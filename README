@@ -1,0 +1,3 @@
+getgo will copy what's needed from $1/go
+You'll need to cd go/src && all.bash for now
+

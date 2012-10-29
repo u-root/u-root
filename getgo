@@ -1,0 +1,6 @@
+mkdir -p go/bin go/pkg
+cp -a $1/src $1/include $1/VERSION.cache $1/misc ./go
+cp $1/go/bin/go go/bin
+cp -a $1/go/pkg/tool go/pkg
+echo default > ./go/VERSION
+mkdir -p bin
