@@ -8,7 +8,6 @@ import (
 )
 
 func main(){
-	goBin := os.Getenv("GOBIN")
 	buildPath := os.Getenv("BUILDPATH")
 
 	cleanPath := path.Clean(os.Args[0])
@@ -23,7 +22,7 @@ func main(){
 		log.Fatal(err, string(out))
 	}
 
-	cmd = exec.Command(path.Join(goBin, arg0))
+	cmd = exec.Command(path.Join(buildPath, "bin", arg0))
 	cmd.Args = os.Args[1:]
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
