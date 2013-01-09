@@ -57,26 +57,14 @@ func main() {
 		os.Exit(1)
 	}
 	if len(fnames) == 4 {
-		var base = 10
-		if len(fnames[2]) > 2 && fnames[2][:2] == "0x" {
-			base = 16
-		} else if fnames[2][0] == '0' {
-			base = 8
-		}
-		offset1, err = strconv.ParseInt(fnames[2], base, 64)
+		offset1, err = strconv.ParseInt(fnames[2], 0, 64)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad offset1: %s", fnames[2])
+			fmt.Fprintf(os.Stderr, "bad offset1: %s: %v\n", fnames[2], err)
 			return
 		}
-		base = 10
-		if len(fnames[3]) > 2 && fnames[3][:2] == "0x" {
-			base = 16
-		} else if fnames[3][0] == '0' {
-			base = 8
-		}
-		offset2, err = strconv.ParseInt(fnames[3], base, 64)
+		offset2, err = strconv.ParseInt(fnames[3], 0, 64)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad offset2: %s", fnames[3])
+			fmt.Fprintf(os.Stderr, "bad offset2: %s: %v\n", fnames[3], err)
 			return
 		}
 	}
