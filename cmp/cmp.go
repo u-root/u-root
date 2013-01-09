@@ -5,13 +5,15 @@
 /*
 Cmp compares the two files and prints a message if the contents differ.
 
+cmp [ –lLs ] file1 file2 [ offset1 [ offset2 ] ]
+
 The options are:
 	–l    Print the byte number (decimal) and the differing bytes (hexadecimal) for each difference.
 	–L    Print the line number of the first differing byte.
 	–s    Print nothing for differing files, but set the exit status.
 
-If offsets are given, comparison starts at the designated byte position of the corresponding file.
-Offsets that begin with 0x are hexadecimal; with 0, octal; with anything else, decimal.
+-If offsets are given, comparison starts at the designated byte position of the corresponding file.
+-Offsets that begin with 0x are hexadecimal; with 0, octal; with anything else, decimal.
 */
 
 package main
@@ -21,15 +23,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 var long = flag.Bool("l", false, "print the byte number (decimal) and the differing bytes (hexadecimal) for each difference")
 var line = flag.Bool("L", false, "print the line number of the first differing byte")
 var silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
 
-func emit(f *os.File, c chan byte) {
-	b := bufio.NewReader(f)
+func emit(f *os.File, c chan byte, offset int64) {
+	if offset > 0 {
+		f.Seek(offset, 0)
+	}
 
+	b := bufio.NewReader(f)
 	for {
 		b, err := b.ReadByte()
 		if err != nil {
@@ -42,11 +48,37 @@ func emit(f *os.File, c chan byte) {
 
 func main() {
 	flag.Parse()
+	var offset1, offset2 int64
+	var err error
 
 	fnames := flag.Args()
-	if len(fnames) != 2 {
-		fmt.Fprintf(os.Stderr, "expected two filenames, got %d", len(fnames))
+	if len(fnames) != 2 && len(fnames) != 4 {
+		fmt.Fprintf(os.Stderr, "expected two filenames (and two optional offsets), got %d", len(fnames))
 		os.Exit(1)
+	}
+	if len(fnames) == 4 {
+		var base = 10
+		if len(fnames[2]) > 2 && fnames[2][:2] == "0x" {
+			base = 16
+		} else if fnames[2][0] == '0' {
+			base = 8
+		}
+		offset1, err = strconv.ParseInt(fnames[2], base, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "bad offset1: %s", fnames[2])
+			return
+		}
+		base = 10
+		if len(fnames[3]) > 2 && fnames[3][:2] == "0x" {
+			base = 16
+		} else if fnames[3][0] == '0' {
+			base = 8
+		}
+		offset2, err = strconv.ParseInt(fnames[3], base, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "bad offset2: %s", fnames[3])
+			return
+		}
 	}
 
 	c1 := make(chan byte, 8192)
@@ -57,14 +89,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error opening %s: %v", fnames[0], err)
 		os.Exit(1)
 	}
-	go emit(f, c1)
+	go emit(f, c1, offset1)
 
 	f, err = os.Open(fnames[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error opening %s: %v", fnames[1], err)
 		os.Exit(2)
 	}
-	go emit(f, c2)
+	go emit(f, c2, offset2)
 
 	lineno, charno := int64(1), int64(1)
 	var b1, b2 byte
