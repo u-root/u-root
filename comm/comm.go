@@ -3,7 +3,10 @@
 // license that can be found in the LICENSE file.
 
 /*
-Comm selects or reject lines common to two sorted files
+Comm reads file1 and file2, which are in lexicographical order, and
+produces a three column output: lines only in file1; lines only in
+file2; and lines in both files. The file name – means the standard
+input.
 
 Flag 1, 2, or 3 suppresses printing of the corresponding column.
 */
