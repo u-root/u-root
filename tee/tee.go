@@ -45,8 +45,9 @@ func main() {
 		if err != nil {
 			if err != io.EOF {
 				fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
+				os.Exit(1)
 			}
-			os.Exit(1)
+			break
 		}
 
 		os.Stdout.Write(buf[:n])
