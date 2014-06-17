@@ -8,13 +8,26 @@ import (
 )
 
 func main(){
-	buildPath := os.Getenv("BUILDPATH")
-
+	myRoot, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
 	cleanPath := path.Clean(os.Args[0])
-	arg0 := path.Base(cleanPath)
+	commandName := path.Base(cleanPath)
+	buildingBin := path.Join(myRoot, "/buildbin")
+	destDir := path.Join(myRoot, "/bin")
+	destFile := path.Join(destDir, commandName)
+	sourceDir := path.Join(myRoot, commandName)
+	log.Println("%v, %v, %v, %v, %v %v\n", 
+	cleanPath,
+	commandName,
+	buildingBin,
+	myRoot,
+	destDir, destFile)
 
 	cmd := exec.Command("go", "install")
-	cmd.Dir = path.Join(buildPath, arg0)
+	cmd.Dir = sourceDir
+	log.Println("RUn %v\n", cmd)
 	
 	out, err := cmd.CombinedOutput()
 
@@ -22,7 +35,7 @@ func main(){
 		log.Fatal(err, string(out))
 	}
 
-	cmd = exec.Command(path.Join(buildPath, "bin", arg0))
+	cmd = exec.Command(destFile)
 	cmd.Args = os.Args[1:]
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr

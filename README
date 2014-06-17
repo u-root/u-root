@@ -1,32 +1,36 @@
-This is a proof of concept. 
-I tried this one year ago, got it sort of working, then
-ran out of time. 
-getgo will copy what's needed from $1/go
-Would be better if if it read */*.go and only got those packages.
-
-Should not copy unused binaries. Only needs go, ?g, ?l, pack.
-Does not need binary packages. 
-
-Then set (assuming you are in /root):
-GOBIN=/root/u-root/bin/
-GOROOT=/root/u-root/go/
-PATH=$GOBIN:/root/u-root/buildbin:$PATH
-
-cd  installcommand
-GOBIN=../buildbin go install
-
+#!/bin/bash
+set -e
+# This README is also a script you can run to test this idea out.
+# you must run it via sudo
+#This is a root file system all based on Go. 
+#
+#The only binary is the builder, and 6?. The rest gets
+#built dynamically into a ramdisk-mounted /.
+#
+#You can test with chroot.
+#
+#Then set (assuming you are in $HOME):
+GOPATH=$HOME/u-root/bin:$HOME/u-root/go
+#GOBIN=$HOME/u-root/bin/
+GOROOT=$HOME/u-root/go/
+PATH=$GOBIN:$HOME/u-root/buildbin:$PATH
+#
+(cd  installcommand && GOBIN=../buildbin go install)
+#
+mkdir -p bin
 mount -t tmpfs none bin
-
-PATH=`pwd`/bin:`pwd`/building:$PATH
-
-then type 
-date
-and watch how it goes.
-
-What happens: 
-finds date in /root/u-root/buildbin/date
-symlink to installcommand
-runs installcommand, installs date in /root/u-root/bin, 
-installcommand runs the command with arg.
-
-All subsequent invocations of date run the compiled version.
+#
+PATH=`pwd`/bin:`pwd`/buildbin:$PATH
+bash
+#
+#then type 
+#date
+#and watch how it goes.
+#
+#What happens: 
+#finds date in $HOME/u-root/buildbin/date
+#symlink to installcommand
+#runs installcommand, installs date in $HOME/u-root/bin, 
+#installcommand runs the command with arg.
+#
+#All subsequent invocations of date run the compiled version.
