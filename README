@@ -17,6 +17,7 @@ PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 (GOBIN=`pwd`/buildbin go install installcommand)
 #
 mkdir -p bin
+sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 #
 bash
