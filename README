@@ -10,17 +10,14 @@ set -e
 #You can test with chroot.
 #
 #Then set (assuming you are in $HOME):
-GOPATH=$HOME/u-root/bin:$HOME/u-root/go
-#GOBIN=$HOME/u-root/bin/
-GOROOT=$HOME/u-root/go/
-PATH=$GOBIN:$HOME/u-root/buildbin:$PATH
+export GOPATH=$HOME/u-root
+PATH=$GOPATH/bin:$GOPATH/buildbin:$PATH
 #
-(cd  installcommand && GOBIN=../buildbin go install)
+(GOBIN=`pwd`/buildbin go install installcommand)
 #
 mkdir -p bin
-mount -t tmpfs none bin
+sudo mount -t tmpfs none bin
 #
-PATH=`pwd`/bin:`pwd`/buildbin:$PATH
 bash
 #
 #then type 
