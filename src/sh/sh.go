@@ -28,7 +28,11 @@ func main() {
 	for scanner.Scan() {
 		cmd := scanner.Text()
 		argv := strings.Split(cmd, " ")
+		e := os.Environ()
+		e = append(e, "GOROOT=/go")
+		fmt.Printf("En %v\n", e)
 		run := exec.Command(argv[0], argv[1:]...)
+		run.Env = e
 		out, err := run.CombinedOutput()
 		if err != nil {
 			fmt.Println(err)
