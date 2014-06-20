@@ -30,15 +30,15 @@ func main() {
 		argv := strings.Split(cmd, " ")
 		e := os.Environ()
 		e = append(e, "GOROOT=/go")
-		fmt.Printf("En %v\n", e)
+		e = append(e, "GOPATH=/")
+		e = append(e, "GOBIN=/bin")
 		run := exec.Command(argv[0], argv[1:]...)
 		run.Env = e
 		out, err := run.CombinedOutput()
 		if err != nil {
 			fmt.Println(err)
-		} else {
-			fmt.Printf("%s", out)
 		}
+		fmt.Printf("%s", out)
 		fmt.Printf("%% ")
 	}
 }
