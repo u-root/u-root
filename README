@@ -16,6 +16,7 @@ export GOROOT=$HOME/u-root/go
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 #
 (GOBIN=`pwd`/buildbin go install installcommand)
+# until we figure out the trickery to get sh to build dynamically, well ...
 (GOBIN=`pwd`/buildbin go install sh)
 PATH=$OLDPATH
 # well, this sucks, go is not itself static.
