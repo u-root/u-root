@@ -17,6 +17,7 @@ func main(){
 
 	e := os.Environ()
 	e = append(e, "GOBIN="+path.Join(myRoot,"bin"))
+	e = append(e, "CGO_ENABLED=0")
 
 	cmd := exec.Command("go", "install", commandName)
 	cmd.Dir = myRoot

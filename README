@@ -5,6 +5,9 @@ set -e
 #
 #The only binary is the builder, and 6?. The rest gets
 #built dynamically into a ramdisk-mounted /.
+#Some tools won't build if you build with CGO_ENABLED=0
+#But we don't want to carry along a gcc dependency along with
+#everything else.
 #
 #You can test with chroot.
 #
@@ -18,25 +21,9 @@ PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 # until we figure out the trickery to get sh to build dynamically, well ...
 (GOBIN=`pwd`/buildbin go install sh)
 PATH=$OLDPATH
-# well, this sucks, go is not itself static.
-# and ldd output is stupid.
-
-# 
-#
-mkdir -p bin
-mkdir -p dev etc usr/lib lib64 tmp
 sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none tmp
-sudo mount -t tmpfs none dev
-sudo mount -t tmpfs none etc
-sudo mount -t tmpfs none lib64
-sudo mount -t tmpfs none usr/lib
-# ugly test
-cp /usr/lib/libc.so.6  /usr/lib/libpthread.so.0  usr/lib
-cp /lib64/ld-linux-x86-64.so.2  lib64
-cp /etc/localtime etc
-sudo mknod dev/null c 1 3
 #
 #bash
 export GOPATH=/

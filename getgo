@@ -1,6 +1,30 @@
+# This is becoming more of a buildroot script. 
+# If it is a one-time thing, do it here.
+# The simplest thing is to build a go via
+# mount --bind your-go-src /go
+# cd /go
+# export CGO_ENABLED=0
+# cd src && make.bash
+# This gives you a go with the right baked-in paths.
+# This script assumes you have done that; if not,
+# have your arg be the path-to-go
 mkdir -p go/bin go/pkg
-cp -a $1/src $1/include $1/VERSION.cache $1/misc ./go
-cp $1/bin/go go/bin
-cp -a $1/pkg/tool go/pkg
+cp -a $1/go/src $1/go/include $1/go/VERSION.cache $1/go/misc ./go
+cp $1/go/bin/go go/bin
+cp -a $1/go/pkg/tool go/pkg
 echo default > ./go/VERSION
 mkdir -p bin
+
+# libraries :-(
+# well, this sucks, go is not itself static.
+# and ldd output is stupid -- no way to get just a list of names!
+# 
+#
+mkdir -p bin
+mkdir -p dev etc usr/lib lib64 tmp
+cp /usr/lib/libc.so.6 /usr/lib/libm.so.6  /usr/lib/libpthread.so.0  usr/lib
+cp /lib64/ld-linux-x86-64.so.2  lib64
+cp /etc/localtime etc
+
+sudo rm -f dev/null
+sudo mknod dev/null c 1 3
