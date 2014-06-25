@@ -23,3 +23,8 @@ _testmain.go
 go
 bin
 buildbin/installcommand
+buildbin/sh
+etc/
+lib64/
+usr/
+
