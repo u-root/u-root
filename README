@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 # This README is also a script you can run to test this idea out.
-# you must run it via sudo
-#This is a root file system all based on Go. 
+# This is a root file system all based on Go. 
 #
 #The only binary is the builder, and 6?. The rest gets
 #built dynamically into a ramdisk-mounted /.
