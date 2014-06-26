@@ -10,6 +10,7 @@ set -e
 #everything else.
 #
 #You can test with chroot.
+#built dynamically into a ramdisk-mounted /.
 #
 #Then set (assuming you are in $HOME):
 OLDPATH=$PATH
@@ -24,13 +25,19 @@ PATH=$OLDPATH
 sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none tmp
+sudo mount -t tmpfs none etc
 #
 #bash
+echo nameserver 8.8.8.8 > etc/resolv.conf
 export GOPATH=/
 export GOROOT=/go
 export GOBIN=/bin
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 sudo chroot . /buildbin/sh
+sudo umount tmp
+sudo umount etc
+sudo umount bin
+sudo umount go/pkg/linux_amd64
 #
 #then type 
 #date

@@ -22,8 +22,8 @@ mkdir -p bin
 #
 mkdir -p bin
 mkdir -p dev etc usr/lib lib64 tmp
-cp /usr/lib/libc.so.6 /usr/lib/libm.so.6  /usr/lib/libpthread.so.0  usr/lib
-cp /lib64/ld-linux-x86-64.so.2  lib64
+#cp /usr/lib/libc.so.6 /usr/lib/libm.so.6  /usr/lib/libpthread.so.0  usr/lib
+#cp /lib64/ld-linux-x86-64.so.2  lib64
 cp /etc/localtime etc
 
 sudo rm -f dev/null

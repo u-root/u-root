@@ -19,13 +19,18 @@ func main(){
 	e = append(e, "GOBIN="+path.Join(myRoot,"bin"))
 	e = append(e, "CGO_ENABLED=0")
 
-	cmd := exec.Command("go", "install", commandName)
+	cmd := exec.Command("go", "install", /*"-x", */commandName)
+	cmd.Env = e
 	cmd.Dir = myRoot
 	
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
 		log.Fatal(err, string(out))
+	}
+
+	if false {
+		log.Printf(string(out))
 	}
 
 	cmd = exec.Command(destFile)
