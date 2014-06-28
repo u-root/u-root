@@ -1,13 +1,13 @@
 package main
 
 import (
-	"path"
+	"log"
 	"os"
 	"os/exec"
-	"log"
+	"path"
 )
 
-func main(){
+func main() {
 	/* e.g. (GOBIN=`pwd`/bin go install date) */
 	cleanPath := path.Clean(os.Args[0])
 	binDir, commandName := path.Split(cleanPath)
@@ -15,14 +15,13 @@ func main(){
 	destDir := path.Join(myRoot, "/bin")
 	destFile := path.Join(destDir, commandName)
 
-	e := os.Environ()
-	e = append(e, "GOBIN="+path.Join(myRoot,"bin"))
-	e = append(e, "CGO_ENABLED=0")
+	cmd := exec.Command("go", "install" /*"-x", */, commandName)
+	cmd.Env = append(os.Environ(),
+		"GOBIN="+path.Join(myRoot, "bin"),
+		"CGO_ENABLED=0")
 
-	cmd := exec.Command("go", "install", /*"-x", */commandName)
-	cmd.Env = e
 	cmd.Dir = myRoot
-	
+
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -34,7 +33,8 @@ func main(){
 	}
 
 	cmd = exec.Command(destFile)
-	cmd.Args = os.Args[1:]
+
+	cmd.Args = append([]string{commandName}, os.Args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
