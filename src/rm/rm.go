@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	for _,v := range(os.Args) {
+	for _,v := range(os.Args[1:]) {
 		err := os.Remove(v)
 		if err != nil {
 			fmt.Printf("%v: %v\n", v, err)
