@@ -15,15 +15,8 @@ cp -a $1/go/pkg/tool go/pkg
 echo default > ./go/VERSION
 mkdir -p bin
 
-# libraries :-(
-# well, this sucks, go is not itself static.
-# and ldd output is stupid -- no way to get just a list of names!
-# 
-#
 mkdir -p bin
 mkdir -p dev etc usr/lib lib64 tmp
-#cp /usr/lib/libc.so.6 /usr/lib/libm.so.6  /usr/lib/libpthread.so.0  usr/lib
-#cp /lib64/ld-linux-x86-64.so.2  lib64
 cp /etc/localtime etc
 
 sudo rm -f dev/null
