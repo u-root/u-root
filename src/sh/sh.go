@@ -36,7 +36,7 @@ func main() {
 		run.Env = e
 		out, err := run.CombinedOutput()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("%v: Path %v\n", err, os.Getenv("PATH"))
 		}
 		fmt.Printf("%s", out)
 		fmt.Printf("%% ")
