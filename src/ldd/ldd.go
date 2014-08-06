@@ -11,6 +11,7 @@ package main
 
 import (
 	"debug/elf"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -18,16 +19,29 @@ import (
 var list map[string]bool
 
 func process(file *os.File, name string) error {
-	if f, err := elf.NewFile(file); err == nil {
-		if fl, err := f.ImportedLibraries(); err == nil {
-			for _, i := range fl {
-				list[i] = true
-			}
-			return nil
-		}
+
+	if f, err := elf.NewFile(file); err != nil {
 		return err
 	} else {
-		return err
+		if fl, err := f.ImportedLibraries(); err != nil {
+			return err
+		} else {
+			if s := f.Section(".interp"); s == nil {
+				return errors.New("No interpreter")
+			} else {
+				if interp, err := s.Data(); err != nil {
+					return err
+				} else {
+					// We could just append the interp but people
+					// expect to see that first.
+					fl = append([]string{string(interp)}, fl...)
+					for _, i := range fl {
+						list[i] = true
+					}
+				}
+
+			}
+		}
 	}
 	return nil
 }
