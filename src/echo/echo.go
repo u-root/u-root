@@ -23,7 +23,7 @@ var nonewline = flag.Bool("n", false, "suppress newline")
 func main() {
 	flag.Parse()
 
-	_, err := fmt.Print("%s", strings.Join(flag.Args(), " "))
+	_, err := fmt.Printf("%s", strings.Join(flag.Args(), " "))
 	if err != nil {
 		os.Exit(1) // "write error" on Plan 9
 	}
