@@ -19,5 +19,11 @@ mkdir -p bin
 mkdir -p dev etc usr/lib lib64 tmp
 cp /etc/localtime etc
 
+# yegads, the world has gone insane and we can't always build static.
+
+libs=`ldd /go/bin/go /go/pkg/tool/linux_amd64/*| grep -v ':' | grep -v not.*dynamic | grep -v vdso | sed s/\(.*// | sed s/.*=.// | sort -u`
+echo $libs
+# gnu tar strips the leading /, cowardly.
+tar hcf - $libs | tar xv
 sudo rm -f dev/null
 sudo mknod dev/null c 1 3
