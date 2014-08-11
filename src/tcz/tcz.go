@@ -9,6 +9,7 @@ Wget reads one file from the argument and writes it on the standard output.
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,6 +21,25 @@ import (
 
 const tcz = "/tinycorelinux.net/5.x/x86/tcz"
 
+// consider making this a goroutine which pushes the string down the channel.
+func findloop() (name string, err error) {
+     for i := 0; i < 1024; i++ {
+     	 l := fmt.Sprintf("/dev/loop%d", i)
+	 f, err := os.Open(l)
+	 if err != nil {
+	    continue
+	    }
+	    _, err = f.Stat()
+	    if err != nil {
+	       continue
+	       }
+	       // if we can get the status, it's in use, too bad.
+		// so do this:
+//ioctl(3, LOOP_GET_STATUS, {number=0, offset=0, flags=0, name="encstateful", ...}) = 0
+//	   and if is 0, you failed; if it fails, you succeed.
+	   }
+	   return name, nil
+}
 func linkone(p string, i os.FileInfo, err error) error {
 	log.Printf("symtree: p %v\n", p)
 	if err != nil {
