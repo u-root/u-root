@@ -14,10 +14,27 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"syscall"
 )
 
 const tcz = "/tinycorelinux.net/5.x/x86/tcz"
 
+func linkone(p string, i os.FileInfo, err error) error {
+	log.Printf("symtree: p %v\n", p)
+	if err != nil {
+		return err
+	}
+
+	// the tree of symlinks starts at /tcz
+	l := filepath.SplitList(p)
+	// surely there's a better way.
+	n := append([]string{"/"}, l[2:]...)
+	to := path.Join(n...)
+
+	log.Printf("symtree: symlink %v to %v\n", p, to)
+	return os.Symlink(p, to)
+}
 func main() {
 	if len(os.Args) < 2 {
 		os.Exit(1)
@@ -28,9 +45,14 @@ func main() {
 	if err := os.MkdirAll(tcz, 0600); err != nil {
 		l.Fatal(err)
 	}
-	
-	// path.Join doesn't quite work here. 
-	filepath := path.Join(tcz, cmdName)
+
+	packagePath := path.Join("/tcz", cmdName)
+	if err := os.MkdirAll(packagePath, 0600); err != nil {
+		l.Fatal(err)
+	}
+
+	// path.Join doesn't quite work here.
+	filepath := path.Join(tcz, cmdName+".tcz")
 	cmd := "http:/" + filepath
 
 	resp, err := http.Get(cmd)
@@ -56,7 +78,13 @@ func main() {
 	if c, err := io.Copy(f, resp.Body); err != nil {
 		l.Fatal(err)
 	} else {
-	/* OK, these are compressed tars ... */
-	l.Printf("c %v err %v\n", c, err)
+		/* OK, these are compressed tars ... */
+		l.Printf("c %v err %v\n", c, err)
 	}
+	/* now mount it. The convention is the mount is in /tcz/packagename */
+	if err := syscall.Mount(filepath, packagePath, "squashfs", 0, ""); err != nil {
+		l.Fatalf("Mount %s on %s: %v\n", filepath, packagePath, err)
+	}
+	/* now walk it, and fetch anything we need. */
+
 }

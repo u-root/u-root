@@ -27,6 +27,7 @@ sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none tmp
 sudo mount -t tmpfs none etc
+sudo mount -t tmpfs none tcz
 #
 #bash
 echo nameserver 8.8.8.8 > etc/resolv.conf
@@ -38,6 +39,7 @@ sudo chroot . /buildbin/sh
 sudo umount tmp
 sudo umount etc
 sudo umount bin
+sudo umount tcz
 sudo umount go/pkg/linux_amd64
 #
 #then type 
