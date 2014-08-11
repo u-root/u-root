@@ -22,6 +22,7 @@ PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 # until we figure out the trickery to get sh to build dynamically, well ...
 (GOBIN=`pwd`/buildbin go install sh)
 PATH=$OLDPATH
+mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz
 sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none tmp
