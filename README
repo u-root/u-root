@@ -22,12 +22,13 @@ PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 # until we figure out the trickery to get sh to build dynamically, well ...
 (GOBIN=`pwd`/buildbin go install sh)
 PATH=$OLDPATH
-mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz
+mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev
 sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none tmp
 sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
+sudo mount --bind /dev dev
 #
 #bash
 echo nameserver 8.8.8.8 > etc/resolv.conf
@@ -41,6 +42,7 @@ sudo umount etc
 sudo umount bin
 sudo umount tcz
 sudo umount go/pkg/linux_amd64
+sudo umount dev
 #
 #then type 
 #date
