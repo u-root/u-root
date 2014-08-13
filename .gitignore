@@ -22,6 +22,7 @@ _testmain.go
 *.exe
 go
 bin
+dev
 buildbin/installcommand
 buildbin/sh
 etc/
