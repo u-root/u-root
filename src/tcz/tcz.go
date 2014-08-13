@@ -70,6 +70,26 @@ func linkone(p string, i os.FileInfo, err error) error {
 	l.Printf("symtree: symlink %v to %v\n", p, to)
 	return os.Symlink(p, to)
 }
+func clonetree(tree string) error {
+	lt := len(tree)
+	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+		if fi.IsDir() {
+		   l.Printf("walking, dir %v\n", path)
+			os.MkdirAll(path[lt:], 0600)
+			return nil
+		}
+		// all else gets a symlink.
+		l.Printf("Need to symlnk %v to %v\n", path, path)
+		os.Symlink(path, path[lt:])
+		return nil
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	return err
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		os.Exit(1)
@@ -127,13 +147,15 @@ func main() {
 
 	ffd, err := syscall.Open(filepath, syscall.O_RDONLY, 0)
 	lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
-	log.Printf("ffd %v lfd %v\n", ffd, lfd)
+	l.Printf("ffd %v lfd %v\n", ffd, lfd)
 	a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
 	if errno != 0 {
-		log.Fatalf("loop set fd ioctl: %v, %v, %v\n", a, b, errno)
+		l.Fatalf("loop set fd ioctl: %v, %v, %v\n", a, b, errno)
 	}
 	/* now mount it. The convention is the mount is in /tcz/packagename */
 	if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
 		l.Fatalf("Mount %s on %s: %v\n", loopname, packagePath, err)
 	}
+	err = clonetree(packagePath)
+	l.Printf("%v\n", err)
 }

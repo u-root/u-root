@@ -41,8 +41,13 @@ func main() {
 		e = append(e, "GOBIN=/bin")
 		// oh, and, Go looks in the environment, NOT the env in the cmd.
 		p := os.Getenv("PATH")
-		if err := os.Setenv("PATH", "/go/bin:/buildbin:/bin:" + p); err != nil {
+		if err := os.Setenv("PATH", "/go/bin:/buildbin:/bin:/usr/local/bin:" + p); err != nil {
 			fmt.Printf("Couldn't set path; %v\n", err)
+			continue
+		}
+		p = os.Getenv("LD_LIBRARY_PATH")
+		if err := os.Setenv("LD_LIBRARY_PATH", p + ":/usr/local/lib"); err != nil {
+			fmt.Printf("Couldn't set LD_LIBRARY_PATH; %v\n", err)
 			continue
 		}
 		run := exec.Command(argv[0], argv[1:]...)
