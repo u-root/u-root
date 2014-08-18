@@ -61,7 +61,7 @@ func linkone(p string, i os.FileInfo, err error) error {
 		return err
 	}
 
-	// the tree of symlinks starts at /tcz
+	// the tree of symlinks starts at /tmp/tcloop
 	packagel := filepath.SplitList(p)
 	// surely there's a better way.
 	n := append([]string{"/"}, packagel[2:]...)
@@ -100,7 +100,11 @@ func main() {
 		l.Fatal(err)
 	}
 
-	packagePath := path.Join("/tcz", cmdName)
+	if err := os.MkdirAll("/tmp/tcloop", 0600); err != nil {
+		l.Fatal(err)
+	}
+
+	packagePath := path.Join("/tmp/tcloop", cmdName)
 	if err := os.MkdirAll(packagePath, 0600); err != nil {
 		l.Fatal(err)
 	}
@@ -152,7 +156,7 @@ func main() {
 	if errno != 0 {
 		l.Fatalf("loop set fd ioctl: %v, %v, %v\n", a, b, errno)
 	}
-	/* now mount it. The convention is the mount is in /tcz/packagename */
+	/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
 	if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
 		l.Fatalf("Mount %s on %s: %v\n", loopname, packagePath, err)
 	}
