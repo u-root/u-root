@@ -14,22 +14,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
-var long = flag.Bool("l", false, "Long form")
+var (
+	long      = flag.Bool("l", false, "Long form")
+	recursive = flag.Bool("R", false, "Recurse")
+)
 
-func dir(path string) error {
-	ents, err := ioutil.ReadDir(path)
-	if err != nil {
-		return err
-	}
-	for _,v := range(ents) {
-		fmt.Printf("%v\n", v)
-	}
-	return nil
-}
-	
 func main() {
 	flag.Parse()
 
@@ -38,10 +31,16 @@ func main() {
 	if len(dirs) == 0 {
 		dirs = []string{"."}
 	}
-	for _,v := range(dirs) {
-		err := dir(v)
+	for _, v := range dirs {
+		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
+			fmt.Printf("%v: %v\n", v, fi)
+			if fi.IsDir() && !*recursive {
+				return filepath.SkipDir
+			}
+			return err
+		})
 		if err != nil {
-			fmt.Printf("%v: %v\n", v, err)
+			fmt.Printf("%s: %v\n", v, err)
 		}
 	}
 }
