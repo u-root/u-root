@@ -24,7 +24,7 @@ var (
 func main() {
 	flag.Parse()
 	if len(flag.Args()) < 1 {
-		fmt.Printf("Usage: mkdir [-p] <directory> [more directories]\n")
+		fmt.Printf("Usage: mkdir [-m mode] [-v] [-p] <directory> [more directories]\n")
 		os.Exit(1)
 	}
 	if *mkall {

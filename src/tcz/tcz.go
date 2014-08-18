@@ -36,7 +36,7 @@ const (
 	SYS_ioctl         = 16
 )
 
-const tcz = "/tinycorelinux.net/5.x/x86/tcz"
+const tcz = "/tinycorelinux.net/5.x/x86_64/tcz"
 
 var l = log.New(os.Stdout, "tcz: ", 0)
 

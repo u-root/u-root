@@ -17,6 +17,8 @@ import (
 	"bufio"
 )
 
+var urpath = "/go/bin:/buildbin:/bin:/usr/local/bin:"
+
 func main() {
 	if len(os.Args) != 1 {
 		fmt.Println("no scripts/args yet")
@@ -40,15 +42,21 @@ func main() {
 		e = append(e, "GOPATH=/")
 		e = append(e, "GOBIN=/bin")
 		// oh, and, Go looks in the environment, NOT the env in the cmd.
+		// Add the prefix if we don't have it.
 		p := os.Getenv("PATH")
-		if err := os.Setenv("PATH", "/go/bin:/buildbin:/bin:/usr/local/bin:" + p); err != nil {
-			fmt.Printf("Couldn't set path; %v\n", err)
-			continue
+		if ! strings.HasPrefix(p, urpath) {
+			if err := os.Setenv("PATH",  urpath + p); err != nil {
+				fmt.Printf("Couldn't set path; %v\n", err)
+				continue
+			}
 		}
 		p = os.Getenv("LD_LIBRARY_PATH")
-		if err := os.Setenv("LD_LIBRARY_PATH", p + ":/usr/local/lib"); err != nil {
-			fmt.Printf("Couldn't set LD_LIBRARY_PATH; %v\n", err)
-			continue
+		// tinycore requires /usr/local/lib; make it always last.
+		if ! strings.HasSuffix(p, ":/usr/local/lib") {
+			if err := os.Setenv("LD_LIBRARY_PATH", p + ":/usr/local/lib"); err != nil {
+				fmt.Printf("Couldn't set LD_LIBRARY_PATH; %v\n", err)
+				continue
+			}
 		}
 		run := exec.Command(argv[0], argv[1:]...)
 		run.Env = e
