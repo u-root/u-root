@@ -25,7 +25,7 @@ PATH=$OLDPATH
 mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr
 sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
-sudo mount -t tmpfs none tmp
+#sudo mount -t tmpfs none tmp
 sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
 sudo mount --bind /dev dev
@@ -39,12 +39,14 @@ export GOROOT=/go
 export GOBIN=/bin
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 sudo chroot . /buildbin/sh
+set +e
 sudo umount tmp
 sudo umount etc
 sudo umount bin
 sudo umount tcz
 sudo umount go/pkg/linux_amd64
 sudo umount dev
+sudo umount tmp/tcloop/*
 #
 #then type 
 #date

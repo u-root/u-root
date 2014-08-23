@@ -6,7 +6,9 @@
 Ls reads the directories in the command line and prints out the names.
 
 The options are:
-	–l		Long form.
+	-l		Long form.
+	-r		raw (%v) form
+	-R		recurse
 */
 
 package main
@@ -20,8 +22,22 @@ import (
 
 var (
 	long      = flag.Bool("l", false, "Long form")
+	raw       = flag.Bool("r", false, "raw struct")
 	recursive = flag.Bool("R", false, "Recurse")
 )
+
+func show(fi os.FileInfo) {
+	switch {
+	case *raw == true:
+		fmt.Printf("%v\n", fi)
+	case *long == false:
+		fmt.Printf("%v\n", fi.Name())
+	// -rw-r--r-- 1 root root 174 Aug 18 17:18 /etc/hosts
+	case *long == true:
+		fmt.Printf("%v\t%v\t%v\t%v\n", fi.Mode(), fi.Size(), fi.Name(), fi.ModTime())
+	}
+
+}
 
 func main() {
 	flag.Parse()
@@ -32,11 +48,15 @@ func main() {
 		dirs = []string{"."}
 	}
 	for _, v := range dirs {
+		if len(dirs) > 1 {
+			fmt.Printf("%v:\n", v)
+		}
 		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
-			fmt.Printf("%v: %v\n", v, fi)
-			if fi.IsDir() && !*recursive {
+			show(fi)
+			if fi.IsDir() && !*recursive && path != v {
 				return filepath.SkipDir
 			}
+
 			return err
 		})
 		if err != nil {

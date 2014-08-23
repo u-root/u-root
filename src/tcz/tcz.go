@@ -7,11 +7,13 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -37,6 +39,9 @@ const (
 )
 
 const tcz = "/tinycorelinux.net/5.x/x86_64/tcz"
+
+//http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
+//The .dep is the name + .dep
 
 var l = log.New(os.Stdout, "tcz: ", 0)
 
@@ -67,6 +72,8 @@ func linkone(p string, i os.FileInfo, err error) error {
 	n := append([]string{"/"}, packagel[2:]...)
 	to := path.Join(n...)
 
+	l.Printf("symtree: remove %v\n", to)
+	os.Remove(to)
 	l.Printf("symtree: symlink %v to %v\n", p, to)
 	return os.Symlink(p, to)
 }
@@ -74,7 +81,7 @@ func clonetree(tree string) error {
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
 		if fi.IsDir() {
-		   l.Printf("walking, dir %v\n", path)
+			l.Printf("walking, dir %v\n", path)
 			os.MkdirAll(path[lt:], 0600)
 			return nil
 		}
@@ -90,29 +97,11 @@ func clonetree(tree string) error {
 	return err
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		os.Exit(1)
-	}
-	cmdName := os.Args[1]
-
-	if err := os.MkdirAll(tcz, 0600); err != nil {
-		l.Fatal(err)
-	}
-
-	if err := os.MkdirAll("/tmp/tcloop", 0600); err != nil {
-		l.Fatal(err)
-	}
-
-	packagePath := path.Join("/tmp/tcloop", cmdName)
-	if err := os.MkdirAll(packagePath, 0600); err != nil {
-		l.Fatal(err)
-	}
-
+func fetch(p string) error {
 	// path.Join doesn't quite work here.
-	filepath := path.Join(tcz, cmdName+".tcz")
-	if _, err := os.Stat(filepath); err != nil {
-		cmd := "http:/" + filepath
+	fullpath := path.Join(tcz, p)
+	if _, err := os.Stat(fullpath); err != nil {
+		cmd := "http:/" + fullpath
 
 		resp, err := http.Get(cmd)
 		if err != nil {
@@ -121,17 +110,18 @@ func main() {
 		defer resp.Body.Close()
 
 		if resp.Status != "200 OK" {
-			l.Fatalf("Not OK! %v\n", resp.Status)
+			l.Printf("%v Not OK! %v\n", cmd, resp.Status)
+			return syscall.ENOENT
 		}
 
 		l.Printf("resp %v err %v\n", resp, err)
-		// we've to the whole tcz in resp.Body.
+		// we have the whole tcz in resp.Body.
 		// First, save it to /tcz/name
-		f, err := os.Create(filepath)
+		f, err := os.Create(fullpath)
 		if err != nil {
-			l.Fatal("Create of :%v: failed: %v\n", filepath, err)
+			l.Fatal("Create of :%v: failed: %v\n", fullpath, err)
 		} else {
-			l.Printf("created %v f %v\n", filepath, f)
+			l.Printf("created %v f %v\n", fullpath, f)
 		}
 
 		if c, err := io.Copy(f, resp.Body); err != nil {
@@ -142,14 +132,79 @@ func main() {
 		}
 		f.Close()
 	}
-	/* now walk it, and fetch anything we need. */
+	return nil
+}
+
+// deps is ALL the packages we need fetched or not
+// this may even let us work with parallel tcz, ALMOST
+func installPackage(tczName string, deps map[string]bool) error {
+	l.Printf("installPackage: %v %v\n", tczName, deps)
+	depName := tczName + ".dep"
+	// path.Join doesn't quite work here.
+	if err := fetch(tczName); err != nil {
+		l.Fatal(err)
+	}
+	deps[tczName] = true
+	l.Printf("Fetched %v\n", tczName)
+	// now fetch dependencies if any.
+	if err := fetch(depName); err == nil {
+		l.Printf("Fetched dep ok!\n")
+	} else {
+		l.Printf("No dep file found\n")
+		return nil
+	}
+	// read deps file
+	deplist, err := ioutil.ReadFile(path.Join(tcz, depName))
+	if err != nil {
+		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
+	}
+	l.Printf("deplist for %v is :%v:\n", depName, deplist)
+	for _, v := range strings.Split(string(deplist), "\n") {
+		if deps[v] {
+			continue
+		}
+		if err := installPackage(v, deps); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func main() {
+	needPackages := make(map[string]bool)
+
+	if len(os.Args) < 2 {
+		os.Exit(1)
+	}
+	cmdName := os.Args[1]
+	tczName := cmdName + ".tcz"
+
+	if err := os.MkdirAll(tcz, 0600); err != nil {
+		l.Fatal(err)
+	}
+
+	if err := os.MkdirAll("/tmp/tcloop", 0600); err != nil {
+		l.Fatal(err)
+	}
+
+	// path.Join doesn't quite work here.
+	if err := installPackage(tczName, needPackages); err != nil {
+		l.Fatal(err)
+	}
+
+	packagePath := path.Join("/tmp/tcloop", cmdName)
+	if err := os.MkdirAll(packagePath, 0600); err != nil {
+		l.Fatal(err)
+	}
+
 	loopname, err := findloop()
 	if err != nil {
 		l.Fatal(err)
 	}
 	l.Printf("findloop gets %v err %v\n", loopname, err)
-
-	ffd, err := syscall.Open(filepath, syscall.O_RDONLY, 0)
+	pkgpath := path.Join(tcz, cmdName+".tcz")
+	ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
 	lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
 	l.Printf("ffd %v lfd %v\n", ffd, lfd)
 	a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
