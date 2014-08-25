@@ -26,7 +26,7 @@ var (
 	recursive = flag.Bool("R", false, "Recurse")
 )
 
-func show(fi os.FileInfo) {
+func show(fullpath string, fi os.FileInfo) {
 	switch {
 	case *raw == true:
 		fmt.Printf("%v\n", fi)
@@ -34,7 +34,11 @@ func show(fi os.FileInfo) {
 		fmt.Printf("%v\n", fi.Name())
 	// -rw-r--r-- 1 root root 174 Aug 18 17:18 /etc/hosts
 	case *long == true:
-		fmt.Printf("%v\t%v\t%v\t%v\n", fi.Mode(), fi.Size(), fi.Name(), fi.ModTime())
+		fmt.Printf("%v\t%v\t%v\t%v", fi.Mode(), fi.Size(), fi.Name(), fi.ModTime())
+		if link, err := os.Readlink(fullpath); err == nil {
+			fmt.Printf(" -> %v", link)
+		}
+		fmt.Printf("\n")
 	}
 
 }
@@ -52,7 +56,7 @@ func main() {
 			fmt.Printf("%v:\n", v)
 		}
 		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
-			show(fi)
+			show(path, fi)
 			if fi.IsDir() && !*recursive && path != v {
 				return filepath.SkipDir
 			}
