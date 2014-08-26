@@ -56,6 +56,10 @@ func main() {
 			fmt.Printf("%v:\n", v)
 		}
 		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf("%v: %v\n", path, err)
+				return err
+			}
 			show(path, fi)
 			if fi.IsDir() && !*recursive && path != v {
 				return filepath.SkipDir
