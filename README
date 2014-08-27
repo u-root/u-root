@@ -36,7 +36,9 @@ set +e
 cpio -i -E tinycorebase/filelist < tinycorebase/corepure64.cpio
 set -e
 #bash
-echo nameserver 8.8.8.8 > etc/resolv.conf
+cat /etc/resolv.conf > etc/resolv.conf
+# The ultimate fallback.
+echo nameserver 8.8.8.8 >> etc/resolv.conf
 export GOPATH=/
 export GOROOT=/go
 export GOBIN=/bin

@@ -102,6 +102,7 @@ func fetch(p string) error {
 	fullpath := path.Join(tcz, p)
 	if _, err := os.Stat(fullpath); err != nil {
 		cmd := "http:/" + fullpath
+		l.Printf("Fetch %v\n", cmd)
 
 		resp, err := http.Get(cmd)
 		if err != nil {
