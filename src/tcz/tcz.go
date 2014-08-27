@@ -171,6 +171,40 @@ func installPackage(tczName string, deps map[string]bool) error {
 
 }
 
+func setupPackages(tczName string, deps map[string]bool) error {
+	for v := range deps {
+		cmdName := strings.Split(v, ".")[0]
+		packagePath := path.Join("/tmp/tcloop", cmdName)
+		if err := os.MkdirAll(packagePath, 0600); err != nil {
+			l.Fatal(err)
+		}
+
+		loopname, err := findloop()
+		if err != nil {
+			l.Fatal(err)
+		}
+		l.Printf("findloop gets %v err %v\n", loopname, err)
+		pkgpath := path.Join(tcz, v)
+		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
+		lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
+		l.Printf("ffd %v lfd %v\n", ffd, lfd)
+		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
+		if errno != 0 {
+			l.Fatalf("loop set fd ioctl: %v, %v, %v\n", a, b, errno)
+		}
+		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
+		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
+			l.Fatalf("Mount %s on %s: %v\n", loopname, packagePath, err)
+		}
+		err = clonetree(packagePath)
+		if err != nil {
+			l.Fatalf("clonetree:  %v\n", err)
+		}
+	}
+	return nil
+
+}
+
 func main() {
 	needPackages := make(map[string]bool)
 
@@ -193,28 +227,7 @@ func main() {
 		l.Fatal(err)
 	}
 
-	packagePath := path.Join("/tmp/tcloop", cmdName)
-	if err := os.MkdirAll(packagePath, 0600); err != nil {
+	if err := setupPackages(tczName, needPackages); err != nil {
 		l.Fatal(err)
 	}
-
-	loopname, err := findloop()
-	if err != nil {
-		l.Fatal(err)
-	}
-	l.Printf("findloop gets %v err %v\n", loopname, err)
-	pkgpath := path.Join(tcz, cmdName+".tcz")
-	ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
-	lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
-	l.Printf("ffd %v lfd %v\n", ffd, lfd)
-	a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
-	if errno != 0 {
-		l.Fatalf("loop set fd ioctl: %v, %v, %v\n", a, b, errno)
-	}
-	/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
-	if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
-		l.Fatalf("Mount %s on %s: %v\n", loopname, packagePath, err)
-	}
-	err = clonetree(packagePath)
-	l.Printf("%v\n", err)
 }

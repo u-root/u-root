@@ -8,8 +8,9 @@
 # This gives you a go with the right baked-in paths.
 # This script assumes you have done that; if not,
 # have your arg be the path-to-go
-mkdir -p go/bin go/pkg
+mkdir -p go/bin go/pkg go/pkg/linux_amd64
 cp -a $1/go/src $1/go/include $1/go/VERSION.cache $1/go/misc ./go
+cp $1/go/pkg/linux_amd64/*.h go/pkg/linux_amd64
 cp $1/go/bin/go go/bin
 cp -a $1/go/pkg/tool go/pkg
 echo default > ./go/VERSION

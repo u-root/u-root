@@ -18,12 +18,16 @@ export GOPATH=$HOME/u-root
 export GOROOT=$HOME/u-root/go
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 #
+echo FUCKFUCKFUCK
 (GOBIN=`pwd`/buildbin go install installcommand)
+echo FUCKFUCKFUCK
+echo FUCKFUCKFUCK
+echo FUCKFUCKFUCK
 # until we figure out the trickery to get sh to build dynamically, well ...
 (GOBIN=`pwd`/buildbin go install sh)
 PATH=$OLDPATH
 mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr
-sudo mount -t tmpfs none go/pkg/linux_amd64
+#sudo mount -t tmpfs none go/pkg/linux_amd64
 sudo mount -t tmpfs none bin
 #sudo mount -t tmpfs none tmp
 sudo mount -t tmpfs none etc
