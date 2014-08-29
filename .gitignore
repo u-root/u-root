@@ -30,3 +30,7 @@ lib64/
 usr/
 lib/
 tinycorelinux*
+tmp
+tinycorebase
+*.swp
+go.cpio
