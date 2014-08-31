@@ -161,6 +161,12 @@ func installPackage(tczName string, deps map[string]bool) error {
 	}
 	l.Printf("deplist for %v is :%v:\n", depName, deplist)
 	for _, v := range strings.Split(string(deplist), "\n") {
+		// split("name\n") gets you a 2-element array with second
+		// element the empty string
+		if len(v) == 0 {
+			break
+		}
+	l.Printf("FOR %v get package %v\n", tczName, v)
 		if deps[v] {
 			continue
 		}
@@ -173,6 +179,7 @@ func installPackage(tczName string, deps map[string]bool) error {
 }
 
 func setupPackages(tczName string, deps map[string]bool) error {
+	l.Printf("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
 		cmdName := strings.Split(v, ".")[0]
 		packagePath := path.Join("/tmp/tcloop", cmdName)
@@ -187,15 +194,21 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		l.Printf("findloop gets %v err %v\n", loopname, err)
 		pkgpath := path.Join(tcz, v)
 		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
+		if err != nil {
+			l.Fatal("%v: %v\n", pkgpath, err)
+		}
 		lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
+		if err != nil {
+			l.Fatal("%v: %v\n", loopname, err)
+		}
 		l.Printf("ffd %v lfd %v\n", ffd, lfd)
 		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
 		if errno != 0 {
-			l.Fatalf("loop set fd ioctl: %v, %v, %v\n", a, b, errno)
+			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
 		}
 		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
 		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
-			l.Fatalf("Mount %s on %s: %v\n", loopname, packagePath, err)
+			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
 		}
 		err = clonetree(packagePath)
 		if err != nil {
@@ -227,6 +240,7 @@ func main() {
 	if err := installPackage(tczName, needPackages); err != nil {
 		l.Fatal(err)
 	}
+	l.Printf("After installpackages: needPackages %v\n", needPackages)
 
 	if err := setupPackages(tczName, needPackages); err != nil {
 		l.Fatal(err)
