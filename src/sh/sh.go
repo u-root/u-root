@@ -60,11 +60,14 @@ func main() {
 		}
 		run := exec.Command(argv[0], argv[1:]...)
 		run.Env = e
-		out, err := run.CombinedOutput()
-		if err != nil {
+		run.Stdin = os.Stdin
+		run.Stdout = os.Stdout
+		run.Stderr = os.Stderr
+		if err := run.Start(); err != nil {
 			fmt.Printf("%v: Path %v\n", err, os.Getenv("PATH"))
+		} else if err := run.Wait(); err != nil {
+			fmt.Printf("wait: %v:\n", err)
 		}
-		fmt.Printf("%s", out)
 		fmt.Printf("%% ")
 	}
 }
