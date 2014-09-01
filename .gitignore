@@ -31,6 +31,6 @@ usr/
 lib/
 tinycorelinux*
 tmp
-tinycorebase
 *.swp
 go.cpio
+tinycorebase/corepure64.cpio
