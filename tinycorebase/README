@@ -1,0 +1,5 @@
+This is the list of files we need from tinycore that are not in any package.
+
+README uses this list, along with the tinycore cpio file, i.e. the initramfs
+cpio from the tinycore image, to populate the file system for u-root
+with the minimum needed set of .so's so that tinycore packages will run.
