@@ -34,3 +34,6 @@ tmp
 *.swp
 go.cpio
 tinycorebase/corepure64.cpio
+initramfs.cpio
+src/init/init
+Core/

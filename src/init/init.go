@@ -11,19 +11,32 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"os/exec"
+	"log"
 )
 
-var urpath = "/go/bin:/buildbin:/bin:/usr/local/bin:"
+var env = []string{
+    	"PATH=/go/bin:/buildbin:/bin:/usr/local/bin:",
+	"GOROOT=/go",
+	"GOBIN=/bin",
+	}
 
 func main() {
-o		run := exec.Command(argv[0], argv[1:]...)
-		run.Env = e
-		out, err := run.CombinedOutput()
-		if err != nil {
-			fmt.Printf("%v: Path %v\n", err, os.Getenv("PATH"))
+	cmd := exec.Command("/buildbin/sh")
+	cmd.Env = env
+	os.Setenv("GOROOT", "/go")
+	os.Setenv("GOPATH", "/")
+	os.Setenv("GOBIN", "/bin")
+	os.Setenv("PATH", "/go/bin:/buildbin:/bin:/usr/local/bin")
+
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
+		for {
 		}
-		fmt.Printf("%s", out)
-		fmt.Printf("%% ")
 }

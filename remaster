@@ -1,0 +1,5 @@
+(cd Core; sudo find  bin dev etc home init lib mnt opt proc root run sbin sys tmp usr var | sudo cpio -H newc -o > ../initramfs.cpio)
+cat initramfs.cpio | gzip > Core/boot/uroot.igz
+(cd Core; sudo mkisofs -l -J -V TC-custom -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -o ../gv.iso .)
+
+
