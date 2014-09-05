@@ -1,8 +1,8 @@
 #sudo qemu-system-x86_64 -s -cpu core2duo,+hypervisor,+vmx -smp 3 -m 2048 -nographic  \
-sudo qemu-system-x86_64 -s -cpu kvm64,+vmx -smp 8 -m 2048 -nographic  \
+sudo qemu-system-x86_64 -smp 8 -m 2048 -cpu kvm64 --nographic --bios build/coreboot.rom
 -net nic,model=rtl8139 \
---machine pc,accel=kvm \
--boot d -cdrom /root/ur.iso $*
+--machine pc,accel=kvm  \
+--monitor /dev/pts/0 $*
 
 #/root/CorePure64-5.3.iso
 #-net user,hostfwd=tcp::5555-:23 \
