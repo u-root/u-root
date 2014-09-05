@@ -24,6 +24,7 @@ go
 bin
 dev
 buildbin/installcommand
+buildbin/init
 buildbin/sh
 etc/
 lib64/

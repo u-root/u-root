@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var urpath = "/go/bin:/buildbin:/bin:/usr/local/bin:"
+var urpath = "/go/bin:/bin:/buildbin:/usr/local/bin:"
 
 func main() {
 	/* e.g. (GOBIN=`pwd`/bin go install date) */
@@ -31,7 +31,7 @@ func main() {
 	// sudo sensibly doesn't inherit the path if you are root.
 	// and probably doesn't in general so we need to do this much.
 	// interestingly, on arch, I did not need to do this. Sounds bad.
-	np := strings.NewReplacer("PATH=", "PATH=/go/bin:/buildbin:/bin:")
+	np := strings.NewReplacer("PATH=", "PATH=/go/bin:/bin:/buildbin:")
 	for i := range e {
 		e[i] = np.Replace(e[i])
 	}
