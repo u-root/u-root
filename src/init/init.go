@@ -23,6 +23,7 @@ var env = []string{
 	}
 
 func main() {
+	log.Printf("Welcome to u-root")
 	cmd := exec.Command("/buildbin/sh")
 	cmd.Env = env
 	os.Setenv("GOROOT", "/go")
@@ -33,10 +34,12 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
+	log.Printf("Run %v", cmd)
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
+	log.Printf("init: /bin/sh returned!\n")
 		for {
 		}
 }

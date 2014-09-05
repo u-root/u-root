@@ -60,14 +60,16 @@ func main() {
 		}
 	}
 
-	cmd := exec.Command("go", "install" /*"-x", */, commandName)
+	cmd := exec.Command("go", "install", "-x", commandName)
 	cmd.Env = append(os.Environ(),
 		"GOBIN="+path.Join(myRoot, "bin"),
 		"CGO_ENABLED=0")
 
 	cmd.Dir = myRoot
 
+	log.Printf("Run %v", cmd)
 	out, err := cmd.CombinedOutput()
+	log.Printf("installcommand: go build returned")
 
 	if err != nil {
 		p := os.Getenv("PATH")
