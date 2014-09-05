@@ -11,16 +11,16 @@
 package main
 
 import (
+	"log"
 	"os"
 	"os/exec"
-	"log"
 )
 
 var env = []string{
-    	"PATH=/go/bin:/buildbin:/bin:/usr/local/bin:",
+	"PATH=/go/bin:/bin:/buildbin:/usr/local/bin:",
 	"GOROOT=/go",
 	"GOBIN=/bin",
-	}
+}
 
 func main() {
 	log.Printf("Welcome to u-root")
@@ -29,7 +29,7 @@ func main() {
 	os.Setenv("GOROOT", "/go")
 	os.Setenv("GOPATH", "/")
 	os.Setenv("GOBIN", "/bin")
-	os.Setenv("PATH", "/go/bin:/buildbin:/bin:/usr/local/bin")
+	os.Setenv("PATH", "/go/bin:/bin:/buildbin:/usr/local/bin")
 
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -40,6 +40,6 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 	log.Printf("init: /bin/sh returned!\n")
-		for {
-		}
+	for {
+	}
 }
