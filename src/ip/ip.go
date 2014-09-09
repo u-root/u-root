@@ -46,15 +46,24 @@ func adddelip(op, ip, dev string) error {
 	newaddr[22] = addr[14]
 	newaddr[23] = addr[15]
 	
-	rv1, rv2, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFADDR, uintptr(unsafe.Pointer(&newaddr[0])))
+	rv1, rv2, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFADDR, uintptr(unsafe.Pointer(&newaddr[0])))
 	l.Printf("addr %v network %v iface %v fd %v rv1 %v rv2 %v",
 	addr, network, iface, fd, rv1, rv2)
-	if err != nil {
-		l.Fatalf("ioctl SIOCSIFADDR %v", err)
+	if errno != 0 {
+		l.Fatalf("ioctl SIOCSIFADDR BAD %v", error(errno))
 		return err
 	}
 
 	// now bring it up.
+	// this is a short cut. I have other things to get right first.
+	flags := uint16(syscall.IFF_UP|syscall.IFF_BROADCAST|syscall.IFF_RUNNING)
+	newaddr[16] = byte(flags >> 8)
+	newaddr[17] = byte(flags)
+	rv1, rv2, err = syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFFLAGS, uintptr(unsafe.Pointer(&newaddr[0])))
+	if errno != 0 {
+		l.Fatalf("ioctl SIOCSIFFLAGS BAD %v", error(errno))
+		return err
+	}
 	return nil
 
 }
@@ -68,6 +77,21 @@ func main() {
 	switch {
 	case len(arg) == 5 && arg[0] == "addr" && arg[1] == "add" && arg[3] == "dev":
 		err = adddelip(arg[1], arg[2], arg[4])
+	
+	case len(arg) == 1 && arg[0] == "link":
+		fallthrough
+	case len(arg) == 2 && arg[0] == "link" && arg[1] == "show":
+		ifaces, err := net.Interfaces()
+	if err != nil {
+		l.Fatalf("Can't enumerate interfaces? %v", err)
+	}
+		for _, v := range ifaces {
+			addrs, err := v.Addrs()
+			if err != nil {
+				l.Printf("Can't enumerate addresses")
+			}
+			l.Printf("%v: %v", v, addrs)
+		}
 	default:
 		l.Fatalf("We don't do this: %v", arg)
 	}
