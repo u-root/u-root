@@ -22,7 +22,7 @@ export GOPATH=$HOME/u-root
 export GOROOT=$HOME/u-root/go
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 #
-(GOBIN=`pwd`/buildbin go install installcommand)
+#(GOBIN=`pwd`/buildbin go install installcommand)
 (GOBIN=`pwd`/buildbin go install -x init)
 # until we figure out the trickery to get sh to build dynamically, well ...
 #(GOBIN=`pwd`/buildbin go install sh)
