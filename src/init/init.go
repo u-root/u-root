@@ -16,23 +16,25 @@ import (
 	"os/exec"
 )
 
-var env = []string{
-	"PATH=/go/bin:/bin:/buildbin:/usr/local/bin:",
-	"GOROOT=/go",
-	"GOBIN=/bin",
-	"GOPATH=/",
-	"CGO_ENABLED=0",
+var env = map[string]string{
+	"PATH": "/go/bin:/bin:/buildbin:/usr/local/bin:",
+	"LD_LIBRARY_PATH" : "/usr/local/lib",
+	"GOROOT": "/go",
+	"GOBIN": "/bin",
+	"GOPATH": "/",
+	"CGO_ENABLED": "0",
 }
 
 func main() {
 	log.Printf("Welcome to u-root 4")
-	os.Setenv("GOROOT", "/go")
-	os.Setenv("GOPATH", "/")
-	os.Setenv("GOBIN", "/bin")
-	os.Setenv("PATH", "/go/bin:/bin:/buildbin:/usr/local/bin")
-
+	envs := []string{}
+	for k, v := range env {
+		os.Setenv(k, v)
+		envs =  append(envs, k + "=" + v)
+	}
+	log.Printf("envs %v", envs)
 	cmd := exec.Command("go", "install", "-x", "installcommand")
-	cmd.Env = env
+	cmd.Env = envs
 	cmd.Dir = "/"
 
 	cmd.Stdin = os.Stdin
@@ -46,7 +48,7 @@ func main() {
 
 
 	cmd = exec.Command("/buildbin/sh")
-	cmd.Env = env
+	cmd.Env = envs
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
