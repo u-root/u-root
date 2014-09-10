@@ -25,12 +25,13 @@ PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 #(GOBIN=`pwd`/buildbin go install installcommand)
 # until we figure out the trickery to get sh to build dynamically, well ...
 #(GOBIN=`pwd`/buildbin go install sh)
-mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr/lib
+mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr/lib proc
 sudo mount -t tmpfs none bin
 #sudo mount -t tmpfs none tmp
 sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
 sudo mount --bind /dev dev
+sudo mount --bind /proc proc
 (GOBIN=`pwd`/bin go install -x init)
 PATH=$OLDPATH
 set +e
@@ -54,6 +55,7 @@ sudo umount bin
 sudo umount tcz
 sudo umount go
 sudo umount dev
+sudo umount proc
 sudo umount tmp/tcloop/*
 #
 #then type 

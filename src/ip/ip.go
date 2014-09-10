@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -45,10 +46,10 @@ func adddelip(op, ip, dev string) error {
 	newaddr[21] = addr[13]
 	newaddr[22] = addr[14]
 	newaddr[23] = addr[15]
-	
+
 	rv1, rv2, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFADDR, uintptr(unsafe.Pointer(&newaddr[0])))
 	l.Printf("addr %v network %v iface %v fd %v rv1 %v rv2 %v",
-	addr, network, iface, fd, rv1, rv2)
+		addr, network, iface, fd, rv1, rv2)
 	if errno != 0 {
 		l.Fatalf("ioctl SIOCSIFADDR BAD %v", error(errno))
 		return err
@@ -56,7 +57,7 @@ func adddelip(op, ip, dev string) error {
 
 	// now bring it up.
 	// this is a short cut. I have other things to get right first.
-	flags := uint16(syscall.IFF_UP|syscall.IFF_BROADCAST|syscall.IFF_RUNNING)
+	flags := uint16(syscall.IFF_UP | syscall.IFF_BROADCAST | syscall.IFF_RUNNING)
 	newaddr[16] = byte(flags >> 8)
 	newaddr[17] = byte(flags)
 	rv1, rv2, err = syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFFLAGS, uintptr(unsafe.Pointer(&newaddr[0])))
@@ -68,7 +69,6 @@ func adddelip(op, ip, dev string) error {
 
 }
 func main() {
-	var err error
 	flag.Parse()
 	arg := flag.Args()
 	if len(arg) < 1 {
@@ -76,15 +76,15 @@ func main() {
 	}
 	switch {
 	case len(arg) == 5 && arg[0] == "addr" && arg[1] == "add" && arg[3] == "dev":
-		err = adddelip(arg[1], arg[2], arg[4])
-	
+		adddelip(arg[1], arg[2], arg[4])
+
 	case len(arg) == 1 && arg[0] == "link":
 		fallthrough
 	case len(arg) == 2 && arg[0] == "link" && arg[1] == "show":
 		ifaces, err := net.Interfaces()
-	if err != nil {
-		l.Fatalf("Can't enumerate interfaces? %v", err)
-	}
+		if err != nil {
+			l.Fatalf("Can't enumerate interfaces? %v", err)
+		}
 		for _, v := range ifaces {
 			addrs, err := v.Addrs()
 			if err != nil {
@@ -92,10 +92,13 @@ func main() {
 			}
 			l.Printf("%v: %v", v, addrs)
 		}
+	case len(arg) == 1 && arg[0] == "route":
+		if b, err := ioutil.ReadFile("/proc/net/route"); err == nil {
+			l.Printf("%s", string(b))
+		} else {
+			l.Fatalf("Route failed: %v", err)
+		}
 	default:
 		l.Fatalf("We don't do this: %v", arg)
-	}
-	if err != nil {
-		l.Fatalf("%v: %v", arg, err)
 	}
 }
