@@ -58,6 +58,4 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 	log.Printf("init: /bin/sh returned!\n")
-	for {
-	}
 }
