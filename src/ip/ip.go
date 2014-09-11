@@ -99,6 +99,6 @@ func main() {
 			l.Fatalf("Route failed: %v", err)
 		}
 	default:
-		l.Fatalf("We don't do this: %v", arg)
+		l.Fatalf("We don't do this: %v; try addr or link or route", arg)
 	}
 }
