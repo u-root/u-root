@@ -23,6 +23,7 @@ type mount struct {
 	fstype string
 	flags  uintptr
 	opts   string
+	mode	os.FileMode
 }
 
 var (
@@ -36,7 +37,7 @@ var (
 	}
 
 	namespace = []mount{
-		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
+		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "", mode:os.FileMode(0555)},
 	}
 )
 
@@ -49,6 +50,10 @@ func main() {
 	}
 
 	for _, m := range namespace {
+		if err := os.MkdirAll(m.target, m.mode); err != nil {
+			log.Printf("mkdir :%s: mode %o: %v\n", m.target, m.mode)
+			continue
+		}
 		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
 			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}

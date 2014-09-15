@@ -149,7 +149,7 @@ func main() {
 			l.Fatalf("Route failed: %v", err)
 		}
 	// oh, barf.
-	case len(arg) == 8 && arg[0] == "route" && arg[1] == "add" && arg[2] == "default" && arg[3] == "via" && arg[5] == "dev":
+	case len(arg) == 7 && arg[0] == "route" && arg[1] == "add" && arg[2] == "default" && arg[3] == "via" && arg[5] == "dev":
 	     AddDefaultGw(arg[4], arg[6])
 	default:
 		l.Fatalf("We don't do this: %v; try addr or link or route", arg)
