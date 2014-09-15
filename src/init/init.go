@@ -14,23 +14,45 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"syscall"
 )
 
-var env = map[string]string{
-	"PATH": "/go/bin:/bin:/buildbin:/usr/local/bin:",
-	"LD_LIBRARY_PATH" : "/usr/local/lib",
-	"GOROOT": "/go",
-	"GOBIN": "/bin",
-	"GOPATH": "/",
-	"CGO_ENABLED": "0",
+type mount struct {
+	source string
+	target string
+	fstype string
+	flags  uintptr
+	opts   string
 }
 
+var (
+	env = map[string]string{
+		"PATH":            "/go/bin:/bin:/buildbin:/usr/local/bin:",
+		"LD_LIBRARY_PATH": "/usr/local/lib",
+		"GOROOT":          "/go",
+		"GOBIN":           "/bin",
+		"GOPATH":          "/",
+		"CGO_ENABLED":     "0",
+	}
+
+	namespace = []mount{
+		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
+	}
+)
+
 func main() {
-	log.Printf("Welcome to u-root 4")
+	log.Printf("Welcome to u-root")
 	envs := []string{}
 	for k, v := range env {
 		os.Setenv(k, v)
-		envs =  append(envs, k + "=" + v)
+		envs = append(envs, k+"="+v)
+	}
+
+	for _, m := range namespace {
+		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
+			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
+		}
+
 	}
 	log.Printf("envs %v", envs)
 	cmd := exec.Command("go", "install", "-x", "installcommand")
@@ -45,7 +67,6 @@ func main() {
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
-
 
 	cmd = exec.Command("/buildbin/sh")
 	cmd.Env = envs

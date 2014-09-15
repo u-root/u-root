@@ -31,8 +31,9 @@ sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
 sudo mount --bind /dev dev
-sudo mount --bind /proc proc
 (GOBIN=`pwd`/bin go install -x init)
+# for building the initramfs
+cp bin/init .
 PATH=$OLDPATH
 set +e
 cpio -i -E tinycorebase/filelist < tinycorebase/corepure64.cpio
