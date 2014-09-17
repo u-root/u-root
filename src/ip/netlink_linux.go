@@ -312,6 +312,7 @@ func (s *NetlinkSocket) Receive() ([]syscall.NetlinkMessage, error) {
 		return nil, err
 	}
 	if nr < syscall.NLMSG_HDRLEN {
+		fmt.Printf("SHORT RESPONSE\n")
 		return nil, ErrShortResponse
 	}
 	rb = rb[:nr]
@@ -334,6 +335,7 @@ func (s *NetlinkSocket) HandleAck(seq uint32) error {
 	native := nativeEndian()
 
 	pid, err := s.GetPid()
+	fmt.Printf("handleack pid %v err %v\n", pid, err)
 	if err != nil {
 		return err
 	}
@@ -346,16 +348,20 @@ done:
 		}
 		for _, m := range msgs {
 			if m.Header.Seq != seq {
+				fmt.Printf("wrong seq\n")
 				return fmt.Errorf("Wrong Seq nr %d, expected %d", m.Header.Seq, seq)
 			}
 			if m.Header.Pid != pid {
+				fmt.Printf("wrong pid\n")
 				return fmt.Errorf("Wrong pid %d, expected %d", m.Header.Pid, pid)
 			}
 			if m.Header.Type == syscall.NLMSG_DONE {
+				fmt.Printf("wrong DONE\n")
 				break done
 			}
 			if m.Header.Type == syscall.NLMSG_ERROR {
 				error := int32(native.Uint32(m.Data[0:4]))
+				fmt.Printf("wrong ERROR %v %v\n", error, m.Data[0:4])
 				if error == 0 {
 					break done
 				}
@@ -364,6 +370,7 @@ done:
 		}
 	}
 
+	fmt.Printf("AKC: NIL\n")
 	return nil
 }
 
@@ -468,6 +475,7 @@ func AddRoute(destination, source, gateway, device string) error {
 	wb.AddData(newRtAttr(syscall.RTA_OIF, b))
 
 	if err := s.Send(wb); err != nil {
+		fmt.Printf("Send, err was %v\n", err)
 		return err
 	}
 	return s.HandleAck(wb.Seq)
