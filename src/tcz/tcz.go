@@ -5,6 +5,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -38,12 +39,17 @@ const (
 	SYS_ioctl         = 16
 )
 
-const tcz = "/tinycorelinux.net/5.x/x86_64/tcz"
-
 //http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
 //The .dep is the name + .dep
 
-var l = log.New(os.Stdout, "tcz: ", 0)
+var (
+	l       = log.New(os.Stdout, "tcz: ", 0)
+	host    = flag.String("h", "tinycorelinux.net", "Host name for packages")
+	version = flag.String("v", "5.x", "tinycore version")
+	arch    = flag.String("a", "x86_64", "tinycore architecture")
+	port    = flag.String("p", "80", "Host port")
+	tcz     string
+)
 
 // consider making this a goroutine which pushes the string down the channel.
 func findloop() (name string, err error) {
@@ -101,7 +107,7 @@ func fetch(p string) error {
 	// path.Join doesn't quite work here.
 	fullpath := path.Join(tcz, p)
 	if _, err := os.Stat(fullpath); err != nil {
-		cmd := "http:/" + fullpath
+		cmd := "http://" + *host + ":" + *port + "/" + fullpath
 		l.Printf("Fetch %v\n", cmd)
 
 		resp, err := http.Get(cmd)
@@ -152,6 +158,9 @@ func installPackage(tczName string, deps map[string]bool) error {
 		l.Printf("Fetched dep ok!\n")
 	} else {
 		l.Printf("No dep file found\n")
+		if err := ioutil.WriteFile(path.Join(tcz, depName), []byte{}, os.FileMode(0444)); err != nil {
+			l.Printf("Tried to write Blank file %v, failed %v\n", depName, err)
+		}
 		return nil
 	}
 	// read deps file
@@ -166,7 +175,7 @@ func installPackage(tczName string, deps map[string]bool) error {
 		if len(v) == 0 {
 			break
 		}
-	l.Printf("FOR %v get package %v\n", tczName, v)
+		l.Printf("FOR %v get package %v\n", tczName, v)
 		if deps[v] {
 			continue
 		}
@@ -220,8 +229,9 @@ func setupPackages(tczName string, deps map[string]bool) error {
 }
 
 func main() {
+	flag.Parse()
 	needPackages := make(map[string]bool)
-
+	tcz = path.Join("/", *version, *arch, "tcz")
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
