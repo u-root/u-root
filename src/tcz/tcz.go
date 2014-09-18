@@ -235,7 +235,7 @@ func main() {
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
-	cmdName := os.Args[1]
+	cmdName := flag.Args()[0]
 	tczName := cmdName + ".tcz"
 
 	if err := os.MkdirAll(tcz, 0600); err != nil {
