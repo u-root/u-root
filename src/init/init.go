@@ -19,13 +19,17 @@ import (
 	"syscall"
 )
 
+type dir struct {
+	name string
+	mode   os.FileMode
+}
+
 type mount struct {
 	source string
 	target string
 	fstype string
 	flags  uintptr
 	opts   string
-	mode   os.FileMode
 }
 
 var (
@@ -37,8 +41,20 @@ var (
 		"CGO_ENABLED":     "0",
 	}
 
+	dirs = []dir {
+		{name: "/proc", mode: os.FileMode(0555),},
+		{name: "/buildbin", mode: os.FileMode(0777),},
+		{name: "/bin", mode: os.FileMode(0777),},
+		{name: "/tmp", mode: os.FileMode(0777),},
+		{name: "/etc", mode: os.FileMode(0777),},
+		{name: "/tcz", mode: os.FileMode(0777),},
+		{name: "/dev", mode: os.FileMode(0777),},
+		{name: "/lib", mode: os.FileMode(0777),},
+		{name: "/usr/lib", mode: os.FileMode(0777),},
+		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777),},
+	}
 	namespace = []mount{
-		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "", mode: os.FileMode(0555)},
+		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "",},
 	}
 )
 
@@ -50,11 +66,14 @@ func main() {
 		envs = append(envs, k+"="+v)
 	}
 
-	for _, m := range namespace {
-		if err := os.MkdirAll(m.target, m.mode); err != nil {
-			log.Printf("mkdir :%s: mode %o: %v\n", m.target, m.mode)
+	for _, m := range dirs {
+		if err := os.MkdirAll(m.name, m.mode); err != nil {
+			log.Printf("mkdir :%s: mode %o: %v\n", m.name, m.mode)
 			continue
 		}
+	}
+
+	for _, m := range namespace {
 		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
 			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
@@ -102,6 +121,8 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
+	// TODO: figure out why we get EPERM when we use this.
+	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
 	log.Printf("Run %v", cmd)
 	err = cmd.Run()
 	if err != nil {
