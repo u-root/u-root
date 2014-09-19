@@ -11,9 +11,11 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"syscall"
 )
 
@@ -23,7 +25,7 @@ type mount struct {
 	fstype string
 	flags  uintptr
 	opts   string
-	mode	os.FileMode
+	mode   os.FileMode
 }
 
 var (
@@ -31,13 +33,12 @@ var (
 		"PATH":            "/go/bin:/bin:/buildbin:/usr/local/bin:",
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
-		"GOBIN":           "/bin",
 		"GOPATH":          "/",
 		"CGO_ENABLED":     "0",
 	}
 
 	namespace = []mount{
-		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "", mode:os.FileMode(0555)},
+		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "", mode: os.FileMode(0555)},
 	}
 )
 
@@ -59,9 +60,30 @@ func main() {
 		}
 
 	}
+	// populate buildbin
+
+	if commands, err := ioutil.ReadDir("/src"); err == nil {
+		for _, v := range commands {
+			name := v.Name()
+			if name == "installcommand" || name == "init" {
+				continue
+			} else {
+				destPath := path.Join("/buildbin", name)
+				source := "/buildbin/installcommand"
+				if err := os.Symlink(source, destPath); err != nil {
+					log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
+				}
+			}
+		}
+	} else {
+		log.Fatalf("Can't read %v; %v", "/src", err)
+	}
 	log.Printf("envs %v", envs)
+	os.Setenv("GOBIN", "/buildbin")
 	cmd := exec.Command("go", "install", "-x", "installcommand")
-	cmd.Env = envs
+	installenvs := envs
+	installenvs = append(envs, "GOBIN=/buildbin")
+	cmd.Env = installenvs
 	cmd.Dir = "/"
 
 	cmd.Stdin = os.Stdin
@@ -73,7 +95,9 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 
+	os.Setenv("GOBIN", "/bin")
 	cmd = exec.Command("/buildbin/sh")
+	envs = append(envs, "GOBIN=/bin")
 	cmd.Env = envs
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
