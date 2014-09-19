@@ -1,0 +1,10 @@
+sudo qemu-system-x86_64 -cpu kvm64 -smp 8 -m 2048 --nographic  \
+-machine pc,accel=kvm \
+-net nic,model=rtl8139 \
+-net user,hostfwd=tcp::5555-:8080 \
+-net dump,file=/tmp/vm0.pcap \
+-append console=ttyS0,115200 \
+-kernel arch/x86/boot/bzImage $*
+
+
+

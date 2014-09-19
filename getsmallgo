@@ -1,0 +1,110 @@
+#!/bin/bash
+# This is becoming more of a buildroot script. 
+# If it is a one-time thing, do it here.
+# The simplest thing is to build a go via
+# mount --bind your-go-src /go
+# cd /go
+# export CGO_ENABLED=0
+# cd src && make.bash
+# This gives you a go with the right baked-in paths.
+# This script assumes you have done that; if not,
+# have your arg be the path-to-go
+
+# I can't believe I have to do this.
+# There are more compact forms (e.g. {6a,6c,6g,6l} but this
+# simple-minded format works with simple shells.
+# go/pkg used to contain binaries, and now contains .h files.
+# Hence the move to cpio. However, pulling the cpio into a ramfs
+# dramatically shortens compile times, so this is good.
+(
+find /go/src/pkg/bufio  \
+/go/src/pkg/bytes  \
+/go/src/pkg/compress/flate  \
+/go/src/pkg/compress/gzip  \
+/go/src/pkg/container/list  \
+/go/src/pkg/crypto  \
+/go/src/pkg/crypto/aes  \
+/go/src/pkg/crypto/cipher  \
+/go/src/pkg/crypto/des  \
+/go/src/pkg/crypto/dsa  \
+/go/src/pkg/crypto/ecdsa  \
+/go/src/pkg/crypto/elliptic  \
+/go/src/pkg/crypto/hmac  \
+/go/src/pkg/crypto/md5  \
+/go/src/pkg/crypto/rand  \
+/go/src/pkg/crypto/rc4  \
+/go/src/pkg/crypto/rsa  \
+/go/src/pkg/crypto/sha1  \
+/go/src/pkg/crypto/sha256  \
+/go/src/pkg/crypto/sha512  \
+/go/src/pkg/crypto/subtle  \
+/go/src/pkg/crypto/tls  \
+/go/src/pkg/crypto/x509  \
+/go/src/pkg/crypto/x509/pkix  \
+/go/src/pkg/debug/dwarf  \
+/go/src/pkg/debug/elf  \
+/go/src/pkg/encoding/asn1  \
+/go/src/pkg/encoding/base64  \
+/go/src/pkg/encoding/binary  \
+/go/src/pkg/encoding/hex  \
+/go/src/pkg/encoding/pem  \
+/go/src/pkg/errors  \
+/go/src/pkg/flag  \
+/go/src/pkg/fmt  \
+/go/src/pkg/hash  \
+/go/src/pkg/hash/crc32  \
+/go/src/pkg/internal/syscall  \
+/go/src/pkg/io  \
+/go/src/pkg/io/ioutil  \
+/go/src/pkg/log  \
+/go/src/pkg/math  \
+/go/src/pkg/math/big  \
+/go/src/pkg/math/rand  \
+/go/src/pkg/mime  \
+/go/src/pkg/mime/multipart  \
+/go/src/pkg/net  \
+/go/src/pkg/net/http  \
+/go/src/pkg/net/http/internal  \
+/go/src/pkg/net/textproto  \
+/go/src/pkg/net/url  \
+/go/src/pkg/os  \
+/go/src/pkg/os/exec  \
+/go/src/pkg/path  \
+/go/src/pkg/path/filepath  \
+/go/src/pkg/reflect  \
+/go/src/pkg/runtime  \
+/go/src/pkg/runtime/cgo  \
+/go/src/pkg/sort  \
+/go/src/pkg/strconv  \
+/go/src/pkg/strings  \
+/go/src/pkg/sync  \
+/go/src/pkg/sync/atomic  \
+/go/src/pkg/syscall  \
+/go/src/pkg/time  \
+/go/src/pkg/unicode  \
+/go/src/pkg/unicode/utf8  \
+/go/src/pkg/unsafe  \
+
+find $1/go/include
+find $1/go/VERSION.cache
+find $1/go/misc
+ls $1/go/pkg/linux_amd64/*.h
+find $1/go/bin/go
+find $1/go/pkg/tool/linux_amd64/6a
+find $1/go/pkg/tool/linux_amd64/6c
+find $1/go/pkg/tool/linux_amd64/6g
+find $1/go/pkg/tool/linux_amd64/6l
+) |
+(cpio --no-absolute-filenames -o) > go.cpio
+
+mkdir -p dev etc usr/lib lib64 tmp bin
+cp /etc/localtime etc
+
+# yegads, the world has gone insane and we can't always build static.
+
+libs=`ldd /go/bin/go /go/pkg/tool/linux_amd64/*| grep -v ':' | grep -v not.*dynamic | grep -v vdso | sed s/\(.*// | sed s/.*=.// | sort -u`
+echo $libs
+# gnu tar strips the leading /, cowardly.
+tar hcf - $libs | tar xv
+sudo rm -f dev/null
+sudo mknod dev/null c 1 3

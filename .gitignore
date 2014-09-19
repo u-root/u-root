@@ -2,6 +2,7 @@
 *.o
 *.a
 *.so
+*~
 
 # Folders
 _obj
@@ -23,9 +24,7 @@ _testmain.go
 go
 bin
 dev
-buildbin/installcommand
-buildbin/init
-buildbin/sh
+/buildbin
 etc/
 lib64/
 usr/
@@ -38,3 +37,6 @@ tinycorebase/corepure64.cpio
 initramfs.cpio
 src/init/init
 Core/
+/5.x
+/.bash_history
+/init
