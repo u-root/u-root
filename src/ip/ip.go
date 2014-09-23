@@ -48,29 +48,6 @@ func usage() {
 		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
 }
 
-func adddelip(op, ip, dev string) error {
-	addr, network, err := net.ParseCIDR(ip)
-	if err != nil {
-		l.Fatalf("%v is not in CIDR format: %v", ip, err)
-	}
-	iface, err := net.InterfaceByName(dev)
-	if err != nil {
-		l.Fatalf("%v not found: %v", dev, err)
-		return err
-	}
-
-	switch op {
-	case "add":
-		if err := NetworkLinkAddIp(iface, addr, network); err != nil {
-			l.Fatalf("Adding %v to %v failed: %v", ip, dev, err)
-		}
-	default:
-		l.Fatalf("%v is not supported yet", op)
-	}
-	return nil
-
-}
-
 // in the ip command, turns out 'dev' is a noise word.
 // The BNF is not right there either.
 // Always make it optional.
@@ -101,6 +78,7 @@ func showips() {
 		l.Printf("%v: %v", v, addrs)
 	}
 }
+
 func addrip() {
 	var err error
 	var addr net.IP
