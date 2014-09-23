@@ -13,7 +13,6 @@ import (
 	"strings"
 )
 
-
 // you will notice that I suck at parsers. That said, here is the method to my madness.
 // The language of ip is not super consistent and has lots of convenience shortcuts.
 // The BNF it shows you doesn't show them.
@@ -25,7 +24,7 @@ import (
 // and accumulate information into a global set of variables. At any point we can see into the
 // whole set of args and see where we are. We can indicate at each point what we're expecting so
 // that in usage() or recover() we can tell the user exactly what we wanted, unlike IP,
-// which just barfs a whole (incorrect) BNF at you when you do anything wrong. 
+// which just barfs a whole (incorrect) BNF at you when you do anything wrong.
 // To handle errors in too few arguments, we just do a recover block. That lets us blindly
 // reference the arg[] array without having to check the length everywhere.
 
@@ -109,11 +108,11 @@ func addrip() {
 		return
 	}
 	cursor++
-	whatIWant = "add"
+	whatIWant = "add|del"
 	cmd := arg[cursor]
 
 	switch cmd {
-	case "add":
+	case "add", "del":
 		cursor++
 		whatIWant = "CIDR format address"
 		addr, network, err = net.ParseCIDR(arg[cursor])
@@ -128,6 +127,10 @@ func addrip() {
 	case "add":
 		if err := NetworkLinkAddIp(iface, addr, network); err != nil {
 			l.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
+		}
+	case "del":
+		if err := NetworkLinkDelIp(iface, addr, network); err != nil {
+			l.Fatalf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
 		l.Fatalf("devip: arg[0] changed: can't happen")
@@ -147,21 +150,21 @@ func linkshow() {
 func linkset() {
 	iface := dev()
 	cursor++
-	whatIWant="up|down"
+	whatIWant = "up|down"
 	switch arg[cursor] {
-		case "up":
+	case "up":
 		if err := NetworkLinkUp(iface); err != nil {
 			l.Fatalf("%v can't make it up: %v", dev, err)
 		}
-		case "down":
+	case "down":
 		if err := NetworkLinkDown(iface); err != nil {
 			l.Fatalf("%v can't make it down: %v", dev, err)
 		}
-		default:
-			usage()
+	default:
+		usage()
 	}
 }
-	
+
 func link() {
 	cursor++
 	whatIWant = "show|set"
@@ -202,24 +205,24 @@ func nexthop() (string, string) {
 	whatIWant = "Gateway CIDR"
 	return nh, arg[cursor]
 }
-	
+
 func routeadddefault() {
-	nh,nhval := nexthop()
-	// TODO: NHFLAGS. 
+	nh, nhval := nexthop()
+	// TODO: NHFLAGS.
 	d := dev()
 	switch nh {
-	case "via": 
+	case "via":
 		l.Printf("Add default route %v via %v", nhval, d)
 		AddDefaultGw(nhval, d.Name)
-	default: 
+	default:
 		usage()
 	}
 }
 
 func routeadd() {
 	ns := nodespec()
-	switch(ns) {
-		case "default":
+	switch ns {
+	case "default":
 		routeadddefault()
 	default:
 		usage()
@@ -235,12 +238,12 @@ func route() {
 
 	whatIWant = "show|add"
 	switch arg[cursor] {
-		case "show": 
-			routeshow()
-		case "add":
-			routeadd()
-		default:
-			usage()
+	case "show":
+		routeshow()
+	case "add":
+		routeadd()
+	default:
+		usage()
 	}
 
 }
@@ -265,7 +268,7 @@ func main() {
 	}()
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
-	switch arg[cursor]{
+	switch arg[cursor] {
 	case "addr":
 		addrip()
 	case "link":
