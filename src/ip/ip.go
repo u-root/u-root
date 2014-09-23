@@ -13,12 +13,28 @@ import (
 	"strings"
 )
 
+
+// you will notice that I suck at parsers. That said, here is the method to my madness.
+// The language of ip is not super consistent and has lots of convenience shortcuts.
+// The BNF it shows you doesn't show them.
+// The inputs is just the set of args.
+// It's very short.
+// Each token is just a string and we need not produce terminals with them -- they can
+// just be the terminals and we can switch on them.
+// The cursor is always our current token pointer. We do a dumb recursive descent parser
+// and accumulate information into a global set of variables. At any point we can see into the
+// whole set of args and see where we are. We can indicate at each point what we're expecting so
+// that in usage() or recover() we can tell the user exactly what we wanted, unlike IP,
+// which just barfs a whole (incorrect) BNF at you when you do anything wrong. 
+// To handle errors in too few arguments, we just do a recover block. That lets us blindly
+// reference the arg[] array without having to check the length everywhere.
+
 var (
 	// Cursor is out next token pointer.
 	// The language of this command doesn't require much more.
 	cursor    int
 	arg       []string
-	whatIWant = "addr|route"
+	whatIWant = "addr|route|link"
 	l         = log.New(os.Stdout, "ip: ", 0)
 )
 
@@ -160,6 +176,72 @@ func link() {
 		usage()
 	}
 	return
+}
+
+func routeshow() {
+	if b, err := ioutil.ReadFile("/proc/net/route"); err == nil {
+		l.Printf("%s", string(b))
+	} else {
+		l.Fatalf("Route show failed: %v", err)
+	}
+}
+func nodespec() string {
+	cursor++
+	whatIWant = "default|CIDR"
+	return arg[cursor]
+}
+
+func nexthop() (string, string) {
+	cursor++
+	whatIWant = "via"
+	if arg[cursor] != "via" {
+		usage()
+	}
+	nh := arg[cursor]
+	cursor++
+	whatIWant = "Gateway CIDR"
+	return nh, arg[cursor]
+}
+	
+func routeadddefault() {
+	nh,nhval := nexthop()
+	// TODO: NHFLAGS. 
+	d := dev()
+	switch nh {
+	case "via": 
+		l.Printf("Add default route %v via %v", nhval, d)
+		AddDefaultGw(nhval, d.Name)
+	default: 
+		usage()
+	}
+}
+
+func routeadd() {
+	ns := nodespec()
+	switch(ns) {
+		case "default":
+		routeadddefault()
+	default:
+		usage()
+	}
+}
+
+func route() {
+	cursor++
+	if len(arg[cursor:]) == 0 {
+		routeshow()
+		return
+	}
+
+	whatIWant = "show|add"
+	switch arg[cursor] {
+		case "show": 
+			routeshow()
+		case "add":
+			routeadd()
+		default:
+			usage()
+	}
 
 }
 func main() {
@@ -183,21 +265,14 @@ func main() {
 	}()
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
-	switch {
-	case arg[cursor] == "addr":
+	switch arg[cursor]{
+	case "addr":
 		addrip()
-
-	case arg[cursor] == "link":
+	case "link":
 		link()
-	case len(arg) == 1 && arg[0] == "route":
-		if b, err := ioutil.ReadFile("/proc/net/route"); err == nil {
-			l.Printf("%s", string(b))
-		} else {
-			l.Fatalf("Route failed: %v", err)
-		}
-	case len(arg) == 7 && arg[0] == "route" && arg[1] == "add" && arg[2] == "default" && arg[3] == "via" && arg[5] == "dev":
-		AddDefaultGw(arg[4], arg[6])
+	case "route":
+		route()
 	default:
-		l.Fatalf("We don't do this: %v; try addr or link or route", arg)
+		usage()
 	}
 }
