@@ -28,6 +28,8 @@ import (
 // To handle errors in too few arguments, we just do a recover block. That lets us blindly
 // reference the arg[] array without having to check the length everywhere.
 
+// Note the plethora of globals. The reason is simple: we parse one command, do it, and quit.
+// It doesn't make sense to write this otherwise.
 var (
 	// Cursor is out next token pointer.
 	// The language of this command doesn't require much more.
