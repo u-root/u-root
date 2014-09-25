@@ -17,6 +17,7 @@ rsync -av ../u-root/buildbin .
 rsync -av ../u-root/src .
 rsync -av ../u-root/etc .
 cpio -id < ../u-root/go.cpio
+cpio -id < ../u-root/tinycorebase/tinycorebase.cpio
 
 cp ../u-root//lib/x86_64-linux-gnu/libm.so.6 lib/x86_64-linux-gnu 
 cp ../u-root//lib/x86_64-linux-gnu/libc.so.6  lib/x86_64-linux-gnu 
