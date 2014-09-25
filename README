@@ -31,9 +31,8 @@ sudo mount -t tmpfs none bin
 sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
 sudo mount --bind /dev dev
-(GOBIN=`pwd`/bin go install -x init)
+(GOBIN=`pwd` go install -x init)
 # for building the initramfs
-cp bin/init .
 PATH=$OLDPATH
 set +e
 cpio -i -E tinycorebase/filelist < tinycorebase/corepure64.cpio
@@ -48,7 +47,7 @@ echo nameserver 8.8.8.8 >> etc/resolv.conf
 #export PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 #echo $PATH
 #sudo chroot . /buildbin/sh
-sudo chroot .  /bin/init
+sudo chroot .  /init
 set +e
 sudo umount tmp
 sudo umount etc

@@ -6,13 +6,16 @@ rm -f initramfs.cpio.lzma
 # 1. Copy the "myinit" program (compiled above) into the
 #    initramfs directory (and rename it to "init"):
 #cp myinit initramfs/init
-cp u-root/src/init/init initramfs
+set -e
+echo 'if this cp fails, run README in u-root'
+cp u-root/init initramfs
 
 # 2. Create the CPIO archive:
 cd initramfs
 mkdir -p lib/x86_64-linux-gnu lib64
 rsync -av ../u-root/buildbin .
 rsync -av ../u-root/src .
+rsync -av ../u-root/etc .
 cpio -id < ../u-root/go.cpio
 
 cp ../u-root//lib/x86_64-linux-gnu/libm.so.6 lib/x86_64-linux-gnu 
@@ -28,5 +31,6 @@ find . | cpio -H newc -o > ../initramfs.cpio # <-- this is the actual initramfs
 #exit # leave the fakeroot shell
 cd ..
 ls -l initramfs.cpio
+cp initramfs.cpio linux-3.14.17
 lzma -e initramfs.cpio
 cp initramfs.cpio.lzma coreboot
