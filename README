@@ -28,7 +28,8 @@ PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr/lib proc
 sudo mount -t tmpfs none bin
 #sudo mount -t tmpfs none tmp
-sudo mount -t tmpfs none etc
+# Don't bother mounting, we need the files later for the initramfs
+#sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
 sudo mount --bind /dev dev
 (GOBIN=`pwd` go install -x init)
