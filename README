@@ -18,8 +18,8 @@ mkdir -p go
 sudo mount -t tmpfs none go
 cpio -id < go.cpio
 OLDPATH=$PATH
-export GOPATH=$HOME/u-root
-export GOROOT=$HOME/u-root/go
+export GOPATH=`/bin/pwd`
+export GOROOT=$GOPATH/go
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
 #
 #(GOBIN=`pwd`/buildbin go install installcommand)
