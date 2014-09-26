@@ -36,7 +36,7 @@ sudo mount --bind /dev dev
 # for building the initramfs
 PATH=$OLDPATH
 set +e
-cpio -i -E tinycorebase/filelist < tinycorebase/corepure64.cpio
+cpio -id -E tinycorebase/filelist < tinycorebase/corepure64.cpio
 set -e
 #bash
 cat /etc/resolv.conf > etc/resolv.conf
