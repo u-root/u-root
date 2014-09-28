@@ -1,0 +1,701 @@
+Script started on Sun Sep 28 14:53:08 2014
+# cd /
+# /srvfiles -p 80 -d ~/u-oot
+^Z[1] + Stopped                    /srvfiles -p 80 -d ~/u-root
+# bg
+[1] /srvfiles -p 80 -d ~/u-root
+# cd /linux-*
+# pwd
+/linux-3.14.17
+# sh ../u-root/scripts/KERNELKVM
+Linux version 3.14.17-onie (root@a36ce38893ec) (gcc version 4.8.2 (Ubuntu 4.8.2-19ubuntu1) ) #5 SMP Sat Sep 27 21:14:51 UTC 2014
+Command line: console=ttyS0,115200
+KERNEL supported cpus:
+  Intel GenuineIntel
+  AMD AuthenticAMD
+e820: BIOS-provided physical RAM map:
+BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+BIOS-e820: [mem 0x000000000009fc00-0x000000000009ffff] reserved
+BIOS-e820: [mem 0x00000000000f0000-0x00000000000fffff] reserved
+BIOS-e820: [mem 0x0000000000100000-0x000000007fffcfff] usable
+BIOS-e820: [mem 0x000000007fffd000-0x000000007fffffff] reserved
+BIOS-e820: [mem 0x00000000feffc000-0x00000000feffffff] reserved
+BIOS-e820: [mem 0x00000000fffc0000-0x00000000ffffffff] reserved
+NX (Execute Disable) protection: active
+SMBIOS 2.4 present.
+Hypervisor detected: KVM
+No AGP bridge found
+e820: last_pfn = 0x7fffd max_arch_pfn = 0x400000000
+x86 PAT enabled: cpu 0, old 0x70406, new 0x7010600070106
+found SMP MP-table at [mem 0x000f0ae0-0x000f0aef] mapped at [ffff8800000f0ae0]
+init_memory_mapping: [mem 0x00000000-0x000fffff]
+init_memory_mapping: [mem 0x7fc00000-0x7fdfffff]
+init_memory_mapping: [mem 0x7c000000-0x7fbfffff]
+init_memory_mapping: [mem 0x00100000-0x7bffffff]
+init_memory_mapping: [mem 0x7fe00000-0x7fffcfff]
+ACPI: RSDP 00000000000f0a90 000014 (v00 BOCHS )
+ACPI: RSDT 000000007ffffc21 000034 (v01 BOCHS  BXPCRSDT 00000001 BXPC 00000001)
+ACPI: FACP 000000007fffef40 000074 (v01 BOCHS  BXPCFACP 00000001 BXPC 00000001)
+ACPI: DSDT 000000007fffddc0 001180 (v01 BOCHS  BXPCDSDT 00000001 BXPC 00000001)
+ACPI: FACS 000000007fffdd80 000040
+ACPI: SSDT 000000007fffefb4 000B85 (v01 BOCHS  BXPCSSDT 00000001 BXPC 00000001)
+ACPI: APIC 000000007ffffb39 0000B0 (v01 BOCHS  BXPCAPIC 00000001 BXPC 00000001)
+ACPI: HPET 000000007ffffbe9 000038 (v01 BOCHS  BXPCHPET 00000001 BXPC 00000001)
+kvm-clock: Using msrs 4b564d01 and 4b564d00
+kvm-clock: cpu 0, msr 0:7fff5001, boot clock
+Zone ranges:
+  DMA      [mem 0x00001000-0x00ffffff]
+  DMA32    [mem 0x01000000-0xffffffff]
+  Normal   empty
+Movable zone start for each node
+Early memory node ranges
+  node   0: [mem 0x00001000-0x0009efff]
+  node   0: [mem 0x00100000-0x7fffcfff]
+ACPI: PM-Timer IO Port: 0xb008
+ACPI: LAPIC (acpi_id[0x00] lapic_id[0x00] enabled)
+ACPI: LAPIC (acpi_id[0x01] lapic_id[0x01] enabled)
+ACPI: LAPIC (acpi_id[0x02] lapic_id[0x02] enabled)
+ACPI: LAPIC (acpi_id[0x03] lapic_id[0x03] enabled)
+ACPI: LAPIC (acpi_id[0x04] lapic_id[0x04] enabled)
+ACPI: LAPIC (acpi_id[0x05] lapic_id[0x05] enabled)
+ACPI: LAPIC (acpi_id[0x06] lapic_id[0x06] enabled)
+ACPI: LAPIC (acpi_id[0x07] lapic_id[0x07] enabled)
+ACPI: LAPIC_NMI (acpi_id[0xff] dfl dfl lint[0x1])
+ACPI: IOAPIC (id[0x00] address[0xfec00000] gsi_base[0])
+IOAPIC[0]: apic_id 0, version 17, address 0xfec00000, GSI 0-23
+ACPI: INT_SRC_OVR (bus 0 bus_irq 0 global_irq 2 dfl dfl)
+ACPI: INT_SRC_OVR (bus 0 bus_irq 5 global_irq 5 high level)
+ACPI: INT_SRC_OVR (bus 0 bus_irq 9 global_irq 9 high level)
+ACPI: INT_SRC_OVR (bus 0 bus_irq 10 global_irq 10 high level)
+ACPI: INT_SRC_OVR (bus 0 bus_irq 11 global_irq 11 high level)
+Using ACPI (MADT) for SMP configuration information
+ACPI: HPET id: 0x8086a201 base: 0xfed00000
+smpboot: Allowing 8 CPUs, 0 hotplug CPUs
+e820: [mem 0x80000000-0xfeffbfff] available for PCI devices
+Booting paravirtualized kernel on KVM
+setup_percpu: NR_CPUS:512 nr_cpumask_bits:512 nr_cpu_ids:8 nr_node_ids:1
+PERCPU: Embedded 26 pages/cpu @ffff88007fc00000 s73792 r8192 d24512 u262144
+kvm-clock: cpu 0, msr 0:7fff5001, primary cpu clock
+KVM setup async PF for cpu 0
+kvm-stealtime: cpu 0, msr 7fc0cb00
+Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 515974
+Kernel command line: console=ttyS0,115200
+PID hash table entries: 4096 (order: 3, 32768 bytes)
+Dentry cache hash table entries: 262144 (order: 9, 2097152 bytes)
+Inode-cache hash table entries: 131072 (order: 8, 1048576 bytes)
+Checking aperture...
+No AGP bridge found
+Memory: 2040132K/2096748K available (4882K kernel code, 473K rwdata, 1716K rodata, 10572K init, 420K bss, 56616K reserved)
+SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=8, Nodes=1
+Hierarchical RCU implementation.
+	CONFIG_RCU_FANOUT set to non-default value of 32
+	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=8.
+RCU: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=8
+NR_IRQS:33024 nr_irqs:744 16
+Console: colour VGA+ 80x25
+console [ttyS0] enabled
+tsc: Detected 1396.765 MHz processor
+Calibrating delay loop (skipped) preset value.. 2793.53 BogoMIPS (lpj=1396765)
+pid_max: default: 32768 minimum: 301
+ACPI: Core revision 20131218
+ACPI: All ACPI Tables successfully acquired
+Mount-cache hash table entries: 4096 (order: 3, 32768 bytes)
+Mountpoint-cache hash table entries: 4096 (order: 3, 32768 bytes)
+Last level iTLB entries: 4KB 0, 2MB 0, 4MB 0
+Last level dTLB entries: 4KB 0, 2MB 0, 4MB 0, 1GB 0
+tlb_flushall_shift: 6
+Freeing SMP alternatives memory: 32K (ffffffff812cb000 - ffffffff812d3000)
+..TIMER: vector=0x30 apic1=0 pin1=2 apic2=-1 pin2=-1
+smpboot: CPU0: Intel Common KVM processor (fam: 0f, model: 06, stepping: 01)
+APIC calibration not consistent with PM-Timer: 115ms instead of 100ms
+APIC delta adjusted to PM-Timer: 6249999 (7249779)
+Performance Events: unsupported Netburst CPU model 6 no PMU driver, software events only.
+x86: Booting SMP configuration:
+.... node  #0, CPUs:      #1
+kvm-clock: cpu 1, msr 0:7fff5041, secondary cpu clock
+KVM setup async PF for cpu 1
+ #2
+kvm-stealtime: cpu 1, msr 7fc4cb00
+kvm-clock: cpu 2, msr 0:7fff5081, secondary cpu clock
+ #3KVM setup async PF for cpu 2
+kvm-stealtime: cpu 2, msr 7fc8cb00
+
+kvm-clock: cpu 3, msr 0:7fff50c1, secondary cpu clock
+ #4KVM setup async PF for cpu 3
+kvm-stealtime: cpu 3, msr 7fcccb00
+
+kvm-clock: cpu 4, msr 0:7fff5101, secondary cpu clock
+ #5KVM setup async PF for cpu 4
+kvm-stealtime: cpu 4, msr 7fd0cb00
+
+kvm-clock: cpu 5, msr 0:7fff5141, secondary cpu clock
+ #6KVM setup async PF for cpu 5
+kvm-stealtime: cpu 5, msr 7fd4cb00
+
+kvm-clock: cpu 6, msr 0:7fff5181, secondary cpu clock
+ #7
+KVM setup async PF for cpu 6
+kvm-stealtime: cpu 6, msr 7fd8cb00
+kvm-clock: cpu 7, msr 0:7fff51c1, secondary cpu clock
+x86: Booted up 1 node, 8 CPUs
+KVM setup async PF for cpu 7
+kvm-stealtime: cpu 7, msr 7fdccb00
+smpboot: Total of 8 processors activated (22348.24 BogoMIPS)
+xor: measuring software checksum speed
+   prefetch64-sse:   120.000 MB/sec
+   generic_sse:   120.000 MB/sec
+xor: using function: generic_sse (120.000 MB/sec)
+NET: Registered protocol family 16
+cpuidle: using governor ladder
+cpuidle: using governor menu
+ACPI: bus type PCI registered
+PCI: Using configuration type 1 for base access
+bio: create slab <bio-0> at 0
+raid6: sse2x1    2906 MB/s
+raid6: sse2x2    3636 MB/s
+raid6: sse2x4    4554 MB/s
+raid6: using algorithm sse2x4 (4554 MB/s)
+raid6: using intx1 recovery algorithm
+ACPI: Added _OSI(Module Device)
+ACPI: Added _OSI(Processor Device)
+ACPI: Added _OSI(3.0 _SCP Extensions)
+ACPI: Added _OSI(Processor Aggregator Device)
+ACPI: Interpreter enabled
+ACPI: (supports S0 S5)
+ACPI: Using IOAPIC for interrupt routing
+PCI: Using host bridge windows from ACPI; if necessary, use "pci=nocrs" and report a bug
+ACPI: PCI Root Bridge [PCI0] (domain 0000 [bus 00-ff])
+acpi PNP0A03:00: _OSC: OS supports [Segments MSI]
+acpi PNP0A03:00: _OSC failed (AE_NOT_FOUND); disabling ASPM
+PCI host bridge to bus 0000:00
+pci_bus 0000:00: root bus resource [bus 00-ff]
+pci_bus 0000:00: root bus resource [io  0x0000-0x0cf7]
+pci_bus 0000:00: root bus resource [io  0x0d00-0xadff]
+pci_bus 0000:00: root bus resource [io  0xae0f-0xaeff]
+pci_bus 0000:00: root bus resource [io  0xaf20-0xafdf]
+pci_bus 0000:00: root bus resource [io  0xafe4-0xffff]
+pci_bus 0000:00: root bus resource [mem 0x000a0000-0x000bffff]
+pci_bus 0000:00: root bus resource [mem 0x80000000-0xfebfffff]
+pci 0000:00:01.3: quirk: [io  0xb000-0xb03f] claimed by PIIX4 ACPI
+pci 0000:00:01.3: quirk: [io  0xb100-0xb10f] claimed by PIIX4 SMB
+ACPI: PCI Interrupt Link [LNKA] (IRQs 5 *10 11)
+ACPI: PCI Interrupt Link [LNKB] (IRQs 5 *10 11)
+ACPI: PCI Interrupt Link [LNKC] (IRQs 5 10 *11)
+ACPI: PCI Interrupt Link [LNKD] (IRQs 5 10 *11)
+ACPI: PCI Interrupt Link [LNKS] (IRQs *9)
+ACPI: Enabled 16 GPEs in block 00 to 0F
+SCSI subsystem initialized
+ACPI: bus type USB registered
+usbcore: registered new interface driver usbfs
+usbcore: registered new interface driver hub
+usbcore: registered new device driver usb
+pps_core: LinuxPPS API ver. 1 registered
+pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+PTP clock support registered
+PCI: Using ACPI for IRQ routing
+HPET: 3 timers in total, 0 timers will be used for per-cpu timer
+Switched to clocksource kvm-clock
+pnp: PnP ACPI init
+ACPI: bus type PNP registered
+pnp: PnP ACPI: found 7 devices
+ACPI: bus type PNP unregistered
+NET: Registered protocol family 2
+TCP established hash table entries: 16384 (order: 5, 131072 bytes)
+TCP bind hash table entries: 16384 (order: 6, 262144 bytes)
+TCP: Hash tables configured (established 16384 bind 16384)
+TCP: reno registered
+UDP hash table entries: 1024 (order: 3, 32768 bytes)
+UDP-Lite hash table entries: 1024 (order: 3, 32768 bytes)
+NET: Registered protocol family 1
+RPC: Registered named UNIX socket transport module.
+RPC: Registered udp transport module.
+RPC: Registered tcp transport module.
+RPC: Registered tcp NFSv4.1 backchannel transport module.
+pci 0000:00:00.0: Limiting direct PCI/PCI transfers
+pci 0000:00:01.0: PIIX3: Enabling Passive Release
+pci 0000:00:01.0: Activating ISA DMA hang workarounds
+futex hash table entries: 2048 (order: 5, 131072 bytes)
+squashfs: version 4.0 (2009/01/31) Phillip Lougher
+NFS: Registering the id_resolver key type
+Key type id_resolver registered
+Key type id_legacy registered
+jffs2: version 2.2. (NAND) (SUMMARY)  © 2001-2006 Red Hat, Inc.
+msgmni has been set to 3984
+Block layer SCSI generic (bsg) driver version 0.4 loaded (major 251)
+io scheduler noop registered
+io scheduler deadline registered
+io scheduler cfq registered (default)
+input: Power Button as /devices/LNXSYSTM:00/LNXPWRBN:00/input/input0
+ACPI: Power Button [PWRF]
+Serial: 8250/16550 driver, 2 ports, IRQ sharing enabled
+00:05: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+Non-volatile memory driver v1.3
+brd: module loaded
+loop: module loaded
+e1000: Intel(R) PRO/1000 Network Driver - version 7.3.21-k8-NAPI
+e1000: Copyright (c) 1999-2006 Intel Corporation.
+e1000e: Intel(R) PRO/1000 Network Driver - 2.3.2-k
+e1000e: Copyright(c) 1999 - 2013 Intel Corporation.
+igb: Intel(R) Gigabit Ethernet Network Driver - version 5.0.5-k
+igb: Copyright (c) 2007-2013 Intel Corporation.
+8139cp: 8139cp: 10/100 PCI Ethernet driver v1.3 (Mar 22, 2004)
+ACPI: PCI Interrupt Link [LNKC] enabled at IRQ 11
+8139cp 0000:00:03.0 eth0: RTL-8139C+ at 0xffffc90004082000, 52:54:00:12:34:56, IRQ 11
+ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+ehci-pci: EHCI PCI platform driver
+uhci_hcd: USB Universal Host Controller Interface driver
+usbcore: registered new interface driver usb-storage
+usbcore: registered new interface driver usbserial
+rtc_cmos 00:00: RTC can wake from S4
+rtc_cmos 00:00: rtc core: registered rtc_cmos as rtc0
+rtc_cmos 00:00: alarms up to one day, 114 bytes nvram, hpet irqs
+i2c /dev entries driver
+md: linear personality registered for level -1
+md: raid0 personality registered for level 0
+md: raid1 personality registered for level 1
+md: raid10 personality registered for level 10
+md: raid6 personality registered for level 6
+md: raid5 personality registered for level 5
+md: raid4 personality registered for level 4
+device-mapper: uevent: version 1.0.3
+device-mapper: ioctl: 4.27.0-ioctl (2013-10-30) initialised: dm-devel@redhat.com
+device-mapper: raid: Loading target version 1.5.2
+sdhci: Secure Digital Host Controller Interface driver
+sdhci: Copyright(c) Pierre Ossman
+sdhci-pltfm: SDHCI platform and OF driver helper
+oprofile: using NMI interrupt.
+TCP: bic registered
+TCP: cubic registered
+TCP: westwood registered
+TCP: htcp registered
+Initializing XFRM netlink socket
+NET: Registered protocol family 10
+mip6: Mobile IPv6
+sit: IPv6 over IPv4 tunneling driver
+NET: Registered protocol family 17
+NET: Registered protocol family 15
+8021q: 802.1Q VLAN Support v1.8
+Key type dns_resolver registered
+console [netcon0] enabled
+netconsole: network logging started
+rtc_cmos 00:00: setting system clock to 2014-09-28 14:53:57 UTC (1411916037)
+Freeing unused kernel memory: 10572K (ffffffff80878000 - ffffffff812cb000)
+Write protecting the kernel read-only data: 8192k
+Freeing unused kernel memory: 1252K (ffff8800014c7000 - ffff880001600000)
+Freeing unused kernel memory: 332K (ffff8800017ad000 - ffff880001800000)
+2014/09/28 14:53:57 Welcome to u-root
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/cat failed; symlink /buildbin/installcommand /buildbin/cat: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/cmp failed; symlink /buildbin/installcommand /buildbin/cmp: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/comm failed; symlink /buildbin/installcommand /buildbin/comm: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/cp failed; symlink /buildbin/installcommand /buildbin/cp: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/datsc: Refined TSC clocksource calibration: 1396.750 MHz
+te failed; symlink /buildbin/installcommand /buildbin/date: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/dmesg failed; symlink /buildbin/installcommand /buildbin/dmesg: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/echo failed; symlink /buildbin/installcommand /buildbin/echo: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/freq failed; symlink /buildbin/installcommand /buildbin/freq: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/ip failed; symlink /buildbin/installcommand /buildbin/ip: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/ldd failed; symlink /buildbin/installcommand /buildbin/ldd: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/losetup failed; symlink /buildbin/installcommand /buildbin/losetup: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/ls failed; symlink /buildbin/installcommand /buildbin/ls: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/mkdir failed; symlink /buildbin/installcommand /buildbin/mkdir: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/mount failed; symlink /buildbin/installcommand /buildbin/mount: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/netcat failed; symlink /buildbin/installcommand /buildbin/netcat: file exists
+2014/09/28 14:53:57 Symlink /buildbin/installcommand -> /buildbin/printenv failed; symlink /buildbin/installcommand /buildbin/printenv: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/rm failed; symlink /buildbin/installcommand /buildbin/rm: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/sh failed; symlink /buildbin/installcommand /buildbin/sh: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/srvfiles failed; symlink /buildbin/installcommand /buildbin/srvfiles: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/tcz failed; symlink /buildbin/installcommand /buildbin/tcz: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/tee failed; symlink /buildbin/installcommand /buildbin/tee: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/uniq failed; symlink /buildbin/installcommand /buildbin/uniq: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/wc failed; symlink /buildbin/installcommand /buildbin/wc: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/wget failed; symlink /buildbin/installcommand /buildbin/wget: file exists
+2014/09/28 14:53:58 Symlink /buildbin/installcommand -> /buildbin/which failed; symlink /buildbin/installcommand /buildbin/which: file exists
+2014/09/28 14:53:58 envs [GOPATH=/ CGO_ENABLED=0 PATH=/go/bin:/bin:/buildbin:/usr/local/bin: LD_LIBRARY_PATH=/usr/local/lib GOROOT=/go]
+2014/09/28 14:53:58 Run &{/go/bin/go [go install -x installcommand] [GOPATH=/ CGO_ENABLED=0 PATH=/go/bin:/bin:/buildbin:/usr/local/bin: LD_LIBRARY_PATH=/usr/local/lib GOROOT=/go GOBIN=/buildbin] / 0xc20803a000 0xc20803a008 0xc20803a010 [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+WORK=/tmp/go-build689446878
+mkdir -p $WORK/runtime/_obj/
+mkdir -p $WORK/
+cd /go/src/pkg/runtime
+/go/pkg/tool/linux_amd64/6g -o $WORK/runtime.a -trimpath $WORK -p runtime -+ -D _/go/src/pkg/runtime -I $WORK -pack ./compiler.go ./debug.go ./error.go ./extern.go ./mem.go ./mgc0.go ./softfloat64.go ./sqrt.go ./type.go ./zgoarch_amd64.go ./zgoos_linux.go ./zruntime_defs_linux_amd64.go ./zversion.go
+cp /go/src/pkg/runtime/arch_amd64.h $WORK/runtime/_obj/arch_GOARCH.h
+cp /go/src/pkg/runtime/defs_linux_amd64.h $WORK/runtime/_obj/defs_GOOS_GOARCH.h
+cp /go/src/pkg/runtime/os_linux.h $WORK/runtime/_obj/os_GOOS.h
+cp /go/src/pkg/runtime/signal_linux_amd64.h $WORK/runtime/_obj/signal_GOOS_GOARCH.h
+cp /go/src/pkg/runtime/signals_linux.h $WORK/runtime/_obj/signals_GOOS.h
+cp /go/src/pkg/runtime/zasm_linux_amd64.h $WORK/runtime/_obj/zasm_GOOS_GOARCH.h
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/atomic_amd64x.6 -D GOOS_linux -D GOARCH_amd64 ./atomic_amd64x.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/cgocall.6 -D GOOS_linux -D GOARCH_amd64 ./cgocall.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/defs.6 -D GOOS_linux -D GOARCH_amd64 ./defs.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/env_posix.6 -D GOOS_linux -D GOARCH_amd64 ./env_posix.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/float.6 -D GOOS_linux -D GOARCH_amd64 ./float.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/heapdump.6 -D GOOS_linux -D GOARCH_amd64 ./heapdump.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/lock_futex.6 -D GOOS_linux -D GOARCH_amd64 ./lock_futex.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/mcache.6 -D GOOS_linux -D GOARCH_amd64 ./mcache.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/mcentral.6 -D GOOS_linux -D GOARCH_amd64 ./mcentral.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/mem_linux.6 -D GOOS_linux -D GOARCH_amd64 ./mem_linux.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/mfixalloc.6 -D GOOS_linux -D GOARCH_amd64 ./mfixalloc.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/mgc0.6 -D GOOS_linux -D GOARCH_amd64 ./mgc0.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/mheap.6 -D GOOS_linux -D GOARCH_amd64 ./mheap.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/msize.6 -D GOOS_linux -D GOARCH_amd64 ./msize.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/netpoll_epoll.6 -D GOOS_linux -D GOARCH_amd64 ./netpoll_epoll.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/os_linux.6 -D GOOS_linux -D GOARCH_amd64 ./os_linux.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/panic.6 -D GOOS_linux -D GOARCH_amd64 ./panic.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/parfor.6 -D GOOS_linux -D GOARCH_amd64 ./parfor.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/print.6 -D GOOS_linux -D GOARCH_amd64 ./print.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/proc.6 -D GOOS_linux -D GOARCH_amd64 ./proc.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/race0.6 -D GOOS_linux -D GOARCH_amd64 ./race0.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/rune.6 -D GOOS_linux -D GOARCH_amd64 ./rune.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/runtime.6 -D GOOS_linux -D GOARCH_amd64 ./runtime.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/signal_amd64x.6 -D GOOS_linux -D GOARCH_amd64 ./signal_amd64x.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/signal_unix.6 -D GOOS_linux -D GOARCH_amd64 ./signal_unix.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/stack.6 -D GOOS_linux -D GOARCH_amd64 ./stack.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/sys_x86.6 -D GOOS_linux -D GOARCH_amd64 ./sys_x86.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/traceback_x86.6 -D GOOS_linux -D GOARCH_amd64 ./traceback_x86.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/vdso_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./vdso_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zalg_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zalg_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zchan_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zchan_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zcomplex_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zcomplex_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zcpuprof_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zcpuprof_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zhashmap_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zhashmap_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/ziface_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./ziface_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zlfstack_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zlfstack_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zmalloc_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zmalloc_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zmprof_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zmprof_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/znetpoll_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./znetpoll_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zrdebug_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zrdebug_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zruntime1_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zruntime1_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zsema_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zsema_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zsigqueue_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zsigqueue_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zslice_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zslice_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zstring_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zstring_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/zsymtab_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zsymtab_linux_amd64.c
+/go/pkg/tool/linux_amd64/6c -F -V -w -trimpath $WORK -I $WORK/runtime/_obj/ -I /go/pkg/linux_amd64 -o $WORK/runtime/_obj/ztime_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./ztime_linux_amd64.c
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/runtime/_obj/ -o $WORK/runtime/_obj/asm_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./asm_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/runtime/_obj/ -o $WORK/runtime/_obj/memclr_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./memclr_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/runtime/_obj/ -o $WORK/runtime/_obj/memmove_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./memmove_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/runtime/_obj/ -o $WORK/runtime/_obj/rt0_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./rt0_linux_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/runtime/_obj/ -o $WORK/runtime/_obj/sys_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./sys_linux_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/runtime/_obj/ -o $WORK/runtime/_obj/zsys_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./zsys_linux_amd64.s
+pack r $WORK/runtime.a $WORK/runtime/_obj/atomic_amd64x.6 $WORK/runtime/_obj/cgocall.6 $WORK/runtime/_obj/defs.6 $WORK/runtime/_obj/env_posix.6 $WORK/runtime/_obj/float.6 $WORK/runtime/_obj/heapdump.6 $WORK/runtime/_obj/lock_futex.6 $WORK/runtime/_obj/mcache.6 $WORK/runtime/_obj/mcentral.6 $WORK/runtime/_obj/mem_linux.6 $WORK/runtime/_obj/mfixalloc.6 $WORK/runtime/_obj/mgc0.6 $WORK/runtime/_obj/mheap.6 $WORK/runtime/_obj/msize.6 $WORK/runtime/_obj/netpoll_epoll.6 $WORK/runtime/_obj/os_linux.6 $WORK/runtime/_obj/panic.6 $WORK/runtime/_obj/parfor.6 $WORK/runtime/_obj/print.6 $WORK/runtime/_obj/proc.6 $WORK/runtime/_obj/race0.6 $WORK/runtime/_obj/rune.6 $WORK/runtime/_obj/runtime.6 $WORK/runtime/_obj/signal_amd64x.6 $WORK/runtime/_obj/signal_unix.6 $WORK/runtime/_obj/stack.6 $WORK/runtime/_obj/sys_x86.6 $WORK/runtime/_obj/traceback_x86.6 $WORK/runtime/_obj/vdso_linux_amd64.6 $WORK/runtime/_obj/zalg_linux_amd64.6 $WORK/runtime/_obj/zchan_linux_amd64.6 $WORK/runtime/_obj/zcomplex_linux_amd64.6 $WORK/runtime/_obj/zcpuprof_linux_amd64.6 $WORK/runtime/_obj/zhashmap_linux_amd64.6 $WORK/runtime/_obj/ziface_linux_amd64.6 $WORK/runtime/_obj/zlfstack_linux_amd64.6 $WORK/runtime/_obj/zmalloc_linux_amd64.6 $WORK/runtime/_obj/zmprof_linux_amd64.6 $WORK/runtime/_obj/znetpoll_linux_amd64.6 $WORK/runtime/_obj/zrdebug_linux_amd64.6 $WORK/runtime/_obj/zruntime1_linux_amd64.6 $WORK/runtime/_obj/zsema_linux_amd64.6 $WORK/runtime/_obj/zsigqueue_linux_amd64.6 $WORK/runtime/_obj/zslice_linux_amd64.6 $WORK/runtime/_obj/zstring_linux_amd64.6 $WORK/runtime/_obj/zsymtab_linux_amd64.6 $WORK/runtime/_obj/ztime_linux_amd64.6 $WORK/runtime/_obj/asm_amd64.6 $WORK/runtime/_obj/memclr_amd64.6 $WORK/runtime/_obj/memmove_amd64.6 $WORK/runtime/_obj/rt0_linux_amd64.6 $WORK/runtime/_obj/sys_linux_amd64.6 $WORK/runtime/_obj/zsys_linux_amd64.6 # internal
+mkdir -p /go/pkg/linux_amd64/
+mv $WORK/runtime.a /go/pkg/linux_amd64/runtime.a
+mkdir -p $WORK/errors/_obj/
+cd /go/src/pkg/errors
+/go/pkg/tool/linux_amd64/6g -o $WORK/errors.a -trimpath $WORK -p errors -complete -D _/go/src/pkg/errors -I $WORK -pack ./errors.go
+mkdir -p $WORK/sync/atomic/_obj/
+mkdir -p $WORK/sync/
+cd /go/src/pkg/sync/atomic
+/go/pkg/tool/linux_amd64/6g -o $WORK/sync/atomic.a -trimpath $WORK -p sync/atomic -D _/go/src/pkg/sync/atomic -I $WORK -pack ./doc.go
+mkdir -p $WORK/math/_obj/
+cd /go/src/pkg/math
+/go/pkg/tool/linux_amd64/6g -o $WORK/math.a -trimpath $WORK -p math -D _/go/src/pkg/math -I $WORK -pack ./abs.go ./acosh.go ./asin.go ./asinh.go ./atan.go ./atan2.go ./atanh.go ./bits.go ./cbrt.go ./const.go ./copysign.go ./dim.go ./erf.go ./exp.go ./expm1.go ./floor.go ./frexp.go ./gamma.go ./hypot.go ./j0.go ./j1.go ./jn.go ./ldexp.go ./lgamma.go ./log.go ./log10.go ./log1p.go ./logb.go ./mod.go ./modf.go ./nextafter.go ./pow.go ./pow10.go ./remainder.go ./signbit.go ./sin.go ./sincos.go ./sinh.go ./sqrt.go ./tan.go ./tanh.go ./unsafe.go
+cd /go/src/pkg/sync/atomic
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/sync/atomic/_obj/ -o $WORK/sync/atomic/_obj/asm_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./asm_amd64.s
+mkdir -p $WORK/unicode/utf8/_obj/
+mkdir -p $WORK/unicode/
+cd /go/src/pkg/unicode/utf8
+/go/pkg/tool/linux_amd64/6g -o $WORK/unicode/utf8.a -trimpath $WORK -p unicode/utf8 -complete -D _/go/src/pkg/unicode/utf8 -I $WORK -pack ./utf8.go
+cd /go/src/pkg/sync/atomic
+pack r $WORK/sync/atomic.a $WORK/sync/atomic/_obj/asm_amd64.6 # internal
+mkdir -p $WORK/unicode/_obj/
+cd /go/src/pkg/unicode
+/go/pkg/tool/linux_amd64/6g -o $WORK/unicode.a -trimpath $WORK -p unicode -complete -D _/go/src/pkg/unicode -I $WORK -pack ./casetables.go ./digit.go ./graphic.go ./letter.go ./tables.go
+mkdir -p $WORK/sort/_obj/
+cd /go/src/pkg/sort
+/go/pkg/tool/linux_amd64/6g -o $WORK/sort.a -trimpath $WORK -p sort -complete -D _/go/src/pkg/sort -I $WORK -pack ./search.go ./sort.go
+mkdir -p /go/pkg/linux_amd64/sync/
+mv $WORK/sync/atomic.a /go/pkg/linux_amd64/sync/atomic.a
+mv $WORK/errors.a /go/pkg/linux_amd64/errors.a
+mkdir -p /go/pkg/linux_amd64/unicode/
+mv $WORK/unicode/utf8.a /go/pkg/linux_amd64/unicode/utf8.a
+mkdir -p $WORK/sync/_obj/
+cd /go/src/pkg/sync
+/go/pkg/tool/linux_amd64/6g -o $WORK/sync.a -trimpath $WORK -p sync -D _/go/src/pkg/sync -I $WORK -pack ./cond.go ./mutex.go ./once.go ./pool.go ./race0.go ./runtime.go ./rwmutex.go ./waitgroup.go
+mv $WORK/sort.a /go/pkg/linux_amd64/sort.a
+mv $WORK/sync.a /go/pkg/linux_amd64/sync.a
+mkdir -p $WORK/io/_obj/
+cd /go/src/pkg/io
+/go/pkg/tool/linux_amd64/6g -o $WORK/io.a -trimpath $WORK -p io -complete -D _/go/src/pkg/io -I $WORK -pack ./io.go ./multi.go ./pipe.go
+mkdir -p $WORK/syscall/_obj/
+cd /go/src/pkg/syscall
+/go/pkg/tool/linux_amd64/6g -o $WORK/syscall.a -trimpath $WORK -p syscall -D _/go/src/pkg/syscall -I $WORK -pack ./env_unix.go ./exec_linux.go ./exec_unix.go ./flock.go ./lsf_linux.go ./netlink_linux.go ./race0.go ./sockcmsg_linux.go ./sockcmsg_unix.go ./str.go ./syscall.go ./syscall_linux.go ./syscall_linux_amd64.go ./syscall_unix.go ./zerrors_linux_amd64.go ./zsyscall_linux_amd64.go ./zsysnum_linux_amd64.go ./ztypes_linux_amd64.go
+mv $WORK/io.a /go/pkg/linux_amd64/io.a
+mv $WORK/unicode.a /go/pkg/linux_amd64/unicode.a
+mkdir -p $WORK/bytes/_obj/
+cd /go/src/pkg/bytes
+/go/pkg/tool/linux_amd64/6g -o $WORK/bytes.a -trimpath $WORK -p bytes -D _/go/src/pkg/bytes -I $WORK -pack ./buffer.go ./bytes.go ./bytes_decl.go ./reader.go
+mkdir -p $WORK/strings/_obj/
+cd /go/src/pkg/strings
+/go/pkg/tool/linux_amd64/6g -o $WORK/strings.a -trimpath $WORK -p strings -D _/go/src/pkg/strings -I $WORK -pack ./reader.go ./replace.go ./search.go ./strings.go ./strings_decl.go
+cd /go/src/pkg/bytes
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/bytes/_obj/ -o $WORK/bytes/_obj/bytes.6 -D GOOS_linux -D GOARCH_amd64 ./bytes.s
+pack r $WORK/bytes.a $WORK/bytes/_obj/bytes.6 # internal
+mv $WORK/bytes.a /go/pkg/linux_amd64/bytes.a
+cd /go/src/pkg/strings
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/strings/_obj/ -o $WORK/strings/_obj/strings.6 -D GOOS_linux -D GOARCH_amd64 ./strings.s
+pack r $WORK/strings.a $WORK/strings/_obj/strings.6 # internal
+mv $WORK/strings.a /go/pkg/linux_amd64/strings.a
+mkdir -p $WORK/path/_obj/
+cd /go/src/pkg/path
+/go/pkg/tool/linux_amd64/6g -o $WORK/path.a -trimpath $WORK -p path -complete -D _/go/src/pkg/path -I $WORK -pack ./match.go ./path.go
+mv $WORK/path.a /go/pkg/linux_amd64/path.a
+cd /go/src/pkg/math
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/abs_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./abs_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/asin_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./asin_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/atan2_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./atan2_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/atan_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./atan_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/dim_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./dim_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/exp2_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./exp2_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/exp_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./exp_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/expm1_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./expm1_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/floor_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./floor_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/frexp_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./frexp_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/hypot_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./hypot_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/ldexp_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./ldexp_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/log10_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./log10_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/log1p_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./log1p_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/log_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./log_amd64.s
+cd /go/src/pkg/syscall
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/syscall/_obj/ -o $WORK/syscall/_obj/asm_linux_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./asm_linux_amd64.s
+cd /go/src/pkg/math
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/mod_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./mod_amd64.s
+cd /go/src/pkg/syscall
+pack r $WORK/syscall.a $WORK/syscall/_obj/asm_linux_amd64.6 # internal
+mv $WORK/syscall.a /go/pkg/linux_amd64/syscall.a
+mkdir -p $WORK/time/_obj/
+cd /go/src/pkg/time
+/go/pkg/tool/linux_amd64/6g -o $WORK/time.a -trimpath $WORK -p time -D _/go/src/pkg/time -I $WORK -pack ./format.go ./sleep.go ./sys_unix.go ./tick.go ./time.go ./zoneinfo.go ./zoneinfo_read.go ./zoneinfo_unix.go
+cd /go/src/pkg/math
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/modf_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./modf_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/remainder_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./remainder_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/sin_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./sin_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/sincos_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./sincos_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/sqrt_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./sqrt_amd64.s
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/math/_obj/ -o $WORK/math/_obj/tan_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./tan_amd64.s
+pack r $WORK/math.a $WORK/math/_obj/abs_amd64.6 $WORK/math/_obj/asin_amd64.6 $WORK/math/_obj/atan2_amd64.6 $WORK/math/_obj/atan_amd64.6 $WORK/math/_obj/dim_amd64.6 $WORK/math/_obj/exp2_amd64.6 $WORK/math/_obj/exp_amd64.6 $WORK/math/_obj/expm1_amd64.6 $WORK/math/_obj/floor_amd64.6 $WORK/math/_obj/frexp_amd64.6 $WORK/math/_obj/hypot_amd64.6 $WORK/math/_obj/ldexp_amd64.6 $WORK/math/_obj/log10_amd64.6 $WORK/math/_obj/log1p_amd64.6 $WORK/math/_obj/log_amd64.6 $WORK/math/_obj/mod_amd64.6 $WORK/math/_obj/modf_amd64.6 $WORK/math/_obj/remainder_amd64.6 $WORK/math/_obj/sin_amd64.6 $WORK/math/_obj/sincos_amd64.6 $WORK/math/_obj/sqrt_amd64.6 $WORK/math/_obj/tan_amd64.6 # internal
+mv $WORK/math.a /go/pkg/linux_amd64/math.a
+mkdir -p $WORK/strconv/_obj/
+cd /go/src/pkg/strconv
+/go/pkg/tool/linux_amd64/6g -o $WORK/strconv.a -trimpath $WORK -p strconv -complete -D _/go/src/pkg/strconv -I $WORK -pack ./atob.go ./atof.go ./atoi.go ./decimal.go ./extfloat.go ./ftoa.go ./isprint.go ./itoa.go ./quote.go
+mv $WORK/strconv.a /go/pkg/linux_amd64/strconv.a
+mkdir -p $WORK/reflect/_obj/
+cd /go/src/pkg/reflect
+/go/pkg/tool/linux_amd64/6g -o $WORK/reflect.a -trimpath $WORK -p reflect -D _/go/src/pkg/reflect -I $WORK -pack ./deepequal.go ./makefunc.go ./type.go ./value.go
+mv $WORK/time.a /go/pkg/linux_amd64/time.a
+mkdir -p $WORK/os/_obj/
+cd /go/src/pkg/os
+/go/pkg/tool/linux_amd64/6g -o $WORK/os.a -trimpath $WORK -p os -D _/go/src/pkg/os -I $WORK -pack ./dir_unix.go ./doc.go ./env.go ./error.go ./error_unix.go ./exec.go ./exec_posix.go ./exec_unix.go ./file.go ./file_posix.go ./file_unix.go ./getwd.go ./path.go ./path_unix.go ./pipe_linux.go ./proc.go ./stat_linux.go ./sys_linux.go ./sys_unix.go ./types.go ./types_notwin.go
+mv $WORK/os.a /go/pkg/linux_amd64/os.a
+mkdir -p $WORK/path/filepath/_obj/
+mkdir -p $WORK/path/
+cd /go/src/pkg/path/filepath
+/go/pkg/tool/linux_amd64/6g -o $WORK/path/filepath.a -trimpath $WORK -p path/filepath -complete -D _/go/src/pkg/path/filepath -I $WORK -pack ./match.go ./path.go ./path_unix.go ./symlink.go
+mkdir -p /go/pkg/linux_amd64/path/
+mv $WORK/path/filepath.a /go/pkg/linux_amd64/path/filepath.a
+mkdir -p $WORK/os/exec/_obj/
+mkdir -p $WORK/os/
+cd /go/src/pkg/os/exec
+/go/pkg/tool/linux_amd64/6g -o $WORK/os/exec.a -trimpath $WORK -p os/exec -complete -D _/go/src/pkg/os/exec -I $WORK -pack ./exec.go ./lp_unix.go
+cd /go/src/pkg/reflect
+/go/pkg/tool/linux_amd64/6a -trimpath $WORK -I $WORK/reflect/_obj/ -o $WORK/reflect/_obj/asm_amd64.6 -D GOOS_linux -D GOARCH_amd64 ./asm_amd64.s
+pack r $WORK/reflect.a $WORK/reflect/_obj/asm_amd64.6 # internal
+mv $WORK/reflect.a /go/pkg/linux_amd64/reflect.a
+mkdir -p $WORK/fmt/_obj/
+cd /go/src/pkg/fmt
+/go/pkg/tool/linux_amd64/6g -o $WORK/fmt.a -trimpath $WORK -p fmt -complete -D _/go/src/pkg/fmt -I $WORK -pack ./doc.go ./format.go ./print.go ./scan.go
+mkdir -p /go/pkg/linux_amd64/os/
+mv $WORK/os/exec.a /go/pkg/linux_amd64/os/exec.a
+mv $WORK/fmt.a /go/pkg/linux_amd64/fmt.a
+mkdir -p $WORK/log/_obj/
+cd /go/src/pkg/log
+/go/pkg/tool/linux_amd64/6g -o $WORK/log.a -trimpath $WORK -p log -complete -D _/go/src/pkg/log -I $WORK -pack ./log.go
+mv $WORK/log.a /go/pkg/linux_amd64/log.a
+mkdir -p $WORK/installcommand/_obj/
+mkdir -p $WORK/installcommand/_obj/exe/
+cd /src/installcommand
+/go/pkg/tool/linux_amd64/6g -o $WORK/installcommand.a -trimpath $WORK -p installcommand -complete -D _/src/installcommand -I $WORK -pack ./installcommand.go
+cd .
+/go/pkg/tool/linux_amd64/6l -o $WORK/installcommand/_obj/exe/a.out -L $WORK -extld=gcc $WORK/installcommand.a
+mkdir -p /buildbin/
+mv $WORK/installcommand/_obj/exe/a.out /buildbin/installcommand
+2014/09/28 14:54:09 Run &{/buildbin/sh [/buildbin/sh] [GOPATH=/ CGO_ENABLED=0 PATH=/go/bin:/bin:/buildbin:/usr/local/bin: LD_LIBRARY_PATH=/usr/local/lib GOROOT=/go GOBIN=/bin]  0xc20803a000 0xc20803a008 0xc20803a010 [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+2014/09/28 14:54:09 cleanPath /buildbin/sh
+2014/09/28 14:54:09 bindir, commandname /buildbin/ sh
+2014/09/28 14:54:09 Run &{/go/bin/go [go install -x sh] [] / <nil> <nil> <nil> [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+2014/09/28 14:54:10 installcommand: go build returned
+% ip addr add 10.0.2.15/8 dev eth0
+2014/09/28 14:54:21 cleanPath ip
+2014/09/28 14:54:21 bindir, commandname  ip
+2014/09/28 14:54:21 Run &{/go/bin/go [go install -x ip] [] / <nil> <nil> <nil> [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+2014/09/28 14:54:22 installcommand: go build returned
+handleack pid 241 err <nil>
+wrong ERROR 0 [0 0 0 0]
+AKC: NIL
+% ip random: nonblocking pool is initialized
+link set dev eth0 up
+8139cp 0000:00:03.0 eth0: link up, 100Mbps, full-duplex, lpa 0x05E1
+handleack pid 245 err <nil>
+wrong ERROR 0 [0 0 0 0]
+AKC: NIL
+% ip route show
+ip: Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
+eth0	0000000A	00000000	0001	0	0	0	000000FF	0	0	0                                                                               
+% tcz -h 10.0.2.2 bash
+2014/09/28 14:54:40 cleanPath tcz
+2014/09/28 14:54:40 bindir, commandname  tcz
+2014/09/28 14:54:40 Run &{/go/bin/go [go install -x tcz] [] / <nil> <nil> <nil> [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+2014/09/28 14:54:43 installcommand: go build returned
+tcz: installPackage: bash.tcz map[]
+tcz: Fetch http://10.0.2.2:80//5.x/x86_64/tcz/bash.tcz
+tcz: resp &{200 OK 200 HTTP/1.1 1 1 map[Accept-Ranges:[bytes] Content-Length:[385024] Content-Type:[application/octet-stream] Last-Modified:[Thu, 25 Sep 2014 22:07:02 GMT] Date:[Sun, 28 Sep 2014 14:54:44 GMT]] 0xc20800e140 385024 [] false map[] 0xc208000000 <nil>} err <nil>
+tcz: created /5.x/x86_64/tcz/bash.tcz f &{0xc208022d50}
+tcz: c 385024 err <nil>
+tcz: Fetched bash.tcz
+tcz: Fetch http://10.0.2.2:80//5.x/x86_64/tcz/bash.tcz.dep
+tcz: resp &{200 OK 200 HTTP/1.1 1 1 map[Last-Modified:[Thu, 25 Sep 2014 22:07:02 GMT] Date:[Sun, 28 Sep 2014 14:54:45 GMT] Accept-Ranges:[bytes] Content-Length:[12] Content-Type:[text/plain; charset=utf-8]] 0xc20800e3c0 12 [] false map[] 0xc2080001a0 <nil>} err <nil>
+tcz: created /5.x/x86_64/tcz/bash.tcz.dep f &{0xc208022ff0}
+tcz: c 12 err <nil>
+tcz: Fetched dep ok!
+tcz: deplist for bash.tcz.dep is :[110 99 117 114 115 101 115 46 116 99 122 10]:
+tcz: FOR bash.tcz get package ncurses.tcz
+tcz: installPackage: ncurses.tcz map[bash.tcz:true]
+tcz: Fetch http://10.0.2.2:80//5.x/x86_64/tcz/ncurses.tcz
+tcz: resp &{200 OK 200 HTTP/1.1 1 1 map[Accept-Ranges:[bytes] Content-Length:[163840] Content-Type:[application/octet-stream] Last-Modified:[Thu, 25 Sep 2014 22:07:05 GMT] Date:[Sun, 28 Sep 2014 14:54:45 GMT]] 0xc20800e4c0 163840 [] false map[] 0xc208000270 <nil>} err <nil>
+tcz: created /5.x/x86_64/tcz/ncurses.tcz f &{0xc208023290}
+tcz: c 163840 err <nil>
+tcz: Fetched ncurses.tcz
+tcz: Fetch http://10.0.2.2:80//5.x/x86_64/tcz/ncurses.tcz.dep
+tcz: resp &{200 OK 200 HTTP/1.1 1 1 map[Accept-Ranges:[bytes] Content-Length:[19] Content-Type:[text/plain; charset=utf-8] Last-Modified:[Thu, 25 Sep 2014 22:07:05 GMT] Date:[Sun, 28 Sep 2014 14:54:45 GMT]] 0xc20800e640 19 [] false map[] 0xc208000340 <nil>} err <nil>
+tcz: created /5.x/x86_64/tcz/ncurses.tcz.dep f &{0xc208023440}
+tcz: c 19 err <nil>
+tcz: Fetched dep ok!
+tcz: deplist for ncurses.tcz.dep is :[110 99 117 114 115 101 115 45 99 111 109 109 111 110 46 116 99 122 10]:
+tcz: FOR ncurses.tcz get package ncurses-common.tcz
+tcz: installPackage: ncurses-common.tcz map[bash.tcz:true ncurses.tcz:true]
+tcz: Fetch http://10.0.2.2:80//5.x/x86_64/tcz/ncurses-common.tcz
+tcz: resp &{200 OK 200 HTTP/1.1 1 1 map[Date:[Sun, 28 Sep 2014 14:54:45 GMT] Accept-Ranges:[bytes] Content-Length:[8192] Content-Type:[application/octet-stream] Last-Modified:[Thu, 25 Sep 2014 22:07:05 GMT]] 0xc20800e380 8192 [] false map[] 0xc208000000 <nil>} err <nil>
+tcz: created /5.x/x86_64/tcz/ncurses-common.tcz f &{0xc208022ea0}
+tcz: c 8192 err <nil>
+tcz: Fetched ncurses-common.tcz
+tcz: Fetch http://10.0.2.2:80//5.x/x86_64/tcz/ncurses-common.tcz.dep
+tcz: resp &{200 OK 200 HTTP/1.1 1 1 map[Date:[Sun, 28 Sep 2014 14:54:45 GMT] Accept-Ranges:[bytes] Content-Length:[0] Content-Type:[text/plain; charset=utf-8] Last-Modified:[Thu, 25 Sep 2014 22:07:05 GMT]] 0xc20800e4c0 0 [] false map[] 0xc2080001a0 <nil>} err <nil>
+tcz: created /5.x/x86_64/tcz/ncurses-common.tcz.dep f &{0xc208023110}
+tcz: c 0 err <nil>
+tcz: Fetched dep ok!
+tcz: deplist for ncurses-common.tcz.dep is :[]:
+tcz: After installpackages: needPackages map[ncurses-common.tcz:true bash.tcz:true ncurses.tcz:true]
+tcz: setupPackages: @ bash.tcz deps map[bash.tcz:true ncurses.tcz:true ncurses-common.tcz:true]
+2014/09/28 14:54:45 a 0 b 0 err <nil>
+tcz: findloop gets /dev/loop0 err <nil>
+tcz: ffd 5 lfd 6
+tcz: walking, dir /tmp/tcloop/bash
+tcz: walking, dir /tmp/tcloop/bash/usr
+tcz: walking, dir /tmp/tcloop/bash/usr/local
+tcz: walking, dir /tmp/tcloop/bash/usr/local/bin
+tcz: Need to symlnk /tmp/tcloop/bash/usr/local/bin/bash to /tmp/tcloop/bash/usr/local/bin/bash
+tcz: Need to symlnk /tmp/tcloop/bash/usr/local/bin/bashbug to /tmp/tcloop/bash/usr/local/bin/bashbug
+tcz: walking, dir /tmp/tcloop/bash/usr/local/share
+tcz: walking, dir /tmp/tcloop/bash/usr/local/share/bash
+tcz: Need to symlnk /tmp/tcloop/bash/usr/local/share/bash/.bashrc to /tmp/tcloop/bash/usr/local/share/bash/.bashrc
+tcz: Need to symlnk /tmp/tcloop/bash/usr/local/share/bash/bashrc to /tmp/tcloop/bash/usr/local/share/bash/bashrc
+tcz: walking, dir /tmp/tcloop/bash/usr/local/share/info
+tcz: walking, dir /tmp/tcloop/bash/usr/local/tce.installed
+tcz: Need to symlnk /tmp/tcloop/bash/usr/local/tce.installed/bash to /tmp/tcloop/bash/usr/local/tce.installed/bash
+2014/09/28 14:54:45 a 1 b 0 err <nil>
+tcz: findloop gets /dev/loop1 err <nil>
+tcz: ffd 7 lfd 8
+tcz: walking, dir /tmp/tcloop/ncurses
+tcz: walking, dir /tmp/tcloop/ncurses/usr
+tcz: walking, dir /tmp/tcloop/ncurses/usr/local
+tcz: walking, dir /tmp/tcloop/ncurses/usr/local/lib
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libform.so to /tmp/tcloop/ncurses/usr/local/lib/libform.so
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libform.so.5 to /tmp/tcloop/ncurses/usr/local/lib/libform.so.5
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libform.so.5.9 to /tmp/tcloop/ncurses/usr/local/lib/libform.so.5.9
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libmenu.so to /tmp/tcloop/ncurses/usr/local/lib/libmenu.so
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libmenu.so.5 to /tmp/tcloop/ncurses/usr/local/lib/libmenu.so.5
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libmenu.so.5.9 to /tmp/tcloop/ncurses/usr/local/lib/libmenu.so.5.9
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libncurses.so to /tmp/tcloop/ncurses/usr/local/lib/libncurses.so
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libncurses.so.5 to /tmp/tcloop/ncurses/usr/local/lib/libncurses.so.5
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libncurses.so.5.9 to /tmp/tcloop/ncurses/usr/local/lib/libncurses.so.5.9
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libpanel.so to /tmp/tcloop/ncurses/usr/local/lib/libpanel.so
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libpanel.so.5 to /tmp/tcloop/ncurses/usr/local/lib/libpanel.so.5
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libpanel.so.5.9 to /tmp/tcloop/ncurses/usr/local/lib/libpanel.so.5.9
+tcz: Need to symlnk /tmp/tcloop/ncurses/usr/local/lib/libtermcap.so to /tmp/tcloop/ncurses/usr/local/lib/libtermcap.so
+2014/09/28 14:54:46 a 2 b 0 err <nil>
+tcz: findloop gets /dev/loop2 err <nil>
+tcz: ffd 9 lfd 10
+tcz: walking, dir /tmp/tcloop/ncurses-common
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/lib
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/lib/terminfo to /tmp/tcloop/ncurses-common/usr/local/lib/terminfo
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/tabset
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/tabset/std to /tmp/tcloop/ncurses-common/usr/local/share/tabset/std
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/tabset/stdcrt to /tmp/tcloop/ncurses-common/usr/local/share/tabset/stdcrt
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/tabset/vt100 to /tmp/tcloop/ncurses-common/usr/local/share/tabset/vt100
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/tabset/vt300 to /tmp/tcloop/ncurses-common/usr/local/share/tabset/vt300
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/terminfo
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/terminfo/a
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/a/ansi to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/a/ansi
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/terminfo/l
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/l/linux to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/l/linux
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/terminfo/r
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/r/rxvt to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/r/rxvt
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt100 to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt100
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102 to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102+enq to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102+enq
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102-nsgr to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102-nsgr
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102-w to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/v/vt102-w
+tcz: walking, dir /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm-color to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm-color
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm-new to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm-new
+tcz: Need to symlnk /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm-vt220 to /tmp/tcloop/ncurses-common/usr/local/share/terminfo/x/xterm-vt220
+% /usr/local/bin/bash
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+bash-4.2# ls
+2014/09/28 14:55:05 cleanPath ls
+2014/09/28 14:55:05 bindir, commandname  ls
+2014/09/28 14:55:05 Run &{/go/bin/go [go install -x ls] [] / <nil> <nil> <nil> [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+2014/09/28 14:55:05 installcommand: go build returned
+.
+5.x
+bin
+buildbin
+dev
+etc
+go
+init
+lib
+lib64
+proc
+src
+tcz
+tmp
+usr
+bash-4.2# exit
+% /usr/local/bin/bash
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+bash-4.2# echo note the building works fine even in bash; it will buih as it builds date on<lding works fine even in bash as it builds date on                         demand
+note the building works fine even in bash as it builds date on demand
+bash-4.2# date
+2014/09/28 14:55:42 cleanPath date
+2014/09/28 14:55:42 bindir, commandname  date
+2014/09/28 14:55:42 Run &{/go/bin/go [go install -x date] [] / <nil> <nil> <nil> [] <nil> <nil> <nil> ?reflect.Value? false [] [] [] [] <nil>}
+2014/09/28 14:55:43 installcommand: go build returned
+2014-09-28 14:55:43.248532432 +0000 UTC
+bash-4.2# exit
+% 2014/09/28 14:55:51 init: /bin/sh returned!
+Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000000
+
+Kernel Offset: 0x0 from 0xffffffff80000000 (relocation range: 0xffffffff80000000-0xffffffff9fffffff)
+Rebooting in 120 seconds..qemu: terminating on signal 15
+# 
+# 
+# 
+
+Script done on Sun Sep 28 14:56:05 2014

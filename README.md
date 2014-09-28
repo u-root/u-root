@@ -11,3 +11,25 @@ The bin in ram comes in your path before the directory with the source code.
 When you run a command that is not built, you fall through to the command that does a
 'go build' of the command, and then execs the command once it is built. From that point on,
 when you run the command, you get the one in tmpfs. This is fast.
+
+To set up the chroot, put your go tree in /go via cp or mount --bind, and run
+getgo
+
+To try the chroot, once you've run getgo, just run 
+./README.
+
+In the kernel and coreboot case, you need to configure ethernet. We have a primitive
+ip command for that case. Since it's qemu:
+ip addr add 10.0.2.15/8 dev eth0
+ip link set dev eth0 up
+
+Note that in the kernel and coreboot case, you need to build and run
+src/srvfiles/srvfiles -p 80 -d path-to-local-tinycore-packages
+UNLESS you set up the qemu to NAT for you.
+
+You can get tinycore packages by running
+tcz bash
+
+In the EXAMPLES directory you can see examples of running in a chroot, kernel, and coreboot.
+
+We need help with this project, so contributions are welcome.
