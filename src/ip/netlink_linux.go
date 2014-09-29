@@ -359,10 +359,10 @@ done:
 			}
 			if m.Header.Type == syscall.NLMSG_ERROR {
 				error := int32(native.Uint32(m.Data[0:4]))
-				fmt.Printf("m.Header.Type is syscall.NLMSG_ERROR %v %v\n", error, m.Data[0:4])
 				if error == 0 {
 					break done
 				}
+				fmt.Printf("m.Header.Type is syscall.NLMSG_ERROR %v %v\n", error, m.Data[0:4])
 				return syscall.Errno(-error)
 			}
 		}
