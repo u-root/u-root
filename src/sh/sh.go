@@ -3,22 +3,36 @@
 // license that can be found in the LICENSE file.
 
 /*
-sh reads in a line at a time and runs it. 
+sh reads in a line at a time and runs it.
 prompt is '% '
 */
 
 package main
 
 import (
-	"path/filepath"
-	"os/exec"
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
-	"bufio"
 )
 
-var urpath = "/go/bin:/buildbin:/bin:/usr/local/bin:"
+type builtin func([]string) error
+
+var (
+	urpath   = "/go/bin:/buildbin:/bin:/usr/local/bin:"
+	builtins = make(map[string]builtin)
+)
+
+func addBuiltIn(name string, f builtin) error {
+	if _, ok := builtins[name]; ok {
+		return errors.New(fmt.Sprintf("%v already a builtin", name))
+	}
+	builtins[name] = f
+	return nil
+}
 
 func main() {
 	if len(os.Args) != 1 {
@@ -31,6 +45,10 @@ func main() {
 	for scanner.Scan() {
 		cmd := scanner.Text()
 		argv := strings.Split(cmd, " ")
+		if len(cmd) == 0 {
+			fmt.Printf("%% ")
+			continue
+		}
 		globargv := []string{}
 		for _, v := range argv[1:] {
 			if globs, err := filepath.Glob(v); err == nil {
@@ -39,14 +57,20 @@ func main() {
 				globargv = append(globargv, v)
 			}
 		}
-		run := exec.Command(argv[0], globargv[:]...)
-		run.Stdin = os.Stdin
-		run.Stdout = os.Stdout
-		run.Stderr = os.Stderr
-		if err := run.Start(); err != nil {
-			fmt.Printf("%v: Path %v\n", err, os.Getenv("PATH"))
-		} else if err := run.Wait(); err != nil {
-			fmt.Printf("wait: %v:\n", err)
+		if b, ok := builtins[argv[0]]; ok {
+			if err := b(globargv); err != nil {
+				fmt.Printf("%v\n", err)
+			}
+		} else if len(argv) > 0 {
+			run := exec.Command(argv[0], globargv[:]...)
+			run.Stdin = os.Stdin
+			run.Stdout = os.Stdout
+			run.Stderr = os.Stderr
+			if err := run.Start(); err != nil {
+				fmt.Printf("%v: Path %v\n", err, os.Getenv("PATH"))
+			} else if err := run.Wait(); err != nil {
+				fmt.Printf("wait: %v:\n", err)
+			}
 		}
 		fmt.Printf("%% ")
 	}
