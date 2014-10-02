@@ -10,6 +10,7 @@ prompt is '% '
 package main
 
 import (
+	"path/filepath"
 	"os/exec"
 	"fmt"
 	"os"
@@ -30,7 +31,15 @@ func main() {
 	for scanner.Scan() {
 		cmd := scanner.Text()
 		argv := strings.Split(cmd, " ")
-		run := exec.Command(argv[0], argv[1:]...)
+		globargv := []string{}
+		for _, v := range argv[1:] {
+			if globs, err := filepath.Glob(v); err == nil {
+				globargv = append(globargv, globs...)
+			} else {
+				globargv = append(globargv, v)
+			}
+		}
+		run := exec.Command(argv[0], globargv[:]...)
 		run.Stdin = os.Stdin
 		run.Stdout = os.Stdout
 		run.Stderr = os.Stderr
