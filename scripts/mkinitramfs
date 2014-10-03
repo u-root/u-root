@@ -36,5 +36,3 @@ find . | cpio -H newc -o > ../initramfs.cpio # <-- this is the actual initramfs
 cd ..
 ls -l initramfs.cpio
 cp initramfs.cpio linux-3.14.17
-lzma -e initramfs.cpio
-cp initramfs.cpio.lzma coreboot
