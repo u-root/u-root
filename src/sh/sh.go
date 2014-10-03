@@ -19,7 +19,7 @@ import (
 	"strings"
 )
 
-type builtin func([]string) error
+type builtin func(string, []string) error
 
 var (
 	urpath   = "/go/bin:/buildbin:/bin:/usr/local/bin:"
@@ -32,6 +32,26 @@ func addBuiltIn(name string, f builtin) error {
 	}
 	builtins[name] = f
 	return nil
+}
+
+func runit(cmd string, argv []string) error {
+	if b, ok := builtins[cmd]; ok {
+		if err := b(cmd, argv); err != nil {
+			fmt.Printf("%v\n", err)
+		}
+	} else {
+		run := exec.Command(cmd, argv[:]...)
+		run.Stdin = os.Stdin
+		run.Stdout = os.Stdout
+		run.Stderr = os.Stderr
+		if err := run.Start(); err != nil {
+			return errors.New(fmt.Sprintf("%v: Path %v\n", err, os.Getenv("PATH")))
+		} else if err := run.Wait(); err != nil {
+			return errors.New(fmt.Sprintf("wait: %v:\n", err))
+		}
+	}
+	return nil
+
 }
 
 func main() {
@@ -51,27 +71,17 @@ func main() {
 		}
 		globargv := []string{}
 		for _, v := range argv[1:] {
-			if globs, err := filepath.Glob(v); err == nil {
+			if globs, err := filepath.Glob(v); err == nil && len(globs) > 0 {
 				globargv = append(globargv, globs...)
 			} else {
 				globargv = append(globargv, v)
 			}
 		}
-		if b, ok := builtins[argv[0]]; ok {
-			if err := b(globargv); err != nil {
-				fmt.Printf("%v\n", err)
-			}
-		} else if len(argv) > 0 {
-			run := exec.Command(argv[0], globargv[:]...)
-			run.Stdin = os.Stdin
-			run.Stdout = os.Stdout
-			run.Stderr = os.Stderr
-			if err := run.Start(); err != nil {
-				fmt.Printf("%v: Path %v\n", err, os.Getenv("PATH"))
-			} else if err := run.Wait(); err != nil {
-				fmt.Printf("wait: %v:\n", err)
-			}
+		err := runit(argv[0], globargv)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
+
 		fmt.Printf("%% ")
 	}
 }

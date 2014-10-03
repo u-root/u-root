@@ -6,19 +6,22 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"os"
+	"time"
 )
 
 func init() {
-	addBuiltIn("cd", cd)
+	addBuiltIn("time", runtime)
 }
 
-func cd(cmd string, s []string) error {
-	if len(s) != 1 {
-		return errors.New("usage: cd one-path")
+func runtime(cmd string, s []string) error {
+	var err error
+	start := time.Now()
+	if len(s) > 0 {
+		err = runit(s[0], s[1:])
 	}
-
-	err := os.Chdir(s[0])
+	cost := time.Since(start)
+	fmt.Fprintf(os.Stderr, "%v\n", cost)
 	return err
 }
