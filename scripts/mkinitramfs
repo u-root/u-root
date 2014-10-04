@@ -13,7 +13,6 @@ cp u-root/init initramfs
 # 2. Create the CPIO archive:
 cd initramfs
 mkdir -p lib/x86_64-linux-gnu lib64
-rsync -av ../u-root/buildbin .
 rsync -av ../u-root/src .
 rsync -av ../u-root/etc .
 cpio -id < ../u-root/go.cpio
