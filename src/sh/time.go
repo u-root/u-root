@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// our first builtin: cd
+// runtime runs the command and prints the time it took.
+// The command can be a builtin, e.g.
+// time time time time time time date
+// works fine.
+
 package main
 
 import (
