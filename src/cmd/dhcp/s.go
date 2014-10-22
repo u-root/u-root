@@ -1,5 +1,5 @@
 // Example of minimal DHCP server:
-package dhcp4_test
+package main
 
 import (
 	dhcp "dhcp4"
@@ -12,7 +12,7 @@ import (
 
 // Example using DHCP with a single network interface device
 func ExampleHandler() {
-	serverIP := net.IP{172, 30, 0, 1}
+	serverIP := net.IP{127, 0, 0, 1}
 	handler := &DHCPHandler{
 		ip:            serverIP,
 		leaseDuration: 2 * time.Hour,
@@ -99,4 +99,8 @@ func (h *DHCPHandler) freeLease() int {
 		}
 	}
 	return -1
+}
+
+func main(){
+	go ExampleHandler()
 }
