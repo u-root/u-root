@@ -10,6 +10,16 @@
 # This script assumes you have done that; if not,
 # have your arg be the path-to-go
 
+# Also, to further compress things, you can
+# cd /go/src/cmd/go
+# go install -tags cmd_go_bootstrap
+# the go_bootstrap will land in /go/tools/pkg/OS_ARCH as go_bootstrap
+# in the long term we'll use this, as it makes u-root workable.
+# This shrinks the go command by 50% or so.
+# You can later recreate the full command once booted:
+# cd /go/src/cmd/go
+# go install 
+
 # I can't believe I have to do this.
 # There are more compact forms (e.g. {6a,6c,6g,6l} but this
 # simple-minded format works with simple shells.
