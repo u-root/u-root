@@ -103,7 +103,7 @@ func (h *DHCPHandler) freeLease() int {
 	return -1
 }
 
-func main(){
+func main() {
 	go ExampleHandler()
 	client()
 	time.Sleep(time.Hour)
