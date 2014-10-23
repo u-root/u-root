@@ -4,6 +4,7 @@ package main
 import (
 	dhcp "dhcp4"
 
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -44,6 +45,7 @@ type DHCPHandler struct {
 }
 
 func (h *DHCPHandler) ServeDHCP(p dhcp.Packet, msgType dhcp.MessageType, options dhcp.Options) (d dhcp.Packet) {
+	fmt.Printf("serve!\n")
 	switch msgType {
 
 	case dhcp.Discover:
@@ -103,4 +105,6 @@ func (h *DHCPHandler) freeLease() int {
 
 func main(){
 	go ExampleHandler()
+	client()
+	time.Sleep(time.Hour)
 }

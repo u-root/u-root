@@ -1,6 +1,7 @@
 package dhcp4
 
 import (
+	"log"
 	"net"
 	"strconv"
 )
@@ -34,23 +35,28 @@ func Serve(conn ServeConn, handler Handler) error {
 	buffer := make([]byte, 1500)
 	for {
 		n, addr, err := conn.ReadFrom(buffer)
+		log.Printf("read from: %v %v %v", n, addr, err)
 		if err != nil {
 			return err
 		}
 		if n < 240 { // Packet too small to be DHCP
+			log.Printf("Packet too small to be DHCP")
 			continue
 		}
 		req := Packet(buffer[:n])
 		if req.HLen() > 16 { // Invalid size
+			log.Printf("Invalid size")
 			continue
 		}
 		options := req.ParseOptions()
 		var reqType MessageType
 		if t := options[OptionDHCPMessageType]; len(t) != 1 {
+			log.Printf("len(options) != 1, is %d", len(t))
 			continue
 		} else {
 			reqType = MessageType(t[0])
 			if reqType < Discover || reqType > Inform {
+				log.Printf("reqType is %d, < %d or > %d", reqType, Discover, Inform)
 				continue
 			}
 		}
@@ -58,6 +64,7 @@ func Serve(conn ServeConn, handler Handler) error {
 			// If IP not available, broadcast
 			ipStr, portStr, err := net.SplitHostPort(addr.String())
 			if err != nil {
+				log.Printf("netSplitHostPort fails: %v", err)
 				return err
 			}
 
