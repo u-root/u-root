@@ -9,18 +9,45 @@ import (
 )
 
 func c2() {
+     r := make(chan dhcp.Packet)
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Printf("client: Can't enumerate interfaces? %v", err)
 		return
 	}
+	for _, v := range(ifaces) {
+		go one(v.HardwareAddr, r)
+		}
+		for p := range r {
+		    fmt.Printf("GOT ONE! %v\n", p)
+		    if p.OpCode() != dhcp.BootReply {
+		       		  fmt.Printf("not a reply?\n")
+				continue
+		}
+		options := p.ParseOptions()
+		switch dhcp.MessageType(options[dhcp.OptionDHCPMessageType][0]) {
+		    case dhcp.Offer:
+		    	 fmt.Printf("reply. flags %v HLen %v XId %v CI %v YI %v SI %v GI %v CH %v\n", 
+			 		    p.Flags(), p.HLen(), p.XId(), 
+					    p.CIAddr(),
+					    p.YIAddr(),
+					    p.SIAddr(),
+					    p.GIAddr(),
+					    p.CHAddr())
+			 
+		    default:
+			fmt.Printf("not what we hoped: %v\n", dhcp.MessageType(p.HType()))
+		    }
+		}
+}
+
+func one(h net.HardwareAddr, r chan dhcp.Packet) {
 	addr, _, err := net.ParseCIDR("0.0.0.0/32")
 	if err != nil {
 		log.Printf("client: Can't parse to ip: %v", err)
-		return
+		return 
 	}
-
-	p := dhcp.RequestPacket(dhcp.Discover, ifaces[0].HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
+	p := dhcp.RequestPacket(dhcp.Discover, h, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: %q\n", p)
 
 	d, err := net.ListenPacket("udp", "")
@@ -59,7 +86,7 @@ func c2() {
 				continue
 			} else {
 				fmt.Printf("client: Data %v amt %v a %v\n", b, n, a)
-				return
+				r <- dhcp.Packet(b[:])
 			}
 		}
 	}

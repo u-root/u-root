@@ -104,6 +104,7 @@ func (h *DHCPHandler) freeLease() int {
 }
 
 func main() {
+	// testing only.
 	go ExampleHandler()
 	//	client()
 	c2()
