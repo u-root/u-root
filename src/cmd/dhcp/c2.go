@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func client() {
+func c2() {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Printf("client: Can't enumerate interfaces? %v", err)
@@ -23,12 +23,14 @@ func client() {
 	p := dhcp.RequestPacket(dhcp.Discover, ifaces[0].HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: %q\n", p)
 
+	d, err := net.ListenPacket("udp", "")
+	if err != nil {
+		fmt.Printf("listen packet: %v\n", err)
+		return
+	}
+	defer d.Close()
 	for {
 		fmt.Printf("Try it\n")
-		d, err := net.Dial("udp", "127.0.0.1:67")
-		if err != nil {
-			log.Printf("client: dial bad %v", err)
-		}
 		fmt.Printf("client: d is %q\n", d)
 		ra, err := net.ResolveUDPAddr("udp", "127.0.0.1:67")
 		if err != nil {
@@ -41,7 +43,7 @@ func client() {
 			log.Printf("client: Can't set deadline: %v\n", err)
 			return
 		}
-		if _, err := d.Write(p); err != nil {
+		if _, err := d.WriteTo(p, ra); err != nil {
 			log.Printf("client: WriteToUDP failed: %v", err)
 			return
 		} else {
@@ -52,11 +54,11 @@ func client() {
 			}
 			fmt.Printf("Client: sleep the read\n")
 			time.Sleep(time.Second)
-			if n, err := d.Read(b[:]); err != nil {
+			if n, a, err := d.ReadFrom(b[:]); err != nil {
 				log.Printf("client: Read  from UDP failed: %v", err)
 				continue
 			} else {
-				fmt.Printf("client: Data %v amt %v \n", b, n)
+				fmt.Printf("client: Data %v amt %v a %v\n", b, n, a)
 				return
 			}
 		}

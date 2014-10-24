@@ -17,11 +17,11 @@ func ExampleHandler() {
 	handler := &DHCPHandler{
 		ip:            serverIP,
 		leaseDuration: 2 * time.Hour,
-		start:         net.IP{172, 30, 0, 2},
+		start:         net.IP{127, 0, 0, 1},
 		leaseRange:    50,
 		leases:        make(map[int]lease, 10),
 		options: dhcp.Options{
-			dhcp.OptionSubnetMask:       []byte{255, 255, 240, 0},
+			dhcp.OptionSubnetMask:       []byte{255, 255, 255, 0},
 			dhcp.OptionRouter:           []byte(serverIP), // Presuming Server is also your router
 			dhcp.OptionDomainNameServer: []byte(serverIP), // Presuming Server is also your DNS server
 		},
@@ -105,6 +105,7 @@ func (h *DHCPHandler) freeLease() int {
 
 func main() {
 	go ExampleHandler()
-	client()
-	time.Sleep(time.Hour)
+	//	client()
+	c2()
+	fmt.Printf("CLIENT RETURNED!\n")
 }
