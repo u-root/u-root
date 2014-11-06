@@ -43,14 +43,14 @@ echo nameserver 8.8.8.8 >> etc/resolv.conf
 #
 sudo chroot .  /init
 set +e
-sudo umount tmp
-sudo umount etc
-sudo umount bin
-sudo umount tcz
-sudo umount go
-sudo umount dev
-sudo umount proc
-sudo umount tmp/tcloop/*
+sudo umount ./tmp
+sudo umount ./etc
+sudo umount ./bin
+sudo umount ./tcz
+sudo umount ./go
+sudo umount ./dev
+sudo umount ./proc
+sudo umount ./tmp/tcloop/*
 
 # Simple test once the primitive sh starts:
 #date
