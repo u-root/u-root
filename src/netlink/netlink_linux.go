@@ -1,5 +1,5 @@
 // From docker.io. See the Apache License in this directory
-package main
+package netlink
 
 import (
 	"encoding/binary"

@@ -11,6 +11,8 @@ import (
 	"net"
 	"os"
 	"strings"
+
+	"netlink"
 )
 
 // you will notice that I suck at parsers. That said, here is the method to my madness.
@@ -105,11 +107,11 @@ func addrip() {
 	iface := dev()
 	switch cmd {
 	case "add":
-		if err := NetworkLinkAddIp(iface, addr, network); err != nil {
+		if err := netlink.NetworkLinkAddIp(iface, addr, network); err != nil {
 			l.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
-		if err := NetworkLinkDelIp(iface, addr, network); err != nil {
+		if err := netlink.NetworkLinkDelIp(iface, addr, network); err != nil {
 			l.Fatalf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
@@ -133,11 +135,11 @@ func linkset() {
 	whatIWant = "up|down"
 	switch arg[cursor] {
 	case "up":
-		if err := NetworkLinkUp(iface); err != nil {
+		if err := netlink.NetworkLinkUp(iface); err != nil {
 			l.Fatalf("%v can't make it up: %v", dev, err)
 		}
 	case "down":
-		if err := NetworkLinkDown(iface); err != nil {
+		if err := netlink.NetworkLinkDown(iface); err != nil {
 			l.Fatalf("%v can't make it down: %v", dev, err)
 		}
 	default:
@@ -193,7 +195,7 @@ func routeadddefault() {
 	switch nh {
 	case "via":
 		l.Printf("Add default route %v via %v", nhval, d)
-		AddDefaultGw(nhval, d.Name)
+		netlink.AddDefaultGw(nhval, d.Name)
 	default:
 		usage()
 	}

@@ -37,7 +37,7 @@ var (
 		"PATH":            "/go/bin:/bin:/buildbin:/usr/local/bin:",
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
-		"GOPATH":          "/",
+		"GOPATH":          "/src/cmd:/",
 		"CGO_ENABLED":     "0",
 	}
 
@@ -81,7 +81,7 @@ func main() {
 	}
 	// populate buildbin
 
-	if commands, err := ioutil.ReadDir("/src"); err == nil {
+	if commands, err := ioutil.ReadDir("/src/cmd"); err == nil {
 		for _, v := range commands {
 			name := v.Name()
 			if name == "installcommand" || name == "init" {

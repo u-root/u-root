@@ -20,6 +20,7 @@ OLDPATH=$PATH
 export GOPATH=`/bin/pwd`
 export GOROOT=$GOPATH/go
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
+GOPATH=$GOPATH:$GOPATH/src/cmd
 
 mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr/lib proc
 sudo mount -t tmpfs none bin

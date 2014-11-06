@@ -4,7 +4,7 @@
 // Actual implementations are in:
 // netlink_linux.go
 // netlink_darwin.go
-package main
+package netlink
 
 import (
 	"errors"

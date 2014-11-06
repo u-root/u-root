@@ -1,7 +1,7 @@
 // From docker.io. See the Apache License in this directory
 // +build !arm
 
-package main
+package netlink
 
 import (
 	"math/rand"
