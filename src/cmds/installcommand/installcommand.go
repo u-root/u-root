@@ -10,7 +10,7 @@ import (
 var urpath = "/go/bin:/bin:/buildbin:/usr/local/bin:"
 
 func main() {
-	/* e.g. (GOBIN=`pwd`/bin go install date) */
+	/* e.g. (GOBIN=`pwd`/bin go install cmds/date) */
 
 	cleanPath := path.Clean(os.Args[0])
 	log.Printf("cleanPath %v\n", cleanPath)
@@ -19,7 +19,7 @@ func main() {
 	destDir := "/bin"
 	destFile := path.Join(destDir, commandName)
 
-	cmd := exec.Command("go", "install", "-x", commandName)
+	cmd := exec.Command("go", "install", "-x", path.Join("cmds", commandName))
 
 	cmd.Dir = "/"
 

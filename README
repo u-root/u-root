@@ -20,7 +20,7 @@ OLDPATH=$PATH
 export GOPATH=`/bin/pwd`
 export GOROOT=$GOPATH/go
 PATH=$GOPATH/bin:$GOPATH/buildbin:$GOPATH/go/bin:$PATH
-GOPATH=$GOPATH:$GOPATH/src/cmd
+GOPATH=$GOPATH:$GOPATH/src/cmds
 
 mkdir -p  bin tmp etc go/pkg/linux_amd64 tcz dev lib usr/lib proc
 sudo mount -t tmpfs none bin
@@ -30,7 +30,7 @@ sudo mount -t tmpfs none bin
 #sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
 sudo mount --bind /dev dev
-(GOBIN=`pwd` go install -x init)
+(GOBIN=`pwd` go install -x cmds/init)
 # In case people want tinycore packages, get the .so's for tinycore
 PATH=$OLDPATH
 set +e

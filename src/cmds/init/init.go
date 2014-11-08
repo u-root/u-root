@@ -37,7 +37,7 @@ var (
 		"PATH":            "/go/bin:/bin:/buildbin:/usr/local/bin:",
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
-		"GOPATH":          "/src/cmd:/",
+		"GOPATH":          "/",
 		"CGO_ENABLED":     "0",
 	}
 
@@ -81,7 +81,7 @@ func main() {
 	}
 	// populate buildbin
 
-	if commands, err := ioutil.ReadDir("/src/cmd"); err == nil {
+	if commands, err := ioutil.ReadDir("/src/cmds"); err == nil {
 		for _, v := range commands {
 			name := v.Name()
 			if name == "installcommand" || name == "init" {
@@ -99,7 +99,7 @@ func main() {
 	}
 	log.Printf("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
-	cmd := exec.Command("go", "install", "-x", "installcommand")
+	cmd := exec.Command("go", "install", "-x", path.Join("cmds", "installcommand"))
 	installenvs := envs
 	installenvs = append(envs, "GOBIN=/buildbin")
 	cmd.Env = installenvs
