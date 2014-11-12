@@ -371,6 +371,45 @@ done:
 	return nil
 }
 
+// Add a new route table entry using IP types. 
+func AddRouteIP(iface *net.Interface, destData, srcData, gwData net.IP) error {
+
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	wb := newNetlinkRequest(syscall.RTM_NEWROUTE, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
+	msg := newRtMsg()
+	var rtAttrs []*RtAttr
+
+	rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_DST, destData))
+	rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_SRC, srcData))
+
+	rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_GATEWAY, gwData))
+
+	wb.AddData(msg)
+	for _, attr := range rtAttrs {
+		wb.AddData(attr)
+	}
+
+	var (
+		native = nativeEndian()
+		b      = make([]byte, 4)
+	)
+
+	native.PutUint32(b, uint32(iface.Index))
+
+	wb.AddData(newRtAttr(syscall.RTA_OIF, b))
+
+	if err := s.Send(wb); err != nil {
+		fmt.Printf("Send, err was %v\n", err)
+		return err
+	}
+	return s.HandleAck(wb.Seq)
+}
+
 // Add a new route table entry.
 func AddRoute(destination, source, gateway, device string) error {
 	if destination == "" && source == "" && gateway == "" {

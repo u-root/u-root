@@ -4,6 +4,7 @@ package main
 import (
 	dhcp "dhcp4"
 
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -104,8 +105,12 @@ func (h *DHCPHandler) freeLease() int {
 }
 
 func main() {
+	var test = flag.Bool("t", false, "run test server")
+	flag.Parse()
 	// testing only.
-	go ExampleHandler()
+	if *test {
+		go ExampleHandler()
+	}
 	//	client()
 	c2()
 	fmt.Printf("CLIENT RETURNED!\n")
