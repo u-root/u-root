@@ -34,7 +34,7 @@ var (
 	noshowmatch = flag.Bool("l", false, "list only files")
 	showname    = false
 	allGrep     = make(chan *oneGrep)
-	nGrep		= 0
+	nGrep       = 0
 )
 
 func grep(f *grepCommand, re *regexp.Regexp) {
@@ -47,7 +47,7 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 			m := re.Match([]byte(i))
 			if m == *Match {
 				res <- &grepResult{re.Match([]byte(i)), f, &i}
-				if (*noshowmatch) {
+				if *noshowmatch {
 					break
 				}
 			}
@@ -97,11 +97,11 @@ func main() {
 				// then all the sizes will be 0 and we'll just fall through.
 				filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
 					if fi.IsDir() && !*recursive {
-						fmt.Printf("grep: %v: Is a directory\n", name)
+						fmt.Fprintf(os.Stderr, "grep: %v: Is a directory\n", name)
 						return filepath.SkipDir
 					}
 					if err != nil {
-						fmt.Printf("%v: %v\n", name, err)
+						fmt.Fprintf(os.Stderr, "%v: %v\n", name, err)
 						return err
 					}
 					treenames <- name
