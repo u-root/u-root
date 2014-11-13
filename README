@@ -29,6 +29,7 @@ sudo mount -t tmpfs none bin
 # Don't bother mounting, we need the files later for the initramfs
 #sudo mount -t tmpfs none etc
 sudo mount -t tmpfs none tcz
+sudo mount -t tmpfs none buildbin
 sudo mount --bind /dev dev
 (GOBIN=`pwd` go install -x cmds/init)
 # In case people want tinycore packages, get the .so's for tinycore
@@ -51,6 +52,7 @@ sudo umount ./tcz
 sudo umount ./go
 sudo umount ./dev
 sudo umount ./proc
+sudo umount ./buildbin
 sudo umount ./tmp/tcloop/*
 
 # Simple test once the primitive sh starts:
