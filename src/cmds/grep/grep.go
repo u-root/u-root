@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Concurrent, parallel grep.
+// It has to deal with the EMFILE limit.
+// To do so we have one chan that is bounded.
+// From args, we use filepath.Walk to generate a chan of names.
+// From that, we create a chan of grepCommands.
+// From that, we create a chan of grepResults.
+// The grepResults contain matches or not-matches only.
+// if we are in -l mode, the goprocs handling the grep bail out as soon as the condition is met.
+// This grep is about 2x faster than GNU grep for simple non-recursive greps and slower
+// as soon as filepath.Walk enters the picture. Let's fix this.
 package main
 
 import (
@@ -37,6 +47,15 @@ var (
 	nGrep       = 0
 )
 
+// grep reads data from the os.File embedded in grepCommand.
+// It creates a chan of grepResults and pushes a pointer to it into allGrep.
+// It matches each line against the re and pushes the matching result
+// into the chan.
+// Bug: this chan should be created by the caller and passed in
+// to preserve file name order. Oops.
+// If we are only looking for a match, we exit as soon as the condition is met.
+// "match" means result of re.Match == Match flag.
+// bug: Match should be match, I expect.
 func grep(f *grepCommand, re *regexp.Regexp) {
 	nGrep++
 	r := bufio.NewReader(f)
@@ -125,6 +144,7 @@ func main() {
 			close(files)
 		}()
 		// now kick off the greps
+		// bug: file name order is not preserved here. Darn.
 
 		for f := range files {
 			go grep(f, re)
