@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"netlink"
 	"os"
 	"strings"
 
