@@ -105,7 +105,11 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	// possibly bogus packet created. I think they are not creating an IP header.
 	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: %q\n", p)
-
+	u := &IPUDPHeader {
+	Version: 4,
+	DPort: 67,
+	}
+	raw := u.Marshal(p)
 	s, err := syscall.LsfSocket(i.Index, syscall.ETH_P_IP)
 	if err != nil {
 		fmt.Printf("lsfsocket: got %v\n", err)
@@ -122,7 +126,7 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	}
 	for tries := 0; tries < 10; tries++ {
 		fmt.Printf("Try it\n")
-		err = syscall.Sendto(s, p, 0, bcast)
+		err = syscall.Sendto(s, raw, 0, bcast)
 		//err = pc.WriteTo(p, nil, addr)
 		if err != nil {
 			log.Printf("client: WriteToUDP failed: %v", err)
