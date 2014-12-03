@@ -227,9 +227,10 @@ func one(i net.Interface, r chan *dhcpInfo) {
 	Version: 4,
 	IHL: 5,
 	DPort: 67,
+	SPort: 68,
 	TotalLength: 300,
 	Length:300,
-	DIP: 0xfffffff,
+	DIP: 0xffffffff,
 	Protocol: syscall.IPPROTO_UDP,
 	TTL: 64,
 	}
