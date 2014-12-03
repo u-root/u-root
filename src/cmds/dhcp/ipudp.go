@@ -60,9 +60,11 @@ func NewEtherIPUDPHeader(data []byte) *EtherIPUDPHeader {
      var t16 uint16
 	u := &EtherIPUDPHeader{}
 	r := bytes.NewReader(data)
+/*
 	binary.Read(r, binary.BigEndian, u.Dst)
 	binary.Read(r, binary.BigEndian, u.Src)
 	binary.Read(r, binary.BigEndian, u.Etype)
+ */
 	binary.Read(r, binary.BigEndian, &t8)
 	u.Version = t8& 0xf
 	u.IHL = t8>>4

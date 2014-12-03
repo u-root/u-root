@@ -231,7 +231,7 @@ func one(i net.Interface, r chan *dhcpInfo) {
 
 	// we don't set family; Sendto does.
 	bcast := &syscall.SockaddrLinklayer{
-		Protocol: syscall.ETH_P_IP,
+		Protocol: 0x8, //syscall.ETH_P_IP,
 		Ifindex:  i.Index,
 		Halen:    6,
 		Addr:     [8]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
