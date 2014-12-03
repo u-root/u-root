@@ -14,7 +14,7 @@ GNU General Public License for more details.
 For full license details see <http://www.gnu.org/licenses/>.
 */
 
-// our big change is that we just smash it all into one IP/UDP header. 
+// our big change is that we just smash it all into one ether/IP/UDP header. 
 // layers are for cakes.
 package main
 
@@ -23,7 +23,10 @@ import (
 	"encoding/binary"
 )
 
-type IPUDPHeader struct {
+type EtherIPUDPHeader struct {
+     Dst [6]uint8
+     Src [6]uint8
+     Etype [2]uint8
      Version uint8 // 4
      IHL     uint8 //4
      DSCP    uint8 //6
@@ -52,11 +55,14 @@ type TCPOption struct {
 }
 
 // Parse packet into TCPHeader structure
-func NewIPUDPHeader(data []byte) *IPUDPHeader {
+func NewEtherIPUDPHeader(data []byte) *EtherIPUDPHeader {
      var t8 uint8
      var t16 uint16
-	u := &IPUDPHeader{}
+	u := &EtherIPUDPHeader{}
 	r := bytes.NewReader(data)
+	binary.Read(r, binary.BigEndian, u.Dst)
+	binary.Read(r, binary.BigEndian, u.Src)
+	binary.Read(r, binary.BigEndian, u.Etype)
 	binary.Read(r, binary.BigEndian, &t8)
 	u.Version = t8& 0xf
 	u.IHL = t8>>4
@@ -82,11 +88,14 @@ func NewIPUDPHeader(data []byte) *IPUDPHeader {
 	return u
 }
 
-func (u *IPUDPHeader) Marshal(datapacket[]byte) []byte {
+func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
 
      var t8 uint8
      var t16 uint16
 	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, u.Dst)
+	binary.Write(buf, binary.BigEndian, u.Src)
+	binary.Write(buf, binary.BigEndian, u.Etype)
 	t8 = u.Version | (u.IHL << 4)
 	binary.Write(buf, binary.BigEndian, t8)
 	t8 = u.DSCP | (u.ECN << 6)

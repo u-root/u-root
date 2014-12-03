@@ -89,6 +89,7 @@ import (
 	"regexp"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
 type dhcpInfo struct {
@@ -180,7 +181,9 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	// possibly bogus packet created. I think they are not creating an IP header.
 	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: %q\n", p)
-	u := &IPUDPHeader {
+	u := &EtherIPUDPHeader {
+	Dst: [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+	Etype: [2]byte{0, 8},
 	Version: 4,
 	DPort: 67,
 	TotalLength: 300,
@@ -190,30 +193,51 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	TTL: 64,
 	}
 	raw := u.Marshal(p)
+/* goddamn. if only this had worked.
 	s, err := syscall.LsfSocket(i.Index, syscall.ETH_P_IP)
+ */
+	// yegads, the socket interface sucks so hard for over 30 years now ...
+	// htons for a LOCAL RESOURCE? Riiiiiight.
+	// How I miss Plan 9
+	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, 8) //syscall.ETH_P_IP)
 	if err != nil {
 		fmt.Printf("lsfsocket: got %v\n", err)
 		r <- nil
 		return
 	}
+	var lsall syscall.SockaddrLinklayer
+	pp := (*[2]byte)(unsafe.Pointer(&lsall.Protocol))
+	pp[0] = 8
+	pp[1] = 0
+	lsall.Ifindex = i.Index
+	lsall.Halen = 6
+	lsall.Addr = [8]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	if err = syscall.Bind(s, &lsall); err != nil {
+		fmt.Printf("lsfsocket: bind got %v\n", err)
+		r <- nil
+		return
+	}
 
 	// we don't set family; Sendto does.
+/*
 	bcast := &syscall.SockaddrLinklayer{
 		Protocol: syscall.ETH_P_IP,
 		Ifindex:  i.Index,
 		Halen:    6,
 		Addr:     [8]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	}
+ */
 	for tries := 0; tries < 10; tries++ {
 		fmt.Printf("Try it\n")
-		err = syscall.Sendto(s, raw, 0, bcast)
+		//err = syscall.Sendto(s, raw, 0, bcast)
 		//err = pc.WriteTo(p, nil, addr)
+		n, err := syscall.Write(s, raw)
 		if err != nil {
 			log.Printf("client: WriteToUDP failed: %v", err)
 			r <- nil
 			return
 		}
-		log.Printf("wrote it; get it")
+		log.Printf("wrote it; %v bytes", n)
 		fmt.Printf("Client: sleep the read\n")
 		time.Sleep(time.Second)
 
