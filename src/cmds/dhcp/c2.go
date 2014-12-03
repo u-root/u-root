@@ -1,4 +1,79 @@
 package main
+/* sample good packet.
+29:26:3e:37 (oui Unknown), length 300, xid 0x1b83823b, Flags [none] (0x0000)
+	  Client-Ethernet-Address 00:0c:29:26:3e:37 (oui Unknown)
+	  Vendor-rfc1048 Extensions
+	    Magic Cookie 0x63825363
+	    DHCP-Message Option 53, length 1: Request
+	    Requested-IP Option 50, length 4: 192.168.28.203
+	    Hostname Option 12, length 24: "rminnich-virtual-machine"
+	    Parameter-Request Option 55, length 13: 
+	      Subnet-Mask, BR, Time-Zone, Default-Gateway
+	      Domain-Name, Domain-Name-Server, Option 119, Hostname
+	      Netbios-Name-Server, Netbios-Scope, MTU, Classless-Static-Route
+	      NTP
+	    END Option 255, length 0
+	    PAD Option 0, length 0, occurs 9
+	0x0000:  4510 0148 0000 0000 8011 3996 0000 0000
+	0x0010:  ffff ffff 0044 0043 0134 7422 0101 0600
+	0x0020:  1b83 823b 0000 0000 0000 0000 0000 0000
+	0x0030:  0000 0000 0000 0000 000c 2926 3e37 0000
+	0x0040:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0050:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0060:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0070:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0080:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0090:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00a0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00b0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00c0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00d0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00e0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00f0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0100:  0000 0000 0000 0000 6382 5363 3501 0332
+	0x0110:  04c0 a81c cb0c 1872 6d69 6e6e 6963 682d
+	0x0120:  7669 7274 7561 6c2d 6d61 6368 696e 6537
+	0x0130:  0d01 1c02 030f 0677 0c2c 2f1a 792a ff00
+	0x0140:  0000 0000 0000 0000
+
+
+strace of dhclient shows a write of this packet:
+
+9955  socket(PF_PACKET, SOCK_RAW, 768)  = 5
+9955  ioctl(5, SIOCGIFINDEX, {ifr_name="eth0", ifr_index=2}) = 0
+9955  bind(5, {sa_family=AF_PACKET, proto=0x03, if2, pkttype=PACKET_HOST, addr(0)={0, }, 20) = 0
+9955  setsockopt(5, SOL_PACKET, PACKET_AUXDATA, [1], 4) = 0
+9955  setsockopt(5, SOL_SOCKET, SO_ATTACH_FILTER, "\v\0\0\0\0\0\0\0\200\363\3761,\177\0\0", 16) = 0
+9955  sendto(3, "<30>Dec  2 17:52:12 dhclient: Listening on LPF/eth0/00:0c:29:26:3e:37", 69, MSG_NOSIGNAL, NULL, 0) = 69
+9955  write(2, "Listening on LPF/eth0/00:0c:29:26:3e:37", 39) = 39
+9955  write(2, "\n", 1)                 = 1
+9955  sendto(3, "<30>Dec  2 17:52:12 dhclient: Sending on   LPF/eth0/00:0c:29:26:3e:37", 69, MSG_NOSIGNAL, NULL, 0) = 69
+9955  write(2, "Sending on   LPF/eth0/00:0c:29:26:3e:37", 39) = 39
+9955  write(2, "\n", 1)                 = 1
+9955  fcntl(5, F_SETFD, FD_CLOEXEC)     = 0
+9955  socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP) = 6
+9955  setsockopt(6, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+9955  bind(6, {sa_family=AF_INET, sin_port=htons(68), sin_addr=inet_addr("0.0.0.0")}, 16) = 0
+9955  sendto(3, "<30>Dec  2 17:52:12 dhclient: Sending on   Socket/fallback", 58, MSG_NOSIGNAL, NULL, 0) = 58
+9955  write(2, "Sending on   Socket/fallback", 28) = 28
+9955  write(2, "\n", 1)                 = 1
+9955  fcntl(6, F_SETFD, FD_CLOEXEC)     = 0
+9955  uname({sys="Linux", node="rminnich-virtual-machine", ...}) = 0
+9955  sendto(3, "<30>Dec  2 17:52:12 dhclient: DHCPREQUEST of 192.168.28.203 on eth0 to 255.255.255.255 port 67 (xid=0x3b82831b)", 111, MSG_NOSIGNAL, NULL, 0) = 111
+9955  write(2, "DHCPREQUEST of 192.168.28.203 on eth0 to 255.255.255.255 port 67 (xid=0x3b82831b)", 81) = 81
+9955  write(2, "\n", 1)                 = 1
+
+H = 0x48 = 3 words of options (HL is 8 words).
+9955  write(5, "\377\377\377\377\377\377 \0\f)&>7 \10\0E \20\1 H \0\0\0\0\200\0219\226\0\0\0\0\377\377\377\377 (options) \0D\0C\0014t\"\1\1\6\0\33\203\202;\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\f)&>7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0c\202Sc5\1\0032\4\300\250\34\313\f\30rminnich-virtual-machine7\r\1\34\2\3\17\6w\f,/\32y*\377\0\0\0\0\0\0\0\0\0", 342) = 342
+
+
+9955  write(5, "\377\377\377\377\377\377\0\f)&>7\10\0E\20\1H\0\0\0\0\200\0219\226\0\0\0\0\377\377\377\377\0D\0C\0014t\"\1\1\6\0\33\203\202;\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\f)&>7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0c\202Sc5\1\0032\4\300\250\34\313\f\30rminnich-virtual-machine7\r\1\34\2\3\17\6w\f,/\32y*\377\0\0\0\0\0\0\0\0\0", 342) = 342
+
+hmm.
+
+dest is ffffff, and we don't have that. do we need to add the enet header too?
+
+*/
 
 // what we've learned.
 // must send packets on link layer
@@ -108,6 +183,11 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	u := &IPUDPHeader {
 	Version: 4,
 	DPort: 67,
+	TotalLength: 300,
+	Length:300,
+	DIP: 0xfffffff,
+	Protocol: syscall.IPPROTO_UDP,
+	TTL: 64,
 	}
 	raw := u.Marshal(p)
 	s, err := syscall.LsfSocket(i.Index, syscall.ETH_P_IP)
