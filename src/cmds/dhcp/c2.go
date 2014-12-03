@@ -1,5 +1,9 @@
 package main
 
+// what we've learned.
+// must send packets on link layer
+// Our packet assembly is wrong.
+
 import (
 	dhcp "dhcp4"
 	"fmt"
@@ -7,6 +11,8 @@ import (
 	"net"
 	"netlink"
 	"os"
+	"regexp"
+	"syscall"
 	"time"
 )
 
@@ -15,7 +21,7 @@ type dhcpInfo struct {
 	dhcp.Packet
 }
 
-func c2() {
+func c2(re *regexp.Regexp) {
 	fails := 0
 	r := make(chan *dhcpInfo)
 	ifaces, err := net.Interfaces()
@@ -24,6 +30,9 @@ func c2() {
 		return
 	}
 	for _, v := range ifaces {
+		if !re.Match([]byte(v.Name)) {
+			continue
+		}
 		go one(&v, r)
 	}
 	for p := range r {
@@ -81,7 +90,7 @@ func c2() {
 }
 
 func one(i *net.Interface, r chan *dhcpInfo) {
-     // the link has to be uppable
+	// the link has to be uppable
 	if err := netlink.NetworkLinkUp(i); err != nil {
 		log.Printf("%v can't make it up: %v", i, err)
 		return
@@ -93,53 +102,48 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 		r <- nil
 		return
 	}
+	// possibly bogus packet created. I think they are not creating an IP header.
 	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: %q\n", p)
 
-	d, err := net.ListenPacket("udp", "")
+	s, err := syscall.LsfSocket(i.Index, syscall.ETH_P_IP)
 	if err != nil {
-		fmt.Printf("listen packet: %v\n", err)
+		fmt.Printf("lsfsocket: got %v\n", err)
 		r <- nil
 		return
 	}
-	defer d.Close()
-	for {
-		fmt.Printf("Try it\n")
-		fmt.Printf("client: d is %q\n", d)
-		//ra, err := net.ResolveUDPAddr("udp", "127.0.0.1:67")
-		ra, err := net.ResolveUDPAddr("udp", "255.255.255.255:67")
-		if err != nil {
-			log.Printf("client: ResolveUDPAddr failed: %v", err)
-		r <- nil
-			return
-		}
 
-		fmt.Printf("client: ra %v\n", ra)
-		if err := d.SetDeadline(time.Now().Add(10000 * time.Millisecond)); err != nil {
-			log.Printf("client: Can't set deadline: %v\n", err)
-		r <- nil
-			return
-		}
-		if _, err := d.WriteTo(p, ra); err != nil {
+	// we don't set family; Sendto does.
+	bcast := &syscall.SockaddrLinklayer{
+		Protocol: syscall.ETH_P_IP,
+		Ifindex:  i.Index,
+		Halen:    6,
+		Addr:     [8]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+	}
+	for tries := 0; tries < 10; tries++ {
+		fmt.Printf("Try it\n")
+		err = syscall.Sendto(s, p, 0, bcast)
+		//err = pc.WriteTo(p, nil, addr)
+		if err != nil {
 			log.Printf("client: WriteToUDP failed: %v", err)
-		r <- nil
+			r <- nil
 			return
-		} else {
-			b := [512]byte{}
-			if err := d.SetReadDeadline(time.Now().Add(10000 * time.Millisecond)); err != nil {
-				log.Printf("client: Can't set deadline: %v\n", err)
-		r <- nil
-				return
-			}
-			fmt.Printf("Client: sleep the read\n")
-			time.Sleep(time.Second)
-			if n, a, err := d.ReadFrom(b[:]); err != nil {
-				log.Printf("client: Read  from UDP failed: %v", err)
-				continue
-			} else {
-				fmt.Printf("client: Data %v amt %v a %v\n", b, n, a)
-				r <- &dhcpInfo{i, dhcp.Packet(b[:])}
-			}
 		}
+		log.Printf("wrote it; get it")
+		fmt.Printf("Client: sleep the read\n")
+		time.Sleep(time.Second)
+
+		/*
+			b := [512]byte{}
+			n, err := syscall.Read(s, b[:])
+			if err != nil {
+					log.Printf("client: %v\n", err)
+							r <- nil
+					return
+				}
+					fmt.Printf("client: Data %v amt %v \n", b, n)
+					r <- &dhcpInfo{i, dhcp.Packet(b[:])}
+		*/
+
 	}
 }

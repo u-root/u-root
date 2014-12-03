@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"regexp"
 	"time"
 )
 
@@ -105,13 +106,15 @@ func (h *DHCPHandler) freeLease() int {
 }
 
 func main() {
+	var nameFilter = flag.String("r", "^eth0$", "Filter for net names")
 	var test = flag.Bool("t", false, "run test server")
 	flag.Parse()
+	re := regexp.MustCompile(*nameFilter)
 	// testing only.
 	if *test {
 		go ExampleHandler()
 	}
 	//	client()
-	c2()
+	c2(re)
 	fmt.Printf("CLIENT RETURNED!\n")
 }
