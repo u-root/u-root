@@ -115,10 +115,12 @@ func c2(re *regexp.Regexp) {
 		return
 	}
 	for _, v := range ifaces {
+		log.Printf("Let's check %v", v)
 		if !re.Match([]byte(v.Name)) {
 			continue
 		}
-		go one(&v, r)
+		log.Printf("Let's USE iface  %v", v)
+		go one(v, r)
 	}
 	for p := range r {
 		if p == nil {
@@ -174,9 +176,9 @@ func c2(re *regexp.Regexp) {
 	}
 }
 
-func one(i *net.Interface, r chan *dhcpInfo) {
+func one(i net.Interface, r chan *dhcpInfo) {
 	// the link has to be uppable
-	if err := netlink.NetworkLinkUp(i); err != nil {
+	if err := netlink.NetworkLinkUp(&i); err != nil {
 		log.Printf("%v can't make it up: %v", i, err)
 		return
 	}
@@ -228,25 +230,24 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	}
 
 	// we don't set family; Sendto does.
-/*
 	bcast := &syscall.SockaddrLinklayer{
 		Protocol: syscall.ETH_P_IP,
 		Ifindex:  i.Index,
 		Halen:    6,
 		Addr:     [8]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	}
- */
+	log.Printf("bcast is %v", bcast)
 	for tries := 0; tries < 10; tries++ {
 		fmt.Printf("Try it\n")
-		//err = syscall.Sendto(s, raw, 0, bcast)
+		err = syscall.Sendto(s, raw, 0, bcast)
 		//err = pc.WriteTo(p, nil, addr)
-		n, err := syscall.Write(s, raw)
+		//n, err := syscall.Write(s, raw)
 		if err != nil {
 			log.Printf("client: WriteToUDP failed: %v", err)
 			r <- nil
 			return
 		}
-		log.Printf("wrote it; %v bytes", n)
+		//log.Printf("wrote it; %v bytes", n)
 		fmt.Printf("Client: sleep the read\n")
 		time.Sleep(time.Second)
 
