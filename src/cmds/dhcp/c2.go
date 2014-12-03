@@ -208,7 +208,7 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	// yegads, the socket interface sucks so hard for over 30 years now ...
 	// htons for a LOCAL RESOURCE? Riiiiiight.
 	// How I miss Plan 9
-	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0x8) //syscall.ETH_P_IP)
+	s, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_DGRAM, 0x8) //syscall.ETH_P_IP)
 	if err != nil {
 		fmt.Printf("lsfsocket: got %v\n", err)
 		r <- nil
