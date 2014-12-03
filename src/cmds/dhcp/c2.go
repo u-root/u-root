@@ -73,6 +73,15 @@ hmm.
 
 dest is ffffff, and we don't have that. do we need to add the enet header too?
 
+
+Known good sequence from udhcpc
+
+14444 sendto(3, "<15>Dec  3 09:19:10 udhcpc: Send"..., 47, MSG_NOSIGNAL, NULL, 0) = 47
+14444 socket(PF_PACKET, SOCK_DGRAM, 8)  = 6
+14444 bind(6, {sa_family=AF_PACKET, proto=0x800, if2, pkttype=PACKET_HOST, addr(6)={0, ffffffffffff}, 20) = 0
+14444 sendto(6, "E\0\2@\0\0\0\0@\21x\256\0\0\0\0\377\377\377\377\0D\0C\2,]z\1\1\6\0"..., 576, 0, {sa_family=AF_PACKET, proto=0x800, if2, pkttype=PACKET_HOST, addr(6)={0, ffffffffffff}, 20) = 576
+
+Note the enet header is not filled in, but space is left for it.
 */
 
 // what we've learned.
@@ -199,7 +208,7 @@ func one(i *net.Interface, r chan *dhcpInfo) {
 	// yegads, the socket interface sucks so hard for over 30 years now ...
 	// htons for a LOCAL RESOURCE? Riiiiiight.
 	// How I miss Plan 9
-	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, 8) //syscall.ETH_P_IP)
+	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0x8) //syscall.ETH_P_IP)
 	if err != nil {
 		fmt.Printf("lsfsocket: got %v\n", err)
 		r <- nil
