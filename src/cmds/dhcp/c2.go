@@ -37,6 +37,35 @@ package main
 	0x0140:  0000 0000 0000 0000
 
 
+// BAD
+11:36:18.213690 IP (tos 0x0, ttl 64, id 0, offset 0, flags [none], proto UDP (17), length 300, bad cksum 0 (->69c3)!)
+    0.0.0.0.0 > 15.255.255.255.bootps: [no cksum] BOOTP/DHCP, Request from 00:0c:29:26:3e:37 (oui Unknown), length 272, xid 0x1020300, Flags [Broadcast] (0x8000)
+	  Client-IP 255.255.255.255
+	  Client-Ethernet-Address 00:0c:29:26:3e:37 (oui Unknown)
+	  Vendor-rfc1048 Extensions
+	    Magic Cookie 0x63825363
+	    DHCP-Message Option 53, length 1: Discover
+	    END Option 255, length 0
+	    PAD Option 0, length 0, occurs 14
+	0x0000:  4500 012c 0000 0000 4011 0000 0000 0000
+	0x0010:  0fff ffff 0000 0043 012c 0000 0101 0600
+	0x0020:  0102 0300 0000 8000 ffff ffff 0000 0000
+	0x0030:  0000 0000 0000 0000 000c 2926 3e37 0000
+	0x0040:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0050:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0060:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0070:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0080:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0090:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00a0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00b0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00c0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00d0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00e0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x00f0:  0000 0000 0000 0000 0000 0000 0000 0000
+	0x0100:  0000 0000 0000 0000 6382 5363 3501 01ff
+	0x0110:  0000 0000 0000 0000 0000 0000 0000
+
 strace of dhclient shows a write of this packet:
 
 9955  socket(PF_PACKET, SOCK_RAW, 768)  = 5
@@ -196,6 +225,7 @@ func one(i net.Interface, r chan *dhcpInfo) {
 	Dst: [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	Etype: [2]byte{0, 8},
 	Version: 4,
+	IHL: 5,
 	DPort: 67,
 	TotalLength: 300,
 	Length:300,

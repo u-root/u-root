@@ -95,10 +95,12 @@ func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
      var t8 uint8
      var t16 uint16
 	buf := new(bytes.Buffer)
+/*
 	binary.Write(buf, binary.BigEndian, u.Dst)
 	binary.Write(buf, binary.BigEndian, u.Src)
 	binary.Write(buf, binary.BigEndian, u.Etype)
-	t8 = u.Version | (u.IHL << 4)
+*/
+	t8 = (u.Version <<4) | u.IHL
 	binary.Write(buf, binary.BigEndian, t8)
 	t8 = u.DSCP | (u.ECN << 6)
 	binary.Write(buf, binary.BigEndian, t8)
