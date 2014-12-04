@@ -222,8 +222,6 @@ func one(i net.Interface, r chan *dhcpInfo) {
 	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: %q\n", p)
 	u := &EtherIPUDPHeader {
-	Dst: [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-	Etype: [2]byte{0, 8},
 	Version: 4,
 	IHL: 5,
 	DPort: 67,

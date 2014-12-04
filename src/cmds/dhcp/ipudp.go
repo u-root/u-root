@@ -21,12 +21,10 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 type EtherIPUDPHeader struct {
-     Dst [6]uint8
-     Src [6]uint8
-     Etype [2]uint8
      Version uint8 // 4
      IHL     uint8 //4
      DSCP    uint8 //6
@@ -95,11 +93,8 @@ func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
      var t8 uint8
      var t16 uint16
 	buf := new(bytes.Buffer)
-/*
-	binary.Write(buf, binary.BigEndian, u.Dst)
-	binary.Write(buf, binary.BigEndian, u.Src)
-	binary.Write(buf, binary.BigEndian, u.Etype)
-*/
+	// stupid code.
+	u.HCsum = 0
 	t8 = (u.Version <<4) | u.IHL
 	binary.Write(buf, binary.BigEndian, t8)
 	t8 = u.DSCP | (u.ECN << 6)
@@ -120,19 +115,50 @@ func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
 	binary.Write(buf, binary.BigEndian, u.Length)
 	binary.Write(buf, binary.BigEndian, u.Csum)
 	binary.Write(buf, binary.BigEndian, datapacket)
+	out := buf.Bytes()
+	u.HCsum = hcsum(out[0:20])
+	out[10] = byte(u.HCsum >> 8)
+	out[11] = byte(u.HCsum)
 
-	return buf.Bytes()
+	// ah joy .. 
+	cs := csum(out[16:], [4]byte{}, [4]byte{0xff,0xff,0xff,0xff}, byte(17))
+	out[26] = byte(cs >> 8)
+	out[27] = byte(cs)
+	fmt.Printf("cs %v\n", cs)
+
+	return out
 }
 
-// TCP Checksum
-func csum(data []byte, srcip, dstip [4]byte) uint16 {
+// Checksum
+func hcsum(sumThis []byte) uint16 {
+	fmt.Printf("% x\n", sumThis)
 
+	lenSumThis := len(sumThis)
+	var nextWord uint16
+	var sum uint32
+	for i := 0; i+1 < lenSumThis; i += 2 {
+		nextWord = uint16(sumThis[i])<<8 | uint16(sumThis[i+1])
+		sum += uint32(nextWord)
+	}
+	if lenSumThis%2 != 0 {
+		//fmt.Println("Odd byte")
+		sum += uint32(sumThis[len(sumThis)-1])
+	}
+
+	// Add back any carry, and any carry from adding the carry
+	sum = (sum >> 16) + (sum & 0xffff)
+	sum = sum + (sum >> 16)
+
+	// Bitwise complement
+	return uint16(^sum)
+}
+func csum(data []byte, srcip, dstip [4]byte, proto byte) uint16 {
 	pseudoHeader := []byte{
 		srcip[0], srcip[1], srcip[2], srcip[3],
 		dstip[0], dstip[1], dstip[2], dstip[3],
 		0,                  // zero
-		6,                  // protocol number (6 == TCP)
-		0, byte(len(data)), // TCP length (16 bits), not inc pseudo header
+		proto,              // protocol number (6 == TCP)
+		0, byte(len(data)), // length (16 bits), not inc pseudo header
 	}
 
 	sumThis := make([]byte, 0, len(pseudoHeader)+len(data))
