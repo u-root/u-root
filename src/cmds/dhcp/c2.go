@@ -287,11 +287,12 @@ func one(i net.Interface, r chan *dhcpInfo) {
 				r <- nil
 				return
 			}
-			if n == 0 {
-				break
+			if n < 240 {
+				continue
 			}
-			fmt.Printf("client: sa %v Data %v amt %v \n", sa, b, n)
-			r <- &dhcpInfo{&i, dhcp.Packet(b[:])}
+			fmt.Printf("client: sa %v Data %v amt %v \n", sa, b[28:], n)
+			r <- &dhcpInfo{&i, dhcp.Packet(b[28:])}
+			break
 
 		}
 	}
