@@ -121,10 +121,12 @@ func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
 	out[11] = byte(u.HCsum)
 
 	// ah joy .. 
-	cs := csum(out[16:], [4]byte{}, [4]byte{0xff,0xff,0xff,0xff}, byte(17))
+	fmt.Printf("PACKET MARSHAL PACKET LEN %d\n", len(out))
+	cs := csum(out[20:], [4]byte{}, [4]byte{0xff,0xff,0xff,0xff}, byte(17))
+	cs = 0
 	out[26] = byte(cs >> 8)
 	out[27] = byte(cs)
-	fmt.Printf("cs %v\n", cs)
+	fmt.Printf("cs %x\n", cs)
 
 	return out
 }

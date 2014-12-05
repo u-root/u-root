@@ -212,22 +212,22 @@ func one(i net.Interface, r chan *dhcpInfo) {
 		return
 	}
 
-	addr, _, err := net.ParseCIDR("255.255.255.255/32")
+	addr, _, err := net.ParseCIDR("0.0.0.0/32")
 	if err != nil {
 		log.Printf("client: Can't parse to ip: %v", err)
 		r <- nil
 		return
 	}
 	// possibly bogus packet created. I think they are not creating an IP header.
-	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
-	fmt.Printf("client: %q\n", p)
+	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, false, nil)
+	fmt.Printf("client: len %d\n", len(p))
 	u := &EtherIPUDPHeader {
 	Version: 4,
 	IHL: 5,
 	DPort: 67,
 	SPort: 68,
-	TotalLength: 300,
-	Length:300,
+	TotalLength: uint16(len(p)),
+	Length:uint16(len(p)),
 	DIP: 0xffffffff,
 	Protocol: syscall.IPPROTO_UDP,
 	TTL: 64,
@@ -266,7 +266,7 @@ func one(i net.Interface, r chan *dhcpInfo) {
 		Addr:     [8]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	}
 	log.Printf("bcast is %v", bcast)
-	for tries := 0; tries < 10; tries++ {
+	for tries := 0; tries < 1; tries++ {
 		fmt.Printf("Try it\n")
 		err = syscall.Sendto(s, raw, 0, bcast)
 		//err = pc.WriteTo(p, nil, addr)
