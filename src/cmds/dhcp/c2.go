@@ -1,4 +1,5 @@
 package main
+
 /* sample good packet.
 29:26:3e:37 (oui Unknown), length 300, xid 0x1b83823b, Flags [none] (0x0000)
 	  Client-Ethernet-Address 00:0c:29:26:3e:37 (oui Unknown)
@@ -7,7 +8,7 @@ package main
 	    DHCP-Message Option 53, length 1: Request
 	    Requested-IP Option 50, length 4: 192.168.28.203
 	    Hostname Option 12, length 24: "rminnich-virtual-machine"
-	    Parameter-Request Option 55, length 13: 
+	    Parameter-Request Option 55, length 13:
 	      Subnet-Mask, BR, Time-Zone, Default-Gateway
 	      Domain-Name, Domain-Name-Server, Option 119, Hostname
 	      Netbios-Name-Server, Netbios-Scope, MTU, Classless-Static-Route
@@ -219,23 +220,23 @@ func one(i net.Interface, r chan *dhcpInfo) {
 		return
 	}
 	// possibly bogus packet created. I think they are not creating an IP header.
-	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, false, nil)
+	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
 	fmt.Printf("client: len %d\n", len(p))
-	u := &EtherIPUDPHeader {
-	Version: 4,
-	IHL: 5,
-	DPort: 67,
-	SPort: 68,
-	TotalLength: uint16(len(p)),
-	Length:uint16(len(p)),
-	DIP: 0xffffffff,
-	Protocol: syscall.IPPROTO_UDP,
-	TTL: 64,
+	u := &EtherIPUDPHeader{
+		Version:     4,
+		IHL:         5,
+		DPort:       67,
+		SPort:       68,
+		TotalLength: uint16(len(p)),
+		Length:      uint16(len(p)),
+		DIP:         0xffffffff,
+		Protocol:    syscall.IPPROTO_UDP,
+		TTL:         64,
 	}
 	raw := u.Marshal(p)
-/* goddamn. if only this had worked.
+	/* goddamn. if only this had worked.
 	s, err := syscall.LsfSocket(i.Index, syscall.ETH_P_IP)
- */
+	*/
 	// yegads, the socket interface sucks so hard for over 30 years now ...
 	// htons for a LOCAL RESOURCE? Riiiiiight.
 	// How I miss Plan 9
@@ -269,8 +270,6 @@ func one(i net.Interface, r chan *dhcpInfo) {
 	for tries := 0; tries < 1; tries++ {
 		fmt.Printf("Try it\n")
 		err = syscall.Sendto(s, raw, 0, bcast)
-		//err = pc.WriteTo(p, nil, addr)
-		//n, err := syscall.Write(s, raw)
 		if err != nil {
 			log.Printf("client: WriteToUDP failed: %v", err)
 			r <- nil
@@ -280,17 +279,20 @@ func one(i net.Interface, r chan *dhcpInfo) {
 		fmt.Printf("Client: sleep the read\n")
 		time.Sleep(time.Second)
 
-		/*
-			b := [512]byte{}
-			n, err := syscall.Read(s, b[:])
+		b := [1024]byte{}
+		for {
+			n, sa, err := syscall.Recvfrom(s, b[:], 0)
 			if err != nil {
-					log.Printf("client: %v\n", err)
-							r <- nil
-					return
-				}
-					fmt.Printf("client: Data %v amt %v \n", b, n)
-					r <- &dhcpInfo{i, dhcp.Packet(b[:])}
-		*/
+				log.Printf("client: %v\n", err)
+				r <- nil
+				return
+			}
+			if n == 0 {
+				break
+			}
+			fmt.Printf("client: sa %v Data %v amt %v \n", sa, b, n)
+			r <- &dhcpInfo{&i, dhcp.Packet(b[:])}
 
+		}
 	}
 }

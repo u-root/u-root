@@ -14,7 +14,7 @@ GNU General Public License for more details.
 For full license details see <http://www.gnu.org/licenses/>.
 */
 
-// our big change is that we just smash it all into one ether/IP/UDP header. 
+// our big change is that we just smash it all into one ether/IP/UDP header.
 // layers are for cakes.
 package main
 
@@ -25,25 +25,25 @@ import (
 )
 
 type EtherIPUDPHeader struct {
-     Version uint8 // 4
-     IHL     uint8 //4
-     DSCP    uint8 //6
-     ECN     uint8 //2
-     TotalLength uint16
-     Id uint16
-     Flags uint8 // 3
-    Fragoff uint16 //13
-     TTL	   uint8
-     Protocol	   uint8
-     HCsum	   uint16	
-     SIP	   uint32
-     DIP	   uint32
-     Options	   []uint8
-     // UDP bits
-     SPort  uint16
-     DPort  uint16
-     Length  uint16 // header + data
-     Csum    uint16 // 0 if you're lazy
+	Version     uint8 // 4
+	IHL         uint8 //4
+	DSCP        uint8 //6
+	ECN         uint8 //2
+	TotalLength uint16
+	Id          uint16
+	Flags       uint8  // 3
+	Fragoff     uint16 //13
+	TTL         uint8
+	Protocol    uint8
+	HCsum       uint16
+	SIP         uint32
+	DIP         uint32
+	Options     []uint8
+	// UDP bits
+	SPort  uint16
+	DPort  uint16
+	Length uint16 // header + data
+	Csum   uint16 // 0 if you're lazy
 }
 
 type TCPOption struct {
@@ -54,26 +54,26 @@ type TCPOption struct {
 
 // Parse packet into TCPHeader structure
 func NewEtherIPUDPHeader(data []byte) *EtherIPUDPHeader {
-     var t8 uint8
-     var t16 uint16
+	var t8 uint8
+	var t16 uint16
 	u := &EtherIPUDPHeader{}
 	r := bytes.NewReader(data)
-/*
-	binary.Read(r, binary.BigEndian, u.Dst)
-	binary.Read(r, binary.BigEndian, u.Src)
-	binary.Read(r, binary.BigEndian, u.Etype)
- */
+	/*
+		binary.Read(r, binary.BigEndian, u.Dst)
+		binary.Read(r, binary.BigEndian, u.Src)
+		binary.Read(r, binary.BigEndian, u.Etype)
+	*/
 	binary.Read(r, binary.BigEndian, &t8)
-	u.Version = t8& 0xf
-	u.IHL = t8>>4
+	u.Version = t8 & 0xf
+	u.IHL = t8 >> 4
 	binary.Read(r, binary.BigEndian, &t8)
-	u.DSCP = t8& 0x3f
-	u.ECN = t8>> 6
+	u.DSCP = t8 & 0x3f
+	u.ECN = t8 >> 6
 	binary.Read(r, binary.BigEndian, &u.TotalLength)
 	binary.Read(r, binary.BigEndian, &u.Id)
 	binary.Read(r, binary.BigEndian, &t16)
 	u.Flags = uint8(t16 & 3)
-	u.Fragoff = t16 >>2
+	u.Fragoff = t16 >> 2
 	binary.Read(r, binary.BigEndian, &u.TTL)
 	binary.Read(r, binary.BigEndian, &u.Protocol)
 	binary.Read(r, binary.BigEndian, &u.HCsum)
@@ -88,21 +88,21 @@ func NewEtherIPUDPHeader(data []byte) *EtherIPUDPHeader {
 	return u
 }
 
-func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
+func (u *EtherIPUDPHeader) Marshal(datapacket []byte) []byte {
 
-     var t8 uint8
-     var t16 uint16
+	var t8 uint8
+	var t16 uint16
 	buf := new(bytes.Buffer)
 	// stupid code.
 	u.HCsum = 0
-	t8 = (u.Version <<4) | u.IHL
+	t8 = (u.Version << 4) | u.IHL
 	binary.Write(buf, binary.BigEndian, t8)
 	t8 = u.DSCP | (u.ECN << 6)
 	binary.Write(buf, binary.BigEndian, t8)
 
 	binary.Write(buf, binary.BigEndian, u.TotalLength)
 	binary.Write(buf, binary.BigEndian, u.Id)
-	t16 = uint16(u.Flags) | u.Fragoff << 13
+	t16 = uint16(u.Flags) | u.Fragoff<<13
 	binary.Write(buf, binary.BigEndian, t16)
 	binary.Write(buf, binary.BigEndian, u.TTL)
 	binary.Write(buf, binary.BigEndian, u.Protocol)
@@ -120,9 +120,9 @@ func (u *EtherIPUDPHeader) Marshal(datapacket[]byte) []byte {
 	out[10] = byte(u.HCsum >> 8)
 	out[11] = byte(u.HCsum)
 
-	// ah joy .. 
+	// ah joy ..
 	fmt.Printf("PACKET MARSHAL PACKET LEN %d\n", len(out))
-	cs := csum(out[20:], [4]byte{}, [4]byte{0xff,0xff,0xff,0xff}, byte(17))
+	cs := csum(out[20:], [4]byte{}, [4]byte{0xff, 0xff, 0xff, 0xff}, byte(17))
 	cs = 0
 	out[26] = byte(cs >> 8)
 	out[27] = byte(cs)
