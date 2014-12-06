@@ -127,11 +127,11 @@ func (p Packet) ParseOptions() Options {
 }
 
 func NewPacket(opCode OpCode) Packet {
-	p := make(Packet, 541)
+	p := make(Packet, 241)
 	p.SetOpCode(opCode)
 	p.SetHType(1) // Ethernet
 	p.SetCookie([]byte{99, 130, 83, 99})
-	p[540] = byte(End)
+	p[240] = byte(End)
 	return p
 }
 
@@ -155,7 +155,7 @@ func RequestPacket(mt MessageType, chAddr net.HardwareAddr, cIAddr net.IP, xId [
 	if cIAddr != nil {
 		p.SetCIAddr(cIAddr)
 	}
-	//p.SetBroadcast(broadcast)
+	p.SetBroadcast(broadcast)
 	p.AddOption(OptionDHCPMessageType, []byte{byte(mt)})
 	a := []byte{1,}
 	a = append(a, chAddr...)
@@ -190,7 +190,7 @@ func ReplyPacket(req Packet, mt MessageType, serverId, yIAddr net.IP, leaseDurat
 
 // PadToMinSize pads a packet so that when sent over UDP, the entire packet,
 // is 300 bytes (BOOTP min), to be compatible with really old devices.
-var padder [548]byte
+var padder [576]byte
 
 func (p *Packet) PadToMinSize() {
 	if n := len(*p); n < len(padder) {

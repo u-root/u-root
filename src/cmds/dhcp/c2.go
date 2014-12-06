@@ -220,14 +220,14 @@ func one(i net.Interface, r chan *dhcpInfo) {
 		return
 	}
 	// possibly bogus packet created. I think they are not creating an IP header.
-	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, true, nil)
+	p := dhcp.RequestPacket(dhcp.Discover, i.HardwareAddr, addr, []byte{1, 2, 3}, false, nil)
 	fmt.Printf("client: len %d\n", len(p))
 	u := &EtherIPUDPHeader{
 		Version:     4,
 		IHL:         5,
 		DPort:       67,
 		SPort:       68,
-		TotalLength: uint16(len(p)),
+		TotalLength: uint16(len(p)) + 20,
 		Length:      uint16(len(p)),
 		DIP:         0xffffffff,
 		Protocol:    syscall.IPPROTO_UDP,
