@@ -64,7 +64,10 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 
-	cmd = exec.Command(f.Name())
+	// stupid, but hey ...
+	execName := f.Name()
+	execName = execName[:len(execName)-3]
+	cmd = exec.Command(execName)
 	cmd.Dir = "/tmp"
 
 	cmd.Stdin = os.Stdin
