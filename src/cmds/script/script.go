@@ -10,34 +10,29 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"golang.org/x/tools/imports"
 )
 
 func main() {
+     opts := imports.Options{
+     Fragment: true,
+     AllErrors: true,
+     Comments: true,
+     TabIndent: true,
+     TabWidth: 8,
+     }
 	flag.Parse()
-	goCode := "package main\n"
-	a := flag.Args()
-	// Simple programs are just bits of code for main ...
-	if a[0] == "{" {
-		goCode = goCode + "\nfunc main() {"
-		for _, v := range a[1:] {
-			if v == "}" {
-				break
-			}
-			goCode = goCode + v
-		}
-	} else {
-		for _, v := range a {
-			if v == "{" {
-				goCode = goCode + "\nfunc main() {\n"
-				continue
-			}
-			if v == "}" {
-				break
-			}
-			goCode = goCode + v
-		}
-	}
-	goCode = goCode + "\n}\n"
+	a := ""
+	for _, v := range flag.Args() {
+	    a = a + v
+	    }
+	   log.Printf("'%v'", a)
+	goCode, err := imports.Process("commandline", []byte(a), &opts)
+	if err != nil {
+	   log.Fatalf("bad parse: '%v': %v", a, err)
+	   }
+	   log.Printf("%v", a)
 
 	f, err := TempFile("", "script%s.go")
 	if err != nil {
