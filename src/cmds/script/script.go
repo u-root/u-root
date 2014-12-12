@@ -23,7 +23,7 @@ func main() {
      TabWidth: 8,
      }
 	flag.Parse()
-	a := ""
+	a := "func main()"
 	for _, v := range flag.Args() {
 	    a = a + v
 	    }
