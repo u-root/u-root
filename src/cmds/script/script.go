@@ -6,7 +6,7 @@
 package main
 
 import (
-       "flag"
+	"flag"
 	"log"
 	"os"
 	"os/exec"
@@ -15,25 +15,26 @@ import (
 )
 
 func main() {
-     opts := imports.Options{
-     Fragment: true,
-     AllErrors: true,
-     Comments: true,
-     TabIndent: true,
-     TabWidth: 8,
-     }
+	opts := imports.Options{
+		Fragment:  true,
+		AllErrors: true,
+		Comments:  true,
+		TabIndent: true,
+		TabWidth:  8,
+	}
 	flag.Parse()
 	a := "func main()"
 	for _, v := range flag.Args() {
-	    a = a + v
-	    }
-	   log.Printf("'%v'", a)
+		a = a + v
+	}
+	log.Printf("'%v'", a)
 	goCode, err := imports.Process("commandline", []byte(a), &opts)
 	if err != nil {
-	   log.Fatalf("bad parse: '%v': %v", a, err)
-	   }
-	   log.Printf("%v", a)
+		log.Fatalf("bad parse: '%v': %v", a, err)
+	}
+	log.Printf("%v", a)
 
+	// of course we have to deal with the Unix issue that /tmp is not private.
 	f, err := TempFile("", "script%s.go")
 	if err != nil {
 		log.Fatalf("Script: opening TempFile: %v", err)
@@ -48,7 +49,6 @@ func main() {
 
 	os.Setenv("GOBIN", "/tmp")
 	cmd := exec.Command("go", "install", "-x", f.Name())
-	//installenvs = append(envs, "GOBIN=/tmp")
 	cmd.Dir = "/"
 
 	cmd.Stdin = os.Stdin
@@ -61,6 +61,7 @@ func main() {
 
 	// stupid, but hey ...
 	execName := f.Name()
+	// strip .go
 	execName = execName[:len(execName)-3]
 	cmd = exec.Command(execName)
 	cmd.Dir = "/tmp"

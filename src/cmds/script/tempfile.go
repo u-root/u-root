@@ -3,7 +3,7 @@ package main
 // ah well, the tempfile in go has a bad limitation. So let's do better.
 
 import (
-       "fmt"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -50,7 +50,7 @@ func TempFile(dir, format string) (f *os.File, err error) {
 
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
-	      	name := fmt.Sprintf(format, nextSuffix())
+		name := fmt.Sprintf(format, nextSuffix())
 		name = filepath.Join(dir, name)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		if os.IsExist(err) {
@@ -63,4 +63,3 @@ func TempFile(dir, format string) (f *os.File, err error) {
 	}
 	return
 }
-
