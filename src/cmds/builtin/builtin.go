@@ -6,7 +6,7 @@
 package main
 
 import (
-       "flag"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,8 +20,8 @@ import (
 
 var (
 	startPart = "package main\n"
-	initPart = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(cmd string, s []string) error {\nvar err error\n"
-//	endPart = "\n}\n)\n}\n"
+	initPart  = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(cmd string, s []string) error {\nvar err error\n"
+	//	endPart = "\n}\n)\n}\n"
 	endPart = "\nreturn err\n}\n"
 )
 
@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 	goCode := startPart
 	a := flag.Args()
-	if len (a) < 3 {
+	if len(a) < 3 {
 		log.Fatalf("Usage: builtin <command> <code>")
 	}
 	// Simple programs are just bits of code for main ...
@@ -73,31 +73,33 @@ func main() {
 
 	d, err := ioutil.TempDir("", "builtin")
 	if err != nil {
-	   log.Fatal(err)
-	   }
+		log.Fatal(err)
+	}
 
-	   if err := ioutil.WriteFile(path.Join(d, a[0] + ".go"), []byte(fullCode), 0666); err != nil {
-	      log.Fatal(err)
-	      }
+	if err := ioutil.WriteFile(path.Join(d, a[0]+".go"), []byte(fullCode), 0666); err != nil {
+		log.Fatal(err)
+	}
 
-	      /* copy all of /src/cmds/sh/*.go to the directory. */
-	      globs, err := filepath.Glob("/src/cmds/sh/*.go")
-	      if err != nil { log.Fatal(err) }
-	      for _, i := range globs {
-	      	  if b, err := ioutil.ReadFile(i); err != nil {
-		     	log.Fatal(err)
-			} else {
-			  _, df := path.Split(i)
-			  f := path.Join(d, df)
+	/* copy all of /src/cmds/sh/*.go to the directory. */
+	globs, err := filepath.Glob("/src/cmds/sh/*.go")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, i := range globs {
+		if b, err := ioutil.ReadFile(i); err != nil {
+			log.Fatal(err)
+		} else {
+			_, df := path.Split(i)
+			f := path.Join(d, df)
 			if err = ioutil.WriteFile(f, b, 0600); err != nil {
-			       log.Fatal(err)
-			       }
+				log.Fatal(err)
 			}
-	      }
+		}
+	}
 
 	os.Setenv("GOBIN", d)
-	cmd := exec.Command("go", "install", "-x", "sh")
-	cmd.Dir = "/"
+	cmd := exec.Command("go", "build", "-x", ".")
+	cmd.Dir = d
 
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -108,17 +110,17 @@ func main() {
 	}
 
 	// stupid, but hey ...
-	execName := "sh"
+	_, execName := path.Split(d)
+	execName = path.Join(d, execName)
 	cmd = exec.Command(execName)
 	cmd.Dir = d
 
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	log.Printf("Run %v", path.Join(d, "sh"))
+	log.Printf("Run %v", execName)
 	if err := cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
-
 
 }
