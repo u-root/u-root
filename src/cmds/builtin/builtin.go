@@ -51,7 +51,7 @@ func main() {
 	} else {
 		for _, v := range a[1:] {
 			if v == "{" {
-				goCode = goCode + fmt.Sprintf(initPart, a[0], a[0])
+				goCode = goCode + fmt.Sprintf(initPart, a[0])
 				continue
 			}
 			// FIXME: should only look for last arg.
@@ -112,6 +112,7 @@ func main() {
 	// stupid, but hey ...
 	_, execName := path.Split(d)
 	execName = path.Join(d, execName)
+	os.Setenv("GOBIN", "/bin")
 	cmd = exec.Command(execName)
 	cmd.Dir = d
 
