@@ -8,17 +8,31 @@ package main
 import (
        "flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-_	"os/exec"
+	"os/exec"
+	"path"
+	"path/filepath"
+
+	"golang.org/x/tools/imports"
 )
+
 var (
 	startPart = "package main\n"
-	initPart = "func init() {\n	addBuiltIn(\"%s\", func %s(cmd string, s []string) error {\nvar err error\n"
-	endPart = "\n}\n)\n}\n"
+	initPart = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(cmd string, s []string) error {\nvar err error\n"
+//	endPart = "\n}\n)\n}\n"
+	endPart = "\nreturn err\n}\n"
 )
 
 func main() {
+	opts := imports.Options{
+		Fragment:  true,
+		AllErrors: true,
+		Comments:  true,
+		TabIndent: true,
+		TabWidth:  8,
+	}
 	flag.Parse()
 	goCode := startPart
 	a := flag.Args()
@@ -26,9 +40,9 @@ func main() {
 		log.Fatalf("Usage: builtin <command> <code>")
 	}
 	// Simple programs are just bits of code for main ...
-	if a[0] == "{" {
-		goCode = goCode + fmt.Sprintf(initPart, a[0], a[0])
-		for _, v := range a[1:] {
+	if a[1] == "{" {
+		goCode = goCode + fmt.Sprintf(initPart, a[0])
+		for _, v := range a[2:] {
 			if v == "}" {
 				break
 			}
@@ -48,48 +62,63 @@ func main() {
 		}
 	}
 	goCode = goCode + endPart
-	log.Print(goCode)
-	os.Exit(1)
-
-/*
-	f, err := TempFile("", "script%s.go")
+	log.Printf("%v", goCode)
+	fullCode, err := imports.Process("commandline", []byte(goCode), &opts)
 	if err != nil {
-		log.Fatalf("Script: opening TempFile: %v", err)
+		log.Fatalf("bad parse: '%v': %v", goCode, err)
 	}
+	log.Printf("%v", a)
 
-	if _, err := f.Write([]byte(goCode)); err != nil {
-		log.Fatalf("Script: Writing %v: %v", f, err)
-	}
-	if err := f.Close(); err != nil {
-		log.Fatalf("Script: Closing %v: %v", f, err)
-	}
+	log.Print(fullCode)
 
-	os.Setenv("GOBIN", "/tmp")
-	cmd := exec.Command("go", "install", "-x", f.Name())
-	//installenvs = append(envs, "GOBIN=/tmp")
+	d, err := ioutil.TempDir("", "builtin")
+	if err != nil {
+	   log.Fatal(err)
+	   }
+
+	   if err := ioutil.WriteFile(path.Join(d, a[0] + ".go"), []byte(fullCode), 0666); err != nil {
+	      log.Fatal(err)
+	      }
+
+	      /* copy all of /src/cmds/sh/*.go to the directory. */
+	      globs, err := filepath.Glob("/src/cmds/sh/*.go")
+	      if err != nil { log.Fatal(err) }
+	      for _, i := range globs {
+	      	  if b, err := ioutil.ReadFile(i); err != nil {
+		     	log.Fatal(err)
+			} else {
+			  _, df := path.Split(i)
+			  f := path.Join(d, df)
+			if err = ioutil.WriteFile(f, b, 0600); err != nil {
+			       log.Fatal(err)
+			       }
+			}
+	      }
+
+	os.Setenv("GOBIN", d)
+	cmd := exec.Command("go", "install", "-x", "sh")
 	cmd.Dir = "/"
 
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	log.Printf("Install %v", f.Name())
+	log.Printf("Install %v", a[0])
 	if err = cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
 
 	// stupid, but hey ...
-	execName := f.Name()
-	execName = execName[:len(execName)-3]
+	execName := "sh"
 	cmd = exec.Command(execName)
-	cmd.Dir = "/tmp"
+	cmd.Dir = d
 
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	log.Printf("Run %v", f.Name())
+	log.Printf("Run %v", path.Join(d, "sh"))
 	if err := cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
-*/
+
 
 }
