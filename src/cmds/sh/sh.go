@@ -62,7 +62,6 @@ func command(c *Command) error {
 	globargv := []string{}
 	for _, v := range c.args[1:] {
 		if v.mod == "ENV" {
-			// Later, this will involve substitution.
 			e := v.val
 			if !path.IsAbs(v.val) {
 				e = path.Join(envDir, e)
@@ -71,6 +70,8 @@ func command(c *Command) error {
 			if err != nil {
 				return err
 			}
+			// It goes in as one argument. Not sure if this is what we want
+			// but it gets very weird to start splitting it on spaces. Or maybe not?
 			globargv = append(globargv, string(b))
 		} else if globs, err := filepath.Glob(v.val); err == nil && len(globs) > 0 {
 			globargv = append(globargv, globs...)

@@ -23,6 +23,10 @@ func main() {
 		TabWidth:  8,
 	}
 	flag.Parse()
+	// Interesting problem: if we're going to script we want args.
+	// But we also want to allow arbitrary Go code.
+	// Possibly, we should take the entire Go code as the one arg,
+	// i.e. in a 'string', and then take the args following.
 	a := "func main()"
 	for _, v := range flag.Args() {
 		a = a + v
