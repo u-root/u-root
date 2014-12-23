@@ -11,7 +11,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 )
 
@@ -28,6 +27,6 @@ func runtime(c *Command) error {
 		err = runit(c)
 	}
 	cost := time.Since(start)
-	fmt.Fprintf(os.Stderr, "%v\n", cost)
+	fmt.Fprintf(c.err, "%v\n", cost)
 	return err
 }

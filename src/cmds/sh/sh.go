@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -45,9 +46,9 @@ func runit(c *Command) error {
 		}
 	} else {
 		run := exec.Command(c.cmd, c.argv[:]...)
-		run.Stdin = os.Stdin
-		run.Stdout = os.Stdout
-		run.Stderr = os.Stderr
+		run.Stdin = c.in
+		run.Stdout = c.out
+		run.Stderr = c.err
 		if err := run.Start(); err != nil {
 			return errors.New(fmt.Sprintf("%v: Path %v\n", err, os.Getenv("PATH")))
 		} else if err := run.Wait(); err != nil {
@@ -58,7 +59,31 @@ func runit(c *Command) error {
 
 }
 
+func OpenRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
+	if c.fdmap[fd] != "" {
+		return os.Open(c.fdmap[fd])
+	}
+	return r, nil
+}
+func OpenWrite(c *Command, w io.Writer, fd int) (io.Writer, error) {
+	if c.fdmap[fd] != "" {
+		return os.Create(c.fdmap[fd])
+	}
+	return w, nil
+}
 func command(c *Command) error {
+	// IO defaults.
+	var err error
+	if c.in, err = OpenRead(c, os.Stdin, 0); err != nil {
+		return err
+	}
+	if c.out, err = OpenWrite(c, os.Stdout, 1); err != nil {
+		return err
+	}
+	if c.err, err = OpenWrite(c, os.Stderr, 2); err != nil {
+		return err
+	}
+
 	globargv := []string{}
 	for _, v := range c.args {
 		if v.mod == "ENV" {
@@ -112,7 +137,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, "no compounds yet\n")
 		}
 		// Once we get to compounds this will be a lot more complex, of course.
-		// And there's no redirection at this point, sorry.
 		if len(cmds) > 0 {
 			if err := command(cmds[0]); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)

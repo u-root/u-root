@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -30,9 +29,10 @@ type Command struct {
 	// provided by the parser.
 	// we separate the command so people don't have to put checks for the length
 	// of argv in their builtins. We do that for them.
-	cmd   string
-	argv []string
-	in, out, err os.File
+	cmd      string
+	argv     []string
+	in       io.Reader
+	out, err io.Writer
 }
 
 var (
@@ -221,6 +221,7 @@ func parsecommands(b *bufio.Reader) ([]*Command, string) {
 }
 
 func getCommand(b *bufio.Reader) ([]*Command, string, error) {
+	// TODO: put a recover here that just returns an error.
 	c, t := parsecommands(b)
 	// the rules.
 	// For now, no empty commands.
