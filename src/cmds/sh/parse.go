@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -16,12 +17,22 @@ type arg struct {
 	mod string
 }
 
+// The Command struct is initially filled in by the parser. The shell itself
+// adds to it as processing continues, and then uses it to creates os.Commands
 type Command struct {
+	// These are filled in by the parser.
 	args  []arg
-	cmd   string
 	fdmap map[int]string
 	link  string
 	bg    bool
+
+	// These are set up by the shell as it evaluates the Commands
+	// provided by the parser.
+	// we separate the command so people don't have to put checks for the length
+	// of argv in their builtins. We do that for them.
+	cmd   string
+	argv []string
+	in, out, err os.File
 }
 
 var (

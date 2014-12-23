@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 )
 
-type builtin func(string, []string) error
+type builtin func(c *Command) error
 
 var (
 	urpath   = "/go/bin:/buildbin:/bin:/usr/local/bin:"
@@ -38,13 +38,13 @@ func addBuiltIn(name string, f builtin) error {
 	return nil
 }
 
-func runit(cmd string, argv []string) error {
-	if b, ok := builtins[cmd]; ok {
-		if err := b(cmd, argv); err != nil {
+func runit(c *Command) error {
+	if b, ok := builtins[c.cmd]; ok {
+		if err := b(c); err != nil {
 			fmt.Printf("%v\n", err)
 		}
 	} else {
-		run := exec.Command(cmd, argv[:]...)
+		run := exec.Command(c.cmd, c.argv[:]...)
 		run.Stdin = os.Stdin
 		run.Stdout = os.Stdout
 		run.Stderr = os.Stderr
@@ -60,7 +60,7 @@ func runit(cmd string, argv []string) error {
 
 func command(c *Command) error {
 	globargv := []string{}
-	for _, v := range c.args[1:] {
+	for _, v := range c.args {
 		if v.mod == "ENV" {
 			e := v.val
 			if !path.IsAbs(v.val) {
@@ -80,15 +80,17 @@ func command(c *Command) error {
 		}
 	}
 
+	c.cmd = globargv[0]
+	c.argv = globargv[1:]
 	// for now, bg will just happen in background.
 	if c.bg {
 		go func() {
-			if err := runit(c.args[0].val, globargv); err != nil {
+			if err := runit(c); err != nil {
 				fmt.Fprintf(os.Stderr, "%v", err)
 			}
 		}()
 	} else {
-		err := runit(c.args[0].val, globargv)
+		err := runit(c)
 		return err
 	}
 	return nil

@@ -14,11 +14,11 @@ func init() {
 	addBuiltIn("cd", cd)
 }
 
-func cd(cmd string, s []string) error {
-	if len(s) != 1 {
+func cd(c *Command) error {
+	if len(c.argv) != 1 {
 		return errors.New("usage: cd one-path")
 	}
 
-	err := os.Chdir(s[0])
+	err := os.Chdir(c.argv[0])
 	return err
 }

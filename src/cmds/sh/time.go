@@ -19,11 +19,13 @@ func init() {
 	addBuiltIn("time", runtime)
 }
 
-func runtime(cmd string, s []string) error {
+func runtime(c *Command) error {
 	var err error
 	start := time.Now()
-	if len(s) > 0 {
-		err = runit(s[0], s[1:])
+	if len(c.argv) > 0 {
+		c.cmd = c.argv[0]
+		c.argv = c.argv[1:]
+		err = runit(c)
 	}
 	cost := time.Since(start)
 	fmt.Fprintf(os.Stderr, "%v\n", cost)
