@@ -62,6 +62,7 @@ func tok(b *bufio.Reader) (string, string, bool) {
 	tokType, arg := "white", ""
 	c := next(b)
 
+fmt.Printf("TOK %v", c)
 	switch(c) {
 		case 0:
 			return "EOF", "", true
@@ -77,22 +78,30 @@ func tok(b *bufio.Reader) (string, string, bool) {
 				}
 				arg = arg + string(nc)
 			}
+		case ' ': 
+			return "white", string(c), false
 		case '\n': 
-		case ' ':
+fmt.Printf("NEWLINE\n")
+			return "EOF", "", true
 		case '|', '&':
+			fmt.Printf("LINK %v\n", c)
 			// peek ahead. We need the literal, so don't use next()
 			nc := one(b)
-			if nc != '&' {
+			if nc == c {
+				fmt.Printf("LINK %v\n", string(c)+string(c))
+				return "LINK", string(c)+string(c), false
+			}
+			pushback(b)
+			if c == '&' {
+				fmt.Printf("BG\n")
 				return "BG", "&", nc == 0
 			}
-			if nc != c {
-				pushback(b)
-				return "LINK", string(c), false
-			}
-			return "LINK", string(c)+string(c), false
+			fmt.Printf("LINK %v\n", string(c))
+			return "LINK", string(c), false
 		default:
 			for {
 				if c == ' ' || c == '\n' {
+					pushback(b)
 					return "ARG", arg, false
 				}
 				arg = arg + string(c)
@@ -133,9 +142,6 @@ func parse(b *bufio.Reader) (*Command, bool) {
 		case "ARG": 
 			c.args = append(c.args, arg{s, t})
 		case "white":
-			if s == "\n" {
-				break
-			}
 		case "FD":
 			x := 0
 			_, err := fmt.Sscanf(s, "%v", &x)
@@ -147,10 +153,11 @@ func parse(b *bufio.Reader) (*Command, bool) {
 		// LINK and BG are similar save that LINK requires another command. If we don't get one, well.
 		case "LINK":
 			c.link = s
-			break
+			fmt.Printf("LINK %v %v\n", c, s)
+			return c, eof
 		case "BG":
 			c.bg = true
-			break
+			return c, eof
 		case "EOF":
 			return c, true
 		default:
@@ -158,7 +165,7 @@ func parse(b *bufio.Reader) (*Command, bool) {
 	}
 	t, s, eof = tok(b)
 	}
-	return c, false
+	return c, eof
 }
 
 func newCommand() *Command {
@@ -169,13 +176,13 @@ func newCommand() *Command {
 func parsecommands(b *bufio.Reader) []*Command {
 	cmds := make([]*Command, 0)
 	for {
-		c, eof := parse(b)
+		c, eoc := parse(b)
 		if c == nil {
 			return cmds
 		}
 		fmt.Printf("cmd  %v\n", *c)
 		cmds = append(cmds, c)
-		if eof {
+		if eoc {
 			break
 		}
 	}
