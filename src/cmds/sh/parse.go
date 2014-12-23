@@ -53,7 +53,7 @@ func one(b *bufio.Reader) byte {
 func next(b *bufio.Reader) byte {
 	c := one(b)
 	if c == '\\' {
-		return next(b)
+		return one(b)
 	}
 	return byte(c)
 }
