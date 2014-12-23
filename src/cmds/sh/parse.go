@@ -4,13 +4,12 @@
 package main
 
 import (
-       "bufio"
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 )
-
 
 type arg struct {
 	val string
@@ -18,15 +17,15 @@ type arg struct {
 }
 
 type Command struct {
-	args []arg
-	cmd string
+	args  []arg
+	cmd   string
 	fdmap map[int]string
-	link string
-	bg bool
+	link  string
+	bg    bool
 }
 
 var (
-	cmds []Command
+	cmds  []Command
 	punct = "<>|&$ \t\n"
 )
 
@@ -57,96 +56,96 @@ func next(b *bufio.Reader) byte {
 	}
 	return byte(c)
 }
-	
-// Tokenize stuff coming in from the stream. For everything but an arg, the 
+
+// Tokenize stuff coming in from the stream. For everything but an arg, the
 // type is just the thing itself, since we can switch on strings.
 func tok(b *bufio.Reader) (string, string) {
 	tokType, arg := "white", ""
 	c := next(b)
 
-//fmt.Printf("TOK %v", c)
-	switch(c) {
-		case 0:
-			return "EOF", ""
-		case '>':
-			return "FD", "1"
-		case '<':
-			return "FD", "0"
-		// yes, I realize $ handling is still pretty hokey.
-		case '$':
-			arg = ""
+	//fmt.Printf("TOK %v", c)
+	switch c {
+	case 0:
+		return "EOF", ""
+	case '>':
+		return "FD", "1"
+	case '<':
+		return "FD", "0"
+	// yes, I realize $ handling is still pretty hokey.
+	case '$':
+		arg = ""
+		c = next(b)
+		for {
+			if strings.Index(punct, string(c)) > -1 {
+				pushback(b)
+				break
+			}
+			arg = arg + string(c)
 			c = next(b)
-			for {
-				if strings.Index(punct, string(c)) > -1 {
-					pushback(b)
-					break
-				}
-				arg = arg + string(c)
-				c = next(b)
+		}
+		return "ENV", arg
+	case '\'':
+		for {
+			nc := next(b)
+			if nc == '\'' {
+				return "ARG", arg
 			}
-			return "ENV", arg
-		case '\'': 
-			for {
-				nc := next(b)
-				if nc == '\'' {
-					return "ARG", arg
-				}
-				arg = arg + string(nc)
+			arg = arg + string(nc)
+		}
+	case ' ':
+		return "white", string(c)
+	case '\n':
+		//fmt.Printf("NEWLINE\n")
+		return "EOL", ""
+	case '|', '&':
+		//fmt.Printf("LINK %v\n", c)
+		// peek ahead. We need the literal, so don't use next()
+		nc := one(b)
+		if nc == c {
+			//fmt.Printf("LINK %v\n", string(c)+string(c))
+			return "LINK", string(c) + string(c)
+		}
+		pushback(b)
+		if c == '&' {
+			//fmt.Printf("BG\n")
+			tokType = "BG"
+			if nc == 0 {
+				tokType = "EOL"
 			}
-		case ' ': 
-			return "white", string(c)
-		case '\n': 
-//fmt.Printf("NEWLINE\n")
-			return "EOL", ""
-		case '|', '&':
-			//fmt.Printf("LINK %v\n", c)
-			// peek ahead. We need the literal, so don't use next()
-			nc := one(b)
-			if nc == c {
-				//fmt.Printf("LINK %v\n", string(c)+string(c))
-				return "LINK", string(c)+string(c)
+			return "BG", tokType
+		}
+		//fmt.Printf("LINK %v\n", string(c))
+		return "LINK", string(c)
+	default:
+		for {
+			if strings.Index(punct, string(c)) > -1 {
+				pushback(b)
+				return "ARG", arg
 			}
-			pushback(b)
-			if c == '&' {
-				//fmt.Printf("BG\n")
-				tokType = "BG"
-				if nc == 0 {
-					tokType = "EOL"
-				}
-				return "BG", tokType
-			}
-			//fmt.Printf("LINK %v\n", string(c))
-			return "LINK", string(c)
-		default:
-			for {
-				if strings.Index(punct, string(c)) > -1 {
-					pushback(b)
-					return "ARG", arg
-				}
-				arg = arg + string(c)
-				c = next(b)
-			}
-		
+			arg = arg + string(c)
+			c = next(b)
+		}
+
 	}
 	return tokType, arg
-	
+
 }
 
 // get an ARG. It has to work.
 func getArg(b *bufio.Reader, what string) string {
-			for {
-				nt, s := tok(b)
-				if nt == "EOF" || nt == "EOL" {
-					panic(fmt.Sprintf("%v requires an argument", what))
-				}
-				if nt == "white" {
-					continue
-				}
-				if nt != "ARG" {
-					panic(fmt.Sprintf("%v requires an argument, not %v", what, nt))
-				}
-				return s
-			}
+	for {
+		nt, s := tok(b)
+		if nt == "EOF" || nt == "EOL" {
+			panic(fmt.Sprintf("%v requires an argument", what))
+		}
+		if nt == "white" {
+			continue
+		}
+		if nt != "ARG" {
+			panic(fmt.Sprintf("%v requires an argument, not %v", what, nt))
+		}
+		return s
+	}
 }
 func parse(b *bufio.Reader) (*Command, string) {
 	t, s := tok(b)
@@ -158,8 +157,8 @@ func parse(b *bufio.Reader) (*Command, string) {
 	//fmt.Printf("%v %v\n", t, s)
 	c := newCommand()
 	for {
-	switch(t) {
-		case "ENV", "ARG": 
+		switch t {
+		case "ENV", "ARG":
 			c.args = append(c.args, arg{s, t})
 		case "white":
 		case "FD":
@@ -184,8 +183,8 @@ func parse(b *bufio.Reader) (*Command, string) {
 			return c, t
 		default:
 			panic(fmt.Sprintf("unknown token type %v", t))
-	}
-	t, s = tok(b)
+		}
+		t, s = tok(b)
 	}
 	return c, t
 }
@@ -211,25 +210,25 @@ func parsecommands(b *bufio.Reader) ([]*Command, string) {
 }
 
 func getCommand(b *bufio.Reader) ([]*Command, string, error) {
-		c, t := parsecommands(b)
-		// the rules. 
-		// For now, no empty commands.
-		// Can't have a redir and a redirect for fd1.
-		for i := range c {
-			if len(c[i].args) == 0 {
-				return nil, "", errors.New("empty commands not allowed (yet)\n")
-			}
-			if c[i].link == "|" && c[i].fdmap[1] != "" {
-				return nil, "", errors.New("Can't have a pipe and > on one command\n")
-			}
-			if c[i].link == "|" && i == len(c)-1 {
-				return nil, "", errors.New("Can't have a pipe to nowhere\n")
-			}
-			if i < len(c) - 1 && c[i].link == "|" && c[i+1].fdmap[0] != "" {
-				return nil, "", errors.New("Can't have a pipe to command with redirect on stdin\n")
-			}
+	c, t := parsecommands(b)
+	// the rules.
+	// For now, no empty commands.
+	// Can't have a redir and a redirect for fd1.
+	for i := range c {
+		if len(c[i].args) == 0 {
+			return nil, "", errors.New("empty commands not allowed (yet)\n")
 		}
-		return c, t, nil
+		if c[i].link == "|" && c[i].fdmap[1] != "" {
+			return nil, "", errors.New("Can't have a pipe and > on one command\n")
+		}
+		if c[i].link == "|" && i == len(c)-1 {
+			return nil, "", errors.New("Can't have a pipe to nowhere\n")
+		}
+		if i < len(c)-1 && c[i].link == "|" && c[i+1].fdmap[0] != "" {
+			return nil, "", errors.New("Can't have a pipe to command with redirect on stdin\n")
+		}
+	}
+	return c, t, nil
 }
 
 /*

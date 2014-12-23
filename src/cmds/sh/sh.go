@@ -64,7 +64,7 @@ func command(c *Command) error {
 		if v.mod == "ENV" {
 			// Later, this will involve substitution.
 			e := v.val
-			if ! path.IsAbs(v.val) {
+			if !path.IsAbs(v.val) {
 				e = path.Join(envDir, e)
 			}
 			b, err := ioutil.ReadFile(e)
@@ -78,12 +78,19 @@ func command(c *Command) error {
 			globargv = append(globargv, v.val)
 		}
 	}
-	// now do the file insertion. Files are inserted as
-	// a single argument.
-	//	for _, v := range globargv {
-	//		}
-	err := runit(c.args[0].val, globargv)
-	return err
+
+	// for now, bg will just happen in background.
+	if c.bg {
+		go func() {
+			if err := runit(c.args[0].val, globargv); err != nil {
+				fmt.Fprintf(os.Stderr, "%v", err)
+			}
+		}()
+	} else {
+		err := runit(c.args[0].val, globargv)
+		return err
+	}
+	return nil
 }
 func main() {
 	if len(os.Args) != 1 {
