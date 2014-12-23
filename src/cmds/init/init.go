@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"syscall"
 )
 
@@ -46,6 +47,7 @@ var (
 		{name: "/buildbin", mode: os.FileMode(0777),},
 		{name: "/bin", mode: os.FileMode(0777),},
 		{name: "/tmp", mode: os.FileMode(0777),},
+		{name: "/env", mode: os.FileMode(0777),},
 		{name: "/etc", mode: os.FileMode(0777),},
 		{name: "/tcz", mode: os.FileMode(0777),},
 		{name: "/dev", mode: os.FileMode(0777),},
@@ -114,9 +116,21 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 
+	// install /env.
 	os.Setenv("GOBIN", "/bin")
-	cmd = exec.Command("/buildbin/sh")
 	envs = append(envs, "GOBIN=/bin")
+	for _, e := range envs {
+		nv := strings.SplitN(e, "=", 2)
+		if len(nv) < 2 {
+			nv = append(nv, "")
+		}
+		n := path.Join("/env", nv[0])
+		if err := ioutil.WriteFile(n, []byte(nv[1]), 0666); err != nil {
+			log.Printf("%v: %v", n, err)
+		}
+	}
+
+	cmd = exec.Command("/buildbin/sh")
 	cmd.Env = envs
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr

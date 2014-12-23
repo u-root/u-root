@@ -13,8 +13,10 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 )
 
@@ -23,6 +25,9 @@ type builtin func(string, []string) error
 var (
 	urpath   = "/go/bin:/buildbin:/bin:/usr/local/bin:"
 	builtins = make(map[string]builtin)
+	// the environment dir is INTENDED to be per-user and bound in
+	// a private name space at /env.
+	envDir = "/env"
 )
 
 func addBuiltIn(name string, f builtin) error {
@@ -56,7 +61,18 @@ func runit(cmd string, argv []string) error {
 func command(c *Command) error {
 	globargv := []string{}
 	for _, v := range c.args[1:] {
-		if globs, err := filepath.Glob(v.val); err == nil && len(globs) > 0 {
+		if v.mod == "ENV" {
+			// Later, this will involve substitution.
+			e := v.val
+			if ! path.IsAbs(v.val) {
+				e = path.Join(envDir, e)
+			}
+			b, err := ioutil.ReadFile(e)
+			if err != nil {
+				return err
+			}
+			globargv = append(globargv, string(b))
+		} else if globs, err := filepath.Glob(v.val); err == nil && len(globs) > 0 {
 			globargv = append(globargv, globs...)
 		} else {
 			globargv = append(globargv, v.val)

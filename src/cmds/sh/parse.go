@@ -14,7 +14,7 @@ import (
 
 type arg struct {
 	val string
-	modifier string
+	mod string
 }
 
 type Command struct {
@@ -72,6 +72,19 @@ func tok(b *bufio.Reader) (string, string) {
 			return "FD", "1"
 		case '<':
 			return "FD", "0"
+		// yes, I realize $ handling is still pretty hokey.
+		case '$':
+			arg = ""
+			c = next(b)
+			for {
+				if strings.Index(punct, string(c)) > -1 {
+					pushback(b)
+					break
+				}
+				arg = arg + string(c)
+				c = next(b)
+			}
+			return "ENV", arg
 		case '\'': 
 			for {
 				nc := next(b)
@@ -106,7 +119,6 @@ func tok(b *bufio.Reader) (string, string) {
 			return "LINK", string(c)
 		default:
 			for {
-//fmt.Printf("c %v index %v\n", c, strings.Index(punct, string(c)))
 				if strings.Index(punct, string(c)) > -1 {
 					pushback(b)
 					return "ARG", arg
@@ -147,7 +159,7 @@ func parse(b *bufio.Reader) (*Command, string) {
 	c := newCommand()
 	for {
 	switch(t) {
-		case "ARG": 
+		case "ENV", "ARG": 
 			c.args = append(c.args, arg{s, t})
 		case "white":
 		case "FD":
