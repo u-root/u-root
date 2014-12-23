@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -205,7 +204,6 @@ func getCommand(b *bufio.Reader) ([]*Command, string, error) {
 		// For now, no empty commands.
 		// Can't have a redir and a redirect for fd1.
 		for i := range c {
-			fmt.Printf("%v\n", c[i])
 			if len(c[i].args) == 0 {
 				return nil, "", errors.New("empty commands not allowed (yet)\n")
 			}

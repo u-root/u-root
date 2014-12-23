@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 type builtin func(string, []string) error
@@ -54,34 +53,48 @@ func runit(cmd string, argv []string) error {
 
 }
 
+func command(c *Command) error {
+	globargv := []string{}
+	for _, v := range c.args[1:] {
+		if globs, err := filepath.Glob(v.val); err == nil && len(globs) > 0 {
+			globargv = append(globargv, globs...)
+		} else {
+			globargv = append(globargv, v.val)
+		}
+	}
+	// now do the file insertion. Files are inserted as
+	// a single argument.
+	//	for _, v := range globargv {
+	//		}
+	err := runit(c.args[0].val, globargv)
+	return err
+}
 func main() {
 	if len(os.Args) != 1 {
 		fmt.Println("no scripts/args yet")
 		os.Exit(1)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	b := bufio.NewReader(os.Stdin)
 	fmt.Printf("%% ")
-	for scanner.Scan() {
-		cmd := scanner.Text()
-		argv := strings.Split(cmd, " ")
-		if len(cmd) == 0 {
-			fmt.Printf("%% ")
-			continue
-		}
-		globargv := []string{}
-		for _, v := range argv[1:] {
-			if globs, err := filepath.Glob(v); err == nil && len(globs) > 0 {
-				globargv = append(globargv, globs...)
-			} else {
-				globargv = append(globargv, v)
-			}
-		}
-		err := runit(argv[0], globargv)
+	for {
+		cmds, status, err := getCommand(b)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
-
+		if len(cmds) > 1 {
+			fmt.Fprintf(os.Stderr, "no compounds yet\n")
+		}
+		// Once we get to compounds this will be a lot more complex, of course.
+		// And there's no redirection at this point, sorry.
+		if len(cmds) > 0 {
+			if err := command(cmds[0]); err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+			}
+		}
+		if status == "EOF" {
+			break
+		}
 		fmt.Printf("%% ")
 	}
 }
