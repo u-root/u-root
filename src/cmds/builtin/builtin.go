@@ -20,7 +20,7 @@ import (
 
 var (
 	startPart = "package main\n"
-	initPart  = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(cmd string, s []string) error {\nvar err error\n"
+	initPart  = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(c*Command) error {\nvar err error\n"
 	//	endPart = "\n}\n)\n}\n"
 	endPart = "\nreturn err\n}\n"
 )
