@@ -40,18 +40,42 @@ func addBuiltIn(name string, f builtin) error {
 }
 
 func wire(cmds []*Command) error {
-	for _, c := range cmds {
+	for i, c := range cmds {
 		// IO defaults.
 		var err error
-		if c.Stdin, err = OpenRead(c, os.Stdin, 0); err != nil {
-			return err
+		if c.Stdin == nil {
+			if c.Stdin, err = OpenRead(c, os.Stdin, 0); err != nil {
+				return err
+			}
 		}
-		if c.Stdout, err = OpenWrite(c, os.Stdout, 1); err != nil {
-			return err
+		if c.link != "|" {
+			if c.Stdout, err = OpenWrite(c, os.Stdout, 1); err != nil {
+				return err
+			}
 		}
 		if c.Stderr, err = OpenWrite(c, os.Stderr, 2); err != nil {
 			return err
 		}
+		// The validation is such that "|" is not set on the last one.
+		// Also, there won't be redirects and "|" inappropriately.
+		if c.link != "|" {
+			continue
+		}
+		w, err := cmds[i+1].StdinPipe()
+		if err != nil {
+			return err
+		}
+		r, err := cmds[i].StdoutPipe()
+		if err != nil {
+			return err
+		}
+		// Oh, yuck.
+		// There seems to be no way to do the classic
+		// inherited pipes thing in Go. Hard to believe.
+		go func() {
+			io.Copy(w, r)
+			w.Close()
+		}()
 	}
 	return nil
 }
