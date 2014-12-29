@@ -191,7 +191,19 @@ func main() {
 		for i := range cmds {
 			if err := command(cmds[i]); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
+				if cmds[i].link == "||" {
+					continue
+				}
+				// yes, not needed, but useful so you know
+				// what goes on here.
+				if cmds[i].link == "&&" {
+					break
+				}
 				break
+			} else {
+				if cmds[i].link == "||" {
+					break
+				}
 			}
 		}
 		if status == "EOF" {
