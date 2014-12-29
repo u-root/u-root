@@ -27,6 +27,6 @@ func runtime(c *Command) error {
 		err = runit(c)
 	}
 	cost := time.Since(start)
-	fmt.Fprintf(c.err, "%v\n", cost)
+	fmt.Fprintf(c.Stderr, "%v\n", cost)
 	return err
 }

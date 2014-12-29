@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os/exec"
 	"strings"
 )
 
@@ -19,6 +20,7 @@ type arg struct {
 // The Command struct is initially filled in by the parser. The shell itself
 // adds to it as processing continues, and then uses it to creates os.Commands
 type Command struct {
+	*exec.Cmd
 	// These are filled in by the parser.
 	args  []arg
 	fdmap map[int]string
@@ -29,10 +31,8 @@ type Command struct {
 	// provided by the parser.
 	// we separate the command so people don't have to put checks for the length
 	// of argv in their builtins. We do that for them.
-	cmd      string
-	argv     []string
-	in       io.Reader
-	out, err io.Writer
+	cmd  string
+	argv []string
 }
 
 var (
