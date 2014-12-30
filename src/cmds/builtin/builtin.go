@@ -14,15 +14,28 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 
 	"golang.org/x/tools/imports"
 )
+
+type mount struct {
+	source string
+	target string
+	fstype string
+	flags  uintptr
+	opts   string
+}
 
 var (
 	startPart = "package main\n"
 	initPart  = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(c*Command) error {\nvar err error\n"
 	//	endPart = "\n}\n)\n}\n"
-	endPart = "\nreturn err\n}\n"
+	endPart   = "\nreturn err\n}\n"
+	namespace = []mount{
+		{source: "tmpfs", target: "/src/cmds/sh", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
+		{source: "tmpfs", target: "/bin", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
+	}
 )
 
 func main() {
@@ -67,20 +80,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("bad parse: '%v': %v", goCode, err)
 	}
-	log.Printf("%v", a)
+	bName := path.Join("/src/cmds/sh", a[0]+".go")
+	filemap := make(map[string][]byte)
+	fmt.Printf("filemap %v\n", filemap)
+	filemap[bName] = fullCode
 
-	log.Print(fullCode)
-
-	d, err := ioutil.TempDir("", "builtin")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := ioutil.WriteFile(path.Join(d, a[0]+".go"), []byte(fullCode), 0666); err != nil {
-		log.Fatal(err)
-	}
-
-	/* copy all of /src/cmds/sh/*.go to the directory. */
+	// processed code, read in shell files.
 	globs, err := filepath.Glob("/src/cmds/sh/*.go")
 	if err != nil {
 		log.Fatal(err)
@@ -89,39 +94,62 @@ func main() {
 		if b, err := ioutil.ReadFile(i); err != nil {
 			log.Fatal(err)
 		} else {
-			_, df := path.Split(i)
-			f := path.Join(d, df)
-			if err = ioutil.WriteFile(f, b, 0600); err != nil {
-				log.Fatal(err)
+			if _, ok := filemap[i]; ok {
+				log.Fatal("%v exists", i)
 			}
+			filemap[i] = b
 		}
 	}
 
-	os.Setenv("GOBIN", d)
-	cmd := exec.Command("go", "build", "-x", ".")
-	cmd.Dir = d
+	log.Printf("%v", a)
 
+	log.Print(fullCode)
+	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
+		fmt.Printf("m %v\n", b)
+	}
+	if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
+		log.Fatal(err)
+	}
+	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
+		fmt.Printf("m %v\n", b)
+	}
+
+	// We are rewriting the shell. We need to create a new binary, i.e.
+	// rewrite the one in /bin. Sadly, there is no way to say "mount THIS bin
+	// before THAT bin". There will be ca. 3.18 and we might as well wait for
+	// that to become common. For now, we essentially erase /bin but mounting
+	// a tmpfs over it.
+	// This would be infinitely easier with a true union file system. Oh well.
+	for _, m := range namespace {
+		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
+			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
+		}
+	}
+	log.Printf("filemap: %v", filemap)
+	// write the new /src/cmds/sh
+	for i, v := range filemap {
+		if err = ioutil.WriteFile(i, v, 0600); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// the big fun: just run it. The Right Things Happen.
+	cmd := exec.Command("/buildbin/sh")
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	log.Printf("Install %v", a[0])
-	if err = cmd.Run(); err != nil {
+	// TODO: figure out why we get EPERM when we use this.
+	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
+	log.Printf("Run %v", cmd)
+	err = cmd.Run()
+	if err != nil {
 		log.Printf("%v\n", err)
 	}
-
-	// stupid, but hey ...
-	_, execName := path.Split(d)
-	execName = path.Join(d, execName)
-	os.Setenv("GOBIN", "/bin")
-	cmd = exec.Command(execName)
-	cmd.Dir = d
-
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	log.Printf("Run %v", execName)
-	if err := cmd.Run(); err != nil {
-		log.Printf("%v\n", err)
+	// Unshare doesn't work in a sane way due to a Go issue?
+	for _, m := range namespace {
+		if err := syscall.Unmount(m.target, syscall.MNT_FORCE); err != nil {
+			log.Printf("Umount :%s: %v\n", m.target, err)
+		}
 	}
-
+	log.Printf("init: /bin/sh returned!\n")
 }
