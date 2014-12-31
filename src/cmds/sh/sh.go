@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 )
 
 type builtin func(c *Command) error
@@ -145,6 +146,14 @@ func doArgs(cmds []*Command) error {
 func commands(cmds []*Command) error {
 	for _, c := range cmds {
 		c.Cmd = exec.Command(c.cmd, c.argv[:]...)
+		// this is a Very Special Case related to a Go issue.
+		// we're not able to unshare correctly in builtin.
+		// Not sure of the issue but this hack will have to do until
+		// we understand it. Barf.
+		if c.cmd == "builtin" {
+			s := &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS}
+			c.Cmd.SysProcAttr = s
+		}
 	}
 	return nil
 }

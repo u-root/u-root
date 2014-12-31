@@ -107,8 +107,15 @@ func main() {
 	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
 		fmt.Printf("m %v\n", b)
 	}
-	if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
-		log.Fatal(err)
+	// we'd like to do this here, but it seems it doesn't end
+	// up applying to all procs in this group, leading to confusion. 
+	// sometimes they get the private mount, sometimes not. So we had
+	// to hack it in the shell. 
+	// FIXME
+	if false {
+		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
+			log.Fatal(err)
+		}
 	}
 	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
 		fmt.Printf("m %v\n", b)
