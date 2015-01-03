@@ -5,10 +5,13 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -43,7 +46,7 @@ var (
 func pushback(b *bufio.Reader) {
 	err := b.UnreadByte()
 	if err != nil {
-		panic(fmt.Sprintf("unreading bufio: %v", err))
+		panic(errors.New(fmt.Sprintf("unreading bufio: %v", err)))
 	}
 }
 
@@ -55,7 +58,7 @@ func one(b *bufio.Reader) byte {
 		return 0
 	}
 	if err != nil {
-		panic(fmt.Sprintf("reading bufio: %v", err))
+		panic(errors.New(fmt.Sprintf("reading bufio: %v", err)))
 	}
 	return c
 }
@@ -103,7 +106,7 @@ func tok(b *bufio.Reader) (string, string) {
 			}
 			arg = arg + string(nc)
 		}
-	case ' ':
+	case ' ', '\t':
 		return "white", string(c)
 	case '\n':
 		//fmt.Printf("NEWLINE\n")
@@ -147,36 +150,43 @@ func getArg(b *bufio.Reader, what string) string {
 	for {
 		nt, s := tok(b)
 		if nt == "EOF" || nt == "EOL" {
-			panic(fmt.Sprintf("%v requires an argument", what))
+			panic(errors.New(fmt.Sprintf("%v requires an argument", what)))
 		}
 		if nt == "white" {
 			continue
 		}
 		if nt != "ARG" {
-			panic(fmt.Sprintf("%v requires an argument, not %v", what, nt))
+			panic(errors.New(fmt.Sprintf("%v requires an argument, not %v", what, nt)))
 		}
 		return s
 	}
 }
-func parse(b *bufio.Reader) (*Command, string) {
+func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 	t, s := tok(b)
-	//fmt.Printf("%v %v\n", t, s)
-	// Cover the trivial case that nothing happens.
 	if s == "\n" || t == "EOF" || t == "EOL" {
 		return nil, t
 	}
-	//fmt.Printf("%v %v\n", t, s)
-	c := newCommand()
 	for {
 		switch t {
-		case "ENV", "ARG":
+		case "ENV":
+			if !path.IsAbs(s) {
+				s = path.Join(envDir, s)
+			}
+			b, err := ioutil.ReadFile(s)
+			if err != nil {
+				panic(errors.New(fmt.Sprintf("%s: %v", s, err)))
+			}
+			f := bufio.NewReader(bytes.NewReader(b))
+			// the whole string is consumed.
+			parsestring(f, c)
+		case "ARG":
 			c.args = append(c.args, arg{s, t})
 		case "white":
 		case "FD":
 			x := 0
 			_, err := fmt.Sscanf(s, "%v", &x)
 			if err != nil {
-				panic(fmt.Sprintf("bad FD on redirect: %v, %v", s, err))
+				panic(errors.New(fmt.Sprintf("bad FD on redirect: %v, %v", s, err)))
 			}
 			// whitespace is allowed
 			c.fdmap[x] = getArg(b, t)
@@ -193,11 +203,16 @@ func parse(b *bufio.Reader) (*Command, string) {
 		case "EOL":
 			return c, t
 		default:
-			panic(fmt.Sprintf("unknown token type %v", t))
+			panic(errors.New(fmt.Sprintf("unknown token type %v", t)))
 		}
 		t, s = tok(b)
 	}
 	return c, t
+}
+func parse(b *bufio.Reader) (*Command, string) {
+	//fmt.Printf("%v %v\n", t, s)
+	c := newCommand()
+	return parsestring(b, c)
 }
 
 func newCommand() *Command {
@@ -220,9 +235,15 @@ func parsecommands(b *bufio.Reader) ([]*Command, string) {
 	}
 }
 
-func getCommand(b *bufio.Reader) ([]*Command, string, error) {
+func getCommand(b *bufio.Reader) (c []*Command, t string, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = e.(error)
+		}
+	}()
+
 	// TODO: put a recover here that just returns an error.
-	c, t := parsecommands(b)
+	c, t = parsecommands(b)
 	// the rules.
 	// For now, no empty commands.
 	// Can't have a redir and a redirect for fd1.
@@ -240,7 +261,7 @@ func getCommand(b *bufio.Reader) ([]*Command, string, error) {
 			return nil, "", errors.New("Can't have a pipe to command with redirect on stdin\n")
 		}
 	}
-	return c, t, nil
+	return c, t, err
 }
 
 /*
