@@ -11,6 +11,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 	"time"
 )
 
@@ -24,6 +25,16 @@ func runtime(c *Command) error {
 	if len(c.argv) > 0 {
 		c.cmd = c.argv[0]
 		c.argv = c.argv[1:]
+		c.args = c.args[1:]
+		// If we are in a builtin, then the lookup failed.
+		// The result of the failed lookup remains in
+		// c.Cmd and will make start fail. We have to make
+		// a new Cmd.
+		nCmd := exec.Command(c.cmd, c.argv[:]...)
+		nCmd.Stdin = c.Stdin
+		nCmd.Stdout = c.Stdout
+		nCmd.Stderr = c.Stderr
+		c.Cmd = nCmd
 		err = runit(c)
 	}
 	cost := time.Since(start)
