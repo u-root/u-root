@@ -49,18 +49,13 @@ func main() {
 	flag.Parse()
 	goCode := startPart
 	a := flag.Args()
-	if len(a) < 3 {
-		log.Fatalf("Usage: builtin <command> <code>")
+	if len(a) < 2 || len(a) % 2 != 0 {
+		log.Fatalf("Usage: builtin <command> <code> [<command> <code>]*")
 	}
 	// Simple programs are just bits of code for main ...
-	if a[1] == "{" {
+	if a[1][0] == '{' {
 		goCode = goCode + fmt.Sprintf(initPart, a[0])
-		for _, v := range a[2:] {
-			if v == "}" {
-				break
-			}
-			goCode = goCode + v + "\n"
-		}
+		goCode = goCode + a[1][1:len(a[1])-1]
 	} else {
 		for _, v := range a[1:] {
 			if v == "{" {
@@ -75,11 +70,12 @@ func main() {
 		}
 	}
 	goCode = goCode + endPart
-	log.Printf("%v", goCode)
+	log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
 	fullCode, err := imports.Process("commandline", []byte(goCode), &opts)
 	if err != nil {
 		log.Fatalf("bad parse: '%v': %v", goCode, err)
 	}
+	log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
 	bName := path.Join("/src/cmds/sh", a[0]+".go")
 	filemap := make(map[string][]byte)
 	fmt.Printf("filemap %v\n", filemap)
@@ -132,7 +128,7 @@ func main() {
 			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
 	}
-	log.Printf("filemap: %v", filemap)
+	//log.Printf("filemap: %v", filemap)
 	// write the new /src/cmds/sh
 	for i, v := range filemap {
 		if err = ioutil.WriteFile(i, v, 0600); err != nil {
