@@ -29,7 +29,7 @@ type mount struct {
 
 var (
 	startPart = "package main\n"
-	initPart  = "func init() {\n	addBuiltIn(\"%s\", b)\n}\nfunc b(c*Command) error {\nvar err error\n"
+	initPart  = "func init() {\n	addBuiltIn(\"%s\", %s)\n}\nfunc %s(c*Command) error {\nvar err error\n"
 	//	endPart = "\n}\n)\n}\n"
 	endPart   = "\nreturn err\n}\n"
 	namespace = []mount{
@@ -47,39 +47,42 @@ func main() {
 		TabWidth:  8,
 	}
 	flag.Parse()
-	goCode := startPart
 	a := flag.Args()
 	if len(a) < 2 || len(a) % 2 != 0 {
 		log.Fatalf("Usage: builtin <command> <code> [<command> <code>]*")
 	}
-	// Simple programs are just bits of code for main ...
-	if a[1][0] == '{' {
-		goCode = goCode + fmt.Sprintf(initPart, a[0])
-		goCode = goCode + a[1][1:len(a[1])-1]
-	} else {
-		for _, v := range a[1:] {
-			if v == "{" {
-				goCode = goCode + fmt.Sprintf(initPart, a[0])
-				continue
-			}
-			// FIXME: should only look for last arg.
-			if v == "}" {
-				break
-			}
-			goCode = goCode + v + "\n"
-		}
-	}
-	goCode = goCode + endPart
-	log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
-	fullCode, err := imports.Process("commandline", []byte(goCode), &opts)
-	if err != nil {
-		log.Fatalf("bad parse: '%v': %v", goCode, err)
-	}
-	log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
-	bName := path.Join("/src/cmds/sh", a[0]+".go")
 	filemap := make(map[string][]byte)
-	fmt.Printf("filemap %v\n", filemap)
-	filemap[bName] = fullCode
+	for ;len(a) > 0; a = a[2:] {
+		goCode := startPart
+		// Simple programs are just bits of code for main ...
+		if a[1][0] == '{' {
+			goCode = goCode + fmt.Sprintf(initPart, a[0], a[0], a[0])
+			goCode = goCode + a[1][1:len(a[1])-1]
+		} else {
+			for _, v := range a[1:] {
+				if v == "{" {
+					goCode = goCode + fmt.Sprintf(initPart, a[0])
+					continue
+				}
+				// FIXME: should only look for last arg.
+				if v == "}" {
+					break
+				}
+				goCode = goCode + v + "\n"
+			}
+		}
+		goCode = goCode + endPart
+		log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
+		fullCode, err := imports.Process("commandline", []byte(goCode), &opts)
+		if err != nil {
+			log.Fatalf("bad parse: '%v': %v", goCode, err)
+		}
+		log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
+		bName := path.Join("/src/cmds/sh", a[0]+".go")
+		//fmt.Printf("filemap %v\n", filemap)
+		filemap[bName] = fullCode
+		//log.Printf("%v: %v", bName, fullCode)
+	}
 
 	// processed code, read in shell files.
 	globs, err := filepath.Glob("/src/cmds/sh/*.go")
@@ -97,11 +100,8 @@ func main() {
 		}
 	}
 
-	log.Printf("%v", a)
-
-	log.Print(fullCode)
-	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
-		fmt.Printf("m %v\n", b)
+	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil && false {
+		log.Printf("m %v\n", string(b))
 	}
 	// we'd like to do this here, but it seems it doesn't end
 	// up applying to all procs in this group, leading to confusion. 
