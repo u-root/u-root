@@ -67,7 +67,7 @@ func NewMlist() *mlist {
 }
 
 func (m *mlist) Add(base, src, dst, mtype, opts string, flags uintptr) {
-	m.mounts = append(m.mounts, &mount{src: path.Join(base, "/", src), dst: dst, mtype: mtype, flags: flags, opts: opts})
+	m.mounts = append(m.mounts, &mount{src: src, dst: path.Join(base, dst), mtype: mtype, flags: flags, opts: opts})
 
 }
 
@@ -79,12 +79,12 @@ func (m* mount) One() error {
 	}
 	return nil
 }
-func (m *mlist) Do(base string) {
+func (m *mlist) Do(base, console string) {
 	// Accumulate all the errors
 	// Do the first one to test.
-	e := []error{}
+	e := ""
 	if err := m.mounts[0].One(); err != nil {
-		e = append(e, err)
+		e = e + "\n" + err.Error()
 	}
 	
 	
@@ -107,30 +107,86 @@ func (m *mlist) Do(base string) {
 		m.Add(base, "devpts", "/dev/pts", "devpts","newinstance,ptmxmode=000,mode=620,gid=5",
 			syscall.MS_NOSUID | syscall.MS_NOEXEC)
 
+		m.Add(base, console, "/dev/console", "", "", syscall.MS_BIND)
+
 		m.Add(base, "tmpfs", "/dev/shm", "tmpfs", "mode=1777", 
 			syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV)
 
 		m.Add(base, "tmpfs", "/run", "tmpfs", "mode=755",
 			syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME)
 
+
 	}
 
 	for _, m := range m.mounts[1:] {
 		err := m.One()
 		if err != nil {
-			e = append(e,err)
+			e = e + "\n" + err.Error()
 		}
 	}
 
-	if len(e) == 0  {
+	if e == "" {
 		return
 	}
 
-	for i := range(e) {
-		log.Printf("%v", e[i])
+	log.Printf("%v", e)
+	log.Fatal("Not all mounts succeeded.")
+}
+
+func setup_nodes(base, console string) {
+	nodes := []string {
+		console,
+		"/dev/tty",
+		"/dev/full",
+		"/dev/null",
+		"/dev/zero",
+		"/dev/random",
+		"/dev/urandom", }
+
+	if err := os.Chmod(console, 0600); err != nil {
+		log.Printf("%v", err)
+	}
+	if err := os.Chown(console, 0, 0); err != nil {
+		log.Printf("%v", err)
 	}
 
-	log.Fatal("Not all mounts succeeded.")
+	for i, n := range nodes {
+		st, err := os.Stat(n)
+		if err != nil {
+			log.Printf("%v", err)
+		}
+		nn := path.Join(base, n)
+		// special case.
+		if i == 0 {
+			nn = path.Join(base, "/dev/console")
+		}
+		if err := syscall.Mknod(nn, uint32(st.Mode()), int(st.Sys().(*syscall.Stat_t).Dev)); err != nil {
+			log.Printf("%v", err)
+		}
+			
+	}
+}
+
+func make_symlinks(base string) {
+	linkit := []struct {
+		src, dst string
+	} {
+		{"/dev/pts/ptmx", "/dev/ptmx"},
+		{"/proc/kcore",	"/dev/core"},
+		{"/proc/self/fd", "/dev/fd"},
+		{"/proc/self/fd/0", "/dev/stdin"},
+		{"/proc/self/fd/1","/dev/stdout"},
+		{"/proc/self/fd/2", "/dev/stderr"},
+
+	}
+
+	for i := range linkit {
+		dst := path.Join(base, linkit[i].dst)
+
+		if err := os.Symlink(linkit[i].src, dst); err != nil {
+			log.Printf("%v", err)
+		}
+	}
 }
 
 
