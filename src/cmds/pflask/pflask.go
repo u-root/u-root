@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"strings"
 	//"user"
 
-	_ "pty"
+	"pty"
 )
 
 type cgroup string
@@ -323,13 +324,12 @@ func main() {
 		for k, v := range e {
 			c.Env = append(c.Env, k + "=" + v)
 		}
-				
-			
-		if err := c.Run(); err != nil {
-			m.Undo()
-			m.Undo()
-			log.Fatalf("Run failed")
+
+		f, err := pty.Start(c)
+		if err != nil {
+			panic(err)
 		}
+		io.Copy(os.Stdout, f)
 	}
 	// end child code.
 	m.Undo()
