@@ -19,6 +19,11 @@ import (
 type cgroup string
 
 func (c cgroup) apply(s string, f func(s string)) {
+	// range of strings.Split("",",") is 1.
+	// not exactly what we might expect.
+	if s == "" {
+		return
+	}
 	for _, g := range strings.Split(s, ",") {
 		p := path.Join(g)
 		f(p)
@@ -215,15 +220,14 @@ func make_symlinks(base string) {
 	}
 }
 
-func do_chroot(dest string) {
-
-	if err := os.Chdir(dest); err != nil {
+func do_chroot(chroot, chdir string) {
+	if chdir == "" {
+		chdir = "/"
+	}
+	if err := syscall.Chroot(chroot); err != nil {
 		log.Fatalf("%v", err)
 	}
-	if err := syscall.Chroot(dest); err != nil {
-		log.Fatalf("%v", err)
-	}
-	if err := os.Chdir("/"); err != nil {
+	if err := os.Chdir(chdir); err != nil {
 		log.Fatalf("%v", err)
 	}
 }
@@ -233,8 +237,7 @@ var (
 	cg      = flag.String("cgroup", "", "set the cgroups")
 	mnt     = flag.String("mount", "", "define mounts")
 	chroot  = flag.String("chroot", "", "where to chroot to")
-	chdir   = flag.String("chdir", "", "where to chrdir to")
-	dest    = flag.String("dest", "", "where the root is")
+	chdir   = flag.String("chdir", "", "where to chrdir to in the chroot")
 	console = flag.String("console", "/dev/console", "where the root is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	env     = flag.String("env", "", "other environment variables")
@@ -245,8 +248,8 @@ func main() {
 	// note the unshare system call worketh not for Go. You have to run
 	// this under the unshare command. Good times.
 	flag.Parse()
-	if *dest == "" {
-		log.Fatalf("you are required to set the dest via --dest")
+	if *chroot == "" {
+		log.Fatalf("you are required to set the chroot via --chroot")
 	}
 	fmt.Printf("greetings\n")
 	a := flag.Args()
@@ -254,7 +257,7 @@ func main() {
 	// Just create the container and run with it for now.
 	c := cgroup(*cgpath)
 	ppid := os.Getpid()
-	m, err := NewMlist(*dest)
+	m, err := NewMlist(*chroot)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -267,28 +270,23 @@ func main() {
 	if true {
 		c.Do(*cg, ppid)
 
-		m.Do(*dest, *console)
+		m.Do(*chroot, *console)
 
-		copy_nodes(*dest, *console)
+		copy_nodes(*chroot, *console)
 
-		//make_ptmx(dest);
+		//make_ptmx(chroot);
 
-		make_symlinks(*dest)
+		make_symlinks(*chroot)
 
-		//make_console(dest, master_name);
+		//make_console(chroot, master_name);
 
-		do_chroot(*dest)
+		do_chroot(*chroot, *chdir)
 
 		//umask(0022);
 
 		/* TODO: drop capabilities */
 
 		//do_user(user);
-		/*
-			if (change != NULL) {
-				rc = chdir(change);
-				if (rc < 0) sysf_printf("chdir()");
-		*/
 
 		e := make(map[string]string)
 		if *keepenv {
@@ -324,6 +322,8 @@ func main() {
 		for k, v := range e {
 			c.Env = append(c.Env, k+"="+v)
 		}
+
+		c.SysProcAttr = &syscall.SysProcAttr{Chroot: *chroot, Setctty: true, Setsid: true}
 
 		// why do we need the ptys, hmm.
 		if false {
