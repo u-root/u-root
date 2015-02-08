@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,47 +9,55 @@ import (
 	"path"
 	"syscall"
 	"strings"
+	//"user"
+
+	_ "pty"
 )
 
 type cgroup string
 
-func (c *cgroup) apply(s string, f func(s string)) {
+func (c cgroup) apply(s string, f func(s string)) {
 	for _,g := range strings.Split(s, ",") {
-		p := path.Join(string(*c), g)
+		p := path.Join(string(c), g)
 		f(p)
 	}
 }
 
-func (c *cgroup) Validate(s string) {
+func (c cgroup) Validate(s string) {
 	c.apply(s, func(s string) {
-		if st, err := os.Stat(s); err != nil {
+		if st, err := os.Stat(path.Join(string(c), s)); err != nil {
 			log.Fatal("%v", err)
 		} else if ! st.IsDir() {
 				log.Fatal("%s: not a directory", s)
 		}})
 }
 
-func (c *cgroup) Create(s string) {
-	c.apply(s, func(s string) {
-		if err := os.MkdirAll(s, 0700); err != nil {
+func (c cgroup) Create(s, name string) {
+	if err := os.MkdirAll(path.Join(string(c), s, name), 0755); err != nil {
 			log.Fatal(err)
-		}})
+	}
 }
 
-func (c *cgroup) Attach(s string, pid int) {
-	c.apply(s, func(s string) {
-		t := path.Join(s, "tasks")
-		b := []byte(fmt.Sprintf("%v", pid))
-		if err := ioutil.WriteFile(t, b, 0600); err != nil {
-			log.Fatal(err)
-		}})
+func (c cgroup) Attach(s, name string, pid int) {
+	t := path.Join(string(c), s, name, "tasks")
+	b := []byte(fmt.Sprintf("%v", pid))
+	if err := ioutil.WriteFile(t, b, 0600); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func (c *cgroup) Destroy(s string) {
-	c.apply(s, func(s string) {
-		if err := os.RemoveAll(s); err != nil {
+func (c cgroup) Destroy(s, n string) {
+	if err := os.RemoveAll(path.Join(string(c), s, n)); err != nil {
 			log.Fatal(err)
-		}})
+	}
+}
+
+func (c cgroup) Do(pid int) {
+	cgn := fmt.Sprintf("pflask.%d", pid)
+	c.apply(string(c), func(s string) {
+		c.Create(s, cgn)
+		c.Attach(s, cgn, 1)
+	})
 }
 
 type mount struct {
@@ -86,7 +95,6 @@ func (m *mlist) Do(base, console string) {
 	if err := m.mounts[0].One(); err != nil {
 		e = e + "\n" + err.Error()
 	}
-	
 	
 	if base != "" {
 		m.Add(base, "proc", "/proc", "proc", "", 
@@ -133,7 +141,7 @@ func (m *mlist) Do(base, console string) {
 	log.Fatal("Not all mounts succeeded.")
 }
 
-func setup_nodes(base, console string) {
+func copy_nodes(base, console string) {
 	nodes := []string {
 		console,
 		"/dev/tty",
@@ -189,7 +197,104 @@ func make_symlinks(base string) {
 	}
 }
 
+func do_chroot(dest string) {
 
+	if err := os.Chdir(dest); err != nil {
+		log.Fatalf("%v", err)
+	}
+	if err := syscall.Chroot(dest); err != nil {
+		log.Fatalf("%v", err)
+	}
+	if err := os.Chdir("/"); err != nil {
+		log.Fatalf("%v", err)
+	}
+}
+
+
+
+var (
+	cg = flag.String("cgroup", "/sys/fs/cgroup", "set the cgroups")
+	mnt = flag.String("mount", "", "define mounts")
+	chroot = flag.String("chroot", "", "where to chroot to")
+	chdir = flag.String("chroot", "", "where to chrdir to")
+	dest = flag.String("dest", "", "where the root is")
+	console = flag.String("console", "", "where the root is")
+	keepenv = flag.Bool("keepenv", false, "Keep the environment")
+	env = flag.String("env", "", "other environment variables")
+	user = flag.String("user", "root"/*user.User.Username*/, "User name")
+)
+	
 func main() {
+	// option is not an option.
 	fmt.Printf("greetings\n")
+	//a := flag.Args()
+
+	// Just create the container and run with it for now.
+	c := cgroup(*cg)
+	ppid := 1048576
+	m := NewMlist()
+	// child code.
+	if true {
+		c.Do(ppid)
+
+		m.Do(*dest, *console)
+
+		if (dest != nil) {
+			copy_nodes(*dest, *console)
+
+			//make_ptmx(dest);
+
+			make_symlinks(*dest)
+
+			//make_console(dest, master_name);
+
+			do_chroot(*dest)
+		}
+
+		//umask(0022);
+
+		/* TODO: drop capabilities */
+
+		//do_user(user);
+/*
+		if (change != NULL) {
+			rc = chdir(change);
+			if (rc < 0) sysf_printf("chdir()");
+*/
+
+		
+		if dest != nil {
+			term := os.Getenv("TERM")
+			
+			if ! *keepenv {
+				os.Clearenv()
+			}
+			os.Setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin")
+			os.Setenv("USER", *user)
+			os.Setenv("LOGNAME", *user)
+			os.Setenv("TERM", term)
+		}
+		
+		if env != nil {
+			for _, c := range strings.Split(*env, ",") {
+				k := strings.SplitN(c, "=", 2)
+				if len(k) != 2 {
+					log.Printf("Bogus environment string %v", c)
+				}
+				if err := os.Setenv(k[0], k[1]); err != nil {
+					log.Printf(err.Error())
+				}
+			}
+		}
+		os.Setenv("container", "pflask")
+		/*
+		if (argc > optind)
+			rc = execvpe(argv[optind], argv + optind, environ);
+		else
+			rc = execle("/bin/bash", "-bash", NULL, environ);
+
+		if (rc < 0) sysf_printf("exec()");
+*/
+	}
+	// end child code.
 }
