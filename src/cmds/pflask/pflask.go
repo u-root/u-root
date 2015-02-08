@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os/exec"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -216,7 +217,7 @@ var (
 	cg = flag.String("cgroup", "/sys/fs/cgroup", "set the cgroups")
 	mnt = flag.String("mount", "", "define mounts")
 	chroot = flag.String("chroot", "", "where to chroot to")
-	chdir = flag.String("chroot", "", "where to chrdir to")
+	chdir = flag.String("chdir", "", "where to chrdir to")
 	dest = flag.String("dest", "", "where the root is")
 	console = flag.String("console", "", "where the root is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
@@ -225,21 +226,30 @@ var (
 )
 	
 func main() {
-	// option is not an option.
+	// note the unshare system call worketh not for Go. You have to run
+	// this under the unshare command. Good times.
+	flag.Parse()
+	if *dest == "" {
+		log.Fatalf("you are required to set the dest via --dest")
+	}
 	fmt.Printf("greetings\n")
-	//a := flag.Args()
+	a := flag.Args()
 
 	// Just create the container and run with it for now.
 	c := cgroup(*cg)
 	ppid := 1048576
 	m := NewMlist()
-	// child code.
+	// child code. Not really. What really happens here is we set
+	// ourselves into the container, and spawn the child. It's a bit odd
+	// but we're the master, but we'll run in the container? I don't know
+	// how else to do it. This may require we set some things up first,
+	// esp. the network. But, it's all fun and games until someone loses
+	// an eye.
 	if true {
 		c.Do(ppid)
 
 		m.Do(*dest, *console)
 
-		if (dest != nil) {
 			copy_nodes(*dest, *console)
 
 			//make_ptmx(dest);
@@ -249,7 +259,6 @@ func main() {
 			//make_console(dest, master_name);
 
 			do_chroot(*dest)
-		}
 
 		//umask(0022);
 
@@ -262,36 +271,49 @@ func main() {
 			if (rc < 0) sysf_printf("chdir()");
 */
 
-		
-		if dest != nil {
-			term := os.Getenv("TERM")
-			
-			if ! *keepenv {
-				os.Clearenv()
+		e := make(map[string]string)
+		if *keepenv {
+			for _, v := range os.Environ() {
+				k := strings.SplitN(v, "=", 2)
+				e[k[0]] = k[1]
 			}
-			os.Setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin")
-			os.Setenv("USER", *user)
-			os.Setenv("LOGNAME", *user)
-			os.Setenv("TERM", term)
 		}
 		
-		if env != nil {
+			term := os.Getenv("TERM")
+			e["TERM"] = term
+			e["PATH"] =  "/usr/sbin:/usr/bin:/sbin:/bin"
+			e["USER"] = *user
+			e["LOGNAME"] = *user
+		
+		if e != nil {
 			for _, c := range strings.Split(*env, ",") {
 				k := strings.SplitN(c, "=", 2)
 				if len(k) != 2 {
 					log.Printf("Bogus environment string %v", c)
 				}
-				if err := os.Setenv(k[0], k[1]); err != nil {
-					log.Printf(err.Error())
-				}
+				e[k[0]] = k[1]
 			}
 		}
-		os.Setenv("container", "pflask")
+		e["container"] = "pflask"
+		
+		if len(a) == 0 {
+			a = []string{"/bin/bash", "bash"}
+		}
+		c := exec.Command(a[0], a...)
+		c.Env = nil
+		for k, v := range e {
+			c.Env = append(c.Env, k + "=" + v)
+		}
+				
+			
+		if err := c.Run(); err != nil {
+			log.Fatalf("Run failed")
+		}
 		/*
 		if (argc > optind)
 			rc = execvpe(argv[optind], argv + optind, environ);
 		else
-			rc = execle("/bin/bash", "-bash", NULL, environ);
+			rc = execle(
 
 		if (rc < 0) sysf_printf("exec()");
 */
