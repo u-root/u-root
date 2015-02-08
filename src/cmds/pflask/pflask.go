@@ -318,7 +318,7 @@ func main() {
 		if len(a) == 0 {
 			a = []string{"/bin/bash", "bash"}
 		}
-		c := exec.Command(a[0], a...)
+		c := exec.Command(a[0]) // , a[1:]...)
 		c.Env = nil
 		for k, v := range e {
 			c.Env = append(c.Env, k + "=" + v)
@@ -330,14 +330,6 @@ func main() {
 			m.Undo()
 			log.Fatalf("Run failed")
 		}
-		/*
-		if (argc > optind)
-			rc = execvpe(argv[optind], argv + optind, environ);
-		else
-			rc = execle(
-
-		if (rc < 0) sysf_printf("exec()");
-*/
 	}
 	// end child code.
 	m.Undo()
