@@ -64,65 +64,73 @@ func (c cgroup) Do(pid int) {
 type mount struct {
 	src, dst, mtype, opts string
 	flags uintptr
+	dir bool
+	mounted bool
 }
 
 type mlist struct {
 	mounts[]*mount
 }
 
-func NewMlist() *mlist {
+func NewMlist(base string) (*mlist, error){
 	m := &mlist{}
-	m.Add("", "", "/", "", "", syscall.MS_SLAVE|syscall.MS_REC)
-	return m
+	if err := syscall.Mount("", "/", "", syscall.MS_SLAVE|syscall.MS_REC, ""); err != nil {
+		err := fmt.Errorf("Mount :%s: on :%s: type :%s: flags %x: opts :%v: %v\n", 
+			"", "/", "", syscall.MS_SLAVE|syscall.MS_REC, "", err)
+		return nil, err
+	}
+
+	return m, nil
 }
 
-func (m *mlist) Add(base, src, dst, mtype, opts string, flags uintptr) {
-	m.mounts = append(m.mounts, &mount{src: src, dst: path.Join(base, dst), mtype: mtype, flags: flags, opts: opts})
+func (m *mlist) Add(base, src, dst, mtype, opts string, flags uintptr, dir bool) {
+	m.mounts = append(m.mounts, &mount{src: src, dst: path.Join(base, dst), mtype: mtype, flags: flags, opts: opts, dir: dir})
 
 }
 
 func (m* mount) One() error {
-	if err := syscall.Mount(m.src, m.dst, m.mtype, m.flags, m.opts); err != nil {
-		err := fmt.Errorf("Mount :%s: on :%s: type :%s: flags %x: %v\n", 
-			m.src, m.dst, m.mtype, m.flags, m.opts, err)
-		return err
+	if m.dir {
+		if err := os.MkdirAll(m.dst, 0755); err != nil {
+			return fmt.Errorf("One: mkdirall %v: %v", m.dst, err)
+		}
 	}
+	if err := syscall.Mount(m.src, m.dst, m.mtype, m.flags, m.opts); err != nil {
+		return fmt.Errorf("Mount :%s: on :%s: type :%s: flags %x: opts :%v: %v\n", 
+			m.src, m.dst, m.mtype, m.flags, m.opts, err)
+	}
+	m.mounted = true
 	return nil
 }
 func (m *mlist) Do(base, console string) {
-	// Accumulate all the errors
-	// Do the first one to test.
-	e := ""
-	if err := m.mounts[0].One(); err != nil {
-		e = e + "\n" + err.Error()
-	}
-	
+	ok := true
 	if base != "" {
 		m.Add(base, "proc", "/proc", "proc", "", 
-			syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV)
+			syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV, true)
 
 		m.Add(base, "/proc/sys", "/proc/sys", "", "", 
-			syscall.MS_BIND)
+			syscall.MS_BIND, true)
 
 		m.Add(base, "", "/proc/sys", "", "", 
-			syscall.MS_BIND | syscall.MS_RDONLY | syscall.MS_REMOUNT)
+			syscall.MS_BIND | syscall.MS_RDONLY | syscall.MS_REMOUNT, true)
 
 		m.Add(base, "sysfs", "/sys", "sysfs", "",
-			syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_RDONLY)
+			syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_RDONLY, true)
 
 		m.Add(base, "tmpfs", "/dev", "tmpfs", "mode=755", 
-			syscall.MS_NOSUID | syscall.MS_STRICTATIME)
+			syscall.MS_NOSUID | syscall.MS_STRICTATIME, true)
 
 		m.Add(base, "devpts", "/dev/pts", "devpts","newinstance,ptmxmode=000,mode=620,gid=5",
-			syscall.MS_NOSUID | syscall.MS_NOEXEC)
+			syscall.MS_NOSUID | syscall.MS_NOEXEC, true)
 
-		m.Add(base, console, "/dev/console", "", "", syscall.MS_BIND)
+		// OOPS! have to mknod first. Now I see why they did it the way they
+		// did.
+		//m.Add(base, console, "/dev/console", "", "", syscall.MS_BIND, false)
 
 		m.Add(base, "tmpfs", "/dev/shm", "tmpfs", "mode=1777", 
-			syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV)
+			syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true)
 
 		m.Add(base, "tmpfs", "/run", "tmpfs", "mode=755",
-			syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME)
+			syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true)
 
 
 	}
@@ -130,16 +138,27 @@ func (m *mlist) Do(base, console string) {
 	for _, m := range m.mounts[1:] {
 		err := m.One()
 		if err != nil {
-			e = e + "\n" + err.Error()
+			log.Printf(err.Error())
+			ok = false
 		}
 	}
-
-	if e == "" {
-		return
+	if ! ok {
+		m.Undo()
+		log.Fatal("Not all mounts succeeded.")
 	}
+}
 
-	log.Printf("%v", e)
-	log.Fatal("Not all mounts succeeded.")
+func (m *mlist) Undo() {
+	for i := range m.mounts {
+		m := m.mounts[len(m.mounts)-i-1]
+		if ! m.mounted {
+			continue
+		}
+		if err := syscall.Unmount(m.dst, 0); err != nil {
+			log.Printf("Unmounting %v: %v", m, err)
+		}
+		m.mounted = false
+	}
 }
 
 func copy_nodes(base, console string) {
@@ -159,16 +178,12 @@ func copy_nodes(base, console string) {
 		log.Printf("%v", err)
 	}
 
-	for i, n := range nodes {
+	for _, n := range nodes {
 		st, err := os.Stat(n)
 		if err != nil {
 			log.Printf("%v", err)
 		}
 		nn := path.Join(base, n)
-		// special case.
-		if i == 0 {
-			nn = path.Join(base, "/dev/console")
-		}
 		if err := syscall.Mknod(nn, uint32(st.Mode()), int(st.Sys().(*syscall.Stat_t).Dev)); err != nil {
 			log.Printf("%v", err)
 		}
@@ -219,7 +234,7 @@ var (
 	chroot = flag.String("chroot", "", "where to chroot to")
 	chdir = flag.String("chdir", "", "where to chrdir to")
 	dest = flag.String("dest", "", "where the root is")
-	console = flag.String("console", "", "where the root is")
+	console = flag.String("console", "/dev/console", "where the root is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	env = flag.String("env", "", "other environment variables")
 	user = flag.String("user", "root"/*user.User.Username*/, "User name")
@@ -238,7 +253,10 @@ func main() {
 	// Just create the container and run with it for now.
 	c := cgroup(*cg)
 	ppid := 1048576
-	m := NewMlist()
+	m, err := NewMlist(*dest)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 	// child code. Not really. What really happens here is we set
 	// ourselves into the container, and spawn the child. It's a bit odd
 	// but we're the master, but we'll run in the container? I don't know
@@ -285,11 +303,12 @@ func main() {
 			e["USER"] = *user
 			e["LOGNAME"] = *user
 		
-		if e != nil {
+		if *env != "" {
 			for _, c := range strings.Split(*env, ",") {
 				k := strings.SplitN(c, "=", 2)
 				if len(k) != 2 {
 					log.Printf("Bogus environment string %v", c)
+					continue
 				}
 				e[k[0]] = k[1]
 			}
@@ -307,6 +326,8 @@ func main() {
 				
 			
 		if err := c.Run(); err != nil {
+			m.Undo()
+			m.Undo()
 			log.Fatalf("Run failed")
 		}
 		/*
@@ -319,4 +340,5 @@ func main() {
 */
 	}
 	// end child code.
+	m.Undo()
 }
