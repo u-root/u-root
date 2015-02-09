@@ -280,7 +280,7 @@ func main() {
 
 		//make_console(chroot, master_name);
 
-		do_chroot(*chroot, *chdir)
+		//do_chroot(*chroot, *chdir)
 
 		//umask(0022);
 
@@ -323,8 +323,19 @@ func main() {
 			c.Env = append(c.Env, k+"="+v)
 		}
 
-		c.SysProcAttr = &syscall.SysProcAttr{Chroot: *chroot, Setctty: true, Setsid: true}
+		c.SysProcAttr = &syscall.SysProcAttr{
+				Chroot: *chroot, 
+				Setctty: true, Setsid: true, Cloneflags:
+				syscall.CLONE_NEWIPC |
+				syscall.CLONE_NEWPID |
+				syscall.CLONE_NEWUTS |
+				syscall.CLONE_NEWNS  |
+					0}
+//			SIGCHLD      |
+//				syscall.CLONE_NEWUSER|
 
+
+		
 		// why do we need the ptys, hmm.
 		if false {
 			c.Stdin = os.Stdin

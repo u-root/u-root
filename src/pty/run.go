@@ -3,7 +3,6 @@ package pty
 import (
 	"os"
 	"os/exec"
-	"syscall"
 )
 
 // Start assigns a pseudo-terminal tty os.File to c.Stdin, c.Stdout,
@@ -18,7 +17,9 @@ func Start(c *exec.Cmd) (pty *os.File, err error) {
 	c.Stdout = tty
 	c.Stdin = tty
 	c.Stderr = tty
-	c.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
+	c.SysProcAttr.Setctty = true
+	c.SysProcAttr.Setsid = true
+	c.SysProcAttr.Ctty = 0
 	err = c.Start()
 	if err != nil {
 		pty.Close()
