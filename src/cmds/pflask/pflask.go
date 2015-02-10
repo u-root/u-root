@@ -109,7 +109,7 @@ func (m *mount) One(base string) error {
 	m.mounted = true
 	return nil
 }
-func (m *mlist) Do(base, console string) {
+func (m *mlist) Do(base string) {
 	ok := true
 	if base != "" {
 		m.Add("proc", "/proc", "proc", "",
@@ -129,10 +129,6 @@ func (m *mlist) Do(base, console string) {
 
 		m.Add("devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=000,mode=620,gid=5",
 			syscall.MS_NOSUID|syscall.MS_NOEXEC, true)
-
-		// OOPS! have to mknod first. Now I see why they did it the way they
-		// did.
-		//m.Add(console, "/dev/console", "", "", syscall.MS_BIND, false)
 
 		m.Add("tmpfs", "/dev/shm", "tmpfs", "mode=1777",
 			syscall.MS_NOSUID|syscall.MS_STRICTATIME|syscall.MS_NODEV, true)
@@ -169,22 +165,39 @@ func (m *mlist) Undo(base string) {
 	}
 }
 
-func copy_nodes(base, console string) {
-	nodes := []string{
-		console,
-		"/dev/tty",
-		"/dev/full",
-		"/dev/null",
-		"/dev/zero",
-		"/dev/random",
-		"/dev/urandom"}
-
+func make_console(base, console string) {
 	if err := os.Chmod(console, 0600); err != nil {
 		log.Printf("%v", err)
 	}
 	if err := os.Chown(console, 0, 0); err != nil {
 		log.Printf("%v", err)
 	}
+
+	st, err := os.Stat(console)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	nn := path.Join(base, "/dev/console")
+	if err := syscall.Mknod(nn, uint32(st.Mode()), int(st.Sys().(*syscall.Stat_t).Dev)); err != nil {
+		log.Printf("%v", err)
+	}
+
+	// if any previous steps failed, this one will too, so we can bail here.
+	if err := syscall.Mount(console, nn, "", syscall.MS_BIND, ""); err != nil {
+		log.Fatalf("Mount :%s: on :%s: flags %v: %v", 
+			console, nn, syscall.MS_BIND, err)
+	}
+
+}
+func copy_nodes(base string) {
+	nodes := []string{
+		"/dev/tty",
+		"/dev/full",
+		"/dev/null",
+		"/dev/zero",
+		"/dev/random",
+		"/dev/urandom"}
 
 	for _, n := range nodes {
 		st, err := os.Stat(n)
@@ -196,6 +209,14 @@ func copy_nodes(base, console string) {
 			log.Printf("%v", err)
 		}
 
+	}
+}
+
+func make_ptmx(base string) {
+	dst := path.Join(base, "/dev/ptmx")
+	
+	if err := os.Symlink("/dev/ptmx", dst); err != nil {
+		log.Printf("%v", err)
 	}
 }
 
@@ -261,6 +282,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+	pty, tty, sname, err := pty.Open()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	defer tty.Close()
+
 	// child code. Not really. What really happens here is we set
 	// ourselves into the container, and spawn the child. It's a bit odd
 	// but we're the master, but we'll run in the container? I don't know
@@ -270,15 +297,15 @@ func main() {
 	if true {
 		c.Do(*cg, ppid)
 
-		m.Do(*chroot, *console)
+		m.Do(*chroot)
 
-		copy_nodes(*chroot, *console)
+		copy_nodes(*chroot)
 
-		//make_ptmx(chroot);
+		make_ptmx(*chroot);
 
 		make_symlinks(*chroot)
 
-		//make_console(chroot, master_name);
+		make_console(*chroot, sname)
 
 		//do_chroot(*chroot, *chdir)
 
@@ -342,12 +369,18 @@ func main() {
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 		} else {
-			f, err := pty.Start(c)
+			c.Stdout = tty
+			c.Stdin = tty
+			c.Stderr = tty
+			c.SysProcAttr.Setctty = true
+			c.SysProcAttr.Setsid = true
+			c.SysProcAttr.Ctty = 0
+			err = c.Start()
 			if err != nil {
 				panic(err)
 			}
-			go io.Copy(os.Stdout, f)
-			io.Copy(f, os.Stdin)
+			go io.Copy(os.Stdout, pty)
+			io.Copy(pty, os.Stdin)
 		}
 		// end child code.
 		// Just be lazy, in case we screw the order up again.

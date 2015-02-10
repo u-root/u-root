@@ -9,7 +9,7 @@ import (
 // and c.Stderr, calls c.Start, and returns the File of the tty's
 // corresponding pty.
 func Start(c *exec.Cmd) (pty *os.File, err error) {
-	pty, tty, err := Open()
+	pty, tty, _, err := Open()
 	if err != nil {
 		return nil, err
 	}

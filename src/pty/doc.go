@@ -11,6 +11,6 @@ import (
 var ErrUnsupported = errors.New("unsupported")
 
 // Opens a pty and its corresponding tty.
-func Open() (pty, tty *os.File, err error) {
+func Open() (*os.File, *os.File, string, error) {
 	return open()
 }
