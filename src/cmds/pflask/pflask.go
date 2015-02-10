@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-//	"io"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -282,7 +282,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	_, pts, sname, err := pty.Open()
+	ptm, pts, sname, err := pty.Open()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -363,15 +363,9 @@ func main() {
 
 		
 		// why do we need the ptys, hmm.
-		if false {
-			c.Stdin = os.Stdin
-			c.Stdout = os.Stdout
-			c.Stderr = os.Stderr
-		} else {
 			c.Stdout = pts
 			c.Stdin = pts
 			c.Stderr = c.Stdout
-		}
 		c.SysProcAttr.Setctty = true
 		c.SysProcAttr.Setsid = true
 		c.SysProcAttr.Ctty = 0
@@ -379,8 +373,8 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-//		go io.Copy(os.Stdout, ptm)
-//		io.Copy(ptm, os.Stdin)
+		go io.Copy(os.Stdout, ptm)
+		io.Copy(ptm, os.Stdin)
 		// end child code.
 		// Just be lazy, in case we screw the order up again.
 		m.Undo("")
