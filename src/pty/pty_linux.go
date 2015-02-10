@@ -8,26 +8,26 @@ import (
 )
 
 func open() (*os.File, *os.File, string, error) {
-	p, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
+	ptm, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
 	if err != nil {
 		return nil, nil, "", err
 	}
 
-	sname, err := ptsname(p)
+	sname, err := ptsname(ptm)
 	if err != nil {
 		return nil, nil, "", err
 	}
 
-	err = unlockpt(p)
+	err = unlockpt(ptm)
 	if err != nil {
 		return nil, nil, "", err
 	}
 
-	t, err := os.OpenFile(sname, os.O_RDWR|syscall.O_NOCTTY, 0)
+	pts, err := os.OpenFile(sname, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return p, t, sname, nil
+	return ptm, pts, sname, nil
 }
 
 func ptsname(f *os.File) (string, error) {

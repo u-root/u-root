@@ -9,14 +9,14 @@ import (
 // and c.Stderr, calls c.Start, and returns the File of the tty's
 // corresponding pty.
 func Start(c *exec.Cmd) (pty *os.File, err error) {
-	pty, tty, _, err := Open()
+	ptm, pts, _, err := Open()
 	if err != nil {
 		return nil, err
 	}
-	defer tty.Close()
-	c.Stdout = tty
-	c.Stdin = tty
-	c.Stderr = tty
+	defer ptm.Close()
+	c.Stdout = pts
+	c.Stdin = pts
+	c.Stderr = pts
 	c.SysProcAttr.Setctty = true
 	c.SysProcAttr.Setsid = true
 	c.SysProcAttr.Ctty = 0
@@ -25,5 +25,5 @@ func Start(c *exec.Cmd) (pty *os.File, err error) {
 		pty.Close()
 		return nil, err
 	}
-	return pty, err
+	return ptm, err
 }

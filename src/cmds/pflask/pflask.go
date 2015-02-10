@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
+//	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -282,11 +282,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	pty, tty, sname, err := pty.Open()
+	_, pts, sname, err := pty.Open()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	defer tty.Close()
 
 	// child code. Not really. What really happens here is we set
 	// ourselves into the container, and spawn the child. It's a bit odd
@@ -369,19 +368,19 @@ func main() {
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 		} else {
-			c.Stdout = tty
-			c.Stdin = tty
-			c.Stderr = tty
-			c.SysProcAttr.Setctty = true
-			c.SysProcAttr.Setsid = true
-			c.SysProcAttr.Ctty = 0
-			err = c.Start()
-			if err != nil {
-				panic(err)
-			}
-			go io.Copy(os.Stdout, pty)
-			io.Copy(pty, os.Stdin)
+			c.Stdout = pts
+			c.Stdin = pts
+			c.Stderr = c.Stdout
 		}
+		c.SysProcAttr.Setctty = true
+		c.SysProcAttr.Setsid = true
+		c.SysProcAttr.Ctty = 0
+		err = c.Start()
+		if err != nil {
+			panic(err)
+		}
+//		go io.Copy(os.Stdout, ptm)
+//		io.Copy(ptm, os.Stdin)
 		// end child code.
 		// Just be lazy, in case we screw the order up again.
 		m.Undo("")
