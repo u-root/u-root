@@ -362,7 +362,6 @@ func main() {
 
 
 		
-		// why do we need the ptys, hmm.
 			c.Stdout = pts
 			c.Stdin = pts
 			c.Stderr = c.Stdout
@@ -373,6 +372,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		fd := ptm.Fd()
+		t, err := getTermios(fd)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		if err = t.setRaw(fd); err != nil {log.Fatalf(err.Error())}
+		
 		go io.Copy(os.Stdout, ptm)
 		io.Copy(ptm, os.Stdin)
 		// end child code.
