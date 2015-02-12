@@ -427,9 +427,4 @@ func main() {
 		os.Exit(1)
 	}()
 	io.Copy(ptm, os.Stdin)
-	// end child code.
-	// Just be lazy, in case we screw the order up again.
-	m.Undo("")
-	m.Undo("")
-	m.Undo("")
 }
