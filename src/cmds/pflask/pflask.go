@@ -265,41 +265,9 @@ var (
 	user    = flag.String("user", "root" /*user.User.Username*/, "User name")
 )
 
-func r() {
-    var (
-        s *winsize
-        t *termios
-        err error
-    )
-
-    defer func() {
-        if err != nil { fmt.Println(err) }
-//        if err = defaultTermios.set(); err != nil { fmt.Println(err) }
-        fmt.Print("\n")
-	os.Exit(1)
-    }()
-
-    if s, err = getWinsize(1); err != nil { return }
-    log.Printf("Window Size:\n\tLines: %d\n\tColumns: %d\n", s.ws_row, s.ws_col)
-
-    fmt.Println("Entering Raw mode. . .")
-    fmt.Println("Type some characters!  Press 'q' to quit!")
-
-    if t, err = getTermios(1); err != nil { return } ;log.Printf("%v\n", t)
-    if err = t.setRaw(1); err != nil { return } ;log.Printf("%v\n", t)
-
-    var buff [4]byte
-    for buff[0] != 'q' {
-        if n, err := os.Stdin.Read(buff[:]); err != nil { return 
-	}else {
-			log.Printf(">>>>  %c\n", buff[:n])
-	}
-    }
-}
-
 func main() {
 	flag.Parse()
-	fmt.Printf("flag. %v ar %v\n", flag.Args(), os.Args)
+
 	if len(flag.Args()) < 1 {
 		os.Exit(1)
 	}
@@ -307,30 +275,36 @@ func main() {
 	// note the unshare system call worketh not for Go.
 	// So do it ourselves.
 	a := os.Args
-	fmt.Printf("hi %v\n", a)
 	if a[len(a)-1] != "#" {
-		log.Printf("respasn")
-		a := append(a, "#")
+
+		a = append(a, "#")
 		// spawn ourselves with the right unsharing settings.
-		c := exec.Command(a[0], a...)
+		c := exec.Command(a[0], a[1:]...)
 		c.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID}
 //		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		
+		t, err := getTermios(1)
+		if err != nil {
+			log.Fatalf("Can't get termios on fd 1: %v", err)
+		}
 		if err := c.Run(); err != nil {
 			log.Printf(err.Error())
 		}
+		if err := t.set(1); err != nil {
+			log.Printf("Can't reset termios on fd1: %v", err)
+		}
+		os.Exit(1)
 	}
-	//r()
+
 	if *chroot == "" {
 		log.Fatalf("you are required to set the chroot via --chroot")
 	}
 
 	a = flag.Args()
-	log.Printf("greetings %v\n", a)
+	//log.Printf("greetings %v\n", a)
 	a = a[:len(a)-1]
 
 	// Just create the container and run with it for now.
@@ -408,25 +382,17 @@ func main() {
 		}
 
 		c.SysProcAttr = &syscall.SysProcAttr{
-				Chroot: *chroot, 
-				Setctty: true, Setsid: true, Cloneflags:
-				syscall.CLONE_NEWIPC |
-				syscall.CLONE_NEWPID |
-				syscall.CLONE_NEWUTS |
-				syscall.CLONE_NEWNS  |
-					0}
-//			SIGCHLD      |
-//				syscall.CLONE_NEWUSER|
-
-
-		
-			c.Stdout = pts
-			c.Stdin = pts
-			c.Stderr = c.Stdout
+			Chroot: *chroot, 
+			Setctty: true, 
+			Setsid: true
+		}
+		c.Stdout = pts
+		c.Stdin = pts
+		c.Stderr = c.Stdout
 		c.SysProcAttr.Setctty = true
 		c.SysProcAttr.Setsid = true
-		c.SysProcAttr.Ctty = 0
-		t, err := getTermios(2)
+		c.SysProcAttr.Cloneflags = 0
+		t, err := getTermios(1)
 		if err != nil {
 			log.Fatalf(err.Error())
 		}
