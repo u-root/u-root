@@ -280,33 +280,58 @@ func r() {
     }()
 
     if s, err = getWinsize(1); err != nil { return }
-    fmt.Printf("Window Size:\n\tLines: %d\n\tColumns: %d\n", s.ws_row, s.ws_col)
+    log.Printf("Window Size:\n\tLines: %d\n\tColumns: %d\n", s.ws_row, s.ws_col)
 
     fmt.Println("Entering Raw mode. . .")
     fmt.Println("Type some characters!  Press 'q' to quit!")
 
-    if t, err = getTermios(1); err != nil { return } ;fmt.Printf("%v\n", t)
-    if err = t.setRaw(1); err != nil { return } ;fmt.Printf("%v\n", t)
+    if t, err = getTermios(1); err != nil { return } ;log.Printf("%v\n", t)
+    if err = t.setRaw(1); err != nil { return } ;log.Printf("%v\n", t)
 
     var buff [4]byte
     for buff[0] != 'q' {
         if n, err := os.Stdin.Read(buff[:]); err != nil { return 
 	}else {
-			fmt.Printf(">>>>  %c\n", buff[:n])
+			log.Printf(">>>>  %c\n", buff[:n])
 	}
     }
 }
 
 func main() {
-	//r()
-	// note the unshare system call worketh not for Go. You have to run
-	// this under the unshare command. Good times.
 	flag.Parse()
+	fmt.Printf("flag. %v ar %v\n", flag.Args(), os.Args)
+	if len(flag.Args()) < 1 {
+		os.Exit(1)
+	}
+
+	// note the unshare system call worketh not for Go.
+	// So do it ourselves.
+	a := os.Args
+	fmt.Printf("hi %v\n", a)
+	if a[len(a)-1] != "#" {
+		log.Printf("respasn")
+		a := append(a, "#")
+		// spawn ourselves with the right unsharing settings.
+		c := exec.Command(a[0], a...)
+		c.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID}
+//		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		
+		if err := c.Run(); err != nil {
+			log.Printf(err.Error())
+		}
+	}
+	//r()
 	if *chroot == "" {
 		log.Fatalf("you are required to set the chroot via --chroot")
 	}
-	fmt.Printf("greetings\n")
-	a := flag.Args()
+
+	a = flag.Args()
+	log.Printf("greetings %v\n", a)
+	a = a[:len(a)-1]
 
 	// Just create the container and run with it for now.
 	c := cgroup(*cgpath)
@@ -411,7 +436,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		go io.Copy(os.Stdout, ptm)
+		go func() {
+			io.Copy(os.Stdout, ptm)
+			os.Exit(1)
+		}()
 		io.Copy(ptm, os.Stdin)
 		// end child code.
 		// Just be lazy, in case we screw the order up again.
