@@ -16,9 +16,9 @@ import (
 	"pty"
 )
 
-type cgroup string
+type cgroupname string
 
-func (c cgroup) apply(s string, f func(s string)) {
+func (c cgroupname) apply(s string, f func(s string)) {
 	// range of strings.Split("",",") is 1.
 	// not exactly what we might expect.
 	if s == "" {
@@ -30,7 +30,7 @@ func (c cgroup) apply(s string, f func(s string)) {
 	}
 }
 
-func (c cgroup) Validate(s string) {
+func (c cgroupname) Validate(s string) {
 	c.apply(s, func(s string) {
 		if st, err := os.Stat(path.Join(string(c), s)); err != nil {
 			log.Fatal("%v", err)
@@ -40,13 +40,13 @@ func (c cgroup) Validate(s string) {
 	})
 }
 
-func (c cgroup) Create(s, name string) {
+func (c cgroupname) Create(s, name string) {
 	if err := os.MkdirAll(path.Join(string(c), s, name), 0755); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (c cgroup) Attach(s, name string, pid int) {
+func (c cgroupname) Attach(s, name string, pid int) {
 	t := path.Join(string(c), s, name, "tasks")
 	b := []byte(fmt.Sprintf("%v", pid))
 	if err := ioutil.WriteFile(t, b, 0600); err != nil {
@@ -54,13 +54,13 @@ func (c cgroup) Attach(s, name string, pid int) {
 	}
 }
 
-func (c cgroup) Destroy(s, n string) {
+func (c cgroupname) Destroy(s, n string) {
 	if err := os.RemoveAll(path.Join(string(c), s, n)); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (c cgroup) Do(groups string, pid int) {
+func (c cgroupname) Do(groups string, pid int) {
 	cgn := fmt.Sprintf("pflask.%d", pid)
 	c.apply(groups, func(s string) {
 		c.Create(s, cgn)
@@ -255,7 +255,7 @@ func do_chroot(chroot, chdir string) {
 
 var (
 	cgpath  = flag.String("cgpath", "/sys/fs/cgroup", "set the cgroups")
-	cg      = flag.String("cgroup", "", "set the cgroups")
+	cgroup  = flag.String("cgroup", "", "set the cgroups")
 	mnt     = flag.String("mount", "", "define mounts")
 	chroot  = flag.String("chroot", "", "where to chroot to")
 	chdir   = flag.String("chdir", "", "where to chrdir to in the chroot")
@@ -307,9 +307,6 @@ func main() {
 	//log.Printf("greetings %v\n", a)
 	a = a[:len(a)-1]
 
-	// Just create the container and run with it for now.
-	c := cgroup(*cgpath)
-	ppid := os.Getpid()
 	m, err := NewMlist(*chroot)
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -325,99 +322,106 @@ func main() {
 	// how else to do it. This may require we set some things up first,
 	// esp. the network. But, it's all fun and games until someone loses
 	// an eye.
-	if true {
-		c.Do(*cg, ppid)
+	m.Do(*chroot)
 
-		m.Do(*chroot)
+	copy_nodes(*chroot)
 
-		copy_nodes(*chroot)
+	make_ptmx(*chroot)
 
-		make_ptmx(*chroot)
+	make_symlinks(*chroot)
 
-		make_symlinks(*chroot)
+	make_console(*chroot, sname)
 
-		make_console(*chroot, sname)
+	//do_chroot(*chroot, *chdir)
 
-		//do_chroot(*chroot, *chdir)
+	//umask(0022);
 
-		//umask(0022);
+	/* TODO: drop capabilities */
 
-		/* TODO: drop capabilities */
+	//do_user(user);
 
-		//do_user(user);
-
-		e := make(map[string]string)
-		if *keepenv {
-			for _, v := range os.Environ() {
-				k := strings.SplitN(v, "=", 2)
-				e[k[0]] = k[1]
-			}
+	e := make(map[string]string)
+	if *keepenv {
+		for _, v := range os.Environ() {
+			k := strings.SplitN(v, "=", 2)
+			e[k[0]] = k[1]
 		}
-
-		term := os.Getenv("TERM")
-		e["TERM"] = term
-		e["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
-		e["USER"] = *user
-		e["LOGNAME"] = *user
-
-		if *env != "" {
-			for _, c := range strings.Split(*env, ",") {
-				k := strings.SplitN(c, "=", 2)
-				if len(k) != 2 {
-					log.Printf("Bogus environment string %v", c)
-					continue
-				}
-				e[k[0]] = k[1]
-			}
-		}
-		e["container"] = "pflask"
-
-		if len(a) == 0 {
-			a = []string{"/bin/bash", "bash"}
-		}
-		c := exec.Command(a[0]) // , a[1:]...)
-		c.Env = nil
-		for k, v := range e {
-			c.Env = append(c.Env, k+"="+v)
-		}
-
-		c.SysProcAttr = &syscall.SysProcAttr{
-			Chroot:  *chroot,
-			Setctty: true,
-			Setsid:  true,
-		}
-		c.Stdout = pts
-		c.Stdin = pts
-		c.Stderr = c.Stdout
-		c.SysProcAttr.Setctty = true
-		c.SysProcAttr.Setsid = true
-		c.SysProcAttr.Cloneflags = 0
-		c.SysProcAttr.Ptrace = true
-		t, err := getTermios(1)
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-		if err = t.setRaw(1); err != nil {
-			log.Fatalf(err.Error())
-		}
-
-		err = c.Start()
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Started %d\n", c.Process.Pid)
-		if err = syscall.PtraceDetach(c.Process.Pid); err != nil {
-			log.Fatalf("Could not detach %v", c.Process.Pid)
-		}
-		go func() {
-			io.Copy(os.Stdout, ptm)
-			os.Exit(1)
-		}()
-		io.Copy(ptm, os.Stdin)
-		// end child code.
-		// Just be lazy, in case we screw the order up again.
-		m.Undo("")
-		m.Undo("")
-		m.Undo("")
 	}
+
+	term := os.Getenv("TERM")
+	e["TERM"] = term
+	e["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
+	e["USER"] = *user
+	e["LOGNAME"] = *user
+
+	if *env != "" {
+		for _, c := range strings.Split(*env, ",") {
+			k := strings.SplitN(c, "=", 2)
+			if len(k) != 2 {
+				log.Printf("Bogus environment string %v", c)
+				continue
+			}
+			e[k[0]] = k[1]
+		}
+	}
+	e["container"] = "pflask"
+
+	if len(a) == 0 {
+		a = []string{"/bin/bash", "bash"}
+	}
+	c := exec.Command(a[0]) // , a[1:]...)
+	c.Env = nil
+	for k, v := range e {
+		c.Env = append(c.Env, k+"="+v)
+	}
+
+	c.SysProcAttr = &syscall.SysProcAttr{
+		Chroot:  *chroot,
+		Setctty: true,
+		Setsid:  true,
+	}
+	c.Stdout = pts
+	c.Stdin = pts
+	c.Stderr = c.Stdout
+	c.SysProcAttr.Setctty = true
+	c.SysProcAttr.Setsid = true
+	c.SysProcAttr.Cloneflags = 0
+	c.SysProcAttr.Ptrace = true
+	t, err := getTermios(1)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	if err = t.setRaw(1); err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	err = c.Start()
+	if err != nil {
+		panic(err)
+	}
+	kid := c.Process.Pid
+	fmt.Printf("Started %d\n", kid)
+
+	// set up the containers, then resume the process.
+	// Its children will get the containers as it clones.
+
+	cg := cgroupname(*cgpath)
+	cg.Do(*cgroup, kid)
+
+	// sometimes the detach fails. Looks like a race condition: we're
+	// sending the detach before it is stopped.
+	// This may have to be a poll. Crap.
+	if err = syscall.PtraceDetach(kid); err != nil {
+		log.Fatalf("Could not detach %v", kid)
+	}
+	go func() {
+		io.Copy(os.Stdout, ptm)
+		os.Exit(1)
+	}()
+	io.Copy(ptm, os.Stdin)
+	// end child code.
+	// Just be lazy, in case we screw the order up again.
+	m.Undo("")
+	m.Undo("")
+	m.Undo("")
 }
