@@ -185,7 +185,7 @@ func make_console(base, console string) {
 
 	// if any previous steps failed, this one will too, so we can bail here.
 	if err := syscall.Mount(console, nn, "", syscall.MS_BIND, ""); err != nil {
-		log.Fatalf("Mount :%s: on :%s: flags %v: %v", 
+		log.Fatalf("Mount :%s: on :%s: flags %v: %v",
 			console, nn, syscall.MS_BIND, err)
 	}
 
@@ -214,7 +214,7 @@ func copy_nodes(base string) {
 
 func make_ptmx(base string) {
 	dst := path.Join(base, "/dev/ptmx")
-	
+
 	if err := os.Symlink("/dev/ptmx", dst); err != nil {
 		log.Printf("%v", err)
 	}
@@ -281,7 +281,7 @@ func main() {
 		// spawn ourselves with the right unsharing settings.
 		c := exec.Command(a[0], a[1:]...)
 		c.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID}
-//		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+		//		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
@@ -332,7 +332,7 @@ func main() {
 
 		copy_nodes(*chroot)
 
-		make_ptmx(*chroot);
+		make_ptmx(*chroot)
 
 		make_symlinks(*chroot)
 
@@ -382,9 +382,9 @@ func main() {
 		}
 
 		c.SysProcAttr = &syscall.SysProcAttr{
-			Chroot: *chroot, 
-			Setctty: true, 
-			Setsid: true
+			Chroot:  *chroot,
+			Setctty: true,
+			Setsid:  true,
 		}
 		c.Stdout = pts
 		c.Stdin = pts
@@ -392,15 +392,22 @@ func main() {
 		c.SysProcAttr.Setctty = true
 		c.SysProcAttr.Setsid = true
 		c.SysProcAttr.Cloneflags = 0
+		c.SysProcAttr.Ptrace = true
 		t, err := getTermios(1)
 		if err != nil {
 			log.Fatalf(err.Error())
 		}
-		if err = t.setRaw(1); err != nil {log.Fatalf(err.Error())}
-		
+		if err = t.setRaw(1); err != nil {
+			log.Fatalf(err.Error())
+		}
+
 		err = c.Start()
 		if err != nil {
 			panic(err)
+		}
+		fmt.Printf("Started %d\n", c.Process.Pid)
+		if err = syscall.PtraceDetach(c.Process.Pid); err != nil {
+			log.Fatalf("Could not detach %v", c.Process.Pid)
 		}
 		go func() {
 			io.Copy(os.Stdout, ptm)
