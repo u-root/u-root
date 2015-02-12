@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 	"syscall"
+	"time"
 	//"user"
 
 	"pty"
@@ -409,10 +410,17 @@ func main() {
 	cg.Do(*cgroup, kid)
 
 	// sometimes the detach fails. Looks like a race condition: we're
-	// sending the detach before it is stopped.
-	// This may have to be a poll. Crap.
-	if err = syscall.PtraceDetach(kid); err != nil {
-		log.Fatalf("Could not detach %v", kid)
+	// sending the detach before the child has hit the TRACE_ME point.
+	// Experimentally, when it fails, even one seconds it too short to
+	// sleep. Sleep for 5 seconds.
+
+	for {
+		if err = syscall.PtraceDetach(kid); err != nil {
+			log.Printf("Could not detach %v, sleeping one second", kid)
+			time.Sleep(5*time.Second)
+			continue
+		}
+		break
 	}
 	go func() {
 		io.Copy(os.Stdout, ptm)
