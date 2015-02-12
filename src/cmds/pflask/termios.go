@@ -10,8 +10,8 @@ const NCCS = 32
 
 type (
     cc_t     byte
-    speed_t  uint
-    tcflag_t uint
+    speed_t  uint32
+    tcflag_t uint32
 
     termios struct {
         c_iflag, c_oflag, c_cflag, c_lflag tcflag_t

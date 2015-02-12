@@ -265,7 +265,40 @@ var (
 	user    = flag.String("user", "root" /*user.User.Username*/, "User name")
 )
 
+func r() {
+    var (
+        s *winsize
+        t *termios
+        err error
+    )
+
+    defer func() {
+        if err != nil { fmt.Println(err) }
+//        if err = defaultTermios.set(); err != nil { fmt.Println(err) }
+        fmt.Print("\n")
+	os.Exit(1)
+    }()
+
+    if s, err = getWinsize(1); err != nil { return }
+    fmt.Printf("Window Size:\n\tLines: %d\n\tColumns: %d\n", s.ws_row, s.ws_col)
+
+    fmt.Println("Entering Raw mode. . .")
+    fmt.Println("Type some characters!  Press 'q' to quit!")
+
+    if t, err = getTermios(1); err != nil { return } ;fmt.Printf("%v\n", t)
+    if err = t.setRaw(1); err != nil { return } ;fmt.Printf("%v\n", t)
+
+    var buff [4]byte
+    for buff[0] != 'q' {
+        if n, err := os.Stdin.Read(buff[:]); err != nil { return 
+	}else {
+			fmt.Printf(">>>>  %c\n", buff[:n])
+	}
+    }
+}
+
 func main() {
+	r()
 	// note the unshare system call worketh not for Go. You have to run
 	// this under the unshare command. Good times.
 	flag.Parse()
