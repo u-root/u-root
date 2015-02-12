@@ -298,7 +298,7 @@ func r() {
 }
 
 func main() {
-	r()
+	//r()
 	// note the unshare system call worketh not for Go. You have to run
 	// this under the unshare command. Good times.
 	flag.Parse()
@@ -401,17 +401,16 @@ func main() {
 		c.SysProcAttr.Setctty = true
 		c.SysProcAttr.Setsid = true
 		c.SysProcAttr.Ctty = 0
+		t, err := getTermios(2)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		if err = t.setRaw(1); err != nil {log.Fatalf(err.Error())}
+		
 		err = c.Start()
 		if err != nil {
 			panic(err)
 		}
-		fd := ptm.Fd()
-		t, err := getTermios(fd)
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-		if err = t.setRaw(fd); err != nil {log.Fatalf(err.Error())}
-		
 		go io.Copy(os.Stdout, ptm)
 		io.Copy(ptm, os.Stdin)
 		// end child code.
