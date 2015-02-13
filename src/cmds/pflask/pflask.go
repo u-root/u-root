@@ -351,12 +351,18 @@ func main() {
 	// sending the detach before the child has hit the TRACE_ME point.
 	// Experimentally, when it fails, even one seconds it too short to
 	// sleep. Sleep for 5 seconds.
+	// Oh well it's not that. It's that there is some one of these
+	// processes not in the PID namespace of the child? Who knows, sigh.
+	// This is an aspect of the Go runtime that is seriously broken.
 
-	for {
+	for i := 0; ; i++ {
 		if err = syscall.PtraceDetach(kid); err != nil {
-			log.Printf("Could not detach %v, sleeping five seconds", kid)
-			time.Sleep(5 * time.Second)
+			log.Printf("Could not detach %v, sleeping 250 milliseconds", kid)
+			time.Sleep(250 * time.Millisecond)
 			continue
+		}
+		if i > 100 {
+			log.Fatalf("Tried for 10 seconds to get a DETACH. Let's fix the go runtime someday")
 		}
 		break
 	}
