@@ -75,7 +75,7 @@ type mount struct {
 	dir                   bool
 }
 
-// Add adds  to teh mouuntlist. Don't know if we need it, but we might for additional volumes?
+// Add adds a mount to the global mountlist. Don't know if we need it, but we might for additional volumes?
 func Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
 	mounts = append(mounts, mount{src: src, dst: dst, mtype: mtype, flags: flags, opts: opts, dir: dir})
 
@@ -83,7 +83,7 @@ func Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
 
 // One mounts one mountpoint, using base as a prefix for the destination.
 // If anything goes wrong, we just bail out; we've privatized the namespace
-// so there is nothing more to do.
+// so there is no cleanup we need to do.
 func (m *mount) One(base string) {
 	dst := path.Join(base, m.dst)
 	if m.dir {
@@ -96,6 +96,9 @@ func (m *mount) One(base string) {
 			m.src, m.dst, m.mtype, m.flags, m.opts, err)
 	}
 }
+
+// MountAll mounts all the mount points. root is a bit special in that it just sets
+// needed flags for non-shared mounts.
 func MountAll(base string) {
 	root.One("")
 	for _, m := range mounts {
@@ -103,6 +106,8 @@ func MountAll(base string) {
 	}
 }
 
+// make_consoel sets the right modes for the real console, then creates
+// a /dev/console in the chroot.
 func make_console(base, console string) {
 	if err := os.Chmod(console, 0600); err != nil {
 		log.Printf("%v", err)
@@ -128,6 +133,8 @@ func make_console(base, console string) {
 	}
 
 }
+
+// copy_nodes makes copies of needed nodes in the chroot.
 func copy_nodes(base string) {
 	nodes := []string{
 		"/dev/tty",
@@ -150,6 +157,8 @@ func copy_nodes(base string) {
 	}
 }
 
+// make_ptmx creates /dev/ptmx in the root. Because of order of operations
+// it has to happen at a different time than copy_nodes.
 func make_ptmx(base string) {
 	dst := path.Join(base, "/dev/ptmx")
 
@@ -158,6 +167,7 @@ func make_ptmx(base string) {
 	}
 }
 
+// make_symlinks sets up standard symlinks as found in /dev.
 func make_symlinks(base string) {
 	linkit := []struct {
 		src, dst string
@@ -189,18 +199,17 @@ var (
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	env     = flag.String("env", "", "other environment variables")
 	user    = flag.String("user", "root" /*user.User.Username*/, "User name")
-	root = &mount {"", "/", "", "", syscall.MS_SLAVE|syscall.MS_REC, false}
-	mounts = []mount {
-		{"proc", "/proc", "proc", "", syscall.MS_NOSUID|syscall.MS_NOEXEC|syscall.MS_NODEV, true},
+	root    = &mount{"", "/", "", "", syscall.MS_SLAVE | syscall.MS_REC, false}
+	mounts  = []mount{
+		{"proc", "/proc", "proc", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV, true},
 		{"/proc/sys", "/proc/sys", "", "", syscall.MS_BIND, true},
-		{"", "/proc/sys", "", "", syscall.MS_BIND|syscall.MS_RDONLY|syscall.MS_REMOUNT, true},
-		{"sysfs", "/sys", "sysfs", "", syscall.MS_NOSUID|syscall.MS_NOEXEC|syscall.MS_NODEV|syscall.MS_RDONLY, true},
-		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID|syscall.MS_STRICTATIME, true},
-		{"devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=000,mode=620,gid=5", syscall.MS_NOSUID|syscall.MS_NOEXEC, true},
-		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID|syscall.MS_STRICTATIME|syscall.MS_NODEV, true},
-		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_STRICTATIME, true},
+		{"", "/proc/sys", "", "", syscall.MS_BIND | syscall.MS_RDONLY | syscall.MS_REMOUNT, true},
+		{"sysfs", "/sys", "sysfs", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_RDONLY, true},
+		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_STRICTATIME, true},
+		{"devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=000,mode=620,gid=5", syscall.MS_NOSUID | syscall.MS_NOEXEC, true},
+		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true},
+		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true},
 	}
-
 )
 
 func main() {
@@ -211,7 +220,13 @@ func main() {
 	}
 
 	// note the unshare system call worketh not for Go.
-	// So do it ourselves.
+	// So do it ourselves. We have to start ourselves up again,
+	// after having spawned ourselves with lots of clone
+	// flags sets. To know that we spawned ourselves we add '#'
+	// as the last arg. # was chosen because shells normally filter
+	// it out, so its presence as our last arg is highly indicative
+	// that we really spawned us. Also, for testing, you can always
+	// pass it by hand to see what the namespace looks like.
 	a := os.Args
 	if a[len(a)-1] != "#" {
 
@@ -237,6 +252,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// unlike pflask, we require that you set a chroot.
+	// If you make it /, strange things are bound to happen.
+	// if that is too limiting we'll have to change this.
 	if *chroot == "" {
 		log.Fatalf("you are required to set the chroot via --chroot")
 	}
@@ -299,10 +317,7 @@ func main() {
 	}
 	e["container"] = "pflask"
 
-	if len(a) == 0 {
-		a = []string{"/bin/bash", "bash"}
-	}
-	c := exec.Command(a[0]) // , a[1:]...)
+	c := exec.Command(a[0], a[1:]...)
 	c.Env = nil
 	for k, v := range e {
 		c.Env = append(c.Env, k+"="+v)
@@ -342,7 +357,7 @@ func main() {
 	for {
 		if err = syscall.PtraceDetach(kid); err != nil {
 			log.Printf("Could not detach %v, sleeping five seconds", kid)
-			time.Sleep(5*time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		break
