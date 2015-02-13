@@ -184,7 +184,7 @@ var (
 	cgroup  = flag.String("cgroup", "", "set the cgroups")
 	mnt     = flag.String("mount", "", "define mounts")
 	chroot  = flag.String("chroot", "", "where to chroot to")
-	chdir   = flag.String("chdir", "", "where to chrdir to in the chroot")
+	chdir   = flag.String("chdir", "/", "where to chrdir to in the chroot")
 	console = flag.String("console", "/dev/console", "where the root is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	env     = flag.String("env", "", "other environment variables")
@@ -320,7 +320,7 @@ func main() {
 	c.SysProcAttr.Setsid = true
 	c.SysProcAttr.Cloneflags = 0
 	c.SysProcAttr.Ptrace = true
-	c.Dir = "/"
+	c.Dir = *chdir
 	err = c.Start()
 	if err != nil {
 		panic(err)
