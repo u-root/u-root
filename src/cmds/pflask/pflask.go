@@ -73,96 +73,33 @@ type mount struct {
 	src, dst, mtype, opts string
 	flags                 uintptr
 	dir                   bool
-	mounted               bool
 }
 
-type mlist struct {
-	mounts []*mount
-}
-
-func NewMlist(base string) (*mlist, error) {
-	m := &mlist{}
-	if err := syscall.Mount("", "/", "", syscall.MS_SLAVE|syscall.MS_REC, ""); err != nil {
-		err := fmt.Errorf("Mount :%s: on :%s: type :%s: flags %x: opts :%v: %v\n",
-			"", "/", "", syscall.MS_SLAVE|syscall.MS_REC, "", err)
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func (m *mlist) Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
-	m.mounts = append(m.mounts, &mount{src: src, dst: dst, mtype: mtype, flags: flags, opts: opts, dir: dir})
+// Add adds  to teh mouuntlist. Don't know if we need it, but we might for additional volumes?
+func Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
+	mounts = append(mounts, mount{src: src, dst: dst, mtype: mtype, flags: flags, opts: opts, dir: dir})
 
 }
 
-func (m *mount) One(base string) error {
+// One mounts one mountpoint, using base as a prefix for the destination.
+// If anything goes wrong, we just bail out; we've privatized the namespace
+// so there is nothing more to do.
+func (m *mount) One(base string) {
 	dst := path.Join(base, m.dst)
 	if m.dir {
 		if err := os.MkdirAll(dst, 0755); err != nil {
-			return fmt.Errorf("One: mkdirall %v: %v", m.dst, err)
+			log.Fatalf("One: mkdirall %v: %v", m.dst, err)
 		}
 	}
 	if err := syscall.Mount(m.src, dst, m.mtype, m.flags, m.opts); err != nil {
-		return fmt.Errorf("Mount :%s: on :%s: type :%s: flags %x: opts :%v: %v\n",
+		log.Fatalf("Mount :%s: on :%s: type :%s: flags %x: opts :%v: %v\n",
 			m.src, m.dst, m.mtype, m.flags, m.opts, err)
 	}
-	m.mounted = true
-	return nil
 }
-func (m *mlist) Do(base string) {
-	ok := true
-	if base != "" {
-		m.Add("proc", "/proc", "proc", "",
-			syscall.MS_NOSUID|syscall.MS_NOEXEC|syscall.MS_NODEV, true)
-
-		m.Add("/proc/sys", "/proc/sys", "", "",
-			syscall.MS_BIND, true)
-
-		m.Add("", "/proc/sys", "", "",
-			syscall.MS_BIND|syscall.MS_RDONLY|syscall.MS_REMOUNT, true)
-
-		m.Add("sysfs", "/sys", "sysfs", "",
-			syscall.MS_NOSUID|syscall.MS_NOEXEC|syscall.MS_NODEV|syscall.MS_RDONLY, true)
-
-		m.Add("tmpfs", "/dev", "tmpfs", "mode=755",
-			syscall.MS_NOSUID|syscall.MS_STRICTATIME, true)
-
-		m.Add("devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=000,mode=620,gid=5",
-			syscall.MS_NOSUID|syscall.MS_NOEXEC, true)
-
-		m.Add("tmpfs", "/dev/shm", "tmpfs", "mode=1777",
-			syscall.MS_NOSUID|syscall.MS_STRICTATIME|syscall.MS_NODEV, true)
-
-		m.Add("tmpfs", "/run", "tmpfs", "mode=755",
-			syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_STRICTATIME, true)
-
-	}
-
-	for _, m := range m.mounts {
-		err := m.One(base)
-		if err != nil {
-			log.Printf(err.Error())
-			ok = false
-		}
-	}
-	if !ok {
-		m.Undo(base)
-		log.Fatal("Not all mounts succeeded.")
-	}
-}
-
-func (m *mlist) Undo(base string) {
-	for i := range m.mounts {
-		m := m.mounts[len(m.mounts)-i-1]
-		if !m.mounted {
-			continue
-		}
-		dst := path.Join(base, m.dst)
-		if err := syscall.Unmount(dst, 0); err != nil {
-			log.Printf("Unmounting %v: %v", m, err)
-		}
-		m.mounted = false
+func MountAll(base string) {
+	root.One("")
+	for _, m := range mounts {
+		m.One(base)
 	}
 }
 
@@ -264,6 +201,18 @@ var (
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	env     = flag.String("env", "", "other environment variables")
 	user    = flag.String("user", "root" /*user.User.Username*/, "User name")
+	root = &mount {"", "/", "", "", syscall.MS_SLAVE|syscall.MS_REC, false}
+	mounts = []mount {
+		{"proc", "/proc", "proc", "", syscall.MS_NOSUID|syscall.MS_NOEXEC|syscall.MS_NODEV, true},
+		{"/proc/sys", "/proc/sys", "", "", syscall.MS_BIND, true},
+		{"", "/proc/sys", "", "", syscall.MS_BIND|syscall.MS_RDONLY|syscall.MS_REMOUNT, true},
+		{"sysfs", "/sys", "sysfs", "", syscall.MS_NOSUID|syscall.MS_NOEXEC|syscall.MS_NODEV|syscall.MS_RDONLY, true},
+		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID|syscall.MS_STRICTATIME, true},
+		{"devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=000,mode=620,gid=5", syscall.MS_NOSUID|syscall.MS_NOEXEC, true},
+		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID|syscall.MS_STRICTATIME|syscall.MS_NODEV, true},
+		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_STRICTATIME, true},
+	}
+
 )
 
 func main() {
@@ -308,10 +257,6 @@ func main() {
 	//log.Printf("greetings %v\n", a)
 	a = a[:len(a)-1]
 
-	m, err := NewMlist(*chroot)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
 	ptm, pts, sname, err := pty.Open()
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -323,7 +268,7 @@ func main() {
 	// how else to do it. This may require we set some things up first,
 	// esp. the network. But, it's all fun and games until someone loses
 	// an eye.
-	m.Do(*chroot)
+	MountAll(*chroot)
 
 	copy_nodes(*chroot)
 
@@ -354,6 +299,7 @@ func main() {
 	e["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
 	e["USER"] = *user
 	e["LOGNAME"] = *user
+	e["HOME"] = "/root"
 
 	if *env != "" {
 		for _, c := range strings.Split(*env, ",") {
@@ -388,14 +334,7 @@ func main() {
 	c.SysProcAttr.Setsid = true
 	c.SysProcAttr.Cloneflags = 0
 	c.SysProcAttr.Ptrace = true
-	t, err := getTermios(1)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-	if err = t.setRaw(1); err != nil {
-		log.Fatalf(err.Error())
-	}
-
+	c.Dir = "/"
 	err = c.Start()
 	if err != nil {
 		panic(err)
@@ -416,12 +355,22 @@ func main() {
 
 	for {
 		if err = syscall.PtraceDetach(kid); err != nil {
-			log.Printf("Could not detach %v, sleeping one second", kid)
+			log.Printf("Could not detach %v, sleeping five seconds", kid)
 			time.Sleep(5*time.Second)
 			continue
 		}
 		break
 	}
+
+	// we don't set raw until the very last, so if they see an issue they can hit ^C
+	t, err := getTermios(1)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	if err = t.setRaw(1); err != nil {
+		log.Fatalf(err.Error())
+	}
+
 	go func() {
 		io.Copy(os.Stdout, ptm)
 		os.Exit(1)
