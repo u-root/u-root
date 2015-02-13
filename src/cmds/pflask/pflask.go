@@ -179,18 +179,6 @@ func make_symlinks(base string) {
 	}
 }
 
-func do_chroot(chroot, chdir string) {
-	if chdir == "" {
-		chdir = "/"
-	}
-	if err := syscall.Chroot(chroot); err != nil {
-		log.Fatalf("%v", err)
-	}
-	if err := os.Chdir(chdir); err != nil {
-		log.Fatalf("%v", err)
-	}
-}
-
 var (
 	cgpath  = flag.String("cgpath", "/sys/fs/cgroup", "set the cgroups")
 	cgroup  = flag.String("cgroup", "", "set the cgroups")
@@ -277,8 +265,6 @@ func main() {
 	make_symlinks(*chroot)
 
 	make_console(*chroot, sname)
-
-	//do_chroot(*chroot, *chdir)
 
 	//umask(0022);
 
