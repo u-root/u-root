@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"syscall"
 	"unsafe"
 )
@@ -131,4 +132,15 @@ func (self *winsize) set(fd uintptr) error {
 	}
 
 	return nil
+}
+
+func raw() {
+	// we don't set raw until the very last, so if they see an issue they can hit ^C
+	t, err := getTermios(1)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	if err = t.setRaw(1); err != nil {
+		log.Fatalf(err.Error())
+	}
 }

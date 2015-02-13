@@ -12,7 +12,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	//"user"
 
 	"pty"
 )
@@ -106,7 +105,7 @@ func MountAll(base string) {
 	}
 }
 
-// make_consoel sets the right modes for the real console, then creates
+// make_console sets the right modes for the real console, then creates
 // a /dev/console in the chroot.
 func make_console(base, console string) {
 	if err := os.Chmod(console, 0600); err != nil {
@@ -333,7 +332,6 @@ func main() {
 	c.Stderr = c.Stdout
 	c.SysProcAttr.Setctty = true
 	c.SysProcAttr.Setsid = true
-	c.SysProcAttr.Cloneflags = 0
 	c.SysProcAttr.Ptrace = true
 	c.Dir = *chdir
 	err = c.Start()
@@ -341,7 +339,7 @@ func main() {
 		panic(err)
 	}
 	kid := c.Process.Pid
-	fmt.Printf("Started %d\n", kid)
+	log.Printf("Started %d\n", kid)
 
 	// set up the containers, then resume the process.
 	// Its children will get the containers as it clones.
@@ -363,14 +361,7 @@ func main() {
 		break
 	}
 
-	// we don't set raw until the very last, so if they see an issue they can hit ^C
-	t, err := getTermios(1)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-	if err = t.setRaw(1); err != nil {
-		log.Fatalf(err.Error())
-	}
+	raw()
 
 	go func() {
 		io.Copy(os.Stdout, ptm)
