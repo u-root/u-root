@@ -105,6 +105,21 @@ func MountAll(base string) {
 	}
 }
 
+// modedev returns a mode and dev suitable for use in mknod.
+// It's very odd, but the Dev either needs to be byteswapped
+// or comes back byteswapped. I just love it that the world
+// has fixed on a 45-year-old ABI (stat in this case)
+// that was abandoned by its designers 30 years ago.
+// Oh well.
+func modedev(st os.FileInfo) (uint32, int) {
+	// Weird. The Dev is byte-swapped for some reason.
+	dev := int(st.Sys().(*syscall.Stat_t).Dev)
+	devlo := dev & 0xff
+	dev >>= 8
+	dev |= (devlo << 8)
+	return uint32(st.Sys().(*syscall.Stat_t).Mode), dev
+}
+
 // make_console sets the right modes for the real console, then creates
 // a /dev/console in the chroot.
 func make_console(base, console string) {
@@ -121,7 +136,8 @@ func make_console(base, console string) {
 	}
 
 	nn := path.Join(base, "/dev/console")
-	if err := syscall.Mknod(nn, uint32(st.Mode()), int(st.Sys().(*syscall.Stat_t).Dev)); err != nil {
+	mode, dev := modedev(st)
+	if err := syscall.Mknod(nn, mode, dev); err != nil {
 		log.Printf("%v", err)
 	}
 
@@ -149,10 +165,10 @@ func copy_nodes(base string) {
 			log.Printf("%v", err)
 		}
 		nn := path.Join(base, n)
-		if err := syscall.Mknod(nn, uint32(st.Mode()), int(st.Sys().(*syscall.Stat_t).Dev)); err != nil {
+		mode, dev := modedev(st)
+		if err := syscall.Mknod(nn, mode, dev); err != nil {
 			log.Printf("%v", err)
 		}
-
 	}
 }
 
