@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Cat reads each file from its arguments in sequence and writes it on the standard output.
-*/
-
 package main
 
 import (
