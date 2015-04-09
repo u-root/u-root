@@ -1,0 +1,33 @@
+# 0. Create a directory to hold files for initramfs:
+rm -rf ppcinitramfs
+mkdir -p ppcinitramfs
+rm -f ppcinitramfs.cpio.lzma
+
+# 1. Copy the "myinit" program (compiled above) into the
+#    initramfs directory (and rename it to "init"):
+#cp myinit initramfs/init
+set -e
+echo 'if this cp fails, run README in u-root'
+cp u-root/init ppcinitramfs
+
+# 2. Create the CPIO archive:
+cd ppcinitramfs
+mkdir -p lib/ppc64le-linux-gnu lib64
+rsync -av ../u-root/src .
+rsync -av ../u-root/etc .
+cpio -id < ../u-root/ppcgo.cpio
+#cpio -id -E ../u-root/tinycorebase/filelist < ../u-root/tinycorebase/corepure64.cpio
+#cpio -id < ../u-root/tinycorebase/tinycorebase.cpio
+
+mkdir -p tmp
+#fakeroot # this is pure magic (it allows us to pretend to be root)
+mkdir -p dev
+sudo mknod dev/console c 5 1
+sudo mknod dev/null c 1 3
+rsync -av /dev/loop* dev
+ls -l dev
+sudo chown root init
+find . | sudo cpio -H newc -o > ../ppcinitramfs.cpio # <-- this is the actual initramfs
+#exit # leave the fakeroot shell
+cd ..
+ls -l ppcinitramfs.cpio
