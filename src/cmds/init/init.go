@@ -11,6 +11,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,7 +19,10 @@ import (
 	"path"
 	"strings"
 	"syscall"
+	"uroot"
 )
+
+const PATH = "/bin:/buildbin:/usr/local/bin"
 
 type dir struct {
 	name string
@@ -35,7 +39,6 @@ type mount struct {
 
 var (
 	env = map[string]string{
-		"PATH":            "/go/bin:/bin:/buildbin:/usr/local/bin:",
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
 		"GOPATH":          "/",
@@ -62,6 +65,19 @@ var (
 
 func main() {
 	log.Printf("Welcome to u-root")
+	// Pick some reasonable values in the (unlikely!) even that Uname fails.
+	uname := "linux"
+	mach := "x86_64"
+	// There are two possible places for go:
+	// The first is in /go/bin
+	// The second is in /go/pkg/tool/$OS_$ARCH
+	if u, err := uroot.Uname(); err != nil {
+		log.Printf("uroot.Utsname fails: %v, so assume %v_%v\n", uname, mach)
+	} else {
+		// Sadly, go and the OS disagree on case.
+		uname = strings.ToLower(u.Sysname)
+	}
+	env["PATH"] = fmt.Sprintf("/go/bin:/go/pkg/tool/%s_%s:%v", uname, mach, PATH)
 	envs := []string{}
 	for k, v := range env {
 		os.Setenv(k, v)
