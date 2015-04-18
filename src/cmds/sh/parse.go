@@ -51,9 +51,8 @@ func pushback(b *bufio.Reader) {
 }
 
 func one(b *bufio.Reader) byte {
-	//fmt.Printf("next\n")
 	c, err := b.ReadByte()
-	//fmt.Printf("'%v' %v\n", c, err)
+	//fmt.Printf("one '%v' %v\n", c, err)
 	if err == io.EOF {
 		return 0
 	}
@@ -90,6 +89,9 @@ func tok(b *bufio.Reader) (string, string) {
 		arg = ""
 		c = next(b)
 		for {
+			if c == 0 {
+				break
+			}
 			if strings.Index(punct, string(c)) > -1 {
 				pushback(b)
 				break
@@ -132,6 +134,9 @@ func tok(b *bufio.Reader) (string, string) {
 		return "LINK", string(c)
 	default:
 		for {
+			if c == 0 {
+				return "ARG", arg
+			}
 			if strings.Index(punct, string(c)) > -1 {
 				pushback(b)
 				return "ARG", arg
