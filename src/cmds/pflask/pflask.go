@@ -364,6 +364,20 @@ func main() {
 	}
 	e["container"] = "pflask"
 
+	if *cgroup == "" {
+		var envs []string
+		for k, v := range e {
+			envs = append(envs, k+"="+v)
+		}
+		if err := syscall.Chroot(*chroot); err != nil {
+			log.Fatal(err)
+		}
+		if err := syscall.Chdir(*chdir); err != nil {
+			log.Fatal(err)
+		}
+		log.Fatal(syscall.Exec(a[0], a[1:], envs))
+	}
+
 	c := exec.Command(a[0], a[1:]...)
 	c.Env = nil
 	for k, v := range e {
