@@ -189,6 +189,10 @@ func copy_nodes(base string) {
 func make_ptmx(base string) {
 	dst := path.Join(base, "/dev/ptmx")
 
+	if _, err := os.Stat(dst); err == nil {
+		return
+	}
+
 	if err := os.Symlink("/dev/pts/ptmx", dst); err != nil {
 		log.Printf("%v", err)
 	}
@@ -209,6 +213,10 @@ func make_symlinks(base string) {
 
 	for i := range linkit {
 		dst := path.Join(base, linkit[i].dst)
+
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
 
 		if err := os.Symlink(linkit[i].src, dst); err != nil {
 			log.Printf("%v", err)
@@ -232,7 +240,7 @@ var (
 		{"/proc/sys", "/proc/sys", "", "", syscall.MS_BIND, true, true},
 		{"", "/proc/sys", "", "", syscall.MS_BIND | syscall.MS_RDONLY | syscall.MS_REMOUNT, true, true},
 		{"sysfs", "/sys", "sysfs", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_RDONLY, true, true},
-		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_STRICTATIME, true, false},
+		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_STRICTATIME, true, true}, // unprivileged system needs a pre-populated /dev
 		{"devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=0660,mode=0620", syscall.MS_NOSUID | syscall.MS_NOEXEC, true, false},
 		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true, false},
 		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true, false},
