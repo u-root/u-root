@@ -282,16 +282,16 @@ func main() {
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		t, err := getTermios(1)
-		if err != nil {
-			log.Fatalf("Can't get termios on fd 1: %v", err)
-		}
+		//t, err := getTermios(1)
+		//if err != nil {
+		//	log.Fatalf("Can't get termios on fd 1: %v", err)
+		//}
 		if err := c.Run(); err != nil {
 			log.Printf(err.Error())
 		}
-		if err := t.set(1); err != nil {
-			log.Printf("Can't reset termios on fd1: %v", err)
-		}
+		//if err := t.set(1); err != nil {
+		//	log.Printf("Can't reset termios on fd1: %v", err)
+		//}
 		os.Exit(1)
 	}
 
