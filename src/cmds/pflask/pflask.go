@@ -72,6 +72,7 @@ type mount struct {
 	src, dst, mtype, opts string
 	flags                 uintptr
 	dir                   bool
+	needPrivilege         bool
 }
 
 // Add adds a mount to the global mountlist. Don't know if we need it, but we might for additional volumes?
@@ -98,9 +99,12 @@ func (m *mount) One(base string) {
 
 // MountAll mounts all the mount points. root is a bit special in that it just sets
 // needed flags for non-shared mounts.
-func MountAll(base string) {
+func MountAll(base string, unprivileged bool) {
 	root.One("")
 	for _, m := range mounts {
+		if m.needPrivilege && unprivileged {
+			continue
+		}
 		m.One(base)
 	}
 }
@@ -122,7 +126,7 @@ func modedev(st os.FileInfo) (uint32, int) {
 
 // make_console sets the right modes for the real console, then creates
 // a /dev/console in the chroot.
-func make_console(base, console string) {
+func make_console(base, console string, unprivileged bool) {
 	if err := os.Chmod(console, 0600); err != nil {
 		log.Printf("%v", err)
 	}
@@ -137,8 +141,16 @@ func make_console(base, console string) {
 
 	nn := path.Join(base, "/dev/console")
 	mode, dev := modedev(st)
-	if err := syscall.Mknod(nn, mode, dev); err != nil {
-		log.Printf("%v", err)
+	if unprivileged {
+		// In unprivileged uses, we can't mknod /dev/console, however,
+		// we can just create a file /dev/console and use bind mount on file.
+		if _, err := os.Stat(nn); err != nil {
+			ioutil.WriteFile(nn, []byte{}, 0600) // best effort, ignore error
+		}
+	} else {
+		if err := syscall.Mknod(nn, mode, dev); err != nil {
+			log.Printf("%v", err)
+		}
 	}
 
 	// if any previous steps failed, this one will too, so we can bail here.
@@ -177,7 +189,11 @@ func copy_nodes(base string) {
 func make_ptmx(base string) {
 	dst := path.Join(base, "/dev/ptmx")
 
-	if err := os.Symlink("/dev/ptmx", dst); err != nil {
+	if _, err := os.Stat(dst); err == nil {
+		return
+	}
+
+	if err := os.Symlink("/dev/pts/ptmx", dst); err != nil {
 		log.Printf("%v", err)
 	}
 }
@@ -198,6 +214,10 @@ func make_symlinks(base string) {
 	for i := range linkit {
 		dst := path.Join(base, linkit[i].dst)
 
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+
 		if err := os.Symlink(linkit[i].src, dst); err != nil {
 			log.Printf("%v", err)
 		}
@@ -210,20 +230,20 @@ var (
 	mnt     = flag.String("mount", "", "define mounts")
 	chroot  = flag.String("chroot", "", "where to chroot to")
 	chdir   = flag.String("chdir", "/", "where to chrdir to in the chroot")
-	console = flag.String("console", "/dev/console", "where the root is")
+	console = flag.String("console", "/dev/console", "where the console is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	env     = flag.String("env", "", "other environment variables")
 	user    = flag.String("user", "root" /*user.User.Username*/, "User name")
-	root    = &mount{"", "/", "", "", syscall.MS_SLAVE | syscall.MS_REC, false}
+	root    = &mount{"", "/", "", "", syscall.MS_SLAVE | syscall.MS_REC, false, false}
 	mounts  = []mount{
-		{"proc", "/proc", "proc", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV, true},
-		{"/proc/sys", "/proc/sys", "", "", syscall.MS_BIND, true},
-		{"", "/proc/sys", "", "", syscall.MS_BIND | syscall.MS_RDONLY | syscall.MS_REMOUNT, true},
-		{"sysfs", "/sys", "sysfs", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_RDONLY, true},
-		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_STRICTATIME, true},
-		{"devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=000,mode=620,gid=5", syscall.MS_NOSUID | syscall.MS_NOEXEC, true},
-		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true},
-		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true},
+		{"proc", "/proc", "proc", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV, true, false},
+		{"/proc/sys", "/proc/sys", "", "", syscall.MS_BIND, true, true},
+		{"", "/proc/sys", "", "", syscall.MS_BIND | syscall.MS_RDONLY | syscall.MS_REMOUNT, true, true},
+		{"sysfs", "/sys", "sysfs", "", syscall.MS_NOSUID | syscall.MS_NOEXEC | syscall.MS_NODEV | syscall.MS_RDONLY, true, true},
+		{"tmpfs", "/dev", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_STRICTATIME, true, true}, // unprivileged system needs a pre-populated /dev
+		{"devpts", "/dev/pts", "devpts", "newinstance,ptmxmode=0660,mode=0620", syscall.MS_NOSUID | syscall.MS_NOEXEC, true, false},
+		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true, false},
+		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true, false},
 	}
 )
 
@@ -243,29 +263,39 @@ func main() {
 	// that we really spawned us. Also, for testing, you can always
 	// pass it by hand to see what the namespace looks like.
 	a := os.Args
-	if a[len(a)-1] != "#" {
-
+	if a[len(a)-1][0] != '#' {
 		a = append(a, "#")
+		if syscall.Geteuid() != 0 {
+			a[len(a)-1] = "#u"
+		}
 		// spawn ourselves with the right unsharing settings.
 		c := exec.Command(a[0], a[1:]...)
 		c.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID}
 		//		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 
+		if syscall.Geteuid() != 0 {
+			c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
+			c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
+			c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
+		}
+
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		t, err := getTermios(1)
-		if err != nil {
-			log.Fatalf("Can't get termios on fd 1: %v", err)
-		}
+		//t, err := getTermios(1)
+		//if err != nil {
+		//	log.Fatalf("Can't get termios on fd 1: %v", err)
+		//}
 		if err := c.Run(); err != nil {
 			log.Printf(err.Error())
 		}
-		if err := t.set(1); err != nil {
-			log.Printf("Can't reset termios on fd1: %v", err)
-		}
+		//if err := t.set(1); err != nil {
+		//	log.Printf("Can't reset termios on fd1: %v", err)
+		//}
 		os.Exit(1)
 	}
+
+	unprivileged := a[len(a)-1] == "#u"
 
 	// unlike pflask, we require that you set a chroot.
 	// If you make it /, strange things are bound to happen.
@@ -289,15 +319,17 @@ func main() {
 	// how else to do it. This may require we set some things up first,
 	// esp. the network. But, it's all fun and games until someone loses
 	// an eye.
-	MountAll(*chroot)
+	MountAll(*chroot, unprivileged)
 
-	copy_nodes(*chroot)
+	if !unprivileged {
+		copy_nodes(*chroot)
+	}
 
 	make_ptmx(*chroot)
 
 	make_symlinks(*chroot)
 
-	make_console(*chroot, sname)
+	make_console(*chroot, sname, unprivileged)
 
 	//umask(0022);
 
@@ -331,6 +363,20 @@ func main() {
 		}
 	}
 	e["container"] = "pflask"
+
+	if *cgroup == "" {
+		var envs []string
+		for k, v := range e {
+			envs = append(envs, k+"="+v)
+		}
+		if err := syscall.Chroot(*chroot); err != nil {
+			log.Fatal(err)
+		}
+		if err := syscall.Chdir(*chdir); err != nil {
+			log.Fatal(err)
+		}
+		log.Fatal(syscall.Exec(a[0], a[1:], envs))
+	}
 
 	c := exec.Command(a[0], a[1:]...)
 	c.Env = nil
