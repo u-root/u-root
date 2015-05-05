@@ -4,26 +4,32 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"io/ioutil"
 	"text/template"
 )
 
 const (
-	copylist = `
-		{{.go}}/go/src
-		{{.go}}/go/VERSION.cache
-		{{.go}}/go/misc
-		{{.go}}/go/pkg/include
-		{{.go}}/go/bin/{{.kernel}}_{{.arch}}/go
-		{{.go}}/go/pkg/tool/{{.kernel}}_{{.arch}}/{{.letter}}g
-		{{.go}}/go/pkg/tool/{{.kernel}}_{{.arch}}/{{.letter}}l
-		{{.go}}/go/pkg/tool/{{.kernel}}_{{.arch}}/asm
-		{{.go}}/go/pkg/tool/{{.kernel}}_{{.arch}}/old{{.letter}}a
+	copylist = `{{.Goroot}}/go/src
+{{.Goroot}}/go/VERSION.cache
+{{.Goroot}}/go/misc
+{{.Goroot}}/go/src
+{{.Goroot}}/go/pkg/include
+{{.Goroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
 `
 )
 var (
 	fail int
 	t = template.Must(template.New("filelist").Parse(copylist))
+	letter = map[string]string{
+		"amd64": "6",
+		"arm": "5",
+		"ppc": "9",
+		}
 )
 
 func cp(in, out string) {
@@ -49,16 +55,52 @@ func getenv(e, d string) string {
 }
 
 func main() {
+	type config struct {
+		Goroot string
+		Arch string
+		Goos string
+		Letter string
+		Dir string
+	}
+	var a config
 	flag.Parse()
-	arch := getenv("GOARCH", "amd64")
-	goos := getenv("GOROOT", "/")
-	d, err := ioutil.TempDir("", "u-root")
+	var err error
+	a.Arch = getenv("GOARCH", "amd64")
+	a.Goroot = getenv("GOROOT", "/")
+	a.Goos = "linux"
+	a.Dir, err = ioutil.TempDir("", "u-root")
+	a.Letter = letter[a.Arch]
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Copying for goos %v, arch %v, dir %v\n", goos, arch, d)
-	
+	fmt.Printf("Copying for Goos %v, Arch %v, dir %v\n", a.Goos, a.Arch, a.Dir)
+	r, w, err := os.Pipe()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+
+	cmd := exec.Command("cpio", "--verbose", "--make-directories", "-p", a.Dir)
+	cmd.Dir = a.Dir
+	cmd.Stdin = r
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	fmt.Fprintf(os.Stderr, "Run %v", cmd)
+	err = cmd.Start()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	err = t.Execute(w, a)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	w.Close()
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
 }
 
 //#!/bin/bash
