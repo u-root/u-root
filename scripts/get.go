@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
-	"io/ioutil"
+	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -60,7 +62,6 @@ func main() {
 		Arch string
 		Goos string
 		Letter string
-		Dir string
 	}
 	var a config
 	flag.Parse()
@@ -68,35 +69,53 @@ func main() {
 	a.Arch = getenv("GOARCH", "amd64")
 	a.Goroot = getenv("GOROOT", "/")
 	a.Goos = "linux"
-	a.Dir, err = ioutil.TempDir("", "u-root")
+	f, err := ioutil.TempFile("", "u-root")
 	a.Letter = letter[a.Arch]
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Copying for Goos %v, Arch %v, dir %v\n", a.Goos, a.Arch, a.Dir)
+	fmt.Printf("Copying for Goos %v, Arch %v\n", a.Goos, a.Arch)
 	r, w, err := os.Pipe()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
-
-	cmd := exec.Command("cpio", "--verbose", "--make-directories", "-p", a.Dir)
-	cmd.Dir = a.Dir
+	cmd := exec.Command("cpio", "--verbose", "-o")
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = f
 	fmt.Fprintf(os.Stderr, "Run %v", cmd)
 	err = cmd.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
-	err = t.Execute(w, a)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+
+	dirs := strings.Split("/go/bin\n/go/src", "\n")
+	fmt.Printf("DIRS %v\n", dirs)
+	for _, v := range dirs {
+		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf("%v: %v\n", path, err)
+				return err
+			}
+			fmt.Fprintf(w, "%v\n", path)
+			fmt.Printf("%v\n", path)
+			return err
+		})
+		fmt.Printf("WALKED %v\n", v)
+		if err != nil {
+			fmt.Printf("%s: %v\n", v, err)
+		}
 	}
+	fmt.Fprintf(os.Stderr, "ALL DONE WALK\n")
 	w.Close()
+	//err = t.Execute(w, a)
+	//if err != nil {
+		//fmt.Fprintf(os.Stderr, "%v\n", err)
+	//}
+
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
