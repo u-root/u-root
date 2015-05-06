@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -15,7 +16,6 @@ const (
 	copylist = `{{.Goroot}}/go/src
 {{.Goroot}}/go/VERSION.cache
 {{.Goroot}}/go/misc
-{{.Goroot}}/go/src
 {{.Goroot}}/go/pkg/include
 {{.Goroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
 {{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
@@ -92,9 +92,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
-	dirs := strings.Split("/go/bin\n/go/src", "\n")
-	fmt.Printf("DIRS %v\n", dirs)
-	for _, v := range dirs {
+	var b bytes.Buffer
+	err = t.Execute(&b, a)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+
+	n := strings.Split(b.String(), "\n")
+	fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)
+	for _, v := range n {
+		fmt.Fprintf(os.Stderr, "%v\n", v)
 		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Printf("%v: %v\n", path, err)
@@ -111,11 +118,6 @@ func main() {
 	}
 	fmt.Fprintf(os.Stderr, "ALL DONE WALK\n")
 	w.Close()
-	//err = t.Execute(w, a)
-	//if err != nil {
-		//fmt.Fprintf(os.Stderr, "%v\n", err)
-	//}
-
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
