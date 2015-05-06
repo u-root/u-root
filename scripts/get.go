@@ -34,18 +34,19 @@ var (
 		}
 )
 
-func cp(in, out string) {
+func cp(in, out string) error {
 	b, err := ioutil.ReadFile(in)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: %v\n", in, err)
 		fail++
-		return
+		return err
 	}
 	err = ioutil.WriteFile(out, b, 0444)
 	if err != nil {
 	     	fmt.Fprintf(os.Stderr, "%v: %v\n", out, err)
 		fail++
 	}
+	return nil
 }
 
 func getenv(e, d string) string {
@@ -70,6 +71,7 @@ func main() {
 	a.Goroot = getenv("GOROOT", "/")
 	a.Goos = "linux"
 	f, err := ioutil.TempFile("", "u-root")
+	fmt.Fprintf(os.Stderr, "f is %v\n", f.Name())
 	a.Letter = letter[a.Arch]
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -116,12 +118,17 @@ func main() {
 			fmt.Printf("%s: %v\n", v, err)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "ALL DONE WALK\n")
 	w.Close()
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
+	// It worked, so move the file to where it needs to be.
+	cpioName := fmt.Sprintf("%v_%vgo.cpio", a.Goos, a.Arch)
+	if err := cp(f.Name(), cpioName); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	fmt.Fprintf(os.Stderr, "Successfully created CPIO %v\n", cpioName)
 }
 
 //#!/bin/bash
