@@ -3,7 +3,8 @@ rm -rf tmp
 mkdir tmp
 cd tmp
 
-mkdir -p dev etc usr/lib lib64 tmp bin
+mkdir -p dev etc usr/lib lib64 tmp bin tcz
+echo nameserver 8.8.8.8 > etc/resolv.conf
 cp /etc/localtime etc
 
 sudo rm -f dev/null
@@ -12,3 +13,4 @@ sudo mknod dev/null c 1 3
 find . -print | cpio -H newc -o > ../dev.cpio
 rm -rf tmp
 
+cat /etc/resolv.conf > etc/resolv.conf
