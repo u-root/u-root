@@ -84,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd := exec.Command("cpio", "--verbose", "-o")
+	cmd := exec.Command("cpio", "-H", "newc", "--verbose", "-o")
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = f
