@@ -8,45 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"text/template"
 )
-
-const (
-	copylist = `{{.Goroot}}/go/src
-{{.Goroot}}/go/VERSION.cache
-{{.Goroot}}/go/misc
-{{.Goroot}}/go/pkg/include
-{{.Goroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
-`
-)
-var (
-	fail int
-	t = template.Must(template.New("filelist").Parse(copylist))
-	letter = map[string]string{
-		"amd64": "6",
-		"arm": "5",
-		"ppc": "9",
-		}
-)
-
-func cp(in, out string) error {
-	b, err := ioutil.ReadFile(in)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v: %v\n", in, err)
-		fail++
-		return err
-	}
-	err = ioutil.WriteFile(out, b, 0444)
-	if err != nil {
-	     	fmt.Fprintf(os.Stderr, "%v: %v\n", out, err)
-		fail++
-	}
-	return nil
-}
 
 func getenv(e, d string) string {
 	v := os.Getenv(e)
@@ -136,6 +98,25 @@ func main() {
 	}
 	w.Close()
 	err = cmd.Wait()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+
+	// at some point, we won't make the intermediate files. Once we trust things.
+	n, err := filepath.Glob(path.Join(a.Gopath, fmt.Sprintf("%v_%v*.cpio", a.Goos, a.Arch)))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	n = append(n, path.Join(a.Gopath, "scripts/dev.cpio"))
+	all := []byte{}
+	for _, i := range n {
+		b, err := ioutil.ReadFile(i)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		all = append(all, b...)
+	}
+	err = ioutil.WriteFile(path.Join(a.Gopath, fmt.Sprintf("%v_%vall.cpio", a.Goos, a.Arch)), all, 0400)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
