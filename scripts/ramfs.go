@@ -20,17 +20,17 @@ type copyfiles struct {
 }
 
 const (
-	goList = `{{.Goroot}}
-{{.Goroot}}/go/bin/go
-{{.Goroot}}/go/pkg/include
-{{.Goroot}}/go/src
-{{.Goroot}}/go/VERSION.cache
-{{.Goroot}}/go/misc
-{{.Goroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
-{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
+	goList = `{{.Gosrcroot}}
+{{.Gosrcroot}}/go/bin/go
+{{.Gosrcroot}}/go/pkg/include
+{{.Gosrcroot}}/go/src
+{{.Gosrcroot}}/go/VERSION.cache
+{{.Gosrcroot}}/go/misc
+{{.Gosrcroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
+{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
+{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
+{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
+{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
 `
 	initList="init"
 	urootList="{{.Gopath}}/src"
@@ -39,6 +39,7 @@ const (
 var (
 	config struct {
 		Goroot string
+		Gosrcroot string
 		Arch string
 		Goos string
 		Letter string
@@ -92,7 +93,7 @@ func cpiop(c string) error {
 			}
 			cn := strings.TrimPrefix(name, n[0] + "/")
 			fmt.Fprintf(w, "%v\n", cn)
-			fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
+			//fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
 			return nil
 		})
 		fmt.Printf("WALKED %v\n", v)
@@ -115,6 +116,7 @@ func main() {
 	var err error
 	config.Arch = getenv("GOARCH", "amd64")
 	config.Goroot = getenv("GOROOT", "/")
+	config.Gosrcroot = path.Dir(config.Goroot)
 	config.Gopath = getenv("GOPATH", "")
 	config.Goos = "linux"
 	config.TempDir, err = ioutil.TempDir("", "u-root")
