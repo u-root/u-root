@@ -15,7 +15,7 @@ import (
 )
 
 type copyfiles struct {
-	dir string
+	dir  string
 	spec string
 }
 
@@ -31,27 +31,27 @@ go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
 go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
 go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
 go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
-	initList=`{{.Gopath}}/src/cmds/init
+	initList = `{{.Gopath}}/src/cmds/init
 init`
-	urootList=`{{.Gopath}}
+	urootList = `{{.Gopath}}
 src`
 )
 
 var (
 	config struct {
-		Goroot string
+		Goroot    string
 		Gosrcroot string
-		Arch string
-		Goos string
-		Letter string
-		Gopath string
-		TempDir string
+		Arch      string
+		Goos      string
+		Letter    string
+		Gopath    string
+		TempDir   string
 	}
 	letter = map[string]string{
 		"amd64": "6",
-		"arm": "5",
-		"ppc": "9",
-		}
+		"arm":   "5",
+		"ppc":   "9",
+	}
 )
 
 func getenv(e, d string) string {
@@ -70,10 +70,11 @@ func lsr(n string, w *os.File) error {
 		}
 		cn := strings.TrimPrefix(name, n)
 		fmt.Fprintf(w, "%v\n", cn)
-			return nil
+		return nil
 	})
 	return err
 }
+
 // we'll keep using cpio and hope the kernel gets fixed some day.
 func cpiop(c string) error {
 
@@ -82,10 +83,10 @@ func cpiop(c string) error {
 	if err := t.Execute(&b, config); err != nil {
 		log.Fatalf("spec %v: %v\n", c, err)
 	}
-	
+
 	n := strings.Split(b.String(), "\n")
 	fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)
-	
+
 	r, w, err := os.Pipe()
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -100,16 +101,16 @@ func cpiop(c string) error {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
-	
+
 	for _, v := range n[1:] {
 		fmt.Fprintf(os.Stderr, "%v\n", v)
-		err := filepath.Walk(path.Join(n[0],v), func(name string, fi os.FileInfo, err error) error {
+		err := filepath.Walk(path.Join(n[0], v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
 				// That's ok, sometimes things are not there.
 				return filepath.SkipDir
 			}
-			cn := strings.TrimPrefix(name, n[0] + "/")
+			cn := strings.TrimPrefix(name, n[0]+"/")
 			if cn == ".git" {
 				return filepath.SkipDir
 			}
@@ -129,6 +130,7 @@ func cpiop(c string) error {
 	}
 	return nil
 }
+
 // sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
 // the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
 // It's not size related: if the go archive is first or in the middle it still fails.
@@ -196,37 +198,23 @@ func main() {
 	if err := lsr(config.TempDir, w); err != nil {
 		log.Fatal("%v\n", err)
 	}
-	if err := os.Rename(f.Name(), "initramfs.cpio"); err != nil {
+	w.Close()
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	// It might just work to put the dev.cpio at the end of the full initramfs.cpio. Let's try.
+	// Yes that at least works.
+	b, err := ioutil.ReadFile(f.Name())
+	if err != nil {
+		log.Fatal("%v\n", err)
+	}
+	dev, err := ioutil.ReadFile("dev.cpio")
+	if err != nil {
+		log.Fatal("%v\n", err)
+	}
+	b = append(b, dev...)
+	if err := ioutil.WriteFile("initramfs.cpio", b, 0600); err != nil {
 		log.Fatal("%v\n", err)
 	}
 }
-
-/*
-# 1. Copy the "myinit" program (compiled above) into the
-#    initramfs directory (and rename it to "init"):
-#cp myinit initramfs/init
-set -e
-echo 'if this cp fails, run README in u-root'
-cp u-root/init initramfs
-
-# 2. Create the CPIO archive:
-cd initramfs
-mkdir -p lib/x86_64-linux-gnu lib64
-rsync -av ../u-root/src .
-rsync -av ../u-root/etc .
-cpio -id < ../u-root/go.cpio
-cpio -id -E ../u-root/tinycorebase/filelist < ../u-root/tinycorebase/corepure64.cpio
-#cpio -id < ../u-root/tinycorebase/tinycorebase.cpio
-
-cp ../u-root//lib/x86_64-linux-gnu/libm.so.6 lib/x86_64-linux-gnu 
-cp ../u-root//lib/x86_64-linux-gnu/libc.so.6  lib/x86_64-linux-gnu 
-cp ../u-root/lib64/ld-linux-x86-64.so.2  lib64
-
-#fakeroot # this is pure magic (it allows us to pretend to be root)
-chown root init
-find . | cpio -H newc -o > ../initramfs.cpio # <-- this is the actual initramfs
-#exit # leave the fakeroot shell
-cd ..
-ls -l initramfs.cpio
-cp initramfs.cpio linux-3.14.17
-*/

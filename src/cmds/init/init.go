@@ -27,13 +27,14 @@ const PATH = "/bin:/buildbin:/usr/local/bin"
 
 type dir struct {
 	name string
-	mode   os.FileMode
+	mode os.FileMode
 }
 
 type dev struct {
-	name string
-	mode   os.FileMode
-	magic  int
+	name  string
+	mode  os.FileMode
+	magic int
+	howmany int
 }
 
 type mount struct {
@@ -52,24 +53,27 @@ var (
 		"CGO_ENABLED":     "0",
 	}
 
-	dirs = []dir {
-		{name: "/proc", mode: os.FileMode(0555),},
-		{name: "/buildbin", mode: os.FileMode(0777),},
-		{name: "/bin", mode: os.FileMode(0777),},
-		{name: "/tmp", mode: os.FileMode(0777),},
-		{name: "/env", mode: os.FileMode(0777),},
-		{name: "/etc", mode: os.FileMode(0777),},
-		{name: "/tcz", mode: os.FileMode(0777),},
-		{name: "/dev", mode: os.FileMode(0777),},
-		{name: "/lib", mode: os.FileMode(0777),},
-		{name: "/usr/lib", mode: os.FileMode(0777),},
-		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777),},
+	dirs = []dir{
+		{name: "/proc", mode: os.FileMode(0555)},
+		{name: "/buildbin", mode: os.FileMode(0777)},
+		{name: "/bin", mode: os.FileMode(0777)},
+		{name: "/tmp", mode: os.FileMode(0777)},
+		{name: "/env", mode: os.FileMode(0777)},
+		{name: "/etc", mode: os.FileMode(0777)},
+		{name: "/tcz", mode: os.FileMode(0777)},
+		{name: "/dev", mode: os.FileMode(0777)},
+		{name: "/lib", mode: os.FileMode(0777)},
+		{name: "/usr/lib", mode: os.FileMode(0777)},
+		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777)},
 	}
-	devs = []dev {
-		{name: "/dev/null", mode: os.FileMode(0660)|os.ModeDevice|os.ModeCharDevice, magic: 0x0301,},
+	devs = []dev{
+		// chicken and egg: these need to be there before you start. So, sadly,
+		// we will always need dev.cpio. 
+		//{name: "/dev/null", mode: os.FileMode(0660) | 020000, magic: 0x0103},
+		//{name: "/dev/console", mode: os.FileMode(0660) | 020000, magic: 0x0501},
 	}
 	namespace = []mount{
-		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "",},
+		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
 	}
 )
 
@@ -102,6 +106,7 @@ func main() {
 	}
 
 	for _, d := range devs {
+		syscall.Unlink(d.name)
 		if err := syscall.Mknod(d.name, uint32(d.mode), d.magic); err != nil {
 			log.Printf("mknod :%s: mode %o: magic: %v: %v\n", d.name, d.mode, d.magic, err)
 			continue

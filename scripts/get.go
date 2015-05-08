@@ -27,14 +27,15 @@ const (
 {{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
 `
 )
+
 var (
-	fail int
-	t = template.Must(template.New("filelist").Parse(copylist))
+	fail   int
+	t      = template.Must(template.New("filelist").Parse(copylist))
 	letter = map[string]string{
 		"amd64": "6",
-		"arm": "5",
-		"ppc": "9",
-		}
+		"arm":   "5",
+		"ppc":   "9",
+	}
 )
 
 func cp(in, out string) error {
@@ -46,7 +47,7 @@ func cp(in, out string) error {
 	}
 	err = ioutil.WriteFile(out, b, 0444)
 	if err != nil {
-	     	fmt.Fprintf(os.Stderr, "%v: %v\n", out, err)
+		fmt.Fprintf(os.Stderr, "%v: %v\n", out, err)
 		fail++
 	}
 	return nil
@@ -63,8 +64,8 @@ func getenv(e, d string) string {
 func main() {
 	type config struct {
 		Goroot string
-		Arch string
-		Goos string
+		Arch   string
+		Goos   string
 		Letter string
 	}
 	var a config
@@ -143,7 +144,7 @@ func main() {
 }
 
 //#!/bin/bash
-//# This is becoming more of a buildroot script. 
+//# This is becoming more of a buildroot script.
 //# If it is a one-time thing, do it here.
 //# The simplest thing is to build a go via
 //# mount --bind your-go-src /go
@@ -162,7 +163,7 @@ func main() {
 //# This shrinks the go command by 50% or so.
 //# You can later recreate the full command once booted:
 //# cd /go/src/cmd/go
-//# go install 
+//# go install
 //
 //# I can't believe I have to do this.
 //# There are more compact forms (e.g. {6a,6c,6g,6l} but this
