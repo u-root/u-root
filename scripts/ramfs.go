@@ -62,6 +62,18 @@ func getenv(e, d string) string {
 	return v
 }
 
+func lsr(n string, w *os.File) error {
+	n = n + "/"
+	err := filepath.Walk(n, func(name string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		cn := strings.TrimPrefix(name, n)
+		fmt.Fprintf(w, "%v\n", cn)
+			return nil
+	})
+	return err
+}
 // we'll keep using cpio and hope the kernel gets fixed some day.
 func cpiop(c string) error {
 
@@ -98,6 +110,9 @@ func cpiop(c string) error {
 				return filepath.SkipDir
 			}
 			cn := strings.TrimPrefix(name, n[0] + "/")
+			if cn == ".git" {
+				return filepath.SkipDir
+			}
 			fmt.Fprintf(w, "%v\n", cn)
 			//fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
 			return nil
@@ -157,6 +172,32 @@ func main() {
 			log.Printf("Things went south. TempDir is %v", config.TempDir)
 			log.Fatalf("Bailing out near line 666")
 		}
+	}
+
+	// now try to create the cpio.
+	f, err := ioutil.TempFile("", "u-root")
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	r, w, err := os.Pipe()
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	cmd = exec.Command("cpio", "-H", "newc", "-o")
+	cmd.Dir = config.TempDir
+	cmd.Stdin = r
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = f
+	fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
+	err = cmd.Start()
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	if err := lsr(config.TempDir, w); err != nil {
+		log.Fatal("%v\n", err)
+	}
+	if err := os.Rename(f.Name(), "initramfs.cpio"); err != nil {
+		log.Fatal("%v\n", err)
 	}
 }
 
