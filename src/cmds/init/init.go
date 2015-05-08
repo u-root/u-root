@@ -30,6 +30,12 @@ type dir struct {
 	mode   os.FileMode
 }
 
+type dev struct {
+	name string
+	mode   os.FileMode
+	magic  int
+}
+
 type mount struct {
 	source string
 	target string
@@ -59,6 +65,9 @@ var (
 		{name: "/usr/lib", mode: os.FileMode(0777),},
 		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777),},
 	}
+	devs = []dev {
+		{name: "/dev/null", mode: os.FileMode(0660)|os.ModeDevice|os.ModeCharDevice, magic: 0x0301,},
+	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: "",},
 	}
@@ -87,7 +96,14 @@ func main() {
 
 	for _, m := range dirs {
 		if err := os.MkdirAll(m.name, m.mode); err != nil {
-			log.Printf("mkdir :%s: mode %o: %v\n", m.name, m.mode)
+			log.Printf("mkdir :%s: mode %o: %v\n", m.name, m.mode, err)
+			continue
+		}
+	}
+
+	for _, d := range devs {
+		if err := syscall.Mknod(d.name, uint32(d.mode), d.magic); err != nil {
+			log.Printf("mknod :%s: mode %o: magic: %v: %v\n", d.name, d.mode, d.magic, err)
 			continue
 		}
 	}
@@ -98,8 +114,10 @@ func main() {
 		}
 
 	}
-//HACK
-	if err := filepath.Walk("/", func(name string, fi os.FileInfo, err error) error {
+
+	// only in case of emergency.
+	if false {
+		if err := filepath.Walk("/", func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
 				// That's ok, sometimes things are not there.
@@ -107,10 +125,10 @@ func main() {
 			}
 			fmt.Printf("%v\n", name)
 			return nil
-	}); err != nil {
-		log.Printf("WALK fails %v\n", err)
+		}); err != nil {
+			log.Printf("WALK fails %v\n", err)
+		}
 	}
-// HACK
 
 	// populate buildbin
 
