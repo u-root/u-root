@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
+	"syscall"
 )
 
 func getenv(e, d string) string {
@@ -37,7 +39,7 @@ func main() {
 	a.Goos = "linux"
 
 	// Build init
-	cmd := exec.Command("go", "build", ".")
+	cmd := exec.Command("go", "build", "init.go")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.Dir = path.Join(a.Gopath, "src/cmds/init")
@@ -89,7 +91,7 @@ func main() {
 			fmt.Printf("%v: %v\n", path, err)
 			return err
 		}
-		fmt.Fprintf(w, "%v\n", path)
+		fmt.Fprintf(w, "%v\n", strings.TrimPrefix(path, a.Gopath))
 		fmt.Printf("%v\n", path)
 		return err
 	})
@@ -103,6 +105,8 @@ func main() {
 	}
 
 	// at some point, we won't make the intermediate files. Once we trust things.
+	outfile := path.Join(a.Gopath, fmt.Sprintf("%v_%vall.cpio", a.Goos, a.Arch))
+	syscall.Unlink(outfile)
 	n, err := filepath.Glob(path.Join(a.Gopath, fmt.Sprintf("%v_%v*.cpio", a.Goos, a.Arch)))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -110,13 +114,14 @@ func main() {
 	n = append(n, path.Join(a.Gopath, "scripts/dev.cpio"))
 	all := []byte{}
 	for _, i := range n {
+		fmt.Fprintf(os.Stderr, "Add %v\n", i)
 		b, err := ioutil.ReadFile(i)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 		all = append(all, b...)
 	}
-	err = ioutil.WriteFile(path.Join(a.Gopath, fmt.Sprintf("%v_%vall.cpio", a.Goos, a.Arch)), all, 0400)
+	err = ioutil.WriteFile(outfile, all, 0400)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}

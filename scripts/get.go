@@ -7,16 +7,19 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"text/template"
 )
 
 const (
-	copylist = `{{.Goroot}}/go/src
+	copylist = `{{.Goroot}}/go/bin/go
+{{.Goroot}}/go/pkg/include
+{{.Goroot}}/go/src
 {{.Goroot}}/go/VERSION.cache
 {{.Goroot}}/go/misc
-{{.Goroot}}/go/pkg/include
 {{.Goroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
 {{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
 {{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
@@ -69,6 +72,10 @@ func main() {
 	var err error
 	a.Arch = getenv("GOARCH", "amd64")
 	a.Goroot = getenv("GOROOT", "/")
+	fmt.Printf("Goroot is %v\n", a.Goroot)
+	// we want to retain "go" in the pathname
+	a.Goroot = path.Dir(a.Goroot)
+	fmt.Printf("Goroot is %v\n", a.Goroot)
 	a.Goos = "linux"
 	f, err := ioutil.TempFile("", "u-root")
 	fmt.Fprintf(os.Stderr, "f is %v\n", f.Name())
@@ -84,11 +91,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd := exec.Command("cpio", "-H", "newc", "--verbose", "-o")
+	cmd := exec.Command("cpio", "-H", "newc", "-o")
+	cmd.Dir = a.Goroot
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = f
-	fmt.Fprintf(os.Stderr, "Run %v", cmd)
+	fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
 	err = cmd.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -104,14 +112,16 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)
 	for _, v := range n {
 		fmt.Fprintf(os.Stderr, "%v\n", v)
-		err := filepath.Walk(v, func(path string, fi os.FileInfo, err error) error {
+		err := filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
-				fmt.Printf("%v: %v\n", path, err)
-				return err
+				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
+				// That's ok, sometimes things are not there.
+				return filepath.SkipDir
 			}
-			fmt.Fprintf(w, "%v\n", path)
-			fmt.Printf("%v\n", path)
-			return err
+			n := strings.TrimPrefix(name, path.Join("/", a.Goroot)+"/")
+			fmt.Fprintf(w, "%v\n", n)
+			//fmt.Printf("%v %v\n", name, n)
+			return nil
 		})
 		fmt.Printf("WALKED %v\n", v)
 		if err != nil {
@@ -125,6 +135,7 @@ func main() {
 	}
 	// It worked, so move the file to where it needs to be.
 	cpioName := fmt.Sprintf("%v_%vgo.cpio", a.Goos, a.Arch)
+	syscall.Unlink(cpioName)
 	if err := cp(f.Name(), cpioName); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
