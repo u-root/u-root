@@ -21,19 +21,20 @@ type copyfiles struct {
 
 const (
 	goList = `{{.Gosrcroot}}
-{{.Gosrcroot}}/go/bin/go
-{{.Gosrcroot}}/go/pkg/include
-{{.Gosrcroot}}/go/src
-{{.Gosrcroot}}/go/VERSION.cache
-{{.Gosrcroot}}/go/misc
-{{.Gosrcroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
-{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
-{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
-{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
-{{.Gosrcroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
-`
-	initList="init"
-	urootList="{{.Gopath}}/src"
+go/bin/go
+go/pkg/include
+go/src
+go/VERSION.cache
+go/misc
+go/bin/{{.Goos}}_{{.Arch}}/go
+go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
+go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
+go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
+go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
+	initList=`{{.Gopath}}/src/cmds/init
+init`
+	urootList=`{{.Gopath}}
+src`
 )
 
 var (
@@ -46,6 +47,11 @@ var (
 		Gopath string
 		TempDir string
 	}
+	letter = map[string]string{
+		"amd64": "6",
+		"arm": "5",
+		"ppc": "9",
+		}
 )
 
 func getenv(e, d string) string {
@@ -119,6 +125,7 @@ func main() {
 	config.Gosrcroot = path.Dir(config.Goroot)
 	config.Gopath = getenv("GOPATH", "")
 	config.Goos = "linux"
+	config.Letter = letter[config.Arch]
 	config.TempDir, err = ioutil.TempDir("", "u-root")
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -142,10 +149,15 @@ func main() {
 	// directory to walk from.
 	cpio := []string{
 		goList,
-		//		{config.Gopath, urootList},
+		urootList,
 		"{{.Gopath}}/src/cmds/init\ninit",
 	}
-	cpiop(cpio[0])
+	for _, c := range cpio {
+		if err := cpiop(c); err != nil {
+			log.Printf("Things went south. TempDir is %v", config.TempDir)
+			log.Fatalf("Bailing out near line 666")
+		}
+	}
 }
 
 /*
