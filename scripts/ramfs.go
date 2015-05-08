@@ -1,15 +1,50 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
-	"syscall"
+	"text/template"
+)
+
+type copyfiles struct {
+	dir string
+	spec string
+}
+
+const (
+	goList = `{{.Goroot}}
+{{.Goroot}}/go/bin/go
+{{.Goroot}}/go/pkg/include
+{{.Goroot}}/go/src
+{{.Goroot}}/go/VERSION.cache
+{{.Goroot}}/go/misc
+{{.Goroot}}/go/bin/{{.Goos}}_{{.Arch}}/go
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
+{{.Goroot}}/go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a
+`
+	initList="init"
+	urootList="{{.Gopath}}/src"
+)
+
+var (
+	config struct {
+		Goroot string
+		Arch string
+		Goos string
+		Letter string
+		Gopath string
+		TempDir string
+	}
 )
 
 func getenv(e, d string) string {
@@ -20,111 +55,95 @@ func getenv(e, d string) string {
 	return v
 }
 
-func main() {
+// we'll keep using cpio and hope the kernel gets fixed some day.
+func cpiop(c string) error {
 
-	
-	type config struct {
-		Goroot string
-		Arch string
-		Goos string
-		Letter string
-		Gopath string
+	t := template.Must(template.New("filelist").Parse(c))
+	var b bytes.Buffer
+	if err := t.Execute(&b, config); err != nil {
+		log.Fatalf("spec %v: %v\n", c, err)
 	}
-	var a config
+	
+	n := strings.Split(b.String(), "\n")
+	fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)
+	
+	r, w, err := os.Pipe()
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	cmd := exec.Command("cpio", "--make-directories", "-p", config.TempDir)
+	cmd.Dir = n[0]
+	cmd.Stdin = r
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	log.Printf("Run %v @ %v", cmd, cmd.Dir)
+	err = cmd.Start()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	
+	for _, v := range n[1:] {
+		fmt.Fprintf(os.Stderr, "%v\n", v)
+		err := filepath.Walk(path.Join(n[0],v), func(name string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
+				// That's ok, sometimes things are not there.
+				return filepath.SkipDir
+			}
+			cn := strings.TrimPrefix(name, n[0] + "/")
+			fmt.Fprintf(w, "%v\n", cn)
+			fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
+			return nil
+		})
+		fmt.Printf("WALKED %v\n", v)
+		if err != nil {
+			fmt.Printf("%s: %v\n", v, err)
+		}
+	}
+	w.Close()
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+	return nil
+}
+// sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
+// the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
+// It's not size related: if the go archive is first or in the middle it still fails.
+func main() {
 	flag.Parse()
 	var err error
-	a.Arch = getenv("GOARCH", "amd64")
-	a.Goroot = getenv("GOROOT", "/")
-	a.Gopath = getenv("GOPATH", "")
-	a.Goos = "linux"
+	config.Arch = getenv("GOARCH", "amd64")
+	config.Goroot = getenv("GOROOT", "/")
+	config.Gopath = getenv("GOPATH", "")
+	config.Goos = "linux"
+	config.TempDir, err = ioutil.TempDir("", "u-root")
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
+	// sanity checking: do /go/bin/go, and some basic source files exist?
+	//sanity()
 	// Build init
 	cmd := exec.Command("go", "build", "init.go")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	cmd.Dir = path.Join(a.Gopath, "src/cmds/init")
+	cmd.Dir = path.Join(config.Gopath, "src/cmds/init")
 
 	err = cmd.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	}
-	cmd = exec.Command("cpio", "-H", "newc", "--verbose", "-o")
-	cmd.Dir = path.Join(a.Gopath, "src/cmds/init")
-	cmd.Stdout, err = os.Create(path.Join(a.Gopath, fmt.Sprintf("%v_%vinit.cpio", a.Goos, a.Arch)))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	w, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		log.Fatalf("%v\n", err)
 		os.Exit(1)
 	}
 
-	err = cmd.Start()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+	// These produce arrays of strings, the first element being the
+	// directory to walk from.
+	cpio := []string{
+		goList,
+		//		{config.Gopath, urootList},
+		"{{.Gopath}}/src/cmds/init\ninit",
 	}
-	fmt.Fprintf(w, "init\n")
-	w.Close()
-	err = cmd.Wait()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	}
-
-	cmd = exec.Command("cpio", "-H", "newc", "--verbose", "-o")
-	cmd.Dir = a.Gopath
-	cmd.Stdout, err = os.Create(path.Join(a.Gopath, fmt.Sprintf("%v_%vuroot.cpio", a.Goos, a.Arch)))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	w, err = cmd.StdinPipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	
-	err = cmd.Start()
-	err = filepath.Walk(path.Join(a.Gopath,"src"), func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("%v: %v\n", path, err)
-			return err
-		}
-		fmt.Fprintf(w, "%v\n", strings.TrimPrefix(path, a.Gopath))
-		fmt.Printf("%v\n", path)
-		return err
-	})
-	if err != nil {
-		fmt.Printf("%s: %v\n", a.Gopath, err)
-	}
-	w.Close()
-	err = cmd.Wait()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	}
-
-	// at some point, we won't make the intermediate files. Once we trust things.
-	outfile := path.Join(a.Gopath, fmt.Sprintf("%v_%vall.cpio", a.Goos, a.Arch))
-	syscall.Unlink(outfile)
-	n, err := filepath.Glob(path.Join(a.Gopath, fmt.Sprintf("%v_%v*.cpio", a.Goos, a.Arch)))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	}
-	n = append(n, path.Join(a.Gopath, "scripts/dev.cpio"))
-	all := []byte{}
-	for _, i := range n {
-		fmt.Fprintf(os.Stderr, "Add %v\n", i)
-		b, err := ioutil.ReadFile(i)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-		all = append(all, b...)
-	}
-	err = ioutil.WriteFile(outfile, all, 0400)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	}
+	cpiop(cpio[0])
 }
 
 /*

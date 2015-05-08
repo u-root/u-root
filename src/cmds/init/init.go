@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"uroot"
@@ -97,6 +98,20 @@ func main() {
 		}
 
 	}
+//HACK
+	if err := filepath.Walk("/", func(name string, fi os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
+				// That's ok, sometimes things are not there.
+				return nil
+			}
+			fmt.Printf("%v\n", name)
+			return nil
+	}); err != nil {
+		log.Printf("WALK fails %v\n", err)
+	}
+// HACK
+
 	// populate buildbin
 
 	if commands, err := ioutil.ReadDir("/src/cmds"); err == nil {
