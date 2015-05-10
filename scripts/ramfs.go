@@ -214,7 +214,7 @@ func main() {
 		log.Fatal("%v\n", err)
 	}
 	b = append(b, dev...)
-	if err := ioutil.WriteFile("initramfs.cpio", b, 0600); err != nil {
+	if err := ioutil.WriteFile(fmt.Sprintf("initramfs.%v_%v.cpio", config.Goos, config.Arch), b, 0600); err != nil {
 		log.Fatal("%v\n", err)
 	}
 }

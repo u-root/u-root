@@ -82,16 +82,18 @@ func main() {
 	// Pick some reasonable values in the (unlikely!) even that Uname fails.
 	uname := "linux"
 	mach := "x86_64"
-	// There are two possible places for go:
-	// The first is in /go/bin
-	// The second is in /go/pkg/tool/$OS_$ARCH
+	// There are three possible places for go:
+	// The first is in /go/bin/$OS_$ARCH
+	// The second is in /go/bin [why they still use this path is anyone's guess]
+	// The third is in /go/pkg/tool/$OS_$ARCH
 	if u, err := uroot.Uname(); err != nil {
 		log.Printf("uroot.Utsname fails: %v, so assume %v_%v\n", uname, mach)
 	} else {
 		// Sadly, go and the OS disagree on case.
 		uname = strings.ToLower(u.Sysname)
+		mach = strings.ToLower(u.Machine)
 	}
-	env["PATH"] = fmt.Sprintf("/go/bin:/go/pkg/tool/%s_%s:%v", uname, mach, PATH)
+	env["PATH"] = fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s:%v", uname, mach, uname, mach, PATH)
 	envs := []string{}
 	for k, v := range env {
 		os.Setenv(k, v)
