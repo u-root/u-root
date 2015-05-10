@@ -92,6 +92,10 @@ func main() {
 		// Sadly, go and the OS disagree on case.
 		uname = strings.ToLower(u.Sysname)
 		mach = strings.ToLower(u.Machine)
+		// Yes, we really have to do this stupid thing.
+		if mach[0:3] == "arm" {
+			mach = "arm"
+		}
 	}
 	env["PATH"] = fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s:%v", uname, mach, uname, mach, PATH)
 	envs := []string{}
