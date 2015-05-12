@@ -176,20 +176,29 @@ func main() {
 		}
 	}
 
-	// now try to create the cpio.
-	f, err := ioutil.TempFile("", "u-root")
-	if err != nil {
-		log.Fatalf("%v\n", err)
-	}
 	r, w, err := os.Pipe()
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cmd = exec.Command("cpio", "-H", "newc", "-o")
+
+	// First create the archive and put the device cpio in it.
+	dev, err := ioutil.ReadFile("dev.cpio")
+	if err != nil {
+		log.Fatal("%v %v\n", dev, err)
+	}
+
+	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
+	if err := ioutil.WriteFile(oname, dev, 0600); err != nil {
+		log.Fatal("%v\n", err)
+	}
+
+	// Now use the append option for cpio to append to it.
+	// That way we get one cpio.
+	cmd = exec.Command("cpio", "-H", "newc", "-o", "-A", "-F", oname)
 	cmd.Dir = config.TempDir
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
-	cmd.Stdout = f
+	cmd.Stdout = os.Stdout
 	fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
 	err = cmd.Start()
 	if err != nil {
@@ -203,18 +212,5 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
-	// It might just work to put the dev.cpio at the end of the full initramfs.cpio. Let's try.
-	// Yes that at least works.
-	b, err := ioutil.ReadFile(f.Name())
-	if err != nil {
-		log.Fatal("%v\n", err)
-	}
-	dev, err := ioutil.ReadFile("dev.cpio")
-	if err != nil {
-		log.Fatal("%v\n", err)
-	}
-	b = append(b, dev...)
-	if err := ioutil.WriteFile(fmt.Sprintf("initramfs.%v_%v.cpio", config.Goos, config.Arch), b, 0600); err != nil {
-		log.Fatal("%v\n", err)
-	}
+	fmt.Printf("Output file is in %v\n", oname)
 }
