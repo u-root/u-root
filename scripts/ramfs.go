@@ -31,6 +31,7 @@ go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
 go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
 go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
 go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
+
 	initList = `{{.Gopath}}/src/cmds/init
 init`
 	urootList = `{{.Gopath}}
@@ -46,6 +47,7 @@ var (
 		Letter    string
 		Gopath    string
 		TempDir   string
+		Debug	  bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -85,7 +87,7 @@ func cpiop(c string) error {
 	}
 
 	n := strings.Split(b.String(), "\n")
-	fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)
+	if config.Debug {fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)}
 
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -96,14 +98,14 @@ func cpiop(c string) error {
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	log.Printf("Run %v @ %v", cmd, cmd.Dir)
+	if config.Debug{log.Printf("Run %v @ %v", cmd, cmd.Dir)}
 	err = cmd.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
 	for _, v := range n[1:] {
-		fmt.Fprintf(os.Stderr, "%v\n", v)
+		if config.Debug {fmt.Fprintf(os.Stderr, "%v\n", v)}
 		err := filepath.Walk(path.Join(n[0], v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
@@ -118,7 +120,6 @@ func cpiop(c string) error {
 			//fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
 			return nil
 		})
-		fmt.Printf("WALKED %v\n", v)
 		if err != nil {
 			fmt.Printf("%s: %v\n", v, err)
 		}
@@ -135,6 +136,7 @@ func cpiop(c string) error {
 // the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
 // It's not size related: if the go archive is first or in the middle it still fails.
 func main() {
+	flag.BoolVar(&config.Debug, "d", false, "Debugging")
 	flag.Parse()
 	var err error
 	config.Arch = getenv("GOARCH", "amd64")
@@ -199,7 +201,7 @@ func main() {
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
+	if (config.Debug) {	fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)}
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalf("%v\n", err)
