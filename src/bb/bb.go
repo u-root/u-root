@@ -41,7 +41,7 @@ func main(s string) {
 			s = fmt.Sprintf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))
 			if x.Name.Name == "main" {
 				x.Name.Name = "cat"
-				x.Type.Params.List = append(x.Type.Params.List, &ast.Field{Names: []*ast.Ident{&ast.Ident{Name:"a"}}, Type: &ast.Ident{Name: "string",}})
+				x.Type.Params.List = []*ast.Field{ &ast.Field{Names: []*ast.Ident{&ast.Ident{Name:"a"}}, Type: &ast.Ident{Name: "string",}}}
 			}
 		}
 		if s != "" {
