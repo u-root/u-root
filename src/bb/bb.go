@@ -3,11 +3,14 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
+	"log"
 	"reflect"
 )
 
@@ -15,14 +18,14 @@ func x(a string, b string,) {
 }
 
 func main() {
+	flag.Parse()
+	a := flag.Args()
+	b, err := ioutil.ReadFile(a[0])
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
 	// src is the input for which we want to inspect the AST.
-	src := `
-package p
-const c = 1.0
-var X = f(3.14)*2 + c
-func main(s string) {
-}
-`
+	src := string(b)
 
 	// Create the AST by parsing src.
 	fset := token.NewFileSet() // positions are relative to fset
@@ -31,21 +34,17 @@ func main(s string) {
 		panic(err)
 	}
 
-	// Inspect the AST and print all identifiers and literals.
+	// Inspect the AST and change all instances of main()
 	ast.Inspect(f, func(n ast.Node) bool {
-		var s string
 		switch x := n.(type) {
-		case *ast.BasicLit:
-			s = x.Value
 		case *ast.FuncDecl:
-			s = fmt.Sprintf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))
+			if false {fmt.Printf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))}
 			if x.Name.Name == "main" {
 				x.Name.Name = "cat"
 				x.Type.Params.List = []*ast.Field{ &ast.Field{Names: []*ast.Ident{&ast.Ident{Name:"a"}}, Type: &ast.Ident{Name: "string",}}}
 			}
-		}
-		if s != "" {
-			fmt.Printf("%s:\t%s\n", fset.Position(n.Pos()), s)
+			// we're done.
+			return false
 		}
 		return true
 	})
