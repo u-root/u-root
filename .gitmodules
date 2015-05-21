@@ -1,0 +1,3 @@
+[submodule "src/golang.org/x/tools"]
+	path = src/golang.org/x/tools
+	url = https://go.googlesource.com/tools
