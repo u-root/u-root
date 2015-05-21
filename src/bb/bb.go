@@ -37,7 +37,8 @@ func main() {
 	src := `package main
 
 func main() {
-os.exit(1)
+os.Exit(1)
+panic(1)
 }
 `
 	config.CmdName = "c"
@@ -74,28 +75,21 @@ os.exit(1)
 			// Append a return.
 			x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
 
-		case *ast.BlockStmt:
-			for i, v := range x.List {
-				ast.Inspect(v, func(n ast.Node) bool {
-					switch y := n.(type) {
-					case *ast.CallExpr:
-						fmt.Fprintf(os.Stderr, "%d %v %v\n", i, reflect.TypeOf(y), *y)
-						switch z := y.Fun.(type) {
-						case *ast.SelectorExpr:
-							
-						fmt.Fprintf(os.Stderr, "%d %v %v\n", i, reflect.TypeOf(z), *z)
-						//	if z.X.Name == "os" && z.Sel.Name == "Exit" {
-								//fmt.Printf("found os.Exit at %v / %v\n", i,n)
-							//}
-						}
-					}
-					return true
-				})
+			case *ast.CallExpr:
+			fmt.Fprintf(os.Stderr, "%v %v\n", reflect.TypeOf(n), n)
+			switch z := x.Fun.(type) {
+			case *ast.SelectorExpr:
+				// somebody tell me how to do this.
+				sel := fmt.Sprintf("%v", z.X)
+				if  sel == "os" && z.Sel.Name == "Exit" {
+					fmt.Printf("found os.Exit \n")
+					x.Fun = &ast.Ident{Name: "panic"}
+				}
 			}
 		}
 		return true
 	})
-
+	
 	if true {
 		ast.Fprint(os.Stderr, fset, f, nil)
 	}
