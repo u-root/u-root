@@ -12,13 +12,14 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"reflect"
 	"text/template"
 )
 
-const cmdFunc = `func {{.CmdName}}(cmd string, args ...string) {
+const cmdFunc = `func {{.CmdName}}(c *Command) error {
 save := os.Args
-os.Args = append([]string{cmd}, args...)
+os.Args = append([]string{c.cmd}, c.argv...)
 {{.CmdName}}_main()
 os.Args = save
 }
@@ -50,8 +51,8 @@ fmt.Printf("%v\n", os.Args)
 		}
 		src = string(b)
 		// assume it ends in .go. Not much point otherwise.
-FIXHERE path.base ec.
-		config.CmdName = a[0][:len(a[0])-3]
+		n := path.Base(a[0])
+		config.CmdName = n[:len(n)-3]
 	}
 
 	fset := token.NewFileSet()
@@ -70,7 +71,7 @@ FIXHERE path.base ec.
 		case *ast.FuncDecl:
 			if false {fmt.Printf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))}
 			if x.Name.Name == "main" {
-				x.Name.Name = fmt.Sprintf("%vmain", config.CmdName)
+				x.Name.Name = fmt.Sprintf("%v_main", config.CmdName)
 				// don't rewrite the param list now, but leave this here so we remember
 				// how it's done.
 				if false {
