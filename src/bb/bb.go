@@ -38,17 +38,10 @@ func init() {
 
 var config struct {
 	CmdName string
+	Src string
 }
 
 func main() {
-	src := `package main
-
-func main() {
-os.Exit(1)
-panic(1)
-}
-`
-	config.CmdName = "c"
 	flag.Parse()
 	a := flag.Args()
 	os.Args = []string{"hi", "there"}
@@ -57,14 +50,14 @@ panic(1)
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		src = string(b)
+		config.Src = string(b)
 		// assume it ends in .go. Not much point otherwise.
 		n := path.Base(a[0])
 		config.CmdName = n[:len(n)-3]
 	}
 
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "src.go", src, 0)
+	f, err := parser.ParseFile(fset, "src.go", config.Src, 0)
 	if err != nil {
 		panic(err)
 	}
