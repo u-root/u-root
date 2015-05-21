@@ -17,11 +17,18 @@ import (
 	"text/template"
 )
 
-const cmdFunc = `func {{.CmdName}}(c *Command) error {
+const cmdFunc = `func {{.CmdName}}(c *Command) (err error) {
 save := os.Args
+defer func() {
+os.Args = save
+        if r := recover(); r != nil {
+            err = r.(error)
+        }
+return
+    }()
 os.Args = append([]string{c.cmd}, c.argv...)
 {{.CmdName}}_main()
-os.Args = save
+return
 }
 
 func init() {
@@ -82,7 +89,6 @@ panic(1)
 				// somebody tell me how to do this.
 				sel := fmt.Sprintf("%v", z.X)
 				if  sel == "os" && z.Sel.Name == "Exit" {
-					fmt.Printf("found os.Exit \n")
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
 			}
