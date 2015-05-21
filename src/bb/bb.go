@@ -50,7 +50,8 @@ fmt.Printf("%v\n", os.Args)
 		}
 		src = string(b)
 		// assume it ends in .go. Not much point otherwise.
-		config.CmdName = a[0][:len(a)-3]
+FIXHERE path.base ec.
+		config.CmdName = a[0][:len(a[0])-3]
 	}
 
 	fset := token.NewFileSet()
@@ -69,7 +70,7 @@ fmt.Printf("%v\n", os.Args)
 		case *ast.FuncDecl:
 			if false {fmt.Printf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))}
 			if x.Name.Name == "main" {
-				x.Name.Name = fmt.Sprintf("%v_main", config.CmdName)
+				x.Name.Name = fmt.Sprintf("%vmain", config.CmdName)
 				// don't rewrite the param list now, but leave this here so we remember
 				// how it's done.
 				if false {
@@ -116,7 +117,7 @@ fmt.Printf("%v\n", os.Args)
 		return true
 	})
 
-	if false {ast.Fprint(os.Stderr, fset, f, nil)}
+	if true {ast.Fprint(os.Stderr, fset, f, nil)}
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
 		panic(err)
