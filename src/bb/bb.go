@@ -33,10 +33,38 @@ _{{.CmdName}}_main()
 return
 }
 
+
 func init() {
 	addBuiltIn("{{.CmdName}}", _builtin_{{.CmdName}})
 }
 `
+
+var defaultCmd = []string{
+"cat",
+"cmp",
+"comm",
+"cp",
+"date",
+"dmesg",
+"echo",
+"freq",
+"grep",
+"ip",
+"ls",
+"mkdir",
+"mount",
+"netcat",
+"ping",
+"printenv",
+"rm",
+"seq",
+"tcz",
+"uname",
+"uniq",
+"unshare",
+"wc",
+"wget",
+}
 
 var config struct {
 	Args     []string
@@ -133,7 +161,7 @@ func main() {
 	flag.Parse()
 	config.Args = flag.Args()
 	if len(config.Args) == 0 {
-		log.Fatalf("usage: bb <directory> [<directory>...]\n")
+		config.Args = defaultCmd
 	}
 	for _, v := range config.Args {
 		// Yes, gross. Fix me.
