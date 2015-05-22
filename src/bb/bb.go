@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-"go/format"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
@@ -19,7 +19,7 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-const cmdFunc = `func {{.CmdName}}(c *Command) (err error) {
+const cmdFunc = `func _builtin_{{.CmdName}}(c *Command) (err error) {
 save := os.Args
 defer func() {
 os.Args = save
@@ -29,24 +29,25 @@ os.Args = save
 return
     }()
 os.Args = append([]string{c.cmd}, c.argv...)
-{{.CmdName}}_main()
+_{{.CmdName}}_main()
 return
 }
 
 func init() {
-	addBuiltIn("{{.CmdName}}", {{.CmdName}})
+	addBuiltIn("{{.CmdName}}", _builtin_{{.CmdName}})
 }
 `
 
 var config struct {
-	Args []string
-	CmdName string
+	Args     []string
+	CmdName  string
 	FullPath string
-	Src string
+	Src      string
 }
 
 func one(s string, fset *token.FileSet, f *ast.File) error {
 	// Inspect the AST and change all instances of main()
+	isMain := false
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.FuncDecl:
@@ -54,40 +55,44 @@ func one(s string, fset *token.FileSet, f *ast.File) error {
 				fmt.Printf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))
 			}
 			if x.Name.Name == "main" {
-				x.Name.Name = fmt.Sprintf("%v_main", config.CmdName)
+				x.Name.Name = fmt.Sprintf("_%v_main", config.CmdName)
+				// Append a return.
+				x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
+				isMain = true
 			}
-			// Append a return.
-			x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
 
-			case *ast.CallExpr:
+		case *ast.CallExpr:
 			fmt.Fprintf(os.Stderr, "%v %v\n", reflect.TypeOf(n), n)
 			switch z := x.Fun.(type) {
 			case *ast.SelectorExpr:
 				// somebody tell me how to do this.
 				sel := fmt.Sprintf("%v", z.X)
-				if  sel == "os" && z.Sel.Name == "Exit" {
+				if sel == "os" && z.Sel.Name == "Exit" {
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
 			}
 		}
 		return true
 	})
-	
+
 	if false {
 		ast.Fprint(os.Stderr, fset, f, nil)
 	}
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
-	panic(err)
+		panic(err)
 	}
 	fmt.Printf("%s", buf.Bytes())
+	out := string(buf.Bytes())
 
-	t := template.Must(template.New("cmdFunc").Parse(cmdFunc))
-	var b bytes.Buffer
-	if err := t.Execute(&b, config); err != nil {
-		log.Fatalf("spec %v: %v\n", cmdFunc, err)
+	if isMain {
+		t := template.Must(template.New("cmdFunc").Parse(cmdFunc))
+		var b bytes.Buffer
+		if err := t.Execute(&b, config); err != nil {
+			log.Fatalf("spec %v: %v\n", cmdFunc, err)
+		}
+		out = out + b.String()
 	}
-	out := string(buf.Bytes()) + b.String()
 
 	// fix up any imports. We may have forced the issue
 	// with os.Args
