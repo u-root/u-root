@@ -45,7 +45,7 @@ var config struct {
 	Src      string
 }
 
-func one(s string, fset *token.FileSet, f *ast.File) error {
+func oneFile(s string, fset *token.FileSet, f *ast.File) error {
 	// Inspect the AST and change all instances of main()
 	isMain := false
 	ast.Inspect(f, func(n ast.Node) bool {
@@ -115,13 +115,7 @@ func one(s string, fset *token.FileSet, f *ast.File) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
-	config.Args = flag.Args()
-	config.CmdName = config.Args[0]
-	if len(config.Args) != 1 {
-		log.Fatalf("usage: bb <one directory>\n")
-	}
+func oneCmd() {
 	fset := token.NewFileSet()
 	config.FullPath = path.Join(os.Getenv("UROOT"), "src/cmds", config.CmdName)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
@@ -131,7 +125,19 @@ func main() {
 
 	for _, f := range p {
 		for n, v := range f.Files {
-			one(n, fset, v)
+			oneFile(n, fset, v)
 		}
+	}
+}
+func main() {
+	flag.Parse()
+	config.Args = flag.Args()
+	if len(config.Args) == 0 {
+		log.Fatalf("usage: bb <directory> [<directory>...]\n")
+	}
+	for _, v := range config.Args {
+		// Yes, gross. Fix me.
+		config.CmdName = v
+		oneCmd()
 	}
 }
