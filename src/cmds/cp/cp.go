@@ -15,7 +15,7 @@ const Defb = 8192
 var offchan chan int64
 var zerochan chan int
 
-func copy(from, to string, todir bool) bool {
+func copyfile(from, to string, todir bool) bool {
 	if todir {
 		_, file := path.Split(from)
 		to = to + "/" + file
@@ -156,7 +156,7 @@ func main() {
 
 	failed := false
 	for i := 0; i < flag.NArg()-1; i++ {
-		if copy(files[i], lf, todir) {
+		if copyfile(files[i], lf, todir) {
 			failed = true
 		}
 	}
