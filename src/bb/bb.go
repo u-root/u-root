@@ -124,6 +124,9 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 				if sel == "os" && z.Sel.Name == "Exit" {
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
+				if sel == "log" && z.Sel.Name == "Fatal" {
+					x.Fun = &ast.Ident{Name: "panic"}
+				}
 				if sel == "flag" && fixFlag[z.Sel.Name] {
 					fmt.Fprintf(os.Stderr, "FLAGGGGGGGG type of args 0 %v\n", reflect.TypeOf(x.Args[0]))
 					switch zz := x.Args[0].(type) {
