@@ -19,7 +19,8 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-const cmdFunc = `package main
+const (
+	cmdFunc = `package main
 import "{{.CmdName}}"
 func _builtin_{{.CmdName}}(c *Command) (err error) {
 save := os.Args
@@ -30,7 +31,7 @@ os.Args = save
         }
 return
     }()
-os.Args = append([]string{c.cmd}, c.argv...)
+os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 {{.CmdName}}.Main()
 return
 }
@@ -38,6 +39,19 @@ return
 
 func init() {
 	addBuiltIn("{{.CmdName}}", _builtin_{{.CmdName}})
+}
+`
+	fixArgs = `
+package main
+
+func fixArgs(cmd string, args[]string) (s []string) {
+	for _, v := range args {
+		if v[0] == '-' {
+			v = "-" + cmd + "." + v[1:]
+		}
+		s = append(s, v)
+	}
+	return
 }
 `
 
@@ -226,5 +240,9 @@ func main() {
 		// Yes, gross. Fix me.
 		config.CmdName = v
 		oneCmd()
+	}
+	// write the fixArgs code.
+	if err := ioutil.WriteFile(path.Join("bbsh", "fixargs.go"), fixArgs, 0444); err != nil {
+		log.Fatalf("%v\n", err)
 	}
 }
