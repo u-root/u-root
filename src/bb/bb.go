@@ -88,6 +88,7 @@ var (
 		"UintVar":     true,
 		"Var":         true,
 	}
+	dumpAST = flag.Bool("d", false, "Dump the AST")
 )
 
 var config struct {
@@ -127,13 +128,18 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 				if sel == "log" && z.Sel.Name == "Fatal" {
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
+				if sel == "log" && z.Sel.Name == "Fatalf" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = "fmt"
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Sprintf"
+					x.Fun = &ast.Ident{Name: "panic"}
+					x.Args = []ast.Expr{&nx}
+					return false
+				}
 				if sel == "flag" && fixFlag[z.Sel.Name] {
-					fmt.Fprintf(os.Stderr, "FLAGGGGGGGG type of args 0 %v\n", reflect.TypeOf(x.Args[0]))
 					switch zz := x.Args[0].(type) {
 					case *ast.BasicLit:
-						fmt.Fprintf(os.Stderr, "Flag %v %q %v\n", reflect.TypeOf(zz.Value), zz.Value, zz.Value)
 						zz.Value = "\"" + config.CmdName + "." + zz.Value[1:]
-						fmt.Fprintf(os.Stderr, "AFTER Flag %v %q %v\n", reflect.TypeOf(zz.Value), zz.Value, zz.Value)
 					}
 				}
 			}
@@ -141,7 +147,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		return true
 	})
 
-	if false {
+	if *dumpAST {
 		ast.Fprint(os.Stderr, fset, f, nil)
 	}
 	var buf bytes.Buffer
