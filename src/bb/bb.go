@@ -36,7 +36,6 @@ os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 return
 }
 
-
 func init() {
 	addBuiltIn("{{.CmdName}}", _builtin_{{.CmdName}})
 }
@@ -54,8 +53,17 @@ func fixArgs(cmd string, args[]string) (s []string) {
 	return
 }
 `
+)
+
+func debugPrint(f string, s ...interface{}) {
+	log.Printf(f, s...)
+}
+
+func nodebugPrint(f string, s ...interface{}) {
+}
 
 var (
+	debug = nodebugPrint
 	defaultCmd = []string{
 		"cat",
 		"cmp",
@@ -102,7 +110,8 @@ var (
 		"UintVar":     true,
 		"Var":         true,
 	}
-	dumpAST = flag.Bool("d", false, "Dump the AST")
+	dumpAST = flag.Bool("D", false, "Dump the AST")
+	debuggery = flag.Bool("d", false, "Debug printing")
 )
 
 var config struct {
@@ -120,9 +129,6 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		case *ast.File:
 			x.Name.Name = config.CmdName
 		case *ast.FuncDecl:
-			if false {
-				fmt.Printf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))
-			}
 			if x.Name.Name == "main" {
 				x.Name.Name = fmt.Sprintf("Main")
 				// Append a return.
@@ -131,7 +137,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 			}
 
 		case *ast.CallExpr:
-			fmt.Fprintf(os.Stderr, "%v %v\n", reflect.TypeOf(n), n)
+			debug("%v %v\n", reflect.TypeOf(n), n)
 			switch z := x.Fun.(type) {
 			case *ast.SelectorExpr:
 				// somebody tell me how to do this.
@@ -168,7 +174,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 	if err := format.Node(&buf, fset, f); err != nil {
 		panic(err)
 	}
-	fmt.Printf("%s", buf.Bytes())
+	debug("%s", buf.Bytes())
 	out := string(buf.Bytes())
 
 	// fix up any imports. We may have forced the issue
@@ -232,6 +238,9 @@ func oneCmd() {
 }
 func main() {
 	flag.Parse()
+	if *debuggery {
+		debug = debugPrint
+	}
 	config.Args = flag.Args()
 	if len(config.Args) == 0 {
 		config.Args = defaultCmd
@@ -242,7 +251,7 @@ func main() {
 		oneCmd()
 	}
 	// write the fixArgs code.
-	if err := ioutil.WriteFile(path.Join("bbsh", "fixargs.go"), fixArgs, 0444); err != nil {
+	if err := ioutil.WriteFile(path.Join("bbsh", "fixargs.go"), []byte(fixArgs), 0444); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }
