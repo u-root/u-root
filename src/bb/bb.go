@@ -19,7 +19,9 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-const cmdFunc = `func _builtin_{{.CmdName}}(c *Command) (err error) {
+const cmdFunc = `package main
+import "{{.CmdName}}"
+func _builtin_{{.CmdName}}(c *Command) (err error) {
 save := os.Args
 defer func() {
 os.Args = save
@@ -29,7 +31,7 @@ os.Args = save
 return
     }()
 os.Args = append([]string{c.cmd}, c.argv...)
-_{{.CmdName}}_main()
+{{.CmdName}}.Main()
 return
 }
 
@@ -73,17 +75,22 @@ var config struct {
 	Src      string
 }
 
-func oneFile(s string, fset *token.FileSet, f *ast.File) error {
+func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 	// Inspect the AST and change all instances of main()
 	isMain := false
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
+		case *ast.File:
+			fmt.Fprintf(os.Stderr, "sssssssssssssssss is %v\n", s)
+			fmt.Fprintf(os.Stderr, "FILEFILEFILE: %v %q\n", x.Name, x.Name)
+			fmt.Fprintf(os.Stderr, "%v %v\n", reflect.TypeOf(x.Name.Name), x.Name.Name)
+			x.Name.Name = config.CmdName
 		case *ast.FuncDecl:
 			if false {
 				fmt.Printf("%v", reflect.TypeOf(x.Type.Params.List[0].Type))
 			}
 			if x.Name.Name == "main" {
-				x.Name.Name = fmt.Sprintf("_%v_main", config.CmdName)
+				x.Name.Name = fmt.Sprintf("Main")
 				// Append a return.
 				x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
 				isMain = true
@@ -103,7 +110,7 @@ func oneFile(s string, fset *token.FileSet, f *ast.File) error {
 		return true
 	})
 
-	if false {
+	if true {
 		ast.Fprint(os.Stderr, fset, f, nil)
 	}
 	var buf bytes.Buffer
@@ -112,15 +119,6 @@ func oneFile(s string, fset *token.FileSet, f *ast.File) error {
 	}
 	fmt.Printf("%s", buf.Bytes())
 	out := string(buf.Bytes())
-
-	if isMain {
-		t := template.Must(template.New("cmdFunc").Parse(cmdFunc))
-		var b bytes.Buffer
-		if err := t.Execute(&b, config); err != nil {
-			log.Fatalf("spec %v: %v\n", cmdFunc, err)
-		}
-		out = out + b.String()
-	}
 
 	// fix up any imports. We may have forced the issue
 	// with os.Args
@@ -136,14 +134,38 @@ func oneFile(s string, fset *token.FileSet, f *ast.File) error {
 		log.Fatalf("bad parse: '%v': %v", out, err)
 	}
 
-	of := path.Join("bbsh", path.Base(s))
+	of := path.Join(dir, path.Base(s))
 	if err := ioutil.WriteFile(of, []byte(fullCode), 0666); err != nil {
 		log.Fatalf("%v\n", err)
 	}
+
+	// fun: must write the file first so the import fixup works :-)
+	if isMain {
+		// Write the file to interface to the command package.
+		t := template.Must(template.New("cmdFunc").Parse(cmdFunc))
+		var b bytes.Buffer
+		if err := t.Execute(&b, config); err != nil {
+			log.Fatalf("spec %v: %v\n", cmdFunc, err)
+		}
+		fullCode, err := imports.Process("commandline", []byte(b.Bytes()), &opts)
+		if err != nil {
+			log.Fatalf("bad parse: '%v': %v", out, err)
+		}
+		if err := ioutil.WriteFile(path.Join("bbsh", "cmd_" + config.CmdName + ".go"), fullCode, 0444); err != nil {
+			log.Fatalf("%v\n", err)
+		}
+	}
+
 	return nil
 }
 
 func oneCmd() {
+	// Create the directory for the package.
+	// For now, ./src/<package name>
+	packageDir := path.Join("bbsh", "src", config.CmdName)
+	if err := os.MkdirAll(packageDir, 0666); err != nil {
+		log.Fatalf("Can't create target directory: %v", err)
+	}
 	fset := token.NewFileSet()
 	config.FullPath = path.Join(os.Getenv("UROOT"), "src/cmds", config.CmdName)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
@@ -153,7 +175,7 @@ func oneCmd() {
 
 	for _, f := range p {
 		for n, v := range f.Files {
-			oneFile(n, fset, v)
+			oneFile(packageDir, n, fset, v)
 		}
 	}
 }
