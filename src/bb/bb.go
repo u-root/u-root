@@ -41,32 +41,54 @@ func init() {
 }
 `
 
-var defaultCmd = []string{
-"cat",
-"cmp",
-"comm",
-"cp",
-"date",
-"dmesg",
-"echo",
-"freq",
-"grep",
-"ip",
-"ls",
-"mkdir",
-"mount",
-"netcat",
-"ping",
-"printenv",
-"rm",
-"seq",
-"tcz",
-"uname",
-"uniq",
-"unshare",
-"wc",
-"wget",
-}
+var (
+	defaultCmd = []string{
+		"cat",
+		"cmp",
+		"comm",
+		"cp",
+		"date",
+		"dmesg",
+		"echo",
+		"freq",
+		"grep",
+		"ip",
+		"ls",
+		"mkdir",
+		"mount",
+		"netcat",
+		"ping",
+		"printenv",
+		"rm",
+		"seq",
+		"tcz",
+		"uname",
+		"uniq",
+		"unshare",
+		"wc",
+		"wget",
+	}
+
+	fixFlag = map[string]bool{
+		"Bool":        true,
+		"BoolVar":     true,
+		"Duration":    true,
+		"DurationVar": true,
+		"Float64":     true,
+		"Float64Var":  true,
+		"Int":         true,
+		"Int64":       true,
+		"Int64Var":    true,
+		"IntVar":      true,
+		"String":      true,
+		"StringVar":   true,
+		"Uint":        true,
+		"Uint64":      true,
+		"Uint64Var":   true,
+		"UintVar":     true,
+		"Var":         true,
+	}
+)
 
 var config struct {
 	Args     []string
@@ -81,9 +103,6 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.File:
-			fmt.Fprintf(os.Stderr, "sssssssssssssssss is %v\n", s)
-			fmt.Fprintf(os.Stderr, "FILEFILEFILE: %v %q\n", x.Name, x.Name)
-			fmt.Fprintf(os.Stderr, "%v %v\n", reflect.TypeOf(x.Name.Name), x.Name.Name)
 			x.Name.Name = config.CmdName
 		case *ast.FuncDecl:
 			if false {
@@ -105,12 +124,21 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 				if sel == "os" && z.Sel.Name == "Exit" {
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
+				if sel == "flag" && fixFlag[z.Sel.Name] {
+					fmt.Fprintf(os.Stderr, "FLAGGGGGGGG type of args 0 %v\n", reflect.TypeOf(x.Args[0]))
+					switch zz := x.Args[0].(type) {
+					case *ast.BasicLit:
+						fmt.Fprintf(os.Stderr, "Flag %v %q %v\n", reflect.TypeOf(zz.Value), zz.Value, zz.Value)
+						zz.Value = "\"" + config.CmdName + "." + zz.Value[1:]
+						fmt.Fprintf(os.Stderr, "AFTER Flag %v %q %v\n", reflect.TypeOf(zz.Value), zz.Value, zz.Value)
+					}
+				}
 			}
 		}
 		return true
 	})
 
-	if true {
+	if false {
 		ast.Fprint(os.Stderr, fset, f, nil)
 	}
 	var buf bytes.Buffer
@@ -151,7 +179,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", out, err)
 		}
-		if err := ioutil.WriteFile(path.Join("bbsh", "cmd_" + config.CmdName + ".go"), fullCode, 0444); err != nil {
+		if err := ioutil.WriteFile(path.Join("bbsh", "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
