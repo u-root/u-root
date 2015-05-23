@@ -7,7 +7,7 @@ package main
 import (
 	"flag"
 	"io/ioutil"
-	"log"
+	l "log"
 	"net"
 	"os"
 	"strings"
@@ -37,8 +37,8 @@ var (
 	// The language of this command doesn't require much more.
 	cursor    int
 	arg       []string
-	whatIWant = "addr|route|link"
-	l         = log.New(os.Stdout, "ip: ", 0)
+	whatIWant string
+	log         = l.New(os.Stdout, "ip: ", 0)
 )
 
 // the pattern:
@@ -70,14 +70,14 @@ func dev() *net.Interface {
 func showips() {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		l.Fatalf("Can't enumerate interfaces? %v", err)
+		log.Fatalf("Can't enumerate interfaces? %v", err)
 	}
 	for _, v := range ifaces {
 		addrs, err := v.Addrs()
 		if err != nil {
-			l.Printf("Can't enumerate addresses")
+			log.Printf("Can't enumerate addresses")
 		}
-		l.Printf("%v: %v", v, addrs)
+		log.Printf("%v: %v", v, addrs)
 	}
 }
 
@@ -108,14 +108,14 @@ func addrip() {
 	switch cmd {
 	case "add":
 		if err := netlink.NetworkLinkAddIp(iface, addr, network); err != nil {
-			l.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
+			log.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
 		if err := netlink.NetworkLinkDelIp(iface, addr, network); err != nil {
-			l.Fatalf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
+			log.Fatalf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
-		l.Fatalf("devip: arg[0] changed: can't happen")
+		log.Fatalf("devip: arg[0] changed: can't happen")
 	}
 	return
 
@@ -136,11 +136,11 @@ func linkset() {
 	switch arg[cursor] {
 	case "up":
 		if err := netlink.NetworkLinkUp(iface); err != nil {
-			l.Fatalf("%v can't make it up: %v", dev, err)
+			log.Fatalf("%v can't make it up: %v", dev, err)
 		}
 	case "down":
 		if err := netlink.NetworkLinkDown(iface); err != nil {
-			l.Fatalf("%v can't make it down: %v", dev, err)
+			log.Fatalf("%v can't make it down: %v", dev, err)
 		}
 	default:
 		usage()
@@ -165,9 +165,9 @@ func link() {
 
 func routeshow() {
 	if b, err := ioutil.ReadFile("/proc/net/route"); err == nil {
-		l.Printf("%s", string(b))
+		log.Printf("%s", string(b))
 	} else {
-		l.Fatalf("Route show failed: %v", err)
+		log.Fatalf("Route show failed: %v", err)
 	}
 }
 func nodespec() string {
@@ -194,7 +194,7 @@ func routeadddefault() {
 	d := dev()
 	switch nh {
 	case "via":
-		l.Printf("Add default route %v via %v", nhval, d)
+		log.Printf("Add default route %v via %v", nhval, d)
 		netlink.AddDefaultGw(nhval, d.Name)
 	default:
 		usage()
@@ -230,6 +230,9 @@ func route() {
 
 }
 func main() {
+	// When this is embedded in busybox we need to reinit some things.
+	whatIWant = "addr|route|link"
+	cursor = 0
 	flag.Parse()
 	arg = flag.Args()
 	defer func() {
@@ -237,15 +240,15 @@ func main() {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				l.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				log.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				l.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				log.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			} else {
-				l.Fatalf("FUCK: %v", err.Error())
+				log.Fatalf("FUCK: %v", err.Error())
 			}
-			l.Fatalf("Bummer: %v", err)
+			log.Fatalf("Bummer: %v", err)
 		default:
-			l.Fatalf("unexpected panic value: %T(%v)", err, err)
+			log.Fatalf("unexpected panic value: %T(%v)", err, err)
 		}
 	}()
 	// The ip command doesn't actually follow the BNF it prints on error.
