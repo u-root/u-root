@@ -26,7 +26,7 @@ save := os.Args
 defer func() {
 os.Args = save
         if r := recover(); r != nil {
-            err = r.(error)
+            err = errors.New(fmt.Sprintf("%v", r))
         }
 return
     }()
