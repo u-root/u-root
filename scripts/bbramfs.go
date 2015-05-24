@@ -20,26 +20,15 @@ type copyfiles struct {
 }
 
 const (
-	goList = `{{.Gosrcroot}}
-go/pkg/include
-go/src
-go/VERSION.cache
-go/misc
-go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
-go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
-go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
-go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
-
-	initList = `{{.Gopath}}/src/cmds/init
-init`
-	urootList = `{{.Gopath}}
-src`
+	bbList = `{{.Uroot}}/src/bb/bbsh
+bbsh`
 )
 
 var (
 	config struct {
 		Goroot    string
 		Gosrcroot string
+		Uroot	  string
 		Arch      string
 		Goos      string
 		Letter    string
@@ -122,7 +111,7 @@ func cpiop(c string) error {
 				return filepath.SkipDir
 			}
 			fmt.Fprintf(w, "%v\n", cn)
-			//fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
+			fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
 			return nil
 		})
 		if err != nil {
@@ -165,6 +154,7 @@ func main() {
 	config.Goroot = getenv("GOROOT", "/")
 	config.Gosrcroot = path.Dir(config.Goroot)
 	config.Gopath = getenv("GOPATH", "")
+	config.Uroot = getenv("UROOT", "")
 	config.Goos = "linux"
 	config.Letter = letter[config.Arch]
 	config.TempDir, err = ioutil.TempDir("", "u-root")
@@ -173,33 +163,20 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	// sanity checking: do /go/bin/go, and some basic source files exist?
-	sanity()
 	// Build init
-	cmd := exec.Command("go", "build", "init.go")
+	cmd := exec.Command("go", "build", ".")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	cmd.Dir = path.Join(config.Gopath, "src/cmds/init")
+	cmd.Dir = path.Join(config.Uroot, "src/bb/bbsh")
+fmt.Printf("cmd.DIr %v\n", cmd.Dir)
+fmt.Printf("cmd %v\n", cmd)
 
 	err = cmd.Run()
 	if err != nil {
 		log.Fatalf("%v\n", err)
 		os.Exit(1)
 	}
-
-	// These produce arrays of strings, the first element being the
-	// directory to walk from.
-	cpio := []string{
-		goList,
-		urootList,
-		"{{.Gopath}}/src/cmds/init\ninit",
-	}
-	for _, c := range cpio {
-		if err := cpiop(c); err != nil {
-			log.Printf("Things went south. TempDir is %v", config.TempDir)
-			log.Fatalf("Bailing out near line 666")
-		}
-	}
+fmt.Printf("BUILT bbsh\n")
 
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -220,7 +197,7 @@ func main() {
 	// Now use the append option for cpio to append to it.
 	// That way we get one cpio.
 	cmd = exec.Command("cpio", "-H", "newc", "-o", "-A", "-F", oname)
-	cmd.Dir = config.TempDir
+	cmd.Dir = path.Join(config.Uroot, "src/bb/bbsh")
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -231,9 +208,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	if err := lsr(config.TempDir, w); err != nil {
-		log.Fatal("%v\n", err)
-	}
+	w.Write([]byte("bbsh\n"))
 	w.Close()
 	err = cmd.Wait()
 	if err != nil {
