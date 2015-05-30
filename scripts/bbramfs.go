@@ -21,7 +21,7 @@ type copyfiles struct {
 
 const (
 	bbList = `{{.Uroot}}/src/bb/bbsh
-bbsh`
+init`
 )
 
 var (
@@ -164,7 +164,7 @@ func main() {
 	}
 
 	// Build init
-	cmd := exec.Command("go", "build", ".")
+	cmd := exec.Command("go", "build", "-o", "init", ".")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.Dir = path.Join(config.Uroot, "src/bb/bbsh")
@@ -208,7 +208,7 @@ fmt.Printf("BUILT bbsh\n")
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	w.Write([]byte("bbsh\n"))
+	w.Write([]byte("init\n"))
 	w.Close()
 	err = cmd.Wait()
 	if err != nil {
