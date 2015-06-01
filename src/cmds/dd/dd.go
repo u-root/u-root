@@ -22,8 +22,11 @@ type passer func(r io.Reader, w io.Writer, ibs, obs int)
 var (
 	ibs     = flag.Int("ibs", 1, "Default input block size")
 	obs     = flag.Int("obs", 1, "Default output block size")
-	inFile  = os.Stdin
-	outFile = os.Stderr
+	skip = flag.Int("skip", 0, "skip n bytes before reading")
+	seek = flag.Int("seek", 0, "seek output when writing")
+	count = flag.Int("count", max.MaxUInt, "Max output of data to copy")
+	inName  = flag.String("if", "", "Input file")
+	outName = flag.String("of", "", "Output file")
 )
 
 func pass(r io.Reader, w io.WriteCloser, ibs, obs int) {
@@ -59,7 +62,16 @@ func pass(r io.Reader, w io.WriteCloser, ibs, obs int) {
 	}
 }
 
+func fatal(err error) {
+	fmt.Fprintf(os.Stderr, "%v", err)
+	os.Exit(1)
+}
+
+// rather than, in essence, recreating all the apparatus of flag.xxxx with the if= bits,
+// including dup checking, conversion, etc. we just convert the arguments and then
+// run flag.Parse. Gross, but hey, it works.
 func main() {
+<<<<<<< HEAD
 	var err error
 	flag.Parse()
 	for _, v := range flag.Args() {
@@ -75,6 +87,33 @@ func main() {
 			os.Exit(1)
 		}
 	}
+=======
+	inFile := os.Stdin
+	outFile := os.Stdout
+	var err error
+	// EVERYTHING in dd follows x=y. So blindly split and convert and sleep well.
+	arg := []string{}
+	for _, v := range os.Args {
+		l := strings.SplitN(v, "=", 2)
+		l[0] = "-" + l[0]
+		arg = append(arg, l...)
+	}
+	os.Args = arg
+	flag.Parse()
+	if *inName != "" {
+		inFile, err = os.Open(*inName)
+		if err != nil {
+			fatal(err)
+		}
+	}
+	if *outName != "" {
+		outFile, err = os.OpenFile(*outName, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fatal(err)
+		}
+	}
+
+>>>>>>> Take dd a bit further: if= and of=
 	r, w := io.Pipe()
 	go pass(inFile, w, *ibs, *ibs)
 	pass(r, outFile, *obs, *obs)
