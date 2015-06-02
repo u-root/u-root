@@ -23,9 +23,9 @@ type passer func(r io.Reader, w io.Writer, ibs, obs int)
 var (
 	ibs     = flag.Int("ibs", 1, "Default input block size")
 	obs     = flag.Int("obs", 1, "Default output block size")
-	skip = flag.Int("skip", 0, "skip n bytes before reading")
-	seek = flag.Int("seek", 0, "seek output when writing")
-	count = flag.Int64("count", math.MaxInt64, "Max output of data to copy")
+	skip    = flag.Int64("skip", 0, "skip n bytes before reading")
+	seek    = flag.Int64("seek", 0, "seek output when writing")
+	count   = flag.Int64("count", math.MaxInt64, "Max output of data to copy")
 	inName  = flag.String("if", "", "Input file")
 	outName = flag.String("of", "", "Output file")
 )
@@ -98,6 +98,14 @@ func main() {
 	}
 
 	r, w := io.Pipe()
+	// position things.
+	if _, err := inFile.Seek(*skip, 0); err != nil {
+		fatal(err)
+	}
+	if _, err := outFile.Seek(*seek, 0); err != nil {
+		fatal(err)
+	}
 	go pass(inFile, w, *ibs, *ibs)
+	// push other filters here as needed.
 	pass(r, outFile, *obs, *obs)
 }
