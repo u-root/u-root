@@ -99,11 +99,15 @@ func main() {
 
 	r, w := io.Pipe()
 	// position things.
-	if _, err := inFile.Seek(*skip, 0); err != nil {
-		fatal(err)
+	if *skip > 0 {
+		if _, err = inFile.Seek(*skip, 0); err != nil {
+			fatal(err)
+		}
 	}
-	if _, err := outFile.Seek(*seek, 0); err != nil {
-		fatal(err)
+	if *seek > 0 {
+		if _, err = outFile.Seek(*seek, 0); err != nil {
+			fatal(err)
+		}
 	}
 	go pass(inFile, w, *ibs, *ibs)
 	// push other filters here as needed.
