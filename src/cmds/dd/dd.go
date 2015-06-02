@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 )
@@ -24,7 +25,7 @@ var (
 	obs     = flag.Int("obs", 1, "Default output block size")
 	skip = flag.Int("skip", 0, "skip n bytes before reading")
 	seek = flag.Int("seek", 0, "seek output when writing")
-	count = flag.Int("count", max.MaxUInt, "Max output of data to copy")
+	count = flag.Int64("count", math.MaxInt64, "Max output of data to copy")
 	inName  = flag.String("if", "", "Input file")
 	outName = flag.String("of", "", "Output file")
 )
@@ -71,23 +72,6 @@ func fatal(err error) {
 // including dup checking, conversion, etc. we just convert the arguments and then
 // run flag.Parse. Gross, but hey, it works.
 func main() {
-<<<<<<< HEAD
-	var err error
-	flag.Parse()
-	for _, v := range flag.Args() {
-		l := strings.SplitN(v, "=", 2)
-		switch l[0] {
-		case "if":
-			inFile, err = os.Open(l[1])
-		case "of":
-			outFile, err = os.OpenFile(l[1], os.O_CREATE|os.O_WRONLY, 0600)
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
-	}
-=======
 	inFile := os.Stdin
 	outFile := os.Stdout
 	var err error
@@ -113,7 +97,6 @@ func main() {
 		}
 	}
 
->>>>>>> Take dd a bit further: if= and of=
 	r, w := io.Pipe()
 	go pass(inFile, w, *ibs, *ibs)
 	pass(r, outFile, *obs, *obs)
