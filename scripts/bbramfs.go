@@ -184,7 +184,7 @@ fmt.Printf("BUILT bbsh\n")
 	}
 
 	// First create the archive and put the device cpio in it.
-	dev, err := ioutil.ReadFile("dev.cpio")
+	dev, err := ioutil.ReadFile(path.Join(config.Uroot, "scripts", "dev.cpio"))
 	if err != nil {
 		log.Fatal("%v %v\n", dev, err)
 	}
