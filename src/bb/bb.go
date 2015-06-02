@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"text/template"
 
@@ -63,13 +64,14 @@ func nodebugPrint(f string, s ...interface{}) {
 }
 
 var (
-	debug = nodebugPrint
+	debug      = nodebugPrint
 	defaultCmd = []string{
 		"cat",
 		"cmp",
 		"comm",
 		"cp",
 		"date",
+		"dd",
 		"dmesg",
 		"echo",
 		"freq",
@@ -110,8 +112,9 @@ var (
 		"UintVar":     true,
 		"Var":         true,
 	}
-	dumpAST = flag.Bool("D", false, "Dump the AST")
+	dumpAST   = flag.Bool("D", false, "Dump the AST")
 	debuggery = flag.Bool("d", false, "Debug printing")
+	cmds      = path.Join(os.Getenv("UROOT"), "src/cmds")
 )
 
 var config struct {
@@ -220,7 +223,7 @@ func oneCmd() {
 	// Create the directory for the package.
 	// For now, ./src/<package name>
 	packageDir := path.Join("bbsh", "src", config.CmdName)
-	if err := os.MkdirAll(packageDir, 0666); err != nil {
+	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
 	fset := token.NewFileSet()
@@ -251,7 +254,28 @@ func main() {
 		oneCmd()
 	}
 	// write the fixArgs code.
-	if err := ioutil.WriteFile(path.Join("bbsh", "fixargs.go"), []byte(fixArgs), 0444); err != nil {
+	if err := ioutil.WriteFile(path.Join("bbsh", "fixargs.go"), []byte(fixArgs), 0644); err != nil {
 		log.Fatalf("%v\n", err)
+	}
+	// copy all shell files
+	err := filepath.Walk(path.Join(cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			return nil
+		}
+		b, err := ioutil.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(path.Join("bbsh", fi.Name()), b, 0644); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal("%v", err)
 	}
 }
