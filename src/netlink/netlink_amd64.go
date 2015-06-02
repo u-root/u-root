@@ -1,5 +1,5 @@
 // From docker.io. See the Apache License in this directory
-// +build !arm
+// +build amd64
 
 package netlink
 
