@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-Cat reads each file from its arguments in sequence and writes it on the standard output.
+dmesg reads the system log.
 */
 
 package main
