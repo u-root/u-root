@@ -16,7 +16,9 @@ var (
 )
 
 func main() {
-	flags := syscall.MS_MGC_VAL
+	// The need for this conversion is not clear to me, but we get an overflow error
+	// on ARM without it.
+	flags := uintptr(syscall.MS_MGC_VAL)
 	flag.Parse()
 	a := flag.Args()
 	if len(a) < 2 {
