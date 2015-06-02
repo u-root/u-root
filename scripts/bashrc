@@ -1,0 +1,7 @@
+# source this file (and change as needed) to set up your environment for u-root
+# building, including the bb-like option.
+export GOPATH=~/projects/u-root/u-root/:~/projects/u-root/u-root/src/bb/bbsh/
+export GOROOT=~/projects/u-root/go1.5/go/
+export UROOT=~/projects/u-root/u-root/
+PATH=$PATH:~/projects/u-root/go1.5/go/bin
+export CGO_ENABLED=0
