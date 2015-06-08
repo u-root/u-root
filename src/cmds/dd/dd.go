@@ -30,9 +30,15 @@ var (
 	outName = flag.String("of", "", "Output file")
 )
 
-func pass(r io.Reader, w io.WriteCloser, ibs, obs int) {
+// The 'close' thing is a real hack, but needed for proper
+// operation in single-process mode.
+func pass(r io.Reader, w io.WriteCloser, ibs, obs int, close bool) {
 	b := make([]byte, ibs)
-	defer w.Close()
+	defer func() {
+		if close {
+			w.Close()
+		}
+	}()
 	for {
 		bs := 0
 		for bs < ibs {
@@ -79,8 +85,13 @@ func main() {
 	arg := []string{}
 	for _, v := range os.Args {
 		l := strings.SplitN(v, "=", 2)
-		l[0] = "-" + l[0]
-		arg = append(arg, l...)
+		// We only fix the exact case for x=y.
+		if len(l) == 2 {
+			l[0] = "-" + l[0]
+			arg = append(arg, l...)
+		} else {
+			arg = append(arg, l...)
+		}
 	}
 	os.Args = arg
 	flag.Parse()
@@ -109,7 +120,7 @@ func main() {
 			fatal(err)
 		}
 	}
-	go pass(inFile, w, *ibs, *ibs)
+	go pass(inFile, w, *ibs, *ibs, true)
 	// push other filters here as needed.
-	pass(r, outFile, *obs, *obs)
+	pass(r, outFile, *obs, *obs, false)
 }

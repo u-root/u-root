@@ -245,6 +245,7 @@ func main() {
 	if *debuggery {
 		debug = debugPrint
 	}
+	os.RemoveAll("bbsh")
 	config.Args = flag.Args()
 	if len(config.Args) == 0 {
 		config.Args = defaultCmd
