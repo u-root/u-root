@@ -24,14 +24,15 @@ const (
 	cmdFunc = `package main
 import "{{.CmdName}}"
 func _builtin_{{.CmdName}}(c *Command) (err error) {
-save := os.Args
+save := *flag.CommandLine
 defer func() {
-os.Args = save
+*flag.CommandLine = save
         if r := recover(); r != nil {
             err = errors.New(fmt.Sprintf("%v", r))
         }
 return
     }()
+flag.CommandLine.Init(c.cmd, flag.PanicOnError)
 os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 {{.CmdName}}.Main()
 return
