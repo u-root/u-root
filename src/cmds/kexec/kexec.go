@@ -20,7 +20,10 @@ import (
 	"debug/elf"
 	"flag"
 	"io"
+	"io/ioutil"
 	"log"
+	"syscall"
+	"unsafe"
 )
 
 /* kexec flags for different usage scenarios */
@@ -54,14 +57,16 @@ const (
  * loading  kernel binaries.
  */
 type kexec_segment struct {
-	buf     []byte
-	bufsz   uint64
-	mem     uint64
-	memsize uint64
+	buf     uintptr
+	bufsz   uintptr
+	mem     uintptr
+	memsize uintptr
 }
 
+type loader func(b[]byte) ([]kexec_segment, error)
 var (
 	kernel = flag.String("k", "vmlinux", "Kernel to load")
+	loaders = []loader{elfexec, rawexec}
 )
 
 /* Load a new kernel image as described by the kexec_segment array
@@ -71,12 +76,16 @@ var (
 //extern int kexec_load(void *, size_t, struct kexec_segment *,
 //		unsigned long int);
 
-func main() {
-	flag.Parse()
-	log.Printf("Loading %v\n", *kernel)
-	f, err := elf.Open(*kernel)
+// rawexec either succeeds or Fatals out. It's the last chance.
+func rawexec(b []byte) ([]kexec_segment, error) {
+	segs := []kexec_segment{{buf: uintptr(unsafe.Pointer(&b[0])), bufsz: uintptr(len(b)), mem: 0x1000, memsize: uintptr(len(b))}}
+	return segs, nil
+}
+
+func elfexec(b []byte) ([]kexec_segment, error) {
+	f, err := elf.NewFile(bytes.NewReader(b))
 	if err != nil {
-		log.Fatalf("%v", err)
+		return nil, err
 	}
 	scount := 0
 	for _, v := range f.Progs {
@@ -88,17 +97,36 @@ func main() {
 		log.Fatalf("Too many segments: got %v, max is %v", scount, KEXEC_SEGMENT_MAX)
 	}
 	segs := make([]kexec_segment, scount)
-	scount = 0
 	for _, v := range f.Progs {
 		if v.Type.String() == "PT_LOAD" {
 			f := v.Open()
 			b := bytes.NewBuffer([]byte{})
 			io.Copy(b, f)
-			segs[scount].buf = b.Bytes()
-			segs[scount].bufsz = uint64(b.Len())
-			segs[scount].mem = v.Paddr
-			segs[scount].memsize = v.Memsz
-			scount++
+			segs = append(segs, kexec_segment{
+				buf: uintptr(unsafe.Pointer(&b.Bytes()[0])),
+				bufsz: uintptr(b.Len()),
+				mem: uintptr(v.Paddr),
+				memsize: uintptr(v.Memsz),
+			})
 		}
 	}
+	return segs, nil
+}
+func main() {
+	var err error
+	var segs []kexec_segment
+	flag.Parse()
+	b, err := ioutil.ReadFile(*kernel)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	log.Printf("Loading %v\n", *kernel)
+	for i := range loaders {
+		if segs, err = loaders[i](b); err == nil {
+			break
+		}
+	}
+
+	e1, e2, err := syscall.Syscall(syscall.SYS_KEXEC_LOAD, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
+	log.Printf("a %v b %v err %v", e1, e2, err)
 }
