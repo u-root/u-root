@@ -14,6 +14,8 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+var verbose = flag.Bool("v", false, "Verbose display of processing")
+
 func main() {
 	opts := imports.Options{
 		Fragment:  true,
@@ -31,12 +33,16 @@ func main() {
 	for _, v := range flag.Args() {
 		a = a + v
 	}
-	log.Printf("'%v'", a)
+	if *verbose {
+		log.Printf("Pre-import version: '%v'", a)
+	}
 	goCode, err := imports.Process("commandline", []byte(a), &opts)
 	if err != nil {
 		log.Fatalf("bad parse: '%v': %v", a, err)
 	}
-	log.Printf("%v", a)
+	if *verbose {
+		log.Printf("Post-import version: '%v'", string(goCode))
+	}
 
 	// of course we have to deal with the Unix issue that /tmp is not private.
 	f, err := TempFile("", "script%s.go")
@@ -65,7 +71,7 @@ func main() {
 
 	// stupid, but hey ...
 	execName := f.Name()
-	// strip .go
+	// strip .go from the name.
 	execName = execName[:len(execName)-3]
 	cmd = exec.Command(execName)
 	cmd.Dir = "/tmp"
