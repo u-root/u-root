@@ -21,6 +21,7 @@ type copyfiles struct {
 
 const (
 	goList = `{{.Gosrcroot}}
+{{.Go}}
 go/pkg/include
 go/src
 go/VERSION.cache
@@ -29,9 +30,6 @@ go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
 go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
 go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
 go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
-
-	initList = `{{.Gopath}}/src/cmds/init
-init`
 	urootList = `{{.Gopath}}
 src`
 )
@@ -138,20 +136,24 @@ func cpiop(c string) error {
 }
 
 func sanity() {
-	goBinGo := path.Join(config.Goroot, "bin/go")
+	goBinGo := path.Join(config.Gosrcroot, "go/bin/go")
+	log.Printf("check %v as the go binary", goBinGo)
 	_, err := os.Stat(goBinGo)
 	if err == nil {
-		config.Go = goBinGo
+		config.Go = "go/bin/go"
 	}
 	// but does the one in go/bin/OS_ARCH exist too?
-	goBinGo = path.Join(config.Goroot, fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch))
+	archgo := fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch)
+	goBinGo = path.Join(config.Gosrcroot, archgo)
+	log.Printf("check %v as the go binary", goBinGo)
 	_, err = os.Stat(goBinGo)
 	if err == nil {
-		config.Go = goBinGo
+		config.Go = archgo
 	}
 	if config.Go == "" {
 		log.Fatalf("Can't find a go binary! Is GOROOT set correctly?")
 	}
+	log.Printf("Using %v as the go command", config.Go)
 }
 
 // sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
@@ -162,9 +164,9 @@ func main() {
 	flag.Parse()
 	var err error
 	config.Arch = getenv("GOARCH", "amd64")
-	config.Goroot = getenv("GOROOT", "/")
+	config.Goroot = path.Clean(getenv("GOROOT", "/"))
 	config.Gosrcroot = path.Dir(config.Goroot)
-	config.Gopath = getenv("GOPATH", "")
+	config.Gopath = path.Clean(getenv("GOPATH", ""))
 	config.Goos = "linux"
 	config.Letter = letter[config.Arch]
 	config.TempDir, err = ioutil.TempDir("", "u-root")
@@ -192,13 +194,22 @@ func main() {
 	cpio := []string{
 		goList,
 		urootList,
-		"{{.Gopath}}/src/cmds/init\ninit",
 	}
 	for _, c := range cpio {
 		if err := cpiop(c); err != nil {
 			log.Printf("Things went south. TempDir is %v", config.TempDir)
 			log.Fatalf("Bailing out near line 666")
 		}
+	}
+
+	// Drop an init in /
+	initbin, err := ioutil.ReadFile(path.Join(config.Gopath, "src/cmds/init/init"))
+	if err != nil {
+		log.Fatal("%v\n", err)
+	}
+	err = ioutil.WriteFile(path.Join(config.TempDir, "init"), initbin, 0755)
+	if err != nil {
+		log.Fatal("%v\n", err)
 	}
 
 	r, w, err := os.Pipe()
