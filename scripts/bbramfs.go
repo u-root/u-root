@@ -1,3 +1,6 @@
+// bbramfs builds a simple initramfs given an existing built bb; see src/bb.go
+// You have to run bb first, which creates src/cmds/bb/bbsh. cd to that directory,
+// and run bbramfs, and you have a single binary which does all u-root commands.
 package main
 
 import (
@@ -36,6 +39,7 @@ var (
 		TempDir   string
 		Go        string
 		Debug     bool
+		Fail	bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -44,10 +48,11 @@ var (
 	}
 )
 
-func getenv(e, d string) string {
+func getenv(e string) string {
 	v := os.Getenv(e)
 	if v == "" {
-		v = d
+		log.Printf("Please setenv %s", e)
+		config.Fail = true
 	}
 	return v
 }
@@ -150,11 +155,14 @@ func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
 	flag.Parse()
 	var err error
-	config.Arch = getenv("GOARCH", "amd64")
-	config.Goroot = getenv("GOROOT", "/")
+	config.Arch = getenv("GOARCH")
+	config.Goroot = getenv("GOROOT")
+	config.Gopath = getenv("GOPATH")
+	config.Uroot = getenv("UROOT")
+	if config.Fail {
+		os.Exit(1)
+	}
 	config.Gosrcroot = path.Dir(config.Goroot)
-	config.Gopath = getenv("GOPATH", "")
-	config.Uroot = getenv("UROOT", "")
 	config.Goos = "linux"
 	config.Letter = letter[config.Arch]
 	config.TempDir, err = ioutil.TempDir("", "u-root")

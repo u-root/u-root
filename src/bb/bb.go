@@ -1,4 +1,17 @@
 // bb converts standalone u-root tools to shell builtins.
+// It copies and converts a set of u-root utilities into a directory called bbsh.
+// It assumes nothing; all files it needs are always copied, no matter what
+// is in bbsh.
+// bb needs to know where the uroot you are using is so it can find command source.
+// UROOT=/home/rminnich/projects/u-root/u-root/
+// bb needs to know the arch:
+// GOARCH=amd64
+// bb needs to know where the tools are, and they are in two places, the place it created them
+// and the place where packages live:
+// GOPATH=/home/rminnich/projects/u-root/u-root/src/bb/bbsh:/home/rminnich/projects/u-root/u-root
+// bb needs to have a GOROOT
+// GOROOT=/home/rminnich/projects/u-root/go1.5/go/
+// There are no defaults.
 package main
 
 import (
@@ -79,6 +92,7 @@ var (
 		"freq",
 		"grep",
 		"ip",
+		"kexec",
 		"ls",
 		"mkdir",
 		"mount",
