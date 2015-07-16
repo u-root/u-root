@@ -138,6 +138,9 @@ var config struct {
 	CmdName  string
 	FullPath string
 	Src      string
+	Uroot    string
+	Cwd      string
+	Bbsh     string
 }
 
 func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
@@ -243,7 +246,7 @@ func oneCmd() {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
 	fset := token.NewFileSet()
-	config.FullPath = path.Join(os.Getenv("UROOT"), "src/cmds", config.CmdName)
+	config.FullPath = path.Join(config.Uroot, "src/cmds", config.CmdName)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
 	if err != nil {
 		panic(err)
@@ -256,11 +259,21 @@ func oneCmd() {
 	}
 }
 func main() {
+	var err error
 	flag.Parse()
 	if *debuggery {
 		debug = debugPrint
 	}
-	os.RemoveAll("bbsh")
+	config.Uroot = os.Getenv("UROOT")
+	if config.Uroot == "" {
+		log.Fatalf("Please set UROOT, e.g. export UROOT=/home/you/u-root")
+	}
+	if config.Cwd, err = os.Getwd(); err != nil {
+		log.Fatalf("Getwd: %v", err)
+	}
+
+	config.Bbsh = path.Join(config.Cwd, "bbsh")
+	os.RemoveAll(config.Bbsh)
 	config.Args = flag.Args()
 	if len(config.Args) == 0 {
 		config.Args = defaultCmd
@@ -271,11 +284,11 @@ func main() {
 		oneCmd()
 	}
 	// write the fixArgs code.
-	if err := ioutil.WriteFile(path.Join("bbsh", "fixargs.go"), []byte(fixArgs), 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	// copy all shell files
-	err := filepath.Walk(path.Join(cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
+	err = filepath.Walk(path.Join(cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -286,7 +299,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path.Join("bbsh", fi.Name()), b, 0644); err != nil {
+		if err := ioutil.WriteFile(path.Join(config.Bbsh, fi.Name()), b, 0644); err != nil {
 			return err
 		}
 
@@ -295,4 +308,7 @@ func main() {
 	if err != nil {
 		log.Fatal("%v", err)
 	}
+	log.Printf("To build the bbsh, add %s to your GOPATH (i.e. GOPATH=$GOPATH:%s, cd bbsh, and go build .",
+		config.Bbsh, config.Bbsh)
+	log.Printf("To build an initramfs with bbsh, just run u-root/scripts/bbramfs.go")
 }
