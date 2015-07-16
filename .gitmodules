@@ -3,4 +3,4 @@
 	url = https://go.googlesource.com/tools
 [submodule "src/github.com/edsrzf/mmap-go"]
 	path = src/github.com/edsrzf/mmap-go
-	url = git@github.com:edsrzf/mmap-go
+	url = https://github.com/edsrzf/mmap-go
