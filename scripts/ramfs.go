@@ -26,8 +26,8 @@ go/pkg/include
 go/src
 go/VERSION.cache
 go/misc
-go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}g
-go/pkg/tool/{{.Goos}}_{{.Arch}}/{{.Letter}}l
+go/pkg/tool/{{.Goos}}_{{.Arch}}/compile
+go/pkg/tool/{{.Goos}}_{{.Arch}}/link
 go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
 go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
 	urootList = `{{.Gopath}}
