@@ -131,7 +131,6 @@ var (
 		"Var":         true,
 	}
 	dumpAST   = flag.Bool("D", false, "Dump the AST")
-	debuggery = flag.Bool("d", false, "Debug printing")
 )
 
 var config struct {
@@ -142,6 +141,16 @@ var config struct {
 	Uroot    string
 	Cwd      string
 	Bbsh     string
+
+		Goroot    string
+		Gosrcroot string
+		Arch      string
+		Goos      string
+		Gopath    string
+		TempDir   string
+		Go        string
+		Debug     bool
+		Fail	bool
 }
 
 func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
@@ -261,37 +270,8 @@ func oneCmd() {
 }
 func main() {
 	var err error
-	flag.Parse()
-	if *debuggery {
-		debug = debugPrint
-	}
-	config.Uroot = os.Getenv("UROOT")
-	if config.Uroot == "" {
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatalf("Trying to intuit UROOT but can't even getwd")
-		}
-		/* let's tr to guess. If we see bb.go, then we're in u-root/src/bb */
-		if _, err := os.Stat("bb.go"); err == nil {
-			dir := path.Dir(wd)
-			config.Uroot = path.Dir(dir)
-		} else if _, err := os.Stat("src/bb/bb.go"); err == nil {
-			// Maybe they're at top level? If there is a srb/bb/bb.go, that's it.
-			config.Uroot = wd
-		} else {
-			log.Fatalf("UROOT was not set and I don't seem to be in u-root/src/bb/bb.go or u-root")
-		}
-	}
-	if config.Cwd, err = os.Getwd(); err != nil {
-		log.Fatalf("Getwd: %v", err)
-	}
+	doConfig()
 
-	config.Bbsh = path.Join(config.Cwd, "bbsh")
-	os.RemoveAll(config.Bbsh)
-	config.Args = flag.Args()
-	if len(config.Args) == 0 {
-		config.Args = defaultCmd
-	}
 	for _, v := range config.Args {
 		// Yes, gross. Fix me.
 		config.CmdName = v
@@ -322,7 +302,7 @@ func main() {
 	if err != nil {
 		log.Fatal("%v", err)
 	}
-	log.Printf("To build the bbsh, add %s to your GOPATH (i.e. GOPATH=$GOPATH:%s, cd bbsh, and go build .",
-		config.Bbsh, config.Bbsh)
-	log.Printf("To build an initramfs with bbsh, just run u-root/scripts/bbramfs.go")
+
+	buildinit()
+	ramfs()
 }
