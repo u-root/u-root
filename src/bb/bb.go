@@ -77,6 +77,8 @@ func debugPrint(f string, s ...interface{}) {
 func nodebugPrint(f string, s ...interface{}) {
 }
 
+const cmds = "src/cmds"
+
 var (
 	debug      = nodebugPrint
 	defaultCmd = []string{
@@ -130,7 +132,6 @@ var (
 	}
 	dumpAST   = flag.Bool("D", false, "Dump the AST")
 	debuggery = flag.Bool("d", false, "Debug printing")
-	cmds      = path.Join(os.Getenv("UROOT"), "src/cmds")
 )
 
 var config struct {
@@ -246,7 +247,7 @@ func oneCmd() {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
 	fset := token.NewFileSet()
-	config.FullPath = path.Join(config.Uroot, "src/cmds", config.CmdName)
+	config.FullPath = path.Join(config.Uroot, cmds, config.CmdName)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
 	if err != nil {
 		panic(err)
@@ -266,7 +267,20 @@ func main() {
 	}
 	config.Uroot = os.Getenv("UROOT")
 	if config.Uroot == "" {
-		log.Fatalf("Please set UROOT, e.g. export UROOT=/home/you/u-root")
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("Trying to intuit UROOT but can't even getwd")
+		}
+		/* let's tr to guess. If we see bb.go, then we're in u-root/src/bb */
+		if _, err := os.Stat("bb.go"); err == nil {
+			dir := path.Dir(wd)
+			config.Uroot = path.Dir(dir)
+		} else if _, err := os.Stat("src/bb/bb.go"); err == nil {
+			// Maybe they're at top level? If there is a srb/bb/bb.go, that's it.
+			config.Uroot = wd
+		} else {
+			log.Fatalf("UROOT was not set and I don't seem to be in u-root/src/bb/bb.go or u-root")
+		}
 	}
 	if config.Cwd, err = os.Getwd(); err != nil {
 		log.Fatalf("Getwd: %v", err)
@@ -288,7 +302,7 @@ func main() {
 		log.Fatalf("%v\n", err)
 	}
 	// copy all shell files
-	err = filepath.Walk(path.Join(cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
+	err = filepath.Walk(path.Join(config.Uroot, cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
