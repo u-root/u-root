@@ -28,8 +28,7 @@ go/VERSION.cache
 go/misc
 go/pkg/tool/{{.Goos}}_{{.Arch}}/compile
 go/pkg/tool/{{.Goos}}_{{.Arch}}/link
-go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
-go/pkg/tool/{{.Goos}}_{{.Arch}}/old{{.Letter}}a`
+go/pkg/tool/{{.Goos}}_{{.Arch}}/asm`
 	urootList = `{{.Gopath}}
 src`
 )
@@ -40,11 +39,11 @@ var (
 		Gosrcroot string
 		Arch      string
 		Goos      string
-		Letter    string
 		Gopath    string
 		TempDir   string
 		Go        string
 		Debug     bool
+		Fail      bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -156,6 +155,63 @@ func sanity() {
 	log.Printf("Using %v as the go command", config.Go)
 }
 
+// It's annoying asking them to set lots of things. So let's try to figure it out.
+func guessgoroot() {
+	config.Goroot = path.Clean(getenv("GOROOT", "/"))
+	config.Gosrcroot = path.Dir(config.Goroot)
+	if config.Goroot == "" {
+		log.Print("Goroot is not set, trying to find a go binary")
+	}
+	p := os.Getenv("PATH")
+	paths := strings.Split(p, ":")
+	for _, v := range paths {
+		g := path.Join(v, "go")
+		if _, err := os.Stat(g); err == nil {
+			config.Goroot = path.Dir(path.Dir(v))
+			log.Printf("Guessing that goroot is %v", config.Goroot)
+			return
+		}
+	}
+	log.Printf("GOROOT is not set and can't find a go binary in %v", p)
+	config.Fail = true
+}
+
+func guessgopath() {
+	defer func() {
+		config.Gosrcroot = path.Dir(config.Goroot)
+	}()
+	gopath := os.Getenv("GOPATH")
+	if gopath != "" {
+		config.Gopath = path.Clean(gopath)
+		return
+	}
+	// It's a good chance they're running this from the u-root source directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("GOPATH was not set and I can't get the wd: %v", err)
+		config.Fail = true
+		return
+	}
+	// walk up the cwd until we find a u-root entry. See if src/cmds/init/init.go exists.
+	for c := cwd; c != "/"; c = path.Dir(c) {
+		log.Printf("Check %v", c)
+		if path.Base(c) != "u-root" {
+			log.Printf("base was not u-root")
+			continue
+		}
+		check := path.Join(c, "src/cmds/init/init.go")
+		if _, err := os.Stat(check); err != nil {
+			log.Printf("Could not stat %v", check)
+			continue
+		}
+		config.Gopath = c
+		return
+	}
+	config.Fail = true
+	log.Printf("GOPATH was not set, and I can't see a u-root-like name in %v", cwd)
+	return
+}
+
 // sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
 // the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
 // It's not size related: if the go archive is first or in the middle it still fails.
@@ -164,11 +220,12 @@ func main() {
 	flag.Parse()
 	var err error
 	config.Arch = getenv("GOARCH", "amd64")
-	config.Goroot = path.Clean(getenv("GOROOT", "/"))
-	config.Gosrcroot = path.Dir(config.Goroot)
-	config.Gopath = path.Clean(getenv("GOPATH", ""))
+	guessgoroot()
+	guessgopath()
+	if config.Fail {
+		log.Fatal("Setup failed")
+	}
 	config.Goos = "linux"
-	config.Letter = letter[config.Arch]
 	config.TempDir, err = ioutil.TempDir("", "u-root")
 	config.Go = ""
 	if err != nil {
