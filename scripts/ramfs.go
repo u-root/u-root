@@ -20,6 +20,8 @@ type copyfiles struct {
 }
 
 const (
+// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
+// I don't want to revive the 'letter' stuff.
 	goList = `{{.Gosrcroot}}
 {{.Go}}
 go/pkg/include
@@ -28,7 +30,8 @@ go/VERSION.cache
 go/misc
 go/pkg/tool/{{.Goos}}_{{.Arch}}/compile
 go/pkg/tool/{{.Goos}}_{{.Arch}}/link
-go/pkg/tool/{{.Goos}}_{{.Arch}}/asm`
+go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
+go/pkg/tool/{{.Goos}}_{{.Arch}}/old6a`
 	urootList = `{{.Gopath}}
 src`
 )
@@ -194,17 +197,17 @@ func guessgopath() {
 	}
 	// walk up the cwd until we find a u-root entry. See if src/cmds/init/init.go exists.
 	for c := cwd; c != "/"; c = path.Dir(c) {
-		log.Printf("Check %v", c)
 		if path.Base(c) != "u-root" {
-			log.Printf("base was not u-root")
 			continue
 		}
 		check := path.Join(c, "src/cmds/init/init.go")
 		if _, err := os.Stat(check); err != nil {
-			log.Printf("Could not stat %v", check)
+			//log.Printf("Could not stat %v", check)
 			continue
 		}
 		config.Gopath = c
+		log.Printf("Guessing %v as GOPATH", c)
+		os.Setenv("GOPATH", c)
 		return
 	}
 	config.Fail = true
@@ -275,7 +278,8 @@ func main() {
 	}
 
 	// First create the archive and put the device cpio in it.
-	dev, err := ioutil.ReadFile("dev.cpio")
+	// Note that Gopath is also the base of all of u-root.
+	dev, err := ioutil.ReadFile(path.Join(config.Gopath, "scripts/dev.cpio"))
 	if err != nil {
 		log.Fatal("%v %v\n", dev, err)
 	}
