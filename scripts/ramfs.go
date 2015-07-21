@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"debug/elf"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -148,16 +149,26 @@ func sanity() {
 	}
 	// but does the one in go/bin/OS_ARCH exist too?
 	archgo := fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch)
-	goBinGo = path.Join(config.Gosrcroot, archgo)
-	log.Printf("check %v as the go binary", goBinGo)
-	_, err = os.Stat(goBinGo)
+	linuxBinGo := path.Join(config.Gosrcroot, archgo)
+	log.Printf("check %v as the go binary", linuxBinGo)
+	_, err = os.Stat(linuxBinGo)
 	if err == nil {
 		config.Go = archgo
+		goBinGo = linuxBinGo
 	}
+	log.Printf("Using %v as the go command", goBinGo)
 	if config.Go == "" {
 		log.Fatalf("Can't find a go binary! Is GOROOT set correctly?")
 	}
-	log.Printf("Using %v as the go command", config.Go)
+	f, err := elf.Open(goBinGo)
+	if err != nil {
+		log.Fatalf("%v is not an ELF file; don't know what to do", goBinGo)
+	}
+	ds := f.SectionByType(elf.SHT_DYNAMIC)
+	if ds != nil {
+		log.Printf("U-root requires a staticically built go tree at present. %v is dynamic.", goBinGo)
+		log.Fatalf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.base", config.Goroot,config.Arch)
+	}
 }
 
 // It's annoying asking them to set lots of things. So let's try to figure it out.
