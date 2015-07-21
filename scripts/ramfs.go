@@ -20,8 +20,8 @@ type copyfiles struct {
 }
 
 const (
-// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
-// I don't want to revive the 'letter' stuff.
+	// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
+	// I don't want to revive the 'letter' stuff.
 	goList = `{{.Gosrcroot}}
 {{.Go}}
 go/pkg/include
@@ -38,15 +38,17 @@ src`
 
 var (
 	config struct {
-		Goroot    string
-		Gosrcroot string
-		Arch      string
-		Goos      string
-		Gopath    string
-		TempDir   string
-		Go        string
-		Debug     bool
-		Fail      bool
+		Goroot     string
+		Gosrcroot  string
+		Arch       string
+		Goos       string
+		Gopath     string
+		TempDir    string
+		Go         string
+		Debug      bool
+		Fail       bool
+		TestChroot bool
+		RemoveDir  bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -220,20 +222,30 @@ func guessgopath() {
 // It's not size related: if the go archive is first or in the middle it still fails.
 func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
+	flag.BoolVar(&config.TestChroot, "test", false, "test the directory by chrooting to it")
+	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
 	flag.Parse()
 	var err error
 	config.Arch = getenv("GOARCH", "amd64")
+	config.Go = ""
+	config.Goos = "linux"
 	guessgoroot()
 	guessgopath()
 	if config.Fail {
 		log.Fatal("Setup failed")
 	}
-	config.Goos = "linux"
 	config.TempDir, err = ioutil.TempDir("", "u-root")
-	config.Go = ""
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+	defer func() {
+		if config.RemoveDir {
+			log.Printf("Removing %v\n", config.TempDir)
+			if err := os.RemoveAll(config.TempDir); err != nil {
+				log.Printf("Can't remove %v: %v", config.TempDir, err)
+			}
+		}
+	}()
 
 	// sanity checking: do /go/bin/go, and some basic source files exist?
 	sanity()
@@ -311,5 +323,53 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
-	fmt.Printf("Output file is in %v\n", oname)
+	defer func() {
+		fmt.Printf("Output file is in %v\n", oname)
+	}()
+
+	if !config.TestChroot {
+		os.Exit(1)
+	}
+
+	// We need to populate the temp directory with dev.cpio. It's a chicken and egg thing;
+	// we can't run init without, e.g., /dev/console and /dev/null.
+	cmd = exec.Command("sudo", "cpio", "-i")
+	cmd.Dir = config.TempDir
+	// We have it in memory. Get a better way to do this!
+	r, err = os.Open(path.Join(config.Gopath, "scripts/dev.cpio"))
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	// OK, at this point, we know we can run as root. And, we're going to create things
+	// we can only remove as root. So, we'll have to remove the directory with
+	// extreme measures.
+	config.RemoveDir = false
+	cmd.Stdin, cmd.Stderr, cmd.Stdout = r, os.Stderr, os.Stdout
+	if config.Debug {
+		fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
+	}
+	err = cmd.Run()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	// Arrange to start init in the directory in a new namespace.
+	// That should make all mounts go away when we're done.
+	// On real kernels you can unshare without being root. Not on Linux.
+	cmd = exec.Command("sudo", "unshare", "-m", "chroot", config.TempDir, "/init")
+	cmd.Dir = config.TempDir
+	cmd.Stdin, cmd.Stderr, cmd.Stdout = os.Stdin, os.Stderr, os.Stdout
+	if config.Debug {
+		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+	}
+	err = cmd.Run()
+	if err != nil {
+		log.Fatalf("Test failed, not removing %v: %v", config.TempDir, err)
+	}
+	// Wow, this one is *scary*
+	cmd = exec.Command("sudo", "rm", "-rf", config.TempDir)
+	cmd.Stderr, cmd.Stdout = os.Stderr, os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 }
