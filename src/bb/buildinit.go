@@ -14,6 +14,7 @@ func buildinit() {
 			e[i] = e[i] + ":" + path.Join(config.Uroot, "src/bb/bbsh")
 		}
 	}
+	e = append(e, "CGO_ENABLED=0")
 	cmd := exec.Command("go", "build", "-o", "init", ".")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
