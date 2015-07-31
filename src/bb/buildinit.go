@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path"
 )
-	
+
 func buildinit() {
 	e := os.Environ()
 	for i := range e {

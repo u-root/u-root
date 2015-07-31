@@ -130,7 +130,7 @@ var (
 		"UintVar":     true,
 		"Var":         true,
 	}
-	dumpAST   = flag.Bool("D", false, "Dump the AST")
+	dumpAST = flag.Bool("D", false, "Dump the AST")
 )
 
 var config struct {
@@ -142,15 +142,15 @@ var config struct {
 	Cwd      string
 	Bbsh     string
 
-		Goroot    string
-		Gosrcroot string
-		Arch      string
-		Goos      string
-		Gopath    string
-		TempDir   string
-		Go        string
-		Debug     bool
-		Fail	bool
+	Goroot    string
+	Gosrcroot string
+	Arch      string
+	Goos      string
+	Gopath    string
+	TempDir   string
+	Go        string
+	Debug     bool
+	Fail      bool
 }
 
 func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
