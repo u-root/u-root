@@ -195,7 +195,10 @@ func routeadddefault() {
 	switch nh {
 	case "via":
 		log.Printf("Add default route %v via %v", nhval, d)
+		log.Printf("=================================================================")
 		netlink.AddDefaultGw(nhval, d.Name)
+		log.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
 	default:
 		usage()
 	}

@@ -103,6 +103,7 @@ var (
 		"printenv",
 		"rm",
 		"seq",
+		"srvfiles",
 		"tcz",
 		"uname",
 		"uniq",

@@ -90,7 +90,7 @@ func cpiop(c string) error {
 
 	n := strings.Split(b.String(), "\n")
 	if config.Debug {
-		fmt.Fprintf(os.Stderr, "Strings :%v:\n", n)
+		log.Printf("Strings :%v:\n", n)
 	}
 
 	r, w, err := os.Pipe()
@@ -107,16 +107,16 @@ func cpiop(c string) error {
 	}
 	err = cmd.Start()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		log.Printf("%v\n", err)
 	}
 
 	for _, v := range n[1:] {
 		if config.Debug {
-			fmt.Fprintf(os.Stderr, "%v\n", v)
+			log.Printf("%v\n", v)
 		}
 		err := filepath.Walk(path.Join(n[0], v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
-				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
+				log.Printf(" WALK FAIL%v: %v\n", name, err)
 				// That's ok, sometimes things are not there.
 				return filepath.SkipDir
 			}
@@ -125,17 +125,17 @@ func cpiop(c string) error {
 				return filepath.SkipDir
 			}
 			fmt.Fprintf(w, "%v\n", cn)
-			//fmt.Printf("c.dir %v %v %v\n", n[0], name, cn)
+			//log.Printf("c.dir %v %v %v\n", n[0], name, cn)
 			return nil
 		})
 		if err != nil {
-			fmt.Printf("%s: %v\n", v, err)
+			log.Printf("%s: %v\n", v, err)
 		}
 	}
 	w.Close()
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		log.Printf("%v\n", err)
 	}
 	return nil
 }
@@ -320,7 +320,7 @@ func main() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if config.Debug {
-		fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
+		log.Printf("Run %v @ %v", cmd, cmd.Dir)
 	}
 	err = cmd.Start()
 	if err != nil {
@@ -332,14 +332,14 @@ func main() {
 	w.Close()
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		log.Printf("%v\n", err)
 	}
 	defer func() {
-		fmt.Printf("Output file is in %v\n", oname)
+		log.Printf("Output file is in %v\n", oname)
 	}()
 
 	if !config.TestChroot {
-		os.Exit(1)
+		return
 	}
 
 	// We need to populate the temp directory with dev.cpio. It's a chicken and egg thing;
@@ -357,7 +357,7 @@ func main() {
 	config.RemoveDir = false
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = r, os.Stderr, os.Stdout
 	if config.Debug {
-		fmt.Fprintf(os.Stderr, "Run %v @ %v", cmd, cmd.Dir)
+		log.Printf("Run %v @ %v", cmd, cmd.Dir)
 	}
 	err = cmd.Run()
 	if err != nil {
