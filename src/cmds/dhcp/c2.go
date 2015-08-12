@@ -189,15 +189,20 @@ func c2(re *regexp.Regexp) {
 			for i := range addr {
 				network[i] = addr[i] & netmask[i]
 			}
-			if false {
-				netlink.NetworkLinkAddIp(p.i, addr, &net.IPNet{network, netmask})
-			}
 			gwData := options[dhcp.OptionRouter]
+			dst := &net.IPNet{IP: p.YIAddr(), Mask: netmask}
+			// Add the address to the iface.
+			if err := netlink.NetworkLinkAddIp(p.i, p.YIAddr(), dst); err != nil {
+				fmt.Printf("Add %v to %v: %v", dst, p.i, err)
+				continue
+			}
 			if gwData != nil {
 				fmt.Printf("router %v\n", gwData)
-			}
-			if err := netlink.AddRouteIP(p.i, []byte{}, []byte{}, gwData); err != nil {
-				fmt.Printf("Can't add route: %v\n", err)
+				routerName := net.IP(gwData).String()
+				fmt.Printf("%v, %v, %v, %v\n", "","", routerName, p.i.Name)
+			//if err := netlink.AddRoute("","", routerName, p.i.Name); err != nil {
+				//fmt.Printf("Can't add route: %v\n", err)
+			//}
 			}
 
 		default:
@@ -296,4 +301,6 @@ func one(i net.Interface, r chan *dhcpInfo) {
 
 		}
 	}
+	close(r)
+	//r <- nil
 }
