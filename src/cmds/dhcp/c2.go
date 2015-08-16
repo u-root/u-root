@@ -200,9 +200,9 @@ func c2(re *regexp.Regexp) {
 				fmt.Printf("router %v\n", gwData)
 				routerName := net.IP(gwData).String()
 				fmt.Printf("%v, %v, %v, %v\n", "","", routerName, p.i.Name)
-			//if err := netlink.AddRoute("","", routerName, p.i.Name); err != nil {
-				//fmt.Printf("Can't add route: %v\n", err)
-			//}
+			if err := netlink.AddRoute("", "", p.YIAddr().String(), p.i.Name); err != nil {
+				fmt.Printf("Can't add route: %v\n", err)
+			}
 			}
 
 		default:

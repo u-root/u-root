@@ -68,6 +68,13 @@ func fixArgs(cmd string, args[]string) (s []string) {
 	return
 }
 `
+	initFunc = `
+package main
+
+func init() {
+	return
+}
+`
 )
 
 func debugPrint(f string, s ...interface{}) {
@@ -278,8 +285,12 @@ func main() {
 		config.CmdName = v
 		oneCmd()
 	}
-	// write the fixArgs code.
+
 	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initFunc), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	// copy all shell files
