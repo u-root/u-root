@@ -70,8 +70,10 @@ func fixArgs(cmd string, args[]string) (s []string) {
 `
 	initFunc = `
 package main
+import "uroot"
 
 func init() {
+	uroot.Rootfs()
 	return
 }
 `

@@ -26,15 +26,6 @@ const (
 init`
 )
 
-func getenv(e string) string {
-	v := os.Getenv(e)
-	if v == "" {
-		log.Printf("Please setenv %s", e)
-		config.Fail = true
-	}
-	return v
-}
-
 func lsr(n string, w *os.File) error {
 	n = n + "/"
 	err := filepath.Walk(n, func(name string, fi os.FileInfo, err error) error {
