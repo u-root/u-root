@@ -160,7 +160,7 @@ func c2(re *regexp.Regexp) {
 			}
 			continue
 		}
-		fmt.Printf("GOT ONE! %v\n", p)
+		//fmt.Printf("GOT ONE! %v\n", len(p))
 		if p.OpCode() != dhcp.BootReply {
 			fmt.Printf("not a reply?\n")
 			continue
@@ -184,12 +184,8 @@ func c2(re *regexp.Regexp) {
 				// what do to?
 				netmask = addr
 			}
-			// they better be the same len. I'm happy explode if not.
-			network := addr
-			for i := range addr {
-				network[i] = addr[i] & netmask[i]
-			}
 			gwData := options[dhcp.OptionRouter]
+			fmt.Printf("gwData: %v", gwData)
 			dst := &net.IPNet{IP: p.YIAddr(), Mask: netmask}
 			// Add the address to the iface.
 			if err := netlink.NetworkLinkAddIp(p.i, p.YIAddr(), dst); err != nil {
@@ -199,8 +195,8 @@ func c2(re *regexp.Regexp) {
 			if gwData != nil {
 				fmt.Printf("router %v\n", gwData)
 				routerName := net.IP(gwData).String()
-				fmt.Printf("%v, %v, %v, %v\n", "","", routerName, p.i.Name)
-			if err := netlink.AddRoute("", "", p.YIAddr().String(), p.i.Name); err != nil {
+				fmt.Printf("%v, %v, %v, %v\n", "","", "", p.YIAddr, routerName, p.i.Name)
+			if err := netlink.AddRoute("", p.YIAddr().String(), routerName, p.i.Name); err != nil {
 				fmt.Printf("Can't add route: %v\n", err)
 			}
 			}
@@ -295,7 +291,7 @@ func one(i net.Interface, r chan *dhcpInfo) {
 			if n < 240 {
 				continue
 			}
-			fmt.Printf("client: sa %v Data %v amt %v \n", sa, b[28:], n)
+			fmt.Printf("client: sa %v Data %v amt %v \n", sa, len(b[28:]), n)
 			r <- &dhcpInfo{&i, dhcp.Packet(b[28:])}
 			break
 
