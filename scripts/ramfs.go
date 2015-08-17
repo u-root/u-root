@@ -173,17 +173,20 @@ func sanity() {
 
 // It's annoying asking them to set lots of things. So let's try to figure it out.
 func guessgoroot() {
-	config.Goroot = path.Clean(getenv("GOROOT", "/"))
-	config.Gosrcroot = path.Dir(config.Goroot)
-	if config.Goroot == "" {
-		log.Print("Goroot is not set, trying to find a go binary")
+	config.Goroot = path.Clean(os.Getenv("GOROOT"))
+	if config.Goroot != "" {
+		log.Printf("Using %v as the GOROOT", config.Goroot)
+		config.Gosrcroot = path.Dir(config.Goroot)
+		return
 	}
+	log.Print("Goroot is not set, trying to find a go binary")
 	p := os.Getenv("PATH")
 	paths := strings.Split(p, ":")
 	for _, v := range paths {
 		g := path.Join(v, "go")
 		if _, err := os.Stat(g); err == nil {
 			config.Goroot = path.Dir(path.Dir(v))
+			config.Gosrcroot = path.Dir(config.Goroot)
 			log.Printf("Guessing that goroot is %v", config.Goroot)
 			return
 		}
