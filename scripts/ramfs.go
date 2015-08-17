@@ -167,7 +167,7 @@ func sanity() {
 	ds := f.SectionByType(elf.SHT_DYNAMIC)
 	if ds != nil {
 		log.Printf("U-root requires a staticically built go tree at present. %v is dynamic.", goBinGo)
-		log.Fatalf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.base", config.Goroot,config.Arch)
+		log.Fatalf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot,config.Arch)
 	}
 }
 
