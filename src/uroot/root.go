@@ -4,6 +4,7 @@ package uroot
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,18 +14,24 @@ import (
 
 const PATH = "/bin:/buildbin:/usr/local/bin"
 
+// TODO: make this a map so it's easier to find dups.
 type dir struct {
 	name string
 	mode os.FileMode
 }
 
+type file struct {
+	contents string
+	mode os.FileMode
+}
+
+// TODO: make this a map so it's easier to find dups.
 type dev struct {
 	name  string
 	mode  os.FileMode
 	magic int
 	howmany int
 }
-
 type mount struct {
 	source string
 	target string
@@ -63,6 +70,10 @@ var (
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
+	}
+
+	files = map[string] file {
+		"/etc/resolv.conf": {contents: `nameserver 8.8.8.8`, mode: os.FileMode(0644)},
 	}
 )
 
@@ -113,6 +124,12 @@ func Rootfs() {
 			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
 
+	}
+
+	for name, m := range files {
+		if err := ioutil.WriteFile(name, []byte(m.contents), m.mode); err != nil {
+			log.Printf("Error writeing %v: %v", name, err)
+		}
 	}
 
 	// only in case of emergency.
