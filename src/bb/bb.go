@@ -47,6 +47,9 @@ return
     }()
 flag.CommandLine.Init(c.cmd, flag.PanicOnError)
 os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
+{{.CmdName}}.Stdin = c.Stdin
+{{.CmdName}}.Stdout = c.Stdout
+{{.CmdName}}.Stderr = c.Stderr
 {{.CmdName}}.Main()
 return
 }
@@ -55,6 +58,13 @@ func init() {
 	addBuiltIn("{{.CmdName}}", _builtin_{{.CmdName}})
 }
 `
+	// TODO: just rewrite the AST and add this declaration.
+	cmdVars = `
+import "io"
+var Stdin io.Reader
+var Stdout, Stderr io.Writer
+`
+
 	fixArgs = `
 package main
 
@@ -187,6 +197,21 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 				if sel == "os" && z.Sel.Name == "Exit" {
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
+				if sel == "os" && z.Sel.Name == "Stdin" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = ""
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Stdin"
+				}
+				if sel == "os" && z.Sel.Name == "Stdout" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = ""
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Stdout"
+				}
+				if sel == "os" && z.Sel.Name == "Stderr" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = ""
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Stderr"
+				}
 				if sel == "log" && z.Sel.Name == "Fatal" {
 					x.Fun = &ast.Ident{Name: "panic"}
 				}
@@ -264,6 +289,13 @@ func oneCmd() {
 	packageDir := path.Join("bbsh", "src", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
+	}
+	// Write any files that have a simple structure
+	// I realize this is hideous. There's a bit of rework I want to do, namely, add the cmdVars
+	// to the list of things in the fset. But for now this works. Or just add these needed declarations
+	// to the AST, but which one if there are multiple files?
+	if err := ioutil.WriteFile(path.Join(packageDir, "var.go"), []byte("package " + config.CmdName + cmdVars), os.FileMode(0644)); err != nil {
+		log.Fatalf("Writing var.go: %v", err)
 	}
 	fset := token.NewFileSet()
 	config.FullPath = path.Join(config.Uroot, cmds, config.CmdName)
