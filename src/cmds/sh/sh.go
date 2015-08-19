@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -173,12 +174,24 @@ func command(c *Command) error {
 }
 
 func main() {
+	b := bufio.NewReader(os.Stdin)
+
+	defer func() {
+		switch err := recover().(type) {
+		case nil:
+		case error:
+			log.Fatalf("Bummer: %v", err)
+		default:
+			log.Fatalf("unexpected panic value: %T(%v)", err, err)
+		}
+		_, _, _ = getCommand(b)
+	}()
+
 	if len(os.Args) != 1 {
 		fmt.Println("no scripts/args yet")
 		os.Exit(1)
 	}
 
-	b := bufio.NewReader(os.Stdin)
 	fmt.Printf("%% ")
 	for {
 		cmds, status, err := getCommand(b)

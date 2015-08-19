@@ -173,7 +173,7 @@ func sanity() {
 
 // It's annoying asking them to set lots of things. So let's try to figure it out.
 func guessgoroot() {
-	config.Goroot = path.Clean(os.Getenv("GOROOT"))
+	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
 		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
 		config.Gosrcroot = path.Dir(config.Goroot)
