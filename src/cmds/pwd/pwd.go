@@ -12,14 +12,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"log"
 )
 
 func main() {	
-	path, error := os.Getwd()
-
-	if error == nil {
-		fmt.Println(path)	
+	if path,error := os.Getwd(); error != nil {
+		log.Fatalf("%v",error)
 	} else {
-		fmt.Printf("Error: %v",error)
+		fmt.Println(path)	
 	}
 }
