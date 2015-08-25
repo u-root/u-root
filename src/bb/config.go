@@ -119,8 +119,9 @@ func doConfig() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	config.Bbsh = path.Join(config.Cwd, "bbsh")
-	os.RemoveAll(config.Bbsh)
+	config.Bb = path.Join(config.Cwd, "bbsh")
+	config.Bbcmdsh = path.Join(config.Cwd, "bbsh/src/sh")
+	os.RemoveAll(config.Bb)
 	config.Args = flag.Args()
 	if len(config.Args) == 0 {
 		config.Args = defaultCmd

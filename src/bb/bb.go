@@ -59,12 +59,29 @@ func fixArgs(cmd string, args[]string) (s []string) {
 	return
 }
 `
-	initFunc = `
+	initGo = `
 package main
-import "uroot"
+import (
+	"log"
+	"os"
+	"os/exec"
+	"uroot"
+)
 
-func init() {
+func main() {
 	uroot.Rootfs()
+	cmd := exec.Command("/bin/sh")
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	// TODO: figure out why we get EPERM when we use this.
+	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
+	log.Printf("Run %v", cmd)
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
+	log.Printf("init: /bin/sh returned!\n")
 	return
 }
 `
@@ -141,7 +158,8 @@ var config struct {
 	Src      string
 	Uroot    string
 	Cwd      string
-	Bbsh     string
+	Bb     string
+	Bbcmdsh     string
 
 	Goroot    string
 	Gosrcroot string
@@ -227,7 +245,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", out, err)
 		}
-		if err := ioutil.WriteFile(path.Join("bbsh", "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
+		if err := ioutil.WriteFile(path.Join(config.Bbcmdsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
@@ -238,7 +256,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 func oneCmd() {
 	// Create the directory for the package.
 	// For now, ./src/<package name>
-	packageDir := path.Join("bbsh", "src", config.CmdName)
+	packageDir := path.Join(config.Bb, "src", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
@@ -260,20 +278,21 @@ func main() {
 	var err error
 	doConfig()
 
+	if err := os.MkdirAll(config.Bbcmdsh, 0755); err != nil {
+		log.Fatalf("%v", err)
+	}
+
 	for _, v := range config.Args {
 		// Yes, gross. Fix me.
 		config.CmdName = v
 		oneCmd()
 	}
 
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
-		log.Fatalf("%v\n", err)
-	}
-
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initFunc), 0644); err != nil {
-		log.Fatalf("%v\n", err)
+	if err := ioutil.WriteFile(path.Join(config.Bb, "init.go"), []byte(initGo), 0644); err != nil {
+		log.Fatal("%v\n", err)
 	}
 	// copy all shell files
+
 	err = filepath.Walk(path.Join(config.Uroot, cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -285,14 +304,18 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path.Join(config.Bbsh, fi.Name()), b, 0644); err != nil {
+		if err := ioutil.WriteFile(path.Join(config.Bbcmdsh, fi.Name()), b, 0644); err != nil {
 			return err
 		}
 
 		return nil
 	})
 	if err != nil {
-		log.Fatal("%v", err)
+		log.Fatalf("%v", err)
+	}
+
+	if err := ioutil.WriteFile(path.Join(config.Bbcmdsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
+		log.Fatalf("%v\n", err)
 	}
 
 	buildinit()

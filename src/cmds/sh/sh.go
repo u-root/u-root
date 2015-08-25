@@ -197,12 +197,11 @@ func main() {
 		}
 		_, _, _ = getCommand(b)
 	}()
-
 	if f, ok := forkBuiltins[os.Args[0]]; ok {
-		if err := f(&Command{cmd: os.Args[0], Cmd: &exec.Cmd{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, argv: os.Args}); err != nil {
+		if err := f(&Command{cmd: os.Args[0], Cmd: &exec.Cmd{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, argv: os.Args[1:]}); err != nil {
 			log.Fatalf("%v", err)
 		}
-		return
+		os.Exit(0)
 	}
 
 	if len(os.Args) != 1 {

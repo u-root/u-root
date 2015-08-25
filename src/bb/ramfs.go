@@ -148,7 +148,7 @@ func ramfs() {
 	// Now use the append option for cpio to append to it.
 	// That way we get one cpio.
 	cmd := exec.Command("cpio", "-H", "newc", "-o", "-A", "-F", oname)
-	cmd.Dir = path.Join(config.Uroot, "src/bb/bbsh")
+	cmd.Dir = config.Bb
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -160,10 +160,20 @@ func ramfs() {
 		log.Fatalf("%v\n", err)
 	}
 	w.Write([]byte("init\n"))
-	for _, n := range append(config.Args, "sh") {
+	b, err := ioutil.ReadFile(path.Join(config.Bbcmdsh, "sh"))
+	if err != nil {
+		log.Fatal("%v", err)
+	}
+	err = ioutil.WriteFile(path.Join(config.Bb, "bin/sh"), b, 0755)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	w.Write([]byte(path.Join("bin", "sh")+"\n"))
+	
+	for _, n := range config.Args {
 		t := path.Join(bbbin, n)
-		if err := os.Symlink("/init", t); err != nil {
-			log.Fatal("Symlink /init to %v: %v", t, err)
+		if err := os.Symlink("sh", t); err != nil {
+			log.Fatal("Symlink sh to %v: %v", t, err)
 		}
 		w.Write([]byte(path.Join("bin", n)+"\n"))
 	}
