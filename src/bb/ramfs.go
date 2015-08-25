@@ -137,6 +137,14 @@ func ramfs() {
 		log.Fatal("%v\n", err)
 	}
 
+	bbdir := path.Join(config.Uroot, "src/bb/bbsh")
+	bbbin := path.Join(bbdir, "bin")
+	os.RemoveAll(bbbin)
+	// Create /bin. It is just a set of symlinks to /init
+	if err := os.Mkdir(bbbin, 0777); err != nil {
+		log.Fatalf("Can't create %v: %v", bbbin, err)
+	}
+
 	// Now use the append option for cpio to append to it.
 	// That way we get one cpio.
 	cmd := exec.Command("cpio", "-H", "newc", "-o", "-A", "-F", oname)
@@ -152,6 +160,13 @@ func ramfs() {
 		log.Fatalf("%v\n", err)
 	}
 	w.Write([]byte("init\n"))
+	for _, n := range append(config.Args, "sh") {
+		t := path.Join(bbbin, n)
+		if err := os.Symlink("/init", t); err != nil {
+			log.Fatal("Symlink /init to %v: %v", t, err)
+		}
+		w.Write([]byte(path.Join("bin", n)+"\n"))
+	}
 	w.Close()
 	err = cmd.Wait()
 	if err != nil {
