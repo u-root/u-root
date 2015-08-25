@@ -11,14 +11,14 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"log"
+	"os"
 )
 
-func main() {	
-	if path,error := os.Getwd(); error != nil {
-		log.Fatalf("%v",error)
+func main() {
+	if path, error := os.Getwd(); error != nil {
+		log.Fatalf("%v", error)
 	} else {
-		fmt.Println(path)	
+		fmt.Println(path)
 	}
 }
