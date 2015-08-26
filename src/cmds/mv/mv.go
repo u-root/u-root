@@ -17,10 +17,11 @@ import (
 
 func main() {
 	flag.Parse()
-	if len(flag.Args()) < 2 {
+	a := flag.Args()
+	if len(a) < 2 {
 		fmt.Printf("mv - missing file operand\n")
 	} else {
-		error := os.Rename(os.Args[1], os.Args[2])
+		error := os.Rename(a[0], a[1])
 		if error != nil {
 			fmt.Printf("%v\n", error)
 		}
