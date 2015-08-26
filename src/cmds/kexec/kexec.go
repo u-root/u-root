@@ -63,13 +63,14 @@ type kexec_segment struct {
 	memsize uintptr
 }
 
-func (k *kexec_segment)String() string{
+func (k *kexec_segment) String() string {
 	return fmt.Sprintf("[0x%x 0x%x 0x%x 0x%x]", k.buf, k.bufsz, k.mem, k.memsize)
 }
 
-type loader func(b[]byte) (uintptr, []kexec_segment, error)
+type loader func(b []byte) (uintptr, []kexec_segment, error)
+
 var (
-	kernel = flag.String("k", "vmlinux", "Kernel to load")
+	kernel  = flag.String("k", "vmlinux", "Kernel to load")
 	loaders = []loader{elfexec, rawexec}
 )
 
@@ -142,5 +143,9 @@ func main() {
 
 	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
 	e1, e2, err := syscall.Syscall6(syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), 0, 0, 0)
+	log.Printf("a %v b %v err %v", e1, e2, err)
+
+	e1, e2, err = syscall.Syscall6(syscall.SYS_REBOOT, syscall.LINUX_REBOOT_MAGIC1, syscall.LINUX_REBOOT_MAGIC2, syscall.LINUX_REBOOT_CMD_KEXEC, 0, 0, 0)
+
 	log.Printf("a %v b %v err %v", e1, e2, err)
 }
