@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"debug/elf"
 	"flag"
-	"io"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"syscall"
@@ -63,6 +63,10 @@ type kexec_segment struct {
 	memsize uintptr
 }
 
+func (k *kexec_segment)String() string{
+	return fmt.Sprintf("[0x%x 0x%x 0x%x 0x%x]", k.buf, k.bufsz, k.mem, k.memsize)
+}
+
 type loader func(b[]byte) (uintptr, []kexec_segment, error)
 var (
 	kernel = flag.String("k", "vmlinux", "Kernel to load")
@@ -98,17 +102,21 @@ func elfexec(b []byte) (uintptr, []kexec_segment, error) {
 		log.Fatalf("Too many segments: got %v, max is %v", scount, KEXEC_SEGMENT_MAX)
 	}
 	segs := make([]kexec_segment, scount)
-	for _, v := range f.Progs {
+	for i, v := range f.Progs {
 		if v.Type.String() == "PT_LOAD" {
 			f := v.Open()
-			b := bytes.NewBuffer([]byte{})
-			io.Copy(b, f)
-			segs = append(segs, kexec_segment{
-				buf: uintptr(unsafe.Pointer(&b.Bytes()[0])),
-				bufsz: uintptr(b.Len()),
-				mem: uintptr(v.Paddr),
-				memsize: uintptr(v.Memsz),
-			})
+			// kexec is stupid. Requires the length to be page aligned.
+			// And, guess what -- that's not always a known thing. But of course
+			// we all know it's 4K. BAH!
+			l := uintptr((v.Memsz + 4095)) & (uintptr(^uintptr(4095)))
+			b := make([]byte, l)
+			if _, err := f.Read(b[:v.Filesz]); err != nil {
+				log.Fatalf("Reading %d bytes of program header %d: %v", v.Filesz, i, err)
+			}
+			segs[i].buf = uintptr(unsafe.Pointer(&b[0]))
+			segs[i].bufsz = uintptr(l)
+			segs[i].mem = uintptr(v.Paddr)
+			segs[i].memsize = uintptr(l)
 		}
 	}
 	return uintptr(f.Entry), segs, nil
@@ -127,6 +135,9 @@ func main() {
 		if entry, segs, err = loaders[i](b); err == nil {
 			break
 		}
+	}
+	for _, s := range segs {
+		log.Printf("%v", s.String())
 	}
 
 	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
