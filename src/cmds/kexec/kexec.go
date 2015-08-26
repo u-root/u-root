@@ -63,7 +63,7 @@ type kexec_segment struct {
 	memsize uintptr
 }
 
-type loader func(b[]byte) ([]kexec_segment, error)
+type loader func(b[]byte) (uintptr, []kexec_segment, error)
 var (
 	kernel = flag.String("k", "vmlinux", "Kernel to load")
 	loaders = []loader{elfexec, rawexec}
@@ -77,15 +77,16 @@ var (
 //		unsigned long int);
 
 // rawexec either succeeds or Fatals out. It's the last chance.
-func rawexec(b []byte) ([]kexec_segment, error) {
+func rawexec(b []byte) (uintptr, []kexec_segment, error) {
+	var entry uintptr
 	segs := []kexec_segment{{buf: uintptr(unsafe.Pointer(&b[0])), bufsz: uintptr(len(b)), mem: 0x1000, memsize: uintptr(len(b))}}
-	return segs, nil
+	return entry, segs, nil
 }
 
-func elfexec(b []byte) ([]kexec_segment, error) {
+func elfexec(b []byte) (uintptr, []kexec_segment, error) {
 	f, err := elf.NewFile(bytes.NewReader(b))
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	scount := 0
 	for _, v := range f.Progs {
@@ -110,11 +111,12 @@ func elfexec(b []byte) ([]kexec_segment, error) {
 			})
 		}
 	}
-	return segs, nil
+	return uintptr(f.Entry), segs, nil
 }
 func main() {
 	var err error
 	var segs []kexec_segment
+	var entry uintptr
 	flag.Parse()
 	b, err := ioutil.ReadFile(*kernel)
 	if err != nil {
@@ -122,11 +124,12 @@ func main() {
 	}
 	log.Printf("Loading %v\n", *kernel)
 	for i := range loaders {
-		if segs, err = loaders[i](b); err == nil {
+		if entry, segs, err = loaders[i](b); err == nil {
 			break
 		}
 	}
 
-	e1, e2, err := syscall.Syscall(syscall.SYS_KEXEC_LOAD, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
+	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
+	e1, e2, err := syscall.Syscall6(syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), 0, 0, 0)
 	log.Printf("a %v b %v err %v", e1, e2, err)
 }
