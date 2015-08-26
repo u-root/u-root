@@ -64,24 +64,24 @@ package main
 import (
 	"log"
 	"os"
-	"os/exec"
+	"path"
 	"uroot"
 )
 
-func main() {
-	uroot.Rootfs()
-	cmd := exec.Command("/bin/sh")
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	// TODO: figure out why we get EPERM when we use this.
-	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
-	log.Printf("Run %v", cmd)
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("%v\n", err)
+func init() {
+	// This one stat adds a bit of cost to each invocation (not much really)
+	// but it allows us to merge init and sh. The 600K we save is worth it.
+	if _, err := os.Stat("/proc/self"); err == nil {
+		return
 	}
-	log.Printf("init: /bin/sh returned!\n")
+	uroot.Rootfs()
+
+	for n := range forkBuiltins {
+		t := path.Join("/bin", n)
+		if err := os.Symlink("/init", t); err != nil {
+			log.Printf("Symlink /init to %v: %v", t, err)
+		}
+	}
 	return
 }
 `
@@ -158,8 +158,7 @@ var config struct {
 	Src      string
 	Uroot    string
 	Cwd      string
-	Bb     string
-	Bbcmdsh     string
+	Bbsh     string
 
 	Goroot    string
 	Gosrcroot string
@@ -245,7 +244,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", out, err)
 		}
-		if err := ioutil.WriteFile(path.Join(config.Bbcmdsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
+		if err := ioutil.WriteFile(path.Join(config.Bbsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
@@ -256,7 +255,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 func oneCmd() {
 	// Create the directory for the package.
 	// For now, ./src/<package name>
-	packageDir := path.Join(config.Bb, "src", config.CmdName)
+	packageDir := path.Join(config.Bbsh, "src", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
@@ -278,7 +277,7 @@ func main() {
 	var err error
 	doConfig()
 
-	if err := os.MkdirAll(config.Bbcmdsh, 0755); err != nil {
+	if err := os.MkdirAll(config.Bbsh, 0755); err != nil {
 		log.Fatalf("%v", err)
 	}
 
@@ -288,7 +287,7 @@ func main() {
 		oneCmd()
 	}
 
-	if err := ioutil.WriteFile(path.Join(config.Bb, "init.go"), []byte(initGo), 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
 		log.Fatal("%v\n", err)
 	}
 	// copy all shell files
@@ -304,7 +303,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path.Join(config.Bbcmdsh, fi.Name()), b, 0644); err != nil {
+		if err := ioutil.WriteFile(path.Join(config.Bbsh, fi.Name()), b, 0644); err != nil {
 			return err
 		}
 
@@ -314,7 +313,7 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(config.Bbcmdsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 
