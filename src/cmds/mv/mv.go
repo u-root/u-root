@@ -21,9 +21,17 @@ func main() {
 	if len(a) < 2 {
 		fmt.Printf("mv - missing file operand\n")
 	} else {
-		error := os.Rename(a[0], a[1])
-		if error != nil {
-			fmt.Printf("%v\n", error)
+		err := os.Rename(a[0], a[1])
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Printf("file does not exist\n")
+			} else {
+				if os.IsPermission(err) {
+					fmt.Printf("you do not have permission\n")
+				} else {
+					fmt.Printf("unknow error\n")
+				}
+			}
 		}
 	}
 }
