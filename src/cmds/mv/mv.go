@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 )
 
 func usage() {
@@ -50,7 +51,7 @@ func main() {
 	} else {
 		// "copying" N files to 1 directory
 		for i := 0; i < flag.NArg()-1; i++ {
-			ndir := lf + "/" + files[i]
+			ndir := path.Join(lf, files[i])
 			err := os.Rename(files[i], ndir)
 			if err != nil {
 				log.Fatalf("%v", err)
