@@ -18,7 +18,8 @@ import (
 )
 
 func usage() {
-	fmt.Printf("mv - missing file operand\n")
+	fmt.Printf("usage: mv [-f | -i | -n] [-v] source target\n")
+	fmt.Printf("       mv [-f | -i | -n] [-v] source ... directory\n")
 	os.Exit(1)
 }
 
@@ -26,8 +27,7 @@ func main() {
 	todir := false
 	flag.Parse()
 
-	switch flag.NArg() {
-	case 0, 1:
+	if flag.NArg() < 2 {
 		usage()
 	}
 
