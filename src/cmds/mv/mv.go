@@ -18,8 +18,8 @@ import (
 )
 
 func usage() {
-	fmt.Printf("usage: mv [-f | -i | -n] [-v] source target\n")
-	fmt.Printf("       mv [-f | -i | -n] [-v] source ... directory\n")
+	fmt.Printf("usage: mv source target\n")
+	fmt.Printf("       mv source ... directory\n")
 	os.Exit(1)
 }
 
