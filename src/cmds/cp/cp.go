@@ -134,8 +134,7 @@ func main() {
 
 	flag.Parse()
 	Nwork = *nwork
-	switch flag.NArg() {
-	case 0, 1:
+	if flag.NArg() < 2 {
 		usage()
 	}
 
