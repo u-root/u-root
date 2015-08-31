@@ -18,8 +18,8 @@ import (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s source target\n",os.Args[0])
-	fmt.Fprintf(os.Stderr, "       %s source ... directory\n",os.Args[0])
+	fmt.Fprintf(os.Stderr, "usage: %s source target\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "       %s source ... directory\n", os.Args[0])
 	os.Exit(1)
 }
 
