@@ -18,8 +18,8 @@ import (
 )
 
 func usage() {
-	fmt.Printf("usage: mv source target\n")
-	fmt.Printf("       mv source ... directory\n")
+	fmt.Fprintf(os.Stderr, "usage: %s source target\n",os.Args[0])
+	fmt.Fprintf(os.Stderr, "       %s source ... directory\n",os.Args[0])
 	os.Exit(1)
 }
 
@@ -33,7 +33,7 @@ func main() {
 
 	files := flag.Args()
 	lf := files[len(files)-1]
-	lfdir, err := os.Stat(lf)
+	lfdir, err := os.Lstat(lf)
 	if err == nil {
 		todir = lfdir.IsDir()
 	}
