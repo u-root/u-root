@@ -39,3 +39,5 @@ Core/
 /5.x
 /.bash_history
 /init
+bzImage
+vmlinux

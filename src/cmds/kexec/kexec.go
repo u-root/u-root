@@ -1,3 +1,7 @@
+// Copyright 2015 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // kexec command in Go.
 // Wow, Linux. Just Wow. Who designs this stuff? Because, basically, it's not very good.
 // I considered keeping the C declarations and such stuff here but it has not changed
@@ -18,6 +22,8 @@ package main
 import (
 	"bytes"
 	"debug/elf"
+	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -56,39 +62,95 @@ const (
  * This structure is used to hold the arguments that are used when
  * loading  kernel binaries.
  */
-type kexec_segment struct {
+type KexecSegment struct {
 	buf     uintptr
 	bufsz   uintptr
 	mem     uintptr
 	memsize uintptr
 }
 
-func (k *kexec_segment) String() string {
+func (k *KexecSegment) String() string {
 	return fmt.Sprintf("[0x%x 0x%x 0x%x 0x%x]", k.buf, k.bufsz, k.mem, k.memsize)
 }
 
-type loader func(b []byte) (uintptr, []kexec_segment, error)
+type loader func(b []byte) (uintptr, []KexecSegment, error)
 
 var (
 	kernel  = flag.String("k", "vmlinux", "Kernel to load")
-	loaders = []loader{elfexec, rawexec}
+	dryrun = flag.Bool("dryrun", false, "Do not do kexec system calls")
+	loaders = []loader{elfexec, bzImage, rawexec}
 )
 
-/* Load a new kernel image as described by the kexec_segment array
+func makeseg(b []byte, paddr uintptr) KexecSegment {
+	return KexecSegment{
+		buf: uintptr(unsafe.Pointer(&b[0])),
+		bufsz: uintptr(len(b)),
+		mem: paddr,
+		memsize: uintptr(len(b)),
+	}
+}
+/* kexec requires page-aligned, page-sized buffers. It also assumes that means 4k. Oh well. */
+func pages(size uintptr) []byte {
+	size = ((size + 4095) >>12)<<12
+	return make([]byte, size)
+}
+/* Load a new kernel image as described by the KexecSegment array
  * consisting of passed number of segments at the entry-point address.
  * The flags allow different useage types.
  */
-//extern int kexec_load(void *, size_t, struct kexec_segment *,
+//extern int kexec_load(void *, size_t, struct KexecSegment *,
 //		unsigned long int);
 
 // rawexec either succeeds or Fatals out. It's the last chance.
-func rawexec(b []byte) (uintptr, []kexec_segment, error) {
+func rawexec(b []byte) (uintptr, []KexecSegment, error) {
 	var entry uintptr
-	segs := []kexec_segment{{buf: uintptr(unsafe.Pointer(&b[0])), bufsz: uintptr(len(b)), mem: 0x1000, memsize: uintptr(len(b))}}
+	segs := []KexecSegment{makeseg(b, 0x1000)}
+	log.Printf("Using raw image loader")
 	return entry, segs, nil
 }
 
-func elfexec(b []byte) (uintptr, []kexec_segment, error) {
+func bzImage(b []byte) (uintptr, []KexecSegment, error) {
+	var h LinuxHeader
+	r := bytes.NewReader(b)
+	binary.Read(r, binary.LittleEndian, &h)
+	log.Printf("bzImage header %v", h)
+	log.Printf("magic %x switch %v", h.HeaderMagic, h.RealModeSwitch)
+	if h.HeaderMagic != HeaderMagic {
+		return 0, nil, errors.New("Not a bzImage")
+	}
+	log.Printf("RamDisk image %x size %x", h.RamdiskImage, h.RamdiskSize)
+	log.Printf("StartSys %x", h.StartSys)
+	log.Printf("Boot type: %s(%x)", LoaderType[boottype(h.TypeOfLoader)], h.TypeOfLoader)
+	log.Printf("SetupSects %d", h.SetupSects)
+
+	// Now for the good fun.
+	l := &LinuxParams{
+		MountRootReadonly: h.RootFlags,
+		OrigRootDev: h.RootDev,
+		OrigVideoMode: 3,
+		OrigVideoCols: 80,
+		OrigVideoLines: 25,
+		OrigVideoIsVGA: 1,
+		OrigVideoPoints: 16,
+		LoaderType: 0xff, 
+		// These can be overridden.
+		CLMagic: CommandLineMagic,
+		CLOffset: CLOffset,
+		KernelStart: 0x100000,
+	}
+	log.Printf("l %v", l)
+	segs := []KexecSegment{
+		makeseg(parameters, LINUX_PARAM_LOC),
+		makeseg(trampoline, TRAMPOLINE_ENTRY_LOC)
+		makeseg(trampoline, kernel, kernel_base),
+		makeseg(cmdline, COMMAND_LINE_LOC),
+		//makeseg(initrd, initrd_base),
+	}
+	
+	return segs, entry, nil
+}
+
+func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 	f, err := elf.NewFile(bytes.NewReader(b))
 	if err != nil {
 		return 0, nil, err
@@ -102,29 +164,23 @@ func elfexec(b []byte) (uintptr, []kexec_segment, error) {
 	if scount > KEXEC_SEGMENT_MAX {
 		log.Fatalf("Too many segments: got %v, max is %v", scount, KEXEC_SEGMENT_MAX)
 	}
-	segs := make([]kexec_segment, scount)
+	segs := make([]KexecSegment, scount)
 	for i, v := range f.Progs {
 		if v.Type.String() == "PT_LOAD" {
 			f := v.Open()
-			// kexec is stupid. Requires the length to be page aligned.
-			// And, guess what -- that's not always a known thing. But of course
-			// we all know it's 4K. BAH!
-			l := uintptr((v.Memsz + 4095)) & (uintptr(^uintptr(4095)))
-			b := make([]byte, l)
+			b := pages(uintptr(v.Memsz))
 			if _, err := f.Read(b[:v.Filesz]); err != nil {
 				log.Fatalf("Reading %d bytes of program header %d: %v", v.Filesz, i, err)
 			}
-			segs[i].buf = uintptr(unsafe.Pointer(&b[0]))
-			segs[i].bufsz = uintptr(l)
-			segs[i].mem = uintptr(v.Paddr)
-			segs[i].memsize = uintptr(l)
+			segs[i] = makeseg(b, uintptr(v.Paddr))
 		}
 	}
+	log.Printf("Using ELF image loader")
 	return uintptr(f.Entry), segs, nil
 }
 func main() {
 	var err error
-	var segs []kexec_segment
+	var segs []KexecSegment
 	var entry uintptr
 	flag.Parse()
 	b, err := ioutil.ReadFile(*kernel)
@@ -141,6 +197,10 @@ func main() {
 		log.Printf("%v", s.String())
 	}
 
+	if *dryrun {
+		log.Printf("Dry run -- exiting now")
+		return
+	}
 	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
 	e1, e2, err := syscall.Syscall6(syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), 0, 0, 0)
 	log.Printf("a %v b %v err %v", e1, e2, err)
