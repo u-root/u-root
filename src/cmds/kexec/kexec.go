@@ -76,24 +76,40 @@ func (k *KexecSegment) String() string {
 type loader func(b []byte) (uintptr, []KexecSegment, error)
 
 var (
-	kernel  = flag.String("k", "vmlinux", "Kernel to load")
-	dryrun = flag.Bool("dryrun", false, "Do not do kexec system calls")
+	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
 	loaders = []loader{elfexec, bzImage, rawexec}
+	tramp []byte
 )
 
+func pagealloc(len int) []byte {
+	flags := syscall.MAP_PRIVATE | syscall.MAP_ANON
+	prot := syscall.PROT_READ | syscall.PROT_WRITE
+	len = ((len + 4095) >> 12) << 12
+	b, err := syscall.Mmap(-1, 0, len, prot, flags)
+	if err != nil {
+		log.Fatal("Could not mmap %d bytes: %v", len, err)
+	}
+	return b
+}
+
 func makeseg(b []byte, paddr uintptr) KexecSegment {
+	if b == nil {
+		panic("bad b")
+	}
 	return KexecSegment{
-		buf: uintptr(unsafe.Pointer(&b[0])),
-		bufsz: uintptr(len(b)),
-		mem: paddr,
+		buf:     uintptr(unsafe.Pointer(&b[0])),
+		bufsz:   uintptr(len(b)),
+		mem:     paddr,
 		memsize: uintptr(len(b)),
 	}
 }
+
 /* kexec requires page-aligned, page-sized buffers. It also assumes that means 4k. Oh well. */
 func pages(size uintptr) []byte {
-	size = ((size + 4095) >>12)<<12
+	size = ((size + 4095) >> 12) << 12
 	return make([]byte, size)
 }
+
 /* Load a new kernel image as described by the KexecSegment array
  * consisting of passed number of segments at the entry-point address.
  * The flags allow different useage types.
@@ -104,7 +120,11 @@ func pages(size uintptr) []byte {
 // rawexec either succeeds or Fatals out. It's the last chance.
 func rawexec(b []byte) (uintptr, []KexecSegment, error) {
 	var entry uintptr
-	segs := []KexecSegment{makeseg(b, 0x1000)}
+	segs := []KexecSegment{
+		//	makeseg(b, 0x1000)
+		makeseg(tramp, TrampolinePointer),
+	}
+	entry = TrampolinePointer
 	log.Printf("Using raw image loader")
 	return entry, segs, nil
 }
@@ -123,31 +143,38 @@ func bzImage(b []byte) (uintptr, []KexecSegment, error) {
 	log.Printf("Boot type: %s(%x)", LoaderType[boottype(h.TypeOfLoader)], h.TypeOfLoader)
 	log.Printf("SetupSects %d", h.SetupSects)
 
+	kernel := pagealloc(len(b))
+	copy(kernel, b[(int(h.SetupSects)+1)*512:])
+	kernelBase := uintptr(0x100000)
+
 	// Now for the good fun.
 	l := &LinuxParams{
 		MountRootReadonly: h.RootFlags,
-		OrigRootDev: h.RootDev,
-		OrigVideoMode: 3,
-		OrigVideoCols: 80,
-		OrigVideoLines: 25,
-		OrigVideoIsVGA: 1,
-		OrigVideoPoints: 16,
-		LoaderType: 0xff, 
-		// These can be overridden.
-		CLMagic: CommandLineMagic,
-		CLOffset: CLOffset,
-		KernelStart: 0x100000,
+		OrigRootDev:       h.RootDev,
+		OrigVideoMode:     3,
+		OrigVideoCols:     80,
+		OrigVideoLines:    25,
+		OrigVideoIsVGA:    1,
+		OrigVideoPoints:   16,
+		LoaderType:        0xff,
+		CLPtr:             CommandLinePointer,
+		KernelStart:       0x100000,
 	}
-	log.Printf("l %v", l)
+	w := pagealloc(1)
+	// binary.Write may reallocate the buffer, but we are pretty sure
+	// it won't.
+	binary.Write(bytes.NewBuffer(w), binary.LittleEndian, l)
+
+	cmdline := pagealloc(1)
 	segs := []KexecSegment{
-		makeseg(parameters, LINUX_PARAM_LOC),
-		makeseg(trampoline, TRAMPOLINE_ENTRY_LOC)
-		makeseg(trampoline, kernel, kernel_base),
-		makeseg(cmdline, COMMAND_LINE_LOC),
+		makeseg(w, LinuxParamPointer),
+		makeseg(tramp, TrampolinePointer),
+		makeseg(kernel, kernelBase),
+		makeseg(cmdline, CommandLinePointer),
 		//makeseg(initrd, initrd_base),
 	}
-	
-	return segs, entry, nil
+
+	return TrampolinePointer, segs, nil
 }
 
 func elfexec(b []byte) (uintptr, []KexecSegment, error) {
@@ -179,15 +206,24 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 	return uintptr(f.Entry), segs, nil
 }
 func main() {
+	kernel := "bzImage"
 	var err error
 	var segs []KexecSegment
 	var entry uintptr
 	flag.Parse()
-	b, err := ioutil.ReadFile(*kernel)
+	if len(flag.Args()) == 1 {
+		kernel = flag.Args()[0]
+	}
+
+	b, err := ioutil.ReadFile(kernel)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Printf("Loading %v\n", *kernel)
+
+	tramp = pagealloc(len(trampoline))
+	copy(tramp, trampoline)
+
+	log.Printf("Loading %v\n", kernel)
 	for i := range loaders {
 		if entry, segs, err = loaders[i](b); err == nil {
 			break
