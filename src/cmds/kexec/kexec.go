@@ -77,8 +77,10 @@ type loader func(b []byte) (uintptr, []KexecSegment, error)
 
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
+	test = flag.Bool("test", false, "Just load a '1: jmp 1b' to 0x100000 as the kernel")
 	loaders = []loader{elfexec, bzImage, rawexec}
 	tramp []byte
+	jmp1b = []byte{0xeb, 0xe}
 )
 
 func pagealloc(len int) []byte {
@@ -121,8 +123,8 @@ func pages(size uintptr) []byte {
 func rawexec(b []byte) (uintptr, []KexecSegment, error) {
 	var entry uintptr
 	segs := []KexecSegment{
-		//	makeseg(b, 0x1000)
 		makeseg(tramp, TrampolinePointer),
+		makeseg(b, 0x100000),
 	}
 	entry = TrampolinePointer
 	log.Printf("Using raw image loader")
@@ -205,8 +207,11 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 	log.Printf("Using ELF image loader")
 	return uintptr(f.Entry), segs, nil
 }
+
 func main() {
 	kernel := "bzImage"
+	b := pagealloc(1)
+	copy(b, jmp1b)
 	var err error
 	var segs []KexecSegment
 	var entry uintptr
@@ -215,9 +220,11 @@ func main() {
 		kernel = flag.Args()[0]
 	}
 
-	b, err := ioutil.ReadFile(kernel)
-	if err != nil {
-		log.Fatalf("%v", err)
+	if !*test {
+		b, err = ioutil.ReadFile(kernel)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
 	}
 
 	tramp = pagealloc(len(trampoline))
