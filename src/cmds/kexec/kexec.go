@@ -193,7 +193,8 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 	if scount > KEXEC_SEGMENT_MAX {
 		log.Fatalf("Too many segments: got %v, max is %v", scount, KEXEC_SEGMENT_MAX)
 	}
-	segs := make([]KexecSegment, scount)
+	segs := make([]KexecSegment, scount + 1)
+	segs[0] = makeseg(tramp, TrampolinePointer)
 	for i, v := range f.Progs {
 		if v.Type.String() == "PT_LOAD" {
 			f := v.Open()
@@ -201,11 +202,12 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 			if _, err := f.Read(b[:v.Filesz]); err != nil {
 				log.Fatalf("Reading %d bytes of program header %d: %v", v.Filesz, i, err)
 			}
-			segs[i] = makeseg(b, uintptr(v.Paddr))
+			segs[i + 1] = makeseg(b, uintptr(v.Paddr))
 		}
 	}
 	log.Printf("Using ELF image loader")
-	return uintptr(f.Entry), segs, nil
+	//return uintptr(f.Entry), segs, nil
+	return uintptr(0x40000), segs, nil
 }
 
 func main() {
