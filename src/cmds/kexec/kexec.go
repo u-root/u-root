@@ -85,9 +85,9 @@ type loader func(b []byte) (uintptr, []KexecSegment, error)
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
 	test    = flag.Bool("test", false, "Just load a '1: jmp 1b' to 0x100000 as the kernel")
+	halt    = flag.Bool("halt", false, "Put a infinite loop at 40000 and jump to it")
 	loaders = []loader{elfexec, bzImage, rawexec}
-	tramp   []byte
-	jmp1b   = []byte{0xeb, 0xe}
+	jmp1b   = []byte{0xeb, 0xfe}
 )
 
 func pagealloc(len int) []byte {
@@ -130,10 +130,8 @@ func pages(size uintptr) []byte {
 func rawexec(b []byte) (uintptr, []KexecSegment, error) {
 	var entry uintptr
 	segs := []KexecSegment{
-		makeseg(tramp, TrampolinePointer),
 		makeseg(b, 0x100000),
 	}
-	entry = TrampolinePointer
 	log.Printf("Using raw image loader")
 	return entry, segs, nil
 }
@@ -191,7 +189,6 @@ func bzImage(b []byte) (uintptr, []KexecSegment, error) {
 	copy(cmdline, []byte("earlyprintk=ttyS0,115200,keep console=ttyS0 mem=1024m nosmp"))
 	segs := []KexecSegment{
 		makeseg(w, LinuxParamPointer),
-		makeseg(tramp, TrampolinePointer),
 		makeseg(kernel, kernelBase),
 		makeseg(cmdline, CommandLinePointer),
 		//makeseg(initrd, initrd_base),
@@ -241,6 +238,10 @@ func main() {
 	if len(flag.Args()) == 1 {
 		kernel = flag.Args()[0]
 	}
+	if *halt {
+		trampoline[0x40000] = 0xeb
+		trampoline[0x40001] = 0xfe
+	}
 	// parse the purgatory. 
 	pentry, psegs, err := elfexec(trampoline)
 	if err != nil {
@@ -250,6 +251,9 @@ func main() {
 		log.Printf("purg %v\n", v.String())
 	}
 	log.Printf("Parsed purgatory OK: %x pentry\n", pentry)
+	if *halt {
+		pentry = 0x40000
+	}
 
 	if !*test {
 		b, err = ioutil.ReadFile(kernel)
@@ -257,9 +261,6 @@ func main() {
 			log.Fatalf("%v", err)
 		}
 	}
-
-	tramp = pagealloc(len(trampoline))
-	copy(tramp, trampoline)
 
 	log.Printf("Loading %v\n", kernel)
 	for i := range loaders {
