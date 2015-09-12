@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// go:generate as entry64.S
+// go:geneate objcopy -O binary a.out a.bin
+// go:generate echo package main > t.go
+// go:generate echo var t []byte { >> t.go
+// go:generate xxd -i a.bin >> t.go
+// go:generate echo } >> t.go
+
 // kexec command in Go.
 // Wow, Linux. Just Wow. Who designs this stuff? Because, basically, it's not very good.
 // I considered keeping the C declarations and such stuff here but it has not changed
@@ -77,10 +84,10 @@ type loader func(b []byte) (uintptr, []KexecSegment, error)
 
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
-	test = flag.Bool("test", false, "Just load a '1: jmp 1b' to 0x100000 as the kernel")
+	test    = flag.Bool("test", false, "Just load a '1: jmp 1b' to 0x100000 as the kernel")
 	loaders = []loader{elfexec, bzImage, rawexec}
-	tramp []byte
-	jmp1b = []byte{0xeb, 0xe}
+	tramp   []byte
+	jmp1b   = []byte{0xeb, 0xe}
 )
 
 func pagealloc(len int) []byte {
@@ -161,6 +168,19 @@ func bzImage(b []byte) (uintptr, []KexecSegment, error) {
 		LoaderType:        0xff,
 		CLPtr:             CommandLinePointer,
 		KernelStart:       0x100000,
+		E820MapNr:         1,
+		E820Map: [32]E820Entry{
+			E820Entry{
+				Addr:    0x0,
+				Size:    0x1 * 1048576,
+				MemType: Reserved,
+			},
+			E820Entry{
+				Addr:    0x100000,
+				Size:    0x128 * 1048576,
+				MemType: Ram,
+			},
+		},
 	}
 	w := pagealloc(1)
 	// binary.Write may reallocate the buffer, but we are pretty sure
@@ -168,6 +188,7 @@ func bzImage(b []byte) (uintptr, []KexecSegment, error) {
 	binary.Write(bytes.NewBuffer(w), binary.LittleEndian, l)
 
 	cmdline := pagealloc(1)
+	copy(cmdline, []byte("earlyprintk=ttyS0,115200,keep console=ttyS0 mem=1024m nosmp"))
 	segs := []KexecSegment{
 		makeseg(w, LinuxParamPointer),
 		makeseg(tramp, TrampolinePointer),
@@ -193,8 +214,7 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 	if scount > KEXEC_SEGMENT_MAX {
 		log.Fatalf("Too many segments: got %v, max is %v", scount, KEXEC_SEGMENT_MAX)
 	}
-	segs := make([]KexecSegment, scount + 1)
-	segs[0] = makeseg(tramp, TrampolinePointer)
+	segs := make([]KexecSegment, scount)
 	for i, v := range f.Progs {
 		if v.Type.String() == "PT_LOAD" {
 			f := v.Open()
@@ -202,12 +222,12 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 			if _, err := f.Read(b[:v.Filesz]); err != nil {
 				log.Fatalf("Reading %d bytes of program header %d: %v", v.Filesz, i, err)
 			}
-			segs[i + 1] = makeseg(b, uintptr(v.Paddr))
+			segs[i] = makeseg(b, uintptr(v.Paddr))
 		}
 	}
 	log.Printf("Using ELF image loader")
-	//return uintptr(f.Entry), segs, nil
-	return uintptr(0x40000), segs, nil
+	return uintptr(f.Entry), segs, nil
+	//return uintptr(0x40000), segs, nil
 }
 
 func main() {
@@ -221,6 +241,15 @@ func main() {
 	if len(flag.Args()) == 1 {
 		kernel = flag.Args()[0]
 	}
+	// parse the purgatory. 
+	pentry, psegs, err := elfexec(trampoline)
+	if err != nil {
+		log.Fatal("Parsing purgatory: %v", err)
+	}
+	for _, v := range psegs {
+		log.Printf("purg %v\n", v.String())
+	}
+	log.Printf("Parsed purgatory OK: %x pentry\n", pentry)
 
 	if !*test {
 		b, err = ioutil.ReadFile(kernel)
@@ -242,11 +271,14 @@ func main() {
 		log.Printf("%v", s.String())
 	}
 
+	// Now adjust for reality.
+	segs = append(psegs, segs...)
+	entry = pentry
+	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
 	if *dryrun {
 		log.Printf("Dry run -- exiting now")
 		return
 	}
-	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
 	e1, e2, err := syscall.Syscall6(syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), 0, 0, 0)
 	log.Printf("a %v b %v err %v", e1, e2, err)
 

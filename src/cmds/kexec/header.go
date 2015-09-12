@@ -37,7 +37,7 @@ const (
 
 type e820type uint8
 type boottype uint8
-type e820entry struct {
+type E820Entry struct {
 	Addr    uint64
 	Size    uint64
 	MemType e820type
@@ -115,8 +115,8 @@ type LinuxParams struct {
 	Lfbdepth      uint16    `offset: 0x16`
 	Lfbbase       uint32    `offset: 0x18`
 	Lfbsize       uint32    `offset: 0x1c`
-	CLMagic       uint16    `offset: 0x20`  // DON'T USE
-	CLOffset      uint16    `offset: 0x22`  // DON'T USE
+	CLMagic       uint16    `offset: 0x20` // DON'T USE
+	CLOffset      uint16    `offset: 0x22` // DON'T USE
 	Lfblinelength uint16    `offset: 0x24`
 	Redsize       uint8     `offset: 0x26`
 	Redpos        uint8     `offset: 0x27`
@@ -131,15 +131,15 @@ type LinuxParams struct {
 	Pages         uint16    `offset: 0x32`
 	_             [12]uint8 `offset: 0x34` //-- 0x3f reserved for future expansion
 
-	//struct apmbiosinfo apmbiosinfo;   
+	//struct apmbiosinfo apmbiosinfo;
 	Apmbiosinfo [0x40]uint8 `offset: 0x40`
 	//struct driveinfostruct driveinfo;
-	Driveinfo [0x20]uint8  `offset: 0x80`
+	Driveinfo [0x20]uint8 `offset: 0x80`
 	//struct sysdesctable sysdesctable;
-	Sysdesctable        [0x140]uint8 `offset: 0xa0`
+	Sysdesctable        [0x140]uint8           `offset: 0xa0`
 	Altmemk             uint32                 `offset: 0x1e0`
 	_                   [4]uint8               `offset: 0x1e4`
-	E820mapnr           uint8                  `offset: 0x1e8`
+	E820MapNr           uint8                  `offset: 0x1e8`
 	_                   [9]uint8               `offset: 0x1e9`
 	MountRootReadonly   uint16                 `offset: 0x1f2`
 	_                   [4]uint8               `offset: 0x1f4`
@@ -164,7 +164,7 @@ type LinuxParams struct {
 	Kernelalignment     uint32                 `offset: 0x230`
 	Relocatablekernel   uint8                  `offset: 0x234`
 	_                   [155]uint8             `offset: 0x22c`
-	E820Map             [E820MAX]e820entry     `offset: 0x2d0`
+	E820Map             [E820MAX]E820Entry     `offset: 0x2d0`
 	_                   [688]uint8             `offset: 0x550`
 	Commandline         [CommandLineSize]uint8 `offset: 0x800`
 	_                   [1792]uint8            `offset: 0x900` //- 0x1000

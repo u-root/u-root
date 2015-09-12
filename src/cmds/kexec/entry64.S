@@ -17,12 +17,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "arch/debug.h"
+//#include "arch/debug.h"
 		
 .text
 .code64
 	.balign 16	
-	.globl entry64, entry64_regs
+	.globl entry64, entry64_regs, main
+main:
 entry64:
 	/* Don't worry about special registers... */
 
@@ -62,13 +63,15 @@ new_cs_exit:
 	movq	r14(%rip), %r14
 	movq	r15(%rip), %r15
 
+	pushq	%rax
+	ret
 	/* Jump to the new code... */
 	jmpq	*rip(%rip)
 		
-	.section ".rodata"       
-	.balign 4
+//	.section ".rodata"       
+	//.balign 4
 entry64_regs:
-rax:	.quad 0x00000000
+rax:	.quad 0x01000000
 rbx:	.quad 0x00000000
 rcx:	.quad 0x00000000
 rdx:	.quad 0x00000000
@@ -84,10 +87,10 @@ r12:	.quad 0x00000000
 r13:	.quad 0x00000000
 r14:	.quad 0x00000000
 r15:	.quad 0x00000000
-rip:	.quad entry32
+rip:	.quad 0x00000000
 	.size entry64_regs, . - entry64_regs		
 
-	.section ".rodata"       
+	//.section ".rodata"       
 	.balign 16
 gdt:	/* 0x00 unusable segment 
 	 * 0x08 unused
