@@ -37,6 +37,8 @@ import (
 	"log"
 	"syscall"
 	"unsafe"
+
+	"memmap"
 )
 
 /* kexec flags for different usage scenarios */
@@ -145,7 +147,7 @@ func bzImage(b []byte) (uintptr, []KexecSegment, error) {
 	if h.HeaderMagic != HeaderMagic {
 		return 0, nil, errors.New("Not a bzImage")
 	}
-	log.Printf("RamDisk image %x size %x", h.RamdiskImage, h.RamdiskSize)
+	log.Printf("RamDisk image %x size %x", h.RamDiskImage, h.RamDiskSize)
 	log.Printf("StartSys %x", h.StartSys)
 	log.Printf("Boot type: %s(%x)", LoaderType[boottype(h.TypeOfLoader)], h.TypeOfLoader)
 	log.Printf("SetupSects %d", h.SetupSects)
@@ -228,10 +230,15 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 }
 
 func main() {
+
+	m, err := memmap.Ranges()
+	if err != nil {
+		log.Fatalf("Can't enumerate memory maps ranges: %v", err)
+	}
+	log.Printf("memranges: %v", m)
 	kernel := "bzImage"
 	b := pagealloc(1)
 	copy(b, jmp1b)
-	var err error
 	var segs []KexecSegment
 	var entry uintptr
 	flag.Parse()
@@ -242,7 +249,7 @@ func main() {
 		trampoline[0x40000] = 0xeb
 		trampoline[0x40001] = 0xfe
 	}
-	// parse the purgatory. 
+	// parse the purgatory.
 	pentry, psegs, err := elfexec(trampoline)
 	if err != nil {
 		log.Fatal("Parsing purgatory: %v", err)
