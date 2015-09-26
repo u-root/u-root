@@ -12,10 +12,6 @@ const (
 )
 
 const (
-	E820MAX = 32 // number of entries in E820MAP
-)
-
-const (
 	NotSet    boottype = 0
 	LoadLin            = 1
 	BootSect           = 2
@@ -32,8 +28,6 @@ const (
 	CommandLineMagic = 0x7ff
 	CommandLineSize  = 256
 
-	HeaderMagic = 0x53726448 // "HdrS" but little-endian constant
-
 	DefaultInitrdAddrMax  = 0x37FFFFFF
 	DefaultBzimageAddrMax = 0x37FFFFFF
 
@@ -41,6 +35,34 @@ const (
 	E820Map = 0x2d0
 	E820NR  = 0x1e8
 )
+
+// what's an EDD? No idea.
+/*
+ * EDD stuff
+ */
+
+const (
+	EDDMBRSigMax       = 16
+	EDDMaxNR           = 6 /* number of edd_info structs starting at EDDBUF  */
+	EDDDeviceParamSize = 74
+)
+
+const (
+	EDDExtFixedDiskAccess = 1 << iota
+	EDDExtDeviceLockingAndEjecting
+	EDDExtEnhancedDiskDriveSupport
+	EDDExt64BitExtensions
+)
+
+type EDDInfo struct {
+	Device                uint8
+	Version               uint8
+	InterfaceSupport      uint16
+	LegacyMaxCylinder     uint16
+	LegacyMaxHead         uint8
+	LegacySectorsPerTrace uint8
+	EDDDeviceParams       [EDDDeviceParamSize]uint8
+}
 
 type e820type uint32
 type boottype uint8
@@ -66,7 +88,7 @@ type LinuxHeader struct {
 	Bootsectormagic uint16              `offset:"0x1fe"`
 	// 0.00+
 	Jump            uint16   `offset:"0x200"`
-	HeaderMagic     uint32   `offset:"0x202"`
+	HeaderMagic     [4]uint8 `offset:"0x202"`
 	Protocolversion uint16   `offset:"0x206"`
 	RealModeSwitch  uint32   `offset:"0x208"`
 	StartSys        uint16   `offset:"0x20c"`
@@ -149,38 +171,55 @@ type LinuxParams struct {
 	//struct driveinfostruct driveinfo;
 	Driveinfo [0x20]uint8 `offset:"0x80"`
 	//struct sysdesctable sysdesctable;
-	Sysdesctable        [0x140]uint8           `offset:"0xa0"`
-	Altmemk             uint32                 `offset:"0x1e0"`
-	_                   [4]uint8               `offset:"0x1e4"`
-	E820MapNr           uint8                  `offset:"0x1e8"`
-	_                   [9]uint8               `offset:"0x1e9"`
-	MountRootReadonly   uint16                 `offset:"0x1f2"`
-	_                   [4]uint8               `offset:"0x1f4"`
-	Ramdiskflags        uint16                 `offset:"0x1f8"`
-	_                   [2]uint8               `offset:"0x1fa"`
-	OrigRootDev         uint16                 `offset:"0x1fc"`
-	_                   [1]uint8               `offset:"0x1fe"`
-	Auxdeviceinfo       uint8                  `offset:"0x1ff"`
-	_                   [2]uint8               `offset:"0x200"`
-	Paramblocksignature [4]uint8               `offset:"0x202"`
-	Paramblockversion   uint16                 `offset:"0x206"`
-	_                   [8]uint8               `offset:"0x208"`
-	LoaderType          uint8                  `offset:"0x210"`
-	Loaderflags         uint8                  `offset:"0x211"`
-	_                   [2]uint8               `offset:"0x212"`
-	KernelStart         uint32                 `offset:"0x214"`
-	Initrdstart         uint32                 `offset:"0x218"`
-	Initrdsize          uint32                 `offset:"0x21c"`
-	_                   [8]uint8               `offset:"0x220"`
-	CLPtr               uint32                 `offset:"0x228"` // USE THIS.
-	Initrdaddrmax       uint32                 `offset:"0x22c"`
-	Kernelalignment     uint32                 `offset:"0x230"`
-	Relocatablekernel   uint8                  `offset:"0x234"`
-	_                   [155]uint8             `offset:"0x22c"`
-	E820Map             [E820MAX]E820Entry     `offset:"0x2d0"`
-	_                   [688]uint8             `offset:"0x550"`
-	Commandline         [CommandLineSize]uint8 `offset:"0x800"`
-	_                   [1792]uint8            `offset:"0x900"` //- 0x1000
+	Sysdesctable        [0x140]uint8 `offset:"0xa0"`
+	Altmemk             uint32       `offset:"0x1e0"`
+	_                   [4]uint8     `offset:"0x1e4"`
+	E820MapNr           uint8        `offset:"0x1e8"`
+	_                   [9]uint8     `offset:"0x1e9"`
+	MountRootReadonly   uint16       `offset:"0x1f2"`
+	_                   [4]uint8     `offset:"0x1f4"`
+	Ramdiskflags        uint16       `offset:"0x1f8"`
+	_                   [2]uint8     `offset:"0x1fa"`
+	OrigRootDev         uint16       `offset:"0x1fc"`
+	_                   [1]uint8     `offset:"0x1fe"`
+	Auxdeviceinfo       uint8        `offset:"0x1ff"`
+	_                   [2]uint8     `offset:"0x200"`
+	Paramblocksignature [4]uint8     `offset:"0x202"`
+	Paramblockversion   uint16       `offset:"0x206"`
+	_                   [8]uint8     `offset:"0x208"`
+	LoaderType          uint8        `offset:"0x210"`
+	Loaderflags         uint8        `offset:"0x211"`
+	_                   [2]uint8     `offset:"0x212"`
+	KernelStart         uint32       `offset:"0x214"`
+	Initrdstart         uint32       `offset:"0x218"`
+	Initrdsize          uint32       `offset:"0x21c"`
+	_                   [8]uint8     `offset:"0x220"`
+	CLPtr               uint32       `offset:"0x228"` // USE THIS.
+	InitrdAddrMax       uint32       `offset:"0x22c"`
+	/* 2.04+ */
+	KernelAlignment     uint32               `offset:"0x230"`
+	elocatableKernel    uint8                `offset:"0x234"`
+	MinAlignment        uint8                `offset:"0x235"`
+	XLoadFlags          uint16               `offset:"0x236"`
+	CmdLineSize         uint32               `offset:"0x238"`
+	HardwareSubarch     uint32               `offset:"0x23C"`
+	HardwareSubarchData uint64               `offset:"0x240"`
+	Payload_Ofset       uint32               `offset:"0x248"`
+	PayloadLength       uint32               `offset:"0x24C"`
+	SetupData           uint64               `offset:"0x250"`
+	PrefAddress         uint64               `offset:"0x258"`
+	InitSize            uint32               `offset:"0x260"`
+	HandoverOffset      uint32               `offset:"0x264"`
+	_                   [0x290 - 0x268]uint8 `offset:"0x268"`
+	EDDMBRSigBuffer     [EDDMBRSigMax]uint32 `offset:"0x290"`
+	// e820map is another cockup from the usual suspects.
+	// Go rounds the size to something reasonable. Oh well. No checking for you.
+	// So the next two offsets are bogus, sorry about that.
+	E820Map [E820Max]E820Entry `offset:"0x2d0"`
+	// we lie.
+	_      [48]uint8         `offset:"0xed0"` // `offset:"0xcd0"`
+	EDDBuf [EDDMaxNR]EDDInfo `offset:"0xf00"` // `offset:"0xd00"`
+
 }
 
 var (
@@ -198,4 +237,5 @@ var (
 		ACPI:     "ACPI",
 		NVS:      "NVS",
 	}
+	HeaderMagic = [4]uint8{'H', 'd', 'r', 'S'}
 )

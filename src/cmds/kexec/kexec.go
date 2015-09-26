@@ -30,7 +30,6 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -139,27 +138,15 @@ func rawexec(b []byte) (uintptr, []KexecSegment, error) {
 }
 
 func bzImage(b []byte) (uintptr, []KexecSegment, error) {
-	var h LinuxHeader
-	r := bytes.NewReader(b)
-	binary.Read(r, binary.LittleEndian, &h)
-	log.Printf("bzImage header %v", h)
-	log.Printf("magic %x switch %v", h.HeaderMagic, h.RealModeSwitch)
-	if h.HeaderMagic != HeaderMagic {
-		return 0, nil, errors.New("Not a bzImage")
+	entry, header, kernelBase, kernel, err := crackbzImage(b)
+	if err != nil {
+		return 0, nil, err
 	}
-	log.Printf("RamDisk image %x size %x", h.RamDiskImage, h.RamDiskSize)
-	log.Printf("StartSys %x", h.StartSys)
-	log.Printf("Boot type: %s(%x)", LoaderType[boottype(h.TypeOfLoader)], h.TypeOfLoader)
-	log.Printf("SetupSects %d", h.SetupSects)
-
-	kernel := pagealloc(len(b))
-	copy(kernel, b[(int(h.SetupSects)+1)*512:])
-	kernelBase := uintptr(0x100000)
 
 	// Now for the good fun.
 	l := &LinuxParams{
-		MountRootReadonly: h.RootFlags,
-		OrigRootDev:       h.RootDev,
+		MountRootReadonly: header.RootFlags,
+		OrigRootDev:       header.RootDev,
 		OrigVideoMode:     3,
 		OrigVideoCols:     80,
 		OrigVideoLines:    25,
@@ -167,9 +154,9 @@ func bzImage(b []byte) (uintptr, []KexecSegment, error) {
 		OrigVideoPoints:   16,
 		LoaderType:        0xff,
 		CLPtr:             CommandLinePointer,
-		KernelStart:       0x100000,
+		KernelStart:       entry,
 		E820MapNr:         1,
-		E820Map: [32]E820Entry{
+		E820Map: [E820Max]E820Entry{
 			E820Entry{
 				Addr:    0x0,
 				Size:    0x1 * 1048576,
@@ -270,6 +257,7 @@ func main() {
 	}
 
 	log.Printf("Loading %v\n", kernel)
+
 	for i := range loaders {
 		if entry, segs, err = loaders[i](b); err == nil {
 			break
