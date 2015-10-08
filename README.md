@@ -12,10 +12,7 @@ When you run a command that is not built, you fall through to the command that d
 'go build' of the command, and then execs the command once it is built. From that point on,
 when you run the command, you get the one in tmpfs. This is fast.
 
-To set up the chroot, put your go tree in /go via cp or mount --bind, and run
-getgo
-
-To try the chroot, once you've run getgo, just run 
+To try the chroot, just run 
 ./README.
 
 In the kernel and coreboot case, you need to configure ethernet. We have a primitive

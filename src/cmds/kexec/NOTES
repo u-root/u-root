@@ -1,0 +1,20 @@
+kexec_tools/kexec/kexec.c
+process options
+
+
+kexec_tools/kexec/kexec-elf-exec.c
+Read in PT_LOAD segments from elf and create segments.
+
+
+OK, try this: get kexec, build purgatory.ro, copy it here.
+ld -Tdata=0x48000 -Ttext=0x40000 -o purgatory purgatory.ro
+
+
+This gets us a blob linked at 40000. Then create the trampoline
+xxd -i purgatory
+etc.etc.
+
+
+ld -e entry64 -Tdata=0x48000 -Ttext=0x40000 -o purgatory purgatory.ro
+
+This gets us to console_init in the kernel, at which point it explodes again. The lgdt and %ds setup is essential, patrickg was right.

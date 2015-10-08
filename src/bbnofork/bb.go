@@ -36,16 +36,35 @@ import (
 const (
 	cmdFunc = `package main
 import "{{.CmdName}}"
-func _forkbuiltin_{{.CmdName}}(c *Command) (err error) {
+func _builtin_{{.CmdName}}(c *Command) (err error) {
+save := *flag.CommandLine
+defer func() {
+*flag.CommandLine = save
+        if r := recover(); r != nil {
+            err = errors.New(fmt.Sprintf("%v", r))
+        }
+return
+    }()
+flag.CommandLine.Init(c.cmd, flag.PanicOnError)
 os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
+{{.CmdName}}.Stdin = c.Stdin
+{{.CmdName}}.Stdout = c.Stdout
+{{.CmdName}}.Stderr = c.Stderr
 {{.CmdName}}.Main()
 return
 }
 
 func init() {
-	addForkBuiltIn("{{.CmdName}}", _forkbuiltin_{{.CmdName}})
+	addBuiltIn("{{.CmdName}}", _builtin_{{.CmdName}})
 }
 `
+	// TODO: just rewrite the AST and add this declaration.
+	cmdVars = `
+import "io"
+var Stdin io.Reader
+var Stdout, Stderr io.Writer
+`
+
 	fixArgs = `
 package main
 
@@ -59,29 +78,12 @@ func fixArgs(cmd string, args[]string) (s []string) {
 	return
 }
 `
-	initGo = `
+	initFunc = `
 package main
-import (
-	"log"
-	"os"
-	"path"
-	"uroot"
-)
+import "uroot"
 
 func init() {
-	// This one stat adds a bit of cost to each invocation (not much really)
-	// but it allows us to merge init and sh. The 600K we save is worth it.
-	if _, err := os.Stat("/proc/self"); err == nil {
-		return
-	}
 	uroot.Rootfs()
-
-	for n := range forkBuiltins {
-		t := path.Join("/bin", n)
-		if err := os.Symlink("/init", t); err != nil {
-			log.Printf("Symlink /init to %v: %v", t, err)
-		}
-	}
 	return
 }
 `
@@ -192,6 +194,35 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 			case *ast.SelectorExpr:
 				// somebody tell me how to do this.
 				sel := fmt.Sprintf("%v", z.X)
+				if sel == "os" && z.Sel.Name == "Exit" {
+					x.Fun = &ast.Ident{Name: "panic"}
+				}
+				if sel == "os" && z.Sel.Name == "Stdin" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = ""
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Stdin"
+				}
+				if sel == "os" && z.Sel.Name == "Stdout" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = ""
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Stdout"
+				}
+				if sel == "os" && z.Sel.Name == "Stderr" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = ""
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Stderr"
+				}
+				if sel == "log" && z.Sel.Name == "Fatal" {
+					x.Fun = &ast.Ident{Name: "panic"}
+				}
+				if sel == "log" && z.Sel.Name == "Fatalf" {
+					nx := *x
+					nx.Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name = "fmt"
+					nx.Fun.(*ast.SelectorExpr).Sel.Name = "Sprintf"
+					x.Fun = &ast.Ident{Name: "panic"}
+					x.Args = []ast.Expr{&nx}
+					return false
+				}
 				if sel == "flag" && fixFlag[z.Sel.Name] {
 					switch zz := x.Args[0].(type) {
 					case *ast.BasicLit:
@@ -244,7 +275,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", out, err)
 		}
-		if err := ioutil.WriteFile(path.Join(config.Bbsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
+		if err := ioutil.WriteFile(path.Join("bbsh", "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
@@ -255,11 +286,17 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 func oneCmd() {
 	// Create the directory for the package.
 	// For now, ./src/<package name>
-	packageDir := path.Join(config.Bbsh, "src", config.CmdName)
+	packageDir := path.Join("bbsh", "src", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
-
+	// Write any files that have a simple structure
+	// I realize this is hideous. There's a bit of rework I want to do, namely, add the cmdVars
+	// to the list of things in the fset. But for now this works. Or just add these needed declarations
+	// to the AST, but which one if there are multiple files?
+	if err := ioutil.WriteFile(path.Join(packageDir, "var.go"), []byte("package " + config.CmdName + cmdVars), os.FileMode(0644)); err != nil {
+		log.Fatalf("Writing var.go: %v", err)
+	}
 	fset := token.NewFileSet()
 	config.FullPath = path.Join(config.Uroot, cmds, config.CmdName)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
@@ -277,21 +314,20 @@ func main() {
 	var err error
 	doConfig()
 
-	if err := os.MkdirAll(config.Bbsh, 0755); err != nil {
-		log.Fatalf("%v", err)
-	}
-
 	for _, v := range config.Args {
 		// Yes, gross. Fix me.
 		config.CmdName = v
 		oneCmd()
 	}
 
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
-		log.Fatal("%v\n", err)
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initFunc), 0644); err != nil {
+		log.Fatalf("%v\n", err)
 	}
 	// copy all shell files
-
 	err = filepath.Walk(path.Join(config.Uroot, cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -310,11 +346,7 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		log.Fatalf("%v", err)
-	}
-
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatal("%v", err)
 	}
 
 	buildinit()

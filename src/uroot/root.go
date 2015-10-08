@@ -51,6 +51,7 @@ var (
 
 	dirs = []dir{
 		{name: "/proc", mode: os.FileMode(0555)},
+		{name: "/sys", mode: os.FileMode(0555)},
 		{name: "/buildbin", mode: os.FileMode(0777)},
 		{name: "/bin", mode: os.FileMode(0777)},
 		{name: "/tmp", mode: os.FileMode(0777)},
@@ -70,6 +71,7 @@ var (
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
+		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
 	}
 
 	files = map[string] file {
