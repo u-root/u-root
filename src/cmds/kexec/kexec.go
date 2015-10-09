@@ -83,10 +83,19 @@ func (k *KexecSegment) String() string {
 
 type loader func(b []byte) (uintptr, []KexecSegment, error)
 
+// tl;dr most of this code is planned to go away. But I'm still trying to get something to work. And failing.
+// In the long term, I want a very simple purgatory that just jumps from kernel of same type to same type,
+// with assembly written in Go assembly code (because the problem is simple when you make it simple).
+// For now there are three purgatories, but two will go away.
+// new is in purg.go, written from scratch, broken, starts at 0x40000
+// old is in data.go, and it's a full up purgatory from kexec. I thought it worked but I was wrong:
+// kexec seems to be dying early in the game.
+// none is just a way to test if the kernel is blowing up because I give it a purgatory.
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
 	test    = flag.Bool("test", false, "Just load a '1: jmp 1b' to 0x100000 as the kernel")
 	halt    = flag.Bool("halt", false, "Put a infinite loop at 40000 and jump to it")
+	purgType = flag.String("purg", "new", "purgatory types: none, old, new")
 	loaders = []loader{elfexec, bzImage, rawexec}
 	jmp1b   = []byte{0xeb, 0xfe}
 )
@@ -232,23 +241,26 @@ func main() {
 	if len(flag.Args()) == 1 {
 		kernel = flag.Args()[0]
 	}
-	if *halt {
-		trampoline[0x40000] = 0xeb
-		trampoline[0x40001] = 0xfe
+	var pentry uintptr = 0x40180
+	psegs := []KexecSegment{makeseg(purg[:], 0x40000),}
+	if *purgType == "none" {
+		psegs = nil
 	}
-	// parse the purgatory.
-	pentry, psegs, err := elfexec(trampoline)
-	if err != nil {
-		log.Fatal("Parsing purgatory: %v", err)
+	if *purgType == "old" {
+		if *halt {
+			trampoline[0x406b0] = 0xeb
+			trampoline[0x406b1] = 0xfe
+		}
+		// parse the purgatory.
+		pentry, psegs, err = elfexec(trampoline)
+		if err != nil {
+			log.Fatal("Parsing purgatory: %v", err)
+		}
+		for _, v := range psegs {
+			log.Printf("purg %v\n", v.String())
+		}
+		log.Printf("Parsed purgatory OK: %x pentry\n", pentry)
 	}
-	for _, v := range psegs {
-		log.Printf("purg %v\n", v.String())
-	}
-	log.Printf("Parsed purgatory OK: %x pentry\n", pentry)
-	if *halt {
-		pentry = 0x40000
-	}
-
 	if !*test {
 		b, err = ioutil.ReadFile(kernel)
 		if err != nil {
@@ -263,12 +275,13 @@ func main() {
 			break
 		}
 	}
+	// Now adjust for reality.
+	segs = append(psegs, segs...)
+
 	for _, s := range segs {
 		log.Printf("%v", s.String())
 	}
 
-	// Now adjust for reality.
-	segs = append(psegs, segs...)
 	entry = pentry
 	log.Printf("%v %v %v %v %v", syscall.SYS_KEXEC_LOAD, entry, uintptr(len(segs)), uintptr(unsafe.Pointer(&segs[0])), uintptr(0))
 	if *dryrun {
