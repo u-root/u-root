@@ -241,7 +241,7 @@ func main() {
 	if len(flag.Args()) == 1 {
 		kernel = flag.Args()[0]
 	}
-	var pentry uintptr = 0x40180
+	var pentry uintptr = 0x402a0
 	psegs := []KexecSegment{makeseg(purg[:], 0x40000),}
 	if *purgType == "none" {
 		psegs = nil
