@@ -64,6 +64,8 @@ const (
 
 	/* The artificial cap on the number of segments passed to kexec_load. */
 	KEXEC_SEGMENT_MAX = 16
+
+	purgstart = 0x1000
 )
 
 /*
@@ -87,14 +89,13 @@ type loader func(b []byte) (uintptr, []KexecSegment, error)
 // In the long term, I want a very simple purgatory that just jumps from kernel of same type to same type,
 // with assembly written in Go assembly code (because the problem is simple when you make it simple).
 // For now there are three purgatories, but two will go away.
-// new is in purg.go, written from scratch, broken, starts at 0x40000
+// new is in purg.go, written from scratch, broken, starts at purgstart
 // old is in data.go, and it's a full up purgatory from kexec. I thought it worked but I was wrong:
 // kexec seems to be dying early in the game.
 // none is just a way to test if the kernel is blowing up because I give it a purgatory.
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
 	test    = flag.Bool("test", false, "Just load a '1: jmp 1b' to 0x100000 as the kernel")
-	halt    = flag.Bool("halt", false, "Put a infinite loop at 40000 and jump to it")
 	purgType = flag.String("purg", "new", "purgatory types: none, old, new")
 	loaders = []loader{elfexec, bzImage, rawexec}
 	jmp1b   = []byte{0xeb, 0xfe}
@@ -222,7 +223,7 @@ func elfexec(b []byte) (uintptr, []KexecSegment, error) {
 	}
 	log.Printf("Using ELF image loader")
 	return uintptr(f.Entry), segs, nil
-	//return uintptr(0x40000), segs, nil
+	//return uintptr(purgstart), segs, nil
 }
 
 func main() {
@@ -241,16 +242,12 @@ func main() {
 	if len(flag.Args()) == 1 {
 		kernel = flag.Args()[0]
 	}
-	var pentry uintptr = 0x402a0
-	psegs := []KexecSegment{makeseg(purg[:], 0x40000),}
+	var pentry uintptr = purgstart
+	psegs := []KexecSegment{makeseg(purg[:], purgstart),}
 	if *purgType == "none" {
 		psegs = nil
 	}
 	if *purgType == "old" {
-		if *halt {
-			trampoline[0x406b0] = 0xeb
-			trampoline[0x406b1] = 0xfe
-		}
 		// parse the purgatory.
 		pentry, psegs, err = elfexec(trampoline)
 		if err != nil {
