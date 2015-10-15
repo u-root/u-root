@@ -1,12 +1,9 @@
 // Copyright 2012 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-/*
- move (rename) files
- created by Beletti (rhiguita@gmail.com)
-*/
-
+//
+//  move (rename) files
+// created by Beletti (rhiguita@gmail.com)
 package main
 
 import (
@@ -23,8 +20,27 @@ func usage() {
 	os.Exit(1)
 }
 
+
+func mv(files []string, todir bool) (error) {
+	if len(files) == 2 && todir == false {
+		if err := os.Rename(files[0], files[1]); err != nil {
+			return err
+		}
+	} else {
+		lf := files[len(files)-1]
+		// "copying" N files to 1 directory
+		for i := range files[:len(files)-1] {
+			ndir := path.Join(lf, path.Base(files[i]))
+			if err := os.Rename(files[i], ndir); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func main() {
-	todir := false
+	var todir bool
 	flag.Parse()
 
 	if flag.NArg() < 2 {
@@ -33,8 +49,7 @@ func main() {
 
 	files := flag.Args()
 	lf := files[len(files)-1]
-	lfdir, err := os.Lstat(lf)
-	if err == nil {
+	if lfdir, err := os.Lstat(lf); err == nil {
 		todir = lfdir.IsDir()
 	}
 	if flag.NArg() > 2 && todir == false {
@@ -42,20 +57,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(files) == 2 && todir == false {
-		// rename file
-		err := os.Rename(files[0], files[1])
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-	} else {
-		// "copying" N files to 1 directory
-		for i := 0; i < flag.NArg()-1; i++ {
-			ndir := path.Join(lf, files[i])
-			err := os.Rename(files[i], ndir)
-			if err != nil {
-				log.Fatalf("%v", err)
-			}
-		}
+	if err := mv(files,todir); err != nil {
+		log.Fatalf("%v", err)
 	}
 }
