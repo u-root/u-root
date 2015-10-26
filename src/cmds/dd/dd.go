@@ -18,13 +18,15 @@ import (
 	"strings"
 )
 
-type passer func(r io.Reader, w io.Writer, ibs, obs int)
+type passer func(r io.Reader, w io.Writer, ibs, obs int, conv string)
 
 var (
 	ibs     = flag.Int("ibs", 1, "Default input block size")
 	obs     = flag.Int("obs", 1, "Default output block size")
+	bs      = flag.Int("bs", 0, "Default input and output block size")
 	skip    = flag.Int64("skip", 0, "skip n bytes before reading")
 	seek    = flag.Int64("seek", 0, "seek output when writing")
+	conv    = flag.String("conv", "", "Convert the file on a specific way, like notrunc")
 	count   = flag.Int64("count", math.MaxInt64, "Max output of data to copy")
 	inName  = flag.String("if", "", "Input file")
 	outName = flag.String("of", "", "Output file")
@@ -32,7 +34,9 @@ var (
 
 // The 'close' thing is a real hack, but needed for proper
 // operation in single-process mode.
-func pass(r io.Reader, w io.WriteCloser, ibs, obs int, close bool) {
+func pass(r io.Reader, w io.WriteCloser, ibs, obs int, conv string, close bool) {
+	var err error
+	var nn int
 	b := make([]byte, ibs)
 	defer func() {
 		if close {
@@ -40,23 +44,30 @@ func pass(r io.Reader, w io.WriteCloser, ibs, obs int, close bool) {
 		}
 	}()
 	for {
-		bs := 0
-		for bs < ibs {
-			n, err := r.Read(b[bs:])
+		bsc := 0
+		for bsc < ibs {
+			n, err := r.Read(b[bsc:])
 			if err != nil && err != io.EOF {
 				return
 			}
 			if n == 0 {
 				break
 			}
-			bs += n
+			bsc += n
 		}
-		if bs == 0 {
+		if bsc == 0 {
 			return
 		}
-		tot := 0
-		for tot < bs {
-			nn, err := w.Write(b[tot : tot+obs])
+		for tot := 0; tot < bsc; tot += nn {
+			switch conv {
+			case "ucase":
+				nn, err = w.Write([]byte(strings.ToUpper(string(b[tot : tot+obs]))))
+			case "lcase":
+				nn, err = w.Write([]byte(strings.ToLower(string(b[tot : tot+obs]))))
+			default:
+				nn, err = w.Write(b[tot : tot+obs])
+			}
+
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "pass: %v\n", err)
 				return
@@ -64,7 +75,6 @@ func pass(r io.Reader, w io.WriteCloser, ibs, obs int, close bool) {
 			if nn == 0 {
 				return
 			}
-			tot += nn
 		}
 	}
 }
@@ -74,14 +84,8 @@ func fatal(err error) {
 	os.Exit(1)
 }
 
-// rather than, in essence, recreating all the apparatus of flag.xxxx with the if= bits,
-// including dup checking, conversion, etc. we just convert the arguments and then
-// run flag.Parse. Gross, but hey, it works.
-func main() {
-	inFile := os.Stdin
-	outFile := os.Stdout
-	var err error
-	// EVERYTHING in dd follows x=y. So blindly split and convert and sleep well.
+func SplitArgs() []string {
+	// EVERYTHING in dd follows x=y. So blindly split and convert sleep well
 	arg := []string{}
 	for _, v := range os.Args {
 		l := strings.SplitN(v, "=", 2)
@@ -93,8 +97,14 @@ func main() {
 			arg = append(arg, l...)
 		}
 	}
-	os.Args = arg
-	flag.Parse()
+	return arg
+}
+
+func OpenFiles() (os.File, os.File) {
+	inFile := os.Stdin
+	outFile := os.Stdout
+	var err error
+
 	if *inName != "" {
 		inFile, err = os.Open(*inName)
 		if err != nil {
@@ -108,7 +118,6 @@ func main() {
 		}
 	}
 
-	r, w := io.Pipe()
 	// position things.
 	if *skip > 0 {
 		if _, err = inFile.Seek(*skip, 0); err != nil {
@@ -120,7 +129,28 @@ func main() {
 			fatal(err)
 		}
 	}
-	go pass(inFile, w, *ibs, *ibs, true)
+	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
+	if *bs > 0 {
+		*ibs = *bs
+		*obs = *bs
+	}
+
+	return *inFile, *outFile
+}
+
+func InOut(inFile, outFile *os.File) {
+	r, w := io.Pipe()
+	go pass(inFile, w, *ibs, *ibs, *conv, true)
 	// push other filters here as needed.
-	pass(r, outFile, *obs, *obs, false)
+	pass(r, outFile, *obs, *obs, *conv, false)
+}
+
+// rather than, in essence, recreating all the apparatus of flag.xxxx with the if= bits,
+// including dup checking, conversion, etc. we just convert the arguments and then
+// run flag.Parse. Gross, but hey, it works.
+func main() {
+	os.Args = SplitArgs()
+	flag.Parse()
+	inFile, outFile := OpenFiles()
+	InOut(&inFile, &outFile)
 }
