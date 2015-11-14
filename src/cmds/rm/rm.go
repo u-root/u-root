@@ -15,11 +15,25 @@ import (
 	"os"
 )
 
+func printErr(file string, err error) {
+	if err != nil {
+		fmt.Printf("%v: %v\n", file, err)
+	}
+}
+
 func main() {
-	for _,v := range(os.Args[1:]) {
-		err := os.Remove(v)
-		if err != nil {
-			fmt.Printf("%v: %v\n", v, err)
+	start := 1
+	if len(os.Args) > 1 {
+		if os.Args[1] == "-r" || os.Args[1] == "-R" {
+			start = 2
+		}
+	}
+
+	for _,v := range(os.Args[start:]) {
+		if start == 2 && os.Args[1] == "-r" || os.Args[1] == "-R" {
+			printErr(v, os.RemoveAll(v))
+		} else {
+			printErr(v, os.Remove(v))
 		}
 	}
 }
