@@ -13,27 +13,28 @@ package main
 import (
 	"fmt"
 	"os"
+	"flag"
 )
 
-func printErr(file string, err error) {
-	if err != nil {
-		fmt.Printf("%v: %v\n", file, err)
-	}
-}
+var recursive = flag.Bool("R", false, "Remove file hierarchies")
+var recursive_too = flag.Bool("r", false, "Equivalent to -R.")
 
 func main() {
-	start := 1
-	if len(os.Args) > 1 {
-		if os.Args[1] == "-r" || os.Args[1] == "-R" {
-			start = 2
-		}
+	flag.Parse()
+
+	var f = os.Remove
+	if *recursive || *recursive_too {
+		f = os.RemoveAll
 	}
 
-	for _,v := range(os.Args[start:]) {
-		if start == 2 && os.Args[1] == "-r" || os.Args[1] == "-R" {
-			printErr(v, os.RemoveAll(v))
-		} else {
-			printErr(v, os.Remove(v))
+	for _,arg := range(os.Args[1:]) {
+		if arg == "-r" || arg == "-R" {
+			continue
+		}
+
+		err := f(arg)
+		if err != nil {
+			fmt.Printf("%v: %v\n", arg, err)
 		}
 	}
 }
