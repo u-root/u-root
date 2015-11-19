@@ -41,7 +41,7 @@ var tests = []makeit{
 
 // initial files and folders (for testing)
 func setup() (string, error) {
-    fmt.Println("Creating simulating data...\n")
+    fmt.Println(":: Creating simulating data...")
     d, err := ioutil.TempDir(os.TempDir(), "hi.dir")
     if err != nil {
         return "", err
@@ -57,7 +57,7 @@ func setup() (string, error) {
             return "", err
         }
     }
-    
+
     return d, nil
 }
 
@@ -69,9 +69,9 @@ func Test_rm_1(t *testing.T) {
     }
     defer os.RemoveAll(d)
 
-    fmt.Println("Deleting files and empty folders (no args) ...")
-    args1 := []string{path.Join(d, "hi1.txt"), path.Join(d, "hi2.txt"), path.Join(d, "go.txt")}
-    if err := rm(args1, false, true); err != nil { 
+    fmt.Println("== Deleting files and empty folders (no args) ...")
+    files := []string{path.Join(d, "hi1.txt"), path.Join(d, "hi2.txt"), path.Join(d, "go.txt")}
+    if err := rm(files, false, true); err != nil {
         t.Error(err)
     }
 }
@@ -83,9 +83,9 @@ func Test_rm_2(t *testing.T) {
     }
     defer os.RemoveAll(d)
 
-    fmt.Println("Deleting folders recursively (using -r flag) ...")
-    files2 := []string{"-r", d}
-    if err := rm(files2, true, true); err != nil {
+    fmt.Println("== Deleting folders recursively (using -r flag) ...")
+    files := []string{d}
+    if err := rm(files, true, true); err != nil {
         t.Error(err)
     }
 }

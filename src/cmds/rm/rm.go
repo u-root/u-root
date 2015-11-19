@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	recursive = flag.Bool("R", false, "Remove file hierarchies.")
-	recursive_too = flag.Bool("r", false, "Equivalent to -R.")
+	recursive_flag = flag.Bool("R", false, "Remove file hierarchies.")
+	recursive_alias = flag.Bool("r", false, "Equivalent to -R.")
 	verbose = flag.Bool("v", false, "Verbose mode.")
 	cmd = struct { name, flags string } {
 		"rm",
@@ -21,26 +21,22 @@ var (
 )
 
 // rm function 
-func rm(args []string, do_recursive bool, verbose bool) error {
+func rm(files []string, do_recursive bool, verbose bool) error {
 	f := os.Remove
 	if do_recursive {
 		f = os.RemoveAll
 	}
 
 	// looping for removing files and folders
-	for _,arg := range(args) {
-		if arg == "-r" || arg == "-R" {
-			continue
-		}
-
-		err := f(arg)
+	for _, file := range(files) {
+		err := f(file)
 		if err != nil {
-			fmt.Printf("%v: %v\n", arg, err)
+			fmt.Printf("%v: %v\n", file, err)
 			return err
 		}
 
 		if verbose {
-			fmt.Printf("Deleting: %v\n", arg)
+			fmt.Printf("Deleting: %v\n", file)
 		}
 	}
 	return nil
@@ -54,6 +50,7 @@ func usage() {
 
 func main() {
 	flag.Usage = usage
+	recursive := *recursive_flag || *recursive_alias
 	flag.Parse()
 
 
@@ -61,5 +58,5 @@ func main() {
 		usage()
 	}
 
-	rm(os.Args[:1], *recursive || *recursive_too, *verbose)
+	rm(flag.Args(), recursive , *verbose)
 }
