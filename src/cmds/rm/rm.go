@@ -10,20 +10,19 @@ import (
 	"flag"
 )
 
-var recursive = flag.Bool("R", false, "Remove file hierarchies.")
-var recursive_too = flag.Bool("r", false, "Equivalent to -R.")
-var verbose = flag.Bool("v", false, "Verbose mode.")
-
-func usage (){
-	fmt.Fprintf(os.Stderr, "usage: %s [-Rrv] file...\n", os.Args[0])
-	os.Exit(1)
-}
+var (
+	recursive = flag.Bool("R", false, "Remove file hierarchies.")
+	recursive_too = flag.Bool("r", false, "Equivalent to -R.")
+	verbose = flag.Bool("v", false, "Verbose mode.")
+	cmd = struct { name, flags string } {
+		"rm",
+		"[-Rrv] file...",
+	}
+)
 
 // rm function 
 func rm(args []string, do_recursive bool, verbose bool) error {
-	
-	// recursive or no depend do_recursive value
-	var f = os.Remove
+	f := os.Remove
 	if do_recursive {
 		f = os.RemoveAll
 	}
@@ -47,8 +46,16 @@ func rm(args []string, do_recursive bool, verbose bool) error {
 	return nil
 }
 
+func usage() {
+	fmt.Fprintln(os.Stderr, "Usage:", cmd.name, cmd.flags)
+	flag.PrintDefaults()
+	os.Exit(1)
+}
+
 func main() {
+	flag.Usage = usage
 	flag.Parse()
+
 
 	if flag.NArg() < 1 {
 		usage()
