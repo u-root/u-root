@@ -16,11 +16,9 @@ import (
 )
 
 var u_flag = flag.Bool("u", false, "Write bytes from the input file to the standard output without delay as each is read.")
-var help_flag = flag.Bool("h", false,	"Display cat's help.")
 
-func help() {
+func usage() {
 	fmt.Println("cat usage: 'cat [-u] [file ...]'")
-	os.Exit(1)
 }
 
 func cat() {
@@ -44,15 +42,10 @@ func main() {
 	flag.Parse()
 	if len(os.Args) == 1 {
 		io.Copy(os.Stdout, os.Stdin)
-
-	} else {
-		if *help_flag == true {
-			help()
-		} else if *u_flag == true {
+	} else if *u_flag == true {
 			// treat -u flag!
 			cat()
-		} else {
+	} else {
 			cat()
-		}
 	}
 }
