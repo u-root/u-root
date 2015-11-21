@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -15,13 +16,14 @@ var (
 	recursive_flag  = flag.Bool("R", false, "Remove file hierarchies.")
 	recursive_alias = flag.Bool("r", false, "Equivalent to -R.")
 	verbose         = flag.Bool("v", false, "Verbose mode.")
+	interactive     = flag.Bool("i", false, "Interactive mode.")
 	cmd             = struct{ name, flags string }{
 		"rm",
 		"[-Rrv] file...",
 	}
 )
 
-func rm(files []string, do_recursive bool, verbose bool) error {
+func rm(files []string, do_recursive bool, verbose bool, interactive bool) error {
 	f := os.Remove
 	if do_recursive {
 		f = os.RemoveAll
@@ -30,16 +32,25 @@ func rm(files []string, do_recursive bool, verbose bool) error {
 
 	// loop for remove files and folders
 	for _, file := range files {
-		err := f(file)
-		if err != nil {
-			fmt.Printf("%v: %v\n", file, err)
-			return err
+		if interactive {
+			fmt.Printf("%v: remove '%v'?: ", cmd.name, file)
+			input := bufio.NewScanner(os.Stdin)
+            input.Scan()
+			if input.Text() != "y" {
+				continue
+			}
 		}
 
 		if verbose {
 			deleted := path.Join(working_path, file)
 			fmt.Printf("Deleting: %v\n", deleted)
 		}
+
+        err := f(file)
+        if err != nil {
+            fmt.Printf("%v: %v\n", file, err)
+            return err
+        }
 	}
 	return nil
 }
@@ -59,5 +70,5 @@ func main() {
 		usage()
 	}
 
-	rm(flag.Args(), recursive, *verbose)
+	rm(flag.Args(), recursive, *verbose, *interactive)
 }
