@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"flag"
+	"path"
 )
 
 var (
@@ -26,6 +27,7 @@ func rm(files []string, do_recursive bool, verbose bool) error {
 	if do_recursive {
 		f = os.RemoveAll
 	}
+	working_path, _ := os.Getwd()
 
 	// looping for removing files and folders
 	for _, file := range(files) {
@@ -36,7 +38,8 @@ func rm(files []string, do_recursive bool, verbose bool) error {
 		}
 
 		if verbose {
-			fmt.Printf("Deleting: %v\n", file)
+			deleted := path.Join(working_path, file)
+			fmt.Printf("Deleting: %v\n", deleted)
 		}
 	}
 	return nil
