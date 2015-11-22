@@ -1,58 +1,73 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2016 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Tee transcribes the standard input to the standard output and makes copies in the files.
-
-The options are:
-      –a    Append the output to the files rather than rewriting them.
-*/
-
+//Tee transcribes the standard input to the standard output and makes copies in the files.
 package main
 
 import (
+	"bufio"
 	"flag"
-	"fmt"
 	"io"
+	"log"
 	"os"
+	"os/signal"
 )
 
-var append = flag.Bool("a", false, "append the output to the files rather than rewriting them")
+var (
+	cat    = flag.Bool("a", false, "append the output to the files rather than rewriting them")
+	ignore = flag.Bool("i", false, "ignore the SIGINT signal")
+)
 
-func main() {
-	var buf [8192]byte
+//Copy any input from buffer to Stdout and files
+func copyinput(files []io.Writer, buf []byte) error {
+
+	for _, v := range append(files, os.Stdout) {
+		if _, err := v.Write(buf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//Parses all the flags and sets variables accordingly
+func handleflags() int {
 
 	flag.Parse()
 
 	oflags := os.O_WRONLY | os.O_CREATE
-	if *append {
+
+	if *cat {
 		oflags |= os.O_APPEND
 	}
 
-	files := make([]*os.File, flag.NArg())
+	if *ignore {
+		signal.Ignore(os.Interrupt)
+	}
+
+	return oflags
+}
+
+func main() {
+
+	oflags := handleflags()
+
+	files := make([]io.Writer, flag.NArg())
+
 	for i, v := range flag.Args() {
 		f, err := os.OpenFile(v, oflags, 0666)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error opening %s: %v", v, err)
-			os.Exit(1)
+			log.Fatalf("error opening %s: %v", v, err)
 		}
 		files[i] = f
 	}
 
-	for {
-		n, err := os.Stdin.Read(buf[:])
-		if err != nil {
-			if err != io.EOF {
-				fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
-				os.Exit(1)
-			}
-			break
-		}
+	buf := bufio.NewReader(os.Stdin)
+	in := bufio.NewScanner(buf)
+	in.Split(bufio.ScanBytes)
 
-		os.Stdout.Write(buf[:n])
-		for _, v := range files {
-			v.Write(buf[:n])
-		}
+	for in.Scan() {
+		copyinput(files, in.Bytes())
 	}
+
 }
