@@ -1,5 +1,7 @@
 #!/bin/bash
 curl -Lo .git/hooks/commit-msg http://review.gerrithub.io/tools/hooks/commit-msg
 chmod u+x .git/hooks/commit-msg
+echo '''SOB=$(git var GIT_AUTHOR_IDENT | sed -n "s/^\(.*>\).*$/Signed-off-by: \1/p") 
+grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"''' >> .git/hooks/commit-msg
 git config remote.origin.push HEAD:refs/for/master
 git config remote.origin.receivepack "git receive-pack --reviewer rminnich --reviewer rhiguita"
