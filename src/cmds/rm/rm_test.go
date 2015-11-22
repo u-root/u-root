@@ -62,8 +62,7 @@ func setup() (string, error) {
 
 // withouth any flag
 func Test_rm_1(t *testing.T) {
-	d, err := setup()
-	if err != nil {
+	if d, err := setup(); err != nil {
 		t.Fatal("Error on setup of the test: creating files and folders.")
 	}
 	defer os.RemoveAll(d)
@@ -77,8 +76,7 @@ func Test_rm_1(t *testing.T) {
 
 // using r flag
 func Test_rm_2(t *testing.T) {
-	d, err := setup()
-	if err != nil {
+	if d, err := setup(); err != nil {
 		t.Fatal("Error on setup of the test: creating files and folders.")
 	}
 	defer os.RemoveAll(d)
