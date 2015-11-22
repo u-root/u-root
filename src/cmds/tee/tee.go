@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Tee transcribes the standard input to the standard output and makes copies in the files.
-
-The options are:
-      –a    Append the output to the files rather than rewriting them.
-*/
+//Tee transcribes the standard input to the standard output and makes copies in the files.
 
 package main
 
@@ -15,27 +10,56 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"os/signal"
 )
 
-var append = flag.Bool("a", false, "append the output to the files rather than rewriting them")
+var (
+	append = flag.Bool("a", false, "append the output to the files rather than rewriting them")
+	ignore = flag.Bool("i", false, "ignore the SIGINT signal")
+)
 
-func main() {
-	var buf [8192]byte
+//Copy any input up to n bytes from buffer to Stdout and files
+func copyinput(files []*os.File, buf [8192]byte, n int) {
+
+	os.Stdout.Write(buf[:n])
+	for _, v := range files {
+		v.Write(buf[:n])
+	}
+
+}
+
+//Parses all the flags and sets variables accordingly
+func handleflags() int {
 
 	flag.Parse()
 
 	oflags := os.O_WRONLY | os.O_CREATE
+
 	if *append {
 		oflags |= os.O_APPEND
 	}
 
+	if *ignore {
+		signal.Ignore(os.Interrupt)
+	}
+
+	return oflags
+}
+
+func main() {
+
+	var buf [8192]byte
+
+	oflags := handleflags()
+
 	files := make([]*os.File, flag.NArg())
+
 	for i, v := range flag.Args() {
 		f, err := os.OpenFile(v, oflags, 0666)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error opening %s: %v", v, err)
-			os.Exit(1)
+                	log.Fatalf("error opening %s: %v", v, err)
 		}
 		files[i] = f
 	}
@@ -44,15 +68,11 @@ func main() {
 		n, err := os.Stdin.Read(buf[:])
 		if err != nil {
 			if err != io.EOF {
-				fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
-				os.Exit(1)
+				log.FatalF("error reading stdin: %v\n", err)
 			}
 			break
 		}
-
-		os.Stdout.Write(buf[:n])
-		for _, v := range files {
-			v.Write(buf[:n])
-		}
+		copyinput(files, buf, n)
 	}
+
 }
