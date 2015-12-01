@@ -22,28 +22,30 @@ var (
 	physical = flag.Bool("P", false, "Don't follow symlinks")
 )
 
-func pwd() {
+func pwd() string {
 
 	if *physical {
 		if path, err := os.Getwd(); err != nil {
 			log.Fatalf("%v", err)
 		} else {
 			path, _ = filepath.EvalSymlinks(path)
-			fmt.Println(path)
+			return path
 		}
 	} else if *logical {
 		if path, err := os.Getwd(); err != nil {
 			log.Fatalf("%v", err)
 		} else {
-			fmt.Println(path)
+			return path
 		}
 	}
+
+	return "" //It wull never come to this
 
 }
 
 func main() {
 
 	flag.Parse()
-	pwd()
+	fmt.Printf("$s\n", pwd())
 
 }
