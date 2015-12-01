@@ -2,24 +2,83 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Rm removes the named files.
-
-The options are:
-*/
-
 package main
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"os"
+	"path"
 )
 
-func main() {
-	for _,v := range(os.Args[1:]) {
-		err := os.Remove(v)
-		if err != nil {
-			fmt.Printf("%v: %v\n", v, err)
+var (
+	flags struct {
+		r bool
+		v bool
+		i bool
+	}
+	cmd = "rm [-Rrvi] file..."
+)
+
+func usage() {
+	fmt.Fprintln(os.Stderr, "Usage:", cmd)
+	flag.PrintDefaults()
+	os.Exit(1)
+}
+
+func init() {
+	flag.BoolVar(&flags.i, "i", false, "Interactive mode.")
+	flag.BoolVar(&flags.v, "v", false, "Verbose mode.")
+	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
+	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
+	flag.Parse()
+	flag.Usage = usage
+}
+
+func rm(files []string) error {
+	f := os.Remove
+	if flags.r {
+		f = os.RemoveAll
+	}
+
+	workingPath, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	input := bufio.NewScanner(os.Stdin)
+	for _, file := range files {
+		if flags.i {
+			fmt.Printf("rm: remove '%v'? ", file)
+			input.Scan()
+			if input.Text()[0] != 'y' {
+				continue
+			}
 		}
+
+		if err := f(file); err != nil {
+			return err
+		}
+
+		if flags.v {
+			toRemove := file
+			if !path.IsAbs(file) {
+				toRemove = path.Join(workingPath, file)
+			}
+			fmt.Printf("removed '%v'\n", toRemove)
+		}
+	}
+	return nil
+}
+
+func main() {
+	if flag.NArg() < 1 {
+		usage()
+	}
+
+	if err := rm(flag.Args()); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 }
