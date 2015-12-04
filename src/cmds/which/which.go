@@ -5,31 +5,53 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"io"
 	"os"
+	"path"
+	"strings"
 )
 
-var a = flag.Bool("a", false, "What?")
+var (
+	flags struct {
+		a bool
+	}
+	cmd = "which [-a] filename ..."
+)
+
+func usage() {
+	fmt.Fprintln(os.Stderr, "Usage:", cmd)
+	flag.PrintDefaults()
+	flag.Usage = usage
+}
+
+func init() {
+	flag.BoolVar(&flags.a, "a", false, "print all matching pathnames of each argument")
+}
+
+func which(p string, cmds []string) {
+	pathArray := strings.Split(p, ":")
+
+	for _, name := range cmds {
+		for i := range pathArray {
+			f := path.Join(pathArray[i], name)
+			if info, err := os.Stat(f); err == nil {
+				if (info.Mode() & 0111) == 0111 {
+					fmt.Println(f)
+				}
+			}
+		}
+	}
+}
 
 func main() {
 	flag.Parse()
-	p, err := os.Getenv("PATH")
-	if err != nil {
-		fmt.Printf("No path! %v\n", err)
+
+	p := os.Getenv("PATH")
+	if len(p) == 0 {
+		fmt.Println("No path variable found!")
 		os.Exit(1)
 	}
 
-	p := strings.Split(p, ":")
-
-		for _, name := range flag.Args() {
-			
-			for i := range(p) {
-				f := path.Join(p[i], name)
-				if s, err := os.Stat(f); err == nil {
-					if 
-				
-				}
-		}
-	}
+	which(p, flag.Args())
 }
