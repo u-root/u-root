@@ -8,7 +8,7 @@ Cmp compares the two files and prints a message if the contents differ.
 cmp [ –lLs ] file1 file2 [ offset1 [ offset2 ] ]
 
 The options are:
-	–l    Print the byte number (decimal) and the differing bytes (hexadecimal) for each difference.
+	–l    Print the byte number (decimal) and the differing bytes (octal) for each difference.
 	–L    Print the line number of the first differing byte.
 	–s    Print nothing for differing files, but set the exit status.
 
@@ -30,7 +30,7 @@ var long = flag.Bool("l", false, "print the byte number (decimal) and the differ
 var line = flag.Bool("L", false, "print the line number of the first differing byte")
 var silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
 
-func emit(f *os.File, c chan byte, offset int64) {
+func emit(f *os.File, c chan byte, offset int64) (error) {
 	if offset > 0 {
 		f.Seek(offset, 0)
 	}
@@ -40,7 +40,7 @@ func emit(f *os.File, c chan byte, offset int64) {
 		b, err := b.ReadByte()
 		if err != nil {
 			close(c)
-			return
+			return err
 		}
 		c <- b
 	}
@@ -109,7 +109,7 @@ func main() {
 					fmt.Fprintf(os.Stderr, "EOF on %s\n", fnames[1])
 					os.Exit(1)
 				}
-				fmt.Fprintf(os.Stderr, "%8d %#.2x %#.2x\n", charno, b1, b2)
+				fmt.Fprintf(os.Stderr, "%8d %#.2o %#.2o\n", charno, b1, b2)
 				goto skip
 			}
 			fmt.Fprintf(os.Stderr, "%s %s differ: char %d\n", fnames[0], fnames[1], charno)
