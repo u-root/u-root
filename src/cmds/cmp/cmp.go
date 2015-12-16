@@ -21,7 +21,8 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
+	"io"
+	"log"
 	"os"
 	"strconv"
 )
@@ -30,12 +31,14 @@ var long = flag.Bool("l", false, "print the byte number (decimal) and the differ
 var line = flag.Bool("L", false, "print the line number of the first differing byte")
 var silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
 
-func emit(f *os.File, c chan byte, offset int64) (error) {
+func emit(rs io.ReadSeeker, c chan byte, offset int64) error {
 	if offset > 0 {
-		f.Seek(offset, 0)
+		if _, err := rs.Seek(offset, 0); err != nil {
+			log.Fatalf("%v", err)
+		}
 	}
 
-	b := bufio.NewReader(f)
+	b := bufio.NewReader(rs)
 	for {
 		b, err := b.ReadByte()
 		if err != nil {
@@ -46,51 +49,65 @@ func emit(f *os.File, c chan byte, offset int64) (error) {
 	}
 }
 
+func openFile(name string) (*os.File, error) {
+	var f *os.File
+	var err error
+
+	if name == "-" {
+		f = os.Stdin
+	} else {
+		f, err = os.Open(name)
+	}
+
+	return f, err
+}
+
 func main() {
 	flag.Parse()
-	var offset1, offset2 int64
+	var offset [2]int64
+	var f *os.File
 	var err error
 
 	fnames := flag.Args()
-	if len(fnames) != 2 && len(fnames) != 4 {
-		fmt.Fprintf(os.Stderr, "expected two filenames (and two optional offsets), got %d", len(fnames))
-		os.Exit(1)
-	}
-	if len(fnames) == 4 {
-		offset1, err = strconv.ParseInt(fnames[2], 0, 64)
+
+	switch len(fnames) {
+	case 2:
+	case 3:
+		offset[0], err = strconv.ParseInt(fnames[2], 0, 64)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "bad offset1: %s: %v\n", fnames[2], err)
 			return
 		}
-		offset2, err = strconv.ParseInt(fnames[3], 0, 64)
+	case 4:
+		offset[0], err = strconv.ParseInt(fnames[2], 0, 64)
+		if err != nil {
+			log.Printf("bad offset1: %s: %v\n", fnames[2], err)
+			return
+		}
+		offset[1], err = strconv.ParseInt(fnames[3], 0, 64)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "bad offset2: %s: %v\n", fnames[3], err)
 			return
 		}
+	default:
+		log.Fatalf("expected two filenames (and one to two optional offsets), got %d", len(fnames))
 	}
 
-	c1 := make(chan byte, 8192)
-	c2 := make(chan byte, 8192)
+	c := make([]chan byte, 2)
 
-	f, err := os.Open(fnames[0])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening %s: %v", fnames[0], err)
-		os.Exit(1)
+	for i := 0; i < 2; i++ {
+		if f, err = openFile(fnames[i]); err != nil {
+			log.Fatalf("Failed to open %s: %v", fnames[i], err)
+		}
+		c[i] = make(chan byte, 8192)
+		go emit(f, c[i], offset[i])
 	}
-	go emit(f, c1, offset1)
-
-	f, err = os.Open(fnames[1])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening %s: %v", fnames[1], err)
-		os.Exit(2)
-	}
-	go emit(f, c2, offset2)
 
 	lineno, charno := int64(1), int64(1)
 	var b1, b2 byte
 	for {
-		b1 = <-c1
-		b2 = <-c2
+		b1 = <-c[0]
+		b2 = <-c[1]
 
 		if b1 != b2 {
 			if *silent {
