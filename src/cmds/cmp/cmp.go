@@ -11,6 +11,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -20,12 +21,12 @@ var long = flag.Bool("l", false, "print the byte number (decimal) and the differ
 var line = flag.Bool("L", false, "print the line number of the first differing byte")
 var silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
 
-func emit(f *os.File, c chan byte, offset int64) error {
+func emit(rs io.ReadSeeker, c chan byte, offset int64) error {
 	if offset > 0 {
-		f.Seek(offset, 0)
+		rs.Seek(offset, 0)
 	}
 
-	b := bufio.NewReader(f)
+	b := bufio.NewReader(rs)
 	for {
 		b, err := b.ReadByte()
 		if err != nil {
@@ -36,26 +37,23 @@ func emit(f *os.File, c chan byte, offset int64) error {
 	}
 }
 
-func openFile(name string) *os.File {
+func openFile(name string) (*os.File, error) {
 	var f *os.File
 	var err error
-	
+
 	if name == "-" {
-		f, err = os.Open(os.Stdin.Name())
+		f = os.Stdin
 	} else {
 		f, err = os.Open(name)
 	}
 
-	if err != nil {
-		log.Fatalf("error opening %s: %v", name, err)
-	}
-
-	return f
+	return f, err
 }
 
 func main() {
 	flag.Parse()
 	var offset1, offset2 int64
+	var f *os.File
 	var err error
 
 	fnames := flag.Args()
@@ -78,10 +76,14 @@ func main() {
 	c1 := make(chan byte, 8192)
 	c2 := make(chan byte, 8192)
 
-	f := openFile(fnames[0])
+	if f, err = openFile(fnames[0]); err != nil {
+		log.Fatalf("Failed to open %s: %v", fnames[0], err)
+	}
 	go emit(f, c1, offset1)
 
-	f = openFile(fnames[1])
+	if f, err = openFile(fnames[1]); err != nil {
+		log.Fatalf("Failed to open %s: %v", fnames[1], err)
+	}
 	go emit(f, c2, offset2)
 
 	lineno, charno := int64(1), int64(1)
