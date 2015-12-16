@@ -36,7 +36,7 @@ func emit(f *os.File, c chan byte, offset int64) error {
 	}
 }
 
-func openFile(name string) *os.File {
+func openFile(name string) (*os.File, error) {
 	var f *os.File
 	var err error
 	
@@ -46,16 +46,13 @@ func openFile(name string) *os.File {
 		f, err = os.Open(name)
 	}
 
-	if err != nil {
-		log.Fatalf("error opening %s: %v", name, err)
-	}
-
-	return f
+	return f, err
 }
 
 func main() {
 	flag.Parse()
 	var offset1, offset2 int64
+	var f *os.File
 	var err error
 
 	fnames := flag.Args()
@@ -78,10 +75,14 @@ func main() {
 	c1 := make(chan byte, 8192)
 	c2 := make(chan byte, 8192)
 
-	f := openFile(fnames[0])
+	if f, err = openFile(fnames[0]); err != nil {
+		log.Fatalf("Failed to open %s: %v", fnames[0], err)
+	}
 	go emit(f, c1, offset1)
 
-	f = openFile(fnames[1])
+	if f, err = openFile(fnames[1]); err != nil {
+		log.Fatalf("Failed to open %s: %v", fnames[1], err)
+	}
 	go emit(f, c2, offset2)
 
 	lineno, charno := int64(1), int64(1)
