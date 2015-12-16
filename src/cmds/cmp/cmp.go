@@ -50,6 +50,7 @@ func main() {
 	flag.Parse()
 	var offset1, offset2 int64
 	var err error
+	var f *os.File
 
 	fnames := flag.Args()
 	if len(fnames) != 2 && len(fnames) != 4 {
@@ -72,14 +73,25 @@ func main() {
 	c1 := make(chan byte, 8192)
 	c2 := make(chan byte, 8192)
 
-	f, err := os.Open(fnames[0])
+	if fnames[0] == "-" {
+		f, err = os.Open(os.Stdin.Name())
+	} else {
+		f, err = os.Open(fnames[0])
+	}
+	
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error opening %s: %v", fnames[0], err)
 		os.Exit(1)
 	}
 	go emit(f, c1, offset1)
 
-	f, err = os.Open(fnames[1])
+
+	if fnames[1] == "-" {
+		f, err = os.Open(os.Stdin.Name())
+	} else {
+		f, err = os.Open(fnames[1])
+	}
+	
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error opening %s: %v", fnames[1], err)
 		os.Exit(2)
