@@ -2,23 +2,27 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
- show the system's hostname
- created by Beletti (rhiguita@gmail.com)
-*/
-
+//show the system's hostname
+//created by Beletti (rhiguita@gmail.com)
 package main
 
 import (
 	"fmt"
-	"log"
+	"io"
 	"os"
 )
 
+func hostname(w io.Writer) error {
+
+	hostname, error := os.Hostname()
+
+	fmt.Fprintf(w, "%v", hostname)
+	return error
+}
+
 func main() {
-	if hostname, error := os.Hostname(); error != nil {
-		log.Fatalf("%v", error)
-	} else {
-		fmt.Println(hostname)
-	}
+
+	hostname(os.Stdout)
+	fmt.Println()
+
 }
