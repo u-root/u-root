@@ -2,33 +2,33 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Echo writes its arguments separated by blanks and terminated by a newline on the standard output.
-
-The options are:
-	–n		suppress newline.
-*/
-
+//Echo writes its arguments separated by blanks and terminated by a newline on the standard output.
 package main
 
 import (
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 )
 
 var nonewline = flag.Bool("n", false, "suppress newline")
 
-func main() {
-	flag.Parse()
+func echo(s string) error {
 
-	_, err := fmt.Printf("%s", strings.Join(flag.Args(), " "))
-	if err != nil {
-		os.Exit(1) // "write error" on Plan 9
-	}
+	_, err := fmt.Printf("%s", s)
 
 	if !*nonewline {
 		fmt.Print("\n")
 	}
+
+	return err
+
+}
+
+func main() {
+
+	flag.Parse()
+
+	echo(strings.Join(flag.Args(), " "))
+
 }
