@@ -11,14 +11,19 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 )
 
+func hostname() (error) {
+
+	hostname, error := os.Hostname()
+
+	fmt.Println(hostname)
+	return error
+}
+
 func main() {
-	if hostname, error := os.Hostname(); error != nil {
-		log.Fatalf("%v", error)
-	} else {
-		fmt.Println(hostname)
-	}
+
+	hostname()
+	
 }
