@@ -16,21 +16,16 @@ import (
 
 var (
 	mkall   = flag.Bool("p", false, "Make all needed directories in the path")
-	mode    = flag.Int("m", 0666, "Directory mode")
+	mode    = flag.Int("m", 0755, "Directory mode")
 	verbose = flag.Bool("v", false, "Print each directory as it is made")
 	f = os.Mkdir
 )
 
-func main() {
-	flag.Parse()
-	if len(flag.Args()) < 1 {
-		fmt.Printf("Usage: mkdir [-m mode] [-v] [-p] <directory> [more directories]\n")
-		os.Exit(1)
-	}
+func mkdir(dirs []string) {
 	if *mkall {
 		f = os.MkdirAll
 	}
-	for _, name := range flag.Args() {
+	for _, name := range dirs {
 		if err := f(name, os.FileMode(*mode)); err != nil {
 			fmt.Printf("%v: %v\n", name, err)
 		} else {
@@ -39,4 +34,14 @@ func main() {
 			}
 		}
 	}
+}
+
+func main() {
+	flag.Parse()
+	if len(flag.Args()) < 1 {
+		fmt.Printf("Usage: mkdir [-m mode] [-v] [-p] <directory> [more directories]\n")
+		os.Exit(1)
+	}
+
+	mkdir(flag.Args())
 }
