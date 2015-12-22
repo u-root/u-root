@@ -15,16 +15,24 @@ import (
 	"os"
 )
 
+func wget(arg string) error {
+	resp, err := http.Get(arg)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, err = io.Copy(os.Stdout, resp.Body)
+
+	return nil
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
 
-	resp, err := http.Get(os.Args[1])
-	if err != nil {
+	if err := wget(os.Args[1]); err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
-	_, err = io.Copy(os.Stdout, resp.Body)
 }
