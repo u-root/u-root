@@ -14,10 +14,13 @@ The options are:
 package main
 
 import (
+	"./group.go"
 	"flag"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
+	"syscall"
 )
 
 var (
@@ -26,7 +29,7 @@ var (
 	recursive = flag.Bool("R", false, "Recurse")
 )
 
-func show(fullpath string, fi os.FileInfo) {
+func show(fullpath string, fi os.FileInfo) error {
 	switch {
 	case *raw == true:
 		fmt.Printf("%v\n", fi)
@@ -34,12 +37,21 @@ func show(fullpath string, fi os.FileInfo) {
 		fmt.Printf("%v\n", fi.Name())
 	// -rw-r--r-- 1 root root 174 Aug 18 17:18 /etc/hosts
 	case *long == true:
-		fmt.Printf("%v\t%v\t%v\t%v", fi.Mode(), fi.Size(), fi.Name(), fi.ModTime())
+		usr, err := user.LookupId(fmt.Sprintf("%v", fi.Sys().(*syscall.Stat_t).Uid))
+		if err != nil {
+			return err
+		}
+		grp, err := group.LookupId(fmt.Sprintf("%v", fi.Sys().(*syscall.Stat_t).Gid))
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%v %v %v %v %v %v", fi.Mode(), usr.Username, grp.Name, fi.Size(), fi.ModTime().Format("Jan _2 15:4"), fi.Name())
 		if link, err := os.Readlink(fullpath); err == nil {
 			fmt.Printf(" -> %v", link)
 		}
 		fmt.Printf("\n")
 	}
+	return nil
 
 }
 
@@ -60,7 +72,9 @@ func main() {
 				fmt.Printf("%v: %v\n", path, err)
 				return err
 			}
-			show(path, fi)
+			if err := show(path, fi); err != nil {
+				return err
+			}
 			if fi.IsDir() && !*recursive && path != v {
 				return filepath.SkipDir
 			}
