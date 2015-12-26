@@ -34,7 +34,7 @@ func show(fullpath string, fi os.FileInfo) {
 		fmt.Printf("%v\n", fi.Name())
 	// -rw-r--r-- 1 root root 174 Aug 18 17:18 /etc/hosts
 	case *long == true:
-		fmt.Printf("%v\t%v\t%v\t%v", fi.Mode(), fi.Size(), fi.Name(), fi.ModTime())
+		fmt.Printf("%v %v %v %v", fi.Mode(), fi.Size(), fi.ModTime().Format("Jan _2 15:4"), fi.Name())
 		if link, err := os.Readlink(fullpath); err == nil {
 			fmt.Printf(" -> %v", link)
 		}
