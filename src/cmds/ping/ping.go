@@ -1,55 +1,108 @@
-// Copyright 2009 The Go Authors.  All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
+
+	"github.com/tatsushid/go-fastping"
 )
 
-var (
-	net6       = flag.Bool("6", false, "use ipv4 (means ip4:icmp) or 6 (ip6:ipv6-icmp)")
-	packetSize = flag.Int("s", 128, "Data size")
-	iter       = flag.Int("c", 8, "# iterations")
-	intv       = flag.Int("i", 1000, "interval in milliseconds")
-	wtf        = flag.Int("w", 100, "wait time in milliseconds")
-)
+type response struct {
+	addr *net.IPAddr
+	rtt  time.Duration
+}
 
 func main() {
-	netname := "ip4:icmp"
+	var useUDP bool
+	flag.BoolVar(&useUDP, "udp", false, "use non-privileged datagram-oriented UDP as ICMP endpoints")
+	flag.BoolVar(&useUDP, "u", false, "use non-privileged datagram-oriented UDP as ICMP endpoints (shorthand)")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] hostname [source]\n\nOptions:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.Parse()
-	interval := time.Duration(*intv)
-	waitFor := time.Duration(*wtf) * time.Millisecond
-	host := flag.Args()[0]
-	// todo: just figure out if it's an ip6 address and go from there.
-	if *net6 {
-		netname = "ip6:ipv6-icmp"
+
+	hostname := flag.Arg(0)
+	if len(hostname) == 0 {
+		flag.Usage()
+		os.Exit(1)
 	}
-	msg := make([]byte, *packetSize)
 
-	for i := 0; i < *iter; i++ {
-		c, err := net.Dial(netname, host)
-		if err != nil {
-			log.Fatalf("net.Dial(%v %v) failed: %v", netname, host, err)
-		}
+	source := ""
+	if flag.NArg() > 1 {
+		source = flag.Arg(1)
+	}
 
-		c.SetDeadline(time.Now().Add(waitFor))
-		defer c.Close()
-		msg[0] = byte(i)
-		if _, err := c.Write(msg[:]); err != nil {
-			log.Printf("Write failed: %v", err)
-		} else {
-			c.SetDeadline(time.Now().Add(waitFor))
-			if amt, err := c.Read(msg[:]); err == nil {
-				log.Printf("%v(%d bytes): %v", i, amt, time.Now())
-			} else {
-				log.Printf("Read failed: %v", err)
+	p := fastping.NewPinger()
+	if useUDP {
+		p.Network("udp")
+	}
+
+	netProto := "ip4:icmp"
+	if strings.Index(hostname, ":") != -1 {
+		netProto = "ip6:ipv6-icmp"
+	}
+	ra, err := net.ResolveIPAddr(netProto, hostname)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if source != "" {
+		p.Source(source)
+	}
+
+	results := make(map[string]*response)
+	results[ra.String()] = nil
+	p.AddIPAddr(ra)
+
+	onRecv, onIdle := make(chan *response), make(chan bool)
+	p.OnRecv = func(addr *net.IPAddr, t time.Duration) {
+		onRecv <- &response{addr: addr, rtt: t}
+	}
+	p.OnIdle = func() {
+		onIdle <- true
+	}
+
+	p.MaxRTT = time.Second
+	p.RunLoop()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+
+loop:
+	for {
+		select {
+		case <-c:
+			fmt.Println("get interrupted")
+			break loop
+		case res := <-onRecv:
+			if _, ok := results[res.addr.String()]; ok {
+				results[res.addr.String()] = res
 			}
+		case <-onIdle:
+			for host, r := range results {
+				if r == nil {
+					fmt.Printf("%s : unreachable %v\n", host, time.Now())
+				} else {
+					fmt.Printf("%s : %v %v\n", host, r.rtt, time.Now())
+				}
+				results[host] = nil
+			}
+		case <-p.Done():
+			if err = p.Err(); err != nil {
+				fmt.Println("Ping failed:", err)
+			}
+			break loop
 		}
-		time.Sleep(time.Millisecond * interval)
 	}
+	signal.Stop(c)
+	p.Stop()
 }
