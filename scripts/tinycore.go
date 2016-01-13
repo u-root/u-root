@@ -1,3 +1,5 @@
+// tinycore is similar to ramfs but uses an existing initramfs and does a few other
+// tasks. 
 package main
 
 import (
@@ -97,7 +99,7 @@ func cpiop(c string) error {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cmd := exec.Command("cpio", "--make-directories", "-p", config.TempDir)
+	cmd := exec.Command("sudo", "cpio", "--make-directories", "-p", config.TempDir)
 	cmd.Dir = n[0]
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
@@ -175,7 +177,7 @@ func sanity() {
 func guessgoroot() {
 	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
-		config.Goroot = path.Clean(config.Goroot)
+		config.Goroot=path.Clean(config.Goroot)
 		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
 		config.Gosrcroot = path.Dir(config.Goroot)
 		return
@@ -232,6 +234,29 @@ func guessgopath() {
 	return
 }
 
+func unpackTinyCore(t, dest string) error {
+	f, err := ioutil.ReadFile(t)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(/*"sudo",*/ "cpio", "-i", "-v")
+	cmd.Dir = dest
+	// Note: if you print Cmd out with %v after assigning cmd.Stdin, it will print
+	// the whole cpio; so don't do that.
+	if config.Debug {
+		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+	}
+	cmd.Stdin = bytes.NewBuffer(f)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	// TODO: the cpio gets an error as we can't upack devices. What we probably want to do is
+	// unpack the cpio with sudo, to get special stuff; then fix permissions on directories.
+	// The trick will be to minimize sudo usage. 
+	return nil
+	//return err
+}
 // sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
 // the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
 // It's not size related: if the go archive is first or in the middle it still fails.
@@ -241,6 +266,11 @@ func main() {
 	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
 	flag.Parse()
 	var err error
+	if len(flag.Args()) != 1 {
+		//usage()
+		log.Fatalf("need a tinycore path")
+	}
+
 	config.Arch = getenv("GOARCH", "amd64")
 	config.Go = ""
 	config.Goos = "linux"
@@ -256,6 +286,7 @@ func main() {
 	defer func() {
 		if config.RemoveDir {
 			log.Printf("Removing %v\n", config.TempDir)
+			os.Exit(1)
 			if err := os.RemoveAll(config.TempDir); err != nil {
 				log.Printf("Can't remove %v: %v", config.TempDir, err)
 			}
@@ -274,6 +305,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 		os.Exit(1)
+	}
+
+	// OK, we've got what we need, now let's unpack the tinycore initramfs.
+	if err = unpackTinyCore(flag.Args()[0], config.TempDir); err != nil {
+		log.Fatalf("Unpacking %v into %v: %v", flag.Args()[0], config.TempDir, err)
 	}
 
 	// These produce arrays of strings, the first element being the
@@ -318,7 +354,7 @@ func main() {
 
 	// Now use the append option for cpio to append to it.
 	// That way we get one cpio.
-	cmd = exec.Command("cpio", "-H", "newc", "-o", "-A", "-F", oname)
+	cmd = exec.Command("sudo", "cpio", "-H", "newc", "-o", "-A", "-F", oname)
 	cmd.Dir = config.TempDir
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
@@ -348,7 +384,7 @@ func main() {
 
 	// We need to populate the temp directory with dev.cpio. It's a chicken and egg thing;
 	// we can't run init without, e.g., /dev/console and /dev/null.
-	cmd = exec.Command("sudo", "cpio", "-i")
+	cmd = exec.Command("cpio", "-i")
 	cmd.Dir = config.TempDir
 	// We have it in memory. Get a better way to do this!
 	r, err = os.Open(path.Join(config.Gopath, "scripts/dev.cpio"))
