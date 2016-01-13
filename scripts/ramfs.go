@@ -39,17 +39,19 @@ src`
 
 var (
 	config struct {
-		Goroot     string
-		Gosrcroot  string
-		Arch       string
-		Goos       string
-		Gopath     string
-		TempDir    string
-		Go         string
-		Debug      bool
-		Fail       bool
-		TestChroot bool
-		RemoveDir  bool
+		Goroot      string
+		Gosrcroot   string
+		Arch        string
+		Goos        string
+		Gopath      string
+		TempDir     string
+		Go          string
+		Debug       bool
+		Fail        bool
+		TestChroot  bool
+		RemoveDir   bool
+		InitialCpio string
+		TmpDir      string
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -79,6 +81,38 @@ func lsr(n string, w *os.File) error {
 	return err
 }
 
+// uniq removes all files in dir/bin that are in dir/buildbin
+// regrettably, we have to do this as root because it will have been
+// built from an initramfs and many of the files will almost certainly
+// not be removable. Sorry.
+func uniq(dir string) error {
+	names := []string{"rm", "-f"}
+	dir = path.Clean(dir)
+	if dir == "/" || dir == "/bin" {
+		log.Fatalf("NOT removing files in / or /bin, sorry!")
+	}
+	b := path.Join(config.Gopath, "src/cmds")
+	err := filepath.Walk(b, func(name string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !fi.IsDir() {
+			return filepath.SkipDir
+		}
+		names = append(names, path.Base(name))
+		return nil
+	})
+	cmd := exec.Command("sudo", names...)
+	cmd.Stderr, cmd.Stdout, cmd.Dir = os.Stderr, os.Stdout, path.Join(dir, "/bin")
+	if config.Debug {
+		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+	}
+	if err = cmd.Run(); err != nil {
+		log.Fatalf("%v", err)
+	}
+	return err
+}
+
 // we'll keep using cpio and hope the kernel gets fixed some day.
 func cpiop(c string) error {
 
@@ -97,7 +131,7 @@ func cpiop(c string) error {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cmd := exec.Command("cpio", "--make-directories", "-p", config.TempDir)
+	cmd := exec.Command("sudo", "cpio", "--make-directories", "-p", config.TempDir)
 	cmd.Dir = n[0]
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
@@ -167,7 +201,7 @@ func sanity() {
 	ds := f.SectionByType(elf.SHT_DYNAMIC)
 	if ds != nil {
 		log.Printf("U-root requires a staticically built go tree at present. %v is dynamic.", goBinGo)
-		log.Fatalf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot,config.Arch)
+		log.Fatalf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot, config.Arch)
 	}
 }
 
@@ -175,6 +209,7 @@ func sanity() {
 func guessgoroot() {
 	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
+		config.Goroot = path.Clean(config.Goroot)
 		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
 		config.Gosrcroot = path.Dir(config.Goroot)
 		return
@@ -238,6 +273,8 @@ func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
 	flag.BoolVar(&config.TestChroot, "test", false, "test the directory by chrooting to it")
 	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
+	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
+	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
 	flag.Parse()
 	var err error
 	config.Arch = getenv("GOARCH", "amd64")
@@ -248,10 +285,14 @@ func main() {
 	if config.Fail {
 		log.Fatal("Setup failed")
 	}
-	config.TempDir, err = ioutil.TempDir("", "u-root")
-	if err != nil {
-		log.Fatalf("%v", err)
+
+	if config.TempDir == "" {
+		config.TempDir, err = ioutil.TempDir("", "u-root")
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
 	}
+
 	defer func() {
 		if config.RemoveDir {
 			log.Printf("Removing %v\n", config.TempDir)
@@ -263,6 +304,42 @@ func main() {
 
 	// sanity checking: do /go/bin/go, and some basic source files exist?
 	sanity()
+
+	if config.InitialCpio != "" {
+		f, err := ioutil.ReadFile(config.InitialCpio)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+
+		cmd := exec.Command("sudo", "cpio", "-i", "-v")
+		cmd.Dir = config.TempDir
+		// Note: if you print Cmd out with %v after assigning cmd.Stdin, it will print
+		// the whole cpio; so don't do that.
+		if config.Debug {
+			log.Printf("Run %v @ %v", cmd, cmd.Dir)
+		}
+
+		// There's a bit of a tough problem here. There's lots of stuff owned by root in
+		// these directories. They probably have to stay that way. But how do we create init
+		// and do other things? For now, we're going to set the modes of select places to
+		// 666 and remove a few things we know need to be removed.
+		// It's hard to say what else to do.
+		cmd.Stdin = bytes.NewBuffer(f)
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		err = cmd.Run()
+		if err != nil {
+			log.Printf("Unpacking %v: %v", config.InitialCpio, err)
+		}
+
+		// Must remove config.TempDir/init.
+		cmd = exec.Command("sudo", "mv", "init", "init.orig")
+		cmd.Dir = config.TempDir
+		if err = cmd.Run(); err != nil {
+			log.Printf("%v", err)
+		}
+	}
+
 	// Build init
 	cmd := exec.Command("go", "build", "init.go")
 	cmd.Stderr = os.Stderr
@@ -298,6 +375,10 @@ func main() {
 		log.Fatal("%v\n", err)
 	}
 
+	if err = uniq(config.TempDir); err != nil {
+		log.Fatalf("uniq: %v")
+	}
+
 	r, w, err := os.Pipe()
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -317,7 +398,9 @@ func main() {
 
 	// Now use the append option for cpio to append to it.
 	// That way we get one cpio.
-	cmd = exec.Command("cpio", "-H", "newc", "-o", "-A", "-F", oname)
+	// We need sudo as there may be files created from an initramfs that
+	// can only be read by root.
+	cmd = exec.Command("sudo", "cpio", "-H", "newc", "-o", "-A", "-F", oname)
 	cmd.Dir = config.TempDir
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
@@ -354,6 +437,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+
 	// OK, at this point, we know we can run as root. And, we're going to create things
 	// we can only remove as root. So, we'll have to remove the directory with
 	// extreme measures.
