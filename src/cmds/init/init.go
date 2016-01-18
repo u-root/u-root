@@ -73,17 +73,23 @@ func main() {
 		}
 	}
 
-	cmd = exec.Command("/buildbin/sh")
-	cmd.Env = envs
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	// TODO: figure out why we get EPERM when we use this.
-	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
-	log.Printf("Run %v", cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("%v\n", err)
+	// There may be an init.orig if we are building on
+	// an existing initramfs. So, first, try to
+	// run init.orig and then run our shell
+	// Perhaps we should stat init.orig first.
+	for _,v := range []string{"/init.orig", "/buildbin/rush"} {
+		cmd = exec.Command(v)
+		cmd.Env = envs
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		// TODO: figure out why we get EPERM when we use this.
+		//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
+		log.Printf("Run %v", cmd)
+		err = cmd.Run()
+		if err != nil {
+			log.Printf("%v\n", err)
+		}
 	}
-	log.Printf("init: /bin/sh returned!\n")
+	log.Printf("init: All commands exited")
 }

@@ -292,7 +292,7 @@ func main() {
 	}
 	// copy all shell files
 
-	err = filepath.Walk(path.Join(config.Uroot, cmds, "sh"), func(name string, fi os.FileInfo, err error) error {
+	err = filepath.Walk(path.Join(config.Uroot, cmds, "rush"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
