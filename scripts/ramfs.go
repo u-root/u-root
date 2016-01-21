@@ -389,6 +389,10 @@ func main() {
 	}
 
 	// Build init
+	b := "build"
+	if config.Debug {
+		b = "build -x"
+	}
 	cmd := exec.Command("go", "build", "init.go")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
