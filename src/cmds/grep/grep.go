@@ -43,6 +43,7 @@ var (
 	recursive   = flag.Bool("r", false, "recursive")
 	noshowmatch = flag.Bool("l", false, "list only files")
 	showname    = false
+	quiet       = flag.Bool("q", false, "Don't print matches; exit on first match")
 	allGrep     = make(chan *oneGrep)
 	nGrep       = 0
 )
@@ -79,16 +80,16 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 }
 
 func printmatch(r *grepResult) {
+	var prefix string
 	if showname {
 		fmt.Printf("%v", r.c.name)
+		prefix = ":"
 	}
 	if *noshowmatch {
 		return
-	} else if showname {
-		fmt.Printf(":")
 	}
 	if r.match == *Match {
-		fmt.Printf("%v", *r.line)
+		fmt.Printf("%v%v", prefix, *r.line)
 	}
 }
 
@@ -153,11 +154,18 @@ func main() {
 
 	for c := range allGrep {
 		for r := range c.c {
+			// exit on first match.
+			if *quiet {
+				os.Exit(0)
+			}
 			printmatch(r)
 		}
 		nGrep--
 		if nGrep == 0 {
 			break
 		}
+	}
+	if *quiet {
+		os.Exit(1)
 	}
 }
