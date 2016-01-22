@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"uroot"
 )
 
 type copyfiles struct {
@@ -218,6 +219,29 @@ func sanity() {
 }
 
 // It's annoying asking them to set lots of things. So let's try to figure it out.
+func guessgoarch() {
+	config.Arch = os.Getenv("GOARCH")
+	if config.Arch != "" {
+		config.Arch = path.Clean(config.Arch)
+		return
+	}
+	log.Printf("GOARCH is not set, trying to guess")
+	u, err := uroot.Uname()
+	if err != nil {
+		log.Printf("uname failed, using default amd64")
+		config.Arch = "amd64"
+	} else {
+		switch u.Machine {
+		case "i686":
+			config.Arch = "386"
+		case "x86_64":
+			config.Arch = "amd64"
+		default:
+			log.Printf("Unrecognized arch")
+			config.Fail = true
+		}
+	}
+}
 func guessgoroot() {
 	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
@@ -289,7 +313,7 @@ func main() {
 	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
 	flag.Parse()
 	var err error
-	config.Arch = getenvOrDefault("GOARCH", "amd64")
+	guessgoarch()
 	config.Go = ""
 	config.Goos = "linux"
 	guessgoroot()
