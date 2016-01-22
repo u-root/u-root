@@ -218,6 +218,30 @@ func sanity() {
 }
 
 // It's annoying asking them to set lots of things. So let's try to figure it out.
+func guessgoarch() {
+	config.Arch = os.Getenv("GOARCH")
+	if config.Arch != "" {
+		config.Arch = path.Clean(config.Arch)
+		return
+	}
+	log.Printf("GOARCH is not set, trying to guess")
+	cmd := exec.Command("uname", "-m")
+	if archname, err := cmd.Output(); err != nil {
+		log.Printf("uname failed, defaulting to amd64")
+		config.Arch = "amd64"
+		return
+	} else {
+		switch strings.TrimSpace(string(archname)) {
+		case "i686":
+			config.Arch = "386"
+		case "x86_64":
+			config.Arch = "amd64"
+		default:
+			log.Printf("Unrecognized arch")
+			config.Fail = true
+		}
+	}
+}
 func guessgoroot() {
 	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
@@ -289,7 +313,7 @@ func main() {
 	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
 	flag.Parse()
 	var err error
-	config.Arch = getenvOrDefault("GOARCH", "amd64")
+	guessgoarch()
 	config.Go = ""
 	config.Goos = "linux"
 	guessgoroot()
