@@ -59,6 +59,10 @@ var (
 		"arm":   "5",
 		"ppc":   "9",
 	}
+	// the whitelist is a list of u-root tools that we feel
+	// can replace existing tools. It is, sadly, a very short
+	// list at present.
+	whitelist = []string{"date",}
 )
 
 func getenvOrDefault(e, defaultValue string) string {
@@ -98,22 +102,30 @@ func lsr(n string, w *os.File) error {
 // built from an initramfs and many of the files will almost certainly
 // not be removable. Sorry.
 func uniq(dir string) error {
+	var err error
 	names := []string{"rm", "-f"}
 	dir = path.Clean(dir)
 	if dir == "/" || dir == "/bin" {
 		log.Fatalf("NOT removing files in / or /bin, sorry!")
 	}
-	b := path.Join(config.Gopath, "src/cmds")
-	err := filepath.Walk(b, func(name string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !fi.IsDir() {
-			return filepath.SkipDir
-		}
-		names = append(names, path.Base(name))
-		return nil
-	})
+	// at some future time, all our u-root tools will be able to replace
+	// busybox tools. That's not currently possible. So, just use the whitelist
+	// and return.
+	if false {
+			b := path.Join(config.Gopath, "src/cmds")
+		err = filepath.Walk(b, func(name string, fi os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !fi.IsDir() {
+				return filepath.SkipDir
+			}
+			names = append(names, path.Base(name))
+			return nil
+		})
+	} else {
+		names = append(names, whitelist...)
+	}
 	cmd := exec.Command("sudo", names...)
 	cmd.Stderr, cmd.Stdout, cmd.Dir = os.Stderr, os.Stdout, path.Join(dir, "/bin")
 	if config.Debug {
@@ -348,14 +360,20 @@ func main() {
 			log.Printf("Unpacking %v: %v", config.InitialCpio, err)
 		}
 
-		// Must remove config.TempDir/init.
-		cmd = exec.Command("sudo", "mv", "init", "init.orig")
-		cmd.Dir = config.TempDir
-		if err = cmd.Run(); err != nil {
-			log.Printf("%v", err)
+		// Must move config.TempDir/init to inito if one is not there.
+		inito := path.Join(config.TempDir, "inito")
+		if _, err := os.Stat(inito); err != nil {
+			cmd = exec.Command("sudo", "mv", "init", "inito")
+			cmd.Dir = config.TempDir
+			if err = cmd.Run(); err != nil {
+				log.Printf("%v", err)
+			}
+		} else {
+			log.Printf("Not replacing %v because there is already one there.", inito)
 		}
 		if err = uniq(config.TempDir); err != nil {
 			// Actually, this is not a problem.
+			// It's fine if the bin is empty.
 		}
 
 	}
