@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"uroot"
 )
 
@@ -73,11 +74,21 @@ func main() {
 		}
 	}
 
-	// There may be an init.orig if we are building on
+	// There may be an inito if we are building on
 	// an existing initramfs. So, first, try to
-	// run init.orig and then run our shell
-	// Perhaps we should stat init.orig first.
-	for _,v := range []string{"/init.orig", "/buildbin/rush"} {
+	// run inito and then run our shell
+	// The big problem is we have to give up control via syscall.Exec
+	// as init has to run as pid 1, and we're pid 1. Most annoying.
+	// We could stat and all that stuff but we can just let the
+	// kernel do it for us.
+	_ = syscall.Exec("/inito", []string{"inito"}, envs)
+
+	// There was no inito, or it failed, so we need to finalize the root setup and
+	// run rush.
+	uroot.RootMounts()
+
+	// Try a few things to start.
+	for _, v := range []string{"/buildbin/rush"} {
 		cmd = exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin = os.Stdin
