@@ -79,7 +79,20 @@ var (
 	}
 )
 
-// build the root file system. 
+// RootMounts mounts all things we needed mounted. We had to do this
+// separately because some init commands (I'm looking at you tinycore!)
+// are too stupid to handle the case when things are already mounted.
+func RootMounts() {
+	for _, m := range namespace {
+		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
+			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
+		}
+
+	}
+}
+
+// Rootfs builds the root file system, including basic directories, device nodes,
+// files, /env, and sets a few environment variables.
 func Rootfs() {
 	// Pick some reasonable values in the (unlikely!) even that Uname fails.
 	uname := "linux"
@@ -119,13 +132,6 @@ func Rootfs() {
 			log.Printf("mknod :%s: mode %o: magic: %v: %v\n", d.name, d.mode, d.magic, err)
 			continue
 		}
-	}
-
-	for _, m := range namespace {
-		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
-			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
-		}
-
 	}
 
 	for name, m := range files {

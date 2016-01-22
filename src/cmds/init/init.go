@@ -17,8 +17,31 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"uroot"
 )
+
+
+// inito runs /inito. It blocks until /inito returns since we want to let
+// inito own the machine if it is there and it can boot. We have to put it in
+// its own PID namespace beacause in the Unix model *everything* depends on
+// init being pid 1.
+func inito(){
+	cmd := exec.Command("/inito")
+	cmd.Dir = "/"
+
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID, }
+	log.Printf("Run %v", cmd)
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
+	var buf [1]byte
+	_, _ = os.Stdin.Read(buf[:])
+}
 
 func main() {
 	log.Printf("Welcome to u-root")
@@ -73,11 +96,15 @@ func main() {
 		}
 	}
 
-	// There may be an init.orig if we are building on
-	// an existing initramfs. So, first, try to
-	// run init.orig and then run our shell
-	// Perhaps we should stat init.orig first.
-	for _,v := range []string{"/init.orig", "/buildbin/rush"} {
+	// It may not exist but we have to try.
+	inito()
+
+	// There was no inito, or it failed, so we need to finalize the root setup and
+	// run rush.
+	uroot.RootMounts()
+
+	// Try a few things to start.
+	for _, v := range []string{"/buildbin/rush"} {
 		cmd = exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin = os.Stdin
