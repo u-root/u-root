@@ -39,19 +39,20 @@ src`
 
 var (
 	config struct {
-		Goroot      string
-		Gosrcroot   string
-		Arch        string
-		Goos        string
-		Gopath      string
-		TempDir     string
-		Go          string
-		Debug       bool
-		Fail        bool
-		TestChroot  bool
-		RemoveDir   bool
-		InitialCpio string
-		TmpDir      string
+		Goroot          string
+		Gosrcroot       string
+		Arch            string
+		Goos            string
+		Gopath          string
+		TempDir         string
+		Go              string
+		Debug           bool
+		Fail            bool
+		TestChroot      bool
+		RemoveDir       bool
+		InitialCpio     string
+		TmpDir          string
+		UseExistingInit bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -62,7 +63,7 @@ var (
 	// the whitelist is a list of u-root tools that we feel
 	// can replace existing tools. It is, sadly, a very short
 	// list at present.
-	whitelist = []string{"date",}
+	whitelist = []string{"date"}
 )
 
 func getenvOrDefault(e, defaultValue string) string {
@@ -112,7 +113,7 @@ func uniq(dir string) error {
 	// busybox tools. That's not currently possible. So, just use the whitelist
 	// and return.
 	if false {
-			b := path.Join(config.Gopath, "src/cmds")
+		b := path.Join(config.Gopath, "src/cmds")
 		err = filepath.Walk(b, func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -296,6 +297,7 @@ func guessgopath() {
 func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
 	flag.BoolVar(&config.TestChroot, "test", false, "test the directory by chrooting to it")
+	flag.BoolVar(&config.UseExistingInit, "useinit", false, "If there is an existing init, don't replace it")
 	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
 	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
 	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
@@ -360,36 +362,45 @@ func main() {
 			log.Printf("Unpacking %v: %v", config.InitialCpio, err)
 		}
 
-		// Must move config.TempDir/init to inito if one is not there.
-		inito := path.Join(config.TempDir, "inito")
-		if _, err := os.Stat(inito); err != nil {
-			cmd = exec.Command("sudo", "mv", "init", "inito")
-			cmd.Dir = config.TempDir
-			if err = cmd.Run(); err != nil {
-				log.Printf("%v", err)
+		if !config.UseExistingInit {
+			// Must move config.TempDir/init to inito if one is not there.
+			inito := path.Join(config.TempDir, "inito")
+			if _, err := os.Stat(inito); err != nil {
+				cmd = exec.Command("sudo", "mv", "init", "inito")
+				cmd.Dir = config.TempDir
+				if err = cmd.Run(); err != nil {
+					log.Printf("%v", err)
+				}
+			} else {
+				log.Printf("Not replacing %v because there is already one there.", inito)
 			}
-		} else {
-			log.Printf("Not replacing %v because there is already one there.", inito)
+
+			// Build init
+			cmd := exec.Command("go", "build", "init.go")
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			cmd.Dir = path.Join(config.Gopath, "src/cmds/init")
+
+			err = cmd.Run()
+			if err != nil {
+				log.Fatalf("%v\n", err)
+				os.Exit(1)
+			}
+			// Drop an init in /
+			initbin, err := ioutil.ReadFile(path.Join(config.Gopath, "src/cmds/init/init"))
+			if err != nil {
+				log.Fatal("%v\n", err)
+			}
+			err = ioutil.WriteFile(path.Join(config.TempDir, "init"), initbin, 0755)
+			if err != nil {
+				log.Fatal("%v\n", err)
+			}
+
 		}
-		if err = uniq(config.TempDir); err != nil {
-			// Actually, this is not a problem.
-			// It's fine if the bin is empty.
-		}
+		// It's fine if the bin is empty.
+		uniq(config.TempDir)
 
 	}
-
-	// Build init
-	cmd := exec.Command("go", "build", "init.go")
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.Dir = path.Join(config.Gopath, "src/cmds/init")
-
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("%v\n", err)
-		os.Exit(1)
-	}
-
 	// These produce arrays of strings, the first element being the
 	// directory to walk from.
 	cpio := []string{
@@ -401,16 +412,6 @@ func main() {
 			log.Printf("Things went south. TempDir is %v", config.TempDir)
 			log.Fatalf("Bailing out near line 666")
 		}
-	}
-
-	// Drop an init in /
-	initbin, err := ioutil.ReadFile(path.Join(config.Gopath, "src/cmds/init/init"))
-	if err != nil {
-		log.Fatal("%v\n", err)
-	}
-	err = ioutil.WriteFile(path.Join(config.TempDir, "init"), initbin, 0755)
-	if err != nil {
-		log.Fatal("%v\n", err)
 	}
 
 	r, w, err := os.Pipe()
@@ -434,7 +435,7 @@ func main() {
 	// That way we get one cpio.
 	// We need sudo as there may be files created from an initramfs that
 	// can only be read by root.
-	cmd = exec.Command("sudo", "cpio", "-H", "newc", "-o", "-A", "-F", oname)
+	cmd := exec.Command("sudo", "cpio", "-H", "newc", "-o", "-A", "-F", oname)
 	cmd.Dir = config.TempDir
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
