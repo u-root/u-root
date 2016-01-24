@@ -57,6 +57,7 @@ var (
 		{name: "/tmp", mode: os.FileMode(0777)},
 		{name: "/env", mode: os.FileMode(0777)},
 		{name: "/etc", mode: os.FileMode(0777)},
+		{name: "/etc/profile.d", mode: os.FileMode(0775)},
 		{name: "/tcz", mode: os.FileMode(0777)},
 		{name: "/dev", mode: os.FileMode(0777)},
 		{name: "/lib", mode: os.FileMode(0777)},
@@ -113,6 +114,10 @@ func Rootfs() {
 		}
 	}
 	env["PATH"] = fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s:%v", uname, mach, uname, mach, PATH)
+	// Some systems set restrictive /bin
+	// And, even though we set it right in rootfs(), they can reset it.
+	// This argues for a /urootbin, maybe.
+	files["/etc/profile.d/uroot.sh"] = file{contents: "chmod 0777 /bin\nPATH=" + env["PATH"] + ":$PATH\nexport GOROOT=/go\nexport GOPATH=/", mode: os.FileMode(0644)}
 
 	for k, v := range env {
 		os.Setenv(k, v)
@@ -122,6 +127,11 @@ func Rootfs() {
 	for _, m := range dirs {
 		if err := os.MkdirAll(m.name, m.mode); err != nil {
 			log.Printf("mkdir :%s: mode %o: %v\n", m.name, m.mode, err)
+			// It might have existed for a pre-existing ramfs; we need to be sure of the mode.
+			// If it's an error, not much we can do.
+			if err = os.Chmod(m.name, m.mode); err != nil {
+				log.Printf("chmod: %s: mode %o: %v", m.name, m.mode, err)
+			}
 			continue
 		}
 	}
@@ -136,7 +146,7 @@ func Rootfs() {
 
 	for name, m := range files {
 		if err := ioutil.WriteFile(name, []byte(m.contents), m.mode); err != nil {
-			log.Printf("Error writeing %v: %v", name, err)
+			log.Printf("Error writing %v: %v", name, err)
 		}
 	}
 

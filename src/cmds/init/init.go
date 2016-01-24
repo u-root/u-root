@@ -34,6 +34,7 @@ func inito(){
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWPID, }
+	cmd.Env = uroot.Envs
 	log.Printf("Run %v", cmd)
 	err := cmd.Run()
 	if err != nil {
