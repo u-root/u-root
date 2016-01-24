@@ -1,0 +1,21 @@
+site_name: U-root
+site_description: "U-root: A Go-based, Firmware Embeddable Root File System with On-demand Compilation"
+site_url: http://u-root.org
+site_favicon: img/favicon.png
+# copyright
+# google_analytics
+pages:
+  - Home: index.md
+  - About: about.md 
+#  - Usenix: usenix.md
+  - News: news.md
+  - Download: download.md
+  - Community: community.md
+  - Roadmap: roadmap.md
+  - Documentation: 
+#    - FAQ: docs/faq.md
+     - Getting started: docs/getting-started.md
+#    - Manual: docs/manual.md
+theme: journal 
+theme_dir: uroot-theme
+repo_url: https://github.com/u-root/u-root
