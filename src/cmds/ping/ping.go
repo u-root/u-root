@@ -6,22 +6,51 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 )
 
 var (
 	net6       = flag.Bool("6", false, "use ipv4 (means ip4:icmp) or 6 (ip6:ipv6-icmp)")
-	packetSize = flag.Int("s", 128, "Data size")
-	iter       = flag.Int("c", 8, "# iterations")
+	packetSize = flag.Int("s", 64, "Data size")
+	iter       = flag.Int64("c", 0, "# iterations")
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
+	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
+	help       = flag.Bool("h", false, "help")
 )
 
+func usage() {
+	fmt.Fprintf(os.Stdout, "ping [-hV] [-c count] [-i interval] [-s packetsize [-w deadline] destination\n")
+	os.Exit(0)
+}
+
+func showversion() {
+	fmt.Fprintf(os.Stdout, "ping utility, Uroot version\n")
+	os.Exit(0)
+}
+
+func optwithoutparam() {
+	if *version {
+		showversion()
+	}
+	// if we reach this point, invalid or help (-h) gets the same result
+	usage()
+}
+
 func main() {
-	netname := "ip4:icmp"
 	flag.Parse()
+
+	// options without parameters (right now just: -hV)
+	if flag.NArg() < 1 {
+		optwithoutparam()
+	}
+
+	var i int64 = 1
+	netname := "ip4:icmp"
 	interval := time.Duration(*intv)
 	waitFor := time.Duration(*wtf) * time.Millisecond
 	host := flag.Args()[0]
@@ -31,7 +60,8 @@ func main() {
 	}
 	msg := make([]byte, *packetSize)
 
-	for i := 0; i < *iter; i++ {
+	// ping needs to run forever, except if '*iter' is not zero
+	for {
 		c, err := net.Dial(netname, host)
 		if err != nil {
 			log.Fatalf("net.Dial(%v %v) failed: %v", netname, host, err)
@@ -51,5 +81,12 @@ func main() {
 			}
 		}
 		time.Sleep(time.Millisecond * interval)
+		if *iter != 0 {
+			if i < *iter {
+				i++
+			} else {
+				break
+			}
+		}
 	}
 }
