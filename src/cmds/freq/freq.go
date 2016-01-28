@@ -31,20 +31,23 @@ import (
 	"unicode/utf8"
 )
 
-var utf = flag.Bool("r", false, "treat input as UTF-8")
-var dec = flag.Bool("d", false, "print decimal value")
-var hex = flag.Bool("x", false, "print hexadecimal value")
-var oct = flag.Bool("o", false, "print octal value")
-var chr = flag.Bool("c", false, "print character/rune")
-
-var freq [utf8.MaxRune + 1]uint64
+var (
+	utf  = flag.Bool("r", false, "treat input as UTF-8")
+	dec  = flag.Bool("d", false, "print decimal value")
+	hex  = flag.Bool("x", false, "print hexadecimal value")
+	oct  = flag.Bool("o", false, "print octal value")
+	chr  = flag.Bool("c", false, "print character/rune")
+	freq [utf8.MaxRune + 1]uint64
+)
 
 func doFreq(f *os.File) {
 	b := bufio.NewReaderSize(f, 8192)
 
-	var r rune
-	var c byte
-	var err error
+	var (
+		r   rune
+		c   byte
+		err error
+	)
 	if *utf {
 		for {
 			r, _, err = b.ReadRune()
