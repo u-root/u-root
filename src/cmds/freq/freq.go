@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -70,6 +71,21 @@ func doFreq(f *os.File) {
 	}
 }
 
+func header() {
+	hdr := []string{}
+	if *dec {
+		hdr = append(hdr, "Dec")
+	}
+	if *hex {
+		hdr = append(hdr, "Hex")
+	}
+	if *oct {
+		hdr = append(hdr, "Oct")
+	}
+	hdr = append(hdr, "\tCount")
+	fmt.Println(strings.Join(hdr, " "))
+}
+
 func main() {
 	flag.Parse()
 
@@ -91,6 +107,7 @@ func main() {
 		*dec, *hex, *oct, *chr = true, true, true, true
 	}
 
+	header()
 	b := bufio.NewWriterSize(os.Stdout, 8192*4)
 	for i, v := range freq {
 		if v == 0 {
