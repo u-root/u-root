@@ -77,7 +77,7 @@ func init() {
 	uroot.Rootfs()
 
 	for n := range forkBuiltins {
-		t := path.Join("/bin", n)
+		t := path.Join("/ubin", n)
 		if err := os.Symlink("/init", t); err != nil {
 			log.Printf("Symlink /init to %v: %v", t, err)
 		}
