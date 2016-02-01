@@ -12,7 +12,7 @@ import (
 	"syscall"
 )
 
-const PATH = "/bin:/buildbin:/usr/local/bin"
+const PATH = "/bin:/ubin:/buildbin:/usr/local/bin"
 
 // TODO: make this a map so it's easier to find dups.
 type dir struct {
@@ -53,7 +53,7 @@ var (
 		{name: "/proc", mode: os.FileMode(0555)},
 		{name: "/sys", mode: os.FileMode(0555)},
 		{name: "/buildbin", mode: os.FileMode(0777)},
-		{name: "/bin", mode: os.FileMode(0777)},
+		{name: "/ubin", mode: os.FileMode(0777)},
 		{name: "/tmp", mode: os.FileMode(0777)},
 		{name: "/env", mode: os.FileMode(0777)},
 		{name: "/etc", mode: os.FileMode(0777)},

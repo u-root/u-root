@@ -60,8 +60,8 @@ func main() {
 	}
 
 	// install /env.
-	os.Setenv("GOBIN", "/bin")
-	envs = append(envs, "GOBIN=/bin")
+	os.Setenv("GOBIN", "/ubin")
+	envs = append(envs, "GOBIN=/ubin")
 	for _, e := range envs {
 		nv := strings.SplitN(e, "=", 2)
 		if len(nv) < 2 {

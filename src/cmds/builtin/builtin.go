@@ -34,7 +34,7 @@ var (
 	endPart   = "\nreturn err\n}\n"
 	namespace = []mount{
 		{source: "tmpfs", target: "/src/cmds/sh", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
-		{source: "tmpfs", target: "/bin", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
+		{source: "tmpfs", target: "/ubin", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 	}
 )
 
@@ -118,9 +118,9 @@ func main() {
 	}
 
 	// We are rewriting the shell. We need to create a new binary, i.e.
-	// rewrite the one in /bin. Sadly, there is no way to say "mount THIS bin
+	// rewrite the one in /ubin. Sadly, there is no way to say "mount THIS bin
 	// before THAT bin". There will be ca. 3.18 and we might as well wait for
-	// that to become common. For now, we essentially erase /bin but mounting
+	// that to become common. For now, we essentially erase /ubin but mounting
 	// a tmpfs over it.
 	// This would be infinitely easier with a true union file system. Oh well.
 	for _, m := range namespace {
@@ -154,5 +154,5 @@ func main() {
 			log.Printf("Umount :%s: %v\n", m.target, err)
 		}
 	}
-	log.Printf("init: /bin/sh returned!\n")
+	log.Printf("init: /ubin/sh returned!\n")
 }
