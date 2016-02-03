@@ -19,21 +19,21 @@ reported.
 	-c		Count bytes.
 */
 
-/* Bugs: 
+/* Bugs:
 
-   This wc differs from Plan 9's wc somewhat in word count (BSD's wc differs 
+   This wc differs from Plan 9's wc somewhat in word count (BSD's wc differs
    even more significantly):
-   
+
 	$ unicode 0x0-0x10ffff | 9 wc -w
 	2228221
 	$ unicode 0x0-0x10ffff | gowc -w
 	2228198
 	$ unicode 0x0-0x10ffff | bsdwc -w
 	 2293628
-  
-   
+
+
    This wc differs from Plan 9's wc significantly in bad rune count:
-   
+
 	$ unicode 0x0-0x10ffff | gowc -b
 	6144
 	$ unicode 0x0-0x10ffff | 9 wc -b
@@ -50,6 +50,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -86,16 +87,20 @@ func invalidCount(p []byte) (n int64) {
 func count(in io.Reader, fname string) (cnt Cnt) {
 	b := bufio.NewReaderSize(in, 8192)
 
-	for {
+	counted := false
+	for !counted {
 		line, err := b.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
-				return
+				counted = true
+			} else {
+				fmt.Fprintf(os.Stderr, "error %s: %v", fname, err)
+				return Cnt{} // no partial counts; should perhaps quit altogether?
 			}
-			fmt.Fprintf(os.Stderr, "error %s: %v", fname, err)
-			return Cnt{} // no partial counts; should perhaps quit altogether?
 		}
-		cnt.nline++
+		if !counted {
+			cnt.nline++
+		}
 		cnt.nword += int64(len(bytes.Fields(line)))
 		cnt.nrune += int64(utf8.RuneCount(line))
 		cnt.nchar += int64(len(line))
@@ -105,26 +110,27 @@ func count(in io.Reader, fname string) (cnt Cnt) {
 }
 
 func report(c Cnt, fname string) {
-	s := ""
+	fields := []string{}
 	if *lines {
-		s += fmt.Sprintf(" %7d", c.nline)
+		fields = append(fields, fmt.Sprintf("%d", c.nline))
 	}
 	if *words {
-		s += fmt.Sprintf(" %7d", c.nword)
+		fields = append(fields, fmt.Sprintf("%d", c.nword))
 	}
 	if *runes {
-		s += fmt.Sprintf(" %7d", c.nrune)
+		fields = append(fields, fmt.Sprintf("%d", c.nrune))
 	}
 	if *broken {
-		s += fmt.Sprintf(" %7d", c.nbadr)
+		fields = append(fields, fmt.Sprintf("%d", c.nbadr))
 	}
 	if *chars {
-		s += fmt.Sprintf(" %7d", c.nchar)
+		fields = append(fields, fmt.Sprintf("%d", c.nchar))
 	}
 	if fname != "" {
-		s += fmt.Sprintf(" %s", fname)
+		fields = append(fields, fmt.Sprintf("%s", fname))
 	}
-	fmt.Println(s[1:]) // skip starting space
+
+	fmt.Println(strings.Join(fields, " "))
 }
 
 func main() {
