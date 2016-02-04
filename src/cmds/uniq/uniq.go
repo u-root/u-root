@@ -28,6 +28,8 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 )
 
@@ -43,12 +45,14 @@ func uniq(f *os.File) {
 
 	var err error
 	var oline, line []byte
-	cnt := 0
+	cnt := 1
 	isLast := false
 	for {
 		line, err = br.ReadBytes('\n')
-		if err != nil {
+		if err == io.EOF {
 			isLast = true
+		} else if err != nil {
+			log.Printf("Can't read the %v line of %v file: %v", line, f, err)
 		}
 		if oline == nil {
 			oline = line
@@ -57,6 +61,7 @@ func uniq(f *os.File) {
 		if !bytes.Equal(line, oline) {
 			if *count {
 				fmt.Printf("%d\t%s", cnt, oline)
+				goto skip
 			}
 			if cnt > 1 && *uniques {
 				goto skip
@@ -75,9 +80,6 @@ func uniq(f *os.File) {
 			break
 		}
 	}
-	if *count {
-		fmt.Printf("%d\t%s", cnt, line)
-	}
 	if cnt > 1 && *uniques {
 		return
 	}
@@ -94,7 +96,7 @@ func main() {
 		for _, fn := range flag.Args() {
 			f, err := os.Open(fn)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "open %s: %v\n", fn, err)
+				log.Printf("open %s: %v\n", fn, err)
 				os.Exit(1)
 			}
 			uniq(f)
