@@ -1,90 +1,205 @@
+// Copyright 2016 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"path"
 )
 
-var Nwork int = 1
+const buffSize = 8192
 
-const Defb = 8192
+var (
+	recursive bool
+	ask       bool
+	force     bool
+	verbose   bool
+	link      bool
+	nwork     int
+	input     = bufio.NewScanner(os.Stdin)
+	offchan   chan int64
+	zerochan  chan int
+	cmd       = "cp"
+	flags     = "[-w workers] [-Rrifv]"
+)
 
-var offchan chan int64
-var zerochan chan int
+func init() {
+	flag.Usage = usage
+	flag.IntVar(&nwork, "w", 1, "number of worker goroutines")
+	flag.BoolVar(&recursive, "R", false, "copy file hierarchies")
+	flag.BoolVar(&recursive, "r", false, "alias to -R recursive mode")
+	flag.BoolVar(&ask, "i", false, "prompt about overwriting file")
+	flag.BoolVar(&force, "f", false, "force overwrite files")
+	flag.BoolVar(&verbose, "v", false, "verbose copy mode")
+	flag.Parse()
 
-func copyfile(from, to string, todir bool) bool {
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "usage: %v %v 'from' 'to'\n", cmd, flags)
+	flag.PrintDefaults()
+	os.Exit(1)
+}
+
+// ask if the user wants overwrite file
+func promptOverwrite(dst string) bool {
+	_, err := os.Stat(dst)
+	if !os.IsNotExist(err) {
+		fmt.Printf("%v: overwrite '%v'? ", cmd, dst)
+		input.Scan()
+		if input.Text()[0] != 'y' {
+			return false
+		}
+	}
+	return true
+}
+
+// copy src to dst
+// todir: if true insert src INTO dir dst
+func copy(src, dst string, todir bool) error {
 	if todir {
-		_, file := path.Split(from)
-		to = to + "/" + file
+		_, file := path.Split(src)
+		dst = path.Join(dst, file)
 	}
 
-	dirb, err := os.Stat(from)
+	srcb, err := os.Stat(src)
 	if err != nil {
-		fmt.Printf("can't stat %s: %v\n", from, err)
-		return true
+		return fmt.Errorf("can't stat %v: %v\n", src, err)
 	}
-	tob, err := os.Stat(to)
+
+	if srcb.IsDir() {
+		if recursive {
+			return copyDir(src, dst)
+		} else {
+			return fmt.Errorf("'%v' is a directory, try use recursive option\n", src)
+		}
+	}
+
+	dstb, err := os.Stat(dst)
 	if err == nil {
-		if sameFile(dirb.Sys(), tob.Sys()) {
-			fmt.Printf("%s and %s are the same file\n", from, to)
-			return true
+		if sameFile(srcb.Sys(), dstb.Sys()) {
+			return fmt.Errorf("'%v' and '%v' are the same file\n", src, dst)
+		}
+	}
+	if ask && !force {
+		if !promptOverwrite(dst) {
+			return nil
 		}
 	}
 
-	if dirb.IsDir() {
-		fmt.Printf("%s is a directory\n", from)
-		return true
-	}
-
-	mode := dirb.Mode() & 0777
-	f, err := os.Open(from)
+	mode := srcb.Mode() & 0777
+	s, err := os.Open(src)
 	if err != nil {
-		fmt.Printf("can't open %s: %v\n", from, err)
-		return true
+		return fmt.Errorf("can't open '%v': %v\n", src, err)
 	}
-	defer f.Close()
+	defer s.Close()
 
-	t, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
+	d, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
-		fmt.Printf("can't create %s: %v\n", to, err)
-		f.Close()
-		return true
+		return fmt.Errorf("can't create '%v': %v\n", dst, err)
 	}
-	defer t.Close()
-	return copy1(f, t, from, to)
+	defer d.Close()
+
+	return copyOneFile(s, d, src, dst)
 }
 
-func copy1(f, t *os.File, from, to string) (ret bool) {
-	zerochan <- 0
-	fail := make(chan bool, Nwork)
+// copy the content between two files
+func copyOneFile(s *os.File, d *os.File, src, dst string) error {
+	zerochan <- 0                   // ? i don't understand that channel
+	fail := make(chan error, nwork) // channel of errors okay
 
-	for i := 0; i < Nwork; i++ {
-		go worker(f, t, from, to, fail)
+	for i := 0; i < nwork; i++ {
+		go worker(s, d, fail)
 	}
-	for i := 0; i < Nwork; i++ {
-		end := <-fail
-		if end == true {
-			ret = true
+
+	// iterate the errors from channel
+	failed := false
+	for i := 0; i < nwork; i++ {
+		err := <-fail
+		if err != nil {
+			failed = true
+			log.Println(err)
 		}
 	}
-	return
+
+	if verbose {
+		fmt.Printf("'%v' -> '%v'\n", src, dst)
+	}
+
+	// if some error occurs, returns that error
+	if failed {
+		return fmt.Errorf("cannot copy the file: '%v'", src)
+	}
+
+	return nil
 }
 
-func worker(f, t *os.File, from, to string, fail chan bool) {
-	var buf [Defb]byte
+// populate dir destination if not exists
+// if exists verify is not a dir: return error if is file
+// cannot overwrite: dir -> file
+func createDir(src, dst string) error {
+	dstInfo, err := os.Stat(dst)
+	if os.IsNotExist(err) {
+		srcInfo, err := os.Stat(src)
+		if err != nil {
+			return err
+		}
+		if err := os.Mkdir(dst, srcInfo.Mode()); err != nil {
+			return err
+		}
+		if verbose {
+			fmt.Printf("'%v' -> '%v'\n", src, dst)
+		}
+	} else if !dstInfo.IsDir() {
+		return fmt.Errorf("can't overwrite non-dir '%v' with dir '%v'\n", dst, src)
+	}
+
+	return nil
+}
+
+// copy file hierarchies
+func copyDir(src, dst string) error {
+	if err := createDir(src, dst); err != nil {
+		return err
+	}
+
+	// list files from destination
+	files, err := ioutil.ReadDir(src)
+	if err != nil {
+		return fmt.Errorf("can't list files from '%v': '%v'\n", src, err)
+	}
+
+	// copy recursively the src -> dst
+	for _, file := range files {
+		fname := file.Name()
+		fpath := path.Join(src, fname)
+		newDst := path.Join(dst, fname)
+		copy(fpath, newDst, false)
+	}
+
+	return err
+}
+
+// concurrent copy, worker routine
+func worker(s *os.File, d *os.File, fail chan error) {
+	var buf [buffSize]byte
 	var bp []byte
 
 	l := len(buf)
 	bp = buf[0:]
 	o := <-offchan
 	for {
-		n, err := f.ReadAt(bp, o)
+		n, err := s.ReadAt(bp, o)
 		if err != nil && err != io.EOF {
-			fmt.Printf("reading %s at %v: %v\n", from, o, err)
-			fail <- true
+			fail <- fmt.Errorf("reading %s at %v: %v\n", s.Name(), o, err)
 			return
 		}
 		if n == 0 {
@@ -92,10 +207,9 @@ func worker(f, t *os.File, from, to string, fail chan bool) {
 		}
 
 		nb := bp[0:n]
-		n, err = t.WriteAt(nb, o)
+		n, err = d.WriteAt(nb, o)
 		if err != nil {
-			fmt.Printf("writing %s: %v\n", to, err)
-			fail <- true
+			fail <- fmt.Errorf("writing %s: %v\n", d.Name(), err)
 			return
 		}
 		bp = buf[n:]
@@ -107,60 +221,51 @@ func worker(f, t *os.File, from, to string, fail chan bool) {
 			o = <-offchan
 		}
 	}
-	fail <- false
+	fail <- nil
 }
 
-func nextoff() {
+// handler for next buffers
+func nextOff() {
 	off := int64(0)
 	for {
 		select {
 		case <-zerochan:
 			off = 0
 		case offchan <- off:
-			off += Defb
+			off += buffSize
 		}
 	}
 }
 
-func usage() {
-	fmt.Printf("usage: cp [-w workers] from to\n")
-	os.Exit(1) // sysfatal
-}
-
-var nwork = flag.Int("w", 16, "number of worker goroutines")
-
 func main() {
-	todir := false
-
-	flag.Parse()
-	Nwork = *nwork
 	if flag.NArg() < 2 {
-		usage()
+		flag.Usage()
 	}
 
+	todir := false
 	files := flag.Args()
-	lf := files[len(files)-1]
-	lfdir, err := os.Stat(lf)
+	from, to := files[:len(files)-1], files[len(files)-1]
+	toStat, err := os.Stat(to)
 	if err == nil {
-		todir = lfdir.IsDir()
+		todir = toStat.IsDir()
 	}
 	if flag.NArg() > 2 && todir == false {
-		fmt.Printf("not a directory: %s\n", lf)
-		os.Exit(1) // sysfatal
+		log.Fatalf("not a directory: %s\n", to)
 	}
 
 	offchan = make(chan int64, 0)
 	zerochan = make(chan int, 0)
-	go nextoff()
+	go nextOff()
 
 	failed := false
-	for i := 0; i < flag.NArg()-1; i++ {
-		if copyfile(files[i], lf, todir) {
+	for _, file := range from {
+		if err := copy(file, to, todir); err != nil {
+			log.Printf("%v: %v", cmd, err.Error())
 			failed = true
 		}
 	}
+
 	if failed {
-		os.Exit(2)
+		os.Exit(1)
 	}
-	return
 }
