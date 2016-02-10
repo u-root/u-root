@@ -1,3 +1,8 @@
+// Copyright 2016 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Disassociate parts of the process execution context
 package main
 
 import (
@@ -10,20 +15,22 @@ import (
 
 var (
 	ipc     = flag.Bool("ipc", false, "Unshare the IPC namespace")
-	mount   = flag.Bool("mount", false, "Unshared the mount namespace")
-	pid     = flag.Bool("pid", false, "Unshared the pid namespace")
-	net     = flag.Bool("net", false, "Unshared the net namespace")
-	uts     = flag.Bool("uts", false, "Unshared the uts namespace")
-	user    = flag.Bool("user", false, "Unshared the user namespace")
-	maproot = flag.Bool("map-root-user", false, "map current uid to root. Not working")
+	mount   = flag.Bool("mount", false, "Unshare the mount namespace")
+	pid     = flag.Bool("pid", false, "Unshare the pid namespace")
+	net     = flag.Bool("net", false, "Unshare the net namespace")
+	uts     = flag.Bool("uts", false, "Unshare the uts namespace")
+	user    = flag.Bool("user", false, "Unshare the user namespace")
+	maproot = flag.Bool("map-root-user", false, "Map current uid to root. Not working")
 )
 
 func main() {
 	flag.Parse()
+
 	a := flag.Args()
 	if len(a) == 0 {
 		a = []string{"/bin/bash", "bash"}
 	}
+
 	c := exec.Command(a[0], a[1:]...)
 	c.SysProcAttr = &syscall.SysProcAttr{}
 	if *mount {
