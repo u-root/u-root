@@ -1,3 +1,16 @@
+// Copyright 2016 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Disassociate parts of the process execution context.
+// Go applications use multiple processes, and the Go user level scheduler schedules goroutines onto those processes.
+// For this reason, it is not possible to use syscall.Unshare. A goroutine can call syscall.Unshare from process m
+// and the scheduler can resume that goroutine in process n, which has not had the unshare operation!
+// This is a known problem with any system call that modifies the name space or file system context
+// of only one process as opposed to the entire Go application, i.e. all of its processes.
+// Examples include chroot and unshare. There has been lively discussion of this problem
+// but no resolution as of yet. In sum: it is not possible to use syscall.Unshare from Go with any reasonable expectation
+// of success.
 package main
 
 import (
@@ -10,20 +23,22 @@ import (
 
 var (
 	ipc     = flag.Bool("ipc", false, "Unshare the IPC namespace")
-	mount   = flag.Bool("mount", false, "Unshared the mount namespace")
-	pid     = flag.Bool("pid", false, "Unshared the pid namespace")
-	net     = flag.Bool("net", false, "Unshared the net namespace")
-	uts     = flag.Bool("uts", false, "Unshared the uts namespace")
-	user    = flag.Bool("user", false, "Unshared the user namespace")
-	maproot = flag.Bool("map-root-user", false, "map current uid to root. Not working")
+	mount   = flag.Bool("mount", false, "Unshare the mount namespace")
+	pid     = flag.Bool("pid", false, "Unshare the pid namespace")
+	net     = flag.Bool("net", false, "Unshare the net namespace")
+	uts     = flag.Bool("uts", false, "Unshare the uts namespace")
+	user    = flag.Bool("user", false, "Unshare the user namespace")
+	maproot = flag.Bool("map-root-user", false, "Map current uid to root. Not working")
 )
 
 func main() {
 	flag.Parse()
+
 	a := flag.Args()
 	if len(a) == 0 {
-		a = []string{"/bin/bash", "bash"}
+		a = []string{"/ubin/rush", "rush"}
 	}
+
 	c := exec.Command(a[0], a[1:]...)
 	c.SysProcAttr = &syscall.SysProcAttr{}
 	if *mount {
