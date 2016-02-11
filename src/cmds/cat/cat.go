@@ -1,10 +1,8 @@
-/* Copyright 2012 the u-root Authors. All rights reserved
- * Use of this source code is governed by a BSD-style
- * license that can be found in the LICENSE file.
- *
- *
- * Cat reads each file from its arguments in sequence and writes it on the standard output.
- */
+// Copyright 2012 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Cat reads each file from its arguments in sequence and writes it on the standard output.
 
 package main
 
@@ -16,20 +14,8 @@ import (
 )
 
 var (
-	_   = flag.Bool("u", false, "ignored")
-	cmd = "cat [-u] filename ..."
+	_ = flag.Bool("u", false, "ignored")
 )
-
-func usage() {
-	fmt.Fprintln(os.Stderr, "Usage:", cmd)
-	flag.PrintDefaults()
-	os.Exit(1)
-}
-
-func init() {
-	flag.Parse()
-	flag.Usage = usage
-}
 
 func cat(writer io.Writer, files []string) error {
 	for _, name := range files {
@@ -49,6 +35,8 @@ func cat(writer io.Writer, files []string) error {
 }
 
 func main() {
+	flag.Parse()
+
 	if len(os.Args) == 1 {
 		io.Copy(os.Stdout, os.Stdin)
 	}
