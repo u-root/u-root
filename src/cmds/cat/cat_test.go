@@ -1,9 +1,8 @@
-/* Copyright 2012 the u-root Authors. All rights reserved
- * Use of this source code is governed by a BSD-style
- * license that can be found in the LICENSE file.
- *
- * created by Rafael Campos Nunes <rafaelnunes@engineer.com>
- */
+// Copyright 2012 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// by Rafael Campos Nunes <rafaelnunes@engineer.com>
 
 package main
 
@@ -18,9 +17,9 @@ import (
 )
 
 // setup writes a set of files, putting 1 byte in each file.
-func setup(data []byte) (string, error) {
-	fmt.Println(":: Creating simulation data. ")
-	dir, err := ioutil.TempDir(os.TempDir(), "cat.dir")
+func setup(t *testing.T, data []byte) (string, error) {
+	t.Logf(":: Creating simulation data. ")
+	dir, err := ioutil.TempDir("", "cat.dir")
 	if err != nil {
 		return "", err
 	}
@@ -35,12 +34,14 @@ func setup(data []byte) (string, error) {
 	return dir, nil
 }
 
-// Test_cat_1 test cat function against 3 files
-func Test_cat_1(t *testing.T) {
+// TestCat test cat function against 4 files, in each file it is written a bit of someData
+// array and the test expect the cat to return the exact same bit from someData array with
+// the corresponding file.
+func TestCat(t *testing.T) {
 	var files []string
 	someData := []byte{'l', 2, 3, 4, 'd'}
 
-	dir, err := setup(someData)
+	dir, err := setup(t, someData)
 	if err != nil {
 		t.Fatal("setup has failed, %v", err)
 	}
