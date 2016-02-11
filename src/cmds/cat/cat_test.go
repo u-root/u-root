@@ -1,9 +1,8 @@
-/* Copyright 2012 the u-root Authors. All rights reserved
- * Use of this source code is governed by a BSD-style
- * license that can be found in the LICENSE file.
- *
- * created by Rafael Campos Nunes <rafaelnunes@engineer.com>
- */
+// Copyright 2012 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// by Rafael Campos Nunes <rafaelnunes@engineer.com>
 
 package main
 
@@ -35,8 +34,10 @@ func setup(data []byte) (string, error) {
 	return dir, nil
 }
 
-// Test_cat_1 test cat function against 3 files
-func Test_cat_1(t *testing.T) {
+// TestCat test cat function against 4 files, in each file it is written a bit of someData
+// array and the test expect the cat to return the exact same bit from someData array with
+// the corresponding file.
+func TestCat(t *testing.T) {
 	var files []string
 	someData := []byte{'l', 2, 3, 4, 'd'}
 
