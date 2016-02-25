@@ -1,33 +1,32 @@
-// Copyright 2013 the u-root Authors. All rights reserved
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2013-2016 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file.
 
-/*
-Comm reads file1 and file2, which are in lexicographical order, and
-produces a three column output: lines only in file1; lines only in
-file2; and lines in both files. The file name – means the standard
-input.
-
-Flag 1, 2, or 3 suppresses printing of the corresponding column.
-*/
-
+//Comm reads file1 and file2, which are in lexicographical order, and
+//produces a three column output: lines only in file1; lines only in
+//file2; and lines in both files. The file name – means the standard
+//input.
 package main
 
 import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
 
-var s1 = flag.Bool("1", false, "suppress printing of column 1")
-var s2 = flag.Bool("2", false, "suppress printing of column 2")
-var s3 = flag.Bool("3", false, "suppress printing of column 3")
-var insensitive = flag.Bool("i", false, "case insensitive comparison of lines")
+var (
+	s1          = flag.Bool("1", false, "suppress printing of column 1")
+	s2          = flag.Bool("2", false, "suppress printing of column 2")
+	s3          = flag.Bool("3", false, "suppress printing of column 3")
+	help        = flag.Bool("h", false, "print this help message and exit")
+	insensitive = flag.Bool("i", false, "case insensitive comparison of lines")
+)
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "%s [-123i] file1 file2\n", os.Args[0])
+	log.Printf("Usage: %s [-123i] file1 file2\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
 }
@@ -85,7 +84,7 @@ func outer(c1, c2 chan string, c chan out) {
 func main() {
 	flag.Usage = usage
 	flag.Parse()
-	if flag.NArg() != 2 {
+	if flag.NArg() != 2 || *help {
 		flag.Usage()
 	}
 
@@ -95,14 +94,12 @@ func main() {
 
 	f1, err := os.Open(flag.Args()[0])
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		return
+		log.Fatalf("Can't open %s: %v", flag.Args()[0], err)
 	}
 
 	f2, err := os.Open(flag.Args()[1])
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		return
+		log.Fatalf("Can't open %s: %v", flag.Args()[1], err)
 	}
 	go reader(f1, c1)
 	go reader(f2, c2)
