@@ -5,6 +5,7 @@ import (
 	"debug/elf"
 	"flag"
 	"fmt"
+	"github.com/u-root/u-root/uroot"
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-	"uroot"
 )
 
 type copyfiles struct {
