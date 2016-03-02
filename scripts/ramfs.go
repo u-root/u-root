@@ -392,7 +392,7 @@ func main() {
 	cmd := exec.Command("go", "build", "init.go")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	cmd.Dir = path.Join(config.Gopath, "src/cmds/init")
+	cmd.Dir = path.Join(config.Gopath, "cmds/init")
 
 	err = cmd.Run()
 	if err != nil {
