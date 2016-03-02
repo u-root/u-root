@@ -2,23 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Wc counts lines, words, runes, syntactically–invalid UTF codes and
-bytes in the named files, or in the standard input if no file is
-named. A word is a maximal string of characters delimited by spaces,
-tabs or newlines. The count of runes includes invalid codes.  If
-the optional argument is present, just the specified counts (lines,
-words, runes, broken UTF codes or bytes) are selected by the letters
-l, w, r, b, or c. Otherwise, lines, words and bytes (–lwc) are
-reported.
-
-	–l		Count lines.
-	–w		Count words.
-	–r		Count runes.
-	–b		Count broken UTF codes.
-	-c		Count bytes.
-*/
-
+// we need re-test this, modifications were done
+// maybe that bugs reported doesn't exists more
 /* Bugs:
 
    This wc differs from Plan 9's wc somewhat in word count (BSD's wc differs
@@ -41,6 +26,21 @@ reported.
 
 */
 
+// Wc counts lines, words, runes, syntactically–invalid UTF codes and
+// bytes in the named files, or in the standard input if no file is
+// named. A word is a maximal string of characters delimited by spaces,
+// tabs or newlines. The count of runes includes invalid codes.  If
+// the optional argument is present, just the specified counts (lines,
+// words, runes, broken UTF codes or bytes) are selected by the letters
+// l, w, r, b, or c. Otherwise, lines, words and bytes (–lwc) are
+// reported.
+//
+//     –l      Count lines.
+//     –w      Count words.
+//     –r      Count runes.
+//     –b      Count broken UTF codes.
+//     -c      Count bytes.
+//     -m      Count chars.
 package main
 
 import (
@@ -54,14 +54,28 @@ import (
 	"unicode/utf8"
 )
 
-var lines = flag.Bool("l", false, "count lines")
-var words = flag.Bool("w", false, "count words")
-var runes = flag.Bool("r", false, "count runes")
-var broken = flag.Bool("b", false, "count broken")
-var chars = flag.Bool("c", false, "count bytes (include partial UTF)")
+var (
+	lines  = flag.Bool("l", false, "count lines")
+	words  = flag.Bool("w", false, "count words")
+	runes  = flag.Bool("r", false, "count runes")
+	broken = flag.Bool("b", false, "count broken")
+	bytesc = flag.Bool("c", false, "count bytes (include partial UTF)")
+	chars  = flag.Bool("m", false, "count chars (treat unicodes as unique char)")
+)
 
+// Cnt are structure for counting used at wc
 type Cnt struct {
-	nline, nword, nrune, nbadr, nchar int64
+	// number of lines
+	nline int64
+	//number of words
+	nword int64
+	// number of runes is equivalent a number of chars
+	nrune int64
+	// number of broken utf-8 codes
+	// identified by invalidCount
+	nbadr int64
+	// number of bytes
+	nbyte int64
 }
 
 // A modified version of utf8.Valid()
@@ -84,6 +98,8 @@ func invalidCount(p []byte) (n int64) {
 	return
 }
 
+// count counts the number of words, runes,
+// bytes and broken utf-8, return a Cnt structure
 func count(in io.Reader, fname string) (cnt Cnt) {
 	b := bufio.NewReaderSize(in, 8192)
 
@@ -103,12 +119,14 @@ func count(in io.Reader, fname string) (cnt Cnt) {
 		}
 		cnt.nword += int64(len(bytes.Fields(line)))
 		cnt.nrune += int64(utf8.RuneCount(line))
-		cnt.nchar += int64(len(line))
+		cnt.nbyte += int64(len(line))
 		cnt.nbadr += invalidCount(line)
 	}
 	return
 }
 
+// print the report on final the program
+// following the flags passed
 func report(c Cnt, fname string) {
 	fields := []string{}
 	if *lines {
@@ -117,37 +135,40 @@ func report(c Cnt, fname string) {
 	if *words {
 		fields = append(fields, fmt.Sprintf("%d", c.nword))
 	}
-	if *runes {
+	if *runes || *chars {
 		fields = append(fields, fmt.Sprintf("%d", c.nrune))
 	}
 	if *broken {
 		fields = append(fields, fmt.Sprintf("%d", c.nbadr))
 	}
-	if *chars {
-		fields = append(fields, fmt.Sprintf("%d", c.nchar))
+	if *bytesc {
+		fields = append(fields, fmt.Sprintf("%d", c.nbyte))
 	}
 	if fname != "" {
 		fields = append(fields, fmt.Sprintf("%s", fname))
 	}
 
-	fmt.Println(strings.Join(fields, " "))
+	fmt.Println(strings.Join(fields, "\t"))
 }
 
 func main() {
-	var totals Cnt
-
 	flag.Parse()
-
-	if !(*lines || *words || *runes || *broken || *chars) {
-		*lines, *words, *chars = true, true, true
+	// this is sickly (freq.go do the same)
+	// if any flag passed, the default is lines, words and bytes
+	if !(*lines || *words || *runes || *broken || *bytesc || *chars) {
+		*lines, *words, *bytesc = true, true, true
 	}
 
 	if flag.NArg() == 0 {
 		cnt := count(os.Stdin, "")
+		// \t to give some space
+		// and not print on the side of input
+		fmt.Print("\t")
 		report(cnt, "")
 		return
 	}
 
+	var totals Cnt
 	for _, v := range flag.Args() {
 		f, err := os.Open(v)
 		if err != nil {
@@ -159,7 +180,7 @@ func main() {
 		totals.nword += cnt.nword
 		totals.nrune += cnt.nrune
 		totals.nbadr += cnt.nbadr
-		totals.nchar += cnt.nchar
+		totals.nbyte += cnt.nbyte
 		report(cnt, v)
 	}
 	if flag.NArg() > 1 {

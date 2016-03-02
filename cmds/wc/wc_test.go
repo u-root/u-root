@@ -10,7 +10,8 @@ import (
 	"testing"
 )
 
-//
+// TestWc do a sequential tests with n args and x input at tab
+// of tests below
 func TestWc(t *testing.T) {
 	var tab = []struct {
 		i string
@@ -18,17 +19,21 @@ func TestWc(t *testing.T) {
 		s int
 		a []string
 	}{
-		{"simple test count words", "4\n", 0, []string{"-w"}}, // don't fail more
-		{"lines\nlines\n", "2\n", 0, []string{"-l"}},
-		{"count chars\n", "12\n", 0, []string{"-c"}},
+		{"simple test count words", "\t4\n", 0, []string{"-w"}}, // don't fail more
+		{"lines\nlines\n", "\t2\n", 0, []string{"-l"}},
+		{"count chars\n", "\t12\n", 0, []string{"-c"}},
+		{"↓→←↑asdf", "\t8\n", 0, []string{"-m"}},
+		{"↓€®", "\t3\n", 0, []string{"-r"}},
+		{"↑↑↑↑", "\t0\t1\t12\n", 0, nil},
 	}
 
 	tmpDir, err := ioutil.TempDir("", "TestWc")
 	if err != nil {
 		t.Fatal("TempDir failed: ", err)
 	}
-	defer os.RemoveAll(tmpDir)
-
+	if false {
+		defer os.RemoveAll(tmpDir)
+	}
 
 	testwcpath := filepath.Join(tmpDir, "testwc.exe")
 	out, err := exec.Command("go", "build", "-o", testwcpath, ".").CombinedOutput()
