@@ -22,14 +22,14 @@ type dir struct {
 
 type file struct {
 	contents string
-	mode os.FileMode
+	mode     os.FileMode
 }
 
 // TODO: make this a map so it's easier to find dups.
 type dev struct {
-	name  string
-	mode  os.FileMode
-	magic int
+	name    string
+	mode    os.FileMode
+	magic   int
 	howmany int
 }
 type mount struct {
@@ -42,7 +42,7 @@ type mount struct {
 
 var (
 	Envs []string
-	env = map[string]string{
+	env  = map[string]string{
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
 		"GOPATH":          "/",
@@ -64,22 +64,22 @@ var (
 		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777)},
 	}
 	devs = []dev{
-		// chicken and egg: these need to be there before you start. So, sadly,
-		// we will always need dev.cpio. 
-		//{name: "/dev/null", mode: os.FileMode(0660) | 020000, magic: 0x0103},
-		//{name: "/dev/console", mode: os.FileMode(0660) | 020000, magic: 0x0501},
+	// chicken and egg: these need to be there before you start. So, sadly,
+	// we will always need dev.cpio.
+	//{name: "/dev/null", mode: os.FileMode(0660) | 020000, magic: 0x0103},
+	//{name: "/dev/console", mode: os.FileMode(0660) | 020000, magic: 0x0501},
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
 		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
 	}
 
-	files = map[string] file {
+	files = map[string]file{
 		"/etc/resolv.conf": {contents: `nameserver 8.8.8.8`, mode: os.FileMode(0644)},
 	}
 )
 
-// build the root file system. 
+// build the root file system.
 func Rootfs() {
 	// Pick some reasonable values in the (unlikely!) even that Uname fails.
 	uname := "linux"
@@ -89,7 +89,7 @@ func Rootfs() {
 	// The second is in /go/bin [why they still use this path is anyone's guess]
 	// The third is in /go/pkg/tool/$OS_$ARCH
 	if u, err := Uname(); err != nil {
-		log.Printf("uroot.Utsname fails: %v, so assume %v_%v\n", uname, mach)
+		log.Printf("uroot.Utsname fails: %v, so assume %v_%v\n", err, uname, mach)
 	} else {
 		// Sadly, go and the OS disagree on case.
 		uname = strings.ToLower(u.Sysname)
@@ -123,7 +123,7 @@ func Rootfs() {
 
 	for _, m := range namespace {
 		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
-			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
+			log.Printf("Mount :%s: on :%s: type :%s: flags %x opts: %s: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
 
 	}
