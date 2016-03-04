@@ -1,90 +1,221 @@
+// Copyright 2016 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// The cp command is an userland program for copy files with that usage:
+// $ cp [FLAGS] from to
+// whose FLAGS := -rRfivwP
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
-	"path"
+	"path/filepath"
+	"runtime"
 )
 
-var Nwork int = 1
+// buffSize is the length of buffer during
+// the parallel copy using worker function
+const buffSize = 8192
 
-const Defb = 8192
+var (
+	recursive bool
+	ask       bool
+	force     bool
+	verbose   bool
+	symlink   bool
+	nwork     int
+	input     = bufio.NewReader(os.Stdin)
+	// offchan is a channel used for indicate the nextbuffer to read with worker()
+	offchan = make(chan int64, 0)
+	// zerochan is a channel used for indicate the start of a new read file
+	zerochan = make(chan int, 0)
+)
 
-var offchan chan int64
-var zerochan chan int
+func init() {
+	flag.IntVar(&nwork, "w", runtime.NumCPU(), "number of worker goroutines")
+	flag.BoolVar(&recursive, "R", false, "copy file hierarchies")
+	flag.BoolVar(&recursive, "r", false, "alias to -R recursive mode")
+	flag.BoolVar(&ask, "i", false, "prompt about overwriting file")
+	flag.BoolVar(&force, "f", false, "force overwrite files")
+	flag.BoolVar(&verbose, "v", false, "verbose copy mode")
+	flag.BoolVar(&symlink, "P", false, "don't follow symlinks")
+	flag.Parse()
+	go nextOff()
 
-func copyfile(from, to string, todir bool) bool {
+}
+
+// promptOverwrite ask if the user wants overwrite file
+func promptOverwrite(dst string) (bool, error) {
+	fmt.Printf("cp: overwrite %q? ", dst)
+	answer, err := input.ReadString('\n')
+	if err != nil {
+		return false, err
+	}
+
+	if answer[0] != 'y' {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// copyFile copies file between src (source) and dst (destination)
+// todir: if true insert src INTO dir dst
+func copyFile(src, dst string, todir bool) error {
 	if todir {
-		_, file := path.Split(from)
-		to = to + "/" + file
+		file := filepath.Base(src)
+		dst = filepath.Join(dst, file)
 	}
 
-	dirb, err := os.Stat(from)
+	srcb, err := os.Lstat(src)
 	if err != nil {
-		fmt.Printf("can't stat %s: %v\n", from, err)
-		return true
+		return fmt.Errorf("can't stat %v: %v", src, err)
 	}
-	tob, err := os.Stat(to)
-	if err == nil {
-		if sameFile(dirb.Sys(), tob.Sys()) {
-			fmt.Printf("%s and %s are the same file\n", from, to)
-			return true
+
+	// don't follow symlinks, copy symlink
+	if L := os.ModeSymlink; symlink && srcb.Mode()&L == L {
+		linkPath, err := filepath.EvalSymlinks(src)
+		if err != nil {
+			return fmt.Errorf("can't eval symlink %v: %v", src, err)
+		}
+		return os.Symlink(linkPath, dst)
+	}
+
+	if srcb.IsDir() {
+		if recursive {
+			return copyDir(src, dst)
+		}
+		return fmt.Errorf("%q is a directory, try use recursive option", src)
+	}
+
+	dstb, err := os.Stat(dst)
+	if !os.IsNotExist(err) {
+		if sameFile(srcb.Sys(), dstb.Sys()) {
+			return fmt.Errorf("%q and %q are the same file", src, dst)
+		}
+		if ask && !force {
+			overwrite, err := promptOverwrite(dst)
+			if err != nil {
+				return err
+			}
+			if !overwrite {
+				return nil
+			}
 		}
 	}
 
-	if dirb.IsDir() {
-		fmt.Printf("%s is a directory\n", from)
-		return true
-	}
-
-	mode := dirb.Mode() & 0777
-	f, err := os.Open(from)
+	mode := srcb.Mode() & 0777
+	s, err := os.Open(src)
 	if err != nil {
-		fmt.Printf("can't open %s: %v\n", from, err)
-		return true
+		return fmt.Errorf("can't open %q: %v", src, err)
 	}
-	defer f.Close()
+	defer s.Close()
 
-	t, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
+	d, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
-		fmt.Printf("can't create %s: %v\n", to, err)
-		f.Close()
-		return true
+		return fmt.Errorf("can't create %q: %v", dst, err)
 	}
-	defer t.Close()
-	return copy1(f, t, from, to)
+	defer d.Close()
+
+	return copyOneFile(s, d, src, dst)
 }
 
-func copy1(f, t *os.File, from, to string) (ret bool) {
+// copyOneFile copy the content between two files
+func copyOneFile(s *os.File, d *os.File, src, dst string) error {
 	zerochan <- 0
-	fail := make(chan bool, Nwork)
-
-	for i := 0; i < Nwork; i++ {
-		go worker(f, t, from, to, fail)
+	fail := make(chan error, nwork)
+	for i := 0; i < nwork; i++ {
+		go worker(s, d, fail)
 	}
-	for i := 0; i < Nwork; i++ {
-		end := <-fail
-		if end == true {
-			ret = true
+
+	// iterate the errors from channel
+	for i := 0; i < nwork; i++ {
+		err := <-fail
+		if err != nil {
+			return err
 		}
 	}
-	return
+
+	if verbose {
+		fmt.Printf("%q -> %q\n", src, dst)
+	}
+
+	return nil
 }
 
-func worker(f, t *os.File, from, to string, fail chan bool) {
-	var buf [Defb]byte
+// createDir populate dir destination if not exists
+// if exists verify is not a dir: return error if is file
+// cannot overwrite: dir -> file
+func createDir(src, dst string) error {
+	dstInfo, err := os.Stat(dst)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	if err == nil {
+		if !dstInfo.IsDir() {
+			return fmt.Errorf("can't overwrite non-dir %q with dir %q", dst, src)
+		}
+		return nil
+	}
+
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if err := os.Mkdir(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+	if verbose {
+		fmt.Printf("%q -> %q\n", src, dst)
+	}
+
+	return nil
+}
+
+// copyDir copy the file hierarchies
+// used at cp when -r or -R flag is true
+func copyDir(src, dst string) error {
+	if err := createDir(src, dst); err != nil {
+		return err
+	}
+
+	// list files from destination
+	files, err := ioutil.ReadDir(src)
+	if err != nil {
+		return fmt.Errorf("can't list files from %q: %q", src, err)
+	}
+
+	// copy recursively the src -> dst
+	for _, file := range files {
+		fname := file.Name()
+		fpath := filepath.Join(src, fname)
+		newDst := filepath.Join(dst, fname)
+		copyFile(fpath, newDst, false)
+	}
+
+	return err
+}
+
+// worker is a concurrent copy, used to copy part of the files
+// in parallel
+func worker(s *os.File, d *os.File, fail chan error) {
+	var buf [buffSize]byte
 	var bp []byte
 
 	l := len(buf)
 	bp = buf[0:]
 	o := <-offchan
 	for {
-		n, err := f.ReadAt(bp, o)
+		n, err := s.ReadAt(bp, o)
 		if err != nil && err != io.EOF {
-			fmt.Printf("reading %s at %v: %v\n", from, o, err)
-			fail <- true
+			fail <- fmt.Errorf("reading %s at %v: %v", s.Name(), o, err)
 			return
 		}
 		if n == 0 {
@@ -92,10 +223,9 @@ func worker(f, t *os.File, from, to string, fail chan bool) {
 		}
 
 		nb := bp[0:n]
-		n, err = t.WriteAt(nb, o)
+		n, err = d.WriteAt(nb, o)
 		if err != nil {
-			fmt.Printf("writing %s: %v\n", to, err)
-			fail <- true
+			fail <- fmt.Errorf("writing %s: %v", d.Name(), err)
 			return
 		}
 		bp = buf[n:]
@@ -107,60 +237,55 @@ func worker(f, t *os.File, from, to string, fail chan bool) {
 			o = <-offchan
 		}
 	}
-	fail <- false
+	fail <- nil
 }
 
-func nextoff() {
+// nextOff handler for next buffers and sync goroutines
+// zerochan imply the init of file
+// offchan is the next buffer part to read
+func nextOff() {
 	off := int64(0)
 	for {
 		select {
 		case <-zerochan:
 			off = 0
 		case offchan <- off:
-			off += Defb
+			off += buffSize
 		}
 	}
 }
 
-func usage() {
-	fmt.Printf("usage: cp [-w workers] from to\n")
-	os.Exit(1) // sysfatal
-}
-
-var nwork = flag.Int("w", 16, "number of worker goroutines")
-
-func main() {
+// cp is a function whose eval the args
+// and make decisions for copyfiles
+func cp(args []string) (lastErr error) {
 	todir := false
-
-	flag.Parse()
-	Nwork = *nwork
-	if flag.NArg() < 2 {
-		usage()
-	}
-
-	files := flag.Args()
-	lf := files[len(files)-1]
-	lfdir, err := os.Stat(lf)
+	from, to := args[:len(args)-1], args[len(args)-1]
+	toStat, err := os.Stat(to)
 	if err == nil {
-		todir = lfdir.IsDir()
+		todir = toStat.IsDir()
 	}
 	if flag.NArg() > 2 && todir == false {
-		fmt.Printf("not a directory: %s\n", lf)
-		os.Exit(1) // sysfatal
+		log.Fatalf("is not a directory: %s\n", to)
 	}
 
-	offchan = make(chan int64, 0)
-	zerochan = make(chan int, 0)
-	go nextoff()
-
-	failed := false
-	for i := 0; i < flag.NArg()-1; i++ {
-		if copyfile(files[i], lf, todir) {
-			failed = true
+	for _, file := range from {
+		if err := copyFile(file, to, todir); err != nil {
+			log.Printf("cp: %v\n", err)
+			lastErr = err
 		}
 	}
-	if failed {
-		os.Exit(2)
+
+	return err
+}
+
+func main() {
+	if flag.NArg() < 2 {
+		flag.Usage()
+		os.Exit(1)
 	}
-	return
+
+	if err := cp(flag.Args()); err != nil {
+		os.Exit(1)
+	}
+
 }
