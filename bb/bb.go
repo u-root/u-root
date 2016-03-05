@@ -8,7 +8,7 @@
 // GOARCH=amd64
 // bb needs to know where the tools are, and they are in two places, the place it created them
 // and the place where packages live:
-// GOPATH=/home/rminnich/projects/u-root/u-root/src/bb/bbsh:/home/rminnich/projects/u-root/u-root
+// GOPATH=/home/rminnich/projects/u-root/u-root/bb/bbsh:/home/rminnich/projects/u-root/u-root
 // bb needs to have a GOROOT
 // GOROOT=/home/rminnich/projects/u-root/go1.5/go/
 // There are no defaults.
@@ -35,7 +35,7 @@ import (
 
 const (
 	cmdFunc = `package main
-import "{{.CmdName}}"
+import "github.com/u-root/u-root/bb/bbsh/cmds/{{.CmdName}}"
 func _forkbuiltin_{{.CmdName}}(c *Command) (err error) {
 os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 {{.CmdName}}.Main()
@@ -65,7 +65,7 @@ import (
 	"log"
 	"os"
 	"path"
-	"uroot"
+	"github.com/u-root/u-root/uroot"
 )
 
 func init() {
@@ -94,7 +94,7 @@ func debugPrint(f string, s ...interface{}) {
 func nodebugPrint(f string, s ...interface{}) {
 }
 
-const cmds = "src/cmds"
+const cmds = "cmds"
 
 var (
 	debug      = nodebugPrint
@@ -111,7 +111,7 @@ var (
 		"freq",
 		"grep",
 		"ip",
-		"kexec",
+		//"kexec",
 		"ls",
 		"mkdir",
 		"mount",
@@ -254,8 +254,8 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 
 func oneCmd() {
 	// Create the directory for the package.
-	// For now, ./src/<package name>
-	packageDir := path.Join(config.Bbsh, "src", config.CmdName)
+	// For now, ./cmds/<package name>
+	packageDir := path.Join(config.Bbsh, "cmds", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
