@@ -10,9 +10,10 @@ import (
 func buildinit() {
 	e := os.Environ()
 	e = append(e, "CGO_ENABLED=0")
+	e = append(e, "GO15VENDOREXPERIMENT=1")
 	for i := range e {
 		if e[i][0:6] == "GOPATH" {
-			e[i] = e[i] + ":" + path.Join(config.Uroot, "src/bb/bbsh")
+			e[i] = e[i] + ":" + path.Join(config.Uroot, "bb/bbsh")
 		}
 	}
 	cmd := exec.Command("go", "build", "-o", "init", ".")

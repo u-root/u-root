@@ -8,7 +8,7 @@
 // GOARCH=amd64
 // bb needs to know where the tools are, and they are in two places, the place it created them
 // and the place where packages live:
-// GOPATH=/home/rminnich/projects/u-root/u-root/src/bb/bbsh:/home/rminnich/projects/u-root/u-root
+// GOPATH=/home/rminnich/projects/u-root/u-root/bb/bbsh:/home/rminnich/projects/u-root/u-root
 // bb needs to have a GOROOT
 // GOROOT=/home/rminnich/projects/u-root/go1.5/go/
 // There are no defaults.
@@ -65,7 +65,7 @@ import (
 	"log"
 	"os"
 	"path"
-	"uroot"
+	"github.com/u-root/u-root/uroot"
 )
 
 func init() {
@@ -94,7 +94,7 @@ func debugPrint(f string, s ...interface{}) {
 func nodebugPrint(f string, s ...interface{}) {
 }
 
-const cmds = "src/cmds"
+const cmds = "cmds"
 
 var (
 	debug      = nodebugPrint

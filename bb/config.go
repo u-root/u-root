@@ -51,6 +51,8 @@ func guessgopath() {
 		config.Gopath = path.Clean(gopath)
 		return
 	}
+	// We need to change the guess logic but that will have to wait.
+	log.Fatal("GOPATH was not set")
 	// It's a good chance they're running this from the u-root source directory
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -58,12 +60,12 @@ func guessgopath() {
 		config.Fail = true
 		return
 	}
-	// walk up the cwd until we find a u-root entry. See if src/cmds/init/init.go exists.
+	// walk up the cwd until we find a u-root entry. See if cmds/init/init.go exists.
 	for c := cwd; c != "/"; c = path.Dir(c) {
 		if path.Base(c) != "u-root" {
 			continue
 		}
-		check := path.Join(c, "src/cmds/init/init.go")
+		check := path.Join(c, "cmds/init/init.go")
 		if _, err := os.Stat(check); err != nil {
 			//log.Printf("Could not stat %v", check)
 			continue
@@ -81,15 +83,14 @@ func guessgopath() {
 func guessuroot() {
 	config.Uroot = os.Getenv("UROOT")
 	if config.Uroot == "" {
-		/* let's try to guess. If we see bb.go, then we're in u-root/src/bb */
+		/* let's try to guess. If we see bb.go, then we're in u-root/bb */
 		if _, err := os.Stat("bb.go"); err == nil {
-			dir := path.Dir(config.Cwd)
-			config.Uroot = path.Dir(dir)
-		} else if _, err := os.Stat("src/bb/bb.go"); err == nil {
-			// Maybe they're at top level? If there is a srb/bb/bb.go, that's it.
+			config.Uroot = path.Dir(config.Cwd)
+		} else if _, err := os.Stat("bb/bb.go"); err == nil {
+			// Maybe they're at top level? If there is a bb/bb.go, that's it.
 			config.Uroot = config.Cwd
 		} else {
-			log.Fatalf("UROOT was not set and I don't seem to be in u-root/src/bb/bb.go or u-root")
+			log.Fatalf("UROOT was not set and I don't seem to be in u-root/u-root/src/bb/bb.go or u-root/u-root")
 		}
 	}
 
