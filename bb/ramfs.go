@@ -1,5 +1,5 @@
-// bbramfs builds a simple initramfs given an existing built bb; see src/bb.go
-// You have to run bb first, which creates src/cmds/bb/bbsh. cd to that directory,
+// bbramfs builds a simple initramfs given an existing built bb; see bb.go
+// You have to run bb first, which creates cmds/bb/bbsh. cd to that directory,
 // and run bbramfs, and you have a single binary which does all u-root commands.
 package main
 
@@ -22,7 +22,7 @@ type copyfiles struct {
 }
 
 const (
-	bbList = `{{.Uroot}}/src/bb/bbsh
+	bbList = `{{.Uroot}}/bb/bbsh
 init`
 )
 
@@ -137,7 +137,7 @@ func ramfs() {
 		log.Fatal("%v\n", err)
 	}
 
-	bbdir := path.Join(config.Uroot, "src/bb/bbsh")
+	bbdir := path.Join(config.Uroot, "bb/bbsh")
 	bbbin := path.Join(bbdir, "bin")
 	os.RemoveAll(bbbin)
 	// Create /bin. It is just a set of symlinks to /init
