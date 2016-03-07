@@ -5,15 +5,18 @@ env:
   - "PATH=/home/travis/gopath/bin:$PATH"
   - "GO15VENDOREXPERIMENT=1"
   - "CGO_ENABLED=0"
+  - "GOPATH=/home/travis/gopath"
 before_install:
   - go get github.com/mitchellh/gox
   - go get github.com/tcnksm/ghr
+  - go get github.com/Masterminds/glide
+  - glide up
+  - pwd
+  - ls -l
 install:
-  - export GOPATH="$HOME/gopath"
-  - mkdir -p "$GOPATH/src/github.com/u-root/u-root"
-  - mv "$TRAVIS_BUILD_DIR" "$GOPATH/build"
+  - ls
+  - du -a vendor
 script:
+  - echo "Did it blend"
 after_success:
-  - cd "$GOPATH/src/sevki.org/build/cmd/build"
-  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
-  - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username sevki --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
