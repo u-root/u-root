@@ -1,0 +1,9 @@
+approve_by_comment: true
+approve_regex: '^(LGTM|:\+1:|\+1)'
+reject_regex: '^(:-1:|-1)'
+reset_on_push: false
+reviewers:
+  members:
+  - rminnich
+  name: u-root/u-root
+  required: 1
