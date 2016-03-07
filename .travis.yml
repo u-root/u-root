@@ -17,6 +17,7 @@ install:
   - ls
   - du -a vendor
 script:
+  - (cd bb && go build .)
   - echo "Did it blend"
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
