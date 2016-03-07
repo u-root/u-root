@@ -1,0 +1,23 @@
+language: go
+go:
+  - 1.6
+env:
+  - "PATH=/home/travis/gopath/bin:$PATH"
+  - "GO15VENDOREXPERIMENT=1"
+  - "CGO_ENABLED=0"
+before_install:
+  - go get github.com/mitchellh/gox
+  - go get github.com/tcnksm/ghr
+install:
+  - export GOPATH="$HOME/gopath"
+  - mkdir -p "$GOPATH/src/sevki.org/"
+  - mv "$TRAVIS_BUILD_DIR" "$GOPATH/src/sevki.org/build"
+  - go get -v -t -d sevki.org/build/...
+script:
+  - go test -v sevki.org/build/parser
+  - go test -v sevki.org/build/lexer
+  - go test -v sevki.org/build/ast
+after_success:
+  - cd "$GOPATH/src/sevki.org/build/cmd/build"
+  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username sevki --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
