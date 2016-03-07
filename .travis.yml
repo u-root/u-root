@@ -10,13 +10,9 @@ before_install:
   - go get github.com/tcnksm/ghr
 install:
   - export GOPATH="$HOME/gopath"
-  - mkdir -p "$GOPATH/src/sevki.org/"
-  - mv "$TRAVIS_BUILD_DIR" "$GOPATH/src/sevki.org/build"
-  - go get -v -t -d sevki.org/build/...
+  - mkdir -p "$GOPATH/src/github.com/u-root/u-root"
+  - mv "$TRAVIS_BUILD_DIR" "$GOPATH/build"
 script:
-  - go test -v sevki.org/build/parser
-  - go test -v sevki.org/build/lexer
-  - go test -v sevki.org/build/ast
 after_success:
   - cd "$GOPATH/src/sevki.org/build/cmd/build"
   - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
