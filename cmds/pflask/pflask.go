@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"C"
 	"unsafe"
 )
 
@@ -45,7 +44,7 @@ func ptsopen() (pty, tty *os.File, slavename string, err error) {
 }
 
 func ptsname(f *os.File) (string, error) {
-	var n C.uint
+	var n uintptr
 	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n)))
 	if err != 0 {
 		return "", err
@@ -54,7 +53,7 @@ func ptsname(f *os.File) (string, error) {
 }
 
 func ptsunlock(f *os.File) error {
-	var u C.int
+	var u uintptr
 	// use TIOCSPTLCK with a zero valued arg to clear the slave pty lock
 	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&u)))
 	if err != 0 {
@@ -322,8 +321,9 @@ func main() {
 
 		if syscall.Geteuid() != 0 {
 			c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
-			c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
-			c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
+			// Interesting. Won't build statically?
+			//c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
+			//c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
 		}
 
 		c.Stdin = os.Stdin

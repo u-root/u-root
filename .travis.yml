@@ -15,7 +15,9 @@ script:
   - (cd bb && go build . && ./bb)
   - which go
   - (cd scripts && go build ramfs.go)
-  - (cd cmds && go test ./...)
+  - (cd cmds && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' ./...)
+  - ls -l cmds/*
+  - (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -ldflags '-s' ./...)
   - echo "Did it blend"
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
