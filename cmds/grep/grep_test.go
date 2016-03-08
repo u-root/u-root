@@ -30,9 +30,7 @@ func TestGrep(t *testing.T) {
 	if err != nil {
 		t.Fatal("TempDir failed: ", err)
 	}
-	if false {
-		defer os.RemoveAll(tmpDir)
-	}
+	defer os.RemoveAll(tmpDir)
 
 	testgreppath := filepath.Join(tmpDir, "testgrep.exe")
 	out, err := exec.Command("go", "build", "-o", testgreppath, ".").CombinedOutput()

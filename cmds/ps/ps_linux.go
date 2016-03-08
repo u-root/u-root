@@ -220,13 +220,17 @@ type winsize struct {
 
 func terminalSize() (int, int) {
 	ws := &winsize{}
-	retCode, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
+	retCode, _, _ := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stdin),
 		uintptr(syscall.TIOCGWINSZ),
 		uintptr(unsafe.Pointer(ws)))
 
+	// Not everything is a terminal!
+	// This is basically really ugly.
+	// We need to consider removing all the terminal stuff completely.
+	// It's not the 1960s :-)
 	if int(retCode) == -1 {
-		panic(errno)
+		return 80, 24
 	}
 	return int(ws.Row), int(ws.Col)
 }

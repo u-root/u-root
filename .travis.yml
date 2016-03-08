@@ -3,9 +3,6 @@ go:
   - 1.6
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
-  - "GO15VENDOREXPERIMENT=1"
-  - "CGO_ENABLED=0"
-  - "GOPATH=/home/travis/gopath"
 before_install:
   - go get github.com/Masterminds/glide
   - glide up
@@ -18,6 +15,7 @@ script:
   - (cd bb && go build . && ./bb)
   - which go
   - (cd scripts && go build ramfs.go)
+  - (cd cmds && go test ./...)
   - echo "Did it blend"
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
