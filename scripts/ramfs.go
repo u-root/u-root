@@ -22,37 +22,48 @@ type copyfiles struct {
 }
 
 const (
+	devcpio = "scripts/dev.cpio"
+	urootPath = "src/github.com/u-root/u-root"
 	// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
 	// I don't want to revive the 'letter' stuff.
-	goList = `{{.Gosrcroot}}
+	// This has gotten kind of ugly. But [0] is source, [1] is dest, and [2..] is the list.
+	// FIXME. this is ugly.
+	goList = `{{.Goroot}}
+go
 {{.Go}}
-go/pkg/include
-go/src
-go/VERSION.cache
-go/misc
-go/pkg/tool/{{.Goos}}_{{.Arch}}/compile
-go/pkg/tool/{{.Goos}}_{{.Arch}}/link
-go/pkg/tool/{{.Goos}}_{{.Arch}}/asm
-go/pkg/tool/{{.Goos}}_{{.Arch}}/old6a`
+pkg/include
+src
+VERSION.cache
+misc
+pkg/tool/{{.Goos}}_{{.Arch}}/compile
+pkg/tool/{{.Goos}}_{{.Arch}}/link
+pkg/tool/{{.Goos}}_{{.Arch}}/asm
+pkg/tool/{{.Goos}}_{{.Arch}}/old6a`
 	urootList = `{{.Gopath}}
-src`
+
+src/github.com/u-root/u-root/cmds
+src/github.com/u-root/u-root/uroot
+src/github.com/u-root/u-root/vendor`
 )
 
 var (
 	config struct {
-		Goroot      string
-		Gosrcroot   string
-		Arch        string
-		Goos        string
-		Gopath      string
-		TempDir     string
-		Go          string
-		Debug       bool
-		Fail        bool
-		TestChroot  bool
-		RemoveDir   bool
-		InitialCpio string
-		TmpDir      string
+		Goroot          string
+		Godotdot       string
+		Godot       string
+		Arch            string
+		Goos            string
+		Gopath          string
+		Urootpath          string
+		TempDir         string
+		Go              string
+		Debug           bool
+		Fail            bool
+		TestChroot      bool
+		RemoveDir       bool
+		InitialCpio     string
+		TmpDir          string
+		UseExistingInit bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -60,6 +71,10 @@ var (
 		"arm":   "5",
 		"ppc":   "9",
 	}
+	// the whitelist is a list of u-root tools that we feel
+	// can replace existing tools. It is, sadly, a very short
+	// list at present.
+	whitelist = []string{"date"}
 )
 
 func getenvOrDefault(e, defaultValue string) string {
@@ -83,49 +98,6 @@ func lsr(n string, w *os.File) error {
 	return err
 }
 
-// Sometimes, when we are creating a new initramfs, we have started with
-// an existing one. In that case, the existing one may have files in bin/
-// that duplicate u-root commands (e.g. a tinycore initramfs has the busybox
-// 'cat' in bin/, and we want to use the u-root one). uniq will remove
-// these duplicate files so that on startup, users will use the u-root
-// commands, not commands from the initial initramfs. Note that we don't
-// put a u-root file in bin/; it is built on-demand.
-// uniq looks in $UROOT/src/cmds and for each directory found there,
-// which corresponds to a u-root command, adds that file name to the
-// list of files to be removed from the initramfs we are creating.
-// Note that the actuall command is rm -f; if the file we want to
-// remove does not exist, that is not a problem.
-// Regrettably, we have to do this as root because it will have been
-// built from an initramfs and many of the files will almost certainly
-// not be removable. Sorry.
-func uniq(dir string) error {
-	names := []string{"rm", "-f"}
-	dir = path.Clean(dir)
-	if dir == "/" || dir == "/bin" {
-		log.Fatalf("NOT removing files in / or /bin, sorry!")
-	}
-	b := path.Join(config.Gopath, "src/cmds")
-	err := filepath.Walk(b, func(name string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !fi.IsDir() {
-			return filepath.SkipDir
-		}
-		names = append(names, path.Base(name))
-		return nil
-	})
-	cmd := exec.Command("sudo", names...)
-	cmd.Stderr, cmd.Stdout, cmd.Dir = os.Stderr, os.Stdout, path.Join(dir, "/bin")
-	if config.Debug {
-		log.Printf("Run %v @ %v", cmd, cmd.Dir)
-	}
-	if err = cmd.Run(); err != nil {
-		log.Fatalf("%v", err)
-	}
-	return err
-}
-
 // cpio copies a tree from one place to another, defined by a template.
 func cpiop(c string) error {
 
@@ -144,8 +116,9 @@ func cpiop(c string) error {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cmd := exec.Command("sudo", "cpio", "--make-directories", "-p", config.TempDir)
-	cmd.Dir = n[0]
+	cmd := exec.Command("sudo", "cpio", "--make-directories", "-p", path.Join(config.TempDir, n[1]))
+	d := path.Clean(n[0])
+	cmd.Dir = d
 	cmd.Stdin = r
 	cmd.Stdout = os.Stdout
 	if config.Debug {
@@ -157,22 +130,22 @@ func cpiop(c string) error {
 		log.Printf("%v\n", err)
 	}
 
-	for _, v := range n[1:] {
+	for _, v := range n[2:] {
 		if config.Debug {
 			log.Printf("%v\n", v)
 		}
-		err := filepath.Walk(path.Join(n[0], v), func(name string, fi os.FileInfo, err error) error {
+		err := filepath.Walk(path.Join(d, v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				log.Printf(" WALK FAIL%v: %v\n", name, err)
 				// That's ok, sometimes things are not there.
 				return filepath.SkipDir
 			}
-			cn := strings.TrimPrefix(name, n[0]+"/")
+			cn := strings.TrimPrefix(name, d+"/")
 			if cn == ".git" {
 				return filepath.SkipDir
 			}
 			fmt.Fprintf(w, "%v\n", cn)
-			//log.Printf("c.dir %v %v %v\n", n[0], name, cn)
+			log.Printf("c.dir %v %v %v\n", d, name, cn)
 			return nil
 		})
 		if err != nil {
@@ -188,33 +161,37 @@ func cpiop(c string) error {
 }
 
 func sanity() {
-	goBinGo := path.Join(config.Gosrcroot, "go/bin/go")
-	log.Printf("check %v as the go binary", goBinGo)
-	_, err := os.Stat(goBinGo)
+	binGo := path.Join(config.Goroot, "bin/go")
+	log.Printf("check %v as the go binary", binGo)
+	_, err := os.Stat(binGo)
 	if err == nil {
-		config.Go = "go/bin/go"
+		config.Go = "bin/go"
 	}
+	log.Printf("%v exists, but check go/bin/OS_ARCH too", config.Go)
 	// but does the one in go/bin/OS_ARCH exist too?
 	archgo := fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch)
-	linuxBinGo := path.Join(config.Gosrcroot, archgo)
-	log.Printf("check %v as the go binary", linuxBinGo)
-	_, err = os.Stat(linuxBinGo)
+	OsArchBinGo := path.Join(config.Goroot, archgo)
+	log.Printf("check %v as the go binary", OsArchBinGo)
+	_, err = os.Stat(OsArchBinGo)
 	if err == nil {
 		config.Go = archgo
-		goBinGo = linuxBinGo
+		binGo = OsArchBinGo
 	}
-	log.Printf("Using %v as the go command", goBinGo)
+	log.Printf("Using %v as the go command", binGo)
 	if config.Go == "" {
 		log.Fatalf("Can't find a go binary! Is GOROOT set correctly?")
 	}
-	f, err := elf.Open(goBinGo)
+	f, err := elf.Open(binGo)
 	if err != nil {
-		log.Fatalf("%v is not an ELF file; don't know what to do", goBinGo)
+		log.Fatalf("%v is not an ELF file; don't know what to do", binGo)
 	}
 	ds := f.SectionByType(elf.SHT_DYNAMIC)
 	if ds != nil {
-		log.Printf("U-root requires a staticically built go tree at present. %v is dynamic.", goBinGo)
-		log.Fatalf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot, config.Arch)
+		log.Printf("*************************************************************************")
+		log.Printf("U-root requires a staticically built go tree at present. %v is dynamic.", binGo)
+		log.Printf("Proceeding, but this probably won't go well.")
+		log.Printf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot, config.Arch)
+		log.Printf("*************************************************************************")
 	}
 }
 
@@ -251,7 +228,7 @@ func guessgoroot() {
 	if config.Goroot != "" {
 		config.Goroot = path.Clean(config.Goroot)
 		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
-		config.Gosrcroot = path.Dir(config.Goroot)
+		config.Godotdot = path.Dir(config.Goroot)
 		return
 	}
 	log.Print("Goroot is not set, trying to find a go binary")
@@ -261,7 +238,7 @@ func guessgoroot() {
 		g := path.Join(v, "go")
 		if _, err := os.Stat(g); err == nil {
 			config.Goroot = path.Dir(path.Dir(v))
-			config.Gosrcroot = path.Dir(config.Goroot)
+			config.Godotdot = path.Dir(config.Goroot)
 			log.Printf("Guessing that goroot is %v from $PATH", config.Goroot)
 			return
 		}
@@ -272,26 +249,28 @@ func guessgoroot() {
 
 func guessgopath() {
 	defer func() {
-		config.Gosrcroot = path.Dir(config.Goroot)
+		config.Godotdot = path.Dir(config.Goroot)
 	}()
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
-		config.Gopath = path.Clean(gopath)
+		config.Gopath = gopath
+		config.Urootpath = path.Join(gopath, urootPath)
 		return
 	}
 	// It's a good chance they're running this from the u-root source directory
+	log.Fatalf("Fix up guessgopath")
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Printf("GOPATH was not set and I can't get the wd: %v", err)
 		config.Fail = true
 		return
 	}
-	// walk up the cwd until we find a u-root entry. See if src/cmds/init/init.go exists.
+	// walk up the cwd until we find a u-root entry. See if cmds/init/init.go exists.
 	for c := cwd; c != "/"; c = path.Dir(c) {
 		if path.Base(c) != "u-root" {
 			continue
 		}
-		check := path.Join(c, "src/cmds/init/init.go")
+		check := path.Join(c, "cmds/init/init.go")
 		if _, err := os.Stat(check); err != nil {
 			//log.Printf("Could not stat %v", check)
 			continue
@@ -312,6 +291,7 @@ func guessgopath() {
 func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
 	flag.BoolVar(&config.TestChroot, "test", false, "test the directory by chrooting to it")
+	flag.BoolVar(&config.UseExistingInit, "useinit", false, "If there is an existing init, don't replace it")
 	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
 	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
 	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
@@ -375,29 +355,43 @@ func main() {
 		if err != nil {
 			log.Printf("Unpacking %v: %v", config.InitialCpio, err)
 		}
-
-		// Must remove config.TempDir/init.
-		cmd = exec.Command("sudo", "mv", "init", "init.orig")
-		cmd.Dir = config.TempDir
-		if err = cmd.Run(); err != nil {
-			log.Printf("%v", err)
-		}
-		if err = uniq(config.TempDir); err != nil {
-			// Actually, this is not a problem.
-		}
-
 	}
 
-	// Build init
-	cmd := exec.Command("go", "build", "init.go")
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.Dir = path.Join(config.Gopath, "cmds/init")
+	if !config.UseExistingInit {
+		// Must move config.TempDir/init to inito if one is not there.
+		inito := path.Join(config.TempDir, "inito")
+		if _, err := os.Stat(inito); err != nil {
+			// WTF? did Ron forget about rename? Yuck!
+			cmd := exec.Command("sudo", "mv", "init", "inito")
+			cmd.Dir = config.TempDir
+			if err = cmd.Run(); err != nil {
+				log.Printf("%v", err)
+			}
+		} else {
+			log.Printf("Not replacing %v because there is already one there.", inito)
+		}
 
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("%v\n", err)
-		os.Exit(1)
+		// Build init
+		cmd := exec.Command("go", "build", "init.go")
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		cmd.Dir = path.Join(config.Urootpath, "cmds/init")
+
+		err = cmd.Run()
+		if err != nil {
+			log.Fatalf("%v\n", err)
+			os.Exit(1)
+		}
+		// Drop an init in /
+		initbin, err := ioutil.ReadFile(path.Join(config.Urootpath, "cmds/init/init"))
+		if err != nil {
+			log.Fatal("%v\n", err)
+		}
+		err = ioutil.WriteFile(path.Join(config.TempDir, "init"), initbin, 0755)
+		if err != nil {
+			log.Fatal("%v\n", err)
+		}
+
 	}
 
 	// These produce arrays of strings, the first element being the
@@ -413,24 +407,13 @@ func main() {
 		}
 	}
 
-	// Drop an init in /
-	initbin, err := ioutil.ReadFile(path.Join(config.Gopath, "src/cmds/init/init"))
-	if err != nil {
-		log.Fatal("%v\n", err)
-	}
-	err = ioutil.WriteFile(path.Join(config.TempDir, "init"), initbin, 0755)
-	if err != nil {
-		log.Fatal("%v\n", err)
-	}
-
 	r, w, err := os.Pipe()
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
 
 	// First create the archive and put the device cpio in it.
-	// Note that Gopath is also the base of all of u-root.
-	dev, err := ioutil.ReadFile(path.Join(config.Gopath, "scripts/dev.cpio"))
+	dev, err := ioutil.ReadFile(path.Join(config.Urootpath, devcpio))
 	if err != nil {
 		log.Fatal("%v %v\n", dev, err)
 	}
@@ -444,7 +427,7 @@ func main() {
 	// That way we get one cpio.
 	// We need sudo as there may be files created from an initramfs that
 	// can only be read by root.
-	cmd = exec.Command("sudo", "cpio", "-H", "newc", "-o", "-A", "-F", oname)
+	cmd := exec.Command("sudo", "cpio", "-H", "newc", "-o", "-A", "-F", oname)
 	cmd.Dir = config.TempDir
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
@@ -477,7 +460,7 @@ func main() {
 	cmd = exec.Command("sudo", "cpio", "-i")
 	cmd.Dir = config.TempDir
 	// We have it in memory. Get a better way to do this!
-	r, err = os.Open(path.Join(config.Gopath, "scripts/dev.cpio"))
+	r, err = os.Open(path.Join(config.Urootpath, devcpio))
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

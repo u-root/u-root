@@ -11,13 +11,14 @@
 package main
 
 import (
-	"github.com/u-root/u-root/uroot"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+
+	"github.com/u-root/u-root/uroot"
 )
 
 func main() {
@@ -25,7 +26,9 @@ func main() {
 	uroot.Rootfs()
 	// populate buildbin
 
-	if commands, err := ioutil.ReadDir("/src/cmds"); err == nil {
+	// In earlier versions we just had src/cmds. Due to the Go rules it seems we need to
+	// embed the URL of the repo everywhere. Yuck.
+	if commands, err := ioutil.ReadDir(path.Join("/src", uroot.CmdsPath)); err == nil {
 		for _, v := range commands {
 			name := v.Name()
 			if name == "installcommand" || name == "init" {
@@ -36,6 +39,8 @@ func main() {
 				if err := os.Symlink(source, destPath); err != nil {
 					log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
 				}
+				// Debugging, almost never needed.
+				//log.Printf("Symlink %v -> %v", source, destPath)
 			}
 		}
 	} else {
@@ -44,7 +49,7 @@ func main() {
 	envs := uroot.Envs
 	log.Printf("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
-	cmd := exec.Command("go", "install", "-x", path.Join("cmds", "installcommand"))
+	cmd := exec.Command("go", "install", "-x", path.Join(uroot.CmdsPath, "installcommand"))
 	installenvs := envs
 	installenvs = append(envs, "GOBIN=/buildbin")
 	cmd.Env = installenvs

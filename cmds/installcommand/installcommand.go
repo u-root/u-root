@@ -5,12 +5,14 @@ import (
 	"os"
 	"os/exec"
 	"path"
+
+	"github.com/u-root/u-root/uroot"
 )
 
 var urpath = "/go/bin:/ubin:/buildbin:/usr/local/bin:"
 
 func main() {
-	/* e.g. (GOBIN=`pwd`/ubin go install cmds/date) */
+	/* e.g. (GOBIN=`pwd`/ubin go install uroot.CmdsPath/date) */
 
 	cleanPath := path.Clean(os.Args[0])
 	log.Printf("cleanPath %v\n", cleanPath)
@@ -19,7 +21,7 @@ func main() {
 	destDir := "/ubin"
 	destFile := path.Join(destDir, commandName)
 
-	cmd := exec.Command("go", "install", "-x", path.Join("cmds", commandName))
+	cmd := exec.Command("go", "install", "-x", path.Join(uroot.CmdsPath, commandName))
 
 	cmd.Dir = "/"
 

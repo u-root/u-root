@@ -12,7 +12,10 @@ import (
 	"syscall"
 )
 
-const PATH = "/bin:/ubin:/buildbin:/usr/local/bin"
+const (
+	PATH = "/bin:/ubin:/buildbin:/usr/local/bin"
+	CmdsPath = "github.com/u-root/u-root/cmds"
+)
 
 // TODO: make this a map so it's easier to find dups.
 type dir struct {

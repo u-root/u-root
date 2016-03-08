@@ -7,8 +7,6 @@ env:
   - "CGO_ENABLED=0"
   - "GOPATH=/home/travis/gopath"
 before_install:
-  - go get github.com/mitchellh/gox
-  - go get github.com/tcnksm/ghr
   - go get github.com/Masterminds/glide
   - glide up
   - pwd
@@ -18,6 +16,7 @@ install:
   - du -a vendor
 script:
   - (cd bb && go build . && ./bb)
+  - which go
   - (cd scripts && go build ramfs.go)
   - echo "Did it blend"
 after_success:
