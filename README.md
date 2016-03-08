@@ -30,3 +30,5 @@ tcz bash
 In the EXAMPLES directory you can see examples of running in a chroot, kernel, and coreboot.
 
 We need help with this project, so contributions are welcome.
+
+[![Build Status](https://travis-ci.org/u-root/uroot.svg?branch=master)](https://travis-ci.org/u-root/u-root)
