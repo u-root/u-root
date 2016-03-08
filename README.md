@@ -1,6 +1,9 @@
 u-root
 ======
 
+[![Build Status](https://travis-ci.org/u-root/u-root.svg?branch=master)](https://travis-ci.org/u-root/u-root)
+
+
 A universal root. You mount it, and it's mostly Go source with the exception of 5 binaries. 
 
 And that's the interesting part. This set of utilities is all Go, and mostly source.
@@ -31,4 +34,3 @@ In the EXAMPLES directory you can see examples of running in a chroot, kernel, a
 
 We need help with this project, so contributions are welcome.
 
-[![Build Status](https://travis-ci.org/u-root/uroot.svg?branch=master)](https://travis-ci.org/u-root/u-root)
