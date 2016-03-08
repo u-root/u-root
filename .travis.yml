@@ -18,6 +18,7 @@ install:
   - du -a vendor
 script:
   - (cd bb && go build . && ./bb)
+  - (cd scripts && go build ramfs.go)
   - echo "Did it blend"
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
