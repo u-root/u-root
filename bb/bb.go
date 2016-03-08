@@ -8,7 +8,7 @@
 // GOARCH=amd64
 // bb needs to know where the tools are, and they are in two places, the place it created them
 // and the place where packages live:
-// GOPATH=/home/rminnich/projects/u-root/u-root/src/bb/bbsh:/home/rminnich/projects/u-root/u-root
+// GOPATH=/home/rminnich/projects/u-root/u-root/bb/bbsh:/home/rminnich/projects/u-root/u-root
 // bb needs to have a GOROOT
 // GOROOT=/home/rminnich/projects/u-root/go1.5/go/
 // There are no defaults.
@@ -35,7 +35,7 @@ import (
 
 const (
 	cmdFunc = `package main
-import "{{.CmdName}}"
+import "github.com/u-root/u-root/bb/bbsh/cmds/{{.CmdName}}"
 func _forkbuiltin_{{.CmdName}}(c *Command) (err error) {
 os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 {{.CmdName}}.Main()
@@ -65,7 +65,7 @@ import (
 	"log"
 	"os"
 	"path"
-	"uroot"
+	"github.com/u-root/u-root/uroot"
 )
 
 func init() {
@@ -94,7 +94,7 @@ func debugPrint(f string, s ...interface{}) {
 func nodebugPrint(f string, s ...interface{}) {
 }
 
-const cmds = "src/cmds"
+const cmds = "cmds"
 
 var (
 	debug      = nodebugPrint
@@ -111,7 +111,7 @@ var (
 		"freq",
 		"grep",
 		"ip",
-		"kexec",
+		//"kexec",
 		"ls",
 		"mkdir",
 		"mount",
@@ -129,24 +129,26 @@ var (
 		"wget",
 	}
 
-	fixFlag = map[string]bool{
-		"Bool":        true,
-		"BoolVar":     true,
-		"Duration":    true,
-		"DurationVar": true,
-		"Float64":     true,
-		"Float64Var":  true,
-		"Int":         true,
-		"Int64":       true,
-		"Int64Var":    true,
-		"IntVar":      true,
-		"String":      true,
-		"StringVar":   true,
-		"Uint":        true,
-		"Uint64":      true,
-		"Uint64Var":   true,
-		"UintVar":     true,
-		"Var":         true,
+	// fixFlag tells by existence if an argument needs to be fixed.
+	// The value tells which argument.
+	fixFlag = map[string]int{
+		"Bool":        0,
+		"BoolVar":     1,
+		"Duration":    0,
+		"DurationVar": 1,
+		"Float64":     0,
+		"Float64Var":  1,
+		"Int":         0,
+		"Int64":       0,
+		"Int64Var":    1,
+		"IntVar":      1,
+		"String":      0,
+		"StringVar":   1,
+		"Uint":        0,
+		"Uint64":      0,
+		"Uint64Var":   1,
+		"UintVar":     1,
+		"Var":         1,
 	}
 	dumpAST = flag.Bool("D", false, "Dump the AST")
 )
@@ -192,10 +194,14 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 			case *ast.SelectorExpr:
 				// somebody tell me how to do this.
 				sel := fmt.Sprintf("%v", z.X)
-				if sel == "flag" && fixFlag[z.Sel.Name] {
-					switch zz := x.Args[0].(type) {
-					case *ast.BasicLit:
-						zz.Value = "\"" + config.CmdName + "." + zz.Value[1:]
+				// TODO: Need to have fixFlag and fixFlagVar
+				// as the Var variation has name in the SECOND argument.
+				if sel == "flag" {
+					if ix, ok := fixFlag[z.Sel.Name]; ok {
+						switch zz := x.Args[ix].(type) {
+						case *ast.BasicLit:
+							zz.Value = "\"" + config.CmdName + "." + zz.Value[1:]
+						}
 					}
 				}
 			}
@@ -254,8 +260,8 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 
 func oneCmd() {
 	// Create the directory for the package.
-	// For now, ./src/<package name>
-	packageDir := path.Join(config.Bbsh, "src", config.CmdName)
+	// For now, ./cmds/<package name>
+	packageDir := path.Join(config.Bbsh, "cmds", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
