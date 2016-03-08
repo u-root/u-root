@@ -9,12 +9,59 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/kr/pty"
+	"C"
+	"unsafe"
 )
+
+// pty support. We used to import github.com/kr/pty but what we need is not that complex.
+// Thanks to keith rarick for these functions.
+
+func ptsopen() (pty, tty *os.File, slavename string, err error) {
+	p, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
+	if err != nil {
+		return
+	}
+
+	slavename, err = ptsname(p)
+	if err != nil {
+		return
+	}
+
+	err = ptsunlock(p)
+	if err != nil {
+		return
+	}
+
+	t, err := os.OpenFile(slavename, os.O_RDWR|syscall.O_NOCTTY, 0)
+	if err != nil {
+		return
+	}
+	return p, t, slavename, nil
+}
+
+func ptsname(f *os.File) (string, error) {
+	var n C.uint
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n)))
+	if err != 0 {
+		return "", err
+	}
+	return "/dev/pts/" + strconv.Itoa(int(n)), nil
+}
+
+func ptsunlock(f *os.File) error {
+	var u C.int
+	// use TIOCSPTLCK with a zero valued arg to clear the slave pty lock
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&u)))
+	if err != 0 {
+		return err
+	}
+	return nil
+}
 
 type cgroupname string
 
@@ -308,7 +355,7 @@ func main() {
 	//log.Printf("greetings %v\n", a)
 	a = a[:len(a)-1]
 
-	ptm, pts, sname, err := pty.Open()
+	ptm, pts, sname, err := ptsopen()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
