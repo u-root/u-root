@@ -1,17 +1,21 @@
 hash: 0fde9cfce7d79134e720a54b2a0dd2e0b7b83f0cd9d0826f3f23ce416e10261e
-updated: 2016-02-29T22:19:05.934951249-03:00
+updated: 2016-03-07T16:08:48.560497435-08:00
 imports:
 - name: github.com/kr/pty
   version: f7ee69f31298ecbe5d2b349c711e2547a617d398
 - name: github.com/krolaw/dhcp4
   version: ffbbb16f447b3e05b80e8ddecbb8ada36e2ae006
 - name: golang.org/x/net
-  version: 6acef71eb69611914f7a30939ea9f6e194c78172
+  version: a4bbce9fcae005b22ae5443f6af064d80a6f5a55
   subpackages:
   - ipv4
   - internal/iana
+- name: golang.org/x/sys
+  version: 7a56174f0086b32866ebd746a794417edbc678a1
+  subpackages:
+  - unix
 - name: golang.org/x/tools
-  version: 8b178a93c1f5b5c8f4e36cd6bd64e0d5bf0ee180
+  version: 3d26f6847a824a26211a433ba4b7813cebd768c9
   subpackages:
   - imports
   - go/ast/astutil
