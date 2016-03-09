@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"text/template"
 )
 
@@ -109,7 +110,7 @@ func cpiop(c string) error {
 
 	n := strings.Split(b.String(), "\n")
 	if config.Debug {
-		log.Printf("Strings :%v:\n", n)
+		log.Printf("cpiop: from %v, to %v, :%v:\n", n[0], n[1], n[2:])
 	}
 
 	r, w, err := os.Pipe()
@@ -153,9 +154,15 @@ func cpiop(c string) error {
 		}
 	}
 	w.Close()
+	if config.Debug {
+		log.Printf("Done sending files to external")
+	}
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%v\n", err)
+	}
+	if config.Debug {
+		log.Printf("External cpio is done")
 	}
 	return nil
 }
@@ -198,15 +205,10 @@ func sanity() {
 
 	goBin := path.Join(config.TempDir, "go/bin/go")
 	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", goBin)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
 	cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	fmt.Printf("Cmd is %v\n", cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("Building statically linked go tool info %v: %v\n", goBin, err)
-		os.Exit(1)
+	if o, err := cmd.CombinedOutput(); err != nil {
+		log.Fatalf("Building statically linked go tool info %v: %v, %v\n", goBin, string(o), err)
 	}
 }
 
@@ -373,13 +375,12 @@ func main() {
 	}
 
 	if !config.UseExistingInit {
+		init := path.Join(config.TempDir, "init")
 		// Must move config.TempDir/init to inito if one is not there.
 		inito := path.Join(config.TempDir, "inito")
 		if _, err := os.Stat(inito); err != nil {
 			// WTF? did Ron forget about rename? Yuck!
-			cmd := exec.Command("sudo", "mv", "init", "inito")
-			cmd.Dir = config.TempDir
-			if err = cmd.Run(); err != nil {
+			if err := syscall.Rename(init, inito); err != nil {
 				log.Printf("%v", err)
 			}
 		} else {
@@ -387,7 +388,7 @@ func main() {
 		}
 
 		// Build init
-		cmd := exec.Command("go", "build", "init.go")
+		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", init, ".")
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		cmd.Dir = path.Join(config.Urootpath, "cmds/init")
@@ -395,18 +396,7 @@ func main() {
 		err = cmd.Run()
 		if err != nil {
 			log.Fatalf("%v\n", err)
-			os.Exit(1)
 		}
-		// Drop an init in /
-		initbin, err := ioutil.ReadFile(path.Join(config.Urootpath, "cmds/init/init"))
-		if err != nil {
-			log.Fatal("%v\n", err)
-		}
-		err = ioutil.WriteFile(path.Join(config.TempDir, "init"), initbin, 0755)
-		if err != nil {
-			log.Fatal("%v\n", err)
-		}
-
 	}
 
 	// These produce arrays of strings, the first element being the
@@ -422,6 +412,10 @@ func main() {
 		}
 	}
 
+	if config.Debug {
+		log.Printf("Done all cpio operations")
+	}
+
 	r, w, err := os.Pipe()
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -431,6 +425,10 @@ func main() {
 	dev, err := ioutil.ReadFile(path.Join(config.Urootpath, devcpio))
 	if err != nil {
 		log.Fatal("%v %v\n", dev, err)
+	}
+
+	if config.Debug {
+		log.Printf("Creating initramf file")
 	}
 
 	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
@@ -458,9 +456,15 @@ func main() {
 		log.Fatal("%v\n", err)
 	}
 	w.Close()
+	if config.Debug {
+		log.Printf("Finished sending file list for initramfs cpio")
+	}
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%v\n", err)
+	}
+	if config.Debug {
+		log.Printf("cpio for initramfs is done")
 	}
 	defer func() {
 		log.Printf("Output file is in %v\n", oname)
