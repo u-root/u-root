@@ -137,6 +137,7 @@ type dhcpInfo struct {
 }
 
 func c2(re *regexp.Regexp) {
+	foundIface := false
 	fails := 0
 	r := make(chan *dhcpInfo)
 	ifaces, err := net.Interfaces()
@@ -149,8 +150,13 @@ func c2(re *regexp.Regexp) {
 		if !re.Match([]byte(v.Name)) {
 			continue
 		}
+		foundIface = true
 		log.Printf("Let's USE iface  %v", v)
 		go one(v, r)
+	}
+	if ! foundIface {
+		log.Printf("Found no interfaces to match re %v", re.String())
+		log.Fatalf("Could you run dhcp -r your-interface-name?")
 	}
 	for p := range r {
 		if p == nil {
