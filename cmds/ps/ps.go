@@ -49,7 +49,7 @@ type ProcessTable struct {
 	headers  []string // each column to print
 	fields   []string // which fields of process to print, on order
 	fstring  []string // formated strings
-	maxwidth int      // max width
+	maxwidth int      // DEPRECATED: reason -> remove terminal stuff
 }
 
 // to use on sort.Sort
@@ -112,10 +112,6 @@ func (pT ProcessTable) PrintHeader() {
 		row += fmt.Sprintf(formated, field)
 	}
 
-	if len(row) > pT.maxwidth {
-		row = row[:pT.maxwidth]
-	}
-
 	fmt.Printf("%v\n", row)
 }
 
@@ -129,10 +125,6 @@ func (pT ProcessTable) PrintProcess(index int) {
 		formated := pT.fstring[index]
 		row += fmt.Sprintf(formated, field)
 
-	}
-
-	if len(row) > pT.maxwidth {
-		row = row[:pT.maxwidth]
 	}
 
 	fmt.Printf("%v\n", row)
