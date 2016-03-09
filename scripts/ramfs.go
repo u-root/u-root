@@ -22,7 +22,7 @@ type copyfiles struct {
 }
 
 const (
-	devcpio = "scripts/dev.cpio"
+	devcpio   = "scripts/dev.cpio"
 	urootPath = "src/github.com/u-root/u-root"
 	// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
 	// I don't want to revive the 'letter' stuff.
@@ -49,12 +49,12 @@ src/github.com/u-root/u-root/vendor`
 var (
 	config struct {
 		Goroot          string
-		Godotdot       string
-		Godot       string
+		Godotdot        string
+		Godot           string
 		Arch            string
 		Goos            string
 		Gopath          string
-		Urootpath          string
+		Urootpath       string
 		TempDir         string
 		Go              string
 		Debug           bool
@@ -145,7 +145,7 @@ func cpiop(c string) error {
 				return filepath.SkipDir
 			}
 			fmt.Fprintf(w, "%v\n", cn)
-			log.Printf("c.dir %v %v %v\n", d, name, cn)
+			//log.Printf("c.dir %v %v %v\n", d, name, cn)
 			return nil
 		})
 		if err != nil {
@@ -186,12 +186,27 @@ func sanity() {
 		log.Fatalf("%v is not an ELF file; don't know what to do", binGo)
 	}
 	ds := f.SectionByType(elf.SHT_DYNAMIC)
-	if ds != nil {
-		log.Printf("*************************************************************************")
-		log.Printf("U-root requires a staticically built go tree at present. %v is dynamic.", binGo)
-		log.Printf("Proceeding, but this probably won't go well.")
-		log.Printf("To fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot, config.Arch)
-		log.Printf("*************************************************************************")
+	if ds == nil {
+		return
+	}
+
+	log.Printf("*************************************************************************")
+	log.Printf("U-root requires a staticically built go command. %v is dynamic.", binGo)
+	log.Printf("This is ok; u-root is all source, but we have to rebuild  the go binary")
+	log.Printf("Another way to  fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot, config.Arch)
+	log.Printf("*************************************************************************")
+
+	goBin := path.Join(config.TempDir, "go/bin/go")
+	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", goBin)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+	fmt.Printf("Cmd is %v\n", cmd)
+	err = cmd.Run()
+	if err != nil {
+		log.Fatalf("Building statically linked go tool info %v: %v\n", goBin, err)
+		os.Exit(1)
 	}
 }
 
