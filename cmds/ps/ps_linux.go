@@ -15,8 +15,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
-	"unsafe"
 )
 
 const (
@@ -96,7 +94,11 @@ type process struct {
 func (p *process) readStat(pid string) error {
 	b, err := ioutil.ReadFile(path.Join(proc, pid, "stat"))
 
-	if err != nil {
+	// if process disappears on the middle of operation
+	// ignore them
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -113,7 +115,10 @@ func (p *process) readStat(pid string) error {
 	p.Ctty = p.getCtty()
 	cmd := p.Cmd
 	p.Cmd = cmd[1 : len(cmd)-1]
-	if flags.x {
+	if flags.x && false {
+		// disable that, because after removed the max width limit
+		// we had some incredible long cmd lines whose breaks the
+		// visual table of process at running ps
 		cmdline, err := p.longCmdLine()
 		if err != nil {
 			return err
@@ -159,7 +164,6 @@ func (p *process) getField(field string) string {
 }
 
 // Search for attributes about the process
-//
 func (p Process) Search(field string) string {
 	return p.process.getField(field)
 }
@@ -211,30 +215,6 @@ func (p process) getTime() string {
 	return fmt.Sprintf("%02d:%02d:%02d", hrs, mins, secs)
 }
 
-type winsize struct {
-	Row    uint16
-	Col    uint16
-	Xpixel uint16
-	Ypixel uint16
-}
-
-func terminalSize() (int, int) {
-	ws := &winsize{}
-	retCode, _, _ := syscall.Syscall(syscall.SYS_IOCTL,
-		uintptr(syscall.Stdin),
-		uintptr(syscall.TIOCGWINSZ),
-		uintptr(unsafe.Pointer(ws)))
-
-	// Not everything is a terminal!
-	// This is basically really ugly.
-	// We need to consider removing all the terminal stuff completely.
-	// It's not the 1960s :-)
-	if int(retCode) == -1 {
-		return 80, 24
-	}
-	return int(ws.Row), int(ws.Col)
-}
-
 // Walk from the proc files
 // and parsing them
 func (pT *ProcessTable) LoadTable() error {
@@ -259,10 +239,6 @@ func (pT *ProcessTable) LoadTable() error {
 
 		return filepath.SkipDir
 	})
-
-	// set terminal max on load table
-	_, columnSize := terminalSize()
-	pT.maxwidth = columnSize
 
 	if err.Error() == "skip this directory" {
 		return nil

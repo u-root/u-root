@@ -13,7 +13,6 @@ import (
 // Simple Test trying execute the ps
 // If no errors returns, it's okay
 func TestPsExecution(t *testing.T) {
-	t.Skipf("ps is broken; if a process disappears the test fails.")
 	pT := ProcessTable{}
 	if err := pT.LoadTable(); err != nil {
 		t.Fatalf("Loading Table fails on some point; %v", err)
