@@ -23,3 +23,6 @@ script:
   - echo "Did it blend"
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
+
+notifications:
+  slack: u-root:S74GnNB8ekAiqNYTjwbEhkQE
