@@ -43,6 +43,7 @@ pkg/tool/{{.Goos}}_{{.Arch}}/old6a`
 	urootList = `{{.Gopath}}
 
 src/github.com/u-root/u-root/cmds
+src/github.com/u-root/u-root/netlink
 src/github.com/u-root/u-root/uroot
 src/github.com/u-root/u-root/vendor`
 )
