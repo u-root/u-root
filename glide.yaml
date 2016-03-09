@@ -1,6 +1,5 @@
 package: github.com/u-root/u-root
 import:
-- package: github.com/kr/pty
 - package: github.com/krolaw/dhcp4
 - package: golang.org/x/tools
   subpackages:
