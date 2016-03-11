@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 
 	"github.com/u-root/u-root/uroot"
 )
@@ -78,23 +79,28 @@ func main() {
 		}
 	}
 
-	// There may be an init.orig if we are building on
+	// There may be an inito if we are building on
 	// an existing initramfs. So, first, try to
-	// run init.orig and then run our shell
-	// Perhaps we should stat init.orig first.
-	for _, v := range []string{"/init.orig", "/buildbin/rush"} {
+	// run inito and then run our shell
+	// Perhaps we should stat inito first.
+	// inito is always first and we set default flags for it.
+	cloneFlags := uintptr(syscall.CLONE_NEWPID)
+	for _, v := range []string{"/inito", "/buildbin/rush"} {
 		cmd = exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		// TODO: figure out why we get EPERM when we use this.
-		//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
+		//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+		cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
 		log.Printf("Run %v", cmd)
 		err = cmd.Run()
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
+		// only the first init needs its own PID space.
+		cloneFlags = 0
 	}
 	log.Printf("init: All commands exited")
 }
