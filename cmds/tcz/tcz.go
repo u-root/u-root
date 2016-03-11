@@ -88,7 +88,7 @@ func clonetree(tree string) error {
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
 		if fi.IsDir() {
 			l.Printf("walking, dir %v\n", path)
-			os.MkdirAll(path[lt:], 0600)
+			os.MkdirAll(path[lt:], 0700)
 			return nil
 		}
 		// all else gets a symlink.
@@ -192,7 +192,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	for v := range deps {
 		cmdName := strings.Split(v, ".")[0]
 		packagePath := path.Join("/tmp/tcloop", cmdName)
-		if err := os.MkdirAll(packagePath, 0600); err != nil {
+		if err := os.MkdirAll(packagePath, 0700); err != nil {
 			l.Fatal(err)
 		}
 
@@ -238,11 +238,11 @@ func main() {
 	cmdName := flag.Args()[0]
 	tczName := cmdName + ".tcz"
 
-	if err := os.MkdirAll(tcz, 0600); err != nil {
+	if err := os.MkdirAll(tcz, 0700); err != nil {
 		l.Fatal(err)
 	}
 
-	if err := os.MkdirAll("/tmp/tcloop", 0600); err != nil {
+	if err := os.MkdirAll("/tmp/tcloop", 0700); err != nil {
 		l.Fatal(err)
 	}
 
