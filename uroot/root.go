@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	PATH = "/bin:/ubin:/buildbin:/usr/local/bin"
+	// Not all these paths may be populated or even exist but OTOH they might.
+	PATH = "/ubin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/buildbin"
 	CmdsPath = "github.com/u-root/u-root/cmds"
 )
 
@@ -73,7 +74,7 @@ var (
 	//{name: "/dev/console", mode: os.FileMode(0660) | 020000, magic: 0x0501},
 	}
 	namespace = []mount{
-		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
+		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
 		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
 	}
 

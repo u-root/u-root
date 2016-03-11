@@ -3,49 +3,51 @@ Roadmap (alpha)
 
 #### Finish commands and tests
 
-- [x] date
+![Progress](http://progressed.io/bar/48)
+
 - [x] cat
-- [x] rm
-- [x] mv
-- [x] tee
-- [ ] freq
-- [ ] ping
-- [ ] ps
-- [ ] sed
-- [ ] which
-- [ ] uniq
-- [ ] seq
-- [ ] sh
-- [ ] grep
-- [ ] wc
-- [ ] cp
-- [ ] script
-- [ ] ip
-- [ ] cmp
+- [x] cmp
 - [ ] comm
+- [x] cp
+- [x] date
 - [ ] dd
+- [ ] dhcp
 - [ ] dmesg
-- [ ] echo
-- [ ] hostname
+- [x] echo
+- [ ] ectool
+- [x] freq
+- [ ] gitclone
+- [x] grep
+- [x] hostname
 - [ ] init
+- [ ] installcommand
+- [ ] ip
+- [ ] kexec
 - [ ] ldd
-- [ ] ls
+- [x] ln
+- [ ] losetup
+- [x] ls
 - [ ] mkdir
 - [ ] mount
-- [ ] printenv
-- [x] pwd
-- [ ] uname
-- [ ] wget
-- [ ] dhcp
-- [ ] ectool
-- [ ] gitclone
-- [ ] installcommand
-- [ ] kexec
-- [ ] losetup
+- [x] mv
 - [ ] pflask
+- [ ] ping
+- [x] printenv
+- [x] ps
+- [x] pwd
+- [x] rm
+- [ ] rush
+- [ ] script
+- [x] seq
 - [ ] srvfiles
-- [ ] tcz3
+- [ ] tcz
+- [ ] tee
+- [x] uname
+- [x] uniq
 - [ ] unshare
+- [x] wc
+- [x] wget
+- [x] which
 
 
 
