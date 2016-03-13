@@ -14,7 +14,9 @@ import (
 
 const (
 	// Not all these paths may be populated or even exist but OTOH they might.
-	PATH = "/ubin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/buildbin"
+	PATHHEAD = "/ubin"
+	PATHMID = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin"
+	PATHTAIL = "/buildbin"
 	CmdsPath = "github.com/u-root/u-root/cmds"
 )
 
@@ -45,11 +47,13 @@ type mount struct {
 }
 
 var (
+	Profile string
 	Envs []string
 	env  = map[string]string{
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
 		"GOPATH":          "/",
+		"GOBIN":          "/ubin",
 		"CGO_ENABLED":     "0",
 	}
 
@@ -66,6 +70,8 @@ var (
 		{name: "/lib", mode: os.FileMode(0777)},
 		{name: "/usr/lib", mode: os.FileMode(0777)},
 		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777)},
+		// This is for uroot packages. Is this a good idea? I don't know.
+		{name: "/pkg", mode: os.FileMode(0777)},
 	}
 	devs = []dev{
 	// chicken and egg: these need to be there before you start. So, sadly,
@@ -75,7 +81,7 @@ var (
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
-		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL | syscall.MS_RDONLY, opts: ""},
+		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL, opts: ""},
 	}
 
 	files = map[string]file{
@@ -87,7 +93,7 @@ var (
 func Rootfs() {
 	// Pick some reasonable values in the (unlikely!) even that Uname fails.
 	uname := "linux"
-	mach := "x86_64"
+	mach := "amd64"
 	// There are three possible places for go:
 	// The first is in /go/bin/$OS_$ARCH
 	// The second is in /go/bin [why they still use this path is anyone's guess]
@@ -95,20 +101,39 @@ func Rootfs() {
 	if u, err := Uname(); err != nil {
 		log.Printf("uroot.Utsname fails: %v, so assume %v_%v\n", err, uname, mach)
 	} else {
-		// Sadly, go and the OS disagree on case.
+		// Sadly, go and the OS disagree on many things.
 		uname = strings.ToLower(u.Sysname)
 		mach = strings.ToLower(u.Machine)
 		// Yes, we really have to do this stupid thing.
 		if mach[0:3] == "arm" {
 			mach = "arm"
 		}
+		if mach == "x86_64" {
+			mach = "amd64"
+		}
 	}
-	env["PATH"] = fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s:%v", uname, mach, uname, mach, PATH)
+	goPath := fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s", uname, mach, uname, mach)
+	env["PATH"] = fmt.Sprintf("%v:%v:%v:%v", goPath, PATHHEAD, PATHMID, PATHTAIL)
 
 	for k, v := range env {
 		os.Setenv(k, v)
 		Envs = append(Envs, k+"="+v)
 	}
+
+	// Some systems wipe out all the environment variables we so carefully craft.
+	// There is a way out -- we can put them into /etc/profile.d/uroot if we want.
+	// The PATH variable has to change, however.
+	env["PATH"] = fmt.Sprintf("%v:%v:%v:%v", goPath, PATHHEAD, "$PATH", PATHTAIL)
+	for k, v := range env {
+		Profile += "export " +k+"="+v+"\n"
+	}
+	// IF the profile is used, THEN when the user logs in they will need a private
+	// tmpfs. There's no good way to do this on linux. The closest we can get for now
+	// is to mount a tmpfs of /go/pkg/%s_%s :-(
+	// Same applies to ubin. Each user should have their own.
+	Profile += fmt.Sprintf("sudo mount -t tmpfs none /go/pkg/%s_%s\n", uname, mach)
+	Profile += fmt.Sprintf("sudo mount -t tmpfs none /ubin\n")
+	Profile += fmt.Sprintf("sudo mount -t tmpfs none /pkg\n")
 
 	for _, m := range dirs {
 		if err := os.MkdirAll(m.name, m.mode); err != nil {

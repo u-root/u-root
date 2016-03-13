@@ -50,7 +50,7 @@ func main() {
 	envs := uroot.Envs
 	log.Printf("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
-	cmd := exec.Command("go", "install", "-x", path.Join(uroot.CmdsPath, "installcommand"))
+	cmd := exec.Command("go", "build", "-x", "-o", "/buildbin/installcommand", path.Join(uroot.CmdsPath, "installcommand"))
 	installenvs := envs
 	installenvs = append(envs, "GOBIN=/buildbin")
 	cmd.Env = installenvs
@@ -76,6 +76,18 @@ func main() {
 		n := path.Join("/env", nv[0])
 		if err := ioutil.WriteFile(n, []byte(nv[1]), 0666); err != nil {
 			log.Printf("%v: %v", n, err)
+		}
+	}
+
+	// Now here's some good fun. We've set environment variables we want to see used.
+	// But on some systems the environment variable we create is completely ignored.
+	// Oh, is that you again, tinycore? Well.
+	// So we can save the day by writing the uroot.profile string to /etc/profile.d/uroot.sh
+	// mode, usually, 644.
+	// Only bother doing this is /etc/profile.d exists and is a directory.
+	if fi, err := os.Stat("/etc/profile.d"); err == nil && fi.IsDir() {
+		if err := ioutil.WriteFile("/etc/profile.d/uroot.sh", []byte(uroot.Profile), 0644); err != nil {
+			log.Printf("Trying to write uroot profile failed: %v", err)
 		}
 	}
 
