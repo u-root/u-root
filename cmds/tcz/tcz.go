@@ -67,34 +67,24 @@ func findloop() (name string, err error) {
 	name = fmt.Sprintf("/dev/loop%d", a)
 	return name, nil
 }
-func linkone(p string, i os.FileInfo, err error) error {
-	l.Printf("symtree: p %v\n", p)
-	if err != nil {
-		return err
-	}
 
-	// the tree of symlinks starts at /tmp/tcloop
-	packagel := filepath.SplitList(p)
-	// surely there's a better way.
-	n := append([]string{"/"}, packagel[2:]...)
-	to := path.Join(n...)
-
-	l.Printf("symtree: remove %v\n", to)
-	os.Remove(to)
-	l.Printf("symtree: symlink %v to %v\n", p, to)
-	return os.Symlink(p, to)
-}
 func clonetree(tree string) error {
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
 		if fi.IsDir() {
 			l.Printf("walking, dir %v\n", path)
-			os.MkdirAll(path[lt:], 0700)
+			if err := os.MkdirAll(path[lt:], 0700); err != nil {
+				l.Printf("Mkdir of %s failed: %v", path[lt:],err)
+				return err
+			}
 			return nil
 		}
 		// all else gets a symlink.
-		l.Printf("Need to symlnk %v to %v\n", path, path)
-		os.Symlink(path, path[lt:])
+		l.Printf("Need to symlnk %v to %v\n", path, path[lt:])
+		if err := os.Symlink(path, path[lt:]); err != nil {
+			l.Printf("symlink failed: %v", err)
+			return err
+		}
 		return nil
 	})
 	if err != nil {
