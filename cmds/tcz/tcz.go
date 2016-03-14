@@ -69,19 +69,27 @@ func findloop() (name string, err error) {
 }
 
 func clonetree(tree string) error {
+	l.Printf("Clone tree %v", tree)
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+		l.Printf("Clone tree with path %s fi %v", path, fi)
 		if fi.IsDir() {
 			l.Printf("walking, dir %v\n", path)
+			if path[lt:] == "" {
+				return nil
+			}
 			if err := os.MkdirAll(path[lt:], 0700); err != nil {
 				l.Printf("Mkdir of %s failed: %v", path[lt:],err)
-				return err
+				// TODO: EEXIST should not be an error. Ignore
+				// err for now. FIXME.
+				//return err
 			}
 			return nil
 		}
 		// all else gets a symlink.
 		l.Printf("Need to symlnk %v to %v\n", path, path[lt:])
 		if err := os.Symlink(path, path[lt:]); err != nil {
+			// TODO: if it's there, and has same value, no error.
 			l.Printf("symlink failed: %v", err)
 			return err
 		}
@@ -226,7 +234,7 @@ func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
 	tczServerDir = path.Join("/", *version, *arch, "tcz")
-	tczLocalPackageDir = path.Join("tcz", tczServerDir)
+	tczLocalPackageDir = path.Join("/tcz", tczServerDir)
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
