@@ -48,7 +48,8 @@ var (
 	version = flag.String("v", "5.x", "tinycore version")
 	arch    = flag.String("a", "x86_64", "tinycore architecture")
 	port    = flag.String("p", "80", "Host port")
-	tcz     string
+	tczServerDir     string
+	tczLocalPackageDir string
 )
 
 // consider making this a goroutine which pushes the string down the channel.
@@ -66,34 +67,32 @@ func findloop() (name string, err error) {
 	name = fmt.Sprintf("/dev/loop%d", a)
 	return name, nil
 }
-func linkone(p string, i os.FileInfo, err error) error {
-	l.Printf("symtree: p %v\n", p)
-	if err != nil {
-		return err
-	}
 
-	// the tree of symlinks starts at /tmp/tcloop
-	packagel := filepath.SplitList(p)
-	// surely there's a better way.
-	n := append([]string{"/"}, packagel[2:]...)
-	to := path.Join(n...)
-
-	l.Printf("symtree: remove %v\n", to)
-	os.Remove(to)
-	l.Printf("symtree: symlink %v to %v\n", p, to)
-	return os.Symlink(p, to)
-}
 func clonetree(tree string) error {
+	l.Printf("Clone tree %v", tree)
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+		l.Printf("Clone tree with path %s fi %v", path, fi)
 		if fi.IsDir() {
 			l.Printf("walking, dir %v\n", path)
-			os.MkdirAll(path[lt:], 0700)
+			if path[lt:] == "" {
+				return nil
+			}
+			if err := os.MkdirAll(path[lt:], 0700); err != nil {
+				l.Printf("Mkdir of %s failed: %v", path[lt:],err)
+				// TODO: EEXIST should not be an error. Ignore
+				// err for now. FIXME.
+				//return err
+			}
 			return nil
 		}
 		// all else gets a symlink.
-		l.Printf("Need to symlnk %v to %v\n", path, path)
-		os.Symlink(path, path[lt:])
+		l.Printf("Need to symlnk %v to %v\n", path, path[lt:])
+		if err := os.Symlink(path, path[lt:]); err != nil {
+			// TODO: if it's there, and has same value, no error.
+			l.Printf("symlink failed: %v", err)
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -104,10 +103,13 @@ func clonetree(tree string) error {
 }
 
 func fetch(p string) error {
-	// path.Join doesn't quite work here.
-	fullpath := path.Join(tcz, p)
+
+	fullpath := path.Join(tczLocalPackageDir, p)
+	packageName := path.Join(tczServerDir, p)
 	if _, err := os.Stat(fullpath); err != nil {
-		cmd := "http://" + *host + ":" + *port + "/" + fullpath
+		// path.Join doesn't quite work here. It will try to do file-system-like
+		// joins and it ends up remove the // and replacing it with a clash.
+		cmd := "http://" + *host + ":" + *port + "/" + packageName
 		l.Printf("Fetch %v\n", cmd)
 
 		resp, err := http.Get(cmd)
@@ -158,13 +160,13 @@ func installPackage(tczName string, deps map[string]bool) error {
 		l.Printf("Fetched dep ok!\n")
 	} else {
 		l.Printf("No dep file found\n")
-		if err := ioutil.WriteFile(path.Join(tcz, depName), []byte{}, os.FileMode(0444)); err != nil {
+		if err := ioutil.WriteFile(path.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0444)); err != nil {
 			l.Printf("Tried to write Blank file %v, failed %v\n", depName, err)
 		}
 		return nil
 	}
 	// read deps file
-	deplist, err := ioutil.ReadFile(path.Join(tcz, depName))
+	deplist, err := ioutil.ReadFile(path.Join(tczLocalPackageDir, depName))
 	if err != nil {
 		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
 	}
@@ -201,7 +203,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			l.Fatal(err)
 		}
 		l.Printf("findloop gets %v err %v\n", loopname, err)
-		pkgpath := path.Join(tcz, v)
+		pkgpath := path.Join(tczLocalPackageDir, v)
 		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
 		if err != nil {
 			l.Fatal("%v: %v\n", pkgpath, err)
@@ -231,14 +233,15 @@ func setupPackages(tczName string, deps map[string]bool) error {
 func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
-	tcz = path.Join("/", *version, *arch, "tcz")
+	tczServerDir = path.Join("/", *version, *arch, "tcz")
+	tczLocalPackageDir = path.Join("/tcz", tczServerDir)
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
 	cmdName := flag.Args()[0]
 	tczName := cmdName + ".tcz"
 
-	if err := os.MkdirAll(tcz, 0700); err != nil {
+	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
 		l.Fatal(err)
 	}
 
