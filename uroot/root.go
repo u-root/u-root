@@ -127,6 +127,9 @@ func Rootfs() {
 	for k, v := range env {
 		Profile += "export " +k+"="+v+"\n"
 	}
+	// The IFS lets us force a rehash every time we type a command, so that when we
+	// build uroot commands we don't keep rebuilding them.
+	Profile += "IFS=`hash -r`\n"
 	// IF the profile is used, THEN when the user logs in they will need a private
 	// tmpfs. There's no good way to do this on linux. The closest we can get for now
 	// is to mount a tmpfs of /go/pkg/%s_%s :-(
