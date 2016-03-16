@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"strings"
 
 	// TODO _ "golang.org/x/crypto/openpgp"
 	// TODO _ "golang.org/x/crypto/md4"
@@ -44,45 +46,57 @@ var (
 	armored = flag.Bool("a", false, "signature is ASCII armored")
 	sumfile = flag.String("i", "", "checksum file")
 	alg     = flag.String("alg", "MD5", "md5sum")
+	verbose = flag.Bool("v", false, "verbose")
+	debug   = func(string, ...interface{}) {}
 )
 
 func main() {
 	flag.Parse()
-	if false {
-		if flag.NArg() < 2 {
-			log.Fatalf("Need at least a file to be validated and one public key")
-		}
+	if flag.NArg() < 2 {
+		log.Fatalf("Need at least a file to be validated and one public key")
+	}
+	if *verbose {
+		debug = log.Printf
 	}
 
 	// TODO: read in the file with the validation.
 	// The second args will be flag.Args()[1], of course!
-	f, _ := flag.Args()[0], flag.Args()[0]
+	f, v := flag.Args()[0], flag.Args()[1]
 
-	// TODO: the set of keys should be a comma-separate list,
-	// and the tool should iterate over all keys, checking each one,
-	// to look for a match.
-	h, ok := algs[*alg]
-	if !ok {
-		log.Fatalf("%s is not in %v", *alg, algs)
+	sigData, err := ioutil.ReadFile(v)
+	if err != nil {
+		log.Fatalf("%v", err)
 	}
+
+	sig := strings.Split(string(sigData), " ")
+	debug("Signature is %v len %v", sig[0], len(sig[0]))
+
 	b, err := ioutil.ReadFile(f)
 	if err != nil {
 		log.Fatalf("%s: %v", f, err)
 	}
+	for _, h := range strings.Split(*alg, ",") {
+		debug("Check %v", h)
+		h, ok := algs[h]
+		if !ok {
+			debug("%s is not in %v", h, algs)
+		}
 
-	checker := h.New()
-	checker.Write(b)
+		checker := h.New()
+		checker.Write(b)
+		r := checker.Sum([]byte{})
 
-	// TODO: check it here.
-	//	checksig(fi, files[1:])
-	//	checksum(fi)
-	//	os.Exit(0)
-
-	// TODO: make this optional. This output is identical
-	// to the md5 tool output.
-	fmt.Printf("%s (%s) = ", *alg, f)
-	for _, v := range checker.Sum([]byte{}) {
-		fmt.Printf("%02x", v)
+		// There has to be a better way.
+		sumText := ""
+		for _, v := range r {
+			sumText += fmt.Sprintf("%02x", v)
+		}
+		debug("Compare to %v", sumText)
+		if sumText == sig[0] {
+			debug("ok")
+			os.Exit(0)
+		}
+		debug("not ok")
 	}
-	fmt.Println()
+	log.Fatalf("No matches found for *alg")
 }
