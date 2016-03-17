@@ -50,7 +50,7 @@ func beatifulLatency(before time.Time) (latency string) {
 	case now > 1e3:
 		latency = fmt.Sprintf("%.2f µ", now/1e3)
 	default:
-		latency = fmt.Sprintf("%v ns %v", now)
+		latency = fmt.Sprintf("%v ns", now)
 	}
 
 	return latency

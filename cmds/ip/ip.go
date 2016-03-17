@@ -136,11 +136,11 @@ func linkset() {
 	switch arg[cursor] {
 	case "up":
 		if err := netlink.NetworkLinkUp(iface); err != nil {
-			log.Fatalf("%v can't make it up: %v", dev, err)
+			log.Fatalf("%v can't make it up: %v", iface, err)
 		}
 	case "down":
 		if err := netlink.NetworkLinkDown(iface); err != nil {
-			log.Fatalf("%v can't make it down: %v", dev, err)
+			log.Fatalf("%v can't make it down: %v", iface, err)
 		}
 	default:
 		usage()

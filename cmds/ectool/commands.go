@@ -3325,12 +3325,12 @@ type mcdp_info struct {
 }
 
 /* struct mcdp_info field decoding */
-func mcdp_chipid(chipid []uint8) uint8 {
-	return (chipid[0] << 8) | chipid[1]
+func mcdp_chipid(chipid []uint8) uint16 {
+	return (uint16(chipid[0]) << 8) | uint16(chipid[1])
 }
 
-func mcdp_family(family []uint8) uint8 {
-	return (family[0] << 8) | family[1]
+func mcdp_family(family []uint8) uint16 {
+	return (uint16(family[0]) << 8) | uint16(family[1])
 }
 
 /* Get/Set USB-PD Alternate mode info */

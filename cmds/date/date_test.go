@@ -51,11 +51,11 @@ func TestDateUniversal(t *testing.T) {
 func TestFormatParser(t *testing.T) {
 	test := "%d %w %x %D %% asdf qwer qwe s sd fqwer % qwer"
 	expected := []string{"%d", "%w", "%x", "%D"}
-	t.Log(":: Test of FormatParser greping the %n flags")
+	t.Log(":: Test of FormatParser greping the n flags")
 	for index, match := range formatParser(test) {
 		t.Logf(":: Parsed on iteration %d: %v", index, match)
 		if match != expected[index] {
-			t.Error("Parsing Error; Want %v, got %v\n", expected[index], match)
+			t.Errorf("Parsing Error; Want %v, got %v\n", expected[index], match)
 		}
 	}
 }

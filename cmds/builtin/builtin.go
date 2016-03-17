@@ -94,7 +94,7 @@ func main() {
 			log.Fatal(err)
 		} else {
 			if _, ok := filemap[i]; ok {
-				log.Fatal("%v exists", i)
+				log.Fatalf("%v exists", i)
 			}
 			filemap[i] = b
 		}
@@ -125,7 +125,7 @@ func main() {
 	// This would be infinitely easier with a true union file system. Oh well.
 	for _, m := range namespace {
 		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
-			log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
+			log.Printf("Mount :%s: on :%s: type :%s: flags %x: opts %v: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
 	}
 	//log.Printf("filemap: %v", filemap)

@@ -79,9 +79,9 @@ func (c cgroupname) apply(s string, f func(s string)) {
 func (c cgroupname) Validate(s string) {
 	c.apply(s, func(s string) {
 		if st, err := os.Stat(path.Join(string(c), s)); err != nil {
-			log.Fatal("%v", err)
+			log.Fatalf("%v", err)
 		} else if !st.IsDir() {
-			log.Fatal("%s: not a directory", s)
+			log.Fatalf("%s: not a directory", s)
 		}
 	})
 }

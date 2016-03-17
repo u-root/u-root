@@ -1,6 +1,7 @@
 // package uroot contains various functions that might be needed more than
 // one place.
 // +build amd64
+
 package uroot
 
 import (
