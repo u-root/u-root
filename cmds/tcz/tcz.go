@@ -128,7 +128,7 @@ func fetch(p string) error {
 		// First, save it to /tcz/name
 		f, err := os.Create(fullpath)
 		if err != nil {
-			l.Fatal("Create of :%v: failed: %v\n", fullpath, err)
+			l.Fatalf("Create of :%v: failed: %v\n", fullpath, err)
 		} else {
 			l.Printf("created %v f %v\n", fullpath, f)
 		}
@@ -206,11 +206,11 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		pkgpath := path.Join(tczLocalPackageDir, v)
 		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
 		if err != nil {
-			l.Fatal("%v: %v\n", pkgpath, err)
+			l.Fatalf("%v: %v\n", pkgpath, err)
 		}
 		lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
 		if err != nil {
-			l.Fatal("%v: %v\n", loopname, err)
+			l.Fatalf("%v: %v\n", loopname, err)
 		}
 		l.Printf("ffd %v lfd %v\n", ffd, lfd)
 		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))

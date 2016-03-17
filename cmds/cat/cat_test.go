@@ -43,7 +43,7 @@ func TestCat(t *testing.T) {
 
 	dir, err := setup(t, someData)
 	if err != nil {
-		t.Fatal("setup has failed, %v", err)
+		t.Fatalf("setup has failed, %v", err)
 	}
 	defer os.RemoveAll(dir)
 

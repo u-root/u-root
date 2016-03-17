@@ -241,7 +241,7 @@ func TestLn(t *testing.T) {
 	for caseNum, testCase := range tabDriven {
 		d := newDir(prepareTestName(testCase.cmdline), t)
 		if err := os.Chdir(d); err != nil {
-			t.Fatalf("Changing directory for %q fails: %v", t, err)
+			t.Fatalf("Changing directory for %q fails: %v", d, err)
 		}
 
 		for _, f := range testCase.files {

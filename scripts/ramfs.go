@@ -425,7 +425,7 @@ func main() {
 	// First create the archive and put the device cpio in it.
 	dev, err := ioutil.ReadFile(path.Join(config.Urootpath, devcpio))
 	if err != nil {
-		log.Fatal("%v %v\n", dev, err)
+		log.Fatalf("%v %v\n", dev, err)
 	}
 
 	if config.Debug {
@@ -434,7 +434,7 @@ func main() {
 
 	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
 	if err := ioutil.WriteFile(oname, dev, 0600); err != nil {
-		log.Fatal("%v\n", err)
+		log.Fatalf("%v\n", err)
 	}
 
 	// Now use the append option for cpio to append to it.
@@ -454,7 +454,7 @@ func main() {
 		log.Fatalf("%v\n", err)
 	}
 	if err := lsr(config.TempDir, w); err != nil {
-		log.Fatal("%v\n", err)
+		log.Fatalf("%v\n", err)
 	}
 	w.Close()
 	if config.Debug {

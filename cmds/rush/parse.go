@@ -146,7 +146,6 @@ func tok(b *bufio.Reader) (string, string) {
 		}
 
 	}
-	return tokType, arg
 
 }
 
@@ -212,7 +211,6 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 		}
 		t, s = tok(b)
 	}
-	return c, t
 }
 func parse(b *bufio.Reader) (*Command, string) {
 	//fmt.Printf("%v %v\n", t, s)
