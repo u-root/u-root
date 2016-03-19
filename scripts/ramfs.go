@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"debug/elf"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -28,6 +27,7 @@ type GoDirs struct {
 	Deps       []string
 	GoFiles    []string
 	SFiles     []string
+	HFiles     []string
 	Goroot     bool
 	ImportPath string
 }
@@ -42,17 +42,13 @@ const (
 )
 
 var (
+	// be VERY CAREFUL with these. If you have an empty line here it will
+	// result in cpio copying the whole tree.
 	goList = `{{.Goroot}}
 go
-{{.Go}}
 pkg/include
-VERSION.cache
-pkg/tool/{{.Goos}}_{{.Arch}}/compile
-pkg/tool/{{.Goos}}_{{.Arch}}/link
-pkg/tool/{{.Goos}}_{{.Arch}}/asm
-`
+VERSION.cache`
 	urootList = `{{.Gopath}}
-
 `
 	config struct {
 		Goroot          string
@@ -69,14 +65,13 @@ pkg/tool/{{.Goos}}_{{.Arch}}/asm
 		TestChroot      bool
 		RemoveDir       bool
 		InitialCpio     string
-		TmpDir          string
 		UseExistingInit bool
-		Dirs            map[string]bool
-		Deps            map[string]bool
-		GorootFiles     map[string]bool
-		UrootFiles      map[string]bool
 	}
-	letter = map[string]string{
+	Dirs        map[string]bool
+	Deps        map[string]bool
+	GorootFiles map[string]bool
+	UrootFiles  map[string]bool
+	letter      = map[string]string{
 		"amd64": "6",
 		"386":   "8",
 		"arm":   "5",
@@ -122,9 +117,7 @@ func cpiop(c string) error {
 	}
 
 	n := strings.Split(b.String(), "\n")
-	if config.Debug {
-		debug("cpiop: from %v, to %v, :%v:\n", n[0], n[1], n[2:])
-	}
+	debug("cpiop: from %v, to %v, :%v:\n", n[0], n[1], n[2:])
 
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -137,17 +130,15 @@ func cpiop(c string) error {
 	cmd.Stdout = os.Stdout
 	if config.Debug {
 		cmd.Stderr = os.Stderr
-		debug("Run %v @ %v", cmd, cmd.Dir)
 	}
+	debug("Run %v @ %v", cmd, cmd.Dir)
 	err = cmd.Start()
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
 
 	for _, v := range n[2:] {
-		if config.Debug {
-			debug("%v\n", v)
-		}
+		debug("%v\n", v)
 		err := filepath.Walk(path.Join(d, v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				log.Printf(" WALK FAIL%v: %v\n", name, err)
@@ -167,61 +158,36 @@ func cpiop(c string) error {
 		}
 	}
 	w.Close()
-	if config.Debug {
-		debug("Done sending files to external")
-	}
+	debug("Done sending files to external")
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
-	if config.Debug {
-		debug("External cpio is done")
-	}
+	debug("External cpio is done")
 	return nil
 }
 
-func sanity() {
-	binGo := path.Join(config.Goroot, "bin/go")
-	log.Printf("check %v as the go binary", binGo)
-	_, err := os.Stat(binGo)
-	if err == nil {
-		config.Go = "bin/go"
-	}
-	log.Printf("%v exists, but check go/bin/OS_ARCH too", config.Go)
-	// but does the one in go/bin/OS_ARCH exist too?
-	archgo := fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch)
-	OsArchBinGo := path.Join(config.Goroot, archgo)
-	log.Printf("check %v as the go binary", OsArchBinGo)
-	_, err = os.Stat(OsArchBinGo)
-	if err == nil {
-		config.Go = archgo
-		binGo = OsArchBinGo
-	}
-	log.Printf("Using %v as the go command", binGo)
-	if config.Go == "" {
-		log.Fatalf("Can't find a go binary! Is GOROOT set correctly?")
-	}
-	f, err := elf.Open(binGo)
-	if err != nil {
-		log.Fatalf("%v is not an ELF file; don't know what to do", binGo)
-	}
-	ds := f.SectionByType(elf.SHT_DYNAMIC)
-	if ds == nil {
-		return
-	}
-
-	log.Printf("*************************************************************************")
-	log.Printf("U-root requires a staticically built go command. %v is dynamic.", binGo)
-	log.Printf("This is ok; u-root is all source, but we have to rebuild  the go binary")
-	log.Printf("Another way to  fix this:\ncd %v/src\nexport CGO_ENABLED=0\nGOARCH=%v ./make.bash", config.Goroot, config.Arch)
-	log.Printf("*************************************************************************")
-
+// buildToolChain builds the four binaries needed for the go toolchain:
+// go, compile, link, and asm. We do this to ensure we get smaller binaries.
+// Smaller, in this, meaning 25M instead of 33M. What a world!
+func buildToolChain() {
 	goBin := path.Join(config.TempDir, "go/bin/go")
-	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", goBin)
+	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-o", goBin)
 	cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	if o, err := cmd.CombinedOutput(); err != nil {
 		log.Fatalf("Building statically linked go tool info %v: %v, %v\n", goBin, string(o), err)
+	}
+
+	toolDir := path.Join(config.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", config.Goos, config.Arch))
+
+	for _, pkg := range []string{"compile", "link", "asm"} {
+		c := path.Join(toolDir, pkg)
+		cmd = exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-o", c, "cmd/"+pkg)
+		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+		if o, err := cmd.CombinedOutput(); err != nil {
+			log.Fatalf("Building statically linked %v: %v, %v\n", pkg, string(o), err)
+		}
 	}
 }
 
@@ -320,9 +286,8 @@ func guessgopath() {
 // but hopefully later we can do this programatically.
 func goListPkg(name string) (*GoDirs, error) {
 	cmd := exec.Command("go", "list", "-json", name)
-	if config.Debug {
-		debug("Run %v @ %v", cmd, cmd.Dir)
-	}
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+	debug("Run %v @ %v", cmd, cmd.Dir)
 	j, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -333,12 +298,12 @@ func goListPkg(name string) (*GoDirs, error) {
 		return nil, err
 	}
 
-	debug("%v, %v %v", p, p.GoFiles, p.SFiles)
-	for _, v := range append(p.GoFiles, p.SFiles...) {
+	debug("%v, %v %v %v", p, p.GoFiles, p.SFiles, p.HFiles)
+	for _, v := range append(append(p.GoFiles, p.SFiles...), p.HFiles...) {
 		if p.Goroot {
-			config.GorootFiles[path.Join(p.ImportPath, v)] = true
+			GorootFiles[path.Join(p.ImportPath, v)] = true
 		} else {
-			config.UrootFiles[path.Join(p.ImportPath, v)] = true
+			UrootFiles[path.Join(p.ImportPath, v)] = true
 		}
 	}
 
@@ -379,20 +344,20 @@ func addGoFiles() error {
 		}
 		debug("cmd p is %v", p)
 		for _, v := range p.Deps {
-			config.Deps[v] = true
+			Deps[v] = true
 		}
 	}
 
-	for v := range config.Deps {
+	for v := range Deps {
 		if _, err := goListPkg(v); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
-	for v := range config.GorootFiles {
-		goList += path.Join("src", v) + "\n"
+	for v := range GorootFiles {
+		goList += "\n" + path.Join("src", v)
 	}
-	for v := range config.UrootFiles {
-		urootList += path.Join("src", v) + "\n"
+	for v := range UrootFiles {
+		urootList += "\n" + path.Join("src", v)
 	}
 	return nil
 }
@@ -406,17 +371,17 @@ func main() {
 	flag.BoolVar(&config.UseExistingInit, "useinit", false, "If there is an existing init, don't replace it")
 	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
 	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
-	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
+	flag.StringVar(&config.TempDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
 	flag.Parse()
 	if config.Debug {
 		debug = log.Printf
 	}
 
 	var err error
-	config.Dirs = make(map[string]bool)
-	config.Deps = make(map[string]bool)
-	config.GorootFiles = make(map[string]bool)
-	config.UrootFiles = make(map[string]bool)
+	Dirs = make(map[string]bool)
+	Deps = make(map[string]bool)
+	GorootFiles = make(map[string]bool)
+	UrootFiles = make(map[string]bool)
 	guessgoarch()
 	config.Go = ""
 	config.Goos = "linux"
@@ -450,8 +415,7 @@ func main() {
 		}
 	}()
 
-	// sanity checking: do $GROOT/bin/go, and some basic source files exist?
-	sanity()
+	buildToolChain()
 
 	if config.InitialCpio != "" {
 		f, err := ioutil.ReadFile(config.InitialCpio)
@@ -464,9 +428,9 @@ func main() {
 		// Note: if you print Cmd out with %v after assigning cmd.Stdin, it will print
 		// the whole cpio; so don't do that.
 		if config.Debug {
-			debug("Run %v @ %v", cmd, cmd.Dir)
 			cmd.Stdout = os.Stdout
 		}
+		debug("Run %v @ %v", cmd, cmd.Dir)
 
 		// There's a bit of a tough problem here. There's lots of stuff owned by root in
 		// these directories. They probably have to stay that way. But how do we create init
@@ -520,9 +484,7 @@ func main() {
 		}
 	}
 
-	if config.Debug {
-		debug("Done all cpio operations")
-	}
+	debug("Done all cpio operations")
 
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -535,9 +497,7 @@ func main() {
 		log.Fatalf("%v %v\n", dev, err)
 	}
 
-	if config.Debug {
-		debug("Creating initramf file")
-	}
+	debug("Creating initramf file")
 
 	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
 	if err := ioutil.WriteFile(oname, dev, 0600); err != nil {
@@ -553,9 +513,7 @@ func main() {
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	if config.Debug {
-		debug("Run %v @ %v", cmd, cmd.Dir)
-	}
+	debug("Run %v @ %v", cmd, cmd.Dir)
 	err = cmd.Start()
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -564,16 +522,12 @@ func main() {
 		log.Fatalf("%v\n", err)
 	}
 	w.Close()
-	if config.Debug {
-		debug("Finished sending file list for initramfs cpio")
-	}
+	debug("Finished sending file list for initramfs cpio")
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
-	if config.Debug {
-		debug("cpio for initramfs is done")
-	}
+	debug("cpio for initramfs is done")
 	defer func() {
 		log.Printf("Output file is in %v\n", oname)
 	}()
@@ -598,9 +552,7 @@ func main() {
 	reallyRemoveDir := config.RemoveDir
 	config.RemoveDir = false
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = r, os.Stderr, os.Stdout
-	if config.Debug {
-		debug("Run %v @ %v", cmd, cmd.Dir)
-	}
+	debug("Run %v @ %v", cmd, cmd.Dir)
 	err = cmd.Run()
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -611,9 +563,7 @@ func main() {
 	cmd = exec.Command("sudo", "unshare", "-m", "chroot", config.TempDir, "/init")
 	cmd.Dir = config.TempDir
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = os.Stdin, os.Stderr, os.Stdout
-	if config.Debug {
-		debug("Run %v @ %v", cmd, cmd.Dir)
-	}
+	debug("Run %v @ %v", cmd, cmd.Dir)
 	err = cmd.Run()
 	if err != nil {
 		log.Fatalf("Test failed, not removing %v: %v", config.TempDir, err)
