@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"debug/elf"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/u-root/u-root/uroot"
@@ -22,6 +23,15 @@ type copyfiles struct {
 	spec string
 }
 
+type GoDirs struct {
+	Dir        string
+	Deps       []string
+	GoFiles    []string
+	SFiles     []string
+	Goroot     bool
+	ImportPath string
+}
+
 const (
 	devcpio   = "scripts/dev.cpio"
 	urootPath = "src/github.com/u-root/u-root"
@@ -29,26 +39,21 @@ const (
 	// I don't want to revive the 'letter' stuff.
 	// This has gotten kind of ugly. But [0] is source, [1] is dest, and [2..] is the list.
 	// FIXME. this is ugly.
+)
+
+var (
 	goList = `{{.Goroot}}
 go
 {{.Go}}
 pkg/include
-src
 VERSION.cache
-misc
 pkg/tool/{{.Goos}}_{{.Arch}}/compile
 pkg/tool/{{.Goos}}_{{.Arch}}/link
 pkg/tool/{{.Goos}}_{{.Arch}}/asm
-pkg/tool/{{.Goos}}_{{.Arch}}/old6a`
+`
 	urootList = `{{.Gopath}}
 
-src/github.com/u-root/u-root/cmds
-src/github.com/u-root/u-root/netlink
-src/github.com/u-root/u-root/uroot
-src/github.com/u-root/u-root/vendor`
-)
-
-var (
+`
 	config struct {
 		Goroot          string
 		Godotdot        string
@@ -66,6 +71,10 @@ var (
 		InitialCpio     string
 		TmpDir          string
 		UseExistingInit bool
+		Dirs            map[string]bool
+		Deps            map[string]bool
+		GorootFiles     map[string]bool
+		UrootFiles      map[string]bool
 	}
 	letter = map[string]string{
 		"amd64": "6",
@@ -77,7 +86,10 @@ var (
 	// can replace existing tools. It is, sadly, a very short
 	// list at present.
 	whitelist = []string{"date"}
+	debug     = nodebug
 )
+
+func nodebug(string, ...interface{}) {}
 
 func getenvOrDefault(e, defaultValue string) string {
 	v := os.Getenv(e)
@@ -111,7 +123,7 @@ func cpiop(c string) error {
 
 	n := strings.Split(b.String(), "\n")
 	if config.Debug {
-		log.Printf("cpiop: from %v, to %v, :%v:\n", n[0], n[1], n[2:])
+		debug("cpiop: from %v, to %v, :%v:\n", n[0], n[1], n[2:])
 	}
 
 	r, w, err := os.Pipe()
@@ -125,7 +137,7 @@ func cpiop(c string) error {
 	cmd.Stdout = os.Stdout
 	if config.Debug {
 		cmd.Stderr = os.Stderr
-		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+		debug("Run %v @ %v", cmd, cmd.Dir)
 	}
 	err = cmd.Start()
 	if err != nil {
@@ -134,7 +146,7 @@ func cpiop(c string) error {
 
 	for _, v := range n[2:] {
 		if config.Debug {
-			log.Printf("%v\n", v)
+			debug("%v\n", v)
 		}
 		err := filepath.Walk(path.Join(d, v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
@@ -156,14 +168,14 @@ func cpiop(c string) error {
 	}
 	w.Close()
 	if config.Debug {
-		log.Printf("Done sending files to external")
+		debug("Done sending files to external")
 	}
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
 	if config.Debug {
-		log.Printf("External cpio is done")
+		debug("External cpio is done")
 	}
 	return nil
 }
@@ -303,6 +315,88 @@ func guessgopath() {
 	return
 }
 
+// goListPkg takes one package name, and computes all the files it needs to build,
+// seperating them into Go tree files and uroot files. For now we just 'go list'
+// but hopefully later we can do this programatically.
+func goListPkg(name string) (*GoDirs, error) {
+	cmd := exec.Command("go", "list", "-json", name)
+	if config.Debug {
+		debug("Run %v @ %v", cmd, cmd.Dir)
+	}
+	j, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	var p GoDirs
+	if err := json.Unmarshal([]byte(j), &p); err != nil {
+		return nil, err
+	}
+
+	debug("%v, %v %v", p, p.GoFiles, p.SFiles)
+	for _, v := range append(p.GoFiles, p.SFiles...) {
+		if p.Goroot {
+			config.GorootFiles[path.Join(p.ImportPath, v)] = true
+		} else {
+			config.UrootFiles[path.Join(p.ImportPath, v)] = true
+		}
+	}
+
+	return &p, nil
+}
+
+// addGoFiles Computes the set of Go files to be added to the initramfs.
+func addGoFiles() error {
+	var pkgList []string
+	// Walk the cmds/ directory, and for each directory in there, add its files and all its
+	// dependencies
+
+	err := filepath.Walk(path.Join(config.Urootpath, "cmds"), func(name string, fi os.FileInfo, err error) error {
+		if err != nil {
+			log.Printf(" WALK FAIL%v: %v\n", name, err)
+			// That's ok, sometimes things are not there.
+			return filepath.SkipDir
+		}
+		if fi.Name() == "cmds" {
+			return nil
+		}
+		if !fi.IsDir() {
+			return nil
+		}
+		pkgList = append(pkgList, path.Join("github.com/u-root/u-root/cmds", fi.Name()))
+		return filepath.SkipDir
+	})
+	if err != nil {
+		log.Printf("Walking cmds/: %v\n", err)
+	}
+	// It would be nice to run go list -json with lots of package names but it produces invalid JSON.
+	// It produces a stream thatis {}{}{} at the top level and the decoders don't like that.
+	// TODO: fix it later. Maybe use template after all. For now this is more than adequate.
+	for _, v := range pkgList {
+		p, err := goListPkg(v)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		debug("cmd p is %v", p)
+		for _, v := range p.Deps {
+			config.Deps[v] = true
+		}
+	}
+
+	for v := range config.Deps {
+		if _, err := goListPkg(v); err != nil {
+			log.Fatalf("%v", err)
+		}
+	}
+	for v := range config.GorootFiles {
+		goList += path.Join("src", v) + "\n"
+	}
+	for v := range config.UrootFiles {
+		urootList += path.Join("src", v) + "\n"
+	}
+	return nil
+}
+
 // sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
 // the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
 // It's not size related: if the go archive is first or in the middle it still fails.
@@ -314,7 +408,15 @@ func main() {
 	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
 	flag.StringVar(&config.TmpDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
 	flag.Parse()
+	if config.Debug {
+		debug = log.Printf
+	}
+
 	var err error
+	config.Dirs = make(map[string]bool)
+	config.Deps = make(map[string]bool)
+	config.GorootFiles = make(map[string]bool)
+	config.UrootFiles = make(map[string]bool)
 	guessgoarch()
 	config.Go = ""
 	config.Goos = "linux"
@@ -322,6 +424,10 @@ func main() {
 	guessgopath()
 	if config.Fail {
 		log.Fatal("Setup failed")
+	}
+
+	if err := addGoFiles(); err != nil {
+		log.Fatalf("%v", err)
 	}
 
 	if config.TempDir == "" {
@@ -358,7 +464,7 @@ func main() {
 		// Note: if you print Cmd out with %v after assigning cmd.Stdin, it will print
 		// the whole cpio; so don't do that.
 		if config.Debug {
-			log.Printf("Run %v @ %v", cmd, cmd.Dir)
+			debug("Run %v @ %v", cmd, cmd.Dir)
 			cmd.Stdout = os.Stdout
 		}
 
@@ -406,6 +512,7 @@ func main() {
 		goList,
 		urootList,
 	}
+
 	for _, c := range cpio {
 		if err := cpiop(c); err != nil {
 			log.Printf("Things went south. TempDir is %v", config.TempDir)
@@ -414,7 +521,7 @@ func main() {
 	}
 
 	if config.Debug {
-		log.Printf("Done all cpio operations")
+		debug("Done all cpio operations")
 	}
 
 	r, w, err := os.Pipe()
@@ -429,7 +536,7 @@ func main() {
 	}
 
 	if config.Debug {
-		log.Printf("Creating initramf file")
+		debug("Creating initramf file")
 	}
 
 	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
@@ -447,7 +554,7 @@ func main() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if config.Debug {
-		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+		debug("Run %v @ %v", cmd, cmd.Dir)
 	}
 	err = cmd.Start()
 	if err != nil {
@@ -458,14 +565,14 @@ func main() {
 	}
 	w.Close()
 	if config.Debug {
-		log.Printf("Finished sending file list for initramfs cpio")
+		debug("Finished sending file list for initramfs cpio")
 	}
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
 	if config.Debug {
-		log.Printf("cpio for initramfs is done")
+		debug("cpio for initramfs is done")
 	}
 	defer func() {
 		log.Printf("Output file is in %v\n", oname)
@@ -492,7 +599,7 @@ func main() {
 	config.RemoveDir = false
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = r, os.Stderr, os.Stdout
 	if config.Debug {
-		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+		debug("Run %v @ %v", cmd, cmd.Dir)
 	}
 	err = cmd.Run()
 	if err != nil {
@@ -505,7 +612,7 @@ func main() {
 	cmd.Dir = config.TempDir
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = os.Stdin, os.Stderr, os.Stdout
 	if config.Debug {
-		log.Printf("Run %v @ %v", cmd, cmd.Dir)
+		debug("Run %v @ %v", cmd, cmd.Dir)
 	}
 	err = cmd.Run()
 	if err != nil {
