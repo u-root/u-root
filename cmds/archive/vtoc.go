@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 func loadVTOC(name string) (*os.File, []file, error) {
@@ -45,17 +46,26 @@ func buildVTOC(dirs []string) ([]*file, error) {
 				return err
 			}
 			debug("visit %v", name)
+			var s syscall.Stat_t
+			if err := syscall.Lstat(name, &s); err != nil {
+				return errors.New(fmt.Sprintf("%s: %v", name, err))
+			}
 			f := &file{
 				Name:    name,
 				Mode:    fi.Mode(),
 				ModTime: fi.ModTime(),
 				IsDir:   fi.IsDir(),
+				Uid:     s.Uid,
+				Gid:     s.Gid,
 			}
 			switch f.Mode.String()[0] {
 			case '-':
 				f.Size = fi.Size()
 			case 'L':
 				f.Link, err = os.Readlink(name)
+			case 'D':
+				f.Minor = uint8(s.Rdev)
+				f.Major = uint8(s.Rdev >> 8)
 			}
 			vtoc = append(vtoc, f)
 			return err
