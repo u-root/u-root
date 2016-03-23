@@ -19,10 +19,9 @@ type file struct {
 
 	// Yes, this is Unix-specific. But u-root in general is very Unix-specific
 	// and I can't get that worried about it.
-	Uid   uint32
-	Gid   uint32
-	Major uint8
-	Minor uint8
+	Uid int
+	Gid int
+	Dev uint64
 	// The offset is not exported.
 	// We want the VTOC at the head of the file so we can stream the file.
 	// We don't save the offset that is not known until we know the size

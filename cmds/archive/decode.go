@@ -12,11 +12,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 )
 
 func doOneFile(f *os.File, v file) error {
 	var err error
 	s := v.Mode.String()
+	fmt.Printf("%v: mode %v", v.Name, s)
 	switch s[0] {
 	case 'd':
 		err = os.MkdirAll(v.Name, v.Mode)
@@ -32,11 +34,25 @@ func doOneFile(f *os.File, v file) error {
 		}
 	case 'L':
 		err = os.Symlink(v.Link, v.Name)
+	case 'D':
+		m := uint32(v.Mode.Perm())
+		switch v.Mode & (os.ModeDevice | os.ModeCharDevice) {
+		case os.ModeDevice:
+			m = m | syscall.S_IFBLK
+		default:
+			m = m | syscall.S_IFCHR
+		}
+		err = syscall.Mknod(v.Name, m, int(v.Dev))
 	default:
+		// It's not an error to do hae an archive we things we can't do.
 		//err = errors.New(fmt.Sprintf("Can't make %v", v))
 		fmt.Printf("Can' do %v yet", v)
+		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return os.Lchown(v.Name, v.Uid, v.Gid)
 }
 
 func decode(files ...string) error {

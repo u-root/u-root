@@ -55,8 +55,8 @@ func buildVTOC(dirs []string) ([]*file, error) {
 				Mode:    fi.Mode(),
 				ModTime: fi.ModTime(),
 				IsDir:   fi.IsDir(),
-				Uid:     s.Uid,
-				Gid:     s.Gid,
+				Uid:     int(s.Uid),
+				Gid:     int(s.Gid),
 			}
 			switch f.Mode.String()[0] {
 			case '-':
@@ -64,8 +64,7 @@ func buildVTOC(dirs []string) ([]*file, error) {
 			case 'L':
 				f.Link, err = os.Readlink(name)
 			case 'D':
-				f.Minor = uint8(s.Rdev)
-				f.Major = uint8(s.Rdev >> 8)
+				f.Dev = s.Rdev
 			}
 			vtoc = append(vtoc, f)
 			return err
