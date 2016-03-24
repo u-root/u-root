@@ -45,7 +45,7 @@ func init() {
 // main process table of ps
 // used to make more flexible
 type ProcessTable struct {
-	table    []Process
+	table    []*Process
 	headers  []string // each column to print
 	fields   []string // which fields of process to print, on order
 	fstring  []string // formated strings
@@ -71,7 +71,7 @@ func (pT ProcessTable) Swap(i, j int) {
 
 // Gived a pid, search for a process
 // Returns nil if not found
-func (pT ProcessTable) GetProcess(pid int) (found Process) {
+func (pT ProcessTable) GetProcess(pid int) (found *Process) {
 	for _, p := range pT.table {
 		if p.Pid == strconv.Itoa(pid) {
 			found = p
