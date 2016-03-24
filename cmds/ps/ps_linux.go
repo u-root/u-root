@@ -218,8 +218,9 @@ func (p process) getTime() string {
 // Walk from the proc files
 // and parsing them
 func (pT *ProcessTable) LoadTable() error {
+	var parsingError error
 	pf := regexp.MustCompile(allProc)
-	err := filepath.Walk(proc, func(name string, fi os.FileInfo, err error) error {
+	filepath.Walk(proc, func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("%v: %v\n", name, err)
 			return err
@@ -231,18 +232,13 @@ func (pT *ProcessTable) LoadTable() error {
 		if pf.Match([]byte(fi.Name())) {
 			p := &Process{}
 			if err := p.Parse(fi.Name()); err != nil {
-				log.Print(err)
-				return err
+				parsingError = err
 			}
-			pT.table = append(pT.table, *p)
+			pT.table = append(pT.table, p)
 		}
 
 		return filepath.SkipDir
 	})
 
-	if err == filepath.SkipDir {
-		return nil
-	}
-
-	return err
+	return parsingError
 }
