@@ -16,7 +16,7 @@ var tableDriven = []struct {
 	host, port, input string
 }{
 	{"127.0.0.1", ":9991", "An unicode²³£øĸøþ stream using IPV4"},
-	//{"0:0:0:0:0:0:0:1", ":9992", "An unicode²³£øĸøþ stream using IPV6"}, fail
+	{"[::1]", ":9992", "An unicode²³£øĸøþ stream using IPV6"},
 }
 
 func TestTCP(t *testing.T) {
