@@ -6,6 +6,7 @@
  (cd cmds && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' ./...)
  ls -l cmds/*
  (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -ldflags '-s' ./...)
+ (go test -cover ./...)
  go tool vet cmds uroot netlink scripts
  sudo date
  echo "Did it blend"
