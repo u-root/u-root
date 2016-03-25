@@ -1,3 +1,7 @@
+// Copyright 2016 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -8,97 +12,104 @@ import (
 	"time"
 )
 
-var Host = "127.0.0.1"
-var Port = ":9991"
-var Input = "Input from other side, пока, £, 语汉"
+var tableDriven = []struct {
+	host, port, input string
+}{
+	{"127.0.0.1", ":9991", "An unicode²³£øĸøþ stream using IPV4"},
+	//{"0:0:0:0:0:0:0:1", ":9992", "An unicode²³£øĸøþ stream using IPV6"}, fail
+}
 
 func TestTCP(t *testing.T) {
 	// Send test data to listener from goroutine and wait for potentials errors at the end of the test
-	go func() {
-		// Wait for main thread starts listener
-		time.Sleep(200 * time.Millisecond)
-		con, err := net.Dial("tcp", Host+Port)
+	for _, test := range tableDriven {
 
+		go func() {
+			// Wait for main thread starts listener
+			time.Sleep(200 * time.Millisecond)
+			con, err := net.Dial("tcp", test.host+test.port)
+
+			if err != nil {
+				t.Fatalf("Connection using tcp %v%v fails: %v", test.host, test.port, err)
+			}
+
+			// Transfer data
+			c1 := readAndWrite(strings.NewReader(test.input), con)
+
+			// Wait for data will be transferred
+			time.Sleep(200 * time.Millisecond)
+			select {
+			case progress := <-c1:
+				t.Logf("Remote connection is closed: %+v\n", progress)
+			default:
+				t.Fatal("handle() must write to result channel")
+			}
+		}()
+
+		ln, err := net.Listen("tcp", test.port)
 		if err != nil {
-			t.Fatalf("Connection using tcp %v%v fails: %v", Host, Port, err)
+			t.Errorf("Listen Port %q fails using TCP: %v", test.port, err)
 		}
 
-		// Transfer data
-		c1 := readAndWrite(strings.NewReader(Input), con)
-
-		// Wait for data will be transferred
-		time.Sleep(200 * time.Millisecond)
-		select {
-		case progress := <-c1:
-			t.Logf("Remote connection is closed: %+v\n", progress)
-		default:
-			t.Fatal("handle() must write to result channel")
+		con, err := ln.Accept()
+		if err != nil {
+			t.Errorf("Connecting accept fails: %v", err)
 		}
-	}()
 
-	ln, err := net.Listen("tcp", Port)
-	if err != nil {
-		t.Errorf("Listen Port %q fails using TCP: %v", Port, err)
+		buf := make([]byte, 1024)
+		n, err := con.Read(buf)
+		if err != nil {
+			t.Errorf("Reading from connection fails: %v", err)
+		}
+
+		output := string(buf[0:n])
+		if test.input != output {
+			t.Errorf("Message passing between connections mismatch; wants %v, got %v", test.input, output)
+		}
 	}
-
-	con, err := ln.Accept()
-	if err != nil {
-		t.Errorf("Connecting accept fails: %v", err)
-	}
-
-	buf := make([]byte, 1024)
-	n, err := con.Read(buf)
-	if err != nil {
-		t.Errorf("Reading from connection fails: %v", err)
-	}
-
-	output := string(buf[0:n])
-	if Input != output {
-		t.Errorf("Message passing between connections mismatch; wants %v, got %v", Input, output)
-	}
-
 }
 
 func TestUDP(t *testing.T) {
-	// Send test data to listener from goroutine and wait for potentials errors at the end of the test
-	go func() {
-		// Wait for main thread starts listener
-		time.Sleep(200 * time.Millisecond)
-		con, err := net.Dial("udp", Host+Port)
+	// Send test data to listener from goroutine and wait
+	// for potentials errors at the end of the test
+	for _, test := range tableDriven {
+		go func() {
+			// Wait for main thread starts listener
+			time.Sleep(200 * time.Millisecond)
+			con, err := net.Dial("udp", test.host+test.port)
+			if err != nil {
+				t.Fatalf("Connection using udp %v%v fails: %v", test.host, test.port, err)
+			}
+
+			// Transfer data
+			addr, err := net.ResolveUDPAddr("udp", test.host+test.port)
+			fmt.Println(con.RemoteAddr())
+			c1 := readAndWriteToAddr(strings.NewReader(test.input), con, addr)
+
+			// Wait for data will be transferred
+			time.Sleep(200 * time.Millisecond)
+			select {
+			case progress := <-c1:
+				t.Logf("Remote connection is closed: %+v\n", progress)
+			default:
+				t.Fatal("handle() must write to result channel")
+			}
+		}()
+
+		con, err := net.ListenPacket("udp", test.port)
 		if err != nil {
-			t.Fatalf("Connection using udp %v%v fails: %v", Host, Port, err)
+			t.Errorf("Listen port %q fails using TCP: %v", test.port, err)
 		}
 
-		// Transfer data
-		addr, err := net.ResolveUDPAddr("udp", Host+Port)
-		fmt.Println(con.RemoteAddr())
-		c1 := readAndWriteToAddr(strings.NewReader(Input), con, addr)
+		buf := make([]byte, 1024)
+		n, _, err := con.ReadFrom(buf)
 
-		// Wait for data will be transferred
-		time.Sleep(200 * time.Millisecond)
-		select {
-		case progress := <-c1:
-			t.Logf("Remote connection is closed: %+v\n", progress)
-		default:
-			t.Fatal("handle() must write to result channel")
+		if err != nil {
+			t.Errorf("Reading from connection fails: %v", err)
 		}
-	}()
 
-	con, err := net.ListenPacket("udp", Port)
-	if err != nil {
-		t.Errorf("Listen Port %q fails using TCP: %v", Port, err)
+		output := string(buf[0:n])
+		if test.input != output {
+			t.Errorf("Message passing between connections mismatch; wants %v, got %v", test.input, output)
+		}
 	}
-
-	buf := make([]byte, 1024)
-	n, _, err := con.ReadFrom(buf)
-
-	if err != nil {
-		t.Errorf("Reading from connection fails: %v", err)
-	}
-
-	output := string(buf[0:n])
-	if Input != output {
-		t.Errorf("Message passing between connections mismatch; wants %v, got %v", Input, output)
-	}
-
 }
