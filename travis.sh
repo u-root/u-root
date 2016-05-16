@@ -9,6 +9,7 @@ set -e
  (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -ldflags '-s' ./...)
  (cd cmds && CGO_ENABLED=0 go test -cover ./...)
  go tool vet cmds uroot netlink memmap
-# until we figure out what's going on. It's doing the whole directory. scripts/ramfs.go scripts/getimports.go
+ go tool vet scripts/getimports.go
+ go tool vet scripts/ramfs.go
  sudo date
  echo "Did it blend"
