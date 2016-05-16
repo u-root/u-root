@@ -1,9 +1,8 @@
 package main
 
 import (
-	"encoding/json"
+	"go/build"
 	"flag"
-	"fmt"
 	"github.com/u-root/u-root/uroot"
 	"log"
 	"os"
@@ -79,27 +78,6 @@ VERSION.cache`
 )
 
 func nodebug(string, ...interface{}) {}
-
-func getenvOrDefault(e, defaultValue string) string {
-	v := os.Getenv(e)
-	if v == "" {
-		v = defaultValue
-	}
-	return v
-}
-
-func lsr(n string, w *os.File) error {
-	n = n + "/"
-	err := filepath.Walk(n, func(name string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		cn := strings.TrimPrefix(name, n)
-		fmt.Fprintf(w, "%v\n", cn)
-		return nil
-	})
-	return err
-}
 
 // It's annoying asking them to set lots of things. So let's try to figure it out.
 func guessgoarch() {
@@ -191,35 +169,6 @@ func guessgopath() {
 	return
 }
 
-// goListPkg takes one package name, and computes all the files it needs to build,
-// seperating them into Go tree files and uroot files. For now we just 'go list'
-// but hopefully later we can do this programatically.
-func goListPkg(name string) (*GoDirs, error) {
-	cmd := exec.Command("go", "list", "-json", name)
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	debug("Run %v @ %v", cmd, cmd.Dir)
-	j, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-
-	var p GoDirs
-	if err := json.Unmarshal([]byte(j), &p); err != nil {
-		return nil, err
-	}
-
-	debug("%v, %v %v %v", p, p.GoFiles, p.SFiles, p.HFiles)
-	for _, v := range append(append(p.GoFiles, p.SFiles...), p.HFiles...) {
-		if p.Goroot {
-			GorootFiles[path.Join(p.ImportPath, v)] = true
-		} else {
-			UrootFiles[path.Join(p.ImportPath, v)] = true
-		}
-	}
-
-	return &p, nil
-}
-
 // addGoFiles Computes the set of Go files to be added to the initramfs.
 func addGoFiles() error {
 	var pkgList []string
@@ -248,29 +197,27 @@ func addGoFiles() error {
 	// It produces a stream thatis {}{}{} at the top level and the decoders don't like that.
 	// TODO: fix it later. Maybe use template after all. For now this is more than adequate.
 	for _, v := range pkgList {
-		p, err := goListPkg(v)
+		p, err := build.Default.Import(v, "", 0)
+		if err != nil {
+			log.Printf("Error on %v: %v", v, err)
+			continue
+		}
+		log.Printf("v %v  Groot %v %v ", v, p.Goroot, p.Imports)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
 		debug("cmd p is %v", p)
 		for _,v := range p.Imports {
-			Imports[v] = true
+			log.Printf("Check %v", v)
+			if ! p.Goroot {
+				Imports[v] = true
+			}
 		}
 	}
 
-/*
-	for v := range Deps {
-		if _, err := goListPkg(v); err != nil {
-			log.Fatalf("%v", err)
-		}
-	}
-*/
 	return nil
 }
 
-// sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
-// the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
-// It's not size related: if the go archive is first or in the middle it still fails.
 func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
 	flag.Parse()
@@ -297,6 +244,20 @@ func main() {
 
 	for i := range Imports {
 		log.Printf("Dep: %v", i)
+		_, err := build.Default.Import(i, "", build.FindOnly)
+		if err == nil {
+			debug("Package %v exists, not getting it", i)
+			continue
+		}
+		debug("go get %v", i)
+		cmd := exec.Command("go", "get", "-a", i)
+		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+		debug("Run %v @ %v", cmd, cmd.Dir)
+		j, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("Go get failed: err %v, output \n%v\n", err, j)
+		}
+		debug("We got %v", i)
 	}
 
 }
