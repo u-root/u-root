@@ -5,13 +5,11 @@ go:
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
-  - go get github.com/Masterminds/glide
-  - glide up
+  - go run scripts/getimports.go -d
   - pwd
   - ls -l
 install:
   - ls
-  - du -a vendor
 script:
   - bash travis.sh
 after_success:
