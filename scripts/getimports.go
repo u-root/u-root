@@ -191,7 +191,7 @@ func addGoFiles() error {
 		return filepath.SkipDir
 	})
 	if err != nil {
-		log.Printf("Walking cmds/: %v\n", err)
+		debug("Walking cmds/: %v\n", err)
 	}
 	// It would be nice to run go list -json with lots of package names but it produces invalid JSON.
 	// It produces a stream thatis {}{}{} at the top level and the decoders don't like that.
@@ -202,13 +202,13 @@ func addGoFiles() error {
 			log.Printf("Error on %v: %v", v, err)
 			continue
 		}
-		log.Printf("v %v  Groot %v %v ", v, p.Goroot, p.Imports)
+		debug("v %v  Goroot %v %v ", v, p.Goroot, p.Imports)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
 		debug("cmd p is %v", p)
 		for _,v := range p.Imports {
-			log.Printf("Check %v", v)
+			debug("Check %v", v)
 			if ! p.Goroot {
 				Imports[v] = true
 			}
@@ -243,7 +243,7 @@ func main() {
 	}
 
 	for i := range Imports {
-		log.Printf("Dep: %v", i)
+		debug("Dep: %v", i)
 		_, err := build.Default.Import(i, "", build.FindOnly)
 		if err == nil {
 			debug("Package %v exists, not getting it", i)
