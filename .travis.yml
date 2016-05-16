@@ -11,6 +11,7 @@ before_install:
 install:
   - ls
 script:
+  - cat travis.sh
   - bash travis.sh
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi

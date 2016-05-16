@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
  (cd bb && go build . && ./bb)
  which go
  (cd scripts && go run ramfs.go -d -tmpdir=/tmp/u-root -removedir=false)
@@ -6,7 +7,8 @@
  (cd cmds && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' ./...)
  ls -l cmds/*
  (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -ldflags '-s' ./...)
- (go test -cover ./...)
- go tool vet cmds uroot netlink scripts
+ (cd cmds && CGO_ENABLED=0 go test -cover ./...)
+ go tool vet cmds uroot netlink memmap
+# until we figure out what's going on. It's doing the whole directory. scripts/ramfs.go scripts/getimports.go
  sudo date
  echo "Did it blend"
