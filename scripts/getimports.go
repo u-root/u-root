@@ -12,73 +12,29 @@ import (
 	"strings"
 )
 
-type copyfiles struct {
-	dir  string
-	spec string
-}
-
-type GoDirs struct {
-	Dir        string
-	Imports       []string
-	GoFiles    []string
-	SFiles     []string
-	HFiles     []string
-	Goroot     bool
-	ImportPath string
-}
-
 const (
-	devcpio   = "scripts/dev.cpio"
 	urootPath = "src/github.com/u-root/u-root"
-	// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
-	// I don't want to revive the 'letter' stuff.
-	// This has gotten kind of ugly. But [0] is source, [1] is dest, and [2..] is the list.
-	// FIXME. this is ugly.
 )
 
 var (
-	goList = `{{.Goroot}}
-go
-pkg/include
-VERSION.cache`
-	urootList = `{{.Gopath}}
-`
 	config struct {
 		Goroot          string
-		Godotdot        string
 		Godot           string
 		Arch            string
 		Goos            string
 		Gopath          string
 		Urootpath       string
-		TempDir         string
 		Go              string
 		Debug           bool
 		Fail            bool
-		TestChroot      bool
-		RemoveDir       bool
-		InitialCpio     string
-		UseExistingInit bool
 	}
-	Dirs        map[string]bool
 	Imports        map[string]bool
-	GorootFiles map[string]bool
-	UrootFiles  map[string]bool
-	letter      = map[string]string{
-		"amd64": "6",
-		"386":   "8",
-		"arm":   "5",
-		"ppc":   "9",
-	}
-	// the whitelist is a list of u-root tools that we feel
-	// can replace existing tools. It is, sadly, a very short
-	// list at present.
-	whitelist = []string{"date"}
 	debug     = nodebug
 )
 
 func nodebug(string, ...interface{}) {}
 
+// TODO: put this in a common place. Or, merge ramfs and getimports, which almost makes sense.
 // It's annoying asking them to set lots of things. So let's try to figure it out.
 func guessgoarch() {
 	config.Arch = os.Getenv("GOARCH")
@@ -112,7 +68,6 @@ func guessgoroot() {
 	if config.Goroot != "" {
 		config.Goroot = path.Clean(config.Goroot)
 		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
-		config.Godotdot = path.Dir(config.Goroot)
 		return
 	}
 	log.Print("Goroot is not set, trying to find a go binary")
@@ -122,7 +77,6 @@ func guessgoroot() {
 		g := path.Join(v, "go")
 		if _, err := os.Stat(g); err == nil {
 			config.Goroot = path.Dir(path.Dir(v))
-			config.Godotdot = path.Dir(config.Goroot)
 			log.Printf("Guessing that goroot is %v from $PATH", config.Goroot)
 			return
 		}
@@ -132,9 +86,6 @@ func guessgoroot() {
 }
 
 func guessgopath() {
-	defer func() {
-		config.Godotdot = path.Dir(config.Goroot)
-	}()
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
 		config.Gopath = gopath
@@ -169,11 +120,10 @@ func guessgopath() {
 	return
 }
 
-// addGoFiles Computes the set of Go files to be added to the initramfs.
-func addGoFiles() error {
+// listPackages computes the packages needed by all the u-root commands.
+// It walks the cmds/ directory, and for each directory, adds all packages used.
+func listPackages() error {
 	var pkgList []string
-	// Walk the cmds/ directory, and for each directory in there, add its files and all its
-	// dependencies
 
 	err := filepath.Walk(path.Join(config.Urootpath, "cmds"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -225,10 +175,7 @@ func main() {
 		debug = log.Printf
 	}
 
-	Dirs = make(map[string]bool)
 	Imports = make(map[string]bool)
-	GorootFiles = make(map[string]bool)
-	UrootFiles = make(map[string]bool)
 	guessgoarch()
 	config.Go = ""
 	config.Goos = "linux"
@@ -238,7 +185,7 @@ func main() {
 		log.Fatal("Setup failed")
 	}
 
-	if err := addGoFiles(); err != nil {
+	if err := listPackages(); err != nil {
 		log.Fatalf("%v", err)
 	}
 
@@ -249,6 +196,8 @@ func main() {
 			debug("Package %v exists, not getting it", i)
 			continue
 		}
+		// TODO: consider making a substitution possible if we ever need to lock down a
+		// package version/tag/whatever.
 		debug("go get %v", i)
 		cmd := exec.Command("go", "get", "-a", i)
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
