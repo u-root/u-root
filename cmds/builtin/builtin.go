@@ -19,6 +19,10 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+const (
+	rushPath = "/src/github.com/u-root/u-root/cmds/rush"
+)
+
 type mount struct {
 	source string
 	target string
@@ -33,9 +37,10 @@ var (
 	//	endPart = "\n}\n)\n}\n"
 	endPart   = "\nreturn err\n}\n"
 	namespace = []mount{
-		{source: "tmpfs", target: "/src/cmds/sh", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
+		{source: "tmpfs", target: rushPath, fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 		{source: "tmpfs", target: "/ubin", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 	}
+	debug = flag.Bool("d", false, "Print debug info")
 )
 
 func main() {
@@ -72,20 +77,22 @@ func main() {
 			}
 		}
 		goCode = goCode + endPart
-		log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
+		if *debug {
+			log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
+		}
 		fullCode, err := imports.Process("commandline", []byte(goCode), &opts)
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", goCode, err)
 		}
-		log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
-		bName := path.Join("/src/cmds/sh", a[0]+".go")
-		//fmt.Printf("filemap %v\n", filemap)
+		if *debug {
+			log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
+		}
+		bName := path.Join(rushPath, a[0]+".go")
 		filemap[bName] = fullCode
-		//log.Printf("%v: %v", bName, fullCode)
 	}
 
 	// processed code, read in shell files.
-	globs, err := filepath.Glob("/src/cmds/sh/*.go")
+	globs, err := filepath.Glob(rushPath + "/*.go")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -105,16 +112,19 @@ func main() {
 	}
 	// we'd like to do this here, but it seems it doesn't end
 	// up applying to all procs in this group, leading to confusion. 
-	// sometimes they get the private mount, sometimes not. So we had
-	// to hack it in the shell. 
-	// FIXME
+	// sometimes they get the private mount, sometimes not.
+	// It's a fundamental limit in the go runtime.
+	// So we hack it in the shell. 
+	// There is no FIXME
 	if false {
 		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
 			log.Fatal(err)
 		}
 	}
-	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
-		fmt.Printf("m %v\n", b)
+	if *debug {
+		if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
+			log.Printf("Reading /proc/mount:m %v\n", b)
+		}
 	}
 
 	// We are rewriting the shell. We need to create a new binary, i.e.
@@ -128,8 +138,7 @@ func main() {
 			log.Printf("Mount :%s: on :%s: type :%s: flags %x: opts %v: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
 	}
-	//log.Printf("filemap: %v", filemap)
-	// write the new /src/cmds/sh
+	// write the new rushPath
 	for i, v := range filemap {
 		if err = ioutil.WriteFile(i, v, 0600); err != nil {
 			log.Fatal(err)
@@ -137,15 +146,16 @@ func main() {
 	}
 
 	// the big fun: just run it. The Right Things Happen.
-	cmd := exec.Command("/buildbin/sh")
+	cmd := exec.Command("/buildbin/rush")
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	// TODO: figure out why we get EPERM when we use this.
 	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
-	log.Printf("Run %v", cmd)
-	err = cmd.Run()
-	if err != nil {
+	if *debug {
+		log.Printf("Run %v", cmd)
+	}
+	if err := cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
 	// Unshare doesn't work in a sane way due to a Go issue?
@@ -154,5 +164,5 @@ func main() {
 			log.Printf("Umount :%s: %v\n", m.target, err)
 		}
 	}
-	log.Printf("init: /ubin/sh returned!\n")
+	log.Printf("builtin: /ubin/rush returned!\n")
 }
