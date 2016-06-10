@@ -40,6 +40,7 @@ func TestGrep(t *testing.T) {
 
 	t.Logf("Built %v for test", testgreppath)
 	for _, v := range tab {
+		t.Logf("Run %v args %v", testgreppath, v)
 		c := exec.Command(testgreppath, v.a...)
 		c.Stdin = bytes.NewReader([]byte(v.i))
 		o, err := c.CombinedOutput()

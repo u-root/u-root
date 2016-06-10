@@ -1,9 +1,0 @@
-package: github.com/u-root/u-root
-import:
-- package: github.com/krolaw/dhcp4
-- package: golang.org/x/tools
-  subpackages:
-  - imports
-- package: golang.org/x/sys
-  subpackages:
-  - unix

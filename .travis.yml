@@ -5,14 +5,13 @@ go:
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
-  - go get github.com/Masterminds/glide
-  - glide up
+  - go run scripts/getimports.go -d
   - pwd
   - ls -l
 install:
   - ls
-  - du -a vendor
 script:
+  - cat travis.sh
   - bash travis.sh
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi

@@ -1,5 +1,15 @@
 #!/bin/bash
-curl -Lo .git/hooks/commit-msg http://review.gerrithub.io/tools/hooks/commit-msg
-chmod u+x .git/hooks/commit-msg
-git config remote.origin.push HEAD:refs/for/master
-git config remote.origin.receivepack "git receive-pack --reviewer rminnich --reviewer rhiguita"
+echo "This command gets all the imports."
+if [ -v $GOPATH ]
+then
+	echo "Please set GOPATH and run this command again."
+	exit 1
+fi
+
+if [ -v $GOROOT ]
+then
+	echo "You have not set GOROOT. This can work but if not, please"
+	echo "set GOROOT to point to a Go tree with version >= 1.6"
+fi
+
+go run scripts/getimports.go

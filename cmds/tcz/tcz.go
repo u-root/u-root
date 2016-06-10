@@ -87,6 +87,13 @@ func clonetree(tree string) error {
 			return nil
 		}
 		// all else gets a symlink.
+		if link, err := os.Readlink(path); err == nil {
+			if link == path {
+				return nil
+			}
+			l.Printf("Symlink: need %v -> %v but %v -> %v is already there", path, path[lt:], path, link)
+			return err
+		}
 		l.Printf("Need to symlnk %v to %v\n", path, path[lt:])
 		if err := os.Symlink(path, path[lt:]); err != nil {
 			// TODO: if it's there, and has same value, no error.
