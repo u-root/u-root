@@ -204,7 +204,7 @@ func main() {
 		debug("Run %v @ %v", cmd, cmd.Dir)
 		j, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Printf("Go get failed: err %v, output \n%v\n", err, j)
+			log.Printf("Go get failed: err %v, output \n%v\n", err, string(j))
 		}
 		debug("We got %v", i)
 	}
