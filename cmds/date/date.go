@@ -177,6 +177,7 @@ func getTime(s string) (t time.Time, err error) {
 	}
 	s = s[8:]
 	switch len(s) {
+	case 0:
 	case 2:
 		err = ints(s, &year)
 	case 3:
