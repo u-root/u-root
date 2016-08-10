@@ -7,10 +7,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -39,7 +41,8 @@ var fmtMap = map[string]string{
 
 var (
 	flags struct{ universal bool }
-	cmd   = "date [-u] [+format]"
+	cmd   = "date [-u] [+format] | date [-u] [MMDDhhmm[CC]YY[.ss]]"
+	z     = time.Local
 )
 
 func usage() {
@@ -52,6 +55,9 @@ func init() {
 	flag.BoolVar(&flags.universal, "u", false, "Coordinated Universal Time (UTC)")
 	flag.Usage = usage
 	flag.Parse()
+	if flags.universal {
+		z = time.UTC
+	}
 }
 
 // regex search for +format POSIX patterns
@@ -69,10 +75,7 @@ func formatParser(args string) []string {
 
 // replace map for the format patterns according POSIX and GNU implementations
 func dateMap(format string) string {
-	d := time.Now()
-	if flags.universal {
-		d = d.UTC()
-	}
+	d := time.Now().In(z)
 	var toReplace string
 	for _, match := range formatParser(format) {
 		translate, exists := fmtMap[match]
@@ -147,29 +150,81 @@ func dateMap(format string) string {
 	return format
 }
 
-func date(universal bool) (string, error) {
-	t := time.Now()
-	if universal {
-		t = t.UTC()
+func ints(s string, i *[]*int) error {
+	var err error
+	for _, p := range *i {
+		if *p, err = strconv.Atoi(s); err != nil {
+			return err
+		}
+		s = s[2:]
 	}
-	s := t.Format(time.UnixDate)
-	return fmt.Sprintf("%v", s), nil
+	return nil
+}
+
+// getTime gets the desired time as a time.Time.
+// It derives it from a unix date command string.
+// Some values in the string are optional, namely
+// year and seconds. For these values, we use
+// time.Now(). For the timezone, we use whatever
+// one we are in, or UTC if desired.
+func getTime(s string) (t time.Time, err error) {
+	var M, D, h, m int
+	year := time.Now().Year() % 100
+	century := time.Now().Year() / 100
+	seconds := time.Now().Second()
+	if err = ints(s, &[]*int{&M, &D, &h, &m}); err != nil {
+		return
+	}
+	s = s[8:]
+	switch len(s) {
+	case 2:
+		err = ints(s, &[]*int{&year})
+	case 3:
+		err = ints(s[1:], &[]*int{&seconds})
+	case 4:
+		err = ints(s, &[]*int{&century, &year})
+	case 5:
+		s = s[0:2] + s[3:]
+		err = ints(s, &[]*int{&year, &seconds})
+	case 7:
+		s = s[0:4] + s[5:]
+		err = ints(s, &[]*int{&century, &year, &seconds})
+	default:
+		err = fmt.Errorf("Optional string is %v instead of [[CC]YY][.ss]", s)
+	}
+
+	if err != nil {
+		return
+	}
+
+	year = year + century
+	t = time.Date(year, time.Month(M), D, h, m, seconds, 0, z)
+	return
+}
+
+func date(z *time.Location) string {
+	return time.Now().In(z).Format(time.UnixDate)
 }
 
 func main() {
-	// date without format args
-	msg, err := date(flags.universal)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	// trick of flag with start '+'
-	for _, argv := range flag.Args() {
-		if argv[0] == '+' {
-			msg = dateMap(argv[1:])
+	switch len(flag.Args()) {
+	case 0:
+		fmt.Printf("%v\n", date(z))
+	case 1:
+		argv0 := flag.Args()[0]
+		if argv0[0] == '+' {
+			fmt.Printf("%v\n", dateMap(argv0[1:]))
+		} else {
+			t, err := getTime(argv0)
+			if err != nil {
+				log.Fatalf("%v: %v", argv0, err)
+			}
+			tv := syscall.NsecToTimeval(t.UnixNano())
+			if err := syscall.Settimeofday(&tv); err != nil {
+				log.Fatalf("%v: %v", argv0, err)
+			}
 		}
+	default:
+		usage()
 	}
-
-	fmt.Printf("%v\n", msg)
 }

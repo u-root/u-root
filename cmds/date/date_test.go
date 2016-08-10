@@ -14,11 +14,8 @@ import (
 // without any flag
 func TestDateNoFlags(t *testing.T) {
 	t.Log("::  Printing date with default location (no flags)...")
-	d, err := date(false)
+	d := date(time.Local)
 	t.Logf("Date: %v\n", d)
-	if err != nil {
-		t.Error(err)
-	}
 	dParsed, err := time.Parse(time.UnixDate, d)
 	if err != nil {
 		t.Error(err)
@@ -33,11 +30,8 @@ func TestDateNoFlags(t *testing.T) {
 // using u flag
 func TestDateUniversal(t *testing.T) {
 	t.Log("::  Printing date with UTC (using -u flag)...")
-	d, err := date(true)
+	d := date(time.UTC)
 	t.Logf("Date: %v\n", d)
-	if err != nil {
-		t.Error(err)
-	}
 	dParsed, err := time.Parse(time.UnixDate, d)
 	if err != nil {
 		t.Error(err)
