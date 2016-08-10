@@ -153,7 +153,7 @@ func dateMap(format string) string {
 func ints(s string, i ...*int) error {
 	var err error
 	for _, p := range i {
-		if *p, err = strconv.Atoi(s); err != nil {
+		if *p, err = strconv.Atoi(s[0:2]); err != nil {
 			return err
 		}
 		s = s[2:]
@@ -177,6 +177,7 @@ func getTime(s string) (t time.Time, err error) {
 	}
 	s = s[8:]
 	switch len(s) {
+	case 0:
 	case 2:
 		err = ints(s, &year)
 	case 3:
@@ -197,7 +198,7 @@ func getTime(s string) (t time.Time, err error) {
 		return
 	}
 
-	year = year + century
+	year = year + century*100
 	t = time.Date(year, time.Month(M), D, h, m, seconds, 0, z)
 	return
 }
