@@ -150,9 +150,9 @@ func dateMap(format string) string {
 	return format
 }
 
-func ints(s string, i *[]*int) error {
+func ints(s string, i ...*int) error {
 	var err error
-	for _, p := range *i {
+	for _, p := range i {
 		if *p, err = strconv.Atoi(s); err != nil {
 			return err
 		}
@@ -172,23 +172,23 @@ func getTime(s string) (t time.Time, err error) {
 	year := time.Now().Year() % 100
 	century := time.Now().Year() / 100
 	seconds := time.Now().Second()
-	if err = ints(s, &[]*int{&M, &D, &h, &m}); err != nil {
+	if err = ints(s, &M, &D, &h, &m); err != nil {
 		return
 	}
 	s = s[8:]
 	switch len(s) {
 	case 2:
-		err = ints(s, &[]*int{&year})
+		err = ints(s, &year)
 	case 3:
-		err = ints(s[1:], &[]*int{&seconds})
+		err = ints(s[1:], &seconds)
 	case 4:
-		err = ints(s, &[]*int{&century, &year})
+		err = ints(s, &century, &year)
 	case 5:
 		s = s[0:2] + s[3:]
-		err = ints(s, &[]*int{&year, &seconds})
+		err = ints(s, &year, &seconds)
 	case 7:
 		s = s[0:4] + s[5:]
-		err = ints(s, &[]*int{&century, &year, &seconds})
+		err = ints(s, &century, &year, &seconds)
 	default:
 		err = fmt.Errorf("Optional string is %v instead of [[CC]YY][.ss]", s)
 	}
