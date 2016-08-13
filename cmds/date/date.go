@@ -164,32 +164,34 @@ func ints(s string, i ...*int) error {
 // getTime gets the desired time as a time.Time.
 // It derives it from a unix date command string.
 // Some values in the string are optional, namely
-// year and seconds. For these values, we use
+// YY and SS. For these values, we use
 // time.Now(). For the timezone, we use whatever
 // one we are in, or UTC if desired.
 func getTime(s string) (t time.Time, err error) {
-	var M, D, h, m int
-	year := time.Now().Year() % 100
-	century := time.Now().Year() / 100
-	seconds := time.Now().Second()
-	if err = ints(s, &M, &D, &h, &m); err != nil {
+	var MM, DD, hh, mm int
+	// CC is the year / 100, not the "century".
+	// i.e. for 2001, CC is 20, not 21.
+	YY := time.Now().Year() % 100
+	CC := time.Now().Year() / 100
+	SS := time.Now().Second()
+	if err = ints(s, &MM, &DD, &hh, &mm); err != nil {
 		return
 	}
 	s = s[8:]
 	switch len(s) {
 	case 0:
 	case 2:
-		err = ints(s, &year)
+		err = ints(s, &YY)
 	case 3:
-		err = ints(s[1:], &seconds)
+		err = ints(s[1:], &SS)
 	case 4:
-		err = ints(s, &century, &year)
+		err = ints(s, &CC, &YY)
 	case 5:
 		s = s[0:2] + s[3:]
-		err = ints(s, &year, &seconds)
+		err = ints(s, &YY, &SS)
 	case 7:
 		s = s[0:4] + s[5:]
-		err = ints(s, &century, &year, &seconds)
+		err = ints(s, &CC, &YY, &SS)
 	default:
 		err = fmt.Errorf("Optional string is %v instead of [[CC]YY][.ss]", s)
 	}
@@ -198,8 +200,8 @@ func getTime(s string) (t time.Time, err error) {
 		return
 	}
 
-	year = year + century*100
-	t = time.Date(year, time.Month(M), D, h, m, seconds, 0, z)
+	YY = YY + CC*100
+	t = time.Date(YY, time.Month(MM), DD, hh, mm, SS, 0, z)
 	return
 }
 
