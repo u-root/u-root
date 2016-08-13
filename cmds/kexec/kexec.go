@@ -14,6 +14,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"syscall"
 	"unsafe"
@@ -37,15 +38,28 @@ var (
 
 func main() {
 	var err error
+	var b []byte
+	var l uintptr
+
 	flag.Parse()
 	if len(flag.Args()) < 1 {
 		flag.PrintDefaults()
 		log.Fatalf("usage: kexec [flags] kernelname")
 	}
 	kernel := flag.Args()[0]
-	l := uintptr(len(*cmdline)) + 1
-	b := make([]byte, l)
-	copy(b, []byte(*cmdline))
+
+	if *cmdline != "" {
+		b = append(b, []byte(*cmdline)...)
+		l = uintptr(len(b)) + 1
+	} else {
+		b, err = ioutil.ReadFile("/proc/cmdline")
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		b[len(b)-1] = 0
+		l = uintptr(len(b))
+	}
+
 	p := uintptr(unsafe.Pointer(&b[0]))
 
 	log.Printf("Loading %v\n", kernel)
@@ -58,6 +72,7 @@ func main() {
 		flags |= KEXEC_FILE_NO_INITRAMFS
 	}
 
+	log.Printf("command line: '%v'", string(b))
 	log.Printf("%v %v %v %v %v %v", 320, uintptr(kern), uintptr(ramfs), p, l, flags)
 	if *dryrun {
 		log.Printf("Dry run -- exiting now")
