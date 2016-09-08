@@ -78,10 +78,11 @@ func main() {
 		log.Printf("Dry run -- exiting now")
 		return
 	}
-	e1, e2, err := syscall.Syscall6(320, uintptr(kern), uintptr(ramfs), l, p, flags, uintptr(0))
-	log.Fatalf("a %v b %v err %v", e1, e2, err)
+	if e1, e2, err := syscall.Syscall6(320, uintptr(kern), uintptr(ramfs), l, p, flags, uintptr(0)); err != 0 {
+		log.Fatalf("a %v b %v err %v", e1, e2, err)
+	}
 
-	e1, e2, err = syscall.Syscall6(syscall.SYS_REBOOT, syscall.LINUX_REBOOT_MAGIC1, syscall.LINUX_REBOOT_MAGIC2, syscall.LINUX_REBOOT_CMD_KEXEC, 0, 0, 0)
-
-	log.Fatalf("a %v b %v err %v", e1, e2, err)
+	if e1, e2, err := syscall.Syscall6(syscall.SYS_REBOOT, syscall.LINUX_REBOOT_MAGIC1, syscall.LINUX_REBOOT_MAGIC2, syscall.LINUX_REBOOT_CMD_KEXEC, 0, 0, 0); err != 0 {
+		log.Fatalf("a %v b %v err %v", e1, e2, err)
+	}
 }
