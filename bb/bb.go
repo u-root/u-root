@@ -294,7 +294,7 @@ func main() {
 	}
 
 	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
-		log.Fatal("%v\n", err)
+		log.Fatalf("%v\n", err)
 	}
 	// copy all shell files
 
