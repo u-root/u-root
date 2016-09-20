@@ -43,18 +43,50 @@ var (
 		"SHA3_512":  crypto.SHA3_512,
 	}
 
-	armored = flag.Bool("a", false, "signature is ASCII armored")
-	sumfile = flag.String("i", "", "checksum file")
-	alg     = flag.String("alg", "MD5", "md5sum")
-	verbose = flag.Bool("v", false, "verbose")
-	debug   = func(string, ...interface{}) {}
+	armored    = flag.Bool("a", false, "signature is ASCII armored")
+	sumfile    = flag.String("i", "", "checksum file")
+	alg        = flag.String("alg", "", "algorithms to check")
+	verbose    = flag.Bool("v", false, "verbose")
+	debug      = func(string, ...interface{}) {}
+	try, tried []string
 )
+
+func init() {
+	for v := range algs {
+		try = append(try, v)
+	}
+}
+
+func one(n string, b []byte, sig string) bool {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Hash %v did not get linked in: ", n, r)
+		}
+	}()
+	debug("Check alg %v", n)
+	checker := algs[n].New()
+	checker.Write(b)
+	r := checker.Sum([]byte{})
+	tried = append(tried, n)
+
+	// There has to be a better way.
+	sumText := ""
+	for _, v := range r {
+		sumText += fmt.Sprintf("%02x", v)
+	}
+	debug("Compare to %v", sumText)
+	if sumText == sig {
+		return true
+	}
+	return false
+}
 
 func main() {
 	flag.Parse()
 	if flag.NArg() < 2 {
 		log.Fatalf("Need at least a file to be validated and one public key")
 	}
+
 	if *verbose {
 		debug = log.Printf
 	}
@@ -68,35 +100,36 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
+	if *alg != "" {
+		try = []string{}
+		for _, v := range strings.Split(*alg, ",") {
+			try = append(try, v)
+		}
+	}
+
+	log.Printf("Try %v", try)
+
 	sig := strings.Split(string(sigData), " ")
+
 	debug("Signature is %v len %v", sig[0], len(sig[0]))
 
 	b, err := ioutil.ReadFile(f)
 	if err != nil {
 		log.Fatalf("%s: %v", f, err)
 	}
-	for _, h := range strings.Split(*alg, ",") {
-		debug("Check %v", h)
-		h, ok := algs[h]
-		if !ok {
-			debug("%s is not in %v", h, algs)
+	for i := range try {
+		debug("Check %v", try[i])
+		if one(try[i], b, sig[0]) {
+			debug("ok")
+			os.Exit(0)
 		}
-
-		checker := h.New()
-		checker.Write(b)
-		r := checker.Sum([]byte{})
-
-		// There has to be a better way.
-		sumText := ""
-		for _, v := range r {
-			sumText += fmt.Sprintf("%02x", v)
-		}
-		debug("Compare to %v", sumText)
-		if sumText == sig[0] {
+		// Sometimes it's not a file in the standard format, but some binary thing.
+		// Check that too.
+		if one(try[i], b, string(sigData)) {
 			debug("ok")
 			os.Exit(0)
 		}
 		debug("not ok")
 	}
-	log.Fatalf("No matches found for *alg")
+	log.Fatalf("No matches found for %v", tried)
 }
