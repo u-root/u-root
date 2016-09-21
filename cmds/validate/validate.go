@@ -60,7 +60,7 @@ func init() {
 func one(n string, b []byte, sig string) bool {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Hash %v did not get linked in: ", n, r)
+			log.Printf("Hash %v did not get linked in: %v", n, r)
 		}
 	}()
 	debug("Check alg %v", n)
@@ -120,13 +120,13 @@ func main() {
 	for i := range try {
 		debug("Check %v", try[i])
 		if one(try[i], b, sig[0]) {
-			debug("ok")
+			fmt.Printf("%v\n", try[i])
 			os.Exit(0)
 		}
 		// Sometimes it's not a file in the standard format, but some binary thing.
 		// Check that too.
 		if one(try[i], b, string(sigData)) {
-			debug("ok")
+			fmt.Printf("%v\n", try[i])
 			os.Exit(0)
 		}
 		debug("not ok")
