@@ -15,16 +15,16 @@ import (
 	"os"
 	"strings"
 
-	_ "golang.org/x/crypto/openpgp"
-	_ "golang.org/x/crypto/md4"
 	_ "crypto/md5"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
+	_ "golang.org/x/crypto/md4"
+	_ "golang.org/x/crypto/openpgp"
 
+	_ "crypto/sha512"
 	_ "golang.org/x/crypto/ripemd160"
 	_ "golang.org/x/crypto/sha3"
-	_ "crypto/sha512"
 )
 
 var (
@@ -58,15 +58,15 @@ func init() {
 }
 
 func one(n string, b []byte, sig string) bool {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Hash %v did not get linked in: %v", n, r)
-		}
-	}()
+	if !algs[n].Available() {
+		log.Printf("Hash %v did not get linked in", n)
+		return false
+	}
 	debug("Check alg %v", n)
 	checker := algs[n].New()
 	checker.Write(b)
 	r := checker.Sum([]byte{})
+	debug("sum is %d bytes %v\n", len(r), r)
 	tried = append(tried, n)
 
 	// There has to be a better way.
@@ -78,6 +78,17 @@ func one(n string, b []byte, sig string) bool {
 	if sumText == sig {
 		return true
 	}
+	return false
+}
+
+func sign(n string, k crypto.PrivateKey, b []byte, sig string) bool {
+	if !algs[n].Available() {
+		log.Printf("Hash %v did not get linked in", n)
+		return false
+	}
+	debug("Check alg %v", n)
+	b, err := k.(crypto.Signer).Sign(nil, b, algs[n])
+	log.Printf("For %v we get %v %v", n, b, err)
 	return false
 }
 
@@ -115,19 +126,35 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s: %v", f, err)
 	}
-	for i := range try {
-		debug("Check %v", try[i])
-		if one(try[i], b, sig[0]) {
-			fmt.Printf("%v\n", try[i])
-			os.Exit(0)
+
+	if *sumfile != "" {
+		sum, err := ioutil.ReadFile(*sumfile)
+		if err != nil {
+			log.Fatalf("Can't read sumfile: %v", *sumfile)
 		}
-		// Sometimes it's not a file in the standard format, but some binary thing.
-		// Check that too.
-		if one(try[i], b, string(sigData)) {
-			fmt.Printf("%v\n", try[i])
-			os.Exit(0)
+		for i := range try {
+			if sign(try[i], crypto.PrivateKey(sum), b, sig[0]) {
+				fmt.Printf("%v\n", try[i])
+				os.Exit(0)
+			}
+			debug("not ok")
 		}
-		debug("not ok")
+
+	} else {
+		for i := range try {
+			debug("Check %v", try[i])
+			if one(try[i], b, sig[0]) {
+				fmt.Printf("%v\n", try[i])
+				os.Exit(0)
+			}
+			// Sometimes it's not a file in the standard format, but some binary thing.
+			// Check that too.
+			if one(try[i], b, string(sigData)) {
+				fmt.Printf("%v\n", try[i])
+				os.Exit(0)
+			}
+			debug("not ok")
+		}
 	}
 	log.Fatalf("No matches found for %v", tried)
 }
