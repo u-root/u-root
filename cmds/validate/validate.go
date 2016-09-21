@@ -15,15 +15,15 @@ import (
 	"os"
 	"strings"
 
-	// TODO _ "golang.org/x/crypto/openpgp"
-	// TODO _ "golang.org/x/crypto/md4"
+	_ "golang.org/x/crypto/openpgp"
+	_ "golang.org/x/crypto/md4"
 	_ "crypto/md5"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
 
-	//	_ "golang.org/x/crypto/ripemd160"
-	//	_ "golang.org/x/crypto/sha3"
+	_ "golang.org/x/crypto/ripemd160"
+	_ "golang.org/x/crypto/sha3"
 	_ "crypto/sha512"
 )
 
