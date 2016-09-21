@@ -59,7 +59,7 @@ ff02::2 ip6-allrouters
 			t.Fatalf("Can't set up hash file: %v", err)
 		}
 
-		c := exec.Command(validatetestpath, path.Join(tmpDir, "hosts"), path.Join(tmpDir, v.name))
+		c := exec.Command(validatetestpath, path.Join(tmpDir, v.name), path.Join(tmpDir, "hosts"))
 		ep, err := c.StderrPipe()
 		if err != nil {
 			t.Fatalf("Can't start StderrPipe: %v", err)

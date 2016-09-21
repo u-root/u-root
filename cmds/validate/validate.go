@@ -91,9 +91,7 @@ func main() {
 		debug = log.Printf
 	}
 
-	// TODO: read in the file with the validation.
-	// The second args will be flag.Args()[1], of course!
-	f, v := flag.Args()[0], flag.Args()[1]
+	v, f := flag.Args()[0], flag.Args()[1]
 
 	sigData, err := ioutil.ReadFile(v)
 	if err != nil {
