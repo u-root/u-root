@@ -94,6 +94,12 @@ func wire(cmds []*Command) error {
 }
 
 func runit(c *Command) error {
+	defer func() {
+		for fd, f := range c.files {
+			f.Close()
+			delete(c.files, fd)
+		}
+	}()
 	if b, ok := builtins[c.cmd]; ok {
 		if err := b(c); err != nil {
 			return err
@@ -111,13 +117,17 @@ func runit(c *Command) error {
 
 func OpenRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
 	if c.fdmap[fd] != "" {
-		return os.Open(c.fdmap[fd])
+		f, err := os.Open(c.fdmap[fd])
+		c.files[fd] = f
+		return f, err
 	}
 	return r, nil
 }
 func OpenWrite(c *Command, w io.Writer, fd int) (io.Writer, error) {
 	if c.fdmap[fd] != "" {
-		return os.Create(c.fdmap[fd])
+		f, err := os.Create(c.fdmap[fd])
+		c.files[fd] = f
+		return f, err
 	}
 	return w, nil
 }
