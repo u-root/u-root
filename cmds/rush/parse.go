@@ -27,6 +27,7 @@ type Command struct {
 	// These are filled in by the parser.
 	args  []arg
 	fdmap map[int]string
+	files map[int]io.Closer
 	link  string
 	bg    bool
 
@@ -219,7 +220,7 @@ func parse(b *bufio.Reader) (*Command, string) {
 }
 
 func newCommand() *Command {
-	return &Command{fdmap: make(map[int]string)}
+	return &Command{fdmap: make(map[int]string), files: make(map[int]io.Closer)}
 }
 
 // Just eat it up until you have all the commands you need.
