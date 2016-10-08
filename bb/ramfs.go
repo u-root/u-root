@@ -129,12 +129,12 @@ func ramfs() {
 	// First create the archive and put the device cpio in it.
 	dev, err := ioutil.ReadFile(path.Join(config.Uroot, "scripts", "dev.cpio"))
 	if err != nil {
-		log.Fatal("%v %v\n", dev, err)
+		log.Fatalf("%v %v\n", dev, err)
 	}
 
 	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
 	if err := ioutil.WriteFile(oname, dev, 0600); err != nil {
-		log.Fatal("%v\n", err)
+		log.Fatalf("%v\n", err)
 	}
 
 	bbdir := path.Join(config.Uroot, "bb/bbsh")
