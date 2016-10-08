@@ -9,6 +9,18 @@
 			"revisionTime": "2016-10-02T09:39:04Z"
 		},
 		{
+			"checksumSHA1": "909rdBh4JsbR+qogtR3gAdcjnm4=",
+			"path": "github.com/vcabbage/trivialt",
+			"revision": "a50016b23257dee85194d413de6ae8dff7300c0e",
+			"revisionTime": "2016-09-16T21:56:20Z"
+		},
+		{
+			"checksumSHA1": "SK0aodujdlhBk3Y3Qgr/fP/03IY=",
+			"path": "github.com/vcabbage/trivialt/netascii",
+			"revision": "a50016b23257dee85194d413de6ae8dff7300c0e",
+			"revisionTime": "2016-09-16T21:56:20Z"
+		},
+		{
 			"checksumSHA1": "fFnEuPOdBRf9AdTSpAFkd0ZPXXs=",
 			"path": "golang.org/x/crypto/cast5",
 			"revision": "d172538b2cfce0c13cee31e647d0367aa8cd2486",
