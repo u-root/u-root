@@ -11,6 +11,7 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -22,9 +23,23 @@ import (
 	"github.com/u-root/u-root/uroot"
 )
 
+var (
+	verbose   = flag.Bool("v", false, "print all build commands")
+	ludicrous = flag.Bool("ludicrous", false, "print out information about symlink creation")
+	debug     = func(string, ...interface{}) {}
+)
+
 func main() {
+	a := []string{"build"}
+	flag.Parse()
 	log.Printf("Welcome to u-root")
 	uroot.Rootfs()
+
+	if *verbose {
+		debug = log.Printf
+		a = append(a, "-x")
+	}
+
 	// populate buildbin
 
 	// In earlier versions we just had src/cmds. Due to the Go rules it seems we need to
@@ -40,17 +55,19 @@ func main() {
 				if err := os.Symlink(source, destPath); err != nil {
 					log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
 				}
-				// Debugging, almost never needed.
-				//log.Printf("Symlink %v -> %v", source, destPath)
+				if *ludicrous {
+					log.Printf("Symlink %v -> %v", source, destPath)
+				}
 			}
 		}
 	} else {
 		log.Fatalf("Can't read %v; %v", "/src", err)
 	}
 	envs := uroot.Envs
-	log.Printf("envs %v", envs)
+	debug("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
-	cmd := exec.Command("go", "build", "-x", "-o", "/buildbin/installcommand", path.Join(uroot.CmdsPath, "installcommand"))
+	a = append(a, "-o", "/buildbin/installcommand", path.Join(uroot.CmdsPath, "installcommand"))
+	cmd := exec.Command("go", a...)
 	installenvs := envs
 	installenvs = append(envs, "GOBIN=/buildbin")
 	cmd.Env = installenvs
@@ -59,9 +76,8 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	log.Printf("Run %v", cmd)
-	err := cmd.Run()
-	if err != nil {
+	debug("Run %v", cmd)
+	if err := cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
 
@@ -106,9 +122,8 @@ func main() {
 		// TODO: figure out why we get EPERM when we use this.
 		//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
 		cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
-		log.Printf("Run %v", cmd)
-		err = cmd.Run()
-		if err != nil {
+		debug("Run %v", cmd)
+		if err := cmd.Run(); err != nil {
 			log.Printf("%v\n", err)
 		}
 		// only the first init needs its own PID space.
