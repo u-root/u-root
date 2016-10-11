@@ -53,7 +53,12 @@ func main() {
 		}
 		check = openpgp.CheckArmoredDetachedSignature
 	}
-
+	for _, e := range kr {
+		log.Printf("%v %v", e, e.Identities)
+		for f, i := range e.Identities {
+			log.Printf("\t%v %v", f, *i)
+		}
+	}
 	if s, err = os.Open(sn); err != nil {
 		log.Fatalf("Can't open signature file: %v", err)
 	}
