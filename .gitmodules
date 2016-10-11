@@ -1,6 +1,0 @@
-[submodule "src/golang.org/x/tools"]
-	path = src/golang.org/x/tools
-	url = https://go.googlesource.com/tools
-[submodule "src/github.com/edsrzf/mmap-go"]
-	path = src/github.com/edsrzf/mmap-go
-	url = https://github.com/edsrzf/mmap-go

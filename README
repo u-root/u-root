@@ -15,5 +15,4 @@ then
 	echo "set GOROOT to point to a Go tree with version >= 1.6"
 fi
 
-go run scripts/getimports.go
 go run scripts/ramfs.go -test
