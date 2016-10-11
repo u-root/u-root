@@ -346,7 +346,7 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		log.Fatal("%v", err)
+		log.Fatalf("%v", err)
 	}
 
 	buildinit()
