@@ -4,9 +4,9 @@ u-root
 [![Build Status](https://travis-ci.org/u-root/u-root.svg?branch=master)](https://travis-ci.org/u-root/u-root)
 
 
-A universal root. You mount it, and it's mostly Go source with the exception of 5 binaries. 
+u-root is a "universal root". It's a root file system with mostly Go source with the exception of 5 binaries. 
 
-And that's the interesting part. This set of utilities is all Go, and mostly source.
+That's the interesting part. This set of utilities is all Go, and mostly source.
 
 When you run a command that is not built, you fall through to the command that does a
 'go build' of the command, and then execs the command once it is built. From that point on,
@@ -16,19 +16,17 @@ To install:
 You'll need a GOPATH. Be sure to set it to something, e.g.
 export GOPATH=/usr/local/src/go
 
+On my machine, my gopath is
+export GOPATH=/home/$USER/go
+
 Then
 go get github.com/u-root/u-root
 
 cd $GOPATH/src/github.com/u-root/u-root
-bash RUN_ME_FIRST
 
 You may hit a problem where it can't find some standard Go packages, if so, you'll need
 to set GOROOT, e.g.
 export GOROOT=/path/to/some_go_>=1.6
-
-then
-bash RUN_ME_FIRST
-should work.
 
 To try the chroot, just run the README:
 bash README
@@ -40,6 +38,8 @@ In the kernel and coreboot case, you need to configure ethernet. We have a primi
 ip command for that case. In qemu:
 ip addr add 10.0.2.15/8 dev eth0
 ip link set dev eth0 up
+
+Or, on newer linux kernels (> 4.x) boot with ip=dhcp in the command line.
 
 There's also a dhcp command.
 
