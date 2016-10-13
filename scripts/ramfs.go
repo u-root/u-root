@@ -232,8 +232,9 @@ func guessgoroot() {
 	paths := strings.Split(p, ":")
 	for _, v := range paths {
 		g := path.Join(v, "go")
+		log.Printf("Try %s as the Go binary", g)
 		if _, err := os.Stat(g); err == nil {
-			config.Goroot = path.Dir(path.Dir(v))
+			config.Goroot = path.Dir(v)
 			config.Godotdot = path.Dir(config.Goroot)
 			log.Printf("Guessing that goroot is %v from $PATH", config.Goroot)
 			return
