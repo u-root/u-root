@@ -25,3 +25,12 @@ $GOPATH/src/github.com/u-root/u-root
 
   - Run `govendor remove +vendor`
   - Run `govendor add +external`
+
+# Contributors
+
+* [Ron Minnich](https://github.com/rminnich)
+* [Andrew Mirtchovski](https://github.com/mirtchovski)
+* [Alexandre Beletti](https://github.com/rhiguita)
+* [Manoel Machado](https://github.com/ryukinix)
+* [Rafael C. Nunes](https://github.com/rafaelcn)
+* [Matheus Pinto Rodrigues](https://github.com/mathgamain)
