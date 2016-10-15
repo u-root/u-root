@@ -75,5 +75,5 @@ In the EXAMPLES directory you can see examples of running in a chroot, kernel, a
 
 # Contributions
 
-We need help with this project, so contributions are welcome.  More information about handle dependencies you can found [here](MAINTENERS.MD)
+We need help with this project, so contributions are welcome.  More information about handle dependencies you can found [here](MAINTAINERS.md)
 
