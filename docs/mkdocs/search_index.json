@@ -1,0 +1,129 @@
+{
+    "docs": [
+        {
+            "location": "/",
+            "text": "Behold the Gopher!\n\n  \n\n\n\n\n\nWhat is U-root?\n\n\n\n    U-root is an embeddable root file system intended to be placed in a FLASH device as part \n    of the firmware image, along with a Linux kernel. Unlikely most embedded root file systems, \n    which consist of large binaries, U-root only has five: an init program and four Go compiler binaries.\n\n\n\n\n\n\nU-root at USENIX\n\n\n\n\nCode status\n\n\n\n\n    No code status at the moment.",
+            "title": "Home"
+        },
+        {
+            "location": "/#what-is-u-root",
+            "text": "U-root is an embeddable root file system intended to be placed in a FLASH device as part \n    of the firmware image, along with a Linux kernel. Unlikely most embedded root file systems, \n    which consist of large binaries, U-root only has five: an init program and four Go compiler binaries.   U-root at USENIX",
+            "title": "What is U-root?"
+        },
+        {
+            "location": "/about/",
+            "text": "About\n\n\nFeatures\n\n\n\n\nBuild binaries on demand.\n\n\nGo programming language port in progress.\n\n\n\n\nAbout the Name\n\n\n\n    So, why \"u-root\"?  It's to reflect a universal root, you can mount on every local and get a userland \n    portable (it's a goal).\n\n\n\n\nTeam\n\n\n\n\nAlexandre F. Beletti\n\n\nManoel Vilela\n\n\nMateus Pinto Rodrigues\n\n\nRafael C. Nunes\n\n\nRon Minnich",
+            "title": "About"
+        },
+        {
+            "location": "/about/#about",
+            "text": "",
+            "title": "About"
+        },
+        {
+            "location": "/about/#features",
+            "text": "Build binaries on demand.  Go programming language port in progress.",
+            "title": "Features"
+        },
+        {
+            "location": "/about/#about-the-name",
+            "text": "So, why \"u-root\"?  It's to reflect a universal root, you can mount on every local and get a userland \n    portable (it's a goal).",
+            "title": "About the Name"
+        },
+        {
+            "location": "/about/#team",
+            "text": "Alexandre F. Beletti  Manoel Vilela  Mateus Pinto Rodrigues  Rafael C. Nunes  Ron Minnich",
+            "title": "Team"
+        },
+        {
+            "location": "/news/",
+            "text": "News & events\n\n\n\n\n\n\nUSENIX papers and video\n\n\nHere are U-root's \npaper\n at USENIX 2015 ATC BOF.\n\n\nThe video presentation you can watch here: \ntalk",
+            "title": "News"
+        },
+        {
+            "location": "/news/#news-events",
+            "text": "",
+            "title": "News &amp; events"
+        },
+        {
+            "location": "/news/#usenix-papers-and-video",
+            "text": "Here are U-root's  paper  at USENIX 2015 ATC BOF.  The video presentation you can watch here:  talk",
+            "title": "USENIX papers and video"
+        },
+        {
+            "location": "/download/",
+            "text": "Download\n\n\nYou can clone the u-root repository in github typing in your terminal:\n\n\ngit clone https://github.com/u-root/u-root\n\n\nTo contribute go to \ngerrithub.io\n.",
+            "title": "Download"
+        },
+        {
+            "location": "/download/#download",
+            "text": "You can clone the u-root repository in github typing in your terminal:  git clone https://github.com/u-root/u-root  To contribute go to  gerrithub.io .",
+            "title": "Download"
+        },
+        {
+            "location": "/community/",
+            "text": "Community\n\n\nMailing lists\n\n\n\n\nu-root\n\n\n\n\nWiki\n\n\n\n\nu-root wiki",
+            "title": "Community"
+        },
+        {
+            "location": "/community/#community",
+            "text": "",
+            "title": "Community"
+        },
+        {
+            "location": "/community/#mailing-lists",
+            "text": "u-root",
+            "title": "Mailing lists"
+        },
+        {
+            "location": "/community/#wiki",
+            "text": "u-root wiki",
+            "title": "Wiki"
+        },
+        {
+            "location": "/roadmap/",
+            "text": "Roadmap (alpha)\n\n\nFinish commands and tests\n\n\n\n\n[x] date\n\n\n[x] cat\n\n\n[x] rm\n\n\n[x] mv\n\n\n[x] tee\n\n\n[ ] freq\n\n\n[ ] ping\n\n\n[ ] ps\n\n\n[ ] sed\n\n\n[ ] which\n\n\n[ ] uniq\n\n\n[ ] seq\n\n\n[ ] sh\n\n\n[ ] grep\n\n\n[ ] wc\n\n\n[ ] cp\n\n\n[ ] script\n\n\n[ ] ip\n\n\n[ ] cmp\n\n\n[ ] comm\n\n\n[ ] dd\n\n\n[ ] dmesg\n\n\n[ ] echo\n\n\n[ ] hostname\n\n\n[ ] init\n\n\n[ ] ldd\n\n\n[ ] ls\n\n\n[ ] mkdir\n\n\n[ ] mount\n\n\n[ ] printenv\n\n\n[x] pwd\n\n\n[ ] uname\n\n\n[ ] wget\n\n\n[ ] dhcp\n\n\n[ ] ectool\n\n\n[ ] gitclone\n\n\n[ ] installcommand\n\n\n[ ] kexec\n\n\n[ ] losetup\n\n\n[ ] pflask\n\n\n[ ] srvfiles\n\n\n[ ] tcz3\n\n\n[ ] unshare\n\n\n\n\nNew Goal\n\n\n\n\n[ ] Get enough basic commands working to support a container mechanism.\n\n\n[ ] Determine what commands we might need for \"New ChromeOS\"\n\n\n[ ] Bring in Go readline package for the u-root shell\n\n\n[ ] Finish implementation of the ip command\n\n\n\n\nFigure out a container solution\n\n\nOptions:\n\n\n\n\nDocker\n\n\nRocket\n\n\nwget + unpack (cpio? tar?) + u-root pflask\n\n\nimplement a gitclone command and use u-root pflask",
+            "title": "Roadmap"
+        },
+        {
+            "location": "/roadmap/#roadmap-alpha",
+            "text": "",
+            "title": "Roadmap (alpha)"
+        },
+        {
+            "location": "/roadmap/#finish-commands-and-tests",
+            "text": "[x] date  [x] cat  [x] rm  [x] mv  [x] tee  [ ] freq  [ ] ping  [ ] ps  [ ] sed  [ ] which  [ ] uniq  [ ] seq  [ ] sh  [ ] grep  [ ] wc  [ ] cp  [ ] script  [ ] ip  [ ] cmp  [ ] comm  [ ] dd  [ ] dmesg  [ ] echo  [ ] hostname  [ ] init  [ ] ldd  [ ] ls  [ ] mkdir  [ ] mount  [ ] printenv  [x] pwd  [ ] uname  [ ] wget  [ ] dhcp  [ ] ectool  [ ] gitclone  [ ] installcommand  [ ] kexec  [ ] losetup  [ ] pflask  [ ] srvfiles  [ ] tcz3  [ ] unshare",
+            "title": "Finish commands and tests"
+        },
+        {
+            "location": "/roadmap/#new-goal",
+            "text": "[ ] Get enough basic commands working to support a container mechanism.  [ ] Determine what commands we might need for \"New ChromeOS\"  [ ] Bring in Go readline package for the u-root shell  [ ] Finish implementation of the ip command",
+            "title": "New Goal"
+        },
+        {
+            "location": "/roadmap/#figure-out-a-container-solution",
+            "text": "Options:   Docker  Rocket  wget + unpack (cpio? tar?) + u-root pflask  implement a gitclone command and use u-root pflask",
+            "title": "Figure out a container solution"
+        },
+        {
+            "location": "/docs/getting-started/",
+            "text": "Getting started with u-root:\n\n\n\n\n1. Prerequisites\n\n\nTo execute u-root and play with it, you need to have git, golang installed. \nOn a Debian, Ubuntu or other .deb system, you should be able to get going with:\n\n\nsudo aptitude install git golang build-essential\n\n\n\nU-root requires go1.5 and the go source tree needs to be present.\n\n\n2. Gerrit\n\n\nWe use gerrithub.io for code-review. If you want to submit changes, go to\n\n\nhttps://review.gerrithub.io/#/admin/projects/u-root/u-root\n\n\n\nand check out the repository from gerrithub rather than github. The clone\ncommand will probably look something like this:\n\n\ngit clone ssh://USERNAME@review.gerrithub.io:29418/u-root/u-root\n\n\n\nyou'll need to run a few commands inside the top-level directory to get set\nup for code-review:\n\n\ncd u-root\ncurl -Lo .git/hooks/commit-msg http://review.gerrithub.io/tools/hooks/commit-msg\nchmod u+x .git/hooks/commit-msg\ngit config remote.origin.push HEAD:refs/for/master\ngit config remote.origin.receivepack \"git receive-pack --reviewer rminnich --reviewer rhiguita\"\n\n\n\nYou're now all set, you can build the whole thing just by running the README file, or you could just type:\n\n\ngo run scripts/ramfs.go -test",
+            "title": "Getting started"
+        },
+        {
+            "location": "/docs/getting-started/#getting-started-with-u-root",
+            "text": "",
+            "title": "Getting started with u-root:"
+        },
+        {
+            "location": "/docs/getting-started/#1-prerequisites",
+            "text": "To execute u-root and play with it, you need to have git, golang installed. \nOn a Debian, Ubuntu or other .deb system, you should be able to get going with:  sudo aptitude install git golang build-essential  U-root requires go1.5 and the go source tree needs to be present.",
+            "title": "1. Prerequisites"
+        },
+        {
+            "location": "/docs/getting-started/#2-gerrit",
+            "text": "We use gerrithub.io for code-review. If you want to submit changes, go to  https://review.gerrithub.io/#/admin/projects/u-root/u-root  and check out the repository from gerrithub rather than github. The clone\ncommand will probably look something like this:  git clone ssh://USERNAME@review.gerrithub.io:29418/u-root/u-root  you'll need to run a few commands inside the top-level directory to get set\nup for code-review:  cd u-root\ncurl -Lo .git/hooks/commit-msg http://review.gerrithub.io/tools/hooks/commit-msg\nchmod u+x .git/hooks/commit-msg\ngit config remote.origin.push HEAD:refs/for/master\ngit config remote.origin.receivepack \"git receive-pack --reviewer rminnich --reviewer rhiguita\"  You're now all set, you can build the whole thing just by running the README file, or you could just type:  go run scripts/ramfs.go -test",
+            "title": "2. Gerrit"
+        }
+    ]
+}

@@ -40,3 +40,7 @@ Core/
 /init
 bzImage
 vmlinux
+
+# Python Virtual Env
+*.env
+*.venv
