@@ -77,12 +77,3 @@ In the EXAMPLES directory you can see examples of running in a chroot, kernel, a
 
 We need help with this project, so contributions are welcome.  More information about handle dependencies you can found [here](MAINTENERS.MD)
 
-* [Ron Minnich](https://github.com/rminnich)
-* [Andrew Mirtchovski](https://github.com/mirtchovski)
-* [Alexandre Beletti](https://github.com/rhiguita)
-* [Manoel Machado](https://github.com/ryukinix)
-* [Rafael C. Nunes](https://github.com/rafaelcn)
-* [Matheus Pinto Rodrigues](https://github.com/mathgamain)
-
-
-
