@@ -18,7 +18,7 @@ var (
 	mkall   = flag.Bool("p", false, "Make all needed directories in the path")
 	mode    = flag.Int("m", 0666, "Directory mode")
 	verbose = flag.Bool("v", false, "Print each directory as it is made")
-	f = os.Mkdir
+	f       = os.Mkdir
 )
 
 func main() {

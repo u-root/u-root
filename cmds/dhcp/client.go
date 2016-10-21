@@ -1,8 +1,8 @@
 package main
 
 import (
-	dhcp "github.com/krolaw/dhcp4"
 	"fmt"
+	dhcp "github.com/krolaw/dhcp4"
 	"log"
 	"net"
 	"time"

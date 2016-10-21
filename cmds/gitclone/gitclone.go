@@ -18,9 +18,9 @@ import (
 )
 
 type fdata struct {
-	err error
+	err  error
 	data []byte
-	url string
+	url  string
 }
 
 func fetch(url string) ([]byte, error) {
@@ -41,7 +41,6 @@ func get(url string, result chan<- *fdata) {
 	b, err := fetch(url)
 	result <- &fdata{data: b, err: err, url: url}
 }
-
 
 func main() {
 	// synchronously get the head. If that's not there, there's no

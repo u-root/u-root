@@ -20,8 +20,7 @@ func usage() {
 	os.Exit(1)
 }
 
-
-func mv(files []string, todir bool) (error) {
+func mv(files []string, todir bool) error {
 	if len(files) == 2 && todir == false {
 		if err := os.Rename(files[0], files[1]); err != nil {
 			return err
@@ -57,7 +56,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := mv(files,todir); err != nil {
+	if err := mv(files, todir); err != nil {
 		log.Fatalf("%v", err)
 	}
 }

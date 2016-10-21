@@ -9,9 +9,9 @@ import (
 )
 
 type makeit struct {
-	n string		   // name
-	m os.FileMode		   // mode
-	s string		   // for symlinks or content
+	n string      // name
+	m os.FileMode // mode
+	s string      // for symlinks or content
 }
 
 var tests = []makeit{
@@ -38,12 +38,12 @@ func setup() (string, error) {
 		return "", err
 	}
 
-	for i:= range tests {
+	for i := range tests {
 		if err := ioutil.WriteFile(path.Join(d, tests[i].n), []byte("hi"), tests[i].m); err != nil {
 			return "", err
 		}
 	}
-	
+
 	return d, nil
 }
 
@@ -56,7 +56,7 @@ func Test_mv_1(t *testing.T) {
 
 	fmt.Println("Renaming file...")
 	files1 := []string{path.Join(d, "hi1.txt"), path.Join(d, "hi4.txt")}
-	if err := mv(files1, false); err != nil { 
+	if err := mv(files1, false); err != nil {
 		t.Error(err)
 	}
 
