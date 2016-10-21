@@ -18,7 +18,7 @@ type Utsname struct {
 
 func toString(d []int8) string {
 	s := ""
-	for _, c := range(d) {
+	for _, c := range d {
 		if c == 0 {
 			break
 		}
@@ -26,12 +26,12 @@ func toString(d []int8) string {
 	}
 	return s
 }
-		
+
 // uname does a uname and returns a uroot.Utsname
 func Uname() (*Utsname, error) {
 	var u syscall.Utsname
 	if err := syscall.Uname(&u); err != nil {
 		return nil, err
 	}
-	return &Utsname{ Sysname: toString(u.Sysname[:]), Nodename: toString(u.Nodename[:]), Release: toString(u.Release[:]), Version: toString(u.Version[:]), Machine: toString(u.Machine[:]), Domainname: toString(u.Domainname[:])}, nil
+	return &Utsname{Sysname: toString(u.Sysname[:]), Nodename: toString(u.Nodename[:]), Release: toString(u.Release[:]), Version: toString(u.Version[:]), Machine: toString(u.Machine[:]), Domainname: toString(u.Domainname[:])}, nil
 }

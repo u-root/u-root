@@ -15,7 +15,7 @@ import (
 const (
 	// Not all these paths may be populated or even exist but OTOH they might.
 	PATHHEAD = "/ubin"
-	PATHMID = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin"
+	PATHMID  = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin"
 	PATHTAIL = "/buildbin"
 	CmdsPath = "github.com/u-root/u-root/cmds"
 )
@@ -48,12 +48,12 @@ type mount struct {
 
 var (
 	Profile string
-	Envs []string
-	env  = map[string]string{
+	Envs    []string
+	env     = map[string]string{
 		"LD_LIBRARY_PATH": "/usr/local/lib",
 		"GOROOT":          "/go",
 		"GOPATH":          "/",
-		"GOBIN":          "/ubin",
+		"GOBIN":           "/ubin",
 		"CGO_ENABLED":     "0",
 	}
 
@@ -125,7 +125,7 @@ func Rootfs() {
 	// The PATH variable has to change, however.
 	env["PATH"] = fmt.Sprintf("%v:%v:%v:%v", goPath, PATHHEAD, "$PATH", PATHTAIL)
 	for k, v := range env {
-		Profile += "export " +k+"="+v+"\n"
+		Profile += "export " + k + "=" + v + "\n"
 	}
 	// The IFS lets us force a rehash every time we type a command, so that when we
 	// build uroot commands we don't keep rebuilding them.

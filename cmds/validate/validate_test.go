@@ -16,11 +16,11 @@ import (
 
 type file struct {
 	name string
-	a string
-	val []byte
-	o string
-	e string
-	x int // XXX wrong for Plan 9 and Harvey
+	a    string
+	val  []byte
+	o    string
+	e    string
+	x    int // XXX wrong for Plan 9 and Harvey
 }
 
 func TestValidate(t *testing.T) {
@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 `)
-	var tests           = []file {
+	var tests = []file{
 		{name: "hosts.sha1", val: []byte("3f397a3b3a7450075da91b078afa35b794cf6088  hosts"), o: "SHA1\n"},
 	}
 

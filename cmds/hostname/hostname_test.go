@@ -19,7 +19,6 @@ func Test_hostname(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 
-
 	if bytes.Compare(buf.Bytes(), []byte(host)) != 0 {
 		t.Fatalf("want %v, got %v", []byte(host), buf)
 	}

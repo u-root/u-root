@@ -294,7 +294,7 @@ func oneCmd() {
 	// I realize this is hideous. There's a bit of rework I want to do, namely, add the cmdVars
 	// to the list of things in the fset. But for now this works. Or just add these needed declarations
 	// to the AST, but which one if there are multiple files?
-	if err := ioutil.WriteFile(path.Join(packageDir, "var.go"), []byte("package " + config.CmdName + cmdVars), os.FileMode(0644)); err != nil {
+	if err := ioutil.WriteFile(path.Join(packageDir, "var.go"), []byte("package "+config.CmdName+cmdVars), os.FileMode(0644)); err != nil {
 		log.Fatalf("Writing var.go: %v", err)
 	}
 	fset := token.NewFileSet()

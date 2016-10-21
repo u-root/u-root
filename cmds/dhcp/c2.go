@@ -154,7 +154,7 @@ func c2(re *regexp.Regexp) {
 		log.Printf("Let's USE iface  %v", v)
 		go one(v, r)
 	}
-	if ! foundIface {
+	if !foundIface {
 		log.Printf("Found no interfaces to match re %v", re.String())
 		log.Fatalf("Could you run dhcp -r your-interface-name?")
 	}

@@ -8,10 +8,10 @@ import (
 func TestEcho(t *testing.T) {
 
 	type test struct {
-		s string
+		s         string
 		nonewline bool
 	}
-	tests := []test{{s:"simple\ttest", nonewline:false}, {s:"simple\ttest\t2", nonewline:true}}
+	tests := []test{{s: "simple\ttest", nonewline: false}, {s: "simple\ttest\t2", nonewline: true}}
 	bufs := make([]bytes.Buffer, len(tests))
 
 	for i, v := range tests {

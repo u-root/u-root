@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"path"
 	"path/filepath"
+	"strconv"
 	"unicode"
 )
 
 type MemMapType int
+
 // These types and consts are compatible with kexec. Mistake?
 const (
 	Ram MemMapType = iota
@@ -23,21 +24,22 @@ const (
 
 type MemoryRange struct {
 	Start uint64
-	End uint64
-	Type MemMapType
+	End   uint64
+	Type  MemMapType
 }
 
 var (
-	Types = map[string]MemMapType {
-	"System RAM": Ram,
-	"reserved": Reserved,
-	"ACPI Tables":ACPITables,
-	"ACPI Non-volatile Storage":ACPINonVolatileStorage,
-	"uncached": Uncached,
+	Types = map[string]MemMapType{
+		"System RAM":                Ram,
+		"reserved":                  Reserved,
+		"ACPI Tables":               ACPITables,
+		"ACPI Non-volatile Storage": ACPINonVolatileStorage,
+		"uncached":                  Uncached,
 	}
 
-	Names = []string {"System RAM", "reserved", "ACPI Tables", "ACPI Non-volatile Storage", "uncached",}
+	Names = []string{"System RAM", "reserved", "ACPI Tables", "ACPI Non-volatile Storage", "uncached"}
 )
+
 func mmVal(dir, file string) (uint64, error) {
 	s, err := ioutil.ReadFile(path.Join(dir, file))
 	if err != nil {
@@ -48,7 +50,7 @@ func mmVal(dir, file string) (uint64, error) {
 }
 
 func mmr(name string) (*MemoryRange, error) {
-	var m = &MemoryRange{Type: Reserved,}
+	var m = &MemoryRange{Type: Reserved}
 	var err error
 	m.Start, err = mmVal(name, "start")
 	if err != nil {
@@ -71,7 +73,7 @@ func mmr(name string) (*MemoryRange, error) {
 // This stringer prints out what you'd get from
 // cat /sys/firmware/memmap/*/{start, end, type}
 // and hence is useful for testing.
-func (m *MemoryRange) String() (string) {
+func (m *MemoryRange) String() string {
 	var s string
 	s = s + fmt.Sprintf("0x%x\n0x%x\n%v\n", m.Start, m.End, Names[m.Type])
 	return s
@@ -90,7 +92,7 @@ func Ranges() ([]MemoryRange, error) {
 			return err
 		}
 		// this should never happen, unless they add weird non-directory things in the future.
-		if ! fi.IsDir() || !unicode.IsDigit(rune(fi.Name()[0])){
+		if !fi.IsDir() || !unicode.IsDigit(rune(fi.Name()[0])) {
 			return nil
 		}
 		m, err := mmr(name)
@@ -100,6 +102,6 @@ func Ranges() ([]MemoryRange, error) {
 		}
 		return err
 	})
-	
+
 	return mr, err
 }

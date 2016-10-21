@@ -53,11 +53,11 @@ func main() {
 	}
 	flag.Parse()
 	a := flag.Args()
-	if len(a) < 2 || len(a) % 2 != 0 {
+	if len(a) < 2 || len(a)%2 != 0 {
 		log.Fatalf("Usage: builtin <command> <code> [<command> <code>]*")
 	}
 	filemap := make(map[string][]byte)
-	for ;len(a) > 0; a = a[2:] {
+	for ; len(a) > 0; a = a[2:] {
 		goCode := startPart
 		// Simple programs are just bits of code for main ...
 		if a[1][0] == '{' {
@@ -111,10 +111,10 @@ func main() {
 		log.Printf("m %v\n", string(b))
 	}
 	// we'd like to do this here, but it seems it doesn't end
-	// up applying to all procs in this group, leading to confusion. 
+	// up applying to all procs in this group, leading to confusion.
 	// sometimes they get the private mount, sometimes not.
 	// It's a fundamental limit in the go runtime.
-	// So we hack it in the shell. 
+	// So we hack it in the shell.
 	// There is no FIXME
 	if false {
 		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {

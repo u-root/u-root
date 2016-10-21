@@ -29,7 +29,6 @@ func TestWc(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-
 	testwcpath := filepath.Join(tmpDir, "testwc.exe")
 	out, err := exec.Command("go", "build", "-o", testwcpath, ".").CombinedOutput()
 	if err != nil {
