@@ -20,8 +20,6 @@ var (
 	}
 )
 
-const L = os.ModeSymlink
-
 func init() {
 	flag.BoolVar(&flags.allPaths, "a", false, "print all matching pathnames of each argument")
 }
@@ -33,7 +31,10 @@ func which(p string, writer io.Writer, cmds []string) {
 		for i := range pathArray {
 			f := path.Join(pathArray[i], name)
 			if info, err := os.Stat(f); err == nil {
-				if m := info.Mode(); !m.IsDir() && m&0111 != 0 && !(m&L == L) {
+				// TODO: this test (0111) is not quite right.
+				// Consider a file executable only by root (0100)
+				// when I'm not root. I can't run it.
+				if m := info.Mode(); m&0111 != 0 && !(m&os.ModeType == os.ModeSymlink) {
 					writer.Write([]byte(f + "\n"))
 					if !flags.allPaths {
 						break

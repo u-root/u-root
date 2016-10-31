@@ -60,7 +60,7 @@ var runes = flag.Bool("r", false, "count runes")
 var broken = flag.Bool("b", false, "count broken")
 var chars = flag.Bool("c", false, "count bytes (include partial UTF)")
 
-type Cnt struct {
+type cnt struct {
 	nline, nword, nrune, nbadr, nchar int64
 }
 
@@ -84,7 +84,7 @@ func invalidCount(p []byte) (n int64) {
 	return
 }
 
-func count(in io.Reader, fname string) (cnt Cnt) {
+func count(in io.Reader, fname string) (c cnt) {
 	b := bufio.NewReaderSize(in, 8192)
 
 	counted := false
@@ -95,21 +95,21 @@ func count(in io.Reader, fname string) (cnt Cnt) {
 				counted = true
 			} else {
 				fmt.Fprintf(os.Stderr, "error %s: %v", fname, err)
-				return Cnt{} // no partial counts; should perhaps quit altogether?
+				return cnt{} // no partial counts; should perhaps quit altogether?
 			}
 		}
 		if !counted {
-			cnt.nline++
+			c.nline++
 		}
-		cnt.nword += int64(len(bytes.Fields(line)))
-		cnt.nrune += int64(utf8.RuneCount(line))
-		cnt.nchar += int64(len(line))
-		cnt.nbadr += invalidCount(line)
+		c.nword += int64(len(bytes.Fields(line)))
+		c.nrune += int64(utf8.RuneCount(line))
+		c.nchar += int64(len(line))
+		c.nbadr += invalidCount(line)
 	}
 	return
 }
 
-func report(c Cnt, fname string) {
+func report(c cnt, fname string) {
 	fields := []string{}
 	if *lines {
 		fields = append(fields, fmt.Sprintf("%d", c.nline))
@@ -134,7 +134,7 @@ func report(c Cnt, fname string) {
 }
 
 func main() {
-	var totals Cnt
+	var totals cnt
 
 	flag.Parse()
 
