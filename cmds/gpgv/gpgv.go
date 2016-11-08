@@ -5,71 +5,110 @@
 // gpgv validates a signature against a file.
 // It prints "OK\n" to stdout if the check succeeds and exits with 0.
 // It prints an error message and exits with non-0 otherwise.
+//
+// The openpgp package ReadKeyRing function does not completely
+// implement RFC4880 in that it can't use a PublicSigningKey with
+// 0 signatures. We use one from Eric Grosse instead.
+//
+// Redistribute freely. Report bugs to grosse@gmail.com.  2016-11-05
+
 package main
 
 import (
+	"crypto"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/errors"
+	"golang.org/x/crypto/openpgp/packet"
 )
 
 var (
-	verbose = flag.Bool("v", false, "verbose")
+	verbose bool
 	debug   = func(string, ...interface{}) {}
 )
 
 func main() {
-	var k, s, f io.Reader
-	var err error
-	var check = openpgp.CheckDetachedSignature
-
+	flag.BoolVar(&verbose, "v", false, "verbose")
 	flag.Parse()
-	if flag.NArg() < 3 {
-		log.Fatalf("usage: gpgv [-v] <keyring file> <signature file> <file to be verified>")
-	}
-
-	if *verbose {
+	if verbose {
 		debug = log.Printf
 	}
-
-	kn, sn, fn := flag.Args()[0], flag.Args()[1], flag.Args()[2]
-
-	if k, err = os.Open(kn); err != nil {
-		log.Fatalf("Can't open key file: %v", err)
+	if flag.NArg() != 3 {
+		log.Fatal("usage: boot-verify [-v] key sig content")
 	}
-	kr, err := openpgp.ReadKeyRing(k)
+
+	keyf, err := os.Open(flag.Args()[0])
 	if err != nil {
-		log.Printf("ReadKeyRing: %v, trying Armored", err)
-		if k, err = os.Open(kn); err != nil {
-			log.Fatalf("reopen KeyRing: %v", err)
-		}
-		kr, err = openpgp.ReadArmoredKeyRing(k)
-		if err != nil {
-			log.Fatalf("ReadArmoredKeyRing: %v", err)
-		}
-		check = openpgp.CheckArmoredDetachedSignature
+		log.Fatal(err)
 	}
-	for _, e := range kr {
-		log.Printf("%v %v", e, e.Identities)
-		for f, i := range e.Identities {
-			log.Printf("\t%v %v", f, *i)
-		}
+	sigf, err := os.Open(flag.Args()[1])
+	if err != nil {
+		log.Fatal(err)
 	}
-	if s, err = os.Open(sn); err != nil {
-		log.Fatalf("Can't open signature file: %v", err)
-	}
-	if f, err = os.Open(fn); err != nil {
-		log.Fatalf("Can't open data file: %v", err)
+	contentf, err := os.Open(flag.Args()[2])
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	sig, err := check(kr, f, s)
+	key, err := readPublicSigningKey(keyf)
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Fatal("key ", err)
 	}
-	debug("Signature: '%v'", sig)
-	fmt.Printf("OK\n")
+
+	if err = verifyDetachedSignature(key, contentf, sigf); err != nil {
+		log.Fatal("verify: ", err)
+	}
+	fmt.Printf("OK")
+}
+
+func readPublicSigningKey(keyf io.Reader) (*packet.PublicKey, error) {
+	keypackets := packet.NewReader(keyf)
+	p, err := keypackets.Next()
+	if err != nil {
+		return nil, err
+	}
+	switch pkt := p.(type) {
+	case *packet.PublicKey:
+		debug("key: ", pkt)
+		return pkt, nil
+	default:
+		log.Printf("ReadPublicSigningKey: got %T, want *packet.PublicKey", pkt)
+	}
+	return nil, errors.StructuralError("expected first packet to be PublicKey")
+}
+
+func verifyDetachedSignature(key *packet.PublicKey, contentf, sigf io.Reader) error {
+	var hashFunc crypto.Hash
+
+	packets := packet.NewReader(sigf)
+	p, err := packets.Next()
+	if err != nil {
+		return err
+	}
+	switch sig := p.(type) {
+	case *packet.Signature:
+		hashFunc = sig.Hash
+	case *packet.SignatureV3:
+		hashFunc = sig.Hash
+	default:
+		return errors.UnsupportedError("unrecognized signature")
+	}
+
+	h := hashFunc.New()
+	if _, err := io.Copy(h, contentf); err != nil && err != io.EOF {
+		return err
+	}
+	switch sig := p.(type) {
+	case *packet.Signature:
+		err = key.VerifySignature(h, sig)
+	case *packet.SignatureV3:
+		err = key.VerifySignatureV3(h, sig)
+	default:
+		panic("unreachable")
+	}
+	return err
 }
