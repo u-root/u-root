@@ -893,7 +893,7 @@ type ec_response_get_set_value struct {
 	value uint32
 }
 
-/* More than one command can use these structs to get/set paramters. */
+/* More than one command can use these structs to get/set parameters. */
 const EC_CMD_GSV_PAUSE_IN_S5 = 0x0c
 
 /*****************************************************************************/

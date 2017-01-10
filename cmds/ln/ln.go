@@ -126,7 +126,7 @@ func (conf config) ln(args []string) error {
 
 	targets, linkName := conf.evalArgs(args)
 	for _, target := range targets {
-		linkFunc := linkFunc // back-overwrite possibilty
+		linkFunc := linkFunc // back-overwrite possibility
 
 		// dereference symlinks
 		t, err := conf.dereferTarget(target, &linkFunc)
