@@ -4,6 +4,8 @@ u-root
 
 [![Build Status](https://travis-ci.org/u-root/u-root.svg?branch=master)](https://travis-ci.org/u-root/u-root)
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
+
 # Description
 
 u-root is a "universal root". It's a root file system with mostly Go source with the exception of 5 binaries. 
