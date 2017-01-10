@@ -283,8 +283,8 @@ func guessgopath() {
 }
 
 // goListPkg takes one package name, and computes all the files it needs to build,
-// seperating them into Go tree files and uroot files. For now we just 'go list'
-// but hopefully later we can do this programatically.
+// separating them into Go tree files and uroot files. For now we just 'go list'
+// but hopefully later we can do this programmatically.
 func goListPkg(name string) (*GoDirs, error) {
 	cmd := exec.Command("go", "list", "-json", name)
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")

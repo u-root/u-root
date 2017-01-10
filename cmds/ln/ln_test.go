@@ -157,7 +157,7 @@ func newDir(testName string, t *testing.T) (name string) {
 	return
 }
 
-// testHardLink test if hardlink creation was sucessful
+// testHardLink test if hardlink creation was successful
 // 'target' and 'linkName' must exists
 // linkName -> target
 func testHardLink(linkName, target string, t *testing.T) {
@@ -174,7 +174,7 @@ func testHardLink(linkName, target string, t *testing.T) {
 	}
 }
 
-// testSymllink test if symlink creation was sucessful
+// testSymllink test if symlink creation was successful
 // 'target' and 'linkName' must exists
 // linkName -> target
 func testSymlink(linkName, linksTo string, t *testing.T) {
