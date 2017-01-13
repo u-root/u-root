@@ -4,8 +4,8 @@
 
 /*
 Sort copies lines from the input to the output, sorting them in the process.
-This does nothing fancy (no multi-threading, compression, tables, ...); it
-simply uses Go's sort.Sort function.
+This does nothing fancy (no multi-threading, compression, optiminzations, ...);
+it simply uses Go's sort.Sort function.
 
 sort [OPTION]... [FILE]...
 
@@ -30,38 +30,7 @@ var (
 	outputFile = flag.String("o", "", "Output file")
 )
 
-// Sort from file a to file b.
-func sortFiles(from []*os.File, to *os.File) {
-	// Read unicode string from input
-	fileContents := []string{}
-	for _, f := range from {
-		bytes, err := ioutil.ReadAll(f)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fileContents = append(fileContents, string(bytes))
-	}
-	s := strings.Join(fileContents, "")
-
-	// Sorting algorithm
-	if len(s) > 0 && s[len(s)-1] == '\n' {
-		s = s[:len(s)-1] // remove terminating newline
-	}
-	lines := strings.Split(string(s), "\n")
-	if *reverse {
-		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
-	} else {
-		sort.Strings(lines)
-	}
-	s = strings.Join(lines, "\n") + "\n" // append newline terminated
-
-	// Write to output
-	to.Write([]byte(s))
-}
-
-func main() {
-	flag.Parse()
-
+func readInput() string {
 	// Input files
 	from := []*os.File{}
 	if flag.NArg() > 0 {
@@ -77,10 +46,43 @@ func main() {
 		from = []*os.File{os.Stdin}
 	}
 
-	// Output file
+	// Read unicode string from input
+	fileContents := []string{}
+	for _, f := range from {
+		bytes, err := ioutil.ReadAll(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		s := string(bytes)
+		fileContents = append(fileContents, s)
+		// Add a separator between files if the file is not newline
+		// terminated. Prevents concatenating lines between files.
+		if len(s) > 0 && s[len(s)-1] != '\n' {
+			fileContents = append(fileContents, "\n")
+		}
+	}
+	return strings.Join(fileContents, "")
+}
+
+func sortAlgorithm(s string) string {
+	if len(s) == 0 {
+		return "" // edge case mimics coreutils
+	}
+	if s[len(s)-1] == '\n' {
+		s = s[:len(s)-1] // remove newline terminator
+	}
+	lines := strings.Split(string(s), "\n")
+	if *reverse {
+		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
+	} else {
+		sort.Strings(lines)
+	}
+	return strings.Join(lines, "\n") + "\n" // append newline terminator
+}
+
+func writeOutput(s string) {
 	var to *os.File = os.Stdout
 	if *outputFile != "" {
-		log.Println(*outputFile)
 		if f, err := os.Create(*outputFile); err == nil {
 			to = f
 			defer f.Close()
@@ -88,6 +90,13 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	to.Write([]byte(s))
+}
 
-	sortFiles(from, to)
+func main() {
+	flag.Parse()
+
+	// Input files must be closed before writing to output files to solve
+	// the situtation in which the output file is the same as an input.
+	writeOutput(sortAlgorithm(readInput()))
 }
