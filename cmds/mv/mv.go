@@ -1,9 +1,15 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Mv renames files and directories.
 //
-//  move (rename) files
-// created by Beletti (rhiguita@gmail.com)
+// Synopsis:
+//     mv SOURCE TARGET
+//     mv SOURCE... DIRECTORY
+//
+// Author:
+//     Beletti (rhiguita@gmail.com)
 package main
 
 import (

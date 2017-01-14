@@ -1,19 +1,20 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Sort copies lines from the input to the output, sorting them in the process.
-This does nothing fancy (no multi-threading, compression, optiminzations, ...);
-it simply uses Go's sort.Sort function.
-
-sort [OPTION]... [FILE]...
-
-The options are:
-	-r		reverse
-	-o string	output file
-*/
-
+// Sort lines.
+//
+// Synopsis:
+//     sort [OPTIONS]... [INPUT]...
+//
+// Description:
+//     Sort copies lines from the input to the output, sorting them in the
+//     process. This does nothing fancy (no multi-threading, compression,
+//     optiminzations, ...); it simply uses Go's sort.Sort function.
+//
+// Options:
+//     -r:      reverse
+//     -o FILE: output file
 package main
 
 import (

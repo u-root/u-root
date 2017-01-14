@@ -1,5 +1,19 @@
 package main
 
+// Install command from a go source file.
+//
+// Synopsis:
+//     installcommand [-v] [-ludicrous]
+//
+// Description:
+//     u-root commands are lazily compiled. Uncompiled commands in the /bin
+//     directory are symbolic links to installcommand. When executed through
+//     the symbolic link, installcommand will build the command from source and
+//     exec it.
+//
+// Options:
+//     -v: print all build commands
+//     -ludicrous: print out ALL the output from the go build commands
 import (
 	"flag"
 	"log"

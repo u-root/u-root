@@ -1,9 +1,18 @@
-// Copyright 2015 the u-root Authors. All rights reserved
+// Copyright 2015-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// By Manoel Vilela <manoel_vilela@engineer.com>
-
+// Print ansi escape sequences.
+//
+// Synopsis:
+//     ansi COMMAND
+//
+// Options:
+//     COMMAND must be one of:
+//         - clear: clear the screen and reset the cursor position
+//
+// Author:
+//     Manoel Vilela <manoel_vilela@engineer.com>
 package main
 
 import (
@@ -39,5 +48,4 @@ func main() {
 	if err := ansi(os.Stdout, os.Args[1:]); err != nil {
 		log.Fatalf("%v", err)
 	}
-
 }

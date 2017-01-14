@@ -1,8 +1,14 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//Wget reads one file from the argument and writes it on the standard output.
+// Wget reads one file from a url and writes to stdout.
+//
+// Synopsis:
+//     wget URL
+//
+// Example:
+//     wget http://google.com/ | tee e100.html
 package main
 
 import (
@@ -24,6 +30,7 @@ func wget(arg string, w io.Writer) error {
 }
 
 func main() {
+	// TODO: use flags library
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}

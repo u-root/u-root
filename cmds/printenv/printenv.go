@@ -1,3 +1,7 @@
+// Print environment variables.
+//
+// Synopsis:
+//     printenv
 package main
 
 import (

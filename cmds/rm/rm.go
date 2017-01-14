@@ -1,7 +1,17 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Delete files.
+//
+// Synopsis:
+//     rm [-Rrvi] FILE...
+//
+// Options:
+//     -i: interactive mode
+//     -v: verbose mode
+//     -R: remove file hierarchies
+//     -r: equivalent to -R
 package main
 
 import (

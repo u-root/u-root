@@ -2,6 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Send icmp packets to a server to test network connectivity.
+//
+// Synopsis:
+//     ping [-hV] [-c COUNT] [-i INTERVAL] [-s PACKETSIZE] [-w DEADLINE] DESTINATION
+//
+// Options:
+//     -6: use ipv6 (ip6:ipv6-icmp)
+//     -s: data size (default: 64)
+//     -c: # iterations, 0 to run forever (default)
+//     -i: interval in milliseconds (default: 1000)
+//     -V: version
+//     -w: wait time in milliseconds (default: 100)
+//     -h: help
 package main
 
 import (
@@ -24,7 +37,7 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stdout, "ping [-hV] [-c count] [-i interval] [-s packetsize [-w deadline] destination\n")
+	fmt.Fprintf(os.Stdout, "ping [-hV] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
 	os.Exit(0)
 }
 

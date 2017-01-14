@@ -1,8 +1,16 @@
-// Copyright 2013-2016 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//Tee transcribes the standard input to the standard output and makes copies in the files.
+// Tee transcribes the standard input to the standard output and makes copies
+// in the files.
+//
+// Synopsis:
+//     tee [-ai] FILES...
+//
+// Options:
+//     -a: append the output to the files rather than rewriting them
+//     -i: ignore the SIGINT signal
 package main
 
 import (
@@ -19,9 +27,8 @@ var (
 	ignore = flag.Bool("i", false, "ignore the SIGINT signal")
 )
 
-//Copy any input from buffer to Stdout and files
+// Copy any input from buffer to Stdout and files
 func copyinput(files []io.Writer, buf []byte) error {
-
 	for _, v := range files {
 		if _, err := v.Write(buf); err != nil {
 			return err
@@ -30,9 +37,8 @@ func copyinput(files []io.Writer, buf []byte) error {
 	return nil
 }
 
-//Parses all the flags and sets variables accordingly
+// Parses all the flags and sets variables accordingly
 func handleflags() int {
-
 	flag.Parse()
 
 	oflags := os.O_WRONLY | os.O_CREATE
@@ -49,7 +55,6 @@ func handleflags() int {
 }
 
 func main() {
-
 	oflags := handleflags()
 
 	files := make([]io.Writer, flag.NArg())

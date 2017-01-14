@@ -1,9 +1,20 @@
-// Copyright 2015 the u-root Authors. All rights reserved
+// Copyright 2015-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// kexec command in Go.
-// This is only intended to be used with kexec_load_files, not the older kexec.
+// kexec executes a new kernel over the running kernel (u-root).
+//
+// Synopsis:
+//     kexec [--dryrun] [--cmdline=] [--i=] [FILES...]
+//
+// Description:
+//     This is only intended to be used with kexec_load_files, not the older
+//     kexec.
+//
+// Options:
+//     -dryrun:   do not do kexec system calls
+//     --cmdline: command line for kernel
+//     --i:       initramfs
 package main
 
 // N.B. /**/ comments are verbatim from uapi/linux/kexec.h.

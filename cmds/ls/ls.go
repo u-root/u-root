@@ -1,16 +1,16 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Ls reads the directories in the command line and prints out the names.
-
-The options are:
-	-l		Long form.
-	-r		raw (%v) form
-	-R		recurse
-*/
-
+// Ls prints the contents of a directory.
+//
+// Synopsis:
+//     ls [OPTIONS] [DIRS]...
+//
+// Options:
+//     -l: Long form.
+//     -r: raw (%v) form
+//     -R: recurse
 package main
 
 import (

@@ -1,14 +1,30 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Convert and copy a file.
+//
+// Synopsis:
+//     dd [OPTIONS...] [-inName FILE] [-outName FILE]
+//
+// Description:
+//     dd is modeled after dd. Each step in the chain is a goroutine that reads
+//     a block and writes a block. There are always two goroutines, in and out.
+//     They're actually the same thing save they have, maybe, different block
+//     sizes.
+//
+// Options:
+//     -ibs n:   input block size (default=1)
+//     -obs n:   output block size (default=1)
+//     -bs n:    input and output block size (default=0)
+//     -skip n:  skip n bytes before reading (default=0)
+//     -seek n:  seek output when writing (default=0)
+//     -conv s:  Convert the file on a specific way, like notrunc
+//     -count n: max output of data to copy
+//     -inName:  defaults to stdin
+//     -outName: defaults to stdout
 package main
 
-/*
-dd is modeled after dd. Each step in the chain is a goroutine that
-reads a block and writes a block.
-There are two always-the goroutines, in and out. They're actually
-the same thing save they have, maybe, different block sizes.
-*/
 import (
 	"flag"
 	"fmt"

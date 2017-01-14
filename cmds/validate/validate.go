@@ -1,9 +1,20 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//This program validates a file by verifying a checksum file and a signature file
-//Exit status: 0-OK, 1-Any error, 2-Bad signature, 3-Bad checksum
+// This program validates a file by verifying a checksum and a signature file.
+//
+// Synopsis:
+//     validate [OPTIONS...] FILE PUBLIC_KEY_FILE
+//
+// Description:
+//     Return code: 0-OK, 1-Any error, 2-Bad signature, 3-Bad checksum
+//
+// Options:
+//     -a:        signature is ASCII armored
+//     -i FILE:   checksum file
+//     -alg FILE: algorithms to check
+//     -v:        verbose
 package main
 
 import (

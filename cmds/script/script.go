@@ -1,8 +1,17 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Script takes the arg list, does minimal rewriting, builds it and runs it
+// Script executes its arguments as a Go program.
+//
+// Synopsis:
+//     script [-v] GO_CODE..
+//
+// Examples:
+//     script {fmt.Println("hello")}
+//
+// Options:
+//     -v: verbose display of processing
 package main
 
 import (

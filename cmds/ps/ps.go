@@ -1,10 +1,22 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// ps reads the /proc and prints out nice things about what it finds.
-// /proc in linux has grown by a process of Evilution, so it's messy.
-
+// Print process information.
+//
+// Synopsis:
+//     ps [-Aaex]
+//
+// Description:
+//     ps reads the /proc filesystem and prints nice things about what it
+//     finds.  /proc in linux has grown by a process of Evilution, so it's
+//     messy.
+//
+// Options:
+//     -A: select all processes. Identical to -e.
+//     -e: select all processes. Identical to -A.
+//     -x: BSD-Like style, with STAT Column and long CommandLine
+//     -a: print all process except whose are session leaders or unlinked with terminal
 package main
 
 import (

@@ -1,11 +1,16 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Cat reads each file from its arguments in sequence and writes it on the standard output.
-*/
-
+// Mkdir makes a new directory.
+//
+// Synopsis:
+//     mkdir [-m mode] [-v] [-p] DIRECTORY...
+//
+// Options:
+//     -m: make all needed directories in the path
+//     -v: directory mode (ex: 666)
+//     -p: print each directory as it is made
 package main
 
 import (

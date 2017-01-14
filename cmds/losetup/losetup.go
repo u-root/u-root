@@ -1,7 +1,16 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Setup loop devices.
+//
+// Synopsis:
+//     losetup [-Ad] FILE
+//     losetup [-Ad] DEV FILE
+//
+// Options:
+//     -A: pick any device
+//     -d: detach the device
 package main
 
 import (

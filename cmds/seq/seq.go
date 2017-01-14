@@ -1,7 +1,24 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Print a sequence of numbers.
+//
+// Synopsis:
+//     seq [-f FORMAT] [-w] [-s SEPARATOR] [START [STEP [END]]]
+//
+// Examples:
+//    % seq -s=' ' 3
+//    1 2 3
+//    % seq -s=' ' 2 4
+//    2 3 4
+//    % seq -s=' ' 3 2 7
+//    3 5 7
+//
+// Options:
+//     -f: use printf style floating-point FORMAT (default: %v)
+//     -s: use STRING to separate numbers (default: \n)
+//     -w: equalize width by padding with leading zeroes (default: false)
 package main
 
 import (
@@ -20,7 +37,7 @@ var (
 		separator  string
 		widthEqual bool
 	}
-	cmd = "seq [-f format] [-w] [-s separator] [start] [step] <end>"
+	cmd = "seq [-f format] [-w] [-s separator] [start [step [end]]]"
 )
 
 func usage() {

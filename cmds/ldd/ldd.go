@@ -1,12 +1,14 @@
-// Copyright 2009 The Go Authors.  All rights reserved.
+// Copyright 2009-2017 The Go Authors.  All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
 // ldd prints the full path of dependencies.
-// unlike the standard one, you can use it in a script, e.g.
-// i=`ldd whatever`
-// leaves you with a list of files you can usefully copy.
-// You can also feed it a long list of files (/bin/*) and get
-// a short list of libraries; further, it will read stdin.
+//
+// Description:
+//     Unlike the standard one, you can use it in a script,
+//     e.g. i=`ldd whatever` leaves you with a list of files you can usefully
+//     copy. You can also feed it a long list of files (/bin/*) and get a
+//     short list of libraries; further, it will read stdin.
 package main
 
 import (
@@ -19,7 +21,6 @@ import (
 var list map[string]bool
 
 func process(file *os.File, name string) error {
-
 	if f, err := elf.NewFile(file); err != nil {
 		return err
 	} else {

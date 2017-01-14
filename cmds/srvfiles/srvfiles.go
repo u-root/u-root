@@ -1,3 +1,12 @@
+// Serve files on the network.
+//
+// Synopsis:
+//     srvfiles [--h=HOST] [--p=PORT] [--d=DIR]
+//
+// Options:
+//     --h: hostname (default: 127.0.0.1)
+//     --p: port number (default: 8080)
+//     --d: directory to serve (default: .)
 package main
 
 import (
@@ -7,9 +16,9 @@ import (
 )
 
 var (
-	host = flag.String("h", "127.0.0.1", "IP")
-	port = flag.String("p", "8080", "port")
-	dir  = flag.String("d", ".", "dir")
+	host = flag.String("h", "127.0.0.1", "hostname")
+	port = flag.String("p", "8080", "port number")
+	dir  = flag.String("d", ".", "directory to serve")
 )
 
 func main() {

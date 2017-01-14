@@ -1,11 +1,25 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// created by Manoel Vilela <manoel_vilela@engineer.com>
-
-// Ln make links between files
-// the actual implementations supports that flags: [-rsvfLPti]
+// Ln makes links to files.
+//
+// Synopsis:
+//     ln [-svfTiLPrt] TARGET LINK
+//
+// Options:
+//     -s: make symbolic links instead of hard links
+//     -v: print name of each linked file
+//     -f: remove destination files
+//     -T: treat linkname operand as a non-dir always
+//     -i: prompt if the user wants overwrite
+//     -L: dereference targets if are symbolic links
+//     -P: make hard links directly to symbolic links
+//     -r: create symlinks relative to link location
+//     -t: specify the directory to put the links
+//
+// Author:
+//     Manoel Vilela <manoel_vilela@engineer.com>
 package main
 
 import (

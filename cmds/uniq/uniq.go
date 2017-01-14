@@ -1,27 +1,33 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Uniq copies the input file, or the standard input, to the standard output,
-comparing adjacent lines. In the normal case, the second and succeeding
-copies of repeated lines are removed. Repeated lines must be adjacent in
-order to be found.
-
-	–u    Print unique lines.
-	–d    Print (one copy of) duplicated lines.
-	–c    Prefix a repetition count and a tab to each output line. Implies –u and –d.
-	–f num	The first num fields together with any blanks before each are ignored.
-			A field is defined as a string of non–space, non–tab characters separated
-			by tabs and spaces from its neighbors.
-	-c num	The first num characters are ignored. Fields are skipped before characters.
-*/
+// Uniq removes repeated lines.
+//
+// Synopsis:
+//     uniq [OPTIONS...] [FILES]...
+//
+// Description:
+//     Uniq copies the input file, or the standard input, to the standard
+//     output, comparing adjacent lines. In the normal case, the second and
+//     succeeding copies of repeated lines are removed. Repeated lines must be
+//     adjacent in order to be found.
+//
+// Options:
+//     –u:      Print unique lines.
+//     –d:      Print (one copy of) duplicated lines.
+//     –c:      Prefix a repetition count and a tab to each output line.
+//              Implies –u and –d.
+//     –f num:  The first num fields together with any blanks before each are
+//              ignored. A field is defined as a string of non–space, non–tab
+//              characters separated by tabs and spaces from its neighbors.
+//     -cn num: The first num characters are ignored. Fields are skipped before
+//              characters.
+package main
 
 // TODO(aam): -num and +num are not implemented. they're easy to do, just not exactly the
 // way that the plan9 uniq does them as we want to avoid polluting the flag parsing libs with
 // outdated flags.
-
-package main
 
 import (
 	"bufio"
