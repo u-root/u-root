@@ -30,6 +30,7 @@ Roadmap (alpha)
 - [ ] mkdir
 - [ ] mount
 - [x] mv
+- [x] netcat
 - [ ] pflask
 - [ ] ping
 - [x] printenv
