@@ -1,21 +1,24 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Cmp compares the two files and prints a message if the contents differ.
-
-cmp [ –lLs ] file1 file2 [ offset1 [ offset2 ] ]
-
-The options are:
-	–l    Print the byte number (decimal) and the differing bytes (octal) for each difference.
-	–L    Print the line number of the first differing byte.
-	–s    Print nothing for differing files, but set the exit status.
-
--If offsets are given, comparison starts at the designated byte position of the corresponding file.
--Offsets that begin with 0x are hexadecimal; with 0, octal; with anything else, decimal.
-*/
-
+// Cmp compares two files and prints a message if their contents differ.
+//
+// Synopsis:
+//     cmp [–lLs] FILE1 FILE2 [OFFSET1 [OFFSET2]]
+//
+// Description:
+//     If offsets are given, comparison starts at the designated byte position
+//     of the corresponding file.
+//
+//     Offsets that begin with 0x are hexadecimal; with 0, octal; with anything
+//     else, decimal.
+//
+// Options:
+//     –l: Print the byte number (decimal) and the differing bytes (octal) for
+//         each difference.
+//     –L: Print the line number of the first differing byte.
+//     –s: Print nothing for differing files, but set the exit status.
 package main
 
 import (

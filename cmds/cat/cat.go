@@ -1,9 +1,17 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Cat reads each file from its arguments in sequence and writes it on the standard output.
-
+// Cat concatenates files and prints to stdout.
+//
+// Synopsis:
+//     cp [-u] [FILES]...
+//
+// Description:
+//     If no files are specified, read from stdin.
+//
+// Options:
+//     -u: ignored flag
 package main
 
 import (

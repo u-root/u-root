@@ -1,12 +1,11 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-sh reads in a line at a time and runs it.
-prompt is '% '
-*/
-
+// Rush is an interactive shell similar to sh.
+//
+// Description:
+//     Prompt is '% '.
 package main
 
 import (
@@ -123,6 +122,7 @@ func OpenRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
 	}
 	return r, nil
 }
+
 func OpenWrite(c *Command, w io.Writer, fd int) (io.Writer, error) {
 	if c.fdmap[fd] != "" {
 		f, err := os.Create(c.fdmap[fd])

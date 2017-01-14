@@ -1,25 +1,26 @@
-// Copyright 2013 the u-root Authors. All rights reserved
+// Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Freq reads the given files (default standard input) and prints histograms of the
-character frequencies. By default, freq counts each byte as a character; under
-the –r option it instead counts UTF sequences, that is, runes.
-
-Each non–zero entry of the table is printed preceded by the byte value, in decimal,
-octal, hex, and Unicode character (if printable). If any options are given, the
-–d, –x, –o, –c flags specify a subset of value formats: decimal, hex, octal, and
-character, respectively.
-
-The options are:
-	–r    	treat input as UTF-8.
-	–d		print decimal value
-	–x		print hex value
-	–o		print octal value
-	–c		print charanter/UTF value
-*/
-
+// Freq reads the given files (default standard input) and prints histograms of the
+// character frequencies. By default, freq counts each byte as a character; under
+// the –r option it instead counts UTF sequences, that is, runes.
+//
+// Synopsis:
+//     freq [-rdxoc] [FILES]...
+//
+// Description:
+//     Each non–zero entry of the table is printed preceded by the byte value,
+//     in decimal, octal, hex, and Unicode character (if printable). If any
+//     options are given, the –d, –x, –o, –c flags specify a subset of value
+//     formats: decimal, hex, octal, and character, respectively.
+//
+// Options:
+//     –r: treat input as UTF-8
+//     –d: print decimal value
+//     –x: print hex value
+//     –o: print octal value
+//     –c: print character/UTF value
 package main
 
 import (

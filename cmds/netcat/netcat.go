@@ -1,11 +1,8 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-netcat connects to a place and sends data to it and from it.
-*/
-
+// Netcat pipes over the network.
 package main
 
 import (

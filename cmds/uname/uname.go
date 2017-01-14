@@ -1,3 +1,16 @@
+// Print build information about the kernel and machine.
+//
+// Synopsis:
+//     uname [-asnrvmd]
+//
+// Options:
+//     -a: print everything
+//     -s: print the kernel name
+//     -n: print the network node name
+//     -r: print the kernel release
+//     -v: print the kernel version
+//     -m: print the machine hardware name
+//     -d: print your domain name
 package main
 
 import (

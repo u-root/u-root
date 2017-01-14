@@ -1,15 +1,20 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 // Kill kills processes.
-// -l lists the signal names.
-// -name, --signal name, or -s name is the message to send.
-// On some systems this is a string,
-// on others a number. It is optional and an OS-dependent value will
-// be used if it is not set.
-// pid is a list of at least one pid.
-
+//
+// Synopsis:
+//     kill -l
+//     kill [<-s | --signal | -> <isgname|signum>] pid [pid...]
+//
+// Options:
+//     -l:                       list the signal names
+//     -name, --signal name, -s: name is the message to send. On some systems
+//                               this is a string, on others a number. It is
+//                               optional and an OS-dependent value will be
+//                               used if it is not set. pid is a list of at
+//                               least one pid.
 package main
 
 import (

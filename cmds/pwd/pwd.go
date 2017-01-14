@@ -1,12 +1,18 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
- print name of current/working directory
- created by Beletti (rhiguita@gmail.com)
-*/
-
+// Print name of current directory.
+//
+// Synopsis:
+//     pwd [-LP]
+//
+// Options:
+//     -L: follow symlinks (default)
+//     -P: don't follow symlinks
+//
+// Author:
+//     created by Beletti (rhiguita@gmail.com)
 package main
 
 import (

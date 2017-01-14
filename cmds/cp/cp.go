@@ -1,10 +1,20 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The cp command is an userland program for copy files with that usage:
-// $ cp [FLAGS] from to
-// whose FLAGS := -rRfivwP
+// Copy files.
+//
+// Synopsis:
+//     cp [-rRfivwP] FROM... TO
+//
+// Options:
+//     -w n: number of worker goroutines
+//     -R: copy file hierarchies
+//     -r: alias to -R recursive mode
+//     -i: prompt about overwriting file
+//     -f: force overwrite files
+//     -v: verbose copy mode
+//     -P: don't follow symlinks
 package main
 
 import (
@@ -47,7 +57,6 @@ func init() {
 	flag.BoolVar(&symlink, "P", false, "don't follow symlinks")
 	flag.Parse()
 	go nextOff()
-
 }
 
 // promptOverwrite ask if the user wants overwrite file

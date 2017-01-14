@@ -1,16 +1,15 @@
-// Copyright 2012 the u-root Authors. All rights reserved
+// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 // gopxe is a pxe program written in Go.
-// It includes the functionality of the the PXE loader
-// and pxelinux.
-// It is incomplete but anyone with interest in filling it out
-// should find this pretty easy.
-// You can extend it to fetch a file following the rules
-// of pxe file name formation, then fetch the files, then use
-// the kexec system call (see kexec.go) to exec it.
-
+//
+// Description:
+//     It includes the functionality of the the PXE loader and pxelinux. It is
+//     incomplete but anyone with interest in filling it out should find this
+//     pretty easy. You can extend it to fetch a file following the rules of
+//     pxe file name formation, then fetch the files, then use the kexec system
+//     call (see kexec.go) to exec it.
 package main
 
 import (
@@ -40,5 +39,4 @@ func main() {
 
 	data, err := ioutil.ReadAll(f)
 	fmt.Printf("len(data) %v, err %v", len(data), err)
-
 }
