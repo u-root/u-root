@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Script takes the arg list, does minimal rewriting, builds it and runs it
 package main
 
 import (
