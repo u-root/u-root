@@ -55,11 +55,12 @@ func TestReadFMap(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
 	fmap := ReadFMap(r)
 	expected := FMap{
-		Start:    4 * 94387,
-		VerMajor: 1,
-		VerMinor: 0,
-		Base:     0xcafebabedeadbeef,
-		Size:     0x44332211,
+		fMapInternal: fMapInternal{
+			VerMajor: 1,
+			VerMinor: 0,
+			Base:     0xcafebabedeadbeef,
+			Size:     0x44332211,
+		},
 		Areas: []FMapArea{
 			{
 				Offset: 0xdeadbeef,
@@ -71,6 +72,7 @@ func TestReadFMap(t *testing.T) {
 				Flags:  0x0000,
 			},
 		},
+		Start: 4 * 94387,
 	}
 	copy(expected.Signature[:], []byte("__FMAP__"))
 	copy(expected.Name[:], fmapName)

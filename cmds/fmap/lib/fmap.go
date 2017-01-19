@@ -22,15 +22,19 @@ const (
 	FmapAreaReadOnly
 )
 
-type FMap struct {
-	Start     uint64 // not part of the written struct, but useful nevertheless
+type fMapInternal struct {
 	Signature [8]uint8
 	VerMajor  uint8
 	VerMinor  uint8
 	Base      uint64
 	Size      uint32
 	Name      [32]uint8
-	Areas     []FMapArea
+}
+
+type FMap struct {
+	fMapInternal
+	Start uint64
+	Areas []FMapArea
 }
 
 type FMapArea struct {
@@ -96,18 +100,11 @@ func ReadFMap(f io.Reader) *FMap {
 
 	// Read fields.
 	fmap := FMap{Start: uint64(start)}
-	readField(r, &fmap.Signature)
-	readField(r, &fmap.VerMajor)
-	readField(r, &fmap.VerMinor)
-	readField(r, &fmap.Base)
-	readField(r, &fmap.Size)
-	readField(r, &fmap.Name)
+	readField(r, &fmap.fMapInternal)
 	var nAreas uint16
 	readField(r, &nAreas)
 	fmap.Areas = make([]FMapArea, nAreas)
-	for i := 0; i < len(fmap.Areas); i++ {
-		readField(r, &fmap.Areas[i])
-	}
+	readField(r, &fmap.Areas)
 
 	return &fmap
 }
