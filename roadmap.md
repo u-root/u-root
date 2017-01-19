@@ -18,6 +18,7 @@
 | dmesg          | -c            | -Clr            |                        |
 | echo           | -n            | -e              |                        |
 | ectool         |               |                 | u-root specific        |
+| fmap           | -s            | -crudV          | u-root specific        |
 | :x: free       |               | -bkmght         | Not implemented yet!   |
 | freq           | -cdorx        |                 | From plan 9            |
 | :x: gitclone   |               |                 | Not implemented yet!   |
