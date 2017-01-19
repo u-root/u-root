@@ -27,7 +27,7 @@ dev
 etc/
 lib64/
 usr/
-lib/
+/lib/
 tinycorelinux*
 tmp
 *.swp
