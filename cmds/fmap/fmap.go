@@ -5,7 +5,7 @@
 // Fmap parses flash maps.
 //
 // Synopsis:
-//     fmap [-p] [FILE]
+//     fmap [-s] [FILE]
 //
 // Description:
 //     Return 0 if the flash map is valid and 1 otherwise. Detailed information
@@ -19,10 +19,11 @@ package main
 
 import (
 	"flag"
-	fmap "github.com/u-root/u-root/cmds/fmap/lib"
 	"log"
 	"os"
 	"text/template"
+
+	fmap "github.com/u-root/u-root/cmds/fmap/lib"
 )
 
 var (
