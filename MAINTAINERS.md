@@ -17,7 +17,7 @@ $GOPATH/src/github.com/u-root/u-root
   - Edit your code to import foo/bar
   - Run `govendor add +external` from the top level
 
-#### Remove dependencies 
+#### Remove dependencies
 
   - Run `govendor remove foo/bar`
 
@@ -25,6 +25,20 @@ $GOPATH/src/github.com/u-root/u-root
 
   - Run `govendor remove +vendor`
   - Run `govendor add +external`
+
+### Style Guide
+
+`gofmt` and `golint` are law. We have a few rules not covered by these tools:
+
+  - Standard imports are separated from other imports. Example:
+    ```
+    import (
+      "regexp"
+      "time"
+
+      dhcp "github.com/krolaw/dhcp4"
+    )
+    ```
 
 # Contributors
 

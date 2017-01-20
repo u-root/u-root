@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/u-root/u-root/uroot"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 	"text/template"
+
+	"github.com/u-root/u-root/uroot"
 )
 
 type copyfiles struct {

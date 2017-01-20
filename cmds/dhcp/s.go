@@ -2,8 +2,6 @@
 package main
 
 import (
-	dhcp "github.com/krolaw/dhcp4"
-
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +9,8 @@ import (
 	"net"
 	"regexp"
 	"time"
+
+	dhcp "github.com/krolaw/dhcp4"
 )
 
 // Example using DHCP with a single network interface device
