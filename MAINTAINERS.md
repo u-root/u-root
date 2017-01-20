@@ -48,3 +48,5 @@ $GOPATH/src/github.com/u-root/u-root
 * [Manoel Machado](https://github.com/ryukinix)
 * [Rafael C. Nunes](https://github.com/rafaelcn)
 * [Matheus Pinto Rodrigues](https://github.com/mathgamain)
+* [Gan Shun](https://github.com/GanShun)
+* [Ryan O'Leary](https://github.com/rjoleary)
