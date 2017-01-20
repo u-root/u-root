@@ -120,8 +120,6 @@ Note the enet header is not filled in, but space is left for it.
 
 import (
 	"fmt"
-	dhcp "github.com/krolaw/dhcp4"
-	"github.com/u-root/u-root/netlink"
 	"log"
 	"net"
 	"os"
@@ -129,6 +127,9 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+
+	dhcp "github.com/krolaw/dhcp4"
+	"github.com/u-root/u-root/netlink"
 )
 
 type dhcpInfo struct {

@@ -16,9 +16,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/u-root/u-root/uroot"
 	"log"
 	"strings"
+
+	"github.com/u-root/u-root/uroot"
 )
 
 var (

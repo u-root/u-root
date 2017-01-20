@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	dhcp "github.com/krolaw/dhcp4"
 	"log"
 	"net"
 	"time"
+
+	dhcp "github.com/krolaw/dhcp4"
 )
 
 func client() {
