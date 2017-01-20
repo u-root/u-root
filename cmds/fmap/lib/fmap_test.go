@@ -53,13 +53,14 @@ var fakeFlash = bytes.Join([][]byte{
 
 func TestReadFMap(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	fmap := ReadFMap(r)
+	fmap, _ := ReadFMap(r)
 	expected := FMap{
-		fMapInternal: fMapInternal{
+		FMapHeader: FMapHeader{
 			VerMajor: 1,
 			VerMinor: 0,
 			Base:     0xcafebabedeadbeef,
 			Size:     0x44332211,
+			NAreas:   2,
 		},
 		Areas: []FMapArea{
 			{
@@ -72,24 +73,34 @@ func TestReadFMap(t *testing.T) {
 				Flags:  0x0000,
 			},
 		},
-		Start: 4 * 94387,
 	}
 	copy(expected.Signature[:], []byte("__FMAP__"))
 	copy(expected.Name[:], fmapName)
 	copy(expected.Areas[0].Name[:], area0Name)
 	copy(expected.Areas[1].Name[:], area1Name)
 	if !reflect.DeepEqual(*fmap, expected) {
-		t.Errorf("expected: %+v\ngot: %+v", expected, *fmap)
+		t.Errorf("expected:\n%+v\ngot:\n%+v", expected, *fmap)
+	}
+}
+
+func TestReadFMapMetadata(t *testing.T) {
+	r := bytes.NewReader(fakeFlash)
+	_, metadata := ReadFMap(r)
+	expected := FMapMetadata{
+		Start: 4 * 94387,
+	}
+	if !reflect.DeepEqual(*metadata, expected) {
+		t.Errorf("expected:\n%+v\ngot:\n%+v", expected, *metadata)
 	}
 }
 
 func TestFieldNames(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	fmap := ReadFMap(r)
+	fmap, _ := ReadFMap(r)
 	for i, expected := range []string{"STATIC|COMPRESSED|0x1010", "0x0"} {
 		got := FlagNames(fmap.Areas[i].Flags)
 		if got != expected {
-			t.Errorf("expected: %s\ngot: %s", expected, got)
+			t.Errorf("expected:\n%s\ngot:\n%s", expected, got)
 		}
 	}
 }

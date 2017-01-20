@@ -31,15 +31,15 @@ var (
 )
 
 // Print human readable summary of the fmap.
-func printFMap(f *fmap.FMap) {
-	const desc = `Fmap found at {{printf "%#x" .Start}}:
+func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
+	const desc = `Fmap found at {{printf "%#x" .Metadata.Start}}:
 	Signature:  {{printf "%s" .Signature}}
 	VerMajor:   {{.VerMajor}}
 	VerMinor:   {{.VerMinor}}
 	Base:       {{printf "%#x" .Base}}
 	Size:       {{printf "%#x" .Size}}
 	Name:       {{printf "%s" .Name}}
-	NAreas:     {{len .Areas}}
+	NAreas:     {{.NAreas}}
 {{- range $i, $v := .Areas}}
 	Areas[{{$i}}]:
 		Offset:  {{printf "%#x" $v.Offset}}
@@ -51,7 +51,12 @@ func printFMap(f *fmap.FMap) {
 	t := template.Must(template.New("desc").
 		Funcs(template.FuncMap{"FlagNames": fmap.FlagNames}).
 		Parse(desc))
-	if err := t.Execute(os.Stdout, f); err != nil {
+	// Combine the two structs to pass into template.
+	combined := struct {
+		*fmap.FMap
+		Metadata *fmap.FMapMetadata
+	}{f, m}
+	if err := t.Execute(os.Stdout, combined); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -72,8 +77,8 @@ func main() {
 	}
 
 	// Read fmap and optionally print summary.
-	f := fmap.ReadFMap(r)
+	f, metadata := fmap.ReadFMap(r)
 	if *summary {
-		printFMap(f)
+		printFMap(f, metadata)
 	}
 }

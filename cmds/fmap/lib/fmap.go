@@ -22,19 +22,19 @@ const (
 	FmapAreaReadOnly
 )
 
-type fMapInternal struct {
+type FMap struct {
+	FMapHeader
+	Areas []FMapArea
+}
+
+type FMapHeader struct {
 	Signature [8]uint8
 	VerMajor  uint8
 	VerMinor  uint8
 	Base      uint64
 	Size      uint32
 	Name      [32]uint8
-}
-
-type FMap struct {
-	fMapInternal
-	Start uint64
-	Areas []FMapArea
+	NAreas    uint16
 }
 
 type FMapArea struct {
@@ -42,6 +42,10 @@ type FMapArea struct {
 	Size   uint32
 	Name   [32]uint8
 	Flags  uint16
+}
+
+type FMapMetadata struct {
+	Start uint64
 }
 
 // FlagNames returns human readable representation of the flags.
@@ -76,7 +80,7 @@ func readField(r io.Reader, data interface{}) {
 }
 
 // Read an FMap into the data structure.
-func ReadFMap(f io.Reader) *FMap {
+func ReadFMap(f io.Reader) (*FMap, *FMapMetadata) {
 	// Read flash into memory.
 	// TODO: it is possible to parse fmap without reading entire file into memory
 	data, err := ioutil.ReadAll(f)
@@ -99,12 +103,15 @@ func ReadFMap(f io.Reader) *FMap {
 	r := bytes.NewReader(data[start:])
 
 	// Read fields.
-	fmap := FMap{Start: uint64(start)}
-	readField(r, &fmap.fMapInternal)
-	var nAreas uint16
-	readField(r, &nAreas)
-	fmap.Areas = make([]FMapArea, nAreas)
+	var fmap FMap
+	readField(r, &fmap.FMapHeader)
+	fmap.Areas = make([]FMapArea, fmap.NAreas)
 	readField(r, &fmap.Areas)
 
-	return &fmap
+	// Return useful metadata
+	fmapMetadata := FMapMetadata{
+		Start: uint64(start),
+	}
+
+	return &fmap, &fmapMetadata
 }
