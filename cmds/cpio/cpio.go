@@ -14,19 +14,21 @@
 // Options:
 //     o: output an archive to stdout given a pattern
 //     i: output files from a stdin stream
-//     -d: debug prints
+//     t: print table of contents
+//     -v: debug prints
 package main
 
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
 
 var (
 	debug = func(string, ...interface{}) {}
-	d     = flag.Bool("d", false, "Debug prints")
+	d     = flag.Bool("v", false, "Debug prints")
 )
 
 func usage() {
@@ -57,13 +59,13 @@ func main() {
 		if r, err = NewcReader(os.Stdin); err == nil {
 			var f *File
 			for f, err = r.RecRead(); err == nil; f, err = r.RecRead() {
-				fmt.Printf("%v\n", f)
+				fmt.Printf("%s\n", f.String())
 			}
 		}
 	default:
 		usage()
 	}
-	if err != nil {
+	if err != nil && err != io.EOF {
 		log.Fatalf("%v", err)
 	}
 }

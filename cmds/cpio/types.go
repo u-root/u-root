@@ -13,7 +13,7 @@ type RecReader interface {
 }
 
 type RecWriter interface {
-	RecWrite() (*File, error)
+	RecWrite(*File) error
 }
 
 type File struct {
