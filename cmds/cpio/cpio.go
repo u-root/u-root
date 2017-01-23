@@ -51,7 +51,18 @@ func main() {
 
 	switch op {
 	case "i":
-		log.Fatalf("no extract yet")
+		var r RecReader
+		if r, err = NewcReader(os.Stdin); err == nil {
+			var f *File
+			for f, err = r.RecRead(); err == nil; f, err = r.RecRead() {
+				fmt.Printf("%s\n", f.String())
+				err = create(f)
+				if err != nil {
+					fmt.Printf("%v: %v", f, err)
+				}
+			}
+		}
+
 	case "o":
 		log.Fatalf("no extract yet")
 	case "t":
