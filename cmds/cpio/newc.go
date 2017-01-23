@@ -14,6 +14,10 @@ import (
 const (
 	magicLen  = 6
 	headerLen = 13*8 + magicLen
+	// bad news. These are not defined on
+	// whatever version of Go travis is running.
+	SeekSet     = 0
+	SeekCurrent = 1
 )
 
 type newcReader struct {
@@ -36,7 +40,7 @@ func (t *newcReader) RecRead() (*File, error) {
 	// There's almost certainly a better way to do this but this
 	// will do for now.
 	var h = make([]byte, headerLen)
-	pos, err := t.Seek(0, io.SeekCurrent)
+	pos, err := t.Seek(0, SeekCurrent)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +75,8 @@ func (t *newcReader) RecRead() (*File, error) {
 	}
 
 	// we have to seek to f.NameSize + len(h) rounded up to a multiple of 4.
-	seekTo := (int64(pos+int64(f.NameSize)+int64(len(h))+3) / 4) * 4
-	if _, err := t.Seek(seekTo, io.SeekStart); err != nil {
+	seekTo := int64(round4(uint64(pos), f.NameSize, uint64(len(h))))
+	if _, err := t.Seek(seekTo, SeekSet); err != nil {
 		return nil, err
 	}
 
@@ -82,9 +86,9 @@ func (t *newcReader) RecRead() (*File, error) {
 		return nil, io.EOF
 	}
 
-	f.Data = &io.LimitedReader{t, int64(f.FileSize)}
-	seekTo = (int64(f.FileSize+3) / 4) * 4
-	if _, err := t.Seek(seekTo, io.SeekCurrent); err != nil {
+	f.Data = &io.LimitedReader{R: t, N: int64(f.FileSize)}
+	seekTo = int64(round4(f.FileSize))
+	if _, err := t.Seek(seekTo, SeekCurrent); err != nil {
 		return nil, err
 	}
 	return &f, nil
