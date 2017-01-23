@@ -10,9 +10,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	var dat = bytes.NewReader(testCPIO)
-
-	r, err := NewcReader(dat)
+	r, err := NewcReader(bytes.NewReader(testCPIO))
 
 	if err != nil {
 		t.Error(err)
@@ -25,5 +23,21 @@ func TestSimple(t *testing.T) {
 		}
 		t.Logf("Value %d: got \n%s, want \n%s", i, f.String(), testResult[i])
 		i++
+	}
+}
+
+func TestBad(t *testing.T) {
+	_, err := NewcReader(bytes.NewReader(badCPIO))
+	t.Logf("error is %v", err)
+
+	if err == nil {
+		t.Errorf("Wanted EOF err, got nil")
+	}
+
+	_, err = NewcReader(bytes.NewReader(badMagicCPIO))
+	t.Logf("error is %v", err)
+
+	if err == nil {
+		t.Errorf("Wanted bad magic err, got nil")
 	}
 }

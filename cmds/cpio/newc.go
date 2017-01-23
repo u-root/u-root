@@ -18,10 +18,12 @@ const (
 	// whatever version of Go travis is running.
 	SeekSet     = 0
 	SeekCurrent = 1
+	newcMagic   = "070701"
 )
 
 type newcReader struct {
-	io.ReadSeeker
+	pos int64
+	io.ReaderAt
 }
 
 type newWriter struct {
@@ -32,27 +34,32 @@ func NewcWriter(n string) (RecWriter, error) {
 	return nil, fmt.Errorf("Writer: not yet")
 }
 
-func NewcReader(r io.ReadSeeker) (RecReader, error) {
-	return &newcReader{ReadSeeker: r}, nil
+func NewcReader(r io.ReaderAt) (RecReader, error) {
+	m := io.NewSectionReader(r, 0, 6)
+	var magic [6]byte
+	if _, err := m.Read(magic[:]); err != nil {
+		return nil, fmt.Errorf("NewcReader: unable to read magic: %v", err)
+	}
+	if string(magic[:]) != newcMagic {
+		return nil, fmt.Errorf("NewcReader: magic is '%s' and must be '%s'", magic, newcMagic)
+	}
+	return &newcReader{ReaderAt: r}, nil
 }
 
 func (t *newcReader) RecRead() (*File, error) {
 	// There's almost certainly a better way to do this but this
 	// will do for now.
 	var h = make([]byte, headerLen)
-	pos, err := t.Seek(0, SeekCurrent)
-	if err != nil {
-		return nil, err
-	}
 
-	debug("Next record: pos is %d\n", pos)
+	debug("Next record: pos is %d\n", t.pos)
 
-	if count, err := t.Read(h[:]); count != len(h) || err != nil {
+	if count, err := t.ReadAt(h[:], t.pos); count != len(h) || err != nil {
 		return nil, fmt.Errorf("Header: got %d of %d bytes, error %v", len(h), count, err)
 	}
+	t.pos += int64(len(h))
 	// Make sure it's right.
 	magic := string(h[:6])
-	if magic != "070701" {
+	if magic != newcMagic {
 		return nil, fmt.Errorf("Reader: magic '%s' not a newc file", magic)
 	}
 
@@ -70,15 +77,12 @@ func (t *newcReader) RecRead() (*File, error) {
 	}
 	debug("f is %s\n", (&f).String())
 	var n = make([]byte, f.NameSize)
-	if l, err := t.Read(n); l != int(f.NameSize) || err != nil {
+	if l, err := t.ReadAt(n, t.pos); l != int(f.NameSize) || err != nil {
 		return nil, fmt.Errorf("Reading name: got %d of %d bytes, err was %v", l, f.NameSize, err)
 	}
 
 	// we have to seek to f.NameSize + len(h) rounded up to a multiple of 4.
-	seekTo := int64(round4(uint64(pos), f.NameSize, uint64(len(h))))
-	if _, err := t.Seek(seekTo, SeekSet); err != nil {
-		return nil, err
-	}
+	t.pos = int64(round4(uint64(t.pos), f.NameSize))
 
 	f.Name = string(n[:f.NameSize-1])
 	if f.Name == "TRAILER!!!" {
@@ -86,10 +90,7 @@ func (t *newcReader) RecRead() (*File, error) {
 		return nil, io.EOF
 	}
 
-	f.Data = &io.LimitedReader{R: t, N: int64(f.FileSize)}
-	seekTo = int64(round4(f.FileSize))
-	if _, err := t.Seek(seekTo, SeekCurrent); err != nil {
-		return nil, err
-	}
+	f.Data = io.NewSectionReader(t, t.pos, int64(f.FileSize))
+	t.pos = int64(round4(uint64(t.pos) + uint64(f.FileSize)))
 	return &f, nil
 }
