@@ -4,8 +4,47 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
+const (
+	typeMask    = 0170000 //This masks the file type bits.
+	typeSocket  = 0140000 //File type value for sockets.
+	typeSymLink = 0120000 //File type value for symbolic links.  For symbolic links, the link body is stored as file data.
+	typeFile    = 0100000 //File type value for regular files.
+	typeBlock   = 0060000 // File type value for block special devices.
+	typeDir     = 0040000 // File type value for directories.
+	typeChar    = 0020000 // File type value for character special devices.
+	typeFIFO    = 0010000 // File type value for named pipes or FIFOs.
+	SUID        = 0004000 // SUID bit.
+	SGID        = 0002000 // SGID bit.
+	sticky      = 0001000 // Sticky bit.  On some systems, this modifies the behavior
+	// of executables and/or directories.
+	mode = 0000777 //The lower 9 bits specify read/write/execute permissions
+	//for world, group, and user following standard POSIX con-
+	//ventions.
+)
+
+var (
+	ModeMap = map[uint64]os.FileMode{
+		typeSocket:  os.ModeSocket,
+		typeSymLink: os.ModeNamedPipe,
+		typeFile:    os.FileMode(0),
+		typeBlock:   os.ModeDevice,
+		typeDir:     os.ModeDir,
+		typeChar:    os.ModeCharDevice,
+		typeFIFO:    os.ModeNamedPipe,
+	}
+)
+
+func cpioModetoMode(m uint64) (os.FileMode, error) {
+	if t, ok := ModeMap[m&typeMask]; ok {
+		return t, nil
+	}
+	return os.FileMode(0), fmt.Errorf("Invalid file type %#x", m&typeMask)
+}
 func round4(n ...uint64) (ret uint64) {
 	for _, v := range n {
 		ret += v
