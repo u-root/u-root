@@ -53,7 +53,10 @@ var fakeFlash = bytes.Join([][]byte{
 
 func TestReadFMap(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	fmap, _ := ReadFMap(r)
+	fmap, _, err := ReadFMap(r)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expected := FMap{
 		FMapHeader: FMapHeader{
 			VerMajor: 1,
@@ -85,7 +88,10 @@ func TestReadFMap(t *testing.T) {
 
 func TestReadFMapMetadata(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	_, metadata := ReadFMap(r)
+	_, metadata, err := ReadFMap(r)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expected := FMapMetadata{
 		Start: 4 * 94387,
 	}
@@ -96,11 +102,46 @@ func TestReadFMapMetadata(t *testing.T) {
 
 func TestFieldNames(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	fmap, _ := ReadFMap(r)
+	fmap, _, err := ReadFMap(r)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for i, expected := range []string{"STATIC|COMPRESSED|0x1010", "0x0"} {
 		got := FlagNames(fmap.Areas[i].Flags)
 		if got != expected {
 			t.Errorf("expected:\n%s\ngot:\n%s", expected, got)
 		}
+	}
+}
+
+func TestNoSignature(t *testing.T) {
+	fakeFlash := bytes.Repeat([]byte{0x53, 0x11, 0x34, 0x22}, 94387)
+	r := bytes.NewReader(fakeFlash)
+	_, _, err := ReadFMap(r)
+	expected := "Cannot find fmap signature"
+	got := err.Error()
+	if expected != got {
+		t.Errorf("expected: %s; got: %s", expected, got)
+	}
+}
+
+func TestTwoSignatures(t *testing.T) {
+	fakeFlash := bytes.Repeat(fakeFlash, 2)
+	r := bytes.NewReader(fakeFlash)
+	_, _, err := ReadFMap(r)
+	expected := "Found multiple signatures"
+	got := err.Error()
+	if expected != got {
+		t.Errorf("expected: %s; got: %s", expected, got)
+	}
+}
+
+func TestTruncatedFmap(t *testing.T) {
+	r := bytes.NewReader(fakeFlash[:len(fakeFlash)-2])
+	_, _, err := ReadFMap(r)
+	expected := "Unexpected EOF while parsing fmap"
+	got := err.Error()
+	if expected != got {
+		t.Errorf("expected: %s; got: %s", expected, got)
 	}
 }

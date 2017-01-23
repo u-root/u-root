@@ -77,7 +77,10 @@ func main() {
 	}
 
 	// Read fmap and optionally print summary.
-	f, metadata := fmap.ReadFMap(r)
+	f, metadata, err := fmap.ReadFMap(r)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if *summary {
 		printFMap(f, metadata)
 	}
