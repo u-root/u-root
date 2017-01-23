@@ -7,10 +7,10 @@ package fmap
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"strings"
 )
 
@@ -72,31 +72,32 @@ func FlagNames(flags uint16) string {
 	return strings.Join(names, "|")
 }
 
-func readField(r io.Reader, data interface{}) {
+func readField(r io.Reader, data interface{}) error {
 	// The endianness might depend on your machine or it might not.
 	if err := binary.Read(r, binary.LittleEndian, data); err != nil {
-		log.Fatal("Unexpected EOF while parsing fmap")
+		return errors.New("Unexpected EOF while parsing fmap")
 	}
+	return nil
 }
 
 // Read an FMap into the data structure.
-func ReadFMap(f io.Reader) (*FMap, *FMapMetadata) {
+func ReadFMap(f io.Reader) (*FMap, *FMapMetadata, error) {
 	// Read flash into memory.
 	// TODO: it is possible to parse fmap without reading entire file into memory
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
 
 	// Check for too many fmaps.
 	if bytes.Count(data, signature) >= 2 {
-		log.Print("Warning: Found multiple signatures, using first")
+		return nil, nil, errors.New("Found multiple signatures")
 	}
 
 	// Check for too few fmaps.
 	start := bytes.Index(data, signature)
 	if start == -1 {
-		log.Fatal("Cannot find fmap signature")
+		return nil, nil, errors.New("Cannot find fmap signature")
 	}
 
 	// Reader anchored to the start of the fmap
@@ -104,14 +105,18 @@ func ReadFMap(f io.Reader) (*FMap, *FMapMetadata) {
 
 	// Read fields.
 	var fmap FMap
-	readField(r, &fmap.FMapHeader)
+	if err := readField(r, &fmap.FMapHeader); err != nil {
+		return nil, nil, err
+	}
 	fmap.Areas = make([]FMapArea, fmap.NAreas)
-	readField(r, &fmap.Areas)
+	if err := readField(r, &fmap.Areas); err != nil {
+		return nil, nil, err
+	}
 
 	// Return useful metadata
 	fmapMetadata := FMapMetadata{
 		Start: uint64(start),
 	}
 
-	return &fmap, &fmapMetadata
+	return &fmap, &fmapMetadata, nil
 }
