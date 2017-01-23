@@ -5,7 +5,7 @@
 // Fmap parses flash maps.
 //
 // Synopsis:
-//     fmap [-s] [FILE]
+//     fmap [-s|-r i] [FILE]
 //
 // Description:
 //     Return 0 if the flash map is valid and 1 otherwise. Detailed information
@@ -14,10 +14,12 @@
 //     This implementation is based off of https://github.com/dhendrix/flashmap.
 //
 // Options:
-//     -s:  print human readable summary
+//     -s: print human readable summary
+//     -r i: read an area from the flash
 package main
 
 import (
+	"bufio"
 	"flag"
 	"log"
 	"os"
@@ -28,6 +30,7 @@ import (
 
 var (
 	summary = flag.Bool("s", false, "print human readable summary")
+	read    = flag.Int("r", -1, "read an area from the flash")
 )
 
 // Print human readable summary of the fmap.
@@ -64,6 +67,10 @@ func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
 func main() {
 	flag.Parse()
 
+	if *summary && *read >= 0 {
+		log.Fatal("Both flags cannot be used at once")
+	}
+
 	// Choose a reader
 	r := os.Stdin
 	if flag.NArg() == 1 {
@@ -72,15 +79,28 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer r.Close()
 	} else if flag.NArg() > 1 {
 		log.Fatal("Too many arguments")
 	}
 
-	// Read fmap and optionally print summary.
+	// Read fmap.
 	f, metadata, err := fmap.ReadFMap(r)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Optionally print area.
+	if *read >= 0 {
+		areaReader, err := f.ReadArea(r, *read)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = bufio.NewWriter(os.Stdout).ReadFrom(areaReader)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	// Optionally print summar.
 	if *summary {
 		printFMap(f, metadata)
 	}

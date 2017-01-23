@@ -120,3 +120,14 @@ func ReadFMap(f io.Reader) (*FMap, *FMapMetadata, error) {
 
 	return &fmap, &fmapMetadata, nil
 }
+
+// Read an area from the fmap as a binary stream.
+func (f *FMap) ReadArea(r io.ReadSeeker, i int) (io.Reader, error) {
+	if i < 0 || int(f.NAreas) <= i {
+		return nil, errors.New("Area index out of range")
+	}
+	if _, err := r.Seek(int64(f.Areas[i].Offset), io.SeekStart); err != nil {
+		return nil, err
+	}
+	return io.LimitReader(r, int64(f.Areas[i].Size)), nil
+}

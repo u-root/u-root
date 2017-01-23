@@ -6,6 +6,7 @@ package fmap
 
 import (
 	"bytes"
+	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -143,5 +144,39 @@ func TestTruncatedFmap(t *testing.T) {
 	got := err.Error()
 	if expected != got {
 		t.Errorf("expected: %s; got: %s", expected, got)
+	}
+}
+
+func TestReadFMapArea(t *testing.T) {
+	fmap := FMap{
+		FMapHeader: FMapHeader{
+			NAreas: 2,
+		},
+		Areas: []FMapArea{
+			{
+				Offset: 0x0,
+				Size:   0x10,
+			}, {
+				Offset: 0x10,
+				Size:   0x20,
+			}, {
+				Offset: 0x30,
+				Size:   0x40,
+			},
+		},
+	}
+	fakeFlash := bytes.Repeat([]byte{0x53, 0x11, 0x34, 0x22}, 0x70)
+	r := bytes.NewReader(fakeFlash)
+	area, err := fmap.ReadArea(r, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := fakeFlash[0x10:0x30]
+	got, err := ioutil.ReadAll(area)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(expected, got) {
+		t.Errorf("expected: %v; got: %v", expected, got)
 	}
 }
