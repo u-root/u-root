@@ -5,7 +5,7 @@
 // Fmap parses flash maps.
 //
 // Synopsis:
-//     fmap [-s|-r i] [FILE]
+//     fmap [-s|-c func|-r i] [FILE]
 //
 // Description:
 //     Return 0 if the flash map is valid and 1 otherwise. Detailed information
@@ -14,13 +14,19 @@
 //     This implementation is based off of https://github.com/dhendrix/flashmap.
 //
 // Options:
-//     -s: print human readable summary
+//     -c func: print checksum using the given `hash function` (md5|sha1|sha256)
 //     -r i: read an area from the flash
+//     -s: print human readable summary
 package main
 
 import (
 	"bufio"
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
 	"flag"
+	"fmt"
+	"hash"
 	"log"
 	"os"
 	"text/template"
@@ -29,9 +35,16 @@ import (
 )
 
 var (
-	summary = flag.Bool("s", false, "print human readable summary")
-	read    = flag.Int("r", -1, "read an area from the flash")
+	checksum = flag.String("c", "", "print checksum using the given `hash function` (md5|sha1|sha256)")
+	read     = flag.Int("r", -1, "read an area from the flash")
+	summary  = flag.Bool("s", false, "print human readable summary")
 )
+
+var hashFuncs = map[string]hash.Hash{
+	"md5":    md5.New(),
+	"sha1":   sha1.New(),
+	"sha256": sha256.New(),
+}
 
 // Print human readable summary of the fmap.
 func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
@@ -64,11 +77,24 @@ func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
 	}
 }
 
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func main() {
 	flag.Parse()
 
-	if *summary && *read >= 0 {
-		log.Fatal("Both flags cannot be used at once")
+	// Validate flags
+	if btoi(*summary)+btoi(*read >= 0)+btoi(*checksum != "") > 1 {
+		log.Fatal("Only use one flag at a time")
+	}
+	if *checksum != "" {
+		if _, ok := hashFuncs[*checksum]; !ok {
+			log.Fatal("Not a valid hash function. Must be one of md5, sha1 or sha256")
+		}
 	}
 
 	// Choose a reader
@@ -89,8 +115,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	switch {
+	// Optionally print checksum.
+	case *checksum != "":
+		checksum, err := f.Checksum(r, hashFuncs[*checksum])
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%x\n", checksum)
+
 	// Optionally print area.
-	if *read >= 0 {
+	case *read >= 0:
 		areaReader, err := f.ReadArea(r, *read)
 		if err != nil {
 			log.Fatal(err)
@@ -99,9 +135,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-	// Optionally print summar.
-	if *summary {
+
+	// Optionally print summary.
+	case *summary:
 		printFMap(f, metadata)
 	}
 }
