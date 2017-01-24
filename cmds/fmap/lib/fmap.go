@@ -5,10 +5,12 @@
 package fmap
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -130,4 +132,22 @@ func (f *FMap) ReadArea(r io.ReadSeeker, i int) (io.Reader, error) {
 		return nil, err
 	}
 	return io.LimitReader(r, int64(f.Areas[i].Size)), nil
+}
+
+// Perform a hash of the static areas.
+func (f *FMap) Checksum(r io.ReadSeeker, h hash.Hash) ([]byte, error) {
+	for i, v := range f.Areas {
+		if v.Flags&FmapAreaStatic == 0 {
+			continue
+		}
+		areaReader, err := f.ReadArea(r, i)
+		if err != nil {
+			return nil, err
+		}
+		_, err = bufio.NewReader(areaReader).WriteTo(h)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return h.Sum([]byte{}), nil
 }

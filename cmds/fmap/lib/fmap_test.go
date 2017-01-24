@@ -6,6 +6,8 @@ package fmap
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -150,7 +152,7 @@ func TestTruncatedFmap(t *testing.T) {
 func TestReadFMapArea(t *testing.T) {
 	fmap := FMap{
 		FMapHeader: FMapHeader{
-			NAreas: 2,
+			NAreas: 3,
 		},
 		Areas: []FMapArea{
 			{
@@ -178,5 +180,40 @@ func TestReadFMapArea(t *testing.T) {
 	}
 	if !bytes.Equal(expected, got) {
 		t.Errorf("expected: %v; got: %v", expected, got)
+	}
+}
+
+func TestChecksum(t *testing.T) {
+	fmap := FMap{
+		FMapHeader: FMapHeader{
+			NAreas: 3,
+		},
+		Areas: []FMapArea{
+			{
+				Offset: 0x00,
+				Size:   0x03,
+				Flags:  FmapAreaStatic,
+			}, {
+				Offset: 0x03,
+				Size:   0x20,
+				Flags:  0x00,
+			}, {
+				Offset: 0x23,
+				Size:   0x04,
+				Flags:  FmapAreaStatic | FmapAreaCompressed,
+			},
+		},
+	}
+	fakeFlash := bytes.Repeat([]byte("abcd"), 0x70)
+	r := bytes.NewReader(fakeFlash)
+	checksum, err := fmap.Checksum(r, sha256.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// $ echo -n abcdabc | sha256sum
+	want := "8a50a4422d673f463f8e4141d8c4b68c4f001ba16f83ad77b8a31bde53ee7273"
+	got := fmt.Sprintf("%x", checksum)
+	if want != got {
+		t.Errorf("want: %v; got: %v", want, got)
 	}
 }
