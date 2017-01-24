@@ -39,6 +39,14 @@ var (
 	}
 )
 
+func perm(f *File) uint32 {
+	return uint32(f.Mode) & mode
+}
+
+func dev(f *File) int {
+	return int(f.Rmajor<<8 | f.Rminor)
+}
+
 func cpioModetoMode(m uint64) (os.FileMode, error) {
 	if t, ok := ModeMap[m&typeMask]; ok {
 		return t, nil
@@ -56,7 +64,7 @@ func round4(n ...uint64) (ret uint64) {
 
 func (f *File) String() string {
 
-	return fmt.Sprintf("%s: Ino %d Mode %#o UID %d GID %d Nlink %d Mtime %#x FileSize %d Major %d Minor RMajor %d Rminor %d %d NameSize %d",
+	return fmt.Sprintf("%s: Ino %d Mode %#o UID %d GID %d Nlink %d Mtime %#x FileSize %d Major %d Minor %d RMajor %d Rminor %d NameSize %d",
 		f.Name,
 		f.Ino,
 		f.Mode,
