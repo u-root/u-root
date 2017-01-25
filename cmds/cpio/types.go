@@ -10,10 +10,12 @@ import "io"
 
 type RecReader interface {
 	RecRead() (*File, error)
+	RecReadAll() ([]*File, error)
 }
 
 type RecWriter interface {
 	RecWrite(*File) error
+	RecWriteAll([]*File) error
 }
 
 type Header struct {

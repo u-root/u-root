@@ -21,7 +21,7 @@
 // But if we implement seek on such things, we have to do it by reading, which
 // really sucks. It's doable, we'll do it if we have to, but for now I'd like
 // to avoid the complexity. cpio is a 40 year old concept. If you want something
-// better, see ../archive which as a VTOC and separates data from metadata (unlike cpio).
+// better, see ../archive which has a VTOC and separates data from metadata (unlike cpio).
 // We could test for ESPIPE and fix it that way ... later.
 package main
 
@@ -75,7 +75,7 @@ func main() {
 	case "o":
 		var w RecWriter
 		if w, err = NewcWriter(os.Stdout); err != nil {
-			log.Fatalf("%v", err)
+			log.Fatal(err)
 		}
 
 		b := bufio.NewReader(os.Stdin)
@@ -84,7 +84,7 @@ func main() {
 			var name string
 			if name, err = b.ReadString('\n'); err != nil {
 				if err == io.EOF {
-					err = nil
+					err = w.RecWrite(TrailerRecord)
 				}
 				break
 			}
@@ -101,9 +101,6 @@ func main() {
 			if err != nil {
 				break
 			}
-		}
-		if err == nil {
-			err = w.RecWrite(trec)
 		}
 	case "t":
 		var r RecReader
