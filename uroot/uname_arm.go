@@ -1,3 +1,7 @@
+// Copyright 2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // package uroot contains various functions that might be needed more than
 // one place.
 // +build arm

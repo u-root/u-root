@@ -1,3 +1,7 @@
+// Copyright 2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // The u-root shell is intended to be very simple, since builtins and extensions
 // are written in Go. It should not need YACC. As in the JSON parser, we hope this
 // simple state machine will do the job.

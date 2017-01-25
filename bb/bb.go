@@ -1,3 +1,7 @@
+// Copyright 2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // bb converts standalone u-root tools to shell builtins.
 // It copies and converts a set of u-root utilities into a directory called bbsh.
 // It assumes nothing; all files it needs are always copied, no matter what
