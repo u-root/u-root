@@ -1,3 +1,7 @@
+// Copyright 2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // bbramfs builds a simple initramfs given an existing built bb; see bb.go
 // You have to run bb first, which creates cmds/bb/bbsh. cd to that directory,
 // and run bbramfs, and you have a single binary which does all u-root commands.
