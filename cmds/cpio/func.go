@@ -53,7 +53,9 @@ func cpioModetoMode(m uint64) (os.FileMode, error) {
 	}
 	return os.FileMode(0), fmt.Errorf("Invalid file type %#x", m&typeMask)
 }
-func round4(n ...uint64) (ret uint64) {
+
+// round4 is intended to be use with offsets to WriteAt and ReadAt
+func round4(n ...int64) (ret int64) {
 	for _, v := range n {
 		ret += v
 	}

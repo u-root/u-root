@@ -26,12 +26,72 @@ type newcReader struct {
 	io.ReaderAt
 }
 
-type newWriter struct {
+type newcWriter struct {
+	pos int64
 	io.Writer
 }
 
-func NewcWriter(n string) (RecWriter, error) {
-	return nil, fmt.Errorf("Writer: not yet")
+// Write implements the write interface for newcWriter.
+// It allows us to track the position and round it up
+// if needed. This allows us to use function such as
+// io.copy and Fprintf
+func (t *newcWriter) Write(b []byte) (int, error) {
+	amt, err := t.Writer.Write(b)
+	if err != nil {
+		return -1, err
+	}
+	t.pos += int64(amt)
+	return amt, err
+}
+
+func (t *newcWriter) advance(amt int64) error {
+	pad := make([]byte, 5)
+	o := round4(t.pos, amt)
+	if o == t.pos {
+		return nil
+	}
+	_, err := t.Write(pad[:o-t.pos])
+	return err
+}
+
+func NewcWriter(w io.Writer) (RecWriter, error) {
+	return &newcWriter{Writer: w}, nil
+}
+
+// RecWrite writes cpio records. It pads the header+name write to
+// 4 byte alignment and pads the data write as well.
+func (t *newcWriter) RecWrite(f *File) error {
+	if _, err := t.Write([]byte(newcMagic)); err != nil {
+		return err
+	}
+
+	v := reflect.ValueOf(&f.Header)
+	for i := 0; i < 13; i++ {
+		n := v.Elem().Field(i)
+		if _, err := fmt.Fprintf(t, "%08x", n.Uint()); err != nil {
+			return err
+		}
+	}
+
+	if _, err := t.Write([]byte(f.Name)); err != nil {
+		return err
+	}
+	// round to at least one byte past the name.
+	if err := t.advance(1); err != nil {
+		return err
+	}
+
+	if f.Data != nil {
+		_, err := io.Copy(t, f.Data)
+		if err != nil {
+			return err
+		}
+		if err := t.advance(0); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func NewcReader(r io.ReaderAt) (RecReader, error) {
@@ -65,7 +125,7 @@ func (t *newcReader) RecRead() (*File, error) {
 
 	debug("Header is %v\n", h)
 	var f File
-	v := reflect.ValueOf(&f)
+	v := reflect.ValueOf(&f.Header)
 	for i := 0; i < 12; i++ {
 		var n uint64
 		f := v.Elem().Field(i)
@@ -82,7 +142,7 @@ func (t *newcReader) RecRead() (*File, error) {
 	}
 
 	// we have to seek to f.NameSize + len(h) rounded up to a multiple of 4.
-	t.pos = int64(round4(uint64(t.pos), f.NameSize))
+	t.pos = int64(round4(t.pos, int64(f.NameSize)))
 
 	f.Name = string(n[:f.NameSize-1])
 	if f.Name == "TRAILER!!!" {
@@ -91,6 +151,6 @@ func (t *newcReader) RecRead() (*File, error) {
 	}
 
 	f.Data = io.NewSectionReader(t, t.pos, int64(f.FileSize))
-	t.pos = int64(round4(uint64(t.pos) + uint64(f.FileSize)))
+	t.pos = int64(round4(t.pos + int64(f.FileSize)))
 	return &f, nil
 }

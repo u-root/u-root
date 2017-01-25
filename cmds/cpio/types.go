@@ -16,7 +16,7 @@ type RecWriter interface {
 	RecWrite(*File) error
 }
 
-type File struct {
+type Header struct {
 	Ino      uint64
 	Mode     uint64
 	UID      uint64
@@ -29,6 +29,10 @@ type File struct {
 	Rmajor   uint64
 	Rminor   uint64
 	NameSize uint64
-	Name     string
-	Data     io.Reader
+	_        uint64
+}
+type File struct {
+	Header
+	Name string
+	Data io.Reader
 }

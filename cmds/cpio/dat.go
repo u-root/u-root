@@ -4,6 +4,10 @@
 
 package main
 
+const (
+	trailer = "TRAILER!!!"
+)
+
 /*
 drwxrwxr-x   9 rminnich rminnich        0 Jan 22 22:18 .
 drwxr-xr-x   2 root     root            0 Jan 22 22:18 etc
@@ -358,5 +362,11 @@ var (
 		"dev/loop3: Ino 3197980 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 3 NameSize 10",
 		"usr: Ino 3204041 Mode 040755 UID 0 GID 0 Nlink 3 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
 		"usr/lib: Ino 3204042 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 8",
+	}
+	trec = &File{
+		Header: Header{
+			NameSize: uint64(len(trailer) + 1),
+		},
+		Name: trailer,
 	}
 )
