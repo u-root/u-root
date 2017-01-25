@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -77,7 +78,6 @@ func create(f *File) error {
 // so many parts of a cpio record are os-dependent we
 // put this in fs_GOOS.go
 func fiToFile(name string, fi os.FileInfo) (*File, error) {
-	var err error
 	sys := fi.Sys().(*syscall.Stat_t)
 	f := &File{
 		Name: name,
@@ -99,9 +99,14 @@ func fiToFile(name string, fi os.FileInfo) (*File, error) {
 	switch fi.Mode().String()[0] {
 	case '-':
 		f.FileSize = uint64(fi.Size())
-		if f.Data, err = os.Open(name); err != nil {
+		file, err := os.Open(name)
+		if err != nil {
 			return nil, err
 		}
+		runtime.SetFinalizer(file, func(f *os.File) {
+			f.Close()
+		})
+		f.Data = file
 	case 'L':
 		l, err := os.Readlink(name)
 		if err != nil {

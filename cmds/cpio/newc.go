@@ -94,6 +94,19 @@ func (t *newcWriter) RecWrite(f *File) error {
 	return nil
 }
 
+func (w *newcWriter) RecWriteAll(f []*File) error {
+	for _, wf := range f {
+		if err := w.RecWrite(wf); err != nil {
+			return fmt.Errorf("TestReadWrite: writing got %v, want nil", err)
+		}
+	}
+	if err := w.RecWrite(TrailerRecord); err != nil {
+		return fmt.Errorf("TestReadWrite: error writing TRAILER: %v", err)
+	}
+	return nil
+
+}
+
 func NewcReader(r io.ReaderAt) (RecReader, error) {
 	m := io.NewSectionReader(r, 0, 6)
 	var magic [6]byte
@@ -114,7 +127,7 @@ func (t *newcReader) RecRead() (*File, error) {
 	debug("Next record: pos is %d\n", t.pos)
 
 	if count, err := t.ReadAt(h[:], t.pos); count != len(h) || err != nil {
-		return nil, fmt.Errorf("Header: got %d of %d bytes, error %v", len(h), count, err)
+		return nil, fmt.Errorf("Header: at %v got %d of %d bytes, error %v", t.pos, count, len(h), err)
 	}
 	t.pos += int64(len(h))
 	// Make sure it's right.
@@ -153,4 +166,22 @@ func (t *newcReader) RecRead() (*File, error) {
 	f.Data = io.NewSectionReader(t, t.pos, int64(f.FileSize))
 	t.pos = int64(round4(t.pos + int64(f.FileSize)))
 	return &f, nil
+}
+
+// RecReadAll reads all the File records.
+// This interface setup seems broken. This should work
+// for all record types. If we ever get more than one
+// we will have to revisit this.
+func (r *newcReader) RecReadAll() ([]*File, error) {
+	var f []*File
+	for {
+		nf, err := r.RecRead()
+		if err == io.EOF {
+			return f, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		f = append(f, nf)
+	}
 }
