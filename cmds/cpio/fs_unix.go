@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -70,4 +71,44 @@ func create(f *File) error {
 		return fmt.Errorf("%v: Unknown type %#o", f.Name, m)
 	}
 
+}
+
+// fiToFile converts an os.FileInfo to a File. Because
+// so many parts of a cpio record are os-dependent we
+// put this in fs_GOOS.go
+func fiToFile(name string, fi os.FileInfo) (*File, error) {
+	var err error
+	sys := fi.Sys().(*syscall.Stat_t)
+	f := &File{
+		Name: name,
+		Header: Header{
+			Ino:   sys.Ino,
+			Mode:  uint64(sys.Mode),
+			UID:   uint64(sys.Uid),
+			GID:   uint64(sys.Gid),
+			Nlink: sys.Nlink,
+			Mtime: uint64(sys.Mtim.Sec),
+			//FileSize: uint64(sys.Size),
+			Major:    sys.Dev >> 8,
+			Minor:    sys.Dev & 0xff,
+			Rmajor:   sys.Rdev >> 8,
+			Rminor:   sys.Rdev & 0xff,
+			NameSize: uint64(len(name) + 1),
+		},
+	}
+	switch fi.Mode().String()[0] {
+	case '-':
+		f.FileSize = uint64(fi.Size())
+		if f.Data, err = os.Open(name); err != nil {
+			return nil, err
+		}
+	case 'L':
+		l, err := os.Readlink(name)
+		if err != nil {
+			return nil, err
+		}
+		f.Data = bytes.NewReader([]byte(l))
+		f.FileSize = uint64(len(l))
+	}
+	return f, nil
 }
