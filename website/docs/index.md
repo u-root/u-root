@@ -7,7 +7,7 @@
 
 <p class="content">
 	U-root is an embeddable root file system intended to be placed in a FLASH device as part 
-    of the firmware image, along with a Linux kernel. Unlikely most embedded root file systems, 
+    of the firmware image, along with a Linux kernel. Unlike most embedded root file systems, 
     which consist of large binaries, U-root only has five: an init program and four Go compiler binaries.
 </p>
 
