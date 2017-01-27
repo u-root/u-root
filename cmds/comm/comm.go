@@ -5,7 +5,7 @@
 // Perform a set comparision over two files.
 //
 // Synopsis:
-//     comm [-123hi] FILE1 FILE2
+//     comm [-123h] FILE1 FILE2
 //
 // Descrption:
 //     Comm reads file1 and file2, which are in lexicographical order, and
@@ -18,7 +18,6 @@
 //     -2: suppress printing of column 2
 //     -3: suppress printing of column 3
 //     -h: print this help message and exit
-//     -i: case insensitive comparison of lines
 package main
 
 import (
@@ -31,11 +30,10 @@ import (
 )
 
 var (
-	s1          = flag.Bool("1", false, "suppress printing of column 1")
-	s2          = flag.Bool("2", false, "suppress printing of column 2")
-	s3          = flag.Bool("3", false, "suppress printing of column 3")
-	help        = flag.Bool("h", false, "print this help message and exit")
-	insensitive = flag.Bool("i", false, "case insensitive comparison of lines")
+	s1   = flag.Bool("1", false, "suppress printing of column 1")
+	s2   = flag.Bool("2", false, "suppress printing of column 2")
+	s3   = flag.Bool("3", false, "suppress printing of column 3")
+	help = flag.Bool("h", false, "print this help message and exit")
 )
 
 func usage() {
@@ -66,9 +64,6 @@ func outer(c1, c2 chan string, c chan out) {
 	s2, ok2 := <-c2
 	for {
 		if ok1 && ok2 {
-			if *insensitive && strings.EqualFold(s1, s2) {
-				s2 = s1
-			}
 			switch {
 			case s1 < s2:
 				c <- out{s1, "", ""}

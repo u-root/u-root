@@ -11,7 +11,7 @@
 | chmod          |               | -R, --reference | More mode forms        |
 | :x: chroot     |               |                 | Not implemented yet!   |
 | cmp            | -lLs          |                 |                        |
-| comm           | -123hi        |                 |                        |
+| comm           | -123h         |                 |                        |
 | cp             | -fiPRrvw      |                 |                        |
 | cpio           | -oitv         |                 |                        |
 | date           | -u            | -drs            |                        |
