@@ -20,7 +20,7 @@
 | dmesg          | -c            | -Clr            |                        |
 | echo           | -n            | -e              |                        |
 | ectool         |               |                 | u-root specific        |
-| :x: false      |               |                 | Not implemented yet!   |
+| false          |               |                 |                        |
 | fmap           | -s            | -crudV          | u-root specific        |
 | :x: free       |               | -bkmght         | Not implemented yet!   |
 | freq           | -cdorx        |                 | From plan 9            |
@@ -67,7 +67,7 @@
 | tcz            | -ahpv         |                 | u-root specific        |
 | tee            | -ai           |                 |                        |
 | :x: tr         |               |                 | Not implemented yet!   |
-| :x: true       |               |                 | Not implemented yet!   |
+| true           |               |                 |                        |
 | :x: umount     |               |                 | Not implemented yet!   |
 | uname          | -admnrsv      |                 |                        |
 | uniq           | -cdfu, --cn   | -i              |                        |
