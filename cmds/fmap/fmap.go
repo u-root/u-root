@@ -40,10 +40,10 @@ var (
 	summary  = flag.Bool("s", false, "print human readable summary")
 )
 
-var hashFuncs = map[string]hash.Hash{
-	"md5":    md5.New(),
-	"sha1":   sha1.New(),
-	"sha256": sha256.New(),
+var hashFuncs = map[string](func() hash.Hash){
+	"md5":    md5.New,
+	"sha1":   sha1.New,
+	"sha256": sha256.New,
 }
 
 // Print human readable summary of the fmap.
@@ -77,18 +77,16 @@ func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
 	}
 }
 
-func btoi(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
+var btoi = map[bool]int{
+	false: 0,
+	true:  1,
 }
 
 func main() {
 	flag.Parse()
 
 	// Validate flags
-	if btoi(*summary)+btoi(*read >= 0)+btoi(*checksum != "") > 1 {
+	if btoi[*summary]+btoi[*read >= 0]+btoi[*checksum != ""] > 1 {
 		log.Fatal("Only use one flag at a time")
 	}
 	if *checksum != "" {
@@ -119,7 +117,7 @@ func main() {
 	switch {
 	// Optionally print checksum.
 	case *checksum != "":
-		checksum, err := f.Checksum(r, hashFuncs[*checksum])
+		checksum, err := f.Checksum(r, hashFuncs[*checksum]())
 		if err != nil {
 			log.Fatal(err)
 		}
