@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Script executes its arguments as a Go program.
+// Run executes its arguments as a Go program.
 //
 // Synopsis:
-//     script [-v] GO_CODE..
+//     run [-v] GO_CODE..
 //
 // Examples:
-//     script {fmt.Println("hello")}
+//     run {fmt.Println("hello")}
 //
 // Options:
 //     -v: verbose display of processing
@@ -34,8 +34,8 @@ func main() {
 		TabWidth:  8,
 	}
 	flag.Parse()
-	// Interesting problem: if we're going to script we want args.
-	// But we also want to allow arbitrary Go code.
+	// Interesting problem:
+	// We want a combination of args and arbitrary Go code.
 	// Possibly, we should take the entire Go code as the one arg,
 	// i.e. in a 'string', and then take the args following.
 	a := "func main()"
@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// of course we have to deal with the Unix issue that /tmp is not private.
-	f, err := TempFile("", "script%s.go")
+	f, err := TempFile("", "run%s.go")
 	if err != nil {
 		log.Fatalf("Script: opening TempFile: %v", err)
 	}

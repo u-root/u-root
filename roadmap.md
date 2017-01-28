@@ -57,8 +57,8 @@
 | :x: readlink   |               |                 | Not implmeneted yet!   |
 | :x: reboot     |               |                 | Not implemented yet!   |
 | rm             | -iRrv         | -I              |                        |
+| run            |               |                 | u-root specific        |
 | rush           |               | -c              |                        |
-| script         |               |                 | u-root specific        |
 | seq            | -s            |                 |                        |
 | :x: sleep      |               |                 | Not implemented yet!   |
 | sort           | -or           | -bcfmnRu        |                        |
