@@ -240,7 +240,7 @@ func (pT *ProcessTable) LoadTable() error {
 		return filepath.SkipDir
 	})
 
-	if err.Error() == "skip this directory" {
+	if err == filepath.SkipDir {
 		return nil
 	}
 
