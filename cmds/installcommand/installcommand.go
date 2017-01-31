@@ -53,6 +53,14 @@ func main() {
 
 	cmd := exec.Command("go", append(a, path.Join(uroot.CmdsPath, commandName))...)
 
+	// Set GOGC if unset. The best value is determined empirically and
+	// depends on the machine and Go version. For the workload of compiling
+	// a small Go program, values larger than the default perform better.
+	// See: /scripts/build_perf.sh
+	if _, ok := os.LookupEnv("GOGC"); !ok {
+		cmd.Env = append(os.Environ(), "GOGC=400")
+	}
+
 	cmd.Dir = "/"
 
 	debug("Run %v", cmd)
