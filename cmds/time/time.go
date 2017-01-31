@@ -13,9 +13,9 @@
 //
 // Example:
 //     $ time sleep 1.23s
-//     real 1.23
-//     user 0.00
-//     sys 0.00
+//     real 1.230
+//     user 0.001
+//     sys 0.000
 //
 // Note:
 //     This is different from bash's time command which is built into the shell
@@ -52,18 +52,18 @@ func main() {
 	cmd.Stderr = os.Stderr
 	start := time.Now()
 	err := cmd.Run()
-	real := time.Since(start)
+	realTime := time.Since(start)
 
-	// Check for io erros.
+	// Check for io errors.
 	exitErr, ok := err.(*exec.ExitError)
 	if err != nil && !ok {
 		log.Fatal(err)
 	}
 
 	// Print usage.
-	printTime("real", real)
-	printTime("user", cmd.ProcessState.SystemTime())
-	printTime("sys", cmd.ProcessState.UserTime())
+	printTime("real", realTime)
+	printTime("user", cmd.ProcessState.UserTime())
+	printTime("sys", cmd.ProcessState.SystemTime())
 
 	// Propagate return value.
 	if exitErr != nil {
