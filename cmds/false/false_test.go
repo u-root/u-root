@@ -16,7 +16,7 @@ func TestFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal("Cannot build false.go:", err)
 	}
-	out, err := exec.Command("false").CombinedOutput()
+	out, err := exec.Command("./false").CombinedOutput()
 	exitErr, ok := err.(*exec.ExitError)
 	if !ok {
 		t.Fatal("Expected an exit error result")
