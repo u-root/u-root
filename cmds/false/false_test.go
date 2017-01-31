@@ -5,18 +5,20 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/shared/test_util"
 )
 
 // Ensure 1 is returned.
 func TestFalse(t *testing.T) {
-	err := exec.Command("go", "build", "false.go").Run()
-	if err != nil {
-		t.Fatal("Cannot build false.go:", err)
-	}
-	out, err := exec.Command("./false").CombinedOutput()
+	tmpDir, falsePath := test_util.CompileInTempDir(t)
+	defer os.RemoveAll(tmpDir)
+
+	out, err := exec.Command(falsePath).CombinedOutput()
 	exitErr, ok := err.(*exec.ExitError)
 	if !ok {
 		t.Fatal("Expected an exit error result")
