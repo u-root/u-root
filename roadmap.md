@@ -20,6 +20,7 @@
 | dmesg          | -c            | -Clr            |                        |
 | echo           | -n            | -e              |                        |
 | ectool         |               |                 | u-root specific        |
+| exit           |               |                 | Rush builtin           |
 | false          |               |                 |                        |
 | fmap           | -s            | -crudV          | u-root specific        |
 | :x: free       |               | -bkmght         | Not implemented yet!   |
@@ -66,6 +67,7 @@
 | sync           |               |                 |                        |
 | tcz            | -ahpv         |                 | u-root specific        |
 | tee            | -ai           |                 |                        |
+| time           |               | -p              | Rush builtin           |
 | :x: tr         |               |                 | Not implemented yet!   |
 | true           |               |                 |                        |
 | :x: umount     |               |                 | Not implemented yet!   |
