@@ -2,21 +2,44 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// runtime runs the command and prints the time it took.
-// The command can be a builtin, e.g.
-// time time time time time time date
-// works fine.
-
+// Time process execution.
+//
+// Synopsis:
+//     time CMD [ARG]...
+//
+// Description:
+//     After executing CMD, its real, user and system times are printed to
+//     stderr in the POSIX format.
+//
+//     CMD can be a builtin, e.g. time cd
+//
+// Example:
+//     $ time sleep 1.23s
+//     real 1.230
+//     user 0.001
+//     sys 0.000
+//
+// Note:
+//     This is different from bash's time command which is built into the shell
+//     and can time the entire pipeline.
+//
+// Bugs:
+//     Time is not reported when exiting due to a signal.
 package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 )
 
 func init() {
 	addBuiltIn("time", runtime)
+}
+
+func printTime(label string, t time.Duration) {
+	fmt.Fprintf(os.Stderr, "%s %.03f\n", label, t.Seconds())
 }
 
 func runtime(c *Command) error {
@@ -37,7 +60,11 @@ func runtime(c *Command) error {
 		c.Cmd = nCmd
 		err = runit(c)
 	}
-	cost := time.Since(start)
-	fmt.Fprintf(c.Stderr, "%v\n", cost)
+	realTime := time.Since(start)
+	printTime("real", realTime)
+	if c.ProcessState != nil {
+		printTime("user", c.ProcessState.UserTime())
+		printTime("sys", c.ProcessState.SystemTime())
+	}
 	return err
 }
