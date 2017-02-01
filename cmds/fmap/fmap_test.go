@@ -10,9 +10,14 @@ import (
 	"testing"
 )
 
-func TestFlashSummary(t *testing.T) {
-	testFlash := "fake_test.flash"
-	expected := `Fmap found at 0x9f4:
+var tests = []struct {
+	flag string
+	out  string
+}{
+	// Test summary
+	{
+		flag: "-s",
+		out: `Fmap found at 0x5f74:
 	Signature:  __FMAP__
 	VerMajor:   1
 	VerMinor:   0
@@ -30,13 +35,33 @@ func TestFlashSummary(t *testing.T) {
 		Size:    0x22222222
 		Name:    Area Number 2xxxxxxxxxxxxxxxxxxx
 		Flags:   0x0 (0x0)
-`
-	out, err := exec.Command("go", "run", "fmap.go", "-s", testFlash).CombinedOutput()
-	if err != nil {
-		t.Fatal(err)
-	}
-	out = bytes.Replace(out, []byte{0}, []byte{}, -1)
-	if string(out) != expected {
-		t.Errorf("expected:\n%s\ngot:\n%s", expected, string(out))
+`,
+	},
+	// Test usage
+	{
+		flag: "-u",
+		out: `Legend: '.' - full (0xff), '0' - zero (0x00), '#' - mixed
+0x00000000: 0..###
+Blocks:       6 (100.0%)
+Full (0xff):  2 (33.3%)
+Empty (0x00): 1 (16.7%)
+Mixed:        3 (50.0%)
+`,
+	},
+}
+
+// Table driven testing
+func TestFmap(t *testing.T) {
+	for _, tt := range tests {
+		testFlash := "fake_test.flash"
+		out, err := exec.Command("go", "run", "fmap.go", tt.flag, testFlash).CombinedOutput()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Filter out null characters which may be present in fmap strings.
+		out = bytes.Replace(out, []byte{0}, []byte{}, -1)
+		if string(out) != tt.out {
+			t.Errorf("expected:\n%s\ngot:\n%s", tt.out, string(out))
+		}
 	}
 }
