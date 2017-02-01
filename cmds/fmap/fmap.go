@@ -17,16 +17,18 @@
 //     -c func: print checksum using the given `hash function` (md5|sha1|sha256)
 //     -r i: read an area from the flash
 //     -s: print human readable summary
+//     -u: print human readable usage stats
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"flag"
 	"fmt"
 	"hash"
+	"io"
 	"log"
 	"os"
 	"text/template"
@@ -38,6 +40,7 @@ var (
 	checksum = flag.String("c", "", "print checksum using the given `hash function` (md5|sha1|sha256)")
 	read     = flag.Int("r", -1, "read an area from the flash")
 	summary  = flag.Bool("s", false, "print human readable summary")
+	usage    = flag.Bool("u", false, "print human readable usage summary")
 )
 
 var hashFuncs = map[string](func() hash.Hash){
@@ -77,6 +80,58 @@ func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
 	}
 }
 
+func printUsage(r io.Reader) {
+	blockSize := 4 * 1024
+	rowLength := 32
+
+	buffer := make([]byte, blockSize)
+	fullBlock := bytes.Repeat([]byte{0xff}, blockSize)
+	zeroBlock := bytes.Repeat([]byte{0x00}, blockSize)
+
+	fmt.Println("Legend: '.' - full (0xff), '0' - zero (0x00), '#' - mixed")
+
+	var numBlocks, numFull, numZero int
+	loop: for {
+		fmt.Printf("%#08x: ", numBlocks*blockSize)
+		for col := 0; col < rowLength; col++ {
+			// Read next block.
+			_, err := io.ReadFull(r, buffer)
+			if err == io.EOF {
+				fmt.Print("\n")
+				break loop
+			} else if err == io.ErrUnexpectedEOF {
+				fmt.Printf("\nWarning: flash is not a multiple of %d", len(buffer))
+				break loop
+			} else if err != nil {
+				log.Fatal(err)
+			}
+			numBlocks++
+
+			// Analyze block.
+			if bytes.Equal(buffer, fullBlock) {
+				numFull++
+				fmt.Print(".")
+			} else if bytes.Equal(buffer, zeroBlock) {
+				numZero++
+				fmt.Print("0")
+			} else {
+				fmt.Print("#")
+			}
+		}
+		fmt.Print("\n")
+	}
+
+	// Print usage statistics.
+	print := func(name string, n int) {
+		fmt.Printf("%s %d (%.1f%%)\n", name, n,
+			float32(n)/float32(numBlocks)*100)
+	}
+	print("Blocks:      ", numBlocks)
+	print("Full (0xff): ", numFull)
+	print("Empty (0x00):", numZero)
+	print("Mixed:       ", numBlocks-numFull-numZero)
+}
+
 var btoi = map[bool]int{
 	false: 0,
 	true:  1,
@@ -86,7 +141,7 @@ func main() {
 	flag.Parse()
 
 	// Validate flags
-	if btoi[*summary]+btoi[*read >= 0]+btoi[*checksum != ""] > 1 {
+	if btoi[*summary]+btoi[*usage]+btoi[*read >= 0]+btoi[*checksum != ""] > 1 {
 		log.Fatal("Only use one flag at a time")
 	}
 	if *checksum != "" {
@@ -129,7 +184,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = bufio.NewWriter(os.Stdout).ReadFrom(areaReader)
+		_, err = io.Copy(os.Stdout, areaReader)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -137,5 +192,12 @@ func main() {
 	// Optionally print summary.
 	case *summary:
 		printFMap(f, metadata)
+
+	// Optionall print usage.
+	case *usage:
+		if _, err := r.Seek(0, io.SeekStart); err != nil {
+			log.Fatal(err)
+		}
+		printUsage(r)
 	}
 }
