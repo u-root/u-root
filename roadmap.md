@@ -61,7 +61,7 @@
 | run            |               |                 | u-root specific        |
 | rush           |               | -c              |                        |
 | seq            | -s            |                 |                        |
-| :x: sleep      |               |                 | Not implemented yet!   |
+| sleep          |               |                 |                        |
 | sort           | -or           | -bcfmnRu        |                        |
 | srvfiles       | -dhp          |                 | u-root specific        |
 | sync           |               |                 |                        |
