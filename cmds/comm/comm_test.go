@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/u-root/u-root/shared/testutil"
 )
 
 var commTests = []struct {
@@ -27,17 +29,13 @@ var commTests = []struct {
 	},
 }
 
-// Table-driven test of the comm command
+// TestComm implements a table-drivent test.
 func TestComm(t *testing.T) {
-	for _, test := range commTests {
-		// Create temporary directory
-		tmpDir, err := ioutil.TempDir("", "TestComm")
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		defer os.RemoveAll(tmpDir)
+	// Compile comm.
+	tmpDir, commPath := testutil.CompileInTempDir(t)
+	defer os.RemoveAll(tmpDir)
 
+	for _, test := range commTests {
 		// Write inputs into the two files
 		var files [2]string
 		for i, contents := range []string{test.in1, test.in2} {
@@ -49,8 +47,8 @@ func TestComm(t *testing.T) {
 		}
 
 		// Execute comm.go
-		args := append(append([]string{"run", "comm.go"}, test.flags...), files[0], files[1])
-		cmd := exec.Command("go", args...)
+		args := append(append([]string{}, test.flags...), files[0], files[1])
+		cmd := exec.Command(commPath, args...)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Errorf("Comm exited with error: %v; output:\n%s", err, string(output))
 		} else if string(output) != test.out {
