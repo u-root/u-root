@@ -28,8 +28,8 @@ var tests = []struct {
 	{"exit 77\n", "% ", "", 77},
 	{"exit 1 2 3\n", "% % ", "Too many arguments\n", 0},
 	{"exit abcd\n", "% % ", "Non numeric argument\n", 0},
-	{"time cd .\n", "% % ", "real 0.00\\d\n", 0},
-	{"time sleep 0.25\n", "% % ", "real 0.25\\d\nuser 0.00\\d\nsys 0.00\\d\n", 0},
+	{"time cd .\n", "% % ", `real 0.0\d\d\n`, 0},
+	{"time sleep 0.25\n", "% % ", `real 0.2\d\d\nuser 0.00\d\nsys 0.00\d\n`, 0},
 }
 
 func TestRush(t *testing.T) {
