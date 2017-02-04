@@ -193,7 +193,7 @@ func main() {
 	case *summary:
 		printFMap(f, metadata)
 
-	// Optionall print usage.
+	// Optionally print usage.
 	case *usage:
 		if _, err := r.Seek(0, io.SeekStart); err != nil {
 			log.Fatal(err)
