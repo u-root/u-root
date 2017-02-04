@@ -82,7 +82,7 @@ func sortAlgorithm(s string) string {
 }
 
 func writeOutput(s string) {
-	var to *os.File = os.Stdout
+	to := os.Stdout
 	if *outputFile != "" {
 		if f, err := os.Create(*outputFile); err == nil {
 			to = f

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/shared/test_util"
+	"github.com/u-root/u-root/shared/testutil"
 )
 
 type test struct {
@@ -43,7 +43,7 @@ var sortTests = []test{
 
 // sort < in > out
 func TestSortWithPipes(t *testing.T) {
-	tmpDir, sortPath := test_util.CompileInTempDir(t)
+	tmpDir, sortPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
 
 	// Table-driven testing
@@ -98,7 +98,7 @@ func sortWithFiles(t *testing.T, tt test, tmpDir string, sortPath string,
 
 // sort -o in out
 func TestSortWithFiles(t *testing.T) {
-	tmpDir, sortPath := test_util.CompileInTempDir(t)
+	tmpDir, sortPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
 
 	// Table-driven testing
@@ -109,7 +109,7 @@ func TestSortWithFiles(t *testing.T) {
 
 // sort -o file file
 func TestInplaceSort(t *testing.T) {
-	tmpDir, sortPath := test_util.CompileInTempDir(t)
+	tmpDir, sortPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
 
 	// Table-driven testing
@@ -120,7 +120,7 @@ func TestInplaceSort(t *testing.T) {
 
 // sort -o out in1 in2 in3 in4
 func TestMultipleFileInputs(t *testing.T) {
-	tmpDir, sortPath := test_util.CompileInTempDir(t)
+	tmpDir, sortPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
 
 	tt := test{[]string{}, "a\nb\nc\n",

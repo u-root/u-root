@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/u-root/u-root/shared/test_util"
+	"github.com/u-root/u-root/shared/testutil"
 )
 
 // Ensure 1 is returned.
 func TestFalse(t *testing.T) {
-	tmpDir, falsePath := test_util.CompileInTempDir(t)
+	tmpDir, falsePath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
 
 	out, err := exec.Command(falsePath).CombinedOutput()

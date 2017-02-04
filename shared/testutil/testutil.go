@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package test_util
+package testutil
 
 import (
 	"io/ioutil"
@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// Helper function to create a temp directory and compile the main package of
+// CompileInTempDir creates a temp directory and compiles the main package of
 // the current directory. Remember to delete the directory after the test:
 //     defer os.RemoveAll(tmpDir)
 func CompileInTempDir(t *testing.T) (tmpDir string, execPath string) {
