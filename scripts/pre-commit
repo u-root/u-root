@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+echo "Running Pre-Commit"
+
+FILES=`git diff --staged --name-only | grep '.*\.go' | cat`
+
+if [ -z "$FILES" ];
+then
+	echo "No go files to check. Skipping."
+	exit 0
+fi
+
+gofmt -w -s $FILES
+golint -set_exit_status $FILES
+go vet $FILES
+
+echo "Pre-Commit Passed"
