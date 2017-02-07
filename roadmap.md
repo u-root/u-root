@@ -30,6 +30,7 @@
 | gpgv           | -v            |                 |                        |
 | grep           | -glrv         | -cno            | RE2-compatible only    |
 | :x: halt       |               |                 | Not implemented yet!   |
+| hexdump        |               |                 |                        |
 | hostname       |               |                 |                        |
 | init           |               |                 |                        |
 | installcommand |               |                 | u-root specific        |
@@ -78,7 +79,6 @@
 | wc             | -cblrw        |                 |                        |
 | wget           |               |                 | No args yet...         |
 | which          | -a            |                 |                        |
-| :x: xxd        |               |                 |                        |
 
 (Commands marked with an :x: are not yet implemented.)
 
