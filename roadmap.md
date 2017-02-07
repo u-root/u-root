@@ -71,7 +71,7 @@
 | time           |               | -p              | Rush builtin           |
 | :x: tr         |               |                 | Not implemented yet!   |
 | true           |               |                 |                        |
-| :x: umount     |               |                 | Not implemented yet!   |
+| umount         | -fl           |                 |                        |
 | uname          | -admnrsv      |                 |                        |
 | uniq           | -cdfu, --cn   | -i              |                        |
 | unshare        | -muin         |                 | Different flag names   |
