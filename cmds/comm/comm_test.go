@@ -22,10 +22,35 @@ var commTests = []struct {
 	out   string
 }{
 	{
+		// Empty files
 		flags: []string{},
-		in1:   "Line1\nlIne2\nline\nline3\nline4",
-		in2:   "Line1\nlIne2\nline\nline3\nline4",
-		out:   "\t\tLine1\n\t\tlIne2\n\t\tline\n\t\tline3\n\t\tline4\n",
+		in1:   "",
+		in2:   "",
+		out:   "",
+	}, {
+		// Equal files
+		flags: []string{},
+		in1:   "Line1\nlIne2\nline2\nline3",
+		in2:   "Line1\nlIne2\nline2\nline3",
+		out:   "\t\tLine1\n\t\tlIne2\n\t\tline2\n\t\tline3\n",
+	}, {
+		// Empty file 1
+		flags: []string{},
+		in1:   "",
+		in2:   "Line1\nlIne2\n",
+		out:   "\tLine1\n\tlIne2\n",
+	}, {
+		// Empty file 2
+		flags: []string{},
+		in1:   "Line1\nlIne2\n",
+		in2:   "",
+		out:   "Line1\nlIne2\n",
+	}, {
+		// Mix of matchine lines
+		flags: []string{},
+		in1:   "1\n3\n5\n",
+		in2:   "2\n3\n4\n",
+		out:   "1\n\t2\n\t\t3\n\t4\n5\n",
 	},
 }
 
