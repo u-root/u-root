@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build amd64
-
 // package uroot contains various functions that might be needed more than
 // one place.
 package uroot
