@@ -12,12 +12,15 @@ import (
 )
 
 func TestPrintenv(t *testing.T) {
+	// Setup some fake environment variables.
+	os.Clearenv()
+	os.Setenv("GIRAFFE", "akaros")
+	os.Setenv("GOPHER", "go")
+	os.Setenv("PENGUIN", "linux")
+
 	var buf bytes.Buffer
-
 	want := os.Environ()
-
 	printenv(&buf)
-
 	found := strings.Split(buf.String(), "\n")
 
 	for i, v := range want {
