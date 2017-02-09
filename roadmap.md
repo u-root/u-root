@@ -45,7 +45,7 @@
 | :x: man        |               | -k              | Not implemented yet!   |
 | mkdir          | -mpv          |                 |                        |
 | :x: mkfifo     |               |                 | Not implemented yet!   |
-| :x: mknod      |               |                 | Not implemented yet!   |
+| mknod          |               |                 |                        |
 | mount          | -rt           |                 |                        |
 | mv             |               | -nu             |                        |
 | netcat         |               |                 |                        |
