@@ -27,7 +27,7 @@ type copyfiles struct {
 	spec string
 }
 
-type GoDirs struct {
+type goDirs struct {
 	Dir        string
 	Deps       []string
 	GoFiles    []string
@@ -72,10 +72,10 @@ VERSION.cache`
 		InitialCpio     string
 		UseExistingInit bool
 	}
-	Dirs        map[string]bool
-	Deps        map[string]bool
-	GorootFiles map[string]bool
-	UrootFiles  map[string]bool
+	dirs        map[string]bool
+	deps        map[string]bool
+	gorootFiles map[string]bool
+	urootFiles  map[string]bool
 	letter      = map[string]string{
 		"amd64": "6",
 		"386":   "8",
@@ -290,7 +290,7 @@ func guessgopath() {
 // goListPkg takes one package name, and computes all the files it needs to build,
 // separating them into Go tree files and uroot files. For now we just 'go list'
 // but hopefully later we can do this programmatically.
-func goListPkg(name string) (*GoDirs, error) {
+func goListPkg(name string) (*goDirs, error) {
 	cmd := exec.Command("go", "list", "-json", name)
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	debug("Run %v @ %v", cmd, cmd.Dir)
@@ -299,7 +299,7 @@ func goListPkg(name string) (*GoDirs, error) {
 		return nil, err
 	}
 
-	var p GoDirs
+	var p goDirs
 	if err := json.Unmarshal([]byte(j), &p); err != nil {
 		return nil, err
 	}
@@ -307,9 +307,9 @@ func goListPkg(name string) (*GoDirs, error) {
 	debug("%v, %v %v %v", p, p.GoFiles, p.SFiles, p.HFiles)
 	for _, v := range append(append(p.GoFiles, p.SFiles...), p.HFiles...) {
 		if p.Goroot {
-			GorootFiles[path.Join(p.ImportPath, v)] = true
+			gorootFiles[path.Join(p.ImportPath, v)] = true
 		} else {
-			UrootFiles[path.Join(p.ImportPath, v)] = true
+			urootFiles[path.Join(p.ImportPath, v)] = true
 		}
 	}
 
@@ -346,23 +346,24 @@ func addGoFiles() error {
 	for _, v := range pkgList {
 		p, err := goListPkg(v)
 		if err != nil {
-			log.Fatalf("%v", err)
+			log.Printf("Can't do go list in %v, ignoring\n", v)
+			continue
 		}
 		debug("cmd p is %v", p)
 		for _, v := range p.Deps {
-			Deps[v] = true
+			deps[v] = true
 		}
 	}
 
-	for v := range Deps {
+	for v := range deps {
 		if _, err := goListPkg(v); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
-	for v := range GorootFiles {
+	for v := range gorootFiles {
 		goList += "\n" + path.Join("src", v)
 	}
-	for v := range UrootFiles {
+	for v := range urootFiles {
 		urootList += "\n" + path.Join("src", v)
 	}
 	return nil
@@ -384,10 +385,10 @@ func main() {
 	}
 
 	var err error
-	Dirs = make(map[string]bool)
-	Deps = make(map[string]bool)
-	GorootFiles = make(map[string]bool)
-	UrootFiles = make(map[string]bool)
+	dirs = make(map[string]bool)
+	deps = make(map[string]bool)
+	gorootFiles = make(map[string]bool)
+	urootFiles = make(map[string]bool)
 	guessgoarch()
 	config.Go = ""
 	config.Goos = "linux"
