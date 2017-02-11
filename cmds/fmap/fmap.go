@@ -5,7 +5,7 @@
 // Fmap parses flash maps.
 //
 // Synopsis:
-//     fmap [-s|-c func|-r i] [FILE]
+//     fmap [OPTIONS] [FILE]
 //
 // Description:
 //     Return 0 if the flash map is valid and 1 otherwise. Detailed information
@@ -18,6 +18,8 @@
 //     -r i: read an area from the flash
 //     -s: print human readable summary
 //     -u: print human readable usage stats
+//     -jr FILE: write json representation of the fmap to FILE
+//     -jw FILE: read json representation and replace the current fmap
 package main
 
 import (
@@ -25,10 +27,12 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"text/template"
@@ -37,16 +41,23 @@ import (
 )
 
 var (
-	checksum = flag.String("c", "", "print checksum using the given `hash function` (md5|sha1|sha256)")
-	read     = flag.Int("r", -1, "read an area from the flash")
-	summary  = flag.Bool("s", false, "print human readable summary")
-	usage    = flag.Bool("u", false, "print human readable usage summary")
+	checksum  = flag.String("c", "", "print checksum using the given `hash function` (md5|sha1|sha256)")
+	read      = flag.Int("r", -1, "read an area from the flash")
+	summary   = flag.Bool("s", false, "print human readable summary")
+	usage     = flag.Bool("u", false, "print human readable usage summary")
+	jsonRead  = flag.String("jr", "", "print json representation of the fmap to FILE")
+	jsonWrite = flag.String("jw", "", "read json representation and replace the fmap")
 )
 
 var hashFuncs = map[string](func() hash.Hash){
 	"md5":    md5.New,
 	"sha1":   sha1.New,
 	"sha256": sha256.New,
+}
+
+type jsonSchema struct {
+	FMap     *fmap.FMap
+	Metadata *fmap.FMapMetadata
 }
 
 // Print human readable summary of the fmap.
@@ -57,13 +68,13 @@ func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
 	VerMinor:   {{.VerMinor}}
 	Base:       {{printf "%#x" .Base}}
 	Size:       {{printf "%#x" .Size}}
-	Name:       {{printf "%s" .Name}}
+	Name:       {{.Name}}
 	NAreas:     {{.NAreas}}
 {{- range $i, $v := .Areas}}
 	Areas[{{$i}}]:
 		Offset:  {{printf "%#x" $v.Offset}}
 		Size:    {{printf "%#x" $v.Size}}
-		Name:    {{printf "%s" $v.Name}}
+		Name:    {{$v.Name}}
 		Flags:   {{printf "%#x" $v.Flags}} ({{FlagNames $v.Flags}})
 {{- end}}
 `
@@ -80,6 +91,30 @@ func printFMap(f *fmap.FMap, m *fmap.FMapMetadata) {
 	}
 }
 
+func readToJSON(f *fmap.FMap, m *fmap.FMapMetadata) error {
+	data, err := json.MarshalIndent(jsonSchema{f, m}, "", "\t")
+	if err != nil {
+		return err
+	}
+	data = append(data, byte('\n'))
+	if err := ioutil.WriteFile(*jsonRead, data, 0666); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeFromJSON(f *os.File) error {
+	data, err := ioutil.ReadFile(*jsonWrite)
+	if err != nil {
+		return err
+	}
+	j := jsonSchema{}
+	if err := json.Unmarshal(data, &j); err != nil {
+		return err
+	}
+	return fmap.WriteFMap(f, j.FMap, j.Metadata)
+}
+
 func printUsage(r io.Reader) {
 	blockSize := 4 * 1024
 	rowLength := 32
@@ -91,7 +126,8 @@ func printUsage(r io.Reader) {
 	fmt.Println("Legend: '.' - full (0xff), '0' - zero (0x00), '#' - mixed")
 
 	var numBlocks, numFull, numZero int
-	loop: for {
+loop:
+	for {
 		fmt.Printf("%#08x: ", numBlocks*blockSize)
 		for col := 0; col < rowLength; col++ {
 			// Read next block.
@@ -141,7 +177,12 @@ func main() {
 	flag.Parse()
 
 	// Validate flags
-	if btoi[*summary]+btoi[*usage]+btoi[*read >= 0]+btoi[*checksum != ""] > 1 {
+	if (btoi[*summary] +
+		btoi[*usage] +
+		btoi[*read >= 0] +
+		btoi[*checksum != ""] +
+		btoi[*jsonRead != ""] +
+		btoi[*jsonWrite != ""]) > 1 {
 		log.Fatal("Only use one flag at a time")
 	}
 	if *checksum != "" {
@@ -149,24 +190,31 @@ func main() {
 			log.Fatal("Not a valid hash function. Must be one of md5, sha1 or sha256")
 		}
 	}
+	if flag.NArg() != 1 {
+		log.Fatal("Incorrect number of arguments")
+	}
 
-	// Choose a reader
-	r := os.Stdin
-	if flag.NArg() == 1 {
-		var err error
+	// Open file
+	var r *os.File
+	var err error
+	if *jsonWrite != "" {
+		r, err = os.OpenFile(flag.Arg(0), os.O_RDWR, 0666)
+	} else {
 		r, err = os.Open(flag.Arg(0))
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Close()
+
+	// Read fmap.
+	var f *fmap.FMap
+	var metadata *fmap.FMapMetadata
+	if *jsonWrite == "" && !*usage {
+		f, metadata, err = fmap.ReadFMap(r)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer r.Close()
-	} else if flag.NArg() > 1 {
-		log.Fatal("Too many arguments")
-	}
-
-	// Read fmap.
-	f, metadata, err := fmap.ReadFMap(r)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	switch {
@@ -199,5 +247,17 @@ func main() {
 			log.Fatal(err)
 		}
 		printUsage(r)
+
+	// Optionally print json.
+	case *jsonRead != "":
+		if err := readToJSON(f, metadata); err != nil {
+			log.Fatal(err)
+		}
+
+	// Optionally read json.
+	case *jsonWrite != "":
+		if err := writeFromJSON(r); err != nil {
+			log.Fatal(err)
+		}
 	}
 }

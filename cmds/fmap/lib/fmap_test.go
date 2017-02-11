@@ -81,9 +81,9 @@ func TestReadFMap(t *testing.T) {
 		},
 	}
 	copy(expected.Signature[:], []byte("__FMAP__"))
-	copy(expected.Name[:], fmapName)
-	copy(expected.Areas[0].Name[:], area0Name)
-	copy(expected.Areas[1].Name[:], area1Name)
+	copy(expected.Name.Value[:], fmapName)
+	copy(expected.Areas[0].Name.Value[:], area0Name)
+	copy(expected.Areas[1].Name.Value[:], area1Name)
 	if !reflect.DeepEqual(*fmap, expected) {
 		t.Errorf("expected:\n%+v\ngot:\n%+v", expected, *fmap)
 	}
