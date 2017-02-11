@@ -6,9 +6,16 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
+
+	"github.com/u-root/u-root/shared/testutil"
 )
+
+const testFlash = "fake_test.flash"
 
 var tests = []struct {
 	flag string
@@ -52,9 +59,11 @@ Mixed:        3 (50.0%)
 
 // Table driven testing
 func TestFmap(t *testing.T) {
+	tmpDir, execPath := testutil.CompileInTempDir(t)
+	defer os.RemoveAll(tmpDir)
+
 	for _, tt := range tests {
-		testFlash := "fake_test.flash"
-		out, err := exec.Command("go", "run", "fmap.go", tt.flag, testFlash).CombinedOutput()
+		out, err := exec.Command(execPath, tt.flag, testFlash).CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -63,5 +72,60 @@ func TestFmap(t *testing.T) {
 		if string(out) != tt.out {
 			t.Errorf("expected:\n%s\ngot:\n%s", tt.out, string(out))
 		}
+	}
+}
+
+func TestJson(t *testing.T) {
+	tmpDir, execPath := testutil.CompileInTempDir(t)
+	defer os.RemoveAll(tmpDir)
+
+	jsonFile := filepath.Join(tmpDir, "tmp.json")
+	if err := exec.Command(execPath, "-jr", jsonFile, testFlash).Run(); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ioutil.ReadFile(jsonFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{
+	"FMap": {
+		"Signature": [
+			95,
+			95,
+			70,
+			77,
+			65,
+			80,
+			95,
+			95
+		],
+		"VerMajor": 1,
+		"VerMinor": 0,
+		"Base": 14627333968688430831,
+		"Size": 1144201745,
+		"Name": "Fake flash",
+		"NAreas": 2,
+		"Areas": [
+			{
+				"Offset": 3735928559,
+				"Size": 286331153,
+				"Name": "Area Number 1\u0000\u0000\u0000Hello",
+				"Flags": 4115
+			},
+			{
+				"Offset": 3405691582,
+				"Size": 572662306,
+				"Name": "Area Number 2xxxxxxxxxxxxxxxxxxx",
+				"Flags": 0
+			}
+		]
+	},
+	"Metadata": {
+		"Start": 24436
+	}
+}
+`
+	if string(got) != want {
+		t.Errorf("want:%s; got:%s", string(want), got)
 	}
 }

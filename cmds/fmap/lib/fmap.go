@@ -8,11 +8,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +25,32 @@ const (
 	FmapAreaCompressed
 	FmapAreaReadOnly
 )
+
+// Wrapper around byte array to give us more control on how strings are
+// serialized.
+type String struct {
+	Value [32]uint8
+}
+
+func (s *String) String() string {
+	return strings.TrimRight(string(s.Value[:]), "\x00")
+}
+
+func (s *String) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *String) UnmarshalJSON(b []byte) error {
+	str, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	if len(str) > len(s.Value) {
+		return fmt.Errorf("String %#v is longer than 32 bytes", str)
+	}
+	copy(s.Value[:], []byte(str))
+	return nil
+}
 
 type FMap struct {
 	FMapHeader
@@ -35,14 +63,14 @@ type FMapHeader struct {
 	VerMinor  uint8
 	Base      uint64
 	Size      uint32
-	Name      [32]uint8
+	Name      String
 	NAreas    uint16
 }
 
 type FMapArea struct {
 	Offset uint32
 	Size   uint32
-	Name   [32]uint8
+	Name   String
 	Flags  uint16
 }
 
@@ -121,6 +149,17 @@ func ReadFMap(f io.Reader) (*FMap, *FMapMetadata, error) {
 	}
 
 	return &fmap, &fmapMetadata, nil
+}
+
+// Overwrite the fmap in the flash file.
+func WriteFMap(f io.WriteSeeker, fmap *FMap, m *FMapMetadata) error {
+	if _, err := f.Seek(int64(m.Start), io.SeekStart); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, fmap.FMapHeader); err != nil {
+		return err
+	}
+	return binary.Write(f, binary.LittleEndian, fmap.Areas)
 }
 
 // Read an area from the fmap as a binary stream.
