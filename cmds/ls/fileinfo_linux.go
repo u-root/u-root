@@ -41,8 +41,8 @@ func extractImportantParts(fi os.FileInfo) fileInfo {
 	return fileInfo{
 		name:    fi.Name(),
 		mode:    fi.Mode(),
-		major:   s.Rdev & minorMask,
-		minor:   s.Rdev >> minorBits,
+		major:   s.Rdev >> minorBits,
+		minor:   s.Rdev & minorMask,
 		uid:     s.Uid,
 		gid:     s.Gid,
 		size:    fi.Size(),
@@ -120,8 +120,8 @@ func (fi longStringer) String() string {
 		replacer.Replace(fi.mode.String()),
 		lookupUserName(fi.uid),
 		lookupGroupName(fi.gid),
-		fi.minor,
 		fi.major,
+		fi.minor,
 		fi.size,
 		fi.modTime.Format("Jan _2 15:04"),
 		fi.comp.String())
