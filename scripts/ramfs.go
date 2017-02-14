@@ -40,10 +40,7 @@ type goDirs struct {
 const (
 	devcpio   = "scripts/dev.cpio"
 	urootPath = "src/github.com/u-root/u-root"
-	// huge suckage here. the 'old' usage is going away but it not gone yet. Just suck in old6a for now.
-	// I don't want to revive the 'letter' stuff.
-	// This has gotten kind of ugly. But [0] is source, [1] is dest, and [2..] is the list.
-	// FIXME. this is ugly.
+	urootCmds = "github.com/u-root/u-root/cmds"
 )
 
 var (
@@ -72,16 +69,11 @@ VERSION.cache`
 		InitialCpio     string
 		UseExistingInit bool
 	}
+	pkgList     []string
 	dirs        map[string]bool
 	deps        map[string]bool
 	gorootFiles map[string]bool
 	urootFiles  map[string]bool
-	letter      = map[string]string{
-		"amd64": "6",
-		"386":   "8",
-		"arm":   "5",
-		"ppc":   "9",
-	}
 	// the whitelist is a list of u-root tools that we feel
 	// can replace existing tools. It is, sadly, a very short
 	// list at present.
@@ -318,31 +310,11 @@ func goListPkg(name string) (*goDirs, error) {
 
 // addGoFiles Computes the set of Go files to be added to the initramfs.
 func addGoFiles() error {
-	var pkgList []string
-	// Walk the cmds/ directory, and for each directory in there, add its files and all its
-	// dependencies
-
-	err := filepath.Walk(path.Join(config.Urootpath, "cmds"), func(name string, fi os.FileInfo, err error) error {
-		if err != nil {
-			log.Printf(" WALK FAIL%v: %v\n", name, err)
-			// That's ok, sometimes things are not there.
-			return filepath.SkipDir
-		}
-		if fi.Name() == "cmds" {
-			return nil
-		}
-		if !fi.IsDir() {
-			return nil
-		}
-		pkgList = append(pkgList, path.Join("github.com/u-root/u-root/cmds", fi.Name()))
-		return filepath.SkipDir
-	})
-	if err != nil {
-		log.Printf("Walking cmds/: %v\n", err)
-	}
-	// It would be nice to run go list -json with lots of package names but it produces invalid JSON.
-	// It produces a stream thatis {}{}{} at the top level and the decoders don't like that.
-	// TODO: fix it later. Maybe use template after all. For now this is more than adequate.
+	// For each directory in pkgList, add its files and all its
+	// dependencies.  It would be nice to run go list -json with
+	// lots of package names but it produces invalid JSON.  It
+	// produces a stream thatis {}{}{} at the top level and the
+	// decoders don't like that.
 	for _, v := range pkgList {
 		p, err := goListPkg(v)
 		if err != nil {
@@ -367,6 +339,19 @@ func addGoFiles() error {
 		urootList += "\n" + path.Join("src", v)
 	}
 	return nil
+}
+
+func globlist(s ...string) []string {
+	// For each arg, use it as a Glob pattern and add any matches to the
+	// package list. If there are no arguments, use [a-zA-Z]* as the glob pattern.
+	var pat []string
+	for _, v := range s {
+		pat = append(pat, path.Join(config.Urootpath, "cmds", v))
+	}
+	if len(s) == 0 {
+		pat = []string{path.Join(config.Urootpath, "cmds", "[a-zA-Z]*")}
+	}
+	return pat
 }
 
 // sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
@@ -397,6 +382,25 @@ func main() {
 	if config.Fail {
 		log.Fatal("Setup failed")
 	}
+
+	pat := globlist(flag.Args()...)
+
+	debug("Initial glob is %v", pat)
+	for _, v := range pat {
+		g, err := filepath.Glob(v)
+		if err != nil {
+			log.Fatalf("Glob error: %v", err)
+		}
+		// We have a set of absolute paths in g.  We can not
+		// use absolute paths in go list, however, so we have
+		// to adjust them.
+		for i := range g {
+			g[i] = path.Join(urootCmds, path.Base(g[i]))
+		}
+		pkgList = append(pkgList, g...)
+	}
+
+	debug("Initial pkgList is %v", pkgList)
 
 	if err := addGoFiles(); err != nil {
 		log.Fatalf("%v", err)
