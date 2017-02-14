@@ -291,6 +291,22 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
+	if len(flag.Args()) > 0 {
+		config.Args = []string{}
+		for _, v := range flag.Args() {
+			v = path.Join(config.Uroot, "cmds", v)
+			g, err := filepath.Glob(v)
+			if err != nil {
+				log.Fatalf("Glob error: %v", err)
+			}
+
+			for i := range g {
+				g[i] = path.Base(g[i])
+			}
+			config.Args = append(config.Args, g...)
+		}
+	}
+
 	for _, v := range config.Args {
 		// Yes, gross. Fix me.
 		config.CmdName = v
