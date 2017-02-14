@@ -1,0 +1,17 @@
+name: go-lua
+
+up:
+  - go: 1.7.3
+  - custom:
+      name: Initializing submodules
+      met?: test -f lua-tests/.git
+      meet: git submodule update --init
+
+commands:
+  test:
+    run: go test ./...
+    desc: 'run unit tests'
+
+packages:
+  - git@github.com:Shopify/dev-shopify.git
+
