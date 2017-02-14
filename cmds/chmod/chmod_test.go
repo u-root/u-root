@@ -106,7 +106,7 @@ func TestInvocationErrors(t *testing.T) {
 			t.Errorf("Chmod for '%v' failed: got '%s', want '%s'", v.args, e[20:], v.expects)
 		}
 		if err == nil {
-			t.Errorf("Kill for '%v' failed: got nil want err", v.args)
+			t.Errorf("Chmod for '%v' failed: got nil want err", v.args)
 		}
 	}
 }
