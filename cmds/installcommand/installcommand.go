@@ -7,7 +7,8 @@ package main
 // Install command from a go source file.
 //
 // Synopsis:
-//     installcommand [-v] [-ludicrous]
+//     SYMLINK [ARGS...]
+//     installcommand [-v] [-ludicrous] COMMAND [ARGS...]
 //
 // Description:
 //     u-root commands are lazily compiled. Uncompiled commands in the /bin
@@ -15,15 +16,21 @@ package main
 //     the symbolic link, installcommand will build the command from source and
 //     exec it.
 //
+//     The second form allows commands to be installed and exec'ed without a
+//     symbolic link. In this form the debug arguments `-v` and `-ludicrous`
+//     can be passed into installcommand.
+//
 // Options:
 //     -v: print all build commands
 //     -ludicrous: print out ALL the output from the go build commands
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/u-root/u-root/uroot"
 )
@@ -35,23 +42,61 @@ var (
 	debug     = func(string, ...interface{}) {}
 )
 
-func main() {
-	a := []string{"install"}
-	/* e.g. (GOBIN=`pwd`/ubin go install uroot.CmdsPath/date) */
+type form struct {
+	// Name of the command, ex: "ls"
+	cmdName string
+	// Args passed to the command, ex: {"-l", "-R"}
+	cmdArgs []string
+	// Args intended for installcommand
+	verbose   bool
+	ludicrous bool
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: installcommand [-v] [-ludicrous] COMMAND [ARGS...]\n")
+	os.Exit(2)
+}
+
+// Parse the command line to determine the form.
+func parseCommandLine() form {
+	// First form:
+	//     SYMLINK [ARGS...]
+	if !strings.HasSuffix(os.Args[0], "installcommand") {
+		return form{
+			cmdName: path.Base(os.Args[0]),
+			cmdArgs: os.Args[1:],
+		}
+	}
+
+	// Second form:
+	//     installcommand [-v] [-ludicrous] COMMAND [ARGS...]
 	flag.Parse()
-	if *verbose {
+	if flag.NArg() < 1 {
+		log.Println("Second form requires a COMMAND argument")
+		usage()
+	}
+	return form{
+		cmdName:   flag.Arg(0),
+		cmdArgs:   flag.Args()[1:],
+		verbose:   *verbose,
+		ludicrous: *ludicrous,
+	}
+}
+
+func main() {
+	form := parseCommandLine()
+
+	a := []string{"install"}
+	if form.verbose {
 		debug = log.Printf
 		a = append(a, "-x")
 	}
 
-	cleanPath := path.Clean(os.Args[0])
-	debug("cleanPath %v\n", cleanPath)
-	binDir, commandName := path.Split(cleanPath)
-	debug("bindir, commandname %v %v\n", binDir, commandName)
+	debug("Command name: %v\n", form.cmdName)
 	destDir := "/ubin"
-	destFile := path.Join(destDir, commandName)
+	destFile := path.Join(destDir, form.cmdName)
 
-	cmd := exec.Command("go", append(a, path.Join(uroot.CmdsPath, commandName))...)
+	cmd := exec.Command("go", append(a, path.Join(uroot.CmdsPath, form.cmdName))...)
 
 	// Set GOGC if unset. The best value is determined empirically and
 	// depends on the machine and Go version. For the workload of compiling
@@ -69,7 +114,7 @@ func main() {
 
 	if err != nil {
 		p := os.Getenv("PATH")
-		log.Fatalf("installcommand: trying to build cleanPath: %v, PATH %s, err %v, out %s", cleanPath, p, err, out)
+		log.Fatalf("installcommand: trying to build {cmdName: %v, PATH %s, err %v, out %s}", form.cmdName, p, err, out)
 	}
 
 	if *ludicrous {
@@ -78,7 +123,7 @@ func main() {
 
 	cmd = exec.Command(destFile)
 
-	cmd.Args = append([]string{commandName}, os.Args[1:]...)
+	cmd.Args = append([]string{form.cmdName}, form.cmdArgs...)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
