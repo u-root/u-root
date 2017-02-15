@@ -124,10 +124,17 @@ func main() {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
 		debug("Run %v", cmd)
 		if err := cmd.Run(); err != nil {
-			log.Printf("%v\n", err)
+			log.Print(err)
 		}
 		// only the first init needs its own PID space.
 		cloneFlags = 0
 	}
+
 	log.Printf("init: All commands exited")
+	log.Printf("Rebooting...")
+	err := exec.Command("shutdown", "reboot").Run()
+
+	// Regardless of whether err is nil, if shutdown returns at all, it
+	// failed at its job.
+	log.Fatalf("Failed to reboot: %v", err)
 }
