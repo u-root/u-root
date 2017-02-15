@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 
 	"github.com/u-root/u-root/uroot"
 )
@@ -121,13 +122,10 @@ func main() {
 		debug(string(out))
 	}
 
-	cmd = exec.Command(destFile)
+	args := append([]string{form.cmdName}, form.cmdArgs...)
+	err = syscall.Exec(destFile, args, os.Environ())
 
-	cmd.Args = append([]string{form.cmdName}, form.cmdArgs...)
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
+	// Regardless of whether err is nil, if Exec returns at all, it failed
+	// at its job.
+	log.Fatalf("Failed to exec %s: %v", form.cmdName, err)
 }
