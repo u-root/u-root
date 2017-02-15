@@ -8,11 +8,10 @@ import (
 	"flag"
 	"io/ioutil"
 	l "log"
-	"net"
 	"os"
 	"strings"
 
-	"github.com/u-root/u-root/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 // you will notice that I suck at parsers. That said, here is the method to my madness.
@@ -53,14 +52,14 @@ func usage() {
 // in the ip command, turns out 'dev' is a noise word.
 // The BNF is not right there either.
 // Always make it optional.
-func dev() *net.Interface {
+func dev() netlink.Link {
 	cursor++
 	whatIWant = "dev|device name"
 	if arg[cursor] == "dev" {
 		cursor++
 	}
 	whatIWant = "device name"
-	iface, err := net.InterfaceByName(arg[cursor])
+	iface, err := netlink.LinkByName(arg[cursor])
 	if err != nil {
 		usage()
 	}
@@ -68,12 +67,12 @@ func dev() *net.Interface {
 }
 
 func showips() {
-	ifaces, err := net.Interfaces()
+	ifaces, err := netlink.LinkList()
 	if err != nil {
 		log.Fatalf("Can't enumerate interfaces? %v", err)
 	}
 	for _, v := range ifaces {
-		addrs, err := v.Addrs()
+		addrs, err := netlink.AddrList(v, netlink.FAMILY_ALL)
 		if err != nil {
 			log.Printf("Can't enumerate addresses")
 		}
@@ -83,8 +82,7 @@ func showips() {
 
 func addrip() {
 	var err error
-	var addr net.IP
-	var network *net.IPNet
+	var addr *netlink.Addr
 	if len(arg) == 1 {
 		showips()
 		return
@@ -97,7 +95,7 @@ func addrip() {
 	case "add", "del":
 		cursor++
 		whatIWant = "CIDR format address"
-		addr, network, err = net.ParseCIDR(arg[cursor])
+		addr, err = netlink.ParseAddr(arg[cursor])
 		if err != nil {
 			usage()
 		}
@@ -107,11 +105,11 @@ func addrip() {
 	iface := dev()
 	switch cmd {
 	case "add":
-		if err := netlink.NetworkLinkAddIp(iface, addr, network); err != nil {
+		if err := netlink.AddrAdd(iface, addr); err != nil {
 			log.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
-		if err := netlink.NetworkLinkDelIp(iface, addr, network); err != nil {
+		if err := netlink.AddrDel(iface, addr); err != nil {
 			log.Fatalf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
@@ -135,11 +133,11 @@ func linkset() {
 	whatIWant = "up|down"
 	switch arg[cursor] {
 	case "up":
-		if err := netlink.NetworkLinkUp(iface); err != nil {
+		if err := netlink.LinkSetUp(iface); err != nil {
 			log.Fatalf("%v can't make it up: %v", iface, err)
 		}
 	case "down":
-		if err := netlink.NetworkLinkDown(iface); err != nil {
+		if err := netlink.LinkSetDown(iface); err != nil {
 			log.Fatalf("%v can't make it down: %v", iface, err)
 		}
 	default:
@@ -176,7 +174,7 @@ func nodespec() string {
 	return arg[cursor]
 }
 
-func nexthop() (string, string) {
+func nexthop() (string, *netlink.Addr) {
 	cursor++
 	whatIWant = "via"
 	if arg[cursor] != "via" {
@@ -185,19 +183,24 @@ func nexthop() (string, string) {
 	nh := arg[cursor]
 	cursor++
 	whatIWant = "Gateway CIDR"
-	return nh, arg[cursor]
+	addr, err := netlink.ParseAddr(arg[cursor])
+	if err != nil {
+		log.Fatalf("Gateway CIDR: %v", err)
+	}
+	return nh, addr
 }
 
 func routeadddefault() {
 	nh, nhval := nexthop()
 	// TODO: NHFLAGS.
-	d := dev()
+	l := dev()
 	switch nh {
 	case "via":
-		log.Printf("Add default route %v via %v", nhval, d)
-		log.Printf("=================================================================")
-		netlink.AddDefaultGw(nhval, d.Name)
-		log.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		log.Printf("Add default route %v via %v", nhval, l)
+		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval.IPNet.IP}
+		if err := netlink.RouteAdd(r); err != nil {
+			log.Fatalf("Add default route: %v", err)
+		}
 
 	default:
 		usage()
@@ -238,6 +241,7 @@ func main() {
 	cursor = 0
 	flag.Parse()
 	arg = flag.Args()
+
 	defer func() {
 		switch err := recover().(type) {
 		case nil:
@@ -246,14 +250,13 @@ func main() {
 				log.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
 				log.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
-			} else {
-				log.Fatalf("FUCK: %v", err.Error())
 			}
 			log.Fatalf("Bummer: %v", err)
 		default:
 			log.Fatalf("unexpected panic value: %T(%v)", err, err)
 		}
 	}()
+
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
 	switch arg[cursor] {
