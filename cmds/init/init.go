@@ -116,6 +116,9 @@ func main() {
 		}
 	}
 
+	// Start background build.
+	go startBgBuild()
+
 	// There may be an inito if we are building on
 	// an existing initramfs. So, first, try to
 	// run inito and then run our shell
