@@ -8,7 +8,7 @@ package main
 //
 // Synopsis:
 //     SYMLINK [ARGS...]
-//     installcommand [-v] [-ludicrous] COMMAND [ARGS...]
+//     installcommand [INSTALLCOMMAND_ARGS...] COMMAND [ARGS...]
 //
 // Description:
 //     u-root commands are lazily compiled. Uncompiled commands in the /bin
@@ -17,12 +17,15 @@ package main
 //     exec it.
 //
 //     The second form allows commands to be installed and exec'ed without a
-//     symbolic link. In this form the debug arguments `-v` and `-ludicrous`
-//     can be passed into installcommand.
+//     symbolic link. In this form additional arguments such as `-v` and
+//     `-ludicrous` can be passed into installcommand.
 //
 // Options:
-//     -v: print all build commands
+//     -lowpri:    the scheduler priority to lowered before starting
 //     -ludicrous: print out ALL the output from the go build commands
+//     -noexec:    do not execute the process after building
+//     -noforce:   do not build if a file already exists at the destination
+//     -v:         print all build commands
 import (
 	"flag"
 	"fmt"
@@ -38,8 +41,11 @@ import (
 
 var (
 	urpath    = "/go/bin:/ubin:/buildbin:/usr/local/bin:"
-	verbose   = flag.Bool("v", false, "print all build commands")
+	lowpri    = flag.Bool("lowpri", false, "the scheduler priority is lowered before starting")
 	ludicrous = flag.Bool("ludicrous", false, "print out ALL the output from the go build commands")
+	noexec    = flag.Bool("noexec", false, "do not execute the process after building")
+	noforce   = flag.Bool("noforce", false, "do not build if a file already exists at the destination")
+	verbose   = flag.Bool("v", false, "print all build commands")
 	debug     = func(string, ...interface{}) {}
 )
 
@@ -49,12 +55,15 @@ type form struct {
 	// Args passed to the command, ex: {"-l", "-R"}
 	cmdArgs []string
 	// Args intended for installcommand
-	verbose   bool
+	lowPri    bool
 	ludicrous bool
+	noExec    bool
+	noForce   bool
+	verbose   bool
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: installcommand [-v] [-ludicrous] COMMAND [ARGS...]\n")
+	fmt.Fprintf(os.Stderr, "Usage: installcommand [INSTALLCOMMAND_ARGS...] COMMAND [ARGS...]\n")
 	os.Exit(2)
 }
 
@@ -70,7 +79,7 @@ func parseCommandLine() form {
 	}
 
 	// Second form:
-	//     installcommand [-v] [-ludicrous] COMMAND [ARGS...]
+	//     installcommand [INSTALLCOMMAND_ARGS...] COMMAND [ARGS...]
 	flag.Parse()
 	if flag.NArg() < 1 {
 		log.Println("Second form requires a COMMAND argument")
@@ -79,13 +88,22 @@ func parseCommandLine() form {
 	return form{
 		cmdName:   flag.Arg(0),
 		cmdArgs:   flag.Args()[1:],
-		verbose:   *verbose,
+		lowPri:    *lowpri,
 		ludicrous: *ludicrous,
+		noExec:    *noexec,
+		noForce:   *noforce,
+		verbose:   *verbose,
 	}
 }
 
 func main() {
 	form := parseCommandLine()
+
+	if form.lowPri {
+		if err := syscall.Setpriority(syscall.PRIO_PGRP, 0, 20); err != nil {
+			log.Printf("Cannot set low priority: %v", err)
+		}
+	}
 
 	a := []string{"install"}
 	if form.verbose {
@@ -96,6 +114,13 @@ func main() {
 	debug("Command name: %v\n", form.cmdName)
 	destDir := "/ubin"
 	destFile := path.Join(destDir, form.cmdName)
+
+	// Optionally skip if already built.
+	if form.noForce {
+		if _, err := os.Stat(destFile); err == nil {
+			os.Exit(0)
+		}
+	}
 
 	cmd := exec.Command("go", append(a, path.Join(uroot.CmdsPath, form.cmdName))...)
 
@@ -122,23 +147,25 @@ func main() {
 		debug(string(out))
 	}
 
-	if os.Getenv("INSTALLCOMMAND_NOFORK") == "1" {
-		err = syscall.Exec(destFile, append([]string{form.cmdName}, form.cmdArgs...), os.Environ())
-		// Regardless of whether err is nil, if Exec returns at all, it failed
-		// at its job. Print an error and then let's see if a normal run can succeed.
-		log.Printf("Failed to exec %s: %v", form.cmdName, err)
-	}
-
-	cmd = exec.Command(destFile)
-	cmd.Args = append([]string{form.cmdName}, form.cmdArgs...)
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); err != nil {
-		exitErr, ok := err.(*exec.ExitError)
-		if !ok {
-			log.Fatal(err)
+	if !form.noExec {
+		if os.Getenv("INSTALLCOMMAND_NOFORK") == "1" {
+			err = syscall.Exec(destFile, append([]string{form.cmdName}, form.cmdArgs...), os.Environ())
+			// Regardless of whether err is nil, if Exec returns at all, it failed
+			// at its job. Print an error and then let's see if a normal run can succeed.
+			log.Printf("Failed to exec %s: %v", form.cmdName, err)
 		}
-		exitWithStatus(exitErr)
+
+		cmd = exec.Command(destFile)
+		cmd.Args = append([]string{form.cmdName}, form.cmdArgs...)
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		if err := cmd.Run(); err != nil {
+			exitErr, ok := err.(*exec.ExitError)
+			if !ok {
+				log.Fatal(err)
+			}
+			exitWithStatus(exitErr)
+		}
 	}
 }
