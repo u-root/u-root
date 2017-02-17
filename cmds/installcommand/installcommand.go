@@ -41,7 +41,6 @@ var (
 	verbose   = flag.Bool("v", false, "print all build commands")
 	ludicrous = flag.Bool("ludicrous", false, "print out ALL the output from the go build commands")
 	debug     = func(string, ...interface{}) {}
-	useExec   = flag.Bool("exec", false, "Use a direct exec system call instead of cmd.Run for the child")
 )
 
 type form struct {
@@ -123,7 +122,7 @@ func main() {
 		debug(string(out))
 	}
 
-	if *useExec {
+	if os.Getenv("INSTALLCOMMAND_NOFORK") == "1" {
 		err = syscall.Exec(destFile, append([]string{form.cmdName}, form.cmdArgs...), os.Environ())
 		// Regardless of whether err is nil, if Exec returns at all, it failed
 		// at its job. Print an error and then let's see if a normal run can succeed.
