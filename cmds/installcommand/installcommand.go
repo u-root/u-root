@@ -41,6 +41,7 @@ var (
 	verbose   = flag.Bool("v", false, "print all build commands")
 	ludicrous = flag.Bool("ludicrous", false, "print out ALL the output from the go build commands")
 	debug     = func(string, ...interface{}) {}
+	useExec   = flag.Bool("exec", false, "Use a direct exec system call instead of cmd.Run for the child")
 )
 
 type form struct {
@@ -122,10 +123,19 @@ func main() {
 		debug(string(out))
 	}
 
-	args := append([]string{form.cmdName}, form.cmdArgs...)
-	err = syscall.Exec(destFile, args, os.Environ())
+	if *useExec {
+		err = syscall.Exec(destFile, append([]string{form.cmdName}, form.cmdArgs...), os.Environ())
+		// Regardless of whether err is nil, if Exec returns at all, it failed
+		// at its job. Print an error and then let's see if a normal run can succeed.
+		log.Printf("Failed to exec %s: %v", form.cmdName, err)
+	}
 
-	// Regardless of whether err is nil, if Exec returns at all, it failed
-	// at its job.
-	log.Fatalf("Failed to exec %s: %v", form.cmdName, err)
+	cmd = exec.Command(destFile)
+	cmd.Args = append([]string{form.cmdName}, form.cmdArgs...)
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	if err := cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
