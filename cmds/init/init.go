@@ -81,6 +81,15 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 
+	// Before entering an interactive shell, decrease the loglevel because
+	// spamming non-critical logs onto the shell frustrates users. The logs
+	// are still accessible through dmesg.
+	const sysLogActionConsoleLevel = 8
+	const kernNotice = 5 // Only messages more severe than "notice" are printed.
+	if _, _, err := syscall.Syscall(syscall.SYS_SYSLOG, sysLogActionConsoleLevel, 0, kernNotice); err != 0 {
+		log.Print("Could not set log level")
+	}
+
 	// install /env.
 	os.Setenv("GOBIN", "/ubin")
 	envs = append(envs, "GOBIN=/ubin")
