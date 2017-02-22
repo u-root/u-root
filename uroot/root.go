@@ -74,6 +74,9 @@ var (
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
 		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL, opts: ""},
+		// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
+		// default to contents of dev.cpio.
+		{source: "none", target: "/dev", fstype: "devtmpfs", flags: syscall.MS_MGC_VAL},
 	}
 
 	files = map[string]file{
