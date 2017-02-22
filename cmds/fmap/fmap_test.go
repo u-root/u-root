@@ -18,12 +18,12 @@ import (
 const testFlash = "fake_test.flash"
 
 var tests = []struct {
-	flag string
-	out  string
+	cmd string
+	out string
 }{
 	// Test summary
 	{
-		flag: "-s",
+		cmd: "summary",
 		out: `Fmap found at 0x5f74:
 	Signature:  __FMAP__
 	VerMajor:   1
@@ -46,7 +46,7 @@ var tests = []struct {
 	},
 	// Test usage
 	{
-		flag: "-u",
+		cmd: "usage",
 		out: `Legend: '.' - full (0xff), '0' - zero (0x00), '#' - mixed
 0x00000000: 0..###
 Blocks:       6 (100.0%)
@@ -63,9 +63,9 @@ func TestFmap(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	for _, tt := range tests {
-		out, err := exec.Command(execPath, tt.flag, testFlash).CombinedOutput()
+		out, err := exec.Command(execPath, tt.cmd, testFlash).CombinedOutput()
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 		// Filter out null characters which may be present in fmap strings.
 		out = bytes.Replace(out, []byte{0}, []byte{}, -1)
@@ -80,7 +80,7 @@ func TestJson(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	jsonFile := filepath.Join(tmpDir, "tmp.json")
-	if err := exec.Command(execPath, "-jr", jsonFile, testFlash).Run(); err != nil {
+	if err := exec.Command(execPath, "jget", jsonFile, testFlash).Run(); err != nil {
 		t.Fatal(err)
 	}
 	got, err := ioutil.ReadFile(jsonFile)
