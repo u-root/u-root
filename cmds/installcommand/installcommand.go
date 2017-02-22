@@ -100,7 +100,7 @@ func main() {
 	form := parseCommandLine()
 
 	if form.lowPri {
-		if err := syscall.Setpriority(syscall.PRIO_PGRP, 0, 20); err != nil {
+		if err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, 20); err != nil {
 			log.Printf("Cannot set low priority: %v", err)
 		}
 	}
