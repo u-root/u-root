@@ -126,7 +126,7 @@ func jsonGet(a cmdArgs) error {
 
 // Replace current fmap with json representation in JSONFILE.
 func jsonPut(a cmdArgs) error {
-	r, err := os.OpenFile(a.args[0], os.O_RDWR, 0666)
+	r, err := os.OpenFile(os.Args[len(os.Args)-1], os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
