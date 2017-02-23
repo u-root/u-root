@@ -15,8 +15,11 @@ import (
 	"sort"
 )
 
-// Generally shorter commands (ls, cd, ...) are used more often, so they are
-// compiled first. This avoids maintaining a list for compilation order.
+// Commands are built approximately in order from smallest to largest length of
+// the command name. So, two letter commands like `ls` and `cd` will be built
+// before `mknod` and `mount`. Generally, shorter commands are used more often
+// (that is why they were made short) and are more likely to be used first,
+// thus they should be built first.
 type cmdSlice []os.FileInfo
 
 func (p cmdSlice) Len() int {
