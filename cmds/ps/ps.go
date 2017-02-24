@@ -193,6 +193,11 @@ func ps(pT ProcessTable) error {
 	for index, p := range pT.table {
 		uid, err := p.GetUid()
 		if err != nil {
+			// It is extremely common for a directory to disappear from
+			// /proc when a process terminates, so ignore those errors.
+			if os.IsNotExist(err) {
+				continue
+			}
 			return err
 		}
 
