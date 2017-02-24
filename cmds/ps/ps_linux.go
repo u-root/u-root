@@ -7,18 +7,15 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
 const (
-	allProc = "^[0-9]+$"
 	proc    = "/proc"
 	USER_HZ = 100
 )
@@ -91,14 +88,9 @@ type process struct {
 
 // Parse all content of stat to a Process Struct
 // by gived the pid (linux)
-func (p *process) readStat(pid string) error {
-	b, err := ioutil.ReadFile(path.Join(proc, pid, "stat"))
-
-	// if process disappears on the middle of operation
-	// ignore them
-	if os.IsNotExist(err) {
-		return nil
-	} else if err != nil {
+func (p *process) readStat(pid int) error {
+	b, err := ioutil.ReadFile(path.Join(proc, fmt.Sprint(pid), "stat"))
+	if err != nil {
 		return err
 	}
 
@@ -133,13 +125,8 @@ func (p *process) readStat(pid string) error {
 
 // Fetch data from Operating System about process
 // on Linux read data from stat
-func (p *Process) Parse(pid string) error {
-	if err := p.process.readStat(pid); err != nil {
-		return err
-	}
-
-	return nil
-
+func (p *Process) Parse(pid int) error {
+	return p.process.readStat(pid)
 }
 
 // ctty returns the ctty or "?" if none can be found.
@@ -215,30 +202,33 @@ func (p process) getTime() string {
 	return fmt.Sprintf("%02d:%02d:%02d", hrs, mins, secs)
 }
 
-// Walk from the proc files
-// and parsing them
+// Create a ProcessTable containing stats on all processes.
 func (pT *ProcessTable) LoadTable() error {
-	var parsingError error
-	pf := regexp.MustCompile(allProc)
-	filepath.Walk(proc, func(name string, fi os.FileInfo, err error) error {
+	// Match all files and directories directly inside of /proc.
+	matches, err := filepath.Glob(filepath.Join(proc, "*"))
+	if err != nil {
+		return err
+	}
+
+	for _, m := range matches {
+		// Filter out files and directories which are not numbers.
+		pid, err := strconv.Atoi(filepath.Base(m))
 		if err != nil {
-			log.Printf("%v: %v\n", name, err)
+			continue
+		}
+
+		// Parse the process's stat file.
+		p := &Process{}
+		if err := p.Parse(pid); err != nil {
+			// It is extremely common for a directory to disappear from
+			// /proc when a process terminates, so ignore those errors.
+			if os.IsNotExist(err) {
+				continue
+			}
 			return err
 		}
-		if name == proc {
-			return nil
-		}
+		pT.table = append(pT.table, p)
+	}
 
-		if pf.Match([]byte(fi.Name())) {
-			p := &Process{}
-			if err := p.Parse(fi.Name()); err != nil {
-				parsingError = err
-			}
-			pT.table = append(pT.table, p)
-		}
-
-		return filepath.SkipDir
-	})
-
-	return parsingError
+	return nil
 }
