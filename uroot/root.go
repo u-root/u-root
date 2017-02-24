@@ -79,9 +79,10 @@ var (
 	}
 	devs = []dev{
 	// chicken and egg: these need to be there before you start. So, sadly,
-	// we will always need dev.cpio.
+	// we will always need dev.cpio or something like it.
 	//{name: "/dev/null", mode: os.FileMode(0660) | 020000, magic: 0x0103},
 	//{name: "/dev/console", mode: os.FileMode(0660) | 020000, magic: 0x0501},
+	{name: "/dev/tty", mode: os.FileMode(0666) | 020000, magic: 0x0501},
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
