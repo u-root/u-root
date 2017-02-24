@@ -3,60 +3,10 @@
 
     
     <url>
-     <loc>http://u-root.org/</loc>
-     <lastmod>2016-10-15</lastmod>
+     <loc>http://u-root.tk/</loc>
+     <lastmod>2017-02-23</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
-    <url>
-     <loc>http://u-root.org/about/</loc>
-     <lastmod>2016-10-15</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>http://u-root.org/news/</loc>
-     <lastmod>2016-10-15</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>http://u-root.org/download/</loc>
-     <lastmod>2016-10-15</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>http://u-root.org/community/</loc>
-     <lastmod>2016-10-15</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>http://u-root.org/roadmap/</loc>
-     <lastmod>2016-10-15</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-        
-    <url>
-     <loc>http://u-root.org/docs/getting-started/</loc>
-     <lastmod>2016-10-15</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-        
     
 
 </urlset>
