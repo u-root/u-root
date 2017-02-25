@@ -23,6 +23,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -45,26 +46,35 @@ var (
 )
 
 func pass(r io.Reader, w io.Writer, ibs, obs int64, conv string) {
-	b := make([]byte, ibs)
+	var b = &bytes.Buffer{}
 	for {
-		n, err := io.ReadFull(r, b)
-		if n == 0 || (err != nil && err != io.EOF) {
+		b.Reset()
+		n, err := io.CopyN(b, r, ibs)
+		if n == 0 {
 			break
 		}
-		var out []byte
+		if err != nil && err != io.EOF {
+			log.Fatalf("Reading from input: %v", err)
+		}
+		var out *bytes.Buffer
 		switch conv {
 		case "ucase":
-			out = []byte(strings.ToUpper(string(b)))
+			out = bytes.NewBuffer(bytes.ToUpper(b.Bytes()))
 		case "lcase":
-			out = []byte(strings.ToLower(string(b)))
+			out = bytes.NewBuffer(bytes.ToLower(b.Bytes()))
 		default:
-			out = b
+			out = bytes.NewBuffer(b.Bytes())
 		}
-		for n := int64(0); n < int64(len(out)); n += obs {
-			if _, err := w.Write(out[n:obs]); err != nil {
+		for n := int64(0); n < int64(out.Len()); {
+			amt, err := io.CopyN(w, out, obs)
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "pass: %v\n", err)
 				break
 			}
+			n += int64(amt)
+		}
+		if err == io.EOF {
+			break
 		}
 	}
 }
@@ -85,8 +95,30 @@ func SplitArgs() []string {
 	return arg
 }
 
+func seekOrRead(r io.ReadSeeker, bs, cnt int64) {
+	if bs*cnt == 0 {
+		return
+	}
+	// I tried to make a NewSectionReader but, sadly, most OSes
+	// get upset when you pread even if it does not involve a seek.
+	// I wish I were making that up.
+	if _, err := r.Seek(1, int(cnt*bs)); err == nil {
+		return
+	}
+
+	// the only choice is to eat it.
+	var b = &bytes.Buffer{}
+
+	for i := int64(0); i < cnt*bs; {
+		amt, err := io.CopyN(b, r, bs)
+		if err != nil {
+			return
+		}
+		i += amt
+	}
+}
 func OpenFiles() (io.Reader, io.Writer) {
-	i := io.ReaderAt(os.Stdin)
+	i := io.ReadSeeker(os.Stdin)
 	o := io.Writer(os.Stdout)
 	var err error
 
@@ -112,7 +144,11 @@ func OpenFiles() (io.Reader, io.Writer) {
 		maxRead = *count * *ibs
 	}
 
-	return io.NewSectionReader(i, *skip**ibs, maxRead), o
+	// I tried to make a NewSectionReader but, sadly, most OSes
+	// get upset when you pread even if it does not involve a seek.
+	// I wish I were making that up.
+	seekOrRead(i, *ibs, *skip)
+	return io.LimitReader(i, maxRead), o
 }
 
 // rather than, in essence, recreating all the apparatus of flag.xxxx with the if= bits,
