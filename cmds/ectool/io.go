@@ -32,7 +32,7 @@ type devports struct {
 	debugf
 }
 
-func NewDevPorts(d debugf) (ioport, error) {
+func newDevPorts(d debugf) (ioport, error) {
 	f, err := os.Create("/dev/port")
 	if err != nil {
 		return nil, err
