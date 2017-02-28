@@ -15,10 +15,10 @@ func TestParseDuration(t *testing.T) {
 		out time.Duration
 		err error
 	}{
-		{"", time.Duration(0), invalidDuration},
-		{"xyz", time.Duration(0), invalidDuration},
-		{"-2.5", time.Duration(0), invalidDuration},
-		{"-2.5s", time.Duration(0), invalidDuration},
+		{"", time.Duration(0), errDuration},
+		{"xyz", time.Duration(0), errDuration},
+		{"-2.5", time.Duration(0), errDuration},
+		{"-2.5s", time.Duration(0), errDuration},
 		{"2.5", time.Duration(2500 * time.Millisecond), nil},
 		{"2.5s", time.Duration(2500 * time.Millisecond), nil},
 		{"300m", time.Duration(300 * time.Minute), nil},

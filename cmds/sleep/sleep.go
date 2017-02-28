@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-var invalidDuration = errors.New("invalid duration")
+var errDuration = errors.New("invalid duration")
 
 func parseDuration(s string) (time.Duration, error) {
 	d, err := time.ParseDuration(s)
@@ -33,7 +33,7 @@ func parseDuration(s string) (time.Duration, error) {
 		d, err = time.ParseDuration(s + "s")
 	}
 	if err != nil || d < 0 {
-		return time.Duration(0), invalidDuration
+		return time.Duration(0), errDuration
 	}
 	return d, nil
 }
