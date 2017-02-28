@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	initial_udelay time.Duration = time.Microsecond
-	maximum_udelay time.Duration = 20 * time.Microsecond
+	initialUdelay time.Duration = time.Microsecond
+	maximumUdelay time.Duration = 20 * time.Microsecond
 )
 
 type lpc struct {
 	ioport
-	status_addr  ioaddr
+	statusAddr   ioaddr
 	status       ioaddr
 	cmd          ioaddr
 	initial, max time.Duration
@@ -22,11 +22,11 @@ type lpc struct {
 }
 
 func init() {
-	chips["lpc"] = NewLPC
+	chips["lpc"] = newLPC
 }
 
-func NewLPC(p ioport, sa ioaddr, i, m time.Duration, d debugf) ec {
-	return &lpc{ioport: p, status_addr: sa, initial: i, max: m, debugf: d}
+func newLPC(p ioport, sa ioaddr, i, m time.Duration, d debugf) ec {
+	return &lpc{ioport: p, statusAddr: sa, initial: i, max: m, debugf: d}
 }
 
 func (l *lpc) Wait(timeout time.Duration) error {
@@ -46,7 +46,7 @@ func (l *lpc) Wait(timeout time.Duration) error {
 		 * since the initial delay is very short.
 		 */
 		time.Sleep(delay)
-		v, err := l.Inb(l.status_addr)
+		v, err := l.Inb(l.statusAddr)
 		if err != nil {
 			return err
 		}
@@ -63,20 +63,20 @@ func (l *lpc) Wait(timeout time.Duration) error {
 func (l *lpc) Cleanup(timeout time.Duration) error { return nil }
 func (l *lpc) Probe(timeout time.Duration) error   { return nil }
 
-func (l *lpc) Command(c Command, v Version, idata []byte, outsize int, timeout time.Duration) ([]byte, error) {
-	flags := uint8(EC_HOST_ARGS_FLAG_FROM_HOST)
+func (l *lpc) Command(c command, v version, idata []byte, outsize int, timeout time.Duration) ([]byte, error) {
+	flags := uint8(ecHostArgsFlagFromHost)
 	csum := flags + uint8(c) + uint8(v) + uint8(len(idata))
 
 	for i := range idata {
-		err := l.Outb(l.status_addr+ioaddr(i), idata[i])
+		err := l.Outb(l.statusAddr+ioaddr(i), idata[i])
 		if err != nil {
 			return nil, err
 		}
 		csum += idata[i]
 	}
 
-	cmd := []uint8{EC_HOST_ARGS_FLAG_FROM_HOST, uint8(v), uint8(len(idata)), uint8(csum)}
-	_, err := l.Outs(l.status_addr, cmd)
+	cmd := []uint8{ecHostArgsFlagFromHost, uint8(v), uint8(len(idata)), uint8(csum)}
+	_, err := l.Outs(l.statusAddr, cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		return nil, err
@@ -90,7 +90,7 @@ func (l *lpc) Command(c Command, v Version, idata []byte, outsize int, timeout t
 	}
 
 	/* Check result */
-	i, err := l.Inb(EC_LPC_ADDR_HOST_DATA)
+	i, err := l.Inb(ecLpcAddrHostData)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (l *lpc) Command(c Command, v Version, idata []byte, outsize int, timeout t
 	}
 
 	/* Read back args */
-	dres, err := l.Ins(EC_LPC_ADDR_HOST_ARGS, 4)
+	dres, err := l.Ins(ecLpcAddrHostArgs, 4)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (l *lpc) Command(c Command, v Version, idata []byte, outsize int, timeout t
 	 * command to an old EC, which means it would have read its params
 	 * from the wrong place.
 	 */
-	if flags&EC_HOST_ARGS_FLAG_TO_HOST == EC_HOST_ARGS_FLAG_TO_HOST {
+	if flags&ecHostArgsFlagToHost == ecHostArgsFlagToHost {
 		return nil, errors.New("EC appears to have reset (may be expected)")
 	}
 
@@ -122,7 +122,7 @@ func (l *lpc) Command(c Command, v Version, idata []byte, outsize int, timeout t
 	csum = uint8(c) + dres[0] + uint8(v) + dres[2]
 
 	/* Read response and update checksum */
-	dout, err := l.Ins(EC_LPC_ADDR_HOST_PARAM, int(dres[2]))
+	dout, err := l.Ins(ecLpcAddrHostParam, int(dres[2]))
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ var (
 	lpcdebug    = flag.Bool("lpcdebug", true, "Enable lpc debug prints")
 	chips       = make(map[string]func(ioport, ioaddr, time.Duration, time.Duration, debugf) ec)
 	defaultChip = flag.String("chip", "lpc", "Which chip to use")
-	chip        = NewLPC
+	chip        = newLPC
 )
 
 func debug(s string, v ...interface{}) {
@@ -29,7 +29,7 @@ func main() {
 	if !*lpcdebug {
 		d = nil
 	}
-	p, err := NewDevPorts(d)
+	p, err := newDevPorts(d)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 	}
@@ -41,7 +41,7 @@ func main() {
 		chip = c
 	}
 
-	ec := chip(p, EC_LPC_ADDR_HOST_CMD, time.Second*10, time.Second*10, d)
+	ec := chip(p, ecLpcAddrHostCmd, time.Second*10, time.Second*10, d)
 	// valid command?
 	// TODO: use the command table for real? But what should the type be? interface{}, err?
 	a := flag.Args()
