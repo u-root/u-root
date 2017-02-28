@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -71,7 +72,7 @@ var tests = []struct {
 	},
 }
 
-// TestDd implements a table-drivent test.
+// TestDd implements a table-driven test.
 func TestDd(t *testing.T) {
 	tmpDir, execPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
@@ -86,5 +87,24 @@ func TestDd(t *testing.T) {
 		if string(out) != tt.stdout {
 			t.Errorf("Want:\n%#v\nGot:\n%#v", tt.stdout, string(out))
 		}
+	}
+}
+
+// BenchmarkDd benchmarks the dd command. Each "op" unit is a 1MiB block.
+func BenchmarkDd(b *testing.B) {
+	tmpDir, execPath := testutil.CompileInTempDir(b)
+	defer os.RemoveAll(tmpDir)
+
+	const bytesPerOp = 1024 * 1024
+	b.SetBytes(bytesPerOp)
+	args := []string{
+		"if=/dev/zero",
+		"of=/dev/null",
+		fmt.Sprintf("count=%d", b.N),
+		fmt.Sprintf("bs=%d", bytesPerOp),
+	}
+	b.ResetTimer()
+	if err := exec.Command(execPath, args...).Run(); err != nil {
+		b.Fatal(err)
 	}
 }
