@@ -6,6 +6,7 @@ package testutil
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -13,12 +14,21 @@ import (
 
 // CompileInTempDir creates a temp directory and compiles the main package of
 // the current directory. Remember to delete the directory after the test:
+//
 //     defer os.RemoveAll(tmpDir)
-func CompileInTempDir(t *testing.T) (tmpDir string, execPath string) {
+//
+// The environment variable EXECPATH overrides execPath.
+func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
 	// Create temp directory
 	tmpDir, err := ioutil.TempDir("", "Test")
 	if err != nil {
 		t.Fatal("TempDir failed: ", err)
+	}
+
+	// Skip compilation if EXECPATH is set.
+	execPath = os.Getenv("EXECPATH")
+	if execPath != "" {
+		return
 	}
 
 	// Compile the program
