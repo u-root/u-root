@@ -16,6 +16,10 @@
 //     sleep 2.5
 //     sleep 300ms
 //     sleep 2h45m
+//
+// Bugs:
+//     When sleep is first run, it must be compiled from source which creates a
+//     delay significantly longer than anticipated.
 package main
 
 import (
