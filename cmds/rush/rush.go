@@ -195,7 +195,26 @@ func command(c *Command) error {
 }
 
 func main() {
-	b := bufio.NewReader(os.Stdin)
+	l, err := readliner()
+	if err != nil {
+		log.Fatalf("Can't start a readliner: %v", err)
+	}
+
+	r, w := io.Pipe()
+
+	go func() {
+		for {
+			s, err := getline(*l)
+			if err != nil {
+				log.Fatalf("Can't read a line: %v", err)
+			}
+			_, err = w.Write([]byte(s))
+			if err != nil {
+				log.Fatalf("Can't write string '%s' to pipe: %v", s, err)
+			}
+		}}()
+
+	b := bufio.NewReader(r)
 
 	defer func() {
 		switch err := recover().(type) {
