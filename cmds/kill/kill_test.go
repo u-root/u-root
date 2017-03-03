@@ -75,10 +75,10 @@ func TestBadInvocations(t *testing.T) {
 			err string
 		}{
 			{a: []string{"-1w34"}, err: "1w34 is not a valid signal\n"},
-			{a: []string{"-s"}, err: Eusage + "\n"},
+			{a: []string{"-s"}, err: eUsage + "\n"},
 			{a: []string{"-s", "a"}, err: "a is not a valid signal\n"},
 			{a: []string{"a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
-			{a: []string{"--signal"}, err: Eusage + "\n"},
+			{a: []string{"--signal"}, err: eUsage + "\n"},
 			{a: []string{"--signal", "a"}, err: "a is not a valid signal\n"},
 			{a: []string{"-1", "a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
 		}

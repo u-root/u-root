@@ -16,7 +16,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -38,7 +37,7 @@ func ansi(w io.Writer, args []string) error {
 		if exists {
 			fmt.Fprintf(w, commands[arg])
 		} else {
-			return errors.New(fmt.Sprintf("Command ANSI '%v' don't exists", arg))
+			return fmt.Errorf("Command ANSI '%v' don't exists", arg)
 		}
 	}
 	return nil

@@ -11,9 +11,9 @@ import (
 	"syscall"
 )
 
-var DefaultSignal = "-SIGTERM"
+var defaultSignal = "-SIGTERM"
 
-func Kill(sig os.Signal, pids ...string) []error {
+func kill(sig os.Signal, pids ...string) []error {
 	var errs []error
 	s := sig.(syscall.Signal)
 	for _, p := range pids {

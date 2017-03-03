@@ -22,10 +22,10 @@ import (
 	"os"
 )
 
-const Eusage = "Usage: kill -l | kill [<-s | --signal | -> <signame|signum>] pid [pid...]"
+const eUsage = "Usage: kill -l | kill [<-s | --signal | -> <signame|signum>] pid [pid...]"
 
 func usage() {
-	die(Eusage)
+	die(eUsage)
 }
 
 func die(msg string, args ...interface{}) {
@@ -38,7 +38,7 @@ func main() {
 	op := os.Args[1]
 	pids := os.Args[2:]
 	if op[0] != '-' {
-		op = DefaultSignal
+		op = defaultSignal
 		pids = os.Args[1:]
 	}
 	// sadly, we can not use flag. Well, we could,
@@ -81,7 +81,7 @@ func main() {
 	if len(pids) < 1 {
 		usage()
 	}
-	if err := Kill(s, pids...); err != nil {
+	if err := kill(s, pids...); err != nil {
 		die("Some processes could not be killed: %v", err)
 	}
 }

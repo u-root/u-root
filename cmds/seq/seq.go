@@ -56,8 +56,8 @@ func init() {
 
 func seq(w io.Writer, args []string) error {
 	var (
-		stt   float64 = 1.0
-		stp   float64 = 1.0
+		stt   = 1.0
+		stp   = 1.0
 		end   float64
 		width int
 	)
@@ -65,7 +65,7 @@ func seq(w io.Writer, args []string) error {
 	format := flags.format // I use that because I'll modify a global variable
 	argv, argc := args, len(args)
 	if argc < 1 || argc > 4 {
-		return errors.New(fmt.Sprintf("Mismatch n args; got %v, wants 1 >= n args >= 3", argc))
+		return fmt.Errorf("Mismatch n args; got %v, wants 1 >= n args >= 3", argc)
 	}
 
 	// loading step value if args is <start> <step> <end>
@@ -76,7 +76,7 @@ func seq(w io.Writer, args []string) error {
 			format = fmt.Sprintf("%%.%df", d)
 		}
 		if stp == 0.0 {
-			return errors.New("Step value should be != 0.")
+			return errors.New("step value should be != 0")
 		}
 
 		if err != nil {

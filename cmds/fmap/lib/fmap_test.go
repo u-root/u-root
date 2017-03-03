@@ -56,19 +56,19 @@ var fakeFlash = bytes.Join([][]byte{
 
 func TestReadFMap(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	fmap, _, err := ReadFMap(r)
+	fmap, _, err := Read(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expected := FMap{
-		FMapHeader: FMapHeader{
+		Header: Header{
 			VerMajor: 1,
 			VerMinor: 0,
 			Base:     0xcafebabedeadbeef,
 			Size:     0x44332211,
 			NAreas:   2,
 		},
-		Areas: []FMapArea{
+		Areas: []Area{
 			{
 				Offset: 0xdeadbeef,
 				Size:   0x11111111,
@@ -89,13 +89,13 @@ func TestReadFMap(t *testing.T) {
 	}
 }
 
-func TestReadFMapMetadata(t *testing.T) {
+func TestReadMetadata(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	_, metadata, err := ReadFMap(r)
+	_, metadata, err := Read(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := FMapMetadata{
+	expected := Metadata{
 		Start: 4 * 94387,
 	}
 	if !reflect.DeepEqual(*metadata, expected) {
@@ -105,7 +105,7 @@ func TestReadFMapMetadata(t *testing.T) {
 
 func TestFieldNames(t *testing.T) {
 	r := bytes.NewReader(fakeFlash)
-	fmap, _, err := ReadFMap(r)
+	fmap, _, err := Read(r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestFieldNames(t *testing.T) {
 func TestNoSignature(t *testing.T) {
 	fakeFlash := bytes.Repeat([]byte{0x53, 0x11, 0x34, 0x22}, 94387)
 	r := bytes.NewReader(fakeFlash)
-	_, _, err := ReadFMap(r)
+	_, _, err := Read(r)
 	expected := "Cannot find fmap signature"
 	got := err.Error()
 	if expected != got {
@@ -131,7 +131,7 @@ func TestNoSignature(t *testing.T) {
 func TestTwoSignatures(t *testing.T) {
 	fakeFlash := bytes.Repeat(fakeFlash, 2)
 	r := bytes.NewReader(fakeFlash)
-	_, _, err := ReadFMap(r)
+	_, _, err := Read(r)
 	expected := "Found multiple signatures"
 	got := err.Error()
 	if expected != got {
@@ -141,7 +141,7 @@ func TestTwoSignatures(t *testing.T) {
 
 func TestTruncatedFmap(t *testing.T) {
 	r := bytes.NewReader(fakeFlash[:len(fakeFlash)-2])
-	_, _, err := ReadFMap(r)
+	_, _, err := Read(r)
 	expected := "Unexpected EOF while parsing fmap"
 	got := err.Error()
 	if expected != got {
@@ -149,12 +149,12 @@ func TestTruncatedFmap(t *testing.T) {
 	}
 }
 
-func TestReadFMapArea(t *testing.T) {
+func TestReadArea(t *testing.T) {
 	fmap := FMap{
-		FMapHeader: FMapHeader{
+		Header: Header{
 			NAreas: 3,
 		},
-		Areas: []FMapArea{
+		Areas: []Area{
 			{
 				Offset: 0x0,
 				Size:   0x10,
@@ -185,10 +185,10 @@ func TestReadFMapArea(t *testing.T) {
 
 func TestChecksum(t *testing.T) {
 	fmap := FMap{
-		FMapHeader: FMapHeader{
+		Header: Header{
 			NAreas: 3,
 		},
-		Areas: []FMapArea{
+		Areas: []Area{
 			{
 				Offset: 0x00,
 				Size:   0x03,

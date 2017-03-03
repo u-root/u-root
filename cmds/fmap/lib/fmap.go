@@ -20,13 +20,14 @@ import (
 
 var signature = []byte("__FMAP__")
 
+// Flags which can be applied to Area.Flags.
 const (
 	FmapAreaStatic = 1 << iota
 	FmapAreaCompressed
 	FmapAreaReadOnly
 )
 
-// Wrapper around byte array to give us more control on how strings are
+// String wraps around byte array to give us more control over how strings are
 // serialized.
 type String struct {
 	Value [32]uint8
@@ -36,10 +37,12 @@ func (s *String) String() string {
 	return strings.TrimRight(string(s.Value[:]), "\x00")
 }
 
+// MarshalJSON implements json.Marshaler.
 func (s *String) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (s *String) UnmarshalJSON(b []byte) error {
 	str, err := strconv.Unquote(string(b))
 	if err != nil {
@@ -52,12 +55,14 @@ func (s *String) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// FMap structure serializable using encoding.Binary.
 type FMap struct {
-	FMapHeader
-	Areas []FMapArea
+	Header
+	Areas []Area
 }
 
-type FMapHeader struct {
+// Header describes the flash part.
+type Header struct {
 	Signature [8]uint8
 	VerMajor  uint8
 	VerMinor  uint8
@@ -67,14 +72,16 @@ type FMapHeader struct {
 	NAreas    uint16
 }
 
-type FMapArea struct {
+// Area describes each area.
+type Area struct {
 	Offset uint32
 	Size   uint32
 	Name   String
 	Flags  uint16
 }
 
-type FMapMetadata struct {
+// Metadata contains additional data not part of the FMap.
+type Metadata struct {
 	Start uint64
 }
 
@@ -111,7 +118,7 @@ func readField(r io.Reader, data interface{}) error {
 }
 
 // Read an FMap into the data structure.
-func ReadFMap(f io.Reader) (*FMap, *FMapMetadata, error) {
+func Read(f io.Reader) (*FMap, *Metadata, error) {
 	// Read flash into memory.
 	// TODO: it is possible to parse fmap without reading entire file into memory
 	data, err := ioutil.ReadAll(f)
@@ -135,34 +142,34 @@ func ReadFMap(f io.Reader) (*FMap, *FMapMetadata, error) {
 
 	// Read fields.
 	var fmap FMap
-	if err := readField(r, &fmap.FMapHeader); err != nil {
+	if err := readField(r, &fmap.Header); err != nil {
 		return nil, nil, err
 	}
-	fmap.Areas = make([]FMapArea, fmap.NAreas)
+	fmap.Areas = make([]Area, fmap.NAreas)
 	if err := readField(r, &fmap.Areas); err != nil {
 		return nil, nil, err
 	}
 
 	// Return useful metadata
-	fmapMetadata := FMapMetadata{
+	fmapMetadata := Metadata{
 		Start: uint64(start),
 	}
 
 	return &fmap, &fmapMetadata, nil
 }
 
-// Overwrite the fmap in the flash file.
-func WriteFMap(f io.WriteSeeker, fmap *FMap, m *FMapMetadata) error {
+// Write overwrites the fmap in the flash file.
+func Write(f io.WriteSeeker, fmap *FMap, m *Metadata) error {
 	if _, err := f.Seek(int64(m.Start), io.SeekStart); err != nil {
 		return err
 	}
-	if err := binary.Write(f, binary.LittleEndian, fmap.FMapHeader); err != nil {
+	if err := binary.Write(f, binary.LittleEndian, fmap.Header); err != nil {
 		return err
 	}
 	return binary.Write(f, binary.LittleEndian, fmap.Areas)
 }
 
-// Read an area from the fmap as a binary stream.
+// ReadArea reads an area from the fmap as a binary stream.
 func (f *FMap) ReadArea(r io.ReadSeeker, i int) (io.Reader, error) {
 	if i < 0 || int(f.NAreas) <= i {
 		return nil, errors.New("Area index out of range")
@@ -173,7 +180,7 @@ func (f *FMap) ReadArea(r io.ReadSeeker, i int) (io.Reader, error) {
 	return io.LimitReader(r, int64(f.Areas[i].Size)), nil
 }
 
-// Perform a hash of the static areas.
+// Checksum performs a hash of the static areas.
 func (f *FMap) Checksum(r io.ReadSeeker, h hash.Hash) ([]byte, error) {
 	for i, v := range f.Areas {
 		if v.Flags&FmapAreaStatic == 0 {
