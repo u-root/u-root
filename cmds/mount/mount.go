@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	RO     = flag.Bool("r", false, "Read only mount")
+	ro     = flag.Bool("r", false, "Read only mount")
 	fsType = flag.String("t", "", "File system type")
 )
 
@@ -33,7 +33,7 @@ func main() {
 	}
 	dev := a[0]
 	path := a[1]
-	if *RO {
+	if *ro {
 		flags |= unix.MS_RDONLY
 	}
 	if err := unix.Mount(a[0], a[1], *fsType, flags, ""); err != nil {

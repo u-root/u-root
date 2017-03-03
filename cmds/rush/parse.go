@@ -51,7 +51,7 @@ var (
 func pushback(b *bufio.Reader) {
 	err := b.UnreadByte()
 	if err != nil {
-		panic(errors.New(fmt.Sprintf("unreading bufio: %v", err)))
+		panic(fmt.Errorf("unreading bufio: %v", err))
 	}
 }
 
@@ -62,7 +62,7 @@ func one(b *bufio.Reader) byte {
 		return 0
 	}
 	if err != nil {
-		panic(errors.New(fmt.Sprintf("reading bufio: %v", err)))
+		panic(fmt.Errorf("reading bufio: %v", err))
 	}
 	return c
 }
@@ -159,13 +159,13 @@ func getArg(b *bufio.Reader, what string) string {
 	for {
 		nt, s := tok(b)
 		if nt == "EOF" || nt == "EOL" {
-			panic(errors.New(fmt.Sprintf("%v requires an argument", what)))
+			panic(fmt.Errorf("%v requires an argument", what))
 		}
 		if nt == "white" {
 			continue
 		}
 		if nt != "ARG" {
-			panic(errors.New(fmt.Sprintf("%v requires an argument, not %v", what, nt)))
+			panic(fmt.Errorf("%v requires an argument, not %v", what, nt))
 		}
 		return s
 	}
@@ -183,7 +183,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 			}
 			b, err := ioutil.ReadFile(s)
 			if err != nil {
-				panic(errors.New(fmt.Sprintf("%s: %v", s, err)))
+				panic(fmt.Errorf("%s: %v", s, err))
 			}
 			f := bufio.NewReader(bytes.NewReader(b))
 			// the whole string is consumed.
@@ -195,7 +195,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 			x := 0
 			_, err := fmt.Sscanf(s, "%v", &x)
 			if err != nil {
-				panic(errors.New(fmt.Sprintf("bad FD on redirect: %v, %v", s, err)))
+				panic(fmt.Errorf("bad FD on redirect: %v, %v", s, err))
 			}
 			// whitespace is allowed
 			c.fdmap[x] = getArg(b, t)
@@ -212,7 +212,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 		case "EOL":
 			return c, t
 		default:
-			panic(errors.New(fmt.Sprintf("unknown token type %v", t)))
+			panic(fmt.Errorf("unknown token type %v", t))
 		}
 		t, s = tok(b)
 	}
@@ -257,16 +257,16 @@ func getCommand(b *bufio.Reader) (c []*Command, t string, err error) {
 	// Can't have a redir and a redirect for fd1.
 	for i := range c {
 		if len(c[i].args) == 0 {
-			return nil, "", errors.New("empty commands not allowed (yet)\n")
+			return nil, "", errors.New("empty commands not allowed (yet)")
 		}
 		if c[i].link == "|" && c[i].fdmap[1] != "" {
-			return nil, "", errors.New("Can't have a pipe and > on one command\n")
+			return nil, "", errors.New("Can't have a pipe and > on one command")
 		}
 		if c[i].link == "|" && i == len(c)-1 {
-			return nil, "", errors.New("Can't have a pipe to nowhere\n")
+			return nil, "", errors.New("Can't have a pipe to nowhere")
 		}
 		if i < len(c)-1 && c[i].link == "|" && c[i+1].fdmap[0] != "" {
-			return nil, "", errors.New("Can't have a pipe to command with redirect on stdin\n")
+			return nil, "", errors.New("Can't have a pipe to command with redirect on stdin")
 		}
 	}
 	return c, t, err

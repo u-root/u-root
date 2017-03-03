@@ -10,7 +10,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -37,7 +36,7 @@ var (
 
 func addBuiltIn(name string, f builtin) error {
 	if _, ok := builtins[name]; ok {
-		return errors.New(fmt.Sprintf("%v already a builtin", name))
+		return fmt.Errorf("%v already a builtin", name)
 	}
 	builtins[name] = f
 	return nil
@@ -45,7 +44,7 @@ func addBuiltIn(name string, f builtin) error {
 
 func addForkBuiltIn(name string, f builtin) error {
 	if _, ok := builtins[name]; ok {
-		return errors.New(fmt.Sprintf("%v already a forkBuiltin", name))
+		return fmt.Errorf("%v already a forkBuiltin", name)
 	}
 	forkBuiltins[name] = f
 	return nil
@@ -56,16 +55,16 @@ func wire(cmds []*Command) error {
 		// IO defaults.
 		var err error
 		if c.Stdin == nil {
-			if c.Stdin, err = OpenRead(c, os.Stdin, 0); err != nil {
+			if c.Stdin, err = openRead(c, os.Stdin, 0); err != nil {
 				return err
 			}
 		}
 		if c.link != "|" {
-			if c.Stdout, err = OpenWrite(c, os.Stdout, 1); err != nil {
+			if c.Stdout, err = openWrite(c, os.Stdout, 1); err != nil {
 				return err
 			}
 		}
-		if c.Stderr, err = OpenWrite(c, os.Stderr, 2); err != nil {
+		if c.Stderr, err = openWrite(c, os.Stderr, 2); err != nil {
 			return err
 		}
 		// The validation is such that "|" is not set on the last one.
@@ -105,16 +104,16 @@ func runit(c *Command) error {
 		}
 	} else {
 		if err := c.Start(); err != nil {
-			return errors.New(fmt.Sprintf("%v: Path %v\n", err, os.Getenv("PATH")))
+			return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))
 		}
 		if err := c.Wait(); err != nil {
-			return errors.New(fmt.Sprintf("wait: %v:\n", err))
+			return fmt.Errorf("wait: %v", err)
 		}
 	}
 	return nil
 }
 
-func OpenRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
+func openRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
 	if c.fdmap[fd] != "" {
 		f, err := os.Open(c.fdmap[fd])
 		c.files[fd] = f
@@ -123,7 +122,7 @@ func OpenRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
 	return r, nil
 }
 
-func OpenWrite(c *Command, w io.Writer, fd int) (io.Writer, error) {
+func openWrite(c *Command, w io.Writer, fd int) (io.Writer, error) {
 	if c.fdmap[fd] != "" {
 		f, err := os.Create(c.fdmap[fd])
 		c.files[fd] = f

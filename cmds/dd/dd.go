@@ -79,7 +79,7 @@ func pass(r io.Reader, w io.Writer, ibs, obs int64, conv string) {
 	}
 }
 
-func SplitArgs() []string {
+func splitArgs() []string {
 	// EVERYTHING in dd follows x=y. So blindly split and convert sleep well
 	arg := []string{}
 	for _, v := range os.Args {
@@ -117,7 +117,8 @@ func seekOrRead(r io.ReadSeeker, bs, cnt int64) {
 		i += amt
 	}
 }
-func OpenFiles() (io.Reader, io.Writer) {
+
+func openFiles() (io.Reader, io.Writer) {
 	i := io.ReadSeeker(os.Stdin)
 	o := io.Writer(os.Stdout)
 	var err error
@@ -155,8 +156,8 @@ func OpenFiles() (io.Reader, io.Writer) {
 // including dup checking, conversion, etc. we just convert the arguments and then
 // run flag.Parse. Gross, but hey, it works.
 func main() {
-	os.Args = SplitArgs()
+	os.Args = splitArgs()
 	flag.Parse()
-	i, o := OpenFiles()
+	i, o := openFiles()
 	pass(i, o, *obs, *obs, *conv)
 }

@@ -60,8 +60,8 @@ var cmds = map[string]struct {
 
 type cmdArgs struct {
 	args []string
-	f    *fmap.FMap         // optional
-	m    *fmap.FMapMetadata // optional
+	f    *fmap.FMap     // optional
+	m    *fmap.Metadata // optional
 	r    io.ReadSeeker
 }
 
@@ -73,7 +73,7 @@ var hashFuncs = map[string](func() hash.Hash){
 
 type jsonSchema struct {
 	FMap     *fmap.FMap
-	Metadata *fmap.FMapMetadata
+	Metadata *fmap.Metadata
 }
 
 // Print a checksum using the given hash function.
@@ -140,7 +140,7 @@ func jsonPut(a cmdArgs) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	return fmap.WriteFMap(r, j.FMap, j.Metadata)
+	return fmap.Write(r, j.FMap, j.Metadata)
 }
 
 // Print a human readable summary.
@@ -167,7 +167,7 @@ func summary(a cmdArgs) error {
 	// Combine the two structs to pass into template.
 	combined := struct {
 		*fmap.FMap
-		Metadata *fmap.FMapMetadata
+		Metadata *fmap.Metadata
 	}{a.f, a.m}
 	if err := t.Execute(os.Stdout, combined); err != nil {
 		return err
@@ -286,7 +286,7 @@ func main() {
 		defer r.Close()
 
 		// Parse fmap.
-		f, m, err := fmap.ReadFMap(r)
+		f, m, err := fmap.Read(r)
 		if err != nil {
 			log.Fatal(err)
 		}

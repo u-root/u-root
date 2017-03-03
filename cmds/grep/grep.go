@@ -49,7 +49,7 @@ type oneGrep struct {
 }
 
 var (
-	Match       = flag.Bool("v", true, "Print only non-matching lines")
+	match       = flag.Bool("v", true, "Print only non-matching lines")
 	recursive   = flag.Bool("r", false, "recursive")
 	noshowmatch = flag.Bool("l", false, "list only files")
 	showname    = false
@@ -65,8 +65,7 @@ var (
 // Bug: this chan should be created by the caller and passed in
 // to preserve file name order. Oops.
 // If we are only looking for a match, we exit as soon as the condition is met.
-// "match" means result of re.Match == Match flag.
-// bug: Match should be match, I expect.
+// "match" means result of re.Match == match flag.
 func grep(f *grepCommand, re *regexp.Regexp) {
 	nGrep++
 	r := bufio.NewReader(f)
@@ -75,7 +74,7 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 	for {
 		if i, err := r.ReadString('\n'); err == nil {
 			m := re.Match([]byte(i))
-			if m == *Match {
+			if m == *match {
 				res <- &grepResult{re.Match([]byte(i)), f, &i}
 				if *noshowmatch {
 					break
@@ -98,7 +97,7 @@ func printmatch(r *grepResult) {
 	if *noshowmatch {
 		return
 	}
-	if r.match == *Match {
+	if r.match == *match {
 		fmt.Printf("%v%v", prefix, *r.line)
 	}
 }
