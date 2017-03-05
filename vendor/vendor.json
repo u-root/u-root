@@ -3,6 +3,24 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "Sub5+6yzZ28L2n1l+xmjg9yitvM=",
+			"path": "github.com/d2g/dhcp4",
+			"revision": "f0e4d29ff0231dce36e250b2ed9ff08412584bca",
+			"revisionTime": "2015-04-13T10:30:26Z"
+		},
+		{
+			"checksumSHA1": "UsIyJWFJ8P8K2ZhynxKem9dUDYw=",
+			"path": "github.com/d2g/dhcp4client",
+			"revision": "bed07e1bc5b85f69c6f0fd73393aa35ec68ed892",
+			"revisionTime": "2015-05-19T14:54:04Z"
+		},
+		{
+			"checksumSHA1": "N28uXw8i8WMJcqBiqmJl9j9NPiI=",
+			"path": "github.com/krolaw/dhcp4",
+			"revision": "f61f734b73027e29f7fa2ed623f2ed85a7ef08fa",
+			"revisionTime": "2016-10-23T04:30:50Z"
+		},
+		{
 			"checksumSHA1": "QDc9VOFYCL8Zbpi6NxnHJ9bTucQ=",
 			"path": "github.com/vcabbage/trivialt/netascii",
 			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
