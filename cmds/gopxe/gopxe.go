@@ -18,7 +18,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	tftp "github.com/vcabbage/trivialt"
+	"pack.ag/tftp"
 )
 
 func main() {
@@ -36,6 +36,9 @@ func main() {
 
 	f, err := c.Get("tftp://192.168.28.128//pxelinux.0")
 	fmt.Printf("Get: r %v err %v\n", f, err)
+	if err != nil {
+		os.Exit(1)
+	}
 
 	data, err := ioutil.ReadAll(f)
 	fmt.Printf("len(data) %v, err %v", len(data), err)

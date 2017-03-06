@@ -1,8 +1,8 @@
-// Copyright (C) 2016 Kale Blankenship. All rights reserved.
+// Copyright (C) 2017 Kale Blankenship. All rights reserved.
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details
 
-package trivialt
+package tftp // import "pack.ag/tftp"
 
 import (
 	"log"
@@ -15,10 +15,10 @@ var (
 )
 
 func init() {
-	if os.Getenv("TRIVIALT_DEBUG") != "" {
+	if os.Getenv("TFTP_DEBUG") != "" {
 		debug = true
 	}
-	if os.Getenv("TRIVIALT_TRACE") != "" {
+	if os.Getenv("TFTP_TRACE") != "" {
 		debug = true
 		trace = true
 	}
@@ -31,7 +31,7 @@ type logger struct {
 }
 
 func newLogger(name string) *logger {
-	prefix := "trivialt|"
+	prefix := "tftp|"
 	if name != "" {
 		prefix += name + "|"
 	}

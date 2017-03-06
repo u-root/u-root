@@ -9,18 +9,6 @@
 			"revisionTime": "2016-10-23T04:30:50Z"
 		},
 		{
-			"checksumSHA1": "oFiLO7CrOTKhwQz8GIsLzL58Rwg=",
-			"path": "github.com/vcabbage/trivialt",
-			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
-			"revisionTime": "2016-12-08T23:35:56Z"
-		},
-		{
-			"checksumSHA1": "QDc9VOFYCL8Zbpi6NxnHJ9bTucQ=",
-			"path": "github.com/vcabbage/trivialt/netascii",
-			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
-			"revisionTime": "2016-12-08T23:35:56Z"
-		},
-		{
 			"checksumSHA1": "H7NaDOZsJadsVTBhu3Vy3OMQziQ=",
 			"path": "github.com/vishvananda/netlink",
 			"revision": "87909c6dada5cba3aa659144a40b1e575d79d625",
@@ -139,6 +127,18 @@
 			"path": "golang.org/x/tools/imports",
 			"revision": "fcfba28e23c7bbd8474b355ca7d6a9d88afcca00",
 			"revisionTime": "2017-01-17T23:39:01Z"
+		},
+		{
+			"checksumSHA1": "V9JHRT3wNULmaeVqrbt3s3Eligs=",
+			"path": "pack.ag/tftp",
+			"revision": "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0",
+			"revisionTime": "2017-03-06T01:16:38Z"
+		},
+		{
+			"checksumSHA1": "Y4VdWtiSOnxPFJH8VeFOtYngqRM=",
+			"path": "pack.ag/tftp/netascii",
+			"revision": "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0",
+			"revisionTime": "2017-03-06T01:16:38Z"
 		}
 	],
 	"rootPath": "github.com/u-root/u-root"
