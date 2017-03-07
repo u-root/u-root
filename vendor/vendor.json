@@ -9,12 +9,6 @@
 			"revisionTime": "2016-10-23T04:30:50Z"
 		},
 		{
-			"checksumSHA1": "oFiLO7CrOTKhwQz8GIsLzL58Rwg=",
-			"path": "github.com/vcabbage/trivialt",
-			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
-			"revisionTime": "2016-12-08T23:35:56Z"
-		},
-		{
 			"checksumSHA1": "QDc9VOFYCL8Zbpi6NxnHJ9bTucQ=",
 			"path": "github.com/vcabbage/trivialt/netascii",
 			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
