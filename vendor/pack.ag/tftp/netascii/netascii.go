@@ -1,4 +1,4 @@
-// Copyright (C) 2016 Kale Blankenship. All rights reserved.
+// Copyright (C) 2017 Kale Blankenship. All rights reserved.
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details
 
@@ -8,7 +8,7 @@ Package netascii implements reading and writing of netascii, as defined in RFC 7
 Netascii encodes LF to CRLF and CR to CRNUL.
 CRLF is decoded to the platform's representation of a new line.
 */
-package netascii
+package netascii // import "pack.ag/tftp/netascii"
 
 import (
 	"bufio"

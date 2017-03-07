@@ -1,8 +1,8 @@
-// Copyright (C) 2016 Kale Blankenship. All rights reserved.
+// Copyright (C) 2017 Kale Blankenship. All rights reserved.
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details
 
-package trivialt
+package tftp // import "pack.ag/tftp"
 
 import (
 	"fmt"
