@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "V6Qhng30E7mgFbXm2jm02BIwAp0=",
+			"path": "github.com/Shopify/go-lua",
+			"revision": "67c3ba03ce822db5f0b4305b83ac822a8bead28a",
+			"revisionTime": "2017-02-07T01:30:01Z"
+		},
+		{
 			"checksumSHA1": "N28uXw8i8WMJcqBiqmJl9j9NPiI=",
 			"path": "github.com/krolaw/dhcp4",
 			"revision": "f61f734b73027e29f7fa2ed623f2ed85a7ef08fa",
