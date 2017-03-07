@@ -111,7 +111,6 @@ var (
 		"cp",
 		"date",
 		"dd",
-		"dhcp",
 		"dmesg",
 		"echo",
 		"freq",
