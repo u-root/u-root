@@ -135,6 +135,10 @@ func main() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
+			log.Fatal(err)
+		}
+		os.Exit(exitErr.Sys().(syscall.WaitStatus).ExitStatus())
 	}
 }
