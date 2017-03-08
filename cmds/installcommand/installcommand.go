@@ -139,6 +139,6 @@ func main() {
 		if !ok {
 			log.Fatal(err)
 		}
-		os.Exit(exitErr.Sys().(syscall.WaitStatus).ExitStatus())
+		exitWithStatus(exitErr)
 	}
 }
