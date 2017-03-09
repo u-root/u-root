@@ -38,8 +38,8 @@ type data struct {
 }
 
 var (
-	ibs     = flag.Int64("ibs", 1, "Default input block size")
-	obs     = flag.Int64("obs", 1, "Default output block size")
+	ibs     = flag.Int64("ibs", 512, "Default input block size")
+	obs     = flag.Int64("obs", 512, "Default output block size")
 	bs      = flag.Int64("bs", 0, "Default input and output block size")
 	skip    = flag.Int64("skip", 0, "skip n bytes before reading")
 	seek    = flag.Int64("seek", 0, "seek output when writing")
