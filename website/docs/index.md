@@ -53,6 +53,41 @@ ln -s -f ../../scripts/pre-commit .git/hooks/pre-commit
 ```
 
 
+## How to Create a Good UNIX Interface
+
+One of our goals with this project is learning how to write programs and, more importantly,
+the importance of not writing code vs. writing code. 
+
+Here are some 
+- [good rules for writing good unix programs](https://lasr.cs.ucla.edu/ficus-members/geoff/interfaces.html)
+
+A good example can be seen in notions of progress bars. The idea of progress bars has come up twice now, from 
+two different contributors, once in cp, and once in dd.
+
+What's wrong with adding a progress bar to a program? In short, everything!
+Where does the output go? stdout? Then you can not add it to some programs because their output is to stdout. 
+So do you add it to stderr? But it's not an error, is it? It's informational. 
+
+Further, once you have added it to one program, how do other programs get progress bars? They'll all end up
+getting their own, and they'll all look different. 
+
+Since we're using Go, there's a way to get progress bars and follow the rules of Unix programs:
+[expvars](https://golang.org/pkg/expvar/). 
+
+[And there are beautiful viewers for them.](https://github.com/divan/expvarmon).
+
+The basic rule for expvars and u-root should be:
+- conditional on a common flag
+- off by default
+
+Then we can imagine a program, called progress, which we invoke something like this:
+
+```sh
+progress dd if=/dev/zero of=/dev/null
+```
+
+Progress can start dd with, e.g., -expvars=true, and dd will then start the service. We can have u-root-wide definitions for default expvars, such as progress, percent, bytes, and so on; and progress can query and display them. 
+
 ## FAQs
 
 ### So, why "u-root"?
