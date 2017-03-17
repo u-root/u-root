@@ -73,9 +73,14 @@ import (
 )
 
 func init() {
-	// This one stat adds a bit of cost to each invocation (not much really)
+	// This getpid adds a bit of cost to each invocation (not much really)
 	// but it allows us to merge init and sh. The 600K we save is worth it.
-	if _, err := os.Stat("/proc/self"); err == nil {
+	if os.Args[0] != "/init" {
+		log.Printf("Skipping root file system setup since we are not /init")
+		return
+	}
+	if os.Getpid() != 1 {
+		log.Printf("Skipping root file system setup since /init is not pid 1")
 		return
 	}
 	uroot.Rootfs()
