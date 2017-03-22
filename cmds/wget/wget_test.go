@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// A parity test can be run:
+//     go test
+//     EXECPATH="wget -O -" go test
 package main
 
 import (
@@ -10,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -45,43 +49,43 @@ var tests = []struct {
 }{
 	{
 		// basic
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://localhost:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// ipv4
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://127.0.0.1:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// ipv6
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://[::1]:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// redirect
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://localhost:%[1]d/302",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// 4xx error
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://localhost:%[1]d/404",
 		stdout:  "",
 		retCode: 1,
 	}, {
 		// 5xx error
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://localhost:%[1]d/500",
 		stdout:  "",
 		retCode: 1,
 	}, {
 		// no server
-		flags:   []string{"-O", "-"},
+		flags:   []string{},
 		url:     "http://localhost:%[2]d/200",
 		stdout:  "",
 		retCode: 1,
@@ -112,7 +116,10 @@ func TestWget(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond) // TODO: better synchronization
 	for i, tt := range tests {
-		args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
+		// Arguments inherited from the environment.
+		execArgs := strings.Split(os.Getenv("EXECPATH"), " ")[1:]
+
+		args := append(append(execArgs, tt.flags...), fmt.Sprintf(tt.url, port, unusedPort))
 		out, err := exec.Command(execPath, args...).Output()
 
 		// Check return code.
