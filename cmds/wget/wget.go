@@ -5,21 +5,18 @@
 // Wget reads one file from a url and writes to stdout.
 //
 // Synopsis:
-//     wget [ARGS] URL
+//     wget URL
 //
 // Description:
 //     Returns a non-zero code on failure.
 //
-// Options:
-//     -O: output filename, defaults to '-' (stdout)
-//
 // Notes:
 //     There are a few differences with GNU wget:
-//     - `-O` defaults to `-`.
+//     - Upon error, the return value is always 1.
 //     - The protocol (http/https) is mandatory.
 //
 // Example:
-//     wget -O e100.html http://google.com/
+//     wget http://google.com/ > e100.html
 package main
 
 import (
@@ -29,10 +26,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-)
-
-var (
-	outFilename = flag.String("O", "-", "output filename, '-' for stdout")
 )
 
 func wget(arg string, w io.Writer) error {
@@ -61,17 +54,7 @@ func main() {
 	}
 
 	url := flag.Arg(0)
-	w := os.Stdout
-	if *outFilename != "-" {
-		var err error
-		w, err = os.Create(*outFilename)
-		if err != nil {
-			log.Fatalln("Cannot create file:", err)
-		}
-		defer w.Close()
-	}
-
-	if err := wget(url, w); err != nil {
+	if err := wget(url, os.Stdout); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }
