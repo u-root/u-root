@@ -19,22 +19,25 @@ import (
 
 const content = "Very simple web server"
 
-type handler struct {
-	status chan int
-}
+type handler struct{}
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
-	case "/redirect":
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	case "/200":
+		w.WriteHeader(200)
+		w.Write([]byte(content))
+	case "/302":
+		http.Redirect(w, r, "/200", 302)
+	case "/500":
+		w.WriteHeader(500)
+		w.Write([]byte(content))
 	default:
-		w.WriteHeader(<-h.status)
+		w.WriteHeader(404)
 		w.Write([]byte(content))
 	}
 }
 
 var tests = []struct {
-	status  int      // in
 	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
 	url     string   // in
 	stdout  string   // out
@@ -42,51 +45,44 @@ var tests = []struct {
 }{
 	{
 		// basic
-		status:  http.StatusOK,
 		flags:   []string{"-O", "-"},
-		url:     "http://localhost:%[1]d/",
+		url:     "http://localhost:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// ipv4
-		status:  http.StatusOK,
 		flags:   []string{"-O", "-"},
-		url:     "http://127.0.0.1:%[1]d/",
+		url:     "http://127.0.0.1:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// ipv6
-		status:  http.StatusOK,
 		flags:   []string{"-O", "-"},
-		url:     "http://[::1]:%[1]d/",
+		url:     "http://[::1]:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// redirect
-		status:  http.StatusOK,
 		flags:   []string{"-O", "-"},
-		url:     "http://localhost:%[1]d/redirect",
+		url:     "http://localhost:%[1]d/302",
 		stdout:  content,
 		retCode: 0,
 	}, {
 		// 4xx error
-		status:  http.StatusNotFound,
 		flags:   []string{"-O", "-"},
-		url:     "http://localhost:%[1]d/",
+		url:     "http://localhost:%[1]d/404",
 		stdout:  "",
 		retCode: 1,
 	}, {
 		// 5xx error
-		status:  http.StatusInternalServerError,
 		flags:   []string{"-O", "-"},
-		url:     "http://localhost:%[1]d/",
+		url:     "http://localhost:%[1]d/500",
 		stdout:  "",
 		retCode: 1,
 	}, {
 		// no server
-		status:  http.StatusOK,
 		flags:   []string{"-O", "-"},
-		url:     "http://localhost:%[2]d/",
+		url:     "http://localhost:%[2]d/200",
 		stdout:  "",
 		retCode: 1,
 	},
@@ -109,15 +105,13 @@ func TestWget(t *testing.T) {
 	// Start a webserver on a free port.
 	port := getFreePort(t)
 	unusedPort := getFreePort(t)
-	h := handler{make(chan int, 1)}
+	h := handler{}
 	go func() {
 		t.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), h))
 	}()
 
 	time.Sleep(500 * time.Millisecond) // TODO: better synchronization
 	for i, tt := range tests {
-		h.status <- tt.status
-
 		args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
 		out, err := exec.Command(execPath, args...).Output()
 
