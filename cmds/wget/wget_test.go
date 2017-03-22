@@ -59,13 +59,13 @@ var tests = []struct {
 		url:     "http://127.0.0.1:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
-	}, {
+	}, /*{ TODO: travis does not support ipv6
 		// ipv6
 		flags:   []string{},
 		url:     "http://[::1]:%[1]d/200",
 		stdout:  content,
 		retCode: 0,
-	}, {
+	},*/{
 		// redirect
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/302",
