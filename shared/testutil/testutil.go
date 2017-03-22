@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -17,7 +18,7 @@ import (
 //
 //     defer os.RemoveAll(tmpDir)
 //
-// The environment variable EXECPATH overrides execPath.
+// The first argument of the environment variable EXECPATH overrides execPath.
 func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
 	// Create temp directory
 	tmpDir, err := ioutil.TempDir("", "Test")
@@ -28,6 +29,7 @@ func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
 	// Skip compilation if EXECPATH is set.
 	execPath = os.Getenv("EXECPATH")
 	if execPath != "" {
+		execPath = strings.SplitN(execPath, " ", 2)[0]
 		return
 	}
 
