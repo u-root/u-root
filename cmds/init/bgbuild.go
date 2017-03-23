@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"runtime"
 	"sort"
+	"strings"
 )
 
 // Commands are built approximately in order from smallest to largest length of
@@ -70,4 +71,23 @@ func startBgBuild() {
 		cmds <- fi.Name()
 	}
 	close(cmds)
+}
+
+func cmdlineContainsFlag(flag string) bool {
+	cmdline, err := ioutil.ReadFile("/proc/cmdline")
+	if err != nil {
+		// Procfs not mounted?
+		return false
+	}
+	args := strings.Split(string(cmdline), " ")
+	for _, a := range args {
+		if a == flag {
+			return true
+		}
+	}
+	return false
+}
+
+func isBgBuildEnabled() bool {
+	return !cmdlineContainsFlag("uroot.nobgbuild")
 }
