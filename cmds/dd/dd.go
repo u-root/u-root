@@ -121,7 +121,6 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 	}
 
 	readyBufs := make(chan intermediateBuffer, depth)
-	defer close(readyBufs)
 
 	// Closing quit makes both goroutines below exit.
 	quit := make(chan struct{})
@@ -133,6 +132,8 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		// Closing this unblocks the writing for-loop below.
+		defer close(readyBufs)
 		defer wg.Done()
 
 		for {
@@ -146,8 +147,6 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 					readyBufs <- buf
 				}
 				if err == io.EOF {
-					// Tell writing goroutine we are done.
-					readyBufs <- nil
 					return
 				}
 				if n == 0 || err != nil {
@@ -158,41 +157,27 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 		}
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for {
-			select {
-			case <-quit:
-				return
-			case buf := <-readyBufs:
-				if buf == nil {
-					// Done reading and writing. Tell main
-					// goroutine that everything went
-					// smoothly.
-					errs <- nil
-					return
-				}
-				if _, err := buf.WriteTo(w); err != nil {
-					errs <- fmt.Errorf("output error: %v", err)
-					return
-				}
-				bufferPool.Put(buf)
-			}
+	var writeErr error
+	for buf := range readyBufs {
+		if _, err := buf.WriteTo(w); err != nil {
+			writeErr = fmt.Errorf("output error: %v", err)
+			break
 		}
-	}()
+		bufferPool.Put(buf)
+	}
 
-	// Wait for an error. nil error means everything worked successfully.
-	err := <-errs
+	// This will force the goroutine to quit if an error occured writing.
+	defer close(quit)
 
-	// This will force goroutines to quit if an error occured.
-	close(quit)
+	// Wait for goroutine to exit.
+	defer wg.Wait()
 
-	// Wait for both goroutines to exit.
-	wg.Wait()
-
-	return err
+	select {
+	case readErr := <-errs:
+		return readErr
+	default:
+		return writeErr
+	}
 }
 
 // nothingWriter implements io.Writer and writes to nothing.
