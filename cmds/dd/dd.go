@@ -14,10 +14,10 @@
 //     -ibs n:   input block size (default=1)
 //     -obs n:   output block size (default=1)
 //     -bs n:    input and output block size (default=0)
-//     -skip n:  skip n bytes before reading (default=0)
-//     -seek n:  seek output when writing (default=0)
+//     -skip n:  skip n ibs-sized input blocks before reading (default=0)
+//     -seek n:  seek n obs-sized output blocks before writing (default=0)
 //     -conv s:  Convert the file on a specific way, like notrunc
-//     -count n: max output of data to copy
+//     -count n: copy only n ibs-sized input blocks
 //     -inName:  defaults to stdin
 //     -outName: defaults to stdout
 package main
@@ -25,159 +25,274 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"math"
 	"os"
 	"strings"
+	"sync"
 )
-
-type data struct {
-	sz   int64
-	data []byte
-}
 
 var (
 	ibs     = flag.Int64("ibs", 512, "Default input block size")
 	obs     = flag.Int64("obs", 512, "Default output block size")
 	bs      = flag.Int64("bs", 0, "Default input and output block size")
-	skip    = flag.Int64("skip", 0, "skip n bytes before reading")
-	seek    = flag.Int64("seek", 0, "seek output when writing")
+	skip    = flag.Int64("skip", 0, "skip N ibs-sized blocks before reading")
+	seek    = flag.Int64("seek", 0, "seek N obs-sized blocks before writing")
 	conv    = flag.String("conv", "none", "Convert the file on a specific way, like notrunc")
-	count   = flag.Int64("count", math.MaxInt64, "Max output of data to copy")
+	count   = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
 	inName  = flag.String("if", "", "Input file")
 	outName = flag.String("of", "", "Output file")
-	convs   = map[string]func([]byte) []byte{
-		"none":  func(b []byte) []byte { return b },
-		"ucase": bytes.ToUpper,
-		"lcase": bytes.ToLower,
-	}
-	convert func([]byte) []byte
 )
 
-func pass(r io.Reader, w io.Writer, ibs, obs int64) {
-	// make the channels deep enough for 1 GiB
-	depth := (1024 * 1048576) / ibs 
-	// but keep it reasonable!
+// intermediateBuffer is a buffer that one can write to and read from.
+type intermediateBuffer interface {
+	io.ReaderFrom
+	io.WriterTo
+}
+
+// chunkedBuffer is an intermediateBuffer with a specific size.
+type chunkedBuffer struct {
+	outChunk  int64
+	length    int64
+	data      []byte
+	transform func([]byte) []byte
+}
+
+// newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
+// chunks of data and writes them to writers in outChunkSize-sized chunks.
+func newChunkedBuffer(inChunkSize int64, outChunkSize int64, transform func([]byte) []byte) intermediateBuffer {
+	return &chunkedBuffer{
+		outChunk:  outChunkSize,
+		length:    0,
+		data:      make([]byte, inChunkSize),
+		transform: transform,
+	}
+}
+
+// ReadFrom reads an inChunkSize-sized chunk from r into the buffer.
+func (cb *chunkedBuffer) ReadFrom(r io.Reader) (int64, error) {
+	n, err := r.Read(cb.data)
+	cb.length = int64(n)
+
+	// Convert to EOF explicitly.
+	if n == 0 && err == nil {
+		return 0, io.EOF
+	}
+	return int64(n), err
+}
+
+// WriteTo writes from the buffer to w in outChunkSize-sized chunks.
+func (cb *chunkedBuffer) WriteTo(w io.Writer) (int64, error) {
+	var i int64
+	for i = 0; i < int64(cb.length); {
+		chunk := cb.outChunk
+		if i+chunk > cb.length {
+			chunk = cb.length - i
+		}
+		got, err := w.Write(cb.transform(cb.data[i : i+chunk]))
+		// Ugh, Go cruft: io.Writer.Write returns (int, error).
+		// io.WriterTo.WriteTo returns (int64, error). So we have to
+		// cast.
+		i += int64(got)
+		if err != nil {
+			return i, err
+		}
+		if int64(got) != chunk {
+			return 0, io.ErrShortWrite
+		}
+	}
+	return i, nil
+}
+
+func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, transform func([]byte) []byte) error {
+	bufferPool := sync.Pool{
+		New: func() interface{} {
+			return newChunkedBuffer(inBufSize, outBufSize, transform)
+		},
+	}
+
+	// Make the channels deep enough to hold a total of 1GiB of data.
+	depth := (1024 * 1024 * 1024) / inBufSize
+	// But keep it reasonable!
 	if depth > 8192 {
 		depth = 8192
 	}
-	bufs := make(chan *data, depth)
-	i := make(chan *data, depth)
+
+	readyBufs := make(chan intermediateBuffer, depth)
+	defer close(readyBufs)
+
+	// Closing quit makes both goroutines below exit.
+	quit := make(chan struct{})
+
+	// errs contains the error value to be returned.
+	errs := make(chan error, 1)
+	defer close(errs)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		var d *data
+		defer wg.Done()
+
 		for {
 			select {
-			case d = <-bufs:
-			default:
-				d = &data{ibs, make([]byte, ibs, ibs)}
-			}
-			amt, err := r.Read(d.data)
-			if amt > 0 {
-				d.sz = int64(amt)
-				i <- d
-			}
-			if err == io.EOF || amt == 0 {
-				close(i)
+			case <-quit:
 				return
-			}
-			if err != nil {
-				close(i)
-				log.Fatalf("input: %v", err)
+			default:
+				buf := bufferPool.Get().(intermediateBuffer)
+				n, err := buf.ReadFrom(r)
+				if n > 0 {
+					readyBufs <- buf
+				}
+				if err == io.EOF {
+					// Tell writing goroutine we are done.
+					readyBufs <- nil
+					return
+				}
+				if n == 0 || err != nil {
+					errs <- fmt.Errorf("input error: %v", err)
+					return
+				}
 			}
 		}
 	}()
 
-	for b := range i {
-		for i := int64(0); i < b.sz; {
-			amt := obs
-			if b.sz-i < obs {
-				amt = b.sz - i
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-quit:
+				return
+			case buf := <-readyBufs:
+				if buf == nil {
+					// Done reading and writing. Tell main
+					// goroutine that everything went
+					// smoothly.
+					errs <- nil
+					return
+				}
+				if _, err := buf.WriteTo(w); err != nil {
+					errs <- fmt.Errorf("output error: %v", err)
+					return
+				}
+				bufferPool.Put(buf)
 			}
-			got, err := w.Write(convert(b.data[i:amt]))
-			if err != nil || got < int(amt) {
-				log.Fatalf("output: got %d, wanted %d, err %v", got, amt, err)
-			}
-			i += amt
 		}
-		select {
-		case bufs <- b:
-		default:
-		}
-	}
+	}()
+
+	// Wait for an error. nil error means everything worked successfully.
+	err := <-errs
+
+	// This will force goroutines to quit if an error occured.
+	close(quit)
+
+	// Wait for both goroutines to exit.
+	wg.Wait()
+
+	return err
 }
 
-func splitArgs() []string {
-	// EVERYTHING in dd follows x=y. So blindly split and convert sleep well
-	arg := []string{}
-	for _, v := range os.Args {
-		l := strings.SplitN(v, "=", 2)
-		// We only fix the exact case for x=y.
-		if len(l) == 2 {
-			l[0] = "-" + l[0]
-			arg = append(arg, l...)
-		} else {
-			arg = append(arg, l...)
-		}
-	}
-	return arg
+// nothingWriter implements io.Writer and writes to nothing.
+type nothingWriter struct{}
+
+// Write implements io.Writer.
+func (nothingWriter) Write(p []byte) (int, error) {
+	// Pretend we wrote.
+	return len(p), nil
 }
 
-func seekOrRead(r io.ReadSeeker, bs, cnt int64) {
-	if bs*cnt == 0 {
-		return
-	}
-	// I tried to make a NewSectionReader but, sadly, most OSes
-	// get upset when you pread even if it does not involve a seek.
-	// I wish I were making that up.
-	if _, err := r.Seek(1, int(cnt*bs)); err == nil {
-		return
-	}
-
-	// the only choice is to eat it.
-	var b = &bytes.Buffer{}
-
-	for i := int64(0); i < cnt*bs; {
-		amt, err := io.CopyN(b, r, bs)
-		if err != nil {
-			return
-		}
-		i += amt
-	}
+// sectionReader implements a SectionReader on an underlying implementation of
+// io.Reader (as opposed to io.SectionReader which uses io.ReaderAt).
+type sectionReader struct {
+	base   int64
+	offset int64
+	limit  int64
+	io.Reader
 }
 
-func openFiles() (io.Reader, io.Writer) {
-	i := io.ReadSeeker(os.Stdin)
-	o := io.Writer(os.Stdout)
+// newStreamSectionReader uses an io.Reader to implement an io.Reader that
+// seeks to offset and reads at most n bytes.
+//
+// This is useful if you want to use a NewSectionReader with stdin or other
+// types of pipes (things that can't be seek'd or pread from).
+func newStreamSectionReader(r io.Reader, offset int64, n int64) io.Reader {
+	limit := offset + n
+	if limit < 0 {
+		limit = math.MaxInt64
+	}
+	return &sectionReader{offset, 0, limit, r}
+}
+
+// Read implements io.Reader.
+func (s *sectionReader) Read(p []byte) (int, error) {
+	if s.offset == 0 && s.base != 0 {
+		if n, err := io.CopyN(&nothingWriter{}, s.Reader, s.base); err != nil {
+			return 0, err
+		} else if n != s.base {
+			// Can't happen.
+			return 0, fmt.Errorf("error skipping input bytes, short write.")
+		}
+		s.offset = s.base
+	}
+
+	if s.offset >= s.limit {
+		return 0, io.EOF
+	}
+
+	if max := s.limit - s.offset; int64(len(p)) > max {
+		p = p[0:max]
+	}
+
+	n, err := s.Reader.Read(p)
+	s.offset += int64(n)
+
+	// Convert to io.EOF explicitly.
+	if n == 0 && err == nil {
+		return 0, io.EOF
+	}
+	return n, err
+}
+
+// inFile opens the input file and seeks to the right position.
+func inFile(name string, inputBytes int64, skip int64, count int64) (io.Reader, error) {
+	maxRead := int64(math.MaxInt64)
+	if count != math.MaxInt64 {
+		maxRead = count * inputBytes
+	}
+
+	if name == "" {
+		// os.Stdin is an io.ReaderAt, but you can't actually call
+		// pread(2) on it, so use the copying section reader.
+		return newStreamSectionReader(os.Stdin, inputBytes*skip, maxRead), nil
+	}
+
+	in, err := os.Open(name)
+	if err != nil {
+		return nil, fmt.Errorf("error opening input file %q: %v", name, err)
+	}
+	return io.NewSectionReader(in, inputBytes*skip, maxRead), nil
+}
+
+// outFile opens the output file and seeks to the right position.
+func outFile(name string, outputBytes int64, seek int64) (io.Writer, error) {
+	var out io.WriteSeeker
 	var err error
-
-	if *inName != "" {
-		if i, err = os.Open(*inName); err != nil {
-			log.Fatal(err)
+	if name == "" {
+		out = os.Stdout
+	} else {
+		if out, err = os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0644); err != nil {
+			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
 		}
 	}
-	if *outName != "" {
-		if o, err = os.OpenFile(*outName, os.O_CREATE|os.O_WRONLY, 0644); err != nil {
-			log.Fatal(err)
+	if seek*outputBytes != 0 {
+		if _, err := out.Seek(seek*outputBytes, io.SeekCurrent); err != nil {
+			return nil, fmt.Errorf("error seeking output file: %v", err)
 		}
 	}
-
-	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
-	if *bs > 0 {
-		*ibs = *bs
-		*obs = *bs
-	}
-
-	var maxRead int64 = math.MaxInt64
-	if *count != math.MaxInt64 {
-		maxRead = *count * *ibs
-	}
-
-	// I tried to make a NewSectionReader but, sadly, most OSes
-	// get upset when you pread even if it does not involve a seek.
-	// I wish I were making that up.
-	seekOrRead(i, *ibs, *skip)
-	return io.LimitReader(i, maxRead), o
+	return out, nil
 }
 
 func usage() {
@@ -188,21 +303,59 @@ func usage() {
 		bs, if specified, overrides ibs and obs`)
 }
 
-// rather than, in essence, recreating all the apparatus of flag.xxxx with the if= bits,
-// including dup checking, conversion, etc. we just convert the arguments and then
-// run flag.Parse. Gross, but hey, it works.
+func convertArgs(osArgs []string) []string {
+	// EVERYTHING in dd follows x=y. So blindly split and convert.
+	var args []string
+	for _, v := range osArgs {
+		l := strings.SplitN(v, "=", 2)
+
+		// We only fix the exact case for x=y.
+		if len(l) == 2 {
+			l[0] = "-" + l[0]
+		}
+
+		args = append(args, l...)
+	}
+	return args
+}
+
 func main() {
-	os.Args = splitArgs()
+	// rather than, in essence, recreating all the apparatus of flag.xxxx
+	// with the if= bits, including dup checking, conversion, etc. we just
+	// convert the arguments and then run flag.Parse. Gross, but hey, it
+	// works.
+	os.Args = convertArgs(os.Args)
 	flag.Parse()
 
 	if len(flag.Args()) > 0 {
 		usage()
 	}
-	var ok bool
-	if convert, ok = convs[*conv]; !ok {
+
+	convs := map[string]func([]byte) []byte{
+		"none":  func(b []byte) []byte { return b },
+		"ucase": bytes.ToUpper,
+		"lcase": bytes.ToLower,
+	}
+	convert, ok := convs[*conv]
+	if !ok {
 		usage()
 	}
 
-	i, o := openFiles()
-	pass(i, o, *obs, *obs)
+	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
+	if *bs > 0 {
+		*ibs = *bs
+		*obs = *bs
+	}
+
+	in, err := inFile(*inName, *ibs, *skip, *count)
+	if err != nil {
+		log.Fatal(err)
+	}
+	out, err := outFile(*outName, *obs, *seek)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := parallelChunkedCopy(in, out, *ibs, *obs, convert); err != nil {
+		log.Fatal(err)
+	}
 }
