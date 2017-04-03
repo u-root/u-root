@@ -106,13 +106,45 @@ func (cb *chunkedBuffer) WriteTo(w io.Writer) (int64, error) {
 	return i, nil
 }
 
-func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, transform func([]byte) []byte) error {
-	bufferPool := sync.Pool{
-		New: func() interface{} {
-			return newChunkedBuffer(inBufSize, outBufSize, transform)
-		},
-	}
+// bufferPool is a pool of intermediateBuffers.
+type bufferPool struct {
+	f func() intermediateBuffer
+	c chan intermediateBuffer
+}
 
+func newBufferPool(size int64, f func() intermediateBuffer) bufferPool {
+	return bufferPool{
+		f: f,
+		c: make(chan intermediateBuffer, size),
+	}
+}
+
+// Put returns a buffer to the pool for later use.
+func (bp bufferPool) Put(b intermediateBuffer) {
+	// Non-blocking write in case pool has filled up (too many buffers
+	// returned, none being used).
+	select {
+	case bp.c <- b:
+	default:
+	}
+}
+
+// Get returns a buffer from the pool or allocates a new buffer if none is
+// available.
+func (bp bufferPool) Get() intermediateBuffer {
+	select {
+	case buf := <-bp.c:
+		return buf
+	default:
+		return bp.f()
+	}
+}
+
+func (bp bufferPool) Destroy() {
+	close(bp.c)
+}
+
+func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, transform func([]byte) []byte) error {
 	// Make the channels deep enough to hold a total of 1GiB of data.
 	depth := (1024 * 1024 * 1024) / inBufSize
 	// But keep it reasonable!
@@ -121,6 +153,10 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 	}
 
 	readyBufs := make(chan intermediateBuffer, depth)
+	pool := newBufferPool(depth, func() intermediateBuffer {
+		return newChunkedBuffer(inBufSize, outBufSize, transform)
+	})
+	defer pool.Destroy()
 
 	// Closing quit makes both goroutines below exit.
 	quit := make(chan struct{})
@@ -141,7 +177,7 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 			case <-quit:
 				return
 			default:
-				buf := bufferPool.Get().(intermediateBuffer)
+				buf := pool.Get()
 				n, err := buf.ReadFrom(r)
 				if n > 0 {
 					readyBufs <- buf
@@ -163,14 +199,14 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 			writeErr = fmt.Errorf("output error: %v", err)
 			break
 		}
-		bufferPool.Put(buf)
+		pool.Put(buf)
 	}
 
 	// This will force the goroutine to quit if an error occured writing.
-	defer close(quit)
+	close(quit)
 
 	// Wait for goroutine to exit.
-	defer wg.Wait()
+	wg.Wait()
 
 	select {
 	case readErr := <-errs:

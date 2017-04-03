@@ -69,6 +69,11 @@ var tests = []struct {
 		flags:  []string{"bs=2", "skip=3", "count=100000"},
 		stdin:  "hello world.....",
 		stdout: "world.....",
+	}, {
+		// 1 GiB zeroed file in 1024 1KiB blocks.
+		flags:  []string{"bs=1048576", "count=1024", "if=/dev/zero"},
+		stdin:  "",
+		stdout: strings.Repeat("\x00", 1024*1024*1024),
 	},
 }
 
@@ -82,7 +87,7 @@ func TestDd(t *testing.T) {
 		cmd.Stdin = strings.NewReader(tt.stdin)
 		out, err := cmd.Output()
 		if err != nil {
-			t.Errorf("Exited with error: %v", err)
+			t.Errorf("Test %v exited with error: %v", tt.flags, err)
 		}
 		if string(out) != tt.stdout {
 			t.Errorf("Want:\n%#v\nGot:\n%#v", tt.stdout, string(out))
