@@ -304,7 +304,7 @@ func outFile(name string, outputBytes int64, seek int64) (io.Writer, error) {
 	if name == "" {
 		out = os.Stdout
 	} else {
-		if out, err = os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0644); err != nil {
+		if out, err = os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666); err != nil {
 			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
 		}
 	}
