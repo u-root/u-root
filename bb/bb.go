@@ -46,8 +46,9 @@ os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 return
 }
 
-func init() {
+func {{.CmdName}}Init() {
 	addForkBuiltIn("{{.CmdName}}", _forkbuiltin_{{.CmdName}})
+	{{.Init}}
 }
 `
 	fixArgs = `
@@ -66,15 +67,40 @@ func fixArgs(cmd string, args[]string) (s []string) {
 	initGo = `
 package main
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path"
+	"strings"
+
 	"github.com/u-root/u-root/uroot"
 )
 
+func usage () {
+	n := path.Base(os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s:\n", n)
+	flag.VisitAll(func(f *flag.Flag) {
+		if ! strings.HasPrefix(f.Name, n+".") {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "\tFlag %s: '%s', Default %v, Value %v\n", f.Name[len(n)+1:], f.Usage, f.Value, f.DefValue)
+	})
+}
+
 func init() {
+	flag.Usage = usage
 	// This getpid adds a bit of cost to each invocation (not much really)
 	// but it allows us to merge init and sh. The 600K we save is worth it.
+	// Figure out which init to run. We must always do this.
+
+	log.Printf("init: os is %v, initMap %v", path.Base(os.Args[0]), initMap)
+	// we use path.Base in case they type something like ./cmd
+	if f, ok := initMap[path.Base(os.Args[0])]; ok {
+		log.Printf("run the Init function for %v: run %v", os.Args[0], f)
+		f()
+	}
+
 	if os.Args[0] != "/init" {
 		log.Printf("Skipping root file system setup since we are not /init")
 		return
@@ -119,7 +145,7 @@ var (
 		"freq",
 		"grep",
 		"ip",
-		//"kexec",
+		"kexec",
 		"ls",
 		"mkdir",
 		"mount",
@@ -159,12 +185,14 @@ var (
 		"Var":         1,
 	}
 	dumpAST = flag.Bool("D", false, "Dump the AST")
+	initMap = "package main\nvar initMap = map[string] func() {\n"
 )
 
 var config struct {
 	Args     []string
 	CmdName  string
 	FullPath string
+	Init string
 	Src      string
 	Uroot    string
 	Cwd      string
@@ -184,6 +212,8 @@ var config struct {
 func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 	// Inspect the AST and change all instances of main()
 	isMain := false
+	// yeah, this is awful, sorry.
+	config.Init = ""
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.File:
@@ -194,6 +224,10 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 				// Append a return.
 				x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
 				isMain = true
+			}
+			if x.Name.Name == "init" {
+				x.Name.Name = fmt.Sprintf("Init")
+				config.Init = config.CmdName + ".Init()"
 			}
 
 		case *ast.CallExpr:
@@ -286,6 +320,7 @@ func oneCmd() {
 			oneFile(packageDir, n, fset, v)
 		}
 	}
+	initMap += "\n\t\"" + config.CmdName + "\":" + config.CmdName + "Init,"
 }
 func main() {
 	var err error
@@ -346,6 +381,12 @@ func main() {
 	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
+
+	initMap += "\n}"
+	if err := ioutil.WriteFile(path.Join(config.Bbsh, "initmap.go"), []byte(initMap), 0644); err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
 
 	buildinit()
 	ramfs()
