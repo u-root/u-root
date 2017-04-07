@@ -5,7 +5,7 @@
 // Dump the headers of a PE file.
 //
 // Synopsis:
-//     pe FILENAME
+//     pe [FILENAME]
 //
 // Description:
 //     Windows and EFI executables are in the portable executable (PE) format.
@@ -15,19 +15,29 @@ package main
 import (
 	"debug/pe"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 )
+
+func openPE() (*pe.File, error) {
+	switch flag.NArg() {
+	case 0:
+		return pe.NewFile(os.Stdin)
+	case 1:
+		filename := flag.Arg(0)
+		return pe.Open(filename)
+	default:
+		return nil, errors.New("Usage: pe [FILENAME]")
+	}
+}
 
 func main() {
 	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatal("Usage: pe FILENAME")
-	}
-	filename := flag.Arg(0)
 
-	f, err := pe.Open(filename)
+	f, err := openPE()
 	if err != nil {
 		log.Fatal(err)
 	}
