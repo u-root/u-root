@@ -15,37 +15,37 @@ package main
 import (
 	"debug/pe"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 )
 
-func openPE() (*pe.File, error) {
+func main() {
+	// Parse flags
+	flag.Parse()
+	var (
+		f   *pe.File
+		err error
+	)
 	switch flag.NArg() {
 	case 0:
-		return pe.NewFile(os.Stdin)
+		f, err = pe.NewFile(os.Stdin)
 	case 1:
 		filename := flag.Arg(0)
-		return pe.Open(filename)
+		f, err = pe.Open(filename)
 	default:
-		return nil, errors.New("Usage: pe [FILENAME]")
+		log.Fatal("Usage: pe [FILENAME]")
 	}
-}
-
-func main() {
-	flag.Parse()
-
-	f, err := openPE()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
 
-	json, err := json.MarshalIndent(f, "", "\t")
+	// Convert to JSON
+	j, err := json.MarshalIndent(f, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(json))
+	fmt.Println(string(j))
 }
