@@ -27,6 +27,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -216,15 +217,6 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 	}
 }
 
-// nothingWriter implements io.Writer and writes to nothing.
-type nothingWriter struct{}
-
-// Write implements io.Writer.
-func (nothingWriter) Write(p []byte) (int, error) {
-	// Pretend we wrote.
-	return len(p), nil
-}
-
 // sectionReader implements a SectionReader on an underlying implementation of
 // io.Reader (as opposed to io.SectionReader which uses io.ReaderAt).
 type sectionReader struct {
@@ -250,7 +242,7 @@ func newStreamSectionReader(r io.Reader, offset int64, n int64) io.Reader {
 // Read implements io.Reader.
 func (s *sectionReader) Read(p []byte) (int, error) {
 	if s.offset == 0 && s.base != 0 {
-		if n, err := io.CopyN(&nothingWriter{}, s.Reader, s.base); err != nil {
+		if n, err := io.CopyN(ioutil.Discard, s.Reader, s.base); err != nil {
 			return 0, err
 		} else if n != s.base {
 			// Can't happen.
