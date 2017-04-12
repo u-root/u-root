@@ -1,4 +1,4 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,15 +13,13 @@ import (
 	"github.com/u-root/u-root/shared/testutil"
 )
 
-const testFlash = "fake_test.flash"
-
 var tests = []struct {
 	cmd string
 	out string
 }{
 	{
 		cmd: "nosuchanimal",
-		out: "Can't get mac for nosuchanimal\n",
+		out: "cannot get mac for nosuchanimal: open /sys/class/net/nosuchanimal/address: no such file or directory\n",
 	},
 }
 
