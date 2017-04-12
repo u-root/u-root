@@ -127,7 +127,7 @@ func main() {
 	// Perhaps we should stat inito first.
 	// inito is always first and we set default flags for it.
 	cloneFlags := uintptr(syscall.CLONE_NEWPID)
-	for _, v := range []string{"/inito", "/buildbin/rush"} {
+	for _, v := range []string{"/inito", "/buildbin/uinit", "/buildbin/rush"} {
 		cmd = exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin = os.Stdin
