@@ -77,8 +77,9 @@ VERSION.cache`
 	// the whitelist is a list of u-root tools that we feel
 	// can replace existing tools. It is, sadly, a very short
 	// list at present.
-	whitelist = []string{"date"}
-	debug     = nodebug
+	whitelist      = []string{"date"}
+	debug          = nodebug
+	standardgotool = false
 )
 
 func nodebug(string, ...interface{}) {}
@@ -169,18 +170,29 @@ func cpiop(c string) error {
 // Smaller, in this, meaning 25M instead of 33M. What a world!
 func buildToolChain() {
 	goBin := path.Join(config.TempDir, "go/bin/go")
-	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-tags", "cmd_go_bootstrap", "-o", goBin)
-	cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	if o, err := cmd.CombinedOutput(); err != nil {
-		log.Fatalf("Building statically linked go tool info %v: %v, %v\n", goBin, string(o), err)
+	if standardgotool {
+		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-tags", "cmd_go_bootstrap", "-o", goBin)
+		cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
+		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+		if o, err := cmd.CombinedOutput(); err != nil {
+			log.Fatalf("Building statically linked go tool info %v: %v, %v\n", goBin, string(o), err)
+		}
+	} else {
+		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", goBin, ".")
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		cmd.Dir = path.Join(config.Urootpath, "cmds/init")
+
+		if err := cmd.Run(); err != nil {
+			log.Fatalf("%v\n", err)
+		}
 	}
 
 	toolDir := path.Join(config.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", config.Goos, config.Arch))
 
 	for _, pkg := range []string{"compile", "link", "asm"} {
 		c := path.Join(toolDir, pkg)
-		cmd = exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-o", c, "cmd/"+pkg)
+		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-o", c, "cmd/"+pkg)
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		if o, err := cmd.CombinedOutput(); err != nil {
 			log.Fatalf("Building statically linked %v: %v, %v\n", pkg, string(o), err)
@@ -470,14 +482,21 @@ func main() {
 		}
 
 		// Build init
-		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", init, ".")
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
-		cmd.Dir = path.Join(config.Urootpath, "cmds/init")
+		if standardgotool {
+			cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", init, ".")
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			cmd.Dir = path.Join(config.Urootpath, "cmds/init")
 
-		err = cmd.Run()
-		if err != nil {
-			log.Fatalf("%v\n", err)
+			err = cmd.Run()
+			if err != nil {
+				log.Fatalf("%v\n", err)
+			}
+		} else {
+			gobingo := path.Join(config.TempDir, "go/bin/go")
+			if err := os.Link(gobingo, init); err != nil {
+				log.Fatalf("hard link of %v go %v failed: %v", gobingo, init, err)
+			}
 		}
 	}
 
