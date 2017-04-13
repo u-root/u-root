@@ -30,6 +30,11 @@ var (
 )
 
 func main() {
+	if path.Base(os.Args[0]) == "go" {
+		rungo()
+		log.Printf("go build returned ... exiting")
+		os.Exit(0)
+	}
 	a := []string{"build"}
 	flag.Parse()
 	log.Printf("Welcome to u-root")
