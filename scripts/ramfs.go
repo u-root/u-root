@@ -169,7 +169,7 @@ func cpiop(c string) error {
 // Smaller, in this, meaning 25M instead of 33M. What a world!
 func buildToolChain() {
 	goBin := path.Join(config.TempDir, "go/bin/go")
-	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-o", goBin)
+	cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-tags", "cmd_go_bootstrap", "-o", goBin)
 	cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	if o, err := cmd.CombinedOutput(); err != nil {
