@@ -47,6 +47,7 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 	// if timeout is < 10 seconds, it's too short.
 	if timeout < slop {
 		timeout = 2 * slop
+		log.Printf("increased log timeout to %s", timeout)
 	}
 
 	n, err := ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", ifname))
@@ -70,7 +71,7 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 
 	c, err := dhcp4client.NewInetSock(dhcp4client.SetLocalAddr(net.UDPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 68}), dhcp4client.SetRemoteAddr(net.UDPAddr{IP: net.IPv4bcast, Port: 67}))
 	if err != nil {
-		done <- fmt.Errorf("client Conection Generation: %v", err)
+		done <- fmt.Errorf("client conection generation: %v", err)
 		return
 	}
 
@@ -80,8 +81,8 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 		return
 	}
 
-	// we require at least one successful request.
-	success, p, err := client.Request()
+	// We require at least one successful request.
+	success, packet, err := client.Request()
 
 	if err != nil {
 		networkError, ok := err.(*net.OpError)
@@ -93,28 +94,28 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 		return
 	}
 
-	debug("Success on %s:%v\n", n, success)
-	debug("Packet:%v\n", p)
-	debug("Lease is %v seconds\n", p.Secs())
+	debug("Success on %s: %v\n", n, success)
+	debug("Packet: %v\n", packet)
+	debug("Lease is %v seconds\n", packet.Secs())
 
 	if !success {
 		done <- fmt.Errorf("we did not sucessfully get a DHCP Lease?")
 		return
 	}
-	log.Printf("IP Received:%v\n", p.YIAddr().String())
+	log.Printf("IP Received: %v\n", packet.YIAddr().String())
 
 	for i := 0; i < *renewals; i++ {
-		addr := p.YIAddr()
+		addr := packet.YIAddr()
 		// We got here because we got a good packet.
-		o := p.ParseOptions()
+		o := packet.ParseOptions()
 		netmask, ok := o[dhcp4.OptionSubnetMask]
 		if ok {
-			fmt.Printf("OptionSubnetMask is %v\n", netmask)
+			log.Printf("OptionSubnetMask is %v\n", netmask)
 		} else {
 			// what do to?
 			netmask = addr
 		}
-		dst := &netlink.Addr{IPNet: &net.IPNet{IP: p.YIAddr(), Mask: netmask}, Label: ""}
+		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
 		// Add the address to the iface.
 		if err := netlink.AddrAdd(iface, dst); err != nil {
 			if os.IsExist(err) {
@@ -124,13 +125,13 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 		}
 
 		if gwData, ok := o[dhcp4.OptionRouter]; ok {
-			fmt.Printf("router %v\n", gwData)
+			log.Printf("router %v", gwData)
 			routerName := net.IP(gwData).String()
 			debug("routerName %v", routerName)
 			r := &netlink.Route{
-				Dst:       &net.IPNet{IP: p.GIAddr(), Mask: netmask},
+				Dst:       &net.IPNet{IP: packet.GIAddr(), Mask: netmask},
 				LinkIndex: iface.Attrs().Index,
-				Gw:        p.GIAddr(),
+				Gw:        packet.GIAddr(),
 			}
 
 			if err := netlink.RouteReplace(r); err != nil {
@@ -143,7 +144,7 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 		// So sleep for just a tiny bit less than the minimum.
 		time.Sleep(timeout - slop)
 		debug("Start Renewing Lease")
-		success, p, err = client.Renew(p)
+		success, packet, err = client.Renew(packet)
 		if err != nil {
 			networkError, ok := err.(*net.OpError)
 			if ok && networkError.Timeout() {
@@ -157,7 +158,7 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 			done <- fmt.Errorf("We didn't sucessfully Renew a DHCP Lease?")
 			return
 		}
-		debug("IP Received:%v\n", p.YIAddr().String())
+		debug("IP Received:%v\n", packet.YIAddr().String())
 	}
 	done <- nil
 	return
