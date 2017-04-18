@@ -1,6 +1,7 @@
 #!/bin/bash
 export GOPATH=/home/travis/gopath
 set -e
+ (cd bb && go build . && ./bb)
  which go
  (cd scripts && go run ramfs.go -d -tmpdir=/tmp/u-root -removedir=false)
  GOBIN=/tmp/u-root/ubin GOROOT=/tmp/u-root/go GOPATH=/tmp/u-root CGO_ENABLED=0 /tmp/u-root/go/bin/go build -x github.com/u-root/u-root/cmds/ip
