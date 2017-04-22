@@ -31,19 +31,18 @@ var (
 	cmd = "rm [-Rrvi] file..."
 )
 
-func usage() {
-	fmt.Fprintln(os.Stderr, "Usage:", cmd)
-	flag.PrintDefaults()
-	os.Exit(1)
-}
-
 func init() {
+	flag.Usage = func(f func()) func() {
+		return func() {
+			os.Args[0] = cmd
+			f()
+		}
+	}(flag.Usage)
 	flag.BoolVar(&flags.i, "i", false, "Interactive mode.")
 	flag.BoolVar(&flags.v, "v", false, "Verbose mode.")
 	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
 	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
 	flag.Parse()
-	flag.Usage = usage
 }
 
 func rm(files []string) error {
@@ -84,7 +83,7 @@ func rm(files []string) error {
 
 func main() {
 	if flag.NArg() < 1 {
-		usage()
+		flag.Usage()
 	}
 
 	if err := rm(flag.Args()); err != nil {

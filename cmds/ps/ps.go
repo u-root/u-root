@@ -39,14 +39,13 @@ var (
 	mainPID = os.Getpid()
 )
 
-func usage() {
-	fmt.Fprintln(os.Stderr, "Usage:", cmd)
-	flag.PrintDefaults()
-	os.Exit(1)
-}
-
 func init() {
-	flag.Usage = usage
+	flag.Usage = func(f func()) func() {
+		return func() {
+			os.Args[0] = cmd
+			f()
+		}
+	}(flag.Usage)
 	flag.BoolVar(&flags.all, "A", false, "Select all processes.  Identical to -e.")
 	flag.BoolVar(&flags.all, "e", false, "Select all processes.  Identical to -A.")
 	flag.BoolVar(&flags.x, "x", false, "BSD-Like style, with STAT Column and long CommandLine")
