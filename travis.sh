@@ -7,7 +7,7 @@ set -e
  GOBIN=/tmp/u-root/ubin GOROOT=/tmp/u-root/go GOPATH=/tmp/u-root CGO_ENABLED=0 /tmp/u-root/go/bin/go build -x github.com/u-root/u-root/cmds/ip
  (cd cmds && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' ./...)
  ls -l cmds/*
- (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -ldflags '-s' ./...)
+ (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -race -ldflags '-s' ./...)
  (cd cmds && CGO_ENABLED=0 go test -cover ./...)
  go tool vet cmds uroot netlink memmap
  go tool vet scripts/ramfs.go
