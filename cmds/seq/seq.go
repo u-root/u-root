@@ -40,14 +40,13 @@ var (
 	cmd = "seq [-f format] [-w] [-s separator] [start [step [end]]]"
 )
 
-func usage() {
-	fmt.Fprintf(os.Stdout, "Usage: %v\n", cmd)
-	flag.PrintDefaults()
-	os.Exit(1)
-}
-
 func init() {
-	flag.Usage = usage
+	flag.Usage = func(f func()) func() {
+		return func() {
+			os.Args[0] = cmd
+			f()
+		}
+	}(flag.Usage)
 	flag.StringVar(&flags.format, "f", "%v", "use printf style floating-point FORMAT")
 	flag.StringVar(&flags.separator, "s", "\n", "use STRING to separate numbers")
 	flag.BoolVar(&flags.widthEqual, "w", false, "equalize width by padding with leading zeroes")

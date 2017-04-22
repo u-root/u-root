@@ -49,15 +49,14 @@ var (
 	z     = time.Local
 )
 
-func usage() {
-	fmt.Fprintln(os.Stderr, "Usage:", cmd)
-	flag.PrintDefaults()
-	os.Exit(1)
-}
-
 func init() {
 	flag.BoolVar(&flags.universal, "u", false, "Coordinated Universal Time (UTC)")
-	flag.Usage = usage
+	flag.Usage = func(f func()) func() {
+		return func() {
+			os.Args[0] = cmd
+			f()
+		}
+	}(flag.Usage)
 	flag.Parse()
 	if flags.universal {
 		z = time.UTC
@@ -232,6 +231,6 @@ func main() {
 			}
 		}
 	default:
-		usage()
+		flag.Usage()
 	}
 }

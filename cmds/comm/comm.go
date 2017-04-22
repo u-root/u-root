@@ -29,6 +29,8 @@ import (
 	"strings"
 )
 
+const cmd = "comm [-123i] file1 file2\n"
+
 var (
 	s1   = flag.Bool("1", false, "suppress printing of column 1")
 	s2   = flag.Bool("2", false, "suppress printing of column 2")
@@ -36,10 +38,13 @@ var (
 	help = flag.Bool("h", false, "print this help message and exit")
 )
 
-func usage() {
-	log.Printf("Usage: %s [-123i] file1 file2\n", os.Args[0])
-	flag.PrintDefaults()
-	os.Exit(1)
+func init() {
+	flag.Usage = func(f func()) func() {
+		return func() {
+			os.Args[0] = cmd
+			f()
+		}
+	}(flag.Usage)
 }
 
 func reader(f *os.File, c chan string) {
@@ -90,7 +95,6 @@ func outer(c1, c2 chan string, c chan out) {
 }
 
 func main() {
-	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() != 2 || *help {
 		flag.Usage()
