@@ -111,7 +111,7 @@ func init() {
 	}
 	uroot.Rootfs()
 
-	for n := range forkBuiltins {
+	for n := range initMap {
 		t := path.Join("/ubin", n)
 		if err := os.Symlink("/init", t); err != nil {
 			log.Printf("Symlink /init to %v: %v", t, err)
@@ -192,7 +192,7 @@ var config struct {
 	Args     []string
 	CmdName  string
 	FullPath string
-	Init string
+	Init     string
 	Src      string
 	Uroot    string
 	Cwd      string
@@ -386,7 +386,6 @@ func main() {
 	if err := ioutil.WriteFile(path.Join(config.Bbsh, "initmap.go"), []byte(initMap), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
-
 
 	buildinit()
 	ramfs()
