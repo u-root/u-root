@@ -14,15 +14,15 @@ import (
 )
 
 func init() {
-	archiveGenerators["chroot"] = chrootGenerator{}
+	archivers["chroot"] = chrootArchiver{}
 }
 
-type chrootGenerator struct {
+type chrootArchiver struct {
 }
 
-// The chroot generator dumps the rootfs tree into a directory appropriate for
+// The chroot archiver dumps the rootfs tree into a directory appropriate for
 // running under a chroot and namespaces.
-func (g chrootGenerator) generate(config Config, files []file) error {
+func (a chrootArchiver) generate(config Config, files []file) error {
 	// Since files is sorted, we can guarantee that the directories are created
 	// before their children.
 	for _, f := range files {
@@ -78,7 +78,7 @@ func createFile(f file) error {
 }
 
 // Run the rootfs under a chroot jail.
-func (g chrootGenerator) run(config Config) error {
+func (a chrootArchiver) run(config Config) error {
 	// TODO: Until https://github.com/golang/go/issues/19661 is fixed,
 	// exec.Command is insufficient for making mount namespaces, so instead we
 	// rely on a moderately up-to-date unshare command.

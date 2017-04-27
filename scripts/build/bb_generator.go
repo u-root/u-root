@@ -9,13 +9,13 @@ import (
 )
 
 func init() {
-	buildGenerators["bb"] = bbGenerator{}
+	builders["bb"] = bbBuilder{}
 }
 
-type bbGenerator struct {
+type bbBuilder struct {
 }
 
-// TODO: This generator is not yet implemented.
-func (g bbGenerator) generate(config Config) ([]file, error) {
-	return nil, errors.New("bb generator not implemented yet")
+// TODO: This builder is not yet implemented.
+func (b bbBuilder) generate(config Config) ([]file, error) {
+	return nil, errors.New("bb builder not implemented yet")
 }

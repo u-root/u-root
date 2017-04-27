@@ -15,16 +15,16 @@ import (
 )
 
 func init() {
-	archiveGenerators["cpio"] = cpioGenerator{}
+	archivers["cpio"] = cpioArchiver{}
 }
 
-type cpioGenerator struct {
+type cpioArchiver struct {
 }
 
-// This generator creates a cpio archive from the given list of files.
+// This archiver creates a cpio archive from the given list of files.
 // TODO: Replace this implementation with one which does not require sudo.
 // TODO: Preferably, it will share code with cmds/cpio.
-func (g cpioGenerator) generate(config Config, files []file) error {
+func (a cpioArchiver) generate(config Config, files []file) error {
 	// TODO: Delete this temporary directory which is too scary because of "sudo rm -rf" --
 	// especially considering the directory could contain mount points.
 	chrootConfig := config
@@ -33,10 +33,10 @@ func (g cpioGenerator) generate(config Config, files []file) error {
 		return err
 	}
 
-	// We cheat by calling the chroot generator to create the directory
+	// We cheat by calling the chroot archiver to create the directory
 	// structure and running cpio over it.
 	chrootConfig.OutputPath = filepath.Join(tmpDir, "chroot")
-	if err := (chrootGenerator{}).generate(chrootConfig, files); err != nil {
+	if err := (chrootArchiver{}).generate(chrootConfig, files); err != nil {
 		return err
 	}
 
@@ -52,7 +52,7 @@ func (g cpioGenerator) generate(config Config, files []file) error {
 }
 
 // Run the cpio file under Linux in QEMU. This requires a bit of setup.
-func (g cpioGenerator) run(config Config) error {
+func (a cpioArchiver) run(config Config) error {
 	envName := fmt.Sprintf("UROOT_CPIO_RUN_%s", gobuild.Default.GOARCH)
 	env := os.Getenv(envName)
 	if env == "" {

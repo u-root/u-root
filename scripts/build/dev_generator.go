@@ -9,14 +9,14 @@ import (
 )
 
 func init() {
-	buildGenerators["dev"] = devGenerator{}
+	builders["dev"] = devBuilder{}
 }
 
-type devGenerator struct {
+type devBuilder struct {
 }
 
 // There are a few dev nodes which are required to run an initramfs.
-func (g devGenerator) generate(config Config) ([]file, error) {
+func (b devBuilder) generate(config Config) ([]file, error) {
 	// TODO: there are probably some files here we don't actually need
 	return []file{
 		{"dev/console", nil, 0644 | os.ModeDevice | os.ModeCharDevice, 0, 0, dev(5, 1)},
