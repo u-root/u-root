@@ -164,7 +164,8 @@ func listGoFiles(config Config) ([]srcDstPair, error) {
 
 		// Parent package is needed to determine correct vendor directory.
 		if parent == "" {
-			// TODO: might break if there are multiple GOPATHs
+			// TODO: Might break if there are multiple GOPATHs. This can be
+			// achieved with one more for loop!
 			parent = filepath.SplitList(gobuild.Default.GOPATH)[0]
 		}
 
