@@ -24,7 +24,7 @@ type copyfiles struct {
 }
 
 const (
-	bbList = `{{.Uroot}}/bb/bbsh
+	bbList = `{{.Gopath}}/github.com/src/u-root/u-root/bb/bbsh
 init`
 )
 
@@ -138,7 +138,7 @@ func ramfs() {
 		log.Fatalf("%v\n", err)
 	}
 
-	bbdir := filepath.Join(config.Uroot, "bb/bbsh")
+	bbdir := filepath.Join(config.Gopath, "github.com/u-root/u-root/bb/bbsh")
 	bbbin := filepath.Join(bbdir, "bin")
 	os.RemoveAll(bbbin)
 

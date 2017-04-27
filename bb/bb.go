@@ -133,33 +133,33 @@ const cmds = "cmds"
 var (
 	debug      = nodebugPrint
 	defaultCmd = []string{
-		"cat",
-		"cmp",
-		"comm",
-		"cp",
-		"date",
-		"dd",
-		"dmesg",
-		"echo",
-		"freq",
-		"grep",
-		"ip",
-		"kexec",
-		"ls",
-		"mkdir",
-		"mount",
-		"netcat",
-		"ping",
-		"printenv",
-		"rm",
-		"seq",
-		"srvfiles",
-		"tcz",
-		"uname",
-		"uniq",
-		"unshare",
-		"wc",
-		"wget",
+		"src/github.com/u-root/u-root/cmds/cat",
+		"src/github.com/u-root/u-root/cmds/cmp",
+		"src/github.com/u-root/u-root/cmds/comm",
+		"src/github.com/u-root/u-root/cmds/cp",
+		"src/github.com/u-root/u-root/cmds/date",
+		"src/github.com/u-root/u-root/cmds/dd",
+		"src/github.com/u-root/u-root/cmds/dmesg",
+		"src/github.com/u-root/u-root/cmds/echo",
+		"src/github.com/u-root/u-root/cmds/freq",
+		"src/github.com/u-root/u-root/cmds/grep",
+		"src/github.com/u-root/u-root/cmds/ip",
+		"src/github.com/u-root/u-root/cmds/kexec",
+		"src/github.com/u-root/u-root/cmds/ls",
+		"src/github.com/u-root/u-root/cmds/mkdir",
+		"src/github.com/u-root/u-root/cmds/mount",
+		"src/github.com/u-root/u-root/cmds/netcat",
+		"src/github.com/u-root/u-root/cmds/ping",
+		"src/github.com/u-root/u-root/cmds/printenv",
+		"src/github.com/u-root/u-root/cmds/rm",
+		"src/github.com/u-root/u-root/cmds/seq",
+		"src/github.com/u-root/u-root/cmds/srvfiles",
+		"src/github.com/u-root/u-root/cmds/tcz",
+		"src/github.com/u-root/u-root/cmds/uname",
+		"src/github.com/u-root/u-root/cmds/uniq",
+		"src/github.com/u-root/u-root/cmds/unshare",
+		"src/github.com/u-root/u-root/cmds/wc",
+		"src/github.com/u-root/u-root/cmds/wget",
 	}
 
 	// fixFlag tells by existence if an argument needs to be fixed.
@@ -190,10 +190,10 @@ var (
 var config struct {
 	Args     []string
 	CmdName  string
+	CmdPath  string
 	FullPath string
 	Init     string
 	Src      string
-	Uroot    string
 	Cwd      string
 	Bbsh     string
 
@@ -308,7 +308,7 @@ func oneCmd() {
 	}
 
 	fset := token.NewFileSet()
-	config.FullPath = filepath.Join(config.Uroot, cmds, config.CmdName)
+	config.FullPath = filepath.Join(config.Gopath, config.CmdPath)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
 	if err != nil {
 		panic(err)
@@ -332,14 +332,14 @@ func main() {
 	if len(flag.Args()) > 0 {
 		config.Args = []string{}
 		for _, v := range flag.Args() {
-			v = filepath.Join(config.Uroot, "cmds", v)
+			v = filepath.Join(config.Gopath, v)
 			g, err := filepath.Glob(v)
 			if err != nil {
 				log.Fatalf("Glob error: %v", err)
 			}
 
 			for i := range g {
-				g[i] = filepath.Base(g[i])
+				g[i] = g[i][len(config.Gopath):]
 			}
 			config.Args = append(config.Args, g...)
 		}
@@ -347,7 +347,8 @@ func main() {
 
 	for _, v := range config.Args {
 		// Yes, gross. Fix me.
-		config.CmdName = v
+		config.CmdPath = v
+		config.CmdName = filepath.Base(v)
 		oneCmd()
 	}
 
@@ -356,7 +357,7 @@ func main() {
 	}
 	// copy all shell files
 
-	err = filepath.Walk(filepath.Join(config.Uroot, cmds, "rush"), func(name string, fi os.FileInfo, err error) error {
+	err = filepath.Walk(filepath.Join(config.Gopath, "src/github.com/u-root/u-root/cmds/rush"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
