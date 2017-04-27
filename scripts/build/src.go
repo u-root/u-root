@@ -54,7 +54,7 @@ func (b srcBuilder) generate(config Config) ([]file, error) {
 			log.Fatalf("%v", err)
 		}
 		for _, f := range files {
-			data, err := os.Open(f.src)
+			data, err := StatelessOpen(f.src)
 			if err != nil {
 				log.Fatalf("unable to open %q: %v", f.src, err)
 			}
