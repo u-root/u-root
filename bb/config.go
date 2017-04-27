@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -27,17 +27,17 @@ func guessgoroot() {
 	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
 		log.Printf("Using %v as GOROOT from environment variable", config.Goroot)
-		config.Gosrcroot = path.Dir(config.Goroot)
+		config.Gosrcroot = filepath.Dir(config.Goroot)
 		return
 	}
 	log.Print("Goroot is not set, trying to find a go binary")
 	p := os.Getenv("PATH")
 	paths := strings.Split(p, ":")
 	for _, v := range paths {
-		g := path.Join(v, "go")
+		g := filepath.Join(v, "go")
 		if _, err := os.Stat(g); err == nil {
-			config.Goroot = path.Dir(path.Dir(v))
-			config.Gosrcroot = path.Dir(config.Goroot)
+			config.Goroot = filepath.Dir(filepath.Dir(v))
+			config.Gosrcroot = filepath.Dir(config.Goroot)
 			log.Printf("Guessing that goroot is %v", config.Goroot)
 			return
 		}
@@ -48,11 +48,11 @@ func guessgoroot() {
 
 func guessgopath() {
 	defer func() {
-		config.Gosrcroot = path.Dir(config.Goroot)
+		config.Gosrcroot = filepath.Dir(config.Goroot)
 	}()
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
-		config.Gopath = path.Clean(gopath)
+		config.Gopath = filepath.Clean(gopath)
 		return
 	}
 	// We need to change the guess logic but that will have to wait.
@@ -65,11 +65,11 @@ func guessgopath() {
 		return
 	}
 	// walk up the cwd until we find a u-root entry. See if cmds/init/init.go exists.
-	for c := cwd; c != "/"; c = path.Dir(c) {
-		if path.Base(c) != "u-root" {
+	for c := cwd; c != "/"; c = filepath.Dir(c) {
+		if filepath.Base(c) != "u-root" {
 			continue
 		}
-		check := path.Join(c, "cmds/init/init.go")
+		check := filepath.Join(c, "cmds/init/init.go")
 		if _, err := os.Stat(check); err != nil {
 			//log.Printf("Could not stat %v", check)
 			continue
@@ -85,11 +85,11 @@ func guessgopath() {
 }
 
 func guessuroot() {
-	config.Uroot = os.Getenv("UROOT")
+	config.Uroot = filepath.Clean(os.Getenv("UROOT"))
 	if config.Uroot == "" {
 		/* let's try to guess. If we see bb.go, then we're in u-root/bb */
 		if _, err := os.Stat("bb.go"); err == nil {
-			config.Uroot = path.Dir(config.Cwd)
+			config.Uroot = filepath.Dir(config.Cwd)
 		} else if _, err := os.Stat("bb/bb.go"); err == nil {
 			// Maybe they're at top level? If there is a bb/bb.go, that's it.
 			config.Uroot = config.Cwd
@@ -117,14 +117,14 @@ func doConfig() {
 	if config.Fail {
 		os.Exit(1)
 	}
-	config.Gosrcroot = path.Dir(config.Goroot)
+	config.Gosrcroot = filepath.Dir(config.Goroot)
 	config.Goos = "linux"
 	config.TempDir, err = ioutil.TempDir("", "u-root")
 	config.Go = ""
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	config.Bbsh = path.Join(config.Cwd, "bbsh")
+	config.Bbsh = filepath.Join(config.Cwd, "bbsh")
 	os.RemoveAll(config.Bbsh)
 	config.Args = flag.Args()
 	if len(config.Args) == 0 {

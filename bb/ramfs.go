@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -77,7 +76,7 @@ func cpiop(c string) error {
 		if config.Debug {
 			fmt.Fprintf(os.Stderr, "%v\n", v)
 		}
-		err := filepath.Walk(path.Join(n[0], v), func(name string, fi os.FileInfo, err error) error {
+		err := filepath.Walk(filepath.Join(n[0], v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Printf(" WALK FAIL%v: %v\n", name, err)
 				// That's ok, sometimes things are not there.
@@ -104,13 +103,13 @@ func cpiop(c string) error {
 }
 
 func sanity() {
-	goBinGo := path.Join(config.Goroot, "bin/go")
+	goBinGo := filepath.Join(config.Goroot, "bin/go")
 	_, err := os.Stat(goBinGo)
 	if err == nil {
 		config.Go = goBinGo
 	}
 	// but does the one in go/bin/OS_ARCH exist too?
-	goBinGo = path.Join(config.Goroot, fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch))
+	goBinGo = filepath.Join(config.Goroot, fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch))
 	_, err = os.Stat(goBinGo)
 	if err == nil {
 		config.Go = goBinGo
@@ -139,8 +138,8 @@ func ramfs() {
 		log.Fatalf("%v\n", err)
 	}
 
-	bbdir := path.Join(config.Uroot, "bb/bbsh")
-	bbbin := path.Join(bbdir, "bin")
+	bbdir := filepath.Join(config.Uroot, "bb/bbsh")
+	bbbin := filepath.Join(bbdir, "bin")
 	os.RemoveAll(bbbin)
 
 	// Now use the append option for cpio to append to it.
