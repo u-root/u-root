@@ -84,22 +84,6 @@ func guessgopath() {
 	return
 }
 
-func guessuroot() {
-	config.Uroot = filepath.Clean(os.Getenv("UROOT"))
-	if config.Uroot == "" {
-		/* let's try to guess. If we see bb.go, then we're in u-root/bb */
-		if _, err := os.Stat("bb.go"); err == nil {
-			config.Uroot = filepath.Dir(config.Cwd)
-		} else if _, err := os.Stat("bb/bb.go"); err == nil {
-			// Maybe they're at top level? If there is a bb/bb.go, that's it.
-			config.Uroot = config.Cwd
-		} else {
-			log.Fatalf("UROOT was not set and I don't seem to be in u-root/u-root/src/bb/bb.go or u-root/u-root")
-		}
-	}
-
-}
-
 func doConfig() {
 	var err error
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
@@ -112,7 +96,6 @@ func doConfig() {
 	}
 	guessgoroot()
 	guessgopath()
-	guessuroot()
 	config.Arch = getenv("GOARCH", "amd64")
 	if config.Fail {
 		os.Exit(1)
