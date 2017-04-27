@@ -5,6 +5,7 @@
 package build
 
 import (
+	"io"
 	"os"
 )
 
@@ -24,7 +25,7 @@ type Config struct {
 // because they are useless for our purposes.
 type file struct {
 	path string
-	data []byte
+	data io.Reader // Only for special files, may this be nil.
 	mode os.FileMode
 	uid  uint32
 	gid  uint32
