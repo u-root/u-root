@@ -32,13 +32,13 @@ type file struct {
 	rdev uint64
 }
 
-// Generates files for inclusion into the archive.
-type buildGenerator interface {
+// Generate files for inclusion into the archive.
+type builder interface {
 	generate(Config) ([]file, error)
 }
 
 // Create an archive given a slice of files.
-type archiveGenerator interface {
+type archiver interface {
 	generate(Config, []file) error
 	run(Config) error
 }

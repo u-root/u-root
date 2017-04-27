@@ -17,10 +17,10 @@ import (
 )
 
 func init() {
-	buildGenerators["src"] = srcGenerator{}
+	builders["src"] = srcBuilder{}
 }
 
-type srcGenerator struct {
+type srcBuilder struct {
 }
 
 type srcDstPair struct {
@@ -29,7 +29,7 @@ type srcDstPair struct {
 
 // Generate u-root files with on-the-fly compilation. This includes the Go
 // toolchain.
-func (g srcGenerator) generate(config Config) ([]file, error) {
+func (b srcBuilder) generate(config Config) ([]file, error) {
 	// For parallism, store files in a chan and convert to a slice afterwards.
 	fileChan := make(chan file)
 	wg := sync.WaitGroup{}
