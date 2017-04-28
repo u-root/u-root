@@ -59,7 +59,7 @@ func (g cpioGenerator) run(config Config) error {
 		return fmt.Errorf(`%s is unset.
 To run the cpio file, set UROOT_CPIO_RUN_$GOARCH to a command to be run under sh.
 In the command, {} is replaced by the path of the cpio file.  For example:
-	$ export UROOT_CPIO_RUN_amd64="qemu-system-x86_64 -kernel $YOUR_BZIMAGE -initrd {} -nographic -m 1G"
+	$ export UROOT_CPIO_RUN_amd64="qemu-system-X86_64 -kernel $YOUR_BZIMAGE -initrd {} -nographic -m 1G
 	$ u-root --format=cpio --run`, envName)
 	}
 
