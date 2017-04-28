@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+# This README is also a script you can run to test this idea out.
+# This is a root file system all based on Go. 
+
+if [ -z $GOPATH ]
+then
+	echo "Please set GOPATH and run this command again."
+	exit 1
+fi
+
+if [ -z $GOROOT ]
+then
+	echo "You have not set GOROOT. This can work but if not, please"
+	echo "set GOROOT to point to a Go tree with version >= 1.6"
+fi
+
+go run scripts/ramfs.go -test

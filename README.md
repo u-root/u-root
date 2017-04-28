@@ -6,7 +6,7 @@ u-root
 
 # Description
 
-u-root is a "universal root". It's a root file system with mostly Go source with the exception of 5 binaries.
+u-root is a "universal root". It's a root file system with mostly Go source with the exception of 5 binaries. 
 
 That's the interesting part. This set of utilities is all Go, and mostly source.
 
@@ -14,36 +14,33 @@ When you run a command that is not built, you fall through to the command that d
 `go build` of the command, and then execs the command once it is built. From that point on,
 when you run the command, you get the one in tmpfs. This is fast.
 
+# Setup
 
-# Usage
+You'll need a GOPATH. Be sure to set it to something, e.g.
 
-Make sure your Go version is the latest (>=1.8). Correctly set up your GOPATH like so:
+`export GOPATH=/usr/local/src/go`
 
-    $ export GOPATH="$HOME/go"
-    $ export PATH="$PATH:$GOPATH/bin"
+On my machine, my gopath is
+`export GOPATH=/home/$USER/go`
 
-Now, download and install u-root:
+Then
+`go get github.com/u-root/u-root`
 
-    $ go get github.com/u-root/u-root
+`cd $GOPATH/src/github.com/u-root/u-root`
 
-You can now use the u-root command anywhere for building. Here are some examples:
+You may hit a problem where it can't find some standard Go packages, if so, you'll need
+to set GOROOT, e.g.
+`export GOROOT=/path/to/some_go_>=1.6`
 
-    $ u-root --run                            # build and run in a chroot (requires sudo)
-    $ u-root --format=cpio -o initramfs.cpio  # generate a cpio archive named initramfs.cpio
-    $ u-root --format=cpio --run              # create a cpio in /tmp and run with qemu
-    $ u-root --format=cpio --build_format=bb  # create a cpio containing a busybox
-    $ u-root --format=docker --run            # build and run a docker image
+# Using
 
-It is also possible to specify packages for inclusion:
-
-    $ go get github.com/golang/example/hello
-    $ u-root --run github.com/golang/example/hello
-
+To try the chroot, just run the README:
+`bash RUN`
 
 ## Build an Embeddable U-root
 
 You can build this environment into a kernel as an initramfs, and further
-embed that into firmware as a coreboot payload.
+embed that into firmware as a coreboot payload. 
 
 In the kernel and coreboot case, you need to configure ethernet. We have a primitive
 ip command for that case. In qemu:
@@ -65,7 +62,7 @@ running, you can do this:
 The tcz command computes and fetches all dependencies.
 
 If you can't get to tinycorelinux.net, or you want package fetching to be faster,
-you can run your own server for tinycore packages.
+you can run your own server for tinycore packages. 
 
 You can do this to get a local server using the u-root srvfiles command:
 `% src/srvfiles/srvfiles -p 80 -d path-to-local-tinycore-packages`
