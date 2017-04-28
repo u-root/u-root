@@ -36,14 +36,16 @@ func (a chrootArchiver) generate(config Config, files []file) error {
 
 // Create an actual file from the file struct. The file struct should already
 // be prepended with the location of the chroot.
-// TODO: some items are not set: uid, gid, dates, ...
 func createFile(f file) error {
+	// TODO: set uid and gid
 	mode := fmt.Sprintf("%03o", f.mode&os.ModePerm)
 	major := fmt.Sprint(major(f.rdev))
 	minor := fmt.Sprint(minor(f.rdev))
 
 	// Special file types
-	// TODO: replace this with Go syscalls rather than forking
+	// I'm sure many of these commands can be done through syscalls rather than
+	// forking, however we need to perform the priviledge escalation via sudo
+	// (asking for their password).
 	switch f.mode & (os.ModeType | os.ModeCharDevice) {
 	case os.ModeDir:
 		return exec.Command("sudo", "mkdir", "--mode="+mode, f.path).Run()
