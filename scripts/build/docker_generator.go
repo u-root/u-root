@@ -9,18 +9,18 @@ import (
 )
 
 func init() {
-	archivers["docker"] = dockerArchiver{}
+	archiveGenerators["docker"] = dockerGenerator{}
 }
 
-type dockerArchiver struct {
+type dockerGenerator struct {
 }
 
 // TODO: Generate a docker image.
-func (a dockerArchiver) generate(config Config, files []file) error {
-	return errors.New("docker archiver not implemented yet")
+func (g dockerGenerator) generate(config Config, files []file) error {
+	return errors.New("docker generator not implemented yet")
 }
 
 // TODO: Run the docker image.
-func (a dockerArchiver) run(config Config) error {
-	return errors.New("docker archiver not implemented yet")
+func (g dockerGenerator) run(config Config) error {
+	return errors.New("docker generator not implemented yet")
 }

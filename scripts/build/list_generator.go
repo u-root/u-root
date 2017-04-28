@@ -11,14 +11,14 @@ import (
 )
 
 func init() {
-	archivers["list"] = listArchiver{}
+	archiveGenerators["list"] = listGenerator{}
 }
 
-type listArchiver struct {
+type listGenerator struct {
 }
 
 // Rather than creating an archive, this simply outputs a list for debugging.
-func (a listArchiver) generate(config Config, files []file) error {
+func (g listGenerator) generate(config Config, files []file) error {
 	totalSize := 0
 	// TODO: use "text/tabwriter" for nicer alignment
 	for _, f := range files {
@@ -41,6 +41,6 @@ func (a listArchiver) generate(config Config, files []file) error {
 	return nil
 }
 
-func (a listArchiver) run(config Config) error {
+func (g listGenerator) run(config Config) error {
 	return errors.New("not implemented")
 }
