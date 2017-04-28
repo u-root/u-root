@@ -12,10 +12,10 @@ import (
 	"sort"
 )
 
-// Builders and archivers register themselves in init() functions.
+// Generators register themselves in init() functions.
 var (
-	builders  = map[string]builder{}
-	archivers = map[string]archiver{}
+	buildGenerators   = map[string]buildGenerator{}
+	archiveGenerators = map[string]archiveGenerator{}
 )
 
 // Uniq sorts and remove duplicates from a slice of strings.
@@ -34,20 +34,20 @@ func Uniq(s []string) []string {
 
 // Build a u-root archive and optionally run it.
 func Build(config Config) error {
-	// Select the builders. There may be multiple!
-	bGens := []builder{}
+	// Select the build generators.
+	bGens := []buildGenerator{}
 	for _, buildFormat := range config.BuildFormats {
-		bGen, ok := builders[buildFormat]
+		bGen, ok := buildGenerators[buildFormat]
 		if !ok {
-			return errors.New("invalid builder")
+			return errors.New("invalid build generator")
 		}
 		bGens = append(bGens, bGen)
 	}
 
-	// Select the archiver.
-	aGen, ok := archivers[config.ArchiveFormat]
+	// Select the archive generator.
+	aGen, ok := archiveGenerators[config.ArchiveFormat]
 	if !ok {
-		return errors.New("invalid archiver")
+		return errors.New("invalid archive generator")
 	}
 
 	// Generate the files.
@@ -88,8 +88,6 @@ func Build(config Config) error {
 	// Sort the files by path. This is requires for reproducible builds.
 	sort.Slice(files, func(i, j int) bool {
 		if files[i].path == files[j].path {
-			// TODO: more intelligent merging. For example, when there are
-			// multiple inits, one must be renamed to inito.
 			log.Printf("warning: multiple files named %q", files[i].path)
 		}
 		return files[i].path < files[j].path
