@@ -39,9 +39,6 @@ func (g srcGenerator) generate(config Config) ([]file, error) {
 	if err != nil {
 		return nil, err
 	}
-	// It is a bit strange because even though we delete intermediate file
-	// before they are read by the next stage, since they were opened before
-	// they are deleted, they can still be read. This is behaviour we want.
 	defer os.RemoveAll(tempDir)
 
 	// Read all go source files of the selected packages along with all the
@@ -54,9 +51,9 @@ func (g srcGenerator) generate(config Config) ([]file, error) {
 			log.Fatalf("%v", err)
 		}
 		for _, f := range files {
-			data, err := os.Open(f.src)
+			data, err := ioutil.ReadFile(f.src)
 			if err != nil {
-				log.Fatalf("unable to open %q: %v", f.src, err)
+				log.Fatalf("unable to read %q: %v", f.src, err)
 			}
 			fileChan <- file{
 				path: f.dst,
@@ -83,7 +80,7 @@ func (g srcGenerator) generate(config Config) ([]file, error) {
 			if err := buildBinary(v.src, outPath); err != nil {
 				log.Fatalf("failed building binary %q: %v", v.src, err)
 			}
-			data, err := os.Open(outPath)
+			data, err := ioutil.ReadFile(outPath)
 			if err != nil {
 				log.Fatalf("unable to read %q: %v", outPath, err)
 			}

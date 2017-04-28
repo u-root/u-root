@@ -5,9 +5,9 @@
 package build
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,8 +34,7 @@ func (g chrootGenerator) generate(config Config, files []file) error {
 	return nil
 }
 
-// Create an actual file from the file struct. The file struct should already
-// be prepended with the location of the chroot.
+// Create an actual file from the file struct.
 func createFile(f file) error {
 	// TODO: set uid and gid
 	mode := fmt.Sprintf("%03o", f.mode&os.ModePerm)
@@ -56,11 +55,7 @@ func createFile(f file) error {
 	case os.ModeNamedPipe:
 		return exec.Command("sudo", "mknod", "--mode="+mode, f.path, "p").Run()
 	case os.ModeSymlink:
-		data, err := ioutil.ReadAll(f.data)
-		if err != nil {
-			return err
-		}
-		if err := exec.Command("sudo", "ln", "-s", string(data), f.path).Run(); err != nil {
+		if err := exec.Command("sudo", "ln", "-s", string(f.data), f.path).Run(); err != nil {
 			return err
 		}
 		return exec.Command("sudo", "chmod", mode, f.path).Run()
@@ -70,7 +65,7 @@ func createFile(f file) error {
 
 	// Regular files
 	cmd := exec.Command("sudo", "tee", f.path)
-	cmd.Stdin = f.data
+	cmd.Stdin = bytes.NewBuffer(f.data)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
