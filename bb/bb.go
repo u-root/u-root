@@ -29,7 +29,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"text/template"
@@ -71,14 +70,14 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/u-root/u-root/uroot"
 )
 
 func usage () {
-	n := path.Base(os.Args[0])
+	n := filepath.Base(os.Args[0])
 	fmt.Fprintf(os.Stderr, "Usage: %s:\n", n)
 	flag.VisitAll(func(f *flag.Flag) {
 		if ! strings.HasPrefix(f.Name, n+".") {
@@ -94,9 +93,9 @@ func init() {
 	// but it allows us to merge init and sh. The 600K we save is worth it.
 	// Figure out which init to run. We must always do this.
 
-	log.Printf("init: os is %v, initMap %v", path.Base(os.Args[0]), initMap)
-	// we use path.Base in case they type something like ./cmd
-	if f, ok := initMap[path.Base(os.Args[0])]; ok {
+	log.Printf("init: os is %v, initMap %v", filepath.Base(os.Args[0]), initMap)
+	// we use filepath.Base in case they type something like ./cmd
+	if f, ok := initMap[filepath.Base(os.Args[0])]; ok {
 		log.Printf("run the Init function for %v: run %v", os.Args[0], f)
 		f()
 	}
@@ -112,7 +111,7 @@ func init() {
 	uroot.Rootfs()
 
 	for n := range initMap {
-		t := path.Join("/ubin", n)
+		t := filepath.Join("/ubin", n)
 		if err := os.Symlink("/init", t); err != nil {
 			log.Printf("Symlink /init to %v: %v", t, err)
 		}
@@ -275,7 +274,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		log.Fatalf("bad parse: '%v': %v", out, err)
 	}
 
-	of := path.Join(dir, path.Base(s))
+	of := filepath.Join(dir, filepath.Base(s))
 	if err := ioutil.WriteFile(of, []byte(fullCode), 0666); err != nil {
 		log.Fatalf("%v\n", err)
 	}
@@ -292,7 +291,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", out, err)
 		}
-		if err := ioutil.WriteFile(path.Join(config.Bbsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
@@ -303,13 +302,13 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 func oneCmd() {
 	// Create the directory for the package.
 	// For now, ./cmds/<package name>
-	packageDir := path.Join(config.Bbsh, "cmds", config.CmdName)
+	packageDir := filepath.Join(config.Bbsh, "cmds", config.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
 
 	fset := token.NewFileSet()
-	config.FullPath = path.Join(config.Uroot, cmds, config.CmdName)
+	config.FullPath = filepath.Join(config.Uroot, cmds, config.CmdName)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
 	if err != nil {
 		panic(err)
@@ -333,14 +332,14 @@ func main() {
 	if len(flag.Args()) > 0 {
 		config.Args = []string{}
 		for _, v := range flag.Args() {
-			v = path.Join(config.Uroot, "cmds", v)
+			v = filepath.Join(config.Uroot, "cmds", v)
 			g, err := filepath.Glob(v)
 			if err != nil {
 				log.Fatalf("Glob error: %v", err)
 			}
 
 			for i := range g {
-				g[i] = path.Base(g[i])
+				g[i] = filepath.Base(g[i])
 			}
 			config.Args = append(config.Args, g...)
 		}
@@ -352,12 +351,12 @@ func main() {
 		oneCmd()
 	}
 
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	// copy all shell files
 
-	err = filepath.Walk(path.Join(config.Uroot, cmds, "rush"), func(name string, fi os.FileInfo, err error) error {
+	err = filepath.Walk(filepath.Join(config.Uroot, cmds, "rush"), func(name string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -368,7 +367,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path.Join(config.Bbsh, fi.Name()), b, 0644); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, fi.Name()), b, 0644); err != nil {
 			return err
 		}
 
@@ -378,12 +377,12 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 
 	initMap += "\n}"
-	if err := ioutil.WriteFile(path.Join(config.Bbsh, "initmap.go"), []byte(initMap), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "initmap.go"), []byte(initMap), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 
