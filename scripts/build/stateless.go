@@ -1,10 +1,10 @@
-// stateless implements stateless Files.
+// stateless implements stateless files.
 
 package build
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"os"
 )
 
@@ -14,10 +14,13 @@ type stateless struct {
 }
 
 var (
-	Files int
-	Opens int
+	files int
+	opens int
 )
 
+// Read implements io.Reader for stateless files.
+// Unlike many Read functions it can return errors
+// from Open as well as ReadAt.
 func (s *stateless) Read(b []byte) (int, error) {
 	f, err := os.Open(s.name)
 	if err != nil {
@@ -26,20 +29,29 @@ func (s *stateless) Read(b []byte) (int, error) {
 	defer f.Close()
 
 	n, err := f.ReadAt(b, s.off)
-	log.Printf("Read %v at off %v n %v err %v", s.name, s.off, n, err)
-	if err != nil {
+	if n > 0 {
 		s.off += int64(n)
 	}
-	Files++
+	opens++
 	return n, err
 }
 
+// Stateless open tries to open a file. If it succeeds,
+// it returns a stateless struct, else the error from os.Open.
+// The file is closed on return so we don't get EMFILE errors
+// on some OSes.
 func StatelessOpen(n string) (io.Reader, error) {
 	f, err := os.Open(n)
 	if err != nil {
 		return nil, err
 	}
-	Opens++
+	files++
 	defer f.Close()
 	return &stateless{name: n}, nil
+}
+
+// StatelessStats returns a string containing information about
+// stateless file activity.
+func StatelessStats() string {
+	return fmt.Sprintf("Number of files used %d Number of opens %d", files, opens)
 }

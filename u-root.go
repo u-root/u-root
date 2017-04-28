@@ -121,6 +121,6 @@ func main() {
 		log.Fatalln("fatal:", err)
 	}
 	if *verbose {
-		log.Printf("Files read %d; Number of opens %d", build.Files, build.Opens)
+		log.Printf("%v", build.StatelessStats())
 	}
 }
