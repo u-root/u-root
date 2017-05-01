@@ -152,6 +152,7 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 				return
 			}
 			done <- fmt.Errorf("error: %v", err)
+			return
 		}
 
 		if !success {
