@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// dhclient setups up DHCP.
+// dhclient sets up DHCP.
 //
 // Synopsis:
 //     dhclient [OPTIONS...]
@@ -41,7 +41,7 @@ var (
 	debug        = func(string, ...interface{}) {}
 )
 
-func dhclient(ifname string, timeout time.Duration, iList []string, done chan error) {
+func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 	var err error
 
 	// if timeout is < 10 seconds, it's too short.
@@ -52,75 +52,76 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 
 	n, err := ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", ifname))
 	if err != nil {
-		done <- fmt.Errorf("cannot get mac for %v: %v", ifname, err)
-		return
+		return fmt.Errorf("cannot get mac for %v: %v", ifname, err)
 	}
+
 	// This is truly amazing but /sys appends newlines to all this data.
 	n = bytes.TrimSpace(n)
-	m, err := net.ParseMAC(string(n))
+	mac, err := net.ParseMAC(string(n))
 	if err != nil {
-		done <- fmt.Errorf("mac error: %v", err)
-		return
+		return fmt.Errorf("mac error: %v", err)
 	}
 
 	iface, err := netlink.LinkByName(ifname)
 	if err != nil {
-		done <- fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
-		return
+		return fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
 	}
 
-	c, err := dhcp4client.NewInetSock(dhcp4client.SetLocalAddr(net.UDPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 68}), dhcp4client.SetRemoteAddr(net.UDPAddr{IP: net.IPv4bcast, Port: 67}))
+	conn, err := dhcp4client.NewInetSock()
 	if err != nil {
-		done <- fmt.Errorf("client conection generation: %v", err)
-		return
+		return fmt.Errorf("client conection generation: %v", err)
 	}
 
-	client, err := dhcp4client.New(dhcp4client.HardwareAddr(m), dhcp4client.Connection(c), dhcp4client.Timeout(timeout))
+	client, err := dhcp4client.New(dhcp4client.HardwareAddr(mac), dhcp4client.Connection(conn), dhcp4client.Timeout(timeout))
 	if err != nil {
-		done <- fmt.Errorf("error: %v", err)
-		return
+		return fmt.Errorf("error: %v", err)
 	}
 
-	// We require at least one successful request.
-	success, packet, err := client.Request()
+	var packet dhcp4.Packet
+	for i := 0; i < numRenewals+1; i++ {
+		debug("Start getting or renewing lease")
 
-	if err != nil {
-		networkError, ok := err.(*net.OpError)
-		if ok && networkError.Timeout() {
-			done <- fmt.Errorf("%s: did not find a DHCP Server", n)
-			return
+		var success bool
+		if packet == nil {
+			success, packet, err = client.Request()
+		} else {
+			success, packet, err = client.Renew(packet)
 		}
-		done <- fmt.Errorf("%s: Error:%v", n, err)
-		return
-	}
+		if err != nil {
+			networkError, ok := err.(*net.OpError)
+			if ok && networkError.Timeout() {
+				return fmt.Errorf("%s: could not find DHCP server", mac)
+			}
+			return fmt.Errorf("%s: error: %v", mac, err)
+		}
 
-	debug("Success on %s: %v\n", n, success)
-	debug("Packet: %v\n", packet)
-	debug("Lease is %v seconds\n", packet.Secs())
+		debug("Success on %s: %v\n", mac, success)
+		debug("Packet: %v\n", packet)
+		debug("Lease is %v seconds\n", packet.Secs())
 
-	if !success {
-		done <- fmt.Errorf("we did not sucessfully get a DHCP Lease?")
-		return
-	}
-	log.Printf("IP Received: %v\n", packet.YIAddr().String())
+		if !success {
+			return fmt.Errorf("%s: we didn't sucessfully get a DHCP lease.", mac)
+		}
+		debug("IP Received: %v\n", packet.YIAddr().String())
 
-	for i := 0; i < *renewals; i++ {
-		addr := packet.YIAddr()
 		// We got here because we got a good packet.
 		o := packet.ParseOptions()
+
 		netmask, ok := o[dhcp4.OptionSubnetMask]
 		if ok {
 			log.Printf("OptionSubnetMask is %v\n", netmask)
 		} else {
-			// what do to?
-			netmask = addr
+			// Default subnet mask is the received IP?
+			//
+			// N.B.(chrisko): This doesn't feel right?
+			netmask = packet.YIAddr()
 		}
+
 		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
 		// Add the address to the iface.
 		if err := netlink.AddrAdd(iface, dst); err != nil {
 			if os.IsExist(err) {
-				done <- fmt.Errorf("add %v to %v: %v", dst, n, err)
-				return
+				return fmt.Errorf("add %v to %v: %v", dst, n, err)
 			}
 		}
 
@@ -135,38 +136,18 @@ func dhclient(ifname string, timeout time.Duration, iList []string, done chan er
 			}
 
 			if err := netlink.RouteReplace(r); err != nil {
-				done <- fmt.Errorf("%s: add %s: %v", ifname, r.String(), routerName)
-				return
+				return fmt.Errorf("%s: add %s: %v", ifname, r.String(), routerName)
 			}
 		}
 
-		// We can not assume the server will give us any grace time.
-		// So sleep for just a tiny bit less than the minimum.
+		// We can not assume the server will give us any grace time. So
+		// sleep for just a tiny bit less than the minimum.
 		time.Sleep(timeout - slop)
-		debug("Start Renewing Lease")
-		success, packet, err = client.Renew(packet)
-		if err != nil {
-			networkError, ok := err.(*net.OpError)
-			if ok && networkError.Timeout() {
-				done <- fmt.Errorf("Renewal Failed! Because it didn't find the DHCP server very Strange")
-				return
-			}
-			done <- fmt.Errorf("error: %v", err)
-			return
-		}
-
-		if !success {
-			done <- fmt.Errorf("We didn't sucessfully Renew a DHCP Lease?")
-			return
-		}
-		debug("IP Received:%v\n", packet.YIAddr().String())
 	}
-	done <- nil
-	return
+	return nil
 }
 
 func main() {
-	done := make(chan error)
 	flag.Parse()
 	if *verbose {
 		debug = log.Printf
@@ -176,14 +157,15 @@ func main() {
 	if len(flag.Args()) > 0 {
 		iList = flag.Args()
 	}
-	for _, s := range iList {
-		go dhclient(s, time.Duration(*leasetimeout)*time.Second, iList, done)
+
+	done := make(chan error)
+	for _, iface := range iList {
+		go func(iface string) {
+			done <- dhclient(iface, *renewals, time.Duration(*leasetimeout)*time.Second)
+		}(iface)
 	}
 
-	// TODO; the goroutines should pretty much run forever,
-	// and only send a message on done when they are finished.
-	// We can keep our own counter (don't need a sync.WaitGroup)
-	// given that they send us an exit message.
+	// Wait for all goroutines to finish.
 	for range iList {
 		if err := <-done; err != nil {
 			fmt.Fprintln(os.Stderr, err)
