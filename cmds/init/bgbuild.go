@@ -37,7 +37,7 @@ func (p cmdSlice) Swap(i, j int) {
 
 func worker(cmds chan string) {
 	for cmdName := range cmds {
-		args := []string{"--noexec", "--noforce", "--lowpri", cmdName}
+		args := []string{"--onlybuild", "--noforce", "--lowpri", cmdName}
 		cmd := exec.Command("installcommand", args...)
 		if err := cmd.Start(); err != nil {
 			log.Println("Cannot start:", err)
