@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -38,9 +37,7 @@ type goDirs struct {
 }
 
 const (
-	devcpio   = "scripts/dev.cpio"
-	urootPath = "src/github.com/u-root/u-root"
-	urootCmds = "github.com/u-root/u-root/cmds"
+	devcpio   = "src/github.com/u-root/u-root/scripts/dev.cpio"
 )
 
 var (
@@ -59,7 +56,6 @@ VERSION.cache`
 		Arch            string
 		Goos            string
 		Gopath          string
-		Urootpath       string
 		TempDir         string
 		Go              string
 		Debug           bool
@@ -121,8 +117,8 @@ func cpiop(c string) error {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cmd := exec.Command("sudo", "cpio", "--make-directories", "-p", path.Join(config.TempDir, n[1]))
-	d := path.Clean(n[0])
+	cmd := exec.Command("sudo", "cpio", "--make-directories", "-p", filepath.Join(config.TempDir, n[1]))
+	d := filepath.Clean(n[0])
 	cmd.Dir = d
 	cmd.Stdin = r
 	cmd.Stdout = os.Stdout
@@ -137,7 +133,7 @@ func cpiop(c string) error {
 
 	for _, v := range n[2:] {
 		debug("%v\n", v)
-		err := filepath.Walk(path.Join(d, v), func(name string, fi os.FileInfo, err error) error {
+		err := filepath.Walk(filepath.Join(d, v), func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				log.Printf(" WALK FAIL%v: %v\n", name, err)
 				// That's ok, sometimes things are not there.
@@ -169,10 +165,10 @@ func cpiop(c string) error {
 // go, compile, link, and asm. We do this to ensure we get smaller binaries.
 // Smaller, in this, meaning 25M instead of 33M. What a world!
 func buildToolChain() {
-	goBin := path.Join(config.TempDir, "go/bin/go")
+	goBin := filepath.Join(config.TempDir, "go/bin/go")
 	if standardgotool {
 		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-tags", "cmd_go_bootstrap", "-o", goBin)
-		cmd.Dir = path.Join(config.Goroot, "src/cmd/go")
+		cmd.Dir = filepath.Join(config.Goroot, "src/cmd/go")
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		if o, err := cmd.CombinedOutput(); err != nil {
 			log.Fatalf("Building statically linked go tool info %v: %v, %v\n", goBin, string(o), err)
@@ -181,17 +177,17 @@ func buildToolChain() {
 		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", goBin, ".")
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
-		cmd.Dir = path.Join(config.Urootpath, "cmds/init")
+		cmd.Dir = filepath.Join(config.Gopath, "src/github.com/u-root/u-root/cmds/init")
 
 		if err := cmd.Run(); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
 
-	toolDir := path.Join(config.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", config.Goos, config.Arch))
+	toolDir := filepath.Join(config.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", config.Goos, config.Arch))
 
 	for _, pkg := range []string{"compile", "link", "asm"} {
-		c := path.Join(toolDir, pkg)
+		c := filepath.Join(toolDir, pkg)
 		cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "-s -w", "-o", c, "cmd/"+pkg)
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		if o, err := cmd.CombinedOutput(); err != nil {
@@ -204,7 +200,7 @@ func buildToolChain() {
 func guessgoarch() {
 	config.Arch = os.Getenv("GOARCH")
 	if config.Arch != "" {
-		config.Arch = path.Clean(config.Arch)
+		config.Arch = filepath.Clean(config.Arch)
 		return
 	}
 	log.Printf("GOARCH is not set, trying to guess")
@@ -231,20 +227,20 @@ func guessgoarch() {
 func guessgoroot() {
 	config.Goroot = os.Getenv("GOROOT")
 	if config.Goroot != "" {
-		config.Goroot = path.Clean(config.Goroot)
+		config.Goroot = filepath.Clean(config.Goroot)
 		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
-		config.Godotdot = path.Dir(config.Goroot)
+		config.Godotdot = filepath.Dir(config.Goroot)
 		return
 	}
 	log.Print("Goroot is not set, trying to find a go binary")
 	p := os.Getenv("PATH")
 	paths := strings.Split(p, ":")
 	for _, v := range paths {
-		g := path.Join(v, "go")
+		g := filepath.Join(v, "go")
 		log.Printf("Try %s as the Go binary", g)
 		if _, err := os.Stat(g); err == nil {
-			config.Goroot = path.Dir(v)
-			config.Godotdot = path.Dir(config.Goroot)
+			config.Goroot = filepath.Dir(v)
+			config.Godotdot = filepath.Dir(config.Goroot)
 			log.Printf("Guessing that goroot is %v from $PATH", config.Goroot)
 			return
 		}
@@ -255,12 +251,11 @@ func guessgoroot() {
 
 func guessgopath() {
 	defer func() {
-		config.Godotdot = path.Dir(config.Goroot)
+		config.Godotdot = filepath.Dir(config.Goroot)
 	}()
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
 		config.Gopath = gopath
-		config.Urootpath = path.Join(gopath, urootPath)
 		return
 	}
 	// It's a good chance they're running this from the u-root source directory
@@ -272,11 +267,11 @@ func guessgopath() {
 		return
 	}
 	// walk up the cwd until we find a u-root entry. See if cmds/init/init.go exists.
-	for c := cwd; c != "/"; c = path.Dir(c) {
-		if path.Base(c) != "u-root" {
+	for c := cwd; c != "/"; c = filepath.Dir(c) {
+		if filepath.Base(c) != "u-root" {
 			continue
 		}
-		check := path.Join(c, "cmds/init/init.go")
+		check := filepath.Join(c, "cmds/init/init.go")
 		if _, err := os.Stat(check); err != nil {
 			//log.Printf("Could not stat %v", check)
 			continue
@@ -311,9 +306,9 @@ func goListPkg(name string) (*goDirs, error) {
 	debug("%v, %v %v %v", p, p.GoFiles, p.SFiles, p.HFiles)
 	for _, v := range append(append(p.GoFiles, p.SFiles...), p.HFiles...) {
 		if p.Goroot {
-			gorootFiles[path.Join(p.ImportPath, v)] = true
+			gorootFiles[filepath.Join(p.ImportPath, v)] = true
 		} else {
-			urootFiles[path.Join(p.ImportPath, v)] = true
+			urootFiles[filepath.Join(p.ImportPath, v)] = true
 		}
 	}
 
@@ -345,10 +340,10 @@ func addGoFiles() error {
 		}
 	}
 	for v := range gorootFiles {
-		goList += "\n" + path.Join("src", v)
+		goList += "\n" + filepath.Join("src", v)
 	}
 	for v := range urootFiles {
-		urootList += "\n" + path.Join("src", v)
+		urootList += "\n" + filepath.Join("src", v)
 	}
 	return nil
 }
@@ -358,10 +353,10 @@ func globlist(s ...string) []string {
 	// package list. If there are no arguments, use [a-zA-Z]* as the glob pattern.
 	var pat []string
 	for _, v := range s {
-		pat = append(pat, path.Join(config.Urootpath, "cmds", v))
+		pat = append(pat, filepath.Join(config.Gopath, v))
 	}
 	if len(s) == 0 {
-		pat = []string{path.Join(config.Urootpath, "cmds", "[a-zA-Z]*")}
+		pat = []string{filepath.Join(config.Gopath, "src/github.com/u-root/u-root/cmds", "[a-zA-Z]*")}
 	}
 	return pat
 }
@@ -407,7 +402,7 @@ func main() {
 		// use absolute paths in go list, however, so we have
 		// to adjust them.
 		for i := range g {
-			g[i] = path.Join(urootCmds, path.Base(g[i]))
+			g[i] = g[i][len(config.Gopath)+4:]
 		}
 		pkgList = append(pkgList, g...)
 	}
@@ -469,9 +464,9 @@ func main() {
 	}
 
 	if !config.UseExistingInit {
-		init := path.Join(config.TempDir, "init")
+		init := filepath.Join(config.TempDir, "init")
 		// Must move config.TempDir/init to inito if one is not there.
-		inito := path.Join(config.TempDir, "inito")
+		inito := filepath.Join(config.TempDir, "inito")
 		if _, err := os.Stat(inito); err != nil {
 			// WTF? did Ron forget about rename? Yuck!
 			if err := syscall.Rename(init, inito); err != nil {
@@ -486,14 +481,14 @@ func main() {
 			cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", init, ".")
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
-			cmd.Dir = path.Join(config.Urootpath, "cmds/init")
+			cmd.Dir = filepath.Join(config.Gopath, "github.com/src/u-root/u-root/cmds/init")
 
 			err = cmd.Run()
 			if err != nil {
 				log.Fatalf("%v\n", err)
 			}
 		} else {
-			gobingo := path.Join(config.TempDir, "go/bin/go")
+			gobingo := filepath.Join(config.TempDir, "go/bin/go")
 			if err := os.Link(gobingo, init); err != nil {
 				log.Fatalf("hard link of %v go %v failed: %v", gobingo, init, err)
 			}
@@ -522,7 +517,7 @@ func main() {
 	}
 
 	// First create the archive and put the device cpio in it.
-	dev, err := ioutil.ReadFile(path.Join(config.Urootpath, devcpio))
+	dev, err := ioutil.ReadFile(filepath.Join(config.Gopath, devcpio))
 	if err != nil {
 		log.Fatalf("%v %v\n", dev, err)
 	}
@@ -571,7 +566,7 @@ func main() {
 	cmd = exec.Command("sudo", "cpio", "-i")
 	cmd.Dir = config.TempDir
 	// We have it in memory. Get a better way to do this!
-	r, err = os.Open(path.Join(config.Urootpath, devcpio))
+	r, err = os.Open(filepath.Join(config.Gopath, devcpio))
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
