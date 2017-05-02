@@ -32,15 +32,14 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
-	"github.com/u-root/u-root/cmds/cpio/pkg"
-	_ "github.com/u-root/u-root/cmds/cpio/pkg/newc"
+	"github.com/u-root/u-root/pkg/cpio"
+	_ "github.com/u-root/u-root/pkg/cpio/newc"
 )
 
 var (
-	debug = func(string, ...interface{}) {}
-	d     = flag.Bool("v", false, "Debug prints")
+	debug  = func(string, ...interface{}) {}
+	d      = flag.Bool("v", false, "Debug prints")
 	format = flag.String("H", "newc", "format")
 )
 
@@ -49,7 +48,6 @@ func usage() {
 }
 
 func main() {
-	var err error
 	flag.Parse()
 	if *d {
 		debug = log.Printf
@@ -62,62 +60,64 @@ func main() {
 	}
 	op := a[0]
 
+	archiver, err := cpio.Format(*format)
+	if err != nil {
+		log.Fatalf("Format %q not supported: %v", *format, err)
+	}
+
 	switch op {
 	case "i":
-		var r cpio.RecReader
-		if r, err = cpio.Reader(*format, os.Stdin); err == nil {
-			var f *cpio.File
-			for f, err = r.RecRead(); err == nil; f, err = r.RecRead() {
-				fmt.Printf("%s\n", f.String())
-				err = cpio.Create(f)
-				if err != nil {
-					fmt.Printf("%v: %v", f, err)
-				}
+		rr := archiver.Reader(os.Stdin)
+		for {
+			rec, err := rr.ReadRecord()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("error reading records: %v", err)
+			}
+			log.Printf("Creating %s\n", rec)
+			if err := cpio.CreateFile(rec); err != nil {
+				log.Printf("Creating %q failed: %v", rec.Name, err)
 			}
 		}
 
 	case "o":
-		var w cpio.RecWriter
-		if w, err = cpio.Writer(*format, os.Stdout); err != nil {
-			log.Fatal(err)
+		rw := archiver.Writer(os.Stdout)
+		scanner := bufio.NewScanner(os.Stdin)
+
+		for scanner.Scan() {
+			name := scanner.Text()
+			rec, err := cpio.GetRecord(name)
+			if err != nil {
+				log.Fatalf("Getting record of %q failed: %v", name, err)
+			}
+			if err := rw.WriteRecord(rec); err != nil {
+				log.Fatalf("Writing record %q failed: %v", name, err)
+			}
 		}
 
-		b := bufio.NewReader(os.Stdin)
-
-		for {
-			var name string
-			if name, err = b.ReadString('\n'); err != nil {
-				if err == io.EOF {
-					err = w.Finish()
-				}
-				break
-			}
-			name = strings.TrimRight(name, "\r\n")
-			fi, err := os.Lstat(name)
-			if err != nil {
-				break
-			}
-			f, err := cpio.FIToFile(name, fi)
-			if err != nil {
-				break
-			}
-			_, err = w.RecWrite(f)
-			if err != nil {
-				break
-			}
+		if err := scanner.Err(); err != nil {
+			log.Fatalf("Error reading stdin: %v", err)
 		}
+		if err := rw.WriteTrailer(); err != nil {
+			log.Fatalf("Error writing trailer record: %v", err)
+		}
+
 	case "t":
-		var r cpio.RecReader
-		if r, err = cpio.Reader(*format, os.Stdin); err == nil {
-			var f *cpio.File
-			for f, err = r.RecRead(); err == nil; f, err = r.RecRead() {
-				fmt.Printf("%s\n", f.String())
+		rr := archiver.Reader(os.Stdin)
+		for {
+			rec, err := rr.ReadRecord()
+			if err == io.EOF {
+				break
 			}
+			if err != nil {
+				log.Fatalf("error reading records: %v", err)
+			}
+			fmt.Println(rec)
 		}
+
 	default:
 		usage()
-	}
-	if err != nil && err != io.EOF {
-		log.Fatalf("%v", err)
 	}
 }
