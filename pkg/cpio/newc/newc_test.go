@@ -1,6 +1,169 @@
+// Copyright 2012 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package newc
 
-import "github.com/u-root/u-root/cmds/cpio/pkg"
+import (
+	"bytes"
+	"io"
+	"io/ioutil"
+	"testing"
+
+	"github.com/u-root/u-root/pkg/cpio"
+)
+
+func TestSimple(t *testing.T) {
+	f, err := cpio.Format("newc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := f.Reader(bytes.NewReader(testCPIO))
+	files, err := r.ReadRecords()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i, f := range files {
+		if f.String() != testResult[i] {
+			t.Errorf("Value %d: got \n%s, want \n%s", i, f.String(), testResult[i])
+		}
+		t.Logf("Value %d: got \n%s, want \n%s", i, f.String(), testResult[i])
+	}
+}
+
+func TestWriteRead(t *testing.T) {
+	f, err := cpio.Format("newc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contents := "LANAAAAAAAAAA"
+	rec := cpio.StaticRecord(contents, cpio.Info{
+		Ino:      1,
+		Mode:     2,
+		UID:      3,
+		GID:      4,
+		NLink:    5,
+		MTime:    6,
+		FileSize: 7,
+		Major:    8,
+		Minor:    9,
+		Rmajor:   10,
+		Rminor:   11,
+		Name:     "foobar",
+	})
+
+	buf := &bytes.Buffer{}
+	w := f.Writer(buf)
+	if err := w.WriteRecord(rec); err != nil {
+		t.Errorf("Could not write record %q: %v", rec.Name, err)
+	}
+
+	if err := w.WriteTrailer(); err != nil {
+		t.Errorf("Could not write trailer: %v", err)
+	}
+
+	r := f.Reader(bytes.NewReader(buf.Bytes()))
+	rec2, err := r.ReadRecord()
+	if err != nil {
+		t.Errorf("Could not read record: %v", err)
+	}
+
+	if rec2.Info != rec.Info {
+		t.Errorf("Records not equal:\n%#v\n%#v", rec.Info, rec2.Info)
+	}
+
+	contents2, err := ioutil.ReadAll(rec2)
+	if err != nil {
+		t.Errorf("Could not read %q: %v", rec2.Name, err)
+	}
+
+	if string(contents2) != contents {
+		t.Errorf("Read(%q) = %s, want %s", rec2.Name, string(contents2), contents)
+	}
+}
+
+func TestReadWrite(t *testing.T) {
+	f, err := cpio.Format("newc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := f.Reader(bytes.NewReader(testCPIO))
+	files, err := r.ReadRecords()
+	if err != nil {
+		t.Fatalf("Reading testCPIO reader: %v", err)
+	}
+
+	buf := &bytes.Buffer{}
+	w := f.Writer(buf)
+	if err := w.WriteRecords(files); err != nil {
+		t.Fatalf("WriteRecords: %v", err)
+	}
+
+	if err := w.WriteTrailer(); err != nil {
+		t.Fatalf("WriteTrailer: %v", err)
+	}
+
+	r = f.Reader(bytes.NewReader(testCPIO))
+	files, err = r.ReadRecords()
+	if err != nil {
+		t.Fatalf("Reading testCPIO reader: %v", err)
+	}
+
+	r = f.Reader(bytes.NewReader(buf.Bytes()))
+	filesReadBack, err := r.ReadRecords()
+	if err != nil {
+		t.Fatalf("TestReadWrite: reading generated data: %v", err)
+	}
+
+	// Now check a few things: arrays should be same length, Headers should match,
+	// names should be the same, and data should be the same. If this all works,
+	// it means we read in serialized data, wrote it out, read it in, and the
+	// structs all matched.
+	if len(files) != len(filesReadBack) {
+		t.Fatalf("[]file len from testCPIO %v and generated %v are not the same and should be", len(files), len(filesReadBack))
+	}
+	for i := range files {
+		f1 := files[i]
+		f2 := filesReadBack[i]
+
+		if f1.Info != f2.Info {
+			t.Errorf("index %d: testCPIO Info\n%v\ngenerated Info\n%v\n", i, f1.Info, f2.Info)
+		}
+
+		contents1, err := ioutil.ReadAll(f1)
+		if err != nil {
+			t.Errorf("index %d(%q): can't read from the source: %v", i, f1.Name, err)
+		}
+		contents2, err := ioutil.ReadAll(f2)
+		if err != nil {
+			t.Errorf("index %d(%q): can't read from the dest: %v", i, f2.Name, err)
+		}
+		if !bytes.Equal(contents1, contents2) {
+			t.Errorf("index %d content: file 1 (%q) is %v, file 2 (%q) wanted %v", i, f1.Name, contents1, f2.Name, contents2)
+		}
+	}
+}
+
+func TestBad(t *testing.T) {
+	f, err := cpio.Format("newc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := f.Reader(bytes.NewReader(badCPIO))
+	if _, err := r.ReadRecord(); err != io.EOF {
+		t.Errorf("ReadRecord(badCPIO) got %v, want %v", err, io.EOF)
+	}
+
+	r = f.Reader(bytes.NewReader(badMagicCPIO))
+	if _, err := r.ReadRecord(); err == nil {
+		t.Errorf("Wanted bad magic err, got nil")
+	}
+}
 
 /*
 drwxrwxr-x   9 rminnich rminnich        0 Jan 22 22:18 .
@@ -291,35 +454,28 @@ var (
 	}
 
 	testResult = []string{
-		".: Ino 3204033 Mode 040775 UID 1000 GID 1000 Nlink 9 Mtime 0x5885a04e FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"etc: Ino 3204037 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"etc/localtime: Ino 3195404 Mode 0100644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 118 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"etc/resolv.conf: Ino 3177229 Mode 0100644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 81 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"lib64: Ino 3204043 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"tcz: Ino 3204036 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"bin: Ino 3204044 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"tmp: Ino 3204045 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"dev: Ino 3204038 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"dev/console: Ino 3197985 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 5 Rminor 1",
-		"dev/ttyS0: Ino 3197986 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 4 Rminor 64",
-		"dev/loop2: Ino 3197987 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 2",
-		"dev/loop-control: Ino 3197983 Mode 020600 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 10 Rminor 237",
-		"dev/loop7: Ino 3197984 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 7",
-		"dev/loop6: Ino 3197975 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 6",
-		"dev/loop4: Ino 3197979 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 4",
-		"dev/loop1: Ino 3197981 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 1",
-		"dev/loop5: Ino 3197982 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 5",
-		"dev/null: Ino 3197988 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 1 Rminor 3",
-		"dev/loop0: Ino 3197976 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 0",
-		"dev/loop3: Ino 3197980 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 3",
-		"usr: Ino 3204041 Mode 040755 UID 0 GID 0 Nlink 3 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-		"usr/lib: Ino 3204042 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
-	}
-
-	// TrailerRecord is the required final record in a file.
-	TrailerRecord = &cpio.File{
-		Info: cpio.Info{
-			Name: cpio.Trailer,
-		},
+		".: Ino 3204033 Mode 040775 UID 1000 GID 1000 NLink 9 MTime 2017-01-23 06:18:54 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"etc: Ino 3204037 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"etc/localtime: Ino 3195404 Mode 0100644 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 118 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"etc/resolv.conf: Ino 3177229 Mode 0100644 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 81 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"lib64: Ino 3204043 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"tcz: Ino 3204036 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"bin: Ino 3204044 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"tmp: Ino 3204045 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"dev: Ino 3204038 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"dev/console: Ino 3197985 Mode 020644 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 5 Rminor 1",
+		"dev/ttyS0: Ino 3197986 Mode 020644 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 4 Rminor 64",
+		"dev/loop2: Ino 3197987 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 2",
+		"dev/loop-control: Ino 3197983 Mode 020600 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 10 Rminor 237",
+		"dev/loop7: Ino 3197984 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 7",
+		"dev/loop6: Ino 3197975 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 6",
+		"dev/loop4: Ino 3197979 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 4",
+		"dev/loop1: Ino 3197981 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 1",
+		"dev/loop5: Ino 3197982 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 5",
+		"dev/null: Ino 3197988 Mode 020644 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 1 Rminor 3",
+		"dev/loop0: Ino 3197976 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 0",
+		"dev/loop3: Ino 3197980 Mode 060660 UID 0 GID 0 NLink 1 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 7 Rminor 3",
+		"usr: Ino 3204041 Mode 040755 UID 0 GID 0 NLink 3 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
+		"usr/lib: Ino 3204042 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
 	}
 )
