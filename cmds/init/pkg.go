@@ -1945,7 +1945,6 @@ var (
 	goBuildEnd    = []byte("\"\n \xff")
 
 	elfPrefix = []byte("\x7fELF")
-
 )
 
 var BuildIDReadSize = 32 * 1024 // changed for testing
