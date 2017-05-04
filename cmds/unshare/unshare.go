@@ -21,15 +21,8 @@
 //     expectation of success.
 //
 //     If PROGRAM is not specified, unshare defaults to /ubin/rush.
-//
-// Options:
-//     -ipc:           Unshare the IPC namespace
-//     -mount:         Unshare the mount namespace
-//     -pid:           Unshare the pid namespace
-//     -net:           Unshare the net namespace
-//     -uts:           Unshare the uts namespace
-//     -user:          Unshare the user namespace
-//     -map-root-user: Map current uid to root. Not working
+//     The unsharing options are highly kernel dependent, but most kernels
+//     support at least one of them.
 package main
 
 import (
@@ -37,18 +30,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
 )
 
-var (
-	ipc     = flag.Bool("ipc", false, "Unshare the IPC namespace")
-	mount   = flag.Bool("mount", false, "Unshare the mount namespace")
-	pid     = flag.Bool("pid", false, "Unshare the pid namespace")
-	net     = flag.Bool("net", false, "Unshare the net namespace")
-	uts     = flag.Bool("uts", false, "Unshare the uts namespace")
-	user    = flag.Bool("user", false, "Unshare the user namespace")
-	maproot = flag.Bool("map-root-user", false, "Map current uid to root. Not working")
-)
+var fatal= log.Fatalf
 
 func main() {
 	flag.Parse()
@@ -59,31 +43,10 @@ func main() {
 	}
 
 	c := exec.Command(a[0], a[1:]...)
-	c.SysProcAttr = &syscall.SysProcAttr{}
-	if *mount {
-		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
-	}
-	if *uts {
-		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUTS
-	}
-	if *ipc {
-		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWIPC
-	}
-	if *net {
-		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
-	}
-	if *pid {
-		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWPID
-	}
-	if *user {
-		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
-	}
-
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
+	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
+	setSysProcAttr(c)
 
 	if err := c.Run(); err != nil {
-		log.Printf(err.Error())
+		fatal(err.Error())
 	}
 }
