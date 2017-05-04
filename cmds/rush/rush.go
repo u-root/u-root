@@ -220,6 +220,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	tty()
 	fmt.Printf("%% ")
 	for {
 		cmds, status, err := getCommand(b)
