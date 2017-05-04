@@ -85,4 +85,3 @@ func extraEnvVars() []envVar {
 		{"CGO_LDFLAGS", strings.Join(ldflags, " ")},
 	}
 }
-

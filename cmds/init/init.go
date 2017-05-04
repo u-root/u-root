@@ -16,7 +16,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -30,7 +30,7 @@ var (
 )
 
 func main() {
-	if path.Base(os.Args[0]) == "go" {
+	if filepath.Base(os.Args[0]) == "go" {
 		rungo()
 		log.Printf("go build returned ... exiting")
 		os.Exit(0)
@@ -49,13 +49,21 @@ func main() {
 
 	// In earlier versions we just had src/cmds. Due to the Go rules it seems we need to
 	// embed the URL of the repo everywhere. Yuck.
-	if commands, err := ioutil.ReadDir(path.Join("/src", uroot.CmdsPath)); err == nil {
-		for _, v := range commands {
-			name := v.Name()
+	c, err := filepath.Glob("/src/github.com/u-root/u-root/cmds/[a-z]*")
+	if err != nil || len(c) == 0 {
+		log.Printf("In a break with tradition, you seem to have NO u-root commands: %v", err)
+	}
+	o, err := filepath.Glob("/src/*/*/*")
+	if err != nil {
+		log.Printf("Your filepath glob for other commands seems busted: %v", err)
+	}
+	c = append(c, o...)
+		for _, v:= range c {
+			name := filepath.Base(v)
 			if name == "installcommand" || name == "init" {
 				continue
 			} else {
-				destPath := path.Join("/buildbin", name)
+				destPath := filepath.Join("/buildbin", name)
 				source := "/buildbin/installcommand"
 				if err := os.Symlink(source, destPath); err != nil {
 					log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
@@ -65,13 +73,10 @@ func main() {
 				}
 			}
 		}
-	} else {
-		log.Fatalf("Can't read %v; %v", "/src", err)
-	}
 	envs := uroot.Envs
 	debug("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
-	a = append(a, "-o", "/buildbin/installcommand", path.Join(uroot.CmdsPath, "installcommand"))
+	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(uroot.CmdsPath, "installcommand"))
 	cmd := exec.Command("go", a...)
 	installenvs := envs
 	installenvs = append(envs, "GOBIN=/buildbin")
@@ -103,7 +108,7 @@ func main() {
 		if len(nv) < 2 {
 			nv = append(nv, "")
 		}
-		n := path.Join("/env", nv[0])
+		n := filepath.Join("/env", nv[0])
 		if err := ioutil.WriteFile(n, []byte(nv[1]), 0666); err != nil {
 			log.Printf("%v: %v", n, err)
 		}

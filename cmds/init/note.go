@@ -145,4 +145,3 @@ func readELFGoBuildID(filename string, f *os.File, data []byte) (buildid string,
 	// No note. Treat as successful but build ID empty.
 	return "", nil
 }
-
