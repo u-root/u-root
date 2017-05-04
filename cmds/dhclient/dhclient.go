@@ -15,6 +15,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -67,7 +68,11 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 		return fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
 	}
 
-	conn, err := dhcp4client.NewInetSock()
+	if err := netlink.LinkSetUp(iface); err != nil {
+		return fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
+	}
+
+	conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
@@ -151,6 +156,21 @@ func main() {
 	flag.Parse()
 	if *verbose {
 		debug = log.Printf
+	}
+
+	// if we boot quickly enough, the random number generator
+	// may not be ready, and the dhcp package panics in that case.
+	// Worse, /dev/urandom, which the Go package falls back to,
+	// might not be there. Still worse, the Go package is "sticky"
+	// in that once it decides to use /dev/urandom, it won't go back,
+	// even if the system call would subsequently work.
+	// You're screwed. Exit.
+	// Wouldn't it be nice if we could just do the blocking system
+	// call? But that comes with its own giant set of headaches.
+	// Maybe we'll end up in a loop, sleeping, and just running
+	// ourselves.
+	if n, err := rand.Read([]byte{0}); err != nil || n != 1 {
+		log.Fatalf("We're sorry, the random number generator is not up. Please file a ticket")
 	}
 
 	iList := []string{defaultIface}
