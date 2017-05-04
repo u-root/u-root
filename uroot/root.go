@@ -36,6 +36,12 @@ type file struct {
 }
 
 // TODO: make this a map so it's easier to find dups.
+type dev struct {
+	name    string
+	mode    os.FileMode
+	magic   int
+	howmany int
+}
 type mount struct {
 	source string
 	target string
@@ -70,6 +76,13 @@ var (
 		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777)},
 		// This is for uroot packages. Is this a good idea? I don't know.
 		{name: "/pkg", mode: os.FileMode(0777)},
+	}
+	devs = []dev{
+	// chicken and egg: these need to be there before you start. So, sadly,
+	// we will always need dev.cpio or something like it.
+	//{name: "/dev/null", mode: os.FileMode(0660) | 020000, magic: 0x0103},
+	//{name: "/dev/console", mode: os.FileMode(0660) | 020000, magic: 0x0501},
+	{name: "/dev/tty", mode: os.FileMode(0666) | 020000, magic: 0x0501},
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
@@ -136,6 +149,14 @@ func Rootfs() {
 	for _, m := range dirs {
 		if err := os.MkdirAll(m.name, m.mode); err != nil {
 			log.Printf("mkdir :%s: mode %o: %v\n", m.name, m.mode, err)
+			continue
+		}
+	}
+
+	for _, d := range devs {
+		syscall.Unlink(d.name)
+		if err := syscall.Mknod(d.name, uint32(d.mode), d.magic); err != nil {
+			log.Printf("mknod :%s: mode %o: magic: %v: %v\n", d.name, d.mode, d.magic, err)
 			continue
 		}
 	}
