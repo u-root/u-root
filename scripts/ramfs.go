@@ -590,7 +590,7 @@ func main() {
 	// Arrange to start init in the directory in a new namespace.
 	// That should make all mounts go away when we're done.
 	// On real kernels you can unshare without being root. Not on Linux.
-	cmd = exec.Command("sudo", "unshare", "-m", "chroot", config.TempDir, "/init")
+	cmd = exec.Command("sudo", "unshare", "-m", "chroot", config.TempDir, "/init", "-test")
 	cmd.Dir = config.TempDir
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = os.Stdin, os.Stderr, os.Stdout
 	debug("Run %v @ %v", cmd, cmd.Dir)
