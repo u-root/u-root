@@ -26,6 +26,7 @@ import (
 var (
 	verbose   = flag.Bool("v", false, "print all build commands")
 	ludicrous = flag.Bool("ludicrous", false, "print out information about symlink creation")
+	test      = flag.Bool("test", false, "Test mode: don't try to set control tty")
 	debug     = func(string, ...interface{}) {}
 )
 
@@ -138,9 +139,11 @@ func main() {
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
-		// TODO: figure out why we get EPERM when we use this.
-		//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
-		cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
+		if *test {
+			cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
+		} else {
+			cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+		}
 		debug("Run %v", cmd)
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
