@@ -31,6 +31,10 @@ var (
 )
 
 func main() {
+	defer func() {
+		log.Printf("well, this sucks, init exited. hanging forever")
+		for {}
+	}()
 	if filepath.Base(os.Args[0]) == "go" {
 		rungo()
 		log.Printf("go build returned ... exiting")
@@ -137,24 +141,50 @@ func main() {
 	// run inito and then run our shell
 	// Perhaps we should stat inito first.
 	// inito is always first and we set default flags for it.
-	cloneFlags := uintptr(syscall.CLONE_NEWPID)
-	for _, v := range []string{"/inito", "/buildbin/uinit", "/buildbin/rush"} {
+	attr := &syscall.SysProcAttr{Cloneflags: uintptr(syscall.CLONE_NEWPID)}
+	if ! *test {
+		tty, err := os.OpenFile("/dev/console", os.O_RDWR, 0)
+		if err == nil {
+			attr.Ctty = int(tty.Fd())
+			attr.Setctty = true
+			r1, r2, e1 := syscall.RawSyscall(syscall.SYS_IOCTL,tty.Fd(), uintptr(syscall.TIOCSCTTY), 1)
+			log.Printf("TIOCSTTY: %v, %v, %v", r1, r2, e1)
+		} else {
+			log.Printf("Can't open /dev/tty; no job control, not even ^c")
+		}
+			{
+		var xattr = &syscall.SysProcAttr{}
+		*xattr = *attr
+		cmd = exec.Command("/buildbin/rush")
+		cmd.Env = envs
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+			xattr.Setsid = true
+			xattr.Setpgid = true
+		cmd.SysProcAttr = xattr
+		log.Printf("============>try to run rush")
+		if err := cmd.Run(); err != nil {
+			log.Print(err)
+		}
+		log.Printf("DONE try to run rush")
+		}
+	}
+	for _, v := range []string{/*"/inito", "/buildbin/uinit", */"/buildbin/rush"} {
 		cmd = exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
-		if *test {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
-		} else {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+		if ! *test {
+			attr.Setsid = true
 		}
+		cmd.SysProcAttr = attr
 		debug("Run %v", cmd)
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
 		}
-		// only the first init needs its own PID space.
-		cloneFlags = 0
+		attr.Cloneflags = 0
 	}
 
 	log.Printf("init: All commands exited")
