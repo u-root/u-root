@@ -204,7 +204,6 @@ func main() {
 		default:
 			log.Fatalf("unexpected panic value: %T(%v)", err, err)
 		}
-		_, _, _ = getCommand(b)
 	}()
 
 	// we use path.Base in case they type something like ./cmd
@@ -220,8 +219,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	tty()
 	fmt.Printf("%% ")
 	for {
+		foreground()
 		cmds, status, err := getCommand(b)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
