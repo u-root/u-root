@@ -41,12 +41,11 @@ var (
 )
 
 func init() {
-	flag.Usage = func(f func()) func() {
-		return func() {
-			os.Args[0] = cmd
-			f()
-		}
-	}(flag.Usage)
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = cmd
+		defUsage()
+	}
 	flag.StringVar(&flags.format, "f", "%v", "use printf style floating-point FORMAT")
 	flag.StringVar(&flags.separator, "s", "\n", "use STRING to separate numbers")
 	flag.BoolVar(&flags.widthEqual, "w", false, "equalize width by padding with leading zeroes")

@@ -48,6 +48,11 @@ var (
 )
 
 func init() {
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = "cp [-wRrifvP] file[s] ... dest"
+		defUsage()
+	}
 	flag.IntVar(&nwork, "w", runtime.NumCPU(), "number of worker goroutines")
 	flag.BoolVar(&recursive, "R", false, "copy file hierarchies")
 	flag.BoolVar(&recursive, "r", false, "alias to -R recursive mode")

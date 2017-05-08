@@ -30,12 +30,11 @@ var (
 )
 
 func init() {
-	flag.Usage = func(f func()) func() {
-		return func() {
-			os.Args[0] = cmd
-			f()
-		}
-	}(flag.Usage)
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = cmd
+		defUsage()
+	}
 	args := os.Args[1:]
 	flag.Parse()
 	for _, flag := range args {
