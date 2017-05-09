@@ -109,9 +109,4 @@ func doConfig() {
 	}
 	config.Bbsh = filepath.Join(config.Cwd, "bbsh")
 	os.RemoveAll(config.Bbsh)
-	config.Args = flag.Args()
-	if len(config.Args) == 0 {
-		config.Args = defaultCmd
-	}
-
 }
