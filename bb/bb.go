@@ -70,8 +70,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+        "syscall"
 
 	"github.com/u-root/u-root/uroot"
 )
@@ -93,19 +95,19 @@ func init() {
 	// but it allows us to merge init and sh. The 600K we save is worth it.
 	// Figure out which init to run. We must always do this.
 
-	log.Printf("init: os is %v, initMap %v", filepath.Base(os.Args[0]), initMap)
+	// log.Printf("init: os is %v, initMap %v", filepath.Base(os.Args[0]), initMap)
 	// we use filepath.Base in case they type something like ./cmd
 	if f, ok := initMap[filepath.Base(os.Args[0])]; ok {
-		log.Printf("run the Init function for %v: run %v", os.Args[0], f)
+		//log.Printf("run the Init function for %v: run %v", os.Args[0], f)
 		f()
 	}
 
 	if os.Args[0] != "/init" {
-		log.Printf("Skipping root file system setup since we are not /init")
+		//log.Printf("Skipping root file system setup since we are not /init")
 		return
 	}
 	if os.Getpid() != 1 {
-		log.Printf("Skipping root file system setup since /init is not pid 1")
+		//log.Printf("Skipping root file system setup since /init is not pid 1")
 		return
 	}
 	uroot.Rootfs()
@@ -116,6 +118,37 @@ func init() {
 			log.Printf("Symlink /init to %v: %v", t, err)
 		}
 	}
+	if err := os.Symlink("/init", "/ubin/rush"); err != nil {
+		log.Printf("Symlink /init to %v: %v", "/ubin/rush", err)
+	}
+        // spawn the first shell. We had been running the shell as pid 1
+        // but that makes control tty stuff messy. We think.
+        cloneFlags := uintptr(0)
+	for _, v := range []string{"/inito", "/ubin/uinit", "/ubin/rush"} {
+		cmd := exec.Command(v)
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		var fd int
+		cons, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err != nil {
+			log.Printf("can't open /dev/tty: %v", err)
+		} else {
+			fd = int(cons.Fd())
+			log.Printf("#### setting 0, 1, 2 to opened tty fd is %v", cons.Fd())
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = cons, cons, cons
+		}
+		cmd.SysProcAttr = &syscall.SysProcAttr{Ctty: fd, Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+		log.Printf("Run %v", cmd)
+		if err := cmd.Run(); err != nil {
+			log.Print(err)
+		}
+		// only the first init needs its own PID space.
+		cloneFlags = 0
+	}
+
+	// This will drop us into a rush prompt, since this is the init for rush.
+	// That's a nice fallback for when everything goes wrong. 
 	return
 }
 `
@@ -131,35 +164,9 @@ func nodebugPrint(f string, s ...interface{}) {
 const cmds = "cmds"
 
 var (
-	debug      = nodebugPrint
-	defaultCmd = []string{
-		"src/github.com/u-root/u-root/cmds/cat",
-		"src/github.com/u-root/u-root/cmds/cmp",
-		"src/github.com/u-root/u-root/cmds/comm",
-		"src/github.com/u-root/u-root/cmds/cp",
-		"src/github.com/u-root/u-root/cmds/date",
-		"src/github.com/u-root/u-root/cmds/dd",
-		"src/github.com/u-root/u-root/cmds/dmesg",
-		"src/github.com/u-root/u-root/cmds/echo",
-		"src/github.com/u-root/u-root/cmds/freq",
-		"src/github.com/u-root/u-root/cmds/grep",
-		"src/github.com/u-root/u-root/cmds/ip",
-		"src/github.com/u-root/u-root/cmds/kexec",
-		"src/github.com/u-root/u-root/cmds/ls",
-		"src/github.com/u-root/u-root/cmds/mkdir",
-		"src/github.com/u-root/u-root/cmds/mount",
-		"src/github.com/u-root/u-root/cmds/netcat",
-		"src/github.com/u-root/u-root/cmds/ping",
-		"src/github.com/u-root/u-root/cmds/printenv",
-		"src/github.com/u-root/u-root/cmds/rm",
-		"src/github.com/u-root/u-root/cmds/seq",
-		"src/github.com/u-root/u-root/cmds/srvfiles",
-		"src/github.com/u-root/u-root/cmds/tcz",
-		"src/github.com/u-root/u-root/cmds/uname",
-		"src/github.com/u-root/u-root/cmds/uniq",
-		"src/github.com/u-root/u-root/cmds/unshare",
-		"src/github.com/u-root/u-root/cmds/wc",
-		"src/github.com/u-root/u-root/cmds/wget",
+	debug   = nodebugPrint
+	cmdlist = []string{
+		"src/github.com/u-root/u-root/cmds/*",
 	}
 
 	// fixFlag tells by existence if an argument needs to be fixed.
@@ -185,6 +192,15 @@ var (
 	}
 	dumpAST = flag.Bool("D", false, "Dump the AST")
 	initMap = "package main\nvar initMap = map[string] func() {\n"
+
+	// commands to skip. init and rush should be obvious
+	// builtin and script we skip as we have no toolchain in this mode.
+	skip = map[string]bool{
+		"builtin": true,
+		"init":    true,
+		"rush":    true,
+		"script":  true,
+	}
 )
 
 var config struct {
@@ -311,7 +327,8 @@ func oneCmd() {
 	config.FullPath = filepath.Join(config.Gopath, config.CmdPath)
 	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
 	if err != nil {
-		panic(err)
+		log.Printf("Can't Parsedir %v, %v", config.FullPath, err)
+		return
 	}
 
 	for _, f := range p {
@@ -323,6 +340,7 @@ func oneCmd() {
 }
 func main() {
 	var err error
+
 	doConfig()
 
 	if err := os.MkdirAll(config.Bbsh, 0755); err != nil {
@@ -330,22 +348,29 @@ func main() {
 	}
 
 	if len(flag.Args()) > 0 {
-		config.Args = []string{}
-		for _, v := range flag.Args() {
-			v = filepath.Join(config.Gopath, v)
-			g, err := filepath.Glob(v)
-			if err != nil {
-				log.Fatalf("Glob error: %v", err)
-			}
-
-			for i := range g {
-				g[i] = g[i][len(config.Gopath):]
-			}
-			config.Args = append(config.Args, g...)
+		cmdlist = flag.Args()
+	}
+	config.Args = []string{}
+	for _, v := range cmdlist {
+		v = filepath.Join(config.Gopath, v)
+		g, err := filepath.Glob(v)
+		if err != nil {
+			log.Fatalf("Glob error: %v", err)
 		}
+
+		for i := range g {
+			g[i], err = filepath.Rel(config.Gopath, g[i])
+			if err != nil {
+				log.Fatalf("Can't take rel path of %v from %v? %v", g[i], config.Gopath, err)
+			}
+		}
+		config.Args = append(config.Args, g...)
 	}
 
 	for _, v := range config.Args {
+		if skip[filepath.Base(v)] {
+			continue
+		}
 		// Yes, gross. Fix me.
 		config.CmdPath = v
 		config.CmdName = filepath.Base(v)
