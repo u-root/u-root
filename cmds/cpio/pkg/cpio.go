@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package cpio
 
 import (
 	"fmt"
+	"log"
+	"io"
 	"os"
 )
 
@@ -37,7 +39,37 @@ var (
 		typeChar:    os.ModeCharDevice,
 		typeFIFO:    os.ModeNamedPipe,
 	}
+
+	FormatMap = map[string] *ops {
+	}
+	Formats string
+	Debug = func(string, ...interface{}) {}
 )
+
+func AddMap(n string, r NewReader, w NewWriter) {
+	if _, ok := FormatMap[n]; ok {
+		log.Fatalf("cpio: two requests for format %s", n)
+	}
+
+	FormatMap[n] = &ops{r, w}
+	Formats += n + " "
+}
+
+func Reader(n string, r io.ReaderAt) (RecReader, error) {
+	op, ok := FormatMap[n]
+	if ! ok {
+		return nil, fmt.Errorf("Format %v is not one of %v", n, Formats)
+	}
+	return op.NewReader(r)
+}
+
+func Writer(n string, w io.Writer) (RecWriter, error) {
+	op, ok := FormatMap[n]
+	if ! ok {
+		return nil, fmt.Errorf("Format %v is not one of %v", n, Formats)
+	}
+	return op.NewWriter(w)
+}
 
 func perm(f *File) uint32 {
 	return uint32(f.Mode) & mode
@@ -54,19 +86,8 @@ func cpioModetoMode(m uint64) (os.FileMode, error) {
 	return os.FileMode(0), fmt.Errorf("Invalid file type %#x", m&typeMask)
 }
 
-// round4 is intended to be use with offsets to WriteAt and ReadAt
-func round4(n ...int64) (ret int64) {
-	for _, v := range n {
-		ret += v
-	}
-
-	ret = ((ret + 3) / 4) * 4
-	return
-}
-
 func (f *File) String() string {
-
-	return fmt.Sprintf("%s: Ino %d Mode %#o UID %d GID %d Nlink %d Mtime %#x FileSize %d Major %d Minor %d RMajor %d Rminor %d NameSize %d",
+	return fmt.Sprintf("%s: Ino %d Mode %#o UID %d GID %d Nlink %d Mtime %#x FileSize %d Major %d Minor %d RMajor %d Rminor %d",
 		f.Name,
 		f.Ino,
 		f.Mode,
@@ -80,6 +101,36 @@ func (f *File) String() string {
 		f.Major,
 		f.Minor,
 		f.Rmajor,
-		f.Rminor,
-		f.NameSize)
+		f.Rminor)
 }
+
+func RecWriteAll(w RecWriter, f []*File) (int, error) {
+	var tot int 
+	for _, wf := range f {
+		n, err := w.RecWrite(wf)
+		if err != nil {
+			return -1, fmt.Errorf("TestReadWrite: writing got %v, want nil", err)
+		}
+		tot += n
+	}
+	return tot, nil
+}
+
+// RecReadAll reads all the File records.
+// This interface setup seems broken. This should work
+// for all record types. If we ever get more than one
+// we will have to revisit this.
+func RecReadAll(r RecReader) ([]*File, error) {
+	var f []*File
+	for {
+		nf, err := r.RecRead()
+		if err == io.EOF {
+			return f, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		f = append(f, nf)
+	}
+}
+

@@ -33,11 +33,15 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/u-root/u-root/cmds/cpio/pkg"
+	_ "github.com/u-root/u-root/cmds/cpio/pkg/newc"
 )
 
 var (
 	debug = func(string, ...interface{}) {}
 	d     = flag.Bool("v", false, "Debug prints")
+	format = flag.String("H", "newc", "format")
 )
 
 func usage() {
@@ -60,12 +64,12 @@ func main() {
 
 	switch op {
 	case "i":
-		var r RecReader
-		if r, err = NewcReader(os.Stdin); err == nil {
-			var f *File
+		var r cpio.RecReader
+		if r, err = cpio.Reader(*format, os.Stdin); err == nil {
+			var f *cpio.File
 			for f, err = r.RecRead(); err == nil; f, err = r.RecRead() {
 				fmt.Printf("%s\n", f.String())
-				err = create(f)
+				err = cpio.Create(f)
 				if err != nil {
 					fmt.Printf("%v: %v", f, err)
 				}
@@ -73,8 +77,8 @@ func main() {
 		}
 
 	case "o":
-		var w RecWriter
-		if w, err = NewcWriter(os.Stdout); err != nil {
+		var w cpio.RecWriter
+		if w, err = cpio.Writer(*format, os.Stdout); err != nil {
 			log.Fatal(err)
 		}
 
@@ -84,7 +88,7 @@ func main() {
 			var name string
 			if name, err = b.ReadString('\n'); err != nil {
 				if err == io.EOF {
-					err = w.RecWrite(TrailerRecord)
+					err = w.Finish()
 				}
 				break
 			}
@@ -93,19 +97,19 @@ func main() {
 			if err != nil {
 				break
 			}
-			f, err := fiToFile(name, fi)
+			f, err := cpio.FIToFile(name, fi)
 			if err != nil {
 				break
 			}
-			err = w.RecWrite(f)
+			_, err = w.RecWrite(f)
 			if err != nil {
 				break
 			}
 		}
 	case "t":
-		var r RecReader
-		if r, err = NewcReader(os.Stdin); err == nil {
-			var f *File
+		var r cpio.RecReader
+		if r, err = cpio.Reader(*format, os.Stdin); err == nil {
+			var f *cpio.File
 			for f, err = r.RecRead(); err == nil; f, err = r.RecRead() {
 				fmt.Printf("%s\n", f.String())
 			}

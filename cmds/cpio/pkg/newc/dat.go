@@ -1,12 +1,6 @@
-// Copyright 2013-2017 the u-root Authors. All rights reserved
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+package newc
 
-package main
-
-const (
-	trailer = "TRAILER!!!"
-)
+import "github.com/u-root/u-root/cmds/cpio/pkg"
 
 /*
 drwxrwxr-x   9 rminnich rminnich        0 Jan 22 22:18 .
@@ -297,36 +291,35 @@ var (
 	}
 
 	testResult = []string{
-		".: Ino 3204033 Mode 040775 UID 1000 GID 1000 Nlink 9 Mtime 0x5885a04e FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 2",
-		"etc: Ino 3204037 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
-		"etc/localtime: Ino 3195404 Mode 0100644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 118 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 14",
-		"etc/resolv.conf: Ino 3177229 Mode 0100644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 81 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 16",
-		"lib64: Ino 3204043 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 6",
-		"tcz: Ino 3204036 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
-		"bin: Ino 3204044 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
-		"tmp: Ino 3204045 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
-		"dev: Ino 3204038 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
-		"dev/console: Ino 3197985 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 5 Rminor 1 NameSize 12",
-		"dev/ttyS0: Ino 3197986 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 4 Rminor 64 NameSize 10",
-		"dev/loop2: Ino 3197987 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 2 NameSize 10",
-		"dev/loop-control: Ino 3197983 Mode 020600 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 10 Rminor 237 NameSize 17",
-		"dev/loop7: Ino 3197984 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 7 NameSize 10",
-		"dev/loop6: Ino 3197975 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 6 NameSize 10",
-		"dev/loop4: Ino 3197979 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 4 NameSize 10",
-		"dev/loop1: Ino 3197981 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 1 NameSize 10",
-		"dev/loop5: Ino 3197982 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 5 NameSize 10",
-		"dev/null: Ino 3197988 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 1 Rminor 3 NameSize 9",
-		"dev/loop0: Ino 3197976 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 0 NameSize 10",
-		"dev/loop3: Ino 3197980 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 3 NameSize 10",
-		"usr: Ino 3204041 Mode 040755 UID 0 GID 0 Nlink 3 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 4",
-		"usr/lib: Ino 3204042 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0 NameSize 8",
+		".: Ino 3204033 Mode 040775 UID 1000 GID 1000 Nlink 9 Mtime 0x5885a04e FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"etc: Ino 3204037 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"etc/localtime: Ino 3195404 Mode 0100644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 118 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"etc/resolv.conf: Ino 3177229 Mode 0100644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 81 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"lib64: Ino 3204043 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"tcz: Ino 3204036 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"bin: Ino 3204044 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"tmp: Ino 3204045 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"dev: Ino 3204038 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"dev/console: Ino 3197985 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 5 Rminor 1",
+		"dev/ttyS0: Ino 3197986 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 4 Rminor 64",
+		"dev/loop2: Ino 3197987 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 2",
+		"dev/loop-control: Ino 3197983 Mode 020600 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 10 Rminor 237",
+		"dev/loop7: Ino 3197984 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 7",
+		"dev/loop6: Ino 3197975 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 6",
+		"dev/loop4: Ino 3197979 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 4",
+		"dev/loop1: Ino 3197981 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 1",
+		"dev/loop5: Ino 3197982 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 5",
+		"dev/null: Ino 3197988 Mode 020644 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 1 Rminor 3",
+		"dev/loop0: Ino 3197976 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 0",
+		"dev/loop3: Ino 3197980 Mode 060660 UID 0 GID 0 Nlink 1 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 7 Rminor 3",
+		"usr: Ino 3204041 Mode 040755 UID 0 GID 0 Nlink 3 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
+		"usr/lib: Ino 3204042 Mode 040755 UID 0 GID 0 Nlink 2 Mtime 0x5885a04a FileSize 0 Major 252 Minor 0 RMajor 0 Rminor 0",
 	}
 
 	// TrailerRecord is the required final record in a file.
-	TrailerRecord = &File{
-		Header: Header{
-			NameSize: uint64(len(trailer) + 1),
+	TrailerRecord = &cpio.File{
+		Info: cpio.Info{
+			Name: cpio.Trailer,
 		},
-		Name: trailer,
 	}
 )

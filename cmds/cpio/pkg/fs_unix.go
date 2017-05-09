@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package cpio
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func modes(f *File) error {
 	return nil
 }
 
-func create(f *File) error {
+func Create(f *File) error {
 
 	m, err := cpioModetoMode(f.Mode)
 	if err != nil {
@@ -77,11 +77,11 @@ func create(f *File) error {
 // fiToFile converts an os.FileInfo to a File. Because
 // so many parts of a cpio record are os-dependent we
 // put this in fs_GOOS.go
-func fiToFile(name string, fi os.FileInfo) (*File, error) {
+func FIToFile(name string, fi os.FileInfo) (*File, error) {
 	sys := fi.Sys().(*syscall.Stat_t)
 	f := &File{
-		Name: name,
-		Header: Header{
+		Info: Info {
+			Name: name,
 			Ino:   sys.Ino,
 			Mode:  uint64(sys.Mode),
 			UID:   uint64(sys.Uid),
@@ -93,7 +93,6 @@ func fiToFile(name string, fi os.FileInfo) (*File, error) {
 			Minor:    sys.Dev & 0xff,
 			Rmajor:   sys.Rdev >> 8,
 			Rminor:   sys.Rdev & 0xff,
-			NameSize: uint64(len(name) + 1),
 		},
 	}
 	switch fi.Mode().String()[0] {
