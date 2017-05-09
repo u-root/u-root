@@ -34,10 +34,21 @@ type fileInfo struct {
 	uid, gid     uint32
 	size         int64
 	modTime      time.Time
+	symlink      string
 }
 
-func extractImportantParts(fi os.FileInfo) fileInfo {
+func extractImportantParts(n string, fi os.FileInfo) fileInfo {
+	var link string
+
 	s := fi.Sys().(*syscall.Stat_t)
+	if fi.Mode()&os.ModeType == os.ModeSymlink {
+		if l, err := os.Readlink(n); err != nil {
+			link = err.Error()
+		} else {
+			link = l
+		}
+	}
+
 	return fileInfo{
 		name:    fi.Name(),
 		mode:    fi.Mode(),
@@ -47,6 +58,7 @@ func extractImportantParts(fi os.FileInfo) fileInfo {
 		gid:     s.Gid,
 		size:    fi.Size(),
 		modTime: fi.ModTime(),
+		symlink: link,
 	}
 }
 
@@ -116,7 +128,7 @@ func (fi longStringer) String() string {
 		pattern = "%[1]s\t%[2]s\t%[3]s\t%[6]d\t%[7]v\t%[8]s"
 	}
 
-	return fmt.Sprintf(pattern,
+	s := fmt.Sprintf(pattern,
 		replacer.Replace(fi.mode.String()),
 		lookupUserName(fi.uid),
 		lookupGroupName(fi.gid),
@@ -125,4 +137,9 @@ func (fi longStringer) String() string {
 		fi.size,
 		fi.modTime.Format("Jan _2 15:04"),
 		fi.comp.String())
+
+	if fi.mode&os.ModeType == os.ModeSymlink {
+		s += fmt.Sprintf(" -> %v", fi.symlink)
+	}
+	return s
 }

@@ -52,7 +52,7 @@ func listDir(d string, w io.Writer) error {
 			return nil
 		}
 
-		fi := extractImportantParts(osfi)
+		fi := extractImportantParts(path, osfi)
 
 		if *recurse {
 			// Mimic find command
