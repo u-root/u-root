@@ -43,7 +43,7 @@ func stringer(fi fileInfo) fmt.Stringer {
 	return s
 }
 
-func listDir(d string, w io.Writer) error {
+func listName(d string, w io.Writer, prefix bool) error {
 	return filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
 		// Soft error. Useful when a permissions are insufficient to
 		// stat one of the files.
@@ -59,7 +59,12 @@ func listDir(d string, w io.Writer) error {
 			fi.name = path
 		} else if path == d {
 			// Starting directory is a dot when non-recursive
-			fi.name = "."
+			if osfi.IsDir() {
+				fi.name = "."
+				if prefix {
+					fmt.Printf("%q\n", d)
+				}
+			}
 		}
 
 		// Print the file in the proper format.
@@ -81,18 +86,16 @@ func main() {
 	w.Init(os.Stdout, 0, 0, 1, ' ', 0)
 	defer w.Flush()
 
-	// Array of directories to list.
-	dirs := flag.Args()
-	if len(dirs) == 0 {
-		dirs = []string{"."}
+	// Array of names to list.
+	names := flag.Args()
+	if len(names) == 0 {
+		names = []string{"."}
 	}
 
-	// List each directory in its own section.
-	for _, d := range dirs {
-		if len(dirs) > 1 {
-			fmt.Printf("%s:\n", d)
-		}
-		if err := listDir(d, w); err != nil {
+	// Is a name a directory? If so, list it in its own section.
+	prefix := len(names) > 1
+	for _, d := range names {
+		if err := listName(d, w, prefix); err != nil {
 			log.Printf("error while listing %#v: %v", d, err)
 		}
 		w.Flush()
