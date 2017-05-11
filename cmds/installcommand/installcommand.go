@@ -101,7 +101,7 @@ func parseCommandLine() form {
 // it should never return in any other case. Hence, if all goes well
 // at the end, we os.Exit(0)
 func run(n string, form form) {
-	if os.Getenv("INSTALLCOMMAND_NOFORK") == "1" {
+	if os.Getenv("INSTALLCOMMAND_NOEXEC") == "" {
 		err := syscall.Exec(n, append([]string{form.cmdName}, form.cmdArgs...), os.Environ())
 		// Regardless of whether err is nil, if Exec returns at all, it failed
 		// at its job. Print an error and then let's see if a normal run can succeed.
