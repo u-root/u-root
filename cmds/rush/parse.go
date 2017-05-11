@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os/exec"
 	"path"
 	"strings"
@@ -62,7 +63,7 @@ func one(b *bufio.Reader) byte {
 		return 0
 	}
 	if err != nil {
-		panic(fmt.Errorf("reading bufio: %v", err))
+		log.Fatalf("reading bufio: %v", err)
 	}
 	return c
 }
