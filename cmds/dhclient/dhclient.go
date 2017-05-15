@@ -14,11 +14,9 @@
 package main
 
 import (
-	"bytes"
 	"crypto/rand"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -30,7 +28,7 @@ import (
 )
 
 const (
-	defaultIface = "eth0"
+	defaultIfname = "eth0"
 	// slop is the slop in our lease time.
 	slop = 10 * time.Second
 )
@@ -39,39 +37,27 @@ var (
 	leasetimeout = flag.Int("timeout", 600, "Lease timeout in seconds")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", false, "Verbose output")
+	ipv6         = flag.Bool("ipv6", false, "use IPV6")
+	ipv4         = flag.Bool("ipv4", true, "use IPV4")
 	debug        = func(string, ...interface{}) {}
 )
 
-func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
-	var err error
-
-	// if timeout is < 10 seconds, it's too short.
-	if timeout < slop {
-		timeout = 2 * slop
-		log.Printf("increased log timeout to %s", timeout)
-	}
-
-	n, err := ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", ifname))
-	if err != nil {
-		return fmt.Errorf("cannot get mac for %v: %v", ifname, err)
-	}
-
-	// This is truly amazing but /sys appends newlines to all this data.
-	n = bytes.TrimSpace(n)
-	mac, err := net.ParseMAC(string(n))
-	if err != nil {
-		return fmt.Errorf("mac error: %v", err)
-	}
-
+func ifup(ifname string) (netlink.Link, error) {
 	iface, err := netlink.LinkByName(ifname)
 	if err != nil {
-		return fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
+		return nil, fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
 	}
 
 	if err := netlink.LinkSetUp(iface); err != nil {
-		return fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
+		return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
 	}
 
+	return iface, nil
+
+}
+
+func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error {
+	mac := iface.Attrs().HardwareAddr
 	conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
@@ -142,7 +128,7 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 			}
 
 			if err := netlink.RouteReplace(r); err != nil {
-				return fmt.Errorf("%s: add %s: %v", ifname, r.String(), routerName)
+				return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
 			}
 		}
 
@@ -151,6 +137,10 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 		time.Sleep(timeout - slop)
 	}
 	return nil
+}
+
+func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error {
+	return fmt.Errorf("v6 is not done")
 }
 
 func main() {
@@ -174,16 +164,33 @@ func main() {
 		log.Fatalf("We're sorry, the random number generator is not up. Please file a ticket")
 	}
 
-	iList := []string{defaultIface}
+	iList := []string{defaultIfname}
 	if len(flag.Args()) > 0 {
 		iList = flag.Args()
 	}
 
+	timeout := time.Duration(*leasetimeout) * time.Second
+	// if timeout is < slop, it's too short.
+	if timeout < slop {
+		timeout = 2 * slop
+		log.Printf("increased lease timeout to %s", timeout)
+	}
+
 	done := make(chan error)
-	for _, iface := range iList {
-		go func(iface string) {
-			done <- dhclient(iface, *renewals, time.Duration(*leasetimeout)*time.Second)
-		}(iface)
+	for _, i := range iList {
+		go func(ifname string) {
+			iface, err := ifup(ifname)
+			if err != nil {
+				done <- err
+				return
+			}
+			if *ipv4 {
+				done <- dhclient4(iface, *renewals, timeout)
+			}
+			if *ipv6 {
+				done <- dhclient6(iface, *renewals, timeout)
+			}
+		}(i)
 	}
 
 	// Wait for all goroutines to finish.
