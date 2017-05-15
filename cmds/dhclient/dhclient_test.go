@@ -14,12 +14,16 @@ import (
 )
 
 var tests = []struct {
-	cmd string
-	out string
+	iface  string
+	isIPv4 string
+	test   string
+	out    string
 }{
 	{
-		cmd: "nosuchanimal",
-		out: "cannot get mac for nosuchanimal: open /sys/class/net/nosuchanimal/address: no such file or directory\n",
+		iface:  "nosuchanimal",
+		isIPv4: "-ipv4=true",
+		test:   "-test=true",
+		out:    "cannot get interface by name nosuchanimal: Link not found\n",
 	},
 }
 
@@ -28,7 +32,7 @@ func TestDhclient(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	for _, tt := range tests {
-		out, err := exec.Command(execPath, tt.cmd).CombinedOutput()
+		out, err := exec.Command(execPath, tt.isIPv4, tt.test, tt.iface).CombinedOutput()
 		if err != nil {
 			t.Error(err)
 		}
