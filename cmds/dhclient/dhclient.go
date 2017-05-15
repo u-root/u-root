@@ -116,9 +116,10 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 		if ok {
 			log.Printf("OptionSubnetMask is %v\n", netmask)
 		} else {
-			// Default subnet mask is the received IP?
-			//
-			// N.B.(chrisko): This doesn't feel right?
+			// If they did not offer a subnet mask, we
+			// choose the most restrictive option, namely,
+			// our IP address.  This could happen on,
+			// e.g., a point to point link.
 			netmask = packet.YIAddr()
 		}
 
