@@ -177,8 +177,8 @@ func ps(pT ProcessTable) error {
 	sort.Sort(pT)
 
 	if flags.x {
-		pT.headers = []string{"PID", "TTY", "STAT", "TIME", "COMMAND"}
-		pT.fields = []string{"Pid", "Ctty", "State", "Time", "Cmd"}
+		pT.headers = []string{"PID", "PGRP", "SID", "TTY", "STAT", "TIME", "COMMAND"}
+		pT.fields = []string{"Pid", "Pgrp", "Sid", "Ctty", "State", "Time", "Cmd"}
 	} else {
 		pT.headers = []string{"PID", "TTY", "TIME", "CMD"}
 		pT.fields = []string{"Pid", "Ctty", "Time", "Cmd"}
