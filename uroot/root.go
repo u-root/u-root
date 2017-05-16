@@ -85,6 +85,7 @@ var (
 		//{name: "/dev/null", mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0103},
 		//{name: "/dev/console", mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
 		{name: "/dev/tty", mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
+		{name: "/dev/urandom", mode: uint32(syscall.S_IFCHR) | 0444, dev: 0x0109},
 	}
 	namespace = []mount{
 		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
