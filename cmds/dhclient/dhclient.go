@@ -37,7 +37,7 @@ const (
 
 var (
 	leasetimeout = flag.Int("timeout", 600, "Lease timeout in seconds")
-	renewals     = flag.Int("renewals", 2, "Number of DHCP renewals before exiting")
+	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", false, "Verbose output")
 	debug        = func(string, ...interface{}) {}
 )
@@ -83,7 +83,7 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 	}
 
 	var packet dhcp4.Packet
-	for i := 0; i < numRenewals+1; i++ {
+	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
 		debug("Start getting or renewing lease")
 
 		var success bool
