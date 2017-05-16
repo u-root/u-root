@@ -24,6 +24,7 @@ import (
 
 	"github.com/d2g/dhcp4"
 	"github.com/d2g/dhcp4client"
+	"github.com/mdlayher/dhcp6"
 	"github.com/vishvananda/netlink"
 )
 
@@ -139,7 +140,96 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	return nil
 }
 
+// dhcp6 support in go is hard to find. This function represents our best current
+// guess based on reading and testing.
 func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error {
+	var id = [4]byte{'r', 'o', 'o', 't'}
+	mac := iface.Attrs().HardwareAddr
+	// TODO: fill in the options. 
+	iata := dhcp6.NewIATA(id, nil)
+	debug("dhclient6: iata is %v", iata)
+
+	// mac := iface.Attrs().HardwareAddr
+	// conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
+	// if err != nil {
+	// 	return fmt.Errorf("client conection generation: %v", err)
+	// }
+
+	// client, err := dhcp4client.New(dhcp4client.HardwareAddr(mac), dhcp4client.Connection(conn), dhcp4client.Timeout(timeout))
+	// if err != nil {
+	// 	return fmt.Errorf("error: %v", err)
+	// }
+	//
+	// get the returned packet. Get options. Pull out o.Unicast, Authentication,
+	// BootFileURL, BootFileParam,
+	for i := 0; i < numRenewals+1; i++ {
+		debug("Start getting or renewing IPV6 lease")
+
+		var success bool
+		// if packet == nil {
+		// 	success, packet, err = client.Request()
+		// } else {
+		// 	success, packet, err = client.Renew(packet)
+		// }
+		// if err != nil {
+		// 	networkError, ok := err.(*net.OpError)
+		// 	if ok && networkError.Timeout() {
+		// 		return fmt.Errorf("%s: could not find DHCP server", mac)
+		// 	}
+		// 	return fmt.Errorf("%s: error: %v", mac, err)
+		// }
+
+		debug("Success on %s: %v\n", mac, success)
+		//debug("Packet: %v\n", packet)
+		//debug("Lease is %v seconds\n", packet.Secs())
+
+		if !success {
+			return fmt.Errorf("%s: we didn't sucessfully get a DHCP6 lease.", mac)
+		}
+
+		// We got here because we got a good packet.
+		// o := packet.ParseOptions()
+
+		// netmask, ok := o[dhcp4.OptionSubnetMask]
+		// if ok {
+		// 	log.Printf("OptionSubnetMask is %v\n", netmask)
+		// } else {
+		// 	// If they did not offer a subnet mask, we
+		// 	// choose the most restrictive option, namely,
+		// 	// our IP address.  This could happen on,
+		// 	// e.g., a point to point link.
+		// 	netmask = packet.YIAddr()
+		// }
+
+		// dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
+		// // Add the address to the iface.
+		// if err := netlink.AddrAdd(iface, dst); err != nil {
+		// 	if os.IsExist(err) {
+		// 		return fmt.Errorf("add %v to %v: %v", dst, iface, err)
+		// 	}
+		// }
+
+		// if gwData, ok := o[dhcp4.OptionRouter]; ok {
+		// 	log.Printf("router %v", gwData)
+		// 	routerName := net.IP(gwData).String()
+		// 	debug("routerName %v", routerName)
+		// 	r := &netlink.Route{
+		// 		Dst:       &net.IPNet{IP: packet.GIAddr(), Mask: netmask},
+		// 		LinkIndex: iface.Attrs().Index,
+		// 		Gw:        packet.GIAddr(),
+		// 	}
+
+		// 	if err := netlink.RouteReplace(r); err != nil {
+		// 		return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
+		// 	}
+		// }
+
+		// We can not assume the server will give us any grace time. So
+		// sleep for just a tiny bit less than the minimum.
+		time.Sleep(timeout - slop)
+	}
+	return nil
+		
 	return fmt.Errorf("v6 is not done")
 }
 
