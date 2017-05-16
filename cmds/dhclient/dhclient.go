@@ -149,17 +149,24 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	iata := dhcp6.NewIATA(id, nil)
 	debug("dhclient6: iata is %v", iata)
 
-	// mac := iface.Attrs().HardwareAddr
-	// conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
-	// if err != nil {
-	// 	return fmt.Errorf("client conection generation: %v", err)
-	// }
-
-	// client, err := dhcp4client.New(dhcp4client.HardwareAddr(mac), dhcp4client.Connection(conn), dhcp4client.Timeout(timeout))
-	// if err != nil {
-	// 	return fmt.Errorf("error: %v", err)
-	// }
+	// dhcp4 ... it's not just for dhcp4 any more.  TODO: I'm
+	// still trying to talk to d2g about expanding his stuff to
+	// include 6. But note that dhcp for 6, in spite of its name,
+	// is NOTHING like dhcp for 4. Nothing. At. All. But pretty
+	// much all the connection layer stuff from the dhcp4 package
+	// works fine.
 	//
+	conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
+	if err != nil {
+		return fmt.Errorf("client conection generation: %v", err)
+	}
+	debug("dhclient6: got conn %v", conn)
+
+	client, err := dhcp4client.New(dhcp4client.HardwareAddr(mac), dhcp4client.Connection(conn), dhcp4client.Timeout(timeout))
+	if err != nil {
+		return fmt.Errorf("error: %v", err)
+	}
+	debug("dhclient6: got client %v", client)
 	// get the returned packet. Get options. Pull out o.Unicast, Authentication,
 	// BootFileURL, BootFileParam,
 	for i := 0; i < numRenewals+1; i++ {
