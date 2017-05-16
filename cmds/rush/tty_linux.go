@@ -53,7 +53,7 @@ func foreground() {
 	if ttypgrp != 0 {
 		r1, r2, errno := syscall.RawSyscall(syscall.SYS_IOCTL, ttyf.Fd(), uintptr(syscall.TIOCSPGRP), uintptr(unsafe.Pointer(&ttypgrp)))
 		if errno != 0 {
-			log.Printf("Can't set foreground: %v, %v, %v", r1, r2, errno)
+			log.Printf("rush pid %v: Can't set foreground to %v: %v, %v, %v", os.Getpid(), ttypgrp, r1, r2, errno)
 		}
 	}
 

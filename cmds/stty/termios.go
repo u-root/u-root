@@ -94,7 +94,7 @@ func stty(fd uintptr, t *tty) (*tty, error) {
 	term.Ispeed = uint32(t.Ispeed)
 	term.Ospeed = uint32(t.Ospeed)
 
-	if err := tiSet(0, term); err != nil {
+	if err := tiSet(fd, term); err != nil {
 		return nil, err
 	}
 
