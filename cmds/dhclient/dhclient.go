@@ -124,10 +124,10 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 		}
 
 		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
-		// Add the address to the iface.
-		if err := netlink.AddrAdd(iface, dst); err != nil {
+		// Replace (or add, if it presents) the address to the iface.
+		if err := netlink.AddrReplace(iface, dst); err != nil {
 			if os.IsExist(err) {
-				return fmt.Errorf("add %v to %v: %v", dst, n, err)
+				return fmt.Errorf("add/replace %v to %v: %v", dst, n, err)
 			}
 		}
 
