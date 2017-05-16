@@ -112,7 +112,7 @@ func tiGet(fd uintptr) (*syscall.Termios, error) {
 		uintptr(unsafe.Pointer(&term)))
 
 	if errno != 0 || r1 != 0 {
-		return nil, fmt.Errorf("termios.get: r1 %v, errno %v", r1, errno)
+		return nil, fmt.Errorf("tiGet: r1 %v, errno %v", r1, errno)
 	}
 	return &term, nil
 }
@@ -122,7 +122,7 @@ func tiSet(fd uintptr, term *syscall.Termios) error {
 		fd, uintptr(syscall.TCSETS),
 		uintptr(unsafe.Pointer(term)))
 	if errno != 0 || r1 != 0 {
-		return fmt.Errorf("termios.get: r1 %v, errno %v", r1, errno)
+		return fmt.Errorf("tiSet: r1 %v, errno %v", r1, errno)
 	}
 
 	return nil
@@ -145,7 +145,7 @@ func wsSet(fd uintptr, w *winsize) error {
 		fd, uintptr(syscallTIOCSWINSZ),
 		uintptr(unsafe.Pointer(w)))
 	if errno != 0 || r1 != 0 {
-		return fmt.Errorf("termios.get: r1 %v, errno %v", r1, errno)
+		return fmt.Errorf("wsSet: r1 %v, errno %v", r1, errno)
 	}
 
 	return nil
