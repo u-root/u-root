@@ -121,6 +121,7 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 			// our IP address.  This could happen on,
 			// e.g., a point to point link.
 			netmask = packet.YIAddr()
+			log.Printf("No OptionSubnetMask; default to %v\n", netmask)
 		}
 
 		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
@@ -136,9 +137,8 @@ func dhclient(ifname string, numRenewals int, timeout time.Duration) error {
 			routerName := net.IP(gwData).String()
 			debug("routerName %v", routerName)
 			r := &netlink.Route{
-				Dst:       &net.IPNet{IP: packet.GIAddr(), Mask: netmask},
 				LinkIndex: iface.Attrs().Index,
-				Gw:        packet.GIAddr(),
+				Gw:        net.IP(gwData),
 			}
 
 			if err := netlink.RouteReplace(r); err != nil {
