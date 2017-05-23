@@ -5,7 +5,7 @@
 // Mount a filesystem at the specified path.
 //
 // Synopsis:
-//     mount [-r] [-t FSTYPE] DEV PATH
+//     mount [-r] [-o options] [-t FSTYPE] DEV PATH
 //
 // Options:
 //     -r: read only
@@ -20,6 +20,7 @@ import (
 var (
 	ro     = flag.Bool("r", false, "Read only mount")
 	fsType = flag.String("t", "", "File system type")
+	data   = flag.String("o", "", "Specify mount options")
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	if *ro {
 		flags |= unix.MS_RDONLY
 	}
-	if err := unix.Mount(a[0], a[1], *fsType, flags, ""); err != nil {
+	if err := unix.Mount(a[0], a[1], *fsType, flags, *data); err != nil {
 		log.Fatalf("Mount :%s: on :%s: type :%s: flags %x: %v\n", dev, path, *fsType, flags, err)
 	}
 }
