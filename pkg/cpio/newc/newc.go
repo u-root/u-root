@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/cpio"
 )
@@ -142,6 +143,9 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 		return err
 	}
 
+	if f.Info.Mode&syscall.S_IFMT != syscall.S_IFREG {
+		return w.pad()
+	}
 	// Write file contents.
 	m, err := io.Copy(w, f)
 	if err != nil {
