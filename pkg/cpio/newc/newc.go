@@ -119,12 +119,21 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 	buf := &bytes.Buffer{}
 	hdr := headerFromInfo(f.Info)
 	hdr.CRC = 0
+
+	// in newc, the FileSize is 0 for all but LNK and REG.
+	if f.Info.Mode&syscall.S_IFMT != syscall.S_IFREG &&
+		f.Info.Mode&syscall.S_IFMT != syscall.S_IFLNK {
+		hdr.FileSize = 0
+	}
+
 	if err := binary.Write(buf, binary.BigEndian, hdr); err != nil {
 		return err
 	}
 
 	hexBuf := make([]byte, hex.EncodedLen(buf.Len()))
 	n := hex.Encode(hexBuf, buf.Bytes())
+	// It's much easier to debug if we match GNU output format.
+	hexBuf = bytes.ToUpper(hexBuf)
 
 	// Write header.
 	if _, err := w.Write(hexBuf[:n]); err != nil {
@@ -143,8 +152,8 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 		return err
 	}
 
-	if f.Info.Mode&syscall.S_IFMT != syscall.S_IFREG {
-		return w.pad()
+	if hdr.FileSize == 0 {
+		return nil
 	}
 	// Write file contents.
 	m, err := io.Copy(w, f)

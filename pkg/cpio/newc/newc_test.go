@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -42,7 +43,7 @@ func TestWriteRead(t *testing.T) {
 	contents := "LANAAAAAAAAAA"
 	rec := cpio.StaticRecord(contents, cpio.Info{
 		Ino:      1,
-		Mode:     2,
+		Mode:     syscall.S_IFREG | 2,
 		UID:      3,
 		GID:      4,
 		NLink:    5,
