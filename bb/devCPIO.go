@@ -36,11 +36,11 @@ var devCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "usr/lib", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "lib64", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "bin", Mode: d | 0755}},
-	{Info: cpio.Info{Name: "dev/console", Mode: c | 0755, Rmajor: 5, Rminor: 1}},
-	{Info: cpio.Info{Name: "dev/tty", Mode: c | 0755, Rmajor: 5, Rminor: 0}},
-	{Info: cpio.Info{Name: "dev/null", Mode: c | 0755, Rmajor: 1, Rminor: 3}},
-	{Info: cpio.Info{Name: "etc/resolv.conf", Mode: f | 0644, FileSize: uint64(len(nameserver))},
-		Reader: strings.NewReader(nameserver)},
+	{Info: cpio.Info{Name: "dev/console", Mode: c | 0600, Rmajor: 5, Rminor: 1}},
+	{Info: cpio.Info{Name: "dev/tty", Mode: c | 0666, Rmajor: 5, Rminor: 0}},
+	{Info: cpio.Info{Name: "dev/null", Mode: c | 0666, Rmajor: 1, Rminor: 3}},
+	{Info: cpio.Info{Name: "dev/urandom", Mode: c | 0666, Rmajor: 1, Rminor: 9}},
+	{Info: cpio.Info{Name: "etc/resolv.conf", Mode: f | 0644, FileSize: uint64(len(nameserver))}, Reader: strings.NewReader(nameserver)},
 	{Info: cpio.Info{Name: "etc/localtime", Mode: f | 0644, FileSize: uint64(len(gmt0))}, Reader: strings.NewReader(gmt0)},
 }
 
