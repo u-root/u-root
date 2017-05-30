@@ -5,9 +5,10 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"io/ioutil"
+	"log"
+	"os"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -16,8 +17,7 @@ func main() {
 	var options string
 
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "insmod: ERROR: missing filename.\n")
-		os.Exit(1)
+		log.Fatalf("insmod: ERROR: missing filename.\n")
 	}
 
 	// get filename from argv[1]
@@ -25,21 +25,18 @@ func main() {
 
 	// Everything else is module options
 	for i := 2; i < len(os.Args); i++ {
-		options = options + os.Args[i] + " "
+		options = strings.Join([]string{options, os.Args[i]}, " ")
 	}
 
 	// read file into memory
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "insmod: can't read '%s': %v\n", filename, err)
-		os.Exit(1)
+		log.Fatalf("insmod: can't read '%s': %v\n", filename, err)
 	}
 
 	// call SYS_INIT_MODULE with file, length, and options
-	ret, _, err := syscall.Syscall(syscall.SYS_INIT_MODULE, uintptr(unsafe.Pointer(&file)), uintptr(len(file)), uintptr(unsafe.Pointer(&options)))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "insmod: error inserting '%s': %v %v\n", filename, ret, err)
+	ret, _, err := syscall.Syscall(syscall.SYS_INIT_MODULE, uintptr(unsafe.Pointer(&file[0])), uintptr(len(file)), uintptr(unsafe.Pointer(&options)))
+	if ret != 0 {
+		log.Fatalf("insmod: error inserting '%s': %v %v\n", filename, ret, err)
 	}
-
-	os.Exit(0)
 }
