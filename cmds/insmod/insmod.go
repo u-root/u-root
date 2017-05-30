@@ -35,7 +35,7 @@ func main() {
 	}
 
 	// call SYS_INIT_MODULE with file, length, and options
-	ret, _, err := syscall.Syscall(syscall.SYS_INIT_MODULE, uintptr(unsafe.Pointer(&file[0])), uintptr(len(file)), uintptr(unsafe.Pointer(&options)))
+	ret, _, err := syscall.Syscall(syscall.SYS_INIT_MODULE, uintptr(unsafe.Pointer(&file[0])), uintptr(len(file)), uintptr(unsafe.Pointer(&[]byte(options)[0])))
 	if ret != 0 {
 		log.Fatalf("insmod: error inserting '%s': %v %v\n", filename, ret, err)
 	}
