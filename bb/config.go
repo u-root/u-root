@@ -98,6 +98,7 @@ func doConfig() {
 	if config.Cwd, err = os.Getwd(); err != nil {
 		log.Fatalf("Getwd: %v", err)
 	}
+
 	guessgoroot()
 	guessgopath()
 	config.Arch = getenv("GOARCH", "amd64")

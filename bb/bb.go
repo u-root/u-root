@@ -203,12 +203,16 @@ var (
 	}
 )
 
-var config struct {
-	Args     []string
+type Command struct {
+	Gopath   string
 	CmdName  string
 	CmdPath  string
-	FullPath string
 	Init     string
+	FullPath string
+}
+
+var config struct {
+	Commands []Command
 	Src      string
 	Cwd      string
 	Bbsh     string
@@ -217,22 +221,25 @@ var config struct {
 	Gosrcroot string
 	Arch      string
 	Goos      string
-	Gopath    string
-	TempDir   string
-	Go        string
-	Debug     bool
-	Fail      bool
+	// GOPATH is several paths, separated by :
+	// We require that the first element be the
+	// basic path that works with u-root.
+	Gopath  string
+	Gopaths []string
+	TempDir string
+	Go      string
+	Debug   bool
+	Fail    bool
 }
 
-func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
+func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 	// Inspect the AST and change all instances of main()
 	isMain := false
-	// yeah, this is awful, sorry.
-	config.Init = ""
+	c.Init = ""
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.File:
-			x.Name.Name = config.CmdName
+			x.Name.Name = c.CmdName
 		case *ast.FuncDecl:
 			if x.Name.Name == "main" {
 				x.Name.Name = fmt.Sprintf("Main")
@@ -242,7 +249,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 			}
 			if x.Name.Name == "init" {
 				x.Name.Name = fmt.Sprintf("Init")
-				config.Init = config.CmdName + ".Init()"
+				c.Init = c.CmdName + ".Init()"
 			}
 
 		case *ast.CallExpr:
@@ -257,7 +264,7 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 					if ix, ok := fixFlag[z.Sel.Name]; ok {
 						switch zz := x.Args[ix].(type) {
 						case *ast.BasicLit:
-							zz.Value = "\"" + config.CmdName + "." + zz.Value[1:]
+							zz.Value = "\"" + c.CmdName + "." + zz.Value[1:]
 						}
 					}
 				}
@@ -300,14 +307,14 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 		// Write the file to interface to the command package.
 		t := template.Must(template.New("cmdFunc").Parse(cmdFunc))
 		var b bytes.Buffer
-		if err := t.Execute(&b, config); err != nil {
+		if err := t.Execute(&b, c); err != nil {
 			log.Fatalf("spec %v: %v\n", cmdFunc, err)
 		}
 		fullCode, err := imports.Process("commandline", []byte(b.Bytes()), &opts)
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", out, err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmd_"+config.CmdName+".go"), fullCode, 0444); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmd_"+c.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}
@@ -315,28 +322,28 @@ func oneFile(dir, s string, fset *token.FileSet, f *ast.File) error {
 	return nil
 }
 
-func oneCmd() {
+func oneCmd(c Command) {
 	// Create the directory for the package.
 	// For now, ./cmds/<package name>
-	packageDir := filepath.Join(config.Bbsh, "cmds", config.CmdName)
+	packageDir := filepath.Join(config.Bbsh, "cmds", c.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		log.Fatalf("Can't create target directory: %v", err)
 	}
 
 	fset := token.NewFileSet()
-	config.FullPath = filepath.Join(config.Gopath, config.CmdPath)
-	p, err := parser.ParseDir(fset, config.FullPath, nil, 0)
+	c.FullPath = filepath.Join(c.Gopath, c.CmdPath)
+	p, err := parser.ParseDir(fset, c.FullPath, nil, 0)
 	if err != nil {
-		log.Printf("Can't Parsedir %v, %v", config.FullPath, err)
+		log.Printf("Can't Parsedir %v, %v", c.FullPath, err)
 		return
 	}
 
 	for _, f := range p {
 		for n, v := range f.Files {
-			oneFile(packageDir, n, fset, v)
+			oneFile(c, packageDir, n, fset, v)
 		}
 	}
-	initMap += "\n\t\"" + config.CmdName + "\":" + config.CmdName + "Init,"
+	initMap += "\n\t\"" + c.CmdName + "\":" + c.CmdName + "Init,"
 }
 func main() {
 	var err error
@@ -350,31 +357,38 @@ func main() {
 	if len(flag.Args()) > 0 {
 		cmdlist = flag.Args()
 	}
-	config.Args = []string{}
-	for _, v := range cmdlist {
-		v = filepath.Join(config.Gopath, v)
-		g, err := filepath.Glob(v)
-		if err != nil {
-			log.Fatalf("Glob error: %v", err)
-		}
+	config.Commands = []Command{}
 
-		for i := range g {
-			g[i], err = filepath.Rel(config.Gopath, g[i])
+	for _, v := range cmdlist {
+		debug("Check %v", v)
+		for _, gp := range config.Gopaths {
+			v = filepath.Join(gp, v)
+			g, err := filepath.Glob(v)
+			debug("v %v globs to %v, err %v", v, g, err)
 			if err != nil {
-				log.Fatalf("Can't take rel path of %v from %v? %v", g[i], config.Gopath, err)
+				debug("tried to match path %v and cmd %v, failed", gp, v)
+				continue
+			}
+
+			for i := range g {
+				c := Command{Gopath: gp}
+				c.CmdPath, err = filepath.Rel(gp, g[i])
+				if err != nil {
+					log.Fatalf("Can't take rel path of %v from %v? %v", g[i], gp, err)
+				}
+
+				config.Commands = append(config.Commands, c)
 			}
 		}
-		config.Args = append(config.Args, g...)
 	}
 
-	for _, v := range config.Args {
-		if skip[filepath.Base(v)] {
+	debug("config.Commands is %v", config.Commands)
+	for _, c := range config.Commands {
+		if skip[filepath.Base(c.CmdPath)] {
 			continue
 		}
-		// Yes, gross. Fix me.
-		config.CmdPath = v
-		config.CmdName = filepath.Base(v)
-		oneCmd()
+		c.CmdName = filepath.Base(c.CmdPath)
+		oneCmd(c)
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
