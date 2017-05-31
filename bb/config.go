@@ -50,7 +50,11 @@ func guessgopath() {
 	defer func() {
 		config.Gosrcroot = filepath.Dir(config.Goroot)
 	}()
-	gopath := os.Getenv("GOPATH")
+	var gopath string
+	config.Gopaths = strings.Split(getenv("GOPATH", ""), ":")
+	if len(config.Gopaths) > 0 {
+		gopath = config.Gopaths[0]
+	}
 	if gopath != "" {
 		config.Gopath = filepath.Clean(gopath)
 		return
