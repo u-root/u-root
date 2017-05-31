@@ -26,30 +26,96 @@ const (
 	CmdsPath = "github.com/u-root/u-root/cmds"
 )
 
-// TODO: make this a map so it's easier to find dups.
-type dir struct {
-	name string
-	mode os.FileMode
+type Creator interface {
+	Create() error
+	fmt.Stringer
 }
 
-type file struct {
-	contents string
-	mode     os.FileMode
+type Dir struct {
+	Name string
+	Mode os.FileMode
 }
 
-// TODO: make this a map so it's easier to find dups.
-type dev struct {
-	name    string
-	mode    uint32
-	dev     int
-	howmany int
+func (d Dir) Create() error {
+	return os.MkdirAll(d.Name, d.Mode)
 }
-type mount struct {
-	source string
-	target string
-	fstype string
-	flags  uintptr
-	opts   string
+
+func (d Dir) String() string {
+	return fmt.Sprintf("dir :%q: mode %o", d.Name, d.Mode)
+}
+
+type File struct {
+	Name     string
+	Contents string
+	Mode     os.FileMode
+}
+
+func (f File) Create() error {
+	return ioutil.WriteFile(f.Name, []byte(f.Contents), f.Mode)
+}
+
+func (f File) String() string {
+	return fmt.Sprintf("file %q", f.Name)
+}
+
+type Symlink struct {
+	Target   string
+	Linkpath string
+}
+
+func (s Symlink) Create() error {
+	os.Remove(s.Target)
+	return os.Symlink(s.Linkpath, s.Target)
+}
+
+func (s Symlink) String() string {
+	return fmt.Sprintf("symlink %q -> %q", s.Target, s.Linkpath)
+}
+
+type Link struct {
+	Oldpath string
+	Newpath string
+}
+
+func (s Link) Create() error {
+	os.Remove(s.Newpath)
+	return os.Link(s.Oldpath, s.Newpath)
+}
+
+func (s Link) String() string {
+	return fmt.Sprintf("link %q -> %q", s.Oldpath, s.Newpath)
+}
+
+type Dev struct {
+	Name    string
+	Mode    uint32
+	Dev     int
+	Howmany int
+}
+
+func (d Dev) Create() error {
+	os.Remove(d.Name)
+	return syscall.Mknod(d.Name, d.Mode, d.Dev)
+}
+
+func (d Dev) String() string {
+	return fmt.Sprintf("dev :%q: mode: %#o: magic: %v", d.Name, d.Mode, d.Dev)
+}
+
+type Mount struct {
+	Source string
+	Target string
+	FSType string
+	Flags  uintptr
+	Opts   string
+}
+
+func (m Mount) Create() error {
+	return syscall.Mount(m.Source, m.Target, m.FSType, m.Flags, m.Opts)
+}
+
+func (m Mount) String() string {
+	return fmt.Sprintf("mount -t %q -o %s %q %q flags %#x", m.FSType, m.Opts, m.Source, m.Target, m.Flags)
 }
 
 var (
@@ -63,40 +129,45 @@ var (
 		"CGO_ENABLED":     "0",
 	}
 
-	dirs = []dir{
-		{name: "/proc", mode: os.FileMode(0555)},
-		{name: "/sys", mode: os.FileMode(0555)},
-		{name: "/buildbin", mode: os.FileMode(0777)},
-		{name: "/ubin", mode: os.FileMode(0777)},
-		{name: "/tmp", mode: os.FileMode(0777)},
-		{name: "/env", mode: os.FileMode(0777)},
-		{name: "/etc", mode: os.FileMode(0777)},
-		{name: "/tcz", mode: os.FileMode(0777)},
-		{name: "/dev", mode: os.FileMode(0777)},
-		{name: "/lib", mode: os.FileMode(0777)},
-		{name: "/usr/lib", mode: os.FileMode(0777)},
-		{name: "/go/pkg/linux_amd64", mode: os.FileMode(0777)},
-		// This is for uroot packages. Is this a good idea? I don't know.
-		{name: "/pkg", mode: os.FileMode(0777)},
-	}
-	devs = []dev{
+	namespace = []Creator{
+		Dir{Name: "/proc", Mode: os.FileMode(0555)},
+		Dir{Name: "/sys", Mode: os.FileMode(0555)},
+		Dir{Name: "/buildbin", Mode: os.FileMode(0777)},
+		Dir{Name: "/ubin", Mode: os.FileMode(0777)},
+		Dir{Name: "/tmp", Mode: os.FileMode(0777)},
+		Dir{Name: "/env", Mode: os.FileMode(0777)},
+		Dir{Name: "/etc", Mode: os.FileMode(0777)},
+		Dir{Name: "/tcz", Mode: os.FileMode(0777)},
+		Dir{Name: "/dev", Mode: os.FileMode(0777)},
+		Dir{Name: "/dev/pts", Mode: os.FileMode(0777)},
+		Dir{Name: "/lib", Mode: os.FileMode(0777)},
+		Dir{Name: "/usr/lib", Mode: os.FileMode(0777)},
+		Dir{Name: "/go/pkg/linux_amd64", Mode: os.FileMode(0777)},
 		// chicken and egg: these need to be there before you start. So, sadly,
 		// we will always need dev.cpio or something like it.
-		//{name: "/dev/null", mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0103},
-		//{name: "/dev/console", mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
-		{name: "/dev/tty", mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0500},
-		{name: "/dev/urandom", mode: uint32(syscall.S_IFCHR) | 0444, dev: 0x0109},
-	}
-	namespace = []mount{
-		{source: "proc", target: "/proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
-		{source: "sys", target: "/sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL, opts: ""},
+		//{Name: "/dev/null", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0103},
+		//{Name: "/dev/console", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
+		Dev{Name: "/Dev/tty", Mode: uint32(syscall.S_IFCHR) | 0666, Dev: 0x0500},
+		Dev{Name: "/Dev/urandom", Mode: uint32(syscall.S_IFCHR) | 0444, Dev: 0x0109},
+		Mount{Source: "proc", Target: "/proc", FSType: "proc", Flags: syscall.MS_MGC_VAL, Opts: ""},
+		Mount{Source: "sys", Target: "/sys", FSType: "sysfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
-		// default to contents of dev.cpio.
-		{source: "none", target: "/dev", fstype: "devtmpfs", flags: syscall.MS_MGC_VAL},
-	}
-
-	files = map[string]file{
-		"/etc/resolv.conf": {contents: `nameserver 8.8.8.8`, mode: os.FileMode(0644)},
+		// default to contents of Dev.cpio.
+		Mount{Source: "none", Target: "/Dev", FSType: "Devtmpfs", Flags: syscall.MS_MGC_VAL},
+		Mount{Source: "none", Target: "/Dev/pts", FSType: "Devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxMode=666,gid=5,mode=620"},
+		Symlink{Linkpath: "/Dev/pts/ptmx", Target: "/Dev/ptmx"},
+		File{Name: "/etc/resolv.conf", Contents: `nameserver 8.8.8.8`, Mode: os.FileMode(0644)},
+		Dir{Name: "/sys/fs/cgroup/memory", Mode: os.FileMode(0555)},
+		Dir{Name: "/sys/fs/cgroup/freezer", Mode: os.FileMode(0555)},
+		Dir{Name: "/sys/fs/cgroup/Devices", Mode: os.FileMode(0555)},
+		Dir{Name: "/sys/fs/cgroup/cpu,cpuacct", Mode: os.FileMode(0555)},
+		Symlink{Linkpath: "/sys/fs/cgroup/cpu,cpuacct", Target: "/sys/fs/cgroup/cpu"},
+		Symlink{Linkpath: "/sys/fs/cgroup/cpu,cpuacct", Target: "/sys/fs/cgroup/cpuacct"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/memory", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "memory"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/freezer", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "freezer"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/Devices", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "Devices"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/cpu,cpuacct", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "cpu,cpuacct"},
 	}
 )
 
@@ -149,31 +220,9 @@ func Rootfs() {
 	Profile += fmt.Sprintf("sudo mount -t tmpfs none /ubin\n")
 	Profile += fmt.Sprintf("sudo mount -t tmpfs none /pkg\n")
 
-	for _, m := range dirs {
-		if err := os.MkdirAll(m.name, m.mode); err != nil {
-			log.Printf("mkdir :%s: mode %o: %v\n", m.name, m.mode, err)
-			continue
-		}
-	}
-
-	for _, d := range devs {
-		syscall.Unlink(d.name)
-		if err := syscall.Mknod(d.name, d.mode, d.dev); err != nil {
-			log.Printf("mknod :%q: mode: %#o: magic: %v: %v\n", d.name, d.mode, d.dev, err)
-			continue
-		}
-	}
-
-	for _, m := range namespace {
-		if err := syscall.Mount(m.source, m.target, m.fstype, m.flags, m.opts); err != nil {
-			log.Printf("Mount :%s: on :%s: type :%s: flags %x opts: %s: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
-		}
-
-	}
-
-	for name, m := range files {
-		if err := ioutil.WriteFile(name, []byte(m.contents), m.mode); err != nil {
-			log.Printf("Error writeing %v: %v", name, err)
+	for _, c := range namespace {
+		if err := c.Create(); err != nil {
+			log.Printf("Error creating %s: %v", c, err)
 		}
 	}
 
