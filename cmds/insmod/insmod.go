@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Insert a module into the Linux kernel
+//
+// Synopsis:
+//	insmod [filename] [module options...]
+//
+// Description:
+//	insmod is a clone of insmod(8)
 package main
 
 import (
