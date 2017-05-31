@@ -24,11 +24,8 @@ func main() {
 	filename := os.Args[1]
 
 	// Everything else is module options
-	for i := 2; i < len(os.Args); i++ {
-		options = strings.Join([]string{options, os.Args[i]}, " ")
-	}
+	options = strings.Join(os.Args[2:], " ")
 
-	// read file into memory
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("insmod: can't read '%s': %v\n", filename, err)
