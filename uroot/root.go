@@ -155,7 +155,7 @@ var (
 		// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
 		// default to contents of Dev.cpio.
 		Mount{Source: "none", Target: "/dev", FSType: "devtmpfs", Flags: syscall.MS_MGC_VAL},
-		Mount{Source: "none", Target: "/dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxMode=666,gid=5,mode=620"},
+		Mount{Source: "none", Target: "/dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		Symlink{Linkpath: "/dev/pts/ptmx", Target: "/dev/ptmx"},
 		File{Name: "/etc/resolv.conf", Contents: `nameserver 8.8.8.8`, Mode: os.FileMode(0644)},
 		Dir{Name: "/sys/fs/cgroup/memory", Mode: os.FileMode(0555)},
@@ -223,6 +223,8 @@ func Rootfs() {
 	for _, c := range namespace {
 		if err := c.Create(); err != nil {
 			log.Printf("Error creating %s: %v", c, err)
+		} else {
+			log.Printf("Created %v", c)
 		}
 	}
 
