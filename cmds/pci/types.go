@@ -24,3 +24,22 @@ func (p *PCI) String() string {
 		fmt.Sprintf(" %v", p.Device)
 }
 
+// A single vendor name can map to several IDs. How fun is that.
+type nameMap map[string][]VID
+
+type subVendor struct {
+	Vendor VID
+	Device DID
+	U      DID
+	Name string
+}
+
+type Device struct {
+	Device DID
+	sub []subVendor
+}
+
+type Vendor struct {
+	Devs map[DID]Device
+}
+
