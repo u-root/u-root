@@ -147,26 +147,26 @@ var (
 		// we will always need dev.cpio or something like it.
 		//{Name: "/dev/null", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0103},
 		//{Name: "/dev/console", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
-		Dev{Name: "/Dev/tty", Mode: uint32(syscall.S_IFCHR) | 0666, Dev: 0x0500},
-		Dev{Name: "/Dev/urandom", Mode: uint32(syscall.S_IFCHR) | 0444, Dev: 0x0109},
+		Dev{Name: "/dev/tty", Mode: uint32(syscall.S_IFCHR) | 0666, Dev: 0x0500},
+		Dev{Name: "/dev/urandom", Mode: uint32(syscall.S_IFCHR) | 0444, Dev: 0x0109},
 		Mount{Source: "proc", Target: "/proc", FSType: "proc", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		Mount{Source: "sys", Target: "/sys", FSType: "sysfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
 		// default to contents of Dev.cpio.
-		Mount{Source: "none", Target: "/Dev", FSType: "Devtmpfs", Flags: syscall.MS_MGC_VAL},
-		Mount{Source: "none", Target: "/Dev/pts", FSType: "Devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxMode=666,gid=5,mode=620"},
-		Symlink{Linkpath: "/Dev/pts/ptmx", Target: "/Dev/ptmx"},
+		Mount{Source: "none", Target: "/dev", FSType: "devtmpfs", Flags: syscall.MS_MGC_VAL},
+		Mount{Source: "none", Target: "/dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxMode=666,gid=5,mode=620"},
+		Symlink{Linkpath: "/dev/pts/ptmx", Target: "/dev/ptmx"},
 		File{Name: "/etc/resolv.conf", Contents: `nameserver 8.8.8.8`, Mode: os.FileMode(0644)},
 		Dir{Name: "/sys/fs/cgroup/memory", Mode: os.FileMode(0555)},
 		Dir{Name: "/sys/fs/cgroup/freezer", Mode: os.FileMode(0555)},
-		Dir{Name: "/sys/fs/cgroup/Devices", Mode: os.FileMode(0555)},
+		Dir{Name: "/sys/fs/cgroup/devices", Mode: os.FileMode(0555)},
 		Dir{Name: "/sys/fs/cgroup/cpu,cpuacct", Mode: os.FileMode(0555)},
 		Symlink{Linkpath: "/sys/fs/cgroup/cpu,cpuacct", Target: "/sys/fs/cgroup/cpu"},
 		Symlink{Linkpath: "/sys/fs/cgroup/cpu,cpuacct", Target: "/sys/fs/cgroup/cpuacct"},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/memory", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "memory"},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/freezer", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "freezer"},
-		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/Devices", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "Devices"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/devices", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "devices"},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/cpu,cpuacct", FSType: "cgroup", Flags: syscall.MS_MGC_VAL, Opts: "cpu,cpuacct"},
 	}
 )
