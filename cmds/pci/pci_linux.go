@@ -33,9 +33,11 @@ func onePCI(dir string) (*PCI, error) {
 			return nil, fmt.Errorf("%v: expected number, got %v: %v", n, string(s), err)
 		}
 		log.Printf("n is %v, s %v, i %v", n, s, i)
-
 		reflect.ValueOf(&pci).Elem().Field(ix).SetUint(i)
 	}
+	ve, d := lookup(fmt.Sprintf("%04x", pci.Vendor), fmt.Sprintf("%04x", pci.Device))
+	log.Printf("Lookup (%v, %v)", ve, d)
+
 	return &pci, nil
 }
 

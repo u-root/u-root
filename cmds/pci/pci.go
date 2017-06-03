@@ -20,9 +20,7 @@ import (
 	"log"
 )
 
-var (
-	numbers = flag.Bool("n", false, "Just show numbers")
-)
+var numbers = flag.Bool("n", false, "Just show numbers")
 
 func main() {
 	flag.Parse()
