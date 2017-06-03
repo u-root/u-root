@@ -1,12 +1,11 @@
 package main
 
+//go:generate go run gen.go
+
 import (
-	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"reflect"
-	"strconv"
 )
 
 type bus struct {
@@ -27,17 +26,9 @@ func onePCI(dir string) (*PCI, error) {
 			return nil, err
 		}
 		// Linux never understood /proc.
-		s = s[:len(s)-1]
-		i, err := strconv.ParseUint(string(s), 0, 0)
-		if err != nil {
-			return nil, fmt.Errorf("%v: expected number, got %v: %v", n, string(s), err)
-		}
-		log.Printf("n is %v, s %v, i %v", n, s, i)
-		reflect.ValueOf(&pci).Elem().Field(ix).SetUint(i)
+		reflect.ValueOf(&pci).Elem().Field(ix).SetString(string(s[2:len(s)-1]))
 	}
-	ve, d := lookup(fmt.Sprintf("%04x", pci.Vendor), fmt.Sprintf("%04x", pci.Device))
-	log.Printf("Lookup (%v, %v)", ve, d)
-
+	pci.VendorName, pci.DeviceName = lookup(pci.Vendor, pci.Device)
 	return &pci, nil
 }
 
