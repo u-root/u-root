@@ -14,7 +14,7 @@ const (
 	FindingDevice
 )
 
-var 	debug                                = func(s string, arg ...interface{}) {}//{log.Printf(s, arg...)}
+var debug = func(s string, arg ...interface{}) {} //{log.Printf(s, arg...)}
 
 func isHex(b byte) bool {
 	return ('a' <= b && b <= 'f') || ('A' <= b && b <= 'F') || ('0' <= b && b <= '9')

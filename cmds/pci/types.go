@@ -13,9 +13,9 @@ type BusReader interface {
 // PCI is a PCI device. We will fill this in as we add options.
 // For now it just holds two uint16 per the PCI spec.
 type PCI struct {
-	Addr   string
-	Vendor string `pci:"vendor"`
-	Device string `pci:"device"`
+	Addr       string
+	Vendor     string `pci:"vendor"`
+	Device     string `pci:"device"`
 	VendorName string
 	DeviceName string
 }
