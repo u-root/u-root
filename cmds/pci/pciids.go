@@ -1,4 +1,5 @@
-#
+package main
+var pciids = []byte(`#
 #	List of PCI ID's
 #
 #	Version: 2016.01.02
@@ -27674,3 +27675,4 @@ C 12  Processing accelerators
 C 13  Non-Essential Instrumentation
 C 40  Coprocessor
 C ff  Unassigned class
+`)
