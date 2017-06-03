@@ -27,19 +27,20 @@ func (p *PCI) String() string {
 // A single vendor name can map to several IDs. How fun is that.
 type nameMap map[string][]VID
 
-type subVendor struct {
-	Vendor VID
-	Device DID
-	U      DID
+type SubVendor struct {
+	Ven VID
+	Dev DID
 	Name string
 }
 
 type Device struct {
-	Device DID
-	sub []subVendor
+	Name string
+	Sub []SubVendor
 }
 
-type Vendor struct {
+type Vendor struct
+{
+	Name string
 	Devs map[DID]Device
 }
 
