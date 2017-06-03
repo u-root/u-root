@@ -13,7 +13,7 @@ type BusReader interface {
 // PCI is a PCI device. We will fill this in as we add options.
 // For now it just holds two uint16 per the PCI spec.
 type PCI struct {
-	Addr string
+	Addr   string
 	Vendor VID `pci:"vendor"`
 	Device DID `pci:"device"`
 }
@@ -28,19 +28,17 @@ func (p *PCI) String() string {
 type nameMap map[string][]VID
 
 type SubVendor struct {
-	Ven VID
-	Dev DID
+	Ven  VID
+	Dev  DID
 	Name string
 }
 
 type Device struct {
 	Name string
-	Sub []SubVendor
+	Sub  []SubVendor
 }
 
-type Vendor struct
-{
+type Vendor struct {
 	Name string
 	Devs map[DID]Device
 }
-
