@@ -1,4 +1,3 @@
-
 // Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -9,13 +8,15 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 )
 
 var (
-	debug = func(s string, arg ...interface{})  {}//{log.Printf(s, arg...)}
+	debug                                = func(s string, arg ...interface{}) {} //{log.Printf(s, arg...)}
+	nosubdevs                            = flag.Bool("nosub", true, "Generate a map for sub devices (BIG!)")
 	inTable, inVID, inDEVS, inDID, inSUB bool
 )
 
@@ -33,7 +34,7 @@ func closeSub() {
 
 func closeDev() {
 	closeSub()
-	if ! inDID {
+	if !inDID {
 		return
 	}
 	fmt.Printf("\t}, // device \n")
@@ -42,7 +43,7 @@ func closeDev() {
 
 func closeDevs() {
 	closeDev()
-	if ! inDEVS {
+	if !inDEVS {
 		return
 	}
 	fmt.Printf("\t}, // devices\n")
@@ -51,7 +52,7 @@ func closeDevs() {
 
 func closeVendor() {
 	closeDevs()
-	if ! inVID {
+	if !inVID {
 		return
 	}
 	inVID = false
@@ -59,36 +60,36 @@ func closeVendor() {
 }
 
 func closeTable() {
-	if ! inTable {
+	if !inTable {
 		return
 	}
 	closeVendor()
 	fmt.Printf("} // table\n")
 }
-	
+
 func newSub(s string) {
-	if ! inDID {
+	if !inDID {
 		log.Fatalf("%s: found a sub but not in a device", s)
 	}
-	if (! inSUB) {
+	if !inSUB {
 		fmt.Printf("Sub: []SubVendor{\n")
 	}
 	inSUB = true
-	
+
 	fmt.Printf("\t\tSubVendor{Ven: 0x%s, Dev: 0x%s, Name: %q},\n", s[3:7], s[7:11], s[13:])
 }
 
 func newDev(s string) {
-	if ! inVID {
+	if !inVID {
 		log.Fatalf("%s: found a dev but not in a vendor", s)
 	}
-	if ! inDEVS {
+	if !inDEVS {
 		fmt.Printf("Devs: map[DID]Device {\n")
 	}
 	closeDev()
 	inDEVS = true
 	inDID = true
-	
+
 	fmt.Printf("\n\t0x%s: Device{Name: %q,", s[1:5], s[6:])
 }
 
@@ -127,7 +128,7 @@ func main() {
 			continue
 		case isHex(line[0]) && isHex(line[1]):
 			debug("Vendor %v, inVID %v", line, inVID)
-			if ! inTable {
+			if !inTable {
 				fmt.Printf("var vendor = map[VID]Vendor {\n")
 				inTable = true
 			}
@@ -137,7 +138,9 @@ func main() {
 			newDev(line)
 		case line[0:2] == "\t\t" && isHex(line[2]):
 			debug("SubDevice %v", line)
-			newSub(line)
+			if !*nosubdevs {
+				newSub(line)
+			}
 		case line[0] == 'C':
 			debug("Class %v", line)
 			closeTable()
@@ -146,4 +149,3 @@ func main() {
 	}
 	closeTable()
 }
-

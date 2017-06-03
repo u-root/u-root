@@ -12,7 +12,7 @@ type (
 )
 
 var (
-	VIDName = map[VID] string {
+	VIDName = map[VID]string{
 		0x0001: "SafeNet (wrong ID)",
 		0x0010: "Allied Telesis, Inc (Wrong ID)",
 		0x001c: "PEAK-System Technik GmbH",
@@ -2118,7 +2118,7 @@ var (
 		0xfffe: "VMWare Inc (temporary ID)",
 		0xffff: "Illegal Vendor ID",
 	}
-	nameToVID = map[string]VID {
+	nameToVID = map[string]VID{
 		"SafeNet (wrong ID)":                          0x0001,
 		"Allied Telesis, Inc (Wrong ID)":              0x0010,
 		"PEAK-System Technik GmbH":                    0x001c,
@@ -4228,7 +4228,7 @@ var (
 
 func (vid VID) String() string {
 	n, ok := VIDName[vid]
-	if ! ok {
+	if !ok {
 		return fmt.Sprintf("%04x", vid)
 	}
 	return n
