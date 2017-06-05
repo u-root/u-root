@@ -21,6 +21,12 @@
 			"revisionTime": "2016-10-23T04:30:50Z"
 		},
 		{
+			"checksumSHA1": "tMWyUmQFr1Im84oWP/V550WqfVo=",
+			"path": "github.com/mdlayher/dhcp6",
+			"revision": "0570f4289fd3465c31d7f27e5ba36ad2800d60e2",
+			"revisionTime": "2016-10-10T16:49:42Z"
+		},
+		{
 			"checksumSHA1": "QDc9VOFYCL8Zbpi6NxnHJ9bTucQ=",
 			"path": "github.com/vcabbage/trivialt/netascii",
 			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
@@ -127,6 +133,12 @@
 			"path": "golang.org/x/net/ipv4",
 			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",
 			"revisionTime": "2017-01-14T04:22:49Z"
+		},
+		{
+			"checksumSHA1": "Iuw6iPsgYAC0EExyf2+wOwultJc=",
+			"path": "golang.org/x/net/ipv6",
+			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"revisionTime": "2016-05-15T03:16:23Z"
 		},
 		{
 			"checksumSHA1": "uTQtOqR0ePMMcvuvAIksiIZxhqU=",
