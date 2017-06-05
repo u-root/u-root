@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mdlayher/dhcp6"
+	// "github.com/d2g/dhcp4"
 )
 
 type Client struct {
@@ -69,12 +70,13 @@ func (c *Client) Request(mac *net.HardwareAddr) (bool, []byte, error) {
 }
 
 func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
+	// make options: iata
 	var id = [4]byte{'r', 'o', 'o', 't'}
 	options := make(dhcp6.Options)
-
 	if err := options.Add(dhcp6.OptionIATA, dhcp6.NewIATA(id, nil)); err != nil {
 		return nil, err
 	}
+	// make options: duid with mac address
 	duid := dhcp6.NewDUIDLL(6, *mac)
 	db, err := duid.MarshalBinary()
 	if err != nil {
@@ -82,21 +84,12 @@ func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
 	}
 	addRaw(options, dhcp6.OptionClientID, db)
 
-	solicitPacket := NewPacket(dhcp6.MessageTypeSolicit, [3]byte{0, 1, 2}, nil, options)
-	padToMinSize(&solicitPacket)
-	return solicitPacket, c.connection.Write(solicitPacket)
+	pb := NewPacket(dhcp6.MessageTypeSolicit, [3]byte{0, 1, 2}, nil, options)
+	return pb, c.connection.Write(pb)
 }
 
 func (c *Client) GetAdvertisePacket() {
 	c.connection.ReadFrom()
-}
-
-var padder [272]byte
-
-func padToMinSize(p *[]byte) {
-	if n := len(*p); n < 272 {
-		*p = append(*p, padder[:272-n]...)
-	}
 }
 
 func (c *Client) PrintConn() {

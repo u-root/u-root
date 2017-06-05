@@ -15,10 +15,10 @@ import (
 
 const (
 	ipv6HdrLen = 40
-	udpHdrLen   = 8
+	udpHdrLen  = 8
 
-	srcPort = 68
-	dstPort = 67
+	srcPort = 546
+	dstPort = 547
 )
 
 type packetSock struct {
@@ -210,24 +210,6 @@ func fillUDPHdr(payloadLen int) []byte {
 	fmt.Printf("udp header: %v\n", udphdr)
 	return udphdr
 }
-
-// func fillIPHdr(hdr []byte, payloadLen uint16) error {
-// 	// version and ip header length (ihl)
-// 	hdr[0] = ipv6Ver | (iana.DiffServAF43 / 4)
-// 	fmt.Printf("ipversion: %v\n", hdr[0])
-// 	// total length
-// 	binary.BigEndian.PutUint16(hdr[2:4], uint16(len(hdr))+payloadLen)
-// 	if _, err := rand.Read(hdr[4:5]); err != nil {
-// 		return err
-// 	}
-// 	hdr[8] = 16
-// 	hdr[9] = unix.IPPROTO_UDP
-// 	// dst IP
-// 	copy(hdr[16:20], net.IPv4bcast.To4())
-// 	// compute IP hdr checksum
-// 	chksum(hdr[0:len(hdr)], hdr[10:12])
-// 	return nil
-// }
 
 func chksum(p []byte, csum []byte) {
 	cklen := len(p)
