@@ -28,6 +28,11 @@ var (
 	ludicrous = flag.Bool("ludicrous", false, "print out information about symlink creation")
 	test      = flag.Bool("test", false, "Test mode: don't try to set control tty")
 	debug     = func(string, ...interface{}) {}
+
+	// There are some targes it makes sense to prebuild, since at least one never
+	// returns and there's no reason to have an installcommand hanging around.
+	// We did try using exec but that had its own set of issues.
+	prebuild  = []string{"uinit", "rush"}
 )
 
 func main() {
@@ -127,6 +132,14 @@ func main() {
 		}
 	}
 
+	// We can try to prebuild but it's not necessarily and error, since
+	// whoever put this initramfs together might have excluded things.
+	for _, v := range prebuild {
+		if o, err := exec.Command("installcommand", []string{"--onlybuild", v}...).CombinedOutput(); err != nil {
+			log.Printf("Warning; build for %v: '%s' %v", v, string(o), err)
+		}
+	}
+
 	// Start background build.
 	if isBgBuildEnabled() {
 		go startBgBuild()
@@ -138,7 +151,8 @@ func main() {
 	// Perhaps we should stat inito first.
 	// inito is always first and we set default flags for it.
 	cloneFlags := uintptr(syscall.CLONE_NEWPID)
-	for _, v := range []string{"/inito", "/buildbin/uinit", "/buildbin/rush"} {
+	for _, v := range append([]string{"/inito"}, prebuild...) {
+
 		cmd = exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin = os.Stdin
