@@ -167,7 +167,13 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 		return fmt.Errorf("error: %v", err)
 	}
 	debug("dhclient6: got client %v", client)
+	client.PrintConn()
 
+	success, packet, err := client.Request(&mac)
+	if err != nil {
+		return fmt.Errorf("result: %v, %v, %v\n", success, packet, err)
+	}
+	fmt.Printf("result: %v, %v, %v\n", success, packet, err)
 	// get the returned packet. Get options. Pull out o.Unicast, Authentication,
 	// BootFileURL, BootFileParam,
 	return nil

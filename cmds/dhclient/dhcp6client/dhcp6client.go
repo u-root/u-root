@@ -1,15 +1,12 @@
 package dhcp6client
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"time"
 
 	"github.com/mdlayher/dhcp6"
-	"github.com/vishvananda/netlink"
 )
 
 type Client struct {
@@ -58,8 +55,8 @@ func NewPacket(messageType dhcp6.MessageType, txID [3]byte, addr *net.UDPAddr, o
 	return pb
 }
 
-func (c *Client) Request() (bool, []byte, error) {
-	solicitPacket, err := c.SendSolicitPacket()
+func (c *Client) Request(mac *net.HardwareAddr) (bool, []byte, error) {
+	solicitPacket, err := c.SendSolicitPacket(mac)
 	if err != nil {
 		return false, solicitPacket, err
 	}
@@ -71,14 +68,14 @@ func (c *Client) Request() (bool, []byte, error) {
 	return true, solicitPacket, nil
 }
 
-func (c *Client) SendSolicitPacket() ([]byte, error) {
+func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
 	var id = [4]byte{'r', 'o', 'o', 't'}
 	options := make(dhcp6.Options)
 
 	if err := options.Add(dhcp6.OptionIATA, dhcp6.NewIATA(id, nil)); err != nil {
 		return nil, err
 	}
-	duid := dhcp6.NewDUIDLL(6, []byte{0xb8, 0xae, 0xed, 0x79, 0x61, 0x91})
+	duid := dhcp6.NewDUIDLL(6, *mac)
 	db, err := duid.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -102,44 +99,6 @@ func padToMinSize(p *[]byte) {
 	}
 }
 
-func Dhclient6(ifname string) error {
-	timeout := 15 * time.Second
-
-	n, err := ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", ifname))
-	if err != nil {
-		return fmt.Errorf("cannot get mac for %v: %v\n", ifname, err)
-	}
-
-	// This is truly amazing but /sys appends newlines to all this data.
-	n = bytes.TrimSpace(n)
-	mac, err := net.ParseMAC(string(n))
-	if err != nil {
-		return fmt.Errorf("mac error: %v\n", err)
-	}
-
-	iface, err := netlink.LinkByName(ifname)
-	if err != nil {
-		return fmt.Errorf("%s: netlink.LinkByName failed: %v\n", ifname, err)
-	}
-
-	if err := netlink.LinkSetUp(iface); err != nil {
-		return fmt.Errorf("%v: %v can't make it up: %v\n", ifname, iface, err)
-	}
-
-	conn, err := NewPacketSock(iface.Attrs().Index)
-	if err != nil {
-		return fmt.Errorf("client conection generation: %v\n", err)
-	}
-
-	client, err := New(mac, conn, timeout)
-	if err != nil {
-		return fmt.Errorf("error: %v\n", err)
-	}
-
-	success, packet, err := client.Request()
-	if err != nil {
-		return fmt.Errorf("result: %v, %v, %v\n", success, packet, err)
-	}
-	fmt.Printf("result: %v, %v, %v\n", success, packet, err)
-	return nil
+func (c *Client) PrintConn() {
+	fmt.Printf("print connection: %v\n", c.connection)
 }

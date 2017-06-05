@@ -5,9 +5,20 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/rand"
+	"net"
 
 	"github.com/mdlayher/dhcp6"
 	"golang.org/x/sys/unix"
+	"golang.org/x/net/ipv6"
+)
+
+const (
+	ipv6HdrLen = 40
+	udpHdrLen   = 8
+
+	srcPort = 68
+	dstPort = 67
 )
 
 type packetSock struct {
@@ -45,7 +56,29 @@ func (pc *packetSock) Write(pb []byte) error {
 	}
 	copy(lladdr.Addr[:], bcastMAC)
 
-	// Wrap up request
+	flowLabel := rand.Int() & 0xfff
+
+	h := ipv6.Header {
+		Version:      ipv6.Version,
+		TrafficClass: 0,
+		FlowLabel:    flowLabel,
+		PayloadLen:   udpHdrLen + len(pb),
+		NextHeader:   unix.IPPROTO_UDP,
+		HopLimit:     3,
+		Src:          net.IPv6unspecified,
+		Dst:          net.ParseIP("FF02::1:2"),
+	}
+
+	pkt := make([]byte, ipv6HdrLen + udpHdrLen + len(pb))
+	ipv6hdr := unmarshalIPv6Hdr(h)
+	fmt.Printf("ipv6hdr: %v\n", ipv6hdr)
+	udphdr := fillUDPHdr(len(pb))
+	fmt.Printf("udphdr: %v\n", udphdr)
+
+	// Wrap up packet
+	copy(pkt[0: ipv6HdrLen], ipv6hdr)
+	copy(pkt[ipv6HdrLen: ipv6HdrLen + udpHdrLen], udphdr)
+	copy(pkt[ipv6HdrLen + udpHdrLen: len(pkt)], pb)
 	//req, err := dhcp6.ParseRequest(pb, addr)
 	//if err != nil {
 	//	return err
@@ -56,7 +89,7 @@ func (pc *packetSock) Write(pb []byte) error {
 	//	return err
 	//}
 	// Send out request from link layer
-	return unix.Sendto(pc.fd, pb, 0, &lladdr)
+	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
 }
 
 func (pc *packetSock) ReadFrom() {
@@ -139,6 +172,77 @@ func swap16(x uint16) uint16 {
 	var b [2]byte
 	binary.BigEndian.PutUint16(b[:], x)
 	return binary.LittleEndian.Uint16(b[:])
+}
+
+func unmarshalIPv6Hdr(h ipv6.Header) []byte {
+	ipv6hdr := make([]byte, ipv6HdrLen)
+	// ver + first half byte of traffic class
+	ipv6hdr[0] = byte(h.Version << 4 | (h.TrafficClass / 4))
+	fmt.Printf("version: %v, %b, %v, %b\n", h.Version, h.Version << 4, h.TrafficClass, h.TrafficClass / 4)
+	// second half byte of traffic class + first half byte of flow label
+	ipv6hdr[1] = byte(((h.TrafficClass & 0x0f) << 4) | (h.FlowLabel / 8))
+	// flow label
+	ipv6hdr[2] = byte(h.FlowLabel & 0x0f0 / 8)
+	ipv6hdr[3] = byte(h.FlowLabel & 0x00f)
+	// payload length
+	binary.BigEndian.PutUint16(ipv6hdr[4:6], uint16(h.PayloadLen))
+	// next header
+	ipv6hdr[6] = byte(h.NextHeader)
+	// hop limit
+	ipv6hdr[7] = byte(h.HopLimit)
+	// src
+	copy(ipv6hdr[8:24], h.Src)
+	// dst
+	copy(ipv6hdr[24:40], h.Dst)
+
+	return ipv6hdr
+}
+
+func fillUDPHdr(payloadLen int) []byte {
+	udphdr := make([]byte, udpHdrLen)
+	//src port
+	binary.BigEndian.PutUint16(udphdr[0:2], srcPort)
+	// dest port
+	binary.BigEndian.PutUint16(udphdr[2:4], dstPort)
+	// length
+	binary.BigEndian.PutUint16(udphdr[4:6], uint16(udpHdrLen+payloadLen))
+	chksum(udphdr[0 : len(udphdr)], udphdr[6:8])
+	fmt.Printf("udp header: %v\n", udphdr)
+	return udphdr
+}
+
+// func fillIPHdr(hdr []byte, payloadLen uint16) error {
+// 	// version and ip header length (ihl)
+// 	hdr[0] = ipv6Ver | (iana.DiffServAF43 / 4)
+// 	fmt.Printf("ipversion: %v\n", hdr[0])
+// 	// total length
+// 	binary.BigEndian.PutUint16(hdr[2:4], uint16(len(hdr))+payloadLen)
+// 	if _, err := rand.Read(hdr[4:5]); err != nil {
+// 		return err
+// 	}
+// 	hdr[8] = 16
+// 	hdr[9] = unix.IPPROTO_UDP
+// 	// dst IP
+// 	copy(hdr[16:20], net.IPv4bcast.To4())
+// 	// compute IP hdr checksum
+// 	chksum(hdr[0:len(hdr)], hdr[10:12])
+// 	return nil
+// }
+
+func chksum(p []byte, csum []byte) {
+	cklen := len(p)
+	s := uint32(0)
+	for i := 0; i < (cklen - 1); i += 2 {
+		s += uint32(p[i+1])<<8 | uint32(p[i])
+	}
+	if cklen&1 == 1 {
+		s += uint32(p[cklen-1])
+	}
+	s = (s >> 16) + (s & 0xffff)
+	s = s + (s >> 16)
+	s = ^s
+	csum[0] = uint8(s & 0xff)
+	csum[1] = uint8(s >> 8)
 }
 
 //func MarshalBinary(req *dhcp6.Request) ([]byte, error) {
