@@ -134,20 +134,7 @@ func GetRecord(path string) (Record, error) {
 	}
 
 	sys := fi.Sys().(*syscall.Stat_t)
-	info := Info{
-		Ino:      sys.Ino,
-		Mode:     uint64(sys.Mode),
-		UID:      uint64(sys.Uid),
-		GID:      uint64(sys.Gid),
-		NLink:    sys.Nlink,
-		MTime:    uint64(sys.Mtim.Sec),
-		FileSize: uint64(sys.Size),
-		Major:    sys.Dev >> 8,
-		Minor:    sys.Dev & 0xff,
-		Rmajor:   sys.Rdev >> 8,
-		Rminor:   sys.Rdev & 0xff,
-		Name:     path,
-	}
+	info := sysInfo(path, sys)
 
 	switch fi.Mode() & os.ModeType {
 	case 0: // Regular file.
