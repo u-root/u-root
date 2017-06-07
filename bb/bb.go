@@ -130,14 +130,6 @@ func init() {
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		var fd int
-		cons, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-		if err != nil {
-			log.Printf("can't open /dev/tty: %v", err)
-		} else {
-			fd = int(cons.Fd())
-			log.Printf("#### setting 0, 1, 2 to opened tty fd is %v", cons.Fd())
-			cmd.Stdin, cmd.Stdout, cmd.Stderr = cons, cons, cons
-		}
 		cmd.SysProcAttr = &syscall.SysProcAttr{Ctty: fd, Setctty: true, Setsid: true, Cloneflags: cloneFlags}
 		log.Printf("Run %v", cmd)
 		if err := cmd.Run(); err != nil {
