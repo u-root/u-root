@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"sort"
 
-	"github.com/d2g/dhcp4"
 	"github.com/mdlayher/dhcp6"
 )
 

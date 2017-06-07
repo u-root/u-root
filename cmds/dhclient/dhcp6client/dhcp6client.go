@@ -71,9 +71,25 @@ func (c *Client) Request(mac *net.HardwareAddr) (bool, []byte, error) {
 
 func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
 	// make options: iata
-	var id = [4]byte{'r', 'o', 'o', 't'}
+	var id = [4]byte{0x00, 0x00, 0x00, 0x0f}
 	options := make(dhcp6.Options)
-	if err := options.Add(dhcp6.OptionIATA, dhcp6.NewIATA(id, nil)); err != nil {
+	if err := options.Add(dhcp6.OptionIANA, dhcp6.NewIANA(id, 0, 0, nil)); err != nil {
+		return nil, err
+	}
+	// make options: rapid commit
+	if err := options.Add(dhcp6.OptionRapidCommit, nil); err != nil {
+		return nil, err
+	}
+	// make options: elapsed time
+	var et dhcp6.ElapsedTime
+	et.UnmarshalBinary([]byte{0x00, 0x00})
+	if err := options.Add(dhcp6.OptionElapsedTime, et); err != nil {
+		return nil, err
+	}
+	// make options: option request option
+	oro := make(dhcp6.OptionRequestOption, 4)
+	oro.UnmarshalBinary([]byte{0x00, 0x17, 0x00, 0x18})
+	if err := options.Add(dhcp6.OptionORO, oro); err != nil {
 		return nil, err
 	}
 	// make options: duid with mac address

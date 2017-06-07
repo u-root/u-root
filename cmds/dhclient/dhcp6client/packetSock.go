@@ -9,8 +9,8 @@ import (
 	"net"
 
 	"github.com/mdlayher/dhcp6"
-	"golang.org/x/sys/unix"
 	"golang.org/x/net/ipv6"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -26,7 +26,7 @@ type packetSock struct {
 	ifindex int
 }
 
-var bcastMAC = []byte{255, 255, 255, 255, 255, 255}
+var bcastMAC = []byte{0x33, 0x33, 0x00, 0x01, 0x00, 0x02}
 
 func NewPacketSock(ifindex int) (*packetSock, error) {
 	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_DGRAM, int(swap16(unix.ETH_P_IPV6)))
@@ -56,29 +56,30 @@ func (pc *packetSock) Write(pb []byte) error {
 	}
 	copy(lladdr.Addr[:], bcastMAC)
 
-	flowLabel := rand.Int() & 0xfff
+	flowLabel := rand.Int() & 0xfffff
 
-	h := ipv6.Header {
+	h := ipv6.Header{
 		Version:      ipv6.Version,
 		TrafficClass: 0,
 		FlowLabel:    flowLabel,
 		PayloadLen:   udpHdrLen + len(pb),
 		NextHeader:   unix.IPPROTO_UDP,
-		HopLimit:     3,
-		Src:          net.IPv6unspecified,
+		HopLimit:     1,
+		Src:          net.ParseIP("fe80::179a:1422:c923:2727"),
 		Dst:          net.ParseIP("FF02::1:2"),
 	}
 
-	pkt := make([]byte, ipv6HdrLen + udpHdrLen + len(pb))
+	pkt := make([]byte, ipv6HdrLen+udpHdrLen+len(pb))
 	ipv6hdr := unmarshalIPv6Hdr(h)
-	fmt.Printf("ipv6hdr: %v\n", ipv6hdr)
+	fmt.Printf("ipv6hdr:%v, %v\n", h.Src, ipv6hdr)
 	udphdr := fillUDPHdr(len(pb))
-	fmt.Printf("udphdr: %v\n", udphdr)
 
 	// Wrap up packet
-	copy(pkt[0: ipv6HdrLen], ipv6hdr)
-	copy(pkt[ipv6HdrLen: ipv6HdrLen + udpHdrLen], udphdr)
-	copy(pkt[ipv6HdrLen + udpHdrLen: len(pkt)], pb)
+	copy(pkt[0:ipv6HdrLen], ipv6hdr)
+	copy(pkt[ipv6HdrLen:ipv6HdrLen+udpHdrLen], udphdr)
+	copy(pkt[ipv6HdrLen+udpHdrLen:len(pkt)], pb)
+
+	udpChksum(ipv6hdr, udphdr, pb, pkt[ipv6HdrLen+6:ipv6HdrLen+8])
 	//req, err := dhcp6.ParseRequest(pb, addr)
 	//if err != nil {
 	//	return err
@@ -164,7 +165,6 @@ func parseOptions(b []byte) (dhcp6.Options, error) {
 	if buf.Len() != 0 {
 		return nil, errors.New("invalid options data")
 	}
-	fmt.Printf("options: %v\n", options)
 	return options, nil
 }
 
@@ -177,13 +177,12 @@ func swap16(x uint16) uint16 {
 func unmarshalIPv6Hdr(h ipv6.Header) []byte {
 	ipv6hdr := make([]byte, ipv6HdrLen)
 	// ver + first half byte of traffic class
-	ipv6hdr[0] = byte(h.Version << 4 | (h.TrafficClass / 4))
-	fmt.Printf("version: %v, %b, %v, %b\n", h.Version, h.Version << 4, h.TrafficClass, h.TrafficClass / 4)
+	ipv6hdr[0] = byte(h.Version<<4 | (h.TrafficClass >> 4))
 	// second half byte of traffic class + first half byte of flow label
-	ipv6hdr[1] = byte(((h.TrafficClass & 0x0f) << 4) | (h.FlowLabel / 8))
+	ipv6hdr[1] = byte(((h.TrafficClass & 0x0f) << 4) | (h.FlowLabel >> 16))
 	// flow label
-	ipv6hdr[2] = byte(h.FlowLabel & 0x0f0 / 8)
-	ipv6hdr[3] = byte(h.FlowLabel & 0x00f)
+	ipv6hdr[2] = byte(h.FlowLabel & 0x0ff00 >> 8)
+	ipv6hdr[3] = byte(h.FlowLabel & 0x000ff)
 	// payload length
 	binary.BigEndian.PutUint16(ipv6hdr[4:6], uint16(h.PayloadLen))
 	// next header
@@ -206,12 +205,32 @@ func fillUDPHdr(payloadLen int) []byte {
 	binary.BigEndian.PutUint16(udphdr[2:4], dstPort)
 	// length
 	binary.BigEndian.PutUint16(udphdr[4:6], uint16(udpHdrLen+payloadLen))
-	chksum(udphdr[0 : len(udphdr)], udphdr[6:8])
-	fmt.Printf("udp header: %v\n", udphdr)
 	return udphdr
 }
 
-func chksum(p []byte, csum []byte) {
+func udpChksum(ipv6hdr []byte, udphdr []byte, udpbody []byte, csum []byte) {
+	// psuedoheader = srcip + dstip + udpcode + udplen
+	psuedoHdr := append(ipv6hdr[8:], []byte{0x00, 0x11 /*udpcode=17*/}...)
+	psuedoHdr = append(psuedoHdr, udphdr[4:6]...)
+
+	// udp header + data (excluding checksum)
+	udpData := append(udphdr, udpbody...)
+
+	// calculate 16-bit sum
+	sumPsuedoHdr := sixteenBitSum(psuedoHdr)
+	sumUdpData := sixteenBitSum(udpData)
+	sumTotal := sumPsuedoHdr + sumUdpData
+	sumTotal = (sumTotal>>16 + sumTotal&0xffff)
+	sumTotal = sumTotal + (sumTotal >> 16)
+
+	// one's complement
+	sumTotal = ^sumTotal
+
+	csum[0] = uint8(sumTotal & 0xff)
+	csum[1] = uint8(sumTotal >> 8)
+}
+
+func sixteenBitSum(p []byte) uint32 {
 	cklen := len(p)
 	s := uint32(0)
 	for i := 0; i < (cklen - 1); i += 2 {
@@ -222,9 +241,8 @@ func chksum(p []byte, csum []byte) {
 	}
 	s = (s >> 16) + (s & 0xffff)
 	s = s + (s >> 16)
-	s = ^s
-	csum[0] = uint8(s & 0xff)
-	csum[1] = uint8(s >> 8)
+
+	return s
 }
 
 //func MarshalBinary(req *dhcp6.Request) ([]byte, error) {
