@@ -15,7 +15,7 @@ import (
 
 var (
 	ttypgrp uintptr
-	ttyf *os.File
+	ttyf    *os.File
 )
 
 // tty does whatever needs to be done to set up a tty for GOOS.
@@ -24,6 +24,7 @@ func tty() {
 
 	sigs := make(chan os.Signal, 512)
 	signal.Notify(sigs, os.Interrupt)
+	signal.Ignore(syscall.SIGTTOU)
 	go func() {
 		for i := range sigs {
 			fmt.Println(i)
