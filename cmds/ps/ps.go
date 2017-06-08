@@ -49,7 +49,6 @@ func init() {
 	flag.BoolVar(&flags.all, "e", false, "Select all processes.  Identical to -A.")
 	flag.BoolVar(&flags.x, "x", false, "BSD-Like style, with STAT Column and long CommandLine")
 	flag.BoolVar(&flags.nSidTty, "a", false, "Print all process except whose are session leaders or unlinked with terminal")
-	flag.Parse()
 }
 
 // main process table of ps
@@ -231,6 +230,7 @@ func ps(pT ProcessTable) error {
 }
 
 func main() {
+	flag.Parse()
 	pT := ProcessTable{}
 	if err := pT.LoadTable(); err != nil {
 		log.Fatal(err)
