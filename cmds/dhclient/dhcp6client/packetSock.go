@@ -1,14 +1,12 @@
 package dhcp6client
 
 import (
-	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net"
 
-	"github.com/mdlayher/dhcp6"
+	// "github.com/mdlayher/dhcp6"
 	"golang.org/x/net/ipv6"
 	"golang.org/x/sys/unix"
 )
@@ -65,13 +63,13 @@ func (pc *packetSock) Write(pb []byte) error {
 		PayloadLen:   udpHdrLen + len(pb),
 		NextHeader:   unix.IPPROTO_UDP,
 		HopLimit:     1,
-		Src:          net.ParseIP("fe80::179a:1422:c923:2727"),
-		Dst:          net.ParseIP("FF02::1:2"),
+		// TODO: src ip harded coded for now
+		Src: net.ParseIP("fe80::baae:edff:fe79:6191"),
+		Dst: net.ParseIP("FF02::1:2"),
 	}
 
 	pkt := make([]byte, ipv6HdrLen+udpHdrLen+len(pb))
-	ipv6hdr := unmarshalIPv6Hdr(h)
-	fmt.Printf("ipv6hdr:%v, %v\n", h.Src, ipv6hdr)
+	ipv6hdr := marshalIPv6Hdr(h)
 	udphdr := fillUDPHdr(len(pb))
 
 	// Wrap up packet
@@ -80,92 +78,29 @@ func (pc *packetSock) Write(pb []byte) error {
 	copy(pkt[ipv6HdrLen+udpHdrLen:len(pkt)], pb)
 
 	udpChksum(ipv6hdr, udphdr, pb, pkt[ipv6HdrLen+6:ipv6HdrLen+8])
-	//req, err := dhcp6.ParseRequest(pb, addr)
-	//if err != nil {
-	//	return err
-	//}
 
-	//rb, err := MarshalBinary(req)
-	//if err != nil {
-	//	return err
-	//}
 	// Send out request from link layer
 	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
 }
 
-func (pc *packetSock) ReadFrom() {
+func (pc *packetSock) ReadFrom() ([]byte, error) {
 	fmt.Printf("starts reading\n")
-	pb := make([]byte, 200) // pkt of size 100 bytes, for now
+	pb := make([]byte, 500)
 	n, _, err := unix.Recvfrom(pc.fd, pb, 0)
-	packet := dhcp6.Packet{}
-	UnmarshalBinary(&packet, pb)
-	fmt.Printf("response: %v\n", packet)
-	fmt.Printf("read from server: %v, %v, %v\n", n, pb, err)
+	if err != nil {
+		return nil, err
+	}
+	return pb[:n], nil
+	//packet := dhcp6.Packet{}
+	//UnmarshalBinary(&packet, pb)
+
+	//ipv6hdr := marshalIPv6Hdr(pb)
+	//fmt.Printf("ip header: %v\n", ipv6hdr)
+	//fmt.Printf("read from server: %v, %v, %v\n", n, pb, err)
 }
 
 func (pc *packetSock) Close() error {
 	return unix.Close(pc.fd)
-}
-
-func UnmarshalBinary(p *dhcp6.Packet, b []byte) error {
-	// Packet must contain at least a message type and transaction ID
-	if len(b) < 4 {
-		return dhcp6.ErrInvalidPacket
-	}
-	p.MessageType = dhcp6.MessageType(b[0])
-	txID := [3]byte{}
-	copy(txID[:], b[1:4])
-	p.TransactionID = txID
-
-	options, err := parseOptions(b[4:])
-	if err != nil {
-		// Invalid options means an invalid packet
-		return dhcp6.ErrInvalidPacket
-	}
-	p.Options = options
-	return nil
-}
-
-func parseOptions(b []byte) (dhcp6.Options, error) {
-	var length int
-	options := make(dhcp6.Options)
-	buf := bytes.NewBuffer(b)
-	for buf.Len() > 3 {
-		// 2 bytes: option code
-		o := option{}
-		code := dhcp6.OptionCode(binary.BigEndian.Uint16(buf.Next(2)))
-		// If code is 0, bytes are empty after this point
-		if code == 0 {
-			return options, nil
-		}
-
-		o.Code = code
-		// 2 bytes: option length
-		length = int(binary.BigEndian.Uint16(buf.Next(2)))
-
-		// If length indicated is zero, skip to next iteration
-		if length == 0 {
-			continue
-		}
-
-		// N bytes: option data
-		o.Data = buf.Next(length)
-		// Set slice's max for option's data
-		o.Data = o.Data[:len(o.Data):len(o.Data)]
-
-		// If option data has less bytes than indicated by length,
-		// return an error
-		if len(o.Data) < length {
-			return nil, errors.New("invalid options data")
-		}
-
-		addRaw(options, o.Code, o.Data)
-	}
-	// Report error for any trailing bytes
-	if buf.Len() != 0 {
-		return nil, errors.New("invalid options data")
-	}
-	return options, nil
 }
 
 func swap16(x uint16) uint16 {
@@ -174,7 +109,20 @@ func swap16(x uint16) uint16 {
 	return binary.LittleEndian.Uint16(b[:])
 }
 
-func unmarshalIPv6Hdr(h ipv6.Header) []byte {
+func unmarshalIPv6Hdr(hb []byte) ipv6.Header {
+	return ipv6.Header{
+		Version:      ipv6.Version,
+		TrafficClass: int((hb[0]&0x0f)<<4 | (hb[1]&0xf0)>>4),
+		FlowLabel:    int((hb[1]&0x0f)<<16 | hb[2]<<8 | hb[3]),
+		PayloadLen:   int(hb[4]<<8 | hb[5]),
+		NextHeader:   int(hb[6]),
+		HopLimit:     int(hb[7]),
+		Src:          hb[8:24],
+		Dst:          hb[24:40],
+	}
+}
+
+func marshalIPv6Hdr(h ipv6.Header) []byte {
 	ipv6hdr := make([]byte, ipv6HdrLen)
 	// ver + first half byte of traffic class
 	ipv6hdr[0] = byte(h.Version<<4 | (h.TrafficClass >> 4))
@@ -256,4 +204,65 @@ func sixteenBitSum(p []byte) uint32 {
 //	copy(b[4+opts.count():], addrbyte[:])
 //
 //	return b, nil
+//}
+
+//func UnmarshalBinary(p *dhcp6.Packet, b []byte) error {
+//	// Packet must contain at least a message type and transaction ID
+//	if len(b) < 4 {
+//		return dhcp6.ErrInvalidPacket
+//	}
+//	p.MessageType = dhcp6.MessageType(b[0])
+//	txID := [3]byte{}
+//	copy(txID[:], b[1:4])
+//	p.TransactionID = txID
+//
+//	options, err := parseOptions(b[4:])
+//	if err != nil {
+//		// Invalid options means an invalid packet
+//		return dhcp6.ErrInvalidPacket
+//	}
+//	p.Options = options
+//	return nil
+//}
+
+//func parseOptions(b []byte) (dhcp6.Options, error) {
+//	var length int
+//	options := make(dhcp6.Options)
+//	buf := bytes.NewBuffer(b)
+//	for buf.Len() > 3 {
+//		// 2 bytes: option code
+//		o := option{}
+//		code := dhcp6.OptionCode(binary.BigEndian.Uint16(buf.Next(2)))
+//		// If code is 0, bytes are empty after this point
+//		if code == 0 {
+//			return options, nil
+//		}
+//
+//		o.Code = code
+//		// 2 bytes: option length
+//		length = int(binary.BigEndian.Uint16(buf.Next(2)))
+//
+//		// If length indicated is zero, skip to next iteration
+//		if length == 0 {
+//			continue
+//		}
+//
+//		// N bytes: option data
+//		o.Data = buf.Next(length)
+//		// Set slice's max for option's data
+//		o.Data = o.Data[:len(o.Data):len(o.Data)]
+//
+//		// If option data has less bytes than indicated by length,
+//		// return an error
+//		if len(o.Data) < length {
+//			return nil, errors.New("invalid options data")
+//		}
+//
+//		addRaw(options, o.Code, o.Data)
+//	}
+//	// Report error for any trailing bytes
+//	if buf.Len() != 0 {
+//		return nil, errors.New("invalid options data")
+//	}
+//	return options, nil
 //}
