@@ -8,7 +8,7 @@ import (
 
 	"github.com/mdlayher/dhcp6"
 	"golang.org/x/net/icmp"
-	"golang.org/x/net/ipv6"
+	//"golang.org/x/net/ipv6"
 	// "github.com/d2g/dhcp4"
 )
 
@@ -26,6 +26,7 @@ type Client struct {
 type connection interface {
 	Close() error
 	Write(packet []byte) error
+	WriteNeighborAd(src, dst net.IP, pb []byte) error
 	ReadFrom() ([]byte, error)
 	// SetReadTimeout(t time.Duration) error
 }
@@ -62,42 +63,45 @@ func (c *Client) Request(mac *net.HardwareAddr) (bool, []byte, error) {
 		return false, solicitPacket, err
 	}
 	x, y, z := c.GetOffer()
-	fmt.Printf("get offer: %v, %v, %v\n", x, *y, z)
-	err = c.connection.Close()
-	if err != nil {
-		return false, solicitPacket, err
-	}
+	fmt.Printf("get offer: %v, %v, %v\n", x, y, z)
+	// err = c.connection.Close()
+	// if err != nil {
+	// 	return false, solicitPacket, err
+	// }
 	return true, solicitPacket, nil
 }
 
-func (c *Client) GetOffer() (bool, *icmp.Message, error) {
+func (c *Client) GetOffer() (bool, []byte, error) {
 	pb, err := c.connection.ReadFrom()
 	if err != nil {
 		return false, nil, err
 	}
 
-	ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
+	return true, pb, nil
 
-	if ipv6Hdr.NextHeader == 58 { // if next header is ICMPv6
-		icmpMsg, err := icmp.ParseMessage(58, pb[40:])
-		if err != nil {
-			return false, nil, err
-		}
-		fmt.Printf("type: %v\n", == ipv6.ICMPTypeNeighborSolicitation)
-		//switch ipv6.ICMPType(pb[40]) {
-		//case "neighbor solicitation":
-		//	//err = c.SendNeighborAdPacket(ipv6Hdr, icmpMsg)
-		//	//if err != nil {
-		//	//	return false, icmpMsg, nil
-		//	//}
-		//	//return true, icmpMsg, nil
-		//default:
-		//	return true, icmpMsg, nil
-		//}
-		return true, icmpMsg, nil
-	}
+	// ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
 
-	return true, nil, nil
+	// if ipv6Hdr.NextHeader == 58 { // if next header is ICMPv6
+	// 	icmpMsg, err := icmp.ParseMessage(58, pb[40:])
+	// 	if err != nil {
+	// 		return false, nil, err
+	// 	}
+
+	// 	switch ipv6.ICMPType(pb[40]) {
+	// 	case ipv6.ICMPTypeNeighborSolicitation:
+	// 		pb, err = c.SendNeighborAdPacket(net.ParseIP("fe80::baae:edff:fe79:6191"), ipv6Hdr.Src, icmpMsg)
+	// 		if err != nil {
+	// 			return false, icmpMsg, err
+	// 		}
+	// 		fmt.Printf("ad: %v\n", pb)
+	// 		return true, icmpMsg, nil
+	// 	default:
+	// 		return true, icmpMsg, nil
+	// 	}
+	// 	return true, icmpMsg, nil
+	// }
+
+	// return true, nil, nil
 
 	//conn, err := icmp.ListenPacket("ip6:135", "::")
 	//if err != nil {
@@ -151,10 +155,37 @@ func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
 	return pb, c.connection.Write(pb)
 }
 
-//func (c *Client) SendNeighborAdPacket(recvpkt []byte) ([]byte, error) {
-//	neighborSolicit := recvpkt[40:]
-//	ipv6hdr := unmarshalIPv6Hdr(recvpkt[:40])
-//}
+func (c *Client) SendNeighborAdPacket(src, dst net.IP, icmpMsg *icmp.Message) ([]byte, error) {
+	flags := []byte{0x40, 0x00, 0x00, 0x00}
+	targetAddr := make([]byte, len(dst))
+	copy(targetAddr[:], src)
+	// m := icmp.Message {
+	// 	Type: ipv6.ICMPTypeNeighborAdvertisement,
+	// 	Code: 0,
+	// 	Body: nil, // &icmp.DefaultMessageBody {
+	// 		//Data: []byte{},//append(flags, targetAddr...),
+	// 	//},
+	// }
+
+	// psh := icmp.IPv6PseudoHeader(src, dst)
+
+	// var mtype int
+	// switch typ := m.Type.(type) {
+	// case ipv6.ICMPType:
+	// 	mtype = int(typ)
+	// default:
+	// 	return nil, syscall.EINVAL
+	// }
+
+	// pb, err := m.Marshal(nil)
+	// fmt.Printf("sending ad: %v, %v, %v, %v\n", mtype, psh, pb, err)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	pb := []byte{136, 0, 0x73, 0x26}
+	pb = append(pb, append(flags, targetAddr...)...)
+	return pb, c.connection.WriteNeighborAd(src, dst, pb)
+}
 
 func (c *Client) PrintConn() {
 	fmt.Printf("print connection: %v\n", c.connection)

@@ -64,7 +64,7 @@ func (pc *packetSock) Write(pb []byte) error {
 		NextHeader:   unix.IPPROTO_UDP,
 		HopLimit:     1,
 		// TODO: src ip harded coded for now
-		Src: net.ParseIP("fe80::baae:edff:fe79:6191"),
+		Src: net.ParseIP("fe80::baae:edff:fe79:6191"), // net.ParseIP("fe80::179a:1422:c923:2727"),
 		Dst: net.ParseIP("FF02::1:2"),
 	}
 
@@ -78,6 +78,43 @@ func (pc *packetSock) Write(pb []byte) error {
 	copy(pkt[ipv6HdrLen+udpHdrLen:len(pkt)], pb)
 
 	udpChksum(ipv6hdr, udphdr, pb, pkt[ipv6HdrLen+6:ipv6HdrLen+8])
+
+	// Send out request from link layer
+	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
+}
+
+// Write icmpv6 neighbor advertisements
+func (pc *packetSock) WriteNeighborAd(src, dst net.IP, pb []byte) error {
+	mac := ipv62mac([]byte(dst))
+	fmt.Printf("addr: %v, %x \n", []byte(dst), mac)
+	// Define linke layer
+	lladdr := unix.SockaddrLinklayer{
+		Ifindex:  pc.ifindex,
+		Protocol: swap16(unix.ETH_P_IPV6),
+		Halen:    uint8(len(mac)),
+	}
+	copy(lladdr.Addr[:], mac)
+
+	flowLabel := rand.Int() & 0xfffff
+
+	h := ipv6.Header{
+		Version:      ipv6.Version,
+		TrafficClass: 0,
+		FlowLabel:    flowLabel,
+		PayloadLen:   24,
+		NextHeader:   unix.IPPROTO_ICMPV6,
+		HopLimit:     255,
+		// TODO: src ip harded coded for now
+		Src: src,
+		Dst: dst,
+	}
+
+	pkt := make([]byte, ipv6HdrLen+len(pb))
+	ipv6hdr := marshalIPv6Hdr(h)
+
+	// Wrap up packet
+	copy(pkt[0:ipv6HdrLen], ipv6hdr)
+	copy(pkt[ipv6HdrLen:], pb)
 
 	// Send out request from link layer
 	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
@@ -109,8 +146,8 @@ func swap16(x uint16) uint16 {
 	return binary.LittleEndian.Uint16(b[:])
 }
 
-func unmarshalIPv6Hdr(hb []byte) ipv6.Header {
-	return ipv6.Header{
+func unmarshalIPv6Hdr(hb []byte) *ipv6.Header {
+	return &ipv6.Header{
 		Version:      ipv6.Version,
 		TrafficClass: int((hb[0]&0x0f)<<4 | (hb[1]&0xf0)>>4),
 		FlowLabel:    int((hb[1]&0x0f)<<16 | hb[2]<<8 | hb[3]),
@@ -191,6 +228,17 @@ func sixteenBitSum(p []byte) uint32 {
 	s = s + (s >> 16)
 
 	return s
+}
+
+func ipv62mac(ipv6 []byte) []byte {
+	mac := make([]byte, 8)
+	copy(mac[:], ipv6[8:])
+	fmt.Printf("mac: %v\n", mac)
+
+	mac[0] -= 0x02
+	mac = append(mac[:4], mac[5:]...)
+	mac = append(mac[:3], mac[4:]...)
+	return mac
 }
 
 //func MarshalBinary(req *dhcp6.Request) ([]byte, error) {
