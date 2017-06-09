@@ -57,36 +57,38 @@ func NewPacket(messageType dhcp6.MessageType, txID [3]byte, addr *net.UDPAddr, o
 	return pb
 }
 
-func (c *Client) Request(mac *net.HardwareAddr) (bool, []byte, error) {
+func (c *Client) Request(mac *net.HardwareAddr) ([]byte, error) {
 	solicitPacket, err := c.SendSolicitPacket(mac)
 	if err != nil {
-		return false, solicitPacket, err
+		return solicitPacket, err
 	}
-	x, y, z := c.GetOffer()
-	fmt.Printf("get offer: %v, %v, %v\n", x, y, z)
+	_, z := c.GetOffer()
+	fmt.Printf("get offer: %v\n", z)
 	// err = c.connection.Close()
 	// if err != nil {
 	// 	return false, solicitPacket, err
 	// }
-	return true, solicitPacket, nil
+	return solicitPacket, nil
 }
 
-func (c *Client) GetOffer() (bool, []byte, error) {
+func (c *Client) GetOffer() ([]byte, error) {
 	pb, err := c.connection.ReadFrom()
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
-	return true, pb, nil
+	ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
+	fmt.Printf("hdr: %v\n", ipv6Hdr)
 
-	// ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
+	if ipv6Hdr.NextHeader == 58 { // if next header is ICMPv6
+		icmpMsg, err := icmp.ParseMessage(58, pb[40:])
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("hdr: %v\n", icmpMsg)
+	}
 
-	// if ipv6Hdr.NextHeader == 58 { // if next header is ICMPv6
-	// 	icmpMsg, err := icmp.ParseMessage(58, pb[40:])
-	// 	if err != nil {
-	// 		return false, nil, err
-	// 	}
-
+	return pb, nil
 	// 	switch ipv6.ICMPType(pb[40]) {
 	// 	case ipv6.ICMPTypeNeighborSolicitation:
 	// 		pb, err = c.SendNeighborAdPacket(net.ParseIP("fe80::baae:edff:fe79:6191"), ipv6Hdr.Src, icmpMsg)

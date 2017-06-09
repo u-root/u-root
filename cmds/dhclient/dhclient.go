@@ -35,10 +35,10 @@ const (
 )
 
 var (
-	leasetimeout = flag.Int("timeout", 600, "Lease timeout in seconds")
+	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", true, "Verbose output")
-	ipv4         = flag.Bool("ipv4", true, "use IPV4")
+	ipv4         = flag.Bool("ipv4", false, "use IPV4")
 	test         = flag.Bool("test", true, "Test mode")
 	debug        = func(string, ...interface{}) {}
 )
@@ -162,17 +162,20 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	}
 	debug("dhclient6: got conn %v", conn)
 
-	client, err := dhcp6client.New(mac, conn, timeout)
-	if err != nil {
-		return fmt.Errorf("error: %v", err)
-	}
-	debug("dhclient6: got client %v", client)
+	for {
+		client, err := dhcp6client.New(mac, conn, timeout)
+		if err != nil {
+			return fmt.Errorf("error: %v", err)
+		}
+		debug("dhclient6: got client %v", client)
 
-	success, packet, err := client.Request(&mac)
-	if err != nil {
-		return fmt.Errorf("result: %v, %v, %v\n", success, packet, err)
+		packet, err := client.Request(&mac)
+		if err != nil {
+			return fmt.Errorf("result: %v, %v\n", packet, err)
+		}
+		fmt.Printf("result: %v, %v\n", packet, err)
+		time.Sleep(timeout - slop)
 	}
-	fmt.Printf("result: %v, %v, %v\n", success, packet, err)
 	// get the returned packet. Get options. Pull out o.Unicast, Authentication,
 	// BootFileURL, BootFileParam,
 	return nil
