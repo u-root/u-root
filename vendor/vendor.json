@@ -15,18 +15,6 @@
 			"revisionTime": "2015-05-19T14:54:04Z"
 		},
 		{
-			"checksumSHA1": "N28uXw8i8WMJcqBiqmJl9j9NPiI=",
-			"path": "github.com/krolaw/dhcp4",
-			"revision": "f61f734b73027e29f7fa2ed623f2ed85a7ef08fa",
-			"revisionTime": "2016-10-23T04:30:50Z"
-		},
-		{
-			"checksumSHA1": "QDc9VOFYCL8Zbpi6NxnHJ9bTucQ=",
-			"path": "github.com/vcabbage/trivialt/netascii",
-			"revision": "d5bad88cc6acb51a6ae90cce040612f61c8cba3e",
-			"revisionTime": "2016-12-08T23:35:56Z"
-		},
-		{
 			"checksumSHA1": "fBYLKUQGGZvgco+r1iuYrVHEkCU=",
 			"path": "github.com/vishvananda/netlink",
 			"revision": "a66e14955d30c6f0806ad60ca197e6926bcd0b10",
@@ -103,30 +91,6 @@
 			"path": "golang.org/x/crypto/sha3",
 			"revision": "b8a2a83acfe6e6770b75de42d5ff4c67596675c0",
 			"revisionTime": "2017-01-13T19:21:00Z"
-		},
-		{
-			"checksumSHA1": "9Pcc1IiRqPxEcxU2KMpkrcEGb3k=",
-			"path": "golang.org/x/net/bpf",
-			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",
-			"revisionTime": "2017-01-14T04:22:49Z"
-		},
-		{
-			"checksumSHA1": "ph4zMZHCWvSjVOZwoxbks+nG0/M=",
-			"path": "golang.org/x/net/internal/iana",
-			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",
-			"revisionTime": "2017-01-14T04:22:49Z"
-		},
-		{
-			"checksumSHA1": "LVY0kRV5iwxDS3XQaBWxdzPemyc=",
-			"path": "golang.org/x/net/internal/netreflect",
-			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",
-			"revisionTime": "2017-01-14T04:22:49Z"
-		},
-		{
-			"checksumSHA1": "825oQJv9jmZu0T9YSXnDHtmeNUY=",
-			"path": "golang.org/x/net/ipv4",
-			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",
-			"revisionTime": "2017-01-14T04:22:49Z"
 		},
 		{
 			"checksumSHA1": "uTQtOqR0ePMMcvuvAIksiIZxhqU=",
