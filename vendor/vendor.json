@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "d4oPLXukgz+dbGX3IqfTDomjnns=",
+			"path": "github.com/c9s/goprocinfo/linux",
+			"revision": "19cb9f127a9c8d2034cf59ccb683cdb94b9deb6c",
+			"revisionTime": "2015-10-25T19:11:53Z"
+		},
+		{
 			"checksumSHA1": "Sub5+6yzZ28L2n1l+xmjg9yitvM=",
 			"path": "github.com/d2g/dhcp4",
 			"revision": "f0e4d29ff0231dce36e250b2ed9ff08412584bca",
@@ -13,6 +19,30 @@
 			"path": "github.com/d2g/dhcp4client",
 			"revision": "bed07e1bc5b85f69c6f0fd73393aa35ec68ed892",
 			"revisionTime": "2015-05-19T14:54:04Z"
+		},
+		{
+			"checksumSHA1": "lTfOJQTrubPI+BjLPZzKJviMk78=",
+			"path": "github.com/google/gopacket/macs",
+			"revision": "f8cc1fb9ff67a83a8a202df16e5639c38c08aab4",
+			"revisionTime": "2017-05-27T13:16:45Z"
+		},
+		{
+			"checksumSHA1": "IyHKjCdrqRRLTAKBHEh6wUhkgiI=",
+			"path": "github.com/jbuchbinder/gopnm",
+			"revision": "5176c556b9ce7e87b54b92744dc86f058f520e86",
+			"revisionTime": "2015-02-23T21:27:18Z"
+		},
+		{
+			"checksumSHA1": "tGrX/RQ3VSaN2apvoM1RffvzCKU=",
+			"path": "github.com/kr/pty",
+			"revision": "2c10821df3c3cf905230d078702dfbe9404c9b23",
+			"revisionTime": "2017-03-07T14:53:09Z"
+		},
+		{
+			"checksumSHA1": "r5eQHkttko6kxroDEENXbmXKrSs=",
+			"path": "github.com/nfnt/resize",
+			"revision": "891127d8d1b52734debe1b3c3d7e747502b6c366",
+			"revisionTime": "2016-07-24T20:39:20Z"
 		},
 		{
 			"checksumSHA1": "fBYLKUQGGZvgco+r1iuYrVHEkCU=",
@@ -91,6 +121,30 @@
 			"path": "golang.org/x/crypto/sha3",
 			"revision": "b8a2a83acfe6e6770b75de42d5ff4c67596675c0",
 			"revisionTime": "2017-01-13T19:21:00Z"
+		},
+		{
+			"checksumSHA1": "eZmCOIYPoiFgcfOd5dvgJLHGKQI=",
+			"path": "golang.org/x/net/bpf",
+			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"revisionTime": "2016-05-15T03:16:23Z"
+		},
+		{
+			"checksumSHA1": "yRuyntx9a59ugMi5NlN4ST0XRcI=",
+			"path": "golang.org/x/net/internal/iana",
+			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"revisionTime": "2016-05-15T03:16:23Z"
+		},
+		{
+			"checksumSHA1": "cNGCoUQtPpisIaR5NYcjL+n3w3E=",
+			"path": "golang.org/x/net/ipv4",
+			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"revisionTime": "2016-05-15T03:16:23Z"
+		},
+		{
+			"checksumSHA1": "Iuw6iPsgYAC0EExyf2+wOwultJc=",
+			"path": "golang.org/x/net/ipv6",
+			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"revisionTime": "2016-05-15T03:16:23Z"
 		},
 		{
 			"checksumSHA1": "uTQtOqR0ePMMcvuvAIksiIZxhqU=",
