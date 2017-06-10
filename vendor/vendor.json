@@ -39,6 +39,12 @@
 			"revisionTime": "2017-03-07T14:53:09Z"
 		},
 		{
+			"checksumSHA1": "tMWyUmQFr1Im84oWP/V550WqfVo=",
+			"path": "github.com/mdlayher/dhcp6",
+			"revision": "0570f4289fd3465c31d7f27e5ba36ad2800d60e2",
+			"revisionTime": "2016-10-10T16:49:42Z"
+		},
+		{
 			"checksumSHA1": "r5eQHkttko6kxroDEENXbmXKrSs=",
 			"path": "github.com/nfnt/resize",
 			"revision": "891127d8d1b52734debe1b3c3d7e747502b6c366",
