@@ -139,7 +139,6 @@ var (
 		Dir{Name: "/etc", Mode: os.FileMode(0777)},
 		Dir{Name: "/tcz", Mode: os.FileMode(0777)},
 		Dir{Name: "/dev", Mode: os.FileMode(0777)},
-		Dir{Name: "/dev/pts", Mode: os.FileMode(0777)},
 		Dir{Name: "/lib", Mode: os.FileMode(0777)},
 		Dir{Name: "/usr/lib", Mode: os.FileMode(0777)},
 		Dir{Name: "/go/pkg/linux_amd64", Mode: os.FileMode(0777)},
@@ -155,6 +154,7 @@ var (
 		// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
 		// default to contents of Dev.cpio.
 		Mount{Source: "none", Target: "/dev", FSType: "devtmpfs", Flags: syscall.MS_MGC_VAL},
+		Dir{Name: "/dev/pts", Mode: os.FileMode(0777)},
 		Mount{Source: "none", Target: "/dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		Symlink{Linkpath: "/dev/pts/ptmx", Target: "/dev/ptmx"},
 		File{Name: "/etc/resolv.conf", Contents: `nameserver 8.8.8.8`, Mode: os.FileMode(0644)},
