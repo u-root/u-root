@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"syscall"
 	"testing"
 
@@ -480,3 +481,81 @@ var (
 		"usr/lib: Ino 3204042 Mode 040755 UID 0 GID 0 NLink 2 MTime 2017-01-23 06:18:50 +0000 UTC FileSize 0 Major 252 Minor 0 Rmajor 0 Rminor 0",
 	}
 )
+
+// TestReproducible verifies that we can produce reproducible cpio archives for newc format.
+func TestReproducible(t *testing.T) {
+	f, err := cpio.Format("newc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contents := "LANAAAAAAAAAA"
+	rec := []cpio.Record{cpio.StaticRecord(contents, cpio.Info{
+		Ino:      1,
+		Mode:     syscall.S_IFREG | 2,
+		UID:      3,
+		GID:      4,
+		NLink:    5,
+		MTime:    6,
+		FileSize: 7,
+		Major:    8,
+		Minor:    9,
+		Rmajor:   10,
+		Rminor:   11,
+		Name:     "foobar",
+	}),
+	}
+
+	// First test that it fails unless we make it reproducible
+
+	b1 := &bytes.Buffer{}
+	w := f.Writer(b1)
+	if err := w.WriteRecords(rec); err != nil {
+		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
+	}
+	rec[0].Reader = bytes.NewReader([]byte(contents))
+	b2 := &bytes.Buffer{}
+	w = f.Writer(b2)
+	rec[0].MTime++
+	if err := w.WriteRecords(rec); err != nil {
+		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
+	}
+
+	if reflect.DeepEqual(b1.Bytes()[:], b2.Bytes()[:]) {
+		t.Error("Reproducible: compared as same, wanted different")
+	}
+
+	// Second test that it works if we make it reproducible
+	// It does indeed fail without the second call.
+
+	b1 = &bytes.Buffer{}
+	w = f.Writer(b1)
+	rec[0].Reader = bytes.NewReader([]byte(contents))
+	cpio.MakeReproducible(rec)
+	if err := w.WriteRecords(rec); err != nil {
+		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
+	}
+
+	b2 = &bytes.Buffer{}
+	w = f.Writer(b2)
+	rec[0].MTime++
+	rec[0].Reader = bytes.NewReader([]byte(contents))
+	cpio.MakeReproducible(rec)
+	if err := w.WriteRecords(rec); err != nil {
+		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
+	}
+
+	if len(b1.Bytes()) != len(b2.Bytes()) {
+		t.Fatalf("Reproducible \n%v,\n%v: len is different, wanted same", b1.Bytes()[:], b2.Bytes()[:])
+	}
+	if !reflect.DeepEqual(b1.Bytes()[:], b2.Bytes()[:]) {
+		t.Error("Reproducible: compared different, wanted same")
+		for i := range b1.Bytes() {
+			a := b1.Bytes()[i]
+			b := b2.Bytes()[i]
+			if a != b {
+				t.Errorf("\tb1[%d] is %v, b2[%d] is %v", i, a, i, b)
+			}
+		}
+	}
+}

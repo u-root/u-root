@@ -127,6 +127,51 @@ func CreateFile(f Record) error {
 	}
 }
 
+// Inumber and devnumbers are unique to Unix-like
+// operating systems. You can not uniquely disambiguate a file in a
+// Unix system with just an inumber, you need a device number too.
+// To handle hard links (unique to Unix) we need to figure out if a
+// given file has been seen before. To do this we see if a file has the
+// same [dev,ino] tuple as one we have seen. If so, we won't bother
+// reading it in.
+
+type devInode struct {
+	dev uint64
+	ino uint64
+}
+
+var (
+	inodeMap = map[devInode]Info{}
+	inumber  uint64
+)
+
+// Certain elements of the file can not be set by cpio:
+// the Inode #
+// the Dev
+// maintaining these elements leaves us with a non-reproducible
+// output stream. In this function, we figure out what inumber
+// we need to use, and clear out anything we can.
+// We always zero the Dev.
+// We try to find the matching inode. If found, we use its inumber.
+// If not, we get a new inumber for it and save the inode away.
+// This eliminates two of the messier parts of creating reproducible
+// output streams.
+func inode(i Info) (Info, bool) {
+	d := devInode{dev: i.Dev, ino: i.Ino}
+	i.Dev = 0
+
+	if d, ok := inodeMap[d]; ok {
+		i.Ino = d.Ino
+		return i, true
+	}
+
+	i.Ino = inumber
+	inumber++
+	inodeMap[d] = i
+
+	return i, false
+}
+
 func GetRecord(path string) (Record, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
@@ -134,10 +179,13 @@ func GetRecord(path string) (Record, error) {
 	}
 
 	sys := fi.Sys().(*syscall.Stat_t)
-	info := sysInfo(path, sys)
+	info, done := inode(sysInfo(path, sys))
 
 	switch fi.Mode() & os.ModeType {
 	case 0: // Regular file.
+		if done {
+			return Record{nil, info}, nil
+		}
 		osfile, err := os.Open(path)
 		if err != nil {
 			return Record{}, err
