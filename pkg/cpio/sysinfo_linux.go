@@ -17,6 +17,7 @@ func sysInfo(n string, sys *syscall.Stat_t) Info {
 		NLink:    sys.Nlink,
 		MTime:    uint64(sys.Mtim.Sec),
 		FileSize: uint64(sys.Size),
+		Dev:      sys.Dev,
 		Major:    sys.Dev >> 8,
 		Minor:    sys.Dev & 0xff,
 		Rmajor:   sys.Rdev >> 8,

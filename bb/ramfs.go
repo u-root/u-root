@@ -61,6 +61,7 @@ func ramfs() {
 	}
 
 	w := archiver.Writer(f)
+	cpio.MakeReproducible(devCPIO[:])
 	if err := w.WriteRecords(devCPIO[:]); err != nil {
 		log.Fatalf("%v\n", err)
 	}
@@ -93,7 +94,9 @@ func ramfs() {
 			}
 			// the name in the cpio is relative to our starting point.
 			rec.Name = cn
-			if err := w.WriteRecord(rec); err != nil {
+			recs := []cpio.Record{rec}
+			cpio.MakeReproducible(recs)
+			if err := w.WriteRecords(recs); err != nil {
 				log.Fatalf("%v\n", err)
 			}
 			return nil

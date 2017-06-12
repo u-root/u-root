@@ -96,3 +96,15 @@ func (w Writer) WriteRecords(files []Record) error {
 func (w Writer) WriteTrailer() error {
 	return w.WriteRecord(TrailerRecord)
 }
+
+// MakeReproducible changes any fields in a Record such that
+// if we run cpio again, with the same files presented to it
+// in the same order, and those files have unchanged contents,
+// the cpio file it produces will be bit-for-bit
+// identical. This is an essential property for firmware-embedded
+// payloads.
+func MakeReproducible(files []Record) {
+	for i := range files {
+		files[i].MTime = 0
+	}
+}

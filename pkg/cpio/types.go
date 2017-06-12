@@ -63,6 +63,7 @@ type Info struct {
 	NLink    uint64
 	MTime    uint64
 	FileSize uint64
+	Dev      uint64
 	Major    uint64
 	Minor    uint64
 	Rmajor   uint64
@@ -78,7 +79,7 @@ func (i Info) String() string {
 		i.UID,
 		i.GID,
 		i.NLink,
-		time.Unix(int64(i.MTime), 0),
+		time.Unix(int64(i.MTime), 0).UTC(),
 		i.FileSize,
 		i.Major,
 		i.Minor,
