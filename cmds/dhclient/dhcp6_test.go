@@ -15,7 +15,11 @@ import (
 	"github.com/mdlayher/dhcp6"
 )
 
-const v6addr = "fe80::baae:edff:fe79:6191"
+const (
+	v6addr  = "fe80::baae:edff:fe79:6191"
+	srcPort = 546
+	dstPort = 547
+)
 
 // We need dhcp6 to let us use a unix.Conn but that requires a fix
 // to the package. For now, we'll use lo
@@ -187,6 +191,7 @@ func newIAAddr(ia *dhcp6.IANA, ip net.IP, w dhcp6.ResponseSender, r *dhcp6.Reque
 // TestDhcpClientRequest creates a packet using the dhcp6 package
 // and compares it to a pre-created packet to see if it is right.
 func TestDhcpClientRequest(t *testing.T) {
+
 }
 
 // Second test. Try to talk to the server and see what comes
@@ -196,7 +201,7 @@ func TestDhcpClientRequest(t *testing.T) {
 func TestDhcp6ClientErrors(t *testing.T) {
 }
 
-// Third test. This should succeed. 
+// Third test. This should succeed.
 // TestDhcp6Client starts a server, creates a packet to send to it,
 // and checks the response for correctness.
 func TestDhcp6Client(t *testing.T) {
