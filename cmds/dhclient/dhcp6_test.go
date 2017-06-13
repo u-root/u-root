@@ -7,18 +7,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/mdlayher/dhcp6"
+	"golang.org/x/net/ipv6"
+	"golang.org/x/sys/unix"
 )
 
 const (
 	v6addr  = "fe80::baae:edff:fe79:6191"
-	srcPort = 546
-	dstPort = 547
+	srcPort = uint16(546)
+	dstPort = uint16(547)
 )
 
 // We need dhcp6 to let us use a unix.Conn but that requires a fix
@@ -191,6 +195,68 @@ func newIAAddr(ia *dhcp6.IANA, ip net.IP, w dhcp6.ResponseSender, r *dhcp6.Reque
 // TestDhcpClientRequest creates a packet using the dhcp6 package
 // and compares it to a pre-created packet to see if it is right.
 func TestDhcpClientRequest(t *testing.T) {
+	iface, err := ifup("em1")
+	if err != nil {
+		t.Fatalf("failed to setup interface: %v\n", err)
+	}
+
+	mac := iface.Attrs().HardwareAddr
+	options, err := addOptions(mac)
+	if err != nil {
+		t.Fatalf("failed to add options: %v\n", err)
+	}
+
+	p := &dhcp6.Packet{
+		MessageType:   dhcp6.MessageTypeSolicit,
+		TransactionID: [3]byte{0x00, 0x01, 0x02},
+		Options:       options,
+	}
+
+	pb, err := p.MarshalBinary()
+	if err != nil {
+		t.Fatalf("packet marshal to binary err: %v\n", err)
+	}
+
+	h1 := &ipv6.Header{
+		Version:      ipv6.Version,
+		TrafficClass: 0,
+		FlowLabel:    rand.Int() & 0xfffff,
+		PayloadLen:   udpHdrLen + len(pb),
+		NextHeader:   unix.IPPROTO_UDP,
+		HopLimit:     1,
+		// TODO: src ip harded coded for now
+		Src: net.ParseIP("fe80::baae:edff:fe79:6191"), // net.ParseIP("fe80::179a:1422:c923:2727"),
+		Dst: net.ParseIP("FF02::1:2"),
+	}
+
+	h2 := &Udphdr{
+		Src:    srcPort,
+		Dst:    dstPort,
+		Length: uint16(udpHdrLen + len(pb)),
+	}
+
+	pkt, err := marshalPacket(h1, h2, pb)
+	if err != nil {
+		t.Fatalf("failed to make a new packet: %v\n", err)
+	}
+
+	// Test if identical after marshal and unmarshal
+	h1p, h2p, _, err := unmarshalPacket(pkt)
+	if err != nil {
+		t.Fatalf("failed to unmarshal packet: %v\n", err)
+	}
+	if !reflect.DeepEqual(h1, h1p) {
+		t.Fatalf("ip headers do not match:\n%v\n%v\n", h1, h1p)
+	}
+	if !reflect.DeepEqual(h2, h2p) {
+		t.Fatalf("udp headers do not match:\n%v\n%v\n", h2, h2p)
+	}
+	// if !reflect.DeepEqual(p, pp) {
+	// 	t.Fatalf("dhcp packets do not match:\n%v\n%v\n", p, pp)
+	// }
+
+	// Test if identical with valid packet
+	// validPkt = []byte{}
 
 }
 
@@ -199,6 +265,27 @@ func TestDhcpClientRequest(t *testing.T) {
 // TestDhcp6ClientErrors creates requests with errors and checks
 // for what we think are correct error responses from the server.
 func TestDhcp6ClientErrors(t *testing.T) {
+	iface, err := ifup("em1")
+	if err != nil {
+		t.Fatalf("failed to setup interface: %v\n", err)
+	}
+
+	conn, err := NewPacketSock(iface.Attrs().Index)
+	if err != nil {
+		t.Fatalf("failed to open new connection: %v\n", err)
+	}
+
+	err = conn.write([]byte{}, iface.Attrs().HardwareAddr)
+	if err != nil {
+		t.Fatalf("failed to write to server: %v\n", err)
+	}
+
+	pb, err := conn.ReadFrom()
+	t.Logf("flag")
+	if err != nil {
+		t.Fatalf("failed to write to server: %v\n", err)
+	}
+	t.Fatalf("recv: %v\n", pb)
 }
 
 // Third test. This should succeed.

@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
-	"log"
 	"net"
 
 	"github.com/mdlayher/dhcp6"
@@ -13,9 +11,6 @@ import (
 const (
 	ipv6HdrLen = 40
 	udpHdrLen  = 8
-
-	srcPort = 546
-	dstPort = 547
 )
 
 type Udphdr struct {
@@ -25,23 +20,15 @@ type Udphdr struct {
 	Csum   uint16
 }
 
-func marshal(h1 ipv6.Header, h2 Udphdr, mac *net.HardwareAddr, messageType dhcp6.MessageType, txID [3]byte) ([]byte, error) {
+func marshalPacket(h1 *ipv6.Header, h2 *Udphdr, pb []byte) ([]byte, error) {
 	ipv6hdr := marshalIPv6Hdr(h1)
 	udphdr := marshapUdpHdr(h2)
-	options, err := addOptions(mac)
-	if err != nil {
-		return nil, err
-	}
-	pb := fillupDhcp(messageType, txID, options)
-	if pb == nil {
-		return nil, errors.New("failed to make dhcp packet")
-	}
+	// add checksum to udp header
+	csum := doCsum(ipv6hdr, udphdr, pb)
+	copy(udphdr[6:8], csum)
+	h2.Csum = binary.BigEndian.Uint16(csum)
 
 	pkt := make([]byte, ipv6HdrLen+udpHdrLen+len(pb))
-
-	// add checksum to udp header
-	copy(udphdr[6:8], doCsum(ipv6hdr, udphdr, pb))
-	// Wrap up packet
 	copy(pkt[0:ipv6HdrLen], ipv6hdr)
 	copy(pkt[ipv6HdrLen:ipv6HdrLen+udpHdrLen], udphdr)
 	copy(pkt[ipv6HdrLen+udpHdrLen:len(pkt)], pb)
@@ -49,7 +36,17 @@ func marshal(h1 ipv6.Header, h2 Udphdr, mac *net.HardwareAddr, messageType dhcp6
 	return pkt, nil
 }
 
-func marshalIPv6Hdr(h ipv6.Header) []byte {
+func unmarshalPacket(pkt []byte) (*ipv6.Header, *Udphdr, *dhcp6.Packet, error) {
+	h1 := unmarshalIPv6Hdr(pkt[0:40])
+	h2 := unmarshalUdpHdr(pkt[40:48])
+	p := new(dhcp6.Packet)
+	if err := p.UnmarshalBinary(pkt[48:]); err != nil {
+		return nil, nil, nil, err
+	}
+	return h1, h2, p, nil
+}
+
+func marshalIPv6Hdr(h *ipv6.Header) []byte {
 	ipv6hdr := make([]byte, ipv6HdrLen)
 	// ver + first half byte of traffic class
 	ipv6hdr[0] = byte(h.Version<<4 | (h.TrafficClass >> 4))
@@ -72,7 +69,21 @@ func marshalIPv6Hdr(h ipv6.Header) []byte {
 	return ipv6hdr
 }
 
-func marshapUdpHdr(h Udphdr) []byte {
+func unmarshalIPv6Hdr(hb []byte) *ipv6.Header {
+	flowlbl := binary.BigEndian.Uint32([]byte{0x00, hb[1] & 0x0f, hb[2], hb[3]})
+	return &ipv6.Header{
+		Version:      ipv6.Version,
+		TrafficClass: int((hb[0]&0x0f)<<4 | (hb[1]&0xf0)>>4),
+		FlowLabel:    int(flowlbl),
+		PayloadLen:   int(hb[4]<<8 | hb[5]),
+		NextHeader:   int(hb[6]),
+		HopLimit:     int(hb[7]),
+		Src:          hb[8:24],
+		Dst:          hb[24:40],
+	}
+}
+
+func marshapUdpHdr(h *Udphdr) []byte {
 	udphdr := make([]byte, udpHdrLen)
 
 	// src port
@@ -84,22 +95,16 @@ func marshapUdpHdr(h Udphdr) []byte {
 	return udphdr
 }
 
-func fillupDhcp(messageType dhcp6.MessageType, txID [3]byte, options dhcp6.Options) []byte {
-	p := &dhcp6.Packet{
-		MessageType:   messageType,
-		TransactionID: txID,
-		Options:       options,
+func unmarshalUdpHdr(hb []byte) *Udphdr {
+	return &Udphdr{
+		Src:    binary.BigEndian.Uint16(hb[0:2]),
+		Dst:    binary.BigEndian.Uint16(hb[2:4]),
+		Length: binary.BigEndian.Uint16(hb[4:6]),
+		Csum:   binary.BigEndian.Uint16(hb[6:8]),
 	}
-
-	pb, err := p.MarshalBinary()
-	if err != nil {
-		log.Printf("packet %v marshal to binary err: %v\n", txID, err)
-		return nil
-	}
-	return pb
 }
 
-func addOptions(mac *net.HardwareAddr) (dhcp6.Options, error) {
+func addOptions(mac net.HardwareAddr) (dhcp6.Options, error) {
 	// make options: iata
 	var id = [4]byte{0x00, 0x00, 0x00, 0x0f}
 	options := make(dhcp6.Options)
@@ -123,7 +128,7 @@ func addOptions(mac *net.HardwareAddr) (dhcp6.Options, error) {
 		return nil, err
 	}
 	// make options: duid with mac address
-	duid := dhcp6.NewDUIDLL(6, *mac)
+	duid := dhcp6.NewDUIDLL(6, mac)
 	db, err := duid.MarshalBinary()
 	if err != nil {
 		return nil, err
