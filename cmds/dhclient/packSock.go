@@ -21,9 +21,6 @@ func ifup(ifname string) (netlink.Link, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
 	}
-	if err := netlink.LinkSetUp(iface); err != nil {
-		return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
-	}
 	return iface, nil
 }
 
@@ -45,7 +42,7 @@ func NewPacketSock(ifindex int) (*packetSock, error) {
 	}, nil
 }
 
-func (pc *packetSock) write(pb []byte, mac net.HardwareAddr) error {
+func (pc *packetSock) write(pkt []byte, mac net.HardwareAddr) error {
 	// Define linke layer
 	lladdr := unix.SockaddrLinklayer{
 		Ifindex:  pc.ifindex,
@@ -54,7 +51,6 @@ func (pc *packetSock) write(pb []byte, mac net.HardwareAddr) error {
 	}
 	copy(lladdr.Addr[:], mac)
 
-	pkt := []byte{0x01}
 	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
 }
 
