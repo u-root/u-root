@@ -24,6 +24,7 @@ import (
 
 	"github.com/d2g/dhcp4"
 	"github.com/d2g/dhcp4client"
+	"github.com/mdlayher/dhcp6"
 	"github.com/u-root/u-root/cmds/dhclient/dhcp6client"
 	"github.com/vishvananda/netlink"
 )
@@ -117,7 +118,6 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
 		// Add the address to the iface.
 		if *test == false {
-			// TODO: use AddrReplace instead. Besides, update vendor
 			if err := netlink.AddrReplace(iface, dst); err != nil {
 				if os.IsExist(err) {
 					return fmt.Errorf("add/replace %v to %v: %v", dst, iface, err)
@@ -177,6 +177,35 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 
 		if !success {
 			return fmt.Errorf("failed to get valid dhcpv6 reply\n")
+		}
+
+		var iana dhcp6.IANA
+		err = iana.UnmarshalBinary(packet.Options[dhcp6.OptionIANA][0])
+		if err != nil {
+			return fmt.Errorf("error: %v", err)
+		}
+		fmt.Printf("IANA: %v\n\n", iana)
+
+		var iaaddr dhcp6.IAAddr
+		err = iaaddr.UnmarshalBinary(iana.Options[dhcp6.OptionIAAddr][0])
+		if err != nil {
+			return fmt.Errorf("error: %v", err)
+		}
+		fmt.Printf("IAAddr: %v\n\n", iaaddr)
+
+		dst := &netlink.Addr{
+			IPNet:       &net.IPNet{IP: iaaddr.IP},
+			PreferedLft: int(iaaddr.PreferredLifetime.Seconds()),
+			ValidLft:    int(iaaddr.ValidLifetime.Seconds()),
+			Label:       "",
+		}
+
+		if *test == false {
+			if err := netlink.AddrReplace(iface, dst); err != nil {
+				if os.IsExist(err) {
+					return fmt.Errorf("add/replace %v to %v: %v", dst, iface, err)
+				}
+			}
 		}
 
 		time.Sleep(timeout - slop)
