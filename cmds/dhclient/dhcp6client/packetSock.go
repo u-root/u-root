@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"net"
 
-	// "github.com/mdlayher/dhcp6"
+	"github.com/mdlayher/dhcp6"
 	"golang.org/x/net/ipv6"
 	"golang.org/x/sys/unix"
 )
@@ -44,7 +44,7 @@ func NewPacketSock(ifindex int) (*packetSock, error) {
 }
 
 // Write dhcpv6 requests
-func (pc *packetSock) Write(pb []byte, mac net.HardwareAddr) error {
+func (pc *packetSock) Write(p *dhcp6.Packet, mac net.HardwareAddr) error {
 	// Define linke layer
 	lladdr := unix.SockaddrLinklayer{
 		Ifindex:  pc.ifindex,
@@ -55,6 +55,11 @@ func (pc *packetSock) Write(pb []byte, mac net.HardwareAddr) error {
 
 	flowLabel := rand.Int() & 0xfffff
 	// src := mac2ipv6(mac)
+
+	pb, err := p.MarshalBinary()
+	if err != nil {
+		return err
+	}
 
 	h1 := &ipv6.Header{
 		Version:      ipv6.Version,

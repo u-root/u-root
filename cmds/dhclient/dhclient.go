@@ -38,7 +38,7 @@ var (
 	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", true, "Verbose output")
-	ipv4         = flag.Bool("ipv4", false, "use IPV4")
+	ipv4         = flag.Bool("ipv4", true, "use IPV4")
 	test         = flag.Bool("test", true, "Test mode")
 	debug        = func(string, ...interface{}) {}
 )
@@ -46,7 +46,7 @@ var (
 func ifup(ifname string) (netlink.Link, error) {
 	iface, err := netlink.LinkByName(ifname)
 	if err != nil {
-		return nil, fmt.Errorf("%s: netlink.LinkByName failed: %v", ifname, err)
+		return nil, fmt.Errorf("cannot get mac for %v: %v", ifname, err)
 	}
 
 	if err := netlink.LinkSetUp(iface); err != nil {
@@ -170,10 +170,15 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 			return fmt.Errorf("error: %v", err)
 		}
 
-		packet, err := client.Request(&mac)
+		success, packet, err := client.Request(&mac)
 		if err != nil {
-			return fmt.Errorf("result: %v, %v\n", packet, err)
+			return fmt.Errorf("result: %v, %v\n", success, packet, err)
 		}
+
+		if !success {
+			return fmt.Errorf("failed to get valid dhcpv6 reply\n")
+		}
+
 		time.Sleep(timeout - slop)
 	}
 	// get the returned packet. Get options. Pull out o.Unicast, Authentication,

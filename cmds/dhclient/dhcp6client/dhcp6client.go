@@ -24,7 +24,7 @@ type Client struct {
 *   */
 type connection interface {
 	Close() error
-	Write(packet []byte, mac net.HardwareAddr) error
+	Write(p *dhcp6.Packet, mac net.HardwareAddr) error
 	// WriteNeighborAd(src, dst net.IP, pb []byte) error
 	ReadFrom() ([]byte, error)
 	// SetReadTimeout(t time.Duration) error
@@ -41,53 +41,58 @@ func New(haddr net.HardwareAddr, conn connection, timeout time.Duration) (*Clien
 	return &c, nil
 }
 
-func (c *Client) Request(mac *net.HardwareAddr) ([]byte, error) {
+func (c *Client) Request(mac *net.HardwareAddr) (bool, *dhcp6.Packet, error) {
 	solicitPacket, err := c.SendSolicitPacket(mac)
 	if err != nil {
-		return solicitPacket, err
+		return false, solicitPacket, err
 	}
-	y, z := c.GetOffer()
-	fmt.Printf("get offer: %v, %v\n", y, z)
+	advertisePacket, err := c.GetOffer()
+	fmt.Printf("get offer: %v, %v\n\n", advertisePacket, err)
+	if err != nil {
+		return false, advertisePacket, err
+	}
 	// err = c.connection.Close()
 	// if err != nil {
 	// 	return false, solicitPacket, err
 	// }
-	return y, nil
+	return true, advertisePacket, nil
 }
 
-func (c *Client) GetOffer() ([]byte, error) {
-	pb, err := c.connection.ReadFrom()
-	if err != nil {
-		return nil, err
-	}
+func (c *Client) GetOffer() (*dhcp6.Packet, error) {
+	var p dhcp6.Packet
+	for i := 0; i < 5; i += 1 { // five attempts
+		pb, err := c.connection.ReadFrom()
+		if err != nil {
+			return &p, err
+		}
 
-	ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
+		ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
+		fmt.Printf("ip header: %v\n", ipv6Hdr)
 
-	if ipv6Hdr.NextHeader == 17 { // if next header is UDP 17
-		udphdr := unmarshalUdpHdr(pb[40:48])
-		if udphdr.Dst == 546 {
-			var p dhcp6.Packet
-			if err = p.UnmarshalBinary(pb[48:]); err != nil {
-				return pb, err
+		if ipv6Hdr.NextHeader == 17 { // if next header is UDP 17
+			udphdr := unmarshalUdpHdr(pb[40:48])
+			if udphdr.Dst == 546 {
+				if err = p.UnmarshalBinary(pb[48:]); err != nil {
+					return &p, err
+				}
+				return &p, nil
 			}
-			fmt.Printf("dhcp packet: %v\n", p)
 		}
 	}
-
-	return pb, nil
+	return &p, fmt.Errorf("failed to get ipv6 address after five attempts.\n")
 }
 
-func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
+func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) (*dhcp6.Packet, error) {
 	options, err := addSolicitOptions(mac)
 	if err != nil {
 		return nil, err
 	}
 
-	pb, err := newDhcpPacket(dhcp6.MessageTypeSolicit, [3]byte{0, 1, 2}, nil, options)
+	p := newDhcpPacket(dhcp6.MessageTypeSolicit, [3]byte{0, 1, 2}, nil, options)
 	if err != nil {
-		return nil, err
+		return p, err
 	}
-	return pb, c.connection.Write(pb, *mac)
+	return p, c.connection.Write(p, *mac)
 }
 
 // func (c *Client) SendNeighborAdPacket(src, dst net.IP, icmpMsg *icmp.Message) ([]byte, error) {

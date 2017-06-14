@@ -133,18 +133,12 @@ func addSolicitOptions(mac *net.HardwareAddr) (dhcp6.Options, error) {
 	return options, nil
 }
 
-func newDhcpPacket(messageType dhcp6.MessageType, txID [3]byte, addr *net.UDPAddr, options dhcp6.Options) ([]byte, error) {
-	packet := &dhcp6.Packet{
+func newDhcpPacket(messageType dhcp6.MessageType, txID [3]byte, addr *net.UDPAddr, options dhcp6.Options) *dhcp6.Packet {
+	return &dhcp6.Packet{
 		MessageType:   messageType,
 		TransactionID: txID,
 		Options:       options,
 	}
-
-	pb, err := packet.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	return pb, nil
 }
 
 /***
