@@ -2,7 +2,6 @@ package dhcp6client
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math/rand"
 	"net"
 
@@ -123,8 +122,7 @@ func (pc *packetSock) Write(pb []byte, mac net.HardwareAddr) error {
 //}
 
 func (pc *packetSock) ReadFrom() ([]byte, error) {
-	fmt.Printf("starts reading\n")
-	pb := make([]byte, 500)
+	pb := make([]byte, 1500)
 	n, _, err := unix.Recvfrom(pc.fd, pb, 0)
 	if err != nil {
 		return nil, err

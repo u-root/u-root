@@ -53,6 +53,9 @@ func ifup(ifname string) (netlink.Link, error) {
 		return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
 	}
 
+	if err := netlink.SetPromiscOn(iface); err != nil {
+		return nil, fmt.Errorf("%v: %v can't set promisc mode: %v", ifname, iface, err)
+	}
 	return iface, nil
 
 }
@@ -156,25 +159,21 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	//
 
 	mac := iface.Attrs().HardwareAddr
-	fmt.Printf("MAC ADDR: %x", mac)
 	conn, err := dhcp6client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
-	debug("dhclient6: got conn %v", conn)
 
 	for {
 		client, err := dhcp6client.New(mac, conn, timeout)
 		if err != nil {
 			return fmt.Errorf("error: %v", err)
 		}
-		debug("dhclient6: got client %v", client)
 
 		packet, err := client.Request(&mac)
 		if err != nil {
 			return fmt.Errorf("result: %v, %v\n", packet, err)
 		}
-		fmt.Printf("result: %v, %v\n", packet, err)
 		time.Sleep(timeout - slop)
 	}
 	// get the returned packet. Get options. Pull out o.Unicast, Authentication,

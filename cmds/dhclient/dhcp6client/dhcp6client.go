@@ -2,7 +2,6 @@ package dhcp6client
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"time"
 
@@ -42,33 +41,18 @@ func New(haddr net.HardwareAddr, conn connection, timeout time.Duration) (*Clien
 	return &c, nil
 }
 
-func NewPacket(messageType dhcp6.MessageType, txID [3]byte, addr *net.UDPAddr, options dhcp6.Options) []byte {
-	packet := &dhcp6.Packet{
-		MessageType:   messageType,
-		TransactionID: txID,
-		Options:       options,
-	}
-
-	pb, err := packet.MarshalBinary()
-	if err != nil {
-		log.Printf("packet %v marshal to binary err: %v\n", txID, err)
-		return nil
-	}
-	return pb
-}
-
 func (c *Client) Request(mac *net.HardwareAddr) ([]byte, error) {
 	solicitPacket, err := c.SendSolicitPacket(mac)
 	if err != nil {
 		return solicitPacket, err
 	}
-	_, z := c.GetOffer()
-	fmt.Printf("get offer: %v\n", z)
+	y, z := c.GetOffer()
+	fmt.Printf("get offer: %v, %v\n", y, z)
 	// err = c.connection.Close()
 	// if err != nil {
 	// 	return false, solicitPacket, err
 	// }
-	return solicitPacket, nil
+	return y, nil
 }
 
 func (c *Client) GetOffer() ([]byte, error) {
@@ -78,7 +62,6 @@ func (c *Client) GetOffer() ([]byte, error) {
 	}
 
 	ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
-	fmt.Printf("hdr: %v\n", ipv6Hdr)
 
 	if ipv6Hdr.NextHeader == 17 { // if next header is UDP 17
 		udphdr := unmarshalUdpHdr(pb[40:48])
@@ -87,7 +70,7 @@ func (c *Client) GetOffer() ([]byte, error) {
 			if err = p.UnmarshalBinary(pb[48:]); err != nil {
 				return pb, err
 			}
-			fmt.Printf("%v\n", p)
+			fmt.Printf("dhcp packet: %v\n", p)
 		}
 	}
 
@@ -95,35 +78,6 @@ func (c *Client) GetOffer() ([]byte, error) {
 }
 
 func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
-	// make options: iata
-	// var id = [4]byte{0x00, 0x00, 0x00, 0x0f}
-	// options := make(dhcp6.Options)
-	// if err := options.Add(dhcp6.OptionIANA, dhcp6.NewIANA(id, 0, 0, nil)); err != nil {
-	// 	return nil, err
-	// }
-	// // make options: rapid commit
-	// if err := options.Add(dhcp6.OptionRapidCommit, nil); err != nil {
-	// 	return nil, err
-	// }
-	// // make options: elapsed time
-	// var et dhcp6.ElapsedTime
-	// et.UnmarshalBinary([]byte{0x00, 0x00})
-	// if err := options.Add(dhcp6.OptionElapsedTime, et); err != nil {
-	// 	return nil, err
-	// }
-	// // make options: option request option
-	// oro := make(dhcp6.OptionRequestOption, 4)
-	// oro.UnmarshalBinary([]byte{0x00, 0x17, 0x00, 0x18})
-	// if err := options.Add(dhcp6.OptionORO, oro); err != nil {
-	// 	return nil, err
-	// }
-	// // make options: duid with mac address
-	// duid := dhcp6.NewDUIDLL(6, *mac)
-	// db, err := duid.MarshalBinary()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// addRaw(options, dhcp6.OptionClientID, db)
 	options, err := addSolicitOptions(mac)
 	if err != nil {
 		return nil, err
