@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mdlayher/dhcp6"
-	"golang.org/x/net/icmp"
+	// "golang.org/x/net/icmp"
 	//"golang.org/x/net/ipv6"
 	// "github.com/d2g/dhcp4"
 )
@@ -25,8 +25,8 @@ type Client struct {
 *   */
 type connection interface {
 	Close() error
-	Write(packet []byte) error
-	WriteNeighborAd(src, dst net.IP, pb []byte) error
+	Write(packet []byte, mac net.HardwareAddr) error
+	// WriteNeighborAd(src, dst net.IP, pb []byte) error
 	ReadFrom() ([]byte, error)
 	// SetReadTimeout(t time.Duration) error
 }
@@ -80,115 +80,90 @@ func (c *Client) GetOffer() ([]byte, error) {
 	ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
 	fmt.Printf("hdr: %v\n", ipv6Hdr)
 
-	if ipv6Hdr.NextHeader == 58 { // if next header is ICMPv6
-		icmpMsg, err := icmp.ParseMessage(58, pb[40:])
-		if err != nil {
-			return nil, err
+	if ipv6Hdr.NextHeader == 17 { // if next header is UDP 17
+		udphdr := unmarshalUdpHdr(pb[40:48])
+		if udphdr.Dst == 546 {
+			var p dhcp6.Packet
+			if err = p.UnmarshalBinary(pb[48:]); err != nil {
+				return pb, err
+			}
+			fmt.Printf("%v\n", p)
 		}
-		fmt.Printf("hdr: %v\n", icmpMsg)
 	}
 
 	return pb, nil
-	// 	switch ipv6.ICMPType(pb[40]) {
-	// 	case ipv6.ICMPTypeNeighborSolicitation:
-	// 		pb, err = c.SendNeighborAdPacket(net.ParseIP("fe80::baae:edff:fe79:6191"), ipv6Hdr.Src, icmpMsg)
-	// 		if err != nil {
-	// 			return false, icmpMsg, err
-	// 		}
-	// 		fmt.Printf("ad: %v\n", pb)
-	// 		return true, icmpMsg, nil
-	// 	default:
-	// 		return true, icmpMsg, nil
-	// 	}
-	// 	return true, icmpMsg, nil
-	// }
-
-	// return true, nil, nil
-
-	//conn, err := icmp.ListenPacket("ip6:135", "::")
-	//if err != nil {
-	//	return false, nil, err
-	//}
-	//fmt.Printf("icmp conn: %v\n", conn)
-
-	//rb := make([]byte, 1500)
-	//n, _, err := conn.ReadFrom(rb)
-	//if err != nil {
-	//	return false, nil, err
-	//}
-	// rm, err := icmp.ParseMessage(58, rb[:n])
-	// 	if err != nil {
-	// 		return false, nil, err
-	// 	}
 }
 
 func (c *Client) SendSolicitPacket(mac *net.HardwareAddr) ([]byte, error) {
 	// make options: iata
-	var id = [4]byte{0x00, 0x00, 0x00, 0x0f}
-	options := make(dhcp6.Options)
-	if err := options.Add(dhcp6.OptionIANA, dhcp6.NewIANA(id, 0, 0, nil)); err != nil {
-		return nil, err
-	}
-	// make options: rapid commit
-	if err := options.Add(dhcp6.OptionRapidCommit, nil); err != nil {
-		return nil, err
-	}
-	// make options: elapsed time
-	var et dhcp6.ElapsedTime
-	et.UnmarshalBinary([]byte{0x00, 0x00})
-	if err := options.Add(dhcp6.OptionElapsedTime, et); err != nil {
-		return nil, err
-	}
-	// make options: option request option
-	oro := make(dhcp6.OptionRequestOption, 4)
-	oro.UnmarshalBinary([]byte{0x00, 0x17, 0x00, 0x18})
-	if err := options.Add(dhcp6.OptionORO, oro); err != nil {
-		return nil, err
-	}
-	// make options: duid with mac address
-	duid := dhcp6.NewDUIDLL(6, *mac)
-	db, err := duid.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	addRaw(options, dhcp6.OptionClientID, db)
-
-	pb := NewPacket(dhcp6.MessageTypeSolicit, [3]byte{0, 1, 2}, nil, options)
-	return pb, c.connection.Write(pb)
-}
-
-func (c *Client) SendNeighborAdPacket(src, dst net.IP, icmpMsg *icmp.Message) ([]byte, error) {
-	flags := []byte{0x40, 0x00, 0x00, 0x00}
-	targetAddr := make([]byte, len(dst))
-	copy(targetAddr[:], src)
-	// m := icmp.Message {
-	// 	Type: ipv6.ICMPTypeNeighborAdvertisement,
-	// 	Code: 0,
-	// 	Body: nil, // &icmp.DefaultMessageBody {
-	// 		//Data: []byte{},//append(flags, targetAddr...),
-	// 	//},
+	// var id = [4]byte{0x00, 0x00, 0x00, 0x0f}
+	// options := make(dhcp6.Options)
+	// if err := options.Add(dhcp6.OptionIANA, dhcp6.NewIANA(id, 0, 0, nil)); err != nil {
+	// 	return nil, err
 	// }
-
-	// psh := icmp.IPv6PseudoHeader(src, dst)
-
-	// var mtype int
-	// switch typ := m.Type.(type) {
-	// case ipv6.ICMPType:
-	// 	mtype = int(typ)
-	// default:
-	// 	return nil, syscall.EINVAL
+	// // make options: rapid commit
+	// if err := options.Add(dhcp6.OptionRapidCommit, nil); err != nil {
+	// 	return nil, err
 	// }
-
-	// pb, err := m.Marshal(nil)
-	// fmt.Printf("sending ad: %v, %v, %v, %v\n", mtype, psh, pb, err)
+	// // make options: elapsed time
+	// var et dhcp6.ElapsedTime
+	// et.UnmarshalBinary([]byte{0x00, 0x00})
+	// if err := options.Add(dhcp6.OptionElapsedTime, et); err != nil {
+	// 	return nil, err
+	// }
+	// // make options: option request option
+	// oro := make(dhcp6.OptionRequestOption, 4)
+	// oro.UnmarshalBinary([]byte{0x00, 0x17, 0x00, 0x18})
+	// if err := options.Add(dhcp6.OptionORO, oro); err != nil {
+	// 	return nil, err
+	// }
+	// // make options: duid with mac address
+	// duid := dhcp6.NewDUIDLL(6, *mac)
+	// db, err := duid.MarshalBinary()
 	// if err != nil {
 	// 	return nil, err
 	// }
-	pb := []byte{136, 0, 0x73, 0x26}
-	pb = append(pb, append(flags, targetAddr...)...)
-	return pb, c.connection.WriteNeighborAd(src, dst, pb)
+	// addRaw(options, dhcp6.OptionClientID, db)
+	options, err := addSolicitOptions(mac)
+	if err != nil {
+		return nil, err
+	}
+
+	pb, err := newDhcpPacket(dhcp6.MessageTypeSolicit, [3]byte{0, 1, 2}, nil, options)
+	if err != nil {
+		return nil, err
+	}
+	return pb, c.connection.Write(pb, *mac)
 }
 
-func (c *Client) PrintConn() {
-	fmt.Printf("print connection: %v\n", c.connection)
-}
+// func (c *Client) SendNeighborAdPacket(src, dst net.IP, icmpMsg *icmp.Message) ([]byte, error) {
+// 	flags := []byte{0x40, 0x00, 0x00, 0x00}
+// 	targetAddr := make([]byte, len(dst))
+// 	copy(targetAddr[:], src)
+// 	// m := icmp.Message {
+// 	// 	Type: ipv6.ICMPTypeNeighborAdvertisement,
+// 	// 	Code: 0,
+// 	// 	Body: nil, // &icmp.DefaultMessageBody {
+// 	// 		//Data: []byte{},//append(flags, targetAddr...),
+// 	// 	//},
+// 	// }
+//
+// 	// psh := icmp.IPv6PseudoHeader(src, dst)
+//
+// 	// var mtype int
+// 	// switch typ := m.Type.(type) {
+// 	// case ipv6.ICMPType:
+// 	// 	mtype = int(typ)
+// 	// default:
+// 	// 	return nil, syscall.EINVAL
+// 	// }
+//
+// 	// pb, err := m.Marshal(nil)
+// 	// fmt.Printf("sending ad: %v, %v, %v, %v\n", mtype, psh, pb, err)
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
+// 	pb := []byte{136, 0, 0x73, 0x26}
+// 	pb = append(pb, append(flags, targetAddr...)...)
+// 	return pb, c.connection.WriteNeighborAd(src, dst, pb)
+// }

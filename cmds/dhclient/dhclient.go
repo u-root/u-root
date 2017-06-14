@@ -156,6 +156,7 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	//
 
 	mac := iface.Attrs().HardwareAddr
+	fmt.Printf("MAC ADDR: %x", mac)
 	conn, err := dhcp6client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
