@@ -6,22 +6,34 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
+
+	"github.com/u-root/u-root/uroot"
 )
 
+const usage = "netcat [go-style network address]"
+
+var netType = flag.String("net", "tcp", "What net type to use, e.g. tcp, unix, etc.")
+
+func init() {
+	uroot.Usage(usage)
+}
+
 func main() {
+	flag.Parse()
 	var c net.Conn
 	var err error
-	if len(os.Args) < 2 {
-		os.Exit(1)
+	if len(flag.Args()) < 1 {
+		flag.Usage()
 	}
 
-	if c, err = net.Dial("tcp", os.Args[1]); err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+	if c, err = net.Dial(*netType, flag.Args()[0]); err != nil {
+		log.Fatalf("%v\n", err)
 	}
 	go func() {
 		if _, err := io.Copy(c, os.Stdin); err != nil {
