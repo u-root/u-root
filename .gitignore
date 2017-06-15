@@ -44,3 +44,6 @@ vmlinux
 # Python Virtual Env
 *.env
 *.venv
+
+# bash helper
+./cmds/dhclient/ssh.sh

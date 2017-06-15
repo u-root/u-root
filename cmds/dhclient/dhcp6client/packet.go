@@ -17,7 +17,7 @@ type Udphdr struct {
 
 func marshalPacket(h1 *ipv6.Header, h2 *Udphdr, pb []byte) ([]byte, error) {
 	ipv6hdr := marshalIPv6Hdr(h1)
-	udphdr := marshapUdpHdr(h2)
+	udphdr := marshalUdpHdr(h2)
 	// add checksum to udp header
 	csum := doCsum(ipv6hdr, udphdr, pb)
 	copy(udphdr[6:8], csum)
@@ -74,7 +74,7 @@ func unmarshalIPv6Hdr(hb []byte) *ipv6.Header {
 /***
 * UDP header
  */
-func marshapUdpHdr(h *Udphdr) []byte {
+func marshalUdpHdr(h *Udphdr) []byte {
 	udphdr := make([]byte, udpHdrLen)
 
 	// src port
@@ -98,7 +98,7 @@ func unmarshalUdpHdr(hb []byte) *Udphdr {
 /***
 * DHCP packet
  */
-func addSolicitOptions(mac *net.HardwareAddr) (dhcp6.Options, error) {
+func newSolicitOptions(mac *net.HardwareAddr) (dhcp6.Options, error) {
 	// make options: iata
 	var id = [4]byte{0x00, 0x00, 0x00, 0x0f}
 	options := make(dhcp6.Options)
@@ -133,12 +133,17 @@ func addSolicitOptions(mac *net.HardwareAddr) (dhcp6.Options, error) {
 	return options, nil
 }
 
-func newDhcpPacket(messageType dhcp6.MessageType, txID [3]byte, addr *net.UDPAddr, options dhcp6.Options) *dhcp6.Packet {
-	return &dhcp6.Packet{
-		MessageType:   messageType,
-		TransactionID: txID,
-		Options:       options,
+func newSolicitPacket(mac *net.HardwareAddr) (*dhcp6.Packet, error) {
+	options, err := newSolicitOptions(mac)
+	if err != nil {
+		return nil, err
 	}
+
+	return &dhcp6.Packet{
+		MessageType:   dhcp6.MessageTypeSolicit,
+		TransactionID: [3]byte{0x00, 0x01, 0x02},
+		Options:       options,
+	}, nil
 }
 
 /***

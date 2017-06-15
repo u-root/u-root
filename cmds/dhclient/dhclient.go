@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultIfname = "enp0s25"
+	defaultIfname = "eth0"
 	// slop is the slop in our lease time.
 	slop = 10 * time.Second
 )
@@ -47,13 +47,14 @@ var (
 func ifup(ifname string) (netlink.Link, error) {
 	iface, err := netlink.LinkByName(ifname)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get mac for %v: %v", ifname, err)
+		return nil, fmt.Errorf("cannot get interface by name %v: %v", ifname, err)
 	}
 
 	if err := netlink.LinkSetUp(iface); err != nil {
 		return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
 	}
 
+	// TODO: we have to remove this at some point.
 	if err := netlink.SetPromiscOn(iface); err != nil {
 		return nil, fmt.Errorf("%v: %v can't set promisc mode: %v", ifname, iface, err)
 	}
@@ -96,7 +97,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 		debug("Lease is %v seconds\n", packet.Secs())
 
 		if !success {
-			return fmt.Errorf("%s: we didn't sucessfully get a DHCP lease.", mac)
+			return fmt.Errorf("%s: we didn't sucessfully get a DHCP lease", mac)
 		}
 		debug("IP Received: %v\n", packet.YIAddr().String())
 
@@ -164,19 +165,15 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 		return fmt.Errorf("client conection generation: %v", err)
 	}
 
-	for {
+	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
 		client, err := dhcp6client.New(mac, conn, timeout)
 		if err != nil {
 			return fmt.Errorf("error: %v", err)
 		}
 
-		success, packet, err := client.Request(&mac)
+		packet, err := client.Request(&mac)
 		if err != nil {
-			return fmt.Errorf("result: %v, %v\n", success, packet, err)
-		}
-
-		if !success {
-			return fmt.Errorf("failed to get valid dhcpv6 reply\n")
+			return fmt.Errorf("error: %v", err)
 		}
 
 		var iana dhcp6.IANA

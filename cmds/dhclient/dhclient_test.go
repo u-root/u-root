@@ -19,7 +19,7 @@ var tests = []struct {
 }{
 	{
 		cmd: "nosuchanimal",
-		out: "cannot get mac for nosuchanimal: open /sys/class/net/nosuchanimal/address: no such file or directory\n",
+		out: "cannot get interface by name nosuchanimal: Link not found\n",
 	},
 }
 

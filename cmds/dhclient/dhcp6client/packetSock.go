@@ -10,20 +10,15 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
-	ipv6HdrLen = 40
-	udpHdrLen  = 8
-
-	srcPort = 546
-	dstPort = 547
-)
-
 type packetSock struct {
 	fd      int
 	ifindex int
 }
 
-var bcastMAC = []byte{0x33, 0x33, 0x00, 0x01, 0x00, 0x02}
+// All DHCP servers and relay agents on the local network segment (RFC 3315)
+// IPv6 Multicast (RFC 2464)
+// insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)
+var multicastMAC = []byte{0x33, 0x33, 0x00, 0x01, 0x00, 0x02}
 
 func NewPacketSock(ifindex int) (*packetSock, error) {
 	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_DGRAM, int(swap16(unix.ETH_P_IPV6)))
@@ -49,9 +44,9 @@ func (pc *packetSock) Write(p *dhcp6.Packet, mac net.HardwareAddr) error {
 	lladdr := unix.SockaddrLinklayer{
 		Ifindex:  pc.ifindex,
 		Protocol: swap16(unix.ETH_P_IPV6),
-		Halen:    uint8(len(bcastMAC)),
+		Halen:    uint8(len(multicastMAC)),
 	}
-	copy(lladdr.Addr[:], bcastMAC)
+	copy(lladdr.Addr[:], multicastMAC)
 
 	flowLabel := rand.Int() & 0xfffff
 	// src := mac2ipv6(mac)
