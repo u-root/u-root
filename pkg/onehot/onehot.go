@@ -18,10 +18,6 @@
 // the file might go away by the time we get around to opening
 // it for I/O and, on some systems, opening and then closing
 // the file can make it go away, even if we don't read it.
-// The name onehot may be a misnomer but we're keeping open
-// the possibility of adding state such that only one onehot
-// file can be open at a time. We will see if we need that.
-// Since our first use case is cpio, that seems unlikely.
 package onehot
 
 import (
@@ -31,68 +27,46 @@ import (
 )
 
 type OneHot struct {
+	*os.File
+}
+
+var (
 	m sync.Mutex
-	name string
-	f    *os.File
-	dead bool
-	err  error
-}
+	f *os.File
+)
 
-// Open returns a new OneHot with the name filled in.
+// Open returns a new OneHot with the name filled in
+// and the File opened.
 func Open(name string) (io.ReadCloser, error) {
-	return &OneHot{name: name}, nil
-}
-
-// Read reads from a OneHot. If it is dead, it returns
-// -1 and the last error, which is sticky. If it is
-// not open, it opens it; if the open fails, it marks
-// the OneHot as dead and records the error.
-// If the open works, it calls the Read on the
-// underlying Reader; if there is an error there
-// the OneHot is marked dead and the error is recorded.
-func (f *OneHot) Read(b []byte) (int, error) {
+	if f != nil {
+		f.Close()
+	}
 	var err error
-	f.m.Lock()
-	defer f.m.Unlock()
-	if f.dead {
-		return -1, f.err
+	f, err = os.Open(name)
+	if err != nil {
+		return nil, err
 	}
-	if f.f == nil {
-		f.f, err = os.Open(f.name)
-		if err != nil {
-			f.dead = true
-			f.err = err
-			return -1, err
-		}
-	}
-	n, err := f.f.Read(b)
-
-	if n < 0 || err != nil {
-		f.dead = true
-		f.err = err
-	}
-	return n, err
+	return &OneHot{File: f}, err
 }
 
-// Close closes the OneNot. It always calls f.f.Close()
-// then sets f.f to nil, retains the error if any, and
-// makes the OneHot as dead.
-func (f *OneHot) Close() error {
-	f.m.Lock()
-	defer f.m.Unlock()
-	// This is a bit tricky. If f.f is nil
-	// but it's not dead, it has not been opened.
-	// Return no error, but mark it dead.
-	if ! f.dead && f.f == nil {
-		f.dead = true
-		f.err = nil
-		return nil
+// Read reads from the file in the OneHot.
+func (o OneHot) Read(b []byte) (int, error) {
+	return o.File.Read(b)
+}
+
+// Close closes the OneHot. If the File in the o is not the
+// currently used file, we forcibly close it and set o.File
+// to nil. Closes on nil are allowed but will get errors.
+func (o OneHot) Close() error {
+	m.Lock()
+	defer m.Unlock()
+	if o.File != f {
+		err := o.File.Close()
+		o.File = nil
+		return err
 	}
-	// calling Close on nil Files is OK.
-	// This way we are sure to get the right error
-	err := f.f.Close()
-	f.dead = true
-	f.err = err
-	f.f = nil
+	err := f.Close()
+	f = nil
+	o.File = nil
 	return err
 }

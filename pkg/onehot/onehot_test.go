@@ -65,6 +65,9 @@ func TestOneHotFile(t *testing.T) {
 	if string(b) != tval {
 		t.Fatalf("Reading back file: got %s, want %s", string(b), tval)
 	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("Closing %v: want nil, got %v", name, err)
+	}
 }
 
 func TestOneHotFail(t *testing.T) {
@@ -74,13 +77,16 @@ func TestOneHotFail(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	bad := filepath.Join(tmpDir, "bad")
+	if err := ioutil.WriteFile(bad, []byte{}, 0644); err != nil {
+		t.Fatalf("Writing test data: got %v, want nil", err)
+	}
 	f, err := Open(bad)
 	if err != nil {
-		t.Fatalf("Opening %v: got %v, want nil", err)
+		t.Fatalf("Opening %v: got %v, want nil", bad, err)
 	}
 	var b [1]byte
 	if _, err := f.Read(b[:]); err == nil {
-		t.Fatalf("Writing test data: got %v, want nil", err)
+		t.Fatalf("Writing test data: got nil, want err")
 	}
 
 }
