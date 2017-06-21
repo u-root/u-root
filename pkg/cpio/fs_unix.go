@@ -5,13 +5,14 @@
 package cpio
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/u-root/u-root/pkg/onehot"
 )
 
 // Linux mode_t bits.
@@ -186,17 +187,11 @@ func GetRecord(path string) (Record, error) {
 		if done {
 			return Record{nil, info}, nil
 		}
-		osfile, err := os.Open(path)
+		f, err := onehot.Open(path)
 		if err != nil {
 			return Record{}, err
 		}
-		defer osfile.Close()
-
-		contents, err := ioutil.ReadAll(osfile)
-		if err != nil {
-			return Record{}, err
-		}
-		return Record{bytes.NewReader(contents), info}, nil
+		return Record{f, info}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)
