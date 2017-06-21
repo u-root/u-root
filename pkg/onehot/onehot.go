@@ -27,46 +27,66 @@ import (
 )
 
 type OneHot struct {
+	Name   string
+	Closed bool
 	*os.File
 }
 
 var (
 	m sync.Mutex
-	f *os.File
+	f *OneHot
 )
 
 // Open returns a new OneHot with the name filled in
-// and the File opened.
 func Open(name string) (io.ReadCloser, error) {
-	if f != nil {
-		f.Close()
-	}
-	var err error
-	f, err = os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	return &OneHot{File: f}, err
+	return &OneHot{Name: name}, nil
 }
 
 // Read reads from the file in the OneHot.
-func (o OneHot) Read(b []byte) (int, error) {
+// If the File is not the same as our current file,
+// we close the current file and open the OneHot.
+func (o *OneHot) Read(b []byte) (int, error) {
+	if o.Closed {
+		return -1, io.EOF
+	}
+	if f != nil && f != o {
+		f.File.Close()
+		f.File = nil
+		f = nil
+	}
+	if f == nil {
+		var err error
+		o.File, err = os.Open(o.Name)
+		if err != nil {
+			return -1, err
+		}
+		f = o
+	}
 	return o.File.Read(b)
 }
 
 // Close closes the OneHot. If the File in the o is not the
 // currently used file, we forcibly close it and set o.File
 // to nil. Closes on nil are allowed but will get errors.
-func (o OneHot) Close() error {
+func (o *OneHot) Close() error {
 	m.Lock()
 	defer m.Unlock()
-	if o.File != f {
+	if o.Closed {
+		return o.File.Close()
+	}
+	if o.File == nil {
+		o.Closed = true
+		return nil
+	}
+	if o != f {
 		err := o.File.Close()
 		o.File = nil
+		o.Closed = true
 		return err
 	}
-	err := f.Close()
+	err := o.File.Close()
 	f = nil
 	o.File = nil
+	o.Closed = true
 	return err
 }
