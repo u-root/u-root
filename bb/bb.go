@@ -351,6 +351,7 @@ func main() {
 	}
 	config.Commands = []Command{}
 
+	var numCmds int
 	for _, v := range cmdlist {
 		debug("Check %v", v)
 		for _, gp := range config.Gopaths {
@@ -362,6 +363,11 @@ func main() {
 				continue
 			}
 
+			if len(g) == 0 {
+				log.Println("=================================================")
+				log.Printf("Warning: %v matched no paths", v)
+				log.Println("=================================================")
+			}
 			for i := range g {
 				c := Command{Gopath: gp}
 				c.CmdPath, err = filepath.Rel(gp, g[i])
@@ -370,10 +376,16 @@ func main() {
 				}
 
 				config.Commands = append(config.Commands, c)
+				numCmds++
 			}
 		}
 	}
 
+	if numCmds == 0 {
+		log.Print("=======================================================")
+		log.Print("Warning: ZERO commands were added; check your arguments")
+		log.Print("=======================================================")
+	}
 	debug("config.Commands is %v", config.Commands)
 	for _, c := range config.Commands {
 		if skip[filepath.Base(c.CmdPath)] {
