@@ -8,36 +8,30 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
 )
 
-var port *os.File
-
-func init() {
-	var err error
-	port, err = os.OpenFile("/dev/port", os.O_RDWR, 0)
+func doio(a16 uint64, f func(*os.File) error) error {
+	port, err := os.OpenFile("/dev/port", os.O_RDWR, 0)
 	if err != nil {
-		log.Fatalf("Can't open /dev/port for io: %v", err)
+		return err
 	}
-}
-
-func doio(a16 uint64, f func() error) error {
-	_, err := port.Seek(int64(a16), 0)
+	defer port.Close()
+	_, err = port.Seek(int64(a16), 0)
 	if err != nil {
 		return fmt.Errorf("in: bad address %v: %v", a16, err)
 	}
-	return f()
+	return f(port)
 }
 
 func in(a16 uint64, data interface{}) error {
-	return doio(a16, func() error {
+	return doio(a16, func(port *os.File) error {
 		return binary.Read(port, binary.LittleEndian, data)
 	})
 }
 
 func out(a16 uint64, data interface{}) error {
-	return doio(a16, func() error {
+	return doio(a16, func(port *os.File) error {
 		return binary.Write(port, binary.LittleEndian, data)
 	})
 
