@@ -50,14 +50,18 @@ func main() {
 	var err error
 	a := os.Args[1:]
 
-	if len(a) == 0 || len(a) != ios[a[0]].nargs {
+	if len(a) == 0 {
 		log.Fatal(usage)
 	}
 
-	i := ios[a[0]]
+	i, ok := ios[a[0]]
+	if !ok || len(a) != i.nargs {
+		log.Fatal(usage)
+	}
+
 	addr, err := strconv.ParseUint(a[1], 0, i.addrbits)
 	if err != nil {
-		log.Fatalf("%v %v", a[1], err)
+		log.Fatalf("Parsing address for %d bits: %v %v", i.addrbits, a[1], err)
 	}
 
 	switch a[0] {
