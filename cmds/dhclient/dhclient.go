@@ -15,6 +15,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"log"
@@ -134,11 +135,14 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 					return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
 				}
 			}
-
-			// We can not assume the server will give us any grace time. So
-			// sleep for just a tiny bit less than the minimum.
-			time.Sleep(timeout - slop)
 		}
+		if binary.BigEndian.Uint16(packet.Secs()) == 0 {
+			break
+		}
+
+		// We can not assume the server will give us any grace time. So
+		// sleep for just a tiny bit less than the minimum.
+		time.Sleep(timeout - slop)
 	}
 	return nil
 }
