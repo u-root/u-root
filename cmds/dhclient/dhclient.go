@@ -126,9 +126,9 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 				routerName := net.IP(gwData).String()
 				debug("routerName %v", routerName)
 				r := &netlink.Route{
-					Dst:       &net.IPNet{IP: packet.YIAddr(), Mask: netmask},
+					Dst:       &net.IPNet{IP: packet.GIAddr()},
 					LinkIndex: iface.Attrs().Index,
-					Gw:        packet.GIAddr(),
+					Gw:        net.IP(gwData),
 				}
 
 				if err := netlink.RouteReplace(r); err != nil {
