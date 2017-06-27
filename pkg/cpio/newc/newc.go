@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/cpio"
 )
@@ -119,13 +118,6 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 	buf := &bytes.Buffer{}
 	hdr := headerFromInfo(f.Info)
 	hdr.CRC = 0
-
-	// in newc, the FileSize is 0 for all but LNK and REG.
-	if f.Info.Mode&syscall.S_IFMT != syscall.S_IFREG &&
-		f.Info.Mode&syscall.S_IFMT != syscall.S_IFLNK {
-		hdr.FileSize = 0
-	}
-
 	if err := binary.Write(buf, binary.BigEndian, hdr); err != nil {
 		return err
 	}
@@ -152,9 +144,11 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 		return err
 	}
 
-	if hdr.FileSize == 0 {
+	// Some files do not have any content.
+	if f.Reader == nil {
 		return nil
 	}
+
 	// Write file contents.
 	m, err := io.Copy(w, f)
 	if err != nil {
