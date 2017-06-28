@@ -5,10 +5,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/google/netstack/tcpip/header"
 	"github.com/mdlayher/dhcp6"
-	// "golang.org/x/net/icmp"
-	//"golang.org/x/net/ipv6"
-	// "github.com/d2g/dhcp4"
 )
 
 const (
@@ -66,56 +64,28 @@ func (c *Client) SendSolicitPacket(p *dhcp6.Packet, mac *net.HardwareAddr) error
 
 func (c *Client) GetOffer() (*dhcp6.Packet, error) {
 	var err error
-	var p dhcp6.Packet
 	for i := 0; i < 5; i++ { // five attempts
-		pb, err := c.connection.ReadFrom()
+		var pb []byte
+		pb, err = c.connection.ReadFrom()
 		if err != nil {
 			continue
 		}
 
-		ipv6Hdr := unmarshalIPv6Hdr(pb[:40])
+		ipv6 := header.IPv6(pb[:header.IPv6MinimumSize])
+		pb = pb[header.IPv6MinimumSize:]
 
-		if ipv6Hdr.NextHeader == protocolUDP { // if next header is UDP
-			udphdr := unmarshalUdpHdr(pb[40:48])
-			if udphdr.Dst == srcPort {
-				if err = p.UnmarshalBinary(pb[48:]); err != nil {
+		if ipv6.NextHeader() == uint8(header.UDPProtocolNumber) {
+			udp := header.UDP(pb[:header.UDPMinimumSize])
+			pb = pb[header.UDPMinimumSize:]
+
+			if udp.DestinationPort() == srcPort {
+				dhcp6p := &dhcp6.Packet{}
+				if err = dhcp6p.UnmarshalBinary(pb); err != nil {
 					continue
 				}
-				return &p, nil
+				return dhcp6p, nil
 			}
 		}
 	}
 	return nil, fmt.Errorf("failed to get ipv6 address after five attempts: %v", err)
 }
-
-// func (c *Client) SendNeighborAdPacket(src, dst net.IP, icmpMsg *icmp.Message) ([]byte, error) {
-// 	flags := []byte{0x40, 0x00, 0x00, 0x00}
-// 	targetAddr := make([]byte, len(dst))
-// 	copy(targetAddr[:], src)
-// 	// m := icmp.Message {
-// 	// 	Type: ipv6.ICMPTypeNeighborAdvertisement,
-// 	// 	Code: 0,
-// 	// 	Body: nil, // &icmp.DefaultMessageBody {
-// 	// 		//Data: []byte{},//append(flags, targetAddr...),
-// 	// 	//},
-// 	// }
-//
-// 	// psh := icmp.IPv6PseudoHeader(src, dst)
-//
-// 	// var mtype int
-// 	// switch typ := m.Type.(type) {
-// 	// case ipv6.ICMPType:
-// 	// 	mtype = int(typ)
-// 	// default:
-// 	// 	return nil, syscall.EINVAL
-// 	// }
-//
-// 	// pb, err := m.Marshal(nil)
-// 	// fmt.Printf("sending ad: %v, %v, %v, %v\n", mtype, psh, pb, err)
-// 	// if err != nil {
-// 	// 	return nil, err
-// 	// }
-// 	pb := []byte{136, 0, 0x73, 0x26}
-// 	pb = append(pb, append(flags, targetAddr...)...)
-// 	return pb, c.connection.WriteNeighborAd(src, dst, pb)
-// }

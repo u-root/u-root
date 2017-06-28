@@ -5,8 +5,9 @@ import (
 	"math/rand"
 	"net"
 
+	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/mdlayher/dhcp6"
-	"golang.org/x/net/ipv6"
 	"golang.org/x/sys/unix"
 )
 
@@ -63,34 +64,37 @@ func (pc *packetSock) Write(p *dhcp6.Packet, mac *net.HardwareAddr) error {
 	}
 	copy(lladdr.Addr[:], multicastMAC)
 
-	flowLabel := rand.Int() & 0xfffff
+	flowLabel := rand.Uint32()
 
 	pb, err := p.MarshalBinary()
 	if err != nil {
 		return err
 	}
 
-	h1 := &ipv6.Header{
-		Version:      ipv6.Version,
-		TrafficClass: 0,
-		FlowLabel:    flowLabel,
-		PayloadLen:   udpHdrLen + len(pb),
-		NextHeader:   unix.IPPROTO_UDP,
-		HopLimit:     1,
-		Src:          mac2ipv6(mac),
-		Dst:          net.ParseIP("FF02::1:2"),
+	length := uint16(header.UDPMinimumSize + len(pb))
+	ipv6fields := &header.IPv6Fields{
+		FlowLabel:     flowLabel,
+		PayloadLength: length,
+		NextHeader:    uint8(header.UDPProtocolNumber),
+		HopLimit:      1,
+		SrcAddr:       tcpip.Address(mac2ipv6(mac)),
+		DstAddr:       tcpip.Address(net.ParseIP("FF02::1:2").To16()),
 	}
+	ipv6header := header.IPv6(make([]byte, header.IPv6MinimumSize))
+	ipv6header.Encode(ipv6fields)
 
-	h2 := &Udphdr{
-		Src:    srcPort,
-		Dst:    dstPort,
-		Length: uint16(udpHdrLen + len(pb)),
-	}
+	udphdr := header.UDP(make([]byte, header.UDPMinimumSize))
+	udphdr.Encode(&header.UDPFields{
+		SrcPort: srcPort,
+		DstPort: dstPort,
+		Length:  length,
+	})
 
-	pkt, err := marshalPacket(h1, h2, pb)
-	if err != nil {
-		return err
-	}
+	xsum := header.Checksum(pb, header.PseudoHeaderChecksum(ipv6header.TransportProtocol(), ipv6fields.SrcAddr, ipv6fields.DstAddr))
+	udphdr.SetChecksum(^udphdr.CalculateChecksum(xsum, length))
+
+	pkt := append([]byte(ipv6header), []byte(udphdr)...)
+	pkt = append(pkt, pb...)
 
 	// Send out request from link layer
 	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
@@ -132,40 +136,3 @@ func mac2ipv6(mac *net.HardwareAddr) []byte {
 	v6addr = append([]byte{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, v6addr...)
 	return v6addr
 }
-
-// Write icmpv6 neighbor advertisements
-//func (pc *packetSock) WriteNeighborAd(src, dst net.IP, pb []byte) error {
-//	mac := ipv62mac([]byte(dst))
-//	fmt.Printf("addr: %v, %x \n", []byte(dst), mac)
-//	// Define linke layer
-//	lladdr := unix.SockaddrLinklayer{
-//		Ifindex:  pc.ifindex,
-//		Protocol: swap16(unix.ETH_P_IPV6),
-//		Halen:    uint8(len(mac)),
-//	}
-//	copy(lladdr.Addr[:], mac)
-//
-//	flowLabel := rand.Int() & 0xfffff
-//
-//	h := &ipv6.Header{
-//		Version:      ipv6.Version,
-//		TrafficClass: 0,
-//		FlowLabel:    flowLabel,
-//		PayloadLen:   24,
-//		NextHeader:   unix.IPPROTO_ICMPV6,
-//		HopLimit:     255,
-//		// TODO: src ip harded coded for now
-//		Src: src,
-//		Dst: dst,
-//	}
-//
-//	pkt := make([]byte, ipv6HdrLen+len(pb))
-//	ipv6hdr := &marshalIPv6Hdr(h)
-//
-//	// Wrap up packet
-//	copy(pkt[0:ipv6HdrLen], ipv6hdr)
-//	copy(pkt[ipv6HdrLen:], pb)
-//
-//	// Send out request from link layer
-//	return unix.Sendto(pc.fd, pkt, 0, &lladdr)
-//}
