@@ -27,6 +27,36 @@
 			"revisionTime": "2017-05-27T13:16:45Z"
 		},
 		{
+			"checksumSHA1": "OpAX5kvSHO1yjxhPHhusM6SaLp0=",
+			"path": "github.com/google/netstack/ilist",
+			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
+			"revisionTime": "2017-06-05T23:30:24Z"
+		},
+		{
+			"checksumSHA1": "4kx1NYuJVd6kpENNFIWNoLVee/c=",
+			"path": "github.com/google/netstack/tcpip",
+			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
+			"revisionTime": "2017-06-05T23:30:24Z"
+		},
+		{
+			"checksumSHA1": "Ocj1dGsscLBDZqJu9fideP4Nj6c=",
+			"path": "github.com/google/netstack/tcpip/buffer",
+			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
+			"revisionTime": "2017-06-05T23:30:24Z"
+		},
+		{
+			"checksumSHA1": "l2melI+BYZmgk4vQcLyKOxL5x0w=",
+			"path": "github.com/google/netstack/tcpip/header",
+			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
+			"revisionTime": "2017-06-05T23:30:24Z"
+		},
+		{
+			"checksumSHA1": "V/lEdAOGzRQFjW+jl3MjzrUxnuo=",
+			"path": "github.com/google/netstack/waiter",
+			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
+			"revisionTime": "2017-06-05T23:30:24Z"
+		},
+		{
 			"checksumSHA1": "IyHKjCdrqRRLTAKBHEh6wUhkgiI=",
 			"path": "github.com/jbuchbinder/gopnm",
 			"revision": "5176c556b9ce7e87b54b92744dc86f058f520e86",
