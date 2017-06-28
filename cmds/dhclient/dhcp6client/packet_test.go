@@ -1,14 +1,11 @@
 package dhcp6client
 
 import (
-	"math/rand"
 	"net"
 	"reflect"
 	"testing"
 
 	"github.com/mdlayher/dhcp6"
-	"golang.org/x/net/ipv6"
-	"golang.org/x/sys/unix"
 )
 
 var mac = net.HardwareAddr([]byte{0xb8, 0xae, 0xed, 0x7a, 0x10, 0x66})
@@ -102,59 +99,5 @@ func TestNewSolicitPacket(t *testing.T) {
 	}
 	if !reflect.DeepEqual(p, expected) {
 		t.Fatalf("incorrect newSolicitPacket: get %v but should be %v\n", p, expected)
-	}
-}
-
-func TestMarshalPacket(t *testing.T) {
-	p, err := newSolicitPacket(&mac)
-	if err != nil {
-		t.Fatalf("error in newSolicitPacket: %v\n", err)
-	}
-
-	pb, err := p.MarshalBinary()
-	if err != nil {
-		t.Fatalf("packet marshal to binary err: %v\n", err)
-	}
-
-	h1 := &ipv6.Header{
-		Version:      ipv6.Version,
-		TrafficClass: 0,
-		FlowLabel:    rand.Int() & 0xfffff,
-		PayloadLen:   udpHdrLen + len(pb),
-		NextHeader:   unix.IPPROTO_UDP,
-		HopLimit:     1,
-		Src:          net.ParseIP("::0"),
-		Dst:          net.ParseIP("FF02::1:2"),
-	}
-
-	h2 := &Udphdr{
-		Src:    srcPort,
-		Dst:    dstPort,
-		Length: uint16(udpHdrLen + len(pb)),
-	}
-	pkt, err := marshalPacket(h1, h2, pb)
-	if err != nil {
-		t.Fatalf("failed to make a new packet: %v\n", err)
-	}
-
-	// Test if identical after marshal and unmarshal
-	h1p, h2p, pp, err := unmarshalPacket(pkt)
-	if err != nil {
-		t.Fatalf("failed to unmarshal packet: %v\n", err)
-	}
-	if !reflect.DeepEqual(h1, h1p) {
-		t.Fatalf("ip headers do not match:\n%v\n%v\n", h1, h1p)
-	}
-	if !reflect.DeepEqual(h2, h2p) {
-		t.Fatalf("udp headers do not match:\n%v\n%v\n", h2, h2p)
-	}
-
-	// Packet unmarshal ignores rapid commit so it has to be added back
-	rc, _ := p.Options.RapidCommit()
-	if rc {
-		pp.Options[dhcp6.OptionRapidCommit] = append(pp.Options[dhcp6.OptionRapidCommit], nil)
-	}
-	if !reflect.DeepEqual(p, pp) {
-		t.Fatalf("dhcp packets do not match:\n%v\n%v\n", p, pp)
 	}
 }
