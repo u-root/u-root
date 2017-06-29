@@ -5,7 +5,7 @@
 // kexec executes a new kernel over the running kernel (u-root).
 //
 // Synopsis:
-//     kexec [--initrd=FILE] [--command-line=STRING] [-l] [-e] KERNELIMAGE
+//     kexec [--initrd=FILE] [--command-line=STRING] [-l] [-e] [KERNELIMAGE]
 //
 // Description:
 //     This is only intended to be used with kexec_load_files, not the older
@@ -92,11 +92,10 @@ func main() {
 	opts := registerFlags(flag.CommandLine)
 	flag.Parse()
 
-	if len(flag.Args()) < 1 {
+	if opts.exec == false && len(flag.Args()) == 0 {
 		flag.PrintDefaults()
-		log.Fatalf("usage: kexec [flags] kernelname")
+		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
 	}
-	kernel := flag.Args()[0]
 
 	if opts.cmdline != "" && opts.reuseCmdline {
 		flag.PrintDefaults()
@@ -119,6 +118,8 @@ func main() {
 
 	if opts.load {
 		var flags int
+
+		kernel := flag.Args()[0]
 		log.Printf("Loading %s for kernel\n", kernel)
 		kernelfd, err := syscall.Open(kernel, syscall.O_RDONLY, 0)
 		if err != nil {
