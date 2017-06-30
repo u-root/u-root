@@ -25,7 +25,7 @@ import (
 
 	"github.com/d2g/dhcp4"
 	"github.com/d2g/dhcp4client"
-	"github.com/u-root/u-root/cmds/dhclient/dhcp6client"
+	"github.com/u-root/u-root/pkg/dhcp6client"
 	"github.com/vishvananda/netlink"
 )
 
