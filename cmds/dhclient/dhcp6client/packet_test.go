@@ -11,7 +11,7 @@ import (
 var mac = net.HardwareAddr([]byte{0xb8, 0xae, 0xed, 0x7a, 0x10, 0x66})
 
 func TestNewSolicitOptions(t *testing.T) {
-	options, err := newSolicitOptions(&mac)
+	options, err := newSolicitOptions(mac)
 	if err != nil {
 		t.Fatalf("error in newSolicitOptions: %v\n", err)
 	}
@@ -86,12 +86,12 @@ func TestNewSolicitOptions(t *testing.T) {
 }
 
 func TestNewSolicitPacket(t *testing.T) {
-	p, err := newSolicitPacket(&mac)
+	p, err := newSolicitPacket(mac)
 	if err != nil {
 		t.Fatalf("error in newSolicitPacket: %v\n", err)
 	}
 
-	options, err := newSolicitOptions(&mac)
+	options, err := newSolicitOptions(mac)
 	expected := &dhcp6.Packet{
 		MessageType:   dhcp6.MessageTypeSolicit,
 		TransactionID: [3]byte{0x00, 0x01, 0x02},
