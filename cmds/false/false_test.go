@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/u-root/u-root/shared/testutil"
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 // Ensure 1 is returned.
