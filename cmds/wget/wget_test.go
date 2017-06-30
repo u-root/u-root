@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/u-root/u-root/shared/testutil"
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 const content = "Very simple web server"

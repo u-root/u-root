@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/shared/testutil"
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 type test struct {

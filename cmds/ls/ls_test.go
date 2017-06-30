@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/u-root/u-root/shared/testutil"
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 var tests = []struct {
