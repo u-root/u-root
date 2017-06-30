@@ -9,6 +9,12 @@ import (
 	"github.com/mdlayher/dhcp6"
 )
 
+// Should send a PR to dhcp6 to add these and others.
+const (
+	OptionDefaultIPTTL dhcp6.OptionCode = 23
+	OptionMTUTimeout   dhcp6.OptionCode = 24
+)
+
 func newSolicitOptions(mac net.HardwareAddr) (dhcp6.Options, error) {
 	// make options: iana
 	options := make(dhcp6.Options)
@@ -24,8 +30,7 @@ func newSolicitOptions(mac net.HardwareAddr) (dhcp6.Options, error) {
 		return nil, err
 	}
 
-	// Requesting Default IP TTL and MTU Timeout.
-	oro := dhcp6.OptionRequestOption{dhcp6.OptionCode(0x17), dhcp6.OptionCode(0x18)}
+	oro := dhcp6.OptionRequestOption{OptionDefaultIPTTL, OptionMTUTimeout}
 	if err := options.Add(dhcp6.OptionORO, oro); err != nil {
 		return nil, err
 	}
