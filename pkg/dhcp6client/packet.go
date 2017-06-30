@@ -59,7 +59,10 @@ func newSolicitPacket(mac net.HardwareAddr) (*dhcp6.Packet, error) {
 // mac2ipv6 gives the EUI-64 IPv6 address corresponding to the mac.
 func mac2ipv6(mac net.HardwareAddr) []byte {
 	var v6addr []byte
-	v6addr = append(mac[:3], append([]byte{0xff, 0xfe}, mac[3:]...)...)
+	// Be careful not to change the mac here.
+	v6addr = append(v6addr, mac[:3]...)
+	v6addr = append(v6addr, 0xff, 0xfe)
+	v6addr = append(v6addr, mac[3:]...)
 
 	// Invert 7th bit from left.
 	if v6addr[0]&0x02 == 0x02 {
