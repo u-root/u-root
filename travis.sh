@@ -13,7 +13,7 @@ cmp /tmp/initramfs.linux_amd64.cpio /tmp/i2
  ls -l cmds/*
  (cd cmds && CGO_ENABLED=0 go test -a -installsuffix cgo -ldflags '-s' ./...)
  (cd cmds && CGO_ENABLED=0 go test -cover ./...)
- go tool vet cmds uroot netlink memmap
+ go tool vet cmds uroot memmap
  go tool vet scripts/ramfs.go
  sudo date
  echo "Did it blend"
