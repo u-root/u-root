@@ -73,7 +73,6 @@ func (r Reader) ReadRecords() ([]Record, error) {
 		}
 		files = append(files, f)
 	}
-	return files, nil
 }
 
 type Writer struct {
