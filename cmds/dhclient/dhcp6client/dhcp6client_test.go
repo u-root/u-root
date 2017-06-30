@@ -13,7 +13,7 @@ const (
 )
 
 func TestSolicitAndAdvertise(t *testing.T) {
-	p, _ := newSolicitPacket(&mac)
+	p, _ := newSolicitPacket(mac)
 	pb, _ := p.MarshalBinary()
 
 	r := &testMessage{

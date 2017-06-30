@@ -150,59 +150,28 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 // dhcp6 support in go is hard to find. This function represents our best current
 // guess based on reading and testing.
 func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error {
-	// dhcp4 ... it's not just for dhcp4 any more.  TODO: I'm
-	// still trying to talk to d2g about expanding his stuff to
-	// include 6. But note that dhcp for 6, in spite of its name,
-	// is NOTHING like dhcp for 4. Nothing. At. All. But pretty
-	// much all the connection layer stuff from the dhcp4 package
-	// works fine.
-	//
-
-	mac := iface.Attrs().HardwareAddr
 	conn, err := dhcp6client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
-
-	client, err := dhcp6client.New(mac, conn, timeout)
-	if err != nil {
-		return fmt.Errorf("error: %v", err)
-	}
+	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn)
 
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
-		packet, err := client.Request(&mac)
+		iaAddrs, packet, err := client.Solicit()
 		if err != nil {
 			return fmt.Errorf("error: %v", err)
 		}
 		fmt.Printf("Packet: %+v\n\n", packet)
-
-		// err = iana.UnmarshalBinary(packet.Options[dhcp6.OptionIANA][0])
-		iana, containsIANA, err := packet.Options.IANA()
-		if !containsIANA {
-			return fmt.Errorf("error: reply does not contain IANA")
-		}
-		if err != nil {
-			return fmt.Errorf("error: reply does not contain valid IANA:\n%v", err)
-		}
-
-		// err = iaaddr.UnmarshalBinary(iana.Options[dhcp6.OptionIAAddr][0])
-		iaaddr, containsIAAddr, err := iana[0].Options.IAAddr()
-		if !containsIAAddr {
-			return fmt.Errorf("error: reply does not contain IAAddr")
-		}
-		if err != nil {
-			return fmt.Errorf("error: reply does not contain valid Iaaddr%v", err)
-		}
-		fmt.Printf("IAAddr: %v\n\n\n", iaaddr[0])
-
-		dst := &netlink.Addr{
-			IPNet:       &net.IPNet{IP: iaaddr[0].IP},
-			PreferedLft: int(iaaddr[0].PreferredLifetime.Seconds()),
-			ValidLft:    int(iaaddr[0].ValidLifetime.Seconds()),
-			Label:       "",
-		}
+		fmt.Printf("IAAddrs: %v\n", iaAddrs)
 
 		if *test == false {
+			dst := &netlink.Addr{
+				IPNet:       &net.IPNet{IP: iaAddrs[0].IP},
+				PreferedLft: int(iaAddrs[0].PreferredLifetime.Seconds()),
+				ValidLft:    int(iaAddrs[0].ValidLifetime.Seconds()),
+				Label:       "",
+			}
+
 			if err := netlink.AddrReplace(iface, dst); err != nil {
 				if os.IsExist(err) {
 					return fmt.Errorf("add/replace %v to %v: %v", dst, iface, err)

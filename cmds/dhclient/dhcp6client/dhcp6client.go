@@ -3,84 +3,112 @@ package dhcp6client
 import (
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/google/netstack/tcpip/header"
 	"github.com/mdlayher/dhcp6"
 )
 
 const (
-	ipv6HdrLen = 40
-	udpHdrLen  = 8
-
-	srcPort     = 546
-	dstPort     = 547
-	protocolUDP = 17
+	srcPort = 546
+	dstPort = 547
 )
 
+// All DHCP servers and relay agents on the local network segment (RFC 3315)
+// IPv6 Multicast (RFC 2464)
+// insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)
+var multicastMAC = net.HardwareAddr([]byte{0x33, 0x33, 0x00, 0x01, 0x00, 0x02})
+
 type Client struct {
-	hardwareAddr  net.HardwareAddr //The HardwareAddr to send in the request.
-	ignoreServers []net.IP         //List of Servers to Ignore requests from.
-	timeout       time.Duration    //Time before we timeout.
-	broadcast     bool             //Set the Bcast flag in BOOTP Flags
-	connection    connection       //The Connection Method to use
+	// The HardwareAddr to send in the request.
+	srcMAC net.HardwareAddr
+
+	// Packet socket to send on.
+	connection *packetSock
 }
 
-/*
-* Abstracts the type of underlying socket used
- */
-
-func New(haddr net.HardwareAddr, conn connection, timeout time.Duration) (*Client, error) {
-	c := Client{
-		broadcast: true,
+func New(haddr net.HardwareAddr, packetSock *packetSock) *Client {
+	return &Client{
+		srcMAC:     haddr,
+		connection: packetSock,
 	}
-
-	c.hardwareAddr = haddr
-	c.connection = conn
-	c.timeout = timeout
-	return &c, nil
 }
 
-func (c *Client) Request(mac *net.HardwareAddr) (*dhcp6.Packet, error) {
-	solicitPacket, err := newSolicitPacket(mac)
+func (c *Client) Solicit() ([]*dhcp6.IAAddr, *dhcp6.Packet, error) {
+	solicitPacket, err := newSolicitPacket(c.srcMAC)
 	if err != nil {
-		return nil, fmt.Errorf("Request Error:\nnew solicit packet: %v\nerr: %v", solicitPacket, err)
+		return nil, nil, fmt.Errorf("Request Error:\nnew solicit packet: %v\nerr: %v", solicitPacket, err)
 	}
 
-	if err = c.SendSolicitPacket(solicitPacket, mac); err != nil {
-		return nil, fmt.Errorf("Request Error:\nsend solicit packet: %v\nerr: %v", solicitPacket, err)
+	if err := c.SendPacket(solicitPacket); err != nil {
+		return nil, nil, fmt.Errorf("Request Error:\nsend solicit packet: %v\nerr: %v", solicitPacket, err)
 	}
 
-	advertisePacket, err := c.GetOffer()
+	packet, err := c.ReadReply()
 	if err != nil {
-		return nil, fmt.Errorf("Request Error:\nadvertise packet: %v\nerr: %v", advertisePacket, err)
+		return nil, nil, fmt.Errorf("Request Error:\nadvertise packet: %v\nerr: %v", packet, err)
 	}
-	return advertisePacket, nil
+
+	iana, containsIANA, err := packet.Options.IANA()
+	if err != nil {
+		return nil, packet, fmt.Errorf("error: reply does not contain valid IANA: %v", err)
+	}
+	if !containsIANA {
+		return nil, packet, fmt.Errorf("error: reply does not contain IANA")
+	}
+
+	iaAddrs, containsIAAddr, err := iana[0].Options.IAAddr()
+	if err != nil {
+		return nil, packet, fmt.Errorf("error: reply does not contain valid Iaaddr: %v", err)
+	}
+	if !containsIAAddr {
+		return nil, packet, fmt.Errorf("error: reply does not contain IAAddr")
+	}
+
+	return iaAddrs, packet, nil
 }
 
-func (c *Client) SendSolicitPacket(p *dhcp6.Packet, mac *net.HardwareAddr) error {
-	return c.connection.Write(p, mac)
+func (c *Client) SendPacket(p *dhcp6.Packet) error {
+	pkt, err := ipv6UDPPacket(p, c.srcMAC)
+	if err != nil {
+		return err
+	}
+
+	return c.connection.WriteTo(pkt, multicastMAC)
 }
 
-func (c *Client) GetOffer() (*dhcp6.Packet, error) {
+type buffer struct {
+	buf []byte
+}
+
+func (p *buffer) consume(size int) []byte {
+	consumed := p.buf[:size]
+	p.buf = p.buf[size:]
+	return consumed
+}
+
+func (p *buffer) remaining() []byte {
+	return p.consume(len(p.buf))
+}
+
+func (c *Client) ReadReply() (*dhcp6.Packet, error) {
 	var err error
 	for i := 0; i < 5; i++ { // five attempts
-		var pb []byte
-		pb, err = c.connection.ReadFrom()
+		pb := make([]byte, 1500)
+		var n int
+		n, err = c.connection.ReadFrom(pb)
 		if err != nil {
 			continue
 		}
 
-		ipv6 := header.IPv6(pb[:header.IPv6MinimumSize])
-		pb = pb[header.IPv6MinimumSize:]
+		p := &buffer{pb[:n]}
+		ipv6 := header.IPv6(p.consume(header.IPv6MinimumSize))
 
 		if ipv6.NextHeader() == uint8(header.UDPProtocolNumber) {
-			udp := header.UDP(pb[:header.UDPMinimumSize])
-			pb = pb[header.UDPMinimumSize:]
+			udp := header.UDP(p.consume(header.UDPMinimumSize))
 
 			if udp.DestinationPort() == srcPort {
 				dhcp6p := &dhcp6.Packet{}
-				if err = dhcp6p.UnmarshalBinary(pb); err != nil {
+				if err = dhcp6p.UnmarshalBinary(p.remaining()); err != nil {
 					continue
 				}
 				return dhcp6p, nil
