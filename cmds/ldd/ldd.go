@@ -16,7 +16,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/ldd"
 )
 
 func usage() {

@@ -17,6 +17,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
+	"github.com/u-root/u-root/pkg/ldd"
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 	// as much of the path as we need, but we can preserve it all.
 	paths      = map[string]string{}
 	extraPaths = flag.String("extra", "", "Extra paths to add in the form root:start, e.g. /:etc/hosts")
+	extraCmds  = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 )
 
 func sanity() {
@@ -45,6 +47,26 @@ func sanity() {
 	}
 	if config.Go == "" {
 		log.Fatalf("Can't find a go binary! Is GOROOT set correctly?")
+	}
+}
+
+func copyCommands(w cpio.Writer, cmds []string) {
+	var recs []cpio.Record
+	libs, err := uroot.LddList(cmds)
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	cmds = append(cmds, libs...)
+	for _, n := range cmds {
+		r, err := cpio.GetRecord(n)
+		if err != nil {
+			log.Fatalf("%v: %v", n, err)
+		}
+		recs = append(recs, r)
+	}
+	cpio.MakeReproducible(recs)
+	if err := w.WriteRecords(recs); err != nil {
+		log.Fatalf("%v\n", err)
 	}
 }
 
@@ -75,6 +97,10 @@ func ramfs() {
 			log.Fatalf("extraPaths requires two : separated pathnames")
 		}
 		paths[x[0]] = x[1]
+	}
+
+	if *extraCmds != "" {
+		copyCommands(w, strings.Split(*extraCmds, " "))
 	}
 
 	// For all the 'roots' in paths, start walking at the name.
