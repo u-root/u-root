@@ -12,55 +12,35 @@
 package main
 
 import (
-	"debug/elf"
-	"errors"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/u-root/u-root/uroot"
 )
 
-var list map[string]bool
+func usage() {
+	log.Fatalf("usage: ldd file [file...]")
+}
 
-func process(file *os.File, name string) error {
-	if f, err := elf.NewFile(file); err != nil {
-		return err
-	} else {
-		if fl, err := f.ImportedLibraries(); err != nil {
-			return err
-		} else {
-			if s := f.Section(".interp"); s == nil {
-				return errors.New("No interpreter")
-			} else {
-				if interp, err := s.Data(); err != nil {
-					return err
-				} else {
-					// We could just append the interp but people
-					// expect to see that first.
-					fl = append([]string{string(interp)}, fl...)
-					for _, i := range fl {
-						list[i] = true
-					}
-				}
-
-			}
+func ldd(s ...string) ([]string, error) {
+	var libs []string
+	l, err := uroot.Ldd(s)
+	if err != nil {
+		return nil, err
+	}
+	for _, i := range l {
+		if i.Mode().IsRegular() {
+			libs = append(libs, i.FullName)
 		}
 	}
-	return nil
+	return libs, nil
 }
 
 func main() {
-	list = make(map[string]bool)
-	if len(os.Args) < 2 {
-		process(os.Stdin, "stdin")
-	} else {
-		for _, i := range os.Args[1:] {
-			if f, err := os.Open(i); err == nil {
-				process(f, i)
-			} else {
-				fmt.Fprintf(os.Stderr, "%v: %v\n", i, err)
-			}
-		}
+	l, err := ldd(os.Args[1:]...)
+	if err != nil {
+		log.Fatalf("ldd: %v", err)
 	}
-	for n := range list {
-		fmt.Printf("%v\n", n)
-	}
+	fmt.Printf("%v\n", l)
 }
