@@ -8,13 +8,11 @@
 //     kexec [--initrd=FILE] [--command-line=STRING] [-l] [-e] [KERNELIMAGE]
 //
 // Description:
-//     This is only intended to be used with kexec_load_files, not the older
-//     kexec.
+//		 Loads a kernel for later execution.
 //
 // Options:
 //     --cmdline=STRING:       command line for kernel
 //     --command-line=STRING:  command line for kernel
-//     --append=STRING:        command line for kernel
 //
 //     --reuse-commandline:    reuse command line from running system
 //
@@ -28,11 +26,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io/ioutil"
 	"log"
-	"syscall"
-	"unsafe"
+	"os"
+
+	"github.com/u-root/u-root/pkg/kexec"
 )
 
 type options struct {
@@ -47,7 +44,6 @@ func registerFlags(f *flag.FlagSet) *options {
 	o := &options{}
 	f.StringVar(&o.cmdline, "cmdline", "", "Set the kernel command line")
 	f.StringVar(&o.cmdline, "command-line", "", "Set the kernel command line")
-	f.StringVar(&o.cmdline, "append", "", "Set the kernel command line")
 
 	f.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 
@@ -61,31 +57,6 @@ func registerFlags(f *flag.FlagSet) *options {
 	f.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel.")
 	f.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel.")
 	return o
-}
-
-// Syscall number for file kexec.
-const _SYS_KEXEC_FILE_LOAD = 320
-
-// Linux kexec syscall flags.
-const (
-	_KEXEC_FILE_UNLOAD       = 0x1
-	_KEXEC_FILE_ON_CRASH     = 0x2
-	_KEXEC_FILE_NO_INITRAMFS = 0x4
-)
-
-func kexec(kernelfd, ramfsfd int, cmdline string, flags int) error {
-	cmd := append([]byte(cmdline), 0)
-	if e1, e2, errno := syscall.Syscall6(
-		_SYS_KEXEC_FILE_LOAD,
-		uintptr(kernelfd),
-		uintptr(ramfsfd),
-		uintptr(len(cmd)),
-		uintptr(unsafe.Pointer(&cmd[0])),
-		uintptr(flags),
-		0); errno != 0 {
-		return fmt.Errorf("sys_kexec(%d, %d, %s, %x) = (%d, %d, errno %v)", kernelfd, ramfsfd, cmdline, flags, e1, e2, errno)
-	}
-	return nil
 }
 
 func main() {
@@ -109,36 +80,40 @@ func main() {
 
 	cmdline := opts.cmdline
 	if opts.reuseCmdline {
-		procCmdline, err := ioutil.ReadFile("/proc/cmdline")
+		procCmdline, err := kexec.CurrentKernelCmdline()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
-		cmdline = string(procCmdline)
+		cmdline = procCmdline
 	}
 
 	if opts.load {
-		var flags int
+		kernelpath := flag.Args()[0]
+		log.Printf("Loading %s for kernel\n", kernelpath)
 
-		kernel := flag.Args()[0]
-		log.Printf("Loading %s for kernel\n", kernel)
-		kernelfd, err := syscall.Open(kernel, syscall.O_RDONLY, 0)
+		kernel, err := os.OpenFile(kernelpath, os.O_RDONLY, 0)
 		if err != nil {
-			log.Fatalf("open(%s): %v", kernel, err)
+			log.Fatalf("open(%q): %v", kernelpath, err)
+		}
+		defer kernel.Close()
+
+		var ramfs *os.File
+		if opts.initramfs != "" {
+			ramfs, err = os.OpenFile(opts.initramfs, os.O_RDONLY, 0)
+			if err != nil {
+				log.Fatalf("open(%q): %v", opts.initramfs, err)
+			}
+			defer ramfs.Close()
 		}
 
-		ramfsfd, err := syscall.Open(opts.initramfs, syscall.O_RDONLY, 0)
-		if err != nil {
-			flags |= _KEXEC_FILE_NO_INITRAMFS
-		}
-
-		if err := kexec(kernelfd, ramfsfd, cmdline, flags); err != nil {
+		if err := kexec.FileLoad(kernel, ramfs, cmdline); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
 
 	if opts.exec {
-		if e1, e2, errno := syscall.Syscall(syscall.SYS_REBOOT, syscall.LINUX_REBOOT_MAGIC1, syscall.LINUX_REBOOT_MAGIC2, syscall.LINUX_REBOOT_CMD_KEXEC); errno != 0 {
-			log.Fatalf("sys_reboot(..., kexec) = (%d, %d, errno %v)", e1, e2, errno)
+		if err := kexec.Reboot(); err != nil {
+			log.Fatalf("%v", err)
 		}
 	}
 }
