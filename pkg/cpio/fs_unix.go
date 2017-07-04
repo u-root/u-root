@@ -5,7 +5,6 @@
 package cpio
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -184,26 +183,16 @@ func GetRecord(path string) (Record, error) {
 	switch fi.Mode() & os.ModeType {
 	case 0: // Regular file.
 		if done {
-			return Record{nil, info}, nil
+			return Record{Info: info}, nil
 		}
-		osfile, err := os.Open(path)
-		if err != nil {
-			return Record{}, err
-		}
-		defer osfile.Close()
-
-		contents, err := ioutil.ReadAll(osfile)
-		if err != nil {
-			return Record{}, err
-		}
-		return Record{bytes.NewReader(contents), info}, nil
+		return Record{Info: info, ReadCloser: NewDeferReadCloser(path)}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)
 		if err != nil {
 			return Record{}, err
 		}
-		return StaticRecord(linkname, info), nil
+		return StaticRecord([]byte(linkname), info), nil
 
 	default:
 		return EmptyRecord(info), nil

@@ -41,7 +41,7 @@ func TestWriteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	contents := "LANAAAAAAAAAA"
+	contents := []byte("LANAAAAAAAAAA")
 	rec := cpio.StaticRecord(contents, cpio.Info{
 		Ino:      1,
 		Mode:     syscall.S_IFREG | 2,
@@ -82,7 +82,7 @@ func TestWriteRead(t *testing.T) {
 		t.Errorf("Could not read %q: %v", rec2.Name, err)
 	}
 
-	if string(contents2) != contents {
+	if bytes.Compare(contents2, contents) != 0 {
 		t.Errorf("Read(%q) = %s, want %s", rec2.Name, string(contents2), contents)
 	}
 }
@@ -482,14 +482,14 @@ var (
 	}
 )
 
-// TestReproducible verifies that we can produce reproducible cpio archives for newc format.
+// testReproducible verifies that we can produce reproducible cpio archives for newc format.
 func TestReproducible(t *testing.T) {
 	f, err := cpio.Format("newc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	contents := "LANAAAAAAAAAA"
+	contents := []byte("LANAAAAAAAAAA")
 	rec := []cpio.Record{cpio.StaticRecord(contents, cpio.Info{
 		Ino:      1,
 		Mode:     syscall.S_IFREG | 2,
@@ -513,7 +513,7 @@ func TestReproducible(t *testing.T) {
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
-	rec[0].Reader = bytes.NewReader([]byte(contents))
+	rec[0].ReadCloser = cpio.NewBytesReadCloser(contents)
 	b2 := &bytes.Buffer{}
 	w = f.Writer(b2)
 	rec[0].MTime++
@@ -530,7 +530,7 @@ func TestReproducible(t *testing.T) {
 
 	b1 = &bytes.Buffer{}
 	w = f.Writer(b1)
-	rec[0].Reader = bytes.NewReader([]byte(contents))
+	rec[0].ReadCloser = cpio.NewBytesReadCloser([]byte(contents))
 	cpio.MakeReproducible(rec)
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
@@ -539,7 +539,7 @@ func TestReproducible(t *testing.T) {
 	b2 = &bytes.Buffer{}
 	w = f.Writer(b2)
 	rec[0].MTime++
-	rec[0].Reader = bytes.NewReader([]byte(contents))
+	rec[0].ReadCloser = cpio.NewBytesReadCloser([]byte(contents))
 	cpio.MakeReproducible(rec)
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
