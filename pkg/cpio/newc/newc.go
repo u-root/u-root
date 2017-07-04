@@ -145,13 +145,16 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 	}
 
 	// Some files do not have any content.
-	if f.Reader == nil {
+	if f.ReadCloser == nil {
 		return nil
 	}
 
 	// Write file contents.
 	m, err := io.Copy(w, f)
 	if err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
 		return err
 	}
 	if m > 0 {
@@ -225,7 +228,7 @@ func (r *reader) ReadRecord() (cpio.Record, error) {
 
 	content := io.NewSectionReader(r.r, r.pos, int64(hdr.FileSize))
 	r.pos = round4(r.pos + int64(hdr.FileSize))
-	return cpio.Record{content, info}, nil
+	return cpio.Record{cpio.NewReadCloser(content), info}, nil
 }
 
 func init() {

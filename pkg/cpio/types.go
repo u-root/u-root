@@ -8,13 +8,15 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"time"
 )
 
 const Trailer = "TRAILER!!!"
 
 type Record struct {
-	io.Reader
+	io.ReadCloser
 	Info
 }
 
@@ -33,25 +35,51 @@ type RecordFormat interface {
 	Writer(w io.Writer) RecordWriter
 }
 
-func StaticRecord(contents string, info Info) Record {
+func StaticRecord(contents []byte, info Info) Record {
 	info.FileSize = uint64(len(contents))
 	return Record{
-		bytes.NewReader([]byte(contents)),
-		info,
+		ReadCloser: ioutil.NopCloser(bytes.NewReader(contents)),
+		Info:       info,
 	}
 }
 
-type eofReader struct{}
+func NewBytesReadCloser(contents []byte) io.ReadCloser {
+	return ioutil.NopCloser(bytes.NewReader(contents))
+}
 
-func (eofReader) Read(p []byte) (int, error) {
-	return 0, io.EOF
+func NewReadCloser(r io.Reader) io.ReadCloser {
+	return ioutil.NopCloser(r)
 }
 
 func EmptyRecord(info Info) Record {
 	return Record{
-		eofReader{},
+		ioutil.NopCloser(bytes.NewReader(nil)),
 		info,
 	}
+}
+
+type LazyOpen struct {
+	Name string
+	File *os.File
+}
+
+func (r *LazyOpen) Read(p []byte) (int, error) {
+	if r.File == nil {
+		f, err := os.Open(r.Name)
+		if err != nil {
+			return -1, err
+		}
+		r.File = f
+	}
+	return r.File.Read(p)
+}
+
+func (r *LazyOpen) Close() error {
+	return r.File.Close()
+}
+
+func NewDeferReadCloser(name string) io.ReadCloser {
+	return &LazyOpen{Name: name}
 }
 
 // Info holds metadata about files.
