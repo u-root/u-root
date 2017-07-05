@@ -20,6 +20,10 @@
 //     -count n: copy only n ibs-sized input blocks
 //     -inName:  defaults to stdin
 //     -outName: defaults to stdout
+//     -status:  print transfer stats to stderr, can be one of:
+//         none:     do not display
+//         xfer:     print on completion (default)
+//         progress: print throughout transfer (GNU)
 package main
 
 import (
@@ -33,6 +37,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 var (
@@ -45,6 +51,9 @@ var (
 	count   = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
 	inName  = flag.String("if", "", "Input file")
 	outName = flag.String("of", "", "Output file")
+	status  = flag.String("status", "xfer", "display status of transfer (none|xfer|progress)")
+
+	bytesWritten int64 // access atomically, must be global for correct alignedness
 )
 
 // intermediateBuffer is a buffer that one can write to and read from.
@@ -196,9 +205,11 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 
 	var writeErr error
 	for buf := range readyBufs {
-		if _, err := buf.WriteTo(w); err != nil {
+		if n, err := buf.WriteTo(w); err != nil {
 			writeErr = fmt.Errorf("output error: %v", err)
 			break
+		} else {
+			atomic.AddInt64(&bytesWritten, n)
 		}
 		pool.Put(buf)
 	}
@@ -246,7 +257,7 @@ func (s *sectionReader) Read(p []byte) (int, error) {
 			return 0, err
 		} else if n != s.base {
 			// Can't happen.
-			return 0, fmt.Errorf("error skipping input bytes, short write.")
+			return 0, fmt.Errorf("error skipping input bytes, short write")
 		}
 		s.offset = s.base
 	}
@@ -308,10 +319,73 @@ func outFile(name string, outputBytes int64, seek int64) (io.Writer, error) {
 	return out, nil
 }
 
+type progressData struct {
+	mode     string // one of: none, xfer, progress
+	start    time.Time
+	variable *int64 // must be aligned for atomic operations
+	quit     chan struct{}
+}
+
+func progressBegin(mode string, variable *int64) (ProgressData *progressData) {
+	p := &progressData{
+		mode:     mode,
+		start:    time.Now(),
+		variable: variable,
+	}
+	if p.mode == "progress" {
+		p.print()
+		// Print progress in a separate goroutine.
+		p.quit = make(chan struct{}, 1)
+		go func() {
+			ticker := time.Tick(1 * time.Second)
+			for {
+				select {
+				case <-ticker:
+					p.print()
+				case <-p.quit:
+					return
+				}
+			}
+		}()
+	}
+	return p
+}
+
+func (p *progressData) end() {
+	if p.mode == "progress" {
+		// Properly synchronize goroutine.
+		p.quit <- struct{}{}
+		p.quit <- struct{}{}
+	}
+	if p.mode == "progress" || p.mode == "xfer" {
+		// Print grand total.
+		p.print()
+		fmt.Fprint(os.Stderr, "\n")
+	}
+}
+
+// With "status=progress", this is called from 3 places:
+// - Once at the beginning to appear responsive
+// - Every 1s afterwards
+// - Once at the end so the final value is accurate
+func (p *progressData) print() {
+	elapse := time.Since(p.start)
+	n := atomic.LoadInt64(p.variable)
+	d := float64(n)
+	const mib = 1024 * 1024
+	const mb = 1000 * 1000
+	// The ANSI escape may be undesirable to some eyes.
+	if p.mode == "progress" {
+		os.Stderr.Write([]byte("\033[2K\r"))
+	}
+	fmt.Fprintf(os.Stderr, "%d bytes (%.3f MB, %.3f MiB) copied, %.3f s, %.3f MB/s",
+		n, d/mb, d/mib, elapse.Seconds(), float64(d)/elapse.Seconds()/mb)
+}
+
 func usage() {
 	// If the conversions get more complex we can dump
 	// the convs map. For now, it's not really worth it.
-	log.Fatal(`Usage: dd [if=file] [of=file] [conv=lcase|ucase] [seek=#] [skip=#] [count=#] [bs=#] [ibs=#] [obs=#]
+	log.Fatal(`Usage: dd [if=file] [of=file] [conv=lcase|ucase] [seek=#] [skip=#] [count=#] [bs=#] [ibs=#] [obs=#] [status=none|xfer|progress]
 		options may also be invoked Go-style as -opt value or -opt=value
 		bs, if specified, overrides ibs and obs`)
 }
@@ -354,6 +428,11 @@ func main() {
 		usage()
 	}
 
+	if *status != "none" && *status != "xfer" && *status != "progress" {
+		usage()
+	}
+	progress := progressBegin(*status, &bytesWritten)
+
 	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
 	if *bs > 0 {
 		*ibs = *bs
@@ -371,4 +450,6 @@ func main() {
 	if err := parallelChunkedCopy(in, out, *ibs, *obs, convert); err != nil {
 		log.Fatal(err)
 	}
+
+	progress.end()
 }
