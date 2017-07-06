@@ -72,7 +72,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 
 	var packet dhcp4.Packet
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
-		debug("Start getting or renewing lease")
+		debug("Start getting or renewing DHCPv4 lease")
 
 		var success bool
 		if packet == nil {
@@ -154,9 +154,10 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
-	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn)
+	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn, timeout)
 
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
+		debug("Start getting or renewing DHCPv6 lease")
 		iaAddrs, packet, err := client.Solicit()
 		if err != nil {
 			return fmt.Errorf("error: %v", err)
