@@ -2,7 +2,10 @@ package dhcp6client
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/google/netstack/tcpip/header"
 	"github.com/mdlayher/dhcp6"
@@ -24,12 +27,16 @@ type Client struct {
 
 	// Packet socket to send on.
 	connection *packetSock
+
+	// Timeout
+	timeout time.Duration
 }
 
-func New(haddr net.HardwareAddr, packetSock *packetSock) *Client {
+func New(haddr net.HardwareAddr, packetSock *packetSock, t time.Duration) *Client {
 	return &Client{
 		srcMAC:     haddr,
 		connection: packetSock,
+		timeout:    t,
 	}
 }
 
@@ -39,13 +46,22 @@ func (c *Client) Solicit() ([]*dhcp6.IAAddr, *dhcp6.Packet, error) {
 		return nil, nil, fmt.Errorf("Request Error:\nnew solicit packet: %v\nerr: %v", solicitPacket, err)
 	}
 
-	if err := c.SendPacket(solicitPacket); err != nil {
-		return nil, nil, fmt.Errorf("Request Error:\nsend solicit packet: %v\nerr: %v", solicitPacket, err)
-	}
+	var packet *dhcp6.Packet
+	for {
+		if err := c.SendPacket(solicitPacket); err != nil {
+			return nil, nil, fmt.Errorf("Request Error:\nsend solicit packet: %v\nerr: %v", solicitPacket, err)
+		}
 
-	packet, err := c.ReadReply()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Request Error:\nadvertise packet: %v\nerr: %v", packet, err)
+		packet, err = c.ReadReply()
+		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				log.Printf("%v: resending DHCPv6 Solicit Message...", err)
+				continue
+			}
+			return nil, nil, fmt.Errorf("Request Error:\nadvertise packet: %v\nerr: %v", packet, err)
+		} else {
+			break
+		}
 	}
 
 	iana, containsIANA, err := packet.Options.IANA()
@@ -92,11 +108,19 @@ func (p *buffer) remaining() []byte {
 
 func (c *Client) ReadReply() (*dhcp6.Packet, error) {
 	var err error
-	for i := 0; i < 5; i++ { // five attempts
+	for i := 0; i < 5; i++ {
+		// set a random timeout within range [c.timeout, 2*c.timeout)
+		// so as to prevent swamping a DHCP server.
+		c.connection.SetReadTimeout(c.timeout + time.Duration(rand.Intn(int(c.timeout))))
 		pb := make([]byte, 1500)
 		var n int
 		n, err = c.connection.ReadFrom(pb)
 		if err != nil {
+			// Return error if read time of socket is due,
+			// so that request can be resent instantly
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				return nil, err
+			}
 			continue
 		}
 

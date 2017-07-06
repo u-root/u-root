@@ -3,6 +3,7 @@ package dhcp6client
 import (
 	"net"
 	"syscall"
+	"time"
 )
 
 // TODO: Make packetSock implement net.PacketConn?
@@ -30,7 +31,7 @@ func NewPacketSock(ifindex int) (*packetSock, error) {
 	}, nil
 }
 
-// Writes a packet.
+// Write a packet.
 func (pc packetSock) WriteTo(p []byte, mac net.HardwareAddr) error {
 	lladdr := syscall.SockaddrLinklayer{
 		Ifindex:  pc.ifindex,
@@ -52,6 +53,12 @@ func (pc packetSock) ReadFrom(p []byte) (int, error) {
 // Close socket.
 func (pc packetSock) Close() error {
 	return syscall.Close(pc.fd)
+}
+
+// Set a read timeout
+func (pc *packetSock) SetReadTimeout(t time.Duration) error {
+	tv := syscall.NsecToTimeval(t.Nanoseconds())
+	return syscall.SetsockoptTimeval(pc.fd, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
 }
 
 func swap16(x uint16) uint16 {
