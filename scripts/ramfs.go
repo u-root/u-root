@@ -857,7 +857,7 @@ func main() {
 		return
 	}
 
-	// We need to populate the temp directory with dev.cpio. It's a chicken and egg thing;
+	// We need to populate the temp directory with devCPIO. It's a chicken and egg thing;
 	// we can't run init without, e.g., /dev/console and /dev/null.
 	cmd = exec.Command("sudo", "cpio", "-i")
 	cmd.Dir = config.TempDir
