@@ -37,8 +37,7 @@ var (
 		//uroot.Dev{Name: "dev/urandom", Mode: uint32(syscall.S_IFCHR) | 0444, dev: 0x0109},
 		//mount{source: "proc", target: "proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
 		//mount{source: "sys", target: "sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL, opts: ""},
-		//// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
-		//// default to contents of dev.cpio.
+		//// Kernel must be compiled with CONFIG_DEVTMPFS for this to work.
 		//mount{source: "none", target: "dev", fstype: "devtmpfs", flags: syscall.MS_MGC_VAL},
 		uroot.Mount{Source: "none", Target: "dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		uroot.Symlink{Linkpath: "/dev/pts/ptmx", Target: "dev/ptmx"},
