@@ -24,12 +24,16 @@ type Client struct {
 
 	// Packet socket to send on.
 	connection *packetSock
+
+	// Max number of attempts to receive a valid DHCPv6 reply from server.
+	attempts int
 }
 
-func New(haddr net.HardwareAddr, packetSock *packetSock) *Client {
+func New(haddr net.HardwareAddr, packetSock *packetSock, n int) *Client {
 	return &Client{
 		srcMAC:     haddr,
 		connection: packetSock,
+		attempts:   n,
 	}
 }
 
@@ -92,7 +96,7 @@ func (p *buffer) remaining() []byte {
 
 func (c *Client) ReadReply() (*dhcp6.Packet, error) {
 	var err error
-	for i := 0; i < 5; i++ { // five attempts
+	for i := 0; i < c.attempts; i++ { // five attempts
 		pb := make([]byte, 1500)
 		var n int
 		n, err = c.connection.ReadFrom(pb)

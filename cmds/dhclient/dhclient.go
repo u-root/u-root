@@ -36,6 +36,7 @@ const (
 )
 
 var (
+	attempts     = flag.Int("attempts", 5, "Max number of attempts for client to receive a valid DHCP reply from server")
 	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", true, "Verbose output")
@@ -149,12 +150,12 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 
 // dhcp6 support in go is hard to find. This function represents our best current
 // guess based on reading and testing.
-func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error {
+func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, attempts int) error {
 	conn, err := dhcp6client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
-	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn)
+	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn, attempts)
 
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
 		iaAddrs, packet, err := client.Solicit()
@@ -228,7 +229,7 @@ func main() {
 			if *ipv4 {
 				done <- dhclient4(iface, *renewals, timeout)
 			} else {
-				done <- dhclient6(iface, *renewals, timeout)
+				done <- dhclient6(iface, *renewals, timeout, *attempts)
 			}
 		}(i)
 	}
