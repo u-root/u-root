@@ -50,19 +50,38 @@ func sanity() {
 	}
 }
 
+// copyCommands takes a list of commands, generates the list of libs,
+// and creates cpio records, including directory records. 
 func copyCommands(w cpio.Writer, cmds []string) {
-	var recs []cpio.Record
+	debug("copyCommands: start with %v", cmds)
+	var (
+		recs []cpio.Record
+		done = make(map[string]bool)
+	)
 	libs, err := uroot.LddList(cmds)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	cmds = append(cmds, libs...)
 	for _, n := range cmds {
-		r, err := cpio.GetRecord(n)
-		if err != nil {
-			log.Fatalf("%v: %v", n, err)
+		debug("copyCommands: file %v", n)
+		var dirlist []string
+		for d := filepath.Dir(n); d != "/"; d = filepath.Dir(d) {
+			if done[d] {
+				continue
+			}
+			dirlist = append([]string{d}, dirlist...)
+			done[d] = true
 		}
-		recs = append(recs, r)
+		dirlist = append(dirlist, n)
+		for _, n := range dirlist {
+			debug("copyCommands: %v", n)
+			r, err := cpio.GetRecord(n)
+			if err != nil {
+				log.Fatalf("%v: %v", n, err)
+			}
+			recs = append(recs, r)
+		}
 	}
 	cpio.MakeReproducible(recs)
 	if err := w.WriteRecords(recs); err != nil {

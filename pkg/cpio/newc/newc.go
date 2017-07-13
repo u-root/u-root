@@ -117,6 +117,9 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 
 	buf := &bytes.Buffer{}
 	hdr := headerFromInfo(f.Info)
+	if f.ReadCloser == nil {
+		hdr.FileSize = 0
+	}
 	hdr.CRC = 0
 	if err := binary.Write(buf, binary.BigEndian, hdr); err != nil {
 		return err
