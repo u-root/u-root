@@ -73,6 +73,40 @@ In the EXAMPLES directory you can see examples of running in a chroot, kernel, a
 
 
 
+## Using elvish: a more handy shell
+
+In default, rush is the shell in u-root. Now, thanks to Qi Xiao(\<xiaqqaix@gmail.com\>), u-root users are also able to use a friendly and expressive unix-like shell: __elvish__. Users are free to choose whether to include elvish in u-root or not. Basically, elvish has handy functionalities such as auto completion, command-line existence checks, etc. More info of elvish can be found at: [http://github/elves/elvish](http://github.com/elves/elvish).
+
+If you prefer to use elvish as shell in u-root, here are the instructions:
+
+1. Get project __elvish__:
+  `go get github.com/elves/elvish`
+
+2. Temporarily, since package `sqlite3` used in elvish has been updated, and its latest
+   version includes codes in C (which u-root does not support), users have to
+   roll back to last good commit of elvish:
+   `cd $GOPATH/src/elves/elvish`
+   `git checkout bc5543aef2c493b658d6bd1bb81e3de298de8d2f`
+
+3. Go to u-root repo. If you did `go get github.com/u-root/u-root` before, do:
+  `cd $GOPATH/src/u-root/u-root`
+
+4. If you prefer to build under bb mode, please do the following command line
+   in u-root/u-root/:
+   `cd ./bb/`
+   `go build .`
+   `CGO_ENABLED=0 ./bb 'src/github.com/u-root/u-root/cmds/[a-z]*' src/github.com/elves/elvish`
+   which generates a cpio file, /tmp/initramfs.linux\_amd64.cpio for you to
+   start up u-root in qemu.
+
+   If you prefer dynamic buildup mode, do the following command line in u-root/u-root:
+   `CGO_ENABLED=0 go run scripts/ramfs.go 'src/github.com/u-root/u-root/cmds/[a-z]*' src/github.com/elves/elvish`
+   which also generates /tmp/initramfs.linux\_amd64.cpio.
+
+5. Afterwards, users can type command line `elvish` in u-root and start to use elvish as shell.
+
+
+
 # Contributions
 
 We need help with this project, so contributions are welcome.  More information about handle dependencies you can found [here](MAINTAINERS.md)
