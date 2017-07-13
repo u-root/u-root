@@ -9,20 +9,22 @@ import (
 	"github.com/mdlayher/dhcp6"
 )
 
-// Should send a PR to dhcp6 to add these and others.
+// TODO: Should send a PR to dhcp6 to add these and others.
 const (
-	OptionDefaultIPTTL dhcp6.OptionCode = 23
-	OptionMTUTimeout   dhcp6.OptionCode = 24
+	OptionDNSServers dhcp6.OptionCode = 23
+	OptionDomainList dhcp6.OptionCode = 24
 )
 
 func newSolicitOptions(mac net.HardwareAddr) (dhcp6.Options, error) {
-	// make options: iana
 	options := make(dhcp6.Options)
 
-	var id = [4]byte{'r', 'o', 'o', 't'}
+	// TODO: This should be generated.
+	id := [4]byte{'r', 'o', 'o', 't'}
+	// IANA = requesting a non-temporary address.
 	if err := options.Add(dhcp6.OptionIANA, dhcp6.NewIANA(id, 0, 0, nil)); err != nil {
 		return nil, err
 	}
+	// Request an immediate Reply with an IP instead of an Advertise packet.
 	if err := options.Add(dhcp6.OptionRapidCommit, nil); err != nil {
 		return nil, err
 	}
@@ -30,16 +32,19 @@ func newSolicitOptions(mac net.HardwareAddr) (dhcp6.Options, error) {
 		return nil, err
 	}
 
-	oro := dhcp6.OptionRequestOption{OptionDefaultIPTTL, OptionMTUTimeout}
+	oro := dhcp6.OptionRequestOption{
+		OptionDNSServers,
+		OptionDomainList,
+		dhcp6.OptionBootFileURL,
+		dhcp6.OptionBootFileParam,
+	}
 	if err := options.Add(dhcp6.OptionORO, oro); err != nil {
 		return nil, err
 	}
 
-	// HardwareType *should* be 1?
 	if err := options.Add(dhcp6.OptionClientID, dhcp6.NewDUIDLL(6, mac)); err != nil {
 		return nil, err
 	}
-
 	return options, nil
 }
 
@@ -50,7 +55,8 @@ func newSolicitPacket(mac net.HardwareAddr) (*dhcp6.Packet, error) {
 	}
 
 	return &dhcp6.Packet{
-		MessageType:   dhcp6.MessageTypeSolicit,
+		MessageType: dhcp6.MessageTypeSolicit,
+		// TODO: This should be random?
 		TransactionID: [3]byte{0x00, 0x01, 0x02},
 		Options:       options,
 	}, nil
