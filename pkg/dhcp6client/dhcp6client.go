@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/mdlayher/dhcp6"
 )
@@ -43,13 +44,13 @@ func New(haddr net.HardwareAddr, packetSock *packetSock, t time.Duration) *Clien
 func (c *Client) Solicit() ([]*dhcp6.IAAddr, *dhcp6.Packet, error) {
 	solicitPacket, err := newSolicitPacket(c.srcMAC)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Request Error:\nnew solicit packet: %v\nerr: %v", solicitPacket, err)
+		return nil, nil, fmt.Errorf("new solicit packet: %v", err)
 	}
 
 	var packet *dhcp6.Packet
 	for {
 		if err := c.SendPacket(solicitPacket); err != nil {
-			return nil, nil, fmt.Errorf("Request Error:\nsend solicit packet: %v\nerr: %v", solicitPacket, err)
+			return nil, nil, fmt.Errorf("send solicit packet(%v) = err %v", solicitPacket, err)
 		}
 
 		packet, err = c.ReadReply()
@@ -58,7 +59,7 @@ func (c *Client) Solicit() ([]*dhcp6.IAAddr, *dhcp6.Packet, error) {
 				log.Printf("%v: resending DHCPv6 Solicit Message...", err)
 				continue
 			}
-			return nil, nil, fmt.Errorf("Request Error:\nadvertise packet: %v\nerr: %v", packet, err)
+			return nil, nil, fmt.Errorf("error while reading reply: %v", err)
 		} else {
 			break
 		}
@@ -74,7 +75,7 @@ func (c *Client) Solicit() ([]*dhcp6.IAAddr, *dhcp6.Packet, error) {
 
 	iaAddrs, containsIAAddr, err := iana[0].Options.IAAddr()
 	if err != nil {
-		return nil, packet, fmt.Errorf("error: reply does not contain valid Iaaddr: %v", err)
+		return nil, packet, fmt.Errorf("error: reply does not contain valid IAAddr: %v", err)
 	}
 	if !containsIAAddr {
 		return nil, packet, fmt.Errorf("error: reply does not contain IAAddr")
@@ -127,7 +128,8 @@ func (c *Client) ReadReply() (*dhcp6.Packet, error) {
 		p := &buffer{pb[:n]}
 		ipv6 := header.IPv6(p.consume(header.IPv6MinimumSize))
 
-		if ipv6.NextHeader() == uint8(header.UDPProtocolNumber) {
+		if ipv6.DestinationAddress() == tcpip.Address(mac2ipv6(c.srcMAC)) ||
+			ipv6.NextHeader() == uint8(header.UDPProtocolNumber) {
 			udp := header.UDP(p.consume(header.UDPMinimumSize))
 
 			if udp.DestinationPort() == srcPort {
