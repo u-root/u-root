@@ -52,6 +52,7 @@ func NewReadCloser(r io.Reader) io.ReadCloser {
 }
 
 func EmptyRecord(info Info) Record {
+	info.FileSize = 0
 	return Record{
 		ioutil.NopCloser(bytes.NewReader(nil)),
 		info,
