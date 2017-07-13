@@ -50,7 +50,15 @@ func sanity() {
 	}
 }
 
+// copyCommands takes a list of commands, generates the list of libs,
+// and creates cpio records. It's a rather stupid function right now
+// in that it creates duplicate directory entries. There are so few
+// of these that it does not matter enough to fix it just yet until
+// we know the limits of the kernel cpio parser.
+// We've already found one: if you give it path a/b/c/d, and c does
+// not exist, d will not be created.
 func copyCommands(w cpio.Writer, cmds []string) {
+	debug("copyCommands: start with %v", cmds)
 	var recs []cpio.Record
 	libs, err := uroot.LddList(cmds)
 	if err != nil {
@@ -58,11 +66,20 @@ func copyCommands(w cpio.Writer, cmds []string) {
 	}
 	cmds = append(cmds, libs...)
 	for _, n := range cmds {
-		r, err := cpio.GetRecord(n)
-		if err != nil {
-			log.Fatalf("%v: %v", n, err)
+		debug("copyCommands: file %v", n)
+		var dirlist []string
+		for d := filepath.Dir(n); d != "/"; d = filepath.Dir(d) {
+			dirlist = append([]string{d}, dirlist...)
 		}
-		recs = append(recs, r)
+		dirlist = append(dirlist, n)
+		for _, n := range dirlist {
+			debug("copyCommands: %v", n)
+			r, err := cpio.GetRecord(n)
+			if err != nil {
+				log.Fatalf("%v: %v", n, err)
+			}
+			recs = append(recs, r)
+		}
 	}
 	cpio.MakeReproducible(recs)
 	if err := w.WriteRecords(recs); err != nil {
