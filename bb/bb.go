@@ -112,15 +112,6 @@ func init() {
 	}
 	uroot.Rootfs()
 
-	for n := range initMap {
-		t := filepath.Join("/ubin", n)
-		if err := os.Symlink("/init", t); err != nil {
-			log.Printf("Symlink /init to %v: %v", t, err)
-		}
-	}
-	if err := os.Symlink("/init", "/ubin/rush"); err != nil {
-		log.Printf("Symlink /init to %v: %v", "/ubin/rush", err)
-	}
         // spawn the first shell. We had been running the shell as pid 1
         // but that makes control tty stuff messy. We think.
         cloneFlags := uintptr(0)
@@ -342,7 +333,7 @@ func main() {
 
 	doConfig()
 
-	if err := os.MkdirAll(config.Bbsh, 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(config.Bbsh, "ubin"), 0755); err != nil {
 		log.Fatalf("%v", err)
 	}
 
@@ -393,6 +384,14 @@ func main() {
 		}
 		c.CmdName = filepath.Base(c.CmdPath)
 		oneCmd(c)
+		// In the bb case, the commands are built. In some cases, we want to
+		// specify init= for a u-root command on boot. Hence, it now makes sense
+		// to have the ubin directory populated on boot, not by /init.
+		l := filepath.Join(config.Bbsh, "ubin", c.CmdName)
+		err := os.Symlink("/init", l)
+		if err != nil {
+			log.Fatalf("Symlinking %v -> /init: %v", l, err)
+		}
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
@@ -421,6 +420,10 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
+	rush := filepath.Join(config.Bbsh, "ubin", "rush")
+	if err := os.Symlink("/init", rush); err != nil {
+		log.Printf("Symlink /init to %v: %v", rush, err)
+	}
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
 		log.Fatalf("%v\n", err)
 	}

@@ -28,7 +28,7 @@ var (
 	// e.g., /lib/modules/4.04, you would do add the root as / and the
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
-	paths      = map[string]string{}
+	paths      = map[string][]string{}
 	extraPaths = flag.String("extra", "", "Extra paths to add in the form root:start, e.g. /:etc/hosts")
 	extraCmds  = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 )
@@ -88,7 +88,7 @@ func ramfs() {
 		log.Fatalf("%v\n", err)
 	}
 
-	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = "init"
+	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = []string{"init","ubin"}
 
 	// For now, just one added path.
 	if *extraPaths != "" {
@@ -96,7 +96,7 @@ func ramfs() {
 		if len(x) != 2 {
 			log.Fatalf("extraPaths requires two : separated pathnames")
 		}
-		paths[x[0]] = x[1]
+		paths[x[0]] = append(paths[x[0]], x[1])
 	}
 
 	if *extraCmds != "" {
@@ -104,30 +104,33 @@ func ramfs() {
 	}
 
 	// For all the 'roots' in paths, start walking at the name.
-	for r, n := range paths {
-		if err := filepath.Walk(filepath.Join(r, n), func(name string, fi os.FileInfo, err error) error {
-			if err != nil {
-				return err
+	debug("PATHS: %v", paths)
+	for r, list := range paths {
+		for _, n := range list {
+			if err := filepath.Walk(filepath.Join(r, n), func(name string, fi os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				cn, err := filepath.Rel(r, name)
+				if err != nil {
+					log.Fatalf("filepath.Rel(%v, %v): %v", r, name, err)
+				}
+				debug("%v\n", cn)
+				rec, err := cpio.GetRecord(name)
+				if err != nil {
+					log.Fatalf("Getting record of %q failed: %v", cn, err)
+				}
+				// the name in the cpio is relative to our starting point.
+				rec.Name = cn
+				recs := []cpio.Record{rec}
+				cpio.MakeReproducible(recs)
+				if err := w.WriteRecords(recs); err != nil {
+					log.Fatalf("%v\n", err)
+				}
+				return nil
+			}); err != nil {
+				log.Fatalf("bbsh walk failed: %v", err)
 			}
-			cn, err := filepath.Rel(r, name)
-			if err != nil {
-				log.Fatalf("filepath.Rel(%v, %v): %v", r, name, err)
-			}
-			debug("%v\n", cn)
-			rec, err := cpio.GetRecord(name)
-			if err != nil {
-				log.Fatalf("Getting record of %q failed: %v", cn, err)
-			}
-			// the name in the cpio is relative to our starting point.
-			rec.Name = cn
-			recs := []cpio.Record{rec}
-			cpio.MakeReproducible(recs)
-			if err := w.WriteRecords(recs); err != nil {
-				log.Fatalf("%v\n", err)
-			}
-			return nil
-		}); err != nil {
-			log.Fatalf("bbsh walk failed: %v", err)
 		}
 	}
 
