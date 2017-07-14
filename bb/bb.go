@@ -327,6 +327,13 @@ func oneCmd(c Command) {
 		}
 	}
 	initMap += "\n\t\"" + c.CmdName + "\":" + c.CmdName + "Init,"
+	// In the bb case, the commands are built. In some cases, we want to
+	// specify init= for a u-root command on boot. Hence, it now makes sense
+	// to have the ubin directory populated on boot, not by /init.
+	l := filepath.Join(config.Bbsh, "ubin", c.CmdName)
+	if err := os.Symlink("/init", l); err != nil {
+		log.Fatalf("Symlinking %v -> /init: %v", l, err)
+	}
 }
 func main() {
 	var err error
@@ -384,14 +391,6 @@ func main() {
 		}
 		c.CmdName = filepath.Base(c.CmdPath)
 		oneCmd(c)
-		// In the bb case, the commands are built. In some cases, we want to
-		// specify init= for a u-root command on boot. Hence, it now makes sense
-		// to have the ubin directory populated on boot, not by /init.
-		l := filepath.Join(config.Bbsh, "ubin", c.CmdName)
-		err := os.Symlink("/init", l)
-		if err != nil {
-			log.Fatalf("Symlinking %v -> /init: %v", l, err)
-		}
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
