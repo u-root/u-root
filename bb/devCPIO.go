@@ -31,6 +31,7 @@ var devCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "tcz", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "etc", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "dev", Mode: d | 0755}},
+	{Info: cpio.Info{Name: "ubin", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "usr", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "usr/lib", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "lib64", Mode: d | 0755}},
