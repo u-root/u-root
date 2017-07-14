@@ -40,7 +40,7 @@ var (
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", true, "Verbose output")
 	ipv4         = flag.Bool("ipv4", false, "use IPV4")
-	test         = flag.Bool("test", true, "Test mode")
+	test         = flag.Bool("test", false, "Test mode")
 	debug        = func(string, ...interface{}) {}
 )
 
