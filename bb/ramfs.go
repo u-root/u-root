@@ -51,7 +51,7 @@ func sanity() {
 }
 
 // copyCommands takes a list of commands, generates the list of libs,
-// and creates cpio records, including directory records. 
+// and creates cpio records, including directory records.
 func copyCommands(w cpio.Writer, cmds []string) {
 	debug("copyCommands: start with %v", cmds)
 	var (
@@ -107,15 +107,13 @@ func ramfs() {
 		log.Fatalf("%v\n", err)
 	}
 
-	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = []string{"init","ubin"}
+	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = []string{"init", "ubin"}
 
-	// For now, just one added path.
 	if *extraPaths != "" {
-		x := strings.Split(*extraPaths, ":")
-		if len(x) != 2 {
-			log.Fatalf("extraPaths requires two : separated pathnames")
+		extras := strings.Split(*extraPaths, " ")
+		for _, x := range extras {
+			paths["/"] = append(paths["/"], x)
 		}
-		paths[x[0]] = append(paths[x[0]], x[1])
 	}
 
 	if *extraCmds != "" {
