@@ -43,7 +43,7 @@ func (a Archiver) Reader(r io.ReaderAt) Reader {
 }
 
 func (a Archiver) Writer(w io.Writer) Writer {
-	return Writer{a.RecordFormat.Writer(w)}
+	return Writer{rw: a.RecordFormat.Writer(w), alreadyWritten: make(map[string]bool)}
 }
 
 type Reader struct {
@@ -78,6 +78,10 @@ func (r Reader) ReadRecords() ([]Record, error) {
 
 type Writer struct {
 	rw RecordWriter
+	// There seems to be no harm done in stripping
+	// duplicate names when the record is written,
+	// and lots of harm done if we don't do it.
+	alreadyWritten map[string] bool
 }
 
 func (w Writer) WriteRecord(rec Record) error {
@@ -91,6 +95,11 @@ func (w Writer) WriteRecord(rec Record) error {
 		}
 		rec.Name = rel
 	}
+
+	if w.alreadyWritten[rec.Name] {
+		return nil
+	}
+	w.alreadyWritten[rec.Name] = true
 	return w.rw.WriteRecord(rec)
 }
 

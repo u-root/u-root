@@ -54,10 +54,7 @@ func sanity() {
 // and creates cpio records, including directory records.
 func copyCommands(w cpio.Writer, cmds []string) {
 	debug("copyCommands: start with %v", cmds)
-	var (
-		recs []cpio.Record
-		done = make(map[string]bool)
-	)
+	var recs []cpio.Record
 	libs, err := uroot.LddList(cmds)
 	if err != nil {
 		log.Fatalf("%v\n", err)
@@ -67,11 +64,7 @@ func copyCommands(w cpio.Writer, cmds []string) {
 		debug("copyCommands: file %v", n)
 		var dirlist []string
 		for d := filepath.Dir(n); d != "/"; d = filepath.Dir(d) {
-			if done[d] {
-				continue
-			}
 			dirlist = append([]string{d}, dirlist...)
-			done[d] = true
 		}
 		dirlist = append(dirlist, n)
 		for _, n := range dirlist {
