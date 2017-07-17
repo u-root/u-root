@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 )
 
 var (
@@ -80,6 +81,16 @@ type Writer struct {
 }
 
 func (w Writer) WriteRecord(rec Record) error {
+	// we do NOT write records with absolute paths.
+	if filepath.IsAbs(rec.Name) {
+		// There's no constant that means "root".
+		// PathSeparator is not really quite right.
+		rel, err := filepath.Rel("/", rec.Name)
+		if err != nil {
+			return fmt.Errorf("Can't make %s relative to /?", rec.Name)
+		}
+		rec.Name = rel
+	}
 	return w.rw.WriteRecord(rec)
 }
 
