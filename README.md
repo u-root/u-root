@@ -95,12 +95,12 @@ If you prefer to use elvish as shell in u-root, here are the instructions:
    in u-root/u-root/:
    `cd ./bb/`
    `go build .`
-   `CGO_ENABLED=0 ./bb 'src/github.com/u-root/u-root/cmds/[a-z]*' src/github.com/elves/elvish`
+   `./bb 'src/github.com/u-root/u-root/cmds/[a-z]*' src/github.com/elves/elvish`
    which generates a cpio file, /tmp/initramfs.linux\_amd64.cpio for you to
    start up u-root in qemu.
 
    If you prefer dynamic buildup mode, do the following command line in u-root/u-root:
-   `CGO_ENABLED=0 go run scripts/ramfs.go 'src/github.com/u-root/u-root/cmds/[a-z]*' src/github.com/elves/elvish`
+   `go run scripts/ramfs.go 'src/github.com/u-root/u-root/cmds/[a-z]*' src/github.com/elves/elvish`
    which also generates /tmp/initramfs.linux\_amd64.cpio.
 
 5. Afterwards, users can type command line `elvish` in u-root and start to use elvish as shell.
