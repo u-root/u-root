@@ -195,6 +195,6 @@ func GetRecord(path string) (Record, error) {
 		return StaticRecord([]byte(linkname), info), nil
 
 	default:
-		return EmptyRecord(info), nil
+		return StaticRecord(nil, info), nil
 	}
 }
