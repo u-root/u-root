@@ -20,7 +20,7 @@ type Record struct {
 	Info
 }
 
-var TrailerRecord = EmptyRecord(Info{Name: Trailer})
+var TrailerRecord = StaticRecord(nil, Info{Name: Trailer})
 
 type RecordReader interface {
 	ReadRecord() (Record, error)
@@ -49,14 +49,6 @@ func NewBytesReadCloser(contents []byte) io.ReadCloser {
 
 func NewReadCloser(r io.Reader) io.ReadCloser {
 	return ioutil.NopCloser(r)
-}
-
-func EmptyRecord(info Info) Record {
-	info.FileSize = 0
-	return Record{
-		ioutil.NopCloser(bytes.NewReader(nil)),
-		info,
-	}
 }
 
 type LazyOpen struct {
