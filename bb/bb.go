@@ -328,7 +328,7 @@ func oneCmd(c Command) {
 	}
 	initMap += "\n\t\"" + c.CmdName + "\":" + c.CmdName + "Init,"
 	// In the bb case, the commands are built. In some cases, we want to
-	// specify init= for a u-root command on boot. Hence, it now makes sense
+	// specify init= to be a u-root command on boot. Hence, it now makes sense
 	// to have the ubin directory populated on boot, not by /init.
 	l := filepath.Join(config.Bbsh, "ubin", c.CmdName)
 	if err := os.Symlink("/init", l); err != nil {
