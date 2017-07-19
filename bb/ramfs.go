@@ -33,6 +33,7 @@ var (
 The path before the : is used as a starting point for a walk; the path after the : selects what things to put
 into the initramfs starting at /. E.g., /tmp/prototype:/ will install the prototype file system into / of the initramfs`)
 	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
+	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
 
 func sanity() {
@@ -127,6 +128,30 @@ func ramfs() {
 
 	if *extraCmds != "" {
 		copyCommands(w, strings.Split(*extraCmds, " "))
+	}
+
+	if *extraCpio != "" {
+		extras := strings.Split(*extraCpio, " ")
+		for _, x := range extras {
+			a, err := cpio.Format("newc")
+			if err != nil {
+				log.Fatalf("Creating archiver: %v", err)
+			}
+			f, err := os.Open(x)
+			if err != nil {
+				log.Fatalf("%v: %v", x, err)
+			}
+			defer f.Close()
+			rr := a.Reader(f)
+			recs, err := rr.ReadRecords()
+			if err != nil {
+				log.Fatalf("read records: %v", err)
+			}
+			cpio.MakeReproducible(recs)
+			if err := w.WriteRecords(recs); err != nil {
+				log.Fatalf("%v\n", err)
+			}
+		}
 	}
 
 	// For all the 'roots' in paths, start walking at the name.
