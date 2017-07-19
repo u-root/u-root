@@ -148,6 +148,7 @@ var (
 		//{Name: "/dev/console", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
 		Dev{Name: "/dev/tty", Mode: uint32(syscall.S_IFCHR) | 0666, Dev: 0x0500},
 		Dev{Name: "/dev/urandom", Mode: uint32(syscall.S_IFCHR) | 0444, Dev: 0x0109},
+		Dev{Name: "/dev/port", Mode: uint32(syscall.S_IFCHR) | 0640, Dev: 0x0104},
 		Mount{Source: "proc", Target: "/proc", FSType: "proc", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		Mount{Source: "sys", Target: "/sys", FSType: "sysfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs", Flags: syscall.MS_MGC_VAL, Opts: ""},

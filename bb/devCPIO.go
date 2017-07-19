@@ -39,6 +39,7 @@ var devCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "dev/console", Mode: c | 0600, Rmajor: 5, Rminor: 1}},
 	{Info: cpio.Info{Name: "dev/tty", Mode: c | 0666, Rmajor: 5, Rminor: 0}},
 	{Info: cpio.Info{Name: "dev/null", Mode: c | 0666, Rmajor: 1, Rminor: 3}},
+	{Info: cpio.Info{Name: "dev/port", Mode: c | 0640, Rmajor: 1, Rminor: 4}},
 	{Info: cpio.Info{Name: "dev/urandom", Mode: c | 0666, Rmajor: 1, Rminor: 9}},
 	{Info: cpio.Info{Name: "etc/resolv.conf", Mode: f | 0644, FileSize: uint64(len(nameserver))}, ReadCloser: cpio.NewBytesReadCloser([]byte(nameserver))},
 	{Info: cpio.Info{Name: "etc/localtime", Mode: f | 0644, FileSize: uint64(len(gmt0))}, ReadCloser: cpio.NewBytesReadCloser([]byte(gmt0))},
