@@ -7,33 +7,43 @@ package main
 
 import (
 	"os"
+	"strconv"
 )
 
 const (
-	data   = 0x3f8
-	status = 0x3fd
+	status = 5
 	inRdy  = 1
 	outRdy = 0x40
 )
 
-type uart struct{}
-
-var port *os.File
-
-func openUART() (err error) {
-	port, err = os.OpenFile("/dev/port", os.O_RDWR, 0)
-	return
+type uart struct {
+	data, status int64
 }
 
-func (uart) OK(bit uint8) (bool, error) {
+var f *os.File
+
+func openUART(comPort string) (*uart, error) {
+	port, err := strconv.ParseUint(comPort, 0, 16)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err = os.OpenFile("/dev/port", os.O_RDWR, 0)
+	if err != nil {
+		return nil, err
+	}
+	return &uart{data: int64(port), status: int64(port + status)}, nil
+}
+
+func (u *uart) OK(bit uint8) (bool, error) {
 	var rdy [1]byte
-	if _, err := port.ReadAt(rdy[:], status); err != nil {
+	if _, err := f.ReadAt(rdy[:], u.status); err != nil {
 		return false, err
 	}
 	return rdy[0]&bit != 0, nil
 }
 
-func (u uart) io(b []byte, bit uint8, f func([]byte) error) (int, error) {
+func (u *uart) io(b []byte, bit uint8, f func([]byte) error) (int, error) {
 	var (
 		err error
 		amt int
@@ -57,14 +67,14 @@ func (u uart) io(b []byte, bit uint8, f func([]byte) error) (int, error) {
 
 func (u uart) Write(b []byte) (int, error) {
 	return u.io(b, outRdy, func(b []byte) error {
-		_, err := port.WriteAt(b[:1], data)
+		_, err := f.WriteAt(b[:1], u.data)
 		return err
 	})
 }
 
 func (u uart) Read(b []byte) (int, error) {
 	return u.io(b, inRdy, func(b []byte) error {
-		_, err := port.ReadAt(b[:1], data)
+		_, err := f.ReadAt(b[:1], u.data)
 		return err
 	})
 }
