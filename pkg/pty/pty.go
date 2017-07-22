@@ -27,6 +27,7 @@ type Pty struct {
 	Sname    string
 	Kid      int
 	TTY      *termios.TTY
+	WS       *termios.WinSize
 	Restorer *termios.Termios
 }
 
@@ -36,7 +37,11 @@ func (p *Pty) Start() error {
 		return err
 	}
 
-	if _, err := tty.Raw(); err != nil {
+	if p.WS, err = tty.GetWinSize(); err != nil {
+		return err
+	}
+
+	if p.Restorer, err = tty.Raw(); err != nil {
 		return err
 	}
 
@@ -46,9 +51,14 @@ func (p *Pty) Start() error {
 	}
 	p.Kid = p.C.Process.Pid
 
-	go func() {
-		io.Copy(p.C.Stdout, p.Ptm)
-	}()
+	// We make a good faith effort to set the
+	// WinSize of the Pts, but it's not a deal breaker
+	// if we can't do it.
+	if err := termios.SetWinSize(p.Pts.Fd(), p.WS); err != nil {
+		fmt.Fprintf(p.C.Stderr, "SetWinSize of Pts: %v", err)
+	}
+
+	go io.Copy(p.C.Stdout, p.Ptm)
 
 	// The 1 byte for IO may seem weird, but ptys are for human interacxtion
 	// and, let's face it, we don't all type fast.

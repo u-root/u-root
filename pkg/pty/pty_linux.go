@@ -12,9 +12,9 @@
 package pty
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 	"unsafe"
 
@@ -70,7 +70,7 @@ func ptsname(f *os.File) (string, error) {
 	if err != 0 {
 		return "", err
 	}
-	return "/dev/pts/" + strconv.Itoa(int(n)), nil
+	return fmt.Sprintf("/dev/pts/%d", n), nil
 }
 
 func ptsunlock(f *os.File) error {

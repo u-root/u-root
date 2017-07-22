@@ -81,7 +81,6 @@ func New() (*TTY, error) {
 func (t *TTY) Get() (*Termios, error) {
 	var ti = &Termios{}
 	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL, t.f.Fd(), uintptr(TCGETS), uintptr(unsafe.Pointer(ti)))
-
 	if errno != 0 || r1 != 0 {
 		return nil, fmt.Errorf("termios.get: r1 %v, errno %v", r1, errno)
 	}
@@ -110,19 +109,27 @@ func MakeRaw(term *Termios) *Termios {
 	return &raw
 }
 
-func (t *TTY) GetWinSize() (*WinSize, error) {
+func GetWinSize(fd uintptr) (*WinSize, error) {
 	var w = &WinSize{}
-	if r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL, t.f.Fd(), uintptr(TIOCGWINSZ), uintptr(unsafe.Pointer(w))); errno != 0 || r1 != 0 {
+	if r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(TIOCGWINSZ), uintptr(unsafe.Pointer(w))); errno != 0 || r1 != 0 {
 		return nil, fmt.Errorf("WinSize.Get: r1 %v, errno %v", r1, errno)
 	}
 
 	return w, nil
 }
 
-func (t *TTY) SetWinSize(w *WinSize) error {
-	if r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL, t.f.Fd(), uintptr(TIOCSWINSZ), uintptr(unsafe.Pointer(w))); errno != 0 || r1 != 0 {
+func (t *TTY) GetWinSize() (*WinSize, error) {
+	return GetWinSize(t.f.Fd())
+}
+
+func SetWinSize(fd uintptr, w *WinSize) error {
+	if r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(TIOCSWINSZ), uintptr(unsafe.Pointer(w))); errno != 0 || r1 != 0 {
 		return fmt.Errorf("WinSize.Set: r1 %v, errno %v", r1, errno)
 	}
 
 	return nil
+}
+
+func (t *TTY) SetWinSize(w *WinSize) error {
+	return SetWinSize(t.f.Fd(), w)
 }
