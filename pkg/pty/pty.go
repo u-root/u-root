@@ -81,7 +81,10 @@ func (p *Pty) Run() error {
 		return err
 	}
 
+	return p.Wait()
+}
+
+func (p *Pty) Wait() error {
 	defer p.TTY.Set(p.Restorer)
-	werr := p.C.Wait()
-	return werr
+	return p.C.Wait()
 }
