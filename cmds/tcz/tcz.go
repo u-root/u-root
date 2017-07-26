@@ -96,10 +96,11 @@ func clonetree(tree string) error {
 				return nil
 			}
 
+			// If it does not, return error because tcz packages are inconsistent
 			l.Printf("Symlink: need %v -> %v but %v -> %v is already there", path, path[lt:], path, link)
 			return err
 		}
-
+		// If the link does not exist
 		l.Printf("Need to symlink %v to %v\n", path, path[lt:])
 
 		if err := os.Symlink(path, path[lt:]); err != nil {
