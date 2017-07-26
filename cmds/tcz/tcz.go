@@ -72,9 +72,10 @@ func clonetree(tree string) error {
 	l.Printf("Clone tree %v", tree)
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+
 		l.Printf("Clone tree with path %s fi %v", path, fi)
 		if fi.IsDir() {
-			l.Printf("walking, dir %v\n", path)
+			l.Printf("Walking, dir %v\n", path)
 			if path[lt:] == "" {
 				return nil
 			}
@@ -87,19 +88,26 @@ func clonetree(tree string) error {
 			return nil
 		}
 		// all else gets a symlink.
-		if link, err := os.Readlink(path); err == nil {
+
+		// If the link exists
+		if link, err := os.Readlink(path[lt:]); err == nil {
+			// Confirm that it points to the full tree path
 			if link == path {
 				return nil
 			}
+
+			// If it does not, return error because tcz packages are inconsistent
 			l.Printf("Symlink: need %v -> %v but %v -> %v is already there", path, path[lt:], path, link)
 			return err
 		}
-		l.Printf("Need to symlnk %v to %v\n", path, path[lt:])
+
+		// If the link does not exist
+		l.Printf("Need to symlink %v to %v\n", path, path[lt:])
+
 		if err := os.Symlink(path, path[lt:]); err != nil {
-			// TODO: if it's there, and has same value, no error.
-			l.Printf("symlink failed: %v", err)
-			return err
+			l.Printf("Symlink: %v", err)
 		}
+
 		return nil
 	})
 	if err != nil {
