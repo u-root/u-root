@@ -90,31 +90,28 @@ func clonetree(tree string) error {
 		// all else gets a symlink.
 
 		// If the link exists
-		if link, err := os.Readlink(path[lt:]); err == nil {
-			// Confirm that it points to the same path to be assigned
-			if link == path {
+		if target, err := os.Readlink(path[lt:]); err == nil {
+			// Confirm that it points to the same path to be symlinked
+			if target == path {
 				return nil
 			}
 
 			// If it does not, return error because tcz packages are inconsistent
-			l.Printf("Symlink: need %v -> %v but %v -> %v is already there", path, path[lt:], path, link)
-			return err
+			return fmt.Errorf("symlink: need %q -> %q, but %q -> %q is already there", path, path[lt:], path, target)
 		}
-		// If the link does not exist
+
 		l.Printf("Need to symlink %v to %v\n", path, path[lt:])
 
 		if err := os.Symlink(path, path[lt:]); err != nil {
-			l.Printf("Symlink: %v", err)
-			return err
+			return fmt.Errorf("Symlink: %v", err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		l.Fatalf("Clone tree: %v", err)
 	}
-	return err
+	return nil
 }
 
 func fetch(p string) error {
