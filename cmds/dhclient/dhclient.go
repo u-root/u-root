@@ -37,6 +37,7 @@ const (
 
 var (
 	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
+	retry        = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
 	verbose      = flag.Bool("verbose", true, "Verbose output")
 	ipv4         = flag.Bool("ipv4", false, "use IPV4")
@@ -58,7 +59,7 @@ func ifup(ifname string) (netlink.Link, error) {
 
 }
 
-func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error {
+func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
 	mac := iface.Attrs().HardwareAddr
 	conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
@@ -71,21 +72,36 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 	}
 
 	var packet dhcp4.Packet
+	needsRequest := true
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
 		debug("Start getting or renewing DHCPv4 lease")
 
 		var success bool
-		if packet == nil {
-			success, packet, err = client.Request()
-		} else {
-			success, packet, err = client.Renew(packet)
-		}
-		if err != nil {
-			networkError, ok := err.(*net.OpError)
-			if ok && networkError.Timeout() {
-				return fmt.Errorf("%s: could not find DHCP server", mac)
+		for i := 0; i < retry || retry < 0; i++ {
+			if i > 0 {
+				if needsRequest {
+					log.Printf("Resending DHCPv4 request...\n")
+				} else {
+					log.Printf("Resending DHCPv4 renewal")
+				}
 			}
-			return fmt.Errorf("%s: error: %v", mac, err)
+
+			if needsRequest {
+				success, packet, err = client.Request()
+			} else {
+				success, packet, err = client.Renew(packet)
+			}
+			if err != nil {
+				if err0, ok := err.(net.Error); ok && err0.Timeout() {
+					log.Printf("%s: could not find DHCP server", mac)
+				} else {
+					log.Printf("%s: error: %v", mac, err)
+				}
+			} else {
+				// Client needs renew after no matter what state it is now.
+				needsRequest = false
+				break
+			}
 		}
 
 		debug("Success on %s: %v\n", mac, success)
@@ -149,12 +165,12 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration) error
 
 // dhcp6 support in go is hard to find. This function represents our best current
 // guess based on reading and testing.
-func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration) error {
+func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
 	conn, err := dhcp6client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
-	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn, timeout)
+	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn, timeout, retry)
 
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
 		debug("Start getting or renewing DHCPv6 lease")
@@ -227,9 +243,9 @@ func main() {
 				return
 			}
 			if *ipv4 {
-				done <- dhclient4(iface, *renewals, timeout)
+				done <- dhclient4(iface, *renewals, timeout, *retry)
 			} else {
-				done <- dhclient6(iface, *renewals, timeout)
+				done <- dhclient6(iface, *renewals, timeout, *retry)
 			}
 		}(i)
 	}
