@@ -3,7 +3,6 @@ package dhcp6client
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"time"
 
@@ -17,10 +16,12 @@ const (
 	dstPort = 547
 )
 
-// All DHCP servers and relay agents on the local network segment (RFC 3315)
-// IPv6 Multicast (RFC 2464)
-// insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)
-var multicastMAC = net.HardwareAddr([]byte{0x33, 0x33, 0x00, 0x01, 0x00, 0x02})
+var (
+	// All DHCP servers and relay agents on the local network segment (RFC 3315)
+	// IPv6 Multicast (RFC 2464)
+	// insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)
+	multicastMAC = net.HardwareAddr([]byte{0x33, 0x33, 0x00, 0x01, 0x00, 0x02})
+)
 
 type Client struct {
 	// The HardwareAddr to send in the request.
@@ -31,13 +32,19 @@ type Client struct {
 
 	// Timeout
 	timeout time.Duration
+
+	// Max number of attempts to send DHCPv6 solicit to server.
+	// A valid DHCPv6 reply is supposed to be received by client before timeout.
+	// -1 means infinity.
+	retry int
 }
 
-func New(haddr net.HardwareAddr, packetSock *packetSock, t time.Duration) *Client {
+func New(haddr net.HardwareAddr, packetSock *packetSock, t time.Duration, r int) *Client {
 	return &Client{
 		srcMAC:     haddr,
 		connection: packetSock,
 		timeout:    t,
+		retry:      r,
 	}
 }
 
@@ -48,18 +55,15 @@ func (c *Client) Solicit() ([]*dhcp6.IAAddr, *dhcp6.Packet, error) {
 	}
 
 	var packet *dhcp6.Packet
-	for {
+	for i := 0; i < c.retry || c.retry < 0; i++ { // each retry takes the amount of timeout at worst.
 		if err := c.SendPacket(solicitPacket); err != nil {
 			return nil, nil, fmt.Errorf("send solicit packet(%v) = err %v", solicitPacket, err)
 		}
 
 		packet, err = c.ReadReply()
 		if err != nil {
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				log.Printf("%v: resending DHCPv6 Solicit Message...", err)
-				continue
-			}
-			return nil, nil, fmt.Errorf("error while reading reply: %v", err)
+			log.Printf("%v\nResending DHCPv6 Solicit Message...", err)
+			continue
 		} else {
 			break
 		}
@@ -107,21 +111,22 @@ func (p *buffer) remaining() []byte {
 	return p.consume(len(p.buf))
 }
 
+// If the client fails to receive a valid DHCPv6 packet via socket,
+// it keeps listening until the time is out.
 func (c *Client) ReadReply() (*dhcp6.Packet, error) {
-	var err error
-	for i := 0; i < 5; i++ {
-		// set a random timeout within range [c.timeout, 2*c.timeout)
-		// so as to prevent swamping a DHCP server.
-		c.connection.SetReadTimeout(c.timeout + time.Duration(rand.Intn(int(c.timeout))))
+	start := time.Now()
+
+	for {
+		remainingTime := c.timeout - time.Since(start)
+		if remainingTime <= 0 {
+			return nil, fmt.Errorf("waiting for response timed out")
+		}
+
+		c.connection.SetReadTimeout(remainingTime)
 		pb := make([]byte, 1500)
 		var n int
-		n, err = c.connection.ReadFrom(pb)
+		n, err := c.connection.ReadFrom(pb)
 		if err != nil {
-			// Return error if read time of socket is due,
-			// so that request can be resent instantly
-			if err, ok := err.(net.Error); ok && err.Timeout() {
-				return nil, err
-			}
 			continue
 		}
 
@@ -134,12 +139,12 @@ func (c *Client) ReadReply() (*dhcp6.Packet, error) {
 
 			if udp.DestinationPort() == srcPort {
 				dhcp6p := &dhcp6.Packet{}
-				if err = dhcp6p.UnmarshalBinary(p.remaining()); err != nil {
+				if err := dhcp6p.UnmarshalBinary(p.remaining()); err != nil {
+					// Not a valid DHCPv6 reply; keep listening.
 					continue
 				}
 				return dhcp6p, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("failed to get ipv6 address after five attempts: %v", err)
 }
