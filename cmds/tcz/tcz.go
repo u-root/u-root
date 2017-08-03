@@ -249,12 +249,12 @@ func main() {
 	if *debugPrint {
 		debug = l.Printf
 	}
-	if len(os.Args) < 2 {
+
+	packages := flag.Args()
+
+	if len(packages) == 0 {
 		os.Exit(1)
 	}
-
-	cmdName := flag.Args()[0]
-	tczName := cmdName + ".tcz"
 
 	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
 		l.Fatal(err)
@@ -264,12 +264,18 @@ func main() {
 		l.Fatal(err)
 	}
 
-	if err := installPackage(tczName, needPackages); err != nil {
-		l.Fatal(err)
-	}
-	debug("After installpackages: needPackages %v\n", needPackages)
+	for cmdName := range packages {
 
-	if err := setupPackages(tczName, needPackages); err != nil {
-		l.Fatal(err)
+		tczName := cmdName + ".tcz"
+
+		if err := installPackage(tczName, needPackages); err != nil {
+			l.Fatal(err)
+		}
+
+		debug("After installpackages: needPackages %v\n", needPackages)
+
+		if err := setupPackages(tczName, needPackages); err != nil {
+			l.Fatal(err)
+		}
 	}
 }
