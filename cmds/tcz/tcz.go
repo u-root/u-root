@@ -239,6 +239,8 @@ func setupPackages(tczName string, deps map[string]bool) error {
 
 }
 
+func debug(f string, s ...interface{}) {}
+
 func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
@@ -250,7 +252,6 @@ func main() {
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
-
 
 	cmdName := flag.Args()[0]
 	tczName := cmdName + ".tcz"
