@@ -51,6 +51,7 @@ var (
 	debug              = func(f string, s ...interface{}) {}
 	tczServerDir       string
 	tczLocalPackageDir string
+	debug              = func(f string, s ...interface{}) {}
 )
 
 // consider making this a goroutine which pushes the string down the channel.
@@ -118,6 +119,14 @@ func clonetree(tree string) error {
 func fetch(p string) error {
 	fullpath := filepath.Join(tczLocalPackageDir, p)
 	packageName := filepath.Join(tczServerDir, p)
+
+	if _, err := os.Stat(fullpath); !os.IsNotExist(err) {
+		debug("package %s is downloaded\n", fullpath)
+		return nil
+	}
+
+	packageName := path.Join(tczServerDir, p)
+
 	if _, err := os.Stat(fullpath); err != nil {
 		cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
 		debug("Fetch %v\n", cmd)
@@ -201,10 +210,12 @@ func installPackage(tczName string, deps map[string]bool) error {
 func setupPackages(tczName string, deps map[string]bool) error {
 	debug("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
-		cmdName := strings.Split(v, ".")[0]
+		cmdName := strings.Split(v, filepath.Ext(v))[0]
 		packagePath := filepath.Join("/tmp/tcloop", cmdName)
 		if err := os.MkdirAll(packagePath, 0700); err != nil {
-			l.Fatal(err)
+			l.Printf("overwriting %s", packagePath)
+			//l.Fatal(err)
+
 		}
 
 		loopname, err := findloop()
@@ -226,6 +237,16 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		if errno != 0 {
 			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
 		}
+
+		directory, err := os.Open(packagePath)
+
+		if err != nil {
+			l.Fatalf("Error opening %s: %v", packagePath, err)
+		}
+
+		if fileList, _ := directory.Readdir(1); len(fileList) == 0 {
+			debug("Directory %s is not empty, skipping mount")
+		}
 		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
 		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
 			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
@@ -238,8 +259,6 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	return nil
 
 }
-
-func debug(f string, s ...interface{}) {}
 
 func main() {
 	flag.Parse()
@@ -264,7 +283,7 @@ func main() {
 		l.Fatal(err)
 	}
 
-	for cmdName := range packages {
+	for _, cmdName := range packages {
 
 		tczName := cmdName + ".tcz"
 
