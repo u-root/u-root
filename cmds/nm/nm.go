@@ -14,7 +14,19 @@ func syms(n string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%v: %v", n, f)
+	fmt.Printf("%v: FileHeader %v *OptionalHeader %v\n", n, f.FileHeader, f.OptionalHeader)
+	fmt.Printf("%d Symbols: %v:\n", len(f.Symbols), f.Symbols)
+	for _, s := range f.Symbols {
+		fmt.Printf("\t%v\n", *s)
+	}
+	fmt.Printf("%d COFFSymbols: %v:\n", len(f.COFFSymbols), f.COFFSymbols)
+	for _, s := range f.COFFSymbols {
+		fmt.Printf("\t%v\n", s)
+	}
+	fmt.Printf("%d Sections: %v:\n", len(f.Sections), f.Sections)
+	for _, s := range f.Sections {
+		fmt.Printf("\t%v\n", *s)
+	}
 	return nil
 }
 
