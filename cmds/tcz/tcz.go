@@ -119,8 +119,6 @@ func fetch(p string) error {
 	fullpath := filepath.Join(tczLocalPackageDir, p)
 	packageName := filepath.Join(tczServerDir, p)
 	if _, err := os.Stat(fullpath); err != nil {
-		// filepath.Join doesn't quite work here. It will try to do file-system-like
-		// joins and it ends up remove the // and replacing it with a clash.
 		cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
 		debug("Fetch %v\n", cmd)
 
@@ -161,7 +159,6 @@ func fetch(p string) error {
 func installPackage(tczName string, deps map[string]bool) error {
 	debug("installPackage: %v %v\n", tczName, deps)
 	depName := tczName + ".dep"
-	// filepath.Join doesn't quite work here.
 	if err := fetch(tczName); err != nil {
 		l.Fatal(err)
 	}
@@ -266,7 +263,6 @@ func main() {
 		l.Fatal(err)
 	}
 
-	// filepath.Join doesn't quite work here.
 	if err := installPackage(tczName, needPackages); err != nil {
 		l.Fatal(err)
 	}
