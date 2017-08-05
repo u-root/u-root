@@ -47,6 +47,8 @@ var (
 	version            = flag.String("v", "5.x", "tinycore version")
 	arch               = flag.String("a", "x86_64", "tinycore architecture")
 	port               = flag.String("p", "80", "Host port")
+	debugPrint         = flag.Bool("d", false, "Enable debug prints")
+	debug              = func(f string, s ...interface{}) {}
 	tczServerDir       string
 	tczLocalPackageDir string
 )
@@ -68,18 +70,18 @@ func findloop() (name string, err error) {
 }
 
 func clonetree(tree string) error {
-	l.Printf("Clone tree %v", tree)
+	debug("Clone tree %v", tree)
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
 
-		l.Printf("Clone tree with path %s fi %v", path, fi)
+		debug("Clone tree with path %s fi %v", path, fi)
 		if fi.IsDir() {
-			l.Printf("Walking, dir %v\n", path)
+			debug("Walking, dir %v\n", path)
 			if path[lt:] == "" {
 				return nil
 			}
 			if err := os.MkdirAll(path[lt:], 0700); err != nil {
-				l.Printf("Mkdir of %s failed: %v", path[lt:], err)
+				debug("Mkdir of %s failed: %v", path[lt:], err)
 				// TODO: EEXIST should not be an error. Ignore
 				// err for now. FIXME.
 				//return err
@@ -99,7 +101,7 @@ func clonetree(tree string) error {
 			return fmt.Errorf("symlink: need %q -> %q, but %q -> %q is already there", path, path[lt:], path, target)
 		}
 
-		l.Printf("Need to symlink %v to %v\n", path, path[lt:])
+		debug("Need to symlink %v to %v\n", path, path[lt:])
 
 		if err := os.Symlink(path, path[lt:]); err != nil {
 			return fmt.Errorf("Symlink: %v", err)
@@ -121,7 +123,7 @@ func fetch(p string) error {
 		// filepath.Join doesn't quite work here. It will try to do file-system-like
 		// joins and it ends up remove the // and replacing it with a clash.
 		cmd := "http://" + *host + ":" + *port + "/" + packageName
-		l.Printf("Fetch %v\n", cmd)
+		debug("Fetch %v\n", cmd)
 
 		resp, err := http.Get(cmd)
 		if err != nil {
@@ -130,25 +132,25 @@ func fetch(p string) error {
 		defer resp.Body.Close()
 
 		if resp.Status != "200 OK" {
-			l.Printf("%v Not OK! %v\n", cmd, resp.Status)
+			debug("%v Not OK! %v\n", cmd, resp.Status)
 			return syscall.ENOENT
 		}
 
-		l.Printf("resp %v err %v\n", resp, err)
+		debug("resp %v err %v\n", resp, err)
 		// we have the whole tcz in resp.Body.
 		// First, save it to /tcz/name
 		f, err := os.Create(fullpath)
 		if err != nil {
 			l.Fatalf("Create of :%v: failed: %v\n", fullpath, err)
 		} else {
-			l.Printf("created %v f %v\n", fullpath, f)
+			debug("created %v f %v\n", fullpath, f)
 		}
 
 		if c, err := io.Copy(f, resp.Body); err != nil {
 			l.Fatal(err)
 		} else {
 			/* OK, these are compressed tars ... */
-			l.Printf("c %v err %v\n", c, err)
+			debug("c %v err %v\n", c, err)
 		}
 		f.Close()
 	}
@@ -158,21 +160,21 @@ func fetch(p string) error {
 // deps is ALL the packages we need fetched or not
 // this may even let us work with parallel tcz, ALMOST
 func installPackage(tczName string, deps map[string]bool) error {
-	l.Printf("installPackage: %v %v\n", tczName, deps)
+	debug("installPackage: %v %v\n", tczName, deps)
 	depName := tczName + ".dep"
 	// filepath.Join doesn't quite work here.
 	if err := fetch(tczName); err != nil {
 		l.Fatal(err)
 	}
 	deps[tczName] = true
-	l.Printf("Fetched %v\n", tczName)
+	debug("Fetched %v\n", tczName)
 	// now fetch dependencies if any.
 	if err := fetch(depName); err == nil {
-		l.Printf("Fetched dep ok!\n")
+		debug("Fetched dep ok!\n")
 	} else {
-		l.Printf("No dep file found\n")
+		debug("No dep file found\n")
 		if err := ioutil.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0444)); err != nil {
-			l.Printf("Tried to write Blank file %v, failed %v\n", depName, err)
+			debug("Tried to write Blank file %v, failed %v\n", depName, err)
 		}
 		return nil
 	}
@@ -181,14 +183,14 @@ func installPackage(tczName string, deps map[string]bool) error {
 	if err != nil {
 		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
 	}
-	l.Printf("deplist for %v is :%v:\n", depName, deplist)
+	debug("deplist for %v is :%v:\n", depName, deplist)
 	for _, v := range strings.Split(string(deplist), "\n") {
 		// split("name\n") gets you a 2-element array with second
 		// element the empty string
 		if len(v) == 0 {
 			break
 		}
-		l.Printf("FOR %v get package %v\n", tczName, v)
+		debug("FOR %v get package %v\n", tczName, v)
 		if deps[v] {
 			continue
 		}
@@ -201,7 +203,7 @@ func installPackage(tczName string, deps map[string]bool) error {
 }
 
 func setupPackages(tczName string, deps map[string]bool) error {
-	l.Printf("setupPackages: @ %v deps %v\n", tczName, deps)
+	debug("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
 		cmdName := strings.Split(v, ".")[0]
 		packagePath := filepath.Join("/tmp/tcloop", cmdName)
@@ -213,7 +215,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		if err != nil {
 			l.Fatal(err)
 		}
-		l.Printf("findloop gets %v err %v\n", loopname, err)
+		debug("findloop gets %v err %v\n", loopname, err)
 		pkgpath := filepath.Join(tczLocalPackageDir, v)
 		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
 		if err != nil {
@@ -223,7 +225,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		if err != nil {
 			l.Fatalf("%v: %v\n", loopname, err)
 		}
-		l.Printf("ffd %v lfd %v\n", ffd, lfd)
+		debug("ffd %v lfd %v\n", ffd, lfd)
 		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
 		if errno != 0 {
 			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
@@ -246,9 +248,14 @@ func main() {
 	needPackages := make(map[string]bool)
 	tczServerDir = filepath.Join("/", *version, *arch, "tcz")
 	tczLocalPackageDir = filepath.Join("/tcz", tczServerDir)
+	if *debugPrint {
+		debug = l.Printf
+	}
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}
+
+
 	cmdName := flag.Args()[0]
 	tczName := cmdName + ".tcz"
 
@@ -264,7 +271,7 @@ func main() {
 	if err := installPackage(tczName, needPackages); err != nil {
 		l.Fatal(err)
 	}
-	l.Printf("After installpackages: needPackages %v\n", needPackages)
+	debug("After installpackages: needPackages %v\n", needPackages)
 
 	if err := setupPackages(tczName, needPackages); err != nil {
 		l.Fatal(err)
