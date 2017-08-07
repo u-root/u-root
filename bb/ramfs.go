@@ -1,5 +1,5 @@
 // Copyright 2015-2017 the u-root Authors. All rights reserved
-// Use of this source code is governed by a BSD-style
+// Use of this source code is governed by a BSiD-style
 // license that can be found in the LICENSE file.
 
 // bbramfs builds a simple initramfs given an existing built bb; see bb.go
@@ -28,10 +28,7 @@ var (
 	// e.g., /lib/modules/4.04, you would do add the root as / and the
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
-	paths      = map[string][]string{}
-	extraPaths = flag.String("extra", "", `Extra paths to add in the form root:start, e.g. /:etc/hosts.
-The path before the : is used as a starting point for a walk; the path after the : selects what things to put
-into the initramfs starting at /. E.g., /tmp/prototype:/ will install the prototype file system into / of the initramfs`)
+	paths     = map[string][]string{}
 	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
@@ -70,15 +67,17 @@ func dirComponents(dir string) []string {
 
 // copyCommands takes a list of commands, generates the list of libs,
 // and creates cpio records, including directory records.
-func copyCommands(w cpio.Writer, cmds []string) {
-	debug("copyCommands: start with %v", cmds)
+func copyCommands(w cpio.Writer, cmd string) {
+	debug("copyCommands: start with %v", cmd)
 	var recs []cpio.Record
-	libs, err := uroot.LddList(cmds)
+	//introduced the tmpSlice variable to be the dependency slice for the cmd string
+	tmpSlice := []string{cmd}
+	libs, err := uroot.LddList(tmpSlice)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cmds = append(cmds, libs...)
-	for _, n := range cmds {
+	tmpSlice = append(tmpSlice, libs...)
+	for _, n := range tmpSlice {
 		debug("copyCommands: file %v", n)
 		for _, n := range dirComponents(n) {
 			debug("copyCommands: %v", n)
@@ -115,23 +114,29 @@ func ramfs() {
 
 	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = []string{"init", "ubin"}
 
-	if *extraPaths != "" {
-		extras := strings.Split(strings.TrimSpace(*extraPaths), " ")
-		for _, x := range extras {
-			p := strings.Split(x, ":")
-			if len(p) != 2 {
-				p = append([]string{"/"}, p...)
+	if *extraCmds != "" {
+		copyc := strings.Fields(*extraCmds)
+		for _, eachPath := range copyc {
+			// eachPath must be an absolute filepath for os.Stat
+			statval, err := os.Stat(eachPath)
+			if err != nil {
+				log.Fatalf("%v\n", err)
 			}
-			paths[p[0]] = append(paths[p[0]], p[1])
+			if statval.IsDir() {
+				// If the file is a directory, append all the files in the directory to the path
+				p := strings.Split(eachPath, ":")
+				if len(p) != 2 {
+					p = append([]string{"/"}, p...)
+				}
+				paths[p[0]] = append(paths[p[0]], p[1])
+			} else {
+				copyCommands(w, eachPath)
+			}
 		}
 	}
 
-	if *extraCmds != "" {
-		copyCommands(w, strings.Split(strings.TrimSpace(*extraCmds), " "))
-	}
-
 	if *extraCpio != "" {
-		extras := strings.Split(strings.TrimSpace(*extraCpio), " ")
+		extras := strings.Fields(*extraCpio)
 		for _, x := range extras {
 			a, err := cpio.Format("newc")
 			if err != nil {
