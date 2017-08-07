@@ -114,10 +114,9 @@ func ramfs() {
 	}
 
 	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = []string{"init", "ubin"}
-		
 
 	if *extraPaths != "" {
-		extras := strings.Split(strings.Trim(*extraPaths, " "), " ")
+		extras := strings.Split(strings.TrimSpace(*extraPaths), " ")
 		for _, x := range extras {
 			p := strings.Split(x, ":")
 			if len(p) != 2 {
@@ -128,11 +127,11 @@ func ramfs() {
 	}
 
 	if *extraCmds != "" {
-		copyCommands(w, strings.Split(strings.Trim(*extraCmds, " "), " "))
+		copyCommands(w, strings.Split(strings.TrimSpace(*extraCmds), " "))
 	}
 
 	if *extraCpio != "" {
-		extras := strings.Split(strings.Trim(*extraCpio, " "), " ")
+		extras := strings.Split(strings.TrimSpace(*extraCpio), " ")
 		for _, x := range extras {
 			a, err := cpio.Format("newc")
 			if err != nil {
