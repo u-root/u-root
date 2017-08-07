@@ -11,7 +11,6 @@
 //     -i: interactive mode
 //     -v: verbose mode
 //     -R: remove file hierarchies
-//     -r: equivalent to -R
 package main
 
 import (
@@ -26,7 +25,6 @@ var (
 	interactive  = flag.Bool("i", false, "Interactive mode.")
 	verbose      = flag.Bool("v", false, "Verbose mode.")
 	hierarchies  = flag.Bool("R", false, "Remove file hierarchies")
-	hierarchiesr = flag.Bool("r", false, "Equivalent to -R.")
 	cmd          = "rm [-Rrvi] file..."
 )
 
@@ -40,16 +38,13 @@ func init() {
 
 func rm(files []string) error {
 	f := os.Remove
-	//fmt.Printf("\n R: %t \n r: %t \n", *hierarchies, *hierarchiesr)
-	if *hierarchies || *hierarchiesr {
-		//fmt.Printf("changing value of the function")
+	if *hierarchies {
 		f = os.RemoveAll
 	}
 	workingPath, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-
 	input := bufio.NewScanner(os.Stdin)
 	for _, file := range files {
 		if *interactive {
