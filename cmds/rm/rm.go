@@ -39,11 +39,10 @@ func init() {
 }
 
 func rm(files []string) error {
-	fmt.Printf("\n unchanged value of funciotn \n")
 	f := os.Remove
-	fmt.Printf("\n r: %t \n R: %t \n", *hierarchies, *hierarchiesr)
+	//fmt.Printf("\n R: %t \n r: %t \n", *hierarchies, *hierarchiesr)
 	if (*hierarchies || *hierarchiesr) {
-		fmt.Printf("changing value of the function")		
+		//fmt.Printf("changing value of the function")		
 		f = os.RemoveAll	
 	}
 	workingPath, err := os.Getwd()
@@ -78,7 +77,6 @@ func rm(files []string) error {
 
 func main() {
 	flag.Parse()
-	fmt.Printf("build debugn")
 	if flag.NArg() < 1 {
 		flag.Usage()
 	}
