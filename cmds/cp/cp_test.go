@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -340,7 +339,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		t.Fatalf("cp %q exit with error: %v", args, err)
 	}
 	for _, src := range srcDirs {
-		_, srcFile := path.Split(src)
+		_, srcFile := filepath.Split(src)
 		dst := filepath.Join(dstTest, srcFile)
 		if equal, err := isEqualTree(src, dst); !equal || err != nil {
 			t.Fatalf("The copy %q -> %q failed, trees are different", src, dst)
@@ -365,7 +364,7 @@ func TestCpSymlink(t *testing.T) {
 	defer f.Close()
 
 	srcFpath := f.Name()
-	_, srcFname := path.Split(srcFpath)
+	_, srcFname := filepath.Split(srcFpath)
 
 	linkName := srcFname + "_link"
 	t.Logf("Enter directory: %q", tempDir)
