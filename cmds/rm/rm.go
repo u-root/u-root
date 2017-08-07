@@ -19,7 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 var (
@@ -66,8 +66,8 @@ func rm(files []string) error {
 
 		if *verbose {
 			toRemove := file
-			if !path.IsAbs(file) {
-				toRemove = path.Join(workingPath, file)
+			if !filepath.IsAbs(file) {
+				toRemove = filepath.Join(workingPath, file)
 			}
 			fmt.Printf("removed '%v'\n", toRemove)
 		}
