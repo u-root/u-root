@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"testing"
+	"path/filepath"
 )
 
 type makeit struct {
@@ -37,13 +37,13 @@ func setup() (string, error) {
 		return "", err
 	}
 
-	tmpdir := path.Join(d, "hi.sub.dir")
+	tmpdir := filepath.Join(d, "hi.sub.dir")
 	if err := os.Mkdir(tmpdir, 0777); err != nil {
 		return "", err
 	}
 
 	for i := range tests {
-		if err := ioutil.WriteFile(path.Join(d, tests[i].n), []byte("hi"), tests[i].m); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(d, tests[i].n), []byte("hi"), tests[i].m); err != nil {
 			return "", err
 		}
 	}
@@ -59,15 +59,15 @@ func Test_mv_1(t *testing.T) {
 	defer os.RemoveAll(d)
 
 	fmt.Println("Renaming file...")
-	files1 := []string{path.Join(d, "hi1.txt"), path.Join(d, "hi4.txt")}
+	files1 := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi4.txt")}
 	if err := mv(files1, false); err != nil {
 		t.Error(err)
 	}
 
-	dsub := path.Join(d, "hi.sub.dir")
+	dsub := filepath.Join(d, "hi.sub.dir")
 
 	fmt.Println("Moving files to directory...")
-	files2 := []string{path.Join(d, "hi2.txt"), path.Join(d, "hi4.txt"), dsub}
+	files2 := []string{filepath.Join(d, "hi2.txt"), filepath.Join(d, "hi4.txt"), dsub}
 	if err := mv(files2, true); err != nil {
 		t.Error(err)
 	}
