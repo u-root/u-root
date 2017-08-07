@@ -23,11 +23,10 @@ import (
 )
 
 var (
-	flags struct {
-		r bool
-		v bool
-		i bool
-	}
+	interactive = flag.Bool( "i", false, "Interactive mode.")
+	verbose = flag.Bool( "v", false, "Verbose mode.")
+	hierarchies = flag.Bool( "R", false, "Remove file hierarchies")
+	hierarchiesr = flag.Bool( "r", false, "Equivalent to -R.")
 	cmd = "rm [-Rrvi] file..."
 )
 
@@ -37,19 +36,16 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.BoolVar(&flags.i, "i", false, "Interactive mode.")
-	flag.BoolVar(&flags.v, "v", false, "Verbose mode.")
-	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
-	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
-	flag.Parse()
 }
 
 func rm(files []string) error {
+	fmt.Printf("\n unchanged value of funciotn \n")
 	f := os.Remove
-	if flags.r {
-		f = os.RemoveAll
+	fmt.Printf("\n r: %t \n R: %t \n", *hierarchies, *hierarchiesr)
+	if (*hierarchies || *hierarchiesr) {
+		fmt.Printf("changing value of the function")		
+		f = os.RemoveAll	
 	}
-
 	workingPath, err := os.Getwd()
 	if err != nil {
 		return err
@@ -57,7 +53,7 @@ func rm(files []string) error {
 
 	input := bufio.NewScanner(os.Stdin)
 	for _, file := range files {
-		if flags.i {
+		if (*interactive) {
 			fmt.Printf("rm: remove '%v'? ", file)
 			input.Scan()
 			if input.Text()[0] != 'y' {
@@ -69,7 +65,7 @@ func rm(files []string) error {
 			return err
 		}
 
-		if flags.v {
+		if( *verbose){
 			toRemove := file
 			if !path.IsAbs(file) {
 				toRemove = path.Join(workingPath, file)
@@ -81,6 +77,8 @@ func rm(files []string) error {
 }
 
 func main() {
+	flag.Parse()
+	fmt.Printf("build debugn")
 	if flag.NArg() < 1 {
 		flag.Usage()
 	}
