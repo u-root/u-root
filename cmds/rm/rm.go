@@ -28,28 +28,13 @@ import (
 	hierarchies  = flag.Bool("r", false, "Remove file hierarchies")
 	flagsRm = [interactive, verbose, hierarchies]
 */
-//attempting to use struct
+// You can add more flags to this struct
 type rmFlags struct {
 	recursive   bool
 	verbose     bool
 	interactive bool
 }
 
-/*var {
-	cmd = "rm [-Rrvi] file..."
-)*/
-/*
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
-	flag.BoolVar(&flags.verbose, "v", false, "Verbose mode.")
-	flag.BoolVar(&flags.recursive, "r", false, "Recursive mode.")
-	flag.BoolVar(&flags.interactive, "i", false, "Interactive mode.")
-}
-*/
 func rm(files []string, flags rmFlags) error {
 	f := os.Remove
 	if flags.recursive {
@@ -70,7 +55,8 @@ func rm(files []string, flags rmFlags) error {
 		}
 
 		if err := f(file); err != nil {
-			return nil
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			continue
 		}
 
 		if flags.verbose {
@@ -89,7 +75,6 @@ func main() {
 	flag.BoolVar(&flags.verbose, "v", false, "Verbose mode.")
 	flag.BoolVar(&flags.recursive, "r", false, "Recursive mode.")
 	flag.BoolVar(&flags.interactive, "i", false, "Interactive mode.")
-	fmt.Printf("proof of update")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		flag.Usage()
