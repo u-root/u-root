@@ -23,8 +23,6 @@ import (
 	"io"
 	"log"
 	"os"
-
-	"github.com/u-root/u-root/pkg/ldd"
 )
 
 func usage() {

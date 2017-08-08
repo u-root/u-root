@@ -7,7 +7,6 @@ package memmap
 import (
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"unicode"

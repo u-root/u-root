@@ -30,10 +30,12 @@ import (
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
+
 	_ "golang.org/x/crypto/md4"
 	_ "golang.org/x/crypto/openpgp"
 
 	_ "crypto/sha512"
+
 	_ "golang.org/x/crypto/ripemd160"
 	_ "golang.org/x/crypto/sha3"
 )

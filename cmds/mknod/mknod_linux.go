@@ -8,8 +8,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"strconv"
+
+	"golang.org/x/sys/unix"
 )
 
 const defaultPerms = 0660

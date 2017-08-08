@@ -17,7 +17,6 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
-	"github.com/u-root/u-root/pkg/ldd"
 )
 
 var (

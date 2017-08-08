@@ -6,6 +6,7 @@ package icmp
 
 import (
 	"encoding/binary"
+
 	"golang.org/x/net/internal/iana"
 )
 

@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 func usage() {

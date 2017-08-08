@@ -13,8 +13,9 @@ package main
 
 import (
 	"flag"
-	"golang.org/x/sys/unix"
 	"log"
+
+	"golang.org/x/sys/unix"
 )
 
 var (

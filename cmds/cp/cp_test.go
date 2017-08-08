@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
