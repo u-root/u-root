@@ -72,7 +72,7 @@ func rm(files []string) error {
 		if flags.v {
 			toRemove := file
 			if !path.IsAbs(file) {
-				toRemove = path.Join(workingPath, file)
+				toRemove = filepath.Join(workingPath, file)
 			}
 			fmt.Printf("removed '%v'\n", toRemove)
 		}

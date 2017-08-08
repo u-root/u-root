@@ -46,13 +46,13 @@ func setup() (string, error) {
 		return "", err
 	}
 
-	tmpdir := path.Join(d, "hi.sub.dir")
+	tmpdir := filepath.Join(d, "hi.sub.dir")
 	if err := os.Mkdir(tmpdir, 0777); err != nil {
 		return "", err
 	}
 
 	for i := range tests {
-		if err := ioutil.WriteFile(path.Join(d, tests[i].n), []byte("Go is cool!"), tests[i].m); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(d, tests[i].n), []byte("Go is cool!"), tests[i].m); err != nil {
 			return "", err
 		}
 	}
@@ -69,7 +69,7 @@ func Test_rm_1(t *testing.T) {
 	defer os.RemoveAll(d)
 
 	fmt.Println("== Deleting files and empty folders (no args) ...")
-	files := []string{path.Join(d, "hi1.txt"), path.Join(d, "hi2.txt"), path.Join(d, "go.txt")}
+	files := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), filepath.Join(d, "go.txt")}
 
 	flags.v = true
 	if err := rm(files); err != nil {

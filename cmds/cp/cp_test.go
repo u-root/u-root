@@ -94,7 +94,7 @@ func readDirs(pathToRead string, mapFiles map[string][]string) error {
 	for _, file := range pathFiles {
 		fname := file.Name()
 		_, exists := mapFiles[fname]
-		fpath := path.Join(pathToRead, fname)
+		fpath := filepath.Join(pathToRead, fname)
 		if !exists {
 			slc := []string{fpath}
 			mapFiles[fname] = slc
@@ -200,7 +200,7 @@ func TestCpSimple(t *testing.T) {
 	srcFpath := f.Name()
 
 	dstFname := fmt.Sprintf("cpfile_%v_dst_copied", indentifier)
-	dstFpath := path.Join(tempDir, dstFname)
+	dstFpath := filepath.Join(tempDir, dstFname)
 
 	if err := copyFile(srcFpath, dstFpath, false); err != nil {
 		t.Fatalf("copyFile %v -> %v failed: %v", srcFpath, dstFpath, err)
@@ -280,7 +280,7 @@ func TestCpRecursiveNew(t *testing.T) {
 		t.Fatalf("cannot create files tree on directory %q: %v", srcTest, err)
 	}
 
-	dstTest := path.Join(tempDir, dstPrefix)
+	dstTest := filepath.Join(tempDir, dstPrefix)
 	copyFile(srcTest, dstTest, false)
 	isEqual, err := isEqualTree(srcTest, dstTest)
 	if err != nil {
@@ -339,8 +339,8 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		t.Fatalf("cp %q exit with error: %v", args, err)
 	}
 	for _, src := range srcDirs {
-		_, srcFile := path.Split(src)
-		dst := path.Join(dstTest, srcFile)
+		_, srcFile := filepath.Split(src)
+		dst := filepath.Join(dstTest, srcFile)
 		if equal, err := isEqualTree(src, dst); !equal || err != nil {
 			t.Fatalf("The copy %q -> %q failed, trees are different", src, dst)
 		}
@@ -364,7 +364,7 @@ func TestCpSymlink(t *testing.T) {
 	defer f.Close()
 
 	srcFpath := f.Name()
-	_, srcFname := path.Split(srcFpath)
+	_, srcFname := filepath.Split(srcFpath)
 
 	linkName := srcFname + "_link"
 	t.Logf("Enter directory: %q", tempDir)

@@ -85,7 +85,7 @@ func (t ElapsedTime) MarshalBinary() ([]byte, error) {
 	// The client uses the value 0xffff to represent any
 	// elapsed time values greater than the largest time value
 	// that can be represented in the Elapsed Time option.
-	if time.Duration(t) > 655350 * time.Millisecond {
+	if time.Duration(t) > 655350*time.Millisecond {
 		t = ElapsedTime(655350 * time.Millisecond)
 	}
 	binary.BigEndian.PutUint16(b, uint16(time.Duration(t)/10/time.Millisecond))

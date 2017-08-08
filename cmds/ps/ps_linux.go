@@ -89,7 +89,7 @@ type process struct {
 // Parse all content of stat to a Process Struct
 // by gived the pid (linux)
 func (p *process) readStat(pid int) error {
-	b, err := ioutil.ReadFile(path.Join(proc, fmt.Sprint(pid), "stat"))
+	b, err := ioutil.ReadFile(filepath.Join(proc, fmt.Sprint(pid), "stat"))
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (p *Process) Parse(pid int) error {
 // ctty returns the ctty or "?" if none can be found.
 // TODO: an right way to get ctty by p.TTYNr and p.TTYPgrp
 func (p process) getCtty() string {
-	if tty, err := os.Readlink(path.Join(proc, p.Pid, "fd/0")); err != nil {
+	if tty, err := os.Readlink(filepath.Join(proc, p.Pid, "fd/0")); err != nil {
 		return "?"
 	} else if p.TTYPgrp != "-1" {
 		if len(tty) > 5 && tty[:5] == "/dev/" {
@@ -157,7 +157,7 @@ func (p Process) Search(field string) string {
 
 // read UID of process based on or
 func (p process) getUid() (int, error) {
-	b, err := ioutil.ReadFile(path.Join(proc, p.Pid, "status"))
+	b, err := ioutil.ReadFile(filepath.Join(proc, p.Pid, "status"))
 
 	var uid int
 	lines := strings.Split(string(b), "\n")
@@ -179,7 +179,7 @@ func (p Process) GetUid() (int, error) {
 
 // change p.Cmd to long command line with args
 func (p process) longCmdLine() (string, error) {
-	b, err := ioutil.ReadFile(path.Join(proc, p.Pid, "cmdline"))
+	b, err := ioutil.ReadFile(filepath.Join(proc, p.Pid, "cmdline"))
 
 	if err != nil {
 		return "", err

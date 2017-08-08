@@ -23,7 +23,7 @@ func Command(f Editor, c string, startLine, endLine int) error {
 	a := c[1:]
 	debug("Process %c, args %v", c[0], a)
 	switch c[0] {
-		case 'q', 'e':
+	case 'q', 'e':
 		if f.IsDirty() {
 			f.Dirty(false)
 			return fmt.Errorf("f was dirty, no longer is, try again")

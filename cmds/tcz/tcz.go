@@ -116,8 +116,8 @@ func clonetree(tree string) error {
 
 func fetch(p string) error {
 
-	fullpath := path.Join(tczLocalPackageDir, p)
-	packageName := path.Join(tczServerDir, p)
+	fullpath := filepath.Join(tczLocalPackageDir, p)
+	packageName := filepath.Join(tczServerDir, p)
 	if _, err := os.Stat(fullpath); err != nil {
 		// path.Join doesn't quite work here. It will try to do file-system-like
 		// joins and it ends up remove the // and replacing it with a clash.
@@ -172,13 +172,13 @@ func installPackage(tczName string, deps map[string]bool) error {
 		l.Printf("Fetched dep ok!\n")
 	} else {
 		l.Printf("No dep file found\n")
-		if err := ioutil.WriteFile(path.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0444)); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0444)); err != nil {
 			l.Printf("Tried to write Blank file %v, failed %v\n", depName, err)
 		}
 		return nil
 	}
 	// read deps file
-	deplist, err := ioutil.ReadFile(path.Join(tczLocalPackageDir, depName))
+	deplist, err := ioutil.ReadFile(filepath.Join(tczLocalPackageDir, depName))
 	if err != nil {
 		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
 	}
@@ -205,7 +205,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	l.Printf("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
 		cmdName := strings.Split(v, ".")[0]
-		packagePath := path.Join("/tmp/tcloop", cmdName)
+		packagePath := filepath.Join("/tmp/tcloop", cmdName)
 		if err := os.MkdirAll(packagePath, 0700); err != nil {
 			l.Fatal(err)
 		}
@@ -215,7 +215,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			l.Fatal(err)
 		}
 		l.Printf("findloop gets %v err %v\n", loopname, err)
-		pkgpath := path.Join(tczLocalPackageDir, v)
+		pkgpath := filepath.Join(tczLocalPackageDir, v)
 		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
 		if err != nil {
 			l.Fatalf("%v: %v\n", pkgpath, err)
@@ -245,8 +245,8 @@ func setupPackages(tczName string, deps map[string]bool) error {
 func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
-	tczServerDir = path.Join("/", *version, *arch, "tcz")
-	tczLocalPackageDir = path.Join("/tcz", tczServerDir)
+	tczServerDir = filepath.Join("/", *version, *arch, "tcz")
+	tczLocalPackageDir = filepath.Join("/tcz", tczServerDir)
 	if len(os.Args) < 2 {
 		os.Exit(1)
 	}

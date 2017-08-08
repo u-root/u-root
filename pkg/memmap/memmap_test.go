@@ -32,7 +32,7 @@ func TestSysMemmap(t *testing.T) {
 			return nil
 		}
 		for _, v := range []string{"start", "end", "type"} {
-			s, err := ioutil.ReadFile(path.Join(name, v))
+			s, err := ioutil.ReadFile(filepath.Join(name, v))
 			if err != nil {
 				return err
 			}

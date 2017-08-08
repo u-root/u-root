@@ -35,7 +35,7 @@ func which(p string, writer io.Writer, cmds []string) {
 
 	for _, name := range cmds {
 		for i := range pathArray {
-			f := path.Join(pathArray[i], name)
+			f := filepath.Join(pathArray[i], name)
 			if info, err := os.Stat(f); err == nil {
 				// TODO: this test (0111) is not quite right.
 				// Consider a file executable only by root (0100)

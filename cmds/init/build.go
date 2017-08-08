@@ -465,7 +465,7 @@ func runBuild(cmd *Command, args []string) {
 	pkgs := packagesForBuild(args)
 
 	if len(pkgs) == 1 && pkgs[0].Name == "main" && *buildO == "" {
-		_, *buildO = path.Split(pkgs[0].ImportPath)
+		_, *buildO = filepath.Split(pkgs[0].ImportPath)
 		*buildO += exeSuffix
 	}
 

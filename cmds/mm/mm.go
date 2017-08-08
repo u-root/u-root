@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	dest = flag.String("d", "/u", "destination directory")
+	dest      = flag.String("d", "/u", "destination directory")
 	namespace = []uroot.Creator{
 		uroot.Dir{Name: "proc", Mode: os.FileMode(0555)},
 		uroot.Dir{Name: "sys", Mode: os.FileMode(0555)},
@@ -42,7 +42,7 @@ var (
 		uroot.Mount{Source: "none", Target: "dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		uroot.Symlink{Linkpath: "/dev/pts/ptmx", Target: "dev/ptmx"},
 	}
-	commands = []*exec.Cmd {
+	commands = []*exec.Cmd{
 		exec.Command("minimega", "-e", "vm", "config", "filesystem"),
 		exec.Command("minimega", "-e", "vm", "config", "snapshot", "false"),
 		exec.Command("minimega", "-e", "vm", "launch", "container", "uroot"),

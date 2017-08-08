@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-//	"syscall"
+	//	"syscall"
 )
 
 // Start assigns a pseudo-terminal tty os.File to c.Stdin, c.Stdout,
@@ -22,15 +22,15 @@ func Start(c *exec.Cmd) (pty *os.File, err error) {
 		return nil, fmt.Errorf("pty Start: open: %v", err)
 	}
 	defer tty.Close()
-//	c.Stdout = tty
+	//	c.Stdout = tty
 	//c.Stdin = tty
 	//c.Stderr = tty
 	//if c.SysProcAttr == nil {
-		//c.SysProcAttr = &syscall.SysProcAttr{}
+	//c.SysProcAttr = &syscall.SysProcAttr{}
 	//}
-//	c.SysProcAttr.Setctty = true
+	//	c.SysProcAttr.Setctty = true
 	//c.SysProcAttr.Setsid = true
-//	c.SysProcAttr.Foreground = true
+	//	c.SysProcAttr.Foreground = true
 	fmt.Printf("TRY TO START %v\nSysprocattr %v\n\n", c, c.SysProcAttr)
 	err = c.Start()
 	if err != nil {
