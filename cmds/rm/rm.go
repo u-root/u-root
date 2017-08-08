@@ -21,24 +21,38 @@ import (
 	"path/filepath"
 )
 
-var (
+// Used an array of flags in case more flags are added (see rm method signature)
+/*
 	interactive  = flag.Bool("i", false, "Interactive mode.")
 	verbose      = flag.Bool("v", false, "Verbose mode.")
-	hierarchies  = flag.Bool("R", false, "Remove file hierarchies")
-	cmd          = "rm [-Rrvi] file..."
-)
+	hierarchies  = flag.Bool("r", false, "Remove file hierarchies")
+	flagsRm = [interactive, verbose, hierarchies]
+*/
+//attempting to use struct
+type rmFlags struct {
+	recursive   bool
+	verbose     bool
+	interactive bool
+}
 
+/*var {
+	cmd = "rm [-Rrvi] file..."
+)*/
+/*
 func init() {
 	defUsage := flag.Usage
 	flag.Usage = func() {
 		os.Args[0] = cmd
 		defUsage()
 	}
+	flag.BoolVar(&flags.verbose, "v", false, "Verbose mode.")
+	flag.BoolVar(&flags.recursive, "r", false, "Recursive mode.")
+	flag.BoolVar(&flags.interactive, "i", false, "Interactive mode.")
 }
-
-func rm(files []string) error {
+*/
+func rm(files []string, flags rmFlags) error {
 	f := os.Remove
-	if *hierarchies {
+	if flags.recursive {
 		f = os.RemoveAll
 	}
 	workingPath, err := os.Getwd()
@@ -47,7 +61,7 @@ func rm(files []string) error {
 	}
 	input := bufio.NewScanner(os.Stdin)
 	for _, file := range files {
-		if *interactive {
+		if flags.interactive {
 			fmt.Printf("rm: remove '%v'? ", file)
 			input.Scan()
 			if input.Text()[0] != 'y' {
@@ -56,10 +70,10 @@ func rm(files []string) error {
 		}
 
 		if err := f(file); err != nil {
-			return err
+			return nil
 		}
 
-		if *verbose {
+		if flags.verbose {
 			toRemove := file
 			if !filepath.IsAbs(file) {
 				toRemove = filepath.Join(workingPath, file)
@@ -71,12 +85,17 @@ func rm(files []string) error {
 }
 
 func main() {
+	var flags rmFlags
+	flag.BoolVar(&flags.verbose, "v", false, "Verbose mode.")
+	flag.BoolVar(&flags.recursive, "r", false, "Recursive mode.")
+	flag.BoolVar(&flags.interactive, "i", false, "Interactive mode.")
+	fmt.Printf("proof of update")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		flag.Usage()
 	}
 
-	if err := rm(flag.Args()); err != nil {
+	if err := rm(flag.Args(), flags); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
