@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 // Used an array of flags in case more flags are added (see rm method signature)
@@ -46,6 +47,16 @@ func rm(files []string, flags rmFlags) error {
 	}
 	input := bufio.NewScanner(os.Stdin)
 	for _, file := range files {
+		//Throw an error if the file is a directory
+		statval, err := os.Stat(file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		if statval.IsDir() {
+			newError := os.PathError{"rm:", file, syscall.EISDIR}
+			fmt.Fprintf(os.Stderr, "%v\n", newError.Error())
+			continue
+		}
 		if flags.interactive {
 			fmt.Printf("rm: remove '%v'? ", file)
 			input.Scan()
@@ -53,7 +64,6 @@ func rm(files []string, flags rmFlags) error {
 				continue
 			}
 		}
-
 		if err := f(file); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			continue
