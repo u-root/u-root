@@ -71,7 +71,7 @@ func Test_rm_1(t *testing.T) {
 	fmt.Println("== Deleting files and empty folders (no args) ...")
 	files := []string{path.Join(d, "hi1.txt"), path.Join(d, "hi2.txt"), path.Join(d, "go.txt")}
 
-	*verbose = true
+	flags.verbose = true
 	if err := rm(files); err != nil {
 		t.Error(err)
 	}
@@ -85,8 +85,8 @@ func Test_rm_2(t *testing.T) {
 	}
 	defer os.RemoveAll(d)
 
-	*verbose = true
-	*hierarchies = true
+	flags.verbose = true
+	flags.recursive = true
 	fmt.Println("== Deleting folders recursively (using -r flag) ...")
 	files := []string{d}
 	if err := rm(files); err != nil {
