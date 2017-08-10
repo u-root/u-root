@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -18,10 +19,6 @@ import (
 )
 
 var (
-	commands = []string{
-		"/bin/bash",
-	}
-
 	DEFAULT_ROOT_DEV = "/dev/mmcblk0p1"
 	DEVICE_PARAM     = "uroot.rootdevice"
 )
@@ -31,10 +28,51 @@ func usage() string {
 	return ""
 }
 
-func littleDoctor(path string) {
+func littleDoctor(path string, fs *syscall.Statfs_t) error {
 	// Recursively deletes everything at slash
 	// Does not continue down other filesystems i.e.
 	// new_root, devtmpfs, profs and sysfs
+
+	pathFS := syscall.Statfs_t{}
+
+	if err := syscall.Statfs(path, &pathFS); err != nil {
+		return err
+	}
+
+	if pathFS.Type != fs.Type {
+		return nil
+	}
+
+	file, err := os.Open(path)
+
+	if err != nil {
+		return fmt.Errorf("Could not open %s: %v", path, err)
+	}
+
+	if fileStat, _ := file.Stat(); fileStat.IsDir() {
+
+		names, err := file.Readdirnames(-1)
+		file.Close()
+
+		if err != nil {
+			return err
+		}
+
+		for _, fileName := range names {
+
+			if fileName == "." || fileName == ".." {
+				return nil
+			}
+
+			littleDoctor(filepath.Join(path, fileName), fs)
+			os.Remove(path)
+		}
+
+	} else {
+		os.Remove(path)
+	}
+
+	return nil
 }
 
 func exec_command(path string) error {
@@ -126,6 +164,16 @@ func start() {
 	log.Printf("switch_root: Changing directory")
 
 	syscall.Chdir("/mnt")
+
+	rootFS := syscall.Statfs_t{}
+
+	if err := syscall.Statfs("/", &rootFS); err != nil {
+		log.Fatalf("switch_root: failed Stat %v", err)
+	}
+
+	if err := littleDoctor("/", &rootFS); err != nil {
+		log.Fatalf("switch_root: failed Deletion of rootfs: %v", err)
+	}
 
 	log.Printf("switch_root: Overmounting on /")
 
