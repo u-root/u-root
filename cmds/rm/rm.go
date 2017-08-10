@@ -53,7 +53,7 @@ func rm(files []string, flags rmFlags) error {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 		if statval.IsDir() {
-			newError := os.PathError{"rm:", file, syscall.EISDIR}
+			newError := os.PathError{Op: "rm:", Path: file, Err: syscall.EISDIR}
 			fmt.Fprintf(os.Stderr, "%v\n", newError.Error())
 			continue
 		}
