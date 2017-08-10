@@ -6,19 +6,18 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
-
-	"github.com/u-root/u-root/uroot"
 )
 
 var (
+	host             = flag.Bool("h", false, "Help")
+	version          = flag.Bool("V", false, "Version")
 	DEFAULT_ROOT_DEV = "/dev/mmcblk0p1"
 	DEVICE_PARAM     = "uroot.rootdevice"
 )
@@ -92,78 +91,16 @@ func exec_command(path string) error {
 	return nil
 }
 
-func getCmdline() (string, error) {
-	// Reads the kernel cmdline at "/proc/cmdline to a string
-	var contents []byte
-
-	contents, err := ioutil.ReadFile("/proc/cmdline")
-
-	if err != nil {
-		return "", fmt.Errorf("Read command line failed: %v", err)
-	}
-
-	return string(contents), nil
-}
-
-func getDevice() (string, error) {
-	// Given the kernel command line, this will select a device to mount
-	var cmdline string
-
-	cmdline, err := getCmdline()
-
-	if err != nil {
-		log.Printf("Could not get kernel cmdline")
-		return "", err
-	}
-
-	for _, item := range strings.Split(cmdline, " ") {
-		paramValue := strings.SplitN(item, "=", 2)
-		if paramValue[0] == DEVICE_PARAM {
-			return paramValue[1], nil
-		}
-	}
-
-	return "", fmt.Errorf("no device specified")
-}
-
-func start() {
+func start(new_root string, init string) {
 	// This getpid adds a bit of cost to each invocation (not much really)
 	// but it allows us to merge init and sh. The 600K we save is worth it.
 	// Figure out which init to run. We must always do this.
 
 	// log.Printf("init: os is %v, initMap %v", filepath.Base(os.Args[0]), initMap)
 	// we use filepath.Base in case they type something like ./cmd
-
-	log.Printf("switch_root: Making mount directory")
-
-	if err := syscall.Mkdir("/mnt", 0777); err != nil {
-		log.Printf("init: error %v", err)
-	}
-
-	log.Printf("switch_root: Mounting filesystem")
-
-	if rootDevice, err := getDevice(); err != nil {
-		log.Printf("Using Device Default %v", DEFAULT_ROOT_DEV)
-		rootDevice = DEFAULT_ROOT_DEV
-	} else {
-		log.Printf("Using Device %v", rootDevice)
-	}
-
-	if err := syscall.Mount("/dev/mmcblk0p1", "/mnt", "ext4", 0, ""); err != nil {
-		log.Fatalf("init: fatal mount error %v", err)
-	}
-
-	// Copy everything over to mnt/
-
-	log.Printf("switch_root: Excing bash")
-
-	if err := exec_command("/bin/bash-static"); err != nil {
-		log.Printf("switch_root: exit ramfs")
-	}
-
 	log.Printf("switch_root: Changing directory")
 
-	syscall.Chdir("/mnt")
+	syscall.Chdir(new_root)
 
 	rootFS := syscall.Statfs_t{}
 
@@ -187,23 +124,36 @@ func start() {
 		log.Fatalf("switch_root: fatal chroot error %v", err)
 	}
 
-	log.Printf("unit: returning to slash")
+	log.Printf("switch_root: returning to slash")
 	syscall.Chdir("/")
 
-	log.Printf("unit: creating Uroot filesystem")
+	log.Printf("switch_root: creating Uroot filesystem")
 
-	log.Printf("Exec init!")
-	uroot.Rootfs()
-
-	if err := exec_command("/bin/bash"); err != nil {
+	if err := exec_command(init); err != nil {
 		log.Printf("switch_root: returning to ramfs")
 	}
 
 }
 
 func main() {
+	flag.Parse()
 
-	start()
+	if len(flag.Args()) == 0 {
+		os.Exit(0)
+	}
+
+	if *host {
+		fmt.Print(usage())
+	}
+
+	if *version {
+		fmt.Println("Version XX")
+	}
+
+	new_root := flag.Args()[0]
+	init := flag.Args()[1]
+
+	start(new_root, init)
 	log.Printf("switch_root failed")
 
 }
