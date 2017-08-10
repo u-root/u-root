@@ -212,6 +212,12 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	for v := range deps {
 		cmdName := strings.Split(v, filepath.Ext(v))[0]
 		packagePath := filepath.Join("/tmp/tcloop", cmdName)
+
+		if _, err := os.Stat(packagePath); err == nil {
+			debug("PackagePath %s exists, skipping mount", packagePath)
+			continue
+		}
+
 		if err := os.MkdirAll(packagePath, 0700); err != nil {
 			l.Printf("overwriting %s", packagePath)
 			//l.Fatal(err)
@@ -238,15 +244,10 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
 		}
 
-		directory, err := os.Open(packagePath)
-
 		if err != nil {
 			l.Fatalf("Error opening %s: %v", packagePath, err)
 		}
 
-		if fileList, _ := directory.Readdir(1); len(fileList) == 0 {
-			debug("Directory %s is not empty, skipping mount")
-		}
 		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
 		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
 			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
@@ -263,8 +264,9 @@ func setupPackages(tczName string, deps map[string]bool) error {
 func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
-	tczServerDir = filepath.Join("/", *version, *arch, "tcz")
+	tczServerDir = filepath.Join("/", *version, *arch, "/tcz")
 	tczLocalPackageDir = filepath.Join("/tcz", tczServerDir)
+
 	if *debugPrint {
 		debug = l.Printf
 	}
