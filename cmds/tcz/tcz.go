@@ -51,7 +51,6 @@ var (
 	debug              = func(f string, s ...interface{}) {}
 	tczServerDir       string
 	tczLocalPackageDir string
-	debug              = func(f string, s ...interface{}) {}
 )
 
 // consider making this a goroutine which pushes the string down the channel.
@@ -124,8 +123,6 @@ func fetch(p string) error {
 		debug("package %s is downloaded\n", fullpath)
 		return nil
 	}
-
-	packageName := path.Join(tczServerDir, p)
 
 	if _, err := os.Stat(fullpath); err != nil {
 		cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
