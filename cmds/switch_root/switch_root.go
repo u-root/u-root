@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	host             = flag.Bool("h", false, "Help")
+	help             = flag.Bool("h", false, "Help")
 	version          = flag.Bool("V", false, "Version")
 	DEFAULT_ROOT_DEV = "/dev/mmcblk0p1"
 	DEVICE_PARAM     = "uroot.rootdevice"
@@ -24,7 +24,7 @@ var (
 
 func usage() string {
 	// Return the usage string
-	return ""
+	return "switch_root [-h] [-V]\nswitch_root newroot init"
 }
 
 func littleDoctor(path string, fs *syscall.Statfs_t) error {
@@ -74,13 +74,13 @@ func littleDoctor(path string, fs *syscall.Statfs_t) error {
 	return nil
 }
 
-func exec_command(path string) error {
+func execCommand(path string) error {
 	// Will exec and dup a command at path
+	var fd int
 	cmd := exec.Command(path)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	var fd int
 	cmd.SysProcAttr = &syscall.SysProcAttr{Ctty: fd, Setctty: true, Setsid: true, Cloneflags: uintptr(0)}
 	log.Printf("Run %v", cmd)
 
@@ -89,6 +89,17 @@ func exec_command(path string) error {
 	}
 
 	return nil
+}
+
+func specialFS() {
+
+	syscall.Mkdir("/path", 0)
+	syscall.Mkdir("/sys", 0)
+	syscall.Mkdir("/dev", 0)
+
+	syscall.Mount("proc", "/proc", "proc", syscall.MS_MGC_VAL, "")
+	syscall.Mount("sys", "/sys", "sysfs", syscall.MS_MGC_VAL, "")
+	syscall.Mount("none", "/dev", "devtmpfs", syscall.MS_MGC_VAL, "")
 }
 
 func start(new_root string, init string) {
@@ -127,9 +138,12 @@ func start(new_root string, init string) {
 	log.Printf("switch_root: returning to slash")
 	syscall.Chdir("/")
 
-	log.Printf("switch_root: creating Uroot filesystem")
+	log.Printf("switch_root: creating proc, dev and sys")
 
-	if err := exec_command(init); err != nil {
+	specialFS()
+
+	log.Printf("switch_root: executing init")
+	if err := execCommand(init); err != nil {
 		log.Printf("switch_root: returning to ramfs")
 	}
 
@@ -139,15 +153,18 @@ func main() {
 	flag.Parse()
 
 	if len(flag.Args()) == 0 {
+		fmt.Println(usage())
 		os.Exit(0)
 	}
 
-	if *host {
-		fmt.Print(usage())
+	if *help {
+		fmt.Println(usage())
+		os.Exit(0)
 	}
 
 	if *version {
 		fmt.Println("Version XX")
+		os.Exit(0)
 	}
 
 	new_root := flag.Args()[0]
