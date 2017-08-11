@@ -216,9 +216,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		}
 
 		if err := os.MkdirAll(packagePath, 0700); err != nil {
-			l.Printf("overwriting %s", packagePath)
-			//l.Fatal(err)
-
+			l.Fatalf("Package directory %s at %s, can not be created: %v", tczName, packagePath, err)
 		}
 
 		loopname, err := findloop()
@@ -236,13 +234,10 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			l.Fatalf("%v: %v\n", loopname, err)
 		}
 		debug("ffd %v lfd %v\n", ffd, lfd)
+
 		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
 		if errno != 0 {
 			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
-		}
-
-		if err != nil {
-			l.Fatalf("Error opening %s: %v", packagePath, err)
 		}
 
 		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
@@ -258,6 +253,10 @@ func setupPackages(tczName string, deps map[string]bool) error {
 
 }
 
+func usage() string {
+	return "tcz [-v version] [-a architecture] [-h hostname] [-p host port] [-d debug prints] PROGRAM..."
+}
+
 func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
@@ -271,6 +270,7 @@ func main() {
 	packages := flag.Args()
 
 	if len(packages) == 0 {
+		fmt.Println(usage())
 		os.Exit(1)
 	}
 
