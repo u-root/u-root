@@ -73,37 +73,52 @@ func littleDoctor(path string, fs *syscall.Statfs_t) error {
 // execCommand will run the executable at "path" with PID 1
 // it returns an error if the command exits incorrectly
 func execCommand(path string) error {
-	var fd int
 	cmd := exec.Command(path)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	cmd.SysProcAttr = &syscall.SysProcAttr{Ctty: fd, Setctty: true, Setsid: true, Cloneflags: uintptr(0)}
-	log.Printf("Run %v", cmd)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setctty: true,
+		Setsid:  true,
+	}
 
-	if err := cmd.Run(); err != nil {
+	return cmd.Run()
+}
+
+// specialFS creates and mounts proc, sys and dev at the root level
+func specialFS() error {
+
+	if err := syscall.Mkdir("/path", 0); err != nil {
+		return err
+	}
+	if err := syscall.Mkdir("/sys", 0); err != nil {
+		return err
+	}
+
+	if err := syscall.Mkdir("/dev", 0); err != nil {
+		return err
+	}
+
+	if err := syscall.Mount("proc", "/proc", "proc", syscall.MS_MGC_VAL, ""); err != nil {
+		return err
+	}
+
+	if err := syscall.Mount("sys", "/sys", "sysfs", syscall.MS_MGC_VAL, ""); err != nil {
+		return err
+	}
+
+	if err := syscall.Mount("none", "/dev", "devtmpfs", syscall.MS_MGC_VAL, ""); err != nil {
 		return err
 	}
 
 	return nil
-}
 
-// specialFS creates and mounts proc, sys and dev at the root level
-func specialFS() {
-
-	syscall.Mkdir("/path", 0)
-	syscall.Mkdir("/sys", 0)
-	syscall.Mkdir("/dev", 0)
-
-	syscall.Mount("proc", "/proc", "proc", syscall.MS_MGC_VAL, "")
-	syscall.Mount("sys", "/sys", "sysfs", syscall.MS_MGC_VAL, "")
-	syscall.Mount("none", "/dev", "devtmpfs", syscall.MS_MGC_VAL, "")
 }
 
 // switchRoot will recursive deletes current root, switches the current root to
 // the "newRoot", creates special filesystems (proc, sys and dev) in the new root
 // and execs "init"
-func switchRoot(newRoot string, init string) {
+func SwitchRoot(newRoot string, init string) error {
 	log.Printf("switch_root: Changing directory")
 
 	syscall.Chdir(newRoot)
@@ -111,23 +126,23 @@ func switchRoot(newRoot string, init string) {
 	rootFS := syscall.Statfs_t{}
 
 	if err := syscall.Statfs("/", &rootFS); err != nil {
-		log.Fatalf("switch_root: failed Stat %v", err)
+		return fmt.Errorf("switch_root: failed statfs %v", err)
 	}
 
 	if err := littleDoctor("/", &rootFS); err != nil {
-		log.Fatalf("switch_root: failed Deletion of rootfs: %v", err)
+		return fmt.Errorf("switch_root: failed Deletion of rootfs: %v", err)
 	}
 
 	log.Printf("switch_root: Overmounting on /")
 
 	if err := syscall.Mount(".", "/", "ext4", syscall.MS_MOVE, ""); err != nil {
-		log.Fatalf("switch_root: fatal mount error %v", err)
+		return fmt.Errorf("switch_root: fatal mount error %v", err)
 	}
 
 	log.Printf("switch_root: Changing root!")
 
 	if err := syscall.Chroot("."); err != nil {
-		log.Fatalf("switch_root: fatal chroot error %v", err)
+		return fmt.Errorf("switch_root: fatal chroot error %v", err)
 	}
 
 	log.Printf("switch_root: returning to slash")
@@ -135,12 +150,16 @@ func switchRoot(newRoot string, init string) {
 
 	log.Printf("switch_root: creating proc, dev and sys")
 
-	specialFS()
+	if err := specialFS(); err != nil {
+		return fmt.Errorf("switch_root: failed to create special files %v", err)
+	}
 
 	log.Printf("switch_root: executing init")
 	if err := execCommand(init); err != nil {
-		log.Printf("switch_root: returning to ramfs")
+		return fmt.Errorf("switch_root: exec failed %v", err)
 	}
+
+	return nil
 
 }
 
@@ -165,7 +184,8 @@ func main() {
 	new_root := flag.Args()[0]
 	init := flag.Args()[1]
 
-	switchRoot(new_root, init)
-	log.Printf("switch_root failed")
-
+	if err := SwitchRoot(new_root, init); err != nil {
+		fmt.Println("switch_root failed %v", err)
+		os.Exit(1)
+	}
 }
