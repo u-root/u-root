@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This is a basic init script.
 package main
 
 import (
@@ -16,22 +15,19 @@ import (
 )
 
 var (
-	help             = flag.Bool("h", false, "Help")
-	version          = flag.Bool("V", false, "Version")
-	DEFAULT_ROOT_DEV = "/dev/mmcblk0p1"
-	DEVICE_PARAM     = "uroot.rootdevice"
+	help    = flag.Bool("h", false, "Help")
+	version = flag.Bool("V", false, "Version")
 )
 
+// Return the usage string
 func usage() string {
-	// Return the usage string
 	return "switch_root [-h] [-V]\nswitch_root newroot init"
 }
 
+// Recursively deletes everything at slash
+// Does not continue down other filesystems i.e.
+// new_root, devtmpfs, profs and sysfs
 func littleDoctor(path string, fs *syscall.Statfs_t) error {
-	// Recursively deletes everything at slash
-	// Does not continue down other filesystems i.e.
-	// new_root, devtmpfs, profs and sysfs
-
 	pathFS := syscall.Statfs_t{}
 
 	if err := syscall.Statfs(path, &pathFS); err != nil {
@@ -74,8 +70,9 @@ func littleDoctor(path string, fs *syscall.Statfs_t) error {
 	return nil
 }
 
+// execCommand will run the executable at "path" with PID 1
+// it returns an error if the command exits incorrectly
 func execCommand(path string) error {
-	// Will exec and dup a command at path
 	var fd int
 	cmd := exec.Command(path)
 	cmd.Stdin = os.Stdin
@@ -91,6 +88,7 @@ func execCommand(path string) error {
 	return nil
 }
 
+// specialFS creates and mounts proc, sys and dev at the root level
 func specialFS() {
 
 	syscall.Mkdir("/path", 0)
@@ -102,16 +100,13 @@ func specialFS() {
 	syscall.Mount("none", "/dev", "devtmpfs", syscall.MS_MGC_VAL, "")
 }
 
-func start(new_root string, init string) {
-	// This getpid adds a bit of cost to each invocation (not much really)
-	// but it allows us to merge init and sh. The 600K we save is worth it.
-	// Figure out which init to run. We must always do this.
-
-	// log.Printf("init: os is %v, initMap %v", filepath.Base(os.Args[0]), initMap)
-	// we use filepath.Base in case they type something like ./cmd
+// switchRoot will recursive deletes current root, switches the current root to
+// the "newRoot", creates special filesystems (proc, sys and dev) in the new root
+// and execs "init"
+func switchRoot(newRoot string, init string) {
 	log.Printf("switch_root: Changing directory")
 
-	syscall.Chdir(new_root)
+	syscall.Chdir(newRoot)
 
 	rootFS := syscall.Statfs_t{}
 
@@ -170,7 +165,7 @@ func main() {
 	new_root := flag.Args()[0]
 	init := flag.Args()[1]
 
-	start(new_root, init)
+	switchRoot(new_root, init)
 	log.Printf("switch_root failed")
 
 }
