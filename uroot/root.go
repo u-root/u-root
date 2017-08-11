@@ -143,7 +143,7 @@ var (
 		Dir{Name: "/usr/lib", Mode: os.FileMode(0777)},
 		Dir{Name: "/go/pkg/linux_amd64", Mode: os.FileMode(0777)},
 		// chicken and egg: these need to be there before you start and hence
-		// built into the initial initramfs. 
+		// built into the initial initramfs.
 		//{Name: "/dev/null", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0103},
 		//{Name: "/dev/console", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
 		Dev{Name: "/dev/tty", Mode: uint32(syscall.S_IFCHR) | 0666, Dev: 0x0500},
@@ -151,6 +151,7 @@ var (
 		Mount{Source: "proc", Target: "/proc", FSType: "proc", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		Mount{Source: "sys", Target: "/sys", FSType: "sysfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
+		Mount{Source: "none", Target: "/tmp", FSType: "tmpfs", Flags: syscall.MS_MGC_VAL, Opts: ""},
 		// Kernel must be compiled with CONFIG_DEVTMPFS, otherwise
 		// default to contents of Dev.cpio.
 		Mount{Source: "none", Target: "/dev", FSType: "devtmpfs", Flags: syscall.MS_MGC_VAL},
