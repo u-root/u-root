@@ -185,7 +185,7 @@ func main() {
 	init := flag.Args()[1]
 
 	if err := SwitchRoot(new_root, init); err != nil {
-		fmt.Println("switch_root failed %v", err)
+		fmt.Printf("switch_root failed %v\n", err)
 		os.Exit(1)
 	}
 }
