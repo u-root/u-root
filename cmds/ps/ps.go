@@ -33,8 +33,9 @@ var (
 		all     bool
 		nSidTty bool
 		x       bool
+		aux     bool
 	}
-	cmd     = "ps [-Aaex]"
+	cmd     = "ps [-Aaex] [aux]"
 	eUID    = os.Geteuid()
 	mainPID = os.Getpid()
 )
@@ -49,6 +50,11 @@ func init() {
 	flag.BoolVar(&flags.all, "e", false, "Select all processes.  Identical to -A.")
 	flag.BoolVar(&flags.x, "x", false, "BSD-Like style, with STAT Column and long CommandLine")
 	flag.BoolVar(&flags.nSidTty, "a", false, "Print all process except whose are session leaders or unlinked with terminal")
+
+	if len(os.Args) > 1 {
+		flags.all = true
+		flags.aux = isPermutation(os.Args[1], "aux")
+	}
 }
 
 // main process table of ps
@@ -168,6 +174,46 @@ func (pT *ProcessTable) PrepareString() {
 	pT.fstring = fstring
 }
 
+func mapSubset(check map[byte]int, ref map[byte]int) bool {
+	for cLet, cNum := range check {
+		if rNum, ok := ref[cLet]; ok {
+			if cNum != rNum {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+func isPermutation(check string, ref string) bool {
+
+	checkMap := make(map[byte]int)
+	refMap := make(map[byte]int)
+
+	if len(check) != len(ref) {
+		return false
+	}
+
+	for i := 0; i < len(check); i++ {
+		if _, ok := checkMap[check[i]]; ok {
+			checkMap[check[i]] += 1
+		} else {
+			checkMap[check[i]] = 0
+		}
+
+		if _, ok := refMap[ref[i]]; ok {
+			refMap[ref[i]] += 1
+		} else {
+			refMap[ref[i]] = 0
+		}
+	}
+
+	return mapSubset(checkMap, refMap) && mapSubset(refMap, checkMap)
+
+}
+
 // For now, just read /proc/pid/stat and dump its brains.
 // TODO: a nice clean way to turn /proc/pid/stat into a struct. (trying now)
 // There has to be a way.
@@ -175,10 +221,14 @@ func ps(pT ProcessTable) error {
 	// sorting ProcessTable by PID
 	sort.Sort(pT)
 
-	if flags.x {
+	switch {
+	case flags.aux:
 		pT.headers = []string{"PID", "PGRP", "SID", "TTY", "STAT", "TIME", "COMMAND"}
 		pT.fields = []string{"Pid", "Pgrp", "Sid", "Ctty", "State", "Time", "Cmd"}
-	} else {
+	case flags.x:
+		pT.headers = []string{"PID", "TTY", "STAT", "TIME", "COMMAND"}
+		pT.fields = []string{"Pid", "Ctty", "State", "Time", "Cmd"}
+	default:
 		pT.headers = []string{"PID", "TTY", "TIME", "CMD"}
 		pT.fields = []string{"Pid", "Ctty", "Time", "Cmd"}
 	}
