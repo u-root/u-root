@@ -19,36 +19,35 @@ var (
 	version = flag.Bool("V", false, "Version")
 )
 
-// Return the usage string
 func usage() string {
 	return "switch_root [-h] [-V]\nswitch_root newroot init"
 }
 
-// Recursively deletes everything at slash
-// Does not continue down other filesystems i.e.
-// new_root, devtmpfs, profs and sysfs
-func littleDoctor(path string, fs *syscall.Statfs_t) error {
-	pathFS := syscall.Statfs_t{}
+// littleDoctor recursively deletes everything at "path" that
+// is in the same file system as "fs".
+func littleDoctor(path string, fsType int64) error {
+	var pathFS syscall.Statfs_t
 
 	if err := syscall.Statfs(path, &pathFS); err != nil {
 		return err
 	}
 
-	if pathFS.Type != fs.Type {
+	if pathFS.Type != fsType {
 		return nil
 	}
 
 	file, err := os.Open(path)
-
 	if err != nil {
 		return fmt.Errorf("Could not open %s: %v", path, err)
 	}
 
-	if fileStat, _ := file.Stat(); fileStat.IsDir() {
+	if fileStat, err := file.Stat(); fileStat.IsDir() {
+		if err != nil {
+			return err
+		}
 
 		names, err := file.Readdirnames(-1)
-		file.Close()
-
+		defer file.Close()
 		if err != nil {
 			return err
 		}
@@ -56,22 +55,28 @@ func littleDoctor(path string, fs *syscall.Statfs_t) error {
 		for _, fileName := range names {
 
 			if fileName == "." || fileName == ".." {
-				return nil
+				continue
 			}
 
-			littleDoctor(filepath.Join(path, fileName), fs)
-			os.Remove(path)
+			if err := littleDoctor(filepath.Join(path, fileName), fsType); err != nil {
+				return err
+			}
+			if err := os.Remove(path); err != nil {
+				return err
+			}
 		}
 
 	} else {
-		os.Remove(path)
+		if err := os.Remove(path); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// execCommand will run the executable at "path" with PID 1
-// it returns an error if the command exits incorrectly
+// execCommand will run the executable at "path" with PID 1.
+// It returns an error if the command exits incorrectly.
 func execCommand(path string) error {
 	cmd := exec.Command(path)
 	cmd.Stdin = os.Stdin
@@ -85,10 +90,10 @@ func execCommand(path string) error {
 	return cmd.Run()
 }
 
-// specialFS creates and mounts proc, sys and dev at the root level
+// specialFS creates and mounts proc, sys and dev at the root level.
 func specialFS() error {
 
-	if err := syscall.Mkdir("/path", 0); err != nil {
+	if err := syscall.Mkdir("/proc", 0); err != nil {
 		return err
 	}
 	if err := syscall.Mkdir("/sys", 0); err != nil {
@@ -99,15 +104,15 @@ func specialFS() error {
 		return err
 	}
 
-	if err := syscall.Mount("proc", "/proc", "proc", syscall.MS_MGC_VAL, ""); err != nil {
+	if err := syscall.Mount("", "/proc", "proc", 0, ""); err != nil {
 		return err
 	}
 
-	if err := syscall.Mount("sys", "/sys", "sysfs", syscall.MS_MGC_VAL, ""); err != nil {
+	if err := syscall.Mount("", "/sys", "sysfs", 0, ""); err != nil {
 		return err
 	}
 
-	if err := syscall.Mount("none", "/dev", "devtmpfs", syscall.MS_MGC_VAL, ""); err != nil {
+	if err := syscall.Mount("", "/dev", "devtmpfs", 0, ""); err != nil {
 		return err
 	}
 
@@ -120,17 +125,18 @@ func specialFS() error {
 // and execs "init"
 func SwitchRoot(newRoot string, init string) error {
 	log.Printf("switch_root: Changing directory")
+	var rootFS syscall.Statfs_t
 
-	syscall.Chdir(newRoot)
-
-	rootFS := syscall.Statfs_t{}
+	if err := syscall.Chdir(newRoot); err != nil {
+		return fmt.Errorf("switch_root: failed change directory to new_root %v", err)
+	}
 
 	if err := syscall.Statfs("/", &rootFS); err != nil {
 		return fmt.Errorf("switch_root: failed statfs %v", err)
 	}
 
-	if err := littleDoctor("/", &rootFS); err != nil {
-		return fmt.Errorf("switch_root: failed Deletion of rootfs: %v", err)
+	if err := littleDoctor("/", rootFS.Type); err != nil {
+		return fmt.Errorf("switch_root: failed Deletion of rootfs %v", err)
 	}
 
 	log.Printf("switch_root: Overmounting on /")
@@ -146,7 +152,9 @@ func SwitchRoot(newRoot string, init string) error {
 	}
 
 	log.Printf("switch_root: returning to slash")
-	syscall.Chdir("/")
+	if err := syscall.Chdir("/"); err != nil {
+		return fmt.Errorf("switch_root: failed change directory to '/' %v", err)
+	}
 
 	log.Printf("switch_root: creating proc, dev and sys")
 
