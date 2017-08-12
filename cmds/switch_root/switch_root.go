@@ -83,8 +83,9 @@ func execCommand(path string) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setctty: true,
-		Setsid:  true,
+		Setctty:    true,
+		Setsid:     true,
+		Cloneflags: syscall.CLONE_THREAD | syscall.CLONE_NEWPID,
 	}
 
 	return cmd.Run()
