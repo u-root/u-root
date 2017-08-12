@@ -17,64 +17,102 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
+	//"io"
 )
 
-// Used an array of flags in case more flags are added (see rm method signature)
-/*
-	interactive  = flag.Bool("i", false, "Interactive mode.")
-	verbose      = flag.Bool("v", false, "Verbose mode.")
-	hierarchies  = flag.Bool("r", false, "Remove file hierarchies")
-	flagsRm = [interactive, verbose, hierarchies]
-*/
 // You can add more flags to this struct
 type rmFlags struct {
 	recursive   bool
 	verbose     bool
 	interactive bool
+	//force       bool
 }
 
-func rm(files []string, flags rmFlags) error {
-	f := os.Remove
-	if flags.recursive {
-		f = os.RemoveAll
-	}
-	workingPath, err := os.Getwd()
+func recursiveDelete(file string, flags rmFlags) error {
+	input := bufio.NewScanner(os.Stdin)
+	statval, err := os.Stat(file)
 	if err != nil {
 		return err
 	}
-	input := bufio.NewScanner(os.Stdin)
-	for _, file := range files {
-		//Throw an error if the file is a directory
-		statval, err := os.Stat(file)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-		if statval.IsDir() {
-			newError := os.PathError{Op: "rm:", Path: file, Err: syscall.EISDIR}
+	if statval.IsDir() {
+		if !flags.recursive {
+			newError := os.PathError{Op: "\nrm:", Path: file, Err: syscall.EISDIR}
 			fmt.Fprintf(os.Stderr, "%v\n", newError.Error())
-			continue
+			return nil
+		}
+		if flags.interactive || flags.verbose {
+			//TODO: sort this list by (unknown parameter)
+			fileList, err := ioutil.ReadDir(file)
+			if len(fileList) == 0 {
+				if flags.interactive {
+					fmt.Printf("rm: remove directory '%v'? ", file)
+					input.Scan()
+					if input.Text()[0] != 'y' {
+						return nil
+					}
+				}
+			} else if err != nil {
+				return err
+			} else {
+				if flags.interactive {
+					fmt.Printf("rm: descend into directory '%v'? ", file)
+					input.Scan()
+					if input.Text()[0] != 'y' {
+						return nil
+					}
+				}
+				for _, each := range fileList {
+					recursiveDelete(filepath.Join(file, each.Name()), flags)
+				}
+			}
+
+		} else {
+			os.RemoveAll(file)
 		}
 		if flags.interactive {
-			fmt.Printf("rm: remove '%v'? ", file)
+			fmt.Printf("rm: remove directory '%v'? ", file)
 			input.Scan()
 			if input.Text()[0] != 'y' {
-				continue
+				return nil
 			}
 		}
-		if err := f(file); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			continue
+		if flags.verbose {
+			fmt.Printf("removed directory '%v'\n", file)
 		}
 
-		if flags.verbose {
-			toRemove := file
-			if !filepath.IsAbs(file) {
-				toRemove = filepath.Join(workingPath, file)
+	} else {
+
+		if flags.interactive {
+			if statval.Size() == 0 {
+				fmt.Printf("rm: remove regular empty file '%v'? ", file)
+			} else {
+				fmt.Printf("rm: remove '%v'? ", file)
 			}
-			fmt.Printf("removed '%v'\n", toRemove)
+			input.Scan()
+			if input.Text()[0] != 'y' {
+				return nil
+			}
+		}
+		if err := os.Remove(file); err != nil {
+			return err
+		}
+		if flags.verbose {
+			fmt.Printf("removed '%v'\n", file)
+		}
+	}
+
+	return nil
+}
+
+func rm(files []string, flags rmFlags) error {
+	for _, file := range files {
+		err := recursiveDelete(file, flags)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 	}
 	return nil
@@ -85,6 +123,7 @@ func main() {
 	flag.BoolVar(&flags.verbose, "v", false, "Verbose mode.")
 	flag.BoolVar(&flags.recursive, "r", false, "Recursive mode.")
 	flag.BoolVar(&flags.interactive, "i", false, "Interactive mode.")
+	//flag.BoolVar(&flags.interactive, "f", false, "Force mode")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		flag.Usage()
