@@ -21,6 +21,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"regexp"
+	"sync"
 	"time"
 
 	"github.com/d2g/dhcp4"
@@ -30,33 +32,46 @@ import (
 )
 
 const (
-	defaultIfname = "eth0"
 	// slop is the slop in our lease time.
-	slop = 10 * time.Second
+	slop          = 10 * time.Second
+	linkUpAttempt = 30 * time.Second
 )
 
 var (
+	ifName       = "^e.*"
 	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	retry        = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting")
-	verbose      = flag.Bool("verbose", true, "Verbose output")
+	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting. -1 means infinity")
+	verbose      = flag.Bool("verbose", false, "Verbose output")
 	ipv4         = flag.Bool("ipv4", false, "use IPV4")
 	test         = flag.Bool("test", false, "Test mode")
 	debug        = func(string, ...interface{}) {}
 )
 
 func ifup(ifname string) (netlink.Link, error) {
-	iface, err := netlink.LinkByName(ifname)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get interface by name %v: %v", ifname, err)
+	debug("Try bringing up %v", ifname)
+	start := time.Now()
+	for time.Since(start) < linkUpAttempt {
+		// Note that it may seem odd to keep trying the
+		// LinkByName operation, by consider that a hotplug
+		// device such as USB ethernet can just vanish.
+		iface, err := netlink.LinkByName(ifname)
+		debug("LinkByName(%v) returns (%v, %v)", ifname, iface, err)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get interface by name %v: %v", ifname, err)
+		}
+
+		if iface.Attrs().OperState == netlink.OperUp {
+			debug("Link %v is up", ifname)
+			return iface, nil
+		}
+
+		if err := netlink.LinkSetUp(iface); err != nil {
+			return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
+		}
+		time.Sleep(1 * time.Second)
 	}
-
-	if err := netlink.LinkSetUp(iface); err != nil {
-		return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
-	}
-
-	return iface, nil
-
+	return nil, fmt.Errorf("Link %v still down after %d seconds", ifname, linkUpAttempt)
 }
 
 func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
@@ -80,9 +95,9 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 		for i := 0; i < retry || retry < 0; i++ {
 			if i > 0 {
 				if needsRequest {
-					log.Printf("Resending DHCPv4 request...\n")
+					debug("Resending DHCPv4 request...\n")
 				} else {
-					log.Printf("Resending DHCPv4 renewal")
+					debug("Resending DHCPv4 renewal")
 				}
 			}
 
@@ -93,7 +108,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 			}
 			if err != nil {
 				if err0, ok := err.(net.Error); ok && err0.Timeout() {
-					log.Printf("%s: could not find DHCP server", mac)
+					log.Printf("%s: timeout contacting DHCP server", mac)
 				} else {
 					log.Printf("%s: error: %v", mac, err)
 				}
@@ -118,14 +133,14 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 
 		netmask, ok := o[dhcp4.OptionSubnetMask]
 		if ok {
-			log.Printf("OptionSubnetMask is %v\n", netmask)
+			debug("OptionSubnetMask is %v\n", netmask)
 		} else {
 			// If they did not offer a subnet mask, we
 			// choose the most restrictive option, namely,
 			// our IP address.  This could happen on,
 			// e.g., a point to point link.
 			netmask = packet.YIAddr()
-			log.Printf("No OptionSubnetMask; default to %v\n", netmask)
+			debug("No OptionSubnetMask; default to %v\n", netmask)
 		}
 
 		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
@@ -138,7 +153,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 			}
 
 			if gwData, ok := o[dhcp4.OptionRouter]; ok {
-				log.Printf("router %v", gwData)
+				debug("router %v", gwData)
 				routerName := net.IP(gwData).String()
 				debug("routerName %v", routerName)
 				r := &netlink.Route{
@@ -153,6 +168,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 			}
 		}
 		if binary.BigEndian.Uint16(packet.Secs()) == 0 {
+			debug("%v: server returned infinite lease.", iface.Attrs().Name)
 			break
 		}
 
@@ -178,8 +194,8 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 		if err != nil {
 			return fmt.Errorf("error: %v", err)
 		}
-		fmt.Printf("Packet: %+v\n\n", packet)
-		fmt.Printf("IAAddrs: %v\n", iaAddrs)
+		debug("Packet: %+v\n\n", packet)
+		debug("IAAddrs: %v\n", iaAddrs)
 
 		if *test == false {
 			dst := &netlink.Addr{
@@ -222,9 +238,19 @@ func main() {
 		log.Fatalf("We're sorry, the random number generator is not up. Please file a ticket")
 	}
 
-	iList := []string{defaultIfname}
+	if len(flag.Args()) > 1 {
+		log.Fatalf("only one re")
+	}
+
 	if len(flag.Args()) > 0 {
-		iList = flag.Args()
+		ifName = flag.Args()[0]
+	}
+
+	ifRE := regexp.MustCompilePOSIX(ifName)
+
+	ifnames, err := netlink.LinkList()
+	if err != nil {
+		log.Fatalf("Can't get list of link names: %v", err)
 	}
 
 	timeout := time.Duration(*leasetimeout) * time.Second
@@ -234,9 +260,15 @@ func main() {
 		log.Printf("increased lease timeout to %s", timeout)
 	}
 
+	var wg sync.WaitGroup
 	done := make(chan error)
-	for _, i := range iList {
+	for _, i := range ifnames {
+		if !ifRE.MatchString(i.Attrs().Name) {
+			continue
+		}
+		wg.Add(1)
 		go func(ifname string) {
+			defer wg.Done()
 			iface, err := ifup(ifname)
 			if err != nil {
 				done <- err
@@ -247,13 +279,24 @@ func main() {
 			} else {
 				done <- dhclient6(iface, *renewals, timeout, *retry)
 			}
-		}(i)
+			debug("Done dhclient for %v", ifname)
+		}(i.Attrs().Name)
 	}
 
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
 	// Wait for all goroutines to finish.
-	for range iList {
-		if err := <-done; err != nil {
+	var nif int
+	for err := range done {
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
+		nif++
+	}
+
+	if nif == 0 {
+		fmt.Printf("No interfaces match %v\n", ifName)
 	}
 }

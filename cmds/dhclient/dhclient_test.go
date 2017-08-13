@@ -23,7 +23,7 @@ var tests = []struct {
 		iface:  "nosuchanimal",
 		isIPv4: "-ipv4=true",
 		test:   "-test=true",
-		out:    "cannot get interface by name nosuchanimal: Link not found\n",
+		out:    "No interfaces match nosuchanimal\n",
 	},
 }
 
