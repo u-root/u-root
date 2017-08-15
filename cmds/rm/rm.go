@@ -39,14 +39,20 @@ func recursiveDelete(file string, flags rmFlags) error {
 		return err
 	}
 	if statval.IsDir() {
+		//Throws error if flag is not recursive
 		if !flags.recursive {
+			//because it is a path error, the print statement is different and cannot be returned
 			newError := os.PathError{Op: "\nrm:", Path: file, Err: syscall.EISDIR}
 			fmt.Fprintf(os.Stderr, "%v\n", newError.Error())
 			return nil
 		}
+		//At this point, the recursive flag is on
 		if flags.interactive || flags.verbose {
 			//TODO: sort this list by (unknown parameter)
 			fileList, err := ioutil.ReadDir(file)
+			if err != nil {
+				return err
+			}
 			if len(fileList) == 0 {
 				if flags.interactive {
 					fmt.Printf("rm: remove directory '%v'? ", file)
@@ -73,6 +79,7 @@ func recursiveDelete(file string, flags rmFlags) error {
 		} else {
 			os.RemoveAll(file)
 		}
+		//This step is for post processing after all the files inside a directory are removed
 		if flags.interactive {
 			fmt.Printf("rm: remove directory '%v'? ", file)
 			input.Scan()
@@ -110,9 +117,8 @@ func recursiveDelete(file string, flags rmFlags) error {
 
 func rm(files []string, flags rmFlags) error {
 	for _, file := range files {
-		err := recursiveDelete(file, flags)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
+		if err := recursiveDelete(file, flags); err != nil {
+			return err
 		}
 	}
 	return nil

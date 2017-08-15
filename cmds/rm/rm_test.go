@@ -11,8 +11,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"testing"
 	"syscall"
+	"testing"
 )
 
 type makeit struct {
@@ -92,12 +92,12 @@ func setup() (string, error) {
 	if err := ioutil.WriteFile(path.Join(newD, tests2[0].n), []byte(""), tests2[0].m); err != nil {
 		return "", err
 	}
-	
-		if err := os.Symlink(path.Join(d, tests2[0].n), path.Join(newD, "symlink")); err != nil {
-			return "", err
-		}
-		// check error
-		syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64)
+
+	if err := os.Symlink(path.Join(d, tests2[0].n), path.Join(newD, "symlink")); err != nil {
+		return "", err
+	}
+	// check error
+	syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64)
 	return d, nil
 }
 
