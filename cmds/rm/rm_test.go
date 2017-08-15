@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"syscall"
 )
 
 type makeit struct {
@@ -76,15 +77,15 @@ func setup() (string, error) {
 	}
 
 	/*create empty file and directory s*/
-	/*if err := ioutil.WriteFile(path.Join(d, tests2[0].n), nil, tests2[0].m); err != nil {
+	if err := ioutil.WriteFile(path.Join(d, tests2[0].n), nil, tests2[0].m); err != nil {
 		return "", err
 	}
 	if ioutil.TempDir(d, tests2[1].n); err != nil {
 		return "", err
-	}*/
+	}
 
 	/*create file, symlink, and block device in a new directory*/
-	/*newD, err := ioutil.TempDir(d, tests2[2].n)
+	newD, err := ioutil.TempDir(d, tests2[2].n)
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +98,6 @@ func setup() (string, error) {
 		}
 		// check error
 		syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64)
-	*/
 	return d, nil
 }
 
@@ -140,13 +140,13 @@ func Test_rm_1(t *testing.T) {
 	}
 	os.RemoveAll(d)
 }
-/*
+
 //flags: none; only delete files from test1
 func Test_rm_2(t *testing.T) {
 	fmt.Println("TEST 2:")
 	d, err := setup()
 	if err != nil {
-		t.Fatal("Error on setup of the test: creating files and folders.")
+		t.Fatalf("Error on setup of the test: creating files and folders.")
 	}
 	var flags rmFlags
 	flags.verbose = true
@@ -165,7 +165,7 @@ func Test_rm_3(t *testing.T) {
 	fmt.Println("TEST 3:")
 	d, err := setup()
 	if err != nil {
-		t.Fatal("Error on setup of the test: creating files and folders.")
+		t.Fatalf("Error on setup of the test: creating files and folders.")
 	}
 	fmt.Printf("All files in directory")
 	filename, err := printFiles(d)
@@ -188,7 +188,7 @@ func Test_rm_4(t *testing.T) {
 	fmt.Println("TEST 4:")
 	d, err := setup()
 	if err != nil {
-		t.Fatal("Error on setup of the test: creating files and folders.")
+		t.Fatalf("Error on setup of the test: creating files and folders.")
 	}
 	var flags rmFlags
 	if err := rm([]string{"dnefile"}, flags); err != nil {
@@ -197,4 +197,3 @@ func Test_rm_4(t *testing.T) {
 	printFiles(d)
 
 }
-*/
