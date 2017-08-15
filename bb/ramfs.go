@@ -31,7 +31,7 @@ var (
 	paths = map[string][]string{}
 	/*extraPaths = flag.String("extra", "", `Extra paths to add in the form root:start, e.g. /:etc/hosts.
 	The path before the : is used as a starting point for a walk; the path after the : selects what things to put
-	into the initramfs starting at /. E.g., /tmp/prototype:/ will install the prototype file system into / of the initramfs`)*/	
+	into the initramfs starting at /. E.g., /tmp/prototype:/ will install the prototype file system into / of the initramfs`)*/
 	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
@@ -142,7 +142,7 @@ func ramfs() {
 			}
 		}
 	}
-	
+
 	if *extraPaths != "" {
 		extras := strings.Split(strings.TrimSpace(*extraPaths), " ")
 		for _, x := range extras {
@@ -153,7 +153,6 @@ func ramfs() {
 			paths[p[0]] = append(paths[p[0]], p[1])
 		}
 	}
-
 
 	if *extraCpio != "" {
 		extras := strings.Fields(*extraCpio)
