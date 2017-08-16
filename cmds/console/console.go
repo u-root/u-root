@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	serial    = flag.String("serial", "0x3f8", "use IO for stdin")
+	serial    = flag.String("serial", "0x3f8", "which IO device: stdio, i8042, or serial port starting with 0")
 	setupRoot = flag.Bool("setuproot", true, "Set up a root file system")
 )
 
@@ -47,12 +47,24 @@ func main() {
 
 	in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)
 
-	if *serial != "" {
+	// This switch is kind of hokey, true, but it's also quite convenient for users.
+	switch {
+	// A raw IO port for serial console
+	case []byte(*serial)[0] == '0':
 		u, err := openUART(*serial)
 		if err != nil {
 			log.Fatalf("Sorry, can't get a uart: %v", err)
 		}
 		in, out = u, u
+	case *serial == "i8042":
+		u, err := openi8042()
+		if err != nil {
+			log.Fatalf("Sorry, can't get an i8042: %v", err)
+		}
+		in, out = u, os.Stdout
+	case *serial == "stdio":
+	default:
+		log.Fatalf("console must be one of stdio, i8042, or an IO port with a leading 0 (e.g. 0x3f8)")
 	}
 
 	err = p.Start()
