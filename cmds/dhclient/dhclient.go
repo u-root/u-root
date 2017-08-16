@@ -43,7 +43,8 @@ var (
 	retry        = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting. -1 means infinity")
 	verbose      = flag.Bool("verbose", false, "Verbose output")
-	ipv4         = flag.Bool("ipv4", false, "use IPV4")
+	ipv4         = flag.Bool("ipv4", true, "use IPV4")
+	ipv6         = flag.Bool("ipv6", true, "use IPV6")
 	test         = flag.Bool("test", false, "Test mode")
 	debug        = func(string, ...interface{}) {}
 )
@@ -275,9 +276,14 @@ func main() {
 				return
 			}
 			if *ipv4 {
+				wg.Add(1)
 				done <- dhclient4(iface, *renewals, timeout, *retry)
-			} else {
+				wg.Done()
+			}
+			if *ipv6 {
+				wg.Add(1)
 				done <- dhclient6(iface, *renewals, timeout, *retry)
+				wg.Done()
 			}
 			debug("Done dhclient for %v", ifname)
 		}(i.Attrs().Name)
