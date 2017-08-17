@@ -14,10 +14,28 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"log"
+	"syscall"
 )
 
+var ()
+
 func main() {
-	fmt.Println("vim-go")
+	uid := syscall.Getuid()
+	gid := syscall.Getgid()
+	groups, err := syscall.Getgroups()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("uid: %d\n", uid)
+	fmt.Printf("gid: %d\n", gid)
+
+	fmt.Print("groups: ")
+	for _, group := range groups {
+		fmt.Printf("%d ", group)
+	}
+	fmt.Println()
+
 }
