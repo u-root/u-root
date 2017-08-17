@@ -5,7 +5,7 @@
 // Print process information.
 //
 // Synopsis:
-//     ps [-Aaex]
+//     ps [-Aaex] [aux]
 //
 // Description:
 //     ps reads the /proc filesystem and prints nice things about what it
@@ -17,6 +17,7 @@
 //     -e: select all processes. Identical to -A.
 //     -x: BSD-Like style, with STAT Column and long CommandLine
 //     -a: print all process except whose are session leaders or unlinked with terminal
+//    aux: see every process on the system using BSD syntax
 package main
 
 import (
@@ -24,8 +25,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -174,44 +177,14 @@ func (pT *ProcessTable) PrepareString() {
 	pT.fstring = fstring
 }
 
-func mapSubset(check map[byte]int, ref map[byte]int) bool {
-	for cLet, cNum := range check {
-		if rNum, ok := ref[cLet]; ok {
-			if cNum != rNum {
-				return false
-			}
-		} else {
-			return false
-		}
-	}
-	return true
-}
-
 func isPermutation(check string, ref string) bool {
+	checkArray := strings.Split(check, "")
+	refArray := strings.Split(ref, "")
 
-	checkMap := make(map[byte]int)
-	refMap := make(map[byte]int)
+	sort.Strings(checkArray)
+	sort.Strings(refArray)
 
-	if len(check) != len(ref) {
-		return false
-	}
-
-	for i := 0; i < len(check); i++ {
-		if _, ok := checkMap[check[i]]; ok {
-			checkMap[check[i]] += 1
-		} else {
-			checkMap[check[i]] = 0
-		}
-
-		if _, ok := refMap[ref[i]]; ok {
-			refMap[ref[i]] += 1
-		} else {
-			refMap[ref[i]] = 0
-		}
-	}
-
-	return mapSubset(checkMap, refMap) && mapSubset(refMap, checkMap)
-
+	return reflect.DeepEqual(check, ref)
 }
 
 // For now, just read /proc/pid/stat and dump its brains.
