@@ -96,8 +96,11 @@ func setup() (string, error) {
 	if err := os.Symlink(path.Join(d, tests2[0].n), path.Join(newD, "symlink")); err != nil {
 		return "", err
 	}
-	// check error
-	syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64)
+	/*
+	if err := syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64); err != nil {
+		return "", err	
+	}
+*/
 	return d, nil
 }
 
