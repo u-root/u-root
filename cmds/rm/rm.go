@@ -83,10 +83,10 @@ func recursiveDelete(file string, flags rmFlags) error {
 				if !iFlag(input,printString){
 					return nil				
 				}
-				if err := os.Remove(file); err != nil {
+			}
+			if err := os.Remove(file); err != nil {
 					return err
 				}
-			}
 			if flags.verbose {
 					fmt.Printf("removed directory '%v'\n", file)
 			}

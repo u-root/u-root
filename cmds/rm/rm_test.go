@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"syscall"
 	"testing"
 )
 
@@ -179,6 +178,7 @@ func Test_rm_3(t *testing.T) {
 	//defer os.RemoveAll(d)
 	fmt.Printf("%v", filename)
 	var flags rmFlags
+	flags.recursive = true
 	if err := rm(filename, flags); err != nil {
 		t.Error(err)
 	}
