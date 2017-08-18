@@ -61,9 +61,13 @@ func initFlags() error {
 	flag.Parse()
 	if !correctFlags(flags.G, flags.g, flags.u) {
 		return fmt.Errorf("cannot print \"only\" of more than one choice\n")
-	} else {
-		return nil
+
 	}
+	if flags.n && !(flags.G || flags.g || flags.u) {
+		return fmt.Errorf("cannot print only names in default format\n")
+	}
+
+	return nil
 }
 
 type User struct {
