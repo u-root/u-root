@@ -39,12 +39,31 @@ var (
 	}
 )
 
-func initFlags() {
+func correctFlags(flags ...bool) bool {
+	n := 0
+	for _, v := range flags {
+		if v {
+			n += 1
+		}
+	}
+	if n > 1 {
+		return false
+	} else {
+		return true
+	}
+}
+
+func initFlags() error {
 	flag.BoolVar(&flags.g, "g", false, "print only the effective group ID")
 	flag.BoolVar(&flags.G, "G", false, "print all group IDs")
 	flag.BoolVar(&flags.n, "n", false, "print a name instead of a number, for -ugG")
 	flag.BoolVar(&flags.u, "u", false, "print only the effective user ID")
 	flag.Parse()
+	if !correctFlags(flags.G, flags.g, flags.u) {
+		return fmt.Errorf("cannot print \"only\" of more than one choice\n")
+	} else {
+		return nil
+	}
 }
 
 type User struct {
@@ -229,9 +248,12 @@ func IDCommand(u User) {
 }
 
 func main() {
-	initFlags()
+	if err := initFlags(); err != nil {
+		log.Fatalf("id: %s", err)
+	}
+
 	if theChosenOne, err := NewUser(); err != nil {
-		log.Fatalf("Fatal error: %s", err)
+		log.Fatalf("id: %s", err)
 	} else {
 		IDCommand(*theChosenOne)
 	}
