@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -26,21 +27,32 @@ import (
 var (
 	GROUP_FILE  = "/etc/group"
 	PASSWD_FILE = "/etc/passwd"
+
+	flags struct {
+		g bool
+		G bool
+		n bool
+		u bool
+	}
 )
 
-type Group struct {
-	Name   string
-	Number int
+func initFlags() {
+	flag.BoolVar(&flags.g, "g", false, "print only the effective group ID")
+	flag.BoolVar(&flags.G, "G", false, "print all group IDs")
+	flag.BoolVar(&flags.n, "n", false, "print a name instead of a number, for -ugG")
+	flag.BoolVar(&flags.u, "u", false, "print only the effective user ID")
+	flag.Parse()
 }
 
 type User struct {
 	Name   string
 	Uid    int
 	Euid   int
-	Groups []*Group
+	Gid    int
+	Groups map[int]string
 }
 
-func (u *User) getUid() int {
+func (u *User) GetUid() int {
 	return u.Uid
 }
 
@@ -48,7 +60,7 @@ func (u *User) pullUid() {
 	u.Uid = syscall.Getuid()
 }
 
-func (u *User) getEuid() int {
+func (u *User) GetEuid() int {
 	return u.Euid
 }
 
@@ -56,7 +68,15 @@ func (u *User) pullEuid() {
 	u.Uid = syscall.Geteuid()
 }
 
-func (u *User) getName() string {
+func (u *User) GetGid() int {
+	return u.Gid
+}
+
+func (u *User) pullGid() {
+	u.Gid = syscall.Getgid()
+}
+
+func (u *User) GetName() string {
 	return u.Name
 }
 
@@ -74,7 +94,7 @@ func (u *User) pullName() {
 		passwdInfo = strings.Split(passwdScanner.Text(), ":")
 		if val, err := strconv.Atoi(passwdInfo[2]); err != nil {
 			log.Fatal(err)
-		} else if val == u.getUid() {
+		} else if val == u.GetUid() {
 			u.Name = passwdInfo[0]
 			return
 		}
@@ -83,8 +103,13 @@ func (u *User) pullName() {
 	log.Fatal()
 }
 
-func (u *User) getGroups() []*Group {
+func (u *User) GetGroups() map[int]string {
 	return u.Groups
+}
+
+func (u *User) GetGidName() string {
+	val := u.GetGroups()[u.GetUid()]
+	return val
 }
 
 func (u *User) pullGroups() {
@@ -99,10 +124,7 @@ func (u *User) pullGroups() {
 	}
 
 	for _, groupNum := range groupsNumbers {
-		u.Groups = append(u.Groups, &Group{
-			Name:   groupsMap[groupNum],
-			Number: groupNum,
-		})
+		u.Groups[groupNum] = groupsMap[groupNum]
 	}
 
 }
@@ -131,28 +153,41 @@ func readGroups() (map[int]string, error) {
 	return groupsMap, nil
 }
 
-func (u *User) Init() {
+func NewUser() User {
+	emptyMap := make(map[int]string)
+	u := User{"", -1, -1, -1, emptyMap}
 	u.pullUid()
 	u.pullEuid()
+	u.pullGid()
 	u.pullGroups()
 	u.pullName()
+	return u
+}
+
+func IDCommand(u User) {
+
+	fmt.Printf("uid=%d(%s) ", u.GetUid(), u.GetName())
+	fmt.Printf("gid=%d(%s) ", u.GetGid(), u.GetGidName())
+
+	fmt.Print("groups=")
+	n := 0
+	length := len(u.Groups)
+	for gid, name := range u.Groups {
+
+		fmt.Printf("%d(%s)", gid, name)
+
+		if n < length-1 {
+			fmt.Print(",")
+		}
+		n += 1
+	}
+	fmt.Println()
 }
 
 func main() {
-	uid := syscall.Getuid()
-	gid := syscall.Getgid()
-	groups, err := syscall.Getgroups()
-	if err != nil {
-		log.Fatal(err)
-	}
+	initFlags()
 
-	fmt.Printf("uid: %d\n", uid)
-	fmt.Printf("gid: %d\n", gid)
+	dude := NewUser()
 
-	fmt.Print("groups: ")
-	for _, group := range groups {
-		fmt.Printf("%d ", group)
-	}
-	fmt.Println()
-
+	IDCommand(dude)
 }
