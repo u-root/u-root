@@ -80,6 +80,7 @@ func (u *User) GetName() string {
 	return u.Name
 }
 
+// pullName finds the name of the User by reading PASSWD_FILE.
 func (u *User) pullName() {
 	passwdFile, err := os.Open(PASSWD_FILE)
 	if err != nil {
@@ -112,6 +113,7 @@ func (u *User) GetGidName() string {
 	return val
 }
 
+// pullGroups aggregates the groups that the User is in.
 func (u *User) pullGroups() {
 	groupsNumbers, err := syscall.Getgroups()
 	if err != nil {
@@ -129,6 +131,8 @@ func (u *User) pullGroups() {
 
 }
 
+// readGroups reads the GROUP_FILE for groups.
+// It assumes the format "name:passwd:number:groupList".
 func readGroups() (map[int]string, error) {
 	groupFile, err := os.Open(GROUP_FILE)
 	if err != nil {
@@ -153,6 +157,7 @@ func readGroups() (map[int]string, error) {
 	return groupsMap, nil
 }
 
+// NewUser is a factory method for the User type.
 func NewUser() User {
 	emptyMap := make(map[int]string)
 	u := User{"", -1, -1, -1, emptyMap}
@@ -164,6 +169,7 @@ func NewUser() User {
 	return u
 }
 
+// IDCommand runs the "id" with the current user's information.
 func IDCommand(u User) {
 	if !flags.G {
 		if flags.u {
