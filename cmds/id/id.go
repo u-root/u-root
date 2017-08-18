@@ -1,16 +1,19 @@
 // Copyright 2013-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
 // Print process information.
 //
 // Synopsis:
-//     id
+//      id [-gGnu]
 //
 // Description:
-//     id displays the uid, guid and groups of the calling process
-//
+//      id displays the uid, guid and groups of the calling process
 // Options:
+//  		-g, --group     print only the effective group ID
+//		  -G, --groups    print all group IDs
+//		  -n, --name      print a name instead of a number, for -ugG
+//		  -u, --user      print only the effective user ID
+//
 package main
 
 import (
@@ -81,10 +84,10 @@ func (u *User) GetName() string {
 }
 
 // pullName finds the name of the User by reading PASSWD_FILE.
-func (u *User) pullName() {
+func (u *User) pullName() error {
 	passwdFile, err := os.Open(PASSWD_FILE)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var passwdInfo []string
@@ -94,14 +97,14 @@ func (u *User) pullName() {
 	for passwdScanner.Scan() {
 		passwdInfo = strings.Split(passwdScanner.Text(), ":")
 		if val, err := strconv.Atoi(passwdInfo[2]); err != nil {
-			log.Fatal(err)
+			return err
 		} else if val == u.GetUid() {
 			u.Name = passwdInfo[0]
-			return
+			return nil
 		}
 	}
 
-	log.Fatal()
+	return fmt.Errorf("User is not in %s", PASSWD_FILE)
 }
 
 func (u *User) GetGroups() map[int]string {
@@ -114,21 +117,25 @@ func (u *User) GetGidName() string {
 }
 
 // pullGroups aggregates the groups that the User is in.
-func (u *User) pullGroups() {
+func (u *User) pullGroups() error {
 	groupsNumbers, err := syscall.Getgroups()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	groupsMap, err := readGroups()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for _, groupNum := range groupsNumbers {
-		u.Groups[groupNum] = groupsMap[groupNum]
+		if groupName, ok := groupsMap[groupNum]; ok {
+			u.Groups[groupNum] = groupName
+		} else {
+			return fmt.Errorf("Inconsistent %s file", GROUP_FILE)
+		}
 	}
-
+	return nil
 }
 
 // readGroups reads the GROUP_FILE for groups.
@@ -148,7 +155,7 @@ func readGroups() (map[int]string, error) {
 		groupInfo = strings.Split(groupScanner.Text(), ":")
 		groupNum, err := strconv.Atoi(groupInfo[2])
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		groupsMap[groupNum] = groupInfo[0]
@@ -158,15 +165,19 @@ func readGroups() (map[int]string, error) {
 }
 
 // NewUser is a factory method for the User type.
-func NewUser() User {
+func NewUser() (*User, error) {
 	emptyMap := make(map[int]string)
-	u := User{"", -1, -1, -1, emptyMap}
+	u := &User{"", -1, -1, -1, emptyMap}
 	u.pullUid()
 	u.pullEuid()
 	u.pullGid()
-	u.pullGroups()
-	u.pullName()
-	return u
+	if err := u.pullGroups(); err != nil {
+		return nil, err
+	}
+	if err := u.pullName(); err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 // IDCommand runs the "id" with the current user's information.
@@ -219,8 +230,9 @@ func IDCommand(u User) {
 
 func main() {
 	initFlags()
-
-	dude := NewUser()
-
-	IDCommand(dude)
+	if theChosenOne, err := NewUser(); err != nil {
+		log.Fatalf("Fatal error: %s", err)
+	} else {
+		IDCommand(*theChosenOne)
+	}
 }
