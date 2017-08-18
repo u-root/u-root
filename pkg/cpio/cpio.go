@@ -81,7 +81,7 @@ type Writer struct {
 	// There seems to be no harm done in stripping
 	// duplicate names when the record is written,
 	// and lots of harm done if we don't do it.
-	alreadyWritten map[string] struct{}
+	alreadyWritten map[string]struct{}
 }
 
 func (w Writer) WriteRecord(rec Record) error {

@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -78,6 +79,23 @@ func CreateFile(f Record) error {
 		return err
 	}
 
+	dir, _ := filepath.Split(f.Name)
+	// The problem: many cpio archives do not specify the directories
+	// and hence the permissions. They just specify the whole path.
+	// In order to create files in these directories, we have to make them at least
+	// mode 755.
+	if dir != "" {
+		switch m {
+		case os.FileMode(0),
+			os.ModeDevice,
+			os.ModeCharDevice,
+			os.ModeSymlink:
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return err
+			}
+		}
+	}
+
 	switch m {
 	case os.ModeSocket, os.ModeNamedPipe:
 		return fmt.Errorf("%q: type %v: cannot create IPC endpoints", f.Name, m)
@@ -116,10 +134,7 @@ func CreateFile(f Record) error {
 		if err != nil {
 			return err
 		}
-		if err := os.Symlink(string(content), f.Name); err != nil {
-			return err
-		}
-		return setModes(f)
+		return os.Symlink(string(content), f.Name)
 
 	default:
 		return fmt.Errorf("%v: Unknown type %#o", f.Name, m)
