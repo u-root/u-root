@@ -40,12 +40,24 @@ type User struct {
 	Groups []*Group
 }
 
+func (u *User) getUid() int {
+	return u.Uid
+}
+
 func (u *User) pullUid() {
 	u.Uid = syscall.Getuid()
 }
 
+func (u *User) getEuid() int {
+	return u.Euid
+}
+
 func (u *User) pullEuid() {
-	u.Uid = syscall.Getieuid()
+	u.Uid = syscall.Geteuid()
+}
+
+func (u *User) getName() string {
+	return u.Name
 }
 
 func (u *User) pullName() {
@@ -56,17 +68,23 @@ func (u *User) pullName() {
 
 	var passwdInfo []string
 
-	passwdScanner = bufio.NewScanner(PASSWD_FILE)
+	passwdScanner := bufio.NewScanner(passwdFile)
 
 	for passwdScanner.Scan() {
 		passwdInfo = strings.Split(passwdScanner.Text(), ":")
-		if passwdInfo[2] == u.getUid() {
+		if val, err := strconv.Atoi(passwdInfo[2]); err != nil {
+			log.Fatal(err)
+		} else if val == u.getUid() {
 			u.Name = passwdInfo[0]
 			return
 		}
 	}
 
 	log.Fatal()
+}
+
+func (u *User) getGroups() []*Group {
+	return u.Groups
 }
 
 func (u *User) pullGroups() {
@@ -81,7 +99,7 @@ func (u *User) pullGroups() {
 	}
 
 	for _, groupNum := range groupsNumbers {
-		u.Groups = append(u.Groups, Group{
+		u.Groups = append(u.Groups, &Group{
 			Name:   groupsMap[groupNum],
 			Number: groupNum,
 		})
@@ -102,10 +120,15 @@ func readGroups() (map[int]string, error) {
 
 	for groupScanner.Scan() {
 		groupInfo = strings.Split(groupScanner.Text(), ":")
-		groupsMap[strconv.Atoi(groupInfo[2])] = groupInfo[0]
+		groupNum, err := strconv.Atoi(groupInfo[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		groupsMap[groupNum] = groupInfo[0]
 	}
 
-	return groupMap, nil
+	return groupsMap, nil
 }
 
 func (u *User) Init() {
