@@ -165,21 +165,48 @@ func NewUser() User {
 }
 
 func IDCommand(u User) {
+	if !flags.G {
+		if flags.u {
+			if flags.n {
+				fmt.Println(u.GetName())
+				return
+			}
+			fmt.Println(u.GetUid())
+			return
+		} else if flags.g {
+			if flags.n {
+				fmt.Println(u.GetGidName())
+				return
+			}
+			fmt.Println(u.GetGid())
+			return
+		}
 
-	fmt.Printf("uid=%d(%s) ", u.GetUid(), u.GetName())
-	fmt.Printf("gid=%d(%s) ", u.GetGid(), u.GetGidName())
+		fmt.Printf("uid=%d(%s) ", u.GetUid(), u.GetName())
+		fmt.Printf("gid=%d(%s) ", u.GetGid(), u.GetGidName())
+	}
 
-	fmt.Print("groups=")
+	if !flags.G {
+		fmt.Print("groups=")
+	}
 	n := 0
 	length := len(u.Groups)
 	for gid, name := range u.Groups {
 
-		fmt.Printf("%d(%s)", gid, name)
+		if !flags.G {
+			fmt.Printf("%d(%s)", gid, name)
 
-		if n < length-1 {
-			fmt.Print(",")
+			if n < length-1 {
+				fmt.Print(",")
+			}
+			n += 1
+		} else {
+			if flags.n {
+				fmt.Printf("%s ", name)
+			} else {
+				fmt.Printf("%d ", gid)
+			}
 		}
-		n += 1
 	}
 	fmt.Println()
 }
