@@ -30,6 +30,7 @@ import (
 var (
 	GROUP_FILE  = "/etc/group"
 	PASSWD_FILE = "/etc/passwd"
+	l           = log.New(os.Stderr, "", 0)
 
 	flags struct {
 		g bool
@@ -253,11 +254,11 @@ func IDCommand(u User) {
 
 func main() {
 	if err := initFlags(); err != nil {
-		log.Fatalf("id: %s", err)
+		l.Fatalf("id: %s", err)
 	}
 
 	if theChosenOne, err := NewUser(); err != nil {
-		log.Fatalf("id: %s", err)
+		l.Fatalf("id: %s", err)
 	} else {
 		IDCommand(*theChosenOne)
 	}
