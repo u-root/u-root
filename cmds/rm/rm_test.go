@@ -20,7 +20,7 @@ type makeit struct {
 	s string      // for symlinks or content
 }
 
-/*standard file permissions*/
+/* Tests contains standard file permissions */
 var tests = []makeit{
 	{
 		n: "hi1.txt",
@@ -39,7 +39,7 @@ var tests = []makeit{
 	},
 }
 
-/*files, directories, links, and block devices*/
+/* Tests2 contains files, directories, links, and block devices */
 var tests2 = []makeit{
 	{
 		n: "file.txt",
@@ -60,7 +60,7 @@ var tests2 = []makeit{
 	},
 }
 
-// setup files and folders (for testing)
+
 func setup() (string, error) {
 	fmt.Println(":: Creating simulating data...")
 	d, err := ioutil.TempDir(os.TempDir(), "hi.dir")
@@ -68,14 +68,14 @@ func setup() (string, error) {
 		return "", err
 	}
 
-	/*create some files with content*/
+	/* Creates some files with content */
 	for i := range tests {
 		if err := ioutil.WriteFile(path.Join(d, tests[i].n), []byte("Go is cool!"), tests[i].m); err != nil {
 			return "", err
 		}
 	}
 
-	/*create empty file and directory s*/
+	/* Creates empty file and directory s */
 	if err := ioutil.WriteFile(path.Join(d, tests2[0].n), nil, tests2[0].m); err != nil {
 		return "", err
 	}
@@ -83,7 +83,7 @@ func setup() (string, error) {
 		return "", err
 	}
 
-	/*create file, symlink, and block device in a new directory*/
+	/* Create file, symlink, and block device in a new directory */
 	newD, err := ioutil.TempDir(d, tests2[2].n)
 	if err != nil {
 		return "", err
@@ -95,15 +95,15 @@ func setup() (string, error) {
 	if err := os.Symlink(path.Join(d, tests2[0].n), path.Join(newD, "symlink")); err != nil {
 		return "", err
 	}
-	/*
+	/* Does not work on Travis
 	if err := syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64); err != nil {
 		return "", err	
 	}
-*/
+	*/
 	return d, nil
 }
 
-//helper print function
+
 func printFiles(d string) (filenames []string, err error) {
 	var nameArray []string
 	fileNames, err := ioutil.ReadDir(d)
@@ -117,16 +117,9 @@ func printFiles(d string) (filenames []string, err error) {
 	return nameArray, nil
 }
 
-//TEST 1
-//flags: none; only delete files from test1
-//regular rm output:
-/*expected output:
-:: Creating simulating data...
-== Deleting files and empty folders (no args) ...
-removed '/tmp/hi.dir494143229/hi1.txt'
-removed '/tmp/hi.dir494143229/hi2.txt'
-removed '/tmp/hi.dir494143229/go.txt'
-*/
+// TEST 1
+// Flags: -v; only delete files from tests
+
 func Test_rm_1(t *testing.T) {
 	fmt.Println("TEST 1:")
 	d, err := setup()
@@ -143,7 +136,8 @@ func Test_rm_1(t *testing.T) {
 	os.RemoveAll(d)
 }
 
-//flags: none; only delete files from test1
+// TEST 2
+// Flags: -v -r; only delete files from test1
 func Test_rm_2(t *testing.T) {
 	fmt.Println("TEST 2:")
 	d, err := setup()
@@ -161,8 +155,8 @@ func Test_rm_2(t *testing.T) {
 	defer os.RemoveAll(d)
 }
 
-//list and delete all files
-//flags: none; only delete files from test1 and 2 and print all files in directory again
+// TEST 3
+// Flags: -r none; delete files from test1 and 2 and print all files in directory
 func Test_rm_3(t *testing.T) {
 	fmt.Println("TEST 3:")
 	d, err := setup()
@@ -183,11 +177,12 @@ func Test_rm_3(t *testing.T) {
 		t.Error(err)
 	}
 	printFiles(d)
-
+	defer os.RemoveAll(d)
 }
 
+//TEST 4
 /*
-//rm a file that does not exist
+//does not work with Travis, but is still a good test
 func Test_rm_4(t *testing.T) {
 	fmt.Println("TEST 4:")
 	d, err := setup()
