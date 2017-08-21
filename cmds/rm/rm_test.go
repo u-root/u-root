@@ -60,7 +60,6 @@ var tests2 = []makeit{
 	},
 }
 
-
 func setup() (string, error) {
 	fmt.Println(":: Creating simulating data...")
 	d, err := ioutil.TempDir(os.TempDir(), "hi.dir")
@@ -97,12 +96,11 @@ func setup() (string, error) {
 	}
 	/* Does not work on Travis
 	if err := syscall.Mknod(path.Join(newD, tests2[3].n), 0777, 64); err != nil {
-		return "", err	
+		return "", err
 	}
 	*/
 	return d, nil
 }
-
 
 func printFiles(d string) (filenames []string, err error) {
 	var nameArray []string

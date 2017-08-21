@@ -30,8 +30,7 @@ type rmFlags struct {
 	interactive bool
 }
 
-
-func isEmpty(file string) (bool, error, []os.FileInfo ) {
+func isEmpty(file string) (bool, error, []os.FileInfo) {
 	fileList, err := ioutil.ReadDir(file)
 	if err != nil {
 		//ignore this boolean return value
@@ -43,12 +42,12 @@ func isEmpty(file string) (bool, error, []os.FileInfo ) {
 	return false, nil, fileList
 }
 
-func interactivePrompt(input *bufio.Scanner, s string, args ...interface{})( bool, error) {
+func interactivePrompt(input *bufio.Scanner, s string, args ...interface{}) (bool, error) {
 	for {
 		fmt.Printf(s+" (y/n)", args...)
 		input.Scan()
 		if input.Err() != nil {
-			return false,input.Err()
+			return false, input.Err()
 		}
 		switch input.Text() {
 		case "y":
@@ -60,17 +59,15 @@ func interactivePrompt(input *bufio.Scanner, s string, args ...interface{})( boo
 	}
 }
 
-
-
-func printRemove(flags rmFlags, input *bufio.Scanner, s1 string, s2 string,  file string)(bool, error){
+func printRemove(flags rmFlags, input *bufio.Scanner, s1 string, s2 string, file string) (bool, error) {
 	if flags.interactive {
-		iVal, err:=interactivePrompt(input, s1, file)
-		if  err != nil {
+		iVal, err := interactivePrompt(input, s1, file)
+		if err != nil {
 			return false, err
 		}
-		if !iVal{
-			return false, nil		
-		}		
+		if !iVal {
+			return false, nil
+		}
 	}
 	if err := os.Remove(file); err != nil {
 		return false, err
@@ -81,8 +78,7 @@ func printRemove(flags rmFlags, input *bufio.Scanner, s1 string, s2 string,  fil
 	return true, nil
 }
 
-
-func rmImplement(file string, flags rmFlags) error{
+func rmImplement(file string, flags rmFlags) error {
 	input := bufio.NewScanner(os.Stdin)
 	statval, err := os.Stat(file)
 	if err != nil {
@@ -95,19 +91,19 @@ func rmImplement(file string, flags rmFlags) error{
 		if !flags.interactive && !flags.verbose {
 			if err := os.RemoveAll(file); err != nil {
 				return err
-			}			
+			}
 			return nil
 		}
 		empty, err, fileList := isEmpty(file)
-		if err != nil{
-			return err		
+		if err != nil {
+			return err
 		}
-		if empty{
+		if empty {
 			cont, err := printRemove(flags, input, "rm: remove directory '%s'? ", "removed directory '%v'\n", file)
-			if  err != nil{
+			if err != nil {
 				return err
 			}
-			if !cont{
+			if !cont {
 				return nil
 			}
 		} else {
@@ -116,7 +112,7 @@ func rmImplement(file string, flags rmFlags) error{
 				if err != nil {
 					return err
 				}
-				if !interact{
+				if !interact {
 					return nil
 				}
 			}
@@ -125,20 +121,20 @@ func rmImplement(file string, flags rmFlags) error{
 			}
 		}
 		empty, err, fileList = isEmpty(file)
-		if err != nil{
-			return err		
+		if err != nil {
+			return err
 		}
-		if empty{
-			cont, err := printRemove(flags, input, "rm: remove directory '%s'? ",  "removed directory '%v'\n", file)
-			if err != nil{
+		if empty {
+			cont, err := printRemove(flags, input, "rm: remove directory '%s'? ", "removed directory '%v'\n", file)
+			if err != nil {
 				return err
 			}
-			if !cont{
+			if !cont {
 				return nil
 			}
-		} else{
-			fmt.Printf("There are still files in this directory, cannot remove.") 
-			return nil		
+		} else {
+			fmt.Printf("There are still files in this directory, cannot remove.")
+			return nil
 		}
 	} else {
 		rmString := "rm: remove file '%s'?"
@@ -146,10 +142,10 @@ func rmImplement(file string, flags rmFlags) error{
 			rmString = "rm: remove regular empty file '%s'?"
 		}
 		cont, err := printRemove(flags, input, rmString, "removed '%v'\n", file)
-		if err != nil{
+		if err != nil {
 			return err
 		}
-		if !cont{
+		if !cont {
 			return nil
 		}
 	}
