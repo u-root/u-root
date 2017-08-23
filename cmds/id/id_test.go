@@ -2,17 +2,17 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 var (
-	testpath = "."
-	logPrefixLength = 20
+	remove          = true
+	testpath        = "."
+	logPrefixLength = len("2009/11/10 23:00:00 ")
 )
 
 type test struct {
@@ -31,6 +31,11 @@ func run(c *exec.Cmd) (string, string, error) {
 
 // Test incorrect invocation of id
 func TestInvocation(t *testing.T) {
+	tempDir, idPath := testutil.CompileInTempDir(t)
+
+	if remove {
+		defer os.RemoveAll(tempDir)
+	}
 
 	var tests = []test{
 		{opt: []string{"-n"}, out: "id: cannot print only names in default format\n"},
@@ -41,29 +46,12 @@ func TestInvocation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		c := exec.Command(testpath, test.opt...)
+		c := exec.Command(idPath, test.opt...)
 		_, e, _ := run(c)
-		
+
 		// Ignore the date and time because we're using Log.Fatalf
 		if e[logPrefixLength:] != test.out {
 			t.Errorf("id for '%v' failed: got '%s', want '%s'", test.opt, e, test.out)
 		}
 	}
-}
-
-func TestMain(m *testing.M) {
-	tempDir, err := ioutil.TempDir("", "TestIdSimple")
-	if err != nil {
-		fmt.Printf("cannot create temporary directory: %v", err)
-		os.Exit(1)
-	}
-	defer os.RemoveAll(tempDir)
-
-	testpath = filepath.Join(tempDir, "testid.exe")
-	out, err := exec.Command("go", "build", "-o", testpath, ".").CombinedOutput()
-	if err != nil {
-		fmt.Printf("go build -o %v cmds/id: %v\n%s", testpath, err, string(out))
-		os.Exit(1)
-	}
-	os.Exit(m.Run())
 }

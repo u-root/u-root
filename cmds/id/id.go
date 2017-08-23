@@ -45,11 +45,7 @@ func correctFlags(flags ...bool) bool {
 			n += 1
 		}
 	}
-	if n > 1 {
-		return false
-	} else {
-		return true
-	}
+	return !(n > 1)
 }
 
 func initFlags() error {
@@ -130,8 +126,7 @@ func (u *User) GIDName() string {
 
 // NewUser is a factory method for the User type.
 func NewUser() (*User, error) {
-	emptyMap := make(map[int]string)
-	u := &User{"", syscall.Getuid(), syscall.Geteuid(), syscall.Getgid(), emptyMap}
+	u := &User{"", syscall.Getuid(), syscall.Geteuid(), syscall.Getgid(), make(map[int]string)}
 
 	groupsNumbers, err := syscall.Getgroups()
 	if err != nil {
