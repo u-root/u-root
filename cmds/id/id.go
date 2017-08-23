@@ -1,4 +1,4 @@
-// Copyright 2013-2017 the u-root Authors. All rights reserved
+// Copyright 2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 // Print process information.
@@ -33,10 +33,10 @@ var (
 	l           = log.New(os.Stderr, "", 0)
 
 	flags struct {
-		g bool
-		G bool
-		n bool
-		u bool
+		group  bool
+		groups bool
+		name   bool
+		user   bool
 	}
 )
 
@@ -55,16 +55,16 @@ func correctFlags(flags ...bool) bool {
 }
 
 func initFlags() error {
-	flag.BoolVar(&flags.g, "g", false, "print only the effective group ID")
-	flag.BoolVar(&flags.G, "G", false, "print all group IDs")
-	flag.BoolVar(&flags.n, "n", false, "print a name instead of a number, for -ugG")
-	flag.BoolVar(&flags.u, "u", false, "print only the effective user ID")
+	flag.BoolVar(&flags.group, "g", false, "print only the effective group ID")
+	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
+	flag.BoolVar(&flags.name, "n", false, "print a name instead of a number, for -ugG")
+	flag.BoolVar(&flags.user, "u", false, "print only the effective user ID")
 	flag.Parse()
-	if !correctFlags(flags.G, flags.g, flags.u) {
+	if !correctFlags(flags.groups, flags.group, flags.user) {
 		return fmt.Errorf("cannot print \"only\" of more than one choice\n")
 
 	}
-	if flags.n && !(flags.G || flags.g || flags.u) {
+	if flags.name && !(flags.groups || flags.group || flags.user) {
 		return fmt.Errorf("cannot print only names in default format\n")
 	}
 
@@ -206,16 +206,16 @@ func NewUser() (*User, error) {
 
 // IDCommand runs the "id" with the current user's information.
 func IDCommand(u User) {
-	if !flags.G {
-		if flags.u {
-			if flags.n {
+	if !flags.groups {
+		if flags.user {
+			if flags.name {
 				fmt.Println(u.GetName())
 				return
 			}
 			fmt.Println(u.GetUid())
 			return
-		} else if flags.g {
-			if flags.n {
+		} else if flags.group {
+			if flags.name {
 				fmt.Println(u.GetGidName())
 				return
 			}
@@ -227,14 +227,14 @@ func IDCommand(u User) {
 		fmt.Printf("gid=%d(%s) ", u.GetGid(), u.GetGidName())
 	}
 
-	if !flags.G {
+	if !flags.groups {
 		fmt.Print("groups=")
 	}
 	n := 0
 	length := len(u.Groups)
 	for gid, name := range u.Groups {
 
-		if !flags.G {
+		if !flags.groups {
 			fmt.Printf("%d(%s)", gid, name)
 
 			if n < length-1 {
@@ -242,7 +242,7 @@ func IDCommand(u User) {
 			}
 			n += 1
 		} else {
-			if flags.n {
+			if flags.name {
 				fmt.Printf("%s ", name)
 			} else {
 				fmt.Printf("%d ", gid)
@@ -257,9 +257,10 @@ func main() {
 		l.Fatalf("id: %s", err)
 	}
 
-	if theChosenOne, err := NewUser(); err != nil {
+	theChosenOne, err := NewUser()
+	if err != nil {
 		l.Fatalf("id: %s", err)
-	} else {
-		IDCommand(*theChosenOne)
 	}
+
+	IDCommand(*theChosenOne)
 }
