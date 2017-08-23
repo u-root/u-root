@@ -205,26 +205,29 @@ func IDCommand(u User) {
 	if !flags.groups {
 		fmt.Print("groups=")
 	}
-	n := 0
-	length := len(u.Groups())
+
+	var groupOutput []string
+
 	for gid, name := range u.Groups() {
 
 		if !flags.groups {
-			fmt.Printf("%d(%s)", gid, name)
+			groupOutput = append(groupOutput, fmt.Sprintf("%d(%s)", gid, name))
 
-			if n < length-1 {
-				fmt.Print(",")
-			}
-			n += 1
 		} else {
 			if flags.name {
-				fmt.Printf("%s ", name)
+				groupOutput = append(groupOutput, fmt.Sprintf("%s ", name))
 			} else {
-				fmt.Printf("%d ", gid)
+				groupOutput = append(groupOutput, fmt.Sprintf("%d ", gid))
 			}
 		}
 	}
-	fmt.Println()
+
+	sep := ","
+	if flags.groups {
+		sep = ""
+	}
+
+	fmt.Println(strings.Join(groupOutput, sep))
 }
 
 func main() {
@@ -232,10 +235,10 @@ func main() {
 		log.Fatalf("id: %s", err)
 	}
 
-	theChosenOne, err := NewUser()
+	currentUser, err := NewUser()
 	if err != nil {
 		log.Fatalf("id: %s", err)
 	}
 
-	IDCommand(*theChosenOne)
+	IDCommand(*currentUser)
 }
