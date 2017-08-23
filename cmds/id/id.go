@@ -12,7 +12,7 @@
 //		  -G, --groups    print all group IDs
 //		  -n, --name      print a name instead of a number, for -ugG
 //		  -u, --user      print only the effective user ID
-//
+
 package main
 
 import (
@@ -77,89 +77,6 @@ type User struct {
 	groups map[int]string
 }
 
-func (u *User) UID() int {
-	return u.uid
-}
-
-func (u *User) pullUid() {
-	u.uid = syscall.Getuid()
-}
-
-func (u *User) GetEuid() int {
-	return u.euid
-}
-
-func (u *User) pullEuid() {
-	u.euid = syscall.Geteuid()
-}
-
-func (u *User) GID() int {
-	return u.gid
-}
-
-func (u *User) pullGid() {
-	u.gid = syscall.Getgid()
-}
-
-func (u *User) Name() string {
-	return u.name
-}
-
-// pullName finds the name of the User by reading PasswdFile.
-func (u *User) pullName() error {
-	passwdFile, err := os.Open(PasswdFile)
-	if err != nil {
-		return err
-	}
-
-	var passwdInfo []string
-
-	passwdScanner := bufio.NewScanner(passwdFile)
-
-	for passwdScanner.Scan() {
-		passwdInfo = strings.Split(passwdScanner.Text(), ":")
-		if val, err := strconv.Atoi(passwdInfo[2]); err != nil {
-			return err
-		} else if val == u.UID() {
-			u.name = passwdInfo[0]
-			return nil
-		}
-	}
-
-	return fmt.Errorf("User is not in %s", PasswdFile)
-}
-
-func (u *User) Groups() map[int]string {
-	return u.groups
-}
-
-func (u *User) GIDName() string {
-	val := u.Groups()[u.UID()]
-	return val
-}
-
-// pullGroups aggregates the groups that the User is in.
-func (u *User) pullGroups() error {
-	groupsNumbers, err := syscall.Getgroups()
-	if err != nil {
-		return err
-	}
-
-	groupsMap, err := readGroups()
-	if err != nil {
-		return err
-	}
-
-	for _, groupNum := range groupsNumbers {
-		if groupName, ok := groupsMap[groupNum]; ok {
-			u.groups[groupNum] = groupName
-		} else {
-			return fmt.Errorf("Inconsistent %s file", GroupFile)
-		}
-	}
-	return nil
-}
-
 // readGroups reads the GroupFile for groups.
 // It assumes the format "name:passwd:number:groupList".
 func readGroups() (map[int]string, error) {
@@ -186,19 +103,79 @@ func readGroups() (map[int]string, error) {
 	return groupsMap, nil
 }
 
+func (u *User) UID() int {
+	return u.uid
+}
+
+func (u *User) GetEuid() int {
+	return u.euid
+}
+
+func (u *User) GID() int {
+	return u.gid
+}
+
+func (u *User) Name() string {
+	return u.name
+}
+
+func (u *User) Groups() map[int]string {
+	return u.groups
+}
+
+func (u *User) GIDName() string {
+	val := u.Groups()[u.UID()]
+	return val
+}
+
 // NewUser is a factory method for the User type.
 func NewUser() (*User, error) {
 	emptyMap := make(map[int]string)
-	u := &User{"", -1, -1, -1, emptyMap}
-	u.pullUid()
-	u.pullEuid()
-	u.pullGid()
-	if err := u.pullGroups(); err != nil {
+	u := &User{"", syscall.Getuid(), syscall.Geteuid(), syscall.Getgid(), emptyMap}
+
+	groupsNumbers, err := syscall.Getgroups()
+	if err != nil {
 		return nil, err
 	}
-	if err := u.pullName(); err != nil {
+
+	// Read from groupFile for names and numbers
+	groupsMap, err := readGroups()
+	if err != nil {
 		return nil, err
 	}
+
+	for _, groupNum := range groupsNumbers {
+		if groupName, ok := groupsMap[groupNum]; ok {
+			u.groups[groupNum] = groupName
+		} else {
+			return nil, fmt.Errorf("Inconsistent %s file", GroupFile)
+		}
+	}
+
+	passwdFile, err := os.Open(PasswdFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read from passwdFile for the users name
+	var passwdInfo []string
+
+	passwdScanner := bufio.NewScanner(passwdFile)
+
+	for passwdScanner.Scan() {
+		passwdInfo = strings.Split(passwdScanner.Text(), ":")
+		if val, err := strconv.Atoi(passwdInfo[2]); err != nil {
+			return nil, err
+		} else if val == u.UID() {
+			u.name = passwdInfo[0]
+			break
+		}
+	}
+
+	if u.name == "" {
+		return nil, fmt.Errorf("User is not in %s", PasswdFile)
+	}
+
 	return u, nil
 }
 
