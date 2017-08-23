@@ -26,7 +26,7 @@ func run(c *exec.Cmd) (string, string, error) {
 	return o.String(), e.String(), err
 }
 
-func testInvocation(t *testing.T) {
+func TestInvocation(t *testing.T) {
 
 	var tests = []test{
 		{opt: []string{"-n"}, out: "id: cannot print only names in default format\n"},
@@ -38,12 +38,10 @@ func testInvocation(t *testing.T) {
 
 	for _, test := range tests {
 		c := exec.Command(testpath, test.opt...)
-		_, e, err := run(c)
+		_, e, _ := run(c)
 		// Ignore the date and time because we're using Log.Fatalf
-		if e != test.out {
+		if e[20:] != test.out {
 			t.Errorf("id for '%v' failed: got '%s', want '%s'", test.opt, e, test.out)
-		} else if err != nil {
-			t.Errorf("id for '%v' failed to run", test.opt)
 		}
 	}
 }
