@@ -10,7 +10,10 @@ import (
 	"testing"
 )
 
-var testpath = "."
+var (
+	testpath = "."
+	logPrefixLength = 20
+)
 
 type test struct {
 	opt []string
@@ -26,6 +29,7 @@ func run(c *exec.Cmd) (string, string, error) {
 	return o.String(), e.String(), err
 }
 
+// Test incorrect invocation of id
 func TestInvocation(t *testing.T) {
 
 	var tests = []test{
@@ -39,8 +43,9 @@ func TestInvocation(t *testing.T) {
 	for _, test := range tests {
 		c := exec.Command(testpath, test.opt...)
 		_, e, _ := run(c)
+		
 		// Ignore the date and time because we're using Log.Fatalf
-		if e[20:] != test.out {
+		if e[logPrefixLength:] != test.out {
 			t.Errorf("id for '%v' failed: got '%s', want '%s'", test.opt, e, test.out)
 		}
 	}
