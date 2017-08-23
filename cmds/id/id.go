@@ -1,7 +1,6 @@
 // Copyright 2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-// Print process information.
 //
 // Synopsis:
 //      id [-gGnu]
@@ -28,9 +27,8 @@ import (
 )
 
 var (
-	GROUP_FILE  = "/etc/group"
-	PASSWD_FILE = "/etc/passwd"
-	l           = log.New(os.Stderr, "", 0)
+	GroupFile  = "/etc/group"
+	PasswdFile = "/etc/passwd"
 
 	flags struct {
 		group  bool
@@ -72,44 +70,44 @@ func initFlags() error {
 }
 
 type User struct {
-	Name   string
-	Uid    int
-	Euid   int
-	Gid    int
-	Groups map[int]string
+	name   string
+	uid    int
+	euid   int
+	gid    int
+	groups map[int]string
 }
 
-func (u *User) GetUid() int {
-	return u.Uid
+func (u *User) UID() int {
+	return u.uid
 }
 
 func (u *User) pullUid() {
-	u.Uid = syscall.Getuid()
+	u.uid = syscall.Getuid()
 }
 
 func (u *User) GetEuid() int {
-	return u.Euid
+	return u.euid
 }
 
 func (u *User) pullEuid() {
-	u.Uid = syscall.Geteuid()
+	u.euid = syscall.Geteuid()
 }
 
-func (u *User) GetGid() int {
-	return u.Gid
+func (u *User) GID() int {
+	return u.gid
 }
 
 func (u *User) pullGid() {
-	u.Gid = syscall.Getgid()
+	u.gid = syscall.Getgid()
 }
 
-func (u *User) GetName() string {
-	return u.Name
+func (u *User) Name() string {
+	return u.name
 }
 
-// pullName finds the name of the User by reading PASSWD_FILE.
+// pullName finds the name of the User by reading PasswdFile.
 func (u *User) pullName() error {
-	passwdFile, err := os.Open(PASSWD_FILE)
+	passwdFile, err := os.Open(PasswdFile)
 	if err != nil {
 		return err
 	}
@@ -122,21 +120,21 @@ func (u *User) pullName() error {
 		passwdInfo = strings.Split(passwdScanner.Text(), ":")
 		if val, err := strconv.Atoi(passwdInfo[2]); err != nil {
 			return err
-		} else if val == u.GetUid() {
-			u.Name = passwdInfo[0]
+		} else if val == u.UID() {
+			u.name = passwdInfo[0]
 			return nil
 		}
 	}
 
-	return fmt.Errorf("User is not in %s", PASSWD_FILE)
+	return fmt.Errorf("User is not in %s", PasswdFile)
 }
 
-func (u *User) GetGroups() map[int]string {
-	return u.Groups
+func (u *User) Groups() map[int]string {
+	return u.groups
 }
 
-func (u *User) GetGidName() string {
-	val := u.GetGroups()[u.GetUid()]
+func (u *User) GIDName() string {
+	val := u.Groups()[u.UID()]
 	return val
 }
 
@@ -154,18 +152,18 @@ func (u *User) pullGroups() error {
 
 	for _, groupNum := range groupsNumbers {
 		if groupName, ok := groupsMap[groupNum]; ok {
-			u.Groups[groupNum] = groupName
+			u.groups[groupNum] = groupName
 		} else {
-			return fmt.Errorf("Inconsistent %s file", GROUP_FILE)
+			return fmt.Errorf("Inconsistent %s file", GroupFile)
 		}
 	}
 	return nil
 }
 
-// readGroups reads the GROUP_FILE for groups.
+// readGroups reads the GroupFile for groups.
 // It assumes the format "name:passwd:number:groupList".
 func readGroups() (map[int]string, error) {
-	groupFile, err := os.Open(GROUP_FILE)
+	groupFile, err := os.Open(GroupFile)
 	if err != nil {
 		return nil, err
 	}
@@ -209,30 +207,30 @@ func IDCommand(u User) {
 	if !flags.groups {
 		if flags.user {
 			if flags.name {
-				fmt.Println(u.GetName())
+				fmt.Println(u.Name())
 				return
 			}
-			fmt.Println(u.GetUid())
+			fmt.Println(u.UID())
 			return
 		} else if flags.group {
 			if flags.name {
-				fmt.Println(u.GetGidName())
+				fmt.Println(u.GIDName())
 				return
 			}
-			fmt.Println(u.GetGid())
+			fmt.Println(u.GID())
 			return
 		}
 
-		fmt.Printf("uid=%d(%s) ", u.GetUid(), u.GetName())
-		fmt.Printf("gid=%d(%s) ", u.GetGid(), u.GetGidName())
+		fmt.Printf("uid=%d(%s) ", u.UID(), u.Name())
+		fmt.Printf("gid=%d(%s) ", u.GID(), u.GIDName())
 	}
 
 	if !flags.groups {
 		fmt.Print("groups=")
 	}
 	n := 0
-	length := len(u.Groups)
-	for gid, name := range u.Groups {
+	length := len(u.Groups())
+	for gid, name := range u.Groups() {
 
 		if !flags.groups {
 			fmt.Printf("%d(%s)", gid, name)
@@ -254,12 +252,12 @@ func IDCommand(u User) {
 
 func main() {
 	if err := initFlags(); err != nil {
-		l.Fatalf("id: %s", err)
+		log.Fatalf("id: %s", err)
 	}
 
 	theChosenOne, err := NewUser()
 	if err != nil {
-		l.Fatalf("id: %s", err)
+		log.Fatalf("id: %s", err)
 	}
 
 	IDCommand(*theChosenOne)
