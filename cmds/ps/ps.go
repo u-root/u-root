@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -55,8 +54,10 @@ func init() {
 	flag.BoolVar(&flags.nSidTty, "a", false, "Print all process except whose are session leaders or unlinked with terminal")
 
 	if len(os.Args) > 1 {
-		flags.all = true
-		flags.aux = isPermutation(os.Args[1], "aux")
+		if isPermutation(os.Args[1], "aux") {
+			flags.aux = true
+			flags.all = true
+		}
 	}
 }
 
@@ -178,13 +179,21 @@ func (pT *ProcessTable) PrepareString() {
 }
 
 func isPermutation(check string, ref string) bool {
+	if len(check) != len(ref) {
+		return false
+	}
 	checkArray := strings.Split(check, "")
 	refArray := strings.Split(ref, "")
 
 	sort.Strings(checkArray)
 	sort.Strings(refArray)
 
-	return reflect.DeepEqual(check, ref)
+	for i, _ := range check {
+		if checkArray[i] != refArray[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // For now, just read /proc/pid/stat and dump its brains.
