@@ -28,7 +28,7 @@ var (
 	// e.g., /lib/modules/4.04, you would do add the root as / and the
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
-	paths = map[string][]string
+	paths = map[string][]string{}
 	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
@@ -65,12 +65,9 @@ func dirComponents(dir string) []string {
 	return dirlist
 }
 
-// copyCommands takes a list of commands, generates the list of libs,
-// and creates cpio records, including directory records.
 func copyCommands(w cpio.Writer, cmd string) {
 	debug("copyCommands: start with %v", cmd)
 	var recs []cpio.Record
-	//introduced the tmpSlice variable to be the dependency slice for the cmd string
 	tmpSlice := []string{cmd}
 	libs, err := uroot.LddList(tmpSlice)
 	if err != nil {
