@@ -113,10 +113,9 @@ func ramfs() {
 
 	if *extraCmds != "" {
 		copyc := strings.Fields(*extraCmds)
-		//check if the path is a file or directory
+		// check if the path is a file or directory
 		for _, eachPath := range copyc {
-			//must not include ~ in path
-			//replace only the first : with //
+			// Must not include ~ in path
 			modPath := strings.Replace(eachPath, ":", "", 1)
 			statval, err := os.Stat(modPath)
 			if err != nil {
@@ -165,7 +164,7 @@ func ramfs() {
 	debug("PATHS: %v", paths)
 	for r, list := range paths {
 		debug("PATHS: root %v", r)
-		// we need to make all the path prefix directories.
+		// We need to make all the path prefix directories.
 		for _, n := range list {
 			debug("\troot %v, name %v", r, n)
 			for _, d := range dirComponents(n) {
