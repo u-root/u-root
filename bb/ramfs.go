@@ -28,7 +28,7 @@ var (
 	// e.g., /lib/modules/4.04, you would do add the root as / and the
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
-	paths = map[string][]string{}
+	paths = map[string][]string
 	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
@@ -74,7 +74,7 @@ func copyCommands(w cpio.Writer, cmd string) {
 	tmpSlice := []string{cmd}
 	libs, err := uroot.LddList(tmpSlice)
 	if err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 	tmpSlice = append(tmpSlice, libs...)
 	for _, n := range tmpSlice {
@@ -90,7 +90,7 @@ func copyCommands(w cpio.Writer, cmd string) {
 	}
 	cpio.MakeReproducible(recs)
 	if err := w.WriteRecords(recs); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 }
 
@@ -103,13 +103,13 @@ func ramfs() {
 	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
 	f, err := os.Create(oname)
 	if err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 
 	w := archiver.Writer(f)
 	cpio.MakeReproducible(devCPIO[:])
 	if err := w.WriteRecords(devCPIO[:]); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 
 	paths[filepath.Join(config.Gopath, "src/github.com/u-root/u-root/bb/bbsh")] = []string{"init", "ubin"}
@@ -121,10 +121,9 @@ func ramfs() {
 			//must not include ~ in path
 			//replace only the first : with //
 			modPath := strings.Replace(eachPath, ":", "", 1)
-			fmt.Println("this is the path", modPath)
 			statval, err := os.Stat(modPath)
 			if err != nil {
-				log.Fatalf("%v\n", err)
+				log.Fatalf("%v", err)
 			}
 			if statval.IsDir() {
 				// If the file is a directory, append all the files in the directory to the path
@@ -160,13 +159,13 @@ func ramfs() {
 			}
 			cpio.MakeReproducible(recs)
 			if err := w.WriteRecords(recs); err != nil {
-				log.Fatalf("%v\n", err)
+				log.Fatalf("%v", err)
 			}
 		}
 	}
 
 	// For all the 'roots' in paths, start walking at the name.
-	fmt.Printf("PATHS: %v", paths)
+	debug("PATHS: %v", paths)
 	for r, list := range paths {
 		debug("PATHS: root %v", r)
 		// we need to make all the path prefix directories.
@@ -181,7 +180,7 @@ func ramfs() {
 				recs := []cpio.Record{rec}
 				cpio.MakeReproducible(recs)
 				if err := w.WriteRecords(recs); err != nil {
-					log.Fatalf("%v\n", err)
+					log.Fatalf("%v", err)
 				}
 			}
 		}
@@ -204,7 +203,7 @@ func ramfs() {
 				recs := []cpio.Record{rec}
 				cpio.MakeReproducible(recs)
 				if err := w.WriteRecords(recs); err != nil {
-					log.Fatalf("%v\n", err)
+					log.Fatalf("%v", err)
 				}
 				return nil
 			}); err != nil {
