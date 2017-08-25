@@ -14,7 +14,7 @@ func sysInfo(n string, sys *syscall.Stat_t) Info {
 		Mode:     uint64(sys.Mode),
 		UID:      uint64(sys.Uid),
 		GID:      uint64(sys.Gid),
-		NLink:    sys.Nlink,
+		NLink:    uint64(sys.Nlink),
 		MTime:    uint64(sys.Mtim.Sec),
 		FileSize: uint64(sys.Size),
 		Dev:      sys.Dev,
