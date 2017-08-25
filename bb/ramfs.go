@@ -29,7 +29,7 @@ var (
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
 	paths     = map[string][]string{}
-	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
+	extraCmds = flag.String("cmds", "", "Extra commands or directories to add (full path, comma-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
 
@@ -39,7 +39,7 @@ func sanity() {
 	if err == nil {
 		config.Go = goBinGo
 	}
-	// but does the one in go/bin/OS_ARCH exist too?
+	// But does the one in go/bin/OS_ARCH exist too?
 	goBinGo = filepath.Join(config.Goroot, fmt.Sprintf("bin/%s_%s/go", config.Goos, config.Arch))
 	_, err = os.Stat(goBinGo)
 	if err == nil {
@@ -87,11 +87,9 @@ func ramfs() {
 
 	if *extraCmds != "" {
 		copyc := strings.Fields(*extraCmds)
-		// check if the path is a file or directory
 		for _, eachPath := range copyc {
-			fmt.Printf("each path is %s\n", eachPath)
+			debug("each path is %s\n", eachPath)
 			// Must not include ~ in path
-			//TODO throw an error if there is more than 1 :
 			if strings.Count(eachPath, ":") > 1 {
 				log.Fatalf(" Input has more than one :")
 			}
