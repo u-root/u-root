@@ -29,7 +29,7 @@ var (
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
 	paths     = map[string][]string{}
-	extraAdd = flag.String("add", "", "Extra commands or directories to add (full path, comma-separated string)")
+	extraAdd = flag.String("add", "", "Extra commands or directories to add (full path, space-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
 
