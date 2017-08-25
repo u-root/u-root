@@ -65,32 +65,6 @@ func dirComponents(dir string) []string {
 	return dirlist
 }
 
-func copyCommands(w cpio.Writer, cmd string) {
-	debug("copyCommands: start with %v", cmd)
-	var recs []cpio.Record
-	tmpSlice := []string{cmd}
-	libs, err := uroot.LddList(tmpSlice)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	tmpSlice = append(tmpSlice, libs...)
-	for _, n := range tmpSlice {
-		debug("\ncopyCommands: file %v", n)
-		for _, n := range dirComponents(n) {
-			debug("\ncopyCommands: %v", n)
-			r, err := cpio.GetRecord(n)
-			if err != nil {
-				log.Fatalf("%v: %v", n, err)
-			}
-			recs = append(recs, r)
-		}
-	}
-	cpio.MakeReproducible(recs)
-	if err := w.WriteRecords(recs); err != nil {
-		log.Fatalf("%v", err)
-	}
-}
-
 func ramfs() {
 	archiver, err := cpio.Format("newc")
 	if err != nil {
@@ -115,22 +89,35 @@ func ramfs() {
 		copyc := strings.Fields(*extraCmds)
 		// check if the path is a file or directory
 		for _, eachPath := range copyc {
+			fmt.Printf("each path is %s\n", eachPath)
 			// Must not include ~ in path
-			modPath := strings.Replace(eachPath, ":", "", 1)
+			//TODO throw an error if there is more than 1 : 
+			if (strings.Count(eachPath, ":") > 1){
+				log.Fatalf(" Input has more than one :")
+			}		
+			modPath := strings.Replace(eachPath, ":", "/", 1)
+			fmt.Printf("modpath is %s\n", modPath)
 			statval, err := os.Stat(modPath)
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
-			if statval.IsDir() {
-				// If the file is a directory, append all the files in the directory to the path
-				p := strings.Split(eachPath, ":")
-				if len(p) != 2 {
-					p = append([]string{"/"}, p...)
+			p := strings.Split(eachPath, ":")
+			if len(p) != 2 {
+				p = append([]string{"/"}, p...)
+			}
+			fmt.Printf("P is %v\n", p)
+			fmt.Printf("Paths currently is %v\n", paths)
+			paths[p[0]] = append(paths[p[0]], p[1])
+			debug("putps")
+			fmt.Printf("Paths currently is %v\n", paths)
+			if !statval.IsDir(){
+				tmpSlice := []string{modPath}
+				libs, err := uroot.LddList(tmpSlice)
+				if err != nil{
+					log.Fatalf("%v", err)
 				}
-				paths[p[0]] = append(paths[p[0]], p[1])
-				debug("putps")
-			} else {
-				copyCommands(w, eachPath)
+				paths["/"] = append(paths["/"], libs...)
+				fmt.Printf("Paths currently is (because command) %v\n", paths)
 			}
 		}
 	}
@@ -159,16 +146,16 @@ func ramfs() {
 			}
 		}
 	}
-
+	//append the ldd'd files to /
 	// For all the 'roots' in paths, start walking at the name.
-	debug("PATHS: %v", paths)
+	fmt.Printf("PATHS: %v", paths)
 	for r, list := range paths {
-		debug("PATHS: root %v", r)
+		fmt.Printf("PATHS: root %v", r)
 		// We need to make all the path prefix directories.
 		for _, n := range list {
-			debug("\troot %v, name %v", r, n)
+			fmt.Printf("\troot %v, name %v", r, n)
 			for _, d := range dirComponents(n) {
-				debug("\t\troot %v, name %v, component %v", r, n, d)
+				fmt.Printf("\t\troot %v, name %v, component %v", r, n, d)
 				rec, err := cpio.GetRecord(d)
 				if err != nil {
 					log.Fatalf("Getting record of %q failed: %v", d, err)
@@ -189,7 +176,7 @@ func ramfs() {
 				if err != nil {
 					log.Fatalf("filepath.Rel(%v, %v): %v", r, name, err)
 				}
-				debug("%v\n", cn)
+				fmt.Printf("%v\n", cn)
 				rec, err := cpio.GetRecord(name)
 				if err != nil {
 					log.Fatalf("Getting record of %q failed: %v", cn, err)
