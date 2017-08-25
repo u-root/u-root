@@ -28,7 +28,7 @@ var (
 	// e.g., /lib/modules/4.04, you would do add the root as / and the
 	// starting point for the walk as lib/modules/4.04. That way we only preserve
 	// as much of the path as we need, but we can preserve it all.
-	paths = map[string][]string{}
+	paths     = map[string][]string{}
 	extraCmds = flag.String("cmds", "", "Extra commands to add (full path, comma-separated string)")
 	extraCpio = flag.String("cpio", "", "A list of cpio archives to include in the output")
 )
@@ -91,10 +91,10 @@ func ramfs() {
 		for _, eachPath := range copyc {
 			fmt.Printf("each path is %s\n", eachPath)
 			// Must not include ~ in path
-			//TODO throw an error if there is more than 1 : 
-			if (strings.Count(eachPath, ":") > 1){
+			//TODO throw an error if there is more than 1 :
+			if strings.Count(eachPath, ":") > 1 {
 				log.Fatalf(" Input has more than one :")
-			}		
+			}
 			modPath := strings.Replace(eachPath, ":", "/", 1)
 			fmt.Printf("modpath is %s\n", modPath)
 			statval, err := os.Stat(modPath)
@@ -110,10 +110,10 @@ func ramfs() {
 			paths[p[0]] = append(paths[p[0]], p[1])
 			debug("putps")
 			fmt.Printf("Paths currently is %v\n", paths)
-			if !statval.IsDir(){
+			if !statval.IsDir() {
 				tmpSlice := []string{modPath}
 				libs, err := uroot.LddList(tmpSlice)
-				if err != nil{
+				if err != nil {
 					log.Fatalf("%v", err)
 				}
 				paths["/"] = append(paths["/"], libs...)
@@ -121,7 +121,6 @@ func ramfs() {
 			}
 		}
 	}
-	
 
 	if *extraCpio != "" {
 		extras := strings.Fields(*extraCpio)
