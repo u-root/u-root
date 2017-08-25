@@ -34,16 +34,14 @@ import (
 const buffSize = 8192
 
 var (
-	input     = bufio.NewReader(os.Stdin)
+	input = bufio.NewReader(os.Stdin)
 	// offchan is a channel used for indicate the nextbuffer to read with worker()
 	offchan = make(chan int64, 0)
 	// zerochan is a channel used for indicate the start of a new read file
 	zerochan = make(chan int, 0)
 )
 
-
-
-type cpFlags struct{
+type options struct {
 	recursive bool
 	ask       bool
 	force     bool
@@ -52,14 +50,13 @@ type cpFlags struct{
 	nwork     int
 }
 
-
 func init() {
 	defUsage := flag.Usage
 	flag.Usage = func() {
 		os.Args[0] = "cp [-wRrifvP] file[s] ... dest"
 		defUsage()
 	}
-	
+
 	go nextOff()
 }
 
@@ -80,7 +77,7 @@ func promptOverwrite(dst string) (bool, error) {
 
 // copyFile copies file between src (source) and dst (destination)
 // todir: if true insert src INTO dir dst
-func copyFile(src, dst string, todir bool, flags cpFlags) error {
+func copyFile(src, dst string, todir bool, flags options) error {
 	if todir {
 		file := filepath.Base(src)
 		dst = filepath.Join(dst, file)
@@ -140,7 +137,7 @@ func copyFile(src, dst string, todir bool, flags cpFlags) error {
 }
 
 // copyOneFile copy the content between two files
-func copyOneFile(s *os.File, d *os.File, src, dst string, flags cpFlags) error {
+func copyOneFile(s *os.File, d *os.File, src, dst string, flags options) error {
 	zerochan <- 0
 	fail := make(chan error, flags.nwork)
 	for i := 0; i < flags.nwork; i++ {
@@ -165,7 +162,7 @@ func copyOneFile(s *os.File, d *os.File, src, dst string, flags cpFlags) error {
 // createDir populate dir destination if not exists
 // if exists verify is not a dir: return error if is file
 // cannot overwrite: dir -> file
-func createDir(src, dst string, flags cpFlags) error {
+func createDir(src, dst string, flags options) error {
 	dstInfo, err := os.Stat(dst)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -194,7 +191,7 @@ func createDir(src, dst string, flags cpFlags) error {
 
 // copyDir copy the file hierarchies
 // used at cp when -r or -R flag is true
-func copyDir(src, dst string, flags cpFlags) error {
+func copyDir(src, dst string, flags options) error {
 	if err := createDir(src, dst, flags); err != nil {
 		return err
 	}
@@ -270,7 +267,7 @@ func nextOff() {
 
 // cp is a function whose eval the args
 // and make decisions for copyfiles
-func cp(args []string, flags cpFlags) (lastErr error) {
+func cp(args []string, flags options) (lastErr error) {
 	todir := false
 	from, to := args[:len(args)-1], args[len(args)-1]
 	toStat, err := os.Stat(to)
@@ -292,7 +289,7 @@ func cp(args []string, flags cpFlags) (lastErr error) {
 }
 
 func main() {
-	var flags cpFlags
+	var flags options
 	flag.IntVar(&flags.nwork, "w", runtime.NumCPU(), "number of worker goroutines")
 	flag.BoolVar(&flags.recursive, "R", false, "copy file hierarchies")
 	flag.BoolVar(&flags.recursive, "r", false, "alias to -R recursive mode")
