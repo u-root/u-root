@@ -416,4 +416,3 @@ func TestCpSymlink(t *testing.T) {
 		t.Fatalf("checksum are different; copies failed %q -> %q: %v", linkName, dstFname, err)
 	}
 }
-

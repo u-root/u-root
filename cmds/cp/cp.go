@@ -48,7 +48,6 @@ type options struct {
 	symlink   bool
 }
 
-
 // promptOverwrite ask if the user wants overwrite file
 func promptOverwrite(dst string) (bool, error) {
 	fmt.Printf("cp: overwrite %q? ", dst)
@@ -127,7 +126,7 @@ func copyFile(src, dst string, todir bool, flags options) error {
 
 // copyOneFile copy the content between two files
 func copyOneFile(s *os.File, d *os.File, src, dst string, flags options) error {
-	_, err := io.Copy(d, s)  
+	_, err := io.Copy(d, s)
 	return err
 }
 
@@ -184,8 +183,6 @@ func copyDir(src, dst string, flags options) error {
 
 	return err
 }
-
-
 
 // cp is a function whose eval the args
 // and make decisions for copyfiles
