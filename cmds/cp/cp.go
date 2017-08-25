@@ -26,7 +26,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 // buffSize is the length of buffer during
@@ -47,18 +46,8 @@ type options struct {
 	force     bool
 	verbose   bool
 	symlink   bool
-	nwork     int
 }
 
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = "cp [-wRrifvP] file[s] ... dest"
-		defUsage()
-	}
-
-	go nextOff()
-}
 
 // promptOverwrite ask if the user wants overwrite file
 func promptOverwrite(dst string) (bool, error) {
@@ -138,25 +127,8 @@ func copyFile(src, dst string, todir bool, flags options) error {
 
 // copyOneFile copy the content between two files
 func copyOneFile(s *os.File, d *os.File, src, dst string, flags options) error {
-	zerochan <- 0
-	fail := make(chan error, flags.nwork)
-	for i := 0; i < flags.nwork; i++ {
-		go worker(s, d, fail)
-	}
-
-	// iterate the errors from channel
-	for i := 0; i < flags.nwork; i++ {
-		err := <-fail
-		if err != nil {
-			return err
-		}
-	}
-
-	if flags.verbose {
-		fmt.Printf("%q -> %q\n", src, dst)
-	}
-
-	return nil
+	_, err := io.Copy(d, s)  
+	return err
 }
 
 // createDir populate dir destination if not exists
@@ -213,57 +185,7 @@ func copyDir(src, dst string, flags options) error {
 	return err
 }
 
-// worker is a concurrent copy, used to copy part of the files
-// in parallel
-func worker(s *os.File, d *os.File, fail chan error) {
-	var buf [buffSize]byte
-	var bp []byte
 
-	l := len(buf)
-	bp = buf[0:]
-	o := <-offchan
-	for {
-		n, err := s.ReadAt(bp, o)
-		if err != nil && err != io.EOF {
-			fail <- fmt.Errorf("reading %s at %v: %v", s.Name(), o, err)
-			return
-		}
-		if n == 0 {
-			break
-		}
-
-		nb := bp[0:n]
-		n, err = d.WriteAt(nb, o)
-		if err != nil {
-			fail <- fmt.Errorf("writing %s: %v", d.Name(), err)
-			return
-		}
-		bp = buf[n:]
-		o += int64(n)
-		l -= n
-		if l == 0 {
-			l = len(buf)
-			bp = buf[0:]
-			o = <-offchan
-		}
-	}
-	fail <- nil
-}
-
-// nextOff handler for next buffers and sync goroutines
-// zerochan imply the init of file
-// offchan is the next buffer part to read
-func nextOff() {
-	off := int64(0)
-	for {
-		select {
-		case <-zerochan:
-			off = 0
-		case offchan <- off:
-			off += buffSize
-		}
-	}
-}
 
 // cp is a function whose eval the args
 // and make decisions for copyfiles
@@ -290,7 +212,6 @@ func cp(args []string, flags options) (lastErr error) {
 
 func main() {
 	var flags options
-	flag.IntVar(&flags.nwork, "w", runtime.NumCPU(), "number of worker goroutines")
 	flag.BoolVar(&flags.recursive, "R", false, "copy file hierarchies")
 	flag.BoolVar(&flags.recursive, "r", false, "alias to -R recursive mode")
 	flag.BoolVar(&flags.ask, "i", false, "prompt about overwriting file")

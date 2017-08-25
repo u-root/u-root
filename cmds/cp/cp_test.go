@@ -34,7 +34,6 @@ const (
 
 // resetFlags is used to reset the cp flags to default
 func resetFlags(flags options) {
-	flags.nwork = 1
 	flags.recursive = false
 	flags.ask = false
 	flags.force = false
@@ -188,6 +187,7 @@ func isEqualTree(src, dst string) (bool, error) {
 // cmd-line equivalent: cp file file-copy
 func TestCpSimple(t *testing.T) {
 	var flags options
+	flags.verbose = true
 	tempDir, err := ioutil.TempDir(testPath, "TestCpSimple")
 	/*if remove {
 		defer os.RemoveAll(tempDir)
@@ -416,3 +416,4 @@ func TestCpSymlink(t *testing.T) {
 		t.Fatalf("checksum are different; copies failed %q -> %q: %v", linkName, dstFname, err)
 	}
 }
+
