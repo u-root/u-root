@@ -9,8 +9,7 @@
 //
 // Options:
 //     -w n: number of worker goroutines
-//     -R: copy file hierarchies
-//     -r: alias to -R recursive mode
+//     -r: copy file hierarchies
 //     -i: prompt about overwriting file
 //     -f: force overwrite files
 //     -v: verbose copy mode
@@ -26,6 +25,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	//"strconv"
 )
 
 // buffSize is the length of buffer during
@@ -34,10 +34,6 @@ const buffSize = 8192
 
 var (
 	input = bufio.NewReader(os.Stdin)
-	// offchan is a channel used for indicate the nextbuffer to read with worker()
-	offchan = make(chan int64, 0)
-	// zerochan is a channel used for indicate the start of a new read file
-	zerochan = make(chan int, 0)
 )
 
 type options struct {
@@ -49,23 +45,30 @@ type options struct {
 }
 
 // promptOverwrite ask if the user wants overwrite file
+// TODO: create a new type of error 
+
 func promptOverwrite(dst string) (bool, error) {
-	fmt.Printf("cp: overwrite %q? ", dst)
-	answer, err := input.ReadString('\n')
-	if err != nil {
-		return false, err
+	for {
+		fmt.Printf("cp: overwrite %q? (y/n)", dst)
+		answer, err := input.ReadString('\n')
+		if err != nil {
+			return false, err
+		}
+		switch answer{
+		case "y":
+			return true, nil
+		case "n":
+			return false, nil
+		}
+		fmt.Printf("Please only enter y or n. You entered %s. \n", answer)
 	}
-
-	if answer[0] != 'y' {
-		return false, nil
-	}
-
-	return true, nil
+	
 }
 
 // copyFile copies file between src (source) and dst (destination)
 // todir: if true insert src INTO dir dst
 func copyFile(src, dst string, todir bool, flags options) error {
+	fmt.Printf("in function copy file ")
 	if todir {
 		file := filepath.Base(src)
 		dst = filepath.Join(dst, file)
@@ -75,14 +78,19 @@ func copyFile(src, dst string, todir bool, flags options) error {
 	if err != nil {
 		return fmt.Errorf("can't stat %v: %v", src, err)
 	}
-
+	//TODO study behavior of CP 
 	// don't follow symlinks, copy symlink
-	if L := os.ModeSymlink; flags.symlink && srcb.Mode()&L == L {
-		linkPath, err := filepath.EvalSymlinks(src)
-		if err != nil {
-			return fmt.Errorf("can't eval symlink %v: %v", src, err)
-		}
-		return os.Symlink(linkPath, dst)
+	fmt.Printf(" scrb.Mode is %v and L is %v ", srcb.Mode(), os.ModeSymlink)
+	if srcb.Mode()&os.ModeType == os.ModeSymlink {
+		fmt.Print(" scrb.Mode is %v and modesym is %v ", srcb.Mode(), os.ModeSymlink)
+		if flags.symlink{
+			linkPath, err := filepath.EvalSymlinks(src)
+			if err != nil {
+				return fmt.Errorf("can't eval symlink %v: %v", src, err)
+			}
+			return os.Symlink(linkPath, dst)
+		} 		
+		
 	}
 
 	if srcb.IsDir() {
@@ -121,14 +129,10 @@ func copyFile(src, dst string, todir bool, flags options) error {
 	}
 	defer d.Close()
 
-	return copyOneFile(s, d, src, dst, flags)
-}
-
-// copyOneFile copy the content between two files
-func copyOneFile(s *os.File, d *os.File, src, dst string, flags options) error {
-	_, err := io.Copy(d, s)
+	_, err = io.Copy(d, s)
 	return err
 }
+
 
 // createDir populate dir destination if not exists
 // if exists verify is not a dir: return error if is file
@@ -198,7 +202,8 @@ func cp(args []string, flags options) (lastErr error) {
 	}
 
 	for _, file := range from {
-		if err := copyFile(file, to, todir, flags); err != nil {
+		copyFile(file, to, todir, flags)	
+		if err != nil {
 			log.Printf("cp: %v\n", err)
 			lastErr = err
 		}
@@ -209,7 +214,6 @@ func cp(args []string, flags options) (lastErr error) {
 
 func main() {
 	var flags options
-	flag.BoolVar(&flags.recursive, "R", false, "copy file hierarchies")
 	flag.BoolVar(&flags.recursive, "r", false, "alias to -R recursive mode")
 	flag.BoolVar(&flags.ask, "i", false, "prompt about overwriting file")
 	flag.BoolVar(&flags.force, "f", false, "force overwrite files")
