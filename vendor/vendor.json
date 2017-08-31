@@ -21,12 +21,6 @@
 			"revisionTime": "2015-05-19T14:54:04Z"
 		},
 		{
-			"checksumSHA1": "lTfOJQTrubPI+BjLPZzKJviMk78=",
-			"path": "github.com/google/gopacket/macs",
-			"revision": "f8cc1fb9ff67a83a8a202df16e5639c38c08aab4",
-			"revisionTime": "2017-05-27T13:16:45Z"
-		},
-		{
 			"checksumSHA1": "OpAX5kvSHO1yjxhPHhusM6SaLp0=",
 			"path": "github.com/google/netstack/ilist",
 			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
