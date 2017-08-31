@@ -63,12 +63,6 @@
 			"revisionTime": "2016-10-10T16:49:42Z"
 		},
 		{
-			"checksumSHA1": "r5eQHkttko6kxroDEENXbmXKrSs=",
-			"path": "github.com/nfnt/resize",
-			"revision": "891127d8d1b52734debe1b3c3d7e747502b6c366",
-			"revisionTime": "2016-07-24T20:39:20Z"
-		},
-		{
 			"checksumSHA1": "fBYLKUQGGZvgco+r1iuYrVHEkCU=",
 			"path": "github.com/vishvananda/netlink",
 			"revision": "a66e14955d30c6f0806ad60ca197e6926bcd0b10",
