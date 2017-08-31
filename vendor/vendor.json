@@ -57,12 +57,6 @@
 			"revisionTime": "2015-02-23T21:27:18Z"
 		},
 		{
-			"checksumSHA1": "tGrX/RQ3VSaN2apvoM1RffvzCKU=",
-			"path": "github.com/kr/pty",
-			"revision": "2c10821df3c3cf905230d078702dfbe9404c9b23",
-			"revisionTime": "2017-03-07T14:53:09Z"
-		},
-		{
 			"checksumSHA1": "tMWyUmQFr1Im84oWP/V550WqfVo=",
 			"path": "github.com/mdlayher/dhcp6",
 			"revision": "0570f4289fd3465c31d7f27e5ba36ad2800d60e2",
