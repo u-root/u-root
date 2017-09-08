@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	tczPackages  = []string{"aterm", "fltk-1.3", "flwm", "freetype", "glib2", "harfbuzz", "imlib2-bin", "imlib2", "libffi", "libfontenc", "libICE", "libjpeg-turbo", "libpng", "libSM", "libX11", "libXau", "libxcb", "libXdmcp", "libXext", "libXfont", "libXi", "libXmu", "libXpm", "libXrandr", "libXrender", "libXt", "pcre", "wbar", "Xfbdev", "Xlibs", "Xorg-fonts", "Xprogs", "Xorg-7.7", "links"}
+	tczPackages  = []string{"Xorg-7.7-bin", "Xorg-7.7-dev", "Xorg-7.7-lib-dev", "Xorg-7.7-lib", "Xorg-7.7", "Xorg-fonts", "xorg-proto", "xorg-server-dev",
+"xorg-server","Xprogs","Xlibs","xpad-locale","xpad","Xlibs","Xfbdev","xvid","xkeyboard-config","xz","gdb","libX11-dev","libX11","libXfixes","i2c-4.8.17-tinycore64","graphics-4.8.17-tinycore64","libXvmc","libdrm","pixman","libXinerama","libXrandr","libXdamage","libXcursor","libXtst","libxshmfence","xf86-video-intel","openssh","aterm"}
 	sshdCommands = []string{"Protocol 2", "AcceptEnv LANG LC_*", "UsePAM no", "ChallengeResponseAuthentication no", "passwordauthentication no", "AuthorizedKeysFile ~/.ssh/authorized_keys", "PermitRootLogin without-password", "X11Forwarding yes", "RSAAuthentication yes", "PubkeyAuthentication yes", "X11DisplayOffset 10", "X11UseLocalhost yes"}
 )
 
