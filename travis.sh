@@ -20,5 +20,7 @@ cmp /tmp/initramfs.linux_amd64.cpio /tmp/i2
  (cd cmds && CGO_ENABLED=0 go test -cover ./...)
  go tool vet cmds uroot pkg
  go tool vet scripts/ramfs.go
+# is it go-gettable?
+go get github.com/u-root/u-root
  sudo date
  echo "Did it blend"
