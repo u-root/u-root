@@ -58,7 +58,7 @@ func sshSetup() error{
 	for arg := range sshdCommands{
 		buffer.WriteString(fmt.Sprintf("%s\n", arg))
 	}
-	fmt.Printf("SSHD file is : %s", byteFile)
+	fmt.Printf("SSHD file is : %s", string(byteFile))
 	if err := ioutil.WriteFile(sshdLoc, byteFile, 0777); err != nil {
 			return nil		
 	}
@@ -72,7 +72,6 @@ func sshSetup() error{
 func tczSetup() error{
 	get := []string{"tcz", "-v", "8.x"}
 	get = append(get, tczPackages...)
-	fmt.Printf(" Command is %s", get)
 	cmd := exec.Command("sudo", get...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -82,8 +81,10 @@ func tczSetup() error{
 }
 
 func  main(){
-	//setup()
-	//sshSetup()
+	if false{
+		setup()
+		sshSetup()
+	}
 	tczSetup()
 }
 
