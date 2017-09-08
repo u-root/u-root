@@ -44,7 +44,7 @@ const (
 var (
 	l                  = log.New(os.Stdout, "tcz: ", 0)
 	host               = flag.String("h", "tinycorelinux.net", "Host name for packages")
-	version            = flag.String("v", "5.x", "tinycore version")
+	version            = flag.String("v", "8.x", "tinycore version")
 	arch               = flag.String("a", "x86_64", "tinycore architecture")
 	port               = flag.String("p", "80", "Host port")
 	debugPrint         = flag.Bool("d", false, "Enable debug prints")
