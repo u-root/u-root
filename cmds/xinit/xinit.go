@@ -70,9 +70,9 @@ func sshSetup() error {
 }
 
 func tczSetup() error {
-	get := []string{"tcz", "-v", "8.x"}
+	get := []string{"-v", "8.x"}
 	get = append(get, tczPackages...)
-	cmd := exec.Command("sudo", get...)
+	cmd := exec.Command("tcz", get...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
@@ -85,5 +85,7 @@ func main() {
 		setup()
 		sshSetup()
 	}
-	tczSetup()
+	if err := tczSetup(); err != nil {
+		log.Printf("Error is %v", err)
+	}
 }
