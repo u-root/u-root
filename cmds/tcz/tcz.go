@@ -47,6 +47,8 @@ var (
 	version            = flag.String("v", "8.x", "tinycore version")
 	arch               = flag.String("a", "x86_64", "tinycore architecture")
 	port               = flag.String("p", "80", "Host port")
+	install            = flag.Bool("i", true, "Install the packages, i.e. mount and create symlinks")
+	tczRoot            = flag.String("r", "/tcz", "tcz root directory")
 	debugPrint         = flag.Bool("d", false, "Enable debug prints")
 	debug              = func(f string, s ...interface{}) {}
 	tczServerDir       string
@@ -141,7 +143,7 @@ func fetch(p string) error {
 
 		debug("resp %v err %v\n", resp, err)
 		// we have the whole tcz in resp.Body.
-		// First, save it to /tcz/name
+		// First, save it to /tczRoot/name
 		f, err := os.Create(fullpath)
 		if err != nil {
 			l.Fatalf("Create of :%v: failed: %v\n", fullpath, err)
@@ -261,7 +263,7 @@ func main() {
 	flag.Parse()
 	needPackages := make(map[string]bool)
 	tczServerDir = filepath.Join("/", *version, *arch, "/tcz")
-	tczLocalPackageDir = filepath.Join("/tcz", tczServerDir)
+	tczLocalPackageDir = filepath.Join(*tczRoot, tczServerDir)
 
 	if *debugPrint {
 		debug = l.Printf
@@ -292,8 +294,10 @@ func main() {
 
 		debug("After installpackages: needPackages %v\n", needPackages)
 
-		if err := setupPackages(tczName, needPackages); err != nil {
-			l.Fatal(err)
+		if *install {
+			if err := setupPackages(tczName, needPackages); err != nil {
+				l.Fatal(err)
+			}
 		}
 	}
 }
