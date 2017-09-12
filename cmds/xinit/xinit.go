@@ -48,6 +48,7 @@ var (
 		"Xprogs",
 		"Xorg-7.7",
 		"links",
+		"opera-12",
 	}
 	sshdCommands = []string{
 		"Protocol 2",
@@ -67,13 +68,14 @@ var (
 )
 
 func setup() error {
+	var errors error
 	if err := os.Symlink("/usr/local/bin/bash", "/bin/bash"); err != nil {
-		return err
+		errors = fmt.Errorf("bash symlink: %v", err)
 	}
-	if err := os.Symlink("/lib/ld-linux-x86-64.so.2", "/lib64"); err != nil {
-		return err
+	if err := os.Symlink("/lib/ld-linux-x86-64.so.2", "/lib64/ld-linux-x86-64.so.2"); err != nil {
+		errors = fmt.Errorf("%v. ld-linux symlink: %v", errors, err)
 	}
-	return nil
+	return errors
 }
 
 func sshSetup() error {
@@ -162,6 +164,16 @@ func xSetup() error {
 		}
 	}()
 	time.Sleep(5 * time.Second)
+	for _, f := range []string{"flwm", "opera-12"} {
+		log.Printf("Run %v", f)
+		go func() {
+			cmd := exec.Command(f, "-display", ":0")
+			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Printf("%v: %v", f, err)
+			}
+		}()
+	}
 	cmd := exec.Command("aterm", "-display", ":0")
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
