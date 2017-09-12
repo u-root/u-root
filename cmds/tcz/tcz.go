@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	cmd = "tcz [options] package-names"
 	/*
 	 * IOCTL commands --- we will commandeer 0x4C ('L')
 	 */
@@ -50,9 +51,11 @@ var (
 	install            = flag.Bool("i", true, "Install the packages, i.e. mount and create symlinks")
 	tczRoot            = flag.String("r", "/tcz", "tcz root directory")
 	debugPrint         = flag.Bool("d", false, "Enable debug prints")
+	skip               = flag.String("skip", "", "Packages to skip")
 	debug              = func(f string, s ...interface{}) {}
 	tczServerDir       string
 	tczLocalPackageDir string
+	ignorePackage      = make(map[string]struct{})
 )
 
 // consider making this a goroutine which pushes the string down the channel.
@@ -183,17 +186,24 @@ func installPackage(tczName string, deps map[string]bool) error {
 		return nil
 	}
 	// read deps file
-	deplist, err := ioutil.ReadFile(filepath.Join(tczLocalPackageDir, depName))
+	depFullPath := filepath.Join(tczLocalPackageDir, depName)
+	deplist, err := ioutil.ReadFile(depFullPath)
 	if err != nil {
 		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
 	}
 	debug("deplist for %v is :%v:\n", depName, deplist)
+	realDepList := ""
 	for _, v := range strings.Split(string(deplist), "\n") {
 		// split("name\n") gets you a 2-element array with second
 		// element the empty string
 		if len(v) == 0 {
 			break
 		}
+		if _, ok := ignorePackage[v]; ok {
+			debug("%v is ignored", v)
+			continue
+		}
+		realDepList = realDepList + v + "\n"
 		debug("FOR %v get package %v\n", tczName, v)
 		if deps[v] {
 			continue
@@ -201,6 +211,13 @@ func installPackage(tczName string, deps map[string]bool) error {
 		if err := installPackage(v, deps); err != nil {
 			return err
 		}
+	}
+	if string(deplist) == realDepList {
+		return nil
+	}
+	if err := ioutil.WriteFile(depFullPath, []byte(realDepList), os.FileMode(0444)); err != nil {
+		debug("Tried to write deplist file %v, failed %v\n", depName, err)
+		return err
 	}
 	return nil
 
@@ -259,21 +276,33 @@ func usage() string {
 	return "tcz [-v version] [-a architecture] [-h hostname] [-p host port] [-d debug prints] PROGRAM..."
 }
 
+func init() {
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = cmd
+		defUsage()
+	}
+}
+
 func main() {
 	flag.Parse()
-	needPackages := make(map[string]bool)
-	tczServerDir = filepath.Join("/", *version, *arch, "/tcz")
-	tczLocalPackageDir = filepath.Join(*tczRoot, tczServerDir)
-
 	if *debugPrint {
 		debug = l.Printf
 	}
 
+	ip := strings.Fields(*skip)
+	debug("ignored packages: %v", ip)
+	for _, p := range ip {
+		ignorePackage[p+".tcz"] = struct{}{}
+	}
+	needPackages := make(map[string]bool)
+	tczServerDir = filepath.Join("/", *version, *arch, "/tcz")
+	tczLocalPackageDir = filepath.Join(*tczRoot, tczServerDir)
+
 	packages := flag.Args()
 
 	if len(packages) == 0 {
-		fmt.Println(usage())
-		os.Exit(1)
+		flag.Usage()
 	}
 
 	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
