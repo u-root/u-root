@@ -343,7 +343,7 @@ var (
 	// list at present.
 	whitelist      = []string{"date"}
 	debug          = nodebug
-	standardgotool = false
+	standardgotool = true
 )
 
 func nodebug(string, ...interface{}) {}
@@ -786,7 +786,7 @@ func main() {
 			cmd := exec.Command("go", "build", "-x", "-a", "-installsuffix", "cgo", "-ldflags", "'-s'", "-o", init, ".")
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
-			cmd.Dir = filepath.Join(config.Gopath, "github.com/src/u-root/u-root/cmds/init")
+			cmd.Dir = filepath.Join(config.Gopath, "src/github.com/u-root/u-root/cmds/init")
 
 			err = cmd.Run()
 			if err != nil {
