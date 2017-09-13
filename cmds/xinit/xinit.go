@@ -49,6 +49,7 @@ var (
 		"Xorg-7.7",
 		"links",
 		"opera-12",
+		"wifi",
 	}
 	sshdCommands = []string{
 		"Protocol 2",
