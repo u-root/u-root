@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -36,25 +37,18 @@ func main() {
 	var initrd = flag.String("initrd", "/mnt/vboot/initrd", "Initrd file path.")
 	var initrdSignature = flag.String("initrd-sig", "/mnt/vboot/initrd.sig", "Initrd signature file path.")
 	var debug = flag.Bool("debug", false, "Enables debug mode.")
-	var noTPM = flag.Bool("no-tpm", false, "Disables tpm measuring process.")
 
 	flag.Parse()
 
 	if err := os.MkdirAll(mountPath, os.ModePerm); err != nil {
 		if *debug {
-			panic(err)
-		} else {
 			dieHard()
+		} else {
+			panic(err)
 		}
 	}
 
-	if err := unix.Mount(*bootDev, mountPath, filesystem, unix.MS_RDONLY, ""); err != nil {
-		if *debug {
-			panic(err)
-		} else {
-			dieHard()
-		}
-	}
+	unix.Mount(*bootDev, mountPath, filesystem, unix.MS_RDONLY, "")
 
 	paths := [...]string{*publicKey, *linuxKernel, *linuxKernelSignature, *initrd, *initrdSignature}
 	files := make(map[string][]byte)
@@ -63,9 +57,9 @@ func main() {
 		data, err := ioutil.ReadFile(element)
 		if err != nil {
 			if *debug {
-				panic(err)
-			} else {
 				dieHard()
+			} else {
+				panic(err)
 			}
 		} else {
 			files[element] = data
@@ -82,26 +76,21 @@ func main() {
 	initrdSuccess := ed25519.Verify(files[*publicKey], initrdDigest[:], files[*linuxKernelSignature])
 
 	if kernelSuccess && initrdSuccess {
-		if !*noTPM {
-			rwc, err := tpm.OpenTPM(tpmDevice)
-			if err != nil {
-				if *debug {
-					panic(err)
-				} else {
-					dieHard()
-				}
-			}
-
-			tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestKernel)
-			tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestInitrd)
+		rwc, err := tpm.OpenTPM(tpmDevice)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Couldn't open the TPM file %s: %s\n", tpmDevice, err)
+			return
 		}
+
+		tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestKernel)
+		tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestInitrd)
 
 		binary, lookErr := exec.LookPath("kexec")
 		if lookErr != nil {
 			if *debug {
-				panic(lookErr)
-			} else {
 				dieHard()
+			} else {
+				panic(lookErr)
 			}
 		}
 
@@ -111,9 +100,9 @@ func main() {
 		execErr := syscall.Exec(binary, args, env)
 		if execErr != nil {
 			if *debug {
-				panic(execErr)
-			} else {
 				dieHard()
+			} else {
+				panic(execErr)
 			}
 		}
 	} else {
