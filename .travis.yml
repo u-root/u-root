@@ -1,7 +1,7 @@
 sudo: true
 language: go
 go:
-  - 1.8
+  - 1.9
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:

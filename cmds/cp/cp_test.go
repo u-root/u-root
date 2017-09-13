@@ -109,11 +109,11 @@ func readDirs(pathToRead string, mapFiles map[string][]string) error {
 func isEqualFile(f1, f2 *os.File) (bool, error) {
 	bytes1, err := ioutil.ReadAll(f1)
 	if err != nil {
-		return false, fmt.Errorf("Failed to read the file %q: %v", f1, err)
+		return false, fmt.Errorf("Failed to read the file %v: %v", f1, err)
 	}
 	bytes2, err := ioutil.ReadAll(f2)
 	if err != nil {
-		return false, fmt.Errorf("Failed to the file %q: %v", f2, err)
+		return false, fmt.Errorf("Failed to the file %v: %v", f2, err)
 	}
 
 	if !reflect.DeepEqual(bytes1, bytes2) {
