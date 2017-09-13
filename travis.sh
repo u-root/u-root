@@ -9,7 +9,7 @@ mv /tmp/initramfs.linux_amd64.cpio /tmp/i2
 # Test all architectures we care about. At some point we may just
 # grow the build matrix.
 # (cd bb && go build . && GOARCH=arm64 ./bb)
-# (cd bb && go build . && GOARCH=ppc64le ./bb)
+(cd bb && go build . && GOARCH=ppc64le ./bb)
 cmp /tmp/initramfs.linux_amd64.cpio /tmp/i2
  which go
  (cd scripts && go run ramfs.go -tmpdir=/tmp/u-root -removedir=false)
