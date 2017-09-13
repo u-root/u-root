@@ -21,7 +21,7 @@ import (
 const (
 	// Not all these paths may be populated or even exist but OTOH they might.
 	PATHHEAD = "/ubin"
-	PATHMID  = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin"
+	PATHMID  = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/usr/local/sbin"
 	PATHTAIL = "/buildbin"
 	CmdsPath = "github.com/u-root/u-root/cmds"
 )
