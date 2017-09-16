@@ -12,45 +12,6 @@ import (
 )
 
 var (
-	tczPackages = []string{
-		"aterm",
-		"bash",
-		"fltk-1.3",
-		"flwm",
-		"freetype",
-		"glib2",
-		"harfbuzz",
-		"imlib2-bin",
-		"imlib2",
-		"libffi",
-		"libfontenc",
-		"libICE",
-		"libjpeg-turbo",
-		"libpng",
-		"libSM",
-		"libX11",
-		"libXau",
-		"libxcb",
-		"libXdmcp",
-		"libXext",
-		"libXfont",
-		"libXi",
-		"libXmu",
-		"libXpm",
-		"libXrandr",
-		"libXrender",
-		"libXt",
-		"pcre",
-		"wbar",
-		"Xfbdev",
-		"Xlibs",
-		"Xorg-fonts",
-		"Xprogs",
-		"Xorg-7.7",
-		"links",
-		"opera-12",
-		"wifi",
-	}
 	sshdCommands = []string{
 		"Protocol 2",
 		"AcceptEnv LANG LC_*",
@@ -145,17 +106,6 @@ func sshSetup() error {
 	return nil
 }
 
-func tczSetup() error {
-	get := []string{"-v", "8.x"}
-	get = append(get, tczPackages...)
-	cmd := exec.Command("tcz", get...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func xSetup() error {
 	go func() {
 		cmd := exec.Command("Xfbdev")
@@ -185,9 +135,6 @@ func xSetup() error {
 
 func main() {
 	if err := setup(); err != nil {
-		log.Printf("Error is %v", err)
-	}
-	if err := tczSetup(); err != nil {
 		log.Printf("Error is %v", err)
 	}
 	if false {
