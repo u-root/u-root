@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -179,7 +180,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 		switch t {
 		case "ENV":
 			if !path.IsAbs(s) {
-				s = path.Join(envDir, s)
+				s = filepath.Join(envDir, s)
 			}
 			b, err := ioutil.ReadFile(s)
 			if err != nil {
