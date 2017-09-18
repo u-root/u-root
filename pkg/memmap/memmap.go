@@ -45,7 +45,7 @@ var (
 )
 
 func mmVal(dir, file string) (uint64, error) {
-	s, err := ioutil.ReadFile(path.Join(dir, file))
+	s, err := ioutil.ReadFile(filepath.Join(dir, file))
 	if err != nil {
 		return 0, err
 	}
@@ -64,7 +64,7 @@ func mmr(name string) (*MemoryRange, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, err := ioutil.ReadFile(path.Join(name, "type"))
+	s, err := ioutil.ReadFile(filepath.Join(name, "type"))
 	if err != nil {
 		return nil, err
 	}

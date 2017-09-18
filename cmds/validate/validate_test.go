@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -43,7 +42,7 @@ ff02::2 ip6-allrouters
 		t.Fatal("TempDir failed: ", err)
 	}
 	defer os.RemoveAll(tmpDir)
-	if err := ioutil.WriteFile(path.Join(tmpDir, "hosts"), data, 0444); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(tmpDir, "hosts"), data, 0444); err != nil {
 		t.Fatalf("Can't set up data file: %v", err)
 	}
 
@@ -55,11 +54,11 @@ ff02::2 ip6-allrouters
 
 	t.Logf("Built %v for test", validatetestpath)
 	for _, v := range tests {
-		if err := ioutil.WriteFile(path.Join(tmpDir, v.name), v.val, 0444); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0444); err != nil {
 			t.Fatalf("Can't set up hash file: %v", err)
 		}
 
-		c := exec.Command(validatetestpath, path.Join(tmpDir, v.name), path.Join(tmpDir, "hosts"))
+		c := exec.Command(validatetestpath, filepath.Join(tmpDir, v.name), filepath.Join(tmpDir, "hosts"))
 		ep, err := c.StderrPipe()
 		if err != nil {
 			t.Fatalf("Can't start StderrPipe: %v", err)
