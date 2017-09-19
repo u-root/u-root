@@ -230,7 +230,7 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 				x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
 				isMain = true
 			}
-			if x.Name.Name == "init" {
+			if x.Recv == nil && x.Name.Name == "init" {
 				x.Name.Name = fmt.Sprintf("Init")
 				c.Init = c.CmdName + ".Init()"
 			}
