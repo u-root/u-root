@@ -315,7 +315,7 @@ func oneCmd(c Command) {
 
 	fset := token.NewFileSet()
 	c.FullPath = filepath.Join(c.Gopath, c.CmdPath)
-	p, err := parser.ParseDir(fset, c.FullPath, nil, 0)
+	p, err := parser.ParseDir(fset, c.FullPath, nil, parser.ParseComments)
 	if err != nil {
 		log.Printf("Can't Parsedir %v, %v", c.FullPath, err)
 		return

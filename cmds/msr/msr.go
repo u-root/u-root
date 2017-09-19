@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build linux
-// +build amd64
-
 // msr lets you read and write an msr for one or more cores.
 // The cores are specified via a filepath.Glob string.
 // The string should be for core number only, with no
@@ -18,6 +15,11 @@
 // msr r glob 32-bit-msr-number
 // msr w glob 32-bit-msr-number 64-bit-value
 // For each MSR operation msr will print an error if any.
+// If your kernel does not have MSRs for any reason,
+// this will fail due to file access. But it's quite possible
+// that non-x86 architectures might someday implement MSRs,
+// which on (e.g.) PPC might have a slightly different name
+// (DICR) but would implement the same kinds of functions.
 package main
 
 import (

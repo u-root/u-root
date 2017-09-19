@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build amd64
-
-// This file contains support functions for msr access for x86 Linux.
+// This file contains support functions for msr access for Linux.
 package main
 
 import (
