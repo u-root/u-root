@@ -27,7 +27,7 @@ import (
 
 	"github.com/d2g/dhcp4"
 	"github.com/d2g/dhcp4client"
-	"github.com/u-root/u-root/pkg/dhcp6client"
+	"github.com/u-root/dhcp6"
 	"github.com/vishvananda/netlink"
 )
 
@@ -183,11 +183,11 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 // dhcp6 support in go is hard to find. This function represents our best current
 // guess based on reading and testing.
 func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
-	conn, err := dhcp6client.NewPacketSock(iface.Attrs().Index)
+	conn, err := dhcp6.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
 		return fmt.Errorf("client conection generation: %v", err)
 	}
-	client := dhcp6client.New(iface.Attrs().HardwareAddr, conn, timeout, retry)
+	client := dhcp6.New(iface.Attrs().HardwareAddr, conn, timeout, retry)
 
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
 		debug("Start getting or renewing DHCPv6 lease")
