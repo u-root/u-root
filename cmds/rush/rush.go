@@ -145,7 +145,7 @@ func doArgs(cmds []*Command) error {
 			if v.mod == "ENV" {
 				e := v.val
 				if !path.IsAbs(v.val) {
-					e = path.Join(envDir, e)
+					e = filepath.Join(envDir, e)
 				}
 				b, err := ioutil.ReadFile(e)
 				if err != nil {

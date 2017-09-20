@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -75,14 +75,14 @@ func (c cgroupname) apply(s string, f func(s string)) {
 		return
 	}
 	for _, g := range strings.Split(s, ",") {
-		p := path.Join(g)
+		p := filepath.Join(g)
 		f(p)
 	}
 }
 
 func (c cgroupname) Validate(s string) {
 	c.apply(s, func(s string) {
-		if st, err := os.Stat(path.Join(string(c), s)); err != nil {
+		if st, err := os.Stat(filepath.Join(string(c), s)); err != nil {
 			log.Fatalf("%v", err)
 		} else if !st.IsDir() {
 			log.Fatalf("%s: not a directory", s)
@@ -91,13 +91,13 @@ func (c cgroupname) Validate(s string) {
 }
 
 func (c cgroupname) Create(s, name string) {
-	if err := os.MkdirAll(path.Join(string(c), s, name), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(string(c), s, name), 0755); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func (c cgroupname) Attach(s, name string, pid int) {
-	t := path.Join(string(c), s, name, "tasks")
+	t := filepath.Join(string(c), s, name, "tasks")
 	b := []byte(fmt.Sprintf("%v", pid))
 	if err := ioutil.WriteFile(t, b, 0600); err != nil {
 		log.Fatal(err)
@@ -105,7 +105,7 @@ func (c cgroupname) Attach(s, name string, pid int) {
 }
 
 func (c cgroupname) Destroy(s, n string) {
-	if err := os.RemoveAll(path.Join(string(c), s, n)); err != nil {
+	if err := os.RemoveAll(filepath.Join(string(c), s, n)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -135,7 +135,7 @@ func Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
 // If anything goes wrong, we just bail out; we've privatized the namespace
 // so there is no cleanup we need to do.
 func (m *mount) One(base string) {
-	dst := path.Join(base, m.dst)
+	dst := filepath.Join(base, m.dst)
 	if m.dir {
 		if err := os.MkdirAll(dst, 0755); err != nil {
 			log.Fatalf("One: mkdirall %v: %v", m.dst, err)
@@ -189,7 +189,7 @@ func make_console(base, console string, unprivileged bool) {
 		log.Printf("%v", err)
 	}
 
-	nn := path.Join(base, "/dev/console")
+	nn := filepath.Join(base, "/dev/console")
 	mode, dev := modedev(st)
 	if unprivileged {
 		// In unprivileged uses, we can't mknod /dev/console, however,
@@ -226,7 +226,7 @@ func copy_nodes(base string) {
 		if err != nil {
 			log.Printf("%v", err)
 		}
-		nn := path.Join(base, n)
+		nn := filepath.Join(base, n)
 		mode, dev := modedev(st)
 		if err := syscall.Mknod(nn, mode, dev); err != nil {
 			log.Printf("%v", err)
@@ -237,7 +237,7 @@ func copy_nodes(base string) {
 // make_ptmx creates /dev/ptmx in the root. Because of order of operations
 // it has to happen at a different time than copy_nodes.
 func make_ptmx(base string) {
-	dst := path.Join(base, "/dev/ptmx")
+	dst := filepath.Join(base, "/dev/ptmx")
 
 	if _, err := os.Stat(dst); err == nil {
 		return
@@ -262,7 +262,7 @@ func make_symlinks(base string) {
 	}
 
 	for i := range linkit {
-		dst := path.Join(base, linkit[i].dst)
+		dst := filepath.Join(base, linkit[i].dst)
 
 		if _, err := os.Stat(dst); err == nil {
 			continue
