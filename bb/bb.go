@@ -217,10 +217,24 @@ var config struct {
 
 func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 	// Inspect the AST and change all instances of main()
+	var pos token.Position
 	isMain := false
 	c.Init = ""
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
+		default:
+			debug("%v %v\n", reflect.TypeOf(n), n)
+		// This is rather gross. Arguably, so is the way that
+		// Go has embedded build information in comments
+		// ... this import comment attachment to a package
+		// came in 1.4, a few years ago, and it only just bit
+		// us with one file in upspin. So we go with gross.
+		case *ast.Ident:
+			// we assume the first identifier is the package id
+			if ! pos.IsValid() {
+				pos = fset.Position(x.Pos())
+				debug("Ident at %v", pos)
+			}
 		case *ast.File:
 			x.Name.Name = c.CmdName
 		case *ast.FuncDecl:
@@ -255,6 +269,21 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 		}
 		return true
 	})
+
+	// Now we change any import names attached to package declarations.
+	// We just upcase it for now; it makes it easy to look in bbsh
+	// for things we changed, e.g. grep -r bbsh Import is useful.
+	for _, cg := range f.Comments {
+		for _, c := range cg.List {
+			l := fset.Position(c.Pos()).Line
+			if l != pos.Line {
+				continue
+			}
+			if c.Text[0:9] == "// import" {
+				c.Text = "// Import" + c.Text[9:]
+			}
+		}
+	}
 
 	if *dumpAST {
 		ast.Fprint(os.Stderr, fset, f, nil)
