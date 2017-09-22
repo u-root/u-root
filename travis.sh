@@ -1,5 +1,7 @@
 #!/bin/bash
-export GOPATH=/home/travis/gopath
+if [ -z "${GOPATH}" ]; then
+        export GOPATH=/home/travis/gopath
+fi
 set -e
 echo "-----------------------> Initial bb test"
  (cd bb && go build . && ./bb)

@@ -11,7 +11,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"syscall"
 
@@ -86,7 +85,7 @@ func main() {
 		if *debug {
 			log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
 		}
-		bName := path.Join(rushPath, a[0]+".go")
+		bName := filepath.Join(rushPath, a[0]+".go")
 		filemap[bName] = fullCode
 	}
 
