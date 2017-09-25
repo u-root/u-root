@@ -57,14 +57,14 @@ func TestReadlink(t *testing.T) {
 			exitStatus: 0,
 		},
 		{
-			flags:      []string{"multiLinks"},
-			out:        fmt.Sprintf("%s/%s", testDir, "f1Symlink\n"),
+			flags:      []string{"multilinks"},
+			out:        fmt.Sprintf("%s/%s", testDir, "f1symlink\n"),
 			stdErr:     "",
 			exitStatus: 0,
 		},
 		{
-			flags:      []string{"-v", "multiLinks", "f1symlink", "f2"},
-			out:        fmt.Sprintf("%s/%sf1\n", testDir, "f1Symlink\n"),
+			flags:      []string{"-v", "multilinks", "f1symlink", "f2"},
+			out:        fmt.Sprintf("%s/%sf1\n", testDir, "f1symlink\n"),
 			stdErr:     "readlink: f2 Invalid argument\n",
 			exitStatus: 1,
 		},
@@ -74,11 +74,11 @@ func TestReadlink(t *testing.T) {
 	os.Create("f2")
 
 	// Create symlinks
-	f1Symlink := filepath.Join(testDir, "f1Symlink")
+	f1Symlink := filepath.Join(testDir, "f1symlink")
 	os.Symlink("f1", f1Symlink)
 
 	// Multiple links
-	multiLinks := filepath.Join(testDir, "multiLinks")
+	multiLinks := filepath.Join(testDir, "multilinks")
 	os.Symlink(f1Symlink, multiLinks)
 
 	// Table-driven testing
