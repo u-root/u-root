@@ -20,10 +20,21 @@ import (
 	"path/filepath"
 )
 
+const cmd = "readlink [-fv] FILE"
+
 var (
 	follow  = flag.Bool("f", false, "follow recursively")
 	verbose = flag.Bool("v", false, "report error messages")
 )
+
+func init() {
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = cmd
+		defUsage()
+	}
+	flag.Parse()
+}
 
 func readLink(file string) error {
 	path, err := os.Readlink(file)
@@ -40,9 +51,7 @@ func readLink(file string) error {
 }
 
 func main() {
-	flag.Parse()
-
-	exitStatus := 0
+	var exitStatus int
 
 	for _, file := range flag.Args() {
 		if err := readLink(file); err != nil {
