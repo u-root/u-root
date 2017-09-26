@@ -38,6 +38,7 @@ echo "-----------------------> go test"
 
 echo "-----------------------> test -cover" 
  (cd cmds && CGO_ENABLED=0 go test -cover ./...)
+ (cd pkg && CGO_ENABLED=0 go test -cover ./...)
 
 echo "-----------------------> go vet"
  go tool vet cmds uroot pkg
