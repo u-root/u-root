@@ -15,7 +15,7 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type Test struct {
+type test struct {
 	flags      []string
 	out        string
 	stdErr     string
@@ -30,10 +30,17 @@ func TestReadlink(t *testing.T) {
 
 	// Creating here to utilize path in tests
 	testDir := filepath.Join(tmpDir, "readLinkDir")
-	os.Mkdir(testDir, 0700)
-	os.Chdir(testDir)
+	err := os.Mkdir(testDir, 0700)
+	if err != nil {
+		t.Error(err)
+	}
 
-	var tests = []Test{
+	err = os.Chdir(testDir)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var tests = []test{
 		{
 			flags:      []string{},
 			out:        "",
@@ -42,7 +49,7 @@ func TestReadlink(t *testing.T) {
 		}, {
 			flags:      []string{"-v", "f1"},
 			out:        "",
-			stdErr:     "readlink: f1 Invalid argument\n",
+			stdErr:     "readlink f1: invalid argument\n",
 			exitStatus: 1,
 		}, {
 			flags:      []string{"-f", "f2"},
@@ -65,21 +72,47 @@ func TestReadlink(t *testing.T) {
 		{
 			flags:      []string{"-v", "multilinks", "f1symlink", "f2"},
 			out:        fmt.Sprintf("%s/%sf1\n", testDir, "f1symlink\n"),
-			stdErr:     "readlink: f2 Invalid argument\n",
+			stdErr:     "readlink f2: invalid argument\n",
+			exitStatus: 1,
+		},
+		{
+			flags:      []string{"-v", testDir},
+			out:        "",
+			stdErr:     fmt.Sprintf("readlink %s: invalid argument\n", testDir),
+			exitStatus: 1,
+		},
+		{
+			flags:      []string{"-v", "foo.bar"},
+			out:        "",
+			stdErr:     fmt.Sprintf("readlink foo.bar: no such file or directory\n"),
 			exitStatus: 1,
 		},
 	}
 	// Createfiles.
-	os.Create("f1")
-	os.Create("f2")
+	_, err = os.Create("f1")
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = os.Create("f2")
+	if err != nil {
+		t.Error(err)
+	}
 
 	// Create symlinks
 	f1Symlink := filepath.Join(testDir, "f1symlink")
-	os.Symlink("f1", f1Symlink)
+	err = os.Symlink("f1", f1Symlink)
+	if err != nil {
+		t.Error(err)
+	}
 
 	// Multiple links
 	multiLinks := filepath.Join(testDir, "multilinks")
-	os.Symlink(f1Symlink, multiLinks)
+	err = os.Symlink(f1Symlink, multiLinks)
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	// Table-driven testing
 	for _, tt := range tests {

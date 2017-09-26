@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// readlink display value of symbolic link file
+// readlink display value of symbolic link file.
 //
 // Synopsis:
 //     readlink [OPTIONS] FILE
@@ -25,36 +25,14 @@ var (
 	verbose = flag.Bool("v", false, "report error messages")
 )
 
-func isLink(file string) error {
-	var err error
-	f, err := os.Lstat(file)
-
+func readLink(file string) error {
+	path, err := os.Readlink(file)
 	if err != nil {
 		return err
 	}
 
-	// If it is not a symbolic link return an error
-	if f.Mode()&os.ModeSymlink == 0 {
-		return fmt.Errorf("%s Invalid argument", file)
-	}
-
-	return err
-}
-
-func readFile(file string) error {
-	var path string
-	var err error
-
-	err = isLink(file)
-	if err != nil {
-		return err
-	}
-
-	// Follow depth
 	if *follow {
 		path, err = filepath.EvalSymlinks(file)
-	} else {
-		path, err = os.Readlink(file)
 	}
 
 	fmt.Printf("%s\n", path)
@@ -67,11 +45,9 @@ func main() {
 	exitStatus := 0
 
 	for _, file := range flag.Args() {
-		err := readFile(file)
-
-		if err != nil {
+		if err := readLink(file); err != nil {
 			if *verbose {
-				fmt.Fprintf(os.Stderr, "readlink: %s\n", err.Error())
+				fmt.Fprintf(os.Stderr, "%v\n", err)
 			}
 			exitStatus = 1
 		}
