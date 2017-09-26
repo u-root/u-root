@@ -51,12 +51,6 @@
 			"revisionTime": "2017-06-05T23:30:24Z"
 		},
 		{
-			"checksumSHA1": "tMWyUmQFr1Im84oWP/V550WqfVo=",
-			"path": "github.com/mdlayher/dhcp6",
-			"revision": "0570f4289fd3465c31d7f27e5ba36ad2800d60e2",
-			"revisionTime": "2016-10-10T16:49:42Z"
-		},
-		{
 			"checksumSHA1": "V7UljrmCbGyj3+apUKdNcojLdgs=",
 			"path": "github.com/u-root/dhcp6",
 			"revision": "e18b1a3a20894dd69ca88bfebb2ac0ff1afbae79",
