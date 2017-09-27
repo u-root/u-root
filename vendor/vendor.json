@@ -51,10 +51,10 @@
 			"revisionTime": "2017-06-05T23:30:24Z"
 		},
 		{
-			"checksumSHA1": "tMWyUmQFr1Im84oWP/V550WqfVo=",
-			"path": "github.com/mdlayher/dhcp6",
-			"revision": "0570f4289fd3465c31d7f27e5ba36ad2800d60e2",
-			"revisionTime": "2016-10-10T16:49:42Z"
+			"checksumSHA1": "V7UljrmCbGyj3+apUKdNcojLdgs=",
+			"path": "github.com/u-root/dhcp6",
+			"revision": "e18b1a3a20894dd69ca88bfebb2ac0ff1afbae79",
+			"revisionTime": "2017-08-24T15:33:34Z"
 		},
 		{
 			"checksumSHA1": "fBYLKUQGGZvgco+r1iuYrVHEkCU=",
@@ -163,6 +163,12 @@
 			"path": "golang.org/x/net/internal/iana",
 			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
 			"revisionTime": "2016-05-15T03:16:23Z"
+		},
+		{
+			"checksumSHA1": "5eWwtQVHJ0Lp2/538Kve2KuE8gQ=",
+			"path": "golang.org/x/net/internal/socket",
+			"revision": "0744d001aa8470aaa53df28d32e5ceeb8af9bd70",
+			"revisionTime": "2017-09-01T09:04:45Z"
 		},
 		{
 			"checksumSHA1": "cNGCoUQtPpisIaR5NYcjL+n3w3E=",
