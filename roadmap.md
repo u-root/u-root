@@ -56,7 +56,7 @@
 | :x: printf     |               |                 | Not implemented yet!   |
 | ps             | -Aaex         |                 |                        |
 | pwd            | -LP           |                 |                        |
-| :x: readlink   |               |                 | Not implmeneted yet!   |
+| readlink       | -fv           | -emnqsz         |                        |
 | :x: reboot     |               |                 | Not implemented yet!   |
 | rm             | -iRrv         | -I              |                        |
 | run            |               |                 | u-root specific        |
