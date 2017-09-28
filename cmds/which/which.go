@@ -33,6 +33,8 @@ func init() {
 func which(p string, writer io.Writer, cmds []string) {
 	pathArray := strings.Split(p, ":")
 
+	// If no matches are found will exit 1, else 0
+	exitValue := 1
 	for _, name := range cmds {
 		for i := range pathArray {
 			f := filepath.Join(pathArray[i], name)
@@ -41,6 +43,7 @@ func which(p string, writer io.Writer, cmds []string) {
 				// Consider a file executable only by root (0100)
 				// when I'm not root. I can't run it.
 				if m := info.Mode(); m&0111 != 0 && !(m&os.ModeType == os.ModeSymlink) {
+					exitValue = 0
 					writer.Write([]byte(f + "\n"))
 					if !flags.allPaths {
 						break
@@ -49,6 +52,7 @@ func which(p string, writer io.Writer, cmds []string) {
 			}
 		}
 	}
+	os.Exit(exitValue)
 }
 
 func main() {

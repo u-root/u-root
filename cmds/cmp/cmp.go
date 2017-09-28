@@ -31,9 +31,11 @@ import (
 	"strconv"
 )
 
-var long = flag.Bool("l", false, "print the byte number (decimal) and the differing bytes (hexadecimal) for each difference")
-var line = flag.Bool("L", false, "print the line number of the first differing byte")
-var silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
+var (
+	long   = flag.Bool("l", false, "print the byte number (decimal) and the differing bytes (hexadecimal) for each difference")
+	line   = flag.Bool("L", false, "print the line number of the first differing byte")
+	silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
+)
 
 func emit(rs io.ReadSeeker, c chan byte, offset int64) error {
 	if offset > 0 {

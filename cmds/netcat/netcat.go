@@ -30,6 +30,7 @@ func main() {
 	var err error
 	if len(flag.Args()) < 1 {
 		flag.Usage()
+		os.Exit(1)
 	}
 
 	if c, err = net.Dial(*netType, flag.Args()[0]); err != nil {

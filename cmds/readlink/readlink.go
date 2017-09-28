@@ -53,6 +53,11 @@ func readLink(file string) error {
 func main() {
 	var exitStatus int
 
+	if flag.NArg() == 0 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	for _, file := range flag.Args() {
 		if err := readLink(file); err != nil {
 			if *verbose {

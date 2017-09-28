@@ -33,6 +33,7 @@ func main() {
 	a := flag.Args()
 	if len(a) != 2 {
 		flag.Usage()
+		os.Exit(1)
 	}
 	essid, pass = a[0], a[1]
 
