@@ -44,10 +44,7 @@ func TestReadlink(t *testing.T) {
 		{
 			flags:      []string{},
 			out:        "",
-			stdErr:     `Usage of readlink [-fv] FILE:
-  -f	follow recursively
-  -v	report error messages
-`,
+			stdErr:     "",
 			exitStatus: 1,
 		}, {
 			flags:      []string{"-v", "f1"},
