@@ -29,7 +29,7 @@ import (
 	"strings"
 )
 
-const cmd = "comm [-123i] file1 file2\n"
+const cmd = "comm [-123i] file1 file2"
 
 var (
 	s1   = flag.Bool("1", false, "suppress printing of column 1")
@@ -97,6 +97,7 @@ func main() {
 	flag.Parse()
 	if flag.NArg() != 2 || *help {
 		flag.Usage()
+		os.Exit(1)
 	}
 
 	c1 := make(chan string, 100)

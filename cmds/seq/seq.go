@@ -113,5 +113,6 @@ func main() {
 	if err := seq(os.Stdout, flag.Args()); err != nil {
 		log.Println(err)
 		flag.Usage()
+		os.Exit(1)
 	}
 }

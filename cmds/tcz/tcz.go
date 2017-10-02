@@ -303,6 +303,7 @@ func main() {
 
 	if len(packages) == 0 {
 		flag.Usage()
+		os.Exit(1)
 	}
 
 	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
