@@ -45,7 +45,7 @@ func TestReadlink(t *testing.T) {
 			flags:      []string{},
 			out:        "",
 			stdErr:     "",
-			exitStatus: 0,
+			exitStatus: 1,
 		}, {
 			flags:      []string{"-v", "f1"},
 			out:        "",

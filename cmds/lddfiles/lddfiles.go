@@ -46,6 +46,7 @@ func ldd(o io.Writer, s ...string) error {
 }
 
 func main() {
+
 	if err := ldd(os.Stdout, os.Args[1:]...); err != nil {
 		log.Fatalf("ldd: %v", err)
 	}
