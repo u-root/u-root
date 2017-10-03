@@ -161,6 +161,11 @@ func linkset() {
 }
 
 func link() {
+	if len(arg) == 1 {
+		linkshow()
+		return
+	}
+
 	cursor++
 	whatIWant = []string{"show", "set"}
 	cmd := arg[cursor]
