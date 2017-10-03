@@ -145,27 +145,6 @@ var (
 		"src/github.com/u-root/u-root/cmds/*",
 	}
 
-	// fixFlag tells by existence if an argument needs to be fixed.
-	// The value tells which argument.
-	fixFlag = map[string]int{
-		"Bool":        0,
-		"BoolVar":     1,
-		"Duration":    0,
-		"DurationVar": 1,
-		"Float64":     0,
-		"Float64Var":  1,
-		"Int":         0,
-		"Int64":       0,
-		"Int64Var":    1,
-		"IntVar":      1,
-		"String":      0,
-		"StringVar":   1,
-		"Uint":        0,
-		"Uint64":      0,
-		"Uint64Var":   1,
-		"UintVar":     1,
-		"Var":         1,
-	}
 	dumpAST = flag.Bool("D", false, "Dump the AST")
 	initMap = "package main\nvar initMap = map[string] func() {\n"
 
