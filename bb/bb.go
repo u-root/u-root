@@ -40,7 +40,6 @@ const (
 	cmdFunc = `package main
 import "github.com/u-root/u-root/bb/bbsh/cmds/{{.CmdName}}"
 func _forkbuiltin_{{.CmdName}}(c *Command) (err error) {
-os.Args = fixArgs("{{.CmdName}}", append([]string{c.cmd}, c.argv...))
 {{.CmdName}}.Main()
 return
 }
@@ -48,19 +47,6 @@ return
 func {{.CmdName}}Init() {
 	addForkBuiltIn("{{.CmdName}}", _forkbuiltin_{{.CmdName}})
 	{{.Init}}
-}
-`
-	fixArgs = `
-package main
-
-func fixArgs(cmd string, args[]string) (s []string) {
-	for _, v := range args {
-		if v[0] == '-' {
-			v = "-" + cmd + "." + v[1:]
-		}
-		s = append(s, v)
-	}
-	return
 }
 `
 	initGo = `
@@ -485,9 +471,6 @@ func main() {
 	rush := filepath.Join(config.Bbsh, "ubin", "rush")
 	if err := os.Symlink("/init", rush); err != nil {
 		log.Printf("Symlink /init to %v: %v", rush, err)
-	}
-	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "fixargs.go"), []byte(fixArgs), 0644); err != nil {
-		log.Fatalf("%v\n", err)
 	}
 
 	initMap += "\n}"
