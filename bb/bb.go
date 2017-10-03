@@ -135,6 +135,13 @@ func init() {
 	return
 }
 `
+	bbsetupGo = `
+package {{.CmdName}}
+
+	import "flag"
+
+	var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
+`
 )
 
 func debugPrint(f string, s ...interface{}) {
@@ -231,7 +238,7 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 		// us with one file in upspin. So we go with gross.
 		case *ast.Ident:
 			// we assume the first identifier is the package id
-			if ! pos.IsValid() {
+			if !pos.IsValid() {
 				pos = fset.Position(x.Pos())
 				debug("Ident at %v", pos)
 			}
@@ -249,23 +256,40 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 				c.Init = c.CmdName + ".Init()"
 			}
 
+		// rewrite use of the flag package.
+		// The flag package uses a global variable to contain all flags.
+		// This works poorly with the busybox mode, so as part of turning
+		// commands into packages, we rewrite their use of flags to use a
+		// package-private FlagSet.
+		// in bbsetup.go, we add a var for the package flagset with params
+		// (packagename, os.ExitOnError)
+		// The ExitOnError may be a mistake, we'll have to see, since
+		// packages are written to assume it returns. But it sure
+		// is much handier since all our code currently follows
+		// flag.Usage with os.Exit(1)
+		// We rewrite arguments for calls to flag.Parse from () to
+		// (os.Args[1:])
+		// We rewrite all other uses of flag. to "commandname"+flag.
 		case *ast.CallExpr:
-			debug("%v %v\n", reflect.TypeOf(n), n)
-			switch z := x.Fun.(type) {
+			switch s := x.Fun.(type) {
 			case *ast.SelectorExpr:
-				// somebody tell me how to do this.
-				sel := fmt.Sprintf("%v", z.X)
-				// TODO: Need to have fixFlag and fixFlagVar
-				// as the Var variation has name in the SECOND argument.
-				if sel == "flag" {
-					if ix, ok := fixFlag[z.Sel.Name]; ok {
-						switch zz := x.Args[ix].(type) {
-						case *ast.BasicLit:
-							zz.Value = "\"" + c.CmdName + "." + zz.Value[1:]
-						}
+				switch i := s.X.(type) {
+				case *ast.Ident:
+					if i.Name != "flag" {
+						break
+					}
+					switch s.Sel.Name {
+					case "Parse":
+						i.Name = c.CmdName + "flag"
+						debug("Found a call to flag.Parse")
+						x.Args = []ast.Expr{&ast.Ident{Name: "os.Args[1:]"}}
+					case "Flag":
+					default:
+						i.Name = c.CmdName + "flag"
 					}
 				}
 			}
+
 		}
 		return true
 	})
@@ -316,15 +340,25 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 
 	// fun: must write the file first so the import fixup works :-)
 	if isMain {
-		// Write the file to interface to the command package.
-		t := template.Must(template.New("cmdFunc").Parse(cmdFunc))
 		var b bytes.Buffer
+		// create the bbsetup.go file with all the random stuff we need
+		t := template.Must(template.New("setup").Parse(bbsetupGo))
+		if err := t.Execute(&b, c); err != nil {
+			log.Fatalf("spec %v: %v\n", bbsetupGo, err)
+		}
+		// we don't yet needs imports.Process, but we'll see.
+		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmds", c.CmdName, "bbsetup.go"), b.Bytes(), 0444); err != nil {
+			log.Fatalf("%v\n", err)
+		}
+		b.Reset()
+		// Write the file to interface to the command package.
+		t = template.Must(template.New("cmdFunc").Parse(cmdFunc))
 		if err := t.Execute(&b, c); err != nil {
 			log.Fatalf("spec %v: %v\n", cmdFunc, err)
 		}
 		fullCode, err := imports.Process("commandline", []byte(b.Bytes()), &opts)
 		if err != nil {
-			log.Fatalf("bad parse: '%v': %v", out, err)
+			log.Fatalf("Main commandline imports: bad parse: '%v': %v", out, err)
 		}
 		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmd_"+c.CmdName+".go"), fullCode, 0444); err != nil {
 			log.Fatalf("%v\n", err)
