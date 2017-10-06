@@ -69,7 +69,7 @@ func findloop() (name string, err error) {
 	if errno != 0 {
 		log.Fatalf("ioctl: %v\n", err)
 	}
-	log.Printf("a %v b %v err %v\n", a, b, err)
+	debug("a %v b %v err %v\n", a, b, err)
 	name = fmt.Sprintf("/dev/loop%d", a)
 	return name, nil
 }
