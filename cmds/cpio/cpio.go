@@ -76,7 +76,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error reading records: %v", err)
 			}
-			log.Printf("Creating %s\n", rec)
+			debug("Creating %s\n", rec)
 			if err := cpio.CreateFile(rec); err != nil {
 				log.Printf("Creating %q failed: %v", rec.Name, err)
 			}
