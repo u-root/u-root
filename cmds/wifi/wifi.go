@@ -6,18 +6,21 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 )
 
-const cmd = "wifi [options] essid passphrase"
-
-var (
-	iface = flag.String("i", "wlan0", "interface to use")
-	essid string
-	pass  string
+const (
+	cmd          = "wifi [options] essid [passphrase]"
+	nopassphrase = `network={
+	ssid="%s"
+	proto=RSN
+	key_mgmt=NONE
+}
+`
 )
 
 func init() {
@@ -29,20 +32,32 @@ func init() {
 }
 
 func main() {
+	var (
+		iface = flag.String("i", "wlan0", "interface to use")
+		essid string
+		conf  []byte
+	)
+
 	flag.Parse()
 	a := flag.Args()
-	if len(a) != 2 {
+	if len(a) != 2 && len(a) != 1 {
 		flag.Usage()
 		os.Exit(1)
 	}
-	essid, pass = a[0], a[1]
+	essid = a[0]
 
-	conf, err := exec.Command("wpa_passphrase", essid, pass).CombinedOutput()
-	if err != nil {
-		log.Fatalf("%v %v: %v", essid, pass, err)
+	if len(a) == 2 {
+		pass := a[1]
+		o, err := exec.Command("wpa_passphrase", essid, pass).CombinedOutput()
+		if err != nil {
+			log.Fatalf("%v %v: %v", essid, pass, err)
+		}
+		conf = o
+	} else {
+		conf = []byte(fmt.Sprintf(nopassphrase, essid))
 	}
 
-	if err := ioutil.WriteFile("/tmp/wifi.conf", []byte(conf), 0444); err != nil {
+	if err := ioutil.WriteFile("/tmp/wifi.conf", conf, 0444); err != nil {
 		log.Fatalf("/tmp/wifi.conf: %v", err)
 	}
 
