@@ -36,7 +36,7 @@ var (
 	// The language of this command doesn't require much more.
 	cursor    int
 	arg       []string
-	whatIWant string
+	whatIWant []string
 	log       = l.New(os.Stdout, "ip: ", 0)
 )
 
@@ -49,16 +49,31 @@ func usage() {
 		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
 }
 
+func one(cmd string, cmds []string) string {
+	var x, n int
+	for i := range cmds {
+		if strings.HasPrefix(cmds[i], cmd) {
+			n++
+			x = i
+		}
+	}
+	if n == 1 {
+		return cmds[x]
+	}
+	return ""
+}
+
+
 // in the ip command, turns out 'dev' is a noise word.
 // The BNF is not right there either.
 // Always make it optional.
 func dev() netlink.Link {
 	cursor++
-	whatIWant = "dev|device name"
+	whatIWant = []string{"dev", "device name",}
 	if arg[cursor] == "dev" {
 		cursor++
 	}
-	whatIWant = "device name"
+	whatIWant = []string{"device name",}
 	iface, err := netlink.LinkByName(arg[cursor])
 	if err != nil {
 		usage()
@@ -88,13 +103,13 @@ func addrip() {
 		return
 	}
 	cursor++
-	whatIWant = "add|del"
+	whatIWant = []string{"add", "del",}
 	cmd := arg[cursor]
 
-	switch cmd {
+	switch one(cmd, whatIWant) {
 	case "add", "del":
 		cursor++
-		whatIWant = "CIDR format address"
+		whatIWant = []string{"CIDR format address",}
 		addr, err = netlink.ParseAddr(arg[cursor])
 		if err != nil {
 			usage()
@@ -103,7 +118,7 @@ func addrip() {
 		usage()
 	}
 	iface := dev()
-	switch cmd {
+	switch one(cmd, whatIWant) {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
 			log.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
@@ -121,7 +136,7 @@ func addrip() {
 
 func linkshow() {
 	cursor++
-	whatIWant = "<nothing>|<device name>"
+	whatIWant = []string{"<nothing>", "<device name>",}
 	if len(arg[cursor:]) == 0 {
 		showips()
 	}
@@ -130,8 +145,8 @@ func linkshow() {
 func linkset() {
 	iface := dev()
 	cursor++
-	whatIWant = "up|down"
-	switch arg[cursor] {
+	whatIWant = []string{"up", "down",}
+	switch one(arg[cursor], whatIWant) {
 	case "up":
 		if err := netlink.LinkSetUp(iface); err != nil {
 			log.Fatalf("%v can't make it up: %v", iface, err)
@@ -147,10 +162,10 @@ func linkset() {
 
 func link() {
 	cursor++
-	whatIWant = "show|set"
+	whatIWant = []string{"show", "set",}
 	cmd := arg[cursor]
 
-	switch cmd {
+	switch one(cmd, whatIWant) {
 	case "show":
 		linkshow()
 	case "set":
@@ -170,19 +185,19 @@ func routeshow() {
 }
 func nodespec() string {
 	cursor++
-	whatIWant = "default|CIDR"
+	whatIWant = []string{"default", "CIDR",}
 	return arg[cursor]
 }
 
 func nexthop() (string, *netlink.Addr) {
 	cursor++
-	whatIWant = "via"
+	whatIWant = []string{"via",}
 	if arg[cursor] != "via" {
 		usage()
 	}
 	nh := arg[cursor]
 	cursor++
-	whatIWant = "Gateway CIDR"
+	whatIWant = []string{"Gateway CIDR",}
 	addr, err := netlink.ParseAddr(arg[cursor])
 	if err != nil {
 		log.Fatalf("Gateway CIDR: %v", err)
@@ -224,8 +239,8 @@ func route() {
 		return
 	}
 
-	whatIWant = "show|add"
-	switch arg[cursor] {
+	whatIWant = []string{"show", "add",}
+	switch one(arg[cursor], whatIWant) {
 	case "show":
 		routeshow()
 	case "add":
@@ -237,7 +252,7 @@ func route() {
 }
 func main() {
 	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = "addr|route|link"
+	whatIWant = []string{"addr", "route", "link",}
 	cursor = 0
 	flag.Parse()
 	arg = flag.Args()
@@ -259,7 +274,7 @@ func main() {
 
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
-	switch arg[cursor] {
+	switch one(arg[cursor], whatIWant) {
 	case "addr":
 		addrip()
 	case "link":
