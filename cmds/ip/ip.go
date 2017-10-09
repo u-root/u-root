@@ -63,17 +63,16 @@ func one(cmd string, cmds []string) string {
 	return ""
 }
 
-
 // in the ip command, turns out 'dev' is a noise word.
 // The BNF is not right there either.
 // Always make it optional.
 func dev() netlink.Link {
 	cursor++
-	whatIWant = []string{"dev", "device name",}
+	whatIWant = []string{"dev", "device name"}
 	if arg[cursor] == "dev" {
 		cursor++
 	}
-	whatIWant = []string{"device name",}
+	whatIWant = []string{"device name"}
 	iface, err := netlink.LinkByName(arg[cursor])
 	if err != nil {
 		usage()
@@ -103,13 +102,13 @@ func addrip() {
 		return
 	}
 	cursor++
-	whatIWant = []string{"add", "del",}
+	whatIWant = []string{"add", "del"}
 	cmd := arg[cursor]
 
 	switch one(cmd, whatIWant) {
 	case "add", "del":
 		cursor++
-		whatIWant = []string{"CIDR format address",}
+		whatIWant = []string{"CIDR format address"}
 		addr, err = netlink.ParseAddr(arg[cursor])
 		if err != nil {
 			usage()
@@ -136,7 +135,7 @@ func addrip() {
 
 func linkshow() {
 	cursor++
-	whatIWant = []string{"<nothing>", "<device name>",}
+	whatIWant = []string{"<nothing>", "<device name>"}
 	if len(arg[cursor:]) == 0 {
 		showips()
 	}
@@ -145,7 +144,7 @@ func linkshow() {
 func linkset() {
 	iface := dev()
 	cursor++
-	whatIWant = []string{"up", "down",}
+	whatIWant = []string{"up", "down"}
 	switch one(arg[cursor], whatIWant) {
 	case "up":
 		if err := netlink.LinkSetUp(iface); err != nil {
@@ -162,7 +161,7 @@ func linkset() {
 
 func link() {
 	cursor++
-	whatIWant = []string{"show", "set",}
+	whatIWant = []string{"show", "set"}
 	cmd := arg[cursor]
 
 	switch one(cmd, whatIWant) {
@@ -185,19 +184,19 @@ func routeshow() {
 }
 func nodespec() string {
 	cursor++
-	whatIWant = []string{"default", "CIDR",}
+	whatIWant = []string{"default", "CIDR"}
 	return arg[cursor]
 }
 
 func nexthop() (string, *netlink.Addr) {
 	cursor++
-	whatIWant = []string{"via",}
+	whatIWant = []string{"via"}
 	if arg[cursor] != "via" {
 		usage()
 	}
 	nh := arg[cursor]
 	cursor++
-	whatIWant = []string{"Gateway CIDR",}
+	whatIWant = []string{"Gateway CIDR"}
 	addr, err := netlink.ParseAddr(arg[cursor])
 	if err != nil {
 		log.Fatalf("Gateway CIDR: %v", err)
@@ -239,7 +238,7 @@ func route() {
 		return
 	}
 
-	whatIWant = []string{"show", "add",}
+	whatIWant = []string{"show", "add"}
 	switch one(arg[cursor], whatIWant) {
 	case "show":
 		routeshow()
@@ -252,7 +251,7 @@ func route() {
 }
 func main() {
 	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = []string{"addr", "route", "link",}
+	whatIWant = []string{"addr", "route", "link"}
 	cursor = 0
 	flag.Parse()
 	arg = flag.Args()

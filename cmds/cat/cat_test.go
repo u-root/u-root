@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
-	"path/filepath"
 )
 
 // setup writes a set of files, putting 1 byte in each file.
