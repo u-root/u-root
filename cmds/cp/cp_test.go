@@ -113,7 +113,7 @@ func isEqualFile(f1, f2 *os.File) (bool, error) {
 	}
 	bytes2, err := ioutil.ReadAll(f2)
 	if err != nil {
-		return false, fmt.Errorf("Failed to the file %v: %v", f2, err)
+		return false, fmt.Errorf("Failed to read the file %v: %v", f2, err)
 	}
 
 	if !reflect.DeepEqual(bytes1, bytes2) {
@@ -136,7 +136,7 @@ func isEqualTree(src, dst string) (bool, error) {
 	equalTree := true
 	for _, files := range mapFiles {
 		if len(files) < 2 {
-			return false, fmt.Errorf("Insufficient files! At least two, some crazy operation at readDirs")
+			return false, fmt.Errorf("insufficient files in readDirs(): expected at least 2, got %v", len(files))
 		}
 		fpath1, fpath2 := files[0], files[1]
 		file1, err := os.Open(fpath1)
@@ -150,11 +150,11 @@ func isEqualTree(src, dst string) (bool, error) {
 
 		stat1, err := file1.Stat()
 		if err != nil {
-			return false, fmt.Errorf("cannot stat file %v: %v\n", file1, err)
+			return false, fmt.Errorf("cannot stat file %v: %v", file1, err)
 		}
 		stat2, err := file2.Stat()
 		if err != nil {
-			return false, fmt.Errorf("cannot stat file %v: %v\n", file2, err)
+			return false, fmt.Errorf("cannot stat file %v: %v", file2, err)
 
 		}
 		if stat1.IsDir() && stat2.IsDir() {
