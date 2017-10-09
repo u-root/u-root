@@ -315,9 +315,9 @@ var devCPIO = [...]byte{
 var (
 	// be VERY CAREFUL with these. If you have an empty line here it will
 	// result in cpio copying the whole tree.
-       goList = []string {"pkg/include",}
-       urootList []string
-	config struct {
+	goList    = []string{"pkg/include"}
+	urootList []string
+	config    struct {
 		Goroot          string
 		Godotdot        string
 		Godot           string
@@ -433,7 +433,7 @@ func cpiop(src, dest string, n []string) error {
 			}
 			//cn, err := filepath.Rel(name, src)
 			//if err != nil {
-				//log.Fatalf("filepath.Rel(%v, %v): %v", name, src, err)
+			//log.Fatalf("filepath.Rel(%v, %v): %v", name, src, err)
 			//}
 			if name == "" {
 				return nil

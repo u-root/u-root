@@ -188,7 +188,7 @@ func isPermutation(check string, ref string) bool {
 	sort.Strings(checkArray)
 	sort.Strings(refArray)
 
-	for i, _ := range check {
+	for i := range check {
 		if checkArray[i] != refArray[i] {
 			return false
 		}

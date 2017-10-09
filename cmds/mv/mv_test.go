@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"testing"
 	"path/filepath"
+	"testing"
 )
 
 type makeit struct {

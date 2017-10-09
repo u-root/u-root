@@ -39,7 +39,7 @@ func TestLddList(t *testing.T) {
 		libMap[n[i].FullName] = true
 	}
 	for i := range n {
-		if ! libMap[l[i]] {
+		if !libMap[l[i]] {
 			t.Errorf("%v was in LddList but not in Ldd", l[i])
 		}
 	}

@@ -173,7 +173,7 @@ func (f *file) Read(r io.Reader, startLine, endLine int) (int, error) {
 // Write writes the lines out from start to end, inclusive.
 // dot is unchanged.
 func (f *file) Write(w io.Writer, startLine, endLine int) (int, error) {
-	if endLine < startLine || startLine < 1 || endLine > len(f.lines) + 1 {
+	if endLine < startLine || startLine < 1 || endLine > len(f.lines)+1 {
 		return -1, fmt.Errorf("file is %d lines and [start, end] is [%d, %d]", len(f.lines), startLine, endLine)
 	}
 
