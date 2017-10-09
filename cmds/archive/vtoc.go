@@ -24,7 +24,7 @@ func loadVTOC(name string) (*os.File, []file, error) {
 	r := io.LimitReader(f, 8)
 	_, err = fmt.Fscanf(r, "%x", &l)
 	if err != nil {
-		return nil, nil, errors.New(fmt.Sprintf("%s: can't scan vtoc length: %v", name, err))
+		return nil, nil, fmt.Errorf("%s: can't scan vtoc length: %v", name, err)
 	}
 
 	r = io.LimitReader(f, l)
@@ -32,7 +32,7 @@ func loadVTOC(name string) (*os.File, []file, error) {
 
 	var vtoc []file
 	if err := dec.Decode(&vtoc); err != nil {
-		return nil, nil, errors.New(fmt.Sprintf("%s: can't decode: %v", name, err))
+		return nil, nil, fmt.Errorf("%s: can't decode: %v", name, err)
 	}
 	return f, vtoc, nil
 }
@@ -48,7 +48,7 @@ func buildVTOC(dirs []string) ([]*file, error) {
 			debug("visit %v", name)
 			var s syscall.Stat_t
 			if err := syscall.Lstat(name, &s); err != nil {
-				return errors.New(fmt.Sprintf("%s: %v", name, err))
+				return fmt.Errorf("%s: %v", name, err)
 			}
 			f := &file{
 				Name:    name,
@@ -98,7 +98,7 @@ func writeVTOC(f io.Writer, vtoc []*file) (int, error) {
 	var v bytes.Buffer
 	enc := json.NewEncoder(&v)
 	if err := enc.Encode(outvtoc); err != nil {
-		return -1, errors.New(fmt.Sprintf("Encoding files: %v", err))
+		return -1, fmt.Errorf("Encoding files: %v", err)
 	}
 
 	if _, err := fmt.Fprintf(f, "%07x\n", v.Len()); err != nil {
