@@ -55,11 +55,11 @@ func initFlags() error {
 	flag.BoolVar(&flags.user, "u", false, "print only the effective user ID")
 	flag.Parse()
 	if !correctFlags(flags.groups, flags.group, flags.user) {
-		return fmt.Errorf("cannot print \"only\" of more than one choice\n")
+		return fmt.Errorf("cannot print \"only\" of more than one choice")
 
 	}
 	if flags.name && !(flags.groups || flags.group || flags.user) {
-		return fmt.Errorf("cannot print only names in default format\n")
+		return fmt.Errorf("cannot print only names in default format")
 	}
 
 	return nil
