@@ -42,7 +42,7 @@ func correctFlags(flags ...bool) bool {
 	n := 0
 	for _, v := range flags {
 		if v {
-			n += 1
+			n++
 		}
 	}
 	return !(n > 1)
