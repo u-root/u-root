@@ -214,7 +214,7 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 		pool.Put(buf)
 	}
 
-	// This will force the goroutine to quit if an error occured writing.
+	// This will force the goroutine to quit if an error occurred writing.
 	close(quit)
 
 	// Wait for goroutine to exit.

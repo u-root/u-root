@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Perform a set comparision over two files.
+// Perform a set comparisons over two files.
 //
 // Synopsis:
 //     comm [-123h] FILE1 FILE2

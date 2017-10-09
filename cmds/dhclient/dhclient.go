@@ -79,7 +79,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 	mac := iface.Attrs().HardwareAddr
 	conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
-		return fmt.Errorf("client conection generation: %v", err)
+		return fmt.Errorf("client connection generation: %v", err)
 	}
 
 	client, err := dhcp4client.New(dhcp4client.HardwareAddr(mac), dhcp4client.Connection(conn), dhcp4client.Timeout(timeout))
@@ -125,7 +125,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 		debug("Lease is %v seconds\n", packet.Secs())
 
 		if !success {
-			return fmt.Errorf("%s: we didn't sucessfully get a DHCP lease", mac)
+			return fmt.Errorf("%s: we didn't successfully get a DHCP lease", mac)
 		}
 		debug("IP Received: %v\n", packet.YIAddr().String())
 
@@ -185,7 +185,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
 	conn, err := dhcp6.NewPacketSock(iface.Attrs().Index)
 	if err != nil {
-		return fmt.Errorf("client conection generation: %v", err)
+		return fmt.Errorf("client connection generation: %v", err)
 	}
 	client := dhcp6.New(iface.Attrs().HardwareAddr, conn, timeout, retry)
 
