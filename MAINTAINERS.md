@@ -1,46 +1,40 @@
 # For maintainers only
 
-# We use the github hub tool for code review. We use govendor for maintaining dependencies.
+# We use the github hub tool for code review.
 
-### Setup your u-root Github Repository
+## Setup your u-root Github Repository
 
-Follow the instructions for using hub. At some point, you'll need to fork github.com/u-root/u-root, then
-get it via go get or gitclone. In any event, you u-root repo should end up in
+Follow the instructions for using github. At some point, you'll need to fork github.com/u-root/u-root, then
+get it via go get or gitclone. In any event, your u-root repo should end up in
 $GOPATH/src/github.com/u-root/u-root
 
+## Keep an eye on github PR's and provide reviews
+
+# We use govendor for maintaining dependencies.
 ``u-root`` uses [govendor](https://github.com/kardianos/govendor) for its dependency management.
 
-### To manage dependencies
+## To manage dependencies
 
-#### Add new dependencies
+### Add new dependencies
 
   - Edit your code to import foo/bar
   - Run `govendor add +external` from the top level
 
-#### Remove dependencies
+### Remove dependencies
 
   - Run `govendor remove foo/bar`
 
-#### Update dependencies
+### Update dependencies
 
   - Run `govendor remove +vendor`
   - Run `govendor add +external`
 
-### Style Guide
+# Style Guide
 
-`gofmt` and `golint` are law. We have a few rules not covered by these tools:
+In [CONTRIBUTING.md](CONTRIBUTING.md) we say `gofmt` and `golint` are law,
+but that's not enforced (yet) in automation.
 
-  - Standard imports are separated from other imports. Example:
-    ```
-    import (
-      "regexp"
-      "time"
-
-      dhcp "github.com/krolaw/dhcp4"
-    )
-    ```
-
-# Contributors
+# Maintainers
 
 * [Ron Minnich](https://github.com/rminnich)
 * [Andrew Mirtchovski](https://github.com/mirtchovski)

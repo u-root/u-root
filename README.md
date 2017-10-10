@@ -109,5 +109,5 @@ If you prefer to use elvish as shell in u-root, here are the instructions:
 
 # Contributions
 
-We need help with this project, so contributions are welcome.  More information about handle dependencies you can found [here](MAINTAINERS.md)
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
