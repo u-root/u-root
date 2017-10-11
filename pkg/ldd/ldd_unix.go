@@ -120,22 +120,36 @@ func Ldd(names []string) ([]*FileInfo, error) {
 			continue
 		}
 		s := f.Section(".interp")
-		if s == nil {
-			continue
+		var interp string
+		if s != nil {
+			// If there is an interpreter section, it should be
+			// an error if we can't read it.
+			i, err := s.Data()
+			if err != nil {
+				return nil, err
+			}
+			// Ignore #! interpreters
+			if len(i) > 1 && i[0] == '#' && i[1] == '!' {
+				continue
+			}
+			// annoyingly, s.Data() seems to return the null at the end and,
+			// weirdly, that seems to confuse the kernel. Truncate it.
+			interp = string(i[:len(i)-1])
 		}
-		// If there is an interpreter, it should be
-		// an error if we can't read it.
-		i, err := s.Data()
-		if err != nil {
-			return nil, err
+		if interp == "" {
+			if f.Type != elf.ET_DYN {
+				continue
+			}
+			// This is a shared library. Turns out you can run an interpreter with
+			// --list and this shared library as an argument. What interpreter
+			// do we use? Well, there's no way to know. You have to guess.
+			// I'm not sure why they could not just put an interp section in
+			// .so's but maybe that would cause trouble somewhere else.
+			interp, err = LdSo()
+			if err != nil {
+				return nil, err
+			}
 		}
-		// Ignore #! interpreters
-		if len(i) > 1 && i[0] == '#' && i[1] == '!' {
-			continue
-		}
-		// annoyingly, s.Data() seems to return the null at the end and,
-		// weirdly, that seems to confuse the kernel. Truncate it.
-		interp := string(i[:len(i)-1])
 		// We could just append the interp but people
 		// expect to see that first.
 		if interps[interp] == nil {
