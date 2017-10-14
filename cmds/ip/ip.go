@@ -105,7 +105,8 @@ func addrip() {
 	whatIWant = []string{"add", "del"}
 	cmd := arg[cursor]
 
-	switch one(cmd, whatIWant) {
+	c := one(cmd, whatIWant)
+	switch c {
 	case "add", "del":
 		cursor++
 		whatIWant = []string{"CIDR format address"}
@@ -117,7 +118,7 @@ func addrip() {
 		usage()
 	}
 	iface := dev()
-	switch one(cmd, whatIWant) {
+	switch c {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
 			log.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
