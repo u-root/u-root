@@ -68,7 +68,8 @@ func main() {
 	case "inb", "inw", "inl":
 		err = in(addr, i.val)
 	case "outb", "outw", "outl":
-		v, err := strconv.ParseUint(a[2], 0, i.valbits)
+		var v uint64
+		v, err = strconv.ParseUint(a[2], 0, i.valbits)
 		if err != nil {
 			log.Fatalf("%v: %v", a, err)
 		}
