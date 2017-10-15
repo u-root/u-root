@@ -38,7 +38,7 @@ func wget(arg string, w io.Writer) error {
 		return fmt.Errorf("non-200 HTTP status: %d", resp.StatusCode)
 	}
 	_, err = io.Copy(w, resp.Body)
-	return nil
+	return err
 }
 
 func usage() {

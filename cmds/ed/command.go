@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -41,7 +42,8 @@ func Command(f Editor, c string, startLine, endLine int) error {
 	case 'r':
 		fname := strings.TrimLeft(a, " \t")
 		debug("read %v @ %v, %v", f, startLine, endLine)
-		r, err := os.Open(fname)
+		var r io.Reader
+		r, err = os.Open(fname)
 		debug("%v: r is %v, err %v", fname, r, err)
 		if err == nil {
 			_, err = f.Read(r, startLine, endLine)
