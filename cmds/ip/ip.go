@@ -6,8 +6,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	l "log"
+	"math"
 	"os"
 	"strings"
 
@@ -38,6 +41,14 @@ var (
 	arg       []string
 	whatIWant []string
 	log       = l.New(os.Stdout, "ip: ", 0)
+
+	addrScopes = map[netlink.Scope]string{
+		netlink.SCOPE_UNIVERSE: "global",
+		netlink.SCOPE_HOST:     "host",
+		netlink.SCOPE_SITE:     "site",
+		netlink.SCOPE_LINK:     "link",
+		netlink.SCOPE_NOWHERE:  "nowhere",
+	}
 )
 
 // the pattern:
@@ -80,17 +91,63 @@ func dev() netlink.Link {
 	return iface
 }
 
-func showips() {
+func showLinks(w io.Writer, withAddresses bool) {
 	ifaces, err := netlink.LinkList()
 	if err != nil {
 		log.Fatalf("Can't enumerate interfaces? %v", err)
 	}
+
 	for _, v := range ifaces {
-		addrs, err := netlink.AddrList(v, netlink.FAMILY_ALL)
-		if err != nil {
-			log.Printf("Can't enumerate addresses")
+		l := v.Attrs()
+
+		fmt.Fprintf(w, "%d: %s: <%s> mtu %d state %s\n", l.Index, l.Name,
+			strings.Replace(strings.ToUpper(fmt.Sprintf("%s", l.Flags)), "|", ",", -1),
+			l.MTU, strings.ToUpper(l.OperState.String()))
+
+		fmt.Fprintf(w, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
+
+		if withAddresses {
+			showLinkAddresses(w, v)
 		}
-		log.Printf("%v: %v", v, addrs)
+	}
+}
+
+func showLinkAddresses(w io.Writer, link netlink.Link) {
+	addrs, err := netlink.AddrList(link, netlink.FAMILY_ALL)
+	if err != nil {
+		log.Printf("Can't enumerate addresses")
+	}
+
+	for _, addr := range addrs {
+
+		var inet string
+		switch len(addr.IPNet.IP) {
+		case 4:
+			inet = "inet"
+		case 16:
+			inet = "inet6"
+		default:
+			log.Fatalf("Can't figure out IP protocol version")
+		}
+
+		fmt.Fprintf(w, "    %s %s", inet, addr.Peer)
+		if addr.Broadcast != nil {
+			fmt.Fprintf(w, " brd %s", addr.Broadcast)
+		}
+		fmt.Fprintf(w, " scope %s %s\n", addrScopes[netlink.Scope(addr.Scope)], addr.Label)
+
+		var validLft, preferredLft string
+		if addr.PreferedLft == math.MaxUint32 {
+			preferredLft = "forever"
+		} else {
+			preferredLft = fmt.Sprintf("%dsec", addr.PreferedLft)
+		}
+		if addr.ValidLft == math.MaxUint32 {
+			validLft = "forever"
+		} else {
+			validLft = fmt.Sprintf("%dsec", addr.ValidLft)
+		}
+		fmt.Fprintf(w, "       valid_lft %s preferred_lft %s\n", validLft, preferredLft)
 	}
 }
 
@@ -98,14 +155,15 @@ func addrip() {
 	var err error
 	var addr *netlink.Addr
 	if len(arg) == 1 {
-		showips()
+		showLinks(os.Stdout, true)
 		return
 	}
 	cursor++
 	whatIWant = []string{"add", "del"}
 	cmd := arg[cursor]
 
-	switch one(cmd, whatIWant) {
+	c := one(cmd, whatIWant)
+	switch c {
 	case "add", "del":
 		cursor++
 		whatIWant = []string{"CIDR format address"}
@@ -117,7 +175,7 @@ func addrip() {
 		usage()
 	}
 	iface := dev()
-	switch one(cmd, whatIWant) {
+	switch c {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
 			log.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
@@ -137,7 +195,7 @@ func linkshow() {
 	cursor++
 	whatIWant = []string{"<nothing>", "<device name>"}
 	if len(arg[cursor:]) == 0 {
-		showips()
+		showLinks(os.Stdout, false)
 	}
 }
 
@@ -160,6 +218,11 @@ func linkset() {
 }
 
 func link() {
+	if len(arg) == 1 {
+		linkshow()
+		return
+	}
+
 	cursor++
 	whatIWant = []string{"show", "set"}
 	cmd := arg[cursor]
@@ -182,6 +245,7 @@ func routeshow() {
 		log.Fatalf("Route show failed: %v", err)
 	}
 }
+
 func nodespec() string {
 	cursor++
 	whatIWant = []string{"default", "CIDR"}
@@ -249,6 +313,7 @@ func route() {
 	}
 
 }
+
 func main() {
 	// When this is embedded in busybox we need to reinit some things.
 	whatIWant = []string{"addr", "route", "link"}
