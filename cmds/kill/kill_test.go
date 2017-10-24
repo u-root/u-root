@@ -62,10 +62,9 @@ func TestKillProcess(t *testing.T) {
 	// you just "know" does not exist is tricky. What PID do you use?
 	// So we just kill the one we just killed; it should get an error.
 	// If not, something's wrong.
-	if o, e, err = run(exec.Command(killtestpath, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err == nil {
+	if _, _, err = run(exec.Command(killtestpath, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err == nil {
 		t.Fatalf("Second kill: got nil, want error")
 	}
-
 }
 
 func TestBadInvocations(t *testing.T) {
