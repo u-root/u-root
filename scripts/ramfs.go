@@ -328,7 +328,6 @@ var (
 		Go              string
 		Debug           bool
 		Fail            bool
-		TestChroot      bool
 		RemoveDir       bool
 		InitialCpio     string
 		UseExistingInit bool
@@ -559,32 +558,7 @@ func guessgopath() {
 		config.Gopath = gopath
 		return
 	}
-	// It's a good chance they're running this from the u-root source directory
-	log.Fatalf("Fix up guessgopath")
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Printf("GOPATH was not set and I can't get the wd: %v", err)
-		config.Fail = true
-		return
-	}
-	// walk up the cwd until we find a u-root entry. See if cmds/init/init.go exists.
-	for c := cwd; c != "/"; c = filepath.Dir(c) {
-		if filepath.Base(c) != "u-root" {
-			continue
-		}
-		check := filepath.Join(c, "cmds/init/init.go")
-		if _, err := os.Stat(check); err != nil {
-			//log.Printf("Could not stat %v", check)
-			continue
-		}
-		config.Gopath = c
-		log.Printf("Guessing %v as GOPATH", c)
-		os.Setenv("GOPATH", c)
-		return
-	}
-	config.Fail = true
-	log.Printf("GOPATH was not set, and I can't see a u-root-like name in %v", cwd)
-	return
+	log.Fatalf("You have to set GOPATH, which is typically ~/go")
 }
 
 // goListPkg takes one package name, and computes all the files it needs to build,
@@ -667,7 +641,6 @@ func globlist(s ...string) []string {
 // It's not size related: if the go archive is first or in the middle it still fails.
 func main() {
 	flag.BoolVar(&config.Debug, "d", false, "Debugging")
-	flag.BoolVar(&config.TestChroot, "test", false, "test the directory by chrooting to it")
 	flag.BoolVar(&config.UseExistingInit, "useinit", false, "If there is an existing init, don't replace it")
 	flag.BoolVar(&config.RemoveDir, "removedir", true, "remove the directory when done -- cleared if test fails")
 	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
@@ -849,41 +822,10 @@ func main() {
 		log.Printf("%v\n", err)
 	}
 	debug("cpio for initramfs is done")
+	// We do this defer in the event that some error messages
+	// pop out during other processing. We want this message to come
+	// last.
 	defer func() {
 		log.Printf("Output file is in %v\n", oname)
 	}()
-
-	if !config.TestChroot {
-		return
-	}
-
-	// We need to populate the temp directory with devCPIO. It's a chicken and egg thing;
-	// we can't run init without, e.g., /dev/console and /dev/null.
-	cmd = exec.Command("sudo", "cpio", "-i")
-	cmd.Dir = config.TempDir
-
-	// OK, at this point, we know we can run as root. And, we're going to create things
-	// we can only remove as root. So, we'll have to remove the directory with
-	// extreme measures.
-	reallyRemoveDir := config.RemoveDir
-	config.RemoveDir = false
-	cmd.Stdin, cmd.Stderr, cmd.Stdout = bytes.NewReader(devCPIO[:]), os.Stderr, os.Stdout
-	debug("Run %v @ %v", cmd, cmd.Dir)
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("%v", err)
-	}
-	// Arrange to start init in the directory in a new namespace.
-	// That should make all mounts go away when we're done.
-	// On real kernels you can unshare without being root. Not on Linux.
-	cmd = exec.Command("sudo", "unshare", "-m", "chroot", config.TempDir, "/init", "-test")
-	cmd.Dir = config.TempDir
-	cmd.Stdin, cmd.Stderr, cmd.Stdout = os.Stdin, os.Stderr, os.Stdout
-	debug("Run %v @ %v", cmd, cmd.Dir)
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("Test failed, not removing %v: %v", config.TempDir, err)
-		config.RemoveDir = false
-	}
-	config.RemoveDir = reallyRemoveDir
 }
