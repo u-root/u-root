@@ -130,26 +130,34 @@ func main() {
 	// There may be an inito if we are building on
 	// an existing initramfs. So, first, try to
 	// run inito and then run our shell
-	// Perhaps we should stat inito first.
 	// inito is always first and we set default flags for it.
 	cloneFlags := uintptr(syscall.CLONE_NEWPID)
-	for _, v := range []string{"/inito", "/buildbin/uinit", "/buildbin/rush"} {
-		cmd = exec.Command(v)
-		cmd.Env = envs
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
-		if *test {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
-		} else {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
-		}
-		debug("Run %v", cmd)
-		if err := cmd.Run(); err != nil {
-			log.Print(err)
+	cmdList := []string{"/inito", "/buildbin/uinit", "/buildbin/rush"}
+	noCmdFound := true
+	for _, v := range cmdList {
+		if _, err := os.Stat(v); !os.IsNotExist(err) {
+			noCmdFound = false
+			cmd = exec.Command(v)
+			cmd.Env = envs
+			cmd.Stdin = os.Stdin
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			if *test {
+				cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
+			} else {
+				cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+			}
+			debug("Run %v", cmd)
+			if err := cmd.Run(); err != nil {
+				log.Print(err)
+			}
 		}
 		// only the first init needs its own PID space.
 		cloneFlags = 0
+	}
+
+	if noCmdFound {
+		log.Printf("init: No suitable executable found in %+v", cmdList)
 	}
 
 	log.Printf("init: All commands exited")
