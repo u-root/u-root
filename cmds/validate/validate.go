@@ -22,9 +22,10 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/log"
 
 	_ "crypto/md5"
 	_ "crypto/sha1"
@@ -57,8 +58,6 @@ var (
 	armored    = flag.Bool("a", false, "signature is ASCII armored")
 	sumfile    = flag.String("i", "", "checksum file")
 	alg        = flag.String("alg", "", "algorithms to check")
-	verbose    = flag.Bool("v", false, "verbose")
-	debug      = func(string, ...interface{}) {}
 	try, tried []string
 )
 
@@ -73,11 +72,11 @@ func one(n string, b []byte, sig string) bool {
 		log.Printf("Hash %v did not get linked in", n)
 		return false
 	}
-	debug("Check alg %v", n)
+	log.Printf("Check alg %v", n)
 	checker := algs[n].New()
 	checker.Write(b)
 	r := checker.Sum([]byte{})
-	debug("sum is %d bytes %v\n", len(r), r)
+	log.Printf("sum is %d bytes %v\n", len(r), r)
 	tried = append(tried, n)
 
 	// There has to be a better way.
@@ -85,11 +84,9 @@ func one(n string, b []byte, sig string) bool {
 	for _, v := range r {
 		sumText += fmt.Sprintf("%02x", v)
 	}
-	debug("Compare to %v", sumText)
-	if sumText == sig {
-		return true
-	}
-	return false
+	log.Printf("Compare to %v", sumText)
+
+	return sumText == sig
 }
 
 func sign(n string, k crypto.PrivateKey, b []byte, sig string) bool {
@@ -97,7 +94,7 @@ func sign(n string, k crypto.PrivateKey, b []byte, sig string) bool {
 		log.Printf("Hash %v did not get linked in", n)
 		return false
 	}
-	debug("Check alg %v", n)
+	log.Printf("Check alg %v", n)
 	b, err := k.(crypto.Signer).Sign(nil, b, algs[n])
 	log.Printf("For %v we get %v %v", n, b, err)
 	return false
@@ -107,10 +104,6 @@ func main() {
 	flag.Parse()
 	if flag.NArg() < 2 {
 		log.Fatalf("Need at least a file to be validated and one public key")
-	}
-
-	if *verbose {
-		debug = log.Printf
 	}
 
 	v, f := flag.Args()[0], flag.Args()[1]
@@ -131,7 +124,7 @@ func main() {
 
 	sig := strings.Split(string(sigData), " ")
 
-	debug("Signature is %v len %v", sig[0], len(sig[0]))
+	log.Printf("Signature is %v len %v", sig[0], len(sig[0]))
 
 	b, err := ioutil.ReadFile(f)
 	if err != nil {
@@ -148,12 +141,12 @@ func main() {
 				fmt.Printf("%v\n", try[i])
 				os.Exit(0)
 			}
-			debug("not ok")
+			log.Printf("not ok")
 		}
 
 	} else {
 		for i := range try {
-			debug("Check %v", try[i])
+			log.Printf("Check %v", try[i])
 			if one(try[i], b, sig[0]) {
 				fmt.Printf("%v\n", try[i])
 				os.Exit(0)
@@ -164,7 +157,7 @@ func main() {
 				fmt.Printf("%v\n", try[i])
 				os.Exit(0)
 			}
-			debug("not ok")
+			log.Printf("not ok")
 		}
 	}
 	log.Fatalf("No matches found for %v", tried)
