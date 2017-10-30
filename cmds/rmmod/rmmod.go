@@ -18,7 +18,8 @@ import (
 	"log"
 	"os"
 	"syscall"
-	"unsafe"
+
+	"github.com/u-root/u-root/pkg/kmodule"
 )
 
 func main() {
@@ -26,16 +27,9 @@ func main() {
 		log.Fatalf("rmmod: ERROR: missing module name.\n")
 	}
 
-	flags := syscall.O_NONBLOCK
-
 	for _, modname := range os.Args[1:] {
-		modnameptr, err := syscall.BytePtrFromString(modname)
-		if err != nil {
-			log.Fatalf("rmmod: %v\n", err)
-		}
-		ret, _, err := syscall.Syscall(syscall.SYS_DELETE_MODULE, uintptr(unsafe.Pointer(modnameptr)), uintptr(flags), 0)
-		if ret != 0 {
-			log.Fatalf("rmmod: error removing '%s': %v %v\n", modname, ret, err)
+		if err := kmodule.Delete(modname, syscall.O_NONBLOCK); err != nil {
+			log.Fatalf("rmmod: %v", err)
 		}
 	}
 }

@@ -12,12 +12,11 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
-	"syscall"
-	"unsafe"
+
+	"github.com/u-root/u-root/pkg/kmodule"
 )
 
 func main() {
@@ -30,19 +29,13 @@ func main() {
 
 	// Everything else is module options
 	options := strings.Join(os.Args[2:], " ")
-	optionsptr, err := syscall.BytePtrFromString(options)
+
+	f, err := os.Open(filename)
 	if err != nil {
-		log.Fatalf("insmod: %v\n", err)
+		log.Fatalf("could not open %q: %v", filename, err)
 	}
 
-	file, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Fatalf("insmod: can't read '%s': %v\n", filename, err)
-	}
-
-	// call SYS_INIT_MODULE with file, length, and options
-	ret, _, err := syscall.Syscall(syscall.SYS_INIT_MODULE, uintptr(unsafe.Pointer(&file[0])), uintptr(len(file)), uintptr(unsafe.Pointer(optionsptr)))
-	if ret != 0 {
-		log.Fatalf("insmod: error inserting '%s': %v %v\n", filename, ret, err)
+	if err := kmodule.FileInit(f, options, 0); err != nil {
+		log.Fatalf("insmod: could not load %q: %v", filename, err)
 	}
 }
