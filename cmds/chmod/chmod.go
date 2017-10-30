@@ -13,10 +13,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
+	"os"
 	"strconv"
-	"syscall"
 )
 
 func main() {
@@ -26,23 +25,23 @@ func main() {
 		log.Fatalf("usage: chmod mode filepath")
 	}
 
-	octval, err := strconv.ParseUint(flag.Args()[0], 8, 32)
+	mode := flag.Args()[0]
+
+	octval, err := strconv.ParseUint(mode, 8, 32)
 	if err != nil {
-		log.Fatalf("Unable to decode mode. Please use an octal value. arg was %s, err was %v", flag.Args()[0], err)
+		log.Fatalf("Unable to decode mode %q. Please use an octal value: %v", mode, err)
 	} else if octval > 0777 {
-		log.Fatalf("Invalid octal value. Value larger than 777, was %o", octval)
+		log.Fatalf("Invalid octal value %0o. Value should be less than or equal to 0777.", octval)
 	}
 
-	mode := uint32(octval)
-
-	var errors string
-	for _, arg := range flag.Args()[1:] {
-		if err := syscall.Chmod(arg, mode); err != nil {
-			errors += fmt.Sprintf("Unable to chmod, filename was %s, err was %v\n", arg, err)
+	var exitError bool
+	for _, name := range flag.Args()[1:] {
+		if err := os.Chmod(name, os.FileMode(octval)); err != nil {
+			log.Printf("%v", err)
+			exitError = true
 		}
 	}
-	if errors != "" {
-		log.Fatalf(errors)
+	if exitError {
+		os.Exit(1)
 	}
-
 }
