@@ -12,6 +12,8 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 // start and end are used like slices.
@@ -53,7 +55,7 @@ func makeLines(n []byte) [][]byte {
 		copy(l, n[pos:])
 		data = append(data, l)
 	}
-	debug("makeLines: %v", data)
+	log.Printf("makeLines: %v", data)
 	return data
 }
 
@@ -100,8 +102,8 @@ func (f *file) fixLines() {
 // to 0-relative, since the API at all levels is 1-relative.
 func (f *file) SliceX(startLine, endLine int) (int, int) {
 	var end, start int
-	debug("SliceX: f %v", f)
-	defer debug("SliceX done: f %v, start %v, end %v", f, start, end)
+	log.Printf("SliceX: f %v", f)
+	defer log.Printf("SliceX done: f %v, start %v, end %v", f, start, end)
 	if startLine > len(f.lines) {
 		//f.start = len(f.lines)
 		//f.end = f.start
@@ -123,7 +125,7 @@ func (f *file) SliceX(startLine, endLine int) (int, int) {
 		}
 		end = f.lines[endLine-1]
 	}
-	debug("SliceX: f %v, start %v end %v\n", f, start, end)
+	log.Printf("SliceX: f %v, start %v end %v\n", f, start, end)
 	return start, end
 }
 
@@ -133,13 +135,13 @@ func (f *file) Slice(startLine, endLine int) ([]byte, int, int) {
 }
 
 func (f *file) Replace(n []byte, startLine, endLine int) (int, error) {
-	defer debug("Replace done: f %v", f)
+	defer log.Printf("Replace done: f %v", f)
 	if f.data != nil {
 		start, end := f.SliceX(startLine, endLine)
-		debug("replace: f %v start %v end %v", f, start, end)
+		log.Printf("replace: f %v start %v end %v", f, start, end)
 		pre := f.data[0:start]
 		post := f.data[end:]
-		debug("replace: pre is %v, post is %v\n", pre, post)
+		log.Printf("replace: pre is %v, post is %v\n", pre, post)
 		var b bytes.Buffer
 		b.Write(pre)
 		b.Write(n)
@@ -156,9 +158,9 @@ func (f *file) Replace(n []byte, startLine, endLine int) (int, error) {
 // If there are lines already the new lines are inserted after '.'
 // dot is unchanged.
 func (f *file) Read(r io.Reader, startLine, endLine int) (int, error) {
-	debug("Read: r %v, startLine %v endLine %v", r, startLine, endLine)
+	log.Printf("Read: r %v, startLine %v endLine %v", r, startLine, endLine)
 	d, err := ioutil.ReadAll(r)
-	debug("ReadAll returns %v, %v", d, err)
+	log.Printf("ReadAll returns %v, %v", d, err)
 	if err != nil {
 		return -1, err
 	}
@@ -184,7 +186,7 @@ func (f *file) Write(w io.Writer, startLine, endLine int) (int, error) {
 }
 
 func (f *file) Print(w io.Writer, start, end int) (int, error) {
-	debug("Print %v %v %v", f.data, start, end)
+	log.Printf("Print %v %v %v", f.data, start, end)
 	i, err := f.Write(w, start, end)
 	if err != nil && start < end {
 		f.dot = end + 1
@@ -205,7 +207,7 @@ func (f *file) WriteFile(n string, startLine, endLine int) (int, error) {
 
 // Sub replaces the regexp with a different one.
 func (f *file) Sub(re, n, opt string, startLine, endLine int) error {
-	debug("Sub re %s n %s opt %s\n", re, n, opt)
+	log.Printf("Sub re %s n %s opt %s\n", re, n, opt)
 	if re == "" {
 		return fmt.Errorf("Empty RE")
 	}
@@ -219,7 +221,7 @@ func (f *file) Sub(re, n, opt string, startLine, endLine int) error {
 	}
 
 	o, start, end := f.Slice(startLine, endLine)
-	debug("Slice from [%v,%v] is [%v, %v] %v", startLine, endLine, start, end, string(o))
+	log.Printf("Slice from [%v,%v] is [%v, %v] %v", startLine, endLine, start, end, string(o))
 	// Lines can turn into two lines. All kinds of stuff can happen.
 	// So
 	// Break it into lines
@@ -233,9 +235,9 @@ func (f *file) Sub(re, n, opt string, startLine, endLine int) error {
 	}
 	for i := range b {
 		var replaced bool
-		debug("Sub: before b[i] is %v", b[i])
+		log.Printf("Sub: before b[i] is %v", b[i])
 		b[i] = r.ReplaceAllFunc(b[i], func(o []byte) []byte {
-			debug("Sub: func called with %v", o)
+			log.Printf("Sub: func called with %v", o)
 			if opts['g'] || !replaced {
 				f.dirty = true
 				replaced = true
@@ -243,10 +245,10 @@ func (f *file) Sub(re, n, opt string, startLine, endLine int) error {
 			}
 			return o
 		})
-		debug("Sub: after b[i] is %v", b[i])
+		log.Printf("Sub: after b[i] is %v", b[i])
 	}
 
-	debug("replaced o %v with n %v\n", o, b)
+	log.Printf("replaced o %v with n %v\n", o, b)
 	var repl = make([]byte, start)
 	copy(repl, f.data[0:start])
 	for _, v := range b {

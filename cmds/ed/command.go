@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 func Command(f Editor, c string, startLine, endLine int) error {
@@ -22,7 +24,7 @@ func Command(f Editor, c string, startLine, endLine int) error {
 	}
 
 	a := c[1:]
-	debug("Process %c, args %v", c[0], a)
+	log.Printf("Process %c, args %v", c[0], a)
 	switch c[0] {
 	case 'q', 'e':
 		if f.IsDirty() {
@@ -41,10 +43,10 @@ func Command(f Editor, c string, startLine, endLine int) error {
 		fallthrough
 	case 'r':
 		fname := strings.TrimLeft(a, " \t")
-		debug("read %v @ %v, %v", f, startLine, endLine)
+		log.Printf("read %v @ %v, %v", f, startLine, endLine)
 		var r io.Reader
 		r, err = os.Open(fname)
-		debug("%v: r is %v, err %v", fname, r, err)
+		log.Printf("%v: r is %v, err %v", fname, r, err)
 		if err == nil {
 			_, err = f.Read(r, startLine, endLine)
 		}
@@ -53,11 +55,11 @@ func Command(f Editor, c string, startLine, endLine int) error {
 		if o[1] == "" {
 			o[1] = "" //f.pat
 		}
-		debug("after split o is %v", o)
+		log.Printf("after split o is %v", o)
 		err = f.Sub(o[0], o[1], o[2], startLine, endLine)
 	case 'w':
 		fname := strings.TrimLeft(a, " \t")
-		debug("NOT WRITINGT TO %v", fname)
+		log.Printf("NOT WRITINGT TO %v", fname)
 		_, err = f.Write(os.Stdout, startLine, endLine)
 	case 'p':
 		fmt.Printf("what the shit")
@@ -80,22 +82,25 @@ func DoCommand(f Editor, l string) error {
 	}
 	switch {
 	case l[0] == '.':
-		debug(".\n")
+		log.Printf(".\n")
 		startLine = f.Dot()
 		l = l[1:]
+
 	case l[0] == '$':
-		debug("$\n")
+		log.Printf("$\n")
 		_, endLine = f.Range()
 		f.Move(endLine)
 		startLine = f.Dot()
 		l = l[1:]
+
 	case startsearch.FindString(l) != "":
 		pat := startsearch.FindString(l)
 		l = l[len(pat):]
-		debug("/\n")
-		fail("Pattern search: not yet")
+		log.Printf("/\n")
+		log.Printf("Pattern search: not yet")
+
 	case num.FindString(l) != "":
-		debug("num\n")
+		log.Printf("num\n")
 		n := num.FindString(l)
 		if startLine, err = strconv.Atoi(n); err != nil {
 			return err
@@ -103,7 +108,8 @@ func DoCommand(f Editor, l string) error {
 		f.Move(startLine)
 		l = l[len(n):]
 	}
-	debug("cmd before endsearch is %v", l)
+
+	log.Printf("cmd before endsearch is %v", l)
 	endLine = f.Dot()
 	if len(l) > 0 && l[0] == ',' {
 		l = l[1:]
@@ -112,18 +118,21 @@ func DoCommand(f Editor, l string) error {
 		}
 		switch {
 		case l[0] == '.':
-			debug(".\n")
+			log.Printf(".\n")
 			endLine = f.Dot()
 			l = l[1:]
+
 		case l[0] == '$':
-			debug("$\n")
+			log.Printf("$\n")
 			_, endLine = f.Range()
 			l = l[1:]
+
 		case startsearch.FindString(l) != "":
-			debug("/\n")
-			fail("Pattern search: not yet")
+			log.Printf("/\n")
+			log.Printf("Pattern search: not yet")
+
 		case num.FindString(l) != "":
-			debug("num\n")
+			log.Printf("num\n")
 			n := num.FindString(l)
 			if endLine, err = strconv.Atoi(n); err != nil {
 				return err
@@ -131,9 +140,9 @@ func DoCommand(f Editor, l string) error {
 			l = l[len(n):]
 		}
 	}
+
 	endLine++
-	debug("l before call to f.Command() is %v", l)
-	err = Command(f, l, startLine, endLine)
-	debug("Comand is done: f is %v", f)
-	return err
+	log.Printf("l before call to f.Command() is %v", l)
+	defer log.Printf("Command is done: f is %v", f)
+	return Command(f, l, startLine, endLine)
 }
