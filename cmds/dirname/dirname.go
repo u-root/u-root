@@ -20,6 +20,6 @@ func main() {
 	}
 
 	for _, n := range os.Args[1:] {
-		fmt.Printf("%v\n", filepath.Dir(n))
+		fmt.Println(filepath.Dir(n))
 	}
 }
