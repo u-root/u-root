@@ -13,6 +13,8 @@ import (
 	"io"
 	"os"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 func doOneFile(f *os.File, v file) error {
@@ -65,7 +67,7 @@ func decode(files ...string) error {
 			if err := doOneFile(fd, v); err != nil {
 				return err
 			}
-			debug("%v", v)
+			log.Printf("%v", v)
 		}
 	}
 	return nil

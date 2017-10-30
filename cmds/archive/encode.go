@@ -11,6 +11,8 @@ package main
 import (
 	"io"
 	"os"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 func encodeOne(out io.Writer, f *file) error {
@@ -23,8 +25,9 @@ func encodeOne(out io.Writer, f *file) error {
 		return err
 	}
 	defer in.Close()
+
 	amt, err := io.Copy(out, in)
-	debug("%s: wrote %d bytes", f.Name, amt)
+	log.Printf("%s: wrote %d bytes", f.Name, amt)
 	return err
 }
 
@@ -40,13 +43,16 @@ func encode(out io.Writer, dirs ...string) error {
 	}
 
 	amt, err := writeVTOC(out, vtoc)
-	debug("Wrote %d bytes of vtoc", amt)
-
-	for _, v := range vtoc {
-		if err = encodeOne(out, v); err != nil {
-			break
-		}
+	if err != nil {
+		return err
 	}
 
-	return err
+	log.Printf("Wrote %d bytes of vtoc", amt)
+
+	for _, v := range vtoc {
+		if err := encodeOne(out, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }

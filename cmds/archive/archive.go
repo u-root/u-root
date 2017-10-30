@@ -22,8 +22,9 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 // You'll see the name VTOC used a lot.
@@ -39,29 +40,20 @@ import (
 // VTOC, and write the encoded VTOC out.
 // VTOC is a []file.
 
-var (
-	debug = func(string, ...interface{}) {}
-	d     = flag.Bool("d", false, "Debug prints")
-)
-
 func usage() {
 	log.Fatalf("Usage: archive d|e|t [args...]")
 }
 
 func main() {
-	var err error
 	flag.Parse()
-	if *d {
-		debug = log.Printf
-	}
 
 	a := flag.Args()
-	debug("Args %v", a)
 	if len(a) < 1 {
 		usage()
 	}
 	op := a[0]
 
+	var err error
 	switch op {
 	case "e":
 		err = encode(os.Stdout, a[1:]...)
