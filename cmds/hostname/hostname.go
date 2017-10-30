@@ -13,17 +13,15 @@ package main
 
 import (
 	"fmt"
-	"io"
+	"log"
 	"os"
 )
 
-func hostname(w io.Writer) error {
-	hostname, error := os.Hostname()
-	fmt.Fprintf(w, "%v", hostname)
-	return error
-}
-
 func main() {
-	hostname(os.Stdout)
-	fmt.Println()
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("could not obtain hostname: %v", err)
+	}
+
+	fmt.Println(hostname)
 }
