@@ -23,11 +23,13 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type config struct {
@@ -45,11 +47,8 @@ type config struct {
 // promptOverwrite ask for overwrite destination
 func promptOverwrite(fname string) bool {
 	fmt.Printf("ln: overwrite '%v'? ", fname)
-	var txt string
-	if fmt.Scanln(&txt); txt != "y" {
-		return false
-	}
-	return true
+	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	return err == nil && strings.ToLower(answer)[0] == 'y'
 }
 
 // exists verify if a fname exists
