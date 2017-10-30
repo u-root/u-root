@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/u-root/u-root/common"
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
 	"github.com/u-root/u-root/pkg/ldd"
@@ -65,21 +66,20 @@ func dirComponents(dir string) []string {
 	return dirlist
 }
 
-func ramfs() {
+func ramfs(goos string, arch string) {
 	archiver, err := cpio.Format("newc")
 	if err != nil {
 		log.Fatalf("Creating newc archiver: %v", err)
 	}
 
-	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
+	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", goos, arch)
 	f, err := os.Create(oname)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	w := archiver.Writer(f)
-	cpio.MakeReproducible(devCPIO[:])
-	if err := w.WriteRecords(devCPIO[:]); err != nil {
+	if err := common.WriteCPIO(w); err != nil {
 		log.Fatalf("%v", err)
 	}
 
@@ -93,12 +93,14 @@ func ramfs() {
 			if strings.Count(eachPath, ":") > 1 {
 				log.Fatalf(" Input has more than one :")
 			}
+
 			modPath := strings.Replace(eachPath, ":", "/", 1)
 			debug("modpath is %s\n", modPath)
 			statval, err := os.Stat(modPath)
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
+
 			p := strings.Split(eachPath, ":")
 			if len(p) != 2 {
 				p = append([]string{"/"}, p...)
@@ -108,6 +110,7 @@ func ramfs() {
 			paths[p[0]] = append(paths[p[0]], p[1])
 			debug("putps")
 			debug("Paths currently is %v\n", paths)
+
 			if !statval.IsDir() {
 				tmpSlice := []string{modPath}
 				libs, err := ldd.List(tmpSlice)
@@ -123,21 +126,18 @@ func ramfs() {
 	if *extraCpio != "" {
 		extras := strings.Fields(*extraCpio)
 		for _, x := range extras {
-			a, err := cpio.Format("newc")
-			if err != nil {
-				log.Fatalf("Creating archiver: %v", err)
-			}
 			f, err := os.Open(x)
 			if err != nil {
 				log.Fatalf("%v: %v", x, err)
 			}
 			defer f.Close()
-			rr := a.Reader(f)
-			recs, err := rr.ReadRecords()
+
+			recs, err := archiver.Reader(f).ReadRecords()
 			if err != nil {
 				log.Fatalf("read records: %v", err)
 			}
-			cpio.MakeReproducible(recs)
+
+			cpio.MakeAllReproducible(recs)
 			if err := w.WriteRecords(recs); err != nil {
 				log.Fatalf("%v", err)
 			}
@@ -157,13 +157,13 @@ func ramfs() {
 				if err != nil {
 					log.Fatalf("Getting record of %q failed: %v", d, err)
 				}
-				recs := []cpio.Record{rec}
-				cpio.MakeReproducible(recs)
-				if err := w.WriteRecords(recs); err != nil {
+
+				if err := w.WriteRecord(cpio.MakeReproducible(rec)); err != nil {
 					log.Fatalf("%v", err)
 				}
 			}
 		}
+
 		for _, n := range list {
 			if err := filepath.Walk(filepath.Join(r, n), func(name string, fi os.FileInfo, err error) error {
 				if err != nil {
@@ -178,11 +178,10 @@ func ramfs() {
 				if err != nil {
 					log.Fatalf("Getting record of %q failed: %v", cn, err)
 				}
+
 				// the name in the cpio is relative to our starting point.
 				rec.Name = cn
-				recs := []cpio.Record{rec}
-				cpio.MakeReproducible(recs)
-				if err := w.WriteRecords(recs); err != nil {
+				if err := w.WriteRecord(cpio.MakeReproducible(rec)); err != nil {
 					log.Fatalf("%v", err)
 				}
 				return nil

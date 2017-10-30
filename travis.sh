@@ -22,10 +22,7 @@ cmp /tmp/initramfs.linux_amd64.cpio /tmp/i2
  which go
 
 echo "-----------------------> First ramfs test"
- (cd scripts && go run ramfs.go -tmpdir=/tmp/u-root -removedir=false)
-
-echo "-----------------------> Build ip command"
- GOBIN=/tmp/u-root/ubin GOROOT=/tmp/u-root/go GOPATH=/tmp/u-root CGO_ENABLED=0 /tmp/u-root/go/bin/go build  github.com/u-root/u-root/cmds/ip
+ (cd scripts && go run ramfs.go -tmpdir=/tmp/u-root)
 
 echo "-----------------------> build all tools"
  (cd cmds && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' ./...)
