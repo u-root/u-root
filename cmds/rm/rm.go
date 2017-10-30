@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -56,12 +57,12 @@ func rm(files []string) error {
 		return err
 	}
 
-	input := bufio.NewScanner(os.Stdin)
+	input := bufio.NewReader(os.Stdin)
 	for _, file := range files {
 		if flags.i {
 			fmt.Printf("rm: remove '%v'? ", file)
-			input.Scan()
-			if input.Text()[0] != 'y' {
+			answer, err := input.ReadString('\n')
+			if err != nil || strings.ToLower(answer)[0] != 'y' {
 				continue
 			}
 		}
