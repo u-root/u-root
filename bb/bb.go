@@ -458,5 +458,5 @@ func main() {
 	}
 
 	buildinit()
-	ramfs()
+	ramfs(config.Goos, config.Arch)
 }

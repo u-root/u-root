@@ -531,7 +531,7 @@ func TestReproducible(t *testing.T) {
 	b1 = &bytes.Buffer{}
 	w = f.Writer(b1)
 	rec[0].ReadCloser = cpio.NewBytesReadCloser([]byte(contents))
-	cpio.MakeReproducible(rec)
+	cpio.MakeAllReproducible(rec)
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
@@ -540,7 +540,7 @@ func TestReproducible(t *testing.T) {
 	w = f.Writer(b2)
 	rec[0].MTime++
 	rec[0].ReadCloser = cpio.NewBytesReadCloser([]byte(contents))
-	cpio.MakeReproducible(rec)
+	cpio.MakeAllReproducible(rec)
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}

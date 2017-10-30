@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package common
 
 import (
 	"syscall"
@@ -43,6 +43,13 @@ var devCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "dev/urandom", Mode: c | 0666, Rmajor: 1, Rminor: 9}},
 	{Info: cpio.Info{Name: "etc/resolv.conf", Mode: f | 0644, FileSize: uint64(len(nameserver))}, ReadCloser: cpio.NewBytesReadCloser([]byte(nameserver))},
 	{Info: cpio.Info{Name: "etc/localtime", Mode: f | 0644, FileSize: uint64(len(gmt0))}, ReadCloser: cpio.NewBytesReadCloser([]byte(gmt0))},
+}
+
+// WriteCPIO writes the common u-root cpio files to a given archive writer.
+func WriteCPIO(w cpio.Writer) error {
+	dcpio := devCPIO[:]
+	cpio.MakeAllReproducible(dcpio)
+	return w.WriteRecords(dcpio)
 }
 
 // not yet implemented, let's wait and see if we still need them:
