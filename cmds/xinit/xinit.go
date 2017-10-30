@@ -47,11 +47,9 @@ func setup() error {
 		log.Printf("Run %v", f)
 		go x11(f)
 	}
+
 	// we block on the aterm. When the aterm exits, we do too.
-	if err := x11("aterm"); err != nil {
-		return err
-	}
-	return nil
+	return x11("aterm")
 }
 
 func main() {
