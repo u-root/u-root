@@ -36,6 +36,8 @@ const (
 	KEXEC_FILE_UNLOAD       = 0x1
 	KEXEC_FILE_ON_CRASH     = 0x2
 	KEXEC_FILE_NO_INITRAMFS = 0x4
+	
+	SYSCALL_KEXEC_FILE_LOAD = 320
 )
 
 var (
@@ -84,12 +86,12 @@ func main() {
 	}
 
 	log.Printf("command line: '%v'", string(b))
-	log.Printf("%v %v %v %v %v %v", 320, uintptr(kern), uintptr(ramfs), p, l, flags)
+	log.Printf("%v %v %v %v %v %v", SYSCALL_KEXEC_FILE_LOAD, uintptr(kern), uintptr(ramfs), p, l, flags)
 	if *dryrun {
 		log.Printf("Dry run -- exiting now")
 		return
 	}
-	if e1, e2, err := syscall.Syscall6(320, uintptr(kern), uintptr(ramfs), l, p, flags, uintptr(0)); err != 0 {
+	if e1, e2, err := syscall.Syscall6(SYSCALL_KEXEC_FILE_LOAD, uintptr(kern), uintptr(ramfs), l, p, flags, uintptr(0)); err != 0 {
 		log.Fatalf("a %v b %v err %v", e1, e2, err)
 	}
 
