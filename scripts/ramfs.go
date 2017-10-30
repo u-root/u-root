@@ -14,10 +14,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
-
-	"github.com/u-root/u-root/uroot"
 )
 
 type copyfiles struct {
@@ -496,63 +495,25 @@ func buildToolChain() {
 	}
 }
 
-// It's annoying asking them to set lots of things. So let's try to figure it out.
 func guessgoarch() {
-	config.Arch = os.Getenv("GOARCH")
-	if config.Arch != "" {
-		config.Arch = filepath.Clean(config.Arch)
-		return
-	}
-	log.Printf("GOARCH is not set, trying to guess")
-	u, err := uroot.Uname()
-	if err != nil {
-		log.Printf("uname failed, using default amd64")
-		config.Arch = "amd64"
+	if arch := os.Getenv("GOARCH"); arch != "" {
+		config.Arch = filepath.Clean(arch)
 	} else {
-		switch {
-		case u.Machine == "i686" || u.Machine == "i386" || u.Machine == "x86":
-			config.Arch = "386"
-		case u.Machine == "x86_64" || u.Machine == "amd64":
-			config.Arch = "amd64"
-		case u.Machine == "armv7l" || u.Machine == "armv6l":
-			config.Arch = "arm"
-		case u.Machine == "ppc" || u.Machine == "ppc64":
-			config.Arch = "ppc64"
-		default:
-			log.Printf("Unrecognized arch")
-			config.Fail = true
-		}
+		config.Arch = runtime.GOARCH
 	}
 }
+
 func guessgoroot() {
-	config.Goroot = os.Getenv("GOROOT")
-	if config.Goroot != "" {
-		config.Goroot = filepath.Clean(config.Goroot)
-		log.Printf("Using %v from the environment as the GOROOT", config.Goroot)
-		config.Godotdot = filepath.Dir(config.Goroot)
-		return
+	if root := os.Getenv("GOROOT"); root != "" {
+		config.Goroot = filepath.Clean(root)
+	} else {
+		config.Goroot = runtime.GOROOT()
 	}
-	log.Print("Goroot is not set, trying to find a go binary")
-	p := os.Getenv("PATH")
-	paths := strings.Split(p, ":")
-	for _, v := range paths {
-		g := filepath.Join(v, "go")
-		log.Printf("Try %s as the Go binary", g)
-		if _, err := os.Stat(g); err == nil {
-			config.Goroot = filepath.Dir(v)
-			config.Godotdot = filepath.Dir(config.Goroot)
-			log.Printf("Guessing that goroot is %v from $PATH", config.Goroot)
-			return
-		}
-	}
-	log.Printf("GOROOT is not set and can't find a go binary in %v", p)
-	config.Fail = true
+	config.Godotdot = filepath.Dir(config.Goroot)
+	log.Printf("Using %q as GOROOT", config.Goroot)
 }
 
 func guessgopath() {
-	defer func() {
-		config.Godotdot = filepath.Dir(config.Goroot)
-	}()
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
 		config.Gopath = gopath
