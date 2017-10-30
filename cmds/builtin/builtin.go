@@ -8,12 +8,12 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/log"
 	"golang.org/x/tools/imports"
 )
 
@@ -38,7 +38,6 @@ var (
 		{source: "tmpfs", target: rushPath, fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 		{source: "tmpfs", target: "/ubin", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 	}
-	debug = flag.Bool("d", false, "Print debug info")
 )
 
 func main() {
@@ -75,16 +74,12 @@ func main() {
 			}
 		}
 		goCode = goCode + endPart
-		if *debug {
-			log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
-		}
+		log.Printf("\n---------------------\n%v\n------------------------\n", goCode)
 		fullCode, err := imports.Process("commandline", []byte(goCode), &opts)
 		if err != nil {
 			log.Fatalf("bad parse: '%v': %v", goCode, err)
 		}
-		if *debug {
-			log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
-		}
+		log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
 		bName := filepath.Join(rushPath, a[0]+".go")
 		filemap[bName] = fullCode
 	}
@@ -92,11 +87,11 @@ func main() {
 	// processed code, read in shell files.
 	globs, err := filepath.Glob(rushPath + "/*.go")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v", err)
 	}
 	for _, i := range globs {
 		if b, err := ioutil.ReadFile(i); err != nil {
-			log.Fatal(err)
+			log.Fatalf("%v", err)
 		} else {
 			if _, ok := filemap[i]; ok {
 				log.Fatalf("%v exists", i)
@@ -116,13 +111,12 @@ func main() {
 	// There is no FIXME
 	if false {
 		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
-			log.Fatal(err)
+			log.Fatalf("unshare: %v", err)
 		}
 	}
-	if *debug {
-		if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
-			log.Printf("Reading /proc/mount:m %v\n", b)
-		}
+
+	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
+		log.Printf("Reading /proc/mount:m %v\n", b)
 	}
 
 	// We are rewriting the shell. We need to create a new binary, i.e.
@@ -139,7 +133,7 @@ func main() {
 	// write the new rushPath
 	for i, v := range filemap {
 		if err = ioutil.WriteFile(i, v, 0600); err != nil {
-			log.Fatal(err)
+			log.Fatalf("%v", err)
 		}
 	}
 
@@ -150,9 +144,7 @@ func main() {
 	cmd.Stdout = os.Stdout
 	// TODO: figure out why we get EPERM when we use this.
 	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
-	if *debug {
-		log.Printf("Run %v", cmd)
-	}
+	log.Printf("Run %v", cmd)
 	if err := cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
