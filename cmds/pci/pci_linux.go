@@ -28,7 +28,9 @@ func onePCI(dir string) (*PCI, error) {
 		// Linux never understood /proc.
 		reflect.ValueOf(&pci).Elem().Field(ix).SetString(string(s[2 : len(s)-1]))
 	}
-	pci.VendorName, pci.DeviceName = lookup(pci.Vendor, pci.Device)
+	if !*numbers {
+		pci.VendorName, pci.DeviceName = lookup(pci.Vendor, pci.Device)
+	}
 	return &pci, nil
 }
 

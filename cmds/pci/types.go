@@ -21,7 +21,8 @@ type PCI struct {
 }
 
 func (p *PCI) String() string {
-	return fmt.Sprintf("%s:", p.Addr) +
-		fmt.Sprintf(" %v", p.VendorName) +
-		fmt.Sprintf(" %v", p.DeviceName)
+	if *numbers {
+		return fmt.Sprintf("%s: %s:%s", p.Addr, p.Vendor, p.Device)
+	} 
+	return fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)
 }
