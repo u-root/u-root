@@ -455,9 +455,11 @@ func main() {
 
 	initMap += "\n}"
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "initmap.go"), []byte(initMap), 0644); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 
 	buildinit()
-	initramfs(config.Goos, config.Arch)
+	if err := initramfs(config.Goos, config.Arch); err != nil {
+		log.Fatalf("%v", err)
+	}
 }
