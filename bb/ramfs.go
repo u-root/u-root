@@ -15,10 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/u-root/u-root/common"
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
 	"github.com/u-root/u-root/pkg/ldd"
+	"github.com/u-root/u-root/pkg/ramfs"
 )
 
 var (
@@ -66,7 +66,7 @@ func dirComponents(dir string) []string {
 	return dirlist
 }
 
-func ramfs(goos string, arch string) {
+func initramfs(goos string, arch string) {
 	archiver, err := cpio.Format("newc")
 	if err != nil {
 		log.Fatalf("Creating newc archiver: %v", err)
@@ -79,7 +79,7 @@ func ramfs(goos string, arch string) {
 	}
 
 	w := archiver.Writer(f)
-	if err := common.WriteCPIO(w); err != nil {
+	if err := w.WriteRecords(ramfs.DevCPIO); err != nil {
 		log.Fatalf("%v", err)
 	}
 

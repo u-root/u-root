@@ -363,6 +363,7 @@ func oneCmd(c Command) {
 		log.Fatalf("Symlinking %v -> /init: %v", l, err)
 	}
 }
+
 func main() {
 	var err error
 
@@ -458,5 +459,5 @@ func main() {
 	}
 
 	buildinit()
-	ramfs(config.Goos, config.Arch)
+	initramfs(config.Goos, config.Arch)
 }

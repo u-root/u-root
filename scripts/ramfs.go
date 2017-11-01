@@ -14,11 +14,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 
-	"github.com/u-root/u-root/common"
 	"github.com/u-root/u-root/pkg/cpio"
-	_ "github.com/u-root/u-root/pkg/cpio/newc"
+	"github.com/u-root/u-root/pkg/ramfs"
 )
 
 var (
@@ -28,7 +26,6 @@ var (
 	urootList []string
 	config    struct {
 		Goroot          string
-		Godotdot        string
 		Godot           string
 		Arch            string
 		Goos            string
@@ -44,108 +41,6 @@ var (
 	urootFiles     map[string]bool
 	standardgotool = true
 )
-
-type initramfs struct {
-	cpio.Writer
-
-	path string
-
-	files map[string]struct{}
-}
-
-func newInitramfs(goos string, goarch string) (*initramfs, error) {
-	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
-	f, err := os.Create(oname)
-	if err != nil {
-		return nil, err
-	}
-
-	archiver, err := cpio.Format("newc")
-	if err != nil {
-		return nil, err
-	}
-
-	return &initramfs{
-		path:   oname,
-		Writer: archiver.Writer(f),
-		files:  make(map[string]struct{}),
-	}, nil
-}
-
-func (i *initramfs) WriteRecord(r cpio.Record) error {
-	if r.Name == "." || r.Name == "/" {
-		return nil
-	}
-
-	// Create record for parent directory if needed.
-	dir := filepath.Dir(r.Name)
-	if _, ok := i.files[dir]; dir != "/" && dir != "." && !ok {
-		if err := i.WriteRecord(cpio.Record{
-			Info: cpio.Info{
-				Name: dir,
-				Mode: syscall.S_IFDIR | 0755,
-			},
-		}); err != nil {
-			return err
-		}
-	}
-
-	i.files[r.Name] = struct{}{}
-	return i.Writer.WriteRecord(r)
-}
-
-func (i *initramfs) writeFile(src string, dest string, path string) error {
-	name, err := filepath.Rel(src, path)
-	if err != nil {
-		return fmt.Errorf("path %q not relative to src %q: %v", path, src, err)
-	}
-
-	record, err := cpio.GetRecord(path)
-	if err != nil {
-		return err
-	}
-
-	// Fix the name.
-	record.Name = filepath.Join(dest, name)
-	return i.WriteRecord(cpio.MakeReproducible(record))
-}
-
-// Copy all files relative to `srcDir` to `destDir` in the cpio archive.
-func (i *initramfs) copyDir(srcDir string, destDir string) error {
-	return filepath.Walk(srcDir, func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		return i.writeFile(srcDir, destDir, path)
-	})
-}
-
-// Copy all files relative to `srcDir` to `destDir` in the cpio archive.
-func (i *initramfs) writeFiles(srcDir string, destDir string, files []string) error {
-	for _, file := range files {
-		path := filepath.Join(srcDir, file)
-		fi, err := os.Stat(path)
-		if err != nil {
-			return err
-		}
-
-		switch fi.Mode() &^ 0777 {
-		case os.ModeDir:
-			dest := filepath.Join(destDir, file)
-			// Copy all files in directory.
-			if err := i.copyDir(path, dest); err != nil {
-				return err
-			}
-
-		default:
-			if err := i.writeFile(srcDir, destDir, path); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
 
 func buildPkg(pkg string, wd string, output string, opts []string) error {
 	args := []string{
@@ -208,7 +103,6 @@ func guessgoroot() {
 	} else {
 		config.Goroot = runtime.GOROOT()
 	}
-	config.Godotdot = filepath.Dir(config.Goroot)
 	log.Printf("Using %q as GOROOT", config.Goroot)
 }
 
@@ -375,7 +269,7 @@ func main() {
 		}
 	}
 
-	ramfs, err := newInitramfs(config.Goos, config.Arch)
+	init, err := ramfs.NewInitramfs(config.Goos, config.Arch)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -403,34 +297,29 @@ func main() {
 			}
 		}
 
-		if err := ramfs.Concat(archiver.Reader(initial), transform); err != nil {
+		if err := init.Concat(archiver.Reader(initial), transform); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
 
-	// Write common devtmpfs files to the archive.
-	if err := common.WriteCPIO(ramfs.Writer); err != nil {
-		log.Fatalf("%v", err)
-	}
-
 	// Write all Go toolchain files to the archive.
-	if err := ramfs.writeFiles(config.Goroot, "go", goList); err != nil {
+	if err := init.WriteFiles(config.Goroot, "go", goList); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	// Write u-root src files to the archive.
-	if err := ramfs.writeFiles(config.Gopath, "", urootList); err != nil {
+	if err := init.WriteFiles(config.Gopath, "", urootList); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	// Write all files from the TempDir.
-	if err := ramfs.copyDir(config.TempDir, ""); err != nil {
+	if err := init.CopyDir(config.TempDir, ""); err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	if err := ramfs.WriteTrailer(); err != nil {
+	if err := init.WriteTrailer(); err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	log.Printf("Output file is %s", ramfs.path)
+	log.Printf("Output file is %s", init.Path)
 }
