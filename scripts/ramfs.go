@@ -20,13 +20,8 @@ import (
 )
 
 var (
-	// be VERY CAREFUL with these. If you have an empty line here it will
-	// result in cpio copying the whole tree.
-	goList    = []string{"pkg/include"}
-	urootList []string
-	config    struct {
+	config struct {
 		Goroot          string
-		Godot           string
 		Arch            string
 		Goos            string
 		Gopath          string
@@ -35,12 +30,23 @@ var (
 		InitialCpio     string
 		UseExistingInit bool
 	}
+
+	// be VERY CAREFUL with these. If you have an empty line here it will
+	// result in cpio copying the whole tree.
+	goList         = []string{"pkg/include"}
+	urootList      []string
 	pkgList        []string
 	deps           map[string]bool
 	gorootFiles    map[string]bool
 	urootFiles     map[string]bool
 	standardgotool = true
 )
+
+func init() {
+	flag.BoolVar(&config.UseExistingInit, "useinit", false, "If there is an existing init, don't replace it")
+	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
+	flag.StringVar(&config.TempDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
+}
 
 func buildPkg(pkg string, wd string, output string, opts []string) error {
 	args := []string{
@@ -115,7 +121,7 @@ func guessgopath() {
 	log.Fatalf("You have to set GOPATH, which is typically ~/go")
 }
 
-type goDirs struct {
+type goPackage struct {
 	Dir        string
 	Deps       []string
 	GoFiles    []string
@@ -125,10 +131,10 @@ type goDirs struct {
 	ImportPath string
 }
 
-// goListPkg takes one package name, and computes all the files it needs to build,
-// separating them into Go tree files and uroot files. For now we just 'go list'
-// but hopefully later we can do this programmatically.
-func goListPkg(name string) (*goDirs, error) {
+// goListPkg takes one package name, and computes all the files it needs to
+// build, separating them into Go tree files and uroot files. For now we just
+// 'go list' but hopefully later we can do this programmatically.
+func goListPkg(name string) (*goPackage, error) {
 	cmd := exec.Command("go", "list", "-json", name)
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	j, err := cmd.CombinedOutput()
@@ -136,7 +142,7 @@ func goListPkg(name string) (*goDirs, error) {
 		return nil, err
 	}
 
-	var p goDirs
+	var p goPackage
 	if err := json.Unmarshal([]byte(j), &p); err != nil {
 		return nil, err
 	}
@@ -148,7 +154,6 @@ func goListPkg(name string) (*goDirs, error) {
 			urootFiles[filepath.Join(p.ImportPath, v)] = true
 		}
 	}
-
 	return &p, nil
 }
 
@@ -197,14 +202,7 @@ func globlist(s ...string) []string {
 	return pat
 }
 
-// sad news. If I concat the Go cpio with the other cpios, for reasons I don't understand,
-// the kernel can't unpack it. Don't know why, don't care. Need to create one giant cpio and unpack that.
-// It's not size related: if the go archive is first or in the middle it still fails.
 func main() {
-	flag.BoolVar(&config.UseExistingInit, "useinit", false, "If there is an existing init, don't replace it")
-	flag.StringVar(&config.InitialCpio, "cpio", "", "An initial cpio image to build on")
-	flag.StringVar(&config.TempDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
-
 	flag.Parse()
 
 	deps = make(map[string]bool)
