@@ -88,7 +88,7 @@ In the EXAMPLES directory you can see examples of running in a chroot, kernel, a
 
 ## Using elvish: a more handy shell
 
-In default, rush is the shell in u-root. Now, thanks to Qi Xiao(\<xiaqqaix@gmail.com\>), u-root users are also able to use a friendly and expressive unix-like shell: __elvish__. Users are free to choose whether to include elvish in u-root or not. Basically, elvish has handy functionalities such as auto completion, command-line existence checks, etc. More info of elvish can be found at: [http://github/elves/elvish](http://github.com/elves/elvish).
+In default, rush is the shell in u-root. Now, thanks to Qi Xiao (\<xiaqqaix@gmail.com\>), u-root users are also able to use a friendly and expressive unix-like shell: __elvish__. Users are free to choose whether to include elvish in u-root or not. Basically, elvish has handy functionalities such as auto completion, command-line existence checks, etc. More info of elvish can be found at: [http://github/elves/elvish](http://github.com/elves/elvish).
 
 If you prefer to use elvish as shell in u-root, here are the instructions:
 
