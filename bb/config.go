@@ -35,6 +35,7 @@ func guessgopath() {
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
 		config.Gopath = gopath
+		config.Gopaths = []string{gopath}
 		return
 	}
 	log.Fatalf("You have to set GOPATH, which is typically ~/go")
