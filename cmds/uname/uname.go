@@ -36,9 +36,7 @@ var (
 	domain  = flag.Bool("d", false, "print your domain name")
 )
 
-func handle_flags(u *uroot.Utsname) string {
-
-	flag.Parse()
+func handleFlags(u *uroot.Utsname) string {
 	info := make([]string, 0, 6)
 
 	if *all || flag.NFlag() == 0 {
@@ -69,11 +67,12 @@ end:
 }
 
 func main() {
+	flag.Parse()
 
 	if u, err := uroot.Uname(); err != nil {
 		log.Fatalf("%v", err)
 	} else {
-		info := handle_flags(u)
+		info := handleFlags(u)
 		fmt.Printf("%v\n", info)
 	}
 }

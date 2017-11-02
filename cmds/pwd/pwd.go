@@ -35,16 +35,6 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	args := os.Args[1:]
-	flag.Parse()
-	for _, flag := range args {
-		switch flag {
-		case "-L":
-			*physical = false
-		case "-P":
-			*physical = true
-		}
-	}
 }
 
 func pwd() error {
@@ -61,6 +51,17 @@ func pwd() error {
 }
 
 func main() {
+	args := os.Args[1:]
+	flag.Parse()
+	for _, flag := range args {
+		switch flag {
+		case "-L":
+			*physical = false
+		case "-P":
+			*physical = true
+		}
+	}
+
 	if err := pwd(); err != nil {
 		log.Fatalf("%v", err)
 	}

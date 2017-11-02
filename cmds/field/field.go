@@ -55,10 +55,11 @@ func init() {
 	flag.BoolVar(&flags.discardEmpty, "E", false, "discard empty input fields")
 	flag.StringVar(&flags.insep, "F", "[ \t\v\r]+", "Input separator characters (regular expression)")
 	flag.StringVar(&flags.outsep, "O", " ", "Output separater (string)")
-	flag.Parse()
 }
 
 func main() {
+	flag.Parse()
+
 	fstate := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { fstate[f.Name] = true })
 	if fstate["e"] && fstate["E"] {

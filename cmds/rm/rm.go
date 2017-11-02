@@ -43,7 +43,6 @@ func init() {
 	flag.BoolVar(&flags.v, "v", false, "Verbose mode.")
 	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
 	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
-	flag.Parse()
 }
 
 func rm(files []string) error {
@@ -83,6 +82,7 @@ func rm(files []string) error {
 }
 
 func main() {
+	flag.Parse()
 	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(1)
