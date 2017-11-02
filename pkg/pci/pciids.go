@@ -1,4 +1,4 @@
-package main
+package pci
 
 var pciids = []byte(`#
 #	List of PCI ID's

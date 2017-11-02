@@ -1,4 +1,4 @@
-package main
+package pci
 
 //go:generate go run gen.go
 
@@ -11,6 +11,8 @@ import (
 type bus struct {
 	Devices []string
 }
+
+var numbers *bool
 
 func onePCI(dir string) (*PCI, error) {
 	var pci PCI
@@ -50,11 +52,12 @@ func (bus *bus) Read() ([]*PCI, error) {
 // NewBusReader returns a BusReader. If we can't at least glob in
 // /sys/bus/pci/devices then we just give up. We don't provide an option
 // (yet) to do type I or PCIe MMIO config stuff.
-func NewBusReader() (BusReader, error) {
+func NewBusReader(n *bool) (BusReader, error) {
 	globs, err := filepath.Glob("/sys/bus/pci/devices/*")
 	if err != nil {
 		return nil, err
 	}
+	numbers = n
 
 	return &bus{Devices: globs}, nil
 }
