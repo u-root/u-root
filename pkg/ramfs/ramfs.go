@@ -122,13 +122,47 @@ func (i *Initramfs) WriteFile(src string, dest string, path string) error {
 	return i.WriteRecord(cpio.MakeReproducible(record))
 }
 
-// Copy all files relative to `srcDir` to `destDir` in the cpio archive.
-func (i *Initramfs) CopyDir(srcDir string, destDir string) error {
-	return filepath.Walk(srcDir, func(path string, fi os.FileInfo, err error) error {
+// Walk walks to all files in a tree rooted at `dir`.
+//
+// filepath.Walk doesn't walk to symlinks, so we can't use it.
+func walk(dir string, fn func(path string, fi os.FileInfo) error) error {
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		path := filepath.Join(dir, name)
+		fileInfo, err := os.Lstat(path)
+		// File has been deleted, or something.
+		if os.IsNotExist(err) {
+			continue
+		}
 		if err != nil {
+			return fmt.Errorf("lstat(%q) = %v", path, err)
+		}
+		if err := fn(path, fileInfo); err != nil {
 			return err
 		}
 
+		// Visit children of directory.
+		if fileInfo.IsDir() {
+			if err := walk(path, fn); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Copy all files relative to `srcDir` to `destDir` in the cpio archive.
+func (i *Initramfs) CopyDir(srcDir string, destDir string) error {
+	return walk(srcDir, func(path string, _ os.FileInfo) error {
 		return i.WriteFile(srcDir, destDir, path)
 	})
 }
