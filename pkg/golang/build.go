@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/build"
 	"os"
@@ -26,6 +27,42 @@ func (c Environ) FindPackage(pkg string) (string, error) {
 
 func (c Environ) ListPackage(pkg string) (*build.Package, error) {
 	return c.Context.Import(pkg, "", 0)
+}
+
+type ListPackage struct {
+	Dir        string
+	Deps       []string
+	GoFiles    []string
+	SFiles     []string
+	HFiles     []string
+	Goroot     bool
+	ImportPath string
+}
+
+type ListOpts struct {
+	CGO bool
+}
+
+func (c Environ) ListDeps(pkg string, opts ListOpts) (*ListPackage, error) {
+	// The output of this is almost the same as build.Import, except for
+	// the dependencies.
+	cmd := exec.Command("go", "list", "-json", pkg)
+	env := os.Environ()
+	env = append(env, c.Env()...)
+	if !opts.CGO {
+		env = append(env, "CGO_ENABLED=0")
+	}
+	cmd.Env = env
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	var p ListPackage
+	if err := json.Unmarshal(out, &p); err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
 
 func (c Environ) Env() []string {
