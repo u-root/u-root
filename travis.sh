@@ -22,7 +22,7 @@ cmp /tmp/initramfs.linux_amd64.cpio /tmp/i2
  which go
 
 echo "-----------------------> First ramfs test"
- (cd scripts && go run ramfs.go -tmpdir=/tmp/u-root)
+ (go run u-root.go -build=source -format=cpio -tmpdir=/tmp/u-root)
 
 echo "-----------------------> build all tools"
  (cd cmds && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' ./...)
@@ -40,11 +40,9 @@ echo "-----------------------> test -cover"
 echo "-----------------------> go vet"
  go tool vet cmds uroot pkg
 
-echo "-----------------------> go vet scripts/ramfs.go"
- go tool vet scripts/ramfs.go
 
 # is it go-gettable?
 echo "-----------------------> test go-gettable"
-go get github.com/u-root/u-root
- sudo date
- echo "Did it blend"
+ go get github.com/u-root/u-root
+
+echo "Did it blend"
