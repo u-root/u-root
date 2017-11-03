@@ -5,7 +5,6 @@
 package ramfs
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -51,25 +50,10 @@ var DevCPIO = []cpio.Record{
 type Initramfs struct {
 	cpio.Writer
 
-	Path string
-
 	files map[string]struct{}
 }
 
-func NewInitramfs(goos string, goarch string) (*Initramfs, error) {
-	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", goos, goarch)
-	f, err := os.Create(oname)
-	if err != nil {
-		return nil, err
-	}
-
-	archiver, err := cpio.Format("newc")
-	if err != nil {
-		return nil, err
-	}
-
-	w := archiver.Writer(f)
-
+func NewInitramfs(w cpio.Writer) (*Initramfs, error) {
 	// Write devtmpfs records.
 	dcpio := DevCPIO[:]
 	cpio.MakeAllReproducible(dcpio)
@@ -78,7 +62,6 @@ func NewInitramfs(goos string, goarch string) (*Initramfs, error) {
 	}
 
 	return &Initramfs{
-		Path:   oname,
 		Writer: w,
 		files:  make(map[string]struct{}),
 	}, nil
@@ -106,26 +89,24 @@ func (i *Initramfs) WriteRecord(r cpio.Record) error {
 	return i.Writer.WriteRecord(r)
 }
 
-func (i *Initramfs) WriteFile(src string, dest string, path string) error {
-	name, err := filepath.Rel(src, path)
-	if err != nil {
-		return fmt.Errorf("path %q not relative to src %q: %v", path, src, err)
-	}
-
-	record, err := cpio.GetRecord(path)
+func (i *Initramfs) WriteFile(src string, dest string) error {
+	record, err := cpio.GetRecord(src)
 	if err != nil {
 		return err
 	}
 
-	// Fix the name.
-	record.Name = filepath.Join(dest, name)
-	return i.WriteRecord(cpio.MakeReproducible(record))
+	if record.Info.Mode&^0777 == syscall.S_IFDIR {
+		return children(src, func(name string) error {
+			return i.WriteFile(filepath.Join(src, name), filepath.Join(dest, name))
+		})
+	} else {
+		// Fix the name.
+		record.Name = dest
+		return i.WriteRecord(cpio.MakeReproducible(record))
+	}
 }
 
-// Walk walks to all files in a tree rooted at `dir`.
-//
-// filepath.Walk doesn't walk to symlinks, so we can't use it.
-func walk(dir string, fn func(path string, fi os.FileInfo) error) error {
+func children(dir string, fn func(name string) error) error {
 	f, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -137,57 +118,23 @@ func walk(dir string, fn func(path string, fi os.FileInfo) error) error {
 	}
 
 	for _, name := range names {
-		path := filepath.Join(dir, name)
-		fileInfo, err := os.Lstat(path)
-		// File has been deleted, or something.
-		if os.IsNotExist(err) {
+		if err := fn(name); os.IsNotExist(err) {
+			// File was deleted in the meantime.
 			continue
-		}
-		if err != nil {
-			return fmt.Errorf("lstat(%q) = %v", path, err)
-		}
-		if err := fn(path, fileInfo); err != nil {
+		} else if err != nil {
 			return err
-		}
-
-		// Visit children of directory.
-		if fileInfo.IsDir() {
-			if err := walk(path, fn); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
 }
 
 // Copy all files relative to `srcDir` to `destDir` in the cpio archive.
-func (i *Initramfs) CopyDir(srcDir string, destDir string) error {
-	return walk(srcDir, func(path string, _ os.FileInfo) error {
-		return i.WriteFile(srcDir, destDir, path)
-	})
-}
-
-// Copy all files relative to `srcDir` to `destDir` in the cpio archive.
 func (i *Initramfs) WriteFiles(srcDir string, destDir string, files []string) error {
 	for _, file := range files {
-		path := filepath.Join(srcDir, file)
-		fi, err := os.Stat(path)
-		if err != nil {
+		srcPath := filepath.Join(srcDir, file)
+		destPath := filepath.Join(destDir, file)
+		if err := i.WriteFile(srcPath, destPath); err != nil {
 			return err
-		}
-
-		switch fi.Mode() &^ 0777 {
-		case os.ModeDir:
-			dest := filepath.Join(destDir, file)
-			// Copy all files in directory.
-			if err := i.CopyDir(path, dest); err != nil {
-				return err
-			}
-
-		default:
-			if err := i.WriteFile(srcDir, destDir, path); err != nil {
-				return err
-			}
 		}
 	}
 	return nil

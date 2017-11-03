@@ -27,7 +27,19 @@ var (
 )
 
 func initramfs(goos string, arch string) error {
-	init, err := ramfs.NewInitramfs(goos, arch)
+	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", goos, arch)
+	f, err := os.Create(oname)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	archiver, err := cpio.Format("newc")
+	if err != nil {
+		return err
+	}
+
+	init, err := ramfs.NewInitramfs(archiver.Writer(f))
 	if err != nil {
 		return err
 	}
@@ -62,11 +74,6 @@ func initramfs(goos string, arch string) error {
 		}
 	}
 
-	archiver, err := cpio.Format("newc")
-	if err != nil {
-		return err
-	}
-
 	if *extraCpio != "" {
 		extras := strings.Fields(*extraCpio)
 		for _, x := range extras {
@@ -92,6 +99,6 @@ func initramfs(goos string, arch string) error {
 		return err
 	}
 
-	fmt.Printf("Output file is in %v\n", init.Path)
+	fmt.Printf("Output file is in %v\n", oname)
 	return nil
 }

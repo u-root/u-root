@@ -267,7 +267,19 @@ func main() {
 		}
 	}
 
-	init, err := ramfs.NewInitramfs(config.Goos, config.Arch)
+	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
+	f, err := os.Create(oname)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	defer f.Close()
+
+	archiver, err := cpio.Format("newc")
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	init, err := ramfs.NewInitramfs(archiver.Writer(f))
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -275,11 +287,6 @@ func main() {
 	// Start with the initial CPIO.
 	if config.InitialCpio != "" {
 		initial, err := os.Open(config.InitialCpio)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-
-		archiver, err := cpio.Format("newc")
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -311,7 +318,7 @@ func main() {
 	}
 
 	// Write all files from the TempDir.
-	if err := init.CopyDir(config.TempDir, ""); err != nil {
+	if err := init.WriteFile(config.TempDir, ""); err != nil {
 		log.Fatalf("%v", err)
 	}
 
@@ -319,5 +326,5 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	log.Printf("Output file is %s", init.Path)
+	log.Printf("Output file is %s", oname)
 }
