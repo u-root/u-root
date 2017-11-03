@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type Environ struct {
@@ -16,8 +17,20 @@ func Default() Environ {
 	return Environ{Context: build.Default}
 }
 
-// FindPackage returns the full path to `pkg` according to the context's Gopaths.
-func (c Environ) FindPackage(pkg string) (string, error) {
+// FindPackageByPath gives the full Go package name for the package in `path`.
+//
+// This currently assumes that packages are named after the directory they are
+// in.
+func (c Environ) FindPackageByPath(path string) (string, error) {
+	p, err := c.Context.ImportDir(path, 0)
+	if err != nil {
+		return "", fmt.Errorf("failed to find package in %q: %v", path, err)
+	}
+	return p.ImportPath, nil
+}
+
+// FindPackageDir returns the full path to `pkg` according to the context's Gopaths.
+func (c Environ) FindPackageDir(pkg string) (string, error) {
 	p, err := c.Context.Import(pkg, "", 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to find package %q in gopath %q", pkg, c.Context.GOPATH)
@@ -36,22 +49,16 @@ type ListPackage struct {
 	SFiles     []string
 	HFiles     []string
 	Goroot     bool
+	Root       string
 	ImportPath string
 }
 
-type ListOpts struct {
-	CGO bool
-}
-
-func (c Environ) ListDeps(pkg string, opts ListOpts) (*ListPackage, error) {
+func (c Environ) ListDeps(pkg string) (*ListPackage, error) {
 	// The output of this is almost the same as build.Import, except for
 	// the dependencies.
 	cmd := exec.Command("go", "list", "-json", pkg)
 	env := os.Environ()
 	env = append(env, c.Env()...)
-	if !opts.CGO {
-		env = append(env, "CGO_ENABLED=0")
-	}
 	cmd.Env = env
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -79,21 +86,27 @@ func (c Environ) Env() []string {
 	if c.GOPATH != "" {
 		env = append(env, fmt.Sprintf("GOPATH=%s", c.GOPATH))
 	}
+	var cgo int8
+	if c.CgoEnabled {
+		cgo = 1
+	}
+	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
 	return env
+}
+
+func (c Environ) String() string {
+	return strings.Join(c.Env(), " ")
 }
 
 // Optional arguments to Environ.Build.
 type BuildOpts struct {
-	// Whether to enable CGO for the build.
-	CGO bool
-
 	// ExtraArgs to `go build`.
 	ExtraArgs []string
 }
 
 // Build compiles `pkg`, writing the executable or object to `binaryPath`.
 func (c Environ) Build(pkg string, binaryPath string, opts BuildOpts) error {
-	path, err := c.FindPackage(pkg)
+	path, err := c.FindPackageDir(pkg)
 	if err != nil {
 		return err
 	}
@@ -102,7 +115,7 @@ func (c Environ) Build(pkg string, binaryPath string, opts BuildOpts) error {
 		"build",
 		"-a", // Force rebuilding of packages.
 		"-o", binaryPath,
-		"-installsuffix", "cgo",
+		"-installsuffix", "uroot",
 		"-ldflags", "-s -w", // Strip all symbols.
 	}
 	if opts.ExtraArgs != nil {
@@ -111,16 +124,9 @@ func (c Environ) Build(pkg string, binaryPath string, opts BuildOpts) error {
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")
 
-	var env []string
-	env = os.Environ()
-	if !opts.CGO {
-		env = append(env, "CGO_ENABLED=0")
-	}
-	env = append(env, c.Env()...)
-
 	cmd := exec.Command("go", args...)
 	cmd.Dir = path
-	cmd.Env = env
+	cmd.Env = append(os.Environ(), c.Env()...)
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error building go package %v: %v, %v", pkg, string(o), err)

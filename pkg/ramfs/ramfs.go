@@ -49,7 +49,6 @@ var DevCPIO = []cpio.Record{
 
 type Initramfs struct {
 	cpio.Writer
-
 	files map[string]struct{}
 }
 
