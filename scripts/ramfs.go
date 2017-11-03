@@ -5,28 +5,21 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ramfs"
 )
 
 var (
 	config struct {
-		Goroot          string
-		Arch            string
-		Goos            string
-		Gopath          string
 		TempDir         string
-		Go              string
 		InitialCpio     string
 		UseExistingInit bool
 	}
@@ -48,102 +41,34 @@ func init() {
 	flag.StringVar(&config.TempDir, "tmpdir", "", "tmpdir to use instead of ioutil.TempDir")
 }
 
-func buildPkg(pkg string, wd string, output string, opts []string) error {
-	args := []string{
-		"build", "-x", "-a",
-		"-o", output,
-		"-installsuffix", "cgo",
-		"-ldflags", "-s -w",
-	}
-	if opts != nil {
-		args = append(args, opts...)
-	}
-	if pkg != "" {
-		args = append(args, pkg)
-	}
-
-	cmd := exec.Command("go", args...)
-	if wd != "" {
-		cmd.Dir = wd
-	}
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	if o, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("building statically linked go tool info %v: %v, %v", pkg, string(o), err)
-	}
-	return nil
-}
-
 // buildToolChain builds the four binaries needed for the go toolchain:
 // go, compile, link, and asm. We do this to ensure we get smaller binaries.
 // Smaller, in this, meaning 25M instead of 33M. What a world!
 func buildToolChain() error {
 	log.Printf("Building go tools...")
 
+	env := golang.Default()
 	goBin := filepath.Join(config.TempDir, "go/bin/go")
-	goDir := filepath.Join(config.Goroot, "src/cmd/go")
-	if err := buildPkg("", goDir, goBin, []string{"-tags", "cmd_go_bootstrap"}); err != nil {
+	if err := env.Build("cmd/go", goBin, golang.BuildOpts{ExtraArgs: []string{"-tags", "cmd_go_bootstrap"}}); err != nil {
 		return err
 	}
 
-	toolDir := filepath.Join(config.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", config.Goos, config.Arch))
+	toolDir := filepath.Join(config.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", env.GOOS, env.GOARCH))
 	for _, pkg := range []string{"compile", "link", "asm"} {
 		c := filepath.Join(toolDir, pkg)
-		if err := buildPkg(fmt.Sprintf("cmd/%s", pkg), "", c, nil); err != nil {
+		if err := env.Build(fmt.Sprintf("cmd/%s", pkg), c, golang.BuildOpts{}); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func guessgoarch() {
-	if arch := os.Getenv("GOARCH"); arch != "" {
-		config.Arch = filepath.Clean(arch)
-	} else {
-		config.Arch = runtime.GOARCH
-	}
-}
-
-func guessgoroot() {
-	if root := os.Getenv("GOROOT"); root != "" {
-		config.Goroot = filepath.Clean(root)
-	} else {
-		config.Goroot = runtime.GOROOT()
-	}
-	log.Printf("Using %q as GOROOT", config.Goroot)
-}
-
-func guessgopath() {
-	gopath := os.Getenv("GOPATH")
-	if gopath != "" {
-		config.Gopath = gopath
-		return
-	}
-	log.Fatalf("You have to set GOPATH, which is typically ~/go")
-}
-
-type goPackage struct {
-	Dir        string
-	Deps       []string
-	GoFiles    []string
-	SFiles     []string
-	HFiles     []string
-	Goroot     bool
-	ImportPath string
-}
-
 // goListPkg takes one package name, and computes all the files it needs to
 // build, separating them into Go tree files and uroot files. For now we just
 // 'go list' but hopefully later we can do this programmatically.
-func goListPkg(name string) (*goPackage, error) {
-	cmd := exec.Command("go", "list", "-json", name)
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	j, err := cmd.CombinedOutput()
+func goListPkg(name string) (*golang.ListPackage, error) {
+	p, err := golang.Default().ListDeps(name, golang.ListOpts{})
 	if err != nil {
-		return nil, err
-	}
-
-	var p goPackage
-	if err := json.Unmarshal([]byte(j), &p); err != nil {
 		return nil, err
 	}
 
@@ -154,7 +79,7 @@ func goListPkg(name string) (*goPackage, error) {
 			urootFiles[filepath.Join(p.ImportPath, v)] = true
 		}
 	}
-	return &p, nil
+	return p, nil
 }
 
 // addGoFiles Computes the set of Go files to be added to the initramfs.
@@ -167,7 +92,7 @@ func addGoFiles() error {
 	for _, v := range pkgList {
 		p, err := goListPkg(v)
 		if err != nil {
-			log.Printf("Can't do go list in %v, ignoring\n", v)
+			log.Printf("Can't do go list in %v, ignoring", v)
 			continue
 		}
 		for _, v := range p.Deps {
@@ -177,7 +102,7 @@ func addGoFiles() error {
 
 	for v := range deps {
 		if _, err := goListPkg(v); err != nil {
-			log.Fatalf("%v", err)
+			log.Fatalf("addGoFiles: %v", err)
 		}
 	}
 	for v := range gorootFiles {
@@ -193,11 +118,12 @@ func globlist(s ...string) []string {
 	// For each arg, use it as a Glob pattern and add any matches to the
 	// package list. If there are no arguments, use [a-zA-Z]* as the glob pattern.
 	var pat []string
+	env := golang.Default()
 	for _, v := range s {
-		pat = append(pat, filepath.Join(config.Gopath, v))
+		pat = append(pat, filepath.Join(env.GOPATH, v))
 	}
 	if len(s) == 0 {
-		pat = []string{filepath.Join(config.Gopath, "src/github.com/u-root/u-root/cmds", "[a-zA-Z]*")}
+		pat = []string{filepath.Join(env.GOPATH, "src/github.com/u-root/u-root/cmds", "[a-zA-Z]*")}
 	}
 	return pat
 }
@@ -205,15 +131,10 @@ func globlist(s ...string) []string {
 func main() {
 	flag.Parse()
 
+	env := golang.Default()
 	deps = make(map[string]bool)
 	gorootFiles = make(map[string]bool)
 	urootFiles = make(map[string]bool)
-
-	guessgoarch()
-	config.Go = ""
-	config.Goos = "linux"
-	guessgoroot()
-	guessgopath()
 
 	pat := globlist(flag.Args()...)
 
@@ -226,7 +147,7 @@ func main() {
 		// use absolute paths in go list, however, so we have
 		// to adjust them.
 		for i := range g {
-			r, err := filepath.Rel(filepath.Join(config.Gopath, "src"), g[i])
+			r, err := filepath.Rel(filepath.Join(env.GOPATH, "src"), g[i])
 			if err != nil {
 				log.Fatalf("Can't get rel path for %v: %v", g, err)
 			}
@@ -260,14 +181,13 @@ func main() {
 
 	if !config.UseExistingInit {
 		init := filepath.Join(config.TempDir, "init")
-		dir := filepath.Join(config.Gopath, "src/github.com/u-root/u-root/cmds/init")
 
-		if err := buildPkg(".", dir, init, nil); err != nil {
+		if err := golang.Default().Build("github.com/u-root/u-root/cmds/init", init, golang.BuildOpts{}); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
 
-	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", config.Goos, config.Arch)
+	oname := fmt.Sprintf("/tmp/initramfs.%v_%v.cpio", env.GOOS, env.GOARCH)
 	f, err := os.Create(oname)
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -308,12 +228,12 @@ func main() {
 	}
 
 	// Write all Go toolchain files to the archive.
-	if err := init.WriteFiles(config.Goroot, "go", goList); err != nil {
+	if err := init.WriteFiles(env.GOROOT, "go", goList); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	// Write u-root src files to the archive.
-	if err := init.WriteFiles(config.Gopath, "", urootList); err != nil {
+	if err := init.WriteFiles(env.GOPATH, "", urootList); err != nil {
 		log.Fatalf("%v", err)
 	}
 
