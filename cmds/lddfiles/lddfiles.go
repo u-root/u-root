@@ -20,34 +20,22 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/ldd"
 )
 
-func usage() {
-	log.Fatalf("usage: lddfiles file [file...]")
-}
-
-func ldd(o io.Writer, s ...string) error {
-	l, err := uroot.Ldd(s)
-	if err != nil {
-		return err
-	}
-	for i := range s {
-		fmt.Fprintf(o, "%s\n", s[i])
-	}
-	for i := range l {
-		fmt.Fprintf(o, "%s\n", l[i].FullName)
-	}
-	return nil
-}
-
 func main() {
-
-	if err := ldd(os.Stdout, os.Args[1:]...); err != nil {
+	l, err := ldd.Ldd(os.Args[1:])
+	if err != nil {
 		log.Fatalf("ldd: %v", err)
+	}
+
+	for _, arg := range os.Args[1:] {
+		fmt.Printf("%s\n", arg)
+	}
+	for _, dep := range l {
+		fmt.Printf("%s\n", dep.FullName)
 	}
 }
