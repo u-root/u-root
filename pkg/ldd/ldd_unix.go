@@ -17,7 +17,7 @@
 // that file name; if it succeeds, we need to add that file name
 // and repeat with the next link in the chain. We can let the
 // kernel do the work of figuring what to do if and when we hit EMLINK.
-package uroot
+package ldd
 
 import (
 	"debug/elf"
@@ -181,7 +181,7 @@ func Ldd(names []string) ([]*FileInfo, error) {
 	return libs, nil
 }
 
-func LddList(names []string) ([]string, error) {
+func List(names []string) ([]string, error) {
 	var list []string
 	l, err := Ldd(names)
 	if err != nil {

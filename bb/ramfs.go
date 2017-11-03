@@ -110,7 +110,7 @@ func ramfs() {
 			debug("Paths currently is %v\n", paths)
 			if !statval.IsDir() {
 				tmpSlice := []string{modPath}
-				libs, err := uroot.LddList(tmpSlice)
+				libs, err := ldd.List(tmpSlice)
 				if err != nil {
 					log.Fatalf("%v", err)
 				}

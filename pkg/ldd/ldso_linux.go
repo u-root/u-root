@@ -1,4 +1,4 @@
-package uroot
+package ldd
 
 import (
 	"fmt"
