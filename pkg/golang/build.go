@@ -2,82 +2,45 @@ package golang
 
 import (
 	"fmt"
+	"go/build"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 type Environ struct {
-	// GOARCH.
-	Arch string
-
-	// GOOS.
-	OS string
-
-	// GOPATH.
-	Gopaths []string
-
-	// GOROOT.
-	Root string
+	build.Context
 }
 
-func Guess() Environ {
-	var env Environ
-	if p := os.Getenv("GOPATH"); p != "" {
-		env.Gopaths = append(env.Gopaths, strings.Split(p, ":")...)
-	}
-
-	if a := os.Getenv("GOARCH"); a != "" {
-		env.Arch = a
-	} else {
-		env.Arch = runtime.GOARCH
-	}
-
-	if os := os.Getenv("GOOS"); os != "" {
-		env.OS = os
-	} else {
-		env.OS = runtime.GOOS
-	}
-
-	if r := os.Getenv("GOROOT"); r != "" {
-		env.Root = r
-	} else {
-		env.Root = runtime.GOROOT()
-	}
-	return env
+func Default() Environ {
+	return Environ{Context: build.Default}
 }
 
 // FindPackage returns the full path to `pkg` according to the context's Gopaths.
 func (c Environ) FindPackage(pkg string) (string, error) {
-	for _, gopath := range c.Gopaths {
-		path := filepath.Join(gopath, pkg)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			continue
-		} else if err != nil {
-			return "", fmt.Errorf("error stat(%q): %v", path, err)
-		} else {
-			return path, nil
-		}
+	p, err := c.Context.Import(pkg, "", 0)
+	if err != nil {
+		return "", fmt.Errorf("failed to find package %q in gopath %q", pkg, c.Context.GOPATH)
 	}
+	return p.Dir, nil
+}
 
-	return "", fmt.Errorf("failed to find package %q in gopaths %v", pkg, c.Gopaths)
+func (c Environ) ListPackage(pkg string) (*build.Package, error) {
+	return c.Context.Import(pkg, "", 0)
 }
 
 func (c Environ) Env() []string {
 	var env []string
-	if c.Arch != "" {
-		env = append(env, fmt.Sprintf("GOARCH=%s", c.Arch))
+	if c.GOARCH != "" {
+		env = append(env, fmt.Sprintf("GOARCH=%s", c.GOARCH))
 	}
-	if c.OS != "" {
-		env = append(env, fmt.Sprintf("GOOS=%s", c.OS))
+	if c.GOOS != "" {
+		env = append(env, fmt.Sprintf("GOOS=%s", c.GOOS))
 	}
-	if c.Root != "" {
-		env = append(env, fmt.Sprintf("GOROOT=%s", c.Root))
+	if c.GOROOT != "" {
+		env = append(env, fmt.Sprintf("GOROOT=%s", c.GOROOT))
 	}
-	if len(c.Gopaths) > 0 {
-		env = append(env, fmt.Sprintf("GOPATH=%s", strings.Join(c.Gopaths, ":")))
+	if c.GOPATH != "" {
+		env = append(env, fmt.Sprintf("GOPATH=%s", c.GOPATH))
 	}
 	return env
 }
