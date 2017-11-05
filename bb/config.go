@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 func guessgoarch() {
@@ -34,8 +35,8 @@ func guessgoroot() {
 func guessgopath() {
 	gopath := os.Getenv("GOPATH")
 	if gopath != "" {
-		config.Gopath = gopath
-		config.Gopaths = []string{gopath}
+		config.Gopaths = strings.Split(gopath, ":")
+		config.Gopath = config.Gopaths[0]
 		return
 	}
 	log.Fatalf("You have to set GOPATH, which is typically ~/go")
