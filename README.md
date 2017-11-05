@@ -45,9 +45,17 @@ command line or coreboot config variable.
 binary. Think of it as busy-box mode. This single binary consists of all the
 commands that got specified by a glob pattern on the command line (by default all of
 them). The following command for example includes the elvish shell:
+
+```shell
+$ # Required for elvish.
+$ go get github.com/boltdb/bolt
+$ go get github.com/elves/elvish
+
+$ cd $GOPATH/src/github.com/u-root/u-root/bb
+$ go build github.com/u-root/u-root/bb
+$ ./bb src/github.com/elves/elvish "s*/g*/u*/u*/c*/*"
 ```
-bb src/github.com/elves/elvish s*/g*/u*/u*/c*
-```
+
 Also note that `bb` has an `-add` flag that is handy to include local files in
 the initramfs.
 
