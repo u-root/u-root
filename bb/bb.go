@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"text/template"
@@ -38,10 +39,12 @@ import (
 
 const (
 	cmdFunc = `package main
+
 import "github.com/u-root/u-root/bb/bbsh/cmds/{{.CmdName}}"
+
 func _forkbuiltin_{{.CmdName}}(c *Command) (err error) {
-{{.CmdName}}.Main()
-return
+	{{.CmdName}}.Main()
+	return
 }
 
 func {{.CmdName}}Init() {
@@ -49,8 +52,8 @@ func {{.CmdName}}Init() {
 	{{.Init}}
 }
 `
-	initGo = `
-package main
+	initGo = `package main
+
 import (
 	"flag"
 	"fmt"
@@ -68,7 +71,7 @@ func usage () {
 	n := filepath.Base(os.Args[0])
 	fmt.Fprintf(os.Stderr, "Usage: %s:\n", n)
 	flag.VisitAll(func(f *flag.Flag) {
-		if ! strings.HasPrefix(f.Name, n+".") {
+		if !strings.HasPrefix(f.Name, n+".") {
 			return
 		}
 		fmt.Fprintf(os.Stderr, "\tFlag %s: '%s', Default %v, Value %v\n", f.Name[len(n)+1:], f.Usage, f.Value, f.DefValue)
@@ -121,12 +124,11 @@ func init() {
 	return
 }
 `
-	bbsetupGo = `
-package {{.CmdName}}
+	bbsetupGo = `package {{.CmdName}}
 
-	import "flag"
+import "flag"
 
-	var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
+var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
 `
 )
 
@@ -146,7 +148,7 @@ var (
 	}
 
 	dumpAST = flag.Bool("D", false, "Dump the AST")
-	initMap = "package main\nvar initMap = map[string] func() {\n"
+	initMap = "package main\n\nvar initMap = map[string]func() {"
 
 	// commands to skip. init and rush should be obvious
 	// builtin and script we skip as we have no toolchain in this mode.
@@ -196,19 +198,22 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 		switch x := n.(type) {
 		default:
 			debug("%v %v\n", reflect.TypeOf(n), n)
+
 		// This is rather gross. Arguably, so is the way that
 		// Go has embedded build information in comments
 		// ... this import comment attachment to a package
 		// came in 1.4, a few years ago, and it only just bit
 		// us with one file in upspin. So we go with gross.
 		case *ast.Ident:
-			// we assume the first identifier is the package id
+			// We assume the first identifier is the package id.
 			if !pos.IsValid() {
 				pos = fset.Position(x.Pos())
 				debug("Ident at %v", pos)
 			}
+
 		case *ast.File:
 			x.Name.Name = c.CmdName
+
 		case *ast.FuncDecl:
 			if x.Name.Name == "main" {
 				x.Name.Name = fmt.Sprintf("Main")
@@ -221,20 +226,19 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 				c.Init = c.CmdName + ".Init()"
 			}
 
-		// rewrite use of the flag package.
-		// The flag package uses a global variable to contain all flags.
-		// This works poorly with the busybox mode, so as part of turning
-		// commands into packages, we rewrite their use of flags to use a
-		// package-private FlagSet.
-		// in bbsetup.go, we add a var for the package flagset with params
-		// (packagename, os.ExitOnError)
-		// The ExitOnError may be a mistake, we'll have to see, since
-		// packages are written to assume it returns. But it sure
-		// is much handier since all our code currently follows
-		// flag.Usage with os.Exit(1)
+		// Rewrite use of the flag package.
+		//
+		// The flag package uses a global variable to contain all
+		// flags. This works poorly with the busybox mode, as flags may
+		// conflict, so as part of turning commands into packages, we
+		// rewrite their use of flags to use a package-private FlagSet.
+		//
+		// bbsetup.go contains a var for the package flagset with
+		// params (packagename, os.ExitOnError).
+		//
 		// We rewrite arguments for calls to flag.Parse from () to
-		// (os.Args[1:])
-		// We rewrite all other uses of flag. to "commandname"+flag.
+		// (os.Args[1:]). We rewrite all other uses of 'flag.' to
+		// '"commandname"+flag.'.
 		case *ast.CallExpr:
 			switch s := x.Fun.(type) {
 			case *ast.SelectorExpr:
@@ -279,7 +283,7 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 	}
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
-		panic(err)
+		return fmt.Errorf("error formating: %v", err)
 	}
 	debug("%s", buf.Bytes())
 	out := string(buf.Bytes())
@@ -295,74 +299,96 @@ func oneFile(c Command, dir, s string, fset *token.FileSet, f *ast.File) error {
 	}
 	fullCode, err := imports.Process("commandline", []byte(out), &opts)
 	if err != nil {
-		log.Fatalf("bad parse: '%v': %v", out, err)
+		return fmt.Errorf("bad parse %q: %v", out, err)
 	}
 
 	of := filepath.Join(dir, filepath.Base(s))
 	if err := ioutil.WriteFile(of, []byte(fullCode), 0666); err != nil {
-		log.Fatalf("%v\n", err)
+		return fmt.Errorf("error writing to %q: %v", err)
 	}
 
 	// fun: must write the file first so the import fixup works :-)
 	if isMain {
 		var b bytes.Buffer
-		// create the bbsetup.go file with all the random stuff we need
+		// Write bbsetup.go.
 		t := template.Must(template.New("setup").Parse(bbsetupGo))
 		if err := t.Execute(&b, c); err != nil {
-			log.Fatalf("spec %v: %v\n", bbsetupGo, err)
+			return fmt.Errorf("spec %v: %v", bbsetupGo, err)
 		}
-		// we don't yet needs imports.Process, but we'll see.
-		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmds", c.CmdName, "bbsetup.go"), b.Bytes(), 0444); err != nil {
-			log.Fatalf("%v\n", err)
+		bbsetupPath := filepath.Join(config.Bbsh, "cmds", c.CmdName, "bbsetup.go")
+		if err := ioutil.WriteFile(bbsetupPath, b.Bytes(), 0444); err != nil {
+			return fmt.Errorf("error writing to %q: %v", bbsetupPath, err)
 		}
 		b.Reset()
+
 		// Write the file to interface to the command package.
 		t = template.Must(template.New("cmdFunc").Parse(cmdFunc))
 		if err := t.Execute(&b, c); err != nil {
-			log.Fatalf("spec %v: %v\n", cmdFunc, err)
+			return fmt.Errorf("spec %v: %v", cmdFunc, err)
 		}
-		fullCode, err := imports.Process("commandline", []byte(b.Bytes()), &opts)
+		fullCode, err := imports.Process("commandline", b.Bytes(), &opts)
 		if err != nil {
-			log.Fatalf("Main commandline imports: bad parse: '%v': %v", out, err)
+			return fmt.Errorf("main commandline imports: bad parse %q: %v", out, err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "cmd_"+c.CmdName+".go"), fullCode, 0444); err != nil {
-			log.Fatalf("%v\n", err)
+		cmdPath := filepath.Join(config.Bbsh, "cmd_"+c.CmdName+".go")
+		if err := ioutil.WriteFile(cmdPath, fullCode, 0444); err != nil {
+			return fmt.Errorf("error writing %q: %v", cmdPath, err)
 		}
 	}
 
 	return nil
 }
 
-func oneCmd(c Command) {
+func oneCmd(c Command) error {
 	// Create the directory for the package.
 	// For now, ./cmds/<package name>
 	packageDir := filepath.Join(config.Bbsh, "cmds", c.CmdName)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
-		log.Fatalf("Can't create target directory: %v", err)
+		return fmt.Errorf("failed to create target directory %q: %v", packageDir, err)
 	}
 
 	fset := token.NewFileSet()
 	c.FullPath = filepath.Join(c.Gopath, c.CmdPath)
 	p, err := parser.ParseDir(fset, c.FullPath, nil, parser.ParseComments)
 	if err != nil {
-		log.Printf("Can't Parsedir %v, %v", c.FullPath, err)
-		return
+		log.Printf("can't parsedir %q: %v", c.FullPath, err)
+		return nil
 	}
 
 	for _, f := range p {
 		for n, v := range f.Files {
-			oneFile(c, packageDir, n, fset, v)
+			if err := oneFile(c, packageDir, n, fset, v); err != nil {
+				return fmt.Errorf("error processing %s: %v", c.CmdName, err)
+			}
 		}
 	}
-	initMap += "\n\t\"" + c.CmdName + "\":" + c.CmdName + "Init,"
+
+	initMap += "\n\t\"" + c.CmdName + "\": " + c.CmdName + "Init,"
+
 	// In the bb case, the commands are built. In some cases, we want to
 	// specify init= to be a u-root command on boot. Hence, it now makes sense
 	// to have the ubin directory populated on boot, not by /init.
+	//
+	// Symlink /ubin/cmdname to /init.
 	l := filepath.Join(config.Bbsh, "ubin", c.CmdName)
 	if err := os.Symlink("/init", l); err != nil {
-		log.Fatalf("Symlinking %v -> /init: %v", l, err)
+		return fmt.Errorf("symlinking %v -> /init: %v", l, err)
 	}
+	return nil
 }
+
+func buildinit() error {
+	e := os.Environ()
+	e = append(e, "CGO_ENABLED=0")
+	cmd := exec.Command("go", "build", "-o", "init", ".")
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Dir = config.Bbsh
+	cmd.Env = e
+
+	return cmd.Run()
+}
+
 func main() {
 	var err error
 
@@ -418,11 +444,13 @@ func main() {
 			continue
 		}
 		c.CmdName = filepath.Base(c.CmdPath)
-		oneCmd(c)
+		if err := oneCmd(c); err != nil {
+			log.Fatalf("%v", err)
+		}
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "init.go"), []byte(initGo), 0644); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 	// copy all shell files
 
@@ -454,9 +482,13 @@ func main() {
 
 	initMap += "\n}"
 	if err := ioutil.WriteFile(filepath.Join(config.Bbsh, "initmap.go"), []byte(initMap), 0644); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalf("%v", err)
 	}
 
-	buildinit()
-	ramfs()
+	if err := buildinit(); err != nil {
+		log.Fatalf("%v", err)
+	}
+	if err := initramfs(config.Goos, config.Arch); err != nil {
+		log.Fatalf("%v", err)
+	}
 }

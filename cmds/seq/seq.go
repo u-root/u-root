@@ -49,7 +49,6 @@ func init() {
 	flag.StringVar(&flags.format, "f", "%v", "use printf style floating-point FORMAT")
 	flag.StringVar(&flags.separator, "s", "\n", "use STRING to separate numbers")
 	flag.BoolVar(&flags.widthEqual, "w", false, "equalize width by padding with leading zeroes")
-	flag.Parse()
 }
 
 func seq(w io.Writer, args []string) error {
@@ -110,6 +109,8 @@ func seq(w io.Writer, args []string) error {
 }
 
 func main() {
+	flag.Parse()
+
 	if err := seq(os.Stdout, flag.Args()); err != nil {
 		log.Println(err)
 		flag.Usage()
