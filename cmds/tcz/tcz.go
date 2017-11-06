@@ -5,23 +5,24 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 const (
 	cmd = "tcz [options] package-names"
-	/*
-	 * IOCTL commands --- we will commandeer 0x4C ('L')
-	 */
+
+	// IOCTL commands --- we will commandeer 0x4C ('L')
 	LOOP_SET_CAPACITY = 0x4C07
 	LOOP_CHANGE_FD    = 0x4C06
 	LOOP_GET_STATUS64 = 0x4C05
@@ -32,27 +33,21 @@ const (
 	LOOP_SET_FD       = 0x4C00
 	LO_NAME_SIZE      = 64
 	LO_KEY_SIZE       = 32
+
 	/* /dev/loop-control interface */
 	LOOP_CTL_ADD      = 0x4C80
 	LOOP_CTL_REMOVE   = 0x4C81
 	LOOP_CTL_GET_FREE = 0x4C82
-	SYS_ioctl         = 16
 )
 
-//http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
-//The .dep is the name + .dep
-
 var (
-	l                  = log.New(os.Stdout, "tcz: ", 0)
 	host               = flag.String("h", "tinycorelinux.net", "Host name for packages")
 	version            = flag.String("v", "8.x", "tinycore version")
 	arch               = flag.String("a", "x86_64", "tinycore architecture")
 	port               = flag.String("p", "80", "Host port")
 	install            = flag.Bool("i", true, "Install the packages, i.e. mount and create symlinks")
 	tczRoot            = flag.String("r", "/tcz", "tcz root directory")
-	debugPrint         = flag.Bool("d", false, "Enable debug prints")
 	skip               = flag.String("skip", "", "Packages to skip")
-	debug              = func(f string, s ...interface{}) {}
 	tczServerDir       string
 	tczLocalPackageDir string
 	ignorePackage      = make(map[string]struct{})
@@ -60,62 +55,57 @@ var (
 
 // consider making this a goroutine which pushes the string down the channel.
 func findloop() (name string, err error) {
-	cfd, err := syscall.Open("/dev/loop-control", syscall.O_RDWR, 0)
+	cfd, err := os.OpenFile("/dev/loop-control", os.O_RDWR, 0)
 	if err != nil {
-		log.Fatalf("/dev/loop-control: %v", err)
+		return "", fmt.Errorf("/dev/loop-control: %v", err)
 	}
-	defer syscall.Close(cfd)
-	a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(cfd), LOOP_CTL_GET_FREE, 0)
+	defer cfd.Close()
+
+	num, _, errno := syscall.Syscall(syscall.SYS_IOCTL, cfd.Fd(), LOOP_CTL_GET_FREE, 0)
 	if errno != 0 {
-		log.Fatalf("ioctl: %v\n", err)
+		return "", fmt.Errorf("ioctl cannot get free loop: %v", errno)
 	}
-	debug("a %v b %v err %v\n", a, b, err)
-	name = fmt.Sprintf("/dev/loop%d", a)
-	return name, nil
+	return fmt.Sprintf("/dev/loop%d", num), nil
 }
 
 func clonetree(tree string) error {
-	debug("Clone tree %v", tree)
+	log.Printf("Clone tree %v", tree)
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+		log.Printf("Clone tree with path %q fi %v", path, fi)
 
-		debug("Clone tree with path %s fi %v", path, fi)
-		if fi.IsDir() {
-			debug("Walking, dir %v\n", path)
+		switch {
+		case fi.IsDir():
+			log.Printf("Walking; dir %q", path)
 			if path[lt:] == "" {
 				return nil
 			}
-			if err := os.MkdirAll(path[lt:], 0700); err != nil {
-				debug("Mkdir of %s failed: %v", path[lt:], err)
-				// TODO: EEXIST should not be an error. Ignore
-				// err for now. FIXME.
-				//return err
+
+			if err := os.MkdirAll(path[lt:], 0700); err != nil && !os.IsExist(err) {
+				return fmt.Errorf("Mkdir(%q) failed: %v", path[lt:], err)
 			}
 			return nil
-		}
-		// all else gets a symlink.
 
-		// If the link exists
-		if target, err := os.Readlink(path[lt:]); err == nil {
-			// Confirm that it points to the same path to be symlinked
-			if target == path {
-				return nil
+		default:
+			// All other file types get a symlink.
+			if target, err := os.Readlink(path[lt:]); err == nil {
+				// Confirm that it points to the same path to be symlinked
+				if target == path {
+					return nil
+				}
+
+				// If it does not, return error because tcz packages are inconsistent
+				return fmt.Errorf("symlink: need %q -> %q, but %q -> %q is already there", path, path[lt:], path, target)
 			}
 
-			// If it does not, return error because tcz packages are inconsistent
-			return fmt.Errorf("symlink: need %q -> %q, but %q -> %q is already there", path, path[lt:], path, target)
+			log.Printf("Need to symlink %q to %q", path, path[lt:])
+
+			return os.Symlink(path, path[lt:])
 		}
-
-		debug("Need to symlink %v to %v\n", path, path[lt:])
-
-		if err := os.Symlink(path, path[lt:]); err != nil {
-			return fmt.Errorf("Symlink: %v", err)
-		}
-
-		return nil
 	})
+
 	if err != nil {
-		l.Fatalf("Clone tree: %v", err)
+		log.Fatalf("Clone tree: %v", err)
 	}
 	return nil
 }
@@ -124,43 +114,39 @@ func fetch(p string) error {
 	fullpath := filepath.Join(tczLocalPackageDir, p)
 	packageName := filepath.Join(tczServerDir, p)
 
-	if _, err := os.Stat(fullpath); !os.IsNotExist(err) {
-		debug("package %s is downloaded\n", fullpath)
+	if _, err := os.Stat(fullpath); err == nil {
+		log.Printf("package %s is already downloaded", fullpath)
 		return nil
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("stat(%q) returned unexpected error: %v", fullpath, err)
 	}
 
-	if _, err := os.Stat(fullpath); err != nil {
-		cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
-		debug("Fetch %v\n", cmd)
+	// Package path does not exist yet. Let's download the package.
+	cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
+	log.Printf("Fetch %v", cmd)
 
-		resp, err := http.Get(cmd)
-		if err != nil {
-			l.Fatalf("Get of %v failed: %v\n", cmd, err)
-		}
-		defer resp.Body.Close()
+	resp, err := http.Get(cmd)
+	if err != nil {
+		return fmt.Errorf("HTTP GET of %q failed: %v", cmd, err)
+	}
+	defer resp.Body.Close()
 
-		if resp.Status != "200 OK" {
-			debug("%v Not OK! %v\n", cmd, resp.Status)
-			return syscall.ENOENT
-		}
+	if resp.Status != "200 OK" {
+		return fmt.Errorf("HTTP GET of %q: Not OK! %v", cmd, resp.Status)
+	}
+	log.Printf("resp %v err %v", resp, err)
 
-		debug("resp %v err %v\n", resp, err)
-		// we have the whole tcz in resp.Body.
-		// First, save it to /tczRoot/name
-		f, err := os.Create(fullpath)
-		if err != nil {
-			l.Fatalf("Create of :%v: failed: %v\n", fullpath, err)
-		} else {
-			debug("created %v f %v\n", fullpath, f)
-		}
+	// we have the whole tcz in resp.Body.
+	// First, save it to /tczRoot/name
+	f, err := os.Create(fullpath)
+	if err != nil {
+		return fmt.Errorf("Create of %q failed: %v", fullpath, err)
+	}
+	defer f.Close()
+	log.Printf("created %q: %v", fullpath, f)
 
-		if c, err := io.Copy(f, resp.Body); err != nil {
-			l.Fatal(err)
-		} else {
-			/* OK, these are compressed tars ... */
-			debug("c %v err %v\n", c, err)
-		}
-		f.Close()
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return fmt.Errorf("copy: %v", err)
 	}
 	return nil
 }
@@ -168,104 +154,118 @@ func fetch(p string) error {
 // deps is ALL the packages we need fetched or not
 // this may even let us work with parallel tcz, ALMOST
 func installPackage(tczName string, deps map[string]bool) error {
-	debug("installPackage: %v %v\n", tczName, deps)
-	depName := tczName + ".dep"
+	log.Printf("installPackage: %v %v", tczName, deps)
+
 	if err := fetch(tczName); err != nil {
-		l.Fatal(err)
+		return err
 	}
 	deps[tczName] = true
-	debug("Fetched %v\n", tczName)
-	// now fetch dependencies if any.
+	log.Printf("Fetched %v", tczName)
+
+	// http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
+	// The dependency file name is the name + .dep
+	depName := tczName + ".dep"
+
+	// Fetch dependencies if any.
 	if err := fetch(depName); err == nil {
-		debug("Fetched dep ok!\n")
+		log.Printf("Fetched dep ok!")
 	} else {
-		debug("No dep file found\n")
+		log.Printf("No dep file found")
 		if err := ioutil.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0444)); err != nil {
-			debug("Tried to write Blank file %v, failed %v\n", depName, err)
+			return fmt.Errorf("tried to write blank file %v: %v", depName, err)
 		}
 		return nil
 	}
-	// read deps file
+
+	// Read deps file.
 	depFullPath := filepath.Join(tczLocalPackageDir, depName)
 	deplist, err := ioutil.ReadFile(depFullPath)
 	if err != nil {
-		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
+		return fmt.Errorf("fetched dep file %v but can't read it? %v", depName, err)
 	}
-	debug("deplist for %v is :%v:\n", depName, deplist)
-	realDepList := ""
-	for _, v := range strings.Split(string(deplist), "\n") {
-		// split("name\n") gets you a 2-element array with second
-		// element the empty string
-		if len(v) == 0 {
+
+	depScanner := bytes.NewBuffer(deplist)
+	var dependencies []string
+	for {
+		dependency, err := depScanner.ReadString('\n')
+		if err == io.EOF {
 			break
 		}
-		if _, ok := ignorePackage[v]; ok {
-			debug("%v is ignored", v)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := ignorePackage[dependency]; ok {
+			log.Printf("%v is ignored", dependency)
 			continue
 		}
-		realDepList = realDepList + v + "\n"
-		debug("FOR %v get package %v\n", tczName, v)
-		if deps[v] {
+
+		dependencies = append(dependencies, dependency)
+
+		log.Printf("For %v get package %v\n", tczName, dependency)
+		if deps[dependency] {
 			continue
 		}
-		if err := installPackage(v, deps); err != nil {
+		if err := installPackage(dependency, deps); err != nil {
 			return err
 		}
 	}
+
+	realDepList := strings.Join(dependencies, "\n") + "\n"
 	if string(deplist) == realDepList {
 		return nil
 	}
 	if err := ioutil.WriteFile(depFullPath, []byte(realDepList), os.FileMode(0444)); err != nil {
-		debug("Tried to write deplist file %v, failed %v\n", depName, err)
-		return err
+		return fmt.Errorf("tried to write deplist file %v: %v", depName, err)
 	}
 	return nil
 
 }
 
 func setupPackages(tczName string, deps map[string]bool) error {
-	debug("setupPackages: @ %v deps %v\n", tczName, deps)
+	log.Printf("setupPackages: @ %v deps %v", tczName, deps)
+
 	for v := range deps {
 		cmdName := strings.Split(v, filepath.Ext(v))[0]
 		packagePath := filepath.Join("/tmp/tcloop", cmdName)
 
 		if _, err := os.Stat(packagePath); err == nil {
-			debug("PackagePath %s exists, skipping mount", packagePath)
+			fmt.Printf("PackagePath %s exists, skipping mount", packagePath)
 			continue
 		}
 
 		if err := os.MkdirAll(packagePath, 0700); err != nil {
-			l.Fatalf("Package directory %s at %s, can not be created: %v", tczName, packagePath, err)
+			return fmt.Errorf("package directory %s at %s, can not be created: %v", tczName, packagePath, err)
 		}
 
 		loopname, err := findloop()
 		if err != nil {
-			l.Fatal(err)
+			return err
 		}
-		debug("findloop gets %v err %v\n", loopname, err)
+
 		pkgpath := filepath.Join(tczLocalPackageDir, v)
 		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
 		if err != nil {
-			l.Fatalf("%v: %v\n", pkgpath, err)
+			return err
 		}
 		lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
 		if err != nil {
-			l.Fatalf("%v: %v\n", loopname, err)
+			return err
 		}
-		debug("ffd %v lfd %v\n", ffd, lfd)
 
-		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
-		if errno != 0 {
-			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
+		log.Printf("ffd %v lfd %v\n", ffd, lfd)
+
+		if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(lfd), LOOP_SET_FD, uintptr(ffd)); errno != 0 {
+			return errno
 		}
 
 		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
-		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
-			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
+		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_RDONLY, ""); err != nil {
+			return fmt.Errorf("mount(%q on %q): %v", loopname, packagePath, err)
 		}
-		err = clonetree(packagePath)
-		if err != nil {
-			l.Fatalf("clonetree:  %v\n", err)
+
+		if err := clonetree(packagePath); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -273,7 +273,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 }
 
 func usage() string {
-	return "tcz [-v version] [-a architecture] [-h hostname] [-p host port] [-d debug prints] PROGRAM..."
+	return "tcz [-v version] [-a architecture] [-h hostname] [-p host port] [-d log.Printf prints] PROGRAM..."
 }
 
 func init() {
@@ -286,12 +286,9 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if *debugPrint {
-		debug = l.Printf
-	}
 
 	ip := strings.Fields(*skip)
-	debug("ignored packages: %v", ip)
+	log.Printf("ignored packages: %v", ip)
 	for _, p := range ip {
 		ignorePackage[p+".tcz"] = struct{}{}
 	}
@@ -307,26 +304,23 @@ func main() {
 	}
 
 	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
-		l.Fatal(err)
+		log.Fatalf("%v", err)
 	}
 
 	if err := os.MkdirAll("/tmp/tcloop", 0700); err != nil {
-		l.Fatal(err)
+		log.Fatalf("%v", err)
 	}
 
 	for _, cmdName := range packages {
-
 		tczName := cmdName + ".tcz"
-
 		if err := installPackage(tczName, needPackages); err != nil {
-			l.Fatal(err)
+			log.Fatalf("%v", err)
 		}
 
-		debug("After installpackages: needPackages %v\n", needPackages)
-
+		log.Printf("After installpackages: needPackages %v\n", needPackages)
 		if *install {
 			if err := setupPackages(tczName, needPackages); err != nil {
-				l.Fatal(err)
+				log.Fatalf("%v", err)
 			}
 		}
 	}

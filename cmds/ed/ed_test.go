@@ -57,7 +57,6 @@ func TestReadTextFile(t *testing.T) {
 		//{"a\nb\nc\n", 2, file{dot: 2, data: []byte("a\nb\na\nb\nc\nc\n"), lines: []int{0, 2, 4, 6, 8, 10}}},
 		{"a\nb\nc\n", 0, file{dot: 1, data: []byte("a\nb\nc\na\nb\nc\n"), lines: []int{0, 2, 4, 6, 8, 10}}},
 	}
-	debug = t.Logf
 	for _, v := range test {
 		r := bytes.NewBufferString(v.d)
 		f, err := NewTextEditor(readerio(r))
@@ -94,7 +93,6 @@ func TestWriteTextFile(t *testing.T) {
 		{err: "file is 6 lines and [start, end] is [40, 60]", start: 40, end: 60, f: file{dot: 1, data: []byte("a\nb\nc\na\nb\nc"), lines: []int{0, 2, 4, 6, 8, 10}}},
 	}
 
-	debug = t.Logf
 	for _, v := range test {
 		n, err := ioutil.TempFile("", "ed")
 		if err != nil {
@@ -202,7 +200,6 @@ func TestFileDelete(t *testing.T) {
 		},
 	}
 
-	debug = t.Logf
 	for _, v := range test {
 		v.fi.Replace([]byte{}, v.start, v.end)
 		if v.fi.dot != v.fo.dot {
@@ -237,7 +234,6 @@ func TestFileDCommand(t *testing.T) {
 		},
 	}
 
-	debug = t.Logf
 	for _, v := range test {
 		err := DoCommand(v.fi, v.c)
 		if v.err == "" && err != nil {
@@ -290,7 +286,6 @@ func TestFileSCommand(t *testing.T) {
 		},
 	}
 
-	debug = t.Logf
 	for _, v := range test {
 		err := DoCommand(v.fi, v.c)
 		if v.err == "" && err != nil {

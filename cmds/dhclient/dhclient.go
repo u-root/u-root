@@ -18,12 +18,13 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/u-root/u-root/pkg/log"
 
 	"github.com/d2g/dhcp4"
 	"github.com/d2g/dhcp4client"
@@ -42,28 +43,26 @@ var (
 	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	retry        = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
 	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting. -1 means infinity")
-	verbose      = flag.Bool("verbose", false, "Verbose output")
 	ipv4         = flag.Bool("ipv4", true, "use IPV4")
 	ipv6         = flag.Bool("ipv6", true, "use IPV6")
 	test         = flag.Bool("test", false, "Test mode")
-	debug        = func(string, ...interface{}) {}
 )
 
 func ifup(ifname string) (netlink.Link, error) {
-	debug("Try bringing up %v", ifname)
+	log.Printf("Try bringing up %v", ifname)
 	start := time.Now()
 	for time.Since(start) < linkUpAttempt {
 		// Note that it may seem odd to keep trying the
 		// LinkByName operation, by consider that a hotplug
 		// device such as USB ethernet can just vanish.
 		iface, err := netlink.LinkByName(ifname)
-		debug("LinkByName(%v) returns (%v, %v)", ifname, iface, err)
+		log.Printf("LinkByName(%v) returns (%v, %v)", ifname, iface, err)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get interface by name %v: %v", ifname, err)
 		}
 
 		if iface.Attrs().OperState == netlink.OperUp {
-			debug("Link %v is up", ifname)
+			log.Printf("Link %v is up", ifname)
 			return iface, nil
 		}
 
@@ -90,15 +89,15 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 	var packet dhcp4.Packet
 	needsRequest := true
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
-		debug("Start getting or renewing DHCPv4 lease")
+		log.Printf("Start getting or renewing DHCPv4 lease")
 
 		var success bool
 		for i := 0; i < retry || retry < 0; i++ {
 			if i > 0 {
 				if needsRequest {
-					debug("Resending DHCPv4 request...\n")
+					log.Printf("Resending DHCPv4 request...\n")
 				} else {
-					debug("Resending DHCPv4 renewal")
+					log.Printf("Resending DHCPv4 renewal")
 				}
 			}
 
@@ -120,28 +119,28 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 			}
 		}
 
-		debug("Success on %s: %v\n", mac, success)
-		debug("Packet: %v\n", packet)
-		debug("Lease is %v seconds\n", packet.Secs())
+		log.Printf("Success on %s: %v\n", mac, success)
+		log.Printf("Packet: %v\n", packet)
+		log.Printf("Lease is %v seconds\n", packet.Secs())
 
 		if !success {
 			return fmt.Errorf("%s: we didn't successfully get a DHCP lease", mac)
 		}
-		debug("IP Received: %v\n", packet.YIAddr().String())
+		log.Printf("IP Received: %v\n", packet.YIAddr().String())
 
 		// We got here because we got a good packet.
 		o := packet.ParseOptions()
 
 		netmask, ok := o[dhcp4.OptionSubnetMask]
 		if ok {
-			debug("OptionSubnetMask is %v\n", netmask)
+			log.Printf("OptionSubnetMask is %v\n", netmask)
 		} else {
 			// If they did not offer a subnet mask, we
 			// choose the most restrictive option, namely,
 			// our IP address.  This could happen on,
 			// e.g., a point to point link.
 			netmask = packet.YIAddr()
-			debug("No OptionSubnetMask; default to %v\n", netmask)
+			log.Printf("No OptionSubnetMask; default to %v\n", netmask)
 		}
 
 		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
@@ -154,9 +153,9 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 			}
 
 			if gwData, ok := o[dhcp4.OptionRouter]; ok {
-				debug("router %v", gwData)
+				log.Printf("router %v", gwData)
 				routerName := net.IP(gwData).String()
-				debug("routerName %v", routerName)
+				log.Printf("routerName %v", routerName)
 				r := &netlink.Route{
 					Dst:       &net.IPNet{IP: packet.GIAddr()},
 					LinkIndex: iface.Attrs().Index,
@@ -169,7 +168,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 			}
 		}
 		if binary.BigEndian.Uint16(packet.Secs()) == 0 {
-			debug("%v: server returned infinite lease.", iface.Attrs().Name)
+			log.Printf("%v: server returned infinite lease.", iface.Attrs().Name)
 			break
 		}
 
@@ -190,13 +189,13 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 	client := dhcp6.New(iface.Attrs().HardwareAddr, conn, timeout, retry)
 
 	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
-		debug("Start getting or renewing DHCPv6 lease")
+		log.Printf("Start getting or renewing DHCPv6 lease")
 		iaAddrs, packet, err := client.Solicit()
 		if err != nil {
 			return fmt.Errorf("error: %v", err)
 		}
-		debug("Packet: %+v\n\n", packet)
-		debug("IAAddrs: %v\n", iaAddrs)
+		log.Printf("Packet: %+v\n\n", packet)
+		log.Printf("IAAddrs: %v\n", iaAddrs)
 
 		if *test == false {
 			dst := &netlink.Addr{
@@ -220,9 +219,6 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 
 func main() {
 	flag.Parse()
-	if *verbose {
-		debug = log.Printf
-	}
 
 	// if we boot quickly enough, the random number generator
 	// may not be ready, and the dhcp package panics in that case.
@@ -285,7 +281,7 @@ func main() {
 				done <- dhclient6(iface, *renewals, timeout, *retry)
 				wg.Done()
 			}
-			debug("Done dhclient for %v", ifname)
+			log.Printf("Done dhclient for %v", ifname)
 		}(i.Attrs().Name)
 	}
 

@@ -27,48 +27,40 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
+
+	"github.com/u-root/u-root/pkg/log"
 
 	"golang.org/x/crypto/openpgp/errors"
 	"golang.org/x/crypto/openpgp/packet"
 )
 
-var (
-	verbose bool
-	debug   = func(string, ...interface{}) {}
-)
-
 func main() {
-	flag.BoolVar(&verbose, "v", false, "verbose")
 	flag.Parse()
-	if verbose {
-		debug = log.Printf
-	}
 	if flag.NArg() != 3 {
-		log.Fatal("usage: boot-verify [-v] key sig content")
+		log.Fatalf("usage: boot-verify [-v] key sig content")
 	}
 
 	keyf, err := os.Open(flag.Args()[0])
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v", err)
 	}
 	sigf, err := os.Open(flag.Args()[1])
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v", err)
 	}
 	contentf, err := os.Open(flag.Args()[2])
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v", err)
 	}
 
 	key, err := readPublicSigningKey(keyf)
 	if err != nil {
-		log.Fatal("key ", err)
+		log.Fatalf("key %v", err)
 	}
 
 	if err = verifyDetachedSignature(key, contentf, sigf); err != nil {
-		log.Fatal("verify: ", err)
+		log.Fatalf("verify: %v", err)
 	}
 	fmt.Printf("OK")
 }
@@ -81,7 +73,7 @@ func readPublicSigningKey(keyf io.Reader) (*packet.PublicKey, error) {
 	}
 	switch pkt := p.(type) {
 	case *packet.PublicKey:
-		debug("key: ", pkt)
+		log.Printf("key: ", pkt)
 		return pkt, nil
 	default:
 		log.Printf("ReadPublicSigningKey: got %T, want *packet.PublicKey", pkt)

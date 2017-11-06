@@ -30,16 +30,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
+	"github.com/u-root/u-root/pkg/log"
 )
 
 var (
-	debug  = func(string, ...interface{}) {}
-	d      = flag.Bool("v", false, "Debug prints")
 	format = flag.String("H", "newc", "format")
 )
 
@@ -49,12 +47,9 @@ func usage() {
 
 func main() {
 	flag.Parse()
-	if *d {
-		debug = log.Printf
-	}
 
 	a := flag.Args()
-	debug("Args %v", a)
+	log.Printf("Args %v", a)
 	if len(a) < 1 {
 		usage()
 	}
@@ -76,9 +71,10 @@ func main() {
 			if err != nil {
 				log.Fatalf("error reading records: %v", err)
 			}
-			debug("Creating %s\n", rec)
+
+			log.Printf("Creating %s\n", rec)
 			if err := cpio.CreateFile(rec); err != nil {
-				log.Printf("Creating %q failed: %v", rec.Name, err)
+				fmt.Fprintf(os.Stderr, "Creating %q failed: %v", rec.Name, err)
 			}
 		}
 
@@ -90,7 +86,7 @@ func main() {
 			name := scanner.Text()
 			rec, err := cpio.GetRecord(name)
 			if err != nil {
-				log.Fatalf("Getting record of %q failed: %v", name, err)
+				log.Fatalf("Getting record of '%q' failed: %v", name, err)
 			}
 			if err := rw.WriteRecord(rec); err != nil {
 				log.Fatalf("Writing record %q failed: %v", name, err)

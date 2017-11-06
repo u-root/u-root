@@ -13,6 +13,7 @@ import (
 	"io"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/log"
 )
 
 const (
@@ -197,7 +198,7 @@ func (r *reader) ReadAligned(p []byte) error {
 func (r *reader) ReadRecord() (cpio.Record, error) {
 	hdr := header{}
 
-	cpio.Debug("Next record: pos is %d\n", r.pos)
+	log.Printf("Next record: pos is %d", r.pos)
 
 	buf := make([]byte, hex.EncodedLen(binary.Size(hdr))+magicLen)
 	if err := r.Read(buf); err != nil {
@@ -208,7 +209,7 @@ func (r *reader) ReadRecord() (cpio.Record, error) {
 	if magic := string(buf[:magicLen]); magic != r.f.magic {
 		return cpio.Record{}, fmt.Errorf("reader: magic got %q, want %q", magic, r.f.magic)
 	}
-	cpio.Debug("Header is %v\n", buf)
+	log.Printf("Header is %v", buf)
 
 	// Decode hex header fields.
 	dst := make([]byte, binary.Size(hdr))
@@ -218,7 +219,7 @@ func (r *reader) ReadRecord() (cpio.Record, error) {
 	if err := binary.Read(bytes.NewReader(dst), binary.BigEndian, &hdr); err != nil {
 		return cpio.Record{}, err
 	}
-	cpio.Debug("Decoded header is %s\n", hdr)
+	log.Printf("Decoded header is %v", hdr)
 
 	// Get the name.
 	nameBuf := make([]byte, hdr.NameLength)

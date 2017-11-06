@@ -13,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 func loadVTOC(name string) (*os.File, []file, error) {
@@ -40,12 +42,12 @@ func loadVTOC(name string) (*os.File, []file, error) {
 func buildVTOC(dirs []string) ([]*file, error) {
 	var vtoc []*file
 	for _, v := range dirs {
-		debug("Process %v", v)
+		log.Printf("Process %v", v)
 		err := filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			debug("visit %v", name)
+			log.Printf("visit %v", name)
 			var s syscall.Stat_t
 			if err := syscall.Lstat(name, &s); err != nil {
 				return fmt.Errorf("%s: %v", name, err)
@@ -104,7 +106,7 @@ func writeVTOC(f io.Writer, vtoc []*file) (int, error) {
 	if _, err := fmt.Fprintf(f, "%07x\n", v.Len()); err != nil {
 		return -1, err
 	}
-	debug("vtoc size is %d", v.Len())
+	log.Printf("vtoc size is %d", v.Len())
 	return f.Write(v.Bytes())
 }
 

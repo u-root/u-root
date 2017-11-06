@@ -16,17 +16,15 @@ import (
 	"bufio"
 	"flag"
 	"io"
-	"log"
 	"os"
 	"regexp"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 type editorArg func(Editor) error
 
 var (
-	d                  = flag.Bool("d", false, "debug")
-	debug              = func(s string, i ...interface{}) {}
-	fail               = log.Printf
 	f           Editor = &file{}
 	num                = regexp.MustCompile("^[0-9][0-9]*")
 	startsearch        = regexp.MustCompile("^/[^/]/")
@@ -51,10 +49,9 @@ func readFile(n string) editorArg {
 		if err != nil {
 			return err
 		}
-		if _, err := f.Read(r, 0, 0); err != nil {
-			return err
-		}
-		return nil
+
+		_, err = f.Read(r, 0, 0)
+		return err
 	}
 }
 
@@ -65,10 +62,6 @@ func main() {
 	)
 
 	flag.Parse()
-
-	if *d {
-		debug = log.Printf
-	}
 
 	e, ok := editors[*fileType]
 	if !ok {

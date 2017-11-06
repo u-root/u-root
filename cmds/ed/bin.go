@@ -11,6 +11,8 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strconv"
+
+	"github.com/u-root/u-root/pkg/log"
 )
 
 type bin struct {
@@ -24,12 +26,12 @@ func (f *bin) String() string {
 }
 
 func (f *bin) Replace(n []byte, start, end int) (int, error) {
-	defer debug("Replace done: f %v", f)
+	defer log.Printf("Replace done: f %v", f)
 	if f.data != nil {
-		debug("replace: f %v start %v end %v", f, start, end)
+		log.Printf("replace: f %v start %v end %v", f, start, end)
 		pre := f.data[0:start]
 		post := f.data[end:]
-		debug("replace: pre is %v, post is %v\n", pre, post)
+		log.Printf("replace: pre is %v, post is %v\n", pre, post)
 		var b bytes.Buffer
 		b.Write(pre)
 		b.Write(n)
@@ -45,9 +47,9 @@ func (f *bin) Replace(n []byte, start, end int) (int, error) {
 // If there are lines already the new lines are inserted after '.'
 // dot is unchanged.
 func (f *bin) Read(r io.Reader, start, end int) (int, error) {
-	debug("Read: r %v, start %v end %v", r, start, end)
+	log.Printf("Read: r %v, start %v end %v", r, start, end)
 	d, err := ioutil.ReadAll(r)
-	debug("ReadAll returns %v, %v", d, err)
+	log.Printf("ReadAll returns %v, %v", d, err)
 	if err != nil {
 		return -1, err
 	}
@@ -94,7 +96,7 @@ func (f *bin) Print(w io.Writer, start, end int) (int, error) {
 // it's a simple substitution, and we'll start by assuming
 // the same length
 func (f *bin) Sub(x, y, opt string, start, end int) error {
-	debug("Slice from [%v,%v] %v", start, end, string(f.data[start:end]))
+	log.Printf("Slice from [%v,%v] %v", start, end, string(f.data[start:end]))
 	if len(x) != len(y) {
 		return fmt.Errorf("For now, old and new must be same len")
 	}
