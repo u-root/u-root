@@ -12,8 +12,6 @@ type bus struct {
 	Devices []string
 }
 
-var numbers *bool
-
 func onePCI(dir string) (*PCI, error) {
 	var pci PCI
 	v := reflect.TypeOf(pci)
@@ -30,34 +28,31 @@ func onePCI(dir string) (*PCI, error) {
 		// Linux never understood /proc.
 		reflect.ValueOf(&pci).Elem().Field(ix).SetString(string(s[2 : len(s)-1]))
 	}
-	if !*numbers {
-		pci.VendorName, pci.DeviceName = lookup(pci.Vendor, pci.Device)
-	}
 	return &pci, nil
 }
 
-func (bus *bus) Read() ([]*PCI, error) {
-	var pci []*PCI
-	for _, d := range bus.Devices {
+// Read impliments the BusReader interface for type bus.
+func (bus *bus) Read() (Devices, error) {
+	pci := make([]*PCI, len(bus.Devices))
+	for i, d := range bus.Devices {
 		p, err := onePCI(d)
 		if err != nil {
-			return nil, err
+			return Devices{}, err
 		}
 		p.Addr = filepath.Base(d)
-		pci = append(pci, p)
+		pci[i] = p
 	}
-	return pci, nil
+	return Devices{PCIs: pci}, nil
 }
 
 // NewBusReader returns a BusReader. If we can't at least glob in
 // /sys/bus/pci/devices then we just give up. We don't provide an option
 // (yet) to do type I or PCIe MMIO config stuff.
-func NewBusReader(n *bool) (BusReader, error) {
+func NewBusReader() (BusReader, error) {
 	globs, err := filepath.Glob("/sys/bus/pci/devices/*")
 	if err != nil {
 		return nil, err
 	}
-	numbers = n
 
 	return &bus{Devices: globs}, nil
 }
