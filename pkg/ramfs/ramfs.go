@@ -45,6 +45,15 @@ var DevCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "dev/urandom", Mode: c | 0666, Rmajor: 1, Rminor: 9}},
 	{Info: cpio.Info{Name: "etc/resolv.conf", Mode: f | 0644, FileSize: uint64(len(nameserver))}, ReadCloser: cpio.NewBytesReadCloser([]byte(nameserver))},
 	{Info: cpio.Info{Name: "etc/localtime", Mode: f | 0644, FileSize: uint64(len(gmt0))}, ReadCloser: cpio.NewBytesReadCloser([]byte(gmt0))},
+	{Info: cpio.Info{Name: "dev/loop0", Mode: b | 0660, Rmajor: 7, Rminor: 0}},
+	{Info: cpio.Info{Name: "dev/loop1", Mode: b | 0660, Rmajor: 7, Rminor: 1}},
+	{Info: cpio.Info{Name: "dev/loop2", Mode: b | 0660, Rmajor: 7, Rminor: 2}},
+	{Info: cpio.Info{Name: "dev/loop3", Mode: b | 0660, Rmajor: 7, Rminor: 3}},
+	{Info: cpio.Info{Name: "dev/loop4", Mode: b | 0660, Rmajor: 7, Rminor: 4}},
+	{Info: cpio.Info{Name: "dev/loop5", Mode: b | 0660, Rmajor: 7, Rminor: 5}},
+	{Info: cpio.Info{Name: "dev/loop6", Mode: b | 0660, Rmajor: 7, Rminor: 6}},
+	{Info: cpio.Info{Name: "dev/loop7", Mode: b | 0660, Rmajor: 7, Rminor: 7}},
+	{Info: cpio.Info{Name: "dev/loop-control", Mode: c | 0600, Rmajor: 10, Rminor: 237}},
 }
 
 type Initramfs struct {
