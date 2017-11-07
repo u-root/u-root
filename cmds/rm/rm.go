@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -42,7 +43,6 @@ func init() {
 	flag.BoolVar(&flags.v, "v", false, "Verbose mode.")
 	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
 	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
-	flag.Parse()
 }
 
 func rm(files []string) error {
@@ -56,12 +56,12 @@ func rm(files []string) error {
 		return err
 	}
 
-	input := bufio.NewScanner(os.Stdin)
+	input := bufio.NewReader(os.Stdin)
 	for _, file := range files {
 		if flags.i {
 			fmt.Printf("rm: remove '%v'? ", file)
-			input.Scan()
-			if input.Text()[0] != 'y' {
+			answer, err := input.ReadString('\n')
+			if err != nil || strings.ToLower(answer)[0] != 'y' {
 				continue
 			}
 		}
@@ -82,6 +82,7 @@ func rm(files []string) error {
 }
 
 func main() {
+	flag.Parse()
 	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(1)

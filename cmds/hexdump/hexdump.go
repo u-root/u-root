@@ -20,35 +20,31 @@ import (
 	"os"
 )
 
-func openFiles() ([]io.Reader, error) {
-	readers := []io.Reader{os.Stdin}
-	if flag.NArg() > 0 {
-		readers = []io.Reader{}
-		for _, filename := range flag.Args() {
-			f, err := os.Open(filename)
-			if err != nil {
-				return nil, err
-			}
-			readers = append(readers, f)
-		}
-	}
-	return readers, nil
-}
-
 func main() {
 	flag.Parse()
 
-	// Create a reader.
-	readers, err := openFiles()
-	if err != nil {
-		log.Fatal(err)
-	}
-	r := io.MultiReader(readers...)
+	var readers []io.Reader
 
-	// Dump hex to stdout.
+	if flag.NArg() == 0 {
+		readers = []io.Reader{os.Stdin}
+	} else {
+		readers = make([]io.Reader, 0, flag.NArg())
+
+		for _, filename := range flag.Args() {
+			f, err := os.Open(filename)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			readers = append(readers, f)
+		}
+	}
+
+	r := io.MultiReader(readers...)
 	w := hex.Dumper(os.Stdout)
+	defer w.Close()
+
 	if _, err := io.Copy(w, r); err != nil {
 		log.Fatal(err)
 	}
-	w.Close()
 }

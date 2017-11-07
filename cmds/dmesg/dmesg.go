@@ -5,33 +5,58 @@
 // Read the system log.
 //
 // Synopsis:
-//     dmesg [-c]
+//     dmesg [-clear|-read-clear]
 //
 // Options:
-//     -c: clear the log
+//     -clear: clear the log
+//     -read-clear: clear the log after printing
 package main
 
 import (
 	"flag"
 	"log"
 	"os"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 )
 
-var clearSyslog = flag.Bool("c", false, "Clear the log")
+const (
+	_SYSLOG_ACTION_READ       = 2
+	_SYSLOG_ACTION_READ_ALL   = 3
+	_SYSLOG_ACTION_READ_CLEAR = 4
+	_SYSLOG_ACTION_CLEAR      = 5
+)
+
+var (
+	clear     bool
+	readClear bool
+)
+
+func init() {
+	flag.BoolVar(&clear, "clear", false, "Clear the log")
+	flag.BoolVar(&readClear, "read-clear", false, "Clear the log after printing")
+	flag.BoolVar(&readClear, "c", false, "Clear the log after printing")
+}
 
 func main() {
 	flag.Parse()
-	l := uintptr(3)
-	if *clearSyslog {
-		l = 4
+	if clear && readClear {
+		log.Fatalf("cannot specify both -clear and -read-clear")
 	}
+
+	level := uintptr(_SYSLOG_ACTION_READ_ALL)
+	if clear {
+		level = _SYSLOG_ACTION_CLEAR
+	}
+	if readClear {
+		level = _SYSLOG_ACTION_READ_CLEAR
+	}
+
 	b := make([]byte, 256*1024)
-	if amt, _, err := unix.Syscall(unix.SYS_SYSLOG, l, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b))); err == 0 {
-		os.Stdout.Write(b[:amt])
-	} else {
+	amt, _, err := syscall.Syscall(syscall.SYS_SYSLOG, level, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)))
+	if err != 0 {
 		log.Fatalf("syslog failed: %v", err)
 	}
+
+	os.Stdout.Write(b[:amt])
 }

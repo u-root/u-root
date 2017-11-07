@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package pci
 
 import "fmt"
 
@@ -20,8 +20,11 @@ type PCI struct {
 	DeviceName string
 }
 
+// String concatenates PCI address, Vendor, and Device to make a useful 
+// display for the user.
 func (p *PCI) String() string {
-	return fmt.Sprintf("%s:", p.Addr) +
-		fmt.Sprintf(" %v", p.VendorName) +
-		fmt.Sprintf(" %v", p.DeviceName)
+	if *numbers {
+		return fmt.Sprintf("%s: %s:%s", p.Addr, p.Vendor, p.Device)
+	} 
+	return fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)
 }

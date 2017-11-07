@@ -33,6 +33,7 @@
 | hexdump        |               |                 |                        |
 | hostname       |               |                 |                        |
 | init           |               |                 |                        |
+| insmod         |               |                 |                        |
 | installcommand |               |                 | u-root specific        |
 | ip             |               |                 |                        |
 | kexec          |               |                 |                        |
@@ -42,6 +43,7 @@
 | ln             | -fiLPrsTtv    |                 |                        |
 | losetup        | -Ad           |                 |                        |
 | ls             | -lRr          | -hFfS           | -r is raw not reverse  |
+| lsmod          |               |                 |                        |
 | :x: man        |               | -k              | Not implemented yet!   |
 | mkdir          | -mpv          |                 |                        |
 | :x: mkfifo     |               |                 | Not implemented yet!   |
@@ -59,6 +61,7 @@
 | readlink       | -fv           | -emnqsz         |                        |
 | :x: reboot     |               |                 | Not implemented yet!   |
 | rm             | -iRrv         | -I              |                        |
+| rmmod          |               | -fsv            |                        |
 | run            |               |                 | u-root specific        |
 | rush           |               | -c              |                        |
 | seq            | -s            |                 |                        |
@@ -71,6 +74,7 @@
 | time           |               | -p              | Rush builtin           |
 | :x: tr         |               |                 | Not implemented yet!   |
 | true           |               |                 |                        |
+| truncate       | -cs           | -or             |                        |
 | umount         | -fl           |                 |                        |
 | uname          | -admnrsv      |                 |                        |
 | uniq           | -cdfu, --cn   | -i              |                        |

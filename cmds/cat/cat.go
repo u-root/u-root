@@ -5,7 +5,7 @@
 // Cat concatenates files and prints to stdout.
 //
 // Synopsis:
-//     cp [-u] [FILES]...
+//     cat [-u] [FILES]...
 //
 // Description:
 //     If no files are specified, read from stdin.
@@ -16,8 +16,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
+	"log"
 	"os"
 )
 
@@ -25,20 +25,23 @@ var (
 	_ = flag.Bool("u", false, "ignored")
 )
 
-func cat(writer io.Writer, files []string) error {
-	for _, name := range files {
-		f, err := os.Open(name)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(writer, f)
-		if err != nil {
-			return err
-		}
-		f.Close()
+func catFile(w io.Writer, file string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
 	}
+	defer f.Close()
 
+	_, err = io.Copy(w, f)
+	return err
+}
+
+func cat(w io.Writer, files []string) error {
+	for _, name := range files {
+		if err := catFile(w, name); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -46,12 +49,12 @@ func main() {
 	flag.Parse()
 
 	if len(os.Args) == 1 {
-		io.Copy(os.Stdout, os.Stdin)
+		if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {
+			log.Fatalf("error concatenating stdin to stdout: %v", err)
+		}
 	}
 
-	err := cat(os.Stdout, flag.Args())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+	if err := cat(os.Stdout, flag.Args()); err != nil {
+		log.Fatalf("cat: %v", err)
 	}
 }

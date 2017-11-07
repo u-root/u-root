@@ -78,6 +78,7 @@ func (r Reader) ReadRecords() ([]Record, error) {
 
 type Writer struct {
 	rw RecordWriter
+
 	// There seems to be no harm done in stripping
 	// duplicate names when the record is written,
 	// and lots of harm done if we don't do it.
@@ -103,6 +104,7 @@ func (w Writer) WriteRecord(rec Record) error {
 	return w.rw.WriteRecord(rec)
 }
 
+// WriteRecords writes multiple records.
 func (w Writer) WriteRecords(files []Record) error {
 	for _, f := range files {
 		if err := w.WriteRecord(f); err != nil {
@@ -112,8 +114,29 @@ func (w Writer) WriteRecords(files []Record) error {
 	return nil
 }
 
+// WriteTrailer writes the trailer record.
 func (w Writer) WriteTrailer() error {
 	return w.WriteRecord(TrailerRecord)
+}
+
+// Concat reads files from r one at a time, and writes them to w.
+func (w Writer) Concat(r Reader, transform func(Record) Record) error {
+	// Read and write one file at a time. We don't want all that in memory.
+	for {
+		f, err := r.ReadRecord()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if transform != nil {
+			f = transform(f)
+		}
+		if err := w.WriteRecord(f); err != nil {
+			return err
+		}
+	}
 }
 
 // MakeReproducible changes any fields in a Record such that
@@ -122,8 +145,13 @@ func (w Writer) WriteTrailer() error {
 // the cpio file it produces will be bit-for-bit
 // identical. This is an essential property for firmware-embedded
 // payloads.
-func MakeReproducible(files []Record) {
+func MakeReproducible(file Record) Record {
+	file.MTime = 0
+	return file
+}
+
+func MakeAllReproducible(files []Record) {
 	for i := range files {
-		files[i].MTime = 0
+		files[i] = MakeReproducible(files[i])
 	}
 }

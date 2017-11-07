@@ -16,13 +16,15 @@ import (
 	"flag"
 	"fmt"
 	"log"
+
+	"github.com/u-root/u-root/pkg/pci"
 )
 
 var numbers = flag.Bool("n", false, "Just show numbers")
 
 func main() {
 	flag.Parse()
-	r, err := NewBusReader()
+	r, err := pci.NewBusReader(numbers)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

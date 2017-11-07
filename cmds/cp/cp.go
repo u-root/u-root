@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // buffSize is the length of buffer during
@@ -72,7 +73,7 @@ func promptOverwrite(dst string) (bool, error) {
 		return false, err
 	}
 
-	if answer[0] != 'y' {
+	if strings.ToLower(answer)[0] != 'y' {
 		return false, nil
 	}
 

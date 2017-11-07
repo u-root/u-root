@@ -1,4 +1,4 @@
-package uroot
+package ldd
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ func lddOne(name string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Ldd on %v: want nil, got %v", name, err)
 	}
-	l, err := LddList([]string{name})
+	l, err := List([]string{name})
 	if err != nil {
 		return nil, fmt.Errorf("LddList on %v: want nil, got %v", name, err)
 	}

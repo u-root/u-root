@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package ramfs
 
 import (
+	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -27,7 +29,7 @@ const (
 // devCPIOrecords are cpio records as defined in the uroot cpio package.
 // Most of the bits can be left unspecified: these all have one link,
 // they are mostly root:root, for example.
-var devCPIO = []cpio.Record{
+var DevCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "tcz", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "etc", Mode: d | 0755}},
 	{Info: cpio.Info{Name: "dev", Mode: d | 0755}},
@@ -45,13 +47,95 @@ var devCPIO = []cpio.Record{
 	{Info: cpio.Info{Name: "etc/localtime", Mode: f | 0644, FileSize: uint64(len(gmt0))}, ReadCloser: cpio.NewBytesReadCloser([]byte(gmt0))},
 }
 
-// not yet implemented, let's wait and see if we still need them:
-// brw-rw----   1 root     wheel         7,6 May 23  2015 dev/loop6
-// brw-rw----   1 root     wheel         7,0 May 23  2015 dev/loop0
-// brw-rw----   1 root     wheel         7,4 May 23  2015 dev/loop4
-// brw-rw----   1 root     wheel         7,3 May 23  2015 dev/loop3
-// brw-rw----   1 root     wheel         7,1 May 23  2015 dev/loop1
-// brw-rw----   1 root     wheel         7,5 May 23  2015 dev/loop5
-// crw-------   1 root     wheel      10,237 May 23  2015 dev/loop-control
-// brw-rw----   1 root     wheel         7,7 May 23  2015 dev/loop7
-// brw-rw----   1 root     wheel         7,2 May 23  2015 dev/loop2
+type Initramfs struct {
+	cpio.Writer
+
+	files map[string]struct{}
+}
+
+func NewInitramfs(w cpio.Writer) (*Initramfs, error) {
+	// Write devtmpfs records.
+	dcpio := DevCPIO[:]
+	cpio.MakeAllReproducible(dcpio)
+	if err := w.WriteRecords(dcpio); err != nil {
+		return nil, err
+	}
+
+	return &Initramfs{
+		Writer: w,
+		files:  make(map[string]struct{}),
+	}, nil
+}
+
+func (i *Initramfs) WriteRecord(r cpio.Record) error {
+	if r.Name == "." || r.Name == "/" {
+		return nil
+	}
+
+	// Create record for parent directory if needed.
+	dir := filepath.Dir(r.Name)
+	if _, ok := i.files[dir]; dir != "/" && dir != "." && !ok {
+		if err := i.WriteRecord(cpio.Record{
+			Info: cpio.Info{
+				Name: dir,
+				Mode: syscall.S_IFDIR | 0755,
+			},
+		}); err != nil {
+			return err
+		}
+	}
+
+	i.files[r.Name] = struct{}{}
+	return i.Writer.WriteRecord(r)
+}
+
+func (i *Initramfs) WriteFile(src string, dest string) error {
+	record, err := cpio.GetRecord(src)
+	if err != nil {
+		return err
+	}
+
+	if record.Info.Mode&^0777 == syscall.S_IFDIR {
+		return children(src, func(name string) error {
+			return i.WriteFile(filepath.Join(src, name), filepath.Join(dest, name))
+		})
+	} else {
+		// Fix the name.
+		record.Name = dest
+		return i.WriteRecord(cpio.MakeReproducible(record))
+	}
+}
+
+func children(dir string, fn func(name string) error) error {
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if err := fn(name); os.IsNotExist(err) {
+			// File was deleted in the meantime.
+			continue
+		} else if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Copy all files relative to `srcDir` to `destDir` in the cpio archive.
+func (i *Initramfs) WriteFiles(srcDir string, destDir string, files []string) error {
+	for _, file := range files {
+		srcPath := filepath.Join(srcDir, file)
+		destPath := filepath.Join(destDir, file)
+		if err := i.WriteFile(srcPath, destPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
