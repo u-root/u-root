@@ -20,20 +20,21 @@ import (
 	"github.com/u-root/u-root/pkg/pci"
 )
 
-var numbers = flag.Bool("n", false, "Just show numbers")
+var numbers = flag.Bool("n", false, "Show numeric IDs")
 
 func main() {
 	flag.Parse()
-	r, err := pci.NewBusReader(numbers)
+	r, err := pci.NewBusReader()
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	devs, err := r.Read()
+
+	d, err := r.Read()
+
 	if err != nil {
 		log.Fatalf("Read: %v", err)
 	}
-	for _, p := range devs {
-		fmt.Printf("%v\n", p)
-	}
+	d.Numbers = *numbers
 
+	fmt.Print(d)
 }
