@@ -1,3 +1,7 @@
+// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package pci
 
 //go:generate go run gen.go
@@ -31,24 +35,25 @@ func onePCI(dir string) (*PCI, error) {
 	return &pci, nil
 }
 
-// Read impliments the BusReader interface for type bus.
+// Read impliments the BusReader interface for type bus. Iterating over each
+// PCI bus device.
 func (bus *bus) Read() (Devices, error) {
-	pci := make([]*PCI, len(bus.Devices))
+	devices := make(Devices, len(bus.Devices))
 	for i, d := range bus.Devices {
 		p, err := onePCI(d)
 		if err != nil {
-			return Devices{}, err
+			return nil, err
 		}
 		p.Addr = filepath.Base(d)
-		pci[i] = p
+		devices[i] = p
 	}
-	return Devices{PCIs: pci}, nil
+	return devices, nil
 }
 
 // NewBusReader returns a BusReader. If we can't at least glob in
 // /sys/bus/pci/devices then we just give up. We don't provide an option
 // (yet) to do type I or PCIe MMIO config stuff.
-func NewBusReader() (BusReader, error) {
+func NewBusReader() (busReader, error) {
 	globs, err := filepath.Glob("/sys/bus/pci/devices/*")
 	if err != nil {
 		return nil, err

@@ -1,7 +1,6 @@
 // Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
 //
 //     pci: show pci bus vendor ids and other info
 //
@@ -30,11 +29,15 @@ func main() {
 	}
 
 	d, err := r.Read()
-
 	if err != nil {
 		log.Fatalf("Read: %v", err)
 	}
-	d.Numbers = *numbers
 
-	fmt.Print(d)
+	if *numbers {
+		fmt.Print(d.ToString(*numbers))
+
+	} else {
+		fmt.Print(d)
+	}
+
 }
