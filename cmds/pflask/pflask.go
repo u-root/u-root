@@ -51,12 +51,11 @@ func ptsopen() (pty, tty *os.File, slavename string, err error) {
 }
 
 func ptsname(f *os.File) (string, error) {
-	var n uintptr
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n)))
-	if err != 0 {
+	n, err := unix.IoctlGetInt(int(f.Fd()), unix.TIOCGPTN)
+	if err != nil {
 		return "", err
 	}
-	return "/dev/pts/" + strconv.Itoa(int(n)), nil
+	return "/dev/pts/" + strconv.Itoa(n), nil
 }
 
 func ptsunlock(f *os.File) error {
