@@ -5,9 +5,7 @@
 package main
 
 import (
-	"fmt"
 	"syscall"
-	"unsafe"
 )
 
 type bit struct {
@@ -98,55 +96,3 @@ const (
 	C        // Control
 	L        // Line control
 )
-
-// ioctl constants
-const (
-	syscallTIOCGWINSZ = 0x5413
-	syscallTIOCSWINSZ = 0x5414
-)
-
-func tiGet(fd uintptr) (*syscall.Termios, error) {
-	var term syscall.Termios
-	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		fd, uintptr(syscall.TCGETS),
-		uintptr(unsafe.Pointer(&term)))
-
-	if errno != 0 || r1 != 0 {
-		return nil, fmt.Errorf("tiGet: r1 %v, errno %v", r1, errno)
-	}
-	return &term, nil
-}
-
-func tiSet(fd uintptr, term *syscall.Termios) error {
-	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		fd, uintptr(syscall.TCSETS),
-		uintptr(unsafe.Pointer(term)))
-	if errno != 0 || r1 != 0 {
-		return fmt.Errorf("tiSet: r1 %v, errno %v", r1, errno)
-	}
-
-	return nil
-}
-
-func wsGet(fd uintptr) (*winsize, error) {
-	var w winsize
-	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		fd, uintptr(syscallTIOCGWINSZ),
-		uintptr(unsafe.Pointer(&w)))
-	if errno != 0 || r1 != 0 {
-		return nil, fmt.Errorf("wsGet: r1 %v, errno %v", r1, errno)
-	}
-
-	return &w, nil
-}
-
-func wsSet(fd uintptr, w *winsize) error {
-	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		fd, uintptr(syscallTIOCSWINSZ),
-		uintptr(unsafe.Pointer(w)))
-	if errno != 0 || r1 != 0 {
-		return fmt.Errorf("wsSet: r1 %v, errno %v", r1, errno)
-	}
-
-	return nil
-}

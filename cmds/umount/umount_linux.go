@@ -11,15 +11,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const noFollow = 8
-
 var (
 	force = flag.Bool("f", false, "Force unmount")
 	lazy  = flag.Bool("l", false, "Lazy unmount")
 )
 
 func umount() error {
-	var flags = noFollow
+	var flags = unix.UMOUNT_NOFOLLOW
 	flag.Parse()
 	a := flag.Args()
 	if len(a) != 1 {

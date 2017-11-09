@@ -10,6 +10,8 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+
+	"golang.org/x/sys/unix"
 )
 
 type (
@@ -29,19 +31,14 @@ type (
 
 		Opts map[string]bool
 	}
-
-	winsize struct {
-		Row, Col       uint16
-		Xpixel, Ypixel uint16
-	}
 )
 
-func gtty(fd uintptr) (*tty, error) {
-	term, err := tiGet(fd)
+func gtty(fd int) (*tty, error) {
+	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
 		return nil, err
 	}
-	w, err := wsGet(fd)
+	w, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +64,9 @@ func gtty(fd uintptr) (*tty, error) {
 	return &t, nil
 }
 
-func stty(fd uintptr, t *tty) (*tty, error) {
-
-	// Get a syscall.Termios
-	// which we can partially fill in.
-	term, err := tiGet(fd)
+func stty(fd int, t *tty) (*tty, error) {
+	// Get a unix.Termios which we can partially fill in.
+	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +89,12 @@ func stty(fd uintptr, t *tty) (*tty, error) {
 	term.Ispeed = uint32(t.Ispeed)
 	term.Ospeed = uint32(t.Ospeed)
 
-	if err := tiSet(fd, term); err != nil {
+	if err := unix.IoctlSetTermios(fd, unix.TCSETS, term); err != nil {
 		return nil, err
 	}
 
-	w := &winsize{Row: uint16(t.Row), Col: uint16(t.Col)}
-	if err := wsSet(fd, w); err != nil {
+	w := &unix.Winsize{Row: uint16(t.Row), Col: uint16(t.Col)}
+	if err := unix.IoctlSetWinsize(fd, unix.TIOCSWINSZ, w); err != nil {
 		return nil, err
 	}
 
@@ -177,7 +172,7 @@ func setOpts(t *tty, opts []string) error {
 	return nil
 }
 
-func setRaw(fd uintptr) (*tty, error) {
+func setRaw(fd int) (*tty, error) {
 	t, err := gtty(fd)
 	if err != nil {
 		return nil, err
