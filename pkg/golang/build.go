@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,7 +23,11 @@ func Default() Environ {
 // This currently assumes that packages are named after the directory they are
 // in.
 func (c Environ) FindPackageByPath(path string) (string, error) {
-	p, err := c.Context.ImportDir(path, 0)
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	p, err := c.Context.ImportDir(abs, 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to find package in %q: %v", path, err)
 	}

@@ -15,20 +15,21 @@ import (
 )
 
 var (
-	builders = map[string]Builder{
-		"source": SourceBuilder{},
+	builders = map[string]Build{
+		"source": sourceBuild,
+		"bb":     bbBuild,
 	}
 	archivers = map[string]Archiver{
 		"cpio": CPIOArchiver{},
 	}
 )
 
-func GetBuilder(name string) (Builder, error) {
-	builder, ok := builders[name]
+func GetBuilder(name string) (Build, error) {
+	build, ok := builders[name]
 	if !ok {
 		return nil, fmt.Errorf("couldn't find builder %q", name)
 	}
-	return builder, nil
+	return build, nil
 }
 
 func GetArchiver(name string) (Archiver, error) {
@@ -114,15 +115,13 @@ func (af ArchiveFiles) Contains(dest string) bool {
 	return fok || rok
 }
 
-type BuilderOpts struct {
+type BuildOpts struct {
 	Env      golang.Environ
 	Packages []string
 	TempDir  string
 }
 
-type Builder interface {
-	Build(BuilderOpts) (ArchiveFiles, error)
-}
+type Build func(BuildOpts) (ArchiveFiles, error)
 
 type ArchiveOpts struct {
 	ArchiveFiles

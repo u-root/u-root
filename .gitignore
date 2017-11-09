@@ -4,6 +4,9 @@
 *.so
 *~
 
+bbsh
+u-root
+
 # Folders
 _obj
 _test
