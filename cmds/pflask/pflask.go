@@ -19,6 +19,9 @@ import (
 	"time"
 
 	"unsafe"
+
+	// "github.com/u-root/u-root/pkg/termios"
+	"golang.org/x/sys/unix"
 )
 
 // pty support. We used to import github.com/kr/pty but what we need is not that complex.
@@ -333,14 +336,14 @@ func main() {
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		//t, err := getTermios(1)
+		//t, err := termios.GetTermios(1)
 		//if err != nil {
 		//	log.Fatalf("Can't get termios on fd 1: %v", err)
 		//}
 		if err := c.Run(); err != nil {
 			log.Printf(err.Error())
 		}
-		//if err := t.set(1); err != nil {
+		//if err := termios.SetTermios(1, t); err != nil {
 		//	log.Printf("Can't reset termios on fd1: %v", err)
 		//}
 		os.Exit(1)
