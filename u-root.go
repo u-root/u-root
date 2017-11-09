@@ -88,12 +88,12 @@ func main() {
 	}
 
 	// Build the packages.
-	bOpts := uroot.BuilderOpts{
+	bOpts := uroot.BuildOpts{
 		Env:      env,
 		Packages: importPaths,
 		TempDir:  tempDir,
 	}
-	files, err := builder.Build(bOpts)
+	files, err := builder(bOpts)
 	if err != nil {
 		log.Fatalf("Error building %#v: %v", bOpts, err)
 	}

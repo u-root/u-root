@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -40,6 +41,18 @@ func StaticRecord(contents []byte, info Info) Record {
 	return Record{
 		ReadCloser: ioutil.NopCloser(bytes.NewReader(contents)),
 		Info:       info,
+	}
+}
+
+// Symlink returns a symlink record at path pointing to target.
+func Symlink(path string, target string) Record {
+	return Record{
+		ReadCloser: ioutil.NopCloser(bytes.NewReader([]byte(target))),
+		Info: Info{
+			FileSize: uint64(len(target)),
+			Mode:     syscall.S_IFLNK | 0777,
+			Name:     path,
+		},
 	}
 }
 

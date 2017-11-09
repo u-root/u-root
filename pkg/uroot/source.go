@@ -12,11 +12,9 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 )
 
-type SourceBuilder struct{}
-
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
 // asm.
-func (s SourceBuilder) buildToolchain(opts BuilderOpts, out *ArchiveFiles) error {
+func buildToolchain(opts BuildOpts, out *ArchiveFiles) error {
 	goBin := filepath.Join(opts.TempDir, "go/bin/go")
 	tcbo := golang.BuildOpts{
 		ExtraArgs: []string{"-tags", "cmd_go_bootstrap"},
@@ -37,7 +35,7 @@ func (s SourceBuilder) buildToolchain(opts BuilderOpts, out *ArchiveFiles) error
 	return out.AddFile(opts.TempDir, "")
 }
 
-func goListPkg(opts BuilderOpts, pkg string, out *ArchiveFiles) *golang.ListPackage {
+func goListPkg(opts BuildOpts, pkg string, out *ArchiveFiles) *golang.ListPackage {
 	p, err := opts.Env.ListDeps(pkg)
 	if err != nil {
 		log.Printf("Can't list Go dependencies for %v; ignoring.", pkg)
@@ -57,7 +55,7 @@ func goListPkg(opts BuilderOpts, pkg string, out *ArchiveFiles) *golang.ListPack
 	return p
 }
 
-func (s SourceBuilder) Build(opts BuilderOpts) (ArchiveFiles, error) {
+func sourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 	af := NewArchiveFiles()
 
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
@@ -83,7 +81,7 @@ func (s SourceBuilder) Build(opts BuilderOpts) (ArchiveFiles, error) {
 
 	// Add Go toolchain.
 	log.Printf("Building go toolchain...")
-	if err := s.buildToolchain(opts, &af); err != nil {
+	if err := buildToolchain(opts, &af); err != nil {
 		return ArchiveFiles{}, err
 	}
 	return af, nil

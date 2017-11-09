@@ -5,6 +5,8 @@
 package uroot
 
 import (
+	"sort"
+
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
 	"github.com/u-root/u-root/pkg/ramfs"
@@ -45,15 +47,31 @@ func (ca CPIOArchiver) Archive(opts ArchiveOpts) error {
 		}
 	}
 
-	for _, record := range opts.ArchiveFiles.Records {
-		if err := init.WriteRecord(record); err != nil {
-			return err
+	// Reproducible builds: Files should be added to the archive in the
+	// same order.
+	r := opts.ArchiveFiles.Records
+	f := opts.ArchiveFiles.Files
+	paths := make([]string, 0, len(r)+len(f))
+	for path := range r {
+		paths = append(paths, path)
+	}
+	for path := range f {
+		paths = append(paths, path)
+	}
+	sort.Sort(sort.StringSlice(paths))
+
+	for _, path := range paths {
+		if record, ok := r[path]; ok {
+			if err := init.WriteRecord(record); err != nil {
+				return err
+			}
+		}
+		if src, ok := f[path]; ok {
+			if err := init.WriteFile(src, path); err != nil {
+				return err
+			}
 		}
 	}
-	for dest, src := range opts.ArchiveFiles.Files {
-		if err := init.WriteFile(src, dest); err != nil {
-			return err
-		}
-	}
+
 	return init.WriteTrailer()
 }
