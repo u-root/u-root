@@ -13,7 +13,11 @@
 // tty.Set(restorer)
 package termios
 
-func (t *TTY) Raw() (*Termios, error) {
+import (
+	"golang.org/x/sys/unix"
+)
+
+func (t *TTY) Raw() (*unix.Termios, error) {
 	restorer, err := t.Get()
 	if err != nil {
 		return nil, err

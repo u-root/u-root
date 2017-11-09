@@ -18,6 +18,7 @@ import (
 	"os/exec"
 
 	"github.com/u-root/u-root/pkg/termios"
+	"golang.org/x/sys/unix"
 )
 
 type Pty struct {
@@ -27,8 +28,8 @@ type Pty struct {
 	Sname    string
 	Kid      int
 	TTY      *termios.TTY
-	WS       *termios.WinSize
-	Restorer *termios.Termios
+	WS       *unix.Winsize
+	Restorer *unix.Termios
 }
 
 func (p *Pty) Start() error {
