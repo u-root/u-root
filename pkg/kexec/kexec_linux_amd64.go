@@ -7,12 +7,10 @@ package kexec
 import (
 	"fmt"
 	"os"
-	"syscall"
 	"unsafe"
-)
 
-// Syscall number for kexec_file_load(2).
-const _SYS_KEXEC_FILE_LOAD = 320
+	"golang.org/x/sys/unix"
+)
 
 // kexec_file_load(2) syscall flags.
 const (
@@ -34,13 +32,13 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 		flags |= _KEXEC_FILE_NO_INITRAMFS
 	}
 
-	cmdPtr, err := syscall.BytePtrFromString(cmdline)
+	cmdPtr, err := unix.BytePtrFromString(cmdline)
 	if err != nil {
 		return fmt.Errorf("could not use cmdline %q: %v", cmdline, err)
 	}
 
-	if _, _, errno := syscall.Syscall6(
-		_SYS_KEXEC_FILE_LOAD,
+	if _, _, errno := unix.Syscall6(
+		unix.SYS_KEXEC_FILE_LOAD,
 		kernel.Fd(),
 		ramfsfd,
 		uintptr(len(cmdline)),
