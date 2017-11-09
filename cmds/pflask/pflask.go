@@ -176,9 +176,9 @@ func modedev(st os.FileInfo) (uint32, int) {
 	return uint32(st.Sys().(*syscall.Stat_t).Mode), dev
 }
 
-// make_console sets the right modes for the real console, then creates
+// makeConsole sets the right modes for the real console, then creates
 // a /dev/console in the chroot.
-func make_console(base, console string, unprivileged bool) {
+func makeConsole(base, console string, unprivileged bool) {
 	if err := os.Chmod(console, 0600); err != nil {
 		log.Printf("%v", err)
 	}
@@ -213,8 +213,8 @@ func make_console(base, console string, unprivileged bool) {
 
 }
 
-// copy_nodes makes copies of needed nodes in the chroot.
-func copy_nodes(base string) {
+// copyNodes makes copies of needed nodes in the chroot.
+func copyNodes(base string) {
 	nodes := []string{
 		"/dev/tty",
 		"/dev/full",
@@ -236,9 +236,9 @@ func copy_nodes(base string) {
 	}
 }
 
-// make_ptmx creates /dev/ptmx in the root. Because of order of operations
-// it has to happen at a different time than copy_nodes.
-func make_ptmx(base string) {
+// makePtmx creates /dev/ptmx in the root. Because of order of operations
+// it has to happen at a different time than copyNodes.
+func makePtmx(base string) {
 	dst := filepath.Join(base, "/dev/ptmx")
 
 	if _, err := os.Stat(dst); err == nil {
@@ -250,8 +250,8 @@ func make_ptmx(base string) {
 	}
 }
 
-// make_symlinks sets up standard symlinks as found in /dev.
-func make_symlinks(base string) {
+// makeSymlinks sets up standard symlinks as found in /dev.
+func makeSymlinks(base string) {
 	linkit := []struct {
 		src, dst string
 	}{
@@ -375,14 +375,14 @@ func main() {
 	MountAll(*chroot, unprivileged)
 
 	if !unprivileged {
-		copy_nodes(*chroot)
+		copyNodes(*chroot)
 	}
 
-	make_ptmx(*chroot)
+	makePtmx(*chroot)
 
-	make_symlinks(*chroot)
+	makeSymlinks(*chroot)
 
-	make_console(*chroot, sname, unprivileged)
+	makeConsole(*chroot, sname, unprivileged)
 
 	//umask(0022);
 
