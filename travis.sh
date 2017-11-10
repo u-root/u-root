@@ -46,5 +46,5 @@ echo "-----------------------> go vet scripts/ramfs.go"
 # is it go-gettable?
 echo "-----------------------> test go-gettable"
 go get github.com/u-root/u-root
- sudo date
+ date
  echo "Did it blend"

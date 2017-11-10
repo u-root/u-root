@@ -127,7 +127,12 @@ Of course you have to fetch all those packages first somehow :-)
 
 In the EXAMPLES directory you can see examples of running in a chroot, kernel, and coreboot.
 
+## Testing
 
+You can run tests locally using the standard `go test` pointing at the directory where you would
+like to run tests (e.g. `go test cmds/dd/`).
+
+You can run the entire test suite locally in a Docker container by running `go run scripts/test_local.go`.
 
 ## Using elvish: a more handy shell
 
