@@ -17,18 +17,18 @@ package main
 
 import (
 	"flag"
+	"golang.org/x/sys/unix"
 	"log"
 	"os"
-	"syscall"
 )
 
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
 	op      = "reboot"
-	opcodes = map[string]uintptr{
-		"halt":    syscall.LINUX_REBOOT_CMD_POWER_OFF,
-		"reboot":  syscall.LINUX_REBOOT_CMD_RESTART,
-		"suspend": syscall.LINUX_REBOOT_CMD_SW_SUSPEND,
+	opcodes = map[string]int{
+		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
+		"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
+		"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
 	}
 )
 
@@ -52,10 +52,11 @@ func main() {
 	}
 
 	if *dryrun {
-		log.Printf("syscall.Syscall6(0x%x, 0x%x, 0x%x, 0x%x, 0, 0, 0)", syscall.SYS_REBOOT, syscall.LINUX_REBOOT_MAGIC1, syscall.LINUX_REBOOT_MAGIC2, f)
+		log.Printf("unix.Reboot(0x%x)", f)
 		os.Exit(0)
 	}
-	if e1, e2, err := syscall.Syscall6(syscall.SYS_REBOOT, syscall.LINUX_REBOOT_MAGIC1, syscall.LINUX_REBOOT_MAGIC2, f, 0, 0, 0); err != 0 {
-		log.Fatalf("a %v b %v err %v", e1, e2, err)
+
+	if err := unix.Reboot(f); err != nil {
+		log.Fatalf(err.Error())
 	}
 }
