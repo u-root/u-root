@@ -97,6 +97,7 @@ func specialFS() error {
 	if err := syscall.Mkdir("/proc", 0); err != nil {
 		return err
 	}
+
 	if err := syscall.Mkdir("/sys", 0); err != nil {
 		return err
 	}
@@ -113,18 +114,13 @@ func specialFS() error {
 		return err
 	}
 
-	if err := syscall.Mount("", "/dev", "devtmpfs", 0, ""); err != nil {
-		return err
-	}
-
-	return nil
-
+	return syscall.Mount("", "/dev", "devtmpfs", 0, "")
 }
 
 // switchRoot will recursive deletes current root, switches the current root to
 // the "newRoot", creates special filesystems (proc, sys and dev) in the new root
 // and execs "init"
-func SwitchRoot(newRoot string, init string) error {
+func switchRoot(newRoot string, init string) error {
 	log.Printf("switch_root: Changing directory")
 	var rootFS syscall.Statfs_t
 
@@ -190,10 +186,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	new_root := flag.Args()[0]
+	newRoot := flag.Args()[0]
 	init := flag.Args()[1]
 
-	if err := SwitchRoot(new_root, init); err != nil {
+	if err := switchRoot(newRoot, init); err != nil {
 		log.Fatalf("switch_root failed %v\n", err)
 	}
 }
