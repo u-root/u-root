@@ -29,7 +29,6 @@
 | gopxe          |               |                 | u-root specific        |
 | gpgv           | -v            |                 |                        |
 | grep           | -glrv         | -cno            | RE2-compatible only    |
-| :x: halt       |               |                 | Not implemented yet!   |
 | hexdump        |               |                 |                        |
 | hostname       |               |                 |                        |
 | init           |               |                 |                        |
@@ -53,18 +52,17 @@
 | netcat         |               |                 |                        |
 | pflask         |               |                 | u-root specific        |
 | ping           | -6chisVw      |                 |                        |
-| :x: poweroff   |               |                 | Not implemented yet!   |
 | printenv       |               |                 |                        |
 | :x: printf     |               |                 | Not implemented yet!   |
 | ps             | -Aaex         |                 |                        |
 | pwd            | -LP           |                 |                        |
 | readlink       | -fv           | -emnqsz         |                        |
-| :x: reboot     |               |                 | Not implemented yet!   |
 | rm             | -iRrv         | -I              |                        |
 | rmmod          |               | -fsv            |                        |
 | run            |               |                 | u-root specific        |
 | rush           |               | -c              |                        |
 | seq            | -s            |                 |                        |
+| shutdown       | halt reboot suspend |           |
 | sleep          |               |                 |                        |
 | sort           | -or           | -bcfmnRu        |                        |
 | srvfiles       | -dhp          |                 | u-root specific        |
