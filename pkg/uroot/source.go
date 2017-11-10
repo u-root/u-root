@@ -12,6 +12,41 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 )
 
+// SourceBuild is an implementation of Build that compiles the Go toolchain
+// (go, compile, link, asm) and includes source files for packages listed in
+// `opts.Packages` to build from scratch.
+func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
+	af := NewArchiveFiles()
+
+	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	log.Printf("Collecting package files and dependencies...")
+	deps := make(map[string]struct{})
+	for _, pkg := range opts.Packages {
+		// Add high-level packages' src files to archive.
+		p := goListPkg(opts, pkg, &af)
+		if p == nil {
+			continue
+		}
+		for _, d := range p.Deps {
+			deps[d] = struct{}{}
+		}
+	}
+	// Add src files of dependencies to archive.
+	for dep := range deps {
+		goListPkg(opts, dep, &af)
+	}
+
+	// Add Go toolchain.
+	log.Printf("Building go toolchain...")
+	if err := buildToolchain(opts, &af); err != nil {
+		return ArchiveFiles{}, err
+	}
+	return af, nil
+}
+
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
 // asm.
 func buildToolchain(opts BuildOpts, out *ArchiveFiles) error {
@@ -53,36 +88,4 @@ func goListPkg(opts BuildOpts, pkg string, out *ArchiveFiles) *golang.ListPackag
 		}
 	}
 	return p
-}
-
-func sourceBuild(opts BuildOpts) (ArchiveFiles, error) {
-	af := NewArchiveFiles()
-
-	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	log.Printf("Collecting package files and dependencies...")
-	deps := make(map[string]struct{})
-	for _, pkg := range opts.Packages {
-		// Add high-level packages' src files to archive.
-		p := goListPkg(opts, pkg, &af)
-		if p == nil {
-			continue
-		}
-		for _, d := range p.Deps {
-			deps[d] = struct{}{}
-		}
-	}
-	// Add src files of dependencies to archive.
-	for dep := range deps {
-		goListPkg(opts, dep, &af)
-	}
-
-	// Add Go toolchain.
-	log.Printf("Building go toolchain...")
-	if err := buildToolchain(opts, &af); err != nil {
-		return ArchiveFiles{}, err
-	}
-	return af, nil
 }
