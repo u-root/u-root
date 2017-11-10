@@ -68,7 +68,7 @@ func buildPkg(pkg string, wd string, output string, opts []string) error {
 	}
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	if o, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("building statically linked go tool info %v: %v, %v", pkg, string(o), err)
+		return fmt.Errorf("Building statically linked go tool info %v: %v, %v", pkg, string(o), err)
 	}
 	return nil
 }
