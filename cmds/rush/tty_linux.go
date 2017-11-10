@@ -9,12 +9,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
-	ttypgrp uintptr
+	ttypgrp int
 	ttyf    *os.File
 )
 
@@ -24,7 +25,7 @@ func tty() {
 
 	sigs := make(chan os.Signal, 512)
 	signal.Notify(sigs, os.Interrupt)
-	signal.Ignore(syscall.SIGTTOU)
+	signal.Ignore(unix.SIGTTOU)
 	go func() {
 		for i := range sigs {
 			fmt.Println(i)
@@ -40,9 +41,9 @@ func tty() {
 	}
 	// Get the current pgrp, and the pgrp on the tty.
 	// get current pgrp
-	r1, r2, errno := syscall.RawSyscall(syscall.SYS_IOCTL, ttyf.Fd(), uintptr(syscall.TIOCGPGRP), uintptr(unsafe.Pointer(&ttypgrp)))
-	if errno != 0 {
-		log.Printf("Can't get foreground: %v, %v, %v", r1, r2, errno)
+	ttypgrp, err = unix.IoctlGetInt(int(ttyf.Fd()), unix.TIOCGPGRP)
+	if err != nil {
+		log.Printf("Can't get foreground: %v", err)
 		ttyf.Close()
 		ttyf = nil
 		ttypgrp = 0
@@ -52,9 +53,9 @@ func tty() {
 func foreground() {
 	// Place process group in foreground.
 	if ttypgrp != 0 {
-		r1, r2, errno := syscall.RawSyscall(syscall.SYS_IOCTL, ttyf.Fd(), uintptr(syscall.TIOCSPGRP), uintptr(unsafe.Pointer(&ttypgrp)))
+		_, _, errno := unix.RawSyscall(unix.SYS_IOCTL, ttyf.Fd(), uintptr(unix.TIOCSPGRP), uintptr(unsafe.Pointer(&ttypgrp)))
 		if errno != 0 {
-			log.Printf("rush pid %v: Can't set foreground to %v: %v, %v, %v", os.Getpid(), ttypgrp, r1, r2, errno)
+			log.Printf("rush pid %v: Can't set foreground to %v: %v", os.Getpid(), ttypgrp, errno)
 		}
 	}
 
