@@ -5,21 +5,25 @@
 package uroot
 
 import (
-	"sort"
-
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
 	"github.com/u-root/u-root/pkg/ramfs"
 )
 
-type CPIOArchiver struct{}
+// CPIOArchiver is an implementation of Archiver for the cpio format.
+type CPIOArchiver struct {
+	// Format is the name of the cpio format to use.
+	Format string
+}
 
+// DefaultExtension implements Archiver.DefaultExtension.
 func (ca CPIOArchiver) DefaultExtension() string {
 	return "cpio"
 }
 
+// Archive implements Archiver.Archive.
 func (ca CPIOArchiver) Archive(opts ArchiveOpts) error {
-	archiver, err := cpio.Format("newc")
+	archiver, err := cpio.Format(ca.Format)
 	if err != nil {
 		return err
 	}
@@ -49,29 +53,17 @@ func (ca CPIOArchiver) Archive(opts ArchiveOpts) error {
 
 	// Reproducible builds: Files should be added to the archive in the
 	// same order.
-	r := opts.ArchiveFiles.Records
-	f := opts.ArchiveFiles.Files
-	paths := make([]string, 0, len(r)+len(f))
-	for path := range r {
-		paths = append(paths, path)
-	}
-	for path := range f {
-		paths = append(paths, path)
-	}
-	sort.Sort(sort.StringSlice(paths))
-
-	for _, path := range paths {
-		if record, ok := r[path]; ok {
+	for _, path := range opts.ArchiveFiles.SortedKeys() {
+		if record, ok := opts.ArchiveFiles.Records[path]; ok {
 			if err := init.WriteRecord(record); err != nil {
 				return err
 			}
 		}
-		if src, ok := f[path]; ok {
+		if src, ok := opts.ArchiveFiles.Files[path]; ok {
 			if err := init.WriteFile(src, path); err != nil {
 				return err
 			}
 		}
 	}
-
 	return init.WriteTrailer()
 }

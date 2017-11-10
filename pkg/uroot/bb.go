@@ -123,17 +123,100 @@ func init() {
 }
 `
 
-var (
+// Commands to skip building in bb mode. init and rush should be obvious
+// builtin and script we skip as we have no toolchain in this mode.
+var skip = map[string]struct{}{
+	"builtin": struct{}{},
+	"init":    struct{}{},
+	"rush":    struct{}{},
+	"script":  struct{}{},
+}
 
-	// commands to skip. init and rush should be obvious
-	// builtin and script we skip as we have no toolchain in this mode.
-	skip = map[string]bool{
-		"builtin": true,
-		"init":    true,
-		"rush":    true,
-		"script":  true,
+type bbBuilder struct {
+	opts    BuildOpts
+	bbshDir string
+	initMap string
+	af      ArchiveFiles
+}
+
+// BBBuild is an implementation of Build for the busybox-like u-root initramfs.
+//
+// BBBuild rewrites the source files of the packages given to create one
+// busybox-like binary containing all commands in `opts.Packages`.
+func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
+	urootDir, err := opts.Env.FindPackageDir("github.com/u-root/u-root")
+	if err != nil {
+		return ArchiveFiles{}, err
 	}
-)
+
+	bbshDir := filepath.Join(urootDir, "bbsh")
+	if err := os.MkdirAll(bbshDir, 0755); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	builder := &bbBuilder{
+		opts:    opts,
+		bbshDir: bbshDir,
+		initMap: "package main\n\nvar initMap = map[string]func() {",
+		af:      NewArchiveFiles(),
+	}
+
+	// Move and rewrite package files.
+	for _, pkg := range opts.Packages {
+		if _, ok := skip[filepath.Base(pkg)]; ok {
+			continue
+		}
+
+		if err := builder.moveCommand(pkg); err != nil {
+			return ArchiveFiles{}, err
+		}
+	}
+
+	// Create init.go.
+	if err := ioutil.WriteFile(filepath.Join(builder.bbshDir, "init.go"), []byte(initGo), 0644); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	// Move rush shell over.
+	p, err := opts.Env.ListPackage("github.com/u-root/u-root/cmds/rush")
+	if err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	if err := filepath.Walk(p.Dir, func(name string, fi os.FileInfo, err error) error {
+		if err != nil || fi.IsDir() {
+			return err
+		}
+		b, err := ioutil.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		return ioutil.WriteFile(filepath.Join(builder.bbshDir, fi.Name()), b, 0644)
+	}); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	// Map init functions.
+	builder.initMap += "\n}"
+	if err := ioutil.WriteFile(filepath.Join(builder.bbshDir, "initmap.go"), []byte(builder.initMap), 0644); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	// Compile rush + commands to /ubin/rush.
+	rushPath := filepath.Join(opts.TempDir, "rush")
+	if err := opts.Env.Build("github.com/u-root/u-root/bbsh", rushPath, golang.BuildOpts{}); err != nil {
+		return ArchiveFiles{}, err
+	}
+	if err := builder.af.AddFile(rushPath, "ubin/rush"); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	// Symlink from /init to rush.
+	if err := builder.af.AddRecord(cpio.Symlink("init", "/ubin/rush")); err != nil {
+		return ArchiveFiles{}, err
+	}
+	return builder.af, nil
+}
 
 type CommandTemplate struct {
 	Gopath  string
@@ -354,79 +437,4 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 
 	// Add a symlink to our bbsh.
 	return b.af.AddRecord(cpio.Symlink(filepath.Join("ubin", p.name), "/ubin/rush"))
-}
-
-type bbBuilder struct {
-	opts    BuildOpts
-	bbshDir string
-	initMap string
-	af      ArchiveFiles
-}
-
-func bbBuild(opts BuildOpts) (ArchiveFiles, error) {
-	urootDir, err := opts.Env.FindPackageDir("github.com/u-root/u-root")
-	if err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	bbshDir := filepath.Join(urootDir, "bbsh")
-	if err := os.MkdirAll(bbshDir, 0755); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	builder := &bbBuilder{
-		opts:    opts,
-		bbshDir: bbshDir,
-		initMap: "package main\n\nvar initMap = map[string]func() {",
-		af:      NewArchiveFiles(),
-	}
-
-	for _, pkg := range opts.Packages {
-		if skip[filepath.Base(pkg)] {
-			continue
-		}
-
-		if err := builder.moveCommand(pkg); err != nil {
-			return ArchiveFiles{}, err
-		}
-	}
-
-	if err := ioutil.WriteFile(filepath.Join(builder.bbshDir, "init.go"), []byte(initGo), 0644); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	p, err := opts.Env.ListPackage("github.com/u-root/u-root/cmds/rush")
-	if err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	if err := filepath.Walk(p.Dir, func(name string, fi os.FileInfo, err error) error {
-		if err != nil || fi.IsDir() {
-			return err
-		}
-		b, err := ioutil.ReadFile(name)
-		if err != nil {
-			return err
-		}
-		return ioutil.WriteFile(filepath.Join(builder.bbshDir, fi.Name()), b, 0644)
-	}); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	builder.initMap += "\n}"
-	if err := ioutil.WriteFile(filepath.Join(builder.bbshDir, "initmap.go"), []byte(builder.initMap), 0644); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	rushPath := filepath.Join(opts.TempDir, "rush")
-	if err := opts.Env.Build("github.com/u-root/u-root/bbsh", rushPath, golang.BuildOpts{}); err != nil {
-		return ArchiveFiles{}, err
-	}
-	if err := builder.af.AddFile(rushPath, "ubin/rush"); err != nil {
-		return ArchiveFiles{}, err
-	}
-	if err := builder.af.AddRecord(cpio.Symlink("init", "/ubin/rush")); err != nil {
-		return ArchiveFiles{}, err
-	}
-	return builder.af, nil
 }
