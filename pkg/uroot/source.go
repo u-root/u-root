@@ -13,8 +13,8 @@ import (
 )
 
 // SourceBuild is an implementation of Build that compiles the Go toolchain
-// (go, compile, link, asm) and includes source files for packages listed in
-// `opts.Packages` to build from scratch.
+// (go, compile, link, asm) and an init process. It includes source files for
+// packages listed in `opts.Packages` to build from scratch.
 func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 	af := NewArchiveFiles()
 
@@ -41,7 +41,17 @@ func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 
 	// Add Go toolchain.
 	log.Printf("Building go toolchain...")
-	if err := buildToolchain(opts, &af); err != nil {
+	if err := buildToolchain(opts); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	// Build init.
+	if err := opts.Env.Build("github.com/u-root/u-root/cmds/init", filepath.Join(opts.TempDir, "init"), golang.BuildOpts{}); err != nil {
+		return ArchiveFiles{}, err
+	}
+
+	// Add Go toolchain and init to archive.
+	if err := af.AddFile(opts.TempDir, ""); err != nil {
 		return ArchiveFiles{}, err
 	}
 	return af, nil
@@ -49,7 +59,7 @@ func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
 // asm.
-func buildToolchain(opts BuildOpts, out *ArchiveFiles) error {
+func buildToolchain(opts BuildOpts) error {
 	goBin := filepath.Join(opts.TempDir, "go/bin/go")
 	tcbo := golang.BuildOpts{
 		ExtraArgs: []string{"-tags", "cmd_go_bootstrap"},
@@ -65,9 +75,7 @@ func buildToolchain(opts BuildOpts, out *ArchiveFiles) error {
 			return err
 		}
 	}
-
-	// Add Go toolchain to archive.
-	return out.AddFile(opts.TempDir, "")
+	return nil
 }
 
 func goListPkg(opts BuildOpts, pkg string, out *ArchiveFiles) *golang.ListPackage {
