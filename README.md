@@ -63,7 +63,7 @@ directories will be included. For example:
 # Both are required for the elvish shell.
 go get github.com/boltdb/bolt
 go get github.com/elves/elvish
-u-root -build=bb ./cmds/\* github.com/elves/elvish
+u-root -build=bb ./cmds/* github.com/elves/elvish
 ```
 
 Side note: `elvish` is a nicer shell than our default shell `rush`; and also
