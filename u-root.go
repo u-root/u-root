@@ -30,6 +30,8 @@ var (
 
 	extraFiles = flag.String("files", "", "Additional files and directories to add to archive.")
 	binaries   = flag.String("binaries", "", "Additional binaries and their ldd dependencies to add to archive.")
+
+	outputPath = flag.String("o", "", "Path to output initramfs file.")
 )
 
 func main() {
@@ -99,7 +101,10 @@ func main() {
 	}
 
 	// Open the target initramfs file.
-	filename := fmt.Sprintf("/tmp/initramfs.%s_%s.%s", env.GOOS, env.GOARCH, archiver.DefaultExtension())
+	filename := *outputPath
+	if filename == "" {
+		filename = fmt.Sprintf("/tmp/initramfs.%s_%s.%s", env.GOOS, env.GOARCH, archiver.DefaultExtension())
+	}
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		log.Fatalf("Couldn't open file %q: %v", filename, err)
