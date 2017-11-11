@@ -17,9 +17,10 @@ package main
 
 import (
 	"flag"
-	"golang.org/x/sys/unix"
 	"log"
 	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
