@@ -1,4 +1,3 @@
-
 u-root
 ======
 
@@ -43,20 +42,20 @@ examples:
 
 ```shell
 # Build a bb-mode cpio initramfs of all the Go cmds in ./cmds/...
-u-root --build=bb
+u-root -build=bb
 
 # Generate a cpio archive named initramfs.cpio.
-u-root --format=cpio --build=source -o initramfs.cpio
+u-root -format=cpio -build=source -o initramfs.cpio
 
 # Generate a bb-mode archive with only these given commands.
-u-root --format=cpio --build=bb ./cmds/{ls,ip,dhclient,wget,tcz,cat}
+u-root -format=cpio -build=bb ./cmds/{ls,ip,dhclient,wget,tcz,cat}
 ```
 
-`--format=cpio` and `--build=source` are the defaults. The default set of
-packages to include is all packages in `github.com/u-root/u-root/cmds/...`.
+`-format=cpio` and `-build=source` are the default flag values. The default
+set of packages included is all packages in `github.com/u-root/u-root/cmds/...`.
 
 In addition to using paths to specify Go source packages to include, you may
-also use Go package import paths (e.g. "golang.org/x/tools/imports") to include
+also use Go package import paths (e.g. `golang.org/x/tools/imports`) to include
 commands. Only the `main` package and its dependencies in those source
 directories will be included. For example:
 
@@ -64,7 +63,7 @@ directories will be included. For example:
 # Both are required for the elvish shell.
 go get github.com/boltdb/bolt
 go get github.com/elves/elvish
-u-root --build=bb ./cmds/\* github.com/elves/elvish
+u-root -build=bb ./cmds/\* github.com/elves/elvish
 ```
 
 Side note: `elvish` is a nicer shell than our default shell `rush`; and also
@@ -83,9 +82,10 @@ qemu-system-x86_64 -kernel path/to/kernel -initrd /tmp/initramfs.linux_amd64.cpi
 Note that you do not have to build a special kernel on your own, it is
 sufficient to use an existing one. Usually you can find one in `/boot`.
 
-You may also include additional files in the initramfs using the `--files` flag.
-As example for Debian, you want to add two kernel modules for testing, executing
-your currently booted kernel:
+You may also include additional files in the initramfs using the `-files` flag.
+If you add binaries with `-files` are listed, their ldd dependencies will be
+included as well. As example for Debian, you want to add two kernel modules for
+testing, executing your currently booted kernel:
 
 ```shell
 u-root -files "$HOME/hello.ko $HOME/hello2.ko"
