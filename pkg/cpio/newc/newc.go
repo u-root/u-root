@@ -231,7 +231,10 @@ func (r *reader) ReadRecord() (cpio.Record, error) {
 
 	content := io.NewSectionReader(r.r, r.pos, int64(hdr.FileSize))
 	r.pos = round4(r.pos + int64(hdr.FileSize))
-	return cpio.Record{cpio.NewReadCloser(content), info}, nil
+	return cpio.Record{
+		Info:       info,
+		ReadCloser: cpio.NewReadCloser(content),
+	}, nil
 }
 
 func init() {

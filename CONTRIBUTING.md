@@ -7,6 +7,10 @@ We need help with this project, so contributions are welcome.
 Conduct collaboration around u-root in accordance to the [Code of
 Conduct](https://github.com/u-root/u-root/wiki/Code-of-Conduct).
 
+## Slack Channel
+
+You can sign up for the Slack channel [here](http://slack.u-root.com:3000/).
+
 ## Coding Style
 
 The ``u-root`` project aims to follow the standard formatting recommendations
@@ -89,9 +93,8 @@ your github fork and its branches and also on your PR's to ``u-root``.
 
 ## Discussion
 
-``u-root`` is on Slack as "u-root.slack.com".  Until we figure out how to
-allow anyone to sign up, please submit a GitHub issue asking to be added to
-Slack. Sorry for the inconvenience.
+``u-root`` is on Slack as "u-root.slack.com".  Please sign up
+[here](http://slack.u-root.com:3000/).
 
 Issues can be reported via Github.  A PR which addresses a Github issue can
 reference that with a simple "Fixes #NNN" on a line in the commit message,
