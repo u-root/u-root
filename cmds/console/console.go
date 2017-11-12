@@ -5,7 +5,7 @@
 // console implements a basic console. It establishes a pair of files
 // to read from, the default being a UART at 0x3f8, but an alternative
 // being just stdin and stdout. It will also set up a root file system
-// using uroot.Rootfs, although this can be disabled as well.
+// using util.Rootfs, although this can be disabled as well.
 // Console uses a Go version of fork_pty to start up a shell, default
 // /ubin/rush. Console runs until the shell exits and then exits itself.
 package main
@@ -18,7 +18,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/pty"
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
@@ -42,7 +42,7 @@ func main() {
 	// Make a good faith effort to set up root. This being
 	// a kind of init program, we do our best and keep going.
 	if *setupRoot {
-		uroot.Rootfs()
+		util.Rootfs()
 	}
 
 	in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)

@@ -13,7 +13,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 const usage = "netcat [go-style network address]"
@@ -21,7 +21,7 @@ const usage = "netcat [go-style network address]"
 var netType = flag.String("net", "tcp", "What net type to use, e.g. tcp, unix, etc.")
 
 func init() {
-	uroot.Usage(usage)
+	util.Usage(usage)
 }
 
 func main() {

@@ -12,29 +12,30 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
-	verbose   = flag.Bool("v", false, "print all build commands")
-	ludicrous = flag.Bool("ludicrous", false, "print out information about symlink creation")
-	test      = flag.Bool("test", false, "Test mode: don't try to set control tty")
-	debug     = func(string, ...interface{}) {}
+	verbose = flag.Bool("v", false, "print all build commands")
+	test    = flag.Bool("test", false, "Test mode: don't try to set control tty")
+	debug   = func(string, ...interface{}) {}
 )
 
 func main() {
 	a := []string{"build"}
 	flag.Parse()
 	log.Printf("Welcome to u-root")
-	uroot.Rootfs()
+	util.Rootfs()
 
 	if *verbose {
 		debug = log.Printf
@@ -64,15 +65,13 @@ func main() {
 			if err := os.Symlink(source, destPath); err != nil {
 				log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
 			}
-			if *ludicrous {
-				log.Printf("Symlink %v -> %v", source, destPath)
-			}
 		}
 	}
-	envs := uroot.Envs
+
+	envs := os.Environ()
 	debug("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
-	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(uroot.CmdsPath, "installcommand"))
+	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(util.CmdsPath, "installcommand"))
 	cmd := exec.Command("go", a...)
 	installenvs := envs
 	installenvs = append(envs, "GOBIN=/buildbin")
@@ -110,14 +109,40 @@ func main() {
 		}
 	}
 
+	var profile string
+	// Some systems wipe out all the environment variables we so carefully craft.
+	// There is a way out -- we can put them into /etc/profile.d/uroot if we want.
+	// The PATH variable has to change, however.
+	path := fmt.Sprintf("%v:%v:%v:%v", util.GoBin(), util.PATHHEAD, "$PATH", util.PATHTAIL)
+	for k, v := range util.Env {
+		// We're doing the hacky way for now. We can clean this up later.
+		if k == "PATH" {
+			profile += "export PATH=" + path + "\n"
+		} else {
+			profile += "export " + k + "=" + v + "\n"
+		}
+	}
+
+	// The IFS lets us force a rehash every time we type a command, so that when we
+	// build uroot commands we don't keep rebuilding them.
+	profile += "IFS=`hash -r`\n"
+
+	// IF the profile is used, THEN when the user logs in they will need a
+	// private tmpfs. There's no good way to do this on linux. The closest
+	// we can get for now is to mount a tmpfs of /go/pkg/%s_%s :-( Same
+	// applies to ubin. Each user should have their own.
+	profile += fmt.Sprintf("sudo mount -t tmpfs none /go/pkg/%s_%s\n", runtime.GOOS, runtime.GOARCH)
+	profile += fmt.Sprintf("sudo mount -t tmpfs none /ubin\n")
+	profile += fmt.Sprintf("sudo mount -t tmpfs none /pkg\n")
+
 	// Now here's some good fun. We've set environment variables we want to see used.
 	// But on some systems the environment variable we create is completely ignored.
 	// Oh, is that you again, tinycore? Well.
-	// So we can save the day by writing the uroot.profile string to /etc/profile.d/uroot.sh
+	// So we can save the day by writing the profile string to /etc/profile.d/uroot.sh
 	// mode, usually, 644.
 	// Only bother doing this is /etc/profile.d exists and is a directory.
 	if fi, err := os.Stat("/etc/profile.d"); err == nil && fi.IsDir() {
-		if err := ioutil.WriteFile("/etc/profile.d/uroot.sh", []byte(uroot.Profile), 0644); err != nil {
+		if err := ioutil.WriteFile("/etc/profile.d/uroot.sh", []byte(profile), 0644); err != nil {
 			log.Printf("Trying to write uroot profile failed: %v", err)
 		}
 	}

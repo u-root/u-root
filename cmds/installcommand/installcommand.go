@@ -36,7 +36,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
@@ -171,7 +171,7 @@ func main() {
 	// and the glob will find it. If we get to the point that the glob
 	// no longer works we can go with filepath.Walk (which glob uses anyway)
 	// but for now this works.
-	src := filepath.Join("/src", uroot.CmdsPath, form.cmdName)
+	src := filepath.Join("/src", util.CmdsPath, form.cmdName)
 	if _, err := os.Stat(src); err != nil {
 		l, err := filepath.Glob(filepath.Join("/src/*/*/", form.cmdName))
 		if err != nil || len(l) == 0 {
