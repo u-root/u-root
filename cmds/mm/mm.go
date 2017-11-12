@@ -9,38 +9,29 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
 	dest      = flag.String("d", "/u", "destination directory")
-	namespace = []uroot.Creator{
-		uroot.Dir{Name: "proc", Mode: os.FileMode(0555)},
-		uroot.Dir{Name: "sys", Mode: os.FileMode(0555)},
-		uroot.Dir{Name: "buildbin", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "ubin", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "tmp", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "env", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "etc", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "tcz", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "dev", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "dev/pts", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "lib", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "usr/lib", Mode: os.FileMode(0777)},
-		uroot.Dir{Name: "go/pkg/linux_amd64", Mode: os.FileMode(0777)},
-		uroot.Link{Oldpath: "/init", Newpath: "init"},
-		//uroot.Dir{Name: "dev/null", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0103},
-		//uroot.Dir{Name: "dev/console", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0501},
-		//uroot.Dev{Name: "dev/tty", Mode: uint32(syscall.S_IFCHR) | 0666, dev: 0x0500},
-		//uroot.Dev{Name: "dev/urandom", Mode: uint32(syscall.S_IFCHR) | 0444, dev: 0x0109},
-		//mount{source: "proc", target: "proc", fstype: "proc", flags: syscall.MS_MGC_VAL, opts: ""},
-		//mount{source: "sys", target: "sys", fstype: "sysfs", flags: syscall.MS_MGC_VAL, opts: ""},
-		//// Kernel must be compiled with CONFIG_DEVTMPFS for this to work.
-		//mount{source: "none", target: "dev", fstype: "devtmpfs", flags: syscall.MS_MGC_VAL},
-		uroot.Mount{Source: "none", Target: "dev/pts", FSType: "devpts", Flags: syscall.MS_MGC_VAL, Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
-		uroot.Symlink{Linkpath: "/dev/pts/ptmx", Target: "dev/ptmx"},
+	namespace = []util.Creator{
+		util.Dir{Name: "proc", Mode: 0555},
+		util.Dir{Name: "sys", Mode: 0555},
+		util.Dir{Name: "buildbin", Mode: 0777},
+		util.Dir{Name: "ubin", Mode: 0777},
+		util.Dir{Name: "tmp", Mode: 0777},
+		util.Dir{Name: "env", Mode: 0777},
+		util.Dir{Name: "etc", Mode: 0777},
+		util.Dir{Name: "tcz", Mode: 0777},
+		util.Dir{Name: "dev", Mode: 0777},
+		util.Dir{Name: "dev/pts", Mode: 0777},
+		util.Dir{Name: "lib", Mode: 0777},
+		util.Dir{Name: "usr/lib", Mode: 0777},
+		util.Dir{Name: "go/pkg/linux_amd64", Mode: 0777},
+		util.Link{NewPath: "init", OldPath: "/init"},
+		util.Mount{Target: "dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
+		util.Symlink{NewPath: "dev/ptmx", Target: "/dev/pts/ptmx"},
 	}
 	commands = []*exec.Cmd{
 		exec.Command("minimega", "-e", "vm", "config", "filesystem"),
@@ -52,9 +43,11 @@ var (
 
 func main() {
 	flag.Parse()
-	// We won't do wholesale removal. That's up to you if this fails. */
+	// We won't do wholesale removal. That's up to you if this fails.
 	if err := os.Chdir(*dest); err == nil {
 		log.Printf("Directory exists, skipping namespace setup")
+	} else if !os.IsNotExist(err) {
+		log.Fatalf("Couldn't chdir(%q): %v", *dest, err)
 	} else {
 		if err := os.Mkdir(*dest, 0777); err != nil {
 			log.Fatalf("Can't mkdir: %v", err)

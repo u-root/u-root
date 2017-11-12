@@ -23,7 +23,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
@@ -36,7 +36,7 @@ var (
 	domain  = flag.Bool("d", false, "print your domain name")
 )
 
-func handleFlags(u *uroot.Utsname) string {
+func handleFlags(u *util.Utsname) string {
 	info := make([]string, 0, 6)
 
 	if *all || flag.NFlag() == 0 {
@@ -69,10 +69,10 @@ end:
 func main() {
 	flag.Parse()
 
-	if u, err := uroot.Uname(); err != nil {
+	if u, err := util.Uname(); err != nil {
 		log.Fatalf("%v", err)
 	} else {
 		info := handleFlags(u)
-		fmt.Printf("%v\n", info)
+		fmt.Println(info)
 	}
 }

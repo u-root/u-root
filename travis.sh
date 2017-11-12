@@ -42,7 +42,7 @@ echo "-----------------------> test -cover"
  (cd pkg && CGO_ENABLED=0 go test -cover ./...)
 
 echo "-----------------------> go vet"
-  (go tool vet cmds uroot pkg)
+  (go tool vet cmds pkg)
 
 # is it go-gettable?
 echo "-----------------------> test go-gettable"

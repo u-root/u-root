@@ -62,7 +62,7 @@ import (
 	"strings"
         "syscall"
 
-	"github.com/u-root/u-root/uroot"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 func usage () {
@@ -97,7 +97,7 @@ func init() {
 		//log.Printf("Skipping root file system setup since /init is not pid 1")
 		return
 	}
-	uroot.Rootfs()
+	util.Rootfs()
 
         // spawn the first shell. We had been running the shell as pid 1
         // but that makes control tty stuff messy. We think.
