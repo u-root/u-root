@@ -21,40 +21,53 @@ package tcpip
 import (
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/waiter"
 )
 
+// Error represents an error in the netstack error space. Using a special type
+// ensures that errors outside of this space are not accidentally introduced.
+type Error struct {
+	string
+}
+
+// String implements fmt.Stringer.String.
+func (e *Error) String() string {
+	return e.string
+}
+
 // Errors that can be returned by the network stack.
 var (
-	ErrUnknownProtocol       = errors.New("unknown protocol")
-	ErrUnknownNICID          = errors.New("unknown nic id")
-	ErrDuplicateNICID        = errors.New("duplicate nic id")
-	ErrDuplicateAddress      = errors.New("duplicate address")
-	ErrNoRoute               = errors.New("no route")
-	ErrBadLinkEndpoint       = errors.New("bad link layer endpoint")
-	ErrAlreadyBound          = errors.New("endpoint already bound")
-	ErrInvalidEndpointState  = errors.New("endpoint is in invalid state")
-	ErrAlreadyConnecting     = errors.New("endpoint is already connecting")
-	ErrAlreadyConnected      = errors.New("endpoint is already connected")
-	ErrNoPortAvailable       = errors.New("no ports are available")
-	ErrPortInUse             = errors.New("port is in use")
-	ErrBadLocalAddress       = errors.New("bad local address")
-	ErrClosedForSend         = errors.New("endpoint is closed for send")
-	ErrClosedForReceive      = errors.New("endpoint is closed for receive")
-	ErrWouldBlock            = errors.New("operation would block")
-	ErrConnectionRefused     = errors.New("connection was refused")
-	ErrTimeout               = errors.New("operation timed out")
-	ErrAborted               = errors.New("operation aborted")
-	ErrConnectStarted        = errors.New("connection attempt started")
-	ErrDestinationRequired   = errors.New("destination address is required")
-	ErrNotSupported          = errors.New("operation not supported")
-	ErrQueueSizeNotSupported = errors.New("queue size querying not supported")
-	ErrNotConnected          = errors.New("endpoint not connected")
-	ErrConnectionReset       = errors.New("connection reset by peer")
-	ErrConnectionAborted     = errors.New("connection aborted")
+	ErrUnknownProtocol       = &Error{"unknown protocol"}
+	ErrUnknownNICID          = &Error{"unknown nic id"}
+	ErrUnknownProtocolOption = &Error{"unknown option for protocol"}
+	ErrDuplicateNICID        = &Error{"duplicate nic id"}
+	ErrDuplicateAddress      = &Error{"duplicate address"}
+	ErrNoRoute               = &Error{"no route"}
+	ErrBadLinkEndpoint       = &Error{"bad link layer endpoint"}
+	ErrAlreadyBound          = &Error{"endpoint already bound"}
+	ErrInvalidEndpointState  = &Error{"endpoint is in invalid state"}
+	ErrAlreadyConnecting     = &Error{"endpoint is already connecting"}
+	ErrAlreadyConnected      = &Error{"endpoint is already connected"}
+	ErrNoPortAvailable       = &Error{"no ports are available"}
+	ErrPortInUse             = &Error{"port is in use"}
+	ErrBadLocalAddress       = &Error{"bad local address"}
+	ErrClosedForSend         = &Error{"endpoint is closed for send"}
+	ErrClosedForReceive      = &Error{"endpoint is closed for receive"}
+	ErrWouldBlock            = &Error{"operation would block"}
+	ErrConnectionRefused     = &Error{"connection was refused"}
+	ErrTimeout               = &Error{"operation timed out"}
+	ErrAborted               = &Error{"operation aborted"}
+	ErrConnectStarted        = &Error{"connection attempt started"}
+	ErrDestinationRequired   = &Error{"destination address is required"}
+	ErrNotSupported          = &Error{"operation not supported"}
+	ErrQueueSizeNotSupported = &Error{"queue size querying not supported"}
+	ErrNotConnected          = &Error{"endpoint not connected"}
+	ErrConnectionReset       = &Error{"connection reset by peer"}
+	ErrConnectionAborted     = &Error{"connection aborted"}
+	ErrNoSuchFile            = &Error{"no such file"}
+	ErrInvalidOptionValue    = &Error{"invalid option value specified"}
 )
 
 // Errors related to Subnet
@@ -177,17 +190,20 @@ type Endpoint interface {
 	// Read reads data from the endpoint and optionally returns the sender.
 	// This method does not block if there is no data pending.
 	// It will also either return an error or data, never both.
-	Read(*FullAddress) (buffer.View, error)
+	Read(*FullAddress) (buffer.View, *Error)
 
 	// Write writes data to the endpoint's peer, or the provided address if
 	// one is specified. This method does not block if the data cannot be
 	// written.
-	Write(buffer.View, *FullAddress) (uintptr, error)
+	//
+	// Note that unlike io.Writer.Write, it is not an error for Write to
+	// perform a partial write.
+	Write(buffer.View, *FullAddress) (uintptr, *Error)
 
 	// Peek reads data without consuming it from the endpoint.
 	//
 	// This method does not block if there is no data pending.
-	Peek(io.Writer) (uintptr, error)
+	Peek([][]byte) (uintptr, *Error)
 
 	// Connect connects the endpoint to its peer. Specifying a NIC is
 	// optional.
@@ -200,22 +216,22 @@ type Endpoint interface {
 	//		the endpoint becomes writable. (This mimics the
 	//		connect(2) syscall behavior.)
 	//	Anything else -- the attempt to connect failed.
-	Connect(address FullAddress) error
+	Connect(address FullAddress) *Error
 
 	// Shutdown closes the read and/or write end of the endpoint connection
 	// to its peer.
-	Shutdown(flags ShutdownFlags) error
+	Shutdown(flags ShutdownFlags) *Error
 
 	// Listen puts the endpoint in "listen" mode, which allows it to accept
 	// new connections.
-	Listen(backlog int) error
+	Listen(backlog int) *Error
 
 	// Accept returns a new endpoint if a peer has established a connection
 	// to an endpoint previously set to listen mode. This method does not
 	// block if no new connections are available.
 	//
 	// The returned Queue is the wait queue for the newly created endpoint.
-	Accept() (Endpoint, *waiter.Queue, error)
+	Accept() (Endpoint, *waiter.Queue, *Error)
 
 	// Bind binds the endpoint to a specific local address and port.
 	// Specifying a NIC is optional.
@@ -223,25 +239,25 @@ type Endpoint interface {
 	// An optional commit function will be executed atomically with respect
 	// to binding the endpoint. If this returns an error, the bind will not
 	// occur and the error will be propagated back to the caller.
-	Bind(address FullAddress, commit func() error) error
+	Bind(address FullAddress, commit func() *Error) *Error
 
 	// GetLocalAddress returns the address to which the endpoint is bound.
-	GetLocalAddress() (FullAddress, error)
+	GetLocalAddress() (FullAddress, *Error)
 
 	// GetRemoteAddress returns the address to which the endpoint is
 	// connected.
-	GetRemoteAddress() (FullAddress, error)
+	GetRemoteAddress() (FullAddress, *Error)
 
 	// Readiness returns the current readiness of the endpoint. For example,
 	// if waiter.EventIn is set, the endpoint is immediately readable.
 	Readiness(mask waiter.EventMask) waiter.EventMask
 
 	// SetSockOpt sets a socket option. opt should be one of the *Option types.
-	SetSockOpt(opt interface{}) error
+	SetSockOpt(opt interface{}) *Error
 
 	// GetSockOpt gets a socket option. opt should be a pointer to one of the
 	// *Option types.
-	GetSockOpt(opt interface{}) error
+	GetSockOpt(opt interface{}) *Error
 }
 
 // ErrorOption is used in GetSockOpt to specify that the last error reported by
@@ -255,6 +271,10 @@ type SendBufferSizeOption int
 // ReceiveBufferSizeOption is used by SetSockOpt/GetSockOpt to specify the
 // receive buffer size option.
 type ReceiveBufferSizeOption int
+
+// SendQueueSizeOption is used in GetSockOpt to specify that the number of
+// unread bytes in the output buffer should be returned.
+type SendQueueSizeOption int
 
 // ReceiveQueueSizeOption is used in GetSockOpt to specify that the number of
 // unread bytes in the input buffer should be returned.
@@ -321,35 +341,6 @@ type TransportProtocolNumber uint32
 
 // NetworkProtocolNumber is the number of a network protocol.
 type NetworkProtocolNumber uint32
-
-// Stack represents a networking stack, with all supported protocols, NICs, and
-// route table.
-type Stack interface {
-	// NewEndpoint creates a new transport layer endpoint of the given
-	// protocol.
-	NewEndpoint(transport TransportProtocolNumber, network NetworkProtocolNumber, waiterQueue *waiter.Queue) (Endpoint, error)
-
-	// SetRouteTable assigns the route table to be used by this stack. It
-	// specifies which NICs to use for given destination address ranges.
-	SetRouteTable(table []Route)
-
-	// CreateNIC creates a NIC with the provided id and link-layer sender.
-	CreateNIC(id NICID, linkEndpoint LinkEndpointID) error
-
-	// AddAddress adds a new network-layer address to the specified NIC.
-	AddAddress(id NICID, protocol NetworkProtocolNumber, addr Address) error
-
-	// Stats returns a snapshot of the current stats.
-	// TODO: Make stats available in sentry for debugging/diag.
-	Stats() Stats
-
-	// NICSubnets returns a map of NICIDs to their associated subnets.
-	NICSubnets() map[NICID][]Subnet
-
-	// CheckNetworkProtocol checks if a given network protocol is enabled in the
-	// stack.
-	CheckNetworkProtocol(protocol NetworkProtocolNumber) bool
-}
 
 // Stats holds statistics about the networking stack.
 type Stats struct {
