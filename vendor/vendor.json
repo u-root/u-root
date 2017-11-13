@@ -17,32 +17,32 @@
 		{
 			"checksumSHA1": "OpAX5kvSHO1yjxhPHhusM6SaLp0=",
 			"path": "github.com/google/netstack/ilist",
-			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
-			"revisionTime": "2017-06-05T23:30:24Z"
+			"revision": "edcfca33ca347f59a1393986a5d216a5f183ae28",
+			"revisionTime": "2017-10-04T17:37:55Z"
 		},
 		{
-			"checksumSHA1": "4kx1NYuJVd6kpENNFIWNoLVee/c=",
+			"checksumSHA1": "5T1P38bkbJiLVvkBayf5fjXm8Mg=",
 			"path": "github.com/google/netstack/tcpip",
-			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
-			"revisionTime": "2017-06-05T23:30:24Z"
+			"revision": "edcfca33ca347f59a1393986a5d216a5f183ae28",
+			"revisionTime": "2017-10-04T17:37:55Z"
 		},
 		{
-			"checksumSHA1": "Ocj1dGsscLBDZqJu9fideP4Nj6c=",
+			"checksumSHA1": "K1vgVfN8RBpijH7fAh1E6weAfeE=",
 			"path": "github.com/google/netstack/tcpip/buffer",
-			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
-			"revisionTime": "2017-06-05T23:30:24Z"
+			"revision": "edcfca33ca347f59a1393986a5d216a5f183ae28",
+			"revisionTime": "2017-10-04T17:37:55Z"
 		},
 		{
-			"checksumSHA1": "l2melI+BYZmgk4vQcLyKOxL5x0w=",
+			"checksumSHA1": "oI+1xNZDXdPKh7aATIB3l49AkRk=",
 			"path": "github.com/google/netstack/tcpip/header",
-			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
-			"revisionTime": "2017-06-05T23:30:24Z"
+			"revision": "edcfca33ca347f59a1393986a5d216a5f183ae28",
+			"revisionTime": "2017-10-04T17:37:55Z"
 		},
 		{
-			"checksumSHA1": "V/lEdAOGzRQFjW+jl3MjzrUxnuo=",
+			"checksumSHA1": "UrIKkRFkarwh2lBdEjuCoH8TF90=",
 			"path": "github.com/google/netstack/waiter",
-			"revision": "a6dae5bc419c44ebba48550cce02b074792e9899",
-			"revisionTime": "2017-06-05T23:30:24Z"
+			"revision": "edcfca33ca347f59a1393986a5d216a5f183ae28",
+			"revisionTime": "2017-10-04T17:37:55Z"
 		},
 		{
 			"checksumSHA1": "Y80EASFjCaCxHdfPxmN4Wc2n1BM=",
