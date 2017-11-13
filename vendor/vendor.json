@@ -3,16 +3,16 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "Sub5+6yzZ28L2n1l+xmjg9yitvM=",
+			"checksumSHA1": "/Q5HjtLF7D4QeiFvz7z19j+caZ0=",
 			"path": "github.com/d2g/dhcp4",
-			"revision": "f0e4d29ff0231dce36e250b2ed9ff08412584bca",
-			"revisionTime": "2015-04-13T10:30:26Z"
+			"revision": "a1d1b6c41b1ce8a71a5121a9cee31809c4707d9c",
+			"revisionTime": "2017-09-04T10:04:07Z"
 		},
 		{
-			"checksumSHA1": "UsIyJWFJ8P8K2ZhynxKem9dUDYw=",
+			"checksumSHA1": "SHPe2KmLMRHISNpmU7rBbhFTlVc=",
 			"path": "github.com/d2g/dhcp4client",
-			"revision": "bed07e1bc5b85f69c6f0fd73393aa35ec68ed892",
-			"revisionTime": "2015-05-19T14:54:04Z"
+			"revision": "6e570ed0a266b730a860ba1068090f683b2c213a",
+			"revisionTime": "2017-08-29T10:45:24Z"
 		},
 		{
 			"checksumSHA1": "OpAX5kvSHO1yjxhPHhusM6SaLp0=",
