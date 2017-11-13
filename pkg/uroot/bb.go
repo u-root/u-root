@@ -150,6 +150,10 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 	}
 
 	bbshDir := filepath.Join(urootDir, "bbsh")
+	// Blow bbsh away before trying to re-create it.
+	if err := os.RemoveAll(bbshDir); err != nil {
+		return ArchiveFiles{}, err
+	}
 	if err := os.MkdirAll(bbshDir, 0755); err != nil {
 		return ArchiveFiles{}, err
 	}
