@@ -141,7 +141,7 @@ If you want to see u-root on real hardware, this
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
-Improving existing commands (e.g., additional currently unsupported) flags is
+Improving existing commands (e.g., additional currently unsupported flags) is
 very welcome. In this case it is not even required to build an initramfs, just
 enter the `cmds/` directory and start coding. A list of commands that are on
 the roadmap can be found [here](roadmap.md).
