@@ -3,12 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "d4oPLXukgz+dbGX3IqfTDomjnns=",
-			"path": "github.com/c9s/goprocinfo/linux",
-			"revision": "19cb9f127a9c8d2034cf59ccb683cdb94b9deb6c",
-			"revisionTime": "2015-10-25T19:11:53Z"
-		},
-		{
 			"checksumSHA1": "Sub5+6yzZ28L2n1l+xmjg9yitvM=",
 			"path": "github.com/d2g/dhcp4",
 			"revision": "f0e4d29ff0231dce36e250b2ed9ff08412584bca",
@@ -167,18 +161,6 @@
 		{
 			"checksumSHA1": "yRuyntx9a59ugMi5NlN4ST0XRcI=",
 			"path": "golang.org/x/net/internal/iana",
-			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
-			"revisionTime": "2016-05-15T03:16:23Z"
-		},
-		{
-			"checksumSHA1": "5eWwtQVHJ0Lp2/538Kve2KuE8gQ=",
-			"path": "golang.org/x/net/internal/socket",
-			"revision": "0744d001aa8470aaa53df28d32e5ceeb8af9bd70",
-			"revisionTime": "2017-09-01T09:04:45Z"
-		},
-		{
-			"checksumSHA1": "cNGCoUQtPpisIaR5NYcjL+n3w3E=",
-			"path": "golang.org/x/net/ipv4",
 			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
 			"revisionTime": "2016-05-15T03:16:23Z"
 		},
