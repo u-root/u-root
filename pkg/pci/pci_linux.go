@@ -50,8 +50,8 @@ func (bus *bus) Read() (Devices, error) {
 	return devices, nil
 }
 
-// NewBusReader returns a BusReader. If we can't at least glob in
-// /sys/bus/pci/devices then we just give up. We don't provide an option
+// NewBusReader returns a BusReader. If it can't glob in
+// /sys/bus/pci/devices then it gives up. We don't provide an option
 // (yet) to do type I or PCIe MMIO config stuff.
 func NewBusReader() (busReader, error) {
 	globs, err := filepath.Glob("/sys/bus/pci/devices/*")
