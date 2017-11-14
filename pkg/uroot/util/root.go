@@ -139,10 +139,19 @@ var (
 		Dev{Name: "/dev/port", Mode: syscall.S_IFCHR | 0640, Dev: 0x0104},
 
 		// Kernel must be compiled with CONFIG_DEVTMPFS.
+		// Note that things kind of work even if this mount fails.
+		// TODO: move the Dir commands above below this line?
 		Mount{Target: "/dev", FSType: "devtmpfs"},
+
 		Dir{Name: "/dev/pts", Mode: 0777},
 		Mount{Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		Symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
+
+		// Note: shm is required at least for Chrome. If you don't mount
+		// it chrome throws a bogus "out of memory" error, not the more
+		// useful "I can't open /dev/shm/whatever". SAD!
+		Dir{Name: "/dev/shm", Mode: 0777},
+		Mount{Source: "tmpfs", Target: "/dev/shm", FSType: "tmpfs"},
 
 		Dir{Name: "/sys", Mode: 0555},
 		Mount{Source: "sys", Target: "/sys", FSType: "sysfs"},
