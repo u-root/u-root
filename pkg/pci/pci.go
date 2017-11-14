@@ -4,7 +4,9 @@
 
 package pci
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // PCI is a PCI device. We will fill this in as we add options.
 // For now it just holds two uint16 per the PCI spec.
@@ -19,15 +21,15 @@ type PCI struct {
 // ToString concatenates PCI address, Vendor, and Device to make a useful
 // display for the user. Boolean argument toggles displaying numeric IDs or
 // human readable labels.
-func (p PCI) ToString(n bool) string {
+func (p PCI) ToString(n bool, ids map[string]Vendor) string {
 	if n {
 		return fmt.Sprintf("%s: %s:%s", p.Addr, p.Vendor, p.Device)
 	}
-	p.VendorName, p.DeviceName = lookup(p.Vendor, p.Device)
+	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
 	return fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)
 }
 
 // String is a Stringer for fmt and others' convenience.
 func (p PCI) String() string {
-	return p.ToString(false)
+	return p.ToString(true, nil)
 }
