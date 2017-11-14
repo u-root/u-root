@@ -43,7 +43,7 @@ func setup() error {
 		}
 		time.Sleep(time.Second)
 	}
-	for _, f := range []string{"wingo", "flwm", "midori", "opera-12"} {
+	for _, f := range []string{"wingo", "flwm", "chrome"} {
 		log.Printf("Run %v", f)
 		go x11(f)
 	}
