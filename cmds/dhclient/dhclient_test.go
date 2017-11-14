@@ -5,9 +5,9 @@
 package main
 
 import (
-	"bytes"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -33,11 +33,10 @@ func TestDhclient(t *testing.T) {
 
 	for _, tt := range tests {
 		out, err := exec.Command(execPath, tt.isIPv4, tt.test, tt.iface).CombinedOutput()
-		if err != nil {
-			t.Error(err)
+		if err == nil {
+			t.Errorf("%v: got nil, want err", tt)
 		}
-		out = bytes.Replace(out, []byte{0}, []byte{}, -1)
-		if string(out) != tt.out {
+		if !strings.HasSuffix(string(out), tt.out) {
 			t.Errorf("expected:\n%s\ngot:\n%s", tt.out, string(out))
 		}
 	}
