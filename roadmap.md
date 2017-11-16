@@ -7,7 +7,7 @@
 | ansi           |               |                 | u-root specific        |
 | archive        |               |                 | u-root specific        |
 | builtin        | -d            |                 | u-root specific        |
-| cat            | -u            |                 | Still need - for stdin |
+| cat            | -u            |                 |                        |
 | chmod          |               | -R, --reference | More mode forms        |
 | :x: chroot     |               |                 | Not implemented yet!   |
 | cmp            | -lLs          |                 |                        |
@@ -29,6 +29,7 @@
 | gopxe          |               |                 | u-root specific        |
 | gpgv           | -v            |                 |                        |
 | grep           | -glrv         | -cno            | RE2-compatible only    |
+| gzip           |               |                 | Not implemented yet!   |
 | hexdump        |               |                 |                        |
 | hostname       |               |                 |                        |
 | init           |               |                 |                        |
