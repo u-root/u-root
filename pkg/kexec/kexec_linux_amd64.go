@@ -36,12 +36,16 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 	if err != nil {
 		return fmt.Errorf("could not use cmdline %q: %v", cmdline, err)
 	}
+	cmdLen := uintptr(len(cmdline))
+	if len(cmdline) > 0 {
+		cmdLen += 1
+	}
 
 	if _, _, errno := unix.Syscall6(
 		unix.SYS_KEXEC_FILE_LOAD,
 		kernel.Fd(),
 		ramfsfd,
-		uintptr(len(cmdline)),
+		cmdLen,
 		uintptr(unsafe.Pointer(cmdPtr)),
 		flags,
 		0); errno != 0 {
