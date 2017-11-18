@@ -9,6 +9,8 @@ before_install:
   - ls -l
 install:
   - ls
+  - curl -L -o /home/travis/gopath/bin/dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
+  - chmod +x /home/travis/gopath/bin/dep
 script:
   - cat travis.sh
   - bash travis.sh
