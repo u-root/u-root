@@ -69,7 +69,7 @@ func buildToolchain(opts BuildOpts) error {
 	}
 
 	toolDir := filepath.Join(opts.TempDir, fmt.Sprintf("go/pkg/tool/%v_%v", opts.Env.GOOS, opts.Env.GOARCH))
-	for _, pkg := range []string{"compile", "link", "asm"} {
+	for _, pkg := range []string{"pack", "compile", "link", "asm"} {
 		c := filepath.Join(toolDir, pkg)
 		if err := opts.Env.Build(fmt.Sprintf("cmd/%s", pkg), c, golang.BuildOpts{}); err != nil {
 			return err
