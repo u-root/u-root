@@ -74,20 +74,49 @@ func (g *GPT) String() string {
 	return string(b)
 }
 
+func errAppend(err error, s string, a ...interface{}) error {
+	var p string
+	if err != nil {
+		p = err.Error() + "; "
+	}
+	return fmt.Errorf(p+s, a...)
+}
+
 // EqualHeader compares two headers and returns true if they match.
 // Those fields which by definition must differ are ignored.
-func EqualHeader(p, b Header) bool {
-	return p.Signature == b.Signature &&
-		p.Revision == b.Revision &&
-		p.HeaderSize == b.HeaderSize &&
-		p.CurrentLBA == b.BackupLBA &&
-		p.BackupLBA == b.CurrentLBA &&
-		p.FirstLBA == b.FirstLBA &&
-		p.LastLBA == b.LastLBA &&
-		p.DiskGUID == b.DiskGUID &&
-		p.NPart == b.NPart &&
-		p.PartSize == b.PartSize &&
-		p.PartCRC == b.PartCRC
+func EqualHeader(p, b Header) error {
+	var err error
+	if p.Signature != b.Signature {
+		err = errAppend(err, "p.Signature(%#x) != b.Signature(%#x)", p.Signature, b.Signature)
+	}
+	if p.Revision != b.Revision {
+		err = errAppend(err, "p.Revision(%v) != b.Revision(%v)", p.Revision, b.Revision)
+	}
+	if p.HeaderSize != b.HeaderSize {
+		err = errAppend(err, "p.HeaderSize(%v) != b.HeaderSize(%v)", p.HeaderSize, b.HeaderSize)
+	}
+	if p.CurrentLBA != b.BackupLBA {
+		err = errAppend(err, "p.CurrentLBA(%#x) != b.BackupLBA(%#x)", p.CurrentLBA, b.BackupLBA)
+	}
+	if p.BackupLBA != b.CurrentLBA {
+		err = errAppend(err, "p.BackupLBA(%#x) != b.CurrentLBA(%#x)", p.BackupLBA, b.CurrentLBA)
+	}
+	if p.FirstLBA != b.FirstLBA {
+		err = errAppend(err, "p.FirstLBA(%#x) != b.FirstLBA(%#x)", p.FirstLBA, b.FirstLBA)
+	}
+	if p.LastLBA != b.LastLBA {
+		err = errAppend(err, "p.LastLBA(%#x) != b.LastLBA(%#x)", p.LastLBA, b.LastLBA)
+	}
+	if p.DiskGUID != b.DiskGUID {
+		err = errAppend(err, "p.DiskGUID(%#x) != b.DiskGUID(%#x)", p.DiskGUID, b.DiskGUID)
+	}
+	if p.NPart != b.NPart {
+		err = errAppend(err, "p.NPart(%v) != b.NPart(%v)", p.NPart, b.NPart)
+	}
+	if p.PartSize != b.PartSize {
+		err = errAppend(err, "p.PartSize(%v) != b.PartSize(%v)", p.PartSize, b.PartSize)
+	}
+	return err
 }
 
 // Table reads a GPT table at the given offset.  It checks that
@@ -210,8 +239,8 @@ func New(r io.ReaderAt) (*GPT, *GPT, error) {
 		return g, nil, err
 	}
 
-	if !EqualHeader(g.Header, b.Header) {
-		return g, b, fmt.Errorf("Primary GPT(%s) and backup GPT(%s) Header differ", g, b)
+	if err := EqualHeader(g.Header, b.Header); err != nil {
+		return g, b, fmt.Errorf("Primary GPT and backup GPT Header differ: %v", err)
 	}
 
 	if g.CRC == b.CRC {
