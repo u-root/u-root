@@ -25,7 +25,7 @@ type builtin func(c *Command) error
 
 // TODO: probably have one builtin map and use it for both types?
 var (
-	urpath   = "/go/bin:/ubin:/buildbin:/bin:/usr/local/bin:"
+	urpath   = "/go/bin:/ubin:/buildbin:/bbin:/bin:/usr/local/bin:"
 	builtins = make(map[string]builtin)
 	// Some builtins really want to be forked off, esp. in the busybox case.
 	forkBuiltins = make(map[string]builtin)
