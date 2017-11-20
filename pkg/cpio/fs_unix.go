@@ -187,7 +187,17 @@ func inode(i Info) (Info, bool) {
 }
 
 func GetRecord(path string) (Record, error) {
-	fi, err := os.Lstat(path)
+	return GetResolvedRecord(path, false)
+}
+
+func GetResolvedRecord(path string, resolveSymlinks bool) (Record, error) {
+	var fi os.FileInfo
+	var err error
+	if resolveSymlinks {
+		fi, err = os.Stat(path)
+	} else {
+		fi, err = os.Lstat(path)
+	}
 	if err != nil {
 		return Record{}, err
 	}

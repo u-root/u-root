@@ -24,6 +24,10 @@ func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 
 	log.Printf("Collecting package files and dependencies...")
 	deps := make(map[string]struct{})
+
+	// Always include the source for installcommand.
+	opts.Packages = append(opts.Packages, "github.com/u-root/u-root/cmds/installcommand")
+
 	for _, pkg := range opts.Packages {
 		// Add high-level packages' src files to archive.
 		p := goListPkg(opts, pkg, &af)
