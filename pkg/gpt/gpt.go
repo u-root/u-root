@@ -19,7 +19,6 @@ import (
 	"hash/crc32"
 	"io"
 	"log"
-	"reflect"
 
 	"github.com/google/uuid"
 )
@@ -115,6 +114,47 @@ func EqualHeader(p, b Header) error {
 	}
 	if p.PartSize != b.PartSize {
 		err = errAppend(err, "p.PartSize(%v) != b.PartSize(%v)", p.PartSize, b.PartSize)
+	}
+	return err
+}
+
+func EqualPart(p, b Part) (err error) {
+	if p.PartGUID != b.PartGUID {
+		err = errAppend(err, "p.PartGUID(%#x) != b.PartGUID(%#x)", p.PartGUID, b.PartGUID)
+	}
+	if p.UniqueGUID != b.UniqueGUID {
+		err = errAppend(err, "p.UniqueGUID(%#x) != b.UniqueGUID(%#x)", p.UniqueGUID, b.UniqueGUID)
+	}
+	if p.FirstLBA != b.FirstLBA {
+		err = errAppend(err, "p.FirstLBA(%#x) != b.FirstLBA(%#x)", p.FirstLBA, b.FirstLBA)
+	}
+	if p.LastLBA != b.LastLBA {
+		err = errAppend(err, "p.LastLBA(%#x) != b.LastLBA(%#x)", p.LastLBA, b.LastLBA)
+	}
+	// TODO: figure out what Attributes actually matter. We're not able to tell what differences
+	// matter and what differences don't.
+	if false && p.Attribute != b.Attribute {
+		err = errAppend(err, "p.Attribute(%#x) != b.Attribute(%#x)", p.Attribute, b.Attribute)
+	}
+	if p.Name != b.Name {
+		err = errAppend(err, "p.Name(%#x) != b.Name(%#x)", p.Name, b.Name)
+	}
+	return err
+}
+
+// EqualParts compares the Parts arrays from two GPTs
+// and returns an error if they differ.
+// If they length differs we just give up, since there's no way
+// to know which should have matched.
+// Otherwise, we do a 1:1 comparison.
+func EqualParts(p, b *GPT) (err error) {
+	if len(p.Parts) != len(b.Parts) {
+		return fmt.Errorf("Primary Number of partitions (%d) differs from Backup (%d)", len(p.Parts), len(b.Parts))
+	}
+	for i := range p.Parts {
+		if e := EqualPart(p.Parts[i], b.Parts[i]); e != nil {
+			err = errAppend(err, "Partition %d: %v", i, e)
+		}
 	}
 	return err
 }
@@ -247,8 +287,8 @@ func New(r io.ReaderAt) (*GPT, *GPT, error) {
 		return g, b, fmt.Errorf("Primary (%v) and Backup (%v) Header CRC (%x) are the same and should differ", g.Header, b.Header, g.CRC)
 	}
 
-	if !reflect.DeepEqual(g.Parts, b.Parts) {
-		return b, g, fmt.Errorf("Primary GPT(%s) and backup GPT(%s) Parts differ", g, b)
+	if err := EqualParts(g, b); err != nil {
+		return b, g, err
 	}
 	return g, b, nil
 }
