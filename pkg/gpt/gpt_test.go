@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const equalHeaderError = "p.Signature(0x5452415020494646) != b.Signature(0x5452415020494645); p.Revision(65537) != b.Revision(65536); p.HeaderSize(93) != b.HeaderSize(92); p.CurrentLBA(0x2) != b.BackupLBA(0x1); p.FirstLBA(0x23) != b.FirstLBA(0x22); p.LastLBA(0x43cf9f) != b.LastLBA(0x43cf9e); p.DiskGUID(0x32653165643462612d656639332d346162302d383436652d326533613661326437336266) != b.DiskGUID(0x32643165643462612d656639332d346162302d383436652d326533613661326437336266); p.NPart(127) != b.NPart(128); p.PartSize(127) != b.PartSize(128)"
+
 var (
 	header = Header{
 		Signature:  Signature,
@@ -114,6 +116,42 @@ func TestGPTTables(t *testing.T) {
 		}
 		t.Logf("Passed %s", test.what)
 	}
+}
+
+// TestEqualHeader tests all variations of headers not being equal.
+// We test to make sure it works, then break some aspect of the header
+// and test that too.
+func TestEqualHeader(t *testing.T) {
+	InstallGPT()
+	r := bytes.NewReader(disk)
+	p, b, err := New(r)
+	if err != nil {
+		t.Fatalf("TestEqualHeader: Reading in gpt: got %v, want nil", err)
+	}
+
+	if err := EqualHeader(p.Header, b.Header); err != nil {
+		t.Fatalf("TestEqualHeader: got %v, want nil", err)
+	}
+	// Yes, we assume a certain order, but it sure simplifies the test :-)
+	p.Signature++
+	p.Revision++
+	p.HeaderSize++
+	p.CurrentLBA++
+	p.FirstLBA++
+	p.LastLBA++
+	p.DiskGUID[0]++
+	p.NPart--
+	p.PartSize--
+	p.PartCRC++
+	if err = EqualHeader(p.Header, b.Header); err == nil {
+		t.Fatalf("TestEqualHeader: got %v, want nil", err)
+	}
+	t.Logf("TestEqualHeader: EqualHeader returns %v", err)
+
+	if err.Error() != equalHeaderError {
+		t.Fatalf("TestEqualHeader: got %v, want %v", err.Error, equalHeaderError)
+	}
+
 }
 
 type iodisk []byte
