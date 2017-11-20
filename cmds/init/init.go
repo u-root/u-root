@@ -46,7 +46,7 @@ func main() {
 
 	// In earlier versions we just had src/cmds. Due to the Go rules it seems we need to
 	// embed the URL of the repo everywhere. Yuck.
-	c, err := filepath.Glob("/src/github.com/u-root/u-root/cmds/[a-z]*")
+	c, err := filepath.Glob("/src/github.com/u-root/*/cmds/[a-z]*")
 	if err != nil || len(c) == 0 {
 		log.Printf("In a break with tradition, you seem to have NO u-root commands: %v", err)
 	}
