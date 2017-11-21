@@ -77,12 +77,11 @@ func GetKeys(rw io.ReadWriter) ([]Handle, error) {
 }
 
 // PcrExtend extends a value into the right PCR by index.
-func PcrExtend(rw io.ReadWriter, i uint32, p pcrValue) ([]byte, error) {
-	in := []interface{}{i, p}
+func PcrExtend(rw io.ReadWriter, pcrIndex uint32, pcr pcrValue) ([]byte, error) {
+	in := []interface{}{pcrIndex, pcr}
 	var d pcrValue
 	out := []interface{}{&d}
-	_, err := submitTPMRequest(rw, tagRQUCommand, ordExtend, in, out)
-	if err != nil {
+	if _, err := submitTPMRequest(rw, tagRQUCommand, ordExtend, in, out); err != nil {
 		return nil, err
 	}
 
@@ -90,8 +89,8 @@ func PcrExtend(rw io.ReadWriter, i uint32, p pcrValue) ([]byte, error) {
 }
 
 // ReadPCR reads a PCR value from the TPM.
-func ReadPCR(rw io.ReadWriter, i uint32) ([]byte, error) {
-	in := []interface{}{i}
+func ReadPCR(rw io.ReadWriter, pcrIndex uint32) ([]byte, error) {
+	in := []interface{}{pcrIndex}
 	var v pcrValue
 	out := []interface{}{&v}
 	// There's no need to check the ret value here, since the err value contains

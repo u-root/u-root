@@ -7,6 +7,7 @@ package kexec
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"syscall"
 )
 
@@ -23,5 +24,5 @@ func CurrentKernelCmdline() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(procCmdline), nil
+	return strings.TrimRight(string(procCmdline), "\n"), nil
 }
