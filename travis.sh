@@ -3,6 +3,10 @@ if [ -z "${GOPATH}" ]; then
         export GOPATH=/home/travis/gopath
 fi
 set -e
+
+echo "Check vendored dependencies"
+ (dep status)
+
 echo "Build u-root"
  (go build u-root.go)
 
