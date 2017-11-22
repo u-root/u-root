@@ -67,12 +67,12 @@ func (l *lpc) Command(c command, v version, idata []byte, outsize int, timeout t
 	flags := uint8(ecHostArgsFlagFromHost)
 	csum := flags + uint8(c) + uint8(v) + uint8(len(idata))
 
-	for i := range idata {
-		err := l.Outb(l.statusAddr+ioaddr(i), idata[i])
+	for i, d := range idata {
+		err := l.Outb(l.statusAddr+ioaddr(i), d)
 		if err != nil {
 			return nil, err
 		}
-		csum += idata[i]
+		csum += d
 	}
 
 	cmd := []uint8{ecHostArgsFlagFromHost, uint8(v), uint8(len(idata)), uint8(csum)}

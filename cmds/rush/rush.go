@@ -245,20 +245,20 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			continue
 		}
-		for i := range cmds {
-			if err := command(cmds[i]); err != nil {
+		for _, c := range cmds {
+			if err := command(c); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
-				if cmds[i].link == "||" {
+				if c.link == "||" {
 					continue
 				}
 				// yes, not needed, but useful so you know
 				// what goes on here.
-				if cmds[i].link == "&&" {
+				if c.link == "&&" {
 					break
 				}
 				break
 			} else {
-				if cmds[i].link == "||" {
+				if c.link == "||" {
 					break
 				}
 			}

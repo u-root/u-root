@@ -46,8 +46,8 @@ var (
 func setup() error {
 	var err error
 
-	for i := range tests {
-		tests[i].pathOnSys, err = exec.Command("which", tests[i].name).Output()
+	for i, t := range tests {
+		tests[i].pathOnSys, err = exec.Command("which", t.name).Output()
 		if err != nil {
 			return err
 		}
@@ -87,9 +87,9 @@ func TestWhichMultiple(t *testing.T) {
 
 	pathsCombined := []byte{}
 	commands := []string{}
-	for i := range tests {
-		pathsCombined = append(pathsCombined, tests[i].pathOnSys...)
-		commands = append(commands, tests[i].name)
+	for _, t := range tests {
+		pathsCombined = append(pathsCombined, t.pathOnSys...)
+		commands = append(commands, t.name)
 	}
 
 	var b bytes.Buffer
