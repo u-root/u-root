@@ -12,6 +12,7 @@
 //     -v: verbose mode
 //     -R: remove file hierarchies
 //     -r: equivalent to -R
+//     -f: ignore nonexistent files and never prompt
 package main
 
 import (
@@ -29,8 +30,9 @@ var (
 		r bool
 		v bool
 		i bool
+		f bool
 	}
-	cmd = "rm [-Rrvi] file..."
+	cmd = "rm [-Rrvif] file..."
 )
 
 func init() {
@@ -43,12 +45,17 @@ func init() {
 	flag.BoolVar(&flags.v, "v", false, "Verbose mode.")
 	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
 	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
+	flag.BoolVar(&flags.f, "f", false, "Ignore nonexistent files and never prompt")
 }
 
 func rm(files []string) error {
 	f := os.Remove
 	if flags.r {
 		f = os.RemoveAll
+	}
+
+	if flags.f {
+		flags.i = false
 	}
 
 	workingPath, err := os.Getwd()
@@ -67,6 +74,9 @@ func rm(files []string) error {
 		}
 
 		if err := f(file); err != nil {
+			if flags.f && os.IsNotExist(err) {
+				continue
+			}
 			return err
 		}
 
