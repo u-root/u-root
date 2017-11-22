@@ -4,57 +4,18 @@
 
 package pci
 
-import (
-	"bufio"
-	"bytes"
-)
+// Lookup takes PCI hex (as strings) vendor and device ID values and returns human
+// readable labels for both the vendor and device. Returns the input ID value if
+// if label is not found in the ids map.
+func Lookup(ids map[string]Vendor, vendor string, device string) (string, string) {
 
-const (
-	findingVendor = iota
-	findingDevice
-)
-
-var debug = func(s string, arg ...interface{}) {} //{log.Printf(s, arg...)}
-
-func isHex(b byte) bool {
-	return ('a' <= b && b <= 'f') || ('A' <= b && b <= 'F') || ('0' <= b && b <= '9')
-}
-
-func lookup(vendor, device string) (string, string) {
-	var state = findingVendor
-	var line string
-	var lineno int
-	vendorName := vendor
-	deviceName := device
-	s := bufio.NewScanner(bytes.NewReader(pciids))
-
-	for s.Scan() {
-		line = s.Text()
-		lineno++
-		debug("Line %d: %v\n", lineno, line)
-		switch {
-		case len(line) < 7, line[0] == '#':
-			debug("discard")
-			continue
-		case state == findingVendor && isHex(line[0]) && isHex(line[1]):
-			debug("vendor check %s against %s", vendor[:4], line[:4])
-			if vendor[:4] == line[:4] {
-				vendorName = line[6:]
-				state = findingDevice
-			}
-		// There are subdevices, ignore them.
-		case state == findingDevice && line[0:2] == "\t\t":
-			debug("Subdevice")
-		case state == findingDevice && (line[0] != '\t' || !isHex(line[1])):
-			debug("Finding device: no more devices for this vendor")
-			return vendorName, deviceName
-		case state == findingDevice && line[0] == '\t' && isHex(line[1]):
-			debug("device check %s against %s", device[:4], line[1:5])
-			if device[:4] == line[1:5] {
-				deviceName = line[7:]
-				return vendorName, deviceName
-			}
+	if v, f1 := ids[vendor]; f1 {
+		if d, f2 := v.Devices[device]; f2 {
+			return v.Name, string(d)
 		}
+		// If entry for device doesn't exist return the hex ID
+		return v.Name, device
 	}
-	return vendorName, deviceName
+	// If entry for vendor doesn't exist both hex IDs
+	return vendor, device
 }
