@@ -62,8 +62,8 @@ func usage() {
 
 func one(cmd string, cmds []string) string {
 	var x, n int
-	for i := range cmds {
-		if strings.HasPrefix(cmds[i], cmd) {
+	for i, v := range cmds {
+		if strings.HasPrefix(v, cmd) {
 			n++
 			x = i
 		}

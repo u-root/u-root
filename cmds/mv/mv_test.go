@@ -42,8 +42,8 @@ func setup() (string, error) {
 		return "", err
 	}
 
-	for i := range tests {
-		if err := ioutil.WriteFile(filepath.Join(d, tests[i].n), []byte("hi"), tests[i].m); err != nil {
+	for _, t := range tests {
+		if err := ioutil.WriteFile(filepath.Join(d, t.n), []byte("hi"), t.m); err != nil {
 			return "", err
 		}
 	}

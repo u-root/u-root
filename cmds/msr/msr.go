@@ -47,11 +47,11 @@ func main() {
 	switch a[0] {
 	case "r":
 		data, errs := rdmsr(m, uint32(reg))
-		for i := range m {
+		for i, v := range m {
 			if errs[i] != nil {
-				fmt.Printf("%v: %v\n", m[i], errs[i])
+				fmt.Printf("%v: %v\n", v, errs[i])
 			} else {
-				fmt.Printf("%v: %#016x\n", m[i], data[i])
+				fmt.Printf("%v: %#016x\n", v, data[i])
 			}
 		}
 
@@ -76,9 +76,9 @@ func main() {
 			log.Fatalf("%v: %v", a, err)
 		}
 		errs := wrmsr(m, uint32(reg), v)
-		for i := range errs {
-			if errs[i] != nil {
-				fmt.Printf("%v: %v\n", m[i], errs[i])
+		for i, e := range errs {
+			if e != nil {
+				fmt.Printf("%v: %v\n", m[i], e)
 			}
 		}
 
