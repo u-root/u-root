@@ -256,17 +256,17 @@ func getCommand(b *bufio.Reader) (c []*Command, t string, err error) {
 	// the rules.
 	// For now, no empty commands.
 	// Can't have a redir and a redirect for fd1.
-	for i := range c {
-		if len(c[i].args) == 0 {
+	for i, v := range c {
+		if len(v.args) == 0 {
 			return nil, "", errors.New("empty commands not allowed (yet)")
 		}
-		if c[i].link == "|" && c[i].fdmap[1] != "" {
+		if v.link == "|" && v.fdmap[1] != "" {
 			return nil, "", errors.New("Can't have a pipe and > on one command")
 		}
-		if c[i].link == "|" && i == len(c)-1 {
+		if v.link == "|" && i == len(c)-1 {
 			return nil, "", errors.New("Can't have a pipe to nowhere")
 		}
-		if i < len(c)-1 && c[i].link == "|" && c[i+1].fdmap[0] != "" {
+		if i < len(c)-1 && v.link == "|" && c[i+1].fdmap[0] != "" {
 			return nil, "", errors.New("Can't have a pipe to command with redirect on stdin")
 		}
 	}
