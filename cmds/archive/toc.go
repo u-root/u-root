@@ -18,8 +18,8 @@ func toc(files ...string) error {
 		if err != nil {
 			fmt.Printf("%v", err)
 		}
-		for i := range vtoc {
-			fmt.Printf("%v\n", vtoc[i])
+		for _, vv := range vtoc {
+			fmt.Printf("%v\n", vv)
 		}
 	}
 	return nil

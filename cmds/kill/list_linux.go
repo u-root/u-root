@@ -204,8 +204,8 @@ var (
 )
 
 func siglist() (s string) {
-	for i := range signames {
-		s = s + fmt.Sprintf("%d: %v\n", i, signames[i])
+	for i, sig := range signames {
+		s = s + fmt.Sprintf("%d: %v\n", i, sig)
 	}
 	return
 }
