@@ -19,6 +19,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -48,7 +49,7 @@ func init() {
 	flag.BoolVar(&flags.f, "f", false, "Ignore nonexistent files and never prompt")
 }
 
-func rm(files []string) error {
+func rm(stdin io.Reader, files []string) error {
 	f := os.Remove
 	if flags.r {
 		f = os.RemoveAll
@@ -63,7 +64,7 @@ func rm(files []string) error {
 		return err
 	}
 
-	input := bufio.NewReader(os.Stdin)
+	input := bufio.NewReader(stdin)
 	for _, file := range files {
 		if flags.i {
 			fmt.Printf("rm: remove '%v'? ", file)
@@ -98,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := rm(flag.Args()); err != nil {
+	if err := rm(os.Stdin, flag.Args()); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
