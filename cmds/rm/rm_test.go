@@ -94,8 +94,7 @@ func Test_rm_2(t *testing.T) {
 	}
 }
 
-// using f flag
-func Test_rm_3(t *testing.T) {
+func TestForceRemove(t *testing.T) {
 	d, err := setup()
 	if err != nil {
 		t.Fatal("Error on setup of the test: creating files and folders.")
