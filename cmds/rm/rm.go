@@ -5,7 +5,7 @@
 // Delete files.
 //
 // Synopsis:
-//     rm [-Rrvi] FILE...
+//     rm [-Rrvif] FILE...
 //
 // Options:
 //     -i: interactive mode
