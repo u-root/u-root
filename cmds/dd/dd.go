@@ -337,10 +337,11 @@ func progressBegin(mode string, variable *int64) (ProgressData *progressData) {
 		// Print progress in a separate goroutine.
 		p.quit = make(chan struct{}, 1)
 		go func() {
-			ticker := time.Tick(1 * time.Second)
+			ticker := time.NewTicker(1 * time.Second)
+			defer ticker.Stop()
 			for {
 				select {
-				case <-ticker:
+				case <-ticker.C:
 					p.print()
 				case <-p.quit:
 					return
