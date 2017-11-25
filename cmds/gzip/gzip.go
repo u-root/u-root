@@ -15,6 +15,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 	"github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/null"
 )
 
 const version string = "0.0.1"
@@ -28,188 +29,41 @@ type options struct {
 	help       bool
 	keep       bool
 	license    bool
-	//list       bool
-	//name       bool
-	//noName     bool
-	quiet bool
-	//recursive  bool
-	//rsyncable  bool
-	stdout bool
-	//test       bool
-	verbose bool
-	version bool
-	suffix  string
+	quiet      bool
+	stdout     bool
+	test       bool
+	verbose    bool
+	version    bool
+	suffix     string
 }
 
 func (o *options) parseArgs() error {
 	var levels [10]bool
 
-	pflag.IntVarP(&o.blocksize,
-		"blocksize",
-		"b",
-		128,
-		"Set compression block size in KiB")
-
-	pflag.BoolVarP(&o.decompress,
-		"decompress",
-		"d",
-		false,
-		"Decompress the compressed input")
-
-	pflag.BoolVarP(&o.force,
-		"force",
-		"f",
-		false,
-		"Force overwrite of output file and compress links")
-
-	pflag.BoolVarP(&o.help,
-		"help",
-		"h",
-		false,
-		"Display a help screen and quit")
-
-	pflag.BoolVarP(&o.keep,
-		"keep",
-		"k",
-		false,
-		"Do not delete original file after processing")
-
-	pflag.BoolVarP(&o.license,
-		"license",
-		"L",
-		false,
-		"Display license")
-
-	/*
-		pflag.BoolVarP(&o.list,
-			"list",
-			"l",
-			false,
-			"List the contents of the compressed input [NOT IMPLEMENTED]")
-
-		pflag.BoolVarP(&o.name,
-			"name",
-			"N",
-			false,
-			"Store/restore file name and mod time in/from header [NOT IMPLEMENTED]")
-
-		pflag.BoolVarP(&o.noName,
-			"no-name",
-			"n",
-			false,
-			"Do not store or restore file name in/from header [NOT IMPLEMENTED]")
-	*/
-
-	pflag.IntVarP(&o.processes,
-		"processes",
-		"p",
-		runtime.NumCPU(),
-		"Allow up to n compression threads")
-
-	pflag.BoolVarP(&o.quiet,
-		"quiet",
-		"q",
-		false,
-		"Print no messages, even on error [NOT IMPLEMENTED]")
-	/*
-		pflag.BoolVarP(&o.recursive,
-			"recursive",
-			"r",
-			false,
-			"Process the contents of all subdirectories [NOT IMPLEMENTED]")
-
-		pflag.BoolVarP(&o.rsyncable,
-			"rsyncable",
-			"R",
-			false,
-			"Input-determined block locations for rsync [NOT IMPLEMENTED]")
-	*/
-
-	pflag.BoolVarP(&o.stdout,
-		"stdout",
-		"c",
-		false,
-		"Write all processed output to stdout (won't delete)")
-
-	pflag.StringVarP(&o.suffix,
-		"suffix",
-		"S",
-		".gz",
-		"Specify suffix for compression")
-
-	/*
-		pflag.BoolVarP(&o.test,
-			"test",
-			"t",
-			false,
-			"Test the integrity of the compressed input [NOT IMPLEMENTED]")
-	*/
-
-	pflag.BoolVarP(&o.verbose,
-		"verbose",
-		"v",
-		false,
-		"Produce more verbose output")
-
-	pflag.BoolVarP(&o.version,
-		"version",
-		"V",
-		false,
-		"Print version")
-
-	pflag.BoolVarP(&levels[1],
-		"fast",
-		"1",
-		false,
-		"Compression level 1")
-
-	pflag.BoolVarP(&levels[2],
-		"two",
-		"2",
-		false,
-		"Compression level 2")
-
-	pflag.BoolVarP(&levels[3],
-		"three",
-		"3",
-		false,
-		"Compression level 3")
-
-	pflag.BoolVarP(&levels[4],
-		"four",
-		"4",
-		false,
-		"Compression level 4")
-
-	pflag.BoolVarP(&levels[5],
-		"five",
-		"5",
-		false,
-		"Compression level 5")
-
-	pflag.BoolVarP(&levels[6],
-		"six",
-		"6",
-		false,
-		"Compression level 6")
-
-	pflag.BoolVarP(&levels[7],
-		"seven",
-		"7",
-		false,
-		"Compression level 7")
-
-	pflag.BoolVarP(&levels[8],
-		"eight",
-		"8",
-		false,
-		"Compression level 8")
-
-	pflag.BoolVarP(&levels[9],
-		"best",
-		"9",
-		false,
-		"Compression level 9")
+	pflag.IntVarP(&o.blocksize, "blocksize", "b", 128, "Set compression block size in KiB")
+	pflag.BoolVarP(&o.decompress, "decompress", "d", false, "Decompress the compressed input")
+	pflag.BoolVarP(&o.force, "force", "f", false, "Force overwrite of output file and compress links")
+	pflag.BoolVarP(&o.help, "help", "h", false, "Display a help screen and quit")
+	pflag.BoolVarP(&o.keep, "keep", "k", false, "Do not delete original file after processing")
+	pflag.BoolVarP(&o.license, "license", "L", false, "Display license")
+	// TODO: implement list option here
+	pflag.IntVarP(&o.processes, "processes", "p", runtime.NumCPU(), "Allow up to n compression threads")
+	pflag.BoolVarP(&o.quiet, "quiet", "q", false, "Print no messages, even on error")
+	// TODO: implement recursive option here
+	pflag.BoolVarP(&o.stdout, "stdout", "c", false, "Write all processed output to stdout (won't delete)")
+	pflag.StringVarP(&o.suffix, "suffix", "S", ".gz", "Specify suffix for compression")
+	pflag.BoolVarP(&o.test, "test", "t", false, "Test the integrity of the compressed input")
+	pflag.BoolVarP(&o.verbose, "verbose", "v", false, "Produce more verbose output")
+	pflag.BoolVarP(&o.version, "version", "V", false, "Print version")
+	pflag.BoolVarP(&levels[1], "fast", "1", false, "Compression level 1")
+	pflag.BoolVarP(&levels[2], "two", "2", false, "Compression level 2")
+	pflag.BoolVarP(&levels[3], "three", "3", false, "Compression level 3")
+	pflag.BoolVarP(&levels[4], "four", "4", false, "Compression level 4")
+	pflag.BoolVarP(&levels[5], "five", "5", false, "Compression level 5")
+	pflag.BoolVarP(&levels[6], "six", "6", false, "Compression level 6")
+	pflag.BoolVarP(&levels[7], "seven", "7", false, "Compression level 7")
+	pflag.BoolVarP(&levels[8], "eight", "8", false, "Compression level 8")
+	pflag.BoolVarP(&levels[9], "best", "9", false, "Compression level 9")
 
 	// Hide the compression levels 2 - 8 from usage.
 	_ = pflag.CommandLine.MarkHidden("two")
@@ -224,8 +78,46 @@ func (o *options) parseArgs() error {
 
 	var err error
 	o.level, err = parseLevels(levels)
-	return err
+	if err != nil {
+		return err
+	}
 
+	return o.validate()
+}
+
+func (o *options) validate() error {
+
+	if o.help {
+		pflag.Usage()
+		os.Exit(0)
+	}
+
+	if o.version {
+		fmt.Printf("%s\n", version)
+		os.Exit(0)
+	}
+
+	if o.license {
+		fmt.Printf("%s\n%s\n%s\n",
+			version,
+			"Copyright (c) 2012-2017 The u-root Authors. All rights reserved.",
+			"Subject to the terms of the BSD 3-Clause license.")
+		os.Exit(0)
+	}
+
+	if o.test {
+		o.decompress = true
+	}
+
+	// Support gunzip and gzcat symlinks
+	if filepath.Base(os.Args[0]) == "gunzip" {
+		o.decompress = true
+	} else if filepath.Base(os.Args[0]) == "gzcat" {
+		o.decompress = true
+		o.stdout = true
+	}
+
+	return nil
 }
 
 // parseLevels loops through a [10]bool and returns the index of the element
@@ -304,9 +196,10 @@ func (f *file) checkOutPath() error {
 	return nil
 }
 
-// Removing input path. Override with keep option. Ignored if output is stdout.
+// Cleanup removes input file. Overrided with keep option. Skipped if
+// stdout or test option is true
 func (f *file) cleanup() error {
-	if !f.options.keep && !f.options.stdout {
+	if !f.options.keep && !f.options.stdout && !f.options.test {
 		return os.Remove(f.path)
 	}
 	return nil
@@ -319,9 +212,11 @@ func (f *file) process() error {
 	}
 	defer i.Close()
 
-	var o *os.File
+	var o null.WriteNameCloser
 	if f.options.stdout {
 		o = os.Stdout
+	} else if f.options.test {
+		o = null.WriteNameClose
 	} else {
 		if o, err = os.Create(f.outputPath()); err != nil {
 			return err
@@ -355,7 +250,7 @@ func (f *file) process() error {
 	return o.Close()
 }
 
-func compressFile(r *os.File, w *os.File, level int, blocksize int, processes int) error {
+func compressFile(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
 	zw, err := pgzip.NewWriterLevel(w, level)
 	if err != nil {
 		return err
@@ -374,7 +269,7 @@ func compressFile(r *os.File, w *os.File, level int, blocksize int, processes in
 	return zw.Close()
 }
 
-func decompressFile(r *os.File, w *os.File, blocksize int, processes int) error {
+func decompressFile(r io.Reader, w io.Writer, blocksize int, processes int) error {
 	zr, err := pgzip.NewReaderN(r, blocksize*1024, processes)
 	if err != nil {
 		return err
@@ -389,42 +284,12 @@ func decompressFile(r *os.File, w *os.File, blocksize int, processes int) error 
 }
 
 func main() {
+
 	var opts options
 
-	// prase CLI arguments. Ignore error if help, version,
-	// or license is specified.
-	err := opts.parseArgs()
-
-	if opts.help {
-		pflag.Usage()
-		os.Exit(0)
-	}
-
-	if opts.version {
-		fmt.Printf("%s\n", version)
-		os.Exit(0)
-	}
-
-	if opts.license {
-		fmt.Printf("%s\n%s\n%s\n",
-			version,
-			"Copyright (c) 2012-2017 The u-root Authors. All rights reserved.",
-			"Subject to the terms of the BSD 3-Clause license.")
-		os.Exit(0)
-	}
-
-	// opts.parseArgs() err
-	if err != nil {
+	if err := opts.parseArgs(); err != nil {
 		fmt.Fprintf(os.Stderr, "Argument error: %s\n", err)
 		os.Exit(1)
-	}
-
-	// Support gunzip and gzcat symlinks
-	if filepath.Base(os.Args[0]) == "gunzip" {
-		opts.decompress = true
-	} else if filepath.Base(os.Args[0]) == "gzcat" {
-		opts.decompress = true
-		opts.stdout = true
 	}
 
 	for _, path := range pflag.Args() {
