@@ -30,6 +30,7 @@ type options struct {
 	keep       bool
 	license    bool
 	quiet      bool
+	stdin      bool
 	stdout     bool
 	test       bool
 	verbose    bool
@@ -85,6 +86,11 @@ func (o *options) parseArgs() error {
 	return o.validate()
 }
 
+// Validate checks options and handles help, version, and license
+// output to the user. If forces decompression to be enabled when
+// test mode is enabled. It further modifies options if the running
+// binary is named gunzip or gzcat to allow for expected behavor for
+// those binaries. Finally it checks if there is piped stdin data.
 func (o *options) validate() error {
 
 	if o.help {
@@ -117,6 +123,25 @@ func (o *options) validate() error {
 		o.stdout = true
 	}
 
+	// Stat os.Stdin and ignore errors. stat will be nil FileInfo if there is an
+	// error.
+	stat, _ := os.Stdin.Stat()
+
+	// No files passed and arguments and Stdin piped data found.
+	// Stdin piped data is ignored if arguments are found.
+	if len(pflag.Args()) == 0 && (stat.Mode()&os.ModeNamedPipe) != 0 {
+		o.stdin = true
+		// Enable force to ignore suffix checks
+		o.force = true
+		// Since there's no filename to derive the output path from, only support
+		// outputting to stdout when data is piped from stdin
+		o.stdout = true
+	} else if len(pflag.Args()) == 0 {
+		// No stdin piped data found and no files passed as arguments
+		pflag.Usage()
+		os.Exit(0)
+	}
+
 	return nil
 }
 
@@ -147,17 +172,28 @@ type file struct {
 }
 
 // outputPath removes the path suffix on decompress and adds it on compress.
+// In the case of when options stdout or test are enabled it returns the path
+// as is.
 func (f *file) outputPath() string {
-	if f.options.decompress {
+	if f.options.stdout || f.options.test {
+		return f.path
+	} else if f.options.decompress {
 		return f.path[:len(f.path)-len(f.options.suffix)]
 	}
 	return f.path + f.options.suffix
 }
 
-// checkPath validates the input file path. Checking on compression
+// checkPath validates the input file path. Checks on compression
 // if the path has the correct suffix, and on decompression checks
 // that it doesn't have the suffix. Allows override by force option.
 func (f *file) checkPath() error {
+	_, err := os.Stat(f.path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("%s does not exist", f.path)
+	} else if os.IsPermission(err) {
+		return fmt.Errorf("%s permission denied", f.path)
+	}
+
 	if !f.options.force {
 		if f.options.decompress {
 			if !strings.HasSuffix(f.path, f.options.suffix) {
@@ -169,26 +205,22 @@ func (f *file) checkPath() error {
 			}
 		}
 	}
-	_, err := os.Stat(f.path)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("%s does not exist", f.path)
-	} else if os.IsPermission(err) {
-		return fmt.Errorf("%s permission denied", f.path)
-	}
 	return f.checkOutPath()
 }
 
-// checkOutPath checks if output is attempting to write binary to the stdout.
-// Check if output path already exists. Allow override via force option.
+// checkOutPath checks if output is attempting to write binary to stdout if
+// stdout is a device. Also checks if output path already exists. Allow
+// override via force option.
 func (f *file) checkOutPath() error {
 	if f.options.stdout {
-		if !f.options.decompress && !f.options.force {
-			return errors.New("trying to write compressed data to a terminal (use -f to force)")
+		stat, _ := os.Stdout.Stat()
+		if !f.options.decompress && !f.options.force && (stat.Mode()&os.ModeDevice) != 0 {
+			return errors.New("trying to write compressed data to a terminal/device (use -f to force)")
 		}
 		return nil
 	}
 	_, err := os.Stat(f.outputPath())
-	if !os.IsNotExist(err) && !f.options.force {
+	if !os.IsNotExist(err) && !f.options.stdout && !f.options.test && !f.options.force {
 		return fmt.Errorf("%s already exist", f.outputPath())
 	} else if os.IsPermission(err) {
 		return fmt.Errorf("%s permission denied", f.outputPath())
@@ -197,7 +229,7 @@ func (f *file) checkOutPath() error {
 }
 
 // Cleanup removes input file. Overrided with keep option. Skipped if
-// stdout or test option is true
+// stdout or test option is true.
 func (f *file) cleanup() error {
 	if !f.options.keep && !f.options.stdout && !f.options.test {
 		return os.Remove(f.path)
@@ -205,6 +237,8 @@ func (f *file) cleanup() error {
 	return nil
 }
 
+// Process either compresses or decompressed the input file based on
+// the associated file.options.
 func (f *file) process() error {
 	i, err := os.Open(f.path)
 	if err != nil {
@@ -212,11 +246,14 @@ func (f *file) process() error {
 	}
 	defer i.Close()
 
+	// Use the null.WriteNameCloser interface so both *os.File and
+	// null.WriteNameClose can be assigned to var o without any type casting below.
 	var o null.WriteNameCloser
-	if f.options.stdout {
-		o = os.Stdout
-	} else if f.options.test {
+
+	if f.options.test {
 		o = null.WriteNameClose
+	} else if f.options.stdout {
+		o = os.Stdout
 	} else {
 		if o, err = os.Create(f.outputPath()); err != nil {
 			return err
@@ -292,7 +329,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, path := range pflag.Args() {
+	var files []string
+
+	if opts.stdin {
+		files = []string{"/dev/stdin"}
+	} else {
+		files = pflag.Args()
+	}
+
+	for _, path := range files {
 
 		f := file{path: path, options: &opts}
 		if err := f.checkPath(); err != nil {
