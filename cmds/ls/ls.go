@@ -27,6 +27,7 @@ import (
 )
 
 var (
+	human   = flag.Bool("h", false, "human readable sizes")
 	long    = flag.Bool("l", false, "long form")
 	quoted  = flag.Bool("Q", false, "quoted")
 	recurse = flag.Bool("R", false, "equivalent to findutil's find")
@@ -35,10 +36,14 @@ var (
 func stringer(fi fileInfo) fmt.Stringer {
 	var s fmt.Stringer = fi
 	if *quoted {
-		s = quotedStringer{fi}
+		s = quotedStringer{fileInfo: fi}
 	}
 	if *long {
-		s = longStringer{fi, s}
+		s = longStringer{
+			fileInfo: fi,
+			comp:     s,
+			human:    *human,
+		}
 	}
 	return s
 }

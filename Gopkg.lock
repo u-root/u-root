@@ -39,6 +39,12 @@
   revision = "6e570ed0a266b730a860ba1068090f683b2c213a"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
+
+[[projects]]
   branch = "v2"
   name = "github.com/go-yaml/yaml"
   packages = ["."]
@@ -185,6 +191,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "22ce9fa037a428293d3133f40f661ac3355c759ff33e1e87cd76e5a6c7b803bf"
+  inputs-digest = "9ed0cf201085ba821055d6f9b341cd682f00653b98780e9c97b2dec30fc3fbfc"
   solver-name = "gps-cdcl"
   solver-version = 1
