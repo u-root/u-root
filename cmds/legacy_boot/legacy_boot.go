@@ -31,6 +31,7 @@ import (
     "io/ioutil"
     "log"
     "strings"
+    "github.com/u-root/u-root/pkg/kexec"
     "os" )
 
 var verbose bool
@@ -227,7 +228,7 @@ func get_file_menu_content(path string) ([]string,int) {
 
 }
 
-func copy_kernel(path string) string {
+func copy_local(path string) string {
     var dest string
     result := strings.Split(path,"/")
 	for _,entry := range result {
@@ -282,12 +283,35 @@ func kexec_entry(grub_conf_path string, mount_point string) {
 		println(initrd)
 		println("****************************************************")
 	}
-	local_kernel_path=copy_kernel(mount_point+kernel)
+	local_kernel_path=copy_local(mount_point+kernel)
+	local_initrd_path=copy_local(mount_point+initrd)
 	if ( verbose ) {
 		println(local_kernel_path)
 	}
-	umount(mount_point)
+	umount_entry(mount_point)
 	// We can kexec the kernel with local_kernel_path as kernel entry, kernel_parameter as parameter and initrd as initrd !
+	        log.Printf("Loading %s for kernel\n", local_kernel_path)
+
+        kernel_desc, err := os.OpenFile(local_kernel_path, os.O_RDONLY, 0)
+        if err != nil {
+                  log.Fatalf("open(%q): %v", local_kernel_path, err)
+        }
+        defer kernel_desc.Close()
+
+        var ramfs *os.File
+        ramfs, err = os.OpenFile(local_initrd_path, os.O_RDONLY, 0)
+        if err != nil {
+               log.Fatalf("open(%q): %v", local_initrd_path, err)
+        }
+        defer ramfs.Close()
+
+        if err := kexec.FileLoad(kernel_desc, ramfs, kernel_parameter); err != nil {
+                log.Fatalf("%v", err)
+        }
+        if err := kexec.Reboot(); err != nil {
+                log.Fatalf("%v", err)
+        }
+
 }
 
 
