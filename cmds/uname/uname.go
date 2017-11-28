@@ -18,12 +18,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -36,30 +37,37 @@ var (
 	domain  = flag.Bool("d", false, "print your domain name")
 )
 
-func handleFlags(u *util.Utsname) string {
+func toString(d []byte) string {
+	return string(d[:bytes.IndexByte(d[:], 0)])
+}
+
+func handleFlags(u *unix.Utsname) string {
+	Sysname, Nodename := toString(u.Sysname[:]), toString(u.Nodename[:])
+	Release, Version := toString(u.Release[:]), toString(u.Version[:])
+	Machine, Domainname := toString(u.Machine[:]), toString(u.Domainname[:])
 	info := make([]string, 0, 6)
 
 	if *all || flag.NFlag() == 0 {
-		info = append(info, u.Sysname, u.Nodename, u.Release, u.Version, u.Machine, u.Domainname)
+		info = append(info, Sysname, Nodename, Release, Version, Machine, Domainname)
 		goto end
 	}
 	if *kernel {
-		info = append(info, u.Sysname)
+		info = append(info, Sysname)
 	}
 	if *node {
-		info = append(info, u.Nodename)
+		info = append(info, Nodename)
 	}
 	if *release {
-		info = append(info, u.Release)
+		info = append(info, Release)
 	}
 	if *version {
-		info = append(info, u.Version)
+		info = append(info, Version)
 	}
 	if *machine {
-		info = append(info, u.Machine)
+		info = append(info, Machine)
 	}
 	if *domain {
-		info = append(info, u.Domainname)
+		info = append(info, Domainname)
 	}
 
 end:
@@ -69,10 +77,11 @@ end:
 func main() {
 	flag.Parse()
 
-	if u, err := util.Uname(); err != nil {
+	var u unix.Utsname
+	if err := unix.Uname(&u); err != nil {
 		log.Fatalf("%v", err)
-	} else {
-		info := handleFlags(u)
-		fmt.Println(info)
 	}
+
+	info := handleFlags(&u)
+	fmt.Println(info)
 }
