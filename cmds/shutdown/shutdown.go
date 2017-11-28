@@ -5,27 +5,38 @@
 // shutdown halts or reboots.
 //
 // Synopsis:
-//     shutdown [-dryrun] [operation]
+//     shutdown [-dryrun] [-k] [-h|-r|operation]
 //
 // Description:
 //     shutdown will either do or simulate the operation.
 //     current operations are reboot and halt.
 //
 // Options:
-//     -dryrun:   do not do really do it.
+//     -dryrun:	do not do really do it.
+//     -k:	do not do really do it.
+//     -r:	reboot the machine.
+//     -h:	halt the machine.
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
+	"fmt"
 	"os"
 
 	"golang.org/x/sys/unix"
 )
 
+type options struct {
+	k      bool
+	h      bool
+	r      bool
+}
+
 var (
-	dryrun  = flag.Bool("dryrun", false, "Do not do reboot system calls")
-	op      = "reboot"
+	flags   options
+	op      string
 	opcodes = map[string]uint32{
 		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
 		"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
@@ -34,11 +45,17 @@ var (
 )
 
 func usage() {
-	log.Fatalf("shutdown [-dryrun] [halt|reboot|suspend] (defaults to reboot)")
+	log.Fatalf("shutdown [-dryrun] [-k] [-h|-r|halt|reboot|suspend] (defaults to reboot)")
 }
 
-func main() {
-	flag.Parse()
+func init() {
+	flag.BoolVar(&flags.k, "dryrun", false, "Do not do kexec system calls")
+	flag.BoolVar(&flags.k, "k", false, "Do not do kexec system calls")
+	flag.BoolVar(&flags.h, "h", false, "Halt the machine")
+	flag.BoolVar(&flags.r, "r", false, "Reboot the machine")
+}
+
+func ascertainOperation() (uint32, error) {
 	switch len(flag.Args()) {
 	default:
 		usage()
@@ -47,12 +64,38 @@ func main() {
 		op = flag.Args()[0]
 	}
 
-	f, ok := opcodes[op]
+	if op == "" {
+		if flags.h && flags.r {
+			return 0, errors.New("Multiple flags detected")
+		} else if flags.h {
+			op = "halt"
+		} else {
+			op = "reboot"
+		}
+
+	} else {
+		if flags.h || flags.r {
+			return 0, errors.New("Please only provide flags or operation codes.")
+		}
+	}
+
+	c, ok := opcodes[op]
 	if !ok {
+		return 0, errors.New(fmt.Sprintf("Invalid operation %s", op))
+	}
+	return c, nil
+}
+
+func main() {
+	flag.Parse()
+
+	f, err := ascertainOperation()
+	if err != nil {
+		log.Println(err)
 		usage()
 	}
 
-	if *dryrun {
+	if flags.k {
 		log.Printf("unix.Reboot(0x%x)", f)
 		os.Exit(0)
 	}
