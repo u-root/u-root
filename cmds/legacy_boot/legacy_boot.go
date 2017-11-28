@@ -257,6 +257,7 @@ func kexec_entry(grub_conf_path string, mount_point string) {
 	var file_menu_content []string
 	var entry int
 	var local_kernel_path string
+	var local_initrd_path string
 	if verbose {
 		println(grub_conf_path)
 	}
