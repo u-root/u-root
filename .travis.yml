@@ -1,21 +1,24 @@
-sudo: true
+sudo: required  # create a full VM, not a container
 language: go
 go:
   - 1.9.x
-env:
-  - "PATH=/home/travis/gopath/bin:$PATH"
-before_install:
-  - pwd
-  - ls -l
-install:
-  - ls
-  - curl -L -o /home/travis/gopath/bin/dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
-  - chmod +x /home/travis/gopath/bin/dep
+install: true   # build only with what's in vendor/
+before_script:
+  - echo $GOPATH  # DEBUG
+  - echo $PATH    # DEBUG
+  - echo "working directory is $CWD"
+  - pwd  # DEBUG
+  - ls -1 vendor/github.com/
+  - ls -1 vendor/github.com/golang
+  - ls -1 vendor/github.com/golang/dep
+  - ls -1 vendor/github.com/golang/dep/cmd
+  - cd vendor/github.com/golang/dep/cmd/dep
+  - go install
+  - cd -  # return to the project root directory
 script:
   - cat travis.sh
   - bash travis.sh
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then ghr --username u-root --token $GITHUB_TOKEN --replace --prerelease --debug `git describe --always`  dist/; fi
-
 notifications:
   slack: u-root:S74GnNB8ekAiqNYTjwbEhkQE
