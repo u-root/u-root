@@ -1,0 +1,7 @@
+{
+  "commands": [
+    ["init"]
+  ],
+  "error-expected": "manifest already exists:",
+  "vendor-final": []
+}
