@@ -51,10 +51,8 @@ type options struct {
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		log.Fatal(e)
 	}
-}
-func check_fs(e error) {
 }
 
 func blkDevicesList(blkpath string, devpath string) []string {
@@ -145,7 +143,7 @@ func mountEntry(path string, supportedFilesystem []string) bool {
 	var returnValue bool
 	var err error
 	err=syscall.Mkdir("/u-root", 0777)
-	check_fs(err)
+	check(err)
 	var flags uintptr
 	// Was supposed to be unecessary for kernel 4.x.x
 	if verbose {
@@ -155,7 +153,7 @@ func mountEntry(path string, supportedFilesystem []string) bool {
 		flags = syscall.MS_MGC_VAL
 		// Need to load the filesystem kind supported
 		err = syscall.Mkdir("/u-root/"+path, 0777)
-		check_fs(err)
+		check(err)
 		err := syscall.Mount("/dev/"+path, "/u-root/"+path, filesystem, flags, "")
 		if err == nil {
 			return true
