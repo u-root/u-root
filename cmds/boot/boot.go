@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// legacy_boot allows to handover a system running linuxboot/u-root
+// boot allows to handover a system running linuxboot/u-root
 // to a legacy preinstalled operating system by replacing the traditional
 // bootloader path
 
 //
 // Synopsis:
-//	legacy_boot
+//	boot
 //
 // Description:
 //	If returns to u-root shell, the code didn't found a local bootable option
@@ -20,7 +20,7 @@
 //	Windows is not supported (that is a work in progress)
 //
 // Example:
-//	legacy_boot -v 	- Start the script in verbose mode for debugging purpose
+//	boot -v 	- Start the script in verbose mode for debugging purpose
 
 package main
 
