@@ -47,6 +47,8 @@ func check(e error) {
 		panic(e)
 	}
 }
+func check_fs(e error) {
+}
 
 func blkDevicesList(blkpath string, devpath string) []string {
 	var blkDevices []string
@@ -57,7 +59,10 @@ func blkDevicesList(blkpath string, devpath string) []string {
 	for _, file := range files {
 		deviceEntry, err := ioutil.ReadDir(blkpath + file.Name() + devpath)
 		if err != nil {
-			println("can t read directory")
+			if ( verbose ) {
+				println("can t read directory")
+			}
+			continue
 		}
 		blkDevices = append(blkDevices, deviceEntry[0].Name())
 	}
@@ -120,8 +125,8 @@ func getSupportedFilesystem() []string {
 		if fields[0] == "nodev" {
 			continue
 		}
-		if fields[1] != "" {
-			returnValue = append(returnValue, fields[1])
+		if fields[0] != "" {
+			returnValue = append(returnValue, fields[0])
     		}
 	}
 
@@ -136,7 +141,7 @@ func mountEntry(path string, supportedFilesystem []string) bool {
 	var returnValue bool
 	var err error
 	err=syscall.Mkdir("/u-root", 0777)
-	check(err)
+	check_fs(err)
 	var flags uintptr
 	// Was supposed to be unecessary for kernel 4.x.x
 	if verbose {
@@ -146,7 +151,7 @@ func mountEntry(path string, supportedFilesystem []string) bool {
 		flags = syscall.MS_MGC_VAL
 		// Need to load the filesystem kind supported
 		err = syscall.Mkdir("/u-root/"+path, 0777)
-		check(err)
+		check_fs(err)
 		err := syscall.Mount("/dev/"+path, "/u-root/"+path, filesystem, flags, "")
 		if err == nil {
 			return true
