@@ -1,6 +1,0 @@
-{
-  "commands": [
-    ["ensure", "-vendor-only"]
-  ],
-  "error-expected": "no Gopkg.lock exists from which to populate vendor/"
-}

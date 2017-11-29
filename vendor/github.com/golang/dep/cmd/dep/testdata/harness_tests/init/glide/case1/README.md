@@ -1,1 +1,0 @@
-Import glide config at project root.

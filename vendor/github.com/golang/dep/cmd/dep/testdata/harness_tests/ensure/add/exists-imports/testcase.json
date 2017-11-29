@@ -1,8 +1,0 @@
-{
-  "commands": [
-    ["ensure", "-add", "github.com/sdboyer/deptesttres@master"]
-  ],
-  "vendor-final": [
-      "github.com/sdboyer/deptesttres"
-  ]
-}
