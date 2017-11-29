@@ -33,10 +33,14 @@ import (
 	"log"
 	"os"
 	"strings"
+	"flag"
 	"syscall"
 )
 
 var verbose bool
+type options struct {
+        verbose bool
+}
 
 func check(e error) {
 	if e != nil {
@@ -320,25 +324,25 @@ func usage() {
 	os.Exit(2)
 }
 
-func main() {
+func registerFlags(f *flag.FlagSet) *options {
+        o := &options{}
+        f.BoolVar(&o.verbose, "v", false, "Set verbose output")
+        return o
+}
 
-	// Device list is in /sys/dev/block/
+
+func main() {
 	var blk_list []string
 	var supported_filesystem []string
 	var parameter string
 	verbose = false
-	if len(os.Args) != 1 {
-		if len(os.Args) != 2 {
-			usage()
-		}
-		parameter = os.Args[1]
-		if parameter == "-v" {
-			verbose = true
-			println("verbose mode activated")
-		} else {
-			usage()
-		}
-	}
+        opts := registerFlags(flag.CommandLine)
+	flag.Parse()
+
+        if opts.verbose != false {
+		verbose = true
+        }
+
 	supported_filesystem = get_supported_filesystem()
 	if verbose {
 		println("************** Supported Filesystem by current linuxboot ********************")
