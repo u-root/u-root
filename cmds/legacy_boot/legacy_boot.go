@@ -114,17 +114,17 @@ func getSupportedFilesystem() []string {
 	if err = scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-	var string1, string2 string
+
 	for scanner.Scan() {
-		string1 = ""
-		string2 = ""
-		fmt.Sscanf(scanner.Text(), "%s %s", &string1, &string2)
-		if string2 == "" {
-			if string1 != "" {
-				returnValue = append(returnValue, string1)
-			}
+		fields := strings.Fields(scanner.Text())
+		if fields[0] == "nodev" {
+			continue
 		}
+		if fields[1] != "" {
+			returnValue = append(returnValue, fields[1])
+    		}
 	}
+
 	err=file.Close()
 	check(err)
 	return returnValue
