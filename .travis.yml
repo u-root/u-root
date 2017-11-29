@@ -4,14 +4,7 @@ go:
   - 1.9.x
 install: true   # build only with what's in vendor/
 before_script:
-  - echo $GOPATH  # DEBUG
-  - echo $PATH    # DEBUG
-  - echo "working directory is $CWD"
-  - pwd  # DEBUG
-  - ls -1 vendor/github.com/
-  - ls -1 vendor/github.com/golang
-  - ls -1 vendor/github.com/golang/dep
-  - ls -1 vendor/github.com/golang/dep/cmd
+  # install the dep tool so we can check for missing dependencies later
   - cd vendor/github.com/golang/dep/cmd/dep
   - go install
   - cd -  # return to the project root directory

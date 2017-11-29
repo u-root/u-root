@@ -106,12 +106,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/u-root/u-root"
-  packages = ["cmds/fmap/lib","pkg/cpio","pkg/cpio/newc","pkg/golang","pkg/gpt","pkg/kexec","pkg/kmodule","pkg/ldd","pkg/pci","pkg/pty","pkg/ramfs","pkg/termios","pkg/testutil","pkg/uroot","pkg/uroot/util"]
-  revision = "fe19818fec279a6f4e77fa7d6610dc06bf2f9fa9"
-
-[[projects]]
-  branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [".","nl"]
   revision = "c2a3de3b38bd00f07290c3c5e12b4dbc04ec8666"
@@ -161,6 +155,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6505f0d80a7e04a4c6d4a7cc9d75666f366a35a44b62cfc440d76858e7b29fd1"
+  inputs-digest = "28bb10879b3f0b890636b4a8b300b768c69c2c35f74641328980fa6c8c5e376d"
   solver-name = "gps-cdcl"
   solver-version = 1
