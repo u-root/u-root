@@ -1,5 +1,0 @@
-{
-  "commands": [
-    ["ensure", "-no-vendor", "-dry-run"]
-  ]
-}

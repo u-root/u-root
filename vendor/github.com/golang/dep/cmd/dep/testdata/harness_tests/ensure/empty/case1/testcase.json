@@ -1,9 +1,0 @@
-{
-  "commands": [
-    ["init", "-skip-tools", "-no-examples"],
-    ["ensure", "-update"]
-  ],
-  "vendor-final": [
-    "github.com/sdboyer/deptest"
-  ]
-}

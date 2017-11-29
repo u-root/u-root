@@ -1,6 +1,0 @@
-{
-  "commands": [
-    ["ensure", "foobar.com/baz"]
-  ],
-  "error-expected": "dep ensure only takes spec arguments with -add or -update"
-}

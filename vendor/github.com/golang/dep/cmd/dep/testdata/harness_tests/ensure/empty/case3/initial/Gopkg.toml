@@ -1,5 +1,0 @@
-ignored = ["github.com/sdboyer/deptestdos"]
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/sdboyer/deptest"
