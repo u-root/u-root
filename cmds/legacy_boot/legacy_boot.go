@@ -26,15 +26,22 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"github.com/u-root/u-root/pkg/kexec"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"flag"
 	"syscall"
+)
+
+const (
+	bootableMBR = 0xaa55
+	signatureOffset = 510
 )
 
 var verbose bool
@@ -69,24 +76,21 @@ func blkDevicesList(blkpath string, devpath string) []string {
 	return (blkDevices)
 }
 
-// checkForBootableMbr is looking for bootable MBR signature 
+// checkForBootableMBR is looking for bootable MBR signature 
 // Current support is limited to Hard disk devices and USB devices
-func checkForBootableMbr(path string) int {
-	var b511, b510 byte
-	var err error
+func checkForBootableMBR(path string) (bool,error) {
+	var sig uint16
 	f, err := os.Open(path)
-	check(err)
-	b1 := make([]byte, 512)
-	_,err=f.Read(b1)
-	check(err)
-	b511 = b1[511]
-	b510 = b1[510]
-	err=f.Close()
-	check(err)
-	if ((b511 == 0xaa) && (b510 == 0x55)) == true {
-		return 1
+	if err != nil {
+		return false, err
 	}
-	return 0
+	if err := binary.Read(io.NewSectionReader(f, signatureOffset, 2), binary.LittleEndian, &sig); err != nil {
+		return false,err
+	}
+	if sig != bootableMBR {
+		return false, nil
+	}
+	return true,nil	
 }
 
 // getDevicePartList returns all devices attached to a specific name like /dev/sdaX where X can move from 0 to 127
@@ -368,7 +372,13 @@ func main() {
 	// devices which do have such support
 	// drive are easy to detect
 	for _, entry := range blkList {
-		if checkForBootableMbr("/dev/"+entry) == 1 {
+		dev := filepath.Join("/dev", entry)
+		b, err := checkForBootableMBR(dev)
+		if err != nil {
+			// Not sure it matters; there can be many bogus entries?
+			log.Printf("MBR for %s failed: %v", dev, err)
+		}
+		if b {
 			fmt.Println("Bootable device found")
 			// We need to loop on the device entries which are into /dev/<device>X
 			// and mount each partitions as to find /boot entry if it is available somewhere
