@@ -68,13 +68,16 @@ func blkDevicesList(blkpath string, devpath string) []string {
 // Current support is limited to Hard disk devices and USB devices
 func checkForBootableMbr(path string) int {
 	var b511, b510 byte
+	var err error
 	f, err := os.Open(path)
 	check(err)
 	b1 := make([]byte, 512)
-	f.Read(b1)
+	_,err=f.Read(b1)
+	check(err)
 	b511 = b1[511]
 	b510 = b1[510]
-	f.Close()
+	err=f.Close()
+	check(err)
 	if ((b511 == 0xaa) && (b510 == 0x55)) == true {
 		return 1
 	}
@@ -104,10 +107,11 @@ func getDevicePartList(path string) []string {
 // getSupportedFilesystem returns all block file system supported by the linuxboot kernel
 func getSupportedFilesystem() []string {
 	var returnValue []string
+	var err error
 	file, err := os.Open("/proc/filesystems")
 	check(err)
 	scanner := bufio.NewScanner(file)
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 	var string1, string2 string
@@ -130,7 +134,9 @@ func getSupportedFilesystem() []string {
 // mountEntry tries to mount a specific block device
 func mountEntry(path string, supportedFilesystem []string) bool {
 	var returnValue bool
-	syscall.Mkdir("/u-root", 0777)
+	var err error
+	err=syscall.Mkdir("/u-root", 0777)
+	check(err)
 	var flags uintptr
 	// Was supposed to be unecessary for kernel 4.x.x
 	if verbose {
@@ -139,7 +145,8 @@ func mountEntry(path string, supportedFilesystem []string) bool {
 	for _, filesystem := range supportedFilesystem {
 		flags = syscall.MS_MGC_VAL
 		// Need to load the filesystem kind supported
-		syscall.Mkdir("/u-root/"+path, 0777)
+		err = syscall.Mkdir("/u-root/"+path, 0777)
+		check(err)
 		err := syscall.Mount("/dev/"+path, "/u-root/"+path, filesystem, flags, "")
 		if err == nil {
 			return true
@@ -190,10 +197,11 @@ func checkBootEntry(mountPoint string) string {
 // and the default boot entry configured into grub.cfg
 func getFileMenuContent(path string) ([]string, int) {
 	var returnValue []string
-	file, _ := os.Open(path + "/grub.cfg")
-	defer file.Close()
+	var err error
+	file, err := os.Open(path + "/grub.cfg")
+	check(err)
 	scanner := bufio.NewScanner(file)
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 	var status int
@@ -225,12 +233,15 @@ func getFileMenuContent(path string) ([]string, int) {
 			}
 		}
 	}
+	err = file.Close()
+	check(err)
 	return returnValue, intReturn
 
 }
 
 func copyLocal(path string) string {
 	var dest string
+	var err error
 	result := strings.Split(path, "/")
 	for _, entry := range result {
 		dest = entry
@@ -238,16 +249,18 @@ func copyLocal(path string) string {
 	dest = "/tmp/" + dest
 	srcFile, err := os.Open(path)
 	check(err)
-	defer srcFile.Close()
 
 	destFile, err := os.Create(dest) // creates if file doesn't exist
 	check(err)
-	defer destFile.Close()
 
 	_, err = io.Copy(destFile, srcFile) // check first var for number of bytes copied
 	check(err)
 
 	err = destFile.Sync()
+	check(err)
+	err = destFile.Close()
+	check(err)
+	err = srcFile.Close()
 	check(err)
 	return dest
 }
@@ -297,18 +310,22 @@ func kexecEntry(grubConfPath string, mountPoint string) {
 	if err != nil {
 		log.Fatalf("open(%q): %v", localKernelPath, err)
 	}
-	defer kernelDesc.Close()
+	// defer kernelDesc.Close()
 
 	var ramfs *os.File
 	ramfs, err = os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
 	if err != nil {
 		log.Fatalf("open(%q): %v", localInitrdPath, err)
 	}
-	defer ramfs.Close()
+	// defer ramfs.Close()
 
 	if err := kexec.FileLoad(kernelDesc, ramfs, kernelParameter); err != nil {
 		log.Fatalf("%v", err)
 	}
+ 	err = ramfs.Close()
+	check(err)
+	err = kernelDesc.Close()
+	check(err)	
 	if err := kexec.Reboot(); err != nil {
 		log.Fatalf("%v", err)
 	}
