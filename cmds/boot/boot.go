@@ -233,22 +233,23 @@ func getFileMenuContent(path string) ([]string, int, error) {
 	for scanner.Scan() {
 		trimmedLine = strings.TrimSpace(scanner.Text())
 		trimmedLine = strings.Join(strings.Fields(trimmedLine), " ")
-		if !strings.HasPrefix(trimmedLine, "#") {
-			if (strings.HasPrefix(trimmedLine, "set default=") ) && (status == 0) {
-				fmt.Sscanf(trimmedLine, "set default=\"%d\"", &intReturn)
-			}
-			if (strings.HasPrefix(trimmedLine, "menuentry ")) && (status == 0) {
-				status = 1
-				returnValue = append(returnValue, trimmedLine)
-			}
-			if (strings.HasPrefix(trimmedLine, "linux ")) && (status == 1) {
-				status = 2
-				returnValue = append(returnValue, trimmedLine)
-			}
-			if (strings.HasPrefix(trimmedLine, "initrd ")) && (status == 2) {
-				status = 0
-				returnValue = append(returnValue, trimmedLine)
-			}
+		if strings.HasPrefix(trimmedLine, "#") {
+			continue
+		}
+		if (strings.HasPrefix(trimmedLine, "set default=") ) && (status == 0) {
+			fmt.Sscanf(trimmedLine, "set default=\"%d\"", &intReturn)
+		}
+		if (strings.HasPrefix(trimmedLine, "menuentry ")) && (status == 0) {
+			status = 1
+			returnValue = append(returnValue, trimmedLine)
+		}
+		if (strings.HasPrefix(trimmedLine, "linux ")) && (status == 1) {
+			status = 2
+			returnValue = append(returnValue, trimmedLine)
+		}
+		if (strings.HasPrefix(trimmedLine, "initrd ")) && (status == 2) {
+			status = 0
+			returnValue = append(returnValue, trimmedLine)
 		}
 	}
 	err = file.Close()
