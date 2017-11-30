@@ -66,7 +66,7 @@ func blkDevicesList(blkpath string, devpath string) ([]string,error) {
 		deviceEntry, err := ioutil.ReadDir(blkpath + file.Name() + devpath)
 		if err != nil {
 			if ( verbose ) {
-				println("can t read directory")
+				log.Printf("can t read directory")
 			}
 			continue
 		}
@@ -145,7 +145,7 @@ func mountEntry(path string, supportedFilesystem []string) (bool,error) {
 	var flags uintptr
 	// Was supposed to be unecessary for kernel 4.x.x
 	if verbose {
-		println("/dev/" + path)
+		log.Printf("/dev/" + path)
 	}
 	for _, filesystem := range supportedFilesystem {
 		flags = syscall.MS_MGC_VAL
@@ -296,7 +296,7 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 	var localKernelPath string
 	var localInitrdPath string
 	if verbose {
-		println(grubConfPath)
+		log.Printf(grubConfPath)
 	}
 	fileMenuContent, entry, err := getFileMenuContent(grubConfPath)
 	if ( err != nil ) {
@@ -318,11 +318,11 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 	}
 	fmt.Sscanf(fileMenuContent[3*entry+2], "initrd %s", &initrd)
 	if verbose {
-		println("************** boot parameters  ********************")
-		println(kernel)
-		println(kernelParameter)
-		println(initrd)
-		println("****************************************************")
+		log.Printf("************** boot parameters  ********************")
+		log.Printf(kernel)
+		log.Printf(kernelParameter)
+		log.Printf(initrd)
+		log.Printf("****************************************************")
 	}
 	localKernelPath,err = copyLocal(mountPoint + kernel)
 	if ( err != nil ) {
@@ -333,7 +333,7 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 		return err
 	}
 	if verbose {
-		println(localKernelPath)
+		log.Printf(localKernelPath)
 	}
 	umountEntry(mountPoint)
 	// We can kexec the kernel with localKernelPath as kernel entry, kernelParameter as parameter and initrd as initrd !
@@ -393,11 +393,11 @@ func main() {
                 log.Panic("No filesystem support found")
         }
 	if verbose {
-		println("************** Supported Filesystem by current linuxboot ********************")
+		log.Printf("************** Supported Filesystem by current linuxboot ********************")
 		for _, filesystem := range supportedFilesystem {
-			println(filesystem)
+			log.Printf(filesystem)
 		}
-		println("*****************************************************************************")
+		log.Printf("*****************************************************************************")
 	}
 	blkList,err = blkDevicesList("/sys/dev/block/", "/device/block/")
 	if ( err != nil ) {
@@ -429,12 +429,12 @@ func main() {
 				}
 				if mount {
 					if verbose {
-						println("mount succeed")
+						log.Printf("mount succeed")
 					}
 					var grubConfPath = checkBootEntry("/u-root/" + deviceList)
 					if grubConfPath != "" {
 						if verbose {
-							println("calling basic kexec")
+							log.Printf("calling basic kexec")
 						}
 						err = kexecEntry(grubConfPath, "/u-root/"+deviceList)
 						if ( err != nil ) {
@@ -446,5 +446,5 @@ func main() {
 			}
 		}
 	}
-	println("Sorry no bootable device found")
+	log.Printf("Sorry no bootable device found")
 }
