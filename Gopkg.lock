@@ -63,10 +63,10 @@
   revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
 
 [[projects]]
+  branch = "master"
   name = "github.com/google/uuid"
   packages = ["."]
-  revision = "064e2069ce9c359c118179501254f67d7d37ba24"
-  version = "0.2"
+  revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
 
 [[projects]]
   name = "github.com/jmank88/nuts"
@@ -108,7 +108,7 @@
   branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [".","nl"]
-  revision = "c2a3de3b38bd00f07290c3c5e12b4dbc04ec8666"
+  revision = "f67b75edbf5e3bb7dfe70bb788610693a71be3d1"
 
 [[projects]]
   branch = "master"
@@ -126,13 +126,13 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["cast5","ed25519","ed25519/internal/edwards25519","md4","openpgp","openpgp/armor","openpgp/elgamal","openpgp/errors","openpgp/packet","openpgp/s2k","ripemd160","sha3"]
-  revision = "9f005a07e0d31d45e6656d241bb5c0f2efd4bc94"
+  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf","context","internal/iana","internal/socket","ipv6"]
-  revision = "9dfe39835686865bff950a07b394c12a98ddc811"
+  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
 
 [[projects]]
   branch = "master"
@@ -144,17 +144,17 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "0dd5e194bbf5eb84a39666eb4c98a4d007e4203a"
+  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
   packages = ["go/ast/astutil","imports"]
-  revision = "6d70fb2e85323e81c89374331d3d2b93304faa36"
+  revision = "04447353bc504b9a5c02eb227b9ecd252e64ea20"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "28bb10879b3f0b890636b4a8b300b768c69c2c35f74641328980fa6c8c5e376d"
+  inputs-digest = "74dfd0d051abb23878bb6e218bf868eb96dc2da2ba1a041384c8f06f7976cdfa"
   solver-name = "gps-cdcl"
   solver-version = 1

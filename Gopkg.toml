@@ -12,8 +12,8 @@ required = [
   name = "github.com/d2g/dhcp4client"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/google/uuid"
-  version = "0.2.0"
 
 [[constraint]]
   name = "github.com/spf13/pflag"
