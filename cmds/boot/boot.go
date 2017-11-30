@@ -116,23 +116,17 @@ func getDevicePartList(path string) ([]string,error) {
 func getSupportedFilesystem() ([]string, error) {
 	var returnValue []string
 	var err error
-	file, err := os.Open("/proc/filesystems")
-	scanner := bufio.NewScanner(file)
-	if err = scanner.Err(); err != nil {
+	fs, err := ioutil.ReadFile("/proc/filesystems") 
+	if err != nil {
 		return returnValue, err
 	}
-
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if fields[0] == "nodev" {
+	for _, f := range strings.Split(string(fs), "\n") {
+		n := strings.Fields(f)
+		if len(n) != 1 {
 			continue
 		}
-		if fields[0] != "" {
-			returnValue = append(returnValue, fields[0])
-    		}
+		returnValue=append(returnValue,n[0])
 	}
-
-	err=file.Close()
 	return returnValue, err
 
 }
