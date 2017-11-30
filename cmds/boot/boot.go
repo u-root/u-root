@@ -27,6 +27,7 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/u-root/u-root/pkg/kexec"
 	"io"
@@ -77,19 +78,20 @@ func blkDevicesList(blkpath string, devpath string) ([]string,error) {
 
 // checkForBootableMBR is looking for bootable MBR signature 
 // Current support is limited to Hard disk devices and USB devices
-func checkForBootableMBR(path string) (bool,error) {
+func checkForBootableMBR(path string) error {
 	var sig uint16
 	f, err := os.Open(path)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if err := binary.Read(io.NewSectionReader(f, signatureOffset, 2), binary.LittleEndian, &sig); err != nil {
-		return false,err
+		return err
 	}
 	if sig != bootableMBR {
-		return false, nil
+		err := errors.New("Not a bootable device")
+		return err
 	}
-	return true,nil	
+	return nil	
 }
 
 // getDevicePartList returns all devices attached to a specific name like /dev/sdaX where X can move from 0 to 127
@@ -408,42 +410,41 @@ func main() {
 	// drive are easy to detect
 	for _, entry := range blkList {
 		dev := filepath.Join("/dev", entry)
-		b, err := checkForBootableMBR(dev)
+		err := checkForBootableMBR(dev)
 		if err != nil {
 			// Not sure it matters; there can be many bogus entries?
 			log.Printf("MBR for %s failed: %v", dev, err)
+			continue
 		}
-		if b {
-			fmt.Println("Bootable device found")
-			// We need to loop on the device entries which are into /dev/<device>X
-			// and mount each partitions as to find /boot entry if it is available somewhere
-			var devicePartList []string
-			devicePartList,err := getDevicePartList(entry)
+		fmt.Println("Bootable device found")
+		// We need to loop on the device entries which are into /dev/<device>X
+		// and mount each partitions as to find /boot entry if it is available somewhere
+		var devicePartList []string
+		devicePartList,err = getDevicePartList(entry)
+		if ( err != nil ) {
+			continue
+		}
+		for _, deviceList := range devicePartList {
+			mount, err := mountEntry(deviceList, supportedFilesystem)
 			if ( err != nil ) {
 				continue
 			}
-			for _, deviceList := range devicePartList {
-				mount, err := mountEntry(deviceList, supportedFilesystem)
-				if ( err != nil ) {
-					continue
+			if mount {
+				if verbose {
+					log.Printf("mount succeed")
 				}
-				if mount {
+				var grubConfPath = checkBootEntry("/u-root/" + deviceList)
+				if grubConfPath != "" {
 					if verbose {
-						log.Printf("mount succeed")
+						log.Printf("calling basic kexec")
 					}
-					var grubConfPath = checkBootEntry("/u-root/" + deviceList)
-					if grubConfPath != "" {
-						if verbose {
-							log.Printf("calling basic kexec")
-						}
-						err = kexecEntry(grubConfPath, "/u-root/"+deviceList)
-						if ( err != nil ) {
-							log.Fatal("kexec failed")
-						}
+					err = kexecEntry(grubConfPath, "/u-root/"+deviceList)
+					if ( err != nil ) {
+						log.Fatal("kexec failed")
 					}
 				}
-				umountEntry("/u-root/" + deviceList)
 			}
+			umountEntry("/u-root/" + deviceList)
 		}
 	}
 	log.Printf("Sorry no bootable device found")
