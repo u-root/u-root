@@ -372,10 +372,8 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 
 }
 
-func registerFlags(f *flag.FlagSet) *options {
-        o := &options{}
-        f.BoolVar(&o.verbose, "v", false, "Set verbose output")
-        return o
+func init {
+        flag.CommandLine..BoolVar(&verbose, "v", false, "Set verbose output")
 }
 
 
@@ -383,12 +381,7 @@ func main() {
 	var blkList []string
 	var supportedFilesystem []string
 	verbose = false
-        opts := registerFlags(flag.CommandLine)
 	flag.Parse()
-
-        if opts.verbose != false {
-		verbose = true
-        }
 
 	supportedFilesystem, err := getSupportedFilesystem()
 	if ( err != nil ) {
