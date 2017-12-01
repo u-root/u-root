@@ -28,6 +28,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/u-root/u-root/pkg/kexec"
 	"io"
@@ -36,47 +37,47 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"flag"
 	"syscall"
 )
 
 const (
-	bootableMBR = 0xaa55
+	bootableMBR     = 0xaa55
 	signatureOffset = 510
 )
 
 var verbose bool
+
 type options struct {
-        verbose bool
+	verbose bool
 }
 
-func blkDevicesList(blkpath string, devpath string) ([]string,error) {
+func blkDevicesList(blkpath string, devpath string) ([]string, error) {
 	var blkDevices []string
 	files, err := ioutil.ReadDir(blkpath)
 	if err != nil {
-		return blkDevices,err
+		return blkDevices, err
 	}
 	for _, file := range files {
-		check,err := os.Stat(blkpath + file.Name() + devpath)
-		if ( check == nil ) {
-                        continue
-                }
-                if ( err != nil ) {
-                        continue
-                }
+		check, err := os.Stat(blkpath + file.Name() + devpath)
+		if check == nil {
+			continue
+		}
+		if err != nil {
+			continue
+		}
 		deviceEntry, err := ioutil.ReadDir(blkpath + file.Name() + devpath)
 		if err != nil {
-			if ( verbose ) {
+			if verbose {
 				log.Printf("can t read directory")
 			}
 			continue
 		}
 		blkDevices = append(blkDevices, deviceEntry[0].Name())
 	}
-	return blkDevices,nil
+	return blkDevices, nil
 }
 
-// checkForBootableMBR is looking for bootable MBR signature 
+// checkForBootableMBR is looking for bootable MBR signature
 // Current support is limited to Hard disk devices and USB devices
 func checkForBootableMBR(path string) error {
 	var sig uint16
@@ -91,12 +92,12 @@ func checkForBootableMBR(path string) error {
 		err := errors.New("Not a bootable device")
 		return err
 	}
-	return nil	
+	return nil
 }
 
 // getDevicePartList returns all devices attached to a specific name like /dev/sdaX where X can move from 0 to 127
 // FIXME no support for devices which are included into subdirectory within /dev
-func getDevicePartList(path string) ([]string,error) {
+func getDevicePartList(path string) ([]string, error) {
 	var returnValue []string
 	files, err := ioutil.ReadDir("/dev/")
 	if err != nil {
@@ -118,7 +119,7 @@ func getDevicePartList(path string) ([]string,error) {
 func getSupportedFilesystem() ([]string, error) {
 	var returnValue []string
 	var err error
-	fs, err := ioutil.ReadFile("/proc/filesystems") 
+	fs, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
 		return returnValue, err
 	}
@@ -127,23 +128,23 @@ func getSupportedFilesystem() ([]string, error) {
 		if len(n) != 1 {
 			continue
 		}
-		returnValue=append(returnValue,n[0])
+		returnValue = append(returnValue, n[0])
 	}
 	return returnValue, err
 
 }
 
 // mountEntry tries to mount a specific block device
-func mountEntry(path string, supportedFilesystem []string) (bool,error) {
+func mountEntry(path string, supportedFilesystem []string) (bool, error) {
 	var returnValue bool
 	var err error
 	exist, err := os.Stat("/u-root")
-        if exist == nil {
-                err=syscall.Mkdir("/u-root", 0777)
-                if ( err != nil ) {
-                        return false,err
-                }
-        }
+	if exist == nil {
+		err = syscall.Mkdir("/u-root", 0777)
+		if err != nil {
+			return false, err
+		}
+	}
 	var flags uintptr
 	// Was supposed to be unecessary for kernel 4.x.x
 	if verbose {
@@ -152,13 +153,13 @@ func mountEntry(path string, supportedFilesystem []string) (bool,error) {
 	for _, filesystem := range supportedFilesystem {
 		flags = syscall.MS_MGC_VAL
 		// Need to load the filesystem kind supported
-		exist, err = os.Stat("/u-root/"+path)
-                if exist == nil {
-                        err = syscall.Mkdir("/u-root/"+path, 0777)
-                        if ( err != nil ) {
-                                return false,err
-                        }
-                }
+		exist, err = os.Stat("/u-root/" + path)
+		if exist == nil {
+			err = syscall.Mkdir("/u-root/"+path, 0777)
+			if err != nil {
+				return false, err
+			}
+		}
 		err := syscall.Mount("/dev/"+path, "/u-root/"+path, filesystem, flags, "")
 		if err == nil {
 			return true, nil
@@ -211,12 +212,12 @@ func getFileMenuContent(path string) ([]string, int, error) {
 	var returnValue []string
 	var err error
 	file, err := os.Open(path + "/grub.cfg")
-	if ( err != nil ) {
-		return returnValue,0,err
+	if err != nil {
+		return returnValue, 0, err
 	}
 	scanner := bufio.NewScanner(file)
 	if err = scanner.Err(); err != nil {
-		return returnValue,0,err
+		return returnValue, 0, err
 	}
 	var status int
 	var intReturn int
@@ -232,7 +233,7 @@ func getFileMenuContent(path string) ([]string, int, error) {
 		if strings.HasPrefix(trimmedLine, "#") {
 			continue
 		}
-		if (strings.HasPrefix(trimmedLine, "set default=") ) && (status == 0) {
+		if (strings.HasPrefix(trimmedLine, "set default=")) && (status == 0) {
 			fmt.Sscanf(trimmedLine, "set default=\"%d\"", &intReturn)
 		}
 		if (strings.HasPrefix(trimmedLine, "menuentry ")) && (status == 0) {
@@ -253,7 +254,7 @@ func getFileMenuContent(path string) ([]string, int, error) {
 
 }
 
-func copyLocal(path string) (string,error) {
+func copyLocal(path string) (string, error) {
 	var dest string
 	var err error
 	result := strings.Split(path, "/")
@@ -262,32 +263,32 @@ func copyLocal(path string) (string,error) {
 	}
 	dest = "/tmp/" + dest
 	srcFile, err := os.Open(path)
-	if ( err != nil ) {	
+	if err != nil {
 		return dest, err
 	}
 
 	destFile, err := os.Create(dest) // creates if file doesn't exist
-	if ( err != nil ) {
+	if err != nil {
 		return dest, err
-        }
+	}
 
 	_, err = io.Copy(destFile, srcFile) // check first var for number of bytes copied
-	if ( err != nil ) {
+	if err != nil {
 		return dest, err
-        }
+	}
 
 	err = destFile.Sync()
-	if ( err != nil ) {
+	if err != nil {
 		return dest, err
-        }
+	}
 	err = destFile.Close()
-	if ( err != nil ) {
+	if err != nil {
 		return dest, err
-        }
+	}
 	err = srcFile.Close()
-	if ( err != nil ) {
+	if err != nil {
 		return dest, err
-        }
+	}
 	return dest, nil
 }
 
@@ -301,7 +302,7 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 		log.Printf(grubConfPath)
 	}
 	fileMenuContent, entry, err := getFileMenuContent(grubConfPath)
-	if ( err != nil ) {
+	if err != nil {
 		return err
 	}
 	var kernel string
@@ -326,12 +327,12 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 		log.Printf(initrd)
 		log.Printf("****************************************************")
 	}
-	localKernelPath,err = copyLocal(mountPoint + kernel)
-	if ( err != nil ) {
+	localKernelPath, err = copyLocal(mountPoint + kernel)
+	if err != nil {
 		return err
 	}
-	localInitrdPath,err = copyLocal(mountPoint + initrd)
-	if ( err != nil ) {
+	localInitrdPath, err = copyLocal(mountPoint + initrd)
+	if err != nil {
 		return err
 	}
 	if verbose {
@@ -357,12 +358,12 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 	if err := kexec.FileLoad(kernelDesc, ramfs, kernelParameter); err != nil {
 		return err
 	}
- 	err = ramfs.Close()
-	if ( err != nil ) {
+	err = ramfs.Close()
+	if err != nil {
 		return err
 	}
 	err = kernelDesc.Close()
-	if ( err != nil ) {
+	if err != nil {
 		return err
 	}
 	if err := kexec.Reboot(); err != nil {
@@ -374,20 +375,16 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 
 // init parse input parameters
 func init() {
-        flag.CommandLine..BoolVar(&verbose, "v", false, "Set verbose output")
+	flag.CommandLine.BoolVar(&verbose, "v", false, "Set verbose output")
 }
 
-
 func main() {
-	var blkList []string
-	var supportedFilesystem []string
-	verbose = false
 	flag.Parse()
 
 	supportedFilesystem, err := getSupportedFilesystem()
-	if ( err != nil ) {
-                log.Panic("No filesystem support found")
-        }
+	if err != nil {
+		log.Panic("No filesystem support found")
+	}
 	if verbose {
 		log.Printf("************** Supported Filesystem by current linuxboot ********************")
 		for _, filesystem := range supportedFilesystem {
@@ -395,9 +392,9 @@ func main() {
 		}
 		log.Printf("*****************************************************************************")
 	}
-	blkList,err = blkDevicesList("/sys/dev/block/", "/device/block/")
-	if ( err != nil ) {
-		log.Fatal("No available block devices to boot from")
+	blkList, err := blkDevicesList("/sys/dev/block/", "/device/block/")
+	if err != nil {
+		log.Panic("No available block devices to boot from")
 	}
 	// We must validate if the MBR is bootable or not and keep the
 	// devices which do have such support
@@ -414,13 +411,13 @@ func main() {
 		// We need to loop on the device entries which are into /dev/<device>X
 		// and mount each partitions as to find /boot entry if it is available somewhere
 		var devicePartList []string
-		devicePartList,err = getDevicePartList(entry)
-		if ( err != nil ) {
+		devicePartList, err = getDevicePartList(entry)
+		if err != nil {
 			continue
 		}
 		for _, deviceList := range devicePartList {
 			mount, err := mountEntry(deviceList, supportedFilesystem)
-			if ( err != nil ) {
+			if err != nil {
 				continue
 			}
 			if mount {
@@ -433,7 +430,7 @@ func main() {
 						log.Printf("calling basic kexec")
 					}
 					err = kexecEntry(grubConfPath, "/u-root/"+deviceList)
-					if ( err != nil ) {
+					if err != nil {
 						log.Fatal("kexec failed")
 					}
 				}
