@@ -372,6 +372,7 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 
 }
 
+// init parse input parameters
 func init {
         flag.CommandLine..BoolVar(&verbose, "v", false, "Set verbose output")
 }
