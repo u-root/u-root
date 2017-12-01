@@ -25,7 +25,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/binary"
 	"errors"
 	"flag"
@@ -184,20 +183,12 @@ func umountEntry(path string) bool {
 
 // checkBootEntry is looking for grub.cfg file
 // and return absolute path to it
-func checkBootEntry(mountPoint string) string {
-	_, err := os.Stat(mountPoint + "/boot")
+func checkBootEntry(mountPoint string) ([]byte, string) {
+	grub, err := ioutil.ReadFile(filepath.Join(mountPoint, "/boot/grub/grub.cfg"))
 	if err == nil {
-		// The boot directory is there
-		_, err2 := os.Stat(mountPoint + "/boot" + "/grub")
-		if err2 == nil {
-			_, err3 := os.Stat(mountPoint + "/boot" + "/grub" + "/grub.cfg")
-			if err3 == nil {
-				// found
-				return (mountPoint + "/boot" + "/grub")
-			}
-		}
+		return grub, filepath.Join(mountPoint, "/boot/grub")
 	}
-	return ""
+	return grub, ""
 
 }
 
@@ -208,17 +199,9 @@ func checkBootEntry(mountPoint string) string {
 //	 line[3*x+1] - linux kernel + boot options
 // 	 line[3*x+2] - initrd
 // and the default boot entry configured into grub.cfg
-func getFileMenuContent(path string) ([]string, int, error) {
+func getFileMenuContent(file []byte) ([]string, int, error) {
 	var returnValue []string
 	var err error
-	file, err := os.Open(path + "/grub.cfg")
-	if err != nil {
-		return returnValue, 0, err
-	}
-	scanner := bufio.NewScanner(file)
-	if err = scanner.Err(); err != nil {
-		return returnValue, 0, err
-	}
 	var status int
 	var intReturn int
 	intReturn = 0
@@ -227,8 +210,9 @@ func getFileMenuContent(path string) ([]string, int, error) {
 	// When status = 1 we are looking for a linux entry
 	// When status = 2 we are looking for a initrd entry
 	var trimmedLine string
-	for scanner.Scan() {
-		trimmedLine = strings.TrimSpace(scanner.Text())
+	s := string(file)
+	for _, line := range strings.Split(s, "\n") {
+		trimmedLine = strings.TrimSpace(line)
 		trimmedLine = strings.Join(strings.Fields(trimmedLine), " ")
 		if strings.HasPrefix(trimmedLine, "#") {
 			continue
@@ -249,7 +233,6 @@ func getFileMenuContent(path string) ([]string, int, error) {
 			returnValue = append(returnValue, trimmedLine)
 		}
 	}
-	err = file.Close()
 	return returnValue, intReturn, err
 
 }
@@ -293,7 +276,7 @@ func copyLocal(path string) (string, error) {
 }
 
 // kexecEntry is booting new kernel based on the content of grub.cfg
-func kexecEntry(grubConfPath string, mountPoint string) error {
+func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 	var fileMenuContent []string
 	var entry int
 	var localKernelPath string
@@ -301,7 +284,7 @@ func kexecEntry(grubConfPath string, mountPoint string) error {
 	if verbose {
 		log.Printf(grubConfPath)
 	}
-	fileMenuContent, entry, err := getFileMenuContent(grubConfPath)
+	fileMenuContent, entry, err := getFileMenuContent(grub)
 	if err != nil {
 		return err
 	}
@@ -424,12 +407,12 @@ func main() {
 				if verbose {
 					log.Printf("mount succeed")
 				}
-				var grubConfPath = checkBootEntry("/u-root/" + deviceList)
+				var grubContent, grubConfPath = checkBootEntry("/u-root/" + deviceList)
 				if grubConfPath != "" {
 					if verbose {
 						log.Printf("calling basic kexec")
 					}
-					err = kexecEntry(grubConfPath, "/u-root/"+deviceList)
+					err = kexecEntry(grubConfPath, grubContent, "/u-root/"+deviceList)
 					if err != nil {
 						log.Fatal("kexec failed")
 					}
