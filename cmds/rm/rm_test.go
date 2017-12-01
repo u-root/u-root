@@ -93,3 +93,28 @@ func Test_rm_2(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestForceRemove(t *testing.T) {
+	d, err := setup()
+	if err != nil {
+		t.Fatal("Error on setup of the test: creating files and folders.")
+	}
+	defer os.RemoveAll(d)
+
+	flags.v = true
+	flags.r = false
+	flags.f = true
+	fmt.Println("== Deleting existing and nonexistent files (using -f flag) ...")
+	files := []string{
+		filepath.Join(d, "hi1.doc"), // does not exist
+		filepath.Join(d, "hi2.txt"), // exists
+		filepath.Join(d, "go.doc"),  // does not exist
+	}
+	if err := rm(files); err != nil {
+		t.Error(err)
+	}
+
+	if _, err := os.Stat(files[1]); !os.IsNotExist(err) {
+		t.Errorf("%q should have been deleted", files[1])
+	}
+}
