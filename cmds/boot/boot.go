@@ -116,12 +116,12 @@ func getDevicePartList(path string) ([]string, error) {
 
 // getSupportedFilesystem returns all block file system supported by the linuxboot kernel
 func getSupportedFilesystem() ([]string, error) {
-	var returnValue []string
 	var err error
 	fs, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
-		return returnValue, err
+		return nil, err
 	}
+	var returnValue []string
 	for _, f := range strings.Split(string(fs), "\n") {
 		n := strings.Fields(f)
 		if len(n) != 1 {
