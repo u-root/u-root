@@ -57,14 +57,14 @@ func blkDevicesList(blkpath string, devpath string) ([]string, error) {
 		return blkDevices, err
 	}
 	for _, file := range files {
-		check, err := os.Stat(blkpath + file.Name() + devpath)
+		check, err := os.Stat(filepath.Join(blkpath, file.Name() + devpath))
 		if check == nil {
 			continue
 		}
 		if err != nil {
 			continue
 		}
-		deviceEntry, err := ioutil.ReadDir(blkpath + file.Name() + devpath)
+		deviceEntry, err := ioutil.ReadDir(filepath.Join(blkpath, file.Name() + devpath))
 		if err != nil {
 			if verbose {
 				log.Printf("can t read directory")
@@ -159,7 +159,7 @@ func mountEntry(path string, supportedFilesystem []string) (bool, error) {
 				return false, err
 			}
 		}
-		err := syscall.Mount("/dev/"+path, "/u-root/"+path, filesystem, flags, "")
+		err := syscall.Mount(filepath.Join("/dev/",path), filepath.Join("/u-root/",path), filesystem, flags, "")
 		if err == nil {
 			return true, nil
 		}
