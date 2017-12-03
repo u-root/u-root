@@ -75,6 +75,30 @@
   version = "v0.2.0"
 
 [[projects]]
+  name = "github.com/klauspost/compress"
+  packages = ["flate"]
+  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
+  version = "v1.2.1"
+
+[[projects]]
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/klauspost/crc32"
+  packages = ["."]
+  revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/klauspost/pgzip"
+  packages = ["."]
+  revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
+  version = "v1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/nightlyone/lockfile"
   packages = ["."]
@@ -103,6 +127,12 @@
   name = "github.com/sdboyer/constext"
   packages = ["."]
   revision = "836a144573533ea4da4e6929c235fd348aed1c80"
+
+[[projects]]
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "addclient"
@@ -161,6 +191,10 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
+<<<<<<< HEAD
   inputs-digest = "d6ddf887dcd953c09317910e1872dd81132409bc12ecf807394386fe09758757"
+=======
+  inputs-digest = "480557a35bb915e8c5b56c12a99110f50ad11f587c403d88f13b409e22a3817e"
+>>>>>>> cmds/gzip, pkgs/gzip: Move majority of cmds/gzip to pkg/gzip. Add tests.
   solver-name = "gps-cdcl"
   solver-version = 1
