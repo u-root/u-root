@@ -1,0 +1,188 @@
+version: 2
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - dep
+      - test_cmds:
+          requires:
+            - dep
+      - test_pkg:
+          requires:
+            - dep
+      - compile_cmds:
+          requires:
+            - dep
+      - bb_amd64:
+          requires:
+            - dep
+      - bb_arm64:
+          requires:
+            - dep
+      - bb_ppc64le:
+          requires:
+            - dep
+      - source_amd64:
+          requires:
+            - dep
+jobs:
+  dep:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    steps:
+      - checkout
+      - run:
+          name: Install dep
+          command: |
+            cd vendor/github.com/golang/dep/cmd/dep
+            go install
+      - run:
+          name: Check vendored dependencies
+          command: dep status
+      - run:
+          name: Go vet
+          command: go tool vet cmds pkg
+  test_cmds:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Test cmds
+          command: |
+            cd cmds
+            go test -a -installsuffix uroot -ldflags '-s' ./...
+      - run:
+          name: Test coverage of cmds
+          command: |
+            cd cmds
+            go test -cover ./...
+  test_pkg:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Test pkg
+          command: |
+            cd pkg
+            go test -a -installsuffix uroot -ldflags '-s' ./...
+      - run:
+          name: Test coverage of pkg
+          command: |
+            cd pkg
+            go test -cover ./...
+  bb_amd64:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    steps:
+      - checkout
+      - run:
+          name: Build u-root
+          command: go build u-root.go
+      - run:
+          name: First bb build
+          command: |
+            ./u-root -build=bb
+            mv /tmp/initramfs.linux_amd64.cpio /tmp/initramfs.linux_amd64.cpio.1
+      - run:
+          name: Second bb build
+          command: ./u-root -build=bb
+      - run:
+          name: cmp bb test output (test reproducibility)
+          command: cmp /tmp/initramfs.linux_amd64.cpio /tmp/initramfs.linux_amd64.cpio.1
+      - run:
+          name: Compress cpio
+          command: lzma -9 /tmp/initramfs.linux_amd64.cpio
+      - store_artifacts:
+          path: /tmp/initramfs.linux_amd64.cpio.lzma
+          destination: bb_initramfs.linux_amd64.cpio.lzma
+  bb_arm64:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+      - GOARCH: arm64
+    steps:
+      - checkout
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: ARM64 test build
+          command: ./u-root -build=bb
+      - run:
+          name: Compress cpio
+          command: lzma -9 /tmp/initramfs.linux_arm64.cpio
+      - store_artifacts:
+          path: /tmp/initramfs.linux_arm64.cpio.lzma
+          destination: bb_initramfs.linux_arm64.cpio.lzma
+  bb_ppc64le:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+      - GOARCH: ppc64le
+    steps:
+      - checkout
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: ppc64le test build
+          command: ./u-root -build=bb
+      - run:
+          name: Compress cpio
+          command: lzma -9 /tmp/initramfs.linux_ppc64le.cpio
+      - store_artifacts:
+          path: /tmp/initramfs.linux_ppc64le.cpio.lzma
+          destination: bb_initramfs.linux_ppc64le.cpio.lzma
+  compile_cmds:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: build all tools
+          command: |
+            cd cmds
+            go build -a -installsuffix uroot -ldflags '-s' ./...
+  source_amd64:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Build ramfs
+          command: ./u-root -build=source --tmpdir=/tmp/u-root
+      - run:
+          name: Compress cpio
+          command: lzma -9 /tmp/initramfs.linux_amd64.cpio
+      - store_artifacts:
+          path: /tmp/initramfs.linux_amd64.cpio.lzma
+          destination: source_initramfs.linux_amd64.cpio.lzma
