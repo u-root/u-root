@@ -33,6 +33,13 @@ func main() {
 			continue
 		}
 
+		if err := f.CheckOutputPath(); err != nil {
+			if !opts.Quiet {
+				gzip.ErrorHandler(err, os.Stdout, os.Stderr)
+			}
+			continue
+		}
+
 		if err := f.Process(); err != nil {
 			if !opts.Quiet {
 				os.Exit(gzip.ErrorHandler(err, os.Stdout, os.Stderr))

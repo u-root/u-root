@@ -48,25 +48,34 @@ func (f *File) CheckPath() error {
 			}
 		}
 	}
-	return f.checkOutPath()
+	return nil
 }
 
-// checkOutPath checks if output is attempting to write binary to stdout if
+// CheckOutputPath checks if output is attempting to write binary to stdout if
 // stdout is a device. Also checks if output path already exists. Allow
 // override via force option.
-func (f *File) checkOutPath() error {
-	if f.Options.Stdout {
-		stat, _ := os.Stdout.Stat()
-		if !f.Options.Decompress && !f.Options.Force && (stat.Mode()&os.ModeDevice) != 0 {
-			return &appError{level: fatal, msg: "trying to write compressed data to a terminal/device (use -f to force)"}
-		}
-		return nil
+func (f *File) CheckOutputPath() error {
+	if err := f.checkOutputStdout(); err != nil {
+		return err
 	}
+
 	_, err := os.Stat(f.outputPath())
 	if !os.IsNotExist(err) && !f.Options.Stdout && !f.Options.Test && !f.Options.Force {
 		return &appError{level: skipping, path: f.outputPath(), msg: "already exist"}
 	} else if os.IsPermission(err) {
 		return &appError{level: skipping, path: f.outputPath(), msg: "permission denied"}
+	}
+	return nil
+}
+
+// checkOutputStdout checks if output is attempting to write binary to stdout
+// if stdout is a device.
+func (f *File) checkOutputStdout() error {
+	if f.Options.Stdout {
+		stat, _ := os.Stdout.Stat()
+		if !f.Options.Decompress && !f.Options.Force && (stat.Mode()&os.ModeDevice) != 0 {
+			return &appError{level: fatal, msg: "trying to write compressed data to a terminal/device (use -f to force)"}
+		}
 	}
 	return nil
 }
