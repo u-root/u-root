@@ -81,7 +81,7 @@ local and get a userland portable (it's a goal).
 ## Contributors
 
 * [Ron Minnich](https://github.com/rminnich)
-* [Andrew Mirtchovski](https://github.com/mirtchovski)
+* [Andrey Mirtchovski](https://github.com/mirtchovski)
 * [Alexandre Beletti](https://github.com/rhiguita)
 * [Manoel Machado](https://github.com/ryukinix)
 * [Rafael C. Nunes](https://github.com/rafaelcn)
