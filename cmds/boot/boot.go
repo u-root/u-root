@@ -52,6 +52,7 @@ var (
 	v       = flag.Bool("v", false, "Print debug messages")
 	verbose = func(string, ...interface{}) {}
 	dryrun  = flag.Bool("dryrun", true, "Boot")
+	uroot string
 )
 
 // checkForBootableMBR is looking for bootable MBR signature
@@ -100,7 +101,7 @@ func mountEntry(d string, supportedFilesystem []string) error {
 	verbose("Try to mount %v", d)
 
 	// find or create the mountpoint.
-	m := filepath.Join("/u-root", d)
+	m := filepath.Join(uroot, d)
 	if _, err = os.Stat(m); err != nil && os.IsNotExist(err) {
 		err = os.MkdirAll(m, 0777)
 	}
@@ -350,13 +351,17 @@ func main() {
 		}
 		allparts = append(allparts, all...)
 	}
+	uroot, err = ioutil.TempDir("", "u-root-boot")
+	if err != nil {
+		log.Fatalf("Can't create tmpdir: %v", err)
+	}
 	verbose("Trying to boot from %v", allparts)
 	for _, d := range allparts {
 		if err := mountEntry(d, fs); err != nil {
 			continue
 		}
 		verbose("mount succeed")
-		u := filepath.Join("/u-root", d)
+		u := filepath.Join(uroot, d)
 		var grubContent, grubConfPath = checkBootEntry(u)
 		if grubConfPath != "" {
 			verbose("calling basic kexec")
