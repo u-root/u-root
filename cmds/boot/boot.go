@@ -8,10 +8,13 @@
 
 //
 // Synopsis:
-//	boot
+//	boot [-dev][-v][-dryrun]
 //
 // Description:
 //	If returns to u-root shell, the code didn't found a local bootable option
+//      -dev glob to use; default is /sys/class/block/*
+//      -v prints messages
+//      -dryrun doesn't really boot
 //
 // Notes:
 //	The code is looking for boot/grub/grub.cfg file as to identify the
@@ -44,37 +47,12 @@ const (
 	signatureOffset = 510
 )
 
-var verbose bool
-
-type options struct {
-	verbose bool
-}
-
-func blkDevicesList(blkpath string, devpath string) ([]string, error) {
-	var blkDevices []string
-	files, err := ioutil.ReadDir(blkpath)
-	if err != nil {
-		return blkDevices, err
-	}
-	for _, file := range files {
-		check, err := os.Stat(filepath.Join(blkpath, file.Name() + devpath))
-		if check == nil {
-			continue
-		}
-		if err != nil {
-			continue
-		}
-		deviceEntry, err := ioutil.ReadDir(filepath.Join(blkpath, file.Name() + devpath))
-		if err != nil {
-			if verbose {
-				log.Printf("can t read directory")
-			}
-			continue
-		}
-		blkDevices = append(blkDevices, deviceEntry[0].Name())
-	}
-	return blkDevices, nil
-}
+var (
+	devGlob = flag.String("dev", "/sys/block/*", "Glob for devices")
+	v       = flag.Bool("v", false, "Print debug messages")
+	verbose = func(string, ...interface{}) {}
+	dryrun  = flag.Bool("dryrun", true, "Boot")
+)
 
 // checkForBootableMBR is looking for bootable MBR signature
 // Current support is limited to Hard disk devices and USB devices
@@ -92,26 +70,6 @@ func checkForBootableMBR(path string) error {
 		return err
 	}
 	return nil
-}
-
-// getDevicePartList returns all devices attached to a specific name like /dev/sdaX where X can move from 0 to 127
-// FIXME no support for devices which are included into subdirectory within /dev
-func getDevicePartList(path string) ([]string, error) {
-	var returnValue []string
-	files, err := ioutil.ReadDir("/dev/")
-	if err != nil {
-		return returnValue, err
-	}
-	for _, file := range files {
-		if strings.HasPrefix(file.Name(), path) {
-			// We shall not return full device name
-			if file.Name() != path {
-				// We shall check that the remaining part is a number
-				returnValue = append(returnValue, file.Name())
-			}
-		}
-	}
-	return returnValue, nil
 }
 
 // getSupportedFilesystem returns all block file system supported by the linuxboot kernel
@@ -133,39 +91,30 @@ func getSupportedFilesystem() ([]string, error) {
 
 }
 
-// mountEntry tries to mount a specific block device
-func mountEntry(path string, supportedFilesystem []string) (bool, error) {
-	var returnValue bool
+// mountEntry tries to mount a specific block device using a list of
+// supported file systems. We have to try to mount the device
+// itself, since devices can be filesystem formatted but not
+// partitioned; and all its partitions.
+func mountEntry(d string, supportedFilesystem []string) error {
 	var err error
-	exist, err := os.Stat("/u-root")
-	if exist == nil {
-		err = syscall.Mkdir("/u-root", 0777)
-		if err != nil {
-			return false, err
-		}
+	verbose("Try to mount %v", d)
+
+	// find or create the mountpoint.
+	m := filepath.Join("/u-root", d)
+	if _, err = os.Stat(m); err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(m, 0777)
 	}
-	var flags uintptr
-	// Was supposed to be unecessary for kernel 4.x.x
-	if verbose {
-		log.Printf("/dev/" + path)
+	if err != nil {
+		return err
 	}
 	for _, filesystem := range supportedFilesystem {
-		flags = syscall.MS_MGC_VAL
-		// Need to load the filesystem kind supported
-		exist, err = os.Stat("/u-root/" + path)
-		if exist == nil {
-			err = syscall.Mkdir("/u-root/"+path, 0777)
-			if err != nil {
-				return false, err
-			}
-		}
-		err := syscall.Mount(filepath.Join("/dev/",path), filepath.Join("/u-root/",path), filesystem, flags, "")
-		if err == nil {
-			return true, nil
+		// Was supposed to be unecessary for kernel 4.x.x
+		var flags = uintptr(syscall.MS_MGC_VAL)
+		if err := syscall.Mount(d, m, filesystem, flags, ""); err == nil {
+			return err
 		}
 	}
-	returnValue = false
-	return returnValue, nil
+	return errors.New("Unable to mount any partition on " + d)
 }
 
 func umountEntry(path string) bool {
@@ -281,9 +230,7 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 	var entry int
 	var localKernelPath string
 	var localInitrdPath string
-	if verbose {
-		log.Printf(grubConfPath)
-	}
+	verbose(grubConfPath)
 	fileMenuContent, entry, err := getFileMenuContent(grub)
 	if err != nil {
 		return err
@@ -303,7 +250,7 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 		count = count + 1
 	}
 	fmt.Sscanf(fileMenuContent[3*entry+2], "initrd %s", &initrd)
-	if verbose {
+	if *v {
 		log.Printf("************** boot parameters  ********************")
 		log.Printf(kernel)
 		log.Printf(kernelParameter)
@@ -318,9 +265,8 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 	if err != nil {
 		return err
 	}
-	if verbose {
-		log.Printf(localKernelPath)
-	}
+	verbose(localKernelPath)
+
 	umountEntry(mountPoint)
 	// We can kexec the kernel with localKernelPath as kernel entry, kernelParameter as parameter and initrd as initrd !
 	log.Printf("Loading %s for kernel\n", localKernelPath)
@@ -349,6 +295,9 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 	if err != nil {
 		return err
 	}
+	if *dryrun {
+		return nil
+	}
 	if err := kexec.Reboot(); err != nil {
 		return err
 	}
@@ -356,70 +305,67 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 
 }
 
-// init parse input parameters
-func init() {
-	flag.CommandLine.BoolVar(&verbose, "v", false, "Set verbose output")
-}
-
 func main() {
 	flag.Parse()
 
-	supportedFilesystem, err := getSupportedFilesystem()
+	if *v {
+		verbose = log.Printf
+	}
+	fs, err := getSupportedFilesystem()
 	if err != nil {
 		log.Panic("No filesystem support found")
 	}
-	if verbose {
-		log.Printf("************** Supported Filesystem by current linuxboot ********************")
-		for _, filesystem := range supportedFilesystem {
-			log.Printf(filesystem)
-		}
-		log.Printf("*****************************************************************************")
-	}
-	blkList, err := blkDevicesList("/sys/dev/block/", "/device/block/")
+	verbose("Supported filesystems: %v", fs)
+	sysList, err := filepath.Glob(*devGlob)
 	if err != nil {
 		log.Panic("No available block devices to boot from")
 	}
+	// The Linux /sys file system is a bit, er, awkward. You can't find
+	// the device special in there; just everything else.
+	var blkList []string
+	for _, b := range sysList {
+		blkList = append(blkList, filepath.Join("/dev", filepath.Base(b)))
+	}
+
 	// We must validate if the MBR is bootable or not and keep the
-	// devices which do have such support
-	// drive are easy to detect
-	for _, entry := range blkList {
-		dev := filepath.Join("/dev", entry)
-		err := checkForBootableMBR(dev)
+	// devices which do have such support drive are easy to
+	// detect.  This whole loop is pretty bogus at present, it
+	// assumes the first partiton we find with grub.cfg is the one
+	// we want. It works for now but ...
+	var allparts []string
+	for _, d := range blkList {
+		err := checkForBootableMBR(d)
 		if err != nil {
 			// Not sure it matters; there can be many bogus entries?
-			log.Printf("MBR for %s failed: %v", dev, err)
+			log.Printf("MBR for %s failed: %v", d, err)
 			continue
 		}
-		fmt.Println("Bootable device found")
-		// We need to loop on the device entries which are into /dev/<device>X
-		// and mount each partitions as to find /boot entry if it is available somewhere
-		var devicePartList []string
-		devicePartList, err = getDevicePartList(entry)
+		verbose("Bootable device %v found", d)
+		// You can't just look for numbers to match. Consider names like
+		// mmcblk0, where has parts like mmcblk0p1. Just glob.
+		g := d + "*"
+		all, err := filepath.Glob(g)
 		if err != nil {
+			log.Printf("Glob for all partitions of %s failed: %v", g, err)
+		}
+		allparts = append(allparts, all...)
+	}
+	verbose("Trying to boot from %v", allparts)
+	for _, d := range allparts {
+		if err := mountEntry(d, fs); err != nil {
 			continue
 		}
-		for _, deviceList := range devicePartList {
-			mount, err := mountEntry(deviceList, supportedFilesystem)
-			if err != nil {
-				continue
+		verbose("mount succeed")
+		u := filepath.Join("/u-root", d)
+		var grubContent, grubConfPath = checkBootEntry(u)
+		if grubConfPath != "" {
+			verbose("calling basic kexec")
+			if err = kexecEntry(grubConfPath, grubContent, u); err != nil {
+				log.Fatalf("kexec failed: %v", err)
 			}
-			if mount {
-				if verbose {
-					log.Printf("mount succeed")
-				}
-				var grubContent, grubConfPath = checkBootEntry("/u-root/" + deviceList)
-				if grubConfPath != "" {
-					if verbose {
-						log.Printf("calling basic kexec")
-					}
-					err = kexecEntry(grubConfPath, grubContent, "/u-root/"+deviceList)
-					if err != nil {
-						log.Fatal("kexec failed")
-					}
-				}
-			}
-			umountEntry("/u-root/" + deviceList)
 		}
+
+		umountEntry(u)
 	}
-	log.Printf("Sorry no bootable device found")
+	log.Fatalf("Sorry no bootable device found")
 }
