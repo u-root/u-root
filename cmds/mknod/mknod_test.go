@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -85,13 +85,10 @@ func TestInvocationErrors(t *testing.T) {
 }
 
 func TestMknodBlock(t *testing.T) {
-	curuser, err := user.Current()
-	if err != nil {
-		t.Fatalf("can't get current user.")
-	}
+	uid := syscall.Getuid()
 
-	if curuser.Uid != "0" {
-		t.Logf("not root, uid %v, skipping test\n", curuser.Uid)
+	if uid != 0 {
+		t.Logf("not root, uid %d, skipping test\n", uid)
 		return
 	}
 	t.Log("root user, proceeding\n")
