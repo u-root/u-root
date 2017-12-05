@@ -114,15 +114,18 @@ func mountEntry(d string, supportedFilesystem []string) error {
 		err = os.MkdirAll(m, 0777)
 	}
 	if err != nil {
+		verbose("Can't make %v", m)
 		return err
 	}
 	for _, filesystem := range supportedFilesystem {
 		// Was supposed to be unecessary for kernel 4.x.x
-		var flags = uintptr(syscall.MS_MGC_VAL)
+		var flags = uintptr(syscall.MS_MGC_VAL | syscall.MS_RDONLY)
+		verbose("\twith %v", filesystem)
 		if err := syscall.Mount(d, m, filesystem, flags, ""); err == nil {
 			return err
 		}
 	}
+	verbose("No mount succceeded")
 	return errors.New("Unable to mount any partition on " + d)
 }
 
@@ -139,34 +142,64 @@ func umountEntry(path string) bool {
 	return returnValue
 }
 
+func loadISOLinux(dir, base string) ([]string, string, string, error) {
+	sol := filepath.Join(dir, base)
+	isolinux, err := ioutil.ReadFile(sol)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	// it's easier we think to do include processing here.
+	lines := strings.Split(string(isolinux), "\n")
+	var result []string
+	for _, l := range lines {
+		f := strings.Fields(l)
+		if len(f) == 0 {
+			continue
+		}
+		switch f[0] {
+		default:
+			result = append(result, l)
+		case "include":
+			i, _, _, err := loadISOLinux(dir, f[1])
+			if err != nil {
+				return nil, "", "", err
+			}
+			result = append(result, i...)
+			// If the string contain include
+			// we must call back as to read the content of the file
+		}
+	}
+	return result, dir, dir, nil
+}
+
 // checkBootEntry is looking for grub.cfg file
 // and return absolute path to it
-func checkBootEntry(mountPoint string) ([]byte, string) {
-	grub, err := ioutil.ReadFile(filepath.Join(mountPoint, "/boot/grub/grub.cfg"))
+func checkBootEntry(mountPoint string) ([]string, string, string, error) {
+	grub, err := ioutil.ReadFile(filepath.Join(mountPoint, "boot/grub/grub.cfg"))
 	if err == nil {
-		return grub, filepath.Join(mountPoint, "/boot/grub")
+		return strings.Split(string(grub), "\n"), filepath.Join(mountPoint, "/isolinux"), mountPoint, nil
 	}
-	return grub, ""
-
+	return loadISOLinux(filepath.Join(mountPoint, "isolinux"), "isolinux.cfg")
 }
 
 // getFileMenuContent is parsing a grub.cfg file
 // output: bootEntries
 // grub parsing is a good deal messier than it looks.
 // This is a simple parser will fail on anything tricky.
-func getBootEntries(lines []byte) (map[string]*bootEntry, map[string]string, error) {
+func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, error) {
 	// There are two ways to reference a bootEntry: its order in the file and its
 	// name.
 	var (
-		lineno int
-		line string
+		lineno   int
+		line     string
 		err      error
 		curEntry string
 		numEntry int
 		b        = make(map[string]*bootEntry)
 		v        = make(map[string]string)
-		f []string
-		be *bootEntry
+		f        []string
+		be       *bootEntry
 	)
 	defer func() {
 		switch err := recover().(type) {
@@ -178,9 +211,9 @@ func getBootEntries(lines []byte) (map[string]*bootEntry, map[string]string, err
 		}
 	}()
 
-
-	verbose("getBootEntries: %s", string(lines))
-	for _, line = range strings.Split(string(lines), "\n") {
+	verbose("getBootEntries: %s", lines)
+	curLabel := ""
+	for _, line = range lines {
 		lineno++
 		f = strings.Fields(line)
 		verbose("%d: %q, %q", lineno, line, f)
@@ -190,27 +223,53 @@ func getBootEntries(lines []byte) (map[string]*bootEntry, map[string]string, err
 		switch f[0] {
 		default:
 		case "#":
+		case "default":
+			v["default"] = f[1]
 		case "set":
 			vals := strings.SplitN(f[1], "=", 2)
 			if len(vals) == 2 {
 				v[vals[0]] = vals[1]
 			}
-		case "menuentry":
+		case "menuentry", "label":
 			verbose("Menuentry %v", line)
 			// nasty, but the alternatives are not much better.
 			// grub config language is kind of arbitrary
 			curEntry = fmt.Sprintf("\"%s\"", strconv.Itoa(numEntry))
 			be = &bootEntry{}
+			curLabel = f[1]
 			b[f[1]] = be
 			b[curEntry] = be
 			numEntry++
-		case "linux":
+		case "menu":
+			// keyword default marks this as default
+			if f[1] != "default" {
+				continue
+			}
+			v["default"] = curLabel
+		case "linux", "kernel":
 			verbose("linux %v", line)
 			be.kernel = f[1]
 			be.cmdline = strings.Join(f[2:], " ")
 		case "initrd":
 			verbose("initrd %v", line)
 			be.initrd = f[1]
+		case "append":
+			// Format is a little bit strange
+			//   append   MENU=/bin/cdrom-checker-menu vga=788 initrd=/install/initrd.gz quiet --
+			var current_parameter int
+			for _, parameter := range f {
+				if current_parameter > 0 {
+					if strings.HasPrefix(parameter, "initrd") {
+						initrd := strings.Split(parameter, "=")
+						b[curEntry].initrd = b[curEntry].initrd + initrd[1]
+					} else {
+						if parameter != "--" {
+							b[curEntry].cmdline = b[curEntry].cmdline + " " + parameter
+						}
+					}
+				}
+				current_parameter++
+			}
 		}
 	}
 	verbose("grub config menu decoded to [%q, %q, %v]", b, v, err)
@@ -257,8 +316,8 @@ func copyLocal(path string) (string, error) {
 }
 
 // kexecEntry is booting new kernel based on the content of grub.cfg
-func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
-	verbose(grubConfPath)
+func kexecEntry(grubConfPath string, grub []string, mountPoint string) error {
+	verbose("kexecEntry: boot from %v", grubConfPath)
 	b, v, err := getBootEntries(grub)
 	if err != nil {
 		return err
@@ -266,11 +325,11 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 
 	verbose("Boot Entries: %q", b)
 	entry, ok := v[*defaultBoot]
-	if ! ok {
+	if !ok {
 		return fmt.Errorf("Entry %v not found in config file", *defaultBoot)
 	}
 	be, ok := b[entry]
-	if ! ok {
+	if !ok {
 		return fmt.Errorf("Entry %v not found in boot entries file", entry)
 	}
 
@@ -379,12 +438,14 @@ func main() {
 		}
 		verbose("mount succeed")
 		u := filepath.Join(uroot, d)
-		var grubContent, grubConfPath = checkBootEntry(u)
-		if grubConfPath != "" {
-			verbose("calling basic kexec")
-			if err = kexecEntry(grubConfPath, grubContent, u); err != nil {
-				log.Fatalf("kexec failed: %v", err)
-			}
+		c, p, r, err := checkBootEntry(u)
+		if err != nil {
+			verbose("d: %v", d, err)
+			continue
+		}
+		verbose("calling basic kexec: content %v, path %v", c, p)
+		if err = kexecEntry(p, c, r); err != nil {
+			log.Printf("kexec on %v failed: %v", u, err)
 		}
 
 		umountEntry(u)
