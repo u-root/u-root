@@ -38,6 +38,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -47,12 +48,19 @@ const (
 	signatureOffset = 510
 )
 
+type bootEntry struct {
+	kernel  string
+	initrd  string
+	cmdline string
+}
+
 var (
-	devGlob = flag.String("dev", "/sys/block/*", "Glob for devices")
-	v       = flag.Bool("v", false, "Print debug messages")
-	verbose = func(string, ...interface{}) {}
-	dryrun  = flag.Bool("dryrun", true, "Boot")
-	uroot string
+	devGlob     = flag.String("dev", "/sys/block/*", "Glob for devices")
+	v           = flag.Bool("v", false, "Print debug messages")
+	verbose     = func(string, ...interface{}) {}
+	dryrun      = flag.Bool("dryrun", true, "Boot")
+	defaultBoot = flag.String("boot", "default", "Default entry to boot")
+	uroot       string
 )
 
 // checkForBootableMBR is looking for bootable MBR signature
@@ -143,47 +151,70 @@ func checkBootEntry(mountPoint string) ([]byte, string) {
 }
 
 // getFileMenuContent is parsing a grub.cfg file
-// input: absolute directory path to grub.cfg
-// output: Return a list of strings with the following format
-//	 line[3*x] - menuconfig
-//	 line[3*x+1] - linux kernel + boot options
-// 	 line[3*x+2] - initrd
-// and the default boot entry configured into grub.cfg
-func getFileMenuContent(file []byte) ([]string, int, error) {
-	var returnValue []string
-	var err error
-	var status int
-	var intReturn int
-	intReturn = 0
-	status = 0
-	// When status = 0 we are looking for a menu entry
-	// When status = 1 we are looking for a linux entry
-	// When status = 2 we are looking for a initrd entry
-	var trimmedLine string
-	s := string(file)
-	for _, line := range strings.Split(s, "\n") {
-		trimmedLine = strings.TrimSpace(line)
-		trimmedLine = strings.Join(strings.Fields(trimmedLine), " ")
-		if strings.HasPrefix(trimmedLine, "#") {
+// output: bootEntries
+// grub parsing is a good deal messier than it looks.
+// This is a simple parser will fail on anything tricky.
+func getBootEntries(lines []byte) (map[string]*bootEntry, map[string]string, error) {
+	// There are two ways to reference a bootEntry: its order in the file and its
+	// name.
+	var (
+		lineno int
+		line string
+		err      error
+		curEntry string
+		numEntry int
+		b        = make(map[string]*bootEntry)
+		v        = make(map[string]string)
+		f []string
+		be *bootEntry
+	)
+	defer func() {
+		switch err := recover().(type) {
+		case nil:
+		case error:
+			log.Fatalf("Bummer: %v, line #%d, line %q, fields %q", err, lineno, line, f)
+		default:
+			log.Fatalf("unexpected panic value: %T(%v)", err, err)
+		}
+	}()
+
+
+	verbose("getBootEntries: %s", string(lines))
+	for _, line = range strings.Split(string(lines), "\n") {
+		lineno++
+		f = strings.Fields(line)
+		verbose("%d: %q, %q", lineno, line, f)
+		if len(f) == 0 {
 			continue
 		}
-		if (strings.HasPrefix(trimmedLine, "set default=")) && (status == 0) {
-			fmt.Sscanf(trimmedLine, "set default=\"%d\"", &intReturn)
-		}
-		if (strings.HasPrefix(trimmedLine, "menuentry ")) && (status == 0) {
-			status = 1
-			returnValue = append(returnValue, trimmedLine)
-		}
-		if (strings.HasPrefix(trimmedLine, "linux ")) && (status == 1) {
-			status = 2
-			returnValue = append(returnValue, trimmedLine)
-		}
-		if (strings.HasPrefix(trimmedLine, "initrd ")) && (status == 2) {
-			status = 0
-			returnValue = append(returnValue, trimmedLine)
+		switch f[0] {
+		default:
+		case "#":
+		case "set":
+			vals := strings.SplitN(f[1], "=", 2)
+			if len(vals) == 2 {
+				v[vals[0]] = vals[1]
+			}
+		case "menuentry":
+			verbose("Menuentry %v", line)
+			// nasty, but the alternatives are not much better.
+			// grub config language is kind of arbitrary
+			curEntry = fmt.Sprintf("\"%s\"", strconv.Itoa(numEntry))
+			be = &bootEntry{}
+			b[f[1]] = be
+			b[curEntry] = be
+			numEntry++
+		case "linux":
+			verbose("linux %v", line)
+			be.kernel = f[1]
+			be.cmdline = strings.Join(f[2:], " ")
+		case "initrd":
+			verbose("initrd %v", line)
+			be.initrd = f[1]
 		}
 	}
-	return returnValue, intReturn, err
+	verbose("grub config menu decoded to [%q, %q, %v]", b, v, err)
+	return b, v, err
 
 }
 
@@ -227,42 +258,28 @@ func copyLocal(path string) (string, error) {
 
 // kexecEntry is booting new kernel based on the content of grub.cfg
 func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
-	var fileMenuContent []string
-	var entry int
-	var localKernelPath string
-	var localInitrdPath string
 	verbose(grubConfPath)
-	fileMenuContent, entry, err := getFileMenuContent(grub)
+	b, v, err := getBootEntries(grub)
 	if err != nil {
 		return err
 	}
-	var kernel string
-	var kernelParameter string
-	var initrd string
-	var kernelInfos []string
-	kernelInfos = strings.Fields(fileMenuContent[3*entry+1])
-	kernel = kernelInfos[1]
-	var count int
-	count = 0
-	for _, field := range kernelInfos {
-		if count > 1 {
-			kernelParameter = kernelParameter + " " + field
-		}
-		count = count + 1
+
+	verbose("Boot Entries: %q", b)
+	entry, ok := v[*defaultBoot]
+	if ! ok {
+		return fmt.Errorf("Entry %v not found in config file", *defaultBoot)
 	}
-	fmt.Sscanf(fileMenuContent[3*entry+2], "initrd %s", &initrd)
-	if *v {
-		log.Printf("************** boot parameters  ********************")
-		log.Printf(kernel)
-		log.Printf(kernelParameter)
-		log.Printf(initrd)
-		log.Printf("****************************************************")
+	be, ok := b[entry]
+	if ! ok {
+		return fmt.Errorf("Entry %v not found in boot entries file", entry)
 	}
-	localKernelPath, err = copyLocal(mountPoint + kernel)
+
+	verbose("Boot params: %q", be)
+	localKernelPath, err := copyLocal(filepath.Join(mountPoint, be.kernel))
 	if err != nil {
 		return err
 	}
-	localInitrdPath, err = copyLocal(mountPoint + initrd)
+	localInitrdPath, err := copyLocal(filepath.Join(mountPoint, be.initrd))
 	if err != nil {
 		return err
 	}
@@ -285,7 +302,7 @@ func kexecEntry(grubConfPath string, grub []byte, mountPoint string) error {
 	}
 	// defer ramfs.Close()
 
-	if err := kexec.FileLoad(kernelDesc, ramfs, kernelParameter); err != nil {
+	if err := kexec.FileLoad(kernelDesc, ramfs, be.cmdline); err != nil {
 		return err
 	}
 	err = ramfs.Close()
