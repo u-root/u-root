@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	CmdsGlob = []string{"github.com/u-root/*/cmds", "*/*/*",}
+	CmdsGlob = []string{"github.com/u-root/*/cmds", "*/*/*", "*/*"}
 )
 
 type Creator interface {
