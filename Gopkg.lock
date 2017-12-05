@@ -101,8 +101,8 @@
 [[projects]]
   branch = "addclient"
   name = "github.com/u-root/dhcp6"
-  packages = ["."]
-  revision = "e18b1a3a20894dd69ca88bfebb2ac0ff1afbae79"
+  packages = [".","client"]
+  revision = "19380cf358122afb7c15aa787e16fd41ec9f537d"
 
 [[projects]]
   branch = "master"
@@ -155,6 +155,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "74dfd0d051abb23878bb6e218bf868eb96dc2da2ba1a041384c8f06f7976cdfa"
+  inputs-digest = "aa157490624c2bb40e9cef1276ffd22078ba9e4f572ba6c045fe19b22ea63d20"
   solver-name = "gps-cdcl"
   solver-version = 1
