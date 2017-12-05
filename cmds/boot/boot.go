@@ -29,7 +29,6 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/u-root/u-root/pkg/kexec"
@@ -75,7 +74,7 @@ func checkForBootableMBR(path string) error {
 		return err
 	}
 	if sig != bootableMBR {
-		err := errors.New("Not a bootable device")
+		err := fmt.Errorf("%v is not a bootable device", path)
 		return err
 	}
 	return nil
@@ -118,21 +117,29 @@ func mountEntry(d string, supportedFilesystem []string) error {
 		return err
 	}
 	for _, filesystem := range supportedFilesystem {
-		// Was supposed to be unecessary for kernel 4.x.x
-		var flags = uintptr(syscall.MS_MGC_VAL | syscall.MS_RDONLY)
+		var flags = uintptr(syscall.MS_RDONLY)
 		verbose("\twith %v", filesystem)
 		if err := syscall.Mount(d, m, filesystem, flags, ""); err == nil {
 			return err
 		}
 	}
 	verbose("No mount succceeded")
-	return errors.New("Unable to mount any partition on " + d)
+	return fmt.Errorf("Unable to mount any partition on %v", d)
 }
 
 func umountEntry(n string) error {
 	return syscall.Unmount(n, syscall.MNT_DETACH)
 }
 
+// loadISOLinux reads an isolinux.cfg file. It further needs to
+// process include directives.
+// The include files are correctly placed in line at the place they
+// were included. Include files can include other files, i.e. this
+// function can recurse.
+// It returns a []string of all the files, the path to the directory
+// contain the boot images (bzImage, initrd, etc.) and the mount point.
+// For now, these are the same, but in, e.g., grub, they are different,
+// and they might in future change here too.
 func loadISOLinux(dir, base string) ([]string, string, string, error) {
 	sol := filepath.Join(dir, base)
 	isolinux, err := ioutil.ReadFile(sol)
@@ -165,11 +172,12 @@ func loadISOLinux(dir, base string) ([]string, string, string, error) {
 }
 
 // checkBootEntry is looking for grub.cfg file
-// and return absolute path to it
+// and return absolute path to it. It returns a []string with all the commands,
+// the path to the direction containing files to load for kexec, and the mountpoint.
 func checkBootEntry(mountPoint string) ([]string, string, string, error) {
 	grub, err := ioutil.ReadFile(filepath.Join(mountPoint, "boot/grub/grub.cfg"))
 	if err == nil {
-		return strings.Split(string(grub), "\n"), filepath.Join(mountPoint, "/isolinux"), mountPoint, nil
+		return strings.Split(string(grub), "\n"), filepath.Join(mountPoint, "/boot"), mountPoint, nil
 	}
 	return loadISOLinux(filepath.Join(mountPoint, "isolinux"), "isolinux.cfg")
 }
@@ -182,15 +190,15 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 	// There are two ways to reference a bootEntry: its order in the file and its
 	// name.
 	var (
-		lineno   int
-		line     string
-		err      error
-		curEntry string
-		numEntry int
-		b        = make(map[string]*bootEntry)
-		v        = make(map[string]string)
-		f        []string
-		be       *bootEntry
+		lineno      int
+		line        string
+		err         error
+		curEntry    string
+		numEntry    int
+		bootEntries = make(map[string]*bootEntry)
+		bootVars    = make(map[string]string)
+		f           []string
+		be          *bootEntry
 	)
 	defer func() {
 		switch err := recover().(type) {
@@ -215,11 +223,11 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 		default:
 		case "#":
 		case "default":
-			v["default"] = f[1]
+			bootVars["default"] = f[1]
 		case "set":
 			vals := strings.SplitN(f[1], "=", 2)
 			if len(vals) == 2 {
-				v[vals[0]] = vals[1]
+				bootVars[vals[0]] = vals[1]
 			}
 		case "menuentry", "label":
 			verbose("Menuentry %v", line)
@@ -228,15 +236,15 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 			curEntry = fmt.Sprintf("\"%s\"", strconv.Itoa(numEntry))
 			be = &bootEntry{}
 			curLabel = f[1]
-			b[f[1]] = be
-			b[curEntry] = be
+			bootEntries[f[1]] = be
+			bootEntries[curEntry] = be
 			numEntry++
 		case "menu":
 			// keyword default marks this as default
 			if f[1] != "default" {
 				continue
 			}
-			v["default"] = curLabel
+			bootVars["default"] = curLabel
 		case "linux", "kernel":
 			verbose("linux %v", line)
 			be.kernel = f[1]
@@ -252,10 +260,10 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 				if current_parameter > 0 {
 					if strings.HasPrefix(parameter, "initrd") {
 						initrd := strings.Split(parameter, "=")
-						b[curEntry].initrd = b[curEntry].initrd + initrd[1]
+						bootEntries[curEntry].initrd = bootEntries[curEntry].initrd + initrd[1]
 					} else {
 						if parameter != "--" {
-							b[curEntry].cmdline = b[curEntry].cmdline + " " + parameter
+							bootEntries[curEntry].cmdline = bootEntries[curEntry].cmdline + " " + parameter
 						}
 					}
 				}
@@ -263,8 +271,8 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 			}
 		}
 	}
-	verbose("grub config menu decoded to [%q, %q, %v]", b, v, err)
-	return b, v, err
+	verbose("grub config menu decoded to [%q, %q, %v]", bootEntries, bootVars, err)
+	return bootEntries, bootVars, err
 
 }
 
@@ -306,8 +314,8 @@ func copyLocal(path string) (string, error) {
 	return dest, nil
 }
 
-// kexecEntry is booting new kernel based on the content of grub.cfg
-func kexecEntry(grubConfPath string, grub []string, mountPoint string) error {
+// kexecLoad Loads a new kernel and initrd.
+func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	verbose("kexecEntry: boot from %v", grubConfPath)
 	b, v, err := getBootEntries(grub)
 	if err != nil {
@@ -327,46 +335,44 @@ func kexecEntry(grubConfPath string, grub []string, mountPoint string) error {
 	verbose("Boot params: %q", be)
 	localKernelPath, err := copyLocal(filepath.Join(mountPoint, be.kernel))
 	if err != nil {
+		verbose("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.kernel), err)
 		return err
 	}
 	localInitrdPath, err := copyLocal(filepath.Join(mountPoint, be.initrd))
 	if err != nil {
+		verbose("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.initrd), err)
 		return err
 	}
 	verbose(localKernelPath)
 
-	umountEntry(mountPoint)
 	// We can kexec the kernel with localKernelPath as kernel entry, kernelParameter as parameter and initrd as initrd !
 	log.Printf("Loading %s for kernel\n", localKernelPath)
 
 	kernelDesc, err := os.OpenFile(localKernelPath, os.O_RDONLY, 0)
 	if err != nil {
+		verbose("%v", err)
 		return err
 	}
 	// defer kernelDesc.Close()
 
-	var ramfs *os.File
-	ramfs, err = os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
+	log.Printf("Loading %s for initramfs", localInitrdPath)
+	ramfs, err := os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
 	if err != nil {
+		verbose("%v", err)
 		return err
 	}
 	// defer ramfs.Close()
 
 	if err := kexec.FileLoad(kernelDesc, ramfs, be.cmdline); err != nil {
+		verbose("%v", err)
 		return err
 	}
-	err = ramfs.Close()
-	if err != nil {
+	if err = ramfs.Close(); err != nil {
+		verbose("%v", err)
 		return err
 	}
-	err = kernelDesc.Close()
-	if err != nil {
-		return err
-	}
-	if *dryrun {
-		return nil
-	}
-	if err := kexec.Reboot(); err != nil {
+	if err = kernelDesc.Close(); err != nil {
+		verbose("%v", err)
 		return err
 	}
 	return err
@@ -429,18 +435,28 @@ func main() {
 		}
 		verbose("mount succeed")
 		u := filepath.Join(uroot, d)
-		c, p, r, err := checkBootEntry(u)
+		config, fileDir, root, err := checkBootEntry(u)
 		if err != nil {
 			verbose("d: %v", d, err)
+			if err := umountEntry(u); err != nil {
+				log.Printf("Can't unmount %v: %v", u, err)
+			}
 			continue
 		}
-		verbose("calling basic kexec: content %v, path %v", c, p)
-		if err = kexecEntry(p, c, r); err != nil {
+		verbose("calling basic kexec: content %v, path %v", config, fileDir)
+		if err = kexecLoad(fileDir, config, root); err != nil {
 			log.Printf("kexec on %v failed: %v", u, err)
 		}
+		verbose("kexecLoad succeeded")
 
 		if err := umountEntry(u); err != nil {
 			log.Printf("Can't unmount %v: %v", u, err)
+		}
+		if *dryrun {
+			continue
+		}
+		if err := kexec.Reboot(); err != nil {
+			log.Printf("Kexec Reboot %v failed, %v. Sorry", u, err)
 		}
 	}
 	log.Fatalf("Sorry no bootable device found")
