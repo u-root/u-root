@@ -94,6 +94,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/rck/unit"
+  packages = ["."]
+  revision = "d5a0eda2ef4e36af33d6e8742d1e9082112a8a9a"
+
+[[projects]]
+  branch = "master"
   name = "github.com/sdboyer/constext"
   packages = ["."]
   revision = "836a144573533ea4da4e6929c235fd348aed1c80"
@@ -155,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "74dfd0d051abb23878bb6e218bf868eb96dc2da2ba1a041384c8f06f7976cdfa"
+  inputs-digest = "d6ddf887dcd953c09317910e1872dd81132409bc12ecf807394386fe09758757"
   solver-name = "gps-cdcl"
   solver-version = 1
