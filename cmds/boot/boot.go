@@ -129,17 +129,8 @@ func mountEntry(d string, supportedFilesystem []string) error {
 	return errors.New("Unable to mount any partition on " + d)
 }
 
-func umountEntry(path string) bool {
-	var returnValue bool
-	var flags int
-	// Was supposed to be unecessary for kernel 4.x.x
-	flags = syscall.MNT_DETACH
-	err := syscall.Unmount(path, flags)
-	if err == nil {
-		return true
-	}
-	returnValue = false
-	return returnValue
+func umountEntry(n string) error {
+	return syscall.Unmount(n, syscall.MNT_DETACH)
 }
 
 func loadISOLinux(dir, base string) ([]string, string, string, error) {
@@ -448,7 +439,9 @@ func main() {
 			log.Printf("kexec on %v failed: %v", u, err)
 		}
 
-		umountEntry(u)
+		if err := umountEntry(u); err != nil {
+			log.Printf("Can't unmount %v: %v", u, err)
+		}
 	}
 	log.Fatalf("Sorry no bootable device found")
 }
