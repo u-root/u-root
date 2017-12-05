@@ -60,12 +60,12 @@ var truncateTests = []struct {
 		size:            1,
 	}, {
 		// Valid, file does exist grow
-		flags:           []string{"-s", "+3"},
+		flags:           []string{"-s", "+3K"},
 		ret:             0,
 		genFile:         true,
 		fileExistsAfter: true,
 		initSize:        2,
-		size:            5,
+		size:            2 + 3*1024,
 	}, {
 		// Valid, file does exist shrink
 		flags:           []string{"-s", "-3"},
@@ -76,7 +76,7 @@ var truncateTests = []struct {
 		size:            2,
 	}, {
 		// Valid, file does exist shrink lower than 0
-		flags:           []string{"-s", "-3"},
+		flags:           []string{"-s", "-3M"},
 		ret:             0,
 		genFile:         true,
 		fileExistsAfter: true,
