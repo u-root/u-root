@@ -38,13 +38,7 @@ func main() {
 	}
 
 	if !*numbers {
-		ids, err := pci.NewIDs()
-		if err != nil {
-			log.Fatalf("pci.NewIDs: %v\n", err)
-		}
-		fmt.Print(d.ToString(*numbers, ids))
-	} else {
-		fmt.Print(d)
+		d.SetVendorDeviceName()
 	}
-
+	fmt.Print(d)
 }

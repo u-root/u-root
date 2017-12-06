@@ -11,7 +11,7 @@ func isHex(b byte) bool {
 
 // scan searches for Vendor and Device lines from the input *bufio.Scanner based
 // on pci.ids format. Found Vendors and Devices are added to the input ids map.
-func scan(s *bufio.Scanner, ids map[string]Vendor) error {
+func scan(s *bufio.Scanner, ids map[string]Vendor) {
 	var currentVendor string
 	var line string
 
@@ -26,14 +26,11 @@ func scan(s *bufio.Scanner, ids map[string]Vendor) error {
 			ids[currentVendor].Devices[line[1:5]] = Device(line[7:])
 		}
 	}
-	return nil
 }
 
-func parse(input []byte) (map[string]Vendor, error) {
+func parse(input []byte) idMap {
 	ids := make(map[string]Vendor)
-
 	s := bufio.NewScanner(bytes.NewReader(input))
-	err := scan(s, ids)
-
-	return ids, err
+	scan(s, ids)
+	return ids
 }

@@ -11,9 +11,21 @@
 
 package pci
 
-// NewIDs contains the plain text contents of pci.ids. It returns
+type idMap map[string]Vendor
+
+var ids idMap
+
+// newIDs contains the plain text contents of pci.ids. It returns
 // a map to be used as lookup from hex ID to human readable lable.
-func NewIDs() (map[string]Vendor, error) {
+// We do not admit of the possibility of error, any failure
+// should be caught by the test. We might just want to just always
+// create ids since the most common use of pci will be with names,
+// not numbers.
+func newIDs() idMap {
+
+	if ids != nil {
+		return ids
+	}
 
 	var pciids = []byte(`0001  SafeNet (wrong ID)
 0010  Allied Telesis, Inc (Wrong ID)
@@ -16395,5 +16407,6 @@ fffe  VMWare Inc (temporary ID)
 	0710  Virtual SVGA
 ffff  Illegal Vendor ID
 `)
-	return parse(pciids)
+	ids = parse(pciids)
+	return ids
 }

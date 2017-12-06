@@ -36,6 +36,7 @@ func onePCI(dir string) (*PCI, error) {
 		// Linux never understood /proc.
 		reflect.ValueOf(&pci).Elem().Field(ix).SetString(string(s[2 : len(s)-1]))
 	}
+	pci.VendorName, pci.DeviceName = pci.Vendor, pci.Device
 	return &pci, nil
 }
 
@@ -49,6 +50,7 @@ func (bus *bus) Read() (Devices, error) {
 			return nil, err
 		}
 		p.Addr = filepath.Base(d)
+		p.FullPath = d
 		devices[i] = p
 	}
 	return devices, nil
