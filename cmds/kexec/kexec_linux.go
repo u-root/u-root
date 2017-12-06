@@ -40,27 +40,27 @@ type options struct {
 	exec         bool
 }
 
-func registerFlags(f *flag.FlagSet) *options {
+func registerFlags() *options {
 	o := &options{}
-	f.StringVar(&o.cmdline, "cmdline", "", "Set the kernel command line")
-	f.StringVar(&o.cmdline, "command-line", "", "Set the kernel command line")
+	flag.StringVar(&o.cmdline, "cmdline", "", "Set the kernel command line")
+	flag.StringVar(&o.cmdline, "command-line", "", "Set the kernel command line")
 
-	f.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
+	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 
-	f.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk")
-	f.StringVar(&o.initramfs, "initrd", "", "Use file as the kernel's initial ramdisk")
-	f.StringVar(&o.initramfs, "ramdisk", "", "Use file as the kernel's initial ramdisk")
+	flag.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk")
+	flag.StringVar(&o.initramfs, "initrd", "", "Use file as the kernel's initial ramdisk")
+	flag.StringVar(&o.initramfs, "ramdisk", "", "Use file as the kernel's initial ramdisk")
 
-	f.BoolVar(&o.load, "l", false, "Load the new kernel into the current kernel.")
-	f.BoolVar(&o.load, "load", false, "Load the new kernel into the current kernel.")
+	flag.BoolVar(&o.load, "l", false, "Load the new kernel into the current kernel.")
+	flag.BoolVar(&o.load, "load", false, "Load the new kernel into the current kernel.")
 
-	f.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel.")
-	f.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel.")
+	flag.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel.")
+	flag.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel.")
 	return o
 }
 
 func main() {
-	opts := registerFlags(flag.CommandLine)
+	opts := registerFlags()
 	flag.Parse()
 
 	if opts.exec == false && len(flag.Args()) == 0 {
