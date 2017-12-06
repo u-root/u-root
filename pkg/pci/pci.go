@@ -5,7 +5,10 @@
 package pci
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 )
 
@@ -32,4 +35,14 @@ func (p *PCI) String() string {
 func (p *PCI) SetVendorDeviceName() {
 	ids = newIDs()
 	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
+}
+
+// ReadConfig reads the config space and adds it to ExtraInfo as a hexdump.
+func (p *PCI) ReadConfig() error {
+	c, err := ioutil.ReadFile(filepath.Join(p.FullPath, "config"))
+	if err != nil {
+		return err
+	}
+	p.ExtraInfo = append(p.ExtraInfo, hex.Dump(c))
+	return nil
 }

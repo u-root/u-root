@@ -28,3 +28,13 @@ func (d Devices) SetVendorDeviceName() {
 		p.SetVendorDeviceName()
 	}
 }
+
+// ReadConfig reads the config info for all the devices.
+func (d Devices) ReadConfig() error {
+	for _, p := range d {
+		if err := p.ReadConfig(); err != nil {
+			return err
+		}
+	}
+	return nil
+}

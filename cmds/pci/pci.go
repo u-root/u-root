@@ -40,5 +40,8 @@ func main() {
 	if !*numbers {
 		d.SetVendorDeviceName()
 	}
+	if *dumpConfig {
+		d.ReadConfig()
+	}
 	fmt.Print(d)
 }
