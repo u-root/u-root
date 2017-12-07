@@ -5,7 +5,11 @@
 package pci
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
 )
 
 // PCI is a PCI device. We will fill this in as we add options.
@@ -16,20 +20,29 @@ type PCI struct {
 	Device     string `pci:"device"`
 	VendorName string
 	DeviceName string
+	FullPath   string
+	ExtraInfo  []string
 }
 
-// ToString concatenates PCI address, Vendor, and Device to make a useful
-// display for the user. Boolean argument toggles displaying numeric IDs or
-// human readable labels.
-func (p PCI) ToString(n bool, ids map[string]Vendor) string {
-	if n {
-		return fmt.Sprintf("%s: %s:%s", p.Addr, p.Vendor, p.Device)
-	}
+// String concatenates PCI address, Vendor, and Device and other information
+// to make a useful display for the user.
+func (p *PCI) String() string {
+	return strings.Join(append([]string{fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
+}
+
+// SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
+// if possible.
+func (p *PCI) SetVendorDeviceName() {
+	ids = newIDs()
 	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
-	return fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)
 }
 
-// String is a Stringer for fmt and others' convenience.
-func (p PCI) String() string {
-	return p.ToString(true, nil)
+// ReadConfig reads the config space and adds it to ExtraInfo as a hexdump.
+func (p *PCI) ReadConfig() error {
+	c, err := ioutil.ReadFile(filepath.Join(p.FullPath, "config"))
+	if err != nil {
+		return err
+	}
+	p.ExtraInfo = append(p.ExtraInfo, hex.Dump(c))
+	return nil
 }

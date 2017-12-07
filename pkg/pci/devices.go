@@ -11,19 +11,30 @@ import (
 //Devices contains a slice of one or more PCI devices
 type Devices []*PCI
 
-// ToString concatenates multiple Devices' PCI address, Vendor, and Device
-// to make a useful display for the user. Boolean argument toggles displaying
-// numeric IDs or human readable labels.
-func (d Devices) ToString(n bool, ids map[string]Vendor) string {
+// String stringifies the PCI devices. Currently it just calls the device String().
+func (d Devices) String() string {
 	var buffer bytes.Buffer
 	for _, pci := range d {
-		buffer.WriteString(pci.ToString(n, ids))
+		buffer.WriteString(pci.String())
 		buffer.WriteString("\n")
 	}
 	return buffer.String()
 }
 
-// String is a Stringer for fmt and others' convenience.
-func (d Devices) String() string {
-	return d.ToString(true, nil)
+// SetVendorDeviceName sets all numeric IDs of all the devices
+// using the pci device SetVendorDeviceName.
+func (d Devices) SetVendorDeviceName() {
+	for _, p := range d {
+		p.SetVendorDeviceName()
+	}
+}
+
+// ReadConfig reads the config info for all the devices.
+func (d Devices) ReadConfig() error {
+	for _, p := range d {
+		if err := p.ReadConfig(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
