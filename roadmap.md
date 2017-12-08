@@ -46,7 +46,7 @@
 | lsmod          |               |                 |                        |
 | :x: man        |               | -k              | Not implemented yet!   |
 | mkdir          | -mpv          |                 |                        |
-| :x: mkfifo     |               |                 | Not implemented yet!   |
+| mkfifo         |               |                 |                        |
 | mknod          |               |                 |                        |
 | mount          | -rt           |                 |                        |
 | mv             |               | -nu             |                        |
