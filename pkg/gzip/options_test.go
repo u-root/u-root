@@ -1,6 +1,7 @@
 package gzip
 
 import (
+	"flag"
 	"runtime"
 	"testing"
 
@@ -16,18 +17,21 @@ func TestOptions_ParseArgs(t *testing.T) {
 		Force      bool
 		Help       bool
 		Keep       bool
-		License    bool
 		Quiet      bool
 		Stdin      bool
 		Stdout     bool
 		Test       bool
 		Verbose    bool
-		Version    bool
 		Suffix     string
+	}
+	type args struct {
+		args    []string
+		cmdLine *flag.FlagSet
 	}
 	tests := []struct {
 		name    string
 		fields  fields
+		args    args
 		wantErr bool
 	}{
 	// TODO: Add test cases.
@@ -42,22 +46,19 @@ func TestOptions_ParseArgs(t *testing.T) {
 				Force:      tt.fields.Force,
 				Help:       tt.fields.Help,
 				Keep:       tt.fields.Keep,
-				License:    tt.fields.License,
 				Quiet:      tt.fields.Quiet,
 				Stdin:      tt.fields.Stdin,
 				Stdout:     tt.fields.Stdout,
 				Test:       tt.fields.Test,
 				Verbose:    tt.fields.Verbose,
-				Version:    tt.fields.Version,
 				Suffix:     tt.fields.Suffix,
 			}
-			if err := o.ParseArgs(); (err != nil) != tt.wantErr {
+			if err := o.ParseArgs(tt.args.args, tt.args.cmdLine); (err != nil) != tt.wantErr {
 				t.Errorf("Options.ParseArgs() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
-
 func TestOptions_validate(t *testing.T) {
 	type fields struct {
 		Blocksize  int
@@ -67,23 +68,26 @@ func TestOptions_validate(t *testing.T) {
 		Force      bool
 		Help       bool
 		Keep       bool
-		License    bool
 		Quiet      bool
 		Stdin      bool
 		Stdout     bool
 		Test       bool
 		Verbose    bool
-		Version    bool
 		Suffix     string
+	}
+	type args struct {
+		moreArgs bool
 	}
 	tests := []struct {
 		name    string
+		args    args
 		fields  fields
 		wantErr bool
 	}{
 		{
-			name:    "Default No Args",
+			name:    "Default values no args",
 			fields:  fields{Blocksize: 128, Level: -1, Processes: runtime.NumCPU(), Decompress: false, Force: false, Help: false},
+			args:    args{moreArgs: false},
 			wantErr: true,
 		},
 	}
@@ -97,16 +101,15 @@ func TestOptions_validate(t *testing.T) {
 				Force:      tt.fields.Force,
 				Help:       tt.fields.Help,
 				Keep:       tt.fields.Keep,
-				License:    tt.fields.License,
 				Quiet:      tt.fields.Quiet,
 				Stdin:      tt.fields.Stdin,
 				Stdout:     tt.fields.Stdout,
 				Test:       tt.fields.Test,
 				Verbose:    tt.fields.Verbose,
-				Version:    tt.fields.Version,
 				Suffix:     tt.fields.Suffix,
 			}
-			if err := o.validate(); (err != nil) != tt.wantErr {
+
+			if err := o.validate(tt.args.moreArgs); (err != nil) != tt.wantErr {
 				t.Errorf("Options.validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

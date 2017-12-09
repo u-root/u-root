@@ -1,15 +1,18 @@
 package gzip
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/klauspost/pgzip"
-	"github.com/spf13/pflag"
 )
 
+// Options represents the CLI options possible, controlling how
+// gzip operates on the given input data.
 type Options struct {
 	Blocksize  int
 	Level      int
@@ -18,74 +21,63 @@ type Options struct {
 	Force      bool
 	Help       bool
 	Keep       bool
-	License    bool
 	Quiet      bool
 	Stdin      bool
 	Stdout     bool
 	Test       bool
 	Verbose    bool
-	Version    bool
 	Suffix     string
 }
 
-func (o *Options) ParseArgs() error {
+// ParseArgs takes CLI args and parses them via a Flagset into fields in
+// the Options struct. Returns any errors from parsing and validating options.
+func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 	var levels [10]bool
 
-	pflag.IntVarP(&o.Blocksize, "blocksize", "b", 128, "Set compression block size in KiB")
-	pflag.BoolVarP(&o.Decompress, "decompress", "d", false, "Decompress the compressed input")
-	pflag.BoolVarP(&o.Force, "force", "f", false, "Force overwrite of output file and compress links")
-	pflag.BoolVarP(&o.Help, "help", "h", false, "Display a help screen and quit")
-	pflag.BoolVarP(&o.Keep, "keep", "k", false, "Do not delete original file after processing")
+	cmdLine.IntVar(&o.Blocksize, "b", 128, "Set compression block size in KiB")
+	cmdLine.BoolVar(&o.Decompress, "d", false, "Decompress the compressed input")
+	cmdLine.BoolVar(&o.Force, "f", false, "Force overwrite of output file and compress links")
+	cmdLine.BoolVar(&o.Help, "h", false, "Display a help screen and quit")
+	cmdLine.BoolVar(&o.Keep, "k", false, "Do not delete original file after processing")
 	// TODO: implement list option here
-	pflag.IntVarP(&o.Processes, "processes", "p", runtime.NumCPU(), "Allow up to n compression threads")
-	pflag.BoolVarP(&o.Quiet, "quiet", "q", false, "Print no messages, even on error")
+	cmdLine.IntVar(&o.Processes, "p", runtime.NumCPU(), "Allow up to n compression threads")
+	cmdLine.BoolVar(&o.Quiet, "q", false, "Print no messages, even on error")
 	// TODO: implement recursive option here
-	pflag.BoolVarP(&o.Stdout, "stdout", "c", false, "Write all processed output to stdout (won't delete)")
-	pflag.StringVarP(&o.Suffix, "suffix", "S", ".gz", "Specify suffix for compression")
-	pflag.BoolVarP(&o.Test, "test", "t", false, "Test the integrity of the compressed input")
-	pflag.BoolVarP(&o.Verbose, "verbose", "v", false, "Produce more verbose output")
-	pflag.BoolVarP(&levels[1], "fast", "1", false, "Compression Level 1")
-	pflag.BoolVarP(&levels[2], "two", "2", false, "Compression Level 2")
-	pflag.BoolVarP(&levels[3], "three", "3", false, "Compression Level 3")
-	pflag.BoolVarP(&levels[4], "four", "4", false, "Compression Level 4")
-	pflag.BoolVarP(&levels[5], "five", "5", false, "Compression Level 5")
-	pflag.BoolVarP(&levels[6], "six", "6", false, "Compression Level 6")
-	pflag.BoolVarP(&levels[7], "seven", "7", false, "Compression Level 7")
-	pflag.BoolVarP(&levels[8], "eight", "8", false, "Compression Level 8")
-	pflag.BoolVarP(&levels[9], "best", "9", false, "Compression Level 9")
+	cmdLine.BoolVar(&o.Stdout, "c", false, "Write all processed output to stdout (won't delete)")
+	cmdLine.StringVar(&o.Suffix, "S", ".gz", "Specify suffix for compression")
+	cmdLine.BoolVar(&o.Test, "t", false, "Test the integrity of the compressed input")
+	cmdLine.BoolVar(&o.Verbose, "v", false, "Produce more verbose output")
+	cmdLine.BoolVar(&levels[1], "1", false, "Compression Level 1")
+	cmdLine.BoolVar(&levels[2], "2", false, "Compression Level 2")
+	cmdLine.BoolVar(&levels[3], "3", false, "Compression Level 3")
+	cmdLine.BoolVar(&levels[4], "4", false, "Compression Level 4")
+	cmdLine.BoolVar(&levels[5], "5", false, "Compression Level 5")
+	cmdLine.BoolVar(&levels[6], "6", false, "Compression Level 6")
+	cmdLine.BoolVar(&levels[7], "7", false, "Compression Level 7")
+	cmdLine.BoolVar(&levels[8], "8", false, "Compression Level 8")
+	cmdLine.BoolVar(&levels[9], "9", false, "Compression Level 9")
 
-	// Hide the compression Levels 2 - 8 from usage.
-	_ = pflag.CommandLine.MarkHidden("two")
-	_ = pflag.CommandLine.MarkHidden("three")
-	_ = pflag.CommandLine.MarkHidden("four")
-	_ = pflag.CommandLine.MarkHidden("five")
-	_ = pflag.CommandLine.MarkHidden("six")
-	_ = pflag.CommandLine.MarkHidden("seven")
-	_ = pflag.CommandLine.MarkHidden("eight")
-
-	pflag.Parse()
+	if err := cmdLine.Parse(args[1:]); err != nil {
+		return err
+	}
 
 	var err error
 	o.Level, err = parseLevels(levels)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s\n\n", err)
 	}
 
-	return o.validate()
+	return o.validate(len(cmdLine.Args()) > 0)
 }
 
-// Validate checks options and handles help, version, and license
-// output to the user. If forces decompression to be enabled when
-// test mode is enabled. It further modifies options if the running
-// binary is named gunzip or gzcat to allow for expected behavor for
-// those binaries. Finally it checks if there is piped stdin data.
-func (o *Options) validate() error {
-
+// Validate checks options.
+// Forces decompression to be enabled when test mode is enabled.
+// It further modifies options if the running binary is named
+// gunzip or gzcat to allow for expected behavor. Checks if there is piped stdin data.
+func (o *Options) validate(moreArgs bool) error {
 	if o.Help {
-		return &appError{
-			level: info,
-			msg:   fmt.Sprintf("Usage of %s:\n%s", filepath.Base(os.Args[0]), pflag.CommandLine.FlagUsages()),
-		}
+		// Return an empty errorString so the CLI app does not continue
+		return errors.New("")
 	}
 
 	if o.Test {
@@ -106,40 +98,38 @@ func (o *Options) validate() error {
 
 	// No files passed and arguments and Stdin piped data found.
 	// Stdin piped data is ignored if arguments are found.
-	if len(pflag.Args()) == 0 && (stat.Mode()&os.ModeNamedPipe) != 0 {
+	if !moreArgs && (stat.Mode()&os.ModeNamedPipe) != 0 {
 		o.Stdin = true
 		// Enable force to ignore suffix checks
 		o.Force = true
 		// Since there's no filename to derive the output path from, only support
 		// outputting to stdout when data is piped from stdin
 		o.Stdout = true
-	} else if len(pflag.Args()) == 0 {
+	} else if !moreArgs {
 		// No stdin piped data found and no files passed as arguments
-		return &appError{
-			level: info,
-			msg:   fmt.Sprintf("Usage of %s:\n%s", filepath.Base(os.Args[0]), pflag.CommandLine.FlagUsages()),
-		}
+		return fmt.Errorf("error: no input files specified or piped data")
 	}
 
 	return nil
 }
 
 // parseLevels loops through a [10]bool and returns the index of the element
-// thats true. If more than one element is true return an error. If no
-// element is true, return the constant pgzip.DefaultCompression (-1).
-func parseLevels(Levels [10]bool) (int, error) {
-	var Level int
+// that's true. If more than one element is true it returns an error. If no
+// element is true, it returns the constant pgzip.DefaultCompression (-1).
+func parseLevels(levels [10]bool) (int, error) {
+	var level int
 
-	for i, l := range Levels {
-		if l && Level != 0 {
-			return 0, &appError{level: fatal, msg: "multiple compression Levels specified"}
+	for i, l := range levels {
+		if l && level != 0 {
+			return 0, fmt.Errorf("error: multiple compression levels specified")
 		} else if l {
-			Level = i
+			level = i
 		}
 	}
 
-	if Level == 0 {
-		Level = pgzip.DefaultCompression
+	if level == 0 {
+		return pgzip.DefaultCompression, nil
 	}
-	return Level, nil
+
+	return level, nil
 }

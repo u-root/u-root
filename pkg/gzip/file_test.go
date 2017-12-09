@@ -98,7 +98,7 @@ func TestFile_CheckOutputPath(t *testing.T) {
 		})
 	}
 }
-func TestFile_checkOutputStdout(t *testing.T) {
+func TestFile_CheckOutputStdout(t *testing.T) {
 	type fields struct {
 		Path    string
 		Options *Options
@@ -151,7 +151,7 @@ func TestFile_checkOutputStdout(t *testing.T) {
 			defer stdout.Close()
 
 			os.Stdout = stdout
-			if err := f.checkOutputStdout(); (err != nil) != tt.wantErr {
+			if err := f.CheckOutputStdout(); (err != nil) != tt.wantErr {
 				t.Errorf("File.checkOutStdout() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			os.Stdout = oldStdout
