@@ -32,19 +32,19 @@ func (f *File) outputPath() string {
 func (f *File) CheckPath() error {
 	_, err := os.Stat(f.Path)
 	if os.IsNotExist(err) {
-		return &appError{level: skipping, path: f.Path, msg: "does not exist"}
+		return fmt.Errorf("skipping, %s does not exist", f.Path)
 	} else if os.IsPermission(err) {
-		return &appError{level: skipping, path: f.Path, msg: "permission denied"}
+		return fmt.Errorf("skipping, %s permission denied", f.Path)
 	}
 
 	if !f.Options.Force {
 		if f.Options.Decompress {
 			if !strings.HasSuffix(f.Path, f.Options.Suffix) {
-				return &appError{level: skipping, path: f.Path, msg: fmt.Sprintf("does not have %s suffix", f.Options.Suffix)}
+				return fmt.Errorf("skipping, %s does not have %s suffix", f.Path, f.Options.Suffix)
 			}
 		} else {
 			if strings.HasSuffix(f.Path, f.Options.Suffix) {
-				return &appError{level: skipping, path: f.Path, msg: fmt.Sprintf("already has %s suffix", f.Options.Suffix)}
+				return fmt.Errorf("skipping, %s already has %s suffix", f.Path, f.Options.Suffix)
 			}
 		}
 	}
@@ -55,26 +55,22 @@ func (f *File) CheckPath() error {
 // stdout is a device. Also checks if output path already exists. Allow
 // override via force option.
 func (f *File) CheckOutputPath() error {
-	if err := f.checkOutputStdout(); err != nil {
-		return err
-	}
-
 	_, err := os.Stat(f.outputPath())
 	if !os.IsNotExist(err) && !f.Options.Stdout && !f.Options.Test && !f.Options.Force {
-		return &appError{level: skipping, path: f.outputPath(), msg: "already exist"}
+		return fmt.Errorf("skipping, %s already exist", f.outputPath())
 	} else if os.IsPermission(err) {
-		return &appError{level: skipping, path: f.outputPath(), msg: "permission denied"}
+		return fmt.Errorf("skipping, %s permission denied", f.outputPath())
 	}
 	return nil
 }
 
-// checkOutputStdout checks if output is attempting to write binary to stdout
+// CheckOutputStdout checks if output is attempting to write binary to stdout
 // if stdout is a device.
-func (f *File) checkOutputStdout() error {
+func (f *File) CheckOutputStdout() error {
 	if f.Options.Stdout {
 		stat, _ := os.Stdout.Stat()
 		if !f.Options.Decompress && !f.Options.Force && (stat.Mode()&os.ModeDevice) != 0 {
-			return &appError{level: fatal, msg: "trying to write compressed data to a terminal/device (use -f to force)"}
+			return fmt.Errorf("fatal, trying to write compressed data to a terminal/device (use -f to force)")
 		}
 	}
 	return nil
@@ -117,14 +113,14 @@ func (f *File) Process() error {
 	}
 
 	if f.Options.Decompress {
-		if err := decompress(i, o, f.Options.Blocksize, f.Options.Processes); err != nil {
+		if err := Decompress(i, o, f.Options.Blocksize, f.Options.Processes); err != nil {
 			if !f.Options.Stdout {
 				o.Close()
 			}
 			return err
 		}
 	} else {
-		if err := compress(i, o, f.Options.Level, f.Options.Blocksize, f.Options.Processes); err != nil {
+		if err := Compress(i, o, f.Options.Level, f.Options.Blocksize, f.Options.Processes); err != nil {
 			if !f.Options.Stdout {
 				o.Close()
 			}

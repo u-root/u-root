@@ -6,7 +6,10 @@ import (
 	"github.com/klauspost/pgzip"
 )
 
-func compress(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
+// Compress takes input from io.Reader and deflates it using pgzip
+// to io.Writer. Data is compressed in blocksize (KB) chunks using
+// upto the number of CPU cores specified.
+func Compress(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
 	zw, err := pgzip.NewWriterLevel(w, level)
 	if err != nil {
 		return err
