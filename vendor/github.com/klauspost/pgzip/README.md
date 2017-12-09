@@ -3,25 +3,25 @@ pgzip
 
 Go parallel gzip compression/decompression. This is a fully gzip compatible drop in replacement for "compress/gzip".
 
-This will split compression into blocks that are compressed in parallel.
+This will split compression into blocks that are compressed in parallel. 
 This can be useful for compressing big amounts of data. The output is a standard gzip file.
 
-The gzip decompression is modified so it decompresses ahead of the current reader.
-This means that reads will be non-blocking if the decompressor can keep ahead of your code reading from it.
+The gzip decompression is modified so it decompresses ahead of the current reader. 
+This means that reads will be non-blocking if the decompressor can keep ahead of your code reading from it. 
 CRC calculation also takes place in a separate goroutine.
 
-You should only use this if you are (de)compressing big amounts of data,
-say **more than 1MB** at the time, otherwise you will not see any benefit,
-and it will likely be faster to use the internal gzip library
+You should only use this if you are (de)compressing big amounts of data, 
+say **more than 1MB** at the time, otherwise you will not see any benefit, 
+and it will likely be faster to use the internal gzip library 
 or [this package](https://github.com/klauspost/compress).
 
-It is important to note that this library creates and reads *standard gzip files*.
-You do not have to match the compressor/decompressor to get the described speedups,
+It is important to note that this library creates and reads *standard gzip files*. 
+You do not have to match the compressor/decompressor to get the described speedups, 
 and the gzip files are fully compatible with other gzip readers/writers.
 
-A golang variant of this is [bgzf](https://godoc.org/github.com/biogo/hts/bgzf),
-which has the same feature, as well as seeking in the resulting file.
-The only drawback is a slightly bigger overhead compared to this and pure gzip.
+A golang variant of this is [bgzf](https://godoc.org/github.com/biogo/hts/bgzf), 
+which has the same feature, as well as seeking in the resulting file. 
+The only drawback is a slightly bigger overhead compared to this and pure gzip. 
 See a comparison below.
 
 [![GoDoc][1]][2] [![Build Status][3]][4]
@@ -46,10 +46,10 @@ Usage
 ====
 [Godoc Doumentation](https://godoc.org/github.com/klauspost/pgzip)
 
-To use as a replacement for gzip, exchange
+To use as a replacement for gzip, exchange 
 
-```import "compress/gzip"```
-with
+```import "compress/gzip"``` 
+with 
 ```import gzip "github.com/klauspost/pgzip"```.
 
 # Changes
@@ -63,7 +63,7 @@ with
 Changes in [github.com/klauspost/compress](https://github.com/klauspost/compress#changelog) are also carried over, so see that for more changes.
 
 ## Compression
-The simplest way to use this is to simply do the same as you would when using [compress/gzip](http://golang.org/pkg/compress/gzip).
+The simplest way to use this is to simply do the same as you would when using [compress/gzip](http://golang.org/pkg/compress/gzip). 
 
 To change the block size, use the added (*pgzip.Writer).SetConcurrency(blockSize, blocks int) function. With this you can control the approximate size of your blocks, as well as how many you want to be processing in parallel. Default values for this is SetConcurrency(250000, 16), meaning blocks are split at 250000 bytes and up to 16 blocks can be processing at once before the writer blocks.
 
@@ -85,7 +85,7 @@ Another side effect of this is, that it is likely to speed up your other code, s
 
 ## Decompression
 
-Decompression works similar to compression. That means that you simply call pgzip the same way as you would call [compress/gzip](http://golang.org/pkg/compress/gzip).
+Decompression works similar to compression. That means that you simply call pgzip the same way as you would call [compress/gzip](http://golang.org/pkg/compress/gzip). 
 
 The only difference is that if you want to specify your own readahead, you have to use `pgzip.NewReaderN(r io.Reader, blockSize, blocks int)` to get a reader with your custom blocksizes. The `blockSize` is the size of each block decoded, and `blocks` is the maximum number of blocks that is decoded ahead.
 

@@ -8,6 +8,6 @@ go:
   - 1.7
   - tip
 
-script:
+script: 
  - go test -v .
  - go test -v -race .
