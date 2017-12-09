@@ -129,12 +129,6 @@
   revision = "836a144573533ea4da4e6929c235fd348aed1c80"
 
 [[projects]]
-  name = "github.com/spf13/pflag"
-  packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "addclient"
   name = "github.com/u-root/dhcp6"
   packages = ["."]
@@ -191,10 +185,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-<<<<<<< HEAD
-  inputs-digest = "d6ddf887dcd953c09317910e1872dd81132409bc12ecf807394386fe09758757"
-=======
-  inputs-digest = "480557a35bb915e8c5b56c12a99110f50ad11f587c403d88f13b409e22a3817e"
->>>>>>> cmds/gzip, pkgs/gzip: Move majority of cmds/gzip to pkg/gzip. Add tests.
+  inputs-digest = "22ce9fa037a428293d3133f40f661ac3355c759ff33e1e87cd76e5a6c7b803bf"
   solver-name = "gps-cdcl"
   solver-version = 1

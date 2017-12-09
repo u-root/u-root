@@ -13,11 +13,11 @@ go:
   - 1.8.x
   - master
 
-script:
+script: 
  - go test -v -cpu=1,2,4 .
  - go test -v -cpu=2 -race -short .
 
 matrix:
   allow_failures:
     - go: 'master'
-  fast_finish: true
+  fast_finish: true 
