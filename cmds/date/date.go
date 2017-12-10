@@ -44,11 +44,15 @@ var fmtMap = map[string]string{
 }
 
 var (
-	flags struct{ universal bool }
-	z     = time.Local
+	flags struct {
+		universal bool
+		reference string
+	}
+	z = time.Local
+	t = time.Now()
 )
 
-const cmd = "date [-u] [+format] | date [-u] [MMDDhhmm[CC]YY[.ss]]"
+const cmd = "date [-u] [-d FILE] [+format] | date [-u] [-d FILE] [MMDDhhmm[CC]YY[.ss]]"
 
 func init() {
 	defUsage := flag.Usage
@@ -57,9 +61,17 @@ func init() {
 		defUsage()
 	}
 	flag.BoolVar(&flags.universal, "u", false, "Coordinated Universal Time (UTC)")
+	flag.StringVar(&flags.reference, "r", "", "Display the last midification time of FILE")
 	flag.Parse()
 	if flags.universal {
 		z = time.UTC
+	}
+	if flags.reference != "" {
+		stat, err := os.Stat(flags.reference)
+		if err != nil {
+			log.Fatalf("Unable to gather stats of file %v", flags.reference)
+		}
+		t = stat.ModTime()
 	}
 }
 
@@ -78,7 +90,7 @@ func formatParser(args string) []string {
 
 // replace map for the format patterns according POSIX and GNU implementations
 func dateMap(format string) string {
-	d := time.Now().In(z)
+	d := t.In(z)
 	var toReplace string
 	for _, match := range formatParser(format) {
 		translate, exists := fmtMap[match]
@@ -209,7 +221,7 @@ func getTime(s string) (t time.Time, err error) {
 }
 
 func date(z *time.Location) string {
-	return time.Now().In(z).Format(time.UnixDate)
+	return t.In(z).Format(time.UnixDate)
 }
 
 func main() {
