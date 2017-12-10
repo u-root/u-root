@@ -2,20 +2,40 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// mkfifo creates a named pipe.
+//
+// Synopsis:
+//     mkfifo [OPTIONS] NAME...
+//
+// Options:
+//     -m: mode (default 0600)
+//
 package main
 
 import (
 	"flag"
 	"log"
+	"os"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/mkfifo"
+	"golang.org/x/sys/unix"
 )
 
-var (
-	defaultMode = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP | syscall.S_IWGRP | syscall.S_IROTH | syscall.S_IWOTH
-	mode        = flag.Int("mode", defaultMode, "Mode to create fifo")
+const (
+	defaultMode = 0660 | unix.S_IFIFO
+	cmd         = "mkfifo [-m] NAME..."
 )
+
+var mode = flag.Int("mode", defaultMode, "Mode to create fifo")
+
+func init() {
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = cmd
+		defUsage()
+	}
+	flag.Parse()
+}
 
 func main() {
 	flag.Parse()
@@ -24,9 +44,9 @@ func main() {
 		log.Fatal("please provide a path, or multiple, to create a fifo")
 	}
 
-	mk := mkfifo.Mkfifo{Paths: flag.Args(), Mode: uint32(*mode)}
-
-	if err := mk.Exec(); err != nil {
-		log.Fatalf("Error while creating fifo, %v", err)
+	for _, path := range flag.Args() {
+		if err := syscall.Mkfifo(path, uint32(*mode)); err != nil {
+			log.Fatalf("Error while creating fifo, %v", err)
+		}
 	}
 }
