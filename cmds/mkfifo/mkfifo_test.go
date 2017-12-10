@@ -18,7 +18,6 @@ import (
 type test struct {
 	name   string
 	flags  []string
-	mode   string
 	stdErr string
 }
 
@@ -33,25 +32,20 @@ func TestMkfifo(t *testing.T) {
 		t.Error(err)
 	}
 
-	defaultMode := "prw-r-----"
-
 	var tests = []test{
 		{
 			name:   "no path or mode, error",
 			flags:  []string{},
-			mode:   defaultMode,
 			stdErr: "please provide a path, or multiple, to create a fifo",
 		},
 		{
 			name:   "single path",
 			flags:  []string{filepath.Join(testDir, "testfifo")},
-			mode:   defaultMode,
 			stdErr: "",
 		},
 		{
 			name:   "duplicate path",
 			flags:  []string{filepath.Join(testDir, "testfifo1"), filepath.Join(testDir, "testfifo1")},
-			mode:   defaultMode,
 			stdErr: "file exists",
 		},
 	}
@@ -75,8 +69,8 @@ func TestMkfifo(t *testing.T) {
 			}
 
 			mode := testFile.Mode()
-			if mode.String() != tt.mode {
-				t.Errorf("mode incorrect. expected %v got %v", tt.mode, mode.String())
+			if (mode & os.ModeNamedPipe).String() != "p---------" {
+				t.Errorf("expected named pipe, got %v %v", mode, (mode & os.ModeNamedPipe))
 			}
 		}
 	}
