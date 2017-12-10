@@ -14,7 +14,7 @@
 | comm           | -123h         |                 |                        |
 | cp             | -fiPRrvw      |                 |                        |
 | cpio           | -oitv         |                 |                        |
-| date           | -u            | -drs            |                        |
+| date           | -ur           | -ds             |                        |
 | dd             |               |                 |                        |
 | dhcp           |               |                 | u-root specific        |
 | dmesg          | -c            | -Clr            |                        |
