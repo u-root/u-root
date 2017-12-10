@@ -18,10 +18,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/find"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
@@ -31,6 +33,95 @@ var (
 	debug   = func(string, ...interface{}) {}
 )
 
+// fillBuildBin tries to fill buildbin. It does it's level best but if it can not do it,
+// c'est la vie.
+func fillBuildBin() {
+	var (
+		// mark that we visited a directory, remember the name
+		// of the go file in that directory. If the name is "",
+		// we won't bother to test it.
+		visited = map[string]string{
+			"/src/github.com/u-root/u-root/cmds/installcommand": "",
+			"/src/github.com/u-root/u-root/cmds/init":           "",
+			"/src/github.com/u-root/u-root/cmds/rush":           "",
+		}
+		// populate is the list of things we must populate.
+		// If you know something you just gotta have, then put it here.
+		populate = []string{"rush"}
+	)
+
+	// populate buildbin
+	f, err := find.New(func(f *find.Finder) error {
+		f.Pattern = "*.go"
+		f.Root = "/src"
+		return nil
+	})
+	if err != nil {
+		log.Printf("Can't build a find, sorry, err %v", err)
+		return
+	}
+	go f.Find()
+
+	for goFile := range f.Names {
+		if goFile.Err != nil {
+			log.Printf("%s: got %v, want nil", goFile.Name, goFile.Err)
+			continue
+		}
+		dir := filepath.Dir(goFile.Name)
+		if _, ok := visited[dir]; ok {
+			continue
+		}
+		visited[dir] = goFile.Name
+	}
+	pm, err := regexp.Compile("\npackage  *main")
+	if err != nil {
+		log.Printf("package main regexp did not compile; finding non-uroot packages won't work")
+	}
+
+	for d, f := range visited {
+		if f == "" {
+			continue
+		}
+		// The simple common case is a base u-root command,
+		// which is easy: the Dir of the dir is
+		// /src/github.com/u-root/u-root/cmds. Check that first.
+		if filepath.Dir(d) == "/src/github.com/u-root/u-root/cmds" {
+			log.Printf("Fast path for %v", d)
+			populate = append(populate, filepath.Base(d))
+			continue
+		}
+		if pm == nil {
+			continue
+		}
+		// We should, really, use ast and look for the package.
+		// But that's kinda slower, so we'll do this hack until
+		// Chris and Ryan force it to be done right.
+		// I'm not yet convinced that just sucking the whole file
+		// in is significantly slower than using MatchReader.
+		// We've already gained a lot with the simple fast path rule
+		// above, so this is likely OK.
+		b, err := ioutil.ReadFile(f)
+		if err != nil {
+			log.Printf("Reading %v: got %v, want nil", f, err)
+			continue
+		}
+		if !pm.Match(b) {
+			continue
+		}
+		populate = append(populate, filepath.Base(d))
+	}
+
+	for _, f := range populate {
+		destPath := filepath.Join("/buildbin", f)
+		source := "/buildbin/installcommand"
+		if err := os.Symlink(source, destPath); err != nil {
+			log.Printf("fillbuildbin: Symlink %v -> %v failed; %v", source, destPath, err)
+			log.Printf("fillbuildbin: contents of populate: %v", populate)
+		}
+		log.Printf("Symlink %v -> %v", destPath, source)
+	}
+
+}
 func main() {
 	a := []string{"build"}
 	flag.Parse()
@@ -42,31 +133,7 @@ func main() {
 		a = append(a, "-x")
 	}
 
-	// populate buildbin
-
-	// In earlier versions we just had src/cmds. Due to the Go rules it seems we need to
-	// embed the URL of the repo everywhere. Yuck.
-	c, err := filepath.Glob("/src/github.com/u-root/*/cmds/[a-z]*")
-	if err != nil || len(c) == 0 {
-		log.Printf("In a break with tradition, you seem to have NO u-root commands: %v", err)
-	}
-	o, err := filepath.Glob("/src/*/*/*")
-	if err != nil {
-		log.Printf("Your filepath glob for other commands seems busted: %v", err)
-	}
-	c = append(c, o...)
-	for _, v := range c {
-		name := filepath.Base(v)
-		if name == "installcommand" || name == "init" {
-			continue
-		} else {
-			destPath := filepath.Join("/buildbin", name)
-			source := "/buildbin/installcommand"
-			if err := os.Symlink(source, destPath); err != nil {
-				log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
-			}
-		}
-	}
+	fillBuildBin()
 
 	envs := os.Environ()
 	debug("envs %v", envs)
