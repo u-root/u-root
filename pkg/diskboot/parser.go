@@ -3,6 +3,7 @@ package diskboot
 import (
 	"log"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -15,9 +16,11 @@ const (
 )
 
 type parser struct {
-	state  parserState
-	config *Config
-	entry  *Entry
+	state        parserState
+	config       *Config
+	entry        *Entry
+	defaultName  string
+	defaultIndex int
 }
 
 func (p *parser) parseSearch(line string) {
@@ -30,19 +33,33 @@ func (p *parser) parseSearch(line string) {
 	newEntry := false
 	var name string
 
-	// TODO: add name to the entry
-	switch f[0] {
-	case "menuentry", "MENUENTRY":
+	switch strings.ToUpper(f[0]) {
+	case "MENUENTRY": // grub
 		p.state = grub
 		newEntry = true
-		names := strings.Split(strings.Replace(trimmedLine, "'", "\"", -1), "\"")
+		repNames := strings.Replace(trimmedLine, "'", "\"", -1)
+		names := strings.Split(repNames, "\"")
 		if len(names) > 1 {
 			name = names[1]
 		}
-	case "label", "LABEL":
+	case "SET": // grub
+		if len(f) > 1 {
+			p.parseSearchHandleSet(f[1])
+		}
+	case "LABEL": // syslinux
 		p.state = syslinux
 		newEntry = true
 		name = trimmedLine[6:]
+		if name == "" {
+			name = "linux" // default for syslinux
+		}
+	case "DEFAULT": // syslinux
+		if len(f) > 1 {
+			label := strings.Join(f[1:], " ")
+			if !strings.HasSuffix(label, ".c32") {
+				p.defaultName = label
+			}
+		}
 	}
 
 	if newEntry {
@@ -50,6 +67,25 @@ func (p *parser) parseSearch(line string) {
 			Name: name,
 			Type: Elf,
 		}
+	}
+}
+
+func (p *parser) parseSearchHandleSet(val string) {
+	val = strings.Replace(val, "\"", "", -1)
+	expr := strings.Split(val, "=")
+	if len(expr) != 2 {
+		return
+	}
+
+	switch expr[0] {
+	case "default":
+		index, err := strconv.Atoi(expr[1])
+		if err == nil {
+			p.defaultIndex = index
+		}
+	default:
+		// TODO: handle variables when grub conditionals are implemented
+		return
 	}
 }
 
@@ -67,8 +103,14 @@ func (p *parser) parseGrubEntry(line string) {
 		p.entry.Type = Multiboot
 		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], f[2:]))
 	case "module":
-		// TODO: fix to remove "--nounzip"
-		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], f[2:]))
+		var filteredParams []string
+		for _, param := range f {
+			if param != "--nounzip" {
+				filteredParams = append(filteredParams, param)
+			}
+		}
+		p.entry.Modules = append(p.entry.Modules,
+			NewModule(filteredParams[1], filteredParams[2:]))
 	case "linux":
 		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], f[2:]))
 	case "initrd":
@@ -85,19 +127,25 @@ func (p *parser) parseSyslinuxEntry(line string) {
 
 	f := strings.Fields(trimmedLine)
 	val := strings.Join(f[1:], " ")
-	switch f[0] {
-	case "label", "LABEL": // new entry, finish this one and start a new one
+	switch strings.ToUpper(f[0]) {
+	case "LABEL": // new entry, finish this one and start a new one
 		p.finishEntry()
 		p.parseSearch(line)
-	case "menu", "MENU":
-		if len(f) > 1 && (strings.ToUpper(f[1]) == "LABEL") {
-			p.entry.Name = strings.Replace(strings.Join(f[2:], " "), "^", "", -1)
+	case "MENU":
+		if len(f) > 1 {
+			switch strings.ToUpper(f[1]) {
+			case "LABEL":
+				tempName := strings.Join(f[2:], " ")
+				p.entry.Name = strings.Replace(tempName, "^", "", -1)
+			case "DEFAULT":
+				p.defaultName = p.entry.Name
+			}
 		}
-	case "linux", "LINUX", "kernel", "KERNEL":
+	case "LINUX", "KERNEL":
 		p.parseSyslinuxKernel(val)
-	case "initrd", "INITRD":
+	case "INITRD":
 		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], nil))
-	case "append", "APPEND":
+	case "APPEND":
 		p.parseSyslinuxAppend(val)
 	}
 }
@@ -106,7 +154,7 @@ func (p *parser) parseSyslinuxKernel(val string) {
 	if strings.HasSuffix(val, "mboot.c32") {
 		p.entry.Type = Multiboot
 	} else if strings.HasSuffix(val, ".c32") {
-		// skip this entry
+		// skip this entry - not valid for kexec
 		p.state = search
 	} else {
 		p.entry.Modules = append(p.entry.Modules, NewModule(val, nil))
@@ -172,7 +220,7 @@ func (p *parser) finishEntry() {
 	p.config.Entries = append(p.config.Entries, *p.entry)
 }
 
-func (p *parser) parseLines(lines []string) error {
+func (p *parser) parseLines(lines []string) {
 	p.state = search
 
 	for _, line := range lines {
@@ -189,22 +237,31 @@ func (p *parser) parseLines(lines []string) error {
 	if p.state == syslinux {
 		p.finishEntry()
 	}
-	return nil
 }
 
 // ParseConfig attemps to construct a valid boot Config from the location
 // and lines contents passed in.
 func ParseConfig(mountPath, configPath string, lines []string) *Config {
-	parser := &parser{
+	p := &parser{
 		config: &Config{
 			MountPath:    mountPath,
 			ConfigPath:   configPath,
 			DefaultEntry: -1,
 		},
+		defaultIndex: -1,
 	}
-	err := parser.parseLines(lines)
-	if err != nil {
-		return nil
+	p.parseLines(lines)
+
+	if p.defaultName != "" {
+		for i, entry := range p.config.Entries {
+			if entry.Name == p.defaultName {
+				p.config.DefaultEntry = i
+			}
+		}
 	}
-	return parser.config
+	if p.defaultIndex >= 0 && len(p.config.Entries) > p.defaultIndex {
+		p.config.DefaultEntry = p.defaultIndex
+	}
+
+	return p.config
 }

@@ -8,7 +8,8 @@ import (
 	"syscall"
 )
 
-// Config contains boot entries for a single configuration file (grub, syslinux, etc.)
+// Config contains boot entries for a single configuration file
+// (grub, syslinux, etc.)
 type Config struct {
 	MountPath    string
 	ConfigPath   string
@@ -16,7 +17,8 @@ type Config struct {
 	DefaultEntry int
 }
 
-// EntryType dictates the method by which kexec should use to load the new kernel
+// EntryType dictates the method by which kexec should use to load
+// the new kernel
 type EntryType int
 
 // EntryType can be either Elf or Multiboot
@@ -25,8 +27,8 @@ const (
 	Multiboot
 )
 
-// Module represents a path to a binary along with arguments for its execution
-// The path in the module is relative to the mount path
+// Module represents a path to a binary along with arguments for its
+// xecution. The path in the module is relative to the mount path
 type Module struct {
 	Path   string
 	Params string
@@ -51,7 +53,8 @@ type Entry struct {
 	Modules []Module
 }
 
-// KexecLoad calls the appropriate kexec load routines based on the type of Entry
+// KexecLoad calls the appropriate kexec load routines based on the
+// type of Entry
 func (e *Entry) KexecLoad() error {
 	switch e.Type {
 	case Multiboot:
@@ -72,13 +75,23 @@ type location struct {
 	Type parserState
 }
 
-// TODO: change to search and autodetect format
 var (
 	locations = []location{
 		{"boot/grub/grub.cfg", grub},
+		{"grub/grub.cfg", grub},
+		{"grub2/grub.cfg", grub},
+		// following entries from the syslinux wiki
+		// TODO: add priorities override (top over bottom)
+		{"boot/isolinux/isolinux.cfg", syslinux},
 		{"isolinux/isolinux.cfg", syslinux},
+		{"isolinux.cfg", syslinux},
+		{"boot/syslinux/syslinux.cfg", syslinux},
+		{"syslinux/syslinux.cfg", syslinux},
+		{"syslinux.cfg", syslinux},
 	}
 )
+
+// TODO: add iso handling along with iso_path variable replacement
 
 // FindConfigs searching the path for valid boot configuration files
 // and returns a Config for each valid instance found.
@@ -100,10 +113,7 @@ func FindConfigs(mountPath string) []*Config {
 			lines = strings.Split(string(contents), "\n")
 		}
 
-		config := ParseConfig(mountPath, configPath, lines)
-		if config != nil {
-			configs = append(configs, config)
-		}
+		configs = append(configs, ParseConfig(mountPath, configPath, lines))
 	}
 
 	return configs
