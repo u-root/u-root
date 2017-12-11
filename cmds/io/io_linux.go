@@ -8,31 +8,21 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 )
 
-func doio(a16 uint64, f func(*os.File) error) error {
-	port, err := os.OpenFile("/dev/port", os.O_RDWR, 0)
+func in(f io.ReadSeeker, addr uint64, data interface{}) error {
+	_, err := f.Seek(int64(addr), 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("in: bad address %v: %v", addr, err)
 	}
-	defer port.Close()
-	_, err = port.Seek(int64(a16), 0)
-	if err != nil {
-		return fmt.Errorf("in: bad address %v: %v", a16, err)
-	}
-	return f(port)
+	return binary.Read(f, binary.LittleEndian, data)
 }
 
-func in(a16 uint64, data interface{}) error {
-	return doio(a16, func(port *os.File) error {
-		return binary.Read(port, binary.LittleEndian, data)
-	})
-}
-
-func out(a16 uint64, data interface{}) error {
-	return doio(a16, func(port *os.File) error {
-		return binary.Write(port, binary.LittleEndian, data)
-	})
-
+func out(f io.WriteSeeker, addr uint64, data interface{}) error {
+	_, err := f.Seek(int64(addr), 0)
+	if err != nil {
+		return fmt.Errorf("in: bad address %v: %v", addr, err)
+	}
+	return binary.Write(f, binary.LittleEndian, data)
 }
