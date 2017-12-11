@@ -36,9 +36,9 @@ func TestDd(t *testing.T) {
 		},
 		{
 			name:    "Copy from input to output on a non-aligned block size",
-			flags:   []string{"bs=8"},
-			stdin:   "2: bs=8 11b", // len=11 is not multiple of 8
-			stdout:  []byte("2: bs=8 11b"),
+			flags:   []string{"bs=8c"},
+			stdin:   "2: bs=8c 11b", // len=12 is not multiple of 8
+			stdout:  []byte("2: bs=8c 11b"),
 			compare: stdoutEqual,
 		},
 		{
@@ -64,7 +64,7 @@ func TestDd(t *testing.T) {
 		},
 		{
 			name:    "Create a 64KiB zeroed file in 1KiB blocks",
-			flags:   []string{"if=/dev/zero", "bs=1024", "count=64"},
+			flags:   []string{"if=/dev/zero", "bs=1K", "count=64"},
 			stdin:   "",
 			stdout:  []byte("\x00"),
 			count:   64 * 1024,
@@ -80,7 +80,7 @@ func TestDd(t *testing.T) {
 		},
 		{
 			name:    "Create a 64KiB zeroed file in one 64KiB block",
-			flags:   []string{"if=/dev/zero", "bs=65536", "count=1"},
+			flags:   []string{"if=/dev/zero", "bs=64K", "count=1"},
 			stdin:   "",
 			stdout:  []byte("\x00"),
 			count:   64 * 1024,
