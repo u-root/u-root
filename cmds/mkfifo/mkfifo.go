@@ -16,7 +16,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -45,7 +44,7 @@ func main() {
 	}
 
 	for _, path := range flag.Args() {
-		if err := syscall.Mkfifo(path, uint32(*mode)); err != nil {
+		if err := unix.Mkfifo(path, uint32(*mode)); err != nil {
 			log.Fatalf("Error while creating fifo, %v", err)
 		}
 	}
