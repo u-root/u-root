@@ -1,0 +1,49 @@
+
+required = [
+  "github.com/golang/dep/cmd/dep"
+]
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/d2g/dhcp4"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/d2g/dhcp4client"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/google/uuid"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "1.0.0"
+
+[[constraint]]
+  branch = "addclient"
+  name = "github.com/u-root/dhcp6"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/vishvananda/netlink"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/zaolin/go-tpm"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/sys"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/tools"
+
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/rck/unit"

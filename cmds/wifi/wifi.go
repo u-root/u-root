@@ -21,6 +21,12 @@ const (
 	key_mgmt=NONE
 }
 `
+	eap = `network={
+		ssid="%s"
+		key_mgmt=WPA-EAP
+		identity="%s"
+		password="%s"
+	}`
 )
 
 func init() {
@@ -40,21 +46,23 @@ func main() {
 
 	flag.Parse()
 	a := flag.Args()
-	if len(a) != 2 && len(a) != 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
 	essid = a[0]
 
-	if len(a) == 2 {
+	switch {
+	case len(a) == 3:
+		conf = []byte(fmt.Sprintf(eap, essid, a[1], a[2]))
+	case len(a) == 2:
 		pass := a[1]
 		o, err := exec.Command("wpa_passphrase", essid, pass).CombinedOutput()
 		if err != nil {
 			log.Fatalf("%v %v: %v", essid, pass, err)
 		}
 		conf = o
-	} else {
+	case len(a) == 1:
 		conf = []byte(fmt.Sprintf(nopassphrase, essid))
+	default:
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	if err := ioutil.WriteFile("/tmp/wifi.conf", conf, 0444); err != nil {

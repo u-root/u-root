@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -131,6 +132,7 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 
 		// We got here because we got a good packet.
 		o := packet.ParseOptions()
+		debug("Options: %v", o)
 
 		netmask, ok := o[dhcp4.OptionSubnetMask]
 		if ok {
@@ -158,13 +160,33 @@ func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 				routerName := net.IP(gwData).String()
 				debug("routerName %v", routerName)
 				r := &netlink.Route{
-					Dst:       &net.IPNet{IP: packet.GIAddr()},
 					LinkIndex: iface.Attrs().Index,
 					Gw:        net.IP(gwData),
 				}
 
-				if err := netlink.RouteReplace(r); err != nil {
-					return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
+				if err := netlink.RouteAdd(r); err != nil {
+					if os.IsExist(err) {
+						if err := netlink.RouteReplace(r); err != nil {
+							return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
+						}
+					} else {
+						return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
+					}
+				}
+			}
+			if ip, ok := o[dhcp4.OptionDomainNameServer]; ok {
+				rc := ""
+				// multiples of 4 octets.
+				for i := 0; i < len(ip); i += 4 {
+					// Don't let broken servers cause us to die.
+					if len(ip[i:]) < 4 {
+						log.Printf("dhcp4.OptionDomainNameServer: short length for last adddress: %v", ip[i:])
+						continue
+					}
+					rc = fmt.Sprintf("%snameserver %s\n", rc, net.IP(ip[i:i+4]))
+				}
+				if err := ioutil.WriteFile("/etc/resolv.conf", []byte(rc), 0644); err != nil {
+					return err
 				}
 			}
 		}
@@ -296,13 +318,15 @@ func main() {
 	// Wait for all goroutines to finish.
 	var nif int
 	for err := range done {
+		debug("err from done %v", err)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			log.Print(err)
 		}
 		nif++
 	}
 
 	if nif == 0 {
-		fmt.Printf("No interfaces match %v\n", ifName)
+		log.Fatalf("No interfaces match %v\n", ifName)
 	}
+	fmt.Printf("%d dhclient attempts were sent", nif)
 }

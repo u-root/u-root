@@ -25,7 +25,7 @@ type builtin func(c *Command) error
 
 // TODO: probably have one builtin map and use it for both types?
 var (
-	urpath   = "/go/bin:/ubin:/buildbin:/bin:/usr/local/bin:"
+	urpath   = "/go/bin:/ubin:/buildbin:/bbin:/bin:/usr/local/bin:"
 	builtins = make(map[string]builtin)
 	// Some builtins really want to be forked off, esp. in the busybox case.
 	forkBuiltins = make(map[string]builtin)
@@ -245,20 +245,20 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			continue
 		}
-		for i := range cmds {
-			if err := command(cmds[i]); err != nil {
+		for _, c := range cmds {
+			if err := command(c); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
-				if cmds[i].link == "||" {
+				if c.link == "||" {
 					continue
 				}
 				// yes, not needed, but useful so you know
 				// what goes on here.
-				if cmds[i].link == "&&" {
+				if c.link == "&&" {
 					break
 				}
 				break
 			} else {
-				if cmds[i].link == "||" {
+				if c.link == "||" {
 					break
 				}
 			}

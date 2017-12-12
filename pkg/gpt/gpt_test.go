@@ -10,6 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	equalHeaderError = "p.Signature(0x5452415020494646) != b.Signature(0x5452415020494645); p.Revision(65537) != b.Revision(65536); p.HeaderSize(93) != b.HeaderSize(92); p.CurrentLBA(0x2) != b.BackupLBA(0x1); p.FirstLBA(0x23) != b.FirstLBA(0x22); p.LastLBA(0x43cf9f) != b.LastLBA(0x43cf9e); p.DiskGUID(0x32653165643462612d656639332d346162302d383436652d326533613661326437336266) != b.DiskGUID(0x32643165643462612d656639332d346162302d383436652d326533613661326437336266); p.NPart(127) != b.NPart(128); p.PartSize(127) != b.PartSize(128)"
+	equalPartsError  = "Partition 3: p.PartGUID(0x35653261336166652d333234662d613734312d623732352d616363633332383561333039) != b.PartGUID(0x35643261336166652d333234662d613734312d623732352d616363633332383561333039); Partition 8: p.UniqueGUID(0x65643939336135312d336563342d346131342d383339382d613437613765366165343263) != b.UniqueGUID(0x65643938336135312d336563342d346131342d383339382d613437613765366165343263); Partition 11: p.FirstLBA(0x3d001) != b.FirstLBA(0x3d000); Partition 21: p.LastLBA(0x1) != b.LastLBA(0x0); Partition 61: p.Name(0x000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) != b.Name(0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)"
+)
+
 var (
 	header = Header{
 		Signature:  Signature,
@@ -114,6 +119,74 @@ func TestGPTTables(t *testing.T) {
 		}
 		t.Logf("Passed %s", test.what)
 	}
+}
+
+// TestEqualHeader tests all variations of headers not being equal.
+// We test to make sure it works, then break some aspect of the header
+// and test that too.
+func TestEqualHeader(t *testing.T) {
+	InstallGPT()
+	r := bytes.NewReader(disk)
+	p, b, err := New(r)
+	if err != nil {
+		t.Fatalf("TestEqualHeader: Reading in gpt: got %v, want nil", err)
+	}
+
+	if err := EqualHeader(p.Header, b.Header); err != nil {
+		t.Fatalf("TestEqualHeader: got %v, want nil", err)
+	}
+	// Yes, we assume a certain order, but it sure simplifies the test :-)
+	p.Signature++
+	p.Revision++
+	p.HeaderSize++
+	p.CurrentLBA++
+	p.FirstLBA++
+	p.LastLBA++
+	p.DiskGUID[0]++
+	p.NPart--
+	p.PartSize--
+	p.PartCRC++
+	if err = EqualHeader(p.Header, b.Header); err == nil {
+		t.Fatalf("TestEqualHeader: got %v, want nil", err)
+	}
+	t.Logf("TestEqualHeader: EqualHeader returns %v", err)
+
+	if err.Error() != equalHeaderError {
+		t.Fatalf("TestEqualHeader: got %v, want %v", err.Error(), equalHeaderError)
+	}
+
+}
+
+func TestEqualParts(t *testing.T) {
+	InstallGPT()
+	r := bytes.NewReader(disk)
+	p, b, err := New(r)
+	if err != nil {
+		t.Fatalf("TestEqualParts: Reading in gpt: got %v, want nil", err)
+	}
+
+	if err = EqualParts(p, b); err != nil {
+		t.Fatalf("TestEqualParts: Checking equality: got %v, want nil", err)
+	}
+	// Test some equality things before we do the 'length is the same' test
+	// Note that testing the NParts header variable is done in the HeaderTest
+	p.Parts[3].PartGUID[0]++
+	p.Parts[8].UniqueGUID[1]++
+	p.Parts[11].FirstLBA++
+	p.Parts[21].LastLBA++
+	p.Parts[53].Attribute++
+	p.Parts[61].Name[1]++
+	if err = EqualParts(p, b); err == nil {
+		t.Errorf("TestEqualParts: Checking equality: got nil, want '%v'", equalPartsError)
+	}
+	if err.Error() != equalPartsError {
+		t.Errorf("TestEqualParts: Checking equality: got '%v', want '%v'", err, equalPartsError)
+	}
+
+	if err = EqualParts(p, b); err == nil {
+		t.Errorf("TestEqualParts: Checking number of parts: got nil, want 'Primary Number of partitions (127) differs from Backup (128)'")
+	}
+
 }
 
 type iodisk []byte

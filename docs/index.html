@@ -9,20 +9,21 @@
         <link rel="canonical" href="http://u-root.tk/">
         <link rel="shortcut icon" href="./img/favicon.png">
         
-        <title>u-root</title>
+
+	<title>u-root</title>
+
         <link href="./css/bootstrap-custom.min.css" rel="stylesheet">
         <link href="./css/font-awesome-4.5.0.css" rel="stylesheet">
         <link href="./css/base.css" rel="stylesheet">
         <link rel="stylesheet" href="./css/highlight.css">
+
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
             <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
             <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
         <![endif]-->
-	
-	<script src="./js/jquery-1.10.2.min.js"></script>
-        <script src="./js/bootstrap-3.0.3.min.js"></script>
-        <script src="./js/highlight.pack.js"></script> 
+
+        
     </head>
 
     <body class="homepage">
@@ -32,6 +33,7 @@
 
         <!-- Collapsed navigation -->
         <div class="navbar-header">
+            
             <!-- Expander button -->
             <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                 <span class="sr-only">Toggle navigation</span>
@@ -39,11 +41,15 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
+            
+
+            <!-- Main title -->
             <a class="navbar-brand" href=".">u-root</a>
         </div>
 
         <!-- Expanded navigation -->
         <div class="navbar-collapse collapse">
+            
 
             <ul class="nav navbar-nav navbar-right">
                 <li>
@@ -51,25 +57,40 @@
                         <i class="fa fa-search"></i> Search
                     </a>
                 </li>
+                
+                
                     <li>
                         <a href="https://github.com/u-root/u-root">
-                                <i class="fa fa-github"></i>GitHub
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
                         </a>
                     </li>
+                
             </ul>
         </div>
     </div>
 </div>
 
         <div class="container">
+            
                 <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
+    
         <li class="main active"><a href="#u-root">u-root</a></li>
+        
             <li><a href="#setup">Setup</a></li>
+        
             <li><a href="#submitting-changes">Submitting Changes</a></li>
+        
             <li><a href="#faqs">FAQs</a></li>
+        
             <li><a href="#community">Community</a></li>
+        
             <li><a href="#contributors">Contributors</a></li>
+        
+    
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
@@ -84,7 +105,7 @@ as part of the firmware image, along with a Linux kernel. Unlike most embedded
 root file systems, which consist of large binaries, u-root only has five: an
 init program and four Go compiler binaries.</p>
 <h2 id="setup">Setup</h2>
-<p>On an Ubuntu system, install perquisites and ensure Go is at least version 1.7:</p>
+<p>On an Ubuntu system, install prerequisites and ensure Go is at least version 1.7:</p>
 <pre><code class="sh">sudo apt-get install git golang build-essential
 go version
 </code></pre>
@@ -98,10 +119,14 @@ go version
 cd &quot;$GOPATH/src/github.com/u-root/u-root&quot;
 </code></pre>
 
-<p>Test u-root inside a chroot:</p>
-<pre><code class="sh">go run scripts/ramfs.go -test
+<p>Generate an initramfs of all u-root Go tools:</p>
+<pre><code class="sh">go run u-root.go -o initramfs.cpio
 </code></pre>
 
+<p>You can use this initramfs with your favorite Linux kernel in QEMU to try it
+out.</p>
+<p>More instructions can be found in the repo's
+<a href="https://github.com/u-root/u-root/blob/master/README.md">README.md</a>.</p>
 <h2 id="submitting-changes">Submitting Changes</h2>
 <p>We use <a href="https://github.com/u-root/u-root/pulls">GitHub Pull Requests</a> for code
 review. Pull requests must receive one approval and pass CI before being merged.</p>
@@ -117,62 +142,73 @@ local and get a userland portable (it's a goal).</p>
 <ul>
 <li><a href="https://www.usenix.org/system/files/conference/atc15/atc15-paper-minnich.pdf">USENIX 2015 ATC Paper</a></li>
 <li><a href="https://www.usenix.org/conference/atc15/technical-session/presentation/minnich">USENIX 2015 ATC Talk</a></li>
+<li>Related: Embedded Linux Conference 2017 LinuxBoot Talk (<a href="https://www.youtube.com/watch?v=iffTJ1vPCSo">YouTube video</a>, <a href="https://schd.ws/hosted_files/osseu17/84/Replace%20UEFI%20with%20Linux.pdf">slides</a>)</li>
 </ul>
 <h2 id="community">Community</h2>
 <ul>
 <li><a href="https://groups.google.com/forum/#!forum/u-root">Join the mailing list</a></li>
-<li><a href="https://u-root.slack.com/">Join slack</a></li>
+<li><a href="https://u-root.slack.com/">Join slack</a> (Get an invite <a href="http://slack.u-root.com">here</a>.)</li>
 <li><a href="https://github.com/u-root/u-root/blob/master/roadmap.md">Checkout the roadmap</a></li>
 </ul>
 <h2 id="contributors">Contributors</h2>
 <ul>
 <li><a href="https://github.com/rminnich">Ron Minnich</a></li>
-<li><a href="https://github.com/mirtchovski">Andrew Mirtchovski</a></li>
+<li><a href="https://github.com/mirtchovski">Andrey Mirtchovski</a></li>
 <li><a href="https://github.com/rhiguita">Alexandre Beletti</a></li>
 <li><a href="https://github.com/ryukinix">Manoel Machado</a></li>
 <li><a href="https://github.com/rafaelcn">Rafael C. Nunes</a></li>
 <li><a href="https://github.com/mathgamain">Matheus Pinto Rodrigues</a></li>
-<li><a href="https://github.com/GanShun">Gan Shun</a></li>
+<li><a href="https://github.com/GanShun">Gan Shun Lim</a></li>
 <li><a href="https://github.com/rjoleary">Ryan O'Leary</a></li>
+<li><a href="https://github.com/hugelgupf">Chris Koch</a></li>
 </ul></div>
+            
         </div>
 
         <footer class="col-md-12">
             <hr>
+            
                 <p>Copyright 2016-2017 The u-root team</p>
+            
             <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+
+        <script src="./js/jquery-1.10.2.min.js"></script>
+        <script src="./js/bootstrap-3.0.3.min.js"></script>
+        <script src="./js/highlight.pack.js"></script>
         <script>var base_url = '.';</script>
         <script data-main="./mkdocs/js/search.js" src="./mkdocs/js/require.js"></script>
-        <script src="./js/base.js"></script><div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="exampleModalLabel">Search</h4>
-            </div>
-            <div class="modal-body">
-                <p>
-                    From here you can search these documents. Enter
-                    your search terms below.
-                </p>
-                <form role="form">
-                    <div class="form-group">
-                        <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+        <script src="./js/base.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
                     </div>
-                </form>
-                <div id="mkdocs-search-results"></div>
-            </div>
-            <div class="modal-footer">
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
     </body>
 </html>
 
 <!--
-MkDocs version : 0.16.1
-Build Date UTC : 2017-02-24 00:37:19
+MkDocs version : 0.15.3
+Build Date UTC : 2017-11-20 08:00:19
 -->

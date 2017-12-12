@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	dryrun  = flag.Bool("dryrun", false, "Do not do kexec system calls")
+	dryrun  = flag.Bool("dryrun", false, "Do not do reboot system calls")
 	op      = "reboot"
 	opcodes = map[string]int{
 		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,

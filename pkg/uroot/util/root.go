@@ -20,8 +20,12 @@ const (
 	// Not all these paths may be populated or even exist but OTOH they might.
 	PATHHEAD = "/ubin"
 	PATHMID  = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/usr/local/sbin"
-	PATHTAIL = "/buildbin"
+	PATHTAIL = "/buildbin:/bbin"
 	CmdsPath = "github.com/u-root/u-root/cmds"
+)
+
+var (
+	CmdsGlob = []string{"github.com/u-root/*/cmds", "*/*/*", "*/*"}
 )
 
 type Creator interface {

@@ -40,7 +40,7 @@ import (
 )
 
 var (
-	urpath    = "/go/bin:/ubin:/buildbin:/usr/local/bin:"
+	urpath    = "/go/bin:/ubin:/buildbin:/bbin:/usr/local/bin:"
 	lowpri    = flag.Bool("lowpri", false, "the scheduler priority is lowered before starting")
 	ludicrous = flag.Bool("ludicrous", false, "print out ALL the output from the go build commands")
 	onlybuild = flag.Bool("onlybuild", false, "only build, i.e. do not execute the process after building")
@@ -133,6 +133,7 @@ func main() {
 	}
 
 	a := []string{"install"}
+
 	if form.verbose {
 		debug = log.Printf
 		a = append(a, "-x")
@@ -171,16 +172,29 @@ func main() {
 	// and the glob will find it. If we get to the point that the glob
 	// no longer works we can go with filepath.Walk (which glob uses anyway)
 	// but for now this works.
-	src := filepath.Join("/src", util.CmdsPath, form.cmdName)
-	if _, err := os.Stat(src); err != nil {
-		l, err := filepath.Glob(filepath.Join("/src/*/*/", form.cmdName))
-		if err != nil || len(l) == 0 {
-			log.Fatalf("Can't find source code for %v (err %v)", form.cmdName, err)
+	var src string
+	for _, p := range util.CmdsGlob {
+		g := filepath.Join("/src", p, form.cmdName)
+		debug("Check %v", g)
+		l, err := filepath.Glob(g)
+		debug("glob is %v %v", l, err)
+		if err != nil {
+			log.Printf("Glob %v fails: %v", g, err)
+			continue
 		}
+		if len(l) == 0 {
+			continue
+		}
+
 		if len(l) > 1 {
 			log.Printf("Found these paths for %v: %v; going with %v", form.cmdName, l, l[0])
 		}
 		src = l[0]
+		break
+	}
+
+	if src == "" {
+		log.Fatalf("Can not find source code for %v", form.cmdName)
 	}
 
 	r, err := filepath.Rel("/src", src)

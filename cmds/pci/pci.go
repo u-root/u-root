@@ -19,11 +19,15 @@ import (
 	"github.com/u-root/u-root/pkg/pci"
 )
 
-var numbers = flag.Bool("n", false, "Show numeric IDs")
+var (
+	numbers    = flag.Bool("n", false, "Show numeric IDs")
+	dumpConfig = flag.Bool("c", false, "Dump config space")
+	devs       = flag.String("s", "*", "Devices to match")
+)
 
 func main() {
 	flag.Parse()
-	r, err := pci.NewBusReader()
+	r, err := pci.NewBusReader(*devs)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -33,11 +37,11 @@ func main() {
 		log.Fatalf("Read: %v", err)
 	}
 
-	if *numbers {
-		fmt.Print(d.ToString(*numbers))
-
-	} else {
-		fmt.Print(d)
+	if !*numbers {
+		d.SetVendorDeviceName()
 	}
-
+	if *dumpConfig {
+		d.ReadConfig()
+	}
+	fmt.Print(d)
 }

@@ -34,9 +34,9 @@ func mv(files []string, todir bool) error {
 	} else {
 		lf := files[len(files)-1]
 		// "copying" N files to 1 directory
-		for i := range files[:len(files)-1] {
-			ndir := filepath.Join(lf, filepath.Base(files[i]))
-			if err := os.Rename(files[i], ndir); err != nil {
+		for _, f := range files[:len(files)-1] {
+			ndir := filepath.Join(lf, filepath.Base(f))
+			if err := os.Rename(f, ndir); err != nil {
 				return err
 			}
 		}

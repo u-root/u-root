@@ -24,9 +24,9 @@ func setup(t *testing.T, data []byte) (string, error) {
 		return "", err
 	}
 
-	for i := range data {
+	for i, d := range data {
 		n := fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i)
-		if err := ioutil.WriteFile(n, []byte{data[i]}, 0666); err != nil {
+		if err := ioutil.WriteFile(n, []byte{d}, 0666); err != nil {
 			return "", err
 		}
 	}
