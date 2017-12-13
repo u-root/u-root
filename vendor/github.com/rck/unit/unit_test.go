@@ -6,7 +6,7 @@ package unit
 
 import "testing"
 
-var m map[string]int64 = map[string]int64{
+var m = map[string]int64{
 	"B":   1,
 	"KiB": 1024,
 	"MiB": 1024 * 1024,
