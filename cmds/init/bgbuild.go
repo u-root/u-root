@@ -89,5 +89,5 @@ func cmdlineContainsFlag(flag string) bool {
 }
 
 func isBgBuildEnabled() bool {
-	return !cmdlineContainsFlag("uroot.nobgbuild")
+	return cmdlineContainsFlag("uroot.bgbuild")
 }
