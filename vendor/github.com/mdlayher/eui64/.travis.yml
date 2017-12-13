@@ -1,0 +1,13 @@
+language: go
+go:
+  - 1.4.2
+  - tip
+before_install:
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+  - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+before_script:
+  - go get -d ./...
+script:
+  - go test -v ./...
+  - $HOME/gopath/bin/goveralls -service=travis-ci -repotoken $COVERALLS_TOKEN

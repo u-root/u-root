@@ -130,6 +130,18 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mdlayher/dhcp6"
+  packages = [".","dhcp6opts","internal/buffer"]
+  revision = "e26af0688e455a82b14ebdbecf43f87ead3c4624"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mdlayher/eui64"
+  packages = ["."]
+  revision = "eee6532bb9adf30c2a17e9963ed90aa14161dae9"
+
+[[projects]]
+  branch = "master"
   name = "github.com/nightlyone/lockfile"
   packages = ["."]
   revision = "6a197d5ea61168f2ac821de2b7f011b250904900"
@@ -265,6 +277,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f8af2c8e52fc2428c02c4e0c3378166548ef630aeb634a5ec2ec8640f93036e7"
+  inputs-digest = "965c45576d8261261c4ea2f95b0d4aa65a4b3a6d5c7d8e660f836fab69b83b36"
   solver-name = "gps-cdcl"
   solver-version = 1
