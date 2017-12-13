@@ -15,20 +15,18 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"os"
 	"regexp"
 	"sync"
 	"time"
 
-	"github.com/d2g/dhcp4"
-	"github.com/d2g/dhcp4client"
-	"github.com/u-root/dhcp6"
+	"github.com/u-root/dhcp4"
+	"github.com/u-root/dhcp4/dhcp4client"
+	"github.com/u-root/u-root/pkg/dhclient"
+	"github.com/u-root/u-root/pkg/dhcp6client"
 	"github.com/vishvananda/netlink"
 )
 
@@ -39,15 +37,16 @@ const (
 )
 
 var (
-	ifName       = "^e.*"
-	leasetimeout = flag.Int("timeout", 15, "Lease timeout in seconds")
-	retry        = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	renewals     = flag.Int("renewals", -1, "Number of DHCP renewals before exiting. -1 means infinity")
-	verbose      = flag.Bool("verbose", false, "Verbose output")
-	ipv4         = flag.Bool("ipv4", true, "use IPV4")
-	ipv6         = flag.Bool("ipv6", true, "use IPV6")
-	test         = flag.Bool("test", false, "Test mode")
-	debug        = func(string, ...interface{}) {}
+	ifName         = "^e.*"
+	leasetimeout   = flag.Int("timeout", 15, "Lease timeout in seconds")
+	retry          = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
+	renewals       = flag.Int("renewals", 0, "Number of DHCP renewals before exiting. -1 means infinity")
+	renewalTimeout = flag.Int("renewal timeout", 3600, "How long to wait before renewing in seconds")
+	verbose        = flag.Bool("verbose", false, "Verbose output")
+	ipv4           = flag.Bool("ipv4", true, "use IPV4")
+	ipv6           = flag.Bool("ipv6", true, "use IPV6")
+	test           = flag.Bool("test", false, "Test mode")
+	debug          = func(string, ...interface{}) {}
 )
 
 func ifup(ifname string) (netlink.Link, error) {
@@ -76,166 +75,55 @@ func ifup(ifname string) (netlink.Link, error) {
 	return nil, fmt.Errorf("Link %v still down after %d seconds", ifname, linkUpAttempt)
 }
 
-func dhclient4(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
-	mac := iface.Attrs().HardwareAddr
-	conn, err := dhcp4client.NewPacketSock(iface.Attrs().Index)
+func DHClient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
+	ifa, err := net.InterfaceByIndex(iface.Attrs().Index)
 	if err != nil {
-		return fmt.Errorf("client connection generation: %v", err)
+		return err
 	}
 
-	client, err := dhcp4client.New(dhcp4client.HardwareAddr(mac), dhcp4client.Connection(conn), dhcp4client.Timeout(timeout))
+	client, err := dhcp4client.New(ifa /*, timeout, retry*/)
 	if err != nil {
-		return fmt.Errorf("error: %v", err)
+		return err
 	}
 
-	var packet dhcp4.Packet
-	needsRequest := true
-	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
-		debug("Start getting or renewing DHCPv4 lease")
-
-		var success bool
-		for i := 0; i < retry || retry < 0; i++ {
-			if i > 0 {
-				if needsRequest {
-					debug("Resending DHCPv4 request...\n")
-				} else {
-					debug("Resending DHCPv4 renewal")
-				}
-			}
-
-			if needsRequest {
-				success, packet, err = client.Request()
-			} else {
-				success, packet, err = client.Renew(packet)
-			}
-			if err != nil {
-				if err0, ok := err.(net.Error); ok && err0.Timeout() {
-					log.Printf("%s: timeout contacting DHCP server", mac)
-				} else {
-					log.Printf("%s: error: %v", mac, err)
-				}
-			} else {
-				// Client needs renew after no matter what state it is now.
-				needsRequest = false
-				break
-			}
-		}
-
-		debug("Success on %s: %v\n", mac, success)
-		debug("Packet: %v\n", packet)
-		debug("Lease is %v seconds\n", packet.Secs())
-
-		if !success {
-			return fmt.Errorf("%s: we didn't successfully get a DHCP lease", mac)
-		}
-		debug("IP Received: %v\n", packet.YIAddr().String())
-
-		// We got here because we got a good packet.
-		o := packet.ParseOptions()
-		debug("Options: %v", o)
-
-		netmask, ok := o[dhcp4.OptionSubnetMask]
-		if ok {
-			debug("OptionSubnetMask is %v\n", netmask)
+	for i := 0; numRenewals < 0 || i <= numRenewals; i++ {
+		var packet *dhcp4.Packet
+		var err error
+		if i == 0 {
+			packet, err = client.Request()
 		} else {
-			// If they did not offer a subnet mask, we
-			// choose the most restrictive option, namely,
-			// our IP address.  This could happen on,
-			// e.g., a point to point link.
-			netmask = packet.YIAddr()
-			debug("No OptionSubnetMask; default to %v\n", netmask)
+			packet, err = client.Renew(packet)
+		}
+		if err != nil {
+			return err
 		}
 
-		dst := &netlink.Addr{IPNet: &net.IPNet{IP: packet.YIAddr(), Mask: netmask}, Label: ""}
-		// Add the address to the iface.
-		if *test == false {
-			if err := netlink.AddrReplace(iface, dst); err != nil {
-				if os.IsExist(err) {
-					return fmt.Errorf("add/replace %v to %v: %v", dst, iface, err)
-				}
-			}
-
-			if gwData, ok := o[dhcp4.OptionRouter]; ok {
-				debug("router %v", gwData)
-				routerName := net.IP(gwData).String()
-				debug("routerName %v", routerName)
-				r := &netlink.Route{
-					LinkIndex: iface.Attrs().Index,
-					Gw:        net.IP(gwData),
-				}
-
-				if err := netlink.RouteAdd(r); err != nil {
-					if os.IsExist(err) {
-						if err := netlink.RouteReplace(r); err != nil {
-							return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
-						}
-					} else {
-						return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r.String(), routerName)
-					}
-				}
-			}
-			if ip, ok := o[dhcp4.OptionDomainNameServer]; ok {
-				rc := ""
-				// multiples of 4 octets.
-				for i := 0; i < len(ip); i += 4 {
-					// Don't let broken servers cause us to die.
-					if len(ip[i:]) < 4 {
-						log.Printf("dhcp4.OptionDomainNameServer: short length for last adddress: %v", ip[i:])
-						continue
-					}
-					rc = fmt.Sprintf("%snameserver %s\n", rc, net.IP(ip[i:i+4]))
-				}
-				if err := ioutil.WriteFile("/etc/resolv.conf", []byte(rc), 0644); err != nil {
-					return err
-				}
-			}
-		}
-		if binary.BigEndian.Uint16(packet.Secs()) == 0 {
-			debug("%v: server returned infinite lease.", iface.Attrs().Name)
-			break
+		if err := dhclient.Configure4(iface, packet); err != nil {
+			return err
 		}
 
-		// We can not assume the server will give us any grace time. So
-		// sleep for just a tiny bit less than the minimum.
-		time.Sleep(timeout - slop)
+		time.Sleep(time.Duration(*renewalTimeout) * time.Second)
 	}
 	return nil
 }
 
-// dhcp6 support in go is hard to find. This function represents our best current
-// guess based on reading and testing.
-func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry int) error {
-	conn, err := dhcp6.NewPacketSock(iface.Attrs().Index)
+func DHClient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
+	client, err := dhcp6client.New(iface, timeout, retry)
 	if err != nil {
-		return fmt.Errorf("client connection generation: %v", err)
+		return err
 	}
-	client := dhcp6.New(iface.Attrs().HardwareAddr, conn, timeout, retry)
 
-	for i := 0; numRenewals < 0 || i < numRenewals+1; i++ {
-		debug("Start getting or renewing DHCPv6 lease")
-		iaAddrs, packet, err := client.Solicit()
+	for i := 0; numRenewals < 0 || i <= numRenewals; i++ {
+		iana, packet, err := client.RapidSolicit()
 		if err != nil {
-			return fmt.Errorf("error: %v", err)
-		}
-		debug("Packet: %+v\n\n", packet)
-		debug("IAAddrs: %v\n", iaAddrs)
-
-		if *test == false {
-			dst := &netlink.Addr{
-				IPNet:       &net.IPNet{IP: iaAddrs[0].IP},
-				PreferedLft: int(iaAddrs[0].PreferredLifetime.Seconds()),
-				ValidLft:    int(iaAddrs[0].ValidLifetime.Seconds()),
-				Label:       "",
-			}
-
-			if err := netlink.AddrReplace(iface, dst); err != nil {
-				if os.IsExist(err) {
-					return fmt.Errorf("add/replace %v to %v: %v", dst, iface, err)
-				}
-			}
+			return err
 		}
 
-		time.Sleep(timeout - slop)
+		if err := dhclient.Configure6(iface, packet, iana); err != nil {
+			return err
+		}
+
+		time.Sleep(time.Duration(*renewalTimeout) * time.Second)
 	}
 	return nil
 }
@@ -292,20 +180,24 @@ func main() {
 		wg.Add(1)
 		go func(ifname string) {
 			defer wg.Done()
-			iface, err := ifup(ifname)
+			iface, err := dhclient.IfUp(ifname)
 			if err != nil {
 				done <- err
 				return
 			}
 			if *ipv4 {
 				wg.Add(1)
-				done <- dhclient4(iface, *renewals, timeout, *retry)
-				wg.Done()
+				go func() {
+					defer wg.Done()
+					done <- DHClient4(iface, timeout, *retry, *renewals)
+				}()
 			}
 			if *ipv6 {
 				wg.Add(1)
-				done <- dhclient6(iface, *renewals, timeout, *retry)
-				wg.Done()
+				go func() {
+					defer wg.Done()
+					done <- DHClient6(iface, timeout, *retry, *renewals)
+				}()
 			}
 			debug("Done dhclient for %v", ifname)
 		}(i.Attrs().Name)
