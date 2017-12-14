@@ -6,6 +6,7 @@
 
 bbsh
 u-root
+!vendor/github.com/u-root
 
 # Folders
 _obj
