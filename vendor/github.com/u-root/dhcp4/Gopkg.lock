@@ -33,12 +33,6 @@
   revision = "a1d1b6c41b1ce8a71a5121a9cee31809c4707d9c"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4client"
-  packages = ["."]
-  revision = "6e570ed0a266b730a860ba1068090f683b2c213a"
-
-[[projects]]
   branch = "v2"
   name = "github.com/go-yaml/yaml"
   packages = ["."]
@@ -63,40 +57,10 @@
   revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/google/uuid"
-  packages = ["."]
-  revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
-
-[[projects]]
   name = "github.com/jmank88/nuts"
   packages = ["."]
   revision = "a1e02c788669d022c325a8ee674f15360d7104f4"
   version = "v0.2.0"
-
-[[projects]]
-  name = "github.com/klauspost/compress"
-  packages = ["flate"]
-  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
-  version = "v1.2.1"
-
-[[projects]]
-  name = "github.com/klauspost/cpuid"
-  packages = ["."]
-  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
-  version = "v1.1"
-
-[[projects]]
-  name = "github.com/klauspost/crc32"
-  packages = ["."]
-  revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
-  version = "v1.1"
-
-[[projects]]
-  name = "github.com/klauspost/pgzip"
-  packages = ["."]
-  revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
-  version = "v1.1"
 
 [[projects]]
   branch = "master"
@@ -118,57 +82,15 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/rck/unit"
-  packages = ["."]
-  revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
-
-[[projects]]
-  branch = "master"
   name = "github.com/sdboyer/constext"
   packages = ["."]
   revision = "836a144573533ea4da4e6929c235fd348aed1c80"
 
 [[projects]]
   branch = "master"
-  name = "github.com/u-root/dhcp4"
-  packages = [".","client","opts","util"]
-  revision = "db4555713d0c163edf988998a4dd5514d9b01e91"
-
-[[projects]]
-  branch = "addclient"
-  name = "github.com/u-root/dhcp6"
-  packages = ["."]
-  revision = "19380cf358122afb7c15aa787e16fd41ec9f537d"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/vishvananda/netlink"
-  packages = [".","nl"]
-  revision = "f67b75edbf5e3bb7dfe70bb788610693a71be3d1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/vishvananda/netns"
-  packages = ["."]
-  revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/zaolin/go-tpm"
-  packages = ["tpm"]
-  revision = "81001ab120f1fe5e056b6b1bc4497ebe2b6b2bd5"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/crypto"
-  packages = ["cast5","ed25519","ed25519/internal/edwards25519","md4","openpgp","openpgp/armor","openpgp/elgamal","openpgp/errors","openpgp/packet","openpgp/s2k","ripemd160","sha3"]
-  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/net"
-  packages = ["bpf","context","internal/iana","internal/socket","ipv6"]
-  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
+  packages = ["context"]
+  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
   branch = "master"
@@ -180,17 +102,11 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/tools"
-  packages = ["go/ast/astutil","imports"]
-  revision = "04447353bc504b9a5c02eb227b9ecd252e64ea20"
+  revision = "53aa286056ef226755cd898109dbcdaba8ac0b81"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1fa7daec4deb644f042685d2773265d00cca59f677f24b5510e6a39dae276c04"
+  inputs-digest = "cb48a02d95f09d89b309e4334a39038d0fdac36025603a69ee03036f3ff90dbc"
   solver-name = "gps-cdcl"
   solver-version = 1
