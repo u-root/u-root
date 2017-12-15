@@ -144,12 +144,12 @@ type bbBuilder struct {
 // BBBuild rewrites the source files of the packages given to create one
 // busybox-like binary containing all commands in `opts.Packages`.
 func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
-	urootDir, err := opts.Env.FindPackageDir("github.com/u-root/u-root")
+	urootPkg, err := opts.Env.Package("github.com/u-root/u-root")
 	if err != nil {
 		return ArchiveFiles{}, err
 	}
 
-	bbshDir := filepath.Join(urootDir, "bbsh")
+	bbshDir := filepath.Join(urootPkg.Dir, "bbsh")
 	// Blow bbsh away before trying to re-create it.
 	if err := os.RemoveAll(bbshDir); err != nil {
 		return ArchiveFiles{}, err
@@ -182,7 +182,7 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 	}
 
 	// Move rush shell over.
-	p, err := opts.Env.ListPackage("github.com/u-root/u-root/cmds/rush")
+	p, err := opts.Env.Package("github.com/u-root/u-root/cmds/rush")
 	if err != nil {
 		return ArchiveFiles{}, err
 	}
@@ -371,8 +371,8 @@ func (p *Package) writeTemplate(path string, text string) error {
 	return writeGoFile(path, b.Bytes())
 }
 
-func getPackage(opts BuildOpts, pkgPath string) (*Package, error) {
-	p, err := opts.Env.ListPackage(pkgPath)
+func getPackage(opts BuildOpts, importPath string) (*Package, error) {
+	p, err := opts.Env.Package(importPath)
 	if err != nil {
 		return nil, err
 	}
