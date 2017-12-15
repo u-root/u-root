@@ -194,9 +194,15 @@
   packages = ["go/ast/astutil","imports"]
   revision = "f271d7a0f8cf389f3ee4f6bf8d68e716a60ea571"
 
+[[projects]]
+  name = "pack.ag/tftp"
+  packages = [".","netascii"]
+  revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
+  version = "v1.0.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9ed0cf201085ba821055d6f9b341cd682f00653b98780e9c97b2dec30fc3fbfc"
+  inputs-digest = "119e445031a4a78275f705fb166c43e5914a967a06307a7cdcba7b248a935073"
   solver-name = "gps-cdcl"
   solver-version = 1
