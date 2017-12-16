@@ -17,13 +17,14 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -93,7 +94,7 @@ func rm(stdin io.Reader, files []string) error {
 }
 
 func main() {
-	flag.Parse()
+
 	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(1)

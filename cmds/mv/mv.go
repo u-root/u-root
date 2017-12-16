@@ -13,11 +13,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+
+	flag "github.com/juju/gnuflag"
 )
 
 func usage() {
@@ -46,7 +47,6 @@ func mv(files []string, todir bool) error {
 
 func main() {
 	var todir bool
-	flag.Parse()
 
 	if flag.NArg() < 2 {
 		usage()

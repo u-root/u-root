@@ -5,7 +5,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +12,8 @@ import (
 	"math"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/vishvananda/netlink"
 )
@@ -318,7 +319,7 @@ func main() {
 	// When this is embedded in busybox we need to reinit some things.
 	whatIWant = []string{"addr", "route", "link"}
 	cursor = 0
-	flag.Parse()
+
 	arg = flag.Args()
 
 	defer func() {

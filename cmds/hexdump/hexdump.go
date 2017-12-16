@@ -14,14 +14,14 @@ package main
 
 import (
 	"encoding/hex"
-	"flag"
 	"io"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 func main() {
-	flag.Parse()
 
 	var readers []io.Reader
 

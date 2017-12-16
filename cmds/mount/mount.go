@@ -12,8 +12,9 @@
 package main
 
 import (
-	"flag"
 	"log"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/sys/unix"
 )
@@ -28,7 +29,7 @@ func main() {
 	// The need for this conversion is not clear to me, but we get an overflow error
 	// on ARM without it.
 	flags := uintptr(unix.MS_MGC_VAL)
-	flag.Parse()
+
 	a := flag.Args()
 	if len(a) < 2 {
 		log.Fatalf("Usage: mount [-r] [-t fstype] dev path")

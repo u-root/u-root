@@ -43,7 +43,7 @@ func {{.CmdName}}Init() {
 
 	bbsetupGo = `package {{.CmdName}}
 
-import "flag"
+import flag "github.com/juju/gnuflag"
 
 var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
 `
@@ -53,14 +53,14 @@ var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
 const initGo = `package main
 
 import (
-	"flag"
+	flag "github.com/juju/gnuflag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-        "syscall"
+    "syscall"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -126,10 +126,10 @@ func init() {
 // Commands to skip building in bb mode. init and rush should be obvious
 // builtin and script we skip as we have no toolchain in this mode.
 var skip = map[string]struct{}{
-	"builtin": struct{}{},
-	"init":    struct{}{},
-	"rush":    struct{}{},
-	"script":  struct{}{},
+	"builtin": {},
+	"init":    {},
+	"rush":    {},
+	"script":  {},
 }
 
 type bbBuilder struct {

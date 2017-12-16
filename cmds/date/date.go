@@ -9,7 +9,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -59,7 +60,7 @@ func init() {
 	}
 	flag.BoolVar(&flags.universal, "u", false, "Coordinated Universal Time (UTC)")
 	flag.StringVar(&flags.reference, "r", "", "Display the last midification time of FILE")
-	flag.Parse()
+
 }
 
 // regex search for +format POSIX patterns

@@ -5,13 +5,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -169,7 +170,6 @@ func switchRoot(newRoot string, init string) error {
 }
 
 func main() {
-	flag.Parse()
 
 	if len(flag.Args()) == 0 {
 		fmt.Println(usage())

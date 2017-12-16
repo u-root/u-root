@@ -18,12 +18,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -70,7 +71,6 @@ func beatifulLatency(before time.Time) (latency string) {
 }
 
 func main() {
-	flag.Parse()
 
 	// options without parameters (right now just: -hV)
 	if flag.NArg() < 1 {

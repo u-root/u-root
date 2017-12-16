@@ -27,11 +27,12 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
@@ -48,7 +49,7 @@ func usage() {
 }
 
 func main() {
-	flag.Parse()
+
 	if *d {
 		debug = log.Printf
 	}

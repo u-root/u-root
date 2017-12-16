@@ -23,12 +23,13 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -69,7 +70,7 @@ func openFile(name string) (*os.File, error) {
 }
 
 func main() {
-	flag.Parse()
+
 	var offset [2]int64
 	var f *os.File
 	var err error

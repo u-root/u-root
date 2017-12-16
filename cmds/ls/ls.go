@@ -17,13 +17,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -79,7 +80,6 @@ func listName(d string, w io.Writer, prefix bool) error {
 }
 
 func main() {
-	flag.Parse()
 
 	// Write output in tabular form.
 	w := new(tabwriter.Writer)

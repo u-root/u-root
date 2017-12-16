@@ -5,8 +5,9 @@
 package util
 
 import (
-	"flag"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 func Usage(cmd string) {

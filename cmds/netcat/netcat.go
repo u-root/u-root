@@ -6,12 +6,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -25,7 +26,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
 	var c net.Conn
 	var err error
 	if len(flag.Args()) < 1 {

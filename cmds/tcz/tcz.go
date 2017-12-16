@@ -5,7 +5,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 )
 
 const (
@@ -285,7 +286,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
 	if *debugPrint {
 		debug = l.Printf
 	}

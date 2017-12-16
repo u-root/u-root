@@ -14,11 +14,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 )
 
 const (
@@ -65,7 +66,7 @@ func findloop() (name string, err error) {
 }
 
 func main() {
-	flag.Parse()
+
 	args := flag.Args()
 	if *detach {
 		l.Fatalf("detach: not yet")

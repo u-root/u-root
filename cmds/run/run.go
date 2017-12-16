@@ -15,10 +15,11 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 	"os/exec"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/tools/imports"
 )
@@ -33,7 +34,7 @@ func main() {
 		TabIndent: true,
 		TabWidth:  8,
 	}
-	flag.Parse()
+
 	// Interesting problem:
 	// We want a combination of args and arbitrary Go code.
 	// Possibly, we should take the entire Go code as the one arg,

@@ -14,11 +14,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/find"
 )
@@ -49,7 +50,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
 	a := flag.Args()
 	if len(a) != 1 {
 		flag.Usage()

@@ -16,7 +16,6 @@ package main
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -25,6 +24,8 @@ import (
 	"regexp"
 	"sync"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/d2g/dhcp4"
 	"github.com/d2g/dhcp4client"
@@ -241,7 +242,7 @@ func dhclient6(iface netlink.Link, numRenewals int, timeout time.Duration, retry
 }
 
 func main() {
-	flag.Parse()
+
 	if *verbose {
 		debug = log.Printf
 	}

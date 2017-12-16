@@ -11,7 +11,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -21,6 +20,8 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -33,7 +34,7 @@ var (
 
 func main() {
 	a := []string{"build"}
-	flag.Parse()
+
 	log.Printf("Welcome to u-root")
 	util.Rootfs()
 

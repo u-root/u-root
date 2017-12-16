@@ -19,12 +19,13 @@ package main
 
 import (
 	"crypto"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 
 	_ "crypto/md5"
 	_ "crypto/sha1"
@@ -103,7 +104,7 @@ func sign(n string, k crypto.PrivateKey, b []byte, sig string) bool {
 }
 
 func main() {
-	flag.Parse()
+
 	if flag.NArg() < 2 {
 		log.Fatalf("Need at least a file to be validated and one public key")
 	}

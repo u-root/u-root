@@ -5,12 +5,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+
+	flag "github.com/juju/gnuflag"
 )
 
 const (
@@ -44,7 +45,6 @@ func main() {
 		conf  []byte
 	)
 
-	flag.Parse()
 	a := flag.Args()
 	essid = a[0]
 

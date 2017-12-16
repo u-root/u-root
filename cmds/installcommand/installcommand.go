@@ -27,7 +27,6 @@ package main
 //     -noforce:   do not build if a file already exists at the destination
 //     -v:         print all build commands
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -35,6 +34,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -80,7 +81,7 @@ func parseCommandLine() form {
 
 	// Second form:
 	//     installcommand [INSTALLCOMMAND_ARGS...] COMMAND [ARGS...]
-	flag.Parse()
+
 	if flag.NArg() < 1 {
 		log.Println("Second form requires a COMMAND argument")
 		usage()

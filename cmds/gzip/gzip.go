@@ -5,10 +5,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/gzip"
 )

@@ -15,15 +15,16 @@ package main
 import (
 	"debug/pe"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 func main() {
 	// Parse flags
-	flag.Parse()
+
 	var (
 		f   *pe.File
 		err error

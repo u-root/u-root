@@ -32,11 +32,12 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var uniques = flag.Bool("u", false, "print unique lines")
@@ -96,7 +97,6 @@ func uniq(f *os.File) {
 }
 
 func main() {
-	flag.Parse()
 
 	if flag.NArg() > 0 {
 		for _, fn := range flag.Args() {

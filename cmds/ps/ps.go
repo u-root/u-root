@@ -21,13 +21,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -262,7 +263,7 @@ func ps(pT ProcessTable) error {
 }
 
 func main() {
-	flag.Parse()
+
 	pT := ProcessTable{}
 	if err := pT.LoadTable(); err != nil {
 		log.Fatal(err)

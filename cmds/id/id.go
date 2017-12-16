@@ -17,13 +17,14 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -53,7 +54,7 @@ func initFlags() error {
 	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
 	flag.BoolVar(&flags.name, "n", false, "print a name instead of a number, for -ugG")
 	flag.BoolVar(&flags.user, "u", false, "print only the effective user ID")
-	flag.Parse()
+
 	if !correctFlags(flags.groups, flags.group, flags.user) {
 		return fmt.Errorf("cannot print \"only\" of more than one choice")
 

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +16,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 
 	"unsafe"
 
@@ -300,7 +301,6 @@ var (
 )
 
 func main() {
-	flag.Parse()
 
 	if len(flag.Args()) < 1 {
 		os.Exit(1)

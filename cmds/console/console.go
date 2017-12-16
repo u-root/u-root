@@ -11,11 +11,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"github.com/u-root/u-root/pkg/uroot/util"
@@ -28,7 +29,6 @@ var (
 
 func main() {
 	fmt.Printf("console -- starting")
-	flag.Parse()
 
 	a := flag.Args()
 	if len(a) == 0 {

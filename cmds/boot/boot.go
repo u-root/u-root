@@ -29,9 +29,7 @@ package main
 
 import (
 	"encoding/binary"
-	"flag"
 	"fmt"
-	"github.com/u-root/u-root/pkg/kexec"
 	"io"
 	"io/ioutil"
 	"log"
@@ -40,6 +38,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
+	"github.com/u-root/u-root/pkg/kexec"
 )
 
 const (
@@ -380,7 +381,6 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 }
 
 func main() {
-	flag.Parse()
 
 	if *v {
 		verbose = log.Printf

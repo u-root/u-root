@@ -23,12 +23,13 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -109,7 +110,6 @@ func seq(w io.Writer, args []string) error {
 }
 
 func main() {
-	flag.Parse()
 
 	if err := seq(os.Stdout, flag.Args()); err != nil {
 		log.Println(err)

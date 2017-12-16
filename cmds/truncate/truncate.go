@@ -16,10 +16,11 @@
 package main
 
 import (
-	"flag"
 	"io/ioutil"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/rck/unit"
 )
@@ -47,7 +48,6 @@ func usageAndExit() {
 }
 
 func main() {
-	flag.Parse()
 
 	if !size.IsSet {
 		log.Println("truncate: ERROR: You need to specify -s <number>.")

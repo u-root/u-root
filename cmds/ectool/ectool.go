@@ -1,10 +1,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 )
 
 type cmd func(...string) error
@@ -25,7 +26,7 @@ func debug(s string, v ...interface{}) {
 
 func main() {
 	d := debug
-	flag.Parse()
+
 	if !*lpcdebug {
 		d = nil
 	}

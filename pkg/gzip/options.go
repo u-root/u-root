@@ -2,11 +2,12 @@ package gzip
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/klauspost/pgzip"
 )
@@ -57,7 +58,7 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 	cmdLine.BoolVar(&levels[8], "8", false, "Compression Level 8")
 	cmdLine.BoolVar(&levels[9], "9", false, "Compression Level 9")
 
-	if err := cmdLine.Parse(args[1:]); err != nil {
+	if err := cmdLine.Parse(true, args[1:]); err != nil {
 		return err
 	}
 

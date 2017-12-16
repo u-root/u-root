@@ -16,10 +16,11 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/gpt"
 )
@@ -40,7 +41,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
 	if flag.NArg() != 1 {
 		flag.Usage()
 	}
