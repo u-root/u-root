@@ -5,12 +5,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -32,7 +33,6 @@ var (
 )
 
 func main() {
-	flag.Parse()
 
 	// Main is in a separate functions so defer's run on return.
 	if err := Main(); err != nil {

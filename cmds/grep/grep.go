@@ -26,11 +26,12 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	flag "github.com/juju/gnuflag"
 )
 
 type grepResult struct {
@@ -104,7 +105,7 @@ func printmatch(r *grepResult) {
 
 func main() {
 	r := ".*"
-	flag.Parse()
+
 	a := flag.Args()
 	if len(a) > 0 {
 		r = a[0]

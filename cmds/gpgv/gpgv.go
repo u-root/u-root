@@ -24,11 +24,12 @@ package main
 
 import (
 	"crypto"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/crypto/openpgp/errors"
 	"golang.org/x/crypto/openpgp/packet"
@@ -41,7 +42,7 @@ var (
 
 func main() {
 	flag.BoolVar(&verbose, "v", false, "verbose")
-	flag.Parse()
+
 	if verbose {
 		debug = log.Printf
 	}

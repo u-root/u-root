@@ -24,9 +24,10 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"log"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var errDuration = errors.New("invalid duration")
@@ -43,7 +44,6 @@ func parseDuration(s string) (time.Duration, error) {
 }
 
 func main() {
-	flag.Parse()
 
 	if flag.NArg() != 1 {
 		log.Fatal("Incorrect number of arguments")

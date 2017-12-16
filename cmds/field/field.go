@@ -17,13 +17,14 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"os"
 	"regexp"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
+
+	flag "github.com/juju/gnuflag"
 )
 
 type frange struct {
@@ -58,7 +59,6 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
 
 	fstate := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { fstate[f.Name] = true })

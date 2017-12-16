@@ -13,11 +13,12 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 	"syscall"
 	"unsafe"
+
+	flag "github.com/juju/gnuflag"
 )
 
 const (
@@ -39,7 +40,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
 	if clear && readClear {
 		log.Fatalf("cannot specify both -clear and -read-clear")
 	}

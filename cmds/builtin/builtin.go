@@ -5,7 +5,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/tools/imports"
 )
@@ -49,7 +50,7 @@ func main() {
 		TabIndent: true,
 		TabWidth:  8,
 	}
-	flag.Parse()
+
 	a := flag.Args()
 	if len(a) < 2 || len(a)%2 != 0 {
 		log.Fatalf("Usage: builtin <command> <code> [<command> <code>]*")

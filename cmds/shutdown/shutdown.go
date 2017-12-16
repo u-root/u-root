@@ -16,9 +16,10 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/sys/unix"
 )
@@ -38,7 +39,7 @@ func usage() {
 }
 
 func main() {
-	flag.Parse()
+
 	switch len(flag.Args()) {
 	default:
 		usage()

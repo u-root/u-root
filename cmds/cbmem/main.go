@@ -10,12 +10,13 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"reflect"
+
+	flag "github.com/juju/gnuflag"
 )
 
 // The C version of cbmem has a complex function to list
@@ -220,7 +221,7 @@ func DumpMem(cbmem *CBmem) {
 }
 
 func main() {
-	flag.Parse()
+
 	if version {
 		fmt.Println("cbmem in Go, a superset of cbmem v1.1 from coreboot")
 		os.Exit(0)

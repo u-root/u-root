@@ -25,9 +25,10 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/kexec"
 )
@@ -61,7 +62,6 @@ func registerFlags() *options {
 
 func main() {
 	opts := registerFlags()
-	flag.Parse()
 
 	if opts.exec == false && len(flag.Args()) == 0 {
 		flag.PrintDefaults()

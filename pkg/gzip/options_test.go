@@ -1,9 +1,10 @@
 package gzip
 
 import (
-	"flag"
 	"runtime"
 	"testing"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/klauspost/pgzip"
 )

@@ -14,11 +14,12 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"io"
 	"log"
 	"os"
 	"regexp"
+
+	flag "github.com/juju/gnuflag"
 )
 
 type editorArg func(Editor) error
@@ -63,8 +64,6 @@ func main() {
 		args []editorArg
 		err  error
 	)
-
-	flag.Parse()
 
 	if *d {
 		debug = log.Printf

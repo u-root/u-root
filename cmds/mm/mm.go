@@ -5,10 +5,11 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 	"os/exec"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -42,7 +43,7 @@ var (
 )
 
 func main() {
-	flag.Parse()
+
 	// We won't do wholesale removal. That's up to you if this fails.
 	if err := os.Chdir(*dest); err == nil {
 		log.Printf("Directory exists, skipping namespace setup")

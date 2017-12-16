@@ -6,9 +6,10 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"strconv"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/sys/unix"
 )
@@ -31,7 +32,7 @@ func parseDevices(args []string, devtype string) (int, error) {
 }
 
 func mknod() error {
-	flag.Parse()
+
 	a := flag.Args()
 	if len(a) != 2 && len(a) != 4 {
 		return errors.New("Usage: mknod path type [major minor]")

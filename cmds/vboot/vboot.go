@@ -3,12 +3,13 @@ package main
 import (
 	"crypto/sha1"
 	"crypto/sha256"
-	"flag"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/zaolin/go-tpm/tpm"
 	"golang.org/x/crypto/ed25519"
@@ -42,7 +43,6 @@ func die(err error) {
 }
 
 func main() {
-	flag.Parse()
 
 	if err := os.MkdirAll(mountPath, os.ModePerm); err != nil {
 		die(err)

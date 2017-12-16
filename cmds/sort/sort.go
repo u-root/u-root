@@ -18,12 +18,13 @@
 package main
 
 import (
-	"flag"
 	"io/ioutil"
 	"log"
 	"os"
 	"sort"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -95,7 +96,6 @@ func writeOutput(s string) {
 }
 
 func main() {
-	flag.Parse()
 
 	// Input files must be closed before writing to output files to solve
 	// the situtation in which the output file is the same as an input.

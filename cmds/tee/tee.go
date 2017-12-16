@@ -15,11 +15,12 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"io"
 	"log"
 	"os"
 	"os/signal"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -39,7 +40,6 @@ func copyinput(files []io.Writer, buf []byte) error {
 
 // Parses all the flags and sets variables accordingly
 func handleflags() int {
-	flag.Parse()
 
 	oflags := os.O_WRONLY | os.O_CREATE
 

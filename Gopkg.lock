@@ -75,6 +75,12 @@
   version = "v0.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/juju/gnuflag"
+  packages = ["."]
+  revision = "2ce1bb71843d6d179b3f1c1c9cb4a72cd067fc65"
+
+[[projects]]
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
@@ -185,6 +191,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "22ce9fa037a428293d3133f40f661ac3355c759ff33e1e87cd76e5a6c7b803bf"
+  inputs-digest = "0a4f5f9bca7547f03a267500d5305945a40e64078e1dd18d46aee2ac3ff445f4"
   solver-name = "gps-cdcl"
   solver-version = 1

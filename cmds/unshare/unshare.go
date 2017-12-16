@@ -33,11 +33,12 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -51,7 +52,6 @@ var (
 )
 
 func main() {
-	flag.Parse()
 
 	a := flag.Args()
 	if len(a) == 0 {

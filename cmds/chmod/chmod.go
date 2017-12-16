@@ -12,12 +12,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -43,7 +44,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+
 	if len(flag.Args()) < 1 {
 		fmt.Fprintf(os.Stderr, "Usage of %s: [mode] filepath\n", os.Args[0])
 		flag.PrintDefaults()

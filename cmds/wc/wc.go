@@ -45,12 +45,13 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"unicode/utf8"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var lines = flag.Bool("l", false, "count lines")
@@ -134,8 +135,6 @@ func report(c cnt, fname string) {
 
 func main() {
 	var totals cnt
-
-	flag.Parse()
 
 	if !(*lines || *words || *runes || *broken || *chars) {
 		*lines, *words, *chars = true, true, true

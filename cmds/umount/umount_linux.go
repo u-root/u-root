@@ -6,8 +6,9 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/sys/unix"
 )
@@ -19,7 +20,7 @@ var (
 
 func umount() error {
 	var flags = unix.UMOUNT_NOFOLLOW
-	flag.Parse()
+
 	a := flag.Args()
 	if len(a) != 1 {
 		return errors.New("Usage: umount [-f | -l] path")

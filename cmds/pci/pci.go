@@ -14,11 +14,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/u-root/u-root/pkg/pci"
 )
@@ -106,7 +107,7 @@ func registers(d pci.Devices, cmds ...string) {
 	}
 }
 func main() {
-	flag.Parse()
+
 	r, err := pci.NewBusReader(*devs)
 	if err != nil {
 		log.Fatalf("%v", err)

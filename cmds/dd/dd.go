@@ -28,7 +28,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -39,6 +38,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	flag "github.com/juju/gnuflag"
 
 	"github.com/rck/unit"
 )
@@ -430,7 +431,6 @@ func main() {
 	// convert the arguments and then run flag.Parse. Gross, but hey, it
 	// works.
 	os.Args = convertArgs(os.Args)
-	flag.Parse()
 
 	if len(flag.Args()) > 0 {
 		usage()

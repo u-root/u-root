@@ -12,12 +12,13 @@
 package main
 
 import (
-	"flag"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -56,7 +57,6 @@ func which(p string, writer io.Writer, cmds []string) {
 }
 
 func main() {
-	flag.Parse()
 
 	p := os.Getenv("PATH")
 	if len(p) == 0 {

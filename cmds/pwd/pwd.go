@@ -16,11 +16,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -52,7 +53,7 @@ func pwd() error {
 
 func main() {
 	args := os.Args[1:]
-	flag.Parse()
+
 	for _, flag := range args {
 		switch flag {
 		case "-L":

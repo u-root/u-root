@@ -14,10 +14,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	flag "github.com/juju/gnuflag"
 )
 
 const cmd = "readlink [-fv] FILE"
@@ -33,7 +34,7 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.Parse()
+
 }
 
 func readLink(file string) error {

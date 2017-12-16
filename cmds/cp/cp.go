@@ -19,7 +19,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +27,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 // buffSize is the length of buffer during
@@ -61,7 +62,7 @@ func init() {
 	flag.BoolVar(&force, "f", false, "force overwrite files")
 	flag.BoolVar(&verbose, "v", false, "verbose copy mode")
 	flag.BoolVar(&symlink, "P", false, "don't follow symlinks")
-	flag.Parse()
+
 	go nextOff()
 }
 

@@ -24,12 +24,13 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 type config struct {
@@ -218,7 +219,6 @@ func main() {
 	flag.BoolVar(&conf.physical, "P", false, "make hard links directly to symbolic links")
 	flag.BoolVar(&conf.relative, "r", false, "create symlinks relative to link location")
 	flag.StringVar(&conf.dirtgt, "t", "", "specify the directory to put the links")
-	flag.Parse()
 
 	args := flag.Args()
 	if len(args) == 0 {

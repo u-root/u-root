@@ -20,12 +20,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 func wget(arg string, w io.Writer) error {
@@ -48,7 +49,7 @@ func usage() {
 }
 
 func main() {
-	flag.Parse()
+
 	if flag.NArg() != 1 {
 		usage()
 	}

@@ -15,10 +15,11 @@
 package main
 
 import (
-	"flag"
 	"io"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -46,7 +47,6 @@ func cat(w io.Writer, files []string) error {
 }
 
 func main() {
-	flag.Parse()
 
 	if len(os.Args) == 1 {
 		if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {

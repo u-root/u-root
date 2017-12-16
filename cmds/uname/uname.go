@@ -19,10 +19,11 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"log"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 
 	"golang.org/x/sys/unix"
 )
@@ -75,7 +76,6 @@ end:
 }
 
 func main() {
-	flag.Parse()
 
 	var u unix.Utsname
 	if err := unix.Uname(&u); err != nil {

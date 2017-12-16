@@ -14,9 +14,10 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"net/http"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var (
@@ -26,6 +27,6 @@ var (
 )
 
 func main() {
-	flag.Parse()
+
 	log.Fatal(http.ListenAndServe(*host+":"+*port, http.FileServer(http.Dir(*dir))))
 }

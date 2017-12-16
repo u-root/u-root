@@ -21,9 +21,10 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
+
+	flag "github.com/juju/gnuflag"
 )
 
 // You'll see the name VTOC used a lot.
@@ -50,7 +51,7 @@ func usage() {
 
 func main() {
 	var err error
-	flag.Parse()
+
 	if *d {
 		debug = log.Printf
 	}

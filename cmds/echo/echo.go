@@ -10,11 +10,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var nonewline = flag.Bool("n", false, "suppress newline")
@@ -30,6 +31,6 @@ func echo(w io.Writer, s ...string) error {
 }
 
 func main() {
-	flag.Parse()
+
 	echo(os.Stdout, flag.Args()...)
 }

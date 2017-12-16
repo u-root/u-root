@@ -22,11 +22,12 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 const cmd = "comm [-123i] file1 file2"
@@ -94,7 +95,7 @@ func outer(c1, c2 chan string, c chan out) {
 }
 
 func main() {
-	flag.Parse()
+
 	if flag.NArg() != 2 || *help {
 		flag.Usage()
 		os.Exit(1)

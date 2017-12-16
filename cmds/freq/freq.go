@@ -25,11 +25,12 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"unicode/utf8"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var utf = flag.Bool("r", false, "treat input as UTF-8")
@@ -72,7 +73,6 @@ func doFreq(f *os.File) {
 }
 
 func main() {
-	flag.Parse()
 
 	if flag.NArg() > 0 {
 		for _, v := range flag.Args() {

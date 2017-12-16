@@ -8,7 +8,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +15,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	flag "github.com/juju/gnuflag"
 )
 
 var absPath = flag.Bool("a", false, "Print absolute paths")
@@ -60,7 +61,7 @@ var rules = []rule{
 }
 
 func main() {
-	flag.Parse()
+
 	uroot := os.ExpandEnv(uroot)
 	incorrect := []string{}
 
