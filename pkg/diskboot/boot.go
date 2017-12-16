@@ -1,11 +1,16 @@
 package diskboot
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/kexec"
 )
 
 // Config contains boot entries for a single configuration file
@@ -55,7 +60,7 @@ type Entry struct {
 
 // KexecLoad calls the appropriate kexec load routines based on the
 // type of Entry
-func (e *Entry) KexecLoad() error {
+func (e *Entry) KexecLoad(mountPath, appendCmdline string) error {
 	switch e.Type {
 	case Multiboot:
 		// TODO: implement using kexec_load syscall
@@ -65,7 +70,30 @@ func (e *Entry) KexecLoad() error {
 		// e.Module[0].Path is kernel
 		// e.Module[0].Params is kernel parameters
 		// e.Module[1].Path is initrd
-		return syscall.ENOSYS
+		if len(e.Modules) < 1 {
+			return errors.New("missing kernel")
+		}
+		var ramfs *os.File
+		kernelPath := filepath.Join(mountPath, e.Modules[0].Path)
+		log.Print("Kernel Path:", kernelPath)
+		kernel, err := os.OpenFile(kernelPath, os.O_RDONLY, 0)
+		cmdline := e.Modules[0].Params
+		if appendCmdline != "" {
+			cmdline += " " + appendCmdline
+		}
+		log.Print("Kernel Params:", cmdline)
+		if err != nil {
+			return err
+		}
+		if len(e.Modules) > 1 {
+			ramfsPath := filepath.Join(mountPath, e.Modules[1].Path)
+			log.Print("Ramfs Path:", ramfsPath)
+			ramfs, err = os.OpenFile(ramfsPath, os.O_RDONLY, 0)
+			if err != nil {
+				return err
+			}
+		}
+		return kexec.FileLoad(kernel, ramfs, cmdline)
 	}
 	return nil
 }
@@ -120,23 +148,50 @@ func FindConfigs(mountPath string) []*Config {
 }
 
 func loadSyslinuxLines(configPath string, contents []byte) []string {
-	var newLines []string
+	// TODO: just parse includes inline with syslinux specific parser
+	var newLines, includeLines []string
+	menuKernel := false
+
 	lines := strings.Split(string(contents), "\n")
 	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-		fields := strings.Fields(trimmedLine)
+		fields := strings.Fields(strings.TrimSpace(line))
+		includeDir := filepath.Dir(configPath)
 		if len(fields) == 2 && strings.ToUpper(fields[0]) == "INCLUDE" {
-			includePath := filepath.Join(filepath.Dir(configPath), fields[1])
-			includeContents, err := ioutil.ReadFile(includePath)
-			if err != nil {
-				// TODO: log error
-				continue
+			includeLines = loadSyslinuxInclude(includeDir, fields[1])
+		} else if len(fields) == 3 &&
+			strings.ToUpper(fields[0]) == "MENU" &&
+			strings.ToUpper(fields[1]) == "INCLUDE" {
+			includeLines = loadSyslinuxInclude(includeDir, fields[2])
+		} else if len(fields) > 1 &&
+			strings.ToUpper(fields[0]) == "APPEND" &&
+			menuKernel {
+			includeLines = []string{}
+			for _, includeFile := range fields[1:] {
+				includeLines = append(includeLines,
+					loadSyslinuxInclude(includeDir, includeFile)...)
 			}
-			includeLines := loadSyslinuxLines(includePath, includeContents)
-			newLines = append(newLines, includeLines...)
 		} else {
-			newLines = append(newLines, line)
+			if len(fields) > 0 && strings.ToUpper(fields[0]) == "LABEL" {
+				menuKernel = false
+			} else if len(fields) == 2 &&
+				strings.ToUpper(fields[0]) == "KERNEL" &&
+				(strings.ToUpper(fields[1]) == "VESAMENU.C32" ||
+					strings.ToUpper(fields[1]) == "MENU.C32") {
+				menuKernel = true
+			}
+			includeLines = []string{line}
 		}
+		newLines = append(newLines, includeLines...)
 	}
 	return newLines
+}
+
+func loadSyslinuxInclude(includePath, includeFile string) []string {
+	path := filepath.Join(includePath, includeFile)
+	includeContents, err := ioutil.ReadFile(path)
+	if err != nil {
+		// TODO: log error
+		return nil
+	}
+	return loadSyslinuxLines(path, includeContents)
 }
