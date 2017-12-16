@@ -18,7 +18,7 @@
 | dd             |               |                 |                        |
 | dhcp           |               |                 | u-root specific        |
 | dmesg          | -c            | -Clr            |                        |
-| echo           | -n            | -e              |                        |
+| echo           | -ne           |                 |                        |
 | ectool         |               |                 | u-root specific        |
 | exit           |               |                 | Rush builtin           |
 | false          |               |                 |                        |
