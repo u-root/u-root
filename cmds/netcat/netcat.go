@@ -18,7 +18,10 @@ import (
 
 const usage = "netcat [go-style network address]"
 
-var netType = flag.String("net", "tcp", "What net type to use, e.g. tcp, unix, etc.")
+var (
+	netType = flag.String("net", "tcp", "What net type to use, e.g. tcp, unix, etc.")
+	listen  = flag.Bool("l", false, "Listen for connections.")
+)
 
 func init() {
 	util.Usage(usage)
@@ -33,15 +36,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	if c, err = net.Dial(*netType, flag.Args()[0]); err != nil {
-		log.Fatalf("%v\n", err)
+	addr := flag.Args()[0]
+
+	if *listen {
+		ln, err := net.Listen(*netType, addr)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		c, err = ln.Accept()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		if c, err = net.Dial(*netType, addr); err != nil {
+			log.Fatalln(err)
+		}
 	}
+
 	go func() {
 		if _, err := io.Copy(c, os.Stdin); err != nil {
-			fmt.Printf("%v", err)
+			fmt.Println(err)
 		}
 	}()
 	if _, err = io.Copy(os.Stdout, c); err != nil {
-		fmt.Printf("%v", err)
+		fmt.Println(err)
 	}
 }
