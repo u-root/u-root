@@ -71,7 +71,7 @@ var tests = []struct {
 		// redirect
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/302",
-		content:  content,
+		content:  "",
 		retCode: 0,
 	}, {
 		// 4xx error
@@ -144,15 +144,17 @@ func TestWget(t *testing.T) {
 			t.Errorf("%d. Want: %d; Got: %d", i, tt.retCode, retCode)
 		}
 
-		fileName := path.Base(tt.url)
-		content, err := ioutil.ReadFile(fileName)
-		if err != nil {
-			t.Errorf("%d. File %s was not created: %v", i, fileName, err)
-		}
+		if tt.content != "" {
+			fileName := path.Base(tt.url)
+			content, err := ioutil.ReadFile(fileName)
+			if err != nil {
+				t.Errorf("%d. File %s was not created: %v", i, fileName, err)
+			}
 
-		// Check content.
-		if string(content) != tt.content {
-			t.Errorf("%d. Want:\n%#v\nGot:\n%#v", i, tt.content, string(content))
+			// Check content.
+			if string(content) != tt.content {
+				t.Errorf("%d. Want:\n%#v\nGot:\n%#v", i, tt.content, string(content))
+			}
 		}
 	}
 }
