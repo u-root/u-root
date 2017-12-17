@@ -34,7 +34,7 @@ var (
 	outPath = flag.String("O", "", "output file")
 )
 
-func wget(arg string, w io.Writer) error {
+func wget(arg, fileName string) error {
 	resp, err := http.Get(arg)
 	if err != nil {
 		return err
@@ -43,6 +43,13 @@ func wget(arg string, w io.Writer) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("non-200 HTTP status: %d", resp.StatusCode)
 	}
+
+	w, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
 	_, err = io.Copy(w, resp.Body)
 	return err
 }
@@ -77,12 +84,7 @@ func main() {
 		}
 	}
 
-	file, err := os.Create(*outPath)
-	if err != nil {
-		log.Fatalf("%v\n", err)
-	}
-
-	if err := wget(argURL, file); err != nil {
+	if err := wget(argURL, *outPath); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }
