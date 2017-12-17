@@ -69,8 +69,8 @@ func TestMkfifo(t *testing.T) {
 			}
 
 			mode := testFile.Mode()
-			if (mode & os.ModeNamedPipe).String() != "p---------" {
-				t.Errorf("expected named pipe, got %v %v", mode, (mode & os.ModeNamedPipe))
+			if typ := mode & os.ModeType; typ != os.ModeNamedPipe {
+				t.Errorf("got %v, want %v", typ, os.ModeNamedPipe)
 			}
 		}
 	}
