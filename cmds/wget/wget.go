@@ -25,7 +25,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 )
 
 func wget(arg string, w io.Writer) error {
@@ -53,8 +55,27 @@ func main() {
 		usage()
 	}
 
-	url := flag.Arg(0)
-	if err := wget(url, os.Stdout); err != nil {
+	argURL := flag.Arg(0)
+	if argURL == "" {
+		log.Fatalln("Empty URL")
+	}
+
+	url, err := url.Parse(argURL)
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
+	fileName := "index.html"
+	if url.Path != "" && url.Path[len(url.Path)-1] != '/' {
+		fileName = path.Base(url.Path)
+	}
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+
+	if err := wget(argURL, file); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 }
