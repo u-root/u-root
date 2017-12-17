@@ -61,8 +61,7 @@ func usage() {
 }
 
 func main() {
-	flag.Parse()
-	if flag.NArg() != 1 {
+	if flag.Parse(); flag.NArg() != 1 {
 		usage()
 	}
 
@@ -73,7 +72,7 @@ func main() {
 
 	url, err := url.Parse(argURL)
 	if err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalln(err)
 	}
 
 	if *outPath == "" {
@@ -85,6 +84,6 @@ func main() {
 	}
 
 	if err := wget(argURL, *outPath); err != nil {
-		log.Fatalf("%v\n", err)
+		log.Fatalln(err)
 	}
 }
