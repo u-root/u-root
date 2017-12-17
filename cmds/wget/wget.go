@@ -30,6 +30,10 @@ import (
 	"path"
 )
 
+var (
+	outPath = flag.String("O", "", "output file")
+)
+
 func wget(arg string, w io.Writer) error {
 	resp, err := http.Get(arg)
 	if err != nil {
@@ -65,12 +69,15 @@ func main() {
 		log.Fatalf("%v\n", err)
 	}
 
-	fileName := "index.html"
-	if url.Path != "" && url.Path[len(url.Path)-1] != '/' {
-		fileName = path.Base(url.Path)
+	if *outPath == "" {
+		if url.Path != "" && url.Path[len(url.Path)-1] != '/' {
+			*outPath = path.Base(url.Path)
+		} else {
+			*outPath = "index.html"
+		}
 	}
 
-	file, err := os.Create(fileName)
+	file, err := os.Create(*outPath)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}

@@ -91,6 +91,12 @@ var tests = []struct {
 		url:     "http://localhost:%[2]d/200",
 		content:  "",
 		retCode: 1,
+	}, {
+		// output file
+		flags:   []string{"-O", "/dev/null"},
+		url:     "http://localhost:%[1]d/200",
+		content:  "",
+		retCode: 0,
 	},
 }
 
