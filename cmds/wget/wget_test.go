@@ -46,20 +46,20 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 var tests = []struct {
 	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
 	url     string   // in
-	content  string   // out
+	content string   // out
 	retCode int      // out
 }{
 	{
 		// basic
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/200",
-		content:  content,
+		content: content,
 		retCode: 0,
 	}, {
 		// ipv4
 		flags:   []string{},
 		url:     "http://127.0.0.1:%[1]d/200",
-		content:  content,
+		content: content,
 		retCode: 0,
 	}, /*{ TODO: travis does not support ipv6
 		// ipv6
@@ -71,31 +71,31 @@ var tests = []struct {
 		// redirect
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/302",
-		content:  "",
+		content: "",
 		retCode: 0,
 	}, {
 		// 4xx error
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/404",
-		content:  "",
+		content: "",
 		retCode: 1,
 	}, {
 		// 5xx error
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/500",
-		content:  "",
+		content: "",
 		retCode: 1,
 	}, {
 		// no server
 		flags:   []string{},
 		url:     "http://localhost:%[2]d/200",
-		content:  "",
+		content: "",
 		retCode: 1,
 	}, {
 		// output file
 		flags:   []string{"-O", "/dev/null"},
 		url:     "http://localhost:%[1]d/200",
-		content:  "",
+		content: "",
 		retCode: 0,
 	},
 }
