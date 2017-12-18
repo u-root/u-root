@@ -21,6 +21,7 @@ const usage = "netcat [go-style network address]"
 var (
 	netType = flag.String("net", "tcp", "What net type to use, e.g. tcp, unix, etc.")
 	listen  = flag.Bool("l", false, "Listen for connections.")
+	verbose = flag.Bool("v", false, "Verbose output.")
 )
 
 func init() {
@@ -43,6 +44,9 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
+		if *verbose {
+			fmt.Fprintln(os.Stderr, "Listening on", ln.Addr())
+		}
 
 		c, err = ln.Accept()
 		if err != nil {
@@ -53,13 +57,19 @@ func main() {
 			log.Fatalln(err)
 		}
 	}
+	if *verbose {
+		fmt.Fprintln(os.Stderr, "Connected to", c.RemoteAddr())
+	}
 
 	go func() {
 		if _, err := io.Copy(c, os.Stdin); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}()
 	if _, err = io.Copy(os.Stdout, c); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
+	}
+	if *verbose {
+		fmt.Fprintln(os.Stderr, "Disconnected")
 	}
 }
