@@ -29,10 +29,9 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
 	var c net.Conn
 	var err error
-	if len(flag.Args()) < 1 {
+	if flag.Parse(); len(flag.Args()) != 1 {
 		flag.Usage()
 		os.Exit(1)
 	}
