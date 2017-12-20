@@ -75,7 +75,6 @@ func init() {
 	ddUnits["c"] = 1
 	ddUnits["w"] = 2
 	ddUnits["b"] = 512
-	ddUnits["kB"] = unit.DefaultUnits["KB"]
 	delete(ddUnits, "B")
 
 	ibs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
