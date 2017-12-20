@@ -20,35 +20,36 @@ import (
 	"time"
 )
 
-// default format map from format.go on time lib
-// Help to make format of date with posix compliant
-var fmtMap = map[string]string{
-	"%a": "Mon",
-	"%A": "Monday",
-	"%b": "Jan",
-	"%h": "Jan",
-	"%B": "January",
-	"%c": time.UnixDate,
-	"%d": "02",
-	"%e": "_2",
-	"%H": "15",
-	"%I": "03",
-	"%m": "1",
-	"%M": "04",
-	"%p": "PM",
-	"%S": "05",
-	"%y": "06",
-	"%Y": "2006",
-	"%z": "-0700",
-	"%Z": "MST",
-}
-
 var (
-	flags struct{ universal bool }
-	z     = time.Local
+	// default format map from format.go on time lib
+	// Help to make format of date with posix compliant
+	fmtMap = map[string]string{
+		"%a": "Mon",
+		"%A": "Monday",
+		"%b": "Jan",
+		"%h": "Jan",
+		"%B": "January",
+		"%c": time.UnixDate,
+		"%d": "02",
+		"%e": "_2",
+		"%H": "15",
+		"%I": "03",
+		"%m": "1",
+		"%M": "04",
+		"%p": "PM",
+		"%S": "05",
+		"%y": "06",
+		"%Y": "2006",
+		"%z": "-0700",
+		"%Z": "MST",
+	}
+	flags struct {
+		universal bool
+		reference string
+	}
 )
 
-const cmd = "date [-u] [+format] | date [-u] [MMDDhhmm[CC]YY[.ss]]"
+const cmd = "date [-u] [-d FILE] [+format] | date [-u] [-d FILE] [MMDDhhmm[CC]YY[.ss]]"
 
 func init() {
 	defUsage := flag.Usage
@@ -57,10 +58,8 @@ func init() {
 		defUsage()
 	}
 	flag.BoolVar(&flags.universal, "u", false, "Coordinated Universal Time (UTC)")
+	flag.StringVar(&flags.reference, "r", "", "Display the last midification time of FILE")
 	flag.Parse()
-	if flags.universal {
-		z = time.UTC
-	}
 }
 
 // regex search for +format POSIX patterns
@@ -77,8 +76,8 @@ func formatParser(args string) []string {
 }
 
 // replace map for the format patterns according POSIX and GNU implementations
-func dateMap(format string) string {
-	d := time.Now().In(z)
+func dateMap(t time.Time, z *time.Location, format string) string {
+	d := t.In(z)
 	var toReplace string
 	for _, match := range formatParser(format) {
 		translate, exists := fmtMap[match]
@@ -92,7 +91,7 @@ func dateMap(format string) string {
 			toReplace = strconv.Itoa(d.Year() / 100)
 		case match == "%D":
 			// Date in the format mm/dd/yy.
-			toReplace = dateMap("%m/%d/%y")
+			toReplace = dateMap(t, z, "%m/%d/%y")
 		case match == "%j":
 			// Day of the year as a decimal number [001,366]."
 			year, weekYear := d.ISOWeek()
@@ -106,12 +105,12 @@ func dateMap(format string) string {
 		case match == "%r":
 			// 12-hour clock time [01,12] using the AM/PM notation;
 			// in the POSIX locale, this shall be equivalent to %I : %M : %S %p.
-			toReplace = dateMap("%I:%M:%S %p")
+			toReplace = dateMap(t, z, "%I:%M:%S %p")
 		case match == "%t":
 			// A <tab>.
 			toReplace = "\t"
 		case match == "%T":
-			toReplace = dateMap("%H:%M:%S")
+			toReplace = dateMap(t, z, "%H:%M:%S")
 		case match == "%W":
 			// Week of the year (Sunday as the first day of the week)
 			// as a decimal number [00,53]. All days in a new year preceding
@@ -136,13 +135,13 @@ func dateMap(format string) string {
 			toReplace = strconv.Itoa(int(weekYear))
 		case match == "%x":
 			// Locale's appropriate date representation.
-			toReplace = dateMap("%m/%d/%y") // TODO: decision algorithm
+			toReplace = dateMap(t, z, "%m/%d/%y") // TODO: decision algorithm
 		case match == "%F":
 			// Date yyyy-mm-dd defined by GNU implementation
-			toReplace = dateMap("%Y-%m-%d")
+			toReplace = dateMap(t, z, "%Y-%m-%d")
 		case match == "%X":
 			// Locale's appropriate time representation.
-			toReplace = dateMap("%I:%M:%S %p") // TODO: decision algorithm
+			toReplace = dateMap(t, z, "%I:%M:%S %p") // TODO: decision algorithm
 		default:
 			continue
 		}
@@ -170,7 +169,7 @@ func ints(s string, i ...*int) error {
 // YY and SS. For these values, we use
 // time.Now(). For the timezone, we use whatever
 // one we are in, or UTC if desired.
-func getTime(s string) (t time.Time, err error) {
+func getTime(z *time.Location, s string) (t time.Time, err error) {
 	var MM, DD, hh, mm int
 	// CC is the year / 100, not the "century".
 	// i.e. for 2001, CC is 20, not 21.
@@ -208,20 +207,33 @@ func getTime(s string) (t time.Time, err error) {
 	return
 }
 
-func date(z *time.Location) string {
-	return time.Now().In(z).Format(time.UnixDate)
+func date(t time.Time, z *time.Location) string {
+	return t.In(z).Format(time.UnixDate)
 }
 
 func main() {
+	t := time.Now()
+	z := time.Local
+	if flags.universal {
+		z = time.UTC
+	}
+	if flags.reference != "" {
+		stat, err := os.Stat(flags.reference)
+		if err != nil {
+			log.Fatalf("Unable to gather stats of file %v", flags.reference)
+		}
+		t = stat.ModTime()
+	}
+
 	switch len(flag.Args()) {
 	case 0:
-		fmt.Printf("%v\n", date(z))
+		fmt.Printf("%v\n", date(t, z))
 	case 1:
 		argv0 := flag.Args()[0]
 		if argv0[0] == '+' {
-			fmt.Printf("%v\n", dateMap(argv0[1:]))
+			fmt.Printf("%v\n", dateMap(t, z, argv0[1:]))
 		} else {
-			t, err := getTime(argv0)
+			t, err := getTime(z, argv0)
 			if err != nil {
 				log.Fatalf("%v: %v", argv0, err)
 			}

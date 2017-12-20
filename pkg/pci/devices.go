@@ -38,3 +38,26 @@ func (d Devices) ReadConfig() error {
 	}
 	return nil
 }
+
+// ReadConfigRegister reads the config info for all the devices.
+func (d Devices) ReadConfigRegister(offset, size int64) ([]uint64, error) {
+	var vals []uint64
+	for _, p := range d {
+		val, err := p.ReadConfigRegister(offset, size)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, val)
+	}
+	return vals, nil
+}
+
+// WriteConfigRegister writes the config info for all the devices.
+func (d Devices) WriteConfigRegister(offset, size int64, val uint64) error {
+	for _, p := range d {
+		if err := p.WriteConfigRegister(offset, size, val); err != nil {
+			return err
+		}
+	}
+	return nil
+}

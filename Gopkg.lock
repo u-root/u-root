@@ -75,6 +75,30 @@
   version = "v0.2.0"
 
 [[projects]]
+  name = "github.com/klauspost/compress"
+  packages = ["flate"]
+  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
+  version = "v1.2.1"
+
+[[projects]]
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/klauspost/crc32"
+  packages = ["."]
+  revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/klauspost/pgzip"
+  packages = ["."]
+  revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
+  version = "v1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/nightlyone/lockfile"
   packages = ["."]
@@ -91,6 +115,12 @@
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/rck/unit"
+  packages = ["."]
+  revision = "59a01d40f639d257b406e932ee8bb206006d5fc2"
 
 [[projects]]
   branch = "master"
@@ -155,6 +185,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "74dfd0d051abb23878bb6e218bf868eb96dc2da2ba1a041384c8f06f7976cdfa"
+  inputs-digest = "22ce9fa037a428293d3133f40f661ac3355c759ff33e1e87cd76e5a6c7b803bf"
   solver-name = "gps-cdcl"
   solver-version = 1

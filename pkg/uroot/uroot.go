@@ -91,18 +91,18 @@ func CreateInitramfs(opts Opts) error {
 	for _, pkg := range opts.Packages {
 		matches, err := filepath.Glob(pkg)
 		if len(matches) == 0 || err != nil {
-			if _, perr := opts.Env.ListPackage(pkg); perr != nil {
+			if _, perr := opts.Env.Package(pkg); perr != nil {
 				return fmt.Errorf("%q is neither package or path/glob: %v / %v", pkg, err, perr)
 			}
 			importPaths = append(importPaths, pkg)
 		}
 
 		for _, match := range matches {
-			p, err := opts.Env.FindPackageByPath(match)
+			p, err := opts.Env.PackageByPath(match)
 			if err != nil {
 				log.Printf("Skipping package %q: %v", match, err)
 			} else {
-				importPaths = append(importPaths, p)
+				importPaths = append(importPaths, p.ImportPath)
 			}
 		}
 	}
@@ -333,20 +333,20 @@ func (af ArchiveFiles) Contains(dest string) bool {
 // DefaultPackageImports returns a list of default u-root packages to include.
 func DefaultPackageImports(env golang.Environ) ([]string, error) {
 	// Find u-root directory.
-	urootDir, err := env.FindPackageDir("github.com/u-root/u-root")
+	urootPkg, err := env.Package("github.com/u-root/u-root")
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't find u-root src directory: %v", err)
 	}
 
-	matches, err := filepath.Glob(filepath.Join(urootDir, "cmds/*"))
+	matches, err := filepath.Glob(filepath.Join(urootPkg.Dir, "cmds/*"))
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find u-root cmds: %v", err)
 	}
 	pkgs := make([]string, 0, len(matches))
 	for _, match := range matches {
-		importPath, err := env.FindPackageByPath(match)
+		pkg, err := env.PackageByPath(match)
 		if err == nil {
-			pkgs = append(pkgs, importPath)
+			pkgs = append(pkgs, pkg.ImportPath)
 		}
 	}
 	return pkgs, nil

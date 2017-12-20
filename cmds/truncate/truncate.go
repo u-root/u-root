@@ -20,17 +20,20 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strconv"
+
+	"github.com/rck/unit"
 )
 
 const cmd = "truncate [-c] -s size file..."
 
 var (
-	create  = flag.Bool("c", false, "Do not create files.")
-	sizeStr = flag.String("s", "", "Size in bytes, prefixes +/- are allowed")
+	create = flag.Bool("c", false, "Do not create files.")
+	size   = unit.MustNewUnit(unit.DefaultUnits).MustNewValue(1, unit.None)
 )
 
 func init() {
+	flag.Var(size, "s", "Size in bytes, prefixes +/- are allowed")
+
 	defUsage := flag.Usage
 	flag.Usage = func() {
 		os.Args[0] = cmd
@@ -46,14 +49,12 @@ func usageAndExit() {
 func main() {
 	flag.Parse()
 
-	if flag.NArg() == 0 {
-		log.Println("truncate: ERROR: You need to specify -s <number> and one or more files.")
+	if !size.IsSet {
+		log.Println("truncate: ERROR: You need to specify -s <number>.")
 		usageAndExit()
 	}
-
-	want, err := strconv.ParseInt(*sizeStr, 10, 64)
-	if err != nil {
-		log.Printf("truncate: ERROR: could not convert %s to int64: %v\n", *sizeStr, err)
+	if flag.NArg() == 0 {
+		log.Println("truncate: ERROR: You need to specify one or more files as argument.")
 		usageAndExit()
 	}
 
@@ -68,9 +69,9 @@ func main() {
 			}
 		}
 
-		final := want // base case
-		if (*sizeStr)[0] == '+' || (*sizeStr)[0] == '-' {
-			final = st.Size() + want // in case of '-', want is already negative
+		final := size.Value // base case
+		if size.ExplicitSign != unit.None {
+			final += st.Size() // in case of '-', size.Value is already negative
 		}
 		if final < 0 {
 			final = 0
