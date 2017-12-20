@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
@@ -139,11 +140,15 @@ func CreateInitramfs(opts Opts) error {
 
 	// Add files from command line.
 	for _, file := range opts.ExtraFiles {
-		path, err := filepath.Abs(file)
+		parts := strings.SplitN(file, ":", 2)
+		path, err := filepath.Abs(filepath.Join(parts...))
+		if len(parts) != 2 {
+			parts = append(parts, parts[0][1:])
+		}
 		if err != nil {
 			return fmt.Errorf("couldn't find absolute path for %q: %v", file, err)
 		}
-		if err := archive.AddFile(path, path[1:]); err != nil {
+		if err := archive.AddFile(path, parts[1]); err != nil {
 			return fmt.Errorf("couldn't add %q to archive: %v", file, err)
 		}
 
