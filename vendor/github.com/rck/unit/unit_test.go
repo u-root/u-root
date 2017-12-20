@@ -37,18 +37,18 @@ var unitTests = []struct {
 		out:   "23B",
 		value: 23,
 	}, {
-		// With valid unit, mutliple of another unit
+		// With valid unit, multiple of another unit
 		in:    "1024KiB",
 		out:   "1MiB",
 		value: 1024 * 1024,
 	}, {
-		// With valid unit, mutliple of another unit, explicit +
+		// With valid unit, multiple of another unit, explicit +
 		in:           "+1024KiB",
 		out:          "+1MiB",
 		value:        1024 * 1024,
 		explicitSign: Positive,
 	}, {
-		// With valid unit, mutliple of another unit, explicit -
+		// With valid unit, multiple of another unit, explicit -
 		in:           "-1024KiB",
 		out:          "-1MiB",
 		value:        -1024 * 1024,
