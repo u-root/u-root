@@ -84,7 +84,6 @@ func main() {
 	fnames := flag.Args()
 
 	cmpUnits := unit.DefaultUnits
-	cmpUnits["kB"] = unit.DefaultUnits["KB"]
 
 	off, err := unit.NewUnit(cmpUnits)
 	if err != nil {
