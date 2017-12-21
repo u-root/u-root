@@ -96,7 +96,6 @@ func main() {
 		}
 
 		c.SetDeadline(time.Now().Add(waitFor))
-		defer c.Close()
 		msg[0] = byte(i)
 		if _, err := c.Write(msg[:]); err != nil {
 			log.Printf("Write failed: %v", err)
@@ -110,6 +109,7 @@ func main() {
 				log.Printf("Read failed: %v", err)
 			}
 		}
+		c.Close()
 		time.Sleep(time.Millisecond * interval)
 	}
 }
