@@ -16,7 +16,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 )
 
 const content = "Very simple web server"
@@ -87,13 +86,17 @@ func getFreePort(t *testing.T) int {
 // TestWget implements a table-driven test.
 func TestWget(t *testing.T) {
 	// Start a webserver on a free port.
-	port := getFreePort(t)
 	unusedPort := getFreePort(t)
+
+	server, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatalf("Cannot get free port for server: %v", err)
+	}
+	port := server.Addr().(*net.TCPAddr).Port
 	go func() {
-		t.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), handler{}))
+		t.Fatal(http.Serve(server, handler{}))
 	}()
 
-	time.Sleep(500 * time.Millisecond) // TODO: better synchronization
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("Test [%02d]", i), func(t *testing.T) {
 			execPath := os.Getenv("EXECPATH")
