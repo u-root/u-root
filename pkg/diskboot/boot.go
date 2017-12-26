@@ -1,7 +1,6 @@
 package diskboot
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -71,7 +70,7 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string) error {
 		// e.Module[0].Params is kernel parameters
 		// e.Module[1].Path is initrd
 		if len(e.Modules) < 1 {
-			return errors.New("missing kernel")
+			return fmt.Errorf("missing kernel")
 		}
 		var ramfs *os.File
 		kernelPath := filepath.Join(mountPath, e.Modules[0].Path)
@@ -83,14 +82,14 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string) error {
 		}
 		log.Print("Kernel Params:", cmdline)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load kernel: %v", err)
 		}
 		if len(e.Modules) > 1 {
 			ramfsPath := filepath.Join(mountPath, e.Modules[1].Path)
 			log.Print("Ramfs Path:", ramfsPath)
 			ramfs, err = os.OpenFile(ramfsPath, os.O_RDONLY, 0)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to load ramfs: %v", err)
 			}
 		}
 		return kexec.FileLoad(kernel, ramfs, cmdline)
