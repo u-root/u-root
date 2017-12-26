@@ -8,17 +8,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 const content = "Very simple web server"
@@ -42,53 +40,38 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var tests = []struct {
-	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
-	url     string   // in
-	stdout  string   // out
-	retCode int      // out
+	url    string
+	stdout string
+	isErr  bool
 }{
 	{
 		// basic
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/200",
-		stdout:  content,
-		retCode: 0,
+		url:    "http://localhost:%[1]d/200",
+		stdout: content,
 	}, {
 		// ipv4
-		flags:   []string{},
-		url:     "http://127.0.0.1:%[1]d/200",
-		stdout:  content,
-		retCode: 0,
-	}, /*{ TODO: travis does not support ipv6
+		url:    "http://127.0.0.1:%[1]d/200",
+		stdout: content,
+	}, {
 		// ipv6
-		flags:   []string{},
-		url:     "http://[::1]:%[1]d/200",
-		stdout:  content,
-		retCode: 0,
-	},*/{
+		url:    "http://[::1]:%[1]d/200",
+		stdout: content,
+	}, {
 		// redirect
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/302",
-		stdout:  content,
-		retCode: 0,
+		url:    "http://localhost:%[1]d/302",
+		stdout: content,
 	}, {
 		// 4xx error
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/404",
-		stdout:  "",
-		retCode: 1,
+		url:   "http://localhost:%[1]d/404",
+		isErr: true,
 	}, {
 		// 5xx error
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/500",
-		stdout:  "",
-		retCode: 1,
+		url:   "http://localhost:%[1]d/500",
+		isErr: true,
 	}, {
 		// no server
-		flags:   []string{},
-		url:     "http://localhost:%[2]d/200",
-		stdout:  "",
-		retCode: 1,
+		url:   "http://localhost:%[2]d/200",
+		isErr: true,
 	},
 }
 
@@ -103,42 +86,48 @@ func getFreePort(t *testing.T) int {
 
 // TestWget implements a table-driven test.
 func TestWget(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
 	// Start a webserver on a free port.
 	port := getFreePort(t)
 	unusedPort := getFreePort(t)
-	h := handler{}
 	go func() {
-		t.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), h))
+		t.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), handler{}))
 	}()
 
 	time.Sleep(500 * time.Millisecond) // TODO: better synchronization
 	for i, tt := range tests {
-		// Arguments inherited from the environment.
-		execArgs := strings.Split(os.Getenv("EXECPATH"), " ")[1:]
+		t.Run(fmt.Sprintf("Test [%02d]", i), func(t *testing.T) {
+			execPath := os.Getenv("EXECPATH")
+			uri := fmt.Sprintf(tt.url, port, unusedPort)
 
-		args := append(append(execArgs, tt.flags...), fmt.Sprintf(tt.url, port, unusedPort))
-		out, err := exec.Command(execPath, args...).Output()
+			var err error
+			var out string
 
-		// Check return code.
-		retCode := 0
-		if err != nil {
-			exitErr, ok := err.(*exec.ExitError)
-			if !ok {
-				t.Errorf("%d. Error running wget: %v", i, err)
-				continue
+			if len(execPath) > 0 {
+				// Arguments inherited from the environment.
+				execArgs := strings.Fields(execPath)
+				args := append(execArgs[1:], uri)
+				cmd := exec.Command(execArgs[0], args...)
+
+				var byteOut []byte
+				byteOut, err = cmd.Output()
+				out = string(byteOut)
+			} else {
+				var stdout bytes.Buffer
+				err = wget(uri, &stdout)
+				out = stdout.String()
 			}
-			retCode = exitErr.Sys().(syscall.WaitStatus).ExitStatus()
-		}
-		if retCode != tt.retCode {
-			t.Errorf("%d. Want: %d; Got: %d", i, tt.retCode, retCode)
-		}
 
-		// Check stdout.
-		if string(out) != tt.stdout {
-			t.Errorf("%d. Want:\n%#v\nGot:\n%#v", i, tt.stdout, string(out))
-		}
+			// Check return code.
+			if tt.isErr && err == nil {
+				t.Errorf("wget(%s) got no error, but expected error", uri)
+			} else if !tt.isErr && err != nil {
+				t.Errorf("wget(%s) got error %v, but expected none", uri, err)
+			}
+
+			// Check stdout.
+			if out != tt.stdout {
+				t.Errorf("wget(%s) = %v, want %v", uri, out, tt.stdout)
+			}
+		})
 	}
 }
