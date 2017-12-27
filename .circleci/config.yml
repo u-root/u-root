@@ -16,6 +16,9 @@ workflows:
       - bb_amd64:
           requires:
             - dep
+      - bb_arm7:
+          requires:
+            - dep
       - bb_arm64:
           requires:
             - dep
@@ -107,6 +110,30 @@ jobs:
       - store_artifacts:
           path: /tmp/initramfs.linux_amd64.cpio.lzma
           destination: bb_initramfs.linux_amd64.cpio.lzma
+  bb_arm7:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+      - GOARCH: arm
+      - GOARM: 7
+    steps:
+      - checkout
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: ARM7 test build
+          command: ./u-root -build=bb
+      - run:
+          name: Compress cpio
+          command: lzma -9 /tmp/initramfs.linux_arm.cpio
+      - store_artifacts:
+          path: /tmp/initramfs.linux_arm.cpio.lzma
+          destination: bb_initramfs.linux_arm.cpio.lzma
   bb_arm64:
     docker:
       - image: circleci/golang:latest
