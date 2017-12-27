@@ -13,16 +13,23 @@ import (
 )
 
 const (
-	_       = iota
+	_ = iota
+	// K is 1024 byte
 	K int64 = 1 << (10 * iota)
+	// M is 1024 K
 	M
+	// G is 1024 M
 	G
+	// T is 1024 G
 	T
+	// P is 1024 T
 	P
+	// E is 1024 P
 	E
 )
 
-var DefaultUnits map[string]int64 = map[string]int64{
+// DefaultUnits is the default unit mapping as used by many standard cli-tools.
+var DefaultUnits = map[string]int64{
 	"B":  1,
 	"K":  K,
 	"M":  M,
@@ -30,6 +37,7 @@ var DefaultUnits map[string]int64 = map[string]int64{
 	"T":  T,
 	"P":  P,
 	"E":  E,
+	"kB": 1000,
 	"KB": 1000,
 	"MB": 1000 * 1000,
 	"GB": 1000 * 1000 * 1000,
@@ -42,8 +50,11 @@ var DefaultUnits map[string]int64 = map[string]int64{
 type Sign uint8
 
 const (
+	// None signals that no explicit sign is set.
 	None Sign = iota
+	// Negative signals that an explicit negative sign is set.
 	Negative
+	// Positive signals that an explicit positive sign is set.
 	Positive
 )
 
@@ -72,6 +83,7 @@ type Unit struct {
 	mapping map[string]int64
 }
 
+// NewUnit returns a new Unit given a mapping 'm'.
 func NewUnit(m map[string]int64) (*Unit, error) {
 	var found bool
 	for _, mult := range m {
@@ -86,6 +98,7 @@ func NewUnit(m map[string]int64) (*Unit, error) {
 	return &Unit{m}, nil
 }
 
+// MustNewUnit is like NewUnit but panics if the mapping 'm' is not valid.
 func MustNewUnit(m map[string]int64) *Unit {
 	u, err := NewUnit(m)
 	if err != nil {
@@ -94,6 +107,9 @@ func MustNewUnit(m map[string]int64) *Unit {
 	return u
 }
 
+// NewValue returns a Value based on a Unit. It's value is set to "value".
+// "value" is the initial value, an explicit sign can be set, but is usually
+// "None".
 func (u *Unit) NewValue(value int64, explicitSign Sign) (*Value, error) {
 	if (value < 0 && explicitSign == Positive) || (value > 0 && explicitSign == Negative) {
 		return nil, errors.New("Invalid value/explicitSign combination")
@@ -106,6 +122,8 @@ func (u *Unit) NewValue(value int64, explicitSign Sign) (*Value, error) {
 	}, nil
 }
 
+// MustNewValue is like NewValue but panics if the new Value could not be
+// generated.
 func (u *Unit) MustNewValue(value int64, explicitSign Sign) *Value {
 	v, err := u.NewValue(value, explicitSign)
 	if err != nil {
@@ -114,6 +132,9 @@ func (u *Unit) MustNewValue(value int64, explicitSign Sign) *Value {
 	return v
 }
 
+// ValueFromString converts the given string to a Value.
+// The string is allowed to have '+'/'-' as prefix, followed by a number, and
+// an optional unit character as defined in its mapping.
 func (u *Unit) ValueFromString(str string) (*Value, error) {
 	s := &Value{unit: u}
 

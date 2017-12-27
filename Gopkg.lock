@@ -120,7 +120,7 @@
   branch = "master"
   name = "github.com/rck/unit"
   packages = ["."]
-  revision = "d5a0eda2ef4e36af33d6e8742d1e9082112a8a9a"
+  revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
 
 [[projects]]
   branch = "master"

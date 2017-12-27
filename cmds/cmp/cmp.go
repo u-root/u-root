@@ -28,7 +28,8 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
+
+	"github.com/rck/unit"
 )
 
 var (
@@ -68,6 +69,12 @@ func openFile(name string) (*os.File, error) {
 	return f, err
 }
 
+// cmp is defined to fail with exit code 2
+func failf(format string, a ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, a...)
+	os.Exit(2)
+}
+
 func main() {
 	flag.Parse()
 	var offset [2]int64
@@ -76,34 +83,40 @@ func main() {
 
 	fnames := flag.Args()
 
+	cmpUnits := unit.DefaultUnits
+
+	off, err := unit.NewUnit(cmpUnits)
+	if err != nil {
+		failf("Could not create unit based on mapping: %v\n", err)
+	}
+
+	var v *unit.Value
 	switch len(fnames) {
 	case 2:
 	case 3:
-		offset[0], err = strconv.ParseInt(fnames[2], 0, 64)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad offset1: %s: %v\n", fnames[2], err)
-			return
+		if v, err = off.ValueFromString(fnames[2]); err != nil {
+			failf("bad offset1: %s: %v\n", fnames[2], err)
 		}
+		offset[0] = v.Value
 	case 4:
-		offset[0], err = strconv.ParseInt(fnames[2], 0, 64)
-		if err != nil {
-			log.Printf("bad offset1: %s: %v\n", fnames[2], err)
-			return
+		if v, err = off.ValueFromString(fnames[2]); err != nil {
+			failf("bad offset1: %s: %v\n", fnames[2], err)
 		}
-		offset[1], err = strconv.ParseInt(fnames[3], 0, 64)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad offset2: %s: %v\n", fnames[3], err)
-			return
+		offset[0] = v.Value
+
+		if v, err = off.ValueFromString(fnames[3]); err != nil {
+			failf("bad offset2: %s: %v\n", fnames[3], err)
 		}
+		offset[1] = v.Value
 	default:
-		log.Fatalf("expected two filenames (and one to two optional offsets), got %d", len(fnames))
+		failf("expected two filenames (and one to two optional offsets), got %d", len(fnames))
 	}
 
 	c := make([]chan byte, 2)
 
 	for i := 0; i < 2; i++ {
 		if f, err = openFile(fnames[i]); err != nil {
-			log.Fatalf("Failed to open %s: %v", fnames[i], err)
+			failf("Failed to open %s: %v", fnames[i], err)
 		}
 		c[i] = make(chan byte, 8192)
 		go emit(f, c[i], offset[i])
