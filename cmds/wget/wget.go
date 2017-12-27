@@ -25,10 +25,16 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 )
 
-func wget(arg string, w io.Writer) error {
+var (
+	outPath = flag.String("O", "", "output file")
+)
+
+func wget(arg, fileName string) error {
 	resp, err := http.Get(arg)
 	if err != nil {
 		return err
@@ -37,6 +43,13 @@ func wget(arg string, w io.Writer) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("non-200 HTTP status: %d", resp.StatusCode)
 	}
+
+	w, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
 	_, err = io.Copy(w, resp.Body)
 	return err
 }
@@ -48,13 +61,29 @@ func usage() {
 }
 
 func main() {
-	flag.Parse()
-	if flag.NArg() != 1 {
+	if flag.Parse(); flag.NArg() != 1 {
 		usage()
 	}
 
-	url := flag.Arg(0)
-	if err := wget(url, os.Stdout); err != nil {
-		log.Fatalf("%v\n", err)
+	argURL := flag.Arg(0)
+	if argURL == "" {
+		log.Fatalln("Empty URL")
+	}
+
+	url, err := url.Parse(argURL)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if *outPath == "" {
+		if url.Path != "" && url.Path[len(url.Path)-1] != '/' {
+			*outPath = path.Base(url.Path)
+		} else {
+			*outPath = "index.html"
+		}
+	}
+
+	if err := wget(argURL, *outPath); err != nil {
+		log.Fatalln(err)
 	}
 }

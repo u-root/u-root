@@ -78,10 +78,10 @@ func buildToolchain(opts BuildOpts) error {
 	return nil
 }
 
-func goListPkg(opts BuildOpts, pkg string, out *ArchiveFiles) *golang.ListPackage {
-	p, err := opts.Env.ListDeps(pkg)
+func goListPkg(opts BuildOpts, importPath string, out *ArchiveFiles) *golang.ListPackage {
+	p, err := opts.Env.Deps(importPath)
 	if err != nil {
-		log.Printf("Can't list Go dependencies for %v; ignoring.", pkg)
+		log.Printf("Can't list Go dependencies for %v; ignoring.", importPath)
 		return nil
 	}
 
