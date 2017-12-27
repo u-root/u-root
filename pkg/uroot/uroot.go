@@ -140,21 +140,28 @@ func CreateInitramfs(opts Opts) error {
 
 	// Add files from command line.
 	for _, file := range opts.ExtraFiles {
+		var src, dst string
 		parts := strings.SplitN(file, ":", 2)
-		path, err := filepath.Abs(filepath.Join(parts...))
-		if len(parts) != 2 {
-			parts = append(parts, parts[0][1:])
+		if len(parts) == 2 {
+			// treat the entry with the new src:dst syntax
+			src = parts[0]
+			dst = parts[1]
+		} else {
+			// plain old syntax
+			src = file
+			dst = file
 		}
+		src, err := filepath.Abs(src)
 		if err != nil {
-			return fmt.Errorf("couldn't find absolute path for %q: %v", file, err)
+			return fmt.Errorf("couldn't find absolute path for %q: %v", src, err)
 		}
-		if err := archive.AddFile(path, parts[1]); err != nil {
+		if err := archive.AddFile(src, dst); err != nil {
 			return fmt.Errorf("couldn't add %q to archive: %v", file, err)
 		}
 
 		// Pull dependencies in the case of binaries. If `path` is not
 		// a binary, `libs` will just be empty.
-		libs, err := ldd.List([]string{path})
+		libs, err := ldd.List([]string{src})
 		if err != nil {
 			return fmt.Errorf("couldn't list ldd dependencies for %q: %v", file, err)
 		}
