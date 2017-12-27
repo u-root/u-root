@@ -26,7 +26,7 @@ import (
 var (
 	dryrun  = flag.Bool("dryrun", false, "Do not do reboot system calls")
 	op      = "reboot"
-	opcodes = map[string]int{
+	opcodes = map[string]uint32{
 		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
 		"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
 		"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
@@ -57,7 +57,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if err := unix.Reboot(f); err != nil {
+	if err := unix.Reboot(int(f)); err != nil {
 		log.Fatalf(err.Error())
 	}
 }
