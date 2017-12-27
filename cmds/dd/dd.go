@@ -39,19 +39,19 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/rck/unit"
 )
 
 var (
-	ibs     = flag.Int64("ibs", 512, "Default input block size")
-	obs     = flag.Int64("obs", 512, "Default output block size")
-	bs      = flag.Int64("bs", 0, "Default input and output block size")
-	skip    = flag.Int64("skip", 0, "skip N ibs-sized blocks before reading")
-	seek    = flag.Int64("seek", 0, "seek N obs-sized blocks before writing")
-	conv    = flag.String("conv", "none", "Convert the file on a specific way, like notrunc")
-	count   = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
-	inName  = flag.String("if", "", "Input file")
-	outName = flag.String("of", "", "Output file")
-	status  = flag.String("status", "xfer", "display status of transfer (none|xfer|progress)")
+	ibs, obs, bs *unit.Value
+	skip         = flag.Int64("skip", 0, "skip N ibs-sized blocks before reading")
+	seek         = flag.Int64("seek", 0, "seek N obs-sized blocks before writing")
+	conv         = flag.String("conv", "none", "Convert the file on a specific way, like notrunc")
+	count        = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
+	inName       = flag.String("if", "", "Input file")
+	outName      = flag.String("of", "", "Output file")
+	status       = flag.String("status", "xfer", "display status of transfer (none|xfer|progress)")
 
 	bytesWritten int64 // access atomically, must be global for correct alignedness
 )
@@ -68,6 +68,22 @@ type chunkedBuffer struct {
 	length    int64
 	data      []byte
 	transform func([]byte) []byte
+}
+
+func init() {
+	ddUnits := unit.DefaultUnits
+	ddUnits["c"] = 1
+	ddUnits["w"] = 2
+	ddUnits["b"] = 512
+	delete(ddUnits, "B")
+
+	ibs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+	obs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+	bs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+
+	flag.Var(ibs, "ibs", "Default input block size")
+	flag.Var(obs, "obs", "Default output block size")
+	flag.Var(bs, "bs", "Default input and output block size")
 }
 
 // newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
@@ -435,20 +451,20 @@ func main() {
 	progress := progressBegin(*status, &bytesWritten)
 
 	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
-	if *bs > 0 {
-		*ibs = *bs
-		*obs = *bs
+	if bs.IsSet {
+		ibs = bs
+		obs = bs
 	}
 
-	in, err := inFile(*inName, *ibs, *skip, *count)
+	in, err := inFile(*inName, ibs.Value, *skip, *count)
 	if err != nil {
 		log.Fatal(err)
 	}
-	out, err := outFile(*outName, *obs, *seek)
+	out, err := outFile(*outName, obs.Value, *seek)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := parallelChunkedCopy(in, out, *ibs, *obs, convert); err != nil {
+	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, convert); err != nil {
 		log.Fatal(err)
 	}
 

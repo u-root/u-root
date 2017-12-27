@@ -14,7 +14,7 @@
 | comm           | -123h         |                 |                        |
 | cp             | -fiPRrvw      |                 |                        |
 | cpio           | -oitv         |                 |                        |
-| date           | -u            | -drs            |                        |
+| date           | -ur           | -ds             |                        |
 | dd             |               |                 |                        |
 | dhcp           |               |                 | u-root specific        |
 | dmesg          | -c            | -Clr            |                        |
@@ -46,7 +46,7 @@
 | lsmod          |               |                 |                        |
 | :x: man        |               | -k              | Not implemented yet!   |
 | mkdir          | -mpv          |                 |                        |
-| :x: mkfifo     |               |                 | Not implemented yet!   |
+| mkfifo         |               |                 |                        |
 | mknod          |               |                 |                        |
 | mount          | -rt           |                 |                        |
 | mv             |               | -nu             |                        |

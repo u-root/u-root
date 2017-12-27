@@ -194,8 +194,8 @@ func (p process) getTime() string {
 	jiffies := utime + stime
 
 	tsecs := jiffies / USER_HZ
-	secs := int(tsecs % 60)
-	mins := int((tsecs / 60) % 60)
+	secs := tsecs % 60
+	mins := (tsecs / 60) % 60
 	hrs := tsecs / 3600
 
 	return fmt.Sprintf("%02d:%02d:%02d", hrs, mins, secs)
@@ -203,15 +203,20 @@ func (p process) getTime() string {
 
 // Create a ProcessTable containing stats on all processes.
 func (pT *ProcessTable) LoadTable() error {
-	// Match all files and directories directly inside of /proc.
-	matches, err := filepath.Glob(filepath.Join(proc, "*"))
+	// Open and Readdir /proc.
+	f, err := os.Open("/proc")
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+	list, err := f.Readdir(-1)
 	if err != nil {
 		return err
 	}
 
-	for _, m := range matches {
+	for _, dir := range list {
 		// Filter out files and directories which are not numbers.
-		pid, err := strconv.Atoi(filepath.Base(m))
+		pid, err := strconv.Atoi(dir.Name())
 		if err != nil {
 			continue
 		}

@@ -1,6 +1,6 @@
 # Contributing to u-root
 
-We need help with this project, so contributions are welcome.
+We need help with this project. Contributions are very welcome. See the [roadmap](roadmap.md), open [issues](https://github.com/u-root/u-root/issues), and join us in [Slack](CONTRIBUTING.md#communication) to talk about your cool ideas for the project.
 
 ## Code of Conduct
 
@@ -9,8 +9,13 @@ Conduct](https://github.com/u-root/u-root/wiki/Code-of-Conduct).
 
 ## Communication
 
-- [Join slack](https://u-root.slack.com) (Get an invite [here](http://slack.u-root.com).)
+- [Slack](https://u-root.slack.com), sign up
+[here](http://slack.u-root.com/)
 - [Join the mailing list](https://groups.google.com/forum/#!forum/u-root)
+
+## Bugs
+
+- Please submit issues to https://github.com/u-root/u-root/issues
 
 ## Coding Style
 
@@ -33,10 +38,6 @@ We have a few rules not covered by these tools:
       dhcp "github.com/krolaw/dhcp4"
     )
     ```
-
-- ``u-root`` uses [govendor](https://github.com/kardianos/govendor)
-for its dependency management.  Re-vendoring will generally be
-handled by the [maintainers](MAINTAINERS.md).
 
 ## Developer Sign-Off
 
@@ -72,31 +73,35 @@ boot just a tad slower.
 Signed-off-by: Ronald G. Minnich <rminnich@gmail.com>
 ```
 
+## General Guidelines
+
+We want to implement some of the common commands that exist in upstream projects and elsewhere, but we don't need to copy broken behavior. CLI compatibility with existing implementations isn't required. We can add missing functionality and remove broken behavior from commands as needed.
+
+U-root needs to fit onto small flash storage, (eg. 8 or 16MB SPI). Be cognizant of of how your work is increasing u-root's footprint. The current goal is to keep the BB mode `lzma -9` compressed initramfs image under 3MB.
+
 ## Pull Requests
 
-We accept github pull requests.
+We accept GitHub pull requests.
 
-Fork the project on github, work in your fork and in branches, push
-these to your github fork, and when ready, do a github pull requests
+Fork the project on GitHub, work in your fork and in branches, push
+these to your GitHub fork, and when ready, do a GitHub pull requests
 against https://github.com/u-root/u-root.
+
+`u-root` uses [dep](https://github.com/golang/dep)
+for its dependency management. Please run `dep ensure`, `dep prune`, and commit Gopkg.toml, Gopkg.lock and vendor/ changes before opening a pull request.
+
+Every commit in your pull request needs to be able to build and pass the CI tests.
+
+If the pull request closes an issue please note it as: `"Fixes #NNN"`.
 
 ## Code Reviews
 
 Look at the area of code you're modifying, its history, and consider
-tagging some of the [maintainers](MAINTAINERS.md).  when doing a
+tagging some of the [maintainers](MAINTAINERS.md) when doing a
 pull request in order to instigate some code review.
 
 ## Quality Controls
 
-This needs enhancing.  ``scripts/`` and ``travis.sh`` include some
-initial plumbing.  [Travis CI](https://travis-ci.org/) will run on
-your github fork and its branches and also on your PR's to ``u-root``.
+[CircleCI](https://circleci.com/gh/u-root/u-root) is used to test and build commits in a pull request.
 
-## Discussion
-
-``u-root`` is on Slack as "u-root.slack.com".  Please sign up
-[here](http://slack.u-root.com/).
-
-Issues can be reported via Github.  A PR which addresses a Github issue can
-reference that with a simple "Fixes #NNN" on a line in the commit message,
-where "NNN" is the issue number.
+See [.circleci/config.yml](.circleci/config.yml) for the CI commands run. [test.sh](test.sh) is maintained as an easy way to run the commands locally. Additionally you can use [CircleCI's CLI tool](https://circleci.com/docs/2.0/local-jobs/) to run individual jobs from `.circlecl/config.yml` via Docker, eg. `circleci build --jobs dep`.

@@ -14,7 +14,8 @@ import (
 // without any flag
 func TestDateNoFlags(t *testing.T) {
 	t.Log("::  Printing date with default location (no flags)...")
-	d := date(time.Local)
+	n := time.Now()
+	d := date(n, time.Local)
 	t.Logf("Date: %v\n", d)
 	dParsed, err := time.Parse(time.UnixDate, d)
 	if err != nil {
@@ -30,7 +31,8 @@ func TestDateNoFlags(t *testing.T) {
 // using u flag
 func TestDateUniversal(t *testing.T) {
 	t.Log("::  Printing date with UTC (using -u flag)...")
-	d := date(time.UTC)
+	n := time.Now()
+	d := date(n, time.UTC)
 	t.Logf("Date: %v\n", d)
 	dParsed, err := time.Parse(time.UnixDate, d)
 	if err != nil {
@@ -57,8 +59,9 @@ func TestFormatParser(t *testing.T) {
 func TestDateMap(t *testing.T) {
 	t.Log(":: Test of DateMap formatting")
 	posixFormat := "%a %b %e %H:%M:%S %Z %Y"
-	test := dateMap(posixFormat)
-	expected := time.Now().Format(time.UnixDate)
+	n := time.Now()
+	test := dateMap(n, time.Local, posixFormat)
+	expected := n.Format(time.UnixDate)
 
 	if test != expected {
 		t.Errorf("Mismatch outputs; \nwant %v, \n got %v", expected, test)
@@ -87,9 +90,10 @@ func TestDateMapExamples(t *testing.T) {
 	}
 
 	t.Log(":: Sequence of examples for dateMap")
+	n := time.Now()
 	for _, test := range tests {
 		t.Logf(" Format: \n%v\n", test.format)
 		t.Logf("Example: \n%v\n", test.example)
-		t.Logf(" Output: \n%v\n", dateMap(test.format))
+		t.Logf(" Output: \n%v\n", dateMap(n, time.Local, test.format))
 	}
 }
