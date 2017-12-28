@@ -1,7 +1,5 @@
 #!/bin/bash
-if [ -z "${GOPATH}" ]; then
-        export GOPATH=/home/travis/gopath
-fi
+
 set -e
 
 echo "Check vendored dependencies"
