@@ -32,7 +32,7 @@ func littleDoctor(path string, fsType int64) error {
 		return err
 	}
 
-	if pathFS.Type != fsType {
+	if int64(pathFS.Type) != fsType {
 		return nil
 	}
 
@@ -132,7 +132,7 @@ func switchRoot(newRoot string, init string) error {
 		return fmt.Errorf("switch_root: failed statfs %v", err)
 	}
 
-	if err := littleDoctor("/", rootFS.Type); err != nil {
+	if err := littleDoctor("/", int64(rootFS.Type)); err != nil {
 		return fmt.Errorf("switch_root: failed Deletion of rootfs %v", err)
 	}
 

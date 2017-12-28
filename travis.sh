@@ -1,7 +1,5 @@
 #!/bin/bash
-if [ -z "${GOPATH}" ]; then
-        export GOPATH=/home/travis/gopath
-fi
+
 set -e
 
 echo "Check vendored dependencies"
@@ -26,6 +24,8 @@ cmp /tmp/initramfs.linux_amd64.cpio /tmp/i2
 # grow the build matrix.
 echo "-----------------------> ARM64 test build"
  (GOARCH=arm64 ./u-root -build=bb)
+echo "-----------------------> ARM7 test build"
+ (GOARCH=arm GOARM=7 ./u-root -build=bb)
 echo "-----------------------> ppc64le test build"
  (GOARCH=ppc64le ./u-root -build=bb)
 
