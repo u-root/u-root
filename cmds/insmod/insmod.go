@@ -34,6 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not open %q: %v", filename, err)
 	}
+	defer f.Close()
 
 	if err := kmodule.FileInit(f, options, 0); err != nil {
 		log.Fatalf("insmod: could not load %q: %v", filename, err)
