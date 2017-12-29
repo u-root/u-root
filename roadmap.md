@@ -48,6 +48,7 @@
 | mkdir          | -mpv          |                 |                        |
 | mkfifo         |               |                 |                        |
 | mknod          |               |                 |                        |
+| modprobe       | -n            |                 | Further options?       |
 | mount          | -rt           |                 |                        |
 | mv             |               | -nu             |                        |
 | netcat         |               |                 |                        |
