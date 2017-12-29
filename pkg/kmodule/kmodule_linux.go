@@ -1,9 +1,13 @@
 package kmodule
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -19,6 +23,7 @@ const (
 	MODULE_INIT_IGNORE_VERMAGIC = 0x2
 )
 
+// SyscallError contains an error message as well as the actual syscall Errno
 type SyscallError struct {
 	Msg   string
 	Errno syscall.Errno
@@ -88,6 +93,170 @@ func Delete(name string, flags uintptr) *SyscallError {
 
 	if _, _, e := unix.Syscall(unix.SYS_DELETE_MODULE, uintptr(unsafe.Pointer(modnameptr)), flags, 0); e != 0 {
 		return &SyscallError{Msg: fmt.Sprintf("could not delete module %q", name), Errno: e}
+	}
+
+	return nil
+}
+
+type modState uint8
+
+const (
+	unloaded modState = iota
+	loading
+	loaded
+)
+
+type dependency struct {
+	state modState
+	deps  []string
+}
+
+type depMap map[string]*dependency
+
+// ProbeOpts contains optional parameters to Probe.
+//
+// An empty ProbeOpts{} should lead to the default behavior.
+type ProbeOpts struct {
+	DryRun bool
+}
+
+// Probe loads the given kernel module and its dependencies.
+// It is calls ProbeOptions with the default ProbeOpts.
+func Probe(name string, modParams string) *SyscallError {
+	return ProbeOptions(name, modParams, ProbeOpts{})
+}
+
+// ProbeOptions loads the given kernel module and its dependencies.
+// This functions takes ProbeOpts.
+func ProbeOptions(name, modParams string, opts ProbeOpts) *SyscallError {
+	deps, err := genDeps()
+	if err != nil {
+		return &SyscallError{Msg: fmt.Sprintf("could not generate dependency map %v", err)}
+	}
+
+	modPath, err := findModPath(name, deps)
+	if err != nil {
+		return &SyscallError{Msg: fmt.Sprintf("could not find module path %q: %v", name, err)}
+	}
+
+	if !opts.DryRun {
+		// if the module is already loaded or does not have deps, or all of them are loaded
+		// then this succeeds and we are done
+		if err := loadModule(modPath, modParams, opts); err == nil {
+			return nil
+		}
+		// okay, we have to try the hard way and load dependencies first.
+	} else {
+		fmt.Println("Unique dependencies in load order, already loaded ones get skipped:")
+	}
+
+	deps[modPath].state = loading
+	for _, d := range deps[modPath].deps {
+		if err := loadDeps(d, deps, opts); err != nil {
+			return err
+		}
+	}
+	if err := loadModule(modPath, modParams, opts); err != nil {
+		return err
+	}
+	// we don't care to set the state to loaded
+	// deps[modPath].state = loaded
+	return nil
+}
+
+func genDeps() (depMap, error) {
+	deps := make(depMap)
+
+	var u unix.Utsname
+	if err := unix.Uname(&u); err != nil {
+		return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+	}
+	rel := string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
+
+	moduleDir := filepath.Join("/lib/modules", strings.TrimSpace(rel))
+
+	f, err := os.Open(filepath.Join(moduleDir, "modules.dep"))
+	if err != nil {
+		return nil, fmt.Errorf("could not open dependency file: %v", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		nameDeps := strings.Split(txt, ":")
+		modPath, modDeps := nameDeps[0], nameDeps[1]
+		modPath = filepath.Join(moduleDir, strings.TrimSpace(modPath))
+
+		var dependency dependency
+		if len(modDeps) > 0 {
+			for _, dep := range strings.Split(strings.TrimSpace(modDeps), " ") {
+				dependency.deps = append(dependency.deps, filepath.Join(moduleDir, dep))
+			}
+		}
+		deps[modPath] = &dependency
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return deps, nil
+}
+
+func findModPath(name string, m depMap) (string, error) {
+	for mp := range m {
+		if strings.HasSuffix(mp, name+".ko") {
+			return mp, nil
+		}
+	}
+
+	return "", fmt.Errorf("Could not find path for module %q", name)
+}
+
+func loadDeps(path string, m depMap, opts ProbeOpts) *SyscallError {
+	dependency, ok := m[path]
+	if !ok {
+		return &SyscallError{Msg: fmt.Sprintf("could not find dependency %q", path)}
+	}
+
+	if dependency.state == loading {
+		return &SyscallError{Msg: fmt.Sprintf("circular dependency! %q already LOADING", path)}
+	} else if dependency.state == loaded {
+		return nil
+	}
+
+	m[path].state = loading
+
+	for _, dep := range dependency.deps {
+		if err := loadDeps(dep, m, opts); err != nil {
+			return err
+		}
+	}
+
+	// done with dependencies, load module
+	if err := loadModule(path, "", opts); err != nil {
+		return err
+	}
+	m[path].state = loaded
+
+	return nil
+}
+
+func loadModule(path, modParams string, opts ProbeOpts) *SyscallError {
+	if opts.DryRun {
+		fmt.Println(path)
+		return nil
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return &SyscallError{Msg: fmt.Sprintf("could not open %q: %v", path, err)}
+	}
+	defer f.Close()
+
+	if err := FileInit(f, modParams, 0); err != nil && err.Errno != unix.EEXIST {
+		return err
 	}
 
 	return nil
