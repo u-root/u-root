@@ -47,3 +47,7 @@ required = [
 [[constraint]]
   branch = "master"
   name = "github.com/rck/unit"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/u-root/dhcp4"
