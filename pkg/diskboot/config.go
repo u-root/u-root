@@ -59,7 +59,7 @@ type Entry struct {
 
 // KexecLoad calls the appropriate kexec load routines based on the
 // type of Entry
-func (e *Entry) KexecLoad(mountPath, appendCmdline string) error {
+func (e *Entry) KexecLoad(mountPath, appendCmdline string, dryrun bool) error {
 	switch e.Type {
 	case Multiboot:
 		// TODO: implement using kexec_load syscall
@@ -92,7 +92,9 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string) error {
 				return fmt.Errorf("failed to load ramfs: %v", err)
 			}
 		}
-		return kexec.FileLoad(kernel, ramfs, cmdline)
+		if !dryrun {
+			return kexec.FileLoad(kernel, ramfs, cmdline)
+		}
 	}
 	return nil
 }
