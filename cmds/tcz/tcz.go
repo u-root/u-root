@@ -37,6 +37,7 @@ const (
 	LOOP_CTL_REMOVE   = 0x4C81
 	LOOP_CTL_GET_FREE = 0x4C82
 	SYS_ioctl         = 16
+	dirMode           = 0755
 )
 
 //http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
@@ -85,7 +86,7 @@ func clonetree(tree string) error {
 			if path[lt:] == "" {
 				return nil
 			}
-			if err := os.MkdirAll(path[lt:], 0700); err != nil {
+			if err := os.MkdirAll(path[lt:], dirMode); err != nil {
 				debug("Mkdir of %s failed: %v", path[lt:], err)
 				// TODO: EEXIST should not be an error. Ignore
 				// err for now. FIXME.
@@ -234,7 +235,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			continue
 		}
 
-		if err := os.MkdirAll(packagePath, 0700); err != nil {
+		if err := os.MkdirAll(packagePath, dirMode); err != nil {
 			l.Fatalf("Package directory %s at %s, can not be created: %v", tczName, packagePath, err)
 		}
 
@@ -306,11 +307,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
+	if err := os.MkdirAll(tczLocalPackageDir, dirMode); err != nil {
 		l.Fatal(err)
 	}
 
-	if err := os.MkdirAll("/tmp/tcloop", 0700); err != nil {
+	if err := os.MkdirAll("/tmp/tcloop", dirMode); err != nil {
 		l.Fatal(err)
 	}
 
