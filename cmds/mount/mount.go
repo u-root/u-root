@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/loop"
+	"github.com/u-root/u-root/pkg/mount"
 	"golang.org/x/sys/unix"
 )
 
@@ -127,8 +128,8 @@ func main() {
 		// mandatory parameter for the moment
 		log.Fatalf("No file system type provided!\nUsage: mount [-r] [-o mount options] -t fstype dev path")
 	}
-	if err := unix.Mount(dev, path, *fsType, flags, strings.Join(data, ",")); err != nil {
-		log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v", dev, path, *fsType, flags, err)
+	if err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), *ro); err != nil {
+		log.Printf("%v", err)
 		informIfUnknownFS(*fsType)
 		os.Exit(1)
 	}
