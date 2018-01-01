@@ -312,8 +312,10 @@ func main() {
 		l.Fatal(err)
 	}
 
-	if err := os.MkdirAll(tinyCoreRoot, dirMode); err != nil {
-		l.Fatal(err)
+	if *install {
+		if err := os.MkdirAll(tinyCoreRoot, dirMode); err != nil {
+			l.Fatal(err)
+		}
 	}
 
 	for _, cmdName := range packages {
