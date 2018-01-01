@@ -38,7 +38,6 @@ const (
 	LOOP_CTL_GET_FREE = 0x4C82
 	SYS_ioctl         = 16
 	dirMode           = 0755
-	tinyCoreRoot      = "/TinyCorePackages/tcloop"
 )
 
 //http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
@@ -229,7 +228,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	debug("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
 		cmdName := strings.Split(v, filepath.Ext(v))[0]
-		packagePath := filepath.Join(tinyCoreRoot, cmdName)
+		packagePath := filepath.Join("/tmp/tcloop", cmdName)
 
 		if _, err := os.Stat(packagePath); err == nil {
 			debug("PackagePath %s exists, skipping mount", packagePath)
@@ -261,7 +260,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
 		}
 
-		/* now mount it. The convention is the mount is in /tinyCoreRoot/packagename */
+		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
 		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
 			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
 		}
@@ -312,7 +311,7 @@ func main() {
 		l.Fatal(err)
 	}
 
-	if err := os.MkdirAll(tinyCoreRoot, dirMode); err != nil {
+	if err := os.MkdirAll("/tmp/tcloop", dirMode); err != nil {
 		l.Fatal(err)
 	}
 
