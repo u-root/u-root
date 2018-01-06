@@ -89,16 +89,18 @@ func (i *Initramfs) WriteRecord(r cpio.Record) error {
 }
 
 func (i *Initramfs) WriteFile(src string, dest string) error {
-	record, err := cpio.GetRecord(src)
+	record, err := cpio.GetResolvedRecord(src, true)
 	if err != nil {
 		return err
 	}
 
-	if record.Info.Mode&^0777 == syscall.S_IFDIR {
+	switch record.Info.Mode &^ 0777 {
+	case syscall.S_IFDIR:
 		return children(src, func(name string) error {
 			return i.WriteFile(filepath.Join(src, name), filepath.Join(dest, name))
 		})
-	} else {
+
+	default:
 		// Fix the name.
 		record.Name = dest
 		return i.WriteRecord(cpio.MakeReproducible(record))
