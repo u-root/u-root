@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 // Linux mode_t bits.
@@ -40,12 +42,19 @@ var modeMap = map[uint64]os.FileMode{
 	modeFIFO:    os.ModeNamedPipe,
 }
 
-// modes sets the modes, changing the easy ones first and the harder ones last.
-// In this way, we set as much as we can before bailing out. It's not an error
-// to not be able to set uid and gid, at least not yet.
-// For now we also ignore sticky bits.
+// setModes sets the modes, changing the easy ones first and the harder ones last.
+// In this way, we set as much as we can before bailing out.
+// N.B.: if you set something with S_ISUID, then change the owner,
+// the kernel (Linux, OSX, etc.) clears S_ISUID (a good idea). So, the simple thing:
+// Do the chmod operations in order of difficulty, and give up as soon as we fail.
+// Set the basic permissions -- not including SUID, GUID, etc.
+// Set the times
+// Set the owner
+// Set ALL the mode bits, in case we need to do SUID, etc. If we could not
+// set the owner, we won't even try this operation of course, so we won't
+// have SUID incorrectly set for the wrong user.
 func setModes(r Record) error {
-	if err := os.Chmod(r.Name, os.FileMode(perm(r))); err != nil {
+	if err := os.Chmod(r.Name, toFileMode(r)&os.ModePerm); err != nil {
 		return err
 	}
 	if err := os.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
@@ -54,8 +63,24 @@ func setModes(r Record) error {
 	if err := os.Chown(r.Name, int(r.UID), int(r.GID)); err != nil {
 		return err
 	}
-	// TODO: only set SUID and GUID if we can set the owner.
+	if err := os.Chmod(r.Name, toFileMode(r)); err != nil {
+		return err
+	}
 	return nil
+}
+
+func toFileMode(r Record) os.FileMode {
+	m := os.FileMode(perm(r))
+	if r.Mode&unix.S_ISUID != 0 {
+		m |= os.ModeSetuid
+	}
+	if r.Mode&unix.S_ISGID != 0 {
+		m |= os.ModeSetgid
+	}
+	if r.Mode&unix.S_ISVTX != 0 {
+		m |= os.ModeSticky
+	}
+	return m
 }
 
 func perm(r Record) uint32 {
@@ -66,7 +91,7 @@ func dev(r Record) int {
 	return int(r.Rmajor<<8 | r.Rminor)
 }
 
-func linuxModeToMode(m uint64) (os.FileMode, error) {
+func linuxModeToFileType(m uint64) (os.FileMode, error) {
 	if t, ok := modeMap[m&modeTypeMask]; ok {
 		return t, nil
 	}
@@ -74,7 +99,7 @@ func linuxModeToMode(m uint64) (os.FileMode, error) {
 }
 
 func CreateFile(f Record) error {
-	m, err := linuxModeToMode(f.Mode)
+	m, err := linuxModeToFileType(f.Mode)
 	if err != nil {
 		return err
 	}
@@ -112,7 +137,7 @@ func CreateFile(f Record) error {
 		return setModes(f)
 
 	case os.ModeDir:
-		if err := os.MkdirAll(f.Name, os.FileMode(perm(f))); err != nil {
+		if err := os.MkdirAll(f.Name, toFileMode(f)); err != nil {
 			return err
 		}
 		return setModes(f)

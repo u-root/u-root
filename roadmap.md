@@ -48,6 +48,7 @@
 | mkdir          | -mpv          |                 |                        |
 | mkfifo         |               |                 |                        |
 | mknod          |               |                 |                        |
+| modprobe       | -n            |                 | Further options?       |
 | mount          | -rt           |                 |                        |
 | mv             |               | -nu             |                        |
 | netcat         |               |                 |                        |
@@ -68,6 +69,7 @@
 | sort           | -or           | -bcfmnRu        |                        |
 | srvfiles       | -dhp          |                 | u-root specific        |
 | sync           |               |                 |                        |
+| tail           | -n            | -f              | u-root specific        |
 | tcz            | -ahpv         |                 | u-root specific        |
 | tee            | -ai           |                 |                        |
 | time           |               | -p              | Rush builtin           |

@@ -39,6 +39,12 @@
   revision = "6e570ed0a266b730a860ba1068090f683b2c213a"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
+
+[[projects]]
   branch = "v2"
   name = "github.com/go-yaml/yaml"
   packages = ["."]
@@ -108,7 +114,7 @@
   branch = "master"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
-  revision = "4e9e0ee19b60b13eb79915933f44d8ed5f268bdd"
+  revision = "0131db6d737cfbbfb678f8b7d92e55e27ce46224"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -129,6 +135,12 @@
   revision = "836a144573533ea4da4e6929c235fd348aed1c80"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/u-root/dhcp4"
+  packages = [".","client","opts","util"]
+  revision = "db4555713d0c163edf988998a4dd5514d9b01e91"
+
+[[projects]]
   branch = "addclient"
   name = "github.com/u-root/dhcp6"
   packages = ["."]
@@ -138,7 +150,7 @@
   branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [".","nl"]
-  revision = "f67b75edbf5e3bb7dfe70bb788610693a71be3d1"
+  revision = "ad19ca1a4c3354d3fdc67eac04b1e459038d9474"
 
 [[projects]]
   branch = "master"
@@ -156,13 +168,13 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["cast5","ed25519","ed25519/internal/edwards25519","md4","openpgp","openpgp/armor","openpgp/elgamal","openpgp/errors","openpgp/packet","openpgp/s2k","ripemd160","sha3"]
-  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
+  revision = "95a4943f35d008beabde8c11e5075a1b714e6419"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf","context","internal/iana","internal/socket","ipv6"]
-  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
+  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
   branch = "master"
@@ -174,17 +186,23 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
+  revision = "83801418e1b59fb1880e363299581ee543af32ca"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
   packages = ["go/ast/astutil","imports"]
-  revision = "04447353bc504b9a5c02eb227b9ecd252e64ea20"
+  revision = "f271d7a0f8cf389f3ee4f6bf8d68e716a60ea571"
+
+[[projects]]
+  name = "pack.ag/tftp"
+  packages = [".","netascii"]
+  revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
+  version = "v1.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "22ce9fa037a428293d3133f40f661ac3355c759ff33e1e87cd76e5a6c7b803bf"
+  inputs-digest = "119e445031a4a78275f705fb166c43e5914a967a06307a7cdcba7b248a935073"
   solver-name = "gps-cdcl"
   solver-version = 1

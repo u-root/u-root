@@ -137,12 +137,13 @@ func showLinkAddresses(w io.Writer, link netlink.Link) {
 		fmt.Fprintf(w, " scope %s %s\n", addrScopes[netlink.Scope(addr.Scope)], addr.Label)
 
 		var validLft, preferredLft string
-		if addr.PreferedLft == math.MaxUint32 {
+		// TODO: fix vishnavanda/netlink. *Lft should be uint32, not int.
+		if uint32(addr.PreferedLft) == math.MaxUint32 {
 			preferredLft = "forever"
 		} else {
 			preferredLft = fmt.Sprintf("%dsec", addr.PreferedLft)
 		}
-		if addr.ValidLft == math.MaxUint32 {
+		if uint32(addr.ValidLft) == math.MaxUint32 {
 			validLft = "forever"
 		} else {
 			validLft = fmt.Sprintf("%dsec", addr.ValidLft)

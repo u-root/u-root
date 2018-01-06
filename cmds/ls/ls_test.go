@@ -19,25 +19,31 @@ var tests = []struct {
 }{
 	{
 		flags: []string{},
-		out: `.
-d1
+		out: `d1
 f1
 f2
 f3?line 2
 `,
 	}, {
 		flags: []string{"-Q"},
-		out: `"."
-"d1"
+		out: `"d1"
 "f1"
 "f2"
 "f3\nline 2"
 `,
 	}, {
 		flags: []string{"-R"},
-		out: `.
-d1
+		out: `d1
 d1/f4
+f1
+f2
+f3?line 2
+`,
+	}, {
+		flags: []string{"-a"},
+		out: `.
+.f4
+d1
 f1
 f2
 f3?line 2
@@ -58,6 +64,7 @@ func TestLs(t *testing.T) {
 	os.Create("f1")
 	os.Create("f2")
 	os.Create("f3\nline 2")
+	os.Create(".f4")
 	os.Mkdir("d1", 0740)
 	os.Create("d1/f4")
 

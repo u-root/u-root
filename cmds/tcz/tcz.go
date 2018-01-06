@@ -37,6 +37,8 @@ const (
 	LOOP_CTL_REMOVE   = 0x4C81
 	LOOP_CTL_GET_FREE = 0x4C82
 	SYS_ioctl         = 16
+	dirMode           = 0755
+	tinyCoreRoot      = "/TinyCorePackages/tcloop"
 )
 
 //http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
@@ -85,7 +87,7 @@ func clonetree(tree string) error {
 			if path[lt:] == "" {
 				return nil
 			}
-			if err := os.MkdirAll(path[lt:], 0700); err != nil {
+			if err := os.MkdirAll(path[lt:], dirMode); err != nil {
 				debug("Mkdir of %s failed: %v", path[lt:], err)
 				// TODO: EEXIST should not be an error. Ignore
 				// err for now. FIXME.
@@ -227,14 +229,14 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	debug("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
 		cmdName := strings.Split(v, filepath.Ext(v))[0]
-		packagePath := filepath.Join("/tmp/tcloop", cmdName)
+		packagePath := filepath.Join(tinyCoreRoot, cmdName)
 
 		if _, err := os.Stat(packagePath); err == nil {
 			debug("PackagePath %s exists, skipping mount", packagePath)
 			continue
 		}
 
-		if err := os.MkdirAll(packagePath, 0700); err != nil {
+		if err := os.MkdirAll(packagePath, dirMode); err != nil {
 			l.Fatalf("Package directory %s at %s, can not be created: %v", tczName, packagePath, err)
 		}
 
@@ -259,7 +261,7 @@ func setupPackages(tczName string, deps map[string]bool) error {
 			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
 		}
 
-		/* now mount it. The convention is the mount is in /tmp/tcloop/packagename */
+		/* now mount it. The convention is the mount is in /tinyCoreRoot/packagename */
 		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
 			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
 		}
@@ -306,12 +308,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := os.MkdirAll(tczLocalPackageDir, 0700); err != nil {
+	if err := os.MkdirAll(tczLocalPackageDir, dirMode); err != nil {
 		l.Fatal(err)
 	}
 
-	if err := os.MkdirAll("/tmp/tcloop", 0700); err != nil {
-		l.Fatal(err)
+	if *install {
+		if err := os.MkdirAll(tinyCoreRoot, dirMode); err != nil {
+			l.Fatal(err)
+		}
 	}
 
 	for _, cmdName := range packages {
