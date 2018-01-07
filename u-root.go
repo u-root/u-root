@@ -134,5 +134,6 @@ func Main() error {
 	if err := uroot.CreateInitramfs(opts); err != nil {
 		return err
 	}
+	log.Printf("foo")
 	return nil
 }
