@@ -10,8 +10,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const Trailer = "TRAILER!!!"
@@ -44,14 +45,43 @@ func StaticRecord(contents []byte, info Info) Record {
 	}
 }
 
-// Symlink returns a symlink record at path pointing to target.
-func Symlink(path string, target string) Record {
+func StaticFile(name string, content string, perm uint64) Record {
+	return StaticRecord([]byte(content), Info{
+		Name: name,
+		Mode: unix.S_IFREG | perm,
+	})
+}
+
+// Symlink returns a symlink record at name pointing to target.
+func Symlink(name string, target string) Record {
 	return Record{
 		ReadCloser: ioutil.NopCloser(bytes.NewReader([]byte(target))),
 		Info: Info{
 			FileSize: uint64(len(target)),
-			Mode:     syscall.S_IFLNK | 0777,
-			Name:     path,
+			Mode:     unix.S_IFLNK | 0777,
+			Name:     name,
+		},
+	}
+}
+
+// Directory returns a directory record at `name`.
+func Directory(name string, mode uint64) Record {
+	return Record{
+		Info: Info{
+			Name: name,
+			Mode: unix.S_IFDIR | mode&^unix.S_IFMT,
+		},
+	}
+}
+
+// CharDev returns a character device record at `name`.
+func CharDev(name string, perm uint64, rmajor, rminor uint64) Record {
+	return Record{
+		Info: Info{
+			Name:   name,
+			Mode:   unix.S_IFCHR | perm,
+			Rmajor: rmajor,
+			Rminor: rminor,
 		},
 	}
 }
@@ -103,6 +133,32 @@ type Info struct {
 	Rmajor   uint64
 	Rminor   uint64
 	Name     string
+}
+
+func Equal(r Record, s Record) bool {
+	if r.Info != s.Info {
+		return false
+	}
+	return ReadCloserEqual(r.ReadCloser, s.ReadCloser)
+}
+
+func ReadCloserEqual(r1, r2 io.ReadCloser) bool {
+	var c, d []byte
+	var err error
+	if r1 != nil {
+		c, err = ioutil.ReadAll(r1)
+		if err != nil {
+			return false
+		}
+	}
+
+	if r2 != nil {
+		d, err = ioutil.ReadAll(r2)
+		if err != nil {
+			return false
+		}
+	}
+	return bytes.Equal(c, d)
 }
 
 func (i Info) String() string {
