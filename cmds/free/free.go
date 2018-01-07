@@ -47,6 +47,8 @@ const (
 	TB      = 40
 )
 
+// meminfo returns a mapping that represents the fields contained in
+// /proc/meminfo
 func meminfo() (map[string]int, error) {
 	buf, err := ioutil.ReadFile(MEMINFO_FILE)
 	if err != nil {
@@ -55,6 +57,8 @@ func meminfo() (map[string]int, error) {
 	return meminfoFromBytes(buf)
 }
 
+// meminfoFromBytes returns a mapping that represents the fields contained in a
+// byte stream with a content compatible with /proc/meminfo
 func meminfoFromBytes(buf []byte) (map[string]int, error) {
 	ret := make(map[string]int, 0)
 	for _, line := range bytes.Split(buf, []byte{'\n'}) {
@@ -76,6 +80,8 @@ func meminfoFromBytes(buf []byte) (map[string]int, error) {
 	return ret, nil
 }
 
+// missingRequiredFields checks if any of the specified fields are present in
+// the input map.
 func missingRequiredFields(m map[string]int, fields []string) bool {
 	for _, f := range fields {
 		if _, ok := m[f]; !ok {
@@ -86,6 +92,8 @@ func missingRequiredFields(m map[string]int, fields []string) bool {
 	return false
 }
 
+// printMem prints the physical memory information in the specified units. Only
+// the relevant fields will be used from the input map.
 func printMem(m map[string]int, unit Unit) error {
 	fields := []string{
 		"MemTotal",
@@ -117,6 +125,8 @@ func printMem(m map[string]int, unit Unit) error {
 	return nil
 }
 
+// printSwap prints the swap space information in the specified units. Only the
+// relevant fields will be used from the input map.
 func printSwap(m map[string]int, unit Unit) error {
 	fields := []string{
 		"SwapTotal",
@@ -133,6 +143,8 @@ func printSwap(m map[string]int, unit Unit) error {
 	return nil
 }
 
+// Free prints physical memory and swap space information. The fields will be
+// expressed with the specified unit (e.g. KB, MB)
 func Free(unit Unit) error {
 	m, err := meminfo()
 	if err != nil {
@@ -148,6 +160,8 @@ func Free(unit Unit) error {
 	return nil
 }
 
+// validateUnits checks that only one option of -b, -k, -m, -g, or -t has been
+// specified on the command line
 func validateUnits() bool {
 	count := 0
 	if *inBytes {
