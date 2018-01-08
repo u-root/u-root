@@ -22,6 +22,7 @@ var (
 	builders = map[string]Build{
 		"source": SourceBuild,
 		"bb":     BBBuild,
+		"binary": BinaryBuild,
 	}
 	archivers = map[string]Archiver{
 		"cpio": CPIOArchiver{
