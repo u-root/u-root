@@ -53,9 +53,18 @@ SReclaimable:     179852 kB`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = printSwap(m, KB)
+	si, err := getSwapInfo(m, &FreeConfig{Unit: KB})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if si.Total != 8464101376 {
+		t.Fatalf("Swap.Total: got %v, want 8464101376", si.Total)
+	}
+	if si.Used != 786432 {
+		t.Fatalf("Swap.Used: got %v, want 786432", si.Used)
+	}
+	if si.Free != 8463314944 {
+		t.Fatalf("Swap.Free: got %v, want 8463314944", si.Free)
 	}
 }
 
@@ -71,7 +80,7 @@ SReclaimable:     179852 kB`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = printSwap(m, KB)
+	_, err = getSwapInfo(m, &FreeConfig{Unit: KB})
 	// should error out for the missing field
 	if err == nil {
 		t.Fatal("printSwap: got no error when expecting one")
@@ -91,10 +100,17 @@ SReclaimable:     179852 kB`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = printMem(m, KB)
+	mmi, err := getMainMemInfo(m, &FreeConfig{Unit: KB})
 	if err != nil {
 		t.Fatal(err)
 	}
+	if mmi.Total != 8246247424 {
+		t.Fatalf("MainMem.Total: got %v, want 8246247424", mmi.Total)
+	}
+	if mmi.Free != 739037184 {
+		t.Fatalf("MainMem.Free: got %v, want 739037184", mmi.Free)
+	}
+	// TODO check Used, Shared, Cached, Buffer, Available
 }
 
 func TestPrintMemMissingFields(t *testing.T) {
@@ -109,7 +125,7 @@ SReclaimable:     179852 kB`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = printMem(m, KB)
+	_, err = getMainMemInfo(m, &FreeConfig{Unit: KB})
 	// should error out for the missing field
 	if err == nil {
 		t.Fatal("printMem: got no error when expecting one")

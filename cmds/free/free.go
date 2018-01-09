@@ -6,7 +6,7 @@
 // swap space.
 //
 // Synopsis:
-//     free [-k] [-m] [-g] [-t] [-h]
+//     free [-k] [-m] [-g] [-t] [-h] [-json]
 //
 // Description:
 //     Read memory information from /proc/meminfo and display a summary for
@@ -18,11 +18,13 @@
 //     -g: display the values in gibibytes
 //     -t: display the values in tebibytes
 //     -h: display the values in human-readable form
+//     -json: use JSON output
 
 package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -38,6 +40,7 @@ var inKB = flag.Bool("k", false, "Express the values in kibibytes (default)")
 var inMB = flag.Bool("m", false, "Express the values in mebibytes")
 var inGB = flag.Bool("g", false, "Express the values in gibibytes")
 var inTB = flag.Bool("t", false, "Express the values in tebibytes")
+var toJSON = flag.Bool("json", false, "Use JSON for output")
 
 type unit uint
 
@@ -56,16 +59,42 @@ const (
 
 var units = [...]string{"B", "K", "M", "G", "T"}
 
-type freeConfig struct {
+// FreeConfig is a structure used to configure the behaviour of Free()
+type FreeConfig struct {
 	Unit        unit
 	HumanOutput bool
+	ToJSON      bool
 }
 
-type memInfo map[string]uint64
+// the following types are used for JSON serialization
+type mainMemInfo struct {
+	Total     uint64 `json:"total"`
+	Used      uint64 `json:"used"`
+	Free      uint64 `json:"free"`
+	Shared    uint64 `json:"shared"`
+	Cached    uint64 `json:"cached"`
+	Buffers   uint64 `json:"buffers"`
+	Available uint64 `json:"available"`
+}
+
+type swapInfo struct {
+	Total uint64 `json:"total"`
+	Used  uint64 `json:"used"`
+	Free  uint64 `json:"free"`
+}
+
+// MemInfo represents the main memory and swap space informatio in a structured
+// manner, suitable for JSON encoding.
+type MemInfo struct {
+	Mem  mainMemInfo `json:"mem"`
+	Swap swapInfo    `json:"swap"`
+}
+
+type meminfomap map[string]uint64
 
 // meminfo returns a mapping that represents the fields contained in
 // /proc/meminfo
-func meminfo() (memInfo, error) {
+func meminfo() (meminfomap, error) {
 	buf, err := ioutil.ReadFile(meminfoFile)
 	if err != nil {
 		return nil, err
@@ -75,8 +104,8 @@ func meminfo() (memInfo, error) {
 
 // meminfoFromBytes returns a mapping that represents the fields contained in a
 // byte stream with a content compatible with /proc/meminfo
-func meminfoFromBytes(buf []byte) (memInfo, error) {
-	ret := make(memInfo, 0)
+func meminfoFromBytes(buf []byte) (meminfomap, error) {
+	ret := make(meminfomap, 0)
 	for _, line := range bytes.Split(buf, []byte{'\n'}) {
 		kv := bytes.SplitN(line, []byte{':'}, 2)
 		if len(kv) != 2 {
@@ -98,7 +127,7 @@ func meminfoFromBytes(buf []byte) (memInfo, error) {
 
 // missingRequiredFields checks if any of the specified fields are present in
 // the input map.
-func missingRequiredFields(m memInfo, fields []string) bool {
+func missingRequiredFields(m meminfomap, fields []string) bool {
 	for _, f := range fields {
 		if _, ok := m[f]; !ok {
 			log.Printf("Missing field '%v'", f)
@@ -140,9 +169,9 @@ func humanReadableValue(value uint64) string {
 }
 
 // formatValueByConfig formats a size in bytes in the appropriate unit,
-// depending on whether freeConfig specifies a human-readable format or a
+// depending on whether FreeConfig specifies a human-readable format or a
 // specific unit
-func formatValueByConfig(value uint64, config *freeConfig) string {
+func formatValueByConfig(value uint64, config *FreeConfig) string {
 	if config.HumanOutput {
 		return humanReadableValue(value)
 	}
@@ -150,9 +179,9 @@ func formatValueByConfig(value uint64, config *freeConfig) string {
 	return fmt.Sprintf("%v", value>>config.Unit)
 }
 
-// printMem prints the physical memory information in the specified units. Only
+// getMainMemInfo prints the physical memory information in the specified units. Only
 // the relevant fields will be used from the input map.
-func printMem(m memInfo, config *freeConfig) error {
+func getMainMemInfo(m meminfomap, config *FreeConfig) (*mainMemInfo, error) {
 	fields := []string{
 		"MemTotal",
 		"MemFree",
@@ -162,7 +191,7 @@ func printMem(m memInfo, config *freeConfig) error {
 		"MemAvailable",
 	}
 	if missingRequiredFields(m, fields) {
-		return fmt.Errorf("Missing required fields from meminfo")
+		return nil, fmt.Errorf("Missing required fields from meminfo")
 	}
 
 	// These values are expressed in kibibytes, convert to the desired unit
@@ -177,54 +206,80 @@ func printMem(m memInfo, config *freeConfig) error {
 	}
 	memAvailable := m["MemAvailable"] << KB
 
-	fmt.Printf("%-7s %11v %11v %11v %11v %11v %11v\n",
-		"Mem:",
-		formatValueByConfig(memTotal, config),
-		formatValueByConfig(memUsed, config),
-		formatValueByConfig(memFree, config),
-		formatValueByConfig(memShared, config),
-		formatValueByConfig(memBuffers+memCached, config),
-		formatValueByConfig(memAvailable, config),
-	)
-	return nil
+	mmi := mainMemInfo{
+		Total:     memTotal,
+		Used:      memUsed,
+		Free:      memFree,
+		Shared:    memShared,
+		Cached:    memCached,
+		Buffers:   memBuffers,
+		Available: memAvailable,
+	}
+	return &mmi, nil
 }
 
-// printSwap prints the swap space information in the specified units. Only the
+// getSwapInfo prints the swap space information in the specified units. Only the
 // relevant fields will be used from the input map.
-func printSwap(m memInfo, config *freeConfig) error {
+func getSwapInfo(m meminfomap, config *FreeConfig) (*swapInfo, error) {
 	fields := []string{
 		"SwapTotal",
 		"SwapFree",
 	}
 	if missingRequiredFields(m, fields) {
-		return fmt.Errorf("Missing required fields from meminfo")
+		return nil, fmt.Errorf("Missing required fields from meminfo")
 	}
 	// These values are expressed in kibibytes, convert to the desired unit
 	swapTotal := m["SwapTotal"] << KB
 	swapUsed := (m["SwapTotal"] - m["SwapFree"]) << KB
 	swapFree := m["SwapFree"] << KB
-	fmt.Printf("%-7s %11v %11v %11v\n",
-		"Swap:",
-		formatValueByConfig(swapTotal, config),
-		formatValueByConfig(swapUsed, config),
-		formatValueByConfig(swapFree, config),
-	)
-	return nil
+
+	si := swapInfo{
+		Total: swapTotal,
+		Used:  swapUsed,
+		Free:  swapFree,
+	}
+	return &si, nil
 }
 
 // Free prints physical memory and swap space information. The fields will be
 // expressed with the specified unit (e.g. KB, MB)
-func Free(config *freeConfig) error {
+func Free(config *FreeConfig) error {
 	m, err := meminfo()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("              total        used        free      shared  buff/cache   available\n")
-	if err := printMem(m, config); err != nil {
+	mmi, err := getMainMemInfo(m, config)
+	if err != nil {
 		return err
 	}
-	if err := printSwap(m, config); err != nil {
+	si, err := getSwapInfo(m, config)
+	if err != nil {
 		return err
+	}
+	mi := MemInfo{Mem: *mmi, Swap: *si}
+	if config.ToJSON {
+		jsonData, err := json.Marshal(mi)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(jsonData))
+	} else {
+		fmt.Printf("%-7s %11v %11v %11v %11v %11v %11v\n",
+			"Mem:",
+			formatValueByConfig(mmi.Total, config),
+			formatValueByConfig(mmi.Used, config),
+			formatValueByConfig(mmi.Free, config),
+			formatValueByConfig(mmi.Shared, config),
+			formatValueByConfig(mmi.Buffers+mmi.Cached, config),
+			formatValueByConfig(mmi.Available, config),
+		)
+		fmt.Printf("%-7s %11v %11v %11v\n",
+			"Swap:",
+			formatValueByConfig(si.Total, config),
+			formatValueByConfig(si.Used, config),
+			formatValueByConfig(si.Free, config),
+		)
 	}
 	return nil
 }
@@ -262,7 +317,7 @@ func main() {
 	if !validateUnits() {
 		log.Fatal("Options -k, -m, -g, -t and -h are mutually exclusive")
 	}
-	var config freeConfig
+	config := FreeConfig{ToJSON: *toJSON}
 	if *humanOutput {
 		config.HumanOutput = true
 	} else {
