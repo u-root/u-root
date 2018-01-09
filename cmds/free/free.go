@@ -6,7 +6,7 @@
 // swap space.
 //
 // Synopsis:
-//     free [-k] [-m] [-g] [-t]
+//     free [-k] [-m] [-g] [-t] [-h]
 //
 // Description:
 //     Read memory information from /proc/meminfo and display a summary for
@@ -17,6 +17,7 @@
 //     -m: display the values in mebibytes
 //     -g: display the values in gibibytes
 //     -t: display the values in tebibytes
+//     -h: display the values in human-readable form
 
 package main
 
@@ -259,7 +260,7 @@ func validateUnits() bool {
 func main() {
 	flag.Parse()
 	if !validateUnits() {
-		log.Fatal("Options -k, -m, -g and -t are mutually exclusive")
+		log.Fatal("Options -k, -m, -g, -t and -h are mutually exclusive")
 	}
 	var config freeConfig
 	if *humanOutput {
