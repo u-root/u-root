@@ -23,7 +23,7 @@
 | exit           |               |                 | Rush builtin           |
 | false          |               |                 |                        |
 | fmap           | -s            | -crudV          | u-root specific        |
-| free           | -bkmgt        | -h              |                        |
+| free           | -bkmgth       |                 |                        |
 | freq           | -cdorx        |                 | From plan 9            |
 | :x: gitclone   |               |                 | Not implemented yet!   |
 | gopxe          |               |                 | u-root specific        |
