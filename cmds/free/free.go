@@ -187,6 +187,7 @@ func getMainMemInfo(m meminfomap, config *FreeConfig) (*mainMemInfo, error) {
 		"MemFree",
 		"Buffers",
 		"Cached",
+		"Shmem",
 		"SReclaimable",
 		"MemAvailable",
 	}
@@ -248,7 +249,6 @@ func Free(config *FreeConfig) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("              total        used        free      shared  buff/cache   available\n")
 	mmi, err := getMainMemInfo(m, config)
 	if err != nil {
 		return err
@@ -265,6 +265,7 @@ func Free(config *FreeConfig) error {
 		}
 		fmt.Println(string(jsonData))
 	} else {
+		fmt.Printf("              total        used        free      shared  buff/cache   available\n")
 		fmt.Printf("%-7s %11v %11v %11v %11v %11v %11v\n",
 			"Mem:",
 			formatValueByConfig(mmi.Total, config),
