@@ -93,6 +93,7 @@ MemFree:          721716 kB
 MemAvailable:    2774100 kB
 Buffers:          244880 kB
 Cached:          3462124 kB
+Shmem:           1617788 kB
 SwapTotal:       8265724 kB
 SwapFree:        8264956 kB
 SReclaimable:     179852 kB`)
@@ -110,7 +111,21 @@ SReclaimable:     179852 kB`)
 	if mmi.Free != 739037184 {
 		t.Fatalf("MainMem.Free: got %v, want 739037184", mmi.Free)
 	}
-	// TODO check Used, Shared, Cached, Buffer, Available
+	if mmi.Used != 3527069696 {
+		t.Fatalf("MainMem.Used: got %v, want 3527069696", mmi.Used)
+	}
+	if mmi.Shared != 1656614912 {
+		t.Fatalf("MainMem.Shared: got %v, want 1656614912", mmi.Shared)
+	}
+	if mmi.Cached != 3729383424 {
+		t.Fatalf("MainMem.Cached: got %v, want 3729383424", mmi.Cached)
+	}
+	if mmi.Buffers != 250757120 {
+		t.Fatalf("MainMem.Buffers: got %v, want 250757120", mmi.Buffers)
+	}
+	if mmi.Available != 2840678400 {
+		t.Fatalf("MainMem.Available: got %v, want 2840678400", mmi.Available)
+	}
 }
 
 func TestPrintMemMissingFields(t *testing.T) {
