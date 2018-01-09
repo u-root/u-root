@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// free displays information about total, used and available physical memory and
-// swap space.
+// free reports usage information for physical memory and swap space.
 //
 // Synopsis:
 //     free [-k] [-m] [-g] [-t] [-h] [-json]
@@ -19,7 +18,6 @@
 //     -t: display the values in tebibytes
 //     -h: display the values in human-readable form
 //     -json: use JSON output
-
 package main
 
 import (
@@ -83,7 +81,7 @@ type swapInfo struct {
 	Free  uint64 `json:"free"`
 }
 
-// MemInfo represents the main memory and swap space informatio in a structured
+// MemInfo represents the main memory and swap space information in a structured
 // manner, suitable for JSON encoding.
 type MemInfo struct {
 	Mem  mainMemInfo `json:"mem"`
