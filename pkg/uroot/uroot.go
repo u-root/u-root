@@ -63,20 +63,10 @@ var DefaultRamfs = []cpio.Record{
 	cpio.StaticFile("etc/localtime", gmt0, 0644),
 }
 
-// Opts are the arguments to CreateInitramfs.
-type Opts struct {
-	// Env is the build environment (OS, arch, etc).
-	Env golang.Environ
-
+// Commands specifies a list of packages to build with a specific builder.
+type Commands struct {
 	// Builder is the build format.
-	//
-	// This can currently be "source" or "bb".
 	Builder Build
-
-	// Archiver is the initramfs archival format.
-	//
-	// Only "cpio" is currently supported.
-	Archiver Archiver
 
 	// Packages are the Go packages to add to the archive.
 	//
@@ -86,15 +76,33 @@ type Opts struct {
 	//   Globs of paths to Go package directories; e.g. ./cmds/*
 	Packages []string
 
+	// BinaryDir is the directory in which the resulting binaries are
+	// placed inside the initramfs.
+	BinaryDir string
+}
+
+// Opts are the arguments to CreateInitramfs.
+type Opts struct {
+	// Env is the build environment (OS, arch, etc).
+	Env golang.Environ
+
+	// Commands specify packages to build using a specific builder.
+	Commands []Commands
+
+	// TempDir is a temporary directory for builders to store files in.
+	TempDir string
+
+	// Archiver is the initramfs archival format.
+	//
+	// Only "cpio" is currently supported.
+	Archiver Archiver
+
 	// ExtraFiles are files to add to the archive in addition to the Go
 	// packages.
 	//
 	// Shared library dependencies will automatically also be added to the
 	// archive using ldd.
 	ExtraFiles []string
-
-	// TempDir is a temporary directory for the builder to store files in.
-	TempDir string
 
 	// OutputFile is the archive output file.
 	OutputFile ArchiveWriter
@@ -118,20 +126,23 @@ type Opts struct {
 //   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
 //   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   Globs of paths to Go package directories; e.g. ./cmds/*
-func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
+func (opts Opts) ResolvePackages(pkgs []string) ([]string, error) {
 	var importPaths []string
+
 	// Resolve file system paths to package import paths.
 	for _, pkg := range pkgs {
 		matches, err := filepath.Glob(pkg)
+		// Package name?
 		if len(matches) == 0 || err != nil {
-			if _, perr := env.Package(pkg); perr != nil {
+			if _, perr := opts.Env.Package(pkg); perr != nil {
 				return nil, fmt.Errorf("%q is neither package or path/glob: %v / %v", pkg, err, perr)
 			}
 			importPaths = append(importPaths, pkg)
 		}
 
+		// Filesystem glob?
 		for _, match := range matches {
-			p, err := env.PackageByPath(match)
+			p, err := opts.Env.PackageByPath(match)
 			if err != nil {
 				log.Printf("Skipping package %q: %v", match, err)
 			} else {
@@ -139,7 +150,6 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 			}
 		}
 	}
-
 	return importPaths, nil
 }
 
@@ -152,25 +162,30 @@ func CreateInitramfs(opts Opts) error {
 		return fmt.Errorf("must give output file")
 	}
 
-	importPaths, err := ResolvePackagePaths(opts.Env, opts.Packages)
-	if err != nil {
-		return err
-	}
+	files := NewArchiveFiles()
 
-	builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
-	if err != nil {
-		return err
-	}
+	// Add each build mode's commands to the archive.
+	for _, cmds := range opts.Commands {
+		importPaths, err := opts.ResolvePackages(cmds.Packages)
+		if err != nil {
+			return err
+		}
 
-	// Build the packages.
-	bOpts := BuildOpts{
-		Env:      opts.Env,
-		Packages: importPaths,
-		TempDir:  builderTmpDir,
-	}
-	files, err := opts.Builder(bOpts)
-	if err != nil {
-		return fmt.Errorf("error building %#v: %v", bOpts, err)
+		builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
+		if err != nil {
+			return err
+		}
+
+		// Build packages.
+		bOpts := BuildOpts{
+			Env:       opts.Env,
+			Packages:  importPaths,
+			TempDir:   builderTmpDir,
+			BinaryDir: cmds.BinaryDir,
+		}
+		if err := cmds.Builder(files, bOpts); err != nil {
+			return fmt.Errorf("error building %#v: %v", bOpts, err)
+		}
 	}
 
 	// Open the target initramfs file.
@@ -182,6 +197,7 @@ func CreateInitramfs(opts Opts) error {
 		DefaultRecords:  DefaultRamfs,
 	}
 
+	var err error
 	// Add files from command line.
 	for _, file := range opts.ExtraFiles {
 		var src, dst string
@@ -246,11 +262,27 @@ type BuildOpts struct {
 	//
 	// TempDir should contain no files.
 	TempDir string
+
+	// BinaryDir is the directory that built binaries are placed in in the
+	// initramfs.
+	//
+	// If BinaryDir is unspecified, each builder may choose their own
+	// default binary directory.
+	BinaryDir string
 }
 
-// Build uses the given options to build Go packages and returns a list of
-// files to be included in an initramfs archive.
-type Build func(BuildOpts) (ArchiveFiles, error)
+// TargetDir returns the binary directory if specified in BuildOpts, otherwise
+// the default def.
+func (b BuildOpts) TargetDir(def string) string {
+	if len(b.BinaryDir) == 0 {
+		return def
+	}
+	return b.BinaryDir
+}
+
+// Build uses the given options to build Go packages and adds its files to be
+// included in the initramfs to the given ArchiveFiles.
+type Build func(ArchiveFiles, BuildOpts) error
 
 // ArchiveOpts are the options for building the initramfs archive.
 type ArchiveOpts struct {

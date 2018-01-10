@@ -27,8 +27,8 @@ func TestBBBuild(t *testing.T) {
 		},
 		TempDir: dir,
 	}
-	af, err := BBBuild(opts)
-	if err != nil {
+	af := NewArchiveFiles()
+	if err := BBBuild(af, opts); err != nil {
 		t.Error(err)
 	}
 
