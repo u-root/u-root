@@ -288,11 +288,17 @@ func Main() error {
 	}
 
 	opts := uroot.Opts{
-		Env:             env,
-		Builder:         builder,
+		Env: env,
+		// The command-line tool only allows specifying one build mode
+		// right now.
+		Commands: []uroot.Commands{
+			{
+				Builder:  builder,
+				Packages: pkgs,
+			},
+		},
 		Archiver:        archiver,
 		TempDir:         tempDir,
-		Packages:        pkgs,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,
 		BaseArchive:     baseFile,

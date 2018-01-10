@@ -15,16 +15,20 @@ import (
 // SourceBuild is an implementation of Build that compiles the Go toolchain
 // (go, compile, link, asm) and an init process. It includes source files for
 // packages listed in `opts.Packages` to build from scratch.
-func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
-	af := NewArchiveFiles()
-
+func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
-		return ArchiveFiles{}, err
+		return err
 	}
 
+	var init string
 	log.Printf("Collecting package files and dependencies...")
 	deps := make(map[string]struct{})
 	for _, pkg := range opts.Packages {
+		if filepath.Base(pkg) == "init" {
+			init = pkg
+			continue
+		}
+
 		// Add high-level packages' src files to archive.
 		p := goListPkg(opts, pkg, &af)
 		if p == nil {
@@ -34,6 +38,7 @@ func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 			deps[d] = struct{}{}
 		}
 	}
+
 	// Add src files of dependencies to archive.
 	for dep := range deps {
 		goListPkg(opts, dep, &af)
@@ -42,19 +47,18 @@ func SourceBuild(opts BuildOpts) (ArchiveFiles, error) {
 	// Add Go toolchain.
 	log.Printf("Building go toolchain...")
 	if err := buildToolchain(opts); err != nil {
-		return ArchiveFiles{}, err
+		return err
 	}
 
-	// Build init.
-	if err := opts.Env.Build("github.com/u-root/u-root/cmds/init", filepath.Join(opts.TempDir, "init"), golang.BuildOpts{}); err != nil {
-		return ArchiveFiles{}, err
+	// Build init, if we are supposed to.
+	if len(init) > 0 {
+		if err := opts.Env.Build(init, filepath.Join(opts.TempDir, "init"), golang.BuildOpts{}); err != nil {
+			return err
+		}
 	}
 
 	// Add Go toolchain and init to archive.
-	if err := af.AddFile(opts.TempDir, ""); err != nil {
-		return ArchiveFiles{}, err
-	}
-	return af, nil
+	return af.AddFile(opts.TempDir, "")
 }
 
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
