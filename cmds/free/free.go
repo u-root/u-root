@@ -27,13 +27,15 @@ import (
 	"log"
 )
 
-var humanOutput = flag.Bool("h", false, "Human output: show automatically the shortest three-digits unit")
-var inBytes = flag.Bool("b", false, "Express the values in bytes")
-var inKB = flag.Bool("k", false, "Express the values in kibibytes (default)")
-var inMB = flag.Bool("m", false, "Express the values in mebibytes")
-var inGB = flag.Bool("g", false, "Express the values in gibibytes")
-var inTB = flag.Bool("t", false, "Express the values in tebibytes")
-var toJSON = flag.Bool("json", false, "Use JSON for output")
+var (
+	humanOutput = flag.Bool("h", false, "Human output: show automatically the shortest three-digits unit")
+	inBytes     = flag.Bool("b", false, "Express the values in bytes")
+	inKB        = flag.Bool("k", false, "Express the values in kibibytes (default)")
+	inMB        = flag.Bool("m", false, "Express the values in mebibytes")
+	inGB        = flag.Bool("g", false, "Express the values in gibibytes")
+	inTB        = flag.Bool("t", false, "Express the values in tebibytes")
+	toJSON      = flag.Bool("json", false, "Use JSON for output")
+)
 
 type unit uint
 
@@ -220,19 +222,18 @@ func main() {
 	if *humanOutput {
 		config.HumanOutput = true
 	} else {
-		var unit unit = KB
-		if *inBytes {
-			unit = B
-		} else if *inKB {
-			unit = KB
-		} else if *inMB {
-			unit = MB
-		} else if *inGB {
-			unit = GB
-		} else if *inTB {
-			unit = TB
+		switch {
+		case *inBytes:
+			config.Unit = B
+		case *inKB:
+			config.Unit = KB
+		case *inMB:
+			config.Unit = MB
+		case *inGB:
+			config.Unit = GB
+		case *inTB:
+			config.Unit = TB
 		}
-		config.Unit = unit
 	}
 
 	if err := Free(&config); err != nil {
