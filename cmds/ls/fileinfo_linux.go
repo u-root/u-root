@@ -126,7 +126,7 @@ func (fi longStringer) String() string {
 	replacer := strings.NewReplacer("Dc", "c", "D", "b")
 
 	// Ex: crw-rw-rw-  root  root  1, 3  Feb 6 09:31  null
-	pattern := "%[1]s\t%[2]s\t%[3]s\t%[4]d, %[5]s\t%[7]v\t%[8]s"
+	pattern := "%[1]s\t%[2]s\t%[3]s\t%[4]d, %[5]d\t%[7]v\t%[8]s"
 	var size string
 	if fi.major == 0 && fi.minor == 0 {
 		// Ex: -rw-rw----  myuser  myuser  1256  Feb 6 09:31  recipes.txt
