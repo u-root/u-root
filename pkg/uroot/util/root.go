@@ -131,7 +131,6 @@ var (
 		Dir{Name: "/go/pkg/linux_amd64", Mode: 0777},
 
 		Dir{Name: "/etc", Mode: 0777},
-		File{Name: "/etc/resolv.conf", Contents: `nameserver 8.8.8.8`, Mode: 0644},
 
 		Dir{Name: "/proc", Mode: 0555},
 		Mount{Target: "/proc", FSType: "proc"},
