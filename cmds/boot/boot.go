@@ -123,7 +123,7 @@ func mountEntry(d string, supportedFilesystem []string) error {
 			return err
 		}
 	}
-	verbose("No mount succceeded")
+	verbose("No mount succeeded")
 	return fmt.Errorf("Unable to mount any partition on %v", d)
 }
 
