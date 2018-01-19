@@ -40,7 +40,7 @@ func onePCI(dir string) (*PCI, error) {
 	return &pci, nil
 }
 
-// Read impliments the BusReader interface for type bus. Iterating over each
+// Read implements the BusReader interface for type bus. Iterating over each
 // PCI bus device.
 func (bus *bus) Read() (Devices, error) {
 	devices := make(Devices, len(bus.Devices))
