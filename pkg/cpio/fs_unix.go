@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
+	//"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -57,9 +57,9 @@ func setModes(r Record) error {
 	if err := os.Chmod(r.Name, toFileMode(r)&os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
+	/*if err := os.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
 		return err
-	}
+	}*/
 	if err := os.Chown(r.Name, int(r.UID), int(r.GID)); err != nil {
 		return err
 	}
@@ -99,25 +99,24 @@ func linuxModeToFileType(m uint64) (os.FileMode, error) {
 }
 
 func CreateFile(f Record) error {
+	return CreateFileInRoot(f, ".")
+}
+
+func CreateFileInRoot(f Record, rootDir string) error {
 	m, err := linuxModeToFileType(f.Mode)
 	if err != nil {
 		return err
 	}
 
-	dir, _ := filepath.Split(f.Name)
-	// The problem: many cpio archives do not specify the directories
-	// and hence the permissions. They just specify the whole path.
-	// In order to create files in these directories, we have to make them at least
+	f.Name = filepath.Clean(filepath.Join(rootDir, f.Name))
+	dir := filepath.Dir(f.Name)
+	// The problem: many cpio archives do not specify the directories and
+	// hence the permissions. They just specify the whole path.  In order
+	// to create files in these directories, we have to make them at least
 	// mode 755.
-	if dir != "" {
-		switch m {
-		case os.FileMode(0),
-			os.ModeDevice,
-			os.ModeCharDevice,
-			os.ModeSymlink:
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return err
-			}
+	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
 		}
 	}
 
