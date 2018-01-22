@@ -28,18 +28,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/d2g/dhcp4"
-  packages = ["."]
-  revision = "a1d1b6c41b1ce8a71a5121a9cee31809c4707d9c"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4client"
-  packages = ["."]
-  revision = "6e570ed0a266b730a860ba1068090f683b2c213a"
-
-[[projects]]
-  branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
@@ -82,18 +70,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/google/netstack"
-  packages = [
-    "ilist",
-    "tcpip",
-    "tcpip/buffer",
-    "tcpip/header",
-    "waiter"
-  ]
-  revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
-
-[[projects]]
-  branch = "master"
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
@@ -131,7 +107,11 @@
 [[projects]]
   branch = "master"
   name = "github.com/mdlayher/dhcp6"
-  packages = [".","dhcp6opts","internal/buffer"]
+  packages = [
+    ".",
+    "dhcp6opts",
+    "internal/buffer"
+  ]
   revision = "e26af0688e455a82b14ebdbecf43f87ead3c4624"
 
 [[projects]]

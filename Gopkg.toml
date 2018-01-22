@@ -4,19 +4,7 @@ required = [
 
 [[constraint]]
   branch = "master"
-  name = "github.com/d2g/dhcp4"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4client"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/google/uuid"
-
-[[constraint]]
-  branch = "addclient"
-  name = "github.com/u-root/dhcp6"
 
 [[constraint]]
   branch = "master"
