@@ -182,12 +182,6 @@
   revision = "a363d0fa829188311bbd955ad3f5cd9ee53926b6"
 
 [[projects]]
-  branch = "addclient"
-  name = "github.com/u-root/dhcp6"
-  packages = ["."]
-  revision = "e18b1a3a20894dd69ca88bfebb2ac0ff1afbae79"
-
-[[projects]]
   branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [
@@ -235,14 +229,8 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = [
-    "bpf",
-    "context",
-    "internal/iana",
-    "internal/socket",
-    "ipv6"
-  ]
-  revision = "f5dfe339be1d06f81b22525fe34671ee7d2c8904"
+  packages = ["context"]
+  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
   branch = "master"
