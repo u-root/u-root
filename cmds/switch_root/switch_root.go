@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"log"
 	"os"
 	"os/exec"
@@ -23,140 +24,201 @@ func usage() string {
 	return "switch_root [-h] [-V]\nswitch_root newroot init"
 }
 
-// littleDoctor recursively deletes everything at "path" that
-// is in the same file system as "fs".
-func littleDoctor(path string, fsType int64) error {
-	var pathFS syscall.Statfs_t
+// get device for file descriptor
+func getDev(fd int) (dev uint64, err error) {
+	var stat syscall.Stat_t
 
-	if err := syscall.Statfs(path, &pathFS); err != nil {
+	if err := syscall.Fstat(fd, &stat); err != nil {
+		return 0, err
+	}
+
+	return stat.Dev, nil
+}
+
+// check for the symlink bit
+func isSymlink(mode uint32) bool {
+	// numbers come from `man fstatat`
+	return (mode & 0170000) == 0120000
+}
+
+// recursively deletes a directory and everything in it
+// works with a file descriptor, can delete files not referenceable
+// any more (e.g. after chroot)
+// does not descent into mounts
+func recursiveDelete(fd int) error {
+	var rb syscall.Stat_t
+
+	if err := syscall.Fstat(fd, &rb); err != nil {
 		return err
 	}
 
-	if int64(pathFS.Type) != fsType {
-		return nil
-	}
+	// may need to call syscall.ReadDirent multiple times
+	for {
 
-	file, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("Could not open %s: %v", path, err)
-	}
-
-	if fileStat, err := file.Stat(); fileStat.IsDir() {
+		// get the subfiles in buff
+		buff := make([]byte, 4096)
+		var nbuff int
+		nbuff, err := syscall.ReadDirent(fd, buff)
 		if err != nil {
 			return err
 		}
-
-		names, err := file.Readdirnames(-1)
-		defer file.Close()
-		if err != nil {
-			return err
+		if nbuff <= 0 {
+			break
 		}
 
-		for _, fileName := range names {
+		_, _, names := syscall.ParseDirent(buff, nbuff, []string{})
 
-			if fileName == "." || fileName == ".." {
-				continue
-			}
+		for _, name := range names {
+			// try to open it with O_DIRECTORY to know if it's a directory
+			// NOTE O_DIRECTORY is linux specific
+			namefd, err := syscall.Openat(fd, name, syscall.O_DIRECTORY, syscall.O_RDWR)
+			if err != nil {
+				// just delete files
+				if err := unlinkat(fd, name, 0); err != nil {
+					return err
+				}
+			} else {
+				defer syscall.Close(namefd)
 
-			if err := littleDoctor(filepath.Join(path, fileName), fsType); err != nil {
-				return err
-			}
-			if err := os.Remove(path); err != nil {
-				return err
-			}
-		}
+				var nameStatT syscall.Stat_t
+				if err := fstatat(fd, name, &nameStatT, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+					return err
+				}
 
-	} else {
-		if err := os.Remove(path); err != nil {
-			return err
+				if fdDev, err := getDev(fd); err != nil {
+					return err
+				} else if fdDev != nameStatT.Dev {
+					// on different filesystem, don't go there
+					continue
+				}
+
+				// not actually a dir, but a symlink to a dir, treat like file and remove
+				if isSymlink(nameStatT.Mode) {
+					if err := unlinkat(fd, name, 0); err != nil {
+						return err
+					}
+					continue
+				}
+
+				// actual recursion
+				if err := recursiveDelete(namefd); err != nil {
+					return err
+				}
+				// back from recursion, dir is not empty, delete
+				if err := unlinkat(fd, name, AT_REMOVEDIR); err != nil {
+					return err
+				}
+			}
 		}
 	}
-
 	return nil
 }
 
-// execCommand will run the executable at "path" with PID 1.
+// do a proper exec to retain PID 1.
 // It returns an error if the command exits incorrectly.
 func execCommand(path string) error {
-	cmd := exec.Command(path)
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setctty:    true,
-		Setsid:     true,
-		Cloneflags: syscall.CLONE_THREAD | syscall.CLONE_NEWPID,
-	}
-
-	return cmd.Run()
+	return syscall.Exec(path, []string{path}, []string{})
 }
 
-// specialFS creates and mounts proc, sys and dev at the root level.
-func specialFS() error {
-
-	if err := syscall.Mkdir("/proc", 0); err != nil {
-		return err
+// check if dir is empty
+func isEmpty(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
 	}
+	defer f.Close()
 
-	if err := syscall.Mkdir("/sys", 0); err != nil {
-		return err
+	_, err = f.Readdirnames(1)
+	if err == io.EOF { // this means emtpy
+		return true, nil
 	}
-
-	if err := syscall.Mkdir("/dev", 0); err != nil {
-		return err
-	}
-
-	if err := syscall.Mount("", "/proc", "proc", 0, ""); err != nil {
-		return err
-	}
-
-	if err := syscall.Mount("", "/sys", "sysfs", 0, ""); err != nil {
-		return err
-	}
-
-	return syscall.Mount("", "/dev", "devtmpfs", 0, "")
+	return false, err
 }
 
-// switchRoot will recursive deletes current root, switches the current root to
-// the "newRoot", creates special filesystems (proc, sys and dev) in the new root
-// and execs "init"
+// check if file exists
+func isExists(name string) (bool, error) {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// moves a mountpoint
+func moveMount(oldPath string, newPath string) error {
+	return syscall.Mount(oldPath, newPath, "", syscall.MS_MOVE, "")
+}
+
+// specialFS creates and mounts proc, sys, and dev.
+func specialFS(newRoot string) error {
+	var mounts = []string{"/dev", "/proc", "/sys", "/run"}
+
+	for _, mount := range mounts {
+		path := newRoot + mount
+		// skip all mounting if the dir does not exists
+		if exists, err := isExists(mount); err != nil {
+			return err
+		} else if !exists {
+			fmt.Println("switch_root: Skipping", mount)
+			continue
+		}
+		// make sure the target dir exist and is empty
+		if exists, err := isExists(path); err != nil {
+			return err
+		} else if !exists {
+			if err := syscall.Mkdir(path, 0); err != nil {
+				return err
+			}
+		}
+		if empty, err := isEmpty(path); err != nil {
+			return err
+		} else if !empty {
+			return fmt.Errorf("%v must be empty", path)
+		}
+		// now move-mount
+		if err := moveMount(mount, path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// switchroot moves special mounts (dev, proc, sys, run) to the new dir,
+// then does a chroot, moves the root mount to the new dir and finally
+// DELETES EVERYTHING in the old dir and execs init
 func switchRoot(newRoot string, init string) error {
-	log.Printf("switch_root: Changing directory")
-	var rootFS syscall.Statfs_t
+	log.Printf("switch_root: moving mounts")
+	if err := specialFS(newRoot); err != nil {
+		return fmt.Errorf("switch_root: moving mounts failed %v", err)
+	}
 
+	log.Printf("switch_root: Changing directory")
 	if err := syscall.Chdir(newRoot); err != nil {
 		return fmt.Errorf("switch_root: failed change directory to new_root %v", err)
 	}
 
-	if err := syscall.Statfs("/", &rootFS); err != nil {
-		return fmt.Errorf("switch_root: failed statfs %v", err)
+	// Open "/" now, we need the file descriptor later
+	oldRoot, err := os.Open("/")
+	if err != nil {
+		return err
 	}
+	defer oldRoot.Close()
 
-	if err := littleDoctor("/", int64(rootFS.Type)); err != nil {
-		return fmt.Errorf("switch_root: failed Deletion of rootfs %v", err)
-	}
-
-	log.Printf("switch_root: Overmounting on /")
-
-	if err := syscall.Mount(".", "/", "ext4", syscall.MS_MOVE, ""); err != nil {
-		return fmt.Errorf("switch_root: fatal mount error %v", err)
+	log.Printf("switch_root: Moving /")
+	if err := moveMount(newRoot, "/"); err != nil {
+		return err
 	}
 
 	log.Printf("switch_root: Changing root!")
-
 	if err := syscall.Chroot("."); err != nil {
 		return fmt.Errorf("switch_root: fatal chroot error %v", err)
 	}
 
-	log.Printf("switch_root: returning to slash")
-	if err := syscall.Chdir("/"); err != nil {
-		return fmt.Errorf("switch_root: failed change directory to '/' %v", err)
-	}
-
-	log.Printf("switch_root: creating proc, dev and sys")
-
-	if err := specialFS(); err != nil {
-		return fmt.Errorf("switch_root: failed to create special files %v", err)
+	log.Printf("switch_root: Deleting old /")
+	if err := recursiveDelete(int(oldRoot.Fd())); err != nil {
+		panic(err)
 	}
 
 	log.Printf("switch_root: executing init")
@@ -165,7 +227,6 @@ func switchRoot(newRoot string, init string) error {
 	}
 
 	return nil
-
 }
 
 func main() {
