@@ -135,49 +135,37 @@ func isEmpty(name string) (bool, error) {
 	return false, err
 }
 
-// check if file exists
-func isExists(name string) (bool, error) {
-	if _, err := os.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
 // moves a mountpoint
 func moveMount(oldPath string, newPath string) error {
 	return syscall.Mount(oldPath, newPath, "", syscall.MS_MOVE, "")
 }
 
-// specialFS creates and mounts proc, sys, and dev.
+// moves common 'special' mounts if the exist
 func specialFS(newRoot string) error {
 	var mounts = []string{"/dev", "/proc", "/sys", "/run"}
 
 	for _, mount := range mounts {
-		path := newRoot + mount
+		path := filepath.Join(newRoot, mount)
 		// skip all mounting if the dir does not exists
-		if exists, err := isExists(mount); err != nil {
-			return err
-		} else if !exists {
+		if _, err := os.Stat(mount); os.IsNotExist(err) {
 			fmt.Println("switch_root: Skipping", mount)
 			continue
+		} else if err != nil {
+			return err
 		}
 		// make sure the target dir exist and is empty
-		if exists, err := isExists(path); err != nil {
-			return err
-		} else if !exists {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
 			if err := syscall.Mkdir(path, 0); err != nil {
 				return err
 			}
+		} else if err != nil {
+			return err
 		}
 		if empty, err := isEmpty(path); err != nil {
 			return err
 		} else if !empty {
 			return fmt.Errorf("%v must be empty", path)
 		}
-		// now move-mount
 		if err := moveMount(mount, path); err != nil {
 			return err
 		}
