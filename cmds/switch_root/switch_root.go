@@ -10,9 +10,9 @@ import (
 	"flag"
 	"fmt"
 	"golang.org/x/sys/unix"
+	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"syscall"
 )
