@@ -74,14 +74,14 @@ func recursiveDelete(fd int) error {
 			namefd, err := syscall.Openat(fd, name, syscall.O_DIRECTORY, syscall.O_RDWR)
 			if err != nil {
 				// just delete files
-				if err := unlinkat(fd, name, 0); err != nil {
+				if err := unix.Unlinkat(fd, name, 0); err != nil {
 					return err
 				}
 			} else {
 				defer syscall.Close(namefd)
 
-				var nameStatT syscall.Stat_t
-				if err := fstatat(fd, name, &nameStatT, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+				var nameStatT unix.Stat_t
+				if err := unix.Fstatat(fd, name, &nameStatT, unix.AT_SYMLINK_NOFOLLOW); err != nil {
 					return err
 				}
 
@@ -94,7 +94,7 @@ func recursiveDelete(fd int) error {
 
 				// not actually a dir, but a symlink to a dir, treat like file and remove
 				if isSymlink(nameStatT.Mode) {
-					if err := unlinkat(fd, name, 0); err != nil {
+					if err := unix.Unlinkat(fd, name, 0); err != nil {
 						return err
 					}
 					continue
@@ -105,7 +105,7 @@ func recursiveDelete(fd int) error {
 					return err
 				}
 				// back from recursion, dir is not empty, delete
-				if err := unlinkat(fd, name, AT_REMOVEDIR); err != nil {
+				if err := unix.Unlinkat(fd, name, unix.AT_REMOVEDIR); err != nil {
 					return err
 				}
 			}
