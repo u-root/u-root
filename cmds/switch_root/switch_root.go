@@ -35,80 +35,62 @@ func getDev(fd int) (dev uint64, err error) {
 	return stat.Dev, nil
 }
 
-// check for the symlink bit
-func isSymlink(mode uint32) bool {
-	// numbers come from `man fstatat`
-	return (mode & 0170000) == 0120000
-}
-
 // recursively deletes a directory and everything in it
 // works with a file descriptor, can delete files not referenceable
 // any more (e.g. after chroot)
 // does not descent into mounts
 func recursiveDelete(fd int) error {
-	var rb syscall.Stat_t
-
-	if err := syscall.Fstat(fd, &rb); err != nil {
+	parentDev, err := getDev(fd)
+	if err != nil {
 		return err
 	}
 
-	// may need to call syscall.ReadDirent multiple times
-	for {
+  // the file descriptor is already open, but allocating a os.File
+	// here for it makes reading the files in the dir so much nicer
+	dir := os.NewFile(uintptr(fd), "__ignored__") // filename is completely irrelevant
+	defer dir.Close()
+	names, err := dir.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
 
-		// get the subfiles in buff
-		buff := make([]byte, 4096)
-		var nbuff int
-		nbuff, err := syscall.ReadDirent(fd, buff)
-		if err != nil {
+	for _, name := range names {
+		// loop here, but handle loop in separate function to make defer work as expected
+		if err := recusiveDeleteInner(fd, parentDev, name); err != nil {
 			return err
 		}
-		if nbuff <= 0 {
-			break
+	}
+	return nil
+}
+
+// don't call this directly, this function is the loop content of recursiveDelete
+func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error {
+	// O_DIRECTORY and O_NOFOLLOW make this open fail for all files and all symlinks (even when pointing to a dir)
+	// we need to filter out symlinks because getDev later follows them
+	childFd, err := syscall.Openat(parentFd, childName, syscall.O_DIRECTORY | syscall.O_NOFOLLOW, syscall.O_RDWR)
+	if err != nil {
+		// either file or symlink, delete in any case
+		if err := unix.Unlinkat(parentFd, childName, 0); err != nil {
+			return err
+		}
+	} else {
+		// open succeeded, which means it is a real directory
+		defer unix.Close(childFd)
+
+		// don't descent into other file systems
+		if childFdDev, err := getDev(childFd); err != nil {
+			return err
+		} else if childFdDev != parentDev {
+			// this means continue in recursiveDelete
+			return nil
 		}
 
-		_, _, names := syscall.ParseDirent(buff, nbuff, []string{})
-
-		for _, name := range names {
-			// try to open it with O_DIRECTORY to know if it's a directory
-			// NOTE O_DIRECTORY is linux specific
-			namefd, err := syscall.Openat(fd, name, syscall.O_DIRECTORY, syscall.O_RDWR)
-			if err != nil {
-				// just delete files
-				if err := unix.Unlinkat(fd, name, 0); err != nil {
-					return err
-				}
-			} else {
-				defer syscall.Close(namefd)
-
-				var nameStatT unix.Stat_t
-				if err := unix.Fstatat(fd, name, &nameStatT, unix.AT_SYMLINK_NOFOLLOW); err != nil {
-					return err
-				}
-
-				if fdDev, err := getDev(fd); err != nil {
-					return err
-				} else if fdDev != nameStatT.Dev {
-					// on different filesystem, don't go there
-					continue
-				}
-
-				// not actually a dir, but a symlink to a dir, treat like file and remove
-				if isSymlink(nameStatT.Mode) {
-					if err := unix.Unlinkat(fd, name, 0); err != nil {
-						return err
-					}
-					continue
-				}
-
-				// actual recursion
-				if err := recursiveDelete(namefd); err != nil {
-					return err
-				}
-				// back from recursion, dir is not empty, delete
-				if err := unix.Unlinkat(fd, name, unix.AT_REMOVEDIR); err != nil {
-					return err
-				}
-			}
+		if err:= recursiveDelete(childFd); err != nil {
+			return err
+		}
+		// back from recursion, dir is now empty, delete
+		if err := unix.Unlinkat(parentFd, childName, unix.AT_REMOVEDIR); err != nil {
+			return err
 		}
 	}
 	return nil
