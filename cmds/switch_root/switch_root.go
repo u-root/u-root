@@ -47,7 +47,7 @@ func recursiveDelete(fd int) error {
 		return err
 	}
 
-  // The file descriptor is already open, but allocating a os.File
+	// The file descriptor is already open, but allocating a os.File
 	// here makes reading the files in the dir so much nicer.
 	dir := os.NewFile(uintptr(fd), "__ignored__")
 	defer dir.Close()
@@ -72,7 +72,7 @@ func recursiveDelete(fd int) error {
 func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error {
 	// O_DIRECTORY and O_NOFOLLOW make this open fail for all files and all symlinks (even when pointing to a dir).
 	// We need to filter out symlinks because getDev later follows them.
-	childFd, err := unix.Openat(parentFd, childName, unix.O_DIRECTORY | unix.O_NOFOLLOW, unix.O_RDWR)
+	childFd, err := unix.Openat(parentFd, childName, unix.O_DIRECTORY|unix.O_NOFOLLOW, unix.O_RDWR)
 	if err != nil {
 		// childName points to either a file or a symlink, delete in any case.
 		if err := unix.Unlinkat(parentFd, childName, 0); err != nil {
@@ -90,7 +90,7 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 			return nil
 		}
 
-		if err:= recursiveDelete(childFd); err != nil {
+		if err := recursiveDelete(childFd); err != nil {
 			return err
 		}
 		// Back from recursion, the directory is now empty, delete.
