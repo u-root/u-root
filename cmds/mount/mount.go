@@ -14,41 +14,81 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/loop"
 	"golang.org/x/sys/unix"
 )
 
+type mountOptions []string
+
+func (o *mountOptions) String() string {
+	return strings.Join(*o, ",")
+}
+
+func (o *mountOptions) Set(value string) error {
+	for _, option := range strings.Split(value, ",") {
+		*o = append(*o, option)
+	}
+	return nil
+}
+
 var (
-	ro     = flag.Bool("r", false, "Read only mount")
-	fsType = flag.String("t", "", "File system type")
-	opt    = flag.String("o", "", "Specify mount options")
+	ro      = flag.Bool("r", false, "Read only mount")
+	fsType  = flag.String("t", "", "File system type")
+	options mountOptions
 )
 
+func init() {
+	flag.Var(&options, "o", "Comma separated list of mount options")
+}
+
+func loopSetup(filename string) (loopDevice string, err error) {
+	loopDevice, err = loop.FindDevice()
+	if err != nil {
+		return "", err
+	}
+	if err := loop.SetFdFiles(loopDevice, filename); err != nil {
+		return "", err
+	}
+	return loopDevice, nil
+}
+
 func main() {
-	// The need for this conversion is not clear to me, but we get an overflow error
-	// on ARM without it.
-	flags := uintptr(unix.MS_MGC_VAL)
 	flag.Parse()
 	a := flag.Args()
 	if len(a) < 2 {
-		log.Fatalf("Usage: mount [-r] [-t fstype] dev path")
+		flag.Usage()
+		os.Exit(1)
 	}
+
 	dev := a[0]
 	path := a[1]
+	var flags uintptr
 	var data []string
-	for _, o := range strings.Split(*opt, ",") {
-		f, ok := opts[o]
-		if !ok {
-			data = append(data, o)
-			continue
+	var err error
+	for _, option := range options {
+		switch option {
+		case "loop":
+			dev, err = loopSetup(dev)
+			if err != nil {
+				log.Fatal("Error setting loop device:", err)
+			}
+		default:
+			f, ok := opts[option]
+			if !ok {
+				data = append(data, option)
+				continue
+			}
+			flags |= f
 		}
-		flags |= f
 	}
 	if *ro {
 		flags |= unix.MS_RDONLY
 	}
-	if err := unix.Mount(a[0], a[1], *fsType, flags, strings.Join(data, ",")); err != nil {
+
+	if err := unix.Mount(dev, path, *fsType, flags, strings.Join(data, ",")); err != nil {
 		log.Fatalf("Mount :%s: on :%s: type :%s: flags %x: %v\n", dev, path, *fsType, flags, err)
 	}
 }
