@@ -89,24 +89,19 @@ func Main() error {
 	}
 
 	// Open the target initramfs file.
-	filename := *outputPath
-	if filename == "" {
-		filename = fmt.Sprintf("/tmp/initramfs.%s_%s.%s", env.GOOS, env.GOARCH, archiver.DefaultExtension())
-	}
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	w, err := archiver.OpenWriter(*outputPath, env.GOOS, env.GOARCH)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	var baseFile *os.File
+	var baseFile uroot.ArchiveReader
 	if *base != "" {
-		var err error
-		baseFile, err = os.Open(*base)
+		bf, err := os.Open(*base)
 		if err != nil {
 			return err
 		}
-		defer baseFile.Close()
+		defer bf.Close()
+		baseFile = archiver.Reader(bf)
 	}
 
 	opts := uroot.Opts{
@@ -116,13 +111,12 @@ func Main() error {
 		TempDir:         tempDir,
 		Packages:        pkgs,
 		ExtraFiles:      strings.Fields(*extraFiles),
-		OutputFile:      f,
+		OutputFile:      w,
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 	}
 	if err := uroot.CreateInitramfs(opts); err != nil {
 		return err
 	}
-	log.Printf("Filename is %s", filename)
 	return nil
 }

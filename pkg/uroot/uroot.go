@@ -6,11 +6,11 @@ package uroot
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -18,17 +18,50 @@ import (
 	"github.com/u-root/u-root/pkg/ldd"
 )
 
+// These constants are used in DefaultRamfs.
+const (
+	// This is the literal timezone file for GMT-0. Given that we have no
+	// idea where we will be running, GMT seems a reasonable guess. If it
+	// matters, setup code should download and change this to something
+	// else.
+	gmt0 = "TZif2\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00GMT\x00\x00\x00TZif2\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x04\xf8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00GMT\x00\x00\x00\nGMT0\n"
+
+	nameserver = "nameserver 8.8.8.8\n"
+)
+
 var (
 	builders = map[string]Build{
 		"source": SourceBuild,
 		"bb":     BBBuild,
+		"binary": BinaryBuild,
 	}
 	archivers = map[string]Archiver{
 		"cpio": CPIOArchiver{
 			Format: "newc",
 		},
+		"dir": DirArchiver{},
 	}
 )
+
+// DefaultRamfs are files that are contained in all u-root initramfs archives
+// by default.
+var DefaultRamfs = []cpio.Record{
+	cpio.Directory("tcz", 0755),
+	cpio.Directory("etc", 0755),
+	cpio.Directory("dev", 0755),
+	cpio.Directory("ubin", 0755),
+	cpio.Directory("usr", 0755),
+	cpio.Directory("usr/lib", 0755),
+	cpio.Directory("lib64", 0755),
+	cpio.Directory("bin", 0755),
+	cpio.CharDev("dev/console", 0600, 5, 1),
+	cpio.CharDev("dev/tty", 0666, 5, 0),
+	cpio.CharDev("dev/null", 0666, 1, 3),
+	cpio.CharDev("dev/port", 0640, 1, 4),
+	cpio.CharDev("dev/urandom", 0666, 1, 9),
+	cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
+	cpio.StaticFile("etc/localtime", gmt0, 0644),
+}
 
 // Opts are the arguments to CreateInitramfs.
 type Opts struct {
@@ -64,11 +97,11 @@ type Opts struct {
 	TempDir string
 
 	// OutputFile is the archive output file.
-	OutputFile *os.File
+	OutputFile ArchiveWriter
 
 	// BaseArchive is an existing initramfs to include in the resulting
 	// initramfs.
-	BaseArchive *os.File
+	BaseArchive ArchiveReader
 
 	// UseExistingInit determines whether the existing init from
 	// BaseArchive should be used.
@@ -124,18 +157,13 @@ func CreateInitramfs(opts Opts) error {
 		return fmt.Errorf("error building %#v: %v", bOpts, err)
 	}
 
-	archiveTmpDir, err := ioutil.TempDir(opts.TempDir, "archive")
-	if err != nil {
-		return err
-	}
-
 	// Open the target initramfs file.
 	archive := ArchiveOpts{
 		ArchiveFiles:    files,
 		OutputFile:      opts.OutputFile,
 		BaseArchive:     opts.BaseArchive,
 		UseExistingInit: opts.UseExistingInit,
-		TempDir:         archiveTmpDir,
+		DefaultRecords:  DefaultRamfs,
 	}
 
 	// Add files from command line.
@@ -173,7 +201,7 @@ func CreateInitramfs(opts Opts) error {
 	}
 
 	// Finally, write the archive.
-	if err := opts.Archiver.Archive(archive); err != nil {
+	if err := archive.Write(); err != nil {
 		return fmt.Errorf("error archiving: %v", err)
 	}
 	return nil
@@ -205,21 +233,21 @@ type Build func(BuildOpts) (ArchiveFiles, error)
 // ArchiveOpts are the options for building the initramfs archive.
 type ArchiveOpts struct {
 	// ArchiveFiles are the files to be included.
+	//
+	// Files in ArchiveFiles generally have priority over files in
+	// DefaultRecords or BaseArchive.
 	ArchiveFiles
 
-	// TempDir is a temporary directory that can be used at the archiver's
-	// discretion.
-	//
-	// TempDir should contain no files.
-	TempDir string
+	// DefaultRecords is a set of files to be included in the initramfs.
+	DefaultRecords []cpio.Record
 
 	// OutputFile is the file to write to.
-	OutputFile *os.File
+	OutputFile ArchiveWriter
 
 	// BaseArchive is an existing archive to add files to.
 	//
 	// BaseArchive may be nil.
-	BaseArchive *os.File
+	BaseArchive ArchiveReader
 
 	// UseExistingInit determines whether the init from BaseArchive is used
 	// or not, if BaseArchive is specified.
@@ -232,11 +260,29 @@ type ArchiveOpts struct {
 // Archiver is an archive format that builds an archive using a given set of
 // files.
 type Archiver interface {
-	// Archive builds an archive file.
-	Archive(ArchiveOpts) error
+	// OpenWriter opens an archive writer at `path`.
+	//
+	// If `path` is unspecified, implementations may choose an arbitrary
+	// default location, potentially based on `goos` and `goarch`.
+	OpenWriter(path, goos, goarch string) (ArchiveWriter, error)
 
-	// DefaultExtension is the default file extension of the archive format.
-	DefaultExtension() string
+	// Reader returns an ArchiveReader wrapper using the given io.Reader.
+	Reader(io.ReaderAt) ArchiveReader
+}
+
+// ArchiveWriter is an object that files can be written to.
+type ArchiveWriter interface {
+	// WriteRecord writes the given file record.
+	WriteRecord(cpio.Record) error
+
+	// Finish finishes the archive.
+	Finish() error
+}
+
+// ArchiveReader is an object that files can be read from.
+type ArchiveReader interface {
+	// ReadRecord reads a file record.
+	ReadRecord() (cpio.Record, error)
 }
 
 // GetBuilder returns the Build function for the named build mode.
@@ -255,91 +301,6 @@ func GetArchiver(name string) (Archiver, error) {
 		return nil, fmt.Errorf("couldn't find archival format %q", name)
 	}
 	return archiver, nil
-}
-
-// ArchiveFiles are host files and records to add to
-type ArchiveFiles struct {
-	// Files is a map of relative archive path -> absolute host file path.
-	Files map[string]string
-
-	// Records is a map of relative archive path -> Record to use.
-	//
-	// TODO: While the only archive mode is cpio, this will be a
-	// cpio.Record. If or when there is another archival mode, we can add a
-	// similar uroot.Record type.
-	Records map[string]cpio.Record
-}
-
-// NewArchiveFiles returns a new archive files map.
-func NewArchiveFiles() ArchiveFiles {
-	return ArchiveFiles{
-		Files:   make(map[string]string),
-		Records: make(map[string]cpio.Record),
-	}
-}
-
-// SortedKeys returns a list of sorted paths in the archive.
-func (af ArchiveFiles) SortedKeys() []string {
-	keys := make([]string, 0, len(af.Files)+len(af.Records))
-	for dest := range af.Files {
-		keys = append(keys, dest)
-	}
-	for dest := range af.Records {
-		keys = append(keys, dest)
-	}
-	sort.Sort(sort.StringSlice(keys))
-	return keys
-}
-
-// AddFile adds a host file at `src` into the archive at `dest`.
-func (af ArchiveFiles) AddFile(src string, dest string) error {
-	if filepath.IsAbs(dest) {
-		return fmt.Errorf("cannot add absolute path %q (from %q) to archive", dest, src)
-	}
-	if !filepath.IsAbs(src) {
-		return fmt.Errorf("source file %q (-> %q) must be absolute", src, dest)
-	}
-
-	if _, ok := af.Records[dest]; ok {
-		return fmt.Errorf("record for %q already exists in archive", dest)
-	}
-	if srcFile, ok := af.Files[dest]; ok {
-		// Just a duplicate.
-		if src == srcFile {
-			return nil
-		}
-		return fmt.Errorf("archive file %q already comes from %q", dest, src)
-	}
-
-	af.Files[dest] = src
-	return nil
-}
-
-// AddRecord adds a cpio.Record into the archive at `r.Name`.
-func (af ArchiveFiles) AddRecord(r cpio.Record) error {
-	if filepath.IsAbs(r.Name) {
-		return fmt.Errorf("cannot add absolute path %q to archive", r.Name)
-	}
-
-	if _, ok := af.Files[r.Name]; ok {
-		return fmt.Errorf("record for %q already exists in archive", r.Name)
-	}
-	if rr, ok := af.Records[r.Name]; ok {
-		if rr.Info == r.Info {
-			return nil
-		}
-		return fmt.Errorf("record for %q already exists", r.Name)
-	}
-
-	af.Records[r.Name] = r
-	return nil
-}
-
-// Contains returns whether path `dest` is already contained in the archive.
-func (af ArchiveFiles) Contains(dest string) bool {
-	_, fok := af.Files[dest]
-	_, rok := af.Records[dest]
-	return fok || rok
 }
 
 // DefaultPackageImports returns a list of default u-root packages to include.
