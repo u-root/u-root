@@ -28,9 +28,9 @@ func usage() string {
 
 // getDev returns the device (as returned by the FSTAT syscall) for the given file descriptor.
 func getDev(fd int) (dev uint64, err error) {
-	var stat syscall.Stat_t
+	var stat unix.Stat_t
 
-	if err := syscall.Fstat(fd, &stat); err != nil {
+	if err := unix.Fstat(fd, &stat); err != nil {
 		return 0, err
 	}
 
@@ -72,7 +72,7 @@ func recursiveDelete(fd int) error {
 func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error {
 	// O_DIRECTORY and O_NOFOLLOW make this open fail for all files and all symlinks (even when pointing to a dir).
 	// We need to filter out symlinks because getDev later follows them.
-	childFd, err := syscall.Openat(parentFd, childName, syscall.O_DIRECTORY | syscall.O_NOFOLLOW, syscall.O_RDWR)
+	childFd, err := unix.Openat(parentFd, childName, unix.O_DIRECTORY | unix.O_NOFOLLOW, unix.O_RDWR)
 	if err != nil {
 		// childName points to either a file or a symlink, delete in any case.
 		if err := unix.Unlinkat(parentFd, childName, 0); err != nil {
@@ -129,7 +129,7 @@ func isEmpty(name string) (bool, error) {
 // This function is just a wrapper around the MOUNT syscall with the
 // MOVE flag supplied.
 func moveMount(oldPath string, newPath string) error {
-	return syscall.Mount(oldPath, newPath, "", syscall.MS_MOVE, "")
+	return unix.Mount(oldPath, newPath, "", unix.MS_MOVE, "")
 }
 
 // specialFS moves the 'special' mounts to the given target path
@@ -153,7 +153,7 @@ func specialFS(newRoot string) error {
 		}
 		// Make sure the target dir exists and is empty.
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if err := syscall.Mkdir(path, 0); err != nil {
+			if err := unix.Mkdir(path, 0); err != nil {
 				return err
 			}
 		} else if err != nil {
@@ -181,7 +181,7 @@ func switchRoot(newRoot string, init string) error {
 	}
 
 	log.Printf("switch_root: Changing directory")
-	if err := syscall.Chdir(newRoot); err != nil {
+	if err := unix.Chdir(newRoot); err != nil {
 		return fmt.Errorf("switch_root: failed change directory to new_root %v", err)
 	}
 
@@ -198,7 +198,7 @@ func switchRoot(newRoot string, init string) error {
 	}
 
 	log.Printf("switch_root: Changing root!")
-	if err := syscall.Chroot("."); err != nil {
+	if err := unix.Chroot("."); err != nil {
 		return fmt.Errorf("switch_root: fatal chroot error %v", err)
 	}
 
