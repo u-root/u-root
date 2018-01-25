@@ -26,7 +26,7 @@ func usage() string {
 	return "switch_root [-h] [-V]\nswitch_root newroot init"
 }
 
-// get device for file descriptor
+// getDev returns the device (as returned by the FSTAT syscall) for the given file descriptor.
 func getDev(fd int) (dev uint64, err error) {
 	var stat syscall.Stat_t
 
@@ -37,19 +37,19 @@ func getDev(fd int) (dev uint64, err error) {
 	return stat.Dev, nil
 }
 
-// recursively deletes a directory and everything in it
-// works with a file descriptor, can delete files not referenceable
-// any more (e.g. after chroot)
-// does not descent into mounts
+// recursiveDelete deletes a directory identified by `fd` and everything in it.
+//
+// This function allows deleting directories no longer referenceable by
+// any file name. This function does not descend into mounts.
 func recursiveDelete(fd int) error {
 	parentDev, err := getDev(fd)
 	if err != nil {
 		return err
 	}
 
-  // the file descriptor is already open, but allocating a os.File
-	// here for it makes reading the files in the dir so much nicer
-	dir := os.NewFile(uintptr(fd), "__ignored__") // filename is completely irrelevant
+  // The file descriptor is already open, but allocating a os.File
+	// here makes reading the files in the dir so much nicer.
+	dir := os.NewFile(uintptr(fd), "__ignored__")
 	defer dir.Close()
 	names, err := dir.Readdirnames(-1)
 	if err != nil {
@@ -57,7 +57,7 @@ func recursiveDelete(fd int) error {
 	}
 
 	for _, name := range names {
-		// loop here, but handle loop in separate function to make defer work as expected
+		// Loop here, but handle loop in separate function to make defer work as expected.
 		if err := recusiveDeleteInner(fd, parentDev, name); err != nil {
 			return err
 		}
@@ -65,32 +65,35 @@ func recursiveDelete(fd int) error {
 	return nil
 }
 
-// don't call this directly, this function is the loop content of recursiveDelete
+// recusiveDeleteInner is called from recursiveDelete and either deletes
+// or recurses into the given file or directory
+//
+// There should be no need to call this function directly.
 func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error {
-	// O_DIRECTORY and O_NOFOLLOW make this open fail for all files and all symlinks (even when pointing to a dir)
-	// we need to filter out symlinks because getDev later follows them
+	// O_DIRECTORY and O_NOFOLLOW make this open fail for all files and all symlinks (even when pointing to a dir).
+	// We need to filter out symlinks because getDev later follows them.
 	childFd, err := syscall.Openat(parentFd, childName, syscall.O_DIRECTORY | syscall.O_NOFOLLOW, syscall.O_RDWR)
 	if err != nil {
-		// either file or symlink, delete in any case
+		// childName points to either a file or a symlink, delete in any case.
 		if err := unix.Unlinkat(parentFd, childName, 0); err != nil {
 			return err
 		}
 	} else {
-		// open succeeded, which means it is a real directory
+		// Open succeeded, which means childName points to a real directory.
 		defer unix.Close(childFd)
 
-		// don't descent into other file systems
+		// Don't descent into other file systems.
 		if childFdDev, err := getDev(childFd); err != nil {
 			return err
 		} else if childFdDev != parentDev {
-			// this means continue in recursiveDelete
+			// This means continue in recursiveDelete.
 			return nil
 		}
 
 		if err:= recursiveDelete(childFd); err != nil {
 			return err
 		}
-		// back from recursion, dir is now empty, delete
+		// Back from recursion, the directory is now empty, delete.
 		if err := unix.Unlinkat(parentFd, childName, unix.AT_REMOVEDIR); err != nil {
 			return err
 		}
@@ -98,13 +101,15 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 	return nil
 }
 
-// do a proper exec to retain PID 1.
-// It returns an error if the command exits incorrectly.
+// execCommand execs into the given command.
+//
+// In order to preserve whatever PID this program is running with,
+// the implementation does an actual EXEC syscall without forking.
 func execCommand(path string) error {
 	return syscall.Exec(path, []string{path}, []string{})
 }
 
-// check if dir is empty
+// isEmpty returns true if the directory with the given path is empty.
 func isEmpty(name string) (bool, error) {
 	f, err := os.Open(name)
 	if err != nil {
@@ -113,31 +118,40 @@ func isEmpty(name string) (bool, error) {
 	defer f.Close()
 
 	_, err = f.Readdirnames(1)
-	if err == io.EOF { // this means emtpy
+	if err == io.EOF {
 		return true, nil
 	}
 	return false, err
 }
 
-// moves a mountpoint
+// moveMount moves mount
+//
+// This function is just a wrapper around the MOUNT syscall with the
+// MOVE flag supplied.
 func moveMount(oldPath string, newPath string) error {
 	return syscall.Mount(oldPath, newPath, "", syscall.MS_MOVE, "")
 }
 
-// moves common 'special' mounts if the exist
+// specialFS moves the 'special' mounts to the given target path
+//
+// 'special' in this context refers to the following non-blockdevice backed
+// mounts that are almost always used: /dev, /proc, /sys, and /run.
+// This function will create the target directories, if necessary.
+// If the target directories already exists, they must be empty.
+// This function skips missing mounts.
 func specialFS(newRoot string) error {
 	var mounts = []string{"/dev", "/proc", "/sys", "/run"}
 
 	for _, mount := range mounts {
 		path := filepath.Join(newRoot, mount)
-		// skip all mounting if the dir does not exists
+		// Skip all mounting if the directory does not exists.
 		if _, err := os.Stat(mount); os.IsNotExist(err) {
 			fmt.Println("switch_root: Skipping", mount)
 			continue
 		} else if err != nil {
 			return err
 		}
-		// make sure the target dir exist and is empty
+		// Make sure the target dir exists and is empty.
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			if err := syscall.Mkdir(path, 0); err != nil {
 				return err
@@ -157,9 +171,9 @@ func specialFS(newRoot string) error {
 	return nil
 }
 
-// switchroot moves special mounts (dev, proc, sys, run) to the new dir,
-// then does a chroot, moves the root mount to the new dir and finally
-// DELETES EVERYTHING in the old dir and execs init
+// switchroot moves special mounts (dev, proc, sys, run) to the new directory,
+// then does a chroot, moves the root mount to the new directory and finally
+// DELETES EVERYTHING in the old root and execs the given init.
 func switchRoot(newRoot string, init string) error {
 	log.Printf("switch_root: moving mounts")
 	if err := specialFS(newRoot); err != nil {
@@ -171,7 +185,7 @@ func switchRoot(newRoot string, init string) error {
 		return fmt.Errorf("switch_root: failed change directory to new_root %v", err)
 	}
 
-	// Open "/" now, we need the file descriptor later
+	// Open "/" now, we need the file descriptor later.
 	oldRoot, err := os.Open("/")
 	if err != nil {
 		return err
