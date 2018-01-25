@@ -15,6 +15,18 @@ import (
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
+// multiFlag is used for flags that support multiple invocations, e.g. -files
+type multiFlag []string
+
+func (m *multiFlag) String() string {
+	return fmt.Sprint(*m)
+}
+
+func (m *multiFlag) Set(value string) error {
+	*m = append(*m, value)
+	return nil
+}
+
 // Flags for u-root builder.
 var (
 	build, format, tmpDir, base, outputPath *string
