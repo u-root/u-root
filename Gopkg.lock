@@ -53,8 +53,8 @@
 [[projects]]
   name = "github.com/golang/dep"
   packages = [".","cmd/dep","internal/feedback","internal/fs","internal/gps","internal/gps/internal/pb","internal/gps/paths","internal/gps/pkgtree","internal/importers","internal/importers/base","internal/importers/glide","internal/importers/godep","internal/importers/govend","internal/importers/gvt","internal/importers/vndr"]
-  revision = "8ddfc8afb2d520d41997ebddd921b52152706c01"
-  version = "v0.3.2"
+  revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"
