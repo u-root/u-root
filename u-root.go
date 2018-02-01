@@ -10,29 +10,45 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
+// multiFlag is used for flags that support multiple invocations, e.g. -files
+type multiFlag []string
+
+func (m *multiFlag) String() string {
+	return fmt.Sprint(*m)
+}
+
+func (m *multiFlag) Set(value string) error {
+	*m = append(*m, value)
+	return nil
+}
+
 // Flags for u-root builder.
 var (
-	build  = flag.String("build", "source", "u-root build format (e.g. bb or source)")
+	build, format, tmpDir, base, outputPath *string
+	useExistingInit                         *bool
+	extraFiles                              multiFlag
+)
+
+func parseFlags() {
+	build = flag.String("build", "source", "u-root build format (e.g. bb or source)")
 	format = flag.String("format", "cpio", "Archival format (e.g. cpio)")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
 
-	base            = flag.String("base", "", "Base archive to add files to")
+	base = flag.String("base", "", "Base archive to add files to")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
-
-	extraFiles = flag.String("files", "", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive.")
-
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
-)
+	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times")
+	flag.Parse()
+}
 
 func main() {
-	flag.Parse()
+	parseFlags()
 
 	// Main is in a separate functions so defer's run on return.
 	if err := Main(); err != nil {
@@ -110,7 +126,7 @@ func Main() error {
 		Archiver:        archiver,
 		TempDir:         tempDir,
 		Packages:        pkgs,
-		ExtraFiles:      strings.Fields(*extraFiles),
+		ExtraFiles:      extraFiles,
 		OutputFile:      w,
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,

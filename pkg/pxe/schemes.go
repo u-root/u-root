@@ -43,11 +43,7 @@ var (
 	DefaultTFTPClient FileScheme
 
 	// DefaultSchemes are the schemes supported by PXE by default.
-	DefaultSchemes = Schemes{
-		"tftp": NewCachedFileScheme(DefaultTFTPClient),
-		"http": NewCachedFileScheme(DefaultHTTPClient),
-		"file": NewCachedFileScheme(&LocalFileClient{}),
-	}
+	DefaultSchemes Schemes
 )
 
 func init() {
@@ -56,6 +52,12 @@ func init() {
 		panic(fmt.Sprintf("tftp.NewClient failed: %v", err))
 	}
 	DefaultTFTPClient = NewTFTPClient(c)
+
+	DefaultSchemes = Schemes{
+		"tftp": NewCachedFileScheme(DefaultTFTPClient),
+		"http": NewCachedFileScheme(DefaultHTTPClient),
+		"file": NewCachedFileScheme(&LocalFileClient{}),
+	}
 }
 
 // Schemes is a map of URI scheme identifier -> implementation that can
