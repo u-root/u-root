@@ -202,16 +202,6 @@ func command(c *Command) error {
 func main() {
 	b := bufio.NewReader(os.Stdin)
 
-	defer func() {
-		switch err := recover().(type) {
-		case nil:
-		case error:
-			log.Fatalf("Bummer: %v", err)
-		default:
-			log.Fatalf("unexpected panic value: %T(%v)", err, err)
-		}
-	}()
-
 	// we use path.Base in case they type something like ./cmd
 	if f, ok := forkBuiltins[path.Base(os.Args[0])]; ok {
 		if err := f(&Command{cmd: os.Args[0], Cmd: &exec.Cmd{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, argv: os.Args[1:]}); err != nil {

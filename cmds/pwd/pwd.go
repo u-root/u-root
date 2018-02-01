@@ -8,7 +8,6 @@
 //     pwd [-LP]
 //
 // Options:
-//     -L: follow symlinks (default)
 //     -P: don't follow symlinks
 //
 // Author:
@@ -24,8 +23,11 @@ import (
 )
 
 var (
-	logical  = flag.Bool("L", true, "Follow symlinks") // this is the default behavior
-	physical = flag.Bool("P", false, "Don't follow symlinks")
+	// This is the default. Setting it to false doesn't do anything in GNU
+	// or zsh pwd, because you just can't even set it to false.
+	_ = flag.Bool("L", true, "don't follow any symlinks")
+
+	physical = flag.Bool("P", false, "follow all symlinks (avoid all symlinks)")
 	cmd      = "pwd [-LP]"
 )
 
@@ -37,32 +39,20 @@ func init() {
 	}
 }
 
-func pwd() error {
+func pwd(followSymlinks bool) (string, error) {
 	path, err := os.Getwd()
-	if err == nil && *physical {
+	if err == nil && followSymlinks {
 		path, err = filepath.EvalSymlinks(path)
 	}
-
-	if err == nil {
-		fmt.Println(path)
-	}
-
-	return err
+	return path, err
 }
 
 func main() {
-	args := os.Args[1:]
 	flag.Parse()
-	for _, flag := range args {
-		switch flag {
-		case "-L":
-			*physical = false
-		case "-P":
-			*physical = true
-		}
-	}
 
-	if err := pwd(); err != nil {
+	path, err := pwd(*physical)
+	if err != nil {
 		log.Fatalf("%v", err)
 	}
+	fmt.Println(path)
 }
