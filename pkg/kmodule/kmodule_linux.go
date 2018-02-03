@@ -206,7 +206,7 @@ func genDeps() (depMap, error) {
 
 func findModPath(name string, m depMap) (string, error) {
 	for mp := range m {
-		if strings.HasSuffix(mp, name+".ko") {
+		if strings.HasSuffix(mp, "/"+name+".ko") {
 			return mp, nil
 		}
 	}
