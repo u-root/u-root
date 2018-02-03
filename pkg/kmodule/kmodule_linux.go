@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -206,7 +207,7 @@ func genDeps() (depMap, error) {
 
 func findModPath(name string, m depMap) (string, error) {
 	for mp := range m {
-		if strings.HasSuffix(mp, "/"+name+".ko") {
+		if path.Base(mp) == name+".ko" {
 			return mp, nil
 		}
 	}
