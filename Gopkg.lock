@@ -48,11 +48,11 @@
   branch = "v2"
   name = "github.com/go-yaml/yaml"
   packages = ["."]
-  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [[projects]]
   name = "github.com/golang/dep"
-  packages = [".","cmd/dep","internal/feedback","internal/fs","internal/gps","internal/gps/internal/pb","internal/gps/paths","internal/gps/pkgtree","internal/importers","internal/importers/base","internal/importers/glide","internal/importers/godep","internal/importers/govend","internal/importers/gvt","internal/importers/vndr"]
+  packages = [".","cmd/dep","gps","gps/internal/pb","gps/paths","gps/pkgtree","internal/feedback","internal/fs","internal/importers","internal/importers/base","internal/importers/glide","internal/importers/glock","internal/importers/godep","internal/importers/govend","internal/importers/govendor","internal/importers/gvt","internal/importers/vndr"]
   revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
   version = "v0.4.1"
 
@@ -60,7 +60,7 @@
   branch = "master"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
-  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+  revision = "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 
 [[projects]]
   branch = "master"
@@ -77,8 +77,8 @@
 [[projects]]
   name = "github.com/jmank88/nuts"
   packages = ["."]
-  revision = "a1e02c788669d022c325a8ee674f15360d7104f4"
-  version = "v0.2.0"
+  revision = "8b28145dffc87104e66d074f62ea8080edfad7c8"
+  version = "v0.3.0"
 
 [[projects]]
   name = "github.com/klauspost/compress"
@@ -111,10 +111,10 @@
   revision = "6a197d5ea61168f2ac821de2b7f011b250904900"
 
 [[projects]]
-  branch = "master"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
-  revision = "0131db6d737cfbbfb678f8b7d92e55e27ce46224"
+  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -138,7 +138,7 @@
   branch = "master"
   name = "github.com/u-root/dhcp4"
   packages = [".","client","opts","util"]
-  revision = "db4555713d0c163edf988998a4dd5514d9b01e91"
+  revision = "a41f1b67ecd64331e603d2ca790467004b015786"
 
 [[projects]]
   branch = "addclient"
@@ -150,7 +150,7 @@
   branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [".","nl"]
-  revision = "ad19ca1a4c3354d3fdc67eac04b1e459038d9474"
+  revision = "d35d6b58e1cb692b27b94fc403170bf44058ac3e"
 
 [[projects]]
   branch = "master"
@@ -168,13 +168,13 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["cast5","ed25519","ed25519/internal/edwards25519","md4","openpgp","openpgp/armor","openpgp/elgamal","openpgp/errors","openpgp/packet","openpgp/s2k","ripemd160","sha3"]
-  revision = "95a4943f35d008beabde8c11e5075a1b714e6419"
+  revision = "d9133f5469342136e669e85192a26056b587f503"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf","context","internal/iana","internal/socket","ipv6"]
-  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
+  revision = "2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1"
 
 [[projects]]
   branch = "master"
@@ -186,13 +186,13 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "83801418e1b59fb1880e363299581ee543af32ca"
+  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
   packages = ["go/ast/astutil","imports"]
-  revision = "f271d7a0f8cf389f3ee4f6bf8d68e716a60ea571"
+  revision = "66487607e2081c7c2af2281c62c14ee000d5024b"
 
 [[projects]]
   name = "pack.ag/tftp"
