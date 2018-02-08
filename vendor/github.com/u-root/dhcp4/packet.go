@@ -1,6 +1,7 @@
 package dhcp4
 
 import (
+	"fmt"
 	"net"
 	"strings"
 
@@ -17,7 +18,7 @@ const (
 )
 
 var (
-	magicCookie = []byte{99, 130, 83, 99}
+	magicCookie = [4]byte{99, 130, 83, 99}
 )
 
 const (
@@ -104,7 +105,7 @@ func (p *Packet) MarshalBinary() ([]byte, error) {
 	b.WriteBytes(file[:])
 
 	// The magic cookie.
-	b.WriteBytes(magicCookie)
+	b.WriteBytes(magicCookie[:])
 
 	p.Options.Marshal(b)
 	// TODO pad to 272 bytes for really old crap.
@@ -161,9 +162,11 @@ func (p *Packet) UnmarshalBinary(q []byte) error {
 	}
 	p.BootFile = string(file[:length])
 
-	// Read the cookie and then fucking ignore it.
 	var cookie [4]byte
 	b.ReadBytes(cookie[:])
+	if cookie != magicCookie {
+		return fmt.Errorf("malformed DHCP packet: got magic cookie %v, want %v", cookie[:], magicCookie[:])
+	}
 
 	return (&p.Options).Unmarshal(b)
 }

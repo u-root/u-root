@@ -107,9 +107,12 @@ func (o *Options) Unmarshal(buf *util.Buffer) error {
 	if !end {
 		return io.ErrUnexpectedEOF
 	}
-	// Report error for any trailing bytes
-	if buf.Len() != 0 {
-		return ErrInvalidOptions
+
+	// Any bytes left must be padding.
+	for buf.Len() >= 1 {
+		if OptionCode(buf.Read8()) != Pad {
+			return ErrInvalidOptions
+		}
 	}
 	return nil
 }

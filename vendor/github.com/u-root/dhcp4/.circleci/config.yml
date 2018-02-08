@@ -1,0 +1,58 @@
+version: 2
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - dep
+      - test:
+          requires:
+            - dep
+      - compile:
+          requires:
+            - dep
+jobs:
+  dep:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/dhcp4
+    steps:
+      - checkout
+      - run:
+          name: Install dep
+          command: |
+            cd vendor/github.com/golang/dep/cmd/dep
+            go install
+      - run:
+          name: Check vendored dependencies
+          command: dep status
+      - run:
+          name: go vet
+          command: go tool vet `find -name \*.go | grep -v ^./vendor`
+  test:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/dhcp4
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Test dhcp4
+          command: |
+            go test -a -ldflags '-s' ./...
+      - run:
+          name: Test coverage of dhcp4
+          command: |
+            go test -cover ./...
+  compile:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/dhcp4
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: build all tools
+          command: |
+            go build -a -ldflags '-s' ./...

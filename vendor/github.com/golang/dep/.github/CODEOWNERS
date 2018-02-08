@@ -1,0 +1,25 @@
+# general
+* @sdboyer
+
+# init
+/cmd/dep/init*                          @carolynvs
+/cmd/dep/gopath_scanner*                @carolynvs
+/cmd/dep/root_analyzer*                 @carolynvs
+/cmd/dep/testdata/init                  @carolynvs
+/cmd/dep/testdata/harness_tests/init    @carolynvs
+/internal/importers                     @carolynvs
+/analyzer*                              @carolynvs
+/testdata/analyzer                      @carolynvs
+/internal/feedback                      @carolynvs
+
+# ensure
+/cmd/dep/ensure*                          @ibrasho
+/cmd/dep/testdata/harness_tests/ensure**  @ibrasho
+
+# status
+/cmd/dep/status*                          @darkowlzz
+/cmd/dep/testdata/harness_tests/status**  @darkowlzz
+/cmd/dep/graphviz*                        @darkowlzz
+
+# gps caching
+/gps/source_cache* @jmank88
