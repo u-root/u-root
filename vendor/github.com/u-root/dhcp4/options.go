@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/u-root/dhcp4/util"
+	"github.com/u-root/dhcp4/internal/buffer"
 )
 
 // Options is a map of OptionCode keys with a slice of byte values.
@@ -63,7 +63,7 @@ func (o Options) Get(key OptionCode) ([]byte, error) {
 // It is used with various different types to enable parsing of both top-level
 // options. If options data is malformed, it returns ErrInvalidOptions or
 // io.ErrUnexpectedEOF.
-func (o *Options) Unmarshal(buf *util.Buffer) error {
+func (o *Options) Unmarshal(buf *buffer.Buffer) error {
 	*o = make(Options)
 
 	var end bool
@@ -118,7 +118,7 @@ func (o *Options) Unmarshal(buf *util.Buffer) error {
 }
 
 // Marshal writes options into the provided Buffer sorted by option codes.
-func (o Options) Marshal(b *util.Buffer) {
+func (o Options) Marshal(b *buffer.Buffer) {
 	for _, c := range o.sortedKeys() {
 		code := OptionCode(c)
 		data := o[code]
@@ -155,8 +155,8 @@ func (o Options) Marshal(b *util.Buffer) {
 	}
 }
 
-// enumerate returns an ordered slice of option data from the Options map,
-// for use with sending responses to clients.
+// sortedKeys returns an ordered slice of option keys from the Options map, for
+// use in serializing options to binary.
 func (o Options) sortedKeys() []int {
 	// Send all values for a given key
 	var codes []int

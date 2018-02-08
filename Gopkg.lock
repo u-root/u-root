@@ -52,7 +52,25 @@
 
 [[projects]]
   name = "github.com/golang/dep"
-  packages = [".","cmd/dep","gps","gps/internal/pb","gps/paths","gps/pkgtree","internal/feedback","internal/fs","internal/importers","internal/importers/base","internal/importers/glide","internal/importers/glock","internal/importers/godep","internal/importers/govend","internal/importers/govendor","internal/importers/gvt","internal/importers/vndr"]
+  packages = [
+    ".",
+    "cmd/dep",
+    "gps",
+    "gps/internal/pb",
+    "gps/paths",
+    "gps/pkgtree",
+    "internal/feedback",
+    "internal/fs",
+    "internal/importers",
+    "internal/importers/base",
+    "internal/importers/glide",
+    "internal/importers/glock",
+    "internal/importers/godep",
+    "internal/importers/govend",
+    "internal/importers/govendor",
+    "internal/importers/gvt",
+    "internal/importers/vndr"
+  ]
   revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
   version = "v0.4.1"
 
@@ -65,7 +83,13 @@
 [[projects]]
   branch = "master"
   name = "github.com/google/netstack"
-  packages = ["ilist","tcpip","tcpip/buffer","tcpip/header","waiter"]
+  packages = [
+    "ilist",
+    "tcpip",
+    "tcpip/buffer",
+    "tcpip/header",
+    "waiter"
+  ]
   revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
 
 [[projects]]
@@ -137,8 +161,13 @@
 [[projects]]
   branch = "master"
   name = "github.com/u-root/dhcp4"
-  packages = [".","client","opts","util"]
-  revision = "a41f1b67ecd64331e603d2ca790467004b015786"
+  packages = [
+    ".",
+    "dhcp4client",
+    "dhcp4opts",
+    "internal/buffer"
+  ]
+  revision = "a363d0fa829188311bbd955ad3f5cd9ee53926b6"
 
 [[projects]]
   branch = "addclient"
@@ -149,7 +178,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/vishvananda/netlink"
-  packages = [".","nl"]
+  packages = [
+    ".",
+    "nl"
+  ]
   revision = "d35d6b58e1cb692b27b94fc403170bf44058ac3e"
 
 [[projects]]
@@ -167,14 +199,33 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["cast5","ed25519","ed25519/internal/edwards25519","md4","openpgp","openpgp/armor","openpgp/elgamal","openpgp/errors","openpgp/packet","openpgp/s2k","ripemd160","sha3"]
+  packages = [
+    "cast5",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "md4",
+    "openpgp",
+    "openpgp/armor",
+    "openpgp/elgamal",
+    "openpgp/errors",
+    "openpgp/packet",
+    "openpgp/s2k",
+    "ripemd160",
+    "sha3"
+  ]
   revision = "d9133f5469342136e669e85192a26056b587f503"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["bpf","context","internal/iana","internal/socket","ipv6"]
-  revision = "2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1"
+  packages = [
+    "bpf",
+    "context",
+    "internal/iana",
+    "internal/socket",
+    "ipv6"
+  ]
+  revision = "f5dfe339be1d06f81b22525fe34671ee7d2c8904"
 
 [[projects]]
   branch = "master"
@@ -191,18 +242,24 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
-  packages = ["go/ast/astutil","imports"]
+  packages = [
+    "go/ast/astutil",
+    "imports"
+  ]
   revision = "66487607e2081c7c2af2281c62c14ee000d5024b"
 
 [[projects]]
   name = "pack.ag/tftp"
-  packages = [".","netascii"]
+  packages = [
+    ".",
+    "netascii"
+  ]
   revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
   version = "v1.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "119e445031a4a78275f705fb166c43e5914a967a06307a7cdcba7b248a935073"
+  inputs-digest = "984f55cb884c4076ea0708b4dfa1097a74feb726dc9f209aabd54a9c306ae4f0"
   solver-name = "gps-cdcl"
   solver-version = 1
