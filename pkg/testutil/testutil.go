@@ -5,6 +5,7 @@
 package testutil
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -43,6 +44,28 @@ func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
 }
 
 // ErrorExists is only used to increase readability of future tests
-func ErrorExist(err error) bool {
+func ErrorExists(err error) bool {
 	return err != nil
+}
+
+// Helper function for PrintError
+func craftPrintMsg(err_exists bool, out string) string {
+	var msg bytes.Buffer
+
+	if err_exists {
+		msg.WriteString("Error Status: exists\n")
+	} else {
+		msg.WriteString("Error Status: not exists\n")
+	}
+	msg.WriteString("Output:\n")
+	msg.WriteString(out)
+	return msg.String()
+}
+
+// PrintError provides a standard way to print out error message when a test case fails
+func PrintError(t *testing.T, expOut string, expErrExists bool, actualOut string, actualErr error) {
+	err_msg_format := "\nEXPECTED:\n%s\n\nACTUAL:\n%s\n"
+	expectMsg := craftPrintMsg(expErrExists, expOut)
+	actualMsg := craftPrintMsg(ErrorExists(actualErr), actualOut)
+	t.Errorf(err_msg_format, expectMsg, actualMsg)
 }
