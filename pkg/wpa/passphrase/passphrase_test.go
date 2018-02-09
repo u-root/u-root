@@ -8,11 +8,11 @@ import (
 )
 
 type RunTestCase struct {
-	name       string
-	essid      string
-	pass       string
-	out        []byte
-	err_exists bool
+	name      string
+	essid     string
+	pass      string
+	out       []byte
+	errExists bool
 }
 
 var (
@@ -30,32 +30,32 @@ var (
 
 	runTestCases = []RunTestCase{
 		{
-			name:       "No essid",
-			essid:      "",
-			pass:       validPass,
-			out:        nil,
-			err_exists: true,
+			name:      "No essid",
+			essid:     "",
+			pass:      validPass,
+			out:       nil,
+			errExists: true,
 		},
 		{
-			name:       "pass length is less than 8 chars",
-			essid:      essidStub,
-			pass:       shortPass,
-			out:        nil,
-			err_exists: true,
+			name:      "pass length is less than 8 chars",
+			essid:     essidStub,
+			pass:      shortPass,
+			out:       nil,
+			errExists: true,
 		},
 		{
-			name:       "pass length is more than 63 chars",
-			essid:      essidStub,
-			pass:       longPass,
-			out:        nil,
-			err_exists: true,
+			name:      "pass length is more than 63 chars",
+			essid:     essidStub,
+			pass:      longPass,
+			out:       nil,
+			errExists: true,
 		},
 		{
-			name:       "Correct Input",
-			essid:      essidStub,
-			pass:       validPass,
-			out:        correctOutput,
-			err_exists: false,
+			name:      "Correct Input",
+			essid:     essidStub,
+			pass:      validPass,
+			out:       correctOutput,
+			errExists: false,
 		},
 	}
 )
@@ -75,8 +75,8 @@ func TestRun(t *testing.T) {
 	for _, test := range runTestCases {
 		t.Logf("TEST %v", test.name)
 		out, err := Run(test.essid, test.pass)
-		if test.err_exists != testutil.ErrorExists(err) || !outEqualsExp(out, test.out) {
-			testutil.PrintError(t, string(test.out), test.err_exists, string(out), err)
+		if test.errExists != testutil.ErrorExists(err) || !outEqualsExp(out, test.out) {
+			testutil.PrintError(t, "", string(test.out), test.errExists, string(out), err)
 		}
 	}
 }
