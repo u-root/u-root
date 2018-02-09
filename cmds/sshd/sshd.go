@@ -2,13 +2,64 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
+	"os/exec"
 
+	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 )
+
+var (
+	shells = [...]string{"bash", "zsh", "rush"}
+	shell  = "/bin/sh"
+)
+
+func echoCopy(w io.Writer, r io.Reader) (int64, error) {
+	var b [8192]byte
+	var err error
+	var tot int64
+	for err == nil {
+		var amt int
+		if amt, err = r.Read(b[:]); err != nil || amt < 1 {
+			fmt.Printf("Read: %v", err)
+			break
+		}
+		fmt.Printf("Read %d bytes: \n", amt) //, b[:amt])
+		if _, err = w.Write(b[:amt]); err != nil {
+			fmt.Printf("Write: %v", err)
+		}
+		tot += int64(amt)
+	}
+	return tot, err
+}
+
+// start a shell
+// TODO: use /etc/passwd, but the Go support for that is incomplete
+func runShell(c ssh.Channel, p *pty.Pty, shell string) error {
+	copy := io.Copy
+	defer c.Close()
+
+	p.Command(shell)
+	if err := p.C.Start(); err != nil {
+		return err
+	}
+	defer p.C.Wait()
+	copy = echoCopy
+	go copy(p.Ptm, c)
+	go copy(c, p.Ptm)
+	return nil
+}
+
+func init() {
+	for _, s := range shells {
+		if _, err := exec.LookPath(s); err == nil {
+			shell = s
+		}
+	}
+}
 
 func main() {
 	// Public key authentication is done by comparing
@@ -91,6 +142,7 @@ func main() {
 	// The incoming Request channel must be serviced.
 	go ssh.DiscardRequests(reqs)
 
+	var p *pty.Pty
 	// Service the incoming Channel channel.
 	for newChannel := range chans {
 		// Channels have a type, depending on the application level
@@ -111,22 +163,21 @@ func main() {
 		// "shell" request.
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
-				req.Reply(req.Type == "shell", nil)
+				fmt.Printf("Request %v", req.Type)
+				switch req.Type {
+				case "shell":
+					err := runShell(channel, p, shell)
+					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
+				case "pty-req":
+					p, err = pty.New()
+					req.Reply(err == nil, nil)
+				default:
+					fmt.Printf("Not handling req %v %q", req, string(req.Payload))
+					req.Reply(false, nil)
+				}
 			}
 		}(requests)
 
-		term := terminal.NewTerminal(channel, "> ")
-
-		go func() {
-			defer channel.Close()
-			for {
-				line, err := term.ReadLine()
-				if err != nil {
-					break
-				}
-				fmt.Println(line)
-			}
-		}()
 	}
 
 }
