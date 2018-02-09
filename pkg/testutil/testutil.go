@@ -41,3 +41,8 @@ func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
 	}
 	return
 }
+
+// ErrorExists is only used to increase readability of future tests
+func ErrorExist(err error) bool {
+	return err != nil
+}
