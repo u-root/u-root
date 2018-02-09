@@ -1,20 +1,35 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"os/exec"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
 )
 
+// The ssh package does not define these things so we will
+type (
+	ptyReq struct {
+		TERM   string //TERM environment variable value (e.g., vt100)
+		Col    uint32
+		Row    uint32
+		Xpixel uint32
+		Ypixel uint32
+		Modes  string //encoded terminal modes
+	}
+)
+
 var (
 	shells = [...]string{"bash", "zsh", "rush"}
 	shell  = "/bin/sh"
+	debug  = flag.Bool("d", false, "Enable debug prints")
 )
 
 func echoCopy(w io.Writer, r io.Reader) (int64, error) {
@@ -27,7 +42,7 @@ func echoCopy(w io.Writer, r io.Reader) (int64, error) {
 			fmt.Printf("Read: %v", err)
 			break
 		}
-		fmt.Printf("Read %d bytes: \n", amt) //, b[:amt])
+		fmt.Printf("Read %d bytes: %q\n", amt, b[:amt])
 		if _, err = w.Write(b[:amt]); err != nil {
 			fmt.Printf("Write: %v", err)
 		}
@@ -47,10 +62,36 @@ func runShell(c ssh.Channel, p *pty.Pty, shell string) error {
 		return err
 	}
 	defer p.C.Wait()
-	copy = echoCopy
+	if *debug {
+		copy = echoCopy
+	}
 	go copy(p.Ptm, c)
 	go copy(c, p.Ptm)
 	return nil
+}
+
+func newPTY(b []byte) (*pty.Pty, error) {
+	ptyReq := &ptyReq{}
+	err := ssh.Unmarshal(b, ptyReq)
+	if err != nil {
+		return nil, err
+	}
+	p, err := pty.New()
+	ws, err := p.TTY.GetWinSize()
+	if err != nil {
+		return nil, err
+	}
+	ws.Row = uint16(ptyReq.Row)
+	ws.Ypixel = uint16(ptyReq.Ypixel)
+	ws.Col = uint16(ptyReq.Col)
+	ws.Xpixel = uint16(ptyReq.Xpixel)
+	if err := p.TTY.SetWinSize(ws); err != nil {
+		return nil, err
+	}
+	if err := os.Setenv("TERM", ptyReq.TERM); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func init() {
@@ -169,7 +210,7 @@ func main() {
 					err := runShell(channel, p, shell)
 					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
 				case "pty-req":
-					p, err = pty.New()
+					p, err = newPTY(req.Payload)
 					req.Reply(err == nil, nil)
 				default:
 					fmt.Printf("Not handling req %v %q", req, string(req.Payload))
