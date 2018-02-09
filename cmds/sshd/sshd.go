@@ -30,6 +30,10 @@ var (
 	shells  = [...]string{"bash", "zsh", "rush"}
 	shell   = "/bin/sh"
 	debug   = flag.Bool("d", false, "Enable debug prints")
+	keys    = flag.String("keys", "authorized_keys", "Path to the authorized_keys file")
+	privkey = flag.String("privatekey", "id_rsa", "Path of private key")
+	ip      = flag.String("ip", "0.0.0.0", "ip address to listen on")
+	port    = flag.String("port", "2022", "port to listen on")
 	dprintf = func(string, ...interface{}) {}
 )
 
@@ -161,9 +165,9 @@ func main() {
 	// Public key authentication is done by comparing
 	// the public key of a received connection
 	// with the entries in the authorized_keys file.
-	authorizedKeysBytes, err := ioutil.ReadFile("authorized_keys")
+	authorizedKeysBytes, err := ioutil.ReadFile(*keys)
 	if err != nil {
-		log.Fatalf("Failed to load authorized_keys, err: %v", err)
+		log.Fatal(err)
 	}
 
 	authorizedKeysMap := map[string]bool{}
@@ -180,16 +184,6 @@ func main() {
 	// An SSH server is represented by a ServerConfig, which holds
 	// certificate details and handles authentication of ServerConns.
 	config := &ssh.ServerConfig{
-		// Remove to disable password auth.
-		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-			// Should use constant-time compare (or better, salt+hash) in
-			// a production setting.
-			if c.User() == "testuser" && string(pass) == "tiger" {
-				return nil, nil
-			}
-			return nil, fmt.Errorf("password rejected for %q", c.User())
-		},
-
 		// Remove to disable public key auth.
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
 			if authorizedKeysMap[string(pubKey.Marshal())] {
@@ -204,35 +198,35 @@ func main() {
 		},
 	}
 
-	privateBytes, err := ioutil.ReadFile("id_rsa")
+	privateBytes, err := ioutil.ReadFile(*privkey)
 	if err != nil {
-		log.Fatal("Failed to load private key: ", err)
+		log.Fatal(err)
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Fatal("Failed to parse private key: ", err)
+		log.Fatal(err)
 	}
 
 	config.AddHostKey(private)
 
 	// Once a ServerConfig has been configured, connections can be
 	// accepted.
-	listener, err := net.Listen("tcp", "0.0.0.0:2022")
+	listener, err := net.Listen("tcp", *ip+":"+*port)
 	if err != nil {
-		log.Fatal("failed to listen for connection: ", err)
+		log.Fatal(err)
 	}
 	for {
 		nConn, err := listener.Accept()
 		if err != nil {
-			log.Fatal("failed to accept incoming connection: ", err)
+			log.Fatalf("failed to accept incoming connection: %s", err)
 		}
 
 		// Before use, a handshake must be performed on the incoming
 		// net.Conn.
 		conn, chans, reqs, err := ssh.NewServerConn(nConn, config)
 		if err != nil {
-			log.Fatal("failed to handshake: ", err)
+			log.Fatalf("failed to handshake: %v", err)
 		}
 		log.Printf("logged in with key %s", conn.Permissions.Extensions["pubkey-fp"])
 
