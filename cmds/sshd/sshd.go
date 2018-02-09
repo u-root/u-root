@@ -27,9 +27,10 @@ type (
 )
 
 var (
-	shells = [...]string{"bash", "zsh", "rush"}
-	shell  = "/bin/sh"
-	debug  = flag.Bool("d", false, "Enable debug prints")
+	shells  = [...]string{"bash", "zsh", "rush"}
+	shell   = "/bin/sh"
+	debug   = flag.Bool("d", false, "Enable debug prints")
+	dprintf = func(string, ...interface{}) {}
 )
 
 func echoCopy(w io.Writer, r io.Reader) (int64, error) {
@@ -42,7 +43,7 @@ func echoCopy(w io.Writer, r io.Reader) (int64, error) {
 			fmt.Printf("Read: %v", err)
 			break
 		}
-		fmt.Printf("Read %d bytes: %q\n", amt, b[:amt])
+		log.Printf("Read %d bytes: %q\n", amt, b[:amt])
 		if _, err = w.Write(b[:amt]); err != nil {
 			fmt.Printf("Write: %v", err)
 		}
@@ -73,6 +74,7 @@ func runShell(c ssh.Channel, p *pty.Pty, shell string) error {
 func newPTY(b []byte) (*pty.Pty, error) {
 	ptyReq := &ptyReq{}
 	err := ssh.Unmarshal(b, ptyReq)
+	dprintf("newPTY: %q", ptyReq)
 	if err != nil {
 		return nil, err
 	}
@@ -85,9 +87,11 @@ func newPTY(b []byte) (*pty.Pty, error) {
 	ws.Ypixel = uint16(ptyReq.Ypixel)
 	ws.Col = uint16(ptyReq.Col)
 	ws.Xpixel = uint16(ptyReq.Xpixel)
+	dprintf("newPTY: Set winsizes to %v", ws)
 	if err := p.TTY.SetWinSize(ws); err != nil {
 		return nil, err
 	}
+	dprintf("newPTY: set TERM to %q", ptyReq.TERM)
 	if err := os.Setenv("TERM", ptyReq.TERM); err != nil {
 		return nil, err
 	}
@@ -103,6 +107,10 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
+	if *debug {
+		dprintf = log.Printf
+	}
 	// Public key authentication is done by comparing
 	// the public key of a received connection
 	// with the entries in the authorized_keys file.
