@@ -11,6 +11,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/u-root/u-root/pkg/wpa/passphrase"
 )
 
 const (
@@ -53,7 +55,7 @@ func main() {
 	case len(a) == 2:
 		essid = a[0]
 		pass := a[1]
-		o, err := exec.Command("wpa_passphrase", essid, pass).CombinedOutput()
+		o, err := passphrase.Run(essid, pass)
 		if err != nil {
 			log.Fatalf("%v %v: %v", essid, pass, err)
 		}
