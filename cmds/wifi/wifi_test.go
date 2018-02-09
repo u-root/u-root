@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,7 +19,7 @@ type WifiTestCase struct {
 	name      string
 	args      []string
 	out       string
-	exp_error bool
+	errExists bool
 }
 
 var testcases = []WifiTestCase{
@@ -26,26 +27,24 @@ var testcases = []WifiTestCase{
 		name:      "No Flags, No Args",
 		args:      nil,
 		out:       "Usage",
-		exp_error: true,
+		errExists: true,
 	},
 	{
 		name:      "Flags, No Args",
 		args:      []string{"-i=123"},
 		out:       "Usage",
-		exp_error: true,
+		errExists: true,
 	},
 }
-
-var ERROR_MSG_FORMAT = "\nEXPECTED:\n%s\n\nACTUAL:\n%s\n"
 
 func errorExists(err error) bool {
 	return err != nil
 }
 
-func craftPrintMsg(err_exists bool, out string) string {
+func craftPrintMsg(errExists bool, out string) string {
 	var msg bytes.Buffer
 
-	if err_exists {
+	if errExists {
 		msg.WriteString("Error Status: exists\n")
 	} else {
 		msg.WriteString("Error Status: not exists\n")
@@ -65,10 +64,11 @@ func TestWifi(t *testing.T) {
 		t.Logf("TEST %v", test.name)
 		c := exec.Command(execPath, test.args...)
 		out, err := c.CombinedOutput()
-		if (test.exp_error != errorExists(err)) || !strings.Contains(string(out), test.out) {
-			expectMsg := craftPrintMsg(test.exp_error, test.out)
+		if (test.errExists != errorExists(err)) || !strings.Contains(string(out), test.out) {
+			expectMsg := craftPrintMsg(test.errExists, test.out)
 			actualMsg := craftPrintMsg(errorExists(err), string(out))
-			t.Errorf(ERROR_MSG_FORMAT, expectMsg, actualMsg)
+			execStatement := fmt.Sprintf("exec(wifi %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
+			t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", execStatement, actualMsg, expectMsg)
 		}
 	}
 }
