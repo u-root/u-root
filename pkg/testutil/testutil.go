@@ -49,10 +49,10 @@ func ErrorExists(err error) bool {
 }
 
 // Helper function for PrintError
-func craftPrintMsg(err_exists bool, out string) string {
+func craftPrintMsg(errExists bool, out string) string {
 	var msg bytes.Buffer
 
-	if err_exists {
+	if errExists {
 		msg.WriteString("Error Status: exists\n")
 	} else {
 		msg.WriteString("Error Status: not exists\n")
@@ -63,9 +63,8 @@ func craftPrintMsg(err_exists bool, out string) string {
 }
 
 // PrintError provides a standard way to print out error message when a test case fails
-func PrintError(t *testing.T, expOut string, expErrExists bool, actualOut string, actualErr error) {
-	err_msg_format := "\nEXPECTED:\n%s\n\nACTUAL:\n%s\n"
+func PrintError(t *testing.T, funcCallStm string, expOut string, expErrExists bool, actualOut string, actualErr error) {
 	expectMsg := craftPrintMsg(expErrExists, expOut)
 	actualMsg := craftPrintMsg(ErrorExists(actualErr), actualOut)
-	t.Errorf(err_msg_format, expectMsg, actualMsg)
+	t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", funcCallStm, actualMsg, expectMsg)
 }

@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-var RESULT_FORMAT = `network={
+const ResultFormat = `network={
 	ssid="%s"
 	#psk="%s"
 	psk=%s
@@ -31,7 +31,7 @@ func Run(essid string, pass string) ([]byte, error) {
 		return nil, err
 	}
 
-	psk_binary := pbkdf2.Key([]byte(pass), []byte(essid), 4096, 32, sha1.New)
-	psk_hex_string := hex.EncodeToString(psk_binary)
-	return []byte(fmt.Sprintf(RESULT_FORMAT, essid, pass, psk_hex_string)), nil
+	pskBinary := pbkdf2.Key([]byte(pass), []byte(essid), 4096, 32, sha1.New)
+	pskHexString := hex.EncodeToString(pskBinary)
+	return []byte(fmt.Sprintf(ResultFormat, essid, pass, pskHexString)), nil
 }
