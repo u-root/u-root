@@ -16,6 +16,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/sys/unix"
@@ -30,6 +31,12 @@ type Pty struct {
 	TTY      *termios.TTY
 	WS       *unix.Winsize
 	Restorer *unix.Termios
+}
+
+func (p *Pty) Command(cmd string, args ...string) {
+	p.C = exec.Command(cmd, args...)
+	p.C.Stdin, p.C.Stdout, p.C.Stderr = p.Pts, p.Pts, p.Pts
+	p.C.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
 }
 
 func (p *Pty) Start() error {
@@ -68,15 +75,6 @@ func (p *Pty) Start() error {
 		for {
 			if _, err := p.C.Stdin.Read(data[:]); err != nil {
 				return
-			}
-			// TODO: should we really echo this? Or pass it to the
-			// shell? I think we need to echo it but not pass it
-			// on.
-			if data[0] == '\r' {
-				if _, err := p.C.Stdout.Write(data[:]); err != nil {
-					fmt.Fprintf(p.C.Stderr, "error on echo %v: %v", data, err)
-				}
-				data[0] = '\n'
 			}
 			// Log the error but it may be transient.
 			if _, err := p.Ptm.Write(data[:]); err != nil {
