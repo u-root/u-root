@@ -213,11 +213,12 @@
     "openpgp/packet",
     "openpgp/s2k",
     "poly1305",
+    "pbkdf2",
     "ripemd160",
     "sha3",
     "ssh"
   ]
-  revision = "d9133f5469342136e669e85192a26056b587f503"
+  revision = "5119cf507ed5294cc409c092980c7497ee5d6fd2"
 
 [[projects]]
   branch = "master"
@@ -250,7 +251,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "66487607e2081c7c2af2281c62c14ee000d5024b"
+  revision = "70252dea49c01dbfc3f800978304eb00eb15b698"
 
 [[projects]]
   name = "pack.ag/tftp"
@@ -264,6 +265,10 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
+<<<<<<< HEAD
   inputs-digest = "0d7eaaa083c6e0e43c9ffa5276aeacc997e0e501199f19c25faf4e5a043c724b"
+=======
+  inputs-digest = "71601edc6c9ac0fc5fb77c0b32ec9666523529ba46d04bd28fef80b971f3671d"
+>>>>>>> Update vendor include pbkdf2.go
   solver-name = "gps-cdcl"
   solver-version = 1
