@@ -16,19 +16,18 @@ type RunTestCase struct {
 }
 
 var (
-	ERROR_MSG_FORMAT = "\nEXPECTED:\n%s\n\nACTUAL:\n%s\n"
-
 	essidStub     = "stub"
 	shortPass     = "aaaaaaa"                                                          // 7 chars
 	longPass      = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" // 64 chars
 	validPass     = "aaaaaaaaaaaaaaaa"                                                 // 16 chars
 	correctOutput = []byte(
 		`network={
-	ssid=\"stub\"
-	#psk=\"aaaaaaaaaaaaaaaa\"
+	ssid="stub"
+	#psk="aaaaaaaaaaaaaaaa"
 	psk=e270ba95a72c6d922e902f65dfa23315f7ba43b69debc75167254acd778f2fe9
 }
-`)
+`) // indentation matters
+
 	runTestCases = []RunTestCase{
 		{
 			name:       "No essid",
