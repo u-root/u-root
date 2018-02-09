@@ -175,58 +175,59 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to listen for connection: ", err)
 	}
-	nConn, err := listener.Accept()
-	if err != nil {
-		log.Fatal("failed to accept incoming connection: ", err)
-	}
-
-	// Before use, a handshake must be performed on the incoming
-	// net.Conn.
-	conn, chans, reqs, err := ssh.NewServerConn(nConn, config)
-	if err != nil {
-		log.Fatal("failed to handshake: ", err)
-	}
-	log.Printf("logged in with key %s", conn.Permissions.Extensions["pubkey-fp"])
-
-	// The incoming Request channel must be serviced.
-	go ssh.DiscardRequests(reqs)
-
-	var p *pty.Pty
-	// Service the incoming Channel channel.
-	for newChannel := range chans {
-		// Channels have a type, depending on the application level
-		// protocol intended. In the case of a shell, the type is
-		// "session" and ServerShell may be used to present a simple
-		// terminal interface.
-		if newChannel.ChannelType() != "session" {
-			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
-			continue
-		}
-		channel, requests, err := newChannel.Accept()
+	for {
+		nConn, err := listener.Accept()
 		if err != nil {
-			log.Fatalf("Could not accept channel: %v", err)
+			log.Fatal("failed to accept incoming connection: ", err)
 		}
 
-		// Sessions have out-of-band requests such as "shell",
-		// "pty-req" and "env".  Here we handle only the
-		// "shell" request.
-		go func(in <-chan *ssh.Request) {
-			for req := range in {
-				fmt.Printf("Request %v", req.Type)
-				switch req.Type {
-				case "shell":
-					err := runShell(channel, p, shell)
-					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
-				case "pty-req":
-					p, err = newPTY(req.Payload)
-					req.Reply(err == nil, nil)
-				default:
-					fmt.Printf("Not handling req %v %q", req, string(req.Payload))
-					req.Reply(false, nil)
-				}
+		// Before use, a handshake must be performed on the incoming
+		// net.Conn.
+		conn, chans, reqs, err := ssh.NewServerConn(nConn, config)
+		if err != nil {
+			log.Fatal("failed to handshake: ", err)
+		}
+		log.Printf("logged in with key %s", conn.Permissions.Extensions["pubkey-fp"])
+
+		// The incoming Request channel must be serviced.
+		go ssh.DiscardRequests(reqs)
+
+		var p *pty.Pty
+		// Service the incoming Channel channel.
+		for newChannel := range chans {
+			// Channels have a type, depending on the application level
+			// protocol intended. In the case of a shell, the type is
+			// "session" and ServerShell may be used to present a simple
+			// terminal interface.
+			if newChannel.ChannelType() != "session" {
+				newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
+				continue
 			}
-		}(requests)
+			channel, requests, err := newChannel.Accept()
+			if err != nil {
+				log.Fatalf("Could not accept channel: %v", err)
+			}
 
+			// Sessions have out-of-band requests such as "shell",
+			// "pty-req" and "env".  Here we handle only the
+			// "shell" request.
+			go func(in <-chan *ssh.Request) {
+				for req := range in {
+					dprintf("Request %v", req.Type)
+					switch req.Type {
+					case "shell":
+						err := runShell(channel, p, shell)
+						req.Reply(true, []byte(fmt.Sprintf("%v", err)))
+					case "pty-req":
+						p, err = newPTY(req.Payload)
+						req.Reply(err == nil, nil)
+					default:
+						fmt.Printf("Not handling req %v %q", req, string(req.Payload))
+						req.Reply(false, nil)
+					}
+				}
+			}(requests)
+
+		}
 	}
-
 }
