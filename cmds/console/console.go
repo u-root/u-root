@@ -35,10 +35,11 @@ func main() {
 		a = []string{"/ubin/rush"}
 	}
 
-	p, err := pty.New(a[0], a[1:]...)
+	p, err := pty.New()
 	if err != nil {
 		log.Fatalf("Can't open pty: %v", err)
 	}
+	p.Command(a[0], a[1:]...)
 	// Make a good faith effort to set up root. This being
 	// a kind of init program, we do our best and keep going.
 	if *setupRoot {
