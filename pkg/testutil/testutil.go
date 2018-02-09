@@ -63,8 +63,8 @@ func craftPrintMsg(errExists bool, out string) string {
 }
 
 // PrintError provides a standard way to print out error message when a test case fails
-func PrintError(t *testing.T, funcCallStm string, expOut string, expErrExists bool, actualOut string, actualErr error) {
+func PrintError(t *testing.T, funcCallStmt string, expOut string, expErrExists bool, actualOut string, actualErr error) {
 	expectMsg := craftPrintMsg(expErrExists, expOut)
 	actualMsg := craftPrintMsg(ErrorExists(actualErr), actualOut)
-	t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", funcCallStm, actualMsg, expectMsg)
+	t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", funcCallStmt, actualMsg, expectMsg)
 }

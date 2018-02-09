@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,23 +36,6 @@ var testcases = []WifiTestCase{
 	},
 }
 
-func errorExists(err error) bool {
-	return err != nil
-}
-
-func craftPrintMsg(errExists bool, out string) string {
-	var msg bytes.Buffer
-
-	if errExists {
-		msg.WriteString("Error Status: exists\n")
-	} else {
-		msg.WriteString("Error Status: not exists\n")
-	}
-	msg.WriteString("Output:\n")
-	msg.WriteString(out)
-	return msg.String()
-}
-
 func TestWifi(t *testing.T) {
 	// Set up
 	tmpDir, execPath := testutil.CompileInTempDir(t)
@@ -64,11 +46,9 @@ func TestWifi(t *testing.T) {
 		t.Logf("TEST %v", test.name)
 		c := exec.Command(execPath, test.args...)
 		out, err := c.CombinedOutput()
-		if (test.errExists != errorExists(err)) || !strings.Contains(string(out), test.out) {
-			expectMsg := craftPrintMsg(test.errExists, test.out)
-			actualMsg := craftPrintMsg(errorExists(err), string(out))
+		if (test.errExists != testutil.ErrorExists(err)) || !strings.Contains(string(out), test.out) {
 			execStatement := fmt.Sprintf("exec(wifi %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-			t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", execStatement, actualMsg, expectMsg)
+			testutil.PrintError(t, execStatement, test.out, test.errExists, string(out), err)
 		}
 	}
 }
