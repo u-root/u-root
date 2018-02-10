@@ -2,62 +2,50 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// shutdown halts or reboots.
+// shutdown halts, suspends, or reboots.
 //
 // Synopsis:
-//     shutdown [-dryrun] [operation]
+//     shutdown [-h|-r|halt|reboot|suspend]
 //
 // Description:
-//     shutdown will either do or simulate the operation.
-//     current operations are reboot and halt.
+//     current operations are reboot (-r), suspend, and halt [-h].
 //
 // Options:
-//     -dryrun:   do not do really do it.
+//     -r|reboot:	reboot the machine.
+//     -h|halt:		halt the machine.
+//     -s|suspend:	suspend the machine.
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 
 	"golang.org/x/sys/unix"
 )
 
-var (
-	dryrun  = flag.Bool("dryrun", false, "Do not do reboot system calls")
-	op      = "reboot"
-	opcodes = map[string]uint32{
-		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
-		"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
-		"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
-	}
-)
+var opcodes = map[string]uint{
+	"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
+	"-h":      unix.LINUX_REBOOT_CMD_POWER_OFF,
+	"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
+	"-r":      unix.LINUX_REBOOT_CMD_RESTART,
+	"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
+	"-s":      unix.LINUX_REBOOT_CMD_SW_SUSPEND,
+}
 
 func usage() {
-	log.Fatalf("shutdown [-dryrun] [halt|reboot|suspend] (defaults to reboot)")
+	log.Fatalf("shutdown [-h|-r|-s|halt|reboot|suspend] (defaults to halt)")
 }
 
 func main() {
-	flag.Parse()
-	switch len(flag.Args()) {
-	default:
-		usage()
-	case 0:
-	case 1:
-		op = flag.Args()[0]
-	}
 
-	f, ok := opcodes[op]
-	if !ok {
+	if len(os.Args) == 1 {
+		os.Args = append(os.Args, "halt")
+	}
+	op, ok := opcodes[os.Args[1]]
+	if !ok || len(os.Args) > 2 {
 		usage()
 	}
-
-	if *dryrun {
-		log.Printf("unix.Reboot(0x%x)", f)
-		os.Exit(0)
-	}
-
-	if err := unix.Reboot(int(f)); err != nil {
+	if err := unix.Reboot(int(op)); err != nil {
 		log.Fatalf(err.Error())
 	}
 }
