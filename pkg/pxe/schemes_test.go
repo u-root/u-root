@@ -19,8 +19,8 @@ type MockScheme struct {
 	// hosts is a map of host -> relative filename to host -> file contents.
 	hosts map[string]map[string]string
 
-	// numCalled is a map of URI string -> number of times GetFile has been
-	// called on that URI.
+	// numCalled is a map of URL string -> number of times GetFile has been
+	// called on that URL.
 	numCalled map[string]uint
 }
 
@@ -42,8 +42,8 @@ func (m *MockScheme) Add(host string, p string, content string) {
 }
 
 func (m *MockScheme) NumCalled(u *url.URL) uint {
-	uri := u.String()
-	if c, ok := m.numCalled[uri]; ok {
+	url := u.String()
+	if c, ok := m.numCalled[url]; ok {
 		return c
 	}
 	return 0
@@ -56,11 +56,11 @@ var (
 )
 
 func (m *MockScheme) GetFile(u *url.URL) (io.Reader, error) {
-	uri := u.String()
-	if _, ok := m.numCalled[uri]; ok {
-		m.numCalled[uri]++
+	url := u.String()
+	if _, ok := m.numCalled[url]; ok {
+		m.numCalled[url]++
 	} else {
-		m.numCalled[uri] = 1
+		m.numCalled[url] = 1
 	}
 
 	if u.Scheme != m.scheme {
@@ -82,7 +82,7 @@ func (m *MockScheme) GetFile(u *url.URL) (io.Reader, error) {
 func TestCachedFileSchemeGetFile(t *testing.T) {
 	for i, tt := range []struct {
 		fs   func() *MockScheme
-		uri  *url.URL
+		url  *url.URL
 		err  error
 		want string
 	}{
@@ -92,7 +92,7 @@ func TestCachedFileSchemeGetFile(t *testing.T) {
 				s.Add("192.168.0.1", "/default", "haha")
 				return s
 			},
-			uri: &url.URL{
+			url: &url.URL{
 				Scheme: "fooftp",
 				Host:   "192.168.0.1",
 				Path:   "/default",
@@ -103,7 +103,7 @@ func TestCachedFileSchemeGetFile(t *testing.T) {
 			fs: func() *MockScheme {
 				return NewMockScheme("fooftp")
 			},
-			uri: &url.URL{
+			url: &url.URL{
 				Scheme: "fooftp",
 			},
 			err: errNoSuchHost,
@@ -112,9 +112,9 @@ func TestCachedFileSchemeGetFile(t *testing.T) {
 		t.Run(fmt.Sprintf("Test [%02d]", i), func(t *testing.T) {
 			ms := tt.fs()
 			fs := NewCachedFileScheme(ms)
-			r, err := fs.GetFile(tt.uri)
+			r, err := fs.GetFile(tt.url)
 			if err != tt.err {
-				t.Errorf("GetFile(%s) = %v, want %v", tt.uri, err, tt.err)
+				t.Errorf("GetFile(%s) = %v, want %v", tt.url, err, tt.err)
 				return
 			} else if err == nil {
 				content, err := ioutil.ReadAll(r)
@@ -122,13 +122,13 @@ func TestCachedFileSchemeGetFile(t *testing.T) {
 					t.Errorf("ReadAll = %v, want nil", err)
 				}
 				if got := string(content); got != tt.want {
-					t.Errorf("Read(%s) got %v, want %v", tt.uri, got, tt.want)
+					t.Errorf("Read(%s) got %v, want %v", tt.url, got, tt.want)
 				}
 			}
 
-			r2, err2 := fs.GetFile(tt.uri)
+			r2, err2 := fs.GetFile(tt.url)
 			if err2 != tt.err {
-				t.Errorf("GetFile2(%s) = %v, want %v", tt.uri, err2, tt.err)
+				t.Errorf("GetFile2(%s) = %v, want %v", tt.url, err2, tt.err)
 				return
 			} else if err2 == nil {
 				content2, err := ioutil.ReadAll(r2)
@@ -136,12 +136,12 @@ func TestCachedFileSchemeGetFile(t *testing.T) {
 					t.Errorf("ReadAll2 = %v, want nil", err)
 				}
 				if got := string(content2); got != tt.want {
-					t.Errorf("Read2(%s) got %v, want %v", tt.uri, got, tt.want)
+					t.Errorf("Read2(%s) got %v, want %v", tt.url, got, tt.want)
 				}
 			}
 
-			if got := ms.NumCalled(tt.uri); got != 1 {
-				t.Errorf("num called(%s) = %d, want 1", tt.uri, got)
+			if got := ms.NumCalled(tt.url); got != 1 {
+				t.Errorf("num called(%s) = %d, want 1", tt.url, got)
 			}
 		})
 	}
@@ -150,8 +150,7 @@ func TestCachedFileSchemeGetFile(t *testing.T) {
 func TestGetFile(t *testing.T) {
 	for i, tt := range []struct {
 		scheme func() *MockScheme
-		wd     *url.URL
-		uri    string
+		url    *url.URL
 		err    error
 		want   string
 	}{
@@ -162,11 +161,10 @@ func TestGetFile(t *testing.T) {
 				return s
 			},
 			want: "haha",
-			uri:  "default",
-			wd: &url.URL{
+			url: &url.URL{
 				Scheme: "fooftp",
 				Host:   "192.168.0.1",
-				Path:   "/foo/pxelinux.cfg",
+				Path:   "/foo/pxelinux.cfg/default",
 			},
 		},
 		{
@@ -174,7 +172,9 @@ func TestGetFile(t *testing.T) {
 				s := NewMockScheme("fooftp")
 				return s
 			},
-			uri: "nosuch://scheme/foo",
+			url: &url.URL{
+				Scheme: "nosuch",
+			},
 			err: ErrNoSuchScheme,
 		},
 		{
@@ -182,7 +182,10 @@ func TestGetFile(t *testing.T) {
 				s := NewMockScheme("fooftp")
 				return s
 			},
-			uri: "fooftp://someotherplace",
+			url: &url.URL{
+				Scheme: "fooftp",
+				Host:   "someotherplace",
+			},
 			err: errNoSuchHost,
 		},
 		{
@@ -191,7 +194,11 @@ func TestGetFile(t *testing.T) {
 				s.Add("somehost", "somefile", "somecontent")
 				return s
 			},
-			uri: "fooftp://somehost/someotherfile",
+			url: &url.URL{
+				Scheme: "fooftp",
+				Host:   "somehost",
+				Path:   "/someotherfile",
+			},
 			err: errNoSuchFile,
 		},
 	} {
@@ -201,13 +208,15 @@ func TestGetFile(t *testing.T) {
 			s.Register(fs.scheme, fs)
 
 			// Test both GetFile and LazyGetFile.
-			for _, f := range []func(uri string, wd *url.URL) (io.Reader, error){
+			for _, f := range []func(url *url.URL) (io.Reader, error){
 				s.GetFile,
 				s.LazyGetFile,
 			} {
-				r, err := f(tt.uri, tt.wd)
-				if got, want := err, tt.err; got != want {
-					t.Errorf("GetFile() = %v, want %v", got, want)
+				r, err := f(tt.url)
+				if uErr, ok := err.(*URLError); ok && uErr.Err != tt.err {
+					t.Errorf("GetFile() = %v, want %v", uErr.Err, tt.err)
+				} else if !ok && err != tt.err {
+					t.Errorf("GetFile() = %v, want %v", err, tt.err)
 				}
 				if err != nil {
 					return
@@ -224,15 +233,15 @@ func TestGetFile(t *testing.T) {
 	}
 }
 
-func TestParseURI(t *testing.T) {
+func TestParseURL(t *testing.T) {
 	for i, tt := range []struct {
-		uri  string
+		url  string
 		wd   *url.URL
 		err  bool
 		want *url.URL
 	}{
 		{
-			uri: "default",
+			url: "default",
 			wd: &url.URL{
 				Scheme: "tftp",
 				Host:   "192.168.1.1",
@@ -245,7 +254,7 @@ func TestParseURI(t *testing.T) {
 			},
 		},
 		{
-			uri: "http://192.168.2.1/configs/your-machine.cfg",
+			url: "http://192.168.2.1/configs/your-machine.cfg",
 			wd: &url.URL{
 				Scheme: "tftp",
 				Host:   "192.168.1.1",
@@ -259,12 +268,12 @@ func TestParseURI(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
-			got, err := parseURI(tt.uri, tt.wd)
+			got, err := parseURL(tt.url, tt.wd)
 			if (err != nil) != tt.err {
 				t.Errorf("Wanted error (%v), but got %v", tt.err, err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseURI() = %#v, want %#v", got, tt.want)
+				t.Errorf("parseURL() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

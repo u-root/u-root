@@ -85,7 +85,7 @@ func TestAppendFile(t *testing.T) {
 	}{
 		{
 			desc:          "all files exist, simple config with cmdline initrd",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -97,7 +97,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/initrd", content2)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -118,7 +118,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "all files exist, simple config with directive initrd",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -131,7 +131,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/initrd", content2)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -152,7 +152,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "all files exist, simple config, no initrd",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -162,7 +162,7 @@ func TestAppendFile(t *testing.T) {
 				kernel ./pxefiles/kernel`
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -183,7 +183,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "kernel does not exist, simple config",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -192,7 +192,7 @@ func TestAppendFile(t *testing.T) {
 				label foo
 				kernel ./pxefiles/kernel`
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -204,20 +204,27 @@ func TestAppendFile(t *testing.T) {
 				defaultEntry: "foo",
 				labels: map[string]label{
 					"foo": {
-						kernelErr: errNoSuchFile,
-						initrd:    "",
-						cmdline:   "",
+						kernelErr: &URLError{
+							URL: &url.URL{
+								Scheme: "tftp",
+								Host:   "1.2.3.4",
+								Path:   "/foobar/pxefiles/kernel",
+							},
+							Err: errNoSuchFile,
+						},
+						initrd:  "",
+						cmdline: "",
 					},
 				},
 			},
 		},
 		{
 			desc:          "config file does not exist",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -225,16 +232,23 @@ func TestAppendFile(t *testing.T) {
 				Host:   "1.2.3.4",
 				Path:   "/foobar",
 			},
-			err: ErrConfigNotFound,
+			err: &URLError{
+				URL: &url.URL{
+					Scheme: "tftp",
+					Host:   "1.2.3.4",
+					Path:   "/foobar/pxelinux.cfg/default",
+				},
+				Err: errNoSuchHost,
+			},
 		},
 		{
 			desc:          "empty config",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", "")
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -248,7 +262,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "valid config with two labels",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -265,7 +279,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/fookernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/barkernel", content2)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -289,7 +303,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "valid config with global APPEND directive",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -310,7 +324,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/fookernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/barkernel", content2)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -341,7 +355,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "valid config with global APPEND with initrd",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
@@ -369,7 +383,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxefiles/drugkernel", content2)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/normal_person", content3)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/criminal", content4)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -407,14 +421,14 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "default label does not exist",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
 				conf := `default avon`
 
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
-				s.Register(fs.scheme, fs)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
 				return s
 			},
 			wd: &url.URL{
@@ -429,7 +443,7 @@ func TestAppendFile(t *testing.T) {
 		},
 		{
 			desc:          "multi-scheme valid config",
-			configFileURI: "default",
+			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() Schemes {
 				conf := `default sheeeit
 
@@ -446,8 +460,8 @@ func TestAppendFile(t *testing.T) {
 				http.Add("someplace.com", "/someinitrd.gz", content3)
 
 				s := make(Schemes)
-				s.Register(tftp.scheme, tftp)
-				s.Register(http.scheme, http)
+				s.Register(tftp.scheme, NewCachedFileScheme(tftp))
+				s.Register(http.scheme, NewCachedFileScheme(http))
 				return s
 			},
 			wd: &url.URL{
@@ -465,13 +479,67 @@ func TestAppendFile(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc:          "valid config with three includes",
+			configFileURI: "pxelinux.cfg/default",
+			schemeFunc: func() Schemes {
+				s := make(Schemes)
+				fs := NewMockScheme("tftp")
+				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
+				conf := `default mcnulty
+
+				include installer/txt.cfg
+				include installer/stdmenu.cfg
+
+				menu begin advanced
+				  menu title Advanced Options
+				  include installer/stdmenu.cfg
+				menu end
+				`
+
+				txt := `
+				label mcnulty
+				kernel ./pxefiles/copkernel
+				append earlyprintk=ttyS0 printk=ttyS0
+				`
+
+				stdmenu := `
+				label omar
+				kernel ./pxefiles/drugkernel
+				`
+				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
+				fs.Add("1.2.3.4", "/foobar/installer/stdmenu.cfg", stdmenu)
+				fs.Add("1.2.3.4", "/foobar/installer/txt.cfg", txt)
+				fs.Add("1.2.3.4", "/foobar/pxefiles/copkernel", content1)
+				fs.Add("1.2.3.4", "/foobar/pxefiles/drugkernel", content2)
+				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				return s
+			},
+			wd: &url.URL{
+				Scheme: "tftp",
+				Host:   "1.2.3.4",
+				Path:   "/foobar",
+			},
+			want: config{
+				defaultEntry: "mcnulty",
+				labels: map[string]label{
+					"mcnulty": {
+						kernel:  content1,
+						cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+					},
+					"omar": {
+						kernel: content2,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
 			s := tt.schemeFunc()
 			c := NewConfig(tt.wd)
 			c.schemes = s
 
-			if err := c.AppendFile(tt.configFileURI); err != tt.err {
+			if err := c.AppendFile(tt.configFileURI); !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)
 			} else if err != nil {
 				return
@@ -495,7 +563,7 @@ func TestAppendFile(t *testing.T) {
 					}
 					if label.Kernel != nil {
 						k, err := ioutil.ReadAll(label.Kernel)
-						if err != want.kernelErr {
+						if !reflect.DeepEqual(err, want.kernelErr) {
 							t.Errorf("could not read kernel of label %q: %v, want %v", labelName, err, want.kernelErr)
 						}
 						if got, want := string(k), want.kernel; got != want {
