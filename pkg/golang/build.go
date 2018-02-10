@@ -53,14 +53,17 @@ type ListPackage struct {
 	ImportPath string
 }
 
+func (c Environ) goCmd(args ...string) *exec.Cmd {
+	cmd := exec.Command(filepath.Join(c.GOROOT, "bin", "go"), args...)
+	cmd.Env = append(os.Environ(), c.Env()...)
+	return cmd
+}
+
 // Deps lists all dependencies of the package given by `importPath`.
 func (c Environ) Deps(importPath string) (*ListPackage, error) {
 	// The output of this is almost the same as build.Import, except for
 	// the dependencies.
-	cmd := exec.Command("go", "list", "-json", importPath)
-	env := os.Environ()
-	env = append(env, c.Env()...)
-	cmd.Env = env
+	cmd := c.goCmd("list", "-json", importPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -126,9 +129,8 @@ func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) err
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")
 
-	cmd := exec.Command("go", args...)
+	cmd := c.goCmd(args...)
 	cmd.Dir = p.Dir
-	cmd.Env = append(os.Environ(), c.Env()...)
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error building go package %v: %v, %v", importPath, string(o), err)
