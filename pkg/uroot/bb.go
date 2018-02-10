@@ -126,10 +126,10 @@ func init() {
 // Commands to skip building in bb mode. init and rush should be obvious
 // builtin and script we skip as we have no toolchain in this mode.
 var skip = map[string]struct{}{
-	"builtin": struct{}{},
-	"init":    struct{}{},
-	"rush":    struct{}{},
-	"script":  struct{}{},
+	"builtin": {},
+	"init":    {},
+	"rush":    {},
+	"script":  {},
 }
 
 type bbBuilder struct {

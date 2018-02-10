@@ -108,7 +108,7 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "foo",
 				labels: map[string]label{
-					"foo": label{
+					"foo": {
 						kernel:  content1,
 						initrd:  content2,
 						cmdline: "initrd=./pxefiles/initrd",
@@ -142,7 +142,7 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "foo",
 				labels: map[string]label{
-					"foo": label{
+					"foo": {
 						kernel:  content1,
 						initrd:  content2,
 						cmdline: "foo=bar",
@@ -173,7 +173,7 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "foo",
 				labels: map[string]label{
-					"foo": label{
+					"foo": {
 						kernel:  content1,
 						initrd:  "",
 						cmdline: "",
@@ -203,7 +203,7 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "foo",
 				labels: map[string]label{
-					"foo": label{
+					"foo": {
 						kernelErr: errNoSuchFile,
 						initrd:    "",
 						cmdline:   "",
@@ -276,11 +276,11 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "foo",
 				labels: map[string]label{
-					"foo": label{
+					"foo": {
 						kernel:  content1,
 						cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 					},
-					"bar": label{
+					"bar": {
 						kernel:  content2,
 						cmdline: "console=ttyS0",
 					},
@@ -321,17 +321,17 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "foo",
 				labels: map[string]label{
-					"foo": label{
+					"foo": {
 						kernel: content1,
 						// Does not contain global APPEND.
 						cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 					},
-					"bar": label{
+					"bar": {
 						kernel: content2,
 						// Contains only global APPEND.
 						cmdline: "foo=bar",
 					},
-					"baz": label{
+					"baz": {
 						kernel: content2,
 						// "APPEND -" means ignore global APPEND.
 						cmdline: "",
@@ -380,23 +380,23 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "mcnulty",
 				labels: map[string]label{
-					"mcnulty": label{
+					"mcnulty": {
 						kernel: content1,
 						// Does not contain global APPEND.
 						cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 					},
-					"lester": label{
+					"lester": {
 						kernel: content1,
 						initrd: content3,
 						// Contains only global APPEND.
 						cmdline: "initrd=./pxefiles/normal_person",
 					},
-					"omar": label{
+					"omar": {
 						kernel: content2,
 						// "APPEND -" means ignore global APPEND.
 						cmdline: "",
 					},
-					"stringer": label{
+					"stringer": {
 						kernel: content2,
 						// See TODO in pxe.go initrd handling.
 						initrd:  content4,
@@ -458,7 +458,7 @@ func TestAppendFile(t *testing.T) {
 			want: config{
 				defaultEntry: "sheeeit",
 				labels: map[string]label{
-					"sheeeit": label{
+					"sheeeit": {
 						kernel: content2,
 						initrd: content3,
 					},

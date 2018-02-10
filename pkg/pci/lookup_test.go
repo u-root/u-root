@@ -10,16 +10,16 @@ import (
 func TestLookup(t *testing.T) {
 
 	var idLookupTests = []*PCI{
-		&PCI{Vendor: "1055", Device: "e420", VendorName: "Efar Microsystems", DeviceName: "LAN9420/LAN9420i"},
-		&PCI{Vendor: "8086", Device: "1237", VendorName: "Intel Corporation", DeviceName: "440FX - 82441FX PMC [Natoma]"},
-		&PCI{Vendor: "8086", Device: "7000", VendorName: "Intel Corporation", DeviceName: "82371SB PIIX3 ISA [Natoma/Triton II]"},
-		&PCI{Vendor: "8086", Device: "7111", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 IDE"},
-		&PCI{Vendor: "80ee", Device: "beef", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Graphics Adapter"},
-		&PCI{Vendor: "8086", Device: "100e", VendorName: "Intel Corporation", DeviceName: "82540EM Gigabit Ethernet Controller"},
-		&PCI{Vendor: "80ee", Device: "cafe", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Guest Service"},
-		&PCI{Vendor: "8086", Device: "2415", VendorName: "Intel Corporation", DeviceName: "82801AA AC'97 Audio Controller"},
-		&PCI{Vendor: "8086", Device: "7113", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 ACPI"},
-		&PCI{Vendor: "8086", Device: "100f", VendorName: "Intel Corporation", DeviceName: "82545EM Gigabit Ethernet Controller (Copper)"},
+		{Vendor: "1055", Device: "e420", VendorName: "Efar Microsystems", DeviceName: "LAN9420/LAN9420i"},
+		{Vendor: "8086", Device: "1237", VendorName: "Intel Corporation", DeviceName: "440FX - 82441FX PMC [Natoma]"},
+		{Vendor: "8086", Device: "7000", VendorName: "Intel Corporation", DeviceName: "82371SB PIIX3 ISA [Natoma/Triton II]"},
+		{Vendor: "8086", Device: "7111", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 IDE"},
+		{Vendor: "80ee", Device: "beef", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Graphics Adapter"},
+		{Vendor: "8086", Device: "100e", VendorName: "Intel Corporation", DeviceName: "82540EM Gigabit Ethernet Controller"},
+		{Vendor: "80ee", Device: "cafe", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Guest Service"},
+		{Vendor: "8086", Device: "2415", VendorName: "Intel Corporation", DeviceName: "82801AA AC'97 Audio Controller"},
+		{Vendor: "8086", Device: "7113", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 ACPI"},
+		{Vendor: "8086", Device: "100f", VendorName: "Intel Corporation", DeviceName: "82545EM Gigabit Ethernet Controller (Copper)"},
 	}
 
 	t.Run("Lookup Using IDs", func(t *testing.T) {
