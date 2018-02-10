@@ -28,15 +28,20 @@ func copyToFile(r io.Reader) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
+
 	if _, err := io.Copy(f, r); err != nil {
-		f.Close()
 		return nil, err
 	}
 	if err := f.Sync(); err != nil {
-		f.Close()
 		return nil, err
 	}
-	return f, nil
+	// Re-open the file read-only so we don't get ETXTBSY from kexec.
+	readOnlyFile, err := os.Open(f.Name())
+	if err != nil {
+		return nil, err
+	}
+	return readOnlyFile, nil
 }
 
 func attemptDHCPLease(iface netlink.Link, timeout time.Duration, retry int) dhclient.Packet {
@@ -111,6 +116,7 @@ func Netboot() error {
 			return err
 		}
 		defer k.Close()
+
 		var i *os.File
 		if label.Initrd != nil {
 			i, err = copyToFile(label.Initrd)
