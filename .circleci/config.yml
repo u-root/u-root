@@ -3,33 +3,33 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - dep
-      - test_cmds:
+      - clean-code
+      - test:
           requires:
-            - dep
-      - test_pkg:
+            - clean-code
+      - race:
           requires:
-            - dep
+            - clean-code
       - compile_cmds:
           requires:
-            - dep
+            - clean-code
       - bb_amd64:
           requires:
-            - dep
+            - clean-code
       - bb_arm7:
           requires:
-            - dep
+            - clean-code
       - bb_arm64:
           requires:
-            - dep
+            - clean-code
       - bb_ppc64le:
           requires:
-            - dep
+            - clean-code
       - source_amd64:
           requires:
-            - dep
+            - clean-code
 jobs:
-  dep:
+  clean-code:
     docker:
       - image: circleci/golang:latest
     working_directory: /go/src/github.com/u-root/u-root
@@ -44,9 +44,14 @@ jobs:
           name: Check vendored dependencies
           command: dep status
       - run:
-          name: Go vet
-          command: go tool vet cmds pkg
-  test_cmds:
+          name: vet
+          command: |
+            go tool vet cmds pkg
+            go tool vet u-root.go
+      - run:
+          name: gofmt
+          command: test -z $(gofmt -s -l cmds pkg u-root.go)
+  test:
     docker:
       - image: circleci/golang:latest
     working_directory: /go/src/github.com/u-root/u-root
@@ -55,33 +60,22 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Test cmds
-          command: |
-            cd cmds
-            go test -a -installsuffix uroot -ldflags '-s' ./...
+          name: Test all
+          command: go test -a -ldflags '-s' ./pkg/... ./cmds/...
       - run:
-          name: Test coverage of cmds
-          command: |
-            cd cmds
-            go test -cover ./...
-  test_pkg:
+          name: Test coverage
+          command: go test -cover ./pkg/... ./cmds/...
+  race:
     docker:
       - image: circleci/golang:latest
     working_directory: /go/src/github.com/u-root/u-root
     environment:
-      - CGO_ENABLED: 0
+      - CGO_ENABLED: 1
     steps:
       - checkout
       - run:
-          name: Test pkg
-          command: |
-            cd pkg
-            go test -a -installsuffix uroot -ldflags '-s' ./...
-      - run:
-          name: Test coverage of pkg
-          command: |
-            cd pkg
-            go test -cover ./...
+          name: Race detector
+          command: go test -race ./pkg/... ./cmds/...
   bb_amd64:
     docker:
       - image: circleci/golang:latest
