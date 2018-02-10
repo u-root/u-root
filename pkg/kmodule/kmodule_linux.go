@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -37,7 +38,7 @@ func (s *SyscallError) Error() string {
 }
 
 // Init loads the kernel module given by image with the given options.
-func Init(image []byte, opts string) *SyscallError {
+func Init(image []byte, opts string) error {
 	optsNull, err := unix.BytePtrFromString(opts)
 	if err != nil {
 		return &SyscallError{Msg: fmt.Sprintf("kmodule.Init: could not convert %q to C string: %v", opts, err)}
@@ -57,7 +58,7 @@ func Init(image []byte, opts string) *SyscallError {
 // flags.
 //
 // FileInit falls back to Init when the finit_module(2) syscall is not available.
-func FileInit(f *os.File, opts string, flags uintptr) *SyscallError {
+func FileInit(f *os.File, opts string, flags uintptr) error {
 	optsNull, err := unix.BytePtrFromString(opts)
 	if err != nil {
 		return &SyscallError{Msg: fmt.Sprintf("kmodule.Init: could not convert %q to C string: %v", opts, err)}
@@ -85,7 +86,7 @@ func FileInit(f *os.File, opts string, flags uintptr) *SyscallError {
 }
 
 // Delete removes a kernel module.
-func Delete(name string, flags uintptr) *SyscallError {
+func Delete(name string, flags uintptr) error {
 	modnameptr, err := unix.BytePtrFromString(name)
 	if err != nil {
 		return &SyscallError{Msg: fmt.Sprintf("could not delete module %q: %v", name, err)}
@@ -122,13 +123,13 @@ type ProbeOpts struct {
 
 // Probe loads the given kernel module and its dependencies.
 // It is calls ProbeOptions with the default ProbeOpts.
-func Probe(name string, modParams string) *SyscallError {
+func Probe(name string, modParams string) error {
 	return ProbeOptions(name, modParams, ProbeOpts{})
 }
 
 // ProbeOptions loads the given kernel module and its dependencies.
 // This functions takes ProbeOpts.
-func ProbeOptions(name, modParams string, opts ProbeOpts) *SyscallError {
+func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	deps, err := genDeps()
 	if err != nil {
 		return &SyscallError{Msg: fmt.Sprintf("could not generate dependency map %v", err)}
@@ -206,7 +207,7 @@ func genDeps() (depMap, error) {
 
 func findModPath(name string, m depMap) (string, error) {
 	for mp := range m {
-		if strings.HasSuffix(mp, name+".ko") {
+		if path.Base(mp) == name+".ko" {
 			return mp, nil
 		}
 	}
@@ -214,7 +215,7 @@ func findModPath(name string, m depMap) (string, error) {
 	return "", fmt.Errorf("Could not find path for module %q", name)
 }
 
-func loadDeps(path string, m depMap, opts ProbeOpts) *SyscallError {
+func loadDeps(path string, m depMap, opts ProbeOpts) error {
 	dependency, ok := m[path]
 	if !ok {
 		return &SyscallError{Msg: fmt.Sprintf("could not find dependency %q", path)}
@@ -243,7 +244,7 @@ func loadDeps(path string, m depMap, opts ProbeOpts) *SyscallError {
 	return nil
 }
 
-func loadModule(path, modParams string, opts ProbeOpts) *SyscallError {
+func loadModule(path, modParams string, opts ProbeOpts) error {
 	if opts.DryRun {
 		fmt.Println(path)
 		return nil
@@ -255,8 +256,10 @@ func loadModule(path, modParams string, opts ProbeOpts) *SyscallError {
 	}
 	defer f.Close()
 
-	if err := FileInit(f, modParams, 0); err != nil && err.Errno != unix.EEXIST {
-		return err
+	if err := FileInit(f, modParams, 0); err != nil {
+		if serr, ok := err.(*SyscallError); !ok || (ok && serr.Errno != unix.EEXIST) {
+			return err
+		}
 	}
 
 	return nil

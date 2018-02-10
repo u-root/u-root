@@ -14,13 +14,12 @@ import (
 )
 
 const (
-	cmd          = "wifi [options] essid [passphrase]"
+	cmd          = "wifi [options] essid [passphrase] [identity]"
 	nopassphrase = `network={
-	ssid="%s"
-	proto=RSN
-	key_mgmt=NONE
-}
-`
+		ssid="%s"
+		proto=RSN
+		key_mgmt=NONE
+	}`
 	eap = `network={
 		ssid="%s"
 		key_mgmt=WPA-EAP
@@ -46,12 +45,13 @@ func main() {
 
 	flag.Parse()
 	a := flag.Args()
-	essid = a[0]
 
 	switch {
 	case len(a) == 3:
-		conf = []byte(fmt.Sprintf(eap, essid, a[1], a[2]))
+		essid = a[0]
+		conf = []byte(fmt.Sprintf(eap, essid, a[2], a[1]))
 	case len(a) == 2:
+		essid = a[0]
 		pass := a[1]
 		o, err := exec.Command("wpa_passphrase", essid, pass).CombinedOutput()
 		if err != nil {
@@ -59,6 +59,7 @@ func main() {
 		}
 		conf = o
 	case len(a) == 1:
+		essid = a[0]
 		conf = []byte(fmt.Sprintf(nopassphrase, essid))
 	default:
 		flag.Usage()

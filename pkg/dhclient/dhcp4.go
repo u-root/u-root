@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/u-root/dhcp4"
-	dhcp4client "github.com/u-root/dhcp4/client"
-	dhcp4opts "github.com/u-root/dhcp4/opts"
+	"github.com/u-root/dhcp4/dhcp4client"
+	"github.com/u-root/dhcp4/dhcp4opts"
 	"github.com/vishvananda/netlink"
 )
 
