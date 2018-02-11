@@ -104,6 +104,9 @@ jobs:
       - store_artifacts:
           path: /tmp/initramfs.linux_amd64.cpio.lzma
           destination: bb_initramfs.linux_amd64.cpio.lzma
+      - store_artifacts:
+          path: /tmp/initramfs.linux_amd64.cpio.1
+          destination: bb_initramfs.linux_amd64.cpio.1
   bb_arm7:
     docker:
       - image: circleci/golang:latest
