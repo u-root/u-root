@@ -4,10 +4,13 @@ workflows:
   build_and_test:
     jobs:
       - clean-code
-      - test:
+      - race_pkg:
           requires:
             - clean-code
-      - race:
+      - race_cmds:
+          requires:
+            - clean-code
+      - test:
           requires:
             - clean-code
       - compile_cmds:
@@ -65,7 +68,7 @@ jobs:
       - run:
           name: Test coverage
           command: go test -cover ./pkg/... ./cmds/...
-  race:
+  race_pkg:
     docker:
       - image: circleci/golang:latest
     working_directory: /go/src/github.com/u-root/u-root
@@ -75,7 +78,18 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race ./pkg/... ./cmds/...
+          command: go test -race ./pkg/...
+  race_cmds:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 1
+    steps:
+      - checkout
+      - run:
+          name: Race detector
+          command: go test -race ./cmds/...
   bb_amd64:
     docker:
       - image: circleci/golang:latest
