@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -431,9 +432,17 @@ func getPackage(opts BuildOpts, importPath string, importer types.Importer) (*Pa
 		Body: &ast.BlockStmt{},
 	}
 
-	var files []*ast.File
-	for _, f := range pp.ast.Files {
-		files = append(files, f)
+	// The order of types.Info.InitOrder depends on this list of files
+	// always being passed to conf.Check in the same order.
+	filenames := make([]string, 0, len(pp.ast.Files))
+	for name := range pp.ast.Files {
+		filenames = append(filenames, name)
+	}
+	sort.Strings(filenames)
+
+	sortedFiles := make([]*ast.File, 0, len(pp.ast.Files))
+	for _, name := range filenames {
+		sortedFiles = append(sortedFiles, pp.ast.Files[name])
 	}
 	// Type-check the package before we continue. We need types to rewrite
 	// some statements.
@@ -443,7 +452,7 @@ func getPackage(opts BuildOpts, importPath string, importer types.Importer) (*Pa
 		// We only need global declarations' types.
 		IgnoreFuncBodies: true,
 	}
-	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, files, &pp.typeInfo)
+	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, sortedFiles, &pp.typeInfo)
 	if err != nil {
 		return nil, fmt.Errorf("type checking failed: %v", err)
 	}
