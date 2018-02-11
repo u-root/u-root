@@ -212,10 +212,15 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 	return builder.af, nil
 }
 
-type CommandTemplate struct {
+// commandTemplate is the template used for cmdFunc, the file that becomes
+// bbsh/cmd_{CmdName}.go.
+type commandTemplate struct {
 	CmdName string
 }
 
+// Package is a Go package.
+//
+// It holds AST, type, file, and Go package information about a Go package.
 type Package struct {
 	name string
 
@@ -252,8 +257,8 @@ func (p *Package) nextInit() *ast.Ident {
 	return i
 }
 
-func (p *Package) CommandTemplate() CommandTemplate {
-	return CommandTemplate{
+func (p *Package) commandTemplate() commandTemplate {
+	return commandTemplate{
 		CmdName: p.name,
 	}
 }
@@ -378,7 +383,7 @@ func writeGoFile(path string, code []byte) error {
 func (p *Package) writeTemplate(path string, text string) error {
 	var b bytes.Buffer
 	t := template.Must(template.New("uroot").Parse(text))
-	if err := t.Execute(&b, p.CommandTemplate()); err != nil {
+	if err := t.Execute(&b, p.commandTemplate()); err != nil {
 		return fmt.Errorf("couldn't write template %q: %v", path, err)
 	}
 
