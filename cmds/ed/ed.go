@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // ED(1)               Unix Programmer's Manual                ED(1)
-// 
+//
 // NAME
 //   ed - text editor
 //
