@@ -17,17 +17,16 @@ const ResultFormat = `network={
 
 func errorCheck(essid string, pass string) error {
 	if len(pass) < 8 || len(pass) > 63 {
-		return fmt.Errorf("Passphrase must be 8..63 characters\n")
+		return fmt.Errorf("Passphrase must be 8..63 characters")
 	}
 	if len(essid) == 0 {
-		return fmt.Errorf("essid cannot be empty\n")
+		return fmt.Errorf("essid cannot be empty")
 	}
 	return nil
 }
 
 func Run(essid string, pass string) ([]byte, error) {
-	err := errorCheck(essid, pass)
-	if err != nil {
+	if err := errorCheck(essid, pass); err != nil {
 		return nil, err
 	}
 
