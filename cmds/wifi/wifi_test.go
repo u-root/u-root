@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,25 +16,29 @@ import (
 )
 
 type WifiTestCase struct {
-	name      string
-	args      []string
-	out       string
-	errExists bool
+	name   string
+	args   []string
+	expect string
 }
 
 var testcases = []WifiTestCase{
 	{
-		name:      "No Flags, No Args",
-		args:      nil,
-		out:       "Usage",
-		errExists: true,
+		name:   "No Flags, No Args",
+		args:   nil,
+		expect: "Usage",
 	},
 	{
-		name:      "Flags, No Args",
-		args:      []string{"-i=123"},
-		out:       "Usage",
-		errExists: true,
+		name:   "Flags, No Args",
+		args:   []string{"-i=123"},
+		expect: "Usage",
 	},
+}
+
+func run(c *exec.Cmd) (string, string, error) {
+	var o, e bytes.Buffer
+	c.Stdout, c.Stderr = &o, &e
+	err := c.Run()
+	return o.String(), e.String(), err
 }
 
 func TestWifi(t *testing.T) {
@@ -45,10 +50,10 @@ func TestWifi(t *testing.T) {
 	for _, test := range testcases {
 		t.Logf("TEST %v", test.name)
 		c := exec.Command(execPath, test.args...)
-		out, err := c.CombinedOutput()
-		if (test.errExists != testutil.ErrorExists(err)) || !strings.Contains(string(out), test.out) {
+		_, e, _ := run(c)
+		if !strings.Contains(e, test.expect) {
 			execStatement := fmt.Sprintf("exec(wifi %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-			testutil.PrintError(t, execStatement, test.out, test.errExists, string(out), err)
+			t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", execStatement, e, test.expect)
 		}
 	}
 }

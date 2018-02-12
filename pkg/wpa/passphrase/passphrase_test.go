@@ -2,17 +2,16 @@ package passphrase
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 type RunTestCase struct {
-	name      string
-	essid     string
-	pass      string
-	out       []byte
-	errExists bool
+	name  string
+	essid string
+	pass  string
+	out   []byte
+	err   error
 }
 
 var (
@@ -30,35 +29,44 @@ var (
 
 	runTestCases = []RunTestCase{
 		{
-			name:      "No essid",
-			essid:     "",
-			pass:      validPass,
-			out:       nil,
-			errExists: true,
+			name:  "No essid",
+			essid: "",
+			pass:  validPass,
+			out:   nil,
+			err:   fmt.Errorf("essid cannot be empty"),
 		},
 		{
-			name:      "pass length is less than 8 chars",
-			essid:     essidStub,
-			pass:      shortPass,
-			out:       nil,
-			errExists: true,
+			name:  "pass length is less than 8 chars",
+			essid: essidStub,
+			pass:  shortPass,
+			out:   nil,
+			err:   fmt.Errorf("Passphrase must be 8..63 characters"),
 		},
 		{
-			name:      "pass length is more than 63 chars",
-			essid:     essidStub,
-			pass:      longPass,
-			out:       nil,
-			errExists: true,
+			name:  "pass length is more than 63 chars",
+			essid: essidStub,
+			pass:  longPass,
+			out:   nil,
+			err:   fmt.Errorf("Passphrase must be 8..63 characters"),
 		},
 		{
-			name:      "Correct Input",
-			essid:     essidStub,
-			pass:      validPass,
-			out:       correctOutput,
-			errExists: false,
+			name:  "Correct Input",
+			essid: essidStub,
+			pass:  validPass,
+			out:   correctOutput,
+			err:   nil,
 		},
 	}
 )
+
+// Helper function to craft the message
+func craftPrintMsg(err error, out []byte) string {
+	var msg bytes.Buffer
+	msg.WriteString(fmt.Sprintf("Error Status: %v\n", err))
+	msg.WriteString("Output:\n")
+	msg.Write(out)
+	return msg.String()
+}
 
 func outEqualsExp(out []byte, exp []byte) bool {
 	switch {
@@ -71,12 +79,25 @@ func outEqualsExp(out []byte, exp []byte) bool {
 	}
 }
 
+func errEqualsExp(err error, exp error) bool {
+	switch {
+	case err == nil && exp == nil:
+		return true
+	case err != nil && exp != nil:
+		return err.Error() == exp.Error()
+	default:
+		return false
+	}
+}
+
 func TestRun(t *testing.T) {
 	for _, test := range runTestCases {
-		t.Logf("TEST %v", test.name)
 		out, err := Run(test.essid, test.pass)
-		if test.errExists != testutil.ErrorExists(err) || !outEqualsExp(out, test.out) {
-			testutil.PrintError(t, "", string(test.out), test.errExists, string(out), err)
+		if !errEqualsExp(err, test.err) || !outEqualsExp(out, test.out) {
+			t.Logf("TEST %v", test.name)
+			actualMsg := craftPrintMsg(err, out)
+			expectMsg := craftPrintMsg(test.err, test.out)
+			t.Errorf("\ngot:\n%s\n\nwant:\n%s", actualMsg, expectMsg)
 		}
 	}
 }
