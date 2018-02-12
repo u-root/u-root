@@ -11,6 +11,8 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	// To import newc format for cpio.
+	// TODO(hugelgupf): revise this package structure.
 	_ "github.com/u-root/u-root/pkg/cpio/newc"
 )
 

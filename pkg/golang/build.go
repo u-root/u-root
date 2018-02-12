@@ -116,6 +116,12 @@ func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) err
 		return err
 	}
 
+	return c.BuildDir(p.Dir, binaryPath, opts)
+}
+
+// BuildDir compiles the package in the directory `dirPath`, writing the build
+// object to `binaryPath`.
+func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) error {
 	args := []string{
 		"build",
 		"-a", // Force rebuilding of packages.
@@ -130,10 +136,10 @@ func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) err
 	args = append(args, ".")
 
 	cmd := c.goCmd(args...)
-	cmd.Dir = p.Dir
+	cmd.Dir = dirPath
 
 	if o, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("error building go package %v: %v, %v", importPath, string(o), err)
+		return fmt.Errorf("error building go package in %q: %v, %v", dirPath, string(o), err)
 	}
 	return nil
 }

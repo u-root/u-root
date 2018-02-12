@@ -10,12 +10,16 @@ import (
 	"go/ast"
 	"go/build"
 	"go/format"
+	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"text/template"
 
 	"golang.org/x/tools/imports"
@@ -25,27 +29,23 @@ import (
 )
 
 // Per-package templates.
+//
+// TODO: Generate the cmd_xx.go template using the AST, and use a function-name
+// generator to avoid collisions.
 const (
 	cmdFunc = `package main
 
 import "github.com/u-root/u-root/bbsh/cmds/{{.CmdName}}"
 
-func _forkbuiltin_{{.CmdName}}(c *Command) (err error) {
+func _forkbuiltin_{{.CmdName}}(c *Command) error {
 	{{.CmdName}}.Main()
-	return
+	return nil
 }
 
 func {{.CmdName}}Init() {
 	addForkBuiltIn("{{.CmdName}}", _forkbuiltin_{{.CmdName}})
-	{{.Init}}
+	{{.CmdName}}.Init()
 }
-`
-
-	bbsetupGo = `package {{.CmdName}}
-
-import "flag"
-
-var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
 `
 )
 
@@ -53,68 +53,55 @@ var {{.CmdName}}flag = flag.NewFlagSet("{{.CmdName}}", flag.ExitOnError)
 const initGo = `package main
 
 import (
-	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
         "syscall"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-func usage () {
-	n := filepath.Base(os.Args[0])
-	fmt.Fprintf(os.Stderr, "Usage: %s:\n", n)
-	flag.VisitAll(func(f *flag.Flag) {
-		if !strings.HasPrefix(f.Name, n+".") {
-			return
-		}
-		fmt.Fprintf(os.Stderr, "\tFlag %s: '%s', Default %v, Value %v\n", f.Name[len(n)+1:], f.Usage, f.Value, f.DefValue)
-	})
-}
-
 func init() {
-	flag.Usage = usage
-	// This getpid adds a bit of cost to each invocation (not much really)
-	// but it allows us to merge init and sh. The 600K we save is worth it.
-	// Figure out which init to run. We must always do this.
-
-	// log.Printf("init: os is %v, initMap %v", filepath.Base(os.Args[0]), initMap)
-	// we use filepath.Base in case they type something like ./cmd
+	// Init for the command that is being run.
 	if f, ok := initMap[filepath.Base(os.Args[0])]; ok {
-		//log.Printf("run the Init function for %v: run %v", os.Args[0], f)
 		f()
 	}
 
+	// Yeah, it's weird that this stuff happens in bbsh's init.
+	// We only do it if we actually *are* init. But merging this into bbsh
+	// should happen some other way. This should just be in bbsh.Main?
+	//
+	// Maybe init should just be a normal bb command, just like the others,
+	// except with a special symlink to /init?
+
 	if os.Args[0] != "/init" {
-		//log.Printf("Skipping root file system setup since we are not /init")
+		// Skipping root file system setup since we are not /init.
 		return
 	}
+
 	if os.Getpid() != 1 {
-		//log.Printf("Skipping root file system setup since /init is not pid 1")
+		// Skipping root file system setup since /init is not pid 1.
 		return
 	}
+
+	// Set up root file system. Mount stuff.
 	util.Rootfs()
 
-        // spawn the first shell. We had been running the shell as pid 1
-        // but that makes control tty stuff messy. We think.
-        cloneFlags := uintptr(0)
+	// Figure out which init to run.
+	//
+	// Spawn the first shell. We had been running the shell as pid 1 but
+	// that makes control tty stuff messy. We think.
 	for _, v := range []string{"/inito", "/bbin/uinit", "/bbin/rush"} {
 		cmd := exec.Command(v)
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
-		var fd int
-		cmd.SysProcAttr = &syscall.SysProcAttr{Ctty: fd, Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
 		log.Printf("Run %v", cmd)
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
 		}
-		// only the first init needs its own PID space.
-		cloneFlags = 0
 	}
 
 	// This will drop us into a rush prompt, since this is the init for rush.
@@ -137,6 +124,8 @@ type bbBuilder struct {
 	bbshDir string
 	initMap string
 	af      ArchiveFiles
+
+	importer types.Importer
 }
 
 // BBBuild is an implementation of Build for the busybox-like u-root initramfs.
@@ -159,10 +148,11 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 	}
 
 	builder := &bbBuilder{
-		opts:    opts,
-		bbshDir: bbshDir,
-		initMap: "package main\n\nvar initMap = map[string]func() {",
-		af:      NewArchiveFiles(),
+		opts:     opts,
+		bbshDir:  bbshDir,
+		initMap:  "package main\n\nvar initMap = map[string]func() {",
+		af:       NewArchiveFiles(),
+		importer: importer.For("source", nil),
 	}
 
 	// Move and rewrite package files.
@@ -222,110 +212,139 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 	return builder.af, nil
 }
 
-type CommandTemplate struct {
-	Gopath  string
+// commandTemplate is the template used for cmdFunc, the file that becomes
+// bbsh/cmd_{CmdName}.go.
+type commandTemplate struct {
 	CmdName string
-	Init    string
 }
 
+// Package is a Go package.
+//
+// It holds AST, type, file, and Go package information about a Go package.
 type Package struct {
 	name string
-	pkg  *build.Package
-	fset *token.FileSet
-	ast  *ast.Package
 
+	pkg      *build.Package
+	fset     *token.FileSet
+	ast      *ast.Package
+	typeInfo types.Info
+	types    *types.Package
+
+	// initCount keeps track of what the next init's index should be.
 	initCount uint
-	init      string
+
+	// init is the cmd.Init function that calls all other InitXs in the
+	// right order.
+	init *ast.FuncDecl
+
+	// initAssigns is a map of assignment expression -> assignment
+	// statement.
+	//
+	// types.Info.InitOrder keeps track of Initializations by Lhs name and
+	// Rhs ast.Expr.  We reparent the Rhs in assignment statements in InitX
+	// functions, so we use the Rhs as an easy key here.
+	// types.Info.InitOrder + initAssigns can then easily be used to derive
+	// the order of AssignStmts.
+	//
+	// The key Expr must also be the AssignStmt.Rhs[0].
+	initAssigns map[ast.Expr]*ast.AssignStmt
 }
 
-func (p *Package) CommandTemplate() CommandTemplate {
-	return CommandTemplate{
-		Gopath:  p.pkg.Root,
+func (p *Package) nextInit() *ast.Ident {
+	i := ast.NewIdent(fmt.Sprintf("Init%d", p.initCount))
+	p.init.Body.List = append(p.init.Body.List, &ast.ExprStmt{X: &ast.CallExpr{Fun: i}})
+	p.initCount++
+	return i
+}
+
+func (p *Package) commandTemplate() commandTemplate {
+	return commandTemplate{
 		CmdName: p.name,
-		Init:    p.init,
 	}
 }
 
-func (p *Package) rewriteFile(opts BuildOpts, f *ast.File) bool {
-	// Inspect the AST and change all instances of main()
-	var pos token.Position
+// TODO:
+// - write an init name generator, in case InitN is already taken.
+// - also rewrite all non-Go-stdlib dependencies.
+func (p *Package) rewriteFile(f *ast.File) bool {
 	hasMain := false
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch x := n.(type) {
-		// This is rather gross. Arguably, so is the way that Go has
-		// embedded build information in comments ... this import
-		// comment attachment to a package came in 1.4, a few years
-		// ago, and it only just bit us with one file in upspin. So we
-		// go with gross.
-		case *ast.Ident:
-			// We assume the first identifier is the package id.
-			if !pos.IsValid() {
-				pos = p.fset.Position(x.Pos())
-			}
 
-		case *ast.File:
-			x.Name.Name = p.name
+	// Change the package name declaration from main to the command's name.
+	f.Name = ast.NewIdent(p.name)
 
-		case *ast.FuncDecl:
-			if x.Name.Name == "main" {
-				x.Name.Name = fmt.Sprintf("Main")
-				// Append a return.
-				x.Body.List = append(x.Body.List, &ast.ReturnStmt{})
-				hasMain = true
-			}
-			if x.Recv == nil && x.Name.Name == "init" {
-				x.Name.Name = fmt.Sprintf("Init%d", p.initCount)
-				p.init += fmt.Sprintf("%s.Init%d()\n", p.name, p.initCount)
-				p.initCount++
-			}
+	// Map of fully qualified package name -> imported alias in the file.
+	importAliases := make(map[string]string)
+	for _, impt := range f.Imports {
+		if impt.Name != nil {
+			// TODO: eval this or find a post-AST source for this
+			// info.
+			importAliases[strings.Trim(impt.Path.Value, "\"")] = impt.Name.Name
+		}
+	}
 
-		// Rewrite use of the flag package.
-		//
-		// The flag package uses a global variable to contain all
-		// flags. This works poorly with the busybox mode, as flags may
-		// conflict, so as part of turning commands into packages, we
-		// rewrite their use of flags to use a package-private FlagSet.
-		//
-		// bbsetup.go contains a var for the package flagset with
-		// params (packagename, os.ExitOnError).
-		//
-		// We rewrite arguments for calls to flag.Parse from () to
-		// (os.Args[1:]). We rewrite all other uses of 'flag.' to
-		// '"commandname"+flag.'.
-		case *ast.CallExpr:
-			switch s := x.Fun.(type) {
-			case *ast.SelectorExpr:
-				switch i := s.X.(type) {
-				case *ast.Ident:
-					if i.Name != "flag" {
-						break
-					}
-					switch s.Sel.Name {
-					case "Parse":
-						i.Name = p.name + "flag"
-						//debug("Found a call to flag.Parse")
-						x.Args = []ast.Expr{&ast.Ident{Name: "os.Args[1:]"}}
-					case "Flag":
-					default:
-						i.Name = p.name + "flag"
+	// When the types.TypeString function translates package names, it uses
+	// this function to map fully qualified package paths to a local alias,
+	// if it exists.
+	qualifier := func(pkg *types.Package) string {
+		name, ok := importAliases[pkg.Path()]
+		if ok {
+			return name
+		}
+		// When referring to self, don't use any package name.
+		if pkg == p.types {
+			return ""
+		}
+		return pkg.Name()
+	}
+
+	for _, decl := range f.Decls {
+		switch d := decl.(type) {
+		case *ast.GenDecl:
+			// We only care about vars.
+			if d.Tok != token.VAR {
+				break
+			}
+			for _, spec := range d.Specs {
+				s := spec.(*ast.ValueSpec)
+				if s.Values == nil {
+					continue
+				}
+
+				// Add an assign statement for these values to init.
+				for i, name := range s.Names {
+					p.initAssigns[s.Values[i]] = &ast.AssignStmt{
+						Lhs: []ast.Expr{name},
+						Tok: token.ASSIGN,
+						Rhs: []ast.Expr{s.Values[i]},
 					}
 				}
+
+				// Add the type of the expression to the global
+				// declaration instead.
+				if s.Type == nil {
+					typ := p.typeInfo.Types[s.Values[0]]
+					s.Type = ast.NewIdent(types.TypeString(typ.Type, qualifier))
+				}
+				s.Values = nil
 			}
 
+		case *ast.FuncDecl:
+			if d.Recv == nil && d.Name.Name == "main" {
+				d.Name.Name = "Main"
+				hasMain = true
+			}
+			if d.Recv == nil && d.Name.Name == "init" {
+				d.Name = p.nextInit()
+			}
 		}
-		return true
-	})
+	}
 
-	// Now we change any import names attached to package declarations.  We
+	// Now we change any import names attached to package declarations. We
 	// just upcase it for now; it makes it easy to look in bbsh for things
 	// we changed, e.g. grep -r bbsh Import is useful.
 	for _, cg := range f.Comments {
 		for _, c := range cg.List {
-			l := p.fset.Position(c.Pos()).Line
-			if l != pos.Line {
-				continue
-			}
-			if c.Text[0:9] == "// import" {
+			if strings.HasPrefix(c.Text, "// import") {
 				c.Text = "// Import" + c.Text[9:]
 			}
 		}
@@ -336,7 +355,7 @@ func (p *Package) rewriteFile(opts BuildOpts, f *ast.File) bool {
 func writeFile(path string, fset *token.FileSet, f *ast.File) error {
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
-		return fmt.Errorf("error formating: %v", err)
+		return fmt.Errorf("error formatting Go file %q: %v", path, err)
 	}
 	return writeGoFile(path, buf.Bytes())
 }
@@ -350,13 +369,13 @@ func writeGoFile(path string, code []byte) error {
 		TabIndent: true,
 		TabWidth:  8,
 	}
-	fullCode, err := imports.Process("commandline", code, &opts)
+	code, err := imports.Process("commandline", code, &opts)
 	if err != nil {
-		return fmt.Errorf("bad parse %q: %v", string(code), err)
+		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
 	}
 
-	if err := ioutil.WriteFile(path, fullCode, 0644); err != nil {
-		return fmt.Errorf("error writing to %q: %v", path, err)
+	if err := ioutil.WriteFile(path, code, 0644); err != nil {
+		return fmt.Errorf("error writing Go file to %q: %v", path, err)
 	}
 	return nil
 }
@@ -364,14 +383,14 @@ func writeGoFile(path string, code []byte) error {
 func (p *Package) writeTemplate(path string, text string) error {
 	var b bytes.Buffer
 	t := template.Must(template.New("uroot").Parse(text))
-	if err := t.Execute(&b, p.CommandTemplate()); err != nil {
-		return fmt.Errorf("spec %v: %v", text, err)
+	if err := t.Execute(&b, p.commandTemplate()); err != nil {
+		return fmt.Errorf("couldn't write template %q: %v", path, err)
 	}
 
 	return writeGoFile(path, b.Bytes())
 }
 
-func getPackage(opts BuildOpts, importPath string) (*Package, error) {
+func getPackage(opts BuildOpts, importPath string, importer types.Importer) (*Package, error) {
 	p, err := opts.Env.Package(importPath)
 	if err != nil {
 		return nil, err
@@ -383,22 +402,71 @@ func getPackage(opts BuildOpts, importPath string) (*Package, error) {
 	}
 
 	fset := token.NewFileSet()
-	pars, err := parser.ParseDir(fset, p.Dir, nil, parser.ParseComments)
+	pars, err := parser.ParseDir(fset, p.Dir, func(fi os.FileInfo) bool {
+		// Only parse Go files that match build tags of this package.
+		for _, name := range p.GoFiles {
+			if name == fi.Name() {
+				return true
+			}
+		}
+		return false
+	}, parser.ParseComments)
 	if err != nil {
 		log.Printf("can't parsedir %q: %v", p.Dir, err)
 		return nil, nil
 	}
 
-	return &Package{
+	pp := &Package{
+		name: name,
 		pkg:  p,
 		fset: fset,
 		ast:  pars[p.Name],
-		name: name,
-	}, nil
+		typeInfo: types.Info{
+			Types: make(map[ast.Expr]types.TypeAndValue),
+		},
+		initAssigns: make(map[ast.Expr]*ast.AssignStmt),
+	}
+
+	// This Init will hold calls to all other InitXs.
+	pp.init = &ast.FuncDecl{
+		Name: ast.NewIdent("Init"),
+		Type: &ast.FuncType{
+			Params:  &ast.FieldList{},
+			Results: nil,
+		},
+		Body: &ast.BlockStmt{},
+	}
+
+	// The order of types.Info.InitOrder depends on this list of files
+	// always being passed to conf.Check in the same order.
+	filenames := make([]string, 0, len(pp.ast.Files))
+	for name := range pp.ast.Files {
+		filenames = append(filenames, name)
+	}
+	sort.Strings(filenames)
+
+	sortedFiles := make([]*ast.File, 0, len(pp.ast.Files))
+	for _, name := range filenames {
+		sortedFiles = append(sortedFiles, pp.ast.Files[name])
+	}
+	// Type-check the package before we continue. We need types to rewrite
+	// some statements.
+	conf := types.Config{
+		Importer: importer,
+
+		// We only need global declarations' types.
+		IgnoreFuncBodies: true,
+	}
+	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, sortedFiles, &pp.typeInfo)
+	if err != nil {
+		return nil, fmt.Errorf("type checking failed: %v", err)
+	}
+	pp.types = tpkg
+	return pp, nil
 }
 
 func (b *bbBuilder) moveCommand(pkgPath string) error {
-	p, err := getPackage(b.opts, pkgPath)
+	p, err := getPackage(b.opts, pkgPath, b.importer)
 	if err != nil {
 		return err
 	}
@@ -411,25 +479,47 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 		return err
 	}
 
-	var hasMain bool
-	for filePath, sourceFile := range p.ast.Files {
-		if hasMainFile := p.rewriteFile(b.opts, sourceFile); hasMainFile {
-			hasMain = true
-		}
-
-		path := filepath.Join(pkgDir, filepath.Base(filePath))
-		if err := writeFile(path, p.fset, sourceFile); err != nil {
-			return err
-		}
+	// This init holds all variable initializations.
+	varInit := &ast.FuncDecl{
+		Name: p.nextInit(),
+		Type: &ast.FuncType{
+			Params:  &ast.FieldList{},
+			Results: nil,
+		},
+		Body: &ast.BlockStmt{},
 	}
 
+	var mainPath string
+	var hasMain bool
+	for filePath, sourceFile := range p.ast.Files {
+		if hasMainFile := p.rewriteFile(sourceFile); hasMainFile {
+			hasMain = true
+			mainPath = filePath
+		}
+	}
 	if !hasMain {
 		return os.RemoveAll(pkgDir)
 	}
 
-	bbsetupPath := filepath.Join(b.bbshDir, "cmds", p.name, "bbsetup.go")
-	if err := p.writeTemplate(bbsetupPath, bbsetupGo); err != nil {
-		return err
+	// Add variable initializations to Init0 in the right order.
+	for _, initStmt := range p.typeInfo.InitOrder {
+		a, ok := p.initAssigns[initStmt.Rhs]
+		if !ok {
+			return fmt.Errorf("couldn't find init assignment %s", initStmt)
+		}
+		varInit.Body.List = append(varInit.Body.List, a)
+	}
+
+	// We could add these statements to any of the package files. We choose
+	// the one that contains Main() to guarantee reproducibility of the
+	// same bbsh binary.
+	p.ast.Files[mainPath].Decls = append(p.ast.Files[mainPath].Decls, varInit, p.init)
+
+	for filePath, sourceFile := range p.ast.Files {
+		path := filepath.Join(pkgDir, filepath.Base(filePath))
+		if err := writeFile(path, p.fset, sourceFile); err != nil {
+			return err
+		}
 	}
 
 	cmdPath := filepath.Join(b.bbshDir, fmt.Sprintf("cmd_%s.go", p.name))

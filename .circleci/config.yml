@@ -28,6 +28,9 @@ workflows:
       - source_amd64:
           requires:
             - clean-code
+      - source_amd64_test_archive:
+          requires:
+            - clean-code
 jobs:
   clean-code:
     docker:
@@ -104,6 +107,9 @@ jobs:
       - store_artifacts:
           path: /tmp/initramfs.linux_amd64.cpio.lzma
           destination: bb_initramfs.linux_amd64.cpio.lzma
+      - store_artifacts:
+          path: /tmp/initramfs.linux_amd64.cpio.1
+          destination: bb_initramfs.linux_amd64.cpio.1
   bb_arm7:
     docker:
       - image: circleci/golang:latest
@@ -209,3 +215,33 @@ jobs:
       - store_artifacts:
           path: /tmp/initramfs.linux_amd64.cpio.lzma
           destination: source_initramfs.linux_amd64.cpio.lzma
+  source_amd64_test_archive:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install cpio
+          command: sudo apt-get install cpio
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Build ramfs
+          command: ./u-root -build=source --tmpdir=/tmp/u-root
+      - run:
+          name: make test directory
+          command: mkdir /tmp/u-root-test
+      - run:
+          name: extract archive
+          command: cpio -i -d --no-absolute-filenames "go/*" < /tmp/initramfs.linux_amd64.cpio
+          working_directory: /tmp/u-root-test
+      - run:
+          name: run go build
+          command: GOPATH=$(pwd) GOROOT=$(pwd)/go ./go/bin/go build ./go/src/...
+          working_directory: /tmp/u-root-test

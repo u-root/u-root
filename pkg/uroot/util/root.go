@@ -133,8 +133,8 @@ var (
 		Dir{Name: "/etc", Mode: 0777},
 
 		Dir{Name: "/proc", Mode: 0555},
-		Mount{Target: "/proc", FSType: "proc"},
-		Mount{Target: "/tmp", FSType: "tmpfs"},
+		Mount{Source: "proc", Target: "/proc", FSType: "proc"},
+		Mount{Source: "tmpfs", Target: "/tmp", FSType: "tmpfs"},
 
 		Dir{Name: "/dev", Mode: 0777},
 		Dev{Name: "/dev/tty", Mode: syscall.S_IFCHR | 0666, Dev: 0x0500},
@@ -144,10 +144,10 @@ var (
 		// Kernel must be compiled with CONFIG_DEVTMPFS.
 		// Note that things kind of work even if this mount fails.
 		// TODO: move the Dir commands above below this line?
-		Mount{Target: "/dev", FSType: "devtmpfs"},
+		Mount{Source: "devtmpfs", Target: "/dev", FSType: "devtmpfs"},
 
 		Dir{Name: "/dev/pts", Mode: 0777},
-		Mount{Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
+		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		Symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
 
 		// Note: shm is required at least for Chrome. If you don't mount
@@ -157,7 +157,7 @@ var (
 		Mount{Source: "tmpfs", Target: "/dev/shm", FSType: "tmpfs"},
 
 		Dir{Name: "/sys", Mode: 0555},
-		Mount{Source: "sys", Target: "/sys", FSType: "sysfs"},
+		Mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
 		Dir{Name: "/sys/fs/cgroup/memory", Mode: 0555},
 		Dir{Name: "/sys/fs/cgroup/freezer", Mode: 0555},

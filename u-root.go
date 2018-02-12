@@ -50,12 +50,15 @@ func parseFlags() {
 func main() {
 	parseFlags()
 
-	// Main is in a separate functions so defer's run on return.
+	// Main is in a separate functions so defers run on return.
 	if err := Main(); err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("Successfully wrote initramfs.")
 }
 
+// Main is a separate function so defers are run on return, which they wouldn't
+// on exit.
 func Main() error {
 	env := golang.Default()
 	if env.CgoEnabled {
@@ -131,8 +134,5 @@ func Main() error {
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 	}
-	if err := uroot.CreateInitramfs(opts); err != nil {
-		return err
-	}
-	return nil
+	return uroot.CreateInitramfs(opts)
 }
