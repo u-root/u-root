@@ -29,7 +29,7 @@ import (
 	"strings"
 )
 
-const cmd = "comm [-123i] file1 file2"
+const cmd = "comm [-123h] file1 file2"
 
 var (
 	s1   = flag.Bool("1", false, "suppress printing of column 1")
