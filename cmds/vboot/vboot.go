@@ -71,7 +71,7 @@ func main() {
 	pcrDigestInitrd := sha1.Sum(files[*initrd])
 
 	kernelSuccess := ed25519.Verify(files[*publicKey], kernelDigest[:], files[*linuxKernelSignature])
-	initrdSuccess := ed25519.Verify(files[*publicKey], initrdDigest[:], files[*initrdKernelSignature])
+	initrdSuccess := ed25519.Verify(files[*publicKey], initrdDigest[:], files[*initrdSignature])
 
 	if !kernelSuccess || !initrdSuccess {
 		die(nil)
