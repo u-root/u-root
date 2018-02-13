@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 )
 
 // From Linux header: /include/uapi/linux/kdev_t.h
