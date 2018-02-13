@@ -23,21 +23,23 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var opcodes = map[string]uint{
-	"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
-	"-h":      unix.LINUX_REBOOT_CMD_POWER_OFF,
-	"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
-	"-r":      unix.LINUX_REBOOT_CMD_RESTART,
-	"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
-	"-s":      unix.LINUX_REBOOT_CMD_SW_SUSPEND,
-}
+var (
+	opcodes = map[string]uint{
+		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
+		"-h":      unix.LINUX_REBOOT_CMD_POWER_OFF,
+		"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
+		"-r":      unix.LINUX_REBOOT_CMD_RESTART,
+		"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
+		"-s":      unix.LINUX_REBOOT_CMD_SW_SUSPEND,
+	}
+	reboot = unix.Reboot
+)
 
 func usage() {
 	log.Fatalf("shutdown [-h|-r|-s|halt|reboot|suspend] (defaults to halt)")
 }
 
 func main() {
-
 	if len(os.Args) == 1 {
 		os.Args = append(os.Args, "halt")
 	}
@@ -45,7 +47,7 @@ func main() {
 	if !ok || len(os.Args) > 2 {
 		usage()
 	}
-	if err := unix.Reboot(int(op)); err != nil {
+	if err := reboot(int(op)); err != nil {
 		log.Fatalf(err.Error())
 	}
 }
