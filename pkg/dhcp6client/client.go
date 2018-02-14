@@ -42,7 +42,7 @@ var (
 //
 // Shortest Example:
 //
-//  c, err := dhcp6client.New(iface, 10*time.Second, 2)
+//  c, err := dhcp6client.New(iface)
 //  ...
 //  iana, packet, err := c.RapidSolicit()
 //  ...
@@ -51,7 +51,7 @@ var (
 //
 // Example selecting which advertising server to request from:
 //
-//   c, err := dhcp6client.New(iface, 10*time.Second, 2)
+//   c, err := dhcp6client.New(iface)
 //   ...
 //   ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
 //   defer cancel()
@@ -65,9 +65,7 @@ var (
 //   ...
 //   // iana now contains the IP assigned in the IAAddr option.
 type Client struct {
-	// The HardwareAddr to send in the request.
-	srcMAC net.HardwareAddr
-
+	// The interface to send requests on.
 	iface netlink.Link
 
 	// Packet socket to send on.
@@ -82,17 +80,14 @@ type Client struct {
 }
 
 // New returns a new DHCPv6 client based on the given parameters.
-func New(iface netlink.Link, timeout time.Duration, retry int) (*Client, error) {
+func New(iface netlink.Link, opts ...ClientOpt) (*Client, error) {
 	haddr := iface.Attrs().HardwareAddr
 	ip, err := eui64.ParseMAC(net.ParseIP("fe80::"), haddr)
 	if err != nil {
 		return nil, err
 	}
 
-	// If this doesn't work like this, we may have to SO_BINDTODEVICE to
-	// the interface. If that doesn't work... then we're back to raw
-	// sockets. Hope not.
-	c, err := net.ListenUDP("udp6", &net.UDPAddr{
+	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
 		IP:   ip,
 		Port: ClientPort,
 		Zone: iface.Attrs().Name,
@@ -100,13 +95,47 @@ func New(iface netlink.Link, timeout time.Duration, retry int) (*Client, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &Client{
+
+	c := &Client{
 		iface:   iface,
-		srcMAC:  haddr,
-		conn:    c,
-		timeout: timeout,
-		retry:   retry,
-	}, nil
+		conn:    conn,
+		timeout: 10 * time.Second,
+		retry:   3,
+	}
+
+	for _, opt := range opts {
+		if err := opt(c); err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
+}
+
+// ClientOpt is a function that configures the client.
+type ClientOpt func(*Client) error
+
+// WithTimeout configures the retransmission timeout.
+//
+// Default is 10 seconds.
+//
+// TODO(hugelgupf): Check RFC for retransmission behavior.
+func WithTimeout(d time.Duration) ClientOpt {
+	return func(c *Client) error {
+		c.timeout = d
+		return nil
+	}
+}
+
+// WithRetry configures the retransmission counts.
+//
+// Default is 3.
+//
+// TODO(hugelgupf): Check RFC for retransmission behavior.
+func WithRetry(retry int) ClientOpt {
+	return func(c *Client) error {
+		c.retry = retry
+		return nil
+	}
 }
 
 // RapidSolicit solicits one non-temporary address assignment by multicasting a
@@ -114,7 +143,7 @@ func New(iface netlink.Link, timeout time.Duration, retry int) (*Client, error) 
 //
 // RapidSolicit returns the first valid, suitable response by any remote server.
 func (c *Client) RapidSolicit() (*dhcp6opts.IANA, *dhcp6.Packet, error) {
-	solicit, err := NewRapidSolicit(c.srcMAC)
+	solicit, err := NewRapidSolicit(c.iface.Attrs().HardwareAddr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,15 +170,15 @@ func (c *Client) RequestOne(request *dhcp6.Packet) (*dhcp6opts.IANA, *dhcp6.Pack
 // - `ctx` is canceled; or
 // - we have exhausted all configured retries and timeouts.
 func (c *Client) Solicit(ctx context.Context) ([]*dhcp6.Packet, error) {
-	solicit, err := NewSolicitPacket(c.srcMAC)
+	solicit, err := NewSolicitPacket(c.iface.Attrs().HardwareAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	out, errCh := c.SendAndRead(ctx, DefaultServers, solicit)
+	out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, solicit)
 
 	var ads []*dhcp6.Packet
-	// resps is closed by SendAndRead when done.
+	// resps is closed by SimpleSendAndRead when done.
 	for r := range out {
 		if r.Packet.MessageType == dhcp6.MessageTypeAdvertise {
 			ads = append(ads, r.Packet)
@@ -193,7 +222,7 @@ func (c *Client) Request(request *dhcp6.Packet) ([]*dhcp6opts.IANA, *dhcp6.Packe
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	out, errCh := c.SendAndRead(ctx, DefaultServers, request)
+	out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, request)
 
 	for packet := range out {
 		if ianas, err := SuitableReply(reqIANAs, packet.Packet); err != nil {
@@ -241,8 +270,8 @@ func (c *Client) newClientErr(err error) *ClientError {
 	}
 }
 
-// SendAndRead multicasts a DHCPv6 packet and launches a goroutine to read
-// response packets. Those response packets will be sent on the channel
+// SimpleSendAndRead multicasts a DHCPv6 packet and launches a goroutine to
+// read response packets. Those response packets will be sent on the channel
 // returned. The sender will close both goroutines when it stops reading
 // packets, for example when the context is canceled.
 //
@@ -255,7 +284,7 @@ func (c *Client) newClientErr(err error) *ClientError {
 //
 // Callers sending a packet on one interface should use this. Callers intending
 // to send packets on many interface at the same time, should look at using
-// ParallelSendAndRead instead.
+// SendAndRead instead.
 //
 // Example Usage:
 //
@@ -263,7 +292,7 @@ func (c *Client) newClientErr(err error) *ClientError {
 //     ctx, cancel := context.WithCancel(context.Background())
 //     defer cancel()
 //
-//     out, errCh := c.SendAndRead(ctx, DefaultServers, someRequest)
+//     out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, someRequest)
 //
 //     for response := range out {
 //       if response == What You Want {
@@ -281,23 +310,24 @@ func (c *Client) newClientErr(err error) *ClientError {
 // TODO(hugelgupf): since the client only has one connection, maybe it should
 // just have one dedicated goroutine for reading from the UDP socket, and use a
 // request and response queue.
-func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet) (<-chan *ClientPacket, <-chan *ClientError) {
+func (c *Client) SimpleSendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet) (<-chan *ClientPacket, <-chan *ClientError) {
 	out := make(chan *ClientPacket, 10)
 	errOut := make(chan *ClientError, 1)
-	go c.ParallelSendAndRead(ctx, dest, p, out, errOut)
+	go func() {
+		c.SendAndRead(ctx, dest, p, out, errOut)
+		close(out)
+		close(errOut)
+	}()
 	return out, errOut
 }
 
-// ParallelSendAndRead sends the given packet `dest` to `to` and reads
-// responses on the UDP connection. Valid responses are sent to `out`; `out` is
-// closed by SendAndRead when it returns.
+// SendAndRead sends the given packet `dest` to `to` and reads
+// responses on the UDP connection. Any valid DHCP reply with the correct
+// Transaction ID is sent on `out`.
 //
-// ParallelSendAndRead blocks reading response packets until either:
+// SendAndRead blocks reading response packets until either:
 // - `ctx` is canceled; or
 // - we have exhausted all configured retries and timeouts.
-//
-// Any valid DHCPv6 packet received with the correct Transaction ID is sent on
-// `out`.
 //
 // SendAndRead retries sending the packet and receiving responses according to
 // the configured number of c.retry, using a response timeout of c.timeout.
@@ -305,29 +335,25 @@ func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Pa
 // TODO(hugelgupf): SendAndRead should follow RFC 3315 Section 14 for
 // retransmission behavior. Also conform to Section 15 for what kind of
 // messages must be discarded.
-func (c *Client) ParallelSendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet, out chan<- *ClientPacket, errCh chan<- *ClientError) {
-	defer close(errCh)
-
+func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet, out chan<- *ClientPacket, errCh chan<- *ClientError) {
 	// This ensures that
 	// - we send at most one error on errCh; and
 	// - we don't forget to send err on errCh in the many return statements
 	//   of sendAndRead.
 	if err := c.sendAndRead(ctx, dest, p, out); err != nil {
-		errCh <- err
+		errCh <- c.newClientErr(err)
 	}
 }
 
-func (c *Client) sendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet, out chan<- *ClientPacket) *ClientError {
-	defer close(out)
-
+func (c *Client) sendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet, out chan<- *ClientPacket) error {
 	pkt, err := p.MarshalBinary()
 	if err != nil {
-		return c.newClientErr(err)
+		return err
 	}
 
-	return c.retryFn(func() *ClientError {
+	return c.retryFn(func() error {
 		if _, err := c.conn.WriteTo(pkt, dest); err != nil {
-			return c.newClientErr(fmt.Errorf("error writing packet to connection: %v", err))
+			return fmt.Errorf("error writing packet to connection: %v", err)
 		}
 
 		var numPackets int
@@ -341,7 +367,7 @@ func (c *Client) sendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Pa
 				}
 
 				// No packets received. Sadness.
-				return c.newClientErr(timeoutCtx.Err())
+				return timeoutCtx.Err()
 			default:
 			}
 
@@ -361,7 +387,7 @@ func (c *Client) sendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Pa
 				// return the appropriate error.
 				continue
 			} else if err != nil {
-				return c.newClientErr(fmt.Errorf("error reading from UDP connection: %v", err))
+				return fmt.Errorf("error reading from UDP connection: %v", err)
 			}
 
 			pkt := &dhcp6.Packet{}
@@ -394,7 +420,7 @@ func (c *Client) sendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Pa
 			// conn, not sending on out.
 			select {
 			case <-ctx.Done():
-				return c.newClientErr(ctx.Err())
+				return ctx.Err()
 			case out <- clientPkt:
 			}
 		}
@@ -449,15 +475,15 @@ func SuitableReply(reqIANAs []*dhcp6opts.IANA, pkt *dhcp6.Packet) ([]*dhcp6opts.
 	return returned, nil
 }
 
-func (c *Client) retryFn(fn func() *ClientError) *ClientError {
+func (c *Client) retryFn(fn func() error) error {
 	// Each retry takes the amount of timeout at worst.
 	for i := 0; i < c.retry || c.retry < 0; i++ {
-		switch err := fn(); {
-		case err == nil:
+		switch err := fn(); err {
+		case nil:
 			// Got it!
 			return nil
 
-		case err.Err == context.DeadlineExceeded:
+		case context.DeadlineExceeded:
 			// Just retry.
 			// TODO(hugelgupf): Sleep here for some random amount of time.
 
@@ -466,5 +492,5 @@ func (c *Client) retryFn(fn func() *ClientError) *ClientError {
 		}
 	}
 
-	return c.newClientErr(context.DeadlineExceeded)
+	return context.DeadlineExceeded
 }

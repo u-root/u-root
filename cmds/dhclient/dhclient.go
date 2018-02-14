@@ -108,7 +108,9 @@ func DHClient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals
 }
 
 func DHClient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
-	client, err := dhcp6client.New(iface, timeout, retry)
+	client, err := dhcp6client.New(iface,
+		dhcp6client.WithTimeout(timeout),
+		dhcp6client.WithRetry(retry))
 	if err != nil {
 		return err
 	}

@@ -210,7 +210,6 @@ func serveAndClient(ctx context.Context, responses [][]*dhcp6.Packet) (*Client, 
 	}
 
 	mc := &Client{
-		srcMAC:  []byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab},
 		conn:    mockConn,
 		retry:   1,
 		timeout: time.Second,
@@ -227,7 +226,7 @@ func serveAndClient(ctx context.Context, responses [][]*dhcp6.Packet) (*Client, 
 	return mc, mockConn
 }
 
-func TestSendAndRead(t *testing.T) {
+func TestSimpleSendAndRead(t *testing.T) {
 	for _, tt := range []struct {
 		desc   string
 		send   *dhcp6.Packet
@@ -321,7 +320,7 @@ func TestSendAndRead(t *testing.T) {
 		mc, _ := serveAndClient(ctx, [][]*dhcp6.Packet{tt.server})
 		defer mc.conn.Close()
 
-		out, errCh := mc.SendAndRead(ctx, DefaultServers, tt.send)
+		out, errCh := mc.SimpleSendAndRead(ctx, DefaultServers, tt.send)
 
 		var rcvd []*dhcp6.Packet
 		for packet := range out {
@@ -329,7 +328,7 @@ func TestSendAndRead(t *testing.T) {
 		}
 
 		if err, ok := <-errCh; ok && err.Err != tt.wantErr {
-			t.Errorf("SendAndRead(%v): got %v, want %v", tt.send, err.Err, tt.wantErr)
+			t.Errorf("SimpleSendAndRead(%v): got %v, want %v", tt.send, err.Err, tt.wantErr)
 		} else if !ok && tt.wantErr != nil {
 			t.Errorf("got no error, want %v", tt.wantErr)
 		}
@@ -344,7 +343,7 @@ func TestSendAndRead(t *testing.T) {
 	}
 }
 
-func TestSendAndReadHandleCancel(t *testing.T) {
+func TestSimpleSendAndReadHandleCancel(t *testing.T) {
 	pkt := &dhcp6.Packet{
 		MessageType:   dhcp6.MessageTypeSolicit,
 		TransactionID: [3]byte{0x33, 0x33, 0x33},
@@ -376,7 +375,7 @@ func TestSendAndReadHandleCancel(t *testing.T) {
 	mc, udpConn := serveAndClient(ctx, [][]*dhcp6.Packet{responses})
 	defer mc.conn.Close()
 
-	out, errCh := mc.SendAndRead(ctx, DefaultServers, pkt)
+	out, errCh := mc.SimpleSendAndRead(ctx, DefaultServers, pkt)
 
 	var counter int
 	for range out {
@@ -397,13 +396,13 @@ func TestSendAndReadHandleCancel(t *testing.T) {
 			panic(err)
 		}
 		if bytes.Compare(packet.payload, bin) != 0 {
-			t.Errorf("SendAndRead read more packets than expected!")
+			t.Errorf("SimpleSendAndRead read more packets than expected!")
 		}
 		counter++
 	}
 }
 
-func TestSendAndReadDiscardGarbage(t *testing.T) {
+func TestSimpleSendAndReadDiscardGarbage(t *testing.T) {
 	pkt := &dhcp6.Packet{
 		MessageType:   dhcp6.MessageTypeSolicit,
 		TransactionID: [3]byte{0x33, 0x33, 0x33},
@@ -427,7 +426,7 @@ func TestSendAndReadDiscardGarbage(t *testing.T) {
 		payload: []byte{0x01}, // Too short for valid DHCPv6 packet.
 	}
 
-	out, errCh := mc.SendAndRead(ctx, DefaultServers, pkt)
+	out, errCh := mc.SimpleSendAndRead(ctx, DefaultServers, pkt)
 
 	var i int
 	for recvd := range out {
@@ -438,14 +437,14 @@ func TestSendAndReadDiscardGarbage(t *testing.T) {
 	}
 
 	if err, ok := <-errCh; ok {
-		t.Errorf("SendAndRead(%v): got %v %v, want %v", pkt, ok, err, nil)
+		t.Errorf("SimpleSendAndRead(%v): got %v %v, want %v", pkt, ok, err, nil)
 	}
 	if i != len(responses) {
 		t.Errorf("should have received %d valid packet, counter is %d", len(responses), i)
 	}
 }
 
-func TestSendAndReadDiscardGarbageTimeout(t *testing.T) {
+func TestSimpleSendAndReadDiscardGarbageTimeout(t *testing.T) {
 	pkt := &dhcp6.Packet{
 		MessageType:   dhcp6.MessageTypeSolicit,
 		TransactionID: [3]byte{0x33, 0x33, 0x33},
@@ -462,7 +461,7 @@ func TestSendAndReadDiscardGarbageTimeout(t *testing.T) {
 		payload: []byte{0x01}, // Too short for valid DHCPv6 packet.
 	}
 
-	out, errCh := mc.SendAndRead(ctx, DefaultServers, pkt)
+	out, errCh := mc.SimpleSendAndRead(ctx, DefaultServers, pkt)
 
 	var counter int
 	for range out {
@@ -470,7 +469,7 @@ func TestSendAndReadDiscardGarbageTimeout(t *testing.T) {
 	}
 
 	if err, ok := <-errCh; !ok || err == nil || err.Err != context.DeadlineExceeded {
-		t.Errorf("SendAndRead(%v): got %v %v, want %v", pkt, ok, err, context.DeadlineExceeded)
+		t.Errorf("SimpleSendAndRead(%v): got %v %v, want %v", pkt, ok, err, context.DeadlineExceeded)
 	}
 	if counter != 0 {
 		t.Errorf("should not have received a valid packet, counter is %d", counter)
