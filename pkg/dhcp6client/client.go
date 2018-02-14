@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	// All DHCP servers and relay agents on the local network segment (RFC
-	// 3315, Section 5.1.).
+	// AllServers is all DHCP servers and relay agents on the local network
+	// segment (RFC 3315, Section 5.1.).
 	AllServers = net.ParseIP("ff02::1:2")
 
 	// DefaultServers is the default AllServers IP combined with the
@@ -192,17 +192,17 @@ func (c *Client) Solicit(ctx context.Context) ([]*dhcp6.Packet, error) {
 }
 
 // This name smells.
-type manyErrs []string
+type errorList []string
 
-func newManyErrs() *manyErrs {
-	return new(manyErrs)
+func newManyErrs() *errorList {
+	return new(errorList)
 }
 
-func (e *manyErrs) add(err error) {
+func (e *errorList) add(err error) {
 	*e = append(*e, err.Error())
 }
 
-func (e manyErrs) Error() string {
+func (e errorList) Error() string {
 	return strings.Join([]string(e), "; ")
 }
 
@@ -243,16 +243,19 @@ func (c *Client) Request(request *dhcp6.Packet) ([]*dhcp6opts.IANA, *dhcp6.Packe
 	return nil, nil, errs
 }
 
+// ClientPacket is a DHCP packet and the interface it corresponds to.
 type ClientPacket struct {
 	Interface netlink.Link
 	Packet    *dhcp6.Packet
 }
 
+// ClientError is an error that occured on the associated interface.
 type ClientError struct {
 	Interface netlink.Link
 	Err       error
 }
 
+// Error implements error.
 func (ce *ClientError) Error() string {
 	if ce.Interface != nil {
 		return fmt.Sprintf("error on %q: %v", ce.Interface.Attrs().Name, ce.Err)

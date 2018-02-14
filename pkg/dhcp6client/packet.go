@@ -61,10 +61,7 @@ func newRequestOptions(options dhcp6.Options) error {
 		dhcp6.OptionBootFileParam,
 	}
 	// Must include; RFC 3315 Section 18.1.1.
-	if err := options.Add(dhcp6.OptionORO, oro); err != nil {
-		return err
-	}
-	return nil
+	return options.Add(dhcp6.OptionORO, oro)
 }
 
 func newSolicitOptions(mac net.HardwareAddr) (dhcp6.Options, error) {

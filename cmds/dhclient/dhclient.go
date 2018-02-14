@@ -75,7 +75,7 @@ func ifup(ifname string) (netlink.Link, error) {
 	return nil, fmt.Errorf("Link %v still down after %d seconds", ifname, linkUpAttempt)
 }
 
-func DHClient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
+func dhclient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
 	ifa, err := net.InterfaceByIndex(iface.Attrs().Index)
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func DHClient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals
 	return nil
 }
 
-func DHClient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
+func dhclient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
 	client, err := dhcp6client.New(iface,
 		dhcp6client.WithTimeout(timeout),
 		dhcp6client.WithRetry(retry))
@@ -191,14 +191,14 @@ func main() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					done <- DHClient4(iface, timeout, *retry, *renewals)
+					done <- dhclient4(iface, timeout, *retry, *renewals)
 				}()
 			}
 			if *ipv6 {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					done <- DHClient6(iface, timeout, *retry, *renewals)
+					done <- dhclient6(iface, timeout, *retry, *renewals)
 				}()
 			}
 			debug("Done dhclient for %v", ifname)
