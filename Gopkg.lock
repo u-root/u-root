@@ -201,8 +201,10 @@
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
+    "curve25519",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "internal/chacha20",
     "md4",
     "openpgp",
     "openpgp/armor",
@@ -210,8 +212,10 @@
     "openpgp/errors",
     "openpgp/packet",
     "openpgp/s2k",
+    "poly1305",
     "ripemd160",
-    "sha3"
+    "sha3",
+    "ssh"
   ]
   revision = "d9133f5469342136e669e85192a26056b587f503"
 
@@ -260,6 +264,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "984f55cb884c4076ea0708b4dfa1097a74feb726dc9f209aabd54a9c306ae4f0"
+  inputs-digest = "0d7eaaa083c6e0e43c9ffa5276aeacc997e0e501199f19c25faf4e5a043c724b"
   solver-name = "gps-cdcl"
   solver-version = 1
