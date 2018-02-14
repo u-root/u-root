@@ -77,7 +77,7 @@ func Netboot() error {
 
 		log.Printf("Attempting to get DHCP lease on %s", iface.Attrs().Name)
 		packet, err := attemptDHCPLease(iface, 30*time.Second, 5)
-		if packet == nil || err != nil {
+		if err != nil {
 			log.Printf("No lease on %s: %v", iface.Attrs().Name, err)
 			continue
 		}

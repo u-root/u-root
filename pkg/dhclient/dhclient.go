@@ -113,6 +113,7 @@ func Configure6(iface netlink.Link, packet *dhcp6.Packet, iana *dhcp6opts.IANA) 
 	return nil
 }
 
+// WriteDNSSettings writes the given IPs as nameservers to resolv.conf.
 func WriteDNSSettings(ips []net.IP) error {
 	rc := &bytes.Buffer{}
 	for _, ip := range ips {
