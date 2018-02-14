@@ -39,7 +39,7 @@ const (
 var (
 	ifName         = "^e.*"
 	leasetimeout   = flag.Int("timeout", 15, "Lease timeout in seconds")
-	retry          = flag.Int("retry", -1, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
+	retry          = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
 	renewals       = flag.Int("renewals", 0, "Number of DHCP renewals before exiting. -1 means infinity")
 	renewalTimeout = flag.Int("renewal timeout", 3600, "How long to wait before renewing in seconds")
 	verbose        = flag.Bool("verbose", false, "Verbose output")
@@ -92,6 +92,7 @@ func DHClient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals
 		if i == 0 {
 			packet, err = client.Request()
 		} else {
+			time.Sleep(time.Duration(*renewalTimeout) * time.Second)
 			packet, err = client.Renew(packet)
 		}
 		if err != nil {
@@ -101,8 +102,6 @@ func DHClient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals
 		if err := dhclient.Configure4(iface, packet); err != nil {
 			return err
 		}
-
-		time.Sleep(time.Duration(*renewalTimeout) * time.Second)
 	}
 	return nil
 }
@@ -116,6 +115,9 @@ func DHClient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals
 	}
 
 	for i := 0; numRenewals < 0 || i <= numRenewals; i++ {
+		if i != 0 {
+			time.Sleep(time.Duration(*renewalTimeout) * time.Second)
+		}
 		iana, packet, err := client.RapidSolicit()
 		if err != nil {
 			return err
@@ -124,8 +126,6 @@ func DHClient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals
 		if err := dhclient.Configure6(iface, packet, iana); err != nil {
 			return err
 		}
-
-		time.Sleep(time.Duration(*renewalTimeout) * time.Second)
 	}
 	return nil
 }
