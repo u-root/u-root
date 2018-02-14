@@ -48,12 +48,12 @@ func TestWifi(t *testing.T) {
 
 	// Tests
 	for _, test := range testcases {
-		t.Logf("TEST %v", test.name)
 		c := exec.Command(execPath, test.args...)
 		_, e, _ := run(c)
 		if !strings.Contains(e, test.expect) {
+			t.Logf("TEST %v", test.name)
 			execStatement := fmt.Sprintf("exec(wifi %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-			t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", execStatement, e, test.expect)
+			t.Errorf("%s\ngot:%s\nwant:%s", execStatement, e, test.expect)
 		}
 	}
 }

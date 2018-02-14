@@ -3,6 +3,7 @@ package passphrase
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -25,7 +26,7 @@ var (
 	#psk="aaaaaaaaaaaaaaaa"
 	psk=e270ba95a72c6d922e902f65dfa23315f7ba43b69debc75167254acd778f2fe9
 }
-`) // indentation matters
+`)
 
 	runTestCases = []RunTestCase{
 		{
@@ -59,45 +60,12 @@ var (
 	}
 )
 
-// Helper function to craft the message
-func craftPrintMsg(err error, out []byte) string {
-	var msg bytes.Buffer
-	msg.WriteString(fmt.Sprintf("Error Status: %v\n", err))
-	msg.WriteString("Output:\n")
-	msg.Write(out)
-	return msg.String()
-}
-
-func outEqualsExp(out []byte, exp []byte) bool {
-	switch {
-	case out == nil && exp == nil:
-		return true
-	case out != nil && exp != nil:
-		return bytes.Compare(out, exp) == 0
-	default:
-		return false
-	}
-}
-
-func errEqualsExp(err error, exp error) bool {
-	switch {
-	case err == nil && exp == nil:
-		return true
-	case err != nil && exp != nil:
-		return err.Error() == exp.Error()
-	default:
-		return false
-	}
-}
-
 func TestRun(t *testing.T) {
 	for _, test := range runTestCases {
 		out, err := Run(test.essid, test.pass)
-		if !errEqualsExp(err, test.err) || !outEqualsExp(out, test.out) {
+		if !reflect.DeepEqual(err, test.err) || bytes.Compare(out, test.out) != 0 {
 			t.Logf("TEST %v", test.name)
-			actualMsg := craftPrintMsg(err, out)
-			expectMsg := craftPrintMsg(test.err, test.out)
-			t.Errorf("\ngot:\n%s\n\nwant:\n%s", actualMsg, expectMsg)
+			t.Errorf("\ngot:[%v, %v]\nwant:[%v, %v]", err, string(out), test.err, string(test.out))
 		}
 	}
 }
