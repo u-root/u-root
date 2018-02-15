@@ -149,7 +149,7 @@ func removeCreatedFiles(tmpDir string) {
 	}
 }
 
-func TestMkdir(t *testing.T) {
+func TestMkdirErrors(t *testing.T) {
 	// Set Up
 	tmpDir, execPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
@@ -175,6 +175,13 @@ func TestMkdir(t *testing.T) {
 			printError(t, test.name, execStmt, "A directory was created", "No directory should be created")
 		}
 	}
+}
+
+func TestMkdirRegular(t *testing.T) {
+	// Set Up
+	tmpDir, execPath := testutil.CompileInTempDir(t)
+	defer os.RemoveAll(tmpDir)
+	syscall.Umask(umaskDefault)
 
 	// Regular Tests
 	for _, test := range regularTestCases {
@@ -199,6 +206,13 @@ func TestMkdir(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMkdirPermission(t *testing.T) {
+	// Set Up
+	tmpDir, execPath := testutil.CompileInTempDir(t)
+	defer os.RemoveAll(tmpDir)
+	syscall.Umask(umaskDefault)
 
 	// Permission Tests
 	for _, test := range permTestCases {
