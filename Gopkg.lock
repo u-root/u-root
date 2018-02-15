@@ -212,8 +212,8 @@
     "openpgp/errors",
     "openpgp/packet",
     "openpgp/s2k",
-    "poly1305",
     "pbkdf2",
+    "poly1305",
     "ripemd160",
     "sha3",
     "ssh"
@@ -265,10 +265,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-<<<<<<< HEAD
-  inputs-digest = "0d7eaaa083c6e0e43c9ffa5276aeacc997e0e501199f19c25faf4e5a043c724b"
-=======
-  inputs-digest = "71601edc6c9ac0fc5fb77c0b32ec9666523529ba46d04bd28fef80b971f3671d"
->>>>>>> Update vendor include pbkdf2.go
+  inputs-digest = "f8af2c8e52fc2428c02c4e0c3378166548ef630aeb634a5ec2ec8640f93036e7"
   solver-name = "gps-cdcl"
   solver-version = 1
