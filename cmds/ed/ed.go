@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Ed is a simple line-oriented editor
+// ED(1)               Unix Programmer's Manual                ED(1)
 //
-// Synopsis:
-//     dd
+// NAME
+//   ed - text editor
 //
-// Description:
+// SYNOPSIS
+//   ed [ - ] [ -d ] [ name ]
 //
-// Options:
+// DESCRIPTION
+//   Ed is the standard text editor.
+//
+// OPTIONS
 package main
 
 import (

@@ -160,18 +160,25 @@ func stdoutEqual(i io.Reader, o []byte, _ int64) error {
 // is returned. Otherwise an error is returned for a non-matching byte or if the count doesn't
 // match.
 func byteCount(i io.Reader, o []byte, n int64) error {
-	b := bufio.NewReader(i)
 	var count int64
+	buf := make([]byte, 4096)
 
 	for {
-		z, err := b.ReadByte()
-		if err != nil {
+		read, err := i.Read(buf)
+		if err != nil || read == 0 {
 			break
 		}
-		if z == o[0] {
-			count++
-		} else {
-			return fmt.Errorf("Found non-matching byte: %v, at offset: %d", o[0], count)
+		for z := 0; z < read; z++ {
+			if buf[z] == o[0] {
+				count++
+			} else {
+				return fmt.Errorf("Found non-matching byte: %v != %v, at offset: %d",
+					buf[z], o[0], count)
+			}
+		}
+
+		if count > n {
+			break
 		}
 	}
 
