@@ -36,7 +36,7 @@ func Run(essid string, pass string) ([]byte, error) {
 
 	// There is a possible security bug here because the salt is the essid which is
 	// static and shared across access points. Thus this salt is not sufficiently random.
-	// This issue has been reported to the responsible parties. Since this mathces the
+	// This issue has been reported to the responsible parties. Since this matches the
 	// current implementation of wpa_passphrase.c, this will maintain until futher notice.
 	pskBinary := pbkdf2.Key([]byte(pass), []byte(essid), 4096, 32, sha1.New)
 	pskHexString := hex.EncodeToString(pskBinary)
