@@ -12,14 +12,11 @@ import (
 	"net"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
 var (
-	// ErrConfigNotFound is returned when no suitable configuration file
-	// was found by AppendFile.
-	ErrConfigNotFound = errors.New("configuration file was not found")
-
 	// ErrDefaultEntryNotFound is returned when the configuration file
 	// names a default label that is not part of the configuration.
 	ErrDefaultEntryNotFound = errors.New("default label not found in configuration")
@@ -80,10 +77,10 @@ func NewConfig(wd *url.URL) *Config {
 // and schemes `s`.
 //
 // If a path encountered in a configuration file is relative instead of a full
-// URI, `wd` is used as the "working directory" of that relative path; the
-// resulting URI is roughly `wd.String()/path`.
+// URL, `wd` is used as the "working directory" of that relative path; the
+// resulting URL is roughly `wd.String()/path`.
 //
-// `s` is used to get files referred to by URIs.
+// `s` is used to get files referred to by URLs.
 func NewConfigWithSchemes(wd *url.URL, s Schemes) *Config {
 	return &Config{
 		Entries: make(map[string]*Entry),
@@ -96,9 +93,13 @@ func NewConfigWithSchemes(wd *url.URL, s Schemes) *Config {
 // FindConfigFile probes for config files based on the Mac and IP given.
 func (c *Config) FindConfigFile(mac net.HardwareAddr, ip net.IP) error {
 	for _, relname := range probeFiles(mac, ip) {
-		if err := c.AppendFile(relname); err != ErrConfigNotFound {
-			return err
+		err := c.AppendFile(path.Join("pxelinux.cfg", relname))
+		if IsURLError(err) {
+			// We didn't find the file.
+			// TODO(hugelgupf): log this.
+			continue
 		}
+		return err
 	}
 	return fmt.Errorf("no valid pxelinux config found")
 }
@@ -112,25 +113,52 @@ func (c *Config) FindConfigFile(mac net.HardwareAddr, ip net.IP) error {
 // `wd` is the default scheme, host, and path for any files named as a
 // relative path. The default path for config files is assumed to be
 // `wd.Path`/pxelinux.cfg/.
-func ParseConfigFile(uri string, wd *url.URL) (*Config, error) {
+func ParseConfigFile(url string, wd *url.URL) (*Config, error) {
 	c := NewConfig(wd)
-	if err := c.AppendFile(uri); err != nil {
+	if err := c.AppendFile(url); err != nil {
 		return nil, err
 	}
 	return c, nil
 }
 
-// AppendFile parses the config file downloaded from `uri` and adds it to `c`.
-func (c *Config) AppendFile(uri string) error {
-	cfgWd := *c.wd
-	// The default location for looking for configuration is
-	// CWD/pxelinux.cfg/, so if `uri` is just a relative path, this will be
-	// the default directory.
-	cfgWd.Path = path.Join(cfgWd.Path, "pxelinux.cfg")
-
-	r, err := c.schemes.GetFile(uri, &cfgWd)
+func parseURL(surl string, wd *url.URL) (*url.URL, error) {
+	u, err := url.Parse(surl)
 	if err != nil {
-		return ErrConfigNotFound
+		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
+	}
+
+	if len(u.Scheme) == 0 {
+		u.Scheme = wd.Scheme
+
+		if len(u.Host) == 0 {
+			// If this is not there, it was likely just a path.
+			u.Host = wd.Host
+			u.Path = filepath.Join(wd.Path, filepath.Clean(u.Path))
+		}
+	}
+	return u, nil
+}
+
+// GetFile parses `url` relative to the config's working directory and returns
+// an io.Reader for the requested url.
+//
+// If url is just a relative path and not a full URL, c.wd is used as the
+// "working directory" of that relative path; the resulting URL is roughly
+// path.Join(wd.String(), url).
+func (c *Config) GetFile(url string) (io.Reader, error) {
+	u, err := parseURL(url, c.wd)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.schemes.LazyGetFile(u)
+}
+
+// AppendFile parses the config file downloaded from `url` and adds it to `c`.
+func (c *Config) AppendFile(url string) error {
+	r, err := c.GetFile(url)
+	if err != nil {
+		return err
 	}
 	config, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -161,10 +189,11 @@ func (c *Config) Append(config string) error {
 			c.DefaultEntry = arg
 
 		case "include":
-			if err := c.AppendFile(arg); err == ErrConfigNotFound {
-				// TODO: What to do in this case?
-				// Return for now. Test this with pxelinux.
-				return err
+			if err := c.AppendFile(arg); IsURLError(err) {
+				// Means we didn't find the file. Just ignore
+				// it.
+				// TODO(hugelgupf): plumb a logger through here.
+				continue
 			} else if err != nil {
 				return err
 			}
@@ -177,14 +206,14 @@ func (c *Config) Append(config string) error {
 			c.Entries[c.curEntry].Cmdline = c.globalAppend
 
 		case "kernel":
-			k, err := c.schemes.LazyGetFile(arg, c.wd)
+			k, err := c.GetFile(arg)
 			if err != nil {
 				return err
 			}
 			c.Entries[c.curEntry].Kernel = k
 
 		case "initrd":
-			i, err := c.schemes.LazyGetFile(arg, c.wd)
+			i, err := c.GetFile(arg)
 			if err != nil {
 				return err
 			}
@@ -224,7 +253,7 @@ func (c *Config) Append(config string) error {
 				continue
 			}
 
-			i, err := c.schemes.LazyGetFile(optkv[1], c.wd)
+			i, err := c.GetFile(optkv[1])
 			if err != nil {
 				return err
 			}

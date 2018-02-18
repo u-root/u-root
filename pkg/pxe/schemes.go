@@ -15,11 +15,11 @@ import (
 var (
 	// ErrNoSuchScheme is returned by Schemes.GetFile and
 	// Schemes.LazyGetFile if there is no registered FileScheme
-	// implementation for the given URI scheme.
+	// implementation for the given URL scheme.
 	ErrNoSuchScheme = errors.New("no such scheme")
 )
 
-// FileScheme represents the implementation of a URI scheme and gives access to
+// FileScheme represents the implementation of a URL scheme and gives access to
 // downloading files of that scheme.
 //
 // For example, an http FileScheme implementation would download files using
@@ -40,27 +40,34 @@ var (
 	DefaultHTTPClient = NewHTTPClient(http.DefaultClient)
 
 	// DefaultTFTPClient is the default TFTP FileScheme.
-	DefaultTFTPClient FileScheme
+	DefaultTFTPClient = NewTFTPClient()
 
 	// DefaultSchemes are the schemes supported by PXE by default.
-	DefaultSchemes Schemes
-)
-
-func init() {
-	c, err := tftp.NewClient()
-	if err != nil {
-		panic(fmt.Sprintf("tftp.NewClient failed: %v", err))
-	}
-	DefaultTFTPClient = NewTFTPClient(c)
-
 	DefaultSchemes = Schemes{
 		"tftp": NewCachedFileScheme(DefaultTFTPClient),
 		"http": NewCachedFileScheme(DefaultHTTPClient),
 		"file": NewCachedFileScheme(&LocalFileClient{}),
 	}
+)
+
+// URLError is an error involving URLs.
+type URLError struct {
+	URL *url.URL
+	Err error
 }
 
-// Schemes is a map of URI scheme identifier -> implementation that can
+// Error implements error.Error.
+func (s *URLError) Error() string {
+	return fmt.Sprintf("encountered error %v with %q", s.Err, s.URL)
+}
+
+// IsURLError returns true iff err is a URLError.
+func IsURLError(err error) bool {
+	_, ok := err.(*URLError)
+	return ok
+}
+
+// Schemes is a map of URL scheme identifier -> implementation that can
 // download a file for that scheme.
 type Schemes map[string]FileScheme
 
@@ -74,93 +81,77 @@ func (s Schemes) Register(scheme string, fs FileScheme) {
 	s[scheme] = fs
 }
 
-func parseURI(uri string, wd *url.URL) (*url.URL, error) {
-	u, err := url.Parse(uri)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(u.Scheme) == 0 {
-		u.Scheme = wd.Scheme
-
-		if len(u.Host) == 0 {
-			// If this is not there, it was likely just a path.
-			u.Host = wd.Host
-			u.Path = filepath.Join(wd.Path, filepath.Clean(u.Path))
-		}
-	}
-	return u, nil
-}
-
 // GetFile downloads a file via DefaultSchemes. See Schemes.GetFile for
 // details.
-func GetFile(uri string, wd *url.URL) (io.Reader, error) {
-	return DefaultSchemes.GetFile(uri, wd)
+func GetFile(u *url.URL) (io.Reader, error) {
+	return DefaultSchemes.GetFile(u)
 }
 
-// GetFile downloads the file with the given `uri`. `uri.Scheme` is used to
+// GetFile downloads the file with the given `u`. `u.Scheme` is used to
 // select the FileScheme via `s`.
 //
-// If `s` does not contain a FileScheme for `uri.Scheme`, ErrNoSuchScheme is
+// If `s` does not contain a FileScheme for `u.Scheme`, ErrNoSuchScheme is
 // returned.
-//
-// If `uri` is just a relative path and not a full URI, `wd` is used as the
-// "working directory" of that relative path; the resulting URI is roughly
-// `path.Join(wd.String(), uri)`.
-func (s Schemes) GetFile(uri string, wd *url.URL) (io.Reader, error) {
-	u, err := parseURI(uri, wd)
-	if err != nil {
-		return nil, err
-	}
-
+func (s Schemes) GetFile(u *url.URL) (io.Reader, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
-		return nil, ErrNoSuchScheme
+		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
-	return fg.GetFile(u)
+	r, err := fg.GetFile(u)
+	if err != nil {
+		return nil, &URLError{URL: u, Err: err}
+	}
+	return r, nil
 }
 
 // LazyGetFile calls LazyGetFile on DefaultSchemes. See Schemes.LazyGetFile.
-func LazyGetFile(uri string, wd *url.URL) (io.Reader, error) {
-	return DefaultSchemes.LazyGetFile(uri, wd)
+func LazyGetFile(u *url.URL) (io.Reader, error) {
+	return DefaultSchemes.LazyGetFile(u)
 }
 
-// LazyGetFile returns a reader that will download the file given by `uri` when
-// Read is called, based on `uri`s scheme. See Schemes.GetFile for more
+// LazyGetFile returns a reader that will download the file given by `u` when
+// Read is called, based on `u`s scheme. See Schemes.GetFile for more
 // details.
-func (s Schemes) LazyGetFile(uri string, wd *url.URL) (io.Reader, error) {
-	u, err := parseURI(uri, wd)
-	if err != nil {
-		return nil, err
-	}
-
+func (s Schemes) LazyGetFile(u *url.URL) (io.Reader, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
-		return nil, fmt.Errorf("could not get file based on scheme %q: no such scheme registered", u.Scheme)
+		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
 
 	return NewLazyOpener(func() (io.Reader, error) {
-		return fg.GetFile(u)
+		r, err := fg.GetFile(u)
+		if err != nil {
+			return nil, &URLError{URL: u, Err: err}
+		}
+		return r, nil
 	}), nil
 }
 
 // TFTPClient implements FileScheme for TFTP files.
 type TFTPClient struct {
-	c *tftp.Client
+	opts []tftp.ClientOpt
 }
 
-// NewTFTPClient returns a new TFTP client based on the given tftp.Client.
-func NewTFTPClient(c *tftp.Client) FileScheme {
+// NewTFTPClient returns a new TFTP client based on the given tftp.ClientOpt.
+func NewTFTPClient(opts ...tftp.ClientOpt) FileScheme {
 	return &TFTPClient{
-		c: c,
+		opts: opts,
 	}
 }
 
 // GetFile implements FileScheme.GetFile.
 func (t *TFTPClient) GetFile(u *url.URL) (io.Reader, error) {
-	r, err := t.c.Get(u.String())
+	// TODO(hugelgupf): These clients are basically stateless, except for
+	// the options. Figure out whether you actually have to re-establish
+	// this connection every time. Audit the TFTP library.
+	c, err := tftp.NewClient(t.opts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get %q: %v", u, err)
+		return nil, err
+	}
+
+	r, err := c.Get(u.String())
+	if err != nil {
+		return nil, err
 	}
 	return r, nil
 }
@@ -181,10 +172,11 @@ func NewHTTPClient(c *http.Client) *HTTPClient {
 func (h HTTPClient) GetFile(u *url.URL) (io.Reader, error) {
 	resp, err := h.c.Get(u.String())
 	if err != nil {
-		return nil, fmt.Errorf("Could not download file %s: %v", u, err)
+		return nil, err
 	}
+
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("could not download file %s: response %v", u, resp)
+		return nil, fmt.Errorf("HTTP server responded with code %d, want 200: response %v", resp.StatusCode, resp)
 	}
 	return resp.Body, nil
 }
@@ -207,7 +199,7 @@ type cachedFile struct {
 type CachedFileScheme struct {
 	fs FileScheme
 
-	// cache is a map of URI string -> cached file or error object.
+	// cache is a map of URL string -> cached file or error object.
 	cache map[string]cachedFile
 }
 
@@ -221,8 +213,9 @@ func NewCachedFileScheme(fs FileScheme) FileScheme {
 
 // GetFile implements FileScheme.GetFile.
 func (cc *CachedFileScheme) GetFile(u *url.URL) (io.Reader, error) {
-	uri := u.String()
-	if cf, ok := cc.cache[uri]; ok {
+	url := u.String()
+	if cf, ok := cc.cache[url]; ok {
+		// File is in cache.
 		if cf.err != nil {
 			return nil, cf.err
 		}
@@ -231,10 +224,10 @@ func (cc *CachedFileScheme) GetFile(u *url.URL) (io.Reader, error) {
 
 	r, err := cc.fs.GetFile(u)
 	if err != nil {
-		cc.cache[uri] = cachedFile{err: err}
+		cc.cache[url] = cachedFile{err: err}
 		return nil, err
 	}
 	cr := NewCachingReader(r)
-	cc.cache[uri] = cachedFile{cr: cr}
+	cc.cache[url] = cachedFile{cr: cr}
 	return cr.NewReader(), nil
 }
