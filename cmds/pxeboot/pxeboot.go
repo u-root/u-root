@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/url"
 	"os"
 	"path"
@@ -51,12 +50,9 @@ func attemptDHCPLease(iface netlink.Link, timeout time.Duration, retry int) (*dh
 		return nil, err
 	}
 
-	ifa, err := net.InterfaceByIndex(iface.Attrs().Index)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := dhcp4client.New(ifa /*, timeout, retry*/)
+	client, err := dhcp4client.New(iface,
+		dhcp4client.WithTimeout(timeout),
+		dhcp4client.WithRetry(retry))
 	if err != nil {
 		return nil, err
 	}

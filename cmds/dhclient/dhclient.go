@@ -18,7 +18,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"regexp"
 	"sync"
 	"time"
@@ -76,12 +75,9 @@ func ifup(ifname string) (netlink.Link, error) {
 }
 
 func dhclient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
-	ifa, err := net.InterfaceByIndex(iface.Attrs().Index)
-	if err != nil {
-		return err
-	}
-
-	client, err := dhcp4client.New(ifa /*, timeout, retry*/)
+	client, err := dhcp4client.New(iface,
+		dhcp4client.WithTimeout(timeout),
+		dhcp4client.WithRetry(retry))
 	if err != nil {
 		return err
 	}
