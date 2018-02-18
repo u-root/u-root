@@ -15,10 +15,15 @@ func NewIPv4UDPConn(iface string, port int) (net.PacketConn, error) {
 		return nil, err
 	}
 	f := os.NewFile(uintptr(fd), "")
+	// net.FilePacketConn dups the FD, so we have to close this in any case.
 	defer f.Close()
 
 	// Allow broadcasting.
 	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_BROADCAST, 1); err != nil {
+		return nil, err
+	}
+	// Allow reusing the addr to aid debugging.
+	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEADDR, 1); err != nil {
 		return nil, err
 	}
 	// Bind directly to the interface.
@@ -30,6 +35,5 @@ func NewIPv4UDPConn(iface string, port int) (net.PacketConn, error) {
 		return nil, err
 	}
 
-	// This dups the FD. We still have to close f.
 	return net.FilePacketConn(f)
 }

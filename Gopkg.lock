@@ -159,7 +159,7 @@
     "dhcp4opts",
     "internal/buffer"
   ]
-  revision = "a363d0fa829188311bbd955ad3f5cd9ee53926b6"
+  revision = "d22c2bd80c70abbecc7cf9555ddd253890cc1610"
 
 [[projects]]
   branch = "master"
@@ -168,7 +168,7 @@
     ".",
     "nl"
   ]
-  revision = "d35d6b58e1cb692b27b94fc403170bf44058ac3e"
+  revision = "25d2c79295b361cac34eb41cfae90d5c69078b2a"
 
 [[projects]]
   branch = "master"
@@ -204,13 +204,13 @@
     "sha3",
     "ssh"
   ]
-  revision = "5119cf507ed5294cc409c092980c7497ee5d6fd2"
+  revision = "650f4a345ab4e5b245a3034b110ebc7299e68186"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
+  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
 
 [[projects]]
   branch = "master"
@@ -231,7 +231,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "70252dea49c01dbfc3f800978304eb00eb15b698"
+  revision = "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 
 [[projects]]
   name = "pack.ag/tftp"
