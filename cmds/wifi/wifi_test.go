@@ -16,42 +16,29 @@ import (
 )
 
 type WifiTestCase struct {
-	name      string
-	args      []string
-	out       string
-	errExists bool
+	name   string
+	args   []string
+	expect string
 }
 
 var testcases = []WifiTestCase{
 	{
-		name:      "No Flags, No Args",
-		args:      nil,
-		out:       "Usage",
-		errExists: true,
+		name:   "No Flags, No Args",
+		args:   nil,
+		expect: "Usage",
 	},
 	{
-		name:      "Flags, No Args",
-		args:      []string{"-i=123"},
-		out:       "Usage",
-		errExists: true,
+		name:   "Flags, No Args",
+		args:   []string{"-i=123"},
+		expect: "Usage",
 	},
 }
 
-func errorExists(err error) bool {
-	return err != nil
-}
-
-func craftPrintMsg(errExists bool, out string) string {
-	var msg bytes.Buffer
-
-	if errExists {
-		msg.WriteString("Error Status: exists\n")
-	} else {
-		msg.WriteString("Error Status: not exists\n")
-	}
-	msg.WriteString("Output:\n")
-	msg.WriteString(out)
-	return msg.String()
+func run(c *exec.Cmd) (string, string, error) {
+	var o, e bytes.Buffer
+	c.Stdout, c.Stderr = &o, &e
+	err := c.Run()
+	return o.String(), e.String(), err
 }
 
 func TestWifi(t *testing.T) {
@@ -61,14 +48,12 @@ func TestWifi(t *testing.T) {
 
 	// Tests
 	for _, test := range testcases {
-		t.Logf("TEST %v", test.name)
 		c := exec.Command(execPath, test.args...)
-		out, err := c.CombinedOutput()
-		if (test.errExists != errorExists(err)) || !strings.Contains(string(out), test.out) {
-			expectMsg := craftPrintMsg(test.errExists, test.out)
-			actualMsg := craftPrintMsg(errorExists(err), string(out))
+		_, e, _ := run(c)
+		if !strings.Contains(e, test.expect) {
+			t.Logf("TEST %v", test.name)
 			execStatement := fmt.Sprintf("exec(wifi %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-			t.Errorf("%s\ngot:\n%s\n\nwant:\n%s", execStatement, actualMsg, expectMsg)
+			t.Errorf("%s\ngot:%s\nwant:%s", execStatement, e, test.expect)
 		}
 	}
 }

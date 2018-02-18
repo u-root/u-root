@@ -28,18 +28,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/d2g/dhcp4"
-  packages = ["."]
-  revision = "a1d1b6c41b1ce8a71a5121a9cee31809c4707d9c"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4client"
-  packages = ["."]
-  revision = "6e570ed0a266b730a860ba1068090f683b2c213a"
-
-[[projects]]
-  branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
@@ -82,18 +70,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/google/netstack"
-  packages = [
-    "ilist",
-    "tcpip",
-    "tcpip/buffer",
-    "tcpip/header",
-    "waiter"
-  ]
-  revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
-
-[[projects]]
-  branch = "master"
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
@@ -127,6 +103,22 @@
   packages = ["."]
   revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
   version = "v1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mdlayher/dhcp6"
+  packages = [
+    ".",
+    "dhcp6opts",
+    "internal/buffer"
+  ]
+  revision = "e26af0688e455a82b14ebdbecf43f87ead3c4624"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mdlayher/eui64"
+  packages = ["."]
+  revision = "eee6532bb9adf30c2a17e9963ed90aa14161dae9"
 
 [[projects]]
   branch = "master"
@@ -170,12 +162,6 @@
   revision = "a363d0fa829188311bbd955ad3f5cd9ee53926b6"
 
 [[projects]]
-  branch = "addclient"
-  name = "github.com/u-root/dhcp6"
-  packages = ["."]
-  revision = "e18b1a3a20894dd69ca88bfebb2ac0ff1afbae79"
-
-[[projects]]
   branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [
@@ -212,24 +198,19 @@
     "openpgp/errors",
     "openpgp/packet",
     "openpgp/s2k",
+    "pbkdf2",
     "poly1305",
     "ripemd160",
     "sha3",
     "ssh"
   ]
-  revision = "d9133f5469342136e669e85192a26056b587f503"
+  revision = "5119cf507ed5294cc409c092980c7497ee5d6fd2"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = [
-    "bpf",
-    "context",
-    "internal/iana",
-    "internal/socket",
-    "ipv6"
-  ]
-  revision = "f5dfe339be1d06f81b22525fe34671ee7d2c8904"
+  packages = ["context"]
+  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
   branch = "master"
@@ -250,7 +231,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "66487607e2081c7c2af2281c62c14ee000d5024b"
+  revision = "70252dea49c01dbfc3f800978304eb00eb15b698"
 
 [[projects]]
   name = "pack.ag/tftp"
@@ -264,6 +245,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0d7eaaa083c6e0e43c9ffa5276aeacc997e0e501199f19c25faf4e5a043c724b"
+  inputs-digest = "965c45576d8261261c4ea2f95b0d4aa65a4b3a6d5c7d8e660f836fab69b83b36"
   solver-name = "gps-cdcl"
   solver-version = 1

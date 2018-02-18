@@ -6,12 +6,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
-	"net/url"
 	"os"
 	"time"
 
+	"github.com/mdlayher/dhcp6"
+	"github.com/mdlayher/dhcp6/dhcp6opts"
+	"github.com/u-root/dhcp4"
 	"github.com/vishvananda/netlink"
 )
 
@@ -42,55 +43,18 @@ func IfUp(ifname string) (netlink.Link, error) {
 	return nil, fmt.Errorf("link %q still down after %d seconds", ifname, linkUpAttempt)
 }
 
-// Lease is a DHCP lease.
-type Lease struct {
-	IPNet             *net.IPNet
-	PreferredLifetime time.Duration
-	ValidLifetime     time.Duration
-}
+// Configure4 adds IP addresses, routes, and DNS servers to the system.
+func Configure4(iface netlink.Link, packet *dhcp4.Packet) error {
+	p := NewPacket4(packet)
 
-// Packet is a DHCP packet.
-type Packet interface {
-	IPs() []net.IP
-
-	// Leases are the leases returned by the DHCP server if specified,
-	// otherwise nil.
-	Leases() []Lease
-
-	// Gateway is the gateway server, if specified, otherwise nil.
-	Gateway() net.IP
-
-	// DNS are DNS server addresses, if specified, otherwise nil.
-	DNS() []net.IP
-
-	// Boot returns the boot URI and boot parameters if specified,
-	// otherwise an error.
-	Boot() (url.URL, string, error)
-}
-
-// Client is a DHCP client.
-type Client interface {
-	// Solicit solicits a new DHCP lease.
-	Solicit() (Packet, error)
-
-	// Renew renews an existing DHCP lease.
-	Renew(p Packet) (Packet, error)
-}
-
-// HandlePacket adds IP addresses, routes, and DNS servers to the system.
-func HandlePacket(iface netlink.Link, packet Packet) error {
-	l := packet.Leases()
-
-	// We currently only know how to handle one lease.
-	if len(l) > 1 {
-		log.Printf("interface %s: only handling one lease.", iface.Attrs().Name)
+	l := p.Lease()
+	if l == nil {
+		return fmt.Errorf("no lease returned")
 	}
 
 	// Add the address to the iface.
 	dst := &netlink.Addr{
-		IPNet:       l[0].IPNet,
-		PreferedLft: int(l[0].PreferredLifetime.Seconds()),
-		ValidLft:    int(l[0].ValidLifetime.Seconds()),
+		IPNet: l,
 	}
 	if err := netlink.AddrReplace(iface, dst); err != nil {
 		if os.IsExist(err) {
@@ -98,7 +62,7 @@ func HandlePacket(iface netlink.Link, packet Packet) error {
 		}
 	}
 
-	if gw := packet.Gateway(); gw != nil {
+	if gw := p.Gateway(); gw != nil {
 		r := &netlink.Route{
 			LinkIndex: iface.Attrs().Index,
 			Gw:        gw,
@@ -109,14 +73,51 @@ func HandlePacket(iface netlink.Link, packet Packet) error {
 		}
 	}
 
-	if ips := packet.DNS(); ips != nil {
-		rc := &bytes.Buffer{}
-		for _, ip := range ips {
-			rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
-		}
-		if err := ioutil.WriteFile("/etc/resolv.conf", rc.Bytes(), 0644); err != nil {
+	if ips := p.DNS(); ips != nil {
+		if err := WriteDNSSettings(ips); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// Configure6 adds IPv6 addresses, routes, and DNS servers to the system.
+func Configure6(iface netlink.Link, packet *dhcp6.Packet, iana *dhcp6opts.IANA) error {
+	p := NewPacket6(packet, iana)
+
+	l := p.Lease()
+	if l == nil {
+		return fmt.Errorf("no lease returned")
+	}
+
+	// Add the address to the iface.
+	dst := &netlink.Addr{
+		IPNet: &net.IPNet{
+			IP:   l.IP,
+			Mask: net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::")),
+		},
+		PreferedLft: int(l.PreferredLifetime.Seconds()),
+		ValidLft:    int(l.ValidLifetime.Seconds()),
+	}
+	if err := netlink.AddrReplace(iface, dst); err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("add/replace %s to %v: %v", dst, iface, err)
+		}
+	}
+
+	if ips := p.DNS(); ips != nil {
+		if err := WriteDNSSettings(ips); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteDNSSettings writes the given IPs as nameservers to resolv.conf.
+func WriteDNSSettings(ips []net.IP) error {
+	rc := &bytes.Buffer{}
+	for _, ip := range ips {
+		rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
+	}
+	return ioutil.WriteFile("/etc/resolv.conf", rc.Bytes(), 0644)
 }
