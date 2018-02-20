@@ -1,39 +1,10 @@
-package pxe
+package uio
 
 import (
 	"bytes"
 	"io"
 	"math"
 )
-
-// LazyOpener is a lazy io.Reader.
-//
-// LazyOpener will use a given open function to derive an io.Reader when Read
-// is first called on the LazyOpener.
-type LazyOpener struct {
-	r    io.Reader
-	err  error
-	open func() (io.Reader, error)
-}
-
-// NewLazyOpener returns a lazy io.Reader based on `open`.
-func NewLazyOpener(open func() (io.Reader, error)) io.Reader {
-	return &LazyOpener{open: open}
-}
-
-// Read implements io.Reader.Read lazily.
-//
-// If called for the first time, the underlying reader will be obtained and
-// then used for the first and subsequent calls to Read.
-func (lr *LazyOpener) Read(p []byte) (int, error) {
-	if lr.r == nil && lr.err == nil {
-		lr.r, lr.err = lr.open()
-	}
-	if lr.err != nil {
-		return 0, lr.err
-	}
-	return lr.r.Read(p)
-}
 
 // CachingReader is a lazily caching wrapper of an io.Reader.
 //

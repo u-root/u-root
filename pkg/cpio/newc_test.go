@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package newc
+package cpio
 
 import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"math"
 	"reflect"
 	"syscall"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/cpio"
 )
 
 func TestSimple(t *testing.T) {
-	f, err := cpio.Format("newc")
+	f, err := Format("newc")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,13 +35,13 @@ func TestSimple(t *testing.T) {
 }
 
 func TestWriteRead(t *testing.T) {
-	f, err := cpio.Format("newc")
+	f, err := Format("newc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	contents := []byte("LANAAAAAAAAAA")
-	rec := cpio.StaticRecord(contents, cpio.Info{
+	rec := StaticRecord(contents, Info{
 		Ino:      1,
 		Mode:     syscall.S_IFREG | 2,
 		UID:      3,
@@ -77,7 +76,7 @@ func TestWriteRead(t *testing.T) {
 		t.Errorf("Records not equal:\n%#v\n%#v", rec.Info, rec2.Info)
 	}
 
-	contents2, err := ioutil.ReadAll(rec2)
+	contents2, err := ioutil.ReadAll(io.NewSectionReader(rec2, 0, math.MaxInt64))
 	if err != nil {
 		t.Errorf("Could not read %q: %v", rec2.Name, err)
 	}
@@ -88,7 +87,7 @@ func TestWriteRead(t *testing.T) {
 }
 
 func TestReadWrite(t *testing.T) {
-	f, err := cpio.Format("newc")
+	f, err := Format("newc")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,11 +135,11 @@ func TestReadWrite(t *testing.T) {
 			t.Errorf("index %d: testCPIO Info\n%v\ngenerated Info\n%v\n", i, f1.Info, f2.Info)
 		}
 
-		contents1, err := ioutil.ReadAll(f1)
+		contents1, err := ioutil.ReadAll(io.NewSectionReader(f1, 0, math.MaxInt64))
 		if err != nil {
 			t.Errorf("index %d(%q): can't read from the source: %v", i, f1.Name, err)
 		}
-		contents2, err := ioutil.ReadAll(f2)
+		contents2, err := ioutil.ReadAll(io.NewSectionReader(f2, 0, math.MaxInt64))
 		if err != nil {
 			t.Errorf("index %d(%q): can't read from the dest: %v", i, f2.Name, err)
 		}
@@ -151,7 +150,7 @@ func TestReadWrite(t *testing.T) {
 }
 
 func TestBad(t *testing.T) {
-	f, err := cpio.Format("newc")
+	f, err := Format("newc")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,13 +483,13 @@ var (
 
 // testReproducible verifies that we can produce reproducible cpio archives for newc format.
 func TestReproducible(t *testing.T) {
-	f, err := cpio.Format("newc")
+	f, err := Format("newc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	contents := []byte("LANAAAAAAAAAA")
-	rec := []cpio.Record{cpio.StaticRecord(contents, cpio.Info{
+	rec := []Record{StaticRecord(contents, Info{
 		Ino:      1,
 		Mode:     syscall.S_IFREG | 2,
 		UID:      3,
@@ -513,7 +512,7 @@ func TestReproducible(t *testing.T) {
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
-	rec[0].ReadCloser = cpio.NewBytesReadCloser(contents)
+	rec[0].ReaderAt = bytes.NewReader(contents)
 	b2 := &bytes.Buffer{}
 	w = f.Writer(b2)
 	rec[0].MTime++
@@ -530,8 +529,8 @@ func TestReproducible(t *testing.T) {
 
 	b1 = &bytes.Buffer{}
 	w = f.Writer(b1)
-	rec[0].ReadCloser = cpio.NewBytesReadCloser([]byte(contents))
-	cpio.MakeAllReproducible(rec)
+	rec[0].ReaderAt = bytes.NewReader([]byte(contents))
+	MakeAllReproducible(rec)
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
@@ -539,8 +538,8 @@ func TestReproducible(t *testing.T) {
 	b2 = &bytes.Buffer{}
 	w = f.Writer(b2)
 	rec[0].MTime++
-	rec[0].ReadCloser = cpio.NewBytesReadCloser([]byte(contents))
-	cpio.MakeAllReproducible(rec)
+	rec[0].ReaderAt = bytes.NewReader([]byte(contents))
+	MakeAllReproducible(rec)
 	if err := w.WriteRecords(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}

@@ -55,7 +55,8 @@ func (r Reader) ReadRecord() (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	// The end of a CPIO archive is marked by a record whose name is "TRAILER!!!".
+	// The end of a CPIO archive is marked by a record whose name is
+	// "TRAILER!!!".
 	if rec.Name == Trailer {
 		return Record{}, io.EOF
 	}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -130,7 +131,7 @@ func CreateFileInRoot(f Record, rootDir string) error {
 			return err
 		}
 		defer nf.Close()
-		if _, err := io.Copy(nf, f); err != nil {
+		if _, err := io.Copy(nf, io.NewSectionReader(f, 0, math.MaxInt64)); err != nil {
 			return err
 		}
 		return setModes(f)
@@ -154,7 +155,7 @@ func CreateFileInRoot(f Record, rootDir string) error {
 		return setModes(f)
 
 	case os.ModeSymlink:
-		content, err := ioutil.ReadAll(f)
+		content, err := ioutil.ReadAll(io.NewSectionReader(f, 0, math.MaxInt64))
 		if err != nil {
 			return err
 		}
@@ -224,7 +225,7 @@ func GetRecord(path string) (Record, error) {
 		if done {
 			return Record{Info: info}, nil
 		}
-		return Record{Info: info, ReadCloser: NewDeferReadCloser(path)}, nil
+		return Record{Info: info, ReaderAt: NewLazyFile(path)}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)

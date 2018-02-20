@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/u-root/u-root/pkg/uio"
 	"pack.ag/tftp"
 )
 
@@ -118,7 +119,7 @@ func (s Schemes) LazyGetFile(u *url.URL) (io.Reader, error) {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
 
-	return NewLazyOpener(func() (io.Reader, error) {
+	return uio.NewLazyOpener(func() (io.Reader, error) {
 		r, err := fg.GetFile(u)
 		if err != nil {
 			return nil, &URLError{URL: u, Err: err}
@@ -190,7 +191,7 @@ func (lfs LocalFileClient) GetFile(u *url.URL) (io.Reader, error) {
 }
 
 type cachedFile struct {
-	cr  *CachingReader
+	cr  *uio.CachingReader
 	err error
 }
 
@@ -227,7 +228,7 @@ func (cc *CachedFileScheme) GetFile(u *url.URL) (io.Reader, error) {
 		cc.cache[url] = cachedFile{err: err}
 		return nil, err
 	}
-	cr := NewCachingReader(r)
+	cr := uio.NewCachingReader(r)
 	cc.cache[url] = cachedFile{cr: cr}
 	return cr.NewReader(), nil
 }
