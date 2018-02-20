@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// newc implements the new ASCII cpio file format.
-package newc
+package cpio
 
 import (
 	"bytes"
@@ -11,8 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-
-	"github.com/u-root/u-root/pkg/cpio"
+	"math"
 )
 
 const (
@@ -36,7 +34,7 @@ type header struct {
 	CRC        uint32
 }
 
-func headerFromInfo(i cpio.Info) header {
+func headerFromInfo(i Info) header {
 	var h header
 	h.Ino = uint32(i.Ino)
 	h.Mode = uint32(i.Mode)
@@ -53,8 +51,8 @@ func headerFromInfo(i cpio.Info) header {
 	return h
 }
 
-func (h header) Info() cpio.Info {
-	var i cpio.Info
+func (h header) Info() Info {
+	var i Info
 	i.Ino = uint64(h.Ino)
 	i.Mode = uint64(h.Mode)
 	i.UID = uint64(h.UID)
@@ -84,7 +82,7 @@ type writer struct {
 	pos int64
 }
 
-func (f format) Writer(w io.Writer) cpio.RecordWriter {
+func (f format) Writer(w io.Writer) RecordWriter {
 	return &writer{f: f, w: w}
 }
 
@@ -109,7 +107,7 @@ func (w *writer) pad() error {
 
 // Write writes newc cpio records. It pads the header+name write to
 // 4 byte alignment and pads the data write as well.
-func (w *writer) WriteRecord(f cpio.Record) error {
+func (w *writer) WriteRecord(f Record) error {
 	// Write magic.
 	if _, err := w.Write([]byte(w.f.magic)); err != nil {
 		return err
@@ -117,7 +115,7 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 
 	buf := &bytes.Buffer{}
 	hdr := headerFromInfo(f.Info)
-	if f.ReadCloser == nil {
+	if f.ReaderAt == nil {
 		hdr.FileSize = 0
 	}
 	hdr.CRC = 0
@@ -148,17 +146,19 @@ func (w *writer) WriteRecord(f cpio.Record) error {
 	}
 
 	// Some files do not have any content.
-	if f.ReadCloser == nil {
+	if f.ReaderAt == nil {
 		return nil
 	}
 
 	// Write file contents.
-	m, err := io.Copy(w, f)
+	m, err := io.Copy(w, io.NewSectionReader(f, 0, math.MaxInt64))
 	if err != nil {
 		return err
 	}
-	if err := f.Close(); err != nil {
-		return err
+	if c, ok := f.ReaderAt.(io.Closer); ok {
+		if err := c.Close(); err != nil {
+			return err
+		}
 	}
 	if m > 0 {
 		return w.pad()
@@ -172,7 +172,7 @@ type reader struct {
 	pos int64
 }
 
-func (f format) Reader(r io.ReaderAt) cpio.RecordReader {
+func (f format) Reader(r io.ReaderAt) RecordReader {
 	return &reader{f: f, r: r}
 }
 
@@ -194,36 +194,36 @@ func (r *reader) ReadAligned(p []byte) error {
 	return err
 }
 
-func (r *reader) ReadRecord() (cpio.Record, error) {
+func (r *reader) ReadRecord() (Record, error) {
 	hdr := header{}
 
-	cpio.Debug("Next record: pos is %d\n", r.pos)
+	Debug("Next record: pos is %d\n", r.pos)
 
 	buf := make([]byte, hex.EncodedLen(binary.Size(hdr))+magicLen)
 	if err := r.Read(buf); err != nil {
-		return cpio.Record{}, err
+		return Record{}, err
 	}
 
 	// Check the magic.
 	if magic := string(buf[:magicLen]); magic != r.f.magic {
-		return cpio.Record{}, fmt.Errorf("reader: magic got %q, want %q", magic, r.f.magic)
+		return Record{}, fmt.Errorf("reader: magic got %q, want %q", magic, r.f.magic)
 	}
-	cpio.Debug("Header is %v\n", buf)
+	Debug("Header is %v\n", buf)
 
 	// Decode hex header fields.
 	dst := make([]byte, binary.Size(hdr))
 	if _, err := hex.Decode(dst, buf[magicLen:]); err != nil {
-		return cpio.Record{}, fmt.Errorf("reader: error decoding hex: %v", err)
+		return Record{}, fmt.Errorf("reader: error decoding hex: %v", err)
 	}
 	if err := binary.Read(bytes.NewReader(dst), binary.BigEndian, &hdr); err != nil {
-		return cpio.Record{}, err
+		return Record{}, err
 	}
-	cpio.Debug("Decoded header is %s\n", hdr)
+	Debug("Decoded header is %s\n", hdr)
 
 	// Get the name.
 	nameBuf := make([]byte, hdr.NameLength)
 	if err := r.ReadAligned(nameBuf); err != nil {
-		return cpio.Record{}, err
+		return Record{}, err
 	}
 
 	info := hdr.Info()
@@ -231,12 +231,12 @@ func (r *reader) ReadRecord() (cpio.Record, error) {
 
 	content := io.NewSectionReader(r.r, r.pos, int64(hdr.FileSize))
 	r.pos = round4(r.pos + int64(hdr.FileSize))
-	return cpio.Record{
-		Info:       info,
-		ReadCloser: cpio.NewReadCloser(content),
+	return Record{
+		Info:     info,
+		ReaderAt: content,
 	}, nil
 }
 
 func init() {
-	cpio.AddFormat("newc", format{magic: newcMagic})
+	AddFormat("newc", format{magic: newcMagic})
 }

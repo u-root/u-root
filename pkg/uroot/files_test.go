@@ -291,7 +291,7 @@ func sameNameModeContent(r1 cpio.Record, r2 cpio.Record) bool {
 	if r1.Name != r2.Name || r1.Mode != r2.Mode {
 		return false
 	}
-	return cpio.ReadCloserEqual(r1.ReadCloser, r2.ReadCloser)
+	return cpio.ReaderAtEqual(r1.ReaderAt, r2.ReaderAt)
 }
 
 func TestWriteFile(t *testing.T) {
@@ -362,14 +362,14 @@ func TestWriteFile(t *testing.T) {
 						Name: "etc/bla",
 						Mode: unix.S_IFREG | 0644,
 					},
-					ReadCloser: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+					ReaderAt: bytes.NewReader([]byte("foo")),
 				},
 				"etc/bla2": cpio.Record{
 					Info: cpio.Info{
 						Name: "etc/bla2",
 						Mode: unix.S_IFREG | 0644,
 					},
-					ReadCloser: ioutil.NopCloser(bytes.NewReader([]byte("foo2"))),
+					ReaderAt: bytes.NewReader([]byte("foo2")),
 				},
 			},
 		},

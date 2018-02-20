@@ -9,39 +9,33 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"time"
 
+	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
 )
 
-const Trailer = "TRAILER!!!"
-
+// Record represents a CPIO record, which represents a Linux file.
 type Record struct {
-	io.ReadCloser
+	// ReaderAt contains the content of this CPIO record.
+	io.ReaderAt
+
+	// Info is metadata describing the CPIO record.
 	Info
 }
 
+const Trailer = "TRAILER!!!"
+
+// TrailerRecord is the last record in any CPIO archive.
 var TrailerRecord = StaticRecord(nil, Info{Name: Trailer})
-
-type RecordReader interface {
-	ReadRecord() (Record, error)
-}
-
-type RecordWriter interface {
-	WriteRecord(Record) error
-}
-
-type RecordFormat interface {
-	Reader(r io.ReaderAt) RecordReader
-	Writer(w io.Writer) RecordWriter
-}
 
 func StaticRecord(contents []byte, info Info) Record {
 	info.FileSize = uint64(len(contents))
 	return Record{
-		ReadCloser: ioutil.NopCloser(bytes.NewReader(contents)),
-		Info:       info,
+		ReaderAt: bytes.NewReader(contents),
+		Info:     info,
 	}
 }
 
@@ -55,7 +49,7 @@ func StaticFile(name string, content string, perm uint64) Record {
 // Symlink returns a symlink record at name pointing to target.
 func Symlink(name string, target string) Record {
 	return Record{
-		ReadCloser: ioutil.NopCloser(bytes.NewReader([]byte(target))),
+		ReaderAt: bytes.NewReader([]byte(target)),
 		Info: Info{
 			FileSize: uint64(len(target)),
 			Mode:     unix.S_IFLNK | 0777,
@@ -86,36 +80,10 @@ func CharDev(name string, perm uint64, rmajor, rminor uint64) Record {
 	}
 }
 
-func NewBytesReadCloser(contents []byte) io.ReadCloser {
-	return ioutil.NopCloser(bytes.NewReader(contents))
-}
-
-func NewReadCloser(r io.Reader) io.ReadCloser {
-	return ioutil.NopCloser(r)
-}
-
-type LazyOpen struct {
-	Name string
-	File *os.File
-}
-
-func (r *LazyOpen) Read(p []byte) (int, error) {
-	if r.File == nil {
-		f, err := os.Open(r.Name)
-		if err != nil {
-			return -1, err
-		}
-		r.File = f
-	}
-	return r.File.Read(p)
-}
-
-func (r *LazyOpen) Close() error {
-	return r.File.Close()
-}
-
-func NewDeferReadCloser(name string) io.ReadCloser {
-	return &LazyOpen{Name: name}
+func NewLazyFile(name string) io.ReaderAt {
+	return uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
+		return os.Open(name)
+	})
 }
 
 // Info holds metadata about files.
@@ -139,21 +107,21 @@ func Equal(r Record, s Record) bool {
 	if r.Info != s.Info {
 		return false
 	}
-	return ReadCloserEqual(r.ReadCloser, s.ReadCloser)
+	return ReaderAtEqual(r.ReaderAt, s.ReaderAt)
 }
 
-func ReadCloserEqual(r1, r2 io.ReadCloser) bool {
+func ReaderAtEqual(r1, r2 io.ReaderAt) bool {
 	var c, d []byte
 	var err error
 	if r1 != nil {
-		c, err = ioutil.ReadAll(r1)
+		c, err = ioutil.ReadAll(io.NewSectionReader(r1, 0, math.MaxInt64))
 		if err != nil {
 			return false
 		}
 	}
 
 	if r2 != nil {
-		d, err = ioutil.ReadAll(r2)
+		d, err = ioutil.ReadAll(io.NewSectionReader(r2, 0, math.MaxInt64))
 		if err != nil {
 			return false
 		}
@@ -175,4 +143,17 @@ func (i Info) String() string {
 		i.Minor,
 		i.Rmajor,
 		i.Rminor)
+}
+
+type RecordReader interface {
+	ReadRecord() (Record, error)
+}
+
+type RecordWriter interface {
+	WriteRecord(Record) error
+}
+
+type RecordFormat interface {
+	Reader(r io.ReaderAt) RecordReader
+	Writer(w io.Writer) RecordWriter
 }
