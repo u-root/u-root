@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"os"
 	"time"
 
@@ -17,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Record represents a CPIO record, which represents a Linux file.
+// Record represents a CPIO record, which represents a Unix file.
 type Record struct {
 	// ReaderAt contains the content of this CPIO record.
 	io.ReaderAt
@@ -114,14 +113,14 @@ func ReaderAtEqual(r1, r2 io.ReaderAt) bool {
 	var c, d []byte
 	var err error
 	if r1 != nil {
-		c, err = ioutil.ReadAll(io.NewSectionReader(r1, 0, math.MaxInt64))
+		c, err = ioutil.ReadAll(uio.Reader(r1))
 		if err != nil {
 			return false
 		}
 	}
 
 	if r2 != nil {
-		d, err = ioutil.ReadAll(io.NewSectionReader(r2, 0, math.MaxInt64))
+		d, err = ioutil.ReadAll(uio.Reader(r2))
 		if err != nil {
 			return false
 		}

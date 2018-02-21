@@ -3,7 +3,6 @@ package uio
 import (
 	"bytes"
 	"io"
-	"math"
 )
 
 // CachingReader is a lazily caching wrapper of an io.Reader.
@@ -37,7 +36,7 @@ func (cr *CachingReader) read(p []byte) (int, error) {
 
 // NewReader returns a new io.Reader that reads cr from offset 0.
 func (cr *CachingReader) NewReader() io.Reader {
-	return io.NewSectionReader(cr, 0, math.MaxInt64)
+	return Reader(cr)
 }
 
 // Read reads from cr; implementing io.Reader.

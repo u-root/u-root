@@ -10,7 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 const (
@@ -151,7 +152,7 @@ func (w *writer) WriteRecord(f Record) error {
 	}
 
 	// Write file contents.
-	m, err := io.Copy(w, io.NewSectionReader(f, 0, math.MaxInt64))
+	m, err := io.Copy(w, uio.Reader(f))
 	if err != nil {
 		return err
 	}
