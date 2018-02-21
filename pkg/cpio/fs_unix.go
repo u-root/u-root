@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"os"
 	"path/filepath"
 	"syscall"
-	//"time"
 
+	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
 )
 
@@ -131,7 +130,7 @@ func CreateFileInRoot(f Record, rootDir string) error {
 			return err
 		}
 		defer nf.Close()
-		if _, err := io.Copy(nf, io.NewSectionReader(f, 0, math.MaxInt64)); err != nil {
+		if _, err := io.Copy(nf, uio.Reader(f)); err != nil {
 			return err
 		}
 		return setModes(f)
@@ -155,7 +154,7 @@ func CreateFileInRoot(f Record, rootDir string) error {
 		return setModes(f)
 
 	case os.ModeSymlink:
-		content, err := ioutil.ReadAll(io.NewSectionReader(f, 0, math.MaxInt64))
+		content, err := ioutil.ReadAll(uio.Reader(f))
 		if err != nil {
 			return err
 		}
