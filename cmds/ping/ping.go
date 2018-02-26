@@ -18,6 +18,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"log"
@@ -29,11 +30,18 @@ import (
 var (
 	net6       = flag.Bool("6", false, "use ipv4 (means ip4:icmp) or 6 (ip6:ipv6-icmp)")
 	packetSize = flag.Int("s", 64, "Data size")
-	iter       = flag.Int64("c", 0, "# iterations")
+	iter       = flag.Uint64("c", 0, "# iterations")
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
 	help       = flag.Bool("h", false, "help")
+)
+
+const (
+	ICMP_TYPE_ECHO_REQUEST             = 8
+	ICMP_TYPE_ECHO_REPLY               = 0
+	ICMP_ECHO_REPLY_HEADER_IPV4_OFFSET = 20
+	ICMP_ECHO_REPLY_HEADER_IPV6_OFFSET = 40
 )
 
 func usage() {
@@ -69,6 +77,77 @@ func beatifulLatency(before time.Time) (latency string) {
 	return latency
 }
 
+func cksum(bs []byte) uint16 {
+	sum := uint32(0)
+
+	for k := 0; k < len(bs)/2; k++ {
+		sum += uint32(bs[k*2]) << 8
+		sum += uint32(bs[k*2+1])
+	}
+	if len(bs)%2 != 0 {
+		sum += uint32(bs[len(bs)-1]) << 8
+	}
+	sum = (sum >> 16) + (sum & 0xffff)
+	sum = (sum >> 16) + (sum & 0xffff)
+	if sum == 0xffff {
+		sum = 0
+	}
+
+	return ^uint16(sum)
+}
+
+func ping1(netname string, host string, i uint64) (string, error) {
+	c, derr := net.Dial(netname, host)
+	if derr != nil {
+		return "", fmt.Errorf("net.Dial(%v %v) failed: %v", netname, host, derr)
+	}
+	defer c.Close()
+
+	// Send ICMP Echo Request
+	waitFor := time.Duration(*wtf) * time.Millisecond
+	c.SetDeadline(time.Now().Add(waitFor))
+	msg := make([]byte, *packetSize)
+	msg[0] = ICMP_TYPE_ECHO_REQUEST
+	msg[1] = 0
+	binary.BigEndian.PutUint16(msg[6:], uint16(i))
+	binary.BigEndian.PutUint16(msg[4:], uint16(i>>16))
+	binary.BigEndian.PutUint16(msg[2:], cksum(msg))
+	if _, err := c.Write(msg[:]); err != nil {
+		return "", fmt.Errorf("Write failed: %v", err)
+	}
+
+	// Get ICMP Echo Reply
+	before := time.Now()
+	c.SetDeadline(time.Now().Add(waitFor))
+	rmsg := make([]byte, *packetSize+256)
+	amt, rerr := c.Read(rmsg[:])
+	if rerr != nil {
+		return "", fmt.Errorf("Read failed: %v", rerr)
+	}
+	if (rmsg[0] & 0x0F) == 6 {
+		rmsg = rmsg[ICMP_ECHO_REPLY_HEADER_IPV6_OFFSET:]
+	} else {
+		rmsg = rmsg[ICMP_ECHO_REPLY_HEADER_IPV4_OFFSET:]
+	}
+	if rmsg[0] != ICMP_TYPE_ECHO_REPLY {
+		return "", fmt.Errorf("Bad ICMP echo reply type: %v", msg[0])
+	}
+	cks := binary.BigEndian.Uint16(rmsg[2:])
+	binary.BigEndian.PutUint16(rmsg[2:], 0)
+	if cks != cksum(rmsg) {
+		return "", fmt.Errorf("Bad ICMP checksum: %v (expected %v)", cks, cksum(rmsg))
+	}
+	latency := beatifulLatency(before)
+	id := binary.BigEndian.Uint16(rmsg[4:])
+	seq := binary.BigEndian.Uint16(rmsg[6:])
+	rseq := uint64(id)<<16 + uint64(seq)
+	if rseq != i {
+		return "", fmt.Errorf("wrong sequence number %v (expected %v)", rseq, i)
+	}
+
+	return fmt.Sprintf("%d bytes from %v: icmp_seq=%v, time=%v", amt, host, i, latency), nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -76,40 +155,26 @@ func main() {
 	if flag.NArg() < 1 {
 		optwithoutparam()
 	}
+	if *packetSize < 8 {
+		log.Fatalf("packet size too small (must be >= 8): %v", *packetSize)
+	}
 
 	netname := "ip4:icmp"
 	interval := time.Duration(*intv)
-	waitFor := time.Duration(*wtf) * time.Millisecond
 	host := flag.Args()[0]
 	// todo: just figure out if it's an ip6 address and go from there.
 	if *net6 {
 		netname = "ip6:ipv6-icmp"
 	}
-	msg := make([]byte, *packetSize)
 
 	// ping needs to run forever, except if '*iter' is not zero
-	var i int64
+	var i uint64
 	for i = 1; *iter == 0 || i < *iter; i++ {
-		c, err := net.Dial(netname, host)
+		msg, err := ping1(netname, host, i)
 		if err != nil {
-			log.Fatalf("net.Dial(%v %v) failed: %v", netname, host, err)
+			log.Fatalf("ping failed: %v", err)
 		}
-
-		c.SetDeadline(time.Now().Add(waitFor))
-		msg[0] = byte(i)
-		if _, err := c.Write(msg[:]); err != nil {
-			log.Printf("Write failed: %v", err)
-		} else {
-			before := time.Now()
-			c.SetDeadline(time.Now().Add(waitFor))
-			if amt, err := c.Read(msg[:]); err == nil {
-				latency := beatifulLatency(before)
-				log.Printf("%d bytes from %v: icmp_seq=%v, time=%v", amt, host, i, latency)
-			} else {
-				log.Printf("Read failed: %v", err)
-			}
-		}
-		c.Close()
+		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)
 	}
 }
