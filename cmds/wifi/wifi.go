@@ -38,10 +38,31 @@ func init() {
 	}
 }
 
+func generateConfig(essid string, id string, pass string) (conf []byte) {
+	switch {
+	case essid != "" && id != "" && pass != "":
+		conf = []byte(fmt.Sprintf(eap, essid, id, pass))
+	case essid != "" && pass != "":
+		o, err := passphrase.Run(essid, pass)
+		if err != nil {
+			log.Fatalf("%v %v: %v", essid, pass, err)
+		}
+		conf = o
+	case essid != "":
+		conf = []byte(fmt.Sprintf(nopassphrase, essid))
+	default:
+		flag.Usage()
+		os.Exit(1)
+	}
+	return
+}
+
 func main() {
+	go startServer()
+
+	// Service
 	var (
 		iface = flag.String("i", "wlan0", "interface to use")
-		essid string
 		conf  []byte
 	)
 
@@ -50,19 +71,20 @@ func main() {
 
 	switch {
 	case len(a) == 3:
-		essid = a[0]
-		conf = []byte(fmt.Sprintf(eap, essid, a[2], a[1]))
+		conf = generateConfig(a[0], a[2], a[1])
 	case len(a) == 2:
-		essid = a[0]
-		pass := a[1]
-		o, err := passphrase.Run(essid, pass)
-		if err != nil {
-			log.Fatalf("%v %v: %v", essid, pass, err)
-		}
-		conf = o
+		conf = generateConfig(a[0], "", a[1])
 	case len(a) == 1:
-		essid = a[0]
-		conf = []byte(fmt.Sprintf(nopassphrase, essid))
+		conf = generateConfig(a[0], "", "")
+	case len(a) == 0:
+		// Experimental Part
+		msg := <-ServerToServiceChan
+		conf = generateConfig(msg.essid, msg.id, msg.pass)
+		stubMsg := ServiceToServerMessage{
+			essid: msg.essid,
+		}
+		ServiceToServerChan <- stubMsg
+		_ = <-ServerToServiceChan // So we can see the result of the page load
 	default:
 		flag.Usage()
 		os.Exit(1)
@@ -85,5 +107,4 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("%v: %v", cmd, err)
 	}
-
 }
