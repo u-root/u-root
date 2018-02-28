@@ -48,3 +48,6 @@ vmlinux
 # Python Virtual Env
 *.env
 *.venv
+
+# Vim swap files
+*.swp
