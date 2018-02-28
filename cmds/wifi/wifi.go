@@ -38,21 +38,19 @@ func init() {
 	}
 }
 
-func generateConfig(essid string, id string, pass string) (conf []byte) {
+func generateConfig(essid string, id string, pass string) (conf []byte, err error) {
 	switch {
 	case essid != "" && id != "" && pass != "":
 		conf = []byte(fmt.Sprintf(eap, essid, id, pass))
-	case essid != "" && pass != "":
-		o, err := passphrase.Run(essid, pass)
+	case essid != "" && id == "" && pass != "":
+		conf, err = passphrase.Run(essid, pass)
 		if err != nil {
-			log.Fatalf("%v %v: %v", essid, pass, err)
+			return nil, fmt.Errorf("essid: %v, pass: %v : %v", essid, pass, err)
 		}
-		conf = o
-	case essid != "":
+	case essid != "" && id == "" && pass == "":
 		conf = []byte(fmt.Sprintf(nopassphrase, essid))
 	default:
-		flag.Usage()
-		os.Exit(1)
+		return nil, fmt.Errorf("Invalid Argument: essid: %v, id: %v, pass: %v", essid, id, pass)
 	}
 	return
 }
@@ -64,6 +62,7 @@ func main() {
 	var (
 		iface = flag.String("i", "wlan0", "interface to use")
 		conf  []byte
+		err   error
 	)
 
 	flag.Parse()
@@ -71,23 +70,28 @@ func main() {
 
 	switch {
 	case len(a) == 3:
-		conf = generateConfig(a[0], a[2], a[1])
+		conf, err = generateConfig(a[0], a[2], a[1])
 	case len(a) == 2:
-		conf = generateConfig(a[0], "", a[1])
+		conf, err = generateConfig(a[0], "", a[1])
 	case len(a) == 1:
-		conf = generateConfig(a[0], "", "")
+		conf, err = generateConfig(a[0], "", "")
 	case len(a) == 0:
 		// Experimental Part
+		// if len(a) = 0, can use the web interface to get user's input
 		msg := <-ServerToServiceChan
-		conf = generateConfig(msg.essid, msg.id, msg.pass)
+		conf, err = generateConfig(msg.essid, msg.id, msg.pass)
 		stubMsg := ServiceToServerMessage{
 			essid: msg.essid,
 		}
 		ServiceToServerChan <- stubMsg
-		_ = <-ServerToServiceChan // So we can see the result of the page load
+		_ = <-ServerToServiceChan // (Experimental) So we can see the result of the page load
 	default:
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	if err != nil {
+		log.Fatalf("error: %v", err)
 	}
 
 	if err := ioutil.WriteFile("/tmp/wifi.conf", conf, 0444); err != nil {
