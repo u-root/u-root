@@ -21,6 +21,12 @@
   revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
 
 [[projects]]
+  name = "github.com/beevik/ntp"
+  packages = ["."]
+  revision = "62c80a04de2086884d8296004b6d74ee1846c582"
+  version = "v0.2.0"
+
+[[projects]]
   name = "github.com/boltdb/bolt"
   packages = ["."]
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
@@ -235,7 +241,10 @@
   name = "golang.org/x/net"
   packages = [
     "bpf",
-    "context"
+    "context",
+    "internal/iana",
+    "internal/socket",
+    "ipv4"
   ]
   revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
 
@@ -272,6 +281,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "965c45576d8261261c4ea2f95b0d4aa65a4b3a6d5c7d8e660f836fab69b83b36"
+  inputs-digest = "53c671ea870169a284a1baec69cbd056ebe2b13fe9ee65ad4b28f3c05a05521a"
   solver-name = "gps-cdcl"
   solver-version = 1
