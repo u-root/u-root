@@ -23,13 +23,13 @@ type WifiTestCase struct {
 
 var testcases = []WifiTestCase{
 	{
-		name:   "No Flags, No Args",
-		args:   nil,
+		name:   "More elements than needed",
+		args:   []string{"a", "a", "a", "a"},
 		expect: "Usage",
 	},
 	{
-		name:   "Flags, No Args",
-		args:   []string{"-i=123"},
+		name:   "Flags, More elements than needed",
+		args:   []string{"-i=123", "a", "a", "a", "a"},
 		expect: "Usage",
 	},
 }
@@ -41,7 +41,7 @@ func run(c *exec.Cmd) (string, string, error) {
 	return o.String(), e.String(), err
 }
 
-func TestWifi(t *testing.T) {
+func TestWifiErrors(t *testing.T) {
 	// Set up
 	tmpDir, execPath := testutil.CompileInTempDir(t)
 	defer os.RemoveAll(tmpDir)
