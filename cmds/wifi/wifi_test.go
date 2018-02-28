@@ -24,19 +24,19 @@ type WifiErrorTestCase struct {
 }
 
 type GenerateConfigTestCase struct {
-	name  string
-	essid string
-	id    string
-	pass  string
-	exp   []byte
-	err   error
+	name string
+	args []string
+	exp  []byte
+	err  error
 }
 
 var (
-	EssidStub    = "stub"
-	IdStub       = "stub"
-	PassStub     = "123456789"
-	expWpaPsk, _ = passphrase.Run(EssidStub, PassStub)
+	EssidStub       = "stub"
+	IdStub          = "stub"
+	PassStub        = "123456789"
+	BadWpaPskPass   = "123"
+	expWpaPsk, _    = passphrase.Run(EssidStub, PassStub)
+	_, expWpaPskErr = passphrase.Run(EssidStub, BadWpaPskPass)
 
 	errorTestcases = []WifiErrorTestCase{
 		{
@@ -53,44 +53,28 @@ var (
 
 	generateConfigTestcases = []GenerateConfigTestCase{
 		{
-			name:  "No Pass Phrase",
-			essid: EssidStub,
-			id:    "",
-			pass:  "",
-			exp:   []byte(fmt.Sprintf(nopassphrase, EssidStub)),
-			err:   nil,
+			name: "No Pass Phrase",
+			args: []string{EssidStub},
+			exp:  []byte(fmt.Sprintf(nopassphrase, EssidStub)),
+			err:  nil,
 		},
 		{
-			name:  "WPA-PSK",
-			essid: EssidStub,
-			id:    "",
-			pass:  PassStub,
-			exp:   expWpaPsk,
-			err:   nil,
+			name: "WPA-PSK",
+			args: []string{EssidStub, PassStub},
+			exp:  expWpaPsk,
+			err:  nil,
 		},
 		{
-			name:  "WPA-EAP",
-			essid: EssidStub,
-			id:    IdStub,
-			pass:  PassStub,
-			exp:   []byte(fmt.Sprintf(eap, EssidStub, IdStub, PassStub)),
-			err:   nil,
+			name: "WPA-EAP",
+			args: []string{EssidStub, PassStub, IdStub},
+			exp:  []byte(fmt.Sprintf(eap, EssidStub, IdStub, PassStub)),
+			err:  nil,
 		},
 		{
-			name:  "Invalid Argument: ESSID and Id",
-			essid: EssidStub,
-			id:    IdStub,
-			pass:  "",
-			exp:   nil,
-			err:   fmt.Errorf("Invalid Argument: essid: %v, id: %v, pass: %v", EssidStub, IdStub, ""),
-		},
-		{
-			name:  "Invalid Argument: No ESSID",
-			essid: "",
-			id:    IdStub,
-			pass:  PassStub,
-			exp:   nil,
-			err:   fmt.Errorf("Invalid Argument: essid: %v, id: %v, pass: %v", "", IdStub, PassStub),
+			name: "WPA-PSK",
+			args: []string{EssidStub, BadWpaPskPass},
+			exp:  nil,
+			err:  fmt.Errorf("essid: %v, pass: %v : %v", EssidStub, BadWpaPskPass, expWpaPskErr),
 		},
 	}
 )
@@ -121,10 +105,10 @@ func TestWifiErrors(t *testing.T) {
 
 func TestWifiGenerateConfig(t *testing.T) {
 	for _, test := range generateConfigTestcases {
-		out, err := generateConfig(test.essid, test.id, test.pass)
+		out, err := generateConfig(test.args)
 		if !reflect.DeepEqual(err, test.err) || !bytes.Equal(out, test.exp) {
 			t.Logf("TEST %v", test.name)
-			fncCall := fmt.Sprintf("genrateConfig(%s, %s,%s)", test.essid, test.id, test.pass)
+			fncCall := fmt.Sprintf("genrateConfig(%v)", test.args)
 			t.Errorf("%s\ngot:[%v, %v]\nwant:[%v, %v]", fncCall, string(out), err, string(test.exp), test.err)
 
 		}

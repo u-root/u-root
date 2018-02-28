@@ -38,19 +38,21 @@ func init() {
 	}
 }
 
-func generateConfig(essid string, id string, pass string) (conf []byte, err error) {
+func generateConfig(a []string) (conf []byte, err error) {
+	// format of a: [essid, pass, id]
 	switch {
-	case essid != "" && id != "" && pass != "":
-		conf = []byte(fmt.Sprintf(eap, essid, id, pass))
-	case essid != "" && id == "" && pass != "":
-		conf, err = passphrase.Run(essid, pass)
+	case len(a) == 3:
+		conf = []byte(fmt.Sprintf(eap, a[0], a[2], a[1]))
+	case len(a) == 2:
+		conf, err = passphrase.Run(a[0], a[1])
 		if err != nil {
-			return nil, fmt.Errorf("essid: %v, pass: %v : %v", essid, pass, err)
+			return nil, fmt.Errorf("essid: %v, pass: %v : %v", a[0], a[1], err)
 		}
-	case essid != "" && id == "" && pass == "":
-		conf = []byte(fmt.Sprintf(nopassphrase, essid))
+	case len(a) == 1:
+		conf = []byte(fmt.Sprintf(nopassphrase, a[0]))
 	default:
-		return nil, fmt.Errorf("Invalid Argument: essid: %v, id: %v, pass: %v", essid, id, pass)
+		flag.Usage()
+		os.Exit(1)
 	}
 	return
 }
@@ -68,28 +70,25 @@ func main() {
 	flag.Parse()
 	a := flag.Args()
 
-	switch {
-	case len(a) == 3:
-		conf, err = generateConfig(a[0], a[2], a[1])
-	case len(a) == 2:
-		conf, err = generateConfig(a[0], "", a[1])
-	case len(a) == 1:
-		conf, err = generateConfig(a[0], "", "")
-	case len(a) == 0:
+	if len(a) == 0 {
 		// Experimental Part
 		// if len(a) = 0, can use the web interface to get user's input
 		msg := <-ServerToServiceChan
-		conf, err = generateConfig(msg.essid, msg.id, msg.pass)
+		a = append(a, msg.essid)
+		if msg.pass != "" {
+			a = append(a, msg.pass)
+		}
+		if msg.id != "" {
+			a = append(a, msg.id)
+		}
 		stubMsg := ServiceToServerMessage{
 			essid: msg.essid,
 		}
 		ServiceToServerChan <- stubMsg
 		_ = <-ServerToServiceChan // (Experimental) So we can see the result of the page load
-	default:
-		flag.Usage()
-		os.Exit(1)
 	}
 
+	conf, err = generateConfig(a)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
