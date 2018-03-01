@@ -38,7 +38,7 @@ func init() {
 	}
 }
 
-func generateConfig(a []string) (conf []byte, err error) {
+func generateConfig(a ...string) (conf []byte, err error) {
 	// format of a: [essid, pass, id]
 	switch {
 	case len(a) == 3:
@@ -52,7 +52,7 @@ func generateConfig(a []string) (conf []byte, err error) {
 		conf = []byte(fmt.Sprintf(nopassphrase, a[0]))
 	default:
 		flag.Usage()
-		os.Exit(1)
+		return nil, fmt.Errorf("generateConfig needs 1, 2, or 3 args")
 	}
 	return
 }
@@ -73,22 +73,16 @@ func main() {
 	if len(a) == 0 {
 		// Experimental Part
 		// if len(a) = 0, can use the web interface to get user's input
-		msg := <-ServerToServiceChan
-		a = append(a, msg.essid)
-		if msg.pass != "" {
-			a = append(a, msg.pass)
+		a = (<-UserInputChannel).args
+		stubMsg := StatusMessage{
+			essid: a[0],
 		}
-		if msg.id != "" {
-			a = append(a, msg.id)
-		}
-		stubMsg := ServiceToServerMessage{
-			essid: msg.essid,
-		}
-		ServiceToServerChan <- stubMsg
-		_ = <-ServerToServiceChan // (Experimental) So we can see the result of the page load
+
+		StatusChannel <- stubMsg
+		_ = <-UserInputChannel // (Experimental) So we can see the result of the page load
 	}
 
-	conf, err = generateConfig(a)
+	conf, err = generateConfig(a...)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}

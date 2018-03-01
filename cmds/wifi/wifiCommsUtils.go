@@ -4,17 +4,15 @@
 
 package main
 
-type ServerToServiceMessage struct {
-	essid string
-	id    string
-	pass  string
+type UserInputMessage struct {
+	args []string
 }
 
-type ServiceToServerMessage struct {
+type StatusMessage struct {
 	essid string
 }
 
 var (
-	ServerToServiceChan = make(chan ServerToServiceMessage)
-	ServiceToServerChan = make(chan ServiceToServerMessage)
+	UserInputChannel = make(chan UserInputMessage)
+	StatusChannel    = make(chan StatusMessage)
 )
