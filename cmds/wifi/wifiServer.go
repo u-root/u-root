@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 )
 
 type SecProto int
@@ -124,6 +123,19 @@ function replaceWithConnecting(elem) {
 `
 )
 
+func userInputValidation(essid, pass, id string) ([]string, error) {
+	switch {
+	case essid != "" && pass != "" && id != "":
+		return []string{essid, pass, id}, nil
+	case essid != "" && pass != "" && id == "":
+		return []string{essid, pass}, nil
+	case essid != "" && pass == "" && id == "":
+		return []string{essid}, nil
+	default:
+		return nil, fmt.Errorf("Invalid user input")
+	}
+}
+
 func startServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		stubWifis := []WifiOptions{
@@ -141,17 +153,10 @@ func startServer() {
 			return
 		}
 
-		var a []string
-		// user input validation
-		switch {
-		case r.FormValue("essid") != "" && r.FormValue("pass") != "" && r.FormValue("identity") != "":
-			a = []string{r.FormValue("essid"), r.FormValue("pass"), r.FormValue("identity")}
-		case r.FormValue("essid") != "" && r.FormValue("pass") != "" && r.FormValue("identity") == "":
-			a = []string{r.FormValue("essid"), r.FormValue("pass")}
-		case r.FormValue("essid") != "" && r.FormValue("pass") == "" && r.FormValue("identity") == "":
-			a = []string{r.FormValue("essid")}
-		default: // TODO: Error handling: for now, just exit
-			os.Exit(1)
+		a, err := userInputValidation(r.FormValue("essid"), r.FormValue("pass"), r.FormValue("identity"))
+		if err != nil {
+			// TODO: Need proper error handling
+			log.Fatalf("error: %v", err)
 		}
 
 		UserInputChannel <- UserInputMessage{args: a}
