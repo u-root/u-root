@@ -12,14 +12,6 @@ import (
 	"net/http"
 )
 
-type SecProto int
-
-const (
-	NoEnc SecProto = iota
-	WpaPsk
-	WpaEap
-)
-
 const (
 	PortNum  = "8080"
 	HtmlPage = `
@@ -138,7 +130,7 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 
 func startServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		stubWifis := []WifiOptions{
+		stubWifis := []WifiOption{
 			{"stub1", NoEnc},
 			{"stub2", WpaPsk},
 			{"stub3", WpaEap},
@@ -167,14 +159,9 @@ func startServer() {
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
 }
 
-type WifiOptions struct {
-	Essid     string
-	AuthSuite SecProto
-}
-
-func displayWifi(wr io.Writer, wifiOpts []WifiOptions, connectedEssid string) error {
+func displayWifi(wr io.Writer, wifiOpts []WifiOption, connectedEssid string) error {
 	wifiData := struct {
-		WifiOpts       []WifiOptions
+		WifiOpts       []WifiOption
 		ConnectedEssid string
 	}{wifiOpts, connectedEssid}
 

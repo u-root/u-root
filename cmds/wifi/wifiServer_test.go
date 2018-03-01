@@ -64,7 +64,7 @@ var (
 	}
 )
 
-func TestWifiServerUserInputValidation(t *testing.T) {
+func TestUserInputValidation(t *testing.T) {
 	for _, test := range userInputValidationTestcases {
 		out, err := userInputValidation(test.essid, test.pass, test.id)
 		if !reflect.DeepEqual(err, test.err) || !reflect.DeepEqual(out, test.exp) {

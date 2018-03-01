@@ -11,6 +11,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/wpa/passphrase"
 )
@@ -25,9 +27,17 @@ const (
 	eap = `network={
 		ssid="%s"
 		key_mgmt=WPA-EAP
-		identity="%s"
+		identity="%s"WPA Version
 		password="%s"
 	}`
+)
+
+var (
+	CellRE       = regexp.MustCompile("(?m)^\\s*Cell")
+	EssidRE      = regexp.MustCompile("(?m)^\\s*ESSID.*")
+	EncKeyOptRE  = regexp.MustCompile("(?m)^\\s*Encryption key:(on|off)\n")
+	Wpa2RE       = regexp.MustCompile("(?m)^\\s*IE: IEEE 802.11i/WPA2 Version 1\n")
+	AuthSuitesRE = regexp.MustCompile("(?m)^\\s*Authentication Suites .*\n")
 )
 
 func init() {
@@ -36,6 +46,62 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
+}
+
+/*
+ * Assumptions:
+ *  1) Cell, essid, and encryption key option are 1:1 match
+ *	2) We only support IEEE 802.11i/WPA2 Version 1
+ *	3) Each WiFi only support (1) authentication suites (based on observations)
+ */
+
+func parseIwlistOut(o []byte) []WifiOption {
+	cells := CellRE.FindAllIndex(o, -1)
+	essids := EssidRE.FindAll(o, -1)
+	encKeyOpts := EncKeyOptRE.FindAll(o, -1)
+
+	if cells == nil {
+		return nil
+	}
+
+	var res []WifiOption
+	knownEssids := make(map[string]bool)
+
+	// Assemble all the WiFi options
+	for i := 0; i < len(cells); i++ {
+		essid := strings.Trim(strings.Split(string(essids[i]), ":")[1], "\"\n")
+		if knownEssids[essid] {
+			continue
+		}
+		knownEssids[essid] = true
+		encKeyOpt := strings.Trim(strings.Split(string(encKeyOpts[i]), ":")[1], "\n")
+		if encKeyOpt == "off" {
+			res = append(res, WifiOption{essid, NoEnc})
+			continue
+		}
+		// Find the proper Authentication Suites
+		start, end := cells[i][0], len(o)
+		if i != len(cells)-1 {
+			end = cells[i+1][0]
+		}
+		wpa2SearchArea := o[start:end]
+		l := Wpa2RE.FindIndex(wpa2SearchArea)
+		if l == nil {
+			res = append(res, WifiOption{essid, NotSupportedProto})
+			continue
+		}
+		authSearchArea := wpa2SearchArea[l[0]:len(wpa2SearchArea)]
+		authSuites := strings.Trim(strings.Split(string(AuthSuitesRE.Find(authSearchArea)), ":")[1], "\n ")
+		switch authSuites {
+		case "PSK":
+			res = append(res, WifiOption{essid, WpaPsk})
+		case "802.1x":
+			res = append(res, WifiOption{essid, WpaEap})
+		default:
+			res = append(res, WifiOption{essid, NotSupportedProto})
+		}
+	}
+	return res
 }
 
 func generateConfig(a ...string) (conf []byte, err error) {
@@ -51,7 +117,6 @@ func generateConfig(a ...string) (conf []byte, err error) {
 	case len(a) == 1:
 		conf = []byte(fmt.Sprintf(nopassphrase, a[0]))
 	default:
-		flag.Usage()
 		return nil, fmt.Errorf("generateConfig needs 1, 2, or 3 args")
 	}
 	return
@@ -63,11 +128,33 @@ func main() {
 	// Service
 	var (
 		iface = flag.String("i", "wlan0", "interface to use")
+		list  = flag.Bool("l", false, "list all nearby WiFi")
 		conf  []byte
 		err   error
 	)
 
 	flag.Parse()
+
+	if *list {
+		o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
+		if err != nil {
+			log.Fatalf("iwlist: %v (%v)", string(o), err)
+		}
+		wifiOpts := parseIwlistOut(o)
+		for _, wifiOpt := range wifiOpts {
+			switch wifiOpt.AuthSuite {
+			case NoEnc:
+				fmt.Printf("%s: No Passphrase\n", wifiOpt.Essid)
+			case WpaPsk:
+				fmt.Printf("%s: WPA-PSK (only passphrase)\n", wifiOpt.Essid)
+			case WpaEap:
+				fmt.Printf("%s: WPA-EAP (passphrase and identity)\n", wifiOpt.Essid)
+			default:
+			}
+		}
+		return
+	}
+
 	a := flag.Args()
 
 	if len(a) == 0 {
@@ -84,6 +171,7 @@ func main() {
 
 	conf, err = generateConfig(a...)
 	if err != nil {
+		flag.Usage()
 		log.Fatalf("error: %v", err)
 	}
 
