@@ -31,6 +31,21 @@ workflows:
       - source_amd64_test_archive:
           requires:
             - clean-code
+      - extra_files:
+          requires:
+            - clean-code
+      - extra_files_multiple_files:
+          requires:
+            - clean-code
+      - extra_files_comma_syntax:
+          requires:
+            - clean-code
+      - extra_files_multiple_files_mixed_syntax:
+          requires:
+            - clean-code
+      - extra_files_wrong_comma_syntax:
+          requires:
+            - clean-code
 jobs:
   clean-code:
     docker:
@@ -245,3 +260,129 @@ jobs:
           name: run go build
           command: GOPATH=$(pwd) GOROOT=$(pwd)/go ./go/bin/go build ./go/src/...
           working_directory: /tmp/u-root-test
+  extra_files:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install cpio
+          command: sudo apt-get install cpio
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Build ramfs
+          command: ./u-root -build=bb --tmpdir=/tmp/u-root -files ///bin/bash
+      - run:
+          name: make test directory
+          command: mkdir /tmp/u-root-test
+      - run:
+          name: extract archive
+          command: cpio -i -d --no-absolute-filenames "bin/bash" < /tmp/initramfs.linux_amd64.cpio
+          working_directory: /tmp/u-root-test
+  extra_files_multiple_files:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install cpio
+          command: sudo apt-get install cpio
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Create sample file
+          command: mkdir sample && touch sample/file
+      - run:
+          name: Build ramfs
+          command: ./u-root -build=bb --tmpdir=/tmp/u-root -files /bin/bash -files /bin/ls -files sample/file
+      - run:
+          name: make test directory
+          command: mkdir /tmp/u-root-test
+      - run:
+          name: extract archive
+          command: cpio -i -d --no-absolute-filenames "bin/bash bin/ls sample/file" < /tmp/initramfs.linux_amd64.cpio
+          working_directory: /tmp/u-root-test
+  extra_files_comma_syntax:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install cpio
+          command: sudo apt-get install cpio
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Build ramfs
+          command: ./u-root -build=bb --tmpdir=/tmp/u-root -files /bin/bash:bin/bush
+      - run:
+          name: make test directory
+          command: mkdir /tmp/u-root-test
+      - run:
+          name: extract archive
+          command: cpio -i -d --no-absolute-filenames "bin/bush" < /tmp/initramfs.linux_amd64.cpio
+          working_directory: /tmp/u-root-test
+  extra_files_multiple_files_mixed_syntax:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install cpio
+          command: sudo apt-get install cpio
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Build ramfs
+          command: ./u-root -build=bb --tmpdir=/tmp/u-root -files /bin/bash:bin/bush -files /bin/ls:ls
+      - run:
+          name: make test directory
+          command: mkdir /tmp/u-root-test
+      - run:
+          name: extract archive
+          command: cpio -i -d --no-absolute-filenames "bin/bush ls" < /tmp/initramfs.linux_amd64.cpio
+          working_directory: /tmp/u-root-test
+  extra_files_wrong_comma_syntax:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install cpio
+          command: sudo apt-get install cpio
+      - run:
+          name: Build u-root
+          environment:
+            - GOARCH: amd64
+          command: go build u-root.go
+      - run:
+          name: Build ramfs
+          command: if ./u-root -build=bb --tmpdir=/tmp/u-root -files /bin/bash:/bin/bash; then exit 1; else exit 0; fi
