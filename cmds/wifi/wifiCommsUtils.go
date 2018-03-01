@@ -4,12 +4,26 @@
 
 package main
 
+type SecProto int
+
+const (
+	NoEnc SecProto = iota
+	WpaPsk
+	WpaEap
+	NotSupportedProto
+)
+
 type UserInputMessage struct {
 	args []string
 }
 
 type StatusMessage struct {
 	essid string
+}
+
+type WifiOption struct {
+	Essid     string
+	AuthSuite SecProto
 }
 
 var (
