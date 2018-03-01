@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type SecProto int
@@ -140,16 +141,22 @@ func startServer() {
 			return
 		}
 
-		msg := ServerToServiceMessage{
-			essid: r.FormValue("essid"),
-			id:    r.FormValue("identity"),
-			pass:  r.FormValue("pass"),
+		var a []string
+		// user input validation
+		switch {
+		case r.FormValue("essid") != "" && r.FormValue("pass") != "" && r.FormValue("identity") != "":
+			a = []string{r.FormValue("essid"), r.FormValue("pass"), r.FormValue("identity")}
+		case r.FormValue("essid") != "" && r.FormValue("pass") != "" && r.FormValue("identity") == "":
+			a = []string{r.FormValue("essid"), r.FormValue("pass")}
+		case r.FormValue("essid") != "" && r.FormValue("pass") == "" && r.FormValue("identity") == "":
+			a = []string{r.FormValue("essid")}
+		default: // TODO: Error handling: for now, just exit
+			os.Exit(1)
 		}
 
-		ServerToServiceChan <- msg
-
-		serviceMsg := <-ServiceToServerChan
-		displayWifi(w, stubWifis, serviceMsg.essid)
+		UserInputChannel <- UserInputMessage{args: a}
+		statMsg := <-StatusChannel
+		displayWifi(w, stubWifis, statMsg.essid)
 	})
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)

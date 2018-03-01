@@ -71,10 +71,16 @@ var (
 			err:  nil,
 		},
 		{
-			name: "WPA-PSK",
+			name: "WPA-PSK Error",
 			args: []string{EssidStub, BadWpaPskPass},
 			exp:  nil,
 			err:  fmt.Errorf("essid: %v, pass: %v : %v", EssidStub, BadWpaPskPass, expWpaPskErr),
+		},
+		{
+			name: "Invalid Args Length Error",
+			args: nil,
+			exp:  nil,
+			err:  fmt.Errorf("generateConfig needs 1, 2, or 3 args"),
 		},
 	}
 )
@@ -105,7 +111,7 @@ func TestWifiErrors(t *testing.T) {
 
 func TestWifiGenerateConfig(t *testing.T) {
 	for _, test := range generateConfigTestcases {
-		out, err := generateConfig(test.args)
+		out, err := generateConfig(test.args...)
 		if !reflect.DeepEqual(err, test.err) || !bytes.Equal(out, test.exp) {
 			t.Logf("TEST %v", test.name)
 			fncCall := fmt.Sprintf("genrateConfig(%v)", test.args)
