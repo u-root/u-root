@@ -89,6 +89,13 @@ type process struct {
 // by gived the pid (linux)
 func (p *process) readStat(pid int) error {
 	b, err := ioutil.ReadFile(filepath.Join(proc, fmt.Sprint(pid), "stat"))
+
+	// We prefer to use os.ErrNotExist in this case.
+	// It is more universal.
+	if err != nil && err.Error() == "no such process" {
+		err = os.ErrNotExist
+	}
+
 	if err != nil {
 		return err
 	}
@@ -157,6 +164,9 @@ func (p Process) Search(field string) string {
 // read UID of process based on or
 func (p process) getUid() (int, error) {
 	b, err := ioutil.ReadFile(filepath.Join(proc, p.Pid, "status"))
+	if err != nil && err.Error() == "no such process" {
+		err = os.ErrNotExist
+	}
 
 	var uid int
 	lines := strings.Split(string(b), "\n")
