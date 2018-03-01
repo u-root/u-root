@@ -177,7 +177,7 @@ func CreateInitramfs(opts Opts) error {
 		} else {
 			// plain old syntax
 			src = file
-			dst = file
+			dst = strings.TrimLeft(file, "/")
 		}
 		src, err := filepath.Abs(src)
 		if err != nil {
