@@ -50,7 +50,7 @@ func init() {
 
 /*
  * Assumptions:
- *  1) Cell, essid, and encryption key option are 1:1 match
+ *	1) Cell, essid, and encryption key option are 1:1 match
  *	2) We only support IEEE 802.11i/WPA2 Version 1
  *	3) Each WiFi only support (1) authentication suites (based on observations)
  */
@@ -92,7 +92,7 @@ func parseIwlistOut(o []byte) []WifiOption {
 			continue
 		}
 		// Narrow down the scope when looking for Authorization Suites
-		authSearchArea := wpa2SearchArea[l[0]:len(wpa2SearchArea)]
+		authSearchArea := wpa2SearchArea[l[0]:]
 		authSuites := strings.Trim(strings.Split(string(AuthSuitesRE.Find(authSearchArea)), ":")[1], "\n ")
 		switch authSuites {
 		case "PSK":
