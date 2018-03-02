@@ -5,8 +5,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -86,12 +84,14 @@ func parseIwlistOut(o []byte) []WifiOption {
 		if i != len(cells)-1 {
 			end = cells[i+1][0]
 		}
+		// Narrow down the scope when looking for WPA Tag
 		wpa2SearchArea := o[start:end]
 		l := Wpa2RE.FindIndex(wpa2SearchArea)
 		if l == nil {
 			res = append(res, WifiOption{essid, NotSupportedProto})
 			continue
 		}
+		// Narrow down the scope when looking for Authorization Suites
 		authSearchArea := wpa2SearchArea[l[0]:len(wpa2SearchArea)]
 		authSuites := strings.Trim(strings.Split(string(AuthSuitesRE.Find(authSearchArea)), ":")[1], "\n ")
 		switch authSuites {
@@ -104,84 +104,6 @@ func parseIwlistOut(o []byte) []WifiOption {
 		}
 	}
 	return res
-}
-
-func parseIwlistOut2(o []byte) []WifiOption {
-	var (
-		res                                []WifiOption
-		essid, encKeyOpt, authSuites       string
-		knownEssids                        = make(map[string]bool)
-		s                                  = bufio.NewScanner(bytes.NewReader(o))
-		doneCell, findingEnc, supportedEnc = false, false, false
-	)
-
-	if o == nil {
-		return nil
-	}
-
-	for s.Scan() {
-		b := s.Bytes()
-		if CellRE.Match(b) {
-			if essid != "" {
-				res = appendNewESSID(res, essid, encKeyOpt, authSuites)
-			}
-			// start new scan
-			essid, encKeyOpt, authSuites = "", "", ""
-			doneCell, findingEnc, supportedEnc = false, false, false
-			continue
-		}
-		if doneCell {
-			continue
-		}
-		if m := EncKeyOptRE.Find(b); m != nil {
-			encKeyOpt = strings.Trim(strings.Split(string(m), ":")[1], "\n")
-			if encKeyOpt == "off" {
-				findingEnc = false
-			} else {
-				findingEnc = true
-			}
-			continue
-		}
-		if m := EssidRE.Find(b); m != nil {
-			essid = strings.Trim(strings.Split(string(m), ":")[1], "\"\n")
-			if knownEssids[essid] {
-				essid = ""
-				doneCell = true
-				continue
-			}
-			knownEssids[essid] = true
-			continue
-		}
-		if Wpa2RE.Match(b) && findingEnc {
-			supportedEnc = true
-			continue
-		}
-		if m := AuthSuitesRE.Find(b); m != nil && supportedEnc {
-			authSuites = strings.Trim(strings.Split(string(m), ":")[1], "\n ")
-			doneCell = true
-			continue
-		}
-	}
-
-	// For the last cell
-	if essid != "" {
-		res = appendNewESSID(res, essid, encKeyOpt, authSuites)
-	}
-
-	return res
-}
-
-func appendNewESSID(res []WifiOption, essid, encKeyOpt, authSuites string) []WifiOption {
-	switch {
-	case encKeyOpt == "off":
-		return append(res, WifiOption{essid, NoEnc})
-	case authSuites == "PSK":
-		return append(res, WifiOption{essid, WpaPsk})
-	case authSuites == "802.1x":
-		return append(res, WifiOption{essid, WpaEap})
-	default:
-		return append(res, WifiOption{essid, NotSupportedProto})
-	}
 }
 
 func generateConfig(a ...string) (conf []byte, err error) {

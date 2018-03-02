@@ -280,73 +280,6 @@ wlan0    Scan completed :
 	}
 }
 
-func TestParseIwlistOutput2(t *testing.T) {
-	var (
-		o        []byte
-		exp, out []WifiOption
-		err      error
-	)
-
-	// No WiFi present
-	o = nil
-	exp = nil
-	out = parseIwlistOut2(o)
-	if !reflect.DeepEqual(out, exp) {
-		t.Errorf("\ngot:[%v]\nwant:[%v]", out, exp)
-	}
-
-	// Only 1 WiFi present
-	o = []byte(`
-wlan0    Scan completed :
-          Cell 01 - Address: 00:00:00:00:00:01
-                    Channel:001
-                    Frequency:5.58 GHz (Channel 001)
-                    Quality=1/2  Signal level=-23 dBm  
-                    Encryption key:on
-                    ESSID:"stub-wpa-eap-1"
-                    Bit Rates:36 Mb/s; 48 Mb/s; 54 Mb/s
-                    Mode:Master
-                    Extra:tsf=000000000000000000
-                    Extra: Last beacon: 1260ms ago
-                    IE: Unknown: 000000000000000000
-                    IE: Unknown: 000000000000000000
-                    IE: Unknown: 000000000000000000
-                    IE: IEEE 802.11i/WPA2 Version 1
-                        Group Cipher : CCMP
-                        Pairwise Ciphers (1) : CCMP
-                        Authentication Suites (1) : 802.1x
-                    IE: Unknown: 000000000000000000
-                    IE: Unknown: 000000000000000000
-                    IE: Unknown: 000000000000000000
-                    IE: Unknown: 000000000000000000
-                    IE: Unknown: 000000000000000000
-`)
-	exp = []WifiOption{
-		{"stub-wpa-eap-1", WpaEap},
-	}
-	out = parseIwlistOut2(o)
-	if !reflect.DeepEqual(out, exp) {
-		t.Errorf("\ngot:[%v]\nwant:[%v]", out, exp)
-	}
-
-	// Regular scenarios (many choices)
-	exp = []WifiOption{
-		{"stub-wpa-eap-1", WpaEap},
-		{"stub-rsa-1", NoEnc},
-		{"stub-wpa-psk-1", WpaPsk},
-		{"stub-rsa-2", NoEnc},
-		{"stub-wpa-psk-2", WpaPsk},
-	}
-	o, err = ioutil.ReadFile("iwlistStubOutput.txt")
-	if err != nil {
-		t.Errorf("error reading iwlistStubOutput.txt: %v", err)
-	}
-	out = parseIwlistOut2(o)
-	if !reflect.DeepEqual(out, exp) {
-		t.Errorf("\ngot:[%v]\nwant:[%v]", out, exp)
-	}
-}
-
 func BenchmarkParseIwlistOutput(b *testing.B) {
 	// Set Up
 	o, err := ioutil.ReadFile("iwlistStubOutput.txt")
@@ -355,16 +288,5 @@ func BenchmarkParseIwlistOutput(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		parseIwlistOut(o)
-	}
-}
-
-func BenchmarkParseIwlistOutput2(b *testing.B) {
-	// Set Up
-	o, err := ioutil.ReadFile("iwlistStubOutput.txt")
-	if err != nil {
-		b.Errorf("error reading iwlistStubOutput.txt: %v", err)
-	}
-	for i := 0; i < b.N; i++ {
-		parseIwlistOut2(o)
 	}
 }
