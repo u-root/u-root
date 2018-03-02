@@ -27,7 +27,7 @@ const (
 	eap = `network={
 		ssid="%s"
 		key_mgmt=WPA-EAP
-		identity="%s"WPA Version
+		identity="%s"
 		password="%s"
 	}`
 )
