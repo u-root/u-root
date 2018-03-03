@@ -43,6 +43,10 @@ var (
 	EncKeyOptRE  = regexp.MustCompile("(?m)^\\s*Encryption key:(on|off)$")
 	Wpa2RE       = regexp.MustCompile("(?m)^\\s*IE: IEEE 802.11i/WPA2 Version 1$")
 	AuthSuitesRE = regexp.MustCompile("(?m)^\\s*Authentication Suites .*$")
+
+	// State of the service
+	CurWifiEssid string
+	NearbyWifis  []WifiOption
 )
 
 func init() {
@@ -51,6 +55,19 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
+}
+
+func scanWifi() {
+	o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
+	if err != nil {
+		log.Printf("iwlist: %v (%v)", string(o), err)
+	} else {
+		NearbyWifis = parseIwlistOut(o)
+	}
+}
+
+func getState() State {
+	return State{NearbyWifis, CurWifiEssid}
 }
 
 /*
@@ -130,8 +147,6 @@ func generateConfig(a ...string) (conf []byte, err error) {
 }
 
 func main() {
-	go startServer()
-
 	// Service
 	var (
 		conf []byte
@@ -165,13 +180,15 @@ func main() {
 
 	if len(a) == 0 {
 		// Experimental Part
-		// if len(a) = 0, can use the web interface to get user's input
+		go scanWifi()
+		go startServer()
 		a = (<-UserInputChannel).args
-		stubMsg := StatusMessage{
-			essid: a[0],
+		s := State{
+			nearbyWifis: NearbyWifis,
+			curEssid:    a[0],
 		}
 
-		StatusChannel <- stubMsg
+		StateChannel <- s
 		_ = <-UserInputChannel // (Experimental) So we can see the result of the page load
 	}
 

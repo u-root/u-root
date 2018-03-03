@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os/exec"
 )
 
 const (
@@ -59,7 +58,10 @@ function replaceWithConnecting(elem) {
 {{$WpaPsk := 1}}
 {{$WpaEap := 2}}
 {{$connectedEssid := .ConnectedEssid}}
-<h1>Please choose your Wifi</h1>
+<div style="width:100%">
+<h1 style="float:left">Please choose your Wifi</h1> 
+<button style="float:right; width:80px; height:32px">Refresh</button>
+</div>
 <table style="width:100%">
 	<tr>
     	<th>Essid</th>
@@ -74,7 +76,7 @@ function replaceWithConnecting(elem) {
     			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
     			<td></td>
     			<td></td>
-    			{{if eq $connectedEssid $opt.Essid}}
+    			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
 				{{else}}
     				<td><input type="submit" class="btn" form="f{{$idx}}" onclick=replaceWithConnecting(this) value="Connect"></td>
@@ -85,7 +87,7 @@ function replaceWithConnecting(elem) {
     			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
     			<td></td>
     			<td><input type="password" name="pass" form="f{{$idx}}"></td>
-    			{{if eq $connectedEssid $opt.Essid}}
+    			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
 				{{else}}
     				<td><input type="submit" class="btn" form="f{{$idx}}" onclick=replaceWithConnecting(this) value="Connect"></td>
@@ -96,7 +98,7 @@ function replaceWithConnecting(elem) {
     			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
     			<td><input type="text" name="identity" form="f{{$idx}}"></td>
 				<td><input type="password" name="pass" form="f{{$idx}}"></td>
-				{{if eq $connectedEssid $opt.Essid}}
+    			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
 				{{else}}
     				<td><input type="submit" class="btn" form="f{{$idx}}" onclick=replaceWithConnecting(this) value="Connect"></td>
@@ -131,25 +133,10 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 
 func startServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var wifiOpts []WifiOption
-
-		// Get Status
-		o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
-		if err != nil {
-			log.Printf("iwlist: %v (%v)\n", string(o), err)
-			// TODO: Need proper error handling
-			wifiOpts = []WifiOption{
-				{"stub1", NoEnc},
-				{"stub2", WpaPsk},
-				{"stub3", WpaEap},
-				{"stub4", NotSupportedProto},
-			}
-		} else {
-			wifiOpts = parseIwlistOut(o)
-		}
+		s := getState()
 
 		if r.Method != http.MethodPost {
-			err := displayWifi(w, wifiOpts, "")
+			err := displayWifi(w, s.nearbyWifis, s.curEssid)
 			if err != nil {
 				log.Fatalf("error: %v", err)
 			}
@@ -159,12 +146,13 @@ func startServer() {
 		a, err := userInputValidation(r.FormValue("essid"), r.FormValue("pass"), r.FormValue("identity"))
 		if err != nil {
 			// TODO: Need proper error handling
-			log.Fatalf("error: %v", err)
+			log.Printf("error: %v", err)
+			return
 		}
 
 		UserInputChannel <- UserInputMessage{args: a}
-		statMsg := <-StatusChannel
-		displayWifi(w, wifiOpts, statMsg.essid)
+		sMsg := <-StateChannel
+		displayWifi(w, sMsg.nearbyWifis, sMsg.curEssid)
 	})
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
