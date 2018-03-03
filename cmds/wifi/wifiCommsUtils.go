@@ -13,21 +13,22 @@ const (
 	NotSupportedProto
 )
 
-type UserInputMessage struct {
-	args []string
-}
-
-type StatusMessage struct {
-	essid string
-}
-
 type WifiOption struct {
 	Essid     string
 	AuthSuite SecProto
 }
 
+type UserInputMessage struct {
+	args []string
+}
+
+type State struct {
+	nearbyWifis []WifiOption
+	curEssid    string
+}
+
 var (
 	StatusRequestChannel = make(chan bool)
 	UserInputChannel     = make(chan UserInputMessage)
-	StatusChannel        = make(chan StatusMessage)
+	StateChannel         = make(chan State)
 )
