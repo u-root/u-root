@@ -27,6 +27,7 @@ type WifiOption struct {
 }
 
 var (
-	UserInputChannel = make(chan UserInputMessage)
-	StatusChannel    = make(chan StatusMessage)
+	StatusRequestChannel = make(chan bool)
+	UserInputChannel     = make(chan UserInputMessage)
+	StatusChannel        = make(chan StatusMessage)
 )
