@@ -42,15 +42,27 @@ function replaceWithConnecting(elem) {
     connectingTxt = document.createTextNode("Connecting...")
     elem.style.display = "none"
     elem.parentNode.appendChild(connectingTxt);
+	disableOtherButton(elem)
+}
+
+function sendRefresh(elem) {
+	elem.setAttribute("disabled", "true")
+	elem.setAttribute("value","Refreshing")
+	disableOtherButton(elem)
+	fetch("http://localhost:8080/refresh").then(_ => window.location.reload())
+}
+
+function disableOtherButton(elem) {
     btns = document.getElementsByClassName("btn");
-    var i;
+	var i;
     for (i = 0; i < btns.length; i++) {
     	if (btns[i] === elem) {
     		continue;
     	}
     	btns[i].setAttribute("disabled", "true")
-    }
+    }	
 }
+
 </script>
 </head>
 <body>
@@ -58,16 +70,13 @@ function replaceWithConnecting(elem) {
 {{$WpaPsk := 1}}
 {{$WpaEap := 2}}
 {{$connectedEssid := .ConnectedEssid}}
-<div style="width:100%">
 <h1 style="float:left">Please choose your Wifi</h1> 
-<button style="float:right; width:80px; height:32px">Refresh</button>
-</div>
 <table style="width:100%">
 	<tr>
     	<th>Essid</th>
     	<th>Identity</th>
     	<th>Password / Passphrase</th>
-    	<th></th>
+    	<th><input type="submit" class="btn" onclick=sendRefresh(this) value="Refresh"></button></th>
   	</tr>
 	{{range $idx, $opt := .WifiOpts}}
 		<form id="f{{$idx}}" method="post"></form>
@@ -153,6 +162,10 @@ func startServer() {
 		UserInputChannel <- UserInputMessage{args: a}
 		sMsg := <-StateChannel
 		displayWifi(w, sMsg.nearbyWifis, sMsg.curEssid)
+	})
+	http.HandleFunc("/refresh", func(w http.ResponseWriter, r *http.Request) {
+		scanWifi()
+		w.Write(nil)
 	})
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
