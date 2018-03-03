@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 )
 
 const (
@@ -130,15 +131,25 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 
 func startServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		stubWifis := []WifiOption{
-			{"stub1", NoEnc},
-			{"stub2", WpaPsk},
-			{"stub3", WpaEap},
-			{"stub4", 123},
+		var wifiOpts []WifiOption
+
+		// Get Status
+		o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
+		if err != nil {
+			log.Printf("iwlist: %v (%v)\n", string(o), err)
+			// TODO: Need proper error handling
+			wifiOpts = []WifiOption{
+				{"stub1", NoEnc},
+				{"stub2", WpaPsk},
+				{"stub3", WpaEap},
+				{"stub4", NotSupportedProto},
+			}
+		} else {
+			wifiOpts = parseIwlistOut(o)
 		}
 
 		if r.Method != http.MethodPost {
-			err := displayWifi(w, stubWifis, "")
+			err := displayWifi(w, wifiOpts, "")
 			if err != nil {
 				log.Fatalf("error: %v", err)
 			}
@@ -153,7 +164,7 @@ func startServer() {
 
 		UserInputChannel <- UserInputMessage{args: a}
 		statMsg := <-StatusChannel
-		displayWifi(w, stubWifis, statMsg.essid)
+		displayWifi(w, wifiOpts, statMsg.essid)
 	})
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)

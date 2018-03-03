@@ -33,6 +33,11 @@ const (
 )
 
 var (
+	// flags
+	iface = flag.String("i", "wlan0", "interface to use")
+	list  = flag.Bool("l", false, "list all nearby WiFi")
+
+	// RegEx for parsing iwlist output
 	CellRE       = regexp.MustCompile("(?m)^\\s*Cell")
 	EssidRE      = regexp.MustCompile("(?m)^\\s*ESSID.*")
 	EncKeyOptRE  = regexp.MustCompile("(?m)^\\s*Encryption key:(on|off)$")
@@ -129,10 +134,8 @@ func main() {
 
 	// Service
 	var (
-		iface = flag.String("i", "wlan0", "interface to use")
-		list  = flag.Bool("l", false, "list all nearby WiFi")
-		conf  []byte
-		err   error
+		conf []byte
+		err  error
 	)
 
 	flag.Parse()
