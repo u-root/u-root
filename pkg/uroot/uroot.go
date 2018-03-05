@@ -172,12 +172,18 @@ func CreateInitramfs(opts Opts) error {
 		parts := strings.SplitN(file, ":", 2)
 		if len(parts) == 2 {
 			// treat the entry with the new src:dst syntax
-			src = parts[0]
-			dst = parts[1]
+			src = filepath.Clean(parts[0])
+			dst = filepath.Clean(parts[1])
 		} else {
 			// plain old syntax
-			src = file
-			dst = file
+			src = filepath.Clean(file)
+			dst = src
+			if filepath.IsAbs(dst) {
+				dst, err = filepath.Rel("/", dst)
+				if err != nil {
+					return fmt.Errorf("cannot make path relative to /: %v: %v", dst, err)
+				}
+			}
 		}
 		src, err := filepath.Abs(src)
 		if err != nil {
