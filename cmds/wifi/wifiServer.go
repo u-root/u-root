@@ -42,24 +42,23 @@ function replaceWithConnecting(elem) {
     connectingTxt = document.createTextNode("Connecting...")
     elem.style.display = "none"
     elem.parentNode.appendChild(connectingTxt);
-	disableOtherButton(elem)
+	disableOtherButtons(elem)
 }
 
 function sendRefresh(elem) {
 	elem.setAttribute("disabled", "true")
 	elem.setAttribute("value","Refreshing")
-	disableOtherButton(elem)
+	disableOtherButtons(elem)
 	fetch("http://localhost:8080/refresh").then(_ => window.location.reload())
 }
 
-function disableOtherButton(elem) {
+function disableOtherButtons(elem) {
     btns = document.getElementsByClassName("btn");
-	var i;
-    for (i = 0; i < btns.length; i++) {
-    	if (btns[i] === elem) {
+    for (let btn of btns) {
+    	if (btn === elem) {
     		continue;
     	}
-    	btns[i].setAttribute("disabled", "true")
+    	btn.setAttribute("disabled", "true")
     }	
 }
 
