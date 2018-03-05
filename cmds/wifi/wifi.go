@@ -57,13 +57,13 @@ func init() {
 	}
 }
 
-func scanWifi() {
+func scanWifi() error {
 	o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
 	if err != nil {
-		log.Printf("iwlist: %v (%v)", string(o), err)
-	} else {
-		NearbyWifis = parseIwlistOut(o)
+		return fmt.Errorf("iwlist: %v (%v)", string(o), err)
 	}
+	NearbyWifis = parseIwlistOut(o)
+	return nil
 }
 
 func getState() State {
@@ -156,12 +156,10 @@ func main() {
 	flag.Parse()
 
 	if *list {
-		o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
-		if err != nil {
-			log.Fatalf("iwlist: %v (%v)", string(o), err)
+		if err := scanWifi(); err != nil {
+			log.Fatalf("error: %v", err)
 		}
-		wifiOpts := parseIwlistOut(o)
-		for _, wifiOpt := range wifiOpts {
+		for _, wifiOpt := range NearbyWifis {
 			switch wifiOpt.AuthSuite {
 			case NoEnc:
 				fmt.Printf("%s: No Passphrase\n", wifiOpt.Essid)

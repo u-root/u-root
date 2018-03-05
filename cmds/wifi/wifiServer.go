@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -39,17 +40,26 @@ input {
 </style>
 <script>
 function replaceWithConnecting(elem) {
-    connectingTxt = document.createTextNode("Connecting...")
-    elem.style.display = "none"
+    connectingTxt = document.createTextNode("Connecting...");
+    elem.style.display = "none";
     elem.parentNode.appendChild(connectingTxt);
-	disableOtherButtons(elem)
+	disableOtherButtons(elem);
 }
 
 function sendRefresh(elem) {
-	elem.setAttribute("disabled", "true")
-	elem.setAttribute("value","Refreshing")
-	disableOtherButtons(elem)
-	fetch("http://localhost:8080/refresh").then(_ => window.location.reload())
+	elem.setAttribute("disabled", "true");
+	elem.setAttribute("value","Refreshing");
+	disableOtherButtons(elem);
+	fetch("http://localhost:8080/refresh")
+	.then(r => r.json())
+	.then( s => {
+		if (s !== null) {
+			alert(s.Error);
+		}
+		else {
+			window.location.reload();
+		}
+	})
 }
 
 function disableOtherButtons(elem) {
@@ -58,7 +68,7 @@ function disableOtherButtons(elem) {
     	if (btn === elem) {
     		continue;
     	}
-    	btn.setAttribute("disabled", "true")
+    	btn.setAttribute("disabled", "true");
     }	
 }
 
@@ -163,8 +173,11 @@ func startServer() {
 		displayWifi(w, sMsg.nearbyWifis, sMsg.curEssid)
 	})
 	http.HandleFunc("/refresh", func(w http.ResponseWriter, r *http.Request) {
-		scanWifi()
-		w.Write(nil)
+		if err := scanWifi(); err != nil {
+			json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(nil)
 	})
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
