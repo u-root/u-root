@@ -33,17 +33,45 @@ td, th {
 input {
 	font-size: 120%;
 }
-
-.essid {
-	border-width: 0;
-}
 </style>
 <script>
+function sendConnect(elem, index) {
+	replaceWithConnecting(elem);
+	disableOtherButtons(elem);
+	essid = document.getElementById("essid".concat(index)).innerHTML
+	pass = document.getElementById("pass".concat(index)) ? 
+		document.getElementById("pass".concat(index)).value : ""
+	id = document.getElementById("id".concat(index)) ? 
+		document.getElementById("id".concat(index)).value : ""
+	fetch("http://localhost:8080/connect", {
+		method: 'post',
+		headers: {
+			'Accept': 'application/json',
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			Essid: essid,
+			Pass: pass,
+			Id: id
+		})
+	})
+	.then(r => r.json())
+	.then( s => {
+		if (s !== null) {
+			alert(s.Error);
+			window.location.reload();
+		}
+		else {
+			window.location.reload();
+		}
+	})
+	.catch(err => alert(err))
+}
+
 function replaceWithConnecting(elem) {
     connectingTxt = document.createTextNode("Connecting...");
     elem.style.display = "none";
     elem.parentNode.appendChild(connectingTxt);
-	disableOtherButtons(elem);
 }
 
 function sendRefresh(elem) {
@@ -55,11 +83,13 @@ function sendRefresh(elem) {
 	.then( s => {
 		if (s !== null) {
 			alert(s.Error);
+			window.location.reload();
 		}
 		else {
 			window.location.reload();
 		}
 	})
+	.catch(err => alert(err))
 }
 
 function disableOtherButtons(elem) {
@@ -71,7 +101,6 @@ function disableOtherButtons(elem) {
     	btn.setAttribute("disabled", "true");
     }	
 }
-
 </script>
 </head>
 <body>
@@ -79,52 +108,58 @@ function disableOtherButtons(elem) {
 {{$WpaPsk := 1}}
 {{$WpaEap := 2}}
 {{$connectedEssid := .ConnectedEssid}}
-<h1 style="float:left">Please choose your Wifi</h1> 
+{{$connectingEssid := .ConnectingEssid}}
+<h1>Please choose your Wifi</h1> 
 <table style="width:100%">
 	<tr>
     	<th>Essid</th>
     	<th>Identity</th>
     	<th>Password / Passphrase</th>
-    	<th><input type="submit" class="btn" onclick=sendRefresh(this) value="Refresh"></button></th>
+    	<th><input type="submit" class="btn" onclick=sendRefresh(this) value="Refresh"></th>
   	</tr>
 	{{range $idx, $opt := .WifiOpts}}
-		<form id="f{{$idx}}" method="post"></form>
 		{{if eq $opt.AuthSuite $NoEnc}}
 			<tr>
-    			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
+    			<td id="essid{{$idx}}">{{$opt.Essid}}</td>
     			<td></td>
     			<td></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-				{{else}}
-    				<td><input type="submit" class="btn" form="f{{$idx}}" onclick=replaceWithConnecting(this) value="Connect"></td>
+				{{else if and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")}}
+    				<td>Connecting...</td>
+    			{{else}}
+    				<td><input type="submit" class="btn" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
     			{{end}}
   			</tr>
 		{{else if eq $opt.AuthSuite $WpaPsk}}
 			<tr>
-    			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
+    			<td id="essid{{$idx}}">{{$opt.Essid}}</td>
     			<td></td>
-    			<td><input type="password" name="pass" form="f{{$idx}}"></td>
+    			<td><input type="password" id="pass{{$idx}}"></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-				{{else}}
-    				<td><input type="submit" class="btn" form="f{{$idx}}" onclick=replaceWithConnecting(this) value="Connect"></td>
+				{{else if and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")}}
+    				<td>Connecting...</td>
+    			{{else}}
+    				<td><input type="submit" class="btn" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
     			{{end}}
-  			</tr>
+       		</tr>
 		{{else if eq $opt.AuthSuite $WpaEap}}
 			<tr>
-    			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
-    			<td><input type="text" name="identity" form="f{{$idx}}"></td>
-				<td><input type="password" name="pass" form="f{{$idx}}"></td>
+    			<td id="essid{{$idx}}">{{$opt.Essid}}</td>
+    			<td><input type="text" id="id{{$idx}}"></td>
+    			<td><input type="password" id="pass{{$idx}}"></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-				{{else}}
-    				<td><input type="submit" class="btn" form="f{{$idx}}" onclick=replaceWithConnecting(this) value="Connect"></td>
+				{{else if and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")}}
+    				<td>Connecting...</td>
+    			{{else}}
+    				<td><input type="submit" class="btn" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
     			{{end}}
   			</tr>
 		{{else}}
 			<tr>
-    			<td><input type="text" name="essid" class="essid" form="f{{$idx}}" readonly value={{$opt.Essid}}></td>
+    			<td id="essid{{$idx}}">{{$opt.Essid}}</td>
     			<td colspan="3">Not a supported protocol</td>
   			</tr>
 		{{end}}
@@ -132,6 +167,10 @@ function disableOtherButtons(elem) {
 		<td colspan="4">No essids found</td>
 	{{end}}
 </table>
+
+{{if ne $connectingEssid ""}}
+	<script>disableOtherButtons(null)</script>
+{{end}}
 </body>
 `
 )
@@ -149,45 +188,56 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 	}
 }
 
+func refreshHandle(w http.ResponseWriter, r *http.Request) {
+	if err := scanWifi(); err != nil {
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(nil)
+
+}
+
+type ConnectJsonMsg struct {
+	Essid string
+	Pass  string
+	Id    string
+}
+
+func connectHandle(w http.ResponseWriter, r *http.Request) {
+	var msg ConnectJsonMsg
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := decoder.Decode(&msg); err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	a, err := userInputValidation(msg.Essid, msg.Pass, msg.Id)
+	if err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(nil)
+}
+
 func startServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		s := getState()
-
-		if r.Method != http.MethodPost {
-			err := displayWifi(w, s.nearbyWifis, s.curEssid)
-			if err != nil {
-				log.Fatalf("error: %v", err)
-			}
-			return
-		}
-
-		a, err := userInputValidation(r.FormValue("essid"), r.FormValue("pass"), r.FormValue("identity"))
-		if err != nil {
-			// TODO: Need proper error handling
-			log.Printf("error: %v", err)
-			return
-		}
-
-		UserInputChannel <- UserInputMessage{args: a}
-		sMsg := <-StateChannel
-		displayWifi(w, sMsg.nearbyWifis, sMsg.curEssid)
+		displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
 	})
-	http.HandleFunc("/refresh", func(w http.ResponseWriter, r *http.Request) {
-		if err := scanWifi(); err != nil {
-			json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
-			return
-		}
-		json.NewEncoder(w).Encode(nil)
-	})
+	http.HandleFunc("/refresh", refreshHandle)
+	http.HandleFunc("/connect", connectHandle)
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
 }
 
-func displayWifi(wr io.Writer, wifiOpts []WifiOption, connectedEssid string) error {
+func displayWifi(wr io.Writer, wifiOpts []WifiOption, connectedEssid, connectingEssid string) error {
 	wifiData := struct {
-		WifiOpts       []WifiOption
-		ConnectedEssid string
-	}{wifiOpts, connectedEssid}
+		WifiOpts        []WifiOption
+		ConnectedEssid  string
+		ConnectingEssid string
+	}{wifiOpts, connectedEssid, connectingEssid}
 
 	tmpl := template.Must(template.New("name").Parse(HtmlPage))
 

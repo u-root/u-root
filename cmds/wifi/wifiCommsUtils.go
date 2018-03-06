@@ -18,17 +18,8 @@ type WifiOption struct {
 	AuthSuite SecProto
 }
 
-type UserInputMessage struct {
-	args []string
-}
-
 type State struct {
-	nearbyWifis []WifiOption
-	curEssid    string
+	NearbyWifis     []WifiOption
+	ConnectingEssid string
+	CurEssid        string
 }
-
-var (
-	StatusRequestChannel = make(chan bool)
-	UserInputChannel     = make(chan UserInputMessage)
-	StateChannel         = make(chan State)
-)

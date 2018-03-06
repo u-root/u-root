@@ -36,6 +36,7 @@ var (
 	// flags
 	iface = flag.String("i", "wlan0", "interface to use")
 	list  = flag.Bool("l", false, "list all nearby WiFi")
+	test  = flag.Bool("test", false, "set up a test server")
 
 	// RegEx for parsing iwlist output
 	CellRE       = regexp.MustCompile("(?m)^\\s*Cell")
@@ -45,8 +46,17 @@ var (
 	AuthSuitesRE = regexp.MustCompile("(?m)^\\s*Authentication Suites .*$")
 
 	// State of the service
-	CurWifiEssid string
-	NearbyWifis  []WifiOption
+	CurEssid        string
+	ConnectingEssid string
+	NearbyWifis     []WifiOption
+
+	// State for the Test Server
+	StubNearbyWifis = []WifiOption{
+		{"Stub1", NoEnc},
+		{"Stub2", WpaPsk},
+		{"Stub3", WpaEap},
+		{"Stub4", NotSupportedProto},
+	}
 )
 
 func init() {
@@ -67,7 +77,7 @@ func scanWifi() error {
 }
 
 func getState() State {
-	return State{NearbyWifis, CurWifiEssid}
+	return State{NearbyWifis, ConnectingEssid, CurEssid}
 }
 
 /*
@@ -146,13 +156,50 @@ func generateConfig(a ...string) (conf []byte, err error) {
 	return
 }
 
-func main() {
-	// Service
-	var (
-		conf []byte
-		err  error
-	)
+func connectWifi(a ...string) error {
+	// format of a: [essid, pass, id]
+	ConnectingEssid = a[0]
+	conf, err := generateConfig(a...)
+	if err != nil {
+		ConnectingEssid = ""
+		return err
+	}
 
+	if err := ioutil.WriteFile("/tmp/wifi.conf", conf, 0444); err != nil {
+		ConnectingEssid = ""
+		return fmt.Errorf("/tmp/wifi.conf: %v", err)
+	}
+
+	c := make(chan error, 2)
+
+	// There's no telling how long the supplicant will take, but on the other hand,
+	// it's been almost instantaneous. But, further, it needs to keep running.
+	go func() {
+		if o, err := exec.Command("wpa_supplicant", "-i"+*iface, "-c/tmp/wifi.conf").CombinedOutput(); err != nil {
+			c <- fmt.Errorf("wpa_supplicant: %v (%v)", string(o), err)
+		} else {
+			c <- nil
+		}
+	}()
+
+	go func() {
+		if o, err := exec.Command("./dhclient", "-ipv4=true", "-ipv6=false", "-verbose", *iface).CombinedOutput(); err != nil {
+			c <- fmt.Errorf("dhclient: %v (%v)", string(o), err)
+		} else {
+			c <- nil
+		}
+	}()
+
+	if errWpaSupplicant, errDhClient := <-c, <-c; errWpaSupplicant != nil || errDhClient != nil {
+		ConnectingEssid = ""
+		return fmt.Errorf("%v \n %v", errWpaSupplicant, errDhClient)
+	}
+	ConnectingEssid = ""
+	CurEssid = a[0]
+	return nil
+}
+
+func main() {
 	flag.Parse()
 
 	if *list {
@@ -174,43 +221,21 @@ func main() {
 		return
 	}
 
+	if *test {
+		NearbyWifis = StubNearbyWifis
+		startServer()
+	}
+
 	a := flag.Args()
 
 	if len(a) == 0 {
 		// Experimental Part
 		go scanWifi()
-		go startServer()
-		a = (<-UserInputChannel).args
-		s := State{
-			nearbyWifis: NearbyWifis,
-			curEssid:    a[0],
-		}
-
-		StateChannel <- s
-		_ = <-UserInputChannel // (Experimental) So we can see the result of the page load
+		startServer()
+		return
 	}
 
-	conf, err = generateConfig(a...)
-	if err != nil {
-		flag.Usage()
+	if err := connectWifi(a...); err != nil {
 		log.Fatalf("error: %v", err)
-	}
-
-	if err := ioutil.WriteFile("/tmp/wifi.conf", conf, 0444); err != nil {
-		log.Fatalf("/tmp/wifi.conf: %v", err)
-	}
-
-	// There's no telling how long the supplicant will take, but on the other hand,
-	// it's been almost instantaneous. But, further, it needs to keep running.
-	go func() {
-		if o, err := exec.Command("wpa_supplicant", "-i"+*iface, "-c/tmp/wifi.conf").CombinedOutput(); err != nil {
-			log.Fatalf("wpa_supplicant: %v (%v)", o, err)
-		}
-	}()
-
-	cmd := exec.Command("dhclient", "-ipv4=true", "-ipv6=false", "-verbose", *iface)
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("%v: %v", cmd, err)
 	}
 }
