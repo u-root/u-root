@@ -125,7 +125,8 @@ function disableOtherButtons(elem) {
     			<td></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-				{{else if and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")}}
+    			// If there was a race condition, prioritize connected
+				{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
     				<td>Connecting...</td>
     			{{else}}
     				<td><input type="submit" class="btn" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
@@ -138,7 +139,7 @@ function disableOtherButtons(elem) {
     			<td><input type="password" id="pass{{$idx}}"></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-				{{else if and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")}}
+				{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
     				<td>Connecting...</td>
     			{{else}}
     				<td><input type="submit" class="btn" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
@@ -151,7 +152,7 @@ function disableOtherButtons(elem) {
     			<td><input type="password" id="pass{{$idx}}"></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-				{{else if and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")}}
+				{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
     				<td>Connecting...</td>
     			{{else}}
     				<td><input type="submit" class="btn" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
@@ -168,7 +169,7 @@ function disableOtherButtons(elem) {
 	{{end}}
 </table>
 
-{{if ne $connectingEssid ""}}
+{{if and (ne $connectingEssid "") (ne $connectingEssid $connectedEssid) }}
 	<script>disableOtherButtons(null)</script>
 {{end}}
 </body>
@@ -214,6 +215,20 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	}
 	a, err := userInputValidation(msg.Essid, msg.Pass, msg.Id)
 	if err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	c := make(chan error)
+	ConnectReqChan <- ConnectReqChanMsg{c, a[0]}
+	if err := <-c; err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	// if err == nil, we have the OK to connect
+	// Since there is only one arbitrator, there is only one OK at any one time
+	if err := connectWifi(a...); err != nil {
 		log.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return

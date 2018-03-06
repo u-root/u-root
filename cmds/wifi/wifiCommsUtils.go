@@ -23,3 +23,13 @@ type State struct {
 	ConnectingEssid string
 	CurEssid        string
 }
+
+type ConnectReqChanMsg struct {
+	c     chan (error)
+	essid string
+}
+
+var (
+	// Assumption: The user shouldn't "accidentally" try to connect more than 4 times
+	ConnectReqChan = make(chan ConnectReqChanMsg, 4)
+)
