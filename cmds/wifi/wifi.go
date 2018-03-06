@@ -250,6 +250,7 @@ func main() {
 	}
 
 	if err := connectWifi(a...); err != nil {
+		flag.Usage()
 		log.Fatalf("error: %v", err)
 	}
 }
