@@ -156,9 +156,21 @@ func generateConfig(a ...string) (conf []byte, err error) {
 	return
 }
 
+// To prevent race condition, there should be only one
+// goroutine running connectWifiArbitrator at any one time
+func connectWifiArbitrator() {
+	for req := range ConnectReqChan {
+		if ConnectingEssid != "" {
+			req.c <- fmt.Errorf("Service is trying to connect to %s", ConnectingEssid)
+		} else {
+			ConnectingEssid = req.essid
+			req.c <- nil
+		}
+	}
+}
+
 func connectWifi(a ...string) error {
 	// format of a: [essid, pass, id]
-	ConnectingEssid = a[0]
 	conf, err := generateConfig(a...)
 	if err != nil {
 		ConnectingEssid = ""
@@ -194,8 +206,8 @@ func connectWifi(a ...string) error {
 		ConnectingEssid = ""
 		return fmt.Errorf("%v \n %v", errWpaSupplicant, errDhClient)
 	}
-	ConnectingEssid = ""
 	CurEssid = a[0]
+	ConnectingEssid = ""
 	return nil
 }
 
@@ -223,6 +235,7 @@ func main() {
 
 	if *test {
 		NearbyWifis = StubNearbyWifis
+		go connectWifiArbitrator()
 		startServer()
 	}
 
@@ -231,6 +244,7 @@ func main() {
 	if len(a) == 0 {
 		// Experimental Part
 		go scanWifi()
+		go connectWifiArbitrator()
 		startServer()
 		return
 	}
