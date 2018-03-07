@@ -291,8 +291,14 @@ func main() {
 
 	a := flag.Args()
 
+	// Experimental Part
 	if len(a) == 0 {
-		// Experimental Part
+		if o, err := exec.Command("ip", "link", "set", "dev", "lo").CombinedOutput(); err != nil {
+			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
+		}
+		if o, err := exec.Command("ip", "link", "set", "dev", *iface).CombinedOutput(); err != nil {
+			log.Fatalf("ip link set dev %v: %v (%v)", *iface, string(o), err)
+		}
 		go scanWifi()
 		go connectWifiArbitrator()
 		startServer()
