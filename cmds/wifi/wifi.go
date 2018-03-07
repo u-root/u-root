@@ -168,6 +168,11 @@ func connectWifiArbitrator() {
 		case bytes.Equal(req.routineID, acceptedRoutineId):
 			if req.success {
 				CurEssid = req.essid
+			} else {
+				// Depending on where the failure happens,
+				// we might or might not be connected to a WiFi
+				o, _ := exec.Command("iwgetid", "-r").CombinedOutput()
+				CurEssid = strings.Trim(string(o), " \n")
 			}
 			acceptedRoutineId = nil
 			ConnectingEssid = ""
