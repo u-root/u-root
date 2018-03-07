@@ -187,16 +187,20 @@ func connectWifi(a ...string) error {
 	// There's no telling how long the supplicant will take, but on the other hand,
 	// it's been almost instantaneous. But, further, it needs to keep running.
 	go func() {
-		if o, err := exec.Command("wpa_supplicant", "-i"+*iface, "-c/tmp/wifi.conf").CombinedOutput(); err != nil {
-			c <- fmt.Errorf("wpa_supplicant: %v (%v)", string(o), err)
+		cmd := exec.Command("wpa_supplicant", "-i"+*iface, "-c/tmp/wifi.conf")
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging
+		if err := cmd.Run(); err != nil {
+			c <- fmt.Errorf("wpa_supplicant error: %v", err)
 		} else {
 			c <- nil
 		}
 	}()
 
 	go func() {
-		if o, err := exec.Command("./dhclient", "-ipv4=true", "-ipv6=false", "-verbose", *iface).CombinedOutput(); err != nil {
-			c <- fmt.Errorf("dhclient: %v (%v)", string(o), err)
+		cmd := exec.Command("dhclient", "-ipv4=true", "-ipv6=false", "-verbose", *iface)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging
+		if err := cmd.Run(); err != nil {
+			c <- fmt.Errorf("dhclient error: %v", err)
 		} else {
 			c <- nil
 		}
