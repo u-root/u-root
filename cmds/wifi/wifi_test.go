@@ -346,9 +346,6 @@ func TestConnectWifiArbitrator(t *testing.T) {
 	if ConnectingEssid != "" {
 		t.Errorf("\ngot: %v\nwant: %v", ConnectingEssid, "")
 	}
-	if CurEssid != "" {
-		t.Errorf("\ngot: %v\nwant: %v", CurEssid, "")
-	}
 
 	// Reject Req
 	func() {
