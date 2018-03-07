@@ -25,8 +25,10 @@ type State struct {
 }
 
 type ConnectReqChanMsg struct {
-	c     chan (error)
-	essid string
+	c         chan (error) // channel that the requesting routine is listening on
+	essid     string
+	routineID []byte
+	success   bool
 }
 
 var (

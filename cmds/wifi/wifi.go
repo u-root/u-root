@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -159,12 +160,26 @@ func generateConfig(a ...string) (conf []byte, err error) {
 // To prevent race condition, there should be only one
 // goroutine running connectWifiArbitrator at any one time
 func connectWifiArbitrator() {
+	// Accepted Routine = routine that is allowed to change the state
+	var acceptedRoutineId []byte
 	for req := range ConnectReqChan {
-		if ConnectingEssid != "" {
-			req.c <- fmt.Errorf("Service is trying to connect to %s", ConnectingEssid)
-		} else {
+		switch {
+		// Accepted routine returns its result
+		case bytes.Equal(req.routineID, acceptedRoutineId):
+			if req.success {
+				CurEssid = req.essid
+			}
+			acceptedRoutineId = nil
+			ConnectingEssid = ""
+			req.c <- nil // Neccessary for testing
+		// The requesting routine wins and can change the state
+		case ConnectingEssid == "":
+			acceptedRoutineId = req.routineID
 			ConnectingEssid = req.essid
 			req.c <- nil
+		// The requesting routine loses
+		default:
+			req.c <- fmt.Errorf("Service is trying to connect to %s", ConnectingEssid)
 		}
 	}
 }
@@ -173,12 +188,10 @@ func connectWifi(a ...string) error {
 	// format of a: [essid, pass, id]
 	conf, err := generateConfig(a...)
 	if err != nil {
-		ConnectingEssid = ""
 		return err
 	}
 
 	if err := ioutil.WriteFile("/tmp/wifi.conf", conf, 0444); err != nil {
-		ConnectingEssid = ""
 		return fmt.Errorf("/tmp/wifi.conf: %v", err)
 	}
 
@@ -207,11 +220,8 @@ func connectWifi(a ...string) error {
 	}()
 
 	if errWpaSupplicant, errDhClient := <-c, <-c; errWpaSupplicant != nil || errDhClient != nil {
-		ConnectingEssid = ""
 		return fmt.Errorf("%v \n %v", errWpaSupplicant, errDhClient)
 	}
-	CurEssid = a[0]
-	ConnectingEssid = ""
 	return nil
 }
 

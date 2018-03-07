@@ -5,6 +5,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -125,7 +126,6 @@ function disableOtherButtons(elem) {
     			<td></td>
     			{{if and (eq $connectedEssid $opt.Essid) (ne $connectedEssid "")}}
     				<td>Connected</td>
-    			// If there was a race condition, prioritize connected
 				{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
     				<td>Connecting...</td>
     			{{else}}
@@ -219,20 +219,33 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
+
+	// Prepare for a connection request
+	routineID := make([]byte, 8)
+	if _, err := rand.Read(routineID); err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
 	c := make(chan error)
-	ConnectReqChan <- ConnectReqChanMsg{c, a[0]}
+
+	// Making a Conncetion Request
+	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
 	if err := <-c; err != nil {
 		log.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
+
 	// if err == nil, we have the OK to connect
 	// Since there is only one arbitrator, there is only one OK at any one time
-	if err := connectWifi(a...); err != nil {
+	if err := connectWifi(a...); err != nil && false {
+		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
 		log.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
+	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, true}
 	json.NewEncoder(w).Encode(nil)
 }
 
