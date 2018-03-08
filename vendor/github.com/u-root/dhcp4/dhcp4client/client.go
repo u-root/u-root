@@ -60,7 +60,7 @@ func New(iface netlink.Link, opts ...ClientOpt) (*Client, error) {
 
 	if c.conn == nil {
 		var err error
-		c.conn, err = NewIPv4UDPConn(iface.Attrs().Name, ClientPort)
+		c.conn, err = NewPacketUDPConn(iface.Attrs().Name, ClientPort)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +113,7 @@ func (c *Client) DiscoverOffer() (*dhcp4.Packet, error) {
 
 	for packet := range out {
 		msgType, err := dhcp4opts.GetDHCPMessageType(packet.Packet.Options)
-		if err == nil && msgType == dhcp4opts.DHCPACK {
+		if err == nil && msgType == dhcp4opts.DHCPOffer {
 			// Deferred cancel will cancel the goroutine.
 			return packet.Packet, nil
 		}
@@ -156,15 +156,14 @@ func (c *Client) SendAndReadOne(packet *dhcp4.Packet) (*dhcp4.Packet, error) {
 
 	out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, packet)
 
-	response, ok := <-out
-	if ok {
+	if response, ok := <-out; ok {
 		// We're just gonna take the first packet.
-		cancel()
+		return response.Packet, nil
 	}
 	if err, ok := <-errCh; ok && err != nil {
 		return nil, err
 	}
-	return response.Packet, nil
+	return nil, fmt.Errorf("no packet received")
 }
 
 // DiscoverPacket returns a valid Discover packet for this client.
