@@ -5,9 +5,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -55,17 +57,58 @@ td, th {
 `
 )
 
+type RegisterJson struct {
+	ServiceName string
+	PortNumber  int
+}
+
+func registerHandle(w http.ResponseWriter, r *http.Request) {
+	var msg RegisterJson
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := decoder.Decode(&msg); err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	if port, exists := read(msg.ServiceName); exists {
+		err := fmt.Sprintf("error: %v already exists at %v", msg.ServiceName, port)
+		fmt.Println(err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err})
+		return
+	}
+	register(msg.ServiceName, msg.PortNumber)
+	json.NewEncoder(w).Encode(nil)
+}
+
+type UnregisterJson struct {
+	ServiceName string
+}
+
+func unregisterHandle(w http.ResponseWriter, r *http.Request) {
+	var msg UnregisterJson
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := decoder.Decode(&msg); err != nil {
+		log.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	unregister(msg.ServiceName)
+	json.NewEncoder(w).Encode(nil)
+}
+
 func startServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		buildHtmlPage(w)
 	})
-
+	http.HandleFunc("/register", registerHandle)
+	http.HandleFunc("/unregister", unregisterHandle)
 	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil))
 }
 
 func buildHtmlPage(wr io.Writer) error {
-	m := make(map[string]int)
-	m["a"] = 8080
+	s := snapshotRegistry()
 	tmpl := template.Must(template.New("SoS").Parse(HtmlPage))
-	return tmpl.Execute(wr, m)
+	return tmpl.Execute(wr, s)
 }
