@@ -254,6 +254,9 @@ func main() {
 	flag.Parse()
 
 	if *list {
+		if o, err := exec.Command("ip", "link", "set", "dev", *iface).CombinedOutput(); err != nil {
+			log.Fatalf("ip link set dev %v: %v (%v)", *iface, string(o), err)
+		}
 		if err := scanWifi(); err != nil {
 			log.Fatalf("error: %v", err)
 		}
