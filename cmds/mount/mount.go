@@ -14,6 +14,7 @@ package main
 import (
 	"flag"
 	"log"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -21,7 +22,7 @@ import (
 var (
 	ro     = flag.Bool("r", false, "Read only mount")
 	fsType = flag.String("t", "", "File system type")
-	data   = flag.String("o", "", "Specify mount options")
+	opt    = flag.String("o", "", "Specify mount options")
 )
 
 func main() {
@@ -35,10 +36,19 @@ func main() {
 	}
 	dev := a[0]
 	path := a[1]
+	var data []string
+	for _, o := range strings.Split(*opt, ",") {
+		f, ok := opts[o]
+		if !ok {
+			data = append(data, o)
+			continue
+		}
+		flags |= f
+	}
 	if *ro {
 		flags |= unix.MS_RDONLY
 	}
-	if err := unix.Mount(a[0], a[1], *fsType, flags, *data); err != nil {
+	if err := unix.Mount(a[0], a[1], *fsType, flags, strings.Join(data, ",")); err != nil {
 		log.Fatalf("Mount :%s: on :%s: type :%s: flags %x: %v\n", dev, path, *fsType, flags, err)
 	}
 }
