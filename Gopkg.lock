@@ -33,10 +33,10 @@
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
 
 [[projects]]
-  branch = "v2"
   name = "github.com/go-yaml/yaml"
   packages = ["."]
-  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
+  revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
+  version = "v2.1.1"
 
 [[projects]]
   name = "github.com/golang/dep"
@@ -67,6 +67,18 @@
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   revision = "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/netstack"
+  packages = [
+    "ilist",
+    "tcpip",
+    "tcpip/buffer",
+    "tcpip/header",
+    "waiter"
+  ]
+  revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
 
 [[projects]]
   branch = "master"
@@ -116,9 +128,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mdlayher/ethernet"
+  packages = ["."]
+  revision = "e72cf8343052938936194daba1914fd1bb33d2fe"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mdlayher/eui64"
   packages = ["."]
   revision = "eee6532bb9adf30c2a17e9963ed90aa14161dae9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mdlayher/raw"
+  packages = ["."]
+  revision = "5f27d82a512f55b8668d40c0343d2f53885261fa"
 
 [[projects]]
   branch = "master"
@@ -127,10 +151,10 @@
   revision = "6a197d5ea61168f2ac821de2b7f011b250904900"
 
 [[projects]]
+  branch = "master"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
-  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
-  version = "v1.1.0"
+  revision = "05bcc0fb0d3e60da4b8dd5bd7e0ea563eb4ca943"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -159,7 +183,7 @@
     "dhcp4opts",
     "internal/buffer"
   ]
-  revision = "d22c2bd80c70abbecc7cf9555ddd253890cc1610"
+  revision = "1f55bfb86c9a7e4167f170c02b4ae9944fd87032"
 
 [[projects]]
   branch = "master"
@@ -168,7 +192,7 @@
     ".",
     "nl"
   ]
-  revision = "25d2c79295b361cac34eb41cfae90d5c69078b2a"
+  revision = "5236321576c0c97ab02c078e60f9b1c5c1828807"
 
 [[projects]]
   branch = "master"
@@ -204,13 +228,16 @@
     "sha3",
     "ssh"
   ]
-  revision = "650f4a345ab4e5b245a3034b110ebc7299e68186"
+  revision = "c7dcf104e3a7a1417abc0230cb0d5240d764159d"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context"]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  packages = [
+    "bpf",
+    "context"
+  ]
+  revision = "d0aafc73d5cdc42264b0af071c261abac580695e"
 
 [[projects]]
   branch = "master"
@@ -222,7 +249,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+  revision = "7dca6fe1f43775aa6d1334576870ff63f978f539"
 
 [[projects]]
   branch = "master"
@@ -231,7 +258,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
+  revision = "059bec968c61383b574810040ba9410712de36c5"
 
 [[projects]]
   name = "pack.ag/tftp"
