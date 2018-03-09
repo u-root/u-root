@@ -239,7 +239,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 
 	// if err == nil, we have the OK to connect
 	// Since there is only one arbitrator, there is only one OK at any one time
-	if err := connectWifi(a...); err != nil && false {
+	if err := connectWifi(a...); err != nil {
 		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
 		log.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
