@@ -363,6 +363,31 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	}
 	// defer ramfs.Close()
 
+	// if /tmp/rsdp file exist we must get the value and add it to the be.cmdline parameter
+	// this will allow the kernel to properly read the ACPI table
+
+	if _, err := os.Stat("/tmp/rsdp"); err == nil {
+		var rsdp string
+		rsdp = " acpi_rsdp="
+		rsdpDesc, err_open := os.OpenFile("/tmp/rsdp", os.O_RDONLY,0)
+		if err_open != nil {
+			verbose("%v", err)
+			return err_open
+		}
+		r := bufio.NewReader(rsdpDesc)
+		address,err_read := r.ReadString('\n')
+		if err_read != nil {
+			verbose("%v", err)
+			return err_read
+		}
+		rsdp = rsdp + address
+		be.cmdline = be.cmdline + rsdp
+		if err = rsdpDesc.Close(); err != nil {
+			verbose("%v", err)
+			return err
+	        }
+	}
+
 	if err := kexec.FileLoad(kernelDesc, ramfs, be.cmdline); err != nil {
 		verbose("%v", err)
 		return err
