@@ -293,13 +293,17 @@ func main() {
 	}
 
 	a := flag.Args()
+	if len(a) > 3 {
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	// Experimental Part
 	if len(a) == 0 {
-		if o, err := exec.Command("ip", "link", "set", "dev", "lo").CombinedOutput(); err != nil {
+		if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
 			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
 		}
-		if o, err := exec.Command("ip", "link", "set", "dev", *iface).CombinedOutput(); err != nil {
+		if o, err := exec.Command("ip", "link", "set", "dev", *iface, "up").CombinedOutput(); err != nil {
 			log.Fatalf("ip link set dev %v: %v (%v)", *iface, string(o), err)
 		}
 		go scanWifi()
@@ -309,7 +313,6 @@ func main() {
 	}
 
 	if err := connectWifi(a...); err != nil {
-		flag.Usage()
 		log.Fatalf("error: %v", err)
 	}
 }
