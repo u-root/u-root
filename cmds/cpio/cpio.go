@@ -34,7 +34,6 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	_ "github.com/u-root/u-root/pkg/cpio/newc"
 )
 
 var (

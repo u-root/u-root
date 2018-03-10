@@ -14,16 +14,16 @@
 | comm           | -123h         |                 |                        |
 | cp             | -fiPRrvw      |                 |                        |
 | cpio           | -oitv         |                 |                        |
-| date           | -u            | -drs            |                        |
+| date           | -ur           | -ds             |                        |
 | dd             |               |                 |                        |
 | dhcp           |               |                 | u-root specific        |
 | dmesg          | -c            | -Clr            |                        |
-| echo           | -n            | -e              |                        |
+| echo           | -ne           |                 |                        |
 | ectool         |               |                 | u-root specific        |
 | exit           |               |                 | Rush builtin           |
 | false          |               |                 |                        |
 | fmap           | -s            | -crudV          | u-root specific        |
-| :x: free       |               | -bkmght         | Not implemented yet!   |
+| free           | -bkmgth       |                 |                        |
 | freq           | -cdorx        |                 | From plan 9            |
 | :x: gitclone   |               |                 | Not implemented yet!   |
 | gopxe          |               |                 | u-root specific        |
@@ -46,8 +46,9 @@
 | lsmod          |               |                 |                        |
 | :x: man        |               | -k              | Not implemented yet!   |
 | mkdir          | -mpv          |                 |                        |
-| :x: mkfifo     |               |                 | Not implemented yet!   |
+| mkfifo         |               |                 |                        |
 | mknod          |               |                 |                        |
+| modprobe       | -n            |                 | Further options?       |
 | mount          | -rt           |                 |                        |
 | mv             |               | -nu             |                        |
 | netcat         |               |                 |                        |
@@ -68,6 +69,7 @@
 | sort           | -or           | -bcfmnRu        |                        |
 | srvfiles       | -dhp          |                 | u-root specific        |
 | sync           |               |                 |                        |
+| tail           | -n            | -f              | u-root specific        |
 | tcz            | -ahpv         |                 | u-root specific        |
 | tee            | -ai           |                 |                        |
 | time           |               | -p              | Rush builtin           |

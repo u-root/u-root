@@ -24,12 +24,12 @@ import (
 )
 
 const (
-	BlockSize  = 512
-	HeaderOff  = 0x200
-	HeaderSize = 0x5c               // They claim it can vary. Give me a break.
-	Signature  = 0x5452415020494645 // ("EFI PART", 45h 46h 49h 20h 50h 41h 52h 54h on little-endian machines)
-	Revision   = 0x10000
-	MaxNPart   = 0x80
+	BlockSize         = 512
+	HeaderOff         = 0x200
+	HeaderSize        = 0x5c               // They claim it can vary. Give me a break.
+	Signature  uint64 = 0x5452415020494645 // ("EFI PART", 45h 46h 49h 20h 50h 41h 52h 54h on little-endian machines)
+	Revision          = 0x10000
+	MaxNPart          = 0x80
 )
 
 type Header struct {

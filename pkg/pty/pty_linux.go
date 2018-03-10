@@ -14,7 +14,6 @@ package pty
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"syscall"
 	"unsafe"
 
@@ -23,7 +22,7 @@ import (
 
 // pty support. We used to import github.com/kr/pty but what we need is not that complex.
 // Thanks to keith rarick for these functions.
-func New(cmd string, args ...string) (*Pty, error) {
+func New() (*Pty, error) {
 	tty, err := termios.New()
 	if err != nil {
 		return nil, err
@@ -58,10 +57,7 @@ func New(cmd string, args ...string) (*Pty, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := exec.Command(cmd, args...)
-	c.Stdin, c.Stdout, c.Stderr = pts, pts, pts
-	c.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
-	return &Pty{Ptm: ptm, Pts: pts, Sname: sname, Kid: -1, C: c, TTY: tty, Restorer: restorer}, nil
+	return &Pty{Ptm: ptm, Pts: pts, Sname: sname, Kid: -1, TTY: tty, Restorer: restorer}, nil
 }
 
 func ptsname(f *os.File) (string, error) {

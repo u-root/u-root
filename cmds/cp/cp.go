@@ -110,7 +110,11 @@ func copyFile(src, dst string, todir bool) error {
 	}
 
 	dstb, err := os.Stat(dst)
-	if !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("%q: can't handle error %v", dst, err)
+	}
+
+	if dstb != nil {
 		if sameFile(srcb.Sys(), dstb.Sys()) {
 			return fmt.Errorf("%q and %q are the same file", src, dst)
 		}

@@ -10,16 +10,17 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	if _, err := New("/bin/bash", "-c", "/bin/date"); err != nil {
+	if _, err := New(); err != nil {
 		t.Errorf("New pty: want nil, got %v", err)
 	}
 }
 
 func TestRunRestoreTTYMode(t *testing.T) {
-	p, err := New("echo", "hi")
+	p, err := New()
 	if err != nil {
 		t.Fatalf("TestStart New pty: want nil, got %v", err)
 	}
+	p.Command("echo", "hi")
 	if err := p.Run(); err != nil {
 		t.Fatalf("TestStart Start: want nil, got %v", err)
 	}

@@ -1,7 +1,7 @@
 u-root
 ======
 
-[![Build Status](https://travis-ci.org/u-root/u-root.svg?branch=master)](https://travis-ci.org/u-root/u-root) [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root) [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
+[![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master) [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root) [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
 
 # Description
 
@@ -87,9 +87,17 @@ If you add binaries with `-files` are listed, their ldd dependencies will be
 included as well. As example for Debian, you want to add two kernel modules for
 testing, executing your currently booted kernel:
 
+> NOTE: these files will be placed in the `$HOME` dir in the initramfs.
+
 ```shell
 u-root -files "$HOME/hello.ko $HOME/hello2.ko"
 qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
+```
+
+To specify the location in the initramfs, use `<sourcefile>:<destinationfile>`. For example:
+
+```shell
+u-root -files "root-fs/usr/bin/runc:usr/bin/run"
 ```
 
 ## Getting Packages of TinyCore

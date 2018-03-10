@@ -9,36 +9,29 @@ import (
 
 func TestLookup(t *testing.T) {
 
-	var idLookupTests = []struct {
-		vendor     string
-		device     string
-		vendorName string
-		deviceName string
-	}{
-		{"1055", "e420", "Efar Microsystems", "LAN9420/LAN9420i"},
-		{"8086", "1237", "Intel Corporation", "440FX - 82441FX PMC [Natoma]"},
-		{"8086", "7000", "Intel Corporation", "82371SB PIIX3 ISA [Natoma/Triton II]"},
-		{"8086", "7111", "Intel Corporation", "82371AB/EB/MB PIIX4 IDE"},
-		{"80ee", "beef", "InnoTek Systemberatung GmbH", "VirtualBox Graphics Adapter"},
-		{"8086", "100e", "Intel Corporation", "82540EM Gigabit Ethernet Controller"},
-		{"80ee", "cafe", "InnoTek Systemberatung GmbH", "VirtualBox Guest Service"},
-		{"8086", "2415", "Intel Corporation", "82801AA AC'97 Audio Controller"},
-		{"8086", "7113", "Intel Corporation", "82371AB/EB/MB PIIX4 ACPI"},
-		{"8086", "100f", "Intel Corporation", "82545EM Gigabit Ethernet Controller (Copper)"},
+	var idLookupTests = []*PCI{
+		{Vendor: "1055", Device: "e420", VendorName: "Efar Microsystems", DeviceName: "LAN9420/LAN9420i"},
+		{Vendor: "8086", Device: "1237", VendorName: "Intel Corporation", DeviceName: "440FX - 82441FX PMC [Natoma]"},
+		{Vendor: "8086", Device: "7000", VendorName: "Intel Corporation", DeviceName: "82371SB PIIX3 ISA [Natoma/Triton II]"},
+		{Vendor: "8086", Device: "7111", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 IDE"},
+		{Vendor: "80ee", Device: "beef", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Graphics Adapter"},
+		{Vendor: "8086", Device: "100e", VendorName: "Intel Corporation", DeviceName: "82540EM Gigabit Ethernet Controller"},
+		{Vendor: "80ee", Device: "cafe", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Guest Service"},
+		{Vendor: "8086", Device: "2415", VendorName: "Intel Corporation", DeviceName: "82801AA AC'97 Audio Controller"},
+		{Vendor: "8086", Device: "7113", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 ACPI"},
+		{Vendor: "8086", Device: "100f", VendorName: "Intel Corporation", DeviceName: "82545EM Gigabit Ethernet Controller (Copper)"},
 	}
 
 	t.Run("Lookup Using IDs", func(t *testing.T) {
-		ids, err := NewIDs()
-		if err != nil {
-			t.Fatalf("NewIDs error:%s\n", err)
-		}
 		for _, tt := range idLookupTests {
-			v, d := Lookup(ids, tt.vendor, tt.device)
-			if v != tt.vendorName {
-				t.Errorf("Vendor mismatch, found %s, expected %s\n", v, tt.vendorName)
+			tp := tt
+			tp.SetVendorDeviceName()
+			v, d := tp.VendorName, tp.DeviceName
+			if v != tt.VendorName {
+				t.Errorf("Vendor mismatch, found %s, expected %s\n", v, tt.VendorName)
 			}
-			if d != tt.deviceName {
-				t.Errorf("Device mismatch, found %s, expected %s\n", d, tt.deviceName)
+			if d != tt.DeviceName {
+				t.Errorf("Device mismatch, found %s, expected %s\n", d, tt.DeviceName)
 			}
 		}
 	})

@@ -27,6 +27,8 @@ import (
 )
 
 var (
+	all     = flag.Bool("a", false, "show hidden files")
+	human   = flag.Bool("h", false, "human readable sizes")
 	long    = flag.Bool("l", false, "long form")
 	quoted  = flag.Bool("Q", false, "quoted")
 	recurse = flag.Bool("R", false, "equivalent to findutil's find")
@@ -35,10 +37,14 @@ var (
 func stringer(fi fileInfo) fmt.Stringer {
 	var s fmt.Stringer = fi
 	if *quoted {
-		s = quotedStringer{fi}
+		s = quotedStringer{fileInfo: fi}
 	}
 	if *long {
-		s = longStringer{fi, s}
+		s = longStringer{
+			fileInfo: fi,
+			comp:     s,
+			human:    *human,
+		}
 	}
 	return s
 }
@@ -67,8 +73,11 @@ func listName(d string, w io.Writer, prefix bool) error {
 			}
 		}
 
-		// Print the file in the proper format.
-		fmt.Fprintln(w, stringer(fi))
+		// Hide .files unless -a was given
+		if *all || fi.name[0] != '.' {
+			// Print the file in the proper format.
+			fmt.Fprintln(w, stringer(fi))
+		}
 
 		// Skip directories when non-recursive.
 		if path != d && fi.mode.IsDir() && !*recurse {

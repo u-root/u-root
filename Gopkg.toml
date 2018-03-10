@@ -1,27 +1,10 @@
-
 required = [
   "github.com/golang/dep/cmd/dep"
 ]
 
 [[constraint]]
   branch = "master"
-  name = "github.com/d2g/dhcp4"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4client"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/google/uuid"
-
-[[constraint]]
-  name = "github.com/spf13/pflag"
-  version = "1.0.0"
-
-[[constraint]]
-  branch = "addclient"
-  name = "github.com/u-root/dhcp6"
 
 [[constraint]]
   branch = "master"
@@ -43,3 +26,19 @@ required = [
   branch = "master"
   name = "golang.org/x/tools"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/rck/unit"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/u-root/dhcp4"
+
+[prune]
+  non-go = true
+  go-tests = true
+  unused-packages = true
+
+  [[prune.project]]
+  name = "github.com/golang/dep"
+  unused-packages = false

@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
+
+	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 // Linux mode_t bits.
@@ -40,22 +42,45 @@ var modeMap = map[uint64]os.FileMode{
 	modeFIFO:    os.ModeNamedPipe,
 }
 
-// modes sets the modes, changing the easy ones first and the harder ones last.
-// In this way, we set as much as we can before bailing out. It's not an error
-// to not be able to set uid and gid, at least not yet.
-// For now we also ignore sticky bits.
+// setModes sets the modes, changing the easy ones first and the harder ones last.
+// In this way, we set as much as we can before bailing out.
+// N.B.: if you set something with S_ISUID, then change the owner,
+// the kernel (Linux, OSX, etc.) clears S_ISUID (a good idea). So, the simple thing:
+// Do the chmod operations in order of difficulty, and give up as soon as we fail.
+// Set the basic permissions -- not including SUID, GUID, etc.
+// Set the times
+// Set the owner
+// Set ALL the mode bits, in case we need to do SUID, etc. If we could not
+// set the owner, we won't even try this operation of course, so we won't
+// have SUID incorrectly set for the wrong user.
 func setModes(r Record) error {
-	if err := os.Chmod(r.Name, os.FileMode(perm(r))); err != nil {
+	if err := os.Chmod(r.Name, toFileMode(r)&os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
+	/*if err := os.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
 		return err
-	}
+	}*/
 	if err := os.Chown(r.Name, int(r.UID), int(r.GID)); err != nil {
 		return err
 	}
-	// TODO: only set SUID and GUID if we can set the owner.
+	if err := os.Chmod(r.Name, toFileMode(r)); err != nil {
+		return err
+	}
 	return nil
+}
+
+func toFileMode(r Record) os.FileMode {
+	m := os.FileMode(perm(r))
+	if r.Mode&unix.S_ISUID != 0 {
+		m |= os.ModeSetuid
+	}
+	if r.Mode&unix.S_ISGID != 0 {
+		m |= os.ModeSetgid
+	}
+	if r.Mode&unix.S_ISVTX != 0 {
+		m |= os.ModeSticky
+	}
+	return m
 }
 
 func perm(r Record) uint32 {
@@ -66,7 +91,7 @@ func dev(r Record) int {
 	return int(r.Rmajor<<8 | r.Rminor)
 }
 
-func linuxModeToMode(m uint64) (os.FileMode, error) {
+func linuxModeToFileType(m uint64) (os.FileMode, error) {
 	if t, ok := modeMap[m&modeTypeMask]; ok {
 		return t, nil
 	}
@@ -74,25 +99,24 @@ func linuxModeToMode(m uint64) (os.FileMode, error) {
 }
 
 func CreateFile(f Record) error {
-	m, err := linuxModeToMode(f.Mode)
+	return CreateFileInRoot(f, ".")
+}
+
+func CreateFileInRoot(f Record, rootDir string) error {
+	m, err := linuxModeToFileType(f.Mode)
 	if err != nil {
 		return err
 	}
 
-	dir, _ := filepath.Split(f.Name)
-	// The problem: many cpio archives do not specify the directories
-	// and hence the permissions. They just specify the whole path.
-	// In order to create files in these directories, we have to make them at least
+	f.Name = filepath.Clean(filepath.Join(rootDir, f.Name))
+	dir := filepath.Dir(f.Name)
+	// The problem: many cpio archives do not specify the directories and
+	// hence the permissions. They just specify the whole path.  In order
+	// to create files in these directories, we have to make them at least
 	// mode 755.
-	if dir != "" {
-		switch m {
-		case os.FileMode(0),
-			os.ModeDevice,
-			os.ModeCharDevice,
-			os.ModeSymlink:
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return err
-			}
+	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
 		}
 	}
 
@@ -106,13 +130,13 @@ func CreateFile(f Record) error {
 			return err
 		}
 		defer nf.Close()
-		if _, err := io.Copy(nf, f); err != nil {
+		if _, err := io.Copy(nf, uio.Reader(f)); err != nil {
 			return err
 		}
 		return setModes(f)
 
 	case os.ModeDir:
-		if err := os.MkdirAll(f.Name, os.FileMode(perm(f))); err != nil {
+		if err := os.MkdirAll(f.Name, toFileMode(f)); err != nil {
 			return err
 		}
 		return setModes(f)
@@ -130,7 +154,7 @@ func CreateFile(f Record) error {
 		return setModes(f)
 
 	case os.ModeSymlink:
-		content, err := ioutil.ReadAll(f)
+		content, err := ioutil.ReadAll(uio.Reader(f))
 		if err != nil {
 			return err
 		}
@@ -200,7 +224,7 @@ func GetRecord(path string) (Record, error) {
 		if done {
 			return Record{Info: info}, nil
 		}
-		return Record{Info: info, ReadCloser: NewDeferReadCloser(path)}, nil
+		return Record{Info: info, ReaderAt: NewLazyFile(path)}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)

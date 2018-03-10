@@ -9,9 +9,12 @@ import (
 	"os"
 	"os/user"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	humanize "github.com/dustin/go-humanize"
 )
 
 // From Linux header: /include/uapi/linux/kdev_t.h
@@ -106,7 +109,8 @@ type quotedStringer struct {
 }
 type longStringer struct {
 	fileInfo
-	comp fmt.Stringer // decorator pattern
+	comp  fmt.Stringer // decorator pattern
+	human bool
 }
 
 // Return the name surrounded by quotes with escaped control characters.
@@ -123,9 +127,16 @@ func (fi longStringer) String() string {
 
 	// Ex: crw-rw-rw-  root  root  1, 3  Feb 6 09:31  null
 	pattern := "%[1]s\t%[2]s\t%[3]s\t%[4]d, %[5]d\t%[7]v\t%[8]s"
+	var size string
 	if fi.major == 0 && fi.minor == 0 {
 		// Ex: -rw-rw----  myuser  myuser  1256  Feb 6 09:31  recipes.txt
-		pattern = "%[1]s\t%[2]s\t%[3]s\t%[6]d\t%[7]v\t%[8]s"
+		pattern = "%[1]s\t%[2]s\t%[3]s\t%[6]s\t%[7]v\t%[8]s"
+	}
+
+	if fi.human {
+		size = humanize.Bytes(uint64(fi.size))
+	} else {
+		size = strconv.FormatInt(fi.size, 10)
 	}
 
 	s := fmt.Sprintf(pattern,
@@ -134,7 +145,7 @@ func (fi longStringer) String() string {
 		lookupGroupName(fi.gid),
 		fi.major,
 		fi.minor,
-		fi.size,
+		size,
 		fi.modTime.Format("Jan _2 15:04"),
 		fi.comp.String())
 

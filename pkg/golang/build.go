@@ -14,39 +14,34 @@ type Environ struct {
 	build.Context
 }
 
+// Default is the default build environment comprised of the default GOPATH,
+// GOROOT, GOOS, GOARCH, and CGO_ENABLED values.
 func Default() Environ {
 	return Environ{Context: build.Default}
 }
 
-// FindPackageByPath gives the full Go package name for the package in `path`.
+// PackageByPath retrieves information about a package by its file system path.
 //
-// This currently assumes that packages are named after the directory they are
-// in.
-func (c Environ) FindPackageByPath(path string) (string, error) {
+// `path` is assumed to be the directory containing the package.
+func (c Environ) PackageByPath(path string) (*build.Package, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	p, err := c.Context.ImportDir(abs, 0)
-	if err != nil {
-		return "", fmt.Errorf("failed to find package in %q: %v", path, err)
-	}
-	return p.ImportPath, nil
+	return c.Context.ImportDir(abs, 0)
 }
 
-// FindPackageDir returns the full path to `pkg` according to the context's Gopaths.
-func (c Environ) FindPackageDir(pkg string) (string, error) {
-	p, err := c.Context.Import(pkg, "", 0)
-	if err != nil {
-		return "", fmt.Errorf("failed to find package %q in gopath %q", pkg, c.Context.GOPATH)
-	}
-	return p.Dir, nil
+// Package retrieves information about a package by its Go import path.
+func (c Environ) Package(importPath string) (*build.Package, error) {
+	return c.Context.Import(importPath, "", 0)
 }
 
-func (c Environ) ListPackage(pkg string) (*build.Package, error) {
-	return c.Context.Import(pkg, "", 0)
-}
-
+// ListPackage matches a subset of the JSON output of the `go list -json`
+// command.
+//
+// See `go help list` for the full structure.
+//
+// This currently contains an incomplete list of dependencies.
 type ListPackage struct {
 	Dir        string
 	Deps       []string
@@ -58,13 +53,17 @@ type ListPackage struct {
 	ImportPath string
 }
 
-func (c Environ) ListDeps(pkg string) (*ListPackage, error) {
+func (c Environ) goCmd(args ...string) *exec.Cmd {
+	cmd := exec.Command(filepath.Join(c.GOROOT, "bin", "go"), args...)
+	cmd.Env = append(os.Environ(), c.Env()...)
+	return cmd
+}
+
+// Deps lists all dependencies of the package given by `importPath`.
+func (c Environ) Deps(importPath string) (*ListPackage, error) {
 	// The output of this is almost the same as build.Import, except for
 	// the dependencies.
-	cmd := exec.Command("go", "list", "-json", pkg)
-	env := os.Environ()
-	env = append(env, c.Env()...)
-	cmd.Env = env
+	cmd := c.goCmd("list", "-json", importPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -109,13 +108,20 @@ type BuildOpts struct {
 	ExtraArgs []string
 }
 
-// Build compiles `pkg`, writing the executable or object to `binaryPath`.
-func (c Environ) Build(pkg string, binaryPath string, opts BuildOpts) error {
-	path, err := c.FindPackageDir(pkg)
+// Build compiles the package given by `importPath`, writing the build object
+// to `binaryPath`.
+func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) error {
+	p, err := c.Package(importPath)
 	if err != nil {
 		return err
 	}
 
+	return c.BuildDir(p.Dir, binaryPath, opts)
+}
+
+// BuildDir compiles the package in the directory `dirPath`, writing the build
+// object to `binaryPath`.
+func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) error {
 	args := []string{
 		"build",
 		"-a", // Force rebuilding of packages.
@@ -129,12 +135,11 @@ func (c Environ) Build(pkg string, binaryPath string, opts BuildOpts) error {
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")
 
-	cmd := exec.Command("go", args...)
-	cmd.Dir = path
-	cmd.Env = append(os.Environ(), c.Env()...)
+	cmd := c.goCmd(args...)
+	cmd.Dir = dirPath
 
 	if o, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("error building go package %v: %v, %v", pkg, string(o), err)
+		return fmt.Errorf("error building go package in %q: %v, %v", dirPath, string(o), err)
 	}
 	return nil
 }
