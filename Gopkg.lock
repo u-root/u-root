@@ -59,8 +59,8 @@
     "internal/importers/gvt",
     "internal/importers/vndr"
   ]
-  revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
-  version = "v0.4.1"
+  revision = "6d95d0d6ac152023bf56b7293f5cae3792936c98"
+  version = "v0.4.0"
 
 [[projects]]
   branch = "master"
@@ -183,7 +183,7 @@
     "dhcp4opts",
     "internal/buffer"
   ]
-  revision = "1f55bfb86c9a7e4167f170c02b4ae9944fd87032"
+  revision = "517ce8756b21b5cf0af025e10354e8104f9f39e1"
 
 [[projects]]
   branch = "master"
