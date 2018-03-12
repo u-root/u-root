@@ -11,6 +11,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 const (
@@ -58,8 +60,8 @@ td, th {
 )
 
 type RegisterJson struct {
-	ServiceName string
-	PortNumber  uint
+	Service string
+	Port    uint
 }
 
 func registerHandle(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +73,8 @@ func registerHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	if err := register(msg.ServiceName, msg.PortNumber); err != nil {
+
+	if err := register(msg.Service, msg.Port); err != nil {
 		fmt.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -96,13 +99,29 @@ func unregisterHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
+type GetServiceResJson struct {
+	Port uint
+}
+
+func getServiceHandle(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	port, err := read(vars["service"])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%v is not in the registry", vars["service"]), http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(GetServiceResJson{port})
+}
+
 func startServer() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r := mux.NewRouter()
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		buildHtmlPage(w)
-	})
-	http.HandleFunc("/register", registerHandle)
-	http.HandleFunc("/unregister", unregisterHandle)
-	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil))
+	}).Methods("GET")
+	r.HandleFunc("/register", registerHandle).Methods("POST")
+	r.HandleFunc("/unregister", unregisterHandle).Methods("POST")
+	r.HandleFunc("/service/{service}", getServiceHandle).Methods("GET")
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), r))
 }
 
 func buildHtmlPage(wr io.Writer) error {
