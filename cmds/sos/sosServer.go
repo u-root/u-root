@@ -59,7 +59,7 @@ td, th {
 
 type RegisterJson struct {
 	ServiceName string
-	PortNumber  int
+	PortNumber  uint
 }
 
 func registerHandle(w http.ResponseWriter, r *http.Request) {

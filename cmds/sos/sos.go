@@ -8,17 +8,17 @@ import "sync"
 
 var (
 	RWLock   sync.RWMutex
-	Registry = make(map[string]int)
+	Registry = make(map[string]uint)
 )
 
-func read(serviceName string) (port int, exists bool) {
+func read(serviceName string) (port uint, exists bool) {
 	RWLock.RLock()
 	defer RWLock.RUnlock()
 	port, exists = Registry[serviceName]
 	return
 }
 
-func register(serviceName string, portNum int) {
+func register(serviceName string, portNum uint) {
 	RWLock.Lock()
 	defer RWLock.Unlock()
 	Registry[serviceName] = portNum
@@ -30,10 +30,10 @@ func unregister(serviceName string) {
 	delete(Registry, serviceName)
 }
 
-func snapshotRegistry() map[string]int {
+func snapshotRegistry() map[string]uint {
 	RWLock.RLock()
 	defer RWLock.RUnlock()
-	snapshot := make(map[string]int)
+	snapshot := make(map[string]uint)
 	for name, port := range Registry {
 		snapshot[name] = port
 	}
