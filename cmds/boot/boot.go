@@ -377,11 +377,15 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 		r := bufio.NewReader(rsdpDesc)
 		address, err_read := r.ReadString('\n')
 		if err_read != nil {
-			verbose("%v", err)
-			return err_read
+			if err_read != io.EOF  {
+				verbose("%v", err)
+				return err_read
+			}
 		}
 		rsdp = rsdp + address
+		log.Printf("Kernel ACPI parameters %s",rsdp)
 		be.cmdline = be.cmdline + rsdp
+		log.Printf("Kernel cmdline %s",be.cmdline)
 		if err = rsdpDesc.Close(); err != nil {
 			verbose("%v", err)
 			return err
