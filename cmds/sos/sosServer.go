@@ -107,10 +107,20 @@ func getServiceHandle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	port, err := read(vars["service"])
 	if err != nil {
-		http.Error(w, fmt.Sprintf("%v is not in the registry", vars["service"]), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	json.NewEncoder(w).Encode(GetServiceResJson{port})
+}
+
+func redirectToResourceHandle(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	port, err := read(vars["service"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("localhost:%v/", port), http.StatusPermanentRedirect)
 }
 
 func startServer() {
@@ -121,6 +131,7 @@ func startServer() {
 	r.HandleFunc("/register", registerHandle).Methods("POST")
 	r.HandleFunc("/unregister", unregisterHandle).Methods("POST")
 	r.HandleFunc("/service/{service}", getServiceHandle).Methods("GET")
+	r.HandleFunc("/go/{service}", redirectToResourceHandle).Methods("GET")
 	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), r))
 }
 
