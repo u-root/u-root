@@ -191,6 +191,7 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 
 func refreshHandle(w http.ResponseWriter, r *http.Request) {
 	if err := scanWifi(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -210,12 +211,14 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 	a, err := userInputValidation(msg.Essid, msg.Pass, msg.Id)
 	if err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -224,6 +227,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	routineID := make([]byte, 8)
 	if _, err := rand.Read(routineID); err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -233,6 +237,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
 	if err := <-c; err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -242,6 +247,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	if err := connectWifi(a...); err != nil {
 		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
