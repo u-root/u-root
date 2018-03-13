@@ -37,6 +37,7 @@ var (
 	// flags
 	iface = flag.String("i", "wlan0", "interface to use")
 	list  = flag.Bool("l", false, "list all nearby WiFi")
+	show  = flag.Bool("s", false, "list interfaces allowed with WiFi extension")
 	test  = flag.Bool("test", false, "set up a test server")
 
 	// RegEx for parsing iwlist output
@@ -45,6 +46,9 @@ var (
 	EncKeyOptRE  = regexp.MustCompile("(?m)^\\s*Encryption key:(on|off)$")
 	Wpa2RE       = regexp.MustCompile("(?m)^\\s*IE: IEEE 802.11i/WPA2 Version 1$")
 	AuthSuitesRE = regexp.MustCompile("(?m)^\\s*Authentication Suites .*$")
+
+	// RegEx for parsing iwconfig output
+	IwconfigRE = regexp.MustCompile("(?m)^[a-zA-Z0-9]+\\s*IEEE 802.11.*$")
 
 	// State of the service
 	CurEssid        string
@@ -137,6 +141,22 @@ func parseIwlistOut(o []byte) []WifiOption {
 		}
 	}
 	return res
+}
+
+func scanInterfaces() ([]string, error) {
+	o, err := exec.Command("iwconfig").CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("iwconfig: %v (%v)", string(o), err)
+	}
+	return parseIwconfig(o), nil
+}
+
+func parseIwconfig(o []byte) (res []string) {
+	interfaces := IwconfigRE.FindAll(o, -1)
+	for _, i := range interfaces {
+		res = append(res, strings.Split(string(i), " ")[0])
+	}
+	return
 }
 
 func generateConfig(a ...string) (conf []byte, err error) {
@@ -234,6 +254,9 @@ func main() {
 	flag.Parse()
 
 	if *list {
+		if o, err := exec.Command("ip", "link", "set", "dev", *iface).CombinedOutput(); err != nil {
+			log.Fatalf("ip link set dev %v: %v (%v)", *iface, string(o), err)
+		}
 		if err := scanWifi(); err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -252,6 +275,17 @@ func main() {
 		return
 	}
 
+	if *show {
+		interfaces, err := scanInterfaces()
+		if err != nil {
+			log.Fatalf("error: %v", err)
+		}
+		for _, i := range interfaces {
+			fmt.Println(i)
+		}
+		return
+	}
+
 	if *test {
 		NearbyWifis = StubNearbyWifis
 		go connectWifiArbitrator()
@@ -259,9 +293,19 @@ func main() {
 	}
 
 	a := flag.Args()
+	if len(a) > 3 {
+		flag.Usage()
+		os.Exit(1)
+	}
 
+	// Experimental Part
 	if len(a) == 0 {
-		// Experimental Part
+		if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
+			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
+		}
+		if o, err := exec.Command("ip", "link", "set", "dev", *iface, "up").CombinedOutput(); err != nil {
+			log.Fatalf("ip link set dev %v: %v (%v)", *iface, string(o), err)
+		}
 		go scanWifi()
 		go connectWifiArbitrator()
 		startServer()
@@ -269,7 +313,6 @@ func main() {
 	}
 
 	if err := connectWifi(a...); err != nil {
-		flag.Usage()
 		log.Fatalf("error: %v", err)
 	}
 }
