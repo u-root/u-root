@@ -4,7 +4,10 @@
 
 package main
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 var (
 	RWLock   sync.RWMutex
@@ -18,10 +21,15 @@ func read(serviceName string) (port uint, exists bool) {
 	return
 }
 
-func register(serviceName string, portNum uint) {
+func register(serviceName string, portNum uint) error {
 	RWLock.Lock()
 	defer RWLock.Unlock()
+	_, exists := Registry[serviceName]
+	if exists {
+		return fmt.Errorf("%v already exists", serviceName)
+	}
 	Registry[serviceName] = portNum
+	return nil
 }
 
 func unregister(serviceName string) {

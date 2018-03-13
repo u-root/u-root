@@ -71,13 +71,11 @@ func registerHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	if port, exists := read(msg.ServiceName); exists {
-		err := fmt.Sprintf("error: %v already exists at %v", msg.ServiceName, port)
-		fmt.Println(err)
-		json.NewEncoder(w).Encode(struct{ Error string }{err})
+	if err := register(msg.ServiceName, msg.PortNumber); err != nil {
+		fmt.Printf("error: %v", err)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	register(msg.ServiceName, msg.PortNumber)
 	json.NewEncoder(w).Encode(nil)
 }
 
