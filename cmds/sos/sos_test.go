@@ -37,16 +37,16 @@ func cleanUpForNewTest() {
 
 func TestReadNonExist(t *testing.T) {
 	cleanUpForNewTest()
-	if _, exists := read(knownServ1.service); exists {
-		t.Errorf("read(%v)\ngot:(%v)\nwant:(%v)", knownServ1.service, exists, false)
+	if _, err := read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
+		t.Errorf("read(%v)\ngot:(%v)\nwant:(%v)", knownServ1.service, err, fmt.Errorf("%v is not in the registry", knownServ1.service))
 	}
 }
 
 func TestRead(t *testing.T) {
 	cleanUpForNewTest()
 	Registry[knownServ1.service] = knownServ1.port
-	if port, exists := read(knownServ1.service); !exists || port != knownServ1.port {
-		t.Errorf("read(%v)\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1.service, port, exists, knownServ1.port, true)
+	if port, err := read(knownServ1.service); err != nil || port != knownServ1.port {
+		t.Errorf("read(%v)\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1.service, port, err, knownServ1.port, nil)
 	}
 }
 
@@ -62,8 +62,8 @@ func TestRegisterAlreadyExists(t *testing.T) {
 func TestRegisterSuccess(t *testing.T) {
 	cleanUpForNewTest()
 	register(knownServ1.service, knownServ1.port)
-	if port, exists := read(knownServ1.service); !exists || port != knownServ1.port {
-		t.Errorf("register(%v)\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1, port, exists, knownServ1.port, true)
+	if port, err := read(knownServ1.service); err != nil || port != knownServ1.port {
+		t.Errorf("register(%v)\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1, port, err, knownServ1.port, nil)
 	}
 }
 
@@ -77,8 +77,8 @@ func TestUnRegister(t *testing.T) {
 	cleanUpForNewTest()
 	register(knownServ1.service, knownServ1.port)
 	unregister(knownServ1.service)
-	if _, exists := read(knownServ1.service); exists {
-		t.Errorf("unregister(%v)\ngot:%v\nwant:%v", knownServ1.service, exists, false)
+	if _, err := read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
+		t.Errorf("unregister(%v)\ngot:(%v)\nwant:(%v)", knownServ1.service, err, fmt.Errorf("%v is not in the registry", knownServ1.service))
 	}
 }
 
