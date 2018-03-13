@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 )
@@ -49,7 +50,16 @@ func TestRead(t *testing.T) {
 	}
 }
 
-func TestRegister(t *testing.T) {
+func TestRegisterAlreadyExists(t *testing.T) {
+	cleanUpForNewTest()
+	Registry[knownServ1.service] = knownServ1.port
+	err := register(knownServ1.service, knownServ1.port)
+	if !reflect.DeepEqual(err, fmt.Errorf("%v already exists", knownServ1.service)) {
+		t.Errorf("Already Exists Register\ngot:(%v)\nwant:(%v)", err, fmt.Errorf("%v already exists", knownServ1.service))
+	}
+}
+
+func TestRegisterSuccess(t *testing.T) {
 	cleanUpForNewTest()
 	register(knownServ1.service, knownServ1.port)
 	if port, exists := read(knownServ1.service); !exists || port != knownServ1.port {
