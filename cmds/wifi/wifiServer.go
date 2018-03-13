@@ -233,7 +233,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 
 	c := make(chan error, 1)
 
-	// Making a Conncetion Request
+	// Making a Connection Request
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
 	if err := <-c; err != nil {
 		log.Printf("error: %v", err)
@@ -253,6 +253,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, true}
+	<-c // Make sure the state is updated
 	json.NewEncoder(w).Encode(nil)
 }
 

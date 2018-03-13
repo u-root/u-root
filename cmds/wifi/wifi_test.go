@@ -306,7 +306,7 @@ func TestConnectWifiArbitrator(t *testing.T) {
 	func() {
 		connectWifiArbitratorSetup("", "", 2)
 		defer close(ConnectReqChan)
-		c := make(chan error)
+		c := make(chan error, 1)
 		ConnectReqChan <- ConnectReqChanMsg{c, "stub", []byte("stub"), false}
 		err := <-c
 		if err != nil {
@@ -330,7 +330,7 @@ func TestConnectWifiArbitrator(t *testing.T) {
 	func() {
 		connectWifiArbitratorSetup("", "", 2)
 		defer close(ConnectReqChan)
-		c := make(chan error)
+		c := make(chan error, 1)
 		ConnectReqChan <- ConnectReqChanMsg{c, "stub", []byte("stub"), false}
 		err := <-c
 		if err != nil {
@@ -351,7 +351,7 @@ func TestConnectWifiArbitrator(t *testing.T) {
 	func() {
 		connectWifiArbitratorSetup("", "stub", 2)
 		defer close(ConnectReqChan)
-		c := make(chan error)
+		c := make(chan error, 1)
 		ConnectReqChan <- ConnectReqChanMsg{c, "stub2", []byte("stub"), false}
 		err := <-c
 		if !reflect.DeepEqual(err, fmt.Errorf("Service is trying to connect to %s", "stub")) {
@@ -370,11 +370,11 @@ func TestConnectWifiArbitrator(t *testing.T) {
 	func() {
 		connectWifiArbitratorSetup("", "", 2)
 		defer close(ConnectReqChan)
-		c1 := make(chan error)
+		c1 := make(chan error, 1)
 		ConnectReqChan <- ConnectReqChanMsg{c1, "stub1", []byte("stub1"), false}
 		<-c1 // Now the channel has accepted me
 		go func() {
-			c2 := make(chan error)
+			c2 := make(chan error, 1)
 			ConnectReqChan <- ConnectReqChanMsg{c2, "stub2", []byte("stub2"), false}
 			err := <-c2
 			if !reflect.DeepEqual(err, fmt.Errorf("Service is trying to connect to %s", "stub1")) {
@@ -397,7 +397,7 @@ func TestRaceCondConnectWifiArbitrator(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			c := make(chan error)
+			c := make(chan error, 1)
 			routineIdStub := fmt.Sprintf("stub%v", idx)
 			ConnectReqChan <- ConnectReqChanMsg{c, routineIdStub, []byte(routineIdStub), false}
 		}(i)
