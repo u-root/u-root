@@ -341,7 +341,7 @@ func (c *Client) sendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp4.Pa
 			// set it.
 			b := make([]byte, 1500)
 			n, _, err := c.conn.ReadFrom(b)
-			if oerr, ok := err.(*net.OpError); ok && oerr.Timeout() {
+			if oerr, ok := err.(net.Error); ok && oerr.Timeout() {
 				// Continue to check ctx.Done() above and
 				// return the appropriate error.
 				continue
