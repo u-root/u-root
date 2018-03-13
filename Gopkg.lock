@@ -59,8 +59,8 @@
     "internal/importers/gvt",
     "internal/importers/vndr"
   ]
-  revision = "6d95d0d6ac152023bf56b7293f5cae3792936c98"
-  version = "v0.4.0"
+  revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"
@@ -183,7 +183,7 @@
     "dhcp4opts",
     "internal/buffer"
   ]
-  revision = "517ce8756b21b5cf0af025e10354e8104f9f39e1"
+  revision = "1418bdb477e4970afa23412e3e54fc49c569ad0e"
 
 [[projects]]
   branch = "master"
@@ -228,7 +228,7 @@
     "sha3",
     "ssh"
   ]
-  revision = "c7dcf104e3a7a1417abc0230cb0d5240d764159d"
+  revision = "c4a91bd4f524f10d064139674cf55852e055ad01"
 
 [[projects]]
   branch = "master"
@@ -237,7 +237,7 @@
     "bpf",
     "context"
   ]
-  revision = "d0aafc73d5cdc42264b0af071c261abac580695e"
+  revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
 
 [[projects]]
   branch = "master"
@@ -249,7 +249,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "7dca6fe1f43775aa6d1334576870ff63f978f539"
+  revision = "8c0ece68c28377f4c326d85b94f8df0dace46f80"
 
 [[projects]]
   branch = "master"
@@ -258,7 +258,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "059bec968c61383b574810040ba9410712de36c5"
+  revision = "c1547a3f90f245aa85784a99580d3f601380cc07"
 
 [[projects]]
   name = "pack.ag/tftp"
