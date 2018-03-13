@@ -90,11 +90,9 @@ func (c Environ) Env() []string {
 	if c.GOPATH != "" {
 		env = append(env, fmt.Sprintf("GOPATH=%s", c.GOPATH))
 	}
-	var cgo int8
-	if c.CgoEnabled {
-		cgo = 1
-	}
-	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
+	// CGO_ENABLED is never enabled. A core tenet of u-root is that it is
+	// standalone Go.
+	env = append(env, fmt.Sprintf("CGO_ENABLED=0"))
 	return env
 }
 
