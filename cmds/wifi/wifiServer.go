@@ -196,7 +196,6 @@ func refreshHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(nil)
-
 }
 
 type ConnectJsonMsg struct {
@@ -231,7 +230,8 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	c := make(chan error)
+
+	c := make(chan error, 1)
 
 	// Making a Conncetion Request
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
@@ -251,6 +251,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
+
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, true}
 	json.NewEncoder(w).Encode(nil)
 }

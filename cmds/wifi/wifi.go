@@ -73,6 +73,10 @@ func init() {
 }
 
 func scanWifi() error {
+	if *test {
+		return nil
+	}
+
 	o, err := exec.Command("iwlist", *iface, "scanning").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("iwlist: %v (%v)", string(o), err)
@@ -188,7 +192,7 @@ func connectWifiArbitrator() {
 		case bytes.Equal(req.routineID, acceptedRoutineId):
 			if req.success {
 				CurEssid = req.essid
-			} else {
+			} else if !*test {
 				// Depending on where the failure happens,
 				// we might or might not be connected to a WiFi
 				o, _ := exec.Command("iwgetid", "-r").CombinedOutput()
@@ -210,6 +214,10 @@ func connectWifiArbitrator() {
 }
 
 func connectWifi(a ...string) error {
+	if *test {
+		return nil
+	}
+
 	// format of a: [essid, pass, id]
 	conf, err := generateConfig(a...)
 	if err != nil {
@@ -286,6 +294,8 @@ func main() {
 		return
 	}
 
+	// Start a Server with Stub data
+	// for manual end-to-end testing
 	if *test {
 		NearbyWifis = StubNearbyWifis
 		go connectWifiArbitrator()
