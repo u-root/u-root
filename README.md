@@ -82,6 +82,13 @@ qemu-system-x86_64 -kernel path/to/kernel -initrd /tmp/initramfs.linux_amd64.cpi
 Note that you do not have to build a special kernel on your own, it is
 sufficient to use an existing one. Usually you can find one in `/boot`.
 
+>NOTE: you can compress the initramfs but for xz compression, the kernel has some restrictions
+>on the compression options and it is suggested to align the file to 512 byte boundaries
+```shell
+xz --check=crc32 -9 --lzma2=dict=1MiB  --stdout /tmp/initramfs.linux_amd64.cpio \
+   | dd conv=sync bs=512 of=/tmp/initramfs.linux_amd64.cpio.xz
+```
+
 You may also include additional files in the initramfs using the `-files` flag.
 If you add binaries with `-files` are listed, their ldd dependencies will be
 included as well. As example for Debian, you want to add two kernel modules for
