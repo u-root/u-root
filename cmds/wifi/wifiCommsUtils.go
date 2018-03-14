@@ -19,7 +19,13 @@ type ConnectReqChanMsg struct {
 	success   bool
 }
 
+type RefreshReqChanMsg struct {
+	c chan (error)
+}
+
 var (
-	// Assumption: The user shouldn't "accidentally" try to connect more than 4 times
-	ConnectReqChan = make(chan ConnectReqChanMsg, 4)
+	// Assumption: The user shouldn't "accidentally" try to connect or refresh more than 4 times
+	DefaultBufferSize = 4
+	ConnectReqChan    = make(chan ConnectReqChanMsg, DefaultBufferSize)
+	RefreshReqChan    = make(chan RefreshReqChanMsg, DefaultBufferSize)
 )
