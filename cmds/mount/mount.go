@@ -13,6 +13,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -55,6 +56,41 @@ func loopSetup(filename string) (loopDevice string, err error) {
 	return loopDevice, nil
 }
 
+// extended from boot.go
+func getSupportedFilesystem(originFS string) ([]string, bool, error) {
+	var known bool
+	var err error
+	fs, err := ioutil.ReadFile("/proc/filesystems")
+	if err != nil {
+		return nil, known, err
+	}
+	var returnValue []string
+	for _, f := range strings.Split(string(fs), "\n") {
+		n := strings.Fields(f)
+		last := len(n) - 1
+		if last < 0 {
+			continue
+		}
+		if n[last] == originFS {
+			known = true
+		}
+		returnValue = append(returnValue, n[last])
+	}
+	return returnValue, known, err
+
+}
+
+func informIfUnknownFS(originFS string) {
+	knownFS, known, err := getSupportedFilesystem(originFS)
+	if err != nil {
+		// just don't make things even worse...
+		return
+	}
+	if !known {
+		log.Printf("Hint: unknown filesystem %s. Known are: %v", originFS, knownFS)
+	}
+}
+
 func main() {
 	flag.Parse()
 	a := flag.Args()
@@ -87,8 +123,13 @@ func main() {
 	if *ro {
 		flags |= unix.MS_RDONLY
 	}
-
+	if *fsType == "" {
+		// mandatory parameter for the moment
+		log.Fatalf("No file system type provided!\nUsage: mount [-r] [-o mount options] -t fstype dev path")
+	}
 	if err := unix.Mount(dev, path, *fsType, flags, strings.Join(data, ",")); err != nil {
-		log.Fatalf("Mount :%s: on :%s: type :%s: flags %x: %v\n", dev, path, *fsType, flags, err)
+		log.Printf("Mount :%s: on :%s: type :%s: flags %x: %v", dev, path, *fsType, flags, err)
+		informIfUnknownFS(*fsType)
+		os.Exit(1)
 	}
 }
