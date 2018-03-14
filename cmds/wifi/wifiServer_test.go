@@ -159,3 +159,21 @@ func TestConnectHandleRace(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestRefreshHandleRace(t *testing.T) {
+	// Set Up
+	turnOnTestingMode()
+	numGoRoutines := 100
+
+	var wg sync.WaitGroup
+	for i := 0; i < numGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			r := httptest.NewRequest("GET", "localhost:"+PortNum+"/refresh", nil)
+			w := httptest.NewRecorder()
+			refreshHandle(w, r)
+		}()
+	}
+	wg.Wait()
+}
