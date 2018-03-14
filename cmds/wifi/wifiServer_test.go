@@ -152,7 +152,7 @@ func TestConnectHandleRace(t *testing.T) {
 				t.Errorf("Setup Fails")
 				return
 			}
-			r := httptest.NewRequest("GET", "localhost:"+PortNum+"/connect", bytes.NewBuffer(b))
+			r := httptest.NewRequest("POST", "localhost:"+PortNum+"/connect", bytes.NewBuffer(b))
 			w := httptest.NewRecorder()
 			connectHandle(w, r)
 		}()
@@ -160,17 +160,24 @@ func TestConnectHandleRace(t *testing.T) {
 	wg.Wait()
 }
 
+func refreshNotifierSetup(bufferSize int) {
+	RefreshReqChan = make(chan RefreshReqChanMsg, bufferSize)
+	go refreshNotifier()
+}
+
 func TestRefreshHandleRace(t *testing.T) {
 	// Set Up
-	turnOnTestingMode()
 	numGoRoutines := 100
+	turnOnTestingMode()
+	refreshNotifierSetup(numGoRoutines)
+	defer close(RefreshReqChan)
 
 	var wg sync.WaitGroup
 	for i := 0; i < numGoRoutines; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			r := httptest.NewRequest("GET", "localhost:"+PortNum+"/refresh", nil)
+			r := httptest.NewRequest("POST", "localhost:"+PortNum+"/refresh", nil)
 			w := httptest.NewRecorder()
 			refreshHandle(w, r)
 		}()

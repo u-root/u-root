@@ -192,7 +192,11 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 }
 
 func refreshHandle(w http.ResponseWriter, r *http.Request) {
-	if err := scanWifi(); err != nil {
+	c := make(chan error, 1)
+
+	// Making a Refresh Request
+	RefreshReqChan <- RefreshReqChanMsg{c}
+	if err := <-c; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
