@@ -72,11 +72,6 @@ var (
 	}
 )
 
-func turnOnTestingMode() {
-	t := true
-	test = &t
-}
-
 func TestUserInputValidation(t *testing.T) {
 	for _, test := range userInputValidationTestcases {
 		out, err := userInputValidation(test.essid, test.pass, test.id)
@@ -90,7 +85,6 @@ func TestUserInputValidation(t *testing.T) {
 
 func TestConnectHandle(t *testing.T) {
 	// Set Up
-	turnOnTestingMode()
 	connectWifiArbitratorSetup("", "", 2)
 	defer close(ConnectReqChan)
 
@@ -111,7 +105,6 @@ func TestConnectHandle(t *testing.T) {
 
 func TestConnectHandleOneAfterAnother(t *testing.T) {
 	// Set Up
-	turnOnTestingMode()
 	connectWifiArbitratorSetup("", "", 2)
 	defer close(ConnectReqChan)
 
@@ -144,7 +137,6 @@ func TestConnectHandleOneAfterAnother(t *testing.T) {
 
 func TestConnectHandleRace(t *testing.T) {
 	// Set Up
-	turnOnTestingMode()
 	numGoRoutines := 100
 	connectWifiArbitratorSetup("", "", numGoRoutines)
 	defer close(ConnectReqChan)

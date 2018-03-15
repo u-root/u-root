@@ -1,17 +1,23 @@
-package wifi
+package wifiStub
 
-type StubWifiWorker struct{}
+import "github.com/u-root/u-root/pkg/wifi"
 
-func (StubWifiWorker) ScanInterfaces() ([]string, error) {
-	return nil, nil
+type StubWifiWorker struct {
+	ScanInterfacesOut  []string
+	ScanWifiOut        []wifi.WifiOption
+	ScanCurrentWifiOut string
 }
 
-func (StubWifiWorker) ScanWifi() ([]WifiOption, error) {
-	return nil, nil
+func (stub StubWifiWorker) ScanInterfaces() ([]string, error) {
+	return stub.ScanInterfacesOut, nil
 }
 
-func (StubWifiWorker) ScanCurrentWifi() (string, error) {
-	return "", nil
+func (stub StubWifiWorker) ScanWifi() ([]wifi.WifiOption, error) {
+	return stub.ScanWifiOut, nil
+}
+
+func (stub StubWifiWorker) ScanCurrentWifi() (string, error) {
+	return stub.ScanCurrentWifiOut, nil
 }
 
 func (StubWifiWorker) Connect(a ...string) error {

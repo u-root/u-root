@@ -5,64 +5,20 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"os/exec"
 	"reflect"
-	"strings"
 	"sync"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/wifi/wifiStub"
 )
-
-type WifiErrorTestCase struct {
-	name   string
-	args   []string
-	expect string
-}
-
-var (
-	errorTestcases = []WifiErrorTestCase{
-		{
-			name:   "More elements than needed",
-			args:   []string{"a", "a", "a", "a"},
-			expect: "Usage",
-		},
-		{
-			name:   "Flags, More elements than needed",
-			args:   []string{"-i=123", "a", "a", "a", "a"},
-			expect: "Usage",
-		},
-	}
-)
-
-func run(c *exec.Cmd) (string, string, error) {
-	var o, e bytes.Buffer
-	c.Stdout, c.Stderr = &o, &e
-	err := c.Run()
-	return o.String(), e.String(), err
-}
-
-func TestWifiErrors(t *testing.T) {
-	// Set up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
-	// Tests
-	for _, test := range errorTestcases {
-		c := exec.Command(execPath, test.args...)
-		_, e, _ := run(c)
-		if !strings.Contains(e, test.expect) {
-			t.Logf("TEST %v", test.name)
-			execStatement := fmt.Sprintf("exec(wifi %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-			t.Errorf("%s\ngot:%s\nwant:%s", execStatement, e, test.expect)
-		}
-	}
-}
 
 func connectWifiArbitratorSetup(curEssid, connEssid string, bufferSize int) {
+	WifiWorker = wifiStub.StubWifiWorker{
+		ScanInterfacesOut:  nil,
+		ScanWifiOut:        nil,
+		ScanCurrentWifiOut: curEssid,
+	}
 	CurEssid = curEssid
 	ConnectingEssid = connEssid
 	ConnectReqChan = make(chan ConnectReqChanMsg, bufferSize)
