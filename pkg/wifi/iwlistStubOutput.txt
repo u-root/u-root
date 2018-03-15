@@ -1,0 +1,184 @@
+wlan0    Scan completed :
+          Cell 01 - Address: 00:00:00:00:00:01
+                    Channel:001
+                    Frequency:5.58 GHz (Channel 001)
+                    Quality=1/2  Signal level=-23 dBm  
+                    Encryption key:on
+                    ESSID:"stub-wpa-eap-1"
+                    Bit Rates:36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 1260ms ago
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: IEEE 802.11i/WPA2 Version 1
+                        Group Cipher : CCMP
+                        Pairwise Ciphers (1) : CCMP
+                        Authentication Suites (1) : 802.1x
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+          Cell 02 - Address: 00:00:00:00:00:02
+                    Channel:002
+                    Frequency:5.58 GHz (Channel 001)
+                    Quality=1/2  Signal level=-23 dBm  
+                    Encryption key:on
+                    ESSID:"stub-wpa-eap-1"
+                    Bit Rates:36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 1260ms ago
+                    IE: Unknown: 0000000000000000000000000
+                    IE: Unknown: 0000000
+                    IE: Unknown: 000000000000000000
+                    IE: IEEE 802.11i/WPA2 Version 1
+                        Group Cipher : CCMP
+                        Pairwise Ciphers (1) : CCMP
+                        Authentication Suites (1) : 802.1x
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+          Cell 03 - Address: 00:00:00:00:00:03
+                    Channel:003
+                    Frequency:5.785 GHz
+                    Quality=50/70  Signal level=-60 dBm  
+                    Encryption key:off
+                    ESSID:"stub-rsa-1"
+                    Bit Rates:36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 188ms ago
+                    IE: Unknown: 0000000000000000000000000
+                    IE: Unknown: 0000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+          Cell 04 - Address: 00:00:00:00:00:04
+                    Channel:004
+                    Frequency:5.785 GHz
+                    Quality=50/70  Signal level=-60 dBm  
+                    Encryption key:on
+                    ESSID:"stub-wpa-psk-1"
+                    Bit Rates:24 Mb/s; 36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 188ms ago
+                    IE: Unknown: 0000000000000000000000000
+                    IE: Unknown: 0000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: IEEE 802.11i/WPA2 Version 1
+                        Group Cipher : CCMP
+                        Pairwise Ciphers (1) : CCMP
+                        Authentication Suites (1) : PSK
+          Cell 05 - Address: 00:00:00:00:00:05
+                    Channel:005
+                    Frequency:2.412 GHz (Channel 1)
+                    Quality=48/70  Signal level=-62 dBm  
+                    Encryption key:off
+                    ESSID:"stub-rsa-2"
+                    Bit Rates:36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 3416ms ago
+                    IE: Unknown: 0000000000000000000000000
+                    IE: Unknown: 0000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+          Cell 06 - Address: 00:00:00:00:00:06
+                    Channel:006
+                    Frequency:5.785 GHz
+                    Quality=50/70  Signal level=-60 dBm  
+                    Encryption key:on
+                    ESSID:"stub-wpa-psk-2"
+                    Bit Rates:24 Mb/s; 36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 188ms ago
+                    IE: Unknown: 0000000000000000000000000
+                    IE: Unknown: 0000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: IEEE 802.11i/WPA2 Version 1
+                        Group Cipher : CCMP
+                        Pairwise Ciphers (1) : CCMP
+                        Authentication Suites (1) : PSK
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+          Cell 07 - Address: 00:00:00:00:00:07
+                    Channel:007
+                    Frequency:5.785 GHz
+                    Quality=50/70  Signal level=-60 dBm  
+                    Encryption key:on
+                    ESSID:"stub-wpa-psk-2"
+                    Bit Rates:24 Mb/s; 36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=000000000000000000
+                    Extra: Last beacon: 188ms ago
+                    IE: Unknown: 0000000000000000000000000
+                    IE: Unknown: 0000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 00000000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: IEEE 802.11i/WPA2 Version 1
+                        Group Cipher : CCMP
+                        Pairwise Ciphers (1) : CCMP
+                        Authentication Suites (1) : PSK
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 0000000000000000000
+                    IE: Unknown: 0000000000000000000000
+                    IE: Unknown: 00000000000000000000
+                    IE: Unknown: 000000000000000
+                    IE: Unknown: 000000000000000000
+                    IE: Unknown: 000000000000000000
