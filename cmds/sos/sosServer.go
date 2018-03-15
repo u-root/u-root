@@ -59,13 +59,13 @@ td, th {
 `
 )
 
-type RegisterJson struct {
+type RegisterReqJson struct {
 	Service string
 	Port    uint
 }
 
 func registerHandle(w http.ResponseWriter, r *http.Request) {
-	var msg RegisterJson
+	var msg RegisterReqJson
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
@@ -82,12 +82,12 @@ func registerHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
-type UnregisterJson struct {
+type UnRegisterReqJson struct {
 	ServiceName string
 }
 
 func unregisterHandle(w http.ResponseWriter, r *http.Request) {
-	var msg UnregisterJson
+	var msg UnRegisterReqJson
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {

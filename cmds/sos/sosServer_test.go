@@ -16,13 +16,13 @@ import (
 
 func TestRegisterHandle(t *testing.T) {
 	cleanUpForNewTest()
-	m := RegisterJson{knownServ1.service, knownServ1.port}
+	m := RegisterReqJson{knownServ1.service, knownServ1.port}
 	b, err := json.Marshal(m)
 	if err != nil {
 		t.Errorf("Setup Fails")
 		return
 	}
-	r := httptest.NewRequest("GET", "localhost:1/register", bytes.NewBuffer(b))
+	r := httptest.NewRequest("POST", "localhost:1/register", bytes.NewBuffer(b))
 	w := httptest.NewRecorder()
 
 	registerHandle(w, r)
@@ -34,13 +34,13 @@ func TestRegisterHandle(t *testing.T) {
 func TestUnregisterHandle(t *testing.T) {
 	cleanUpForNewTest()
 	Registry[knownServ1.service] = knownServ1.port
-	m := UnregisterJson{knownServ1.service}
+	m := UnRegisterReqJson{knownServ1.service}
 	b, err := json.Marshal(m)
 	if err != nil {
 		t.Errorf("Setup Fails")
 		return
 	}
-	r := httptest.NewRequest("GET", "localhost:1/unregister", bytes.NewBuffer(b))
+	r := httptest.NewRequest("POST", "localhost:1/unregister", bytes.NewBuffer(b))
 	w := httptest.NewRecorder()
 
 	unregisterHandle(w, r)
@@ -60,7 +60,7 @@ func TestRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			m := RegisterJson{knownServ1.service, knownServ1.port}
+			m := RegisterReqJson{knownServ1.service, knownServ1.port}
 			b, err := json.Marshal(m)
 			if err != nil {
 				t.Errorf("Setup Fails")
@@ -76,7 +76,7 @@ func TestRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			m := RegisterJson{knownServ2.service, knownServ2.port}
+			m := RegisterReqJson{knownServ2.service, knownServ2.port}
 			b, err := json.Marshal(m)
 			if err != nil {
 				t.Errorf("Setup Fails")
@@ -92,7 +92,7 @@ func TestRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			m := UnregisterJson{knownServ1.service}
+			m := UnRegisterReqJson{knownServ1.service}
 			b, err := json.Marshal(m)
 			if err != nil {
 				t.Errorf("Setup Fails")
