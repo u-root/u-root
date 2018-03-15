@@ -10,11 +10,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/wifi/wifiStub"
+	"github.com/u-root/u-root/pkg/wifi"
 )
 
 func connectWifiArbitratorSetup(curEssid, connEssid string, bufferSize int) {
-	WifiWorker = wifiStub.StubWifiWorker{
+	WifiWorker = wifi.StubWifiWorker{
 		ScanInterfacesOut:  nil,
 		ScanWifiOut:        nil,
 		ScanCurrentWifiOut: curEssid,
