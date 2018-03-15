@@ -24,6 +24,10 @@ type UserInputValidationTestcase struct {
 }
 
 var (
+	EssidStub = "stub"
+	IdStub    = "stub"
+	PassStub  = "123456789"
+
 	userInputValidationTestcases = []UserInputValidationTestcase{
 		{
 			name:  "Essid, passphrase, Id",

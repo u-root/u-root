@@ -12,6 +12,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/u-root/u-root/pkg/wifi"
 )
 
 const (
@@ -244,7 +246,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 
 	// if err == nil, we have the OK to connect
 	// Since there is only one arbitrator, there is only one OK at any one time
-	if err := connectWifi(a...); err != nil {
+	if err := WifiWorker.Connect(a...); err != nil {
 		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
 		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -268,9 +270,9 @@ func startServer() {
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
 }
 
-func displayWifi(wr io.Writer, wifiOpts []WifiOption, connectedEssid, connectingEssid string) error {
+func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
 	wifiData := struct {
-		WifiOpts        []WifiOption
+		WifiOpts        []wifi.WifiOption
 		ConnectedEssid  string
 		ConnectingEssid string
 	}{wifiOpts, connectedEssid, connectingEssid}
