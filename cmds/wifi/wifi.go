@@ -13,6 +13,7 @@ import (
 	"os/exec"
 
 	"github.com/u-root/u-root/pkg/wifi"
+	"github.com/u-root/u-root/pkg/wifi/wifiStub"
 )
 
 const (
@@ -31,14 +32,6 @@ var (
 	ConnectingEssid string
 	NearbyWifis     []wifi.WifiOption
 	WifiWorker      wifi.Wifi
-
-	// State for the Test Server
-	StubNearbyWifis = []wifi.WifiOption{
-		{"Stub1", wifi.NoEnc},
-		{"Stub2", wifi.WpaPsk},
-		{"Stub3", wifi.WpaEap},
-		{"Stub4", wifi.NotSupportedProto},
-	}
 )
 
 func init() {
@@ -74,7 +67,11 @@ func connectWifiArbitrator() {
 			if req.success {
 				CurEssid = req.essid
 			} else {
-				WifiWorker.ScanCurrentWifi()
+				essid, err := WifiWorker.ScanCurrentWifi()
+				if err != nil {
+					log.Fatalf("error: %v", err)
+				}
+				CurEssid = essid
 			}
 			acceptedRoutineId = nil
 			ConnectingEssid = ""
@@ -93,10 +90,30 @@ func connectWifiArbitrator() {
 
 func main() {
 	flag.Parse()
-	WifiWorker, err := wifi.NewWorker(*iface)
+
+	// Start a Server with Stub data
+	// for manual end-to-end testing
+	if *test {
+		NearbyWifis = []wifi.WifiOption{
+			{"Stub1", wifi.NoEnc},
+			{"Stub2", wifi.WpaPsk},
+			{"Stub3", wifi.WpaEap},
+			{"Stub4", wifi.NotSupportedProto},
+		}
+		WifiWorker = wifiStub.StubWifiWorker{
+			ScanInterfacesOut:  nil,
+			ScanWifiOut:        NearbyWifis,
+			ScanCurrentWifiOut: CurEssid,
+		}
+		go connectWifiArbitrator()
+		startServer()
+	}
+
+	w, err := wifi.NewWorker(*iface)
 	if err != nil {
 		log.Fatal(err)
 	}
+	WifiWorker = w
 
 	if *list {
 		wifiOpts, err := WifiWorker.ScanWifi()
@@ -127,14 +144,6 @@ func main() {
 			fmt.Println(i)
 		}
 		return
-	}
-
-	// Start a Server with Stub data
-	// for manual end-to-end testing
-	if *test {
-		NearbyWifis = StubNearbyWifis
-		go connectWifiArbitrator()
-		startServer()
 	}
 
 	a := flag.Args()
