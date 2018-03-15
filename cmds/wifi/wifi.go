@@ -13,7 +13,6 @@ import (
 	"os/exec"
 
 	"github.com/u-root/u-root/pkg/wifi"
-	"github.com/u-root/u-root/pkg/wifi/wifiStub"
 )
 
 const (
@@ -100,7 +99,7 @@ func main() {
 			{"Stub3", wifi.WpaEap},
 			{"Stub4", wifi.NotSupportedProto},
 		}
-		WifiWorker = wifiStub.StubWifiWorker{
+		WifiWorker = wifi.StubWifiWorker{
 			ScanInterfacesOut:  nil,
 			ScanWifiOut:        NearbyWifis,
 			ScanCurrentWifiOut: CurEssid,

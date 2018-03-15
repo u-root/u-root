@@ -1,10 +1,8 @@
-package wifiStub
-
-import "github.com/u-root/u-root/pkg/wifi"
+package wifi
 
 type StubWifiWorker struct {
 	ScanInterfacesOut  []string
-	ScanWifiOut        []wifi.WifiOption
+	ScanWifiOut        []WifiOption
 	ScanCurrentWifiOut string
 }
 
@@ -12,7 +10,7 @@ func (stub StubWifiWorker) ScanInterfaces() ([]string, error) {
 	return stub.ScanInterfacesOut, nil
 }
 
-func (stub StubWifiWorker) ScanWifi() ([]wifi.WifiOption, error) {
+func (stub StubWifiWorker) ScanWifi() ([]WifiOption, error) {
 	return stub.ScanWifiOut, nil
 }
 
