@@ -123,7 +123,7 @@ func redirectToResourceHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("localhost:%v/", port), http.StatusPermanentRedirect)
 }
 
-func startServer() {
+func buildRouter() http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		buildHtmlPage(w)
@@ -132,7 +132,11 @@ func startServer() {
 	r.HandleFunc("/unregister", unregisterHandle).Methods("POST")
 	r.HandleFunc("/service/{service}", getServiceHandle).Methods("GET")
 	r.HandleFunc("/go/{service}", redirectToResourceHandle).Methods("GET")
-	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), r))
+	return r
+}
+
+func startServer() {
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), buildRouter()))
 }
 
 func buildHtmlPage(wr io.Writer) error {
