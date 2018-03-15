@@ -173,7 +173,7 @@ func TestParseIwlistOutput(t *testing.T) {
 		err      error
 	)
 
-	// No WiFi present
+	// No Wifi present
 	o = nil
 	exp = nil
 	out = parseIwlistOut(o)
@@ -181,7 +181,7 @@ func TestParseIwlistOutput(t *testing.T) {
 		t.Errorf("\ngot:[%v]\nwant:[%v]", out, exp)
 	}
 
-	// Only 1 WiFi present
+	// Only 1 Wifi present
 	o = []byte(`
 wlan0    Scan completed :
           Cell 01 - Address: 00:00:00:00:00:01

@@ -55,17 +55,25 @@ type WifiOption struct {
 	AuthSuite SecProto
 }
 
-type WiFi interface {
+type Wifi interface {
 	ScanInterfaces() ([]string, error)
 	ScanWifi() ([]WifiOption, error)
+	ScanCurrentWifi() (string, error)
 	Connect(a ...string) error
 }
 
-type WiFiService struct {
+type WifiWorker struct {
 	Interface string
 }
 
-func (w WiFiService) ScanInterfaces() ([]string, error) {
+func NewWorker(i string) (WifiWorker, error) {
+	if o, err := exec.Command("ip", "link", "set", "dev", i).CombinedOutput(); err != nil {
+		return WifiWorker{""}, fmt.Errorf("ip link set dev %v: %v (%v)", i, string(o), err)
+	}
+	return WifiWorker{i}, nil
+}
+
+func (w WifiWorker) ScanInterfaces() ([]string, error) {
 	o, err := exec.Command("iwconfig").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("iwconfig: %v (%v)", string(o), err)
@@ -81,7 +89,7 @@ func parseIwconfig(o []byte) (res []string) {
 	return
 }
 
-func (w WiFiService) ScanWifi() ([]WifiOption, error) {
+func (w WifiWorker) ScanWifi() ([]WifiOption, error) {
 	o, err := exec.Command("iwlist", w.Interface, "scanning").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("iwlist: %v (%v)", string(o), err)
@@ -93,7 +101,7 @@ func (w WiFiService) ScanWifi() ([]WifiOption, error) {
  * Assumptions:
  *	1) Cell, essid, and encryption key option are 1:1 match
  *	2) We only support IEEE 802.11i/WPA2 Version 1
- *	3) Each WiFi only support (1) authentication suites (based on observations)
+ *	3) Each Wifi only support (1) authentication suites (based on observations)
  */
 
 func parseIwlistOut(o []byte) []WifiOption {
@@ -108,7 +116,7 @@ func parseIwlistOut(o []byte) []WifiOption {
 	var res []WifiOption
 	knownEssids := make(map[string]bool)
 
-	// Assemble all the WiFi options
+	// Assemble all the Wifi options
 	for i := 0; i < len(cells); i++ {
 		essid := strings.Trim(strings.Split(string(essids[i]), ":")[1], "\"\n")
 		if knownEssids[essid] {
@@ -147,7 +155,15 @@ func parseIwlistOut(o []byte) []WifiOption {
 	return res
 }
 
-func (w WiFiService) Connect(a ...string) error {
+func (w WifiWorker) ScanCurrentWifi() (string, error) {
+	o, err := exec.Command("iwgetid", "-r").CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	return strings.Trim(string(o), " \n"), nil
+}
+
+func (w WifiWorker) Connect(a ...string) error {
 	// format of a: [essid, pass, id]
 	conf, err := generateConfig(a...)
 	if err != nil {
