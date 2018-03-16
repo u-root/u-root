@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -119,41 +120,38 @@ func TestGetServiceFails(t *testing.T) {
 func TestRace(t *testing.T) {
 	// Set Up
 	cleanUpForNewTest()
-	numRegisterGoRoutines := 10
-	numUnregisterGoRoutines := 10
+	setUpKnownServices()
+
+	numRegisterGoRoutines, numUnregisterGoRoutines, numReadGoRoutines := 10, 10, 100
+	serviceChoices := []RegistryEntryStub{
+		knownServ1, knownServ2, knownServ3,
+		newServ1, newServ2, newServ3,
+	}
+
+	r := buildRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
 	// Execute
 	var wg sync.WaitGroup
 
-	for i := 0; i < numRegisterGoRoutines/2; i++ {
+	for i := 0; i < numRegisterGoRoutines; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			m := RegisterReqJson{knownServ1.service, knownServ1.port}
+			idx := rand.Intn(len(serviceChoices))
+			m := RegisterReqJson{serviceChoices[idx].service, serviceChoices[idx].port}
 			b, err := json.Marshal(m)
 			if err != nil {
 				t.Errorf("Setup Fails")
 				return
 			}
-			r := httptest.NewRequest("GET", "localhost:1/register", bytes.NewBuffer(b))
-			w := httptest.NewRecorder()
-			registerHandle(w, r)
-		}()
-	}
-
-	for i := 0; i < numRegisterGoRoutines/2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			m := RegisterReqJson{knownServ2.service, knownServ2.port}
-			b, err := json.Marshal(m)
+			req, err := http.NewRequest("POST", ts.URL+"/register", bytes.NewBuffer(b))
 			if err != nil {
-				t.Errorf("Setup Fails")
+				t.Errorf("error: %v", err)
 				return
 			}
-			r := httptest.NewRequest("GET", "localhost:1/register", bytes.NewBuffer(b))
-			w := httptest.NewRecorder()
-			registerHandle(w, r)
+			http.DefaultClient.Do(req)
 		}()
 	}
 
@@ -161,15 +159,33 @@ func TestRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			m := UnRegisterReqJson{knownServ1.service}
+			idx := rand.Intn(len(serviceChoices))
+			m := UnRegisterReqJson{serviceChoices[idx].service}
 			b, err := json.Marshal(m)
 			if err != nil {
 				t.Errorf("Setup Fails")
 				return
 			}
-			r := httptest.NewRequest("GET", "localhost:1/unregister", bytes.NewBuffer(b))
-			w := httptest.NewRecorder()
-			unregisterHandle(w, r)
+			req, err := http.NewRequest("POST", ts.URL+"/unregister", bytes.NewBuffer(b))
+			if err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+			http.DefaultClient.Do(req)
+		}()
+	}
+
+	for i := 0; i < numReadGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			idx := rand.Intn(len(serviceChoices))
+			req, err := http.NewRequest("GET", ts.URL+"/service/"+serviceChoices[idx].service, nil)
+			if err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+			http.DefaultClient.Do(req)
 		}()
 	}
 
