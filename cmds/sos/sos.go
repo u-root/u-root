@@ -14,11 +14,14 @@ var (
 	Registry = make(map[string]uint)
 )
 
-func read(serviceName string) (port uint, exists bool) {
+func read(serviceName string) (uint, error) {
 	RWLock.RLock()
 	defer RWLock.RUnlock()
-	port, exists = Registry[serviceName]
-	return
+	port, exists := Registry[serviceName]
+	if !exists {
+		return 0, fmt.Errorf("%v is not in the registry", serviceName)
+	}
+	return port, nil
 }
 
 func register(serviceName string, portNum uint) error {

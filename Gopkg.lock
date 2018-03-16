@@ -21,6 +21,12 @@
   revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
 
 [[projects]]
+  name = "github.com/beevik/ntp"
+  packages = ["."]
+  revision = "62c80a04de2086884d8296004b6d74ee1846c582"
+  version = "v0.2.0"
+
+[[projects]]
   name = "github.com/boltdb/bolt"
   packages = ["."]
   revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
@@ -85,6 +91,18 @@
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
+
+[[projects]]
+  name = "github.com/gorilla/context"
+  packages = ["."]
+  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/gorilla/mux"
+  packages = ["."]
+  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
+  version = "v1.6.1"
 
 [[projects]]
   name = "github.com/jmank88/nuts"
@@ -235,7 +253,10 @@
   name = "golang.org/x/net"
   packages = [
     "bpf",
-    "context"
+    "context",
+    "internal/iana",
+    "internal/socket",
+    "ipv4"
   ]
   revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
 
@@ -272,6 +293,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "965c45576d8261261c4ea2f95b0d4aa65a4b3a6d5c7d8e660f836fab69b83b36"
+  inputs-digest = "a5a96e440163570c65a6b3ed407b70519be20c6a489a6010cc9f66b87535da00"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -11,6 +11,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 const (
@@ -57,13 +59,13 @@ td, th {
 `
 )
 
-type RegisterJson struct {
-	ServiceName string
-	PortNumber  uint
+type RegisterReqJson struct {
+	Service string
+	Port    uint
 }
 
 func registerHandle(w http.ResponseWriter, r *http.Request) {
-	var msg RegisterJson
+	var msg RegisterReqJson
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
@@ -71,7 +73,8 @@ func registerHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	if err := register(msg.ServiceName, msg.PortNumber); err != nil {
+
+	if err := register(msg.Service, msg.Port); err != nil {
 		fmt.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -79,12 +82,12 @@ func registerHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
-type UnregisterJson struct {
+type UnRegisterReqJson struct {
 	ServiceName string
 }
 
 func unregisterHandle(w http.ResponseWriter, r *http.Request) {
-	var msg UnregisterJson
+	var msg UnRegisterReqJson
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
@@ -96,13 +99,44 @@ func unregisterHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
-func startServer() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+type GetServiceResJson struct {
+	Port uint
+}
+
+func getServiceHandle(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	port, err := read(vars["service"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(GetServiceResJson{port})
+}
+
+func redirectToResourceHandle(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	port, err := read(vars["service"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("localhost:%v/", port), http.StatusPermanentRedirect)
+}
+
+func buildRouter() http.Handler {
+	r := mux.NewRouter()
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		buildHtmlPage(w)
-	})
-	http.HandleFunc("/register", registerHandle)
-	http.HandleFunc("/unregister", unregisterHandle)
-	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil))
+	}).Methods("GET")
+	r.HandleFunc("/register", registerHandle).Methods("POST")
+	r.HandleFunc("/unregister", unregisterHandle).Methods("POST")
+	r.HandleFunc("/service/{service}", getServiceHandle).Methods("GET")
+	r.HandleFunc("/go/{service}", redirectToResourceHandle).Methods("GET")
+	return r
+}
+
+func startServer() {
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), buildRouter()))
 }
 
 func buildHtmlPage(wr io.Writer) error {
