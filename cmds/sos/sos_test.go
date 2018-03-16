@@ -25,7 +25,7 @@ var (
 	newServ3   = RegistryEntryStub{"stub6", 6}
 )
 
-func setUpKnownService() {
+func setUpKnownServices() {
 	register(knownServ1.service, knownServ1.port)
 	register(knownServ2.service, knownServ2.port)
 	register(knownServ3.service, knownServ3.port)
@@ -84,7 +84,7 @@ func TestUnRegister(t *testing.T) {
 
 func TestSnapshot(t *testing.T) {
 	cleanUpForNewTest()
-	setUpKnownService()
+	setUpKnownServices()
 	s := snapshotRegistry()
 	if port, exists := s[knownServ1.service]; !exists || port != knownServ1.port {
 		t.Errorf("%v\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1, port, exists, knownServ1.port, true)
