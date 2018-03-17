@@ -20,11 +20,11 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
-	"fmt"
 )
 
 func getRSDP(path string) (string, error) {
