@@ -50,11 +50,11 @@ func getRSDP(path string) (string, error) {
 		}
 	}()
 
-	var data_read int
+	var dataRead int
 	var exit int
-	data_read = 1
+	dataRead = 1
 	exit = 0
-	for data_read == 1 && exit == 0 {
+	for dataRead == 1 && exit == 0 {
 		select {
 		case res := <-channel:
 			if strings.Contains(res, "RSDP") {
@@ -63,7 +63,7 @@ func getRSDP(path string) (string, error) {
 			}
 
 		case <-time.After(1 * time.Second):
-			data_read = 0
+			dataRead = 0
 		}
 	}
 	return returnValue, err
@@ -76,7 +76,5 @@ func main() {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	writer := bufio.NewWriter(f)
-	writer.WriteString(rsdp_value)
-	writer.Flush()
+	f.Fprintf(f, " acpi_rsdp=%08x \n", rsdp_value)
 }
