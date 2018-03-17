@@ -1,5 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
-// Use of this source code is governed by a BSD-style
+// Copyright 2012-2017 the u-root Authors. All rights reserved // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 // rsdp allows to determine the ACPI RSDP structure address which could
@@ -25,6 +24,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"fmt"
 )
 
 func getRSDP(path string) (string, error) {
@@ -76,5 +76,5 @@ func main() {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	f.Fprintf(f, " acpi_rsdp=%08x \n", rsdp_value)
+	fmt.Fprintf(f, " acpi_rsdp=%08x \n", rsdp_value)
 }
