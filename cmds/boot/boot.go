@@ -369,7 +369,7 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 
 	rsdp, err := ioutil.ReadFile("/tmp/rsdp")
 	if err == nil {
-		be.cmdline = append(be.cmdline, strings.Split(string(rsdp), "\n"))
+		be.cmdline = append(be.cmdline, string(rsdp))
 	}
 
 	log.Printf("Kernel cmdline %s", be.cmdline)

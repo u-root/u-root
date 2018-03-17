@@ -76,5 +76,5 @@ func main() {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	_, _ = fmt.Fprintf(f, " acpi_rsdp=%s \n", rsdp_value)
+	_, _ = fmt.Fprintf(f, " acpi_rsdp=%s ", rsdp_value)
 }
