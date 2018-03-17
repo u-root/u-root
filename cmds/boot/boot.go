@@ -367,9 +367,9 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	// if /tmp/rsdp file exist we must get the value and add it to the be.cmdline parameter
 	// this will allow the kernel to properly read the ACPI table
 
-	b, err := ioutil.ReadFile("/tmp/rsdp")
+	rsdp, err := ioutil.ReadFile("/tmp/rsdp")
 	if err == nil {
-		be.cmdline = append(be.cmdline, strings.Split(string(b), "\n"))
+		be.cmdline = append(be.cmdline, strings.Split(string(rsdp), "\n"))
 	}
 
 	log.Printf("Kernel cmdline %s", be.cmdline)
