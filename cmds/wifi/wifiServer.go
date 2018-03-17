@@ -12,6 +12,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/u-root/u-root/pkg/wifi"
 )
 
 const (
@@ -191,11 +193,11 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 
 func refreshHandle(w http.ResponseWriter, r *http.Request) {
 	if err := scanWifi(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 	json.NewEncoder(w).Encode(nil)
-
 }
 
 type ConnectJsonMsg struct {
@@ -210,12 +212,14 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 	a, err := userInputValidation(msg.Essid, msg.Pass, msg.Id)
 	if err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -224,28 +228,34 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	routineID := make([]byte, 8)
 	if _, err := rand.Read(routineID); err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	c := make(chan error)
 
-	// Making a Conncetion Request
+	c := make(chan error, 1)
+
+	// Making a Connection Request
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
 	if err := <-c; err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 
 	// if err == nil, we have the OK to connect
 	// Since there is only one arbitrator, there is only one OK at any one time
-	if err := connectWifi(a...); err != nil && false {
+	if err := WifiWorker.Connect(a...); err != nil {
 		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
+
 	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, true}
+	<-c // Make sure the state is updated
 	json.NewEncoder(w).Encode(nil)
 }
 
@@ -260,9 +270,9 @@ func startServer() {
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
 }
 
-func displayWifi(wr io.Writer, wifiOpts []WifiOption, connectedEssid, connectingEssid string) error {
+func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
 	wifiData := struct {
-		WifiOpts        []WifiOption
+		WifiOpts        []wifi.WifiOption
 		ConnectedEssid  string
 		ConnectingEssid string
 	}{wifiOpts, connectedEssid, connectingEssid}

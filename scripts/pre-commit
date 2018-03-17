@@ -14,6 +14,7 @@ fi
 
 gofmt -w -s $FILES
 golint -set_exit_status $FILES
-go vet $FILES
+go tool vet cmds pkg
+go tool vet u-root.go
 
 echo "Pre-Commit Passed"

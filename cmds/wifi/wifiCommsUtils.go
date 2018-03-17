@@ -4,22 +4,10 @@
 
 package main
 
-type SecProto int
-
-const (
-	NoEnc SecProto = iota
-	WpaPsk
-	WpaEap
-	NotSupportedProto
-)
-
-type WifiOption struct {
-	Essid     string
-	AuthSuite SecProto
-}
+import "github.com/u-root/u-root/pkg/wifi"
 
 type State struct {
-	NearbyWifis     []WifiOption
+	NearbyWifis     []wifi.WifiOption
 	ConnectingEssid string
 	CurEssid        string
 }
