@@ -28,7 +28,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/binary"
 	"flag"
 	"fmt"
