@@ -223,6 +223,9 @@ func (pT *ProcessTable) LoadTable() error {
 	if err != nil {
 		return err
 	}
+	if len(list) == 0 {
+		return fmt.Errorf("No processes in /proc.")
+	}
 
 	for _, dir := range list {
 		// Filter out files and directories which are not numbers.
