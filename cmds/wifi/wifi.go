@@ -25,8 +25,6 @@ var (
 	show  = flag.Bool("s", false, "list interfaces allowed with WiFi extension")
 	test  = flag.Bool("test", false, "set up a test server")
 
-	Worker          wifi.Wifi
-	Service         WifiService
 	NearbyWifisStub = []wifi.WifiOption{
 		{"Stub1", wifi.NoEnc},
 		{"Stub2", wifi.WpaPsk},
@@ -49,25 +47,25 @@ func main() {
 	// Start a Server with Stub data
 	// for manual end-to-end testing
 	if *test {
-		Worker = wifi.StubWifiWorker{
+		worker := wifi.StubWifiWorker{
 			ScanInterfacesOut:  nil,
 			ScanWifiOut:        NearbyWifisStub,
 			ScanCurrentWifiOut: "",
 		}
-		Service = NewWifiService(Worker)
-		Service.Start()
-		defer Service.Shutdown()
-		startServer()
+		service := NewWifiService(worker)
+		service.Start()
+		defer service.Shutdown()
+		NewWifiServer(service).startServer()
 		return
 	}
 
-	Worker, err := wifi.NewWorker(*iface)
+	worker, err := wifi.NewWorker(*iface)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if *list {
-		wifiOpts, err := Worker.ScanWifi()
+		wifiOpts, err := worker.ScanWifi()
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -87,7 +85,7 @@ func main() {
 	}
 
 	if *show {
-		interfaces, err := Worker.ScanInterfaces()
+		interfaces, err := worker.ScanInterfaces()
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -108,15 +106,15 @@ func main() {
 		if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
 			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
 		}
-		Service = NewWifiService(Worker)
-		Service.Start()
-		defer Service.Shutdown()
-		go Service.Refresh()
-		startServer()
+		service := NewWifiService(worker)
+		service.Start()
+		defer service.Shutdown()
+		go service.Refresh()
+		NewWifiServer(service).startServer()
 		return
 	}
 
-	if err := Worker.Connect(a...); err != nil {
+	if err := worker.Connect(a...); err != nil {
 		log.Fatalf("error: %v", err)
 	}
 }
