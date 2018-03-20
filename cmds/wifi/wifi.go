@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -26,11 +25,14 @@ var (
 	show  = flag.Bool("s", false, "list interfaces allowed with WiFi extension")
 	test  = flag.Bool("test", false, "set up a test server")
 
-	// State of the service
-	CurEssid        string
-	ConnectingEssid string
-	NearbyWifis     []wifi.WifiOption
-	WifiWorker      wifi.Wifi
+	Worker          wifi.Wifi
+	Service         WifiService
+	NearbyWifisStub = []wifi.WifiOption{
+		{"Stub1", wifi.NoEnc},
+		{"Stub2", wifi.WpaPsk},
+		{"Stub3", wifi.WpaEap},
+		{"Stub4", wifi.NotSupportedProto},
+	}
 )
 
 func init() {
@@ -41,112 +43,30 @@ func init() {
 	}
 }
 
-func getState() State {
-	return State{NearbyWifis, ConnectingEssid, CurEssid}
-}
-
-func scanWifi() error {
-	o, err := WifiWorker.ScanWifi()
-	if err != nil {
-		return fmt.Errorf("error: %v", err)
-	}
-	NearbyWifis = o
-	return nil
-}
-
-// To prevent race condition, there should be only one
-// goroutine running connectWifiArbitrator at any one time
-func connectWifiArbitrator() {
-	// Accepted Routine = routine that is allowed to change the state
-	var acceptedRoutineId []byte
-	for req := range ConnectReqChan {
-		switch {
-		// Accepted routine returns its result
-		case bytes.Equal(req.routineID, acceptedRoutineId):
-			if req.success {
-				CurEssid = req.essid
-			} else {
-				essid, err := WifiWorker.ScanCurrentWifi()
-				if err != nil {
-					log.Fatalf("error: %v", err)
-				}
-				CurEssid = essid
-			}
-			acceptedRoutineId = nil
-			ConnectingEssid = ""
-			req.c <- nil // Neccessary for testing
-		// The requesting routine wins and can change the state
-		case ConnectingEssid == "":
-			acceptedRoutineId = req.routineID
-			ConnectingEssid = req.essid
-			req.c <- nil
-		// The requesting routine loses
-		default:
-			req.c <- fmt.Errorf("Service is trying to connect to %s", ConnectingEssid)
-		}
-	}
-}
-
-// To prevent race condition, there should be only one
-// goroutine running refreshNotifier at any one time
-func refreshNotifier() {
-	refreshing := false
-	workDone := make(chan bool, 1)
-	pool := make(chan RefreshReqChanMsg, DefaultBufferSize)
-
-	// Pooler
-	for {
-		select {
-		case r := <-RefreshReqChan:
-			if !refreshing {
-				refreshing = true
-				// Notifier
-				go func(p chan RefreshReqChanMsg) {
-					err := scanWifi()
-					workDone <- true
-					for req := range p {
-						req.c <- err
-					}
-				}(pool)
-			}
-			pool <- r
-		case <-workDone:
-			close(pool)
-			refreshing = false
-			pool = make(chan RefreshReqChanMsg, DefaultBufferSize)
-		}
-	}
-}
-
 func main() {
 	flag.Parse()
 
 	// Start a Server with Stub data
 	// for manual end-to-end testing
 	if *test {
-		NearbyWifis = []wifi.WifiOption{
-			{"Stub1", wifi.NoEnc},
-			{"Stub2", wifi.WpaPsk},
-			{"Stub3", wifi.WpaEap},
-			{"Stub4", wifi.NotSupportedProto},
-		}
-		WifiWorker = wifi.StubWifiWorker{
+		Worker = wifi.StubWifiWorker{
 			ScanInterfacesOut:  nil,
-			ScanWifiOut:        NearbyWifis,
-			ScanCurrentWifiOut: CurEssid,
+			ScanWifiOut:        NearbyWifisStub,
+			ScanCurrentWifiOut: "",
 		}
-		go connectWifiArbitrator()
+		Service = NewWifiService(Worker)
+		Service.Start()
 		startServer()
+		return
 	}
 
-	w, err := wifi.NewWorker(*iface)
+	Worker, err := wifi.NewWorker(*iface)
 	if err != nil {
 		log.Fatal(err)
 	}
-	WifiWorker = w
 
 	if *list {
-		wifiOpts, err := WifiWorker.ScanWifi()
+		wifiOpts, err := Worker.ScanWifi()
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -166,7 +86,7 @@ func main() {
 	}
 
 	if *show {
-		interfaces, err := WifiWorker.ScanInterfaces()
+		interfaces, err := Worker.ScanInterfaces()
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -187,13 +107,14 @@ func main() {
 		if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
 			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
 		}
-		go scanWifi()
-		go connectWifiArbitrator()
+		Service = NewWifiService(Worker)
+		Service.Start()
+		Service.RefreshReqChan <- make(chan error, 1)
 		startServer()
 		return
 	}
 
-	if err := WifiWorker.Connect(a...); err != nil {
+	if err := Worker.Connect(a...); err != nil {
 		log.Fatalf("error: %v", err)
 	}
 }

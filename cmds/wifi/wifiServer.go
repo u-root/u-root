@@ -5,7 +5,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -195,7 +194,7 @@ func refreshHandle(w http.ResponseWriter, r *http.Request) {
 	c := make(chan error, 1)
 
 	// Making a Refresh Request
-	RefreshReqChan <- RefreshReqChanMsg{c}
+	Service.RefreshReqChan <- (c)
 	if err := <-c; err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
@@ -228,46 +227,29 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare for a connection request
-	routineID := make([]byte, 8)
-	if _, err := rand.Read(routineID); err != nil {
-		log.Printf("error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
-		return
-	}
-
 	c := make(chan error, 1)
 
 	// Making a Connection Request
-	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
+	Service.ConnectReqChan <- ConnectReqMsg{c, a}
 	if err := <-c; err != nil {
 		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-
-	// if err == nil, we have the OK to connect
-	// Since there is only one arbitrator, there is only one OK at any one time
-	if err := WifiWorker.Connect(a...); err != nil {
-		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
-		log.Printf("error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
-		return
-	}
-
-	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, true}
-	<-c // Make sure the state is updated
+	// Connect Successful
 	json.NewEncoder(w).Encode(nil)
 }
 
+func getStateHandle(w http.ResponseWriter, r *http.Request) {
+	c := make(chan State, 1)
+	Service.StateReqChan <- (c)
+	s := <-c
+	displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
+}
+
 func startServer() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		s := getState()
-		displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
-	})
+	http.HandleFunc("/", getStateHandle)
 	http.HandleFunc("/refresh", refreshHandle)
 	http.HandleFunc("/connect", connectHandle)
 
