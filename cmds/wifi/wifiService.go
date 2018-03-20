@@ -99,7 +99,7 @@ func (ws WifiService) startConnectWifiArbitrator() {
 			doneUpdate := make(chan bool, 2)
 			ws.stateUpdateChan <- stateUpdateMsg{curEssidComp, curEssid, doneUpdate}
 			connectingEssid = ""
-			ws.stateUpdateChan <- stateUpdateMsg{connectingEssidComp, connectingEssidComp, doneUpdate}
+			ws.stateUpdateChan <- stateUpdateMsg{connectingEssidComp, connectingEssid, doneUpdate}
 			<-doneUpdate
 			<-doneUpdate
 			winningChan <- err
@@ -167,7 +167,7 @@ func (ws WifiService) startStateTracker() {
 }
 
 func updateState(state *State, update stateUpdateMsg) {
-	switch update.val {
+	switch update.key {
 	case curEssidComp:
 		state.CurEssid = update.val.(string)
 	case connectingEssidComp:
@@ -179,7 +179,7 @@ func updateState(state *State, update stateUpdateMsg) {
 	}
 }
 
-func NewWifiService(w wifi.WifiWorker) WifiService {
+func NewWifiService(w wifi.Wifi) WifiService {
 	return WifiService{
 		wifiWorker:            w,
 		connectArbitratorQuit: make(chan bool, 1),
@@ -195,6 +195,7 @@ func NewWifiService(w wifi.WifiWorker) WifiService {
 func (ws WifiService) Start() {
 	go ws.startConnectWifiArbitrator()
 	go ws.startRefreshPooler()
+	go ws.startStateTracker()
 }
 
 func (ws WifiService) Shutdown() {
