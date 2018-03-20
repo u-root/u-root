@@ -46,9 +46,9 @@ type WifiService struct {
 	stateUpdateChan       chan stateUpdateMsg
 
 	// Communicating Channels with Server goroutines
-	ConnectReqChan chan ConnectReqMsg
-	RefreshReqChan chan RefreshReqMsg
-	StateReqChan   chan StateReqMsg
+	connectReqChan chan ConnectReqMsg
+	refreshReqChan chan RefreshReqMsg
+	stateReqChan   chan StateReqMsg
 }
 
 // Internal type
@@ -75,7 +75,7 @@ func (ws WifiService) startConnectWifiArbitrator() {
 	var winningChan chan error
 	for {
 		select {
-		case req := <-ws.ConnectReqChan:
+		case req := <-ws.connectReqChan:
 			if connectingEssid == "" {
 				// The requesting routine wins
 				connectingEssid = req.args[0]
@@ -116,7 +116,7 @@ func (ws WifiService) startRefreshPooler() {
 	// Pooler
 	for {
 		select {
-		case req := <-ws.RefreshReqChan:
+		case req := <-ws.refreshReqChan:
 			if !refreshing {
 				refreshing = true
 				ws.stateUpdateChan <- stateUpdateMsg{refreshingComp, refreshing, nil}
@@ -126,6 +126,7 @@ func (ws WifiService) startRefreshPooler() {
 					o, err := ws.wifiWorker.ScanWifi()
 					doneUpdate := make(chan bool, 1)
 					ws.stateUpdateChan <- stateUpdateMsg{nearbyWifisComp, o, doneUpdate}
+					<-doneUpdate
 					workDone <- true
 					for ch := range p {
 						ch <- err
@@ -153,7 +154,7 @@ func (ws WifiService) startStateTracker() {
 	}
 	for {
 		select {
-		case r := <-ws.StateReqChan:
+		case r := <-ws.stateReqChan:
 			r <- state
 		case updateMsg := <-ws.stateUpdateChan:
 			updateState(&state, updateMsg)
@@ -186,9 +187,9 @@ func NewWifiService(w wifi.Wifi) WifiService {
 		refreshPoolerQuit:     make(chan bool, 1),
 		stateTrackerQuit:      make(chan bool, 1),
 		stateUpdateChan:       make(chan stateUpdateMsg, 4),
-		ConnectReqChan:        make(chan ConnectReqMsg, DefaultBufferSize),
-		RefreshReqChan:        make(chan RefreshReqMsg, DefaultBufferSize),
-		StateReqChan:          make(chan StateReqMsg, DefaultBufferSize),
+		connectReqChan:        make(chan ConnectReqMsg, DefaultBufferSize),
+		refreshReqChan:        make(chan RefreshReqMsg, DefaultBufferSize),
+		stateReqChan:          make(chan StateReqMsg, DefaultBufferSize),
 	}
 }
 
@@ -202,4 +203,22 @@ func (ws WifiService) Shutdown() {
 	ws.connectArbitratorQuit <- true
 	ws.refreshPoolerQuit <- true
 	ws.stateTrackerQuit <- true
+}
+
+func (ws WifiService) GetState() State {
+	c := make(chan State, 1)
+	ws.stateReqChan <- (c)
+	return <-c
+}
+
+func (ws WifiService) Connect(args []string) error {
+	c := make(chan error, 1)
+	ws.connectReqChan <- ConnectReqMsg{c, args}
+	return <-c
+}
+
+func (ws WifiService) Refresh() error {
+	c := make(chan error, 1)
+	ws.refreshReqChan <- (c)
+	return <-c
 }

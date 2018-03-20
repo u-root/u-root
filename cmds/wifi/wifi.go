@@ -56,6 +56,7 @@ func main() {
 		}
 		Service = NewWifiService(Worker)
 		Service.Start()
+		defer Service.Shutdown()
 		startServer()
 		return
 	}
@@ -109,7 +110,8 @@ func main() {
 		}
 		Service = NewWifiService(Worker)
 		Service.Start()
-		Service.RefreshReqChan <- make(chan error, 1)
+		defer Service.Shutdown()
+		go Service.Refresh()
 		startServer()
 		return
 	}

@@ -191,11 +191,7 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 }
 
 func refreshHandle(w http.ResponseWriter, r *http.Request) {
-	c := make(chan error, 1)
-
-	// Making a Refresh Request
-	Service.RefreshReqChan <- (c)
-	if err := <-c; err != nil {
+	if err := Service.Refresh(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -227,11 +223,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := make(chan error, 1)
-
-	// Making a Connection Request
-	Service.ConnectReqChan <- ConnectReqMsg{c, a}
-	if err := <-c; err != nil {
+	if err := Service.Connect(a); err != nil {
 		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
@@ -242,9 +234,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func getStateHandle(w http.ResponseWriter, r *http.Request) {
-	c := make(chan State, 1)
-	Service.StateReqChan <- (c)
-	s := <-c
+	s := Service.GetState()
 	displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
 }
 
