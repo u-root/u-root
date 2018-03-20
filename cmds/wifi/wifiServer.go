@@ -177,6 +177,10 @@ function disableOtherButtons(elem) {
 `
 )
 
+type WifiServer struct {
+	service WifiService
+}
+
 func userInputValidation(essid, pass, id string) ([]string, error) {
 	switch {
 	case essid != "" && pass != "" && id != "":
@@ -190,8 +194,8 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 	}
 }
 
-func refreshHandle(w http.ResponseWriter, r *http.Request) {
-	if err := Service.Refresh(); err != nil {
+func (ws WifiServer) refreshHandle(w http.ResponseWriter, r *http.Request) {
+	if err := ws.service.Refresh(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -205,7 +209,7 @@ type ConnectJsonMsg struct {
 	Id    string
 }
 
-func connectHandle(w http.ResponseWriter, r *http.Request) {
+func (ws WifiServer) connectHandle(w http.ResponseWriter, r *http.Request) {
 	var msg ConnectJsonMsg
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
@@ -223,7 +227,7 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := Service.Connect(a); err != nil {
+	if err := ws.service.Connect(a); err != nil {
 		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
@@ -233,15 +237,15 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
-func getStateHandle(w http.ResponseWriter, r *http.Request) {
-	s := Service.GetState()
+func (ws WifiServer) getStateHandle(w http.ResponseWriter, r *http.Request) {
+	s := ws.service.GetState()
 	displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
 }
 
-func startServer() {
-	http.HandleFunc("/", getStateHandle)
-	http.HandleFunc("/refresh", refreshHandle)
-	http.HandleFunc("/connect", connectHandle)
+func (ws WifiServer) startServer() {
+	http.HandleFunc("/", ws.getStateHandle)
+	http.HandleFunc("/refresh", ws.refreshHandle)
+	http.HandleFunc("/connect", ws.connectHandle)
 
 	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
 }
@@ -256,4 +260,10 @@ func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, conne
 	tmpl := template.Must(template.New("name").Parse(HtmlPage))
 
 	return tmpl.Execute(wr, wifiData)
+}
+
+func NewWifiServer(service WifiService) WifiServer {
+	return WifiServer{
+		service: service,
+	}
 }
