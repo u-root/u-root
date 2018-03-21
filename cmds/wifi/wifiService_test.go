@@ -15,7 +15,6 @@ import (
 
 func setupStubService() WifiService {
 	wifiWorker := wifi.StubWifiWorker{
-		ScanInterfacesOut:  nil,
 		ScanWifiOut:        NearbyWifisStub,
 		ScanCurrentWifiOut: "",
 	}

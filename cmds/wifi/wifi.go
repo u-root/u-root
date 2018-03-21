@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/wifi"
 )
@@ -25,6 +27,10 @@ var (
 	show  = flag.Bool("s", false, "list interfaces allowed with WiFi extension")
 	test  = flag.Bool("test", false, "set up a test server")
 
+	// RegEx for parsing iwconfig output
+	iwconfigRE = regexp.MustCompile("(?m)^[a-zA-Z0-9]+\\s*IEEE 802.11.*$")
+
+	// Stub data for simple end-to-end interaction test
 	NearbyWifisStub = []wifi.WifiOption{
 		{"Stub1", wifi.NoEnc},
 		{"Stub2", wifi.WpaPsk},
@@ -32,6 +38,14 @@ var (
 		{"Stub4", wifi.NotSupportedProto},
 	}
 )
+
+func parseIwconfig(o []byte) (res []string) {
+	interfaces := iwconfigRE.FindAll(o, -1)
+	for _, i := range interfaces {
+		res = append(res, strings.Split(string(i), " ")[0])
+	}
+	return
+}
 
 func init() {
 	defUsage := flag.Usage
@@ -48,13 +62,23 @@ func main() {
 	// for manual end-to-end testing
 	if *test {
 		worker := wifi.StubWifiWorker{
-			ScanInterfacesOut:  nil,
 			ScanWifiOut:        NearbyWifisStub,
 			ScanCurrentWifiOut: "",
 		}
 		service := NewWifiService(worker)
 		service.Start()
 		NewWifiServer(service).Start() // this function shutdown service upon return
+		return
+	}
+
+	if *show {
+		o, err := exec.Command("iwconfig").CombinedOutput()
+		if err != nil {
+			log.Fatalf("iwconfig: %v (%v)", string(o), err)
+		}
+		for _, i := range parseIwconfig(o) {
+			fmt.Println(i)
+		}
 		return
 	}
 
@@ -79,17 +103,6 @@ func main() {
 			case wifi.NotSupportedProto:
 				fmt.Printf("%s: Not a supported protocol\n", wifiOpt.Essid)
 			}
-		}
-		return
-	}
-
-	if *show {
-		interfaces, err := worker.ScanInterfaces()
-		if err != nil {
-			log.Fatalf("error: %v", err)
-		}
-		for _, i := range interfaces {
-			fmt.Println(i)
 		}
 		return
 	}
