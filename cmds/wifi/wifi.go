@@ -54,8 +54,7 @@ func main() {
 		}
 		service := NewWifiService(worker)
 		service.Start()
-		defer service.Shutdown()
-		NewWifiServer(service).startServer()
+		NewWifiServer(service).Start() // this function shutdown service upon return
 		return
 	}
 
@@ -108,9 +107,8 @@ func main() {
 		}
 		service := NewWifiService(worker)
 		service.Start()
-		defer service.Shutdown()
 		go service.Refresh()
-		NewWifiServer(service).startServer()
+		NewWifiServer(service).Start() // this function shutdown service upon return
 		return
 	}
 
