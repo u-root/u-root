@@ -5,6 +5,7 @@
 package main
 
 import (
+	"math/rand"
 	"reflect"
 	"sync"
 	"testing"
@@ -124,7 +125,7 @@ func TestRaceRefreshWithinDefaultBufferSize(t *testing.T) {
 }
 
 func TestRaceRefreshOverDefaultBufferSize(t *testing.T) {
-	//Set Up
+	// Set Up
 	numGoRoutines := DefaultBufferSize * 2
 	service := setupStubService()
 	service.Start()
@@ -138,5 +139,44 @@ func TestRaceRefreshOverDefaultBufferSize(t *testing.T) {
 			service.Refresh()
 		}()
 	}
+	wg.Wait()
+}
+
+func TestRaceCond(t *testing.T) {
+	// Set Up
+	numConnectRoutines, numRefreshGoRoutines, numReadGoRoutines := 10, 10, 100
+	service := setupStubService()
+	service.Start()
+	defer service.Shutdown()
+
+	essidChoices := []string{"stub1", "stub2", "stub3"}
+
+	var wg sync.WaitGroup
+
+	for i := 0; i < numConnectRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			idx := rand.Intn(len(essidChoices))
+			service.Connect([]string{essidChoices[idx]})
+		}()
+	}
+
+	for i := 0; i < numRefreshGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			service.Refresh()
+		}()
+	}
+
+	for i := 0; i < numReadGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			service.GetState()
+		}()
+	}
+
 	wg.Wait()
 }
