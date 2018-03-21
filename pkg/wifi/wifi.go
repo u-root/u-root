@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/u-root/u-root/pkg/wpa/passphrase"
 )
@@ -154,32 +155,37 @@ func (w WifiWorker) Connect(a ...string) error {
 		return fmt.Errorf("/tmp/wifi.conf: %v", err)
 	}
 
-	c := make(chan error, 2)
+	c := make(chan error, 1)
 
 	// There's no telling how long the supplicant will take, but on the other hand,
 	// it's been almost instantaneous. But, further, it needs to keep running.
 	go func() {
 		cmd := exec.Command("wpa_supplicant", "-i"+w.Interface, "-c/tmp/wifi.conf")
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging
-		if err := cmd.Run(); err != nil {
-			c <- fmt.Errorf("wpa_supplicant error: %v", err)
-		} else {
-			c <- nil
-		}
+		cmd.Run()
 	}()
 
+	// dhclient might never return on incorect passwords or identity
 	go func() {
 		cmd := exec.Command("dhclient", "-ipv4=true", "-ipv6=false", "-verbose", w.Interface)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging
 		if err := cmd.Run(); err != nil {
-			c <- fmt.Errorf("dhclient error: %v", err)
+			c <- err
 		} else {
 			c <- nil
 		}
 	}()
 
-	if errWpaSupplicant, errDhClient := <-c, <-c; errWpaSupplicant != nil || errDhClient != nil {
-		return fmt.Errorf("%v \n %v", errWpaSupplicant, errDhClient)
+	// Each connect attempt is given a 30-second
+	// window before timing out
+	t := time.AfterFunc(30*time.Second, func() {
+		c <- fmt.Errorf("Connection Timeout")
+	})
+
+	err = <-c
+	t.Stop()
+	if err != nil {
+		return fmt.Errorf("error: %v", err)
 	}
 	return nil
 }
