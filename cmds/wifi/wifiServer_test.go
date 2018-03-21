@@ -230,8 +230,7 @@ func TestHandlersRace(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			idx := rand.Intn(len(essidChoices))
-			essid := essidChoices[idx]
-			m := ConnectJsonMsg{essid, "", ""}
+			m := ConnectJsonMsg{essidChoices[idx], "", ""}
 			b, err := json.Marshal(m)
 			if err != nil {
 				t.Errorf("error: %v", err)
