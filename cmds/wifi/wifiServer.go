@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/u-root/u-root/pkg/wifi"
 )
 
@@ -46,7 +47,7 @@ function sendConnect(elem, index) {
 	id = document.getElementById("id".concat(index)) ? 
 		document.getElementById("id".concat(index)).value : ""
 	fetch("http://localhost:8080/connect", {
-		method: 'post',
+		method: 'Post',
 		headers: {
 			'Accept': 'application/json',
 			'Content-Type': 'application/json'
@@ -80,7 +81,9 @@ function sendRefresh(elem) {
 	elem.setAttribute("disabled", "true");
 	elem.setAttribute("value","Refreshing");
 	disableOtherButtons(elem);
-	fetch("http://localhost:8080/refresh")
+	fetch("http://localhost:8080/refresh", {
+		method: 'Post'
+	})
 	.then(r => r.json())
 	.then( s => {
 		if (s !== null) {
@@ -237,17 +240,22 @@ func (ws WifiServer) connectHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
-func (ws WifiServer) getStateHandle(w http.ResponseWriter, r *http.Request) {
+func (ws WifiServer) displayStateHandle(w http.ResponseWriter, r *http.Request) {
 	s := ws.service.GetState()
 	displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
 }
 
-func (ws WifiServer) startServer() {
-	http.HandleFunc("/", ws.getStateHandle)
-	http.HandleFunc("/refresh", ws.refreshHandle)
-	http.HandleFunc("/connect", ws.connectHandle)
+func (ws WifiServer) buildRouter() http.Handler {
+	r := mux.NewRouter()
+	r.HandleFunc("/", ws.displayStateHandle).Methods("GET")
+	r.HandleFunc("/refresh", ws.refreshHandle).Methods("POST")
+	r.HandleFunc("/connect", ws.connectHandle).Methods("POST")
+	return r
+}
 
-	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
+func (ws WifiServer) Start() {
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), ws.buildRouter()))
+	defer ws.service.Shutdown()
 }
 
 func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
