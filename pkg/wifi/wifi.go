@@ -67,8 +67,8 @@ type WifiWorker struct {
 }
 
 func NewWorker(i string) (WifiWorker, error) {
-	if o, err := exec.Command("ip", "link", "set", "dev", i).CombinedOutput(); err != nil {
-		return WifiWorker{""}, fmt.Errorf("ip link set dev %v: %v (%v)", i, string(o), err)
+	if o, err := exec.Command("ip", "link", "set", "dev", i, "up").CombinedOutput(); err != nil {
+		return WifiWorker{""}, fmt.Errorf("ip link set dev %v up: %v (%v)", i, string(o), err)
 	}
 	return WifiWorker{i}, nil
 }
