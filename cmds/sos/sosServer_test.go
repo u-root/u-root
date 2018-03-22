@@ -18,52 +18,63 @@ import (
 
 func TestRegisterHandle(t *testing.T) {
 	// Set up
-	cleanUpForNewTest()
+	s := SosServer{NewSosService()}
+	r := s.buildRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
 	m := RegisterReqJson{knownServ1.service, knownServ1.port}
 	b, err := json.Marshal(m)
 	if err != nil {
 		t.Error("Setup Fails")
 		return
 	}
-	r := httptest.NewRequest("POST", "localhost:1/register", bytes.NewBuffer(b))
-	w := httptest.NewRecorder()
+	req, err := http.NewRequest("POST", ts.URL+"/register", bytes.NewBuffer(b))
+	if err != nil {
+		t.Errorf("error: %v", err)
+		return
+	}
 
 	// Execute
-	registerHandle(w, r)
+	http.DefaultClient.Do(req)
 
 	// Assert
-	if Registry[knownServ1.service] != knownServ1.port {
-		t.Errorf("got:(%v)\nwant:(%v)", Registry[knownServ1.service], knownServ1.port)
+	if s.service.registry[knownServ1.service] != knownServ1.port {
+		t.Errorf("got:(%v)\nwant:(%v)", s.service.registry[knownServ1.service], knownServ1.port)
 	}
 }
 
 func TestUnregisterHandle(t *testing.T) {
 	// Set up
-	cleanUpForNewTest()
-	Registry[knownServ1.service] = knownServ1.port
+	s := SosServer{setUpKnownServices()}
+	r := s.buildRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
 	m := UnRegisterReqJson{knownServ1.service}
 	b, err := json.Marshal(m)
 	if err != nil {
 		t.Error("Setup Fails")
 		return
 	}
-	r := httptest.NewRequest("POST", "localhost:1/unregister", bytes.NewBuffer(b))
-	w := httptest.NewRecorder()
+	req, err := http.NewRequest("POST", ts.URL+"/unregister", bytes.NewBuffer(b))
+	if err != nil {
+		t.Errorf("error: %v", err)
+		return
+	}
 
 	// Execute
-	unregisterHandle(w, r)
+	http.DefaultClient.Do(req)
 
 	// Assert
-	if _, err := read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
+	if _, err := s.service.Read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
 		t.Errorf("\ngot:(%v)\nwant:(%v)", err, fmt.Errorf("%v is not in the registry", knownServ1.service))
 	}
 }
 
 func TestGetService(t *testing.T) {
 	// Set up
-	cleanUpForNewTest()
-	Registry[knownServ1.service] = knownServ1.port
-	r := buildRouter()
+	r := SosServer{setUpKnownServices()}.buildRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	req, err := http.NewRequest("GET", ts.URL+"/service/"+knownServ1.service, nil)
@@ -94,8 +105,7 @@ func TestGetService(t *testing.T) {
 
 func TestGetServiceFails(t *testing.T) {
 	// Set up
-	cleanUpForNewTest()
-	r := buildRouter()
+	r := SosServer{NewSosService()}.buildRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	req, err := http.NewRequest("GET", ts.URL+"/service/"+knownServ1.service, nil)
@@ -119,16 +129,13 @@ func TestGetServiceFails(t *testing.T) {
 
 func TestRace(t *testing.T) {
 	// Set Up
-	cleanUpForNewTest()
-	setUpKnownServices()
-
 	numRegisterGoRoutines, numUnregisterGoRoutines, numReadGoRoutines := 10, 10, 100
 	serviceChoices := []RegistryEntryStub{
 		knownServ1, knownServ2, knownServ3,
 		newServ1, newServ2, newServ3,
 	}
 
-	r := buildRouter()
+	r := SosServer{setUpKnownServices()}.buildRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 

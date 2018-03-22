@@ -25,67 +25,60 @@ var (
 	newServ3   = RegistryEntryStub{"stub6", 6}
 )
 
-func setUpKnownServices() {
-	register(knownServ1.service, knownServ1.port)
-	register(knownServ2.service, knownServ2.port)
-	register(knownServ3.service, knownServ3.port)
-}
-
-func cleanUpForNewTest() {
-	Registry = make(map[string]uint)
+func setUpKnownServices() *SosService {
+	service := NewSosService()
+	service.registry[knownServ1.service] = knownServ1.port
+	service.registry[knownServ2.service] = knownServ2.port
+	service.registry[knownServ3.service] = knownServ3.port
+	return service
 }
 
 func TestReadNonExist(t *testing.T) {
-	cleanUpForNewTest()
-	if _, err := read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
+	s := NewSosService()
+	if _, err := s.Read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
 		t.Errorf("read(%v)\ngot:(%v)\nwant:(%v)", knownServ1.service, err, fmt.Errorf("%v is not in the registry", knownServ1.service))
 	}
 }
 
 func TestRead(t *testing.T) {
-	cleanUpForNewTest()
-	Registry[knownServ1.service] = knownServ1.port
-	if port, err := read(knownServ1.service); err != nil || port != knownServ1.port {
+	s := setUpKnownServices()
+	if port, err := s.Read(knownServ1.service); err != nil || port != knownServ1.port {
 		t.Errorf("read(%v)\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1.service, port, err, knownServ1.port, nil)
 	}
 }
 
 func TestRegisterAlreadyExists(t *testing.T) {
-	cleanUpForNewTest()
-	Registry[knownServ1.service] = knownServ1.port
-	err := register(knownServ1.service, knownServ1.port)
+	s := setUpKnownServices()
+	err := s.Register(knownServ1.service, knownServ1.port)
 	if !reflect.DeepEqual(err, fmt.Errorf("%v already exists", knownServ1.service)) {
 		t.Errorf("Already Exists Register\ngot:(%v)\nwant:(%v)", err, fmt.Errorf("%v already exists", knownServ1.service))
 	}
 }
 
 func TestRegisterSuccess(t *testing.T) {
-	cleanUpForNewTest()
-	register(knownServ1.service, knownServ1.port)
-	if port, err := read(knownServ1.service); err != nil || port != knownServ1.port {
+	s := NewSosService()
+	s.Register(knownServ1.service, knownServ1.port)
+	if port, err := s.Read(knownServ1.service); err != nil || port != knownServ1.port {
 		t.Errorf("register(%v)\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1, port, err, knownServ1.port, nil)
 	}
 }
 
-func TestUnRegisterNonExist(t *testing.T) {
-	cleanUpForNewTest()
-	unregister(knownServ1.service)
+func TestUnregisterNonExist(t *testing.T) {
+	s := NewSosService()
+	s.Unregister(knownServ1.service)
 	// should not panic
 }
 
-func TestUnRegister(t *testing.T) {
-	cleanUpForNewTest()
-	register(knownServ1.service, knownServ1.port)
-	unregister(knownServ1.service)
-	if _, err := read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
+func TestUnregister(t *testing.T) {
+	s := setUpKnownServices()
+	s.Unregister(knownServ1.service)
+	if _, err := s.Read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
 		t.Errorf("unregister(%v)\ngot:(%v)\nwant:(%v)", knownServ1.service, err, fmt.Errorf("%v is not in the registry", knownServ1.service))
 	}
 }
 
 func TestSnapshot(t *testing.T) {
-	cleanUpForNewTest()
-	setUpKnownServices()
-	s := snapshotRegistry()
+	s := setUpKnownServices().SnapshotRegistry()
 	if port, exists := s[knownServ1.service]; !exists || port != knownServ1.port {
 		t.Errorf("%v\ngot:(%v, %v)\nwant:(%v, %v)", knownServ1, port, exists, knownServ1.port, true)
 	}
@@ -99,8 +92,8 @@ func TestSnapshot(t *testing.T) {
 
 func TestRaceCondtion(t *testing.T) {
 	//Set Up
-	cleanUpForNewTest()
-	numReadGoRoutines := 100
+	s := NewSosService()
+	numReadGoRoutines := 10
 	numRegisterGoRoutines := 20
 	numUnregisterGoRoutines := 20
 	numSnapshotGoRoutines := 10
@@ -110,7 +103,7 @@ func TestRaceCondtion(t *testing.T) {
 		wg.Add(1)
 		go func(idx uint) {
 			defer wg.Done()
-			register(fmt.Sprintf("stub%v", idx), idx)
+			s.Register(fmt.Sprintf("stub%v", idx), idx)
 		}(uint(i))
 	}
 
@@ -118,7 +111,7 @@ func TestRaceCondtion(t *testing.T) {
 		wg.Add(1)
 		go func(idx uint) {
 			defer wg.Done()
-			read(fmt.Sprintf("stub%v", idx%20))
+			s.Read(fmt.Sprintf("stub%v", idx))
 		}(uint(i))
 	}
 
@@ -126,7 +119,7 @@ func TestRaceCondtion(t *testing.T) {
 		wg.Add(1)
 		go func(idx uint) {
 			defer wg.Done()
-			unregister(fmt.Sprintf("stub%v", idx))
+			s.Unregister(fmt.Sprintf("stub%v", idx))
 		}(uint(i))
 	}
 
@@ -134,7 +127,7 @@ func TestRaceCondtion(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			snapshotRegistry()
+			s.SnapshotRegistry()
 		}()
 	}
 
