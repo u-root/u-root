@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"net/http"
 
@@ -59,12 +58,16 @@ td, th {
 `
 )
 
+type SosServer struct {
+	service *SosService
+}
+
 type RegisterReqJson struct {
 	Service string
 	Port    uint
 }
 
-func registerHandle(w http.ResponseWriter, r *http.Request) {
+func (s SosServer) registerHandle(w http.ResponseWriter, r *http.Request) {
 	var msg RegisterReqJson
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
@@ -74,7 +77,7 @@ func registerHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := register(msg.Service, msg.Port); err != nil {
+	if err := s.service.Register(msg.Service, msg.Port); err != nil {
 		fmt.Printf("error: %v", err)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -86,7 +89,7 @@ type UnRegisterReqJson struct {
 	ServiceName string
 }
 
-func unregisterHandle(w http.ResponseWriter, r *http.Request) {
+func (s SosServer) unregisterHandle(w http.ResponseWriter, r *http.Request) {
 	var msg UnRegisterReqJson
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
@@ -95,7 +98,7 @@ func unregisterHandle(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-	unregister(msg.ServiceName)
+	s.service.Unregister(msg.ServiceName)
 	json.NewEncoder(w).Encode(nil)
 }
 
@@ -103,9 +106,9 @@ type GetServiceResJson struct {
 	Port uint
 }
 
-func getServiceHandle(w http.ResponseWriter, r *http.Request) {
+func (s SosServer) getServiceHandle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	port, err := read(vars["service"])
+	port, err := s.service.Read(vars["service"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -113,9 +116,9 @@ func getServiceHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(GetServiceResJson{port})
 }
 
-func redirectToResourceHandle(w http.ResponseWriter, r *http.Request) {
+func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	port, err := read(vars["service"])
+	port, err := s.service.Read(vars["service"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -123,24 +126,23 @@ func redirectToResourceHandle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("localhost:%v/", port), http.StatusPermanentRedirect)
 }
 
-func buildRouter() http.Handler {
+func (s SosServer) displaySosHandle(w http.ResponseWriter, r *http.Request) {
+	snap := s.service.SnapshotRegistry()
+	tmpl := template.Must(template.New("SoS").Parse(HtmlPage))
+	tmpl.Execute(w, snap)
+}
+
+func (s SosServer) buildRouter() http.Handler {
 	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		buildHtmlPage(w)
-	}).Methods("GET")
-	r.HandleFunc("/register", registerHandle).Methods("POST")
-	r.HandleFunc("/unregister", unregisterHandle).Methods("POST")
-	r.HandleFunc("/service/{service}", getServiceHandle).Methods("GET")
-	r.HandleFunc("/go/{service}", redirectToResourceHandle).Methods("GET")
+	r.HandleFunc("/", s.displaySosHandle).Methods("GET")
+	r.HandleFunc("/register", s.registerHandle).Methods("POST")
+	r.HandleFunc("/unregister", s.unregisterHandle).Methods("POST")
+	r.HandleFunc("/service/{service}", s.getServiceHandle).Methods("GET")
+	r.HandleFunc("/go/{service}", s.redirectToResourceHandle).Methods("GET")
 	return r
 }
 
-func startServer() {
-	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), buildRouter()))
-}
-
-func buildHtmlPage(wr io.Writer) error {
-	s := snapshotRegistry()
-	tmpl := template.Must(template.New("SoS").Parse(HtmlPage))
-	return tmpl.Execute(wr, s)
+func StartServer(service *SosService) {
+	server := SosServer{service}
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), server.buildRouter()))
 }
