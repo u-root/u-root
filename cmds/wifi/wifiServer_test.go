@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"sync"
@@ -83,78 +85,198 @@ func TestUserInputValidation(t *testing.T) {
 	}
 }
 
-func TestConnectHandle(t *testing.T) {
-	// Set Up
-	connectWifiArbitratorSetup("", "", 2)
-	defer close(ConnectReqChan)
+func setupStubServer() WifiServer {
+	service := setupStubService()
+	service.Start()
+	return NewWifiServer(service)
+}
 
+func TestConnectHandlerSuccess(t *testing.T) {
+	// Set Up
+	server := setupStubServer()
+	defer server.service.Shutdown()
+	router := server.buildRouter()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
 	m := ConnectJsonMsg{EssidStub, PassStub, IdStub}
 	b, err := json.Marshal(m)
 	if err != nil {
-		t.Errorf("Setup Fails")
+		t.Errorf("error: %v", err)
+		return
+	}
+	req, err := http.NewRequest("POST", ts.URL+"/connect", bytes.NewBuffer(b))
+	if err != nil {
+		t.Errorf("error: %v", err)
 		return
 	}
 
-	r := httptest.NewRequest("GET", "localhost:"+PortNum+"/connect", bytes.NewBuffer(b))
-	w := httptest.NewRecorder()
-	connectHandle(w, r)
-	if CurEssid != EssidStub {
-		t.Errorf("\ngot:%v\nwant:%v", CurEssid, EssidStub)
+	// Execute
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Errorf("error: %v", err)
+		return
+	}
+	// Assert
+	decoder := json.NewDecoder(res.Body)
+	defer res.Body.Close()
+	var retMsg struct{ Error string }
+	if err := decoder.Decode(&retMsg); err != nil {
+		t.Errorf("Error Decode JSON Response")
+		return
+	}
+	// nil in response
+	if retMsg != struct{ Error string }{} {
+		t.Errorf("\ngot:%v\nwant:%v", retMsg, struct{ Error string }{})
+		return
+	}
+	// Check for State change
+	state := server.service.GetState()
+	if state.CurEssid != EssidStub {
+		t.Errorf("\ngot:%v\nwant:%v", state.CurEssid, EssidStub)
 	}
 }
 
-func TestConnectHandleOneAfterAnother(t *testing.T) {
+func TestConnectHandlerFail(t *testing.T) {
 	// Set Up
-	connectWifiArbitratorSetup("", "", 2)
-	defer close(ConnectReqChan)
-
-	m1 := ConnectJsonMsg{"stub1", PassStub, IdStub}
-	b1, err := json.Marshal(m1)
+	server := setupStubServer()
+	defer server.service.Shutdown()
+	router := server.buildRouter()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+	m := ConnectJsonMsg{EssidStub, "", IdStub}
+	b, err := json.Marshal(m)
 	if err != nil {
-		t.Errorf("Setup Fails")
+		t.Errorf("error: %v", err)
+		return
+	}
+	req, err := http.NewRequest("POST", ts.URL+"/connect", bytes.NewBuffer(b))
+	if err != nil {
+		t.Errorf("error: %v", err)
 		return
 	}
 
-	m2 := ConnectJsonMsg{"stub2", PassStub, IdStub}
-	b2, err := json.Marshal(m2)
+	// Execute
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Errorf("Setup Fails")
+		t.Errorf("error: %v", err)
 		return
 	}
-
-	r1 := httptest.NewRequest("GET", "localhost:"+PortNum+"/connect", bytes.NewBuffer(b1))
-	w1 := httptest.NewRecorder()
-	connectHandle(w1, r1)
-
-	r2 := httptest.NewRequest("GET", "localhost:"+PortNum+"/connect", bytes.NewBuffer(b2))
-	w2 := httptest.NewRecorder()
-	connectHandle(w2, r2)
-
-	if CurEssid != "stub2" {
-		t.Errorf("\ngot:%v\nwant:%v", CurEssid, "stub2")
+	// Assert
+	decoder := json.NewDecoder(res.Body)
+	defer res.Body.Close()
+	var retMsg struct{ Error string }
+	if err := decoder.Decode(&retMsg); err != nil {
+		t.Errorf("Error Decode JSON Response")
+		return
+	}
+	// Error message in response
+	if retMsg != struct{ Error string }{"Invalid user input"} {
+		t.Errorf("\ngot:%v\nwant:%v", retMsg, struct{ Error string }{})
+		return
 	}
 }
 
-func TestConnectHandleRace(t *testing.T) {
+func TestRefreshHandler(t *testing.T) {
 	// Set Up
-	numGoRoutines := 100
-	connectWifiArbitratorSetup("", "", numGoRoutines)
-	defer close(ConnectReqChan)
+	server := setupStubServer()
+	defer server.service.Shutdown()
+	router := server.buildRouter()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+	req, err := http.NewRequest("POST", ts.URL+"/refresh", nil)
+	if err != nil {
+		t.Errorf("error: %v", err)
+		return
+	}
 
+	// Execute
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Errorf("error: %v", err)
+		return
+	}
+
+	// Assert
+	decoder := json.NewDecoder(res.Body)
+	defer res.Body.Close()
+	var retMsg struct{ Error string }
+	if err := decoder.Decode(&retMsg); err != nil {
+		t.Errorf("Error Decode JSON Response")
+		return
+	}
+	// nil in response
+	if retMsg != struct{ Error string }{} {
+		t.Errorf("\ngot:%v\nwant:%v", retMsg, struct{ Error string }{})
+		return
+	}
+}
+
+func TestHandlersRace(t *testing.T) {
+	// Set Up
+	numConnectRoutines, numRefreshGoRoutines, numReadGoRoutines := 10, 10, 100
+	server := setupStubServer()
+	defer server.service.Shutdown()
+	router := server.buildRouter()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	essidChoices := []string{"stub1", "stub2", "stub3"}
+
+	// Execute
 	var wg sync.WaitGroup
-	for i := 0; i < numGoRoutines; i++ {
+
+	for i := 0; i < numConnectRoutines; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			m := ConnectJsonMsg{EssidStub, PassStub, IdStub}
+			idx := rand.Intn(len(essidChoices))
+			m := ConnectJsonMsg{essidChoices[idx], "", ""}
 			b, err := json.Marshal(m)
 			if err != nil {
-				t.Errorf("Setup Fails")
+				t.Errorf("error: %v", err)
 				return
 			}
-			r := httptest.NewRequest("GET", "localhost:"+PortNum+"/connect", bytes.NewBuffer(b))
-			w := httptest.NewRecorder()
-			connectHandle(w, r)
+			req, err := http.NewRequest("POST", ts.URL+"/connect", bytes.NewBuffer(b))
+			if err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+			if _, err = http.DefaultClient.Do(req); err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+		}()
+	}
+
+	for i := 0; i < numRefreshGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req, err := http.NewRequest("POST", ts.URL+"/refresh", nil)
+			if err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+			if _, err = http.DefaultClient.Do(req); err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+		}()
+	}
+
+	for i := 0; i < numReadGoRoutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req, err := http.NewRequest("GET", ts.URL+"/", nil)
+			if err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
+			if _, err = http.DefaultClient.Do(req); err != nil {
+				t.Errorf("error: %v", err)
+				return
+			}
 		}()
 	}
 	wg.Wait()
