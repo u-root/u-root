@@ -36,9 +36,6 @@ var (
 	encKeyOptRE  = regexp.MustCompile("(?m)^\\s*Encryption key:(on|off)$")
 	wpa2RE       = regexp.MustCompile("(?m)^\\s*IE: IEEE 802.11i/WPA2 Version 1$")
 	authSuitesRE = regexp.MustCompile("(?m)^\\s*Authentication Suites .*$")
-
-	// RegEx for parsing iwconfig output
-	iwconfigRE = regexp.MustCompile("(?m)^[a-zA-Z0-9]+\\s*IEEE 802.11.*$")
 )
 
 type SecProto int
@@ -56,7 +53,6 @@ type WifiOption struct {
 }
 
 type Wifi interface {
-	ScanInterfaces() ([]string, error)
 	ScanWifi() ([]WifiOption, error)
 	ScanCurrentWifi() (string, error)
 	Connect(a ...string) error
@@ -67,26 +63,10 @@ type WifiWorker struct {
 }
 
 func NewWorker(i string) (WifiWorker, error) {
-	if o, err := exec.Command("ip", "link", "set", "dev", i).CombinedOutput(); err != nil {
-		return WifiWorker{""}, fmt.Errorf("ip link set dev %v: %v (%v)", i, string(o), err)
+	if o, err := exec.Command("ip", "link", "set", "dev", i, "up").CombinedOutput(); err != nil {
+		return WifiWorker{""}, fmt.Errorf("ip link set dev %v up: %v (%v)", i, string(o), err)
 	}
 	return WifiWorker{i}, nil
-}
-
-func (w WifiWorker) ScanInterfaces() ([]string, error) {
-	o, err := exec.Command("iwconfig").CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("iwconfig: %v (%v)", string(o), err)
-	}
-	return parseIwconfig(o), nil
-}
-
-func parseIwconfig(o []byte) (res []string) {
-	interfaces := iwconfigRE.FindAll(o, -1)
-	for _, i := range interfaces {
-		res = append(res, strings.Split(string(i), " ")[0])
-	}
-	return
 }
 
 func (w WifiWorker) ScanWifi() ([]WifiOption, error) {

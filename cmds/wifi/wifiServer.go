@@ -5,7 +5,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -13,6 +12,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/u-root/u-root/pkg/wifi"
 )
 
@@ -47,7 +47,7 @@ function sendConnect(elem, index) {
 	id = document.getElementById("id".concat(index)) ? 
 		document.getElementById("id".concat(index)).value : ""
 	fetch("http://localhost:8080/connect", {
-		method: 'post',
+		method: 'Post',
 		headers: {
 			'Accept': 'application/json',
 			'Content-Type': 'application/json'
@@ -81,7 +81,9 @@ function sendRefresh(elem) {
 	elem.setAttribute("disabled", "true");
 	elem.setAttribute("value","Refreshing");
 	disableOtherButtons(elem);
-	fetch("http://localhost:8080/refresh")
+	fetch("http://localhost:8080/refresh", {
+		method: 'Post'
+	})
 	.then(r => r.json())
 	.then( s => {
 		if (s !== null) {
@@ -178,6 +180,10 @@ function disableOtherButtons(elem) {
 `
 )
 
+type WifiServer struct {
+	service WifiService
+}
+
 func userInputValidation(essid, pass, id string) ([]string, error) {
 	switch {
 	case essid != "" && pass != "" && id != "":
@@ -191,8 +197,8 @@ func userInputValidation(essid, pass, id string) ([]string, error) {
 	}
 }
 
-func refreshHandle(w http.ResponseWriter, r *http.Request) {
-	if err := scanWifi(); err != nil {
+func (ws WifiServer) refreshHandle(w http.ResponseWriter, r *http.Request) {
+	if err := ws.service.Refresh(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -206,7 +212,7 @@ type ConnectJsonMsg struct {
 	Id    string
 }
 
-func connectHandle(w http.ResponseWriter, r *http.Request) {
+func (ws WifiServer) connectHandle(w http.ResponseWriter, r *http.Request) {
 	var msg ConnectJsonMsg
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
@@ -224,50 +230,32 @@ func connectHandle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare for a connection request
-	routineID := make([]byte, 8)
-	if _, err := rand.Read(routineID); err != nil {
+	if err := ws.service.Connect(a); err != nil {
 		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
-
-	c := make(chan error, 1)
-
-	// Making a Connection Request
-	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, false}
-	if err := <-c; err != nil {
-		log.Printf("error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
-		return
-	}
-
-	// if err == nil, we have the OK to connect
-	// Since there is only one arbitrator, there is only one OK at any one time
-	if err := WifiWorker.Connect(a...); err != nil {
-		ConnectReqChan <- ConnectReqChanMsg{nil, a[0], routineID, false}
-		log.Printf("error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
-		return
-	}
-
-	ConnectReqChan <- ConnectReqChanMsg{c, a[0], routineID, true}
-	<-c // Make sure the state is updated
+	// Connect Successful
 	json.NewEncoder(w).Encode(nil)
 }
 
-func startServer() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		s := getState()
-		displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
-	})
-	http.HandleFunc("/refresh", refreshHandle)
-	http.HandleFunc("/connect", connectHandle)
+func (ws WifiServer) displayStateHandle(w http.ResponseWriter, r *http.Request) {
+	s := ws.service.GetState()
+	displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
+}
 
-	http.ListenAndServe(fmt.Sprintf(":%s", PortNum), nil)
+func (ws WifiServer) buildRouter() http.Handler {
+	r := mux.NewRouter()
+	r.HandleFunc("/", ws.displayStateHandle).Methods("GET")
+	r.HandleFunc("/refresh", ws.refreshHandle).Methods("POST")
+	r.HandleFunc("/connect", ws.connectHandle).Methods("POST")
+	return r
+}
+
+func (ws WifiServer) Start() {
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), ws.buildRouter()))
+	defer ws.service.Shutdown()
 }
 
 func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
@@ -280,4 +268,10 @@ func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, conne
 	tmpl := template.Must(template.New("name").Parse(HtmlPage))
 
 	return tmpl.Execute(wr, wifiData)
+}
+
+func NewWifiServer(service WifiService) WifiServer {
+	return WifiServer{
+		service: service,
+	}
 }

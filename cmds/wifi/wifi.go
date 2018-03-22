@@ -5,12 +5,13 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/wifi"
 )
@@ -26,12 +27,25 @@ var (
 	show  = flag.Bool("s", false, "list interfaces allowed with WiFi extension")
 	test  = flag.Bool("test", false, "set up a test server")
 
-	// State of the service
-	CurEssid        string
-	ConnectingEssid string
-	NearbyWifis     []wifi.WifiOption
-	WifiWorker      wifi.Wifi
+	// RegEx for parsing iwconfig output
+	iwconfigRE = regexp.MustCompile("(?m)^[a-zA-Z0-9]+\\s*IEEE 802.11.*$")
+
+	// Stub data for simple end-to-end interaction test
+	NearbyWifisStub = []wifi.WifiOption{
+		{"Stub1", wifi.NoEnc},
+		{"Stub2", wifi.WpaPsk},
+		{"Stub3", wifi.WpaEap},
+		{"Stub4", wifi.NotSupportedProto},
+	}
 )
+
+func parseIwconfig(o []byte) (res []string) {
+	interfaces := iwconfigRE.FindAll(o, -1)
+	for _, i := range interfaces {
+		res = append(res, strings.Split(string(i), " ")[0])
+	}
+	return
+}
 
 func init() {
 	defUsage := flag.Usage
@@ -41,81 +55,40 @@ func init() {
 	}
 }
 
-func getState() State {
-	return State{NearbyWifis, ConnectingEssid, CurEssid}
-}
-
-func scanWifi() error {
-	o, err := WifiWorker.ScanWifi()
-	if err != nil {
-		return fmt.Errorf("error: %v", err)
-	}
-	NearbyWifis = o
-	return nil
-}
-
-// To prevent race condition, there should be only one
-// goroutine running connectWifiArbitrator at any one time
-func connectWifiArbitrator() {
-	// Accepted Routine = routine that is allowed to change the state
-	var acceptedRoutineId []byte
-	for req := range ConnectReqChan {
-		switch {
-		// Accepted routine returns its result
-		case bytes.Equal(req.routineID, acceptedRoutineId):
-			if req.success {
-				CurEssid = req.essid
-			} else {
-				essid, err := WifiWorker.ScanCurrentWifi()
-				if err != nil {
-					log.Fatalf("error: %v", err)
-				}
-				CurEssid = essid
-			}
-			acceptedRoutineId = nil
-			ConnectingEssid = ""
-			req.c <- nil // Neccessary for testing
-		// The requesting routine wins and can change the state
-		case ConnectingEssid == "":
-			acceptedRoutineId = req.routineID
-			ConnectingEssid = req.essid
-			req.c <- nil
-		// The requesting routine loses
-		default:
-			req.c <- fmt.Errorf("Service is trying to connect to %s", ConnectingEssid)
-		}
-	}
-}
-
 func main() {
 	flag.Parse()
 
 	// Start a Server with Stub data
 	// for manual end-to-end testing
 	if *test {
-		NearbyWifis = []wifi.WifiOption{
-			{"Stub1", wifi.NoEnc},
-			{"Stub2", wifi.WpaPsk},
-			{"Stub3", wifi.WpaEap},
-			{"Stub4", wifi.NotSupportedProto},
+		worker := wifi.StubWifiWorker{
+			ScanWifiOut:        NearbyWifisStub,
+			ScanCurrentWifiOut: "",
 		}
-		WifiWorker = wifi.StubWifiWorker{
-			ScanInterfacesOut:  nil,
-			ScanWifiOut:        NearbyWifis,
-			ScanCurrentWifiOut: CurEssid,
-		}
-		go connectWifiArbitrator()
-		startServer()
+		service := NewWifiService(worker)
+		service.Start()
+		NewWifiServer(service).Start() // this function shutdown service upon return
+		return
 	}
 
-	w, err := wifi.NewWorker(*iface)
+	if *show {
+		o, err := exec.Command("iwconfig").CombinedOutput()
+		if err != nil {
+			log.Fatalf("iwconfig: %v (%v)", string(o), err)
+		}
+		for _, i := range parseIwconfig(o) {
+			fmt.Println(i)
+		}
+		return
+	}
+
+	worker, err := wifi.NewWorker(*iface)
 	if err != nil {
 		log.Fatal(err)
 	}
-	WifiWorker = w
 
 	if *list {
-		wifiOpts, err := WifiWorker.ScanWifi()
+		wifiOpts, err := worker.ScanWifi()
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -134,17 +107,6 @@ func main() {
 		return
 	}
 
-	if *show {
-		interfaces, err := WifiWorker.ScanInterfaces()
-		if err != nil {
-			log.Fatalf("error: %v", err)
-		}
-		for _, i := range interfaces {
-			fmt.Println(i)
-		}
-		return
-	}
-
 	a := flag.Args()
 	if len(a) > 3 {
 		flag.Usage()
@@ -156,13 +118,14 @@ func main() {
 		if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
 			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
 		}
-		go scanWifi()
-		go connectWifiArbitrator()
-		startServer()
+		service := NewWifiService(worker)
+		service.Start()
+		go service.Refresh()
+		NewWifiServer(service).Start() // this function shutdown service upon return
 		return
 	}
 
-	if err := WifiWorker.Connect(a...); err != nil {
+	if err := worker.Connect(a...); err != nil {
 		log.Fatalf("error: %v", err)
 	}
 }
