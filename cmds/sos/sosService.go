@@ -16,7 +16,7 @@ type SosService struct {
 	registry Registry
 }
 
-func (s SosService) Read(serviceName string) (uint, error) {
+func (s *SosService) Read(serviceName string) (uint, error) {
 	s.rWLock.RLock()
 	defer s.rWLock.RUnlock()
 	port, exists := s.registry[serviceName]
@@ -26,7 +26,7 @@ func (s SosService) Read(serviceName string) (uint, error) {
 	return port, nil
 }
 
-func (s SosService) Register(serviceName string, portNum uint) error {
+func (s *SosService) Register(serviceName string, portNum uint) error {
 	s.rWLock.Lock()
 	defer s.rWLock.Unlock()
 	_, exists := s.registry[serviceName]
@@ -37,13 +37,13 @@ func (s SosService) Register(serviceName string, portNum uint) error {
 	return nil
 }
 
-func (s SosService) Unregister(serviceName string) {
+func (s *SosService) Unregister(serviceName string) {
 	s.rWLock.Lock()
 	defer s.rWLock.Unlock()
 	delete(s.registry, serviceName)
 }
 
-func (s SosService) SnapshotRegistry() Registry {
+func (s *SosService) SnapshotRegistry() Registry {
 	s.rWLock.RLock()
 	defer s.rWLock.RUnlock()
 	snapshot := make(map[string]uint)
