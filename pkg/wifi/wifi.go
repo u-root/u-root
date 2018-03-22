@@ -5,6 +5,7 @@
 package wifi
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -155,19 +156,22 @@ func (w WifiWorker) Connect(a ...string) error {
 		return fmt.Errorf("/tmp/wifi.conf: %v", err)
 	}
 
+	// Each request has a 30 second window to make a connection
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	c := make(chan error, 1)
 
 	// There's no telling how long the supplicant will take, but on the other hand,
 	// it's been almost instantaneous. But, further, it needs to keep running.
 	go func() {
-		cmd := exec.Command("wpa_supplicant", "-i"+w.Interface, "-c/tmp/wifi.conf")
+		cmd := exec.CommandContext(ctx, "wpa_supplicant", "-i"+w.Interface, "-c/tmp/wifi.conf")
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging
 		cmd.Run()
 	}()
 
 	// dhclient might never return on incorect passwords or identity
 	go func() {
-		cmd := exec.Command("dhclient", "-ipv4=true", "-ipv6=false", "-verbose", w.Interface)
+		cmd := exec.CommandContext(ctx, "dhclient", "-ipv4=true", "-ipv6=false", "-verbose", w.Interface)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging
 		if err := cmd.Run(); err != nil {
 			c <- err
@@ -176,18 +180,12 @@ func (w WifiWorker) Connect(a ...string) error {
 		}
 	}()
 
-	// Each connect attempt is given a 30-second
-	// window before timing out
-	t := time.AfterFunc(30*time.Second, func() {
-		c <- fmt.Errorf("Connection Timeout")
-	})
-
-	err = <-c
-	t.Stop()
-	if err != nil {
-		return fmt.Errorf("error: %v", err)
+	select {
+	case err := <-c:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("Connection timeout")
 	}
-	return nil
 }
 
 func generateConfig(a ...string) (conf []byte, err error) {
