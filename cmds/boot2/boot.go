@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -24,10 +26,10 @@ var (
 	devices []*diskboot.Device
 )
 
-func getDevice() *diskboot.Device {
+func getDevice() (*diskboot.Device, error) {
 	devices = diskboot.FindDevices(*devGlob)
 	if len(devices) == 0 {
-		log.Fatal("No devices found")
+		return nil, errors.New("No devices found")
 	}
 
 	verbose("Got devices: %#v", devices)
@@ -39,20 +41,20 @@ func getDevice() *diskboot.Device {
 				log.Printf("Device #%v: path: %v type: %v",
 					i, device.DevPath, device.Fstype)
 			}
-			log.Fatal("Multiple devices found - must specify a device index")
+			return nil, errors.New("Multiple devices found - must specify a device index")
 		}
 		if deviceIndex, err = strconv.Atoi(*sDeviceIndex); err != nil ||
 			deviceIndex < 0 || deviceIndex >= len(devices) {
-			log.Fatal("Invalid device index:", *sDeviceIndex)
+			return nil, fmt.Errorf("invalid device index %q", *sDeviceIndex)
 		}
 	}
-	return devices[deviceIndex]
+	return devices[deviceIndex], nil
 }
 
-func getConfig(device *diskboot.Device) *diskboot.Config {
+func getConfig(device *diskboot.Device) (*diskboot.Config, error) {
 	configs := device.Configs
 	if len(configs) == 0 {
-		log.Fatal("No config found")
+		return nil, errors.New("No config found")
 	}
 
 	verbose("Got configs: %#v", configs)
@@ -63,24 +65,24 @@ func getConfig(device *diskboot.Device) *diskboot.Config {
 			for i, config := range configs {
 				log.Printf("Config #%v: path: %v", i, config.ConfigPath)
 			}
-			log.Fatal("Multiple configs found - must specify a config index")
+			return nil, errors.New("Multiple configs found - must specify a config index")
 		}
 		if configIndex, err = strconv.Atoi(*sConfigIndex); err != nil ||
 			configIndex < 0 || configIndex >= len(configs) {
-			log.Fatal("Invalid config index:", *sConfigIndex)
+			return nil, fmt.Errorf("invalid config index %q", *sConfigIndex)
 		}
 	}
-	return configs[configIndex]
+	return configs[configIndex], nil
 }
 
-func getEntry(config *diskboot.Config) *diskboot.Entry {
+func getEntry(config *diskboot.Config) (*diskboot.Entry, error) {
 	verbose("Got entries: %#v", config.Entries)
 	var err error
 	entryIndex := 0
 	if *sEntryIndex != "" {
 		if entryIndex, err = strconv.Atoi(*sEntryIndex); err != nil ||
 			entryIndex < 0 || entryIndex >= len(config.Entries) {
-			log.Fatal("Invalid entry index:", *sEntryIndex)
+			return nil, fmt.Errorf("invalid entry index %q", *sEntryIndex)
 		}
 	} else if config.DefaultEntry >= 0 {
 		entryIndex = config.DefaultEntry
@@ -88,26 +90,27 @@ func getEntry(config *diskboot.Config) *diskboot.Entry {
 		for i, entry := range config.Entries {
 			log.Printf("Entry #%v: %#v", i, entry)
 		}
-		log.Fatal("No entry specified")
+		return nil, errors.New("No entry specified")
 	}
-	return &config.Entries[entryIndex]
+	return &config.Entries[entryIndex], nil
 }
 
-func bootEntry(config *diskboot.Config, entry *diskboot.Entry) {
+func bootEntry(config *diskboot.Config, entry *diskboot.Entry) error {
 	verbose("Booting entry: %v", entry)
 	err := entry.KexecLoad(config.MountPath, *appendCmdline, *dryrun)
 	if err != nil {
-		log.Fatal("Error doing kexec load:", err)
+		return fmt.Errorf("wrror doing kexec load: %v", err)
 	}
 
 	if *dryrun {
-		return
+		return nil
 	}
 
 	err = kexec.Reboot()
 	if err != nil {
-		log.Fatal("Error doing kexec reboot:", err)
+		return fmt.Errorf("error doing kexec reboot: %v", err)
 	}
+	return nil
 }
 
 func cleanDevices() {
@@ -125,8 +128,19 @@ func main() {
 	}
 	defer cleanDevices()
 
-	device := getDevice()
-	config := getConfig(device)
-	entry := getEntry(config)
-	bootEntry(config, entry)
+	device, err := getDevice()
+	if err != nil {
+		log.Panic(err)
+	}
+	config, err := getConfig(device)
+	if err != nil {
+		log.Panic(err)
+	}
+	entry, err := getEntry(config)
+	if err != nil {
+		log.Panic(err)
+	}
+	if err := bootEntry(config, entry); err != nil {
+		log.Panic(err)
+	}
 }
