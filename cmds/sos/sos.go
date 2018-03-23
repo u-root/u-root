@@ -4,6 +4,8 @@
 
 package main
 
+import "github.com/u-root/u-root/pkg/sos"
+
 func main() {
-	StartServer(NewSosService())
+	sos.StartServer(sos.NewSosService())
 }
