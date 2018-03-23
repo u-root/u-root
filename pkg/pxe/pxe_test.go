@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 func TestProbeFiles(t *testing.T) {
@@ -97,7 +99,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/initrd", content2)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -131,7 +133,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/initrd", content2)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -162,7 +164,7 @@ func TestAppendFile(t *testing.T) {
 				kernel ./pxefiles/kernel`
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -192,7 +194,7 @@ func TestAppendFile(t *testing.T) {
 				label foo
 				kernel ./pxefiles/kernel`
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -224,7 +226,7 @@ func TestAppendFile(t *testing.T) {
 			schemeFunc: func() Schemes {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -248,7 +250,7 @@ func TestAppendFile(t *testing.T) {
 				s := make(Schemes)
 				fs := NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", "")
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -279,7 +281,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/fookernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/barkernel", content2)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -324,7 +326,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/fookernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/barkernel", content2)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -383,7 +385,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/pxefiles/drugkernel", content2)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/normal_person", content3)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/criminal", content4)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -428,7 +430,7 @@ func TestAppendFile(t *testing.T) {
 				conf := `default avon`
 
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -460,8 +462,8 @@ func TestAppendFile(t *testing.T) {
 				http.Add("someplace.com", "/someinitrd.gz", content3)
 
 				s := make(Schemes)
-				s.Register(tftp.scheme, NewCachedFileScheme(tftp))
-				s.Register(http.scheme, NewCachedFileScheme(http))
+				s.Register(tftp.scheme, tftp)
+				s.Register(http.scheme, http)
 				return s
 			},
 			wd: &url.URL{
@@ -512,7 +514,7 @@ func TestAppendFile(t *testing.T) {
 				fs.Add("1.2.3.4", "/foobar/installer/txt.cfg", txt)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/copkernel", content1)
 				fs.Add("1.2.3.4", "/foobar/pxefiles/drugkernel", content2)
-				s.Register(fs.scheme, NewCachedFileScheme(fs))
+				s.Register(fs.scheme, fs)
 				return s
 			},
 			wd: &url.URL{
@@ -562,7 +564,7 @@ func TestAppendFile(t *testing.T) {
 						t.Errorf("want kernel, got none")
 					}
 					if label.Kernel != nil {
-						k, err := ioutil.ReadAll(label.Kernel)
+						k, err := ioutil.ReadAll(uio.Reader(label.Kernel))
 						if !reflect.DeepEqual(err, want.kernelErr) {
 							t.Errorf("could not read kernel of label %q: %v, want %v", labelName, err, want.kernelErr)
 						}
@@ -576,7 +578,7 @@ func TestAppendFile(t *testing.T) {
 						t.Errorf("want initrd, got none")
 					}
 					if label.Initrd != nil {
-						i, err := ioutil.ReadAll(label.Initrd)
+						i, err := ioutil.ReadAll(uio.Reader(label.Initrd))
 						if err != want.initrdErr {
 							t.Errorf("could not read initrd of label %q: %v, want %v", labelName, err, want.initrdErr)
 						}

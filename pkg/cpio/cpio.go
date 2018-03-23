@@ -85,16 +85,7 @@ func NewDedupWriter(rw RecordWriter) RecordWriter {
 // If rec.Name was already seen once before, it will not be written again and
 // WriteRecord returns nil.
 func (dw *DedupWriter) WriteRecord(rec Record) error {
-	// We do NOT write records with absolute paths.
-	if filepath.IsAbs(rec.Name) {
-		// There's no constant that means "root". PathSeparator is not
-		// really quite right.
-		rel, err := filepath.Rel("/", rec.Name)
-		if err != nil {
-			return fmt.Errorf("Can't make %s relative to /?", rec.Name)
-		}
-		rec.Name = rel
-	}
+	rec.Name = Normalize(rec.Name)
 
 	if _, ok := dw.alreadyWritten[rec.Name]; ok {
 		return nil
@@ -138,7 +129,9 @@ func Concat(w RecordWriter, r RecordReader, transform func(Record) Record) error
 	}
 }
 
-// Archive is an in-memory list of files.
+// Archive implements RecordWriter and is an in-memory list of files.
+//
+// Archive.Reader returns a RecordReader for this archive.
 type Archive struct {
 	// Files is a map of relative archive path -> record.
 	Files map[string]Record
@@ -148,10 +141,49 @@ type Archive struct {
 	Order []string
 }
 
-// Add adds a record to the archive.
-func (a *Archive) Add(r Record) {
+// InMemArchive returns an in-memory file archive.
+func InMemArchive() *Archive {
+	return &Archive{
+		Files: make(map[string]Record),
+	}
+}
+
+// WriteRecord implements RecordWriter and adds a record to the archive.
+func (a *Archive) WriteRecord(r Record) error {
+	r.Name = Normalize(r.Name)
 	a.Files[r.Name] = r
 	a.Order = append(a.Order, r.Name)
+	return nil
+}
+
+type archiveReader struct {
+	a   *Archive
+	pos int
+}
+
+// Reader returns a RecordReader for the archive.
+func (a *Archive) Reader() RecordReader {
+	return &EOFReader{&archiveReader{a: a}}
+}
+
+// ReadRecord implements RecordReader.
+func (ar *archiveReader) ReadRecord() (Record, error) {
+	if ar.pos >= len(ar.a.Order) {
+		return Record{}, io.EOF
+	}
+
+	path := ar.a.Order[ar.pos]
+	ar.pos++
+	return ar.a.Files[path], nil
+}
+
+// Contains returns true if a record matching r is in the archive.
+func (a *Archive) Contains(r Record) bool {
+	r.Name = Normalize(r.Name)
+	if s, ok := a.Files[r.Name]; ok {
+		return Equal(r, s)
+	}
+	return false
 }
 
 // ReadArchive reads the entire archive in-memory and makes it accessible by
@@ -161,8 +193,7 @@ func ReadArchive(rr RecordReader) (*Archive, error) {
 		Files: make(map[string]Record),
 	}
 	err := ForEachRecord(rr, func(r Record) error {
-		a.Add(r)
-		return nil
+		return a.WriteRecord(r)
 	})
 	return a, err
 }
@@ -197,11 +228,25 @@ func ForEachRecord(rr RecordReader, fun func(Record) error) error {
 	}
 }
 
+// Normalize normalizes path to be relative to /.
+func Normalize(path string) string {
+	if filepath.IsAbs(path) {
+		rel, err := filepath.Rel("/", path)
+		if err != nil {
+			panic("absolute filepath must be relative to /")
+		}
+		return rel
+	}
+	return path
+}
+
 // MakeReproducible changes any fields in a Record such that if we run cpio
 // again, with the same files presented to it in the same order, and those
 // files have unchanged contents, the cpio file it produces will be bit-for-bit
 // identical. This is an essential property for firmware-embedded payloads.
 func MakeReproducible(r Record) Record {
+	r.Ino = 0
+	r.Name = Normalize(r.Name)
 	r.MTime = 0
 	r.UID = 0
 	r.GID = 0
