@@ -119,6 +119,18 @@ func (i Info) String() string {
 		i.Rminor)
 }
 
+func AllEqual(r []Record, s []Record) bool {
+	if len(r) != len(s) {
+		return false
+	}
+	for i := range r {
+		if !Equal(r[i], s[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 func Equal(r Record, s Record) bool {
 	if r.Info != s.Info {
 		return false

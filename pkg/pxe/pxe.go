@@ -14,6 +14,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 var (
@@ -21,18 +24,6 @@ var (
 	// names a default label that is not part of the configuration.
 	ErrDefaultEntryNotFound = errors.New("default label not found in configuration")
 )
-
-// Entry encapsulates a Syslinux "label" config directive.
-type Entry struct {
-	// Kernel is the kernel for this label.
-	Kernel io.Reader
-
-	// Initrd is the initial ramdisk for this label.
-	Initrd io.Reader
-
-	// Cmdline is the list of kernel command line parameters.
-	Cmdline string
-}
 
 // Config encapsulates a parsed Syslinux configuration file.
 //
@@ -42,7 +33,7 @@ type Entry struct {
 // TODO: Tear apart parser internals from Config.
 type Config struct {
 	// Entries is a map of label name -> label configuration.
-	Entries map[string]*Entry
+	Entries map[string]*boot.LinuxImage
 
 	// DefaultEntry is the default label key to use.
 	//
@@ -83,7 +74,7 @@ func NewConfig(wd *url.URL) *Config {
 // `s` is used to get files referred to by URLs.
 func NewConfigWithSchemes(wd *url.URL, s Schemes) *Config {
 	return &Config{
-		Entries: make(map[string]*Entry),
+		Entries: make(map[string]*boot.LinuxImage),
 		scope:   scopeGlobal,
 		wd:      wd,
 		schemes: s,
@@ -145,7 +136,7 @@ func parseURL(surl string, wd *url.URL) (*url.URL, error) {
 // If url is just a relative path and not a full URL, c.wd is used as the
 // "working directory" of that relative path; the resulting URL is roughly
 // path.Join(wd.String(), url).
-func (c *Config) GetFile(url string) (io.Reader, error) {
+func (c *Config) GetFile(url string) (io.ReaderAt, error) {
 	u, err := parseURL(url, c.wd)
 	if err != nil {
 		return nil, err
@@ -160,7 +151,7 @@ func (c *Config) AppendFile(url string) error {
 	if err != nil {
 		return err
 	}
-	config, err := ioutil.ReadAll(r)
+	config, err := ioutil.ReadAll(uio.Reader(r))
 	if err != nil {
 		return err
 	}
@@ -202,7 +193,7 @@ func (c *Config) Append(config string) error {
 			// We forever enter label scope.
 			c.scope = scopeEntry
 			c.curEntry = arg
-			c.Entries[c.curEntry] = &Entry{}
+			c.Entries[c.curEntry] = &boot.LinuxImage{}
 			c.Entries[c.curEntry].Cmdline = c.globalAppend
 
 		case "kernel":

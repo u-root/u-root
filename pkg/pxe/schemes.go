@@ -29,8 +29,8 @@ type FileScheme interface {
 	// GetFile returns a reader that gives the contents of `u`.
 	//
 	// It may do so by downloading `u` and placing it in a buffer, or by
-	// returning an io.Reader that downloads the file.
-	GetFile(u *url.URL) (io.Reader, error)
+	// returning an io.ReaderAt that downloads the file.
+	GetFile(u *url.URL) (io.ReaderAt, error)
 }
 
 var (
@@ -45,9 +45,9 @@ var (
 
 	// DefaultSchemes are the schemes supported by PXE by default.
 	DefaultSchemes = Schemes{
-		"tftp": NewCachedFileScheme(DefaultTFTPClient),
-		"http": NewCachedFileScheme(DefaultHTTPClient),
-		"file": NewCachedFileScheme(&LocalFileClient{}),
+		"tftp": DefaultTFTPClient,
+		"http": DefaultHTTPClient,
+		"file": &LocalFileClient{},
 	}
 )
 
@@ -84,7 +84,7 @@ func (s Schemes) Register(scheme string, fs FileScheme) {
 
 // GetFile downloads a file via DefaultSchemes. See Schemes.GetFile for
 // details.
-func GetFile(u *url.URL) (io.Reader, error) {
+func GetFile(u *url.URL) (io.ReaderAt, error) {
 	return DefaultSchemes.GetFile(u)
 }
 
@@ -93,7 +93,7 @@ func GetFile(u *url.URL) (io.Reader, error) {
 //
 // If `s` does not contain a FileScheme for `u.Scheme`, ErrNoSuchScheme is
 // returned.
-func (s Schemes) GetFile(u *url.URL) (io.Reader, error) {
+func (s Schemes) GetFile(u *url.URL) (io.ReaderAt, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
@@ -106,20 +106,20 @@ func (s Schemes) GetFile(u *url.URL) (io.Reader, error) {
 }
 
 // LazyGetFile calls LazyGetFile on DefaultSchemes. See Schemes.LazyGetFile.
-func LazyGetFile(u *url.URL) (io.Reader, error) {
+func LazyGetFile(u *url.URL) (io.ReaderAt, error) {
 	return DefaultSchemes.LazyGetFile(u)
 }
 
 // LazyGetFile returns a reader that will download the file given by `u` when
 // Read is called, based on `u`s scheme. See Schemes.GetFile for more
 // details.
-func (s Schemes) LazyGetFile(u *url.URL) (io.Reader, error) {
+func (s Schemes) LazyGetFile(u *url.URL) (io.ReaderAt, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
 
-	return uio.NewLazyOpener(func() (io.Reader, error) {
+	return uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
 		r, err := fg.GetFile(u)
 		if err != nil {
 			return nil, &URLError{URL: u, Err: err}
@@ -141,7 +141,7 @@ func NewTFTPClient(opts ...tftp.ClientOpt) FileScheme {
 }
 
 // GetFile implements FileScheme.GetFile.
-func (t *TFTPClient) GetFile(u *url.URL) (io.Reader, error) {
+func (t *TFTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 	// TODO(hugelgupf): These clients are basically stateless, except for
 	// the options. Figure out whether you actually have to re-establish
 	// this connection every time. Audit the TFTP library.
@@ -154,7 +154,7 @@ func (t *TFTPClient) GetFile(u *url.URL) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return r, nil
+	return uio.NewCachingReader(r), nil
 }
 
 // HTTPClient implements FileScheme for HTTP files.
@@ -170,7 +170,7 @@ func NewHTTPClient(c *http.Client) *HTTPClient {
 }
 
 // GetFile implements FileScheme.GetFile.
-func (h HTTPClient) GetFile(u *url.URL) (io.Reader, error) {
+func (h HTTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 	resp, err := h.c.Get(u.String())
 	if err != nil {
 		return nil, err
@@ -179,56 +179,13 @@ func (h HTTPClient) GetFile(u *url.URL) (io.Reader, error) {
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("HTTP server responded with code %d, want 200: response %v", resp.StatusCode, resp)
 	}
-	return resp.Body, nil
+	return uio.NewCachingReader(resp.Body), nil
 }
 
 // LocalFileClient implements FileScheme for files on disk.
 type LocalFileClient struct{}
 
 // GetFile implements FileScheme.GetFile.
-func (lfs LocalFileClient) GetFile(u *url.URL) (io.Reader, error) {
+func (lfs LocalFileClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 	return os.Open(filepath.Clean(u.Path))
-}
-
-type cachedFile struct {
-	cr  *uio.CachingReader
-	err error
-}
-
-// CachedFileScheme implements FileScheme and caches files downloaded from a
-// FileScheme.
-type CachedFileScheme struct {
-	fs FileScheme
-
-	// cache is a map of URL string -> cached file or error object.
-	cache map[string]cachedFile
-}
-
-// NewCachedFileScheme returns a caching wrapper for the given FileScheme `fs`.
-func NewCachedFileScheme(fs FileScheme) FileScheme {
-	return &CachedFileScheme{
-		fs:    fs,
-		cache: make(map[string]cachedFile),
-	}
-}
-
-// GetFile implements FileScheme.GetFile.
-func (cc *CachedFileScheme) GetFile(u *url.URL) (io.Reader, error) {
-	url := u.String()
-	if cf, ok := cc.cache[url]; ok {
-		// File is in cache.
-		if cf.err != nil {
-			return nil, cf.err
-		}
-		return cf.cr.NewReader(), nil
-	}
-
-	r, err := cc.fs.GetFile(u)
-	if err != nil {
-		cc.cache[url] = cachedFile{err: err}
-		return nil, err
-	}
-	cr := uio.NewCachingReader(r)
-	cc.cache[url] = cachedFile{cr: cr}
-	return cr.NewReader(), nil
 }

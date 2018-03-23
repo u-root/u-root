@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -13,7 +11,6 @@ import (
 
 	"github.com/u-root/dhcp4/dhcp4client"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/pxe"
 	"github.com/vishvananda/netlink"
 )
@@ -23,27 +20,6 @@ var (
 	dryRun  = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
 	debug   = func(string, ...interface{}) {}
 )
-
-func copyToFile(r io.Reader) (*os.File, error) {
-	f, err := ioutil.TempFile("", "nerf-netboot")
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, r); err != nil {
-		return nil, err
-	}
-	if err := f.Sync(); err != nil {
-		return nil, err
-	}
-	// Re-open the file read-only so we don't get ETXTBSY from kexec.
-	readOnlyFile, err := os.Open(f.Name())
-	if err != nil {
-		return nil, err
-	}
-	return readOnlyFile, nil
-}
 
 func attemptDHCPLease(iface netlink.Link, timeout time.Duration, retry int) (*dhclient.Packet4, error) {
 	if _, err := dhclient.IfUp(iface.Attrs().Name); err != nil {
@@ -116,32 +92,10 @@ func Netboot() error {
 		label := pc.Entries[pc.DefaultEntry]
 		log.Printf("Got configuration: %v", label)
 
-		k, err := copyToFile(label.Kernel)
-		if err != nil {
-			return err
-		}
-		defer k.Close()
-
-		var i *os.File
-		if label.Initrd != nil {
-			i, err = copyToFile(label.Initrd)
-			if err != nil {
-				return err
-			}
-			defer i.Close()
-		}
-
 		if *dryRun {
-			log.Printf("Kernel: %s", k.Name())
-			if i != nil {
-				log.Printf("Initrd: %s", i.Name())
-			}
-			log.Printf("Command line: %s", label.Cmdline)
-		} else {
-			if err := kexec.FileLoad(k, i, label.Cmdline); err != nil {
-				return err
-			}
-			return kexec.Reboot()
+			label.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
+		} else if err := label.Execute(); err != nil {
+			log.Printf("Kexec error: %v", err)
 		}
 	}
 	return nil

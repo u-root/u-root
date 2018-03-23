@@ -1,7 +1,6 @@
 package pxe
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,7 +8,10 @@ import (
 	"net/url"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 type MockScheme struct {
@@ -55,7 +57,7 @@ var (
 	errNoSuchFile  = errors.New("no such file exists on this host")
 )
 
-func (m *MockScheme) GetFile(u *url.URL) (io.Reader, error) {
+func (m *MockScheme) GetFile(u *url.URL) (io.ReaderAt, error) {
 	url := u.String()
 	if _, ok := m.numCalled[url]; ok {
 		m.numCalled[url]++
@@ -76,75 +78,7 @@ func (m *MockScheme) GetFile(u *url.URL) (io.Reader, error) {
 	if !ok {
 		return nil, errNoSuchFile
 	}
-	return bytes.NewBufferString(content), nil
-}
-
-func TestCachedFileSchemeGetFile(t *testing.T) {
-	for i, tt := range []struct {
-		fs   func() *MockScheme
-		url  *url.URL
-		err  error
-		want string
-	}{
-		{
-			fs: func() *MockScheme {
-				s := NewMockScheme("fooftp")
-				s.Add("192.168.0.1", "/default", "haha")
-				return s
-			},
-			url: &url.URL{
-				Scheme: "fooftp",
-				Host:   "192.168.0.1",
-				Path:   "/default",
-			},
-			want: "haha",
-		},
-		{
-			fs: func() *MockScheme {
-				return NewMockScheme("fooftp")
-			},
-			url: &url.URL{
-				Scheme: "fooftp",
-			},
-			err: errNoSuchHost,
-		},
-	} {
-		t.Run(fmt.Sprintf("Test [%02d]", i), func(t *testing.T) {
-			ms := tt.fs()
-			fs := NewCachedFileScheme(ms)
-			r, err := fs.GetFile(tt.url)
-			if err != tt.err {
-				t.Errorf("GetFile(%s) = %v, want %v", tt.url, err, tt.err)
-				return
-			} else if err == nil {
-				content, err := ioutil.ReadAll(r)
-				if err != nil {
-					t.Errorf("ReadAll = %v, want nil", err)
-				}
-				if got := string(content); got != tt.want {
-					t.Errorf("Read(%s) got %v, want %v", tt.url, got, tt.want)
-				}
-			}
-
-			r2, err2 := fs.GetFile(tt.url)
-			if err2 != tt.err {
-				t.Errorf("GetFile2(%s) = %v, want %v", tt.url, err2, tt.err)
-				return
-			} else if err2 == nil {
-				content2, err := ioutil.ReadAll(r2)
-				if err != nil {
-					t.Errorf("ReadAll2 = %v, want nil", err)
-				}
-				if got := string(content2); got != tt.want {
-					t.Errorf("Read2(%s) got %v, want %v", tt.url, got, tt.want)
-				}
-			}
-
-			if got := ms.NumCalled(tt.url); got != 1 {
-				t.Errorf("num called(%s) = %d, want 1", tt.url, got)
-			}
-		})
-	}
+	return strings.NewReader(content), nil
 }
 
 func TestGetFile(t *testing.T) {
@@ -208,7 +142,7 @@ func TestGetFile(t *testing.T) {
 			s.Register(fs.scheme, fs)
 
 			// Test both GetFile and LazyGetFile.
-			for _, f := range []func(url *url.URL) (io.Reader, error){
+			for _, f := range []func(url *url.URL) (io.ReaderAt, error){
 				s.GetFile,
 				s.LazyGetFile,
 			} {
@@ -221,7 +155,7 @@ func TestGetFile(t *testing.T) {
 				if err != nil {
 					return
 				}
-				content, err := ioutil.ReadAll(r)
+				content, err := ioutil.ReadAll(uio.Reader(r))
 				if err != nil {
 					t.Errorf("bytes.Buffer read returned an error? %v", err)
 				}
