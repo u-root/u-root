@@ -41,7 +41,7 @@ import (
 	"strconv"
 	"text/template"
 
-	fmap "github.com/u-root/u-root/cmds/fmap/lib"
+	"github.com/u-root/u-root/pkg/fmap"
 )
 
 var cmds = map[string]struct {
