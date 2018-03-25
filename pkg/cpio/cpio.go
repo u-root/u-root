@@ -138,33 +138,78 @@ func Concat(w RecordWriter, r RecordReader, transform func(Record) Record) error
 	}
 }
 
+// Archive is an in-memory list of files.
+type Archive struct {
+	// Files is a map of relative archive path -> record.
+	Files map[string]Record
+
+	// Order is a list of relative archive paths and represents the order
+	// in which Files were added.
+	Order []string
+}
+
+// Add adds a record to the archive.
+func (a *Archive) Add(r Record) {
+	a.Files[r.Name] = r
+	a.Order = append(a.Order, r.Name)
+}
+
+// ReadArchive reads the entire archive in-memory and makes it accessible by
+// paths.
+func ReadArchive(rr RecordReader) (*Archive, error) {
+	a := &Archive{
+		Files: make(map[string]Record),
+	}
+	err := ForEachRecord(rr, func(r Record) error {
+		a.Add(r)
+		return nil
+	})
+	return a, err
+}
+
 // ReadAllRecords returns all records in `r` in the order in which they were
 // read.
-func ReadAllRecords(r RecordReader) ([]Record, error) {
+func ReadAllRecords(rr RecordReader) ([]Record, error) {
 	var files []Record
+	err := ForEachRecord(rr, func(r Record) error {
+		files = append(files, r)
+		return nil
+	})
+	return files, err
+}
+
+// ForEachRecord reads every record from r and applies f.
+func ForEachRecord(rr RecordReader, fun func(Record) error) error {
 	for {
-		f, err := r.ReadRecord()
-		if err == io.EOF {
-			return files, nil
+		rec, err := rr.ReadRecord()
+		switch err {
+		case io.EOF:
+			return nil
+
+		case nil:
+			if err := fun(rec); err != nil {
+				return err
+			}
+
+		default:
+			return err
 		}
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, f)
 	}
 }
 
-// MakeReproducible changes any fields in a Record such that
-// if we run cpio again, with the same files presented to it
-// in the same order, and those files have unchanged contents,
-// the cpio file it produces will be bit-for-bit
-// identical. This is an essential property for firmware-embedded
-// payloads.
-func MakeReproducible(file Record) Record {
-	file.MTime = 0
-	return file
+// MakeReproducible changes any fields in a Record such that if we run cpio
+// again, with the same files presented to it in the same order, and those
+// files have unchanged contents, the cpio file it produces will be bit-for-bit
+// identical. This is an essential property for firmware-embedded payloads.
+func MakeReproducible(r Record) Record {
+	r.MTime = 0
+	r.UID = 0
+	r.GID = 0
+	return r
 }
 
+// MakeAllReproducible makes all given records reproducible as in
+// MakeReproducible.
 func MakeAllReproducible(files []Record) {
 	for i := range files {
 		files[i] = MakeReproducible(files[i])
