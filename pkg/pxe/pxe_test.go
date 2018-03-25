@@ -2,7 +2,6 @@ package pxe
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
 	"reflect"
@@ -564,7 +563,7 @@ func TestAppendFile(t *testing.T) {
 						t.Errorf("want kernel, got none")
 					}
 					if label.Kernel != nil {
-						k, err := ioutil.ReadAll(uio.Reader(label.Kernel))
+						k, err := uio.ReadAll(label.Kernel)
 						if !reflect.DeepEqual(err, want.kernelErr) {
 							t.Errorf("could not read kernel of label %q: %v, want %v", labelName, err, want.kernelErr)
 						}
@@ -578,7 +577,7 @@ func TestAppendFile(t *testing.T) {
 						t.Errorf("want initrd, got none")
 					}
 					if label.Initrd != nil {
-						i, err := ioutil.ReadAll(uio.Reader(label.Initrd))
+						i, err := uio.ReadAll(label.Initrd)
 						if err != want.initrdErr {
 							t.Errorf("could not read initrd of label %q: %v, want %v", labelName, err, want.initrdErr)
 						}

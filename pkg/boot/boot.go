@@ -2,6 +2,8 @@ package boot
 
 import (
 	"log"
+
+	"github.com/u-root/u-root/pkg/cpio"
 )
 
 // OSImage represents a bootable OS package.
@@ -19,3 +21,12 @@ type OSImage interface {
 	// package type to package_type of sw.
 	Pack(sw *SigningWriter) error
 }
+
+var (
+	osimageMap = map[string]func(*cpio.Archive) (OSImage, error){
+		"linux": func(a *cpio.Archive) (OSImage, error) {
+			return NewLinuxImageFromArchive(a)
+		},
+		"multiboot": newMultibootImage,
+	}
+)

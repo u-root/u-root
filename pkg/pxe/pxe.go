@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/url"
 	"path"
@@ -151,7 +150,7 @@ func (c *Config) AppendFile(url string) error {
 	if err != nil {
 		return err
 	}
-	config, err := ioutil.ReadAll(uio.Reader(r))
+	config, err := uio.ReadAll(r)
 	if err != nil {
 		return err
 	}

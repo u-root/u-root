@@ -63,12 +63,13 @@ func (r EOFReader) ReadRecord() (Record, error) {
 
 // DedupWriter is a RecordWriter that does not write more than one record with
 // the same path.
+//
+// There seems to be no harm done in stripping duplicate names when the record
+// is written, and lots of harm done if we don't do it.
 type DedupWriter struct {
 	rw RecordWriter
 
-	// There seems to be no harm done in stripping
-	// duplicate names when the record is written,
-	// and lots of harm done if we don't do it.
+	// alreadyWritten keeps track of paths already written to rw.
 	alreadyWritten map[string]struct{}
 }
 
