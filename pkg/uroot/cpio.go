@@ -15,8 +15,7 @@ import (
 
 // CPIOArchiver is an implementation of Archiver for the cpio format.
 type CPIOArchiver struct {
-	// Format is the name of the cpio format to use.
-	Format string
+	cpio.RecordFormat
 }
 
 // OpenWriter opens `path` as the correct file type and returns an
@@ -33,32 +32,24 @@ func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (ArchiveWriter, err
 		return nil, err
 	}
 	log.Printf("Filename is %s", path)
-	archiver, err := cpio.Format(ca.Format)
-	if err != nil {
-		return nil, err
-	}
-
-	return osWriter{archiver.Writer(f), f}, nil
+	return osWriter{ca.RecordFormat.Writer(f), f}, nil
 }
 
 // osWriter implements ArchiveWriter.
 type osWriter struct {
-	cpio.Writer
+	cpio.RecordWriter
+
 	f *os.File
 }
 
+// Finish implements ArchiveWriter.Finish.
 func (o osWriter) Finish() error {
-	err := o.WriteTrailer()
+	err := cpio.WriteTrailer(o)
 	o.f.Close()
 	return err
 }
 
 // Reader implements Archiver.Reader.
 func (ca CPIOArchiver) Reader(r io.ReaderAt) ArchiveReader {
-	archiver, err := cpio.Format(ca.Format)
-	if err != nil {
-		panic(err)
-	}
-
-	return archiver.Reader(r)
+	return ca.RecordFormat.Reader(r)
 }

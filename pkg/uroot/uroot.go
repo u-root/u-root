@@ -37,7 +37,7 @@ var (
 	}
 	archivers = map[string]Archiver{
 		"cpio": CPIOArchiver{
-			Format: "newc",
+			RecordFormat: cpio.Newc,
 		},
 		"dir": DirArchiver{},
 	}
@@ -278,18 +278,14 @@ type Archiver interface {
 
 // ArchiveWriter is an object that files can be written to.
 type ArchiveWriter interface {
-	// WriteRecord writes the given file record.
-	WriteRecord(cpio.Record) error
+	cpio.RecordWriter
 
 	// Finish finishes the archive.
 	Finish() error
 }
 
 // ArchiveReader is an object that files can be read from.
-type ArchiveReader interface {
-	// ReadRecord reads a file record.
-	ReadRecord() (cpio.Record, error)
-}
+type ArchiveReader cpio.RecordReader
 
 // GetBuilder returns the Build function for the named build mode.
 func GetBuilder(name string) (Build, error) {

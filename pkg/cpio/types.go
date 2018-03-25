@@ -25,6 +25,7 @@ type Record struct {
 	Info
 }
 
+// Trailer is the name of the trailer record.
 const Trailer = "TRAILER!!!"
 
 // TrailerRecord is the last record in any CPIO archive.
@@ -57,7 +58,7 @@ func Symlink(name string, target string) Record {
 	}
 }
 
-// Directory returns a directory record at `name`.
+// Directory returns a directory record at name.
 func Directory(name string, mode uint64) Record {
 	return Record{
 		Info: Info{
@@ -67,7 +68,7 @@ func Directory(name string, mode uint64) Record {
 	}
 }
 
-// CharDev returns a character device record at `name`.
+// CharDev returns a character device record at name.
 func CharDev(name string, perm uint64, rmajor, rminor uint64) Record {
 	return Record{
 		Info: Info{
@@ -102,6 +103,22 @@ type Info struct {
 	Name     string
 }
 
+func (i Info) String() string {
+	return fmt.Sprintf("%s: Ino %d Mode %#o UID %d GID %d NLink %d MTime %v FileSize %d Major %d Minor %d Rmajor %d Rminor %d",
+		i.Name,
+		i.Ino,
+		i.Mode,
+		i.UID,
+		i.GID,
+		i.NLink,
+		time.Unix(int64(i.MTime), 0).UTC(),
+		i.FileSize,
+		i.Major,
+		i.Minor,
+		i.Rmajor,
+		i.Rminor)
+}
+
 func Equal(r Record, s Record) bool {
 	if r.Info != s.Info {
 		return false
@@ -126,33 +143,4 @@ func ReaderAtEqual(r1, r2 io.ReaderAt) bool {
 		}
 	}
 	return bytes.Equal(c, d)
-}
-
-func (i Info) String() string {
-	return fmt.Sprintf("%s: Ino %d Mode %#o UID %d GID %d NLink %d MTime %v FileSize %d Major %d Minor %d Rmajor %d Rminor %d",
-		i.Name,
-		i.Ino,
-		i.Mode,
-		i.UID,
-		i.GID,
-		i.NLink,
-		time.Unix(int64(i.MTime), 0).UTC(),
-		i.FileSize,
-		i.Major,
-		i.Minor,
-		i.Rmajor,
-		i.Rminor)
-}
-
-type RecordReader interface {
-	ReadRecord() (Record, error)
-}
-
-type RecordWriter interface {
-	WriteRecord(Record) error
-}
-
-type RecordFormat interface {
-	Reader(r io.ReaderAt) RecordReader
-	Writer(w io.Writer) RecordWriter
 }
