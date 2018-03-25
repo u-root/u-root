@@ -4,13 +4,12 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"path"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 // Package is a netboot21 boot package.
@@ -19,23 +18,28 @@ import (
 type Package struct {
 	OSImage
 
+	// Metadata is a map of relative archive paths -> arbitrary metadata
+	// content.
 	Metadata map[string]string
 }
 
+// NewPackage returns a new package based on the given OSImage.
 func NewPackage(osi OSImage) *Package {
 	return &Package{
-		Metadata: make(map[string]string),
 		OSImage:  osi,
+		Metadata: make(map[string]string),
 	}
 }
 
+// AddMetadata adds metadata at a relative path.
 func (p *Package) AddMetadata(relPath string, content string) {
 	p.Metadata[relPath] = content
 }
 
 // Pack writes the boot package into archive w.
 //
-// TODO(hugelgupf): use a generic private key interface.
+// TODO(hugelgupf): use a generic private key interface. No idea if we intend
+// to keep using RSA here. Make usable with TPM.
 func (p *Package) Pack(w cpio.RecordWriter, signer *rsa.PrivateKey) error {
 	sw := NewSigningWriter(w)
 
@@ -54,47 +58,40 @@ func (p *Package) Pack(w cpio.RecordWriter, signer *rsa.PrivateKey) error {
 	if err := p.OSImage.Pack(sw); err != nil {
 		return err
 	}
-	return sw.WriteSignature(signer)
+
+	if signer != nil {
+		return sw.WriteSignature(signer)
+	}
+	return nil
 }
 
-// archive is an archive of files expected to be a netboot21 boot package.
-type archive struct {
-	originalArchive io.ReaderAt
-	Files           map[string]cpio.Record
-}
-
-// TODO(hugelgupf): stop using x509.
-func (p *Package) Unpack(arch io.ReaderAt, pk *rsa.PublicKey) error {
-	p = &Package{
+// Unpack unpacks a boot package in rr to p.
+//
+// TODO(hugelgupf): RSA? Generalize.
+func (p *Package) Unpack(rr cpio.RecordReader, pk *rsa.PublicKey) error {
+	*p = Package{
 		Metadata: make(map[string]string),
 	}
-	a := &archive{
-		originalArchive: arch,
-		Files:           make(map[string]cpio.Record),
-	}
 
-	recs := NewMeasuringReader(cpio.Newc.Reader(arch))
-	for {
-		r, err := recs.ReadRecord()
-		if err == io.EOF {
-			break
-		}
-
-		dir, name := path.Split(r.Name)
-		if dir == "metadata" {
-			b, err := ioutil.ReadAll(uio.Reader(r))
-			if err != nil {
-				return err
-			}
-
-			p.Metadata[name] = string(b)
-		} else {
-			a.Files[r.Name] = r
-		}
+	recs := NewMeasuringReader(rr)
+	a, err := cpio.ReadArchive(recs)
+	if err != nil {
+		return err
 	}
 	if pk != nil {
 		if err := recs.Verify(pk); err != nil {
 			return err
+		}
+	}
+
+	for pth, content := range a.Files {
+		s := strings.Split(pth, "/")
+		if s[0] == "metadata" && content.Info.Mode&unix.S_IFMT == unix.S_IFREG {
+			c, err := uio.ReadAll(content)
+			if err != nil {
+				return err
+			}
+			p.Metadata[path.Join(s[1:]...)] = string(c)
 		}
 	}
 
@@ -103,26 +100,20 @@ func (p *Package) Unpack(arch io.ReaderAt, pk *rsa.PublicKey) error {
 		return errors.New("file 'package_type' missing from boot package")
 	}
 
-	tb, err := ioutil.ReadAll(uio.Reader(typFile.ReaderAt))
+	tb, err := uio.ReadAll(typFile)
 	if err != nil {
 		return err
 	}
 
 	pkgType := strings.TrimSpace(string(tb))
-	switch pkgType {
-	case "linux":
-		img, err := newLinuxImageFromArchive(a)
-		if err != nil {
-			return err
-		}
-		p.OSImage = img
-
-	case "multiboot":
-		return fmt.Errorf("multiboot image support not yet implemented")
-
-	default:
+	imager, ok := osimageMap[pkgType]
+	if !ok {
 		return fmt.Errorf("invalid package type %q not supported", pkgType)
 	}
-
+	img, err := imager(a)
+	if err != nil {
+		return err
+	}
+	p.OSImage = img
 	return nil
 }

@@ -1,6 +1,7 @@
 package boot
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +13,9 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
+// ErrKernelMissing is returned by LinuxImage.Pack if no kernel is given.
+var ErrKernelMissing = errors.New("must have non-nil kernel")
+
 // LinuxImage implements OSImage for a Linux kernel + initramfs.
 type LinuxImage struct {
 	Kernel  io.ReaderAt
@@ -19,7 +23,11 @@ type LinuxImage struct {
 	Cmdline string
 }
 
-func newLinuxImageFromArchive(a *archive) (*LinuxImage, error) {
+var _ OSImage = &LinuxImage{}
+
+// NewLinuxImageFromArchive reads a netboot21 Linux OSImage from a CPIO file
+// archive.
+func NewLinuxImageFromArchive(a *cpio.Archive) (*LinuxImage, error) {
 	kernel, ok := a.Files["modules/kernel/content"]
 	if !ok {
 		return nil, fmt.Errorf("kernel missing from archive")
@@ -29,7 +37,7 @@ func newLinuxImageFromArchive(a *archive) (*LinuxImage, error) {
 	li.Kernel = kernel
 
 	if params, ok := a.Files["modules/kernel/params"]; ok {
-		b, err := ioutil.ReadAll(uio.Reader(params))
+		b, err := uio.ReadAll(params)
 		if err != nil {
 			return nil, err
 		}
@@ -51,11 +59,13 @@ func (li *LinuxImage) Pack(sw *SigningWriter) error {
 	if err := sw.WriteRecord(cpio.Directory("modules/kernel", 0700)); err != nil {
 		return err
 	}
-	kernel, err := ioutil.ReadAll(uio.Reader(li.Kernel))
+	if li.Kernel == nil {
+		return ErrKernelMissing
+	}
+	kernel, err := uio.ReadAll(li.Kernel)
 	if err != nil {
 		return err
 	}
-	// TODO: avoid this unnecessary allocation.
 	if err := sw.WriteFile("modules/kernel/content", string(kernel)); err != nil {
 		return err
 	}
@@ -67,7 +77,7 @@ func (li *LinuxImage) Pack(sw *SigningWriter) error {
 		if err := sw.WriteRecord(cpio.Directory("modules/initrd", 0700)); err != nil {
 			return err
 		}
-		initrd, err := ioutil.ReadAll(uio.Reader(li.Initrd))
+		initrd, err := uio.ReadAll(li.Initrd)
 		if err != nil {
 			return err
 		}

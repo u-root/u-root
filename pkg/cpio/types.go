@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
@@ -49,7 +49,7 @@ func StaticFile(name string, content string, perm uint64) Record {
 // Symlink returns a symlink record at name pointing to target.
 func Symlink(name string, target string) Record {
 	return Record{
-		ReaderAt: bytes.NewReader([]byte(target)),
+		ReaderAt: strings.NewReader(target),
 		Info: Info{
 			FileSize: uint64(len(target)),
 			Mode:     unix.S_IFLNK | 0777,
@@ -142,14 +142,14 @@ func ReaderAtEqual(r1, r2 io.ReaderAt) bool {
 	var c, d []byte
 	var err error
 	if r1 != nil {
-		c, err = ioutil.ReadAll(uio.Reader(r1))
+		c, err = uio.ReadAll(r1)
 		if err != nil {
 			return false
 		}
 	}
 
 	if r2 != nil {
-		d, err = ioutil.ReadAll(uio.Reader(r2))
+		d, err = uio.ReadAll(r2)
 		if err != nil {
 			return false
 		}
