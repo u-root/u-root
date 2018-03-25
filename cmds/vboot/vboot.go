@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/zaolin/go-tpm/tpm"
+	"github.com/google/go-tpm/tpm"
 	"golang.org/x/crypto/ed25519"
 )
 

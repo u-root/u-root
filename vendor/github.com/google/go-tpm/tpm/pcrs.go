@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/google/go-tpm/tpmutil"
 )
 
 // setPCR sets a PCR value as selected in a given mask.
@@ -70,7 +72,7 @@ func createPCRComposite(mask pcrMask, pcrs []byte) ([]byte, error) {
 		Selection: pcrSelection{3, mask},
 		Values:    pcrs,
 	}
-	b, err := pack([]interface{}{pcrc})
+	b, err := tpmutil.Pack(pcrc)
 	if err != nil {
 		return nil, err
 	}
@@ -128,4 +130,29 @@ func newPCRInfoLong(rw io.ReadWriter, loc byte, pcrNums []int) (*pcrInfoLong, er
 	}
 
 	return createPCRInfoLong(loc, mask, pcrVals)
+}
+
+func newPCRInfo(rw io.ReadWriter, pcrNums []int) (*pcrInfo, error) {
+	var mask pcrMask
+	for _, pcr := range pcrNums {
+		if err := mask.setPCR(pcr); err != nil {
+			return nil, err
+		}
+	}
+
+	pcrVals, err := FetchPCRValues(rw, pcrNums)
+	if err != nil {
+		return nil, err
+	}
+	d, err := createPCRComposite(mask, pcrVals)
+	if err != nil {
+		return nil, err
+	}
+	pcri := &pcrInfo{
+		PcrSelection: pcrSelection{3, mask},
+	}
+	copy(pcri.DigestAtRelease[:], d)
+	copy(pcri.DigestAtCreation[:], d)
+
+	return pcri, nil
 }
