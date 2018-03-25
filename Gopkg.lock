@@ -2,77 +2,16 @@
 
 
 [[projects]]
-  branch = "parse-constraints-with-dash-in-pre"
-  name = "github.com/Masterminds/semver"
-  packages = ["."]
-  revision = "a93e51b5a57ef416dac8bb02d11407b6f55d8929"
-  source = "https://github.com/carolynvs/semver.git"
-
-[[projects]]
-  name = "github.com/Masterminds/vcs"
-  packages = ["."]
-  revision = "6f1c6d150500e452704e9863f68c2559f58616bf"
-  version = "v1.12.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/armon/go-radix"
-  packages = ["."]
-  revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
-
-[[projects]]
   name = "github.com/beevik/ntp"
   packages = ["."]
   revision = "62c80a04de2086884d8296004b6d74ee1846c582"
   version = "v0.2.0"
 
 [[projects]]
-  name = "github.com/boltdb/bolt"
-  packages = ["."]
-  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
-  version = "v1.3.1"
-
-[[projects]]
   branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
-
-[[projects]]
-  name = "github.com/go-yaml/yaml"
-  packages = ["."]
-  revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
-  version = "v2.1.1"
-
-[[projects]]
-  name = "github.com/golang/dep"
-  packages = [
-    ".",
-    "cmd/dep",
-    "gps",
-    "gps/internal/pb",
-    "gps/paths",
-    "gps/pkgtree",
-    "internal/feedback",
-    "internal/fs",
-    "internal/importers",
-    "internal/importers/base",
-    "internal/importers/glide",
-    "internal/importers/glock",
-    "internal/importers/godep",
-    "internal/importers/govend",
-    "internal/importers/govendor",
-    "internal/importers/gvt",
-    "internal/importers/vndr"
-  ]
-  revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
-  version = "v0.4.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/golang/protobuf"
-  packages = ["proto"]
-  revision = "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 
 [[projects]]
   branch = "master"
@@ -112,12 +51,6 @@
   packages = ["."]
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
-
-[[projects]]
-  name = "github.com/jmank88/nuts"
-  packages = ["."]
-  revision = "8b28145dffc87104e66d074f62ea8080edfad7c8"
-  version = "v0.3.0"
 
 [[projects]]
   name = "github.com/klauspost/compress"
@@ -173,33 +106,9 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/nightlyone/lockfile"
-  packages = ["."]
-  revision = "6a197d5ea61168f2ac821de2b7f011b250904900"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/pelletier/go-toml"
-  packages = ["."]
-  revision = "05bcc0fb0d3e60da4b8dd5bd7e0ea563eb4ca943"
-
-[[projects]]
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
-
-[[projects]]
-  branch = "master"
   name = "github.com/rck/unit"
   packages = ["."]
   revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/sdboyer/constext"
-  packages = ["."]
-  revision = "836a144573533ea4da4e6929c235fd348aed1c80"
 
 [[projects]]
   branch = "master"
@@ -256,18 +165,11 @@
   name = "golang.org/x/net"
   packages = [
     "bpf",
-    "context",
     "internal/iana",
     "internal/socket",
     "ipv4"
   ]
   revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/sync"
-  packages = ["errgroup"]
-  revision = "fd80eb99c8f653c847d294a001bdf2a3a6f768f5"
 
 [[projects]]
   branch = "master"
@@ -296,6 +198,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "eaf13138c5384f124aa50a394c6c9c07f46c75178e7c8e8693f1dd9e92046195"
+  inputs-digest = "e1a178092006f93c9de124c458d2eac8ad385d356d4328f475a9c1d49b661206"
   solver-name = "gps-cdcl"
   solver-version = 1
