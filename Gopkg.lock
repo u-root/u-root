@@ -119,7 +119,7 @@
     "dhcp4opts",
     "internal/buffer"
   ]
-  revision = "1418bdb477e4970afa23412e3e54fc49c569ad0e"
+  revision = "a950c25c1e85927070c5395d644ae394a9caae2b"
 
 [[projects]]
   branch = "master"
@@ -128,7 +128,7 @@
     ".",
     "nl"
   ]
-  revision = "5236321576c0c97ab02c078e60f9b1c5c1828807"
+  revision = "41009d533ba0788a139b0b6ef38923a23b3766d3"
 
 [[projects]]
   branch = "master"
@@ -158,7 +158,7 @@
     "sha3",
     "ssh"
   ]
-  revision = "c4a91bd4f524f10d064139674cf55852e055ad01"
+  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
   branch = "master"
@@ -169,13 +169,13 @@
     "internal/socket",
     "ipv4"
   ]
-  revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "8c0ece68c28377f4c326d85b94f8df0dace46f80"
+  revision = "91ee8cde435411ca3f1cd365e8f20131aed4d0a1"
 
 [[projects]]
   branch = "master"
@@ -184,7 +184,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "c1547a3f90f245aa85784a99580d3f601380cc07"
+  revision = "77106db15f689a60e7d4e085d967ac557b918fb2"
 
 [[projects]]
   name = "pack.ag/tftp"
