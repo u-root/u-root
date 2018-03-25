@@ -12,10 +12,6 @@ required = [
 
 [[constraint]]
   branch = "master"
-  name = "github.com/zaolin/go-tpm"
-
-[[constraint]]
-  branch = "master"
   name = "golang.org/x/crypto"
 
 [[constraint]]

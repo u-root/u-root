@@ -20,6 +20,8 @@ import (
 	"crypto/sha1"
 	"errors"
 	"math/big"
+
+	"github.com/google/go-tpm/tpmutil"
 )
 
 // This file provides functions to extract a crypto/rsa public key from a key
@@ -31,7 +33,7 @@ import (
 func UnmarshalRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 	// Parse the blob as a key.
 	var k key
-	if err := unpack(keyBlob, []interface{}{&k}); err != nil {
+	if _, err := tpmutil.Unpack(keyBlob, &k); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +50,7 @@ func (k *key) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	// This means that k.AlgorithmsParms.Parms is an rsaKeyParms, which is
 	// enough to create the exponent, and k.PubKey contains the key.
 	var rsakp rsaKeyParms
-	if err := unpack(k.AlgorithmParms.Parms, []interface{}{&rsakp}); err != nil {
+	if _, err := tpmutil.Unpack(k.AlgorithmParms.Parms, &rsakp); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +71,7 @@ func (k *key) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 func UnmarshalPubRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 	// Parse the blob as a key.
 	var pk pubKey
-	if err := unpack(keyBlob, []interface{}{&pk}); err != nil {
+	if _, err := tpmutil.Unpack(keyBlob, &pk); err != nil {
 		return nil, err
 	}
 
@@ -87,7 +89,7 @@ func (pk *pubKey) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	// This means that pk.AlgorithmsParms.Parms is an rsaKeyParms, which is
 	// enough to create the exponent, and pk.Key contains the key.
 	var rsakp rsaKeyParms
-	if err := unpack(pk.AlgorithmParms.Parms, []interface{}{&rsakp}); err != nil {
+	if _, err := tpmutil.Unpack(pk.AlgorithmParms.Parms, &rsakp); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +136,7 @@ func VerifyQuote(pk *rsa.PublicKey, data []byte, quote []byte, pcrNums []int, pc
 		return err
 	}
 
-	p, err := pack([]interface{}{qi})
+	p, err := tpmutil.Pack(qi)
 	if err != nil {
 		return err
 	}

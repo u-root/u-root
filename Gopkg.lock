@@ -76,6 +76,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/google/go-tpm"
+  packages = [
+    "tpm",
+    "tpmutil"
+  ]
+  revision = "ca55a71865e26d3113cb6b281f72a50a1d82ea8a"
+
+[[projects]]
+  branch = "master"
   name = "github.com/google/netstack"
   packages = [
     "ilist",
@@ -220,12 +229,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/zaolin/go-tpm"
-  packages = ["tpm"]
-  revision = "81001ab120f1fe5e056b6b1bc4497ebe2b6b2bd5"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -293,6 +296,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a5a96e440163570c65a6b3ed407b70519be20c6a489a6010cc9f66b87535da00"
+  inputs-digest = "eaf13138c5384f124aa50a394c6c9c07f46c75178e7c8e8693f1dd9e92046195"
   solver-name = "gps-cdcl"
   solver-version = 1

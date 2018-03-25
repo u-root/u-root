@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+
+	"github.com/google/go-tpm/tpmutil"
 )
 
 // A pcrValue is the fixed-size value of a PCR.
@@ -59,6 +61,12 @@ type pcrInfoShort struct {
 	DigestAtRelease digest
 }
 
+type pcrInfo struct {
+	PcrSelection     pcrSelection
+	DigestAtRelease  digest
+	DigestAtCreation digest
+}
+
 // A capVersionInfo contains information about the TPM itself. Note that this
 // is deserialized specially, since it has a variable-length byte array but no
 // length. It is preceeded with a length in the response to the Quote2 command.
@@ -76,36 +84,9 @@ type capVersionInfoFixed struct {
 	VendorID  byte
 }
 
-// A Handle is a 32-bit unsigned integer.
-type Handle uint32
-
-// CloseKey flushes the key associated with this Handle.
-func (h Handle) CloseKey(rw io.ReadWriter) error {
+// CloseKey flushes the key associated with the tpmutil.Handle.
+func CloseKey(rw io.ReadWriter, h tpmutil.Handle) error {
 	return flushSpecific(rw, h, rtKey)
-}
-
-// A commandHeader is the header for a TPM command.
-type commandHeader struct {
-	Tag  uint16
-	Size uint32
-	Cmd  uint32
-}
-
-// String returns a string version of a commandHeader
-func (ch commandHeader) String() string {
-	return fmt.Sprintf("commandHeader{Tag: %x, Size: %x, Cmd: %x}", ch.Tag, ch.Size, ch.Cmd)
-}
-
-// A responseHeader is a header for TPM responses.
-type responseHeader struct {
-	Tag  uint16
-	Size uint32
-	Res  uint32
-}
-
-// String returns a string representation of a responseHeader.
-func (rh responseHeader) String() string {
-	return fmt.Sprintf("responseHeader{Tag: %x, Size: %x, Res: %x", rh.Tag, rh.Size, rh.Res)
 }
 
 // A nonce is a 20-byte value.
@@ -115,7 +96,7 @@ const nonceSize uint32 = 20
 
 // An oiapResponse is a response to an OIAP command.
 type oiapResponse struct {
-	AuthHandle Handle
+	AuthHandle tpmutil.Handle
 	NonceEven  nonce
 }
 
@@ -132,7 +113,7 @@ func (opr *oiapResponse) Close(rw io.ReadWriter) error {
 // An osapCommand is a command sent for OSAP authentication.
 type osapCommand struct {
 	EntityType  uint16
-	EntityValue Handle
+	EntityValue tpmutil.Handle
 	OddOSAP     nonce
 }
 
@@ -143,7 +124,7 @@ func (opc osapCommand) String() string {
 
 // An osapResponse is a TPM reply to an osapCommand.
 type osapResponse struct {
-	AuthHandle Handle
+	AuthHandle tpmutil.Handle
 	NonceEven  nonce
 	EvenOSAP   nonce
 }
@@ -170,7 +151,7 @@ const authSize uint32 = 20
 
 // A sealCommand is the command sent to the TPM to seal data.
 type sealCommand struct {
-	KeyHandle Handle
+	KeyHandle tpmutil.Handle
 	EncAuth   authValue
 }
 
@@ -183,7 +164,7 @@ func (sc sealCommand) String() string {
 // tagRQUAuth1Command tags use one of these auth structures, and commands with
 // tagRQUAuth2Command use two.
 type commandAuth struct {
-	AuthHandle  Handle
+	AuthHandle  tpmutil.Handle
 	NonceOdd    nonce
 	ContSession byte
 	Auth        authValue
@@ -309,7 +290,7 @@ func convertPubKey(pk crypto.PublicKey) (*pubKey, error) {
 		NumPrimes: 2,
 		Exponent:  big.NewInt(int64(pkRSA.E)).Bytes(),
 	}
-	rsakpb, err := pack([]interface{}{rsakp})
+	rsakpb, err := tpmutil.Pack(rsakp)
 	if err != nil {
 		return nil, err
 	}

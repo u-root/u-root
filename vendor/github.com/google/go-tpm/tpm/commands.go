@@ -18,61 +18,23 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"strconv"
+
+	"github.com/google/go-tpm/tpmutil"
 )
 
 // submitTPMRequest sends a structure to the TPM device file and gets results
 // back, interpreting them as a new provided structure.
 func submitTPMRequest(rw io.ReadWriter, tag uint16, ord uint32, in []interface{}, out []interface{}) (uint32, error) {
-	if rw == nil {
-		return 0, errors.New("nil TPM handle")
-	}
-
-	ch := commandHeader{tag, 0, ord}
-	inb, err := packWithHeader(ch, in)
+	resp, code, err := tpmutil.RunCommand(rw, tpmutil.Tag(tag), tpmutil.Command(ord), in...)
 	if err != nil {
 		return 0, err
 	}
-
-	if _, err := rw.Write(inb); err != nil {
-		return 0, err
+	if code != tpmutil.RCSuccess {
+		return uint32(code), tpmError(code)
 	}
 
-	// Try to read the whole thing, but handle the case where it's just a
-	// ResponseHeader and not the body, since that's what happens in the error
-	// case.
-	var rh responseHeader
-	rhSize := binary.Size(rh)
-	outb := make([]byte, maxTPMResponse)
-	outlen, err := rw.Read(outb)
-	if err != nil {
-		return 0, err
-	}
-
-	// Resize the buffer to match the amount read from the TPM.
-	outb = outb[:outlen]
-	if err := unpack(outb[:rhSize], []interface{}{&rh}); err != nil {
-		return 0, err
-	}
-
-	// Check success before trying to read the rest of the result.
-	// Note that the command tag and its associated response tag differ by 3,
-	// e.g., tagRQUCommand == 0x00C1, and tagRSPCommand == 0x00C4.
-	if rh.Res != 0 {
-		return rh.Res, tpmError(rh.Res)
-	}
-
-	if rh.Tag != ch.Tag+3 {
-		return 0, errors.New("inconsistent tag returned by TPM. Expected " + strconv.Itoa(int(ch.Tag+3)) + " but got " + strconv.Itoa(int(rh.Tag)))
-	}
-
-	if rh.Size > uint32(rhSize) {
-		if err := unpack(outb[rhSize:], out); err != nil {
-			return 0, err
-		}
-	}
-
-	return rh.Res, nil
+	_, err = tpmutil.Unpack(resp, out...)
+	return 0, err
 }
 
 // oiap sends an OIAP command to the TPM and gets back an auth value and a
@@ -127,7 +89,7 @@ func seal(rw io.ReadWriter, sc *sealCommand, pcrs *pcrInfoLong, data []byte, ca 
 }
 
 // unseal data sealed by the TPM.
-func unseal(rw io.ReadWriter, keyHandle Handle, sealed *tpmStoredData, ca1 *commandAuth, ca2 *commandAuth) ([]byte, *responseAuth, *responseAuth, uint32, error) {
+func unseal(rw io.ReadWriter, keyHandle tpmutil.Handle, sealed *tpmStoredData, ca1 *commandAuth, ca2 *commandAuth) ([]byte, *responseAuth, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, sealed, ca1, ca2}
 	var outb []byte
 	var ra1 responseAuth
@@ -143,7 +105,7 @@ func unseal(rw io.ReadWriter, keyHandle Handle, sealed *tpmStoredData, ca1 *comm
 
 // flushSpecific removes a handle from the TPM. Note that removing a handle
 // doesn't require any authentication.
-func flushSpecific(rw io.ReadWriter, handle Handle, resourceType uint32) error {
+func flushSpecific(rw io.ReadWriter, handle tpmutil.Handle, resourceType uint32) error {
 	// In this case, all the information is in err, so we don't check the
 	// specific return-value details.
 	_, err := submitTPMRequest(rw, tagRQUCommand, ordFlushSpecific, []interface{}{handle, resourceType}, nil)
@@ -153,10 +115,10 @@ func flushSpecific(rw io.ReadWriter, handle Handle, resourceType uint32) error {
 // loadKey2 loads a key into the TPM. It's a tagRQUAuth1Command, so it only
 // needs one auth parameter.
 // TODO(tmroeder): support key12, too.
-func loadKey2(rw io.ReadWriter, k *key, ca *commandAuth) (Handle, *responseAuth, uint32, error) {
+func loadKey2(rw io.ReadWriter, k *key, ca *commandAuth) (tpmutil.Handle, *responseAuth, uint32, error) {
 	// We always load our keys with the SRK as the parent key.
 	in := []interface{}{khSRK, k, ca}
-	var keyHandle Handle
+	var keyHandle tpmutil.Handle
 	var ra responseAuth
 	out := []interface{}{&keyHandle, &ra}
 	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordLoadKey2, in, out)
@@ -168,7 +130,7 @@ func loadKey2(rw io.ReadWriter, k *key, ca *commandAuth) (Handle, *responseAuth,
 }
 
 // getPubKey gets a public key from the TPM
-func getPubKey(rw io.ReadWriter, keyHandle Handle, ca *commandAuth) (*pubKey, *responseAuth, uint32, error) {
+func getPubKey(rw io.ReadWriter, keyHandle tpmutil.Handle, ca *commandAuth) (*pubKey, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, ca}
 	var pk pubKey
 	var ra responseAuth
@@ -186,7 +148,7 @@ func getPubKey(rw io.ReadWriter, keyHandle Handle, ca *commandAuth) (*pubKey, *r
 // under, the signature, auth information, and optionally information about the
 // TPM itself. Note that the input to quote2 must be exactly 20 bytes, so it is
 // normally the SHA1 hash of the data.
-func quote2(rw io.ReadWriter, keyHandle Handle, hash [20]byte, pcrs *pcrSelection, addVersion byte, ca *commandAuth) (*pcrInfoShort, *capVersionInfo, []byte, []byte, *responseAuth, uint32, error) {
+func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrSelection, addVersion byte, ca *commandAuth) (*pcrInfoShort, *capVersionInfo, []byte, []byte, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, hash, pcrs, addVersion, ca}
 	var pcrShort pcrInfoShort
 	var capInfo capVersionInfo
@@ -206,7 +168,7 @@ func quote2(rw io.ReadWriter, keyHandle Handle, hash [20]byte, pcrs *pcrSelectio
 
 	size := binary.Size(capInfo.CapVersionFixed)
 	capInfo.VendorSpecific = make([]byte, len(capBytes)-size)
-	if err := unpack(capBytes[:size], []interface{}{&capInfo.CapVersionFixed}); err != nil {
+	if _, err := tpmutil.Unpack(capBytes[:size], &capInfo.CapVersionFixed); err != nil {
 		return nil, nil, nil, nil, nil, 0, err
 	}
 
@@ -217,7 +179,7 @@ func quote2(rw io.ReadWriter, keyHandle Handle, hash [20]byte, pcrs *pcrSelectio
 
 // quote performs a TPM 1.1 quote operation: it signs data using the
 // TPM_QUOTE_INFO structure for the current values of a selectied set of PCRs.
-func quote(rw io.ReadWriter, keyHandle Handle, hash [20]byte, pcrs *pcrSelection, ca *commandAuth) (*pcrComposite, []byte, *responseAuth, uint32, error) {
+func quote(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrSelection, ca *commandAuth) (*pcrComposite, []byte, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, hash, pcrs, ca}
 	var pcrc pcrComposite
 	var sig []byte
@@ -264,7 +226,7 @@ func resetLockValue(rw io.ReadWriter, ca *commandAuth) (*responseAuth, uint32, e
 
 // ownerReadInternalPub uses owner auth and OSAP to read either the endorsement
 // key (using khEK) or the SRK (using khSRK).
-func ownerReadInternalPub(rw io.ReadWriter, kh Handle, ca *commandAuth) (*pubKey, *responseAuth, uint32, error) {
+func ownerReadInternalPub(rw io.ReadWriter, kh tpmutil.Handle, ca *commandAuth) (*pubKey, *responseAuth, uint32, error) {
 	in := []interface{}{kh, ca}
 	var pk pubKey
 	var ra responseAuth
@@ -323,4 +285,39 @@ func takeOwnership(rw io.ReadWriter, encOwnerAuth []byte, encSRKAuth []byte, srk
 	}
 
 	return &k, &ra, ret, nil
+}
+
+// Creates a wrapped key under the SRK.
+func createWrapKey(rw io.ReadWriter, encUsageAuth digest, encMigrationAuth digest, keyInfo *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
+	in := []interface{}{khSRK, encUsageAuth, encMigrationAuth, keyInfo, ca}
+	var k key
+	var ra responseAuth
+	out := []interface{}{&k, &ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordCreateWrapKey, in, out)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	return &k, &ra, ret, nil
+}
+
+func sign(rw io.ReadWriter, keyHandle tpmutil.Handle, data []byte, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+	in := []interface{}{keyHandle, data, ca}
+	var signature []byte
+	var ra responseAuth
+	out := []interface{}{&signature, &ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordSign, in, out)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	return signature, &ra, ret, nil
+}
+
+func pcrReset(rw io.ReadWriter, pcrs *pcrSelection) error {
+	_, err := submitTPMRequest(rw, tagRQUCommand, ordPcrReset, []interface{}{pcrs}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
