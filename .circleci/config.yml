@@ -56,11 +56,11 @@ jobs:
       - run:
           name: Install dep
           command: |
-            cd vendor/github.com/golang/dep/cmd/dep
-            go install
+            wget https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64
+            chmod +x ./dep-linux-amd64
       - run:
           name: Check vendored dependencies
-          command: dep status
+          command: ./dep-linux-amd64 status
       - run:
           name: vet
           command: |

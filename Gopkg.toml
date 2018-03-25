@@ -1,7 +1,3 @@
-required = [
-  "github.com/golang/dep/cmd/dep"
-]
-
 [[constraint]]
   branch = "master"
   name = "github.com/google/uuid"
@@ -34,10 +30,6 @@ required = [
   non-go = true
   go-tests = true
   unused-packages = true
-
-  [[prune.project]]
-  name = "github.com/golang/dep"
-  unused-packages = false
 
 [[constraint]]
   name = "github.com/beevik/ntp"
