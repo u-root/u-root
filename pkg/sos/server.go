@@ -79,7 +79,7 @@ func (s SosServer) registerHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.service.Register(msg.Service, msg.Port); err != nil {
-		fmt.Printf("error: %v", err)
+		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -113,6 +113,7 @@ func (s SosServer) getServiceHandle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	port, err := s.service.Read(vars["service"])
 	if err != nil {
+		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
@@ -124,6 +125,7 @@ func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 	port, err := s.service.Read(vars["service"])
 	if err != nil {
+		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
