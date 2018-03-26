@@ -73,12 +73,14 @@ func (s SosServer) registerHandle(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 
 	if err := s.service.Register(msg.Service, msg.Port); err != nil {
 		fmt.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -95,6 +97,7 @@ func (s SosServer) unregisterHandle(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err := decoder.Decode(&msg); err != nil {
 		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
@@ -110,7 +113,8 @@ func (s SosServer) getServiceHandle(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	port, err := s.service.Read(vars["service"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 	json.NewEncoder(w).Encode(GetServiceResJson{port})
@@ -120,7 +124,8 @@ func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 	port, err := s.service.Read(vars["service"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("http://localhost:%v/", port), http.StatusTemporaryRedirect)
