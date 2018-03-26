@@ -87,7 +87,7 @@ func makeRequestToServer(reqType, url string, reqJson interface{}) error {
 //
 // defer listener.close()
 //
-// or if it's used in a server, remeber to shutdown the server.
+// or if it's used in a server, remember to shutdown the server.
 func GetListener() (net.Listener, uint, error) {
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
