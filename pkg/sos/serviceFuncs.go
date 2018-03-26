@@ -20,7 +20,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func RegistersNeccesaryPatterns(router *mux.Router) {
+func RegistersNecessaryPatterns(router *mux.Router) {
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	}).Methods("GET")
@@ -32,32 +32,7 @@ func RegisterServiceWithSos(service string, port uint) error {
 
 func registerServiceWithSos(service string, port uint, sosServerURL string) error {
 	m := RegisterReqJson{service, port}
-	b, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", sosServerURL+"/register", bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	decoder := json.NewDecoder(res.Body)
-	defer res.Body.Close()
-	var retMsg struct{ Error string }
-	if err := decoder.Decode(&retMsg); err != nil {
-		return err
-	}
-
-	if retMsg != struct{ Error string }{} {
-		return fmt.Errorf(retMsg.Error)
-	}
-
-	return nil
+	return makeRequestToServer("POST", sosServerURL+"/register", m)
 }
 
 func UnregisterServiceWithSos(service string) error {
@@ -66,11 +41,16 @@ func UnregisterServiceWithSos(service string) error {
 
 func unregisterServiceWithSos(service string, sosServerURL string) error {
 	m := UnRegisterReqJson{service}
-	b, err := json.Marshal(m)
+	return makeRequestToServer("POST", sosServerURL+"/unregister", m)
+}
+
+func makeRequestToServer(reqType, url string, reqJson interface{}) error {
+	b, err := json.Marshal(reqJson)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", sosServerURL+"/unregister", bytes.NewBuffer(b))
+
+	req, err := http.NewRequest(reqType, url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -87,7 +67,7 @@ func unregisterServiceWithSos(service string, sosServerURL string) error {
 		return err
 	}
 
-	if retMsg != struct{ Error string }{} {
+	if retMsg.Error != "" {
 		return fmt.Errorf(retMsg.Error)
 	}
 
@@ -100,14 +80,20 @@ func StartServiceServer(router *mux.Router, serviceName string, portNumReq *uint
 	if err != nil {
 		return err
 	}
-	port, err := strconv.ParseUint(strings.Split(listener.Addr().String(), ":")[1], 10, 32)
+
+	addrSplit := strings.Split(listener.Addr().String(), ":")
+	if len(addrSplit) != 2 {
+		return fmt.Errorf("Address format not recognized: %v", listener.Addr().String())
+	}
+
+	port, err := strconv.ParseUint(addrSplit[1], 10, 32)
 	if err != nil {
 		return err
 	}
 	if portNumReq != nil {
 		*portNumReq = uint(port)
 	}
-	RegistersNeccesaryPatterns(router)
+	RegistersNecessaryPatterns(router)
 	if err := RegisterServiceWithSos(serviceName, uint(port)); err != nil {
 		return err
 	}
@@ -121,7 +107,7 @@ func StartServiceServer(router *mux.Router, serviceName string, portNumReq *uint
 
 	// Signals Collector
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGSTOP)
+	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
 		sig := <-sigs
 		fmt.Printf("Received: %v\n", sig)

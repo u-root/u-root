@@ -15,9 +15,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestRegistersNeccesaryPatterns(t *testing.T) {
+func TestRegistersNecessaryPatterns(t *testing.T) {
 	router := mux.NewRouter()
-	RegistersNeccesaryPatterns(router)
+	RegistersNecessaryPatterns(router)
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
