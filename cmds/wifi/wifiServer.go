@@ -259,7 +259,12 @@ func (ws WifiServer) buildRouter() *mux.Router {
 
 func (ws WifiServer) Start() {
 	defer ws.service.Shutdown()
-	fmt.Println(sos.StartServiceServer(ws.buildRouter(), "wifi", &Port))
+	listener, port, err := sos.GetListener()
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+	Port = port
+	fmt.Println(sos.StartServiceServer(ws.buildRouter(), "wifi", listener, Port))
 }
 
 func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
