@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Register all the neccesary patterns needed to make
 func RegistersNecessaryPatterns(router *mux.Router) {
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
