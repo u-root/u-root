@@ -81,35 +81,42 @@ func makeRequestToServer(reqType, url string, reqJson interface{}) error {
 	return nil
 }
 
-// StartServiceServer establishes a listener on a random port, registers all neccesary patterns
-// to the router passed in, registers the service with SoS, and starts serving
-// the service on the random port selected before. If any of the above step fails, this function
-// will fail. If the function call needs to know what port that the service is listenning on,
-// they can passed in a uint pointer to the portNumReq to get the port. This function wraps around
-// RegistersNecessaryPatterns, RegisterServiceWithSos, and UnregisterServiceWithSos. If no
-// extenral settings are required, instead of calling each of the above separately, one can just
-// call this function to start and serving their service HTTP server right away.
-func StartServiceServer(router *mux.Router, serviceName string, portNumReq *uint) error {
+// GetListener starts listener on a random port in localhost
+// and returns the listener and the port that the listener is on.
+// Remember to close the listener with:
+//
+// defer listener.close()
+//
+// or if it's used in a server, remeber to shutdown the server.
+func GetListener() (net.Listener, uint, error) {
 	listener, err := net.Listen("tcp", "localhost:0")
-	defer listener.Close()
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 
 	addrSplit := strings.Split(listener.Addr().String(), ":")
 	if len(addrSplit) != 2 {
-		return fmt.Errorf("Address format not recognized: %v", listener.Addr().String())
+		listener.Close()
+		return nil, 0, fmt.Errorf("Address format not recognized: %v", listener.Addr().String())
 	}
 
 	port, err := strconv.ParseUint(addrSplit[1], 10, 32)
 	if err != nil {
-		return err
+		listener.Close()
+		return nil, 0, err
 	}
-	if portNumReq != nil {
-		*portNumReq = uint(port)
-	}
+	return listener, uint(port), nil
+}
+
+// StartServiceServer establishes registers all neccesary patterns to the router passed in,
+// registers the service with SoS using the port passed in, and starts serving the service on the
+// listener passed in. If any of the above step fails, this function will return an error.
+// This function wraps around RegistersNecessaryPatterns, RegisterServiceWithSos, and UnregisterServiceWithSos.
+// If no extenral settings are required, instead of calling each of the above separately, one can call
+// the GetListener function and pass the result into this function to start and serve their HTTP server right away.
+func StartServiceServer(router *mux.Router, serviceName string, listener net.Listener, port uint) error {
 	RegistersNecessaryPatterns(router)
-	if err := RegisterServiceWithSos(serviceName, uint(port)); err != nil {
+	if err := RegisterServiceWithSos(serviceName, port); err != nil {
 		return err
 	}
 	defer UnregisterServiceWithSos(serviceName)
