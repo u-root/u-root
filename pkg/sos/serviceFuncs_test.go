@@ -11,11 +11,14 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/gorilla/mux"
 )
 
 func TestRegistersNeccesaryPatterns(t *testing.T) {
-	RegistersNeccesaryPatterns(http.DefaultServeMux)
-	ts := httptest.NewServer(http.DefaultServeMux)
+	router := mux.NewRouter()
+	RegistersNeccesaryPatterns(router)
+	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL + "/ping")
@@ -25,7 +28,7 @@ func TestRegistersNeccesaryPatterns(t *testing.T) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		t.Errorf("Status\ngot:%v\nwant:%v", http.StatusOK, res.Status)
+		t.Errorf("Status Code\ngot:%v\nwant:%v", res.StatusCode, http.StatusOK)
 		return
 	}
 
@@ -71,4 +74,23 @@ func TestRegisterServiceWithSosFail(t *testing.T) {
 	if !reflect.DeepEqual(err, fmt.Errorf("%v already exists", knownServ1.service)) {
 		t.Errorf("\ngot:%v\nwant:%v", err, fmt.Errorf("%v already exists", knownServ1.service))
 	}
+}
+
+func TestUnregisterServiceWithSosSuccess(t *testing.T) {
+	// Set up
+	service := setUpKnownServices()
+	server := SosServer{service}
+	r := server.buildRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	if err := unregisterServiceWithSos(knownServ1.service, ts.URL); err != nil {
+		t.Errorf("error: %v", err)
+		return
+	}
+
+	if _, err := service.Read(knownServ1.service); !reflect.DeepEqual(err, fmt.Errorf("%v is not in the registry", knownServ1.service)) {
+		t.Errorf("unregister(%v)\ngot:(%v)\nwant:(%v)", knownServ1.service, err, fmt.Errorf("%v is not in the registry", knownServ1.service))
+	}
+
 }
