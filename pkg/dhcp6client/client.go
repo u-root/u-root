@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mdlayher/dhcp6"
@@ -175,7 +176,8 @@ func (c *Client) Solicit(ctx context.Context) ([]*dhcp6.Packet, error) {
 		return nil, err
 	}
 
-	out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, solicit)
+	wg, out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, solicit)
+	defer wg.Wait()
 
 	var ads []*dhcp6.Packet
 	// resps is closed by SimpleSendAndRead when done.
@@ -221,8 +223,12 @@ func (c *Client) Request(request *dhcp6.Packet) ([]*dhcp6opts.IANA, *dhcp6.Packe
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, request)
+	wg, out, errCh := c.SimpleSendAndRead(ctx, DefaultServers, request)
+	// Explicitly cancel the goroutine first, then wait.
+	defer func() {
+		cancel()
+		wg.Wait()
+	}()
 
 	for packet := range out {
 		if ianas, err := SuitableReply(reqIANAs, packet.Packet); err != nil {
@@ -313,15 +319,18 @@ func (c *Client) newClientErr(err error) *ClientError {
 // TODO(hugelgupf): since the client only has one connection, maybe it should
 // just have one dedicated goroutine for reading from the UDP socket, and use a
 // request and response queue.
-func (c *Client) SimpleSendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet) (<-chan *ClientPacket, <-chan *ClientError) {
+func (c *Client) SimpleSendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcp6.Packet) (*sync.WaitGroup, <-chan *ClientPacket, <-chan *ClientError) {
 	out := make(chan *ClientPacket, 10)
 	errOut := make(chan *ClientError, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		c.SendAndRead(ctx, dest, p, out, errOut)
 		close(out)
 		close(errOut)
+		wg.Done()
 	}()
-	return out, errOut
+	return &wg, out, errOut
 }
 
 // SendAndRead sends the given packet `dest` to `to` and reads
