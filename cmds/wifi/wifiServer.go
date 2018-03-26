@@ -13,11 +13,11 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/u-root/u-root/pkg/sos"
 	"github.com/u-root/u-root/pkg/wifi"
 )
 
 const (
-	PortNum  = "8080"
 	HtmlPage = `
 <head>
 <style>
@@ -46,7 +46,7 @@ function sendConnect(elem, index) {
 		document.getElementById("pass".concat(index)).value : ""
 	id = document.getElementById("id".concat(index)) ? 
 		document.getElementById("id".concat(index)).value : ""
-	fetch("http://localhost:8080/connect", {
+	fetch("http://localhost:{{.Port}}/connect", {
 		method: 'Post',
 		headers: {
 			'Accept': 'application/json',
@@ -81,7 +81,7 @@ function sendRefresh(elem) {
 	elem.setAttribute("disabled", "true");
 	elem.setAttribute("value","Refreshing");
 	disableOtherButtons(elem);
-	fetch("http://localhost:8080/refresh", {
+	fetch("http://localhost:{{.Port}}/refresh", {
 		method: 'Post'
 	})
 	.then(r => r.json())
@@ -180,6 +180,10 @@ function disableOtherButtons(elem) {
 `
 )
 
+var (
+	Port uint
+)
+
 type WifiServer struct {
 	service WifiService
 }
@@ -245,7 +249,7 @@ func (ws WifiServer) displayStateHandle(w http.ResponseWriter, r *http.Request) 
 	displayWifi(w, s.NearbyWifis, s.CurEssid, s.ConnectingEssid)
 }
 
-func (ws WifiServer) buildRouter() http.Handler {
+func (ws WifiServer) buildRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", ws.displayStateHandle).Methods("GET")
 	r.HandleFunc("/refresh", ws.refreshHandle).Methods("POST")
@@ -254,8 +258,8 @@ func (ws WifiServer) buildRouter() http.Handler {
 }
 
 func (ws WifiServer) Start() {
-	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", PortNum), ws.buildRouter()))
 	defer ws.service.Shutdown()
+	fmt.Println(sos.StartServiceServer(ws.buildRouter(), "wifi", &Port))
 }
 
 func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
@@ -263,7 +267,8 @@ func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, conne
 		WifiOpts        []wifi.WifiOption
 		ConnectedEssid  string
 		ConnectingEssid string
-	}{wifiOpts, connectedEssid, connectingEssid}
+		Port            uint
+	}{wifiOpts, connectedEssid, connectingEssid, Port}
 
 	tmpl := template.Must(template.New("name").Parse(HtmlPage))
 

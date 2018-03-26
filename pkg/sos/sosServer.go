@@ -46,7 +46,7 @@ td, th {
 	<tr>
 	<td>{{$key}}</td>
 	<td>{{$value}}</td>
-	<td><a href="localhost:{{$value}}" target="_blank">Go there!</td>
+	<td><a href="http://localhost:{{$value}}" target="_blank">Go there!</td>
 	</tr>
 	{{else}}
 	<tr>
@@ -123,7 +123,7 @@ func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("localhost:%v/", port), http.StatusPermanentRedirect)
+	http.Redirect(w, r, fmt.Sprintf("http://localhost:%v/", port), http.StatusTemporaryRedirect)
 }
 
 func (s SosServer) displaySosHandle(w http.ResponseWriter, r *http.Request) {
