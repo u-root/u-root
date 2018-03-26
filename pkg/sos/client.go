@@ -20,13 +20,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Register all the neccesary patterns needed to make
+// RegistersNecessaryPatterns registers all the neccesary patterns needed
+// to make a service becomes a SoS client.
 func RegistersNecessaryPatterns(router *mux.Router) {
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	}).Methods("GET")
 }
 
+// RegisterServiceWithSos tries to register a service with SoS.
+// If an non-nil error is returned, the service needs to exit immediately.
 func RegisterServiceWithSos(service string, port uint) error {
 	return registerServiceWithSos(service, port, "http://localhost:"+PortNum)
 }
@@ -36,6 +39,8 @@ func registerServiceWithSos(service string, port uint, sosServerURL string) erro
 	return makeRequestToServer("POST", sosServerURL+"/register", m)
 }
 
+// UnregisterServiceWithSos makes a request to SoS Server to unregister the service.
+// This function should be called before a service exit.
 func UnregisterServiceWithSos(service string) error {
 	return unregisterServiceWithSos(service, "http://localhost:"+PortNum)
 }
@@ -75,6 +80,14 @@ func makeRequestToServer(reqType, url string, reqJson interface{}) error {
 	return nil
 }
 
+// StartServiceServer establishes a listener on a random port, registers all neccesary patterns
+// to the router passed in, registers the service with SoS, and starts serving
+// the service on the random port selected before. If any of the above step fails, this function
+// will fail. If the function call needs to know what port that the service is listenning on,
+// they can passed in a uint pointer to the portNumReq to get the port. This function wraps around
+// RegistersNecessaryPatterns, RegisterServiceWithSos, and UnregisterServiceWithSos. If no
+// extenral settings are required, instead of calling each of the above separately, one can just
+// call this function to start and serving their service HTTP server right away.
 func StartServiceServer(router *mux.Router, serviceName string, portNumReq *uint) error {
 	listener, err := net.Listen("tcp", "localhost:0")
 	defer listener.Close()
