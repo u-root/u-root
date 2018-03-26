@@ -66,15 +66,16 @@ func makeRequestToServer(reqType, url string, reqJson interface{}) error {
 		return err
 	}
 
-	decoder := json.NewDecoder(res.Body)
-	defer res.Body.Close()
-	var retMsg struct{ Error string }
-	if err := decoder.Decode(&retMsg); err != nil {
-		return err
-	}
-
-	if retMsg.Error != "" {
-		return fmt.Errorf(retMsg.Error)
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		decoder := json.NewDecoder(res.Body)
+		defer res.Body.Close()
+		var retMsg struct{ Error string }
+		if err := decoder.Decode(&retMsg); err != nil {
+			return err
+		}
+		if retMsg.Error != "" {
+			return fmt.Errorf(retMsg.Error)
+		}
 	}
 
 	return nil
