@@ -28,7 +28,7 @@ func (m *MultiCompleter) Complete(s string) ([]string, error) {
 	for _, c := range m.Completers {
 		cc, err := c.Complete(s)
 		if err != nil {
-			debug("MultiCompleter: %v: %v", c, err)
+			Debug("MultiCompleter: %v: %v", c, err)
 		}
 		files = append(files, cc...)
 	}

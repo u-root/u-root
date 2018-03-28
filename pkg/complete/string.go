@@ -15,9 +15,9 @@ func NewStringCompleter(s []string) Completer {
 func (f *StringCompleter) Complete(s string) ([]string, error) {
 	var names []string
 	for _, n := range f.Names {
-		debug("Check %v against %v", n, s)
+		Debug("Check %v against %v", n, s)
 		if strings.HasPrefix(n, s) {
-			debug("Add %v", n)
+			Debug("Add %v", n)
 			names = append(names, n)
 		}
 	}
