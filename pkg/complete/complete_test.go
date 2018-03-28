@@ -1,3 +1,7 @@
+// Copyright 2012-2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package complete
 
 import (
@@ -12,6 +16,8 @@ import (
 	"testing"
 )
 
+// TestSimple tests a basic completer for completion with arrays of strings,
+// as might be used for builtin commands.
 func TestSimple(t *testing.T) {
 	var (
 		hinames  = []string{"hi", "hil", "hit"}
@@ -41,6 +47,7 @@ func TestSimple(t *testing.T) {
 	}
 }
 
+// TestFile tests the file completer
 func TestFile(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "TestComplete")
 	if err != nil {
@@ -81,6 +88,9 @@ func TestFile(t *testing.T) {
 	}
 }
 
+// TestMulti tests a multi completer. It creates a multi completer consisting
+// of a simple completer and another multicompleter, which in turn has two
+// file completers. It also tests the Path completer.
 func TestMulti(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "TestComplete")
 	if err != nil {
@@ -162,6 +172,7 @@ func TestInOut(t *testing.T) {
 	}
 }
 
+// TestInOut tests the InOut structures, which we don't know we want.
 func TestInOutRW(t *testing.T) {
 	var els = []string{"ab", "bc", "de", "fgh"}
 	var outs = []string{"ab", "abbc", "abbcde", "abbcdefgh"}
@@ -181,12 +192,13 @@ func TestInOutRW(t *testing.T) {
 	}
 }
 
-func TestLineReader(t*testing.T) {
+// TestLineReader tests Line Readers, and looks for proper read and output behavior.
+func TestLineReader(t *testing.T) {
 	var (
 		hinames  = []string{"hi", "hil", "hit"}
 		hnames   = append(hinames, "how")
 		allnames = append(hnames, "there")
-		r = bytes.NewBufferString("ther\t")
+		r        = bytes.NewBufferString("ther\t")
 	)
 	cr, cw := io.Pipe()
 	f := NewStringCompleter(allnames)
@@ -206,8 +218,9 @@ func TestLineReader(t*testing.T) {
 	}()
 
 	s, err := l.ReadOne()
-	
-	if err != nil {
+
+	t.Logf("ReadOne returns %v %v", s, err)
+	if err != nil && err != io.EOF {
 		t.Fatal(err)
 	}
 	if len(s) != 1 {
