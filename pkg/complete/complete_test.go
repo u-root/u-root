@@ -1,7 +1,9 @@
 package complete
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -176,5 +178,42 @@ func TestInOutRW(t *testing.T) {
 		if string(b) != outs[i] {
 			t.Errorf("Read back %s: got %s, want %s", s, string(b), s)
 		}
+	}
+}
+
+func TestLineReader(t*testing.T) {
+	var (
+		hinames  = []string{"hi", "hil", "hit"}
+		hnames   = append(hinames, "how")
+		allnames = append(hnames, "there")
+		r = bytes.NewBufferString("ther\t")
+	)
+	cr, cw := io.Pipe()
+	f := NewStringCompleter(allnames)
+	debug = t.Logf
+
+	l := NewLineReader(f, r, cw)
+	var out []byte
+	go func() {
+		var err error
+		out, err = ioutil.ReadAll(cr)
+		if err != nil {
+			t.Errorf("reading console io.Pipe: got %v, want nil", err)
+		}
+		if string(out) != "there" {
+			t.Errorf("console out: got %v, want ther", string(out))
+		}
+	}()
+
+	s, err := l.ReadOne()
+	
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s) != 1 {
+		t.Fatalf("Got %d choices, want 1", len(s))
+	}
+	if s[0] != "there" {
+		t.Errorf("Got %v choices, want there", s[0])
 	}
 }
