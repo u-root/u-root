@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -134,5 +135,46 @@ func TestMulti(t *testing.T) {
 			t.Errorf("Complete %v: got %v, want %v", tst.c, o, tst.o)
 		}
 		t.Logf("Check %v: found %v", tst, o)
+	}
+}
+
+func TestInOut(t *testing.T) {
+	var tests = []struct {
+		i []string
+		o string
+	}{
+		{[]string{"a", "b", "c", "d"}, "d"},
+		{[]string{""}, ""},
+		{[]string{}, ""},
+	}
+	for _, tst := range tests {
+		l := NewLine()
+		if len(tst.i) > 0 {
+			l.Push(tst.i[0], tst.i[1:]...)
+		}
+
+		o := l.Pop()
+		if o != tst.o {
+			t.Errorf("tst %v: got %v, want %v", tst, o, tst.o)
+		}
+	}
+}
+
+func TestInOutRW(t *testing.T) {
+	var els = []string{"ab", "bc", "de", "fgh"}
+	var outs = []string{"ab", "abbc", "abbcde", "abbcdefgh"}
+
+	l := NewLine()
+	t.Logf("%v %v %v", els, outs, l)
+	for i := range els {
+		s := strings.Join(els[:i+1], "")
+		l.Write([]byte(s))
+		b, err := l.ReadAll()
+		if err != nil {
+			t.Errorf("ReadAll of %s: got %v, want nil", s, err)
+		}
+		if string(b) != outs[i] {
+			t.Errorf("Read back %s: got %s, want %s", s, string(b), s)
+		}
 	}
 }
