@@ -28,7 +28,7 @@ func TestSimple(t *testing.T) {
 	)
 
 	f := NewStringCompleter(allnames)
-	debug = t.Logf
+	Debug = t.Logf
 	for _, tst := range tests {
 		o, err := f.Complete(tst.c)
 		if err != nil {
@@ -68,7 +68,7 @@ func TestFile(t *testing.T) {
 		}
 	}
 	f := NewFileCompleter(tempDir)
-	debug = t.Logf
+	Debug = t.Logf
 	for _, tst := range tests {
 		o, err := f.Complete(tst.c)
 		if err != nil {
@@ -116,7 +116,7 @@ func TestMulti(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	debug = t.Logf
+	Debug = t.Logf
 	if err := os.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Join(tempDir, "bin"), filepath.Join(tempDir, "sbin"))); err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestLineReader(t*testing.T) {
 	)
 	cr, cw := io.Pipe()
 	f := NewStringCompleter(allnames)
-	debug = t.Logf
+	Debug = t.Logf
 
 	l := NewLineReader(f, r, cw)
 	var out []byte

@@ -4,4 +4,4 @@ type Completer interface {
 	Complete(s string) ([]string, error)
 }
 
-var debug = func(s string, v ...interface{}) {}
+var Debug = func(s string, v ...interface{}) {}
