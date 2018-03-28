@@ -14,11 +14,11 @@ type TTY struct {
 	f *os.File
 }
 
-func (t*TTY) Read(b[]byte) (int, error) {
+func (t *TTY) Read(b []byte) (int, error) {
 	return t.f.Read(b)
 }
 
-func (t*TTY) Write(b[]byte) (int, error) {
+func (t *TTY) Write(b []byte) (int, error) {
 	return t.f.Write(b)
 }
 
