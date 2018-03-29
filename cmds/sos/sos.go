@@ -4,6 +4,16 @@
 
 package main
 
+import (
+	"log"
+	"os/exec"
+
+	"github.com/u-root/u-root/pkg/sos"
+)
+
 func main() {
-	StartServer(NewSosService())
+	if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
+		log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
+	}
+	sos.StartServer(sos.NewSosService())
 }
