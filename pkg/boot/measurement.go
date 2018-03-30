@@ -86,8 +86,8 @@ func (mr *MeasuringReader) ReadRecord() (cpio.Record, error) {
 	}
 }
 
-// SigningWriter is a cpio.Writer that collects digests as it writes files to
-// the cpio archive.
+// SigningWriter is a cpio.RecordWriter that collects digests as it writes
+// files to the cpio archive.
 type SigningWriter struct {
 	w cpio.RecordWriter
 
@@ -102,30 +102,21 @@ func NewSigningWriter(w cpio.RecordWriter) *SigningWriter {
 	}
 }
 
-// WriteRecord wraps cpio.Writer.WriteRecord.
+// WriteRecord implements cpio.RecordWriter.
 func (sw *SigningWriter) WriteRecord(rec cpio.Record) error {
-	if rec.Info.Mode&unix.S_IFMT == unix.S_IFREG {
-		return fmt.Errorf("use SigningWriter.WriteFile for file named %q", rec.Info.Name)
-	}
+	rec = cpio.MakeReproducible(rec)
 	if rec.Info.Name == "signature" || rec.Info.Name == "signature_algo" {
 		return fmt.Errorf("cannot write signature or signature_algo files")
 	}
+	if rec.Info.Mode&unix.S_IFMT == unix.S_IFREG {
+		if _, err := sw.digest.WriteString(rec.Info.Name); err != nil {
+			return err
+		}
+		if _, err := sw.digest.ReadFrom(uio.Reader(rec)); err != nil {
+			return err
+		}
+	}
 	return sw.w.WriteRecord(rec)
-}
-
-// WriteFile adds the contents of `rd` at `path` to the cpio archive and adds
-// `rd` to the digest.
-func (sw *SigningWriter) WriteFile(path string, content string) error {
-	if path == "signature" || path == "signature_algo" {
-		return fmt.Errorf("cannot write signature or signature_algo files")
-	}
-	if _, err := sw.digest.WriteString(path); err != nil {
-		return err
-	}
-	if _, err := sw.digest.WriteString(content); err != nil {
-		return err
-	}
-	return sw.w.WriteRecord(cpio.StaticFile(path, content, 0700))
 }
 
 // SHA1Sum returns the SHA1 sum of the collected digest.

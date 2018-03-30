@@ -19,7 +19,7 @@ type OSImage interface {
 
 	// Pack writes the OS image to the modules directory of sw and the
 	// package type to package_type of sw.
-	Pack(sw *SigningWriter) error
+	Pack(sw cpio.RecordWriter) error
 }
 
 var (
