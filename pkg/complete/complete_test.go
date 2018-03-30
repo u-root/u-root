@@ -198,35 +198,52 @@ func TestLineReader(t *testing.T) {
 		hinames  = []string{"hi", "hil", "hit"}
 		hnames   = append(hinames, "how")
 		allnames = append(hnames, "there")
-		r        = bytes.NewBufferString("ther\t")
+		tests    = []struct {
+			in    string
+			names []string
+			out   string
+		}{
+			{"ther ", []string{"there"}, "there"},
+			{"ther", []string{"there"}, "there"},
+			{"\n", []string{}, ""},
+			{"", []string{}, ""},
+			{" ", []string{}, ""},
+		}
 	)
-	cr, cw := io.Pipe()
-	f := NewStringCompleter(allnames)
-	Debug = t.Logf
+	for _, tst := range tests {
+		r := bytes.NewBufferString(tst.in)
+		t.Logf("Test %v", tst)
+		cr, cw := io.Pipe()
+		f := NewStringCompleter(allnames)
+		Debug = t.Logf
 
-	l := NewLineReader(f, r, cw)
-	var out []byte
-	go func() {
-		var err error
-		out, err = ioutil.ReadAll(cr)
-		if err != nil {
-			t.Errorf("reading console io.Pipe: got %v, want nil", err)
+		l := NewLineReader(f, r, cw)
+		var out []byte
+		go func(o string, r io.Reader) {
+			var err error
+			out, err = ioutil.ReadAll(r)
+			if err != nil {
+				t.Errorf("reading console io.Pipe: got %v, want nil", err)
+			}
+			if string(out) != o {
+				t.Errorf("console out: got %v, want %v", o, string(out))
+			}
+		}(tst.out, cr)
+
+		s, err := l.ReadOne()
+
+		t.Logf("ReadOne returns %v %v", s, err)
+		if err != nil && err != io.EOF && err != EOL {
+			t.Fatal(err)
 		}
-		if string(out) != "there" {
-			t.Errorf("console out: got %v, want ther", string(out))
+		if len(s) != len(tst.names) {
+			t.Fatalf("Got %d choices, want 1", len(s))
 		}
-	}()
-
-	s, err := l.ReadOne()
-
-	t.Logf("ReadOne returns %v %v", s, err)
-	if err != nil && err != io.EOF {
-		t.Fatal(err)
-	}
-	if len(s) != 1 {
-		t.Fatalf("Got %d choices, want 1", len(s))
-	}
-	if s[0] != "there" {
-		t.Errorf("Got %v choices, want there", s[0])
+		if len(s) == 0 {
+			continue
+		}
+		if s[0] != tst.names[0] {
+			t.Errorf("Got %v, want %v", s[0], tst.names[0])
+		}
 	}
 }

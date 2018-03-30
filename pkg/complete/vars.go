@@ -4,6 +4,11 @@
 
 package complete
 
+import "errors"
+
 // Debug is a package level variable which can be
 // set to, e.g., log.Printf if you want lots of debug.
-var Debug = func(s string, v ...interface{}) {}
+var (
+	Debug = func(s string, v ...interface{}) {}
+	EOL   = errors.New("EOL")
+)
