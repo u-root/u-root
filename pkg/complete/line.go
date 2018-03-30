@@ -52,29 +52,38 @@ func NewLineReader(c Completer, r io.Reader, w io.Writer) *LineReader {
 // In the case of \r or \n, if there is more than one choice,
 // it will return the list of choices, preprended with that has been typed so far.
 func (l *LineReader) ReadOne() ([]string, error) {
+	Debug("LineReader: start with %v", l)
 	for {
 		var b [1]byte
 		n, err := l.R.Read(b[:])
 		if err != nil {
 			if err == io.EOF {
 				ln := l.Line.String()
-				return l.C.Complete(ln[:len(ln)-1])
+				if ln == "" {
+					return []string{}, nil
+				}
+				return l.C.Complete(ln)
 			}
 			return nil, err
 		}
-		Debug("ReadOne: got %v, %v, %v", b[0], n, err)
+		Debug("LineReader.ReadOne: got %s, %v, %v", b, n, err)
 		if n == 0 {
 			continue
 		}
 		switch b[0] {
 		default:
-			Debug("Just add it to line and pipe")
+			Debug("LineReader.Just add it to line and pipe")
 			l.Line.Write(b[:])
 			l.W.Write(b[:])
 		case '\n', '\r':
+			err = EOL
+			fallthrough
+		case ' ':
 			ln := l.Line.String()
-			s, err := l.C.Complete(ln[:len(ln)-1])
-			Debug("Newline, just return %v", s)
+			if ln == "" {
+				return []string{}, nil
+			}
+			s, _ := l.C.Complete(ln)
 			// the choice to use is always the first element.
 			// In the case too many elements, put what they
 			// typed so far as the only choice
@@ -83,9 +92,9 @@ func (l *LineReader) ReadOne() ([]string, error) {
 			}
 			return s, err
 		case '\t':
-			Debug("Try complete with %s", l.Line.String())
+			Debug("LineReader.Try complete with %s", l.Line.String())
 			s, err := l.C.Complete(l.Line.String())
-			Debug("Complete returns %v, %v", s, err)
+			Debug("LineReader.Complete returns %v, %v", s, err)
 			if err != nil {
 				return nil, err
 			}
