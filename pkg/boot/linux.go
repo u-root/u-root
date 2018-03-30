@@ -52,7 +52,7 @@ func NewLinuxImageFromArchive(a *cpio.Archive) (*LinuxImage, error) {
 
 // Pack implements OSImage.Pack and writes all necessary files to the modules
 // directory of `sw`.
-func (li *LinuxImage) Pack(sw *SigningWriter) error {
+func (li *LinuxImage) Pack(sw cpio.RecordWriter) error {
 	if err := sw.WriteRecord(cpio.Directory("modules", 0700)); err != nil {
 		return err
 	}
@@ -66,10 +66,10 @@ func (li *LinuxImage) Pack(sw *SigningWriter) error {
 	if err != nil {
 		return err
 	}
-	if err := sw.WriteFile("modules/kernel/content", string(kernel)); err != nil {
+	if err := sw.WriteRecord(cpio.StaticFile("modules/kernel/content", string(kernel), 0700)); err != nil {
 		return err
 	}
-	if err := sw.WriteFile("modules/kernel/params", li.Cmdline); err != nil {
+	if err := sw.WriteRecord(cpio.StaticFile("modules/kernel/params", li.Cmdline, 0700)); err != nil {
 		return err
 	}
 
@@ -81,12 +81,12 @@ func (li *LinuxImage) Pack(sw *SigningWriter) error {
 		if err != nil {
 			return err
 		}
-		if err := sw.WriteFile("modules/initrd/content", string(initrd)); err != nil {
+		if err := sw.WriteRecord(cpio.StaticFile("modules/initrd/content", string(initrd), 0700)); err != nil {
 			return err
 		}
 	}
 
-	return sw.WriteFile("package_type", "linux")
+	return sw.WriteRecord(cpio.StaticFile("package_type", "linux", 0700))
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {

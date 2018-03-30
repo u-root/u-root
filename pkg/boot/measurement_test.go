@@ -6,26 +6,21 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
-func containsFile(a *cpio.Archive, path string, content string) bool {
-	if r, ok := a.Files[path]; ok {
-		return cpio.ReaderAtEqual(r.ReaderAt, strings.NewReader(content))
-	}
-	return false
-}
-
-func TestSigningWriterWriteRecord(t *testing.T) {
+func TestSigningWriterWriteFile(t *testing.T) {
 	m := cpio.InMemArchive()
 	s := NewSigningWriter(m)
+	digest := &bytes.Buffer{}
 
 	for _, tt := range []struct {
-		r   cpio.Record
-		err error
+		r       cpio.Record
+		err     error
+		measure bool
 	}{
 		{
 			r:   cpio.Directory("foobar", 0777),
@@ -40,56 +35,31 @@ func TestSigningWriterWriteRecord(t *testing.T) {
 			err: fmt.Errorf("cannot write signature or signature_algo files"),
 		},
 		{
-			r:   cpio.StaticFile("haha", "boo", 0777),
-			err: fmt.Errorf("use SigningWriter.WriteFile for file named \"haha\""),
+			r:   cpio.StaticFile("signature", "foobar", 0700),
+			err: fmt.Errorf("cannot write signature or signature_algo files"),
+		},
+		{
+			r:   cpio.StaticFile("signature_algo", "foobar", 0700),
+			err: fmt.Errorf("cannot write signature or signature_algo files"),
+		},
+		{
+			r:       cpio.StaticFile("modules/foo/kernel", "barfoo", 0700),
+			err:     nil,
+			measure: true,
 		},
 	} {
 		if err := s.WriteRecord(tt.r); err != tt.err && err.Error() != tt.err.Error() {
-			t.Errorf("WriteRecord(%v) = %v, want %v", tt.r, err, tt.err)
-		} else if err == nil && !m.Contains(tt.r) {
-			t.Errorf("Archive should contain record %q, but doesn't", tt.r)
-		} else if err != nil && m.Contains(tt.r) {
-			t.Errorf("Archive should not contain record %q, but it does", tt.r)
-		}
-	}
-}
-
-func TestSigningWriterWriteFile(t *testing.T) {
-	m := cpio.InMemArchive()
-	s := NewSigningWriter(m)
-	digest := &bytes.Buffer{}
-
-	for _, tt := range []struct {
-		path string
-		r    string
-		err  error
-	}{
-		{
-			path: "signature",
-			r:    "foobar",
-			err:  fmt.Errorf("cannot write signature or signature_algo files"),
-		},
-		{
-			path: "signature_algo",
-			r:    "foobar",
-			err:  fmt.Errorf("cannot write signature or signature_algo files"),
-		},
-		{
-			path: "modules/foo/kernel",
-			r:    "barfoo",
-			err:  nil,
-		},
-	} {
-		if err := s.WriteFile(tt.path, tt.r); err != tt.err && err.Error() != tt.err.Error() {
-			t.Errorf("WriteFile(%v) = %v, want %v", tt.path, err, tt.err)
+			t.Errorf("WriteFile(%v) = %v, want %v", tt.r.Name, err, tt.err)
 		} else if err == nil {
-			if !containsFile(m, tt.path, tt.r) {
-				t.Errorf("Archive should contain %q but doesn't", tt.path)
+			if !m.Contains(tt.r) {
+				t.Errorf("Archive should contain %q but doesn't", tt.r.Name)
 			}
-			digest.WriteString(tt.path)
-			digest.WriteString(tt.r)
-		} else if err != nil && containsFile(m, tt.path, tt.r) {
-			t.Errorf("Archive contains file %q but shouldn't", tt.path)
+			if tt.measure {
+				digest.WriteString(tt.r.Name)
+				digest.ReadFrom(uio.Reader(tt.r))
+			}
+		} else if err != nil && m.Contains(tt.r) {
+			t.Errorf("Archive contains file %q but shouldn't", tt.r.Name)
 		}
 	}
 
@@ -110,21 +80,16 @@ func TestWriterAndReader(t *testing.T) {
 		cpio.Directory("modules", 0700),
 		cpio.Directory("modules/foo", 0700),
 		cpio.Directory("metadata", 0700),
+		cpio.StaticFile("modules/foo/kernel", "foobar", 0700),
+		cpio.StaticFile("metadata/hahaha", "arrgh", 0700),
 	}
 	if err := cpio.WriteRecords(s, records); err != nil {
 		t.Errorf("WriteRecords() = %v, want nil", err)
 	}
-
-	for path, content := range map[string]string{
-		"modules/foo/kernel": "foobar",
-		"metadata/hahaha":    "arrrrrgh",
-	} {
-		if err := s.WriteFile(path, content); err != nil {
-			t.Errorf("WriteFile(%q, %s) = %v, want nil", path, content, err)
-		}
-		digest.WriteString(path)
-		digest.WriteString(content)
-	}
+	digest.WriteString("modules/foo/kernel")
+	digest.WriteString("foobar")
+	digest.WriteString("metadata/hahaha")
+	digest.WriteString("arrgh")
 
 	if len(digest.Bytes()) == 0 {
 		t.Errorf("digest should contain something")
@@ -150,7 +115,7 @@ func TestWriterAndReader(t *testing.T) {
 		cpio.Directory("modules/foo", 0700),
 		cpio.Directory("metadata", 0700),
 		cpio.StaticFile("modules/foo/kernel", "foobar", 0700),
-		cpio.StaticFile("metadata/hahaha", "arrrrrgh", 0700),
+		cpio.StaticFile("metadata/hahaha", "arrgh", 0700),
 	}
 
 	r := NewMeasuringReader(m.Reader())

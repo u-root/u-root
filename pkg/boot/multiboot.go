@@ -27,6 +27,6 @@ func (multibootImage) Execute() error {
 }
 
 // Pack implements OSImage.Pack.
-func (multibootImage) Pack(sw *SigningWriter) error {
+func (multibootImage) Pack(sw cpio.RecordWriter) error {
 	return fmt.Errorf("multiboot images unimplemented")
 }

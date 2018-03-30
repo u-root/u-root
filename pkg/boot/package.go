@@ -49,7 +49,7 @@ func (p *Package) Pack(w cpio.RecordWriter, signer *rsa.PrivateKey) error {
 		}
 
 		for name, r := range p.Metadata {
-			if err := sw.WriteFile(path.Join("metadata", name), r); err != nil {
+			if err := sw.WriteRecord(cpio.StaticFile(path.Join("metadata", name), r, 0700)); err != nil {
 				return err
 			}
 		}

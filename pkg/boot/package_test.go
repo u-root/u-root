@@ -15,13 +15,15 @@ type mockOSImage struct {
 	packErr error
 }
 
+var _ OSImage = &mockOSImage{}
+
 func newMockImage(*cpio.Archive) (OSImage, error) {
 	return &mockOSImage{}, nil
 }
 
-func (mockOSImage) ExecutionInfo(log *log.Logger)  {}
-func (mockOSImage) Execute() error                 { return nil }
-func (m mockOSImage) Pack(sw *SigningWriter) error { return m.packErr }
+func (mockOSImage) ExecutionInfo(log *log.Logger)     {}
+func (mockOSImage) Execute() error                    { return nil }
+func (m mockOSImage) Pack(sw cpio.RecordWriter) error { return m.packErr }
 
 func packageEqual(p1, p2 *Package) bool {
 	li1, ok := p1.OSImage.(*LinuxImage)
