@@ -20,7 +20,13 @@ func NewFileCompleter(s string) Completer {
 
 // Complete implements complete for a file starting at a directory.
 func (f *FileCompleter) Complete(s string) ([]string, error) {
-	p := filepath.Join(f.Root, s+"*")
+	// Check for an exact match. If so, that is good enough.
+	p := filepath.Join(f.Root, s)
+	n, _ := filepath.Glob(p)
+	if len(n) == 1 {
+		return n, nil
+	}
+	p = filepath.Join(f.Root, s+"*")
 	Debug("FileCompleter: Check %v with %v", s, p)
 	n, err := filepath.Glob(p)
 	Debug("FileCompleter: %s: matches %v, err %v", s, n, err)
