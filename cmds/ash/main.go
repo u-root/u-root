@@ -107,7 +107,7 @@ func main() {
 		}
 		v("ash: Done reading args")
 		cmd := exec.Command(bin, args...)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, cw, cw
 		if err := cmd.Run(); err != nil {
 			log.Print(err)
 		}
