@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -15,17 +16,47 @@ import (
 )
 
 var (
-	debug = flag.Bool("d", true, "enable debug prints")
-	v = log.Printf
+	debug = flag.Bool("d", false, "enable debug prints")
+	v = func(string, ...interface{}) {}
 )
 
 func verbose(f string, a ...interface{}) {
 	v(f+"\r\n", a...)
 }
 
+func output(r io.Reader, w io.Writer) {
+	for {
+		var b[1]byte
+		n, err := r.Read(b[:])
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			log.Print("output: %v", err)
+			return
+		}
+		if n < len(b) {
+			continue
+		}
+		var s string
+		switch b[0] {
+		default: 
+		s = string(b[:])
+		case '\b', 127:
+			s = "\b \b"
+		case '\r', '\n':
+			s = "\r\n"
+		}
+		if _, err := w.Write([]byte(s)); err != nil {
+			log.Printf("output write: %v", err)
+			return
+		}
+	}
+}
 func main() {
 	flag.Parse()
 	if *debug {
+		v = log.Printf
 		complete.Debug = verbose
 	}
 	t, err := termios.New()
@@ -34,15 +65,20 @@ func main() {
 	}
 	r, err := t.Raw()
 	defer t.Set(r)
+	cr, cw, err := os.Pipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	go output(cr, t)
 	for {
 		p, err := complete.NewPathCompleter()
 		if err != nil {
 			log.Fatal(err)
 		}
 		c := complete.NewMultiCompleter(complete.NewStringCompleter([]string{"exit"}), p)
-		l := complete.NewLineReader(c, t, t)
+		l := complete.NewLineReader(c, t, cw)
 		s, err := l.ReadOne()
-		v("Readone: %v, %v", s, err)
+		v("ash: Readone: %v, %v", s, err)
 		if err != nil && err != complete.EOL {
 			log.Print(err)
 			continue
@@ -54,21 +90,22 @@ func main() {
 			break
 		}
 		// s[0] is either the match or what they typed so far.
-		t.Write([]byte(" "))
+		cw.Write([]byte(" "))
 		bin := s[0]
 		var args []string
 		for err == nil {
-			c := complete.NewFileCompleter(".")
+			c := complete.NewFileCompleter("")
 			l := complete.NewLineReader(c, t, t)
 			s, err := l.ReadOne()
+			v("ash: l.ReadOne returns %v, %v", s, err)
 			args = append(args, s...)
-			v("add %v", s)
+			v("ash: add %v", s)
 			if err != nil {
 				log.Print(err)
 				break
 			}
 		}
-		v("Done reading args")
+		v("ash: Done reading args")
 		cmd := exec.Command(bin, args...)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		if err := cmd.Run(); err != nil {

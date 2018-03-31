@@ -27,10 +27,6 @@ func (f *FileCompleter) Complete(s string) ([]string, error) {
 	if err != nil || len(n) == 0 {
 		return n, err
 	}
-	files := make([]string, len(n))
-	for i := range n {
-		files[i] = filepath.Base(n[i])
-	}
-	Debug("FileCompleter: %s: returns %v", s, files)
-	return files, err
+	Debug("FileCompleter: %s: returns %v", s, n)
+	return n, err
 }

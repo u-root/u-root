@@ -37,12 +37,12 @@ type LineReader struct {
 	// W is used for output, usually for showing completions.
 	W io.Writer
 	// Lines holds incoming data as it is read.
-	Line bytes.Buffer
+	Line *bytes.Buffer
 }
 
 // NewLineReader returns a LineReader.
 func NewLineReader(c Completer, r io.Reader, w io.Writer) *LineReader {
-	return &LineReader{C: c, R: r, W: w}
+	return &LineReader{C: c, R: r, W: w, Line: bytes.NewBufferString("")}
 }
 
 // ReadOne tries to read one choice from l.R, printing out progress to l.W.
@@ -75,20 +75,31 @@ func (l *LineReader) ReadOne() ([]string, error) {
 			Debug("LineReader.Just add it to line and pipe")
 			l.Line.Write(b[:])
 			l.W.Write(b[:])
+		case 8, 127:
+			// We may have found a use for the io stuff, we'll see.
+			s := l.Line.String()
+			if len(s) > 0 {
+				s = s[:len(s)-1]
+				l.Line = bytes.NewBufferString(s)
+				l.W.Write(b[:])
+			}
 		case '\n', '\r':
 			err = EOL
 			fallthrough
 		case ' ':
+			if b[0] == ' ' {
+				l.W.Write(b[:])
+			}
 			ln := l.Line.String()
 			if ln == "" {
-				return []string{}, nil
+				return []string{}, err
 			}
 			s, _ := l.C.Complete(ln)
-			// the choice to use is always the first element.
-			// In the case too many elements, put what they
-			// typed so far as the only choice
-			if len(s) > 1 {
-				s = append([]string{ln}, s...)
+			// If there is no match or too many matches,
+			// return what is typed so far.
+			Debug("LineReader ln %v, err %v, s %v", ln, err, s)
+			if len(s) != 1 {
+				s = []string{ln}
 			}
 			return s, err
 		case '\t':
@@ -100,6 +111,7 @@ func (l *LineReader) ReadOne() ([]string, error) {
 			}
 			if len(s) < 2 {
 				Debug("Return is %v", s)
+				return s, nil
 			}
 			if _, err := l.W.Write([]byte(fmt.Sprintf("\n\r%v\n\r%v", s, l.Line.String()))); err != nil {
 				log.Printf("Write %v: %v", s, err)
