@@ -24,8 +24,8 @@ func TestSimple(t *testing.T) {
 		hnames   = append(hinames, "how")
 		allnames = append(hnames, "there")
 		tests    = []struct {
-			c string
-			o []string
+			in   string
+			outs []string
 		}{
 			{"hi", hinames},
 			{"h", hnames},
@@ -36,13 +36,13 @@ func TestSimple(t *testing.T) {
 	f := NewStringCompleter(allnames)
 	Debug = t.Logf
 	for _, tst := range tests {
-		o, err := f.Complete(tst.c)
+		o, err := f.Complete(tst.in)
 		if err != nil {
-			t.Errorf("Complete %v: got %v, want nil", tst.c, err)
+			t.Errorf("Complete %v: got %v, want nil", tst.in, err)
 			continue
 		}
-		if !reflect.DeepEqual(o, tst.o) {
-			t.Errorf("Complete %v: got %v, want %v", tst.c, o, tst.o)
+		if !reflect.DeepEqual(o, tst.outs) {
+			t.Errorf("Complete %v: got %v, want %v", tst.in, o, tst.outs)
 		}
 	}
 }
@@ -60,10 +60,11 @@ func TestFile(t *testing.T) {
 		hnames   = append(hinames, "how")
 		allnames = append(hnames, "there")
 		tests    = []struct {
-			c string
-			o []string
+			in   string
+			outs []string
 		}{
-			{"hi", hinames},
+			{"hi", []string{"hi"}}, // not necessarily intuitive, but the rule is match ONLY one name
+					// if that name completes one thing.
 			{"h", hnames},
 			{"t", []string{"there"}},
 		}
@@ -73,19 +74,38 @@ func TestFile(t *testing.T) {
 		if err := ioutil.WriteFile(filepath.Join(tempDir, n), []byte{}, 0600); err != nil {
 			t.Fatal(err)
 		}
+		t.Logf("Wrote %v", filepath.Join(tempDir, n))
 	}
 	f := NewFileCompleter(tempDir)
 	Debug = t.Logf
+	errCount := 0
 	for _, tst := range tests {
-		o, err := f.Complete(tst.c)
+		o, err := f.Complete(tst.in)
 		if err != nil {
-			t.Errorf("Complete %v: got %v, want nil", tst.c, err)
+			t.Errorf("%v: got %v, want nil", tst.in, err)
+			errCount++
 			continue
 		}
-		if !reflect.DeepEqual(o, tst.o) {
-			t.Errorf("Complete %v: got %v, want %v", tst.c, o, tst.o)
+		t.Logf("tst %v gets %v", tst, o)
+		// potential issue here: we assume FileCompleter, which uses glob, returns
+		// sorted order. We'll see if that's an issue later.
+		// adjust outs for the path and then check it.
+		if len(o) != len(tst.outs) {
+			t.Errorf("%v: %v results, want %v", tst, o, tst.outs)
+			errCount++
+			continue
 		}
+		for i := range o {
+			p := filepath.Join(tempDir, tst.outs[i])
+			if o[i] != p {
+				t.Errorf("%v: got %v, want %v", tst.in, o, p)
+				errCount++
+				continue
+			}
+		}
+		t.Logf("tst %v ok", tst)
 	}
+	t.Logf("%d errors", errCount)
 }
 
 // TestMulti tests a multi completer. It creates a multi completer consisting
@@ -103,8 +123,8 @@ func TestMulti(t *testing.T) {
 		hnames   = append(hinames, "how")
 		allnames = append(hnames, "there")
 		tests    = []struct {
-			c string
-			o []string
+			in   string
+			outs []string
 		}{
 			{"hi", hinames},
 			{"h", hnames},
@@ -138,13 +158,24 @@ func TestMulti(t *testing.T) {
 	f := NewMultiCompleter(NewStringCompleter(allnames), p)
 
 	for _, tst := range tests {
-		o, err := f.Complete(tst.c)
+		o, err := f.Complete(tst.in)
 		if err != nil {
-			t.Errorf("Complete %v: got %v, want nil", tst.c, err)
+			t.Errorf("Complete %v: got %v, want nil", tst.in, err)
 			continue
 		}
-		if !reflect.DeepEqual(o, tst.o) {
-			t.Errorf("Complete %v: got %v, want %v", tst.c, o, tst.o)
+		t.Logf("Complete: tst %v gets %v", tst, o)
+		// potential issue here: we assume FileCompleter, which uses glob, returns
+		// sorted order. We'll see if that's an issue later.
+		// adjust outs for the path and then check it.
+		if len(o) != len(tst.outs) {
+			t.Errorf("Complete %v: %v results, want %v", tst, o, tst.outs)
+			continue
+		}
+		for i := range o {
+			p := filepath.Join(tempDir, tst.outs[i])
+			if o[i] != p {
+				t.Errorf("Complete %v: got %v, want %v", tst.in, o, p)
+			}
 		}
 		t.Logf("Check %v: found %v", tst, o)
 	}
@@ -152,8 +183,8 @@ func TestMulti(t *testing.T) {
 
 func TestInOut(t *testing.T) {
 	var tests = []struct {
-		i []string
-		o string
+		ins   []string
+		stack string
 	}{
 		{[]string{"a", "b", "c", "d"}, "d"},
 		{[]string{""}, ""},
@@ -161,13 +192,13 @@ func TestInOut(t *testing.T) {
 	}
 	for _, tst := range tests {
 		l := NewLine()
-		if len(tst.i) > 0 {
-			l.Push(tst.i[0], tst.i[1:]...)
+		if len(tst.ins) > 0 {
+			l.Push(tst.ins...)
 		}
 
-		o := l.Pop()
-		if o != tst.o {
-			t.Errorf("tst %v: got %v, want %v", tst, o, tst.o)
+		stack := l.Pop()
+		if stack != tst.stack {
+			t.Errorf("tst %v: got %v, want %v", tst, stack, tst.stack)
 		}
 	}
 }

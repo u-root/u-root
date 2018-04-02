@@ -10,7 +10,7 @@ import "strings"
 // We are no longer sure we need it.
 type InOut interface {
 	// Push one or more strings onto the InOut
-	Push(string, ...string)
+	Push(...string)
 	// Pop a string fom the InOut.
 	Pop() string
 	// Pop all strings from the Inout.
@@ -32,8 +32,8 @@ func NewLine() InOut {
 }
 
 // Push implements Push for a Line
-func (l *Line) Push(s string, ss ...string) {
-	l.L = append(append(l.L, s), ss...)
+func (l *Line) Push(s ...string) {
+	l.L = append(l.L, s...)
 }
 
 // Pop implements Pop for a Line
