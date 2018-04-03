@@ -50,7 +50,7 @@ func NewLineReader(c Completer, r io.Reader, w io.Writer) *LineReader {
 // It will show the result of trying to complete it.
 // If there is only one possible completion, it will return the result.
 // In the case of \r or \n, if there is more than one choice,
-// it will return the list of choices, preprended with that has been typed so far.
+// it will return the list of choices, preprended with what has been typed so far.
 func (l *LineReader) ReadOne() ([]string, error) {
 	Debug("LineReader: start with %v", l)
 	for {

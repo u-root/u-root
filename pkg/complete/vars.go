@@ -9,6 +9,7 @@ import "errors"
 // Debug is a package level variable which can be
 // set to, e.g., log.Printf if you want lots of debug.
 var (
-	Debug = func(s string, v ...interface{}) {}
-	EOL   = errors.New("EOL")
+	Debug    = func(s string, v ...interface{}) {}
+	EOL      = errors.New("EOL")
+	EmptyEnv = errors.New("Empty environment variable")
 )

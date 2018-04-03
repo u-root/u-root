@@ -27,14 +27,13 @@ func TestSimple(t *testing.T) {
 			in   string
 			outs []string
 		}{
-			{"hi", hinames},
+			{"hi", []string{"hi"}},
 			{"h", hnames},
 			{"t", []string{"there"}},
 		}
 	)
 
 	f := NewStringCompleter(allnames)
-	Debug = t.Logf
 	for _, tst := range tests {
 		o, err := f.Complete(tst.in)
 		if err != nil {
@@ -64,7 +63,7 @@ func TestFile(t *testing.T) {
 			outs []string
 		}{
 			{"hi", []string{"hi"}}, // not necessarily intuitive, but the rule is match ONLY one name
-					// if that name completes one thing.
+			// if that name completes one thing.
 			{"h", hnames},
 			{"t", []string{"there"}},
 		}
@@ -77,7 +76,6 @@ func TestFile(t *testing.T) {
 		t.Logf("Wrote %v", filepath.Join(tempDir, n))
 	}
 	f := NewFileCompleter(tempDir)
-	Debug = t.Logf
 	errCount := 0
 	for _, tst := range tests {
 		o, err := f.Complete(tst.in)
@@ -126,11 +124,11 @@ func TestMulti(t *testing.T) {
 			in   string
 			outs []string
 		}{
-			{"hi", hinames},
+			{"hi", []string{"hi"}},
 			{"h", hnames},
 			{"t", []string{"there"}},
-			{"ahi", []string{"ahi", "ahil", "ahit"}},
-			{"bh", []string{"bhi", "bhil", "bhit", "bhow"}},
+			{"ahi", []string{"bin/ahi"}},
+			{"bh", []string{"sbin/bhi", "sbin/bhil", "sbin/bhit", "sbin/bhow"}},
 		}
 	)
 	for _, p := range []string{"bin", "sbin"} {
@@ -146,7 +144,6 @@ func TestMulti(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	Debug = t.Logf
 	if err := os.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Join(tempDir, "bin"), filepath.Join(tempDir, "sbin"))); err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +157,7 @@ func TestMulti(t *testing.T) {
 	for _, tst := range tests {
 		o, err := f.Complete(tst.in)
 		if err != nil {
-			t.Errorf("Complete %v: got %v, want nil", tst.in, err)
+			t.Errorf("Error Complete %v: got %v, want nil", tst.in, err)
 			continue
 		}
 		t.Logf("Complete: tst %v gets %v", tst, o)
@@ -168,16 +165,20 @@ func TestMulti(t *testing.T) {
 		// sorted order. We'll see if that's an issue later.
 		// adjust outs for the path and then check it.
 		if len(o) != len(tst.outs) {
-			t.Errorf("Complete %v: %v results, want %v", tst, o, tst.outs)
+			t.Errorf("Error Complete %v, wrong len for return: %v results, want %v", tst, o, tst.outs)
 			continue
 		}
 		for i := range o {
-			p := filepath.Join(tempDir, tst.outs[i])
+			p := tst.outs[i]
+			if tst.in[0] == 'a' || tst.in[0] == 'b' {
+				p = filepath.Join(tempDir, tst.outs[i])
+			}
+			t.Logf("\tcheck %v", p)
 			if o[i] != p {
-				t.Errorf("Complete %v: got %v, want %v", tst.in, o, p)
+				t.Errorf("Error Complete %v, %d'th result mismatches: got %v, want %v", tst.in, i, o[i], p)
 			}
 		}
-		t.Logf("Check %v: found %v", tst, o)
+		t.Logf("Done check %v: found %v", tst, o)
 	}
 }
 
@@ -246,7 +247,6 @@ func TestLineReader(t *testing.T) {
 		t.Logf("Test %v", tst)
 		cr, cw := io.Pipe()
 		f := NewStringCompleter(allnames)
-		Debug = t.Logf
 
 		l := NewLineReader(f, r, cw)
 		var out []byte
@@ -275,6 +275,46 @@ func TestLineReader(t *testing.T) {
 		}
 		if s[0] != tst.names[0] {
 			t.Errorf("Got %v, want %v", s[0], tst.names[0])
+		}
+	}
+}
+
+// TestEnv tests the the environment completer.
+func TestEnv(t *testing.T) {
+	var tests = []struct {
+		pathVal string
+		nels    int
+		err     error
+	}{
+		{"", 0, EmptyEnv},
+		{"a", 1, nil},
+		{"A:B", 2, nil},
+	}
+	for _, tst := range tests {
+		t.Logf("tst %v", tst)
+		if err := os.Setenv("PATH", tst.pathVal); err != nil {
+			t.Fatal(err)
+		}
+		e, err := NewPathCompleter()
+		if tst.err != err {
+			t.Errorf("tst %v: got %v, want %v", tst, err, tst.err)
+			continue
+		}
+		t.Logf("NewPathCompleter returns %v, %v", e, err)
+		if tst.nels == 0 && e != nil {
+			t.Errorf("tst %v: got %v, want nil", tst, e)
+			continue
+		}
+		if tst.nels == 0 {
+			continue
+		}
+		if e == nil {
+			t.Errorf("tst %v: got nil, want MultiCompleter", tst)
+			continue
+		}
+		nels := len(e.(*MultiCompleter).Completers)
+		if nels != tst.nels {
+			t.Errorf("tst %v: got %d els, want %d", tst, nels, tst.nels)
 		}
 	}
 }
