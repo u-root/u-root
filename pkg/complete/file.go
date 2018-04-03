@@ -7,7 +7,7 @@ package complete
 import "path/filepath"
 
 // FileCompleter is used to implement a Completer for a single
-// directory in a a file system.
+// directory in a file system.
 type FileCompleter struct {
 	// Root is the starting point for this Completer.
 	Root string

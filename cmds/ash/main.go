@@ -17,7 +17,7 @@ import (
 
 var (
 	debug = flag.Bool("d", false, "enable debug prints")
-	v = func(string, ...interface{}) {}
+	v     = func(string, ...interface{}) {}
 )
 
 func verbose(f string, a ...interface{}) {
@@ -26,13 +26,13 @@ func verbose(f string, a ...interface{}) {
 
 func output(r io.Reader, w io.Writer) {
 	for {
-		var b[1]byte
+		var b [1]byte
 		n, err := r.Read(b[:])
 		if err == io.EOF {
 			return
 		}
 		if err != nil {
-			log.Print("output: %v", err)
+			log.Printf("output: %v", err)
 			return
 		}
 		if n < len(b) {
@@ -40,8 +40,8 @@ func output(r io.Reader, w io.Writer) {
 		}
 		var s string
 		switch b[0] {
-		default: 
-		s = string(b[:])
+		default:
+			s = string(b[:])
 		case '\b', 127:
 			s = "\b \b"
 		case '\r', '\n':

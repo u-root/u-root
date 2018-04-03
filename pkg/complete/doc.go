@@ -40,5 +40,4 @@
 	to read one word. The intent is that completers are so cheap that just
 	creating them on demand costs nothing. So far this seems to work.
 */
-
 package complete
