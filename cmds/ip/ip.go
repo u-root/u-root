@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	l "log"
 	"math"
+	"net"
 	"os"
 	"strings"
 
@@ -200,11 +201,25 @@ func linkshow() {
 	}
 }
 
+func setHardwareAddress(iface netlink.Link) {
+	cursor++
+	hwAddr, err := net.ParseMAC(arg[cursor])
+	if err != nil {
+		log.Fatalf("%v cant parse mac addr %v: %v", iface, hwAddr, err)
+	}
+	err = netlink.LinkSetHardwareAddr(iface, hwAddr)
+	if err != nil {
+		log.Fatalf("%v cant set mac addr %v: %v", iface, hwAddr, err)
+	}
+}
+
 func linkset() {
 	iface := dev()
 	cursor++
-	whatIWant = []string{"up", "down"}
+	whatIWant = []string{"address", "up", "down"}
 	switch one(arg[cursor], whatIWant) {
+	case "address":
+		setHardwareAddress(iface)
 	case "up":
 		if err := netlink.LinkSetUp(iface); err != nil {
 			log.Fatalf("%v can't make it up: %v", iface, err)
