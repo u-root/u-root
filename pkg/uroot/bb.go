@@ -413,7 +413,7 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 						// name=
 						&ast.BasicLit{
 							Kind:  token.STRING,
-							Value: fmt.Sprintf("%#v", p.name),
+							Value: strconv.Quote(p.name),
 						},
 						// init=
 						ast.NewIdent("Init"),
