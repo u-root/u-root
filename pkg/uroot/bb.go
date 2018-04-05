@@ -19,111 +19,27 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
-	"text/template"
 
+	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 )
 
-// Per-package templates.
-//
-// TODO: Generate the cmd_xx.go template using the AST, and use a function-name
-// generator to avoid collisions.
-const (
-	cmdFunc = `package main
-
-import "github.com/u-root/u-root/bbsh/cmds/{{.CmdName}}"
-
-func _forkbuiltin_{{.CmdName}}(c *Command) error {
-	{{.CmdName}}.Main()
-	return nil
-}
-
-func {{.CmdName}}Init() {
-	addForkBuiltIn("{{.CmdName}}", _forkbuiltin_{{.CmdName}})
-	{{.CmdName}}.Init()
-}
-`
-)
-
-// init.go
-const initGo = `package main
-
-import (
-	"log"
-	"os"
-	"os/exec"
-	"path/filepath"
-        "syscall"
-
-	"github.com/u-root/u-root/pkg/uroot/util"
-)
-
-func init() {
-	// Init for the command that is being run.
-	if f, ok := initMap[filepath.Base(os.Args[0])]; ok {
-		f()
-	}
-
-	// Yeah, it's weird that this stuff happens in bbsh's init.
-	// We only do it if we actually *are* init. But merging this into bbsh
-	// should happen some other way. This should just be in bbsh.Main?
-	//
-	// Maybe init should just be a normal bb command, just like the others,
-	// except with a special symlink to /init?
-
-	if os.Args[0] != "/init" {
-		// Skipping root file system setup since we are not /init.
-		return
-	}
-
-	if os.Getpid() != 1 {
-		// Skipping root file system setup since /init is not pid 1.
-		return
-	}
-
-	// Set up root file system. Mount stuff.
-	util.Rootfs()
-
-	// Figure out which init to run.
-	//
-	// Spawn the first shell. We had been running the shell as pid 1 but
-	// that makes control tty stuff messy. We think.
-	for _, v := range []string{"/inito", "/bbin/uinit", "/bbin/rush"} {
-		cmd := exec.Command(v)
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
-		log.Printf("Run %v", cmd)
-		if err := cmd.Run(); err != nil {
-			log.Print(err)
-		}
-	}
-
-	// This will drop us into a rush prompt, since this is the init for rush.
-	// That's a nice fallback for when everything goes wrong. 
-	return
-}
-`
-
-// Commands to skip building in bb mode. init and rush should be obvious
-// builtin and script we skip as we have no toolchain in this mode.
+// Commands to skip building in bb mode.
 var skip = map[string]struct{}{
-	"builtin": {},
-	"init":    {},
-	"rush":    {},
-	"script":  {},
+	"bb": {},
 }
 
 type bbBuilder struct {
-	opts    BuildOpts
-	bbshDir string
-	initMap string
-	af      ArchiveFiles
+	opts  BuildOpts
+	bbDir string
+	af    ArchiveFiles
+
+	init string
 
 	importer types.Importer
 }
@@ -138,20 +54,23 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 		return ArchiveFiles{}, err
 	}
 
-	bbshDir := filepath.Join(urootPkg.Dir, "bbsh")
+	bbDir := filepath.Join(urootPkg.Dir, "bb")
 	// Blow bbsh away before trying to re-create it.
-	if err := os.RemoveAll(bbshDir); err != nil {
+	if err := os.RemoveAll(bbDir); err != nil {
 		return ArchiveFiles{}, err
 	}
-	if err := os.MkdirAll(bbshDir, 0755); err != nil {
+	if err := os.MkdirAll(bbDir, 0755); err != nil {
 		return ArchiveFiles{}, err
 	}
 
 	builder := &bbBuilder{
-		opts:     opts,
-		bbshDir:  bbshDir,
-		initMap:  "package main\n\nvar initMap = map[string]func() {",
-		af:       NewArchiveFiles(),
+		opts:  opts,
+		bbDir: bbDir,
+		af:    NewArchiveFiles(),
+		init: `package main
+
+		import (
+`,
 		importer: importer.For("source", nil),
 	}
 
@@ -166,13 +85,8 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 		}
 	}
 
-	// Create init.go.
-	if err := ioutil.WriteFile(filepath.Join(builder.bbshDir, "init.go"), []byte(initGo), 0644); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	// Move rush shell over.
-	p, err := opts.Env.Package("github.com/u-root/u-root/cmds/rush")
+	// Move bb cmd over.
+	p, err := opts.Env.Package("github.com/u-root/u-root/pkg/bb/cmd")
 	if err != nil {
 		return ArchiveFiles{}, err
 	}
@@ -185,37 +99,34 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 		if err != nil {
 			return err
 		}
-		return ioutil.WriteFile(filepath.Join(builder.bbshDir, fi.Name()), b, 0644)
+		return ioutil.WriteFile(filepath.Join(builder.bbDir, fi.Name()), b, 0644)
 	}); err != nil {
 		return ArchiveFiles{}, err
 	}
 
-	// Map init functions.
-	builder.initMap += "\n}"
-	if err := ioutil.WriteFile(filepath.Join(builder.bbshDir, "initmap.go"), []byte(builder.initMap), 0644); err != nil {
+	// Write init.go, which imports all command packages.
+	//
+	// I swear, I tried this with *ast.File and astutil.AddNamedImport, but
+	// I just couldn't get it to work. Whatever.
+	builder.init += ")\n"
+	if err := writeGoFile(filepath.Join(builder.bbDir, "init.go"), []byte(builder.init)); err != nil {
 		return ArchiveFiles{}, err
 	}
 
-	// Compile rush + commands to /bbin/rush.
-	rushPath := filepath.Join(opts.TempDir, "rush")
-	if err := opts.Env.Build("github.com/u-root/u-root/bbsh", rushPath, golang.BuildOpts{}); err != nil {
+	// Compile bb + commands to /bbin/bb.
+	bbPath := filepath.Join(opts.TempDir, "bb")
+	if err := opts.Env.Build("github.com/u-root/u-root/bb", bbPath, golang.BuildOpts{}); err != nil {
 		return ArchiveFiles{}, err
 	}
-	if err := builder.af.AddFile(rushPath, "bbin/rush"); err != nil {
+	if err := builder.af.AddFile(bbPath, "bbin/bb"); err != nil {
 		return ArchiveFiles{}, err
 	}
 
-	// Symlink from /init to rush.
-	if err := builder.af.AddRecord(cpio.Symlink("init", "/bbin/rush")); err != nil {
+	// Symlink from /init to init.
+	if err := builder.af.AddRecord(cpio.Symlink("init", "/bbin/init")); err != nil {
 		return ArchiveFiles{}, err
 	}
 	return builder.af, nil
-}
-
-// commandTemplate is the template used for cmdFunc, the file that becomes
-// bbsh/cmd_{CmdName}.go.
-type commandTemplate struct {
-	CmdName string
 }
 
 // Package is a Go package.
@@ -257,12 +168,6 @@ func (p *Package) nextInit() *ast.Ident {
 	return i
 }
 
-func (p *Package) commandTemplate() commandTemplate {
-	return commandTemplate{
-		CmdName: p.name,
-	}
-}
-
 // TODO:
 // - write an init name generator, in case InitN is already taken.
 // - also rewrite all non-Go-stdlib dependencies.
@@ -276,9 +181,11 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 	importAliases := make(map[string]string)
 	for _, impt := range f.Imports {
 		if impt.Name != nil {
-			// TODO: eval this or find a post-AST source for this
-			// info.
-			importAliases[strings.Trim(impt.Path.Value, "\"")] = impt.Name.Name
+			importPath, err := strconv.Unquote(impt.Path.Value)
+			if err != nil {
+				panic(err)
+			}
+			importAliases[importPath] = impt.Name.Name
 		}
 	}
 
@@ -380,16 +287,6 @@ func writeGoFile(path string, code []byte) error {
 	return nil
 }
 
-func (p *Package) writeTemplate(path string, text string) error {
-	var b bytes.Buffer
-	t := template.Must(template.New("uroot").Parse(text))
-	if err := t.Execute(&b, p.commandTemplate()); err != nil {
-		return fmt.Errorf("couldn't write template %q: %v", path, err)
-	}
-
-	return writeGoFile(path, b.Bytes())
-}
-
 func getPackage(opts BuildOpts, importPath string, importer types.Importer) (*Package, error) {
 	p, err := opts.Env.Package(importPath)
 	if err != nil {
@@ -474,12 +371,14 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 		return nil
 	}
 
-	pkgDir := filepath.Join(b.bbshDir, "cmds", p.name)
+	pkgDir := filepath.Join(b.bbDir, "cmds", p.name)
 	if err := os.MkdirAll(pkgDir, 0755); err != nil {
 		return err
 	}
 
 	// This init holds all variable initializations.
+	//
+	// func [nextInitName]() {}
 	varInit := &ast.FuncDecl{
 		Name: p.nextInit(),
 		Type: &ast.FuncType{
@@ -510,10 +409,38 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 		varInit.Body.List = append(varInit.Body.List, a)
 	}
 
+	astutil.AddImport(p.fset, p.ast.Files[mainPath], "github.com/u-root/u-root/pkg/bb")
+
+	// func init() {
+	//   bb.Register(p.name, Init, Main)
+	// }
+	bbRegisterInit := &ast.FuncDecl{
+		Name: ast.NewIdent("init"),
+		Type: &ast.FuncType{},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{X: &ast.CallExpr{
+					Fun: ast.NewIdent("bb.Register"),
+					Args: []ast.Expr{
+						// name=
+						&ast.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf("%#v", p.name),
+						},
+						// init=
+						ast.NewIdent("Init"),
+						// main=
+						ast.NewIdent("Main"),
+					},
+				}},
+			},
+		},
+	}
+
 	// We could add these statements to any of the package files. We choose
 	// the one that contains Main() to guarantee reproducibility of the
 	// same bbsh binary.
-	p.ast.Files[mainPath].Decls = append(p.ast.Files[mainPath].Decls, varInit, p.init)
+	p.ast.Files[mainPath].Decls = append(p.ast.Files[mainPath].Decls, varInit, p.init, bbRegisterInit)
 
 	for filePath, sourceFile := range p.ast.Files {
 		path := filepath.Join(pkgDir, filepath.Base(filePath))
@@ -522,13 +449,9 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 		}
 	}
 
-	cmdPath := filepath.Join(b.bbshDir, fmt.Sprintf("cmd_%s.go", p.name))
-	if err := p.writeTemplate(cmdPath, cmdFunc); err != nil {
-		return err
-	}
-
-	b.initMap += "\n\t\"" + p.name + "\": " + p.name + "Init,"
+	// Add side-effect import to bb binary so init registers itself.
+	b.init += fmt.Sprintf("_ \"github.com/u-root/u-root/bb/cmds/%s\"\n", p.name)
 
 	// Add a symlink to our bbsh.
-	return b.af.AddRecord(cpio.Symlink(filepath.Join("bbin", p.name), "/bbin/rush"))
+	return b.af.AddRecord(cpio.Symlink(filepath.Join("bbin", p.name), "/bbin/bb"))
 }

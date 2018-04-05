@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -27,8 +26,7 @@ type builtin func(c *Command) error
 var (
 	urpath   = "/go/bin:/ubin:/buildbin:/bbin:/bin:/usr/local/bin:"
 	builtins = make(map[string]builtin)
-	// Some builtins really want to be forked off, esp. in the busybox case.
-	forkBuiltins = make(map[string]builtin)
+
 	// the environment dir is INTENDED to be per-user and bound in
 	// a private name space at /env.
 	envDir = "/env"
@@ -39,14 +37,6 @@ func addBuiltIn(name string, f builtin) error {
 		return fmt.Errorf("%v already a builtin", name)
 	}
 	builtins[name] = f
-	return nil
-}
-
-func addForkBuiltIn(name string, f builtin) error {
-	if _, ok := builtins[name]; ok {
-		return fmt.Errorf("%v already a forkBuiltin", name)
-	}
-	forkBuiltins[name] = f
 	return nil
 }
 
@@ -184,6 +174,7 @@ func commands(cmds []*Command) error {
 	}
 	return nil
 }
+
 func command(c *Command) error {
 	// for now, bg will just happen in background.
 	if c.bg {
@@ -200,21 +191,12 @@ func command(c *Command) error {
 }
 
 func main() {
-	b := bufio.NewReader(os.Stdin)
-
-	// we use path.Base in case they type something like ./cmd
-	if f, ok := forkBuiltins[path.Base(os.Args[0])]; ok {
-		if err := f(&Command{cmd: os.Args[0], Cmd: &exec.Cmd{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, argv: os.Args[1:]}); err != nil {
-			log.Fatalf("%v", err)
-		}
-		os.Exit(0)
-	}
-
 	if len(os.Args) != 1 {
 		fmt.Println("no scripts/args yet")
 		os.Exit(1)
 	}
 
+	b := bufio.NewReader(os.Stdin)
 	tty()
 	fmt.Printf("%% ")
 	for {
