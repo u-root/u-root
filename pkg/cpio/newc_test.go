@@ -16,13 +16,8 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	f, err := Format("newc")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	r := f.Reader(bytes.NewReader(testCPIO))
-	files, err := r.ReadRecords()
+	r := Newc.Reader(bytes.NewReader(testCPIO))
+	files, err := ReadAllRecords(r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,11 +31,6 @@ func TestSimple(t *testing.T) {
 }
 
 func TestWriteRead(t *testing.T) {
-	f, err := Format("newc")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	contents := []byte("LANAAAAAAAAAA")
 	rec := StaticRecord(contents, Info{
 		Ino:      1,
@@ -58,16 +48,16 @@ func TestWriteRead(t *testing.T) {
 	})
 
 	buf := &bytes.Buffer{}
-	w := f.Writer(buf)
+	w := Newc.Writer(buf)
 	if err := w.WriteRecord(rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec.Name, err)
 	}
 
-	if err := w.WriteTrailer(); err != nil {
+	if err := WriteTrailer(w); err != nil {
 		t.Errorf("Could not write trailer: %v", err)
 	}
 
-	r := f.Reader(bytes.NewReader(buf.Bytes()))
+	r := Newc.Reader(bytes.NewReader(buf.Bytes()))
 	rec2, err := r.ReadRecord()
 	if err != nil {
 		t.Errorf("Could not read record: %v", err)
@@ -88,35 +78,30 @@ func TestWriteRead(t *testing.T) {
 }
 
 func TestReadWrite(t *testing.T) {
-	f, err := Format("newc")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	r := f.Reader(bytes.NewReader(testCPIO))
-	files, err := r.ReadRecords()
+	r := Newc.Reader(bytes.NewReader(testCPIO))
+	files, err := ReadAllRecords(r)
 	if err != nil {
 		t.Fatalf("Reading testCPIO reader: %v", err)
 	}
 
 	buf := &bytes.Buffer{}
-	w := f.Writer(buf)
-	if err := w.WriteRecords(files); err != nil {
+	w := Newc.Writer(buf)
+	if err := WriteRecords(w, files); err != nil {
 		t.Fatalf("WriteRecords: %v", err)
 	}
 
-	if err := w.WriteTrailer(); err != nil {
+	if err := WriteTrailer(w); err != nil {
 		t.Fatalf("WriteTrailer: %v", err)
 	}
 
-	r = f.Reader(bytes.NewReader(testCPIO))
-	files, err = r.ReadRecords()
+	r = Newc.Reader(bytes.NewReader(testCPIO))
+	files, err = ReadAllRecords(r)
 	if err != nil {
 		t.Fatalf("Reading testCPIO reader: %v", err)
 	}
 
-	r = f.Reader(bytes.NewReader(buf.Bytes()))
-	filesReadBack, err := r.ReadRecords()
+	r = Newc.Reader(bytes.NewReader(buf.Bytes()))
+	filesReadBack, err := ReadAllRecords(r)
 	if err != nil {
 		t.Fatalf("TestReadWrite: reading generated data: %v", err)
 	}
@@ -151,17 +136,12 @@ func TestReadWrite(t *testing.T) {
 }
 
 func TestBad(t *testing.T) {
-	f, err := Format("newc")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	r := f.Reader(bytes.NewReader(badCPIO))
+	r := Newc.Reader(bytes.NewReader(badCPIO))
 	if _, err := r.ReadRecord(); err != io.EOF {
 		t.Errorf("ReadRecord(badCPIO) got %v, want %v", err, io.EOF)
 	}
 
-	r = f.Reader(bytes.NewReader(badMagicCPIO))
+	r = Newc.Reader(bytes.NewReader(badMagicCPIO))
 	if _, err := r.ReadRecord(); err == nil {
 		t.Errorf("Wanted bad magic err, got nil")
 	}
@@ -484,11 +464,6 @@ var (
 
 // testReproducible verifies that we can produce reproducible cpio archives for newc format.
 func TestReproducible(t *testing.T) {
-	f, err := Format("newc")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	contents := []byte("LANAAAAAAAAAA")
 	rec := []Record{StaticRecord(contents, Info{
 		Ino:      1,
@@ -509,15 +484,15 @@ func TestReproducible(t *testing.T) {
 	// First test that it fails unless we make it reproducible
 
 	b1 := &bytes.Buffer{}
-	w := f.Writer(b1)
-	if err := w.WriteRecords(rec); err != nil {
+	w := Newc.Writer(b1)
+	if err := WriteRecords(w, rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
 	rec[0].ReaderAt = bytes.NewReader(contents)
 	b2 := &bytes.Buffer{}
-	w = f.Writer(b2)
+	w = Newc.Writer(b2)
 	rec[0].MTime++
-	if err := w.WriteRecords(rec); err != nil {
+	if err := WriteRecords(w, rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
 
@@ -529,19 +504,19 @@ func TestReproducible(t *testing.T) {
 	// It does indeed fail without the second call.
 
 	b1 = &bytes.Buffer{}
-	w = f.Writer(b1)
+	w = Newc.Writer(b1)
 	rec[0].ReaderAt = bytes.NewReader([]byte(contents))
 	MakeAllReproducible(rec)
-	if err := w.WriteRecords(rec); err != nil {
+	if err := WriteRecords(w, rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
 
 	b2 = &bytes.Buffer{}
-	w = f.Writer(b2)
+	w = Newc.Writer(b2)
 	rec[0].MTime++
 	rec[0].ReaderAt = bytes.NewReader([]byte(contents))
 	MakeAllReproducible(rec)
-	if err := w.WriteRecords(rec); err != nil {
+	if err := WriteRecords(w, rec); err != nil {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
 

@@ -99,7 +99,7 @@ func main() {
 		if err := scanner.Err(); err != nil {
 			log.Fatalf("Error reading stdin: %v", err)
 		}
-		if err := rw.WriteTrailer(); err != nil {
+		if err := cpio.WriteTrailer(rw); err != nil {
 			log.Fatalf("Error writing trailer record: %v", err)
 		}
 

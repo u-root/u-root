@@ -14,6 +14,14 @@ type TTY struct {
 	f *os.File
 }
 
+func (t *TTY) Read(b []byte) (int, error) {
+	return t.f.Read(b)
+}
+
+func (t *TTY) Write(b []byte) (int, error) {
+	return t.f.Write(b)
+}
+
 func New() (*TTY, error) {
 	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 	if err != nil {

@@ -19,6 +19,11 @@ const (
 	magicLen  = 6
 )
 
+var (
+	// Newc is the newc CPIO record format.
+	Newc RecordFormat = newc{magic: newcMagic}
+)
+
 type header struct {
 	Ino        uint32
 	Mode       uint32
@@ -68,7 +73,8 @@ func (h header) Info() Info {
 	return i
 }
 
-type format struct {
+// newc implements RecordFormat for the newc format.
+type newc struct {
 	magic string
 }
 
@@ -78,13 +84,14 @@ func round4(n int64) int64 {
 }
 
 type writer struct {
-	f   format
+	n   newc
 	w   io.Writer
 	pos int64
 }
 
-func (f format) Writer(w io.Writer) RecordWriter {
-	return &writer{f: f, w: w}
+// Writer implements RecordFormat.Writer.
+func (n newc) Writer(w io.Writer) RecordWriter {
+	return NewDedupWriter(&writer{n: n, w: w})
 }
 
 func (w *writer) Write(b []byte) (int, error) {
@@ -106,11 +113,11 @@ func (w *writer) pad() error {
 	return nil
 }
 
-// Write writes newc cpio records. It pads the header+name write to
-// 4 byte alignment and pads the data write as well.
+// WriteRecord writes newc cpio records. It pads the header+name write to 4
+// byte alignment and pads the data write as well.
 func (w *writer) WriteRecord(f Record) error {
 	// Write magic.
-	if _, err := w.Write([]byte(w.f.magic)); err != nil {
+	if _, err := w.Write([]byte(w.n.magic)); err != nil {
 		return err
 	}
 
@@ -168,16 +175,17 @@ func (w *writer) WriteRecord(f Record) error {
 }
 
 type reader struct {
-	f   format
+	n   newc
 	r   io.ReaderAt
 	pos int64
 }
 
-func (f format) Reader(r io.ReaderAt) RecordReader {
-	return &reader{f: f, r: r}
+// Reader implements RecordFormat.Reader.
+func (n newc) Reader(r io.ReaderAt) RecordReader {
+	return EOFReader{&reader{n: n, r: r}}
 }
 
-func (r *reader) Read(p []byte) error {
+func (r *reader) read(p []byte) error {
 	n, err := r.r.ReadAt(p, r.pos)
 	if err == io.EOF {
 		return io.EOF
@@ -189,25 +197,26 @@ func (r *reader) Read(p []byte) error {
 	return nil
 }
 
-func (r *reader) ReadAligned(p []byte) error {
-	err := r.Read(p)
+func (r *reader) readAligned(p []byte) error {
+	err := r.read(p)
 	r.pos = round4(r.pos)
 	return err
 }
 
+// ReadRecord implements RecordReader for the newc cpio format.
 func (r *reader) ReadRecord() (Record, error) {
 	hdr := header{}
 
 	Debug("Next record: pos is %d\n", r.pos)
 
 	buf := make([]byte, hex.EncodedLen(binary.Size(hdr))+magicLen)
-	if err := r.Read(buf); err != nil {
+	if err := r.read(buf); err != nil {
 		return Record{}, err
 	}
 
 	// Check the magic.
-	if magic := string(buf[:magicLen]); magic != r.f.magic {
-		return Record{}, fmt.Errorf("reader: magic got %q, want %q", magic, r.f.magic)
+	if magic := string(buf[:magicLen]); magic != r.n.magic {
+		return Record{}, fmt.Errorf("reader: magic got %q, want %q", magic, r.n.magic)
 	}
 	Debug("Header is %v\n", buf)
 
@@ -223,7 +232,7 @@ func (r *reader) ReadRecord() (Record, error) {
 
 	// Get the name.
 	nameBuf := make([]byte, hdr.NameLength)
-	if err := r.ReadAligned(nameBuf); err != nil {
+	if err := r.readAligned(nameBuf); err != nil {
 		return Record{}, err
 	}
 
@@ -239,5 +248,5 @@ func (r *reader) ReadRecord() (Record, error) {
 }
 
 func init() {
-	AddFormat("newc", format{magic: newcMagic})
+	formatMap["newc"] = Newc
 }
