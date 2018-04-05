@@ -20,9 +20,12 @@ func TestBBBuild(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	opts := BuildOpts{
-		Env:      golang.Default(),
-		Packages: []string{"github.com/u-root/u-root/pkg/uroot/test/foo"},
-		TempDir:  dir,
+		Env: golang.Default(),
+		Packages: []string{
+			"github.com/u-root/u-root/pkg/uroot/test/foo",
+			"github.com/u-root/u-root/cmds/rush",
+		},
+		TempDir: dir,
 	}
 	af, err := BBBuild(opts)
 	if err != nil {
@@ -58,12 +61,7 @@ func TestPackageRewriteFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	opts := BuildOpts{
-		Env:     golang.Default(),
-		TempDir: dir,
-	}
-
-	p, err := getPackage(opts, "github.com/u-root/u-root/pkg/uroot/test/foo", importer.For("source", nil))
+	p, err := getPackage(golang.Default(), "github.com/u-root/u-root/pkg/uroot/test/foo", importer.For("source", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +125,7 @@ func TestPackageRewriteFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := opts.Env.BuildDir(d, filepath.Join(d, "foo"), golang.BuildOpts{}); err != nil {
+	if err := golang.Default().BuildDir(d, filepath.Join(d, "foo"), golang.BuildOpts{}); err != nil {
 		t.Fatal(err)
 	}
 

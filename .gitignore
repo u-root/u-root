@@ -4,8 +4,9 @@
 *.so
 *~
 
-bbsh
-u-root
+/bbsh
+/bb
+/u-root
 !vendor/github.com/u-root
 
 # Folders
