@@ -39,7 +39,7 @@ type bbBuilder struct {
 	bbDir string
 	af    ArchiveFiles
 
-	init string
+	bb *Package
 
 	importer types.Importer
 }
@@ -64,15 +64,23 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 	}
 
 	builder := &bbBuilder{
-		opts:  opts,
-		bbDir: bbDir,
-		af:    NewArchiveFiles(),
-		init: `package main
-
-		import (
-`,
+		opts:     opts,
+		bbDir:    bbDir,
+		af:       NewArchiveFiles(),
 		importer: importer.For("source", nil),
 	}
+
+	p, err := getPackage(opts, "github.com/u-root/u-root/pkg/bb/cmd", builder.importer)
+	if err != nil {
+		return ArchiveFiles{}, err
+	}
+	if p == nil {
+		return ArchiveFiles{}, fmt.Errorf("bb/cmd missing")
+	}
+	if len(p.ast.Files) != 1 {
+		return ArchiveFiles{}, fmt.Errorf("bb/cmd is supposed to only have one file")
+	}
+	builder.bb = p
 
 	// Move and rewrite package files.
 	for _, pkg := range opts.Packages {
@@ -85,32 +93,12 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 		}
 	}
 
-	// Move bb cmd over.
-	p, err := opts.Env.Package("github.com/u-root/u-root/pkg/bb/cmd")
-	if err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	if err := filepath.Walk(p.Dir, func(name string, fi os.FileInfo, err error) error {
-		if err != nil || fi.IsDir() {
-			return err
+	// Write bb cmd out.
+	for filePath, sourceFile := range p.ast.Files {
+		path := filepath.Join(builder.bbDir, filepath.Base(filePath))
+		if err := writeFile(path, p.fset, sourceFile); err != nil {
+			return ArchiveFiles{}, err
 		}
-		b, err := ioutil.ReadFile(name)
-		if err != nil {
-			return err
-		}
-		return ioutil.WriteFile(filepath.Join(builder.bbDir, fi.Name()), b, 0644)
-	}); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	// Write init.go, which imports all command packages.
-	//
-	// I swear, I tried this with *ast.File and astutil.AddNamedImport, but
-	// I just couldn't get it to work. Whatever.
-	builder.init += ")\n"
-	if err := writeGoFile(filepath.Join(builder.bbDir, "init.go"), []byte(builder.init)); err != nil {
-		return ArchiveFiles{}, err
 	}
 
 	// Compile bb + commands to /bbin/bb.
@@ -450,7 +438,9 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 	}
 
 	// Add side-effect import to bb binary so init registers itself.
-	b.init += fmt.Sprintf("_ \"github.com/u-root/u-root/bb/cmds/%s\"\n", p.name)
+	for _, sourceFile := range b.bb.ast.Files {
+		astutil.AddNamedImport(b.bb.fset, sourceFile, "_", fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", p.name))
+	}
 
 	// Add a symlink to our bbsh.
 	return b.af.AddRecord(cpio.Symlink(filepath.Join("bbin", p.name), "/bbin/bb"))
