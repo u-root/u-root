@@ -157,7 +157,16 @@ func main() {
 	// run inito and then run our shell
 	// inito is always first and we set default flags for it.
 	cloneFlags := uintptr(syscall.CLONE_NEWPID)
-	cmdList := []string{"/inito", "/buildbin/uinit", "/buildbin/rush"}
+	cmdList := []string{
+		"/inito",
+		"/bbin/uinit",
+		"/buildbin/uinit",
+		"/bbin/sh",
+		"/bbin/rush",
+		"/buildbin/sh",
+		"/buildbin/rush",
+	}
+
 	noCmdFound := true
 	for _, v := range cmdList {
 		if _, err := os.Stat(v); !os.IsNotExist(err) {
