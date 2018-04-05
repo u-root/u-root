@@ -111,6 +111,38 @@ type Opts struct {
 	UseExistingInit bool
 }
 
+// ResolvePackagePaths takes a list of Go package import paths and directories
+// and turns them into exclusively import paths.
+//
+// Currently allowed formats:
+//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
+//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
+//   Globs of paths to Go package directories; e.g. ./cmds/*
+func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
+	var importPaths []string
+	// Resolve file system paths to package import paths.
+	for _, pkg := range pkgs {
+		matches, err := filepath.Glob(pkg)
+		if len(matches) == 0 || err != nil {
+			if _, perr := env.Package(pkg); perr != nil {
+				return nil, fmt.Errorf("%q is neither package or path/glob: %v / %v", pkg, err, perr)
+			}
+			importPaths = append(importPaths, pkg)
+		}
+
+		for _, match := range matches {
+			p, err := env.PackageByPath(match)
+			if err != nil {
+				log.Printf("Skipping package %q: %v", match, err)
+			} else {
+				importPaths = append(importPaths, p.ImportPath)
+			}
+		}
+	}
+
+	return importPaths, nil
+}
+
 // CreateInitramfs creates an initramfs built to `opts`' specifications.
 func CreateInitramfs(opts Opts) error {
 	if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
@@ -120,25 +152,9 @@ func CreateInitramfs(opts Opts) error {
 		return fmt.Errorf("must give output file")
 	}
 
-	var importPaths []string
-	// Resolve file system paths to package import paths.
-	for _, pkg := range opts.Packages {
-		matches, err := filepath.Glob(pkg)
-		if len(matches) == 0 || err != nil {
-			if _, perr := opts.Env.Package(pkg); perr != nil {
-				return fmt.Errorf("%q is neither package or path/glob: %v / %v", pkg, err, perr)
-			}
-			importPaths = append(importPaths, pkg)
-		}
-
-		for _, match := range matches {
-			p, err := opts.Env.PackageByPath(match)
-			if err != nil {
-				log.Printf("Skipping package %q: %v", match, err)
-			} else {
-				importPaths = append(importPaths, p.ImportPath)
-			}
-		}
+	importPaths, err := ResolvePackagePaths(opts.Env, opts.Packages)
+	if err != nil {
+		return err
 	}
 
 	builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")

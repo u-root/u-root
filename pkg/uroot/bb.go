@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -34,14 +35,68 @@ var skip = map[string]struct{}{
 	"bb": {},
 }
 
-type bbBuilder struct {
-	opts  BuildOpts
-	bbDir string
-	af    ArchiveFiles
+// BuildBusybox builds a busybox of the given Go packages.
+//
+// pkgs is a list of Go import paths. If nil is returned, binaryPath will hold
+// the busybox-style binary.
+func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
+	urootPkg, err := env.Package("github.com/u-root/u-root")
+	if err != nil {
+		return err
+	}
 
-	bb *Package
+	bbDir := filepath.Join(urootPkg.Dir, "bb")
+	// Blow bb away before trying to re-create it.
+	if err := os.RemoveAll(bbDir); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(bbDir, 0755); err != nil {
+		return err
+	}
 
-	importer types.Importer
+	importer := importer.For("source", nil)
+
+	// Make the bb/cmd variable in case this lives elsewhere.
+	bb, err := getPackage(env, "github.com/u-root/u-root/pkg/bb/cmd", importer)
+	if err != nil {
+		return err
+	}
+	if bb == nil {
+		return fmt.Errorf("bb/cmd missing")
+	}
+	if len(bb.ast.Files) != 1 {
+		return fmt.Errorf("bb/cmd is supposed to only have one file")
+	}
+
+	// Move and rewrite package files.
+	for _, pkg := range pkgs {
+		if _, ok := skip[path.Base(pkg)]; ok {
+			continue
+		}
+
+		// TODO: use bbDir to derive import path below or vice versa.
+		if err := RewritePackage(env, pkg, filepath.Join(bbDir, "cmds"), "github.com/u-root/u-root/pkg/bb", importer); err != nil {
+			return err
+		}
+
+		// Add side-effect import to bb binary so init registers itself.
+		for _, sourceFile := range bb.ast.Files {
+			astutil.AddNamedImport(bb.fset, sourceFile, "_", fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", path.Base(pkg)))
+		}
+	}
+
+	// Write bb main binary out.
+	for filePath, sourceFile := range bb.ast.Files {
+		path := filepath.Join(bbDir, filepath.Base(filePath))
+		if err := writeFile(path, bb.fset, sourceFile); err != nil {
+			return err
+		}
+	}
+
+	// Compile bb.
+	//
+	// TODO: derive "github.com/u-root/u-root/bb" from bbDir or vice versa.
+	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{})
 }
 
 // BBBuild is an implementation of Build for the busybox-like u-root initramfs.
@@ -49,72 +104,35 @@ type bbBuilder struct {
 // BBBuild rewrites the source files of the packages given to create one
 // busybox-like binary containing all commands in `opts.Packages`.
 func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
-	urootPkg, err := opts.Env.Package("github.com/u-root/u-root")
-	if err != nil {
+	// Build the busybox binary.
+	bbPath := filepath.Join(opts.TempDir, "bb")
+	if err := BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {
 		return ArchiveFiles{}, err
 	}
 
-	bbDir := filepath.Join(urootPkg.Dir, "bb")
-	// Blow bbsh away before trying to re-create it.
-	if err := os.RemoveAll(bbDir); err != nil {
-		return ArchiveFiles{}, err
-	}
-	if err := os.MkdirAll(bbDir, 0755); err != nil {
+	// Build initramfs.
+	af := NewArchiveFiles()
+	if err := af.AddFile(bbPath, "bbin/bb"); err != nil {
 		return ArchiveFiles{}, err
 	}
 
-	builder := &bbBuilder{
-		opts:     opts,
-		bbDir:    bbDir,
-		af:       NewArchiveFiles(),
-		importer: importer.For("source", nil),
-	}
-
-	p, err := getPackage(opts, "github.com/u-root/u-root/pkg/bb/cmd", builder.importer)
-	if err != nil {
-		return ArchiveFiles{}, err
-	}
-	if p == nil {
-		return ArchiveFiles{}, fmt.Errorf("bb/cmd missing")
-	}
-	if len(p.ast.Files) != 1 {
-		return ArchiveFiles{}, fmt.Errorf("bb/cmd is supposed to only have one file")
-	}
-	builder.bb = p
-
-	// Move and rewrite package files.
+	// Add symlinks for included commands to initramfs.
 	for _, pkg := range opts.Packages {
-		if _, ok := skip[filepath.Base(pkg)]; ok {
+		if _, ok := skip[path.Base(pkg)]; ok {
 			continue
 		}
 
-		if err := builder.moveCommand(pkg); err != nil {
+		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
+		if err := af.AddRecord(cpio.Symlink(filepath.Join("bbin", path.Base(pkg)), "/bbin/bb")); err != nil {
 			return ArchiveFiles{}, err
 		}
 	}
 
-	// Write bb cmd out.
-	for filePath, sourceFile := range p.ast.Files {
-		path := filepath.Join(builder.bbDir, filepath.Base(filePath))
-		if err := writeFile(path, p.fset, sourceFile); err != nil {
-			return ArchiveFiles{}, err
-		}
-	}
-
-	// Compile bb + commands to /bbin/bb.
-	bbPath := filepath.Join(opts.TempDir, "bb")
-	if err := opts.Env.Build("github.com/u-root/u-root/bb", bbPath, golang.BuildOpts{}); err != nil {
+	// Symlink from /init to busybox init.
+	if err := af.AddRecord(cpio.Symlink("init", "/bbin/init")); err != nil {
 		return ArchiveFiles{}, err
 	}
-	if err := builder.af.AddFile(bbPath, "bbin/bb"); err != nil {
-		return ArchiveFiles{}, err
-	}
-
-	// Symlink from /init to init.
-	if err := builder.af.AddRecord(cpio.Symlink("init", "/bbin/init")); err != nil {
-		return ArchiveFiles{}, err
-	}
-	return builder.af, nil
+	return af, nil
 }
 
 // Package is a Go package.
@@ -275,8 +293,8 @@ func writeGoFile(path string, code []byte) error {
 	return nil
 }
 
-func getPackage(opts BuildOpts, importPath string, importer types.Importer) (*Package, error) {
-	p, err := opts.Env.Package(importPath)
+func getPackage(env golang.Environ, importPath string, importer types.Importer) (*Package, error) {
+	p, err := env.Package(importPath)
 	if err != nil {
 		return nil, err
 	}
@@ -350,8 +368,11 @@ func getPackage(opts BuildOpts, importPath string, importer types.Importer) (*Pa
 	return pp, nil
 }
 
-func (b *bbBuilder) moveCommand(pkgPath string) error {
-	p, err := getPackage(b.opts, pkgPath, b.importer)
+// RewritePackage rewrites the pkgPath to be bb-mode compatible, where
+// destinationPath is the file system destination of the written files and
+// bbImportPath is the Go import path of the bb package.
+func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, importer types.Importer) error {
+	p, err := getPackage(env, pkgPath, importer)
 	if err != nil {
 		return err
 	}
@@ -359,14 +380,14 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 		return nil
 	}
 
-	pkgDir := filepath.Join(b.bbDir, "cmds", p.name)
+	pkgDir := filepath.Join(destDir, p.name)
 	if err := os.MkdirAll(pkgDir, 0755); err != nil {
 		return err
 	}
 
 	// This init holds all variable initializations.
 	//
-	// func [nextInitName]() {}
+	// func Init0() {}
 	varInit := &ast.FuncDecl{
 		Name: p.nextInit(),
 		Type: &ast.FuncType{
@@ -377,14 +398,12 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 	}
 
 	var mainPath string
-	var hasMain bool
 	for filePath, sourceFile := range p.ast.Files {
 		if hasMainFile := p.rewriteFile(sourceFile); hasMainFile {
-			hasMain = true
 			mainPath = filePath
 		}
 	}
-	if !hasMain {
+	if len(mainPath) == 0 {
 		return os.RemoveAll(pkgDir)
 	}
 
@@ -397,7 +416,7 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 		varInit.Body.List = append(varInit.Body.List, a)
 	}
 
-	astutil.AddImport(p.fset, p.ast.Files[mainPath], "github.com/u-root/u-root/pkg/bb")
+	astutil.AddNamedImport(p.fset, p.ast.Files[mainPath], "bb", bbImportPath)
 
 	// func init() {
 	//   bb.Register(p.name, Init, Main)
@@ -430,18 +449,12 @@ func (b *bbBuilder) moveCommand(pkgPath string) error {
 	// same bbsh binary.
 	p.ast.Files[mainPath].Decls = append(p.ast.Files[mainPath].Decls, varInit, p.init, bbRegisterInit)
 
+	// Write all files out.
 	for filePath, sourceFile := range p.ast.Files {
 		path := filepath.Join(pkgDir, filepath.Base(filePath))
 		if err := writeFile(path, p.fset, sourceFile); err != nil {
 			return err
 		}
 	}
-
-	// Add side-effect import to bb binary so init registers itself.
-	for _, sourceFile := range b.bb.ast.Files {
-		astutil.AddNamedImport(b.bb.fset, sourceFile, "_", fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", p.name))
-	}
-
-	// Add a symlink to our bbsh.
-	return b.af.AddRecord(cpio.Symlink(filepath.Join("bbin", p.name), "/bbin/bb"))
+	return nil
 }
