@@ -83,6 +83,9 @@ func newPTY(b []byte) (*pty.Pty, error) {
 		return nil, err
 	}
 	p, err := pty.New()
+	if err != nil {
+		return nil, err
+	}
 	ws, err := p.TTY.GetWinSize()
 	if err != nil {
 		return nil, err
