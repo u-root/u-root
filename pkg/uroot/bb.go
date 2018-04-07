@@ -123,13 +123,13 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 		}
 
 		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
-		if err := af.AddRecord(cpio.Symlink(filepath.Join("bbin", path.Base(pkg)), "/bbin/bb")); err != nil {
+		if err := af.AddRecord(cpio.Symlink(filepath.Join("bbin", path.Base(pkg)), "bb")); err != nil {
 			return ArchiveFiles{}, err
 		}
 	}
 
 	// Symlink from /init to busybox init.
-	if err := af.AddRecord(cpio.Symlink("init", "/bbin/init")); err != nil {
+	if err := af.AddRecord(cpio.Symlink("init", "bbin/init")); err != nil {
 		return ArchiveFiles{}, err
 	}
 	return af, nil
