@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -47,7 +48,7 @@ func setup() error {
 	var err error
 
 	for i, t := range tests {
-		tests[i].pathOnSys, err = exec.Command("which", t.name).Output()
+		tests[i].pathOnSys, err = exec.Command("which", "-a", t.name).Output()
 		if err != nil {
 			return err
 		}
@@ -67,7 +68,9 @@ func TestWhichUnique(t *testing.T) {
 
 	commands := []string{"cat"}
 	var b bytes.Buffer
-	which(p, &b, commands[:])
+	if err := which(&b, strings.Split(p, ":"), commands[:], true); err != nil {
+		t.Fatal(err)
+	}
 
 	// Comparing against only the cat command.
 	if !reflect.DeepEqual(b.Bytes(), tests[0].pathOnSys) {
@@ -93,7 +96,9 @@ func TestWhichMultiple(t *testing.T) {
 	}
 
 	var b bytes.Buffer
-	which(p, &b, commands[:])
+	if err := which(&b, strings.Split(p, ":"), commands[:], true); err != nil {
+		t.Fatal(err)
+	}
 
 	if !reflect.DeepEqual(b.Bytes(), pathsCombined) {
 		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(pathsCombined), string(b.Bytes()))
