@@ -13,6 +13,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -21,38 +22,33 @@ import (
 )
 
 var (
-	flags struct {
-		allPaths bool
-	}
+	allPaths = flag.Bool("a", false, "print all matching pathnames of each argument")
+	verbose  = flag.Bool("v", false, "verbose output")
 )
 
-func init() {
-	flag.BoolVar(&flags.allPaths, "a", false, "print all matching pathnames of each argument")
-}
-
-func which(p string, writer io.Writer, cmds []string) {
-	pathArray := strings.Split(p, ":")
-
-	// If no matches are found will exit 1, else 0
-	exitValue := 1
+func which(writer io.Writer, paths []string, cmds []string, allPaths bool) error {
+	var foundOne bool
 	for _, name := range cmds {
-		for _, p := range pathArray {
+		for _, p := range paths {
 			f := filepath.Join(p, name)
-			if info, err := os.Stat(f); err == nil {
-				// TODO: this test (0111) is not quite right.
-				// Consider a file executable only by root (0100)
-				// when I'm not root. I can't run it.
-				if m := info.Mode(); m&0111 != 0 && !(m&os.ModeType == os.ModeSymlink) {
-					exitValue = 0
-					writer.Write([]byte(f + "\n"))
-					if !flags.allPaths {
-						break
-					}
-				}
+			if !canExecute(f) {
+				continue
+			}
+
+			foundOne = true
+			if _, err := writer.Write([]byte(f + "\n")); err != nil {
+				return err
+			}
+			if !allPaths {
+				return nil
 			}
 		}
 	}
-	os.Exit(exitValue)
+
+	if !foundOne {
+		return fmt.Errorf("no suitable executable found")
+	}
+	return nil
 }
 
 func main() {
@@ -65,5 +61,10 @@ func main() {
 		p = "/ubin"
 	}
 
-	which(p, os.Stdout, flag.Args())
+	if err := which(os.Stdout, strings.Split(p, ":"), flag.Args(), *allPaths); err != nil {
+		if *verbose {
+			log.Printf("Error: %v", err)
+		}
+		os.Exit(1)
+	}
 }
