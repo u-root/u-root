@@ -97,6 +97,7 @@ func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 }
 
 // DiskUsage calculates the usage statistics of a mount point
+// Bsize on arm is int32, hence the cast
 func DiskUsage(mnt *Mount) {
 	fs := syscall.Statfs_t{}
 	err := syscall.Statfs(mnt.MountPoint, &fs)
@@ -104,7 +105,7 @@ func DiskUsage(mnt *Mount) {
 		return
 	}
 	mnt.Blocks = fs.Blocks * uint64(fs.Bsize) / units
-	mnt.Bsize = fs.Bsize
+	mnt.Bsize = int64(fs.Bsize)
 	mnt.Total = fs.Blocks * uint64(fs.Bsize) / units
 	mnt.Avail = fs.Bavail * uint64(fs.Bsize) / units
 	mnt.Used = (fs.Blocks - fs.Bfree) * uint64(fs.Bsize) / units
