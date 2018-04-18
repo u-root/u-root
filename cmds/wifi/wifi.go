@@ -26,6 +26,7 @@ var (
 	list  = flag.Bool("l", false, "list all nearby WiFi")
 	show  = flag.Bool("s", false, "list interfaces allowed with WiFi extension")
 	test  = flag.Bool("test", false, "set up a test server")
+	wType = flag.String("worker", "iwl", "What kind of wireless layer to use")
 
 	// RegEx for parsing iwconfig output
 	iwconfigRE = regexp.MustCompile("(?m)^[a-zA-Z0-9]+\\s*IEEE 802.11.*$")
@@ -36,6 +37,10 @@ var (
 		{"Stub2", wifi.WpaPsk},
 		{"Stub3", wifi.WpaEap},
 		{"Stub4", wifi.NotSupportedProto},
+	}
+	workers = map[string]func(string) (wifi.WiFi, error){
+		"iwl":    wifi.NewIWLWorker,
+		"native": wifi.NewNativeWorker,
 	}
 )
 
@@ -86,11 +91,14 @@ func main() {
 		return
 	}
 
-	worker, err := wifi.NewIWLWorker(*iface)
+	f, ok := workers[*wType]
+	if !ok {
+		log.Fatalf("%v: not in %v", *wType, workers)
+	}
+	worker, err := f(*iface)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	if *list {
 		wifiOpts, err := worker.Scan()
 		if err != nil {
