@@ -4,14 +4,24 @@
 
 package wifi
 
-import "fmt"
+import (
+	"fmt"
+	"syscall"
+	"unsafe"
+)
 
 type NativeWorker struct {
 	Interface string
+	FD        int
+	Range     IWRange
 }
 
-func NewNativeWorker(i string) (NativeWorker, error) {
-	return NativeWorker{i}, nil
+func NewNativeWorker(i string) (WiFi, error) {
+	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_IP)
+	if err != nil {
+		return nil, err
+	}
+	return &NativeWorker{FD: s, Interface: i}, nil
 }
 
 func (w *NativeWorker) Scan() ([]Option, error) {
@@ -23,5 +33,6 @@ func (w *NativeWorker) GetID() (string, error) {
 }
 
 func (w *NativeWorker) Connect(a ...string) error {
-	return fmt.Errorf("Not Yet")
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(w.FD), SIOCGIWRANGE, uintptr(unsafe.Pointer(&w.Range)))
+	return err
 }

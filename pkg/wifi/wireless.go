@@ -2088,7 +2088,7 @@ type iwreq struct {
  *	Range of parameters
  */
 
-type iw_range struct {
+type IWRange struct {
 	/* Informative stuff (to choose between different interface) */
 	throughput uint32 /* To give an idea... */
 	/* In theory this value should be the maximum benchmarked
