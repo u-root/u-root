@@ -31,7 +31,7 @@ var (
 	iwconfigRE = regexp.MustCompile("(?m)^[a-zA-Z0-9]+\\s*IEEE 802.11.*$")
 
 	// Stub data for simple end-to-end interaction test
-	NearbyWifisStub = []wifi.WifiOption{
+	NearbyWifisStub = []wifi.Option{
 		{"Stub1", wifi.NoEnc},
 		{"Stub2", wifi.WpaPsk},
 		{"Stub3", wifi.WpaEap},
@@ -60,12 +60,16 @@ func main() {
 
 	// Start a Server with Stub data
 	// for manual end-to-end testing
+	// This is probably in need of a change.
 	if *test {
-		worker := wifi.StubWifiWorker{
-			ScanWifiOut:        NearbyWifisStub,
-			ScanCurrentWifiOut: "",
+		worker, err := wifi.NewStubWorker("", NearbyWifisStub...)
+		if err != nil {
+			log.Fatal(err)
 		}
-		service := NewWifiService(worker)
+		service, err := NewWifiService(worker)
+		if err != nil {
+			log.Fatal(err)
+		}
 		service.Start()
 		NewWifiServer(service).Start() // this function shutdown service upon return
 		return
@@ -82,13 +86,13 @@ func main() {
 		return
 	}
 
-	worker, err := wifi.NewWorker(*iface)
+	worker, err := wifi.NewIWLWorker(*iface)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if *list {
-		wifiOpts, err := worker.ScanWifi()
+		wifiOpts, err := worker.Scan()
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -118,7 +122,10 @@ func main() {
 		if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
 			log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
 		}
-		service := NewWifiService(worker)
+		service, err := NewWifiService(worker)
+		if err != nil {
+			log.Fatal(err)
+		}
 		service.Start()
 		go service.Refresh()
 		NewWifiServer(service).Start() // this function shutdown service upon return

@@ -13,16 +13,19 @@ import (
 	"github.com/u-root/u-root/pkg/wifi"
 )
 
-func setupStubService() WifiService {
-	wifiWorker := wifi.StubWifiWorker{
-		ScanWifiOut:        NearbyWifisStub,
-		ScanCurrentWifiOut: "",
+func setupStubService() (*WifiService, error) {
+	wifiWorker, err := wifi.NewStubWorker("", NearbyWifisStub...)
+	if err != nil {
+		return nil, err
 	}
 	return NewWifiService(wifiWorker)
 }
 
 func TestGetState(t *testing.T) {
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
 	service.Start()
 	defer service.Shutdown()
 
@@ -40,7 +43,10 @@ func TestGetState(t *testing.T) {
 
 func TestRaceGetState(t *testing.T) {
 	// Set Up
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
 	service.Start()
 	defer service.Shutdown()
 	numGoRoutines := 100
@@ -57,7 +63,10 @@ func TestRaceGetState(t *testing.T) {
 }
 
 func TestConnect(t *testing.T) {
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
 	service.Start()
 	defer service.Shutdown()
 
@@ -74,7 +83,11 @@ func TestConnect(t *testing.T) {
 func TestRaceConnect(t *testing.T) {
 	//Set Up
 	numGoRoutines := 100
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	service.Start()
 	defer service.Shutdown()
 
@@ -91,13 +104,15 @@ func TestRaceConnect(t *testing.T) {
 
 func TestRefresh(t *testing.T) {
 	//Set Up
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
 	service.Start()
 	defer service.Shutdown()
 
 	if err := service.Refresh(); err != nil {
-		t.Errorf("error: %v", err)
-		return
+		t.Fatalf("Refresh: error: %v", err)
 	}
 	s := service.GetState()
 	if !reflect.DeepEqual(s.NearbyWifis, NearbyWifisStub) {
@@ -108,7 +123,11 @@ func TestRefresh(t *testing.T) {
 func TestRaceRefreshWithinDefaultBufferSize(t *testing.T) {
 	//Set Up
 	numGoRoutines := DefaultBufferSize
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	service.Start()
 	defer service.Shutdown()
 
@@ -126,7 +145,11 @@ func TestRaceRefreshWithinDefaultBufferSize(t *testing.T) {
 func TestRaceRefreshOverDefaultBufferSize(t *testing.T) {
 	// Set Up
 	numGoRoutines := DefaultBufferSize * 2
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	service.Start()
 	defer service.Shutdown()
 
@@ -144,7 +167,11 @@ func TestRaceRefreshOverDefaultBufferSize(t *testing.T) {
 func TestRaceCond(t *testing.T) {
 	// Set Up
 	numConnectRoutines, numRefreshGoRoutines, numReadGoRoutines := 10, 10, 100
-	service := setupStubService()
+	service, err := setupStubService()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	service.Start()
 	defer service.Shutdown()
 

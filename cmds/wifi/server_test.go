@@ -85,15 +85,21 @@ func TestUserInputValidation(t *testing.T) {
 	}
 }
 
-func setupStubServer() WifiServer {
-	service := setupStubService()
+func setupStubServer() (*WifiServer, error) {
+	service, err := setupStubService()
+	if err != nil {
+		return nil, err
+	}
 	service.Start()
-	return NewWifiServer(service)
+	return NewWifiServer(service), nil
 }
 
 func TestConnectHandlerSuccess(t *testing.T) {
 	// Set Up
-	server := setupStubServer()
+	server, err := setupStubServer()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer server.service.Shutdown()
 	router := server.buildRouter()
 	ts := httptest.NewServer(router)
@@ -138,7 +144,10 @@ func TestConnectHandlerSuccess(t *testing.T) {
 
 func TestConnectHandlerFail(t *testing.T) {
 	// Set Up
-	server := setupStubServer()
+	server, err := setupStubServer()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer server.service.Shutdown()
 	router := server.buildRouter()
 	ts := httptest.NewServer(router)
@@ -178,7 +187,10 @@ func TestConnectHandlerFail(t *testing.T) {
 
 func TestRefreshHandler(t *testing.T) {
 	// Set Up
-	server := setupStubServer()
+	server, err := setupStubServer()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer server.service.Shutdown()
 	router := server.buildRouter()
 	ts := httptest.NewServer(router)
@@ -214,7 +226,10 @@ func TestRefreshHandler(t *testing.T) {
 func TestHandlersRace(t *testing.T) {
 	// Set Up
 	numConnectRoutines, numRefreshGoRoutines, numReadGoRoutines := 10, 10, 100
-	server := setupStubServer()
+	server, err := setupStubServer()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer server.service.Shutdown()
 	router := server.buildRouter()
 	ts := httptest.NewServer(router)

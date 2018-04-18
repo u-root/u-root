@@ -185,7 +185,7 @@ var (
 )
 
 type WifiServer struct {
-	service WifiService
+	service *WifiService
 }
 
 func userInputValidation(essid, pass, id string) ([]string, error) {
@@ -267,9 +267,9 @@ func (ws WifiServer) Start() {
 	fmt.Println(sos.StartServiceServer(ws.buildRouter(), "wifi", listener, Port))
 }
 
-func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, connectingEssid string) error {
+func displayWifi(wr io.Writer, wifiOpts []wifi.Option, connectedEssid, connectingEssid string) error {
 	wifiData := struct {
-		WifiOpts        []wifi.WifiOption
+		WifiOpts        []wifi.Option
 		ConnectedEssid  string
 		ConnectingEssid string
 		Port            uint
@@ -280,8 +280,8 @@ func displayWifi(wr io.Writer, wifiOpts []wifi.WifiOption, connectedEssid, conne
 	return tmpl.Execute(wr, wifiData)
 }
 
-func NewWifiServer(service WifiService) WifiServer {
-	return WifiServer{
+func NewWifiServer(service *WifiService) *WifiServer {
+	return &WifiServer{
 		service: service,
 	}
 }
