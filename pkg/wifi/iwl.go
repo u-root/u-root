@@ -49,29 +49,19 @@ const (
 	NotSupportedProto
 )
 
-type WifiOption struct {
-	Essid     string
-	AuthSuite SecProto
-}
-
-type Wifi interface {
-	ScanWifi() ([]WifiOption, error)
-	ScanCurrentWifi() (string, error)
-	Connect(a ...string) error
-}
-
-type WifiWorker struct {
+// IWLWorker implements the WiFi interface using the Intel Wireless LAN commands
+type IWLWorker struct {
 	Interface string
 }
 
-func NewWorker(i string) (WifiWorker, error) {
+func NewIWLWorker(i string) (WiFi, error) {
 	if o, err := exec.Command("ip", "link", "set", "dev", i, "up").CombinedOutput(); err != nil {
-		return WifiWorker{""}, fmt.Errorf("ip link set dev %v up: %v (%v)", i, string(o), err)
+		return &IWLWorker{""}, fmt.Errorf("ip link set dev %v up: %v (%v)", i, string(o), err)
 	}
-	return WifiWorker{i}, nil
+	return &IWLWorker{i}, nil
 }
 
-func (w WifiWorker) ScanWifi() ([]WifiOption, error) {
+func (w *IWLWorker) Scan() ([]Option, error) {
 	o, err := exec.Command("iwlist", w.Interface, "scanning").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("iwlist: %v (%v)", string(o), err)
@@ -86,7 +76,7 @@ func (w WifiWorker) ScanWifi() ([]WifiOption, error) {
  *	3) Each Wifi only support (1) authentication suites (based on observations)
  */
 
-func parseIwlistOut(o []byte) []WifiOption {
+func parseIwlistOut(o []byte) []Option {
 	cells := cellRE.FindAllIndex(o, -1)
 	essids := essidRE.FindAll(o, -1)
 	encKeyOpts := encKeyOptRE.FindAll(o, -1)
@@ -95,7 +85,7 @@ func parseIwlistOut(o []byte) []WifiOption {
 		return nil
 	}
 
-	var res []WifiOption
+	var res []Option
 	knownEssids := make(map[string]bool)
 
 	// Assemble all the Wifi options
@@ -107,7 +97,7 @@ func parseIwlistOut(o []byte) []WifiOption {
 		knownEssids[essid] = true
 		encKeyOpt := strings.Trim(strings.Split(string(encKeyOpts[i]), ":")[1], "\n")
 		if encKeyOpt == "off" {
-			res = append(res, WifiOption{essid, NoEnc})
+			res = append(res, Option{essid, NoEnc})
 			continue
 		}
 		// Find the proper Authentication Suites
@@ -119,7 +109,7 @@ func parseIwlistOut(o []byte) []WifiOption {
 		wpa2SearchArea := o[start:end]
 		l := wpa2RE.FindIndex(wpa2SearchArea)
 		if l == nil {
-			res = append(res, WifiOption{essid, NotSupportedProto})
+			res = append(res, Option{essid, NotSupportedProto})
 			continue
 		}
 		// Narrow down the scope when looking for Authorization Suites
@@ -127,17 +117,17 @@ func parseIwlistOut(o []byte) []WifiOption {
 		authSuites := strings.Trim(strings.Split(string(authSuitesRE.Find(authSearchArea)), ":")[1], "\n ")
 		switch authSuites {
 		case "PSK":
-			res = append(res, WifiOption{essid, WpaPsk})
+			res = append(res, Option{essid, WpaPsk})
 		case "802.1x":
-			res = append(res, WifiOption{essid, WpaEap})
+			res = append(res, Option{essid, WpaEap})
 		default:
-			res = append(res, WifiOption{essid, NotSupportedProto})
+			res = append(res, Option{essid, NotSupportedProto})
 		}
 	}
 	return res
 }
 
-func (w WifiWorker) ScanCurrentWifi() (string, error) {
+func (w *IWLWorker) GetID() (string, error) {
 	o, err := exec.Command("iwgetid", "-r").CombinedOutput()
 	if err != nil {
 		return "", err
@@ -145,7 +135,7 @@ func (w WifiWorker) ScanCurrentWifi() (string, error) {
 	return strings.Trim(string(o), " \n"), nil
 }
 
-func (w WifiWorker) Connect(a ...string) error {
+func (w *IWLWorker) Connect(a ...string) error {
 	// format of a: [essid, pass, id]
 	conf, err := generateConfig(a...)
 	if err != nil {

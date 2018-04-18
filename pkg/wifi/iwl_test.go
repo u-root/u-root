@@ -169,11 +169,11 @@ func TestAuthSuitesRE(t *testing.T) {
 func TestParseIwlistOutput(t *testing.T) {
 	var (
 		o        []byte
-		exp, out []WifiOption
+		exp, out []Option
 		err      error
 	)
 
-	// No Wifi present
+	// No WiFi present
 	o = nil
 	exp = nil
 	out = parseIwlistOut(o)
@@ -181,7 +181,7 @@ func TestParseIwlistOutput(t *testing.T) {
 		t.Errorf("\ngot:[%v]\nwant:[%v]", out, exp)
 	}
 
-	// Only 1 Wifi present
+	// Only 1 WiFi present
 	o = []byte(`
 wlan0    Scan completed :
           Cell 01 - Address: 00:00:00:00:00:01
@@ -207,7 +207,7 @@ wlan0    Scan completed :
                     IE: Unknown: 000000000000000000
                     IE: Unknown: 000000000000000000
 `)
-	exp = []WifiOption{
+	exp = []Option{
 		{"stub-wpa-eap-1", WpaEap},
 	}
 	out = parseIwlistOut(o)
@@ -216,7 +216,7 @@ wlan0    Scan completed :
 	}
 
 	// Regular scenarios (many choices)
-	exp = []WifiOption{
+	exp = []Option{
 		{"stub-wpa-eap-1", WpaEap},
 		{"stub-rsa-1", NoEnc},
 		{"stub-wpa-psk-1", WpaPsk},

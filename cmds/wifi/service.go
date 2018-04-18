@@ -22,7 +22,7 @@ type State struct {
 	CurEssid        string
 	ConnectingEssid string
 	Refreshing      bool
-	NearbyWifis     []wifi.WifiOption
+	NearbyWifis     []wifi.Option
 }
 
 type ConnectReqMsg struct {
@@ -37,7 +37,7 @@ type StateReqMsg chan State
 
 type WifiService struct {
 	// Share Resource between goroutines
-	wifiWorker wifi.Wifi
+	wifiWorker wifi.WiFi
 
 	// Communicating Channels between internal goroutines
 	connectArbitratorQuit chan bool
@@ -92,7 +92,7 @@ func (ws WifiService) startConnectWifiArbitrator() {
 		case err := <-workDone:
 			// Update states
 			if err != nil {
-				curEssid, _ = ws.wifiWorker.ScanCurrentWifi()
+				curEssid, _ = ws.wifiWorker.GetID()
 			} else {
 				curEssid = connectingEssid
 			}
@@ -123,7 +123,7 @@ func (ws WifiService) startRefreshPooler() {
 
 				// Notifier
 				go func(p chan RefreshReqMsg) {
-					o, err := ws.wifiWorker.ScanWifi()
+					o, err := ws.wifiWorker.Scan()
 					doneUpdate := make(chan bool, 1)
 					ws.stateUpdateChan <- stateUpdateMsg{nearbyWifisComp, o, doneUpdate}
 					<-doneUpdate
@@ -176,12 +176,12 @@ func updateState(state *State, update stateUpdateMsg) {
 	case refreshingComp:
 		state.Refreshing = update.val.(bool)
 	case nearbyWifisComp:
-		state.NearbyWifis = update.val.([]wifi.WifiOption)
+		state.NearbyWifis = update.val.([]wifi.Option)
 	}
 }
 
-func NewWifiService(w wifi.Wifi) WifiService {
-	return WifiService{
+func NewWifiService(w wifi.WiFi) (*WifiService, error) {
+	return &WifiService{
 		wifiWorker:            w,
 		connectArbitratorQuit: make(chan bool, 1),
 		refreshPoolerQuit:     make(chan bool, 1),
@@ -190,7 +190,7 @@ func NewWifiService(w wifi.Wifi) WifiService {
 		connectReqChan:        make(chan ConnectReqMsg, DefaultBufferSize),
 		refreshReqChan:        make(chan RefreshReqMsg, DefaultBufferSize),
 		stateReqChan:          make(chan StateReqMsg, DefaultBufferSize),
-	}
+	}, nil
 }
 
 func (ws WifiService) Start() {
