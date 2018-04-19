@@ -316,7 +316,7 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 	}, parser.ParseComments)
 	if err != nil {
 		log.Printf("can't parsedir %q: %v", p.Dir, err)
-		return nil, nil
+		return nil, err
 	}
 
 	pp := &Package{
