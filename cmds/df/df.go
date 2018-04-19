@@ -1,3 +1,6 @@
+// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 //
 // df reports details of mounted filesystems
 //
@@ -32,7 +35,7 @@ var (
 	units uint64
 )
 
-const mountinfoFile = "/proc/mounts"
+const procmountsFile = "/proc/mounts"
 
 const (
 	// B is Bytes
@@ -62,7 +65,7 @@ type mountinfomap map[string]Mount
 // mountinfo returns a map of mounts representing
 // the data in /proc/mounts
 func mountinfo() (mountinfomap, error) {
-	buf, err := ioutil.ReadFile(mountinfoFile)
+	buf, err := ioutil.ReadFile(procmountsFile)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +75,7 @@ func mountinfo() (mountinfomap, error) {
 // returns a map generated from the bytestream returned
 // from /proc/mounts
 // for tidiness, we decide to ignore filesystems of size 0
+// to exclude cgroup, procfs and sysfs types
 func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 	ret := make(mountinfomap, 0)
 	for _, line := range bytes.Split(buf, []byte{'\n'}) {
@@ -97,7 +101,7 @@ func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 }
 
 // DiskUsage calculates the usage statistics of a mount point
-// Bsize on arm is int32, hence the cast
+// note: arm7 Bsize is int32; all others are int64
 func DiskUsage(mnt *Mount) {
 	fs := syscall.Statfs_t{}
 	err := syscall.Statfs(mnt.MountPoint, &fs)
