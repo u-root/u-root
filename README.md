@@ -1,4 +1,4 @@
-# SystemBoot
+# systemboot
 
 SystemBoot is a set of commands for [u-root](https://github.com/u-root/u-root) that help automate system booting. The provided programs are:
 
@@ -37,6 +37,10 @@ In the current mode, `localboot` does the following:
 * try to boot (via kexec) each valid kernel/ramfs combination found above
 
 In the future I will also support VPD, which will be used as a substitute for EFI variables, in this specific case to hold the boot order of the various boot entries.
+
+## uinit
+
+The `uinit` program just wraps `netboot` and `localboot` in a forever-loop logic, just like your BIOS/UEFI would do. At the moment it just loops between netboot and localboot in this order, but I plan to make this more flexible and configurable.
 
 ## TODO
 
