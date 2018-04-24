@@ -58,7 +58,7 @@ func ParseGrubCfg(grubcfg string, basedir string) []BootConfig {
 				// surely not a valid linux or initrd directive, skip it
 				continue
 			}
-			if sline[0] == "linux" || sline[0] == "linux16" {
+			if sline[0] == "linux" || sline[0] == "linux16" || sline[0] == "linuxefi" {
 				kernel := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
 				fullpath := path.Join(basedir, kernel)
@@ -69,7 +69,7 @@ func ParseGrubCfg(grubcfg string, basedir string) []BootConfig {
 				cfg.Kernel = fd
 				cfg.KernelName = kernel
 				cfg.Cmdline = cmdline
-			} else if sline[0] == "initrd" || sline[0] == "initrd16" {
+			} else if sline[0] == "initrd" || sline[0] == "initrd16" || sline[0] == "initrdefi" {
 				initrd := sline[1]
 				fullpath := path.Join(basedir, initrd)
 				fd, err := os.Open(fullpath)
