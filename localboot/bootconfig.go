@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/u-root/u-root.orig/pkg/kexec"
+	"github.com/u-root/u-root/pkg/kexec"
 )
 
 // BootConfig holds information to boot a kernel using kexec

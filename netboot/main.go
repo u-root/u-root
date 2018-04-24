@@ -13,7 +13,7 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/insomniacslk/dhcp/netboot"
-	"github.com/u-root/u-root.orig/pkg/kexec"
+	"github.com/u-root/u-root/pkg/kexec"
 )
 
 var (
