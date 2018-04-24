@@ -32,6 +32,101 @@ var (
 	build, format, tmpDir, base, outputPath *string
 	useExistingInit                         *bool
 	extraFiles                              multiFlag
+	templates                               = map[string][]string{
+		"all": {
+			"cmds/*",
+		},
+		// Core should be things you can't live without.
+		"core": {
+			"cmds/ansi",
+			"cmds/builtin",
+			"cmds/cbmem",
+			"cmds/chroot",
+			"cmds/cp",
+			"cmds/date",
+			"cmds/df",
+			"cmds/dirname",
+			"cmds/echo",
+			"cmds/ed",
+			"cmds/field",
+			"cmds/fmap",
+			"cmds/free",
+			"cmds/gpgv",
+			"cmds/grep",
+			"cmds/hexdump",
+			"cmds/id",
+			"cmds/insmod",
+			"cmds/io",
+			"cmds/kexec",
+			"cmds/lddfiles",
+			"cmds/losetup",
+			"cmds/lsmod",
+			"cmds/mkfifo",
+			"cmds/mount",
+			"cmds/mv",
+			"cmds/ntpdate",
+			"cmds/ping",
+			"cmds/ps",
+			"cmds/pxeboot",
+			"cmds/rm",
+			"cmds/rsdp",
+			"cmds/rush",
+			"cmds/shutdown",
+			"cmds/sort",
+			"cmds/stty",
+			"cmds/sync",
+			"cmds/true",
+			"cmds/umount",
+			"cmds/uniq",
+			"cmds/validate",
+			"cmds/wc",
+			"cmds/which",
+			"cmds/archive",
+			"cmds/boot",
+			"cmds/cat",
+			"cmds/chmod",
+			"cmds/cmp",
+			"cmds/console",
+			"cmds/cpio",
+			"cmds/dd",
+			"cmds/dhclient",
+			"cmds/dmesg",
+			"cmds/false",
+			"cmds/find",
+			"cmds/freq",
+			"cmds/gpt",
+			"cmds/gzip",
+			"cmds/hostname",
+			"cmds/init",
+			"cmds/installcommand",
+			"cmds/ip",
+			"cmds/kill",
+			"cmds/ln",
+			"cmds/ls",
+			"cmds/mkdir",
+			"cmds/mknod",
+			"cmds/modprobe",
+			"cmds/msr",
+			"cmds/netcat",
+			"cmds/pci",
+			"cmds/pflask",
+			"cmds/printenv",
+			"cmds/pwd",
+			"cmds/readlink",
+			"cmds/rmmod",
+			"cmds/run",
+			"cmds/seq",
+			"cmds/sleep",
+			"cmds/switch_root",
+			"cmds/tail",
+			"cmds/tee",
+			"cmds/truncate",
+			"cmds/uname",
+			"cmds/unshare",
+			"cmds/vboot",
+			"cmds/wget",
+		},
+	}
 )
 
 func parseFlags() {
@@ -98,7 +193,15 @@ func Main() error {
 	// Currently allowed formats:
 	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
 	//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
-	pkgs := flag.Args()
+	var pkgs []string
+	for _, a := range flag.Args() {
+		p, ok := templates[a]
+		if !ok {
+			pkgs = append(pkgs, a)
+			continue
+		}
+		pkgs = append(pkgs, p...)
+	}
 	if len(pkgs) == 0 {
 		var err error
 		pkgs, err = uroot.DefaultPackageImports(env)
