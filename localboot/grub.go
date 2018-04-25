@@ -1,18 +1,22 @@
 package main
 
 import (
+	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
 )
 
 var (
-	GrubPaths = []string{
+	Grub2Paths = []string{
 		// grub2
 		"boot/grub2/grub.cfg",
 		"boot/grub2.cfg",
 		"grub2/grub.cfg",
 		"grub2.cfg",
+	}
+	GrubLegacyPaths = []string{
 		// grub legacy
 		"boot/grub/grub.cfg",
 		"boot/grub.cfg",
@@ -25,10 +29,14 @@ var (
 // BootConfig structures, one for each menuentry, in the same order as they
 // appear in grub.cfg. All opened kernel and initrd files are relative to
 // basedir.
-func ParseGrubCfg(grubcfg string, basedir string) []BootConfig {
+func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig {
 	// This parser sucks. It's not even a parser, it just looks for lines
 	// starting with menuentry, linux or initrd.
 	// TODO use a parser, e.g. https://github.com/alecthomas/participle
+	if grubVersion != 1 && grubVersion != 2 {
+		log.Printf("Warning: invalid GRUB version: %d", grubVersion)
+		return nil
+	}
 	bootconfigs := make([]BootConfig, 0)
 	inMenuEntry := false
 	var cfg *BootConfig
@@ -61,6 +69,12 @@ func ParseGrubCfg(grubcfg string, basedir string) []BootConfig {
 			if sline[0] == "linux" || sline[0] == "linux16" || sline[0] == "linuxefi" {
 				kernel := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
+				if grubVersion == 2 {
+					// if grub2, unquote the string, as directives could be quoted
+					// https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
+					// TODO unquote everything, not just \$
+					cmdline = strings.Replace(cmdline, `\$`, "$", -1)
+				}
 				fullpath := path.Join(basedir, kernel)
 				fd, err := os.Open(fullpath)
 				if err != nil {
@@ -84,6 +98,37 @@ func ParseGrubCfg(grubcfg string, basedir string) []BootConfig {
 	// append last kernel config if it wasn't already
 	if inMenuEntry && cfg.IsValid() {
 		bootconfigs = append(bootconfigs, *cfg)
+	}
+	return bootconfigs
+}
+
+// ScanGrubConfigs looks for grub2 and grub legacy config files in the known
+// locations and returns a list of boot configurations.
+func ScanGrubConfigs(basedir string) []BootConfig {
+	bootconfigs := make([]BootConfig, 0)
+	// Scan Grub 2 configurations
+	for _, grubpath := range Grub2Paths {
+		path := path.Join(basedir, grubpath)
+		log.Printf("Trying to read %s", path)
+		grubcfg, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Printf("cannot open %s: %v", path, err)
+			continue
+		}
+		cfgs := ParseGrubCfg(string(grubcfg), basedir, 2)
+		bootconfigs = append(bootconfigs, cfgs...)
+	}
+	// Scan Grub Legacy configurations
+	for _, grubpath := range GrubLegacyPaths {
+		path := path.Join(basedir, grubpath)
+		log.Printf("Trying to read %s", path)
+		grubcfg, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Printf("cannot open %s: %v", path, err)
+			continue
+		}
+		cfgs := ParseGrubCfg(string(grubcfg), basedir, 1)
+		bootconfigs = append(bootconfigs, cfgs...)
 	}
 	return bootconfigs
 }

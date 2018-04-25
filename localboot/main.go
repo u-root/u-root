@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
 	"path"
 	"syscall"
@@ -70,17 +69,7 @@ func main() {
 	// search for a valid grub config and extracts the boot configuration
 	bootconfigs := make([]BootConfig, 0)
 	for _, mountpoint := range mounted {
-		for _, grubpath := range GrubPaths {
-			path := path.Join(mountpoint.Path, grubpath)
-			log.Printf("Trying to read %s", path)
-			grubcfg, err := ioutil.ReadFile(path)
-			if err != nil {
-				log.Printf("cannot open %s: %v", path, err)
-				continue
-			}
-			cfgs := ParseGrubCfg(string(grubcfg), mountpoint.Path)
-			bootconfigs = append(bootconfigs, cfgs...)
-		}
+		bootconfigs = append(bootconfigs, ScanGrubConfigs(mountpoint.Path)...)
 	}
 	log.Printf("Found %d boot configs", len(bootconfigs))
 	for _, cfg := range bootconfigs {
