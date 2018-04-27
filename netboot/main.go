@@ -26,6 +26,7 @@ var (
 	overrideNetbootURL = flag.String("netboot-url", "", "Override the netboot URL normally obtained via DHCP")
 	readTimeout        = flag.Int("timeout", 3, "Read timeout in seconds")
 	dhcpRetries        = flag.Int("retries", 3, "Number of times a DHCP request is retried")
+	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
 )
 
 const (
@@ -75,9 +76,13 @@ func main() {
 			log.Print("Skipping DHCP")
 		} else {
 			// send a netboot request via DHCP
-			conversation, err := netboot.RequestNetbootv6(*ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries,
-				dhcpv6.WithUserClass([]byte("linuxboot")),
-				dhcpv6.WithArchType(dhcpv6.EFI_X86_64))
+			modifiers := []dhcpv6.Modifier{
+				dhcpv6.WithArchType(dhcpv6.EFI_X86_64),
+			}
+			if *userClass != "" {
+				modifiers = append(modifiers, dhcpv6.WithUserClass([]byte(*userClass)))
+			}
+			conversation, err := netboot.RequestNetbootv6(*ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 			for _, m := range conversation {
 				debug(m.Summary())
 			}
