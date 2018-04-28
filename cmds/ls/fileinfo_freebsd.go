@@ -4,16 +4,12 @@
 
 package main
 
-// From Linux header: /include/uapi/linux/kdev_t.h
-const (
-	minorBits = 8
-	minorMask = (1 << minorBits) - 1
-)
+// From FreeBSD header: /usr/include/sys/types.h
 
 func major(dev uint64) uint64 {
-	return dev >> minorBits
+	return (dev >> 8) & 0xff
 }
 
 func minor(dev uint64) uint64 {
-	return dev & minorMask
+	return dev & 0xffff00ff
 }
