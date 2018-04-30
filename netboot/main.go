@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -132,8 +133,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("DHCPv6: cannot parse URL %s: %v", bootfile, err)
 		}
-		// remove leading slashes
-		filename := strings.TrimLeft(u.Path, "/")
+		// extract file name component
+		if strings.HasSuffix(u.Path, "/") {
+			log.Fatalf("Invalid file path, cannot end with '/': %s", u.Path)
+		}
+		filename := filepath.Base(u.Path)
+		if filename == "." || filename == "" {
+			log.Fatalf("Invalid empty file name extracted from file path %s", u.Path)
+		}
 		if err = ioutil.WriteFile(filename, body, 0400); err != nil {
 			log.Fatalf("DHCPv6: cannot write to file %s: %v", filename, err)
 		}
