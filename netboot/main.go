@@ -126,7 +126,7 @@ func main() {
 		// FIXME this will not be called if something fails after this point
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			log.Fatalf("Status code is not 200 OK: %sd", resp.StatusCode)
+			log.Fatalf("Status code is not 200 OK: %d", resp.StatusCode)
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
