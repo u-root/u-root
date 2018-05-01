@@ -7,6 +7,7 @@ package testutil
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,31 +28,17 @@ func Command(t testing.TB, args ...string) *exec.Cmd {
 		return exec.Command(exe[0], append(exe[1:], args...)...)
 	}
 
+	// Should be cached by PrepareMain if os.Executable is going to fail.
+	if len(binary) > 0 {
+		t.Logf("binary: %v", binary)
+		return exec.Command(binary, args...)
+	}
+
 	execPath, err := os.Executable()
-	if err != nil || len(os.Getenv("UROOT_TEST_BUILD")) > 0 {
-		if len(binary) > 0 {
-			return exec.Command(binary, args...)
-		}
-		// We can't find ourselves? Probably FreeBSD or something. Try to go
-		// build the command.
-		//
-		// This is NOT build-system-independent, and hence the fallback.
-		tmpDir, err := ioutil.TempDir("", "uroot-build")
-		if err != nil {
-			t.Fatal(err)
-		}
-		wd, err := os.Getwd()
-		if err != nil {
-			t.Fatal(err)
-		}
-		execPath = filepath.Join(tmpDir, "binary")
-		// Build the stuff.
-		if err := golang.Default().BuildDir(wd, execPath, golang.BuildOpts{}); err != nil {
-			t.Fatal(err)
-		}
-		// Cache dat.
-		binary = execPath
-		return exec.Command(execPath, args...)
+	if err != nil {
+		// PrepareMain should have prevented this case by caching
+		// something in `binary`.
+		t.Fatal("You must call testutil.PrepareMain() in your test.")
 	}
 
 	c := exec.Command(execPath, args...)
@@ -81,6 +68,40 @@ func IsExitCode(err error, exitCode int) error {
 	return nil
 }
 
-func CallMain() bool {
-	return len(os.Getenv("UROOT_CALL_MAIN")) > 0
+func PrepareMain() (func(), bool) {
+	eraser := func() {}
+
+	if len(os.Getenv("UROOT_CALL_MAIN")) > 0 {
+		return eraser, true
+	}
+
+	// Cache the executable. Do this here, so that when testing.M.Run()
+	// returns, we can remove the executable using the functor returned.
+	_, err := os.Executable()
+	if err != nil || len(os.Getenv("UROOT_TEST_BUILD")) > 0 {
+		// We can't find ourselves? Probably FreeBSD or something. Try to go
+		// build the command.
+		//
+		// This is NOT build-system-independent, and hence the fallback.
+		tmpDir, err := ioutil.TempDir("", "uroot-build")
+		if err != nil {
+			log.Fatal(err)
+		}
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+		execPath := filepath.Join(tmpDir, "binary")
+		// Build the stuff.
+		if err := golang.Default().BuildDir(wd, execPath, golang.BuildOpts{}); err != nil {
+			log.Fatal(err)
+		}
+
+		// Cache dat.
+		binary = execPath
+		eraser = func() {
+			os.RemoveAll(tmpDir)
+		}
+	}
+	return eraser, false
 }

@@ -101,10 +101,13 @@ ff02::2 ip6-allrouters
 }
 
 func TestMain(m *testing.M) {
-	if testutil.CallMain() {
+	remover, callMain := testutil.PrepareMain()
+	if callMain {
 		main()
+		remover()
 		os.Exit(0)
 	}
-
-	os.Exit(m.Run())
+	code := m.Run()
+	remover()
+	os.Exit(code)
 }
