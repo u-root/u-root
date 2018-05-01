@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -30,12 +29,9 @@ var dirnameTests = []test{
 }
 
 func TestDirName(t *testing.T) {
-	tmpDir, dirname := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
 	// Table-driven testing
 	for _, tt := range dirnameTests {
-		c := exec.Command(dirname, tt.args...)
+		c := testutil.Command(t, tt.args...)
 		stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
 		c.Stdout, c.Stderr = stdout, stderr
 		err := c.Run()
@@ -53,4 +49,13 @@ func TestDirName(t *testing.T) {
 		}
 
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

@@ -7,8 +7,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -23,20 +23,19 @@ type test struct {
 }
 
 func TestReadlink(t *testing.T) {
-
-	// Create an empty directory
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	// Creating here to utilize path in tests
 	testDir := filepath.Join(tmpDir, "readLinkDir")
-	err := os.Mkdir(testDir, 0700)
-	if err != nil {
+	if err := os.Mkdir(testDir, 0700); err != nil {
 		t.Error(err)
 	}
 
-	err = os.Chdir(testDir)
-	if err != nil {
+	if err := os.Chdir(testDir); err != nil {
 		t.Error(err)
 	}
 
@@ -116,9 +115,8 @@ func TestReadlink(t *testing.T) {
 
 	// Table-driven testing
 	for _, tt := range tests {
-
 		var out, stdErr bytes.Buffer
-		cmd := exec.Command(execPath, tt.flags...)
+		cmd := testutil.Command(t, tt.flags...)
 		cmd.Stdout = &out
 		cmd.Stderr = &stdErr
 		err := cmd.Run()
@@ -135,4 +133,13 @@ func TestReadlink(t *testing.T) {
 			t.Errorf("expected to exit with %d, but exited with err %s", tt.exitStatus, err)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

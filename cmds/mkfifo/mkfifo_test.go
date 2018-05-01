@@ -6,8 +6,8 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,13 +22,15 @@ type test struct {
 }
 
 func TestMkfifo(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	// used later in testing
 	testDir := filepath.Join(tmpDir, "mkfifoDir")
-	err := os.Mkdir(testDir, 0700)
-	if err != nil {
+	if err := os.Mkdir(testDir, 0700); err != nil {
 		t.Error(err)
 	}
 
@@ -52,7 +54,7 @@ func TestMkfifo(t *testing.T) {
 
 	for _, tt := range tests {
 		var out, stdErr bytes.Buffer
-		cmd := exec.Command(execPath, tt.flags...)
+		cmd := testutil.Command(t, tt.flags...)
 		cmd.Stdout = &out
 		cmd.Stderr = &stdErr
 		err := cmd.Run()
@@ -74,4 +76,13 @@ func TestMkfifo(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

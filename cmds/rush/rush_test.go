@@ -6,14 +6,14 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 var tests = []struct {
@@ -40,48 +40,43 @@ func TestRush(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Compile rush
-	rushPath := filepath.Join(tmpDir, "rush")
-	out, err := exec.Command("go", "build", "-o", rushPath).CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/rush: %v\n%s", rushPath, err, string(out))
-	}
-
 	// Table-driven testing
-	for _, tt := range tests {
-		// Run command
-		cmd := exec.Command(rushPath)
-		cmd.Stdin = strings.NewReader(tt.stdin)
-		var stdout bytes.Buffer
-		cmd.Stdout = &stdout
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		err := cmd.Run()
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {
+			// Run command
+			cmd := testutil.Command(t)
+			cmd.Stdin = strings.NewReader(tt.stdin)
+			var stdout bytes.Buffer
+			cmd.Stdout = &stdout
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			err := cmd.Run()
 
-		// Check stdout
-		strout := string(stdout.Bytes())
-		if !regexp.MustCompile("^" + tt.stdout + "$").MatchString(strout) {
-			t.Errorf("Want: %#v; Got: %#v", tt.stdout, strout)
-		}
-
-		// Check stderr
-		strerr := string(stderr.Bytes())
-		if !regexp.MustCompile("^" + tt.stderr + "$").MatchString(strerr) {
-			t.Errorf("Want: %#v; Got: %#v", tt.stderr, strerr)
-		}
-
-		// Check return code
-		retCode := 0
-		if err != nil {
-			exitErr, ok := err.(*exec.ExitError)
-			if !ok {
-				t.Errorf("Error running rush: %v", err)
-				continue
+			// Check stdout
+			strout := string(stdout.Bytes())
+			if !regexp.MustCompile("^" + tt.stdout + "$").MatchString(strout) {
+				t.Errorf("Want: %#v; Got: %#v", tt.stdout, strout)
 			}
-			retCode = exitErr.Sys().(syscall.WaitStatus).ExitStatus()
-		}
-		if retCode != tt.ret {
-			t.Errorf("Want: %d; Got: %d", tt.ret, retCode)
-		}
+
+			// Check stderr
+			strerr := string(stderr.Bytes())
+			if !regexp.MustCompile("^" + tt.stderr + "$").MatchString(strerr) {
+				t.Errorf("Want: %#v; Got: %#v", tt.stderr, strerr)
+			}
+
+			// Check return code
+			if err := testutil.IsExitCode(err, tt.ret); err != nil {
+				t.Error(err)
+			}
+		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }
