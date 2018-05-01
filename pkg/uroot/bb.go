@@ -141,11 +141,12 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 type Package struct {
 	name string
 
-	pkg      *build.Package
-	fset     *token.FileSet
-	ast      *ast.Package
-	typeInfo types.Info
-	types    *types.Package
+	pkg         *build.Package
+	fset        *token.FileSet
+	ast         *ast.Package
+	typeInfo    types.Info
+	types       *types.Package
+	sortedFiles []*ast.File
 
 	// initCount keeps track of what the next init's index should be.
 	initCount uint
@@ -348,9 +349,9 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 	}
 	sort.Strings(filenames)
 
-	sortedFiles := make([]*ast.File, 0, len(pp.ast.Files))
+	pp.sortedFiles = make([]*ast.File, 0, len(pp.ast.Files))
 	for _, name := range filenames {
-		sortedFiles = append(sortedFiles, pp.ast.Files[name])
+		pp.sortedFiles = append(pp.sortedFiles, pp.ast.Files[name])
 	}
 	// Type-check the package before we continue. We need types to rewrite
 	// some statements.
@@ -360,7 +361,7 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 		// We only need global declarations' types.
 		IgnoreFuncBodies: true,
 	}
-	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, sortedFiles, &pp.typeInfo)
+	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
 	if err != nil {
 		return nil, fmt.Errorf("type checking failed: %v", err)
 	}
@@ -397,13 +398,13 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 		Body: &ast.BlockStmt{},
 	}
 
-	var mainPath string
-	for filePath, sourceFile := range p.ast.Files {
+	var mainFile *ast.File
+	for _, sourceFile := range p.sortedFiles {
 		if hasMainFile := p.rewriteFile(sourceFile); hasMainFile {
-			mainPath = filePath
+			mainFile = sourceFile
 		}
 	}
-	if len(mainPath) == 0 {
+	if mainFile == nil {
 		return os.RemoveAll(pkgDir)
 	}
 
@@ -416,7 +417,7 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 		varInit.Body.List = append(varInit.Body.List, a)
 	}
 
-	astutil.AddNamedImport(p.fset, p.ast.Files[mainPath], "bb", bbImportPath)
+	astutil.AddNamedImport(p.fset, mainFile, "bb", bbImportPath)
 
 	// func init() {
 	//   bb.Register(p.name, Init, Main)
@@ -447,7 +448,7 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 	// We could add these statements to any of the package files. We choose
 	// the one that contains Main() to guarantee reproducibility of the
 	// same bbsh binary.
-	p.ast.Files[mainPath].Decls = append(p.ast.Files[mainPath].Decls, varInit, p.init, bbRegisterInit)
+	mainFile.Decls = append(mainFile.Decls, varInit, p.init, bbRegisterInit)
 
 	// Write all files out.
 	for filePath, sourceFile := range p.ast.Files {
