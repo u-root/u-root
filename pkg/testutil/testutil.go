@@ -6,12 +6,18 @@ package testutil
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/golang"
 )
+
+var binary string
 
 func Command(t testing.TB, args ...string) *exec.Cmd {
 	// Skip compilation if EXECPATH is set.
@@ -22,9 +28,32 @@ func Command(t testing.TB, args ...string) *exec.Cmd {
 	}
 
 	execPath, err := os.Executable()
-	if err != nil {
-		t.Errorf("on strange system: cannot find executable path? %v", err)
+	if err != nil || len(os.Getenv("UROOT_TEST_BUILD")) > 0 {
+		if len(binary) > 0 {
+			return exec.Command(binary, args...)
+		}
+		// We can't find ourselves? Probably FreeBSD or something. Try to go
+		// build the command.
+		//
+		// This is NOT build-system-independent, and hence the fallback.
+		tmpDir, err := ioutil.TempDir("", "uroot-build")
+		if err != nil {
+			t.Fatal(err)
+		}
+		wd, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		execPath = filepath.Join(tmpDir, "binary")
+		// Build the stuff.
+		if err := golang.Default().BuildDir(wd, execPath, golang.BuildOpts{}); err != nil {
+			t.Fatal(err)
+		}
+		// Cache dat.
+		binary = execPath
+		return exec.Command(execPath, args...)
 	}
+
 	c := exec.Command(execPath, args...)
 	c.Env = append(c.Env, "UROOT_CALL_MAIN=1")
 	return c
