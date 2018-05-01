@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -56,8 +55,10 @@ var commTests = []struct {
 
 // TestComm implements a table-drivent test.
 func TestComm(t *testing.T) {
-	// Compile comm.
-	tmpDir, commPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "comm")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	for _, test := range commTests {
@@ -66,18 +67,25 @@ func TestComm(t *testing.T) {
 		for i, contents := range []string{test.in1, test.in2} {
 			files[i] = filepath.Join(tmpDir, fmt.Sprintf("txt%d", i))
 			if err := ioutil.WriteFile(files[i], []byte(contents), 0600); err != nil {
-				t.Errorf("Failed to create test file %d: %v", i, err)
-				continue
+				t.Fatalf("Failed to create test file %d: %v", i, err)
 			}
 		}
 
-		// Execute comm.go
-		args := append(append([]string{}, test.flags...), files[0], files[1])
-		cmd := exec.Command(commPath, args...)
+		cmd := testutil.Command(t, append(test.flags, files[0], files[1])...)
+
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Errorf("Comm exited with error: %v; output:\n%s", err, string(output))
 		} else if string(output) != test.out {
 			t.Errorf("Fail: want\n %#v\n got\n %#v", test.out, string(output))
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

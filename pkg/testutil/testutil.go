@@ -5,39 +5,53 @@
 package testutil
 
 import (
-	"io/ioutil"
+	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
-// CompileInTempDir creates a temp directory and compiles the main package of
-// the current directory. Remember to delete the directory after the test:
-//
-//     defer os.RemoveAll(tmpDir)
-//
-// The first argument of the environment variable EXECPATH overrides execPath.
-func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
-	// Create temp directory
-	tmpDir, err := ioutil.TempDir("", "Test")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-
+func Command(t testing.TB, args ...string) *exec.Cmd {
 	// Skip compilation if EXECPATH is set.
-	execPath = os.Getenv("EXECPATH")
-	if execPath != "" {
-		execPath = strings.SplitN(execPath, " ", 2)[0]
-		return
+	execPath := os.Getenv("EXECPATH")
+	if len(execPath) > 0 {
+		exe := strings.Split(os.Getenv("EXECPATH"), " ")
+		return exec.Command(exe[0], append(exe[1:], args...)...)
 	}
 
-	// Compile the program
-	execPath = filepath.Join(tmpDir, "exec")
-	out, err := exec.Command("go", "build", "-o", execPath).CombinedOutput()
+	execPath, err := os.Executable()
 	if err != nil {
-		t.Fatalf("Failed to build: %v\n%s", err, string(out))
+		t.Errorf("on strange system: cannot find executable path? %v", err)
 	}
-	return
+	c := exec.Command(execPath, args...)
+	c.Env = append(c.Env, "UROOT_CALL_MAIN=1")
+	return c
+}
+
+func IsExitCode(err error, exitCode int) error {
+	if err == nil {
+		if exitCode != 0 {
+			return fmt.Errorf("got code 0, want %d", exitCode)
+		}
+		return nil
+	}
+
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		return fmt.Errorf("encountered error other than ExitError: %#v", err)
+	}
+	ws, ok := exitErr.Sys().(syscall.WaitStatus)
+	if !ok {
+		return fmt.Errorf("sys() is not a syscall WaitStatus: %v", err)
+	}
+	if es := ws.ExitStatus(); es != exitCode {
+		return fmt.Errorf("got exit status %d, want %d", es, exitCode)
+	}
+	return nil
+}
+
+func CallMain() bool {
+	return len(os.Getenv("UROOT_CALL_MAIN")) > 0
 }

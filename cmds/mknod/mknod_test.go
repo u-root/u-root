@@ -6,92 +6,71 @@ package main
 
 import (
 	"bytes"
-	"fmt"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var (
-	testPath = "."
-	// if true removeAll the testPath on the end
-	remove = true
-)
-
-type test struct {
-	args    []string
-	expects string
-}
-
-func run(c *exec.Cmd) (string, string, error) {
-	var o, e bytes.Buffer
-	c.Stdout, c.Stderr = &o, &e
-	err := c.Run()
-	return o.String(), e.String(), err
-}
+var logPrefixLength = len("2009/11/10 23:00:00 ")
 
 func TestMknodFifo(t *testing.T) {
-	tempDir, mknodPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "mknod_fifo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
 
-	if remove {
-		defer os.RemoveAll(tempDir)
+	pipe := filepath.Join(tmpDir, "pipe")
+
+	c := testutil.Command(t, pipe, "p")
+	if err := c.Run(); err != nil {
+		t.Fatal(err)
 	}
 
-	// Delete a preexisting pipe if it exists, thought it shouldn't
-	pipepath := filepath.Join(tempDir, "testpipe")
-	_ = os.Remove(pipepath)
-	if _, err := os.Stat(pipepath); err != nil && !os.IsNotExist(err) {
-		// Couldn't delete the file for reasons other than it didn't exist.
-		t.Fatalf("couldn't delete preexisting pipe")
-	}
-
-	// Make a pipe and check that it exists.
-	fmt.Print(pipepath)
-	c := exec.Command(mknodPath, pipepath, "p")
-	c.Run()
-	if _, err := os.Stat(pipepath); os.IsNotExist(err) {
-		t.Errorf("Pipe was not created.")
+	if _, err := os.Stat(pipe); os.IsNotExist(err) {
+		t.Error("Pipe was not created.")
 	}
 }
 
 func TestInvocationErrors(t *testing.T) {
-	tempDir, mknodPath := testutil.CompileInTempDir(t)
-
-	if remove {
-		defer os.RemoveAll(tempDir)
+	tmpDir, err := ioutil.TempDir("", "mknod_fifo")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tmpDir)
 
-	devpath := filepath.Join(tempDir, "testdev")
-	var tests = []test{
-		{args: []string{devpath}, expects: "Usage: mknod path type [major minor]\n"},
-		{args: []string{""}, expects: "Usage: mknod path type [major minor]\n"},
-		{args: []string{devpath, "p", "254", "3"}, expects: "device type p requires no other arguments\n"},
-		{args: []string{devpath, "b", "254"}, expects: "Usage: mknod path type [major minor]\n"},
-		{args: []string{devpath, "b"}, expects: "device type b requires a major and minor number\n"},
-		{args: []string{devpath, "k"}, expects: "device type not recognized: k\n"},
-	}
+	devpath := filepath.Join(tmpDir, "testdev")
 
-	for _, v := range tests {
-		c := exec.Command(mknodPath, v.args...)
-		_, e, _ := run(c)
-		if e[20:] != v.expects {
-			t.Errorf("mknod for '%v' failed: got '%s', want '%s'", v.args, e[20:], v.expects)
+	for _, tt := range []struct {
+		args []string
+		want string
+	}{
+		{args: []string{devpath}, want: "Usage: mknod path type [major minor]\n"},
+		{args: []string{""}, want: "Usage: mknod path type [major minor]\n"},
+		{args: []string{devpath, "p", "254", "3"}, want: "device type p requires no other arguments\n"},
+		{args: []string{devpath, "b", "254"}, want: "Usage: mknod path type [major minor]\n"},
+		{args: []string{devpath, "b"}, want: "device type b requires a major and minor number\n"},
+		{args: []string{devpath, "k"}, want: "device type not recognized: k\n"},
+	} {
+		c := testutil.Command(t, tt.args...)
+		var stderr bytes.Buffer
+		c.Stderr = &stderr
+		c.Run()
+
+		if e := stderr.String(); e[logPrefixLength:] != tt.want {
+			t.Errorf("mknod for %q failed: got %q, want %q", tt.args, e[logPrefixLength:], tt.want)
 		}
 	}
 }
 
-func TestMknodBlock(t *testing.T) {
-	uid := syscall.Getuid()
-
-	if uid != 0 {
-		t.Logf("not root, uid %d, skipping test\n", uid)
-		return
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
 	}
-	t.Log("root user, proceeding\n")
-	//TODO(ganshun): implement block test
-	t.Skip("Unimplemented test, need root")
+
+	os.Exit(m.Run())
 }

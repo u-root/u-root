@@ -6,8 +6,8 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,55 +15,51 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type test struct {
-	name   string
-	flags  []string
-	stdErr string
-}
-
 func TestMkfifo(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "mkfifo")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	// used later in testing
 	testDir := filepath.Join(tmpDir, "mkfifoDir")
-	err := os.Mkdir(testDir, 0700)
-	if err != nil {
+	if err := os.Mkdir(testDir, 0700); err != nil {
 		t.Error(err)
 	}
 
-	var tests = []test{
+	for _, tt := range []struct {
+		name   string
+		flags  []string
+		stderr string
+	}{
 		{
 			name:   "no path or mode, error",
 			flags:  []string{},
-			stdErr: "please provide a path, or multiple, to create a fifo",
+			stderr: "please provide a path, or multiple, to create a fifo",
 		},
 		{
 			name:   "single path",
 			flags:  []string{filepath.Join(testDir, "testfifo")},
-			stdErr: "",
+			stderr: "",
 		},
 		{
 			name:   "duplicate path",
 			flags:  []string{filepath.Join(testDir, "testfifo1"), filepath.Join(testDir, "testfifo1")},
-			stdErr: "file exists",
+			stderr: "file exists",
 		},
-	}
-
-	for _, tt := range tests {
-		var out, stdErr bytes.Buffer
-		cmd := exec.Command(execPath, tt.flags...)
-		cmd.Stdout = &out
-		cmd.Stderr = &stdErr
+	} {
+		var stderr bytes.Buffer
+		cmd := testutil.Command(t, tt.flags...)
+		cmd.Stderr = &stderr
 		err := cmd.Run()
 
-		if err != nil && !strings.Contains(stdErr.String(), tt.stdErr) {
-			t.Errorf("expected %v got %v", tt.stdErr, stdErr.String())
+		if err != nil && !strings.Contains(stderr.String(), tt.stderr) {
+			t.Errorf("expected %v got %v", tt.stderr, stderr.String())
 		}
 
 		for _, path := range tt.flags {
 			testFile, err := os.Stat(path)
-
 			if err != nil {
 				t.Errorf("Unable to stat file %s", path)
 			}
@@ -74,4 +70,13 @@ func TestMkfifo(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

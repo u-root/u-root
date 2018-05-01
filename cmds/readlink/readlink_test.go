@@ -7,132 +7,118 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type test struct {
-	flags      []string
-	out        string
-	stdErr     string
-	exitStatus int
-}
-
 func TestReadlink(t *testing.T) {
-
-	// Create an empty directory
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "mkdir")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
-	// Creating here to utilize path in tests
-	testDir := filepath.Join(tmpDir, "readLinkDir")
-	err := os.Mkdir(testDir, 0700)
-	if err != nil {
-		t.Error(err)
+	// Create files.
+	f1 := filepath.Join(tmpDir, "f1")
+	if _, err := os.Create(f1); err != nil {
+		t.Fatal(err)
 	}
-
-	err = os.Chdir(testDir)
-	if err != nil {
-		t.Error(err)
-	}
-
-	var tests = []test{
-		{
-			flags:      []string{},
-			out:        "",
-			stdErr:     "",
-			exitStatus: 1,
-		}, {
-			flags:      []string{"-v", "f1"},
-			out:        "",
-			stdErr:     "readlink f1: invalid argument\n",
-			exitStatus: 1,
-		}, {
-			flags:      []string{"-f", "f2"},
-			out:        "",
-			stdErr:     "",
-			exitStatus: 1,
-		},
-		{
-			flags:      []string{"f1symlink"},
-			out:        "f1\n",
-			stdErr:     "",
-			exitStatus: 0,
-		},
-		{
-			flags:      []string{"multilinks"},
-			out:        fmt.Sprintf("%s/%s", testDir, "f1symlink\n"),
-			stdErr:     "",
-			exitStatus: 0,
-		},
-		{
-			flags:      []string{"-v", "multilinks", "f1symlink", "f2"},
-			out:        fmt.Sprintf("%s/%sf1\n", testDir, "f1symlink\n"),
-			stdErr:     "readlink f2: invalid argument\n",
-			exitStatus: 1,
-		},
-		{
-			flags:      []string{"-v", testDir},
-			out:        "",
-			stdErr:     fmt.Sprintf("readlink %s: invalid argument\n", testDir),
-			exitStatus: 1,
-		},
-		{
-			flags:      []string{"-v", "foo.bar"},
-			out:        "",
-			stdErr:     fmt.Sprintf("readlink foo.bar: no such file or directory\n"),
-			exitStatus: 1,
-		},
-	}
-	// Createfiles.
-	_, err = os.Create("f1")
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = os.Create("f2")
-	if err != nil {
-		t.Error(err)
+	f2 := filepath.Join(tmpDir, "f2")
+	if _, err := os.Create(f2); err != nil {
+		t.Fatal(err)
 	}
 
 	// Create symlinks
-	f1Symlink := filepath.Join(testDir, "f1symlink")
-	err = os.Symlink("f1", f1Symlink)
-	if err != nil {
-		t.Error(err)
+	f1symlink := filepath.Join(tmpDir, "f1symlink")
+	if err := os.Symlink("f1", f1symlink); err != nil {
+		t.Fatal(err)
 	}
 
 	// Multiple links
-	multiLinks := filepath.Join(testDir, "multilinks")
-	err = os.Symlink(f1Symlink, multiLinks)
-
-	if err != nil {
-		t.Error(err)
+	multilinks := filepath.Join(tmpDir, "multilinks")
+	if err := os.Symlink(f1symlink, multilinks); err != nil {
+		t.Fatal(err)
 	}
 
-	// Table-driven testing
-	for _, tt := range tests {
+	for i, tt := range []struct {
+		flags      []string
+		out        string
+		stderr     string
+		exitStatus int
+	}{
+		{
+			flags:      []string{},
+			out:        "",
+			stderr:     "",
+			exitStatus: 1,
+		}, {
+			flags:      []string{"-v", f1},
+			out:        "",
+			stderr:     fmt.Sprintf("readlink %s: invalid argument\n", f1),
+			exitStatus: 1,
+		}, {
+			flags:      []string{"-f", f2},
+			out:        "",
+			stderr:     "",
+			exitStatus: 1,
+		}, {
+			flags:      []string{f1symlink},
+			out:        "f1\n",
+			stderr:     "",
+			exitStatus: 0,
+		}, {
+			flags:      []string{multilinks},
+			out:        fmt.Sprintf("%s\n", f1symlink),
+			stderr:     "",
+			exitStatus: 0,
+		}, {
+			flags:      []string{"-v", multilinks, f1symlink, f2},
+			out:        fmt.Sprintf("%s\nf1\n", f1symlink),
+			stderr:     fmt.Sprintf("readlink %s: invalid argument\n", f2),
+			exitStatus: 1,
+		}, {
+			flags:      []string{"-v", tmpDir},
+			out:        "",
+			stderr:     fmt.Sprintf("readlink %s: invalid argument\n", tmpDir),
+			exitStatus: 1,
+		}, {
+			flags:      []string{"-v", "foo.bar"},
+			out:        "",
+			stderr:     fmt.Sprintf("readlink foo.bar: no such file or directory\n"),
+			exitStatus: 1,
+		},
+	} {
+		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {
+			var out, stderr bytes.Buffer
+			cmd := testutil.Command(t, tt.flags...)
+			cmd.Stdout = &out
+			cmd.Stderr = &stderr
+			err := cmd.Run()
 
-		var out, stdErr bytes.Buffer
-		cmd := exec.Command(execPath, tt.flags...)
-		cmd.Stdout = &out
-		cmd.Stderr = &stdErr
-		err := cmd.Run()
+			if out.String() != tt.out {
+				t.Errorf("stdout got: %q, want: %q", out.String(), tt.out)
+			}
 
-		if out.String() != tt.out {
-			t.Errorf("stdout got:\n%s\nwant:\n%s", out.String(), tt.out)
-		}
+			if stderr.String() != tt.stderr {
+				t.Errorf("stderr got: %q, want: %q", stderr.String(), tt.stderr)
+			}
 
-		if stdErr.String() != tt.stdErr {
-			t.Errorf("stderr got:\n%s\nwant:\n%s", stdErr.String(), tt.stdErr)
-		}
-
-		if tt.exitStatus == 0 && err != nil {
-			t.Errorf("expected to exit with %d, but exited with err %s", tt.exitStatus, err)
-		}
+			if tt.exitStatus == 0 && err != nil {
+				t.Errorf("expected to exit with %d, but exited with err %v", tt.exitStatus, err)
+			}
+		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

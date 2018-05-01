@@ -13,12 +13,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
-	"path"
-	"strings"
-	"syscall"
+	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
@@ -111,41 +107,31 @@ func getFreePort(t *testing.T) int {
 
 // TestWget implements a table-driven test.
 func TestWget(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
 	// Start a webserver on a free port.
-	port := getFreePort(t)
 	unusedPort := getFreePort(t)
+
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatalf("Cannot create free port: %v", err)
+	}
+	port := l.Addr().(*net.TCPAddr).Port
+
 	h := handler{}
 	go func() {
-		t.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), h))
+		t.Fatal(http.Serve(l, h))
 	}()
 
-	time.Sleep(500 * time.Millisecond) // TODO: better synchronization
 	for i, tt := range tests {
-		// Arguments inherited from the environment.
-		execArgs := strings.Split(os.Getenv("EXECPATH"), " ")[1:]
-
-		args := append(append(execArgs, tt.flags...), fmt.Sprintf(tt.url, port, unusedPort))
-		_, err := exec.Command(execPath, args...).Output()
+		args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
+		_, err := testutil.Command(t, args...).Output()
 
 		// Check return code.
-		retCode := 0
-		if err != nil {
-			exitErr, ok := err.(*exec.ExitError)
-			if !ok {
-				t.Errorf("%d. Error running wget: %v", i, err)
-				continue
-			}
-			retCode = exitErr.Sys().(syscall.WaitStatus).ExitStatus()
-		}
-		if retCode != tt.retCode {
-			t.Errorf("%d. Want: %d; Got: %d", i, tt.retCode, retCode)
+		if err := testutil.IsExitCode(err, tt.retCode); err != nil {
+			t.Error(err)
 		}
 
 		if tt.content != "" {
-			fileName := path.Base(tt.url)
+			fileName := filepath.Base(tt.url)
 			content, err := ioutil.ReadFile(fileName)
 			if err != nil {
 				t.Errorf("%d. File %s was not created: %v", i, fileName, err)
@@ -157,4 +143,13 @@ func TestWget(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }
