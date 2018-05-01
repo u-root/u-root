@@ -64,7 +64,8 @@ func buildVTOC(dirs []string) ([]*file, error) {
 			case 'L':
 				f.Link, err = os.Readlink(name)
 			case 'D':
-				f.Dev = s.Rdev
+				// On FreeBSD Rdev type is uint32
+				f.Dev = uint64(s.Rdev)
 			}
 			vtoc = append(vtoc, f)
 			return err
