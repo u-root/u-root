@@ -7,9 +7,10 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
+	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,7 +19,6 @@ import (
 )
 
 var (
-	testPath = "."
 	// if true removeAll the testPath on the end
 	remove = true
 	// simple label for src and dst
@@ -48,13 +48,9 @@ func randomFile(fpath, prefix string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	// generate random content for files
-	bytes := []byte{}
-	for i := 0; i < rand.Intn(maxSizeFile); i++ {
-		bytes = append(bytes, byte(i))
+	if _, err := io.CopyN(f, rand.Reader, maxSizeFile); err != nil {
+		return nil, err
 	}
-	f.Write(bytes)
-
 	return f, nil
 }
 
@@ -62,7 +58,7 @@ func randomFile(fpath, prefix string) (*os.File, error) {
 func createFilesTree(root string, maxDepth, depth int) error {
 	// create more one dir if don't achieve the maxDepth
 	if depth < maxDepth {
-		newDir, err := ioutil.TempDir(root, fmt.Sprintf("cpdir_%d_", depth))
+		newDir, err := ioutil.TempDir(root, fmt.Sprintf("depth%d-", depth))
 		if err != nil {
 			return err
 		}
@@ -73,13 +69,12 @@ func createFilesTree(root string, maxDepth, depth int) error {
 	}
 	// generate random files
 	for i := 0; i < maxFiles; i++ {
-		f, err := randomFile(root, fmt.Sprintf("cpfile_%d_", i))
+		f, err := randomFile(root, "file")
 		if err != nil {
 			return err
 		}
 		f.Close()
 	}
-
 	return nil
 }
 
@@ -93,104 +88,92 @@ func readDirs(pathToRead string, mapFiles map[string][]string) error {
 	}
 	for _, file := range pathFiles {
 		fname := file.Name()
-		_, exists := mapFiles[fname]
 		fpath := filepath.Join(pathToRead, fname)
-		if !exists {
-			slc := []string{fpath}
-			mapFiles[fname] = slc
+		if _, ok := mapFiles[fname]; !ok {
+			mapFiles[fname] = []string{fpath}
 		} else {
 			mapFiles[fname] = append(mapFiles[fname], fpath)
 		}
 	}
-	return err
+	return nil
 }
 
-// isEqualFile compare two files by checksum
-func isEqualFile(f1, f2 *os.File) (bool, error) {
+// sameContent compares two files.
+func sameContent(f1, f2 io.Reader) error {
 	bytes1, err := ioutil.ReadAll(f1)
 	if err != nil {
-		return false, fmt.Errorf("Failed to read the file %v: %v", f1, err)
+		return err
 	}
 	bytes2, err := ioutil.ReadAll(f2)
 	if err != nil {
-		return false, fmt.Errorf("Failed to read the file %v: %v", f2, err)
+		return err
 	}
 
 	if !reflect.DeepEqual(bytes1, bytes2) {
-		return false, nil
+		return fmt.Errorf("content is not equal")
+	}
+	return nil
+}
+
+func sameFiles(path1, path2 string) error {
+	f1, err := os.Open(path1)
+	if err != nil {
+		return err
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(path2)
+	if err != nil {
+		return err
+	}
+	defer f2.Close()
+
+	stat1, err := f1.Stat()
+	if err != nil {
+		return err
+	}
+	stat2, err := f2.Stat()
+	if err != nil {
+		return err
 	}
 
-	return true, nil
+	if stat1.IsDir() && stat2.IsDir() {
+		return isEqualTree(path1, path2)
+	}
+	return sameContent(f1, f2)
 }
 
 // isEqualTree compare the content between of src and dst paths
-func isEqualTree(src, dst string) (bool, error) {
+func isEqualTree(src, dst string) error {
 	mapFiles := map[string][]string{}
 	if err := readDirs(src, mapFiles); err != nil {
-		return false, fmt.Errorf("cannot read dir %v: %v", src, err)
+		return fmt.Errorf("cannot read dir %v: %v", src, err)
 	}
 	if err := readDirs(dst, mapFiles); err != nil {
-		return false, fmt.Errorf("cannot read dir %v: %v", dst, err)
+		return fmt.Errorf("cannot read dir %v: %v", dst, err)
 	}
 
-	equalTree := true
 	for _, files := range mapFiles {
 		if len(files) < 2 {
-			return false, fmt.Errorf("insufficient files in readDirs(): expected at least 2, got %v", len(files))
+			return fmt.Errorf("insufficient files in readDirs(): expected at least 2, got %v", len(files))
 		}
-		fpath1, fpath2 := files[0], files[1]
-		file1, err := os.Open(fpath1)
-		if err != nil {
-			return false, fmt.Errorf("cannot open file %v: %v", fpath1, err)
+		if err := sameFiles(files[0], files[1]); err != nil {
+			return err
 		}
-		file2, err := os.Open(fpath2)
-		if err != nil {
-			return false, fmt.Errorf("cannot open file %v: %v", fpath2, err)
-		}
-
-		stat1, err := file1.Stat()
-		if err != nil {
-			return false, fmt.Errorf("cannot stat file %v: %v", file1, err)
-		}
-		stat2, err := file2.Stat()
-		if err != nil {
-			return false, fmt.Errorf("cannot stat file %v: %v", file2, err)
-
-		}
-		if stat1.IsDir() && stat2.IsDir() {
-			equalDirs, err := isEqualTree(fpath1, fpath2)
-			if err != nil {
-				return false, err
-			}
-			equalTree = equalTree && equalDirs
-
-		} else {
-			equalFiles, err := isEqualFile(file1, file2)
-			if err != nil {
-				return false, err
-			}
-			equalTree = equalTree && equalFiles
-
-		}
-		if !equalTree {
-			break
-		}
-		file1.Close()
-		file2.Close()
-
 	}
-
-	return equalTree, nil
+	return nil
 
 }
 
-// TestCpsSimple make a simple test for copy file-to-file
+// TestCpSimple make a simple test for copy file-to-file
 // cmd-line equivalent: cp file file-copy
 func TestCpSimple(t *testing.T) {
-	tempDir, err := ioutil.TempDir(testPath, "TestCpSimple")
-	if remove {
-		defer os.RemoveAll(tempDir)
+	tempDir, err := ioutil.TempDir("", "TestCpSimple")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tempDir)
+
 	srcPrefix := fmt.Sprintf("cpfile_%v_src", indentifier)
 	f, err := randomFile(tempDir, srcPrefix)
 	if err != nil {
@@ -205,18 +188,9 @@ func TestCpSimple(t *testing.T) {
 	if err := copyFile(srcFpath, dstFpath, false); err != nil {
 		t.Fatalf("copyFile %v -> %v failed: %v", srcFpath, dstFpath, err)
 	}
-	s, err := os.Open(srcFpath)
-	if err != nil {
-		t.Fatalf("cannot open the file %v", srcFpath)
-	}
-	defer s.Close()
-	d, err := os.Open(dstFpath)
-	if err != nil {
-		t.Fatalf("cannot open the file %v", dstFpath)
-	}
-	defer d.Close()
-	if equal, err := isEqualFile(s, d); !equal || err != nil {
-		t.Fatalf("checksum are different; copies failed %q -> %q: %v", srcFpath, dstFpath, err)
+
+	if err := sameFiles(srcFpath, dstFpath); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -227,16 +201,13 @@ func TestCpSimple(t *testing.T) {
 func TestCpRecursive(t *testing.T) {
 	recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir(testPath, "TestCpRecursive")
+	tempDir, err := ioutil.TempDir("", "TestCpRecursive")
 	if err != nil {
-		t.Fatalf("Failed on build tmp dir %q: %v\n", testPath, err)
+		t.Fatal(err)
 	}
-	if remove {
-		defer os.RemoveAll(tempDir)
-	}
-	srcPrefix := fmt.Sprintf("TestCpSrc_%v_", indentifier)
-	dstPrefix := fmt.Sprintf("TestCpDst_%v_copied", indentifier)
-	srcTest, err := ioutil.TempDir(tempDir, srcPrefix)
+	defer os.RemoveAll(tempDir)
+
+	srcTest, err := ioutil.TempDir(tempDir, "src")
 	if err != nil {
 		t.Fatalf("Failed on build directory %q: %v\n", srcTest, err)
 	}
@@ -244,7 +215,7 @@ func TestCpRecursive(t *testing.T) {
 		t.Fatalf("cannot create files tree on directory %q: %v", srcTest, err)
 	}
 
-	dstTest, err := ioutil.TempDir(tempDir, dstPrefix)
+	dstTest, err := ioutil.TempDir(tempDir, "dst")
 	if err != nil {
 		t.Fatalf("Failed on build directory %q: %v\n", dstTest, err)
 	}
@@ -252,7 +223,7 @@ func TestCpRecursive(t *testing.T) {
 		t.Fatalf("copyFile %q -> %q failed: %v", srcTest, dstTest, err)
 	}
 
-	if equal, err := isEqualTree(srcTest, dstTest); !equal || err != nil {
+	if err := sameFiles(srcTest, dstTest); err != nil {
 		t.Fatalf("The copy %q -> %q failed, trees are different: %v", srcTest, dstTest, err)
 	}
 }
@@ -262,13 +233,11 @@ func TestCpRecursive(t *testing.T) {
 func TestCpRecursiveNew(t *testing.T) {
 	recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir(testPath, "TestCpRecursiveNew")
+	tempDir, err := ioutil.TempDir("", "TestCpRecursiveNew")
 	if err != nil {
-		t.Fatalf("failed on build tmp directory at %v: %v\n", tempDir, err)
+		t.Fatal(err)
 	}
-	if remove {
-		defer os.RemoveAll(tempDir)
-	}
+	defer os.RemoveAll(tempDir)
 	srcPrefix := fmt.Sprintf("TestCpSrc_%v_", indentifier)
 	dstPrefix := fmt.Sprintf("TestCpDst_%v_new", indentifier)
 	srcTest, err := ioutil.TempDir(tempDir, srcPrefix)
@@ -282,11 +251,7 @@ func TestCpRecursiveNew(t *testing.T) {
 
 	dstTest := filepath.Join(tempDir, dstPrefix)
 	copyFile(srcTest, dstTest, false)
-	isEqual, err := isEqualTree(srcTest, dstTest)
-	if err != nil {
-		t.Fatalf("The test isEqualTree failed")
-	}
-	if !isEqual && err != nil {
+	if err := sameFiles(srcTest, dstTest); err != nil {
 		t.Fatalf("The copy %q -> %q failed, ", srcTest, dstTest)
 	}
 }
@@ -303,18 +268,16 @@ func TestCpRecursiveNew(t *testing.T) {
 func TestCpRecursiveMultiple(t *testing.T) {
 	recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir(testPath, "TestCpRecursiveMultiple")
+	tempDir, err := ioutil.TempDir("", "TestCpRecursiveMultiple")
 	if err != nil {
-		t.Fatalf("Failed on build tmp directory %v: %v\n", testPath, err)
+		t.Fatal(err)
 	}
-	if remove {
-		defer os.RemoveAll(tempDir)
-	}
+	defer os.RemoveAll(tempDir)
 
 	dstPrefix := fmt.Sprintf("TestCpDst_%v_container", indentifier)
 	dstTest, err := ioutil.TempDir(tempDir, dstPrefix)
 	if err != nil {
-		t.Fatalf("Failed on build directory %v: %v\n", dstTest, err)
+		t.Fatalf("Failed on build directory %v: %v", dstTest, err)
 	}
 	// create multiple random directories sources
 	srcDirs := []string{}
@@ -322,7 +285,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		srcPrefix := fmt.Sprintf("TestCpSrc_%v_", indentifier)
 		srcTest, err := ioutil.TempDir(tempDir, srcPrefix)
 		if err != nil {
-			t.Fatalf("Failed on build directory %v: %v\n", srcTest, err)
+			t.Fatalf("Failed on build directory %v: %v", srcTest, err)
 		}
 		if err = createFilesTree(srcTest, maxDirDepth, 0); err != nil {
 			t.Fatalf("cannot create files tree on directory %v: %v", srcTest, err)
@@ -331,8 +294,6 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		srcDirs = append(srcDirs, srcTest)
 
 	}
-	t.Logf("From: %q", srcDirs)
-	t.Logf("To: %q", dstTest)
 	args := srcDirs
 	args = append(args, dstTest)
 	if err := cp(args); err != nil {
@@ -341,7 +302,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 	for _, src := range srcDirs {
 		_, srcFile := filepath.Split(src)
 		dst := filepath.Join(dstTest, srcFile)
-		if equal, err := isEqualTree(src, dst); !equal || err != nil {
+		if err := sameFiles(src, dst); err != nil {
 			t.Fatalf("The copy %q -> %q failed, trees are different", src, dst)
 		}
 	}
@@ -352,10 +313,12 @@ func TestCpRecursiveMultiple(t *testing.T) {
 func TestCpSymlink(t *testing.T) {
 	defer resetFlags()
 	symlink = true
-	tempDir, err := ioutil.TempDir(testPath, "TestCpSymlink")
-	if remove {
-		defer os.RemoveAll(tempDir)
+	tempDir, err := ioutil.TempDir("", "TestCpSymlink")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tempDir)
+
 	srcPrefix := fmt.Sprintf("cpfile_%v_origin", indentifier)
 	f, err := randomFile(tempDir, srcPrefix)
 	if err != nil {
@@ -367,45 +330,29 @@ func TestCpSymlink(t *testing.T) {
 	_, srcFname := filepath.Split(srcFpath)
 
 	linkName := srcFname + "_link"
-	t.Logf("Enter directory: %q", tempDir)
 	// Enter to temp directory to don't have problems
 	// with copy links and relative paths
 	os.Chdir(tempDir)
 	defer os.Chdir("..")
-	defer t.Logf("Exiting directory: %q", tempDir)
 
-	t.Logf("Create link %q -> %q", srcFname, linkName)
 	if err := os.Symlink(srcFname, linkName); err != nil {
 		t.Fatalf("cannot create a link %v -> %v: %v", srcFname, linkName, err)
 	}
 
 	dstFname := fmt.Sprintf("cpfile_%v_dst_link", indentifier)
-	t.Logf("Copy from: %q", linkName)
-	t.Logf("To: %q", dstFname)
 	if err := copyFile(linkName, dstFname, false); err != nil {
 		t.Fatalf("copyFile %q -> %q failed: %v", linkName, dstFname, err)
 	}
 
-	s, err := os.Open(linkName)
+	stat, err := os.Stat(dstFname)
 	if err != nil {
-		t.Fatalf("cannot open the file %v", linkName)
+		t.Fatalf("cannot stat file %q: %v", dstFname, err)
 	}
-	defer s.Close()
-
-	d, err := os.Open(dstFname)
-	if err != nil {
-		t.Fatalf("cannot open the file %v", dstFname)
-	}
-	defer d.Close()
-	dStat, err := d.Stat()
-	if err != nil {
-		t.Fatalf("cannot stat file %v: %v\n", d, err)
-	}
-	if L := os.ModeSymlink; dStat.Mode()&L == L {
-		t.Fatalf("destination file is not a link %v", d.Name())
+	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+		t.Fatalf("destination file is not a link %q", dstFname)
 	}
 
-	if equal, err := isEqualFile(s, d); !equal || err != nil {
+	if err := sameFiles(linkName, dstFname); err != nil {
 		t.Fatalf("checksum are different; copies failed %q -> %q: %v", linkName, dstFname, err)
 	}
 }
