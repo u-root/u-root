@@ -55,7 +55,7 @@ func Command(t testing.TB, args ...string) *exec.Cmd {
 	}
 
 	c := exec.Command(execPath, args...)
-	c.Env = append(c.Env, "UROOT_CALL_MAIN=1")
+	c.Env = append(c.Env, append(os.Environ(), "UROOT_CALL_MAIN=1")...)
 	return c
 }
 
