@@ -39,10 +39,13 @@ func TestDhclient(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	if testutil.CallMain() {
+	remover, callMain := testutil.PrepareMain()
+	if callMain {
 		main()
+		remover()
 		os.Exit(0)
 	}
-
-	os.Exit(m.Run())
+	code := m.Run()
+	remover()
+	os.Exit(code)
 }
