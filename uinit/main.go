@@ -15,7 +15,7 @@ var (
 )
 
 var bootsequence = [][]string{
-	[]string{"netboot"},
+	[]string{"netboot", "-userclass", "linuxboot"},
 	[]string{"localboot"},
 }
 
