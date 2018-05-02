@@ -16,12 +16,6 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var (
-	testPath = "."
-	// if true removeAll the testPath on the end
-	remove = true
-)
-
 type test struct {
 	args    []string
 	expects string
@@ -85,13 +79,5 @@ func TestInvocationErrors(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	remover, callMain := testutil.PrepareMain()
-	if callMain {
-		main()
-		remover()
-		os.Exit(0)
-	}
-	code := m.Run()
-	remover()
-	os.Exit(code)
+	testutil.Run(m, main)
 }

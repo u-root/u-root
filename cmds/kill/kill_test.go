@@ -93,13 +93,5 @@ func TestBadInvocations(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	remover, callMain := testutil.PrepareMain()
-	if callMain {
-		main()
-		remover()
-		os.Exit(0)
-	}
-	code := m.Run()
-	remover()
-	os.Exit(code)
+	testutil.Run(m, main)
 }

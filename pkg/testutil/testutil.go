@@ -20,15 +20,20 @@ import (
 
 var binary string
 
+// Command returns an exec.Cmd appropriate for testing the u-root command.
+//
+// Command decides which executable to call based on environment variables:
+// - EXECPATH="executable args" overrides any other test subject.
+// - UROOT_TEST_BUILD=1 will force compiling the u-root command in question.
 func Command(t testing.TB, args ...string) *exec.Cmd {
-	// Skip compilation if EXECPATH is set.
+	// If EXECPATH is set, just use that.
 	execPath := os.Getenv("EXECPATH")
 	if len(execPath) > 0 {
 		exe := strings.Split(os.Getenv("EXECPATH"), " ")
 		return exec.Command(exe[0], append(exe[1:], args...)...)
 	}
 
-	// Should be cached by PrepareMain if os.Executable is going to fail.
+	// Should be cached by Run if os.Executable is going to fail.
 	if len(binary) > 0 {
 		t.Logf("binary: %v", binary)
 		return exec.Command(binary, args...)
@@ -36,9 +41,9 @@ func Command(t testing.TB, args ...string) *exec.Cmd {
 
 	execPath, err := os.Executable()
 	if err != nil {
-		// PrepareMain should have prevented this case by caching
-		// something in `binary`.
-		t.Fatal("You must call testutil.PrepareMain() in your test.")
+		// Run should have prevented this case by caching something in
+		// `binary`.
+		t.Fatal("You must call testutil.Run() in your TestMain.")
 	}
 
 	c := exec.Command(execPath, args...)
@@ -46,6 +51,11 @@ func Command(t testing.TB, args ...string) *exec.Cmd {
 	return c
 }
 
+// IsExitCode takes err and checks whether it represents the given process exit
+// code.
+//
+// IsExitCode assumes that `err` is the return value of a successful call to
+// exec.Cmd.Run/Output/CombinedOutput and hence an *exec.ExitError.
 func IsExitCode(err error, exitCode int) error {
 	if err == nil {
 		if exitCode != 0 {
@@ -68,15 +78,24 @@ func IsExitCode(err error, exitCode int) error {
 	return nil
 }
 
-func PrepareMain() (func(), bool) {
-	eraser := func() {}
-
+func run(m *testing.M, mainFn func()) int {
+	// UROOT_CALL_MAIN=1 /proc/self/exe should be the same as just running
+	// the command we are testing.
 	if len(os.Getenv("UROOT_CALL_MAIN")) > 0 {
-		return eraser, true
+		mainFn()
+		return 0
 	}
 
-	// Cache the executable. Do this here, so that when testing.M.Run()
-	// returns, we can remove the executable using the functor returned.
+	// Normally, /proc/self/exe (and equivalents) are used to test u-root
+	// commands.
+	//
+	// Such a symlink isn't available on Plan 9, OS X, or FreeBSD. On these
+	// systems, we compile the u-root command in question on the fly
+	// instead.
+	//
+	// Here, we decide whether to compile or not and cache the executable.
+	// Do this here, so that when m.Run() returns, we can remove the
+	// executable using the functor returned.
 	_, err := os.Executable()
 	if err != nil || len(os.Getenv("UROOT_TEST_BUILD")) > 0 {
 		// We can't find ourselves? Probably FreeBSD or something. Try to go
@@ -87,10 +106,13 @@ func PrepareMain() (func(), bool) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer os.RemoveAll(tmpDir)
+
 		wd, err := os.Getwd()
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		execPath := filepath.Join(tmpDir, "binary")
 		// Build the stuff.
 		if err := golang.Default().BuildDir(wd, execPath, golang.BuildOpts{}); err != nil {
@@ -99,9 +121,13 @@ func PrepareMain() (func(), bool) {
 
 		// Cache dat.
 		binary = execPath
-		eraser = func() {
-			os.RemoveAll(tmpDir)
-		}
 	}
-	return eraser, false
+
+	return m.Run()
+}
+
+// Run sets up necessary commands to be compiled, if necessary, and calls
+// m.Run.
+func Run(m *testing.M, mainFn func()) {
+	os.Exit(run(m, mainFn))
 }

@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -52,13 +51,5 @@ func TestDirName(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	remover, callMain := testutil.PrepareMain()
-	if callMain {
-		main()
-		remover()
-		os.Exit(0)
-	}
-	code := m.Run()
-	remover()
-	os.Exit(code)
+	testutil.Run(m, main)
 }
