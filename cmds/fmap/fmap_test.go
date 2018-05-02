@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -59,14 +58,12 @@ Mixed:        3 (50.0%)
 
 // Table driven testing
 func TestFmap(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
 	for _, tt := range tests {
-		out, err := exec.Command(execPath, tt.cmd, testFlash).CombinedOutput()
+		out, err := testutil.Command(t, tt.cmd, testFlash).CombinedOutput()
 		if err != nil {
 			t.Error(err)
 		}
+
 		// Filter out null characters which may be present in fmap strings.
 		out = bytes.Replace(out, []byte{0}, []byte{}, -1)
 		if string(out) != tt.out {
@@ -76,11 +73,14 @@ func TestFmap(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "fmap_json")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	jsonFile := filepath.Join(tmpDir, "tmp.json")
-	if err := exec.Command(execPath, "jget", jsonFile, testFlash).Run(); err != nil {
+	if err := testutil.Command(t, "jget", jsonFile, testFlash).Run(); err != nil {
 		t.Fatal(err)
 	}
 	got, err := ioutil.ReadFile(jsonFile)
@@ -128,4 +128,8 @@ func TestJson(t *testing.T) {
 	if string(got) != want {
 		t.Errorf("want:%s; got:%s", string(want), got)
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

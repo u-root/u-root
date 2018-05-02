@@ -5,8 +5,6 @@
 package main
 
 import (
-	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -28,11 +26,8 @@ var tests = []struct {
 }
 
 func TestDhclient(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
 	for _, tt := range tests {
-		out, err := exec.Command(execPath, tt.isIPv4, tt.test, tt.iface).CombinedOutput()
+		out, err := testutil.Command(t, tt.isIPv4, tt.test, tt.iface).CombinedOutput()
 		if err == nil {
 			t.Errorf("%v: got nil, want err", tt)
 		}
@@ -40,4 +35,8 @@ func TestDhclient(t *testing.T) {
 			t.Errorf("expected:\n%s\ngot:\n%s", tt.out, string(out))
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

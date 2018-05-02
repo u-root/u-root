@@ -5,29 +5,22 @@
 package main
 
 import (
-	"os"
-	"os/exec"
-	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-// Ensure 1 is returned.
 func TestFalse(t *testing.T) {
-	tmpDir, falsePath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
-	out, err := exec.Command(falsePath).CombinedOutput()
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
-		t.Fatal("Expected an exit error result")
-	}
-	retCode := exitErr.Sys().(syscall.WaitStatus).ExitStatus()
-	if retCode != 1 {
-		t.Fatalf("Expected 1 as the return code; got %v", retCode)
+	// Ensure 1 is returned.
+	out, err := testutil.Command(t).CombinedOutput()
+	if err := testutil.IsExitCode(err, 1); err != nil {
+		t.Error(err)
 	}
 	if len(out) != 0 {
 		t.Fatalf("Expected no output; got %#v", string(out))
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

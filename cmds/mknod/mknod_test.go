@@ -7,19 +7,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
-)
-
-var (
-	testPath = "."
-	// if true removeAll the testPath on the end
-	remove = true
 )
 
 type test struct {
@@ -35,14 +29,14 @@ func run(c *exec.Cmd) (string, string, error) {
 }
 
 func TestMknodFifo(t *testing.T) {
-	tempDir, mknodPath := testutil.CompileInTempDir(t)
-
-	if remove {
-		defer os.RemoveAll(tempDir)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tmpDir)
 
 	// Delete a preexisting pipe if it exists, thought it shouldn't
-	pipepath := filepath.Join(tempDir, "testpipe")
+	pipepath := filepath.Join(tmpDir, "testpipe")
 	_ = os.Remove(pipepath)
 	if _, err := os.Stat(pipepath); err != nil && !os.IsNotExist(err) {
 		// Couldn't delete the file for reasons other than it didn't exist.
@@ -51,7 +45,7 @@ func TestMknodFifo(t *testing.T) {
 
 	// Make a pipe and check that it exists.
 	fmt.Print(pipepath)
-	c := exec.Command(mknodPath, pipepath, "p")
+	c := testutil.Command(t, pipepath, "p")
 	c.Run()
 	if _, err := os.Stat(pipepath); os.IsNotExist(err) {
 		t.Errorf("Pipe was not created.")
@@ -59,13 +53,13 @@ func TestMknodFifo(t *testing.T) {
 }
 
 func TestInvocationErrors(t *testing.T) {
-	tempDir, mknodPath := testutil.CompileInTempDir(t)
-
-	if remove {
-		defer os.RemoveAll(tempDir)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tmpDir)
 
-	devpath := filepath.Join(tempDir, "testdev")
+	devpath := filepath.Join(tmpDir, "testdev")
 	var tests = []test{
 		{args: []string{devpath}, expects: "Usage: mknod path type [major minor]\n"},
 		{args: []string{""}, expects: "Usage: mknod path type [major minor]\n"},
@@ -76,7 +70,7 @@ func TestInvocationErrors(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		c := exec.Command(mknodPath, v.args...)
+		c := testutil.Command(t, v.args...)
 		_, e, _ := run(c)
 		if e[20:] != v.expects {
 			t.Errorf("mknod for '%v' failed: got '%s', want '%s'", v.args, e[20:], v.expects)
@@ -84,14 +78,6 @@ func TestInvocationErrors(t *testing.T) {
 	}
 }
 
-func TestMknodBlock(t *testing.T) {
-	uid := syscall.Getuid()
-
-	if uid != 0 {
-		t.Logf("not root, uid %d, skipping test\n", uid)
-		return
-	}
-	t.Log("root user, proceeding\n")
-	//TODO(ganshun): implement block test
-	t.Skip("Unimplemented test, need root")
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

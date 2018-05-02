@@ -5,8 +5,8 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -52,7 +52,10 @@ f3?line 2
 }
 
 func TestLs(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	// Create an empty directory.
@@ -69,11 +72,9 @@ func TestLs(t *testing.T) {
 
 	// Table-driven testing
 	for _, tt := range tests {
-		c := exec.Command(execPath, tt.flags...)
-		t.Logf("Dir is %v", testDir)
+		c := testutil.Command(t, tt.flags...)
 		c.Dir = testDir
 		out, err := c.Output()
-		t.Logf("out :%v err: %v", out, err)
 		if err != nil {
 			t.Error(err)
 		}
@@ -81,4 +82,8 @@ func TestLs(t *testing.T) {
 			t.Errorf("got:\n%s\nwant:\n%s", string(out), tt.out)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

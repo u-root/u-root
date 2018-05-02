@@ -10,9 +10,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 // Run the command, with the optional args, and return a string
@@ -31,29 +32,20 @@ func TestKillProcess(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	killtestpath := filepath.Join(tmpDir, "killtest.exe")
-	o, e, err := run(exec.Command("go", "build", "-o", killtestpath, "."))
-	if err != nil {
-		t.Fatalf("go build -o %s cmds/kill: %v, %s", killtestpath, err, o+":"+e)
-	}
-
-	t.Logf("Built %v for test", killtestpath)
-
 	// Re-exec the test binary itself to emulate "sleep 1".
 	cmd := exec.Command("/bin/sleep", "10")
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("Failed to start test process: %v, output %s", err, string(e))
+		t.Fatalf("Failed to start test process: %v", err)
 	}
 
 	// from the orignal. hokey .1 second wait for the process to start. Racy.
 	time.Sleep(100 * time.Millisecond)
 
-	if o, e, err = run(exec.Command(killtestpath, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err != nil {
+	if _, _, err := run(testutil.Command(t, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err != nil {
 		t.Errorf("Could not spawn first kill: %v", err)
 	}
 
-	t.Logf("Ran kill: output :%s:, extra info :%v", o, e)
-	if err = cmd.Wait(); err == nil {
+	if err := cmd.Wait(); err == nil {
 		t.Errorf("Test process succeeded, but expected to fail")
 	}
 
@@ -62,7 +54,7 @@ func TestKillProcess(t *testing.T) {
 	// you just "know" does not exist is tricky. What PID do you use?
 	// So we just kill the one we just killed; it should get an error.
 	// If not, something's wrong.
-	if _, _, err = run(exec.Command(killtestpath, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err == nil {
+	if _, _, err := run(testutil.Command(t, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err == nil {
 		t.Fatalf("Second kill: got nil, want error")
 	}
 }
@@ -89,16 +81,8 @@ func TestBadInvocations(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	killtestpath := filepath.Join(tmpDir, "killtest.exe")
-	o, e, err := run(exec.Command("go", "build", "-o", killtestpath, "."))
-	if err != nil {
-		t.Fatalf("go build -o %s cmds/kill: %v, %s", killtestpath, err, o+":"+e)
-	}
-
-	t.Logf("Built %v for test", killtestpath)
 	for _, v := range tab {
-		o, e, err := run(exec.Command(killtestpath, v.a...))
-		t.Logf("%v: %s %s %v", v.a, o, e, err)
+		_, e, err := run(testutil.Command(t, v.a...))
 		if e != v.err {
 			t.Errorf("Kill for '%v' failed: got '%s', want '%s'", v.a, e, v.err)
 		}
@@ -106,4 +90,8 @@ func TestBadInvocations(t *testing.T) {
 			t.Errorf("Kill for '%v' failed: got nil, want err", v.a)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

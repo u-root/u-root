@@ -5,39 +5,129 @@
 package testutil
 
 import (
+	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/golang"
 )
 
-// CompileInTempDir creates a temp directory and compiles the main package of
-// the current directory. Remember to delete the directory after the test:
+var binary string
+
+// Command returns an exec.Cmd appropriate for testing the u-root command.
 //
-//     defer os.RemoveAll(tmpDir)
-//
-// The first argument of the environment variable EXECPATH overrides execPath.
-func CompileInTempDir(t testing.TB) (tmpDir string, execPath string) {
-	// Create temp directory
-	tmpDir, err := ioutil.TempDir("", "Test")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
+// Command decides which executable to call based on environment variables:
+// - EXECPATH="executable args" overrides any other test subject.
+// - UROOT_TEST_BUILD=1 will force compiling the u-root command in question.
+func Command(t testing.TB, args ...string) *exec.Cmd {
+	// If EXECPATH is set, just use that.
+	execPath := os.Getenv("EXECPATH")
+	if len(execPath) > 0 {
+		exe := strings.Split(os.Getenv("EXECPATH"), " ")
+		return exec.Command(exe[0], append(exe[1:], args...)...)
 	}
 
-	// Skip compilation if EXECPATH is set.
-	execPath = os.Getenv("EXECPATH")
-	if execPath != "" {
-		execPath = strings.SplitN(execPath, " ", 2)[0]
-		return
+	// Should be cached by Run if os.Executable is going to fail.
+	if len(binary) > 0 {
+		t.Logf("binary: %v", binary)
+		return exec.Command(binary, args...)
 	}
 
-	// Compile the program
-	execPath = filepath.Join(tmpDir, "exec")
-	out, err := exec.Command("go", "build", "-o", execPath).CombinedOutput()
+	execPath, err := os.Executable()
 	if err != nil {
-		t.Fatalf("Failed to build: %v\n%s", err, string(out))
+		// Run should have prevented this case by caching something in
+		// `binary`.
+		t.Fatal("You must call testutil.Run() in your TestMain.")
 	}
-	return
+
+	c := exec.Command(execPath, args...)
+	c.Env = append(c.Env, append(os.Environ(), "UROOT_CALL_MAIN=1")...)
+	return c
+}
+
+// IsExitCode takes err and checks whether it represents the given process exit
+// code.
+//
+// IsExitCode assumes that `err` is the return value of a successful call to
+// exec.Cmd.Run/Output/CombinedOutput and hence an *exec.ExitError.
+func IsExitCode(err error, exitCode int) error {
+	if err == nil {
+		if exitCode != 0 {
+			return fmt.Errorf("got code 0, want %d", exitCode)
+		}
+		return nil
+	}
+
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		return fmt.Errorf("encountered error other than ExitError: %#v", err)
+	}
+	ws, ok := exitErr.Sys().(syscall.WaitStatus)
+	if !ok {
+		return fmt.Errorf("sys() is not a syscall WaitStatus: %v", err)
+	}
+	if es := ws.ExitStatus(); es != exitCode {
+		return fmt.Errorf("got exit status %d, want %d", es, exitCode)
+	}
+	return nil
+}
+
+func run(m *testing.M, mainFn func()) int {
+	// UROOT_CALL_MAIN=1 /proc/self/exe should be the same as just running
+	// the command we are testing.
+	if len(os.Getenv("UROOT_CALL_MAIN")) > 0 {
+		mainFn()
+		return 0
+	}
+
+	// Normally, /proc/self/exe (and equivalents) are used to test u-root
+	// commands.
+	//
+	// Such a symlink isn't available on Plan 9, OS X, or FreeBSD. On these
+	// systems, we compile the u-root command in question on the fly
+	// instead.
+	//
+	// Here, we decide whether to compile or not and cache the executable.
+	// Do this here, so that when m.Run() returns, we can remove the
+	// executable using the functor returned.
+	_, err := os.Executable()
+	if err != nil || len(os.Getenv("UROOT_TEST_BUILD")) > 0 {
+		// We can't find ourselves? Probably FreeBSD or something. Try to go
+		// build the command.
+		//
+		// This is NOT build-system-independent, and hence the fallback.
+		tmpDir, err := ioutil.TempDir("", "uroot-build")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		execPath := filepath.Join(tmpDir, "binary")
+		// Build the stuff.
+		if err := golang.Default().BuildDir(wd, execPath, golang.BuildOpts{}); err != nil {
+			log.Fatal(err)
+		}
+
+		// Cache dat.
+		binary = execPath
+	}
+
+	return m.Run()
+}
+
+// Run sets up necessary commands to be compiled, if necessary, and calls
+// m.Run.
+func Run(m *testing.M, mainFn func()) {
+	os.Exit(run(m, mainFn))
 }

@@ -151,14 +151,17 @@ func removeCreatedFiles(tmpDir string) {
 
 func TestMkdirErrors(t *testing.T) {
 	// Set Up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 	syscall.Umask(umaskDefault)
 
 	// Error Tests
 	for _, test := range errorTestCases {
 		removeCreatedFiles(tmpDir)
-		c := exec.Command(execPath, test.args...)
+		c := testutil.Command(t, test.args...)
 		execStmt := fmt.Sprintf("exec(mkdir %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
 		c.Dir = tmpDir
 		_, e, err := run(c)
@@ -179,14 +182,17 @@ func TestMkdirErrors(t *testing.T) {
 
 func TestMkdirRegular(t *testing.T) {
 	// Set Up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 	syscall.Umask(umaskDefault)
 
 	// Regular Tests
 	for _, test := range regularTestCases {
 		removeCreatedFiles(tmpDir)
-		c := exec.Command(execPath, test.args...)
+		c := testutil.Command(t, test.args...)
 		execStmt := fmt.Sprintf("exec(mkdir %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
 		c.Dir = tmpDir
 		_, e, err := run(c)
@@ -210,14 +216,17 @@ func TestMkdirRegular(t *testing.T) {
 
 func TestMkdirPermission(t *testing.T) {
 	// Set Up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 	syscall.Umask(umaskDefault)
 
 	// Permission Tests
 	for _, test := range permTestCases {
 		removeCreatedFiles(tmpDir)
-		c := exec.Command(execPath, test.args...)
+		c := testutil.Command(t, test.args...)
 		execStmt := fmt.Sprintf("exec(mkdir %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
 		c.Dir = tmpDir
 		_, e, err := run(c)
@@ -241,4 +250,8 @@ func TestMkdirPermission(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

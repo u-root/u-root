@@ -8,8 +8,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -101,27 +99,25 @@ func TestDd(t *testing.T) {
 			compare: stdoutEqual,
 		},
 		{
-			name:    "1 GiB zeroed file in 1024 1KiB blocks",
-			flags:   []string{"bs=1048576", "count=1024", "if=/dev/zero"},
+			name:    "512 MiB zeroed file in 1024 1KiB blocks",
+			flags:   []string{"bs=524288", "count=1024", "if=/dev/zero"},
 			stdin:   "",
 			stdout:  []byte("\x00"),
-			count:   1024 * 1024 * 1024,
+			count:   1024 * 1024 * 512,
 			compare: byteCount,
 		},
 	}
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(execPath, tt.flags...)
+			cmd := testutil.Command(t, tt.flags...)
 			cmd.Stdin = strings.NewReader(tt.stdin)
 			out, err := cmd.StdoutPipe()
 			if err != nil {
-				t.Errorf("Test %v exited with error: %v", tt.flags, err)
+				t.Fatal(err)
 			}
 			if err := cmd.Start(); err != nil {
-				t.Errorf("Test %v exited with error: %v", tt.flags, err)
+				t.Error(err)
 			}
 			err = tt.compare(out, tt.stdout, tt.count)
 			if err != nil {
@@ -190,11 +186,9 @@ func byteCount(i io.Reader, o []byte, n int64) error {
 
 // BenchmarkDd benchmarks the dd command. Each "op" unit is a 1MiB block.
 func BenchmarkDd(b *testing.B) {
-	tmpDir, execPath := testutil.CompileInTempDir(b)
-	defer os.RemoveAll(tmpDir)
-
 	const bytesPerOp = 1024 * 1024
 	b.SetBytes(bytesPerOp)
+
 	args := []string{
 		"if=/dev/zero",
 		"of=/dev/null",
@@ -202,7 +196,11 @@ func BenchmarkDd(b *testing.B) {
 		fmt.Sprintf("bs=%d", bytesPerOp),
 	}
 	b.ResetTimer()
-	if err := exec.Command(execPath, args...).Run(); err != nil {
+	if err := testutil.Command(b, args...).Run(); err != nil {
 		b.Fatal(err)
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

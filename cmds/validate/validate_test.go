@@ -7,10 +7,11 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 type file struct {
@@ -46,19 +47,12 @@ ff02::2 ip6-allrouters
 		t.Fatalf("Can't set up data file: %v", err)
 	}
 
-	validatetestpath := filepath.Join(tmpDir, "validatetest.exe")
-	out, err := exec.Command("go", "build", "-o", validatetestpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/validate: %v\n%s", validatetestpath, err, string(out))
-	}
-
-	t.Logf("Built %v for test", validatetestpath)
 	for _, v := range tests {
 		if err := ioutil.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0444); err != nil {
 			t.Fatalf("Can't set up hash file: %v", err)
 		}
 
-		c := exec.Command(validatetestpath, filepath.Join(tmpDir, v.name), filepath.Join(tmpDir, "hosts"))
+		c := testutil.Command(t, filepath.Join(tmpDir, v.name), filepath.Join(tmpDir, "hosts"))
 		ep, err := c.StderrPipe()
 		if err != nil {
 			t.Fatalf("Can't start StderrPipe: %v", err)
@@ -104,4 +98,8 @@ ff02::2 ip6-allrouters
 
 		t.Logf("Validate %v hosts %v: %v", v.a, v.name, string(o))
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

@@ -12,10 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-)
 
-var (
-	testPath = "."
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func run(c *exec.Cmd) (string, string, error) {
@@ -39,16 +37,9 @@ func TestChmodSimple(t *testing.T) {
 	}
 	defer f.Close()
 
-	// Build chmod binary.
-	testpath := filepath.Join(tempDir, "testchmod.exe")
-	out, err := exec.Command("go", "build", "-o", testpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/chmod: %v\n%s", testpath, err, string(out))
-	}
-
 	for _, perm := range []os.FileMode{0777, 0644} {
 		// Set permissions using chmod.
-		c := exec.Command(testpath, fmt.Sprintf("%0o", perm), f.Name())
+		c := testutil.Command(t, fmt.Sprintf("%0o", perm), f.Name())
 		c.Run()
 
 		// Check that it worked.
@@ -108,15 +99,9 @@ func TestChmodRecursive(t *testing.T) {
 	}
 
 	// Build chmod binary.
-	testpath := filepath.Join(tempDir, "testchmod.exe")
-	out, err := exec.Command("go", "build", "-o", testpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/chmod: %v\n%s", testpath, err, string(out))
-	}
-
 	for _, perm := range []os.FileMode{0707, 0770} {
 		// Set target file permissions using chmod.
-		c := exec.Command(testpath,
+		c := testutil.Command(t,
 			"-R",
 			fmt.Sprintf("%0o", perm),
 			tempDir)
@@ -149,18 +134,11 @@ func TestChmodReference(t *testing.T) {
 	}
 	defer targetFile.Close()
 
-	// Build chmod binary.
-	testpath := filepath.Join(tempDir, "testchmod.exe")
-	out, err := exec.Command("go", "build", "-o", testpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/chmod: %v\n%s", testpath, err, string(out))
-	}
-
 	for _, perm := range []os.FileMode{0777, 0644} {
 		os.Chmod(sourceFile.Name(), perm)
 
 		// Set target file permissions using chmod.
-		c := exec.Command(testpath,
+		c := testutil.Command(t,
 			"--reference",
 			sourceFile.Name(),
 			targetFile.Name())
@@ -190,12 +168,6 @@ func TestInvocationErrors(t *testing.T) {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
 	defer f.Close()
-
-	testpath := filepath.Join(tempDir, "testchmod.exe")
-	out, err := exec.Command("go", "build", "-o", testpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/chmod: %v\n%s", testpath, err, string(out))
-	}
 
 	for _, v := range []struct {
 		args     []string
@@ -235,7 +207,7 @@ func TestInvocationErrors(t *testing.T) {
 			skipFrom: -1,
 		},
 	} {
-		cmd := exec.Command(testpath, v.args...)
+		cmd := testutil.Command(t, v.args...)
 		_, stderr, err := run(cmd)
 		if v.skipFrom == -1 {
 			v.skipFrom = len(stderr)
@@ -248,4 +220,8 @@ func TestInvocationErrors(t *testing.T) {
 			t.Errorf("Chmod for %q failed: got nil want err", v.args)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

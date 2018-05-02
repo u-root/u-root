@@ -8,10 +8,9 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestUniq(t *testing.T) {
@@ -41,32 +40,21 @@ func TestUniq(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	uniqtestpath := filepath.Join(tmpDir, "uniqtest.exe")
-	out, err := exec.Command("go", "build", "-o", uniqtestpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/uniq: %v\n%s", uniqtestpath, err, string(out))
-	}
-
-	t.Logf("Built %v for test", uniqtestpath)
 	for _, v := range tab {
-		c := exec.Command(uniqtestpath, v.a...)
+		c := testutil.Command(t, v.a...)
 		c.Stdin = bytes.NewReader([]byte(v.i))
 		o, err := c.CombinedOutput()
-		s := c.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
-
-		if s != v.s {
-			t.Errorf("Uniq %v < %v > %v: want (exit: %v), got (exit %v)", v.a, v.i, v.o, v.s, s)
-			continue
-		}
-
-		if err != nil && s != v.s {
-			t.Errorf("Uniq %v < %v > %v: want nil, got %v", v.a, v.i, v.o, err)
+		if err := testutil.IsExitCode(err, v.s); err != nil {
+			t.Error(err)
 			continue
 		}
 		if string(o) != v.o {
 			t.Errorf("Uniq %v < %v: want '%v', got '%v'", v.a, v.i, v.o, string(o))
 			continue
 		}
-		t.Logf("Uniq %v < %v: %v", v.a, v.i, v.o)
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -102,8 +101,10 @@ var truncateTests = []struct {
 
 // TestTruncate implements a table-driven test.
 func TestTruncate(t *testing.T) {
-	// Compile truncate.
-	tmpDir, truncatePath := testutil.CompileInTempDir(t)
+	tmpDir, err := ioutil.TempDir("", "truncate")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.RemoveAll(tmpDir)
 
 	for i, test := range truncateTests {
@@ -116,8 +117,7 @@ func TestTruncate(t *testing.T) {
 			}
 		}
 		// Execute truncate.go
-		args := append(append([]string{}, test.flags...), testfile)
-		cmd := exec.Command(truncatePath, args...)
+		cmd := testutil.Command(t, append(test.flags, testfile)...)
 		err := cmd.Run()
 		if err != nil {
 			if test.ret == 0 {
@@ -138,4 +138,8 @@ func TestTruncate(t *testing.T) {
 			t.Fatalf("Expected that %s has size: %d, but it has size: %d\n", testfile, test.size, s)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }

@@ -6,8 +6,6 @@ package main
 
 import (
 	"bytes"
-	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -27,11 +25,8 @@ var tests = []struct {
 }
 
 func TestHexdump(t *testing.T) {
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
-
 	for _, tt := range tests {
-		cmd := exec.Command(execPath)
+		cmd := testutil.Command(t)
 		cmd.Stdin = bytes.NewReader(tt.in)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -42,4 +37,8 @@ func TestHexdump(t *testing.T) {
 			t.Errorf("want=%#v; got=%#v", tt.out, tt)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }
