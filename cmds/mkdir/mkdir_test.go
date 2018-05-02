@@ -2,11 +2,9 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"syscall"
@@ -15,107 +13,8 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type MkdirErrorTestcase struct {
-	name string
-	args []string
-	exp  string
-}
-
-type MkdirPermTestCase struct {
-	name     string
-	args     []string
-	perm     os.FileMode
-	dirNames []string
-}
-
 var (
-	stubDirNames   = []string{"stub", "stub2"}
-	umaskDefault   = 022
-	errorTestCases = []MkdirErrorTestcase{
-		{
-			name: "No Arg Error",
-			args: nil,
-			exp:  "Usage",
-		},
-		{
-			name: "Perm Mode Bits over 7 Error",
-			args: []string{"-m=7778", stubDirNames[0]},
-			exp:  `invalid mode '7778'`,
-		},
-		{
-			name: "More than 4 Perm Mode Bits Error",
-			args: []string{"-m=11111", stubDirNames[0]},
-			exp:  `invalid mode '11111'`,
-		},
-	}
-
-	regularTestCases = []struct {
-		name string
-		args []string
-		exp  []string
-	}{
-		{
-			name: "Create 1 Directory",
-			args: []string{stubDirNames[0]},
-			exp:  []string{stubDirNames[0]},
-		},
-		{
-			name: "Create 2 Directories",
-			args: stubDirNames,
-			exp:  stubDirNames,
-		},
-	}
-
-	permTestCases = []MkdirPermTestCase{
-		{
-			name:     "Default Perm",
-			args:     []string{stubDirNames[0]},
-			perm:     os.FileMode(0755 | os.ModeDir),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm in Octal Form",
-			args:     []string{"-m=0777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm not in Octal Form",
-			args:     []string{"-m=777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm with Sticky Bit",
-			args:     []string{"-m=1777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSticky),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm with SGID Bit",
-			args:     []string{"-m=2777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSetgid),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm with SUID Bit",
-			args:     []string{"-m=4777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSetuid),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm with Sticky Bit and SUID Bit",
-			args:     []string{"-m=5777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSticky | os.ModeSetuid),
-			dirNames: []string{stubDirNames[0]},
-		},
-		{
-			name:     "Custom Perm for 2 Directories",
-			args:     []string{"-m=5777", stubDirNames[0], stubDirNames[1]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSticky | os.ModeSetuid),
-			dirNames: stubDirNames,
-		},
-	}
+	umaskDefault = 022
 )
 
 func run(c *exec.Cmd) (string, string, error) {
@@ -123,11 +22,6 @@ func run(c *exec.Cmd) (string, string, error) {
 	c.Stdout, c.Stderr = &o, &e
 	err := c.Run()
 	return o.String(), e.String(), err
-}
-
-func printError(t *testing.T, testname string, execStmt string, out interface{}, exp interface{}) {
-	t.Logf("TEST %v", testname)
-	t.Errorf("%s\ngot:%v\nwant:%v", execStmt, out, exp)
 }
 
 func findFile(dir string, filename string) (os.FileInfo, error) {
@@ -143,102 +37,192 @@ func findFile(dir string, filename string) (os.FileInfo, error) {
 	return nil, nil
 }
 
-func removeCreatedFiles(tmpDir string) {
-	for _, dirName := range stubDirNames {
-		os.Remove(filepath.Join(tmpDir, dirName))
-	}
-}
-
 func TestMkdirErrors(t *testing.T) {
-	// Set Up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
 	syscall.Umask(umaskDefault)
 
 	// Error Tests
-	for _, test := range errorTestCases {
-		removeCreatedFiles(tmpDir)
-		c := exec.Command(execPath, test.args...)
-		execStmt := fmt.Sprintf("exec(mkdir %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-		c.Dir = tmpDir
-		_, e, err := run(c)
-		if err == nil || !strings.Contains(e, test.exp) {
-			printError(t, test.name, execStmt, e, test.exp)
-			continue
-		}
-		f, err := findFile(tmpDir, stubDirNames[0])
-		if err != nil {
-			printError(t, test.name, execStmt, err, "No error while finding the file")
-			continue
-		}
-		if f != nil {
-			printError(t, test.name, execStmt, "A directory was created", "No directory should be created")
-		}
+	for _, test := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "No Arg Error",
+			args: nil,
+			want: "Usage",
+		},
+		{
+			name: "Perm Mode Bits over 7 Error",
+			args: []string{"-m=7778", "foo"},
+			want: `invalid mode '7778'`,
+		},
+		{
+			name: "More than 4 Perm Mode Bits Error",
+			args: []string{"-m=11111", "foo"},
+			want: `invalid mode '11111'`,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir, err := ioutil.TempDir("", "mkdir")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tmpDir)
+
+			c := testutil.Command(t, test.args...)
+			c.Dir = tmpDir
+			_, stderr, err := run(c)
+			if err == nil || !strings.Contains(stderr, test.want) {
+				t.Fatalf("stderr is %v, want %v", stderr, test.want)
+			}
+
+			f, err := findFile(tmpDir, "foo")
+			if err != nil {
+				t.Fatalf("error finding file \"foo\": %v", err)
+			}
+			if f != nil {
+				t.Errorf("wantected not to find file, but found file \"foo\"")
+			}
+		})
 	}
 }
 
 func TestMkdirRegular(t *testing.T) {
-	// Set Up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
 	syscall.Umask(umaskDefault)
 
-	// Regular Tests
-	for _, test := range regularTestCases {
-		removeCreatedFiles(tmpDir)
-		c := exec.Command(execPath, test.args...)
-		execStmt := fmt.Sprintf("exec(mkdir %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-		c.Dir = tmpDir
-		_, e, err := run(c)
-		if err != nil {
-			printError(t, test.name, execStmt, e, "No error while mkdir")
-			continue
-		}
-		for _, dirName := range test.exp {
-			f, err := findFile(tmpDir, dirName)
+	for _, test := range []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "Create 1 Directory",
+			args: []string{"foo"},
+			want: []string{"foo"},
+		},
+		{
+			name: "Create 2 Directories",
+			args: []string{"foo", "bar"},
+			want: []string{"foo", "bar"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir, err := ioutil.TempDir("", "mkdir")
 			if err != nil {
-				printError(t, test.name, execStmt, err, "No error while finding the file")
-				break
+				t.Fatal(err)
 			}
-			if f == nil {
-				printError(t, test.name, execStmt, fmt.Sprintf("%s not found", dirName), fmt.Sprintf("%s should have been created", dirName))
-				break
+			defer os.RemoveAll(tmpDir)
+
+			c := testutil.Command(t, test.args...)
+			c.Dir = tmpDir
+			if err := c.Run(); err != nil {
+				t.Fatalf("Error running mkdir: %v", err)
 			}
-		}
+			for _, dirName := range test.want {
+				f, err := findFile(tmpDir, dirName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if f == nil {
+					t.Errorf("file %q not found in dir", dirName)
+				}
+			}
+		})
 	}
 }
 
 func TestMkdirPermission(t *testing.T) {
-	// Set Up
-	tmpDir, execPath := testutil.CompileInTempDir(t)
-	defer os.RemoveAll(tmpDir)
 	syscall.Umask(umaskDefault)
 
-	// Permission Tests
-	for _, test := range permTestCases {
-		removeCreatedFiles(tmpDir)
-		c := exec.Command(execPath, test.args...)
-		execStmt := fmt.Sprintf("exec(mkdir %s)", strings.Trim(fmt.Sprint(test.args), "[]"))
-		c.Dir = tmpDir
-		_, e, err := run(c)
-		if err != nil {
-			printError(t, test.name, execStmt, e, "No error while mkdir")
-			continue
-		}
-		for _, dirName := range test.dirNames {
-			f, err := findFile(tmpDir, dirName)
+	for _, test := range []struct {
+		name     string
+		args     []string
+		perm     os.FileMode
+		dirNames []string
+	}{
+		{
+			name:     "Default Perm",
+			args:     []string{"foo"},
+			perm:     0755 | os.ModeDir,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm in Octal Form",
+			args:     []string{"-m=0777", "foo"},
+			perm:     0777 | os.ModeDir,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm not in Octal Form",
+			args:     []string{"-m=777", "foo"},
+			perm:     0777 | os.ModeDir,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm with Sticky Bit",
+			args:     []string{"-m=1777", "foo"},
+			perm:     0777 | os.ModeDir | os.ModeSticky,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm with SGID Bit",
+			args:     []string{"-m=2777", "foo"},
+			perm:     0777 | os.ModeDir | os.ModeSetgid,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm with SUID Bit",
+			args:     []string{"-m=4777", "foo"},
+			perm:     0777 | os.ModeDir | os.ModeSetuid,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm with Sticky Bit and SUID Bit",
+			args:     []string{"-m=5777", "foo"},
+			perm:     0777 | os.ModeDir | os.ModeSticky | os.ModeSetuid,
+			dirNames: []string{"foo"},
+		},
+		{
+			name:     "Custom Perm for 2 Directories",
+			args:     []string{"-m=5777", "foo", "bar"},
+			perm:     0777 | os.ModeDir | os.ModeSticky | os.ModeSetuid,
+			dirNames: []string{"foo", "bar"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir, err := ioutil.TempDir("", "mkdir")
 			if err != nil {
-				printError(t, test.name, execStmt, err, "No error while finding the file")
-				break
+				t.Fatal(err)
 			}
-			if f == nil {
-				printError(t, test.name, execStmt, fmt.Sprintf("%s not found", dirName), fmt.Sprintf("%s should have been created", dirName))
-				break
+			defer os.RemoveAll(tmpDir)
+
+			c := testutil.Command(t, test.args...)
+			c.Dir = tmpDir
+			if err := c.Run(); err != nil {
+				t.Fatalf("mkdir exited with error: %v", err)
 			}
-			if f != nil && !reflect.DeepEqual(f.Mode(), test.perm) {
-				printError(t, test.name, execStmt, f.Mode(), test.perm)
-				break
+
+			for _, dirName := range test.dirNames {
+				f, err := findFile(tmpDir, dirName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if f == nil {
+					t.Errorf("could not find file %q", dirName)
+				}
+				if f != nil && !reflect.DeepEqual(f.Mode(), test.perm) {
+					t.Errorf("file %q has mode %v, want %v", dirName, f.Mode(), test.perm)
+				}
 			}
-		}
+		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }

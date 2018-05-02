@@ -7,10 +7,11 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 type file struct {
@@ -33,32 +34,30 @@ func TestValidate(t *testing.T) {
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 `)
-	var tests = []file{
-		{name: "hosts.sha1", val: []byte("3f397a3b3a7450075da91b078afa35b794cf6088  hosts"), o: "SHA1\n"},
-	}
 
-	tmpDir, err := ioutil.TempDir("", "validatetest")
+	tmpDir, err := ioutil.TempDir("", "validate")
 	if err != nil {
 		t.Fatal("TempDir failed: ", err)
 	}
 	defer os.RemoveAll(tmpDir)
+
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, "hosts"), data, 0444); err != nil {
 		t.Fatalf("Can't set up data file: %v", err)
 	}
 
-	validatetestpath := filepath.Join(tmpDir, "validatetest.exe")
-	out, err := exec.Command("go", "build", "-o", validatetestpath, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("go build -o %v cmds/validate: %v\n%s", validatetestpath, err, string(out))
-	}
-
-	t.Logf("Built %v for test", validatetestpath)
-	for _, v := range tests {
+	for _, v := range []file{
+		// TODO: what kind of table-driven test only has one test? what the fuck?
+		{
+			name: "hosts.sha1",
+			val:  []byte("3f397a3b3a7450075da91b078afa35b794cf6088  hosts"),
+			o:    "SHA1\n",
+		},
+	} {
 		if err := ioutil.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0444); err != nil {
 			t.Fatalf("Can't set up hash file: %v", err)
 		}
 
-		c := exec.Command(validatetestpath, filepath.Join(tmpDir, v.name), filepath.Join(tmpDir, "hosts"))
+		c := testutil.Command(t, filepath.Join(tmpDir, v.name), filepath.Join(tmpDir, "hosts"))
 		ep, err := c.StderrPipe()
 		if err != nil {
 			t.Fatalf("Can't start StderrPipe: %v", err)
@@ -101,7 +100,14 @@ ff02::2 ip6-allrouters
 			t.Errorf("Validate %v hosts %v (%v): want stdout: %v, got %v)", v.a, v.name, string(v.val), v.o, string(o))
 			continue
 		}
-
-		t.Logf("Validate %v hosts %v: %v", v.a, v.name, string(o))
 	}
+}
+
+func TestMain(m *testing.M) {
+	if testutil.CallMain() {
+		main()
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }
