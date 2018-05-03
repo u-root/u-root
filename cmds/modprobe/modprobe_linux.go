@@ -21,7 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/kmodule"
 )
 
-const cmd = "modprobe [-a] [-n] modulename [parameters...]"
+const cmd = "modprobe [-an] modulename[s] [parameters...]"
 
 var (
 	dryRun     = flag.Bool("n", false, "Try run")
