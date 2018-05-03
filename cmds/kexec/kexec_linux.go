@@ -29,6 +29,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
 )
 
@@ -78,13 +79,14 @@ func main() {
 		opts.exec = true
 	}
 
-	cmdline := opts.cmdline
+	newCmdLine := opts.cmdline
 	if opts.reuseCmdline {
-		procCmdline, err := kexec.CurrentKernelCmdline()
-		if err != nil {
-			log.Fatalf("%v", err)
+		procCmdLine := cmdline.NewCmdLine()
+		if procCmdLine.Err != nil {
+			log.Fatal("Couldn't read /proc/cmdline")
+		} else {
+			newCmdLine = procCmdLine.Raw
 		}
-		cmdline = procCmdline
 	}
 
 	if opts.load {
@@ -106,7 +108,7 @@ func main() {
 			defer ramfs.Close()
 		}
 
-		if err := kexec.FileLoad(kernel, ramfs, cmdline); err != nil {
+		if err := kexec.FileLoad(kernel, ramfs, newCmdLine); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}

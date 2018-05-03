@@ -6,8 +6,6 @@ package kexec
 
 import (
 	"fmt"
-	"io/ioutil"
-	"strings"
 	"syscall"
 )
 
@@ -17,12 +15,4 @@ func Reboot() error {
 		return fmt.Errorf("sys_reboot(..., kexec) = %v", err)
 	}
 	return nil
-}
-
-func CurrentKernelCmdline() (string, error) {
-	procCmdline, err := ioutil.ReadFile("/proc/cmdline")
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimRight(string(procCmdline), "\n"), nil
 }
