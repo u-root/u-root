@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -70,15 +70,23 @@ func follow(l string, names map[string]*FileInfo) error {
 	}
 }
 
-// runinterp runs the interpreter with the --list switch
-// and the file as an argument. For each returned line
-// it looks for => as the second field, indicating a
-// real .so (as opposed to the .vdso or a string like
-// 'not a dynamic executable'.
+func LdSo() (string, error) {
+	n, err := filepath.Glob(ldso)
+	if err != nil {
+		return "", err
+	}
+	if len(n) == 0 {
+		return "", fmt.Errorf("No ld.so matches %v", ldso)
+	}
+	return n[0], nil
+}
+
+// runinterp runs the interpreter on the given file
+// and returns a list of shared libs it depends on.
 func runinterp(interp, file string) ([]string, error) {
 	var names []string
-	o, err := exec.Command(interp, "--list", file).Output()
-	if err != nil {
+	o, err := lddOutput(interp, file)
+	if err != nil && o == nil {
 		return nil, err
 	}
 	for _, p := range strings.Split(string(o), "\n") {
@@ -86,6 +94,10 @@ func runinterp(interp, file string) ([]string, error) {
 		if len(f) < 3 {
 			continue
 		}
+
+		// look for => as the second field, indicating a
+		// real .so (as opposed to the .vdso or a string like
+		// 'not a dynamic executable'.
 		if f[1] != "=>" || len(f[2]) == 0 {
 			continue
 		}
@@ -174,9 +186,10 @@ func Ldd(names []string) ([]*FileInfo, error) {
 		libs = append(libs, interps[i])
 	}
 
-	for i := range list {
-		libs = append(libs, list[i])
+	for _, item := range list {
+		libs = append(libs, item)
 	}
+	sort.SliceStable(libs, func(i, j int) bool { return libs[i].FullName < libs[j].FullName })
 
 	return libs, nil
 }

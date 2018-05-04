@@ -1,19 +1,12 @@
 package ldd
 
 import (
-	"fmt"
-	"path/filepath"
+	"os/exec"
 )
 
 const ldso = "/lib*/ld-linux-*.so.*"
 
-func LdSo() (string, error) {
-	n, err := filepath.Glob(ldso)
-	if err != nil {
-		return "", err
-	}
-	if len(n) == 0 {
-		return "", fmt.Errorf("No ld.so matches %v", ldso)
-	}
-	return n[0], nil
+// lddOutput runs the interpreter and returns its output.
+func lddOutput(interp, file string) ([]byte, error) {
+	return exec.Command(interp, "--list", file).Output()
 }
