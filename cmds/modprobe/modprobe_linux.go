@@ -6,6 +6,7 @@
 //
 // Synopsis:
 //     modprobe [-n] modulename [parameters...]
+//     modprobe [-n] -a modulename...
 //
 // Author:
 //     Roland Kammerer <dev.rck@gmail.com>
@@ -20,10 +21,12 @@ import (
 	"github.com/u-root/u-root/pkg/kmodule"
 )
 
-const cmd = "modprobe [-n] modulename [parameters...]"
+const cmd = "modprobe [-an] modulename[s] [parameters...]"
 
 var (
-	dryRun = flag.Bool("n", false, "Try run")
+	dryRun     = flag.Bool("n", false, "Try run")
+	all        = flag.Bool("a", false, "Insert all module names on the command line.")
+	verboseAll = flag.Bool("va", false, "Insert all module names on the command line.")
 )
 
 func init() {
@@ -41,6 +44,18 @@ func main() {
 		log.Println("Usage: ERROR: one module and optional module options.")
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	// -va is just an alias for -a
+	*all = *all || *verboseAll
+	if *all {
+		modNames := flag.Args()
+		for _, modName := range modNames {
+			if err := kmodule.ProbeOptions(modName, "", kmodule.ProbeOpts{DryRun: *dryRun}); err != nil {
+				log.Printf("modprobe: Could not load module %q: %v", modName, err)
+			}
+		}
+		os.Exit(0)
 	}
 
 	modName := flag.Args()[0]
