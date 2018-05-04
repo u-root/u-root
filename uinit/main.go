@@ -34,7 +34,7 @@ func main() {
 			log.Printf("Running boot command: %v", bootcmd)
 			cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 			if err := cmd.Run(); err != nil {
-				log.Printf("Error executing %s: %v", cmd, err)
+				log.Printf("Error executing %v: %v", cmd, err)
 			}
 		}
 		if !*doQuiet {
