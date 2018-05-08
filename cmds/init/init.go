@@ -19,9 +19,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
@@ -170,20 +172,33 @@ func main() {
 	noCmdFound := true
 	for _, v := range cmdList {
 		if _, err := os.Stat(v); !os.IsNotExist(err) {
+
 			noCmdFound = false
-			cmd = exec.Command(v)
-			cmd.Env = envs
-			cmd.Stdin = os.Stdin
-			cmd.Stderr = os.Stderr
-			cmd.Stdout = os.Stdout
-			if *test {
-				cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
+
+			initFlags := cmdline.GetInitFlagMap()
+			// systemd gets upset when it discovers it isn't really process 1
+			systemd, present := initFlags["systemd"]
+			systemdEnabled, boolErr := strconv.ParseBool(systemd)
+			if !present || boolErr != nil || systemdEnabled == false {
+				cmd = exec.Command(v)
+				cmd.Env = envs
+				cmd.Stdin = os.Stdin
+				cmd.Stderr = os.Stderr
+				cmd.Stdout = os.Stdout
+				if *test {
+					cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
+				} else {
+					cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+				}
+				debug("Run %v", cmd)
+				if err := cmd.Run(); err != nil {
+					log.Print(err)
+				}
 			} else {
-				cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
-			}
-			debug("Run %v", cmd)
-			if err := cmd.Run(); err != nil {
-				log.Print(err)
+				debug("Exec %v", v)
+				if err := syscall.Exec(v, []string{v}, envs); err != nil {
+					log.Print(err)
+				}
 			}
 		}
 		// only the first init needs its own PID space.

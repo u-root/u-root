@@ -13,7 +13,10 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/cmdline"
 )
 
 const (
@@ -158,6 +161,8 @@ var (
 
 		Dir{Name: "/sys", Mode: 0555},
 		Mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
+	}
+	cgroupsnamespace = []Creator{
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
 		Dir{Name: "/sys/fs/cgroup/memory", Mode: 0555},
 		Dir{Name: "/sys/fs/cgroup/freezer", Mode: 0555},
@@ -198,13 +203,7 @@ func GoBin() string {
 	return fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s", runtime.GOOS, runtime.GOARCH, runtime.GOOS, runtime.GOARCH)
 }
 
-// build the root file system.
-func Rootfs() {
-	Env["PATH"] = fmt.Sprintf("%v:%v:%v:%v", GoBin(), PATHHEAD, PATHMID, PATHTAIL)
-	for k, v := range Env {
-		os.Setenv(k, v)
-	}
-
+func create(namespace []Creator) {
 	for _, c := range namespace {
 		if err := c.Create(); err != nil {
 			log.Printf("Error creating %s: %v", c, err)
@@ -212,4 +211,23 @@ func Rootfs() {
 			log.Printf("Created %v", c)
 		}
 	}
+}
+
+// build the root file system.
+func Rootfs() {
+	Env["PATH"] = fmt.Sprintf("%v:%v:%v:%v", GoBin(), PATHHEAD, PATHMID, PATHTAIL)
+	for k, v := range Env {
+		os.Setenv(k, v)
+	}
+	create(namespace)
+
+	// systemd gets upset when it discovers something has already setup cgroups
+	// We have to do this after the base namespace is created, so we have /proc
+	initFlags := cmdline.GetInitFlagMap()
+	systemd, present := initFlags["systemd"]
+	systemdEnabled, boolErr := strconv.ParseBool(systemd)
+	if !present || boolErr != nil || systemdEnabled == false {
+		create(cgroupsnamespace)
+	}
+
 }
