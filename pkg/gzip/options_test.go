@@ -28,14 +28,13 @@ func TestOptions_ParseArgs(t *testing.T) {
 		args    []string
 		cmdLine *flag.FlagSet
 	}
+	// TODO: Add test cases.
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
 		wantErr bool
-	}{
-	// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			o := &Options{
