@@ -54,13 +54,12 @@ func TestFile_CheckPath(t *testing.T) {
 		Path    string
 		Options *Options
 	}
+	// TODO: Add test cases.
 	tests := []struct {
 		name    string
 		fields  fields
 		wantErr bool
-	}{
-	// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &File{
@@ -79,13 +78,12 @@ func TestFile_CheckOutputPath(t *testing.T) {
 		Path    string
 		Options *Options
 	}
+	// TODO: Add test cases.
 	tests := []struct {
 		name    string
 		fields  fields
 		wantErr bool
-	}{
-	// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &File{
@@ -164,13 +162,12 @@ func TestFile_Cleanup(t *testing.T) {
 		Path    string
 		Options *Options
 	}
+	// TODO: Add test cases.
 	tests := []struct {
 		name    string
 		fields  fields
 		wantErr bool
-	}{
-	// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &File{
