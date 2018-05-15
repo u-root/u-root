@@ -33,6 +33,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// print partition info
+	for _, dev := range devices {
+		log.Printf("Device: %+v", dev)
+		table, err := GetGPTTable(dev)
+		if err != nil {
+			continue
+		}
+		log.Printf("  Table: %+v", table)
+		for _, part := range table.Partitions {
+			log.Printf("    Partition: %+v", part)
+			if !part.IsEmpty() {
+				log.Printf("      UUID: %s", part.Type.String())
+			}
+		}
+	}
 
 	// get a list of supported file systems for real devices (i.e. skip nodev)
 	debug("Getting list of supported filesystems")

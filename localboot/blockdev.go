@@ -141,24 +141,26 @@ func GetBlockStats() ([]BlockDev, error) {
 	return blockdevs, nil
 }
 
+func GetGPTTable(device BlockDev) (*gpt.Table, error) {
+	fd, err := os.Open(fmt.Sprintf("/dev/%s", device.Name))
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	if _, err := fd.Seek(512, os.SEEK_SET); err != nil {
+		return nil, err
+	}
+	table, err := gpt.ReadTable(fd, 512)
+	if err != nil {
+		return nil, err
+	}
+	return &table, nil
+}
+
 func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
 	esps := make([]BlockDev, 0)
 	for _, device := range devices {
-		table, err := func(dev string) (*gpt.Table, error) {
-			fd, err := os.Open(fmt.Sprintf("/dev/%s", dev))
-			if err != nil {
-				return nil, err
-			}
-			defer fd.Close()
-			if _, err := fd.Seek(512, os.SEEK_SET); err != nil {
-				return nil, err
-			}
-			table, err := gpt.ReadTable(fd, 512)
-			if err != nil {
-				return nil, err
-			}
-			return &table, nil
-		}(device.Name)
+		table, err := GetGPTTable(device)
 		if err != nil {
 			debug("Skipping %s: %v", device.Name, err)
 			continue
