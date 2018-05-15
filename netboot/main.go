@@ -64,11 +64,13 @@ func main() {
 	// DHCPv6
 	if *useV6 {
 		log.Printf("Trying to obtain a DHCPv6 lease on %s", *ifname)
+		log.Printf("Waiting for network interface %s to come up", *ifname)
+		start := time.Now()
 		_, err := netboot.IfUp(*ifname, interfaceUpTimeout)
 		if err != nil {
 			log.Fatalf("DHCPv6: IfUp failed: %v", err)
 		}
-		debug("DHCPv6: interface %s is up", *ifname)
+		debug("Interface %s is up after %v", *ifname, time.Since(start))
 		var (
 			netconf  *netboot.NetConf
 			bootfile string
