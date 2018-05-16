@@ -12,11 +12,13 @@ import (
 	"github.com/rekby/gpt"
 )
 
+// BlockDev maps a device name to a BlockStat structure for a given block device
 type BlockDev struct {
 	Name string
 	Stat BlockStat
 }
 
+// Summary prints a multiline summary of the BlockDev object
 // https://www.kernel.org/doc/Documentation/block/stat.txt
 func (b BlockDev) Summary() string {
 	return fmt.Sprintf(`BlockStat{
@@ -48,6 +50,8 @@ func (b BlockDev) Summary() string {
 	)
 }
 
+// BlockStat provides block device information as contained in
+// /sys/class/block/<device_name>/stat
 type BlockStat struct {
 	ReadIOs      uint64
 	ReadMerges   uint64
@@ -62,8 +66,8 @@ type BlockStat struct {
 	TimeInQueue  uint64
 }
 
-// TODO use a better GUID library. Endianess, comparison and so on.
-// System partitions have GUID == C12A7328-F81F-11D2-BA4B-00A0C93EC93B
+// SystemPartitionGUID is the GUID of EFI system partitions
+// EFI System partitions have GUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B
 var SystemPartitionGUID = gpt.Guid([...]byte{
 	0x28, 0x73, 0x2a, 0xc1,
 	0x1f, 0xf8,
@@ -72,6 +76,9 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 })
 
+// BlockStatFromBytes parses a block stat file and returns a BlockStat object.
+// The format of the block stat file is the one defined by Linux for
+// /sys/class/block/<device_name>/stat
 func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
 	fields := strings.Fields(string(buf))
 	// BlockStat has 11 fields
@@ -101,6 +108,8 @@ func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
 	}, nil
 }
 
+// GetBlockStats iterates over /sys/class/block entries and returns a list of
+// BlockDev objects, or an error if any
 func GetBlockStats() ([]BlockDev, error) {
 	blockdevs := make([]BlockDev, 0)
 	devnames := make([]string, 0)
@@ -141,6 +150,8 @@ func GetBlockStats() ([]BlockDev, error) {
 	return blockdevs, nil
 }
 
+// GetGPTTable tries to read a GPT table from the block device described by the
+// passed BlockDev object, and returns a gpt.Table object, or an error if any
 func GetGPTTable(device BlockDev) (*gpt.Table, error) {
 	fd, err := os.Open(fmt.Sprintf("/dev/%s", device.Name))
 	if err != nil {
@@ -157,6 +168,8 @@ func GetGPTTable(device BlockDev) (*gpt.Table, error) {
 	return &table, nil
 }
 
+// FilterEFISystemPartitions returns a list of BlockDev objects whose underlying
+// block device is a valid EFI system partition, or an error if any
 func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
 	esps := make([]BlockDev, 0)
 	for _, device := range devices {

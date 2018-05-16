@@ -8,6 +8,7 @@ import (
 	"syscall"
 )
 
+// Mountpoint holds mount point information for a given device
 type Mountpoint struct {
 	DeviceName string
 	Path       string

@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// List of paths where to look for grub config files. Grub2Paths will look for
+// files with grub2-compatible syntax, GrubLegacyPaths similarly will treat
+// these as grub-legacy config files.
 var (
 	Grub2Paths = []string{
 		// grub2
