@@ -19,11 +19,11 @@ func parseDevices(args []string, devtype string) (int, error) {
 	if len(args) != 4 {
 		return 0, fmt.Errorf("device type %v requires a major and minor number", devtype)
 	}
-	major, err := strconv.ParseUint(args[2], 10, 8)
+	major, err := strconv.ParseUint(args[2], 10, 12)
 	if err != nil {
 		return 0, err
 	}
-	minor, err := strconv.ParseUint(args[3], 10, 8)
+	minor, err := strconv.ParseUint(args[3], 10, 20)
 	if err != nil {
 		return 0, err
 	}
