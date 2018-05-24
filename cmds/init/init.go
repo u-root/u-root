@@ -154,11 +154,6 @@ func main() {
 		go startBgBuild()
 	}
 
-	// There may be an inito if we are building on
-	// an existing initramfs. So, first, try to
-	// run inito and then run our shell
-	// inito is always first and we set default flags for it.
-	cloneFlags := uintptr(syscall.CLONE_NEWPID)
 	cmdList := []string{
 		"/inito",
 		"/bbin/uinit",
@@ -169,46 +164,88 @@ func main() {
 		"/buildbin/rush",
 	}
 
-	noCmdFound := true
+	var cmdCount int
+	// systemd is "special". If we are supposed to run systemd, we're
+	// going to exec, and if we're going to exec, we're done here.
+	// systemd uber alles.
+	initFlags := cmdline.GetInitFlagMap()
+	// systemd gets upset when it discovers it isn't really process 1, so
+	// we can't start it in its own namespace. I just love systemd.
+	systemd, present := initFlags["systemd"]
+	systemdEnabled, boolErr := strconv.ParseBool(systemd)
+	if present && boolErr == nil && systemdEnabled == true {
+		v := cmdList[0]
+		debug("Exec %v", v)
+		if err := syscall.Exec(v, []string{v}, envs); err != nil {
+			log.Printf("Lucky you, systemd failed: %v", err)
+		}
+		// well, what a shame.
+		cmdList = cmdList[1:]
+		cmdCount++
+	}
+	// If the systemd failed for some reason, we might as well do the other things.
+
 	for _, v := range cmdList {
-		if _, err := os.Stat(v); !os.IsNotExist(err) {
+		if _, err := os.Stat(v); os.IsNotExist(err) {
+			continue
+		}
 
-			noCmdFound = false
+		// inito is (optionally) created by the u-root command when
+		// the u-root initramfs is merged with an existing initramfs that has
+		// a /init. The name inito means "original /init"
+		// There may be an inito if we are building on
+		// an existing initramfs. All initos need their
+		// own pid space.
+		var cloneFlags uintptr
+		if v == "/inito" {
+			cloneFlags = uintptr(syscall.CLONE_NEWPID)
+		}
 
-			initFlags := cmdline.GetInitFlagMap()
-			// systemd gets upset when it discovers it isn't really process 1
-			systemd, present := initFlags["systemd"]
-			systemdEnabled, boolErr := strconv.ParseBool(systemd)
-			if !present || boolErr != nil || systemdEnabled == false {
-				cmd = exec.Command(v)
-				cmd.Env = envs
-				cmd.Stdin = os.Stdin
-				cmd.Stderr = os.Stderr
-				cmd.Stdout = os.Stdout
-				if *test {
-					cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
-				} else {
-					cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
-				}
-				debug("Run %v", cmd)
-				if err := cmd.Run(); err != nil {
-					log.Print(err)
-				}
+		cmdCount++
+		cmd = exec.Command(v)
+		cmd.Env = envs
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if *test {
+			cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
+		} else {
+			cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
+		}
+		debug("Run %v", cmd)
+		if err := cmd.Start(); err != nil {
+			log.Printf("Error starting %v: %v", v, err)
+			continue
+		}
+		for {
+			var s syscall.WaitStatus
+			var r syscall.Rusage
+			if p, err := syscall.Wait4(-1, &s, 0, &r); p == cmd.Process.Pid {
+				debug("Shell exited, exit status %d", s.ExitStatus())
+				break
+			} else if p != -1 {
+				debug("Reaped PID %d, exit status %d", p, s.ExitStatus())
 			} else {
-				debug("Exec %v", v)
-				if err := syscall.Exec(v, []string{v}, envs); err != nil {
-					log.Print(err)
-				}
+				debug("Error from Wait4 for orphaned child: %v", err)
+				break
 			}
 		}
-		// only the first init needs its own PID space.
-		cloneFlags = 0
+		if err := cmd.Process.Release(); err != nil {
+			log.Printf("Error releasing %v:%v", v, err)
+		}
 	}
-
-	if noCmdFound {
+	if cmdCount == 0 {
 		log.Printf("init: No suitable executable found in %+v", cmdList)
 	}
 
+	// We need to reap all children before exiting.
+	go func() {
+		for {
+			var s syscall.WaitStatus
+			var r syscall.Rusage
+			if p, err := syscall.Wait4(-1, &s, 0, &r); err != nil {
+				log.Printf("%v: exited with %v, status %v, rusage %v", p, err, s, r)
+			}
+		}
+	}()
 	log.Printf("init: All commands exited")
 	log.Printf("init: Syncing filesystems")
 	syscall.Sync()
