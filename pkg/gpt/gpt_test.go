@@ -108,7 +108,7 @@ func TestGPTTables(t *testing.T) {
 			disk[BlockSize+test.mangle] = 0xff
 		}
 		r := bytes.NewReader(disk)
-		_, _, err := New(r)
+		_, err := New(r)
 		switch {
 		case err != nil && test.mangle > -1:
 			t.Logf("Got expected error %s", test.what)
@@ -129,26 +129,26 @@ func TestGPTTables(t *testing.T) {
 func TestEqualHeader(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)
-	p, b, err := New(r)
+	p, err := New(r)
 	if err != nil {
 		t.Fatalf("TestEqualHeader: Reading in gpt: got %v, want nil", err)
 	}
 
-	if err := EqualHeader(p.Header, b.Header); err != nil {
+	if err := EqualHeader(p.Primary.Header, p.Backup.Header); err != nil {
 		t.Fatalf("TestEqualHeader: got %v, want nil", err)
 	}
 	// Yes, we assume a certain order, but it sure simplifies the test :-)
-	p.Signature++
-	p.Revision++
-	p.HeaderSize++
-	p.CurrentLBA++
-	p.FirstLBA++
-	p.LastLBA++
-	p.DiskGUID[0]++
-	p.NPart--
-	p.PartSize--
-	p.PartCRC++
-	if err = EqualHeader(p.Header, b.Header); err == nil {
+	p.Primary.Signature++
+	p.Primary.Revision++
+	p.Primary.HeaderSize++
+	p.Primary.CurrentLBA++
+	p.Primary.FirstLBA++
+	p.Primary.LastLBA++
+	p.Primary.DiskGUID[0]++
+	p.Primary.NPart--
+	p.Primary.PartSize--
+	p.Primary.PartCRC++
+	if err = EqualHeader(p.Primary.Header, p.Backup.Header); err == nil {
 		t.Fatalf("TestEqualHeader: got %v, want nil", err)
 	}
 	t.Logf("TestEqualHeader: EqualHeader returns %v", err)
@@ -162,30 +162,30 @@ func TestEqualHeader(t *testing.T) {
 func TestEqualParts(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)
-	p, b, err := New(r)
+	p, err := New(r)
 	if err != nil {
 		t.Fatalf("TestEqualParts: Reading in gpt: got %v, want nil", err)
 	}
 
-	if err = EqualParts(p, b); err != nil {
+	if err = EqualParts(p.Primary, p.Backup); err != nil {
 		t.Fatalf("TestEqualParts: Checking equality: got %v, want nil", err)
 	}
 	// Test some equality things before we do the 'length is the same' test
 	// Note that testing the NParts header variable is done in the HeaderTest
-	p.Parts[3].PartGUID[0]++
-	p.Parts[8].UniqueGUID[1]++
-	p.Parts[11].FirstLBA++
-	p.Parts[21].LastLBA++
-	p.Parts[53].Attribute++
-	p.Parts[61].Name[1]++
-	if err = EqualParts(p, b); err == nil {
+	p.Primary.Parts[3].PartGUID[0]++
+	p.Primary.Parts[8].UniqueGUID[1]++
+	p.Primary.Parts[11].FirstLBA++
+	p.Primary.Parts[21].LastLBA++
+	p.Primary.Parts[53].Attribute++
+	p.Primary.Parts[61].Name[1]++
+	if err = EqualParts(p.Primary, p.Backup); err == nil {
 		t.Errorf("TestEqualParts: Checking equality: got nil, want '%v'", equalPartsError)
 	}
 	if err.Error() != equalPartsError {
 		t.Errorf("TestEqualParts: Checking equality: got '%v', want '%v'", err, equalPartsError)
 	}
 
-	if err = EqualParts(p, b); err == nil {
+	if err = EqualParts(p.Primary, p.Backup); err == nil {
 		t.Errorf("TestEqualParts: Checking number of parts: got nil, want 'Primary Number of partitions (127) differs from Backup (128)'")
 	}
 
@@ -201,17 +201,17 @@ func (d *iodisk) WriteAt(b []byte, off int64) (int, error) {
 func TestWrite(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)
-	g, err := Table(r, BlockSize)
+	p, err := New(r)
 	if err != nil {
-		t.Fatalf("Reading table: got %v, want nil", err)
+		t.Fatalf("Reading partitions: got %v, want nil", err)
 	}
 	var targ = make(iodisk, len(disk))
 
-	if err := Write(&targ, g); err != nil {
+	if err := Write(&targ, p); err != nil {
 		t.Fatalf("Writing: got %v, want nil", err)
 	}
-	if n, err := Table(bytes.NewReader([]byte(targ)), BlockSize); err != nil {
-		t.Logf("Old GPT: %s", g)
+	if n, err := New(bytes.NewReader([]byte(targ))); err != nil {
+		t.Logf("Old GPT: %s", p.Primary)
 		var b bytes.Buffer
 		w := hex.Dumper(&b)
 		io.Copy(w, bytes.NewReader(disk[:4096]))

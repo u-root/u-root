@@ -58,31 +58,23 @@ func main() {
 
 	switch *write {
 	case true:
-		var g = make([]gpt.GPT, 2)
-		if err := json.NewDecoder(os.Stdin).Decode(&g); err != nil {
+		var p = &gpt.PartitionTable{}
+		if err := json.NewDecoder(os.Stdin).Decode(&p); err != nil {
 			log.Fatalf("Reading in JSON: %v", err)
 		}
-		if err := gpt.Write(f, &g[0]); err != nil {
-			log.Fatalf("Writing %v: %v", n, err)
-		}
-		if err := gpt.Write(f, &g[1]); err != nil {
+		if err := gpt.Write(f, p); err != nil {
 			log.Fatalf("Writing %v: %v", n, err)
 		}
 	default:
 		// We might get one back, we might get both.
 		// In the event of an error, we show what we can
 		// so you can at least see what went wrong.
-		g, b, err := gpt.New(f)
-		if g == nil {
-			log.Fatal(err)
-		}
-		if b == nil {
-			log.Fatalf("Primary found: %s\nBut no backup GPT found: %v", g, err)
+		p, err := gpt.New(f)
+		if err != nil {
+			log.Printf("Error reading %v: %v", n, err)
 		}
 		// Emit this as a JSON array. Suggestions welcome on better ways to do this.
-		fmt.Printf("[\n%s,\n", g.String())
-		fmt.Printf("%s\n]\n", b.String())
-		if err != nil {
+		if _, err := fmt.Printf("%s\n", p); err != nil {
 			log.Fatal(err)
 		}
 
