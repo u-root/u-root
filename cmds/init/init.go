@@ -40,7 +40,7 @@ var (
 		"/buildbin/rush",
 	}
 	cmdCount int
-	envs     = os.Environ()
+	envs     []string
 )
 
 func main() {
@@ -80,6 +80,7 @@ func main() {
 		}
 	}
 
+	envs = os.Environ()
 	debug("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
 	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(util.CmdsPath, "installcommand"))
