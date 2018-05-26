@@ -19,18 +19,28 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
-	verbose = flag.Bool("v", false, "print all build commands")
-	test    = flag.Bool("test", false, "Test mode: don't try to set control tty")
-	debug   = func(string, ...interface{}) {}
+	verbose  = flag.Bool("v", false, "print all build commands")
+	test     = flag.Bool("test", false, "Test mode: don't try to set control tty")
+	debug    = func(string, ...interface{}) {}
+	osInitGo = func() {}
+	cmdList  = []string{
+		"/inito",
+		"/bbin/uinit",
+		"/buildbin/uinit",
+		"/bbin/sh",
+		"/bbin/rush",
+		"/buildbin/sh",
+		"/buildbin/rush",
+	}
+	cmdCount int
+	envs     = os.Environ()
 )
 
 func main() {
@@ -70,7 +80,6 @@ func main() {
 		}
 	}
 
-	envs := os.Environ()
 	debug("envs %v", envs)
 	os.Setenv("GOBIN", "/buildbin")
 	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(util.CmdsPath, "installcommand"))
@@ -154,36 +163,8 @@ func main() {
 		go startBgBuild()
 	}
 
-	cmdList := []string{
-		"/inito",
-		"/bbin/uinit",
-		"/buildbin/uinit",
-		"/bbin/sh",
-		"/bbin/rush",
-		"/buildbin/sh",
-		"/buildbin/rush",
-	}
-
-	var cmdCount int
-	// systemd is "special". If we are supposed to run systemd, we're
-	// going to exec, and if we're going to exec, we're done here.
-	// systemd uber alles.
-	initFlags := cmdline.GetInitFlagMap()
-	// systemd gets upset when it discovers it isn't really process 1, so
-	// we can't start it in its own namespace. I just love systemd.
-	systemd, present := initFlags["systemd"]
-	systemdEnabled, boolErr := strconv.ParseBool(systemd)
-	if present && boolErr == nil && systemdEnabled == true {
-		v := cmdList[0]
-		debug("Exec %v", v)
-		if err := syscall.Exec(v, []string{v}, envs); err != nil {
-			log.Printf("Lucky you, systemd failed: %v", err)
-		}
-		// well, what a shame.
-		cmdList = cmdList[1:]
-		cmdCount++
-	}
-	// If the systemd failed for some reason, we might as well do the other things.
+	osInitGo()
+	// If the os-specific runner failed, we can just keep going.
 
 	for _, v := range cmdList {
 		if _, err := os.Stat(v); os.IsNotExist(err) {
@@ -237,15 +218,16 @@ func main() {
 	}
 
 	// We need to reap all children before exiting.
-	go func() {
-		for {
-			var s syscall.WaitStatus
-			var r syscall.Rusage
-			if p, err := syscall.Wait4(-1, &s, 0, &r); err != nil {
-				log.Printf("%v: exited with %v, status %v, rusage %v", p, err, s, r)
-			}
+	log.Printf("init: Waiting for orphaned children")
+	for {
+		var s syscall.WaitStatus
+		var r syscall.Rusage
+		p, err := syscall.Wait4(-1, &s, 0, &r)
+		if p == -1 {
+			break
 		}
-	}()
+		log.Printf("%v: exited with %v, status %v, rusage %v", p, err, s, r)
+	}
 	log.Printf("init: All commands exited")
 	log.Printf("init: Syncing filesystems")
 	syscall.Sync()
