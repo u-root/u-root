@@ -8,11 +8,16 @@ import (
 )
 
 const (
-	publicKeyDERFile  string = "tests/public_key.der"
-	publicKeyPEMFile  string = "tests/public_key.pem"
-	testDataFile      string = "tests/data"
+	// publicKeyDERFile is a RSA public key in DER format
+	publicKeyDERFile string = "tests/public_key.der"
+	// publicKeyPEMFile is a RSA public key in PEM format
+	publicKeyPEMFile string = "tests/public_key.pem"
+	// testDataFile which should be verified by the good signature
+	testDataFile string = "tests/data"
+	// signatureGoodFile is a good signature of testDataFile
 	signatureGoodFile string = "tests/verify_rsa_pkcs15_sha256.signature"
-	signatureBadFile  string = "tests/verify_rsa_pkcs15_sha256.signature2"
+	// signatureBadFile is a bad signature which does not work with testDataFile
+	signatureBadFile string = "tests/verify_rsa_pkcs15_sha256.signature2"
 )
 
 func TestLoadDERPublicKey(t *testing.T) {

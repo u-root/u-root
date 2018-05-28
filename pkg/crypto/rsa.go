@@ -37,7 +37,7 @@ func LoadPublicKeyFromFile(publicKeyPath string) (*rsa.PublicKey, error) {
 	case *rsa.PublicKey:
 		return pub, nil
 	default:
-		return nil, err
+		return nil, errors.New("Not a RSA public key")
 	}
 }
 
