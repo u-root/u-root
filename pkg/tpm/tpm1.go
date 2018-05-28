@@ -1,13 +1,10 @@
 package tpm
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"strconv"
 
 	tspi "github.com/google/go-tpm/tpm"
 )
@@ -22,6 +19,7 @@ type TPM1 struct {
 	tempDeactivated bool
 	ownerPassword   string
 	srkPassword     string
+	tpmInfo         Info
 }
 
 const (
@@ -53,82 +51,32 @@ var (
 	wellKnownSecret string
 )
 
-func getInfo() (string, bool, bool, bool, bool, error) {
-	var cap [256]byte
-	var owned [1]byte
-	var active [1]byte
-	var enabled [1]byte
-	var tempDeactivated [1]byte
-
-	caps, err := os.Open(TpmCapabilities)
-	if err != nil {
-		return "", false, false, false, false, err
-	}
-
-	ownedState, err := os.Open(TpmOwnershipState)
-	if err != nil {
-		return "", false, false, false, false, err
-	}
-
-	activeState, err := os.Open(TpmActivatedState)
-	if err != nil {
-		return "", false, false, false, false, err
-	}
-
-	enabledState, err := os.Open(TpmEnabledState)
-	if err != nil {
-		return "", false, false, false, false, err
-	}
-
-	tempDeactivatedState, err := os.Open(TpmTempDeactivatedState)
-	if err != nil {
-		return "", false, false, false, false, err
-	}
-
-	caps.Read(cap[:])
-	specBytes := bytes.Split(cap[:], []byte(specFilter))
-	specBytes = bytes.Split(specBytes[1], []byte("\n"))
-
-	ownedState.Read(owned[:])
-	activeState.Read(active[:])
-	enabledState.Read(enabled[:])
-	tempDeactivatedState.Read(tempDeactivated[:])
-
-	caps.Close()
-	ownedState.Close()
-	activeState.Close()
-	enabledState.Close()
-	tempDeactivatedState.Close()
-
-	spec := string(specBytes[0])
-	ownedBool, _ := strconv.ParseBool(string(owned[:]))
-	activeBool, _ := strconv.ParseBool(string(active[:]))
-	enabledBool, _ := strconv.ParseBool(string(enabled[:]))
-	tempDeactivatedBool, _ := strconv.ParseBool(string(tempDeactivated[:]))
-
-	return spec, ownedBool, activeBool, enabledBool, tempDeactivatedBool, nil
-}
-
 // NewTPM gets a new TPM handle struct with
 // io fd and specification string
 func NewTPM() (TPM, error) {
+	// It's the caller's responsibility to call TPM.Close()
 	rwc, err := tspi.OpenTPM(TPMDevice)
 	if err != nil {
 		return nil, err
 	}
 
-	spec, owned, active, enabled, tempDeactivated, err := getInfo()
+	tinfo, err := getInfo()
 	if err != nil {
 		return nil, err
 	}
 
-	if spec == tpm12 {
-		return &TPM1{device: rwc, specification: spec, owned: owned, active: active, enabled: enabled, tempDeactivated: tempDeactivated}, nil
-	} else if spec == tpm20 {
+	if tinfo.Specification == tpm12 {
+		return &TPM1{device: rwc, tpmInfo: *tinfo}, nil
+	} else if tinfo.Specification == tpm20 {
 		return nil, errors.New("TPM 2.0 not supported yet")
 	} else {
-		return nil, fmt.Errorf("Unknown TPM specification: %s", spec)
+		return nil, fmt.Errorf("Unknown TPM specification: %s", tinfo.Specification)
 	}
+}
+
+// Info returns the TPMInfo object associated to this TPM device
+func (t TPM1) Info() Info {
+	return t.tpmInfo
 }
 
 // OwnerClear clears the TPM and destroys all
@@ -253,11 +201,11 @@ func (t *TPM1) Close() {
 	}
 }
 
-// Info returns TPM information
-func (t TPM1) Info() string {
+// Summary returns a string with formatted TPM information
+func (t TPM1) Summary() string {
 	ret := ""
 	ret += fmt.Sprintf("TPM spec:                  %s\n", t.specification)
-	ret = fmt.Sprintf("TPM owned:                 %t\n", t.owned)
+	ret += fmt.Sprintf("TPM owned:                 %t\n", t.owned)
 	ret += fmt.Sprintf("TPM activated:             %t\n", t.active)
 	ret += fmt.Sprintf("TPM enabled:               %t\n", t.enabled)
 	ret += fmt.Sprintf("TPM temporary deactivated: %t\n", t.tempDeactivated)
