@@ -117,14 +117,11 @@ func NewTPM() (TPM, error) {
 		return nil, err
 	}
 
-	// No error checking for spec because of tpm 1.2
-	// capability command not being available in deacitvated
-	// or disabled state.
 	spec, owned, active, enabled, tempDeactivated, err := getInfo()
-
 	if err != nil {
 		return nil, err
 	}
+
 	if spec == tpm12 {
 		return &TPM1{device: rwc, specification: spec, owned: owned, active: active, enabled: enabled, tempDeactivated: tempDeactivated}, nil
 	} else if spec == tpm20 {
@@ -134,7 +131,7 @@ func NewTPM() (TPM, error) {
 	}
 }
 
-// OwnerClear clears the TPM and destorys all
+// OwnerClear clears the TPM and destroys all
 // access to existing keys. Afterwards a machine
 // power cycle is needed.
 func (t *TPM1) OwnerClear(ownerPassword string) error {
@@ -203,6 +200,7 @@ func (t *TPM1) SetupTPM() error {
 	}
 
 	if !t.enabled || !t.active || t.tempDeactivated {
+		return errors.New("TPM is not enabled")
 		//utils.Die(true, "Please enable the TPM")
 	}
 	return nil
