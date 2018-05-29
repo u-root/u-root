@@ -22,57 +22,9 @@ type TPM1 struct {
 	tpmInfo         Info
 }
 
-const (
-	// TPMDevice main device path for
-	// TSS usage
-	TPMDevice = "/dev/tpm0"
-
-	// TpmCapabilities for selecting tpm spec
-	TpmCapabilities = "/sys/class/tpm/tpm0/caps"
-
-	// TpmOwnershipState contains owner state
-	TpmOwnershipState = "/sys/class/tpm/tpm0/owned"
-
-	// TpmActivatedState contains active state
-	TpmActivatedState = "/sys/class/tpm/tpm0/active"
-
-	// TpmEnabledState contains enabled state
-	TpmEnabledState = "/sys/class/tpm/tpm0/enabled"
-
-	// TpmTempDeactivatedState contains enabled state
-	TpmTempDeactivatedState = "/sys/class/tpm/tpm0/temp_deactivated"
-
-	tpm12      = "1.2"
-	tpm20      = "2.0"
-	specFilter = "TCG version: "
-)
-
 var (
 	wellKnownSecret string
 )
-
-// NewTPM gets a new TPM handle struct with
-// io fd and specification string
-func NewTPM() (TPM, error) {
-	// It's the caller's responsibility to call TPM.Close()
-	rwc, err := tspi.OpenTPM(TPMDevice)
-	if err != nil {
-		return nil, err
-	}
-
-	tinfo, err := getInfo()
-	if err != nil {
-		return nil, err
-	}
-
-	if tinfo.Specification == tpm12 {
-		return &TPM1{device: rwc, tpmInfo: *tinfo}, nil
-	} else if tinfo.Specification == tpm20 {
-		return nil, errors.New("TPM 2.0 not supported yet")
-	} else {
-		return nil, fmt.Errorf("Unknown TPM specification: %s", tinfo.Specification)
-	}
-}
 
 // Info returns the TPMInfo object associated to this TPM device
 func (t TPM1) Info() Info {
