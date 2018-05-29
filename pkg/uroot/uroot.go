@@ -126,7 +126,7 @@ type Opts struct {
 //   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
 //   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   Globs of paths to Go package directories; e.g. ./cmds/*
-func (opts Opts) ResolvePackages(pkgs []string) ([]string, error) {
+func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 	var importPaths []string
 
 	// Resolve file system paths to package import paths.
@@ -134,7 +134,7 @@ func (opts Opts) ResolvePackages(pkgs []string) ([]string, error) {
 		matches, err := filepath.Glob(pkg)
 		// Package name?
 		if len(matches) == 0 || err != nil {
-			if _, perr := opts.Env.Package(pkg); perr != nil {
+			if _, perr := env.Package(pkg); perr != nil {
 				return nil, fmt.Errorf("%q is neither package or path/glob: %v / %v", pkg, err, perr)
 			}
 			importPaths = append(importPaths, pkg)
@@ -142,7 +142,7 @@ func (opts Opts) ResolvePackages(pkgs []string) ([]string, error) {
 
 		// Filesystem glob?
 		for _, match := range matches {
-			p, err := opts.Env.PackageByPath(match)
+			p, err := env.PackageByPath(match)
 			if err != nil {
 				log.Printf("Skipping package %q: %v", match, err)
 			} else {
@@ -166,7 +166,7 @@ func CreateInitramfs(opts Opts) error {
 
 	// Add each build mode's commands to the archive.
 	for _, cmds := range opts.Commands {
-		importPaths, err := opts.ResolvePackages(cmds.Packages)
+		importPaths, err := ResolvePackagePaths(opts.Env, cmds.Packages)
 		if err != nil {
 			return err
 		}
