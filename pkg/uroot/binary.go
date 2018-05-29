@@ -13,8 +13,8 @@ import (
 
 // BinaryBuild builds all given packages as separate binaries and includes them
 // in the archive.
-func BinaryBuild(opts BuildOpts) (ArchiveFiles, error) {
-	af := NewArchiveFiles()
+func BinaryBuild(af ArchiveFiles, opts BuildOpts) error {
+	binDir := opts.TargetDir("bin")
 
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
@@ -25,7 +25,7 @@ func BinaryBuild(opts BuildOpts) (ArchiveFiles, error) {
 			defer wg.Done()
 			result <- opts.Env.Build(
 				p,
-				filepath.Join(opts.TempDir, "bin", filepath.Base(p)),
+				filepath.Join(opts.TempDir, binDir, filepath.Base(p)),
 				golang.BuildOpts{})
 		}(pkg)
 	}
@@ -35,13 +35,10 @@ func BinaryBuild(opts BuildOpts) (ArchiveFiles, error) {
 
 	for err := range result {
 		if err != nil {
-			return ArchiveFiles{}, err
+			return err
 		}
 	}
 
 	// Add bin directory to archive.
-	if err := af.AddFile(opts.TempDir, ""); err != nil {
-		return ArchiveFiles{}, err
-	}
-	return af, nil
+	return af.AddFile(opts.TempDir, "")
 }
