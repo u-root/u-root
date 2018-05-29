@@ -5,26 +5,26 @@ u-root
 
 # Description
 
-u-root is a "universal root". It's a root file system with mostly Go source with the exception of 5 binaries.
+u-root is a suite of busybox-like tools written in Go. It's a pure Go userland
+for Linux!
 
-u-root contains simple Go versions of many standard Linux tools, similar to
-busybox. u-root can create an initramfs in two different modes:
+u-root can create an initramfs in two different modes:
 
  * source mode: Go toolchain binaries + simple shell + Go source for tools to be
                 compiled on the fly by the shell.
 
+   The first time you run any command, it is compiled first.
+
    When you run a command that is not built, you fall through to the command
    that does a `go build` of the command, and then execs the command once it is
    built. From that point on, when you run the command, you get the one in
-   tmpfs. This is fast.
+   tmpfs. This is fast: the first time you run a command, 
 
  * bb mode: One busybox-like binary comprised of all the Go tools you ask to
             include.
 
    In this mode, u-root copies and rewrites the source of the tools you asked to
    include to be able to compile everything into one busybox-like binary.
-
-That's the interesting part. This set of utilities is all Go, and mostly source.
 
 # Usage
 
