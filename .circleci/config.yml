@@ -207,7 +207,9 @@ jobs:
           name: build all tools
           command: |
             cd cmds
-            go build -a -installsuffix uroot -ldflags '-s' ./...
+            go install -a ./...
+            cd ../tools
+            go install -a ./...
   source_amd64:
     docker:
       - image: circleci/golang:latest
