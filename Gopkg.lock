@@ -14,6 +14,12 @@
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
 
 [[projects]]
+  name = "github.com/go-test/deep"
+  packages = ["."]
+  revision = "9898238679c264cfb10411539f14a0553dc8b295"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/google/go-tpm"
   packages = [
@@ -198,6 +204,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "64e3c851fe52e70b5458df7e0bff6ddda21bf06abe5af8fee42cd73dd386b425"
+  inputs-digest = "4f5c2f5b0adbffeff3683a0bb44606f6e89ecd8d2bb22eea6ce15e18a1ebd937"
   solver-name = "gps-cdcl"
   solver-version = 1

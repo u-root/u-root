@@ -32,6 +32,7 @@ const (
 	MaxNPart          = 0x80
 )
 
+type MBR [BlockSize]byte
 type Header struct {
 	Signature  uint64
 	Revision   uint32    // (for GPT version 1.0 (through at least UEFI version 2.7 (May 2017)), the value is 00h 00h 01h 00h)
@@ -65,12 +66,44 @@ type GPT struct {
 	Parts []Part
 }
 
+// PartitionTable defines all the partition table information.
+// This includes the MBR and two GPTs. The GPTs are
+// similar but not identical, as they contain "pointers"
+// to each other in the BackupLBA in the Header.
+// The design is defective in that if a given Header has
+// an error, you are supposed to just assume that the BackupLBA
+// is intact, which is a pretty bogus assumption. This is why
+// you do standards like this in the open, not in hiding.
+// I hope someone from Intel is reading this.
+type PartitionTable struct {
+	MasterBootRecord *MBR
+	Primary          *GPT
+	Backup           *GPT
+}
+
+func (m *MBR) String() string {
+	b, err := json.MarshalIndent(m, "", "\t")
+	if err != nil {
+		log.Fatalf("Can't marshal %v", *m)
+	}
+	return string(b)
+}
+
 func (g *GPT) String() string {
 	b, err := json.MarshalIndent(g, "", "\t")
 	if err != nil {
 		log.Fatalf("Can't marshal %v", *g)
 	}
 	return string(b)
+}
+
+func (p *PartitionTable) String() string {
+	b, err := json.MarshalIndent(p, "", "\t")
+	if err != nil {
+		log.Fatalf("Can't marshal %v", *p)
+	}
+	return string(b)
+
 }
 
 func errAppend(err error, s string, a ...interface{}) error {
@@ -222,10 +255,24 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 
 }
 
-// Write writes the GPT to w, both primary and backup. It generates the CRCs before writing.
-// It takes an io.Writer and assumes that you are correctly positioned in the output stream.
-// This means we must adjust partition numbers by subtracting one from them.
-func Write(w io.WriterAt, g *GPT) error {
+// Write writes the MBR and primary and backup GPTs to w.
+func Write(w io.WriterAt, p *PartitionTable) error {
+	if _, err := w.WriteAt(p.MasterBootRecord[:], 0); err != nil {
+		return err
+	}
+	if err := writeGPT(w, p.Primary); err != nil {
+		return err
+	}
+
+	if err := writeGPT(w, p.Backup); err != nil {
+		return err
+	}
+	return nil
+
+}
+
+// Write writes the GPT to w. It generates the partition and header CRC before writing.
+func writeGPT(w io.WriterAt, g *GPT) error {
 	// The maximum extent is NPart * PartSize
 	var h = make([]byte, uint64(g.NPart*g.PartSize))
 	s := int64(g.PartSize)
@@ -261,34 +308,43 @@ func Write(w io.WriterAt, g *GPT) error {
 	return err
 }
 
-// New reads in the primary and backup GPT from a disk and returns a pointer to them.
+// New reads in the MBR, primary and backup GPT from a disk and returns a pointer to them.
 // There are some checks it can apply. It can return with a
 // one or more headers AND an error. Sorry. Experience with some real USB sticks
 // is showing that we need to return data even if there are some things wrong.
-func New(r io.ReaderAt) (*GPT, *GPT, error) {
+func New(r io.ReaderAt) (*PartitionTable, error) {
+	var p = &PartitionTable{}
+	var mbr = &MBR{}
+	n, err := r.ReadAt(mbr[:], 0)
+	if n != BlockSize || err != nil {
+		return p, err
+	}
+	p.MasterBootRecord = mbr
 	g, err := Table(r, HeaderOff)
 	// If we can't read the table it's kinda hard to find the backup.
 	// Bit of a flaw in the design, eh?
+	// "We can't recover the backup from the error with the primary because there
+	// was an error in the primary"
+	// uh, what?
 	if err != nil {
-		return nil, nil, err
+		return p, err
 	}
+	p.Primary = g
 
 	b, err := Table(r, int64(g.BackupLBA*BlockSize))
 	if err != nil {
 		// you go to war with the army you have
-		return g, nil, err
+		return p, err
 	}
 
 	if err := EqualHeader(g.Header, b.Header); err != nil {
-		return g, b, fmt.Errorf("Primary GPT and backup GPT Header differ: %v", err)
+		return p, fmt.Errorf("Primary GPT and backup GPT Header differ: %v", err)
 	}
 
 	if g.CRC == b.CRC {
-		return g, b, fmt.Errorf("Primary (%v) and Backup (%v) Header CRC (%x) are the same and should differ", g.Header, b.Header, g.CRC)
+		return p, fmt.Errorf("Primary (%v) and Backup (%v) Header CRC (%x) are the same and should differ", g.Header, b.Header, g.CRC)
 	}
 
-	if err := EqualParts(g, b); err != nil {
-		return b, g, err
-	}
-	return g, b, nil
+	p.Backup = b
+	return p, EqualParts(g, b)
 }

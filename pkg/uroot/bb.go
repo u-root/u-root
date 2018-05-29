@@ -103,17 +103,18 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 //
 // BBBuild rewrites the source files of the packages given to create one
 // busybox-like binary containing all commands in `opts.Packages`.
-func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
+func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
 	if err := BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {
-		return ArchiveFiles{}, err
+		return err
 	}
 
+	binDir := opts.TargetDir("bbin")
+
 	// Build initramfs.
-	af := NewArchiveFiles()
-	if err := af.AddFile(bbPath, "bbin/bb"); err != nil {
-		return ArchiveFiles{}, err
+	if err := af.AddFile(bbPath, path.Join(binDir, "bb")); err != nil {
+		return err
 	}
 
 	// Add symlinks for included commands to initramfs.
@@ -123,16 +124,13 @@ func BBBuild(opts BuildOpts) (ArchiveFiles, error) {
 		}
 
 		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
-		if err := af.AddRecord(cpio.Symlink(filepath.Join("bbin", path.Base(pkg)), "bb")); err != nil {
-			return ArchiveFiles{}, err
+		if err := af.AddRecord(cpio.Symlink(filepath.Join(binDir, path.Base(pkg)), "bb")); err != nil {
+			return err
 		}
 	}
 
 	// Symlink from /init to busybox init.
-	if err := af.AddRecord(cpio.Symlink("init", "bbin/init")); err != nil {
-		return ArchiveFiles{}, err
-	}
-	return af, nil
+	return af.AddRecord(cpio.Symlink("init", path.Join(binDir, "init")))
 }
 
 // Package is a Go package.
