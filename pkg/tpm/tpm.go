@@ -77,7 +77,11 @@ func NewTPM() (TPM, error) {
 	}
 
 	if tinfo.Specification == tpm12 {
-		return &TPM1{device: rwc, tpmInfo: *tinfo}, nil
+		return &TPM1{
+			device:    rwc,
+			tpmInfo:   *tinfo,
+			pcrReader: tspi.ReadPCR,
+		}, nil
 	} else if tinfo.Specification == tpm20 {
 		return nil, errors.New("TPM 2.0 not supported yet")
 	} else if tinfo.Specification == "" {
