@@ -20,9 +20,6 @@ type TPM1 struct {
 	ownerPassword   string
 	srkPassword     string
 	tpmInfo         Info
-	// the following fields are used for unit testing
-	// pcrReader emulates go-tpm's ReadPCR
-	pcrReader func(io.ReadWriter, uint32) ([]byte, error)
 }
 
 var (
@@ -104,13 +101,15 @@ func (t *TPM1) SetupTPM() error {
 
 	if !t.enabled || !t.active || t.tempDeactivated {
 		return errors.New("TPM is not enabled")
+		//utils.Die(true, "Please enable the TPM")
 	}
 	return nil
 }
 
-// ReadPCR reads the PCR for the given index
+// ReadPCR reads the PCR for the given
+// index
 func (t *TPM1) ReadPCR(pcr uint32) ([]byte, error) {
-	data, err := t.pcrReader(t.device, pcr)
+	data, err := tspi.ReadPCR(t.device, pcr)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +117,7 @@ func (t *TPM1) ReadPCR(pcr uint32) ([]byte, error) {
 	return data, nil
 }
 
-// ReadPubEK reads the Public Endorsement Key part
+// ReadPubEK reads the public Endorsement key part
 func (t *TPM1) ReadPubEK(ownerPassword string) ([]byte, error) {
 	var ownerAuth [20]byte
 

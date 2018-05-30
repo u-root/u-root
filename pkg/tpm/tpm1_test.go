@@ -42,18 +42,13 @@ func TestTPM1NewTPM(t *testing.T) {
 	require.Equal(t, tpm12, tpm.Version())
 }
 
+/*
 func TestTPM1ReadPcr(t *testing.T) {
-	tpm, err := NewTPM()
-	tpm.(*TPM1).pcrReader = func(io.ReadWriter, uint32) ([]byte, error) {
-		return make([]byte, 20), nil
-	}
-	require.NoError(t, err)
-	pcrData, err := tpm.ReadPCR(testReadPcrIndex)
+	pcrData, err := ReadPcrTPM1(testReadPcrIndex)
 	require.NoError(t, err)
 	require.Equal(t, pcrData, make([]byte, 20))
 }
 
-/*
 func TestMeasureTPM1(t *testing.T) {
 	oldPcrValue, err := ReadPcrTPM1(testWritePcrIndex)
 	require.NoError(t, err)
