@@ -22,7 +22,6 @@ const (
 
 	// Ignore kernel version magic.
 	MODULE_INIT_IGNORE_VERMAGIC = 0x2
-
 )
 
 // SyscallError contains an error message as well as the actual syscall Errno
