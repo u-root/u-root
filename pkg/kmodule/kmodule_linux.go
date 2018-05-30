@@ -22,6 +22,7 @@ const (
 
 	// Ignore kernel version magic.
 	MODULE_INIT_IGNORE_VERMAGIC = 0x2
+
 )
 
 // SyscallError contains an error message as well as the actual syscall Errno
@@ -174,7 +175,15 @@ func genDeps() (depMap, error) {
 	}
 	rel := string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
 
-	moduleDir := filepath.Join("/lib/modules", strings.TrimSpace(rel))
+	moduleDirs := []string{"/lib/modules", "/usr/lib/modules"}
+
+	var moduleDir string
+	for _, moduleDirs := range(moduleDirs) {
+		moduleDir = filepath.Join(moduleDirs, strings.TrimSpace(rel))
+		if _, err := os.Stat(moduleDir); err == nil {
+			break
+		}
+	}
 
 	f, err := os.Open(filepath.Join(moduleDir, "modules.dep"))
 	if err != nil {
@@ -264,3 +273,4 @@ func loadModule(path, modParams string, opts ProbeOpts) error {
 
 	return nil
 }
+
