@@ -187,6 +187,17 @@ var (
 			"cmds/unshare",
 			"cmds/wget",
 		},
+		// coreboot-app minimal environment
+		"coreboot-app": {
+			"cmds/insmod",
+			"cmds/modprobe",
+			"cmds/rmmod",
+			"cmds/cbmem",
+			"cmds/fmap",
+			"cmds/sshd",
+			"cmds/switch_root",
+			"cmds/chroot",
+		},
 	}
 )
 
