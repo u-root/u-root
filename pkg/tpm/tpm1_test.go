@@ -2,6 +2,7 @@ package tpm
 
 // Manual testing needed or tpm hardware in VM
 import (
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -51,6 +52,16 @@ func TestTPM1ReadPcr(t *testing.T) {
 	pcrData, err := tpm.ReadPCR(testReadPcrIndex)
 	require.NoError(t, err)
 	require.Equal(t, pcrData, make([]byte, 20))
+}
+
+func TestTPM1ReadPcrError(t *testing.T) {
+	tpm, err := NewTPM()
+	tpm.(*TPM1).pcrReader = func(io.ReadWriter, uint32) ([]byte, error) {
+		return nil, errors.New("Fake error")
+	}
+	require.NoError(t, err)
+	_, err = tpm.ReadPCR(testReadPcrIndex)
+	require.Error(t, err)
 }
 
 /*
