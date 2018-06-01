@@ -1,30 +1,32 @@
-u-root
-======
+# u-root
 
-[![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master) [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root) [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
+[![Build
+Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master)
+[![Go Report
+Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
+[![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
 
 # Description
 
-u-root is a "universal root". It's a root file system with mostly Go source with the exception of 5 binaries.
-
 u-root contains simple Go versions of many standard Linux tools, similar to
-busybox. u-root can create an initramfs in two different modes:
+busybox. It's a pure Go userland!
 
- * source mode: Go toolchain binaries + simple shell + Go source for tools to be
-                compiled on the fly by the shell.
+u-root stands for "universal root". It can create an initramfs in two different
+modes:
 
-   When you run a command that is not built, you fall through to the command
-   that does a `go build` of the command, and then execs the command once it is
-   built. From that point on, when you run the command, you get the one in
-   tmpfs. This is fast.
+*   source mode: Go toolchain binaries + simple shell + Go source for tools to
+    be compiled on the fly by the shell.
 
- * bb mode: One busybox-like binary comprised of all the Go tools you ask to
-            include.
+    When you try to run a command that is not built, it is compiled first and
+    stored in tmpfs. From that point on, when you run the command, you get the
+    one in tmpfs. Don't worry: the Go compiler is pretty fast.
 
-   In this mode, u-root copies and rewrites the source of the tools you asked to
-   include to be able to compile everything into one busybox-like binary.
+*   bb mode: One busybox-like binary comprised of all the Go tools you ask to
+    include.
 
-That's the interesting part. This set of utilities is all Go, and mostly source.
+    In this mode, u-root copies and rewrites the source of the tools you asked
+    to include to be able to compile everything into one busybox-like binary.
 
 # Usage
 
@@ -51,8 +53,8 @@ u-root -format=cpio -build=source -o initramfs.cpio
 u-root -format=cpio -build=bb ./cmds/{ls,ip,dhclient,wget,tcz,cat}
 ```
 
-`-format=cpio` and `-build=source` are the default flag values. The default
-set of packages included is all packages in `github.com/u-root/u-root/cmds/...`.
+`-format=cpio` and `-build=source` are the default flag values. The default set
+of packages included is all packages in `github.com/u-root/u-root/cmds/...`.
 
 In addition to using paths to specify Go source packages to include, you may
 also use Go package import paths (e.g. `golang.org/x/tools/imports`) to include
@@ -60,10 +62,8 @@ commands. Only the `main` package and its dependencies in those source
 directories will be included. For example:
 
 ```shell
-# Both are required for the elvish shell.
-go get github.com/boltdb/bolt
-go get github.com/elves/elvish
-u-root -build=bb ./cmds/* github.com/elves/elvish
+go get github.com/u-root/elvish
+u-root -build=bb ./cmds/* github.com/u-root/elvish
 ```
 
 Side note: `elvish` is a nicer shell than our default shell `rush`; and also
@@ -82,12 +82,11 @@ qemu-system-x86_64 -kernel path/to/kernel -initrd /tmp/initramfs.linux_amd64.cpi
 Note that you do not have to build a special kernel on your own, it is
 sufficient to use an existing one. Usually you can find one in `/boot`.
 
->NOTE: you can compress the initramfs but for xz compression, the kernel has some restrictions
->on the compression options and it is suggested to align the file to 512 byte boundaries
-```shell
-xz --check=crc32 -9 --lzma2=dict=1MiB  --stdout /tmp/initramfs.linux_amd64.cpio \
-   | dd conv=sync bs=512 of=/tmp/initramfs.linux_amd64.cpio.xz
-```
+> NOTE: you can compress the initramfs but for xz compression, the kernel has
+> some restrictions on the compression options and it is suggested to align the
+> file to 512 byte boundaries `shell xz --check=crc32 -9 --lzma2=dict=1MiB
+> --stdout /tmp/initramfs.linux_amd64.cpio \ | dd conv=sync bs=512
+> of=/tmp/initramfs.linux_amd64.cpio.xz`
 
 You may also include additional files in the initramfs using the `-files` flag.
 If you add binaries with `-files` are listed, their ldd dependencies will be
@@ -101,7 +100,8 @@ u-root -files "$HOME/hello.ko $HOME/hello2.ko"
 qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
-To specify the location in the initramfs, use `<sourcefile>:<destinationfile>`. For example:
+To specify the location in the initramfs, use `<sourcefile>:<destinationfile>`.
+For example:
 
 ```shell
 u-root -files "root-fs/usr/bin/runc:usr/bin/run"
@@ -112,8 +112,8 @@ u-root -files "root-fs/usr/bin/runc:usr/bin/run"
 Using the `tcz` command included in u-root, you can install tinycore linux
 packages for things you want.
 
-You can use QEMU NAT to allow you to fetch packages. Let's suppose, for
-example, you want bash. Once u-root is running, you can do this:
+You can use QEMU NAT to allow you to fetch packages. Let's suppose, for example,
+you want bash. Once u-root is running, you can do this:
 
 ```shell
 % tcz bash
@@ -133,8 +133,8 @@ Of course you have to fetch all those packages first somehow :-)
 
 ## Build an Embeddable U-root
 
-You can build this environment into a kernel as an initramfs, and further
-embed that into firmware as a coreboot payload.
+You can build this environment into a kernel as an initramfs, and further embed
+that into firmware as a coreboot payload.
 
 In the kernel and coreboot case, you need to configure ethernet. We have a
 `dhclient` command that works for both ipv4 and ipv6. Since v6 does not yet work
@@ -158,5 +158,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Improving existing commands (e.g., additional currently unsupported flags) is
 very welcome. In this case it is not even required to build an initramfs, just
-enter the `cmds/` directory and start coding. A list of commands that are on
-the roadmap can be found [here](roadmap.md).
+enter the `cmds/` directory and start coding. A list of commands that are on the
+roadmap can be found [here](roadmap.md).
