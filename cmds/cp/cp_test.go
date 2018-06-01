@@ -18,9 +18,6 @@ import (
 )
 
 var (
-	testPath = "."
-	// if true removeAll the testPath on the end
-	remove = true
 	// simple label for src and dst
 	indentifier = time.Now().Format(time.Kitchen)
 )
@@ -187,10 +184,12 @@ func isEqualTree(src, dst string) (bool, error) {
 // TestCpsSimple make a simple test for copy file-to-file
 // cmd-line equivalent: cp file file-copy
 func TestCpSimple(t *testing.T) {
-	tempDir, err := ioutil.TempDir(testPath, "TestCpSimple")
-	if remove {
-		defer os.RemoveAll(tempDir)
+	tempDir, err := ioutil.TempDir("", "TestCpSimple")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tempDir)
+
 	srcPrefix := fmt.Sprintf("cpfile_%v_src", indentifier)
 	f, err := randomFile(tempDir, srcPrefix)
 	if err != nil {
@@ -227,13 +226,12 @@ func TestCpSimple(t *testing.T) {
 func TestCpRecursive(t *testing.T) {
 	recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir(testPath, "TestCpRecursive")
+	tempDir, err := ioutil.TempDir("", "TestCpRecursive")
 	if err != nil {
-		t.Fatalf("Failed on build tmp dir %q: %v\n", testPath, err)
+		t.Fatal(err)
 	}
-	if remove {
-		defer os.RemoveAll(tempDir)
-	}
+	defer os.RemoveAll(tempDir)
+
 	srcPrefix := fmt.Sprintf("TestCpSrc_%v_", indentifier)
 	dstPrefix := fmt.Sprintf("TestCpDst_%v_copied", indentifier)
 	srcTest, err := ioutil.TempDir(tempDir, srcPrefix)
@@ -262,13 +260,12 @@ func TestCpRecursive(t *testing.T) {
 func TestCpRecursiveNew(t *testing.T) {
 	recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir(testPath, "TestCpRecursiveNew")
+	tempDir, err := ioutil.TempDir("", "TestCpRecursiveNew")
 	if err != nil {
-		t.Fatalf("failed on build tmp directory at %v: %v\n", tempDir, err)
+		t.Fatal(err)
 	}
-	if remove {
-		defer os.RemoveAll(tempDir)
-	}
+	defer os.RemoveAll(tempDir)
+
 	srcPrefix := fmt.Sprintf("TestCpSrc_%v_", indentifier)
 	dstPrefix := fmt.Sprintf("TestCpDst_%v_new", indentifier)
 	srcTest, err := ioutil.TempDir(tempDir, srcPrefix)
@@ -303,13 +300,11 @@ func TestCpRecursiveNew(t *testing.T) {
 func TestCpRecursiveMultiple(t *testing.T) {
 	recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir(testPath, "TestCpRecursiveMultiple")
+	tempDir, err := ioutil.TempDir("", "TestCpRecursiveMultiple")
 	if err != nil {
-		t.Fatalf("Failed on build tmp directory %v: %v\n", testPath, err)
+		t.Fatal(err)
 	}
-	if remove {
-		defer os.RemoveAll(tempDir)
-	}
+	defer os.RemoveAll(tempDir)
 
 	dstPrefix := fmt.Sprintf("TestCpDst_%v_container", indentifier)
 	dstTest, err := ioutil.TempDir(tempDir, dstPrefix)
@@ -331,8 +326,6 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		srcDirs = append(srcDirs, srcTest)
 
 	}
-	t.Logf("From: %q", srcDirs)
-	t.Logf("To: %q", dstTest)
 	args := srcDirs
 	args = append(args, dstTest)
 	if err := cp(args); err != nil {
@@ -352,10 +345,13 @@ func TestCpRecursiveMultiple(t *testing.T) {
 func TestCpSymlink(t *testing.T) {
 	defer resetFlags()
 	symlink = true
-	tempDir, err := ioutil.TempDir(testPath, "TestCpSymlink")
-	if remove {
-		defer os.RemoveAll(tempDir)
+
+	tempDir, err := ioutil.TempDir("", "TestCpSymlink")
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer os.RemoveAll(tempDir)
+
 	srcPrefix := fmt.Sprintf("cpfile_%v_origin", indentifier)
 	f, err := randomFile(tempDir, srcPrefix)
 	if err != nil {
@@ -367,21 +363,16 @@ func TestCpSymlink(t *testing.T) {
 	_, srcFname := filepath.Split(srcFpath)
 
 	linkName := srcFname + "_link"
-	t.Logf("Enter directory: %q", tempDir)
 	// Enter to temp directory to don't have problems
 	// with copy links and relative paths
 	os.Chdir(tempDir)
 	defer os.Chdir("..")
-	defer t.Logf("Exiting directory: %q", tempDir)
 
-	t.Logf("Create link %q -> %q", srcFname, linkName)
 	if err := os.Symlink(srcFname, linkName); err != nil {
 		t.Fatalf("cannot create a link %v -> %v: %v", srcFname, linkName, err)
 	}
 
 	dstFname := fmt.Sprintf("cpfile_%v_dst_link", indentifier)
-	t.Logf("Copy from: %q", linkName)
-	t.Logf("To: %q", dstFname)
 	if err := copyFile(linkName, dstFname, false); err != nil {
 		t.Fatalf("copyFile %q -> %q failed: %v", linkName, dstFname, err)
 	}
