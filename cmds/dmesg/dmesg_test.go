@@ -5,19 +5,19 @@
 package main
 
 import (
-	"os/exec"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
-// Test reading from the buffer.
-// dmesg
 func TestDmesg(t *testing.T) {
-	out, err := exec.Command("go", "run", "dmesg.go").Output()
-	if err != nil {
-		t.Fatalf("Error running dmesg: %v", err)
+	cmd := testutil.Command(t)
+	out, err := cmd.Output()
+	if err != nil || len(out) == 0 {
+		t.Fatal(err)
 	}
-	// Test passes if anything is read.
-	if len(out) == 0 {
-		t.Fatalf("Nothing read from dmesg")
-	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }
