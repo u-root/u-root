@@ -5,19 +5,24 @@
 package pty
 
 import (
+	"os"
 	"reflect"
 	"testing"
 )
 
 func TestNew(t *testing.T) {
-	if _, err := New(); err != nil {
+	if _, err := New(); os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
 		t.Errorf("New pty: want nil, got %v", err)
 	}
 }
 
 func TestRunRestoreTTYMode(t *testing.T) {
 	p, err := New()
-	if err != nil {
+	if os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
 		t.Fatalf("TestStart New pty: want nil, got %v", err)
 	}
 	p.Command("echo", "hi")

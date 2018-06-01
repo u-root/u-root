@@ -11,12 +11,15 @@
 package termios
 
 import (
+	"os"
 	"reflect"
 	"testing"
 )
 
 func TestNew(t *testing.T) {
-	if _, err := New(); err != nil {
+	if _, err := New(); os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
 		t.Errorf("TestNew: want nil, got %v", err)
 	}
 
@@ -24,7 +27,9 @@ func TestNew(t *testing.T) {
 
 func TestRaw(t *testing.T) {
 	tty, err := New()
-	if err != nil {
+	if os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
 		t.Fatalf("TestRaw new: want nil, got %v", err)
 	}
 	term, err := tty.Get()
