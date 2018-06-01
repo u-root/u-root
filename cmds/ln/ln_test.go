@@ -14,11 +14,6 @@ import (
 	"testing"
 )
 
-const (
-	testPath   = "."
-	removeTest = true
-)
-
 type create struct {
 	name string
 	dir  bool
@@ -150,9 +145,9 @@ func loadTests() []test {
 
 // newDir create a temp dir
 func newDir(testName string, t *testing.T) (name string) {
-	name, err := ioutil.TempDir(testPath, "Go_"+testName)
+	name, err := ioutil.TempDir("", "Go_"+testName)
 	if err != nil {
-		t.Errorf("TempDir %s: %s", testName, err)
+		t.Fatalf("TempDir %s: %s", testName, err)
 	}
 	return
 }
@@ -229,9 +224,8 @@ func testSymlink(linkName, linksTo string, t *testing.T) {
 func TestLn(t *testing.T) {
 	tabDriven := loadTests()
 	testDir := newDir("TestLnGeneric", t)
-	if removeTest {
-		defer os.RemoveAll(testDir)
-	}
+	defer os.RemoveAll(testDir)
+
 	// executing ln on isolated testDir
 	if err := os.Chdir(testDir); err != nil {
 		t.Fatalf("Changing directory for %q fails: %v", testDir, err)
