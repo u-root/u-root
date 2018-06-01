@@ -174,7 +174,13 @@ func genDeps() (depMap, error) {
 	}
 	rel := string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
 
-	moduleDir := filepath.Join("/lib/modules", strings.TrimSpace(rel))
+	var moduleDir string
+	for _, n := range []string{"/lib/modules", "/usr/lib/modules"} {
+		moduleDir = filepath.Join(n, strings.TrimSpace(rel))
+		if _, err := os.Stat(moduleDir); err == nil {
+			break
+		}
+	}
 
 	f, err := os.Open(filepath.Join(moduleDir, "modules.dep"))
 	if err != nil {
