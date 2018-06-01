@@ -10,8 +10,17 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// TTY is a wrapper that only allows Read and Write.
 type TTY struct {
 	f *os.File
+}
+
+func New() (*TTY, error) {
+	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return nil, err
+	}
+	return &TTY{f: f}, nil
 }
 
 func (t *TTY) Read(b []byte) (int, error) {
@@ -20,16 +29,6 @@ func (t *TTY) Read(b []byte) (int, error) {
 
 func (t *TTY) Write(b []byte) (int, error) {
 	return t.f.Write(b)
-}
-
-func New() (*TTY, error) {
-	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-	if err != nil {
-		return nil, err
-	}
-	t := &TTY{f: f}
-
-	return t, nil
 }
 
 func GetTermios(fd uintptr) (*unix.Termios, error) {
@@ -48,20 +47,6 @@ func (t *TTY) Set(ti *unix.Termios) error {
 	return SetTermios(t.f.Fd(), ti)
 }
 
-func MakeRaw(term *unix.Termios) *unix.Termios {
-	raw := *term
-	raw.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
-	raw.Oflag &^= unix.OPOST
-	raw.Lflag &^= unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN
-	raw.Cflag &^= unix.CSIZE | unix.PARENB
-	raw.Cflag |= unix.CS8
-
-	raw.Cc[unix.VMIN] = 1
-	raw.Cc[unix.VTIME] = 0
-
-	return &raw
-}
-
 func GetWinSize(fd uintptr) (*unix.Winsize, error) {
 	return unix.IoctlGetWinsize(int(fd), unix.TIOCGWINSZ)
 }
@@ -76,4 +61,18 @@ func SetWinSize(fd uintptr, w *unix.Winsize) error {
 
 func (t *TTY) SetWinSize(w *unix.Winsize) error {
 	return SetWinSize(t.f.Fd(), w)
+}
+
+func MakeRaw(term *unix.Termios) *unix.Termios {
+	raw := *term
+	raw.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
+	raw.Oflag &^= unix.OPOST
+	raw.Lflag &^= unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN
+	raw.Cflag &^= unix.CSIZE | unix.PARENB
+	raw.Cflag |= unix.CS8
+
+	raw.Cc[unix.VMIN] = 1
+	raw.Cc[unix.VTIME] = 0
+
+	return &raw
 }
