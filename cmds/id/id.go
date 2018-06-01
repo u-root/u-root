@@ -48,21 +48,11 @@ func correctFlags(flags ...bool) bool {
 	return !(n > 1)
 }
 
-func initFlags() error {
+func init() {
 	flag.BoolVar(&flags.group, "g", false, "print only the effective group ID")
 	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
 	flag.BoolVar(&flags.name, "n", false, "print a name instead of a number, for -ugG")
 	flag.BoolVar(&flags.user, "u", false, "print only the effective user ID")
-	flag.Parse()
-	if !correctFlags(flags.groups, flags.group, flags.user) {
-		return fmt.Errorf("cannot print \"only\" of more than one choice")
-
-	}
-	if flags.name && !(flags.groups || flags.group || flags.user) {
-		return fmt.Errorf("cannot print only names in default format")
-	}
-
-	return nil
 }
 
 type User struct {
@@ -226,8 +216,13 @@ func IDCommand(u User) {
 }
 
 func main() {
-	if err := initFlags(); err != nil {
-		log.Fatalf("id: %s", err)
+	flag.Parse()
+	if !correctFlags(flags.groups, flags.group, flags.user) {
+		log.Fatalf("id: cannot print \"only\" of more than one choice")
+
+	}
+	if flags.name && !(flags.groups || flags.group || flags.user) {
+		log.Fatalf("id: cannot print only names in default format")
 	}
 
 	currentUser, err := NewUser()
