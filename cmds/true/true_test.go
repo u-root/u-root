@@ -5,14 +5,19 @@
 package main
 
 import (
-	"os/exec"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 // Ensure 0 is returned.
 func TestTrue(t *testing.T) {
-	out, err := exec.Command("go", "run", "true.go").CombinedOutput()
+	out, err := testutil.Command(t).CombinedOutput()
 	if err != nil || len(out) != 0 {
 		t.Fatal("Expected no output and no error")
 	}
+}
+
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }
