@@ -119,28 +119,19 @@ type Opts struct {
 	UseExistingInit bool
 }
 
-// ResolvePackagePaths takes a list of Go package import paths and directories
-// and turns them into exclusively import paths.
-//
-// Currently allowed formats:
-//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
-//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
-//   Globs of paths to Go package directories; e.g. ./cmds/*
-func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
-	var importPaths []string
-
+// resolvePackagePath finds import paths for a single import path or directory string
+func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
+	// Search the current working directory, as well GOROOT and GOPATHs
+	prefixes := append([]string{""}, env.SrcDirs()...)
 	// Resolve file system paths to package import paths.
-	for _, pkg := range pkgs {
-		matches, err := filepath.Glob(pkg)
-		// Package name?
+	for _, prefix := range prefixes {
+		path := filepath.Join(prefix, pkg)
+		matches, err := filepath.Glob(path)
 		if len(matches) == 0 || err != nil {
-			if _, perr := env.Package(pkg); perr != nil {
-				return nil, fmt.Errorf("%q is neither package or path/glob: %v / %v", pkg, err, perr)
-			}
-			importPaths = append(importPaths, pkg)
+			continue
 		}
 
-		// Filesystem glob?
+		var importPaths []string
 		for _, match := range matches {
 			p, err := env.PackageByPath(match)
 			if err != nil {
@@ -149,6 +140,32 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 				importPaths = append(importPaths, p.ImportPath)
 			}
 		}
+		return importPaths, nil
+	}
+
+	// No file import paths found. Check if pkg still resolves as a package name.
+	if _, err := env.Package(pkg); err != nil {
+		return nil, fmt.Errorf("%q is neither package or path/glob: %v", pkg, err)
+	}
+	return []string{pkg}, nil
+}
+
+// ResolvePackagePaths takes a list of Go package import paths and directories
+// and turns them into exclusively import paths.
+//
+// Currently allowed formats:
+//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
+//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
+//   Globs of package imports, e.g. github.com/u-root/u-root/cmds/*
+//   Globs of paths to Go package directories; e.g. ./cmds/*
+func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
+	var importPaths []string
+	for _, pkg := range pkgs {
+		paths, err := resolvePackagePath(env, pkg)
+		if err != nil {
+			return nil, err
+		}
+		importPaths = append(importPaths, paths...)
 	}
 	return importPaths, nil
 }
