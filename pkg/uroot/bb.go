@@ -54,21 +54,9 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 		return err
 	}
 
-	importer := importer.For("source", nil)
-
-	// Make the bb/cmd variable in case this lives elsewhere.
-	bb, err := getPackage(env, "github.com/u-root/u-root/pkg/bb/cmd", importer)
-	if err != nil {
-		return err
-	}
-	if bb == nil {
-		return fmt.Errorf("bb/cmd missing")
-	}
-	if len(bb.ast.Files) != 1 {
-		return fmt.Errorf("bb/cmd is supposed to only have one file")
-	}
-
+	var bbPackages []string
 	// Move and rewrite package files.
+	importer := importer.For("source", nil)
 	for _, pkg := range pkgs {
 		if _, ok := skip[path.Base(pkg)]; ok {
 			continue
@@ -79,24 +67,55 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 			return err
 		}
 
-		// Add side-effect import to bb binary so init registers itself.
+		bbPackages = append(bbPackages, fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", path.Base(pkg)))
+	}
+
+	// Create bb main.go.
+	if err := CreateBBMainSource(env, importer, "github.com/u-root/u-root/pkg/bb/cmd", bbPackages, bbDir); err != nil {
+		return err
+	}
+
+	// Compile bb.
+	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{})
+}
+
+// CreateBBMainSource creates a bb Go command that imports all given pkgs.
+//
+// - Takes code from templatePkg, which must be ONE Go main() file.
+// - For each pkg in pkgs, add
+//     import _ "pkg"
+//   to templatePkg main() file
+// - Write source file out to destDir.
+func CreateBBMainSource(env golang.Environ, importer types.Importer, templatePkg string, pkgs []string, destDir string) error {
+	bb, err := getPackage(env, templatePkg, importer)
+	if err != nil {
+		return err
+	}
+	if bb == nil {
+		return fmt.Errorf("bb cmd template missing")
+	}
+	if len(bb.ast.Files) != 1 {
+		return fmt.Errorf("bb cmd template is supposed to only have one file")
+	}
+	for _, pkg := range pkgs {
 		for _, sourceFile := range bb.ast.Files {
-			astutil.AddNamedImport(bb.fset, sourceFile, "_", fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", path.Base(pkg)))
+			// Add side-effect import to bb binary so init registers itself.
+			//
+			// import _ "pkg"
+			astutil.AddNamedImport(bb.fset, sourceFile, "_", pkg)
+			break
 		}
 	}
 
 	// Write bb main binary out.
 	for filePath, sourceFile := range bb.ast.Files {
-		path := filepath.Join(bbDir, filepath.Base(filePath))
+		path := filepath.Join(destDir, filepath.Base(filePath))
 		if err := writeFile(path, bb.fset, sourceFile); err != nil {
 			return err
 		}
+		break
 	}
-
-	// Compile bb.
-	//
-	// TODO: derive "github.com/u-root/u-root/bb" from bbDir or vice versa.
-	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{})
+	return nil
 }
 
 // BBBuild is an implementation of Build for the busybox-like u-root initramfs.
@@ -367,9 +386,9 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 	return pp, nil
 }
 
-// RewritePackage rewrites the pkgPath to be bb-mode compatible, where
-// destinationPath is the file system destination of the written files and
-// bbImportPath is the Go import path of the bb package.
+// RewritePackage rewrites pkgPath to be bb-mode compatible, where destDir is
+// the file system destination of the written files and bbImportPath is the Go
+// import path of the bb package to register with.
 func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, importer types.Importer) error {
 	p, err := getPackage(env, pkgPath, importer)
 	if err != nil {
@@ -415,6 +434,7 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 		varInit.Body.List = append(varInit.Body.List, a)
 	}
 
+	// import bb "bbImportPath"
 	astutil.AddNamedImport(p.fset, mainFile, "bb", bbImportPath)
 
 	// func init() {
