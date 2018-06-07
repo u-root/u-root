@@ -170,6 +170,59 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 	return importPaths, nil
 }
 
+// ParseExtraFiles adds files from the extraFiles list to the archive, as
+// parsed from the following formats:
+//
+// - hostPath:archivePath adds the file from hostPath at the relative archivePath in the archive.
+// - justAPath is added to the archive under justAPath.
+//
+// ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
+func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) error {
+	var err error
+	// Add files from command line.
+	for _, file := range extraFiles {
+		var src, dst string
+		parts := strings.SplitN(file, ":", 2)
+		if len(parts) == 2 {
+			// treat the entry with the new src:dst syntax
+			src = filepath.Clean(parts[0])
+			dst = filepath.Clean(parts[1])
+		} else {
+			// plain old syntax
+			src = filepath.Clean(file)
+			dst = src
+			if filepath.IsAbs(dst) {
+				dst, err = filepath.Rel("/", dst)
+				if err != nil {
+					return fmt.Errorf("cannot make path relative to /: %v: %v", dst, err)
+				}
+			}
+		}
+		src, err := filepath.Abs(src)
+		if err != nil {
+			return fmt.Errorf("couldn't find absolute path for %q: %v", src, err)
+		}
+		if err := archive.AddFile(src, dst); err != nil {
+			return fmt.Errorf("couldn't add %q to archive: %v", file, err)
+		}
+
+		if lddDeps {
+			// Pull dependencies in the case of binaries. If `path` is not
+			// a binary, `libs` will just be empty.
+			libs, err := ldd.List([]string{src})
+			if err != nil {
+				return fmt.Errorf("couldn't list ldd dependencies for %q: %v", file, err)
+			}
+			for _, lib := range libs {
+				if err := archive.AddFile(lib, lib[1:]); err != nil {
+					return fmt.Errorf("couldn't add %q to archive: %v", lib, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // CreateInitramfs creates an initramfs built to `opts`' specifications.
 func CreateInitramfs(opts Opts) error {
 	if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
@@ -214,45 +267,8 @@ func CreateInitramfs(opts Opts) error {
 		DefaultRecords:  DefaultRamfs,
 	}
 
-	var err error
-	// Add files from command line.
-	for _, file := range opts.ExtraFiles {
-		var src, dst string
-		parts := strings.SplitN(file, ":", 2)
-		if len(parts) == 2 {
-			// treat the entry with the new src:dst syntax
-			src = filepath.Clean(parts[0])
-			dst = filepath.Clean(parts[1])
-		} else {
-			// plain old syntax
-			src = filepath.Clean(file)
-			dst = src
-			if filepath.IsAbs(dst) {
-				dst, err = filepath.Rel("/", dst)
-				if err != nil {
-					return fmt.Errorf("cannot make path relative to /: %v: %v", dst, err)
-				}
-			}
-		}
-		src, err := filepath.Abs(src)
-		if err != nil {
-			return fmt.Errorf("couldn't find absolute path for %q: %v", src, err)
-		}
-		if err := archive.AddFile(src, dst); err != nil {
-			return fmt.Errorf("couldn't add %q to archive: %v", file, err)
-		}
-
-		// Pull dependencies in the case of binaries. If `path` is not
-		// a binary, `libs` will just be empty.
-		libs, err := ldd.List([]string{src})
-		if err != nil {
-			return fmt.Errorf("couldn't list ldd dependencies for %q: %v", file, err)
-		}
-		for _, lib := range libs {
-			if err := archive.AddFile(lib, lib[1:]); err != nil {
-				return fmt.Errorf("couldn't add %q to archive: %v", lib, err)
-			}
-		}
+	if err := ParseExtraFiles(archive.ArchiveFiles, opts.ExtraFiles, true); err != nil {
+		return err
 	}
 
 	// Finally, write the archive.

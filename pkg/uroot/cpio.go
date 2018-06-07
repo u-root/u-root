@@ -24,6 +24,9 @@ type CPIOArchiver struct {
 // If `path` is empty, a default path of /tmp/initramfs.GOOS_GOARCH.cpio is
 // used.
 func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (ArchiveWriter, error) {
+	if len(path) == 0 && len(goos) == 0 && len(goarch) == 0 {
+		return nil, fmt.Errorf("passed no path, GOOS, and GOARCH to CPIOArchiver.OpenWriter")
+	}
 	if len(path) == 0 {
 		path = fmt.Sprintf("/tmp/initramfs.%s_%s.cpio", goos, goarch)
 	}
