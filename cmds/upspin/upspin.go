@@ -4,11 +4,6 @@
 
 package main
 
-import (
-	"log"
-	"os/exec"
-)
-
 func main() {
 	NewUpspinServer().Start()
 }
