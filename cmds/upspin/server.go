@@ -44,7 +44,6 @@ func (us UpspinServer) buildRouter() *mux.Router {
 }
 
 func (us UpspinServer) Start() {
-	//defer us.service.Shutdown()
 	listener, port, err := sos.GetListener()
 	if err != nil {
 		log.Fatalf("error: %v", err)
