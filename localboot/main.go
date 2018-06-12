@@ -5,6 +5,8 @@ import (
 	"log"
 	"path"
 	"syscall"
+
+	"github.com/insomniacslk/systemboot/pkg/storage"
 )
 
 // TODO backward compatibility for BIOS mode with partition type 0xee
@@ -29,14 +31,14 @@ func main() {
 	}
 
 	// Get all the available block devices
-	devices, err := GetBlockStats()
+	devices, err := storage.GetBlockStats()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// print partition info
 	for _, dev := range devices {
 		log.Printf("Device: %+v", dev)
-		table, err := GetGPTTable(dev)
+		table, err := storage.GetGPTTable(dev)
 		if err != nil {
 			continue
 		}
@@ -51,7 +53,7 @@ func main() {
 
 	// get a list of supported file systems for real devices (i.e. skip nodev)
 	debug("Getting list of supported filesystems")
-	filesystems, err := GetSupportedFilesystems()
+	filesystems, err := storage.GetSupportedFilesystems()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,7 +62,7 @@ func main() {
 	// detect EFI system partitions
 	// TODO currently, this is not necessary, but will be once we have VPD.
 	debug("Searching for EFI system partitions")
-	esps, err := FilterEFISystemPartitions(devices)
+	esps, err := storage.FilterEFISystemPartitions(devices)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,11 +71,11 @@ func main() {
 	// try mounting all the available devices, with all the supported file
 	// systems
 	debug("trying to mount all the available block devices with all the supported file system types")
-	mounted := make([]Mountpoint, 0)
+	mounted := make([]storage.Mountpoint, 0)
 	for _, dev := range devices {
 		devname := path.Join("/dev", dev.Name)
 		mountpath := path.Join(*baseMountPoint, dev.Name)
-		if mountpoint, err := Mount(devname, mountpath, filesystems); err != nil {
+		if mountpoint, err := storage.Mount(devname, mountpath, filesystems); err != nil {
 			debug("Failed to mount %s on %s: %v", devname, mountpath, err)
 		} else {
 			mounted = append(mounted, *mountpoint)

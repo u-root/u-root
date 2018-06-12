@@ -1,8 +1,9 @@
-package main
+package storage
 
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -44,16 +45,16 @@ func Mount(devname, mountpath string, filesystems []string) (*Mountpoint, error)
 		return nil, err
 	}
 	for _, fstype := range filesystems {
-		debug(" * trying %s on %s", fstype, devname)
+		log.Printf(" * trying %s on %s", fstype, devname)
 		// MS_RDONLY should be enough. See mount(2)
 		flags := uintptr(syscall.MS_RDONLY)
 		// no options
 		data := ""
 		if err := syscall.Mount(devname, mountpath, fstype, flags, data); err != nil {
-			debug("    failed with %v", err)
+			log.Printf("    failed with %v", err)
 			continue
 		}
-		debug(" * mounted %s on %s with filesystem type %s", devname, mountpath, fstype)
+		log.Printf(" * mounted %s on %s with filesystem type %s", devname, mountpath, fstype)
 		return &Mountpoint{DeviceName: devname, Path: mountpath, FsType: fstype}, nil
 	}
 	return nil, fmt.Errorf("no suitable filesystem type found to mount %s", devname)

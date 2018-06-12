@@ -1,9 +1,10 @@
-package main
+package storage
 
 import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -158,7 +159,7 @@ func GetGPTTable(device BlockDev) (*gpt.Table, error) {
 		return nil, err
 	}
 	defer fd.Close()
-	if _, err := fd.Seek(512, os.SEEK_SET); err != nil {
+	if _, err = fd.Seek(512, os.SEEK_SET); err != nil {
 		return nil, err
 	}
 	table, err := gpt.ReadTable(fd, 512)
@@ -175,7 +176,7 @@ func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
 	for _, device := range devices {
 		table, err := GetGPTTable(device)
 		if err != nil {
-			debug("Skipping %s: %v", device.Name, err)
+			log.Printf("Skipping %s: %v", device.Name, err)
 			continue
 		}
 		for _, part := range table.Partitions {
