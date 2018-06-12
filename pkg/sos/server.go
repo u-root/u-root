@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
 
 	"github.com/gorilla/mux"
 )
