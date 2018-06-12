@@ -8,15 +8,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"io/ioutil"
 
 	"github.com/gorilla/mux"
 )
 
 const (
-	PortNum  = "8000"
-	HtmlPage = `
+	PortNum     = "8000"
+	DefHtmlPage = `
 <head>
 <style>
 table {
@@ -35,7 +37,7 @@ td, th {
 </script>
 </head>
 <body>
-<h1>Current Services</h1> 
+<h1>Current Services (html embedded)</h1> 
 <table style="width:100%">
 	<tr>
     	<th>Service</th>
@@ -135,7 +137,14 @@ func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Reque
 
 func (s SosServer) displaySosHandle(w http.ResponseWriter, r *http.Request) {
 	snap := s.service.SnapshotRegistry()
-	tmpl := template.Must(template.New("SoS").Parse(HtmlPage))
+	var tmpl *template.Template
+	file, err := ioutil.ReadFile("/html/sos.html")
+	if err == nil {
+		html := string(file)
+		tmpl = template.Must(template.New("SoS").Parse(html))
+	} else {
+		tmpl = template.Must(template.New("SoS").Parse(DefHtmlPage))
+	}
 	tmpl.Execute(w, snap)
 }
 

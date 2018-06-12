@@ -1,0 +1,38 @@
+<head>
+  <style>
+    table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    td, th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+  </style>
+  <script>
+  </script>
+</head>
+
+<body>
+  <h1>Current Services (html read in)</h1> 
+  <table style="width:100%">
+  	<tr>
+      	<th>Service</th>
+      	<th>Port Number</th>
+      	<th></th>
+    	</tr>
+  	{{range $key, $value := .}}
+  	<tr>
+  	<td>{{$key}}</td>
+  	<td>{{$value}}</td>
+  	<td><a href="http://localhost:{{$value}}" target="_blank">Go there!</td>
+  	</tr>
+  	{{else}}
+  	<tr>
+  		<td colspan="3" style="text-align:center">No services</td>
+  	</tr>
+  	{{end}}
+  </table>
+</body>
