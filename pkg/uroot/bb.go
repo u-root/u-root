@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/format"
 	"go/importer"
 	"go/parser"
@@ -158,7 +157,6 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 type Package struct {
 	name string
 
-	pkg         *build.Package
 	fset        *token.FileSet
 	ast         *ast.Package
 	typeInfo    types.Info
@@ -339,7 +337,6 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 
 	pp := &Package{
 		name: name,
-		pkg:  p,
 		fset: fset,
 		ast:  pars[p.Name],
 		typeInfo: types.Info{
@@ -378,7 +375,7 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 		// We only need global declarations' types.
 		IgnoreFuncBodies: true,
 	}
-	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
+	tpkg, err := conf.Check(p.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
 	if err != nil {
 		return nil, fmt.Errorf("type checking failed: %v", err)
 	}
