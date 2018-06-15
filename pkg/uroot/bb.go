@@ -38,7 +38,7 @@ var skip = map[string]struct{}{
 //
 // pkgs is a list of Go import paths. If nil is returned, binaryPath will hold
 // the busybox-style binary.
-func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
+func BuildBusybox(env *golang.StandardGoEnviron, pkgs []string, binaryPath string) error {
 	urootPkg, err := env.Package("github.com/u-root/u-root")
 	if err != nil {
 		return err
@@ -316,7 +316,7 @@ func getPackage(env golang.Environ, importPath string, importer types.Importer) 
 	}
 
 	name := filepath.Base(p.Dir)
-	if !p.IsCommand() {
+	if !p.IsCommand {
 		return nil, fmt.Errorf("package %q is not a command and cannot be included in bb", name)
 	}
 
