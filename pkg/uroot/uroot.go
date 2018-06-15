@@ -84,7 +84,7 @@ type Commands struct {
 // Opts are the arguments to CreateInitramfs.
 type Opts struct {
 	// Env is the build environment (OS, arch, etc).
-	Env golang.Environ
+	Env *golang.StandardGoEnviron
 
 	// Commands specify packages to build using a specific builder.
 	Commands []Commands
@@ -120,7 +120,7 @@ type Opts struct {
 }
 
 // resolvePackagePath finds import paths for a single import path or directory string
-func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
+func resolvePackagePath(env *golang.StandardGoEnviron, pkg string) ([]string, error) {
 	// Search the current working directory, as well GOROOT and GOPATHs
 	prefixes := append([]string{""}, env.SrcDirs()...)
 	// Resolve file system paths to package import paths.
@@ -158,7 +158,7 @@ func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
 //   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   Globs of package imports, e.g. github.com/u-root/u-root/cmds/*
 //   Globs of paths to Go package directories; e.g. ./cmds/*
-func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
+func ResolvePackagePaths(env *golang.StandardGoEnviron, pkgs []string) ([]string, error) {
 	var importPaths []string
 	for _, pkg := range pkgs {
 		paths, err := resolvePackagePath(env, pkg)
@@ -281,7 +281,7 @@ func CreateInitramfs(opts Opts) error {
 // BuildOpts are arguments to the Build function.
 type BuildOpts struct {
 	// Env is the Go environment to use to compile and link packages.
-	Env golang.Environ
+	Env *golang.StandardGoEnviron
 
 	// Packages are the Go package import paths to compile.
 	//
@@ -387,7 +387,7 @@ func GetArchiver(name string) (Archiver, error) {
 }
 
 // DefaultPackageImports returns a list of default u-root packages to include.
-func DefaultPackageImports(env golang.Environ) ([]string, error) {
+func DefaultPackageImports(env *golang.StandardGoEnviron) ([]string, error) {
 	// Find u-root directory.
 	urootPkg, err := env.Package("github.com/u-root/u-root")
 	if err != nil {
