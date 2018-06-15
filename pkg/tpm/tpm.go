@@ -33,10 +33,21 @@ var (
 
 	// TpmTempDeactivatedState contains enabled state
 	TpmTempDeactivatedState = "/sys/class/tpm/tpm0/temp_deactivated"
-
-	tpm12 = "1.2"
-	tpm20 = "2.0"
 )
+
+const (
+	// TPM12 is the TPM 1.2 identifier
+	TPM12 = "1.2"
+	// TPM12MaxKeySize is the TPM 1.2 maximum key size
+	TPM12MaxKeySize = 256
+	// TPM20 is the TPM 2.0 identifier
+	TPM20 = "2.0"
+)
+
+// Manufactures list of TPM vendors
+var Manufactures = map[string]string{
+	"0x53544d20": "STMicroelectronics",
+}
 
 // TPM is an interface that both TPM1 and TPM2 have to implement. It requires a
 // common subset of methods that both TPM versions have to implement.
@@ -46,20 +57,30 @@ type TPM interface {
 	Summary() string
 	Version() string
 	SetupTPM() error
-	TakeOwnership() error
-	ClearOwnership() error
+	TakeOwnership(ownerPassword string, srkPassword string) error
+	ClearOwnership(ownerPassword string) error
 	Measure(pcr uint32, data []byte) error
 	Close()
 	ReadPCR(uint32) ([]byte, error)
+	ReadPubEK(ownerPassword string) ([]byte, error)
+	SealData(locality byte, pcrs []int, data []byte, srkPassword string) ([]byte, error)
+	UnsealData(sealed []byte, srkPassword string) ([]byte, error)
+	ResetLock(ownerPassword string) error
 }
 
 // Info holds information about a TPM device
 type Info struct {
+	Manufacturer           string
 	Specification          string
 	Owned                  bool
 	Active                 bool
 	Enabled                bool
 	TemporarilyDeactivated bool
+}
+
+func bytesToBool(data []byte) (bool, error) {
+	s := strings.TrimSuffix(string(data), "\n")
+	return strconv.ParseBool(s)
 }
 
 // NewTPM gets a new TPM handle struct with
@@ -76,13 +97,13 @@ func NewTPM() (TPM, error) {
 		return nil, err
 	}
 
-	if tinfo.Specification == tpm12 {
+	if tinfo.Specification == TPM12 {
 		return &TPM1{
 			device:    rwc,
 			tpmInfo:   *tinfo,
 			pcrReader: tspi.ReadPCR,
 		}, nil
-	} else if tinfo.Specification == tpm20 {
+	} else if tinfo.Specification == TPM20 {
 		return nil, errors.New("TPM 2.0 not supported yet")
 	} else if tinfo.Specification == "" {
 		return nil, fmt.Errorf("Invalid empty TPM specification")
@@ -118,6 +139,20 @@ func getInfo() (*Info, error) {
 		return nil, err
 	}
 
+	manufacturerPrefix := "Manufacturer: "
+	var manufacturerID string
+	for _, lineBytes := range bytes.Split(caps, []byte{'\n'}) {
+		line := string(lineBytes)
+		if strings.HasPrefix(line, manufacturerPrefix) {
+			manufacturerID = line[len(manufacturerPrefix):]
+		}
+	}
+
+	manufacturer := Manufactures[manufacturerID]
+	if manufacturer == "" {
+		manufacturer = "< unknown >"
+	}
+
 	specPrefix := "TCG version: "
 	var tpmVersion string
 	for _, lineBytes := range bytes.Split(caps, []byte{'\n'}) {
@@ -127,24 +162,25 @@ func getInfo() (*Info, error) {
 		}
 	}
 
-	owned, err := strconv.ParseBool(string(ownedBytes))
+	owned, err := bytesToBool(ownedBytes)
 	if err != nil {
 		return nil, err
 	}
-	active, err := strconv.ParseBool(string(activeBytes))
+	active, err := bytesToBool(activeBytes)
 	if err != nil {
 		return nil, err
 	}
-	enabled, err := strconv.ParseBool(string(enabledBytes))
+	enabled, err := bytesToBool(enabledBytes)
 	if err != nil {
 		return nil, err
 	}
-	tempDeactivated, err := strconv.ParseBool(string(tempDeactivatedBytes))
+	tempDeactivated, err := bytesToBool(tempDeactivatedBytes)
 	if err != nil {
 		return nil, err
 	}
 
 	tinfo := Info{
+		Manufacturer:           manufacturer,
 		Specification:          tpmVersion,
 		Owned:                  owned,
 		Active:                 active,

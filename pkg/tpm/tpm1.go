@@ -11,22 +11,18 @@ import (
 
 // TPM1 represents a TPM 1.2 device
 type TPM1 struct {
-	device          io.ReadWriteCloser
-	specification   string
-	owned           bool
-	active          bool
-	enabled         bool
-	tempDeactivated bool
-	ownerPassword   string
-	srkPassword     string
-	tpmInfo         Info
+	device  io.ReadWriteCloser
+	tpmInfo Info
 	// the following fields are used for unit testing
 	// pcrReader emulates go-tpm's ReadPCR
 	pcrReader func(io.ReadWriter, uint32) ([]byte, error)
 }
 
-var (
-	wellKnownSecret string
+const (
+	// WellKnownSecret is the 20 bytes zero
+	WellKnownSecret = ""
+	// DefaultLocality is the TPM locality mostly used
+	DefaultLocality byte = 0
 )
 
 // Info returns the TPMInfo object associated to this TPM device
@@ -34,31 +30,18 @@ func (t TPM1) Info() Info {
 	return t.tpmInfo
 }
 
-// OwnerClear clears the TPM and destroys all
-// access to existing keys. Afterwards a machine
-// power cycle is needed.
-func (t *TPM1) OwnerClear(ownerPassword string) error {
+// TakeOwnership takes ownership of the TPM. if no password defined use
+// WELL_KNOWN_SECRET aka 20 zero bytes.
+func (t *TPM1) TakeOwnership(ownerPassword string, srkPassword string) error {
 	var ownerAuth [20]byte
+	var srkAuth [20]byte
 
 	if ownerPassword != "" {
 		ownerAuth = sha1.Sum([]byte(ownerPassword))
 	}
 
-	return tspi.OwnerClear(t.device, ownerAuth)
-}
-
-// TakeOwnership takes ownership of the TPM. if no password defined use
-// WELL_KNOWN_SECRET aka 20 zero bytes.
-func (t *TPM1) TakeOwnership() error {
-	var ownerAuth [20]byte
-	var srkAuth [20]byte
-
-	if t.ownerPassword != "" {
-		ownerAuth = sha1.Sum([]byte(t.ownerPassword))
-	}
-
-	if t.srkPassword != "" {
-		srkAuth = sha1.Sum([]byte(t.srkPassword))
+	if srkPassword != "" {
+		srkAuth = sha1.Sum([]byte(srkPassword))
 	}
 
 	// This test assumes that the TPM has been cleared using OwnerClear.
@@ -72,37 +55,39 @@ func (t *TPM1) TakeOwnership() error {
 
 // Version returns the TPM version
 func (t TPM1) Version() string {
-	return tpm12
+	return TPM12
 }
 
 // ClearOwnership clears ownership of the TPM
-func (t TPM1) ClearOwnership() error {
-	var err error
-	if t.specification == tpm12 {
-		err = t.OwnerClear(t.ownerPassword)
+func (t TPM1) ClearOwnership(ownerPassword string) error {
+	var ownerAuth [20]byte
+
+	if ownerPassword != "" {
+		ownerAuth = sha1.Sum([]byte(ownerPassword))
 	}
-	return err
+
+	return tspi.OwnerClear(t.device, ownerAuth)
 }
 
 // SetupTPM enabled, activates and takes
 // the ownership of a TPM if it is not in a good
 // state
 func (t *TPM1) SetupTPM() error {
-	if t.owned && t.specification == tpm12 {
-		_, err := t.ReadPubEK(wellKnownSecret)
+	if t.tpmInfo.Owned && t.tpmInfo.Specification == TPM12 {
+		_, err := t.ReadPubEK(WellKnownSecret)
 		if err != nil {
-			t.ClearOwnership()
+			t.ClearOwnership(WellKnownSecret)
 			return err
 		}
 	}
 
-	if !t.owned && t.enabled {
-		if err := t.TakeOwnership(); err != nil {
+	if !t.tpmInfo.Owned && t.tpmInfo.Enabled {
+		if err := t.TakeOwnership(WellKnownSecret, WellKnownSecret); err != nil {
 			return err
 		}
 	}
 
-	if !t.enabled || !t.active || t.tempDeactivated {
+	if !t.tpmInfo.Enabled || !t.tpmInfo.Active || t.tpmInfo.TemporarilyDeactivated {
 		return errors.New("TPM is not enabled")
 	}
 	return nil
@@ -121,7 +106,6 @@ func (t *TPM1) ReadPCR(pcr uint32) ([]byte, error) {
 // ReadPubEK reads the Public Endorsement Key part
 func (t *TPM1) ReadPubEK(ownerPassword string) ([]byte, error) {
 	var ownerAuth [20]byte
-
 	if ownerPassword != "" {
 		ownerAuth = sha1.Sum([]byte(ownerPassword))
 	}
@@ -146,6 +130,45 @@ func (t *TPM1) Measure(pcr uint32, data []byte) error {
 	return nil
 }
 
+// SealData seals data at locality with pcrs and srkPassword
+func (t *TPM1) SealData(locality byte, pcrs []int, data []byte, srkPassword string) ([]byte, error) {
+	var srkAuth [20]byte
+	if srkPassword != "" {
+		srkAuth = sha1.Sum([]byte(srkPassword))
+	}
+
+	sealed, err := tspi.Seal(t.device, locality, pcrs, data, srkAuth[:])
+	if err != nil {
+		return nil, err
+	}
+
+	return sealed, nil
+}
+
+// UnsealData unseals sealed data with srkPassword
+func (t *TPM1) UnsealData(sealed []byte, srkPassword string) ([]byte, error) {
+	var srkAuth [20]byte
+	if srkPassword != "" {
+		srkAuth = sha1.Sum([]byte(srkPassword))
+	}
+
+	unsealed, err := tspi.Unseal(t.device, sealed, srkAuth[:])
+	if err != nil {
+		return nil, err
+	}
+	return unsealed, err
+}
+
+// ResetLock resets the TPM brute force protection lock
+func (t *TPM1) ResetLock(ownerPassword string) error {
+	var ownerAuth [20]byte
+	if ownerPassword != "" {
+		ownerAuth = sha1.Sum([]byte(ownerPassword))
+	}
+
+	return tspi.ResetLockValue(t.device, ownerAuth)
+}
+
 // Close tpm device's file descriptor
 func (t *TPM1) Close() {
 	if t.device != nil {
@@ -157,10 +180,11 @@ func (t *TPM1) Close() {
 // Summary returns a string with formatted TPM information
 func (t TPM1) Summary() string {
 	ret := ""
-	ret += fmt.Sprintf("TPM spec:                  %s\n", t.specification)
-	ret += fmt.Sprintf("TPM owned:                 %t\n", t.owned)
-	ret += fmt.Sprintf("TPM activated:             %t\n", t.active)
-	ret += fmt.Sprintf("TPM enabled:               %t\n", t.enabled)
-	ret += fmt.Sprintf("TPM temporary deactivated: %t\n", t.tempDeactivated)
+	ret += fmt.Sprintf("TPM Manufacturer:          %s\n", t.tpmInfo.Manufacturer)
+	ret += fmt.Sprintf("TPM spec:                  %s\n", t.tpmInfo.Specification)
+	ret += fmt.Sprintf("TPM owned:                 %t\n", t.tpmInfo.Owned)
+	ret += fmt.Sprintf("TPM activated:             %t\n", t.tpmInfo.Active)
+	ret += fmt.Sprintf("TPM enabled:               %t\n", t.tpmInfo.Enabled)
+	ret += fmt.Sprintf("TPM temporary deactivated: %t\n", t.tpmInfo.TemporarilyDeactivated)
 	return ret
 }

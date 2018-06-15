@@ -40,7 +40,7 @@ func TestTPM1NewTPM(t *testing.T) {
 
 	tpm, err := NewTPM()
 	require.NoError(t, err)
-	require.Equal(t, tpm12, tpm.Version())
+	require.Equal(t, TPM12, tpm.Version())
 }
 
 func TestTPM1ReadPcr(t *testing.T) {
