@@ -1,12 +1,14 @@
 # systemboot
 
-SystemBoot is a set of commands for [u-root](https://github.com/u-root/u-root) that help automate system booting. The provided programs are:
+SystemBoot is a distribution for LinuxBoot to create a system firmware + bootloader. It is based on u-root. The provided programs are:
 
 * `netboot`: a network boot client that uses DHCP and HTTP to get a boot program based on Linux, and uses kexec to run it
 * `localboot`: a tool that finds bootable kernel configurations on the local disks and boots them
 * `uinit`: a wrapper around `netboot` and `localboot` that just mimicks a BIOS/UEFI BDS behaviour, by looping between network booting and local booting. The name `uinit` is necessary to be picked up as boot program by u-root.
 
 This work is similar to the `pxeboot` and `boot` commands that are already part of u-root, but approach and implementation are slightly different. Thanks to Chris Koch and Jean-Marie Verdun for pioneering in this area. 
+
+This project started as a personal experiment under github.com/insomniacslk/systemboot but it is now an effort of a broader community and graduated to a real project for system firmwares.
 
 The next sections go into further details.
 
@@ -46,8 +48,7 @@ The `uinit` program just wraps `netboot` and `localboot` in a forever-loop logic
 
 * DHCPv4 is under work
 * VPD
+* TPM support
+* verified and measured boot
 * a proper GRUB config parser
 * backwards compatibility with BIOS-style partitions
-
-
-
