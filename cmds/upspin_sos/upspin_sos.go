@@ -4,6 +4,14 @@
 
 package main
 
+import (
+	"log"
+)
+
 func main() {
-	NewUpspinServer().Start()
+service, err := NewDummyUpspinService()
+if err != nil {
+	log.Fatal(err)
+}
+	NewUpspinServer(service).Start()
 }
