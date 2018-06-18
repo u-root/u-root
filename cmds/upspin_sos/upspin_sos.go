@@ -9,9 +9,9 @@ import (
 )
 
 func main() {
-service, err := NewDummyUpspinService()
-if err != nil {
-	log.Fatal(err)
-}
+	service, err := NewDummyUpspinService()
+	if err != nil {
+		log.Fatal(err)
+	}
 	NewUpspinServer(service).Start()
 }
