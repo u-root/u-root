@@ -150,10 +150,10 @@ func (us *UpspinServer) editHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpspinAcctJsonMsg struct {
-	User	string
-	Dir		string
-	Store	string
-	Seed	string
+	User  string
+	Dir   string
+	Store string
+	Seed  string
 }
 
 func (us *UpspinServer) submitHandle(w http.ResponseWriter, r *http.Request) {
@@ -178,12 +178,12 @@ func (us *UpspinServer) submitHandle(w http.ResponseWriter, r *http.Request) {
 
 func (us *UpspinServer) displayStateHandle(w http.ResponseWriter, r *http.Request) {
 	upspinData := struct {
-		Configured	bool
-		User	string
-		Dir		string
-		Store	string
-		Seed	string
-		Port uint
+		Configured bool
+		User       string
+		Dir        string
+		Store      string
+		Seed       string
+		Port       uint
 	}{us.service.Configured, us.service.User, us.service.Dir, us.service.Store, us.service.Seed, Port}
 	tmpl := template.Must(template.New("upspin").Parse(HtmlPage))
 	tmpl.Execute(w, upspinData)
@@ -208,6 +208,6 @@ func (us *UpspinServer) Start() {
 
 func NewUpspinServer(service *DummyUpspinService) *UpspinServer {
 	return &UpspinServer{
-		service:	service,
+		service: service,
 	}
 }
