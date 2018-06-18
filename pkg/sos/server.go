@@ -137,7 +137,7 @@ func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Reque
 func (s SosServer) displaySosHandle(w http.ResponseWriter, r *http.Request) {
 	snap := s.service.SnapshotRegistry()
 	var tmpl *template.Template
-	file, err := ioutil.ReadFile("/html/sos.html")
+	file, err := ioutil.ReadFile("/etc/sos/html/sos.html")
 	if err == nil {
 		html := string(file)
 		tmpl = template.Must(template.New("SoS").Parse(html))

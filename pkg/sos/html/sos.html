@@ -1,6 +1,6 @@
 <head>
   <title>Service of Services</title>
-  <link rel="stylesheet" href="stylesheet.css">
+  <link rel="stylesheet" href="css/stylesheet.css">
   <meta charset="utf-8">
 </head>
 
@@ -10,13 +10,11 @@
   	<tr>
       	<th>Service</th>
       	<th>Port Number</th>
-      	<th></th>
     	</tr>
   	{{range $key, $value := .}}
   	<tr>
-  	<td>{{$key}}</td>
+    <td><a href="http://localhost:{{$value}}" target="_blank" class="button">{{$key}}</td>
   	<td>{{$value}}</td>
-  	<td><a href="http://localhost:{{$value}}" target="_blank">Go there!</td>
   	</tr>
   	{{else}}
   	<tr>
