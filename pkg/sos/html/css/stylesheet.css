@@ -1,5 +1,35 @@
 body { 
-  font: 12px Helvetica, sans-serif; 
+  font: 12px Helvetica, sans-serif;
+  background-color: #f1f1f1
+}
+
+h1 {
+  margin-left: 40px;
+}
+
+h2.center {
+  padding: 5px;
+  color: #616161
+}
+
+.banner {
+  background-color: #3367d6;
+  color: white;
+  position: absolute; 
+  top: 0px; 
+  right: 0; 
+  left: 0; 
+  margin: 0 auto;
+}
+
+.content {
+  margin-top: 100px;
+}
+
+.center {
+    margin: auto;
+    padding: 5px;
+    width: 75%
 }
 
 
@@ -24,13 +54,14 @@ a:hover {
 }
 
 table {
+  background-color: white;
+  margin:auto;
 	border-collapse: collapse;
-	width: 100%;
   box-shadow: 0 2px 0 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
 }
 
 td, th {
 	border: 1px solid #dddddd;
-	text-align: left;
+	text-align: center;
 	padding: 8px;
 }
