@@ -15,7 +15,6 @@ import (
 	"go/token"
 	"go/types"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -82,7 +81,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 		return fmt.Errorf("bb cmd template is supposed to only have one file")
 	}
 	// Create bb main.go.
-	if err := bb.CreateBBMain(bbPackages, bbDir); err != nil {
+	if err := CreateBBMainSource(bb.fset, bb.ast, bbPackages, bbDir); err != nil {
 		return err
 	}
 
@@ -94,26 +93,25 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 //
 // p must be the bb template.
 //
-// - Takes code from templatePkg, which must be ONE Go main() file.
 // - For each pkg in pkgs, add
 //     import _ "pkg"
-//   to templatePkg main() file
+//   to astp's first file.
 // - Write source file out to destDir.
-func (p *Package) CreateBBMain(pkgs []string, destDir string) error {
+func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, destDir string) error {
 	for _, pkg := range pkgs {
-		for _, sourceFile := range p.ast.Files {
+		for _, sourceFile := range astp.Files {
 			// Add side-effect import to bb binary so init registers itself.
 			//
 			// import _ "pkg"
-			astutil.AddNamedImport(p.fset, sourceFile, "_", pkg)
+			astutil.AddNamedImport(fset, sourceFile, "_", pkg)
 			break
 		}
 	}
 
 	// Write bb main binary out.
-	for filePath, sourceFile := range p.ast.Files {
+	for filePath, sourceFile := range astp.Files {
 		path := filepath.Join(destDir, filepath.Base(filePath))
-		if err := writeFile(path, p.fset, sourceFile); err != nil {
+		if err := writeFile(path, fset, sourceFile); err != nil {
 			return err
 		}
 		break
@@ -197,12 +195,11 @@ func NewPackageFromEnv(env golang.Environ, importPath string, importer types.Imp
 	return NewPackage(p, importer)
 }
 
-// NewPackage gathers AST, type, and token information about package p, using
-// the given importer to resolve dependencies.
-func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
+// ParseAST parses p's package files into an AST.
+func ParseAST(p *build.Package) (*token.FileSet, *ast.Package, error) {
 	name := filepath.Base(p.Dir)
 	if !p.IsCommand() {
-		return nil, fmt.Errorf("package %q is not a command and cannot be included in bb", name)
+		return nil, nil, fmt.Errorf("package %q is not a command and cannot be included in bb", name)
 	}
 
 	fset := token.NewFileSet()
@@ -216,14 +213,29 @@ func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
 		return false
 	}, parser.ParseComments)
 	if err != nil {
-		log.Printf("can't parsedir %q: %v", p.Dir, err)
+		return nil, nil, fmt.Errorf("failed to parse AST for pkg %q: %v", name, err)
+	}
+
+	astp, ok := pars[p.Name]
+	if !ok {
+		return nil, nil, fmt.Errorf("parsed files, but could not find package %q in ast: %v", p.Name, pars)
+	}
+	return fset, astp, nil
+}
+
+// NewPackage gathers AST, type, and token information about package p, using
+// the given importer to resolve dependencies.
+func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
+	name := filepath.Base(p.Dir)
+	fset, astp, err := ParseAST(p)
+	if err != nil {
 		return nil, err
 	}
 
 	pp := &Package{
 		name: name,
 		fset: fset,
-		ast:  pars[p.Name],
+		ast:  astp,
 		typeInfo: types.Info{
 			Types: make(map[ast.Expr]types.TypeAndValue),
 		},

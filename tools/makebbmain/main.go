@@ -7,7 +7,6 @@ package main
 
 import (
 	"flag"
-	"go/importer"
 	"log"
 
 	"github.com/u-root/u-root/pkg/golang"
@@ -26,9 +25,16 @@ func main() {
 	}
 
 	env := golang.Default()
-	importer := importer.For("source", nil)
+	p, err := env.Package(*template)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	if err := uroot.CreateBBMainSource(env, importer, *template, flag.Args(), *outputDir); err != nil {
+	fset, astp, err := uroot.ParseAST(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := uroot.CreateBBMainSource(fset, astp, flag.Args(), *outputDir); err != nil {
 		log.Fatalf("failed to create bb source file: %v", err)
 	}
 }
