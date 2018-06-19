@@ -154,6 +154,7 @@ func (s SosServer) buildRouter() http.Handler {
 	r.HandleFunc("/unregister", s.unregisterHandle).Methods("POST")
 	r.HandleFunc("/service/{service}", s.getServiceHandle).Methods("GET")
 	r.HandleFunc("/go/{service}", s.redirectToResourceHandle).Methods("GET")
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("/etc/sos/html/css"))))
 	return r
 }
 
