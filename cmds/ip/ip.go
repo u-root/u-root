@@ -88,7 +88,6 @@ func dev() (netlink.Link, error) {
 	whatIWant = []string{"device name"}
 	iface, err := netlink.LinkByName(arg[cursor])
 	if err != nil {
-		//usage()
 		return nil, err
 	}
 	return iface, nil
@@ -240,7 +239,7 @@ func linkset() error {
 	switch one(arg[cursor], whatIWant) {
 	case "address":
 		if err := setHardwareAddress(iface); err != nil {
-			return nil
+			return err
 		}
 	case "up":
 		if err := netlink.LinkSetUp(iface); err != nil {
@@ -320,12 +319,12 @@ func nexthop() (string, *netlink.Addr, error) {
 func routeadddefault() error {
 	nh, nhval, err := nexthop()
 	if err != nil {
-		return nil
+		return err
 	}
 	// TODO: NHFLAGS.
 	l, err := dev()
 	if err != nil {
-		return nil
+		return err
 	}
 	switch nh {
 	case "via":
