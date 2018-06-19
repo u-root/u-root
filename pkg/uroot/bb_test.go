@@ -61,7 +61,7 @@ func TestPackageRewriteFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	p, err := getPackage(golang.Default(), "github.com/u-root/u-root/pkg/uroot/test/foo", importer.For("source", nil))
+	p, err := NewPackageFromEnv(golang.Default(), "github.com/u-root/u-root/pkg/uroot/test/foo", importer.For("source", nil))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,7 +15,6 @@ import (
 	"go/token"
 	"go/types"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -62,32 +61,16 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 			continue
 		}
 
+		pkgDir := filepath.Join(bbDir, "cmds", path.Base(pkg))
 		// TODO: use bbDir to derive import path below or vice versa.
-		if err := RewritePackage(env, pkg, filepath.Join(bbDir, "cmds"), "github.com/u-root/u-root/pkg/bb", importer); err != nil {
+		if err := RewritePackage(env, pkg, pkgDir, "github.com/u-root/u-root/pkg/bb", importer); err != nil {
 			return err
 		}
 
 		bbPackages = append(bbPackages, fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", path.Base(pkg)))
 	}
 
-	// Create bb main.go.
-	if err := CreateBBMainSource(env, importer, "github.com/u-root/u-root/pkg/bb/cmd", bbPackages, bbDir); err != nil {
-		return err
-	}
-
-	// Compile bb.
-	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{})
-}
-
-// CreateBBMainSource creates a bb Go command that imports all given pkgs.
-//
-// - Takes code from templatePkg, which must be ONE Go main() file.
-// - For each pkg in pkgs, add
-//     import _ "pkg"
-//   to templatePkg main() file
-// - Write source file out to destDir.
-func CreateBBMainSource(env golang.Environ, importer types.Importer, templatePkg string, pkgs []string, destDir string) error {
-	bb, err := getPackage(env, templatePkg, importer)
+	bb, err := NewPackageFromEnv(env, "github.com/u-root/u-root/pkg/bb/cmd", importer)
 	if err != nil {
 		return err
 	}
@@ -97,20 +80,38 @@ func CreateBBMainSource(env golang.Environ, importer types.Importer, templatePkg
 	if len(bb.ast.Files) != 1 {
 		return fmt.Errorf("bb cmd template is supposed to only have one file")
 	}
+	// Create bb main.go.
+	if err := CreateBBMainSource(bb.fset, bb.ast, bbPackages, bbDir); err != nil {
+		return err
+	}
+
+	// Compile bb.
+	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{})
+}
+
+// CreateBBMainSource creates a bb Go command that imports all given pkgs.
+//
+// p must be the bb template.
+//
+// - For each pkg in pkgs, add
+//     import _ "pkg"
+//   to astp's first file.
+// - Write source file out to destDir.
+func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, destDir string) error {
 	for _, pkg := range pkgs {
-		for _, sourceFile := range bb.ast.Files {
+		for _, sourceFile := range astp.Files {
 			// Add side-effect import to bb binary so init registers itself.
 			//
 			// import _ "pkg"
-			astutil.AddNamedImport(bb.fset, sourceFile, "_", pkg)
+			astutil.AddNamedImport(fset, sourceFile, "_", pkg)
 			break
 		}
 	}
 
 	// Write bb main binary out.
-	for filePath, sourceFile := range bb.ast.Files {
+	for filePath, sourceFile := range astp.Files {
 		path := filepath.Join(destDir, filepath.Base(filePath))
-		if err := writeFile(path, bb.fset, sourceFile); err != nil {
+		if err := writeFile(path, fset, sourceFile); err != nil {
 			return err
 		}
 		break
@@ -158,7 +159,6 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 type Package struct {
 	name string
 
-	pkg         *build.Package
 	fset        *token.FileSet
 	ast         *ast.Package
 	typeInfo    types.Info
@@ -183,6 +183,101 @@ type Package struct {
 	//
 	// The key Expr must also be the AssignStmt.Rhs[0].
 	initAssigns map[ast.Expr]*ast.AssignStmt
+}
+
+// NewPackageFromEnv finds the package identified by importPath, and gathers
+// AST, type, and token information.
+func NewPackageFromEnv(env golang.Environ, importPath string, importer types.Importer) (*Package, error) {
+	p, err := env.Package(importPath)
+	if err != nil {
+		return nil, err
+	}
+	return NewPackage(p, importer)
+}
+
+// ParseAST parses p's package files into an AST.
+func ParseAST(p *build.Package) (*token.FileSet, *ast.Package, error) {
+	name := filepath.Base(p.Dir)
+	if !p.IsCommand() {
+		return nil, nil, fmt.Errorf("package %q is not a command and cannot be included in bb", name)
+	}
+
+	fset := token.NewFileSet()
+	pars, err := parser.ParseDir(fset, p.Dir, func(fi os.FileInfo) bool {
+		// Only parse Go files that match build tags of this package.
+		for _, name := range p.GoFiles {
+			if name == fi.Name() {
+				return true
+			}
+		}
+		return false
+	}, parser.ParseComments)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse AST for pkg %q: %v", name, err)
+	}
+
+	astp, ok := pars[p.Name]
+	if !ok {
+		return nil, nil, fmt.Errorf("parsed files, but could not find package %q in ast: %v", p.Name, pars)
+	}
+	return fset, astp, nil
+}
+
+// NewPackage gathers AST, type, and token information about package p, using
+// the given importer to resolve dependencies.
+func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
+	name := filepath.Base(p.Dir)
+	fset, astp, err := ParseAST(p)
+	if err != nil {
+		return nil, err
+	}
+
+	pp := &Package{
+		name: name,
+		fset: fset,
+		ast:  astp,
+		typeInfo: types.Info{
+			Types: make(map[ast.Expr]types.TypeAndValue),
+		},
+		initAssigns: make(map[ast.Expr]*ast.AssignStmt),
+	}
+
+	// This Init will hold calls to all other InitXs.
+	pp.init = &ast.FuncDecl{
+		Name: ast.NewIdent("Init"),
+		Type: &ast.FuncType{
+			Params:  &ast.FieldList{},
+			Results: nil,
+		},
+		Body: &ast.BlockStmt{},
+	}
+
+	// The order of types.Info.InitOrder depends on this list of files
+	// always being passed to conf.Check in the same order.
+	filenames := make([]string, 0, len(pp.ast.Files))
+	for name := range pp.ast.Files {
+		filenames = append(filenames, name)
+	}
+	sort.Strings(filenames)
+
+	pp.sortedFiles = make([]*ast.File, 0, len(pp.ast.Files))
+	for _, name := range filenames {
+		pp.sortedFiles = append(pp.sortedFiles, pp.ast.Files[name])
+	}
+	// Type-check the package before we continue. We need types to rewrite
+	// some statements.
+	conf := types.Config{
+		Importer: importer,
+
+		// We only need global declarations' types.
+		IgnoreFuncBodies: true,
+	}
+	tpkg, err := conf.Check(p.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
+	if err != nil {
+		return nil, fmt.Errorf("type checking failed: %v", err)
+	}
+	pp.types = tpkg
+	return pp, nil
 }
 
 func (p *Package) nextInit() *ast.Ident {
@@ -283,123 +378,24 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 	return hasMain
 }
 
-func writeFile(path string, fset *token.FileSet, f *ast.File) error {
-	var buf bytes.Buffer
-	if err := format.Node(&buf, fset, f); err != nil {
-		return fmt.Errorf("error formatting Go file %q: %v", path, err)
-	}
-	return writeGoFile(path, buf.Bytes())
-}
-
-func writeGoFile(path string, code []byte) error {
-	// Fix up imports.
-	opts := imports.Options{
-		Fragment:  true,
-		AllErrors: true,
-		Comments:  true,
-		TabIndent: true,
-		TabWidth:  8,
-	}
-	code, err := imports.Process("commandline", code, &opts)
-	if err != nil {
-		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
-	}
-
-	if err := ioutil.WriteFile(path, code, 0644); err != nil {
-		return fmt.Errorf("error writing Go file to %q: %v", path, err)
-	}
-	return nil
-}
-
-func getPackage(env golang.Environ, importPath string, importer types.Importer) (*Package, error) {
-	p, err := env.Package(importPath)
-	if err != nil {
-		return nil, err
-	}
-
-	name := filepath.Base(p.Dir)
-	if !p.IsCommand() {
-		return nil, fmt.Errorf("package %q is not a command and cannot be included in bb", name)
-	}
-
-	fset := token.NewFileSet()
-	pars, err := parser.ParseDir(fset, p.Dir, func(fi os.FileInfo) bool {
-		// Only parse Go files that match build tags of this package.
-		for _, name := range p.GoFiles {
-			if name == fi.Name() {
-				return true
-			}
-		}
-		return false
-	}, parser.ParseComments)
-	if err != nil {
-		log.Printf("can't parsedir %q: %v", p.Dir, err)
-		return nil, err
-	}
-
-	pp := &Package{
-		name: name,
-		pkg:  p,
-		fset: fset,
-		ast:  pars[p.Name],
-		typeInfo: types.Info{
-			Types: make(map[ast.Expr]types.TypeAndValue),
-		},
-		initAssigns: make(map[ast.Expr]*ast.AssignStmt),
-	}
-
-	// This Init will hold calls to all other InitXs.
-	pp.init = &ast.FuncDecl{
-		Name: ast.NewIdent("Init"),
-		Type: &ast.FuncType{
-			Params:  &ast.FieldList{},
-			Results: nil,
-		},
-		Body: &ast.BlockStmt{},
-	}
-
-	// The order of types.Info.InitOrder depends on this list of files
-	// always being passed to conf.Check in the same order.
-	filenames := make([]string, 0, len(pp.ast.Files))
-	for name := range pp.ast.Files {
-		filenames = append(filenames, name)
-	}
-	sort.Strings(filenames)
-
-	pp.sortedFiles = make([]*ast.File, 0, len(pp.ast.Files))
-	for _, name := range filenames {
-		pp.sortedFiles = append(pp.sortedFiles, pp.ast.Files[name])
-	}
-	// Type-check the package before we continue. We need types to rewrite
-	// some statements.
-	conf := types.Config{
-		Importer: importer,
-
-		// We only need global declarations' types.
-		IgnoreFuncBodies: true,
-	}
-	tpkg, err := conf.Check(pp.pkg.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
-	if err != nil {
-		return nil, fmt.Errorf("type checking failed: %v", err)
-	}
-	pp.types = tpkg
-	return pp, nil
-}
-
 // RewritePackage rewrites pkgPath to be bb-mode compatible, where destDir is
 // the file system destination of the written files and bbImportPath is the Go
 // import path of the bb package to register with.
 func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, importer types.Importer) error {
-	p, err := getPackage(env, pkgPath, importer)
+	p, err := NewPackageFromEnv(env, pkgPath, importer)
 	if err != nil {
 		return err
 	}
 	if p == nil {
 		return nil
 	}
+	return p.Rewrite(destDir, bbImportPath)
+}
 
-	pkgDir := filepath.Join(destDir, p.name)
-	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+// Rewrite rewrites p into destDir as a bb package using bbImportPath for the
+// bb implementation.
+func (p *Package) Rewrite(destDir, bbImportPath string) error {
+	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
 
@@ -422,7 +418,7 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 		}
 	}
 	if mainFile == nil {
-		return os.RemoveAll(pkgDir)
+		return os.RemoveAll(destDir)
 	}
 
 	// Add variable initializations to Init0 in the right order.
@@ -470,10 +466,38 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 
 	// Write all files out.
 	for filePath, sourceFile := range p.ast.Files {
-		path := filepath.Join(pkgDir, filepath.Base(filePath))
+		path := filepath.Join(destDir, filepath.Base(filePath))
 		if err := writeFile(path, p.fset, sourceFile); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func writeFile(path string, fset *token.FileSet, f *ast.File) error {
+	var buf bytes.Buffer
+	if err := format.Node(&buf, fset, f); err != nil {
+		return fmt.Errorf("error formatting Go file %q: %v", path, err)
+	}
+	return writeGoFile(path, buf.Bytes())
+}
+
+func writeGoFile(path string, code []byte) error {
+	// Fix up imports.
+	opts := imports.Options{
+		Fragment:  true,
+		AllErrors: true,
+		Comments:  true,
+		TabIndent: true,
+		TabWidth:  8,
+	}
+	code, err := imports.Process("commandline", code, &opts)
+	if err != nil {
+		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
+	}
+
+	if err := ioutil.WriteFile(path, code, 0644); err != nil {
+		return fmt.Errorf("error writing Go file to %q: %v", path, err)
 	}
 	return nil
 }
