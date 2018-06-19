@@ -5,21 +5,28 @@
 </head>
 
 <body>
-  <h1>Current Services</h1> 
-  <table style="width:50%">
-  	<tr>
-      	<th>Service</th>
-      	<th>Port Number</th>
-    	</tr>
-  	{{range $key, $value := .}}
-  	<tr>
-    <td><a href="http://localhost:{{$value}}" target="_blank" class="button">{{$key}}</td>
-  	<td>{{$value}}</td>
-  	</tr>
-  	{{else}}
-  	<tr>
-  		<td colspan="3" style="text-align:center">No services</td>
-  	</tr>
-  	{{end}}
-  </table>
+  <div class="banner">
+      <h1>Service of Services</h1>
+  </div>
+  <div class="content">
+    <div class="center">
+      <h2 class="center">Current Services</h2>
+      <table class="center">
+        <tr>
+            <th>Service</th>
+            <th>Port Number</th>
+          </tr>
+        {{range $key, $value := .}}
+        <tr>
+        <td><a href="http://localhost:{{$value}}" target="_blank" class="button">{{$key}}</td>
+        <td>{{$value}}</td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="3">No services</td>
+        </tr>
+        {{end}}
+      </table>
+    </div> 
+  </div>
 </body>
