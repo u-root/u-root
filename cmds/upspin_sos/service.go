@@ -6,48 +6,19 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"regexp"
 	"io/ioutil"
+	"os"
+	"os/exec"
+	"regexp"
+	"strings"
 )
 
 var (
-	upspinConfigDir	= fmt.Sprintf("%v/upspin/config", os.Getenv("HOME"))
+	upspinConfigDir = fmt.Sprintf("%v/upspin", os.Getenv("HOME"))
+	upspinKeyDir    = fmt.Sprintf("%v/.ssh", os.Getenv("HOME"))
 )
 
-
-
-type DummyUpspinService struct {
-	Configured bool
-	User       string
-	Dir        string
-	Store      string
-	Seed       string
-}
-func (us *DummyUpspinService) ToggleFlag() {
-	us.Configured = !us.Configured
-}
-func (us *DummyUpspinService) SetConfig(new UpspinAcctJsonMsg) error {
-	us.User = new.User
-	us.Dir = new.Dir
-	us.Store = new.Store
-	us.Seed = new.Seed
-	return nil
-}
-func NewDummyUpspinService() (*DummyUpspinService, error) {
-	return &DummyUpspinService{
-		Configured: false,
-		User:       "",
-		Dir:        "",
-		Store:      "",
-		Seed:       "",
-	}, nil
-}
-
-
-
-type UpspinService struct  {
+type UpspinService struct {
 	Configured bool
 	User       string
 	Dir        string
@@ -57,15 +28,17 @@ type UpspinService struct  {
 
 func getFileData(path string) map[string]string {
 	userData := make(map[string]string)
-	b, err := ioutil.ReadFile(path)
+	b, err := ioutil.ReadFile(fmt.Sprintf("%v/config", path))
 	if err != nil {
 		// start in unconfigured mode using empty map
 		return userData
 	}
-	// parse file data into map using regex
-	reg, err := regexp.Compile("(: )(.*,|)")
+	// regex for finding key-val separator ": [remote,]" and port ":443"
+	splitpoint, err := regexp.Compile("(: )(.*,|)")
+	port, err := regexp.Compile("(:443)")
 	for _, s := range strings.Split(string(b), "\n") {
-		keyval := reg.Split(s, -1)
+		s := port.ReplaceAllString(s, "")
+		keyval := splitpoint.Split(s, -1)
 		if len(keyval) == 2 {
 			userData[keyval[0]] = keyval[1]
 		}
@@ -73,31 +46,70 @@ func getFileData(path string) map[string]string {
 	return userData
 }
 
-func (us *UpspinService) SetConfig(new UpspinAcctJsonMsg) error {
-	us.User = new.User
-	us.Dir = new.Dir
-	us.Store = new.Store
-	us.Seed = new.Seed
+func (us UpspinService) setFileData(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, 1000); err != nil {
+			return err
+		}
+	}
+	f, err := os.Create(fmt.Sprintf("%v/config", path))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	f.WriteString(fmt.Sprintf("username: %v\n", us.User))
+	// hardcoded default server prefix and suffix
+	f.WriteString(fmt.Sprintf("dirserver: remote,%v:443\n", us.Dir))
+	f.WriteString(fmt.Sprintf("storeserver: remote,%v:443\n", us.Store))
+	// hardcoded packing security
+	f.WriteString("packing: ee")
+	return nil
+}
+
+func (us UpspinService) setKeys(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, 1000); err != nil {
+			return err
+		}
+	}
+	// TODO: upspin keygen is acting up. Removing for now
 	return nil
 }
 
 func (us *UpspinService) Update() {
 	data := getFileData(upspinConfigDir)
-	us.Configured = true
-	us.User       = data["username"]
-	us.Dir        = data["dirserver"]
-	us.Store      = data["storeserver"]
-	us.Seed       = ""
+	us.User = data["username"]
+	us.Dir = data["dirserver"]
+	us.Store = data["storeserver"]
 }
 
 func (us *UpspinService) ToggleFlag() {
 	us.Configured = !us.Configured
 }
 
+func (us *UpspinService) SetConfig(new UpspinAcctJsonMsg) error {
+	us.User = new.User
+	us.Dir = new.Dir
+	us.Store = new.Store
+	us.Seed = new.Seed
+	if err := us.setFileData(upspinConfigDir); err != nil {
+		return err
+	}
+	if err := us.setKeys(fmt.Sprintf("%v/%v", upspinKeyDir, us.User)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func NewUpspinService() (*UpspinService, error) {
 	data := getFileData(upspinConfigDir)
+	config := false
+	if len(data) > 0 {
+		config = true
+	}
 	return &UpspinService{
-		Configured: true,
+		Configured: config,
 		User:       data["username"],
 		Dir:        data["dirserver"],
 		Store:      data["storeserver"],
