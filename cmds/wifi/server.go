@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -18,7 +19,7 @@ import (
 )
 
 const (
-	HtmlPage = `
+	DefHtmlPage = `
 <head>
 <style>
 table {
@@ -254,6 +255,7 @@ func (ws WifiServer) buildRouter() *mux.Router {
 	r.HandleFunc("/", ws.displayStateHandle).Methods("GET")
 	r.HandleFunc("/refresh", ws.refreshHandle).Methods("POST")
 	r.HandleFunc("/connect", ws.connectHandle).Methods("POST")
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("/etc/sos/html/css"))))
 	return r
 }
 
@@ -275,8 +277,14 @@ func displayWifi(wr io.Writer, wifiOpts []wifi.Option, connectedEssid, connectin
 		Port            uint
 	}{wifiOpts, connectedEssid, connectingEssid, Port}
 
-	tmpl := template.Must(template.New("name").Parse(HtmlPage))
-
+	var tmpl *template.Template
+	file, err := ioutil.ReadFile("/etc/sos/html/wifi.html")
+	if err == nil {
+		html := string(file)
+		tmpl = template.Must(template.New("name").Parse(html))
+	} else {
+		tmpl = template.Must(template.New("name").Parse(DefHtmlPage))
+	}
 	return tmpl.Execute(wr, wifiData)
 }
 
