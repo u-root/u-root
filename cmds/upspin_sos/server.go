@@ -138,7 +138,7 @@ const (
 )
 
 type UpspinServer struct {
-	service *DummyUpspinService
+	service *UpspinService
 }
 
 var (
@@ -178,6 +178,7 @@ func (us *UpspinServer) submitHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (us *UpspinServer) displayStateHandle(w http.ResponseWriter, r *http.Request) {
+	us.service.Update()
 	upspinData := struct {
 		Configured bool
 		User       string
@@ -215,7 +216,7 @@ func (us *UpspinServer) Start() {
 	fmt.Println(sos.StartServiceServer(us.buildRouter(), "upspin", listener, Port))
 }
 
-func NewUpspinServer(service *DummyUpspinService) *UpspinServer {
+func NewUpspinServer(service *UpspinService) *UpspinServer {
 	return &UpspinServer{
 		service: service,
 	}

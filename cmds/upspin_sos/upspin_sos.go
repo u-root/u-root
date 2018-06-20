@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	service, err := NewDummyUpspinService()
+	service, err := NewUpspinService()
 	if err != nil {
 		log.Fatal(err)
 	}
