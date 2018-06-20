@@ -32,6 +32,15 @@ h2.center {
     width: 75%
 }
 
+.textbutton {
+  color: #3367d6;
+  background-color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+
 
 a.button {
   background-color: #4885ed;
@@ -49,7 +58,7 @@ a.button {
   border-radius: 4px;
 }
 
-a:hover {
+a.button:hover {
   background-color: #3875d8;
 }
 
