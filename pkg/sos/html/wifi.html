@@ -76,7 +76,7 @@
 
 <body>
 	<div class="banner">
-      <h1>Service of Services</h1>
+      <h1><a href="http://localhost:8000" target="_blank" class="bannerbtn">Service of Services</a></h1>
   </div>
 
   <div class="content">
@@ -92,7 +92,7 @@
 			    	<th>Essid</th>
 			    	<th>Identity</th>
 			    	<th>Password / Passphrase</th>
-			    	<th><button type="submit" class="textbutton" onclick=sendRefresh(this)>Refresh</button></th>
+			    	<th><input type="submit" class="textbutton" onclick=sendRefresh(this) value="Refresh"></th>
 			  	</tr>
 				{{range $idx, $opt := .WifiOpts}}
 					{{if eq $opt.AuthSuite $NoEnc}}
@@ -105,7 +105,8 @@
 							{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
 			    				<td>Connecting...</td>
 			    			{{else}}
-			    				<td><button type="submit" class="textbutton" onclick="sendConnect(this, {{$idx}})">Connect</button></td>
+			    				<td><input type="submit" class="textbutton" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
+			    			{{end}}
 			  			</tr>
 					{{else if eq $opt.AuthSuite $WpaPsk}}
 						<tr>
@@ -117,7 +118,7 @@
 							{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
 			    				<td>Connecting...</td>
 			    			{{else}}
-			    				<td><button type="submit" class="textbutton" onclick="sendConnect(this, {{$idx}})">Connect</button></td>
+			    				<td><input type="submit" class="textbutton" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
 			    			{{end}}
 			       		</tr>
 					{{else if eq $opt.AuthSuite $WpaEap}}
@@ -130,7 +131,7 @@
 							{{else if and (and (eq $connectingEssid $opt.Essid) (ne $connectingEssid "")) (ne $connectingEssid $connectedEssid) }}
 			    				<td>Connecting...</td>
 			    			{{else}}
-			    				<td><button type="submit" class="textbutton" onclick="sendConnect(this, {{$idx}})">Connect</button></td>
+			    				<td><input type="submit" class="textbutton" onclick="sendConnect(this, {{$idx}})" value="Connect"></td>
 			    			{{end}}
 			  			</tr>
 					{{else}}

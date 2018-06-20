@@ -22,6 +22,11 @@ h2.center {
   margin: 0 auto;
 }
 
+.bannerbtn {
+  text-decoration: none;
+  color: white;
+}
+
 .content {
   margin-top: 100px;
 }
