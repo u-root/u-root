@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	HtmlPage = `
+	DefHtmlPage = `
 	<head>
 	<style>
 	  table {
@@ -185,7 +186,14 @@ func (us *UpspinServer) displayStateHandle(w http.ResponseWriter, r *http.Reques
 		Seed       string
 		Port       uint
 	}{us.service.Configured, us.service.User, us.service.Dir, us.service.Store, us.service.Seed, Port}
-	tmpl := template.Must(template.New("upspin").Parse(HtmlPage))
+	var tmpl *template.Template
+	file, err := ioutil.ReadFile("/etc/sos/html/upspin.html")
+	if err == nil {
+		html := string(file)
+		tmpl = template.Must(template.New("SoS").Parse(html))
+	} else {
+		tmpl = template.Must(template.New("SoS").Parse(DefHtmlPage))
+	}
 	tmpl.Execute(w, upspinData)
 }
 
@@ -194,6 +202,7 @@ func (us *UpspinServer) buildRouter() *mux.Router {
 	r.HandleFunc("/", us.displayStateHandle).Methods("GET")
 	r.HandleFunc("/edit", us.editHandle).Methods("POST")
 	r.HandleFunc("/submit", us.submitHandle).Methods("POST")
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("/etc/sos/html/css"))))
 	return r
 }
 

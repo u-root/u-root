@@ -1,0 +1,103 @@
+<head>
+	<title>Service of Services</title>
+  <link rel="stylesheet" href="css/stylesheet.css">
+  <meta charset="utf-8">
+	<script>
+	  function sendEdit() {
+	    fetch("http://localhost:{{.Port}}/edit", {
+	      method: 'Post'
+	    })
+	    .then(r => r.json())
+	    .then( s => {
+	      if (s !== null) {
+	        alert(s.Error);
+	        window.location.reload();
+	      }
+	      else {
+	        window.location.reload();
+	      }
+	    })
+	    .catch(err => alert(err))
+	  }
+	  function sendSubmit() {
+	    username = document.getElementById("user").value
+	    dirserver = document.getElementById("dir").value
+	    storeserver = document.getElementById("store").value
+	    secretseed = document.getElementById("seed").value
+	    fetch("http://localhost:{{.Port}}/submit", {
+	      method: 'Post',
+	      headers: {
+	  			'Accept': 'application/json',
+	  			'Content-Type': 'application/json'
+	  		},
+	  		body: JSON.stringify({
+	  			User:  username,
+	  			Dir:   dirserver,
+	        Store: storeserver,
+	        Seed:  secretseed
+	  		})
+	    })
+	    .then(r => r.json())
+	    .then( s => {
+	      if (s !== null) {
+	        alert(s.Error);
+	        window.location.reload();
+	      }
+	      else {
+	        window.location.reload();
+	      }
+	    })
+	    .catch(err => alert(err))
+	  }
+
+	  function setFieldsOnLoad(config) {
+	    if (config) {
+	      disableFields();
+	    }
+	    else {
+	      enableFields();
+	    }
+	  }
+
+	  function enableFields() {
+	    fields = document.getElementsByClassName("text");
+	    for(let field of fields) {
+	      field.removeAttribute("disabled")
+	    }
+	    document.getElementById("button").setAttribute("value", "Submit");
+	    document.getElementById("button").setAttribute("onclick", "sendSubmit()");
+	  }
+	  function disableFields() {
+	    fields = document.getElementsByClassName("text");
+	    for(let field of fields) {
+	      field.setAttribute("disabled", "true")
+	    }
+	    document.getElementById("button").setAttribute("value", "Edit");
+	    document.getElementById("button").setAttribute("onclick", "sendEdit()");
+	  }
+	</script>
+</head>
+<body onload="setFieldsOnLoad({{.Configured}})">
+	  <!-- Copy to local variables -->
+	  {{$user := .User}}
+	  {{$dir := .Dir}}
+	  {{$store := .Store}}
+	  {{$seed := .Seed}}
+	  <h1>Upspin</h1>
+	  <table style="width:100%">
+	    <tr>
+	      <th>Username</th>
+	      <th>Dir Server</th>
+	      <th>Store Server</th>
+	      <th>Secret Seed</th>
+	      <th></th>
+	    </tr>
+	    <tr>
+	      <td><input type="text" id="user"  class="text" value="{{$user}}"></td>
+	      <td><input type="text" id="dir"   class="text" value="{{$dir}}"></td>
+	      <td><input type="text" id="store" class="text" value="{{$store}}"></td>
+	      <td><input type="text" id="seed"  class="text" value="{{$seed}}"></td>
+	      <td><input type="submit" id="button" class="btn"></td>
+	    </tr>
+	  </table>
+</body>
