@@ -48,7 +48,7 @@ func getFileData(path string) map[string]string {
 
 func (us UpspinService) setFileData(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 1000); err != nil {
+		if err := os.MkdirAll(path, 0777); err != nil {
 			return err
 		}
 	}
@@ -69,11 +69,14 @@ func (us UpspinService) setFileData(path string) error {
 
 func (us UpspinService) setKeys(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 1000); err != nil {
+		if err := os.MkdirAll(path, 0777); err != nil {
 			return err
 		}
 	}
-	// TODO: upspin keygen is acting up. Removing for now
+	err := exec.Command("upspin", "keygen", fmt.Sprintf("-secretseed=%v", us.Seed), path).Start()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
