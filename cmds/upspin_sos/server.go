@@ -187,7 +187,7 @@ func (us *UpspinServer) displayStateHandle(w http.ResponseWriter, r *http.Reques
 		Port       uint
 	}{us.service.Configured, us.service.User, us.service.Dir, us.service.Store, us.service.Seed, Port}
 	var tmpl *template.Template
-	file, err := ioutil.ReadFile("/etc/sos/html/upspin.html")
+	file, err := ioutil.ReadFile(sos.HTMLPath("upspin.html"))
 	if err == nil {
 		html := string(file)
 		tmpl = template.Must(template.New("SoS").Parse(html))
