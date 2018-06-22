@@ -78,26 +78,47 @@
 	</script>
 </head>
 <body onload="setFieldsOnLoad({{.Configured}})">
+	<div class="banner">
+      <h1><a href="http://localhost:8000" target="_blank" class="bannerbtn">Service of Services</a></h1>
+  </div>
+	<div class="content">
 	  <!-- Copy to local variables -->
 	  {{$user := .User}}
 	  {{$dir := .Dir}}
 	  {{$store := .Store}}
 	  {{$seed := .Seed}}
-	  <h1>Upspin</h1>
-	  <table style="width:100%">
-	    <tr>
-	      <th>Username</th>
-	      <th>Dir Server</th>
-	      <th>Store Server</th>
-	      <th>Secret Seed</th>
-	      <th></th>
-	    </tr>
-	    <tr>
-	      <td><input type="text" id="user"  class="text" value="{{$user}}"></td>
-	      <td><input type="text" id="dir"   class="text" value="{{$dir}}"></td>
-	      <td><input type="text" id="store" class="text" value="{{$store}}"></td>
-	      <td><input type="text" id="seed"  class="text" value="{{$seed}}"></td>
-	      <td><input type="submit" id="button" class="btn"></td>
-	    </tr>
-	  </table>
+	  <div class="center">
+			<h2 class="centernarrow">Upspin Config Settings</h2>
+			<div class="card">
+				<h3 class="label">Username</h3>
+				<input type="text" id="user"  class="text" value="{{$user}}">
+				<h3 class="label">Dir Server</h3>
+				<input type="text" id="dir"   class="text" value="{{$dir}}">
+				<h3 class="label">Store Server</h3>
+	      <input type="text" id="store" class="text" value="{{$store}}">
+				<h3 class="label">Secret Seed</h3>
+	      <input type="text" id="seed"  class="text" value="{{$seed}}">
+			</div>
+			<input type="submit" id="button" class="button submitbtn">
+			<!--
+			  <table class="center">
+			    <tr>
+			      <th>Username</th>
+			      <th>Dir Server</th>
+			      <th>Store Server</th>
+			      <th>Secret Seed</th>
+			      <th></th>
+			    </tr>
+			    <tr>
+			      <td><input type="text" id="user"  class="text" value="{{$user}}"></td>
+			      <td><input type="text" id="dir"   class="text" value="{{$dir}}"></td>
+			      <td><input type="text" id="store" class="text" value="{{$store}}"></td>
+			      <td><input type="text" id="seed"  class="text" value="{{$seed}}"></td>
+			      <td><input type="submit" id="button" class="btn"></td>
+			    </tr>
+			  </table>
+			-->
+			</div>
+		</div>
+	</div>
 </body>
