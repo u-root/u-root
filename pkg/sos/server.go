@@ -6,11 +6,13 @@ package sos
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 )
@@ -66,6 +68,14 @@ type SosServer struct {
 type RegisterReqJson struct {
 	Service string
 	Port    uint
+}
+
+var htmlRoot = flag.String("soshtml", "/etc/sos/html", "Path for root of SOS html files")
+
+// HTMLPath returns the HTMLPath formed by joining the arguments together.
+// If there are no arguments, it simply returns the HTML root directory.
+func HTMLPath(n ...string) string {
+	return filepath.Join(append([]string{*htmlRoot}, n...)...)
 }
 
 func (s SosServer) registerHandle(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +147,7 @@ func (s SosServer) redirectToResourceHandle(w http.ResponseWriter, r *http.Reque
 func (s SosServer) displaySosHandle(w http.ResponseWriter, r *http.Request) {
 	snap := s.service.SnapshotRegistry()
 	var tmpl *template.Template
-	file, err := ioutil.ReadFile("/etc/sos/html/sos.html")
+	file, err := ioutil.ReadFile(HTMLPath("sos.html"))
 	if err == nil {
 		html := string(file)
 		tmpl = template.Must(template.New("SoS").Parse(html))
@@ -154,7 +164,7 @@ func (s SosServer) buildRouter() http.Handler {
 	r.HandleFunc("/unregister", s.unregisterHandle).Methods("POST")
 	r.HandleFunc("/service/{service}", s.getServiceHandle).Methods("GET")
 	r.HandleFunc("/go/{service}", s.redirectToResourceHandle).Methods("GET")
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("/etc/sos/html/css"))))
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir(HTMLPath("css")))))
 	return r
 }
 
