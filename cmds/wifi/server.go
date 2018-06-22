@@ -278,7 +278,7 @@ func displayWifi(wr io.Writer, wifiOpts []wifi.Option, connectedEssid, connectin
 	}{wifiOpts, connectedEssid, connectingEssid, Port}
 
 	var tmpl *template.Template
-	file, err := ioutil.ReadFile("/etc/sos/html/wifi.html")
+	file, err := ioutil.ReadFile(sos.HTMLPath("wifi.html"))
 	if err == nil {
 		html := string(file)
 		tmpl = template.Must(template.New("name").Parse(html))
