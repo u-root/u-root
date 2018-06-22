@@ -5,17 +5,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
 var (
-	upspinConfigDir = fmt.Sprintf("%v/upspin", os.Getenv("HOME"))
-	upspinKeyDir    = fmt.Sprintf("%v/.ssh", os.Getenv("HOME"))
+	upspinConfigDir = flag.String("configdir", filepath.Join(os.Getenv("HOME"), "upspin"), "path for Upspin config file")
+	upspinKeyDir    = flag.String("keydir", filepath.Join(os.Getenv("HOME"), ".ssh"), "path for username directory to hold key files")
 )
 
 type UpspinService struct {
@@ -26,9 +28,24 @@ type UpspinService struct {
 	Seed       string
 }
 
+func makeUserDirectories(dir string) error {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			return err
+		}
+		return filepath.Walk(dir, func(name string, info os.FileInfo, err error) error {
+			if err == nil {
+				err = os.Chown(name, 1000, 1000)
+			}
+			return err
+		})
+	}
+	return nil
+}
+
 func getFileData(path string) map[string]string {
 	userData := make(map[string]string)
-	b, err := ioutil.ReadFile(fmt.Sprintf("%v/config", path))
+	b, err := ioutil.ReadFile(filepath.Join(path, "config"))
 	if err != nil {
 		// start in unconfigured mode using empty map
 		return userData
@@ -47,33 +64,23 @@ func getFileData(path string) map[string]string {
 }
 
 func (us UpspinService) setFileData(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0777); err != nil {
-			return err
-		}
-	}
-	f, err := os.Create(fmt.Sprintf("%v/config", path))
+	f, err := os.Create(filepath.Join(path, "config"))
+	defer f.Close()
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
 	f.WriteString(fmt.Sprintf("username: %v\n", us.User))
 	// hardcoded default server prefix and suffix
 	f.WriteString(fmt.Sprintf("dirserver: remote,%v:443\n", us.Dir))
 	f.WriteString(fmt.Sprintf("storeserver: remote,%v:443\n", us.Store))
-	// hardcoded packing security
-	f.WriteString("packing: ee")
+	f.WriteString("packing: ee\n")
 	return nil
 }
 
 func (us UpspinService) setKeys(path string) error {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0777); err != nil {
-			return err
-		}
-	}
-	err := exec.Command("upspin", "keygen", fmt.Sprintf("-secretseed=%v", us.Seed), path).Start()
+	// execute as user. This command generates files with elevated permissions otherwise
+	keygen := exec.Command("upspin", "keygen", fmt.Sprintf("-secretseed=%v", us.Seed), path)
+	err := keygen.Start()
 	if err != nil {
 		return err
 	}
@@ -81,7 +88,7 @@ func (us UpspinService) setKeys(path string) error {
 }
 
 func (us *UpspinService) Update() {
-	data := getFileData(upspinConfigDir)
+	data := getFileData(*upspinConfigDir)
 	us.User = data["username"]
 	us.Dir = data["dirserver"]
 	us.Store = data["storeserver"]
@@ -96,17 +103,20 @@ func (us *UpspinService) SetConfig(new UpspinAcctJsonMsg) error {
 	us.Dir = new.Dir
 	us.Store = new.Store
 	us.Seed = new.Seed
-	if err := us.setFileData(upspinConfigDir); err != nil {
+	makeUserDirectories(*upspinConfigDir)
+	if err := us.setFileData(*upspinConfigDir); err != nil {
 		return err
 	}
-	if err := us.setKeys(fmt.Sprintf("%v/%v", upspinKeyDir, us.User)); err != nil {
+	fullKeyPath := filepath.Join(*upspinKeyDir, us.User)
+	makeUserDirectories(fullKeyPath)
+	if err := us.setKeys(fullKeyPath); err != nil {
 		return err
 	}
 	return nil
 }
 
 func NewUpspinService() (*UpspinService, error) {
-	data := getFileData(upspinConfigDir)
+	data := getFileData(*upspinConfigDir)
 	config := false
 	if len(data) > 0 {
 		config = true
