@@ -10,10 +10,29 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 )
+
+func TestSOSHtmlPath(t *testing.T) {
+	var tests = []struct {
+		paths  []string
+		result string
+	}{
+		{paths: []string{""}, result: *htmlRoot},
+		{paths: []string{"css"}, result: filepath.Join(*htmlRoot, "css")},
+		{paths: []string{"html", "wifi.html"}, result: filepath.Join(*htmlRoot, "html/wifi.html")},
+		{paths: []string{"html/wifi.html"}, result: filepath.Join(*htmlRoot, "html/wifi.html")},
+	}
+
+	for _, test := range tests {
+		if p := HTMLPath(test.paths...); p != test.result {
+			t.Errorf("%v: want %v, got %v", test, test.result, p)
+		}
+	}
+}
 
 func TestRegisterHandle(t *testing.T) {
 	// Set up

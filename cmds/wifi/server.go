@@ -255,7 +255,7 @@ func (ws WifiServer) buildRouter() *mux.Router {
 	r.HandleFunc("/", ws.displayStateHandle).Methods("GET")
 	r.HandleFunc("/refresh", ws.refreshHandle).Methods("POST")
 	r.HandleFunc("/connect", ws.connectHandle).Methods("POST")
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("/etc/sos/html/css"))))
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir(sos.HTMLPath("css")))))
 	return r
 }
 
