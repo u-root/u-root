@@ -7,7 +7,7 @@ h1 {
   margin-left: 40px;
 }
 
-h2.center {
+h2.center, h2.centernarrow {
   padding: 5px;
   color: #616161
 }
@@ -37,17 +37,13 @@ h2.center {
     width: 75%
 }
 
-.textbutton {
-  color: #3367d6;
-  background-color: white;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
+.centernarrow {
+  margin: auto;
+  padding: 5px;
+  width: 50%
 }
 
-
-
-a.button {
+.button {
   background-color: #4885ed;
   border: none;
   color: white;
@@ -63,7 +59,21 @@ a.button {
   border-radius: 4px;
 }
 
-a.button:hover {
+.textbutton {
+  color: #3367d6;
+  background-color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.submitbtn {
+  float: right;
+  margin-right: 25%;
+  margin-top: 20px;
+}
+
+.button:hover {
   background-color: #3875d8;
 }
 
@@ -78,4 +88,33 @@ td, th {
 	border: 1px solid #dddddd;
 	text-align: center;
 	padding: 8px;
+}
+
+.card {
+  background-color: white;
+  margin:auto;
+  width: 50%;
+  box-shadow: 0 2px 0 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+  padding-bottom: 10px;
+}
+
+.label {
+  padding: 20px;
+  padding-bottom: 0px;
+  margin-bottom: 5px;
+  margin-top: 0;
+}
+
+input[type=text] {
+  width: 75%;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 2px solid #bbbbbb;
+  padding: 0px;
+  margin-left: 20px;
+  margin-bottom: 10px;
+}
+
+input[type="text"]:disabled {
+    background: #dddddd;
 }
