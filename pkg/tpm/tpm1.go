@@ -145,6 +145,26 @@ func (t *TPM1) SealData(locality byte, pcrs []int, data []byte, srkPassword stri
 	return sealed, nil
 }
 
+// ResealData seals data against a given pcrInfo map and srkPassword
+// locality: TPM locality, by default zero.
+// pcrInfo: A map of 24 entries. The key is the PCR index and the value is
+// a hash.
+// data: Data which should be sealed against the PCR of pcrInfo.
+// srkPassword: The storage root key password of the TPM.
+func (t *TPM1) ResealData(locality byte, pcrInfo map[int][]byte, data []byte, srkPassword string) ([]byte, error) {
+	var srkAuth [20]byte
+	if srkPassword != "" {
+		srkAuth = sha1.Sum([]byte(srkPassword))
+	}
+
+	sealed, err := tspi.Reseal(t.device, locality, pcrInfo, data, srkAuth[:])
+	if err != nil {
+		return nil, err
+	}
+
+	return sealed, nil
+}
+
 // UnsealData unseals sealed data with srkPassword
 func (t *TPM1) UnsealData(sealed []byte, srkPassword string) ([]byte, error) {
 	var srkAuth [20]byte
