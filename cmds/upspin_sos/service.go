@@ -45,7 +45,7 @@ func makeUserDirectories(dir string) error {
 
 func getFileData(path string) map[string]string {
 	userData := make(map[string]string)
-	b, err := ioutil.ReadFile(filepath.Join(path, "config"))
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		// start in unconfigured mode using empty map
 		return userData
@@ -64,11 +64,11 @@ func getFileData(path string) map[string]string {
 }
 
 func (us UpspinService) setFileData(path string) error {
-	f, err := os.Create(filepath.Join(path, "config"))
-	defer f.Close()
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	f.WriteString(fmt.Sprintf("username: %v\n", us.User))
 	// hardcoded default server prefix and suffix
 	f.WriteString(fmt.Sprintf("dirserver: remote,%v:443\n", us.Dir))
@@ -80,7 +80,7 @@ func (us UpspinService) setFileData(path string) error {
 func (us UpspinService) setKeys(path string) error {
 	// execute as user. This command generates files with elevated permissions otherwise
 	keygen := exec.Command("upspin", "keygen", fmt.Sprintf("-secretseed=%v", us.Seed), path)
-	err := keygen.Start()
+	err := keygen.Run()
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (us UpspinService) setKeys(path string) error {
 }
 
 func (us *UpspinService) Update() {
-	data := getFileData(*upspinConfigDir)
+	data := getFileData(filepath.Join(*upspinConfigDir, "config"))
 	us.User = data["username"]
 	us.Dir = data["dirserver"]
 	us.Store = data["storeserver"]
@@ -104,7 +104,7 @@ func (us *UpspinService) SetConfig(new UpspinAcctJsonMsg) error {
 	us.Store = new.Store
 	us.Seed = new.Seed
 	makeUserDirectories(*upspinConfigDir)
-	if err := us.setFileData(*upspinConfigDir); err != nil {
+	if err := us.setFileData(filepath.Join(*upspinConfigDir, "config")); err != nil {
 		return err
 	}
 	fullKeyPath := filepath.Join(*upspinKeyDir, us.User)
@@ -116,7 +116,7 @@ func (us *UpspinService) SetConfig(new UpspinAcctJsonMsg) error {
 }
 
 func NewUpspinService() (*UpspinService, error) {
-	data := getFileData(*upspinConfigDir)
+	data := getFileData(filepath.Join(*upspinConfigDir, "config"))
 	config := false
 	if len(data) > 0 {
 		config = true
