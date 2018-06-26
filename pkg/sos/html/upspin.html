@@ -60,7 +60,7 @@
     }
 
     function enableFields() {
-      fields = document.getElementsByClassName("text");
+      fields = document.getElementsByClassName("form");
       for(let field of fields) {
         field.removeAttribute("disabled")
       }
@@ -68,7 +68,7 @@
       document.getElementById("button").setAttribute("onclick", "sendSubmit()");
     }
     function disableFields() {
-      fields = document.getElementsByClassName("text");
+      fields = document.getElementsByClassName("form");
       for(let field of fields) {
         field.setAttribute("disabled", "true")
       }
