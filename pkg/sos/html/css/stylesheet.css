@@ -114,7 +114,3 @@ input.form[type=text] {
   margin-left: 20px;
   margin-bottom: 10px;
 }
-
-input[type="text"]:disabled {
-    background: #dddddd;
-}
