@@ -84,21 +84,15 @@ func (us UpspinService) setKeys(path string) error {
 		return err
 	}
 	defer f.Close()
-	_, err = f.Readdir(1)
 	args := []string{"keygen", fmt.Sprintf("-secretseed=%v", us.Seed)}
 	// if the directory is populated, rotate the keys instead of generating new ones
 	// this method of appending args is ugly, but they have to be in this specific order:
 	// upspin keygen <-rotate> -secretseed=<seed> path
-	if err == nil {
+	if _, err = f.Readdir(1); err == nil {
 		args = append(args, "-rotate")
 	}
 
-	keygen := exec.Command("upspin", append(args, path)...)
-	err = keygen.Run()
-	if err != nil {
-		return err
-	}
-	return nil
+	return exec.Command("upspin", append(args, path)...).Run()
 }
 
 func (us *UpspinService) Update() {
