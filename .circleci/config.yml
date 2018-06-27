@@ -66,11 +66,11 @@ jobs:
       - run:
           name: vet
           command: |
-            go tool vet cmds pkg
+            go tool vet cmds xcmds pkg
             go tool vet u-root.go
       - run:
           name: gofmt
-          command: test -z $(gofmt -s -l cmds pkg u-root.go)
+          command: test -z $(gofmt -s -l cmds xcmds pkg u-root.go)
   test:
     docker:
       - image: circleci/golang:latest
@@ -81,10 +81,10 @@ jobs:
       - checkout
       - run:
           name: Test all
-          command: go test -a -ldflags '-s' ./pkg/... ./cmds/...
+          command: go test -a -ldflags '-s' ./pkg/... ./cmds/... ./xcmds/...
       - run:
           name: Test coverage
-          command: go test -cover ./pkg/... ./cmds/...
+          command: go test -cover ./pkg/... ./cmds/... ./xcmds/...
   race:
     docker:
       - image: circleci/golang:latest
@@ -95,7 +95,7 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race ./pkg/... ./cmds/...
+          command: go test -race ./pkg/... ./cmds/... ./xcmds/...
   bb_amd64:
     docker:
       - image: circleci/golang:latest
@@ -211,6 +211,8 @@ jobs:
             cd cmds
             go install -a ./...
             cd ../tools
+            go install -a ./...
+            cd ../xcmds
             go install -a ./...
   source_amd64:
     docker:
