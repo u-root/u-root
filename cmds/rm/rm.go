@@ -28,10 +28,11 @@ import (
 
 var (
 	flags struct {
-		r bool
-		v bool
-		i bool
-		f bool
+		r  bool
+		v  bool
+		i  bool
+		f  bool
+		rf bool
 	}
 	cmd = "rm [-Rrvif] file..."
 )
@@ -47,6 +48,8 @@ func init() {
 	flag.BoolVar(&flags.r, "R", false, "Remove file hierarchies")
 	flag.BoolVar(&flags.r, "r", false, "Equivalent to -R.")
 	flag.BoolVar(&flags.f, "f", false, "Ignore nonexistent files and never prompt")
+	// Go flag parsing is ... yuck.
+	flag.BoolVar(&flags.r, "rf", false, "Equivalent to -R -f.")
 }
 
 func rm(stdin io.Reader, files []string) error {
@@ -98,6 +101,8 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	flags.r, flags.f = flags.r || flags.rf, flags.f || flags.rf
 
 	if err := rm(os.Stdin, flag.Args()); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
