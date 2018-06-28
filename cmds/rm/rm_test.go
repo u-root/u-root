@@ -106,6 +106,14 @@ func TestRemove(t *testing.T) {
 				stdin: no,
 			},
 			{
+				name:  "directory with -rf",
+				files: []file{{"hi", true}},
+				r:     true,
+				f:     true,
+				err:   nilerr,
+				stdin: no,
+			},
+			{
 				name:  "directory with -r",
 				files: []file{{"hi", true}},
 				r:     true,
