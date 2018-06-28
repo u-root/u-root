@@ -15,6 +15,7 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
+	"golang.org/x/sys/unix"
 )
 
 // Matches characters which would interfere with ls's formatting.
@@ -136,8 +137,8 @@ func (fi longStringer) String() string {
 		replacer.Replace(fi.mode.String()),
 		lookupUserName(fi.uid),
 		lookupGroupName(fi.gid),
-		major(fi.rdev),
-		minor(fi.rdev),
+		unix.Major(fi.rdev),
+		unix.Minor(fi.rdev),
 		size,
 		fi.modTime.Format("Jan _2 15:04"),
 		fi.comp.String())
