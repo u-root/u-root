@@ -78,13 +78,21 @@ func (us UpspinService) setFileData(path string) error {
 }
 
 func (us UpspinService) setKeys(path string) error {
-	// execute as user. This command generates files with elevated permissions otherwise
-	keygen := exec.Command("upspin", "keygen", fmt.Sprintf("-secretseed=%v", us.Seed), path)
-	err := keygen.Run()
+	// check if keys are set already
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	return nil
+	defer f.Close()
+	args := []string{"keygen", fmt.Sprintf("-secretseed=%v", us.Seed)}
+	// if the directory is populated, rotate the keys instead of generating new ones
+	// this method of appending args is ugly, but they have to be in this specific order:
+	// upspin keygen <-rotate> -secretseed=<seed> path
+	if _, err = f.Readdir(1); err == nil {
+		args = append(args, "-rotate")
+	}
+
+	return exec.Command("upspin", append(args, path)...).Run()
 }
 
 func (us *UpspinService) Update() {
