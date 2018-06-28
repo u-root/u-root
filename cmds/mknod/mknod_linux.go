@@ -27,7 +27,7 @@ func parseDevices(args []string, devtype string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int((major << 8) | minor), nil
+	return int(unix.Mkdev(uint32(major), uint32(minor))), nil
 }
 
 func mknod() error {
