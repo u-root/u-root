@@ -60,7 +60,9 @@ jobs:
             chmod +x ./dep-linux-amd64
       - run:
           name: Check vendored dependencies
-          command: ./dep-linux-amd64 status
+          command:
+                  ./dep-linux-amd64 hash-inputs
+                  ./dep-linux-amd64 status
       - run:
           name: vet
           command: |
