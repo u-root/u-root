@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -47,7 +47,7 @@ func main() {
 			log.Fatalf("Error creating temp dir: %v\n", err)
 		}
 		fmt.Println(dirName)
-		os.Exit(0)
+		return
 	}
 
 	file, err := ioutil.TempFile("", *prefix)
