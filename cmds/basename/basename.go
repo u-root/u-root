@@ -10,37 +10,33 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"os"
+	"log"
 	"path"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 )
 
-func init() {
-	// Usage Definition
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = "basename NAME [SUFFIX]"
-		defUsage()
-	}
+func usage() {
+	log.Fatal("Usage: basename NAME [SUFFIX]")
 }
 
 func main() {
 	flag.Parse()
-	if len(flag.Args()) < 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
 
-	if len(flag.Args()) == 2 {
-		_, fileName := path.Split(flag.Arg(0))
-		if fileName != flag.Arg(1) {
-			fileName = strings.TrimSuffix(fileName, flag.Arg(1))
+	args := flag.Args()
+	switch len(args) {
+	case 2:
+		_, fileName := path.Split(args[0])
+		if fileName != args[1] {
+			fileName = strings.TrimSuffix(fileName, args[1])
 		}
 		fmt.Println(fileName)
-	} else {
-		_, fileName := path.Split(flag.Arg(0))
+	case 1:
+		_, fileName := path.Split(args[0])
 		fmt.Println(fileName)
+	default:
+		usage()
 	}
 }
