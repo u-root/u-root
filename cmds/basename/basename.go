@@ -7,8 +7,6 @@
 // Synopsis:
 //     basename NAME [SUFFIX]
 //
-// Options:
-//     -s: optional flag for removing suffix
 package main
 
 import (
@@ -19,15 +17,11 @@ import (
 	"strings"
 )
 
-var (
-	suffix = flag.String("s", "", "Strip prefix from file")
-)
-
 func init() {
 	// Usage Definition
 	defUsage := flag.Usage
 	flag.Usage = func() {
-		os.Args[0] = "basename [-s] NAME [SUFFIX]"
+		os.Args[0] = "basename NAME [SUFFIX]"
 		defUsage()
 	}
 }
@@ -39,15 +33,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(*suffix) > 0 {
-		for i := 0; i < len(flag.Args()); i++ {
-			_, fileName := path.Split(flag.Arg(i))
-			fileName = strings.TrimSuffix(fileName, *suffix)
-			fmt.Println(fileName)
-		}
-	} else if len(flag.Args()) > 1 {
+	if len(flag.Args()) == 2 {
 		_, fileName := path.Split(flag.Arg(0))
-		fileName = strings.TrimSuffix(fileName, flag.Arg(1))
+		if fileName != flag.Arg(1) {
+			fileName = strings.TrimSuffix(fileName, flag.Arg(1))
+		}
 		fmt.Println(fileName)
 	} else {
 		_, fileName := path.Split(flag.Arg(0))
