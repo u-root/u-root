@@ -35,18 +35,14 @@ func TestBasename(t *testing.T) {
 			exitStatus: 0,
 		},
 		{
-			// Found this behavior kind of odd, if you provide just the suffix
-			// name you are also asking to remove basename will still print. The
-			// way I have implemented here it will print a blank line instead, that
-			// seems to make more sense to me.
-			flags:      []string{"-s", ".h", "/bar/biz/foo.h", ".h"},
-			out:        "foo\n\n",
+			flags:      []string{".h", ".h"},
+			out:        ".h\n",
 			stdErr:     "",
 			exitStatus: 0,
 		},
 		{
-			flags:      []string{"-s", ".h", "/bar/biz/foo.h", "/foo/bar/thing.h"},
-			out:        "foo\nthing\n",
+			flags:      []string{"/some/path/foo"},
+			out:        "foo\n",
 			stdErr:     "",
 			exitStatus: 0,
 		},
