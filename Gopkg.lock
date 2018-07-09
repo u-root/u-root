@@ -169,12 +169,6 @@
   revision = "5f27d82a512f55b8668d40c0343d2f53885261fa"
 
 [[projects]]
-  name = "github.com/ogier/pflag"
-  packages = ["."]
-  revision = "32a05c62658bd1d7c7e75cbc8195de5d585fde0f"
-  version = "v0.0.1"
-
-[[projects]]
   branch = "master"
   name = "github.com/rck/unit"
   packages = ["."]
@@ -300,6 +294,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1e27e31742105bf7259387e57df57fb7adac6d8850fb41e1560e68cc21865c1a"
+  inputs-digest = "5f3e15dfc568c5aa1a23aebc04c864a319571361f7d6eab3a2c137ab40a52e3a"
   solver-name = "gps-cdcl"
   solver-version = 1
