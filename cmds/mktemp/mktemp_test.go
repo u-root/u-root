@@ -36,16 +36,22 @@ func TestMkTemp(t *testing.T) {
 			exitStatus: 0,
 		},
 		{
-			flags:      []string{"-d", "-p", "foo"},
-			out:        "/tmp/foo",
+			flags:      []string{"foofoo.XXXX"},
+			out:        "/tmp/foofoo",
 			stdErr:     "",
 			exitStatus: 0,
 		},
 		{
-			flags:      []string{"foo"},
+			flags:      []string{"foo.XXXXX", "--suffix", "baz"},
+			out:        "/tmp/foo.baz",
+			stdErr:     "",
+			exitStatus: 0,
+		},
+		{
+			flags:      []string{"-u", "-q"},
 			out:        "",
 			stdErr:     "",
-			exitStatus: 1,
+			exitStatus: 0,
 		},
 	}
 
@@ -59,11 +65,11 @@ func TestMkTemp(t *testing.T) {
 			err := cmd.Run()
 
 			if !strings.HasPrefix(out.String(), tt.out) {
-				t.Errorf("stdout got:\n%s\nwant:\n%s", out.String(), tt.out)
+				t.Errorf("stdout got:\n%s\nwant starting with:\n%s", out.String(), tt.out)
 			}
 
 			if !strings.HasPrefix(stdErr.String(), tt.stdErr) {
-				t.Errorf("stderr got:\n%s\nwant:\n%s", stdErr.String(), tt.stdErr)
+				t.Errorf("stderr got:\n%s\nwant starting with:\n%s", stdErr.String(), tt.stdErr)
 			}
 
 			if tt.exitStatus == 0 && err != nil {
