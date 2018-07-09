@@ -5,12 +5,10 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"io"
+	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	l "log"
-	"math"
 	"net"
 	"os"
 	"strings"
@@ -18,22 +16,24 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// you will notice that I suck at parsers. That said, here is the method to my madness.
-// The language of ip is not super consistent and has lots of convenience shortcuts.
-// The BNF it shows you doesn't show them.
+// The language implemented by the standard 'ip' is not super consistent
+// and has lots of convenience shortcuts.
+// The BNF the standard ip  shows you doesn't show many of these short cuts, and
+// it is wrong in other ways.
+// For this ip command:.
 // The inputs is just the set of args.
-// It's very short.
+// The input is very short -- it's not a program!
 // Each token is just a string and we need not produce terminals with them -- they can
 // just be the terminals and we can switch on them.
-// The cursor is always our current token pointer. We do a dumb recursive descent parser
+// The cursor is always our current token pointer. We do a simple recursive descent parser
 // and accumulate information into a global set of variables. At any point we can see into the
 // whole set of args and see where we are. We can indicate at each point what we're expecting so
-// that in usage() or recover() we can tell the user exactly what we wanted, unlike IP,
-// which just barfs a whole (incorrect) BNF at you when you do anything wrong.
+// that in usage() or recover() we can tell the user exactly what we wanted, unlike the standard ip,
+// which just dumps a whole (incorrect) BNF at you when you do anything wrong.
 // To handle errors in too few arguments, we just do a recover block. That lets us blindly
 // reference the arg[] array without having to check the length everywhere.
 
-// Note the plethora of globals. The reason is simple: we parse one command, do it, and quit.
+// RE: the use of globals. The reason is simple: we parse one command, do it, and quit.
 // It doesn't make sense to write this otherwise.
 var (
 	// Cursor is out next token pointer.
@@ -56,8 +56,8 @@ var (
 // at each level parse off arg[0]. If it matches, continue. If it does not, all error with how far you got, what arg you saw,
 // and why it did not work out.
 
-func usage() {
-	log.Fatalf("This was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
+func usage() error {
+	return fmt.Errorf("This was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
 		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
 }
 
@@ -76,89 +76,23 @@ func one(cmd string, cmds []string) string {
 }
 
 // in the ip command, turns out 'dev' is a noise word.
-// The BNF is not right there either.
-// Always make it optional.
-func dev() netlink.Link {
+// The BNF it shows is not right in that case.
+// Always make 'dev' optional.
+func dev() (netlink.Link, error) {
 	cursor++
 	whatIWant = []string{"dev", "device name"}
 	if arg[cursor] == "dev" {
 		cursor++
 	}
 	whatIWant = []string{"device name"}
-	iface, err := netlink.LinkByName(arg[cursor])
-	if err != nil {
-		usage()
-	}
-	return iface
+	return netlink.LinkByName(arg[cursor])
 }
 
-func showLinks(w io.Writer, withAddresses bool) {
-	ifaces, err := netlink.LinkList()
-	if err != nil {
-		log.Fatalf("Can't enumerate interfaces? %v", err)
-	}
-
-	for _, v := range ifaces {
-		l := v.Attrs()
-
-		fmt.Fprintf(w, "%d: %s: <%s> mtu %d state %s\n", l.Index, l.Name,
-			strings.Replace(strings.ToUpper(fmt.Sprintf("%s", l.Flags)), "|", ",", -1),
-			l.MTU, strings.ToUpper(l.OperState.String()))
-
-		fmt.Fprintf(w, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
-
-		if withAddresses {
-			showLinkAddresses(w, v)
-		}
-	}
-}
-
-func showLinkAddresses(w io.Writer, link netlink.Link) {
-	addrs, err := netlink.AddrList(link, netlink.FAMILY_ALL)
-	if err != nil {
-		log.Printf("Can't enumerate addresses")
-	}
-
-	for _, addr := range addrs {
-
-		var inet string
-		switch len(addr.IPNet.IP) {
-		case 4:
-			inet = "inet"
-		case 16:
-			inet = "inet6"
-		default:
-			log.Fatalf("Can't figure out IP protocol version")
-		}
-
-		fmt.Fprintf(w, "    %s %s", inet, addr.Peer)
-		if addr.Broadcast != nil {
-			fmt.Fprintf(w, " brd %s", addr.Broadcast)
-		}
-		fmt.Fprintf(w, " scope %s %s\n", addrScopes[netlink.Scope(addr.Scope)], addr.Label)
-
-		var validLft, preferredLft string
-		// TODO: fix vishnavanda/netlink. *Lft should be uint32, not int.
-		if uint32(addr.PreferedLft) == math.MaxUint32 {
-			preferredLft = "forever"
-		} else {
-			preferredLft = fmt.Sprintf("%dsec", addr.PreferedLft)
-		}
-		if uint32(addr.ValidLft) == math.MaxUint32 {
-			validLft = "forever"
-		} else {
-			validLft = fmt.Sprintf("%dsec", addr.ValidLft)
-		}
-		fmt.Fprintf(w, "       valid_lft %s preferred_lft %s\n", validLft, preferredLft)
-	}
-}
-
-func addrip() {
+func addrip() error {
 	var err error
 	var addr *netlink.Addr
 	if len(arg) == 1 {
-		showLinks(os.Stdout, true)
-		return
+		return showLinks(os.Stdout, true)
 	}
 	cursor++
 	whatIWant = []string{"add", "del"}
@@ -171,72 +105,79 @@ func addrip() {
 		whatIWant = []string{"CIDR format address"}
 		addr, err = netlink.ParseAddr(arg[cursor])
 		if err != nil {
-			usage()
+			return err
 		}
 	default:
-		usage()
+		return usage()
 	}
-	iface := dev()
+	iface, err := dev()
+	if err != nil {
+		return err
+	}
 	switch c {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
-			log.Fatalf("Adding %v to %v failed: %v", arg[1], arg[2], err)
+			return fmt.Errorf("Adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
 		if err := netlink.AddrDel(iface, addr); err != nil {
-			log.Fatalf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
+			return fmt.Errorf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
-		log.Fatalf("devip: arg[0] changed: can't happen")
+		return fmt.Errorf("devip: arg[0] changed: can't happen")
 	}
-	return
-
+	return nil
 }
 
-func linkshow() {
+func linkshow() error {
 	cursor++
 	whatIWant = []string{"<nothing>", "<device name>"}
 	if len(arg[cursor:]) == 0 {
-		showLinks(os.Stdout, false)
+		return showLinks(os.Stdout, false)
 	}
+	return nil
 }
 
-func setHardwareAddress(iface netlink.Link) {
+func setHardwareAddress(iface netlink.Link) error {
 	cursor++
 	hwAddr, err := net.ParseMAC(arg[cursor])
 	if err != nil {
-		log.Fatalf("%v cant parse mac addr %v: %v", iface, hwAddr, err)
+
+		return fmt.Errorf("%v cant parse mac addr %v: %v", iface, hwAddr, err)
 	}
 	err = netlink.LinkSetHardwareAddr(iface, hwAddr)
 	if err != nil {
-		log.Fatalf("%v cant set mac addr %v: %v", iface, hwAddr, err)
+		return fmt.Errorf("%v cant set mac addr %v: %v", iface, hwAddr, err)
 	}
+	return nil
 }
 
-func linkset() {
-	iface := dev()
+func linkset() error {
+	iface, err := dev()
+	if err != nil {
+		return err
+	}
+
 	cursor++
 	whatIWant = []string{"address", "up", "down"}
 	switch one(arg[cursor], whatIWant) {
 	case "address":
-		setHardwareAddress(iface)
+		return setHardwareAddress(iface)
 	case "up":
 		if err := netlink.LinkSetUp(iface); err != nil {
-			log.Fatalf("%v can't make it up: %v", iface, err)
+			return fmt.Errorf("%v can't make it up: %v", iface, err)
 		}
 	case "down":
 		if err := netlink.LinkSetDown(iface); err != nil {
-			log.Fatalf("%v can't make it down: %v", iface, err)
+			return fmt.Errorf("%v can't make it down: %v", iface, err)
 		}
-	default:
-		usage()
 	}
+	return usage()
 }
 
-func link() {
+func link() error {
 	if len(arg) == 1 {
-		linkshow()
-		return
+		return linkshow()
 	}
 
 	cursor++
@@ -245,21 +186,20 @@ func link() {
 
 	switch one(cmd, whatIWant) {
 	case "show":
-		linkshow()
+		return linkshow()
 	case "set":
-		linkset()
-	default:
-		usage()
+		return linkset()
 	}
-	return
+	return usage()
 }
 
-func routeshow() {
-	if b, err := ioutil.ReadFile("/proc/net/route"); err == nil {
-		log.Printf("%s", string(b))
-	} else {
-		log.Fatalf("Route show failed: %v", err)
+func routeshow() error {
+	b, err := ioutil.ReadFile("/proc/net/route")
+	if err != nil {
+		return fmt.Errorf("Route show failed: %v", err)
 	}
+	log.Printf("%s", string(b))
+	return nil
 }
 
 func nodespec() string {
@@ -268,66 +208,67 @@ func nodespec() string {
 	return arg[cursor]
 }
 
-func nexthop() (string, *netlink.Addr) {
+func nexthop() (string, *netlink.Addr, error) {
 	cursor++
 	whatIWant = []string{"via"}
 	if arg[cursor] != "via" {
-		usage()
+		return "", nil, usage()
 	}
 	nh := arg[cursor]
 	cursor++
 	whatIWant = []string{"Gateway CIDR"}
 	addr, err := netlink.ParseAddr(arg[cursor])
 	if err != nil {
-		log.Fatalf("Gateway CIDR: %v", err)
+		return "", nil, fmt.Errorf("Gateway CIDR: %v", err)
 	}
-	return nh, addr
+	return nh, addr, nil
 }
 
-func routeadddefault() {
-	nh, nhval := nexthop()
+func routeadddefault() error {
+	nh, nhval, err := nexthop()
+	if err != nil {
+		return err
+	}
 	// TODO: NHFLAGS.
-	l := dev()
+	l, err := dev()
+	if err != nil {
+		return err
+	}
 	switch nh {
 	case "via":
 		log.Printf("Add default route %v via %v", nhval, l)
 		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval.IPNet.IP}
 		if err := netlink.RouteAdd(r); err != nil {
-			log.Fatalf("Add default route: %v", err)
+			return fmt.Errorf("Add default route: %v", err)
 		}
-
-	default:
-		usage()
+		return nil
 	}
+	return usage()
 }
 
-func routeadd() {
+func routeadd() error {
 	ns := nodespec()
 	switch ns {
 	case "default":
-		routeadddefault()
-	default:
-		usage()
+		return routeadddefault()
 	}
+	return usage()
 }
 
-func route() {
+func route() error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		routeshow()
-		return
+		return routeshow()
 	}
 
 	whatIWant = []string{"show", "add"}
 	switch one(arg[cursor], whatIWant) {
 	case "show":
-		routeshow()
+		return routeshow()
 	case "add":
-		routeadd()
-	default:
-		usage()
+		return routeadd()
 	}
-
+	return usage()
 }
 
 func main() {
@@ -354,14 +295,19 @@ func main() {
 
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
+	var err error
 	switch one(arg[cursor], whatIWant) {
 	case "addr":
-		addrip()
+		err = addrip()
 	case "link":
-		link()
+		err = link()
 	case "route":
-		route()
+		err = route()
 	default:
 		usage()
 	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
