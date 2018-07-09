@@ -12,7 +12,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"path"
+	"path/filepath"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -28,13 +28,13 @@ func main() {
 	args := flag.Args()
 	switch len(args) {
 	case 2:
-		_, fileName := path.Split(args[0])
+		fileName := filepath.Base(args[0])
 		if fileName != args[1] {
 			fileName = strings.TrimSuffix(fileName, args[1])
 		}
 		fmt.Println(fileName)
 	case 1:
-		_, fileName := path.Split(args[0])
+		fileName := filepath.Base(args[0])
 		fmt.Println(fileName)
 	default:
 		usage()
