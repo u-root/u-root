@@ -22,7 +22,7 @@ modes:
     stored in tmpfs. From that point on, when you run the command, you get the
     one in tmpfs. Don't worry: the Go compiler is pretty fast.
 
-*   bb mode: One busybox-like binary comprised of all the Go tools you ask to
+*   bb mode: One busybox-like binary comprising all the Go tools you ask to
     include.
 
     In this mode, u-root copies and rewrites the source of the tools you asked
