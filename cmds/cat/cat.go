@@ -48,7 +48,7 @@ func cat(w io.Writer, files []string) error {
 func main() {
 	flag.Parse()
 
-	if len(os.Args) == 1 {
+	if flag.NArg() == 0 {
 		if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {
 			log.Fatalf("error concatenating stdin to stdout: %v", err)
 		}
