@@ -1,3 +1,7 @@
+// Copyright 2017-2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // The `field` command reads newline-separated lines of data from either
 // the standard input or the specified files. It splits those lines into
 // a list of fields, separated by a specifiable regular expression. It

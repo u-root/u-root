@@ -1,4 +1,4 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2017-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,9 +13,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
+	"os/exec"
 )
 
 var absPath = flag.Bool("a", false, "Print absolute paths")
@@ -51,12 +51,12 @@ func reject(s string) rule {
 // A file is checked iff all the accepts and none of the rejects match.
 var rules = []rule{
 	accept(`.*\.go`),
-	reject(`/vendor/.*`),      // Various authors
-	reject(`/cmds/dhcp/.*`),   // Graham King
-	reject(`/cmds/ectool/.*`), // Chromium authors
-	reject(`/cmds/ldd/.*`),    // Go authors
-	reject(`/cmds/ping/.*`),   // Go authors
-	reject(`/netlink/.*`),     // Docker (Apache license)
+	reject(`vendor/.*`),      // Various authors
+	reject(`cmds/dhcp/.*`),   // Graham King
+	reject(`cmds/ectool/.*`), // Chromium authors
+	reject(`cmds/ldd/.*`),    // Go authors
+	reject(`cmds/ping/.*`),   // Go authors
+	reject(`netlink/.*`),     // Docker (Apache license)
 }
 
 func main() {
@@ -64,37 +64,51 @@ func main() {
 	uroot := os.ExpandEnv(uroot)
 	incorrect := []string{}
 
-	// Walk u-root tree.
-	err := filepath.Walk(uroot, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-		// Test rules
-		trimmedPath := strings.TrimPrefix(path, uroot)
+	// List files added to u-root.
+	out, err := exec.Command("git", "ls-files").Output()
+	if err != nil {
+		log.Fatalln("error running git ls-files:", err)
+	}
+	files := strings.Fields(string(out))
+
+	// Iterate over files.
+	outer:
+	for _, file := range files {
+		// Test rules.
+		trimmedPath := strings.TrimPrefix(file, uroot)
 		for _, r := range rules {
 			if r.MatchString(trimmedPath) == r.invert {
-				return nil
+				continue outer
 			}
 		}
-		// Read from the file.
-		r, err := os.Open(path)
+
+		// Make sure it is not a directory.
+		info, err := os.Stat(file)
 		if err != nil {
-			return err
+			log.Fatalln("cannot stat", file, err)
+		}
+		if info.IsDir() {
+			continue
+		}
+
+		// Read from the file.
+		r, err := os.Open(file)
+		if err != nil {
+			log.Fatalln("cannot open", file, err)
 		}
 		defer r.Close()
 		contents, err := ioutil.ReadAll(r)
 		if err != nil {
-			return err
+			log.Fatalln("cannot read", file, err)
 		}
 		if !license.Match(contents) {
 			p := trimmedPath
 			if *absPath {
-				p = path
+				p = file
 			}
 			incorrect = append(incorrect, p)
 		}
-		return nil
-	})
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
