@@ -1,7 +1,7 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2017-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//
+
 // Synopsis:
 //      id [-gGnu]
 //
@@ -12,7 +12,6 @@
 //		  -G, --groups    print all group IDs
 //		  -n, --name      print a name instead of a number, for -ugG
 //		  -u, --user      print only the effective user ID
-
 package main
 
 import (
