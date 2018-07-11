@@ -172,17 +172,20 @@ type Package struct {
 	// right order.
 	init *ast.FuncDecl
 
-	// initAssigns is a map of assignment expression -> assignment
+	// initAssigns is a map of assignment expression -> InitN function call
 	// statement.
 	//
+	// That InitN should contain the assignment statement for the
+	// appropriate assignment expression.
+	//
 	// types.Info.InitOrder keeps track of Initializations by Lhs name and
-	// Rhs ast.Expr.  We reparent the Rhs in assignment statements in InitX
+	// Rhs ast.Expr.  We reparent the Rhs in assignment statements in InitN
 	// functions, so we use the Rhs as an easy key here.
 	// types.Info.InitOrder + initAssigns can then easily be used to derive
-	// the order of AssignStmts.
+	// the order of Stmts in the "real" init.
 	//
 	// The key Expr must also be the AssignStmt.Rhs[0].
-	initAssigns map[ast.Expr]*ast.AssignStmt
+	initAssigns map[ast.Expr]ast.Stmt
 }
 
 // NewPackageFromEnv finds the package identified by importPath, and gathers
@@ -239,7 +242,7 @@ func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
 		typeInfo: types.Info{
 			Types: make(map[ast.Expr]types.TypeAndValue),
 		},
-		initAssigns: make(map[ast.Expr]*ast.AssignStmt),
+		initAssigns: make(map[ast.Expr]ast.Stmt),
 	}
 
 	// This Init will hold calls to all other InitXs.
@@ -280,9 +283,11 @@ func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
 	return pp, nil
 }
 
-func (p *Package) nextInit() *ast.Ident {
+func (p *Package) nextInit(addToCallList bool) *ast.Ident {
 	i := ast.NewIdent(fmt.Sprintf("Init%d", p.initCount))
-	p.init.Body.List = append(p.init.Body.List, &ast.ExprStmt{X: &ast.CallExpr{Fun: i}})
+	if addToCallList {
+		p.init.Body.List = append(p.init.Body.List, &ast.ExprStmt{X: &ast.CallExpr{Fun: i}})
+	}
 	p.initCount++
 	return i
 }
@@ -336,13 +341,31 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 					continue
 				}
 
-				// Add an assign statement for these values to init.
+				// For each assignment, create a new init
+				// function, and place it in the same file.
 				for i, name := range s.Names {
-					p.initAssigns[s.Values[i]] = &ast.AssignStmt{
-						Lhs: []ast.Expr{name},
-						Tok: token.ASSIGN,
-						Rhs: []ast.Expr{s.Values[i]},
+					varInit := &ast.FuncDecl{
+						Name: p.nextInit(false),
+						Type: &ast.FuncType{
+							Params:  &ast.FieldList{},
+							Results: nil,
+						},
+						Body: &ast.BlockStmt{
+							List: []ast.Stmt{
+								&ast.AssignStmt{
+									Lhs: []ast.Expr{name},
+									Tok: token.ASSIGN,
+									Rhs: []ast.Expr{s.Values[i]},
+								},
+							},
+						},
 					}
+					// Add a call to the new init func to
+					// this map, so they can be added to
+					// Init0() in the correct init order
+					// later.
+					p.initAssigns[s.Values[i]] = &ast.ExprStmt{X: &ast.CallExpr{Fun: varInit.Name}}
+					f.Decls = append(f.Decls, varInit)
 				}
 
 				// Add the type of the expression to the global
@@ -360,7 +383,7 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 				hasMain = true
 			}
 			if d.Recv == nil && d.Name.Name == "init" {
-				d.Name = p.nextInit()
+				d.Name = p.nextInit(true)
 			}
 		}
 	}
@@ -403,7 +426,7 @@ func (p *Package) Rewrite(destDir, bbImportPath string) error {
 	//
 	// func Init0() {}
 	varInit := &ast.FuncDecl{
-		Name: p.nextInit(),
+		Name: p.nextInit(true),
 		Type: &ast.FuncType{
 			Params:  &ast.FieldList{},
 			Results: nil,
@@ -483,13 +506,13 @@ func writeFile(path string, fset *token.FileSet, f *ast.File) error {
 }
 
 func writeGoFile(path string, code []byte) error {
-	// Fix up imports.
+	// Format the file. Do not fix up imports, as we only moved code around
+	// within files.
 	opts := imports.Options{
-		Fragment:  true,
-		AllErrors: true,
-		Comments:  true,
-		TabIndent: true,
-		TabWidth:  8,
+		Comments:   true,
+		TabIndent:  true,
+		TabWidth:   8,
+		FormatOnly: true,
 	}
 	code, err := imports.Process("commandline", code, &opts)
 	if err != nil {
