@@ -8,13 +8,11 @@ import (
 	"io"
 	"reflect"
 	"testing"
-
-	"github.com/google/uuid"
 )
 
 const (
-	equalHeaderError = "p.Signature(0x5452415020494646) != b.Signature(0x5452415020494645); p.Revision(65537) != b.Revision(65536); p.HeaderSize(93) != b.HeaderSize(92); p.CurrentLBA(0x2) != b.BackupLBA(0x1); p.FirstLBA(0x23) != b.FirstLBA(0x22); p.LastLBA(0x43cf9f) != b.LastLBA(0x43cf9e); p.DiskGUID(0x32653165643462612d656639332d346162302d383436652d326533613661326437336266) != b.DiskGUID(0x32643165643462612d656639332d346162302d383436652d326533613661326437336266); p.NPart(127) != b.NPart(128); p.PartSize(127) != b.PartSize(128)"
-	equalPartsError  = "Partition 3: p.PartGUID(0x35653261336166652d333234662d613734312d623732352d616363633332383561333039) != b.PartGUID(0x35643261336166652d333234662d613734312d623732352d616363633332383561333039); Partition 8: p.UniqueGUID(0x65643939336135312d336563342d346131342d383339382d613437613765366165343263) != b.UniqueGUID(0x65643938336135312d336563342d346131342d383339382d613437613765366165343263); Partition 11: p.FirstLBA(0x3d001) != b.FirstLBA(0x3d000); Partition 21: p.LastLBA(0x1) != b.LastLBA(0x0); Partition 61: p.Name(0x000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) != b.Name(0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)"
+	equalHeaderError = "p.Signature(0x5452415020494646) != b.Signature(0x5452415020494645); p.Revision(65537) != b.Revision(65536); p.HeaderSize(93) != b.HeaderSize(92); p.CurrentLBA(0x2) != b.BackupLBA(0x1); p.FirstLBA(0x23) != b.FirstLBA(0x22); p.LastLBA(0x43cf9f) != b.LastLBA(0x43cf9e); p.DiskGUID({0xbad41e2d 0x93ef 0xb04a 0x856e2e3a6a2d73bf}) != b.DiskGUID({0xbad41e2d 0x93ef 0xb04a 0x846e2e3a6a2d73bf}); p.NPart(127) != b.NPart(128); p.PartSize(127) != b.PartSize(128)"
+	equalPartsError  = "Partition 3: p.PartGUID({0xfe3a2a5d 0x4f32 0x41a7 0xb825accc3285a309}) != b.PartGUID({0xfe3a2a5d 0x4f32 0x41a7 0xb725accc3285a309}); Partition 8: p.UniqueGUID({0x513a98ed 0xc43e 0x144a 0x8399a47a7e6ae42c}) != b.UniqueGUID({0x513a98ed 0xc43e 0x144a 0x8398a47a7e6ae42c}); Partition 11: p.FirstLBA(0x3d001) != b.FirstLBA(0x3d000); Partition 21: p.LastLBA(0x1) != b.LastLBA(0x0); Partition 61: p.Name(0x000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) != b.Name(0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)"
 )
 
 var (
@@ -28,7 +26,7 @@ var (
 		BackupLBA:  0x43cfbf,
 		FirstLBA:   0x22,
 		LastLBA:    0x43cf9e,
-		DiskGUID:   uuid.Must(uuid.Parse("2d1ed4ba-ef93-4ab0-846e-2e3a6a2d73bf")),
+		DiskGUID:   GUID{L: 0xbad41e2d, W1: 0x93ef, W2: 0xb04a, B: [8]byte{0x84, 0x6e, 0x2e, 0x3a, 0x6a, 0x2d, 0x73, 0xbf}},
 		PartStart:  2,
 		NPart:      MaxNPart,
 		PartSize:   0x80, // This is not constant, but was used for this chromeos disk.
@@ -53,7 +51,7 @@ func TestGPTTable(t *testing.T) {
 		{0x0, "Primary GPT signature invalid (54524150204946ff), needs to be 5452415020494645"},
 		{0xf, "Primary GPT HeaderSize (ff00005c) is not supported value (5c)"},
 		{0x51, "Primary GPT MaxNPart (ff80) is above maximum of 80"},
-		{0x59, "Primary Partition CRC: Header {\n\t\"Signature\": 6075990659671082565,\n\t\"Revision\": 65536,\n\t\"HeaderSize\": 92,\n\t\"CRC\": 575771282,\n\t\"Reserved\": 0,\n\t\"CurrentLBA\": 1,\n\t\"BackupLBA\": 4444095,\n\t\"FirstLBA\": 34,\n\t\"LastLBA\": 4444062,\n\t\"DiskGUID\": \"2d1ed4ba-ef93-4ab0-846e-2e3a6a2d73bf\",\n\t\"PartStart\": 2,\n\t\"NPart\": 128,\n\t\"PartSize\": 128,\n\t\"PartCRC\": 2373123927,\n\t\"Parts\": null\n}, computed checksum is 8d728e57, header has 8d72ff57"},
+		{0x59, "Primary Partition CRC: Header {\n\t\"Signature\": 6075990659671082565,\n\t\"Revision\": 65536,\n\t\"HeaderSize\": 92,\n\t\"CRC\": 575771282,\n\t\"Reserved\": 0,\n\t\"CurrentLBA\": 1,\n\t\"BackupLBA\": 4444095,\n\t\"FirstLBA\": 34,\n\t\"LastLBA\": 4444062,\n\t\"DiskGUID\": {\n\t\t\"L\": 3134463533,\n\t\t\"W1\": 37871,\n\t\t\"W2\": 45130,\n\t\t\"B\": [\n\t\t\t132,\n\t\t\t110,\n\t\t\t46,\n\t\t\t58,\n\t\t\t106,\n\t\t\t45,\n\t\t\t115,\n\t\t\t191\n\t\t]\n\t},\n\t\"PartStart\": 2,\n\t\"NPart\": 128,\n\t\"PartSize\": 128,\n\t\"PartCRC\": 2373123927,\n\t\"Parts\": null\n}, computed checksum is 8d728e57, header has 8d72ff57"},
 		{0x10, "Primary Header CRC: computed checksum is 22519292, header has 225192ff"},
 	}
 
@@ -81,7 +79,7 @@ func TestGPTTable(t *testing.T) {
 
 		t.Logf("New GPT: %s", g)
 		if !reflect.DeepEqual(header, g.Header) {
-			t.Errorf("Check UUID equality from\n%v to\n%v: got false, want true", header, g.Header)
+			t.Errorf("Check GUID equality from\n%v to\n%v: got false, want true", header, g.Header)
 			continue
 		}
 	}
@@ -144,7 +142,7 @@ func TestEqualHeader(t *testing.T) {
 	p.Primary.CurrentLBA++
 	p.Primary.FirstLBA++
 	p.Primary.LastLBA++
-	p.Primary.DiskGUID[0]++
+	p.Primary.DiskGUID.B[0]++
 	p.Primary.NPart--
 	p.Primary.PartSize--
 	p.Primary.PartCRC++
@@ -172,8 +170,8 @@ func TestEqualParts(t *testing.T) {
 	}
 	// Test some equality things before we do the 'length is the same' test
 	// Note that testing the NParts header variable is done in the HeaderTest
-	p.Primary.Parts[3].PartGUID[0]++
-	p.Primary.Parts[8].UniqueGUID[1]++
+	p.Primary.Parts[3].PartGUID.B[0]++
+	p.Primary.Parts[8].UniqueGUID.B[1]++
 	p.Primary.Parts[11].FirstLBA++
 	p.Primary.Parts[21].LastLBA++
 	p.Primary.Parts[53].Attribute++
