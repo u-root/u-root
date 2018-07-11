@@ -6,7 +6,7 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/insomniacslk/systemboot/pkg/storage"
+	"github.com/systemboot/systemboot/pkg/storage"
 )
 
 // TODO backward compatibility for BIOS mode with partition type 0xee

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/insomniacslk/systemboot/pkg/booter"
+	"github.com/systemboot/systemboot/pkg/booter"
 )
 
 var (
