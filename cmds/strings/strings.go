@@ -19,7 +19,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -36,12 +35,13 @@ func asciiIsPrint(char byte) bool {
 }
 
 func stringsIO(r *bufio.Reader, w io.Writer) error {
-	var o string
+	var o []byte
 	for {
 		b, err := r.ReadByte()
 		if err == io.EOF {
 			if len(o) >= *n {
-				fmt.Fprintf(w, "%s\n", o)
+				w.Write(o)
+				w.Write([]byte{'\n'})
 			}
 			return nil
 		}
@@ -50,13 +50,18 @@ func stringsIO(r *bufio.Reader, w io.Writer) error {
 		}
 		if !asciiIsPrint(b) {
 			if len(o) >= *n {
-				fmt.Fprintf(w, "%s\n", o)
+				w.Write(o)
+				w.Write([]byte{'\n'})
 			}
-			o = ""
+			o = o[:0]
 			continue
 		}
-		o = o + string(b)
-
+		// Prevent the buffer from growing indefinitely.
+		if len(o) >= *n+1024 {
+			w.Write(o[:1024])
+			o = o[1024:]
+		}
+		o = append(o, b)
 	}
 }
 
