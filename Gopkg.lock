@@ -8,62 +8,10 @@
   version = "v0.2.0"
 
 [[projects]]
-  name = "github.com/boltdb/bolt"
-  packages = ["."]
-  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
-  version = "v1.3.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4"
-  packages = ["."]
-  revision = "a1d1b6c41b1ce8a71a5121a9cee31809c4707d9c"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/d2g/dhcp4client"
-  packages = ["."]
-  revision = "b7a004ff1a09ab6723625e179a44e476306977a6"
-
-[[projects]]
   branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
   revision = "bb3d318650d48840a39aa21a027c6630e198e626"
-
-[[projects]]
-  name = "github.com/elves/elvish"
-  packages = [
-    "build",
-    "daemon",
-    "edit",
-    "edit/highlight",
-    "edit/history",
-    "edit/lscolors",
-    "edit/prompt",
-    "edit/tty",
-    "edit/ui",
-    "eval",
-    "eval/bundled",
-    "eval/daemon",
-    "eval/re",
-    "eval/types",
-    "eval/vartypes",
-    "getopt",
-    "glob",
-    "parse",
-    "program",
-    "program/daemon",
-    "program/shell",
-    "program/web",
-    "runtime",
-    "store",
-    "store/storedefs",
-    "sys",
-    "util"
-  ]
-  revision = "6331c1515ba41515c74f0f8f24be10e74bf3acbe"
-  version = "0.11"
 
 [[projects]]
   name = "github.com/go-test/deep"
@@ -91,12 +39,6 @@
     "waiter"
   ]
   revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/google/uuid"
-  packages = ["."]
-  revision = "dec09d789f3dba190787f8b4454c7d3c936fed9e"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -133,12 +75,6 @@
   packages = ["."]
   revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
   version = "v1.1"
-
-[[projects]]
-  name = "github.com/mattn/go-isatty"
-  packages = ["."]
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
 
 [[projects]]
   branch = "master"
@@ -193,12 +129,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/u-root/dhcp6"
-  packages = ["."]
-  revision = "0570f4289fd3465c31d7f27e5ba36ad2800d60e2"
-
-[[projects]]
-  branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
@@ -211,22 +141,6 @@
   name = "github.com/vishvananda/netns"
   packages = ["."]
   revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/xiaq/persistent"
-  packages = [
-    "hash",
-    "hashmap",
-    "vector"
-  ]
-  revision = "cd415c64068256386eb46bbbb1e56b461872feed"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/zaolin/go-tpm"
-  packages = ["tpm"]
-  revision = "c1c9f6aa4acef48f689c983db26d7b5066cb1c32"
 
 [[projects]]
   branch = "master"
@@ -259,18 +173,14 @@
     "bpf",
     "internal/iana",
     "internal/socket",
-    "ipv4",
-    "ipv6"
+    "ipv4"
   ]
   revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = [
-    "unix",
-    "windows"
-  ]
+  packages = ["unix"]
   revision = "91ee8cde435411ca3f1cd365e8f20131aed4d0a1"
 
 [[projects]]
@@ -294,6 +204,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5f3e15dfc568c5aa1a23aebc04c864a319571361f7d6eab3a2c137ab40a52e3a"
+  inputs-digest = "7845beb8ce3e8cd8063b44d87d4f8b7cd2450c9747f6be84f43c7d9bc5aa3b8b"
   solver-name = "gps-cdcl"
   solver-version = 1
