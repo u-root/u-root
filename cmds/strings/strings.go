@@ -19,6 +19,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -34,50 +35,28 @@ func asciiIsPrint(char byte) bool {
 	return char >= 32 && char <= 126
 }
 
-func stringsIO(r io.Reader, w io.Writer) error {
-	// At least `n` bytes must be held in memory at a given time.
-	rb := bufio.NewReaderSize(r, *n)
-
-	// This processes the file one byte at a time. It might be inefficient,
-	// but it works for now.
-outerLoop:
+func stringsIO(r *bufio.Reader, w io.Writer) error {
+	var o string
 	for {
-		// Discard bytes from the buffer until the first `n` bytes are
-		// all printable.
-		peek, err := rb.Peek(*n)
+		b, err := r.ReadByte()
 		if err == io.EOF {
+			if len(o) >= *n {
+				fmt.Fprintf(w, "%s\n", o)
+			}
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		for i := *n - 1; i >= 0; i-- {
-			if !asciiIsPrint(peek[i]) {
-				rb.Discard(i + 1)
-				continue outerLoop
+		if !asciiIsPrint(b) {
+			if len(o) >= *n {
+				fmt.Fprintf(w, "%s\n", o)
 			}
+			o = ""
+			continue
 		}
+		o = o + string(b)
 
-		// Write the first `n` bytes of the buffer.
-		w.Write(peek)
-		rb.Discard(*n)
-
-		// Keep writing bytes until a non-printable byte is encountered.
-		for {
-			b, err := rb.ReadByte()
-			if err == io.EOF {
-				w.Write([]byte{'\n'})
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			if !asciiIsPrint(b) {
-				w.Write([]byte{'\n'})
-				break
-			}
-			w.Write([]byte{b})
-		}
 	}
 }
 
