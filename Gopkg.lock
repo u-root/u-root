@@ -21,12 +21,30 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/golang/glog"
+  packages = ["."]
+  revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+
+[[projects]]
+  branch = "master"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
     "tpmutil"
   ]
   revision = "ca55a71865e26d3113cb6b281f72a50a1d82ea8a"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/goexpect"
+  packages = ["."]
+  revision = "24d0569daa0e7d860dc93ebc60ef69a0a2958889"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/goterm"
+  packages = ["term"]
+  revision = "70e1c263818522aa1ecbdd34d7e143639d447ced"
 
 [[projects]]
   branch = "master"
@@ -193,6 +211,12 @@
   revision = "77106db15f689a60e7d4e085d967ac557b918fb2"
 
 [[projects]]
+  name = "google.golang.org/grpc"
+  packages = ["codes"]
+  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
+  version = "v1.13.0"
+
+[[projects]]
   name = "pack.ag/tftp"
   packages = [
     ".",
@@ -204,6 +228,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7845beb8ce3e8cd8063b44d87d4f8b7cd2450c9747f6be84f43c7d9bc5aa3b8b"
+  inputs-digest = "fb7a18910b8554fe9aa3bb3ff61d41afceeedf80c74249b08fc9d168f7f01f39"
   solver-name = "gps-cdcl"
   solver-version = 1
