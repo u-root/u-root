@@ -61,6 +61,10 @@ func TestReadTextFile(t *testing.T) {
 	for _, v := range test {
 		r := bytes.NewBufferString(v.d)
 		f, err := NewTextEditor(readerio(r))
+		if err != nil {
+			t.Error(err)
+			continue
+		}
 		// We are adding the file after a 0-length slice
 		// We want dot to be at the point we added it.
 		f.Move(v.where)

@@ -22,7 +22,7 @@ func in(f io.ReadSeeker, addr uint64, data interface{}) error {
 func out(f io.WriteSeeker, addr uint64, data interface{}) error {
 	_, err := f.Seek(int64(addr), 0)
 	if err != nil {
-		return fmt.Errorf("in: bad address %v: %v", addr, err)
+		return fmt.Errorf("out: bad address %v: %v", addr, err)
 	}
 	return binary.Write(f, binary.LittleEndian, data)
 }
