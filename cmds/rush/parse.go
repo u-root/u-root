@@ -79,7 +79,7 @@ func next(b *bufio.Reader) byte {
 // Tokenize stuff coming in from the stream. For everything but an arg, the
 // type is just the thing itself, since we can switch on strings.
 func tok(b *bufio.Reader) (string, string) {
-	tokType, arg := "white", ""
+	var tokType, arg string
 	c := next(b)
 
 	//fmt.Printf("TOK %v", c)

@@ -82,14 +82,12 @@ func main() {
 
 	envs = os.Environ()
 	debug("envs %v", envs)
+
 	os.Setenv("GOBIN", "/buildbin")
 	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(util.CmdsPath, "installcommand"))
 	cmd := exec.Command("go", a...)
-	installenvs := envs
-	installenvs = append(envs, "GOBIN=/buildbin")
-	cmd.Env = installenvs
+	cmd.Env = append(envs, "GOBIN=/buildbin")
 	cmd.Dir = "/"
-
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout

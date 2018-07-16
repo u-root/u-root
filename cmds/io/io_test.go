@@ -60,7 +60,7 @@ func checkError(msg string, got, want error) error {
 
 func TestIO(t *testing.T) {
 	var ops = []op{
-		{name: "Test bad seek", addr: 9, size: -1, outerr: fmt.Errorf("in: bad address 9: Seek: illegal seek to 9")},
+		{name: "Test bad seek", addr: 9, size: -1, outerr: fmt.Errorf("out: bad address 9: Seek: illegal seek to 9")},
 		{name: "Write and Read byte", val: uint8(1), want: 1, retval: []byte{1}},
 		{name: "Write and Read 16 bits", val: uint16(0x12), want: 0x12, retval: []byte{1, 2}},
 		{name: "Write and Read 32 bits", val: uint32(0x1234), want: 0x1234, retval: []byte{1, 2, 3, 4}},
