@@ -1,3 +1,7 @@
+// Copyright 2017-2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // This file is a GPT of a ChromeOS file system, which has
 // 12 partitions (more than most) and is hence useful to test
 // basic functions out. It includes a lot of data we don't

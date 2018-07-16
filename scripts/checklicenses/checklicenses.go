@@ -51,12 +51,13 @@ func reject(s string) rule {
 // A file is checked iff all the accepts and none of the rejects match.
 var rules = []rule{
 	accept(`.*\.go`),
-	reject(`vendor/.*`),      // Various authors
-	reject(`cmds/dhcp/.*`),   // Graham King
-	reject(`cmds/ectool/.*`), // Chromium authors
-	reject(`cmds/ldd/.*`),    // Go authors
-	reject(`cmds/ping/.*`),   // Go authors
-	reject(`netlink/.*`),     // Docker (Apache license)
+	reject(`vendor/.*`),       // Various authors
+	reject(`cmds/dhcp/.*`),    // Graham King
+	reject(`cmds/ldd/.*`),     // Go authors
+	reject(`cmds/ping/.*`),    // Go authors
+	reject(`xcmds/ectool/.*`), // Chromium authors
+
+	reject(`pkg/diskboot/entrytype_string.go`), // generated
 }
 
 func main() {
