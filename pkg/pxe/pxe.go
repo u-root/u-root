@@ -1,3 +1,7 @@
+// Copyright 2017-2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // Package pxe aims to implement the PXE specification.
 //
 // See http://www.pix.net/software/pxeboot/archive/pxespec.pdf

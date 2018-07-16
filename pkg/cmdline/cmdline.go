@@ -1,9 +1,12 @@
-/* The cmdline package provides a parser and convienence functions for reading
-   configuration data from /proc/cmdline it's conformant with
-   https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html,
-   though making 'var_name' and 'var-name' equivalent may need to be done
-   separately. */
+// Copyright 2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
+// The cmdline package provides a parser and convienence functions for reading
+// configuration data from /proc/cmdline it's conformant with
+// https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html,
+// though making 'var_name' and 'var-name' equivalent may need to be done
+// separately.
 package cmdline
 
 import (
