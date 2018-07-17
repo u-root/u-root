@@ -113,12 +113,11 @@ func main() {
 				log.Fatal("Error setting loop device:", err)
 			}
 		default:
-			f, ok := opts[option]
-			if !ok {
+			if f, ok := opts[option]; ok {
+				flags |= f
+			} else {
 				data = append(data, option)
-				continue
 			}
-			flags |= f
 		}
 	}
 	if *ro {
@@ -128,7 +127,7 @@ func main() {
 		// mandatory parameter for the moment
 		log.Fatalf("No file system type provided!\nUsage: mount [-r] [-o mount options] -t fstype dev path")
 	}
-	if err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), *ro); err != nil {
+	if err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), flags); err != nil {
 		log.Printf("%v", err)
 		informIfUnknownFS(*fsType)
 		os.Exit(1)

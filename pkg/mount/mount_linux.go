@@ -11,11 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func Mount(dev, path, fsType, data string, ro bool) error {
-	var flags uintptr
-	if ro {
-		flags |= unix.MS_RDONLY
-	}
+func Mount(dev, path, fsType, data string, flags uintptr) error {
 	if err := unix.Mount(dev, path, fsType, flags, data); err != nil {
 		return fmt.Errorf("Mount %q on %q type %q flags %x: %v",
 			dev, path, fsType, flags, err)
