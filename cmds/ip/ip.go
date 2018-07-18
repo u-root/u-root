@@ -171,8 +171,10 @@ func linkset() error {
 		if err := netlink.LinkSetDown(iface); err != nil {
 			return fmt.Errorf("%v can't make it down: %v", iface, err)
 		}
+	default:
+		return usage()
 	}
-	return usage()
+	return nil
 }
 
 func link() error {
