@@ -21,6 +21,10 @@ Minimal kernel config needed for Go:
     CONFIG_SERIAL_8250_CONSOLE=y
     CONFIG_TTY=y
 
+Additional configs needed for testing:
+
+    CONFIG_DEVPORT=y
+
 Build Linux:
 
 1. Run `make mrproper`.
