@@ -1,3 +1,7 @@
+// Copyright 2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package integration
 
 import (
@@ -86,32 +90,10 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 func cleanup(t *testing.T, tmpDir string, q *qemu.QEMU) {
 	q.Close()
 	if t.Failed() {
-		t.Log("Temp dir: ", tmpDir)
+		t.Log("keeping temp dir: ", tmpDir)
 	} else {
 		if err := os.RemoveAll(tmpDir); err != nil {
 			t.Logf("failed to remove temporary directory %s", tmpDir)
 		}
-	}
-}
-
-// TestHelloWorld runs an init which prints the string "HELLO WORLD" and exits.
-func TestHelloWorld(t *testing.T) {
-	// Create the CPIO and start QEMU.
-	tmpDir, q := testWithQEMU(t, "github.com/u-root/u-root/integration/testdata/helloworld/uinit")
-	defer cleanup(t, tmpDir, q)
-
-	if err := q.Expect("HELLO WORLD"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// TestHelloWorldNegative runs an init which does not print the string "GOODBYE WORLD".
-func TestHelloWorldNegative(t *testing.T) {
-	// Create the CPIO and start QEMU.
-	tmpDir, q := testWithQEMU(t, "github.com/u-root/u-root/integration/testdata/helloworld/uinit")
-	defer cleanup(t, tmpDir, q)
-
-	if err := q.Expect("GOODBYE WORLD"); err == nil {
-		t.Fatal(err)
 	}
 }
