@@ -36,6 +36,9 @@ type QEMU struct {
 	// Extra kernel arguments
 	KernelArgs string
 
+	// Extra QEMU arguments
+	ExtraArgs []string
+
 	gExpect *expect.GExpect
 }
 
@@ -68,7 +71,7 @@ func (q *QEMU) CmdLine() []string {
 		args = append(args, "-initrd", q.InitRAMFS)
 	}
 
-	return args
+	return append(args, q.ExtraArgs...)
 }
 
 // CmdLineQuoted quotes any of QEMU's command line arguments containing a space

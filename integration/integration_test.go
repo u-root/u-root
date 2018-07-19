@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -16,8 +17,9 @@ import (
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
-// Returns temporary directory and QEMU instance.
-func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
+// Returns temporary directory and QEMU instance. `uinitName` is the name of a
+// directory containing uinit found at `github.com/u-root/u-root/integration/testdata`.
+func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *qemu.QEMU) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("test is skipped unless UROOT_QEMU is set")
 	}
@@ -46,7 +48,7 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs = append(pkgs, uinitPkg)
+	pkgs = append(pkgs, path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"))
 
 	// Archiver
 	archiver, err := uroot.GetArchiver("cpio")
@@ -82,6 +84,7 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 	q := &qemu.QEMU{
 		InitRAMFS: outputFile,
 		Kernel:    os.Getenv("UROOT_KERNEL"),
+		ExtraArgs: extraArgs,
 	}
 	t.Logf("command line:\n%s", q.CmdLineQuoted())
 	if err := q.Start(); err != nil {
