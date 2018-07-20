@@ -195,7 +195,7 @@ func NewPackageFromEnv(env golang.Environ, importPath string, importer types.Imp
 	if err != nil {
 		return nil, err
 	}
-	return NewPackage(p, importer)
+	return NewPackage(filepath.Base(p.Dir), p, importer)
 }
 
 // ParseAST parses p's package files into an AST.
@@ -228,8 +228,7 @@ func ParseAST(p *build.Package) (*token.FileSet, *ast.Package, error) {
 
 // NewPackage gathers AST, type, and token information about package p, using
 // the given importer to resolve dependencies.
-func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
-	name := filepath.Base(p.Dir)
+func NewPackage(name string, p *build.Package, importer types.Importer) (*Package, error) {
 	fset, astp, err := ParseAST(p)
 	if err != nil {
 		return nil, err
