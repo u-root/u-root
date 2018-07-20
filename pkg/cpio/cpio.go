@@ -81,8 +81,8 @@ func NewDedupWriter(rw RecordWriter) RecordWriter {
 	}
 }
 
-// Passthrough reads in a cpio from a root and writes it to a destination root.
-// This avoids copying the entire partition which is much larger than the cpio.
+// Passthrough copies from a RecordReader to a RecordWriter
+// It processes one record at a time to minimize the memory footprint.
 func Passthrough(r RecordReader, w RecordWriter) error {
 	for {
 		rec, err := r.ReadRecord()
