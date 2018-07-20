@@ -60,9 +60,15 @@ jobs:
             chmod +x ./dep-linux-amd64
       - run:
           name: Check vendored dependencies
-          command:
-                  ./dep-linux-amd64 hash-inputs
-                  ./dep-linux-amd64 status
+          command: |
+            ./dep-linux-amd64 hash-inputs
+            ./dep-linux-amd64 status
+            ./dep-linux-amd64 ensure -vendor-only
+            if [[ -n "$(git status --porcelain vendor)" ]]; then
+              echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
+              git status --porcelain vendor
+              exit 1
+            fi
       - run:
           name: vet
           command: |

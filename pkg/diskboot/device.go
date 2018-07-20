@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/mount"
+	"golang.org/x/sys/unix"
 )
 
 // Device contains the path to a block filesystem along with its type
@@ -76,7 +77,7 @@ func mountDevice(devPath string, fstypes []string) (*Device, error) {
 		return nil, fmt.Errorf("Failed to create tmp mount directory: %v", err)
 	}
 	for _, fstype := range fstypes {
-		if err := mount.Mount(devPath, mountPath, fstype, "", true); err != nil {
+		if err := mount.Mount(devPath, mountPath, fstype, "", unix.MS_RDONLY); err != nil {
 			continue
 		}
 

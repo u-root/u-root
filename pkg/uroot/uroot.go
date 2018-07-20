@@ -140,6 +140,12 @@ func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
 			p, err := env.PackageByPath(match)
 			if err != nil {
 				log.Printf("Skipping package %q: %v", match, err)
+			} else if p.ImportPath == "." {
+				// TODO: I do not completely understand why
+				// this is triggered. This is only an issue
+				// while this function is run inside the
+				// process of a "go test".
+				importPaths = append(importPaths, pkg)
 			} else {
 				importPaths = append(importPaths, p.ImportPath)
 			}
