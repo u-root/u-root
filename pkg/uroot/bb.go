@@ -149,8 +149,13 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 		}
 	}
 
-	// Symlink from /init to busybox init.
-	return af.AddRecord(cpio.Symlink("init", path.Join(binDir, "init")))
+	initCmd := opts.InitCmd
+	if initCmd == "" {
+		initCmd = path.Join(binDir, "init")
+	}
+
+	// Symlink from /init to busybox init or something else.
+	return af.AddRecord(cpio.Symlink("init", initCmd))
 }
 
 // Package is a Go package.
@@ -276,7 +281,7 @@ func NewPackage(name string, p *build.Package, importer types.Importer) (*Packag
 	}
 	tpkg, err := conf.Check(p.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
 	if err != nil {
-		return nil, fmt.Errorf("type checking failed: %v", err)
+		return nil, fmt.Errorf("type checking failed: %#v: %v", importer, err)
 	}
 	pp.types = tpkg
 	return pp, nil
