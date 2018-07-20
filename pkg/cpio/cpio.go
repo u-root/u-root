@@ -81,6 +81,25 @@ func NewDedupWriter(rw RecordWriter) RecordWriter {
 	}
 }
 
+func Passthrough(r RecordReader, w RecordWriter) error {
+	for {
+		rec, err := r.ReadRecord()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("error reading records: %v", err)
+		}
+		if err := w.WriteRecord(rec); err != nil {
+			return fmt.Errorf("Writing record %q failed: %v", rec, err)
+		}
+	}
+	if err := WriteTrailer(w); err != nil {
+		return fmt.Errorf("Writing Trailer failed: %v", err)
+	}
+	return nil
+}
+
 // WriteRecord implements RecordWriter.
 //
 // If rec.Name was already seen once before, it will not be written again and
