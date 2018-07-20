@@ -90,7 +90,7 @@ func Passthrough(r RecordReader, w RecordWriter) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("error reading records: %v", err)
+			return fmt.Errorf("Reading record %q failed: %v", rec, err)
 		}
 		if err := w.WriteRecord(rec); err != nil {
 			return fmt.Errorf("Writing record %q failed: %v", rec, err)
