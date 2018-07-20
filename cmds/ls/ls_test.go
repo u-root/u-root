@@ -32,6 +32,16 @@ f3?line 2
 "f3\nline 2"
 `,
 	}, {
+		flags: []string{"-aR"},
+		out: `.
+.f4
+d1
+d1/f4
+f1
+f2
+f3?line 2
+`,
+	}, {
 		flags: []string{"-R"},
 		out: `d1
 d1/f4
