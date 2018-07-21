@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -59,7 +58,7 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	}
 
 	// OutputFile
-	outputFile := filepath.Join(tmpDir, fmt.Sprintf("initramfs.%s_%s.cpio", env.GOOS, env.GOARCH))
+	outputFile := filepath.Join(tmpDir, "initramfs.cpio")
 	w, err := archiver.OpenWriter(outputFile, "", "")
 	if err != nil {
 		t.Fatal(err)
