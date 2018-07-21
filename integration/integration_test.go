@@ -17,8 +17,10 @@ import (
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
-// Returns temporary directory and QEMU instance. `uinitName` is the name of a
-// directory containing uinit found at `github.com/u-root/u-root/integration/testdata`.
+// Returns temporary directory and QEMU instance.
+//
+// - `uinitName` is the name of a directory containing uinit found at
+//   `github.com/u-root/u-root/integration/testdata`.
 func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *qemu.QEMU) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("test is skipped unless UROOT_QEMU is set")
@@ -79,6 +81,11 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	if err := uroot.CreateInitramfs(opts); err != nil {
 		t.Fatal(err)
 	}
+
+	// Expose the temp directory to QEMU as /dev/sda1
+	extraArgs = append(extraArgs, "-drive", "file=fat:ro:" + tmpDir + ",if=none,id=abc")
+	extraArgs = append(extraArgs, "-device", "ich9-ahci,id=ahci")
+	extraArgs = append(extraArgs, "-device", "ide-drive,drive=abc,bus=ahci.0")
 
 	// Start QEMU
 	q := &qemu.QEMU{
