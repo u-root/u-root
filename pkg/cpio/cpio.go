@@ -88,7 +88,7 @@ func Passthrough(r RecordReader, w RecordWriter) error {
 		return err
 	}
 	if err := WriteTrailer(w); err != nil {
-		return fmt.Errorf("Writing Trailer failed: %v", err)
+		return err
 	}
 	return nil
 }
