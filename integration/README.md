@@ -15,8 +15,11 @@ Run the tests with:
 ## Requirements
 
 - QEMU
-  - Path and arguments must be set with `TEST_QEMU`.
-  - Example: `export TEST_QEMU="$USER/bin/qemu-system-x86_64" -L .`
+  - Path and arguments must be set with `UROOT_QEMU`.
+  - Example: `export UROOT_QEMU="$HOME/bin/qemu-system-x86_64 -L ."`
+- Linux kernel
+  - Path and arguments must be set with `UROOT_KERNEL`.
+  - Example: `export UROOT_KERNEL="$HOME/linux/arch/x86_64/boot/bzImage"`
 
 ## To Dos
 
