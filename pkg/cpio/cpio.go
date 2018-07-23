@@ -84,17 +84,8 @@ func NewDedupWriter(rw RecordWriter) RecordWriter {
 // Passthrough copies from a RecordReader to a RecordWriter
 // It processes one record at a time to minimize the memory footprint.
 func Passthrough(r RecordReader, w RecordWriter) error {
-	for {
-		rec, err := r.ReadRecord()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("Reading record %q failed: %v", rec, err)
-		}
-		if err := w.WriteRecord(rec); err != nil {
-			return fmt.Errorf("Writing record %q failed: %v", rec, err)
-		}
+	if err := Concat(w, r, nil); err != nil {
+		return err
 	}
 	if err := WriteTrailer(w); err != nil {
 		return fmt.Errorf("Writing Trailer failed: %v", err)
