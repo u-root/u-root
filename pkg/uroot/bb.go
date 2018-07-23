@@ -149,8 +149,13 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 		}
 	}
 
-	// Symlink from /init to busybox init.
-	return af.AddRecord(cpio.Symlink("init", path.Join(binDir, "init")))
+	initCmd := opts.InitCmd
+	if initCmd == "" {
+		initCmd = path.Join(binDir, "init")
+	}
+
+	// Symlink from /init to busybox init or something else.
+	return af.AddRecord(cpio.Symlink("init", initCmd))
 }
 
 // Package is a Go package.
@@ -195,7 +200,7 @@ func NewPackageFromEnv(env golang.Environ, importPath string, importer types.Imp
 	if err != nil {
 		return nil, err
 	}
-	return NewPackage(p, importer)
+	return NewPackage(filepath.Base(p.Dir), p, importer)
 }
 
 // ParseAST parses p's package files into an AST.
@@ -228,8 +233,7 @@ func ParseAST(p *build.Package) (*token.FileSet, *ast.Package, error) {
 
 // NewPackage gathers AST, type, and token information about package p, using
 // the given importer to resolve dependencies.
-func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
-	name := filepath.Base(p.Dir)
+func NewPackage(name string, p *build.Package, importer types.Importer) (*Package, error) {
 	fset, astp, err := ParseAST(p)
 	if err != nil {
 		return nil, err
@@ -277,7 +281,7 @@ func NewPackage(p *build.Package, importer types.Importer) (*Package, error) {
 	}
 	tpkg, err := conf.Check(p.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
 	if err != nil {
-		return nil, fmt.Errorf("type checking failed: %v", err)
+		return nil, fmt.Errorf("type checking failed: %#v: %v", importer, err)
 	}
 	pp.types = tpkg
 	return pp, nil

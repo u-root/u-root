@@ -117,6 +117,10 @@ type Opts struct {
 	// If this is false, the "init" from BaseArchive will be renamed to
 	// "inito".
 	UseExistingInit bool
+
+	// InitCmd is the name of a command to link /init to in bb build.
+	// Default: bbin/init
+	InitCmd string
 }
 
 // resolvePackagePath finds import paths for a single import path or directory string
@@ -258,6 +262,7 @@ func CreateInitramfs(opts Opts) error {
 			Packages:  importPaths,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.BinaryDir,
+			InitCmd:   opts.InitCmd,
 		}
 		if err := cmds.Builder(files, bOpts); err != nil {
 			return fmt.Errorf("error building %#v: %v", bOpts, err)
@@ -308,6 +313,10 @@ type BuildOpts struct {
 	// If BinaryDir is unspecified, each builder may choose their own
 	// default binary directory.
 	BinaryDir string
+
+	// InitCmd is the name of a command to link /init to in bb build.
+	// Default: bbin/init
+	InitCmd string
 }
 
 // TargetDir returns the binary directory if specified in BuildOpts, otherwise

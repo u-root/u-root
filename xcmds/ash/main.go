@@ -53,6 +53,7 @@ func output(r io.Reader, w io.Writer) {
 		}
 	}
 }
+
 func main() {
 	flag.Parse()
 	if *debug {
@@ -64,6 +65,9 @@ func main() {
 		log.Fatal(err)
 	}
 	r, err := t.Raw()
+	if err != nil {
+		log.Printf("non-fatal cannot get tty: %v", err)
+	}
 	defer t.Set(r)
 	cr, cw, err := os.Pipe()
 	if err != nil {

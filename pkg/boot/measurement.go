@@ -68,7 +68,8 @@ func (mr *MeasuringReader) ReadRecord() (cpio.Record, error) {
 
 		switch rec.Name {
 		case "signature":
-			_, err = mr.signature.ReadFrom(uio.Reader(rec))
+			// Error return is intentionally ignored.
+			mr.signature.ReadFrom(uio.Reader(rec))
 			continue
 
 		case "signature_algo":

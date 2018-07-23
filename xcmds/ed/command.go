@@ -36,7 +36,7 @@ func Command(f Editor, c string, startLine, endLine int) error {
 	case 'q':
 		os.Exit(1)
 	case 'e':
-		startLine, endLine = f.Range()
+		_, endLine = f.Range()
 		startLine = 0
 		fallthrough
 	case 'r':

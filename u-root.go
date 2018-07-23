@@ -30,6 +30,7 @@ func (m *multiFlag) Set(value string) error {
 // Flags for u-root builder.
 var (
 	build, format, tmpDir, base, outputPath *string
+	initCmd                                 *string
 	useExistingInit                         *bool
 	extraFiles                              multiFlag
 	templates                               = map[string][]string{
@@ -205,6 +206,7 @@ func parseFlags() {
 	base = flag.String("base", "", "Base archive to add files to")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
+	initCmd = flag.String("initcmd", "", "Where to link /init to (default: bbin/init).")
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times")
 	flag.Parse()
 }
@@ -309,6 +311,7 @@ func Main() error {
 		OutputFile:      w,
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
+		InitCmd:         *initCmd,
 	}
 	return uroot.CreateInitramfs(opts)
 }
