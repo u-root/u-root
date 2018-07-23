@@ -51,8 +51,8 @@ func getFileData(path string) map[string]string {
 		return userData
 	}
 	// regex for finding key-val separator ": [remote,]" and port ":443"
-	splitpoint, err := regexp.Compile("(: )(.*,|)")
-	port, err := regexp.Compile("(:443)")
+	splitpoint := regexp.MustCompile("(: )(.*,|)")
+	port := regexp.MustCompile("(:443)")
 	for _, s := range strings.Split(string(b), "\n") {
 		s := port.ReplaceAllString(s, "")
 		keyval := splitpoint.Split(s, -1)

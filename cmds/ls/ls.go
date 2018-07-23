@@ -17,21 +17,22 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
+
+	flag "github.com/spf13/pflag"
 )
 
 var (
-	all     = flag.Bool("a", false, "show hidden files")
-	human   = flag.Bool("h", false, "human readable sizes")
-	long    = flag.Bool("l", false, "long form")
-	quoted  = flag.Bool("Q", false, "quoted")
-	recurse = flag.Bool("R", false, "equivalent to findutil's find")
+	all     = flag.BoolP("all", "a", false, "show hidden files")
+	human   = flag.BoolP("human-readable", "h", false, "human readable sizes")
+	long    = flag.BoolP("long", "l", false, "long form")
+	quoted  = flag.BoolP("quote-name", "Q", false, "quoted")
+	recurse = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
 )
 
 func stringer(fi fileInfo) fmt.Stringer {
