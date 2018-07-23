@@ -89,19 +89,16 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v: %v", a, err)
 		}
-		switch t := i.val.(type) {
-		case uint8:
-			t = uint8(v)
-		case uint16:
-			t = uint16(v)
-		case uint32:
-			t = uint32(v)
-		case uint64:
-			t = uint64(v)
-		default:
-			log.Fatalf("Can't handle %T for %v command", t, a[0])
+		switch i.valbits {
+		case 8:
+			err = out(f, addr, uint8(v))
+		case 16:
+			err = out(f, addr, uint16(v))
+		case 32:
+			err = out(f, addr, uint32(v))
+		case 64:
+			err = out(f, addr, uint64(v))
 		}
-		err = out(f, addr, i.val)
 	default:
 		log.Fatalf(usage)
 	}
