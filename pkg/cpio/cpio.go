@@ -81,6 +81,18 @@ func NewDedupWriter(rw RecordWriter) RecordWriter {
 	}
 }
 
+// Passthrough copies from a RecordReader to a RecordWriter
+// It processes one record at a time to minimize the memory footprint.
+func Passthrough(r RecordReader, w RecordWriter) error {
+	if err := Concat(w, r, nil); err != nil {
+		return err
+	}
+	if err := WriteTrailer(w); err != nil {
+		return err
+	}
+	return nil
+}
+
 // WriteRecord implements RecordWriter.
 //
 // If rec.Name was already seen once before, it will not be written again and
