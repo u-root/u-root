@@ -7,6 +7,9 @@ workflows:
       - test:
           requires:
             - clean-code
+      - test-integration:
+          requires:
+            - clean-code
       - race:
           requires:
             - clean-code
@@ -91,6 +94,17 @@ jobs:
       - run:
           name: Test coverage
           command: go test -cover ./pkg/... ./cmds/... ./xcmds/...
+  test-integration:
+    docker:
+      - image: roleary/uroot-integration:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Test integration all
+          command: go test -v -a -ldflags '-s' ./integration/...
   race:
     docker:
       - image: circleci/golang:latest

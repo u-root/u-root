@@ -15,7 +15,7 @@ func TestHelloWorld(t *testing.T) {
 	defer cleanup(t, tmpDir, q)
 
 	if err := q.Expect("HELLO WORLD"); err != nil {
-		t.Fatal(err)
+		t.Fatal(`expected "HELLO WORLD", got error: `, err)
 	}
 }
 
@@ -26,6 +26,6 @@ func TestHelloWorldNegative(t *testing.T) {
 	defer cleanup(t, tmpDir, q)
 
 	if err := q.Expect("GOODBYE WORLD"); err == nil {
-		t.Fatal(err)
+		t.Fatal(`expected error, but matched "GOODBYE WORLD"`)
 	}
 }

@@ -9,7 +9,7 @@
 //
 //     UROOT_QEMU='qemu-system-x86_64 -L . -m 4096 -enable-kvm'
 //
-// For CI, this environment variable is set in `.circleci/config.yml`.
+// For CI, this environment variable is set in `.circleci/images/integration/Dockerfile`.
 package qemu
 
 import (
@@ -23,7 +23,7 @@ import (
 )
 
 // DefaultTimeout for `Expect` and `ExpectRE` functions.
-var DefaultTimeout = 5 * time.Second
+var DefaultTimeout = 7 * time.Second
 
 // QEMU is filled and pass to `Start()`.
 type QEMU struct {

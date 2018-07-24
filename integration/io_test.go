@@ -17,6 +17,6 @@ func TestIO(t *testing.T) {
 	defer cleanup(t, tmpDir, q)
 
 	if err := q.Expect("UART TEST"); err != nil {
-		t.Fatal(err)
+		t.Fatal(`expected "UART TEST", got error: `, err)
 	}
 }

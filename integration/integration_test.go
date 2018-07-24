@@ -21,6 +21,9 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("test is skipped unless UROOT_QEMU is set")
 	}
+	if _, ok := os.LookupEnv("UROOT_KERNEL"); !ok {
+		t.Skip("test is skipped unless UROOT_KERNEL is set")
+	}
 
 	// TempDir
 	tmpDir, err := ioutil.TempDir("", "uroot-integration")
@@ -78,7 +81,7 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 	// Start QEMU
 	q := &qemu.QEMU{
 		InitRAMFS: outputFile,
-		Kernel:    "testdata/bzImage_amd64",
+		Kernel:    os.Getenv("UROOT_KERNEL"),
 	}
 	t.Logf("command line:\n%s", q.CmdLineQuoted())
 	if err := q.Start(); err != nil {
