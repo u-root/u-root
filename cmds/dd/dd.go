@@ -18,8 +18,9 @@
 //     -seek n:  seek n obs-sized output blocks before writing (default=0)
 //     -conv s:  comma separated list of conversions (none|ucase|lcase|notrunc)
 //     -count n: copy only n ibs-sized input blocks
-//     -inName:  defaults to stdin
-//     -outName: defaults to stdout
+//     -if:      defaults to stdin
+//     -of:      defaults to stdout
+//     -oflag:   comma separated list of out flags (none|sync|dsync)
 //     -status:  print transfer stats to stderr, can be one of:
 //         none:     do not display
 //         xfer:     print on completion (default)
@@ -38,6 +39,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/rck/unit"
@@ -51,6 +53,7 @@ var (
 	count        = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
 	inName       = flag.String("if", "", "Input file")
 	outName      = flag.String("of", "", "Output file")
+	oFlag        = flag.String("oflag", "none", "comma separated list of out flags (none|sync|dsync)")
 	status       = flag.String("status", "xfer", "display status of transfer (none|xfer|progress)")
 
 	bytesWritten int64 // access atomically, must be global for correct alignedness
@@ -60,12 +63,19 @@ const (
 	convUCase = 1 << iota
 	convLCase
 	convNoTrunc
+	oFlagSync
+	oFlagDSync
 )
 
 var convMap = map[string]int{
 	"ucase":   convUCase,
 	"lcase":   convLCase,
 	"notrunc": convNoTrunc,
+}
+
+var flagMap = map[string]int{
+	"sync":  oFlagSync,
+	"dsync": oFlagDSync,
 }
 
 // intermediateBuffer is a buffer that one can write to and read from.
@@ -79,7 +89,7 @@ type chunkedBuffer struct {
 	outChunk int64
 	length   int64
 	data     []byte
-	convs    int
+	flags    int
 }
 
 func init() {
@@ -100,12 +110,12 @@ func init() {
 
 // newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
 // chunks of data and writes them to writers in outChunkSize-sized chunks.
-func newChunkedBuffer(inChunkSize int64, outChunkSize int64, convs int) intermediateBuffer {
+func newChunkedBuffer(inChunkSize int64, outChunkSize int64, flags int) intermediateBuffer {
 	return &chunkedBuffer{
 		outChunk: outChunkSize,
 		length:   0,
 		data:     make([]byte, inChunkSize),
-		convs:    convs,
+		flags:    flags,
 	}
 }
 
@@ -130,9 +140,9 @@ func (cb *chunkedBuffer) WriteTo(w io.Writer) (int64, error) {
 			chunk = cb.length - i
 		}
 		block := cb.data[i : i+chunk]
-		if cb.convs&convUCase != 0 {
+		if cb.flags&convUCase != 0 {
 			block = bytes.ToUpper(block)
-		} else if cb.convs&convLCase != 0 {
+		} else if cb.flags&convLCase != 0 {
 			block = bytes.ToLower(block)
 		}
 		got, err := w.Write(block)
@@ -189,7 +199,7 @@ func (bp bufferPool) Destroy() {
 	close(bp.c)
 }
 
-func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, convs int) error {
+func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, flags int) error {
 	// Make the channels deep enough to hold a total of 1GiB of data.
 	depth := (1024 * 1024 * 1024) / inBufSize
 	// But keep it reasonable!
@@ -199,7 +209,7 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 
 	readyBufs := make(chan intermediateBuffer, depth)
 	pool := newBufferPool(depth, func() intermediateBuffer {
-		return newChunkedBuffer(inBufSize, outBufSize, convs)
+		return newChunkedBuffer(inBufSize, outBufSize, flags)
 	})
 	defer pool.Destroy()
 
@@ -336,15 +346,21 @@ func inFile(name string, inputBytes int64, skip int64, count int64) (io.Reader, 
 }
 
 // outFile opens the output file and seeks to the right position.
-func outFile(name string, outputBytes int64, seek int64, convs int) (io.Writer, error) {
+func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, error) {
 	var out io.WriteSeeker
 	var err error
 	if name == "" {
 		out = os.Stdout
 	} else {
 		perm := os.O_CREATE | os.O_WRONLY
-		if convs&convNoTrunc == 0 {
+		if flags&convNoTrunc == 0 {
 			perm |= os.O_TRUNC
+		}
+		if flags&oFlagSync != 0 {
+			perm |= os.O_SYNC
+		}
+		if flags&oFlagDSync != 0 {
+			perm |= syscall.O_DSYNC
 		}
 		if out, err = os.OpenFile(name, perm, 0666); err != nil {
 			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
@@ -423,9 +439,8 @@ func (p *progressData) print() {
 }
 
 func usage() {
-	// If the conversions get more complex we can dump
-	// the convs map. For now, it's not really worth it.
-	log.Fatal(`Usage: dd [if=file] [of=file] [conv=none|lcase|ucase|notrunc] [seek=#] [skip=#] [count=#] [bs=#] [ibs=#] [obs=#] [status=none|xfer|progress]
+	log.Fatal(`Usage: dd [if=file] [of=file] [conv=none|lcase|ucase|notrunc] [seek=#] [skip=#]
+			     [count=#] [bs=#] [ibs=#] [obs=#] [status=none|xfer|progress] [oflag=none|sync|dsync]
 		options may also be invoked Go-style as -opt value or -opt=value
 		bs, if specified, overrides ibs and obs`)
 }
@@ -459,19 +474,31 @@ func main() {
 	}
 
 	// Convert conv argument to bit set.
-	convs := 0
+	flags := 0
 	if *conv != "none" {
 		for _, c := range strings.Split(*conv, ",") {
 			if v, ok := convMap[c]; ok {
-				convs |= v
+				flags |= v
 			} else {
 				log.Printf("unknown argument conv=%s", c)
 				usage()
 			}
 		}
 	}
-	if (convs&convUCase != 0) && (convs&convLCase != 0) {
+	if (flags&convUCase != 0) && (flags&convLCase != 0) {
 		log.Fatal("conv=ucase and conv=lcase are mutually exclusive")
+	}
+
+	// Convert oflag argument to bit set.
+	if *oFlag != "none" {
+		for _, f := range strings.Split(*oFlag, ",") {
+			if v, ok := flagMap[f]; ok {
+				flags |= v
+			} else {
+				log.Printf("unknown argument oflag=%s", f)
+				usage()
+			}
+		}
 	}
 
 	if *status != "none" && *status != "xfer" && *status != "progress" {
@@ -489,11 +516,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	out, err := outFile(*outName, obs.Value, *seek, convs)
+	out, err := outFile(*outName, obs.Value, *seek, flags)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, convs); err != nil {
+	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, flags); err != nil {
 		log.Fatal(err)
 	}
 

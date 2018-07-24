@@ -247,6 +247,20 @@ func TestFiles(t *testing.T) {
 			outFile:  []byte("abcde"),
 			expected: []byte("1234e"),
 		},
+		{
+			// Fully testing the file is synchronous would require something more.
+			name:     "sync",
+			flags:    []string{"oflag=sync"},
+			inFile:   []byte("x: defaults"),
+			expected: []byte("x: defaults"),
+		},
+		{
+			// Fully testing the file is synchronous would require something more.
+			name:     "dsync",
+			flags:    []string{"oflag=dsync"},
+			inFile:   []byte("y: defaults"),
+			expected: []byte("y: defaults"),
+		},
 	}
 
 	for _, tt := range tests {
