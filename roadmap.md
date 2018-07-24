@@ -8,7 +8,6 @@ yourself.
 | Command        | Flags TODO      | Comments               |
 | -------------- | --------------- | ---------------------- |
 | chmod          | -R, --reference | More mode forms        |
-| dd             | -conv=notrunc   | Also sync, ...         |
 | fmap           |                 | Move into fiano        |
 | :x: gitclone   |                 | Not implemented yet!   |
 | grep           | -cnF            | RE2-compatible only    |
