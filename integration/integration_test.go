@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -81,15 +82,21 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 		t.Fatal(err)
 	}
 
+	// Copy kernel to tmpDir.
+	bzImage := filepath.Join(tmpDir, "bzImage")
+	if err := cp.Copy(os.Getenv("UROOT_KERNEL"), bzImage); err != nil {
+		t.Fatal(err)
+	}
+
 	// Expose the temp directory to QEMU as /dev/sda1
-	extraArgs = append(extraArgs, "-drive", "file=fat:ro:" + tmpDir + ",if=none,id=abc")
+	extraArgs = append(extraArgs, "-drive", "file=fat:ro:"+tmpDir+",if=none,id=tmpdir")
 	extraArgs = append(extraArgs, "-device", "ich9-ahci,id=ahci")
-	extraArgs = append(extraArgs, "-device", "ide-drive,drive=abc,bus=ahci.0")
+	extraArgs = append(extraArgs, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
 
 	// Start QEMU
 	q := &qemu.QEMU{
 		InitRAMFS: outputFile,
-		Kernel:    os.Getenv("UROOT_KERNEL"),
+		Kernel:    bzImage,
 		ExtraArgs: extraArgs,
 	}
 	t.Logf("command line:\n%s", q.CmdLineQuoted())

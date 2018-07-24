@@ -40,11 +40,15 @@ CONFIG_NLS=y
 CONFIG_NLS_CODEPAGE_437=y
 CONFIG_NLS_ISO8859_1=y
 
-# Add kexec syscall:
+# For the kernel doing the kexec'ing:
 
 CONFIG_CRYPTO=y
 CONFIG_KEXEC=y
 CONFIG_KEXEC_FILE=y
+
+# For the kernel being kexec'ed:
+
+CONFIG_RELOCATABLE=y
 
 # Build Linux:
 #

@@ -36,8 +36,11 @@ func main() {
 	fmt.Printf("KEXECCOUNTER=%s\n", kExecCounter)
 
 	if kExecCounter == "0" {
-		sh("kexec", "/testdata/bzImage",
+		cmdLine := cmdline.FullCmdLine() + " kexeccounter=1"
+		log.Print("cmdline: ", cmdLine)
+		sh("kexec",
 			"-i", "/testdata/initramfs.cpio",
-			"-cmdline", cmdline.FullCmdLine()+" kexeccounter=1")
+			"-c", cmdLine,
+			"/testdata/bzImage")
 	}
 }
