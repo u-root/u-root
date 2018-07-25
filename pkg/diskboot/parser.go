@@ -243,7 +243,7 @@ func (p *parser) parseLines(lines []string) {
 	}
 }
 
-// ParseConfig attemps to construct a valid boot Config from the location
+// ParseConfig attempts to construct a valid boot Config from the location
 // and lines contents passed in.
 func ParseConfig(mountPath, configPath string, lines []string) *Config {
 	p := &parser{
