@@ -8,6 +8,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -182,6 +186,110 @@ func byteCount(i io.Reader, o []byte, n int64) error {
 		return nil
 	}
 	return fmt.Errorf("Found %d count of %#v bytes, wanted to find %d count", count, o[0], n)
+}
+
+// TestFiles uses `if` and `of` arguments.
+func TestFiles(t *testing.T) {
+	var tests = []struct {
+		name     string
+		flags    []string
+		inFile   []byte
+		outFile  []byte
+		expected []byte
+	}{
+		{
+			name:     "Simple copying from input to output",
+			flags:    []string{},
+			inFile:   []byte("1: defaults"),
+			expected: []byte("1: defaults"),
+		},
+		{
+			name:     "Copy from input to output on a non-aligned block size",
+			flags:    []string{"bs=8c"},
+			inFile:   []byte("2: bs=8c 11b"), // len=12 is not multiple of 8
+			expected: []byte("2: bs=8c 11b"),
+		},
+		{
+			name:     "case lower change",
+			flags:    []string{"bs=8", "conv=lcase"},
+			inFile:   []byte("3: Bs=8 11B"), // len=11 is not multiple of 8
+			expected: []byte("3: bs=8 11b"),
+		},
+		{
+			name:     "case upper change",
+			flags:    []string{"bs=8", "conv=ucase"},
+			inFile:   []byte("3: Bs=8 11B"), // len=11 is not multiple of 8
+			expected: []byte("3: BS=8 11B"),
+		},
+		{
+			name:     "Copy from input to output on an aligned block size",
+			flags:    []string{"bs=8"},
+			inFile:   []byte("hello world....."), // len=16 is a multiple of 8
+			expected: []byte("hello world....."),
+		},
+		{
+			name:     "Use skip and count",
+			flags:    []string{"skip=6", "bs=1", "count=5"},
+			inFile:   []byte("hello world....."),
+			expected: []byte("world"),
+		},
+		{
+			name:     "truncate",
+			flags:    []string{"bs=1"},
+			inFile:   []byte("1234"),
+			outFile:  []byte("abcde"),
+			expected: []byte("1234"),
+		},
+		{
+			name:     "no truncate",
+			flags:    []string{"bs=1", "conv=notrunc"},
+			inFile:   []byte("1234"),
+			outFile:  []byte("abcde"),
+			expected: []byte("1234e"),
+		},
+		{
+			// Fully testing the file is synchronous would require something more.
+			name:     "sync",
+			flags:    []string{"oflag=sync"},
+			inFile:   []byte("x: defaults"),
+			expected: []byte("x: defaults"),
+		},
+		{
+			// Fully testing the file is synchronous would require something more.
+			name:     "dsync",
+			flags:    []string{"oflag=dsync"},
+			inFile:   []byte("y: defaults"),
+			expected: []byte("y: defaults"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Write in and out file to temporary dir.
+			tmpDir, err := ioutil.TempDir("", "dd-test")
+			defer os.RemoveAll(tmpDir)
+			inFile := filepath.Join(tmpDir, "inFile")
+			outFile := filepath.Join(tmpDir, "outFile")
+			if err := ioutil.WriteFile(inFile, tt.inFile, 0666); err != nil {
+				t.Error(err)
+			}
+			if err := ioutil.WriteFile(outFile, tt.outFile, 0666); err != nil {
+				t.Error(err)
+			}
+
+			args := append(tt.flags, "if="+inFile, "of="+outFile)
+			if err := testutil.Command(t, args...).Run(); err != nil {
+				t.Error(err)
+			}
+			got, err := ioutil.ReadFile(filepath.Join(tmpDir, "outFile"))
+			if err != nil {
+				t.Error(err)
+			}
+			if !reflect.DeepEqual(tt.expected, got) {
+				t.Errorf("expected %q, got %q", tt.expected, got)
+			}
+		})
+	}
 }
 
 // BenchmarkDd benchmarks the dd command. Each "op" unit is a 1MiB block.

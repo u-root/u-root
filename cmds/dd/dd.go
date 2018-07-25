@@ -16,10 +16,11 @@
 //     -bs n:    input and output block size (default=0)
 //     -skip n:  skip n ibs-sized input blocks before reading (default=0)
 //     -seek n:  seek n obs-sized output blocks before writing (default=0)
-//     -conv s:  Convert the file on a specific way, like notrunc
+//     -conv s:  comma separated list of conversions (none|ucase|lcase|notrunc)
 //     -count n: copy only n ibs-sized input blocks
-//     -inName:  defaults to stdin
-//     -outName: defaults to stdout
+//     -if:      defaults to stdin
+//     -of:      defaults to stdout
+//     -oflag:   comma separated list of out flags (none|sync|dsync)
 //     -status:  print transfer stats to stderr, can be one of:
 //         none:     do not display
 //         xfer:     print on completion (default)
@@ -38,6 +39,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/rck/unit"
@@ -47,14 +49,34 @@ var (
 	ibs, obs, bs *unit.Value
 	skip         = flag.Int64("skip", 0, "skip N ibs-sized blocks before reading")
 	seek         = flag.Int64("seek", 0, "seek N obs-sized blocks before writing")
-	conv         = flag.String("conv", "none", "Convert the file on a specific way, like notrunc")
+	conv         = flag.String("conv", "none", "comma separated list of conversions (none|ucase|lcase|notrunc)")
 	count        = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
 	inName       = flag.String("if", "", "Input file")
 	outName      = flag.String("of", "", "Output file")
+	oFlag        = flag.String("oflag", "none", "comma separated list of out flags (none|sync|dsync)")
 	status       = flag.String("status", "xfer", "display status of transfer (none|xfer|progress)")
 
 	bytesWritten int64 // access atomically, must be global for correct alignedness
 )
+
+const (
+	convUCase = 1 << iota
+	convLCase
+	convNoTrunc
+	oFlagSync
+	oFlagDSync
+)
+
+var convMap = map[string]int{
+	"ucase":   convUCase,
+	"lcase":   convLCase,
+	"notrunc": convNoTrunc,
+}
+
+var flagMap = map[string]int{
+	"sync":  oFlagSync,
+	"dsync": oFlagDSync,
+}
 
 // intermediateBuffer is a buffer that one can write to and read from.
 type intermediateBuffer interface {
@@ -64,10 +86,10 @@ type intermediateBuffer interface {
 
 // chunkedBuffer is an intermediateBuffer with a specific size.
 type chunkedBuffer struct {
-	outChunk  int64
-	length    int64
-	data      []byte
-	transform func([]byte) []byte
+	outChunk int64
+	length   int64
+	data     []byte
+	flags    int
 }
 
 func init() {
@@ -88,12 +110,12 @@ func init() {
 
 // newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
 // chunks of data and writes them to writers in outChunkSize-sized chunks.
-func newChunkedBuffer(inChunkSize int64, outChunkSize int64, transform func([]byte) []byte) intermediateBuffer {
+func newChunkedBuffer(inChunkSize int64, outChunkSize int64, flags int) intermediateBuffer {
 	return &chunkedBuffer{
-		outChunk:  outChunkSize,
-		length:    0,
-		data:      make([]byte, inChunkSize),
-		transform: transform,
+		outChunk: outChunkSize,
+		length:   0,
+		data:     make([]byte, inChunkSize),
+		flags:    flags,
 	}
 }
 
@@ -117,7 +139,14 @@ func (cb *chunkedBuffer) WriteTo(w io.Writer) (int64, error) {
 		if i+chunk > cb.length {
 			chunk = cb.length - i
 		}
-		got, err := w.Write(cb.transform(cb.data[i : i+chunk]))
+		block := cb.data[i : i+chunk]
+		if cb.flags&convUCase != 0 {
+			block = bytes.ToUpper(block)
+		} else if cb.flags&convLCase != 0 {
+			block = bytes.ToLower(block)
+		}
+		got, err := w.Write(block)
+
 		// Ugh, Go cruft: io.Writer.Write returns (int, error).
 		// io.WriterTo.WriteTo returns (int64, error). So we have to
 		// cast.
@@ -170,7 +199,7 @@ func (bp bufferPool) Destroy() {
 	close(bp.c)
 }
 
-func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, transform func([]byte) []byte) error {
+func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, flags int) error {
 	// Make the channels deep enough to hold a total of 1GiB of data.
 	depth := (1024 * 1024 * 1024) / inBufSize
 	// But keep it reasonable!
@@ -180,7 +209,7 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 
 	readyBufs := make(chan intermediateBuffer, depth)
 	pool := newBufferPool(depth, func() intermediateBuffer {
-		return newChunkedBuffer(inBufSize, outBufSize, transform)
+		return newChunkedBuffer(inBufSize, outBufSize, flags)
 	})
 	defer pool.Destroy()
 
@@ -317,13 +346,23 @@ func inFile(name string, inputBytes int64, skip int64, count int64) (io.Reader, 
 }
 
 // outFile opens the output file and seeks to the right position.
-func outFile(name string, outputBytes int64, seek int64) (io.Writer, error) {
+func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, error) {
 	var out io.WriteSeeker
 	var err error
 	if name == "" {
 		out = os.Stdout
 	} else {
-		if out, err = os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666); err != nil {
+		perm := os.O_CREATE | os.O_WRONLY
+		if flags&convNoTrunc == 0 {
+			perm |= os.O_TRUNC
+		}
+		if flags&oFlagSync != 0 {
+			perm |= os.O_SYNC
+		}
+		if flags&oFlagDSync != 0 {
+			perm |= syscall.O_DSYNC
+		}
+		if out, err = os.OpenFile(name, perm, 0666); err != nil {
 			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
 		}
 	}
@@ -400,9 +439,8 @@ func (p *progressData) print() {
 }
 
 func usage() {
-	// If the conversions get more complex we can dump
-	// the convs map. For now, it's not really worth it.
-	log.Fatal(`Usage: dd [if=file] [of=file] [conv=lcase|ucase] [seek=#] [skip=#] [count=#] [bs=#] [ibs=#] [obs=#] [status=none|xfer|progress]
+	log.Fatal(`Usage: dd [if=file] [of=file] [conv=none|lcase|ucase|notrunc] [seek=#] [skip=#]
+			     [count=#] [bs=#] [ibs=#] [obs=#] [status=none|xfer|progress] [oflag=none|sync|dsync]
 		options may also be invoked Go-style as -opt value or -opt=value
 		bs, if specified, overrides ibs and obs`)
 }
@@ -435,14 +473,32 @@ func main() {
 		usage()
 	}
 
-	convs := map[string]func([]byte) []byte{
-		"none":  func(b []byte) []byte { return b },
-		"ucase": bytes.ToUpper,
-		"lcase": bytes.ToLower,
+	// Convert conv argument to bit set.
+	flags := 0
+	if *conv != "none" {
+		for _, c := range strings.Split(*conv, ",") {
+			if v, ok := convMap[c]; ok {
+				flags |= v
+			} else {
+				log.Printf("unknown argument conv=%s", c)
+				usage()
+			}
+		}
 	}
-	convert, ok := convs[*conv]
-	if !ok {
-		usage()
+	if (flags&convUCase != 0) && (flags&convLCase != 0) {
+		log.Fatal("conv=ucase and conv=lcase are mutually exclusive")
+	}
+
+	// Convert oflag argument to bit set.
+	if *oFlag != "none" {
+		for _, f := range strings.Split(*oFlag, ",") {
+			if v, ok := flagMap[f]; ok {
+				flags |= v
+			} else {
+				log.Printf("unknown argument oflag=%s", f)
+				usage()
+			}
+		}
 	}
 
 	if *status != "none" && *status != "xfer" && *status != "progress" {
@@ -460,11 +516,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	out, err := outFile(*outName, obs.Value, *seek)
+	out, err := outFile(*outName, obs.Value, *seek, flags)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, convert); err != nil {
+	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, flags); err != nil {
 		log.Fatal(err)
 	}
 
