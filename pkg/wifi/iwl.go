@@ -159,7 +159,7 @@ func (w *IWLWorker) Connect(a ...string) error {
 		cmd.Run()
 	}()
 
-	// dhclient might never return on incorect passwords or identity
+	// dhclient might never return on incorrect passwords or identity
 	go func() {
 		cmd := exec.CommandContext(ctx, "dhclient", "-ipv4=true", "-ipv6=false", "-verbose", w.Interface)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr //For an easier time debugging

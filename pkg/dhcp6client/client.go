@@ -244,7 +244,7 @@ func (c *Client) Request(request *dhcp6.Packet) ([]*dhcp6opts.IANA, *dhcp6.Packe
 		}
 	}
 
-	// Check if an error occured.
+	// Check if an error occurred.
 	if err, ok := <-errCh; ok && err != nil {
 		errs.add(err)
 	}
@@ -259,7 +259,7 @@ type ClientPacket struct {
 	Packet    *dhcp6.Packet
 }
 
-// ClientError is an error that occured on the associated interface.
+// ClientError is an error that occurred on the associated interface.
 type ClientError struct {
 	Interface netlink.Link
 	Err       error
