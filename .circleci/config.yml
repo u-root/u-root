@@ -49,6 +49,9 @@ workflows:
       - extra_files_wrong_comma_syntax:
           requires:
             - clean-code
+      - check_licenses:
+          requires:
+            - clean-code
 jobs:
   clean-code:
     docker:
@@ -418,3 +421,14 @@ jobs:
       - run:
           name: Build ramfs
           command: if ./u-root -build=bb --tmpdir=/tmp/u-root -files /bin/bash:/bin/bash; then exit 1; else exit 0; fi
+  check_licenses:
+    docker:
+      - image: circleci/golang:latest
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Check licenses
+          command: go run scripts/checklicenses/checklicenses.go
