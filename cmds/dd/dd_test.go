@@ -267,6 +267,9 @@ func TestFiles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write in and out file to temporary dir.
 			tmpDir, err := ioutil.TempDir("", "dd-test")
+			if err != nil {
+				t.Fatal(err)
+			}
 			defer os.RemoveAll(tmpDir)
 			inFile := filepath.Join(tmpDir, "inFile")
 			outFile := filepath.Join(tmpDir, "outFile")
