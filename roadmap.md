@@ -7,7 +7,9 @@ yourself.
 
 | Command        | Flags TODO      | Comments               |
 | -------------- | --------------- | ---------------------- |
+| :x: checksum   |                 | md5, sha1, sha256, ... |
 | chmod          | -R, --reference | More mode forms        |
+| :x: flashrom   | -p internal     |                        |
 | fmap           |                 | Move into fiano        |
 | :x: gitclone   |                 | Not implemented yet!   |
 | grep           | -cnF            | RE2-compatible only    |
