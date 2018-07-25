@@ -11,24 +11,18 @@
 //		 Loads a kernel for later execution.
 //
 // Options:
-//     --cmdline=STRING:       command line for kernel
-//     --command-line=STRING:  command line for kernel
-//
-//     --reuse-commandline:    reuse command line from running system
-//
-//     --i=FILE:       initramfs file
-//     --initrd=FILE:  initramfs file
-//     --ramdisk=FILE: initramfs file
-//
-//     -l or --load:   only load the kernel
-//     -e or --exec:   reboot with the currently loaded kernel
+//     --cmdline=STRING or -c=STRING: Set the kernel command line
+//     --reuse-commandline:           Use the kernel command line from running system
+//     --i=FILE or --initrd=FILE:     Use file as the kernel's initial ramdisk
+//     -l or --load:                  Load the new kernel into the current kernel
+//     -e or --exec:		      Execute a currently loaded kernel
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 
+	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
 )
@@ -43,20 +37,11 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVar(&o.cmdline, "cmdline", "", "Set the kernel command line")
-	flag.StringVar(&o.cmdline, "command-line", "", "Set the kernel command line")
-
+	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
-
-	flag.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk")
-	flag.StringVar(&o.initramfs, "initrd", "", "Use file as the kernel's initial ramdisk")
-	flag.StringVar(&o.initramfs, "ramdisk", "", "Use file as the kernel's initial ramdisk")
-
-	flag.BoolVar(&o.load, "l", false, "Load the new kernel into the current kernel.")
-	flag.BoolVar(&o.load, "load", false, "Load the new kernel into the current kernel.")
-
-	flag.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel.")
-	flag.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel.")
+	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
+	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
+	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	return o
 }
 
@@ -64,7 +49,7 @@ func main() {
 	opts := registerFlags()
 	flag.Parse()
 
-	if opts.exec == false && len(flag.Args()) == 0 {
+	if (opts.exec == false && flag.NArg() == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
 		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
 	}
