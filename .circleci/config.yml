@@ -65,6 +65,9 @@ jobs:
             wget https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64
             chmod +x ./dep-linux-amd64
       - run:
+          name: Install ineffassign
+          command: go get github.com/gordonklaus/ineffassign
+      - run:
           name: Check vendored dependencies
           command: |
             ./dep-linux-amd64 hash-inputs
@@ -83,6 +86,9 @@ jobs:
       - run:
           name: gofmt
           command: test -z $(gofmt -s -l cmds xcmds pkg u-root.go)
+      - run:
+          name: ineffassign
+          command: ineffassign .
   test:
     docker:
       - image: circleci/golang:latest
