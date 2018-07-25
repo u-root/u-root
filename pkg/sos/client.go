@@ -20,7 +20,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// RegistersNecessaryPatterns registers all the neccesary patterns needed
+// RegistersNecessaryPatterns registers all the necessary patterns needed
 // to make a service becomes a SoS client.
 func RegistersNecessaryPatterns(router *mux.Router) {
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +108,7 @@ func GetListener() (net.Listener, uint, error) {
 	return listener, uint(port), nil
 }
 
-// StartServiceServer establishes registers all neccesary patterns to the router passed in,
+// StartServiceServer establishes registers all necessary patterns to the router passed in,
 // registers the service with SoS using the port passed in, and starts serving the service on the
 // listener passed in. If any of the above step fails, this function will return an error.
 // This function wraps around RegistersNecessaryPatterns, RegisterServiceWithSos, and UnregisterServiceWithSos.
