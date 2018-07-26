@@ -14,6 +14,9 @@ func TestMountKExec(t *testing.T) {
 	tmpDir, q := testWithQEMU(t, "kexec", []string{})
 	defer cleanup(t, tmpDir, q)
 
+	if err := q.Expect("KEXECCOUNTER=0"); err != nil {
+		t.Fatal(err)
+	}
 	if err := q.Expect("KEXECCOUNTER=1"); err != nil {
 		t.Fatal(err)
 	}

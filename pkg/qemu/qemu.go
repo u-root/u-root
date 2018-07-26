@@ -25,6 +25,10 @@ import (
 // DefaultTimeout for `Expect` and `ExpectRE` functions.
 var DefaultTimeout = 7 * time.Second
 
+// TimeoutMultiplier increases all timeouts proportionally. Useful when running
+// QEMU on a slow machine.
+var TimeoutMultiplier = 2.0
+
 // QEMU is filled and pass to `Start()`.
 type QEMU struct {
 	// Path to the bzImage kernel
@@ -128,6 +132,7 @@ func (q *QEMU) ExpectRE(pattern *regexp.Regexp) error {
 // ExpectRETimeout returns an error if the given regular expression is not
 // found in QEMU's serial output within the given timeout.
 func (q *QEMU) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) error {
-	_, _, err := q.gExpect.Expect(pattern, timeout)
+	scaled := time.Duration(float64(timeout) * TimeoutMultiplier)
+	_, _, err := q.gExpect.Expect(pattern, scaled)
 	return err
 }
