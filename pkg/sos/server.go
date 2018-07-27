@@ -6,7 +6,6 @@ package sos
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -38,7 +37,7 @@ td, th {
 </script>
 </head>
 <body>
-<h1>Current Services (html embedded)</h1> 
+<h1>Current Services (html embedded)</h1>
 <table style="width:100%">
 	<tr>
     	<th>Service</th>
@@ -61,6 +60,8 @@ td, th {
 `
 )
 
+var htmlRoot []string
+
 type SosServer struct {
 	service *SosService
 }
@@ -70,12 +71,14 @@ type RegisterReqJson struct {
 	Port    uint
 }
 
-var htmlRoot = flag.String("soshtml", "/etc/sos/html", "Path for root of SOS html files")
+func SetHTMLPath(p []string) {
+	htmlRoot = append(htmlRoot, p...)
+}
 
 // HTMLPath returns the HTMLPath formed by joining the arguments together.
 // If there are no arguments, it simply returns the HTML root directory.
 func HTMLPath(n ...string) string {
-	return filepath.Join(append([]string{*htmlRoot}, n...)...)
+	return filepath.Join(append(htmlRoot, n...)...)
 }
 
 func (s SosServer) registerHandle(w http.ResponseWriter, r *http.Request) {
