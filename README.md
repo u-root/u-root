@@ -30,7 +30,7 @@ modes:
 
 # Usage
 
-Make sure your Go version is the latest (>=1.9). Make sure your `GOPATH` is set
+Make sure your Go version is the latest (>=1.10). Make sure your `GOPATH` is set
 up correctly.
 
 Download and install u-root:
