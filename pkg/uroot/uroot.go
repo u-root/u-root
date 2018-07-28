@@ -52,6 +52,7 @@ var DefaultRamfs = []cpio.Record{
 	cpio.Directory("ubin", 0755),
 	cpio.Directory("usr", 0755),
 	cpio.Directory("usr/lib", 0755),
+	cpio.Directory("var/log", 0777),
 	cpio.Directory("lib64", 0755),
 	cpio.Directory("bin", 0755),
 	cpio.CharDev("dev/console", 0600, 5, 1),
