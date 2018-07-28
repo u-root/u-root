@@ -131,6 +131,7 @@ var (
 		Dir{Name: "/tcz", Mode: 0777},
 		Dir{Name: "/lib", Mode: 0777},
 		Dir{Name: "/usr/lib", Mode: 0777},
+		Dir{Name: "/var/log", Mode: 0777},
 		Dir{Name: "/go/pkg/linux_amd64", Mode: 0777},
 
 		Dir{Name: "/etc", Mode: 0777},
