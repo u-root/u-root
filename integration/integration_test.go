@@ -21,7 +21,7 @@ import (
 //
 // - `uinitName` is the name of a directory containing uinit found at
 //   `github.com/u-root/u-root/integration/testdata`.
-func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *qemu.QEMU) {
+func testWithQEMU(t *testing.T, mode string, uinitName string, extraArgs []string) (string, *qemu.QEMU) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("test is skipped unless UROOT_QEMU is set")
 	}
@@ -40,7 +40,7 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	env.CgoEnabled = false
 
 	// Builder
-	builder, err := uroot.GetBuilder("bb")
+	builder, err := uroot.GetBuilder(mode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +92,13 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	extraArgs = append(extraArgs, "-drive", "file=fat:ro:"+tmpDir+",if=none,id=tmpdir")
 	extraArgs = append(extraArgs, "-device", "ich9-ahci,id=ahci")
 	extraArgs = append(extraArgs, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
+
+	// Source mode uses significantly more memory.
+	if mode == "source" {
+		extraArgs = append(extraArgs, "-m", "1G")
+	} else {
+		extraArgs = append(extraArgs, "-m", "128M")
+	}
 
 	// Start QEMU
 	q := &qemu.QEMU{
