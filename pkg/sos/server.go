@@ -60,7 +60,8 @@ td, th {
 `
 )
 
-var htmlRoot []string
+// default path
+var htmlRoot = "/etc/sos/html"
 
 type SosServer struct {
 	service *SosService
@@ -71,14 +72,17 @@ type RegisterReqJson struct {
 	Port    uint
 }
 
-func SetHTMLPath(p []string) {
-	htmlRoot = append(htmlRoot, p...)
+// set htmlRoot var to array of dirs p
+func SetHTMLRoot(p ...string) {
+	if len(p) > 0 {
+		htmlRoot = filepath.Join(p...)
+	}
 }
 
 // HTMLPath returns the HTMLPath formed by joining the arguments together.
 // If there are no arguments, it simply returns the HTML root directory.
 func HTMLPath(n ...string) string {
-	return filepath.Join(append(htmlRoot, n...)...)
+	return filepath.Join(htmlRoot, filepath.Join(n...))
 }
 
 func (s SosServer) registerHandle(w http.ResponseWriter, r *http.Request) {
