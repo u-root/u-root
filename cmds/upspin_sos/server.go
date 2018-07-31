@@ -203,7 +203,6 @@ func (us *UpspinServer) buildRouter() *mux.Router {
 	r.HandleFunc("/", us.displayStateHandle).Methods("GET")
 	r.HandleFunc("/edit", us.editHandle).Methods("POST")
 	r.HandleFunc("/submit", us.submitHandle).Methods("POST")
-	sos.SetHTMLPath([]string{"/etc/sos/html"})
 	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir(sos.HTMLPath("css")))))
 	return r
 }
