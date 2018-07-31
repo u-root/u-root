@@ -21,10 +21,10 @@ func TestSOSHtmlPath(t *testing.T) {
 		paths  []string
 		result string
 	}{
-		{paths: []string{""}, result: ""},
-		{paths: []string{"css"}, result: "css"},
-		{paths: []string{"html", "wifi.html"}, result: "html/wifi.html"},
-		{paths: []string{"html/wifi.html"}, result: "html/wifi.html"},
+		{paths: []string{""}, result: htmlRoot},
+		{paths: []string{"css"}, result: filepath.Join(htmlRoot, "css")},
+		{paths: []string{"html", "wifi.html"}, result: filepath.Join(htmlRoot, "html/wifi.html")},
+		{paths: []string{"html/wifi.html"}, result: filepath.Join(htmlRoot, "html/wifi.html")},
 	}
 
 	for _, test := range tests {
@@ -36,8 +36,8 @@ func TestSOSHtmlPath(t *testing.T) {
 
 func TestSOSHtmlPathWithPresetRoot(t *testing.T) {
 	//set up
-	testRoot := "/etc/sos/html"
-	SetHTMLPath([]string{testRoot})
+	testRoot := "/a/b/html"
+	SetHTMLRoot("/a", "b", "html")
 
 	var tests = []struct {
 		paths  []string
