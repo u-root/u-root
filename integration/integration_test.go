@@ -5,19 +5,23 @@
 package integration
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
 // Returns temporary directory and QEMU instance.
-func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
+//
+// - `uinitName` is the name of a directory containing uinit found at
+//   `github.com/u-root/u-root/integration/testdata`.
+func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *qemu.QEMU) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("test is skipped unless UROOT_QEMU is set")
 	}
@@ -46,7 +50,7 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs = append(pkgs, uinitPkg)
+	pkgs = append(pkgs, path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"))
 
 	// Archiver
 	archiver, err := uroot.GetArchiver("cpio")
@@ -55,7 +59,7 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 	}
 
 	// OutputFile
-	outputFile := filepath.Join(tmpDir, fmt.Sprintf("initramfs.%s_%s.cpio", env.GOOS, env.GOARCH))
+	outputFile := filepath.Join(tmpDir, "initramfs.cpio")
 	w, err := archiver.OpenWriter(outputFile, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -78,10 +82,22 @@ func testWithQEMU(t *testing.T, uinitPkg string) (string, *qemu.QEMU) {
 		t.Fatal(err)
 	}
 
+	// Copy kernel to tmpDir.
+	bzImage := filepath.Join(tmpDir, "bzImage")
+	if err := cp.Copy(os.Getenv("UROOT_KERNEL"), bzImage); err != nil {
+		t.Fatal(err)
+	}
+
+	// Expose the temp directory to QEMU as /dev/sda1
+	extraArgs = append(extraArgs, "-drive", "file=fat:ro:"+tmpDir+",if=none,id=tmpdir")
+	extraArgs = append(extraArgs, "-device", "ich9-ahci,id=ahci")
+	extraArgs = append(extraArgs, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
+
 	// Start QEMU
 	q := &qemu.QEMU{
 		InitRAMFS: outputFile,
-		Kernel:    os.Getenv("UROOT_KERNEL"),
+		Kernel:    bzImage,
+		ExtraArgs: extraArgs,
 	}
 	t.Logf("command line:\n%s", q.CmdLineQuoted())
 	if err := q.Start(); err != nil {

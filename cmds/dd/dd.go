@@ -16,7 +16,7 @@
 //     -bs n:    input and output block size (default=0)
 //     -skip n:  skip n ibs-sized input blocks before reading (default=0)
 //     -seek n:  seek n obs-sized output blocks before writing (default=0)
-//     -conv s:  comma separated list of conversions (none|ucase|lcase|notrunc)
+//     -conv s:  comma separated list of conversions (none|notrunc)
 //     -count n: copy only n ibs-sized input blocks
 //     -if:      defaults to stdin
 //     -of:      defaults to stdout
@@ -25,10 +25,14 @@
 //         none:     do not display
 //         xfer:     print on completion (default)
 //         progress: print throughout transfer (GNU)
+//
+// Notes:
+//     Because UTF-8 clashes with block-oriented copying, `conv=lcase` and
+//     `conv=ucase` will not be supported. Additionally, research showed these
+//     arguments are rarely useful. Use tr instead.
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -49,7 +53,7 @@ var (
 	ibs, obs, bs *unit.Value
 	skip         = flag.Int64("skip", 0, "skip N ibs-sized blocks before reading")
 	seek         = flag.Int64("seek", 0, "seek N obs-sized blocks before writing")
-	conv         = flag.String("conv", "none", "comma separated list of conversions (none|ucase|lcase|notrunc)")
+	conv         = flag.String("conv", "none", "comma separated list of conversions (none|notrunc)")
 	count        = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
 	inName       = flag.String("if", "", "Input file")
 	outName      = flag.String("of", "", "Output file")
@@ -60,16 +64,12 @@ var (
 )
 
 const (
-	convUCase = 1 << iota
-	convLCase
-	convNoTrunc
+	convNoTrunc = 1 << iota
 	oFlagSync
 	oFlagDSync
 )
 
 var convMap = map[string]int{
-	"ucase":   convUCase,
-	"lcase":   convLCase,
 	"notrunc": convNoTrunc,
 }
 
@@ -140,11 +140,6 @@ func (cb *chunkedBuffer) WriteTo(w io.Writer) (int64, error) {
 			chunk = cb.length - i
 		}
 		block := cb.data[i : i+chunk]
-		if cb.flags&convUCase != 0 {
-			block = bytes.ToUpper(block)
-		} else if cb.flags&convLCase != 0 {
-			block = bytes.ToLower(block)
-		}
 		got, err := w.Write(block)
 
 		// Ugh, Go cruft: io.Writer.Write returns (int, error).
@@ -439,7 +434,7 @@ func (p *progressData) print() {
 }
 
 func usage() {
-	log.Fatal(`Usage: dd [if=file] [of=file] [conv=none|lcase|ucase|notrunc] [seek=#] [skip=#]
+	log.Fatal(`Usage: dd [if=file] [of=file] [conv=none|notrunc] [seek=#] [skip=#]
 			     [count=#] [bs=#] [ibs=#] [obs=#] [status=none|xfer|progress] [oflag=none|sync|dsync]
 		options may also be invoked Go-style as -opt value or -opt=value
 		bs, if specified, overrides ibs and obs`)
@@ -484,9 +479,6 @@ func main() {
 				usage()
 			}
 		}
-	}
-	if (flags&convUCase != 0) && (flags&convLCase != 0) {
-		log.Fatal("conv=ucase and conv=lcase are mutually exclusive")
 	}
 
 	// Convert oflag argument to bit set.

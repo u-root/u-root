@@ -44,20 +44,6 @@ func TestDd(t *testing.T) {
 			compare: stdoutEqual,
 		},
 		{
-			name:    "case lower change",
-			flags:   []string{"bs=8", "conv=lcase"},
-			stdin:   "3: Bs=8 11B", // len=11 is not multiple of 8
-			stdout:  []byte("3: bs=8 11b"),
-			compare: stdoutEqual,
-		},
-		{
-			name:    "case upper change",
-			flags:   []string{"bs=8", "conv=ucase"},
-			stdin:   "3: Bs=8 11B", // len=11 is not multiple of 8
-			stdout:  []byte("3: BS=8 11B"),
-			compare: stdoutEqual,
-		},
-		{
 			name:    "Copy from input to output on an aligned block size",
 			flags:   []string{"bs=8"},
 			stdin:   "hello world.....", // len=16 is a multiple of 8
@@ -208,18 +194,6 @@ func TestFiles(t *testing.T) {
 			flags:    []string{"bs=8c"},
 			inFile:   []byte("2: bs=8c 11b"), // len=12 is not multiple of 8
 			expected: []byte("2: bs=8c 11b"),
-		},
-		{
-			name:     "case lower change",
-			flags:    []string{"bs=8", "conv=lcase"},
-			inFile:   []byte("3: Bs=8 11B"), // len=11 is not multiple of 8
-			expected: []byte("3: bs=8 11b"),
-		},
-		{
-			name:     "case upper change",
-			flags:    []string{"bs=8", "conv=ucase"},
-			inFile:   []byte("3: Bs=8 11B"), // len=11 is not multiple of 8
-			expected: []byte("3: BS=8 11B"),
 		},
 		{
 			name:     "Copy from input to output on an aligned block size",
