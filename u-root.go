@@ -1,4 +1,4 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -111,7 +111,6 @@ var (
 			"cmds/pwd",
 			"cmds/readlink",
 			"cmds/rmmod",
-			"cmds/run",
 			"cmds/seq",
 			"cmds/sleep",
 			"cmds/switch_root",
@@ -173,7 +172,6 @@ var (
 			"cmds/pwd",
 			"cmds/readlink",
 			"cmds/rmmod",
-			"cmds/run",
 			"cmds/seq",
 			"cmds/sleep",
 			"cmds/tail",
