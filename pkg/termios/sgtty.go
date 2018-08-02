@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package termios
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"reflect"
+	"sort"
 	"strconv"
 
 	"golang.org/x/sys/unix"
@@ -30,7 +30,9 @@ type (
 	}
 )
 
-func gtty(fd int) (*tty, error) {
+// GTTY returns the tty struct for a given fd. It is like a New in
+// many packages but the name GTTY is a tradition.
+func GTTY(fd int) (*tty, error) {
 	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
 		return nil, err
@@ -61,7 +63,10 @@ func gtty(fd int) (*tty, error) {
 	return &t, nil
 }
 
-func stty(fd int, t *tty) (*tty, error) {
+// STTY uses a tty * to set tty settings on an fd.
+// It returns a new tty struct for the fd after the changes are made,
+// and an error. It does not change the original tty struct.
+func (t *tty) STTY(fd int) (*tty, error) {
 	// Get a unix.Termios which we can partially fill in.
 	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
@@ -95,24 +100,30 @@ func stty(fd int, t *tty) (*tty, error) {
 		return nil, err
 	}
 
-	return gtty(fd)
+	return GTTY(fd)
 }
 
-func pretty(w io.Writer, t *tty) {
-	fmt.Printf("speed: %v ", t.Ispeed)
+// String will stringify a tty, including printing out the options all in the same order.
+func (t *tty) String() string {
+	s := fmt.Sprintf("speed:%v ", t.Ispeed)
+	s += fmt.Sprintf("rows:%d cols:%d", t.Row, t.Col)
+	var opts []string
 	for n, c := range t.CC {
-		fmt.Printf("%v: %#q, ", n, c)
+		opts = append(opts, fmt.Sprintf("%v:%#02x", n, c))
 	}
-	fmt.Fprintf(w, "%d rows, %d cols\n", t.Row, t.Col)
 
 	for n, set := range t.Opts {
 		if set {
-			fmt.Fprintf(w, "%v ", n)
+			opts = append(opts, fmt.Sprintf("%v:1", n))
 		} else {
-			fmt.Fprintf(w, "~%v ", n)
+			opts = append(opts, fmt.Sprintf("%v:0", n))
 		}
 	}
-	fmt.Fprintln(w)
+	sort.Strings(opts)
+	for _, v := range opts {
+		s += fmt.Sprintf(" %s", v)
+	}
+	return s
 }
 
 func intarg(s []string) int {
@@ -126,9 +137,10 @@ func intarg(s []string) int {
 	return i
 }
 
-// the arguments are a variety of key-value pairs and booleans.
+// SetOpts sets opts in a tty given an array of key-value pairs and
+// booleans. The arguments are a variety of key-value pairs and booleans.
 // booleans are cleared if the first char is a -, set otherwise.
-func setOpts(t *tty, opts []string) error {
+func (t *tty) SetOpts(opts []string) error {
 	for i := 0; i < len(opts); i++ {
 		o := opts[i]
 		switch o {
@@ -169,13 +181,14 @@ func setOpts(t *tty, opts []string) error {
 	return nil
 }
 
-func setRaw(fd int) (*tty, error) {
-	t, err := gtty(fd)
+// Raw sets a tty into raw more, returning a tty struct
+func Raw(fd int) (*tty, error) {
+	t, err := GTTY(fd)
 	if err != nil {
 		return nil, err
 	}
 
-	setOpts(t, []string{"~ignbrk", "~brkint", "~parmrk", "~istrip", "~inlcr", "~igncr", "~icrnl", "~ixon", "~opost", "~echo", "~echonl", "~icanon", "~isig", "~iexten", "~parenb" /*"cs8", */, "min", "1", "time", "0"})
+	t.SetOpts([]string{"~ignbrk", "~brkint", "~parmrk", "~istrip", "~inlcr", "~igncr", "~icrnl", "~ixon", "~opost", "~echo", "~echonl", "~icanon", "~isig", "~iexten", "~parenb" /*"cs8", */, "min", "1", "time", "0"})
 
-	return stty(fd, t)
+	return t.STTY(fd)
 }

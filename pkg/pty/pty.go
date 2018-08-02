@@ -66,22 +66,6 @@ func (p *Pty) Start() error {
 		fmt.Fprintf(p.C.Stderr, "SetWinSize of Pts: %v", err)
 	}
 
-	go io.Copy(p.C.Stdout, p.Ptm)
-
-	// The 1 byte for IO may seem weird, but ptys are for human interacxtion
-	// and, let's face it, we don't all type fast.
-	go func() {
-		var data [1]byte
-		for {
-			if _, err := p.C.Stdin.Read(data[:]); err != nil {
-				return
-			}
-			// Log the error but it may be transient.
-			if _, err := p.Ptm.Write(data[:]); err != nil {
-				fmt.Fprintf(p.C.Stderr, "Error writing input to ptm: %v: give up\n", err)
-			}
-		}
-	}()
 	return nil
 }
 
@@ -90,6 +74,22 @@ func (p *Pty) Run() error {
 		return err
 	}
 
+	go io.Copy(p.TTY, p.Ptm)
+
+	// The 1 byte for IO may seem weird, but ptys are for human interaction
+	// and, let's face it, we don't all type fast.
+	go func() {
+		var data [1]byte
+		for {
+			if _, err := p.TTY.Read(data[:]); err != nil {
+				return
+			}
+			// Log the error but it may be transient.
+			if _, err := p.Ptm.Write(data[:]); err != nil {
+				fmt.Fprintf(p.C.Stderr, "Error writing input to ptm: %v: give up\n", err)
+			}
+		}
+	}()
 	return p.Wait()
 }
 
