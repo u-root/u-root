@@ -7,8 +7,10 @@ package uroot
 import (
 	"fmt"
 	"log"
+	"path"
 	"path/filepath"
 
+	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 )
 
@@ -21,16 +23,18 @@ var SourceBuilder = Builder{
 // (go, compile, link, asm) and an init process. It includes source files for
 // packages listed in `opts.Packages` to build from scratch.
 func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
+	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
 		return err
 	}
 
-	var init string
+	var installcommand string
 	log.Printf("Collecting package files and dependencies...")
 	deps := make(map[string]struct{})
 	for _, pkg := range opts.Packages {
-		if filepath.Base(pkg) == "init" {
-			init = pkg
+		name := path.Base(pkg)
+		if name == "installcommand" {
+			installcommand = pkg
 			continue
 		}
 
@@ -42,6 +46,17 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 		for _, d := range p.Deps {
 			deps[d] = struct{}{}
 		}
+
+		// Add a symlink to installcommand. This means source mode can
+		// work with any init.
+		if err := af.AddRecord(cpio.Symlink(
+			path.Join(opts.BinaryDir, name),
+			path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
+			return err
+		}
+	}
+	if len(installcommand) == 0 {
+		return fmt.Errorf("must include a version of installcommand in source mode")
 	}
 
 	// Add src files of dependencies to archive.
@@ -54,16 +69,12 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 	if err := buildToolchain(opts); err != nil {
 		return err
 	}
-
-	// Build init, if we are supposed to.
-	if len(init) > 0 {
-		if err := opts.Env.Build(init, filepath.Join(opts.TempDir, "init"), golang.BuildOpts{}); err != nil {
-			return err
-		}
+	if err := opts.Env.Build(installcommand, filepath.Join(opts.TempDir, "installcommand"), golang.BuildOpts{}); err != nil {
+		return err
 	}
 
-	// Add Go toolchain and init to archive.
-	return af.AddFile(opts.TempDir, "")
+	// Add Go toolchain and installcommand to archive.
+	return af.AddFile(opts.TempDir, opts.BinaryDir)
 }
 
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
