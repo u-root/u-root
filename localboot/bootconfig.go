@@ -8,24 +8,20 @@ import (
 
 // BootConfig holds information to boot a kernel using kexec
 type BootConfig struct {
-	Kernel *os.File
-	// KernelName is used only for reference but has no effect on booting
-	KernelName string
-	Initrd     *os.File
-	// InitrdName is used only for reference but has no effect on booting
-	InitrdName string
-	Cmdline    string
+	Kernel    *os.File
+	Initramfs *os.File
+	Cmdline   string
 }
 
 // IsValid returns true if the BootConfig has a valid kernel and initrd entry
 func (bc BootConfig) IsValid() bool {
-	return bc.Kernel != nil && bc.Initrd != nil
+	return bc.Kernel != nil && bc.Initramfs != nil
 }
 
 // Boot tries to boot the kernel pointed by the BootConfig option, or returns an
 // error if it cannot be booted. The kernel is loaded using kexec
 func (bc BootConfig) Boot() error {
-	if err := kexec.FileLoad(bc.Kernel, bc.Initrd, bc.Cmdline); err != nil {
+	if err := kexec.FileLoad(bc.Kernel, bc.Initramfs, bc.Cmdline); err != nil {
 		return err
 	}
 	kexec.Reboot()
@@ -38,11 +34,9 @@ func (bc *BootConfig) Close() {
 	if bc.Kernel != nil {
 		bc.Kernel.Close()
 		bc.Kernel = nil
-		bc.KernelName = ""
 	}
-	if bc.Initrd != nil {
-		bc.Initrd.Close()
-		bc.Initrd = nil
-		bc.InitrdName = ""
+	if bc.Initramfs != nil {
+		bc.Initramfs.Close()
+		bc.Initramfs = nil
 	}
 }

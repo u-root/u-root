@@ -84,7 +84,6 @@ func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig 
 					debug("error opening kernel file %s: %v", fullpath, err)
 				}
 				cfg.Kernel = fd
-				cfg.KernelName = kernel
 				cfg.Cmdline = cmdline
 			} else if sline[0] == "initrd" || sline[0] == "initrd16" || sline[0] == "initrdefi" {
 				initrd := sline[1]
@@ -93,8 +92,7 @@ func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig 
 				if err != nil {
 					debug("error opening initrd file %s: %v", fullpath, err)
 				}
-				cfg.Initrd = fd
-				cfg.InitrdName = initrd
+				cfg.Initramfs = fd
 			}
 		}
 	}
