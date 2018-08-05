@@ -130,14 +130,15 @@ type Opts struct {
 
 	// InitCmd is the name of a command to link /init to.
 	//
-	// BB mode only.
+	// This can be an absolute path or the name of a command included in
+	// Commands.
 	//
-	// Default: bbin/init
+	// If this is empty, no init symlink will be created.
 	InitCmd string
 
 	// DefaultShell is the default shell to start after init.
 	//
-	// This can be an absolute path, or the name of a command included in
+	// This can be an absolute path or the name of a command included in
 	// Commands.
 	//
 	// This must be specified to have a default shell.
@@ -181,22 +182,22 @@ func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
 	return []string{pkg}, nil
 }
 
-func resolveDefaultShell(defaultShell string, cmds []Commands) (cpio.Record, error) {
-	if filepath.IsAbs(defaultShell) {
-		return cpio.Symlink("bin/defaultsh", defaultShell), nil
+func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
+	if filepath.IsAbs(cmd) {
+		return cmd, nil
 	}
 
 	for _, c := range cmds {
 		for _, p := range c.Packages {
 			// Figure out which build mode the shell is in, and symlink to
-			// that build mode.
-			if name := path.Base(p); name == defaultShell {
-				return cpio.Symlink(path.Join(c.TargetDir(), "defaultsh"), name), nil
+			// that build modee
+			if name := path.Base(p); name == cmd {
+				return path.Join("/", c.TargetDir(), cmd), nil
 			}
 		}
 	}
 
-	return cpio.Record{}, fmt.Errorf("specified shell %q not included in u-root build", defaultShell)
+	return "", fmt.Errorf("command or path %q not included in u-root build", cmd)
 }
 
 // ResolvePackagePaths takes a list of Go package import paths and directories
@@ -301,7 +302,6 @@ func CreateInitramfs(opts Opts) error {
 			Packages:  importPaths,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
-			InitCmd:   opts.InitCmd,
 		}
 		if err := cmds.Builder.Build(files, bOpts); err != nil {
 			return fmt.Errorf("error building %#v: %v", bOpts, err)
@@ -318,9 +318,17 @@ func CreateInitramfs(opts Opts) error {
 	}
 
 	if len(opts.DefaultShell) > 0 {
-		if rec, err := resolveDefaultShell(opts.DefaultShell, opts.Commands); err != nil {
+		if target, err := resolveCommandOrPath(opts.DefaultShell, opts.Commands); err != nil {
 			log.Printf("No default shell: %v", err)
-		} else if err := archive.ArchiveFiles.AddRecord(rec); err != nil {
+		} else if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", target)); err != nil {
+			return err
+		}
+	}
+
+	if len(opts.InitCmd) > 0 {
+		if target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands); err != nil {
+			return fmt.Errorf("could not find init: %v", err)
+		} else if err := archive.AddRecord(cpio.Symlink("init", target)); err != nil {
 			return err
 		}
 	}
@@ -359,10 +367,6 @@ type BuildOpts struct {
 	//
 	// BinaryDir must be specified.
 	BinaryDir string
-
-	// InitCmd is the name of a command to link /init to in bb build.
-	// Default: bbin/init
-	InitCmd string
 }
 
 // Builder uses the given options to build Go packages and adds its files to be

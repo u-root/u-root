@@ -37,7 +37,6 @@ func TestBBBuild(t *testing.T) {
 	}
 
 	var mustContain = []string{
-		"init",
 		"bbin/rush",
 		"bbin/foo",
 	}

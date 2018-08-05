@@ -206,8 +206,9 @@ func init() {
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
-	initCmd = flag.String("initcmd", "", "Symlink target for /init in BB mode. (default: bbin/init).")
-	defaultShell = flag.String("defaultsh", "rush", "Default shell. Can be an absolute path or a command name.")
+	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name.")
+	defaultShell = flag.String("defaultsh", "rush", "Default shell. Can be an absolute path or a u-root command name.")
+
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
 

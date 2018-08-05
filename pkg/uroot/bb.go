@@ -155,14 +155,7 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 			return err
 		}
 	}
-
-	initCmd := opts.InitCmd
-	if len(initCmd) == 0 {
-		initCmd = path.Join(opts.BinaryDir, "init")
-	}
-
-	// Symlink from /init to busybox init or something else.
-	return af.AddRecord(cpio.Symlink("init", initCmd))
+	return nil
 }
 
 // Package is a Go package.
