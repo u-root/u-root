@@ -75,8 +75,9 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 				Packages: pkgs,
 			},
 		},
-		Archiver:   archiver,
-		OutputFile: w,
+		Archiver:     archiver,
+		OutputFile:   w,
+		DefaultShell: "rush",
 	}
 	if err := uroot.CreateInitramfs(opts); err != nil {
 		t.Fatal(err)
