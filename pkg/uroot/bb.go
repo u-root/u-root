@@ -34,6 +34,11 @@ var skip = map[string]struct{}{
 	"bb": {},
 }
 
+var BBBuilder = Builder{
+	Build:            BBBuild,
+	DefaultBinaryDir: "bbin",
+}
+
 // BuildBusybox builds a busybox of the given Go packages.
 //
 // pkgs is a list of Go import paths. If nil is returned, binaryPath will hold
@@ -130,10 +135,12 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 		return err
 	}
 
-	binDir := opts.TargetDir("bbin")
+	if len(opts.BinaryDir) == 0 {
+		return fmt.Errorf("must specify binary directory")
+	}
 
 	// Build initramfs.
-	if err := af.AddFile(bbPath, path.Join(binDir, "bb")); err != nil {
+	if err := af.AddFile(bbPath, path.Join(opts.BinaryDir, "bb")); err != nil {
 		return err
 	}
 
@@ -144,14 +151,14 @@ func BBBuild(af ArchiveFiles, opts BuildOpts) error {
 		}
 
 		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
-		if err := af.AddRecord(cpio.Symlink(filepath.Join(binDir, path.Base(pkg)), "bb")); err != nil {
+		if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {
 			return err
 		}
 	}
 
 	initCmd := opts.InitCmd
-	if initCmd == "" {
-		initCmd = path.Join(binDir, "init")
+	if len(initCmd) == 0 {
+		initCmd = path.Join(opts.BinaryDir, "init")
 	}
 
 	// Symlink from /init to busybox init or something else.

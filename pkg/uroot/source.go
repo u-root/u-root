@@ -12,6 +12,11 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 )
 
+var SourceBuilder = Builder{
+	Build:            SourceBuild,
+	DefaultBinaryDir: "buildbin",
+}
+
 // SourceBuild is an implementation of Build that compiles the Go toolchain
 // (go, compile, link, asm) and an init process. It includes source files for
 // packages listed in `opts.Packages` to build from scratch.

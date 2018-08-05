@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -32,11 +33,21 @@ var (
 	osInitGo = func() {}
 	cmdList  = []string{
 		"/inito",
+
 		"/bbin/uinit",
+		"/bin/uinit",
 		"/buildbin/uinit",
+
+		"/bbin/defaultsh",
+		"/bin/defaultsh",
+		"/buildbin/defaultsh",
+
 		"/bbin/sh",
-		"/bbin/rush",
+		"/bin/sh",
 		"/buildbin/sh",
+
+		"/bbin/rush",
+		"/bin/rush",
 		"/buildbin/rush",
 	}
 	cmdCount int
@@ -123,11 +134,11 @@ func main() {
 	// Some systems wipe out all the environment variables we so carefully craft.
 	// There is a way out -- we can put them into /etc/profile.d/uroot if we want.
 	// The PATH variable has to change, however.
-	path := fmt.Sprintf("%v:%v:%v:%v", util.GoBin(), util.PATHHEAD, "$PATH", util.PATHTAIL)
+	epath := fmt.Sprintf("%v:%v:%v:%v", util.GoBin(), util.PATHHEAD, "$PATH", util.PATHTAIL)
 	for k, v := range util.Env {
 		// We're doing the hacky way for now. We can clean this up later.
 		if k == "PATH" {
-			profile += "export PATH=" + path + "\n"
+			profile += "export PATH=" + epath + "\n"
 		} else {
 			profile += "export " + k + "=" + v + "\n"
 		}
@@ -170,12 +181,26 @@ func main() {
 			continue
 		}
 
-		// inito is (optionally) created by the u-root command when
-		// the u-root initramfs is merged with an existing initramfs that has
-		// a /init. The name inito means "original /init"
-		// There may be an inito if we are building on
-		// an existing initramfs. All initos need their
-		// own pid space.
+		// I *love* special cases. Evaluate just the top-most symlink.
+		//
+		// In source mode, this would be a symlink like
+		// /buildbin/defaultsh -> /buildbin/elvish ->
+		// /buildbin/installcommand.
+		//
+		// To actually get the command to build, argv[0] has to end
+		// with /elvish, so we resolve one level of symlink.
+		if path.Base(v) == "defaultsh" {
+			s, err := os.Readlink(v)
+			if err == nil {
+				v = s
+			}
+		}
+
+		// inito is (optionally) created by the u-root command when the
+		// u-root initramfs is merged with an existing initramfs that
+		// has a /init. The name inito means "original /init" There may
+		// be an inito if we are building on an existing initramfs. All
+		// initos need their own pid space.
 		var cloneFlags uintptr
 		if v == "/inito" {
 			cloneFlags = uintptr(syscall.CLONE_NEWPID)
