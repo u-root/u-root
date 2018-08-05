@@ -38,9 +38,7 @@ var (
 		"/bin/uinit",
 		"/buildbin/uinit",
 
-		"/bbin/defaultsh",
 		"/bin/defaultsh",
-		"/buildbin/defaultsh",
 
 		"/bbin/sh",
 		"/bin/sh",
