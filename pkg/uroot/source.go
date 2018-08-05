@@ -69,12 +69,12 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 	if err := buildToolchain(opts); err != nil {
 		return err
 	}
-	if err := opts.Env.Build(installcommand, filepath.Join(opts.TempDir, "installcommand"), golang.BuildOpts{}); err != nil {
+	if err := opts.Env.Build(installcommand, filepath.Join(opts.TempDir, opts.BinaryDir, "installcommand"), golang.BuildOpts{}); err != nil {
 		return err
 	}
 
 	// Add Go toolchain and installcommand to archive.
-	return af.AddFile(opts.TempDir, opts.BinaryDir)
+	return af.AddFile(opts.TempDir, "")
 }
 
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
