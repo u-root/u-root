@@ -8,8 +8,9 @@ import "encoding/json"
 type BootConfig struct {
 	Name       string `json:"name"`
 	Kernel     string `json:"kernel"`
-	Initramfs  string `json:"initramfs"`
-	KernelArgs string `json:"kernel_args"`
+	Initramfs  string `json:"initramfs,omitempty"`
+	KernelArgs string `json:"kernel_args,omitempty"`
+	DeviceTree string `json:"devicetree"`
 }
 
 func NewBootConfig(data []byte) (*BootConfig, error) {
