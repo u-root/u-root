@@ -44,6 +44,14 @@ In the future I will also support VPD, which will be used as a substitute for EF
 
 The `uinit` program just wraps `netboot` and `localboot` in a forever-loop logic, just like your BIOS/UEFI would do. At the moment it just loops between netboot and localboot in this order, but I plan to make this more flexible and configurable.
 
+## Who uses systemboot?
+
+Public projects that use it and that we are aware of:
+* [OpenCellular](https://github.com/Telecominfraproject/OpenCellular/wiki/How-to-systemboot-(verifiedboot)
+
+If you use systemboot in your project please let us know and we will add your
+project to this list,
+
 ## TODO
 
 * DHCPv4 is under work
