@@ -50,7 +50,7 @@ Public projects that use it and that we are aware of:
 * [OpenCellular](https://github.com/Telecominfraproject/OpenCellular/wiki/How-to-systemboot-(verifiedboot)
 
 If you use systemboot in your project please let us know and we will add your
-project to this list,
+project to this list.
 
 ## TODO
 
