@@ -209,6 +209,11 @@ func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) er
 				}
 			}
 		}
+
+		// filepath.Abs interprets empty string as CWD for no good reason.
+		if len(src) == 0 {
+			continue
+		}
 		src, err := filepath.Abs(src)
 		if err != nil {
 			return fmt.Errorf("couldn't find absolute path for %q: %v", src, err)
