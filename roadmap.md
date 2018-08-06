@@ -7,7 +7,7 @@ yourself.
 
 | Command        | Flags TODO      | Comments               |
 | -------------- | --------------- | ---------------------- |
-| :x: checksum   |                 | md5, sha1, sha256, ... |
+| checksum       | -i,-md5,sha1/256 | md5, sha1, sha256, ...|
 | chmod          | -R, --reference | More mode forms        |
 | :x: flashrom   | -p internal     |                        |
 | fmap           |                 | Move into fiano        |
