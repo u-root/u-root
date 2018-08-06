@@ -18,6 +18,7 @@ import (
 
 var (
 	baseMountPoint = flag.String("m", "/mnt", "Base mount point where to mount partiions")
+	doDryRun       = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
 	doDebug        = flag.Bool("d", false, "Print debug output")
 )
 
@@ -95,10 +96,17 @@ func main() {
 
 	// try to kexec into every boot config kernel until one succeeds
 	for _, cfg := range bootconfigs {
-		log.Printf("trying to boot %s", cfg.KernelName)
-		if err := cfg.Boot(); err != nil {
-			log.Printf("Failed to boot kernel %s: %v", cfg.KernelName, err)
-			cfg.Close()
+		log.Printf("trying to boot %s", cfg.Kernel.Name())
+		if *doDryRun {
+			// note: in dry-run, this loop brea at the first entry
+			// unconditionally
+			log.Printf("Dry-run, will not actually boot")
+			break
+		} else {
+			if err := cfg.Boot(); err != nil {
+				log.Printf("Failed to boot kernel %s: %v", cfg.Kernel.Name(), err)
+				cfg.Close()
+			}
 		}
 	}
 	log.Print("No boot configuration succeeded")
