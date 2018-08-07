@@ -13,6 +13,8 @@ type BootConfig struct {
 	DeviceTree string `json:"devicetree,omitempty"`
 }
 
+// NewBootConfig parses a boot configuration in JSON format and returns a
+// BootConfig object.
 func NewBootConfig(data []byte) (*BootConfig, error) {
 	var bootconfig BootConfig
 	if err := json.Unmarshal(data, &bootconfig); err != nil {
