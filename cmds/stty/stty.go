@@ -46,7 +46,7 @@
 // 4500:5:bf:8a3b:3:1c:7f:15:4:0:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0
 //
 // We always do our operations on fd 0, as that is standard, and we always do an initial
-// gtty to ensure we have access to fd 0.
+// termios.GTTY to ensure we have access to fd 0.
 package main
 
 import (
@@ -55,13 +55,15 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/u-root/u-root/pkg/termios"
 )
 
 func main() {
-	t, err := gtty(0)
+	t, err := termios.GTTY(0)
 
 	if err != nil {
-		log.Fatalf("gtty: %v", err)
+		log.Fatalf("termios.GTTY: %v", err)
 	}
 
 	if len(os.Args) == 1 {
@@ -70,7 +72,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "pretty":
-		pretty(os.Stdout, t)
+		fmt.Printf("%v\n", t.String())
 	case "dump":
 		b, err := json.MarshalIndent(t, "", "\t")
 
@@ -89,22 +91,23 @@ func main() {
 		if err := json.Unmarshal(b, t); err != nil {
 			log.Fatalf("stty load: %v", err)
 		}
-		if t, err = stty(0, t); err != nil {
-			log.Fatalf("stty: %v", err)
-		}
-		pretty(os.Stdout, t)
-	case "raw":
-		if _, err := setRaw(0); err != nil {
-			log.Fatalf("raw: %v", err)
-		}
-	default:
-		if err := setOpts(t, os.Args[1:]); err != nil {
-			log.Fatalf("setting opts: %v", err)
-		}
-		t, err = stty(0, t)
+		n, err := t.STTY(0)
 		if err != nil {
 			log.Fatalf("stty: %v", err)
 		}
-		pretty(os.Stdout, t)
+		fmt.Printf("%v\n", n.String())
+	case "raw":
+		if _, err := termios.Raw(0); err != nil {
+			log.Fatalf("raw: %v", err)
+		}
+	default:
+		if err := t.SetOpts(os.Args[1:]); err != nil {
+			log.Fatalf("setting opts: %v", err)
+		}
+		n, err := t.STTY(0)
+		if err != nil {
+			log.Fatalf("stty: %v", err)
+		}
+		fmt.Printf("%v\n", n.String())
 	}
 }

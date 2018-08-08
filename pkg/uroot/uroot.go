@@ -239,6 +239,10 @@ func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) er
 			dst = filepath.Clean(parts[1])
 		} else {
 			// plain old syntax
+			// filepath.Clean interprets an empty string as CWD for no good reason.
+			if len(file) == 0 {
+				continue
+			}
 			src = filepath.Clean(file)
 			dst = src
 			if filepath.IsAbs(dst) {
