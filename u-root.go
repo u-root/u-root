@@ -31,6 +31,7 @@ func (m *multiFlag) Set(value string) error {
 var (
 	build, format, tmpDir, base, outputPath *string
 	initCmd                                 *string
+	defaultShell                            *string
 	useExistingInit                         *bool
 	extraFiles                              multiFlag
 	templates                               = map[string][]string{
@@ -195,22 +196,24 @@ var (
 	}
 )
 
-func parseFlags() {
-	build = flag.String("build", "source", "u-root build format (e.g. bb or source)")
-	format = flag.String("format", "cpio", "Archival format (e.g. cpio)")
+func init() {
+	build = flag.String("build", "source", "u-root build format (e.g. bb or source).")
+	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
 
-	base = flag.String("base", "", "Base archive to add files to")
+	base = flag.String("base", "", "Base archive to add files to.")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
-	initCmd = flag.String("initcmd", "", "Where to link /init to (default: bbin/init).")
-	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times")
-	flag.Parse()
+
+	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name.")
+	defaultShell = flag.String("defaultsh", "rush", "Default shell. Can be an absolute path or a u-root command name.")
+
+	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
 
 func main() {
-	parseFlags()
+	flag.Parse()
 
 	// Main is in a separate functions so defers run on return.
 	if err := Main(); err != nil {
@@ -258,7 +261,7 @@ func Main() error {
 	// Resolve globs into package imports.
 	//
 	// Currently allowed formats:
-	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
+	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
 	//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
 	var pkgs []string
 	for _, a := range flag.Args() {
@@ -310,6 +313,7 @@ func Main() error {
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 		InitCmd:         *initCmd,
+		DefaultShell:    *defaultShell,
 	}
 	return uroot.CreateInitramfs(opts)
 }
