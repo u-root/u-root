@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -32,11 +33,19 @@ var (
 	osInitGo = func() {}
 	cmdList  = []string{
 		"/inito",
+
 		"/bbin/uinit",
+		"/bin/uinit",
 		"/buildbin/uinit",
+
+		"/bin/defaultsh",
+
 		"/bbin/sh",
-		"/bbin/rush",
+		"/bin/sh",
 		"/buildbin/sh",
+
+		"/bbin/rush",
+		"/bin/rush",
 		"/buildbin/rush",
 	}
 	cmdCount int
@@ -44,56 +53,12 @@ var (
 )
 
 func main() {
-	a := []string{"build"}
 	flag.Parse()
 	log.Printf("Welcome to u-root")
 	util.Rootfs()
 
 	if *verbose {
 		debug = log.Printf
-		a = append(a, "-x")
-	}
-
-	// populate buildbin
-
-	// In earlier versions we just had src/cmds. Due to the Go rules it seems we need to
-	// embed the URL of the repo everywhere. Yuck.
-	c, err := filepath.Glob("/src/github.com/u-root/*/cmds/[a-z]*")
-	if err != nil || len(c) == 0 {
-		log.Printf("In a break with tradition, you seem to have NO u-root commands: %v", err)
-	}
-	o, err := filepath.Glob("/src/*/*/*")
-	if err != nil {
-		log.Printf("Your filepath glob for other commands seems busted: %v", err)
-	}
-	c = append(c, o...)
-	for _, v := range c {
-		name := filepath.Base(v)
-		if name == "installcommand" || name == "init" {
-			continue
-		} else {
-			destPath := filepath.Join("/buildbin", name)
-			source := "/buildbin/installcommand"
-			if err := os.Symlink(source, destPath); err != nil {
-				log.Printf("Symlink %v -> %v failed; %v", source, destPath, err)
-			}
-		}
-	}
-
-	envs = os.Environ()
-	debug("envs %v", envs)
-
-	os.Setenv("GOBIN", "/buildbin")
-	a = append(a, "-o", "/buildbin/installcommand", filepath.Join(util.CmdsPath, "installcommand"))
-	cmd := exec.Command("go", a...)
-	cmd.Env = append(envs, "GOBIN=/buildbin")
-	cmd.Dir = "/"
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	debug("Run %v", cmd)
-	if err := cmd.Run(); err != nil {
-		log.Printf("%v\n", err)
 	}
 
 	// Before entering an interactive shell, decrease the loglevel because
@@ -105,9 +70,10 @@ func main() {
 		log.Print("Could not set log level")
 	}
 
+	envs = os.Environ()
+	debug("envs %v", envs)
+
 	// install /env.
-	os.Setenv("GOBIN", "/ubin")
-	envs = append(envs, "GOBIN=/ubin")
 	for _, e := range envs {
 		nv := strings.SplitN(e, "=", 2)
 		if len(nv) < 2 {
@@ -123,11 +89,11 @@ func main() {
 	// Some systems wipe out all the environment variables we so carefully craft.
 	// There is a way out -- we can put them into /etc/profile.d/uroot if we want.
 	// The PATH variable has to change, however.
-	path := fmt.Sprintf("%v:%v:%v:%v", util.GoBin(), util.PATHHEAD, "$PATH", util.PATHTAIL)
+	epath := fmt.Sprintf("%v:%v:%v:%v", util.GoBin(), util.PATHHEAD, "$PATH", util.PATHTAIL)
 	for k, v := range util.Env {
 		// We're doing the hacky way for now. We can clean this up later.
 		if k == "PATH" {
-			profile += "export PATH=" + path + "\n"
+			profile += "export PATH=" + epath + "\n"
 		} else {
 			profile += "export " + k + "=" + v + "\n"
 		}
@@ -163,26 +129,39 @@ func main() {
 	}
 
 	osInitGo()
-	// If the os-specific runner failed, we can just keep going.
 
 	for _, v := range cmdList {
 		if _, err := os.Stat(v); os.IsNotExist(err) {
 			continue
 		}
 
-		// inito is (optionally) created by the u-root command when
-		// the u-root initramfs is merged with an existing initramfs that has
-		// a /init. The name inito means "original /init"
-		// There may be an inito if we are building on
-		// an existing initramfs. All initos need their
-		// own pid space.
+		// I *love* special cases. Evaluate just the top-most symlink.
+		//
+		// In source mode, this would be a symlink like
+		// /buildbin/defaultsh -> /buildbin/elvish ->
+		// /buildbin/installcommand.
+		//
+		// To actually get the command to build, argv[0] has to end
+		// with /elvish, so we resolve one level of symlink.
+		if path.Base(v) == "defaultsh" {
+			s, err := os.Readlink(v)
+			if err == nil {
+				v = s
+			}
+		}
+
+		// inito is (optionally) created by the u-root command when the
+		// u-root initramfs is merged with an existing initramfs that
+		// has a /init. The name inito means "original /init" There may
+		// be an inito if we are building on an existing initramfs. All
+		// initos need their own pid space.
 		var cloneFlags uintptr
 		if v == "/inito" {
 			cloneFlags = uintptr(syscall.CLONE_NEWPID)
 		}
 
 		cmdCount++
-		cmd = exec.Command(v)
+		cmd := exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		if *test {

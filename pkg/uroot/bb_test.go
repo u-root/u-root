@@ -28,7 +28,8 @@ func TestBBBuild(t *testing.T) {
 			"github.com/u-root/u-root/pkg/uroot/test/foo",
 			"github.com/u-root/u-root/cmds/rush",
 		},
-		TempDir: dir,
+		TempDir:   dir,
+		BinaryDir: "bbin",
 	}
 	af := NewArchiveFiles()
 	if err := BBBuild(af, opts); err != nil {
@@ -36,13 +37,12 @@ func TestBBBuild(t *testing.T) {
 	}
 
 	var mustContain = []string{
-		"init",
 		"bbin/rush",
 		"bbin/foo",
 	}
 	for _, name := range mustContain {
 		if !af.Contains(name) {
-			t.Errorf("expected files to include %q", name)
+			t.Errorf("expected files to include %q; archive: %v", name, af)
 		}
 	}
 
