@@ -147,8 +147,7 @@ var (
 
 		Dir{Name: "/dev/pts", Mode: 0777},
 		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
-		Symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
-
+		Dev{Name: "/dev/ptmx", Mode: syscall.S_IFCHR | 0666, Dev: 0x0502},
 		// Note: shm is required at least for Chrome. If you don't mount
 		// it chrome throws a bogus "out of memory" error, not the more
 		// useful "I can't open /dev/shm/whatever". SAD!
