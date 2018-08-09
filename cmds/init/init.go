@@ -39,14 +39,6 @@ var (
 		"/buildbin/uinit",
 
 		"/bin/defaultsh",
-
-		"/bbin/sh",
-		"/bin/sh",
-		"/buildbin/sh",
-
-		"/bbin/rush",
-		"/bin/rush",
-		"/buildbin/rush",
 	}
 	cmdCount int
 	envs     []string
