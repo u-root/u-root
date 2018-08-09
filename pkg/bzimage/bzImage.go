@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 )
 
@@ -40,6 +41,8 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if b.KernelOffset > uintptr(len(d)) {
 		return fmt.Errorf("len(b) is %d, b.Header.SetupSects+1 * 512 is %d: too small?", len(d), b.KernelOffset)
 	}
+	b.BootCode = d[len(d)-r.Len() : b.KernelOffset]
+	Debug("%d bytes of BootCode", len(b.BootCode))
 	b.Kernel = d[b.KernelOffset:]
 	Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.Kernel))
 	b.KernelBase = uintptr(0x100000)
@@ -52,18 +55,14 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 func (b *BzImage) MarshalBinary() ([]byte, error) {
 	var w bytes.Buffer
 	w.Grow(int(b.KernelOffset) + len(b.Kernel))
+	Debug("Grew output buffer to %d bytes", w.Len())
 	if err := binary.Write(&w, binary.LittleEndian, &b.Header); err != nil {
 		return nil, err
 	}
 	Debug("Wrote %d bytes of header", w.Len())
-	ff := make([]byte, b.KernelOffset)
-	for i := range ff {
-		ff[i] = 0xff
-	}
-	if _, err := w.Write(ff[w.Len():b.KernelOffset]); err != nil {
+	if _, err := w.Write(b.BootCode); err != nil {
 		return nil, err
 	}
-	Debug("Grew output buffer to %d bytes", w.Len())
 	if _, err := w.Write(b.Kernel); err != nil {
 		return nil, err
 	}
@@ -90,10 +89,26 @@ func Equal(a, b []byte) error {
 	if len(ba.Kernel) != len(bb.Kernel) {
 		return fmt.Errorf("Kernel lengths differ: %d vs %d bytes", len(ba.Kernel), len(bb.Kernel))
 	}
+	if len(ba.BootCode) != len(bb.BootCode) {
+		return fmt.Errorf("BootCode lengths differ: %d vs %d bytes", len(ba.Kernel), len(bb.Kernel))
+	}
+
+	if !reflect.DeepEqual(ba.BootCode, bb.BootCode) {
+		return fmt.Errorf("BootCode does not match")
+	}
 	if !reflect.DeepEqual(ba.Kernel, bb.Kernel) {
 		return fmt.Errorf("Kernels do not match")
 	}
 
+	return nil
+}
+
+func (b *BzImage) AddInitRAMFS(s string) error {
+	d, err := ioutil.ReadFile(s)
+	if err != nil {
+		return err
+	}
+	b.InitRAMFS = d
 	return nil
 }
 

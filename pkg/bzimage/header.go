@@ -76,7 +76,7 @@ type E820Entry struct {
 
 // The header of Linux/i386 kernel
 type LinuxHeader struct {
-	_               [0xc0]uint8         `offset:"0x000"`
+	MBRCode         [0xc0]uint8         `offset:"0x000"`
 	ExtRamdiskImage uint32              `offset:"0xc0"`
 	ExtRamdiskSize  uint32              `offset:"0xc4"`
 	ExtCmdlinePtr   uint32              `offset:"0xc8"`
@@ -244,6 +244,7 @@ var (
 
 type BzImage struct {
 	Header       LinuxHeader
+	BootCode     []byte
 	Kernel       []byte
 	KernelBase   uintptr
 	KernelOffset uintptr
