@@ -24,11 +24,21 @@ import (
 // you, if you want to read the serial logs.
 const logDir = "serial"
 
+type options struct {
+	// uinitName is the name of a directory containing uinit found at
+	// `github.com/u-root/u-root/integration/testdata`.
+	uinitName string
+
+	// extraArgs are extra arguments passed to QEMU.
+	extraArgs []string
+
+	// tmpDir indicates a path to use as a temporary directory for the
+	// test. If this is unset, a new directory is created and returned.
+	tmpDir string
+}
+
 // Returns temporary directory and QEMU instance.
-//
-// - `uinitName` is the name of a directory containing uinit found at
-//   `github.com/u-root/u-root/integration/testdata`.
-func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *qemu.QEMU) {
+func testWithQEMU(t *testing.T, o options) (string, *qemu.QEMU) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("test is skipped unless UROOT_QEMU is set")
 	}
@@ -36,10 +46,14 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 		t.Skip("test is skipped unless UROOT_KERNEL is set")
 	}
 
-	// TempDir
-	tmpDir, err := ioutil.TempDir("", "uroot-integration")
-	if err != nil {
-		t.Fatal(err)
+	// Create or reuse a temporary directory.
+	tmpDir := o.tmpDir
+	if tmpDir == "" {
+		var err error
+		tmpDir, err = ioutil.TempDir("", "uroot-integration")
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Env
@@ -61,7 +75,7 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 				Builder: builder.BusyBox,
 				Packages: []string{
 					"github.com/u-root/u-root/cmds/*",
-					path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"),
+					path.Join("github.com/u-root/u-root/integration/testdata", o.uinitName, "uinit"),
 				},
 			},
 		},
@@ -83,15 +97,17 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	}
 
 	// Expose the temp directory to QEMU as /dev/sda1
-	extraArgs = append(extraArgs, "-drive", "file=fat:ro:"+tmpDir+",if=none,id=tmpdir")
-	extraArgs = append(extraArgs, "-device", "ich9-ahci,id=ahci")
-	extraArgs = append(extraArgs, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
+	args := []string{}
+	args = append(args, "-drive", "file=fat:ro:"+tmpDir+",if=none,id=tmpdir")
+	args = append(args, "-device", "ich9-ahci,id=ahci")
+	args = append(args, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
+	args = append(args, o.extraArgs...)
 
 	// Create file for serial logs.
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatalf("could not create serial log directory: %v", err)
 	}
-	logFile, err := os.Create(path.Join(logDir, uinitName+".log"))
+	logFile, err := os.Create(path.Join(logDir, o.uinitName+".log"))
 	if err != nil {
 		t.Fatalf("could not create log file: %v", err)
 	}
@@ -100,7 +116,7 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	q := &qemu.QEMU{
 		InitRAMFS:    outputFile,
 		Kernel:       bzImage,
-		ExtraArgs:    extraArgs,
+		ExtraArgs:    args,
 		SerialOutput: logFile,
 	}
 	t.Logf("command line:\n%s", q.CmdLineQuoted())

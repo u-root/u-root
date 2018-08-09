@@ -11,7 +11,9 @@ import (
 // TestMountKExec runs an init which mounts a filesystem and kexecs a kernel.
 func TestMountKExec(t *testing.T) {
 	// Create the CPIO and start QEMU.
-	tmpDir, q := testWithQEMU(t, "kexec", []string{})
+	tmpDir, q := testWithQEMU(t, options{
+		uinitName: "kexec",
+	})
 	defer cleanup(t, tmpDir, q)
 
 	if err := q.Expect("KEXECCOUNTER=0"); err != nil {
