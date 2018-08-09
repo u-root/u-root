@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	flag "github.com/spf13/pflag"
+	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/pty"
@@ -56,6 +57,13 @@ func main() {
 	//
 	// - new PID namespace
 	//   - archive/init actually runs as PID 1.
+
+	// Note this is basically a chroot and umask is inherited.
+	// The umask has to be zero else some creation will end
+	// up with incorrect permissions, a particular problem
+	// in device creation.
+	u := unix.Umask(0)
+	defer unix.Umask(u)
 
 	tempDir, err := ioutil.TempDir("", "u-root")
 	if err != nil {
