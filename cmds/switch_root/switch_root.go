@@ -9,12 +9,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -106,7 +106,7 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 // In order to preserve whatever PID this program is running with,
 // the implementation does an actual EXEC syscall without forking.
 func execCommand(path string) error {
-	return syscall.Exec(path, []string{path}, []string{})
+	return unix.Exec(path, []string{path}, []string{})
 }
 
 // isEmpty returns true if the directory with the given path is empty.
