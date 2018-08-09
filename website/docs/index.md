@@ -89,3 +89,5 @@ local and get a userland portable (it's a goal).
 * [Gan Shun Lim](https://github.com/GanShun)
 * [Ryan O'Leary](https://github.com/rjoleary)
 * [Chris Koch](https://github.com/hugelgupf)
+* [Andrea Barberio](https://github.com/insomniacslk)
+* [Jean-Marie Verdun](https://github.com/vejmarie)
