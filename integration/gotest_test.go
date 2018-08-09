@@ -55,13 +55,19 @@ func TestGoTest(t *testing.T) {
 	for _, pkg := range pkgs {
 		bases = append(bases, path.Base(pkg))
 	}
-	sort.Strings(pkgs) // Tests are run and checked in sorted order.
-	for _, base := range bases {
-		passMsg := fmt.Sprintf("#### %s PASSED ####", base)
+	sort.Strings(bases) // Tests are run and checked in sorted order.
+	t.Log("TAP: TAP version 12")
+	t.Logf("TAP: 1..%d", len(bases))
+	for i, base := range bases {
+		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, base)
+		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, base)
+		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, base)
+
+		t.Log(runMsg)
 		if err := q.Expect(passMsg); err == nil {
-			t.Logf("go test '%s' passed", base)
+			t.Logf(passMsg)
 		} else {
-			t.Errorf("go test '%s' failed: %v", base, err)
+			t.Errorf(failMsg)
 		}
 	}
 }
