@@ -74,3 +74,28 @@ func TestBadMagic(t *testing.T) {
 		t.Fatal("Want err, got nil")
 	}
 }
+
+func TestAddInitRAMFS(t *testing.T) {
+	Debug = t.Logf
+	initramfsimage, err := ioutil.ReadFile("testdata/bzImage")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b BzImage
+	if err := b.UnmarshalBinary(initramfsimage); err != nil {
+		t.Fatal(err)
+	}
+	b.AddInitRAMFS("testdata/hosts.cpio")
+	d, err := b.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// For testing, you can enable this write, and then:
+	// qemu-system-x86_64 -serial stdio -kernel /tmp/x
+	// I mainly left this here as a memo.
+	if false {
+		if err := ioutil.WriteFile("/tmp/x", d, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
