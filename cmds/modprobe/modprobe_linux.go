@@ -46,12 +46,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	opts := kmodule.ProbeOpts{}
+	if *dryRun {
+		log.Println("Unique dependencies in load order, already loaded ones get skipped:")
+		opts.DryRunCB = func(modPath string) {
+			log.Println(modPath)
+		}
+	}
+
 	// -va is just an alias for -a
 	*all = *all || *verboseAll
 	if *all {
 		modNames := flag.Args()
 		for _, modName := range modNames {
-			if err := kmodule.ProbeOptions(modName, "", kmodule.ProbeOpts{DryRun: *dryRun}); err != nil {
+			if err := kmodule.ProbeOptions(modName, "", opts); err != nil {
 				log.Printf("modprobe: Could not load module %q: %v", modName, err)
 			}
 		}
@@ -61,7 +69,7 @@ func main() {
 	modName := flag.Args()[0]
 	modOptions := strings.Join(flag.Args()[1:], " ")
 
-	if err := kmodule.ProbeOptions(modName, modOptions, kmodule.ProbeOpts{DryRun: *dryRun}); err != nil {
+	if err := kmodule.ProbeOptions(modName, modOptions, opts); err != nil {
 		log.Fatalf("modprobe: Could not load module %q: %v", modName, err)
 	}
 }
