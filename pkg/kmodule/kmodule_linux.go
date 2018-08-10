@@ -123,6 +123,7 @@ type depMap map[string]*dependency
 // An empty ProbeOpts{} should lead to the default behavior.
 type ProbeOpts struct {
 	DryRunCB func(string)
+	RootDir  string
 }
 
 // Probe loads the given kernel module and its dependencies.
@@ -134,7 +135,7 @@ func Probe(name string, modParams string) error {
 // ProbeOptions loads the given kernel module and its dependencies.
 // This functions takes ProbeOpts.
 func ProbeOptions(name, modParams string, opts ProbeOpts) error {
-	deps, err := genDeps()
+	deps, err := genDeps(opts)
 	if err != nil {
 		return &SyscallError{Msg: fmt.Sprintf("could not generate dependency map %v", err)}
 	}
@@ -167,7 +168,7 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	return nil
 }
 
-func genDeps() (depMap, error) {
+func genDeps(opts ProbeOpts) (depMap, error) {
 	deps := make(depMap)
 
 	var u unix.Utsname
@@ -178,7 +179,7 @@ func genDeps() (depMap, error) {
 
 	var moduleDir string
 	for _, n := range []string{"/lib/modules", "/usr/lib/modules"} {
-		moduleDir = filepath.Join(n, strings.TrimSpace(rel))
+		moduleDir = filepath.Join(opts.RootDir, n, strings.TrimSpace(rel))
 		if _, err := os.Stat(moduleDir); err == nil {
 			break
 		}
