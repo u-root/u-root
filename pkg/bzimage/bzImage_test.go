@@ -93,9 +93,21 @@ func TestAddInitRAMFS(t *testing.T) {
 	// For testing, you can enable this write, and then:
 	// qemu-system-x86_64 -serial stdio -kernel /tmp/x
 	// I mainly left this here as a memo.
-	if false {
+	if true {
 		if err := ioutil.WriteFile("/tmp/x", d, 0644); err != nil {
 			t.Fatal(err)
 		}
 	}
+}
+func TestHeaderString(t *testing.T) {
+	Debug = t.Logf
+	initramfsimage, err := ioutil.ReadFile("testdata/bzImageinitramfs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b BzImage
+	if err := b.UnmarshalBinary(initramfsimage); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%s", b.Header.String())
 }
