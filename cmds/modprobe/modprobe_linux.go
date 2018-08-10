@@ -28,6 +28,7 @@ var (
 	all        = flag.Bool("a", false, "Insert all module names on the command line.")
 	verboseAll = flag.Bool("va", false, "Insert all module names on the command line.")
 	rootDir    = flag.String("d", "/", "Root directory for modules")
+	kernelVer  = flag.String("S", "", "Set kernel version instead of using uname")
 )
 
 func init() {
@@ -49,6 +50,7 @@ func main() {
 
 	opts := kmodule.ProbeOpts{
 		RootDir: *rootDir,
+		KVer:    *kernelVer,
 	}
 	if *dryRun {
 		log.Println("Unique dependencies in load order, already loaded ones get skipped:")
