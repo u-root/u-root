@@ -35,28 +35,69 @@ const (
     }
   </style>
   <script>
-    function sendSet() {
-      fetch("http://localhost:{{.Port}}/auto", {
-        method: 'Post'
-      })
-      .then(r => r.json())
-      .then( s => {
-        if (s !== null) {
-          alert(s.Error);
-        }
-      })
-      .catch(err => alert(err))
-    }
+		function sendAutoSet() {
+			fetch("http://localhost:{{.Port}}/auto", {
+				method: 'Post'
+			})
+			.then(r => r.json())
+			.then( s => {
+				if (s !== null) {
+					alert(s.Error);
+					window.location.reload();
+				}
+				else {
+					window.location.reload();
+				}
+			})
+			.catch(err => alert(err))
+		}
+
+		function sendManSet() {
+			d = document.getElementById("date_field").value
+			t = document.getElementById("time_field").value
+			fetch("http://localhost:{{.Port}}/manual", {
+				method: 'Post',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					Date: d,
+					Time: t
+				})
+			})
+			.then(r => r.json())
+			.then( s => {
+				if (s !== null) {
+					alert(s.Error);
+					window.location.reload();
+				}
+				else {
+					window.location.reload();
+				}
+			})
+			.catch(err => alert(err))
+		}
+
+		function setOnLoad(date, time) {
+			document.getElementById("date_field").setAttribute("value", date)
+			document.getElementById("time_field").setAttribute("value", time)
+		}
   </script>
   </head>
-  <body>
-    <h1>Time</h1>
-    <table style="width:100%">
-      <tr>
-        <td><input type="submit" id="button" class="btn" label="Set Time" onclick=sendSet()></td>
-      </tr>
-    </table>
-  </body>
+	<body onload="setOnLoad({{.Date}}, {{.Time}})">
+		<h1>System Time Settings</h2>
+		<table style="width:100%">
+			<tr>
+				<td><input type="date" id="date_field"></td>
+				<td><input type="time" id="time_field"></td>
+				<td><input type="submit" id="button" value="Auto-Set" onclick=sendAutoSet()></td>
+			</tr>
+			<tr>
+				<td colspan="3"><input type="submit" id="button" value="Save" onclick=sendManSet()></td>
+			</tr>
+		</table>
+	</body>
   `
 )
 
@@ -86,7 +127,7 @@ func (ts *TimeServer) displayStateHandle(w http.ResponseWriter, r *http.Request)
 	tmpl.Execute(w, timeData)
 }
 
-func (ts *TimeServer) buttonHandle(w http.ResponseWriter, r *http.Request) {
+func (ts *TimeServer) autoHandle(w http.ResponseWriter, r *http.Request) {
 	if err := ts.service.AutoSetTime(); err != nil {
 		log.Printf("error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -96,10 +137,35 @@ func (ts *TimeServer) buttonHandle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nil)
 }
 
+type TimeJsonMsg struct {
+	Date string
+	Time string
+}
+
+func (ts *TimeServer) manHandle(w http.ResponseWriter, r *http.Request) {
+	var msg TimeJsonMsg
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := decoder.Decode(&msg); err != nil {
+		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	if err := ts.service.ManSetTime(msg); err != nil {
+		log.Printf("error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(struct{ Error string }{err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(nil)
+}
+
 func (ts *TimeServer) buildRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", ts.displayStateHandle).Methods("GET")
-	r.HandleFunc("/auto", ts.buttonHandle).Methods("POST")
+	r.HandleFunc("/auto", ts.autoHandle).Methods("POST")
+	r.HandleFunc("/manual", ts.manHandle).Methods("POST")
 	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir(sos.HTMLPath("css")))))
 	return r
 }
