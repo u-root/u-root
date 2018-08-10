@@ -24,7 +24,7 @@ import (
 const cmd = "modprobe [-an] modulename[s] [parameters...]"
 
 var (
-	dryRun     = flag.Bool("n", false, "Try run")
+	dryRun     = flag.Bool("n", false, "Dry run")
 	all        = flag.Bool("a", false, "Insert all module names on the command line.")
 	verboseAll = flag.Bool("va", false, "Insert all module names on the command line.")
 )
