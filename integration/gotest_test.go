@@ -103,7 +103,7 @@ func TestGoTest(t *testing.T) {
 		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, base)
 
 		t.Log(runMsg)
-		if err := q.Expect(passMsg); err == nil {
+		if err := q.ExpectTimeout(passMsg, 2*time.Second); err == nil {
 			t.Logf(passMsg)
 		} else {
 			t.Errorf(failMsg)
