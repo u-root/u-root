@@ -124,6 +124,7 @@ type depMap map[string]*dependency
 type ProbeOpts struct {
 	DryRunCB func(string)
 	RootDir  string
+	KVer     string
 }
 
 // Probe loads the given kernel module and its dependencies.
@@ -170,12 +171,15 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 
 func genDeps(opts ProbeOpts) (depMap, error) {
 	deps := make(depMap)
+	rel := opts.KVer
 
-	var u unix.Utsname
-	if err := unix.Uname(&u); err != nil {
-		return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+	if rel == "" {
+		var u unix.Utsname
+		if err := unix.Uname(&u); err != nil {
+			return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+		}
+		rel = string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
 	}
-	rel := string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
 
 	var moduleDir string
 	for _, n := range []string{"/lib/modules", "/usr/lib/modules"} {
