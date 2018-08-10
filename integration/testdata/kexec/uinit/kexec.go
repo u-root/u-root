@@ -7,26 +7,15 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/sh"
 )
-
-func sh(arg0 string, args ...string) {
-	cmd := exec.Command(arg0, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-}
 
 // Mount a vfat volume and kexec the kernel within.
 func main() {
-	sh("mkdir", "/testdata")
-	sh("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
+	sh.RunOrDie("mkdir", "/testdata")
+	sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
 
 	// Get and increment the counter.
 	kExecCounter, ok := cmdline.Flag("kexeccounter")
@@ -38,7 +27,7 @@ func main() {
 	if kExecCounter == "0" {
 		cmdLine := cmdline.FullCmdLine() + " kexeccounter=1"
 		log.Print("cmdline: ", cmdLine)
-		sh("kexec",
+		sh.RunOrDie("kexec",
 			"-i", "/testdata/initramfs.cpio",
 			"-c", cmdLine,
 			"/testdata/bzImage")
