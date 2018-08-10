@@ -27,6 +27,7 @@ var (
 	dryRun     = flag.Bool("n", false, "Dry run")
 	all        = flag.Bool("a", false, "Insert all module names on the command line.")
 	verboseAll = flag.Bool("va", false, "Insert all module names on the command line.")
+	rootDir    = flag.String("d", "/", "Root directory for modules")
 )
 
 func init() {
@@ -46,7 +47,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	opts := kmodule.ProbeOpts{}
+	opts := kmodule.ProbeOpts{
+		RootDir: *rootDir,
+	}
 	if *dryRun {
 		log.Println("Unique dependencies in load order, already loaded ones get skipped:")
 		opts.DryRunCB = func(modPath string) {
