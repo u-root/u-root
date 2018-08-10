@@ -6,6 +6,8 @@ package main
 
 import (
 	"os/exec"
+	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -22,6 +24,18 @@ func getCurrentTime() string {
 	return time.Now().Format("15:04")
 }
 
+func parseDate(d TimeJsonMsg) time.Time {
+	// split date message into integers for each field
+	YYYY, _ := strconv.Atoi(d.Date[:4])
+	MM, _ := strconv.Atoi(d.Date[5:7])
+	DD, _ := strconv.Atoi(d.Date[8:])
+
+	hh, _ := strconv.Atoi(d.Time[:2])
+	mm, _ := strconv.Atoi(d.Time[3:])
+
+	return time.Date(YYYY, time.Month(MM), DD, hh, mm, 0, 0, time.UTC)
+}
+
 // Update sets the TimeService fields to the current system time
 func (ts *TimeService) Update() {
 	ts.Date = getCurrentDate()
@@ -32,6 +46,17 @@ func (ts *TimeService) Update() {
 // the current date from time.google.com
 func (ts TimeService) AutoSetTime() error {
 	return exec.Command("ntpdate").Run()
+}
+
+// ManSetTime sets the system time similarly to u-root's "date" commmand
+// with user-entered fields
+func (ts TimeService) ManSetTime(new TimeJsonMsg) error {
+	userTime := parseDate(new)
+	tv := syscall.NsecToTimeval(userTime.UnixNano())
+	if err := syscall.Settimeofday(&tv); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewTimeService builds a TimeService with the current system date and time
