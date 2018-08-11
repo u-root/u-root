@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
@@ -31,6 +32,9 @@ type (
 	execReq struct {
 		Command string
 	}
+	exitStatusReq struct {
+		ExitStatus uint32
+	}
 )
 
 var (
@@ -47,25 +51,42 @@ var (
 // start a command
 // TODO: use /etc/passwd, but the Go support for that is incomplete
 func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
+	var ps *os.ProcessState
 	defer c.Close()
 
 	if p != nil {
 		log.Printf("Executing PTY command %s %v", cmd, args)
 		p.Command(cmd, args...)
 		if err := p.C.Start(); err != nil {
+			dprintf("Failed to execute: %v", err)
 			return err
 		}
 		defer p.C.Wait()
 		go io.Copy(p.Ptm, c)
 		go io.Copy(c, p.Ptm)
+		ps, _ = p.C.Process.Wait()
 	} else {
 		e := exec.Command(cmd, args...)
 		e.Stdin, e.Stdout, e.Stderr = c, c, c
 		log.Printf("Executing non-PTY command %s %v", cmd, args)
 		if err := e.Start(); err != nil {
+			dprintf("Failed to execute: %v", err)
 			return err
 		}
-		defer e.Process.Wait()
+		ps, _ = e.Process.Wait()
+	}
+
+	var ws syscall.WaitStatus
+	ws = ps.Sys().(syscall.WaitStatus)
+	if ws.Signaled() {
+		// TOOD(bluecmd): If somebody wants we can send exit-signal to return
+		// information about signal termination, but leave it until somebody needs
+		// it.
+	}
+	if ws.Exited() {
+		code := uint32(ws.ExitStatus())
+		dprintf("Exit status %v", code)
+		c.SendRequest("exit-status", false, ssh.Marshal(exitStatusReq{code}))
 	}
 	return nil
 }
