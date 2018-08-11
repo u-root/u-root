@@ -13,7 +13,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
@@ -47,12 +46,12 @@ var (
 
 // start a command
 // TODO: use /etc/passwd, but the Go support for that is incomplete
-func runCommand(c ssh.Channel, p *pty.Pty, cmd string) error {
+func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 	defer c.Close()
 
 	if p != nil {
-		log.Printf("Executing PTY command %s", cmd)
-		p.Command(cmd)
+		log.Printf("Executing PTY command %s %v", cmd, args)
+		p.Command(cmd, args...)
 		if err := p.C.Start(); err != nil {
 			return err
 		}
@@ -60,13 +59,12 @@ func runCommand(c ssh.Channel, p *pty.Pty, cmd string) error {
 		go io.Copy(p.Ptm, c)
 		go io.Copy(c, p.Ptm)
 	} else {
-		args := strings.Fields(cmd)
-		e := exec.Command(args[0], args[1:]...)
+		e := exec.Command(cmd, args...)
 		e.Stdin, e.Stdout, e.Stderr = c, c, c
+		log.Printf("Executing non-PTY command %s %v", cmd, args)
 		if err := e.Start(); err != nil {
 			return err
 		}
-		log.Printf("Executing non-PTY command %s", cmd)
 		defer e.Process.Wait()
 	}
 	return nil
@@ -144,7 +142,9 @@ func session(chans <-chan ssh.NewChannel) {
 						log.Printf("sshd: %v", err)
 						break
 					}
-					err := runCommand(channel, p, e.Command)
+					// Execute command using user's shell. This is what OpenSSH does
+					// so it's the least surprising to the user.
+					err := runCommand(channel, p, shell, "-c", e.Command)
 					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
 				case "pty-req":
 					p, err = newPTY(req.Payload)
