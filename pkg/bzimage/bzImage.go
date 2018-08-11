@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strings"
 )
 
 var Debug = func(string, ...interface{}) {}
@@ -46,7 +47,13 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	b.Kernel = d[b.KernelOffset:]
 	Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.Kernel))
 	b.KernelBase = uintptr(0x100000)
-	b.InitRAMFS = d[b.Header.RamDiskImage : b.Header.RamDiskImage+b.Header.RamDiskSize]
+	if b.Header.RamDiskImage == 0 {
+		return nil
+	}
+	i := b.Header.RamDiskImage - uint32(b.KernelBase)
+	s := b.Header.RamDiskSize
+	Debug("initrd in file at %d, %d bytes", i, s)
+	b.InitRAMFS = d[i : i+s]
 	Debug("Ramdisk at %d, %d bytes", b.Header.RamDiskImage, b.Header.RamDiskSize)
 	return nil
 }
@@ -54,7 +61,12 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
 func (b *BzImage) MarshalBinary() ([]byte, error) {
 	var w bytes.Buffer
-	w.Grow(int(b.KernelOffset) + len(b.Kernel))
+	w.Grow(int(b.KernelOffset) + len(b.Kernel) + len(b.InitRAMFS))
+	if len(b.InitRAMFS) > 0 {
+		b.Header.RamDiskImage = uint32(b.KernelBase) + uint32(len(b.Kernel))
+		b.Header.RamDiskSize = uint32(len(b.InitRAMFS))
+	}
+
 	Debug("Grew output buffer to %d bytes", w.Len())
 	if err := binary.Write(&w, binary.LittleEndian, &b.Header); err != nil {
 		return nil, err
@@ -64,6 +76,9 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	if _, err := w.Write(b.Kernel); err != nil {
+		return nil, err
+	}
+	if _, err := w.Write(b.InitRAMFS); err != nil {
 		return nil, err
 	}
 	Debug("Finished writing, len is now %d bytes", w.Len())
@@ -83,7 +98,7 @@ func Equal(a, b []byte) error {
 		return err
 	}
 	if !reflect.DeepEqual(ba.Header, bb.Header) {
-		return fmt.Errorf("Headers do not match")
+		return fmt.Errorf("Headers do not match: %s", ba.Header.Diff(&bb.Header))
 	}
 	// this is overkill, I can't see any way it can happen.
 	if len(ba.Kernel) != len(bb.Kernel) {
@@ -97,6 +112,9 @@ func Equal(a, b []byte) error {
 		return fmt.Errorf("BootCode does not match")
 	}
 	if !reflect.DeepEqual(ba.Kernel, bb.Kernel) {
+		return fmt.Errorf("Kernels do not match")
+	}
+	if !reflect.DeepEqual(ba.InitRAMFS, bb.InitRAMFS) {
 		return fmt.Errorf("Kernels do not match")
 	}
 
@@ -117,4 +135,44 @@ func MakeLinuxHeader(h *LinuxHeader) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.LittleEndian, h)
 	return buf.Bytes(), err
+}
+
+// Show stringifies a LinuxHeader into a []string
+func (h *LinuxHeader) Show() []string {
+	var s []string
+
+	val := reflect.ValueOf(*h)
+	for i := 0; i < val.NumField(); i++ {
+		v := val.Field(i)
+		k := reflect.ValueOf(v).Kind()
+		n := fmt.Sprintf("%s:", val.Type().Field(i).Name)
+		switch k {
+		case reflect.Slice:
+			s = append(s, fmt.Sprintf("%s:%02x", n, v))
+		case reflect.Bool:
+			s = append(s, fmt.Sprintf("%s:%v", n, v))
+		default:
+			s = append(s, fmt.Sprintf("%s:%02x", n, v))
+		}
+	}
+	return s
+}
+
+// Diff is a convenience function that returns a string showing
+// differents between a header and another header.
+func (h *LinuxHeader) Diff(i *LinuxHeader) string {
+	var s string
+	hs := h.Show()
+	is := i.Show()
+	for i := range hs {
+		if hs[i] != is[i] {
+			s += fmt.Sprintf("%s != %s", hs[i], is[i])
+		}
+	}
+	return s
+}
+
+// String stringifies a LinuxHeader into comma-separated parts
+func (h *LinuxHeader) String() string {
+	return strings.Join(h.Show(), ",")
 }
