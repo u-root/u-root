@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
@@ -28,6 +29,12 @@ type (
 		Ypixel uint32
 		Modes  string //encoded terminal modes
 	}
+	execReq struct {
+		Command string
+	}
+	exitStatusReq struct {
+		ExitStatus uint32
+	}
 )
 
 var (
@@ -41,41 +48,46 @@ var (
 	dprintf = func(string, ...interface{}) {}
 )
 
-func echoCopy(w io.Writer, r io.Reader) (int64, error) {
-	var b [8192]byte
-	var err error
-	var tot int64
-	for err == nil {
-		var amt int
-		if amt, err = r.Read(b[:]); err != nil || amt < 1 {
-			fmt.Printf("Read: %v", err)
-			break
-		}
-		log.Printf("Read %d bytes: %q\n", amt, b[:amt])
-		if _, err = w.Write(b[:amt]); err != nil {
-			fmt.Printf("Write: %v", err)
-		}
-		tot += int64(amt)
-	}
-	return tot, err
-}
-
-// start a shell
+// start a command
 // TODO: use /etc/passwd, but the Go support for that is incomplete
-func runShell(c ssh.Channel, p *pty.Pty, shell string) error {
-	copy := io.Copy
+func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
+	var ps *os.ProcessState
 	defer c.Close()
 
-	p.Command(shell)
-	if err := p.C.Start(); err != nil {
-		return err
+	if p != nil {
+		log.Printf("Executing PTY command %s %v", cmd, args)
+		p.Command(cmd, args...)
+		if err := p.C.Start(); err != nil {
+			dprintf("Failed to execute: %v", err)
+			return err
+		}
+		defer p.C.Wait()
+		go io.Copy(p.Ptm, c)
+		go io.Copy(c, p.Ptm)
+		ps, _ = p.C.Process.Wait()
+	} else {
+		e := exec.Command(cmd, args...)
+		e.Stdin, e.Stdout, e.Stderr = c, c, c
+		log.Printf("Executing non-PTY command %s %v", cmd, args)
+		if err := e.Start(); err != nil {
+			dprintf("Failed to execute: %v", err)
+			return err
+		}
+		ps, _ = e.Process.Wait()
 	}
-	defer p.C.Wait()
-	if *debug {
-		copy = echoCopy
+
+	var ws syscall.WaitStatus
+	ws = ps.Sys().(syscall.WaitStatus)
+	if ws.Signaled() {
+		// TOOD(bluecmd): If somebody wants we can send exit-signal to return
+		// information about signal termination, but leave it until somebody needs
+		// it.
 	}
-	go copy(p.Ptm, c)
-	go copy(c, p.Ptm)
+	if ws.Exited() {
+		code := uint32(ws.ExitStatus())
+		dprintf("Exit status %v", code)
+		c.SendRequest("exit-status", false, ssh.Marshal(exitStatusReq{code}))
+	}
 	return nil
 }
 
@@ -143,14 +155,17 @@ func session(chans <-chan ssh.NewChannel) {
 				dprintf("Request %v", req.Type)
 				switch req.Type {
 				case "shell":
-					if p == nil {
-						p, err = pty.New()
-						if err != nil {
-							log.Printf("sshd: pty.New failed, not running a shell")
-							break
-						}
+					err := runCommand(channel, p, shell)
+					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
+				case "exec":
+					e := &execReq{}
+					if err := ssh.Unmarshal(req.Payload, e); err != nil {
+						log.Printf("sshd: %v", err)
+						break
 					}
-					err := runShell(channel, p, shell)
+					// Execute command using user's shell. This is what OpenSSH does
+					// so it's the least surprising to the user.
+					err := runCommand(channel, p, shell, "-c", e.Command)
 					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
 				case "pty-req":
 					p, err = newPTY(req.Payload)
