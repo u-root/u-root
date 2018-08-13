@@ -13,6 +13,7 @@ import (
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
+	"github.com/insomniacslk/dhcp/iana"
 	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/u-root/u-root/pkg/kexec"
 )
@@ -80,7 +81,7 @@ func main() {
 		} else {
 			// send a netboot request via DHCP
 			modifiers := []dhcpv6.Modifier{
-				dhcpv6.WithArchType(dhcpv6.EFI_X86_64),
+				dhcpv6.WithArchType(iana.EFI_X86_64),
 			}
 			if *userClass != "" {
 				modifiers = append(modifiers, dhcpv6.WithUserClass([]byte(*userClass)))
