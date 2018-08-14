@@ -35,7 +35,6 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 		name := path.Base(pkg)
 		if name == "installcommand" {
 			installcommand = pkg
-			continue
 		}
 
 		// Add high-level packages' src files to archive.
