@@ -129,9 +129,6 @@ func main() {
 		debug = log.Printf
 	}
 
-	// To compile something in Go, you need a /tmp directory, apparently.
-	os.Mkdir("/tmp", 0755)
-
 	debug("Command name: %v\n", form.cmdName)
 	destFile := filepath.Join("/ubin", form.cmdName)
 

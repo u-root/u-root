@@ -50,6 +50,7 @@ var DefaultRamfs = []cpio.Record{
 	cpio.Directory("tcz", 0755),
 	cpio.Directory("etc", 0755),
 	cpio.Directory("dev", 0755),
+	cpio.Directory("tmp", 0777),
 	cpio.Directory("ubin", 0755),
 	cpio.Directory("usr", 0755),
 	cpio.Directory("usr/lib", 0755),
