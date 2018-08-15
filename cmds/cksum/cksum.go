@@ -1,36 +1,61 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"hash/crc32"
+	"flag"
+	"strconv"
 )
 
-func GetInput(fileName string) (input []byte, err error) {
+func helpPrinter() {
 
-	if fileName != "" {
-		data, ioErr := ioutil.ReadFile(fileName)
-		if ioErr != nil {
-			return nil, ioErr
-		}
-		dataWithLen := string(data)
-		dataWithLen += string(len(data))
-		return []byte(dataWithLen[:len(dataWithLen)-2]), ioErr
-	}
-	scanner := bufio.NewScanner(os.Stdin)
-	userInput := ""
-	for scanner.Scan() {
-		userInput += scanner.Text()
-	}
-	inputWithLen := fmt.Sprintf( "%s%d", userInput, len(userInput))
-	fmt.Println( "in:", userInput ,string(len(userInput)), len(userInput), inputWithLen )
-	return []byte(inputWithLen[:len(inputWithLen)-1]), scanner.Err()
+	fmt.Printf("Usage:\ncksum <File Name>\n")
+	flag.PrintDefaults()
+	os.Exit(0)
 }
 
+func versionPrinter() {
+	fmt.Println("cksum utility, URoot Version.")
+	os.Exit(0)
+}
+
+
+
+func GetInput(fileName string) (input []byte, err error) {
+	if fileName != "" {
+		return ioutil.ReadFile(fileName)
+	}
+	return ioutil.ReadAll(os.Stdin)
+}
+
+func printCksum( input []byte ) uint32 {
+	// Linux cksum polynomial 04C11DB7
+	data := string(input)
+	data += strconv.Itoa(len(input))
+	return crc32.Checksum([]byte(data), crc32.MakeTable(uint32(0x7BD11C40)))
+}
+
+
+
 func main() {
+	var (
+		help      bool
+		version   bool
+	)
 	cliArgs := ""
+	flag.BoolVar(&help, "help",false, "Show this help and exit")
+	flag.BoolVar(&version, "version", false, "Print Version")
+	flag.Parse()
+
+	if help {
+		helpPrinter()
+	}
+
+	if version {
+		versionPrinter()
+	}
 	if len(os.Args) >= 2 {
 		cliArgs = os.Args[1];
 	}
@@ -38,8 +63,5 @@ func main() {
 	if err != nil {
 		return
 	}
-	// 04C11DB7
-	fmt.Println("Data:",string(input))
-	crc := crc32.Checksum(input, crc32.MakeTable(uint32(0x7BD11C40)))
-	fmt.Println(crc,len(input)+1,cliArgs)
+	fmt.Println(printCksum(input),len(input),cliArgs)
 }
