@@ -1,11 +1,26 @@
 package main
-
 import (
+	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"crypto/sha256"
+	"flag"
 )
+
+
+func helpPrinter() {
+
+	fmt.Printf("Usage:\nshasum -a <algorithm> <File Name>\n")
+	flag.PrintDefaults()
+	os.Exit(0)
+}
+
+func versionPrinter() {
+	fmt.Println("shasum utility, URoot Version.")
+	os.Exit(0)
+}
+
 
 func GetInput(fileName string) (input []byte, err error) {
 
@@ -15,21 +30,49 @@ func GetInput(fileName string) (input []byte, err error) {
 	return ioutil.ReadAll(os.Stdin)
 }
 
+func ShaPrinter(algorithm int, data []byte) {
+	if algorithm == 256 {
+		fmt.Printf("%x ", sha256.Sum256(data))
+	} else if algorithm == 1 {
+		fmt.Printf("%x ", sha1.Sum(data))
+	}else {
+		fmt.Fprintf(os.Stderr, "Invalid algorithm" )
+	}
+}
+
 func main() {
+
+	var (
+		algorithm int
+		help      bool
+		version   bool
+	)
 	cliArgs := ""
-	if len(os.Args) >= 2 {
-		cliArgs = os.Args[1];
+	flag.IntVar(&algorithm, "algorithm", 1, "SHA algorithm, valid args are 1 and 256")
+	flag.BoolVar(&help, "help",false, "Show this help and exit")
+	flag.BoolVar(&version, "version", false, "Print Version")
+	flag.Parse()
+
+	if help {
+		helpPrinter()
+	}
+
+	if version {
+		versionPrinter()
+	}
+	if len(flag.Args()) == 1 {
+		cliArgs = flag.Args()[0]
 	}
 	input, err := GetInput(cliArgs)
 	if err != nil {
-		fmt.Println("Error getting input." );
+		fmt.Println("Error getting input.")
 		os.Exit(-1)
 	}
-	fmt.Printf("%x ",sha256.Sum256(input))
+	ShaPrinter(algorithm, input)
 	if cliArgs == "" {
-		fmt.Printf(" -\n");
-	}else{
-		fmt.Printf(" %s\n",cliArgs);
+		fmt.Printf(" -\n")
+	} else {
+		fmt.Printf(" %s\n", cliArgs)
 	}
 	os.Exit(0)
 }
