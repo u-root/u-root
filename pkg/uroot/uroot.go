@@ -289,13 +289,17 @@ func CreateInitramfs(opts Opts) error {
 
 	files := NewArchiveFiles()
 
-	// Add each build mode's commands to the archive.
-	for _, cmds := range opts.Commands {
+	// Expand commands.
+	for index, cmds := range opts.Commands {
 		importPaths, err := ResolvePackagePaths(opts.Env, cmds.Packages)
 		if err != nil {
 			return err
 		}
+		opts.Commands[index].Packages = importPaths
+	}
 
+	// Add each build mode's commands to the archive.
+	for _, cmds := range opts.Commands {
 		builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
 		if err != nil {
 			return err
@@ -304,7 +308,7 @@ func CreateInitramfs(opts Opts) error {
 		// Build packages.
 		bOpts := BuildOpts{
 			Env:       opts.Env,
-			Packages:  importPaths,
+			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
 		}
