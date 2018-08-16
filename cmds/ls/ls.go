@@ -25,6 +25,7 @@ import (
 	"text/tabwriter"
 
 	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/ls"
 )
 
 var (
@@ -35,22 +36,7 @@ var (
 	recurse = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
 )
 
-func stringer(fi fileInfo) fmt.Stringer {
-	var s fmt.Stringer = fi
-	if *quoted {
-		s = quotedStringer{fileInfo: fi}
-	}
-	if *long {
-		s = longStringer{
-			fileInfo: fi,
-			comp:     s,
-			human:    *human,
-		}
-	}
-	return s
-}
-
-func listName(d string, w io.Writer, prefix bool) error {
+func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 	return filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
 		// Soft error. Useful when a permissions are insufficient to
 		// stat one of the files.
@@ -59,15 +45,15 @@ func listName(d string, w io.Writer, prefix bool) error {
 			return nil
 		}
 
-		fi := extractImportantParts(path, osfi)
+		fi := ls.FromOSFileInfo(path, osfi)
 
 		if *recurse {
 			// Mimic find command
-			fi.name = path
+			fi.Name = path
 		} else if path == d {
 			// Starting directory is a dot when non-recursive
 			if osfi.IsDir() {
-				fi.name = "."
+				fi.Name = "."
 				if prefix {
 					fmt.Printf("%q\n", d)
 				}
@@ -75,13 +61,13 @@ func listName(d string, w io.Writer, prefix bool) error {
 		}
 
 		// Hide .files unless -a was given
-		if *all || fi.name[0] != '.' {
+		if *all || fi.Name[0] != '.' {
 			// Print the file in the proper format.
-			fmt.Fprintln(w, stringer(fi))
+			fmt.Fprintln(w, stringer.FileString(fi))
 		}
 
 		// Skip directories when non-recursive.
-		if path != d && fi.mode.IsDir() && !*recurse {
+		if path != d && fi.Mode.IsDir() && !*recurse {
 			return filepath.SkipDir
 		}
 		return nil
@@ -92,9 +78,17 @@ func main() {
 	flag.Parse()
 
 	// Write output in tabular form.
-	w := new(tabwriter.Writer)
+	w := &tabwriter.Writer{}
 	w.Init(os.Stdout, 0, 0, 1, ' ', 0)
 	defer w.Flush()
+
+	var s ls.Stringer = ls.NameStringer{}
+	if *quoted {
+		s = ls.QuotedStringer{}
+	}
+	if *long {
+		s = ls.LongStringer{Human: *human, Name: s}
+	}
 
 	// Array of names to list.
 	names := flag.Args()
@@ -105,7 +99,7 @@ func main() {
 	// Is a name a directory? If so, list it in its own section.
 	prefix := len(names) > 1
 	for _, d := range names {
-		if err := listName(d, w, prefix); err != nil {
+		if err := listName(s, d, w, prefix); err != nil {
 			log.Printf("error while listing %#v: %v", d, err)
 		}
 		w.Flush()
