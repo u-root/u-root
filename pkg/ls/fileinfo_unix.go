@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package ls
 
 import (
 	"fmt"
@@ -25,38 +25,43 @@ var unprintableRe = regexp.MustCompile("[[:cntrl:]\n]")
 // internal values. For example, replacing the starting directory with a dot.
 // `extractImportantParts` populates our own struct which we can modify at will
 // before printing.
-type fileInfo struct {
-	name     string
-	mode     os.FileMode
-	rdev     uint64
-	uid, gid uint32
-	size     int64
-	modTime  time.Time
-	symlink  string
+type FileInfo struct {
+	Name          string
+	Mode          os.FileMode
+	Rdev          uint64
+	UID, GID      uint32
+	Size          int64
+	MTime         time.Time
+	SymlinkTarget string
 }
 
-func extractImportantParts(n string, fi os.FileInfo) fileInfo {
+func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	var link string
 
 	s := fi.Sys().(*syscall.Stat_t)
 	if fi.Mode()&os.ModeType == os.ModeSymlink {
-		if l, err := os.Readlink(n); err != nil {
+		if l, err := os.Readlink(path); err != nil {
 			link = err.Error()
 		} else {
 			link = l
 		}
 	}
 
-	return fileInfo{
-		name:    fi.Name(),
-		mode:    fi.Mode(),
-		rdev:    uint64(s.Rdev),
-		uid:     s.Uid,
-		gid:     s.Gid,
-		size:    fi.Size(),
-		modTime: fi.ModTime(),
-		symlink: link,
+	return FileInfo{
+		Name:          fi.Name(),
+		Mode:          fi.Mode(),
+		Rdev:          uint64(s.Rdev),
+		UID:           s.Uid,
+		GID:           s.Gid,
+		Size:          fi.Size(),
+		MTime:         fi.ModTime(),
+		SymlinkTarget: link,
 	}
+}
+
+// Name returns a printable file name.
+func (fi FileInfo) PrintableName() string {
+	return unprintableRe.ReplaceAllLiteralString(fi.Name, "?")
 }
 
 // Without this cache, `ls -l` is orders of magnitude slower.
@@ -91,60 +96,61 @@ func lookupGroupName(id uint32) string {
 	return s
 }
 
-// The default stringer. Return only the filename. Unprintable characters are
-// replaced with '?'.
-func (fi fileInfo) String() string {
-	return unprintableRe.ReplaceAllLiteralString(fi.name, "?")
+type Stringer interface {
+	FileString(fi FileInfo) string
 }
 
-// Two alternative stringers
-type quotedStringer struct {
-	fileInfo
-}
-type longStringer struct {
-	fileInfo
-	comp  fmt.Stringer // decorator pattern
-	human bool
+type NameStringer struct{}
+
+func (ns NameStringer) FileString(fi FileInfo) string {
+	return fi.PrintableName()
 }
 
-// Return the name surrounded by quotes with escaped control characters.
-func (fi quotedStringer) String() string {
-	return fmt.Sprintf("%#v", fi.name)
+// QuotedStringer is a Stringer that returns the file name surrounded by qutoes
+// with escaped control characters.
+type QuotedStringer struct{}
+
+// FileString returns the name surrounded by quotes with escaped control characters.
+func (qs QuotedStringer) FileString(fi FileInfo) string {
+	return fmt.Sprintf("%#v", fi.Name)
 }
 
-// The long and quoted stringers can be combined like so:
-//     longStringer{fi, quotedStringer{fi}}
-func (fi longStringer) String() string {
+type LongStringer struct {
+	Human bool
+	Name  Stringer
+}
+
+func (ls LongStringer) FileString(fi FileInfo) string {
 	// Golang's FileMode.String() is almost sufficient, except we would
 	// rather use b and c for devices.
 	replacer := strings.NewReplacer("Dc", "c", "D", "b")
 
 	// Ex: crw-rw-rw-  root  root  1, 3  Feb 6 09:31  null
 	pattern := "%[1]s\t%[2]s\t%[3]s\t%[4]d, %[5]d\t%[7]v\t%[8]s"
-	var size string
-	if fi.mode&os.ModeDevice == 0 && fi.mode&os.ModeCharDevice == 0 {
+	if fi.Mode&os.ModeDevice == 0 && fi.Mode&os.ModeCharDevice == 0 {
 		// Ex: -rw-rw----  myuser  myuser  1256  Feb 6 09:31  recipes.txt
 		pattern = "%[1]s\t%[2]s\t%[3]s\t%[6]s\t%[7]v\t%[8]s"
 	}
 
-	if fi.human {
-		size = humanize.Bytes(uint64(fi.size))
+	var size string
+	if ls.Human {
+		size = humanize.Bytes(uint64(fi.Size))
 	} else {
-		size = strconv.FormatInt(fi.size, 10)
+		size = strconv.FormatInt(fi.Size, 10)
 	}
 
 	s := fmt.Sprintf(pattern,
-		replacer.Replace(fi.mode.String()),
-		lookupUserName(fi.uid),
-		lookupGroupName(fi.gid),
-		unix.Major(fi.rdev),
-		unix.Minor(fi.rdev),
+		replacer.Replace(fi.Mode.String()),
+		lookupUserName(fi.UID),
+		lookupGroupName(fi.GID),
+		unix.Major(fi.Rdev),
+		unix.Minor(fi.Rdev),
 		size,
-		fi.modTime.Format("Jan _2 15:04"),
-		fi.comp.String())
+		fi.MTime.Format("Jan _2 15:04"),
+		ls.Name.FileString(fi))
 
-	if fi.mode&os.ModeType == os.ModeSymlink {
-		s += fmt.Sprintf(" -> %v", fi.symlink)
+	if fi.Mode&os.ModeType == os.ModeSymlink {
+		s += fmt.Sprintf(" -> %v", fi.SymlinkTarget)
 	}
 	return s
 }
