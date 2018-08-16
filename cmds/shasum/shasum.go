@@ -30,14 +30,17 @@ func GetInput(fileName string) (input []byte, err error) {
 	return ioutil.ReadAll(os.Stdin)
 }
 
-func ShaPrinter(algorithm int, data []byte) {
+func ShaPrinter(algorithm int, data []byte) string {
+	var sha string
 	if algorithm == 256 {
-		fmt.Printf("%x ", sha256.Sum256(data))
+		sha = fmt.Sprintf("%x", sha256.Sum256(data))
 	} else if algorithm == 1 {
-		fmt.Printf("%x ", sha1.Sum(data))
+		sha = fmt.Sprintf("%x", sha1.Sum(data))
 	}else {
 		fmt.Fprintf(os.Stderr, "Invalid algorithm" )
+		return ""
 	}
+	return sha
 }
 
 func main() {
@@ -68,7 +71,7 @@ func main() {
 		fmt.Println("Error getting input.")
 		os.Exit(-1)
 	}
-	ShaPrinter(algorithm, input)
+	fmt.Printf("%s ",ShaPrinter(algorithm, input))
 	if cliArgs == "" {
 		fmt.Printf(" -\n")
 	} else {

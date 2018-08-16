@@ -1,27 +1,25 @@
 package main
 
 import (
-	//"os"
 	"testing"
-	"encoding/hex"
-	//"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestCksum(t *testing.T) {
 	var testMatrix = []struct {
 		data []byte
-		cksum []byte
+		cksum string
 		algorithm int
 	}{
-		{[]byte("abcdef\n"), _ := hex.DecodeString("bdc37c074ec4ee6050d68bc133c6b912f36474df"), 1},
-		{[]byte("pqra\n"), 0xe8ed2d487f1dc32152c8590f39c20b7703f9e159, 1},
-		{[]byte("abcdef\n"), 0xae0666f161fed1a5dde998bbd0e140550d2da0db27db1d0e31e370f2bd366a57, 256},
-		{[]byte("pqra\n"), 0xdb296dd0bcb796df9b327f44104029da142c8fff313a25bd1ac7c3b7562caea9, 256},
+		{[]byte("abcdef\n"), "bdc37c074ec4ee6050d68bc133c6b912f36474df", 1},
+		{[]byte("pqra\n"), "e8ed2d487f1dc32152c8590f39c20b7703f9e159", 1},
+		{[]byte("abcdef\n"), "ae0666f161fed1a5dde998bbd0e140550d2da0db27db1d0e31e370f2bd366a57", 256},
+		{[]byte("pqra\n"), "db296dd0bcb796df9b327f44104029da142c8fff313a25bd1ac7c3b7562caea9", 256},
 	}
 	
 	for _, testData := range testMatrix {
-		if testMatrix.cksum != calculateMd5Sum(testMatrix.algorithm, testMatrix.data) {
-			t.Errorf("shasum verification failed.")
+		if testData.cksum != ShaPrinter(testData.algorithm, testData.data) {
+			t.Errorf("shasum verification failed.(Expected:%s, Received:%s)",testData.cksum, ShaPrinter(testData.algorithm, testData.data))
 		}
 	}
 
