@@ -17,6 +17,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -199,6 +200,9 @@ func GoBin() string {
 }
 
 func create(namespace []Creator) {
+	// Clear umask bits so that we get stuff like ptmx right.
+	m := unix.Umask(0)
+	defer unix.Umask(m)
 	for _, c := range namespace {
 		if err := c.Create(); err != nil {
 			log.Printf("Error creating %s: %v", c, err)
