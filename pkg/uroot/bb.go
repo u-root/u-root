@@ -128,7 +128,7 @@ func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, d
 //
 // BBBuild rewrites the source files of the packages given to create one
 // busybox-like binary containing all commands in `opts.Packages`.
-func BBBuild(af ArchiveFiles, opts BuildOpts) error {
+func BBBuild(af *ArchiveFiles, opts BuildOpts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
 	if err := BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {

@@ -22,7 +22,7 @@ var SourceBuilder = Builder{
 // SourceBuild is an implementation of Build that compiles the Go toolchain
 // (go, compile, link, asm) and an init process. It includes source files for
 // packages listed in `opts.Packages` to build from scratch.
-func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
+func SourceBuild(af *ArchiveFiles, opts BuildOpts) error {
 	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
 		return err
@@ -38,7 +38,7 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 		}
 
 		// Add high-level packages' src files to archive.
-		p := goListPkg(opts, pkg, &af)
+		p := goListPkg(opts, pkg, af)
 		if p == nil {
 			continue
 		}
@@ -48,10 +48,12 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 
 		// Add a symlink to installcommand. This means source mode can
 		// work with any init.
-		if err := af.AddRecord(cpio.Symlink(
-			path.Join(opts.BinaryDir, name),
-			path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
-			return err
+		if name != "installcommand" {
+			if err := af.AddRecord(cpio.Symlink(
+				path.Join(opts.BinaryDir, name),
+				path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
+				return err
+			}
 		}
 	}
 	if len(installcommand) == 0 {
@@ -60,7 +62,7 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 
 	// Add src files of dependencies to archive.
 	for dep := range deps {
-		goListPkg(opts, dep, &af)
+		goListPkg(opts, dep, af)
 	}
 
 	// Add Go toolchain.

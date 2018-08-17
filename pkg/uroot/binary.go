@@ -18,7 +18,7 @@ var BinaryBuilder = Builder{
 
 // BinaryBuild builds all given packages as separate binaries and includes them
 // in the archive.
-func BinaryBuild(af ArchiveFiles, opts BuildOpts) error {
+func BinaryBuild(af *ArchiveFiles, opts BuildOpts) error {
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
 
