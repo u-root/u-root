@@ -40,7 +40,7 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() != 1 {
-		log.Fatalln("usage: %s <cpio-path>", os.Args[0])
+		log.Fatalf("usage: %s <cpio-path>", os.Args[0])
 	}
 
 	c := flag.Args()[0]
