@@ -1,6 +1,16 @@
-// Copyright 2016 The Netstack Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package header
 
@@ -81,7 +91,7 @@ const (
 	// IPv4ProtocolNumber is IPv4's network protocol number.
 	IPv4ProtocolNumber tcpip.NetworkProtocolNumber = 0x0800
 
-	// IPv4Version is the version of the ipv4 procotol.
+	// IPv4Version is the version of the ipv4 protocol.
 	IPv4Version = 4
 )
 
@@ -107,12 +117,12 @@ func (b IPv4) HeaderLength() uint8 {
 	return (b[versIHL] & 0xf) * 4
 }
 
-// ID returns the value of the identifier field of the the ipv4 header.
+// ID returns the value of the identifier field of the ipv4 header.
 func (b IPv4) ID() uint16 {
 	return binary.BigEndian.Uint16(b[id:])
 }
 
-// Protocol returns the value of the protocol field of the the ipv4 header.
+// Protocol returns the value of the protocol field of the ipv4 header.
 func (b IPv4) Protocol() uint8 {
 	return b[protocol]
 }
