@@ -1,6 +1,16 @@
-// Copyright 2016 The Netstack Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package header
 
@@ -19,6 +29,10 @@ const (
 
 	// ICMPv4EchoMinimumSize is the minimum size of a valid ICMP echo packet.
 	ICMPv4EchoMinimumSize = 6
+
+	// ICMPv4DstUnreachableMinimumSize is the minimum size of a valid ICMP
+	// destination unreachable packet.
+	ICMPv4DstUnreachableMinimumSize = ICMPv4MinimumSize + 4
 
 	// ICMPv4ProtocolNumber is the ICMP transport protocol number.
 	ICMPv4ProtocolNumber tcpip.TransportProtocolNumber = 1
@@ -42,6 +56,12 @@ const (
 	ICMPv4InfoReply      ICMPv4Type = 16
 )
 
+// Values for ICMP code as defined in RFC 792.
+const (
+	ICMPv4PortUnreachable     = 3
+	ICMPv4FragmentationNeeded = 4
+)
+
 // Type is the ICMP type field.
 func (b ICMPv4) Type() ICMPv4Type { return ICMPv4Type(b[0]) }
 
@@ -54,7 +74,35 @@ func (b ICMPv4) Code() byte { return b[1] }
 // SetCode sets the ICMP code field.
 func (b ICMPv4) SetCode(c byte) { b[1] = c }
 
+// Checksum is the ICMP checksum field.
+func (b ICMPv4) Checksum() uint16 {
+	return binary.BigEndian.Uint16(b[2:])
+}
+
 // SetChecksum sets the ICMP checksum field.
 func (b ICMPv4) SetChecksum(checksum uint16) {
 	binary.BigEndian.PutUint16(b[2:], checksum)
+}
+
+// SourcePort implements Transport.SourcePort.
+func (ICMPv4) SourcePort() uint16 {
+	return 0
+}
+
+// DestinationPort implements Transport.DestinationPort.
+func (ICMPv4) DestinationPort() uint16 {
+	return 0
+}
+
+// SetSourcePort implements Transport.SetSourcePort.
+func (ICMPv4) SetSourcePort(uint16) {
+}
+
+// SetDestinationPort implements Transport.SetDestinationPort.
+func (ICMPv4) SetDestinationPort(uint16) {
+}
+
+// Payload implements Transport.Payload.
+func (b ICMPv4) Payload() []byte {
+	return b[ICMPv4MinimumSize:]
 }

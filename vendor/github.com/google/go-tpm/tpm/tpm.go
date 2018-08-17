@@ -324,13 +324,7 @@ func zeroBytes(b []byte) {
 	}
 }
 
-// Seal encrypts data against a given locality and PCRs and returns the sealed data.
-func Seal(rw io.ReadWriter, locality byte, pcrs []int, data []byte, srkAuth []byte) ([]byte, error) {
-	pcrInfo, err := newPCRInfoLong(rw, locality, pcrs)
-	if err != nil {
-		return nil, err
-	}
-
+func sealHelper(rw io.ReadWriter, pcrInfo *pcrInfoLong, data []byte, srkAuth []byte) ([]byte, error) {
 	// Run OSAP for the SRK, reading a random OddOSAP for our initial
 	// command and getting back a secret and a handle.
 	sharedSecret, osapr, err := newOSAPSession(rw, etSRK, khSRK, srkAuth)
@@ -385,6 +379,27 @@ func Seal(rw io.ReadWriter, locality byte, pcrs []int, data []byte, srkAuth []by
 	}
 
 	return sealedBytes, nil
+}
+
+// Seal encrypts data against a given locality and PCRs and returns the sealed data.
+func Seal(rw io.ReadWriter, locality byte, pcrs []int, data []byte, srkAuth []byte) ([]byte, error) {
+	pcrInfo, err := newPCRInfoLong(rw, locality, pcrs)
+	if err != nil {
+		return nil, err
+	}
+	return sealHelper(rw, pcrInfo, data, srkAuth)
+}
+
+// Reseal takes a pre-calculated PCR map and locality in order to seal data
+// with a srkAuth. This function is necessary for PCR pre-calculation and later
+// sealing to provide a way of updating software which is part of a measured
+// boot process.
+func Reseal(rw io.ReadWriter, locality byte, pcrs map[int][]byte, data []byte, srkAuth []byte) ([]byte, error) {
+	pcrInfo, err := newPCRInfoLongWithHashes(locality, pcrs)
+	if err != nil {
+		return nil, err
+	}
+	return sealHelper(rw, pcrInfo, data, srkAuth)
 }
 
 // Unseal decrypts data encrypted by the TPM.
@@ -1004,4 +1019,15 @@ func PcrReset(rw io.ReadWriter, pcrs []int) error {
 		return err
 	}
 	return nil
+}
+
+// ForceClear is normally used by firmware but on some platforms
+// vendors got it wrong and didn't call TPM_DisableForceClear.
+// It removes forcefully the ownership of the TPM.
+func ForceClear(rw io.ReadWriter) error {
+	in := []interface{}{}
+	out := []interface{}{}
+	_, err := submitTPMRequest(rw, tagRQUCommand, ordForceClear, in, out)
+
+	return err
 }
