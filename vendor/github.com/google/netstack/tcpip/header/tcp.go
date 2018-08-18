@@ -1,6 +1,16 @@
-// Copyright 2016 The Netstack Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package header
 
@@ -8,6 +18,7 @@ import (
 	"encoding/binary"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/seqnum"
 )
 
 const (
@@ -26,6 +37,10 @@ const (
 	// MaxWndScale is maximum allowed window scaling, as described in
 	// RFC 1323, section 2.3, page 11.
 	MaxWndScale = 14
+
+	// TCPMaxSACKBlocks is the maximum number of SACK blocks that can
+	// be encoded in a TCP option field.
+	TCPMaxSACKBlocks = 4
 )
 
 // Flags that may be set in a TCP segment.
@@ -40,11 +55,13 @@ const (
 
 // Options that may be present in a TCP segment.
 const (
-	TCPOptionEOL = 0
-	TCPOptionNOP = 1
-	TCPOptionMSS = 2
-	TCPOptionWS  = 3
-	TCPOptionTS  = 8
+	TCPOptionEOL           = 0
+	TCPOptionNOP           = 1
+	TCPOptionMSS           = 2
+	TCPOptionWS            = 3
+	TCPOptionTS            = 8
+	TCPOptionSACKPermitted = 4
+	TCPOptionSACK          = 5
 )
 
 // TCPFields contains the fields of a TCP packet. It is used to describe the
@@ -97,10 +114,27 @@ type TCPSynOptions struct {
 
 	// TSEcr is the value of the TSEcr field in the timestamp option.
 	TSEcr uint32
+
+	// SACKPermitted is true if the SACK option was provided in the SYN/SYN-ACK.
+	SACKPermitted bool
+}
+
+// SACKBlock represents a single contiguous SACK block.
+//
+// +stateify savable
+type SACKBlock struct {
+	// Start indicates the lowest sequence number in the block.
+	Start seqnum.Value
+
+	// End indicates the sequence number immediately following the last
+	// sequence number of this block.
+	End seqnum.Value
 }
 
 // TCPOptions are used to parse and cache the TCP segment options for a non
 // syn/syn-ack segment.
+//
+// +stateify savable
 type TCPOptions struct {
 	// TS is true if the TimeStamp option is enabled.
 	TS bool
@@ -110,6 +144,9 @@ type TCPOptions struct {
 
 	// TSEcr is the value in the TSEcr field of the segment.
 	TSEcr uint32
+
+	// SACKBlocks are the SACK blocks specified in the segment.
+	SACKBlocks []SACKBlock
 }
 
 // TCP represents a TCP header stored in a byte array.
@@ -121,14 +158,6 @@ const (
 
 	// TCPProtocolNumber is TCP's transport protocol number.
 	TCPProtocolNumber tcpip.TransportProtocolNumber = 6
-
-	// TCPTimeStampOptionSize is the size of an encoded TCP timestamp
-	// option.
-	//
-	// NOTE: The actual option is 10 bytes but we always include 2
-	// NOP options to quad align the timestamp option and hence it's
-	// 12 and not 10.
-	TCPTimeStampOptionSize = 12
 )
 
 // SourcePort returns the "source port" field of the tcp header.
@@ -314,6 +343,12 @@ func ParseSynOptions(opts []byte, isAck bool) TCPSynOptions {
 			}
 			synOpts.TS = true
 			i += 10
+		case TCPOptionSACKPermitted:
+			if i+2 > limit || opts[i+1] != 2 {
+				return synOpts
+			}
+			synOpts.SACKPermitted = true
+			i += 2
 
 		default:
 			// We don't recognize this option, just skip over it.
@@ -345,13 +380,34 @@ func ParseTCPOptions(b []byte) TCPOptions {
 		case TCPOptionNOP:
 			i++
 		case TCPOptionTS:
-			if i+10 > limit || b[i+1] != 10 {
+			if i+10 > limit || (b[i+1] != 10) {
 				return opts
 			}
 			opts.TS = true
 			opts.TSVal = binary.BigEndian.Uint32(b[i+2:])
 			opts.TSEcr = binary.BigEndian.Uint32(b[i+6:])
 			i += 10
+		case TCPOptionSACK:
+			if i+2 > limit {
+				// Malformed SACK block, just return and stop parsing.
+				return opts
+			}
+			sackOptionLen := int(b[i+1])
+			if i+sackOptionLen > limit || (sackOptionLen-2)%8 != 0 {
+				// Malformed SACK block, just return and stop parsing.
+				return opts
+			}
+			numBlocks := (sackOptionLen - 2) / 8
+			opts.SACKBlocks = []SACKBlock{}
+			for j := 0; j < numBlocks; j++ {
+				start := binary.BigEndian.Uint32(b[i+2+j*8:])
+				end := binary.BigEndian.Uint32(b[i+2+j*8+4:])
+				opts.SACKBlocks = append(opts.SACKBlocks, SACKBlock{
+					Start: seqnum.Value(start),
+					End:   seqnum.Value(end),
+				})
+			}
+			i += sackOptionLen
 		default:
 			// We don't recognize this option, just skip over it.
 			if i+2 > limit {
@@ -369,16 +425,108 @@ func ParseTCPOptions(b []byte) TCPOptions {
 	return opts
 }
 
-// EncodeTSOption builds and returns an array containing a TCP
-// timestamp option with the TSVal/TSEcr fields set to the value of
-// tsVal/tsEcr. This function also pads the option with two
-// TCPOptionNOP to make sure it is correctly quad aligned.
-func EncodeTSOption(tsVal, tsEcr uint32) (b [12]byte) {
-	b[0] = TCPOptionTS
-	b[1] = 10
+// EncodeMSSOption encodes the MSS TCP option with the provided MSS values in
+// the supplied buffer. If the provided buffer is not large enough then it just
+// returns without encoding anything. It returns the number of bytes written to
+// the provided buffer.
+func EncodeMSSOption(mss uint32, b []byte) int {
+	// mssOptionSize is the number of bytes in a valid MSS option.
+	const mssOptionSize = 4
+
+	if len(b) < mssOptionSize {
+		return 0
+	}
+	b[0], b[1], b[2], b[3] = TCPOptionMSS, mssOptionSize, byte(mss>>8), byte(mss)
+	return mssOptionSize
+}
+
+// EncodeWSOption encodes the WS TCP option with the WS value in the
+// provided buffer. If the provided buffer is not large enough then it just
+// returns without encoding anything. It returns the number of bytes written to
+// the provided buffer.
+func EncodeWSOption(ws int, b []byte) int {
+	if len(b) < 3 {
+		return 0
+	}
+	b[0], b[1], b[2] = TCPOptionWS, 3, uint8(ws)
+	return int(b[1])
+}
+
+// EncodeTSOption encodes the provided tsVal and tsEcr values as a TCP timestamp
+// option into the provided buffer. If the buffer is smaller than expected it
+// just returns without encoding anything. It returns the number of bytes
+// written to the provided buffer.
+func EncodeTSOption(tsVal, tsEcr uint32, b []byte) int {
+	if len(b) < 10 {
+		return 0
+	}
+	b[0], b[1] = TCPOptionTS, 10
 	binary.BigEndian.PutUint32(b[2:], tsVal)
 	binary.BigEndian.PutUint32(b[6:], tsEcr)
-	b[10] = TCPOptionNOP
-	b[11] = TCPOptionNOP
-	return b
+	return int(b[1])
+}
+
+// EncodeSACKPermittedOption encodes a SACKPermitted option into the provided
+// buffer. If the buffer is smaller than required it just returns without
+// encoding anything. It returns the number of bytes written to the provided
+// buffer.
+func EncodeSACKPermittedOption(b []byte) int {
+	if len(b) < 2 {
+		return 0
+	}
+
+	b[0], b[1] = TCPOptionSACKPermitted, 2
+	return int(b[1])
+}
+
+// EncodeSACKBlocks encodes the provided SACK blocks as a TCP SACK option block
+// in the provided slice. It tries to fit in as many blocks as possible based on
+// number of bytes available in the provided buffer. It returns the number of
+// bytes written to the provided buffer.
+func EncodeSACKBlocks(sackBlocks []SACKBlock, b []byte) int {
+	if len(sackBlocks) == 0 {
+		return 0
+	}
+	l := len(sackBlocks)
+	if l > TCPMaxSACKBlocks {
+		l = TCPMaxSACKBlocks
+	}
+	if ll := (len(b) - 2) / 8; ll < l {
+		l = ll
+	}
+	if l == 0 {
+		// There is not enough space in the provided buffer to add
+		// any SACK blocks.
+		return 0
+	}
+	b[0] = TCPOptionSACK
+	b[1] = byte(l*8 + 2)
+	for i := 0; i < l; i++ {
+		binary.BigEndian.PutUint32(b[i*8+2:], uint32(sackBlocks[i].Start))
+		binary.BigEndian.PutUint32(b[i*8+6:], uint32(sackBlocks[i].End))
+	}
+	return int(b[1])
+}
+
+// EncodeNOP adds an explicit NOP to the option list.
+func EncodeNOP(b []byte) int {
+	if len(b) == 0 {
+		return 0
+	}
+	b[0] = TCPOptionNOP
+	return 1
+}
+
+// AddTCPOptionPadding adds the required number of TCPOptionNOP to quad align
+// the option buffer. It adds padding bytes after the offset specified and
+// returns the number of padding bytes added. The passed in options slice
+// must have space for the padding bytes.
+func AddTCPOptionPadding(options []byte, offset int) int {
+	paddingToAdd := -offset & 3
+	// Now add any padding bytes that might be required to quad align the
+	// options.
+	for i := offset; i < offset+paddingToAdd; i++ {
+		options[i] = TCPOptionNOP
+	}
+	return paddingToAdd
 }

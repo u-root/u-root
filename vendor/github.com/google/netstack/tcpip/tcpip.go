@@ -1,6 +1,16 @@
-// Copyright 2016 The Netstack Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // Package tcpip provides the interfaces and related types that users of the
 // tcpip stack will use in order to create endpoints used to send and receive
@@ -21,6 +31,10 @@ package tcpip
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/waiter"
@@ -28,6 +42,9 @@ import (
 
 // Error represents an error in the netstack error space. Using a special type
 // ensures that errors outside of this space are not accidentally introduced.
+//
+// Note: to support save / restore, it is important that all tcpip errors have
+// distinct error messages.
 type Error struct {
 	string
 }
@@ -68,6 +85,9 @@ var (
 	ErrConnectionAborted     = &Error{"connection aborted"}
 	ErrNoSuchFile            = &Error{"no such file"}
 	ErrInvalidOptionValue    = &Error{"invalid option value specified"}
+	ErrNoLinkAddress         = &Error{"no remote link address"}
+	ErrBadAddress            = &Error{"bad address"}
+	ErrNetworkUnreachable    = &Error{"network is unreachable"}
 )
 
 // Errors related to Subnet
@@ -75,6 +95,35 @@ var (
 	errSubnetLengthMismatch = errors.New("subnet length of address and mask differ")
 	errSubnetAddressMasked  = errors.New("subnet address has bits set outside the mask")
 )
+
+// ErrSaveRejection indicates a failed save due to unsupported networking state.
+// This type of errors is only used for save logic.
+type ErrSaveRejection struct {
+	Err error
+}
+
+// Error returns a sensible description of the save rejection error.
+func (e ErrSaveRejection) Error() string {
+	return "save rejected due to unsupported networking state: " + e.Err.Error()
+}
+
+// A Clock provides the current time.
+//
+// Times returned by a Clock should always be used for application-visible
+// time, but never for netstack internal timekeeping.
+type Clock interface {
+	// NowNanoseconds returns the current real time as a number of
+	// nanoseconds since some epoch.
+	NowNanoseconds() int64
+}
+
+// StdClock implements Clock with the time package.
+type StdClock struct{}
+
+// NowNanoseconds implements Clock.NowNanoseconds.
+func (*StdClock) NowNanoseconds() int64 {
+	return time.Now().UnixNano()
+}
 
 // Address is a byte slice cast as a string that represents the address of a
 // network node. Or, in the case of unix endpoints, it may represent a path.
@@ -164,6 +213,8 @@ const (
 
 // FullAddress represents a full transport node address, as required by the
 // Connect() and Bind() methods.
+//
+// +stateify savable
 type FullAddress struct {
 	// NIC is the ID of the NIC this address refers to.
 	//
@@ -179,6 +230,45 @@ type FullAddress struct {
 	Port uint16
 }
 
+// Payload provides an interface around data that is being sent to an endpoint.
+// This allows the endpoint to request the amount of data it needs based on
+// internal buffers without exposing them. 'p.Get(p.Size())' reads all the data.
+type Payload interface {
+	// Get returns a slice containing exactly 'min(size, p.Size())' bytes.
+	Get(size int) ([]byte, *Error)
+
+	// Size returns the payload size.
+	Size() int
+}
+
+// SlicePayload implements Payload on top of slices for convenience.
+type SlicePayload []byte
+
+// Get implements Payload.
+func (s SlicePayload) Get(size int) ([]byte, *Error) {
+	if size > s.Size() {
+		size = s.Size()
+	}
+	return s[:size], nil
+}
+
+// Size implements Payload.
+func (s SlicePayload) Size() int {
+	return len(s)
+}
+
+// A ControlMessages contains socket control messages for IP sockets.
+//
+// +stateify savable
+type ControlMessages struct {
+	// HasTimestamp indicates whether Timestamp is valid/set.
+	HasTimestamp bool
+
+	// Timestamp is the time (in ns) that the last packed used to create
+	// the read data was received.
+	Timestamp int64
+}
+
 // Endpoint is the interface implemented by transport protocols (e.g., tcp, udp)
 // that exposes functionality like read, write, connect, etc. to users of the
 // networking stack.
@@ -188,33 +278,44 @@ type Endpoint interface {
 	Close()
 
 	// Read reads data from the endpoint and optionally returns the sender.
-	// This method does not block if there is no data pending.
-	// It will also either return an error or data, never both.
-	Read(*FullAddress) (buffer.View, *Error)
+	//
+	// This method does not block if there is no data pending. It will also
+	// either return an error or data, never both.
+	//
+	// A timestamp (in ns) is optionally returned. A zero value indicates
+	// that no timestamp was available.
+	Read(*FullAddress) (buffer.View, ControlMessages, *Error)
 
-	// Write writes data to the endpoint's peer, or the provided address if
-	// one is specified. This method does not block if the data cannot be
-	// written.
+	// Write writes data to the endpoint's peer. This method does not block if
+	// the data cannot be written.
+	//
+	// Unlike io.Writer.Write, Endpoint.Write transfers ownership of any bytes
+	// successfully written to the Endpoint. That is, if a call to
+	// Write(SlicePayload{data}) returns (n, err), it may retain data[:n], and
+	// the caller should not use data[:n] after Write returns.
 	//
 	// Note that unlike io.Writer.Write, it is not an error for Write to
 	// perform a partial write.
-	Write(buffer.View, *FullAddress) (uintptr, *Error)
+	Write(Payload, WriteOptions) (uintptr, *Error)
 
 	// Peek reads data without consuming it from the endpoint.
 	//
 	// This method does not block if there is no data pending.
-	Peek([][]byte) (uintptr, *Error)
+	//
+	// A timestamp (in ns) is optionally returned. A zero value indicates
+	// that no timestamp was available.
+	Peek([][]byte) (uintptr, ControlMessages, *Error)
 
 	// Connect connects the endpoint to its peer. Specifying a NIC is
 	// optional.
 	//
 	// There are three classes of return values:
 	//	nil -- the attempt to connect succeeded.
-	//	ErrConnectStarted -- the connect attempt started but hasn't
-	//		completed yet. In this case, the actual result will
-	//		become available via GetSockOpt(ErrorOption) when
-	//		the endpoint becomes writable. (This mimics the
-	//		connect(2) syscall behavior.)
+	//	ErrConnectStarted/ErrAlreadyConnecting -- the connect attempt started
+	//		but hasn't completed yet. In this case, the caller must call Connect
+	//		or GetSockOpt(ErrorOption) when the endpoint becomes writable to
+	//		get the actual result. The first call to Connect after the socket has
+	//		connected returns nil. Calling connect again results in ErrAlreadyConnected.
 	//	Anything else -- the attempt to connect failed.
 	Connect(address FullAddress) *Error
 
@@ -260,6 +361,19 @@ type Endpoint interface {
 	GetSockOpt(opt interface{}) *Error
 }
 
+// WriteOptions contains options for Endpoint.Write.
+type WriteOptions struct {
+	// If To is not nil, write to the given address instead of the endpoint's
+	// peer.
+	To *FullAddress
+
+	// More has the same semantics as Linux's MSG_MORE.
+	More bool
+
+	// EndOfRecord has the same semantics as Linux's MSG_EOR.
+	EndOfRecord bool
+}
+
 // ErrorOption is used in GetSockOpt to specify that the last error reported by
 // the endpoint should be cleared and returned.
 type ErrorOption struct{}
@@ -298,6 +412,15 @@ type ReuseAddressOption int
 //
 // Only supported on Unix sockets.
 type PasscredOption int
+
+// TimestampOption is used by SetSockOpt/GetSockOpt to specify whether
+// SO_TIMESTAMP socket control messages are enabled.
+type TimestampOption int
+
+// TCPInfoOption is used by GetSockOpt to expose TCP statistics.
+//
+// TODO: Add and populate stat fields.
+type TCPInfoOption struct{}
 
 // Route is a row in the routing table. It specifies through which NIC (and
 // gateway) sets of packets should be routed. A row is considered viable if the
@@ -344,7 +467,7 @@ type NetworkProtocolNumber uint32
 
 // Stats holds statistics about the networking stack.
 type Stats struct {
-	// UnkownProtocolRcvdPackets is the number of packets received by the
+	// UnknownProtocolRcvdPackets is the number of packets received by the
 	// stack that were for an unknown or unsupported protocol.
 	UnknownProtocolRcvdPackets uint64
 
@@ -413,3 +536,69 @@ func (a LinkAddress) String() string {
 		return fmt.Sprintf("%x", []byte(a))
 	}
 }
+
+// ParseMACAddress parses an IEEE 802 address.
+//
+// It must be in the format aa:bb:cc:dd:ee:ff or aa-bb-cc-dd-ee-ff.
+func ParseMACAddress(s string) (LinkAddress, error) {
+	parts := strings.FieldsFunc(s, func(c rune) bool {
+		return c == ':' || c == '-'
+	})
+	if len(parts) != 6 {
+		return "", fmt.Errorf("inconsistent parts: %s", s)
+	}
+	addr := make([]byte, 0, len(parts))
+	for _, part := range parts {
+		u, err := strconv.ParseUint(part, 16, 8)
+		if err != nil {
+			return "", fmt.Errorf("invalid hex digits: %s", s)
+		}
+		addr = append(addr, byte(u))
+	}
+	return LinkAddress(addr), nil
+}
+
+// ProtocolAddress is an address and the network protocol it is associated
+// with.
+type ProtocolAddress struct {
+	// Protocol is the protocol of the address.
+	Protocol NetworkProtocolNumber
+
+	// Address is a network address.
+	Address Address
+}
+
+// danglingEndpointsMu protects access to danglingEndpoints.
+var danglingEndpointsMu sync.Mutex
+
+// danglingEndpoints tracks all dangling endpoints no longer owned by the app.
+var danglingEndpoints = make(map[Endpoint]struct{})
+
+// GetDanglingEndpoints returns all dangling endpoints.
+func GetDanglingEndpoints() []Endpoint {
+	es := make([]Endpoint, 0, len(danglingEndpoints))
+	danglingEndpointsMu.Lock()
+	for e := range danglingEndpoints {
+		es = append(es, e)
+	}
+	danglingEndpointsMu.Unlock()
+	return es
+}
+
+// AddDanglingEndpoint adds a dangling endpoint.
+func AddDanglingEndpoint(e Endpoint) {
+	danglingEndpointsMu.Lock()
+	danglingEndpoints[e] = struct{}{}
+	danglingEndpointsMu.Unlock()
+}
+
+// DeleteDanglingEndpoint removes a dangling endpoint.
+func DeleteDanglingEndpoint(e Endpoint) {
+	danglingEndpointsMu.Lock()
+	delete(danglingEndpoints, e)
+	danglingEndpointsMu.Unlock()
+}
+
+// AsyncLoading is the global barrier for asynchronous endpoint loading
+// activities.
+var AsyncLoading sync.WaitGroup

@@ -50,6 +50,7 @@ const (
 	ordLoadKey2             uint32 = 0x00000041
 	ordGetRandom            uint32 = 0x00000046
 	ordOwnerClear           uint32 = 0x0000005B
+	ordForceClear           uint32 = 0x0000005D
 	ordGetCapability        uint32 = 0x00000065
 	ordMakeIdentity         uint32 = 0x00000079
 	ordReadPubEK            uint32 = 0x0000007C
@@ -156,12 +157,6 @@ const (
 	authAlways      byte = 0x01
 	authPrivUseOnly byte = 0x03
 )
-
-// maxTPMResponse is the largest possible response from the TPM. We need to know
-// this because we don't always know the length of the TPM response, and
-// /dev/tpm insists on giving it all back in a single value rather than
-// returning a header and a body in separate responses.
-const maxTPMResponse = 4096
 
 // fixedQuote is the fixed constant string used in quoteInfo.
 var fixedQuote = [4]byte{byte('Q'), byte('U'), byte('O'), byte('T')}
