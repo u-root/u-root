@@ -66,3 +66,8 @@ func (p *packetConn) SetBPF(filter []bpf.RawInstruction) error {
 func (p *packetConn) SetPromiscuous(b bool) error {
 	return ErrNotImplemented
 }
+
+// Stats is not currently implemented on this platform.
+func (p *packetConn) Stats() (*Stats, error) {
+	return nil, ErrNotImplemented
+}

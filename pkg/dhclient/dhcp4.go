@@ -26,8 +26,8 @@ func NewPacket4(p *dhcp4.Packet) *Packet4 {
 
 // Lease returns the IPNet assigned.
 func (p *Packet4) Lease() *net.IPNet {
-	netmask, err := dhcp4opts.GetSubnetMask(p.P.Options)
-	if err != nil {
+	netmask := dhcp4opts.GetSubnetMask(p.P.Options)
+	if netmask == nil {
 		// If they did not offer a subnet mask, we choose the most
 		// restrictive option.
 		netmask = []byte{255, 255, 255, 255}
@@ -44,8 +44,8 @@ func (p *Packet4) Lease() *net.IPNet {
 // OptionRouter is used as opposed to GIAddr, which seems unused by most DHCP
 // servers?
 func (p *Packet4) Gateway() net.IP {
-	gw, err := dhcp4opts.GetRouters(p.P.Options)
-	if err != nil {
+	gw := dhcp4opts.GetRouters(p.P.Options)
+	if gw == nil {
 		return nil
 	}
 	return gw[0]
@@ -53,8 +53,8 @@ func (p *Packet4) Gateway() net.IP {
 
 // DNS returns DNS IPs assigned.
 func (p *Packet4) DNS() []net.IP {
-	ips, err := dhcp4opts.GetDomainNameServers(p.P.Options)
-	if err != nil {
+	ips := dhcp4opts.GetDomainNameServers(p.P.Options)
+	if ips == nil {
 		return nil
 	}
 	return []net.IP(ips)
@@ -77,8 +77,8 @@ func (p *Packet4) Boot() (url.URL, error) {
 		u.Scheme = "tftp"
 		u.Path = p.P.BootFile
 		if len(p.P.ServerName) == 0 {
-			server, err := dhcp4opts.GetServerIdentifier(p.P.Options)
-			if err != nil {
+			server := dhcp4opts.GetServerIdentifier(p.P.Options)
+			if server == nil {
 				return url.URL{}, err
 			}
 			u.Host = net.IP(server).String()

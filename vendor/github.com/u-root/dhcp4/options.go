@@ -44,21 +44,21 @@ func (o Options) AddRaw(key OptionCode, value []byte) {
 
 // Get attempts to retrieve the value specified by an OptionCode key.
 //
-// If a value is found, get returns a non-nil byte slice and nil. If it is not
-// found, Get returns nil and ErrOptionNotPresent.
-func (o Options) Get(key OptionCode) ([]byte, error) {
+// If a value is found, get returns a non-nil byte slice. If it is not found,
+// Get returns nil.
+func (o Options) Get(key OptionCode) []byte {
 	// Check for value by key.
 	v, ok := o[key]
 	if !ok {
-		return nil, ErrOptionNotPresent
+		return nil
 	}
 
 	// Some options can actually have zero length (OptionRapidCommit), so
 	// just return an empty byte slice if this is the case.
 	if len(v) == 0 {
-		return []byte{}, nil
+		return []byte{}
 	}
-	return v, nil
+	return v
 }
 
 // Unmarshal fills opts with option codes and corresponding values from an

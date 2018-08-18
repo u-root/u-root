@@ -120,8 +120,8 @@ func (c *Client) DiscoverOffer() (*dhcp4.Packet, error) {
 	}()
 
 	for packet := range out {
-		msgType, err := dhcp4opts.GetDHCPMessageType(packet.Packet.Options)
-		if err == nil && msgType == dhcp4opts.DHCPOffer {
+		msgType := dhcp4opts.GetDHCPMessageType(packet.Packet.Options)
+		if msgType == dhcp4opts.DHCPOffer {
 			// Deferred cancel will cancel the goroutine.
 			return packet.Packet, nil
 		}
@@ -208,8 +208,8 @@ func (c *Client) RequestPacket(offer *dhcp4.Packet) *dhcp4.Packet {
 	// Request the offered IP address.
 	packet.Options.Add(dhcp4.OptionRequestedIPAddress, dhcp4opts.IP(offer.YIAddr))
 
-	sid, err := dhcp4opts.GetServerIdentifier(offer.Options)
-	if err == nil {
+	sid := dhcp4opts.GetServerIdentifier(offer.Options)
+	if sid != nil {
 		packet.Options.Add(dhcp4.OptionServerIdentifier, dhcp4opts.IP(sid))
 	}
 	return packet
