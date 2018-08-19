@@ -1,13 +1,17 @@
+// Copyright 2016-2017 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package main
+
 import (
 	"crypto/sha1"
 	"crypto/sha256"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"flag"
 )
-
 
 func helpPrinter() {
 
@@ -20,7 +24,6 @@ func versionPrinter() {
 	fmt.Println("shasum utility, URoot Version.")
 	os.Exit(0)
 }
-
 
 func GetInput(fileName string) (input []byte, err error) {
 
@@ -36,8 +39,8 @@ func ShaPrinter(algorithm int, data []byte) string {
 		sha = fmt.Sprintf("%x", sha256.Sum256(data))
 	} else if algorithm == 1 {
 		sha = fmt.Sprintf("%x", sha1.Sum(data))
-	}else {
-		fmt.Fprintf(os.Stderr, "Invalid algorithm" )
+	} else {
+		fmt.Fprintf(os.Stderr, "Invalid algorithm")
 		return ""
 	}
 	return sha
@@ -52,7 +55,7 @@ func main() {
 	)
 	cliArgs := ""
 	flag.IntVar(&algorithm, "algorithm", 1, "SHA algorithm, valid args are 1 and 256")
-	flag.BoolVar(&help, "help",false, "Show this help and exit")
+	flag.BoolVar(&help, "help", false, "Show this help and exit")
 	flag.BoolVar(&version, "version", false, "Print Version")
 	flag.Parse()
 
@@ -71,7 +74,7 @@ func main() {
 		fmt.Println("Error getting input.")
 		os.Exit(-1)
 	}
-	fmt.Printf("%s ",ShaPrinter(algorithm, input))
+	fmt.Printf("%s ", ShaPrinter(algorithm, input))
 	if cliArgs == "" {
 		fmt.Printf(" -\n")
 	} else {
