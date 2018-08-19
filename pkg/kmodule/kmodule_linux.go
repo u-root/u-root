@@ -122,7 +122,9 @@ type depMap map[string]*dependency
 //
 // An empty ProbeOpts{} should lead to the default behavior.
 type ProbeOpts struct {
-	DryRun bool
+	DryRunCB func(string)
+	RootDir  string
+	KVer     string
 }
 
 // Probe loads the given kernel module and its dependencies.
@@ -134,7 +136,7 @@ func Probe(name string, modParams string) error {
 // ProbeOptions loads the given kernel module and its dependencies.
 // This functions takes ProbeOpts.
 func ProbeOptions(name, modParams string, opts ProbeOpts) error {
-	deps, err := genDeps()
+	deps, err := genDeps(opts)
 	if err != nil {
 		return &SyscallError{Msg: fmt.Sprintf("could not generate dependency map %v", err)}
 	}
@@ -144,15 +146,13 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 		return &SyscallError{Msg: fmt.Sprintf("could not find module path %q: %v", name, err)}
 	}
 
-	if !opts.DryRun {
+	if opts.DryRunCB == nil {
 		// if the module is already loaded or does not have deps, or all of them are loaded
 		// then this succeeds and we are done
 		if err := loadModule(modPath, modParams, opts); err == nil {
 			return nil
 		}
 		// okay, we have to try the hard way and load dependencies first.
-	} else {
-		fmt.Println("Unique dependencies in load order, already loaded ones get skipped:")
 	}
 
 	deps[modPath].state = loading
@@ -169,18 +169,21 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	return nil
 }
 
-func genDeps() (depMap, error) {
+func genDeps(opts ProbeOpts) (depMap, error) {
 	deps := make(depMap)
+	rel := opts.KVer
 
-	var u unix.Utsname
-	if err := unix.Uname(&u); err != nil {
-		return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+	if rel == "" {
+		var u unix.Utsname
+		if err := unix.Uname(&u); err != nil {
+			return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+		}
+		rel = string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
 	}
-	rel := string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
 
 	var moduleDir string
 	for _, n := range []string{"/lib/modules", "/usr/lib/modules"} {
-		moduleDir = filepath.Join(n, strings.TrimSpace(rel))
+		moduleDir = filepath.Join(opts.RootDir, n, strings.TrimSpace(rel))
 		if _, err := os.Stat(moduleDir); err == nil {
 			break
 		}
@@ -255,8 +258,8 @@ func loadDeps(path string, m depMap, opts ProbeOpts) error {
 }
 
 func loadModule(path, modParams string, opts ProbeOpts) error {
-	if opts.DryRun {
-		fmt.Println(path)
+	if opts.DryRunCB != nil {
+		opts.DryRunCB(path)
 		return nil
 	}
 

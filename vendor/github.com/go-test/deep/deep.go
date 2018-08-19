@@ -247,6 +247,16 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 				return
 			}
 		}
+	case reflect.Array:
+		n := a.Len()
+		for i := 0; i < n; i++ {
+			c.push(fmt.Sprintf("array[%d]", i))
+			c.equals(a.Index(i), b.Index(i), level+1)
+			c.pop()
+			if len(c.diff) >= MaxDiff {
+				break
+			}
+		}
 	case reflect.Slice:
 		if a.IsNil() || b.IsNil() {
 			if a.IsNil() && !b.IsNil() {

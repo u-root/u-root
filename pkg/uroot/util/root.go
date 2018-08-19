@@ -17,6 +17,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -24,11 +25,6 @@ const (
 	PATHHEAD = "/ubin"
 	PATHMID  = "/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/usr/local/sbin"
 	PATHTAIL = "/buildbin:/bbin"
-	CmdsPath = "github.com/u-root/u-root/cmds"
-)
-
-var (
-	CmdsGlob = []string{"github.com/u-root/*/cmds", "*/*/*", "*/*"}
 )
 
 type Creator interface {
@@ -152,8 +148,7 @@ var (
 
 		Dir{Name: "/dev/pts", Mode: 0777},
 		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
-		Symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
-
+		Dev{Name: "/dev/ptmx", Mode: syscall.S_IFCHR | 0666, Dev: 0x0502},
 		// Note: shm is required at least for Chrome. If you don't mount
 		// it chrome throws a bogus "out of memory" error, not the more
 		// useful "I can't open /dev/shm/whatever". SAD!
@@ -205,6 +200,9 @@ func GoBin() string {
 }
 
 func create(namespace []Creator) {
+	// Clear umask bits so that we get stuff like ptmx right.
+	m := unix.Umask(0)
+	defer unix.Umask(m)
 	for _, c := range namespace {
 		if err := c.Create(); err != nil {
 			log.Printf("Error creating %s: %v", c, err)

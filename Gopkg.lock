@@ -11,34 +11,29 @@
   branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
-  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
+  revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
 
 [[projects]]
   name = "github.com/go-test/deep"
   packages = ["."]
-  revision = "9898238679c264cfb10411539f14a0553dc8b295"
-  version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/golang/glog"
-  packages = ["."]
-  revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+  revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
-    "tpmutil"
+    "tpmutil",
+    "tpmutil/tbs"
   ]
-  revision = "ca55a71865e26d3113cb6b281f72a50a1d82ea8a"
+  revision = "f9bda7c79425630507590804d9ecb42603d6291e"
 
 [[projects]]
   branch = "master"
   name = "github.com/google/goexpect"
   packages = ["."]
-  revision = "24d0569daa0e7d860dc93ebc60ef69a0a2958889"
+  revision = "9db06cbbaed691242d13045e8e5f5037f72db9e7"
 
 [[projects]]
   branch = "master"
@@ -54,27 +49,28 @@
     "tcpip",
     "tcpip/buffer",
     "tcpip/header",
+    "tcpip/seqnum",
     "waiter"
   ]
-  revision = "edcfca33ca347f59a1393986a5d216a5f183ae28"
+  revision = "8b4eef0f44a9713d81e56056edf3b96f28f7a8e3"
 
 [[projects]]
   name = "github.com/gorilla/context"
   packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
+  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/gorilla/mux"
   packages = ["."]
-  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
-  version = "v1.6.1"
+  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
+  version = "v1.6.2"
 
 [[projects]]
   name = "github.com/klauspost/compress"
   packages = ["flate"]
-  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
-  version = "v1.2.1"
+  revision = "b939724e787a27c0005cabe3f78e7ed7987ac74f"
+  version = "v1.4.0"
 
 [[projects]]
   name = "github.com/klauspost/cpuid"
@@ -108,7 +104,7 @@
   branch = "master"
   name = "github.com/mdlayher/ethernet"
   packages = ["."]
-  revision = "e72cf8343052938936194daba1914fd1bb33d2fe"
+  revision = "0a1564b57aeaf8387d273d4bdffbb34b1bb8f626"
 
 [[projects]]
   branch = "master"
@@ -120,7 +116,7 @@
   branch = "master"
   name = "github.com/mdlayher/raw"
   packages = ["."]
-  revision = "5f27d82a512f55b8668d40c0343d2f53885261fa"
+  revision = "1d2cec5bb8cce1f029119448aa6760cf9421bea4"
 
 [[projects]]
   branch = "master"
@@ -131,8 +127,8 @@
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
-  version = "v1.0.1"
+  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -143,7 +139,7 @@
     "dhcp4opts",
     "internal/buffer"
   ]
-  revision = "a950c25c1e85927070c5395d644ae394a9caae2b"
+  revision = "f78158b7c380d2ae515105471716468098373c72"
 
 [[projects]]
   branch = "master"
@@ -152,13 +148,13 @@
     ".",
     "nl"
   ]
-  revision = "41009d533ba0788a139b0b6ef38923a23b3766d3"
+  revision = "8aa85bfa77a45236ae842cab3a91853e2b74e07a"
 
 [[projects]]
   branch = "master"
   name = "github.com/vishvananda/netns"
   packages = ["."]
-  revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
+  revision = "13995c7128ccc8e51e9a6bd2b551020a27180abd"
 
 [[projects]]
   branch = "master"
@@ -169,6 +165,7 @@
     "ed25519",
     "ed25519/internal/edwards25519",
     "internal/chacha20",
+    "internal/subtle",
     "md4",
     "openpgp",
     "openpgp/armor",
@@ -182,7 +179,7 @@
     "sha3",
     "ssh"
   ]
-  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
+  revision = "aabede6cba87e37f413b3e60ebfc214f8eeca1b0"
 
 [[projects]]
   branch = "master"
@@ -193,28 +190,29 @@
     "internal/socket",
     "ipv4"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "91ee8cde435411ca3f1cd365e8f20131aed4d0a1"
+  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
-    "imports"
+    "imports",
+    "internal/fastwalk"
   ]
-  revision = "77106db15f689a60e7d4e085d967ac557b918fb2"
+  revision = "7d1dc997617fb662918b6ea95efc19faa87e1cf8"
 
 [[projects]]
   name = "google.golang.org/grpc"
   packages = ["codes"]
-  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
-  version = "v1.13.0"
+  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
+  version = "v1.14.0"
 
 [[projects]]
   name = "pack.ag/tftp"

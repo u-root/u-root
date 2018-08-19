@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -30,10 +31,10 @@ const (
 )
 
 var (
-	builders = map[string]Build{
-		"source": SourceBuild,
-		"bb":     BBBuild,
-		"binary": BinaryBuild,
+	builders = map[string]Builder{
+		"source": SourceBuilder,
+		"bb":     BBBuilder,
+		"binary": BinaryBuilder,
 	}
 	archivers = map[string]Archiver{
 		"cpio": CPIOArchiver{
@@ -49,6 +50,7 @@ var DefaultRamfs = []cpio.Record{
 	cpio.Directory("tcz", 0755),
 	cpio.Directory("etc", 0755),
 	cpio.Directory("dev", 0755),
+	cpio.Directory("tmp", 0777),
 	cpio.Directory("ubin", 0755),
 	cpio.Directory("usr", 0755),
 	cpio.Directory("usr/lib", 0755),
@@ -67,7 +69,7 @@ var DefaultRamfs = []cpio.Record{
 // Commands specifies a list of packages to build with a specific builder.
 type Commands struct {
 	// Builder is the build format.
-	Builder Build
+	Builder Builder
 
 	// Packages are the Go packages to add to the archive.
 	//
@@ -80,6 +82,14 @@ type Commands struct {
 	// BinaryDir is the directory in which the resulting binaries are
 	// placed inside the initramfs.
 	BinaryDir string
+}
+
+// TargetDir returns the binary directory for these Commands.
+func (c Commands) TargetDir() string {
+	if len(c.BinaryDir) != 0 {
+		return c.BinaryDir
+	}
+	return c.Builder.DefaultBinaryDir
 }
 
 // Opts are the arguments to CreateInitramfs.
@@ -119,9 +129,21 @@ type Opts struct {
 	// "inito".
 	UseExistingInit bool
 
-	// InitCmd is the name of a command to link /init to in bb build.
-	// Default: bbin/init
+	// InitCmd is the name of a command to link /init to.
+	//
+	// This can be an absolute path or the name of a command included in
+	// Commands.
+	//
+	// If this is empty, no init symlink will be created.
 	InitCmd string
+
+	// DefaultShell is the default shell to start after init.
+	//
+	// This can be an absolute path or the name of a command included in
+	// Commands.
+	//
+	// This must be specified to have a default shell.
+	DefaultShell string
 }
 
 // resolvePackagePath finds import paths for a single import path or directory string
@@ -159,6 +181,24 @@ func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
 		return nil, fmt.Errorf("%q is neither package or path/glob: %v", pkg, err)
 	}
 	return []string{pkg}, nil
+}
+
+func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
+	if filepath.IsAbs(cmd) {
+		return cmd, nil
+	}
+
+	for _, c := range cmds {
+		for _, p := range c.Packages {
+			// Figure out which build mode the shell is in, and symlink to
+			// that build modee
+			if name := path.Base(p); name == cmd {
+				return path.Join("/", c.TargetDir(), cmd), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("command or path %q not included in u-root build", cmd)
 }
 
 // ResolvePackagePaths takes a list of Go package import paths and directories
@@ -200,6 +240,10 @@ func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) er
 			dst = filepath.Clean(parts[1])
 		} else {
 			// plain old syntax
+			// filepath.Clean interprets an empty string as CWD for no good reason.
+			if len(file) == 0 {
+				continue
+			}
 			src = filepath.Clean(file)
 			dst = src
 			if filepath.IsAbs(dst) {
@@ -245,13 +289,17 @@ func CreateInitramfs(opts Opts) error {
 
 	files := NewArchiveFiles()
 
-	// Add each build mode's commands to the archive.
-	for _, cmds := range opts.Commands {
+	// Expand commands.
+	for index, cmds := range opts.Commands {
 		importPaths, err := ResolvePackagePaths(opts.Env, cmds.Packages)
 		if err != nil {
 			return err
 		}
+		opts.Commands[index].Packages = importPaths
+	}
 
+	// Add each build mode's commands to the archive.
+	for _, cmds := range opts.Commands {
 		builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
 		if err != nil {
 			return err
@@ -260,12 +308,11 @@ func CreateInitramfs(opts Opts) error {
 		// Build packages.
 		bOpts := BuildOpts{
 			Env:       opts.Env,
-			Packages:  importPaths,
+			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
-			BinaryDir: cmds.BinaryDir,
-			InitCmd:   opts.InitCmd,
+			BinaryDir: cmds.TargetDir(),
 		}
-		if err := cmds.Builder(files, bOpts); err != nil {
+		if err := cmds.Builder.Build(files, bOpts); err != nil {
 			return fmt.Errorf("error building %#v: %v", bOpts, err)
 		}
 	}
@@ -277,6 +324,22 @@ func CreateInitramfs(opts Opts) error {
 		BaseArchive:     opts.BaseArchive,
 		UseExistingInit: opts.UseExistingInit,
 		DefaultRecords:  DefaultRamfs,
+	}
+
+	if len(opts.DefaultShell) > 0 {
+		if target, err := resolveCommandOrPath(opts.DefaultShell, opts.Commands); err != nil {
+			log.Printf("No default shell: %v", err)
+		} else if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", target)); err != nil {
+			return err
+		}
+	}
+
+	if len(opts.InitCmd) > 0 {
+		if target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands); err != nil {
+			return fmt.Errorf("could not find init: %v", err)
+		} else if err := archive.AddRecord(cpio.Symlink("init", target)); err != nil {
+			return err
+		}
 	}
 
 	if err := ParseExtraFiles(archive.ArchiveFiles, opts.ExtraFiles, true); err != nil {
@@ -311,27 +374,21 @@ type BuildOpts struct {
 	// BinaryDir is the directory that built binaries are placed in in the
 	// initramfs.
 	//
-	// If BinaryDir is unspecified, each builder may choose their own
-	// default binary directory.
+	// BinaryDir must be specified.
 	BinaryDir string
-
-	// InitCmd is the name of a command to link /init to in bb build.
-	// Default: bbin/init
-	InitCmd string
 }
 
-// TargetDir returns the binary directory if specified in BuildOpts, otherwise
-// the default def.
-func (b BuildOpts) TargetDir(def string) string {
-	if len(b.BinaryDir) == 0 {
-		return def
-	}
-	return b.BinaryDir
-}
-
-// Build uses the given options to build Go packages and adds its files to be
+// Builder uses the given options to build Go packages and adds its files to be
 // included in the initramfs to the given ArchiveFiles.
-type Build func(ArchiveFiles, BuildOpts) error
+type Builder struct {
+	// Build uses the given options to build Go packages and adds its files to be
+	// included in the initramfs to the given ArchiveFiles.
+	Build func(ArchiveFiles, BuildOpts) error
+
+	// DefaultBinaryDir is the default binary directory to place built
+	// binaries in.
+	DefaultBinaryDir string
+}
 
 // ArchiveOpts are the options for building the initramfs archive.
 type ArchiveOpts struct {
@@ -385,10 +442,10 @@ type ArchiveWriter interface {
 type ArchiveReader cpio.RecordReader
 
 // GetBuilder returns the Build function for the named build mode.
-func GetBuilder(name string) (Build, error) {
+func GetBuilder(name string) (Builder, error) {
 	build, ok := builders[name]
 	if !ok {
-		return nil, fmt.Errorf("couldn't find builder %q", name)
+		return Builder{}, fmt.Errorf("couldn't find builder %q", name)
 	}
 	return build, nil
 }

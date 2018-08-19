@@ -1,0 +1,91 @@
+<head>
+  <style>
+    table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    td, th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+    input {
+      font-size: 120%;
+    }
+  </style>
+  <script>
+    // here we define Javascript functions for sending data back to our Go server, by
+    // fetching the URL defined by our server's router to invoke the Go function.
+    // When we are sending data back, we get the value(s) in the text field(s) and
+    // encode them into JSON, which is sent back to our Go handler.
+    function sendString() {
+      ex = document.getElementById("field").value
+      fetch("http://localhost:{{.Port}}/your_url_here_1", {
+        method: 'Post',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Example: ex
+        })
+      })
+      .then(r => r.json())
+      .then( s => {
+        if (s !== null) {
+          alert(s.Error);
+          window.location.reload();
+        }
+        else {
+          window.location.reload();
+        }
+      })
+      .catch(err => alert(err))
+    }
+    // this function calls the handler without sending anything, so we do not do any
+    // JSON manipulation.
+    function sendEmpty() {
+      fetch("http://localhost:{{.Port}}/your_url_here_2", {
+        method: 'Post'
+      })
+      .then(r => r.json())
+      .then( s => {
+        if (s !== null) {
+          alert(s.Error);
+          window.location.reload();
+        }
+        else {
+          window.location.reload();
+        }
+      })
+      .catch(err => alert(err))
+    }
+  </script>
+</head>
+<body>
+  <!--
+  Inline Javascript doesn't like directly calling the data we passed in, so we copy
+  it to a local variable. We do not have to do this when we are in the <script> tag.
+  -->
+  {{$example := .Example}}
+  <h1>Example</h1>
+  <!-- This div contains a link back to the SoS homepage. -->
+  <div class="banner">
+      <h1><a href="http://localhost:8000" target="_blank" class="bannerbtn">Service of Services</a></h1>
+  </div>
+  <div class="content">
+    <div class="center">
+      <h2 class="centernarrow">Example</h2>
+      <div class="card">
+        <div class="center">
+          <!-- we can populate fields with the current settings on load by setting the value. -->
+          <input type="text" id="field"  class="text" value="{{$example}}">
+          <!-- we define which functions to run using the onclick tag with buttons. -->
+          <input type="submit" class="btn" value="Submit" onclick=sendString()>
+          <input type="submit" class="btn" value="Clear" onclick=sendEmpty()>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>

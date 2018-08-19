@@ -11,11 +11,14 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 )
 
+var BinaryBuilder = Builder{
+	Build:            BinaryBuild,
+	DefaultBinaryDir: "bin",
+}
+
 // BinaryBuild builds all given packages as separate binaries and includes them
 // in the archive.
 func BinaryBuild(af ArchiveFiles, opts BuildOpts) error {
-	binDir := opts.TargetDir("bin")
-
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
 
@@ -25,7 +28,7 @@ func BinaryBuild(af ArchiveFiles, opts BuildOpts) error {
 			defer wg.Done()
 			result <- opts.Env.Build(
 				p,
-				filepath.Join(opts.TempDir, binDir, filepath.Base(p)),
+				filepath.Join(opts.TempDir, opts.BinaryDir, filepath.Base(p)),
 				golang.BuildOpts{})
 		}(pkg)
 	}

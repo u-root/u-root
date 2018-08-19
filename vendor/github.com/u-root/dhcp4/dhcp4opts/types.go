@@ -87,13 +87,16 @@ func (i *IP) UnmarshalBinary(p []byte) error {
 }
 
 // GetIP returns the IP encoded in `code` option of `o`, if there is one.
-func GetIP(code dhcp4.OptionCode, o dhcp4.Options) (IP, error) {
-	v, err := o.Get(code)
-	if err != nil {
-		return nil, err
+func GetIP(code dhcp4.OptionCode, o dhcp4.Options) IP {
+	v := o.Get(code)
+	if v == nil {
+		return nil
 	}
 	var ip IP
-	return ip, (&ip).UnmarshalBinary(v)
+	if err := (&ip).UnmarshalBinary(v); err != nil {
+		return nil
+	}
+	return ip
 }
 
 // IPs implements encoding.BinaryMarshaler and encapsulates binary encoding and
@@ -127,14 +130,17 @@ func (i *IPs) UnmarshalBinary(p []byte) error {
 }
 
 // GetIPs returns the list of IPs encoded in `code` option of `o`.
-func GetIPs(code dhcp4.OptionCode, o dhcp4.Options) (IPs, error) {
-	v, err := o.Get(code)
-	if err != nil {
-		return nil, err
+func GetIPs(code dhcp4.OptionCode, o dhcp4.Options) IPs {
+	v := o.Get(code)
+	if v == nil {
+		return nil
 	}
 
 	var i IPs
-	return i, (&i).UnmarshalBinary(v)
+	if err := (&i).UnmarshalBinary(v); err != nil {
+		return nil
+	}
+	return i
 }
 
 // String implements encoding.BinaryMarshaler and encapsulates binary encoding
@@ -147,20 +153,13 @@ func (s String) MarshalBinary() ([]byte, error) {
 	return []byte(s), nil
 }
 
-// UnmarshalBinary reads the string from binary.
-func (s *String) UnmarshalBinary(b []byte) error {
-	*s = String(string(b))
-	return nil
-}
-
 // GetString returns the string encoded in the `code` option of `o`.
-func GetString(code dhcp4.OptionCode, o dhcp4.Options) (string, error) {
-	v, err := o.Get(code)
-	if err != nil {
-		return "", err
+func GetString(code dhcp4.OptionCode, o dhcp4.Options) string {
+	v := o.Get(code)
+	if v == nil {
+		return ""
 	}
-	var s String
-	return string(s), (&s).UnmarshalBinary(v)
+	return string(v)
 }
 
 // OptionCodes implements encoding.BinaryMarshaler and encapsulates binary

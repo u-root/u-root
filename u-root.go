@@ -31,6 +31,7 @@ func (m *multiFlag) Set(value string) error {
 var (
 	build, format, tmpDir, base, outputPath *string
 	initCmd                                 *string
+	defaultShell                            *string
 	useExistingInit                         *bool
 	extraFiles                              multiFlag
 	templates                               = map[string][]string{
@@ -40,177 +41,177 @@ var (
 		// Core should be things you don't want to live without.
 		"core": {
 			"cmds/ansi",
-			"cmds/cbmem",
-			"cmds/chroot",
-			"cmds/cp",
-			"cmds/date",
-			"cmds/df",
-			"cmds/dirname",
-			"cmds/echo",
-			"cmds/field",
-			"cmds/fmap",
-			"cmds/free",
-			"cmds/gpgv",
-			"cmds/grep",
-			"cmds/hexdump",
-			"cmds/id",
-			"cmds/insmod",
-			"cmds/io",
-			"cmds/kexec",
-			"cmds/lddfiles",
-			"cmds/losetup",
-			"cmds/lsmod",
-			"cmds/mkfifo",
-			"cmds/mount",
-			"cmds/mv",
-			"cmds/ntpdate",
-			"cmds/ping",
-			"cmds/ps",
-			"cmds/pxeboot",
-			"cmds/rm",
-			"cmds/rsdp",
-			"cmds/rush",
-			"cmds/shutdown",
-			"cmds/sort",
-			"cmds/stty",
-			"cmds/sync",
-			"cmds/true",
-			"cmds/umount",
-			"cmds/uniq",
-			"cmds/validate",
-			"cmds/wc",
-			"cmds/which",
 			"cmds/boot",
 			"cmds/cat",
+			"cmds/cbmem",
 			"cmds/chmod",
+			"cmds/chroot",
 			"cmds/cmp",
 			"cmds/console",
+			"cmds/cp",
 			"cmds/cpio",
+			"cmds/date",
 			"cmds/dd",
+			"cmds/df",
 			"cmds/dhclient",
+			"cmds/dirname",
 			"cmds/dmesg",
+			"cmds/echo",
 			"cmds/false",
+			"cmds/field",
 			"cmds/find",
+			"cmds/free",
 			"cmds/freq",
+			"cmds/gpgv",
 			"cmds/gpt",
+			"cmds/grep",
 			"cmds/gzip",
+			"cmds/hexdump",
 			"cmds/hostname",
+			"cmds/id",
 			"cmds/init",
+			"cmds/insmod",
 			"cmds/installcommand",
+			"cmds/io",
 			"cmds/ip",
+			"cmds/kexec",
 			"cmds/kill",
+			"cmds/lddfiles",
 			"cmds/ln",
+			"cmds/losetup",
 			"cmds/ls",
+			"cmds/lsmod",
 			"cmds/mkdir",
+			"cmds/mkfifo",
 			"cmds/mknod",
 			"cmds/modprobe",
+			"cmds/mount",
 			"cmds/msr",
+			"cmds/mv",
 			"cmds/netcat",
+			"cmds/ntpdate",
 			"cmds/pci",
+			"cmds/ping",
 			"cmds/printenv",
+			"cmds/ps",
 			"cmds/pwd",
+			"cmds/pxeboot",
 			"cmds/readlink",
+			"cmds/rm",
 			"cmds/rmmod",
+			"cmds/rsdp",
+			"cmds/rush",
 			"cmds/seq",
+			"cmds/shutdown",
 			"cmds/sleep",
+			"cmds/sort",
+			"cmds/stty",
 			"cmds/switch_root",
+			"cmds/sync",
 			"cmds/tail",
 			"cmds/tee",
+			"cmds/true",
 			"cmds/truncate",
+			"cmds/umount",
 			"cmds/uname",
+			"cmds/uniq",
 			"cmds/unshare",
+			"cmds/validate",
 			"cmds/vboot",
+			"cmds/wc",
 			"cmds/wget",
+			"cmds/which",
 		},
 		// Minimal should be things you can't live without.
 		"minimal": {
-			"cmds/cp",
-			"cmds/date",
-			"cmds/df",
-			"cmds/echo",
-			"cmds/free",
-			"cmds/gpgv",
-			"cmds/grep",
-			"cmds/id",
-			"cmds/insmod",
-			"cmds/io",
-			"cmds/kexec",
-			"cmds/losetup",
-			"cmds/lsmod",
-			"cmds/mount",
-			"cmds/mv",
-			"cmds/ping",
-			"cmds/ps",
-			"cmds/rm",
-			"cmds/rush",
-			"cmds/shutdown",
-			"cmds/sync",
-			"cmds/umount",
-			"cmds/wc",
-			"cmds/which",
 			"cmds/cat",
 			"cmds/chmod",
 			"cmds/cmp",
 			"cmds/console",
+			"cmds/cp",
+			"cmds/date",
 			"cmds/dd",
+			"cmds/df",
 			"cmds/dhclient",
 			"cmds/dmesg",
+			"cmds/echo",
 			"cmds/find",
+			"cmds/free",
+			"cmds/gpgv",
+			"cmds/grep",
 			"cmds/gzip",
 			"cmds/hostname",
+			"cmds/id",
 			"cmds/init",
+			"cmds/insmod",
+			"cmds/io",
 			"cmds/ip",
+			"cmds/kexec",
 			"cmds/kill",
 			"cmds/ln",
+			"cmds/losetup",
 			"cmds/ls",
+			"cmds/lsmod",
 			"cmds/mkdir",
 			"cmds/mknod",
 			"cmds/modprobe",
+			"cmds/mount",
 			"cmds/msr",
+			"cmds/mv",
 			"cmds/pci",
+			"cmds/ping",
 			"cmds/printenv",
+			"cmds/ps",
 			"cmds/pwd",
 			"cmds/readlink",
+			"cmds/rm",
 			"cmds/rmmod",
+			"cmds/rush",
 			"cmds/seq",
+			"cmds/shutdown",
 			"cmds/sleep",
+			"cmds/sync",
 			"cmds/tail",
 			"cmds/tee",
 			"cmds/truncate",
+			"cmds/umount",
 			"cmds/uname",
 			"cmds/unshare",
+			"cmds/wc",
 			"cmds/wget",
+			"cmds/which",
 		},
 		// coreboot-app minimal environment
 		"coreboot-app": {
+			"cmds/cbmem",
+			"cmds/chroot",
 			"cmds/insmod",
 			"cmds/modprobe",
 			"cmds/rmmod",
-			"cmds/cbmem",
-			"cmds/fmap",
 			"cmds/sshd",
 			"cmds/switch_root",
-			"cmds/chroot",
 		},
 	}
 )
 
-func parseFlags() {
-	build = flag.String("build", "source", "u-root build format (e.g. bb or source)")
-	format = flag.String("format", "cpio", "Archival format (e.g. cpio)")
+func init() {
+	build = flag.String("build", "source", "u-root build format (e.g. bb or source).")
+	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
 
-	base = flag.String("base", "", "Base archive to add files to")
+	base = flag.String("base", "", "Base archive to add files to.")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
-	initCmd = flag.String("initcmd", "", "Where to link /init to (default: bbin/init).")
-	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times")
-	flag.Parse()
+
+	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name.")
+	defaultShell = flag.String("defaultsh", "rush", "Default shell. Can be an absolute path or a u-root command name.")
+
+	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
 
 func main() {
-	parseFlags()
+	flag.Parse()
 
 	// Main is in a separate functions so defers run on return.
 	if err := Main(); err != nil {
@@ -258,7 +259,7 @@ func Main() error {
 	// Resolve globs into package imports.
 	//
 	// Currently allowed formats:
-	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls
+	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
 	//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
 	var pkgs []string
 	for _, a := range flag.Args() {
@@ -310,6 +311,7 @@ func Main() error {
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 		InitCmd:         *initCmd,
+		DefaultShell:    *defaultShell,
 	}
 	return uroot.CreateInitramfs(opts)
 }

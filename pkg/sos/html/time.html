@@ -1,0 +1,73 @@
+<head>
+  <title>Time</title>
+  <link rel="stylesheet" href="css/stylesheet.css">
+  <meta charset="utf-8">
+  <script>
+    function sendAutoSet() {
+      fetch("http://localhost:{{.Port}}/auto", {
+        method: 'Post'
+      })
+      .then(r => r.json())
+      .then( s => {
+        if (s !== null) {
+          alert(s.Error);
+          window.location.reload();
+        }
+        else {
+          window.location.reload();
+        }
+      })
+      .catch(err => alert(err))
+    }
+
+    function sendManSet() {
+      d = document.getElementById("date_field").value
+      t = document.getElementById("time_field").value
+      fetch("http://localhost:{{.Port}}/manual", {
+        method: 'Post',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Date: d,
+          Time: t
+        })
+      })
+      .then(r => r.json())
+      .then( s => {
+        if (s !== null) {
+          alert(s.Error);
+          window.location.reload();
+        }
+        else {
+          window.location.reload();
+        }
+      })
+      .catch(err => alert(err))
+    }
+    
+    function setOnLoad(date, time) {
+      document.getElementById("date_field").setAttribute("value", date)
+      document.getElementById("time_field").setAttribute("value", time)
+    }
+  </script>
+</head>
+<body onload="setOnLoad({{.Date}}, {{.Time}})">
+  <div class="banner">
+      <h1><a href="http://localhost:8000" target="_blank" class="bannerbtn">Service of Services</a></h1>
+  </div>
+  <div class="content">
+    <div class="center">
+      <h2 class="centernarrow">System Time Settings</h2>
+      <div class="card">
+        <div class="center">
+          <input type="date" id="date_field">
+          <input type="time" id="time_field">
+          <input type="submit" id="button" class="button" value="Auto-Set" onclick=sendAutoSet()>
+        </div>
+      </div>
+      <input type="submit" id="button" class="button submitbtn" value="Save" onclick=sendManSet()>
+    </div>
+  </div>
+</body>

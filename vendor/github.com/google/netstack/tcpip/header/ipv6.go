@@ -1,6 +1,16 @@
-// Copyright 2016 The Netstack Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package header
 
@@ -60,7 +70,7 @@ const (
 	// IPv6ProtocolNumber is IPv6's network protocol number.
 	IPv6ProtocolNumber tcpip.NetworkProtocolNumber = 0x86dd
 
-	// IPv6Version is the version of the ipv6 procotol.
+	// IPv6Version is the version of the ipv6 protocol.
 	IPv6Version = 6
 
 	// IPv6MinimumMTU is the minimum MTU required by IPv6, per RFC 2460,
@@ -137,6 +147,11 @@ func (b IPv6) SetSourceAddress(addr tcpip.Address) {
 // header.
 func (b IPv6) SetDestinationAddress(addr tcpip.Address) {
 	copy(b[v6DstAddr:v6DstAddr+IPv6AddressSize], addr)
+}
+
+// SetNextHeader sets the value of the "next header" field of the ipv6 header.
+func (b IPv6) SetNextHeader(v uint8) {
+	b[nextHdr] = v
 }
 
 // SetChecksum implements Network.SetChecksum. Given that IPv6 doesn't have a
