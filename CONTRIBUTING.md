@@ -97,7 +97,7 @@ If the pull request closes an issue please note it as: `"Fixes #NNN"`.
 ## Code Reviews
 
 Look at the area of code you're modifying, its history, and consider
-tagging some of the [maintainers](MAINTAINERS.md) when doing a
+tagging some of the [maintainers](https://u-root.tk/#contributors) when doing a
 pull request in order to instigate some code review.
 
 ## Quality Controls
