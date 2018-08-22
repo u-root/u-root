@@ -33,8 +33,8 @@ func getInput(fileName string) (input []byte, err error) {
 	return ioutil.ReadAll(os.Stdin)
 }
 
-// 
-// Input- 
+//
+// Input-
 //   algorithm: 1 for SHA1 and 256 for SHA256
 //   data: Input data for SHA
 // Return-
