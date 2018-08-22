@@ -23,6 +23,11 @@ type Record struct {
 
 	// Info is metadata describing the CPIO record.
 	Info
+
+	// metadata about this item's place in the file
+	RecPos  int64  // Where in the file this record is
+	RecLen  uint64 // How big the record is.
+	FilePos int64  // Where in the CPIO the file's contents are.
 }
 
 // Trailer is the name of the trailer record.
