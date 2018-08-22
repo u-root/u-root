@@ -12,15 +12,15 @@ import (
 func TestCksum(t *testing.T) {
 	var testMatrix = []struct {
 		data  []byte
-		cksum string
+		cksum int
 	}{
-		{[]byte("abcdef\n"), "3512391007"},
-		{[]byte("pqra\n"), "1063566492"},
+		{[]byte("abcdef\n"), 3512391007},
+		{[]byte("pqra\n"), 1063566492},
 	}
 
 	for _, testData := range testMatrix {
-		if testData.cksum != string(printCksum(testData.data)) {
-			t.Errorf("Cksum verification failed. (Expected: %s, Received: %s)", testData.cksum, string(printCksum(testData.data)))
+		if testData.cksum != calculateCksum(testData.data) {
+			t.Errorf("Cksum verification failed. (Expected: %d, Received: %d)", testData.cksum, calculateCksum(testData.data))
 		}
 	}
 }

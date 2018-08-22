@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-func GetInput(fileName string) (input []byte, err error) {
+func getInput(fileName string) (input []byte, err error) {
 
 	if fileName != "" {
 		return ioutil.ReadFile(fileName)
@@ -57,7 +57,7 @@ func main() {
 	if len(os.Args) >= 2 {
 		cliArgs = os.Args[1]
 	}
-	input, err := GetInput(cliArgs)
+	input, err := getInput(cliArgs)
 	if err != nil {
 		fmt.Println("Error getting input.")
 		os.Exit(-1)

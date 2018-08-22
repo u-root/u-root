@@ -22,16 +22,16 @@ func versionPrinter() {
 	os.Exit(0)
 }
 
-func GetInput(fileName string) (input []byte, err error) {
+func getInput(fileName string) (input []byte, err error) {
 	if fileName != "" {
 		return ioutil.ReadFile(fileName)
 	}
 	return ioutil.ReadAll(os.Stdin)
 }
 
-func printCksum(input []byte) string {
+func calculateCksum(input []byte) int {
 
-	var cksumTable = []uint64{
+	var cksumTable = []int{
 		/*
 		 * Following table is originally contributed by
 		 * Q. Frank Xia et. al (qx@math.columbia.edu)
@@ -92,13 +92,12 @@ func printCksum(input []byte) string {
 		0x933EB0BB, 0x97FFAD0C, 0xAFB010B1, 0xAB710D06, 0xA6322BDF,
 		0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4,
 	}
-	cksum := uint64(0)
+	cksum := 0
 	for i := 0; i < len(input); i++ {
-		cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^uint64(input[i]))&0xFF]
+		cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^int(input[i]))&0xFF]
 	}
-	cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^uint64(len(input)))&0xFF]
-	cksum = (^cksum) & 0xFFFFFFFF
-	return fmt.Sprintf("%d", cksum)
+	cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^int(len(input)))&0xFF]
+	return (^cksum) & 0xFFFFFFFF
 }
 
 func main() {
@@ -121,9 +120,9 @@ func main() {
 	if len(os.Args) >= 2 {
 		cliArgs = os.Args[1]
 	}
-	input, err := GetInput(cliArgs)
+	input, err := getInput(cliArgs)
 	if err != nil {
 		return
 	}
-	fmt.Println(printCksum(input), len(input), cliArgs)
+	fmt.Println(calculateCksum(input), len(input), cliArgs)
 }

@@ -25,7 +25,7 @@ func versionPrinter() {
 	os.Exit(0)
 }
 
-func GetInput(fileName string) (input []byte, err error) {
+func getInput(fileName string) (input []byte, err error) {
 
 	if fileName != "" {
 		return ioutil.ReadFile(fileName)
@@ -33,7 +33,13 @@ func GetInput(fileName string) (input []byte, err error) {
 	return ioutil.ReadAll(os.Stdin)
 }
 
-func ShaPrinter(algorithm int, data []byte) string {
+// 
+// Input- 
+//   algorithm: 1 for SHA1 and 256 for SHA256
+//   data: Input data for SHA
+// Return-
+//   SHA256/SHA1
+func shaPrinter(algorithm int, data []byte) string {
 	var sha string
 	if algorithm == 256 {
 		sha = fmt.Sprintf("%x", sha256.Sum256(data))
@@ -69,12 +75,12 @@ func main() {
 	if len(flag.Args()) == 1 {
 		cliArgs = flag.Args()[0]
 	}
-	input, err := GetInput(cliArgs)
+	input, err := getInput(cliArgs)
 	if err != nil {
 		fmt.Println("Error getting input.")
 		os.Exit(-1)
 	}
-	fmt.Printf("%s ", ShaPrinter(algorithm, input))
+	fmt.Printf("%s ", shaPrinter(algorithm, input))
 	if cliArgs == "" {
 		fmt.Printf(" -\n")
 	} else {

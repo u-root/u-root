@@ -22,8 +22,8 @@ func TestCksum(t *testing.T) {
 	}
 
 	for _, testData := range testMatrix {
-		if testData.cksum != ShaPrinter(testData.algorithm, testData.data) {
-			t.Errorf("shasum verification failed.(Expected:%s, Received:%s)", testData.cksum, ShaPrinter(testData.algorithm, testData.data))
+		if testData.cksum != shaPrinter(testData.algorithm, testData.data) {
+			t.Errorf("shasum verification failed.(Expected:%s, Received:%s)", testData.cksum, shaPrinter(testData.algorithm, testData.data))
 		}
 	}
 
