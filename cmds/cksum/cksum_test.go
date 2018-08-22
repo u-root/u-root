@@ -20,7 +20,7 @@ func TestCksum(t *testing.T) {
 
 	for _, testData := range testMatrix {
 		if testData.cksum != calculateCksum(testData.data) {
-			t.Errorf("Cksum verification failed. (Expected: %lu, Received: %lu)", testData.cksum, calculateCksum(testData.data))
+			t.Errorf("Cksum verification failed. (Expected: %d, Received: %d)", testData.cksum, calculateCksum(testData.data))
 		}
 	}
 }
