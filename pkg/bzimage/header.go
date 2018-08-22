@@ -80,7 +80,7 @@ type LinuxHeader struct {
 	ExtRamdiskImage uint32              `offset:"0xc0"`
 	ExtRamdiskSize  uint32              `offset:"0xc4"`
 	ExtCmdlinePtr   uint32              `offset:"0xc8"`
-	_               [0x1f1 - 0xcc]uint8 `offset:"0xcc"`
+	O               [0x1f1 - 0xcc]uint8 `offset:"0xcc"`
 	SetupSects      uint8               `offset:"0x1f1"`
 	RootFlags       uint16              `offset:"0x1f2"`
 	Syssize         uint32              `offset:"0x1f4"` //(2.04+)
@@ -245,9 +245,10 @@ var (
 type BzImage struct {
 	Header       LinuxHeader
 	BootCode     []byte
-	Kernel       []byte
+	HeadCode     []byte
+	KernelCode   []byte
+	TailCode     []byte
 	KernelBase   uintptr
 	KernelOffset uintptr
-	// todo: allow more than one?
-	InitRAMFS []byte
+	compressed   []byte
 }
