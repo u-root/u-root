@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// The mount package implements functions for mounting and unmounting
+// file systems and defines the mount interface.
 package mount
 
 import (
