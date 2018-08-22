@@ -12,7 +12,7 @@ import (
 func TestCksum(t *testing.T) {
 	var testMatrix = []struct {
 		data  []byte
-		cksum int
+		cksum uint64
 	}{
 		{[]byte("abcdef\n"), 3512391007},
 		{[]byte("pqra\n"), 1063566492},
@@ -20,7 +20,7 @@ func TestCksum(t *testing.T) {
 
 	for _, testData := range testMatrix {
 		if testData.cksum != calculateCksum(testData.data) {
-			t.Errorf("Cksum verification failed. (Expected: %d, Received: %d)", testData.cksum, calculateCksum(testData.data))
+			t.Errorf("Cksum verification failed. (Expected: %lu, Received: %lu)", testData.cksum, calculateCksum(testData.data))
 		}
 	}
 }

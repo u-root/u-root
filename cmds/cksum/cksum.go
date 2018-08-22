@@ -29,9 +29,9 @@ func getInput(fileName string) (input []byte, err error) {
 	return ioutil.ReadAll(os.Stdin)
 }
 
-func calculateCksum(input []byte) int {
+func calculateCksum(input []byte) uint64 {
 
-	var cksumTable = []int{
+	var cksumTable = []uint64{
 		/*
 		 * Following table is originally contributed by
 		 * Q. Frank Xia et. al (qx@math.columbia.edu)
@@ -92,11 +92,11 @@ func calculateCksum(input []byte) int {
 		0x933EB0BB, 0x97FFAD0C, 0xAFB010B1, 0xAB710D06, 0xA6322BDF,
 		0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4,
 	}
-	cksum := 0
+	cksum := uint64(0)
 	for i := 0; i < len(input); i++ {
-		cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^int(input[i]))&0xFF]
+		cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^uint64(input[i]))&0xFF]
 	}
-	cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^int(len(input)))&0xFF]
+	cksum = (cksum << 8) ^ cksumTable[((cksum>>24)^uint64(len(input)))&0xFF]
 	return (^cksum) & 0xFFFFFFFF
 }
 
