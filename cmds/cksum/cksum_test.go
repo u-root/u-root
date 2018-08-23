@@ -12,7 +12,7 @@ import (
 func TestCksum(t *testing.T) {
 	var testMatrix = []struct {
 		data  []byte
-		cksum uint64
+		cksum uint32
 	}{
 		{[]byte("abcdef\n"), 3512391007},
 		{[]byte("pqra\n"), 1063566492},
