@@ -38,6 +38,8 @@ func calculateCksum(input []byte) uint32 {
 		 * under GPL License.
 		 * http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/
 		 * old-releases/i386/1.0-RELEASE/ports/textutils/src/cksum.c
+		 *
+		 * Polynomial same as Linux cksum utility i.e. 0x04C11DB7 
 		 */
 		0x0,
 		0x04C11DB7, 0x09823B6E, 0x0D4326D9, 0x130476DC, 0x17C56B6B,
@@ -92,12 +94,19 @@ func calculateCksum(input []byte) uint32 {
 		0x933EB0BB, 0x97FFAD0C, 0xAFB010B1, 0xAB710D06, 0xA6322BDF,
 		0xA2F33668, 0xBCB4666D, 0xB8757BDA, 0xB5365D03, 0xB1F740B4,
 	}
+
 	cksum := uint32(0)
 	for i := 0; i < len(input); i++ {
 		cksum = (cksum << 8) ^ uint32(cksumTable[((cksum>>24)^uint32(input[i]))&0xFF])
-		fmt.Println("ck",cksum)
+		testVal := cksum
+		testVal = ^testVal
 	}
-	cksum = (cksum << 8) ^ uint32(cksumTable[((cksum>>24)^uint32(len(input)))&0xFF])
+	// checksum for data length
+	dataLength := len(input)
+	for dataLength > 0  {
+		cksum = (cksum << 8) ^ uint32(cksumTable[((cksum>>24)^uint32(dataLength))&0xFF])
+		dataLength = (dataLength >> 8)
+	}
 	return (^cksum)
 }
 

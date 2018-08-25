@@ -16,6 +16,11 @@ func TestCksum(t *testing.T) {
 	}{
 		{[]byte("abcdef\n"), 3512391007},
 		{[]byte("pqra\n"), 1063566492},
+		{[]byte("abcdef\nafdsfsfgdglfdgkdlvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\n"+
+			"afdsfsfgdglfdgkdlvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\nafdsfsfg"+
+			"dglfdgkdlvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\nafdsfsfgdglfdgkd"+
+			"lvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\nsdddsfsfsdfsdfsdasaarwre"+
+			"mazadsfs"), 3084665392 },
 	}
 
 	for _, testData := range testMatrix {
