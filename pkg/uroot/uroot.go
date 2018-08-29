@@ -266,11 +266,12 @@ func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) er
 			// a binary, `libs` will just be empty.
 			libs, err := ldd.List([]string{src})
 			if err != nil {
-				return fmt.Errorf("couldn't list ldd dependencies for %q: %v", file, err)
+				log.Printf("WARNING: couldn't add ldd dependencies for %q: %v", file, err)
+				return nil
 			}
 			for _, lib := range libs {
 				if err := archive.AddFile(lib, lib[1:]); err != nil {
-					return fmt.Errorf("couldn't add %q to archive: %v", lib, err)
+					log.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
 				}
 			}
 		}
