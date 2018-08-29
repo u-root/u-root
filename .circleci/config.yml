@@ -105,7 +105,7 @@ jobs:
           command: go test -cover ./pkg/... ./cmds/... ./xcmds/...
   test-integration:
     docker:
-      - image: roleary/uroot-integration:latest
+      - image: uroottest/x86-integration:latest
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0

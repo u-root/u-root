@@ -4,11 +4,11 @@
 
 # Build:
 #
-#     sudo docker build . -t uroot-integration
+#     sudo docker build . -t uroottest/x86-integration
 #
 # Run:
 #
-#     sudo docker run --rm -it uroot-integration
+#     sudo docker run --rm -it uroottest/x86-integration
 #
 # More instructions:
 #
