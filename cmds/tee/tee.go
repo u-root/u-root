@@ -1,4 +1,4 @@
-// Copyright 2013-2017 the u-root Authors. All rights reserved
+// Copyright 2013-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,36 +9,29 @@
 //     tee [-ai] FILES...
 //
 // Options:
-//     -a: append the output to the files rather than rewriting them
-//     -i: ignore the SIGINT signal
+//     -a, --append: append the output to the files rather than rewriting them
+//     -i, --ignore-interrupts: ignore the SIGINT signal
 package main
 
 import (
-	"bufio"
-	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
+
+	flag "github.com/spf13/pflag"
 )
+
+const name = "tee"
 
 var (
-	cat    = flag.Bool("a", false, "append the output to the files rather than rewriting them")
-	ignore = flag.Bool("i", false, "ignore the SIGINT signal")
+	cat    = flag.BoolP("append", "a", false, "append the output to the files rather than rewriting them")
+	ignore = flag.BoolP("ignore-interrupts", "i", false, "ignore the SIGINT signal")
 )
 
-// Copy any input from buffer to Stdout and files
-func copyinput(files []io.Writer, buf []byte) error {
-	for _, v := range files {
-		if _, err := v.Write(buf); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Parses all the flags and sets variables accordingly
-func handleflags() int {
+// handeFlags parses all the flags and sets variables accordingly
+func handleFlags() int {
 	flag.Parse()
 
 	oflags := os.O_WRONLY | os.O_CREATE
@@ -55,27 +48,28 @@ func handleflags() int {
 }
 
 func main() {
-	oflags := handleflags()
+	oflags := handleFlags()
 
-	files := make([]io.Writer, flag.NArg())
-
-	for i, v := range flag.Args() {
-		f, err := os.OpenFile(v, oflags, 0666)
+	files := make([]*os.File, 0, flag.NArg())
+	writers := make([]io.Writer, 0, flag.NArg()+1)
+	for _, fname := range flag.Args() {
+		f, err := os.OpenFile(fname, oflags, 0666)
 		if err != nil {
-			log.Fatalf("error opening %s: %v", v, err)
+			log.Fatalf("%s: error opening %s: %v", name, fname, err)
 		}
-		files[i] = f
+		files = append(files, f)
+		writers = append(writers, f)
+	}
+	writers = append(writers, os.Stdout)
+
+	mw := io.MultiWriter(writers...)
+	if _, err := io.Copy(mw, os.Stdin); err != nil {
+		log.Fatalf("%s: error: %v", name, err)
 	}
 
-	b := make([]byte, 1048576)
-	files = append(files, os.Stdout)
-	buf := bufio.NewReader(os.Stdin)
-
-	for {
-		if n, err := buf.Read(b[:]); err != nil {
-			log.Fatalf("%v", err)
-		} else {
-			copyinput(files, b[:n])
+	for _, f := range files {
+		if err := f.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "%s: error closing file %q: %v\n", name, f.Name(), err)
 		}
 	}
 }
