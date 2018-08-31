@@ -154,7 +154,7 @@ func (af Files) WriteTo(w Writer) error {
 			}
 		}
 		if src, ok := af.Files[path]; ok {
-			if err := WriteFile(w, src, path); err != nil {
+			if err := writeFile(w, src, path); err != nil {
 				return err
 			}
 		}
@@ -162,11 +162,11 @@ func (af Files) WriteTo(w Writer) error {
 	return nil
 }
 
-// WriteFile takes the file at `src` on the host system and adds it to the
+// writeFile takes the file at `src` on the host system and adds it to the
 // archive `w` at path `dest`.
 //
 // If `src` is a directory, its children will be added to the archive as well.
-func WriteFile(w Writer, src, dest string) error {
+func writeFile(w Writer, src, dest string) error {
 	record, err := cpio.GetRecord(src)
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func WriteFile(w Writer, src, dest string) error {
 
 	if record.Info.Mode&unix.S_IFMT == unix.S_IFDIR {
 		return children(src, func(name string) error {
-			return WriteFile(w, filepath.Join(src, name), filepath.Join(dest, name))
+			return writeFile(w, filepath.Join(src, name), filepath.Join(dest, name))
 		})
 	}
 	return nil
