@@ -6,11 +6,20 @@ import "encoding/json"
 // characteristics from FIT but it's not compatible with it. It uses
 // JSON for interoperability.
 type BootConfig struct {
-	Name       string `json:"name"`
+	Name       string `json:"name,omitempty"`
 	Kernel     string `json:"kernel"`
 	Initramfs  string `json:"initramfs,omitempty"`
 	KernelArgs string `json:"kernel_args,omitempty"`
 	DeviceTree string `json:"devicetree,omitempty"`
+}
+
+// Validate returns true if a BootConfig object has valid content, and false
+// otherwise
+func (bc *BootConfig) Validate() bool {
+	if bc.Kernel == "" {
+		return false
+	}
+	return true
 }
 
 // NewBootConfig parses a boot configuration in JSON format and returns a
