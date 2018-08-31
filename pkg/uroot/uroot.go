@@ -76,6 +76,9 @@ type Commands struct {
 
 	// BinaryDir is the directory in which the resulting binaries are
 	// placed inside the initramfs.
+	//
+	// BinaryDir may be empty, in which case Builder.DefaultBinaryDir()
+	// will be used.
 	BinaryDir string
 }
 
