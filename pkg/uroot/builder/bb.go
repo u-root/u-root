@@ -21,18 +21,26 @@ var skip = map[string]struct{}{
 
 // BBBuilder is an implementation of Builder that compiles many Go commands
 // into one busybox-style binary.
+//
+// BBBuilder will also include symlinks for each command to the busybox binary.
+//
+// BBBuilder does all this by rewriting the source files of the packages given
+// to create one busybox-like binary containing all commands.
+//
+// The compiled binary uses argv[0] to decide which Go command to run.
+//
+// See bb/README.md for a detailed explanation of the implementation of busybox
+// mode.
 type BBBuilder struct{}
 
+// DefaultBinaryDir implements Builder.DefaultBinaryDir.
+//
+// The default initramfs binary dir is bbin for busybox binaries.
 func (BBBuilder) DefaultBinaryDir() string {
 	return "bbin"
 }
 
-// Build is an implementation of uroot.Builder.Build for a busybox-like initramfs.
-//
-// Build rewrites the source files of the packages given to create one
-// busybox-like binary containing all commands in opts.Packages.
-//
-// See bb/README.md for a detailed explanation of busybox mode.
+// Build is an implementation of Builder.Build for a busybox-like initramfs.
 func (BBBuilder) Build(af initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
@@ -44,7 +52,6 @@ func (BBBuilder) Build(af initramfs.Files, opts Opts) error {
 		return fmt.Errorf("must specify binary directory")
 	}
 
-	// Build initramfs.
 	if err := af.AddFile(bbPath, path.Join(opts.BinaryDir, "bb")); err != nil {
 		return err
 	}

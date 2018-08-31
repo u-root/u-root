@@ -12,14 +12,19 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
+// BinaryBuilder builds each Go command as a separate binary.
+//
+// BinaryBuilder is an implementation of Builder.
 type BinaryBuilder struct{}
 
+// DefaultBinaryDir implements Builder.DefaultBinaryDir.
+//
+// "bin" is the default initramfs binary directory for these binaries.
 func (BinaryBuilder) DefaultBinaryDir() string {
 	return "bin"
 }
 
-// Build builds all given packages as separate binaries and includes them in
-// the archive.
+// Build implements Builder.Build.
 func (BinaryBuilder) Build(af initramfs.Files, opts Opts) error {
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
