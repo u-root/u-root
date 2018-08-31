@@ -41,7 +41,7 @@ func (BBBuilder) DefaultBinaryDir() string {
 }
 
 // Build is an implementation of Builder.Build for a busybox-like initramfs.
-func (BBBuilder) Build(af initramfs.Files, opts Opts) error {
+func (BBBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
 	if err := bb.BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {

@@ -35,7 +35,7 @@ func (SourceBuilder) DefaultBinaryDir() string {
 }
 
 // Build is an implementation of Builder.Build.
-func (SourceBuilder) Build(af initramfs.Files, opts Opts) error {
+func (SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
 		return err
@@ -51,7 +51,7 @@ func (SourceBuilder) Build(af initramfs.Files, opts Opts) error {
 		}
 
 		// Add high-level packages' src files to archive.
-		p := goListPkg(opts, pkg, &af)
+		p := goListPkg(opts, pkg, af)
 		if p == nil {
 			continue
 		}
@@ -73,7 +73,7 @@ func (SourceBuilder) Build(af initramfs.Files, opts Opts) error {
 
 	// Add src files of dependencies to archive.
 	for dep := range deps {
-		goListPkg(opts, dep, &af)
+		goListPkg(opts, dep, af)
 	}
 
 	// Add Go toolchain.
