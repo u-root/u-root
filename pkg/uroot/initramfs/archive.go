@@ -65,7 +65,7 @@ type Opts struct {
 	//
 	// Files here generally have priority over files in DefaultRecords or
 	// BaseArchive.
-	Files
+	*Files
 
 	// OutputFile is the file to write to.
 	OutputFile Writer

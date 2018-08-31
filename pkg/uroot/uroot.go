@@ -333,7 +333,7 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 //   - `justAPath` is added to the archive under justAPath.
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
-func ParseExtraFiles(archive initramfs.Files, extraFiles []string, lddDeps bool) error {
+func ParseExtraFiles(archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
 	var err error
 	// Add files from command line.
 	for _, file := range extraFiles {

@@ -25,7 +25,7 @@ func (BinaryBuilder) DefaultBinaryDir() string {
 }
 
 // Build implements Builder.Build.
-func (BinaryBuilder) Build(af initramfs.Files, opts Opts) error {
+func (BinaryBuilder) Build(af *initramfs.Files, opts Opts) error {
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
 
