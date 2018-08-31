@@ -337,5 +337,6 @@ func Main() error {
 		InitCmd:         *initCmd,
 		DefaultShell:    *defaultShell,
 	}
-	return uroot.CreateInitramfs(opts)
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	return uroot.CreateInitramfs(logger, opts)
 }

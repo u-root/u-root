@@ -9,6 +9,7 @@ package mkinitramfs
 import (
 	"flag"
 	"log"
+	"os"
 
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -37,7 +38,8 @@ func main() {
 		OutputFile:  w,
 		BaseArchive: uroot.DefaultRamfs.Reader(),
 	}
-	if err := uroot.ParseExtraFiles(archive.Files, flag.Args(), false); err != nil {
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	if err := uroot.ParseExtraFiles(logger, archive.Files, flag.Args(), false); err != nil {
 		log.Fatalf("failed to parse file names %v: %v", flag.Args(), err)
 	}
 

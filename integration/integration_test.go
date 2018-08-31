@@ -6,6 +6,7 @@ package integration
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -66,7 +67,8 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 		InitCmd:      "init",
 		DefaultShell: "rush",
 	}
-	if err := uroot.CreateInitramfs(opts); err != nil {
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	if err := uroot.CreateInitramfs(logger, opts); err != nil {
 		t.Fatal(err)
 	}
 
