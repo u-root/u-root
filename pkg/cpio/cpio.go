@@ -161,6 +161,14 @@ func InMemArchive() *Archive {
 	}
 }
 
+func ArchiveFromRecords(rs []Record) *Archive {
+	a := InMemArchive()
+	for _, r := range rs {
+		a.WriteRecord(r)
+	}
+	return a
+}
+
 // WriteRecord implements RecordWriter and adds a record to the archive.
 func (a *Archive) WriteRecord(r Record) error {
 	r.Name = Normalize(r.Name)

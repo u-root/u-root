@@ -33,7 +33,7 @@ const (
 
 // DefaultRamfs are files that are contained in all u-root initramfs archives
 // by default.
-var DefaultRamfs = []cpio.Record{
+var DefaultRamfs = cpio.ArchiveFromRecords([]cpio.Record{
 	cpio.Directory("tcz", 0755),
 	cpio.Directory("etc", 0755),
 	cpio.Directory("dev", 0755),
@@ -51,7 +51,7 @@ var DefaultRamfs = []cpio.Record{
 	cpio.CharDev("dev/urandom", 0666, 1, 9),
 	cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
 	cpio.StaticFile("etc/localtime", gmt0, 0644),
-}
+})
 
 // Commands specifies a list of Golang packages to build with a builder, e.g.
 // in busybox mode or source mode or binary mode.
@@ -216,7 +216,6 @@ func CreateInitramfs(opts Opts) error {
 		OutputFile:      opts.OutputFile,
 		BaseArchive:     opts.BaseArchive,
 		UseExistingInit: opts.UseExistingInit,
-		DefaultRecords:  DefaultRamfs,
 	}
 
 	if len(opts.DefaultShell) > 0 {

@@ -227,7 +227,7 @@ func init() {
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
 
-	base = flag.String("base", "", "Base archive to add files to.")
+	base = flag.String("base", "", "Base archive to add files to. By default, this is a couple of directories like /bin, /etc, etc.")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
@@ -315,6 +315,8 @@ func Main() error {
 		}
 		defer bf.Close()
 		baseFile = archiver.Reader(bf)
+	} else {
+		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
 	opts := uroot.Opts{

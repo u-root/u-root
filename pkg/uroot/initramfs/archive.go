@@ -67,9 +67,6 @@ type Opts struct {
 	// BaseArchive.
 	Files
 
-	// DefaultRecords is a set of files to be included in the initramfs.
-	DefaultRecords []cpio.Record
-
 	// OutputFile is the file to write to.
 	OutputFile Writer
 
@@ -89,15 +86,6 @@ type Opts struct {
 // Write uses the given options to determine which files need to be written to
 // the output initramfs archiver using the archive format `a` and writes them.
 func Write(opts *Opts) error {
-	// Add default records.
-	for _, rec := range opts.DefaultRecords {
-		// Ignore if it doesn't get added. Probably means the user
-		// included something for this file or directory already.
-		//
-		// TODO: ignore only when it already exists in archive.
-		opts.Files.AddRecord(rec)
-	}
-
 	// Write base archive.
 	if opts.BaseArchive != nil {
 		transform := cpio.MakeReproducible
