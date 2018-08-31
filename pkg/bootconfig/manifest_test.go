@@ -48,7 +48,7 @@ func TestManifestGetBootConfig(t *testing.T) {
 }`)
 	m, err := NewManifest(data)
 	require.NoError(t, err)
-	config, err := m.GetBootConfig("some_boot_config")
+	config, err := m.GetBootConfig(0)
 	require.NoError(t, err)
 	assert.Equal(t, "some_boot_config", config.Name)
 	assert.Equal(t, "/path/to/kernel", config.Kernel)
@@ -66,6 +66,6 @@ func TestManifestGetBootConfigMissing(t *testing.T) {
 }`)
 	m, err := NewManifest(data)
 	require.NoError(t, err)
-	_, err = m.GetBootConfig("some_other_boot_config")
+	_, err = m.GetBootConfig(1)
 	require.Error(t, err)
 }

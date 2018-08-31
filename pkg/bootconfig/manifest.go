@@ -25,11 +25,9 @@ func NewManifest(data []byte) (*Manifest, error) {
 	return &manifest, nil
 }
 
-func (mc *Manifest) GetBootConfig(name string) (*BootConfig, error) {
-	for _, config := range mc.Configs {
-		if config.Name == name {
-			return &config, nil
-		}
+func (mc *Manifest) GetBootConfig(idx int) (*BootConfig, error) {
+	if idx < 0 || idx >= len(mc.Configs) {
+		return nil, fmt.Errorf("Invalid index: not in range: %d", idx)
 	}
-	return nil, fmt.Errorf("No boot config found by name: %s", name)
+	return &mc.Configs[idx], nil
 }

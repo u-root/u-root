@@ -21,23 +21,12 @@ func TestNewBootConfig(t *testing.T) {
 	require.Equal(t, "/path/to/initramfs", c.Initramfs)
 	require.Equal(t, "init=/bin/bash", c.KernelArgs)
 	require.Equal(t, "some data here", c.DeviceTree)
+	require.Equal(t, true, c.Validate())
 }
 
 func TestNewBootConfigInvalidJSON(t *testing.T) {
 	data := []byte(`{
 	"name": "broken
-}`)
-	_, err := NewBootConfig(data)
-	require.Error(t, err)
-}
-
-func TestNewBootConfigMissingName(t *testing.T) {
-	data := []byte(`{
-	"name_is_missing": "some_conf",
-	"kernel": "/path/to/kernel",
-	"initramfs": "/path/to/initramfs",
-	"kernel_args": "init=/bin/bash",
-	"devicetree": "some data here"
 }`)
 	_, err := NewBootConfig(data)
 	require.Error(t, err)
@@ -51,6 +40,7 @@ func TestNewBootConfigMissingKernel(t *testing.T) {
 	"kernel_args": "init=/bin/bash",
 	"devicetree": "some data here"
 }`)
-	_, err := NewBootConfig(data)
-	require.Error(t, err)
+	c, err := NewBootConfig(data)
+	require.NoError(t, err)
+	require.Equal(t, false, c.Validate())
 }
