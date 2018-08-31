@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -35,6 +36,7 @@ var (
 	initCmd                                 *string
 	defaultShell                            *string
 	useExistingInit                         *bool
+	fourbins                                *bool
 	extraFiles                              multiFlag
 	templates                               = map[string][]string{
 		"all": {
@@ -219,9 +221,42 @@ var (
 			"github.com/u-root/u-root/cmds/wget",
 		},
 	}
+	goCommandFile      = "zzzzinit.go"
+	addInitToGoCommand = []byte(`// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package main
+
+import (
+	"log"
+	"os"
+	"os/exec"
+	"syscall"
+
 )
 
 func init() {
+	if os.Args[0] != "/init" {
+		return
+	}
+
+	c := exec.Command("/go/bin/go", "build", "-o", "/buildbin/installcommand", "github.com/u-root/u-root/cmds/installcommand")
+	c.Env = append(c.Env,  []string{"GOROOT=/go", "GOPATH=/",}...)
+	o, err := c.CombinedOutput()
+	if err != nil {
+		log.Printf("building installcommand: %s, %v", string(o), err)
+		return
+	}
+	if err := syscall.Exec("/buildbin/init", []string{"init"}, []string{}); err != nil {
+		log.Printf("Exec of /buildbin/init failed. %v", err)
+	}
+}
+`)
+)
+
+func init() {
+	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
 	build = flag.String("build", "source", "u-root build format (e.g. bb or source).")
 	format = flag.String("format", "cpio", "Archival format.")
 
@@ -251,6 +286,9 @@ func main() {
 // on exit.
 func Main() error {
 	env := golang.Default()
+	if *fourbins && env.GOROOT == "" {
+		log.Fatalf("You have to set GOROOT for fourbins to work")
+	}
 	if env.CgoEnabled {
 		log.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
@@ -319,6 +357,26 @@ func Main() error {
 		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
+	// Someday, when I grow up, I'll be a function!
+	// If we are doing "four bins" mode, or maybe I should call it
+	// Go of Four, then we need to drop a file into the Go command
+	// source directory before we build, and we need to remove it after.
+	// And we need to verify that we're not supplanting something.
+	if *fourbins {
+		d := filepath.Join(env.GOROOT, "src/cmd/go")
+		if _, err := os.Stat(d); err != nil {
+			log.Fatalf("%s: stat err is %v", d, err)
+		}
+		z := filepath.Join(d, goCommandFile)
+		if _, err := os.Stat(z); err == nil {
+			log.Fatalf("%s exists, and we will not overwrite it", z)
+		}
+		if err := ioutil.WriteFile(z, addInitToGoCommand, 0444); err != nil {
+			log.Fatal(err)
+		}
+		*initCmd = "/go/bin/go"
+		defer os.Remove(z)
+	}
 	opts := uroot.Opts{
 		Env: env,
 		// The command-line tool only allows specifying one build mode
@@ -336,6 +394,7 @@ func Main() error {
 		UseExistingInit: *useExistingInit,
 		InitCmd:         *initCmd,
 		DefaultShell:    *defaultShell,
+		SkipBuildingInstallCommand: *fourbins,
 	}
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	return uroot.CreateInitramfs(logger, opts)

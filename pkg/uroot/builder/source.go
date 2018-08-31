@@ -83,8 +83,10 @@ func (SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 	if err := buildToolchain(opts); err != nil {
 		return err
 	}
-	if err := opts.Env.Build(installcommand, filepath.Join(opts.TempDir, opts.BinaryDir, "installcommand"), golang.BuildOpts{}); err != nil {
-		return err
+	if !opts.SkipBuildingInstallCommand {
+		if err := opts.Env.Build(installcommand, filepath.Join(opts.TempDir, opts.BinaryDir, "installcommand"), golang.BuildOpts{}); err != nil {
+			return err
+		}
 	}
 
 	// Add Go toolchain and installcommand to archive.

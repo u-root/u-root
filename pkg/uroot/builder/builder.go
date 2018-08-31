@@ -45,6 +45,11 @@ type Opts struct {
 	//
 	// BinaryDir must be specified.
 	BinaryDir string
+
+	// SkipBuildingInstallCommand indicates that we need not build
+	// installcommand; rather, the building of it will happen
+	// in the go command.
+	SkipBuildingInstallCommand bool
 }
 
 // Builder builds Go packages and adds the binaries to an initramfs.
