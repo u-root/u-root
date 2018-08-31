@@ -172,7 +172,7 @@ type Opts struct {
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
-func CreateInitramfs(opts Opts) error {
+func CreateInitramfs(logger *log.Logger, opts Opts) error {
 	if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 		return fmt.Errorf("temp dir %q must exist: %v", opts.TempDir, err)
 	}
@@ -184,7 +184,7 @@ func CreateInitramfs(opts Opts) error {
 
 	// Expand commands.
 	for index, cmds := range opts.Commands {
-		importPaths, err := ResolvePackagePaths(opts.Env, cmds.Packages)
+		importPaths, err := ResolvePackagePaths(logger, opts.Env, cmds.Packages)
 		if err != nil {
 			return err
 		}
@@ -220,7 +220,7 @@ func CreateInitramfs(opts Opts) error {
 
 	if len(opts.DefaultShell) > 0 {
 		if target, err := resolveCommandOrPath(opts.DefaultShell, opts.Commands); err != nil {
-			log.Printf("No default shell: %v", err)
+			logger.Printf("No default shell: %v", err)
 		} else if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", target)); err != nil {
 			return err
 		}
@@ -234,7 +234,7 @@ func CreateInitramfs(opts Opts) error {
 		}
 	}
 
-	if err := ParseExtraFiles(archive.Files, opts.ExtraFiles, true); err != nil {
+	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFiles, true); err != nil {
 		return err
 	}
 
@@ -246,7 +246,7 @@ func CreateInitramfs(opts Opts) error {
 }
 
 // resolvePackagePath finds import paths for a single import path or directory string
-func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
+func resolvePackagePath(logger *log.Logger, env golang.Environ, pkg string) ([]string, error) {
 	// Search the current working directory, as well GOROOT and GOPATHs
 	prefixes := append([]string{""}, env.SrcDirs()...)
 	// Resolve file system paths to package import paths.
@@ -261,7 +261,7 @@ func resolvePackagePath(env golang.Environ, pkg string) ([]string, error) {
 		for _, match := range matches {
 			p, err := env.PackageByPath(match)
 			if err != nil {
-				log.Printf("Skipping package %q: %v", match, err)
+				logger.Printf("Skipping package %q: %v", match, err)
 			} else if p.ImportPath == "." {
 				// TODO: I do not completely understand why
 				// this is triggered. This is only an issue
@@ -312,10 +312,10 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
-func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
+func ResolvePackagePaths(logger *log.Logger, env golang.Environ, pkgs []string) ([]string, error) {
 	var importPaths []string
 	for _, pkg := range pkgs {
-		paths, err := resolvePackagePath(env, pkg)
+		paths, err := resolvePackagePath(logger, env, pkg)
 		if err != nil {
 			return nil, err
 		}
@@ -333,7 +333,7 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 //   - `justAPath` is added to the archive under justAPath.
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
-func ParseExtraFiles(archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
+func ParseExtraFiles(logger *log.Logger, archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
 	var err error
 	// Add files from command line.
 	for _, file := range extraFiles {
@@ -371,12 +371,12 @@ func ParseExtraFiles(archive *initramfs.Files, extraFiles []string, lddDeps bool
 			// a binary, `libs` will just be empty.
 			libs, err := ldd.List([]string{src})
 			if err != nil {
-				log.Printf("WARNING: couldn't add ldd dependencies for %q: %v", file, err)
-				return nil
+				logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", file, err)
+				continue
 			}
 			for _, lib := range libs {
 				if err := archive.AddFile(lib, lib[1:]); err != nil {
-					log.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
+					logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
 				}
 			}
 		}

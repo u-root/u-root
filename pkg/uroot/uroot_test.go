@@ -7,6 +7,7 @@ package uroot
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -45,6 +46,9 @@ func TestResolvePackagePaths(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failure to set up test: %v", err)
 	}
+
+	// Why doesn't the log package export this as a default?
+	l := log.New(os.Stdout, "", log.LstdFlags)
 
 	for _, tc := range []struct {
 		env      golang.Environ
@@ -142,7 +146,7 @@ func TestResolvePackagePaths(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%q", tc.in), func(t *testing.T) {
-			out, err := ResolvePackagePaths(tc.env, tc.in)
+			out, err := ResolvePackagePaths(l, tc.env, tc.in)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("ResolvePackagePaths(%#v, %v) err != nil is %v, want %v\nerr is %v",
 					tc.env, tc.in, err != nil, tc.wantErr, err)
@@ -217,6 +221,9 @@ func TestCreateInitramfs(t *testing.T) {
 	if err := os.MkdirAll(tmp777, 0777); err != nil {
 		t.Error(err)
 	}
+
+	// Why doesn't the log package export this as a default?
+	l := log.New(os.Stdout, "", log.LstdFlags)
 
 	for i, tt := range []struct {
 		name       string
@@ -362,7 +369,7 @@ func TestCreateInitramfs(t *testing.T) {
 			archive := inMemArchive{cpio.InMemArchive()}
 			tt.opts.OutputFile = archive
 			// Compare error type or error string.
-			if err := CreateInitramfs(tt.opts); err != tt.want && (tt.want == nil || err.Error() != tt.want.Error()) {
+			if err := CreateInitramfs(l, tt.opts); err != tt.want && (tt.want == nil || err.Error() != tt.want.Error()) {
 				t.Errorf("CreateInitramfs(%v) = %v, want %v", tt.opts, err, tt.want)
 			}
 
