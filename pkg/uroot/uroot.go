@@ -354,25 +354,3 @@ func ParseExtraFiles(archive initramfs.Files, extraFiles []string, lddDeps bool)
 	}
 	return nil
 }
-
-// DefaultPackageImports returns a list of default u-root packages to include.
-func DefaultPackageImports(env golang.Environ) ([]string, error) {
-	// Find u-root directory.
-	urootPkg, err := env.Package("github.com/u-root/u-root")
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't find u-root src directory: %v", err)
-	}
-
-	matches, err := filepath.Glob(filepath.Join(urootPkg.Dir, "cmds/*"))
-	if err != nil {
-		return nil, fmt.Errorf("couldn't find u-root cmds: %v", err)
-	}
-	pkgs := make([]string, 0, len(matches))
-	for _, match := range matches {
-		pkg, err := env.PackageByPath(match)
-		if err == nil {
-			pkgs = append(pkgs, pkg.ImportPath)
-		}
-	}
-	return pkgs, nil
-}

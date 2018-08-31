@@ -28,12 +28,10 @@ func main() {
 	log.Printf("Build environment: %s", env)
 
 	pkgs := flag.Args()
-	var err error
 	if len(pkgs) == 0 {
-		pkgs, err = uroot.DefaultPackageImports(env)
-	} else {
-		pkgs, err = uroot.ResolvePackagePaths(env, pkgs)
+		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
+	pkgs, err := uroot.ResolvePackagePaths(env, pkgs)
 	if err != nil {
 		log.Fatal(err)
 	}

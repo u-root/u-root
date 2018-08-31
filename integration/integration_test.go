@@ -46,11 +46,10 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	}
 
 	// Packages
-	pkgs, err := uroot.DefaultPackageImports(env)
-	if err != nil {
-		t.Fatal(err)
+	pkgs := []string{
+		"github.com/u-root/u-root/cmds/*",
+		path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"),
 	}
-	pkgs = append(pkgs, path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"))
 
 	// Archiver
 	archiver, err := uroot.GetArchiver("cpio")
