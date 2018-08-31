@@ -381,11 +381,11 @@ func TestWriteFile(t *testing.T) {
 		t.Run(fmt.Sprintf("Test %02d", i), func(t *testing.T) {
 			src := tt.src()
 			defer os.RemoveAll(src)
-			if err := WriteFile(tt.ma, src, tt.dest); err != tt.err {
-				t.Errorf("WriteFile() = %v, want %v", err, tt.err)
+			if err := writeFile(tt.ma, src, tt.dest); err != tt.err {
+				t.Errorf("writeFile() = %v, want %v", err, tt.err)
 			}
 			if !RecordsEqual(tt.ma.Records, tt.want, sameNameModeContent) {
-				t.Errorf("WriteFile() = %v, want %v", tt.ma.Records, tt.want)
+				t.Errorf("writeFile() = %v, want %v", tt.ma.Records, tt.want)
 			}
 		})
 	}
@@ -407,13 +407,13 @@ func TestOptsWrite(t *testing.T) {
 						"foo": cpio.Symlink("foo", "elsewhere"),
 					},
 				},
-				DefaultRecords: []cpio.Record{
-					cpio.Directory("etc", 0777),
-					cpio.Directory("etc/nginx", 0777),
-				},
 			},
 			ma: &MockArchiver{
 				Records: make(Records),
+				BaseArchive: []cpio.Record{
+					cpio.Directory("etc", 0777),
+					cpio.Directory("etc/nginx", 0777),
+				},
 			},
 			want: Records{
 				"foo":       cpio.Symlink("foo", "elsewhere"),
@@ -422,19 +422,19 @@ func TestOptsWrite(t *testing.T) {
 			},
 		},
 		{
-			desc: "default already exists",
+			desc: "base archive file already exists",
 			opts: &Opts{
 				Files: Files{
 					Records: map[string]cpio.Record{
 						"etc": cpio.Symlink("etc", "whatever"),
 					},
 				},
-				DefaultRecords: []cpio.Record{
-					cpio.Directory("etc", 0777),
-				},
 			},
 			ma: &MockArchiver{
 				Records: make(Records),
+				BaseArchive: []cpio.Record{
+					cpio.Directory("etc", 0777),
+				},
 			},
 			want: Records{
 				"etc": cpio.Symlink("etc", "whatever"),
@@ -584,13 +584,13 @@ func TestOptsWrite(t *testing.T) {
 			tt.opts.OutputFile = tt.ma
 
 			if err := Write(tt.opts); err != tt.err {
-				t.Errorf("Write() = %v, want %v", err, tt.err)
+				t.Errorf("Write(%v) = %v, want %v", tt.opts, err, tt.err)
 			} else if err == nil && !tt.ma.FinishCalled {
 				t.Errorf("Finish wasn't called on archive")
 			}
 
 			if !RecordsEqual(tt.ma.Records, tt.want, sameNameModeContent) {
-				t.Errorf("Write() = %v, want %v", tt.ma.Records, tt.want)
+				t.Errorf("Write(%v) = %v, want %v", tt.opts, tt.ma.Records, tt.want)
 			}
 		})
 	}
