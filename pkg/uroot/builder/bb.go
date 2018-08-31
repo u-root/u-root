@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package builder
 
 import (
 	"bytes"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 // Commands to skip building in bb mode.
@@ -34,9 +35,48 @@ var skip = map[string]struct{}{
 	"bb": {},
 }
 
-var BBBuilder = Builder{
-	Build:            BBBuild,
-	DefaultBinaryDir: "bbin",
+// BBBuilder is an implementation of Builder that compiles many Go commands
+// into one busybox-style binary.
+type BBBuilder struct{}
+
+func (BBBuilder) DefaultBinaryDir() string {
+	return "bbin"
+}
+
+// Build is an implementation of uroot.Builder.Build for a busybox-like initramfs.
+//
+// Build rewrites the source files of the packages given to create one
+// busybox-like binary containing all commands in opts.Packages.
+//
+// See pkg/uroot/README.md for a detailed explanation of busybox mode.
+func (BBBuilder) Build(af initramfs.Files, opts Opts) error {
+	// Build the busybox binary.
+	bbPath := filepath.Join(opts.TempDir, "bb")
+	if err := BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {
+		return err
+	}
+
+	if len(opts.BinaryDir) == 0 {
+		return fmt.Errorf("must specify binary directory")
+	}
+
+	// Build initramfs.
+	if err := af.AddFile(bbPath, path.Join(opts.BinaryDir, "bb")); err != nil {
+		return err
+	}
+
+	// Add symlinks for included commands to initramfs.
+	for _, pkg := range opts.Packages {
+		if _, ok := skip[path.Base(pkg)]; ok {
+			continue
+		}
+
+		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
+		if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // BuildBusybox builds a busybox of the given Go packages.
@@ -120,40 +160,6 @@ func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, d
 			return err
 		}
 		break
-	}
-	return nil
-}
-
-// BBBuild is an implementation of Build for the busybox-like u-root initramfs.
-//
-// BBBuild rewrites the source files of the packages given to create one
-// busybox-like binary containing all commands in `opts.Packages`.
-func BBBuild(af ArchiveFiles, opts BuildOpts) error {
-	// Build the busybox binary.
-	bbPath := filepath.Join(opts.TempDir, "bb")
-	if err := BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {
-		return err
-	}
-
-	if len(opts.BinaryDir) == 0 {
-		return fmt.Errorf("must specify binary directory")
-	}
-
-	// Build initramfs.
-	if err := af.AddFile(bbPath, path.Join(opts.BinaryDir, "bb")); err != nil {
-		return err
-	}
-
-	// Add symlinks for included commands to initramfs.
-	for _, pkg := range opts.Packages {
-		if _, ok := skip[path.Base(pkg)]; ok {
-			continue
-		}
-
-		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
-		if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {
-			return err
-		}
 	}
 	return nil
 }

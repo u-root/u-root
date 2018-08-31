@@ -12,6 +12,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder"
 )
 
 var outputPath = flag.String("o", "bb", "Path to busybox binary")
@@ -42,7 +43,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := uroot.BuildBusybox(env, pkgs, o); err != nil {
+	if err := builder.BuildBusybox(env, pkgs, o); err != nil {
 		log.Fatal(err)
 	}
 }

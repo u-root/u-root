@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package builder
 
 import (
 	"fmt"
@@ -12,17 +12,23 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-var SourceBuilder = Builder{
-	Build:            SourceBuild,
-	DefaultBinaryDir: "buildbin",
+// SourceBuilder
+type SourceBuilder struct{}
+
+// DefaultBinaryDir implements Builder.DefaultBinaryDir.
+func (SourceBuilder) DefaultBinaryDir() string {
+	return "buildbin"
 }
 
-// SourceBuild is an implementation of Build that compiles the Go toolchain
-// (go, compile, link, asm) and an init process. It includes source files for
-// packages listed in `opts.Packages` to build from scratch.
-func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
+// Build is an implementation of Build that includes opts.Packages' full
+// source in the initramfs.
+//
+// It then also includes the Go toolchain (go, compile, link, asm) and an init
+// process that can compile other programs in the initramfs.
+func (SourceBuilder) Build(af initramfs.Files, opts Opts) error {
 	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
 		return err
@@ -78,7 +84,7 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
 // asm.
-func buildToolchain(opts BuildOpts) error {
+func buildToolchain(opts Opts) error {
 	goBin := filepath.Join(opts.TempDir, "go/bin/go")
 	tcbo := golang.BuildOpts{
 		ExtraArgs: []string{"-tags", "cmd_go_bootstrap"},
@@ -97,7 +103,7 @@ func buildToolchain(opts BuildOpts) error {
 	return nil
 }
 
-func goListPkg(opts BuildOpts, importPath string, out *ArchiveFiles) *golang.ListPackage {
+func goListPkg(opts Opts, importPath string, out *initramfs.Files) *golang.ListPackage {
 	p, err := opts.Env.Deps(importPath)
 	if err != nil {
 		log.Printf("Can't list Go dependencies for %v; ignoring.", importPath)

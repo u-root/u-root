@@ -13,6 +13,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 // multiFlag is used for flags that support multiple invocations, e.g. -files
@@ -258,11 +260,11 @@ func Main() error {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
-	builder, err := uroot.GetBuilder(*build)
+	builder, err := builder.GetBuilder(*build)
 	if err != nil {
 		return err
 	}
-	archiver, err := uroot.GetArchiver(*format)
+	archiver, err := initramfs.GetArchiver(*format)
 	if err != nil {
 		return err
 	}
@@ -309,7 +311,7 @@ func Main() error {
 		return err
 	}
 
-	var baseFile uroot.ArchiveReader
+	var baseFile initramfs.Reader
 	if *base != "" {
 		bf, err := os.Open(*base)
 		if err != nil {
@@ -329,7 +331,6 @@ func Main() error {
 				Packages: pkgs,
 			},
 		},
-		Archiver:        archiver,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,

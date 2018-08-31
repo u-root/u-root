@@ -10,7 +10,7 @@ import (
 	"log"
 
 	"github.com/u-root/u-root/pkg/golang"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder"
 )
 
 var (
@@ -30,11 +30,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fset, astp, err := uroot.ParseAST(p)
+	fset, astp, err := builder.ParseAST(p)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := uroot.CreateBBMainSource(fset, astp, flag.Args(), *outputDir); err != nil {
+	if err := builder.CreateBBMainSource(fset, astp, flag.Args(), *outputDir); err != nil {
 		log.Fatalf("failed to create bb source file: %v", err)
 	}
 }

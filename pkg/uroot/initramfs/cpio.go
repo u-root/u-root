@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package initramfs
 
 import (
 	"fmt"
@@ -19,11 +19,11 @@ type CPIOArchiver struct {
 }
 
 // OpenWriter opens `path` as the correct file type and returns an
-// ArchiveWriter pointing to `path`.
+// Writer pointing to `path`.
 //
 // If `path` is empty, a default path of /tmp/initramfs.GOOS_GOARCH.cpio is
 // used.
-func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (ArchiveWriter, error) {
+func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (Writer, error) {
 	if len(path) == 0 && len(goos) == 0 && len(goarch) == 0 {
 		return nil, fmt.Errorf("passed no path, GOOS, and GOARCH to CPIOArchiver.OpenWriter")
 	}
@@ -38,14 +38,14 @@ func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (ArchiveWriter, err
 	return osWriter{ca.RecordFormat.Writer(f), f}, nil
 }
 
-// osWriter implements ArchiveWriter.
+// osWriter implements Writer.
 type osWriter struct {
 	cpio.RecordWriter
 
 	f *os.File
 }
 
-// Finish implements ArchiveWriter.Finish.
+// Finish implements Writer.Finish.
 func (o osWriter) Finish() error {
 	err := cpio.WriteTrailer(o)
 	o.f.Close()
@@ -53,6 +53,6 @@ func (o osWriter) Finish() error {
 }
 
 // Reader implements Archiver.Reader.
-func (ca CPIOArchiver) Reader(r io.ReaderAt) ArchiveReader {
+func (ca CPIOArchiver) Reader(r io.ReaderAt) Reader {
 	return ca.RecordFormat.Reader(r)
 }
