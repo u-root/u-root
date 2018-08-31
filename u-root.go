@@ -298,11 +298,7 @@ func Main() error {
 		pkgs = append(pkgs, p...)
 	}
 	if len(pkgs) == 0 {
-		var err error
-		pkgs, err = uroot.DefaultPackageImports(env)
-		if err != nil {
-			return err
-		}
+		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
 
 	// Open the target initramfs file.
