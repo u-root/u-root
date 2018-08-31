@@ -10,7 +10,6 @@ import (
 	"flag"
 	"log"
 
-	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -25,12 +24,9 @@ func main() {
 	if flag.NArg() == 0 {
 		log.Fatalf("must specify at least one file to include in initramfs")
 	}
-	archiver := initramfs.CPIOArchiver{
-		RecordFormat: cpio.Newc,
-	}
 
 	// Open the target initramfs file.
-	w, err := archiver.OpenWriter(*outputFile, "", "")
+	w, err := initramfs.CPIO.OpenWriter(*outputFile, "", "")
 	if err != nil {
 		log.Fatalf("failed to open cpio archive %q: %v", *outputFile, err)
 	}

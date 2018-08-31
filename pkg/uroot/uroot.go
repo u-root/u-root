@@ -108,14 +108,14 @@ type Opts struct {
 	//
 	//   []Commands{
 	//     Commands{
-	//       Builder: builder.BBBuilder{},
+	//       Builder: builder.BusyBox,
 	//       Packages: []string{
 	//         "github.com/u-root/u-root/cmds/ls",
 	//         "github.com/u-root/u-root/cmds/ip",
 	//       },
 	//     },
 	//     Commands{
-	//       Builder: builder.BinaryBuilder{},
+	//       Builder: builder.Binary,
 	//       Packages: []string{
 	//         "github.com/u-root/u-root/cmds/cd",
 	//         "github.com/u-root/u-root/cmds/cat",

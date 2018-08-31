@@ -41,12 +41,9 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	env := golang.Default()
 	env.CgoEnabled = false
 
-	// Archiver
-	archiver := initramfs.CPIOArchiver{}
-
 	// OutputFile
 	outputFile := filepath.Join(tmpDir, "initramfs.cpio")
-	w, err := archiver.OpenWriter(outputFile, "", "")
+	w, err := initramfs.CPIO.OpenWriter(outputFile, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +53,7 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 		Env: env,
 		Commands: []uroot.Commands{
 			{
-				Builder: builder.BBBuilder{},
+				Builder: builder.BusyBox,
 				Packages: []string{
 					"github.com/u-root/u-root/cmds/*",
 					path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"),
