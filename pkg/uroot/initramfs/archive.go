@@ -12,15 +12,19 @@ import (
 )
 
 var (
+	CPIO = CPIOArchiver{
+		RecordFormat: cpio.Newc,
+	}
+
+	Dir = DirArchiver{}
+
 	// Archivers are the supported initramfs archivers at the moment.
 	//
 	// - cpio: writes the initramfs to a cpio.
 	// - dir:  writes the initramfs relative to a specified directory.
 	Archivers = map[string]Archiver{
-		"cpio": CPIOArchiver{
-			RecordFormat: cpio.Newc,
-		},
-		"dir": DirArchiver{},
+		"cpio": CPIO,
+		"dir":  Dir,
 	}
 )
 

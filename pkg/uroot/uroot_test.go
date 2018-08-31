@@ -235,7 +235,7 @@ func TestCreateInitramfs(t *testing.T) {
 				DefaultShell:    "ls",
 				Commands: []Commands{
 					{
-						Builder: builder.BBBuilder{},
+						Builder: builder.BusyBox,
 						Packages: []string{
 							"github.com/u-root/u-root/cmds/init",
 							"github.com/u-root/u-root/cmds/ls",
@@ -311,21 +311,21 @@ func TestCreateInitramfs(t *testing.T) {
 				DefaultShell:    "ls",
 				Commands: []Commands{
 					{
-						Builder: builder.BBBuilder{},
+						Builder: builder.BusyBox,
 						Packages: []string{
 							"github.com/u-root/u-root/cmds/init",
 							"github.com/u-root/u-root/cmds/ls",
 						},
 					},
 					{
-						Builder: builder.BinaryBuilder{},
+						Builder: builder.Binary,
 						Packages: []string{
 							"github.com/u-root/u-root/cmds/cp",
 							"github.com/u-root/u-root/cmds/dd",
 						},
 					},
 					{
-						Builder: builder.SourceBuilder{},
+						Builder: builder.Source,
 						Packages: []string{
 							"github.com/u-root/u-root/cmds/cat",
 							"github.com/u-root/u-root/cmds/chroot",

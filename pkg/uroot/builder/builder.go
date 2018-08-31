@@ -11,10 +11,16 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
+var (
+	BusyBox = BBBuilder{}
+	Source  = SourceBuilder{}
+	Binary  = BinaryBuilder{}
+)
+
 var Builders = map[string]Builder{
-	"bb":     BBBuilder{},
-	"source": SourceBuilder{},
-	"binary": BinaryBuilder{},
+	"bb":     BusyBox,
+	"source": Source,
+	"binary": Binary,
 }
 
 // Opts are arguments to the Builder.Build function.
