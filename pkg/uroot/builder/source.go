@@ -59,12 +59,14 @@ func (SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 			deps[d] = struct{}{}
 		}
 
-		// Add a symlink to installcommand. This means source mode can
-		// work with any init.
-		if err := af.AddRecord(cpio.Symlink(
-			path.Join(opts.BinaryDir, name),
-			path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
-			return err
+		if name != "installcommand" {
+			// Add a symlink to installcommand. This means source mode can
+			// work with any init.
+			if err := af.AddRecord(cpio.Symlink(
+				path.Join(opts.BinaryDir, name),
+				path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
+				return err
+			}
 		}
 	}
 	if len(installcommand) == 0 {
