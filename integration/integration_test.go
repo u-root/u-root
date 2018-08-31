@@ -15,6 +15,8 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 // Returns temporary directory and QEMU instance.
@@ -39,23 +41,8 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	env := golang.Default()
 	env.CgoEnabled = false
 
-	// Builder
-	builder, err := uroot.GetBuilder("bb")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Packages
-	pkgs := []string{
-		"github.com/u-root/u-root/cmds/*",
-		path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"),
-	}
-
 	// Archiver
-	archiver, err := uroot.GetArchiver("cpio")
-	if err != nil {
-		t.Fatal(err)
-	}
+	archiver := initramfs.CPIOArchiver{}
 
 	// OutputFile
 	outputFile := filepath.Join(tmpDir, "initramfs.cpio")
@@ -66,15 +53,18 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 
 	// Build u-root
 	opts := uroot.Opts{
-		TempDir: tmpDir,
-		Env:     env,
+		Env: env,
 		Commands: []uroot.Commands{
 			{
-				Builder:  builder,
-				Packages: pkgs,
+				Builder: builder.BBBuilder{},
+				Packages: []string{
+					"github.com/u-root/u-root/cmds/*",
+					path.Join("github.com/u-root/u-root/integration/testdata", uinitName, "uinit"),
+				},
 			},
 		},
-		Archiver:     archiver,
+		TempDir:      tmpDir,
+		BaseArchive:  uroot.DefaultRamfs.Reader(),
 		OutputFile:   w,
 		InitCmd:      "init",
 		DefaultShell: "rush",
