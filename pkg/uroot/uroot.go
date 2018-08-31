@@ -98,6 +98,27 @@ type Opts struct {
 	Env golang.Environ
 
 	// Commands specify packages to build using a specific builder.
+	//
+	// E.g. the following will build 'ls' and 'ip' in busybox mode, but
+	// 'cd' and 'cat' as separate binaries. 'cd', 'cat', 'bb', and symlinks
+	// from 'ls' and 'ip' will be added to the final initramfs.
+	//
+	//   []Commands{
+	//     Commands{
+	//       Builder: builder.BBBuilder{},
+	//       Packages: []string{
+	//         "github.com/u-root/u-root/cmds/ls",
+	//         "github.com/u-root/u-root/cmds/ip",
+	//       },
+	//     },
+	//     Commands{
+	//       Builder: builder.BinaryBuilder{},
+	//       Packages: []string{
+	//         "github.com/u-root/u-root/cmds/cd",
+	//         "github.com/u-root/u-root/cmds/cat",
+	//       },
+	//     },
+	//   }
 	Commands []Commands
 
 	// TempDir is a temporary directory for builders to store files in.
@@ -108,6 +129,12 @@ type Opts struct {
 	//
 	// Shared library dependencies will automatically also be added to the
 	// archive using ldd.
+	//
+	// The following formats are allowed in the list:
+	//
+	//   - `hostPath:archivePath` adds the file from hostPath at the relative
+	//     archivePath in the archive.
+	//   - `justAPath` is added to the archive under justAPath.
 	ExtraFiles []string
 
 	// OutputFile is the archive output file.
@@ -299,9 +326,9 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 //
 // The following formats are allowed in the extraFiles list:
 //
-//   - hostPath:archivePath adds the file from hostPath at the relative
+//   - `hostPath:archivePath` adds the file from hostPath at the relative
 //     archivePath in the archive.
-//   - justAPath is added to the archive under justAPath.
+//   - `justAPath` is added to the archive under justAPath.
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
 func ParseExtraFiles(archive initramfs.Files, extraFiles []string, lddDeps bool) error {
