@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package builder
 
 import (
 	"go/ast"
@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 func TestBBBuild(t *testing.T) {
@@ -22,7 +23,7 @@ func TestBBBuild(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	opts := BuildOpts{
+	opts := Opts{
 		Env: golang.Default(),
 		Packages: []string{
 			"github.com/u-root/u-root/pkg/uroot/test/foo",
@@ -31,8 +32,9 @@ func TestBBBuild(t *testing.T) {
 		TempDir:   dir,
 		BinaryDir: "bbin",
 	}
-	af := NewArchiveFiles()
-	if err := BBBuild(af, opts); err != nil {
+	af := initramfs.NewFiles()
+	var bbb BBBuilder
+	if err := bbb.Build(af, opts); err != nil {
 		t.Error(err)
 	}
 

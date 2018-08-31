@@ -11,7 +11,7 @@ import (
 	"log"
 
 	"github.com/u-root/u-root/pkg/golang"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder"
 )
 
 var (
@@ -26,7 +26,7 @@ func main() {
 	env := golang.Default()
 	importer := importer.For("source", nil)
 
-	if err := uroot.RewritePackage(env, *pkg, *dest, *bbPath, importer); err != nil {
+	if err := builder.RewritePackage(env, *pkg, *dest, *bbPath, importer); err != nil {
 		log.Fatalf("failed to rewrite package %v: %v", *pkg, err)
 	}
 }

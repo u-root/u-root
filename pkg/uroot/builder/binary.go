@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package builder
 
 import (
 	"path/filepath"
 	"sync"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-var BinaryBuilder = Builder{
-	Build:            BinaryBuild,
-	DefaultBinaryDir: "bin",
+type BinaryBuilder struct{}
+
+func (BinaryBuilder) DefaultBinaryDir() string {
+	return "bin"
 }
 
-// BinaryBuild builds all given packages as separate binaries and includes them
-// in the archive.
-func BinaryBuild(af ArchiveFiles, opts BuildOpts) error {
+// Build builds all given packages as separate binaries and includes them in
+// the archive.
+func (BinaryBuilder) Build(af initramfs.Files, opts Opts) error {
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
 

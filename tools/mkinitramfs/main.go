@@ -12,6 +12,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 var (
@@ -24,7 +25,7 @@ func main() {
 	if flag.NArg() == 0 {
 		log.Fatalf("must specify at least one file to include in initramfs")
 	}
-	archiver := uroot.CPIOArchiver{
+	archiver := initramfs.CPIOArchiver{
 		RecordFormat: cpio.Newc,
 	}
 
@@ -34,17 +35,17 @@ func main() {
 		log.Fatalf("failed to open cpio archive %q: %v", *outputFile, err)
 	}
 
-	files := uroot.NewArchiveFiles()
-	archive := uroot.ArchiveOpts{
-		ArchiveFiles:   files,
+	files := initramfs.NewFiles()
+	archive := &initramfs.Opts{
+		Files:          files,
 		OutputFile:     w,
 		DefaultRecords: uroot.DefaultRamfs,
 	}
-	if err := uroot.ParseExtraFiles(archive.ArchiveFiles, flag.Args(), false); err != nil {
+	if err := uroot.ParseExtraFiles(archive.Files, flag.Args(), false); err != nil {
 		log.Fatalf("failed to parse file names %v: %v", flag.Args(), err)
 	}
 
-	if err := archive.Write(); err != nil {
+	if err := initramfs.Write(archive); err != nil {
 		log.Fatalf("failed to write archive %q: %v", *outputFile, err)
 	}
 }

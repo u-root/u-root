@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package initramfs
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,8 +15,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// ArchiveFiles are host files and records to add to the resulting initramfs.
-type ArchiveFiles struct {
+// Files are host files and cpio records to add to an initramfs.
+//
+// The initramfs can be written out using Files.WriteTo.
+type Files struct {
 	// Files is a map of relative archive path -> absolute host file path.
 	Files map[string]string
 
@@ -29,16 +30,16 @@ type ArchiveFiles struct {
 	Records map[string]cpio.Record
 }
 
-// NewArchiveFiles returns a new archive files map.
-func NewArchiveFiles() ArchiveFiles {
-	return ArchiveFiles{
+// NewFiles returns a new archive files map.
+func NewFiles() Files {
+	return Files{
 		Files:   make(map[string]string),
 		Records: make(map[string]cpio.Record),
 	}
 }
 
 // SortedKeys returns a list of sorted paths in the archive.
-func (af ArchiveFiles) SortedKeys() []string {
+func (af Files) SortedKeys() []string {
 	keys := make([]string, 0, len(af.Files)+len(af.Records))
 	for dest := range af.Files {
 		keys = append(keys, dest)
@@ -51,7 +52,7 @@ func (af ArchiveFiles) SortedKeys() []string {
 }
 
 // AddFile adds a host file at `src` into the archive at `dest`.
-func (af ArchiveFiles) AddFile(src string, dest string) error {
+func (af Files) AddFile(src string, dest string) error {
 	src = filepath.Clean(src)
 	dest = path.Clean(dest)
 	if path.IsAbs(dest) {
@@ -77,7 +78,7 @@ func (af ArchiveFiles) AddFile(src string, dest string) error {
 }
 
 // AddRecord adds a cpio.Record into the archive at `r.Name`.
-func (af ArchiveFiles) AddRecord(r cpio.Record) error {
+func (af Files) AddRecord(r cpio.Record) error {
 	r.Name = path.Clean(r.Name)
 	if filepath.IsAbs(r.Name) {
 		return fmt.Errorf("record name %q must not be absolute", r.Name)
@@ -98,14 +99,14 @@ func (af ArchiveFiles) AddRecord(r cpio.Record) error {
 }
 
 // Contains returns whether path `dest` is already contained in the archive.
-func (af ArchiveFiles) Contains(dest string) bool {
+func (af Files) Contains(dest string) bool {
 	_, fok := af.Files[dest]
 	_, rok := af.Records[dest]
 	return fok || rok
 }
 
 // Rename renames a file in the archive.
-func (af ArchiveFiles) Rename(name string, newname string) {
+func (af Files) Rename(name string, newname string) {
 	if src, ok := af.Files[name]; ok {
 		delete(af.Files, name)
 		af.Files[newname] = src
@@ -118,7 +119,7 @@ func (af ArchiveFiles) Rename(name string, newname string) {
 }
 
 // addParent recursively adds parent directory records for `name`.
-func (af ArchiveFiles) addParent(name string) {
+func (af Files) addParent(name string) {
 	parent := path.Dir(name)
 	if parent == "." {
 		return
@@ -130,7 +131,7 @@ func (af ArchiveFiles) addParent(name string) {
 }
 
 // fillInParents adds parent directory records for unparented files in `af`.
-func (af ArchiveFiles) fillInParents() {
+func (af Files) fillInParents() {
 	for name := range af.Files {
 		af.addParent(name)
 	}
@@ -140,7 +141,7 @@ func (af ArchiveFiles) fillInParents() {
 }
 
 // WriteTo writes all records and files in `af` to `w`.
-func (af ArchiveFiles) WriteTo(w ArchiveWriter) error {
+func (af Files) WriteTo(w Writer) error {
 	// Add parent directories when not added specifically.
 	af.fillInParents()
 
@@ -161,62 +162,11 @@ func (af ArchiveFiles) WriteTo(w ArchiveWriter) error {
 	return nil
 }
 
-// Write uses the given options to determine which files need to be written
-// to the output file using the archive format `a` and writes them.
-func (opts *ArchiveOpts) Write() error {
-	// Add default records.
-	for _, rec := range opts.DefaultRecords {
-		// Ignore if it doesn't get added. Probably means the user
-		// included something for this file or directory already.
-		//
-		// TODO: ignore only when it already exists in archive.
-		opts.ArchiveFiles.AddRecord(rec)
-	}
-
-	// Write base archive.
-	if opts.BaseArchive != nil {
-		transform := cpio.MakeReproducible
-
-		// Rename init to inito if user doesn't want the existing init.
-		if !opts.UseExistingInit && opts.Contains("init") {
-			transform = func(r cpio.Record) cpio.Record {
-				if r.Name == "init" {
-					r.Name = "inito"
-				}
-				return cpio.MakeReproducible(r)
-			}
-		}
-		// If user wants the base archive init, but specified another
-		// init, make the other one inito.
-		if opts.UseExistingInit && opts.Contains("init") {
-			opts.Rename("init", "inito")
-		}
-
-		for {
-			f, err := opts.BaseArchive.ReadRecord()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			// TODO: ignore only the error where it already exists
-			// in archive.
-			opts.ArchiveFiles.AddRecord(transform(f))
-		}
-	}
-
-	if err := opts.ArchiveFiles.WriteTo(opts.OutputFile); err != nil {
-		return err
-	}
-	return opts.OutputFile.Finish()
-}
-
 // WriteFile takes the file at `src` on the host system and adds it to the
 // archive `w` at path `dest`.
 //
 // If `src` is a directory, its children will be added to the archive as well.
-func WriteFile(w ArchiveWriter, src, dest string) error {
+func WriteFile(w Writer, src, dest string) error {
 	record, err := cpio.GetRecord(src)
 	if err != nil {
 		return err
