@@ -5,7 +5,6 @@ import "encoding/json"
 // BootConfig is a general-purpose boot configuration. It draws some
 // characteristics from FIT but it's not compatible with it. It uses
 // JSON for interoperability.
-// If you add or remove fields, remember to update UnmarshalJSON.
 type BootConfig struct {
 	Name       string `json:"name,omitempty"`
 	Kernel     string `json:"kernel"`
