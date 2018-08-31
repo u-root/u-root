@@ -15,19 +15,26 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-// SourceBuilder
+// SourceBuilder includes full source for Go commands in the initramfs.
+//
+// SourceBuilder is an implementation of Builder.
+//
+// It also includes the Go toolchain in the initramfs, and a tool called
+// installcommand that can compile the other commands using symlinks.
+//
+// E.g. if "ls" is an included command, "ls" will be a symlink to
+// "installcommand" in the initramfs, which uses argv[0] to figure out which
+// command to compile.
 type SourceBuilder struct{}
 
 // DefaultBinaryDir implements Builder.DefaultBinaryDir.
+//
+// The initramfs default binary dir is buildbin.
 func (SourceBuilder) DefaultBinaryDir() string {
 	return "buildbin"
 }
 
-// Build is an implementation of Build that includes opts.Packages' full
-// source in the initramfs.
-//
-// It then also includes the Go toolchain (go, compile, link, asm) and an init
-// process that can compile other programs in the initramfs.
+// Build is an implementation of Builder.Build.
 func (SourceBuilder) Build(af initramfs.Files, opts Opts) error {
 	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
