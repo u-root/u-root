@@ -6,10 +6,11 @@ package main
 
 import (
 	"crypto/md5"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/spf13/pflag"
 )
 
 func getInput(fileName string) (input []byte, err error) {
@@ -23,7 +24,7 @@ func getInput(fileName string) (input []byte, err error) {
 func helpPrinter() {
 
 	fmt.Printf("Usage:\nmd5sum <File Name>\n")
-	flag.PrintDefaults()
+	pflag.PrintDefaults()
 	os.Exit(0)
 }
 
@@ -36,15 +37,23 @@ func calculateMd5Sum(data []byte) string {
 	return fmt.Sprintf("%x", md5.Sum(data))
 }
 
+func checksum(hasher hash.Hash, r io.Reader) {
+	if _, err := io.Copy(hasher, r); err != nil {
+		log.Fatal(err)
+	}
+	sum := hasher.Sum(nil)
+	fmt.Println(hex.EncodeToString(sum))
+}
+
 func main() {
 	var (
 		help    bool
 		version bool
 	)
 	cliArgs := ""
-	flag.BoolVar(&help, "help", false, "Show this help and exit")
-	flag.BoolVar(&version, "version", false, "Print Version")
-	flag.Parse()
+	pflag.BoolVarP(&help, "help", "h", false, "Show this help and exit")
+	pflag.BoolVarP(&version, "version", "v", false, "Print Version")
+	pflag.Parse()
 
 	if help {
 		helpPrinter()

@@ -7,16 +7,17 @@ package main
 import (
 	"crypto/sha1"
 	"crypto/sha256"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/spf13/pflag"
 )
 
 func helpPrinter() {
 
 	fmt.Printf("Usage:\nshasum -a <algorithm> <File Name>\n")
-	flag.PrintDefaults()
+	pflag.PrintDefaults()
 	os.Exit(0)
 }
 
@@ -34,11 +35,10 @@ func getInput(fileName string) (input []byte, err error) {
 }
 
 //
-// Input-
-//   algorithm: 1 for SHA1 and 256 for SHA256
-//   data: Input data for SHA
-// Return-
-//   SHA256/SHA1
+// shaPrinter prints sha1/sha256 of given data. The
+// value of algorithm is expected to be 1 for SHA1
+// and 256 for SHA256
+//
 func shaPrinter(algorithm int, data []byte) string {
 	var sha string
 	if algorithm == 256 {
@@ -60,10 +60,10 @@ func main() {
 		version   bool
 	)
 	cliArgs := ""
-	flag.IntVar(&algorithm, "algorithm", 1, "SHA algorithm, valid args are 1 and 256")
-	flag.BoolVar(&help, "help", false, "Show this help and exit")
-	flag.BoolVar(&version, "version", false, "Print Version")
-	flag.Parse()
+	pflag.IntVar(&algorithm, "algorithm", "a", 1, "SHA algorithm, valid args are 1 and 256")
+	pflag.BoolVar(&help, "help", "h", false, "Show this help and exit")
+	pflag.BoolVar(&version, "version", "v", false, "Print Version")
+	pflag.Parse()
 
 	if help {
 		helpPrinter()
