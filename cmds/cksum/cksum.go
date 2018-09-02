@@ -5,15 +5,16 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/spf13/pflag"
 )
 
 func helpPrinter() {
 	fmt.Printf("Usage:\ncksum <File Name>\n")
-	flag.PrintDefaults()
+	pflag.PrintDefaults()
 	os.Exit(0)
 }
 
@@ -39,7 +40,7 @@ func calculateCksum(input []byte) uint32 {
 		 * http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/
 		 * old-releases/i386/1.0-RELEASE/ports/textutils/src/cksum.c
 		 *
-		 * Polynomial same as Linux cksum utility i.e. 0x04C11DB7 
+		 * Polynomial same as Linux cksum utility i.e. 0x04C11DB7
 		 */
 		0x0,
 		0x04C11DB7, 0x09823B6E, 0x0D4326D9, 0x130476DC, 0x17C56B6B,
@@ -103,7 +104,7 @@ func calculateCksum(input []byte) uint32 {
 	}
 	// checksum for data length
 	dataLength := len(input)
-	for dataLength > 0  {
+	for dataLength > 0 {
 		cksum = (cksum << 8) ^ uint32(cksumTable[((cksum>>24)^uint32(dataLength))&0xFF])
 		dataLength = (dataLength >> 8)
 	}
@@ -116,8 +117,8 @@ func main() {
 		version bool
 	)
 	cliArgs := ""
-	flag.BoolVar(&help, "help", false, "Show this help and exit")
-	flag.BoolVar(&version, "version", false, "Print Version")
+	flag.BoolVar(&help, "help", "h", false, "Show this help and exit")
+	flag.BoolVar(&version, "version", "v", false, "Print Version")
 	flag.Parse()
 
 	if help {

@@ -5,8 +5,9 @@
 package main
 
 import (
-	"github.com/u-root/u-root/pkg/testutil"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestCksum(t *testing.T) {
