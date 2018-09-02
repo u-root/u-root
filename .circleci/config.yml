@@ -62,17 +62,19 @@ jobs:
       - run:
           name: Install dep
           command: |
-            wget https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64
-            chmod +x ./dep-linux-amd64
+            wget https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
+            mv dep-linux-amd64 dep
+            chmod +x dep
       - run:
           name: Install ineffassign
           command: go get github.com/gordonklaus/ineffassign
       - run:
           name: Check vendored dependencies
           command: |
-            ./dep-linux-amd64 hash-inputs
-            ./dep-linux-amd64 status
-            ./dep-linux-amd64 ensure -vendor-only
+            ./dep version
+            ./dep status
+            ./dep ensure -vendor-only
+            git status
             if [[ -n "$(git status --porcelain vendor)" ]]; then
               echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
               git status --porcelain vendor
