@@ -77,6 +77,7 @@ jobs:
             git status
             if [[ -n "$(git status --porcelain vendor)" ]]; then
               echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
+              echo 'If `dep ensure` results in no changes, make sure you are using the latest relase of dep'
               git status --porcelain vendor
               exit 1
             fi
