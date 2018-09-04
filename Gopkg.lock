@@ -35,15 +35,15 @@
     "tpmutil/tbs",
   ]
   pruneopts = "NUT"
-  revision = "f9bda7c79425630507590804d9ecb42603d6291e"
+  revision = "cf513cbc2b1463408c269cd80616839c163ca376"
 
 [[projects]]
   branch = "master"
-  digest = "1:9ad1f25e4da1188f2d132b4f2326dcb94f171eff6cb7539c953d3d4d2329270b"
+  digest = "1:c0c871240b85ea14304b4f6113c390b4390020cf4914c7ba78f63e9f54ef7927"
   name = "github.com/google/goexpect"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "9db06cbbaed691242d13045e8e5f5037f72db9e7"
+  revision = "88b7cf98484152f464f685e94dc4334205362983"
 
 [[projects]]
   branch = "master"
@@ -55,7 +55,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8f07bc76a30d696486d08959665f29a6463ec84b7ff487aa36c17f6a359bc189"
+  digest = "1:6e878fe056f579d6834a5d810d2f7222a920a4c2807c65b5b191324039ba78f6"
   name = "github.com/google/netstack"
   packages = [
     "ilist",
@@ -66,7 +66,7 @@
     "waiter",
   ]
   pruneopts = "NUT"
-  revision = "8b4eef0f44a9713d81e56056edf3b96f28f7a8e3"
+  revision = "b02367f6aa1b40aedb7ae612ff1e6ae0803f0052"
 
 [[projects]]
   digest = "1:c01767916c59f084bb7c41a7d5877c0f3099b1595cfa066e84ec6ad6b084dd89"
@@ -115,6 +115,19 @@
   pruneopts = "NUT"
   revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
   version = "v1.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:4d211d06ad6a292b6b35818760910405bbbf48f9fb69c03d30edb8ced778f6eb"
+  name = "github.com/linuxboot/fiano"
+  packages = [
+    "pkg/lzma",
+    "pkg/uefi",
+    "pkg/unicode",
+    "pkg/uuid",
+  ]
+  pruneopts = "NUT"
+  revision = "c49be3752323c40d3bef1e7b5f397895492f4a47"
 
 [[projects]]
   branch = "master"
@@ -182,6 +195,18 @@
   revision = "f78158b7c380d2ae515105471716468098373c72"
 
 [[projects]]
+  digest = "1:c7bb7358ef6fe00020e6ad412cf7ebb7a13e5225bd728f36bbd68a4fac8a1360"
+  name = "github.com/ulikunitz/xz"
+  packages = [
+    "internal/hash",
+    "internal/xlog",
+    "lzma",
+  ]
+  pruneopts = "NUT"
+  revision = "0c6b41e72360850ca4f98dc341fd999726ea007f"
+  version = "v0.5.4"
+
+[[projects]]
   branch = "master"
   digest = "1:b36be55846d7ae495e311b97b68d4d01c4bb951ddbf0520c3f7b940055972174"
   name = "github.com/vishvananda/netlink"
@@ -225,7 +250,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "aabede6cba87e37f413b3e60ebfc214f8eeca1b0"
+  revision = "182538f80094b6a8efaade63a8fd8e0d9d5843dd"
 
 [[projects]]
   branch = "master"
@@ -238,15 +263,33 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
+  revision = "8a410e7b638dca158bf9e766925842f6651ff828"
 
 [[projects]]
   branch = "master"
-  digest = "1:27bdaa1c836789f63d5a1e33288575fcd452fdaeeaaae42200a6b13577044435"
+  digest = "1:7e7f0804044e91c06a78a4d1b28f59b93d2d8edb78f5a97036f840cf82e41500"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "NUT"
-  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
+  revision = "fa5fdf94c78965f1aa8423f0cc50b8b8d728b05a"
+
+[[projects]]
+  digest = "1:fb8be2f4db4c5f3fa4b93ec808502d5933c7cf8d8fa285b32ba8c0102c309850"
+  name = "golang.org/x/text"
+  packages = [
+    "encoding",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/unicode",
+    "internal/gen",
+    "internal/utf8internal",
+    "runes",
+    "transform",
+    "unicode/cldr",
+  ]
+  pruneopts = "NUT"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
@@ -258,7 +301,7 @@
     "internal/fastwalk",
   ]
   pruneopts = "NUT"
-  revision = "7d1dc997617fb662918b6ea95efc19faa87e1cf8"
+  revision = "7ca132754999accbaa5c1735eda29e7ce0f3bf03"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
@@ -290,6 +333,7 @@
     "github.com/google/goexpect",
     "github.com/gorilla/mux",
     "github.com/klauspost/pgzip",
+    "github.com/linuxboot/fiano/pkg/uefi",
     "github.com/mdlayher/dhcp6",
     "github.com/mdlayher/dhcp6/dhcp6opts",
     "github.com/mdlayher/eui64",
