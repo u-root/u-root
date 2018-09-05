@@ -1,0 +1,84 @@
+// Copyright 2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"testing"
+)
+
+func TestScpSource(t *testing.T) {
+	var w bytes.Buffer
+	var r bytes.Buffer
+
+	tf, err := ioutil.TempFile("", "TestScpSource")
+	if err != nil {
+		t.Fatalf("creating temp file: %v", err)
+	}
+	defer os.Remove(tf.Name())
+	tf.Write([]byte("dummy-file-contents"))
+
+	r.Write([]byte{0})
+	err = scpSource(&w, &r, tf.Name())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	expected := []byte(fmt.Sprintf("C0600 19 %s\ndummy-file-contents", tf.Name()))
+	expected = append(expected, 0)
+	if string(expected) != w.String() {
+		t.Fatalf("Got: %v\nExpected: %v", w.Bytes(), expected)
+	}
+}
+
+func TestScpSink(t *testing.T) {
+	var w bytes.Buffer
+	var r bytes.Buffer
+
+	tf, err := ioutil.TempFile("", "TestScpSink")
+	if err != nil {
+		t.Fatalf("creating temp file: %v", err)
+	}
+	defer os.Remove(tf.Name())
+
+	r.Write([]byte(fmt.Sprintf("C0600 19 dummy\ndummy-file-contents")))
+	// Post IO-copy success status
+	r.Write([]byte{0})
+
+	err = scpSink(&w, &r, tf.Name())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+
+	// 1: Initial SUCCESS post to start scp
+	// 2: Success opening file tf.Name()
+	// 3: Success writing file
+	expected := []byte{0, 0, 0}
+	if string(expected) != w.String() {
+		t.Fatalf("Got: %v\nExpected: %v", w.Bytes(), expected)
+	}
+
+	m := make([]byte, 19)
+	n, err := tf.Read(m)
+	if err != nil {
+		t.Fatalf("IO error: %v", err)
+	}
+	if n != 19 {
+		t.Fatalf("Expected 19 bytes, got %v", n)
+	}
+
+	// Ensure EOF
+	_, err = tf.Read(m)
+	if err != io.EOF {
+		t.Fatalf("Expected EOF, got %v", err)
+	}
+
+	if string(m) != "dummy-file-contents" {
+		t.Fatalf("Expected 'dummy-file-contents', got '%v'", string(m))
+	}
+}
