@@ -110,13 +110,13 @@ func main() {
 	if i.format != "" {
 		switch i.val.(type) {
 		case *uint8:
-			fmt.Printf(i.format, *i.val.(*uint8))
+			fmt.Printf(i.format+"\n", *i.val.(*uint8))
 		case *uint16:
-			fmt.Printf(i.format, *i.val.(*uint16))
+			fmt.Printf(i.format+"\n", *i.val.(*uint16))
 		case *uint32:
-			fmt.Printf(i.format, *i.val.(*uint32))
+			fmt.Printf(i.format+"\n", *i.val.(*uint32))
 		case *uint64:
-			fmt.Printf(i.format, *i.val.(*uint64))
+			fmt.Printf(i.format+"\n", *i.val.(*uint64))
 		}
 
 	}
