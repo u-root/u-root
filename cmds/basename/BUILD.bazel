@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["basename.go"],
+    importpath = "github.com/u-root/u-root/cmds/basename",
+    visibility = ["//visibility:private"],
+    deps = ["//vendor/github.com/spf13/pflag:go_default_library"],
+)
+
+go_binary(
+    name = "basename",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["basename_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//pkg/testutil:go_default_library"],
+)

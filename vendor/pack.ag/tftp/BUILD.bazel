@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client.go",
+        "conn.go",
+        "datagram.go",
+        "doc.go",
+        "errors.go",
+        "handlers.go",
+        "logging.go",
+        "server.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/pack.ag/tftp",
+    importpath = "pack.ag/tftp",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/pack.ag/tftp/netascii:go_default_library"],
+)

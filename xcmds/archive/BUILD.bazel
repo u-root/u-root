@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "archive.go",
+        "decode.go",
+        "encode.go",
+        "toc.go",
+        "types.go",
+        "vtoc.go",
+    ],
+    importpath = "github.com/u-root/u-root/xcmds/archive",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "archive",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

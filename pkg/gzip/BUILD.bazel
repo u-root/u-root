@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "file.go",
+        "gunzip.go",
+        "gzip.go",
+        "options.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/gzip",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/null:go_default_library",
+        "//vendor/github.com/klauspost/pgzip:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "file_test.go",
+        "gunzip_test.go",
+        "gzip_test.go",
+        "options_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/klauspost/pgzip:go_default_library"],
+)

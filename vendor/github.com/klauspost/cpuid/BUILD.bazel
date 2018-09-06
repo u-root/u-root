@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "cpuid.go",
+        "cpuid_386.s",
+        "cpuid_amd64.s",
+        "detect_intel.go",
+        "detect_ref.go",
+        "generate.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/klauspost/cpuid",
+    importpath = "github.com/klauspost/cpuid",
+    visibility = ["//visibility:public"],
+)

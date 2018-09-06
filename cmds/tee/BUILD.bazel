@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["tee.go"],
+    importpath = "github.com/u-root/u-root/cmds/tee",
+    visibility = ["//visibility:private"],
+    deps = ["//vendor/github.com/spf13/pflag:go_default_library"],
+)
+
+go_binary(
+    name = "tee",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

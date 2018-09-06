@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "pflask.go",
+        "termios.go",
+    ],
+    importpath = "github.com/u-root/u-root/xcmds/pflask",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/termios:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "pflask",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

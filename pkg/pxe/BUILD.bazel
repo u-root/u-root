@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "pxe.go",
+        "schemes.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/pxe",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/boot:go_default_library",
+        "//pkg/uio:go_default_library",
+        "//vendor/pack.ag/tftp:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "pxe_test.go",
+        "schemes_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//pkg/uio:go_default_library"],
+)

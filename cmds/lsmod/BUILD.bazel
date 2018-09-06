@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["lsmod_linux.go"],
+    importpath = "github.com/u-root/u-root/cmds/lsmod",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "lsmod",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

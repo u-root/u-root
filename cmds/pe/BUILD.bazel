@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["pe.go"],
+    importpath = "github.com/u-root/u-root/cmds/pe",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "pe",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

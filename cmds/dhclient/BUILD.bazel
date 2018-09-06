@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["dhclient.go"],
+    importpath = "github.com/u-root/u-root/cmds/dhclient",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/dhclient:go_default_library",
+        "//pkg/dhcp6client:go_default_library",
+        "//vendor/github.com/u-root/dhcp4:go_default_library",
+        "//vendor/github.com/u-root/dhcp4/dhcp4client:go_default_library",
+        "//vendor/github.com/vishvananda/netlink:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "dhclient",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["dhclient_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//pkg/testutil:go_default_library"],
+)

@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "sgtty.go",
+        "termios.go",
+        "termios_linux.go",
+        "var.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/termios",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/golang.org/x/sys/unix:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["termios_test.go"],
+    embed = [":go_default_library"],
+)

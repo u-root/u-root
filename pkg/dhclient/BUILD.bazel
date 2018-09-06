@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "dhclient.go",
+        "dhcp4.go",
+        "dhcp6.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/dhclient",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/mdlayher/dhcp6:go_default_library",
+        "//vendor/github.com/mdlayher/dhcp6/dhcp6opts:go_default_library",
+        "//vendor/github.com/u-root/dhcp4:go_default_library",
+        "//vendor/github.com/u-root/dhcp4/dhcp4opts:go_default_library",
+        "//vendor/github.com/vishvananda/netlink:go_default_library",
+    ],
+)

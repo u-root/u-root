@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "options.go",
+        "types.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/u-root/dhcp4/dhcp4opts",
+    importpath = "github.com/u-root/dhcp4/dhcp4opts",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/u-root/dhcp4:go_default_library",
+        "//vendor/github.com/u-root/dhcp4/internal/buffer:go_default_library",
+    ],
+)

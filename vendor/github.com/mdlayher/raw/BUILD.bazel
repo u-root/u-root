@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "raw.go",
+        "raw_bsd.go",
+        "raw_linux.go",
+        "raw_others.go",
+        "timeval.go",
+        "timeval32.go",
+        "timeval_darwin.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/mdlayher/raw",
+    importpath = "github.com/mdlayher/raw",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/golang.org/x/net/bpf:go_default_library",
+    ] + select({
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

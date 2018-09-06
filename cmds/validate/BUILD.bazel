@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["validate.go"],
+    importpath = "github.com/u-root/u-root/cmds/validate",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//vendor/golang.org/x/crypto/md4:go_default_library",
+        "//vendor/golang.org/x/crypto/openpgp:go_default_library",
+        "//vendor/golang.org/x/crypto/ripemd160:go_default_library",
+        "//vendor/golang.org/x/crypto/sha3:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "validate",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["validate_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//pkg/testutil:go_default_library"],
+)

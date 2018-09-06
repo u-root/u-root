@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "example_sos.go",
+        "server.go",
+        "service.go",
+    ],
+    importpath = "github.com/u-root/u-root/examples/sos",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/sos:go_default_library",
+        "//vendor/github.com/gorilla/mux:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "sos",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

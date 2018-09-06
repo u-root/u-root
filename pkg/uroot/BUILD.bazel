@@ -1,0 +1,39 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bb.go",
+        "binary.go",
+        "cpio.go",
+        "dir.go",
+        "files.go",
+        "source.go",
+        "uroot.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/uroot",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/cpio:go_default_library",
+        "//pkg/golang:go_default_library",
+        "//pkg/ldd:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+        "//vendor/golang.org/x/tools/go/ast/astutil:go_default_library",
+        "//vendor/golang.org/x/tools/imports:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "bb_test.go",
+        "files_test.go",
+        "uroot_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/cpio:go_default_library",
+        "//pkg/golang:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+    ],
+)

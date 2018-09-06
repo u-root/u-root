@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "authentication.go",
+        "const.go",
+        "duid.go",
+        "iaaddr.go",
+        "iana.go",
+        "iapd.go",
+        "iaprefix.go",
+        "iata.go",
+        "miscoptions.go",
+        "options.go",
+        "opts.go",
+        "relaymessage.go",
+        "remoteid.go",
+        "statuscode.go",
+        "string.go",
+        "vendorclass.go",
+        "vendoropts.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/mdlayher/dhcp6/dhcp6opts",
+    importpath = "github.com/mdlayher/dhcp6/dhcp6opts",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/mdlayher/dhcp6:go_default_library",
+        "//vendor/github.com/mdlayher/dhcp6/internal/buffer:go_default_library",
+    ],
+)

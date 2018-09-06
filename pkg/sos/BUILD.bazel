@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client.go",
+        "server.go",
+        "service.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/sos",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/gorilla/mux:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "server_test.go",
+        "serviceFuncs_test.go",
+        "service_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/gorilla/mux:go_default_library"],
+)

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["kexec.go"],
+    importpath = "github.com/u-root/u-root/integration/testdata/kexec/uinit",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/cmdline:go_default_library"],
+)
+
+go_binary(
+    name = "uinit",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

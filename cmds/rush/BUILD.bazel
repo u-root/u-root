@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "cd.go",
+        "exit.go",
+        "parse.go",
+        "rush.go",
+        "time.go",
+        "tty_linux.go",
+    ],
+    importpath = "github.com/u-root/u-root/cmds/rush",
+    visibility = ["//visibility:private"],
+    deps = select({
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+go_binary(
+    name = "rush",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["rush_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//pkg/testutil:go_default_library"],
+)

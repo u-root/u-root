@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "pty.go",
+        "pty_linux.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/pty",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/termios:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["pty_test.go"],
+    embed = [":go_default_library"],
+)

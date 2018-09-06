@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "env.go",
+        "file.go",
+        "io.go",
+        "line.go",
+        "multi.go",
+        "string.go",
+        "types.go",
+        "vars.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/complete",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["complete_test.go"],
+    embed = [":go_default_library"],
+)

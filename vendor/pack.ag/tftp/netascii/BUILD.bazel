@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["netascii.go"],
+    importmap = "github.com/u-root/u-root/vendor/pack.ag/tftp/netascii",
+    importpath = "pack.ag/tftp/netascii",
+    visibility = ["//visibility:public"],
+)

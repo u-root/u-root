@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["insmod_linux.go"],
+    importpath = "github.com/u-root/u-root/cmds/insmod",
+    visibility = ["//visibility:private"],
+    deps = select({
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//pkg/kmodule:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+go_binary(
+    name = "insmod",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

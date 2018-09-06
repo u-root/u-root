@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "server.go",
+        "service.go",
+        "wifi.go",
+    ],
+    importpath = "github.com/u-root/u-root/cmds/wifi",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/sos:go_default_library",
+        "//pkg/wifi:go_default_library",
+        "//vendor/github.com/gorilla/mux:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "wifi",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "server_test.go",
+        "service_test.go",
+        "wifi_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//pkg/wifi:go_default_library"],
+)

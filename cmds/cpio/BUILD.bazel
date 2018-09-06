@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["cpio.go"],
+    importpath = "github.com/u-root/u-root/cmds/cpio",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/cpio:go_default_library"],
+)
+
+go_binary(
+    name = "cpio",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

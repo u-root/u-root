@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "mount.go",
+        "opts.go",
+        "opts_linux.go",
+    ],
+    importpath = "github.com/u-root/u-root/cmds/mount",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/loop:go_default_library",
+        "//pkg/mount:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "mount",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

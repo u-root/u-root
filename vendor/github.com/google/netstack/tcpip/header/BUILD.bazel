@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "arp.go",
+        "checksum.go",
+        "eth.go",
+        "gue.go",
+        "icmpv4.go",
+        "icmpv6.go",
+        "interfaces.go",
+        "ipv4.go",
+        "ipv6.go",
+        "ipv6_fragment.go",
+        "tcp.go",
+        "udp.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/google/netstack/tcpip/header",
+    importpath = "github.com/google/netstack/tcpip/header",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/google/netstack/tcpip:go_default_library",
+        "//vendor/github.com/google/netstack/tcpip/seqnum:go_default_library",
+    ],
+)

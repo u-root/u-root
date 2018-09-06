@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "const.go",
+        "dhcp6.go",
+        "options.go",
+        "packet.go",
+        "string.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/mdlayher/dhcp6",
+    importpath = "github.com/mdlayher/dhcp6",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/mdlayher/dhcp6/internal/buffer:go_default_library"],
+)

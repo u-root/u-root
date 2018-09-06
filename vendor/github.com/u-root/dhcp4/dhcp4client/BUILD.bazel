@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client.go",
+        "conn_linux.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/u-root/dhcp4/dhcp4client",
+    importpath = "github.com/u-root/dhcp4/dhcp4client",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/u-root/dhcp4:go_default_library",
+        "//vendor/github.com/u-root/dhcp4/dhcp4opts:go_default_library",
+        "//vendor/github.com/vishvananda/netlink:go_default_library",
+    ] + select({
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//vendor/github.com/google/netstack/tcpip:go_default_library",
+            "//vendor/github.com/google/netstack/tcpip/header:go_default_library",
+            "//vendor/github.com/mdlayher/ethernet:go_default_library",
+            "//vendor/github.com/mdlayher/raw:go_default_library",
+            "//vendor/github.com/u-root/dhcp4/internal/buffer:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

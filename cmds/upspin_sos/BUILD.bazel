@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "server.go",
+        "service.go",
+        "upspin_sos.go",
+    ],
+    importpath = "github.com/u-root/u-root/cmds/upspin_sos",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/sos:go_default_library",
+        "//vendor/github.com/gorilla/mux:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "upspin_sos",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

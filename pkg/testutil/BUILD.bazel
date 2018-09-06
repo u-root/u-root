@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "stdin.go",
+        "testutil.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/testutil",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/golang:go_default_library"],
+)

@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "umount.go",
+        "umount_linux.go",
+    ],
+    importpath = "github.com/u-root/u-root/cmds/umount",
+    visibility = ["//visibility:private"],
+    deps = select({
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//pkg/mount:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+go_binary(
+    name = "umount",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

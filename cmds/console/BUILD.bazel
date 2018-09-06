@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "console.go",
+        "i8042_linux.go",
+        "port_linux.go",
+        "uart_linux.go",
+    ],
+    importpath = "github.com/u-root/u-root/cmds/console",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/pty:go_default_library",
+        "//pkg/uroot/util:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "console",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

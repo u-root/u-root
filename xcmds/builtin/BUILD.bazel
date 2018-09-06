@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["builtin.go"],
+    importpath = "github.com/u-root/u-root/xcmds/builtin",
+    visibility = ["//visibility:private"],
+    deps = ["//vendor/golang.org/x/tools/imports:go_default_library"],
+)
+
+go_binary(
+    name = "builtin",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

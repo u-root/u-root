@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["eui64.go"],
+    importmap = "github.com/u-root/u-root/vendor/github.com/mdlayher/eui64",
+    importpath = "github.com/mdlayher/eui64",
+    visibility = ["//visibility:public"],
+)

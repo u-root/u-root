@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["find.go"],
+    importpath = "github.com/u-root/u-root/cmds/find",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/find:go_default_library"],
+)
+
+go_binary(
+    name = "find",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

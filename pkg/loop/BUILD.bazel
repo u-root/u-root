@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "loop.go",
+        "loop_linux.go",
+        "losetup_linux.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/loop",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/mount:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+    ],
+)

@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "prependable.go",
+        "view.go",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/google/netstack/tcpip/buffer",
+    importpath = "github.com/google/netstack/tcpip/buffer",
+    visibility = ["//visibility:public"],
+)

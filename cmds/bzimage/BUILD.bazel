@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["bzimage.go"],
+    importpath = "github.com/u-root/u-root/cmds/bzimage",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/bzimage:go_default_library",
+        "//vendor/github.com/spf13/pflag:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "bzimage",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["bzimage_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/bzimage:go_default_library",
+        "//pkg/testutil:go_default_library",
+    ],
+)

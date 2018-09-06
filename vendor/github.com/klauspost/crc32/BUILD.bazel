@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "crc32.go",
+        "crc32_amd64.go",
+        "crc32_amd64.s",
+        "crc32_amd64p32.go",
+        "crc32_amd64p32.s",
+        "crc32_generic.go",
+        "crc32_otherarch.go",
+        "crc32_s390x.go",
+        "crc32_s390x.s",
+    ],
+    importmap = "github.com/u-root/u-root/vendor/github.com/klauspost/crc32",
+    importpath = "github.com/klauspost/crc32",
+    visibility = ["//visibility:public"],
+)

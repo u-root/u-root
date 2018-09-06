@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["dmesg.go"],
+    importpath = "github.com/u-root/u-root/cmds/dmesg",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "dmesg",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["dmesg_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//pkg/testutil:go_default_library"],
+)

@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "integration_test.go",
+        "io_test.go",
+        "kexec_test.go",
+        "uinit_test.go",
+    ],
+    deps = [
+        "//pkg/cp:go_default_library",
+        "//pkg/golang:go_default_library",
+        "//pkg/qemu:go_default_library",
+        "//pkg/uroot:go_default_library",
+    ],
+)

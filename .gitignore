@@ -4,6 +4,12 @@
 *.so
 *~
 
+# Bazel build system
+/bazel-*
+/buck-*
+/output/
+
+# Busybox build system
 /bbsh
 /bb
 /u-root

@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "config.go",
+        "device.go",
+        "entrytype_string.go",
+        "parser.go",
+    ],
+    importpath = "github.com/u-root/u-root/pkg/diskboot",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/kexec:go_default_library",
+        "//pkg/mount:go_default_library",
+        "//vendor/golang.org/x/sys/unix:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["config_test.go"],
+    data = glob(["testdata/**"]),
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/go-test/deep:go_default_library"],
+)

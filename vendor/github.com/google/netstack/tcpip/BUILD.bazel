@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["tcpip.go"],
+    importmap = "github.com/u-root/u-root/vendor/github.com/google/netstack/tcpip",
+    importpath = "github.com/google/netstack/tcpip",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/google/netstack/tcpip/buffer:go_default_library",
+        "//vendor/github.com/google/netstack/waiter:go_default_library",
+    ],
+)
