@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/u-root/u-root/tools/makebbinitramfs",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/cpio:go_default_library",
+        "//pkg/uflag:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "makebbinitramfs",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

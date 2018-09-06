@@ -2,39 +2,63 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// makebbmain creates a bb main.go source file.
+// makebbmain adds u-root command package imports to an existing main()
+// template file.
 package main
 
 import (
 	"flag"
+	"go/build"
 	"log"
+	"os"
+	"path/filepath"
 
-	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uflag"
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
 var (
-	template  = flag.String("template", "github.com/u-root/u-root/pkg/bb/cmd", "bb main.go template package")
-	outputDir = flag.String("o", "", "output directory")
+	pkg      = flag.String("template_pkg", "", "Go import package path")
+	destDir  = flag.String("dest_dir", "", "Destination directory")
+	pkgFiles uflag.Strings
+	commands uflag.Strings
 )
+
+func init() {
+	flag.Var(&pkgFiles, "package_file", "package files")
+	flag.Var(&commands, "command", "Go package path for command to import")
+}
 
 func main() {
 	flag.Parse()
-	if flag.NArg() == 0 {
-		log.Fatalf("must list bb packages as arguments")
+
+	var dir string
+	var gofiles []string
+	for _, file := range pkgFiles {
+		if len(dir) == 0 {
+			dir = filepath.Dir(file)
+		} else if dir != filepath.Dir(file) {
+			log.Fatal("all package source files must be in the same directory")
+		}
+		gofiles = append(gofiles, filepath.Base(file))
 	}
 
-	env := golang.Default()
-	p, err := env.Package(*template)
+	bpkg := &build.Package{
+		Name:       "main",
+		Dir:        dir,
+		ImportPath: *pkg,
+		GoFiles:    gofiles,
+	}
+
+	fset, astp, err := uroot.ParseAST(bpkg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fset, astp, err := uroot.ParseAST(p)
-	if err != nil {
+	if err := os.MkdirAll(*destDir, 0755); err != nil {
 		log.Fatal(err)
 	}
-	if err := uroot.CreateBBMainSource(fset, astp, flag.Args(), *outputDir); err != nil {
-		log.Fatalf("failed to create bb source file: %v", err)
+	if err := uroot.CreateBBMainSource(fset, astp, commands, *destDir); err != nil {
+		log.Fatal(err)
 	}
 }

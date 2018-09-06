@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/u-root/u-root/tools/makeinitramfs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/cpio:go_default_library",
+        "//pkg/uroot:go_default_library",
+    ],
+)

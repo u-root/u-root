@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["importer.go"],
+    importpath = "github.com/u-root/u-root/pkg/monoimporter",
+    visibility = ["//visibility:public"],
+    deps = ["@org_golang_x_tools//go/gcexportdata:go_default_library"],
+)
