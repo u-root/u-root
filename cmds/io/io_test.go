@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"testing"
 )
 
@@ -46,6 +47,11 @@ func (o op) Write(b []byte) (int, error) {
 	return len(b), o.outerr
 }
 
+func (o op) Fd() uintptr {
+	log.Fatalf("Fd is not not implemented in tests")
+	return 0
+}
+
 // checkError checks two error cases to make sure they match
 // in some reasonable way, since there are four cases ...
 func checkError(msg string, got, want error) error {
@@ -68,14 +74,14 @@ func TestIO(t *testing.T) {
 	}
 
 	for i, o := range ops {
-		err := out(o, o.addr, o.val)
+		err := outp(o, o.addr, o.val)
 		if err := checkError(o.name, err, o.outerr); err != nil {
 			t.Errorf("%v", err)
 		}
 		if i == 0 {
 			continue
 		}
-		err = in(o, o.addr, o.val)
+		err = inp(o, o.addr, o.val)
 		if err := checkError(o.name, err, o.inerr); err != nil {
 			t.Errorf("%v", err)
 		}

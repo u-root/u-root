@@ -15,6 +15,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -22,6 +23,15 @@ import (
 
 const usage = `io [inb|inw|inl|rb|rw|rl|rq] address
 io [outb|outw|outl|wb|ww|wl|wq] address value`
+
+type IoIntf interface {
+	Fd() uintptr
+	io.Reader
+	io.Seeker
+	io.Writer
+}
+
+type Accessor func(IoIntf, uint64, interface{}) error
 
 type iod struct {
 	nargs    int
@@ -31,24 +41,25 @@ type iod struct {
 	format   string
 	dev      string
 	mode     int
+	access   Accessor
 }
 
 var (
 	ios = map[string]iod{
-		"inb":  {2, 16, &b, 8, "%#02x", "/dev/port", os.O_RDONLY},
-		"inw":  {2, 16, &w, 16, "%#04x", "/dev/port", os.O_RDONLY},
-		"inl":  {2, 16, &l, 32, "%#08x", "/dev/port", os.O_RDONLY},
-		"outb": {3, 16, b, 8, "", "/dev/port", os.O_WRONLY},
-		"outw": {3, 16, w, 16, "", "/dev/port", os.O_WRONLY},
-		"outl": {3, 16, l, 32, "", "/dev/port", os.O_WRONLY},
-		"rb":   {2, 64, &b, 8, "%#02x", "/dev/mem", os.O_RDONLY},
-		"rw":   {2, 64, &w, 16, "%#04x", "/dev/mem", os.O_RDONLY},
-		"rl":   {2, 64, &l, 32, "%#08x", "/dev/mem", os.O_RDONLY},
-		"rq":   {2, 64, &q, 64, "%#16x", "/dev/mem", os.O_RDONLY},
-		"wb":   {3, 64, b, 8, "", "/dev/mem", os.O_WRONLY},
-		"ww":   {3, 64, w, 16, "", "/dev/mem", os.O_WRONLY},
-		"wl":   {3, 64, l, 32, "", "/dev/mem", os.O_WRONLY},
-		"wq":   {3, 64, q, 64, "", "/dev/mem", os.O_WRONLY},
+		"inb":  {2, 16, &b, 8, "%#02x", "/dev/port", os.O_RDONLY, inp},
+		"inw":  {2, 16, &w, 16, "%#04x", "/dev/port", os.O_RDONLY, inp},
+		"inl":  {2, 16, &l, 32, "%#08x", "/dev/port", os.O_RDONLY, inp},
+		"outb": {3, 16, b, 8, "", "/dev/port", os.O_WRONLY, outp},
+		"outw": {3, 16, w, 16, "", "/dev/port", os.O_WRONLY, outp},
+		"outl": {3, 16, l, 32, "", "/dev/port", os.O_WRONLY, outp},
+		"rb":   {2, 64, &b, 8, "%#02x", "/dev/mem", os.O_RDONLY, in},
+		"rw":   {2, 64, &w, 16, "%#04x", "/dev/mem", os.O_RDONLY, in},
+		"rl":   {2, 64, &l, 32, "%#08x", "/dev/mem", os.O_RDONLY, in},
+		"rq":   {2, 64, &q, 64, "%#16x", "/dev/mem", os.O_RDONLY, in},
+		"wb":   {3, 64, b, 8, "", "/dev/mem", os.O_WRONLY, out},
+		"ww":   {3, 64, w, 16, "", "/dev/mem", os.O_WRONLY, out},
+		"wl":   {3, 64, l, 32, "", "/dev/mem", os.O_WRONLY, out},
+		"wq":   {3, 64, q, 64, "", "/dev/mem", os.O_WRONLY, out},
 	}
 	b    byte
 	w    uint16
@@ -82,7 +93,7 @@ func main() {
 
 	switch a[0][0] {
 	case 'i', 'r':
-		err = in(f, addr, i.val)
+		err = i.access(f, addr, i.val)
 	case 'o', 'w':
 		var v uint64
 		v, err = strconv.ParseUint(a[2], 0, i.valbits)
@@ -91,13 +102,13 @@ func main() {
 		}
 		switch i.valbits {
 		case 8:
-			err = out(f, addr, uint8(v))
+			err = i.access(f, addr, uint8(v))
 		case 16:
-			err = out(f, addr, uint16(v))
+			err = i.access(f, addr, uint16(v))
 		case 32:
-			err = out(f, addr, uint32(v))
+			err = i.access(f, addr, uint32(v))
 		case 64:
-			err = out(f, addr, uint64(v))
+			err = i.access(f, addr, uint64(v))
 		}
 	default:
 		log.Fatalf(usage)
