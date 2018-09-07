@@ -14,7 +14,7 @@
 #
 #     https://circleci.com/docs/2.0/custom-images/
 
-FROM circleci/golang:1.10.3
+FROM circleci/golang:1.11
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
