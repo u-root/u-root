@@ -35,7 +35,7 @@ var (
 	_        = flag.Bool("v", false, "Ignored")
 )
 
-func scpSource(w io.Writer, path string) error {
+func scpSingleSource(w io.Writer, r io.Reader, path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -46,51 +46,81 @@ func scpSource(w io.Writer, path string) error {
 		return err
 	}
 	w.Write([]byte(fmt.Sprintf("C0%o %d %s\n", s.Mode(), s.Size(), path)))
-	if response() != SUCCESS {
-		log.Fatalf("response was not success")
+	if response(r) != SUCCESS {
+		return fmt.Errorf("response was not success")
 	}
 	_, err = io.Copy(w, f)
 	if err != nil {
-		log.Fatalf("copy error: %v", err)
+		return fmt.Errorf("copy error: %v", err)
 	}
-	reply(SUCCESS)
+	reply(w, SUCCESS)
 
-	if response() != SUCCESS {
-		log.Fatalf("response was not success")
+	if response(r) != SUCCESS {
+		return fmt.Errorf("response was not success")
 	}
 	return nil
 }
 
-func scpSink(r io.Reader, path string) error {
+func scpSingleSink(w io.Writer, r io.Reader, path string) error {
 	var mode os.FileMode
 	var size int64
 	filename := ""
 
+	// Ignore the filename, assume it has been provided on the command line.
+	// This will not work with directories and recursive copy, but that's not
+	// supported right now.
 	if _, err := fmt.Fscanf(r, "C0%o %d %s\n", &mode, &size, &filename); err != nil {
-		return err
+		if err == io.ErrUnexpectedEOF {
+			return io.EOF
+		}
+		return fmt.Errorf("fscanf: %v", err)
 	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, mode)
 	if err != nil {
-		log.Fatalf("open error: %v", err)
+		return fmt.Errorf("open error: %v", err)
 	}
-	reply(SUCCESS)
+	reply(w, SUCCESS)
 	defer f.Close()
 
 	_, err = io.CopyN(f, r, size)
 	if err != nil {
-		log.Fatalf("copy error: %v", err)
+		return fmt.Errorf("copy error: %v", err)
 	}
-	reply(SUCCESS)
+	if response(r) != SUCCESS {
+		return fmt.Errorf("response was not success")
+	}
+	reply(w, SUCCESS)
 	return nil
 }
 
-func reply(r byte) {
-	os.Stdout.Write([]byte{r})
+func scpSource(w io.Writer, r io.Reader, path string) error {
+	// Sink->Source is started with a response
+	if response(r) != SUCCESS {
+		return fmt.Errorf("response was not success")
+	}
+	return scpSingleSource(w, r, path)
 }
 
-func response() byte {
+func scpSink(w io.Writer, r io.Reader, path string) error {
+	reply(w, SUCCESS)
+	for {
+		if err := scpSingleSink(w, r, path); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func reply(out io.Writer, r byte) {
+	out.Write([]byte{r})
+}
+
+func response(in io.Reader) byte {
 	b := make([]byte, 1)
-	os.Stdout.Read(b)
+	in.Read(b)
 	return b[0]
 }
 
@@ -106,20 +136,12 @@ func main() {
 	}
 
 	if *isSource {
-		// Sink->Source is started with a response
-		if response() != SUCCESS {
-			log.Fatalf("response was not success")
-		}
-		if err := scpSource(os.Stdout, flag.Args()[0]); err != nil {
+		if err := scpSource(os.Stdout, os.Stdin, flag.Args()[0]); err != nil {
 			log.Fatalf("scp: %v", err)
 		}
 	} else if *isTarget {
-		// Sink->Source starts with a response
-		reply(SUCCESS)
-		for {
-			if err := scpSink(os.Stdin, flag.Args()[0]); err != nil {
-				log.Fatalf("scp: %v", err)
-			}
+		if err := scpSink(os.Stdout, os.Stdin, flag.Args()[0]); err != nil {
+			log.Fatalf("scp: %v", err)
 		}
 	}
 }
