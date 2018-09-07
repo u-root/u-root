@@ -88,7 +88,8 @@ jobs:
             go tool vet u-root.go
       - run:
           name: gofmt
-          command: test -z $(gofmt -s -l cmds xcmds pkg u-root.go)
+          command: |
+              test -z $(gofmt -s -l $(go list ./... | grep -v /vendor/))
       - run:
           name: ineffassign
           command: ineffassign .
