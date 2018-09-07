@@ -87,6 +87,9 @@ jobs:
             go tool vet cmds xcmds pkg
             go tool vet u-root.go
       - run:
+          name: gofmt
+          command: test -z $(gofmt -s -l cmds xcmds pkg u-root.go)
+      - run:
           name: ineffassign
           command: ineffassign .
   test:
