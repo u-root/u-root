@@ -13,9 +13,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
-	"os/exec"
 )
 
 var absPath = flag.Bool("a", false, "Print absolute paths")
@@ -73,7 +73,7 @@ func main() {
 	files := strings.Fields(string(out))
 
 	// Iterate over files.
-	outer:
+outer:
 	for _, file := range files {
 		// Test rules.
 		trimmedPath := strings.TrimPrefix(file, uroot)
