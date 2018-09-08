@@ -21,7 +21,7 @@ func TestCksum(t *testing.T) {
 			"afdsfsfgdglfdgkdlvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\nafdsfsfg" +
 			"dglfdgkdlvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\nafdsfsfgdglfdgkd" +
 			"lvcmdfposvpomfvmlcvdfk;lgkd'f;k;lvcvcv\nsdddsfsfsdfsdfsdasaarwre" +
-			"mazadsfs"), 3084665392},
+			"mazadsfs"), 449387299},
 	}
 
 	for _, testData := range testMatrix {

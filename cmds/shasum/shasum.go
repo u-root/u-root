@@ -60,9 +60,9 @@ func main() {
 		version   bool
 	)
 	cliArgs := ""
-	pflag.IntVar(&algorithm, "algorithm", "a", 1, "SHA algorithm, valid args are 1 and 256")
-	pflag.BoolVar(&help, "help", "h", false, "Show this help and exit")
-	pflag.BoolVar(&version, "version", "v", false, "Print Version")
+	pflag.IntVarP(&algorithm, "algorithm", "a", 1, "SHA algorithm, valid args are 1 and 256")
+	pflag.BoolVarP(&help, "help", "h", false, "Show this help and exit")
+	pflag.BoolVarP(&version, "version", "v", false, "Print Version")
 	pflag.Parse()
 
 	if help {
@@ -72,8 +72,8 @@ func main() {
 	if version {
 		versionPrinter()
 	}
-	if len(flag.Args()) == 1 {
-		cliArgs = flag.Args()[0]
+	if len(pflag.Args()) == 1 {
+		cliArgs = pflag.Args()[0]
 	}
 	input, err := getInput(cliArgs)
 	if err != nil {

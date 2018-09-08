@@ -115,9 +115,9 @@ func main() {
 		version bool
 	)
 	cliArgs := ""
-	flag.BoolVar(&help, "help", "h", false, "Show this help and exit")
-	flag.BoolVar(&version, "version", "v", false, "Print Version")
-	flag.Parse()
+	pflag.BoolVarP(&help, "help", "h", false, "Show this help and exit")
+	pflag.BoolVarP(&version, "version", "v", false, "Print Version")
+	pflag.Parse()
 
 	if help {
 		helpPrinter()
