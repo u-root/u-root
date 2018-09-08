@@ -7,17 +7,16 @@ package main
 import (
 	"crypto/md5"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/spf13/pflag"
 )
 
-func getInput(fileName string) (input []byte, err error) {
+func getInput() (input []byte, err error) {
 
-	if fileName != "" {
-		return ioutil.ReadFile(fileName)
-	}
 	return ioutil.ReadAll(os.Stdin)
 }
 
@@ -33,22 +32,32 @@ func versionPrinter() {
 	os.Exit(0)
 }
 
-func calculateMd5Sum(data []byte) string {
-	return fmt.Sprintf("%x", md5.Sum(data))
-}
+func calculateMd5Sum(fileName string, data []byte) string {
+	if len(data) > 0 {
+		return fmt.Sprintf("%x", md5.Sum(data))
+	}
 
-func checksum(hasher hash.Hash, r io.Reader) {
-	if _, err := io.Copy(hasher, r); err != nil {
+	fileDesc, err := os.Open(fileName)
+	if err != nil {
 		log.Fatal(err)
 	}
-	sum := hasher.Sum(nil)
-	fmt.Println(hex.EncodeToString(sum))
+	defer fileDesc.Close()
+
+	md5Generator := md5.New()
+	if _, err := io.Copy(md5Generator, fileDesc); err != nil {
+		log.Fatal(err)
+	}
+
+	md5Sum := fmt.Sprintf("%x", md5Generator.Sum(nil))
+	return md5Sum
 }
 
 func main() {
 	var (
 		help    bool
 		version bool
+		input   []byte
+		err     error
 	)
 	cliArgs := ""
 	pflag.BoolVarP(&help, "help", "h", false, "Show this help and exit")
@@ -66,12 +75,14 @@ func main() {
 	if len(os.Args) >= 2 {
 		cliArgs = os.Args[1]
 	}
-	input, err := getInput(cliArgs)
-	if err != nil {
-		fmt.Println("Error getting input.")
-		os.Exit(-1)
+	if cliArgs == "" {
+		input, err = getInput()
+		if err != nil {
+			fmt.Println("Error getting input.")
+			os.Exit(-1)
+		}
 	}
-	fmt.Printf("%s ", calculateMd5Sum(input))
+	fmt.Printf("%s ", calculateMd5Sum(cliArgs, input))
 	if cliArgs == "" {
 		fmt.Printf(" -\n")
 	} else {
