@@ -55,26 +55,29 @@ workflows:
 jobs:
   clean-code:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     steps:
       - checkout
       - run:
           name: Install dep
           command: |
-            wget https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64
-            chmod +x ./dep-linux-amd64
+            wget https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
+            mv dep-linux-amd64 dep
+            chmod +x dep
       - run:
           name: Install ineffassign
           command: go get github.com/gordonklaus/ineffassign
       - run:
           name: Check vendored dependencies
           command: |
-            ./dep-linux-amd64 hash-inputs
-            ./dep-linux-amd64 status
-            ./dep-linux-amd64 ensure -vendor-only
+            ./dep version
+            ./dep status
+            ./dep ensure -vendor-only
+            git status
             if [[ -n "$(git status --porcelain vendor)" ]]; then
               echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
+              echo 'If `dep ensure` results in no changes, make sure you are using the latest relase of dep'
               git status --porcelain vendor
               exit 1
             fi
@@ -85,13 +88,14 @@ jobs:
             go tool vet u-root.go
       - run:
           name: gofmt
-          command: test -z $(gofmt -s -l cmds xcmds pkg u-root.go)
+          command: |
+              test -z $(gofmt -s -l $(go list ./... | grep -v /vendor/))
       - run:
           name: ineffassign
           command: ineffassign .
   test:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -105,7 +109,7 @@ jobs:
           command: go test -cover ./pkg/... ./cmds/... ./xcmds/...
   test-integration:
     docker:
-      - image: roleary/uroot-integration:latest
+      - image: uroottest/x86-integration:latest
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -116,7 +120,7 @@ jobs:
           command: go test -v -a -ldflags '-s' ./integration/...
   race:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 1
@@ -127,7 +131,7 @@ jobs:
           command: go test -race ./pkg/... ./cmds/... ./xcmds/...
   bb_amd64:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -158,7 +162,7 @@ jobs:
           destination: bb_initramfs.linux_amd64.cpio.1
   bb_arm7:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -182,7 +186,7 @@ jobs:
           destination: bb_initramfs.linux_arm.cpio.lzma
   bb_arm64:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -205,7 +209,7 @@ jobs:
           destination: bb_initramfs.linux_arm64.cpio.lzma
   bb_ppc64le:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -228,7 +232,7 @@ jobs:
           destination: bb_initramfs.linux_ppc64le.cpio.lzma
   compile_cmds:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -245,7 +249,7 @@ jobs:
             go install -a ./...
   source_amd64:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -267,7 +271,7 @@ jobs:
           destination: source_initramfs.linux_amd64.cpio.lzma
   source_amd64_test_archive:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -297,7 +301,7 @@ jobs:
           working_directory: /tmp/u-root-test
   extra_files:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -323,7 +327,7 @@ jobs:
           working_directory: /tmp/u-root-test
   extra_files_multiple_files:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -352,7 +356,7 @@ jobs:
           working_directory: /tmp/u-root-test
   extra_files_comma_syntax:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -378,7 +382,7 @@ jobs:
           working_directory: /tmp/u-root-test
   extra_files_multiple_files_mixed_syntax:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -404,7 +408,7 @@ jobs:
           working_directory: /tmp/u-root-test
   extra_files_wrong_comma_syntax:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -423,7 +427,7 @@ jobs:
           command: if ./u-root -build=bb --tmpdir=/tmp/u-root -files /bin/bash:/bin/bash; then exit 1; else exit 0; fi
   check_licenses:
     docker:
-      - image: circleci/golang:latest
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0

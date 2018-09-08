@@ -30,7 +30,7 @@ modes:
 
 # Usage
 
-Make sure your Go version is the latest (>=1.10). Make sure your `GOPATH` is set
+Make sure your Go version is 1.11. Make sure your `GOPATH` is set
 up correctly.
 
 Download and install u-root:
@@ -146,6 +146,14 @@ that well for most people, a typical invocation looks like this:
 
 Or, on newer linux kernels (> 4.x) boot with ip=dhcp in the command line,
 assuming your kernel is configured to work that way.
+
+## Updating Dependencies
+
+```shell
+# The latest released version of dep is required:
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+dep ensure
+```
 
 # Hardware
 

@@ -4,17 +4,17 @@
 
 # Build:
 #
-#     sudo docker build . -t uroot-integration
+#     sudo docker build . -t uroottest/x86-integration
 #
 # Run:
 #
-#     sudo docker run --rm -it uroot-integration
+#     sudo docker run --rm -it uroottest/x86-integration
 #
 # More instructions:
 #
 #     https://circleci.com/docs/2.0/custom-images/
 
-FROM circleci/golang:1.10.3
+FROM circleci/golang:1.11
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
