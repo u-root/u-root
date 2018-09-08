@@ -20,8 +20,8 @@ func TestCksum(t *testing.T) {
 	}
 
 	for _, testData := range testMatrix {
-		if testData.cksum != calculateMd5Sum(testData.data) {
-			t.Errorf("md5sum verification failed. (Expected: %s, Received: %s)", testData.cksum, calculateMd5Sum(testData.data))
+		if testData.cksum != calculateMd5Sum("", testData.data) {
+			t.Errorf("md5sum verification failed. (Expected: %s, Received: %s)", testData.cksum, calculateMd5Sum("", testData.data))
 		}
 	}
 
