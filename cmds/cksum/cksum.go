@@ -99,8 +99,6 @@ func calculateCksum(input []byte) uint32 {
 	cksum := uint32(0)
 	for i := 0; i < len(input); i++ {
 		cksum = (cksum << 8) ^ uint32(cksumTable[((cksum>>24)^uint32(input[i]))&0xFF])
-		testVal := cksum
-		testVal = ^testVal
 	}
 	// checksum for data length
 	dataLength := len(input)
