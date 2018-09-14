@@ -13,7 +13,6 @@ import (
 	"sort"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	"golang.org/x/sys/unix"
 )
 
 // ArchiveFiles are host files and records to add to the resulting initramfs.
@@ -30,15 +29,15 @@ type ArchiveFiles struct {
 }
 
 // NewArchiveFiles returns a new archive files map.
-func NewArchiveFiles() ArchiveFiles {
-	return ArchiveFiles{
+func NewArchiveFiles() *ArchiveFiles {
+	return &ArchiveFiles{
 		Files:   make(map[string]string),
 		Records: make(map[string]cpio.Record),
 	}
 }
 
 // SortedKeys returns a list of sorted paths in the archive.
-func (af ArchiveFiles) SortedKeys() []string {
+func (af *ArchiveFiles) SortedKeys() []string {
 	keys := make([]string, 0, len(af.Files)+len(af.Records))
 	for dest := range af.Files {
 		keys = append(keys, dest)
@@ -51,7 +50,7 @@ func (af ArchiveFiles) SortedKeys() []string {
 }
 
 // AddFile adds a host file at `src` into the archive at `dest`.
-func (af ArchiveFiles) AddFile(src string, dest string) error {
+func (af *ArchiveFiles) AddFile(src string, dest string) error {
 	src = filepath.Clean(src)
 	dest = path.Clean(dest)
 	if path.IsAbs(dest) {
@@ -61,9 +60,31 @@ func (af ArchiveFiles) AddFile(src string, dest string) error {
 		return fmt.Errorf("source file %q (-> %q) must be absolute", src, dest)
 	}
 
-	if _, ok := af.Records[dest]; ok {
-		return fmt.Errorf("record for %q already exists in archive", dest)
+	// We check if it's a directory first. If a directory already exists as
+	// a record or file, we want to include its children anyway.
+	sInfo, err := os.Stat(src)
+	if err != nil {
+		return fmt.Errorf("adding file %q to archive failed: %v", src, err)
 	}
+
+	if sInfo.Mode().IsDir() {
+		err := children(src, func(name string) error {
+			return af.AddFile(filepath.Join(src, name), filepath.Join(dest, name))
+		})
+		if err != nil {
+			return err
+		}
+
+		// Only override an existing directory if all children were
+		// added successfully.
+		af.Files[dest] = src
+		return nil
+	}
+
+	if record, ok := af.Records[dest]; ok {
+		return fmt.Errorf("record for %q already exists in archive: %v", dest, record)
+	}
+
 	if srcFile, ok := af.Files[dest]; ok {
 		// Just a duplicate.
 		if src == srcFile {
@@ -77,20 +98,20 @@ func (af ArchiveFiles) AddFile(src string, dest string) error {
 }
 
 // AddRecord adds a cpio.Record into the archive at `r.Name`.
-func (af ArchiveFiles) AddRecord(r cpio.Record) error {
+func (af *ArchiveFiles) AddRecord(r cpio.Record) error {
 	r.Name = path.Clean(r.Name)
 	if filepath.IsAbs(r.Name) {
 		return fmt.Errorf("record name %q must not be absolute", r.Name)
 	}
 
-	if _, ok := af.Files[r.Name]; ok {
-		return fmt.Errorf("record for %q already exists in archive", r.Name)
+	if src, ok := af.Files[r.Name]; ok {
+		return fmt.Errorf("record for %q already exists in archive: file %q", r.Name, src)
 	}
 	if rr, ok := af.Records[r.Name]; ok {
 		if rr.Info == r.Info {
 			return nil
 		}
-		return fmt.Errorf("record for %q already exists in archive", r.Name)
+		return fmt.Errorf("record for %q already exists in archive: %v", r.Name, rr)
 	}
 
 	af.Records[r.Name] = r
@@ -98,14 +119,14 @@ func (af ArchiveFiles) AddRecord(r cpio.Record) error {
 }
 
 // Contains returns whether path `dest` is already contained in the archive.
-func (af ArchiveFiles) Contains(dest string) bool {
+func (af *ArchiveFiles) Contains(dest string) bool {
 	_, fok := af.Files[dest]
 	_, rok := af.Records[dest]
 	return fok || rok
 }
 
 // Rename renames a file in the archive.
-func (af ArchiveFiles) Rename(name string, newname string) {
+func (af *ArchiveFiles) Rename(name string, newname string) {
 	if src, ok := af.Files[name]; ok {
 		delete(af.Files, name)
 		af.Files[newname] = src
@@ -118,7 +139,7 @@ func (af ArchiveFiles) Rename(name string, newname string) {
 }
 
 // addParent recursively adds parent directory records for `name`.
-func (af ArchiveFiles) addParent(name string) {
+func (af *ArchiveFiles) addParent(name string) {
 	parent := path.Dir(name)
 	if parent == "." {
 		return
@@ -130,7 +151,7 @@ func (af ArchiveFiles) addParent(name string) {
 }
 
 // fillInParents adds parent directory records for unparented files in `af`.
-func (af ArchiveFiles) fillInParents() {
+func (af *ArchiveFiles) fillInParents() {
 	for name := range af.Files {
 		af.addParent(name)
 	}
@@ -140,7 +161,7 @@ func (af ArchiveFiles) fillInParents() {
 }
 
 // WriteTo writes all records and files in `af` to `w`.
-func (af ArchiveFiles) WriteTo(w ArchiveWriter) error {
+func (af *ArchiveFiles) WriteTo(w ArchiveWriter) error {
 	// Add parent directories when not added specifically.
 	af.fillInParents()
 
@@ -224,16 +245,7 @@ func WriteFile(w ArchiveWriter, src, dest string) error {
 
 	// Fix the name.
 	record.Name = dest
-	if err := w.WriteRecord(cpio.MakeReproducible(record)); err != nil {
-		return err
-	}
-
-	if record.Info.Mode&unix.S_IFMT == unix.S_IFDIR {
-		return children(src, func(name string) error {
-			return WriteFile(w, filepath.Join(src, name), filepath.Join(dest, name))
-		})
-	}
-	return nil
+	return w.WriteRecord(cpio.MakeReproducible(record))
 }
 
 // children calls `fn` on all direct children of directory `dir`.

@@ -329,7 +329,6 @@ func Main() error {
 				Packages: pkgs,
 			},
 		},
-		Archiver:        archiver,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,

@@ -56,7 +56,6 @@ var DefaultRamfs = []cpio.Record{
 	cpio.Directory("usr/lib", 0755),
 	cpio.Directory("var/log", 0777),
 	cpio.Directory("lib64", 0755),
-	cpio.Directory("bin", 0755),
 	cpio.CharDev("dev/console", 0600, 5, 1),
 	cpio.CharDev("dev/tty", 0666, 5, 0),
 	cpio.CharDev("dev/null", 0666, 1, 3),
@@ -103,11 +102,6 @@ type Opts struct {
 	// TempDir is a temporary directory for builders to store files in.
 	TempDir string
 
-	// Archiver is the initramfs archival format.
-	//
-	// Only "cpio" is currently supported.
-	Archiver Archiver
-
 	// ExtraFiles are files to add to the archive in addition to the Go
 	// packages.
 	//
@@ -142,7 +136,7 @@ type Opts struct {
 	// This can be an absolute path or the name of a command included in
 	// Commands.
 	//
-	// This must be specified to have a default shell.
+	// If this is empty, there will be no default shell.
 	DefaultShell string
 }
 
@@ -228,7 +222,7 @@ func ResolvePackagePaths(env golang.Environ, pkgs []string) ([]string, error) {
 // - justAPath is added to the archive under justAPath.
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
-func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) error {
+func ParseExtraFiles(archive *ArchiveFiles, extraFiles []string, lddDeps bool) error {
 	var err error
 	// Add files from command line.
 	for _, file := range extraFiles {
@@ -281,8 +275,8 @@ func ParseExtraFiles(archive ArchiveFiles, extraFiles []string, lddDeps bool) er
 
 // CreateInitramfs creates an initramfs built to `opts`' specifications.
 func CreateInitramfs(opts Opts) error {
-	if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
-		return fmt.Errorf("temp dir %q must exist: %v", opts.TempDir, err)
+	if _, err := os.Stat(opts.TempDir); err != nil {
+		return fmt.Errorf("temp dir %q must exist and be accessible: %v", opts.TempDir, err)
 	}
 	if opts.OutputFile == nil {
 		return fmt.Errorf("must give output file")
@@ -384,7 +378,7 @@ type BuildOpts struct {
 type Builder struct {
 	// Build uses the given options to build Go packages and adds its files to be
 	// included in the initramfs to the given ArchiveFiles.
-	Build func(ArchiveFiles, BuildOpts) error
+	Build func(*ArchiveFiles, BuildOpts) error
 
 	// DefaultBinaryDir is the default binary directory to place built
 	// binaries in.
@@ -397,7 +391,7 @@ type ArchiveOpts struct {
 	//
 	// Files in ArchiveFiles generally have priority over files in
 	// DefaultRecords or BaseArchive.
-	ArchiveFiles
+	*ArchiveFiles
 
 	// DefaultRecords is a set of files to be included in the initramfs.
 	DefaultRecords []cpio.Record
