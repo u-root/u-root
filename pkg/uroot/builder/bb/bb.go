@@ -21,16 +21,45 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 
+	"github.com/nightlyone/lockfile"
 	"github.com/u-root/u-root/pkg/golang"
 )
 
 // Commands to skip building in bb mode.
 var skip = map[string]struct{}{
 	"bb": {},
+}
+
+func getBBLock(bblock string) (lockfile.Lockfile, error) {
+	timer := time.After(10 * time.Second)
+	lock, err := lockfile.New(bblock)
+	if err != nil {
+		return lockfile.Lockfile(""), err
+	}
+	for {
+		select {
+		case <-timer:
+			return lockfile.Lockfile(""), fmt.Errorf("could not acquire bblock file %q", bblock)
+		default:
+		}
+
+		switch err := lock.TryLock(); err {
+		case nil:
+			return lock, nil
+
+		case lockfile.ErrBusy, lockfile.ErrNotExist:
+			// This sucks. Use inotify.
+			time.Sleep(100 * time.Millisecond)
+
+		default:
+			return lockfile.Lockfile(""), err
+		}
+	}
 }
 
 // BuildBusybox builds a busybox of the given Go packages.
@@ -42,6 +71,14 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 	if err != nil {
 		return err
 	}
+
+	bblock := filepath.Join(urootPkg.Dir, "bblock")
+	// Only one busybox can be compiled at a time.
+	l, err := getBBLock(bblock)
+	if err != nil {
+		return err
+	}
+	defer l.Unlock()
 
 	bbDir := filepath.Join(urootPkg.Dir, "bb")
 	// Blow bb away before trying to re-create it.
