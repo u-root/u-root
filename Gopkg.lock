@@ -154,6 +154,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:26217ee135b8157549e648efe97dff3282e4bd597a912d784db964df41067f29"
+  name = "github.com/nightlyone/lockfile"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
+
+[[projects]]
+  branch = "master"
   digest = "1:22ffe7a0e80f54e5a5ee408e2f6a4717ee8c5c3ecd94530963d1362efa178df5"
   name = "github.com/rck/unit"
   packages = ["."]
@@ -293,6 +301,7 @@
     "github.com/mdlayher/dhcp6",
     "github.com/mdlayher/dhcp6/dhcp6opts",
     "github.com/mdlayher/eui64",
+    "github.com/nightlyone/lockfile",
     "github.com/rck/unit",
     "github.com/spf13/pflag",
     "github.com/u-root/dhcp4",
