@@ -36,7 +36,7 @@ var skip = map[string]struct{}{
 }
 
 func getBBLock(bblock string) (lockfile.Lockfile, error) {
-	timer := time.After(10 * time.Second)
+	timer := time.After(30 * time.Second)
 	lock, err := lockfile.New(bblock)
 	if err != nil {
 		return lockfile.Lockfile(""), err
@@ -44,7 +44,7 @@ func getBBLock(bblock string) (lockfile.Lockfile, error) {
 	for {
 		select {
 		case <-timer:
-			return lockfile.Lockfile(""), fmt.Errorf("could not acquire bblock file %q", bblock)
+			return lockfile.Lockfile(""), fmt.Errorf("could not acquire bblock file %q: 30 second deadline expired", bblock)
 		default:
 		}
 
