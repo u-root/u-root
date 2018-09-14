@@ -54,14 +54,15 @@ var DefaultRamfs = cpio.ArchiveFromRecords([]cpio.Record{
 })
 
 // Commands specifies a list of Golang packages to build with a builder, e.g.
-// in busybox mode or source mode or binary mode.
+// in busybox mode, source mode, or binary mode.
 //
 // See Builder for an explanation of build modes.
 type Commands struct {
 	// Builder is the Go compiler mode.
 	Builder builder.Builder
 
-	// Packages are the Go packages to compile and add to the archive.
+	// Packages are the Go commands to include (compiled or otherwise) and
+	// add to the archive.
 	//
 	// Currently allowed formats:
 	//
@@ -94,8 +95,6 @@ func (c Commands) TargetDir() string {
 //
 // Opts contains everything that influences initramfs creation such as the Go
 // build environment.
-//
-//
 type Opts struct {
 	// Env is the Golang build environment (GOOS, GOARCH, etc).
 	Env golang.Environ
@@ -135,9 +134,10 @@ type Opts struct {
 	//
 	// The following formats are allowed in the list:
 	//
-	//   - `hostPath:archivePath` adds the file from hostPath at the relative
-	//     archivePath in the archive.
-	//   - `justAPath` is added to the archive under justAPath.
+	//   - "/home/chrisko/foo:root/bar" adds the file from absolute path
+	//     /home/chrisko/foo on the host at the relative root/bar in the
+	//     archive.
+	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
 	ExtraFiles []string
 
 	// OutputFile is the archive output file.
@@ -151,7 +151,7 @@ type Opts struct {
 	// BaseArchive should be used.
 	//
 	// If this is false, the "init" from BaseArchive will be renamed to
-	// "inito".
+	// "inito" (init-original).
 	UseExistingInit bool
 
 	// InitCmd is the name of a command to link /init to.
@@ -328,9 +328,10 @@ func ResolvePackagePaths(logger *log.Logger, env golang.Environ, pkgs []string) 
 //
 // The following formats are allowed in the extraFiles list:
 //
-//   - `hostPath:archivePath` adds the file from hostPath at the relative
-//     archivePath in the archive.
-//   - `justAPath` is added to the archive under justAPath.
+//   - "/home/chrisko/foo:root/bar" adds the file from absolute path
+//     /home/chrisko/foo on the host at the relative root/bar in the
+//     archive.
+//   - "/home/foo" is equivalent to "/home/foo:home/foo".
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
 func ParseExtraFiles(logger *log.Logger, archive *initramfs.Files, extraFiles []string, lddDeps bool) error {

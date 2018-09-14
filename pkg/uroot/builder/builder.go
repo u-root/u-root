@@ -23,7 +23,7 @@ var Builders = map[string]Builder{
 	"binary": Binary,
 }
 
-// Opts are arguments to the Builder.Build function.
+// Opts are options passed to the Builder.Build function.
 type Opts struct {
 	// Env is the Go compiler environment.
 	Env golang.Environ
