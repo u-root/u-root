@@ -156,16 +156,8 @@ func TestFilesAddFile(t *testing.T) {
 					"bar/foo/foo2": "/some/place/real/zed",
 				},
 			},
-			src:  dir,
-			dest: "bar/foo",
-			result: &Files{
-				Files: map[string]string{
-					// This is weird. Half-done operation.
-					"bar/foo/foo":  filepath.Join(dir, "foo"),
-					"bar/foo":      "/some/place/real",
-					"bar/foo/foo2": "/some/place/real/zed",
-				},
-			},
+			src:         dir,
+			dest:        "bar/foo",
 			errContains: "already exists in archive",
 		},
 	} {
@@ -178,7 +170,7 @@ func TestFilesAddFile(t *testing.T) {
 				t.Errorf("Got no error, want %v", tt.errContains)
 			}
 
-			if !reflect.DeepEqual(tt.af, tt.result) {
+			if tt.result != nil && !reflect.DeepEqual(tt.af, tt.result) {
 				t.Errorf("got %v, want %v", tt.af, tt.result)
 			}
 		})
