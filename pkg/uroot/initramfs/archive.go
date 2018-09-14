@@ -83,12 +83,12 @@ type Opts struct {
 	// or not, if BaseArchive is specified.
 	//
 	// If this is false, the "init" file in BaseArchive will be renamed
-	// "inito" in the output archive.
+	// "inito" (for init-original) in the output archive.
 	UseExistingInit bool
 }
 
-// Write uses the given options to determine which files need to be written to
-// the output initramfs archiver using the archive format `a` and writes them.
+// Write uses the given options to determine which files to write to the output
+// initramfs.
 func Write(opts *Opts) error {
 	// Write base archive.
 	if opts.BaseArchive != nil {

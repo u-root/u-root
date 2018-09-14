@@ -74,6 +74,16 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 
 	bblock := filepath.Join(urootPkg.Dir, "bblock")
 	// Only one busybox can be compiled at a time.
+	//
+	// Since busybox files all get rewritten in
+	// GOPATH/src/github.com/u-root/u-root/bb/..., no more than one source
+	// transformation can be in progress at the same time. Otherwise,
+	// different bb processes will write a different set of files to the
+	// "bb" directory at the same time, potentially producing an unintended
+	// bb binary.
+	//
+	// Doing each rewrite in a temporary unique directory is not an option
+	// as that kills reproducible builds.
 	l, err := getBBLock(bblock)
 	if err != nil {
 		return err
