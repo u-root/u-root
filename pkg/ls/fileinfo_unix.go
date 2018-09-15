@@ -96,12 +96,16 @@ func lookupGroupName(id uint32) string {
 	return s
 }
 
+// Stringer provides a consistent way to format FileInfo.
 type Stringer interface {
+	// FileString formats a FileInfo.
 	FileString(fi FileInfo) string
 }
 
+// NameStringer is a Stringer implementation that just prints the name.
 type NameStringer struct{}
 
+// FileString implements Stringer.FileString and just returns fi's name.
 func (ns NameStringer) FileString(fi FileInfo) string {
 	return fi.PrintableName()
 }
@@ -115,11 +119,14 @@ func (qs QuotedStringer) FileString(fi FileInfo) string {
 	return fmt.Sprintf("%#v", fi.Name)
 }
 
+// LongStringer is a Stringer that returns the file info formatted in `ls -l`
+// long format.
 type LongStringer struct {
 	Human bool
 	Name  Stringer
 }
 
+// FileString implements Stringer.FileString.
 func (ls LongStringer) FileString(fi FileInfo) string {
 	// Golang's FileMode.String() is almost sufficient, except we would
 	// rather use b and c for devices.
