@@ -20,7 +20,7 @@ func NewEnvCompleter(s string) (Completer, error) {
 	e := os.Getenv(s)
 	Debug("NewEnvCompleter: path %q has value %q", s, e)
 	if e == "" {
-		return nil, EmptyEnv
+		return nil, ErrEmptyEnv
 	}
 	dirs := strings.Split(e, ":")
 	if len(dirs) == 0 {

@@ -50,8 +50,8 @@ func unregisterServiceWithSos(service string, sosServerURL string) error {
 	return makeRequestToServer("POST", sosServerURL+"/unregister", m)
 }
 
-func makeRequestToServer(reqType, url string, reqJson interface{}) error {
-	b, err := json.Marshal(reqJson)
+func makeRequestToServer(reqType, url string, reqJSON interface{}) error {
+	b, err := json.Marshal(reqJSON)
 	if err != nil {
 		return err
 	}

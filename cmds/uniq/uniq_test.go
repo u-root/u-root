@@ -15,9 +15,9 @@ import (
 
 func TestUniq(t *testing.T) {
 	var (
-		input1 string = "test\ntest\ngo\ngo\ngo\ncoool\ncoool\ncool\nlegaal\ntest\n"
-		input2 string = "u-root\nuniq\nron\nron\nteam\nbinaries\ntest\n\n\n\n\n\n"
-		tab           = []struct {
+		input1 = "test\ntest\ngo\ngo\ngo\ncoool\ncoool\ncool\nlegaal\ntest\n"
+		input2 = "u-root\nuniq\nron\nron\nteam\nbinaries\ntest\n\n\n\n\n\n"
+		tab    = []struct {
 			i string
 			o string
 			s int
