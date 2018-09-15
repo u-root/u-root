@@ -48,8 +48,8 @@ func (ts TimeService) AutoSetTime() error {
 	return exec.Command("ntpdate").Run()
 }
 
-// ManSetTime sets the system time similarly to u-root's "date" commmand
-// with user-entered fields
+// ManSetTime sets the system time similarly to u-root's "date" command with
+// user-entered fields
 func (ts TimeService) ManSetTime(new TimeJsonMsg) error {
 	userTime := parseDate(new)
 	tv := syscall.NsecToTimeval(userTime.UnixNano())
