@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -224,7 +225,7 @@ func (pT *ProcessTable) LoadTable() error {
 		return err
 	}
 	if len(list) == 0 {
-		return fmt.Errorf("No processes in /proc.")
+		return errors.New("no processes in /proc")
 	}
 
 	for _, dir := range list {

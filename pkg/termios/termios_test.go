@@ -130,7 +130,7 @@ func TestString(t *testing.T) {
 	}
 }`
 	s := `speed:0 rows:72 cols:238 brkint:1 clocal:0 cread:1 cstopb:0 echo:1 echoctl:1 echoe:1 echok:1 echoke:1 echonl:0 echoprt:0 eof:0x04 eol2:0xff eol:0xff erase:0x7f flusho:0 hupcl:0 icanon:1 icrnl:1 iexten:1 ignbrk:0 igncr:0 ignpar:1 imaxbel:1 inlcr:0 inpck:0 intr:0x03 isig:1 istrip:0 iuclc:0 iutf8:1 ixany:0 ixoff:0 ixon:1 kill:0x15 lnext:0x16 min:0x00 noflsh:0 ocrnl:0 ofdel:0 ofill:0 olcuc:0 onlcr:1 onlret:0 onocr:0 opost:1 parenb:0 parmrk:0 parodd:0 pendin:1 quit:0x1c start:0x11 stop:0x13 susp:0x1a time:0x03 tostop:0 werase:0x17 xcase:0`
-	var g *tty = &tty{}
+	g := &tty{}
 	if err := json.Unmarshal([]byte(j), g); err != nil {
 		t.Fatalf("stty load: %v", err)
 	}

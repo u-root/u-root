@@ -84,7 +84,7 @@ func (l *LineReader) ReadOne() ([]string, error) {
 				l.W.Write(b[:])
 			}
 		case '\n', '\r':
-			err = EOL
+			err = ErrEOL
 			fallthrough
 		case ' ':
 			if b[0] == ' ' {

@@ -38,13 +38,13 @@ import (
 	"strings"
 )
 
-type forthop func(f Forth)
+type ForthOp func(f Forth)
 
 type forthstack struct {
 	stack []string
 }
 
-var opmap = map[string]forthop{
+var opmap = map[string]ForthOp{
 	"+":        plus,
 	"-":        sub,
 	"*":        times,
@@ -68,7 +68,7 @@ type Forth interface {
 	Pop() string
 	Length() int
 	Empty() bool
-	Newop(string, forthop)
+	Newop(string, ForthOp)
 	Reset()
 	Stack() []string
 }
@@ -81,11 +81,11 @@ func New() Forth {
 
 // Newop creates a new operation. We considered having
 // an opmap per stack but don't feel the package requires it
-func (f *forthstack) Newop(n string, op forthop) {
+func (f *forthstack) Newop(n string, op ForthOp) {
 	opmap[n] = op
 }
 
-func Ops() map[string]forthop {
+func Ops() map[string]ForthOp {
 	return opmap
 }
 

@@ -29,7 +29,7 @@ func (fs *FakeStdin) Read(p []byte) (int, error) {
 		fs.pos = 0
 	}
 	n := copy(p, fs.answers[fs.pos])
-	fs.pos += 1
+	fs.pos++
 	return n, nil
 }
 

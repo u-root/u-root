@@ -108,7 +108,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		return nil
 	}
 	if r.Len() != 0 {
-		return fmt.Errorf("%d bytes left over!", r.Len())
+		return fmt.Errorf("%d bytes left over", r.Len())
 	}
 	return nil
 }
@@ -345,25 +345,25 @@ func (h *LinuxHeader) Diff(i *LinuxHeader) string {
 
 // Diff is a convenience function that returns a string showing
 // differences between a bzImage and another bzImage
-func (b1 *BzImage) Diff(b2 *BzImage) string {
-	s := b1.Header.Diff(&b2.Header)
-	if len(b1.BootCode) != len(b2.BootCode) {
-		s = s + fmt.Sprintf("b1 Bootcode is %d; b2 BootCode is %d", len(b1.BootCode), len(b2.BootCode))
+func (b *BzImage) Diff(b2 *BzImage) string {
+	s := b.Header.Diff(&b2.Header)
+	if len(b.BootCode) != len(b2.BootCode) {
+		s = s + fmt.Sprintf("b Bootcode is %d; b2 BootCode is %d", len(b.BootCode), len(b2.BootCode))
 	}
-	if len(b1.HeadCode) != len(b2.HeadCode) {
-		s = s + fmt.Sprintf("b1 Headcode is %d; b2 HeadCode is %d", len(b1.HeadCode), len(b2.HeadCode))
+	if len(b.HeadCode) != len(b2.HeadCode) {
+		s = s + fmt.Sprintf("b Headcode is %d; b2 HeadCode is %d", len(b.HeadCode), len(b2.HeadCode))
 	}
-	if len(b1.KernelCode) != len(b2.KernelCode) {
-		s = s + fmt.Sprintf("b1 Kernelcode is %d; b2 KernelCode is %d", len(b1.KernelCode), len(b2.KernelCode))
+	if len(b.KernelCode) != len(b2.KernelCode) {
+		s = s + fmt.Sprintf("b Kernelcode is %d; b2 KernelCode is %d", len(b.KernelCode), len(b2.KernelCode))
 	}
-	if len(b1.TailCode) != len(b2.TailCode) {
-		s = s + fmt.Sprintf("b1 Tailcode is %d; b2 TailCode is %d", len(b1.TailCode), len(b2.TailCode))
+	if len(b.TailCode) != len(b2.TailCode) {
+		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
 	}
-	if b1.KernelBase != b2.KernelBase {
-		s = s + fmt.Sprintf("b1 KernelBase is %#x; b2 KernelBase is %#x", b1.KernelBase, b2.KernelBase)
+	if b.KernelBase != b2.KernelBase {
+		s = s + fmt.Sprintf("b KernelBase is %#x; b2 KernelBase is %#x", b.KernelBase, b2.KernelBase)
 	}
-	if b1.KernelOffset != b2.KernelOffset {
-		s = s + fmt.Sprintf("b1 KernelOffset is %#x; b2 KernelOffset is %#x", b1.KernelOffset, b2.KernelOffset)
+	if b.KernelOffset != b2.KernelOffset {
+		s = s + fmt.Sprintf("b KernelOffset is %#x; b2 KernelOffset is %#x", b.KernelOffset, b2.KernelOffset)
 	}
 	return s
 }

@@ -264,7 +264,7 @@ func TestLineReader(t *testing.T) {
 		s, err := l.ReadOne()
 
 		t.Logf("ReadOne returns %v %v", s, err)
-		if err != nil && err != io.EOF && err != EOL {
+		if err != nil && err != io.EOF && err != ErrEOL {
 			t.Fatal(err)
 		}
 		if len(s) != len(tst.names) {
@@ -286,7 +286,7 @@ func TestEnv(t *testing.T) {
 		nels    int
 		err     error
 	}{
-		{"", 0, EmptyEnv},
+		{"", 0, ErrEmptyEnv},
 		{"a", 1, nil},
 		{"A:B", 2, nil},
 	}
