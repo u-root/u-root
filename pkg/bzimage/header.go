@@ -131,7 +131,7 @@ type LinuxHeader struct {
 	HandoverOffset uint32 `offset:"0x264"`
 }
 
-// Paramters passed to 32-bit part of Linux
+// Parameters passed to 32-bit part of Linux
 type LinuxParams struct {
 	Origx           uint8  `offset:"0x00"`
 	Origy           uint8  `offset:"0x01"`
