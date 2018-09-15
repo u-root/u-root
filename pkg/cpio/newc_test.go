@@ -16,7 +16,9 @@ import (
 )
 
 /*
-This test should really compare against []Records, not the string formatted []Records.
+TODO(#935): This test should really compare against []Records, not the string
+formatted []Records.
+
 func TestSimple(t *testing.T) {
 	r := Newc.Reader(bytes.NewReader(testCPIO))
 	files, err := ReadAllRecords(r)
