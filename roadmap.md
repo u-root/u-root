@@ -16,7 +16,7 @@ yourself.
 | :x: less       |                 | Not implemented yet!   |
 | ls             | -hFfS           | -r is raw not reverse  |
 | :x: man        | -k              | Not implemented yet!   |
-| mv             | -nu             |                        |
+| mv             | -n              |                        |
 | ping           | -a              |                        |
 | :x: printf     |                 | Not implemented yet!   |
 | ps             |                 | Fix race conditions    |
