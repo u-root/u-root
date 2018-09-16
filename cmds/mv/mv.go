@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -20,23 +20,59 @@ import (
 	"path/filepath"
 )
 
+var (
+	update = flag.Bool("u", false, "move only when the SOURCE file is newer than the destination file or when the destination file is missing")
+)
+
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s source target\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "       %s source ... directory\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s [ARGS] source target\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "       %s [ARGS] source ... directory\n", os.Args[0])
+	flag.PrintDefaults()
 	os.Exit(1)
+}
+
+func moveFile(source string, dest string) error {
+	if *update {
+		var err error
+		var sourceModTime, destModTime os.FileInfo
+
+		sourceModTime, err = os.Lstat(source)
+		if err != nil {
+			return err
+		}
+		var sourceDate = sourceModTime.ModTime()
+
+		// Check if the destination already exists and was touched later than the source
+		destModTime, err = os.Lstat(dest)
+		if err == nil {
+			var destDate = destModTime.ModTime()
+			if destDate.After(sourceDate) {
+				// Source is older and we don't want to "downgrade"
+				return nil
+			}
+		}
+	}
+
+	if err := os.Rename(source, dest); err != nil {
+		return err
+	}
+	return nil
 }
 
 func mv(files []string, todir bool) error {
 	if len(files) == 2 && todir == false {
-		if err := os.Rename(files[0], files[1]); err != nil {
+		// Rename/move a single file
+		var err = moveFile(files[0], files[1])
+		if err != nil {
 			return err
 		}
 	} else {
-		lf := files[len(files)-1]
-		// "copying" N files to 1 directory
+		// Move one or more files into a directory
+		destdir := files[len(files)-1]
 		for _, f := range files[:len(files)-1] {
-			ndir := filepath.Join(lf, filepath.Base(f))
-			if err := os.Rename(f, ndir); err != nil {
+			newPath := filepath.Join(destdir, filepath.Base(f))
+			var err = moveFile(f, newPath)
+			if err != nil {
 				return err
 			}
 		}
@@ -53,12 +89,12 @@ func main() {
 	}
 
 	files := flag.Args()
-	lf := files[len(files)-1]
-	if lfdir, err := os.Lstat(lf); err == nil {
-		todir = lfdir.IsDir()
+	dest := files[len(files)-1]
+	if destdir, err := os.Lstat(dest); err == nil {
+		todir = destdir.IsDir()
 	}
 	if flag.NArg() > 2 && todir == false {
-		fmt.Printf("not a directory: %s\n", lf)
+		fmt.Printf("Not a directory: %s\n", dest)
 		os.Exit(1)
 	}
 
