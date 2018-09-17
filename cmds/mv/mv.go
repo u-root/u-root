@@ -5,8 +5,8 @@
 // Mv renames files and directories.
 //
 // Synopsis:
-//     mv SOURCE TARGET
-//     mv SOURCE... DIRECTORY
+//     mv SOURCE [-u] TARGET
+//     mv SOURCE... [-u] DIRECTORY
 //
 // Author:
 //     Beletti (rhiguita@gmail.com)
@@ -62,8 +62,7 @@ func moveFile(source string, dest string) error {
 func mv(files []string, todir bool) error {
 	if len(files) == 2 && todir == false {
 		// Rename/move a single file
-		var err = moveFile(files[0], files[1])
-		if err != nil {
+		if err := moveFile(files[0], files[1]); err != nil {
 			return err
 		}
 	} else {
@@ -71,8 +70,7 @@ func mv(files []string, todir bool) error {
 		destdir := files[len(files)-1]
 		for _, f := range files[:len(files)-1] {
 			newPath := filepath.Join(destdir, filepath.Base(f))
-			var err = moveFile(f, newPath)
-			if err != nil {
+			if err := moveFile(f, newPath); err != nil {
 				return err
 			}
 		}
