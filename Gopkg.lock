@@ -133,6 +133,14 @@
   version = "v0.0.4"
 
 [[projects]]
+  digest = "1:bff482b22ebed387378546ba6a7850fdef87fd47f8ee58a7c62124a8e889a56b"
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ce7b0b5c7b45a81508558cd1dba6bb1e4ddb51bb"
+  version = "v0.0.3"
+
+[[projects]]
   branch = "master"
   digest = "1:a5fecc72805e5b778d3ed8676c9ae4b8dc11244f1c32630ae339582bee18a3b9"
   name = "github.com/mdlayher/dhcp6"
@@ -175,6 +183,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
+
+[[projects]]
+  branch = "master"
+  digest = "1:34d9354c2c5d916c05864327553047df59fc10e86ff1f408e4136eba0a25a5ec"
+  name = "github.com/nsf/termbox-go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "b66b20ab708e289ff1eb3e218478302e6aec28ce"
 
 [[projects]]
   branch = "master"
@@ -335,6 +351,7 @@
     "github.com/mdlayher/dhcp6/dhcp6opts",
     "github.com/mdlayher/eui64",
     "github.com/nightlyone/lockfile",
+    "github.com/nsf/termbox-go",
     "github.com/rck/unit",
     "github.com/spf13/pflag",
     "github.com/u-root/dhcp4",
