@@ -89,7 +89,7 @@ jobs:
       - run:
           name: gofmt
           command: |
-              test -z $(gofmt -s -l $(go list ./... | grep -v /vendor/))
+              test -z "$(gofmt -s -l $(go list ./... | grep -v /vendor/))"
       - run:
           name: ineffassign
           command: ineffassign .
