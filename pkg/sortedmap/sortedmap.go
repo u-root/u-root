@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-var ErrNoSuchKey = errors.New("No such key exists.")
+var ErrNoSuchKey = errors.New("no such key exists")
 
 // SearchInt64s implements sort.SearchInts for int64.
 func SearchInt64s(a []int64, x int64) int {

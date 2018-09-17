@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package less
 
 import (
 	"fmt"
@@ -12,9 +12,9 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/nsf/termbox-go" // TODO: vendor
-	"github.com/u-root/u-root/cmds/less/lineio"
-	"github.com/u-root/u-root/cmds/less/sortedmap"
+	"github.com/nsf/termbox-go"
+	"github.com/u-root/u-root/pkg/lineio"
+	"github.com/u-root/u-root/pkg/sortedmap"
 )
 
 type size struct {
@@ -43,7 +43,7 @@ const (
 	ModeSearchEntry
 )
 
-type Lesser struct {
+type Less struct {
 	// src is the source file being displayed.
 	src lineio.LineReader
 
@@ -72,13 +72,13 @@ type Lesser struct {
 
 	// searchResults are the results for the current search.
 	// They should be highlighted.
-	searchResults searchResults
+	searchResults *searchResults
 }
 
 // lastLine returns the last line on the display.  It may be beyond the end
 // of the file, if the file is short enough.
 // mu must be held on call.
-func (l *Lesser) lastLine() int64 {
+func (l *Less) lastLine() int64 {
 	return l.line + int64(l.size.y) - 1
 }
 
@@ -107,7 +107,7 @@ const (
 // scrollLine tries to scroll the display to the given line,
 // but will not scroll beyond the first or last lines in the file.
 // l.mu must be held when calling scrollLine.
-func (l *Lesser) scrollLine(dest int64) {
+func (l *Less) scrollLine(dest int64) {
 	var delta int64
 	if dest > l.line {
 		delta = 1
@@ -122,7 +122,7 @@ func (l *Lesser) scrollLine(dest int64) {
 
 // scroll moves the display based on the passed scroll action, without
 // going past the beginning or end of the file.
-func (l *Lesser) scroll(s Scroll) {
+func (l *Less) scroll(s Scroll) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -150,7 +150,7 @@ func (l *Lesser) scroll(s Scroll) {
 	l.scrollLine(dest)
 }
 
-func (l *Lesser) handleEvent(e termbox.Event) {
+func (l *Less) handleEvent(e termbox.Event) {
 	l.mu.Lock()
 	mode := l.mode
 	l.mu.Unlock()
@@ -238,7 +238,7 @@ func (l *Lesser) handleEvent(e termbox.Event) {
 	}
 }
 
-func (l *Lesser) listenEvents() {
+func (l *Less) listenEvents() {
 	for {
 		e := termbox.PollEvent()
 		l.handleEvent(e)
@@ -278,8 +278,8 @@ type searchResults struct {
 	results []searchResult
 }
 
-func NewSearchResults() searchResults {
-	return searchResults{
+func NewSearchResults() *searchResults {
+	return &searchResults{
 		lines: sortedmap.NewMap(),
 	}
 }
@@ -337,7 +337,7 @@ func (s *searchResults) Prev(line int64) (searchResult, bool) {
 	return s.results[i], true
 }
 
-func (l *Lesser) search(s string) searchResults {
+func (l *Less) search(s string) *searchResults {
 	reg, err := regexp.Compile(s)
 	if err != nil {
 		// TODO(prattmic): display a better error
@@ -407,7 +407,7 @@ func (l *Lesser) search(s string) searchResults {
 
 // statusBar renders the status bar.
 // mu must be held on call.
-func (l *Lesser) statusBar() {
+func (l *Less) statusBar() {
 	// The statusbar is just below the display.
 
 	// Clear the statusbar
@@ -435,7 +435,7 @@ func alignUp(n, divisor int) int {
 	return n + (divisor - (n % divisor))
 }
 
-func (l *Lesser) refreshScreen() error {
+func (l *Less) refreshScreen() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -491,7 +491,7 @@ func (l *Lesser) refreshScreen() error {
 	return nil
 }
 
-func (l *Lesser) Run() {
+func (l *Less) Run() {
 	// Start populating the LineReader cache, to speed things up later.
 	go l.src.Populate()
 
@@ -519,16 +519,17 @@ func (l *Lesser) Run() {
 	}
 }
 
-func NewLesser(r io.ReaderAt, ts int) Lesser {
+func NewLess(r io.ReaderAt, ts int) Less {
 	x, y := termbox.Size()
 
-	return Lesser{
+	return Less{
 		src:     lineio.NewLineReader(r),
 		tabStop: ts,
 		// Save one line for statusbar.
-		size:   size{x: x, y: y - 1},
-		line:   1,
-		events: make(chan Event, 1),
-		mode:   ModeNormal,
+		size:          size{x: x, y: y - 1},
+		line:          1,
+		events:        make(chan Event, 1),
+		mode:          ModeNormal,
+		searchResults: NewSearchResults(),
 	}
 }

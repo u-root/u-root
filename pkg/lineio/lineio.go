@@ -8,7 +8,7 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/u-root/u-root/cmds/less/sortedmap"
+	"github.com/u-root/u-root/pkg/sortedmap"
 )
 
 type LineReader struct {
@@ -57,7 +57,7 @@ func (l *LineReader) scanForLine(line, curLine, curOffset int64) (offset int64, 
 				}
 			}
 
-			curLine += 1
+			curLine++
 
 			l.offsetCache.Insert(curLine, offset)
 
