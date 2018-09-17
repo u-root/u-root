@@ -79,30 +79,30 @@ func TestDelete(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		for _, k := range c.del {
-			c.before.Delete(k)
+	for i := range cases {
+		for _, k := range cases[i].del {
+			cases[i].before.Delete(k)
 		}
 
 		// All expected entries exist
-		for k, e := range c.after.m {
-			v, ok := c.before.m[k]
+		for k, e := range cases[i].after.m {
+			v, ok := cases[i].before.m[k]
 			if !ok {
-				t.Errorf("%d not found in %v", k, c.before.m)
+				t.Errorf("%d not found in %v", k, cases[i].before.m)
 			}
 			if v != e {
-				t.Errorf("got %d want %d in %v", v, e, c.before.m)
+				t.Errorf("got %d want %d in %v", v, e, cases[i].before.m)
 			}
 		}
 
-		if len(c.before.k) != len(c.after.k) {
-			t.Errorf("Bad length, got %d, expected %d. %v vs %v", len(c.before.k), len(c.after.k), c.before.k, c.after.k)
+		if len(cases[i].before.k) != len(cases[i].after.k) {
+			t.Errorf("Bad length, got %d, expected %d. %v vs %v", len(cases[i].before.k), len(cases[i].after.k), cases[i].before.k, cases[i].after.k)
 		}
 
 		// Key slice is correct
-		for i, e := range c.after.k {
-			if c.before.k[i] != e {
-				t.Errorf("Got %v, expected %v", c.before.k, c.after.k)
+		for i, e := range cases[i].after.k {
+			if cases[i].before.k[i] != e {
+				t.Errorf("Got %v, expected %v", cases[i].before.k, cases[i].after.k)
 				break
 			}
 		}
