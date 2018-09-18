@@ -33,23 +33,20 @@ func usage() {
 
 func moveFile(source string, dest string) error {
 	if *update {
-		var err error
-		var sourceModTime, destModTime os.FileInfo
-
-		sourceModTime, err = os.Lstat(source)
+		sourceInfo, err := os.Lstat(source)
 		if err != nil {
 			return err
 		}
-		var sourceDate = sourceModTime.ModTime()
+
+		destInfo, err := os.Lstat(dest)
+		if err != nil {
+			return err
+		}
 
 		// Check if the destination already exists and was touched later than the source
-		destModTime, err = os.Lstat(dest)
-		if err == nil {
-			var destDate = destModTime.ModTime()
-			if destDate.After(sourceDate) {
-				// Source is older and we don't want to "downgrade"
-				return nil
-			}
+		if destInfo.ModTime().After(sourceInfo.ModTime()) {
+			// Source is older and we don't want to "downgrade"
+			return nil
 		}
 	}
 
