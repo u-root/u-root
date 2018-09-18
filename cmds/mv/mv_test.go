@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -76,7 +75,7 @@ func TestMv(t *testing.T) {
 	}
 	defer os.RemoveAll(d)
 
-	fmt.Println("Renaming file...")
+	t.Logf("Renaming file...")
 	{
 		files := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi4.txt")}
 		res := testutil.Command(t, files...)
@@ -88,7 +87,7 @@ func TestMv(t *testing.T) {
 
 	dsub := filepath.Join(d, "hi.sub.dir")
 
-	fmt.Println("Moving files to directory...")
+	t.Logf("Moving files to directory...")
 	{
 		files := []string{filepath.Join(d, "hi2.txt"), filepath.Join(d, "hi4.txt"), dsub}
 		res := testutil.Command(t, files...)
@@ -106,7 +105,7 @@ func TestMvUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	defer os.RemoveAll(d)
-	fmt.Println("Testing mv -u...")
+	t.Logf("Testing mv -u...")
 
 	// Ensure that the newer file actually has a newer timestamp
 	currentTime := time.Now().Local()
