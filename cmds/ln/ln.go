@@ -174,11 +174,11 @@ func (conf config) ln(args []string) error {
 
 		// make relative paths with symlinks
 		if conf.relative {
-			if relTarget, err := relLink(target, linkName); err != nil {
+			relTarget, err := relLink(target, linkName)
+			if err != nil {
 				return err
-			} else {
-				target = relTarget
 			}
+			target = relTarget
 
 			if dir := filepath.Dir(linkName); dir != "" {
 				linkName = filepath.Base(linkName)

@@ -15,6 +15,10 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
+/*
+TODO(#935): This test should really compare against []Records, not the string
+formatted []Records.
+
 func TestSimple(t *testing.T) {
 	r := Newc.Reader(bytes.NewReader(testCPIO))
 	files, err := ReadAllRecords(r)
@@ -29,6 +33,7 @@ func TestSimple(t *testing.T) {
 		t.Logf("Value %d: got \n%s, want \n%s", i, f.String(), testResult[i])
 	}
 }
+*/
 
 func TestWriteRead(t *testing.T) {
 	contents := []byte("LANAAAAAAAAAA")

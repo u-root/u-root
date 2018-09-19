@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package bb
 
 import (
 	"bytes"
@@ -21,11 +21,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 
-	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/nightlyone/lockfile"
 	"github.com/u-root/u-root/pkg/golang"
 )
 
@@ -34,9 +35,32 @@ var skip = map[string]struct{}{
 	"bb": {},
 }
 
-var BBBuilder = Builder{
-	Build:            BBBuild,
-	DefaultBinaryDir: "bbin",
+func getBBLock(bblock string) (lockfile.Lockfile, error) {
+	secondsTimeout := 60
+	timer := time.After(time.Duration(secondsTimeout) * time.Second)
+	lock, err := lockfile.New(bblock)
+	if err != nil {
+		return lockfile.Lockfile(""), err
+	}
+	for {
+		select {
+		case <-timer:
+			return lockfile.Lockfile(""), fmt.Errorf("could not acquire bblock file %q: %d second deadline expired", bblock, secondsTimeout)
+		default:
+		}
+
+		switch err := lock.TryLock(); err {
+		case nil:
+			return lock, nil
+
+		case lockfile.ErrBusy, lockfile.ErrNotExist:
+			// This sucks. Use inotify.
+			time.Sleep(100 * time.Millisecond)
+
+		default:
+			return lockfile.Lockfile(""), err
+		}
+	}
 }
 
 // BuildBusybox builds a busybox of the given Go packages.
@@ -48,6 +72,24 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 	if err != nil {
 		return err
 	}
+
+	bblock := filepath.Join(urootPkg.Dir, "bblock")
+	// Only one busybox can be compiled at a time.
+	//
+	// Since busybox files all get rewritten in
+	// GOPATH/src/github.com/u-root/u-root/bb/..., no more than one source
+	// transformation can be in progress at the same time. Otherwise,
+	// different bb processes will write a different set of files to the
+	// "bb" directory at the same time, potentially producing an unintended
+	// bb binary.
+	//
+	// Doing each rewrite in a temporary unique directory is not an option
+	// as that kills reproducible builds.
+	l, err := getBBLock(bblock)
+	if err != nil {
+		return err
+	}
+	defer l.Unlock()
 
 	bbDir := filepath.Join(urootPkg.Dir, "bb")
 	// Blow bb away before trying to re-create it.
@@ -120,40 +162,6 @@ func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, d
 			return err
 		}
 		break
-	}
-	return nil
-}
-
-// BBBuild is an implementation of Build for the busybox-like u-root initramfs.
-//
-// BBBuild rewrites the source files of the packages given to create one
-// busybox-like binary containing all commands in `opts.Packages`.
-func BBBuild(af ArchiveFiles, opts BuildOpts) error {
-	// Build the busybox binary.
-	bbPath := filepath.Join(opts.TempDir, "bb")
-	if err := BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {
-		return err
-	}
-
-	if len(opts.BinaryDir) == 0 {
-		return fmt.Errorf("must specify binary directory")
-	}
-
-	// Build initramfs.
-	if err := af.AddFile(bbPath, path.Join(opts.BinaryDir, "bb")); err != nil {
-		return err
-	}
-
-	// Add symlinks for included commands to initramfs.
-	for _, pkg := range opts.Packages {
-		if _, ok := skip[path.Base(pkg)]; ok {
-			continue
-		}
-
-		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
-		if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {
-			return err
-		}
 	}
 	return nil
 }

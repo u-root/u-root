@@ -38,12 +38,11 @@ func FindDevice() (name string, err error) {
 	}
 	defer cfd.Close()
 
-	if number, err := CtlGetFree(cfd.Fd()); err != nil {
+	number, err := CtlGetFree(cfd.Fd())
+	if err != nil {
 		return "", err
-	} else {
-		return fmt.Sprintf("/dev/loop%d", number), nil
 	}
-
+	return fmt.Sprintf("/dev/loop%d", number), nil
 }
 
 // ClearFd clears the loop device associated with filedescriptor fd.

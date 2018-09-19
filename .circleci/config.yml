@@ -66,6 +66,11 @@ jobs:
             mv dep-linux-amd64 dep
             chmod +x dep
       - run:
+          name: Install gometalinter
+          command: |
+            go get -u golang.org/x/lint/golint
+            go get github.com/alecthomas/gometalinter
+      - run:
           name: Install ineffassign
           command: go get github.com/gordonklaus/ineffassign
       - run:
@@ -89,7 +94,20 @@ jobs:
       - run:
           name: gofmt
           command: |
-              test -z $(gofmt -s -l $(go list ./... | grep -v /vendor/))
+              test -z "$(gofmt -s -l $(go list ./... | grep -v /vendor/))"
+      - run:
+          name: gometalinter
+          command: |
+              gometalinter --vendor ./... --disable-all --enable=golint \
+                --skip=pkg/uroot/test \
+                --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
+                --exclude="don't use underscores" \
+                --exclude="don't use ALL_CAPS" \
+                --exclude="comment on exported (function|type|const|method|var) (\w|_|\.)+ should be of the form" \
+                --exclude="package comment should be of the form" \
+                --exclude="(function|type|const|method|var|type field|struct field) (\w|_|\.)+ should be (\w|_|\.)+" \
+                --exclude="stutter" \
+                --exclude="which can be annoying to use"
       - run:
           name: ineffassign
           command: ineffassign .

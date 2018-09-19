@@ -79,7 +79,7 @@ func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 	var ws syscall.WaitStatus
 	ws = ps.Sys().(syscall.WaitStatus)
 	if ws.Signaled() {
-		// TOOD(bluecmd): If somebody wants we can send exit-signal to return
+		// TODO(bluecmd): If somebody wants we can send exit-signal to return
 		// information about signal termination, but leave it until somebody needs
 		// it.
 	}

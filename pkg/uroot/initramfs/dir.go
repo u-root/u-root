@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package initramfs
 
 import (
 	"fmt"
@@ -20,12 +20,12 @@ type DirArchiver struct{}
 // Reader implements Archiver.Reader.
 //
 // Currently unsupported for directories.
-func (da DirArchiver) Reader(io.ReaderAt) ArchiveReader {
+func (da DirArchiver) Reader(io.ReaderAt) Reader {
 	return nil
 }
 
 // OpenWriter implements Archiver.OpenWriter.
-func (da DirArchiver) OpenWriter(path, goos, goarch string) (ArchiveWriter, error) {
+func (da DirArchiver) OpenWriter(path, goos, goarch string) (Writer, error) {
 	if len(path) == 0 {
 		var err error
 		path, err = ioutil.TempDir("", "u-root")
@@ -44,17 +44,17 @@ func (da DirArchiver) OpenWriter(path, goos, goarch string) (ArchiveWriter, erro
 	return dirWriter{path}, nil
 }
 
-// dirWriter implements ArchiveWriter.
+// dirWriter implements Writer.
 type dirWriter struct {
 	dir string
 }
 
-// WriteRecord implements ArchiveWriter.WriteRecord.
+// WriteRecord implements Writer.WriteRecord.
 func (dw dirWriter) WriteRecord(r cpio.Record) error {
 	return cpio.CreateFileInRoot(r, dw.dir)
 }
 
-// Finish implements ArchiveWriter.Finish.
+// Finish implements Writer.Finish.
 func (dw dirWriter) Finish() error {
 	return nil
 }

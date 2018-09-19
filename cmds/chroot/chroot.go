@@ -99,8 +99,8 @@ func (g *groupsSpec) String() string {
 
 var (
 	skipchdirFlag bool
-	user          userSpec   = defaultUser()
-	groups        groupsSpec = groupsSpec{}
+	user          = defaultUser()
+	groups        = groupsSpec{}
 )
 
 func init() {

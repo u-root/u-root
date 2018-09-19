@@ -58,8 +58,8 @@ func (r *barreg) Read(b []byte) (int, error) {
 	return r.ReadAt(b, r.offset)
 }
 
-func (w *barreg) Write(b []byte) (int, error) {
-	return w.WriteAt(b, w.offset)
+func (r *barreg) Write(b []byte) (int, error) {
+	return r.WriteAt(b, r.offset)
 }
 
 // ReadConfigRegister reads a configuration register of size 8, 16, 32, or 64.

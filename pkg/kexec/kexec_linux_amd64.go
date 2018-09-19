@@ -38,7 +38,7 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 	}
 	cmdLen := uintptr(len(cmdline))
 	if len(cmdline) > 0 {
-		cmdLen += 1
+		cmdLen++
 	}
 
 	if _, _, errno := unix.Syscall6(

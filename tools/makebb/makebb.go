@@ -8,10 +8,12 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder/bb"
 )
 
 var outputPath = flag.String("o", "bb", "Path to busybox binary")
@@ -19,30 +21,30 @@ var outputPath = flag.String("o", "bb", "Path to busybox binary")
 func main() {
 	flag.Parse()
 
+	// Why doesn't the log package export this as a default?
+	l := log.New(os.Stdout, "", log.LstdFlags)
 	env := golang.Default()
 	if env.CgoEnabled {
-		log.Printf("Disabling CGO for u-root...")
+		l.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
 	}
-	log.Printf("Build environment: %s", env)
+	l.Printf("Build environment: %s", env)
 
 	pkgs := flag.Args()
-	var err error
 	if len(pkgs) == 0 {
-		pkgs, err = uroot.DefaultPackageImports(env)
-	} else {
-		pkgs, err = uroot.ResolvePackagePaths(env, pkgs)
+		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
+	pkgs, err := uroot.ResolvePackagePaths(l, env, pkgs)
 	if err != nil {
-		log.Fatal(err)
+		l.Fatal(err)
 	}
 
 	o, err := filepath.Abs(*outputPath)
 	if err != nil {
-		log.Fatal(err)
+		l.Fatal(err)
 	}
 
-	if err := uroot.BuildBusybox(env, pkgs, o); err != nil {
-		log.Fatal(err)
+	if err := bb.BuildBusybox(env, pkgs, o); err != nil {
+		l.Fatal(err)
 	}
 }

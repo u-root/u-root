@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/u-root/u-root/pkg/ls"
 	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
 )
@@ -23,6 +24,22 @@ type Record struct {
 
 	// Info is metadata describing the CPIO record.
 	Info
+
+	// metadata about this item's place in the file
+	RecPos  int64  // Where in the file this record is
+	RecLen  uint64 // How big the record is.
+	FilePos int64  // Where in the CPIO the file's contents are.
+}
+
+// String implements a fmt.Stringer for Record.
+//
+// String returns a string formatted like `ls` would format it.
+func (r Record) String() string {
+	s := ls.LongStringer{
+		Human: true,
+		Name:  ls.NameStringer{},
+	}
+	return s.FileString(LSInfoFromRecord(r))
 }
 
 // Trailer is the name of the trailer record.

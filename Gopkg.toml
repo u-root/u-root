@@ -1,3 +1,5 @@
+ignored = ["github.com/u-root/u-root/bb*"]
+
 [[constraint]]
   branch = "master"
   name = "github.com/vishvananda/netlink"
