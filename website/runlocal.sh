@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Must run in website directory.
 mkdocs serve && exit 0
