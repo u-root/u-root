@@ -100,6 +100,7 @@ jobs:
           command: |
               gometalinter --vendor ./... --disable-all --enable=golint \
                 --skip=pkg/uroot/test \
+                --skip=cmds/elvish \
                 --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
                 --exclude="don't use underscores" \
                 --exclude="don't use ALL_CAPS" \
