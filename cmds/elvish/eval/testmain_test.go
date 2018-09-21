@@ -114,9 +114,11 @@ func TestMain(m *testing.M) {
 }
 
 func runTests(t *testing.T, tests []Test) {
-	RunTests(t, tests, func() *Evaler {
+	if err := RunTests(tests, func() *Evaler {
 		ev := NewEvaler()
 		ev.SetLibDir(libDir)
 		return ev
-	})
+	}); err != nil {
+		t.Error(err)
+	}
 }

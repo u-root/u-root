@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"testing"
 
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/parse"
@@ -88,36 +87,43 @@ func (t Test) Errors() Test {
 
 // RunTests runs test cases. For each test case, a new Evaler is made by calling
 // makeEvaler.
-func RunTests(t *testing.T, evalTests []Test, makeEvaler func() *Evaler) {
+func RunTests(evalTests []Test, makeEvaler func() *Evaler) error {
 	for _, tt := range evalTests {
 		// fmt.Printf("eval %q\n", tt.text)
 
 		ev := makeEvaler()
 		defer ev.Close()
-		out, bytesOut, err := evalAndCollect(t, ev, []string{tt.text}, len(tt.want.out))
+		out, bytesOut, err := evalAndCollect(ev, []string{tt.text}, len(tt.want.out))
 
 		first := true
-		errorf := func(format string, args ...interface{}) {
+		errorf := func(format string, args ...interface{}) error {
 			if first {
 				first = false
-				t.Errorf("eval(%q) fails:", tt.text)
+				return fmt.Errorf("eval(%q) fails:", tt.text)
 			}
-			t.Errorf("  "+format, args...)
+			return fmt.Errorf("  "+format, args...)
 		}
 
 		if !matchOut(tt.want.out, out) {
-			errorf("got out=%v, want %v", out, tt.want.out)
+			if err := errorf("got out=%v, want %v", out, tt.want.out); err != nil {
+				return err
+			}
 		}
 		if !bytes.Equal(tt.want.bytesOut, bytesOut) {
-			errorf("got bytesOut=%q, want %q", bytesOut, tt.want.bytesOut)
+			if err := errorf("got bytesOut=%q, want %q", bytesOut, tt.want.bytesOut); err != nil {
+				return err
+			}
 		}
 		if !matchErr(tt.want.err, err) {
-			errorf("got err=%v, want %v", err, tt.want.err)
+			if err := errorf("got err=%v, want %v", err, tt.want.err); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func evalAndCollect(t *testing.T, ev *Evaler, texts []string, chsize int) ([]interface{}, []byte, error) {
+func evalAndCollect(ev *Evaler, texts []string, chsize int) ([]interface{}, []byte, error) {
 	// Collect byte output
 	bytesOut := []byte{}
 	pr, pw, _ := os.Pipe()
@@ -144,7 +150,10 @@ func evalAndCollect(t *testing.T, ev *Evaler, texts []string, chsize int) ([]int
 		name := fmt.Sprintf("test%d.elv", i)
 		src := NewScriptSource(name, name, text)
 
-		op := mustParseAndCompile(t, ev, src)
+		op, err := mustParseAndCompile(ev, src)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		outCh := make(chan interface{}, chsize)
 		outDone := make(chan struct{})
@@ -173,16 +182,16 @@ func evalAndCollect(t *testing.T, ev *Evaler, texts []string, chsize int) ([]int
 	return outs, bytesOut, ex
 }
 
-func mustParseAndCompile(t *testing.T, ev *Evaler, src *Source) Op {
+func mustParseAndCompile(ev *Evaler, src *Source) (Op, error) {
 	n, err := parse.Parse(src.name, src.code)
 	if err != nil {
-		t.Fatalf("Parse(%q) error: %s", src.code, err)
+		return Op{}, fmt.Errorf("Parse(%q) error: %s", src.code, err)
 	}
 	op, err := ev.Compile(n, src)
 	if err != nil {
-		t.Fatalf("Compile(Parse(%q)) error: %s", src.code, err)
+		return Op{}, fmt.Errorf("Compile(Parse(%q)) error: %s", src.code, err)
 	}
-	return op
+	return op, nil
 }
 
 func matchOut(want, got []interface{}) bool {
