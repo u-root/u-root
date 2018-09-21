@@ -7,7 +7,7 @@
 // being just stdin and stdout. It will also set up a root file system
 // using util.Rootfs, although this can be disabled as well.
 // Console uses a Go version of fork_pty to start up a shell, default
-// /ubin/rush. Console runs until the shell exits and then exits itself.
+// /ubin/elvish. Console runs until the shell exits and then exits itself.
 package main
 
 import (
@@ -32,7 +32,7 @@ func main() {
 
 	a := flag.Args()
 	if len(a) == 0 {
-		a = []string{"/ubin/rush"}
+		a = []string{"/ubin/elvish"}
 	}
 
 	p, err := pty.New()

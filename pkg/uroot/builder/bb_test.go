@@ -26,7 +26,7 @@ func TestBBBuild(t *testing.T) {
 		Env: golang.Default(),
 		Packages: []string{
 			"github.com/u-root/u-root/pkg/uroot/test/foo",
-			"github.com/u-root/u-root/cmds/rush",
+			"github.com/u-root/u-root/cmds/elvish",
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",
@@ -38,7 +38,7 @@ func TestBBBuild(t *testing.T) {
 	}
 
 	var mustContain = []string{
-		"bbin/rush",
+		"bbin/elvish",
 		"bbin/foo",
 	}
 	for _, name := range mustContain {

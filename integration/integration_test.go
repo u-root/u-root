@@ -65,7 +65,7 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 		BaseArchive:  uroot.DefaultRamfs.Reader(),
 		OutputFile:   w,
 		InitCmd:      "init",
-		DefaultShell: "rush",
+		DefaultShell: "elvish",
 	}
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	if err := uroot.CreateInitramfs(logger, opts); err != nil {
