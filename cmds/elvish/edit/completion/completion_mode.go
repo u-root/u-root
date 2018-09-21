@@ -382,7 +382,6 @@ func (c *completion) ListRender(width, maxHeight int) *ui.Buffer {
 			col.WriteSpaces(remainedWidth, styleForCompletion.String())
 		}
 		b.ExtendRight(col, 0)
-		remainedWidth = 0
 	}
 	return b
 }
