@@ -84,8 +84,12 @@ func matchPrefix(fm *eval.Frame, opts eval.RawOptions, pattern string, inputs ev
 }
 
 func TestProvider(t *testing.T) {
-	eddefs.TestListingProviderFilter(
-		t, "theLocation", theLocation, locationFilterTests)
-	eddefs.TestListingProviderFilter(
-		t, "locationWithPrefixMatcher", locationWithPrefixMatcher, locationWithPrefixMatcherTests)
+	if err := eddefs.TestListingProviderFilter(
+		"theLocation", theLocation, locationFilterTests); err != nil {
+		t.Error(err)
+	}
+	if err := eddefs.TestListingProviderFilter(
+		"locationWithPrefixMatcher", locationWithPrefixMatcher, locationWithPrefixMatcherTests); err != nil {
+		t.Error(err)
+	}
 }

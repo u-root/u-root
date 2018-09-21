@@ -31,7 +31,7 @@ func TestMiscEval(t *testing.T) {
 
 func TestMultipleEval(t *testing.T) {
 	texts := []string{"x=hello", "put $x"}
-	outs, _, err := evalAndCollect(t, NewEvaler(), texts, 1)
+	outs, _, err := evalAndCollect(NewEvaler(), texts, 1)
 	wantOuts := []interface{}{"hello"}
 	if err != nil {
 		t.Errorf("eval %s => %v, want nil", texts, err)

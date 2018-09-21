@@ -32,7 +32,11 @@ var (
 )
 
 func TestHistlist(t *testing.T) {
-	eddefs.TestListingProviderFilter(t, "theHistList", theHistList, histlistDedupFilterTests)
+	if err := eddefs.TestListingProviderFilter("theHistList", theHistList, histlistDedupFilterTests); err != nil {
+		t.Error(err)
+	}
 	theHistList.dedup = false
-	eddefs.TestListingProviderFilter(t, "theHistList", theHistList, histlistNoDedupFilterTests)
+	if err := eddefs.TestListingProviderFilter("theHistList", theHistList, histlistNoDedupFilterTests); err != nil {
+		t.Error(err)
+	}
 }

@@ -28,5 +28,7 @@ var (
 )
 
 func TestLastCmd(t *testing.T) {
-	eddefs.TestListingProviderFilter(t, "theLastCmd", theLastCmd, tests)
+	if err := eddefs.TestListingProviderFilter("theLastCmd", theLastCmd, tests); err != nil {
+		t.Error(err)
+	}
 }
