@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package builder
 
 import (
 	"go/ast"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 func TestBBBuild(t *testing.T) {
@@ -22,7 +22,7 @@ func TestBBBuild(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	opts := BuildOpts{
+	opts := Opts{
 		Env: golang.Default(),
 		Packages: []string{
 			"github.com/u-root/u-root/pkg/uroot/test/foo",
@@ -31,8 +31,9 @@ func TestBBBuild(t *testing.T) {
 		TempDir:   dir,
 		BinaryDir: "bbin",
 	}
-	af := NewArchiveFiles()
-	if err := BBBuild(af, opts); err != nil {
+	af := initramfs.NewFiles()
+	var bbb BBBuilder
+	if err := bbb.Build(af, opts); err != nil {
 		t.Error(err)
 	}
 
@@ -55,23 +56,4 @@ func findFile(filemap map[string]*ast.File, basename string) *ast.File {
 		}
 	}
 	return nil
-}
-
-func TestPackageRewriteFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "u-root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
-	bin := filepath.Join(dir, "foo")
-	if err := BuildBusybox(golang.Default(), []string{"github.com/u-root/u-root/pkg/uroot/test/foo"}, bin); err != nil {
-		t.Fatal(err)
-	}
-
-	cmd := exec.Command(bin)
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("foo failed: %v %v", string(o), err)
-	}
 }

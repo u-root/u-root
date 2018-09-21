@@ -53,7 +53,7 @@ func showLinkAddresses(w io.Writer, link netlink.Link) error {
 			return fmt.Errorf("Can't figure out IP protocol version")
 		}
 
-		fmt.Fprintf(w, "    %s %s", inet, addr.Peer)
+		fmt.Fprintf(w, "    %s %s", inet, addr.IP)
 		if addr.Broadcast != nil {
 			fmt.Fprintf(w, " brd %s", addr.Broadcast)
 		}

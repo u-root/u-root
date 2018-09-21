@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package builder
 
 import (
 	"fmt"
@@ -12,17 +12,30 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-var SourceBuilder = Builder{
-	Build:            SourceBuild,
-	DefaultBinaryDir: "buildbin",
+// SourceBuilder includes full source for Go commands in the initramfs.
+//
+// SourceBuilder is an implementation of Builder.
+//
+// It also includes the Go toolchain in the initramfs, and a tool called
+// installcommand that can compile the other commands using symlinks.
+//
+// E.g. if "ls" is an included command, "ls" will be a symlink to
+// "installcommand" in the initramfs, which uses argv[0] to figure out which
+// command to compile.
+type SourceBuilder struct{}
+
+// DefaultBinaryDir implements Builder.DefaultBinaryDir.
+//
+// The initramfs default binary dir is buildbin.
+func (SourceBuilder) DefaultBinaryDir() string {
+	return "buildbin"
 }
 
-// SourceBuild is an implementation of Build that compiles the Go toolchain
-// (go, compile, link, asm) and an init process. It includes source files for
-// packages listed in `opts.Packages` to build from scratch.
-func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
+// Build is an implementation of Builder.Build.
+func (SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
 		return err
@@ -38,7 +51,7 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 		}
 
 		// Add high-level packages' src files to archive.
-		p := goListPkg(opts, pkg, &af)
+		p := goListPkg(opts, pkg, af)
 		if p == nil {
 			continue
 		}
@@ -46,12 +59,14 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 			deps[d] = struct{}{}
 		}
 
-		// Add a symlink to installcommand. This means source mode can
-		// work with any init.
-		if err := af.AddRecord(cpio.Symlink(
-			path.Join(opts.BinaryDir, name),
-			path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
-			return err
+		if name != "installcommand" {
+			// Add a symlink to installcommand. This means source mode can
+			// work with any init.
+			if err := af.AddRecord(cpio.Symlink(
+				path.Join(opts.BinaryDir, name),
+				path.Join("/", opts.BinaryDir, "installcommand"))); err != nil {
+				return err
+			}
 		}
 	}
 	if len(installcommand) == 0 {
@@ -60,7 +75,7 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 
 	// Add src files of dependencies to archive.
 	for dep := range deps {
-		goListPkg(opts, dep, &af)
+		goListPkg(opts, dep, af)
 	}
 
 	// Add Go toolchain.
@@ -78,7 +93,7 @@ func SourceBuild(af ArchiveFiles, opts BuildOpts) error {
 
 // buildToolchain builds the needed Go toolchain binaries: go, compile, link,
 // asm.
-func buildToolchain(opts BuildOpts) error {
+func buildToolchain(opts Opts) error {
 	goBin := filepath.Join(opts.TempDir, "go/bin/go")
 	tcbo := golang.BuildOpts{
 		ExtraArgs: []string{"-tags", "cmd_go_bootstrap"},
@@ -97,7 +112,7 @@ func buildToolchain(opts BuildOpts) error {
 	return nil
 }
 
-func goListPkg(opts BuildOpts, importPath string, out *ArchiveFiles) *golang.ListPackage {
+func goListPkg(opts Opts, importPath string, out *initramfs.Files) *golang.ListPackage {
 	p, err := opts.Env.Deps(importPath)
 	if err != nil {
 		log.Printf("Can't list Go dependencies for %v; ignoring.", importPath)

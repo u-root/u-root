@@ -7,7 +7,15 @@ package cpio
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/u-root/u-root/pkg/ls"
+	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -20,12 +28,13 @@ type RecordReader interface {
 	ReadRecord() (Record, error)
 }
 
-// A RecordWriter writes on record to an archive.
+// A RecordWriter writes one record to an archive.
 type RecordWriter interface {
 	WriteRecord(Record) error
 }
 
-// A RecordFormat gives readers and writers for dealing with archives.
+// A RecordFormat gives readers and writers for dealing with archives from io
+// objects.
 type RecordFormat interface {
 	Reader(r io.ReaderAt) RecordReader
 	Writer(w io.Writer) RecordWriter
@@ -161,6 +170,14 @@ func InMemArchive() *Archive {
 	}
 }
 
+func ArchiveFromRecords(rs []Record) *Archive {
+	a := InMemArchive()
+	for _, r := range rs {
+		a.WriteRecord(r)
+	}
+	return a
+}
+
 // WriteRecord implements RecordWriter and adds a record to the archive.
 func (a *Archive) WriteRecord(r Record) error {
 	r.Name = Normalize(r.Name)
@@ -169,14 +186,92 @@ func (a *Archive) WriteRecord(r Record) error {
 	return nil
 }
 
+// Empty returns whether the archive has any files in it.
+func (a *Archive) Empty() bool {
+	return len(a.Files) == 0
+}
+
 type archiveReader struct {
 	a   *Archive
 	pos int
 }
 
-// Reader returns a RecordReader for the archive.
+// Reader returns a RecordReader for the archive that starts at the first
+// record.
 func (a *Archive) Reader() RecordReader {
 	return &EOFReader{&archiveReader{a: a}}
+}
+
+func modeFromLinux(mode uint64) os.FileMode {
+	m := os.FileMode(mode & 0777)
+	switch mode & syscall.S_IFMT {
+	case syscall.S_IFBLK:
+		m |= os.ModeDevice
+	case syscall.S_IFCHR:
+		m |= os.ModeDevice | os.ModeCharDevice
+	case syscall.S_IFDIR:
+		m |= os.ModeDir
+	case syscall.S_IFIFO:
+		m |= os.ModeNamedPipe
+	case syscall.S_IFLNK:
+		m |= os.ModeSymlink
+	case syscall.S_IFREG:
+		// nothing to do
+	case syscall.S_IFSOCK:
+		m |= os.ModeSocket
+	}
+	if mode&syscall.S_ISGID != 0 {
+		m |= os.ModeSetgid
+	}
+	if mode&syscall.S_ISUID != 0 {
+		m |= os.ModeSetuid
+	}
+	if mode&syscall.S_ISVTX != 0 {
+		m |= os.ModeSticky
+	}
+	return m
+}
+
+// LSInfoFromRecord converts a Record to be usable with the ls package for
+// listing files.
+func LSInfoFromRecord(rec Record) ls.FileInfo {
+	var target string
+
+	mode := modeFromLinux(rec.Mode)
+	if mode&os.ModeType == os.ModeSymlink {
+		if l, err := uio.ReadAll(rec); err != nil {
+			target = err.Error()
+		} else {
+			target = string(l)
+		}
+	}
+
+	return ls.FileInfo{
+		Name:          rec.Name,
+		Mode:          mode,
+		Rdev:          unix.Mkdev(uint32(rec.Rmajor), uint32(rec.Rminor)),
+		UID:           uint32(rec.UID),
+		GID:           uint32(rec.GID),
+		Size:          int64(rec.FileSize),
+		MTime:         time.Unix(int64(rec.MTime), 0).UTC(),
+		SymlinkTarget: target,
+	}
+}
+
+// String implements fmt.Stringer.
+//
+// String lists files like ls would.
+func (a *Archive) String() string {
+	var b strings.Builder
+	r := a.Reader()
+	for {
+		record, err := r.ReadRecord()
+		if err != nil {
+			return b.String()
+		}
+		b.WriteString(record.String())
+		b.WriteString("\n")
+	}
 }
 
 // ReadRecord implements RecordReader.
@@ -197,6 +292,11 @@ func (a *Archive) Contains(r Record) bool {
 		return Equal(r, s)
 	}
 	return false
+}
+
+func (a *Archive) Get(path string) (Record, bool) {
+	r, ok := a.Files[Normalize(path)]
+	return r, ok
 }
 
 // ReadArchive reads the entire archive in-memory and makes it accessible by
@@ -263,6 +363,10 @@ func MakeReproducible(r Record) Record {
 	r.MTime = 0
 	r.UID = 0
 	r.GID = 0
+	r.Dev = 0
+	r.Major = 0
+	r.Minor = 0
+	r.NLink = 0
 	return r
 }
 

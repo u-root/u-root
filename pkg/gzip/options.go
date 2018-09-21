@@ -68,7 +68,7 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 	var err error
 	o.Level, err = parseLevels(levels)
 	if err != nil {
-		return fmt.Errorf("%s\n\n", err)
+		return err
 	}
 
 	return o.validate(len(cmdLine.Args()) > 0)

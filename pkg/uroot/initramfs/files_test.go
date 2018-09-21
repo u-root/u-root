@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package uroot
+package initramfs
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,38 +15,56 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	"golang.org/x/sys/unix"
 )
 
-func TestArchiveFilesAddFile(t *testing.T) {
+func TestFilesAddFile(t *testing.T) {
+	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(regularFile.Name())
+
+	dir, err := ioutil.TempDir("", "archive-add-files")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir)
+
+	os.Create(filepath.Join(dir, "foo"))
+	os.Create(filepath.Join(dir, "foo2"))
+
 	for i, tt := range []struct {
-		af          ArchiveFiles
+		name        string
+		af          *Files
 		src         string
 		dest        string
-		result      ArchiveFiles
+		result      *Files
 		errContains string
 	}{
 		{
-			af:   NewArchiveFiles(),
-			src:  "/foo/bar",
+			name: "just add a file",
+			af:   NewFiles(),
+
+			src:  regularFile.Name(),
 			dest: "bar/foo",
 
-			result: ArchiveFiles{
+			result: &Files{
 				Files: map[string]string{
-					"bar/foo": "/foo/bar",
+					"bar/foo": regularFile.Name(),
 				},
 				Records: map[string]cpio.Record{},
 			},
 		},
 		{
-			af: ArchiveFiles{
+			name: "add file that exists in Files",
+			af: &Files{
 				Files: map[string]string{
 					"bar/foo": "/some/other/place",
 				},
 			},
-			src:  "/foo/bar",
+			src:  regularFile.Name(),
 			dest: "bar/foo",
-			result: ArchiveFiles{
+			result: &Files{
 				Files: map[string]string{
 					"bar/foo": "/some/other/place",
 				},
@@ -55,14 +72,15 @@ func TestArchiveFilesAddFile(t *testing.T) {
 			errContains: "already exists in archive",
 		},
 		{
-			af: ArchiveFiles{
+			name: "add a file that exists in Records",
+			af: &Files{
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", "/some/other/place"),
 				},
 			},
-			src:  "/foo/bar",
+			src:  regularFile.Name(),
 			dest: "bar/foo",
-			result: ArchiveFiles{
+			result: &Files{
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", "/some/other/place"),
 				},
@@ -70,31 +88,80 @@ func TestArchiveFilesAddFile(t *testing.T) {
 			errContains: "already exists in archive",
 		},
 		{
-			af: ArchiveFiles{
+			name: "add a file that already exists in Files, but is the same one",
+			af: &Files{
 				Files: map[string]string{
-					"bar/foo": "/foo/bar",
+					"bar/foo": regularFile.Name(),
 				},
 			},
-			src:  "/foo/bar",
+			src:  regularFile.Name(),
 			dest: "bar/foo",
-			result: ArchiveFiles{
+			result: &Files{
 				Files: map[string]string{
-					"bar/foo": "/foo/bar",
+					"bar/foo": regularFile.Name(),
 				},
 			},
 		},
 		{
-			src:         "/foo/bar",
+			name:        "destination path must not be absolute",
+			src:         regularFile.Name(),
 			dest:        "/bar/foo",
 			errContains: "must not be absolute",
 		},
 		{
+			name:        "source path must be absolute",
 			src:         "foo/bar",
 			dest:        "bar/foo",
 			errContains: "must be absolute",
 		},
+		{
+			name: "add a directory",
+			af: &Files{
+				Files: map[string]string{},
+			},
+			src:  dir,
+			dest: "bar/foo",
+			result: &Files{
+				Files: map[string]string{
+					"bar/foo":      dir,
+					"bar/foo/foo":  filepath.Join(dir, "foo"),
+					"bar/foo/foo2": filepath.Join(dir, "foo2"),
+				},
+			},
+		},
+		{
+			name: "add a different directory to the same destination, no overlapping children",
+			af: &Files{
+				Files: map[string]string{
+					"bar/foo":     "/some/place/real",
+					"bar/foo/zed": "/some/place/real/zed",
+				},
+			},
+			src:  dir,
+			dest: "bar/foo",
+			result: &Files{
+				Files: map[string]string{
+					"bar/foo":      dir,
+					"bar/foo/foo":  filepath.Join(dir, "foo"),
+					"bar/foo/foo2": filepath.Join(dir, "foo2"),
+					"bar/foo/zed":  "/some/place/real/zed",
+				},
+			},
+		},
+		{
+			name: "add a different directory to the same destination, overlapping children",
+			af: &Files{
+				Files: map[string]string{
+					"bar/foo":      "/some/place/real",
+					"bar/foo/foo2": "/some/place/real/zed",
+				},
+			},
+			src:         dir,
+			dest:        "bar/foo",
+			errContains: "already exists in archive",
+		},
 	} {
-		t.Run(fmt.Sprintf("Test %02d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Test %02d: %s", i, tt.name), func(t *testing.T) {
 			err := tt.af.AddFile(tt.src, tt.dest)
 			if err != nil && !strings.Contains(err.Error(), tt.errContains) {
 				t.Errorf("Error is %v, does not contain %v", err, tt.errContains)
@@ -103,25 +170,25 @@ func TestArchiveFilesAddFile(t *testing.T) {
 				t.Errorf("Got no error, want %v", tt.errContains)
 			}
 
-			if !reflect.DeepEqual(tt.af, tt.result) {
+			if tt.result != nil && !reflect.DeepEqual(tt.af, tt.result) {
 				t.Errorf("got %v, want %v", tt.af, tt.result)
 			}
 		})
 	}
 }
 
-func TestArchiveFilesAddRecord(t *testing.T) {
+func TestFilesAddRecord(t *testing.T) {
 	for i, tt := range []struct {
-		af     ArchiveFiles
+		af     *Files
 		record cpio.Record
 
-		result      ArchiveFiles
+		result      *Files
 		errContains string
 	}{
 		{
-			af:     NewArchiveFiles(),
+			af:     NewFiles(),
 			record: cpio.Symlink("bar/foo", ""),
-			result: ArchiveFiles{
+			result: &Files{
 				Files: map[string]string{},
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", ""),
@@ -129,13 +196,13 @@ func TestArchiveFilesAddRecord(t *testing.T) {
 			},
 		},
 		{
-			af: ArchiveFiles{
+			af: &Files{
 				Files: map[string]string{
 					"bar/foo": "/some/other/place",
 				},
 			},
 			record: cpio.Symlink("bar/foo", ""),
-			result: ArchiveFiles{
+			result: &Files{
 				Files: map[string]string{
 					"bar/foo": "/some/other/place",
 				},
@@ -143,13 +210,13 @@ func TestArchiveFilesAddRecord(t *testing.T) {
 			errContains: "already exists in archive",
 		},
 		{
-			af: ArchiveFiles{
+			af: &Files{
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", "/some/other/place"),
 				},
 			},
 			record: cpio.Symlink("bar/foo", ""),
-			result: ArchiveFiles{
+			result: &Files{
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", "/some/other/place"),
 				},
@@ -157,13 +224,13 @@ func TestArchiveFilesAddRecord(t *testing.T) {
 			errContains: "already exists in archive",
 		},
 		{
-			af: ArchiveFiles{
+			af: &Files{
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", "/some/other/place"),
 				},
 			},
 			record: cpio.Symlink("bar/foo", "/some/other/place"),
-			result: ArchiveFiles{
+			result: &Files{
 				Records: map[string]cpio.Record{
 					"bar/foo": cpio.Symlink("bar/foo", "/some/other/place"),
 				},
@@ -190,18 +257,18 @@ func TestArchiveFilesAddRecord(t *testing.T) {
 	}
 }
 
-func TestArchiveFilesfillInParent(t *testing.T) {
+func TestFilesfillInParent(t *testing.T) {
 	for i, tt := range []struct {
-		af     ArchiveFiles
-		result ArchiveFiles
+		af     *Files
+		result *Files
 	}{
 		{
-			af: ArchiveFiles{
+			af: &Files{
 				Records: map[string]cpio.Record{
 					"foo/bar": cpio.Directory("foo/bar", 0777),
 				},
 			},
-			result: ArchiveFiles{
+			result: &Files{
 				Records: map[string]cpio.Record{
 					"foo/bar": cpio.Directory("foo/bar", 0777),
 					"foo":     cpio.Directory("foo", 0755),
@@ -209,7 +276,7 @@ func TestArchiveFilesfillInParent(t *testing.T) {
 			},
 		},
 		{
-			af: ArchiveFiles{
+			af: &Files{
 				Files: map[string]string{
 					"baz/baz/baz": "/somewhere",
 				},
@@ -217,7 +284,7 @@ func TestArchiveFilesfillInParent(t *testing.T) {
 					"foo/bar": cpio.Directory("foo/bar", 0777),
 				},
 			},
-			result: ArchiveFiles{
+			result: &Files{
 				Files: map[string]string{
 					"baz/baz/baz": "/somewhere",
 				},
@@ -230,8 +297,8 @@ func TestArchiveFilesfillInParent(t *testing.T) {
 			},
 		},
 		{
-			af:     ArchiveFiles{},
-			result: ArchiveFiles{},
+			af:     &Files{},
+			result: &Files{},
 		},
 	} {
 		t.Run(fmt.Sprintf("Test %02d", i), func(t *testing.T) {
@@ -298,122 +365,29 @@ func sameNameModeContent(r1 cpio.Record, r2 cpio.Record) bool {
 	return cpio.ReaderAtEqual(r1.ReaderAt, r2.ReaderAt)
 }
 
-func TestWriteFile(t *testing.T) {
-	unix.Umask(0)
-
-	for i, tt := range []struct {
-		ma   *MockArchiver
-		src  func() string
-		dest string
-		err  error
-		want Records
-	}{
-		{
-			ma: &MockArchiver{
-				Records: make(Records),
-			},
-			src: func() string {
-				f, err := ioutil.TempFile("", "foo")
-				if err != nil {
-					panic(err)
-				}
-				n := f.Name()
-				f.Close()
-				return n
-			},
-			dest: "foo/whatever",
-			want: Records{
-				"foo/whatever": cpio.Record{
-					Info: cpio.Info{
-						Name:  "foo/whatever",
-						Mode:  unix.S_IFREG | 0600,
-						UID:   uint64(os.Geteuid()),
-						GID:   uint64(os.Getegid()),
-						NLink: 1,
-						Major: 253,
-						Minor: 1,
-					},
-				},
-			},
-		},
-		{
-			ma: &MockArchiver{
-				Records: make(Records),
-			},
-			src: func() string {
-				f, err := ioutil.TempDir("", "foo")
-				if err != nil {
-					panic(err)
-				}
-				if err := ioutil.WriteFile(filepath.Join(f, "bla"), []byte("foo"), 0644); err != nil {
-					panic(err)
-				}
-				if err := ioutil.WriteFile(filepath.Join(f, "bla2"), []byte("foo2"), 0644); err != nil {
-					panic(err)
-				}
-				return f
-			},
-			dest: "etc",
-			want: Records{
-				"etc": cpio.Record{
-					Info: cpio.Info{
-						Name: "etc",
-						Mode: unix.S_IFDIR | 0700,
-					},
-				},
-				"etc/bla": cpio.Record{
-					Info: cpio.Info{
-						Name: "etc/bla",
-						Mode: unix.S_IFREG | 0644,
-					},
-					ReaderAt: bytes.NewReader([]byte("foo")),
-				},
-				"etc/bla2": cpio.Record{
-					Info: cpio.Info{
-						Name: "etc/bla2",
-						Mode: unix.S_IFREG | 0644,
-					},
-					ReaderAt: bytes.NewReader([]byte("foo2")),
-				},
-			},
-		},
-	} {
-		t.Run(fmt.Sprintf("Test %02d", i), func(t *testing.T) {
-			src := tt.src()
-			defer os.RemoveAll(src)
-			if err := WriteFile(tt.ma, src, tt.dest); err != tt.err {
-				t.Errorf("WriteFile() = %v, want %v", err, tt.err)
-			}
-			if !RecordsEqual(tt.ma.Records, tt.want, sameNameModeContent) {
-				t.Errorf("WriteFile() = %v, want %v", tt.ma.Records, tt.want)
-			}
-		})
-	}
-}
-
-func TestArchiveOptsWrite(t *testing.T) {
+func TestOptsWrite(t *testing.T) {
 	for i, tt := range []struct {
 		desc string
-		opts *ArchiveOpts
+		opts *Opts
 		ma   *MockArchiver
 		want Records
 		err  error
 	}{
 		{
 			desc: "no conflicts, just records",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"foo": cpio.Symlink("foo", "elsewhere"),
 					},
 				},
-				DefaultRecords: []cpio.Record{
-					cpio.Directory("etc", 0777),
-					cpio.Directory("etc/nginx", 0777),
-				},
 			},
 			ma: &MockArchiver{
 				Records: make(Records),
+				BaseArchive: []cpio.Record{
+					cpio.Directory("etc", 0777),
+					cpio.Directory("etc/nginx", 0777),
+				},
 			},
 			want: Records{
 				"foo":       cpio.Symlink("foo", "elsewhere"),
@@ -423,18 +397,18 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "default already exists",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"etc": cpio.Symlink("etc", "whatever"),
 					},
 				},
-				DefaultRecords: []cpio.Record{
-					cpio.Directory("etc", 0777),
-				},
 			},
 			ma: &MockArchiver{
 				Records: make(Records),
+				BaseArchive: []cpio.Record{
+					cpio.Directory("etc", 0777),
+				},
 			},
 			want: Records{
 				"etc": cpio.Symlink("etc", "whatever"),
@@ -442,8 +416,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "no conflicts, missing parent automatically created",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"foo/bar/baz": cpio.Symlink("foo/bar/baz", "elsewhere"),
 					},
@@ -460,8 +434,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "parent only automatically created if not already exists",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"foo/bar":     cpio.Directory("foo/bar", 0444),
 						"foo/bar/baz": cpio.Symlink("foo/bar/baz", "elsewhere"),
@@ -479,8 +453,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "base archive",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"foo/bar": cpio.Symlink("foo/bar", "elsewhere"),
 						"exists":  cpio.Directory("exists", 0777),
@@ -504,8 +478,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "base archive with init, no user init",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{},
 				},
 			},
@@ -521,8 +495,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "base archive with init and user init",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"init": cpio.StaticFile("init", "bar", 0444),
 					},
@@ -541,8 +515,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "base archive with init, use existing init",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{},
 				},
 				UseExistingInit: true,
@@ -559,8 +533,8 @@ func TestArchiveOptsWrite(t *testing.T) {
 		},
 		{
 			desc: "base archive with init and user init, use existing init",
-			opts: &ArchiveOpts{
-				ArchiveFiles: ArchiveFiles{
+			opts: &Opts{
+				Files: &Files{
 					Records: map[string]cpio.Record{
 						"init": cpio.StaticFile("init", "huh", 0111),
 					},
@@ -583,7 +557,7 @@ func TestArchiveOptsWrite(t *testing.T) {
 			tt.opts.BaseArchive = tt.ma
 			tt.opts.OutputFile = tt.ma
 
-			if err := tt.opts.Write(); err != tt.err {
+			if err := Write(tt.opts); err != tt.err {
 				t.Errorf("Write() = %v, want %v", err, tt.err)
 			} else if err == nil && !tt.ma.FinishCalled {
 				t.Errorf("Finish wasn't called on archive")
