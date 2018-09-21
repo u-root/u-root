@@ -38,7 +38,7 @@ type (
 )
 
 var (
-	shells  = [...]string{"bash", "zsh", "rush"}
+	shells  = [...]string{"bash", "zsh", "elvish"}
 	shell   = "/bin/sh"
 	debug   = flag.Bool("d", false, "Enable debug prints")
 	keys    = flag.String("keys", "authorized_keys", "Path to the authorized_keys file")

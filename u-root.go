@@ -59,6 +59,7 @@ var (
 			"github.com/u-root/u-root/cmds/dirname",
 			"github.com/u-root/u-root/cmds/dmesg",
 			"github.com/u-root/u-root/cmds/echo",
+			"github.com/u-root/u-root/cmds/elvish",
 			"github.com/u-root/u-root/cmds/false",
 			"github.com/u-root/u-root/cmds/field",
 			"github.com/u-root/u-root/cmds/find",
@@ -102,7 +103,6 @@ var (
 			"github.com/u-root/u-root/cmds/rm",
 			"github.com/u-root/u-root/cmds/rmmod",
 			"github.com/u-root/u-root/cmds/rsdp",
-			"github.com/u-root/u-root/cmds/rush",
 			"github.com/u-root/u-root/cmds/seq",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/cmds/sleep",
@@ -137,6 +137,7 @@ var (
 			"github.com/u-root/u-root/cmds/dhclient",
 			"github.com/u-root/u-root/cmds/dmesg",
 			"github.com/u-root/u-root/cmds/echo",
+			"github.com/u-root/u-root/cmds/elvish",
 			"github.com/u-root/u-root/cmds/find",
 			"github.com/u-root/u-root/cmds/free",
 			"github.com/u-root/u-root/cmds/gpgv",
@@ -168,7 +169,6 @@ var (
 			"github.com/u-root/u-root/cmds/readlink",
 			"github.com/u-root/u-root/cmds/rm",
 			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/rush",
 			"github.com/u-root/u-root/cmds/seq",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/cmds/sleep",
@@ -193,6 +193,7 @@ var (
 			"github.com/u-root/u-root/cmds/dd",
 			"github.com/u-root/u-root/cmds/dhclient",
 			"github.com/u-root/u-root/cmds/dmesg",
+			"github.com/u-root/u-root/cmds/elvish",
 			"github.com/u-root/u-root/cmds/find",
 			"github.com/u-root/u-root/cmds/grep",
 			"github.com/u-root/u-root/cmds/id",
@@ -209,7 +210,6 @@ var (
 			"github.com/u-root/u-root/cmds/pwd",
 			"github.com/u-root/u-root/cmds/rm",
 			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/rush",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/cmds/sshd",
 			"github.com/u-root/u-root/cmds/switch_root",
@@ -232,7 +232,7 @@ func init() {
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name.")
-	defaultShell = flag.String("defaultsh", "rush", "Default shell. Can be an absolute path or a u-root command name.")
+	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name.")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
