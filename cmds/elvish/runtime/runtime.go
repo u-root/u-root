@@ -26,20 +26,12 @@ func InitRuntime(binpath, sockpath, dbpath string) (*eval.Evaler, string) {
 	dataDir, err = storedefs.EnsureDataDir()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: cannot create data directory ~/.elvish")
-	} else {
-		if dbpath == "" {
-			dbpath = filepath.Join(dataDir, "db")
-		}
 	}
 
 	// Determine runtime directory.
-	runDir, err := getSecureRunDir()
+	_, err = getSecureRunDir()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "cannot get runtime dir /tmp/elvish-$uid, falling back to data dir ~/.elvish:", err)
-		runDir = dataDir
-	}
-	if sockpath == "" {
-		sockpath = filepath.Join(runDir, "sock")
 	}
 
 	ev := eval.NewEvaler()
