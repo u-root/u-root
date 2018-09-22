@@ -18,7 +18,6 @@ var (
 		"/bbin/dhclient -ipv6=false",
 		"/bbin/ip a",
 		"/bbin/elvish",
-		"/bbin/rush",
 		"/bbin/shutdown halt",
 	}
 )

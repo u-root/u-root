@@ -117,6 +117,22 @@
   version = "v1.1"
 
 [[projects]]
+  digest = "1:15416fd2b58d5b2dfa0bc99185cdff3a8f49e73e022291891cb8d5d820d9760d"
+  name = "github.com/kr/pty"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "db8e3cd836b82e82e0a9c8edc6896967dd31374f"
+  version = "v1.1.3"
+
+[[projects]]
+  digest = "1:bffa444ca07c69c599ae5876bc18b25bfd5fa85b297ca10a25594d284a7e9c5d"
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c"
+  version = "v0.0.4"
+
+[[projects]]
   branch = "master"
   digest = "1:a5fecc72805e5b778d3ed8676c9ae4b8dc11244f1c32630ae339582bee18a3b9"
   name = "github.com/mdlayher/dhcp6"
@@ -210,6 +226,18 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:aae63b31dc1d7b61597321418d42fc7d089e1e1a93becc1b4c327db54281c1b8"
+  name = "github.com/xiaq/persistent"
+  packages = [
+    "hash",
+    "hashmap",
+    "vector",
+  ]
+  pruneopts = "NUT"
+  revision = "cd415c64068256386eb46bbbb1e56b461872feed"
+
+[[projects]]
+  branch = "master"
   digest = "1:b57c91e2b189aefe344e20735cef090459571e3082b2769e11d981370dc67a8a"
   name = "golang.org/x/crypto"
   packages = [
@@ -250,9 +278,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:27bdaa1c836789f63d5a1e33288575fcd452fdaeeaaae42200a6b13577044435"
+  digest = "1:51bfac9fe01b6a949bfed6db70b00bada281f0d64e5296ec644163aa977bfee0"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows",
+  ]
   pruneopts = "NUT"
   revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
@@ -298,6 +329,8 @@
     "github.com/google/goexpect",
     "github.com/gorilla/mux",
     "github.com/klauspost/pgzip",
+    "github.com/kr/pty",
+    "github.com/mattn/go-isatty",
     "github.com/mdlayher/dhcp6",
     "github.com/mdlayher/dhcp6/dhcp6opts",
     "github.com/mdlayher/eui64",
@@ -308,6 +341,9 @@
     "github.com/u-root/dhcp4/dhcp4client",
     "github.com/u-root/dhcp4/dhcp4opts",
     "github.com/vishvananda/netlink",
+    "github.com/xiaq/persistent/hash",
+    "github.com/xiaq/persistent/hashmap",
+    "github.com/xiaq/persistent/vector",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",
     "golang.org/x/crypto/openpgp",
@@ -318,6 +354,7 @@
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
     "golang.org/x/sys/unix",
+    "golang.org/x/sys/windows",
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/imports",
     "pack.ag/tftp",

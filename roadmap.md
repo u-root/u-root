@@ -21,7 +21,6 @@ yourself.
 | :x: printf     |                 | Not implemented yet!   |
 | ps             |                 | Fix race conditions    |
 | readlink       | -emn            |                        |
-| rush           | -c              |                        |
 | seq            |                 |                        |
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |

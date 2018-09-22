@@ -61,14 +61,6 @@ also use Go package import paths (e.g. `golang.org/x/tools/imports`) to include
 commands. Only the `main` package and its dependencies in those source
 directories will be included. For example:
 
-```shell
-go get github.com/u-root/elvish
-u-root -build=bb ./cmds/* github.com/u-root/elvish
-```
-
-Side note: `elvish` is a nicer shell than our default shell `rush`; and also
-written in Go.
-
 You can build the initramfs built by u-root into the kernel via the
 `CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an
 option in for example Grub or the QEMU command line or coreboot config variable.
