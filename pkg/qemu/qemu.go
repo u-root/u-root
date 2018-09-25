@@ -64,13 +64,13 @@ func (q *QEMU) CmdLine() []string {
 	// - earlyprintk=ttyS0: print very early debug messages to the serial
 	// - console=ttyS0: /dev/console points to /dev/ttyS0 (the serial port)
 	// - q.KernelArgs: extra, optional kernel arguments
-	args = append(args, "-append", "console=ttyS0 earlyprintk=ttyS0")
-	if q.KernelArgs != "" {
-		args[len(args)-1] += " " + q.KernelArgs
+	if q.Kernel != "" {
+		args = append(args, "-kernel", q.Kernel)
+		args = append(args, "-append", "console=ttyS0 earlyprintk=ttyS0")
+		if q.KernelArgs != "" {
+			args[len(args)-1] += " " + q.KernelArgs
+		}
 	}
-
-	// Kernel and initramfs
-	args = append(args, "-kernel", q.Kernel)
 	if q.InitRAMFS != "" {
 		args = append(args, "-initrd", q.InitRAMFS)
 	}
