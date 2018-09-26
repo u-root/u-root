@@ -50,7 +50,7 @@ u-root -build=bb
 u-root -format=cpio -build=source -o initramfs.cpio
 
 # Generate a bb-mode archive with only these given commands.
-u-root -format=cpio -build=bb ./cmds/{ls,ip,dhclient,wget,tcz,cat}
+u-root -format=cpio -build=bb ./cmds/{init,ls,ip,dhclient,wget,tcz,cat}
 ```
 
 `-format=cpio` and `-build=source` are the default flag values. The default set
