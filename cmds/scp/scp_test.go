@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func TestScpSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	expected := []byte(fmt.Sprintf("C0600 19 %s\ndummy-file-contents", tf.Name()))
+	expected := []byte(fmt.Sprintf("C0600 19 %s\ndummy-file-contents", path.Base(tf.Name())))
 	expected = append(expected, 0)
 	if string(expected) != w.String() {
 		t.Fatalf("Got: %v\nExpected: %v", w.Bytes(), expected)
