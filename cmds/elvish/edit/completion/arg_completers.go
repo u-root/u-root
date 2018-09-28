@@ -6,11 +6,10 @@ import (
 	"io"
 	"os"
 	"strings"
-	"unsafe"
 
 	"github.com/u-root/u-root/cmds/elvish/eval"
-	"github.com/xiaq/persistent/hash"
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hash"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 // For an overview of completion, see the comment in completers.go.
@@ -128,7 +127,7 @@ func (bac *builtinArgCompleter) Equal(a interface{}) bool {
 }
 
 func (bac *builtinArgCompleter) Hash() uint32 {
-	return hash.Pointer(unsafe.Pointer(bac))
+	return hash.Hash(bac)
 }
 
 func (bac *builtinArgCompleter) Repr(int) string {

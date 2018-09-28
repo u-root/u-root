@@ -6,8 +6,8 @@ import (
 
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hash"
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/hash"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 // Styled is a piece of text with style.
@@ -78,7 +78,7 @@ func (s *Styled) Equal(a interface{}) bool {
 
 func (s *Styled) Hash() uint32 {
 	h := hash.DJBInit
-	h = hash.DJBCombine(h, hash.String(s.Text))
+	h = hash.DJBCombine(h, hash.Hash(s.Text))
 	h = hash.DJBCombine(h, s.Styles.Hash())
 	return h
 }
@@ -132,7 +132,7 @@ func (ss Styles) Eq(rhs Styles) bool {
 func (ss Styles) Hash() uint32 {
 	h := hash.DJBInit
 	for _, s := range ss {
-		h = hash.DJBCombine(h, hash.String(s))
+		h = hash.DJBCombine(h, hash.Hash(s))
 	}
 	return h
 }

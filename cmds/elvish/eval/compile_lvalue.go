@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -174,31 +173,5 @@ type elemOp struct {
 }
 
 func (op *elemOp) Invoke(fm *Frame) ([]vars.Var, error) {
-	variable := fm.ResolveVar(op.ns, op.name)
-	if variable == nil {
-		return nil, fmt.Errorf("variable $%s:%s does not exist, compiler bug", op.ns, op.name)
-	}
-
-	indicies := make([]interface{}, len(op.indexOps))
-	for i, op := range op.indexOps {
-		values, err := op.Exec(fm)
-		if err != nil {
-			return nil, err
-		}
-		// TODO: Implement multi-indexing.
-		if len(values) != 1 {
-			return nil, errors.New("multi indexing not implemented")
-		}
-		indicies[i] = values[0]
-	}
-	elemVar, err := vars.MakeElement(variable, indicies)
-	if err != nil {
-		level := vars.ElementErrorLevel(err)
-		if level < 0 {
-			fm.errorpf(op.begin, op.end, "%s", err)
-		} else {
-			fm.errorpf(op.begin, op.ends[level], "%s", err)
-		}
-	}
-	return []vars.Var{elemVar}, nil
+	return nil, nil
 }

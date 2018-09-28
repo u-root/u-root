@@ -51,7 +51,6 @@ func newFlagSet() *flagSet {
 	f.BoolVar(&f.Help, "help", false, "show usage help and quit")
 	f.BoolVar(&f.Version, "version", false, "show version and quit")
 	f.BoolVar(&f.BuildInfo, "buildinfo", false, "show build info and quit")
-	f.BoolVar(&f.JSON, "json", false, "show output in JSON. Useful with -buildinfo.")
 
 	f.BoolVar(&f.CodeInArg, "c", false, "take first argument as code to execute")
 	f.BoolVar(&f.CompileOnly, "compileonly", false, "Parse/Compile but do not execute")
@@ -120,7 +119,7 @@ func FindProgram(flag *flagSet) Program {
 	case flag.Version:
 		return ShowVersion{}
 	case flag.BuildInfo:
-		return ShowBuildInfo{flag.JSON}
+		return ShowBuildInfo{}
 	default:
 		return shell.New(flag.Bin, flag.Sock, flag.DB, flag.CodeInArg, flag.CompileOnly)
 	}

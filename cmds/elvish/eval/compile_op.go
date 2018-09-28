@@ -10,7 +10,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval/vars"
 	"github.com/u-root/u-root/cmds/elvish/parse"
 	"github.com/u-root/u-root/cmds/elvish/util"
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 // Op is an operation on an Frame.
@@ -268,13 +268,9 @@ func (op *formOp) Invoke(fm *Frame) (errRet error) {
 			}
 			saveVars = append(saveVars, moreSaveVars...)
 		}
-		for i, v := range saveVars {
+		for _, v := range saveVars {
 			// XXX(xiaq): If the variable to save is a elemVariable, save
 			// the outermost variable instead.
-			if u := vars.HeadOfElement(v); u != nil {
-				v = u
-				saveVars[i] = v
-			}
 			val := v.Get()
 			saveVals = append(saveVals, val)
 			logger.Printf("saved %s = %s", v, val)

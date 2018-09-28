@@ -10,7 +10,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/parse"
 	"github.com/u-root/u-root/cmds/elvish/util"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 var (
@@ -32,7 +32,7 @@ func (e ExternalCmd) Equal(a interface{}) bool {
 }
 
 func (e ExternalCmd) Hash() uint32 {
-	return hash.String(e.Name)
+	return hash.Hash(e.Name)
 }
 
 func (e ExternalCmd) Repr(int) string {

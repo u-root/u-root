@@ -3,12 +3,11 @@ package eval
 import (
 	"errors"
 	"fmt"
-	"unsafe"
 
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/eval/vars"
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 // ErrArityMismatch is thrown by a closure when the number of arguments the user
@@ -42,7 +41,7 @@ func (c *Closure) Equal(rhs interface{}) bool {
 }
 
 func (c *Closure) Hash() uint32 {
-	return hash.Pointer(unsafe.Pointer(c))
+	return hash.Hash(c)
 }
 
 // Repr returns an opaque representation "<closure 0x23333333>".

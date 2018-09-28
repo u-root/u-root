@@ -1,7 +1,7 @@
 package vals
 
 import (
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 // Hasher wraps the Hash method.
@@ -36,7 +36,7 @@ func Hash(v interface{}) uint32 {
 		}
 		return h
 	case string:
-		return hash.String(v)
+		return hash.Hash(v)
 	case Hasher:
 		return v.Hash()
 	}

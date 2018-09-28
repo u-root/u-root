@@ -1,0 +1,25 @@
+-rwxrwxr-x 1 rminnich rminnich 4708872 Oct 3 15:57 elvish
+-rwxrwxr-x 1 rminnich rminnich 4512232 Oct 3 15:58 elvish
+-rwxrwxr-x 1 rminnich rminnich 4512232 Oct  3 16:20 elvish
+-rwxrwxr-x 1 rminnich rminnich 4508136 Oct  3 16:24 elvish
+-rwxrwxr-x 1 rminnich rminnich 4508136 Oct  3 16:49 elvish
+-rwxrwxr-x 1 rminnich rminnich 4504040 Oct  3 16:51 elvish
+-rwxrwxr-x 1 rminnich rminnich 4491688 Oct  4 11:34 elvish
+-rwxrwxr-x 1 rminnich rminnich 4487592 Oct  4 17:57 elvish
+-rwxrwxr-x 1 rminnich rminnich 4483496 Oct  4 18:00 elvish
+-rwxrwxr-x 1 rminnich rminnich 4479400 Oct  4 18:11 elvish
+-rwxrwxr-x 1 rminnich rminnich 4454824 Oct  5 06:58 elvish
+-rwxrwxr-x 1 rminnich rminnich 4463016 Oct  5 07:01 elvish
+-rwxrwxr-x 1 rminnich rminnich 4438440 Oct  5 07:06 elvish
+9f5cb5d6b7f0605f541155ded2eb86f178077c4d strip more junk out
+-rwxrwxr-x 1 rminnich rminnich 4430248 Oct  5 08:00 elvish
+-rwxrwxr-x 1 rminnich rminnich 4422056 Oct  5 08:18 elvish
+d0df87e036c342e93eae9ab9e6e9aa1c55790ddc (HEAD -> prunelvish) pull in vector, throw away all the complexity
+b6d8493af4385d7e3ee94113830df0131530e886 remove xiaq hash
+-rwxrwxr-x 1 rminnich rminnich 4286600 Oct  5 08:25 elvish
+e89e3809d13c7e88a1d54085e3511ff46442a716 remove xiaq hash
+-rwxrwxr-x 1 rminnich rminnich 4286600 Oct  5 13:29 elvish
+6da666f2e7dcc7b38b2f78a026f4ab55eeb60509 simplify the hashmap
+-rwxrwxr-x 1 rminnich rminnich 4249736 Oct  5 18:26 elvish
+9a40ae416360913d08bc8c75f16f659298ad5972 get rid of rats, there is no clear need
+-rwxrwxr-x 1 rminnich rminnich 3920360 Oct  5 18:33 elvish

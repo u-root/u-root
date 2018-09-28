@@ -4,10 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"unsafe"
 
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 var ErrArgs = errors.New("args error")
@@ -104,7 +103,7 @@ func (b *BuiltinFn) Equal(rhs interface{}) bool {
 
 // Hash hashes the address.
 func (b *BuiltinFn) Hash() uint32 {
-	return hash.Pointer(unsafe.Pointer(b))
+	return hash.Hash(b)
 }
 
 // Repr returns an opaque representation "<builtin $name>".

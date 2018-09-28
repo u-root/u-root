@@ -1,7 +1,7 @@
 package vals
 
 import (
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 type mapIterable interface {

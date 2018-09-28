@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/u-root/u-root/cmds/elvish/eval"
-	"github.com/u-root/u-root/cmds/elvish/eval/re"
-	"github.com/u-root/u-root/cmds/elvish/eval/str"
 	"github.com/u-root/u-root/cmds/elvish/store/storedefs"
 	"github.com/u-root/u-root/cmds/elvish/util"
 )
@@ -36,8 +34,6 @@ func InitRuntime(binpath, sockpath, dbpath string) (*eval.Evaler, string) {
 
 	ev := eval.NewEvaler()
 	ev.SetLibDir(filepath.Join(dataDir, "lib"))
-	ev.InstallModule("re", re.Ns)
-	ev.InstallModule("str", str.Ns)
 	return ev, dataDir
 }
 
