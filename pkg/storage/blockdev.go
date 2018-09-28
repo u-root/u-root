@@ -178,7 +178,13 @@ func GetGPTTable(device BlockDev) (*gpt.Table, error) {
 // FilterEFISystemPartitions returns a list of BlockDev objects whose underlying
 // block device is a valid EFI system partition, or an error if any
 func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
-	esps := make([]BlockDev, 0)
+	return PartitionsByGUID(devices, SystemPartitionGUID.String())
+}
+
+// PartitionsByGUID returns a list of BlockDev objects whose underlying
+// block device ahs the given GUID
+func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
+	partitions := make([]BlockDev, 0)
 	for _, device := range devices {
 		table, err := GetGPTTable(device)
 		if err != nil {
@@ -189,12 +195,12 @@ func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
 			if part.IsEmpty() {
 				continue
 			}
-			if part.Type.String() == SystemPartitionGUID.String() {
-				esps = append(esps, device)
+			if part.Type.String() == guid {
+				partitions = append(partitions, device)
 			}
 		}
 	}
-	return esps, nil
+	return partitions, nil
 }
 
 // GetMountpointByDevice gets the mountpoint by given

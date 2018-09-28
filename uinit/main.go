@@ -17,7 +17,7 @@ var (
 
 var defaultBootsequence = [][]string{
 	[]string{"netboot", "-userclass", "linuxboot"},
-	[]string{"localboot"},
+	[]string{"localboot", "-grub"},
 }
 
 func main() {
