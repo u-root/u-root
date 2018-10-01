@@ -124,19 +124,22 @@ func (q *QEMU) Expect(search string) error {
 // ExpectTimeout returns an error if the given string is not found in QEMU's serial
 // output within the given timeout.
 func (q *QEMU) ExpectTimeout(search string, timeout time.Duration) error {
-	return q.ExpectRETimeout(regexp.MustCompile(regexp.QuoteMeta(search)), timeout)
+	_, err := q.ExpectRETimeout(regexp.MustCompile(regexp.QuoteMeta(search)), timeout)
+	return err
 }
 
 // ExpectRE returns an error if the given regular expression is not found in
-// QEMU's serial output within `DefaultTimeout`.
-func (q *QEMU) ExpectRE(pattern *regexp.Regexp) error {
+// QEMU's serial output within `DefaultTimeout`. The matched string is
+// returned.
+func (q *QEMU) ExpectRE(pattern *regexp.Regexp) (string, error) {
 	return q.ExpectRETimeout(pattern, DefaultTimeout)
 }
 
 // ExpectRETimeout returns an error if the given regular expression is not
-// found in QEMU's serial output within the given timeout.
-func (q *QEMU) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) error {
+// found in QEMU's serial output within the given timeout. The matched string
+// is returned.
+func (q *QEMU) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) (string, error) {
 	scaled := time.Duration(float64(timeout) * TimeoutMultiplier)
-	_, _, err := q.gExpect.Expect(pattern, scaled)
-	return err
+	str, _, err := q.gExpect.Expect(pattern, scaled)
+	return str, err
 }
