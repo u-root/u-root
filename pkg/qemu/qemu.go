@@ -14,6 +14,7 @@ package qemu
 
 import (
 	"errors"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -42,6 +43,9 @@ type QEMU struct {
 
 	// Extra QEMU arguments
 	ExtraArgs []string
+
+	// Where to send serial output.
+	SerialOutput io.WriteCloser
 
 	gExpect *expect.GExpect
 }
@@ -96,7 +100,7 @@ func (q *QEMU) Start() error {
 		return errors.New("QEMU already started")
 	}
 	var err error
-	q.gExpect, _, err = expect.SpawnWithArgs(q.CmdLine(), -1)
+	q.gExpect, _, err = expect.SpawnWithArgs(q.CmdLine(), -1, expect.Tee(q.SerialOutput))
 	return err
 }
 
