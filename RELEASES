@@ -5,6 +5,27 @@ A new release happens every 6 weeks:
 - 1st day on the first month of each quarter
 - 15th day of the second month of each quarter
 
+## v2.0.0 (2018-10-01)
+
+- Large improvements to readability of GoDocs
+- New commands:
+  - cksum: generates md5, sha and crc checksums
+  - elvish: forked from github.com/elves/elvish
+  - less: pages files, courtesy of Michael Pratt
+  - more: simplistic implementation of less
+  - pox: builds a POrtable eXecutable as a squashfs image
+- Breaking changes:
+  - rush is moved to xcmds and elvish is the default shell
+  - bzImage renamed to bzimage
+  - time_sos renamed to timesos
+  - upspin_sos renamed to upspinsos
+- Major bug fixes
+  - u-root command expands wildcards properly
+  - scp now compliant with openssh's scp
+- Tested with:
+  - Linux 4.17
+  - Golang 1.11
+
 ## v1.0.0 (2018-08-15)
 
 - Initial release
