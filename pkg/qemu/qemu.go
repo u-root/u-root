@@ -100,7 +100,9 @@ func (q *QEMU) Start() error {
 		return errors.New("QEMU already started")
 	}
 	var err error
-	q.gExpect, _, err = expect.SpawnWithArgs(q.CmdLine(), -1, expect.Tee(q.SerialOutput))
+	q.gExpect, _, err = expect.SpawnWithArgs(q.CmdLine(), -1,
+		expect.Tee(q.SerialOutput),
+		expect.CheckDuration(2*time.Millisecond))
 	return err
 }
 
