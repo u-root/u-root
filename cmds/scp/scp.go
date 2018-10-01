@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 )
 
 const (
@@ -35,8 +36,8 @@ var (
 	_        = flag.Bool("v", false, "Ignored")
 )
 
-func scpSingleSource(w io.Writer, r io.Reader, path string) error {
-	f, err := os.Open(path)
+func scpSingleSource(w io.Writer, r io.Reader, pth string) error {
+	f, err := os.Open(pth)
 	if err != nil {
 		return err
 	}
@@ -45,7 +46,8 @@ func scpSingleSource(w io.Writer, r io.Reader, path string) error {
 	if err != nil {
 		return err
 	}
-	w.Write([]byte(fmt.Sprintf("C0%o %d %s\n", s.Mode(), s.Size(), path)))
+	filename := path.Base(pth)
+	w.Write([]byte(fmt.Sprintf("C0%o %d %s\n", s.Mode(), s.Size(), filename)))
 	if response(r) != SUCCESS {
 		return fmt.Errorf("response was not success")
 	}
