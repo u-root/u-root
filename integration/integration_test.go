@@ -20,6 +20,10 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
+// Serial output is written to this directory and picked up by circleci, or
+// you, if you want to read the serial logs.
+const logDir = "serial"
+
 // Returns temporary directory and QEMU instance.
 //
 // - `uinitName` is the name of a directory containing uinit found at
@@ -83,11 +87,21 @@ func testWithQEMU(t *testing.T, uinitName string, extraArgs []string) (string, *
 	extraArgs = append(extraArgs, "-device", "ich9-ahci,id=ahci")
 	extraArgs = append(extraArgs, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
 
+	// Create file for serial logs.
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		t.Fatalf("could not create serial log directory: %v", err)
+	}
+	logFile, err := os.Create(path.Join(logDir, uinitName+".log"))
+	if err != nil {
+		t.Fatalf("could not create log file: %v", err)
+	}
+
 	// Start QEMU
 	q := &qemu.QEMU{
-		InitRAMFS: outputFile,
-		Kernel:    bzImage,
-		ExtraArgs: extraArgs,
+		InitRAMFS:    outputFile,
+		Kernel:       bzImage,
+		ExtraArgs:    extraArgs,
+		SerialOutput: logFile,
 	}
 	t.Logf("command line:\n%s", q.CmdLineQuoted())
 	if err := q.Start(); err != nil {
