@@ -92,6 +92,17 @@ func VerboseWriter(w io.Writer) Option {
 	}
 }
 
+// Tee duplicates all of the spawned process's output to the given writer and
+// closes the writer when complete. Writes occur from another thread, so
+// synchronization may be necessary.
+func Tee(w io.WriteCloser) Option {
+	return func(e *GExpect) Option {
+		prev := e.teeWriter
+		e.teeWriter = w
+		return Tee(prev)
+	}
+}
+
 // NoCheck turns off the Expect alive checks.
 func NoCheck() Option {
 	return changeChk(func(*GExpect) bool {
@@ -524,6 +535,8 @@ type GExpect struct {
 	verbose bool
 	// verboseWriter if set specifies where to write verbose information.
 	verboseWriter io.Writer
+	// teeWriter receives a duplicate of the spawned process's output when set.
+	teeWriter io.WriteCloser
 
 	// mu protects the output buffer. It must be held for any operations on out.
 	mu  sync.Mutex
@@ -1020,7 +1033,9 @@ func (e *GExpect) waitForSession(r chan error, wait func() error, sIn io.WriteCl
 			nr, err := out.Read(buf)
 			if err != nil || !e.check() {
 				if err == io.EOF {
-					log.Printf("read closing down: %v", err)
+					if e.verbose {
+						log.Printf("read closing down: %v", err)
+					}
 					return
 				}
 				return
@@ -1139,11 +1154,20 @@ func (e *GExpect) read(done chan struct{}, ptySync *sync.WaitGroup) {
 	for {
 		nr, err := e.pty.Master.Read(buf)
 		if err != nil || !e.check() {
+			if e.teeWriter != nil {
+				e.teeWriter.Close()
+			}
 			if err == io.EOF {
-				log.Printf("read closing down: %v", err)
+				if e.verbose {
+					log.Printf("read closing down: %v", err)
+				}
 				return
 			}
 			return
+		}
+		// Tee output to writer
+		if e.teeWriter != nil {
+			e.teeWriter.Write(buf[:nr])
 		}
 		// Add to buffer
 		e.mu.Lock()

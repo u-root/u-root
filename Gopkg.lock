@@ -39,11 +39,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9ad1f25e4da1188f2d132b4f2326dcb94f171eff6cb7539c953d3d4d2329270b"
+  digest = "1:6698f8917739265a62bfddf10902d8cfed43c541f91fe18f109a7ff0a273481d"
   name = "github.com/google/goexpect"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "9db06cbbaed691242d13045e8e5f5037f72db9e7"
+  revision = "b18097df138928108f35d9eb94955cc12954c0d5"
 
 [[projects]]
   branch = "master"

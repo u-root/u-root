@@ -137,6 +137,8 @@ jobs:
       - run:
           name: Test integration all
           command: go test -v -a -ldflags '-s' ./integration/...
+      - store_artifacts:
+          path: integration/serial
   race:
     docker:
       - image: circleci/golang:1.11
