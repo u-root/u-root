@@ -70,9 +70,8 @@ func (nb *NetBooter) Boot() error {
 	cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
+		return fmt.Errorf("Error executing %v: %v", cmd, err)
 	}
-	// This should be never reached
 	return nil
 }
 
