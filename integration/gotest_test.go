@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -50,6 +51,11 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/dd",
 		"github.com/u-root/u-root/cmds/df",
 		"github.com/u-root/u-root/cmds/dhclient",
+		"github.com/u-root/u-root/cmds/elvish",
+		"github.com/u-root/u-root/cmds/elvish/build",
+		"github.com/u-root/u-root/cmds/elvish/eval",
+		"github.com/u-root/u-root/cmds/elvish/eval/store",
+		"github.com/u-root/u-root/cmds/elvish/eval/str",
 		"github.com/u-root/u-root/cmds/field",
 		"github.com/u-root/u-root/cmds/find",
 		"github.com/u-root/u-root/cmds/fmap",
@@ -65,10 +71,12 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/kexec",
 		"github.com/u-root/u-root/cmds/kill",
 		"github.com/u-root/u-root/cmds/lddfiles",
+		"github.com/u-root/u-root/cmds/less",
 		"github.com/u-root/u-root/cmds/losetup",
 		"github.com/u-root/u-root/cmds/lsmod",
 		"github.com/u-root/u-root/cmds/mm",
 		"github.com/u-root/u-root/cmds/modprobe",
+		"github.com/u-root/u-root/cmds/more",
 		"github.com/u-root/u-root/cmds/mount",
 		"github.com/u-root/u-root/cmds/msr",
 		"github.com/u-root/u-root/cmds/netcat",
@@ -139,24 +147,41 @@ func TestGoTest(t *testing.T) {
 	})
 	defer cleanup(t, tmpDir, q)
 
-	// Check that each test passed.
+	// Tests are run and checked in sorted order.
 	bases := []string{}
 	for _, pkg := range pkgs {
 		bases = append(bases, path.Base(pkg))
 	}
-	sort.Strings(bases) // Tests are run and checked in sorted order.
-	t.Log("TAP: TAP version 12")
-	t.Logf("TAP: 1..%d", len(bases))
+	sort.Strings(bases)
+
+	// Check that the test runner is running inside QEMU.
+	headerMsg := fmt.Sprintf("TAP: 1..%d", len(bases))
+	if err := q.ExpectTimeout(headerMsg, 3*time.Second); err != nil {
+		t.Fatalf("cannot communicate with test runner: %v", err)
+	}
+	t.Log(headerMsg)
+
+	// Check that each test passed.
 	for i, base := range bases {
 		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, base)
 		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, base)
 		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, base)
+		passOrFailMsg := regexp.MustCompile(fmt.Sprintf("TAP: (not )?ok %d - %s", i, base))
 
 		t.Log(runMsg)
-		if err := q.ExpectTimeout(passMsg, 2*time.Second); err == nil {
-			t.Logf(passMsg)
+		str, err := q.ExpectRETimeout(passOrFailMsg, 2*time.Second)
+		if err != nil {
+			// If we can neither find the "ok" nor the "not ok" message, the
+			// test runner inside QEMU is misbehaving and we fatal early
+			// instead of wasting time.
+			t.Logf(failMsg)
+			t.Fatal("TAP: Bail out! QEMU test runner stopped printing.")
+		}
+
+		if strings.Contains(str, passMsg) {
+			t.Log(passMsg)
 		} else {
-			t.Errorf(failMsg)
+			t.Error(failMsg)
 		}
 	}
 }

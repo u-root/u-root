@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/u-root/u-root/pkg/sh"
 )
@@ -31,24 +33,31 @@ func main() {
 		tests = append(tests, f.Name())
 	}
 
+	// Sort tests.
+	sort.Strings(tests)
+
 	// We are using TAP-style test output. See: https://testanything.org/
 	// One unfortunate design in TAP is "ok" is a subset of "not ok", so we
 	// prepend each line with "TAP: " and search for for "TAP: ok".
-	log.Println("TAP: TAP version 12")
-
-	// Sort and run tests.
-	sort.Strings(tests)
 	log.Printf("TAP: 1..%d", len(tests))
-	for i, t := range tests {
-		cmd := exec.Command(filepath.Join("/testdata/tests", t))
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 
+	// Run tests.
+	for i, t := range tests {
 		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, t)
 		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, t)
 		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, t)
-
 		log.Println(runMsg)
-		if err := cmd.Run(); err == nil {
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1900*time.Millisecond)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, filepath.Join("/testdata/tests", t))
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		err := cmd.Run()
+
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Println("TAP: # timed out")
+			log.Println(failMsg)
+		} else if err == nil {
 			log.Println(passMsg)
 		} else {
 			log.Println(err)
