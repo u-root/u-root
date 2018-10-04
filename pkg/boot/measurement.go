@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
+	// Registers with crypto
 	_ "crypto/sha512"
 	//"encoding/binary"
 	"fmt"

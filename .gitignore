@@ -8,6 +8,7 @@
 /bb
 /u-root
 !vendor/github.com/u-root
+integration/serial/
 
 # Folders
 _obj

@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	rushPath = "/src/github.com/u-root/u-root/cmds/rush"
+	elvishPath = "/src/github.com/u-root/u-root/cmds/elvish"
 )
 
 type mount struct {
@@ -35,7 +35,7 @@ var (
 	//	endPart = "\n}\n)\n}\n"
 	endPart   = "\nreturn err\n}\n"
 	namespace = []mount{
-		{source: "tmpfs", target: rushPath, fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
+		{source: "tmpfs", target: elvishPath, fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 		{source: "tmpfs", target: "/ubin", fstype: "tmpfs", flags: syscall.MS_MGC_VAL, opts: ""},
 	}
 	debug = flag.Bool("d", false, "Print debug info")
@@ -85,12 +85,12 @@ func main() {
 		if *debug {
 			log.Printf("\n----FULLCODE---------\n%v\n------FULLCODE----------\n", string(fullCode))
 		}
-		bName := filepath.Join(rushPath, a[0]+".go")
+		bName := filepath.Join(elvishPath, a[0]+".go")
 		filemap[bName] = fullCode
 	}
 
 	// processed code, read in shell files.
-	globs, err := filepath.Glob(rushPath + "/*.go")
+	globs, err := filepath.Glob(elvishPath + "/*.go")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func main() {
 			log.Printf("Mount :%s: on :%s: type :%s: flags %x: opts %v: %v\n", m.source, m.target, m.fstype, m.flags, m.opts, err)
 		}
 	}
-	// write the new rushPath
+	// write the new elvishPath
 	for i, v := range filemap {
 		if err = ioutil.WriteFile(i, v, 0600); err != nil {
 			log.Fatal(err)
@@ -144,7 +144,7 @@ func main() {
 	}
 
 	// the big fun: just run it. The Right Things Happen.
-	cmd := exec.Command("/buildbin/rush")
+	cmd := exec.Command("/buildbin/elvish")
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -162,5 +162,5 @@ func main() {
 			log.Printf("Umount :%s: %v\n", m.target, err)
 		}
 	}
-	log.Printf("builtin: /ubin/rush returned!\n")
+	log.Printf("builtin: /ubin/elvish returned!\n")
 }

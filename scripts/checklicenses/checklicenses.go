@@ -53,6 +53,7 @@ var rules = []rule{
 	accept(`.*\.go`),
 	reject(`vendor/.*`),       // Various authors
 	reject(`cmds/dhcp/.*`),    // Graham King
+	reject(`cmds/elvish/.*`),  // elvish developers and contributors
 	reject(`cmds/ldd/.*`),     // Go authors
 	reject(`cmds/ping/.*`),    // Go authors
 	reject(`xcmds/ectool/.*`), // Chromium authors
