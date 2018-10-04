@@ -178,14 +178,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:26217ee135b8157549e648efe97dff3282e4bd597a912d784db964df41067f29"
-  name = "github.com/nightlyone/lockfile"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
-
-[[projects]]
-  branch = "master"
   digest = "1:34d9354c2c5d916c05864327553047df59fc10e86ff1f408e4136eba0a25a5ec"
   name = "github.com/nsf/termbox-go"
   packages = ["."]
@@ -338,7 +330,6 @@
     "github.com/mdlayher/dhcp6",
     "github.com/mdlayher/dhcp6/dhcp6opts",
     "github.com/mdlayher/eui64",
-    "github.com/nightlyone/lockfile",
     "github.com/nsf/termbox-go",
     "github.com/rck/unit",
     "github.com/spf13/pflag",
