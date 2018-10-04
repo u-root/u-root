@@ -28,15 +28,17 @@ import (
 )
 
 type options struct {
-	cmdline      string
-	reuseCmdline bool
-	initramfs    string
-	load         bool
-	exec         bool
+	appendCmdline string
+	cmdline       string
+	reuseCmdline  bool
+	initramfs     string
+	load          bool
+	exec          bool
 }
 
 func registerFlags() *options {
 	o := &options{}
+	flag.StringVarP(&o.appendCmdline, "append", "a", "", "Append to kernel command line")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
@@ -72,6 +74,9 @@ func main() {
 		} else {
 			newCmdLine = procCmdLine.Raw
 		}
+	}
+	if opts.appendCmdline != "" {
+		newCmdLine += " " + opts.appendCmdline
 	}
 
 	if opts.load {
