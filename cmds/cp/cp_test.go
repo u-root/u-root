@@ -31,12 +31,12 @@ const (
 
 // resetFlags is used to reset the cp flags to default
 func resetFlags() {
-	nwork = 1
-	recursive = false
-	ask = false
-	force = false
-	verbose = false
-	symlink = false
+	flags.nwork = 1
+	flags.recursive = false
+	flags.ask = false
+	flags.force = false
+	flags.verbose = false
+	flags.symlink = false
 }
 
 // randomFile create a random file with random content
@@ -224,7 +224,7 @@ func TestCpSimple(t *testing.T) {
 // whose src-dir and dst-dir already exists
 // cmd-line equivalent: $ cp -R src-dir/ dst-dir/
 func TestCpRecursive(t *testing.T) {
-	recursive = true
+	flags.recursive = true
 	defer resetFlags()
 	tempDir, err := ioutil.TempDir("", "TestCpRecursive")
 	if err != nil {
@@ -258,7 +258,7 @@ func TestCpRecursive(t *testing.T) {
 // whose src-dir exists but dst-dir no
 // cmd-line equivalent: $ cp -R some-dir/ new-dir/
 func TestCpRecursiveNew(t *testing.T) {
-	recursive = true
+	flags.recursive = true
 	defer resetFlags()
 	tempDir, err := ioutil.TempDir("", "TestCpRecursiveNew")
 	if err != nil {
@@ -298,7 +298,7 @@ func TestCpRecursiveNew(t *testing.T) {
 // ..	dir2/
 // ..   dir3/
 func TestCpRecursiveMultiple(t *testing.T) {
-	recursive = true
+	flags.recursive = true
 	defer resetFlags()
 	tempDir, err := ioutil.TempDir("", "TestCpRecursiveMultiple")
 	if err != nil {
@@ -344,7 +344,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 // cmd-line equivalent: $ cp -P symlink symlink-copy
 func TestCpSymlink(t *testing.T) {
 	defer resetFlags()
-	symlink = true
+	flags.symlink = true
 
 	tempDir, err := ioutil.TempDir("", "TestCpSymlink")
 	if err != nil {
