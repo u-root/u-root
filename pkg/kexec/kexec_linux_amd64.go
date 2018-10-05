@@ -7,16 +7,8 @@ package kexec
 import (
 	"fmt"
 	"os"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
-)
-
-// kexec_file_load(2) syscall flags.
-const (
-	_KEXEC_FILE_UNLOAD       = 0x1
-	_KEXEC_FILE_ON_CRASH     = 0x2
-	_KEXEC_FILE_NO_INITRAMFS = 0x4
 )
 
 // FileLoad loads the given kernel as the new kernel with the given ramfs and
@@ -24,32 +16,16 @@ const (
 //
 // The kexec_file_load(2) syscall is x86-64 bit only.
 func FileLoad(kernel, ramfs *os.File, cmdline string) error {
-	var flags uintptr
-	var ramfsfd uintptr
+	var flags int
+	var ramfsfd int
 	if ramfs != nil {
-		ramfsfd = ramfs.Fd()
+		ramfsfd = int(ramfs.Fd())
 	} else {
-		flags |= _KEXEC_FILE_NO_INITRAMFS
+		flags |= unix.KEXEC_FILE_NO_INITRAMFS
 	}
 
-	cmdPtr, err := unix.BytePtrFromString(cmdline)
-	if err != nil {
-		return fmt.Errorf("could not use cmdline %q: %v", cmdline, err)
-	}
-	cmdLen := uintptr(len(cmdline))
-	if len(cmdline) > 0 {
-		cmdLen++
-	}
-
-	if _, _, errno := unix.Syscall6(
-		unix.SYS_KEXEC_FILE_LOAD,
-		kernel.Fd(),
-		ramfsfd,
-		cmdLen,
-		uintptr(unsafe.Pointer(cmdPtr)),
-		flags,
-		0); errno != 0 {
-		return fmt.Errorf("sys_kexec(%d, %d, %s, %x) = %v", kernel.Fd(), ramfsfd, cmdline, flags, errno)
+	if err := unix.KexecFileLoad(int(kernel.Fd()), ramfsfd, cmdline, flags); err != nil {
+		return fmt.Errorf("sys_kexec(%d, %d, %s, %x) = %v", kernel.Fd(), ramfsfd, cmdline, flags, err)
 	}
 	return nil
 }
