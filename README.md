@@ -47,7 +47,7 @@ The `uinit` program just wraps `netboot` and `localboot` in a forever-loop logic
 ## Who uses systemboot?
 
 Public projects that use it and that we are aware of:
-* [OpenCellular](https://github.com/Telecominfraproject/OpenCellular/wiki/How-to-systemboot-(verifiedboot)
+* [OpenCellular](https://github.com/Telecominfraproject/OpenCellular/wiki/How-to-use-systemboot#verifiedboot)
 
 If you use systemboot in your project please let us know and we will add your
 project to this list.
