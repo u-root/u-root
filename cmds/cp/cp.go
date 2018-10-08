@@ -19,7 +19,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +27,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 )
 
 // buffSize is the length of buffer during
@@ -35,13 +36,15 @@ import (
 const buffSize = 8192
 
 var (
-	recursive bool
-	ask       bool
-	force     bool
-	verbose   bool
-	symlink   bool
-	nwork     int
-	input     = bufio.NewReader(os.Stdin)
+	flags struct {
+		recursive bool
+		ask       bool
+		force     bool
+		verbose   bool
+		symlink   bool
+		nwork     int
+	}
+	input = bufio.NewReader(os.Stdin)
 	// offchan is a channel used for indicate the nextbuffer to read with worker()
 	offchan = make(chan int64, 0)
 	// zerochan is a channel used for indicate the start of a new read file
@@ -54,14 +57,13 @@ func init() {
 		os.Args[0] = "cp [-wRrifvP] file[s] ... dest"
 		defUsage()
 	}
-	flag.IntVar(&nwork, "w", runtime.NumCPU(), "number of worker goroutines")
-	flag.BoolVar(&recursive, "R", false, "copy file hierarchies")
-	flag.BoolVar(&recursive, "r", false, "alias to -R recursive mode")
-	flag.BoolVar(&ask, "i", false, "prompt about overwriting file")
-	flag.BoolVar(&force, "f", false, "force overwrite files")
-	flag.BoolVar(&verbose, "v", false, "verbose copy mode")
-	flag.BoolVar(&symlink, "P", false, "don't follow symlinks")
-	flag.Parse()
+	flag.IntVarP(&flags.nwork, "workers", "w", runtime.NumCPU(), "number of worker goroutines")
+	flag.BoolVarP(&flags.recursive, "RECURSIVE", "R", false, "copy file hierarchies")
+	flag.BoolVarP(&flags.recursive, "recursive", "r", false, "alias to -R recursive mode")
+	flag.BoolVarP(&flags.ask, "interactive", "i", false, "prompt about overwriting file")
+	flag.BoolVarP(&flags.force, "force", "f", false, "force overwrite files")
+	flag.BoolVarP(&flags.verbose, "verbose", "v", false, "verbose copy mode")
+	flag.BoolVarP(&flags.symlink, "no-dereference", "P", false, "don't follow symlinks")
 	go nextOff()
 }
 
@@ -94,7 +96,7 @@ func copyFile(src, dst string, todir bool) error {
 	}
 
 	// don't follow symlinks, copy symlink
-	if L := os.ModeSymlink; symlink && srcb.Mode()&L == L {
+	if L := os.ModeSymlink; flags.symlink && srcb.Mode()&L == L {
 		linkPath, err := filepath.EvalSymlinks(src)
 		if err != nil {
 			return fmt.Errorf("can't eval symlink %v: %v", src, err)
@@ -103,7 +105,7 @@ func copyFile(src, dst string, todir bool) error {
 	}
 
 	if srcb.IsDir() {
-		if recursive {
+		if flags.recursive {
 			return copyDir(src, dst)
 		}
 		return fmt.Errorf("%q is a directory, try use recursive option", src)
@@ -118,7 +120,7 @@ func copyFile(src, dst string, todir bool) error {
 		if sameFile(srcb.Sys(), dstb.Sys()) {
 			return fmt.Errorf("%q and %q are the same file", src, dst)
 		}
-		if ask && !force {
+		if flags.ask && !flags.force {
 			overwrite, err := promptOverwrite(dst)
 			if err != nil {
 				return err
@@ -148,20 +150,20 @@ func copyFile(src, dst string, todir bool) error {
 // copyOneFile copy the content between two files
 func copyOneFile(s *os.File, d *os.File, src, dst string) error {
 	zerochan <- 0
-	fail := make(chan error, nwork)
-	for i := 0; i < nwork; i++ {
+	fail := make(chan error, flags.nwork)
+	for i := 0; i < flags.nwork; i++ {
 		go worker(s, d, fail)
 	}
 
 	// iterate the errors from channel
-	for i := 0; i < nwork; i++ {
+	for i := 0; i < flags.nwork; i++ {
 		err := <-fail
 		if err != nil {
 			return err
 		}
 	}
 
-	if verbose {
+	if flags.verbose {
 		fmt.Printf("%q -> %q\n", src, dst)
 	}
 
@@ -191,7 +193,7 @@ func createDir(src, dst string) error {
 	if err := os.Mkdir(dst, srcInfo.Mode()); err != nil {
 		return err
 	}
-	if verbose {
+	if flags.verbose {
 		fmt.Printf("%q -> %q\n", src, dst)
 	}
 
@@ -298,6 +300,7 @@ func cp(args []string) (lastErr error) {
 }
 
 func main() {
+	flag.Parse()
 	if flag.NArg() < 2 {
 		flag.Usage()
 		os.Exit(1)
