@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/u-root/u-root/cmds/elvish/edit/eddefs"
-	"github.com/u-root/u-root/cmds/elvish/edit/lscolors"
 	"github.com/u-root/u-root/cmds/elvish/edit/ui"
 	"github.com/u-root/u-root/cmds/elvish/eval"
 	"github.com/u-root/u-root/cmds/elvish/eval/vars"
@@ -327,11 +326,10 @@ func (n *navigation) loaddir(dir string) ([]ui.Styled, error) {
 	sort.Strings(names)
 
 	var all []ui.Styled
-	lsColor := lscolors.GetColorist()
 	for _, name := range names {
 		if n.showHidden || name[0] != '.' {
 			all = append(all, ui.Styled{name,
-				ui.StylesFromString(lsColor.GetStyle(path.Join(dir, name)))})
+				ui.StylesFromString(path.Join(dir, name))})
 		}
 	}
 

@@ -1,6 +1,6 @@
 package vals
 
-import "github.com/xiaq/persistent/vector"
+import "github.com/u-root/u-root/cmds/elvish/vector"
 
 // Lener wraps the Len method.
 type Lener interface {

@@ -48,7 +48,7 @@ func main() {
 		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, t)
 		log.Println(runMsg)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1900*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, filepath.Join("/testdata/tests", t))
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr

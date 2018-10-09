@@ -31,9 +31,11 @@ package tcpip
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/netstack/tcpip/buffer"
@@ -46,48 +48,56 @@ import (
 // Note: to support save / restore, it is important that all tcpip errors have
 // distinct error messages.
 type Error struct {
-	string
+	msg string
+
+	ignoreStats bool
 }
 
 // String implements fmt.Stringer.String.
 func (e *Error) String() string {
-	return e.string
+	return e.msg
+}
+
+// IgnoreStats indicates whether this error type should be included in failure
+// counts in tcpip.Stats structs.
+func (e *Error) IgnoreStats() bool {
+	return e.ignoreStats
 }
 
 // Errors that can be returned by the network stack.
 var (
-	ErrUnknownProtocol       = &Error{"unknown protocol"}
-	ErrUnknownNICID          = &Error{"unknown nic id"}
-	ErrUnknownProtocolOption = &Error{"unknown option for protocol"}
-	ErrDuplicateNICID        = &Error{"duplicate nic id"}
-	ErrDuplicateAddress      = &Error{"duplicate address"}
-	ErrNoRoute               = &Error{"no route"}
-	ErrBadLinkEndpoint       = &Error{"bad link layer endpoint"}
-	ErrAlreadyBound          = &Error{"endpoint already bound"}
-	ErrInvalidEndpointState  = &Error{"endpoint is in invalid state"}
-	ErrAlreadyConnecting     = &Error{"endpoint is already connecting"}
-	ErrAlreadyConnected      = &Error{"endpoint is already connected"}
-	ErrNoPortAvailable       = &Error{"no ports are available"}
-	ErrPortInUse             = &Error{"port is in use"}
-	ErrBadLocalAddress       = &Error{"bad local address"}
-	ErrClosedForSend         = &Error{"endpoint is closed for send"}
-	ErrClosedForReceive      = &Error{"endpoint is closed for receive"}
-	ErrWouldBlock            = &Error{"operation would block"}
-	ErrConnectionRefused     = &Error{"connection was refused"}
-	ErrTimeout               = &Error{"operation timed out"}
-	ErrAborted               = &Error{"operation aborted"}
-	ErrConnectStarted        = &Error{"connection attempt started"}
-	ErrDestinationRequired   = &Error{"destination address is required"}
-	ErrNotSupported          = &Error{"operation not supported"}
-	ErrQueueSizeNotSupported = &Error{"queue size querying not supported"}
-	ErrNotConnected          = &Error{"endpoint not connected"}
-	ErrConnectionReset       = &Error{"connection reset by peer"}
-	ErrConnectionAborted     = &Error{"connection aborted"}
-	ErrNoSuchFile            = &Error{"no such file"}
-	ErrInvalidOptionValue    = &Error{"invalid option value specified"}
-	ErrNoLinkAddress         = &Error{"no remote link address"}
-	ErrBadAddress            = &Error{"bad address"}
-	ErrNetworkUnreachable    = &Error{"network is unreachable"}
+	ErrUnknownProtocol       = &Error{msg: "unknown protocol"}
+	ErrUnknownNICID          = &Error{msg: "unknown nic id"}
+	ErrUnknownProtocolOption = &Error{msg: "unknown option for protocol"}
+	ErrDuplicateNICID        = &Error{msg: "duplicate nic id"}
+	ErrDuplicateAddress      = &Error{msg: "duplicate address"}
+	ErrNoRoute               = &Error{msg: "no route"}
+	ErrBadLinkEndpoint       = &Error{msg: "bad link layer endpoint"}
+	ErrAlreadyBound          = &Error{msg: "endpoint already bound", ignoreStats: true}
+	ErrInvalidEndpointState  = &Error{msg: "endpoint is in invalid state"}
+	ErrAlreadyConnecting     = &Error{msg: "endpoint is already connecting", ignoreStats: true}
+	ErrAlreadyConnected      = &Error{msg: "endpoint is already connected", ignoreStats: true}
+	ErrNoPortAvailable       = &Error{msg: "no ports are available"}
+	ErrPortInUse             = &Error{msg: "port is in use"}
+	ErrBadLocalAddress       = &Error{msg: "bad local address"}
+	ErrClosedForSend         = &Error{msg: "endpoint is closed for send"}
+	ErrClosedForReceive      = &Error{msg: "endpoint is closed for receive"}
+	ErrWouldBlock            = &Error{msg: "operation would block", ignoreStats: true}
+	ErrConnectionRefused     = &Error{msg: "connection was refused"}
+	ErrTimeout               = &Error{msg: "operation timed out"}
+	ErrAborted               = &Error{msg: "operation aborted"}
+	ErrConnectStarted        = &Error{msg: "connection attempt started", ignoreStats: true}
+	ErrDestinationRequired   = &Error{msg: "destination address is required"}
+	ErrNotSupported          = &Error{msg: "operation not supported"}
+	ErrQueueSizeNotSupported = &Error{msg: "queue size querying not supported"}
+	ErrNotConnected          = &Error{msg: "endpoint not connected"}
+	ErrConnectionReset       = &Error{msg: "connection reset by peer"}
+	ErrConnectionAborted     = &Error{msg: "connection aborted"}
+	ErrNoSuchFile            = &Error{msg: "no such file"}
+	ErrInvalidOptionValue    = &Error{msg: "invalid option value specified"}
+	ErrNoLinkAddress         = &Error{msg: "no remote link address"}
+	ErrBadAddress            = &Error{msg: "bad address"}
+	ErrNetworkUnreachable    = &Error{msg: "network is unreachable"}
 )
 
 // Errors related to Subnet
@@ -113,16 +123,11 @@ func (e ErrSaveRejection) Error() string {
 // time, but never for netstack internal timekeeping.
 type Clock interface {
 	// NowNanoseconds returns the current real time as a number of
-	// nanoseconds since some epoch.
+	// nanoseconds since the Unix epoch.
 	NowNanoseconds() int64
-}
 
-// StdClock implements Clock with the time package.
-type StdClock struct{}
-
-// NowNanoseconds implements Clock.NowNanoseconds.
-func (*StdClock) NowNanoseconds() int64 {
-	return time.Now().UnixNano()
+	// NowMonotonic returns a monotonic time value.
+	NowMonotonic() int64
 }
 
 // Address is a byte slice cast as a string that represents the address of a
@@ -195,6 +200,11 @@ func (s *Subnet) Prefix() int {
 		}
 	}
 	return len(s.mask) * 8
+}
+
+// Mask returns the subnet mask.
+func (s *Subnet) Mask() AddressMask {
+	return s.mask
 }
 
 // NICID is a number that uniquely identifies a NIC.
@@ -296,7 +306,12 @@ type Endpoint interface {
 	//
 	// Note that unlike io.Writer.Write, it is not an error for Write to
 	// perform a partial write.
-	Write(Payload, WriteOptions) (uintptr, *Error)
+	//
+	// For UDP and Ping sockets if address resolution is required,
+	// ErrNoLinkAddress and a notification channel is returned for the caller to
+	// block. Channel is closed once address resolution is complete (success or
+	// not). The channel is only non-nil in this case.
+	Write(Payload, WriteOptions) (uintptr, <-chan struct{}, *Error)
 
 	// Peek reads data without consuming it from the endpoint.
 	//
@@ -420,7 +435,50 @@ type TimestampOption int
 // TCPInfoOption is used by GetSockOpt to expose TCP statistics.
 //
 // TODO: Add and populate stat fields.
-type TCPInfoOption struct{}
+type TCPInfoOption struct {
+	RTT    time.Duration
+	RTTVar time.Duration
+}
+
+// KeepaliveEnabledOption is used by SetSockOpt/GetSockOpt to specify whether
+// TCP keepalive is enabled for this socket.
+type KeepaliveEnabledOption int
+
+// KeepaliveIdleOption is used by SetSockOpt/GetSockOpt to specify the time a
+// connection must remain idle before the first TCP keepalive packet is sent.
+// Once this time is reached, KeepaliveIntervalOption is used instead.
+type KeepaliveIdleOption time.Duration
+
+// KeepaliveIntervalOption is used by SetSockOpt/GetSockOpt to specify the
+// interval between sending TCP keepalive packets.
+type KeepaliveIntervalOption time.Duration
+
+// KeepaliveCountOption is used by SetSockOpt/GetSockOpt to specify the number
+// of un-ACKed TCP keepalives that will be sent before the connection is
+// closed.
+type KeepaliveCountOption int
+
+// MulticastTTLOption is used by SetSockOpt/GetSockOpt to control the default
+// TTL value for multicast messages. The default is 1.
+type MulticastTTLOption uint8
+
+// MembershipOption is used by SetSockOpt/GetSockOpt as an argument to
+// AddMembershipOption and RemoveMembershipOption.
+type MembershipOption struct {
+	NIC           NICID
+	InterfaceAddr Address
+	MulticastAddr Address
+}
+
+// AddMembershipOption is used by SetSockOpt/GetSockOpt to join a multicast
+// group identified by the given multicast address, on the interface matching
+// the given interface address.
+type AddMembershipOption MembershipOption
+
+// RemoveMembershipOption is used by SetSockOpt/GetSockOpt to leave a multicast
+// group identified by the given multicast address, on the interface matching
+// the given interface address.
+type RemoveMembershipOption MembershipOption
 
 // Route is a row in the routing table. It specifies through which NIC (and
 // gateway) sets of packets should be routed. A row is considered viable if the
@@ -432,7 +490,7 @@ type Route struct {
 
 	// Mask specifies which bits of the Destination and the target address
 	// must match for this row to be viable.
-	Mask Address
+	Mask AddressMask
 
 	// Gateway is the gateway to be used if this row is viable.
 	Gateway Address
@@ -465,23 +523,147 @@ type TransportProtocolNumber uint32
 // NetworkProtocolNumber is the number of a network protocol.
 type NetworkProtocolNumber uint32
 
+// A StatCounter keeps track of a statistic.
+type StatCounter struct {
+	count uint64
+}
+
+// Increment adds one to the counter.
+func (s *StatCounter) Increment() {
+	s.IncrementBy(1)
+}
+
+// Value returns the current value of the counter.
+func (s *StatCounter) Value() uint64 {
+	return atomic.LoadUint64(&s.count)
+}
+
+// IncrementBy increments the counter by v.
+func (s *StatCounter) IncrementBy(v uint64) {
+	atomic.AddUint64(&s.count, v)
+}
+
+// IPStats collects IP-specific stats (both v4 and v6).
+type IPStats struct {
+	// PacketsReceived is the total number of IP packets received from the link
+	// layer in nic.DeliverNetworkPacket.
+	PacketsReceived *StatCounter
+
+	// InvalidAddressesReceived is the total number of IP packets received
+	// with an unknown or invalid destination address.
+	InvalidAddressesReceived *StatCounter
+
+	// PacketsDelivered is the total number of incoming IP packets that
+	// are successfully delivered to the transport layer via HandlePacket.
+	PacketsDelivered *StatCounter
+
+	// PacketsSent is the total number of IP packets sent via WritePacket.
+	PacketsSent *StatCounter
+
+	// OutgoingPacketErrors is the total number of IP packets which failed
+	// to write to a link-layer endpoint.
+	OutgoingPacketErrors *StatCounter
+}
+
+// TCPStats collects TCP-specific stats.
+type TCPStats struct {
+	// ActiveConnectionOpenings is the number of connections opened successfully
+	// via Connect.
+	ActiveConnectionOpenings *StatCounter
+
+	// PassiveConnectionOpenings is the number of connections opened
+	// successfully via Listen.
+	PassiveConnectionOpenings *StatCounter
+
+	// FailedConnectionAttempts is the number of calls to Connect or Listen
+	// (active and passive openings, respectively) that end in an error.
+	FailedConnectionAttempts *StatCounter
+
+	// ValidSegmentsReceived is the number of TCP segments received that the
+	// transport layer successfully parsed.
+	ValidSegmentsReceived *StatCounter
+
+	// InvalidSegmentsReceived is the number of TCP segments received that
+	// the transport layer could not parse.
+	InvalidSegmentsReceived *StatCounter
+
+	// SegmentsSent is the number of TCP segments sent.
+	SegmentsSent *StatCounter
+
+	// ResetsSent is the number of TCP resets sent.
+	ResetsSent *StatCounter
+
+	// ResetsReceived is the number of TCP resets received.
+	ResetsReceived *StatCounter
+}
+
+// UDPStats collects UDP-specific stats.
+type UDPStats struct {
+	// PacketsReceived is the number of UDP datagrams received via
+	// HandlePacket.
+	PacketsReceived *StatCounter
+
+	// UnknownPortErrors is the number of incoming UDP datagrams dropped
+	// because they did not have a known destination port.
+	UnknownPortErrors *StatCounter
+
+	// ReceiveBufferErrors is the number of incoming UDP datagrams dropped
+	// due to the receiving buffer being in an invalid state.
+	ReceiveBufferErrors *StatCounter
+
+	// MalformedPacketsReceived is the number of incoming UDP datagrams
+	// dropped due to the UDP header being in a malformed state.
+	MalformedPacketsReceived *StatCounter
+
+	// PacketsSent is the number of UDP datagrams sent via sendUDP.
+	PacketsSent *StatCounter
+}
+
 // Stats holds statistics about the networking stack.
+//
+// All fields are optional.
 type Stats struct {
 	// UnknownProtocolRcvdPackets is the number of packets received by the
 	// stack that were for an unknown or unsupported protocol.
-	UnknownProtocolRcvdPackets uint64
-
-	// UnknownNetworkEndpointRcvdPackets is the number of packets received
-	// by the stack that were for a supported network protocol, but whose
-	// destination address didn't having a matching endpoint.
-	UnknownNetworkEndpointRcvdPackets uint64
+	UnknownProtocolRcvdPackets *StatCounter
 
 	// MalformedRcvPackets is the number of packets received by the stack
 	// that were deemed malformed.
-	MalformedRcvdPackets uint64
+	MalformedRcvdPackets *StatCounter
 
 	// DroppedPackets is the number of packets dropped due to full queues.
-	DroppedPackets uint64
+	DroppedPackets *StatCounter
+
+	// IP breaks out IP-specific stats (both v4 and v6).
+	IP IPStats
+
+	// TCP breaks out TCP-specific stats.
+	TCP TCPStats
+
+	// UDP breaks out UDP-specific stats.
+	UDP UDPStats
+}
+
+func fillIn(v reflect.Value) {
+	for i := 0; i < v.NumField(); i++ {
+		v := v.Field(i)
+		switch v.Kind() {
+		case reflect.Ptr:
+			if s, ok := v.Addr().Interface().(**StatCounter); ok {
+				if *s == nil {
+					*s = &StatCounter{}
+				}
+			}
+		case reflect.Struct:
+			fillIn(v)
+		}
+	}
+}
+
+// FillIn returns a copy of s with nil fields initialized to new StatCounters.
+func (s Stats) FillIn() Stats {
+	fillIn(reflect.ValueOf(&s).Elem())
+	return s
 }
 
 // String implements the fmt.Stringer interface.
@@ -489,6 +671,43 @@ func (a Address) String() string {
 	switch len(a) {
 	case 4:
 		return fmt.Sprintf("%d.%d.%d.%d", int(a[0]), int(a[1]), int(a[2]), int(a[3]))
+	case 16:
+		// Find the longest subsequence of hexadecimal zeros.
+		start, end := -1, -1
+		for i := 0; i < len(a); i += 2 {
+			j := i
+			for j < len(a) && a[j] == 0 && a[j+1] == 0 {
+				j += 2
+			}
+			if j > i+2 && j-i > end-start {
+				start, end = i, j
+			}
+		}
+
+		var b strings.Builder
+		for i := 0; i < len(a); i += 2 {
+			if i == start {
+				b.WriteString("::")
+				i = end
+				if end >= len(a) {
+					break
+				}
+			} else if i > 0 {
+				b.WriteByte(':')
+			}
+			v := uint16(a[i+0])<<8 | uint16(a[i+1])
+			if v == 0 {
+				b.WriteByte('0')
+			} else {
+				const digits = "0123456789abcdef"
+				for i := uint(3); i < 4; i-- {
+					if v := v >> (i * 4); v != 0 {
+						b.WriteByte(digits[v&0xf])
+					}
+				}
+			}
+		}
+		return b.String()
 	default:
 		return fmt.Sprintf("%x", []byte(a))
 	}

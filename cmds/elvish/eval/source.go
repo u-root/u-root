@@ -6,7 +6,7 @@ import (
 
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 // Source describes a piece of source code.
@@ -53,8 +53,8 @@ func (src *Source) Kind() string {
 }
 
 func (src *Source) Hash() uint32 {
-	return hash.DJB(uint32(src.typ),
-		hash.String(src.name), hash.String(src.path), hash.String(src.code))
+	return hash.DJB(hash.Hash(src.typ),
+		hash.Hash(src.name), hash.Hash(src.path), hash.Hash(src.code))
 }
 
 func (src *Source) Equal(other interface{}) bool {

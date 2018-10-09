@@ -156,7 +156,7 @@ func TestGoTest(t *testing.T) {
 
 	// Check that the test runner is running inside QEMU.
 	headerMsg := fmt.Sprintf("TAP: 1..%d", len(bases))
-	if err := q.ExpectTimeout(headerMsg, 3*time.Second); err != nil {
+	if err := q.ExpectTimeout(headerMsg, 30*time.Second); err != nil {
 		t.Fatalf("cannot communicate with test runner: %v", err)
 	}
 	t.Log(headerMsg)
@@ -169,7 +169,7 @@ func TestGoTest(t *testing.T) {
 		passOrFailMsg := regexp.MustCompile(fmt.Sprintf("TAP: (not )?ok %d - %s", i, base))
 
 		t.Log(runMsg)
-		str, err := q.ExpectRETimeout(passOrFailMsg, 2*time.Second)
+		str, err := q.ExpectRETimeout(passOrFailMsg, 30*time.Second)
 		if err != nil {
 			// If we can neither find the "ok" nor the "not ok" message, the
 			// test runner inside QEMU is misbehaving and we fatal early

@@ -11,7 +11,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/eval/vars"
 	"github.com/u-root/u-root/cmds/elvish/parse/parseutil"
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 // narrow implements a listing mode that supports the notion of selecting an
