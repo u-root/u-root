@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/u-root/u-root/cmds/elvish/edit/ui"
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 var errStyledStyles = errors.New("styles must either be a string or list of strings")

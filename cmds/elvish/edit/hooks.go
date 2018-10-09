@@ -4,7 +4,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval"
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/eval/vars"
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 // The $edit:{before,after}-readline lists that contain hooks. We might have more

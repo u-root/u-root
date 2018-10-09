@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 // EmptyList is an empty list.

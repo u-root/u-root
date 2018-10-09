@@ -45,7 +45,7 @@ var complFilenameInnerTests = []struct {
 	}},
 }
 
-func TestComplFilenameInner(t *testing.T) {
+func testComplFilenameInner(t *testing.T) {
 	os.Setenv("LS_COLORS", "rs=1:ex=2:di=4")
 	util.InTempDir(func(string) {
 		create("foo", 0600)

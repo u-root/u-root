@@ -3,7 +3,7 @@ package vals
 import (
 	"errors"
 
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 // KeysIterator wraps the IterateKeys method.

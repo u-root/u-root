@@ -3,7 +3,7 @@ package vals
 import (
 	"reflect"
 
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 // Equaler wraps the Equal method.

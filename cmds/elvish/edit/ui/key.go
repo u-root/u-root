@@ -8,7 +8,7 @@ import (
 
 	"github.com/u-root/u-root/cmds/elvish/parse"
 	"github.com/u-root/u-root/cmds/elvish/util"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 var ErrKeyMustBeString = errors.New("key must be key or string value")

@@ -29,7 +29,7 @@ func TestMiscEval(t *testing.T) {
 	})
 }
 
-func TestMultipleEval(t *testing.T) {
+func testMultipleEval(t *testing.T) {
 	texts := []string{"x=hello", "put $x"}
 	outs, _, err := evalAndCollect(NewEvaler(), texts, 1)
 	wantOuts := []interface{}{"hello"}

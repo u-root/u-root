@@ -1,14 +1,10 @@
 package hashmap
 
-import "encoding/json"
-
 // Map is a persistent associative data structure mapping keys to values. It
 // is immutable, and supports near-O(1) operations to create modified version of
 // the map that shares the underlying data structure. Because it is immutable,
 // all of its methods are safe for concurrent use.
 type Map interface {
-	json.Marshaler
-	// Len returns the length of the map.
 	Len() int
 	// Index returns whether there is a value associated with the given key, and
 	// that value or nil.

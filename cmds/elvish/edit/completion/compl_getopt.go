@@ -8,7 +8,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/getopt"
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 func complGetopt(fm *eval.Frame, elemsv, optsv, argsv interface{}) {

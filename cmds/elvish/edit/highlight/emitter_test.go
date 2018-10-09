@@ -98,7 +98,7 @@ var formTests = []emitTests{
 	}},
 }
 
-func TestForm(t *testing.T) {
+func testForm(t *testing.T) {
 	test(t, "form", formTests,
 		func(e *Emitter, ps *parse.Parser) {
 			e.form(parse.ParseForm(ps))

@@ -348,17 +348,6 @@ func (ed *editor) insertDefault() {
 		ed.insertKey()
 		// Match abbreviations.
 		expanded := false
-		literals := ed.buffer[ed.dot-ed.insert.literalInserts-1 : ed.dot]
-		abbrIterate(ed.abbr, func(abbr, full string) bool {
-			if strings.HasSuffix(literals, abbr) {
-				ed.buffer = ed.buffer[:ed.dot-len(abbr)] + full + ed.buffer[ed.dot:]
-				ed.dot += len(full) - len(abbr)
-				expanded = true
-				return false
-			}
-			return true
-		})
-		// No match.
 		if !expanded {
 			ed.insert.insertedLiteral = true
 		}

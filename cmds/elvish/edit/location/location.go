@@ -18,8 +18,8 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/parse"
 	"github.com/u-root/u-root/cmds/elvish/store/storedefs"
 	"github.com/u-root/u-root/cmds/elvish/util"
-	"github.com/xiaq/persistent/hashmap"
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 var logger = util.GetLogger("[edit/location] ")

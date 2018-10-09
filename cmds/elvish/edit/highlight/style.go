@@ -34,34 +34,9 @@ var styleForSep = map[string]string{
 	"?>": "green",
 	"|":  "green",
 
-	"?(": "bold",
 	"(":  "bold",
 	")":  "bold",
-	"[":  "bold",
-	"]":  "bold",
-	"{":  "bold",
-	"}":  "bold",
 
 	"&": "bold",
 
-	"if":   "yellow",
-	"then": "yellow",
-	"elif": "yellow",
-	"else": "yellow",
-	"fi":   "yellow",
-
-	"while": "yellow",
-	"do":    "yellow",
-	"done":  "yellow",
-
-	"for": "yellow",
-	"in":  "yellow",
-
-	"try":     "yellow",
-	"except":  "yellow",
-	"finally": "yellow",
-	"tried":   "yellow",
-
-	"begin": "yellow",
-	"end":   "yellow",
 }
