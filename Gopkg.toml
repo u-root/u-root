@@ -1,8 +1,93 @@
-ignored = ["github.com/u-root/u-root/bb*"]
+# Gopkg.toml example
+#
+# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+
+[[constraint]]
+  name = "github.com/beevik/ntp"
+  version = "0.2.0"
 
 [[constraint]]
   branch = "master"
+  name = "github.com/dustin/go-humanize"
+
+[[constraint]]
+  name = "github.com/go-test/deep"
+  version = "1.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/google/go-tpm"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/google/goexpect"
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  version = "1.6.2"
+
+[[constraint]]
+  name = "github.com/klauspost/pgzip"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/kr/pty"
+  version = "1.1.3"
+
+[[constraint]]
+  name = "github.com/mattn/go-isatty"
+  version = "0.0.4"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mdlayher/eui64"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/nightlyone/lockfile"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/nsf/termbox-go"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/rck/unit"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "1.0.3"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/u-root/dhcp4"
+
+[[constraint]]
   name = "github.com/vishvananda/netlink"
+  version = "1.0.0"
 
 [[constraint]]
   branch = "master"
@@ -17,18 +102,9 @@ ignored = ["github.com/u-root/u-root/bb*"]
   name = "golang.org/x/tools"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/rck/unit"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/u-root/dhcp4"
+  name = "pack.ag/tftp"
+  version = "1.0.0"
 
 [prune]
-  non-go = true
   go-tests = true
   unused-packages = true
-
-[[constraint]]
-  name = "github.com/beevik/ntp"
-  version = "0.2.0"

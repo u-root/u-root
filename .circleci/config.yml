@@ -77,13 +77,22 @@ jobs:
           name: Check vendored dependencies
           command: |
             ./dep version
+              go version
+              git status --porcelain vendor
+              echo "-->running dep check in the faint hope it will provide useful information. Don't expect much."
+              ./dep check
+
+              # now do a real check
             ./dep status
             ./dep ensure -vendor-only
             git status
             if [[ -n "$(git status --porcelain vendor)" ]]; then
               echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
               echo 'If `dep ensure` results in no changes, make sure you are using the latest relase of dep'
+              go version
               git status --porcelain vendor
+              echo "-->running dep check in the faint hope it will provide useful information. Don't expect much."
+              ./dep check
               exit 1
             fi
       - run:

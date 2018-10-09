@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/cmds/elvish/edit/highlight"
@@ -10,6 +11,7 @@ import (
 )
 
 func doHighlight(n parse.Node, ed *editor) {
+	fmt.Printf("doHIghlight %v %v", n, ed)
 	s := &highlight.Emitter{
 		func(s string) bool { return goodFormHead(s, ed) },
 		ed.styling.Add,

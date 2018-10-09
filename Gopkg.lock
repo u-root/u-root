@@ -2,26 +2,26 @@
 
 
 [[projects]]
-  digest = "1:e6c88dab8edc42242a2035bba3a869993ff08a3e245a445ea75f436e1bb27c33"
+  digest = "1:a8d622a8049a4aa420e1c509873bb85d4c45c5107f420d922f919bfcb8d08694"
   name = "github.com/beevik/ntp"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "62c80a04de2086884d8296004b6d74ee1846c582"
   version = "v0.2.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:b7ffca49e9cfd3dfb04a8e0a59347708c6f78f68476a32c5e0a0edca5d1b258c"
+  digest = "1:6f9339c912bbdda81302633ad7e99a28dfa5a639c864061f1929510a9a64aa74"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
 
 [[projects]]
-  digest = "1:3c04690dd1d3fad9a36c492c32863fad91bcf822fd95d5c4cae97be1e9abc361"
+  digest = "1:7f89e0c888fb99c61055c646f5678aae645b0b0a1443d9b2dcd9964d850827ce"
   name = "github.com/go-test/deep"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
   version = "v1.0.1"
 
@@ -34,15 +34,15 @@
     "tpmutil",
     "tpmutil/tbs",
   ]
-  pruneopts = "NUT"
-  revision = "f9bda7c79425630507590804d9ecb42603d6291e"
+  pruneopts = "UT"
+  revision = "32e35b55507906fdc516bcd927d8e9b9192b0c0d"
 
 [[projects]]
   branch = "master"
-  digest = "1:6698f8917739265a62bfddf10902d8cfed43c541f91fe18f109a7ff0a273481d"
+  digest = "1:39cbfe12a7ffa695d46316e608933b28d9d0129ee598dedf0e639b74c3da11cf"
   name = "github.com/google/goexpect"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "b18097df138928108f35d9eb94955cc12954c0d5"
 
 [[projects]]
@@ -50,12 +50,12 @@
   digest = "1:5b66c432b11dc4996e583c298c03a3120c9f2e1c68d05b72adceff13595892c3"
   name = "github.com/google/goterm"
   packages = ["term"]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "70e1c263818522aa1ecbdd34d7e143639d447ced"
 
 [[projects]]
   branch = "master"
-  digest = "1:8f07bc76a30d696486d08959665f29a6463ec84b7ff487aa36c17f6a359bc189"
+  digest = "1:d41215e2a502376cb5e13b4b1fd5e587c801bbe54dbfe29ea724c7713885ccd8"
   name = "github.com/google/netstack"
   packages = [
     "ilist",
@@ -65,22 +65,22 @@
     "tcpip/seqnum",
     "waiter",
   ]
-  pruneopts = "NUT"
-  revision = "8b4eef0f44a9713d81e56056edf3b96f28f7a8e3"
+  pruneopts = "UT"
+  revision = "4587841de36d653195b5fd71498e62b0df1df84c"
 
 [[projects]]
-  digest = "1:c01767916c59f084bb7c41a7d5877c0f3099b1595cfa066e84ec6ad6b084dd89"
+  digest = "1:c79fb010be38a59d657c48c6ba1d003a8aa651fa56b579d959d74573b7dff8e1"
   name = "github.com/gorilla/context"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:bf5cf1d53d703332e9bd8984c69784645b73a938317bf5ace9aadf20ac49379a"
+  digest = "1:e73f5b0152105f18bc131fba127d9949305c8693f8a762588a82a48f61756f5f"
   name = "github.com/gorilla/mux"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
   version = "v1.6.2"
 
@@ -88,129 +88,129 @@
   digest = "1:d5f48855170be8f523ecb23af1886a6b142b44ec64015fa91a03bd02076ceff4"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "b939724e787a27c0005cabe3f78e7ed7987ac74f"
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:5e55a8699c9ff7aba1e4c8952aeda209685d88d4cb63a8766c338e333b8e65d6"
+  digest = "1:4ea0668d490ca32a38366453a486e2e8c60fbdaf1f2607c96b4a093d8a5c8de7"
   name = "github.com/klauspost/cpuid"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
   version = "v1.1"
 
 [[projects]]
-  digest = "1:b95da1293525625ef6f07be79d537b9bf2ecd7901efcf9a92193edafbd55b9ef"
+  digest = "1:1e5bf9cae557702ebbd51a32a94b47e3d1a20b7637682be08da8cf62152ec781"
   name = "github.com/klauspost/crc32"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
   version = "v1.1"
 
 [[projects]]
-  digest = "1:108c0948ac2c945dd137fde030ea1e0667473daa816c2ad89c11bb52bfa855f3"
+  digest = "1:485c95e36c287cdafed03bcde883d5129e26100bbb19b448fb9b4de4e5baf7e4"
   name = "github.com/klauspost/pgzip"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "0bf5dcad4ada2814c3c00f996a982270bb81a506"
   version = "v1.1"
 
 [[projects]]
-  digest = "1:15416fd2b58d5b2dfa0bc99185cdff3a8f49e73e022291891cb8d5d820d9760d"
+  digest = "1:29d28429a93b076908a36420a7ecb2bf429d24c15a4b5e2c220ea00fc84b71af"
   name = "github.com/kr/pty"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "db8e3cd836b82e82e0a9c8edc6896967dd31374f"
   version = "v1.1.3"
 
 [[projects]]
-  digest = "1:bffa444ca07c69c599ae5876bc18b25bfd5fa85b297ca10a25594d284a7e9c5d"
+  digest = "1:0981502f9816113c9c8c4ac301583841855c8cf4da8c72f696b3ebedf6d0e4e5"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c"
   version = "v0.0.4"
 
 [[projects]]
-  digest = "1:bff482b22ebed387378546ba6a7850fdef87fd47f8ee58a7c62124a8e889a56b"
+  digest = "1:cdb899c199f907ac9fb50495ec71212c95cb5b0e0a8ee0800da0238036091033"
   name = "github.com/mattn/go-runewidth"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "ce7b0b5c7b45a81508558cd1dba6bb1e4ddb51bb"
   version = "v0.0.3"
 
 [[projects]]
   branch = "master"
-  digest = "1:a5fecc72805e5b778d3ed8676c9ae4b8dc11244f1c32630ae339582bee18a3b9"
+  digest = "1:a55df695568f48d84d2b5c3d250871bb9f74d9950c201190b6615a4f94727e3c"
   name = "github.com/mdlayher/dhcp6"
   packages = [
     ".",
     "dhcp6opts",
     "internal/buffer",
   ]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "e26af0688e455a82b14ebdbecf43f87ead3c4624"
 
 [[projects]]
   branch = "master"
-  digest = "1:88810ec115324c260951440d11f030e4bfe451cd888720481e1ddc037a5c8678"
+  digest = "1:eb5be1bdd61496ebc846e6786b0cee939ac478b40513e93942b8f7bf05be4eda"
   name = "github.com/mdlayher/ethernet"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "0a1564b57aeaf8387d273d4bdffbb34b1bb8f626"
 
 [[projects]]
   branch = "master"
-  digest = "1:dc8097cc1f6d5cfe11684242e360da6789368b2a1f54f32d08a416c6253ab9d3"
+  digest = "1:c28733acceca11580468df85c501406e5e15930409c192bd6c1feeb43473ae56"
   name = "github.com/mdlayher/eui64"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "eee6532bb9adf30c2a17e9963ed90aa14161dae9"
 
 [[projects]]
   branch = "master"
-  digest = "1:e290d86bbab22344cd0268454cf2851cb8a3ae5946dfb1dd5dee99363a9e8b8b"
+  digest = "1:6569c2877d56f921a8a459d182af16b700c0e588c94b9938aef0d15d13d596db"
   name = "github.com/mdlayher/raw"
   packages = ["."]
-  pruneopts = "NUT"
-  revision = "1d2cec5bb8cce1f029119448aa6760cf9421bea4"
+  pruneopts = "UT"
+  revision = "67a536258490ec29bca6d465b51dea32c0db3623"
 
 [[projects]]
   branch = "master"
-  digest = "1:26217ee135b8157549e648efe97dff3282e4bd597a912d784db964df41067f29"
+  digest = "1:6491080aa184f88c2bb8e2f6056e5e0e9a578b2d8666efbd6e97bc37a0c41e72"
   name = "github.com/nightlyone/lockfile"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
 
 [[projects]]
   branch = "master"
-  digest = "1:34d9354c2c5d916c05864327553047df59fc10e86ff1f408e4136eba0a25a5ec"
+  digest = "1:f335d800550786b6f51ddaedb9d1107a7a72f4a2195e5b039dd7c0e103e119bc"
   name = "github.com/nsf/termbox-go"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "b66b20ab708e289ff1eb3e218478302e6aec28ce"
 
 [[projects]]
   branch = "master"
-  digest = "1:22ffe7a0e80f54e5a5ee408e2f6a4717ee8c5c3ecd94530963d1362efa178df5"
+  digest = "1:fde51660e59038d00b9cedd35e503e129570f1fdae265e2bca63c1d5f7609eab"
   name = "github.com/rck/unit"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
 
 [[projects]]
-  digest = "1:e3707aeaccd2adc89eba6c062fec72116fe1fc1ba71097da85b4d8ae1668a675"
+  digest = "1:c1b1102241e7f645bc8e0c22ae352e8f0dc6484b6cb4d132fa9f24174e0119e2"
   name = "github.com/spf13/pflag"
   packages = ["."]
-  pruneopts = "NUT"
-  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
-  version = "v1.0.2"
+  pruneopts = "UT"
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
 
 [[projects]]
   branch = "master"
-  digest = "1:6e0859e017e676eab41ee8461a9d114503699347fa0700141a562a164a6e3908"
+  digest = "1:5f621c124e3270b706a0f1c1e159d3a4bba77c9819ccc6e55374bb49f9b2e39e"
   name = "github.com/u-root/dhcp4"
   packages = [
     ".",
@@ -218,43 +218,31 @@
     "dhcp4opts",
     "internal/buffer",
   ]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "f78158b7c380d2ae515105471716468098373c72"
 
 [[projects]]
-  branch = "master"
-  digest = "1:b36be55846d7ae495e311b97b68d4d01c4bb951ddbf0520c3f7b940055972174"
+  digest = "1:2d9d06cb9d46dacfdbb45f8575b39fc0126d083841a29d4fbf8d97708f43107e"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
-  pruneopts = "NUT"
-  revision = "8aa85bfa77a45236ae842cab3a91853e2b74e07a"
+  pruneopts = "UT"
+  revision = "a2ad57a690f3caf3015351d2d6e1c0b95c349752"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:2a1bbe57bb2602803e0f142d88453b0d9fec89e496aaa2cd8807bcae2e05a4a7"
+  digest = "1:e4e30678fb2560b5c62f6308c5023d6c294fc7713216fa379411cc74465e866f"
   name = "github.com/vishvananda/netns"
   packages = ["."]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "13995c7128ccc8e51e9a6bd2b551020a27180abd"
 
 [[projects]]
   branch = "master"
-  digest = "1:aae63b31dc1d7b61597321418d42fc7d089e1e1a93becc1b4c327db54281c1b8"
-  name = "github.com/xiaq/persistent"
-  packages = [
-    "hash",
-    "hashmap",
-    "vector",
-  ]
-  pruneopts = "NUT"
-  revision = "cd415c64068256386eb46bbbb1e56b461872feed"
-
-[[projects]]
-  branch = "master"
-  digest = "1:b57c91e2b189aefe344e20735cef090459571e3082b2769e11d981370dc67a8a"
+  digest = "1:4c5ddd5ad2059321f674700f9cc640ff8800cbe9fab922e4e2ae26cebc5704a9"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -276,8 +264,8 @@
     "sha3",
     "ssh",
   ]
-  pruneopts = "NUT"
-  revision = "aabede6cba87e37f413b3e60ebfc214f8eeca1b0"
+  pruneopts = "UT"
+  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
 
 [[projects]]
   branch = "master"
@@ -289,48 +277,48 @@
     "internal/socket",
     "ipv4",
   ]
-  pruneopts = "NUT"
-  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
+  pruneopts = "UT"
+  revision = "146acd28ed5894421fb5aac80ca93bc1b1f46f87"
 
 [[projects]]
   branch = "master"
-  digest = "1:fead135696b8757b285508810bbdac64f33978223a6ac653beef9392cbba9073"
+  digest = "1:850d28ab022512e2cd3cf511a77f363c29e22689b4031f2050871f5de47ae4a0"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
-  pruneopts = "NUT"
-  revision = "f81de40a842616c63e7d0b2dc3fc203cdd92de66"
+  pruneopts = "UT"
+  revision = "4497e2df6f9e69048a54498c7affbbec3294ad47"
 
 [[projects]]
   branch = "master"
-  digest = "1:a05bd2d296bc727082abcb63ff52615b4dcc6219d8b61e99fd83d605dc779a18"
+  digest = "1:45751dc3302c90ea55913674261b2d74286b05cdd8e3ae9606e02e4e77f4353f"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
     "imports",
     "internal/fastwalk",
   ]
-  pruneopts = "NUT"
-  revision = "7d1dc997617fb662918b6ea95efc19faa87e1cf8"
+  pruneopts = "UT"
+  revision = "6d96510a3a1ce41c929ca332a25fa9cab475bd0c"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
   name = "google.golang.org/grpc"
   packages = ["codes"]
-  pruneopts = "NUT"
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  pruneopts = "UT"
+  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
+  version = "v1.15.0"
 
 [[projects]]
-  digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"
+  digest = "1:c978be1a6be1a7d81c9ab8834732fcfda1c7cdadae8324627a92e4542f2b4542"
   name = "pack.ag/tftp"
   packages = [
     ".",
     "netascii",
   ]
-  pruneopts = "NUT"
+  pruneopts = "UT"
   revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
   version = "v1.0.0"
 
@@ -358,9 +346,6 @@
     "github.com/u-root/dhcp4/dhcp4client",
     "github.com/u-root/dhcp4/dhcp4opts",
     "github.com/vishvananda/netlink",
-    "github.com/xiaq/persistent/hash",
-    "github.com/xiaq/persistent/hashmap",
-    "github.com/xiaq/persistent/vector",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",
     "golang.org/x/crypto/openpgp",
