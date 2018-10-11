@@ -41,71 +41,19 @@ func testPkgs(t *testing.T) []string {
 	// 1. either it requires networking (not enabled in the kernel)
 	// 2. or it depends on some test files (for example /bin/sleep)
 	blacklist := []string{
-		"github.com/u-root/u-root/cmds/boot",
-		"github.com/u-root/u-root/cmds/boot2",
 		"github.com/u-root/u-root/cmds/bzimage",
-		"github.com/u-root/u-root/cmds/cbmem",
 		"github.com/u-root/u-root/cmds/cmp",
-		"github.com/u-root/u-root/cmds/console",
-		"github.com/u-root/u-root/cmds/cpio",
 		"github.com/u-root/u-root/cmds/dd",
-		"github.com/u-root/u-root/cmds/df",
 		"github.com/u-root/u-root/cmds/dhclient",
-		"github.com/u-root/u-root/cmds/elvish",
-		"github.com/u-root/u-root/cmds/elvish/build",
 		"github.com/u-root/u-root/cmds/elvish/eval",
-		"github.com/u-root/u-root/cmds/elvish/eval/store",
-		"github.com/u-root/u-root/cmds/elvish/eval/str",
-		"github.com/u-root/u-root/cmds/field",
-		"github.com/u-root/u-root/cmds/find",
 		"github.com/u-root/u-root/cmds/fmap",
-		"github.com/u-root/u-root/cmds/freq",
-		"github.com/u-root/u-root/cmds/gpgv",
 		"github.com/u-root/u-root/cmds/gpt",
-		"github.com/u-root/u-root/cmds/gzip",
-		"github.com/u-root/u-root/cmds/hostname",
-		"github.com/u-root/u-root/cmds/init",
-		"github.com/u-root/u-root/cmds/insmod",
-		"github.com/u-root/u-root/cmds/installcommand",
-		"github.com/u-root/u-root/cmds/ip",
-		"github.com/u-root/u-root/cmds/kexec",
 		"github.com/u-root/u-root/cmds/kill",
-		"github.com/u-root/u-root/cmds/lddfiles",
-		"github.com/u-root/u-root/cmds/less",
-		"github.com/u-root/u-root/cmds/losetup",
-		"github.com/u-root/u-root/cmds/lsmod",
-		"github.com/u-root/u-root/cmds/mm",
-		"github.com/u-root/u-root/cmds/modprobe",
-		"github.com/u-root/u-root/cmds/more",
 		"github.com/u-root/u-root/cmds/mount",
-		"github.com/u-root/u-root/cmds/msr",
-		"github.com/u-root/u-root/cmds/netcat",
-		"github.com/u-root/u-root/cmds/pci",
-		"github.com/u-root/u-root/cmds/pe",
-		"github.com/u-root/u-root/cmds/ping",
-		"github.com/u-root/u-root/cmds/pwd",
-		"github.com/u-root/u-root/cmds/pxeboot",
-		"github.com/u-root/u-root/cmds/rmmod",
-		"github.com/u-root/u-root/cmds/rsdp",
-		"github.com/u-root/u-root/cmds/sos",
-		"github.com/u-root/u-root/cmds/srvfiles",
-		"github.com/u-root/u-root/cmds/sshd",
-		"github.com/u-root/u-root/cmds/stty",
-		"github.com/u-root/u-root/cmds/switch_root",
-		"github.com/u-root/u-root/cmds/sync",
 		"github.com/u-root/u-root/cmds/tail",
-		"github.com/u-root/u-root/cmds/tcz",
-		"github.com/u-root/u-root/cmds/tee",
-		"github.com/u-root/u-root/cmds/timesos",
-		"github.com/u-root/u-root/cmds/umount",
-		"github.com/u-root/u-root/cmds/uname",
-		"github.com/u-root/u-root/cmds/unshare",
-		"github.com/u-root/u-root/cmds/upspinsos",
-		"github.com/u-root/u-root/cmds/vboot",
 		"github.com/u-root/u-root/cmds/wget",
 		"github.com/u-root/u-root/cmds/which",
 		"github.com/u-root/u-root/cmds/wifi",
-		"github.com/u-root/u-root/cmds/xinit",
 	}
 	for i := 0; i < len(pkgs); i++ {
 		for _, b := range blacklist {
@@ -129,6 +77,7 @@ func TestGoTest(t *testing.T) {
 
 	// Statically build tests and add them to the temporary directory.
 	pkgs := testPkgs(t)
+	tests := []string{}
 	os.Setenv("CGO_ENABLED", "0")
 	testDir := filepath.Join(tmpDir, "tests")
 	for _, pkg := range pkgs {
@@ -137,6 +86,13 @@ func TestGoTest(t *testing.T) {
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("could not build %s: %v", pkg, err)
+		}
+
+		// When a package does not contain any tests, the test
+		// executable is not generated, so it is not included in the
+		// `tests` list.
+		if _, err := os.Stat(testFile); !os.IsNotExist(err) {
+			tests = append(tests, pkg)
 		}
 	}
 
@@ -149,8 +105,8 @@ func TestGoTest(t *testing.T) {
 
 	// Tests are run and checked in sorted order.
 	bases := []string{}
-	for _, pkg := range pkgs {
-		bases = append(bases, path.Base(pkg))
+	for _, test := range tests {
+		bases = append(bases, path.Base(test))
 	}
 	sort.Strings(bases)
 
