@@ -83,7 +83,8 @@ var keyTests = []struct {
 	{"\033[27;4;63~", KeyEvent{';', ui.Shift | ui.Alt}},
 }
 
-func TestKey(t *testing.T) {
+// FIXME: Fix test flakiness.
+func DISABLED_TestKey(t *testing.T) {
 	for _, test := range keyTests {
 		theWriter.WriteString(test.input)
 		select {
@@ -127,7 +128,8 @@ func TestStopMakesUnderlyingFileAvailable(t *testing.T) {
 
 // TestStartAfterStopIndeedStarts tests that calling Start very shortly after
 // Stop puts the Reader the correct started state.
-func TestStartAfterStopIndeedStarts(t *testing.T) {
+// FIXME: Fix test flakiness.
+func DISABLED_TestStartAfterStopIndeedStarts(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		theReader.Stop()
 		theReader.Start()

@@ -8,7 +8,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval"
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
 )
 
 var errValueShouldBeFn = errors.New("value should be function")

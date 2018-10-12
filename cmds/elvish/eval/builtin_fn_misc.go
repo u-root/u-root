@@ -5,7 +5,6 @@ package eval
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"path/filepath"
 	"time"
 	"unicode/utf8"
@@ -18,21 +17,8 @@ import (
 
 func init() {
 	addBuiltinFns(map[string]interface{}{
-		"nop":        nop,
-		"kind-of":    kindOf,
-		"constantly": constantly,
-
-		"resolve": resolve,
-
 		"-source": source,
-
-		// Time
-		"esleep": sleep,
-		"-time":  _time,
 	})
-
-	// For rand and randint.
-	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 func nop(opts RawOptions, args ...interface{}) {

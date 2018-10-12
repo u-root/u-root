@@ -7,7 +7,6 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path/filepath"
 	"testing"
 
@@ -25,8 +24,8 @@ import (
 //     = (0x12378 & 0xff) | (0x456 << 8) | ((0x12378 & ~0xff) << 12)
 //     = 0x12345678
 func TestLargeDevNumber(t *testing.T) {
-	if user, err := user.Current(); err != nil || user.Uid != "0" {
-		t.Skip("test requires root.")
+	if uid := os.Getuid(); uid != 0 {
+		t.Skipf("test requires root, your uid is %d", uid)
 	}
 
 	// Make a temporary directory.

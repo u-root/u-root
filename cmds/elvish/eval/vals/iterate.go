@@ -3,7 +3,7 @@ package vals
 import (
 	"errors"
 
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 // Iterator wraps the Iterate method.

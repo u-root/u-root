@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 // File wraps a pointer to os.File.
@@ -29,7 +29,7 @@ func (f File) Equal(rhs interface{}) bool {
 }
 
 func (f File) Hash() uint32 {
-	return hash.UIntPtr(f.Inner.Fd())
+	return hash.Hash(f.Inner.Fd())
 }
 
 func (f File) Repr(int) string {

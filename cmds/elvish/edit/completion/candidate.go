@@ -9,7 +9,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval"
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/parse"
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 type candidate struct {
@@ -34,7 +34,7 @@ type plainCandidate string
 
 func (plainCandidate) Kind() string               { return "string" }
 func (p plainCandidate) Equal(a interface{}) bool { return p == a }
-func (p plainCandidate) Hash() uint32             { return hash.String(string(p)) }
+func (p plainCandidate) Hash() uint32             { return hash.Hash(string(p)) }
 func (p plainCandidate) Repr(l int) string        { return vals.Repr(string(p), l) }
 func (p plainCandidate) text() string             { return string(p) }
 
@@ -49,7 +49,7 @@ type noQuoteCandidate string
 
 func (noQuoteCandidate) Kind() string                { return "string" }
 func (nq noQuoteCandidate) Equal(a interface{}) bool { return nq == a }
-func (nq noQuoteCandidate) Hash() uint32             { return hash.String(string(nq)) }
+func (nq noQuoteCandidate) Hash() uint32             { return hash.Hash(string(nq)) }
 func (nq noQuoteCandidate) Repr(l int) string        { return vals.Repr(string(nq), l) }
 func (nq noQuoteCandidate) text() string             { return string(nq) }
 
@@ -76,9 +76,9 @@ func (c *complexCandidate) Equal(a interface{}) bool {
 
 func (c *complexCandidate) Hash() uint32 {
 	h := hash.DJBInit
-	h = hash.DJBCombine(h, hash.String(c.stem))
-	h = hash.DJBCombine(h, hash.String(c.codeSuffix))
-	h = hash.DJBCombine(h, hash.String(c.displaySuffix))
+	h = hash.DJBCombine(h, hash.Hash(c.stem))
+	h = hash.DJBCombine(h, hash.Hash(c.codeSuffix))
+	h = hash.DJBCombine(h, hash.Hash(c.displaySuffix))
 	h = hash.DJBCombine(h, c.style.Hash())
 	return h
 }

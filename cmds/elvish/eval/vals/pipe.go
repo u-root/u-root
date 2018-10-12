@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/xiaq/persistent/hash"
+	"github.com/u-root/u-root/cmds/elvish/hash"
 )
 
 // Pipe wraps a pair of pointers to os.File that are the two ends of the same
@@ -30,8 +30,8 @@ func (p Pipe) Equal(rhs interface{}) bool {
 
 func (p Pipe) Hash() uint32 {
 	h := hash.DJBInit
-	h = hash.DJBCombine(h, hash.UIntPtr(p.ReadEnd.Fd()))
-	h = hash.DJBCombine(h, hash.UIntPtr(p.WriteEnd.Fd()))
+	h = hash.DJBCombine(h, hash.Hash(p.ReadEnd.Fd()))
+	h = hash.DJBCombine(h, hash.Hash(p.WriteEnd.Fd()))
 	return h
 }
 

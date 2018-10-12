@@ -3,8 +3,8 @@ package vals
 import (
 	"fmt"
 
-	"github.com/xiaq/persistent/hashmap"
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/hashmap"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 // Kinder wraps the Kind method.

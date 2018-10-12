@@ -53,10 +53,6 @@ func init() {
 		"use":   compileUse,
 		"and":   compileAnd,
 		"or":    compileOr,
-		"if":    compileIf,
-		"while": compileWhile,
-		"for":   compileFor,
-		"try":   compileTry,
 	}
 	for name := range builtinSpecials {
 		IsBuiltinSpecial[name] = true
@@ -158,13 +154,6 @@ func (op *delElemOp) Invoke(fm *Frame) error {
 			fm.errorpf(indexOp.Begin, indexOp.End, "index must evaluate to a single value in argument to del")
 		}
 		indicies = append(indicies, indexValues[0])
-	}
-	err := vars.DelElement(fm.ResolveVar(op.ns, op.name), indicies)
-	if err != nil {
-		if level := vars.ElementErrorLevel(err); level >= 0 {
-			fm.errorpf(op.begin, op.ends[level], "%s", err.Error())
-		}
-		return err
 	}
 	return nil
 }

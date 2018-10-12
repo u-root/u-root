@@ -35,15 +35,15 @@
     "tpmutil/tbs",
   ]
   pruneopts = "NUT"
-  revision = "f9bda7c79425630507590804d9ecb42603d6291e"
+  revision = "32e35b55507906fdc516bcd927d8e9b9192b0c0d"
 
 [[projects]]
   branch = "master"
-  digest = "1:9ad1f25e4da1188f2d132b4f2326dcb94f171eff6cb7539c953d3d4d2329270b"
+  digest = "1:6698f8917739265a62bfddf10902d8cfed43c541f91fe18f109a7ff0a273481d"
   name = "github.com/google/goexpect"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "9db06cbbaed691242d13045e8e5f5037f72db9e7"
+  revision = "b18097df138928108f35d9eb94955cc12954c0d5"
 
 [[projects]]
   branch = "master"
@@ -55,7 +55,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8f07bc76a30d696486d08959665f29a6463ec84b7ff487aa36c17f6a359bc189"
+  digest = "1:d41215e2a502376cb5e13b4b1fd5e587c801bbe54dbfe29ea724c7713885ccd8"
   name = "github.com/google/netstack"
   packages = [
     "ilist",
@@ -66,7 +66,7 @@
     "waiter",
   ]
   pruneopts = "NUT"
-  revision = "8b4eef0f44a9713d81e56056edf3b96f28f7a8e3"
+  revision = "4587841de36d653195b5fd71498e62b0df1df84c"
 
 [[projects]]
   digest = "1:c01767916c59f084bb7c41a7d5877c0f3099b1595cfa066e84ec6ad6b084dd89"
@@ -170,11 +170,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e290d86bbab22344cd0268454cf2851cb8a3ae5946dfb1dd5dee99363a9e8b8b"
+  digest = "1:b8a6fcfafb3bcd39c6c3e661dc4e854882b53a172c2fa79336d5c5e3e523710f"
   name = "github.com/mdlayher/raw"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "1d2cec5bb8cce1f029119448aa6760cf9421bea4"
+  revision = "67a536258490ec29bca6d465b51dea32c0db3623"
 
 [[projects]]
   branch = "master"
@@ -201,12 +201,12 @@
   revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
 
 [[projects]]
-  digest = "1:e3707aeaccd2adc89eba6c062fec72116fe1fc1ba71097da85b4d8ae1668a675"
+  digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
-  version = "v1.0.2"
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
 
 [[projects]]
   branch = "master"
@@ -223,14 +223,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b36be55846d7ae495e311b97b68d4d01c4bb951ddbf0520c3f7b940055972174"
+  digest = "1:6211fbdc470f6a031e343b7c128fa6d65279d24f3d2f45ed5c532366873f1391"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "8aa85bfa77a45236ae842cab3a91853e2b74e07a"
+  revision = "56b1bd27a9a363862ef67916bb450fe240787d07"
 
 [[projects]]
   branch = "master"
@@ -242,19 +242,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:aae63b31dc1d7b61597321418d42fc7d089e1e1a93becc1b4c327db54281c1b8"
-  name = "github.com/xiaq/persistent"
-  packages = [
-    "hash",
-    "hashmap",
-    "vector",
-  ]
-  pruneopts = "NUT"
-  revision = "cd415c64068256386eb46bbbb1e56b461872feed"
-
-[[projects]]
-  branch = "master"
-  digest = "1:b57c91e2b189aefe344e20735cef090459571e3082b2769e11d981370dc67a8a"
+  digest = "1:4c5ddd5ad2059321f674700f9cc640ff8800cbe9fab922e4e2ae26cebc5704a9"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -277,7 +265,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "aabede6cba87e37f413b3e60ebfc214f8eeca1b0"
+  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
 
 [[projects]]
   branch = "master"
@@ -290,22 +278,22 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
+  revision = "146acd28ed5894421fb5aac80ca93bc1b1f46f87"
 
 [[projects]]
   branch = "master"
-  digest = "1:51bfac9fe01b6a949bfed6db70b00bada281f0d64e5296ec644163aa977bfee0"
+  digest = "1:68ca1f18d986adc1d25a28aa732806ee8f1c874cc5b606e4ba67ddd3eeb89e20"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
+  revision = "4497e2df6f9e69048a54498c7affbbec3294ad47"
 
 [[projects]]
   branch = "master"
-  digest = "1:a05bd2d296bc727082abcb63ff52615b4dcc6219d8b61e99fd83d605dc779a18"
+  digest = "1:45751dc3302c90ea55913674261b2d74286b05cdd8e3ae9606e02e4e77f4353f"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -313,15 +301,15 @@
     "internal/fastwalk",
   ]
   pruneopts = "NUT"
-  revision = "7d1dc997617fb662918b6ea95efc19faa87e1cf8"
+  revision = "6d96510a3a1ce41c929ca332a25fa9cab475bd0c"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
   name = "google.golang.org/grpc"
   packages = ["codes"]
   pruneopts = "NUT"
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
+  version = "v1.15.0"
 
 [[projects]]
   digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"
@@ -358,9 +346,6 @@
     "github.com/u-root/dhcp4/dhcp4client",
     "github.com/u-root/dhcp4/dhcp4opts",
     "github.com/vishvananda/netlink",
-    "github.com/xiaq/persistent/hash",
-    "github.com/xiaq/persistent/hashmap",
-    "github.com/xiaq/persistent/vector",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",
     "golang.org/x/crypto/openpgp",

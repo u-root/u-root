@@ -14,9 +14,6 @@ var findProgramTests = []struct {
 	{[]string{"-help"}, isShowHelp},
 	{[]string{"-version"}, isShowVersion},
 	{[]string{"-buildinfo"}, isShowBuildInfo},
-	{[]string{"-buildinfo", "-json"}, func(p Program) bool {
-		return p.(ShowBuildInfo).JSON
-	}},
 	{[]string{}, isShell},
 	{[]string{"-c", "echo"}, func(p Program) bool {
 		return p.(*shell.Shell).Cmd

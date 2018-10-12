@@ -9,7 +9,7 @@ import (
 	"github.com/u-root/u-root/cmds/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/elvish/eval/vars"
 	"github.com/u-root/u-root/cmds/elvish/util"
-	"github.com/xiaq/persistent/vector"
+	"github.com/u-root/u-root/cmds/elvish/vector"
 )
 
 var (
