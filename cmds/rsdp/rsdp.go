@@ -9,13 +9,13 @@
 
 //
 // Synopsis:
-//	rsdp
+//	rsdp [-d] [-f file]
 //
 // Description:
 //	Look for rsdp value into kernel messages
 //
 // Example:
-//	rsdp 	- Start the script and save the founded value into /tmp/rsdp
+//	rsdp 	- Start the script and print rsdp to stdout
 
 package main
 
@@ -26,56 +26,81 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	flag "github.com/spf13/pflag"
 )
 
-func getRSDP(path string) (string, error) {
+var (
+	d        = flag.BoolP("debug", "d", false, "Print debug messages")
+	errTimeOut  = fmt.Errorf("Timeout scanning for rsdp")
+	cmdUsage = "Usage: rsdp [-f file]"
+	file     = flag.StringP("file", "f", "/dev/kmsg", "File to read from")
+	debug    = func(string, ...interface{}) {}
+)
 
+func usage() {
+	log.Fatalf(cmdUsage)
+}
+
+func getRSDP(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
-	var returnValue string
 	channel := make(chan string)
 
 	go func() {
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			mystring := scanner.Text()
-			channel <- mystring
+		debug("Read from scanner")
+		s := bufio.NewScanner(file)
+		for s.Scan() {
+			debug("Read '%q'", s.Text())
+			channel <- s.Text()
 		}
 		close(channel)
-		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
+		if err := s.Err(); err != nil {
+			log.Print(err)
 		}
 	}()
 
-	var dataRead int
-	var exit int
-	dataRead = 1
-	exit = 0
-	for dataRead == 1 && exit == 0 {
+	for {
 		select {
 		case res := <-channel:
+			debug("Read '%q' from chan", res)
+			// The Scanner works fine for /dev/kmsg
+			// and doesn't seem to know how to deliver
+			// EOF on files. It hangs. If we get a ""
+			// then quit.
+			if res == "" {
+				return "", fmt.Errorf("Could not find RSDP")
+			}
 			if strings.Contains(res, "RSDP") {
-				returnValue = strings.Split(res, " ")[2]
-				exit = 0
+				s := strings.Split(res, " ")
+				if len(s) < 3 {
+					continue
+				}
+				return s[2], nil
 			}
 
 		case <-time.After(1 * time.Second):
-			dataRead = 0
+			log.Print(errTimeOut)
+			return "", errTimeOut
 		}
 	}
-	return returnValue, err
 }
 
 func main() {
-	rsdp_value, _ := getRSDP("/dev/kmsg")
-	f, err := os.Create("/tmp/rsdp")
+	flag.Parse()
+	if flag.NArg() != 0 {
+		usage()
+	}
+	if *d {
+		debug = log.Printf
+	}
+	rsdp_value, err := getRSDP(*file)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
-	_, _ = fmt.Fprintf(f, " acpi_rsdp=%s ", rsdp_value)
+	fmt.Printf(" acpi_rsdp=%s \n", rsdp_value)
 }
