@@ -3,20 +3,19 @@
 // license that can be found in the LICENSE file.
 
 // rsdp allows to determine the ACPI RSDP structure address which could
-// be pass to the boot command later on
+// be passed to the boot command later on
 // It must be executed at the system init as it relies on scanning
 // the kernel messages which could be quickly filled up in some cases
-
 //
 // Synopsis:
-//	rsdp
+//	rsdp [-f file]
 //
 // Description:
-//	Look for rsdp value into kernel messages
+//	Look for rsdp value in a file, default /dev/kmsg
 //
 // Example:
-//	rsdp 	- Start the script and save the founded value into /tmp/rsdp
-
+//	rsdp
+//	rsdp -f /path/to/file
 package main
 
 import (
@@ -25,57 +24,53 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
+
+	flag "github.com/spf13/pflag"
+	"golang.org/x/sys/unix"
 )
 
-func getRSDP(path string) (string, error) {
+var (
+	cmdUsage = "Usage: rsdp [-f file]"
+	file     = flag.StringP("file", "f", "/dev/kmsg", "File to read from")
+)
 
-	file, err := os.Open(path)
+func usage() {
+	log.Fatalf(cmdUsage)
+}
+
+func getRSDP(path string) (string, error) {
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
+	file := os.NewFile(uintptr(fd), "kernel messages")
 	defer file.Close()
 
-	var returnValue string
-	channel := make(chan string)
-
-	go func() {
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			mystring := scanner.Text()
-			channel <- mystring
+	s := bufio.NewScanner(file)
+	for s.Scan() {
+		if err := s.Err(); err != nil {
+			return "", err
 		}
-		close(channel)
-		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	var dataRead int
-	var exit int
-	dataRead = 1
-	exit = 0
-	for dataRead == 1 && exit == 0 {
-		select {
-		case res := <-channel:
-			if strings.Contains(res, "RSDP") {
-				returnValue = strings.Split(res, " ")[2]
-				exit = 0
+		res := s.Text()
+		if strings.Contains(res, "RSDP") {
+			rv := strings.Split(res, " ")
+			if len(res) < 3 {
+				continue
 			}
-
-		case <-time.After(1 * time.Second):
-			dataRead = 0
+			return rv[2], nil
 		}
 	}
-	return returnValue, err
+	return "", fmt.Errorf("Could not find RSDP")
 }
 
 func main() {
-	rsdp_value, _ := getRSDP("/dev/kmsg")
-	f, err := os.Create("/tmp/rsdp")
+	flag.Parse()
+	if flag.NArg() != 0 {
+		usage()
+	}
+	rsdp_value, err := getRSDP(*file)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
-	_, _ = fmt.Fprintf(f, " acpi_rsdp=%s ", rsdp_value)
+	fmt.Printf(" acpi_rsdp=%s \n", rsdp_value)
 }
