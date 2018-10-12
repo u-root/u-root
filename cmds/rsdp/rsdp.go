@@ -60,7 +60,7 @@ func getRSDP(path string) (string, error) {
 		case res := <-channel:
 			if strings.Contains(res, "RSDP") {
 				returnValue = strings.Split(res, " ")[2]
-				exit = 0
+				exit = 1
 			}
 
 		case <-time.After(1 * time.Second):
