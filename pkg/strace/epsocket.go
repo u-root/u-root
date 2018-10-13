@@ -15,6 +15,10 @@
 package strace
 
 import (
+	"bytes"
+	"encoding/binary"
+	"strings"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -38,72 +42,69 @@ type FullAddress struct {
 // to the FullAddress format. It supports AF_UNIX, AF_INET and AF_INET6
 // addresses.
 func GetAddress(t *Tracer, sfamily int, addr []byte) (FullAddress, error) {
-	/*
-		// Make sure we have at least 2 bytes for the address family.
-		if len(addr) < 2 {
-			return FullAddress{}, syserr.ErrInvalidArgument
+	r := bytes.NewBuffer(addr[:2])
+	var fam uint16
+	if err := binary.Read(r, ByteOrder, &fam); err != nil {
+		return FullAddress{}, unix.EFAULT
+	}
+	if fam != uint16(sfamily) {
+		return FullAddress{}, unix.ENOTSUP
+	}
+
+	// Get the rest of the fields based on the address family.
+	switch fam {
+	case unix.AF_UNIX:
+		path := addr[2:]
+		if len(path) > unix.PathMax {
+			return FullAddress{}, unix.EINVAL
+		}
+		// Drop the terminating NUL (if one exists) and everything after
+		// it for filesystem (non-abstract) addresses.
+		if len(path) > 0 && path[0] != 0 {
+			if n := bytes.IndexByte(path[1:], 0); n >= 0 {
+				path = path[:n+1]
+			}
+		}
+		return FullAddress{
+			Addr: Address(path),
+		}, nil
+
+	case unix.AF_INET:
+		var a unix.RawSockaddrInet4
+		r = bytes.NewBuffer(addr)
+		if err := binary.Read(r, binary.BigEndian, &a); err != nil {
+			return FullAddress{}, unix.EFAULT
+		}
+		out := FullAddress{
+			Addr: Address(a.Addr[:]),
+			Port: uint16(a.Port),
+		}
+		if out.Addr == "\x00\x00\x00\x00" {
+			out.Addr = ""
+		}
+		return out, nil
+	case unix.AF_INET6:
+		var a unix.RawSockaddrInet6
+		r = bytes.NewBuffer(addr)
+		if err := binary.Read(r, binary.BigEndian, &a); err != nil {
+			return FullAddress{}, unix.EFAULT
 		}
 
-		family := usermem.ByteOrder.Uint16(addr)
-		if family != uint16(sfamily) {
-			return FullAddress{}, syserr.ErrAddressFamilyNotSupported
+		out := FullAddress{
+			Addr: Address(a.Addr[:]),
+			Port: uint16(a.Port),
 		}
 
-		// Get the rest of the fields based on the address family.
-		switch family {
-		case linux.AF_UNIX:
-			path := addr[2:]
-			if len(path) > linux.UnixPathMax {
-				return FullAddress{}, syserr.ErrInvalidArgument
-			}
-			// Drop the terminating NUL (if one exists) and everything after
-			// it for filesystem (non-abstract) addresses.
-			if len(path) > 0 && path[0] != 0 {
-				if n := bytes.IndexByte(path[1:], 0); n >= 0 {
-					path = path[:n+1]
-				}
-			}
-			return FullAddress{
-				Addr: Address(path),
-			}, nil
+		//if isLinkLocal(out.Addr) {
+		//			out.NIC = NICID(a.Scope_id)
+		//}
 
-		case linux.AF_INET:
-			var a linux.SockAddrInet
-			if len(addr) < sockAddrInetSize {
-				return FullAddress{}, syserr.ErrBadAddress
-			}
-			binary.Unmarshal(addr[:sockAddrInetSize], usermem.ByteOrder, &a)
+		if out.Addr == Address(strings.Repeat("\x00", 16)) {
+			out.Addr = ""
+		}
+		return out, nil
+	default:
 
-			out := FullAddress{
-				Addr: Address(a.Addr[:]),
-				Port: ntohs(a.Port),
-			}
-			if out.Addr == "\x00\x00\x00\x00" {
-				out.Addr = ""
-			}
-			return out, nil
-
-		case linux.AF_INET6:
-			var a linux.SockAddrInet6
-			if len(addr) < sockAddrInet6Size {
-				return FullAddress{}, syserr.ErrBadAddress
-			}
-			binary.Unmarshal(addr[:sockAddrInet6Size], usermem.ByteOrder, &a)
-
-			out := FullAddress{
-				Addr: Address(a.Addr[:]),
-				Port: ntohs(a.Port),
-			}
-			if isLinkLocal(out.Addr) {
-				out.NIC = NICID(a.Scope_id)
-			}
-			if out.Addr == Address(strings.Repeat("\x00", 16)) {
-				out.Addr = ""
-			}
-			return out, nil
-
-		default:
-	*/
-	return FullAddress{}, unix.ENOTSUP
-	//}
+		return FullAddress{}, unix.ENOTSUP
+	}
 }
