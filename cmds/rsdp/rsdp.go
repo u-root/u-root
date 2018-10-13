@@ -52,15 +52,15 @@ func getRSDP(path string) (string, error) {
 	}()
 
 	var dataRead int
-	var exit int
+	var exit bool
 	dataRead = 1
-	exit = 0
-	for dataRead == 1 && exit == 0 {
+	exit = false
+	for dataRead == 1 && !exit {
 		select {
 		case res := <-channel:
 			if strings.Contains(res, "RSDP") {
 				returnValue = strings.Split(res, " ")[2]
-				exit = 1
+				exit = true
 			}
 
 		case <-time.After(1 * time.Second):
