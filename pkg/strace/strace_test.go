@@ -23,6 +23,7 @@ func TestNoCommandFail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	c.Raw = true
 	go c.RunTracerFromCmd(exec.Command("hi", "/etc/hosts"))
 	r := <-c.Records
 	if r.Err == nil {
@@ -38,8 +39,4 @@ func TestBasicStrace(t *testing.T) {
 	}
 
 	go c.RunTracerFromCmd(exec.Command("ls", "/etc/hosts"))
-
-	for r := range c.Records {
-		t.Logf("%s", r.String())
-	}
 }
