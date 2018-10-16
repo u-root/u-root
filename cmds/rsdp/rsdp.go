@@ -54,7 +54,6 @@ func getRSDP(path string) (string, error) {
 	var dataRead int
 	var exit bool
 	dataRead = 1
-	exit = false
 	for dataRead == 1 && !exit {
 		select {
 		case res := <-channel:
