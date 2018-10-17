@@ -63,9 +63,9 @@ func (af *Files) AddFile(src string, dest string) error {
 
 	// We check if it's a directory first. If a directory already exists as
 	// a record or file, we want to include its children anyway.
-	sInfo, err := os.Lstat(src)
+	sInfo, err := os.Stat(src)
 	if err != nil {
-		return fmt.Errorf("Adding %q to archive failed because Lstat failed: %v", src, err)
+		return fmt.Errorf("Adding %q to archive failed because stat failed: %v", src, err)
 	}
 
 	// Recursively add children.
