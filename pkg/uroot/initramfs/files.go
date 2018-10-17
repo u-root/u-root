@@ -60,9 +60,6 @@ func (af *Files) AddFile(src string, dest string) error {
 	if path.IsAbs(dest) {
 		return fmt.Errorf("archive path %q must not be absolute (host source %q)", dest, src)
 	}
-	if !filepath.IsAbs(src) {
-		return fmt.Errorf("source file %q (-> %q) must be absolute", src, dest)
-	}
 
 	// We check if it's a directory first. If a directory already exists as
 	// a record or file, we want to include its children anyway.
