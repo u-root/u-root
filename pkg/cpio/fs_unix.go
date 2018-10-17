@@ -210,6 +210,27 @@ func inode(i Info) (Info, bool) {
 	return i, false
 }
 
+func GetFollowedRecord(path string) (Record, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return Record{}, err
+	}
+
+	sys := fi.Sys().(*syscall.Stat_t)
+	info, done := inode(sysInfo(path, sys))
+
+	switch fi.Mode() & os.ModeType {
+	case 0: // Regular file.
+		if done {
+			return Record{Info: info}, nil
+		}
+		return Record{Info: info, ReaderAt: NewLazyFile(path)}, nil
+
+	default:
+		return StaticRecord(nil, info), nil
+	}
+}
+
 func GetRecord(path string) (Record, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
