@@ -60,15 +60,12 @@ func (af *Files) AddFile(src string, dest string) error {
 	if path.IsAbs(dest) {
 		return fmt.Errorf("archive path %q must not be absolute (host source %q)", dest, src)
 	}
-	if !filepath.IsAbs(src) {
-		return fmt.Errorf("source file %q (-> %q) must be absolute", src, dest)
-	}
 
 	// We check if it's a directory first. If a directory already exists as
 	// a record or file, we want to include its children anyway.
-	sInfo, err := os.Lstat(src)
+	sInfo, err := os.Stat(src)
 	if err != nil {
-		return fmt.Errorf("Adding %q to archive failed because Lstat failed: %v", src, err)
+		return fmt.Errorf("Adding %q to archive failed because stat failed: %v", src, err)
 	}
 
 	// Recursively add children.
@@ -192,7 +189,7 @@ func (af *Files) WriteTo(w Writer) error {
 //
 // If `src` is a directory, its children will be added to the archive as well.
 func writeFile(w Writer, src, dest string) error {
-	record, err := cpio.GetRecord(src)
+	record, err := cpio.GetFollowedRecord(src)
 	if err != nil {
 		return err
 	}

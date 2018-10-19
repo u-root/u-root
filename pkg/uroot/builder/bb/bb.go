@@ -26,8 +26,8 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 
-	"github.com/nightlyone/lockfile"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/lockfile"
 )
 
 // Commands to skip building in bb mode.
@@ -35,17 +35,14 @@ var skip = map[string]struct{}{
 	"bb": {},
 }
 
-func getBBLock(bblock string) (lockfile.Lockfile, error) {
+func getBBLock(bblock string) (*lockfile.Lockfile, error) {
 	secondsTimeout := 60
 	timer := time.After(time.Duration(secondsTimeout) * time.Second)
-	lock, err := lockfile.New(bblock)
-	if err != nil {
-		return lockfile.Lockfile(""), err
-	}
+	lock := lockfile.New(bblock)
 	for {
 		select {
 		case <-timer:
-			return lockfile.Lockfile(""), fmt.Errorf("could not acquire bblock file %q: %d second deadline expired", bblock, secondsTimeout)
+			return nil, fmt.Errorf("could not acquire bblock file %q: %d second deadline expired", bblock, secondsTimeout)
 		default:
 		}
 
@@ -53,12 +50,12 @@ func getBBLock(bblock string) (lockfile.Lockfile, error) {
 		case nil:
 			return lock, nil
 
-		case lockfile.ErrBusy, lockfile.ErrNotExist:
+		case lockfile.ErrBusy:
 			// This sucks. Use inotify.
 			time.Sleep(100 * time.Millisecond)
 
 		default:
-			return lockfile.Lockfile(""), err
+			return nil, err
 		}
 	}
 }
