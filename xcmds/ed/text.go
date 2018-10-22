@@ -106,10 +106,8 @@ func (f *file) SliceX(startLine, endLine int) (int, int) {
 		//f.start = len(f.lines)
 		//f.end = f.start
 		return len(f.data), len(f.data)
-	} else {
-		if startLine > 0 {
-			start = f.lines[startLine-1]
-		}
+	} else if startLine > 0 {
+		start = f.lines[startLine-1]
 	}
 	end = start
 	if endLine < startLine {

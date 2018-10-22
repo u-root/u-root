@@ -206,6 +206,7 @@ func (r *reader) readAligned(p []byte) error {
 // ReadRecord implements RecordReader for the newc cpio format.
 func (r *reader) ReadRecord() (Record, error) {
 	hdr := header{}
+	recPos := r.pos
 
 	Debug("Next record: pos is %d\n", r.pos)
 
@@ -228,7 +229,7 @@ func (r *reader) ReadRecord() (Record, error) {
 	if err := binary.Read(bytes.NewReader(dst), binary.BigEndian, &hdr); err != nil {
 		return Record{}, err
 	}
-	Debug("Decoded header is %s\n", hdr)
+	Debug("Decoded header is %v\n", hdr)
 
 	// Get the name.
 	nameBuf := make([]byte, hdr.NameLength)
@@ -239,11 +240,16 @@ func (r *reader) ReadRecord() (Record, error) {
 	info := hdr.Info()
 	info.Name = string(nameBuf[:hdr.NameLength-1])
 
+	recLen := uint64(r.pos - recPos)
+	filePos := r.pos
 	content := io.NewSectionReader(r.r, r.pos, int64(hdr.FileSize))
 	r.pos = round4(r.pos + int64(hdr.FileSize))
 	return Record{
 		Info:     info,
 		ReaderAt: content,
+		RecLen:   recLen,
+		RecPos:   recPos,
+		FilePos:  filePos,
 	}, nil
 }
 

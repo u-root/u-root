@@ -46,7 +46,13 @@ var (
 
 func main() {
 	flag.Parse()
-	log.Printf("Welcome to u-root")
+	log.Printf("Welcome to u-root!")
+	fmt.Println(`                              _`)
+	fmt.Println(`   _   _      _ __ ___   ___ | |_`)
+	fmt.Println(`  | | | |____| '__/ _ \ / _ \| __|`)
+	fmt.Println(`  | |_| |____| | | (_) | (_) | |_`)
+	fmt.Println(`   \__,_|    |_|  \___/ \___/ \__|`)
+	fmt.Println()
 	util.Rootfs()
 
 	if *verbose {

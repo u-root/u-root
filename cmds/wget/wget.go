@@ -16,7 +16,7 @@
 //     - The protocol (http/https) is mandatory.
 //
 // Example:
-//     wget http://google.com/ > e100.html
+//     wget -O google.txt http://google.com/
 package main
 
 import (

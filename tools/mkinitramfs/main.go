@@ -9,9 +9,10 @@ package mkinitramfs
 import (
 	"flag"
 	"log"
+	"os"
 
-	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 var (
@@ -24,27 +25,25 @@ func main() {
 	if flag.NArg() == 0 {
 		log.Fatalf("must specify at least one file to include in initramfs")
 	}
-	archiver := uroot.CPIOArchiver{
-		RecordFormat: cpio.Newc,
-	}
 
 	// Open the target initramfs file.
-	w, err := archiver.OpenWriter(*outputFile, "", "")
+	w, err := initramfs.CPIO.OpenWriter(*outputFile, "", "")
 	if err != nil {
 		log.Fatalf("failed to open cpio archive %q: %v", *outputFile, err)
 	}
 
-	files := uroot.NewArchiveFiles()
-	archive := uroot.ArchiveOpts{
-		ArchiveFiles:   files,
-		OutputFile:     w,
-		DefaultRecords: uroot.DefaultRamfs,
+	files := initramfs.NewFiles()
+	archive := &initramfs.Opts{
+		Files:       files,
+		OutputFile:  w,
+		BaseArchive: uroot.DefaultRamfs.Reader(),
 	}
-	if err := uroot.ParseExtraFiles(archive.ArchiveFiles, flag.Args(), false); err != nil {
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	if err := uroot.ParseExtraFiles(logger, archive.Files, flag.Args(), false); err != nil {
 		log.Fatalf("failed to parse file names %v: %v", flag.Args(), err)
 	}
 
-	if err := archive.Write(); err != nil {
+	if err := initramfs.Write(archive); err != nil {
 		log.Fatalf("failed to write archive %q: %v", *outputFile, err)
 	}
 }

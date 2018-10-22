@@ -7,7 +7,7 @@ yourself.
 
 | Command        | Flags TODO      | Comments               |
 | -------------- | --------------- | ---------------------- |
-| :x: checksum   |                 | md5, sha1, sha256, ... |
+| checksum       | -i,-md5,sha1/256 | md5, sha1, sha256, ...|
 | chmod          | -R, --reference | More mode forms        |
 | :x: flashrom   | -p internal     |                        |
 | fmap           |                 | Move into fiano        |
@@ -16,12 +16,11 @@ yourself.
 | :x: less       |                 | Not implemented yet!   |
 | ls             | -hFfS           | -r is raw not reverse  |
 | :x: man        | -k              | Not implemented yet!   |
-| mv             | -nu             |                        |
+| mv             | -n              |                        |
 | ping           | -a              |                        |
 | :x: printf     |                 | Not implemented yet!   |
 | ps             |                 | Fix race conditions    |
 | readlink       | -emn            |                        |
-| rush           | -c              |                        |
 | seq            |                 |                        |
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |

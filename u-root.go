@@ -13,6 +13,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/uroot/builder"
+	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 // multiFlag is used for flags that support multiple invocations, e.g. -files
@@ -57,6 +59,7 @@ var (
 			"github.com/u-root/u-root/cmds/dirname",
 			"github.com/u-root/u-root/cmds/dmesg",
 			"github.com/u-root/u-root/cmds/echo",
+			"github.com/u-root/u-root/cmds/elvish",
 			"github.com/u-root/u-root/cmds/false",
 			"github.com/u-root/u-root/cmds/field",
 			"github.com/u-root/u-root/cmds/find",
@@ -100,7 +103,6 @@ var (
 			"github.com/u-root/u-root/cmds/rm",
 			"github.com/u-root/u-root/cmds/rmmod",
 			"github.com/u-root/u-root/cmds/rsdp",
-			"github.com/u-root/u-root/cmds/rush",
 			"github.com/u-root/u-root/cmds/seq",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/cmds/sleep",
@@ -135,6 +137,7 @@ var (
 			"github.com/u-root/u-root/cmds/dhclient",
 			"github.com/u-root/u-root/cmds/dmesg",
 			"github.com/u-root/u-root/cmds/echo",
+			"github.com/u-root/u-root/cmds/elvish",
 			"github.com/u-root/u-root/cmds/find",
 			"github.com/u-root/u-root/cmds/free",
 			"github.com/u-root/u-root/cmds/gpgv",
@@ -166,7 +169,6 @@ var (
 			"github.com/u-root/u-root/cmds/readlink",
 			"github.com/u-root/u-root/cmds/rm",
 			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/rush",
 			"github.com/u-root/u-root/cmds/seq",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/cmds/sleep",
@@ -191,6 +193,7 @@ var (
 			"github.com/u-root/u-root/cmds/dd",
 			"github.com/u-root/u-root/cmds/dhclient",
 			"github.com/u-root/u-root/cmds/dmesg",
+			"github.com/u-root/u-root/cmds/elvish",
 			"github.com/u-root/u-root/cmds/find",
 			"github.com/u-root/u-root/cmds/grep",
 			"github.com/u-root/u-root/cmds/id",
@@ -207,7 +210,6 @@ var (
 			"github.com/u-root/u-root/cmds/pwd",
 			"github.com/u-root/u-root/cmds/rm",
 			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/rush",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/cmds/sshd",
 			"github.com/u-root/u-root/cmds/switch_root",
@@ -225,12 +227,12 @@ func init() {
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
 
-	base = flag.String("base", "", "Base archive to add files to.")
+	base = flag.String("base", "", "Base archive to add files to. By default, this is a couple of directories like /bin, /etc, etc.")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name.")
-	defaultShell = flag.String("defaultsh", "rush", "Default shell. Can be an absolute path or a u-root command name.")
+	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name.")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
@@ -258,11 +260,11 @@ func Main() error {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
-	builder, err := uroot.GetBuilder(*build)
+	builder, err := builder.GetBuilder(*build)
 	if err != nil {
 		return err
 	}
-	archiver, err := uroot.GetArchiver(*format)
+	archiver, err := initramfs.GetArchiver(*format)
 	if err != nil {
 		return err
 	}
@@ -296,11 +298,7 @@ func Main() error {
 		pkgs = append(pkgs, p...)
 	}
 	if len(pkgs) == 0 {
-		var err error
-		pkgs, err = uroot.DefaultPackageImports(env)
-		if err != nil {
-			return err
-		}
+		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
 
 	// Open the target initramfs file.
@@ -309,7 +307,7 @@ func Main() error {
 		return err
 	}
 
-	var baseFile uroot.ArchiveReader
+	var baseFile initramfs.Reader
 	if *base != "" {
 		bf, err := os.Open(*base)
 		if err != nil {
@@ -317,6 +315,8 @@ func Main() error {
 		}
 		defer bf.Close()
 		baseFile = archiver.Reader(bf)
+	} else {
+		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
 	opts := uroot.Opts{
@@ -329,7 +329,6 @@ func Main() error {
 				Packages: pkgs,
 			},
 		},
-		Archiver:        archiver,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,
@@ -338,5 +337,6 @@ func Main() error {
 		InitCmd:         *initCmd,
 		DefaultShell:    *defaultShell,
 	}
-	return uroot.CreateInitramfs(opts)
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	return uroot.CreateInitramfs(logger, opts)
 }

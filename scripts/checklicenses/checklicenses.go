@@ -22,12 +22,18 @@ var absPath = flag.Bool("a", false, "Print absolute paths")
 
 const uroot = "$GOPATH/src/github.com/u-root/u-root"
 
-// The first few lines of every go file is expected to contain this license.
-var license = regexp.MustCompile(
+var oklicenses = []*regexp.Regexp{
+	regexp.MustCompile(
 	`^// Copyright [\d\-, ]+ the u-root Authors\. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file\.
-`)
+`),
+	regexp.MustCompile(
+`^// Copyright [\d\-, ]+ Google Inc.
+//
+// Licensed under the Apache License, Version 2.0.*
+`),
+}
 
 type rule struct {
 	*regexp.Regexp
@@ -53,6 +59,7 @@ var rules = []rule{
 	accept(`.*\.go`),
 	reject(`vendor/.*`),       // Various authors
 	reject(`cmds/dhcp/.*`),    // Graham King
+	reject(`cmds/elvish/.*`),  // elvish developers and contributors
 	reject(`cmds/ldd/.*`),     // Go authors
 	reject(`cmds/ping/.*`),    // Go authors
 	reject(`xcmds/ectool/.*`), // Chromium authors
@@ -102,7 +109,14 @@ outer:
 		if err != nil {
 			log.Fatalln("cannot read", file, err)
 		}
-		if !license.Match(contents) {
+		var foundone bool
+		for _, l := range oklicenses {
+			if l.Match(contents) {
+				foundone = true
+				break
+			}
+		}
+		if ! foundone {
 			p := trimmedPath
 			if *absPath {
 				p = file

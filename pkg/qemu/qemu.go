@@ -14,6 +14,7 @@ package qemu
 
 import (
 	"errors"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -43,6 +44,9 @@ type QEMU struct {
 	// Extra QEMU arguments
 	ExtraArgs []string
 
+	// Where to send serial output.
+	SerialOutput io.WriteCloser
+
 	gExpect *expect.GExpect
 }
 
@@ -64,13 +68,13 @@ func (q *QEMU) CmdLine() []string {
 	// - earlyprintk=ttyS0: print very early debug messages to the serial
 	// - console=ttyS0: /dev/console points to /dev/ttyS0 (the serial port)
 	// - q.KernelArgs: extra, optional kernel arguments
-	args = append(args, "-append", "console=ttyS0 earlyprintk=ttyS0")
-	if q.KernelArgs != "" {
-		args[len(args)-1] += " " + q.KernelArgs
+	if q.Kernel != "" {
+		args = append(args, "-kernel", q.Kernel)
+		args = append(args, "-append", "console=ttyS0 earlyprintk=ttyS0")
+		if q.KernelArgs != "" {
+			args[len(args)-1] += " " + q.KernelArgs
+		}
 	}
-
-	// Kernel and initramfs
-	args = append(args, "-kernel", q.Kernel)
 	if q.InitRAMFS != "" {
 		args = append(args, "-initrd", q.InitRAMFS)
 	}
@@ -96,7 +100,9 @@ func (q *QEMU) Start() error {
 		return errors.New("QEMU already started")
 	}
 	var err error
-	q.gExpect, _, err = expect.SpawnWithArgs(q.CmdLine(), -1)
+	q.gExpect, _, err = expect.SpawnWithArgs(q.CmdLine(), -1,
+		expect.Tee(q.SerialOutput),
+		expect.CheckDuration(2*time.Millisecond))
 	return err
 }
 
@@ -120,19 +126,22 @@ func (q *QEMU) Expect(search string) error {
 // ExpectTimeout returns an error if the given string is not found in QEMU's serial
 // output within the given timeout.
 func (q *QEMU) ExpectTimeout(search string, timeout time.Duration) error {
-	return q.ExpectRETimeout(regexp.MustCompile(regexp.QuoteMeta(search)), timeout)
+	_, err := q.ExpectRETimeout(regexp.MustCompile(regexp.QuoteMeta(search)), timeout)
+	return err
 }
 
 // ExpectRE returns an error if the given regular expression is not found in
-// QEMU's serial output within `DefaultTimeout`.
-func (q *QEMU) ExpectRE(pattern *regexp.Regexp) error {
+// QEMU's serial output within `DefaultTimeout`. The matched string is
+// returned.
+func (q *QEMU) ExpectRE(pattern *regexp.Regexp) (string, error) {
 	return q.ExpectRETimeout(pattern, DefaultTimeout)
 }
 
 // ExpectRETimeout returns an error if the given regular expression is not
-// found in QEMU's serial output within the given timeout.
-func (q *QEMU) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) error {
+// found in QEMU's serial output within the given timeout. The matched string
+// is returned.
+func (q *QEMU) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) (string, error) {
 	scaled := time.Duration(float64(timeout) * TimeoutMultiplier)
-	_, _, err := q.gExpect.Expect(pattern, scaled)
-	return err
+	str, _, err := q.gExpect.Expect(pattern, scaled)
+	return str, err
 }

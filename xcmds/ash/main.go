@@ -83,7 +83,7 @@ func main() {
 		l := complete.NewLineReader(c, t, cw)
 		s, err := l.ReadOne()
 		v("ash: Readone: %v, %v", s, err)
-		if err != nil && err != complete.EOL {
+		if err != nil && err != complete.ErrEOL {
 			log.Print(err)
 			continue
 		}

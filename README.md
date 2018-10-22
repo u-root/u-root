@@ -50,7 +50,7 @@ u-root -build=bb
 u-root -format=cpio -build=source -o initramfs.cpio
 
 # Generate a bb-mode archive with only these given commands.
-u-root -format=cpio -build=bb ./cmds/{ls,ip,dhclient,wget,tcz,cat}
+u-root -format=cpio -build=bb ./cmds/{init,ls,ip,dhclient,wget,tcz,cat}
 ```
 
 `-format=cpio` and `-build=source` are the default flag values. The default set
@@ -60,14 +60,6 @@ In addition to using paths to specify Go source packages to include, you may
 also use Go package import paths (e.g. `golang.org/x/tools/imports`) to include
 commands. Only the `main` package and its dependencies in those source
 directories will be included. For example:
-
-```shell
-go get github.com/u-root/elvish
-u-root -build=bb ./cmds/* github.com/u-root/elvish
-```
-
-Side note: `elvish` is a nicer shell than our default shell `rush`; and also
-written in Go.
 
 You can build the initramfs built by u-root into the kernel via the
 `CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an

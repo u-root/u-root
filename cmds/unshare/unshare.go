@@ -20,7 +20,7 @@
 //     it is not possible to use `syscall.Unshare` from Go with any reasonable
 //     expectation of success.
 //
-//     If PROGRAM is not specified, unshare defaults to /ubin/rush.
+//     If PROGRAM is not specified, unshare defaults to /ubin/elvish.
 //
 // Options:
 //     -ipc:           Unshare the IPC namespace
@@ -55,7 +55,7 @@ func main() {
 
 	a := flag.Args()
 	if len(a) == 0 {
-		a = []string{"/ubin/rush", "rush"}
+		a = []string{"/ubin/elvish", "elvish"}
 	}
 
 	c := exec.Command(a[0], a[1:]...)
