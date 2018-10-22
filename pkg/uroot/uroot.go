@@ -259,6 +259,14 @@ func resolvePackagePath(logger *log.Logger, env golang.Environ, pkg string) ([]s
 
 		var importPaths []string
 		for _, match := range matches {
+
+			// Only match directories for building.
+			// Skip anything that is not a directory
+			fileInfo, _ := os.Stat(match)
+			if !fileInfo.IsDir() {
+				continue
+			}
+
 			p, err := env.PackageByPath(match)
 			if err != nil {
 				logger.Printf("Skipping package %q: %v", match, err)
