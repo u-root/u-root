@@ -109,12 +109,6 @@ func TestFilesAddFile(t *testing.T) {
 			errContains: "must not be absolute",
 		},
 		{
-			name:        "source path must be absolute",
-			src:         "foo/bar",
-			dest:        "bar/foo",
-			errContains: "must be absolute",
-		},
-		{
 			name: "add a directory",
 			af: &Files{
 				Files: map[string]string{},
