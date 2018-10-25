@@ -105,13 +105,12 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 			continue
 		}
 
-		pkgDir := filepath.Join(bbDir, "cmds", path.Base(pkg))
 		// TODO: use bbDir to derive import path below or vice versa.
-		if err := RewritePackage(env, pkg, pkgDir, "github.com/u-root/u-root/pkg/bb", importer); err != nil {
+		if err := RewritePackage(env, pkg, "github.com/u-root/u-root/pkg/bb", importer); err != nil {
 			return err
 		}
 
-		bbPackages = append(bbPackages, fmt.Sprintf("github.com/u-root/u-root/bb/cmds/%s", path.Base(pkg)))
+		bbPackages = append(bbPackages, path.Join(pkg, ".bb"))
 	}
 
 	bb, err := NewPackageFromEnv(env, "github.com/u-root/u-root/pkg/bb/cmd", importer)
@@ -169,6 +168,7 @@ func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, d
 type Package struct {
 	name string
 
+	buildp      *build.Package
 	fset        *token.FileSet
 	ast         *ast.Package
 	typeInfo    types.Info
@@ -245,9 +245,10 @@ func NewPackage(name string, p *build.Package, importer types.Importer) (*Packag
 	}
 
 	pp := &Package{
-		name: name,
-		fset: fset,
-		ast:  astp,
+		buildp: p,
+		name:   name,
+		fset:   fset,
+		ast:    astp,
 		typeInfo: types.Info{
 			Types: make(map[ast.Expr]types.TypeAndValue),
 		},
@@ -413,7 +414,7 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 // RewritePackage rewrites pkgPath to be bb-mode compatible, where destDir is
 // the file system destination of the written files and bbImportPath is the Go
 // import path of the bb package to register with.
-func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, importer types.Importer) error {
+func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer types.Importer) error {
 	p, err := NewPackageFromEnv(env, pkgPath, importer)
 	if err != nil {
 		return err
@@ -421,7 +422,8 @@ func RewritePackage(env golang.Environ, pkgPath, destDir, bbImportPath string, i
 	if p == nil {
 		return nil
 	}
-	return p.Rewrite(destDir, bbImportPath)
+	dest := filepath.Join(p.buildp.Dir, ".bb")
+	return p.Rewrite(dest, bbImportPath)
 }
 
 // Rewrite rewrites p into destDir as a bb package using bbImportPath for the
