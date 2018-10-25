@@ -13,3 +13,7 @@ for d in $(go list ./... | grep -v vendor); do
         rm profile.out
     fi
 done
+
+# build systemboot using u-root
+go get -u github.com/u-root/u-root
+"${GOPATH}/bin/u-root" -build=bb core localboot netboot uinit
