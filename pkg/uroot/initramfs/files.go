@@ -189,7 +189,7 @@ func (af *Files) WriteTo(w Writer) error {
 //
 // If `src` is a directory, its children will be added to the archive as well.
 func writeFile(w Writer, src, dest string) error {
-	record, err := cpio.GetFollowedRecord(src)
+	record, err := cpio.GetRecord(src)
 	if err != nil {
 		return err
 	}
