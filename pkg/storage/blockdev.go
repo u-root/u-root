@@ -90,7 +90,7 @@ func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
 	fields := strings.Fields(string(buf))
 	// BlockStat has 11 fields
 	if len(fields) != 11 {
-		return nil, errors.New("Invalid number of fields")
+		return nil, fmt.Errorf("BlockStatFromBytes: parsing %q: got %d fields(%q), want 11", buf, len(fields), fields)
 	}
 	intfields := make([]uint64, 0)
 	for _, field := range fields {
