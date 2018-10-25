@@ -1,12 +1,12 @@
 # systemboot
 
-SystemBoot is a distribution for LinuxBoot to create a system firmware + bootloader. It is based on u-root. The provided programs are:
+SystemBoot is a distribution for LinuxBoot to create a system firmware + bootloader. It is based on [u-root](https://github.com/u-root/u-root). The provided programs are:
 
 * `netboot`: a network boot client that uses DHCP and HTTP to get a boot program based on Linux, and uses kexec to run it
 * `localboot`: a tool that finds bootable kernel configurations on the local disks and boots them
 * `uinit`: a wrapper around `netboot` and `localboot` that just mimicks a BIOS/UEFI BDS behaviour, by looping between network booting and local booting. The name `uinit` is necessary to be picked up as boot program by u-root.
 
-This work is similar to the `pxeboot` and `boot` commands that are already part of u-root, but approach and implementation are slightly different. Thanks to Chris Koch and Jean-Marie Verdun for pioneering in this area. 
+This work is similar to the `pxeboot` and `boot` commands that are already part of u-root, but approach and implementation are slightly different. Thanks to Chris Koch and Jean-Marie Verdun for pioneering in this area.
 
 This project started as a personal experiment under github.com/insomniacslk/systemboot but it is now an effort of a broader community and graduated to a real project for system firmwares.
 
@@ -44,19 +44,26 @@ In the future I will also support VPD, which will be used as a substitute for EF
 
 The `uinit` program just wraps `netboot` and `localboot` in a forever-loop logic, just like your BIOS/UEFI would do. At the moment it just loops between netboot and localboot in this order, but I plan to make this more flexible and configurable.
 
-## Who uses systemboot?
+## How to build systemboot
 
-Public projects that use it and that we are aware of:
-* [OpenCellular](https://github.com/Telecominfraproject/OpenCellular/wiki/How-to-use-systemboot#verifiedboot)
+* Install a recent version of Go, we recommend 1.10 or later
+* make sure that your PATH points appropriately to wherever Go stores the
+  go-get'ed executables
+* Then build it with the `u-root` ramfs builder using the following commands:
 
-If you use systemboot in your project please let us know and we will add your
-project to this list.
+```
+go get -u github.com/u-root/u-root
+go get -u github.com/systemboot/systemboot/{uinit,localboot,netboot}
+u-root -build=bb core github.com/systemboot/systemboot/{uinit,localboot,netboot}
+```
+
+The initramfs will be located in `/tmp/initramfs_${platform}_${arch}.cpio`.
+
 
 ## TODO
 
+* Instructions to build a suitable kernel and run it with Qemu
 * DHCPv4 is under work
-* VPD
-* TPM support
 * verified and measured boot
 * a proper GRUB config parser
 * backwards compatibility with BIOS-style partitions
