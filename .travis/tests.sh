@@ -3,7 +3,7 @@
 # because things are never simple.
 # See https://github.com/codecov/example-go#caveat-multiple-files
 
-set -e
+set -ex
 echo "" > coverage.txt
 
 for d in $(go list ./... | grep -v vendor); do
