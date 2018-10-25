@@ -13,18 +13,21 @@
 package main
 
 import (
+	// Don't use spf13 flags. It will not allow commands like
+	// strace ls -l
+	// it tries to use the -l for strace instead of leaving it alone.
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/strace"
 )
 
 var (
 	cmdUsage = "Usage: strace <command> [args...]"
-	debug    = flag.BoolP("debug", "d", false, "enable debug printing")
+	debug    = flag.Bool("d", false, "enable debug printing")
 )
 
 func usage() {
@@ -53,6 +56,10 @@ func main() {
 	go t.RunTracerFromCmd(c)
 
 	for r := range t.Records {
-		fmt.Printf("%s\n", r.String())
+		if r.Err != nil {
+			fmt.Printf("Record shows error %v\n", r.Err)
+			continue
+		}
+		fmt.Printf("%s\n", r.Out)
 	}
 }
