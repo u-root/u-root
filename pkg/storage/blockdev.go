@@ -71,6 +71,12 @@ type BlockStat struct {
 	InFlight     uint64
 	IOTicks      uint64
 	TimeInQueue  uint64
+	// Kernel 4.18 added four fields for discard tracking, see
+	// https://github.com/torvalds/linux/commit/bdca3c87fb7ad1cc61d231d37eb0d8f90d001e0c
+	DiscardIOs     uint64
+	DiscardMerges  uint64
+	DiscardSectors uint64
+	DiscardTicks   uint64
 }
 
 // SystemPartitionGUID is the GUID of EFI system partitions
@@ -89,8 +95,8 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
 	fields := strings.Fields(string(buf))
 	// BlockStat has 11 fields
-	if len(fields) != 11 {
-		return nil, fmt.Errorf("BlockStatFromBytes: parsing %q: got %d fields(%q), want 11", buf, len(fields), fields)
+	if len(fields) < 11 {
+		return nil, fmt.Errorf("BlockStatFromBytes: parsing %q: got %d fields(%q), want at least 11", buf, len(fields), fields)
 	}
 	intfields := make([]uint64, 0)
 	for _, field := range fields {
@@ -100,7 +106,7 @@ func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
 		}
 		intfields = append(intfields, v)
 	}
-	return &BlockStat{
+	bs := BlockStat{
 		ReadIOs:      intfields[0],
 		ReadMerges:   intfields[1],
 		ReadSectors:  intfields[2],
@@ -112,7 +118,14 @@ func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
 		InFlight:     intfields[8],
 		IOTicks:      intfields[9],
 		TimeInQueue:  intfields[10],
-	}, nil
+	}
+	if len(fields) >= 15 {
+		bs.DiscardIOs = intfields[11]
+		bs.DiscardMerges = intfields[12]
+		bs.DiscardSectors = intfields[13]
+		bs.DiscardTicks = intfields[14]
+	}
+	return &bs, nil
 }
 
 // GetBlockStats iterates over /sys/class/block entries and returns a list of
