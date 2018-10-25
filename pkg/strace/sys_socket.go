@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package strace implements the logic to print out the input and the return value
-// of each traced syscall.
 package strace
+
+import "github.com/u-root/u-root/pkg/abi"
+
+// ReadMessageHeader64 reads a MessageHeader64
+func ReadMessageHeader64(t *Tracer, addr Addr, msg *abi.MessageHeader64) error {
+	if _, err := t.Read(addr, msg); err != nil {
+		return err
+	}
+
+	return nil
+}
