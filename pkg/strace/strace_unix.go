@@ -10,9 +10,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func Wait(pid int) (unix.WaitStatus, error) {
+// Wait will wait for the specified pid using Wait4.
+// Callers may specify the full range of values
+// as specified in the waipid man page, though
+// we typically use only -1 or a valid pid.
+func Wait(wpid int) (int, unix.WaitStatus, error) {
 	var w syscall.WaitStatus
-	_, err := syscall.Wait4(pid, &w, 0, nil)
+	pid, err := syscall.Wait4(wpid, &w, 0, nil)
 	uw := unix.WaitStatus(w)
-	return uw, err
+	return pid, uw, err
 }

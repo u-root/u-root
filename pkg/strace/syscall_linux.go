@@ -310,7 +310,7 @@ func (i *SyscallInfo) printEnter(t *Tracer, r *TraceRecord) string {
 
 }
 
-func SysCallEnter(t *Tracer, r *TraceRecord) {
+func sysCallEnter(t *Tracer, r *TraceRecord) {
 	i := defaultSyscallInfo(r.Sysno)
 	if v, ok := syscalls[uintptr(r.Sysno)]; ok {
 		*i = v
@@ -318,7 +318,7 @@ func SysCallEnter(t *Tracer, r *TraceRecord) {
 	r.Out = i.printEnter(t, r)
 }
 
-func SysCallExit(t *Tracer, r *TraceRecord) {
+func sysCallExit(t *Tracer, r *TraceRecord) {
 	i := defaultSyscallInfo(r.Sysno)
 	if v, ok := syscalls[uintptr(r.Sysno)]; ok {
 		*i = v
@@ -326,12 +326,13 @@ func SysCallExit(t *Tracer, r *TraceRecord) {
 	r.Out = i.printExit(t, r.Time, r.Args, r.Ret[0], r.Err, r.Errno)
 }
 
+// SysCall takes a Tracer and a TraceRecord and adds prettyprint to the TraceRecord.
 func SysCall(t *Tracer, r *TraceRecord) {
 	if r.EX == Enter {
-		SysCallEnter(t, r)
+		sysCallEnter(t, r)
 		return
 	}
-	SysCallExit(t, r)
+	sysCallExit(t, r)
 }
 
 // printExit prints the given system call exit.
