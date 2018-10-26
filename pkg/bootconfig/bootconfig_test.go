@@ -21,7 +21,7 @@ func TestNewBootConfig(t *testing.T) {
 	require.Equal(t, "/path/to/initramfs", c.Initramfs)
 	require.Equal(t, "init=/bin/bash", c.KernelArgs)
 	require.Equal(t, "some data here", c.DeviceTree)
-	require.Equal(t, true, c.Validate())
+	require.Equal(t, true, c.IsValid())
 }
 
 func TestNewBootConfigInvalidJSON(t *testing.T) {
@@ -42,5 +42,5 @@ func TestNewBootConfigMissingKernel(t *testing.T) {
 }`)
 	c, err := NewBootConfig(data)
 	require.NoError(t, err)
-	require.Equal(t, false, c.Validate())
+	require.Equal(t, false, c.IsValid())
 }

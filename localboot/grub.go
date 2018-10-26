@@ -3,9 +3,10 @@ package main
 import (
 	"io/ioutil"
 	"log"
-	"os"
 	"path"
 	"strings"
+
+	"github.com/systemboot/systemboot/pkg/bootconfig"
 )
 
 // List of paths where to look for grub config files. Grub2Paths will look for
@@ -32,7 +33,7 @@ var (
 // BootConfig structures, one for each menuentry, in the same order as they
 // appear in grub.cfg. All opened kernel and initrd files are relative to
 // basedir.
-func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig {
+func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []bootconfig.BootConfig {
 	// This parser sucks. It's not even a parser, it just looks for lines
 	// starting with menuentry, linux or initrd.
 	// TODO use a parser, e.g. https://github.com/alecthomas/participle
@@ -40,9 +41,9 @@ func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig 
 		log.Printf("Warning: invalid GRUB version: %d", grubVersion)
 		return nil
 	}
-	bootconfigs := make([]BootConfig, 0)
+	bootconfigs := make([]bootconfig.BootConfig, 0)
 	inMenuEntry := false
-	var cfg *BootConfig
+	var cfg *bootconfig.BootConfig
 	for _, line := range strings.Split(grubcfg, "\n") {
 		// remove all leading spaces as they are not relevant for the config
 		// line
@@ -62,7 +63,7 @@ func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig 
 				}
 			}
 			inMenuEntry = true
-			cfg = new(BootConfig)
+			cfg = new(bootconfig.BootConfig)
 		} else if inMenuEntry {
 			// otherwise look for kernel and initramfs configuration
 			if len(sline) < 2 {
@@ -78,21 +79,11 @@ func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig 
 					// TODO unquote everything, not just \$
 					cmdline = strings.Replace(cmdline, `\$`, "$", -1)
 				}
-				fullpath := path.Join(basedir, kernel)
-				fd, err := os.Open(fullpath)
-				if err != nil {
-					debug("error opening kernel file %s: %v", fullpath, err)
-				}
-				cfg.Kernel = fd
-				cfg.Cmdline = cmdline
+				cfg.Kernel = path.Join(basedir, kernel)
+				cfg.KernelArgs = cmdline
 			} else if sline[0] == "initrd" || sline[0] == "initrd16" || sline[0] == "initrdefi" {
 				initrd := sline[1]
-				fullpath := path.Join(basedir, initrd)
-				fd, err := os.Open(fullpath)
-				if err != nil {
-					debug("error opening initrd file %s: %v", fullpath, err)
-				}
-				cfg.Initramfs = fd
+				cfg.Initramfs = path.Join(basedir, initrd)
 			}
 		}
 	}
@@ -105,8 +96,8 @@ func ParseGrubCfg(grubcfg string, basedir string, grubVersion int) []BootConfig 
 
 // ScanGrubConfigs looks for grub2 and grub legacy config files in the known
 // locations and returns a list of boot configurations.
-func ScanGrubConfigs(basedir string) []BootConfig {
-	bootconfigs := make([]BootConfig, 0)
+func ScanGrubConfigs(basedir string) []bootconfig.BootConfig {
+	bootconfigs := make([]bootconfig.BootConfig, 0)
 	// Scan Grub 2 configurations
 	for _, grubpath := range Grub2Paths {
 		path := path.Join(basedir, grubpath)

@@ -8,6 +8,7 @@ import (
 	"path"
 	"syscall"
 
+	"github.com/systemboot/systemboot/pkg/bootconfig"
 	"github.com/systemboot/systemboot/pkg/storage"
 )
 
@@ -111,7 +112,7 @@ func BootGrubMode(devices []storage.BlockDev, baseMountpoint string, guid string
 	}
 
 	// search for a valid grub config and extracts the boot configuration
-	bootconfigs := make([]BootConfig, 0)
+	bootconfigs := make([]bootconfig.BootConfig, 0)
 	for _, mountpoint := range mounted {
 		bootconfigs = append(bootconfigs, ScanGrubConfigs(mountpoint.Path)...)
 	}
@@ -134,8 +135,7 @@ func BootGrubMode(devices []storage.BlockDev, baseMountpoint string, guid string
 	for _, cfg := range bootconfigs {
 		debug("Trying boot configuration %+v", cfg)
 		if err := cfg.Boot(); err != nil {
-			log.Printf("Failed to boot kernel %s: %v", cfg.Kernel.Name(), err)
-			cfg.Close()
+			log.Printf("Failed to boot kernel %s: %v", cfg.Kernel, err)
 		}
 	}
 	// if we reach this point, no boot configuration succeeded
@@ -171,26 +171,17 @@ func BootPathMode(devices []storage.BlockDev, baseMountpoint string, guid string
 
 	fullKernelPath := path.Join(mount.Path, *flagKernelPath)
 	fullInitramfsPath := path.Join(mount.Path, *flagInitramfsPath)
-	kernelFD, err := os.Open(fullKernelPath)
-	if err != nil {
-		return fmt.Errorf("Cannot open kernel %s: %v", fullKernelPath, err)
-	}
-	initramfsFD, err := os.Open(fullInitramfsPath)
-	if err != nil {
-		return fmt.Errorf("Cannot open initramfs %s: %v", fullInitramfsPath, err)
-	}
-	cfg := BootConfig{
-		Kernel:    kernelFD,
-		Initramfs: initramfsFD,
-		Cmdline:   *flagKernelCmdline,
+	cfg := bootconfig.BootConfig{
+		Kernel:     fullKernelPath,
+		Initramfs:  fullInitramfsPath,
+		KernelArgs: *flagKernelCmdline,
 	}
 	debug("Trying boot configuration %+v", cfg)
 	if dryrun {
 		log.Printf("Dry-run, will not actually boot")
 	} else {
 		if err := cfg.Boot(); err != nil {
-			cfg.Close()
-			return fmt.Errorf("Failed to boot kernel %s: %v", cfg.Kernel.Name(), err)
+			return fmt.Errorf("Failed to boot kernel %s: %v", cfg.Kernel, err)
 		}
 	}
 	return nil
