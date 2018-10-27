@@ -29,9 +29,10 @@ func (bc *BootConfig) IsValid() bool {
 // Boot tries to boot the kernel with optional initramfs and command line
 // options. If a device-tree is specified, that will be used too
 func (bc *BootConfig) Boot() error {
-	// kexec: try the kexec executable first, and if it fails, use the native
+	// kexec: try the kexecbin executable first, and if it fails, use the native
 	// Go implementation of kexec from u-root
-	if err := kexecbin.KexecBin(bc.Kernel, bc.Initramfs, bc.KernelArgs, bc.DeviceTree); err != nil {
+	log.Printf("Trying KexecBin on %+v", bc)
+	if err := kexecbin.KexecBin(bc.Kernel, bc.KernelArgs, bc.Initramfs, bc.DeviceTree); err != nil {
 		if os.IsNotExist(err) {
 			log.Printf("BootConfig: KexecBin failed, trying pure-Go kexec. Error: %v", err)
 		} else {
