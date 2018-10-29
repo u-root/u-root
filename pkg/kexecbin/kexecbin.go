@@ -4,6 +4,14 @@
 
 package kexecbin
 
+// The package `kexecbin` offers a facility to call an external program to
+// kexec a kernel. The reason is that u-root's `kexec` implementation covers
+// less use-cases than the one from `kexec-tools`.
+// The user has to embed a `kexecbin` program in the initramfs, and make
+// it available in the PATH, then call the `KexecBin` function.
+// Please note that adding an external kexec implementation will increase
+// the ramfs size more than the pure-Go implementation from u-root.
+
 import (
 	"os"
 	"os/exec"
@@ -18,7 +26,7 @@ var (
 // KexecBin uses kexec-tools binary and runtime architecture detection
 // to execute abritary files.
 func KexecBin(kernelFilePath string, kernelCommandline string, initrdFilePath string, dtFilePath string) error {
-	baseCmd, err := exec.LookPath("kexec")
+	baseCmd, err := exec.LookPath("kexecbin")
 	if err != nil {
 		return err
 	}
