@@ -64,6 +64,7 @@ const (
 	unloaded modState = iota
 	loading
 	loaded
+	builtin
 )
 
 type dependency struct {
@@ -101,6 +102,10 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 		return fmt.Errorf("could not find module path %q: %v", name, err)
 	}
 
+	if deps[modPath].state == builtin {
+		return nil
+	}
+
 	if opts.DryRunCB == nil {
 		// if the module is already loaded or does not have deps, or all of them are loaded
 		// then this succeeds and we are done
@@ -122,6 +127,28 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	// we don't care to set the state to loaded
 	// deps[modPath].state = loaded
 	return nil
+}
+
+func checkBuiltin(moduleDir string, deps depMap) error {
+	f, err := os.Open(filepath.Join(moduleDir, "modules.builtin"))
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("could not open builtin file: %v", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		modPath := filepath.Join(moduleDir, strings.TrimSpace(txt))
+		if deps[modPath] == nil {
+			deps[modPath] = new(dependency)
+		}
+		deps[modPath].state = builtin
+	}
+
+	return scanner.Err()
 }
 
 func genDeps(opts ProbeOpts) (depMap, error) {
@@ -170,6 +197,10 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 		return nil, err
 	}
 
+	if err = checkBuiltin(moduleDir, deps); err != nil {
+		return nil, err
+	}
+
 	return deps, nil
 }
 
@@ -191,7 +222,7 @@ func loadDeps(path string, m depMap, opts ProbeOpts) error {
 
 	if dependency.state == loading {
 		return fmt.Errorf("circular dependency! %q already LOADING", path)
-	} else if dependency.state == loaded {
+	} else if (dependency.state == loaded) || (dependency.state == builtin) {
 		return nil
 	}
 
