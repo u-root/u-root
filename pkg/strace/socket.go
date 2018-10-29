@@ -200,10 +200,10 @@ func sockAddr(t *Tracer, addr Addr, length uint32) string {
 		}
 
 		if family == unix.AF_UNIX {
-			return fmt.Sprintf("%#x {Family: %s, Addr: %q}", addr, familyStr, string(fa.Addr))
+			return fmt.Sprintf("%#x {Family: %s, Addr: %q}", addr, familyStr, fa.Addr)
 		}
 
-		return fmt.Sprintf("%#x {Family: %s, Addr: %v, Port: %d}", addr, familyStr, fa.Addr, fa.Port)
+		return fmt.Sprintf("%#x {Family: %s, Addr: %#02x, Port: %d}", addr, familyStr, []byte(fa.Addr), fa.Port)
 	case unix.AF_NETLINK:
 		//sa, err := netlink.ExtractSockAddr(b)
 		//if err != nil {
