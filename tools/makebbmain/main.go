@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fset, astp, err := bb.ParseAST(p)
+	fset, astp, err := bb.ParseAST(bb.SrcFiles(p))
 	if err != nil {
 		log.Fatal(err)
 	}
