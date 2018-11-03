@@ -6,13 +6,50 @@ package builder
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+)
+
+var (
+	goCommandFile      = "zzzzinit.go"
+	addInitToGoCommand = []byte(`// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package main
+
+import (
+	"log"
+	"os"
+	"os/exec"
+	"syscall"
+
+)
+
+func init() {
+	if os.Args[0] != "/init" {
+		return
+	}
+
+	c := exec.Command("/go/bin/go", "build", "-o", "/buildbin/installcommand", "github.com/u-root/u-root/cmds/installcommand")
+	c.Env = append(c.Env,  []string{"GOROOT=/go", "GOPATH=/",}...)
+	o, err := c.CombinedOutput()
+	if err != nil {
+		log.Printf("building installcommand: %s, %v", string(o), err)
+		return
+	}
+	if err := syscall.Exec("/buildbin/init", []string{"init"}, []string{}); err != nil {
+		log.Printf("Exec of /buildbin/init failed. %v", err)
+	}
+}
+`)
 )
 
 // SourceBuilder includes full source for Go commands in the initramfs.
@@ -25,7 +62,14 @@ import (
 // E.g. if "ls" is an included command, "ls" will be a symlink to
 // "installcommand" in the initramfs, which uses argv[0] to figure out which
 // command to compile.
-type SourceBuilder struct{}
+type SourceBuilder struct {
+	// FourBins, if true, will cause us to not build
+	// an installcommand. This only makes sense if you are using the
+	// fourbins command in the u-root command, but that's your call.
+	// In operation, the default behavior is the one most people will want,
+	// i.e. the installcommand will be built.
+	FourBins bool
+}
 
 // DefaultBinaryDir implements Builder.DefaultBinaryDir.
 //
@@ -35,7 +79,7 @@ func (SourceBuilder) DefaultBinaryDir() string {
 }
 
 // Build is an implementation of Builder.Build.
-func (SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
+func (sb SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// TODO: this is a failure to collect the correct dependencies.
 	if err := af.AddFile(filepath.Join(opts.Env.GOROOT, "pkg/include"), "go/pkg/include"); err != nil {
 		return err
@@ -78,12 +122,33 @@ func (SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 		goListPkg(opts, dep, af)
 	}
 
+	// If we are doing "four bins" mode, or maybe I should call it Go of
+	// Four, then we need to drop a file into the Go command source
+	// directory before we build, and we need to remove it after.  And we
+	// need to verify that we're not supplanting something.
+	if sb.FourBins {
+		goCmd := filepath.Join(opts.Env.GOROOT, "src/cmd/go")
+		if _, err := os.Stat(goCmd); err != nil {
+			return fmt.Errorf("stat(%q): %v", goCmd, err)
+		}
+
+		z := filepath.Join(goCmd, goCommandFile)
+		if _, err := os.Stat(z); err == nil {
+			return fmt.Errorf("%q exists, and we will not overwrite it", z)
+		}
+
+		if err := ioutil.WriteFile(z, addInitToGoCommand, 0444); err != nil {
+			return err
+		}
+		defer os.Remove(z)
+	}
+
 	// Add Go toolchain.
 	log.Printf("Building go toolchain...")
 	if err := buildToolchain(opts); err != nil {
 		return err
 	}
-	if !opts.SkipBuildingInstallCommand {
+	if !sb.FourBins {
 		if err := opts.Env.Build(installcommand, filepath.Join(opts.TempDir, opts.BinaryDir, "installcommand"), golang.BuildOpts{}); err != nil {
 			return err
 		}

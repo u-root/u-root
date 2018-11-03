@@ -169,13 +169,6 @@ type Opts struct {
 	//
 	// This must be specified to have a default shell.
 	DefaultShell string
-
-	// SkipBuildingInstallCommand, if true, will cause us to not build
-	// an installcommand. This only makes sense if you are using the
-	// fourbins command in the u-root command, but that's your call.
-	// In operation, the default behavior is the one most people will want,
-	// i.e. the installcommand will be built.
-	SkipBuildingInstallCommand bool
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
@@ -207,11 +200,10 @@ func CreateInitramfs(logger *log.Logger, opts Opts) error {
 
 		// Build packages.
 		bOpts := builder.Opts{
-			Env:                        opts.Env,
-			Packages:                   cmds.Packages,
-			TempDir:                    builderTmpDir,
-			BinaryDir:                  cmds.TargetDir(),
-			SkipBuildingInstallCommand: opts.SkipBuildingInstallCommand,
+			Env:       opts.Env,
+			Packages:  cmds.Packages,
+			TempDir:   builderTmpDir,
+			BinaryDir: cmds.TargetDir(),
 		}
 		if err := cmds.Builder.Build(files, bOpts); err != nil {
 			return fmt.Errorf("error building %#v: %v", bOpts, err)
