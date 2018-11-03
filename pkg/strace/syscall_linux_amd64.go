@@ -24,7 +24,7 @@ const Width = 64
 
 var ByteOrder = binary.LittleEndian
 
-// This is the amd64 syscall map. One might thing that this one map could be used for all Linux
+// This is the amd64 syscall map. One might think that this one map could be used for all Linux
 // flavors on all architectures. Ah, no. It's Linux, not Plan 9. Every arch has a different
 // system call set.
 var syscalls = SyscallMap{
@@ -348,7 +348,7 @@ var syscalls = SyscallMap{
 	unix.SYS_SECCOMP:           makeSyscallInfo("seccomp", Hex, Hex, Hex),
 }
 
-// FillArgs pulls the correct registers to populate system call arguements
+// FillArgs pulls the correct registers to populate system call arguments
 // and the system call number into a TraceRecord. Note that the system
 // call number is not technically an argument. This is good, in a sense,
 // since it makes the function arguements end up in "the right place"
