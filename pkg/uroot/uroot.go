@@ -7,7 +7,6 @@ package uroot
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"github.com/u-root/u-root/pkg/uroot/logger"
 )
 
 // These constants are used in DefaultRamfs.
@@ -172,7 +172,7 @@ type Opts struct {
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
-func CreateInitramfs(logger *log.Logger, opts Opts) error {
+func CreateInitramfs(logger logger.Logger, opts Opts) error {
 	if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 		return fmt.Errorf("temp dir %q must exist: %v", opts.TempDir, err)
 	}
@@ -246,7 +246,7 @@ func CreateInitramfs(logger *log.Logger, opts Opts) error {
 }
 
 // resolvePackagePath finds import paths for a single import path or directory string
-func resolvePackagePath(logger *log.Logger, env golang.Environ, pkg string) ([]string, error) {
+func resolvePackagePath(logger logger.Logger, env golang.Environ, pkg string) ([]string, error) {
 	// Search the current working directory, as well GOROOT and GOPATHs
 	prefixes := append([]string{""}, env.SrcDirs()...)
 	// Resolve file system paths to package import paths.
@@ -320,7 +320,7 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
-func ResolvePackagePaths(logger *log.Logger, env golang.Environ, pkgs []string) ([]string, error) {
+func ResolvePackagePaths(logger logger.Logger, env golang.Environ, pkgs []string) ([]string, error) {
 	var importPaths []string
 	for _, pkg := range pkgs {
 		paths, err := resolvePackagePath(logger, env, pkg)
@@ -342,7 +342,7 @@ func ResolvePackagePaths(logger *log.Logger, env golang.Environ, pkgs []string) 
 //   - "/home/foo" is equivalent to "/home/foo:home/foo".
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
-func ParseExtraFiles(logger *log.Logger, archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
+func ParseExtraFiles(logger logger.Logger, archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
 	var err error
 	// Add files from command line.
 	for _, file := range extraFiles {
