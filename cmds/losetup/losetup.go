@@ -36,7 +36,7 @@ func main() {
 	args := flag.Args()
 	if *detach {
 		if len(args) == 1 {
-			if err := loop.ClearFdFile(args[0]); err != nil {
+			if err := loop.ClearFile(args[0]); err != nil {
 				log.Fatal("Error clearing device: ", err)
 			}
 			log.Println("Detached", args[0])
@@ -61,7 +61,7 @@ func main() {
 		log.Fatal("Syntax Error")
 	}
 
-	if err := loop.SetFdFiles(devicename, filename); err != nil {
+	if err := loop.SetFile(devicename, filename); err != nil {
 		log.Fatal("Could not set loop device:", err)
 	}
 

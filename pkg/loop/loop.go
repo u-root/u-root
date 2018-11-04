@@ -26,7 +26,7 @@ func New(source, target, fstype string, flags uintptr, data string) (mount.Mount
 	if err != nil {
 		return nil, err
 	}
-	if err := SetFdFiles(devicename, source); err != nil {
+	if err := SetFile(devicename, source); err != nil {
 		return nil, err
 	}
 	l := &Loop{Dev: devicename, Dir: target, Source: source, FStype: fstype, Flags: flags, Data: data}

@@ -51,7 +51,7 @@ func loopSetup(filename string) (loopDevice string, err error) {
 	if err != nil {
 		return "", err
 	}
-	if err := loop.SetFdFiles(loopDevice, filename); err != nil {
+	if err := loop.SetFile(loopDevice, filename); err != nil {
 		return "", err
 	}
 	return loopDevice, nil
