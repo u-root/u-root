@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/uroot/logger"
 )
 
 var (
@@ -35,7 +36,7 @@ type Archiver interface {
 	//
 	// If `path` is unspecified, implementations may choose an arbitrary
 	// default location, potentially based on `goos` and `goarch`.
-	OpenWriter(path, goos, goarch string) (Writer, error)
+	OpenWriter(l logger.Logger, path, goos, goarch string) (Writer, error)
 
 	// Reader returns a Reader that allows reading files from a file.
 	Reader(file io.ReaderAt) Reader
