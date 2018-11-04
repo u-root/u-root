@@ -1,0 +1,4 @@
+DEFAULT normal
+
+LABEL normal
+LINUX bzImage
