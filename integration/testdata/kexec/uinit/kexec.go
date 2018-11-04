@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/sh"
 )
@@ -31,5 +33,7 @@ func main() {
 			"-i", "/testdata/initramfs.cpio",
 			"-c", cmdLine,
 			"/testdata/bzImage")
+	} else {
+		unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 	}
 }

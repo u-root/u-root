@@ -6,9 +6,13 @@ package main
 
 import (
 	"fmt"
+
+	"golang.org/x/sys/unix"
 )
 
 // The most trivial init script.
 func main() {
 	fmt.Println("HELLO WORLD")
+
+	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 }
