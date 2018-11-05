@@ -13,12 +13,13 @@
 package main
 
 import (
-	"debug/pe"
-	"encoding/json"
+	//"encoding/json"
 	"flag"
-	"fmt"
+	//"fmt"
 	"log"
 	"os"
+
+	"github.com/u-root/u-root/pkg/pe"
 )
 
 func main() {
@@ -43,9 +44,13 @@ func main() {
 	defer f.Close()
 
 	// Convert to JSON
-	j, err := json.MarshalIndent(f, "", "\t")
+	/*j, err := json.MarshalIndent(f, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(j))
+	fmt.Println(string(j))*/
+
+	for _, sec := range f.Sections {
+		log.Printf("section %q, addr %#x, virt size %#x, size %#x", sec.Name, sec.VirtualAddress, sec.VirtualSize, sec.Size)
+	}
 }
