@@ -8,6 +8,8 @@
 package dhcp4opts
 
 import (
+	"time"
+
 	"github.com/u-root/dhcp4"
 )
 
@@ -336,4 +338,16 @@ func GetMaximumDHCPMessageSize(o dhcp4.Options) (uint16, error) {
 	}
 	var u Uint16
 	return uint16(u), (&u).UnmarshalBinary(v)
+}
+
+// GetIPAddressLeaseTime returns the proposed lease time.
+//
+// The IP address lease time message is defined by RFC 2132, Section 9.2.
+func GetIPAddressLeaseTime(o dhcp4.Options) (time.Duration, error) {
+	v := o.Get(dhcp4.OptionIPAddressLeaseTime)
+	if v == nil {
+		return 0, dhcp4.ErrOptionNotPresent
+	}
+	var u Uint32
+	return time.Duration(u) * time.Second, (&u).UnmarshalBinary(v)
 }
