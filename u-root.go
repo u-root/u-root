@@ -35,6 +35,7 @@ var (
 	initCmd                                 *string
 	defaultShell                            *string
 	useExistingInit                         *bool
+	fourbins                                *bool
 	extraFiles                              multiFlag
 	templates                               = map[string][]string{
 		"all": {
@@ -222,6 +223,7 @@ var (
 )
 
 func init() {
+	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
 	build = flag.String("build", "source", "u-root build format (e.g. bb or source).")
 	format = flag.String("format", "cpio", "Archival format.")
 
@@ -251,6 +253,9 @@ func main() {
 // on exit.
 func Main() error {
 	env := golang.Default()
+	if *fourbins && env.GOROOT == "" {
+		log.Fatalf("You have to set GOROOT for fourbins to work")
+	}
 	if env.CgoEnabled {
 		log.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
@@ -260,10 +265,20 @@ func Main() error {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
-	builder, err := builder.GetBuilder(*build)
-	if err != nil {
-		return err
+	var b builder.Builder
+	switch *build {
+	case "bb":
+		b = builder.BBBuilder{}
+	case "binary":
+		b = builder.BinaryBuilder{}
+	case "source":
+		b = builder.SourceBuilder{
+			FourBins: *fourbins,
+		}
+	default:
+		return fmt.Errorf("could not find builder %q", *build)
 	}
+
 	archiver, err := initramfs.GetArchiver(*format)
 	if err != nil {
 		return err
@@ -319,13 +334,18 @@ func Main() error {
 		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
+	initCommand := *initCmd
+	if *fourbins && *build == "source" {
+		initCommand = "/go/bin/go"
+	}
+
 	opts := uroot.Opts{
 		Env: env,
 		// The command-line tool only allows specifying one build mode
 		// right now.
 		Commands: []uroot.Commands{
 			{
-				Builder:  builder,
+				Builder:  b,
 				Packages: pkgs,
 			},
 		},
@@ -334,7 +354,7 @@ func Main() error {
 		OutputFile:      w,
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
-		InitCmd:         *initCmd,
+		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
 	}
 	logger := log.New(os.Stderr, "", log.LstdFlags)

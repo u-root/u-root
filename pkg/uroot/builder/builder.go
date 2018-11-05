@@ -5,8 +5,6 @@
 package builder
 
 import (
-	"fmt"
-
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -16,12 +14,6 @@ var (
 	Source  = SourceBuilder{}
 	Binary  = BinaryBuilder{}
 )
-
-var Builders = map[string]Builder{
-	"bb":     BusyBox,
-	"source": Source,
-	"binary": Binary,
-}
 
 // Opts are options passed to the Builder.Build function.
 type Opts struct {
@@ -59,13 +51,4 @@ type Builder interface {
 	// DefaultBinaryDir is the initramfs' default directory for binaries
 	// built using this builder.
 	DefaultBinaryDir() string
-}
-
-// GetBuilder returns the Build function for the named build mode.
-func GetBuilder(name string) (Builder, error) {
-	build, ok := Builders[name]
-	if !ok {
-		return nil, fmt.Errorf("couldn't find builder %q", name)
-	}
-	return build, nil
 }
