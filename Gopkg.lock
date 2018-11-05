@@ -202,16 +202,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6e0859e017e676eab41ee8461a9d114503699347fa0700141a562a164a6e3908"
+  digest = "1:f06cd40b99d2fcb4f1cbf05e10b309a6ce4acc50e9c392e94a8b2a9b76eeabb4"
   name = "github.com/u-root/dhcp4"
   packages = [
     ".",
     "dhcp4client",
     "dhcp4opts",
+    "dhcp4server",
     "internal/buffer",
   ]
   pruneopts = "NUT"
-  revision = "f78158b7c380d2ae515105471716468098373c72"
+  revision = "8fce2c0a78c8e92233c390983acefb152d6c233f"
 
 [[projects]]
   branch = "master"
@@ -336,6 +337,7 @@
     "github.com/u-root/dhcp4",
     "github.com/u-root/dhcp4/dhcp4client",
     "github.com/u-root/dhcp4/dhcp4opts",
+    "github.com/u-root/dhcp4/dhcp4server",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",

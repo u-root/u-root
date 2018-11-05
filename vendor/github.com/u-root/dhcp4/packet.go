@@ -143,6 +143,15 @@ func (p *Packet) MarshalBinary() ([]byte, error) {
 	return b.Data(), nil
 }
 
+// ParsePacket parses a DHCP4 packet from q.
+func ParsePacket(q []byte) (*Packet, error) {
+	var pkt Packet
+	if err := (&pkt).UnmarshalBinary(q); err != nil {
+		return nil, err
+	}
+	return &pkt, nil
+}
+
 // UnmarshalBinary reads the packet from binary.
 func (p *Packet) UnmarshalBinary(q []byte) error {
 	b := buffer.New(q)
