@@ -8,9 +8,16 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"os"
+
+	"golang.org/x/sys/unix"
 )
 
-type inMemReaderAt interface {
+// InMemReaderAt is an io.ReaderAt for which ReadAtll will return a pointer to
+// the bytes in memory without copying them.
+type InMemReaderAt interface {
+	io.ReaderAt
+
 	Bytes() []byte
 }
 
@@ -21,13 +28,43 @@ type inMemReaderAt interface {
 // If r is an in-memory representation, ReadAll will attempt to return a
 // pointer to those bytes directly.
 func ReadAll(r io.ReaderAt) ([]byte, error) {
-	if imra, ok := r.(inMemReaderAt); ok {
+	if imra, ok := r.(InMemReaderAt); ok {
 		return imra.Bytes(), nil
 	}
 	return ioutil.ReadAll(Reader(r))
 }
 
 // Reader generates a Reader from a ReaderAt.
-func Reader(r io.ReaderAt) io.Reader {
-	return io.NewSectionReader(r, 0, math.MaxInt64)
+func Reader(ra io.ReaderAt) io.Reader {
+	if r, ok := ra.(io.Reader); ok {
+		return r
+	}
+	return io.NewSectionReader(ra, 0, math.MaxInt64)
+}
+
+type inMemFile struct {
+	*os.File
+
+	bytes []byte
+}
+
+// InMemFile mmaps a file.
+func InMemFile(f *os.File) (InMemReaderAt, error) {
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	b, err := unix.Mmap(int(f.Fd()), 0, int(fi.Size()), unix.PROT_READ, unix.MAP_PRIVATE)
+	if err != nil {
+		return nil, err
+	}
+	return &inMemFile{
+		File:  f,
+		bytes: b,
+	}, nil
+}
+
+// Bytes implements InMemReaderAt.
+func (i *inMemFile) Bytes() []byte {
+	return i.bytes
 }
