@@ -140,7 +140,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		t.Fatalf("Failed to create QEMU VM %s: %v", o.Name, err)
 	}
 
-	vm, err := qemu.Start(qOpts)
+	vm, err := qOpts.Start()
 	if err != nil {
 		t.Fatalf("Failed to start QEMU VM %s: %v", o.Name, err)
 	}
@@ -159,6 +159,10 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 }
 
 func QEMU(o *Options) (*qemu.Options, error) {
+	if len(o.Name) == 0 {
+		o.Name = callerName(2)
+	}
+
 	if o.Env == nil {
 		env := golang.Default()
 		o.Env = &env

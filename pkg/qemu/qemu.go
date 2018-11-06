@@ -148,7 +148,7 @@ type VM struct {
 }
 
 // Start a QEMU VM.
-func Start(o *Options) (*VM, error) {
+func (o *Options) Start() (*VM, error) {
 	var net *networkState
 	if o.Network != nil {
 		net = o.Network.newVM()
