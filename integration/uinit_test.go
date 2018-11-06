@@ -11,7 +11,10 @@ import (
 // TestHelloWorld runs an init which prints the string "HELLO WORLD" and exits.
 func TestHelloWorld(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
-		Cmds: []string{"github.com/u-root/u-root/integration/testcmd/helloworld/uinit"},
+		Cmds: []string{
+			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+			"github.com/u-root/u-root/cmds/init",
+		},
 	})
 	defer cleanup()
 
@@ -23,7 +26,10 @@ func TestHelloWorld(t *testing.T) {
 // TestHelloWorldNegative runs an init which does not print the string "HELLO WORLD".
 func TestHelloWorldNegative(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
-		Cmds: []string{"github.com/u-root/u-root/integration/testcmd/helloworld/uinit"},
+		Cmds: []string{
+			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+			"github.com/u-root/u-root/cmds/init",
+		},
 	})
 	defer cleanup()
 

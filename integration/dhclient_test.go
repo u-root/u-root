@@ -17,6 +17,7 @@ func TestDhclient(t *testing.T) {
 		Name: "TestDhclient_Server",
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/ip",
+			"github.com/u-root/u-root/cmds/init",
 			"github.com/u-root/u-root/cmds/shutdown",
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
@@ -35,6 +36,7 @@ func TestDhclient(t *testing.T) {
 		Name: "TestDhclient_Client",
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/ip",
+			"github.com/u-root/u-root/cmds/init",
 			"github.com/u-root/u-root/cmds/dhclient",
 			"github.com/u-root/u-root/cmds/shutdown",
 		},
@@ -62,6 +64,8 @@ func TestPxeboot(t *testing.T) {
 	dhcpServer, scleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Server",
 		Cmds: []string{
+			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/ip",
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
 		Uinit: []string{
@@ -79,9 +83,16 @@ func TestPxeboot(t *testing.T) {
 
 	dhcpClient, ccleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Client",
+		Cmds: []string{
+			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/ip",
+			"github.com/u-root/u-root/cmds/shutdown",
+			"github.com/u-root/u-root/cmds/pxeboot",
+		},
 		Uinit: []string{
 			"ip route add 255.255.255.255/32 dev eth0",
 			"pxeboot --dry-run",
+			"shutdown -h",
 		},
 		Network: network,
 	})

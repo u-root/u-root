@@ -12,7 +12,12 @@ import (
 func TestMountKexec(t *testing.T) {
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
-		Cmds: []string{"github.com/u-root/u-root/integration/testcmd/kexec/uinit"},
+		Cmds: []string{
+			"github.com/u-root/u-root/integration/testcmd/kexec/uinit",
+			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/mount",
+			"github.com/u-root/u-root/cmds/kexec",
+		},
 	})
 	defer cleanup()
 

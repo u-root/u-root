@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"golang.org/x/sys/unix"
 
@@ -16,7 +17,9 @@ import (
 
 // Mount a vfat volume and kexec the kernel within.
 func main() {
-	sh.RunOrDie("mkdir", "/testdata")
+	if err := os.MkdirAll("/testdata", 0755); err != nil {
+		log.Fatal(err)
+	}
 	sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
 
 	// Get and increment the counter.

@@ -63,6 +63,8 @@ type Options struct {
 	Name string
 
 	// Go commands to include in the initramfs for the VM.
+	//
+	// If left empty, all u-root commands will be included.
 	Cmds []string
 
 	// Uinit are commands to execute after init.
@@ -173,7 +175,11 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	}
 
 	var cmds []string
-	cmds = append(cmds, o.Cmds...)
+	if len(o.Cmds) == 0 {
+		cmds = append(cmds, "github.com/u-root/u-root/cmds/*")
+	} else {
+		cmds = append(cmds, o.Cmds...)
+	}
 	// Create a uinit from the commands given.
 	if len(o.Uinit) > 0 {
 		urootPkg, err := o.Env.Package("github.com/u-root/u-root/integration")
@@ -182,7 +188,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		}
 		testDir := filepath.Join(urootPkg.Dir, "testcmd")
 
-		dirpath, err := ioutil.TempDir(testDir, "uinit")
+		dirpath, err := ioutil.TempDir(testDir, "uinit-")
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +239,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		Commands: []uroot.Commands{
 			{
 				Builder:  builder.BusyBox,
-				Packages: append([]string{"github.com/u-root/u-root/cmds/*"}, cmds...),
+				Packages: cmds,
 			},
 		},
 		ExtraFiles:   o.Files,
