@@ -97,7 +97,7 @@ func TestGoTest(t *testing.T) {
 
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
-		Cmds:   []string{"github.com/u-root/u-root/integration/testdata/gotest/uinit"},
+		Cmds:   []string{"github.com/u-root/u-root/integration/testcmd/gotest/uinit"},
 		TmpDir: tmpDir,
 	})
 	defer cleanup()
