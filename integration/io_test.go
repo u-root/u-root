@@ -14,7 +14,7 @@ import (
 func TestIO(t *testing.T) {
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
-		Cmds: []string{"github.com/u-root/u-root/integration/testdata/io/uinit"},
+		Cmds: []string{"github.com/u-root/u-root/integration/testcmd/io/uinit"},
 	})
 	defer cleanup()
 

@@ -28,19 +28,6 @@ import (
 // you, if you want to read the serial logs.
 const logDir = "serial"
 
-type options struct {
-	// uinitName is the name of a directory containing uinit found at
-	// `github.com/u-root/u-root/integration/testdata`.
-	uinitName string
-
-	// extraArgs are extra arguments passed to QEMU.
-	extraArgs []string
-
-	// tmpDir indicates a path to use as a temporary directory for the
-	// test. If this is unset, a new directory is created and returned.
-	tmpDir string
-}
-
 const template = `
 package main
 
@@ -159,7 +146,7 @@ func QEMU(o *Options) (*qemu.QEMU, error) {
 		if err != nil {
 			return nil, err
 		}
-		testDir := filepath.Join(urootPkg.Dir, "testdata")
+		testDir := filepath.Join(urootPkg.Dir, "testcmd")
 
 		dirpath, err := ioutil.TempDir(testDir, "uinit")
 		if err != nil {
@@ -182,7 +169,7 @@ func QEMU(o *Options) (*qemu.QEMU, error) {
 			0755); err != nil {
 			return nil, err
 		}
-		cmds = append(cmds, path.Join("github.com/u-root/u-root/integration/testdata", filepath.Base(dirpath), "uinit"))
+		cmds = append(cmds, path.Join("github.com/u-root/u-root/integration/testcmd", filepath.Base(dirpath), "uinit"))
 	}
 
 	// Create or reuse a temporary directory.
