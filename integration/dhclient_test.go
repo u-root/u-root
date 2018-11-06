@@ -6,69 +6,61 @@ package integration
 
 import (
 	"testing"
+	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
 )
 
 func TestDhclient(t *testing.T) {
-	QEMUTestSetup(t)
-
 	network := qemu.NewNetwork()
-	dhcpServer, err := QEMU(&Options{
-		Cmds: []string{"github.com/u-root/u-root/integration/testcmd/pxeserver"},
+	_, scleanup := QEMUTest(t, &Options{
+		Name: "TestDhclient_Server",
+		Cmds: []string{
+			"github.com/u-root/u-root/cmds/ip",
+			"github.com/u-root/u-root/cmds/shutdown",
+			"github.com/u-root/u-root/integration/testcmd/pxeserver",
+		},
 		Uinit: []string{
 			"ip addr add 192.168.0.1/24 dev eth0",
 			"ip link set eth0 up",
 			"ip route add 255.255.255.255/32 dev eth0",
 			"pxeserver",
+			"shutdown -h",
 		},
-		Logger: &TestLogger{t},
+		Network: network,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	network.NewVM(dhcpServer)
+	defer scleanup()
 
-	dhcpClient, err := QEMU(&Options{
+	dhcpClient, ccleanup := QEMUTest(t, &Options{
+		Name: "TestDhclient_Client",
+		Cmds: []string{
+			"github.com/u-root/u-root/cmds/ip",
+			"github.com/u-root/u-root/cmds/dhclient",
+			"github.com/u-root/u-root/cmds/shutdown",
+		},
 		Uinit: []string{
 			"dhclient -ipv6=false -verbose",
 			"ip a",
+			"shutdown -h",
 		},
-		Logger: &TestLogger{t},
+		Network: network,
+		Timeout: 30 * time.Second,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	network.NewVM(dhcpClient)
-
-	t.Logf("server cmdline:\n%s", dhcpServer.CmdlineQuoted())
-	t.Logf("client cmdline:\n%s", dhcpClient.CmdlineQuoted())
-	if err := dhcpServer.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer dhcpServer.Close()
-
-	if err := dhcpClient.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer dhcpClient.Close()
+	defer ccleanup()
 
 	if err := dhcpClient.Expect("err from done <nil>"); err != nil {
-		//t.Logf("Client out: %v", dhcpClient.Output())
 		t.Fatal(err)
 	}
 
 	if err := dhcpClient.Expect("inet 192.168.1.0"); err != nil {
-		//t.Logf("Client out: %v", dhcpClient.Output())
 		t.Fatal(err)
 	}
 }
 
 func TestPxeboot(t *testing.T) {
-	QEMUTestSetup(t)
-
 	network := qemu.NewNetwork()
-	dhcpServer, err := QEMU(&Options{
+	dhcpServer, scleanup := QEMUTest(t, &Options{
+		Name: "TestPxeboot_Server",
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
@@ -81,39 +73,20 @@ func TestPxeboot(t *testing.T) {
 		Files: []string{
 			"./testdata/pxe:pxeroot",
 		},
+		Network: network,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	network.NewVM(dhcpServer)
+	defer scleanup()
 
-	dhcpClient, err := QEMU(&Options{
+	dhcpClient, ccleanup := QEMUTest(t, &Options{
+		Name: "TestPxeboot_Client",
 		Uinit: []string{
 			"ip route add 255.255.255.255/32 dev eth0",
 			"pxeboot --dry-run",
 		},
+		Network: network,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	network.NewVM(dhcpClient)
-
-	t.Logf("server cmdline:\n%s", dhcpServer.CmdlineQuoted())
-	t.Logf("client cmdline:\n%s", dhcpClient.CmdlineQuoted())
-
-	if err := dhcpServer.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer dhcpServer.Close()
-
-	if err := dhcpClient.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer dhcpClient.Close()
+	defer ccleanup()
 
 	dhcpClient.Expect("")
 	dhcpServer.Expect("")
-
-	//t.Logf("Client out: %v", dhcpClient.Output())
-	//t.Logf("Server out: %v", dhcpServer.Output())
 }

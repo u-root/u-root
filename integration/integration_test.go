@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
@@ -50,27 +51,44 @@ func main() {
 }
 `
 
-func QEMUTestSetup(t *testing.T) {
-	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
-		t.Skip("test is skipped unless UROOT_QEMU is set")
-	}
-	if _, ok := os.LookupEnv("UROOT_KERNEL"); !ok {
-		t.Skip("test is skipped unless UROOT_KERNEL is set")
-	}
-}
-
+// Options are integration test options.
 type Options struct {
-	// Go commands to include.
+	// Env is the Go environment to use to build u-root.
+	Env *golang.Environ
+
+	// Name is the test's name.
+	//
+	// If name is left empty, the calling function's function name will be
+	// used as determined by runtime.Caller
+	Name string
+
+	// Go commands to include in the initramfs for the VM.
 	Cmds []string
 
-	// Commands to execute after init.
+	// Uinit are commands to execute after init.
 	//
-	// Will override any uinit included in Cmds.
-	Uinit   []string
-	Files   []string
-	TmpDir  string
+	// If populated, a uinit.go will be generated from these.
+	Uinit []string
+
+	// Files are files to include in the VMs initramfs.
+	Files []string
+
+	// TmpDir is a temporary directory for build artifacts.
+	TmpDir string
+
+	// LogFile is a file to log serial output to.
+	//
+	// The default is serial/$Name.log
 	LogFile string
-	Logger  logger.Logger
+
+	// Logger logs build statements.
+	Logger logger.Logger
+
+	// Timeout is the timeout for expect statements.
+	Timeout time.Duration
+
+	// Network is the VM's network.
+	Network *qemu.Network
 }
 
 func last(s string) string {
@@ -78,71 +96,87 @@ func last(s string) string {
 	return l[len(l)-1]
 }
 
-type TestLogger struct {
+type testLogger struct {
 	t *testing.T
 }
 
-func (tl TestLogger) Printf(format string, v ...interface{}) {
+func (tl testLogger) Printf(format string, v ...interface{}) {
 	tl.t.Logf(format, v...)
 }
 
-func (tl TestLogger) Print(v ...interface{}) {
+func (tl testLogger) Print(v ...interface{}) {
 	tl.t.Log(v...)
 }
 
-// Returns temporary directory and QEMU instance.
-func QEMUTest(t *testing.T, o *Options) (*qemu.QEMU, func()) {
-	QEMUTestSetup(t)
-
-	// Create file for serial logs.
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		t.Fatalf("could not create serial log directory: %v", err)
-	}
-
+func callerName(depth int) string {
 	// Use the test name as the serial log's file name.
-	pc, _, _, ok := runtime.Caller(1)
+	pc, _, _, ok := runtime.Caller(depth)
 	if !ok {
-		t.Fatal("runtime caller failed")
+		panic("runtime caller failed")
 	}
 	f := runtime.FuncForPC(pc)
+	return last(f.Name())
+}
 
-	if len(o.LogFile) == 0 {
-		o.LogFile = filepath.Join(logDir, fmt.Sprintf("%s.log", last(f.Name())))
+func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
+	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
+		t.Skip("QEMU test is skipped unless UROOT_QEMU is set")
+	}
+	if _, ok := os.LookupEnv("UROOT_KERNEL"); !ok {
+		t.Skip("QEMU test is skipped unless UROOT_KERNEL is set")
+	}
+
+	if len(o.Name) == 0 {
+		o.Name = callerName(2)
 	}
 	if o.Logger == nil {
-		o.Logger = &TestLogger{t}
+		o.Logger = &testLogger{t}
 	}
 
-	q, err := QEMU(o)
+	qOpts, err := QEMU(o)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create QEMU VM %s: %v", o.Name, err)
 	}
 
-	t.Logf("QEMU command line:\n%s", q.CmdlineQuoted())
-	if err := q.Start(); err != nil {
-		t.Fatal(err)
+	vm, err := qemu.Start(qOpts)
+	if err != nil {
+		t.Fatalf("Failed to start QEMU VM %s: %v", o.Name, err)
 	}
+	t.Logf("QEMU command line for %s:\n%s", o.Name, vm.CmdlineQuoted())
 
-	return q, func() {
-		q.Close()
+	return vm, func() {
+		vm.Close()
 		if t.Failed() {
-			t.Log("keeping temp dir: ", q.SharedDir)
+			t.Log("keeping temp dir: ", vm.Options.SharedDir)
 		} else if len(o.TmpDir) == 0 {
-			if err := os.RemoveAll(q.SharedDir); err != nil {
-				t.Logf("failed to remove temporary directory %s: %v", q.SharedDir, err)
+			if err := os.RemoveAll(vm.Options.SharedDir); err != nil {
+				t.Logf("failed to remove temporary directory %s: %v", vm.Options.SharedDir, err)
 			}
 		}
 	}
 }
 
-func QEMU(o *Options) (*qemu.QEMU, error) {
-	env := golang.Default()
-	env.CgoEnabled = false
+func QEMU(o *Options) (*qemu.Options, error) {
+	if o.Env == nil {
+		env := golang.Default()
+		o.Env = &env
+		o.Env.CgoEnabled = false
+	}
+
+	if len(o.LogFile) == 0 {
+		// Create file for serial logs.
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			return nil, fmt.Errorf("could not create serial log directory: %v", err)
+		}
+
+		o.LogFile = filepath.Join(logDir, fmt.Sprintf("%s.log", o.Name))
+	}
 
 	var cmds []string
 	cmds = append(cmds, o.Cmds...)
+	// Create a uinit from the commands given.
 	if len(o.Uinit) > 0 {
-		urootPkg, err := env.Package("github.com/u-root/u-root/integration")
+		urootPkg, err := o.Env.Package("github.com/u-root/u-root/integration")
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +229,7 @@ func QEMU(o *Options) (*qemu.QEMU, error) {
 
 	// Build u-root
 	opts := uroot.Opts{
-		Env: env,
+		Env: *o.Env,
 		Commands: []uroot.Commands{
 			{
 				Builder:  builder.BusyBox,
@@ -227,11 +261,12 @@ func QEMU(o *Options) (*qemu.QEMU, error) {
 		}
 	}
 
-	// Start QEMU
-	return &qemu.QEMU{
+	return &qemu.Options{
 		Initramfs:    outputFile,
 		Kernel:       bzImage,
 		SerialOutput: logFile,
 		SharedDir:    tmpDir,
+		Timeout:      o.Timeout,
+		Network:      o.Network,
 	}, nil
 }
