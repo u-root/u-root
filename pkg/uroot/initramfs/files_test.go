@@ -17,7 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
-func TestFilesAddFile(t *testing.T) {
+func TestFilesAddFileNoFollow(t *testing.T) {
 	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
 	if err != nil {
 		t.Error(err)
@@ -30,8 +30,14 @@ func TestFilesAddFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	os.Create(filepath.Join(dir, "foo"))
+	dir2, err := ioutil.TempDir("", "archive-add-files")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir2)
+
 	os.Create(filepath.Join(dir, "foo2"))
+	os.Symlink(filepath.Join(dir, "foo2"), filepath.Join(dir2, "foo3"))
 
 	for i, tt := range []struct {
 		name        string
@@ -51,6 +57,92 @@ func TestFilesAddFile(t *testing.T) {
 			result: &Files{
 				Files: map[string]string{
 					"bar/foo": regularFile.Name(),
+				},
+				Records: map[string]cpio.Record{},
+			},
+		},
+		{
+			name: "add symlinked file, NOT following",
+			af:   NewFiles(),
+			src:  filepath.Join(dir2, "foo3"),
+			dest: "bar/foo",
+			result: &Files{
+				Files: map[string]string{
+					"bar/foo": filepath.Join(dir2, "foo3"),
+				},
+				Records: map[string]cpio.Record{},
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("Test %02d: %s", i, tt.name), func(t *testing.T) {
+			err := tt.af.AddFileNoFollow(tt.src, tt.dest)
+			if err != nil && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("Error is %v, does not contain %v", err, tt.errContains)
+			}
+			if err == nil && len(tt.errContains) > 0 {
+				t.Errorf("Got no error, want %v", tt.errContains)
+			}
+
+			if tt.result != nil && !reflect.DeepEqual(tt.af, tt.result) {
+				t.Errorf("got %v, want %v", tt.af, tt.result)
+			}
+		})
+	}
+}
+
+func TestFilesAddFile(t *testing.T) {
+	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(regularFile.Name())
+
+	dir, err := ioutil.TempDir("", "archive-add-files")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir)
+
+	dir2, err := ioutil.TempDir("", "archive-add-files")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir2)
+
+	os.Create(filepath.Join(dir, "foo"))
+	os.Create(filepath.Join(dir, "foo2"))
+	os.Symlink(filepath.Join(dir, "foo2"), filepath.Join(dir2, "foo3"))
+
+	for i, tt := range []struct {
+		name        string
+		af          *Files
+		src         string
+		dest        string
+		result      *Files
+		errContains string
+	}{
+		{
+			name: "just add a file",
+			af:   NewFiles(),
+
+			src:  regularFile.Name(),
+			dest: "bar/foo",
+
+			result: &Files{
+				Files: map[string]string{
+					"bar/foo": regularFile.Name(),
+				},
+				Records: map[string]cpio.Record{},
+			},
+		},
+		{
+			name: "add symlinked file, following",
+			af:   NewFiles(),
+			src:  filepath.Join(dir2, "foo3"),
+			dest: "bar/foo",
+			result: &Files{
+				Files: map[string]string{
+					"bar/foo": filepath.Join(dir, "foo2"),
 				},
 				Records: map[string]cpio.Record{},
 			},
