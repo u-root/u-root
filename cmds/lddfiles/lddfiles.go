@@ -32,9 +32,6 @@ func main() {
 		log.Fatalf("ldd: %v", err)
 	}
 
-	for _, arg := range os.Args[1:] {
-		fmt.Printf("%s\n", arg)
-	}
 	for _, dep := range l {
 		fmt.Printf("%s\n", dep.FullName)
 	}
