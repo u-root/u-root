@@ -42,7 +42,7 @@ COPY config_linux4.17_amd64.txt .config
 # Build linux
 RUN set -eux;                                                             \
     git clone --depth=1 --branch=v4.17 https://github.com/torvalds/linux; \
-    sudo chmod 0444 .config;                                               \
+    sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
     make -j$(($(nproc) * 2 + 1));                                         \
