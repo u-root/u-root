@@ -110,6 +110,11 @@ func Ldd(names []string) ([]*FileInfo, error) {
 		libs    []*FileInfo
 	)
 	for _, n := range names {
+		if err := follow(n, list); err != nil {
+			return nil, err
+		}
+	}
+	for _, n := range names {
 		r, err := os.Open(n)
 		if err != nil {
 			return nil, err
