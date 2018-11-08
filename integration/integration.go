@@ -278,5 +278,8 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		SharedDir:    tmpDir,
 		Timeout:      o.Timeout,
 		Network:      o.Network,
+		ExtraArgs: []string{
+			"-device", "virtio-rng-pci",
+		},
 	}, nil
 }
