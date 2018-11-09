@@ -21,9 +21,10 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"github.com/google/goexpect"
+	expect "github.com/google/goexpect"
 )
 
 // DefaultTimeout for `Expect` and `ExpectRE` functions.
@@ -88,8 +89,11 @@ type Device interface {
 // Network uses the QEMU socket mechanism to connect multiple VMs with a simple
 // TCP socket.
 type Network struct {
-	port   uint16
-	numVMs uint8
+	port uint16
+
+	// numVMs must be atomically accessed so VMs can be started in parallel
+	// in goroutines.
+	numVMs uint32
 }
 
 func NewNetwork() *Network {
@@ -98,33 +102,23 @@ func NewNetwork() *Network {
 	}
 }
 
-func (n *Network) newVM() *networkState {
-	num := n.numVMs
-	n.numVMs++
-	return &networkState{
-		connect: num != 0,
-		mac:     net.HardwareAddr{0x0e, 0x00, 0x00, 0x00, 0x00, byte(num)},
-		port:    n.port,
-	}
-}
-
 // Cmdline implements Device.
 func (n *Network) Cmdline() []string {
-	net := n.newVM()
-	args := []string{"-net", fmt.Sprintf("nic,macaddr=%s", net.mac)}
-	if net.connect {
-		args = append(args, "-net", fmt.Sprintf("socket,connect=:%d", net.port))
+	if n == nil {
+		return nil
+	}
+
+	newNum := atomic.AddUint32(&n.numVMs, 1)
+	num := newNum - 1
+	mac := net.HardwareAddr{0x0e, 0x00, 0x00, 0x00, 0x00, byte(num)}
+
+	args := []string{"-net", fmt.Sprintf("nic,macaddr=%s", mac)}
+	if num != 0 {
+		args = append(args, "-net", fmt.Sprintf("socket,connect=:%d", n.port))
 	} else {
-		args = append(args, "-net", fmt.Sprintf("socket,listen=:%d", net.port))
+		args = append(args, "-net", fmt.Sprintf("socket,listen=:%d", n.port))
 	}
 	return args
-}
-
-type networkState struct {
-	// Whether to connect or listen.
-	connect bool
-	mac     net.HardwareAddr
-	port    uint16
 }
 
 // ReadOnlyDirectory is a Device that exposes a directory as a /dev/sda1
