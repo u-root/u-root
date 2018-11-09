@@ -36,6 +36,7 @@ var (
 	defaultShell                            *string
 	useExistingInit                         *bool
 	fourbins                                *bool
+	noCommands                              *bool
 	extraFiles                              multiFlag
 )
 
@@ -52,6 +53,7 @@ func init() {
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
 	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
+	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
@@ -82,55 +84,9 @@ func Main() error {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
-	var b builder.Builder
-	switch *build {
-	case "bb":
-		b = builder.BBBuilder{}
-	case "binary":
-		b = builder.BinaryBuilder{}
-	case "source":
-		b = builder.SourceBuilder{
-			FourBins: *fourbins,
-		}
-	default:
-		return fmt.Errorf("could not find builder %q", *build)
-	}
-
 	archiver, err := initramfs.GetArchiver(*format)
 	if err != nil {
 		return err
-	}
-
-	tempDir := *tmpDir
-	if tempDir == "" {
-		var err error
-		tempDir, err = ioutil.TempDir("", "u-root")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(tempDir)
-	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(tempDir, 0755); err != nil {
-			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
-		}
-	}
-
-	// Resolve globs into package imports.
-	//
-	// Currently allowed formats:
-	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
-	//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
-	var pkgs []string
-	for _, a := range flag.Args() {
-		p, ok := templates[a]
-		if !ok {
-			pkgs = append(pkgs, a)
-			continue
-		}
-		pkgs = append(pkgs, p...)
-	}
-	if len(pkgs) == 0 {
-		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
@@ -152,21 +108,72 @@ func Main() error {
 		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
-	initCommand := *initCmd
-	if *fourbins && *build == "source" {
-		initCommand = "/go/bin/go"
+	tempDir := *tmpDir
+	if tempDir == "" {
+		var err error
+		tempDir, err = ioutil.TempDir("", "u-root")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tempDir)
+	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(tempDir, 0755); err != nil {
+			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
+		}
+	}
+
+	var (
+		c           []uroot.Commands
+		initCommand = *initCmd
+	)
+	if !*noCommands {
+		var b builder.Builder
+		switch *build {
+		case "bb":
+			b = builder.BBBuilder{}
+		case "binary":
+			b = builder.BinaryBuilder{}
+		case "source":
+			b = builder.SourceBuilder{
+				FourBins: *fourbins,
+			}
+		default:
+			return fmt.Errorf("could not find builder %q", *build)
+		}
+
+		// Resolve globs into package imports.
+		//
+		// Currently allowed formats:
+		//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
+		//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
+		var pkgs []string
+		for _, a := range flag.Args() {
+			p, ok := templates[a]
+			if !ok {
+				pkgs = append(pkgs, a)
+				continue
+			}
+			pkgs = append(pkgs, p...)
+		}
+		if len(pkgs) == 0 {
+			pkgs = []string{"github.com/u-root/u-root/cmds/*"}
+		}
+
+		if *fourbins && *build == "source" {
+			initCommand = "/go/bin/go"
+		}
+
+		// The command-line tool only allows specifying one build mode
+		// right now.
+		c = append(c, uroot.Commands{
+			Builder:  b,
+			Packages: pkgs,
+		})
 	}
 
 	opts := uroot.Opts{
-		Env: env,
-		// The command-line tool only allows specifying one build mode
-		// right now.
-		Commands: []uroot.Commands{
-			{
-				Builder:  b,
-				Packages: pkgs,
-			},
-		},
+		Env:             env,
+		Commands:        c,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,
