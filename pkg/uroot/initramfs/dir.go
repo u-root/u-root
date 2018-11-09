@@ -51,7 +51,7 @@ type dirWriter struct {
 
 // WriteRecord implements Writer.WriteRecord.
 func (dw dirWriter) WriteRecord(r cpio.Record) error {
-	return cpio.CreateFileInRoot(r, dw.dir)
+	return cpio.CreateFileInRoot(r, dw.dir, false)
 }
 
 // Finish implements Writer.Finish.

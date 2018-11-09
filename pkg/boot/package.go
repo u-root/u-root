@@ -78,7 +78,7 @@ func (p *Package) Unpack(rr cpio.RecordReader, pk *rsa.PublicKey) error {
 	}
 
 	recs := NewMeasuringReader(rr)
-	a, err := cpio.ReadArchive(recs)
+	a, err := cpio.ArchiveFromReader(recs)
 	if err != nil {
 		return err
 	}

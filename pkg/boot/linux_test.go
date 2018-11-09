@@ -10,11 +10,12 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 func imageEqual(li1, li2 *LinuxImage) bool {
-	return cpio.ReaderAtEqual(li1.Kernel, li2.Kernel) &&
-		cpio.ReaderAtEqual(li1.Kernel, li2.Kernel) &&
+	return uio.ReaderAtEqual(li1.Kernel, li2.Kernel) &&
+		uio.ReaderAtEqual(li1.Kernel, li2.Kernel) &&
 		li1.Cmdline == li2.Cmdline
 }
 

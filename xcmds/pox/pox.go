@@ -107,7 +107,7 @@ func pox() error {
 			if err != nil {
 				return err
 			}
-			if err := cpio.CreateFileInRoot(r, dir); err != nil {
+			if err := cpio.CreateFileInRoot(r, dir, true); err != nil {
 				return err
 			}
 
