@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 func TestFilesAddFileNoFollow(t *testing.T) {
@@ -448,7 +449,7 @@ func sameNameModeContent(r1 cpio.Record, r2 cpio.Record) bool {
 	if r1.Name != r2.Name || r1.Mode != r2.Mode {
 		return false
 	}
-	return cpio.ReaderAtEqual(r1.ReaderAt, r2.ReaderAt)
+	return uio.ReaderAtEqual(r1.ReaderAt, r2.ReaderAt)
 }
 
 func TestOptsWrite(t *testing.T) {
