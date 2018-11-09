@@ -156,6 +156,15 @@ func (VirtioRandom) Cmdline() []string {
 	return []string{"-device", "virtio-rng-pci"}
 }
 
+// ArbitraryArgs allows users to add arbitrary arguments to the QEMU command
+// line.
+type ArbitraryArgs []string
+
+// Cmdline implements Device.
+func (aa ArbitraryArgs) Cmdline() []string {
+	return aa
+}
+
 // cmdline returns the command line arguments used to start QEMU. These
 // arguments are derived from the given QEMU struct.
 func cmdline(o *Options) []string {
