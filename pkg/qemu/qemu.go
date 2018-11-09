@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package qemu is suitable for running QEMU-based integration tests.
+// Package qemu provides a Go API for starting QEMU VMs.
+//
+// qemu is mainly suitable for running QEMU-based integration tests.
 //
 // The environment variable `UROOT_QEMU` overrides the path to QEMU and the
 // first few arguments (defaults to "qemu"). For example, I use:
@@ -31,6 +33,60 @@ var DefaultTimeout = 7 * time.Second
 // QEMU on a slow machine.
 var TimeoutMultiplier = 2.0
 
+// Options are VM start-up parameters.
+type Options struct {
+	// QEMUPath is the path to the QEMU binary to invoke.
+	//
+	// If left unspecified, the UROOT_QEMU env var will be used.
+	// If the env var is unspecified, "qemu" is the default.
+	QEMUPath string
+
+	// Path to the kernel to boot.
+	Kernel string
+
+	// Path to the initramfs.
+	Initramfs string
+
+	// Extra kernel command-line arguments.
+	KernelArgs string
+
+	// Where to send serial output.
+	SerialOutput io.WriteCloser
+
+	// Timeout is the expect timeout.
+	Timeout time.Duration
+
+	// Devices are devices to expose to the QEMU VM.
+	Devices []Device
+}
+
+// Start starts a QEMU VM.
+func (o *Options) Start() (*VM, error) {
+	cmdline := cmdline(o)
+
+	gExpect, _, err := expect.SpawnWithArgs(cmdline, -1,
+		expect.Tee(o.SerialOutput),
+		expect.CheckDuration(2*time.Millisecond))
+	if err != nil {
+		return nil, err
+	}
+	return &VM{
+		Options: o,
+		cmdline: cmdline,
+		gExpect: gExpect,
+	}, nil
+}
+
+// Device is a QEMU device to expose to a VM.
+type Device interface {
+	// Cmdline returns arguments to append to the QEMU command line for this device.
+	Cmdline() []string
+}
+
+// Network is a Device that can connect multiple QEMU VMs to each other.
+//
+// Network uses the QEMU socket mechanism to connect multiple VMs with a simple
+// TCP socket.
 type Network struct {
 	port   uint16
 	numVMs uint8
@@ -52,6 +108,18 @@ func (n *Network) newVM() *networkState {
 	}
 }
 
+// Cmdline implements Device.
+func (n *Network) Cmdline() []string {
+	net := n.newVM()
+	args := []string{"-net", fmt.Sprintf("nic,macaddr=%s", net.mac)}
+	if net.connect {
+		args = append(args, "-net", fmt.Sprintf("socket,connect=:%d", net.port))
+	} else {
+		args = append(args, "-net", fmt.Sprintf("socket,listen=:%d", net.port))
+	}
+	return args
+}
+
 type networkState struct {
 	// Whether to connect or listen.
 	connect bool
@@ -59,43 +127,49 @@ type networkState struct {
 	port    uint16
 }
 
-// Options is filled and pass to `Start()`.
-type Options struct {
-	// Path to the bzImage kernel
-	Kernel string
+// ReadOnlyDirectory is a Device that exposes a directory as a /dev/sda1
+// readonly vfat partition in the VM.
+type ReadOnlyDirectory struct {
+	// Dir is the directory to expose as a read-only vfat partition.
+	Dir string
+}
 
-	// Path to the initramfs.
-	Initramfs string
+// Cmdline implements Device.
+func (rod ReadOnlyDirectory) Cmdline() []string {
+	if len(rod.Dir) == 0 {
+		return nil
+	}
 
-	// Extra kernel arguments.
-	KernelArgs string
+	// Expose the temp directory to QEMU as /dev/sda1
+	return []string{
+		"-drive", fmt.Sprintf("file=fat:ro:%s,if=none,id=tmpdir", rod.Dir),
+		"-device", "ich9-ahci,id=ahci",
+		"-device", "ide-drive,drive=tmpdir,bus=ahci.0",
+	}
+}
 
-	// SharedDir is a directory that will be mountable inside the VM as
-	// /dev/sda1.
-	SharedDir string
+// VirtioRandom exposes a PCI random number generator Device to the QEMU VM.
+type VirtioRandom struct{}
 
-	// ExtraArgs are additional QEMU arguments.
-	ExtraArgs []string
-
-	// Where to send serial output.
-	SerialOutput io.WriteCloser
-
-	// Timeout is the expect timeout.
-	Timeout time.Duration
-
-	// Network to expose inside the VM.
-	Network *Network
+// Cmdline implements Device.
+func (VirtioRandom) Cmdline() []string {
+	return []string{"-device", "virtio-rng-pci"}
 }
 
 // cmdline returns the command line arguments used to start QEMU. These
 // arguments are derived from the given QEMU struct.
-func cmdline(o *Options, net *networkState) []string {
-	// Read first few arguments for env.
-	env := os.Getenv("UROOT_QEMU")
-	if env == "" {
-		env = "qemu" // default
+func cmdline(o *Options) []string {
+	var args []string
+	if len(o.QEMUPath) > 0 {
+		args = append(args, o.QEMUPath)
+	} else {
+		// Read first few arguments for env.
+		env := os.Getenv("UROOT_QEMU")
+		if env == "" {
+			env = "qemu" // default
+		}
+		args = append(args, strings.Fields(env)...)
 	}
-	args := strings.Fields(env)
 
 	// Disable graphics because we are using serial.
 	args = append(args, "-nographic")
@@ -117,24 +191,12 @@ func cmdline(o *Options, net *networkState) []string {
 		args = append(args, "-initrd", o.Initramfs)
 	}
 
-	if len(o.SharedDir) != 0 {
-		// Expose the temp directory to QEMU as /dev/sda1
-		args = append(args, "-drive", fmt.Sprintf("file=fat:ro:%s,if=none,id=tmpdir", o.SharedDir))
-		args = append(args, "-device", "ich9-ahci,id=ahci")
-		args = append(args, "-device", "ide-drive,drive=tmpdir,bus=ahci.0")
-	}
-
-	if net != nil {
-		args = append(args, "-net", fmt.Sprintf("nic,macaddr=%s", net.mac))
-		if net.connect {
-			args = append(args, "-net", fmt.Sprintf("socket,connect=:%d", net.port))
-		} else {
-			args = append(args, "-net", fmt.Sprintf("socket,listen=:%d", net.port))
+	for _, dev := range o.Devices {
+		if dev != nil {
+			if c := dev.Cmdline(); c != nil {
+				args = append(args, c...)
+			}
 		}
-	}
-
-	if o.ExtraArgs != nil {
-		args = append(args, o.ExtraArgs...)
 	}
 	return args
 }
@@ -143,31 +205,7 @@ func cmdline(o *Options, net *networkState) []string {
 type VM struct {
 	Options *Options
 	cmdline []string
-	network *networkState
 	gExpect *expect.GExpect
-}
-
-// Start a QEMU VM.
-func (o *Options) Start() (*VM, error) {
-	var net *networkState
-	if o.Network != nil {
-		net = o.Network.newVM()
-	}
-
-	cmdline := cmdline(o, net)
-
-	gExpect, _, err := expect.SpawnWithArgs(cmdline, -1,
-		expect.Tee(o.SerialOutput),
-		expect.CheckDuration(2*time.Millisecond))
-	if err != nil {
-		return nil, err
-	}
-	return &VM{
-		Options: o,
-		cmdline: cmdline,
-		network: net,
-		gExpect: gExpect,
-	}, nil
 }
 
 func (v *VM) Cmdline() []string {
