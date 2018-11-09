@@ -148,11 +148,12 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 
 	return vm, func() {
 		vm.Close()
+		dir := vm.Options.Devices[0].(qemu.ReadOnlyDirectory).Dir
 		if t.Failed() {
-			t.Log("keeping temp dir: ", vm.Options.SharedDir)
+			t.Log("keeping temp dir: ", dir)
 		} else if len(o.TmpDir) == 0 {
-			if err := os.RemoveAll(vm.Options.SharedDir); err != nil {
-				t.Logf("failed to remove temporary directory %s: %v", vm.Options.SharedDir, err)
+			if err := os.RemoveAll(dir); err != nil {
+				t.Logf("failed to remove temporary directory %s: %v", dir, err)
 			}
 		}
 	}
@@ -275,11 +276,11 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		Initramfs:    outputFile,
 		Kernel:       bzImage,
 		SerialOutput: logFile,
-		SharedDir:    tmpDir,
 		Timeout:      o.Timeout,
-		Network:      o.Network,
-		ExtraArgs: []string{
-			"-device", "virtio-rng-pci",
+		Devices: []qemu.Device{
+			qemu.ReadOnlyDirectory{Dir: tmpDir},
+			qemu.VirtioRandom{},
+			o.Network,
 		},
 	}, nil
 }
