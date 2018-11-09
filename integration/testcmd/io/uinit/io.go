@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"golang.org/x/sys/unix"
 )
 
 // Prints the string "UART TEST\r\n" using IO.
@@ -24,4 +26,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+
+	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 }

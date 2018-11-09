@@ -48,13 +48,7 @@ func (af *Files) sortedKeys() []string {
 	return keys
 }
 
-// AddFile adds a host file at src into the archive at dest.
-//
-// If src is a directory, it and its children will be added to the archive
-// relative to dest.
-//
-// Duplicate files with identical content will be silently ignored.
-func (af *Files) AddFile(src string, dest string) error {
+func (af *Files) addFile(src string, dest string, follow bool) error {
 	src = filepath.Clean(src)
 	dest = path.Clean(dest)
 	if path.IsAbs(dest) {
@@ -71,7 +65,7 @@ func (af *Files) AddFile(src string, dest string) error {
 	// Recursively add children.
 	if sInfo.Mode().IsDir() {
 		err := children(src, func(name string) error {
-			return af.AddFile(filepath.Join(src, name), filepath.Join(dest, name))
+			return af.addFile(filepath.Join(src, name), filepath.Join(dest, name), follow)
 		})
 		if err != nil {
 			return err
@@ -87,6 +81,13 @@ func (af *Files) AddFile(src string, dest string) error {
 		return fmt.Errorf("record for %q already exists in archive: %v", dest, record)
 	}
 
+	if follow && (sInfo.Mode()&os.ModeType == os.ModeSymlink) {
+		src, err = filepath.EvalSymlinks(src)
+		if err != nil {
+			return err
+		}
+	}
+
 	if srcFile, ok := af.Files[dest]; ok {
 		// Just a duplicate.
 		if src == srcFile {
@@ -97,6 +98,28 @@ func (af *Files) AddFile(src string, dest string) error {
 
 	af.Files[dest] = src
 	return nil
+}
+
+// AddFile adds a host file at src into the archive at dest.
+// It follows symlinks.
+//
+// If src is a directory, it and its children will be added to the archive
+// relative to dest.
+//
+// Duplicate files with identical content will be silently ignored.
+func (af *Files) AddFile(src string, dest string) error {
+	return af.addFile(src, dest, true)
+}
+
+// AddFileNoFollow adds a host file at src into the archive at dest.
+// It does not follow symlinks.
+//
+// If src is a directory, it and its children will be added to the archive
+// relative to dest.
+//
+// Duplicate files with identical content will be silently ignored.
+func (af *Files) AddFileNoFollow(src string, dest string) error {
+	return af.addFile(src, dest, false)
 }
 
 // AddRecord adds a cpio.Record into the archive at `r.Name`.

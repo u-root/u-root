@@ -8,13 +8,18 @@ import (
 	"testing"
 )
 
-// TestMountKExec runs an init which mounts a filesystem and kexecs a kernel.
-func TestMountKExec(t *testing.T) {
+// TestMountKexec runs an init which mounts a filesystem and kexecs a kernel.
+func TestMountKexec(t *testing.T) {
 	// Create the CPIO and start QEMU.
-	tmpDir, q := testWithQEMU(t, options{
-		uinitName: "kexec",
+	q, cleanup := QEMUTest(t, &Options{
+		Cmds: []string{
+			"github.com/u-root/u-root/integration/testcmd/kexec/uinit",
+			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/mount",
+			"github.com/u-root/u-root/cmds/kexec",
+		},
 	})
-	defer cleanup(t, tmpDir, q)
+	defer cleanup()
 
 	if err := q.Expect("KEXECCOUNTER=0"); err != nil {
 		t.Fatal(err)
