@@ -9,40 +9,43 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type makeit struct {
+type makeIt struct {
 	n string      // name
 	m os.FileMode // mode
 	c []byte      // content
 }
 
-var old = makeit{
+var hiFileContent = []byte("hi")
+
+var old = makeIt{
 	n: "old.txt",
 	m: 0777,
 	c: []byte("old"),
 }
 
-var new = makeit{
+var new = makeIt{
 	n: "new.txt",
 	m: 0777,
 	c: []byte("new"),
 }
 
-var tests = []makeit{
+var tests = []makeIt{
 	{
 		n: "hi1.txt",
 		m: 0666,
-		c: []byte("hi"),
+		c: hiFileContent,
 	},
 	{
 		n: "hi2.txt",
 		m: 0777,
-		c: []byte("hi"),
+		c: hiFileContent,
 	},
 	old,
 	new,
@@ -68,6 +71,14 @@ func setup() (string, error) {
 	return d, nil
 }
 
+func getInode(file string) (uint64, error) {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(file, &stat); err != nil {
+		return 0, err
+	}
+	return stat.Ino, nil
+}
+
 func TestMv(t *testing.T) {
 	d, err := setup()
 	if err != nil {
@@ -77,11 +88,37 @@ func TestMv(t *testing.T) {
 
 	t.Logf("Renaming file...")
 	{
+		originalInode, err := getInode(filepath.Join(d, "hi1.txt"))
+		if err != nil {
+			t.Error(err)
+		}
+
 		files := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi4.txt")}
 		res := testutil.Command(t, files...)
 		_, err = res.CombinedOutput()
 		if err = testutil.IsExitCode(err, 0); err != nil {
 			t.Error(err)
+		}
+
+		t.Logf("Verify renamed file integrity...")
+		{
+			content, err := ioutil.ReadFile(filepath.Join(d, "hi4.txt"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			if !bytes.Equal(hiFileContent, content) {
+				t.Errorf("Expected file content to equal %s, got %s", hiFileContent, content)
+			}
+
+			movedInode, err := getInode(filepath.Join(d, "hi4.txt"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			if originalInode != movedInode {
+				t.Errorf("Expected inode to equal. Expected %d, got %d", originalInode, movedInode)
+			}
 		}
 	}
 
@@ -89,11 +126,51 @@ func TestMv(t *testing.T) {
 
 	t.Logf("Moving files to directory...")
 	{
+		originalInode, err := getInode(filepath.Join(d, "hi2.txt"))
+		if err != nil {
+			t.Error(err)
+		}
+
+		originalInodeFour, err := getInode(filepath.Join(d, "hi4.txt"))
+		if err != nil {
+			t.Error(err)
+		}
+
 		files := []string{filepath.Join(d, "hi2.txt"), filepath.Join(d, "hi4.txt"), dsub}
 		res := testutil.Command(t, files...)
 		_, err = res.CombinedOutput()
 		if err = testutil.IsExitCode(err, 0); err != nil {
 			t.Error(err)
+		}
+
+		t.Logf("Verify moved files into directory file integrity...")
+		{
+			content, err := ioutil.ReadFile(filepath.Join(dsub, "hi4.txt"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			if !bytes.Equal(hiFileContent, content) {
+				t.Errorf("Expected file content to equal %s, got %s", hiFileContent, content)
+			}
+
+			movedInode, err := getInode(filepath.Join(dsub, "hi2.txt"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			movedInodeFour, err := getInode(filepath.Join(dsub, "hi4.txt"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			if originalInode != movedInode {
+				t.Errorf("Expected inode to equal. Expected %d, got %d", originalInode, movedInode)
+			}
+
+			if originalInodeFour != movedInodeFour {
+				t.Errorf("Expected inode to equal. Expected %d, got %d", originalInodeFour, movedInodeFour)
+			}
 		}
 	}
 }
