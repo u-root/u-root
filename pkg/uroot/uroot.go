@@ -206,7 +206,7 @@ func CreateInitramfs(logger logger.Logger, opts Opts) error {
 			BinaryDir: cmds.TargetDir(),
 		}
 		if err := cmds.Builder.Build(files, bOpts); err != nil {
-			return fmt.Errorf("error building %#v: %v", bOpts, err)
+			return fmt.Errorf("error building: %v", err)
 		}
 	}
 
@@ -234,16 +234,18 @@ func CreateInitramfs(logger logger.Logger, opts Opts) error {
 	}
 
 	if len(opts.InitCmd) > 0 {
-		target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands)
-		if err != nil {
-			return fmt.Errorf("could not find init: %v", err)
-		}
-		rtarget, err := filepath.Rel("/", target)
-		if err != nil {
-			return err
-		}
-		if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
-			return err
+		if target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands); err != nil {
+			if opts.Commands != nil {
+				return fmt.Errorf("could not find init: %v", err)
+			}
+		} else {
+			rtarget, err := filepath.Rel("/", target)
+			if err != nil {
+				return err
+			}
+			if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
+				return err
+			}
 		}
 	}
 

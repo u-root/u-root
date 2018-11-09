@@ -236,6 +236,14 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "init specified, but not in commands",
 			opts: Opts{
+				Commands: []Commands{
+					{
+						Builder: builder.Binary,
+						Packages: []string{
+							"github.com/u-root/u-root/cmds/ls",
+						},
+					},
+				},
 				Env:          golang.Default(),
 				TempDir:      dir,
 				DefaultShell: "zoocar",
