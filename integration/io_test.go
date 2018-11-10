@@ -13,10 +13,14 @@ import (
 // TestIO tests the string "UART TEST" is written to the serial port on 0x3f8.
 func TestIO(t *testing.T) {
 	// Create the CPIO and start QEMU.
-	tmpDir, q := testWithQEMU(t, options{
-		uinitName: "io",
+	q, cleanup := QEMUTest(t, &Options{
+		Cmds: []string{
+			"github.com/u-root/u-root/integration/testcmd/io/uinit",
+			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/io",
+		},
 	})
-	defer cleanup(t, tmpDir, q)
+	defer cleanup()
 
 	if err := q.Expect("UART TEST"); err != nil {
 		t.Fatal(`expected "UART TEST", got error: `, err)

@@ -316,8 +316,9 @@ func Main() error {
 		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
 
+	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Open the target initramfs file.
-	w, err := archiver.OpenWriter(*outputPath, env.GOOS, env.GOARCH)
+	w, err := archiver.OpenWriter(logger, *outputPath, env.GOOS, env.GOARCH)
 	if err != nil {
 		return err
 	}
@@ -357,6 +358,5 @@ func Main() error {
 		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
 	}
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	return uroot.CreateInitramfs(logger, opts)
 }

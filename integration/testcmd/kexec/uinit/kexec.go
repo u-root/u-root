@@ -7,6 +7,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/sh"
@@ -14,7 +17,9 @@ import (
 
 // Mount a vfat volume and kexec the kernel within.
 func main() {
-	sh.RunOrDie("mkdir", "/testdata")
+	if err := os.MkdirAll("/testdata", 0755); err != nil {
+		log.Fatal(err)
+	}
 	sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
 
 	// Get and increment the counter.
@@ -31,5 +36,7 @@ func main() {
 			"-i", "/testdata/initramfs.cpio",
 			"-c", cmdLine,
 			"/testdata/bzImage")
+	} else {
+		unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 	}
 }

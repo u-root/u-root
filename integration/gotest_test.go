@@ -83,7 +83,6 @@ func TestGoTest(t *testing.T) {
 	for _, pkg := range pkgs {
 		testFile := filepath.Join(testDir, path.Base(pkg))
 		cmd := exec.Command("go", "test", "-ldflags", "-s -w", "-c", pkg, "-o", testFile)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("could not build %s: %v", pkg, err)
 		}
@@ -97,11 +96,19 @@ func TestGoTest(t *testing.T) {
 	}
 
 	// Create the CPIO and start QEMU.
-	tmpDir, q := testWithQEMU(t, options{
-		uinitName: "gotest",
-		tmpDir:    tmpDir,
+	q, cleanup := QEMUTest(t, &Options{
+		Cmds: []string{
+			"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
+			"github.com/u-root/u-root/cmds/init",
+			// Used by gotest/uinit.
+			"github.com/u-root/u-root/cmds/mkdir",
+			"github.com/u-root/u-root/cmds/mount",
+			// Used by an elvish test.
+			"github.com/u-root/u-root/cmds/ls",
+		},
+		TmpDir: tmpDir,
 	})
-	defer cleanup(t, tmpDir, q)
+	defer cleanup()
 
 	// Tests are run and checked in sorted order.
 	bases := []string{}

@@ -4,6 +4,8 @@
 *.so
 *~
 
+bazel-*
+
 /bbsh
 /bb
 /u-root
