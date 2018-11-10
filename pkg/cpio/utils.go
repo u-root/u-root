@@ -209,7 +209,7 @@ func Normalize(path string) string {
 		}
 		return rel
 	}
-	return path
+	return filepath.Clean(path)
 }
 
 // MakeReproducible changes any fields in a Record such that if we run cpio
