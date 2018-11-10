@@ -110,6 +110,10 @@ func (n *Network) Cmdline() []string {
 
 	newNum := atomic.AddUint32(&n.numVMs, 1)
 	num := newNum - 1
+
+	// MAC for the virtualized NIC.
+	//
+	// This is from the range of locally administered address ranges.
 	mac := net.HardwareAddr{0x0e, 0x00, 0x00, 0x00, 0x00, byte(num)}
 
 	args := []string{"-net", fmt.Sprintf("nic,macaddr=%s", mac)}
