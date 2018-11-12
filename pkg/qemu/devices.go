@@ -2,16 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package qemu provides a Go API for starting QEMU VMs.
-//
-// qemu is mainly suitable for running QEMU-based integration tests.
-//
-// The environment variable `UROOT_QEMU` overrides the path to QEMU and the
-// first few arguments (defaults to "qemu"). For example, I use:
-//
-//     UROOT_QEMU='qemu-system-x86_64 -L . -m 4096 -enable-kvm'
-//
-// For CI, this environment variable is set in `.circleci/images/integration/Dockerfile`.
 package qemu
 
 import (
