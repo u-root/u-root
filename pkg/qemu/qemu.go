@@ -61,9 +61,9 @@ type Options struct {
 
 // Start starts a QEMU VM.
 func (o *Options) Start() (*VM, error) {
-	cmdline := cmdline(o)
+	cmdline := o.Cmdline()
 
-	gExpect, _, err := expect.SpawnWithArgs(cmdline, -1,
+	gExpect, ch, err := expect.SpawnWithArgs(cmdline, -1,
 		expect.Tee(o.SerialOutput),
 		expect.CheckDuration(2*time.Millisecond))
 	if err != nil {
@@ -71,6 +71,7 @@ func (o *Options) Start() (*VM, error) {
 	}
 	return &VM{
 		Options: o,
+		errCh:   ch,
 		cmdline: cmdline,
 		gExpect: gExpect,
 	}, nil
@@ -78,7 +79,7 @@ func (o *Options) Start() (*VM, error) {
 
 // cmdline returns the command line arguments used to start QEMU. These
 // arguments are derived from the given QEMU struct.
-func cmdline(o *Options) []string {
+func (o *Options) Cmdline() []string {
 	var args []string
 	if len(o.QEMUPath) > 0 {
 		args = append(args, o.QEMUPath)
@@ -125,9 +126,16 @@ func cmdline(o *Options) []string {
 type VM struct {
 	Options *Options
 	cmdline []string
+	errCh   <-chan error
 	gExpect *expect.GExpect
 }
 
+// Wait waits for the VM to exit.
+func (v *VM) Wait() error {
+	return <-v.errCh
+}
+
+// Cmdline is the command-line the VM was started with.
 func (v *VM) Cmdline() []string {
 	// Maybe return a copy?
 	return v.cmdline
