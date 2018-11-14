@@ -91,6 +91,9 @@ type Options struct {
 
 	// Network is the VM's network.
 	Network *qemu.Network
+
+	// Extra environment variables to set when building (used by u-bmc)
+	ExtraBuildEnv []string
 }
 
 func last(s string) string {
