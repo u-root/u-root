@@ -23,10 +23,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -37,9 +37,8 @@ var (
 		x       bool
 		aux     bool
 	}
-	cmd     = "ps [-Aaex] [aux]"
-	eUID    = os.Geteuid()
-	mainPID = os.Getpid()
+	cmd  = "ps [-Aaex] [aux]"
+	eUID = os.Geteuid()
 )
 
 func init() {
@@ -61,43 +60,34 @@ func init() {
 	}
 }
 
-// main process table of ps
-// used to make more flexible
+// ProcessTable holds all the information needed for ps
 type ProcessTable struct {
 	table    []*Process
+	mProc    *Process
 	headers  []string // each column to print
 	fields   []string // which fields of process to print, on order
 	fstring  []string // formated strings
 	maxwidth int      // DEPRECATED: reason -> remove terminal stuff
 }
 
-// to use on sort.Sort
+// NewProcessTable creates an empty process table
+func NewProcessTable() *ProcessTable {
+	return &ProcessTable{}
+}
+
+// Len returns the number of processes in the ProcessTable.
 func (pT ProcessTable) Len() int {
 	return len(pT.table)
 }
 
 // to use on sort.Sort
 func (pT ProcessTable) Less(i, j int) bool {
-	a, _ := strconv.Atoi(pT.table[i].Pid)
-	b, _ := strconv.Atoi(pT.table[j].Pid)
-	return a < b
+	return pT.table[i].Pidno < pT.table[j].Pidno
 }
 
 // to use on sort.Sort
 func (pT ProcessTable) Swap(i, j int) {
 	pT.table[i], pT.table[j] = pT.table[j], pT.table[i]
-}
-
-// Gived a pid, search for a process
-// Returns nil if not found
-func (pT ProcessTable) GetProcess(pid int) (found *Process) {
-	for _, p := range pT.table {
-		if p.Pid == strconv.Itoa(pid) {
-			found = p
-			break
-		}
-	}
-	return
 }
 
 // Return the biggest value in a slice of ints.
@@ -111,9 +101,8 @@ func max(slice []int) int {
 	return max
 }
 
-// fetch the most long string of a field of ProcessTable
-// example: biggest len of string Pid of processes
-func (pT ProcessTable) MaxLenght(field string) int {
+// MaxLength returns the longest string of a field of ProcessTable
+func (pT ProcessTable) MaxLength(field string) int {
 	slice := make([]int, 0)
 	for _, p := range pT.table {
 		slice = append(slice, len(p.Search(field)))
@@ -122,21 +111,19 @@ func (pT ProcessTable) MaxLenght(field string) int {
 	return max(slice)
 }
 
-// Defined the each header
-// Print them pT.headers
-func (pT ProcessTable) PrintHeader() {
+// PrintHeader prints the header for ps, with correct spacing.
+func (pT ProcessTable) PrintHeader(w io.Writer) {
 	var row string
 	for index, field := range pT.headers {
 		formated := pT.fstring[index]
 		row += fmt.Sprintf(formated, field)
 	}
 
-	fmt.Printf("%v\n", row)
+	fmt.Fprintf(w, "%v\n", row)
 }
 
-// Print an single processing for defined fields
-// by ith-position on table slice of ProcessTable
-func (pT ProcessTable) PrintProcess(index int) {
+// PrintProcess prints information about one process.
+func (pT ProcessTable) PrintProcess(index int, w io.Writer) {
 	var row string
 	p := pT.table[index]
 	for index, f := range pT.fields {
@@ -146,18 +133,19 @@ func (pT ProcessTable) PrintProcess(index int) {
 
 	}
 
-	fmt.Printf("%v\n", row)
+	fmt.Fprintf(w, "%v\n", row)
 }
 
+// PrepareString figures out how to lay out a process table print
 func (pT *ProcessTable) PrepareString() {
 	var (
 		fstring  []string
 		formated string
-		PID      = pT.MaxLenght("Pid")
-		TTY      = pT.MaxLenght("Ctty")
-		STAT     = 4 | pT.MaxLenght("State") // min : 4
-		TIME     = pT.MaxLenght("Time")
-		CMD      = pT.MaxLenght("Cmd")
+		PID      = pT.MaxLength("Pid")
+		TTY      = pT.MaxLength("Ctty")
+		STAT     = 4 | pT.MaxLength("State") // min : 4
+		TIME     = pT.MaxLength("Time")
+		CMD      = pT.MaxLength("Cmd")
 	)
 	for _, f := range pT.headers {
 		switch f {
@@ -199,7 +187,10 @@ func isPermutation(check string, ref string) bool {
 // For now, just read /proc/pid/stat and dump its brains.
 // TODO: a nice clean way to turn /proc/pid/stat into a struct. (trying now)
 // There has to be a way.
-func ps(pT ProcessTable) error {
+func ps(pT *ProcessTable, w io.Writer) error {
+	if len(pT.table) == 0 {
+		return nil
+	}
 	// sorting ProcessTable by PID
 	sort.Sort(pT)
 
@@ -215,21 +206,9 @@ func ps(pT ProcessTable) error {
 		pT.fields = []string{"Pid", "Ctty", "Time", "Cmd"}
 	}
 
-	mProc := pT.GetProcess(mainPID)
-
 	pT.PrepareString()
-	pT.PrintHeader()
+	pT.PrintHeader(w)
 	for index, p := range pT.table {
-		uid, err := p.GetUid()
-		if err != nil {
-			// It is extremely common for a directory to disappear from
-			// /proc when a process terminates, so ignore those errors.
-			if os.IsNotExist(err) {
-				continue
-			}
-			return err
-		}
-
 		switch {
 		case flags.nSidTty:
 			// no session leaders and no unlinked terminals
@@ -239,7 +218,7 @@ func ps(pT ProcessTable) error {
 
 		case flags.x:
 			// print only process with same eUID of caller
-			if eUID != uid {
+			if eUID != p.uid {
 				continue
 			}
 
@@ -249,12 +228,12 @@ func ps(pT ProcessTable) error {
 		default:
 			// default for no flags only same session
 			// and same uid process
-			if p.Sid != mProc.Sid || eUID != uid {
+			if p.Sid != pT.mProc.Sid || eUID != p.uid {
 				continue
 			}
 		}
 
-		pT.PrintProcess(index)
+		pT.PrintProcess(index, w)
 	}
 
 	return nil
@@ -263,12 +242,12 @@ func ps(pT ProcessTable) error {
 
 func main() {
 	flag.Parse()
-	pT := ProcessTable{}
+	pT := NewProcessTable()
 	if err := pT.LoadTable(); err != nil {
 		log.Fatal(err)
 	}
 
-	err := ps(pT)
+	err := ps(pT, os.Stderr)
 	if err != nil {
 		log.Fatal(err)
 	}
