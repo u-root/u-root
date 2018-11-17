@@ -5,9 +5,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,21 +16,28 @@ import (
 )
 
 const (
-	proc    = "/proc"
-	USER_HZ = 100
+	proc        = "/proc"
+	defaultGlob = "/proc/[0-9]*/stat"
+	userHZ      = 100
 )
 
-// Portable way to implement ps cross-plataform
-// Like the os.File
+var psglob string
+
+// Process contains both kernel-dependent and kernel-independent information.
 type Process struct {
 	process
+	status  string
+	cmdline string
+	stat    string
+	Pidno   int // process id #
+	uid     int
 }
 
 // table content of stat file defined by:
 // https://www.kernel.org/doc/Documentation/filesystems/proc.txt (2009)
 // Section (ctrl + f) : Table 1-4: Contents of the stat files (as of 2.6.30-rc7)
 type process struct {
-	Pid         string // process id
+	Pid         string // process id name
 	Cmd         string // filename of the executable
 	State       string // state (R is running, S is sleeping, D is sleeping in an uninterruptible wait, Z is zombie, T is traced or stopped)
 	Ppid        string // process id of the parent process
@@ -68,7 +75,7 @@ type process struct {
 	Zero1       string // ignored
 	Zero2       string // ignored
 	ExitSignal  string // signal to send to parent thread on exit
-	TaskCpu     string // which CPU the task is scheduled on
+	TaskCPU     string // which CPU the task is scheduled on
 	RtPriority  string // realtime priority
 	Policy      string // scheduling policy (man sched_setscheduler)
 	BlkioTicks  string // time spent waiting for block IO
@@ -88,23 +95,10 @@ type process struct {
 
 // Parse all content of stat to a Process Struct
 // by gived the pid (linux)
-func (p *process) readStat(pid int) error {
-	b, err := ioutil.ReadFile(filepath.Join(proc, fmt.Sprint(pid), "stat"))
-
-	// We prefer to use os.ErrNotExist in this case.
-	// It is more universal.
-	if err != nil && err.Error() == "no such process" {
-		err = os.ErrNotExist
-	}
-
-	if err != nil {
-		return err
-	}
-
-	fields := strings.Split(string(b), " ")
-
+func (p *Process) readStat(s string) error {
+	fields := strings.Split(s, " ")
 	// set struct fields from stat file data
-	v := reflect.ValueOf(p).Elem()
+	v := reflect.ValueOf(&p.process).Elem()
 	for i := 0; i < len(fields); i++ {
 		fieldVal := v.Field(i)
 		fieldVal.Set(reflect.ValueOf(fields[i]))
@@ -112,28 +106,24 @@ func (p *process) readStat(pid int) error {
 
 	p.Time = p.getTime()
 	p.Ctty = p.getCtty()
-	cmd := p.Cmd
-	p.Cmd = cmd[1 : len(cmd)-1]
-	if flags.x && false {
-		// disable that, because after removed the max width limit
-		// we had some incredible long cmd lines whose breaks the
-		// visual table of process at running ps
-		cmdline, err := p.longCmdLine()
-		if err != nil {
-			return err
-		}
-		if cmdline != "" {
-			p.Cmd = cmdline
-		}
+	p.Cmd = strings.TrimSuffix(strings.TrimPrefix(p.Cmd, "("), ")")
+	if flags.x && p.cmdline != "" {
+		p.Cmd = p.cmdline
 	}
 
 	return nil
 }
 
-// Fetch data from Operating System about process
-// on Linux read data from stat
-func (p *Process) Parse(pid int) error {
-	return p.process.readStat(pid)
+// Parse data from various strings in the Process struct
+func (p *Process) Parse() error {
+	err := p.readStat(p.stat)
+	if err != nil {
+		return err
+	}
+	if p.uid, err = p.GetUID(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ctty returns the ctty or "?" if none can be found.
@@ -158,33 +148,22 @@ func (p *process) getField(field string) string {
 }
 
 // Search for attributes about the process
-func (p Process) Search(field string) string {
+func (p *Process) Search(field string) string {
 	return p.process.getField(field)
 }
 
-// read UID of process based on or
-func (p process) getUid() (int, error) {
-	b, err := ioutil.ReadFile(filepath.Join(proc, p.Pid, "status"))
-	if err != nil && err.Error() == "no such process" {
-		err = os.ErrNotExist
-	}
-
-	var uid int
-	lines := strings.Split(string(b), "\n")
+// GetUID gets the UID of the process from the status string
+func (p Process) GetUID() (int, error) {
+	lines := strings.Split(p.status, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "Uid") {
 			fields := strings.Split(line, "\t")
-			uid, err = strconv.Atoi(fields[1])
-			break
+			return strconv.Atoi(fields[1])
 		}
 	}
 
-	return uid, err
+	return -1, fmt.Errorf("no Uid string in %s", p.status)
 
-}
-
-func (p Process) GetUid() (int, error) {
-	return p.process.getUid()
 }
 
 // change p.Cmd to long command line with args
@@ -204,7 +183,7 @@ func (p process) getTime() string {
 	stime, _ := strconv.Atoi(p.Stime)
 	jiffies := utime + stime
 
-	tsecs := jiffies / USER_HZ
+	tsecs := jiffies / userHZ
 	secs := tsecs % 60
 	mins := (tsecs / 60) % 60
 	hrs := tsecs / 3600
@@ -212,41 +191,115 @@ func (p process) getTime() string {
 	return fmt.Sprintf("%02d:%02d:%02d", hrs, mins, secs)
 }
 
-// Create a ProcessTable containing stats on all processes.
-func (pT *ProcessTable) LoadTable() error {
-	// Open and Readdir /proc.
-	f, err := os.Open("/proc")
-	defer f.Close()
-	if err != nil {
-		return err
+func getAllGlobNames() []string {
+	psglob = os.Getenv("UROOT_PSPATH")
+	if psglob == "" {
+		// The reason we glob with stat, even though
+		// we strip it off later, is it is a cheap way
+		// to ensure we're getting a process directory
+		// and not some other weird thing in /proc.
+		psglob = defaultGlob
 	}
-	list, err := f.Readdir(-1)
-	if err != nil {
-		return err
+	return filepath.SplitList(psglob)
+
+}
+
+// Create a set of stat file names from an array of globs
+func getAllStatNames(globs []string) ([]string, error) {
+	var list []string
+	for _, g := range globs {
+		l, err := filepath.Glob(g)
+		if err != nil {
+			log.Printf("Glob err on %s: %v", g, err)
+			continue
+		}
+		list = append(list, l...)
 	}
 	if len(list) == 0 {
-		return errors.New("no processes in /proc")
+		return nil, fmt.Errorf("No files found in %q; check if proc is mounted", psglob)
 	}
+	return list, nil
+}
 
-	for _, dir := range list {
-		// Filter out files and directories which are not numbers.
-		pid, err := strconv.Atoi(dir.Name())
+func file(s string) (string, error) {
+	b, err := ioutil.ReadFile(s)
+	return string(b), err
+}
+
+func (pT *ProcessTable) doTable(statFileNames []string) error {
+	var err error
+	for _, stat := range statFileNames {
+		p := &Process{}
+
+		// ps is a snapshot in time of /proc. Hence we want to grab
+		// all the files we need in as close to an instant in time as
+		// we can.
+		// Read the files. It may have vanished or we may not have
+		// access; we do not consider those to be errors.
+		// if *any* of the files are not there, just skip this pid.
+		p.stat, err = file(stat)
 		if err != nil {
 			continue
 		}
-
-		// Parse the process's stat file.
-		p := &Process{}
-		if err := p.Parse(pid); err != nil {
-			// It is extremely common for a directory to disappear from
-			// /proc when a process terminates, so ignore those errors.
-			if os.IsNotExist(err) {
+		d := filepath.Dir(stat)
+		pid := filepath.Base(d)
+		p.status, err = file(filepath.Join(d, "status"))
+		if err != nil {
+			continue
+		}
+		if flags.x {
+			p.cmdline, err = file(filepath.Join(d, "cmdline"))
+			if err != nil {
 				continue
 			}
+		}
+		// Get the path component out. Painful.
+		// remove the stat, then split, then make Pid be
+		// the path minus the first directory
+		n := strings.Split(d, string([]byte{filepath.Separator}))
+
+		// The "pid" is the path minus the mountpoint. Why?
+		// For things like /netproc/<host>/<pid>, so that the "pid"
+		// shows up as <host>/<pid> in ps
+		p.Pid = filepath.Join(n[1:]...)
+		pidno, err := strconv.Atoi(pid)
+		if err != nil {
+			return fmt.Errorf("Can't happen: last element of %v is not a number", n)
+		}
+		p.Pidno = pidno
+		if err := p.Parse(); err != nil {
 			return err
+		}
+		//log.Printf("stat is %v p is %v", stat,p)
+		if p.Pidno == os.Getpid() {
+			pT.mProc = p
 		}
 		pT.table = append(pT.table, p)
 	}
-
+	// if mProc is nil, something is really wrong. 
+	if pT.mProc == nil && len(pT.table) > 0 {
+		pT.mProc = pT.table[0]
+	}
 	return nil
+}
+
+// LoadTable creates a ProcessTable containing stats on all processes.
+// We use UROOT_PSPATH if set, else the default glob
+// of /proc/[0-9]*/stat.
+// We want to allow ps to run against the standard /proc but also
+// proc mounted over a network in, e.g., /netproc/host/pid/...
+// (i.e. we mount node:/proc on /netproc/node)
+// The question then becomes what to store for the pid.
+// For /proc, it's easy: strip the first directory component.
+// For additional directories, e.g. /netproc/host/[0-9]*/stat,
+// we can follow the same rule: strip the first component.
+// We will do that for now and see if it works; if not we'll
+// need more complex processing for UROOT_PSPATH.
+func (pT *ProcessTable) LoadTable() error {
+	g := getAllGlobNames()
+	n, err := getAllStatNames(g)
+	if err != nil {
+		return err
+	}
+	return pT.doTable(n)
 }
