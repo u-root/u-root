@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// the forth package is designed for use by programs
+// Package forth implements Forth parsing, which allows
+// programs to use forth-like syntax to manipulate a stack
+// of Cells.
+// It is designed for use by programs
 // needing to evaluate command-line arguments or simple
 // expressions to set program variables. It is designed
 // to map host names to numbers. We use it to
@@ -32,19 +35,32 @@ package forth
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 )
 
-type ForthOp func(f Forth)
+type (
+	// Op is an opcode type. It does not return an error value,
+	// instead using panic when parsing issues occur, to ease
+	// the programming annoyance of propagating errors up the
+	// stack (following common Go practice for parsers).
+	// If you write an op it can use panic as well.
+	// Lest you get upset about the use of panic, be aware
+	// I've talked to the folks in Go core about this and
+	// they feel it's fine for parsers.
+	Op func(f Forth)
+	// Cell is a stack element.
+	Cell interface{}
 
-type forthstack struct {
-	stack []string
-}
+	stack struct {
+		stack []Cell
+	}
+)
 
-var opmap = map[string]ForthOp{
+var opmap = map[string]Op{
 	"+":        plus,
 	"-":        sub,
 	"*":        times,
@@ -64,50 +80,51 @@ var opmap = map[string]ForthOp{
 // meaning Length is 0), Newop (insert a new or replacement operator),
 // and Reset (clear the stack, mainly diagnostic)
 type Forth interface {
-	Push(string)
-	Pop() string
+	Push(Cell)
+	Pop() Cell
 	Length() int
 	Empty() bool
-	Newop(string, ForthOp)
+	Newop(string, Op)
 	Reset()
-	Stack() []string
+	Stack() []Cell
 }
 
 // New creates a new stack
 func New() Forth {
-	f := new(forthstack)
+	f := new(stack)
 	return f
 }
 
 // Newop creates a new operation. We considered having
 // an opmap per stack but don't feel the package requires it
-func (f *forthstack) Newop(n string, op ForthOp) {
+func (f *stack) Newop(n string, op Op) {
 	opmap[n] = op
 }
 
-func Ops() map[string]ForthOp {
+// Ops returns the operator map.
+func Ops() map[string]Op {
 	return opmap
 }
 
 // Reset resets the stack to empty
-func (f *forthstack) Reset() {
+func (f *stack) Reset() {
 	f.stack = f.stack[0:0]
 }
 
-// Return the stack as a []string
-func (f *forthstack) Stack() []string {
+// Return the stack
+func (f *stack) Stack() []Cell {
 	return f.stack
 }
 
-// Push pushes the string on the stack.
-func (f *forthstack) Push(s string) {
-	f.stack = append(f.stack, s)
+// Push pushes the interface{} on the stack.
+func (f *stack) Push(c Cell) {
+	f.stack = append(f.stack, c)
 	//fmt.Printf("push: %v: stack: %v\n", s, f.stack)
 }
 
 // Pop pops the stack. If the stack is Empty Pop will panic.
 // Eval recovers() the panic.
-func (f *forthstack) Pop() (ret string) {
+func (f *stack) Pop() (ret Cell) {
 
 	if len(f.stack) < 1 {
 		panic(errors.New("Empty stack"))
@@ -119,12 +136,12 @@ func (f *forthstack) Pop() (ret string) {
 }
 
 // Length returns the stack length.
-func (f *forthstack) Length() int {
+func (f *stack) Length() int {
 	return len(f.stack)
 }
 
 // Empty is a convenience function synonymous with Length == 0
-func (f *forthstack) Empty() bool {
+func (f *stack) Empty() bool {
 	return len(f.stack) == 0
 }
 
@@ -136,7 +153,7 @@ func errRecover(errp *error) {
 		if _, ok := e.(runtime.Error); ok {
 			panic(e)
 		}
-		*errp = e.(error)
+		*errp = fmt.Errorf("%v", e)
 	}
 }
 
@@ -162,12 +179,12 @@ func iEval(f Forth, s string) {
 	return
 }
 
-/* Eval takes a Forth and strings and splits the string on space
- * characters, pushing each element on the stack or invoking the
- * operator if it is found in the opmap. It returns TOS when it is done.
- * it is an error to leave the stack non-Empty.
- */
-func Eval(f Forth, s string) (ret string, err error) {
+// Eval takes a Forth and strings and splits the string on space
+// characters, pushing each element on the stack or invoking the
+// operator if it is found in the opmap. It returns TOS when it is done.
+// it is an error to leave the stack non-Empty.
+//
+func Eval(f Forth, s string) (ret Cell, err error) {
 	defer errRecover(&err)
 	iEval(f, s)
 	ret = f.Pop()
@@ -175,13 +192,33 @@ func Eval(f Forth, s string) (ret string, err error) {
 
 }
 
+// String returns the Top Of Stack if it is a string
+// or panics.
+func String(f Forth) string {
+	c := f.Pop()
+	switch s := c.(type) {
+	case string:
+		return s
+	default:
+		panic(fmt.Sprintf("Can't convert %v to a string", c))
+	}
+}
+
 // toInt converts to int64.
 func toInt(f Forth) int64 {
-	i, err := strconv.ParseInt(f.Pop(), 0, 64)
-	if err != nil {
-		panic(err)
+	c := f.Pop()
+	switch s := c.(type) {
+	case string:
+		i, err := strconv.ParseInt(s, 0, 64)
+		if err != nil {
+			panic(err)
+		}
+		return i
+	case int64:
+		return s
+	default:
+		panic(fmt.Sprintf("NaN: %T", c))
 	}
-	return i
 }
 
 func plus(f Forth) {
@@ -234,8 +271,8 @@ func swap(f Forth) {
 }
 
 func strcat(f Forth) {
-	x := f.Pop()
-	y := f.Pop()
+	x := String(f)
+	y := String(f)
 	f.Push(y + x)
 }
 
@@ -265,10 +302,15 @@ func hostname(f Forth) {
 }
 
 func hostbase(f Forth) {
-	host := f.Pop()
+	host := String(f)
 	f.Push(strings.TrimLeft(host, "abcdefghijklmnopqrstuvwxyz -"))
 }
 
+// NewWord allows for definition of new operators from strings.
+// For example, should you wish to create a word which adds a number
+// to itself twice, you can call:
+// NewWord(f, "d3d", "dup dup + +")
+// which does two dups, and two adds.
 func NewWord(f Forth, name, command string) {
 	newword := func(f Forth) {
 		iEval(f, command)
