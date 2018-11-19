@@ -1,4 +1,4 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -16,12 +16,16 @@ import (
 )
 
 const (
-	proc        = "/proc"
-	defaultGlob = "/proc/[0-9]*/stat"
+	defaultGlob = "/proc"
 	userHZ      = 100
 )
 
-var psglob string
+var (
+	psglob string
+	// by convention, the first element of the path is "/proc"
+	// This allows us to point to any place as our "/proc"
+	procdir = "/proc"
+)
 
 // Process contains both kernel-dependent and kernel-independent information.
 type Process struct {
@@ -129,7 +133,7 @@ func (p *Process) Parse() error {
 // ctty returns the ctty or "?" if none can be found.
 // TODO: an right way to get ctty by p.TTYNr and p.TTYPgrp
 func (p process) getCtty() string {
-	if tty, err := os.Readlink(filepath.Join(proc, p.Pid, "fd/0")); err != nil {
+	if tty, err := os.Readlink(filepath.Join(procdir, p.Pid, "fd/0")); err != nil {
 		return "?"
 	} else if p.TTYPgrp != "-1" {
 		if len(tty) > 5 && tty[:5] == "/dev/" {
@@ -168,7 +172,7 @@ func (p Process) GetUID() (int, error) {
 
 // change p.Cmd to long command line with args
 func (p process) longCmdLine() (string, error) {
-	b, err := ioutil.ReadFile(filepath.Join(proc, p.Pid, "cmdline"))
+	b, err := ioutil.ReadFile(filepath.Join(procdir, p.Pid, "cmdline"))
 
 	if err != nil {
 		return "", err
@@ -200,15 +204,18 @@ func getAllGlobNames() []string {
 		// and not some other weird thing in /proc.
 		psglob = defaultGlob
 	}
-	return filepath.SplitList(psglob)
-
+	l := filepath.SplitList(psglob)
+	if len(l) > 0 {
+		procdir = l[0]
+	}
+	return l
 }
 
 // Create a set of stat file names from an array of globs
 func getAllStatNames(globs []string) ([]string, error) {
 	var list []string
 	for _, g := range globs {
-		l, err := filepath.Glob(g)
+		l, err := filepath.Glob(filepath.Join(g, "[0-9]*/stat"))
 		if err != nil {
 			log.Printf("Glob err on %s: %v", g, err)
 			continue
@@ -231,6 +238,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 	for _, stat := range statFileNames {
 		p := &Process{}
 
+		//log.Printf("Check %s", stat)
 		// ps is a snapshot in time of /proc. Hence we want to grab
 		// all the files we need in as close to an instant in time as
 		// we can.
@@ -243,6 +251,10 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 		}
 		d := filepath.Dir(stat)
 		pid := filepath.Base(d)
+		pidno, err := strconv.Atoi(pid)
+		if err != nil {
+			return fmt.Errorf("Can't happen: last element of %v is not a number", pid)
+		}
 		p.status, err = file(filepath.Join(d, "status"))
 		if err != nil {
 			continue
@@ -253,30 +265,25 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 				continue
 			}
 		}
-		// Get the path component out. Painful.
-		// remove the stat, then split, then make Pid be
-		// the path minus the first directory
-		n := strings.Split(d, string([]byte{filepath.Separator}))
-
-		// The "pid" is the path minus the mountpoint. Why?
-		// For things like /netproc/<host>/<pid>, so that the "pid"
-		// shows up as <host>/<pid> in ps
-		p.Pid = filepath.Join(n[1:]...)
-		pidno, err := strconv.Atoi(pid)
-		if err != nil {
-			return fmt.Errorf("Can't happen: last element of %v is not a number", n)
+		// if filepath.Base is *not* proc, then use it, else
+		// it's just the directory containing the pid.
+		proot := filepath.Dir(d)
+		//log.Printf("procdir %v d %v proot %v", procdir, d, proot)
+		if proot != procdir {
+			pid = filepath.Join(filepath.Base(proot), pid)
 		}
 		p.Pidno = pidno
 		if err := p.Parse(); err != nil {
 			return err
 		}
+		p.Pid = pid
 		//log.Printf("stat is %v p is %v", stat,p)
 		if p.Pidno == os.Getpid() {
 			pT.mProc = p
 		}
 		pT.table = append(pT.table, p)
 	}
-	// if mProc is nil, something is really wrong. 
+	// if mProc is nil, something is really wrong.
 	if pT.mProc == nil && len(pT.table) > 0 {
 		pT.mProc = pT.table[0]
 	}

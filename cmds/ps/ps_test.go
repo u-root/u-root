@@ -1,4 +1,4 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -43,7 +43,7 @@ Gid:	0	0	0	0
 FDSize:	128
 `,
 			"cmdline": "/sbin/init"},
-			o: "PID PGRP SID TTY    STAT        TIME  COMMAND \nbad         ?    file    00:00:00   status \n",
+			o: "PID PGRP SID TTY    STAT        TIME  COMMAND \n1     ?    file    00:00:00   status \n",
 		},
 		// Fix things up
 		{n: "correct pid 1", pid: "1", files: map[string]string{"stat": "1 (systemd) S 0 1 1 0 -1 4194560 82923 51272244 88 3457 153 671 103226 39563 20 0 1 0 2 230821888 2325 18446744073709551615 1 1 0 0 0 0 671173123 4096 1260 0 0 0 17 1 0 0 69 0 0 0 0 0 0 0 0 0 0",
@@ -65,6 +65,15 @@ Uid:	110	110	110	110
 			"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000"},
 			o: " PID PGRP  SID TTY    STAT         TIME  COMMAND \n   1    1    1 ?    S        00:00:08  systemd \n1996 1995 1995 ?    S        00:00:00  dnsmasq \n",
 		},
+		{n: "nethost process", pid: "srv/1996", files: map[string]string{"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
+
+			"status": `Name:	dnsmasq
+Umask:	0022
+Uid:	110	110	110	110
+`,
+			"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000"},
+			o: "     PID     PGRP      SID TTY    STAT         TIME  COMMAND \n       1        1        1 ?    S        00:00:08  systemd \n    1996     1995     1995 ?    S        00:00:00  dnsmasq \nsrv/1996     1995     1995 ?    S        00:00:00  dnsmasq \n",
+		},
 	}
 
 	for _, tt := range tests {
@@ -81,7 +90,8 @@ Uid:	110	110	110	110
 			}
 		}
 		c := testutil.Command(t, "aux")
-		c.Env = append(c.Env, "UROOT_PSPATH="+filepath.Join(d, "*/stat"))
+		psp := fmt.Sprintf("UROOT_PSPATH=%s:%s", d, filepath.Join(d, "srv"))
+		c.Env = append(c.Env, psp)
 		o, err := c.CombinedOutput()
 		t.Logf("%s: %s %v", tt.n, string(o), err)
 		if string(o) != tt.o {
