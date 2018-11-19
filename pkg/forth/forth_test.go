@@ -5,13 +5,15 @@
 package forth
 
 import (
+	"fmt"
 	"os"
+	"reflect"
 	"testing"
 )
 
 type forthTest struct {
 	val string
-	res string
+	res Cell
 	err string
 }
 
@@ -34,7 +36,7 @@ var forthTests = []forthTest{
 	{"1 dup +", "2", ""},
 	{"4095 4096 roundup", "4096", ""},
 	{"4097 8192 roundup", "8192", ""},
-	{"2 x +", "", "parsing \"x\": invalid syntax"},
+	{"2 x +", nil, "parsing \"x\": invalid syntax"},
 	{"1 dd +", "2", ""},
 	{"1 d3d", "3", ""},
 }
@@ -75,8 +77,9 @@ func TestForth(t *testing.T) {
 			}
 			t.Logf("Test: '%v' '%v' '%v': Pass\n", tt.val, res, err)
 		} else {
-			t.Errorf("Test: '%v' '%v' '%v': Fail\n", tt.val, res, err)
+			t.Errorf("Test: '%v' got (%v, %v): want (%v, %v): Fail\n", tt.val, res, err.Error(), tt.res, tt.err)
 			t.Logf("ops %v\n", Ops())
+			continue
 		}
 		if f.Length() != 0 {
 			t.Errorf("Test: %v: stack is %d and should be empty", tt, f.Length())
@@ -86,4 +89,19 @@ func TestForth(t *testing.T) {
 		}
 	}
 
+}
+
+func TestBadPop(t *testing.T) {
+	var b [3]byte
+	f := New()
+	f.Push(b)
+	res, err := Eval(f, "2 +")
+	t.Logf("%v, %v", res, err)
+	nan := fmt.Errorf("NaN: %T", b)
+	if !reflect.DeepEqual(err, nan) {
+		t.Errorf("got %v, want %v", err, nan)
+	}
+	if res != nil {
+		t.Errorf("got %v, want nil", res)
+	}
 }
