@@ -5,12 +5,10 @@
 package loop
 
 import (
-	"syscall"
-
 	"golang.org/x/sys/unix"
 )
 
-const forceUnmount = syscall.MNT_FORCE | syscall.MNT_DETACH
+const forceUnmount = unix.MNT_FORCE | unix.MNT_DETACH
 
 // Unmount unmounts and frees a loop. If it is mounted, it will try to unmount it.
 // If the unmount fails, we try to free it anyway, after trying a more
@@ -22,5 +20,5 @@ func (l *Loop) Unmount(flags int) error {
 			unix.Unmount(l.Dir, flags|forceUnmount)
 		}
 	}
-	return ClearFdFile(l.Dev)
+	return ClearFile(l.Dev)
 }

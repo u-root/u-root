@@ -30,7 +30,9 @@ RUN sudo apt-get update &&                          \
         libglib2.0-dev                              \
         libfdt-dev                                  \
         libpixman-1-dev                             \
-        zlib1g-dev &&                               \
+        zlib1g-dev                                  \
+        `# Linux kernel build deps`                 \
+        libelf-dev &&                               \
     sudo rm -rf /var/lib/apt/lists/*
 
 # Create working directory
@@ -40,6 +42,7 @@ COPY config_linux4.17_amd64.txt .config
 # Build linux
 RUN set -eux;                                                             \
     git clone --depth=1 --branch=v4.17 https://github.com/torvalds/linux; \
+    sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
     make -j$(($(nproc) * 2 + 1));                                         \

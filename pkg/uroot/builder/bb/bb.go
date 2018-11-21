@@ -36,7 +36,7 @@ var skip = map[string]struct{}{
 }
 
 func getBBLock(bblock string) (*lockfile.Lockfile, error) {
-	secondsTimeout := 60
+	secondsTimeout := 100
 	timer := time.After(time.Duration(secondsTimeout) * time.Second)
 	lock := lockfile.New(bblock)
 	for {
@@ -166,14 +166,18 @@ func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, d
 //
 // It holds AST, type, file, and Go package information about a Go package.
 type Package struct {
-	name string
+	// Name is the command name.
+	//
+	// In the standard Go tool chain, this is usually the base name of the
+	// directory containing its source files.
+	Name string
 
-	buildp      *build.Package
 	fset        *token.FileSet
 	ast         *ast.Package
-	typeInfo    types.Info
-	types       *types.Package
 	sortedFiles []*ast.File
+
+	typeInfo types.Info
+	types    *types.Package
 
 	// initCount keeps track of what the next init's index should be.
 	initCount uint
@@ -205,50 +209,72 @@ func NewPackageFromEnv(env golang.Environ, importPath string, importer types.Imp
 	if err != nil {
 		return nil, err
 	}
-	return NewPackage(filepath.Base(p.Dir), p, importer)
+	return NewPackage(filepath.Base(p.Dir), p.ImportPath, SrcFiles(p), importer)
 }
 
-// ParseAST parses p's package files into an AST.
-func ParseAST(p *build.Package) (*token.FileSet, *ast.Package, error) {
-	name := filepath.Base(p.Dir)
-	if !p.IsCommand() {
-		return nil, nil, fmt.Errorf("package %q is not a command and cannot be included in bb", name)
-	}
-
+// ParseAST parses the given files for a package named main.
+//
+// Only files with a matching package statement will be part of the AST
+// returned.
+func ParseAST(files []string) (*token.FileSet, *ast.Package, error) {
 	fset := token.NewFileSet()
-	pars, err := parser.ParseDir(fset, p.Dir, func(fi os.FileInfo) bool {
-		// Only parse Go files that match build tags of this package.
-		for _, name := range p.GoFiles {
-			if name == fi.Name() {
-				return true
-			}
+	p := &ast.Package{
+		Name:  "main",
+		Files: make(map[string]*ast.File),
+	}
+	for _, path := range files {
+		if src, err := parser.ParseFile(fset, path, nil, parser.ParseComments); err == nil && src.Name.Name == p.Name {
+			p.Files[path] = src
+		} else if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse AST in file %q: %v", path, err)
 		}
-		return false
-	}, parser.ParseComments)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse AST for pkg %q: %v", name, err)
 	}
 
-	astp, ok := pars[p.Name]
-	if !ok {
-		return nil, nil, fmt.Errorf("parsed files, but could not find package %q in ast: %v", p.Name, pars)
+	// Did we parse anything?
+	if len(p.Files) == 0 {
+		return nil, nil, fmt.Errorf("no valid `main` package files found in %v", files)
 	}
-	return fset, astp, nil
+	return fset, p, nil
 }
 
-// NewPackage gathers AST, type, and token information about package p, using
-// the given importer to resolve dependencies.
-func NewPackage(name string, p *build.Package, importer types.Importer) (*Package, error) {
-	fset, astp, err := ParseAST(p)
+func SrcFiles(p *build.Package) []string {
+	files := make([]string, 0, len(p.GoFiles))
+	for _, name := range p.GoFiles {
+		files = append(files, filepath.Join(p.Dir, name))
+	}
+	return files
+}
+
+// RewritePackage rewrites pkgPath to be bb-mode compatible, where destDir is
+// the file system destination of the written files and bbImportPath is the Go
+// import path of the bb package to register with.
+func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer types.Importer) error {
+	buildp, err := env.Package(pkgPath)
+	if err != nil {
+		return err
+	}
+
+	p, err := NewPackage(filepath.Base(buildp.Dir), buildp.ImportPath, SrcFiles(buildp), importer)
+	if err != nil {
+		return err
+	}
+	dest := filepath.Join(buildp.Dir, ".bb")
+	return p.Rewrite(dest, bbImportPath)
+}
+
+// NewPackage gathers AST, type, and token information about a command.
+//
+// The given importer is used to resolve dependencies.
+func NewPackage(name string, pkgPath string, srcFiles []string, importer types.Importer) (*Package, error) {
+	fset, astp, err := ParseAST(srcFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	pp := &Package{
-		buildp: p,
-		name:   name,
-		fset:   fset,
-		ast:    astp,
+	p := &Package{
+		Name: name,
+		fset: fset,
+		ast:  astp,
 		typeInfo: types.Info{
 			Types: make(map[ast.Expr]types.TypeAndValue),
 		},
@@ -256,7 +282,7 @@ func NewPackage(name string, p *build.Package, importer types.Importer) (*Packag
 	}
 
 	// This Init will hold calls to all other InitXs.
-	pp.init = &ast.FuncDecl{
+	p.init = &ast.FuncDecl{
 		Name: ast.NewIdent("Init"),
 		Type: &ast.FuncType{
 			Params:  &ast.FieldList{},
@@ -267,16 +293,17 @@ func NewPackage(name string, p *build.Package, importer types.Importer) (*Packag
 
 	// The order of types.Info.InitOrder depends on this list of files
 	// always being passed to conf.Check in the same order.
-	filenames := make([]string, 0, len(pp.ast.Files))
-	for name := range pp.ast.Files {
+	filenames := make([]string, 0, len(p.ast.Files))
+	for name := range p.ast.Files {
 		filenames = append(filenames, name)
 	}
 	sort.Strings(filenames)
 
-	pp.sortedFiles = make([]*ast.File, 0, len(pp.ast.Files))
+	p.sortedFiles = make([]*ast.File, 0, len(p.ast.Files))
 	for _, name := range filenames {
-		pp.sortedFiles = append(pp.sortedFiles, pp.ast.Files[name])
+		p.sortedFiles = append(p.sortedFiles, p.ast.Files[name])
 	}
+
 	// Type-check the package before we continue. We need types to rewrite
 	// some statements.
 	conf := types.Config{
@@ -285,12 +312,12 @@ func NewPackage(name string, p *build.Package, importer types.Importer) (*Packag
 		// We only need global declarations' types.
 		IgnoreFuncBodies: true,
 	}
-	tpkg, err := conf.Check(p.ImportPath, pp.fset, pp.sortedFiles, &pp.typeInfo)
+	tpkg, err := conf.Check(pkgPath, p.fset, p.sortedFiles, &p.typeInfo)
 	if err != nil {
 		return nil, fmt.Errorf("type checking failed: %#v: %v", importer, err)
 	}
-	pp.types = tpkg
-	return pp, nil
+	p.types = tpkg
+	return p, nil
 }
 
 func (p *Package) nextInit(addToCallList bool) *ast.Ident {
@@ -309,7 +336,7 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 	hasMain := false
 
 	// Change the package name declaration from main to the command's name.
-	f.Name = ast.NewIdent(p.name)
+	f.Name = ast.NewIdent(p.Name)
 
 	// Map of fully qualified package name -> imported alias in the file.
 	importAliases := make(map[string]string)
@@ -411,21 +438,6 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 	return hasMain
 }
 
-// RewritePackage rewrites pkgPath to be bb-mode compatible, where destDir is
-// the file system destination of the written files and bbImportPath is the Go
-// import path of the bb package to register with.
-func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer types.Importer) error {
-	p, err := NewPackageFromEnv(env, pkgPath, importer)
-	if err != nil {
-		return err
-	}
-	if p == nil {
-		return nil
-	}
-	dest := filepath.Join(p.buildp.Dir, ".bb")
-	return p.Rewrite(dest, bbImportPath)
-}
-
 // Rewrite rewrites p into destDir as a bb package using bbImportPath for the
 // bb implementation.
 func (p *Package) Rewrite(destDir, bbImportPath string) error {
@@ -481,7 +493,7 @@ func (p *Package) Rewrite(destDir, bbImportPath string) error {
 						// name=
 						&ast.BasicLit{
 							Kind:  token.STRING,
-							Value: strconv.Quote(p.name),
+							Value: strconv.Quote(p.Name),
 						},
 						// init=
 						ast.NewIdent("Init"),

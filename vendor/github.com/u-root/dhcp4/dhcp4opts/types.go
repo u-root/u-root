@@ -206,3 +206,24 @@ func (u *Uint16) UnmarshalBinary(p []byte) error {
 	*u = Uint16(b.Read16())
 	return nil
 }
+
+// Uint32 implements encoding.BinaryMarshaler and encapsulates binary encoding
+// and decoding methods of uint32s as defined by RFC 2132 Section 9.2.
+type Uint32 uint32
+
+// MarshalBinary writes the uint32 to binary.
+func (u Uint32) MarshalBinary() ([]byte, error) {
+	b := buffer.New(nil)
+	b.Write32(uint32(u))
+	return b.Data(), nil
+}
+
+// UnmarshalBinary reads the uint32 from binary.
+func (u *Uint32) UnmarshalBinary(p []byte) error {
+	b := buffer.New(p)
+	if b.Len() < 2 {
+		return io.ErrUnexpectedEOF
+	}
+	*u = Uint32(b.Read32())
+	return nil
+}

@@ -7,10 +7,10 @@ package initramfs
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/uroot/logger"
 )
 
 // CPIOArchiver is an implementation of Archiver for the cpio format.
@@ -23,7 +23,7 @@ type CPIOArchiver struct {
 //
 // If `path` is empty, a default path of /tmp/initramfs.GOOS_GOARCH.cpio is
 // used.
-func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (Writer, error) {
+func (ca CPIOArchiver) OpenWriter(l logger.Logger, path, goos, goarch string) (Writer, error) {
 	if len(path) == 0 && len(goos) == 0 && len(goarch) == 0 {
 		return nil, fmt.Errorf("passed no path, GOOS, and GOARCH to CPIOArchiver.OpenWriter")
 	}
@@ -34,7 +34,7 @@ func (ca CPIOArchiver) OpenWriter(path, goos, goarch string) (Writer, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Filename is %s", path)
+	l.Printf("Filename is %s", path)
 	return osWriter{ca.RecordFormat.Writer(f), f}, nil
 }
 

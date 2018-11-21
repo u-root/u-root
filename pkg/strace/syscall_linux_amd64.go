@@ -24,6 +24,9 @@ const Width = 64
 
 var ByteOrder = binary.LittleEndian
 
+// This is the amd64 syscall map. One might think that this one map could be used for all Linux
+// flavors on all architectures. Ah, no. It's Linux, not Plan 9. Every arch has a different
+// system call set.
 var syscalls = SyscallMap{
 	unix.SYS_READ:                   makeSyscallInfo("read", Hex, ReadBuffer, Hex),
 	unix.SYS_WRITE:                  makeSyscallInfo("write", Hex, WriteBuffer, Hex),
@@ -345,6 +348,12 @@ var syscalls = SyscallMap{
 	unix.SYS_SECCOMP:           makeSyscallInfo("seccomp", Hex, Hex, Hex),
 }
 
+// FillArgs pulls the correct registers to populate system call arguments
+// and the system call number into a TraceRecord. Note that the system
+// call number is not technically an argument. This is good, in a sense,
+// since it makes the function arguements end up in "the right place"
+// from the point of view of the caller. The performance improvement is
+// negligible, as you can see by a look at the GNU runtime.
 func (rec *TraceRecord) FillArgs() {
 	r := rec.Regs
 	rec.Args = SyscallArguments{
@@ -357,6 +366,7 @@ func (rec *TraceRecord) FillArgs() {
 	rec.Sysno = int(uint32(r.Orig_rax))
 }
 
+// FillRet fills the TraceRecord with the result values from the registers.
 func (rec *TraceRecord) FillRet() {
 	r := rec.Regs
 	rec.Ret = [2]SyscallArgument{{uintptr(r.Rax)}, {uintptr(r.Rdx)}}

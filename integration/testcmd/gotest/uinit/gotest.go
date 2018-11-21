@@ -15,6 +15,8 @@ import (
 	"sort"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/u-root/u-root/pkg/sh"
 )
 
@@ -64,4 +66,6 @@ func main() {
 			log.Println(failMsg)
 		}
 	}
+
+	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 }

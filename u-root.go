@@ -35,6 +35,7 @@ var (
 	initCmd                                 *string
 	defaultShell                            *string
 	useExistingInit                         *bool
+	fourbins                                *bool
 	extraFiles                              multiFlag
 	templates                               = map[string][]string{
 		"all": {
@@ -222,17 +223,18 @@ var (
 )
 
 func init() {
+	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
 	build = flag.String("build", "source", "u-root build format (e.g. bb or source).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
 
-	base = flag.String("base", "", "Base archive to add files to. By default, this is a couple of directories like /bin, /etc, etc.")
+	base = flag.String("base", "", "Base archive to add files to. By default, this is a couple of directories like /bin, /etc, etc. u-root has a default internally supplied set of files; use base=/dev/null if you don't want any base files.")
 	useExistingInit = flag.Bool("useinit", false, "Use existing init from base archive (only if --base was specified).")
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
-	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name.")
-	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name.")
+	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
+	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
@@ -251,6 +253,9 @@ func main() {
 // on exit.
 func Main() error {
 	env := golang.Default()
+	if *fourbins && env.GOROOT == "" {
+		log.Fatalf("You have to set GOROOT for fourbins to work")
+	}
 	if env.CgoEnabled {
 		log.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
@@ -260,10 +265,20 @@ func Main() error {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
-	builder, err := builder.GetBuilder(*build)
-	if err != nil {
-		return err
+	var b builder.Builder
+	switch *build {
+	case "bb":
+		b = builder.BBBuilder{}
+	case "binary":
+		b = builder.BinaryBuilder{}
+	case "source":
+		b = builder.SourceBuilder{
+			FourBins: *fourbins,
+		}
+	default:
+		return fmt.Errorf("could not find builder %q", *build)
 	}
+
 	archiver, err := initramfs.GetArchiver(*format)
 	if err != nil {
 		return err
@@ -301,8 +316,9 @@ func Main() error {
 		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
 
+	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Open the target initramfs file.
-	w, err := archiver.OpenWriter(*outputPath, env.GOOS, env.GOARCH)
+	w, err := archiver.OpenWriter(logger, *outputPath, env.GOOS, env.GOARCH)
 	if err != nil {
 		return err
 	}
@@ -319,13 +335,18 @@ func Main() error {
 		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
+	initCommand := *initCmd
+	if *fourbins && *build == "source" {
+		initCommand = "/go/bin/go"
+	}
+
 	opts := uroot.Opts{
 		Env: env,
 		// The command-line tool only allows specifying one build mode
 		// right now.
 		Commands: []uroot.Commands{
 			{
-				Builder:  builder,
+				Builder:  b,
 				Packages: pkgs,
 			},
 		},
@@ -334,9 +355,8 @@ func Main() error {
 		OutputFile:      w,
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
-		InitCmd:         *initCmd,
+		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
 	}
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	return uroot.CreateInitramfs(logger, opts)
 }

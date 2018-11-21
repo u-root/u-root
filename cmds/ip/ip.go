@@ -253,8 +253,21 @@ func routeadd() error {
 	switch ns {
 	case "default":
 		return routeadddefault()
+	default:
+		addr, err := netlink.ParseAddr(arg[cursor])
+		if err != nil {
+			return usage()
+		}
+		d, err := dev()
+		if err != nil {
+			return usage()
+		}
+		r := &netlink.Route{LinkIndex: d.Attrs().Index, Dst: addr.IPNet}
+		if err := netlink.RouteAdd(r); err != nil {
+			return fmt.Errorf("error adding route %s -> %s: %v", addr, d, err)
+		}
+		return nil
 	}
-	return usage()
 }
 
 func route() error {

@@ -183,156 +183,156 @@ type TimerID int32
 // ptrace
 
 // PtraceRequestSet are the possible ptrace(2) requests.
-var PtraceRequestSet = ValueSet{
-	{
+var PtraceRequestSet = FlagSet{
+	&Value{
 		Value: PTRACE_TRACEME,
 		Name:  "PTRACE_TRACEME",
 	},
-	{
+	&Value{
 		Value: PTRACE_PEEKTEXT,
 		Name:  "PTRACE_PEEKTEXT",
 	},
-	{
+	&Value{
 		Value: PTRACE_PEEKDATA,
 		Name:  "PTRACE_PEEKDATA",
 	},
-	{
+	&Value{
 		Value: PTRACE_PEEKUSR,
 		Name:  "PTRACE_PEEKUSR",
 	},
-	{
+	&Value{
 		Value: PTRACE_POKETEXT,
 		Name:  "PTRACE_POKETEXT",
 	},
-	{
+	&Value{
 		Value: PTRACE_POKEDATA,
 		Name:  "PTRACE_POKEDATA",
 	},
-	{
+	&Value{
 		Value: PTRACE_POKEUSR,
 		Name:  "PTRACE_POKEUSR",
 	},
-	{
+	&Value{
 		Value: PTRACE_CONT,
 		Name:  "PTRACE_CONT",
 	},
-	{
+	&Value{
 		Value: PTRACE_KILL,
 		Name:  "PTRACE_KILL",
 	},
-	{
+	&Value{
 		Value: PTRACE_SINGLESTEP,
 		Name:  "PTRACE_SINGLESTEP",
 	},
-	{
+	&Value{
 		Value: PTRACE_ATTACH,
 		Name:  "PTRACE_ATTACH",
 	},
-	{
+	&Value{
 		Value: PTRACE_DETACH,
 		Name:  "PTRACE_DETACH",
 	},
-	{
+	&Value{
 		Value: PTRACE_SYSCALL,
 		Name:  "PTRACE_SYSCALL",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETOPTIONS,
 		Name:  "PTRACE_SETOPTIONS",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETEVENTMSG,
 		Name:  "PTRACE_GETEVENTMSG",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETSIGINFO,
 		Name:  "PTRACE_GETSIGINFO",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETSIGINFO,
 		Name:  "PTRACE_SETSIGINFO",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETREGSET,
 		Name:  "PTRACE_GETREGSET",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETREGSET,
 		Name:  "PTRACE_SETREGSET",
 	},
-	{
+	&Value{
 		Value: PTRACE_SEIZE,
 		Name:  "PTRACE_SEIZE",
 	},
-	{
+	&Value{
 		Value: PTRACE_INTERRUPT,
 		Name:  "PTRACE_INTERRUPT",
 	},
-	{
+	&Value{
 		Value: PTRACE_LISTEN,
 		Name:  "PTRACE_LISTEN",
 	},
-	{
+	&Value{
 		Value: PTRACE_PEEKSIGINFO,
 		Name:  "PTRACE_PEEKSIGINFO",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETSIGMASK,
 		Name:  "PTRACE_GETSIGMASK",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETSIGMASK,
 		Name:  "PTRACE_SETSIGMASK",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETREGS,
 		Name:  "PTRACE_GETREGS",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETREGS,
 		Name:  "PTRACE_SETREGS",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETFPREGS,
 		Name:  "PTRACE_GETFPREGS",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETFPREGS,
 		Name:  "PTRACE_SETFPREGS",
 	},
-	{
+	&Value{
 		Value: PTRACE_GETFPXREGS,
 		Name:  "PTRACE_GETFPXREGS",
 	},
-	{
+	&Value{
 		Value: PTRACE_SETFPXREGS,
 		Name:  "PTRACE_SETFPXREGS",
 	},
-	{
+	&Value{
 		Value: PTRACE_OLDSETOPTIONS,
 		Name:  "PTRACE_OLDSETOPTIONS",
 	},
-	{
+	&Value{
 		Value: PTRACE_GET_THREAD_AREA,
 		Name:  "PTRACE_GET_THREAD_AREA",
 	},
-	{
+	&Value{
 		Value: PTRACE_SET_THREAD_AREA,
 		Name:  "PTRACE_SET_THREAD_AREA",
 	},
-	{
+	&Value{
 		Value: PTRACE_ARCH_PRCTL,
 		Name:  "PTRACE_ARCH_PRCTL",
 	},
-	{
+	&Value{
 		Value: PTRACE_SYSEMU,
 		Name:  "PTRACE_SYSEMU",
 	},
-	{
+	&Value{
 		Value: PTRACE_SYSEMU_SINGLESTEP,
 		Name:  "PTRACE_SYSEMU_SINGLESTEP",
 	},
-	{
+	&Value{
 		Value: PTRACE_SINGLEBLOCK,
 		Name:  "PTRACE_SINGLEBLOCK",
 	},
@@ -342,93 +342,93 @@ var PtraceRequestSet = ValueSet{
 
 // CloneFlagSet is the set of clone(2) flags.
 var CloneFlagSet = FlagSet{
-	{
-		Flag: syscall.CLONE_VM,
-		Name: "CLONE_VM",
+	&BitFlag{
+		Value: syscall.CLONE_VM,
+		Name:  "CLONE_VM",
 	},
-	{
-		Flag: syscall.CLONE_FS,
-		Name: "CLONE_FS",
+	&BitFlag{
+		Value: syscall.CLONE_FS,
+		Name:  "CLONE_FS",
 	},
-	{
-		Flag: syscall.CLONE_FILES,
-		Name: "CLONE_FILES",
+	&BitFlag{
+		Value: syscall.CLONE_FILES,
+		Name:  "CLONE_FILES",
 	},
-	{
-		Flag: syscall.CLONE_SIGHAND,
-		Name: "CLONE_SIGHAND",
+	&BitFlag{
+		Value: syscall.CLONE_SIGHAND,
+		Name:  "CLONE_SIGHAND",
 	},
-	{
-		Flag: syscall.CLONE_PTRACE,
-		Name: "CLONE_PTRACE",
+	&BitFlag{
+		Value: syscall.CLONE_PTRACE,
+		Name:  "CLONE_PTRACE",
 	},
-	{
-		Flag: syscall.CLONE_VFORK,
-		Name: "CLONE_VFORK",
+	&BitFlag{
+		Value: syscall.CLONE_VFORK,
+		Name:  "CLONE_VFORK",
 	},
-	{
-		Flag: syscall.CLONE_PARENT,
-		Name: "CLONE_PARENT",
+	&BitFlag{
+		Value: syscall.CLONE_PARENT,
+		Name:  "CLONE_PARENT",
 	},
-	{
-		Flag: syscall.CLONE_THREAD,
-		Name: "CLONE_THREAD",
+	&BitFlag{
+		Value: syscall.CLONE_THREAD,
+		Name:  "CLONE_THREAD",
 	},
-	{
-		Flag: syscall.CLONE_NEWNS,
-		Name: "CLONE_NEWNS",
+	&BitFlag{
+		Value: syscall.CLONE_NEWNS,
+		Name:  "CLONE_NEWNS",
 	},
-	{
-		Flag: syscall.CLONE_SYSVSEM,
-		Name: "CLONE_SYSVSEM",
+	&BitFlag{
+		Value: syscall.CLONE_SYSVSEM,
+		Name:  "CLONE_SYSVSEM",
 	},
-	{
-		Flag: syscall.CLONE_SETTLS,
-		Name: "CLONE_SETTLS",
+	&BitFlag{
+		Value: syscall.CLONE_SETTLS,
+		Name:  "CLONE_SETTLS",
 	},
-	{
-		Flag: syscall.CLONE_PARENT_SETTID,
-		Name: "CLONE_PARENT_SETTID",
+	&BitFlag{
+		Value: syscall.CLONE_PARENT_SETTID,
+		Name:  "CLONE_PARENT_SETTID",
 	},
-	{
-		Flag: syscall.CLONE_CHILD_CLEARTID,
-		Name: "CLONE_CHILD_CLEARTID",
+	&BitFlag{
+		Value: syscall.CLONE_CHILD_CLEARTID,
+		Name:  "CLONE_CHILD_CLEARTID",
 	},
-	{
-		Flag: syscall.CLONE_DETACHED,
-		Name: "CLONE_DETACHED",
+	&BitFlag{
+		Value: syscall.CLONE_DETACHED,
+		Name:  "CLONE_DETACHED",
 	},
-	{
-		Flag: syscall.CLONE_UNTRACED,
-		Name: "CLONE_UNTRACED",
+	&BitFlag{
+		Value: syscall.CLONE_UNTRACED,
+		Name:  "CLONE_UNTRACED",
 	},
-	{
-		Flag: syscall.CLONE_CHILD_SETTID,
-		Name: "CLONE_CHILD_SETTID",
+	&BitFlag{
+		Value: syscall.CLONE_CHILD_SETTID,
+		Name:  "CLONE_CHILD_SETTID",
 	},
-	{
-		Flag: syscall.CLONE_NEWUTS,
-		Name: "CLONE_NEWUTS",
+	&BitFlag{
+		Value: syscall.CLONE_NEWUTS,
+		Name:  "CLONE_NEWUTS",
 	},
-	{
-		Flag: syscall.CLONE_NEWIPC,
-		Name: "CLONE_NEWIPC",
+	&BitFlag{
+		Value: syscall.CLONE_NEWIPC,
+		Name:  "CLONE_NEWIPC",
 	},
-	{
-		Flag: syscall.CLONE_NEWUSER,
-		Name: "CLONE_NEWUSER",
+	&BitFlag{
+		Value: syscall.CLONE_NEWUSER,
+		Name:  "CLONE_NEWUSER",
 	},
-	{
-		Flag: syscall.CLONE_NEWPID,
-		Name: "CLONE_NEWPID",
+	&BitFlag{
+		Value: syscall.CLONE_NEWPID,
+		Name:  "CLONE_NEWPID",
 	},
-	{
-		Flag: syscall.CLONE_NEWNET,
-		Name: "CLONE_NEWNET",
+	&BitFlag{
+		Value: syscall.CLONE_NEWNET,
+		Name:  "CLONE_NEWNET",
 	},
-	{
-		Flag: syscall.CLONE_IO,
-		Name: "CLONE_IO",
+	&BitFlag{
+		Value: syscall.CLONE_IO,
+		Name:  "CLONE_IO",
 	},
 }
 
@@ -721,16 +721,16 @@ const (
 )
 
 // ItimerTypes are the possible itimer types.
-var ItimerTypes = ValueSet{
-	{
+var ItimerTypes = FlagSet{
+	&Value{
 		Value: ITIMER_REAL,
 		Name:  "ITIMER_REAL",
 	},
-	{
+	&Value{
 		Value: ITIMER_VIRTUAL,
 		Name:  "ITIMER_VIRTUAL",
 	},
-	{
+	&Value{
 		Value: ITIMER_PROF,
 		Name:  "ITIMER_PROF",
 	},
@@ -738,56 +738,56 @@ var ItimerTypes = ValueSet{
 
 // from gvisor futex.go
 // FutexCmd are the possible futex(2) commands.
-var FutexCmd = ValueSet{
-	{
+var FutexCmd = FlagSet{
+	&Value{
 		Value: FUTEX_WAIT,
 		Name:  "FUTEX_WAIT",
 	},
-	{
+	&Value{
 		Value: FUTEX_WAKE,
 		Name:  "FUTEX_WAKE",
 	},
-	{
+	&Value{
 		Value: FUTEX_FD,
 		Name:  "FUTEX_FD",
 	},
-	{
+	&Value{
 		Value: FUTEX_REQUEUE,
 		Name:  "FUTEX_REQUEUE",
 	},
-	{
+	&Value{
 		Value: FUTEX_CMP_REQUEUE,
 		Name:  "FUTEX_CMP_REQUEUE",
 	},
-	{
+	&Value{
 		Value: FUTEX_WAKE_OP,
 		Name:  "FUTEX_WAKE_OP",
 	},
-	{
+	&Value{
 		Value: FUTEX_LOCK_PI,
 		Name:  "FUTEX_LOCK_PI",
 	},
-	{
+	&Value{
 		Value: FUTEX_UNLOCK_PI,
 		Name:  "FUTEX_UNLOCK_PI",
 	},
-	{
+	&Value{
 		Value: FUTEX_TRYLOCK_PI,
 		Name:  "FUTEX_TRYLOCK_PI",
 	},
-	{
+	&Value{
 		Value: FUTEX_WAIT_BITSET,
 		Name:  "FUTEX_WAIT_BITSET",
 	},
-	{
+	&Value{
 		Value: FUTEX_WAKE_BITSET,
 		Name:  "FUTEX_WAKE_BITSET",
 	},
-	{
+	&Value{
 		Value: FUTEX_WAIT_REQUEUE_PI,
 		Name:  "FUTEX_WAIT_REQUEUE_PI",
 	},
-	{
+	&Value{
 		Value: FUTEX_CMP_REQUEUE_PI,
 		Name:  "FUTEX_CMP_REQUEUE_PI",
 	},

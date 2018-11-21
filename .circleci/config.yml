@@ -52,6 +52,15 @@ workflows:
       - check_licenses:
           requires:
             - clean-code
+      - check_hosted_source:
+          requires:
+            - clean-code
+      - check_hosted_busybox:
+          requires:
+            - clean-code
+      - check_symlinks:
+          requires:
+            - clean-code
 jobs:
   clean-code:
     docker:
@@ -457,3 +466,36 @@ jobs:
       - run:
           name: Check licenses
           command: go run scripts/checklicenses/checklicenses.go
+  check_hosted_source:
+    docker:
+      - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Build hosted source initramfs with no defaultsh or init symlink, no base cpio
+          command: go run u-root.go -base=/dev/null -defaultsh="" -initcmd=""
+  check_hosted_busybox:
+    docker:
+      - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Build hosted busybox initramfs with no defaultsh or init symlink, no base cpio
+          command: go run u-root.go -build=bb -base=/dev/null -defaultsh="" -initcmd=""
+  check_symlinks:
+    docker:
+      - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Symbol tests to ensure we do not break symlink handling
+          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -build=bb -files /tmp/usr minimal

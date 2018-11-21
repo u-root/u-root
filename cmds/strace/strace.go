@@ -28,6 +28,7 @@ import (
 var (
 	cmdUsage = "Usage: strace <command> [args...]"
 	debug    = flag.Bool("d", false, "enable debug printing")
+	tr       = make(chan *strace.TraceRecord)
 )
 
 func usage() {
@@ -35,6 +36,7 @@ func usage() {
 }
 
 func main() {
+
 	flag.Parse()
 
 	if *debug {
@@ -54,7 +56,6 @@ func main() {
 	}
 
 	go t.RunTracerFromCmd(c)
-
 	for r := range t.Records {
 		if r.Err != nil {
 			fmt.Printf("Record shows error %v\n", r.Err)
