@@ -384,6 +384,12 @@ func ParseExtraFiles(logger logger.Logger, archive *initramfs.Files, extraFiles 
 				continue
 			}
 			for _, lib := range libs {
+				// N.B.: we already added information about the src.
+				// Don't add it twice. We have to do this check here in
+				// case we're renaming the src to a different dest.
+				if lib == src {
+					continue
+				}
 				if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
 					logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
 				}
