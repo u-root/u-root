@@ -29,7 +29,7 @@ var oklicenses = []*regexp.Regexp{
 // license that can be found in the LICENSE file\.
 `),
 	regexp.MustCompile(
-`^// Copyright [\d\-, ]+ Google Inc.
+`^// Copyright [\d\-, ]+ Google LLC.
 //
 // Licensed under the Apache License, Version 2.0.*
 `),
