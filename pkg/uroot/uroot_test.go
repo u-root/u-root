@@ -356,8 +356,8 @@ func TestCreateInitramfs(t *testing.T) {
 				hasFile{path: "bin/dd"},
 
 				// source mode.
-				hasRecord{cpio.Symlink("buildbin/cat", "/buildbin/installcommand")},
-				hasRecord{cpio.Symlink("buildbin/chroot", "/buildbin/installcommand")},
+				hasRecord{cpio.Symlink("buildbin/cat", "installcommand")},
+				hasRecord{cpio.Symlink("buildbin/chroot", "installcommand")},
 				hasFile{path: "buildbin/installcommand"},
 				hasFile{path: "src/github.com/u-root/u-root/cmds/cat/cat.go"},
 				hasFile{path: "src/github.com/u-root/u-root/cmds/chroot/chroot.go"},
