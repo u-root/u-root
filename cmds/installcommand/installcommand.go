@@ -36,6 +36,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
@@ -45,6 +46,7 @@ var (
 
 	verbose = flag.Bool("v", false, "print all build commands")
 	debug   = func(string, ...interface{}) {}
+	r = util.UrootPath
 )
 
 type form struct {
@@ -130,7 +132,7 @@ func main() {
 	}
 
 	debug("Command name: %v\n", form.cmdName)
-	destFile := filepath.Join("/ubin", form.cmdName)
+	destFile := filepath.Join(r("/ubin"), form.cmdName)
 
 	// Is the command there? This covers a race condition
 	// in that some other process may have caused it to be
@@ -143,11 +145,11 @@ func main() {
 	}
 
 	env := golang.Default()
-	env.Context.GOROOT = "/go"
-	env.Context.GOPATH = "/"
+	env.Context.GOROOT = r("/go")
+	env.Context.GOPATH = r("/")
 
 	var srcDir string
-	err := filepath.Walk("/src", func(p string, fi os.FileInfo, err error) error {
+	err := filepath.Walk(r("/src"), func(p string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

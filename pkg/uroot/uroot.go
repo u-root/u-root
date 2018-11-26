@@ -221,15 +221,28 @@ func CreateInitramfs(logger logger.Logger, opts Opts) error {
 	if len(opts.DefaultShell) > 0 {
 		if target, err := resolveCommandOrPath(opts.DefaultShell, opts.Commands); err != nil {
 			logger.Printf("No default shell: %v", err)
-		} else if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", target)); err != nil {
-			return err
+		} else {
+			rtarget, err := filepath.Rel("/", target)
+			if err != nil {
+				return err
+			}
+
+			if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", filepath.Join("..", rtarget))); err != nil {
+				return err
+			}
 		}
 	}
 
 	if len(opts.InitCmd) > 0 {
-		if target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands); err != nil {
+		target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands)
+		if err != nil {
 			return fmt.Errorf("could not find init: %v", err)
-		} else if err := archive.AddRecord(cpio.Symlink("init", target)); err != nil {
+		}
+		rtarget, err := filepath.Rel("/", target)
+		if err != nil {
+			return err
+		}
+		if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
 			return err
 		}
 	}

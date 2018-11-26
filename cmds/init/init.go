@@ -31,18 +31,23 @@ var (
 	test     = flag.Bool("test", false, "Test mode: don't try to set control tty")
 	debug    = func(string, ...interface{}) {}
 	osInitGo = func() {}
-	cmdList  = []string{
-		"/inito",
-
-		"/bbin/uinit",
-		"/bin/uinit",
-		"/buildbin/uinit",
-
-		"/bin/defaultsh",
-	}
+	cmdList  []string
 	cmdCount int
 	envs     []string
 )
+
+func init() {
+	r := util.UrootPath
+	cmdList = []string{
+		r("/inito"),
+
+		r("/bbin/uinit"),
+		r("/bin/uinit"),
+		r("/buildbin/uinit"),
+
+		r("/bin/defaultsh"),
+	}
+}
 
 func main() {
 	flag.Parse()
@@ -146,6 +151,11 @@ func main() {
 			if err == nil {
 				v = s
 			}
+			// and, well, it might be a relative link.
+			// We must go deeper.
+			d, b := filepath.Split(v)
+			d = filepath.Base(d)
+			v = filepath.Join("/", os.Getenv("UROOT_ROOT"), d, b)
 		}
 
 		// inito is (optionally) created by the u-root command when the

@@ -255,7 +255,7 @@ func TestCreateInitramfs(t *testing.T) {
 				hasFile{path: "bbin/bb"},
 				hasRecord{cpio.Symlink("bbin/init", "bb")},
 				hasRecord{cpio.Symlink("bbin/ls", "bb")},
-				hasRecord{cpio.Symlink("bin/defaultsh", "/bbin/ls")},
+				hasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
 			},
 		},
 		{
@@ -304,7 +304,7 @@ func TestCreateInitramfs(t *testing.T) {
 			},
 			want: nil,
 			validators: []archiveValidator{
-				hasRecord{cpio.Symlink("init", "/bin/systemd")},
+				hasRecord{cpio.Symlink("init", "bin/systemd")},
 			},
 		},
 		{
@@ -343,13 +343,13 @@ func TestCreateInitramfs(t *testing.T) {
 			},
 			want: nil,
 			validators: []archiveValidator{
-				hasRecord{cpio.Symlink("init", "/bbin/init")},
+				hasRecord{cpio.Symlink("init", "bbin/init")},
 
 				// bb mode.
 				hasFile{path: "bbin/bb"},
 				hasRecord{cpio.Symlink("bbin/init", "bb")},
 				hasRecord{cpio.Symlink("bbin/ls", "bb")},
-				hasRecord{cpio.Symlink("bin/defaultsh", "/bbin/ls")},
+				hasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
 
 				// binary mode.
 				hasFile{path: "bin/cp"},
