@@ -179,7 +179,7 @@ func main() {
 			log.Print("DHCPv4: sending request")
 			client := dhcpv4.NewClient()
 			// TODO add options to request to netboot
-			conversation, err := client.Exchange(*ifname, nil)
+			conversation, err := client.Exchange(*ifname)
 			for _, m := range conversation {
 				debug(m.Summary())
 			}
