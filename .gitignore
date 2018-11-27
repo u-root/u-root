@@ -1,4 +1,7 @@
 .*.swp
 localboot/localboot
+localboot/.bb
 netboot/netboot
+netboot/.bb
 uinit/uinit
+uinit/.bb

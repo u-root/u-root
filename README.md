@@ -1,5 +1,10 @@
 # systemboot
 
+[![Build Status](https://travis-ci.org/systemboot/systemboot.svg?branch=master)](https://travis-ci.org/systemboot/systemboot)
+[![codecov](https://codecov.io/gh/systemboot/systemboot/branch/master/graph/badge.svg)](https://codecov.io/gh/systemboot/systemboot)
+[![Go Report Card](https://goreportcard.com/badge/github.com/systemboot/systemboot)](https://goreportcard.com/report/github.com/systemboot/systemboot)
+
+
 SystemBoot is a distribution for LinuxBoot to create a system firmware + bootloader. It is based on [u-root](https://github.com/u-root/u-root). The provided programs are:
 
 * `netboot`: a network boot client that uses DHCP and HTTP to get a boot program based on Linux, and uses kexec to run it
