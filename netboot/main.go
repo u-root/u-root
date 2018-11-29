@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +16,7 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/insomniacslk/dhcp/iana"
+	"github.com/insomniacslk/dhcp/interfaces"
 	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/u-root/u-root/pkg/kexec"
 )
@@ -21,7 +24,7 @@ import (
 var (
 	useV4              = flag.Bool("4", false, "Get a DHCPv4 lease")
 	useV6              = flag.Bool("6", true, "Get a DHCPv6 lease")
-	ifname             = flag.String("i", "eth0", "Interface to send packets through")
+	ifname             = flag.String("i", "", "Interface to send packets through")
 	dryRun             = flag.Bool("dryrun", false, "Do everything except assigning IP addresses, changing DNS, and kexec")
 	doDebug            = flag.Bool("d", false, "Print debug output")
 	skipDHCP           = flag.Bool("skip-dhcp", false, "Skip DHCP and rely on SLAAC for network configuration. This requires -netboot-url")
@@ -32,7 +35,7 @@ var (
 )
 
 const (
-	interfaceUpTimeout = 30 * time.Second
+	interfaceUpTimeout = 10 * time.Second
 )
 
 var banner = `
@@ -47,13 +50,13 @@ var banner = `
                 ||     ||
 
 `
+var debug = func(string, ...interface{}) {}
 
 func main() {
 	flag.Parse()
 	if *skipDHCP && *overrideNetbootURL == "" {
 		log.Fatal("-skip-dhcp requires -netboot-url")
 	}
-	debug := func(string, ...interface{}) {}
 	if *doDebug {
 		debug = log.Printf
 	}
@@ -62,134 +65,165 @@ func main() {
 	if !*useV6 && !*useV4 {
 		log.Fatal("At least one of DHCPv6 and DHCPv4 is required")
 	}
-	// DHCPv6
-	if *useV6 {
-		log.Printf("Trying to obtain a DHCPv6 lease on %s", *ifname)
-		log.Printf("Waiting for network interface %s to come up", *ifname)
-		start := time.Now()
-		_, err := netboot.IfUp(*ifname, interfaceUpTimeout)
-		if err != nil {
-			log.Fatalf("DHCPv6: IfUp failed: %v", err)
+
+	iflist := []net.Interface{}
+	if *ifname != "" {
+		var iface *net.Interface
+		var err error
+		if iface, err = net.InterfaceByName(*ifname); err != nil {
+			log.Fatalf("Could not find interface %s: %v", *ifname, err)
 		}
-		debug("Interface %s is up after %v", *ifname, time.Since(start))
-		var (
-			netconf  *netboot.NetConf
-			bootfile string
-		)
-		if *skipDHCP {
-			log.Print("Skipping DHCP")
-		} else {
-			// send a netboot request via DHCP
-			modifiers := []dhcpv6.Modifier{
-				dhcpv6.WithArchType(iana.EFI_X86_64),
+		iflist = append(iflist, *iface)
+	} else {
+		var err error
+		if iflist, err = interfaces.GetNonLoopbackInterfaces(); err != nil {
+			log.Fatalf("Could not obtain the list of network interfaces: %v", err)
+		}
+	}
+
+	for _, iface := range iflist {
+		if *useV6 {
+			if err := boot6(iface.Name); err != nil {
+				log.Printf("Could not boot from %s: %v", iface.Name, err)
 			}
-			if *userClass != "" {
-				modifiers = append(modifiers, dhcpv6.WithUserClass([]byte(*userClass)))
+		}
+		if *useV4 {
+			if err := boot4(iface.Name); err != nil {
+				log.Printf("Could not boot from %s: %v", iface.Name, err)
 			}
-			conversation, err := netboot.RequestNetbootv6(*ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
-			for _, m := range conversation {
-				debug(m.Summary())
+		}
+	}
+
+	log.Fatalln("Could not boot from any interfaces")
+}
+
+func boot6(ifname string) error {
+	log.Printf("Trying to obtain a DHCPv6 lease on %s", ifname)
+	log.Printf("Waiting for network interface %s to come up", ifname)
+	start := time.Now()
+	_, err := netboot.IfUp(ifname, interfaceUpTimeout)
+	if err != nil {
+		return fmt.Errorf("DHCPv6: IfUp failed: %v", err)
+	}
+	debug("Interface %s is up after %v", ifname, time.Since(start))
+	var (
+		netconf  *netboot.NetConf
+		bootfile string
+	)
+	if *skipDHCP {
+		log.Print("Skipping DHCP")
+	} else {
+		// send a netboot request via DHCP
+		modifiers := []dhcpv6.Modifier{
+			dhcpv6.WithArchType(iana.EFI_X86_64),
+		}
+		if *userClass != "" {
+			modifiers = append(modifiers, dhcpv6.WithUserClass([]byte(*userClass)))
+		}
+		conversation, err := netboot.RequestNetbootv6(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
+		for _, m := range conversation {
+			debug(m.Summary())
+		}
+		if err != nil {
+			return fmt.Errorf("DHCPv6: netboot request for interface %s failed: %v", ifname, err)
+		}
+		// get network configuration and boot file
+		netconf, bootfile, err = netboot.ConversationToNetconf(conversation)
+		if err != nil {
+			return fmt.Errorf("DHCPv6: failed to extract network configuration for %s: %v", ifname, err)
+		}
+		debug("DHCPv6: network configuration: %+v", netconf)
+		if !*dryRun {
+			// Set up IP addresses
+			log.Printf("DHCPv6: configuring network interface %s", ifname)
+			if err = netboot.ConfigureInterface(ifname, netconf); err != nil {
+				return fmt.Errorf("DHCPv6: cannot configure IPv6 addresses on interface %s: %v", ifname, err)
 			}
-			if err != nil {
-				log.Fatalf("DHCPv6: netboot request for interface %s failed: %v", *ifname, err)
-			}
-			// get network configuration and boot file
-			netconf, bootfile, err = netboot.ConversationToNetconf(conversation)
-			if err != nil {
-				log.Fatalf("DHCPv6: failed to extract network configuration for %s: %v", *ifname, err)
-			}
-			debug("DHCPv6: network configuration: %+v", netconf)
-			if !*dryRun {
-				// Set up IP addresses
-				log.Printf("DHCPv6: configuring network interface %s", *ifname)
-				if err = netboot.ConfigureInterface(*ifname, netconf); err != nil {
-					log.Fatalf("DHCPv6: cannot configure IPv6 addresses on interface %s: %v", *ifname, err)
-				}
-				// Set up DNS
-			}
-			if *overrideNetbootURL != "" {
-				bootfile = *overrideNetbootURL
-			}
-			log.Printf("DHCPv6: boot file for interface %s is %s", *ifname, bootfile)
+			// Set up DNS
 		}
 		if *overrideNetbootURL != "" {
 			bootfile = *overrideNetbootURL
 		}
-		debug("DHCPv6: boot file URL is %s", bootfile)
-		// check for supported schemes
-		if !strings.HasPrefix(bootfile, "http://") {
-			log.Fatal("DHCPv6: can only handle http scheme")
-		}
-
-		log.Printf("DHCPv6: fetching boot file URL: %s", bootfile)
-		resp, err := http.Get(bootfile)
-		if err != nil {
-			log.Fatalf("DHCPv6: http.Get of %s failed: %v", bootfile, err)
-		}
-		// FIXME this will not be called if something fails after this point
-		defer resp.Body.Close()
-		if resp.StatusCode != 200 {
-			log.Fatalf("Status code is not 200 OK: %d", resp.StatusCode)
-		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatalf("DHCPv6: cannot read boot file from the network: %v", err)
-		}
-		u, err := url.Parse(bootfile)
-		if err != nil {
-			log.Fatalf("DHCPv6: cannot parse URL %s: %v", bootfile, err)
-		}
-		// extract file name component
-		if strings.HasSuffix(u.Path, "/") {
-			log.Fatalf("Invalid file path, cannot end with '/': %s", u.Path)
-		}
-		filename := filepath.Base(u.Path)
-		if filename == "." || filename == "" {
-			log.Fatalf("Invalid empty file name extracted from file path %s", u.Path)
-		}
-		if err = ioutil.WriteFile(filename, body, 0400); err != nil {
-			log.Fatalf("DHCPv6: cannot write to file %s: %v", filename, err)
-		}
-		debug("DHCPv6: saved boot file to %s", filename)
-		if !*dryRun {
-			log.Printf("DHCPv6: kexec'ing into %s", filename)
-			kernel, err := os.OpenFile(filename, os.O_RDONLY, 0)
-			if err != nil {
-				log.Fatalf("DHCPv6: cannot open file %s: %v", filename, err)
-			}
-			if err = kexec.FileLoad(kernel, nil /* ramfs */, "" /* cmdline */); err != nil {
-				log.Fatalf("DHCPv6: kexec.FileLoad failed: %v", err)
-			}
-			if err = kexec.Reboot(); err != nil {
-				log.Fatalf("DHCPv6: kexec.Reboot failed: %v", err)
-			}
-		}
+		log.Printf("DHCPv6: boot file for interface %s is %s", ifname, bootfile)
 	}
-	// DHCPv4
-	if *useV4 {
-		log.Printf("Trying to obtain a DHCPv4 lease on %s", *ifname)
-		_, err := netboot.IfUp(*ifname, interfaceUpTimeout)
-		if err != nil {
-			log.Fatalf("DHCPv4: IfUp failed: %v", err)
-		}
-		debug("DHCPv4: interface %s is up", *ifname)
-		if *skipDHCP {
-			log.Print("Skipping DHCP")
-		} else {
-			log.Print("DHCPv4: sending request")
-			client := dhcpv4.NewClient()
-			// TODO add options to request to netboot
-			conversation, err := client.Exchange(*ifname)
-			for _, m := range conversation {
-				debug(m.Summary())
-			}
-			if err != nil {
-				log.Fatalf("DHCPv4: Exchange failed: %v", err)
-			}
-			// TODO configure the network and DNS
-			// TODO extract the next server and boot file and fetch it
-			// TODO kexec into the NBP
-		}
+	if *overrideNetbootURL != "" {
+		bootfile = *overrideNetbootURL
+	}
+	debug("DHCPv6: boot file URL is %s", bootfile)
+	// check for supported schemes
+	if !strings.HasPrefix(bootfile, "http://") {
+		return fmt.Errorf("DHCPv6: can only handle http scheme")
 	}
 
+	log.Printf("DHCPv6: fetching boot file URL: %s", bootfile)
+	resp, err := http.Get(bootfile)
+	if err != nil {
+		return fmt.Errorf("DHCPv6: http.Get of %s failed: %v", bootfile, err)
+	}
+	// FIXME this will not be called if something fails after this point
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Status code is not 200 OK: %d", resp.StatusCode)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("DHCPv6: cannot read boot file from the network: %v", err)
+	}
+	u, err := url.Parse(bootfile)
+	if err != nil {
+		return fmt.Errorf("DHCPv6: cannot parse URL %s: %v", bootfile, err)
+	}
+	// extract file name component
+	if strings.HasSuffix(u.Path, "/") {
+		return fmt.Errorf("Invalid file path, cannot end with '/': %s", u.Path)
+	}
+	filename := filepath.Base(u.Path)
+	if filename == "." || filename == "" {
+		return fmt.Errorf("Invalid empty file name extracted from file path %s", u.Path)
+	}
+	if err = ioutil.WriteFile(filename, body, 0400); err != nil {
+		return fmt.Errorf("DHCPv6: cannot write to file %s: %v", filename, err)
+	}
+	debug("DHCPv6: saved boot file to %s", filename)
+	if !*dryRun {
+		log.Printf("DHCPv6: kexec'ing into %s", filename)
+		kernel, err := os.OpenFile(filename, os.O_RDONLY, 0)
+		if err != nil {
+			return fmt.Errorf("DHCPv6: cannot open file %s: %v", filename, err)
+		}
+		if err = kexec.FileLoad(kernel, nil /* ramfs */, "" /* cmdline */); err != nil {
+			return fmt.Errorf("DHCPv6: kexec.FileLoad failed: %v", err)
+		}
+		if err = kexec.Reboot(); err != nil {
+			return fmt.Errorf("DHCPv6: kexec.Reboot failed: %v", err)
+		}
+	}
+	return nil
+}
+
+func boot4(ifname string) error {
+	log.Printf("Trying to obtain a DHCPv4 lease on %s", ifname)
+	_, err := netboot.IfUp(ifname, interfaceUpTimeout)
+	if err != nil {
+		return fmt.Errorf("DHCPv4: IfUp failed: %v", err)
+	}
+	debug("DHCPv4: interface %s is up", ifname)
+	if *skipDHCP {
+		log.Print("Skipping DHCP")
+	} else {
+		log.Print("DHCPv4: sending request")
+		client := dhcpv4.NewClient()
+		// TODO add options to request to netboot
+		conversation, err := client.Exchange(ifname)
+		for _, m := range conversation {
+			debug(m.Summary())
+		}
+		if err != nil {
+			return fmt.Errorf("DHCPv4: Exchange failed: %v", err)
+		}
+		// TODO configure the network and DNS
+		// TODO extract the next server and boot file and fetch it
+		// TODO kexec into the NBP
+	}
+	return nil
 }
