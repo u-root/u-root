@@ -19,48 +19,19 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
-	"strings"
 
 	flag "github.com/spf13/pflag"
-	"golang.org/x/sys/unix"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
-	cmdUsage = "Usage: rsdp [-f file]"
-	file     = flag.StringP("file", "f", "/dev/kmsg", "File to read from")
+	cmdUsage = "Usage: rsdp"
 )
 
 func usage() {
 	log.Fatalf(cmdUsage)
-}
-
-func getRSDP(path string) (string, error) {
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_NONBLOCK, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-	file := os.NewFile(uintptr(fd), "kernel messages")
-	defer file.Close()
-
-	s := bufio.NewScanner(file)
-	for s.Scan() {
-		if err := s.Err(); err != nil {
-			return "", err
-		}
-		res := s.Text()
-		if strings.Contains(res, "RSDP") {
-			rv := strings.Split(res, " ")
-			if len(res) < 3 {
-				continue
-			}
-			return rv[2], nil
-		}
-	}
-	return "", fmt.Errorf("Could not find RSDP")
 }
 
 func main() {
@@ -68,7 +39,7 @@ func main() {
 	if flag.NArg() != 0 {
 		usage()
 	}
-	rsdp_value, err := getRSDP(*file)
+	rsdp_value, err := util.GetRSDP()
 	if err != nil {
 		log.Fatal(err)
 	}

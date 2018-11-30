@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/u-root/u-root/pkg/uroot/util"
 	"golang.org/x/sys/unix"
 )
 
@@ -22,6 +23,10 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 		ramfsfd = int(ramfs.Fd())
 	} else {
 		flags |= unix.KEXEC_FILE_NO_INITRAMFS
+	}
+
+	if rsdp, _ := util.GetRSDP(); rsdp != "" {
+		cmdline += " acpi_rsdp=" + rsdp
 	}
 
 	if err := unix.KexecFileLoad(int(kernel.Fd()), ramfsfd, cmdline, flags); err != nil {
