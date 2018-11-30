@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"os/exec"
 	"time"
 
@@ -67,6 +68,8 @@ func main() {
 				}
 				log.Printf("Running boot command: %v", bootcmd)
 				cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
 					log.Printf("Error executing %v: %v", cmd, err)
 				}
