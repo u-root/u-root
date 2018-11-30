@@ -8,12 +8,15 @@
 package util
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
@@ -229,4 +232,32 @@ func Rootfs() {
 		create(cgroupsnamespace)
 	}
 
+}
+
+func GetRSDP() (string, error) {
+	file, err := os.Open("/sys/firmware/efi/systab")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	const (
+		acpi20 = "ACPI20="
+		acpi   = "ACPI="
+	)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, acpi20) {
+			return strings.TrimPrefix(line, acpi20), nil
+		}
+		if strings.HasPrefix(line, acpi) {
+			return strings.TrimPrefix(line, acpi), nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("error while reading EFI systab: %v", err)
+	}
+	return "", errors.New("invalid efi/systab file")
 }
