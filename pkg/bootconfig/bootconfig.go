@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/systemboot/systemboot/pkg/crypto"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/kexecbin"
 )
@@ -32,6 +33,7 @@ func (bc *BootConfig) Boot() error {
 	// kexec: try the kexecbin executable first, and if it fails, use the native
 	// Go implementation of kexec from u-root
 	log.Printf("Trying KexecBin on %+v", bc)
+	crypto.TryMeasureBootConfig(bc.Name, bc.Kernel, bc.Initramfs, bc.KernelArgs, bc.DeviceTree)
 	if err := kexecbin.KexecBin(bc.Kernel, bc.KernelArgs, bc.Initramfs, bc.DeviceTree); err != nil {
 		if os.IsNotExist(err) {
 			log.Printf("BootConfig: KexecBin failed, trying pure-Go kexec. Error: %v", err)
@@ -45,7 +47,7 @@ func (bc *BootConfig) Boot() error {
 	}
 	var initramfs *os.File
 	if bc.Initramfs != "" {
-		initramfs, err = os.Open(bc.Kernel)
+		initramfs, err = os.Open(bc.Initramfs)
 		if err != nil {
 			return err
 		}
