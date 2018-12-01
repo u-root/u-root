@@ -19,29 +19,29 @@ const (
 )
 
 // TryMeasureBootConfig measures bootconfig contents
-func TryMeasureBootConfig(name string, kernel string, initramfs string, kernelArgs string, deviceTree string) {
+func TryMeasureBootConfig(name, kernel, initramfs, kernelArgs, deviceTree string) {
 	TPMInterface, err := tpm.NewTPM()
 	if err != nil {
 		log.Printf("Cannot open TPM: %v", err)
 		return
 	}
-	TryMeasureData(BootConfig, []byte(name), &name)
-	TryMeasureData(BootConfig, []byte(kernel), &kernel)
-	TryMeasureData(BootConfig, []byte(initramfs), &initramfs)
-	TryMeasureData(BootConfig, []byte(kernelArgs), &kernelArgs)
-	TryMeasureData(BootConfig, []byte(deviceTree), &deviceTree)
+	TryMeasureData(BootConfig, []byte(name), name)
+	TryMeasureData(BootConfig, []byte(kernel), kernel)
+	TryMeasureData(BootConfig, []byte(initramfs), initramfs)
+	TryMeasureData(BootConfig, []byte(kernelArgs), kernelArgs)
+	TryMeasureData(BootConfig, []byte(deviceTree), deviceTree)
 	TryMeasureFiles(kernel, initramfs, deviceTree)
 	TPMInterface.Close()
 }
 
 // TryMeasureData measures a byte array with additional information
-func TryMeasureData(pcr uint32, data []byte, info *string) {
+func TryMeasureData(pcr uint32, data []byte, info string) {
 	TPMInterface, err := tpm.NewTPM()
 	if err != nil {
 		log.Printf("Cannot open TPM: %v", err)
 		return
 	}
-	log.Println("Measuring blob: " + *info)
+	log.Printf("Measuring blob: %v", info)
 	TPMInterface.Measure(pcr, data)
 	TPMInterface.Close()
 }
@@ -54,7 +54,7 @@ func TryMeasureFiles(files ...string) {
 		return
 	}
 	for _, file := range files {
-		log.Println("Measuring file: " + file)
+		log.Printf("Measuring file: %v", file)
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			continue

@@ -170,7 +170,7 @@ func boot6(ifname string) error {
 	if err != nil {
 		return fmt.Errorf("DHCPv6: cannot read boot file from the network: %v", err)
 	}
-	crypto.TryMeasureData(crypto.BootConfig, body, &bootfile)
+	crypto.TryMeasureData(crypto.BootConfig, body, bootfile)
 	u, err := url.Parse(bootfile)
 	if err != nil {
 		return fmt.Errorf("DHCPv6: cannot parse URL %s: %v", bootfile, err)
