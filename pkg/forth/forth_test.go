@@ -20,7 +20,7 @@ type forthTest struct {
 var forthTests = []forthTest{
 	{"hostname", "", ""},
 	{"2", "2", ""},
-	{"", "2", "Empty stack"},
+	{"", "", "[]: length is not 1"},
 	{"2 2 +", "4", ""},
 	{"4 2 -", "2", ""},
 	{"4 2 *", "8", ""},
@@ -66,10 +66,11 @@ func TestForth(t *testing.T) {
 		t.Errorf("Test: After Reset(): stack is %v and should be true", f.Empty())
 	}
 	NewWord(f, "dd", "dup")
-	NewWord(f, "d3d", "dup dup + +")
+	NewWord(f, "d3d", "dup", "dup", "+", "+")
 	for _, tt := range forthTests {
 		var err error
-		res, err := Eval(f, tt.val)
+		res, err := EvalPop(f, tt.val)
+		t.Logf("tt %v res %v err %v", tt, res, err)
 		if res == tt.res || (err != nil && err.Error() == tt.err) {
 			if err != nil {
 				/* stack is not going to be right; reset it. */
@@ -77,7 +78,7 @@ func TestForth(t *testing.T) {
 			}
 			t.Logf("Test: '%v' '%v' '%v': Pass\n", tt.val, res, err)
 		} else {
-			t.Errorf("Test: '%v' got (%v, %v): want (%v, %v): Fail\n", tt.val, res, err.Error(), tt.res, tt.err)
+			t.Errorf("Test: '%v' got (%v, %v): want (%v, %v): Fail\n", tt.val, res, err, tt.res, tt.err)
 			t.Logf("ops %v\n", Ops())
 			continue
 		}
@@ -95,7 +96,7 @@ func TestBadPop(t *testing.T) {
 	var b [3]byte
 	f := New()
 	f.Push(b)
-	res, err := Eval(f, "2 +")
+	res, err := EvalPop(f, "2 +")
 	t.Logf("%v, %v", res, err)
 	nan := fmt.Errorf("NaN: %T", b)
 	if !reflect.DeepEqual(err, nan) {
@@ -104,4 +105,40 @@ func TestBadPop(t *testing.T) {
 	if res != nil {
 		t.Errorf("got %v, want nil", res)
 	}
+}
+
+func TestOpmap(t *testing.T) {
+	f := New()
+	err := Eval(f, "words")
+	if err != nil {
+		t.Fatalf("words: got %v, nil", err)
+	}
+	if f.Length() != 1 {
+		t.Fatalf("words: got length %d, want 1", f.Length())
+	}
+	w := f.Pop()
+	switch w.(type) {
+	case []string:
+	default:
+		t.Fatalf("words: got %T, want []string", w)
+	}
+	t.Logf("words are %v", w)
+}
+
+func TestNewWord(t *testing.T) {
+	Debug = t.Logf
+	f := New()
+	// This test creates a word, tp, with 3 args, which simply
+	// pushes 1 and 3 on the stack and applies +.
+	// Note the use of ' so we can evaluate + as a string,
+	// not an operator.
+	err := Eval(f, "1", "3", "'+", "3", "tp", "newword")
+	if err != nil {
+		t.Fatalf("newword: got %v, nil", err)
+	}
+	err = Eval(f, "tp")
+	if err != nil {
+		t.Fatalf("newword: got %v, want nil", err)
+	}
+	t.Logf("stack %v", f.Stack())
 }

@@ -16,13 +16,17 @@ import (
 	"github.com/u-root/u-root/pkg/forth"
 )
 
-var debug = flag.Bool("d", false, "Turn on stack dump after each Eval")
+var debug = flag.Bool("d", false, "Turn on forth package debugging using log.Printf")
 
 func main() {
 	var b = make([]byte, 512)
 	flag.Parse()
+	if *debug {
+		forth.Debug = log.Printf
+	}
 	f := forth.New()
 	for {
+		fmt.Printf("%sOK\n", f.Stack())
 		n, err := os.Stdin.Read(b)
 		if err != nil {
 			if err != io.EOF {
@@ -31,18 +35,8 @@ func main() {
 			// Silently exit on EOF. It's the unix way.
 			break
 		}
-		// NOTE: should be f.Eval. Why did I not do that? There was a reason ...
-		// I don't remember what it was
-		s, err := forth.Eval(f, string(b[:n]))
-		if err != nil {
+		if err := forth.EvalString(f, string(b[:n])); err != nil {
 			fmt.Printf("%v\n", err)
 		}
-		if *debug {
-			fmt.Printf("%v", f.Stack())
-		}
-		fmt.Printf("%s\n", s)
-		// And push it back. It's much more convenient to have it
-		// always on TOS.
-		f.Push(s)
 	}
 }

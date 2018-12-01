@@ -40,6 +40,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type (
@@ -60,19 +61,32 @@ type (
 	}
 )
 
-var opmap = map[string]Op{
-	"+":        plus,
-	"-":        sub,
-	"*":        times,
-	"/":        div,
-	"%":        mod,
-	"swap":     swap,
-	"ifelse":   ifelse,
-	"hostname": hostname,
-	"hostbase": hostbase,
-	"strcat":   strcat,
-	"roundup":  roundup,
-	"dup":      dup,
+var (
+	// Debug is an empty function that can be set to, e.g.,
+	// fmt.Printf or log.Printf for debugging.
+	Debug   = func(string, ...interface{}) {}
+	opmap   map[string]Op
+	mapLock sync.Mutex
+)
+
+func init() {
+	opmap = map[string]Op{
+		"+":        plus,
+		"-":        sub,
+		"*":        times,
+		"/":        div,
+		"%":        mod,
+		"swap":     swap,
+		"ifelse":   ifelse,
+		"hostname": hostname,
+		"hostbase": hostbase,
+		"strcat":   strcat,
+		"roundup":  roundup,
+		"dup":      dup,
+		"drop":     drop,
+		"newword":  newword,
+		"words":    words,
+	}
 }
 
 // Forth is an interface used by the package. The interface
@@ -84,7 +98,6 @@ type Forth interface {
 	Pop() Cell
 	Length() int
 	Empty() bool
-	Newop(string, Op)
 	Reset()
 	Stack() []Cell
 }
@@ -95,9 +108,25 @@ func New() Forth {
 	return f
 }
 
-// Newop creates a new operation. We considered having
+// Getop gets an op from the map.
+func Getop(n string) Op {
+	mapLock.Lock()
+	defer mapLock.Unlock()
+	op, ok := opmap[n]
+	if !ok {
+		return nil
+	}
+	return op
+}
+
+// Putop creates a new operation. We considered having
 // an opmap per stack but don't feel the package requires it
-func (f *stack) Newop(n string, op Op) {
+func Putop(n string, op Op) {
+	mapLock.Lock()
+	defer mapLock.Unlock()
+	if _, ok := opmap[n]; ok {
+		panic("Putting %s: op already assigned")
+	}
 	opmap[n] = op
 }
 
@@ -119,19 +148,18 @@ func (f *stack) Stack() []Cell {
 // Push pushes the interface{} on the stack.
 func (f *stack) Push(c Cell) {
 	f.stack = append(f.stack, c)
-	//fmt.Printf("push: %v: stack: %v\n", s, f.stack)
+	Debug("push: %v: stack: %v\n", c, f.stack)
 }
 
 // Pop pops the stack. If the stack is Empty Pop will panic.
 // Eval recovers() the panic.
 func (f *stack) Pop() (ret Cell) {
-
 	if len(f.stack) < 1 {
 		panic(errors.New("Empty stack"))
 	}
 	ret = f.stack[len(f.stack)-1]
 	f.stack = f.stack[0 : len(f.stack)-1]
-	//fmt.Printf("Pop: %v stack %v\n", ret, f.stack)
+	Debug("Pop: %v stack %v\n", ret, f.stack)
 	return ret
 }
 
@@ -157,39 +185,64 @@ func errRecover(errp *error) {
 	}
 }
 
-/* iEval takes a Forth and strings and splits the string on space
- * characters, pushing each element on the stack or invoking the
- * operator if it is found in the opmap.
- */
-func iEval(f Forth, s string) {
-	// TODO: create a separator list based on isspace and all the
-	// non alpha numberic characters in the opmap.
-	for _, val := range strings.Fields(s) {
-		//fmt.Printf("eval %s stack %v", val, f.Stack())
-		fun := opmap[val]
-		if fun != nil {
-			//fmt.Printf("Eval ...:")
-			fun(f)
-			//fmt.Printf("Stack now %v", f.Stack())
-		} else {
-			f.Push(val)
-			//fmt.Printf("push %s, stack %v", val, f.Stack())
+// Eval takes a Forth and []Cell, pushing each element on the stack or invoking the
+// operator if it is found in the opmap.
+func Eval(f Forth, cells ...Cell) (err error) {
+	defer errRecover(&err)
+	for _, c := range cells {
+		Debug("eval %s(%T) stack %v", c, c, f.Stack())
+		switch s := c.(type) {
+		case string:
+			fun := Getop(s)
+			if fun != nil {
+				Debug("Eval ... %v:", f.Stack())
+				fun(f)
+				Debug("Stack now %v", f.Stack())
+				break
+			}
+			if s[0] == '\'' {
+				s = s[1:]
+			}
+			f.Push(s)
+			Debug("push %s, stack %v", s, f.Stack())
+		default:
+			Debug("push %s, stack %v", s, f.Stack())
+			f.Push(s)
 		}
 	}
+	return nil
+}
+
+// EvalString takes a Forth and string and splits the string on space
+// characters, calling Eval for each one.
+func EvalString(f Forth, s string) (err error) {
+	for _, c := range strings.Fields(s) {
+		if err = Eval(f, c); err != nil {
+			Debug("EvalString Eval err: err %v", err)
+			return
+		}
+	}
+	Debug("EvalString err %v", err)
 	return
 }
 
-// Eval takes a Forth and strings and splits the string on space
-// characters, pushing each element on the stack or invoking the
-// operator if it is found in the opmap. It returns TOS when it is done.
-// it is an error to leave the stack non-Empty.
-//
-func Eval(f Forth, s string) (ret Cell, err error) {
+// EvalPop takes a Forth and string, calls EvalString, and
+// returns TOS and an error, if any.
+// For EvalPop it is an error to leave the stack non-Empty.
+// EvalPop is typically used for programs that want to
+// parse forth contained in, e.g., flag.Args(), and return
+// a result. In most use cases, we want the stack to be empty.
+func EvalPop(f Forth, s string) (ret Cell, err error) {
 	defer errRecover(&err)
-	iEval(f, s)
+	if err = EvalString(f, s); err != nil {
+		return
+	}
+	if f.Length() != 1 {
+		panic(fmt.Sprintf("%v: length is not 1", f.Stack()))
+	}
 	ret = f.Pop()
+	Debug("EvalPop ret %v err %v", ret, err)
 	return
-
 }
 
 // String returns the Top Of Stack if it is a string
@@ -206,7 +259,9 @@ func String(f Forth) string {
 
 // toInt converts to int64.
 func toInt(f Forth) int64 {
+	Debug("toint %v", f.Stack())
 	c := f.Pop()
+	Debug("%T", c)
 	switch s := c.(type) {
 	case string:
 		i, err := strconv.ParseInt(s, 0, 64)
@@ -222,10 +277,42 @@ func toInt(f Forth) int64 {
 }
 
 func plus(f Forth) {
+	Debug("plus")
 	x := toInt(f)
 	y := toInt(f)
+	Debug("Plus %v %v", x, y)
 	z := x + y
 	f.Push(strconv.FormatInt(z, 10))
+}
+
+func words(f Forth) {
+	mapLock.Lock()
+	defer mapLock.Unlock()
+	var w []string
+	for i := range opmap {
+		w = append(w, i)
+	}
+	f.Push(w)
+}
+
+func newword(f Forth) {
+	s := String(f)
+	n := toInt(f)
+	// Pop <n> Cells.
+	if f.Length() < int(n) {
+		panic(fmt.Sprintf("newword %s: stack is %d elements, need %d", s, f.Length(), n))
+	}
+	var c = make([]Cell, n)
+	for i := range c {
+		c[i] = f.Pop()
+	}
+	Putop(s, func(f Forth) {
+		Eval(f, c...)
+	})
+}
+
+func drop(f Forth) {
+	_ = f.Pop()
 }
 
 func times(f Forth) {
@@ -311,11 +398,11 @@ func hostbase(f Forth) {
 // to itself twice, you can call:
 // NewWord(f, "d3d", "dup dup + +")
 // which does two dups, and two adds.
-func NewWord(f Forth, name, command string) {
+func NewWord(f Forth, name string, cell Cell, cells ...Cell) {
+	cmd := append([]Cell{cell}, cells...)
 	newword := func(f Forth) {
-		iEval(f, command)
-		return
+		Eval(f, cmd...)
 	}
-	opmap[name] = newword
+	Putop(name, newword)
 	return
 }
