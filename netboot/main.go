@@ -18,6 +18,7 @@ import (
 	"github.com/insomniacslk/dhcp/iana"
 	"github.com/insomniacslk/dhcp/interfaces"
 	"github.com/insomniacslk/dhcp/netboot"
+	"github.com/systemboot/systemboot/pkg/crypto"
 	"github.com/u-root/u-root/pkg/kexec"
 )
 
@@ -169,6 +170,7 @@ func boot6(ifname string) error {
 	if err != nil {
 		return fmt.Errorf("DHCPv6: cannot read boot file from the network: %v", err)
 	}
+	crypto.TryMeasureData(crypto.BootConfig, body, bootfile)
 	u, err := url.Parse(bootfile)
 	if err != nil {
 		return fmt.Errorf("DHCPv6: cannot parse URL %s: %v", bootfile, err)

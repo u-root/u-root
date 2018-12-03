@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/systemboot/systemboot/pkg/crypto"
 	"github.com/systemboot/systemboot/pkg/vpd"
 )
 
@@ -60,6 +61,7 @@ func GetBootEntries() []BootEntry {
 		// try the RW entries first
 		value, err := Get(key, false)
 		if err == nil {
+			crypto.TryMeasureData(crypto.NvramVars, value, key)
 			bootEntries = append(bootEntries, BootEntry{Name: key, Config: value})
 			// WARNING WARNING WARNING this means that read-write boot entries
 			// have priority over read-only ones
@@ -68,6 +70,7 @@ func GetBootEntries() []BootEntry {
 		// try the RO entries then
 		value, err = Get(key, true)
 		if err == nil {
+			crypto.TryMeasureData(crypto.NvramVars, value, key)
 			bootEntries = append(bootEntries, BootEntry{Name: key, Config: value})
 		}
 	}
