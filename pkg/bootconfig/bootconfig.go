@@ -2,8 +2,10 @@ package bootconfig
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
+	"os/exec"
 
 	"github.com/systemboot/systemboot/pkg/crypto"
 	"github.com/u-root/u-root/pkg/kexec"
@@ -30,17 +32,21 @@ func (bc *BootConfig) IsValid() bool {
 // Boot tries to boot the kernel with optional initramfs and command line
 // options. If a device-tree is specified, that will be used too
 func (bc *BootConfig) Boot() error {
-	// kexec: try the kexecbin executable first, and if it fails, use the native
-	// Go implementation of kexec from u-root
-	log.Printf("Trying KexecBin on %+v", bc)
 	crypto.TryMeasureBootConfig(bc.Name, bc.Kernel, bc.Initramfs, bc.KernelArgs, bc.DeviceTree)
+
+	// kexec: try the kexecbin executable first
+	// if it is not available fallback to the Go implementation of kexec from u-root
+	log.Printf("Trying KexecBin on %+v", bc)
 	if err := kexecbin.KexecBin(bc.Kernel, bc.KernelArgs, bc.Initramfs, bc.DeviceTree); err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("BootConfig: KexecBin failed, trying pure-Go kexec. Error: %v", err)
+		// If it was found nowhere in PATH it will be exec.Error{exec.ErrNotFound}, which we have to unpack
+		execErr, ok := err.(*exec.Error)
+		if (ok && execErr.Err == exec.ErrNotFound) || os.IsNotExist(err) {
+			log.Printf("BootConfig: KexecBin is not available, trying pure-Go kexec. Error: %v", err)
 		} else {
 			return err
 		}
 	}
+
 	kernel, err := os.Open(bc.Kernel)
 	if err != nil {
 		return err
@@ -65,7 +71,16 @@ func (bc *BootConfig) Boot() error {
 			}
 		}
 	}()
-	return kexec.FileLoad(kernel, initramfs, bc.KernelArgs)
+	if err := kexec.FileLoad(kernel, initramfs, bc.KernelArgs); err != nil {
+		return err
+	}
+
+	err = kexec.Reboot()
+	if err == nil {
+		return errors.New("Unexpectedly returned from Reboot() without error. The system did not reboot")
+	}
+	return err
+
 }
 
 // NewBootConfig parses a boot configuration in JSON format and returns a
