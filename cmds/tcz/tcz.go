@@ -263,7 +263,16 @@ func setupPackages(tczName string, deps map[string]bool) error {
 
 		/* now mount it. The convention is the mount is in /tinyCoreRoot/packagename */
 		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
-			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
+			// how I hate Linux.
+			// Since all you ever get back is a USELESS ERRNO
+			// note: the open succeeded for both things, the mkdir worked,
+			// the loop device open worked. And we can get ENODEV. So,
+			// just what went wrong? "We're not telling. Here's an errno."
+			li, lerr := os.Stat(loopname)
+			pi, perr := os.Stat(pkgpath)
+			di, derr := os.Stat(packagePath)
+			e := fmt.Sprintf("%v: loop is (%v, %v); package is (%v, %v); dir is (%v, %v). Is squashfs built into your kernel?", err, li, lerr, pi, perr, di, derr)
+			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, e)
 		}
 		err = clonetree(packagePath)
 		if err != nil {
@@ -302,6 +311,7 @@ func main() {
 	tczLocalPackageDir = filepath.Join(*tczRoot, tczServerDir)
 
 	packages := flag.Args()
+	debug("tcz: packages %v", packages)
 
 	if len(packages) == 0 {
 		flag.Usage()
