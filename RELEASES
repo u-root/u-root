@@ -5,7 +5,7 @@ A new release happens every 6 weeks:
 - 1st day on the first month of each quarter
 - 15th day of the second month of each quarter
 
-## v2.0.0 (2018-11-21)
+## v3.0.0 (2018-11-21)
 
 - Reduced size of shell by 20%
 - Improved QEMU-based integration tests
