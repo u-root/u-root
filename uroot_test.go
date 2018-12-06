@@ -67,8 +67,6 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 }
 
 func TestUrootCmdline(t *testing.T) {
-	t.Parallel()
-
 	samplef, err := ioutil.TempFile("", "u-root-sample-")
 	if err != nil {
 		t.Fatal(err)
@@ -149,8 +147,13 @@ func TestUrootCmdline(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			delFiles := true
 			f, sum1 := buildIt(t, tt.args, tt.env, tt.err)
-			defer os.RemoveAll(f.Name())
+			defer func() {
+				if delFiles {
+					os.RemoveAll(f.Name())
+				}
+			}()
 
 			a, err := itest.ReadArchive(f.Name())
 			if err != nil {
@@ -164,9 +167,16 @@ func TestUrootCmdline(t *testing.T) {
 			}
 
 			f2, sum2 := buildIt(t, tt.args, tt.env, tt.err)
-			defer os.RemoveAll(f2.Name())
+			defer func() {
+				if delFiles {
+					os.RemoveAll(f2.Name())
+				}
+			}()
 			if !bytes.Equal(sum1, sum2) {
-				t.Fatalf("not reproducible, hashes don't match")
+				delFiles = false
+				t.Errorf("not reproducible, hashes don't match")
+				t.Errorf("env: %v args: %v", tt.env, tt.args)
+				t.Errorf("file1: %v file2: %v", f.Name(), f2.Name())
 			}
 		})
 	}
@@ -180,6 +190,7 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
 
 	arg := append([]string{"-o", f.Name()}, args...)
 	c := testutil.Command(t, arg...)
+	t.Logf("Commandline: %v", arg)
 	c.Env = append(c.Env, env...)
 	if out, err := c.CombinedOutput(); err != want {
 		t.Fatalf("Error: %v\nOutput:\n%s", err, out)
