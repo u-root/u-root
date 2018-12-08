@@ -64,6 +64,10 @@ u-root -build=bb core github.com/systemboot/systemboot/{uinit,localboot,netboot}
 
 The initramfs will be located in `/tmp/initramfs_${platform}_${arch}.cpio`.
 
+More detailed information about the build process for a full LinuxBoot firmware image
+using u-root/systemboot and coreboot can be found in the [LinuxBoot book](https://github.com/linuxboot/book)
+chapter 11, [LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/11.coreboot.u-root.systemboot/README.md).
+
 ## Example: LinuxBoot with coreboot
 
 One of the ways to create a LinuxBoot system firmware is by using
