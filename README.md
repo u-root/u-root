@@ -77,7 +77,6 @@ following diagram:
 ## TODO
 
 * Instructions to build a suitable kernel and run it with Qemu
-* DHCPv4 is under work
 * verified and measured boot
 * a proper GRUB config parser
 * backwards compatibility with BIOS-style partitions
