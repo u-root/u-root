@@ -21,13 +21,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	flag "github.com/spf13/pflag"
 	"io"
 	"log"
 	"os"
 	"sort"
-	"strings"
 )
 
 var (
@@ -47,17 +46,10 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.BoolVar(&flags.all, "A", false, "Select all processes.  Identical to -e.")
-	flag.BoolVar(&flags.all, "e", false, "Select all processes.  Identical to -A.")
-	flag.BoolVar(&flags.x, "x", false, "BSD-Like style, with STAT Column and long CommandLine")
-	flag.BoolVar(&flags.nSidTty, "a", false, "Print all process except whose are session leaders or unlinked with terminal")
-
-	if len(os.Args) > 1 {
-		if isPermutation(os.Args[1], "aux") {
-			flags.aux = true
-			flags.all = true
-		}
-	}
+	flag.BoolVarP(&flags.all, "All", "A", false, "Select all processes.  Identical to -e.")
+	flag.BoolVarP(&flags.all, "every", "e", false, "Select all processes.  Identical to -A.")
+	flag.BoolVarP(&flags.x, "bsd", "x", false, "BSD-Like style, with STAT Column and long CommandLine")
+	flag.BoolVarP(&flags.nSidTty, "nSIDTTY", "a", false, "Print all process except whose are session leaders or unlinked with terminal")
 }
 
 // ProcessTable holds all the information needed for ps
@@ -166,27 +158,7 @@ func (pT *ProcessTable) PrepareString() {
 	pT.fstring = fstring
 }
 
-func isPermutation(check string, ref string) bool {
-	if len(check) != len(ref) {
-		return false
-	}
-	checkArray := strings.Split(check, "")
-	refArray := strings.Split(ref, "")
-
-	sort.Strings(checkArray)
-	sort.Strings(refArray)
-
-	for i := range check {
-		if checkArray[i] != refArray[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // For now, just read /proc/pid/stat and dump its brains.
-// TODO: a nice clean way to turn /proc/pid/stat into a struct. (trying now)
-// There has to be a way.
 func ps(pT *ProcessTable, w io.Writer) error {
 	if len(pT.table) == 0 {
 		return nil
@@ -240,8 +212,25 @@ func ps(pT *ProcessTable, w io.Writer) error {
 
 }
 
+func usage() {
+	log.Printf("Uage: ps [flags] [aux]")
+	flag.Usage()
+	os.Exit(1)
+}
+
 func main() {
 	flag.Parse()
+	// The original ps was designed before many flag conventions existed.
+	// It had switchwes not needing a -. Try to emulate that.
+	// It's pretty awful, however :-)
+	for _, a := range flag.Args() {
+		switch a {
+		case "aux":
+			flags.all, flags.aux = true, true
+		default:
+			usage()
+		}
+	}
 	pT := NewProcessTable()
 	if err := pT.LoadTable(); err != nil {
 		log.Fatal(err)

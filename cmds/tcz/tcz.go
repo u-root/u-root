@@ -15,14 +15,30 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-
-	"github.com/u-root/u-root/pkg/loop"
 )
 
 const (
-	cmd          = "tcz [options] package-names"
-	dirMode      = 0755
-	tinyCoreRoot = "/TinyCorePackages/tcloop"
+	cmd = "tcz [options] package-names"
+	/*
+	 * IOCTL commands --- we will commandeer 0x4C ('L')
+	 */
+	LOOP_SET_CAPACITY = 0x4C07
+	LOOP_CHANGE_FD    = 0x4C06
+	LOOP_GET_STATUS64 = 0x4C05
+	LOOP_SET_STATUS64 = 0x4C04
+	LOOP_GET_STATUS   = 0x4C03
+	LOOP_SET_STATUS   = 0x4C02
+	LOOP_CLR_FD       = 0x4C01
+	LOOP_SET_FD       = 0x4C00
+	LO_NAME_SIZE      = 64
+	LO_KEY_SIZE       = 32
+	/* /dev/loop-control interface */
+	LOOP_CTL_ADD      = 0x4C80
+	LOOP_CTL_REMOVE   = 0x4C81
+	LOOP_CTL_GET_FREE = 0x4C82
+	SYS_ioctl         = 16
+	dirMode           = 0755
+	tinyCoreRoot      = "/TinyCorePackages/tcloop"
 )
 
 //http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
@@ -43,6 +59,22 @@ var (
 	tczLocalPackageDir string
 	ignorePackage      = make(map[string]struct{})
 )
+
+// consider making this a goroutine which pushes the string down the channel.
+func findloop() (name string, err error) {
+	cfd, err := syscall.Open("/dev/loop-control", syscall.O_RDWR, 0)
+	if err != nil {
+		log.Fatalf("/dev/loop-control: %v", err)
+	}
+	defer syscall.Close(cfd)
+	a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(cfd), LOOP_CTL_GET_FREE, 0)
+	if errno != 0 {
+		log.Fatalf("ioctl: %v\n", err)
+	}
+	debug("a %v b %v err %v\n", a, b, err)
+	name = fmt.Sprintf("/dev/loop%d", a)
+	return name, nil
+}
 
 func clonetree(tree string) error {
 	debug("Clone tree %v", tree)
@@ -85,7 +117,7 @@ func clonetree(tree string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("clone tree: %v", err)
+		l.Fatalf("Clone tree: %v", err)
 	}
 	return nil
 }
@@ -95,32 +127,42 @@ func fetch(p string) error {
 	packageName := filepath.Join(tczServerDir, p)
 
 	if _, err := os.Stat(fullpath); !os.IsNotExist(err) {
-		// Either already exists (already been downloaded) or some
-		// unresolvable error.
-		return err
+		debug("package %s is downloaded\n", fullpath)
+		return nil
 	}
 
-	cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
-	resp, err := http.Get(cmd)
-	if err != nil {
-		return fmt.Errorf("http.Get(%s) failed: %v", cmd, err)
-	}
-	defer resp.Body.Close()
+	if _, err := os.Stat(fullpath); err != nil {
+		cmd := fmt.Sprintf("http://%s:%s/%s", *host, *port, packageName)
+		debug("Fetch %v\n", cmd)
 
-	if resp.Status != "200 OK" {
-		return syscall.ENOENT
-	}
+		resp, err := http.Get(cmd)
+		if err != nil {
+			l.Fatalf("Get of %v failed: %v\n", cmd, err)
+		}
+		defer resp.Body.Close()
 
-	// we have the whole tcz in resp.Body.
-	// First, save it to /tczRoot/name
-	f, err := os.Create(fullpath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+		if resp.Status != "200 OK" {
+			debug("%v Not OK! %v\n", cmd, resp.Status)
+			return syscall.ENOENT
+		}
 
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		return fmt.Errorf("error reading download body of %q: %v", cmd, err)
+		debug("resp %v err %v\n", resp, err)
+		// we have the whole tcz in resp.Body.
+		// First, save it to /tczRoot/name
+		f, err := os.Create(fullpath)
+		if err != nil {
+			l.Fatalf("Create of :%v: failed: %v\n", fullpath, err)
+		} else {
+			debug("created %v f %v\n", fullpath, f)
+		}
+
+		if c, err := io.Copy(f, resp.Body); err != nil {
+			l.Fatal(err)
+		} else {
+			/* OK, these are compressed tars ... */
+			debug("c %v err %v\n", c, err)
+		}
+		f.Close()
 	}
 	return nil
 }
@@ -131,12 +173,10 @@ func installPackage(tczName string, deps map[string]bool) error {
 	debug("installPackage: %v %v\n", tczName, deps)
 	depName := tczName + ".dep"
 	if err := fetch(tczName); err != nil {
-		return err
+		l.Fatal(err)
 	}
 	deps[tczName] = true
-
 	debug("Fetched %v\n", tczName)
-
 	// now fetch dependencies if any.
 	if err := fetch(depName); err == nil {
 		debug("Fetched dep ok!\n")
@@ -147,14 +187,13 @@ func installPackage(tczName string, deps map[string]bool) error {
 		}
 		return nil
 	}
-
 	// read deps file
 	depFullPath := filepath.Join(tczLocalPackageDir, depName)
 	deplist, err := ioutil.ReadFile(depFullPath)
 	if err != nil {
-		return fmt.Errorf("read(%q) = %v", depName, err)
+		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
 	}
-
+	debug("deplist for %v is :%v:\n", depName, deplist)
 	realDepList := ""
 	for _, v := range strings.Split(string(deplist), "\n") {
 		// split("name\n") gets you a 2-element array with second
@@ -183,9 +222,11 @@ func installPackage(tczName string, deps map[string]bool) error {
 		return err
 	}
 	return nil
+
 }
 
 func setupPackages(tczName string, deps map[string]bool) error {
+	debug("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {
 		cmdName := strings.Split(v, filepath.Ext(v))[0]
 		packagePath := filepath.Join(tinyCoreRoot, cmdName)
@@ -196,24 +237,37 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		}
 
 		if err := os.MkdirAll(packagePath, dirMode); err != nil {
-			return fmt.Errorf("package directory %s at %s, can not be created: %v", tczName, packagePath, err)
+			l.Fatalf("Package directory %s at %s, can not be created: %v", tczName, packagePath, err)
 		}
 
-		loopname, err := loop.FindDevice()
+		loopname, err := findloop()
 		if err != nil {
-			return err
+			l.Fatal(err)
 		}
+		debug("findloop gets %v err %v\n", loopname, err)
 		pkgpath := filepath.Join(tczLocalPackageDir, v)
-		if err := loop.SetFile(loopname, pkgpath); err != nil {
-			return err
+		ffd, err := syscall.Open(pkgpath, syscall.O_RDONLY, 0)
+		if err != nil {
+			l.Fatalf("%v: %v\n", pkgpath, err)
+		}
+		lfd, err := syscall.Open(loopname, syscall.O_RDONLY, 0)
+		if err != nil {
+			l.Fatalf("%v: %v\n", loopname, err)
+		}
+		debug("ffd %v lfd %v\n", ffd, lfd)
+
+		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
+		if errno != 0 {
+			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
 		}
 
 		/* now mount it. The convention is the mount is in /tinyCoreRoot/packagename */
-		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_RDONLY, ""); err != nil {
-			return err
+		if err := syscall.Mount(loopname, packagePath, "squashfs", syscall.MS_MGC_VAL|syscall.MS_RDONLY, ""); err != nil {
+			l.Fatalf("Mount :%s: on :%s: %v\n", loopname, packagePath, err)
 		}
-		if err := clonetree(packagePath); err != nil {
-			return err
+		err = clonetree(packagePath)
+		if err != nil {
+			l.Fatalf("clonetree:  %v\n", err)
 		}
 	}
 	return nil
@@ -265,12 +319,15 @@ func main() {
 	}
 
 	for _, cmdName := range packages {
+
 		tczName := cmdName + ".tcz"
+
 		if err := installPackage(tczName, needPackages); err != nil {
 			l.Fatal(err)
 		}
 
 		debug("After installpackages: needPackages %v\n", needPackages)
+
 		if *install {
 			if err := setupPackages(tczName, needPackages); err != nil {
 				l.Fatal(err)
