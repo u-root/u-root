@@ -19,20 +19,30 @@ func NewFileCompleter(s string) Completer {
 }
 
 // Complete implements complete for a file starting at a directory.
-func (f *FileCompleter) Complete(s string) ([]string, error) {
+func (f *FileCompleter) Complete(s string) (string, []string, error) {
 	// Check for an exact match. If so, that is good enough.
+	var x string
 	p := filepath.Join(f.Root, s)
 	n, _ := filepath.Glob(p)
-	if len(n) == 1 {
-		return n, nil
+	if len(n) > 0 {
+		x = n[0]
 	}
 	p = filepath.Join(f.Root, s+"*")
 	Debug("FileCompleter: Check %v with %v", s, p)
-	n, err := filepath.Glob(p)
+	g, err := filepath.Glob(p)
 	Debug("FileCompleter: %s: matches %v, err %v", s, n, err)
-	if err != nil || len(n) == 0 {
-		return n, err
+	if err != nil || len(g) == 0 {
+		return x, nil, err
 	}
-	Debug("FileCompleter: %s: returns %v", s, n)
-	return n, err
+	// Here's a complication: we don't want to repeat
+	// the exact match in the g array
+	var ret []string
+	for i := range g {
+		if g[i] == x {
+			continue
+		}
+		ret = append(ret, g[i])
+	}
+	Debug("FileCompleter: %s: returns %v, %v", s, n, ret)
+	return x, ret, err
 }

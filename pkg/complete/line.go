@@ -5,13 +5,12 @@
 package complete
 
 import (
-	"bytes"
-	"fmt"
 	"io"
-	"log"
+	"path/filepath"
+	"strings"
 )
 
-// LineReader has three things and returns on string.
+// LineReader has three things and returns one string.
 // The three things are an io.Reader, an io.Writer, and a Completer
 // Bytes are read one at a time, and depending on their value,
 // are written to the io.Writer.
@@ -37,86 +36,115 @@ type LineReader struct {
 	// W is used for output, usually for showing completions.
 	W io.Writer
 	// Lines holds incoming data as it is read.
-	Line *bytes.Buffer
+	Line string
+	// Exact is the exact match.
+	// It can be "" if there is not one.
+	Exact string
+	// Candidates are any completion candidates.
+	// The UI can decide how to handle them.
+	Candidates []string
+	EOF        bool
+	Fields     int
 }
 
 // NewLineReader returns a LineReader.
 func NewLineReader(c Completer, r io.Reader, w io.Writer) *LineReader {
-	return &LineReader{C: c, R: r, W: w, Line: bytes.NewBufferString("")}
+	return &LineReader{C: c, R: r, W: w}
 }
 
-// ReadOne tries to read one choice from l.R, printing out progress to l.W.
-// In the case of \t it will try to complete given what it has.
-// It will show the result of trying to complete it.
-// If there is only one possible completion, it will return the result.
-// In the case of \r or \n, if there is more than one choice,
-// it will return the list of choices, preprended with what has been typed so far.
-func (l *LineReader) ReadOne() ([]string, error) {
+// ReadChar reads one character and processes it. It is inflexible by design.
+func (l *LineReader) ReadChar(b byte) (err error) {
+	defer func() {
+		l.Fields = len(strings.Fields(l.Line))
+	}()
 	Debug("LineReader: start with %v", l)
+	l.Exact, l.Candidates = "", []string{}
+	switch b {
+	default:
+		Debug("LineReader.Just add it to line and pipe")
+		l.Line += string(b)
+	case 4:
+		l.EOF = true
+		return io.EOF
+	case 8, 127:
+		s := l.Line
+		if len(s) > 0 {
+			s = s[:len(s)-1]
+			l.Line = s
+		}
+	case '\n', '\r':
+		return ErrEOL
+	case ' ':
+		l.Line += string(b)
+		return nil
+	case '\t':
+		ll := len(l.Line)
+		s := l.Line
+		bl := strings.LastIndexAny(s, " ")
+		flds := strings.Fields(s)
+		Debug("fields of %q is %v", s, flds)
+		var cc string
+		// The rules are complex.
+		// It might be zero length.
+		// It might end in whitespace
+		// It might be one or more things
+		switch {
+		case ll == 0 || bl == ll-1:
+		case len(flds) == 0:
+			cc = flds[0]
+		default:
+			cc = flds[len(flds)-1]
+		}
+
+		Debug("ReadChar.Try complete with %s", cc)
+		x, cmpl, err := l.C.Complete(cc)
+		Debug("ReadChar.Complete returns %q, %v, %v", x, cmpl, err)
+		if err != nil {
+			return err
+		}
+		if len(cmpl) == 1 && x == "" {
+			Debug("Readchar: only one candidate, so use it")
+			x, cmpl = cmpl[0], []string{}
+		}
+		l.Exact = x
+		l.Candidates = cmpl
+		if x != "" && filepath.Clean(cc) != x {
+			// Paste the completion over where we found the candidate.
+			Debug("ReadChar: l.Line %q bl %d cmpl[0] %q", l.Line, bl, x)
+			// In the case of multicompleters, x might have multiple
+			// matches. So return the base, not the whole thing.
+			if !filepath.IsAbs(cc) {
+				x = filepath.Base(x)
+			}
+			l.Line = l.Line[:bl+1] + x
+			Debug("Return is %v", l)
+			l.Exact = x
+			return nil
+		}
+	}
+	return nil
+}
+
+// ReadLine reads until an error occurs
+func (l *LineReader) ReadLine() error {
 	for {
+		Debug("ReadLine: start with %v", l)
 		var b [1]byte
 		n, err := l.R.Read(b[:])
-		if err != nil {
-			if err == io.EOF {
-				ln := l.Line.String()
-				if ln == "" {
-					return []string{}, nil
-				}
-				return l.C.Complete(ln)
-			}
-			return nil, err
+		if err != nil && err != io.EOF {
+			return err
 		}
-		Debug("LineReader.ReadOne: got %s, %v, %v", b, n, err)
+		Debug("ReadLine: got %s, %v, %v", b, n, err)
 		if n == 0 {
-			continue
+			return io.EOF
 		}
-		switch b[0] {
-		default:
-			Debug("LineReader.Just add it to line and pipe")
-			l.Line.Write(b[:])
-			l.W.Write(b[:])
-		case 8, 127:
-			// We may have found a use for the io stuff, we'll see.
-			s := l.Line.String()
-			if len(s) > 0 {
-				s = s[:len(s)-1]
-				l.Line = bytes.NewBufferString(s)
-				l.W.Write(b[:])
+		if err := l.ReadChar(b[0]); err != nil {
+			Debug("Readline: %v", l)
+			if err == io.EOF || err == ErrEOL {
+				Debug("Readline: %v", err)
+				return nil
 			}
-		case '\n', '\r':
-			err = ErrEOL
-			fallthrough
-		case ' ':
-			if b[0] == ' ' {
-				l.W.Write(b[:])
-			}
-			ln := l.Line.String()
-			if ln == "" {
-				return []string{}, err
-			}
-			s, _ := l.C.Complete(ln)
-			// If there is no match or too many matches,
-			// return what is typed so far.
-			Debug("LineReader ln %v, err %v, s %v", ln, err, s)
-			if len(s) != 1 {
-				s = []string{ln}
-			}
-			return s, err
-		case '\t':
-			Debug("LineReader.Try complete with %s", l.Line.String())
-			s, err := l.C.Complete(l.Line.String())
-			Debug("LineReader.Complete returns %v, %v", s, err)
-			if err != nil {
-				return nil, err
-			}
-			if len(s) < 2 {
-				Debug("Return is %v", s)
-				return s, nil
-			}
-			if _, err := l.W.Write([]byte(fmt.Sprintf("\n\r%v\n\r%v", s, l.Line.String()))); err != nil {
-				log.Printf("Write %v: %v", s, err)
-			}
-
+			return err
 		}
 	}
 }
