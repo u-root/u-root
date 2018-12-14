@@ -1,4 +1,4 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -19,12 +19,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	flag "github.com/spf13/pflag"
+
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/multiboot"
 )
 
 type options struct {
@@ -33,7 +36,18 @@ type options struct {
 	initramfs    string
 	load         bool
 	exec         bool
+	modules      []string
+	trampoline   string
 }
+
+var trampoline = fmt.Sprintf(`Path to trampoline (will be removed in future releases).
+Trampoline is a executable blob, which should set machine
+to a specific state defined by multiboot v1 spec.
+https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
+
+Trampoline should use a long word value stored right after %q byte sequence
+as a value to be stored in ebx register and use a quad word value stored right after
+%q as kernel entry point.`, multiboot.TrampolineEBX, multiboot.TrampolineEP)
 
 func registerFlags() *options {
 	o := &options{}
@@ -42,7 +56,54 @@ func registerFlags() *options {
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
+	flag.StringSliceVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
+	flag.StringVar(&o.trampoline, "trampoline", "", trampoline)
 	return o
+}
+
+type loader interface {
+	Load(path, cmdLine string) error
+}
+
+type file struct {
+	initramfs string
+}
+
+type mboot struct {
+	trampoline string
+	modules    []string
+}
+
+func (f file) Load(path, cmdLine string) error {
+	kernel, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open(%q): %v", path, err)
+	}
+	defer kernel.Close()
+
+	var ramfs *os.File
+	if f.initramfs != "" {
+		ramfs, err = os.OpenFile(f.initramfs, os.O_RDONLY, 0)
+		if err != nil {
+			return fmt.Errorf("open(%q): %v", f.initramfs, err)
+		}
+		defer ramfs.Close()
+	}
+
+	return kexec.FileLoad(kernel, ramfs, cmdLine)
+}
+
+func (mb mboot) Load(path, cmdLine string) error {
+	m := multiboot.New(path, cmdLine, mb.trampoline, mb.modules)
+	if err := m.Load(); err != nil {
+		return fmt.Errorf("Load failed: %v", err)
+	}
+
+	err := kexec.Load(m.EntryPoint, m.Segments(), 0)
+	if err != nil {
+		return fmt.Errorf("kexec.Load() error: %v", err)
+	}
+	return nil
 }
 
 func main() {
@@ -78,23 +139,19 @@ func main() {
 		kernelpath := flag.Args()[0]
 		log.Printf("Loading %s for kernel\n", kernelpath)
 
-		kernel, err := os.OpenFile(kernelpath, os.O_RDONLY, 0)
-		if err != nil {
-			log.Fatalf("open(%q): %v", kernelpath, err)
-		}
-		defer kernel.Close()
-
-		var ramfs *os.File
-		if opts.initramfs != "" {
-			ramfs, err = os.OpenFile(opts.initramfs, os.O_RDONLY, 0)
-			if err != nil {
-				log.Fatalf("open(%q): %v", opts.initramfs, err)
+		var l loader = file{opts.initramfs}
+		if err := multiboot.Probe(kernelpath); err == nil {
+			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
+			l = mboot{
+				modules:    opts.modules,
+				trampoline: opts.trampoline,
 			}
-			defer ramfs.Close()
+		} else if err == multiboot.ErrFlagsNotSupported {
+			log.Fatal(err)
 		}
 
-		if err := kexec.FileLoad(kernel, ramfs, newCmdLine); err != nil {
-			log.Fatalf("%v", err)
+		if err := l.Load(kernelpath, newCmdLine); err != nil {
+			log.Fatal(err)
 		}
 	}
 
