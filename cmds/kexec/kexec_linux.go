@@ -40,14 +40,14 @@ type options struct {
 	trampoline   string
 }
 
-var trampoline = fmt.Sprintf(`Path to trampoline (will be removed in future releases).
+var trampoline = `Path to trampoline (will be removed in future releases).
 Trampoline is a executable blob, which should set machine
 to a specific state defined by multiboot v1 spec.
 https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 
-Trampoline should use a long word value stored right after %q byte sequence
+Trampoline should use a long word value stored right after "u-root-ebx-long"
 as a value to be stored in ebx register and use a quad word value stored right after
-%q as kernel entry point.`, multiboot.TrampolineEBX, multiboot.TrampolineEP)
+"u-root-ep-quad" as kernel entry point.`
 
 func registerFlags() *options {
 	o := &options{}
