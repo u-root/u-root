@@ -5,8 +5,8 @@
 package complete
 
 // Completer is an interface for completion functions.
-// It is passed a string and returns a []string with all
-// matches and an error.
+// It is passed a string and returns a string for an exact
+// match, a []string with all glob matches and an error.
 type Completer interface {
-	Complete(s string) ([]string, error)
+	Complete(s string) (string, []string, error)
 }
