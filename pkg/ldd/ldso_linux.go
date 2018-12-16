@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-const ldso = "/lib*/ld-linux-*.so.*"
+const ldso = "/lib*/ld-*.so.*"
 
 func LdSo() (string, error) {
 	n, err := filepath.Glob(ldso)
