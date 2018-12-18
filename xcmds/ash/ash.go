@@ -5,6 +5,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"io"
 	"log"
@@ -17,8 +19,9 @@ import (
 )
 
 var (
-	debug = flag.Bool("d", false, "enable debug prints")
-	v     = func(string, ...interface{}) {}
+	debug   = flag.Bool("d", false, "enable debug prints")
+	userush = flag.Bool("R", false, "Use the rush interpreter for commands")
+	v       = func(string, ...interface{}) {}
 )
 
 func verbose(f string, a ...interface{}) {
@@ -48,6 +51,7 @@ func output(s chan string, w io.Writer) {
 }
 
 func main() {
+	tty()
 	flag.Parse()
 	if *debug {
 		v = log.Printf
@@ -109,25 +113,36 @@ func main() {
 		}
 		if lineComplete && l.Line != "" {
 			v("ash: Done reading args: line %q", l.Line)
-			f := strings.Fields(l.Line)
-
-			var args []string
-			if l.Exact != "" {
-				args = append(args, l.Exact)
-			}
-			args = append(args, l.Candidates...)
-			if len(f) > 1 && len(args) > 1 {
-				f = append(f[:len(f)-1], args...)
-			}
 			// here we go.
 			lines <- "\n"
-			cmd := exec.Command(f[0], f[1:]...)
-			cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 			t.Set(r)
-			if err := cmd.Run(); err != nil {
-				log.Print(err)
+			if !*userush {
+				f := strings.Fields(l.Line)
+				var args []string
+				if l.Exact != "" {
+					args = append(args, l.Exact)
+				}
+				args = append(args, l.Candidates...)
+				if len(f) > 1 && len(args) > 1 {
+					f = append(f[:len(f)-1], args...)
+				}
+
+				cmd := exec.Command(f[0], f[1:]...)
+				cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+
+				if err := cmd.Run(); err != nil {
+					log.Print(err)
+				}
+
+			} else {
+				b := bufio.NewReader(bytes.NewBufferString(l.Line))
+				if err := rush(b); err != nil {
+					log.Print(err)
+				}
 			}
+			foreground()
 			t.Raw()
+
 			l.Line = ""
 			l.Candidates = []string{}
 			lineComplete = false
