@@ -53,6 +53,8 @@ CONFIG_RELOCATABLE=y
 # Loop device for tcz:
 
 CONFIG_BLK_DEV_LOOP=y
+CONFIG_MISC_FILESYSTEMS=y
+CONFIG_SQUASHFS=y
 
 # Build Linux:
 #
