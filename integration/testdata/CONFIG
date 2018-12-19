@@ -1,4 +1,4 @@
-# # Minimal Go-Capable Linux Kernel
+# # Kernel Configs Used for Tests
 #
 # Build Setup:
 #
@@ -49,6 +49,10 @@ CONFIG_KEXEC_FILE=y
 # For the kernel being kexec'ed:
 
 CONFIG_RELOCATABLE=y
+
+# Loop device for tcz:
+
+CONFIG_BLK_DEV_LOOP=y
 
 # Build Linux:
 #
