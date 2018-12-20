@@ -2,13 +2,21 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# Build:
+# See previously built images at:
 #
-#     sudo docker build . -t uroottest/x86-integration
+#     https://hub.docker.com/r/uroottest/x86-integration/tags
 #
-# Run:
+# Build and run a new image (use a new x.y.z for easier archiving):
 #
-#     sudo docker run --rm -it uroottest/x86-integration
+#     sudo docker build . -t uroottest/x86-integration:x.y.z
+#     sudo docker run --rm -it uroottest/x86-integration:x.y.z
+#
+# Push:
+#
+#     # Ping Ryan O'Leary (on slack or via email) for push access.
+#     sudo docker tag uroottest/x86-integration:{x.y.z,latest}
+#     sudo docker push uroottest/x86-integration:x.y.z
+#     sudo docker push uroottest/x86-integration:latest
 #
 # More instructions:
 #
