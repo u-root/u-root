@@ -121,7 +121,7 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 					log.Printf("Warning: duplicate manifest.json found, the last found wins")
 				}
 				// parse the Manifest containing the boot configurations
-				manifest, err = NewManifest(buf)
+				manifest, err = ManifestFromBytes(buf)
 				if err != nil {
 					return nil, "", err
 				}

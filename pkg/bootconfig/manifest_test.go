@@ -8,6 +8,12 @@ import (
 )
 
 func TestNewManifest(t *testing.T) {
+	m := NewManifest()
+	require.NotNil(t, m)
+	require.Equal(t, m.Version, CurrentManifestVersion)
+}
+
+func TestManifestFromBytes(t *testing.T) {
 	data := []byte(`{
 	"version": 1,
 	"configs": [
@@ -20,19 +26,19 @@ func TestNewManifest(t *testing.T) {
 		}
 	]
 }`)
-	m, err := NewManifest(data)
+	m, err := ManifestFromBytes(data)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(m.Configs))
 }
 
-func TestNewManifestInvalid(t *testing.T) {
+func TestManifestFromBytesInvalid(t *testing.T) {
 	data := []byte(`{
 		"nonexisting": "baaah",
 		"configs": {
 			"broken": true
 		}
 }`)
-	_, err := NewManifest(data)
+	_, err := ManifestFromBytes(data)
 	require.Error(t, err)
 }
 
@@ -46,7 +52,7 @@ func TestManifestGetBootConfig(t *testing.T) {
 		}
 	]
 }`)
-	m, err := NewManifest(data)
+	m, err := ManifestFromBytes(data)
 	require.NoError(t, err)
 	config, err := m.GetBootConfig(0)
 	require.NoError(t, err)
@@ -64,7 +70,7 @@ func TestManifestGetBootConfigMissing(t *testing.T) {
 		}
 	]
 }`)
-	m, err := NewManifest(data)
+	m, err := ManifestFromBytes(data)
 	require.NoError(t, err)
 	_, err = m.GetBootConfig(1)
 	require.Error(t, err)
