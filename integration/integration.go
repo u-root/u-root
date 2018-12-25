@@ -6,6 +6,7 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -94,6 +95,9 @@ type Options struct {
 
 	// Extra environment variables to set when building (used by u-bmc)
 	ExtraBuildEnv []string
+
+	// Serial Output
+	SerialOutput io.WriteCloser
 }
 
 func last(s string) string {
@@ -267,11 +271,13 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		return nil, err
 	}
 
-	var logFile *os.File
-	if len(o.LogFile) != 0 {
-		logFile, err = os.Create(o.LogFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not create log file: %v", err)
+	logFile := o.SerialOutput
+	if logFile == nil {
+		if o.LogFile != "" {
+			logFile, err = os.Create(o.LogFile)
+			if err != nil {
+				return nil, fmt.Errorf("could not create log file: %v", err)
+			}
 		}
 	}
 
