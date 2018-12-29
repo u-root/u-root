@@ -6,7 +6,7 @@ package uio
 
 import (
 	"encoding/binary"
-	"io"
+	"fmt"
 
 	"github.com/u-root/u-root/pkg/ubinary"
 )
@@ -22,7 +22,7 @@ type Marshaler interface {
 // Unmarshaler is the interface implemented by an object that can unmarshal a
 // binary representation of itself.
 //
-// Unmarshal consumes data from the buffer b.
+// Unmarshal Consumes data from the buffer b.
 type Unmarshaler interface {
 	Unmarshal(l *Lexer) error
 }
@@ -31,11 +31,21 @@ type Unmarshaler interface {
 type Buffer struct {
 	// data is the underlying data.
 	data []byte
+
+	// byteCount keeps track of how many bytes have been consumed for
+	// debugging.
+	byteCount int
 }
 
-// NewBuffer consumes b for marshaling or unmarshaling in the given byte order.
+// NewBuffer Consumes b for marshaling or unmarshaling in the given byte order.
 func NewBuffer(b []byte) *Buffer {
 	return &Buffer{data: b}
+}
+
+// Preallocate increases the capacity of the buffer by n bytes.
+func (b *Buffer) Preallocate(n int) {
+	b.data = append(b.data, make([]byte, 0, n)...)
+	return
 }
 
 // WriteN appends n bytes to the Buffer and returns a slice pointing to the
@@ -45,18 +55,19 @@ func (b *Buffer) WriteN(n int) []byte {
 	return b.data[len(b.data)-n:]
 }
 
-// consume consumes n bytes from the Buffer. It returns nil, false if there
+// Consume Consumes n bytes from the Buffer. It returns nil, false if there
 // aren't enough bytes left.
 func (b *Buffer) ReadN(n int) ([]byte, error) {
 	if !b.Has(n) {
-		return nil, io.ErrUnexpectedEOF
+		return nil, fmt.Errorf("buffer too short at position %d: have %d bytes, want %d bytes", b.byteCount, b.Len(), n)
 	}
 	rval := b.data[:n]
 	b.data = b.data[n:]
+	b.byteCount += n
 	return rval, nil
 }
 
-// Data is unconsumed data remaining in the Buffer.
+// Data is unConsumed data remaining in the Buffer.
 func (b *Buffer) Data() []byte {
 	return b.data
 }
@@ -134,7 +145,10 @@ func (l *Lexer) setError(err error) {
 	}
 }
 
-func (l *Lexer) consume(n int) []byte {
+// Consume returns a slice of the next n bytes from the buffer.
+//
+// Consume gives direct access to the underlying data.
+func (l *Lexer) Consume(n int) []byte {
 	v, err := l.Buffer.ReadN(n)
 	if err != nil {
 		l.setError(err)
@@ -152,11 +166,23 @@ func (l *Lexer) Error() error {
 	return l.err
 }
 
+// FinError returns an error if an error occured or if there is more data left
+// to read in the buffer.
+func (l *Lexer) FinError() error {
+	if l.err != nil {
+		return l.err
+	}
+	if l.Buffer.Len() > 0 {
+		return fmt.Errorf("buffer contains more bytes than it should")
+	}
+	return nil
+}
+
 // Read8 reads a byte from the Buffer.
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) Read8() uint8 {
-	v := l.consume(1)
+	v := l.Consume(1)
 	if v == nil {
 		return 0
 	}
@@ -167,7 +193,7 @@ func (l *Lexer) Read8() uint8 {
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) Read16() uint16 {
-	v := l.consume(2)
+	v := l.Consume(2)
 	if v == nil {
 		return 0
 	}
@@ -178,7 +204,7 @@ func (l *Lexer) Read16() uint16 {
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) Read32() uint32 {
-	v := l.consume(4)
+	v := l.Consume(4)
 	if v == nil {
 		return 0
 	}
@@ -189,7 +215,7 @@ func (l *Lexer) Read32() uint32 {
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) Read64() uint64 {
-	v := l.consume(8)
+	v := l.Consume(8)
 	if v == nil {
 		return 0
 	}
@@ -200,7 +226,7 @@ func (l *Lexer) Read64() uint64 {
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) CopyN(n int) []byte {
-	v := l.consume(n)
+	v := l.Consume(n)
 	if v == nil {
 		return nil
 	}
@@ -210,7 +236,7 @@ func (l *Lexer) CopyN(n int) []byte {
 	return p[:m]
 }
 
-// ReadAll consumes and returns a copy of all remaining bytes in the Buffer.
+// ReadAll Consumes and returns a copy of all remaining bytes in the Buffer.
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) ReadAll() []byte {
@@ -221,12 +247,12 @@ func (l *Lexer) ReadAll() []byte {
 //
 // If an error occured, Error() will return a non-nil error.
 func (l *Lexer) ReadBytes(p []byte) {
-	copy(p, l.consume(len(p)))
+	copy(p, l.Consume(len(p)))
 }
 
 // Read implements io.Reader.Read.
 func (l *Lexer) Read(p []byte) (int, error) {
-	v := l.consume(len(p))
+	v := l.Consume(len(p))
 	if v == nil {
 		return 0, l.Error()
 	}
