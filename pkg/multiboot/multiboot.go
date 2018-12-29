@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
@@ -290,7 +291,7 @@ func (m memoryMaps) marshal() ([]byte, error) {
 func (m *Multiboot) addTrampoline() (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := setupTrampoline(m.trampoline, m.infoAddr, m.kernelEntry)
+	d, err := trampoline.Setup(m.trampoline, m.infoAddr, m.kernelEntry)
 	if err != nil {
 		return 0, err
 	}
