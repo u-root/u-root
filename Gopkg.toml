@@ -24,6 +24,10 @@ ignored = ["github.com/u-root/u-root/bb*"]
   branch = "master"
   name = "github.com/u-root/dhcp4"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/gliderlabs/ssh"
+
 [prune]
   non-go = true
   go-tests = true
