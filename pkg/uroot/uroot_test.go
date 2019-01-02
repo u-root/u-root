@@ -17,6 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot/builder"
+	itest "github.com/u-root/u-root/pkg/uroot/initramfs/test"
 )
 
 type inMemArchive struct {
@@ -159,56 +160,6 @@ func TestResolvePackagePaths(t *testing.T) {
 	}
 }
 
-type archiveValidator interface {
-	validate(a *cpio.Archive) error
-}
-
-type hasRecord struct {
-	r cpio.Record
-}
-
-func (hr hasRecord) validate(a *cpio.Archive) error {
-	r, ok := a.Get(hr.r.Name)
-	if !ok {
-		return fmt.Errorf("archive does not contain %v", hr.r)
-	}
-	if !cpio.Equal(r, hr.r) {
-		return fmt.Errorf("archive does not contain %v; instead has %v", hr.r, r)
-	}
-	return nil
-}
-
-type hasFile struct {
-	path string
-}
-
-func (hf hasFile) validate(a *cpio.Archive) error {
-	if _, ok := a.Get(hf.path); ok {
-		return nil
-	}
-	return fmt.Errorf("archive does not contain %s, but should", hf.path)
-}
-
-type missingFile struct {
-	path string
-}
-
-func (mf missingFile) validate(a *cpio.Archive) error {
-	if _, ok := a.Get(mf.path); ok {
-		return fmt.Errorf("archive contains %s, but shouldn't", mf.path)
-	}
-	return nil
-}
-
-type isEmpty struct{}
-
-func (isEmpty) validate(a *cpio.Archive) error {
-	if empty := a.Empty(); !empty {
-		return fmt.Errorf("expected archive to be empty")
-	}
-	return nil
-}
-
 func TestCreateInitramfs(t *testing.T) {
 	dir, err := ioutil.TempDir("", "foo")
 	if err != nil {
@@ -229,7 +180,7 @@ func TestCreateInitramfs(t *testing.T) {
 		name       string
 		opts       Opts
 		want       error
-		validators []archiveValidator
+		validators []itest.ArchiveValidator
 	}{
 		{
 			name: "BB archive with ls and init",
@@ -251,11 +202,11 @@ func TestCreateInitramfs(t *testing.T) {
 				},
 			},
 			want: nil,
-			validators: []archiveValidator{
-				hasFile{path: "bbin/bb"},
-				hasRecord{cpio.Symlink("bbin/init", "bb")},
-				hasRecord{cpio.Symlink("bbin/ls", "bb")},
-				hasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"bbin/bb"},
+				itest.HasRecord{cpio.Symlink("bbin/init", "bb")},
+				itest.HasRecord{cpio.Symlink("bbin/ls", "bb")},
+				itest.HasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
 			},
 		},
 		{
@@ -267,8 +218,8 @@ func TestCreateInitramfs(t *testing.T) {
 			},
 			// TODO: Ew. Our error types suck.
 			want: fmt.Errorf("temp dir \"\" must exist: stat : no such file or directory"),
-			validators: []archiveValidator{
-				isEmpty{},
+			validators: []itest.ArchiveValidator{
+				itest.IsEmpty{},
 			},
 		},
 		{
@@ -278,21 +229,29 @@ func TestCreateInitramfs(t *testing.T) {
 				TempDir: dir,
 			},
 			want: nil,
-			validators: []archiveValidator{
-				missingFile{"bbin/bb"},
+			validators: []itest.ArchiveValidator{
+				itest.MissingFile{"bbin/bb"},
 			},
 		},
 		{
 			name: "init specified, but not in commands",
 			opts: Opts{
+				Commands: []Commands{
+					{
+						Builder: builder.Binary,
+						Packages: []string{
+							"github.com/u-root/u-root/cmds/ls",
+						},
+					},
+				},
 				Env:          golang.Default(),
 				TempDir:      dir,
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
 			},
 			want: fmt.Errorf("could not find init: command or path \"foobar\" not included in u-root build"),
-			validators: []archiveValidator{
-				isEmpty{},
+			validators: []itest.ArchiveValidator{
+				itest.IsEmpty{},
 			},
 		},
 		{
@@ -303,8 +262,8 @@ func TestCreateInitramfs(t *testing.T) {
 				InitCmd: "/bin/systemd",
 			},
 			want: nil,
-			validators: []archiveValidator{
-				hasRecord{cpio.Symlink("init", "bin/systemd")},
+			validators: []itest.ArchiveValidator{
+				itest.HasRecord{cpio.Symlink("init", "bin/systemd")},
 			},
 		},
 		{
@@ -342,26 +301,26 @@ func TestCreateInitramfs(t *testing.T) {
 				},
 			},
 			want: nil,
-			validators: []archiveValidator{
-				hasRecord{cpio.Symlink("init", "bbin/init")},
+			validators: []itest.ArchiveValidator{
+				itest.HasRecord{cpio.Symlink("init", "bbin/init")},
 
 				// bb mode.
-				hasFile{path: "bbin/bb"},
-				hasRecord{cpio.Symlink("bbin/init", "bb")},
-				hasRecord{cpio.Symlink("bbin/ls", "bb")},
-				hasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
+				itest.HasFile{"bbin/bb"},
+				itest.HasRecord{cpio.Symlink("bbin/init", "bb")},
+				itest.HasRecord{cpio.Symlink("bbin/ls", "bb")},
+				itest.HasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
 
 				// binary mode.
-				hasFile{path: "bin/cp"},
-				hasFile{path: "bin/dd"},
+				itest.HasFile{"bin/cp"},
+				itest.HasFile{"bin/dd"},
 
 				// source mode.
-				hasRecord{cpio.Symlink("buildbin/cat", "installcommand")},
-				hasRecord{cpio.Symlink("buildbin/chroot", "installcommand")},
-				hasFile{path: "buildbin/installcommand"},
-				hasFile{path: "src/github.com/u-root/u-root/cmds/cat/cat.go"},
-				hasFile{path: "src/github.com/u-root/u-root/cmds/chroot/chroot.go"},
-				hasFile{path: "src/github.com/u-root/u-root/cmds/installcommand/installcommand.go"},
+				itest.HasRecord{cpio.Symlink("buildbin/cat", "installcommand")},
+				itest.HasRecord{cpio.Symlink("buildbin/chroot", "installcommand")},
+				itest.HasFile{"buildbin/installcommand"},
+				itest.HasFile{"src/github.com/u-root/u-root/cmds/cat/cat.go"},
+				itest.HasFile{"src/github.com/u-root/u-root/cmds/chroot/chroot.go"},
+				itest.HasFile{"src/github.com/u-root/u-root/cmds/installcommand/installcommand.go"},
 			},
 		},
 	} {
@@ -374,7 +333,7 @@ func TestCreateInitramfs(t *testing.T) {
 			}
 
 			for _, v := range tt.validators {
-				if err := v.validate(archive.Archive); err != nil {
+				if err := v.Validate(archive.Archive); err != nil {
 					t.Errorf("validator failed: %v / archive:\n%s", err, archive)
 				}
 			}

@@ -36,190 +36,8 @@ var (
 	defaultShell                            *string
 	useExistingInit                         *bool
 	fourbins                                *bool
+	noCommands                              *bool
 	extraFiles                              multiFlag
-	templates                               = map[string][]string{
-		"all": {
-			"github.com/u-root/u-root/cmds/*",
-		},
-		// Core should be things you don't want to live without.
-		"core": {
-			"github.com/u-root/u-root/cmds/ansi",
-			"github.com/u-root/u-root/cmds/boot",
-			"github.com/u-root/u-root/cmds/cat",
-			"github.com/u-root/u-root/cmds/cbmem",
-			"github.com/u-root/u-root/cmds/chmod",
-			"github.com/u-root/u-root/cmds/chroot",
-			"github.com/u-root/u-root/cmds/cmp",
-			"github.com/u-root/u-root/cmds/console",
-			"github.com/u-root/u-root/cmds/cp",
-			"github.com/u-root/u-root/cmds/cpio",
-			"github.com/u-root/u-root/cmds/date",
-			"github.com/u-root/u-root/cmds/dd",
-			"github.com/u-root/u-root/cmds/df",
-			"github.com/u-root/u-root/cmds/dhclient",
-			"github.com/u-root/u-root/cmds/dirname",
-			"github.com/u-root/u-root/cmds/dmesg",
-			"github.com/u-root/u-root/cmds/echo",
-			"github.com/u-root/u-root/cmds/elvish",
-			"github.com/u-root/u-root/cmds/false",
-			"github.com/u-root/u-root/cmds/field",
-			"github.com/u-root/u-root/cmds/find",
-			"github.com/u-root/u-root/cmds/free",
-			"github.com/u-root/u-root/cmds/freq",
-			"github.com/u-root/u-root/cmds/gpgv",
-			"github.com/u-root/u-root/cmds/gpt",
-			"github.com/u-root/u-root/cmds/grep",
-			"github.com/u-root/u-root/cmds/gzip",
-			"github.com/u-root/u-root/cmds/hexdump",
-			"github.com/u-root/u-root/cmds/hostname",
-			"github.com/u-root/u-root/cmds/id",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/insmod",
-			"github.com/u-root/u-root/cmds/installcommand",
-			"github.com/u-root/u-root/cmds/io",
-			"github.com/u-root/u-root/cmds/ip",
-			"github.com/u-root/u-root/cmds/kexec",
-			"github.com/u-root/u-root/cmds/kill",
-			"github.com/u-root/u-root/cmds/lddfiles",
-			"github.com/u-root/u-root/cmds/ln",
-			"github.com/u-root/u-root/cmds/losetup",
-			"github.com/u-root/u-root/cmds/ls",
-			"github.com/u-root/u-root/cmds/lsmod",
-			"github.com/u-root/u-root/cmds/mkdir",
-			"github.com/u-root/u-root/cmds/mkfifo",
-			"github.com/u-root/u-root/cmds/mknod",
-			"github.com/u-root/u-root/cmds/modprobe",
-			"github.com/u-root/u-root/cmds/mount",
-			"github.com/u-root/u-root/cmds/msr",
-			"github.com/u-root/u-root/cmds/mv",
-			"github.com/u-root/u-root/cmds/netcat",
-			"github.com/u-root/u-root/cmds/ntpdate",
-			"github.com/u-root/u-root/cmds/pci",
-			"github.com/u-root/u-root/cmds/ping",
-			"github.com/u-root/u-root/cmds/printenv",
-			"github.com/u-root/u-root/cmds/ps",
-			"github.com/u-root/u-root/cmds/pwd",
-			"github.com/u-root/u-root/cmds/pxeboot",
-			"github.com/u-root/u-root/cmds/readlink",
-			"github.com/u-root/u-root/cmds/rm",
-			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/rsdp",
-			"github.com/u-root/u-root/cmds/seq",
-			"github.com/u-root/u-root/cmds/shutdown",
-			"github.com/u-root/u-root/cmds/sleep",
-			"github.com/u-root/u-root/cmds/sort",
-			"github.com/u-root/u-root/cmds/stty",
-			"github.com/u-root/u-root/cmds/switch_root",
-			"github.com/u-root/u-root/cmds/sync",
-			"github.com/u-root/u-root/cmds/tail",
-			"github.com/u-root/u-root/cmds/tee",
-			"github.com/u-root/u-root/cmds/true",
-			"github.com/u-root/u-root/cmds/truncate",
-			"github.com/u-root/u-root/cmds/umount",
-			"github.com/u-root/u-root/cmds/uname",
-			"github.com/u-root/u-root/cmds/uniq",
-			"github.com/u-root/u-root/cmds/unshare",
-			"github.com/u-root/u-root/cmds/validate",
-			"github.com/u-root/u-root/cmds/vboot",
-			"github.com/u-root/u-root/cmds/wc",
-			"github.com/u-root/u-root/cmds/wget",
-			"github.com/u-root/u-root/cmds/which",
-		},
-		// Minimal should be things you can't live without.
-		"minimal": {
-			"github.com/u-root/u-root/cmds/cat",
-			"github.com/u-root/u-root/cmds/chmod",
-			"github.com/u-root/u-root/cmds/cmp",
-			"github.com/u-root/u-root/cmds/console",
-			"github.com/u-root/u-root/cmds/cp",
-			"github.com/u-root/u-root/cmds/date",
-			"github.com/u-root/u-root/cmds/dd",
-			"github.com/u-root/u-root/cmds/df",
-			"github.com/u-root/u-root/cmds/dhclient",
-			"github.com/u-root/u-root/cmds/dmesg",
-			"github.com/u-root/u-root/cmds/echo",
-			"github.com/u-root/u-root/cmds/elvish",
-			"github.com/u-root/u-root/cmds/find",
-			"github.com/u-root/u-root/cmds/free",
-			"github.com/u-root/u-root/cmds/gpgv",
-			"github.com/u-root/u-root/cmds/grep",
-			"github.com/u-root/u-root/cmds/gzip",
-			"github.com/u-root/u-root/cmds/hostname",
-			"github.com/u-root/u-root/cmds/id",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/insmod",
-			"github.com/u-root/u-root/cmds/io",
-			"github.com/u-root/u-root/cmds/ip",
-			"github.com/u-root/u-root/cmds/kexec",
-			"github.com/u-root/u-root/cmds/kill",
-			"github.com/u-root/u-root/cmds/ln",
-			"github.com/u-root/u-root/cmds/losetup",
-			"github.com/u-root/u-root/cmds/ls",
-			"github.com/u-root/u-root/cmds/lsmod",
-			"github.com/u-root/u-root/cmds/mkdir",
-			"github.com/u-root/u-root/cmds/mknod",
-			"github.com/u-root/u-root/cmds/modprobe",
-			"github.com/u-root/u-root/cmds/mount",
-			"github.com/u-root/u-root/cmds/msr",
-			"github.com/u-root/u-root/cmds/mv",
-			"github.com/u-root/u-root/cmds/pci",
-			"github.com/u-root/u-root/cmds/ping",
-			"github.com/u-root/u-root/cmds/printenv",
-			"github.com/u-root/u-root/cmds/ps",
-			"github.com/u-root/u-root/cmds/pwd",
-			"github.com/u-root/u-root/cmds/readlink",
-			"github.com/u-root/u-root/cmds/rm",
-			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/seq",
-			"github.com/u-root/u-root/cmds/shutdown",
-			"github.com/u-root/u-root/cmds/sleep",
-			"github.com/u-root/u-root/cmds/sync",
-			"github.com/u-root/u-root/cmds/tail",
-			"github.com/u-root/u-root/cmds/tee",
-			"github.com/u-root/u-root/cmds/truncate",
-			"github.com/u-root/u-root/cmds/umount",
-			"github.com/u-root/u-root/cmds/uname",
-			"github.com/u-root/u-root/cmds/unshare",
-			"github.com/u-root/u-root/cmds/wc",
-			"github.com/u-root/u-root/cmds/wget",
-			"github.com/u-root/u-root/cmds/which",
-		},
-		// coreboot-app minimal environment
-		"coreboot-app": {
-			"github.com/u-root/u-root/cmds/cat",
-			"github.com/u-root/u-root/cmds/cbmem",
-			"github.com/u-root/u-root/cmds/chroot",
-			"github.com/u-root/u-root/cmds/console",
-			"github.com/u-root/u-root/cmds/cp",
-			"github.com/u-root/u-root/cmds/dd",
-			"github.com/u-root/u-root/cmds/dhclient",
-			"github.com/u-root/u-root/cmds/dmesg",
-			"github.com/u-root/u-root/cmds/elvish",
-			"github.com/u-root/u-root/cmds/find",
-			"github.com/u-root/u-root/cmds/grep",
-			"github.com/u-root/u-root/cmds/id",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/insmod",
-			"github.com/u-root/u-root/cmds/ip",
-			"github.com/u-root/u-root/cmds/kill",
-			"github.com/u-root/u-root/cmds/ls",
-			"github.com/u-root/u-root/cmds/modprobe",
-			"github.com/u-root/u-root/cmds/mount",
-			"github.com/u-root/u-root/cmds/pci",
-			"github.com/u-root/u-root/cmds/ping",
-			"github.com/u-root/u-root/cmds/ps",
-			"github.com/u-root/u-root/cmds/pwd",
-			"github.com/u-root/u-root/cmds/rm",
-			"github.com/u-root/u-root/cmds/rmmod",
-			"github.com/u-root/u-root/cmds/shutdown",
-			"github.com/u-root/u-root/cmds/sshd",
-			"github.com/u-root/u-root/cmds/switch_root",
-			"github.com/u-root/u-root/cmds/tail",
-			"github.com/u-root/u-root/cmds/tee",
-			"github.com/u-root/u-root/cmds/uname",
-			"github.com/u-root/u-root/cmds/wget",
-		},
-	}
 )
 
 func init() {
@@ -235,6 +53,7 @@ func init() {
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
 	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
+	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 }
@@ -265,55 +84,9 @@ func Main() error {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
-	var b builder.Builder
-	switch *build {
-	case "bb":
-		b = builder.BBBuilder{}
-	case "binary":
-		b = builder.BinaryBuilder{}
-	case "source":
-		b = builder.SourceBuilder{
-			FourBins: *fourbins,
-		}
-	default:
-		return fmt.Errorf("could not find builder %q", *build)
-	}
-
 	archiver, err := initramfs.GetArchiver(*format)
 	if err != nil {
 		return err
-	}
-
-	tempDir := *tmpDir
-	if tempDir == "" {
-		var err error
-		tempDir, err = ioutil.TempDir("", "u-root")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(tempDir)
-	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(tempDir, 0755); err != nil {
-			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
-		}
-	}
-
-	// Resolve globs into package imports.
-	//
-	// Currently allowed formats:
-	//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
-	//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
-	var pkgs []string
-	for _, a := range flag.Args() {
-		p, ok := templates[a]
-		if !ok {
-			pkgs = append(pkgs, a)
-			continue
-		}
-		pkgs = append(pkgs, p...)
-	}
-	if len(pkgs) == 0 {
-		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
 	}
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
@@ -335,21 +108,72 @@ func Main() error {
 		baseFile = uroot.DefaultRamfs.Reader()
 	}
 
-	initCommand := *initCmd
-	if *fourbins && *build == "source" {
-		initCommand = "/go/bin/go"
+	tempDir := *tmpDir
+	if tempDir == "" {
+		var err error
+		tempDir, err = ioutil.TempDir("", "u-root")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tempDir)
+	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(tempDir, 0755); err != nil {
+			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
+		}
+	}
+
+	var (
+		c           []uroot.Commands
+		initCommand = *initCmd
+	)
+	if !*noCommands {
+		var b builder.Builder
+		switch *build {
+		case "bb":
+			b = builder.BBBuilder{}
+		case "binary":
+			b = builder.BinaryBuilder{}
+		case "source":
+			b = builder.SourceBuilder{
+				FourBins: *fourbins,
+			}
+		default:
+			return fmt.Errorf("could not find builder %q", *build)
+		}
+
+		// Resolve globs into package imports.
+		//
+		// Currently allowed formats:
+		//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
+		//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
+		var pkgs []string
+		for _, a := range flag.Args() {
+			p, ok := templates[a]
+			if !ok {
+				pkgs = append(pkgs, a)
+				continue
+			}
+			pkgs = append(pkgs, p...)
+		}
+		if len(pkgs) == 0 {
+			pkgs = []string{"github.com/u-root/u-root/cmds/*"}
+		}
+
+		if *fourbins && *build == "source" {
+			initCommand = "/go/bin/go"
+		}
+
+		// The command-line tool only allows specifying one build mode
+		// right now.
+		c = append(c, uroot.Commands{
+			Builder:  b,
+			Packages: pkgs,
+		})
 	}
 
 	opts := uroot.Opts{
-		Env: env,
-		// The command-line tool only allows specifying one build mode
-		// right now.
-		Commands: []uroot.Commands{
-			{
-				Builder:  b,
-				Packages: pkgs,
-			},
-		},
+		Env:             env,
+		Commands:        c,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,

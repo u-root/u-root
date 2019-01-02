@@ -36,7 +36,7 @@ var skip = map[string]struct{}{
 }
 
 func getBBLock(bblock string) (*lockfile.Lockfile, error) {
-	secondsTimeout := 100
+	secondsTimeout := 150
 	timer := time.After(time.Duration(secondsTimeout) * time.Second)
 	lock := lockfile.New(bblock)
 	for {

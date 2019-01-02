@@ -98,11 +98,23 @@ func linuxModeToFileType(m uint64) (os.FileMode, error) {
 	return 0, fmt.Errorf("Invalid file type %#o", m&modeTypeMask)
 }
 
+// CreateFile creates a local file for f relative to the current working
+// directory.
+//
+// CreateFile will attempt to set all metadata for the file, including
+// ownership, times, and permissions.
 func CreateFile(f Record) error {
-	return CreateFileInRoot(f, ".")
+	return CreateFileInRoot(f, ".", true)
 }
 
-func CreateFileInRoot(f Record, rootDir string) error {
+// CreateFileInRoot creates a local file for f relative to rootDir.
+//
+// It will attempt to set all metadata for the file, including ownership,
+// times, and permissions. If these fail, it only returns an error if
+// forcePriv is true.
+//
+// Block and char device creation will only return error if forcePriv is true.
+func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 	m, err := linuxModeToFileType(f.Mode)
 	if err != nil {
 		return err
@@ -116,13 +128,20 @@ func CreateFileInRoot(f Record, rootDir string) error {
 	// mode 755.
 	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return err
+			return fmt.Errorf("CreateFileInRoot %q: %v", f.Name, err)
 		}
 	}
 
 	switch m {
 	case os.ModeSocket, os.ModeNamedPipe:
 		return fmt.Errorf("%q: type %v: cannot create IPC endpoints", f.Name, m)
+
+	case os.ModeSymlink:
+		content, err := ioutil.ReadAll(uio.Reader(f))
+		if err != nil {
+			return err
+		}
+		return os.Symlink(string(content), f.Name)
 
 	case os.FileMode(0):
 		nf, err := os.Create(f.Name)
@@ -133,36 +152,30 @@ func CreateFileInRoot(f Record, rootDir string) error {
 		if _, err := io.Copy(nf, uio.Reader(f)); err != nil {
 			return err
 		}
-		return setModes(f)
 
 	case os.ModeDir:
 		if err := os.MkdirAll(f.Name, toFileMode(f)); err != nil {
 			return err
 		}
-		return setModes(f)
 
 	case os.ModeDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil {
+		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
 			return err
 		}
-		return setModes(f)
 
 	case os.ModeCharDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil {
+		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
 			return err
 		}
-		return setModes(f)
-
-	case os.ModeSymlink:
-		content, err := ioutil.ReadAll(uio.Reader(f))
-		if err != nil {
-			return err
-		}
-		return os.Symlink(string(content), f.Name)
 
 	default:
 		return fmt.Errorf("%v: Unknown type %#o", f.Name, m)
 	}
+
+	if err := setModes(f); err != nil && forcePriv {
+		return err
+	}
+	return nil
 }
 
 // Inumber and devnumbers are unique to Unix-like
@@ -210,6 +223,16 @@ func inode(i Info) (Info, bool) {
 	return i, false
 }
 
+func newLazyFile(name string) io.ReaderAt {
+	return uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
+		return os.Open(name)
+	})
+}
+
+// GetRecord returns a cpio Record for the given path on the local file system.
+//
+// GetRecord does not follow symlinks. If path is a symlink, the record
+// returned will reflect that symlink.
 func GetRecord(path string) (Record, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
@@ -224,7 +247,7 @@ func GetRecord(path string) (Record, error) {
 		if done {
 			return Record{Info: info}, nil
 		}
-		return Record{Info: info, ReaderAt: NewLazyFile(path)}, nil
+		return Record{Info: info, ReaderAt: newLazyFile(path)}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)

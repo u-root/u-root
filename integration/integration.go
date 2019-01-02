@@ -6,6 +6,7 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -94,6 +95,9 @@ type Options struct {
 
 	// Extra environment variables to set when building (used by u-bmc)
 	ExtraBuildEnv []string
+
+	// Serial Output
+	SerialOutput io.WriteCloser
 }
 
 func last(s string) string {
@@ -123,13 +127,20 @@ func callerName(depth int) string {
 	return last(f.Name())
 }
 
-func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
+// SkipWithoutQEMU skips the test when the QEMU environment variables are not
+// set. This is already called by QEMUTest(), so use if some expensive
+// operations are performed before calling QEMUTest().
+func SkipWithoutQEMU(t *testing.T) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("QEMU test is skipped unless UROOT_QEMU is set")
 	}
 	if _, ok := os.LookupEnv("UROOT_KERNEL"); !ok {
 		t.Skip("QEMU test is skipped unless UROOT_KERNEL is set")
 	}
+}
+
+func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
+	SkipWithoutQEMU(t)
 
 	if len(o.Name) == 0 {
 		o.Name = callerName(2)
@@ -267,11 +278,13 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		return nil, err
 	}
 
-	var logFile *os.File
-	if len(o.LogFile) != 0 {
-		logFile, err = os.Create(o.LogFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not create log file: %v", err)
+	logFile := o.SerialOutput
+	if logFile == nil {
+		if o.LogFile != "" {
+			logFile, err = os.Create(o.LogFile)
+			if err != nil {
+				return nil, fmt.Errorf("could not create log file: %v", err)
+			}
 		}
 	}
 
