@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:4d3dc52be088499ee1b86a009bf217aa398f3337121584fee4763989862f063b"
+  name = "github.com/anmitsu/go-shlex"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "648efa622239a2f6ff949fed78ee37b48d499ba4"
+
+[[projects]]
   digest = "1:e6c88dab8edc42242a2035bba3a869993ff08a3e245a445ea75f436e1bb27c33"
   name = "github.com/beevik/ntp"
   packages = ["."]
@@ -16,6 +24,13 @@
   pruneopts = "NUT"
   revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:e8301df5b11c8c13927a26a88ee7ec65410024f75c0fc3c8e6421aa6833808ac"
+  name = "github.com/gliderlabs/ssh"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
 
 [[projects]]
   digest = "1:3c04690dd1d3fad9a36c492c32863fad91bcf822fd95d5c4cae97be1e9abc361"
@@ -224,14 +239,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fe96899330d8e6af1c23b1c4e139ddb55c936a33f3799567f4616fc4f786683f"
+  digest = "1:d4458b17fd58217ec1f754eab39f0b9b66d75e7c19ca11a0477e3922b1c60f5a"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "332a6983d9d1e222ab7495c3ffa0509e378c463d"
+  revision = "e37f4b431a44d87d6301065bb908a1813c594b82"
 
 [[projects]]
   branch = "master"
@@ -337,6 +352,7 @@
   input-imports = [
     "github.com/beevik/ntp",
     "github.com/dustin/go-humanize",
+    "github.com/gliderlabs/ssh",
     "github.com/go-test/deep",
     "github.com/google/go-tpm/tpm",
     "github.com/google/goexpect",
