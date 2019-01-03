@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc.
+// Copyright 2018 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,6 +98,8 @@ var (
 	ErrNoLinkAddress         = &Error{msg: "no remote link address"}
 	ErrBadAddress            = &Error{msg: "bad address"}
 	ErrNetworkUnreachable    = &Error{msg: "network is unreachable"}
+	ErrMessageTooLong        = &Error{msg: "message too long"}
+	ErrNoBufferSpace         = &Error{msg: "no buffer space available"}
 )
 
 // Errors related to Subnet
@@ -136,6 +138,11 @@ type Address string
 
 // AddressMask is a bitmask for an address.
 type AddressMask string
+
+// String implements Stringer.
+func (a AddressMask) String() string {
+	return Address(a).String()
+}
 
 // Subnet is a subnet defined by its address and mask.
 type Subnet struct {
@@ -305,7 +312,10 @@ type Endpoint interface {
 	// the caller should not use data[:n] after Write returns.
 	//
 	// Note that unlike io.Writer.Write, it is not an error for Write to
-	// perform a partial write.
+	// perform a partial write (if n > 0, no error may be returned). Only
+	// stream (TCP) Endpoints may return partial writes, and even then only
+	// in the case where writing additional data would block. Other Endpoints
+	// will either write the entire message or return an error.
 	//
 	// For UDP and Ping sockets if address resolution is required,
 	// ErrNoLinkAddress and a notification channel is returned for the caller to
@@ -413,14 +423,25 @@ type ReceiveQueueSizeOption int
 // socket is to be restricted to sending and receiving IPv6 packets only.
 type V6OnlyOption int
 
-// NoDelayOption is used by SetSockOpt/GetSockOpt to specify if data should be
+// DelayOption is used by SetSockOpt/GetSockOpt to specify if data should be
 // sent out immediately by the transport protocol. For TCP, it determines if the
 // Nagle algorithm is on or off.
-type NoDelayOption int
+type DelayOption int
+
+// CorkOption is used by SetSockOpt/GetSockOpt to specify if data should be
+// held until segments are full by the TCP transport protocol.
+type CorkOption int
 
 // ReuseAddressOption is used by SetSockOpt/GetSockOpt to specify whether Bind()
 // should allow reuse of local address.
 type ReuseAddressOption int
+
+// ReusePortOption is used by SetSockOpt/GetSockOpt to permit multiple sockets
+// to be bound to an identical socket address.
+type ReusePortOption int
+
+// QuickAckOption is stubbed out in SetSockOpt/GetSockOpt.
+type QuickAckOption int
 
 // PasscredOption is used by SetSockOpt/GetSockOpt to specify whether
 // SCM_CREDENTIALS socket control messages are enabled.
@@ -479,6 +500,10 @@ type AddMembershipOption MembershipOption
 // group identified by the given multicast address, on the interface matching
 // the given interface address.
 type RemoveMembershipOption MembershipOption
+
+// OutOfBandInlineOption is used by SetSockOpt/GetSockOpt to specify whether
+// TCP out-of-band data is delivered along with the normal in-band data.
+type OutOfBandInlineOption int
 
 // Route is a row in the routing table. It specifies through which NIC (and
 // gateway) sets of packets should be routed. A row is considered viable if the
