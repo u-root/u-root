@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package dhcp4 implements constants and marshaling for DHCPv4 packets as
-// described by RFC 2131, RFC 2132, and RFC 3396.
+// Package dhcp4 implements constants and marshaling for IPv4 DHCP packets
+// as described by RFC 2131, RFC 2132, and RFC 3396.
 package dhcp4
 
 import (

@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc.
+// Copyright 2018 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -209,6 +209,11 @@ func (b IPv4) SetChecksum(v uint16) {
 func (b IPv4) SetFlagsFragmentOffset(flags uint8, offset uint16) {
 	v := (uint16(flags) << 13) | (offset >> 3)
 	binary.BigEndian.PutUint16(b[flagsFO:], v)
+}
+
+// SetID sets the identification field.
+func (b IPv4) SetID(v uint16) {
+	binary.BigEndian.PutUint16(b[id:], v)
 }
 
 // SetSourceAddress sets the "source address" field of the ipv4 header.
