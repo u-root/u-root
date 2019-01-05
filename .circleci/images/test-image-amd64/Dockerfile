@@ -2,26 +2,6 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# See previously built images at:
-#
-#     https://hub.docker.com/r/uroottest/x86-integration/tags
-#
-# Build and run a new image (use a new x.y.z for easier archiving):
-#
-#     sudo docker build . -t uroottest/x86-integration:x.y.z
-#     sudo docker run --rm -it uroottest/x86-integration:x.y.z
-#
-# Push:
-#
-#     # Ping Ryan O'Leary (on slack or via email) for push access.
-#     sudo docker tag uroottest/x86-integration:{x.y.z,latest}
-#     sudo docker push uroottest/x86-integration:x.y.z
-#     sudo docker push uroottest/x86-integration:latest
-#
-# More instructions:
-#
-#     https://circleci.com/docs/2.0/custom-images/
-
 FROM circleci/golang:1.11
 
 # Install dependencies
