@@ -28,7 +28,7 @@ RUN sudo apt-get update &&                          \
 
 # Create working directory
 WORKDIR /home/circleci
-COPY config_linux4.17_amd64.txt .config
+COPY config_linux4.17_x86_64.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
