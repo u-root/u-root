@@ -1,0 +1,62 @@
+# Copyright 2018-2019 the u-root Authors. All rights reserved
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+FROM circleci/golang:1.11
+
+# Install dependencies
+RUN sudo apt-get update &&                          \
+    sudo apt-get install -y --no-install-recommends \
+        `# Linux dependencies`                      \
+        git                                         \
+        bc                                          \
+        bison                                       \
+        flex                                        \
+        gcc-arm-linux-gnueabi                       \
+        make                                        \
+        `# QEMU dependencies`                       \
+        libglib2.0-dev                              \
+        libfdt-dev                                  \
+        libpixman-1-dev                             \
+        zlib1g-dev                                  \
+        `# Linux kernel build deps`                 \
+        libelf-dev &&                               \
+    sudo rm -rf /var/lib/apt/lists/*
+
+# Create working directory
+WORKDIR /home/circleci
+COPY config_linux4.20_arm.txt .config
+
+# Build linux
+RUN set -eux;                                                             \
+    git clone --depth=1 --branch=v4.20 https://github.com/torvalds/linux; \
+    sudo chmod 0444 .config;                                              \
+    mv .config linux/;                                                    \
+    cd linux;                                                             \
+    export ARCH=arm;                                                      \
+    export CROSS_COMPILE=/usr/bin/arm-linux-gnueabi-;                     \
+    make -j$(($(nproc) * 2 + 1));                                         \
+    cd ~;                                                                 \
+    cp linux/arch/arm/boot/zImage zImage;                                 \
+    rm -rf linux/
+
+# Build QEMU
+RUN set -eux;                                                          \
+    git clone --depth=1 --branch=v2.12.0 https://github.com/qemu/qemu; \
+    cd qemu;                                                           \
+    mkdir build;                                                       \
+    cd build;                                                          \
+    ../configure                                                       \
+        --target-list=arm-softmmu                                      \
+        --disable-docs                                                 \
+        --disable-sdl                                                  \
+        --disable-kvm;                                                 \
+    make -j$(($(nproc) * 2 + 1));                                      \
+    cd ~;                                                              \
+    cp -rL qemu/build/pc-bios/ ~/pc-bios;                              \
+    cp qemu/build/arm-softmmu/qemu-system-arm .;                       \
+    rm -rf qemu/
+
+# Export paths to binaries.
+ENV UROOT_KERNEL /home/circleci/zImage
+ENV UROOT_QEMU "/home/circleci/qemu-system-arm -M virt"
