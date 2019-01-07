@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -69,27 +69,36 @@ func TestParseMemoryMap(t *testing.T) {
 }
 
 func TestAvailableRAM(t *testing.T) {
+	old := pageMask
+	defer func() {
+		pageMask = old
+	}()
+	// suppose we have 4K pages.
+	pageMask = 4095
+
 	var mem Memory
 	mem.Phys = []TypedAddressRange{
-		TypedAddressRange{Range: Range{Start: 0, Size: 100}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 200, Size: 100}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 400, Size: 100}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 600, Size: 100}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 0, Size: 8192}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 8192, Size: 8000}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 20480, Size: 1000}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 24576, Size: 1000}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 28672, Size: 1000}, Type: RangeRAM},
 	}
 
 	mem.Segments = []Segment{
-		Segment{Phys: Range{Start: 0, Size: 50}},
-		Segment{Phys: Range{Start: 100, Size: 100}},
-		Segment{Phys: Range{Start: 250, Size: 50}},
-		Segment{Phys: Range{Start: 410, Size: 80}},
-		Segment{Phys: Range{Start: 599, Size: 102}},
+		Segment{Phys: Range{Start: 40, Size: 50}},
+		Segment{Phys: Range{Start: 8000, Size: 200}},
+		Segment{Phys: Range{Start: 18000, Size: 1000}},
+		Segment{Phys: Range{Start: 24600, Size: 1000}},
+		Segment{Phys: Range{Start: 28000, Size: 10000}},
 	}
 
 	want := []TypedAddressRange{
-		TypedAddressRange{Range: Range{Start: 50, Size: 50}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 200, Size: 50}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 400, Size: 10}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 490, Size: 10}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 0, Size: 40}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 4096, Size: 8000 - 4096}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 12288, Size: 8192 + 8000 - 12288}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 20480, Size: 1000}, Type: RangeRAM},
+		TypedAddressRange{Range: Range{Start: 24576, Size: 24}, Type: RangeRAM},
 	}
 
 	got := mem.availableRAM()
