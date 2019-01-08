@@ -4,30 +4,34 @@
 
 // pox builds a portable executable as a squashfs image.
 // It is intended to create files compatible with tinycore
-// tcz files.
+// tcz files. One of more of the files can be programs
+// but that is not required.
 // This could have been a simple program but mksquashfs does not
 // preserve path information.
 // Yeah.
 //
 // Synopsis:
-//     pox [-d] -[output|o file]
+//     pox [-[-debug]|d] -[-run|r file] [-[-create]|c]  [-[-file]|f tcz-file] file [...file]
 //
 // Description:
 //     pox makes portable executables in squashfs format compatible with
 //     tcz format. We don't build in the execution code, rather, we set it
-//     up so we can use the command itself.
+//     up so we can use the command itself. You can create, create and run a command,
+//     mount a pox, or mount a pox and run a command in it.
 //
 // Options:
 //     debug|d: verbose
-//     output|o file: output file name (default /tmp/pox.tcz)
-//     test|t: run a test by loopback mounting the squashfs and using the first arg as a command to run in a chroot
+//     file|f file: file name (default /tmp/pox.tcz)
+//     run|r: run a file by loopback mounting the squashfs and using the first arg as a command to run in a chroot
+//     create|c: create the file.
+//     both -c and -r can be used on the same command.
 //
 // Example:
-//	pox -d -t /bin/bash /bin/cat /bin/ls /etc/hosts
-//	Will build and squashfs, mount it, and drop you into it running bash.
+//	pox -d -r /bin/bash /bin/cat /bin/ls /etc/hosts
+//	Will build a squashfs, mount it, and drop you into it running bash.
 //	You can use ls and cat on /etc/hosts.
 //	Simpler example:
-//	pox -d -t /bin/ls /etc/hosts
+//	pox -d -r /bin/ls /etc/hosts
 //	will run ls and exit.
 package main
 
@@ -38,22 +42,22 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	flag "github.com/spf13/pflag"
-	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/loop"
 )
 
-const usage = "pox [-d] [-f file] command..."
+const usage = "pox [-[-debug]|d] -[-run|r file] [-[-create]|c]  [-[-file]|f tcz-file] file [...file]"
 
 var (
 	debug  = flag.BoolP("debug", "d", false, "enable debug prints")
-	test   = flag.BoolP("test", "t", false, "run a test with the first argument")
+	run    = flag.BoolP("run", "r", false, "run a test with the first argument")
 	create = flag.BoolP("create", "c", true, "create it")
+	file   = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
 	v      = func(string, ...interface{}) {}
-	ofile  = flag.StringP("output", "o", "/tmp/pox.tcz", "Output file")
 )
 
 func pox() error {
@@ -85,34 +89,38 @@ func pox() error {
 		if !*debug {
 			defer os.RemoveAll(dir)
 		}
-		archiver := cpio.InMemArchive()
+		// We don't use defer() here to close files as
+		// that can cause open failures with a large enough number.
 		for _, f := range names {
 			v("Process %v", f)
-			rec, err := cpio.GetRecord(f)
+			fi, err := os.Stat(f)
 			if err != nil {
 				return err
 			}
-			if err := archiver.WriteRecord(rec); err != nil {
-				return err
-			}
-		}
-		v("%v", archiver)
-		rr := archiver.Reader()
-		for {
-			r, err := rr.ReadRecord()
-			v("%v %v", r, err)
-			if err == io.EOF {
-				break
-			}
+			in, err := os.Open(f)
 			if err != nil {
 				return err
 			}
-			if err := cpio.CreateFileInRoot(r, dir, true); err != nil {
+			dfile := filepath.Join(dir, f)
+			d := filepath.Dir(dfile)
+			if err := os.MkdirAll(d, 0755); err != nil {
+				in.Close()
+				return err
+			}
+			out, err := os.OpenFile(dfile, os.O_WRONLY|os.O_CREATE, fi.Mode().Perm())
+			if err != nil {
+				in.Close()
+				return err
+			}
+			_, err = io.Copy(out, in)
+			in.Close()
+			out.Close()
+			if err != nil {
 				return err
 			}
 
 		}
-		c := exec.Command("mksquashfs", dir, *ofile, "-noappend")
+		c := exec.Command("mksquashfs", dir, *file, "-noappend")
 		o, err := c.CombinedOutput()
 		v("%v", string(o))
 		if err != nil {
@@ -120,7 +128,7 @@ func pox() error {
 		}
 	}
 
-	if !*test {
+	if !*run {
 		return nil
 	}
 	dir, err := ioutil.TempDir("", "pox")
@@ -130,7 +138,7 @@ func pox() error {
 	if !*debug {
 		defer os.RemoveAll(dir)
 	}
-	m, err := loop.New(*ofile, dir, "squashfs", 0, "")
+	m, err := loop.New(*file, dir, "squashfs", 0, "")
 	if err != nil {
 		return err
 	}
@@ -151,7 +159,7 @@ func pox() error {
 		v("Unmounting and freeing %v: %v", m, err)
 	}
 
-	v("Done, your pox is in %v", *ofile)
+	v("Done, your pox is in %v", *file)
 	return err
 }
 
