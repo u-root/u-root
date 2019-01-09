@@ -207,6 +207,7 @@ func TestCreateInitramfs(t *testing.T) {
 				itest.HasRecord{cpio.Symlink("bbin/init", "bb")},
 				itest.HasRecord{cpio.Symlink("bbin/ls", "bb")},
 				itest.HasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
+				itest.HasRecord{cpio.Symlink("bin/sh", "../bbin/ls")},
 			},
 		},
 		{
@@ -309,6 +310,7 @@ func TestCreateInitramfs(t *testing.T) {
 				itest.HasRecord{cpio.Symlink("bbin/init", "bb")},
 				itest.HasRecord{cpio.Symlink("bbin/ls", "bb")},
 				itest.HasRecord{cpio.Symlink("bin/defaultsh", "../bbin/ls")},
+				itest.HasRecord{cpio.Symlink("bin/sh", "../bbin/ls")},
 
 				// binary mode.
 				itest.HasFile{"bin/cp"},
