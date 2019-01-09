@@ -73,7 +73,7 @@ func pox() error {
 	if *create {
 		l, err := ldd.Ldd(names)
 		if err != nil {
-			return err
+			return fmt.Errorf("Running ldd on %v: %v", names, err)
 		}
 
 		for _, dep := range l {
