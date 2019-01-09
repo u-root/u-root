@@ -1,4 +1,4 @@
-// Copyright 2015-2018 the u-root Authors. All rights reserved
+// Copyright 2015-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -23,6 +23,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var pageMask uint
+
+func init() {
+	pageMask = uint(os.Getpagesize() - 1)
+}
+
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
 	// Start is the inclusive start of the range.
@@ -42,7 +48,7 @@ func (r Range) IsSupersetOf(r2 Range) bool {
 	return r.Start <= r2.Start && (r.Start+uintptr(r.Size)) >= (r2.Start+uintptr(r2.Size))
 }
 
-// Disjunct returns true if r and r2 does not overlap.
+// Disjunct returns true if r and r2 do not overlap.
 func (r Range) Disjunct(r2 Range) bool {
 	return !r.Overlaps(r2)
 }
@@ -120,6 +126,14 @@ func (s *Segment) tryMerge(s2 Segment) (ok bool) {
 	return true
 }
 
+func alignUp(p uint) uint {
+	return (p + pageMask) &^ pageMask
+}
+
+func alignUpPtr(p uintptr) uintptr {
+	return uintptr(alignUp(uint(p)))
+}
+
 // AlignPhys fixes s to the kexec_load preconditions.
 //
 // s's physical addresses must be multiples of the page size.
@@ -135,14 +149,13 @@ func (s *Segment) tryMerge(s2 Segment) (ok bool) {
 //   Phys: {Start: 0x2000, Size: 0x2000}
 // }
 func AlignPhys(s Segment) Segment {
-	pageMask := uint(os.Getpagesize() - 1)
 	orig := s.Phys.Start
 	// Find the page address of the starting point.
 	s.Phys.Start = s.Phys.Start &^ uintptr(pageMask)
 
 	diff := orig - s.Phys.Start
 	// Round up to page size.
-	s.Phys.Size = (s.Phys.Size + uint(diff) + pageMask) &^ pageMask
+	s.Phys.Size = alignUp(s.Phys.Size + uint(diff))
 
 	if s.Buf.Start < diff {
 		panic("cannot have virtual memory address within first page")
@@ -375,8 +388,7 @@ var ErrNotEnoughSpace = errors.New("not enough space")
 // where array of size sz can be stored during next
 // AddKexecSegment call.
 func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
-	pageSize := uint(os.Getpagesize())
-	sz = (sz + pageSize - 1) &^ (pageSize - 1)
+	sz = alignUp(sz)
 	ranges := m.availableRAM()
 	for _, r := range ranges {
 		// don't use memory below 1M, just in case.
@@ -413,53 +425,91 @@ func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 	return start, nil
 }
 
-// availableRAM subtracts physycal ranges of kexec segments from
-// RAM segments of TypedAddressRange.
+// availableRAM subtracts physical ranges of kexec segments from
+// RAM segments of TypedAddressRange aligning range beginnings
+// to a page boundary.
 //
-// E.g if RAM segments are
-//            [{start:0 size:100} {start:200 size:100}]
+// E.g if page size is 4K and RAM segments are
+//            [{start:0 size:8192} {start:8192 size:8000}]
 // and kexec segments are
-//            [{start:0 size:50} {start:100 size:100} {start:250 size:50}]
+//            [{start:40 size:50} {start:8000 size:2000}]
 // result should be
-//            [{start:50 size:50} {start:200 end:250}]
-func (m Memory) availableRAM() []TypedAddressRange {
-	var ret []TypedAddressRange
-	var i int
-	for _, a := range m.Phys {
-		if a.Type != RangeRAM {
-			continue
-		}
+//            [{start:0 size:40} {start:4096 end:8000 - 4096}]
+func (m Memory) availableRAM() (avail []TypedAddressRange) {
+	type point struct {
+		// x is a point coordinate on an axis.
+		x uintptr
+		// start is true if the point is the beginning of segment.
+		start bool
+		// ram it true if the point is part of a RAM segmnts.
+		ram bool
+	}
+	// points stores starting and ending points of segments
+	// sorted by coordinate.
+	var points []point
+	addPoint := func(r Range, ram bool) {
+		points = append(points,
+			point{x: r.Start, start: true, ram: ram},
+			point{x: r.Start + uintptr(r.Size) - 1, start: false, ram: ram},
+		)
+	}
 
-		start := a.Start
-		end := a.Start + uintptr(a.Size)
-		for ; i < len(m.Segments); i++ {
-			b := m.Segments[i]
-			if end < b.Phys.Start {
-				break
-			}
-			if start < b.Phys.Start {
-				ret = append(ret, TypedAddressRange{
-					Range: Range{
-						Start: start,
-						Size:  uint(b.Phys.Start - start),
-					},
-					Type: a.Type,
-				})
-			}
-			start = b.Phys.Start + uintptr(b.Phys.Size)
+	for _, s := range m.Phys {
+		if s.Type == RangeRAM {
+			addPoint(s.Range, true)
 		}
+	}
+	for _, s := range m.Segments {
+		addPoint(s.Phys, false)
+	}
 
+	sort.Slice(points, func(i, j int) bool {
+		return points[i].x < points[j].x
+	})
+
+	add := func(start, end uintptr, ramRange, kexecRange bool) {
+		if !ramRange || kexecRange {
+			return
+		}
+		start = alignUpPtr(start)
 		if start >= end {
-			continue
+			return
 		}
-
-		ret = append(ret, TypedAddressRange{
+		avail = append(avail, TypedAddressRange{
 			Range: Range{
 				Start: start,
-				Size:  uint(end - start),
+				Size:  uint(end-start) + 1,
 			},
-			Type: a.Type,
+			Type: RangeRAM,
 		})
 	}
-	return ret
+
+	var start uintptr
+	var ramRange bool
+	var kexecRange bool
+	for _, p := range points {
+		switch {
+		case p.start && p.ram:
+			start = p.x
+		case p.start && !p.ram:
+			if start != p.x {
+				add(start, p.x-1, ramRange, kexecRange)
+			}
+		case !p.start && p.ram:
+			add(start, p.x, ramRange, kexecRange)
+		case !p.start && !p.ram:
+			if ramRange {
+				start = p.x + 1
+			}
+		}
+
+		if p.ram {
+			ramRange = p.start
+		}
+		if !p.ram {
+			kexecRange = p.start
+		}
+	}
+
+	return avail
 }
