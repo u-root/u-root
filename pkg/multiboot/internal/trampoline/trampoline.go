@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build linux,!amd64
+// +build !linux !amd64
 
-package multiboot
+package trampoline
 
 import "errors"
 
-func setupTrampoline(path string, infoAddr, entryPoint uintptr) ([]byte, error) {
+func Setup(path string, infoAddr, entryPoint uintptr) ([]byte, error) {
 	return nil, errors.New("not implemented yet")
 }
