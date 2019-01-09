@@ -1,4 +1,4 @@
-# Copyright 2018 the u-root Authors. All rights reserved
+# Copyright 2018-2019 the u-root Authors. All rights reserved
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
@@ -40,7 +40,9 @@ RUN sudo apt-get update &&                          \
         libpixman-1-dev                             \
         zlib1g-dev                                  \
         `# Linux kernel build deps`                 \
-        libelf-dev &&                               \
+        libelf-dev                                  \
+        `# Multiboot kernel build deps`             \
+        gcc-multilib &&                             \
     sudo rm -rf /var/lib/apt/lists/*
 
 # Create working directory
@@ -75,6 +77,16 @@ RUN set -eux;                                                          \
     cp qemu/build/x86_64-softmmu/qemu-system-x86_64 .;                 \
     rm -rf qemu/
 
+# Build Multiboot kernel
+RUN set -eux;                                                          \
+    git clone --depth=1 --branch=v1.00                                 \
+           https://github.com/u-root/multiboot-test-kernel;            \
+    cd multiboot-test-kernel;                                          \
+    make;                                                              \
+    cd ~;                                                              \
+    cp multiboot-test-kernel/kernel ./;                                \
+    rm -rf multiboot-test-kernel/
+
 # Export paths to binaries.
 ENV UROOT_KERNEL /home/circleci/bzImage
-ENV UROOT_QEMU "/home/circleci/qemu-system-x86_64 -L /home/circleci/pc-bios"
+ENV UROOT_QEMU "/home/circleci/qemu-system-x86_64 -L /home/circleci/pc-bios -m 1G"

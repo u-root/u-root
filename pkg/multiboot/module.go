@@ -50,6 +50,8 @@ func (m *Multiboot) addModules() (uintptr, error) {
 
 	loaded.fix(uint32(addr))
 
+	m.loadedModules = loaded
+
 	b, err := loaded.marshal()
 	if err != nil {
 		return 0, err
@@ -84,9 +86,9 @@ func loadModules(cmds []string) (loaded modules, data []byte, err error) {
 	}
 
 	for i, cmd := range cmds {
-		args := strings.Fields(cmd)
-		if err := loaded[i].loadModule(&buf, args[0], cmd); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", args[0], err)
+		name := strings.Fields(cmd)[0]
+		if err := loaded[i].loadModule(&buf, name); err != nil {
+			return nil, nil, fmt.Errorf("error adding module %v: %v", name, err)
 		}
 	}
 
@@ -101,7 +103,7 @@ func alignUp(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *Module) loadModule(buf *bytes.Buffer, name, cmdLine string) error {
+func (m *Module) loadModule(buf *bytes.Buffer, name string) error {
 	log.Printf("Adding module %v", name)
 
 	b, err := readModule(name)
