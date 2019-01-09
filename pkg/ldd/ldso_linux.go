@@ -9,15 +9,21 @@ import (
 	"path/filepath"
 )
 
-const ldso = "/lib*/ld-*.so.*"
-
-func LdSo() (string, error) {
-	n, err := filepath.Glob(ldso)
-	if err != nil {
-		return "", err
+// This is a real mess. Ubuntu keeps makimg it worse.
+func LdSo(bit64 bool) (string, error) {
+	bits := 32
+	if bit64 {
+		bits = 64
 	}
-	if len(n) == 0 {
-		return "", fmt.Errorf("No ld.so matches %v", ldso)
+	choices := []string{fmt.Sprintf("/lib%d/ld-*.so.*", bits), "/lib/ld-*.so.*"}
+	for _, d := range choices {
+		n, err := filepath.Glob(d)
+		if err != nil {
+			return "", err
+		}
+		if len(n) > 0 {
+			return n[0], nil
+		}
 	}
-	return n[0], nil
+	return "", fmt.Errorf("No ld.so matches %v", choices)
 }
