@@ -90,7 +90,7 @@ type infoWrapper struct {
 
 // marshal writes out the exact bytes of multiboot info
 // expected by the kernel being loaded.
-func (iw infoWrapper) marshal(base uintptr) ([]byte, error) {
+func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
 	offset := sizeofInfo + uint32(base)
 	iw.Info.CmdLine = offset
 	offset += uint32(len(iw.CmdLine)) + 1
