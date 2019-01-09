@@ -73,3 +73,12 @@ func OpenTPM() (io.ReadWriteCloser, error) {
 	}
 	return rwc, err
 }
+
+// FromContext creates a new instance of a ReadWriteCloser which can
+// interact with a Windows TPM, using the specified TBS handle.
+func FromContext(ctx tbs.Context) io.ReadWriteCloser {
+	return &winTPMBuffer{
+		context:   ctx,
+		outBuffer: make([]byte, 0, maxTPMResponse),
+	}
+}

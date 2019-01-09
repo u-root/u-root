@@ -9,12 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"hash/crc32"
 	"io"
 	"sync"
 	"time"
 
 	"github.com/klauspost/compress/flate"
-	"github.com/klauspost/crc32"
 )
 
 const (

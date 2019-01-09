@@ -142,15 +142,20 @@ func Ldd(names []string) ([]*FileInfo, error) {
 			interp = string(i[:len(i)-1])
 		}
 		if interp == "" {
-			if f.Type != elf.ET_DYN {
+			if f.Type != elf.ET_DYN || f.Class == elf.ELFCLASSNONE {
 				continue
 			}
+			bit64 := true
+			if f.Class != elf.ELFCLASS64 {
+				bit64 = false
+			}
+
 			// This is a shared library. Turns out you can run an interpreter with
 			// --list and this shared library as an argument. What interpreter
 			// do we use? Well, there's no way to know. You have to guess.
 			// I'm not sure why they could not just put an interp section in
 			// .so's but maybe that would cause trouble somewhere else.
-			interp, err = LdSo()
+			interp, err = LdSo(bit64)
 			if err != nil {
 				return nil, err
 			}
