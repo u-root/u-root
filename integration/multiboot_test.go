@@ -31,7 +31,7 @@ func TestMultiboot(t *testing.T) {
 	defer cleanup()
 
 	if err := q.Expect(`"status": "ok"`); err != nil {
-		t.Fatal(`expected "HELLO WORLD", got error: `, err)
+		t.Fatalf(`expected '"status": "ok"', got error: %v`, err)
 	}
 
 	output := serial.Bytes()
