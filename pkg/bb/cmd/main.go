@@ -28,6 +28,14 @@ func init() {
 		if len(os.Args) == 0 {
 			log.Fatal("Arg len is 0. This is impossible")
 		}
+		// This is a gross hack for elvish.
+		// If you do this:
+		// elvish -c "echo hi" # works
+		// sh -c "echo hi" # fails b/c it does not parse it.
+		if len(os.Args) == 1 && !filepath.IsAbs(os.Args[0]) {
+			os.Args = []string{"/bbin/elvish", "-c", os.Args[0]}
+			run()
+		}
 		if len(os.Args) == 1 {
 			// This might be a symlink, and have been invoked by an sshd.
 			// Let's try this: readlink until we get a terminal link.
