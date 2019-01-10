@@ -20,6 +20,12 @@ func run() {
 }
 
 func main() {
+	arg1 := os.Args[0]
+	for s, err := os.Readlink(arg1); err == nil && s != "bb"; s, err = os.Readlink(arg1) {
+		arg1 = s
+	}
+	os.Args[0] = arg1
+
 	run()
 }
 
