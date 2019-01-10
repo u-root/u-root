@@ -12,6 +12,11 @@ import (
 
 // TestIO tests the string "UART TEST" is written to the serial port on 0x3f8.
 func TestIO(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{

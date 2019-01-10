@@ -66,6 +66,11 @@ func testMultiboot(t *testing.T, kernel string) {
 }
 
 func TestMultiboot(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {
 		t.Run(kernel, func(t *testing.T) {
 			testMultiboot(t, kernel)
