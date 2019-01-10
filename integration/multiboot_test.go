@@ -24,7 +24,7 @@ func TestMultiboot(t *testing.T) {
 			"github.com/u-root/u-root/cmds/kexec",
 		},
 		Uinit: []string{
-			`/bbin/kexec -l /kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
+			`kexec -l /kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 		},
 		SerialOutput: &serial,
 	})
