@@ -46,6 +46,7 @@ func init() {
 		r("/buildbin/uinit"),
 
 		r("/bin/defaultsh"),
+		r("/bin/sh"),
 	}
 }
 
@@ -59,6 +60,7 @@ func main() {
 	fmt.Println(`   \__,_|    |_|  \___/ \___/ \__|`)
 	fmt.Println()
 	util.Rootfs()
+	log.Printf("Done Rootfs")
 
 	if *verbose {
 		debug = log.Printf
@@ -67,12 +69,13 @@ func main() {
 	// Before entering an interactive shell, decrease the loglevel because
 	// spamming non-critical logs onto the shell frustrates users. The logs
 	// are still accessible through dmesg.
-	const sysLogActionConsoleLevel = 8
-	const kernNotice = 5 // Only messages more severe than "notice" are printed.
-	if _, _, err := syscall.Syscall(syscall.SYS_SYSLOG, sysLogActionConsoleLevel, 0, kernNotice); err != 0 {
-		log.Print("Could not set log level")
+	if !*verbose {
+		const sysLogActionConsoleLevel = 8
+		const kernNotice = 5 // Only messages more severe than "notice" are printed.
+		if _, _, err := syscall.Syscall(syscall.SYS_SYSLOG, sysLogActionConsoleLevel, 0, kernNotice); err != 0 {
+			log.Print("Could not set log level")
+		}
 	}
-
 	envs = os.Environ()
 	debug("envs %v", envs)
 
@@ -134,7 +137,9 @@ func main() {
 	osInitGo()
 
 	for _, v := range cmdList {
+		debug("Let's try to run %v", v)
 		if _, err := os.Stat(v); os.IsNotExist(err) {
+			log.Printf("it's not there")
 			continue
 		}
 
@@ -151,11 +156,13 @@ func main() {
 			if err == nil {
 				v = s
 			}
+			debug("readlink of %v returns %v", v, s)
 			// and, well, it might be a relative link.
 			// We must go deeper.
 			d, b := filepath.Split(v)
 			d = filepath.Base(d)
 			v = filepath.Join("/", os.Getenv("UROOT_ROOT"), d, b)
+			debug("is now %v", v)
 		}
 
 		// inito is (optionally) created by the u-root command when the

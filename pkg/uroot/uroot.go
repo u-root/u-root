@@ -230,6 +230,9 @@ func CreateInitramfs(logger logger.Logger, opts Opts) error {
 			if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", filepath.Join("..", rtarget))); err != nil {
 				return err
 			}
+			if err := archive.AddRecord(cpio.Symlink("bin/sh", filepath.Join("..", rtarget))); err != nil {
+				return err
+			}
 		}
 	}
 

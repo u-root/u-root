@@ -69,6 +69,8 @@ func testPkgs(t *testing.T) []string {
 // TestGoTest effectively runs "go test ./..." inside a QEMU instance. The
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
+	SkipWithoutQEMU(t)
+
 	// Create a temporary directory.
 	tmpDir, err := ioutil.TempDir("", "uroot-integration")
 	if err != nil {

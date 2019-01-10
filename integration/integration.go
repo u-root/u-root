@@ -127,13 +127,20 @@ func callerName(depth int) string {
 	return last(f.Name())
 }
 
-func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
+// SkipWithoutQEMU skips the test when the QEMU environment variables are not
+// set. This is already called by QEMUTest(), so use if some expensive
+// operations are performed before calling QEMUTest().
+func SkipWithoutQEMU(t *testing.T) {
 	if _, ok := os.LookupEnv("UROOT_QEMU"); !ok {
 		t.Skip("QEMU test is skipped unless UROOT_QEMU is set")
 	}
 	if _, ok := os.LookupEnv("UROOT_KERNEL"); !ok {
 		t.Skip("QEMU test is skipped unless UROOT_KERNEL is set")
 	}
+}
+
+func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
+	SkipWithoutQEMU(t)
 
 	if len(o.Name) == 0 {
 		o.Name = callerName(2)

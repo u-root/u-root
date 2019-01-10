@@ -55,8 +55,17 @@ func ClearFD(fd int) error {
 // fd must be a loop control device.
 //
 // It returns the number of the free loop device /dev/loopN.
+// The _LOOP_CTL_GET_FREE does not follow the rules. Values
+// of 0 or greater are the number of the device; less than
+// zero is an error.
+// So you can not use unix.IoctlGetInt as it assumes the return
+// value is stored in a pointer in the normal style. Yuck.
 func GetFree(fd int) (int, error) {
-	return unix.IoctlGetInt(fd, _LOOP_CTL_GET_FREE)
+	r1, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), _LOOP_CTL_GET_FREE, 0)
+	if err >= 0 {
+		return int(r1), nil
+	}
+	return -1, err
 }
 
 // SetFD associates a loop device lfd with a regular file ffd.
