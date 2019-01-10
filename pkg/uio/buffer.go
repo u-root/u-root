@@ -27,6 +27,45 @@ type Unmarshaler interface {
 	Unmarshal(l *Lexer) error
 }
 
+// ToBytes marshals m in the given byte order.
+func ToBytes(m Marshaler, order binary.ByteOrder) []byte {
+	l := NewLexer(NewBuffer(nil), order)
+	m.Marshal(l)
+	return l.Data()
+}
+
+// FromBytes unmarshals b into obj in the given byte order.
+func FromBytes(obj Unmarshaler, b []byte, order binary.ByteOrder) error {
+	l := NewLexer(NewBuffer(b), order)
+	return obj.Unmarshal(l)
+}
+
+// ToBigEndian marshals m to big endian byte order.
+func ToBigEndian(m Marshaler) []byte {
+	l := NewBigEndianBuffer(nil)
+	m.Marshal(l)
+	return l.Data()
+}
+
+// FromBigEndian unmarshals b into obj in big endian byte order.
+func FromBigEndian(obj Unmarshaler, b []byte) error {
+	l := NewBigEndianBuffer(b)
+	return obj.Unmarshal(l)
+}
+
+// ToLittleEndian marshals m to little endian byte order.
+func ToLittleEndian(m Marshaler) []byte {
+	l := NewLittleEndianBuffer(nil)
+	m.Marshal(l)
+	return l.Data()
+}
+
+// FromLittleEndian unmarshals b into obj in little endian byte order.
+func FromLittleEndian(obj Unmarshaler, b []byte) error {
+	l := NewLittleEndianBuffer(b)
+	return obj.Unmarshal(l)
+}
+
 // Buffer implements functions to manipulate byte slices in a zero-copy way.
 type Buffer struct {
 	// data is the underlying data.
