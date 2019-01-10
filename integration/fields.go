@@ -12,7 +12,10 @@ func isWhitespace(b byte) bool {
 // fields splits the string s around each instance of one or more consecutive white space
 // characters, returning a slice of substrings of s or an
 // empty slice if s contains only white space.
-// fields doesn't split substring of s if substring is inside of quotes.
+//
+// fields is similar to strings.Fields() method, two main differences are:
+//     fields doesn't split substring of s if substring is inside of double quotes
+//     fields works only with ASCII strings.
 func fields(s string) []string {
 	var ret []string
 	var token []byte
