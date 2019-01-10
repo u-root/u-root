@@ -72,6 +72,11 @@ func testPkgs(t *testing.T) []string {
 func TestGoTest(t *testing.T) {
 	SkipWithoutQEMU(t)
 
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	// Create a temporary directory.
 	tmpDir, err := ioutil.TempDir("", "uroot-integration")
 	if err != nil {
