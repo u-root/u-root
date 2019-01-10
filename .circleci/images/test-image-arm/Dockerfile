@@ -59,5 +59,5 @@ RUN set -eux;                                                          \
 
 # Export paths to binaries.
 ENV UROOT_KERNEL /home/circleci/zImage
-ENV UROOT_QEMU "/home/circleci/qemu-system-arm -M virt"
+ENV UROOT_QEMU "/home/circleci/qemu-system-arm -M virt -L /home/circleci/pc-bios"
 ENV UROOT_TESTARCH arm
