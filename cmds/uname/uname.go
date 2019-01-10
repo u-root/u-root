@@ -28,13 +28,14 @@ import (
 )
 
 var (
-	all     = flag.Bool("a", false, "print everything")
-	kernel  = flag.Bool("s", false, "print the kernel name")
-	node    = flag.Bool("n", false, "print the network node name")
-	release = flag.Bool("r", false, "print the kernel release")
-	version = flag.Bool("v", false, "print the kernel version")
-	machine = flag.Bool("m", false, "print the machine hardware name")
-	domain  = flag.Bool("d", false, "print your domain name")
+	all       = flag.Bool("a", false, "print everything")
+	kernel    = flag.Bool("s", false, "print the kernel name")
+	node      = flag.Bool("n", false, "print the network node name")
+	release   = flag.Bool("r", false, "print the kernel release")
+	version   = flag.Bool("v", false, "print the kernel version")
+	machine   = flag.Bool("m", false, "print the machine hardware name")
+	processor = flag.Bool("p", false, "print the machine hardware name")
+	domain    = flag.Bool("d", false, "print your domain name")
 )
 
 func toString(d []byte) string {
@@ -63,7 +64,7 @@ func handleFlags(u *unix.Utsname) string {
 	if *version {
 		info = append(info, Version)
 	}
-	if *machine {
+	if *machine || *processor {
 		info = append(info, Machine)
 	}
 	if *domain {
