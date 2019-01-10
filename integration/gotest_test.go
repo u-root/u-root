@@ -30,6 +30,7 @@ func testPkgs(t *testing.T) []string {
 		// "github.com/u-root/u-root/xcmds/...",
 		// "github.com/u-root/u-root/pkg/...",
 	)
+	cmd.Env = append(os.Environ(), "GOARCH="+TestArch())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatal(err)

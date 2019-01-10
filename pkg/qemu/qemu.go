@@ -102,11 +102,7 @@ func (o *Options) Cmdline() []string {
 	// - o.KernelArgs: extra, optional kernel arguments
 	if len(o.Kernel) != 0 {
 		args = append(args, "-kernel", o.Kernel)
-		cmdline := "console=ttyS0 earlyprintk=ttyS0"
-		if len(o.KernelArgs) != 0 {
-			cmdline += " " + o.KernelArgs
-		}
-		args = append(args, "-append", cmdline)
+		args = append(args, "-append", o.KernelArgs)
 	}
 	if len(o.Initramfs) != 0 {
 		args = append(args, "-initrd", o.Initramfs)

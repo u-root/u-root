@@ -127,6 +127,15 @@ func callerName(depth int) string {
 	return last(f.Name())
 }
 
+// TestArch returns the architecture under test. Pass this as GOARCH when
+// building Go programs to be run in the QEMU environment.
+func TestArch() string {
+	if env := os.Getenv("UROOT_TESTARCH"); env != "" {
+		return env
+	}
+	return "amd64"
+}
+
 // SkipWithoutQEMU skips the test when the QEMU environment variables are not
 // set. This is already called by QEMUTest(), so use if some expensive
 // operations are performed before calling QEMUTest().
@@ -182,6 +191,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		env := golang.Default()
 		o.Env = &env
 		o.Env.CgoEnabled = false
+		env.GOARCH = TestArch()
 	}
 
 	if len(o.LogFile) == 0 {
@@ -288,9 +298,18 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		}
 	}
 
+	kernelArgs := ""
+	switch TestArch() {
+	case "amd64":
+		kernelArgs = "console=ttyS0 earlyprintk=ttyS0"
+	case "arm":
+		kernelArgs = "console=ttyAMA0"
+	}
+
 	return &qemu.Options{
 		Initramfs:    outputFile,
 		Kernel:       bzImage,
+		KernelArgs:   kernelArgs,
 		SerialOutput: logFile,
 		Timeout:      o.Timeout,
 		Devices: []qemu.Device{
