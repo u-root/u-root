@@ -27,9 +27,7 @@ Build and run a new image:
 Push:
 
     # Ping Ryan O'Leary (on slack or via email) for push access.
-    sudo docker tag uroottest/test-image-$GOARCH:{$VERSION,latest}
     sudo docker push uroottest/test-image-$GOARCH:$VERSION
-    sudo docker push uroottest/test-image-$GOARCH:latest
 
 More instructions:
 
