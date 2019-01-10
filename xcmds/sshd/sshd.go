@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -32,7 +33,7 @@ func setWinsize(f *os.File, w, h int) {
 func handler(s ssh.Session) {
 	var a []string
 	if len(s.Command()) > 0 {
-		a = append([]string{"-c"}, s.Command()...)
+		a = append([]string{"-c"}, strings.Join(s.Command(), " "))
 	}
 	cmd := exec.Command("/bin/sh", a...)
 	cmd.Env = append(cmd.Env, s.Environ()...)
