@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
@@ -49,6 +50,9 @@ type Multiboot struct {
 	kernelEntry uintptr
 	// EntryPoint is a pointer to trampoline.
 	EntryPoint uintptr
+
+	info          Info
+	loadedModules []Module
 }
 
 var rangeTypes = map[kexec.RangeType]uint32{
@@ -99,7 +103,7 @@ func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
 }
 
 // Load loads and parses multiboot information from m.file.
-func (m *Multiboot) Load() error {
+func (m *Multiboot) Load(debug bool) error {
 	log.Printf("Parsing file %v", m.file)
 	kernel, err := os.Open(m.file)
 	if err != nil {
@@ -136,6 +140,15 @@ func (m *Multiboot) Load() error {
 	if m.EntryPoint, err = m.addTrampoline(); err != nil {
 		return fmt.Errorf("Error adding trampoline: %v", err)
 	}
+
+	if debug {
+		info, err := m.Description()
+		if err != nil {
+			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
+		}
+		log.Printf("%v %v", DebugPrefix, info)
+	}
+
 	return nil
 }
 
@@ -166,6 +179,7 @@ func (m *Multiboot) addInfo() (addr uintptr, err error) {
 	if err != nil {
 		return 0, err
 	}
+	m.info = iw.Info
 
 	addr, err = m.mem.AddKexecSegment(d)
 	if err != nil {
@@ -290,7 +304,7 @@ func (m memoryMaps) marshal() ([]byte, error) {
 func (m *Multiboot) addTrampoline() (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := setupTrampoline(m.trampoline, m.infoAddr, m.kernelEntry)
+	d, err := trampoline.Setup(m.trampoline, m.infoAddr, m.kernelEntry)
 	if err != nil {
 		return 0, err
 	}

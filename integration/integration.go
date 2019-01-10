@@ -219,7 +219,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 
 		var realUinit [][]string
 		for _, cmd := range o.Uinit {
-			realUinit = append(realUinit, strings.Fields(cmd))
+			realUinit = append(realUinit, fields(cmd))
 		}
 
 		if err := ioutil.WriteFile(

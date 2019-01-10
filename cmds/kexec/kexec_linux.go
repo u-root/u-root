@@ -36,18 +36,9 @@ type options struct {
 	initramfs    string
 	load         bool
 	exec         bool
+	debug        bool
 	modules      []string
-	trampoline   string
 }
-
-var trampoline = `Path to trampoline (will be removed in future releases).
-Trampoline is a executable blob, which should set machine
-to a specific state defined by multiboot v1 spec.
-https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
-
-Trampoline should use a long word value stored right after "u-root-ebx-long"
-as a value to be stored in ebx register and use a quad word value stored right after
-"u-root-ep-quad" as kernel entry point.`
 
 func registerFlags() *options {
 	o := &options{}
@@ -56,8 +47,8 @@ func registerFlags() *options {
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
+	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
 	flag.StringSliceVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
-	flag.StringVar(&o.trampoline, "trampoline", "", trampoline)
 	return o
 }
 
@@ -70,8 +61,8 @@ type file struct {
 }
 
 type mboot struct {
-	trampoline string
-	modules    []string
+	debug   bool
+	modules []string
 }
 
 func (f file) Load(path, cmdLine string) error {
@@ -94,13 +85,13 @@ func (f file) Load(path, cmdLine string) error {
 }
 
 func (mb mboot) Load(path, cmdLine string) error {
-	m := multiboot.New(path, cmdLine, mb.trampoline, mb.modules)
-	if err := m.Load(); err != nil {
+	// Trampoline should be a part of current binary.
+	m := multiboot.New(path, cmdLine, os.Args[0], mb.modules)
+	if err := m.Load(mb.debug); err != nil {
 		return fmt.Errorf("Load failed: %v", err)
 	}
 
-	err := kexec.Load(m.EntryPoint, m.Segments(), 0)
-	if err != nil {
+	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
@@ -143,8 +134,8 @@ func main() {
 		if err := multiboot.Probe(kernelpath); err == nil {
 			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
 			l = mboot{
-				modules:    opts.modules,
-				trampoline: opts.trampoline,
+				debug:   opts.debug,
+				modules: opts.modules,
 			}
 		} else if err == multiboot.ErrFlagsNotSupported {
 			log.Fatal(err)
