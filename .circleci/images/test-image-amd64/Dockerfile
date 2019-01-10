@@ -72,3 +72,4 @@ RUN set -eux;                                                          \
 # Export paths to binaries.
 ENV UROOT_KERNEL /home/circleci/bzImage
 ENV UROOT_QEMU "/home/circleci/qemu-system-x86_64 -L /home/circleci/pc-bios -m 1G"
+ENV UROOT_TESTARCH amd64
