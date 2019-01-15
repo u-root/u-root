@@ -42,7 +42,8 @@ RUN sudo apt-get update &&                          \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
-        gcc-multilib &&                             \
+        gcc-multilib                                \
+        gzip &&                                     \
     sudo rm -rf /var/lib/apt/lists/*
 
 # Create working directory
@@ -85,6 +86,7 @@ RUN set -eux;                                                          \
     make;                                                              \
     cd ~;                                                              \
     cp multiboot-test-kernel/kernel ./;                                \
+    gzip -k kernel;                                                    \
     rm -rf multiboot-test-kernel/
 
 # Export paths to binaries.
