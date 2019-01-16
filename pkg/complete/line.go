@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+const (
+	controlD = 4
+	backSpace = 8
+	del = 127
+)
+
 // LineReader has three things and returns one string.
 // The three things are an io.Reader, an io.Writer, and a Completer
 // Bytes are read one at a time, and depending on their value,
@@ -63,10 +69,10 @@ func (l *LineReader) ReadChar(b byte) (err error) {
 	default:
 		Debug("LineReader.Just add it to line and pipe")
 		l.Line += string(b)
-	case 4:
+	case controlD:
 		l.EOF = true
 		return io.EOF
-	case 8, 127:
+	case backSpace, del:
 		s := l.Line
 		if len(s) > 0 {
 			s = s[:len(s)-1]
