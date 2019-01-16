@@ -181,7 +181,7 @@ func main() {
 		log.Fatalf("Load failed: %v", err)
 	}
 
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
+	if err := kexec.RawLoad(m.EntryPoint, m.Segments(), 0); err != nil {
 		log.Fatalf("kexec.Load() error: %v", err)
 	}
 	if err := kexec.Reboot(); err != nil {

@@ -1,4 +1,4 @@
-// Copyright 2015-2018 the u-root Authors. All rights reserved
+// Copyright 2015-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@
 //     kexec [--initrd=FILE] [--command-line=STRING] [-l] [-e] [KERNELIMAGE]
 //
 // Description:
-//		 Loads a kernel for later execution.
+//	   Loads a kernel for later execution.
 //
 // Options:
 //     --acpi=STRING or -a=string      Add an ACPI table (only one at present)
@@ -17,6 +17,10 @@
 //     --i=FILE or --initrd=FILE:     Use file as the kernel's initial ramdisk
 //     -l or --load:                  Load the new kernel into the current kernel
 //     -e or --exec:                  Execute a currently loaded kernel
+//     -d or --debug:                 Print debug info
+//     --module:                      Load module with command line args
+//     --dtb FILE:                    Override the device tree with this file
+//     --dryrun:                      Print segments, do not load kernel
 package main
 
 import (
@@ -42,6 +46,8 @@ type options struct {
 	debug        bool
 	acpi         string
 	modules      []string
+	dtb          string // device tree
+	dryrun       bool
 }
 
 func registerFlags() *options {
@@ -54,11 +60,13 @@ func registerFlags() *options {
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
 	flag.StringSliceVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
+	flag.StringVar(&o.dtb, "dtb", "", "Override the device tree with this file")
+	flag.BoolVar(&o.dryrun, "dryrun", false, "Print segments, do not load kernel")
 	return o
 }
 
 type loader interface {
-	Load(path, cmdLine string) error
+	Load(path, cmdLine string, o *options) error
 }
 
 type file struct {
@@ -71,7 +79,7 @@ type mboot struct {
 	acpi    string
 }
 
-func (f file) Load(path, cmdLine string) error {
+func (f file) Load(path, cmdLine string, o *options) error {
 	kernel, err := os.OpenFile(path, os.O_RDONLY, 0)
 	if err != nil {
 		return fmt.Errorf("open(%q): %v", path, err)
@@ -86,10 +94,27 @@ func (f file) Load(path, cmdLine string) error {
 		}
 		defer ramfs.Close()
 	}
-	return kexec.FileLoad(kernel, ramfs, cmdLine)
+
+	kOpts := &kexec.LinuxOpts{
+		Initramfs: ramfs,
+		CmdLine:   cmdLine,
+	}
+	if o.dryrun {
+		kOpts.FileLoadSyscall = kexec.DryrunFileLoad
+		kOpts.LoadSyscall = kexec.DryrunLoad
+	}
+	if o.dtb != "" {
+		f, err := os.OpenFile(o.dtb, os.O_RDONLY, 0)
+		if err != nil {
+			return fmt.Errorf("open(%q): %v", path, err)
+		}
+		defer f.Close()
+		kOpts.DTB = f
+	}
+	return kexec.Load(kOpts)
 }
 
-func (mb mboot) Load(path, cmdLine string) error {
+func (mb mboot) Load(path, cmdLine string, o *options) error {
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
@@ -109,8 +134,8 @@ func (mb mboot) Load(path, cmdLine string) error {
 		}
 	}
 
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
+	if err := kexec.RawLoad(m.EntryPoint, m.Segments(), 0); err != nil {
+		return fmt.Errorf("kexec.RawLoad() error: %v", err)
 	}
 	return nil
 }
@@ -173,7 +198,7 @@ func main() {
 				acpi:    opts.acpi,
 			}
 		}
-		if err := l.Load(kernelpath, newCmdLine); err != nil {
+		if err := l.Load(kernelpath, newCmdLine, opts); err != nil {
 			log.Fatal(err)
 		}
 	}

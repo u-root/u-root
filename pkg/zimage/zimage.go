@@ -123,7 +123,8 @@ func (z *ZImage) GetEntry(t Tag) (*TableEntry, error) {
 }
 
 // GetKernelSizes returns two kernel sizes relevant for kexec.
-func (z *ZImage) GetKernelSizes() (piggySizeAddr uint32, kernelBSSSize uint32, err error) {
+func (z *ZImage) GetKernelSizes(f io.ReadSeeker) (edataSize uint32, bssSize uint32, err error) {
+	// Look at Linux's arm/boot/compressed/vmlinux.lds.S to understand this parsing.
 	e, err := z.GetEntry(TagKernelSize)
 	if err != nil {
 		return 0, 0, err
@@ -132,5 +133,13 @@ func (z *ZImage) GetKernelSizes() (piggySizeAddr uint32, kernelBSSSize uint32, e
 		return 0, 0, fmt.Errorf("zImage tag %#08x has incorrect size %d, expected 2",
 			TagKernelSize, len(e.Data))
 	}
-	return e.Data[0], e.Data[1], nil
+
+	piggySizeAddr := e.Data[0]
+	if _, err := f.Seek(int64(piggySizeAddr), io.SeekStart); err != nil {
+		return 0, 0, err
+	}
+	if err := binary.Read(f, binary.LittleEndian, &edataSize); err != nil {
+		return 0, 0, err
+	}
+	return edataSize, e.Data[1], nil
 }

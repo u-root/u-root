@@ -133,7 +133,7 @@ func (m *Multiboot) Load(debug bool) error {
 	}
 
 	log.Printf("Parsing memory map")
-	if err := m.mem.ParseMemoryMap(); err != nil {
+	if err := m.mem.ParseFromMemmap(); err != nil {
 		return fmt.Errorf("Error parsing memory map: %v", err)
 	}
 

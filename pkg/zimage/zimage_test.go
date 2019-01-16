@@ -45,12 +45,23 @@ func TestParse(t *testing.T) {
 }
 
 func TestKernelSizes(t *testing.T) {
-	piggySizeAddr, kernelBSSSize, err := testData.GetKernelSizes()
+	f, err := os.Open("testdata/zImage")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if piggySizeAddr != 0xd55f5 {
-		t.Errorf("want piggySizeAddr=0xd55f5, got piggySizeAddr=%#x", piggySizeAddr)
+	defer f.Close()
+
+	z, err := Parse(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	edataSize, kernelBSSSize, err := z.GetKernelSizes(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if edataSize != 0x50e780 { // at address 0xd55f5
+		t.Errorf("want edataSize=0x50e780, got edataSize=%#x", edataSize)
 	}
 	if kernelBSSSize != 0x2b83c {
 		t.Errorf("want kernelBSSSize=0x2b83c, got kernelBSSSize=%#x", kernelBSSSize)

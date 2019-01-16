@@ -1,3 +1,6 @@
-- fdt.dtb is the Flattened Device Tree created by QEMU virt machine.
-- fdt.dts was obtained by running `fdtdump fdt.bin`.
-- fdt.json was obtained by marshalling the `FDT` struct in Go.
+- qemu_fdt.dtb is the Flattened Device Tree created by QEMU virt machine.
+- qemu_fdt.dts was obtained by running `fdtdump qemu_fdt.bin`.
+- qemu_fdt.json was obtained by marshalling the `FDT` struct in Go.
+- rpi_fdt.dtb is the Flattened Device Tree from an RPI 3 B+
+- rpi_fdt.dts was obtained by running `fdtdump rpi_fdt.bin`.
+- rpi_fdt.json was obtained by marshalling the `FDT` struct in Go.

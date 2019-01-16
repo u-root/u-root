@@ -391,7 +391,11 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 
 	log.Printf("Kernel cmdline %s", cl)
 
-	if err := kexec.FileLoad(kernelDesc, ramfs, cl); err != nil {
+	if err := kexec.Load(&kexec.LinuxOpts{
+		Kernel:    kernelDesc,
+		Initramfs: ramfs,
+		CmdLine:   cl,
+	}); err != nil {
 		debug("%v", err)
 		return err
 	}

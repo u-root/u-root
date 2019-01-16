@@ -50,8 +50,8 @@ var StandardPropertyTypes = map[string]PropertyType{
 // Node is one Node in the Device Tree.
 type Node struct {
 	Name       string
-	Properties []Property `json:",omitempty"`
-	Children   []*Node    `json:",omitempty"`
+	Properties []*Property `json:",omitempty"`
+	Children   []*Node     `json:",omitempty"`
 }
 
 // Walk calls f on a Node and alls its descendents.
@@ -65,6 +65,62 @@ func (n *Node) Walk(f func(*Node) error) error {
 		}
 	}
 	return nil
+}
+
+// GetNode returns a subnode with the given name. If the subnode does not
+// already exist, nil is returned.
+func (n *Node) GetNode(name string) *Node {
+	for _, c := range n.Children {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// CreateNode returns a subnode with the given name. If the subnode does not
+// already exist, a new one is created.
+func (n *Node) CreateNode(name string) *Node {
+	c := n.GetNode(name)
+	if c == nil {
+		c = &Node{Name: name}
+		n.Children = append(n.Children, c)
+	}
+	return c
+}
+
+// GetProperty returns a property of the Node with the given name. If the
+// property does not exist, nil is returned.
+func (n *Node) GetProperty(name string) *Property {
+	for _, p := range n.Properties {
+		if p.Name == name {
+			return p
+		}
+	}
+	return nil
+}
+
+// CreateProperty returns a property of the Node with the given name. If the
+// property does not already exist, a new one is created.
+func (n *Node) CreateProperty(name string) *Property {
+	p := n.GetProperty(name)
+	if p == nil {
+		p = &Property{Name: name}
+		n.Properties = append(n.Properties, p)
+	}
+	return p
+}
+
+// DeleteProperty deletes a property from the Node. It returns false iff the
+// property did not exist in the first place.
+func (n *Node) DeleteProperty(name string) bool {
+	for i, p := range n.Properties {
+		if p.Name == name {
+			n.Properties = append(n.Properties[:i], n.Properties[i+1:]...)
+			return true
+		}
+	}
+	return false
 }
 
 // Property is a name-value pair. Note the PropertyType of Value is not
@@ -204,6 +260,52 @@ func (p *Property) AsStringList() ([]string, error) {
 		strs = append(strs, string(str))
 	}
 	return []string{}, nil
+}
+
+// SetEmpty sets the property to the empty value.
+func (p *Property) SetEmpty() {
+	p.Value = []byte{}
+}
+
+// SetU32 sets the property to a uint32.
+func (p *Property) SetU32(val uint32) {
+	buf := &bytes.Buffer{}
+	binary.Write(buf, binary.BigEndian, &val)
+	p.Value = buf.Bytes()
+}
+
+// SetU64 sets the property to a uint64.
+func (p *Property) SetU64(val uint64) {
+	buf := &bytes.Buffer{}
+	binary.Write(buf, binary.BigEndian, &val)
+	p.Value = buf.Bytes()
+}
+
+// SetString sets the property to a string. The string should not contain null
+// characters and should be printable for it to be decoded properly.
+func (p *Property) SetString(val string) {
+	p.Value = append([]byte(val), 0)
+}
+
+// SetPropEncodedArray sets the property to a []byte slice.
+func (p *Property) SetPropEncodedArray(val []byte) {
+	p.Value = val
+}
+
+// SetPHandle sets the property to a PHandle.
+func (p *Property) SetPHandle(val PHandle) {
+	p.SetU32(uint32(val))
+}
+
+// SetStringList sets the property to an []string. The strings should not
+// contain null characters and should be printable for it to be decoded
+// properly.
+func (p *Property) SetStringList(val []string) {
+	p.Value = []byte{}
+	for _, s := range val {
+		p.Value = append(p.Value, []byte(s)...)
+		p.Value = append(p.Value, 0)
+	}
 }
 
 func isPrintableASCII(s []byte) bool {

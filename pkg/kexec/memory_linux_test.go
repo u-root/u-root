@@ -12,9 +12,11 @@ import (
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/dt"
 )
 
-func TestParseMemoryMap(t *testing.T) {
+func TestParseFromMemmap(t *testing.T) {
 	var mem Memory
 	root, err := ioutil.TempDir("", "memmap")
 	if err != nil {
@@ -22,9 +24,9 @@ func TestParseMemoryMap(t *testing.T) {
 	}
 	defer os.RemoveAll(root)
 
-	old := memoryMapRoot
-	memoryMapRoot = root
-	defer func() { memoryMapRoot = old }()
+	old := memmapRoot
+	memmapRoot = root
+	defer func() { memmapRoot = old }()
 
 	create := func(dir string, start, end uintptr, typ RangeType) error {
 		p := path.Join(root, dir)
@@ -60,11 +62,35 @@ func TestParseMemoryMap(t *testing.T) {
 		{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
 	}
 
-	if err := mem.ParseMemoryMap(); err != nil {
-		t.Fatalf("ParseMemoryMap() error: %v", err)
+	if err := mem.ParseFromMemmap(); err != nil {
+		t.Fatalf("ParseFromMemmap() error: %v", err)
 	}
 	if !reflect.DeepEqual(mem.Phys, want) {
-		t.Errorf("ParseMemoryMap() got %v, want %v", mem.Phys, want)
+		t.Errorf("ParseFromMemmap() got %#v, want %#v", mem.Phys, want)
+	}
+}
+
+func TestParseFromDeviceTree(t *testing.T) {
+	f, err := os.Open("../dt/testdata/rpi_fdt.dtb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdt, err := dt.ReadFDT(f)
+	if err != nil {
+		t.Fatalf("error parsing fdt: %v", err)
+	}
+
+	var mem Memory
+	want := []TypedAddressRange{
+		{Range: Range{Start: 0, Size: 0x3b400000}, Type: RangeRAM},
+	}
+	if err := mem.ParseFromDeviceTree(fdt); err != nil {
+		t.Fatalf("ParseFromDeviceTree() error: %v", err)
+	}
+	if !reflect.DeepEqual(mem.Phys, want) {
+		t.Errorf("ParseFromDeviceTree() got %#v, want %#v", mem.Phys, want)
 	}
 }
 

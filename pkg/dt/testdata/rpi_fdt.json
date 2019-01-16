@@ -1,0 +1,4207 @@
+{
+    "Header": {
+        "Magic": 3490578157,
+        "TotalSize": 26921,
+        "OffDtStruct": 72,
+        "OffDtStrings": 24168,
+        "OffMemRsvmap": 40,
+        "Version": 17,
+        "LastCompVersion": 16,
+        "BootCpuidPhys": 0,
+        "SizeDtStrings": 2753,
+        "SizeDtStruct": 24096
+    },
+    "ReserveEntries": [
+        {
+            "Address": 0,
+            "Size": 4096
+        }
+    ],
+    "RootNode": {
+        "Name": "",
+        "Properties": [
+            {
+                "Name": "memreserve",
+                "Value": "O0AAAATAAAA="
+            },
+            {
+                "Name": "serial-number",
+                "Value": "MDAwMDAwMDBlZGIxNWY3OQA="
+            },
+            {
+                "Name": "compatible",
+                "Value": "cmFzcGJlcnJ5cGksMy1tb2RlbC1iLXBsdXMAYnJjbSxiY20yODM3AA=="
+            },
+            {
+                "Name": "model",
+                "Value": "UmFzcGJlcnJ5IFBpIDMgTW9kZWwgQiBQbHVzIFJldiAxLjMA"
+            },
+            {
+                "Name": "interrupt-parent",
+                "Value": "AAAAAQ=="
+            },
+            {
+                "Name": "#address-cells",
+                "Value": "AAAAAQ=="
+            },
+            {
+                "Name": "#size-cells",
+                "Value": "AAAAAQ=="
+            }
+        ],
+        "Children": [
+            {
+                "Name": "system",
+                "Properties": [
+                    {
+                        "Name": "linux,serial",
+                        "Value": "AAAAAO2xX3k="
+                    },
+                    {
+                        "Name": "linux,revision",
+                        "Value": "AKAg0w=="
+                    }
+                ]
+            },
+            {
+                "Name": "axi",
+                "Children": [
+                    {
+                        "Name": "vc_mem",
+                        "Properties": [
+                            {
+                                "Name": "reg",
+                                "Value": "PsAAAEAAAADAAAAA"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "aliases",
+                "Properties": [
+                    {
+                        "Name": "i2c_arm",
+                        "Value": "L3NvYy9pMmNAN2U4MDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c",
+                        "Value": "L3NvYy9pMmNAN2U4MDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c_vc",
+                        "Value": "L3NvYy9pMmNAN2UyMDUwMDAA"
+                    },
+                    {
+                        "Name": "serial0",
+                        "Value": "L3NvYy9zZXJpYWxAN2UyMDEwMDAA"
+                    },
+                    {
+                        "Name": "serial1",
+                        "Value": "L3NvYy9zZXJpYWxAN2UyMTUwNDAA"
+                    },
+                    {
+                        "Name": "audio",
+                        "Value": "L3NvYy9hdWRpbwA="
+                    },
+                    {
+                        "Name": "aux",
+                        "Value": "L3NvYy9hdXhAMHg3ZTIxNTAwMAA="
+                    },
+                    {
+                        "Name": "sound",
+                        "Value": "L3NvYy9zb3VuZAA="
+                    },
+                    {
+                        "Name": "soc",
+                        "Value": "L3NvYwA="
+                    },
+                    {
+                        "Name": "dma",
+                        "Value": "L3NvYy9kbWFAN2UwMDcwMDAA"
+                    },
+                    {
+                        "Name": "intc",
+                        "Value": "L3NvYy9pbnRlcnJ1cHQtY29udHJvbGxlckA3ZTAwYjIwMAA="
+                    },
+                    {
+                        "Name": "watchdog",
+                        "Value": "L3NvYy93YXRjaGRvZ0A3ZTEwMDAwMAA="
+                    },
+                    {
+                        "Name": "random",
+                        "Value": "L3NvYy9ybmdAN2UxMDQwMDAA"
+                    },
+                    {
+                        "Name": "mailbox",
+                        "Value": "L3NvYy9tYWlsYm94QDdlMDBiODgwAA=="
+                    },
+                    {
+                        "Name": "gpio",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwAA=="
+                    },
+                    {
+                        "Name": "uart0",
+                        "Value": "L3NvYy9zZXJpYWxAN2UyMDEwMDAA"
+                    },
+                    {
+                        "Name": "sdhost",
+                        "Value": "L3NvYy9tbWNAN2UyMDIwMDAA"
+                    },
+                    {
+                        "Name": "mmc0",
+                        "Value": "L3NvYy9tbWNAN2UyMDIwMDAA"
+                    },
+                    {
+                        "Name": "i2s",
+                        "Value": "L3NvYy9pMnNAN2UyMDMwMDAA"
+                    },
+                    {
+                        "Name": "spi0",
+                        "Value": "L3NvYy9zcGlAN2UyMDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c0",
+                        "Value": "L3NvYy9pMmNAN2UyMDUwMDAA"
+                    },
+                    {
+                        "Name": "uart1",
+                        "Value": "L3NvYy9zZXJpYWxAN2UyMTUwNDAA"
+                    },
+                    {
+                        "Name": "spi1",
+                        "Value": "L3NvYy9zcGlAN2UyMTUwODAA"
+                    },
+                    {
+                        "Name": "spi2",
+                        "Value": "L3NvYy9zcGlAN2UyMTUwYzAA"
+                    },
+                    {
+                        "Name": "mmc",
+                        "Value": "L3NvYy9tbWNAN2UzMDAwMDAA"
+                    },
+                    {
+                        "Name": "mmc1",
+                        "Value": "L3NvYy9tbWNAN2UzMDAwMDAA"
+                    },
+                    {
+                        "Name": "i2c1",
+                        "Value": "L3NvYy9pMmNAN2U4MDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c2",
+                        "Value": "L3NvYy9pMmNAN2U4MDUwMDAA"
+                    },
+                    {
+                        "Name": "usb",
+                        "Value": "L3NvYy91c2JAN2U5ODAwMDAA"
+                    },
+                    {
+                        "Name": "leds",
+                        "Value": "L2xlZHMA"
+                    },
+                    {
+                        "Name": "fb",
+                        "Value": "L3NvYy9mYgA="
+                    },
+                    {
+                        "Name": "vchiq",
+                        "Value": "L3NvYy92Y2hpcQA="
+                    },
+                    {
+                        "Name": "thermal",
+                        "Value": "L3NvYy90aGVybWFsQDdlMjEyMDAwAA=="
+                    },
+                    {
+                        "Name": "axiperf",
+                        "Value": "L3NvYy9heGlwZXJmAA=="
+                    },
+                    {
+                        "Name": "ethernet0",
+                        "Value": "L3NvYy91c2JAN2U5ODAwMDAvdXNiMUAxL3VzYjFfMUAxL3VzYmV0aGVyQDEA"
+                    }
+                ]
+            },
+            {
+                "Name": "chosen",
+                "Properties": [
+                    {
+                        "Name": "kaslr-seed",
+                        "Value": "Fna1Yl8X6h8="
+                    },
+                    {
+                        "Name": "bootargs",
+                        "Value": "ODI1MC5ucl91YXJ0cz0xIGJjbTI3MDhfZmIuZmJ3aWR0aD02NTYgYmNtMjcwOF9mYi5mYmhlaWdodD00MTYgYmNtMjcwOF9mYi5mYnN3YXA9MSB2Y19tZW0ubWVtX2Jhc2U9MHgzZWMwMDAwMCB2Y19tZW0ubWVtX3NpemU9MHg0MDAwMDAwMCAgZHdjX290Zy5scG1fZW5hYmxlPTAgY29uc29sZT10dHlBTUEwLDExNTIwMCByb290PVBBUlRVVUlEPTJhNmI1ZGY5LTAyIHJvb3Rmc3R5cGU9ZXh0NCBlbGV2YXRvcj1kZWFkbGluZSBmc2NrLnJlcGFpcj15ZXMgcm9vdHdhaXQA"
+                    }
+                ]
+            },
+            {
+                "Name": "thermal-zones",
+                "Children": [
+                    {
+                        "Name": "cpu-thermal",
+                        "Properties": [
+                            {
+                                "Name": "polling-delay-passive",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "polling-delay",
+                                "Value": "AAAD6A=="
+                            },
+                            {
+                                "Name": "thermal-sensors",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "coefficients",
+                                "Value": "///95gAGSWA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAMg=="
+                            }
+                        ],
+                        "Children": [
+                            {
+                                "Name": "cooling-maps"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "soc",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "c2ltcGxlLWJ1cwA="
+                    },
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "ranges",
+                        "Value": "fgAAAD8AAAABAAAAQAAAAEAAAAAAABAA"
+                    },
+                    {
+                        "Name": "dma-ranges",
+                        "Value": "wAAAAAAAAAA/AAAA"
+                    },
+                    {
+                        "Name": "phandle",
+                        "Value": "AAAAMw=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "dma@7e007000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWRtYQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fgBwAAAADwA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAQAAABAAAAABAAAAEQAAAAEAAAASAAAAAQAAABMAAAABAAAAFAAAAAEAAAAVAAAAAQAAABYAAAABAAAAFwAAAAEAAAAYAAAAAQAAABkAAAABAAAAGgAAAAEAAAAbAAAAAQAAABsAAAABAAAAGwAAAAEAAAAbAAAAAQAAABw="
+                            },
+                            {
+                                "Name": "interrupt-names",
+                                "Value": "ZG1hMABkbWExAGRtYTIAZG1hMwBkbWE0AGRtYTUAZG1hNgBkbWE3AGRtYTgAZG1hOQBkbWExMABkbWExMQBkbWExMgBkbWExMwBkbWExNABkbWEtc2hhcmVkLWFsbAA="
+                            },
+                            {
+                                "Name": "#dma-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "brcm,dma-channel-mask",
+                                "Value": "AAB/NA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAACw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "interrupt-controller@7e00b200",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM2LWFybWN0cmwtaWMA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fgCyAAAAAgA="
+                            },
+                            {
+                                "Name": "interrupt-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "#interrupt-cells",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "interrupt-parent",
+                                "Value": "AAAAAw=="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAACA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAAQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "watchdog@7e100000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXBtLXdkdAA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fhAAAAAAACg="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAJA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "cprman@7e101000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWNwcm1hbgA="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fhAQAAAAIAA="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAABAAAAAUAAAAAAAAABQAAAAEAAAAFAAAAAgAAAAYAAAAAAAAABgAAAAEAAAAGAAAAAg=="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAACA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "rng@7e104000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXJuZwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fhBAAAAAABA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAB0="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAJQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "mailbox@7e00b880",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LW1ib3gA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fgC4gAAAAEA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAAAAAAE="
+                            },
+                            {
+                                "Name": "#mbox-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAGg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "gpio@7e200000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWdwaW8A"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiAAAAAAALQ="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABEAAAACAAAAEg=="
+                            },
+                            {
+                                "Name": "gpio-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "#gpio-cells",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "interrupt-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "#interrupt-cells",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAEA=="
+                            }
+                        ],
+                        "Children": [
+                            {
+                                "Name": "dpi_gpio0",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAAAAAAAEAAAACAAAAAwAAAAQAAAAFAAAABgAAAAcAAAAIAAAACQAAAAoAAAALAAAADAAAAA0AAAAOAAAADwAAABAAAAARAAAAEgAAABMAAAAUAAAAFQAAABYAAAAXAAAAGAAAABkAAAAaAAAAGw=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAANA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "emmc_gpio22",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAFgAAABcAAAAYAAAAGQAAABoAAAAb"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAANQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "emmc_gpio34",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAIgAAACMAAAAkAAAAJQAAACYAAAAn"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "brcm,pull",
+                                        "Value": "AAAAAAAAAAIAAAACAAAAAgAAAAIAAAAC"
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAANg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "emmc_gpio48",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAMAAAADEAAAAyAAAAMwAAADQAAAA1"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAANw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "gpclk0_gpio4",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAOA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "gpclk1_gpio5",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAABQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAOQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "gpclk1_gpio42",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKg=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAOg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "gpclk1_gpio44",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAALA=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAOw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "gpclk2_gpio6",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAPA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "gpclk2_gpio43",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKw=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAPQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c0_gpio0",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAAAAAAAE="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAPg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c0_gpio28",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAHAAAAB0="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAPw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c0_gpio44",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAALAAAAC0="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABQ=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAQA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c1_gpio2",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAAgAAAAM="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAQQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c1_gpio44",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAALAAAAC0="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAQg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c_slave_gpio18",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEgAAABMAAAAUAAAAFQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAQw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "jtag_gpio4",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAABAAAAAUAAAAGAAAADAAAAA0="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAARA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "jtag_gpio22",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAFgAAABcAAAAYAAAAGQAAABoAAAAb"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAARQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pcm_gpio18",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEgAAABMAAAAUAAAAFQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAARg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pcm_gpio28",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAHAAAAB0AAAAeAAAAHw=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAARw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm0_gpio12",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAADA=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAASA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm0_gpio18",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEg=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAASQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm0_gpio40",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKA=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAASg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm1_gpio13",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAADQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAASw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm1_gpio19",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEw=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAATA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm1_gpio41",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAATQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "pwm1_gpio45",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAALQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAATg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "sdhost_gpio48",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAMAAAADEAAAAyAAAAMwAAADQAAAA1"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAADA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spi0_gpio7",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAABwAAAAgAAAAJAAAACgAAAAs="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAATw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spi0_gpio35",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAIwAAACQAAAAlAAAAJgAAACc="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAUA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spi1_gpio16",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEAAAABEAAAASAAAAEwAAABQAAAAV"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAUQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spi2_gpio40",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKAAAACkAAAAqAAAAKwAAACwAAAAt"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAUg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_gpio14",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAADgAAAA8="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAUw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_ctsrts_gpio16",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEAAAABE="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAVA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_ctsrts_gpio30",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAHgAAAB8="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAVQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_gpio32",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAIAAAACE="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAVg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_gpio36",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAJAAAACU="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAVw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_ctsrts_gpio38",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAJgAAACc="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAWA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_gpio14",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAADgAAAA8="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAWQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_ctsrts_gpio16",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEAAAABE="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAWg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_gpio32",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAIAAAACE="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAWw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_ctsrts_gpio30",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAHgAAAB8="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAXA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_gpio40",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKAAAACk="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAXQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_ctsrts_gpio42",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKgAAACs="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAXg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "dpi_18bit_gpio0",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAAAAAAAEAAAACAAAAAwAAAAQAAAAFAAAABgAAAAcAAAAIAAAACQAAAAoAAAALAAAADAAAAA0AAAAOAAAADwAAABAAAAARAAAAEgAAABMAAAAUAAAAFQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABg=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAXw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spi0_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAACQAAAAoAAAAL"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAADg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spi0_cs_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAACAAAAAc="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAAAQ=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAADw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c0",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAAAAAAAE="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAEQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2c1",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAAgAAAAM="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAFQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "i2s",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAEgAAABMAAAAUAAAAFQ=="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAADQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "sdio_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAIgAAACMAAAAkAAAAJQAAACYAAAAn"
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABw=="
+                                    },
+                                    {
+                                        "Name": "brcm,pull",
+                                        "Value": "AAAAAAAAAAIAAAACAAAAAgAAAAIAAAAC"
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAGQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "bt_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "brcm,pull",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAACg=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart0_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "brcm,pull",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAACQ=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "uart1_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "brcm,pull",
+                                        "Value": ""
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAEw=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "audio_pins",
+                                "Properties": [
+                                    {
+                                        "Name": "brcm,pins",
+                                        "Value": "AAAAKAAAACk="
+                                    },
+                                    {
+                                        "Name": "brcm,function",
+                                        "Value": "AAAABA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAGw=="
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "serial@7e201000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXBsMDExAGFybSxwbDAxMQBhcm0scHJpbWVjZWxsAA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiAQAAAAEAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABk="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABMAAAAIAAAAFA=="
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "dWFydGNsawBhcGJfcGNsawA="
+                            },
+                            {
+                                "Name": "arm,primecell-periphid",
+                                "Value": "ACQQEQ=="
+                            },
+                            {
+                                "Name": "cts-event-workaround",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAACQ=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAHQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "mmc@7e202000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXNkaG9zdAA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiAgAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABg="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQ="
+                            },
+                            {
+                                "Name": "dmas",
+                                "Value": "AAAACwAAAA0="
+                            },
+                            {
+                                "Name": "dma-names",
+                                "Value": "cngtdHgA"
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAADA=="
+                            },
+                            {
+                                "Name": "bus-width",
+                                "Value": "AAAABA=="
+                            },
+                            {
+                                "Name": "brcm,overclock-50",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "brcm,pio-limit",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAJg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "i2s@7e203000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWkycwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiAwAAAAACQ="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAAB8="
+                            },
+                            {
+                                "Name": "dmas",
+                                "Value": "AAAACwAAAAIAAAALAAAAAw=="
+                            },
+                            {
+                                "Name": "dma-names",
+                                "Value": "dHgAcngA"
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "#sound-dai-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAADQ=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAHw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "spi@7e204000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXNwaQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiBAAAAAEAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABY="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQ="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "dmas",
+                                "Value": "AAAACwAAAAYAAAALAAAABw=="
+                            },
+                            {
+                                "Name": "dma-names",
+                                "Value": "dHgAcngA"
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAADgAAAA8="
+                            },
+                            {
+                                "Name": "cs-gpios",
+                                "Value": "AAAAEAAAAAgAAAABAAAAEAAAAAcAAAAB"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAIA=="
+                            }
+                        ],
+                        "Children": [
+                            {
+                                "Name": "spidev@0",
+                                "Properties": [
+                                    {
+                                        "Name": "compatible",
+                                        "Value": "c3BpZGV2AA=="
+                                    },
+                                    {
+                                        "Name": "reg",
+                                        "Value": "AAAAAA=="
+                                    },
+                                    {
+                                        "Name": "#address-cells",
+                                        "Value": "AAAAAQ=="
+                                    },
+                                    {
+                                        "Name": "#size-cells",
+                                        "Value": "AAAAAA=="
+                                    },
+                                    {
+                                        "Name": "spi-max-frequency",
+                                        "Value": "B3NZQA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAYA=="
+                                    }
+                                ]
+                            },
+                            {
+                                "Name": "spidev@1",
+                                "Properties": [
+                                    {
+                                        "Name": "compatible",
+                                        "Value": "c3BpZGV2AA=="
+                                    },
+                                    {
+                                        "Name": "reg",
+                                        "Value": "AAAAAQ=="
+                                    },
+                                    {
+                                        "Name": "#address-cells",
+                                        "Value": "AAAAAQ=="
+                                    },
+                                    {
+                                        "Name": "#size-cells",
+                                        "Value": "AAAAAA=="
+                                    },
+                                    {
+                                        "Name": "spi-max-frequency",
+                                        "Value": "B3NZQA=="
+                                    },
+                                    {
+                                        "Name": "phandle",
+                                        "Value": "AAAAYQ=="
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "i2c@7e205000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWkyYwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiBQAAAAEAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABU="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQ="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAAEQ=="
+                            },
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "AAGGoA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAIQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "pixelvalve@7e206000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXBpeGVsdmFsdmUwAA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiBgAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAA0="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAYg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "pixelvalve@7e207000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXBpeGVsdmFsdmUxAA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiBwAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAA4="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAYw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "dpi@7e208000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWRwaQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiCAAAAAAIw="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQAAAAIAAAALA=="
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "Y29yZQBwaXhlbAA="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAZA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "dsi@7e209000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWRzaTAA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiCQAAAAAHg="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAQ="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAACAAAAAIAAAALwAAAAgAAAAx"
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "cGh5AGVzY2FwZQBwaXhlbAA="
+                            },
+                            {
+                                "Name": "clock-output-names",
+                                "Value": "ZHNpMF9ieXRlAGRzaTBfZGRyMgBkc2kwX2RkcgA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAABQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "thermal@7e212000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM3LXRoZXJtYWwA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiEgAAAAAAg="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABs="
+                            },
+                            {
+                                "Name": "#thermal-sensor-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAAg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "aux@0x7e215000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWF1eAA="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiFQAAAAAAg="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQ="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAQAAAB0="
+                            },
+                            {
+                                "Name": "interrupt-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "#interrupt-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAEg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "serial@7e215040",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWF1eC11YXJ0AA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiFQQAAAAEA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAAEgAAAAA="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "interrupt-parent",
+                                "Value": "AAAAEg=="
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAAEw=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAHg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "spi@7e215080",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWF1eC1zcGkA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiFQgAAAAEA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAAEgAAAAE="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "interrupt-parent",
+                                "Value": "AAAAEg=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAZQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "spi@7e2150c0",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWF1eC1zcGkA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiFQwAAAAEA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAAEgAAAAI="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "interrupt-parent",
+                                "Value": "AAAAEg=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAZg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "pwm@7e20c000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXB3bQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiDAAAAAACg="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAAB4="
+                            },
+                            {
+                                "Name": "assigned-clocks",
+                                "Value": "AAAACAAAAB4="
+                            },
+                            {
+                                "Name": "assigned-clock-rates",
+                                "Value": "AJiWgA=="
+                            },
+                            {
+                                "Name": "#pwm-cells",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAZw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "hvs@7e400000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWh2cwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fkAAAAAAYAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAE="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAaA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "dsi@7e700000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWRzaTEA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fnAAAAAAAIw="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAw="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAACMAAAAIAAAAMAAAAAgAAAAy"
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "cGh5AGVzY2FwZQBwaXhlbAA="
+                            },
+                            {
+                                "Name": "clock-output-names",
+                                "Value": "ZHNpMV9ieXRlAGRzaTFfZGRyMgBkc2kxX2RkcgA="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAABg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "csi0@7e800000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXVuaWNhbQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "foAAAAAACAB+gCAAAAAABA=="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAY="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAAC0="
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "bHAA"
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "power-domains",
+                                "Value": "AAAAFAAAAAw="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAaQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "csi1@7e801000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXVuaWNhbQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "foAQAAAACAB+gCAEAAAABA=="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAc="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAAC4="
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "bHAA"
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "power-domains",
+                                "Value": "AAAAFAAAAA0="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAag=="
+                            }
+                        ],
+                        "Children": [
+                            {
+                                "Name": "port",
+                                "Children": [
+                                    {
+                                        "Name": "endpoint",
+                                        "Properties": [
+                                            {
+                                                "Name": "data-lanes",
+                                                "Value": "AAAAAQAAAAI="
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "i2c@7e804000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWkyYwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "foBAAAAAEAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABU="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQ="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAAFQ=="
+                            },
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "AAGGoA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAIg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "i2c@7e805000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWkyYwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "foBQAAAAEAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABU="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABQ="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "AAGGoA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAFg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "vec@7e806000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXZlYwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "foBgAAAAEAA="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABg="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABs="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAaw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "pixelvalve@7e807000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXBpeGVsdmFsdmUyAA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "foBwAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAo="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAbA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "hdmi@7e902000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWhkbWkA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fpAgAAAABgB+gIAAAAABAA=="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAgAAAACAAAACQ=="
+                            },
+                            {
+                                "Name": "ddc",
+                                "Value": "AAAAFg=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABAAAAAIAAAAGQ=="
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "cGl4ZWwAaGRtaQA="
+                            },
+                            {
+                                "Name": "dmas",
+                                "Value": "AAAACwAAABE="
+                            },
+                            {
+                                "Name": "dma-names",
+                                "Value": "YXVkaW8tcngA"
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "power-domains",
+                                "Value": "AAAAFAAAAAU="
+                            },
+                            {
+                                "Name": "hpd-gpios",
+                                "Value": "AAAAEAAAABwAAAAB"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAbQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "usb@7e980000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yNzA4LXVzYgA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fpgAAAABAAB+AGAAAAAQAA=="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAAAAAAABAAAACQ=="
+                            },
+                            {
+                                "Name": "#address-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "#size-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAAFw=="
+                            },
+                            {
+                                "Name": "clock-names",
+                                "Value": "b3RnAA=="
+                            },
+                            {
+                                "Name": "phys",
+                                "Value": "AAAAGA=="
+                            },
+                            {
+                                "Name": "phy-names",
+                                "Value": "dXNiMi1waHkA"
+                            },
+                            {
+                                "Name": "power-domains",
+                                "Value": "AAAAFAAAAAY="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAbg=="
+                            }
+                        ],
+                        "Children": [
+                            {
+                                "Name": "usb1@1",
+                                "Properties": [
+                                    {
+                                        "Name": "compatible",
+                                        "Value": "dXNiNDI0LDI1MTQA"
+                                    },
+                                    {
+                                        "Name": "reg",
+                                        "Value": "AAAAAQ=="
+                                    },
+                                    {
+                                        "Name": "#address-cells",
+                                        "Value": "AAAAAQ=="
+                                    },
+                                    {
+                                        "Name": "#size-cells",
+                                        "Value": "AAAAAA=="
+                                    }
+                                ],
+                                "Children": [
+                                    {
+                                        "Name": "usb1_1@1",
+                                        "Properties": [
+                                            {
+                                                "Name": "compatible",
+                                                "Value": "dXNiNDI0LDI1MTQA"
+                                            },
+                                            {
+                                                "Name": "reg",
+                                                "Value": "AAAAAQ=="
+                                            },
+                                            {
+                                                "Name": "#address-cells",
+                                                "Value": "AAAAAQ=="
+                                            },
+                                            {
+                                                "Name": "#size-cells",
+                                                "Value": "AAAAAA=="
+                                            }
+                                        ],
+                                        "Children": [
+                                            {
+                                                "Name": "usbether@1",
+                                                "Properties": [
+                                                    {
+                                                        "Name": "local-mac-address",
+                                                        "Value": "uCfrsV95"
+                                                    },
+                                                    {
+                                                        "Name": "compatible",
+                                                        "Value": "dXNiNDI0LDc4MDAA"
+                                                    },
+                                                    {
+                                                        "Name": "reg",
+                                                        "Value": "AAAAAQ=="
+                                                    },
+                                                    {
+                                                        "Name": "microchip,eee-enabled",
+                                                        "Value": ""
+                                                    },
+                                                    {
+                                                        "Name": "microchip,tx-lpi-timer",
+                                                        "Value": "AAACWA=="
+                                                    },
+                                                    {
+                                                        "Name": "microchip,led-modes",
+                                                        "Value": "AAAAAQAAAAY="
+                                                    },
+                                                    {
+                                                        "Name": "phandle",
+                                                        "Value": "AAAALQ=="
+                                                    }
+                                                ],
+                                                "Children": [
+                                                    {
+                                                        "Name": "mdio",
+                                                        "Properties": [
+                                                            {
+                                                                "Name": "#address-cells",
+                                                                "Value": "AAAAAQ=="
+                                                            },
+                                                            {
+                                                                "Name": "#size-cells",
+                                                                "Value": "AAAAAA=="
+                                                            }
+                                                        ],
+                                                        "Children": [
+                                                            {
+                                                                "Name": "ethernet-phy@1",
+                                                                "Properties": [
+                                                                    {
+                                                                        "Name": "reg",
+                                                                        "Value": "AAAAAQ=="
+                                                                    },
+                                                                    {
+                                                                        "Name": "microchip,downshift-after",
+                                                                        "Value": "AAAAAg=="
+                                                                    },
+                                                                    {
+                                                                        "Name": "phandle",
+                                                                        "Value": "AAAALg=="
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "v3d@7ec00000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSx2YzQtdjNkAA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fsAAAAAAEAA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAQAAAAo="
+                            },
+                            {
+                                "Name": "power-domains",
+                                "Value": "AAAAFAAAAAo="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAbw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "gpu",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXZjNAA="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAcA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "local_intc@40000000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM2LWwxLWludGMA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "QAAAAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupt-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "#interrupt-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "interrupt-parent",
+                                "Value": "AAAAAw=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAAw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "mmc@7e300000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LW1tYwBicmNtLGJjbTI4MzUtc2RoY2kA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fjAAAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAAB4="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAABw="
+                            },
+                            {
+                                "Name": "dmas",
+                                "Value": "AAAACwAAAAs="
+                            },
+                            {
+                                "Name": "dma-names",
+                                "Value": "cngtdHgA"
+                            },
+                            {
+                                "Name": "brcm,overclock-50",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAAGQ=="
+                            },
+                            {
+                                "Name": "non-removable",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "bus-width",
+                                "Value": "AAAABA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAJw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "firmwarekms@7e600000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "cmFzcGJlcnJ5cGkscnBpLWZpcm13YXJlLWttcwA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fmAAAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABA="
+                            },
+                            {
+                                "Name": "brcm,firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAcQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "smi@7e600000",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXNtaQA="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fmAAAAAAAQA="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAgAAABA="
+                            },
+                            {
+                                "Name": "clocks",
+                                "Value": "AAAACAAAACo="
+                            },
+                            {
+                                "Name": "assigned-clocks",
+                                "Value": "AAAACAAAACo="
+                            },
+                            {
+                                "Name": "assigned-clock-rates",
+                                "Value": "B3NZQA=="
+                            },
+                            {
+                                "Name": "dmas",
+                                "Value": "AAAACwAAAAQ="
+                            },
+                            {
+                                "Name": "dma-names",
+                                "Value": "cngtdHgA"
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAcg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "axiperf",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWF4aXBlcmYA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fgCYAAAAAQB+4IAAAAABAA=="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAKA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "gpiomem",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWdwaW9tZW0A"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fiAAAAAAEAA="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "firmware",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "cmFzcGJlcnJ5cGksYmNtMjgzNS1maXJtd2FyZQA="
+                            },
+                            {
+                                "Name": "mboxes",
+                                "Value": "AAAAGg=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAABw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "power",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "cmFzcGJlcnJ5cGksYmNtMjgzNS1wb3dlcgA="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "#power-domain-cells",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAFA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "fb",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yNzA4LWZiAA=="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAcw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "vchiq",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LXZjaGlxAA=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "fgC4QAAAAA8="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAAAAAAAAI="
+                            },
+                            {
+                                "Name": "cache-line-size",
+                                "Value": "AAAAQA=="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAHA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "vcsm",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "cmFzcGJlcnJ5cGksYmNtMjgzNS12Y3NtAA=="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAdA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "audio",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWF1ZGlvAA=="
+                            },
+                            {
+                                "Name": "brcm,pwm-channels",
+                                "Value": "AAAACA=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "pinctrl-names",
+                                "Value": "ZGVmYXVsdAA="
+                            },
+                            {
+                                "Name": "pinctrl-0",
+                                "Value": "AAAAGw=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAIw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "sound",
+                        "Properties": [
+                            {
+                                "Name": "status",
+                                "Value": "ZGlzYWJsZWQA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAdQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "arm-pmu",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGNvcnRleC1hNy1wbXUA"
+                            },
+                            {
+                                "Name": "interrupt-parent",
+                                "Value": "AAAAAw=="
+                            },
+                            {
+                                "Name": "interrupts",
+                                "Value": "AAAACQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "expgpio",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "YnJjbSxiY20yODM1LWV4cGdwaW8A"
+                            },
+                            {
+                                "Name": "gpio-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "#gpio-cells",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "firmware",
+                                "Value": "AAAABw=="
+                            },
+                            {
+                                "Name": "status",
+                                "Value": "b2theQA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAMQ=="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "clocks",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "c2ltcGxlLWJ1cwA="
+                    },
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAA=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "clock@3",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "Zml4ZWQtY2xvY2sA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAw=="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "clock-output-names",
+                                "Value": "b3NjAA=="
+                            },
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "AST4AA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAABA=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "clock@4",
+                        "Properties": [
+                            {
+                                "Name": "compatible",
+                                "Value": "Zml4ZWQtY2xvY2sA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAABA=="
+                            },
+                            {
+                                "Name": "#clock-cells",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "clock-output-names",
+                                "Value": "b3RnAA=="
+                            },
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "HJw4AA=="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAFw=="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "phy",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "dXNiLW5vcC14Y2VpdgA="
+                    },
+                    {
+                        "Name": "#phy-cells",
+                        "Value": "AAAAAA=="
+                    },
+                    {
+                        "Name": "phandle",
+                        "Value": "AAAAGA=="
+                    }
+                ]
+            },
+            {
+                "Name": "timer",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLGFybXY3LXRpbWVyAA=="
+                    },
+                    {
+                        "Name": "interrupt-parent",
+                        "Value": "AAAAAw=="
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAAEAAAADAAAAAg=="
+                    },
+                    {
+                        "Name": "always-on",
+                        "Value": ""
+                    }
+                ]
+            },
+            {
+                "Name": "cpus",
+                "Properties": [
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAA=="
+                    },
+                    {
+                        "Name": "enable-method",
+                        "Value": "YnJjbSxiY20yODM2LXNtcAA="
+                    },
+                    {
+                        "Name": "phandle",
+                        "Value": "AAAAdg=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "cpu@0",
+                        "Properties": [
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "U3JOAA=="
+                            },
+                            {
+                                "Name": "device_type",
+                                "Value": "Y3B1AA=="
+                            },
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGNvcnRleC1hNTMA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "enable-method",
+                                "Value": "c3Bpbi10YWJsZQA="
+                            },
+                            {
+                                "Name": "cpu-release-addr",
+                                "Value": "AAAAAAAAANg="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAKQ=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "cpu@1",
+                        "Properties": [
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "U3JOAA=="
+                            },
+                            {
+                                "Name": "device_type",
+                                "Value": "Y3B1AA=="
+                            },
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGNvcnRleC1hNTMA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAQ=="
+                            },
+                            {
+                                "Name": "enable-method",
+                                "Value": "c3Bpbi10YWJsZQA="
+                            },
+                            {
+                                "Name": "cpu-release-addr",
+                                "Value": "AAAAAAAAAOA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAKg=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "cpu@2",
+                        "Properties": [
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "U3JOAA=="
+                            },
+                            {
+                                "Name": "device_type",
+                                "Value": "Y3B1AA=="
+                            },
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGNvcnRleC1hNTMA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAg=="
+                            },
+                            {
+                                "Name": "enable-method",
+                                "Value": "c3Bpbi10YWJsZQA="
+                            },
+                            {
+                                "Name": "cpu-release-addr",
+                                "Value": "AAAAAAAAAOg="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAKw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "cpu@3",
+                        "Properties": [
+                            {
+                                "Name": "clock-frequency",
+                                "Value": "U3JOAA=="
+                            },
+                            {
+                                "Name": "device_type",
+                                "Value": "Y3B1AA=="
+                            },
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGNvcnRleC1hNTMA"
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAw=="
+                            },
+                            {
+                                "Name": "enable-method",
+                                "Value": "c3Bpbi10YWJsZQA="
+                            },
+                            {
+                                "Name": "cpu-release-addr",
+                                "Value": "AAAAAAAAAPA="
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAALA=="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "fixedregulator_5v0",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "cmVndWxhdG9yLWZpeGVkAA=="
+                    },
+                    {
+                        "Name": "regulator-name",
+                        "Value": "NXYwAA=="
+                    },
+                    {
+                        "Name": "regulator-min-microvolt",
+                        "Value": "AExLQA=="
+                    },
+                    {
+                        "Name": "regulator-max-microvolt",
+                        "Value": "AExLQA=="
+                    },
+                    {
+                        "Name": "regulator-always-on",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "phandle",
+                        "Value": "AAAAdw=="
+                    }
+                ]
+            },
+            {
+                "Name": "fixedregulator_3v3",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "cmVndWxhdG9yLWZpeGVkAA=="
+                    },
+                    {
+                        "Name": "regulator-name",
+                        "Value": "M3YzAA=="
+                    },
+                    {
+                        "Name": "regulator-min-microvolt",
+                        "Value": "ADJaoA=="
+                    },
+                    {
+                        "Name": "regulator-max-microvolt",
+                        "Value": "ADJaoA=="
+                    },
+                    {
+                        "Name": "regulator-always-on",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "phandle",
+                        "Value": "AAAAeA=="
+                    }
+                ]
+            },
+            {
+                "Name": "__overrides__",
+                "Properties": [
+                    {
+                        "Name": "i2c_arm_baudrate",
+                        "Value": "AAAAImNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "i2c_baudrate",
+                        "Value": "AAAAImNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "i2c_arm",
+                        "Value": "AAAAInN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2c",
+                        "Value": "AAAAInN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2c_vc_baudrate",
+                        "Value": "AAAAIWNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "i2c_vc",
+                        "Value": "AAAAIXN0YXR1cwA="
+                    },
+                    {
+                        "Name": "cam0-pwdn-ctrl",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "cam0-pwdn",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "cam0-led-ctrl",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "cam0-led",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "cache_line_size",
+                        "Value": "AAAAHGNhY2hlLWxpbmUtc2l6ZTowAA=="
+                    },
+                    {
+                        "Name": "uart0",
+                        "Value": "AAAAHXN0YXR1cwA="
+                    },
+                    {
+                        "Name": "uart1",
+                        "Value": "AAAAHnN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2s",
+                        "Value": "AAAAH3N0YXR1cwA="
+                    },
+                    {
+                        "Name": "spi",
+                        "Value": "AAAAIHN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2c0",
+                        "Value": "AAAAIXN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2c1",
+                        "Value": "AAAAInN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2c2_iknowwhatimdoing",
+                        "Value": "AAAAFnN0YXR1cwA="
+                    },
+                    {
+                        "Name": "i2c0_baudrate",
+                        "Value": "AAAAIWNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "i2c1_baudrate",
+                        "Value": "AAAAImNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "i2c2_baudrate",
+                        "Value": "AAAAFmNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "audio",
+                        "Value": "AAAAI3N0YXR1cwA="
+                    },
+                    {
+                        "Name": "watchdog",
+                        "Value": "AAAAJHN0YXR1cwA="
+                    },
+                    {
+                        "Name": "random",
+                        "Value": "AAAAJXN0YXR1cwA="
+                    },
+                    {
+                        "Name": "sd_overclock",
+                        "Value": "AAAAJmJyY20sb3ZlcmNsb2NrLTUwOjAA"
+                    },
+                    {
+                        "Name": "sd_force_pio",
+                        "Value": "AAAAJmJyY20sZm9yY2UtcGlvPwA="
+                    },
+                    {
+                        "Name": "sd_pio_limit",
+                        "Value": "AAAAJmJyY20scGlvLWxpbWl0OjAA"
+                    },
+                    {
+                        "Name": "sd_debug",
+                        "Value": "AAAAJmJyY20sZGVidWcA"
+                    },
+                    {
+                        "Name": "sdio_overclock",
+                        "Value": "AAAAJ2JyY20sb3ZlcmNsb2NrLTUwOjAA"
+                    },
+                    {
+                        "Name": "axiperf",
+                        "Value": "AAAAKHN0YXR1cwA="
+                    },
+                    {
+                        "Name": "arm_freq",
+                        "Value": "AAAAKWNsb2NrLWZyZXF1ZW5jeTowAAAAACpjbG9jay1mcmVxdWVuY3k6MAAAAAArY2xvY2stZnJlcXVlbmN5OjAAAAAALGNsb2NrLWZyZXF1ZW5jeTowAA=="
+                    },
+                    {
+                        "Name": "eee",
+                        "Value": "AAAALW1pY3JvY2hpcCxlZWUtZW5hYmxlZD8A"
+                    },
+                    {
+                        "Name": "tx_lpi_timer",
+                        "Value": "AAAALW1pY3JvY2hpcCx0eC1scGktdGltZXI6MAA="
+                    },
+                    {
+                        "Name": "eth_led0",
+                        "Value": "AAAALW1pY3JvY2hpcCxsZWQtbW9kZXM6MAA="
+                    },
+                    {
+                        "Name": "eth_led1",
+                        "Value": "AAAALW1pY3JvY2hpcCxsZWQtbW9kZXM6NAA="
+                    },
+                    {
+                        "Name": "eth_downshift_after",
+                        "Value": "AAAALm1pY3JvY2hpcCxkb3duc2hpZnQtYWZ0ZXI6MAA="
+                    },
+                    {
+                        "Name": "eth_max_speed",
+                        "Value": "AAAALm1heC1zcGVlZDowAA=="
+                    },
+                    {
+                        "Name": "act_led_gpio",
+                        "Value": "AAAAL2dwaW9zOjQA"
+                    },
+                    {
+                        "Name": "act_led_activelow",
+                        "Value": "AAAAL2dwaW9zOjgA"
+                    },
+                    {
+                        "Name": "act_led_trigger",
+                        "Value": "AAAAL2xpbnV4LGRlZmF1bHQtdHJpZ2dlcgA="
+                    },
+                    {
+                        "Name": "pwr_led_gpio",
+                        "Value": "AAAAMGdwaW9zOjQA"
+                    },
+                    {
+                        "Name": "pwr_led_activelow",
+                        "Value": "AAAAMGdwaW9zOjgA"
+                    },
+                    {
+                        "Name": "pwr_led_trigger",
+                        "Value": "AAAAMGxpbnV4LGRlZmF1bHQtdHJpZ2dlcgA="
+                    }
+                ]
+            },
+            {
+                "Name": "memory",
+                "Properties": [
+                    {
+                        "Name": "device_type",
+                        "Value": "bWVtb3J5AA=="
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAADtAAAA="
+                    }
+                ]
+            },
+            {
+                "Name": "leds",
+                "Properties": [
+                    {
+                        "Name": "compatible",
+                        "Value": "Z3Bpby1sZWRzAA=="
+                    },
+                    {
+                        "Name": "phandle",
+                        "Value": "AAAAeQ=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "act",
+                        "Properties": [
+                            {
+                                "Name": "label",
+                                "Value": "bGVkMAA="
+                            },
+                            {
+                                "Name": "linux,default-trigger",
+                                "Value": "bW1jMAA="
+                            },
+                            {
+                                "Name": "gpios",
+                                "Value": "AAAAEAAAAB0AAAAA"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAALw=="
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "pwr",
+                        "Properties": [
+                            {
+                                "Name": "label",
+                                "Value": "bGVkMQA="
+                            },
+                            {
+                                "Name": "linux,default-trigger",
+                                "Value": "ZGVmYXVsdC1vbgA="
+                            },
+                            {
+                                "Name": "gpios",
+                                "Value": "AAAAMQAAAAIAAAAB"
+                            },
+                            {
+                                "Name": "phandle",
+                                "Value": "AAAAMA=="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "__symbols__",
+                "Properties": [
+                    {
+                        "Name": "i2c_arm",
+                        "Value": "L3NvYy9pMmNAN2U4MDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c",
+                        "Value": "L3NvYy9pMmNAN2U4MDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c_vc",
+                        "Value": "L3NvYy9pMmNAN2UyMDUwMDAA"
+                    },
+                    {
+                        "Name": "cpu_thermal",
+                        "Value": "L3RoZXJtYWwtem9uZXMvY3B1LXRoZXJtYWwA"
+                    },
+                    {
+                        "Name": "soc",
+                        "Value": "L3NvYwA="
+                    },
+                    {
+                        "Name": "dma",
+                        "Value": "L3NvYy9kbWFAN2UwMDcwMDAA"
+                    },
+                    {
+                        "Name": "intc",
+                        "Value": "L3NvYy9pbnRlcnJ1cHQtY29udHJvbGxlckA3ZTAwYjIwMAA="
+                    },
+                    {
+                        "Name": "watchdog",
+                        "Value": "L3NvYy93YXRjaGRvZ0A3ZTEwMDAwMAA="
+                    },
+                    {
+                        "Name": "clocks",
+                        "Value": "L3NvYy9jcHJtYW5AN2UxMDEwMDAA"
+                    },
+                    {
+                        "Name": "random",
+                        "Value": "L3NvYy9ybmdAN2UxMDQwMDAA"
+                    },
+                    {
+                        "Name": "mailbox",
+                        "Value": "L3NvYy9tYWlsYm94QDdlMDBiODgwAA=="
+                    },
+                    {
+                        "Name": "gpio",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwAA=="
+                    },
+                    {
+                        "Name": "dpi_gpio0",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2RwaV9ncGlvMAA="
+                    },
+                    {
+                        "Name": "emmc_gpio22",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2VtbWNfZ3BpbzIyAA=="
+                    },
+                    {
+                        "Name": "emmc_gpio34",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2VtbWNfZ3BpbzM0AA=="
+                    },
+                    {
+                        "Name": "emmc_gpio48",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2VtbWNfZ3BpbzQ4AA=="
+                    },
+                    {
+                        "Name": "gpclk0_gpio4",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2dwY2xrMF9ncGlvNAA="
+                    },
+                    {
+                        "Name": "gpclk1_gpio5",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2dwY2xrMV9ncGlvNQA="
+                    },
+                    {
+                        "Name": "gpclk1_gpio42",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2dwY2xrMV9ncGlvNDIA"
+                    },
+                    {
+                        "Name": "gpclk1_gpio44",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2dwY2xrMV9ncGlvNDQA"
+                    },
+                    {
+                        "Name": "gpclk2_gpio6",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2dwY2xrMl9ncGlvNgA="
+                    },
+                    {
+                        "Name": "gpclk2_gpio43",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2dwY2xrMl9ncGlvNDMA"
+                    },
+                    {
+                        "Name": "i2c0_gpio0",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzBfZ3BpbzAA"
+                    },
+                    {
+                        "Name": "i2c0_gpio28",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzBfZ3BpbzI4AA=="
+                    },
+                    {
+                        "Name": "i2c0_gpio44",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzBfZ3BpbzQ0AA=="
+                    },
+                    {
+                        "Name": "i2c1_gpio2",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzFfZ3BpbzIA"
+                    },
+                    {
+                        "Name": "i2c1_gpio44",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzFfZ3BpbzQ0AA=="
+                    },
+                    {
+                        "Name": "i2c_slave_gpio18",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyY19zbGF2ZV9ncGlvMTgA"
+                    },
+                    {
+                        "Name": "jtag_gpio4",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2p0YWdfZ3BpbzQA"
+                    },
+                    {
+                        "Name": "jtag_gpio22",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2p0YWdfZ3BpbzIyAA=="
+                    },
+                    {
+                        "Name": "pcm_gpio18",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3BjbV9ncGlvMTgA"
+                    },
+                    {
+                        "Name": "pcm_gpio28",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3BjbV9ncGlvMjgA"
+                    },
+                    {
+                        "Name": "pwm0_gpio12",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTBfZ3BpbzEyAA=="
+                    },
+                    {
+                        "Name": "pwm0_gpio18",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTBfZ3BpbzE4AA=="
+                    },
+                    {
+                        "Name": "pwm0_gpio40",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTBfZ3BpbzQwAA=="
+                    },
+                    {
+                        "Name": "pwm1_gpio13",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTFfZ3BpbzEzAA=="
+                    },
+                    {
+                        "Name": "pwm1_gpio19",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTFfZ3BpbzE5AA=="
+                    },
+                    {
+                        "Name": "pwm1_gpio41",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTFfZ3BpbzQxAA=="
+                    },
+                    {
+                        "Name": "pwm1_gpio45",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3B3bTFfZ3BpbzQ1AA=="
+                    },
+                    {
+                        "Name": "sdhost_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NkaG9zdF9ncGlvNDgA"
+                    },
+                    {
+                        "Name": "sdhost_gpio48",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NkaG9zdF9ncGlvNDgA"
+                    },
+                    {
+                        "Name": "spi0_gpio7",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NwaTBfZ3BpbzcA"
+                    },
+                    {
+                        "Name": "spi0_gpio35",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NwaTBfZ3BpbzM1AA=="
+                    },
+                    {
+                        "Name": "spi1_gpio16",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NwaTFfZ3BpbzE2AA=="
+                    },
+                    {
+                        "Name": "spi2_gpio40",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NwaTJfZ3BpbzQwAA=="
+                    },
+                    {
+                        "Name": "uart0_gpio14",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX2dwaW8xNAA="
+                    },
+                    {
+                        "Name": "uart0_ctsrts_gpio16",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX2N0c3J0c19ncGlvMTYA"
+                    },
+                    {
+                        "Name": "uart0_ctsrts_gpio30",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX2N0c3J0c19ncGlvMzAA"
+                    },
+                    {
+                        "Name": "uart0_gpio32",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX2dwaW8zMgA="
+                    },
+                    {
+                        "Name": "uart0_gpio36",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX2dwaW8zNgA="
+                    },
+                    {
+                        "Name": "uart0_ctsrts_gpio38",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX2N0c3J0c19ncGlvMzgA"
+                    },
+                    {
+                        "Name": "uart1_gpio14",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX2dwaW8xNAA="
+                    },
+                    {
+                        "Name": "uart1_ctsrts_gpio16",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX2N0c3J0c19ncGlvMTYA"
+                    },
+                    {
+                        "Name": "uart1_gpio32",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX2dwaW8zMgA="
+                    },
+                    {
+                        "Name": "uart1_ctsrts_gpio30",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX2N0c3J0c19ncGlvMzAA"
+                    },
+                    {
+                        "Name": "uart1_gpio40",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX2dwaW80MAA="
+                    },
+                    {
+                        "Name": "uart1_ctsrts_gpio42",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX2N0c3J0c19ncGlvNDIA"
+                    },
+                    {
+                        "Name": "dpi_18bit_gpio0",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2RwaV8xOGJpdF9ncGlvMAA="
+                    },
+                    {
+                        "Name": "spi0_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NwaTBfcGlucwA="
+                    },
+                    {
+                        "Name": "spi0_cs_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NwaTBfY3NfcGlucwA="
+                    },
+                    {
+                        "Name": "i2c0_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzAA"
+                    },
+                    {
+                        "Name": "i2c1_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kyYzEA"
+                    },
+                    {
+                        "Name": "i2s_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2kycwA="
+                    },
+                    {
+                        "Name": "sdio_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3NkaW9fcGlucwA="
+                    },
+                    {
+                        "Name": "bt_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2J0X3BpbnMA"
+                    },
+                    {
+                        "Name": "uart0_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQwX3BpbnMA"
+                    },
+                    {
+                        "Name": "uart1_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL3VhcnQxX3BpbnMA"
+                    },
+                    {
+                        "Name": "audio_pins",
+                        "Value": "L3NvYy9ncGlvQDdlMjAwMDAwL2F1ZGlvX3BpbnMA"
+                    },
+                    {
+                        "Name": "uart0",
+                        "Value": "L3NvYy9zZXJpYWxAN2UyMDEwMDAA"
+                    },
+                    {
+                        "Name": "sdhost",
+                        "Value": "L3NvYy9tbWNAN2UyMDIwMDAA"
+                    },
+                    {
+                        "Name": "i2s",
+                        "Value": "L3NvYy9pMnNAN2UyMDMwMDAA"
+                    },
+                    {
+                        "Name": "spi0",
+                        "Value": "L3NvYy9zcGlAN2UyMDQwMDAA"
+                    },
+                    {
+                        "Name": "spi",
+                        "Value": "L3NvYy9zcGlAN2UyMDQwMDAA"
+                    },
+                    {
+                        "Name": "spidev0",
+                        "Value": "L3NvYy9zcGlAN2UyMDQwMDAvc3BpZGV2QDAA"
+                    },
+                    {
+                        "Name": "spidev1",
+                        "Value": "L3NvYy9zcGlAN2UyMDQwMDAvc3BpZGV2QDEA"
+                    },
+                    {
+                        "Name": "i2c0",
+                        "Value": "L3NvYy9pMmNAN2UyMDUwMDAA"
+                    },
+                    {
+                        "Name": "pixelvalve0",
+                        "Value": "L3NvYy9waXhlbHZhbHZlQDdlMjA2MDAwAA=="
+                    },
+                    {
+                        "Name": "pixelvalve1",
+                        "Value": "L3NvYy9waXhlbHZhbHZlQDdlMjA3MDAwAA=="
+                    },
+                    {
+                        "Name": "dpi",
+                        "Value": "L3NvYy9kcGlAN2UyMDgwMDAA"
+                    },
+                    {
+                        "Name": "dsi0",
+                        "Value": "L3NvYy9kc2lAN2UyMDkwMDAA"
+                    },
+                    {
+                        "Name": "thermal",
+                        "Value": "L3NvYy90aGVybWFsQDdlMjEyMDAwAA=="
+                    },
+                    {
+                        "Name": "aux",
+                        "Value": "L3NvYy9hdXhAMHg3ZTIxNTAwMAA="
+                    },
+                    {
+                        "Name": "uart1",
+                        "Value": "L3NvYy9zZXJpYWxAN2UyMTUwNDAA"
+                    },
+                    {
+                        "Name": "spi1",
+                        "Value": "L3NvYy9zcGlAN2UyMTUwODAA"
+                    },
+                    {
+                        "Name": "spi2",
+                        "Value": "L3NvYy9zcGlAN2UyMTUwYzAA"
+                    },
+                    {
+                        "Name": "pwm",
+                        "Value": "L3NvYy9wd21AN2UyMGMwMDAA"
+                    },
+                    {
+                        "Name": "hvs",
+                        "Value": "L3NvYy9odnNAN2U0MDAwMDAA"
+                    },
+                    {
+                        "Name": "dsi1",
+                        "Value": "L3NvYy9kc2lAN2U3MDAwMDAA"
+                    },
+                    {
+                        "Name": "csi0",
+                        "Value": "L3NvYy9jc2kwQDdlODAwMDAwAA=="
+                    },
+                    {
+                        "Name": "csi1",
+                        "Value": "L3NvYy9jc2kxQDdlODAxMDAwAA=="
+                    },
+                    {
+                        "Name": "i2c1",
+                        "Value": "L3NvYy9pMmNAN2U4MDQwMDAA"
+                    },
+                    {
+                        "Name": "i2c2",
+                        "Value": "L3NvYy9pMmNAN2U4MDUwMDAA"
+                    },
+                    {
+                        "Name": "vec",
+                        "Value": "L3NvYy92ZWNAN2U4MDYwMDAA"
+                    },
+                    {
+                        "Name": "pixelvalve2",
+                        "Value": "L3NvYy9waXhlbHZhbHZlQDdlODA3MDAwAA=="
+                    },
+                    {
+                        "Name": "hdmi",
+                        "Value": "L3NvYy9oZG1pQDdlOTAyMDAwAA=="
+                    },
+                    {
+                        "Name": "usb",
+                        "Value": "L3NvYy91c2JAN2U5ODAwMDAA"
+                    },
+                    {
+                        "Name": "ethernet",
+                        "Value": "L3NvYy91c2JAN2U5ODAwMDAvdXNiMUAxL3VzYjFfMUAxL3VzYmV0aGVyQDEA"
+                    },
+                    {
+                        "Name": "eth_phy",
+                        "Value": "L3NvYy91c2JAN2U5ODAwMDAvdXNiMUAxL3VzYjFfMUAxL3VzYmV0aGVyQDEvbWRpby9ldGhlcm5ldC1waHlAMQA="
+                    },
+                    {
+                        "Name": "v3d",
+                        "Value": "L3NvYy92M2RAN2VjMDAwMDAA"
+                    },
+                    {
+                        "Name": "vc4",
+                        "Value": "L3NvYy9ncHUA"
+                    },
+                    {
+                        "Name": "local_intc",
+                        "Value": "L3NvYy9sb2NhbF9pbnRjQDQwMDAwMDAwAA=="
+                    },
+                    {
+                        "Name": "mmc",
+                        "Value": "L3NvYy9tbWNAN2UzMDAwMDAA"
+                    },
+                    {
+                        "Name": "firmwarekms",
+                        "Value": "L3NvYy9maXJtd2FyZWttc0A3ZTYwMDAwMAA="
+                    },
+                    {
+                        "Name": "smi",
+                        "Value": "L3NvYy9zbWlAN2U2MDAwMDAA"
+                    },
+                    {
+                        "Name": "axiperf",
+                        "Value": "L3NvYy9heGlwZXJmAA=="
+                    },
+                    {
+                        "Name": "firmware",
+                        "Value": "L3NvYy9maXJtd2FyZQA="
+                    },
+                    {
+                        "Name": "power",
+                        "Value": "L3NvYy9wb3dlcgA="
+                    },
+                    {
+                        "Name": "fb",
+                        "Value": "L3NvYy9mYgA="
+                    },
+                    {
+                        "Name": "vchiq",
+                        "Value": "L3NvYy92Y2hpcQA="
+                    },
+                    {
+                        "Name": "vcsm",
+                        "Value": "L3NvYy92Y3NtAA=="
+                    },
+                    {
+                        "Name": "audio",
+                        "Value": "L3NvYy9hdWRpbwA="
+                    },
+                    {
+                        "Name": "sound",
+                        "Value": "L3NvYy9zb3VuZAA="
+                    },
+                    {
+                        "Name": "expgpio",
+                        "Value": "L3NvYy9leHBncGlvAA=="
+                    },
+                    {
+                        "Name": "clk_osc",
+                        "Value": "L2Nsb2Nrcy9jbG9ja0AzAA=="
+                    },
+                    {
+                        "Name": "clk_usb",
+                        "Value": "L2Nsb2Nrcy9jbG9ja0A0AA=="
+                    },
+                    {
+                        "Name": "usbphy",
+                        "Value": "L3BoeQA="
+                    },
+                    {
+                        "Name": "cpus",
+                        "Value": "L2NwdXMA"
+                    },
+                    {
+                        "Name": "cpu0",
+                        "Value": "L2NwdXMvY3B1QDAA"
+                    },
+                    {
+                        "Name": "cpu1",
+                        "Value": "L2NwdXMvY3B1QDEA"
+                    },
+                    {
+                        "Name": "cpu2",
+                        "Value": "L2NwdXMvY3B1QDIA"
+                    },
+                    {
+                        "Name": "cpu3",
+                        "Value": "L2NwdXMvY3B1QDMA"
+                    },
+                    {
+                        "Name": "vdd_5v0_reg",
+                        "Value": "L2ZpeGVkcmVndWxhdG9yXzV2MAA="
+                    },
+                    {
+                        "Name": "vdd_3v3_reg",
+                        "Value": "L2ZpeGVkcmVndWxhdG9yXzN2MwA="
+                    },
+                    {
+                        "Name": "leds",
+                        "Value": "L2xlZHMA"
+                    },
+                    {
+                        "Name": "act_led",
+                        "Value": "L2xlZHMvYWN0AA=="
+                    },
+                    {
+                        "Name": "pwr_led",
+                        "Value": "L2xlZHMvcHdyAA=="
+                    }
+                ]
+            }
+        ]
+    }
+}

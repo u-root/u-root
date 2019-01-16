@@ -251,7 +251,7 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 					"property name does not having terminating null at %#x",
 					pHeader.Nameoff)
 			}
-			p := Property{
+			p := &Property{
 				Name:  string(strs[pHeader.Nameoff : pHeader.Nameoff+uint32(null)]),
 				Value: make([]byte, pHeader.Len),
 			}

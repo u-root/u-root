@@ -159,7 +159,11 @@ func (li *LinuxImage) Execute() error {
 		defer i.Close()
 	}
 
-	if err := kexec.FileLoad(k, i, li.Cmdline); err != nil {
+	if err := kexec.Load(&kexec.LinuxOpts{
+		Kernel:    k,
+		Initramfs: i,
+		CmdLine:   li.Cmdline,
+	}); err != nil {
 		return err
 	}
 	return kexec.Reboot()

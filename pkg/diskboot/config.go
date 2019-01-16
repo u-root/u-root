@@ -73,13 +73,18 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string, dryrun bool) error {
 		// e.Module[0].Path is kernel
 		// e.Module[0].Params is kernel parameters
 		// e.Module[1].Path is initrd
+		opts := &kexec.LinuxOpts{}
+		if dryrun {
+			opts = kexec.DryrunOpts()
+		}
+
 		if len(e.Modules) < 1 {
 			return fmt.Errorf("missing kernel")
 		}
-		var ramfs *os.File
 		kernelPath := filepath.Join(mountPath, e.Modules[0].Path)
 		log.Print("Kernel Path:", kernelPath)
-		kernel, err := os.OpenFile(kernelPath, os.O_RDONLY, 0)
+		var err error
+		opts.Kernel, err = os.OpenFile(kernelPath, os.O_RDONLY, 0)
 		cmdline := e.Modules[0].Params
 		if appendCmdline != "" {
 			cmdline += " " + appendCmdline
@@ -91,14 +96,12 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string, dryrun bool) error {
 		if len(e.Modules) > 1 {
 			ramfsPath := filepath.Join(mountPath, e.Modules[1].Path)
 			log.Print("Ramfs Path:", ramfsPath)
-			ramfs, err = os.OpenFile(ramfsPath, os.O_RDONLY, 0)
+			opts.Initramfs, err = os.OpenFile(ramfsPath, os.O_RDONLY, 0)
 			if err != nil {
 				return fmt.Errorf("failed to load ramfs: %v", err)
 			}
 		}
-		if !dryrun {
-			return kexec.FileLoad(kernel, ramfs, cmdline)
-		}
+		return kexec.KernelFileLoad(opts)
 	}
 	return nil
 }

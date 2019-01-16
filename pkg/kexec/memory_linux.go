@@ -5,7 +5,9 @@
 package kexec
 
 import (
+	"bytes"
 	"debug/elf"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -17,10 +19,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"unsafe"
 
-	"golang.org/x/sys/unix"
+	"github.com/u-root/u-root/pkg/dt"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -190,62 +191,6 @@ func Dedup(segs []Segment) []Segment {
 	return s
 }
 
-// Load loads the given segments into memory to be executed on a kexec-reboot.
-//
-// It is assumed that segments is made up of the next kernel's code and text
-// segments, and that `entry` is the entry point, either kernel entry point or trampoline.
-func Load(entry uintptr, segments []Segment, flags uint64) error {
-	for i := range segments {
-		segments[i] = AlignPhys(segments[i])
-	}
-
-	segments = Dedup(segments)
-	ok := false
-	for _, s := range segments {
-		ok = ok || (s.Phys.Start <= entry && entry < s.Phys.Start+uintptr(s.Phys.Size))
-	}
-	if !ok {
-		return fmt.Errorf("entry point %#v is not covered by any segment", entry)
-	}
-
-	return rawLoad(entry, segments, flags)
-}
-
-// ErrKexec is the error type returned kexec.
-// It describes entry point, flags, errno and kernel layout.
-type ErrKexec struct {
-	Entry    uintptr
-	Segments []Segment
-	Flags    uint64
-	Errno    syscall.Errno
-}
-
-func (e ErrKexec) Error() string {
-	return fmt.Sprintf("entry %x, flags %x, errno %d, segments %v", e.Entry, e.Flags, e.Errno, e.Segments)
-}
-
-// rawLoad is a wrapper around kexec_load(2) syscall.
-// Preconditions:
-// - segments must not overlap
-// - segments must be full pages
-func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
-	if _, _, errno := unix.Syscall6(
-		unix.SYS_KEXEC_LOAD,
-		entry,
-		uintptr(len(segments)),
-		uintptr(unsafe.Pointer(&segments[0])),
-		uintptr(flags),
-		0, 0); errno != 0 {
-		return ErrKexec{
-			Entry:    entry,
-			Segments: segments,
-			Flags:    flags,
-			Errno:    errno,
-		}
-	}
-	return nil
-}
-
 // LoadElfSegments loads loadable ELF segments.
 func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 	f, err := elf.NewFile(r)
@@ -275,11 +220,11 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 	return nil
 }
 
-var memoryMapRoot = "/sys/firmware/memmap/"
+var memmapRoot = "/sys/firmware/memmap/"
 
-// ParseMemoryMap reads firmware provided memory map
-// from /sys/firmware/memmap.
-func (m *Memory) ParseMemoryMap() error {
+// ParseFromMemmap reads the firmware provided memory map from
+// /sys/firmware/memmap.
+func (m *Memory) ParseFromMemmap() error {
 	type memRange struct {
 		// start and addresses are inclusive
 		start, end uintptr
@@ -335,7 +280,7 @@ func (m *Memory) ParseMemoryMap() error {
 		return nil
 	}
 
-	if err := filepath.Walk(memoryMapRoot, walker); err != nil {
+	if err := filepath.Walk(memmapRoot, walker); err != nil {
 		return err
 	}
 
@@ -351,6 +296,41 @@ func (m *Memory) ParseMemoryMap() error {
 	sort.Slice(m.Phys, func(i, j int) bool {
 		return m.Phys[i].Start < m.Phys[j].Start
 	})
+	return nil
+}
+
+// ParseFromDeviceTree reads the memory map from the device tree.
+func (m *Memory) ParseFromDeviceTree(fdt *dt.FDT) error {
+	// TODO: Does not support a number of this: regions, multiple memory nodes,
+	//       #address-cells, #size-cells, ...
+	memoryNode := fdt.RootNode.GetNode("memory")
+	if memoryNode == nil {
+		return errors.New("device tree missing /memory node")
+	}
+	regProp := memoryNode.GetProperty("reg")
+	if memoryNode == nil {
+		return errors.New("device tree missing /memory/reg property")
+	}
+	array, _ := regProp.AsPropEncodedArray()
+	if len(array)%8 != 0 {
+		return errors.New("device tree /memory/reg property not a multiple of two cells")
+	}
+
+	// The reg property is an array of (address, value) pair cells.
+	b := bytes.NewBuffer(array)
+	for b.Len() > 0 {
+		var address, size uint32
+		binary.Read(b, binary.BigEndian, &address)
+		binary.Read(b, binary.BigEndian, &size)
+
+		m.Phys = append(m.Phys, TypedAddressRange{
+			Range: Range{
+				Start: uintptr(address),
+				Size:  uint(size),
+			},
+			Type: RangeRAM,
+		})
+	}
 	return nil
 }
 
@@ -388,6 +368,7 @@ func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
 	ranges := m.availableRAM()
 	for _, r := range ranges {
 		// don't use memory below 1M, just in case.
+		// TODO: not true on non-x86 platforms
 		if uint(r.Start)+r.Size < 1048576 {
 			continue
 		}
@@ -396,6 +377,17 @@ func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
 		}
 	}
 	return 0, ErrNotEnoughSpace
+}
+
+// ContainedInAvailableMemory return true if the given range appears in the
+// available memory.
+func (m Memory) ContainedInAvailableMemory(r Range) bool {
+	for _, r2 := range m.availableRAM() {
+		if r2.Range.IsSupersetOf(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
@@ -410,7 +402,7 @@ func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
 	})
 }
 
-// AddKexecSegment adds d to a new kexec segment
+// AddKexecSegment adds d to a new kexec segment.
 func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 	size := uint(len(d))
 	start, err := m.FindSpace(size)
@@ -419,6 +411,18 @@ func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 	}
 	m.addKexecSegment(start, d)
 	return start, nil
+}
+
+// AddKexecSegmentPhys adds a kexec segment at the physical address.
+func (m *Memory) AddKexecSegmentPhys(d []byte, phys uintptr) error {
+	size := uint(len(d))
+	if !m.ContainedInAvailableMemory(Range{Start: phys, Size: size}) {
+		return fmt.Errorf(
+			"trying to add segment (size=%#x, phys=%#x) outside of availabe memory",
+			size, phys)
+	}
+	m.addKexecSegment(phys, d)
+	return nil
 }
 
 // availableRAM subtracts physical ranges of kexec segments from
