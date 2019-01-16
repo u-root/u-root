@@ -76,12 +76,13 @@ func main() {
 	}
 	f := complete.NewFileCompleter("/")
 	bin := complete.NewMultiCompleter(complete.NewStringCompleter([]string{"exit"}), p)
-	rest := complete.NewMultiCompleter(complete.NewStringCompleter([]string{"exit"}), f)
+	rest := f
 	l := complete.NewLineReader(bin, t, cw)
 	lines := make(chan string)
 	go output(lines, os.Stdout)
 	var lineComplete bool
 	for !l.EOF {
+		lineComplete = false
 		l.C = bin
 		if l.Fields > 1 {
 			l.C = rest
@@ -145,7 +146,6 @@ func main() {
 
 			l.Line = ""
 			l.Candidates = []string{}
-			lineComplete = false
 			l.C = bin
 			l.Fields = 0
 			l.Exact = ""

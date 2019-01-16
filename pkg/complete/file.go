@@ -23,14 +23,16 @@ func (f *FileCompleter) Complete(s string) (string, []string, error) {
 	// Check for an exact match. If so, that is good enough.
 	var x string
 	p := filepath.Join(f.Root, s)
-	n, _ := filepath.Glob(p)
-	if len(n) > 0 {
-		x = n[0]
-	}
-	p = filepath.Join(f.Root, s+"*")
 	Debug("FileCompleter: Check %v with %v", s, p)
 	g, err := filepath.Glob(p)
-	Debug("FileCompleter: %s: matches %v, err %v", s, n, err)
+	Debug("FileCompleter: %s: matches %v, err %v", s, g, err)
+	if len(g) > 0 {
+		x = g[0]
+	}
+	p = filepath.Join(f.Root, s+"*")
+	Debug("FileCompleter: Check %v* with %v", s, p)
+	g, err = filepath.Glob(p)
+	Debug("FileCompleter: %s*: matches %v, err %v", s, g, err)
 	if err != nil || len(g) == 0 {
 		return x, nil, err
 	}
@@ -43,6 +45,6 @@ func (f *FileCompleter) Complete(s string) (string, []string, error) {
 		}
 		ret = append(ret, g[i])
 	}
-	Debug("FileCompleter: %s: returns %v, %v", s, n, ret)
+	Debug("FileCompleter: %s: returns %v, %v", s, g, ret)
 	return x, ret, err
 }
