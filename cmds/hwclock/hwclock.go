@@ -32,15 +32,15 @@ import (
 const startYear = 1900
 
 type tm struct {
-	tm_sec   int32
-	tm_min   int32
-	tm_hour  int32
-	tm_mday  int32
-	tm_mon   int32
-	tm_year  int32
-	tm_wday  int32
-	tm_yday  int32
-	tm_isdst int32
+	tmSec   int32
+	tmMin   int32
+	tmHour  int32
+	tmMday  int32
+	tmMon   int32
+	tmYear  int32
+	tmWday  int32
+	tmYday  int32
+	tmIsdst int32
 }
 
 func readRtc() (time.Time, error) {
@@ -61,15 +61,15 @@ func readRtc() (time.Time, error) {
 		uintptr(unsafe.Pointer(&ptm)),
 	)
 	if errno != 0 {
-		return retTime, fmt.Errorf("ioctl RTC_RD_TIME returned with errno: %v\n", errno)
+		return retTime, fmt.Errorf("ioctl RTC_RD_TIME returned with errno: %v", errno)
 	}
 
-	retTime = time.Date(int(ptm.tm_year)+startYear,
-		time.Month(ptm.tm_mon),
-		int(ptm.tm_mday),
-		int(ptm.tm_hour),
-		int(ptm.tm_min),
-		int(ptm.tm_sec),
+	retTime = time.Date(int(ptm.tmYear)+startYear,
+		time.Month(ptm.tmMon),
+		int(ptm.tmMday),
+		int(ptm.tmHour),
+		int(ptm.tmMin),
+		int(ptm.tmSec),
 		0,
 		time.UTC)
 
@@ -83,15 +83,15 @@ func setRtcFromSysClock() error {
 	if err != nil {
 		return err
 	}
-	stm := tm{tm_sec: int32(timeUTC.Second()),
-		tm_min:   int32(timeUTC.Minute()),
-		tm_hour:  int32(timeUTC.Hour()),
-		tm_mday:  int32(timeUTC.Day()),
-		tm_mon:   int32(timeUTC.Month()),
-		tm_year:  int32(timeUTC.Year() - startYear),
-		tm_wday:  int32(0),
-		tm_yday:  int32(0),
-		tm_isdst: int32(0)}
+	stm := tm{tmSec: int32(timeUTC.Second()),
+		tmMin:   int32(timeUTC.Minute()),
+		tmHour:  int32(timeUTC.Hour()),
+		tmMday:  int32(timeUTC.Day()),
+		tmMon:   int32(timeUTC.Month()),
+		tmYear:  int32(timeUTC.Year() - startYear),
+		tmWday:  int32(0),
+		tmYday:  int32(0),
+		tmIsdst: int32(0)}
 
 	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		rtc.Fd(),
