@@ -9,7 +9,6 @@ package io
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"syscall"
 	"unsafe"
 )
@@ -32,24 +31,16 @@ func mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, offset int6
 	return
 }
 
-// Read reads data from physical memory at address addr. data must be one of:
-// *uint8, *uint16, *uint32, or *uint64. On x86 platforms, this uses the
-// seek+read syscalls. On arm platforms, this uses mmap.
-func Read(addr int64, data interface{}) error {
-	switch data.(type) {
-	case *uint8, *uint16, *uint32, *uint64:
-	default:
-		return fmt.Errorf("cannot read type %T", data)
-	}
-
+// Read reads data from physical memory at address addr. On x86 platforms,
+// this uses the seek+read syscalls. On arm platforms, this uses mmap.
+func Read(addr int64, data UintN) error {
 	f, err := os.OpenFile(memPath, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	size := reflect.Indirect(reflect.ValueOf(data)).Type().Size()
-	mem, offset, err := mmap(f, addr, int64(size), syscall.PROT_READ)
+	mem, offset, err := mmap(f, addr, data.Size(), syscall.PROT_READ)
 	if err != nil {
 		return err
 	}
@@ -57,39 +48,19 @@ func Read(addr int64, data interface{}) error {
 
 	// MMIO makes this a bit tricky. Reads must be conducted in one load
 	// operation. Review the generated assembly to make sure.
-	p := unsafe.Pointer(&mem[offset])
-	switch data := data.(type) {
-	case *uint8:
-		*data = *(*uint8)(p)
-	case *uint16:
-		*data = *(*uint16)(p)
-	case *uint32:
-		*data = *(*uint32)(p)
-	case *uint64:
-		// Warning: On arm, this uses two ldr's rather than ldrd.
-		*data = *(*uint64)(p)
-	}
-	return nil
+	return data.read(unsafe.Pointer(&mem[offset]))
 }
 
-// Write writes data to physical memory at address addr. data must be one of:
-// uint8, uint16, uint32, or uint64. On x86 platforms, this uses the seek+read
-// syscalls. On arm platforms, this uses mmap.
-func Write(addr int64, data interface{}) error {
-	switch data.(type) {
-	case uint8, uint16, uint32, uint64:
-	default:
-		return fmt.Errorf("cannot write type %T", data)
-	}
-
+// Write writes data to physical memory at address addr. On x86 platforms, this
+// uses the seek+read syscalls. On arm platforms, this uses mmap.
+func Write(addr int64, data UintN) error {
 	f, err := os.OpenFile(memPath, os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	size := reflect.TypeOf(data).Size()
-	mem, offset, err := mmap(f, addr, int64(size), syscall.PROT_WRITE)
+	mem, offset, err := mmap(f, addr, data.Size(), syscall.PROT_WRITE)
 	if err != nil {
 		return err
 	}
@@ -97,17 +68,5 @@ func Write(addr int64, data interface{}) error {
 
 	// MMIO makes this a bit tricky. Writes must be conducted in one store
 	// operation. Review the generated assembly to make sure.
-	p := unsafe.Pointer(&mem[offset])
-	switch data := data.(type) {
-	case uint8:
-		*(*uint8)(p) = data
-	case uint16:
-		*(*uint16)(p) = data
-	case uint32:
-		*(*uint32)(p) = data
-	case uint64:
-		// Warning: On arm, this uses two str's rather than strd.
-		*(*uint64)(p) = data
-	}
-	return nil
+	return data.write(unsafe.Pointer(&mem[offset]))
 }

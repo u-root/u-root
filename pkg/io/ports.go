@@ -12,24 +12,20 @@ import (
 
 const portPath = "/dev/port"
 
-// In reads data from the x86 port at address addr. data must be one of:
-// *uint8, *uint16, or *uint32.
-func In(addr uint16, data interface{}) error {
-	switch data.(type) {
-	case *uint8, *uint16, *uint32:
-	default:
-		return fmt.Errorf("cannot read port type %T", data)
+// In reads data from the x86 port at address addr. Data must be Uint8, Uint16,
+// Uint32, but not Uint64.
+func In(addr uint16, data UintN) error {
+	if _, ok := data.(*Uint64); ok {
+		return fmt.Errorf("port data must be 8, 16 or 32 bits")
 	}
 	return pathRead(portPath, int64(addr), data)
 }
 
-// Out writes data to the x86 port at address addr. data must be one of: uint8,
-// uint16, or uint32.
-func Out(addr uint16, data interface{}) error {
-	switch data.(type) {
-	case uint8, uint16, uint32:
-	default:
-		return fmt.Errorf("cannot write port type %T", data)
+// Out writes data to the x86 port at address addr. data must be Uint8, Uint16
+// uint32, but not Uint64.
+func Out(addr uint16, data UintN) error {
+	if _, ok := data.(*Uint64); ok {
+		return fmt.Errorf("port data must be 8, 16 or 32 bits")
 	}
 	return pathWrite(portPath, int64(addr), data)
 }

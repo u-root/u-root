@@ -13,49 +13,37 @@ import (
 	"testing"
 )
 
+var u8 = Uint8(0x12)
+
 var tests = []struct {
-	name      string
-	addr      int64
-	writeData interface{}
-	readData  interface{}
-	err       string
+	name                string
+	addr                int64
+	writeData, readData UintN
+	err                 string
 }{
 	{
 		name:      "uint8",
 		addr:      0x10,
-		writeData: uint8(0x12),
-		readData:  new(uint8),
+		writeData: &[]Uint8{0x12}[0],
+		readData:  new(Uint8),
 	},
 	{
 		name:      "uint16",
 		addr:      0x20,
-		writeData: uint16(0x1234),
-		readData:  new(uint16),
+		writeData: &[]Uint16{0x1234}[0],
+		readData:  new(Uint16),
 	},
 	{
 		name:      "uint32",
 		addr:      0x30,
-		writeData: uint32(0x12345678),
-		readData:  new(uint32),
+		writeData: &[]Uint32{0x12345678}[0],
+		readData:  new(Uint32),
 	},
 	{
 		name:      "uint64",
 		addr:      0x40,
-		writeData: uint64(0x1234567890abcdef),
-		readData:  new(uint64),
-	},
-	{
-		name:      "bad write type",
-		addr:      0,
-		writeData: int8(0),
-		err:       "cannot write type int8",
-	},
-	{
-		name:      "bad read type",
-		addr:      0,
-		writeData: uint8(0),
-		readData:  int8(0),
-		err:       "cannot read type int8",
+		writeData: &[]Uint64{0x1234567890abcdef}[0],
+		readData:  new(Uint64),
 	},
 }
 
@@ -88,10 +76,10 @@ func TestIO(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			want := fmt.Sprintf("%#016x", tt.writeData)
-			got := fmt.Sprintf("%#016x", reflect.Indirect(reflect.ValueOf(tt.readData)).Interface())
-			if got != want {
-				t.Fatalf("Write(%#016x, %s) = %s; want %s",
+			want := tt.writeData
+			got := tt.readData
+			if !reflect.DeepEqual(want, got) {
+				t.Fatalf("Write(%#016x, %v) = %v; want %v",
 					tt.addr, want, got, want)
 			}
 		})
@@ -99,15 +87,16 @@ func TestIO(t *testing.T) {
 }
 
 func ExampleRead() {
-	var data uint32
+	var data Uint32
 	if err := Read(0x1000000, &data); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%#08x\n", data)
+	log.Printf("%v\n", data)
 }
 
 func ExampleWrite() {
-	if err := Write(0x1000000, uint32(42)); err != nil {
+	data := Uint32(42)
+	if err := Write(0x1000000, &data); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -22,10 +22,10 @@ io out{b,w,l} address value
 	writeCmds["outl"] = cmd{out, 16, 32}
 }
 
-func in(addr int64, data interface{}) error {
+func in(addr int64, data io.UintN) error {
 	return io.In(uint16(addr), data)
 }
 
-func out(addr int64, data interface{}) error {
+func out(addr int64, data io.UintN) error {
 	return io.Out(uint16(addr), data)
 }

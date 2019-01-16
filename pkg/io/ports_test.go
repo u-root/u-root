@@ -7,19 +7,21 @@
 package io
 
 import (
+	"fmt"
 	"log"
 )
 
 func ExampleIn() {
-	var data uint8
+	var data Uint8
 	if err := In(0x3f8, &data); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%#02x\n", data)
+	fmt.Printf("%v\n", data)
 }
 
 func ExampleOut() {
-	if err := Out(0x3f8, uint8('A')); err != nil {
+	data := Uint8('A')
+	if err := Out(0x3f8, &data); err != nil {
 		log.Fatal(err)
 	}
 }

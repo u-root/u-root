@@ -34,7 +34,7 @@ import (
 )
 
 type cmd struct {
-	f                 func(addr int64, data interface{}) error
+	f                 func(addr int64, data io.UintN) error
 	addrBits, valBits int
 }
 
@@ -62,22 +62,21 @@ func usage() {
 	os.Exit(1)
 }
 
-// newInt constructs an int with the specified value and bits.
-// The int and address of the int is returned.
-func newInt(val uint64, bits int) (data interface{}, dataPtr interface{}) {
+// newInt constructs a UintN with the specified value and bits.
+func newInt(val uint64, bits int) io.UintN {
 	switch bits {
 	case 8:
-		v := uint8(val)
-		return v, &v
+		val := io.Uint8(int8(val))
+		return &val
 	case 16:
-		v := uint16(val)
-		return v, &v
+		val := io.Uint16(uint16(val))
+		return &val
 	case 32:
-		v := uint32(val)
-		return v, &v
+		val := io.Uint32(uint32(val))
+		return &val
 	case 64:
-		v := uint64(val)
-		return v, &v
+		val := io.Uint64(uint64(val))
+		return &val
 	default:
 		panic(fmt.Sprintf("invalid number of bits %d", bits))
 	}
@@ -96,11 +95,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		data, dataPtr := newInt(0, c.valBits)
-		if err := c.f(int64(addr), dataPtr); err != nil {
+		data := newInt(0, c.valBits)
+		if err := c.f(int64(addr), data); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf(fmt.Sprintf("%%#0%dx\n", c.valBits/4), data)
+		fmt.Printf("%s\n", data)
 	} else if c, ok := writeCmds[os.Args[1]]; ok {
 		if len(os.Args) != 4 {
 			usage()
@@ -113,7 +112,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		data, _ := newInt(value, c.valBits)
+		data := newInt(value, c.valBits)
 		if err := c.f(int64(addr), data); err != nil {
 			log.Fatal(err)
 		}
