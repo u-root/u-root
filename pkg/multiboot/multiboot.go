@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
@@ -50,6 +49,9 @@ type Multiboot struct {
 	kernelEntry uintptr
 	// EntryPoint is a pointer to trampoline.
 	EntryPoint uintptr
+
+	info          Info
+	loadedModules []Module
 }
 
 var rangeTypes = map[kexec.RangeType]uint32{
@@ -78,12 +80,12 @@ type memoryMaps []MemoryMap
 
 // Probe checks if file is multiboot v1 kernel.
 func Probe(file string) error {
-	f, err := os.Open(file)
+	b, err := readFile(file)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = parseHeader(f)
+	kernel := &kernelReader{buf: b}
+	_, err = parseHeader(kernel)
 	return err
 }
 
@@ -100,16 +102,15 @@ func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
 }
 
 // Load loads and parses multiboot information from m.file.
-func (m *Multiboot) Load() error {
+func (m *Multiboot) Load(debug bool) error {
 	log.Printf("Parsing file %v", m.file)
-	kernel, err := os.Open(m.file)
+	b, err := readFile(m.file)
 	if err != nil {
 		return err
 	}
-	defer kernel.Close()
-
+	kernel := kernelReader{buf: b}
 	log.Println("Parsing Multiboot Header")
-	if m.header, err = parseHeader(kernel); err != nil {
+	if m.header, err = parseHeader(&kernel); err != nil {
 		return fmt.Errorf("Error parsing headers: %v", err)
 	}
 
@@ -137,6 +138,15 @@ func (m *Multiboot) Load() error {
 	if m.EntryPoint, err = m.addTrampoline(); err != nil {
 		return fmt.Errorf("Error adding trampoline: %v", err)
 	}
+
+	if debug {
+		info, err := m.Description()
+		if err != nil {
+			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
+		}
+		log.Printf("%v %v", DebugPrefix, info)
+	}
+
 	return nil
 }
 
@@ -167,6 +177,7 @@ func (m *Multiboot) addInfo() (addr uintptr, err error) {
 	if err != nil {
 		return 0, err
 	}
+	m.info = iw.Info
 
 	addr, err = m.mem.AddKexecSegment(d)
 	if err != nil {

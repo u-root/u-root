@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -20,8 +21,9 @@ import (
 )
 
 var (
-	pubKeyFile = flag.StringP("pubkeyfile", "k", "key.pub", "file for public key")
-	port       = flag.StringP("port", "p", "2222", "default port")
+	hostKeyFile = flag.StringP("hostkeyfile", "h", "/etc/ssh_host_rsa_key", "file for host key")
+	pubKeyFile  = flag.StringP("pubkeyfile", "k", "key.pub", "file for public key")
+	port        = flag.StringP("port", "p", "2222", "default port")
 )
 
 func setWinsize(f *os.File, w, h int) {
@@ -32,7 +34,7 @@ func setWinsize(f *os.File, w, h int) {
 func handler(s ssh.Session) {
 	var a []string
 	if len(s.Command()) > 0 {
-		a = append([]string{"-c"}, s.Command()...)
+		a = append([]string{"-c"}, strings.Join(s.Command(), " "))
 	}
 	cmd := exec.Command("/bin/sh", a...)
 	cmd.Env = append(cmd.Env, s.Environ()...)
@@ -41,7 +43,8 @@ func handler(s ssh.Session) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
 		f, err := pty.Start(cmd)
 		if err != nil {
-			panic(err)
+			log.Print(err)
+			return
 		}
 		go func() {
 			for win := range winCh {
@@ -55,7 +58,8 @@ func handler(s ssh.Session) {
 	} else {
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = s, s, s
 		if err := cmd.Run(); err != nil {
-			panic(err)
+			log.Print(err)
+			return
 		}
 	}
 }
@@ -87,6 +91,7 @@ func main() {
 		Handler: handler,
 	}
 
+	server.SetOption(ssh.HostKeyFile(*hostKeyFile))
 	log.Println("starting ssh server on port " + *port)
 	log.Fatal(server.ListenAndServe())
 }

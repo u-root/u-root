@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,11 +9,8 @@ package multiboot
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/binary"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -50,6 +47,8 @@ func (m *Multiboot) addModules() (uintptr, error) {
 
 	loaded.fix(uint32(addr))
 
+	m.loadedModules = loaded
+
 	b, err := loaded.marshal()
 	if err != nil {
 		return 0, err
@@ -84,9 +83,9 @@ func loadModules(cmds []string) (loaded modules, data []byte, err error) {
 	}
 
 	for i, cmd := range cmds {
-		args := strings.Fields(cmd)
-		if err := loaded[i].loadModule(&buf, args[0], cmd); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", args[0], err)
+		name := strings.Fields(cmd)[0]
+		if err := loaded[i].loadModule(&buf, name); err != nil {
+			return nil, nil, fmt.Errorf("error adding module %v: %v", name, err)
 		}
 	}
 
@@ -101,10 +100,10 @@ func alignUp(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *Module) loadModule(buf *bytes.Buffer, name, cmdLine string) error {
+func (m *Module) loadModule(buf *bytes.Buffer, name string) error {
 	log.Printf("Adding module %v", name)
 
-	b, err := readModule(name)
+	b, err := readFile(name)
 	if err != nil {
 		return err
 	}
@@ -146,30 +145,4 @@ func (m modules) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := binary.Write(&buf, ubinary.NativeEndian, m)
 	return buf.Bytes(), err
-}
-
-func readGzip(r io.Reader) ([]byte, error) {
-	z, err := gzip.NewReader(r)
-	if err != nil {
-		return nil, err
-	}
-	defer z.Close()
-	return ioutil.ReadAll(z)
-}
-
-func readModule(name string) ([]byte, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	b, err := readGzip(f)
-	if err == nil {
-		return b, err
-	}
-	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("cannot rewind file: %v", err)
-	}
-
-	return ioutil.ReadAll(f)
 }

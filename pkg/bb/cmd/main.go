@@ -20,6 +20,12 @@ func run() {
 }
 
 func main() {
+	arg1 := os.Args[0]
+	for s, err := os.Readlink(arg1); err == nil && filepath.Base(s) != "bb"; s, err = os.Readlink(arg1) {
+		arg1 = s
+	}
+	os.Args[0] = arg1
+
 	run()
 }
 
@@ -33,7 +39,7 @@ func init() {
 			// Let's try this: readlink until we get a terminal link.
 			// If the final link is "", then forget it.
 			var arg1 string
-			for s, err := os.Readlink(os.Args[0]); err == nil && s != "bb"; s, err = os.Readlink(arg1) {
+			for s, err := os.Readlink(os.Args[0]); err == nil && filepath.Base(s) != "bb"; s, err = os.Readlink(arg1) {
 				arg1 = s
 			}
 			if arg1 == "" {

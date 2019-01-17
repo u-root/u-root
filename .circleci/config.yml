@@ -95,7 +95,7 @@ jobs:
           command: go test -cover ./...
   test-integration:
     docker:
-      - image: uroottest/x86-integration:latest
+      - image: uroottest/x86-integration:v3.2.1
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0

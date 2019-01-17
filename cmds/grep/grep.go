@@ -52,10 +52,12 @@ var (
 	match       = flag.Bool("v", true, "Print only non-matching lines")
 	recursive   = flag.Bool("r", false, "recursive")
 	noshowmatch = flag.Bool("l", false, "list only files")
-	showname    = false
 	quiet       = flag.Bool("q", false, "Don't print matches; exit on first match")
+	count       = flag.Bool("c", false, "Just show counts")
+	showname    bool
 	allGrep     = make(chan *oneGrep)
-	nGrep       = 0
+	nGrep       int
+	matchCount  int
 )
 
 // grep reads data from the os.File embedded in grepCommand.
@@ -90,6 +92,12 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 
 func printmatch(r *grepResult) {
 	var prefix string
+	if r.match == *match {
+		matchCount++
+	}
+	if *count {
+		return
+	}
 	if showname {
 		fmt.Printf("%v", r.c.name)
 		prefix = ":"
@@ -176,5 +184,8 @@ func main() {
 	}
 	if *quiet {
 		os.Exit(1)
+	}
+	if *count {
+		fmt.Printf("%d\n", matchCount)
 	}
 }
