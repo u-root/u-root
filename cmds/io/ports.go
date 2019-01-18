@@ -11,8 +11,8 @@ import (
 )
 
 func init() {
-	usageMsg += `io in{b,w,l} address
-io out{b,w,l} address value
+	usageMsg += `io (in{b,w,l} address)...
+io (out{b,w,l} address value)...
 `
 	readCmds["inb"] = cmd{in, 16, 8}
 	readCmds["inw"] = cmd{in, 16, 16}
