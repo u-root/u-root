@@ -24,12 +24,13 @@ const uroot = "$GOPATH/src/github.com/u-root/u-root"
 
 var oklicenses = []*regexp.Regexp{
 	regexp.MustCompile(
-	`^// Copyright [\d\-, ]+ the u-root Authors\. All rights reserved
+		`^// Copyright [\d\-, ]+ the u-root Authors\. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file\.
+
 `),
 	regexp.MustCompile(
-`^// Copyright [\d\-, ]+ Google LLC.
+		`^// Copyright [\d\-, ]+ Google LLC.
 //
 // Licensed under the Apache License, Version 2.0.*
 `),
@@ -116,7 +117,7 @@ outer:
 				break
 			}
 		}
-		if ! foundone {
+		if !foundone {
 			p := trimmedPath
 			if *absPath {
 				p = file
