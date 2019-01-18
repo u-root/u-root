@@ -5,11 +5,11 @@
 // io reads and writes to physical memory and ports.
 //
 // Synopsis:
-//     io r{b,w,l,q} address
-//     io w{b,w,l,q} address value
+//     io (r{b,w,l,q} address)...
+//     io (w{b,w,l,q} address value)...
 //     # x86 only:
-//     io in{b,w,l} address
-//     io out{b,w,l} address value
+//     io (in{b,w,l} address)
+//     io (out{b,w,l} address value)...
 //
 // Description:
 //     io lets you read/write 1/2/4/8-bytes to memory with the {r,w}{b,w,l,q}
@@ -18,8 +18,8 @@
 //     On x86 platforms, {in,out}{b,w,l} allow for port io.
 //
 // Examples:
-//     # Read 8-bytes from address 0x10000
-//     io rq 0x10000
+//     # Read 8-bytes from address 0x10000 and 0x10000
+//     io rq 0x10000 rq 0x10008
 //     # Write to the serial port on x86
 //     io outb 0x3f8 50
 package main
@@ -53,8 +53,8 @@ var (
 	}
 )
 
-var usageMsg = `io r{b,w,l,q} address
-io w{b,w,l,q} address value
+var usageMsg = `io (r{b,w,l,q} address)...
+io (w{b,w,l,q} address value)...
 `
 
 func usage() {
@@ -86,37 +86,65 @@ func main() {
 	if len(os.Args) < 3 {
 		usage()
 	}
+	os.Args = os.Args[1:]
 
-	if c, ok := readCmds[os.Args[1]]; ok {
-		if len(os.Args) != 3 {
+	// To avoid the command list from being partially executed when the
+	// args fail to parse, queue them up and run all at once at the end.
+	queue := []func(){}
+
+	for len(os.Args) > 0 {
+		var cmdStr string
+		cmdStr, os.Args = os.Args[0], os.Args[1:]
+		if c, ok := readCmds[cmdStr]; ok {
+			// Parse arguments.
+			if len(os.Args) < 1 {
+				usage()
+			}
+			var addrStr string
+			addrStr, os.Args = os.Args[0], os.Args[1:]
+			addr, err := strconv.ParseUint(addrStr, 0, c.addrBits)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			queue = append(queue, func() {
+				// Read from addr and print.
+				data := newInt(0, c.valBits)
+				if err := c.f(int64(addr), data); err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("%s\n", data)
+			})
+		} else if c, ok := writeCmds[cmdStr]; ok {
+			// Parse arguments.
+			if len(os.Args) < 2 {
+				usage()
+			}
+			var addrStr, dataStr string
+			addrStr, dataStr, os.Args = os.Args[0], os.Args[1], os.Args[2:]
+			addr, err := strconv.ParseUint(addrStr, 0, c.addrBits)
+			if err != nil {
+				log.Fatal(err)
+			}
+			value, err := strconv.ParseUint(dataStr, 0, c.valBits)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			queue = append(queue, func() {
+				// Write data to addr.
+				data := newInt(value, c.valBits)
+				if err := c.f(int64(addr), data); err != nil {
+					log.Fatal(err)
+				}
+			})
+		} else {
 			usage()
 		}
-		addr, err := strconv.ParseUint(os.Args[2], 0, c.addrBits)
-		if err != nil {
-			log.Fatal(err)
-		}
-		data := newInt(0, c.valBits)
-		if err := c.f(int64(addr), data); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("%s\n", data)
-	} else if c, ok := writeCmds[os.Args[1]]; ok {
-		if len(os.Args) != 4 {
-			usage()
-		}
-		addr, err := strconv.ParseUint(os.Args[2], 0, c.addrBits)
-		if err != nil {
-			log.Fatal(err)
-		}
-		value, err := strconv.ParseUint(os.Args[3], 0, c.valBits)
-		if err != nil {
-			log.Fatal(err)
-		}
-		data := newInt(value, c.valBits)
-		if err := c.f(int64(addr), data); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		usage()
+	}
+
+	// Run all commands.
+	for _, c := range queue {
+		c()
 	}
 }
