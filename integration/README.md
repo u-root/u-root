@@ -12,6 +12,13 @@ Run the tests with:
 
     go test
 
+When the QEMU arch is not amd64, set the `UROOT_TESTARCH` variable. For
+example:
+
+    UROOT_TESTARCH=arm go test
+
+Currently, only amd64 and arm are supported.
+
 ## Requirements
 
 - QEMU
@@ -20,8 +27,3 @@ Run the tests with:
 - Linux kernel
   - Path and arguments must be set with `UROOT_KERNEL`.
   - Example: `export UROOT_KERNEL="$HOME/linux/arch/x86_64/boot/bzImage"`
-
-## To Dos
-
-1. Support testing on architectures besides amd64. This is currently limited by
-   the Linux bzImage uploaded.

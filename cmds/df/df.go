@@ -1,7 +1,7 @@
 // Copyright 2015-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//
+
 // df reports details of mounted filesystems
 //
 // Synopsis
@@ -16,7 +16,6 @@
 // Options
 //  -k: display values in KB (default)
 //  -m: dispaly values in MB
-//
 package main
 
 import (
