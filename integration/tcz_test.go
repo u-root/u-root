@@ -12,6 +12,11 @@ import (
 )
 
 func TestTczclient(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	network := qemu.NewNetwork()
 	// TODO: On the next iteration, this will serve and provide a missing tcz.
 	var sb wc

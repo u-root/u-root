@@ -30,6 +30,7 @@ func testPkgs(t *testing.T) []string {
 		// "github.com/u-root/u-root/xcmds/...",
 		// "github.com/u-root/u-root/pkg/...",
 	)
+	cmd.Env = append(os.Environ(), "GOARCH="+TestArch())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
@@ -70,6 +71,11 @@ func testPkgs(t *testing.T) []string {
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
 	SkipWithoutQEMU(t)
+
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
 
 	// Create a temporary directory.
 	tmpDir, err := ioutil.TempDir("", "uroot-integration")

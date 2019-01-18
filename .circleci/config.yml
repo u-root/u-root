@@ -7,7 +7,10 @@ workflows:
       - test:
           requires:
             - clean-code
-      - test-integration:
+      - test-integration-amd64:
+          requires:
+            - clean-code
+      - test-integration-arm:
           requires:
             - clean-code
       - race:
@@ -93,16 +96,29 @@ jobs:
       - run:
           name: Test coverage
           command: go test -cover ./...
-  test-integration:
+  test-integration-amd64:
     docker:
-      - image: uroottest/x86-integration:v3.2.0
+      - image: uroottest/test-image-amd64:v3.2.2
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
     steps:
       - checkout
       - run:
-          name: Test integration all
+          name: Test integration amd64
+          command: go test -v -a -ldflags '-s' ./integration/...
+      - store_artifacts:
+          path: integration/serial
+  test-integration-arm:
+    docker:
+      - image: uroottest/test-image-arm:v3.0.0
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Test integration arm
           command: go test -v -a -ldflags '-s' ./integration/...
       - store_artifacts:
           path: integration/serial

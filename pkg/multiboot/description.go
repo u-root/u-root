@@ -40,7 +40,7 @@ func (m Multiboot) Description() (string, error) {
 	var modules []ModuleDesc
 	for i, mod := range m.loadedModules {
 		name := strings.Fields(m.modules[i])[0]
-		b, err := readModule(name)
+		b, err := readFile(name)
 		if err != nil {
 			return "", nil
 		}

@@ -12,6 +12,11 @@ import (
 )
 
 func TestDhclient(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	network := qemu.NewNetwork()
 	var sb, cb wc
 	_, scleanup := QEMUTest(t, &Options{
@@ -75,6 +80,11 @@ func TestDhclient(t *testing.T) {
 }
 
 func TestPxeboot(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	network := qemu.NewNetwork()
 	dhcpServer, scleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Server",
