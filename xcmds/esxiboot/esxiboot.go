@@ -5,13 +5,17 @@
 // esxiboot executes ESXi kernel over the running kernel.
 //
 // Synopsis:
-//     esxiboot --config <config>
+//     esxiboot --config <config> [-d (--device)]
 //
 // Description:
 //     Loads and executes ESXi kernel.
 //
 // Options:
+//     --device=FILE or -d=FILE: set the ESXi boot device
 //     --config=FILE or -c=FILE: set the ESXi config
+//
+// --device is required to kexec installed ESXi instance.
+// You don't need it if you kexec ESXi installer.
 //
 // The config file has the following syntax:
 //
@@ -25,7 +29,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -33,11 +39,13 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/u-root/u-root/pkg/gpt"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
 )
 
 var cfg = flag.StringP("config", "c", "", "Set the ESXi config")
+var dev = flag.StringP("device", "d", "", "Set the ESXi boot device")
 
 const (
 	kernel  = "kernel"
@@ -46,12 +54,59 @@ const (
 
 	comment = '#'
 	sep     = "---"
+
+	uuidMagic = "VMWARE FAT16    "
+	uuidSize  = 32
+	partition = 5
 )
 
 type options struct {
 	kernel  string
 	args    string
 	modules []string
+}
+
+func getUUID(device string) (string, error) {
+	device = strings.TrimRight(device, "/")
+	blockSize, err := gpt.GetBlockSize(device)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := os.Open(fmt.Sprintf("%s%d", device, partition))
+	if err != nil {
+		return "", err
+	}
+
+	// Boot uuid is stored in the second block of the disk
+	// in the following format:
+	//
+	// VMWARE FAT16    <uuid>
+	// <---128 bit----><128 bit>
+	data := make([]byte, uuidSize)
+	n, err := f.ReadAt(data, int64(blockSize))
+	if err != nil {
+		return "", err
+	}
+	if n != uuidSize {
+		return "", io.ErrUnexpectedEOF
+	}
+
+	if magic := string(data[:len(uuidMagic)]); magic != uuidMagic {
+		return "", fmt.Errorf("bad uuid magic %q", magic)
+	}
+
+	uuid := hex.EncodeToString(data[len(uuidMagic):])
+	return fmt.Sprintf("bootUUID=%s", uuid), nil
+}
+
+func (o *options) addUUID(device string) error {
+	uuid, err := getUUID(device)
+	if err != nil {
+		return err
+	}
+	o.args += " " + uuid
+	return nil
 }
 
 func parse(fname string) (options, error) {
@@ -104,6 +159,12 @@ func main() {
 	opts, err := parse(*cfg)
 	if err != nil {
 		log.Fatalf("Cannot parse config %v: %v", *cfg, err)
+	}
+
+	if *dev != "" {
+		if err := opts.addUUID(*dev); err != nil {
+			log.Fatalf("Cannot add boot uuid: %v", err)
+		}
 	}
 
 	p, err := os.Executable()
