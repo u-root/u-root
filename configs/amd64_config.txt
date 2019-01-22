@@ -1,0 +1,49 @@
+# Kernel Configs Used for amd64 Tests
+#
+# Build Linux:
+#
+#     make mrproper
+#     make tinyconfig
+#     cat amd64_config.txt generic_config.txt >> .config
+#     make menuconfig  # Exit and save.
+#     make -j$(($(nproc) * 2 + 1))
+#
+# Build u-root:
+#
+#     go get github.com/u-root/u-root
+#     u-root -format=cpio -build=bb
+#
+# Test:
+#
+# 1. `qemu-system-x86_64 -kernel arch/x86_64/boot/bzImage -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append 'earlyprintk=ttyS0 console=ttyS0'`
+# 2. Exit with CTRL-A + X
+
+# Minimal kernel config needed for Go and serial port:
+
+CONFIG_64BIT=y
+CONFIG_BINFMT_ELF=y
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_DEVTMPFS=y
+CONFIG_EARLY_PRINTK=y
+CONFIG_EPOLL=y
+CONFIG_FUTEX=y
+CONFIG_PRINTK=y
+CONFIG_PROC_FS=y
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+CONFIG_TTY=y
+
+# Add /dev/port for io command:
+
+CONFIG_PCI=y
+CONFIG_DEVPORT=y
+
+# For the kernel doing the kexec'ing:
+
+CONFIG_CRYPTO=y
+CONFIG_KEXEC=y
+CONFIG_KEXEC_FILE=y
+
+# For the kernel being kexec'ed:
+
+CONFIG_RELOCATABLE=y

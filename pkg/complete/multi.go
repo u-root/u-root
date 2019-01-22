@@ -24,14 +24,19 @@ func NewMultiCompleter(c Completer, cc ...Completer) Completer {
 
 // Complete Returns a []string consisting of the results
 // of calling all the Completers.
-func (m *MultiCompleter) Complete(s string) ([]string, error) {
+func (m *MultiCompleter) Complete(s string) (string, []string, error) {
 	var files []string
+	var exact string
 	for _, c := range m.Completers {
-		cc, err := c.Complete(s)
+		x, cc, err := c.Complete(s)
 		if err != nil {
 			Debug("MultiCompleter: %v: %v", c, err)
 		}
 		files = append(files, cc...)
+		if exact == "" {
+			exact = x
+		}
+
 	}
-	return files, nil
+	return exact, files, nil
 }
