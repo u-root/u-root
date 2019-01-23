@@ -211,9 +211,9 @@ func main() {
 			}
 			log.Printf("  Table: %+v", table)
 			for _, part := range table.Partitions {
-				log.Printf("    Partition: %+v", part)
+				log.Printf("    Partition: %+v\n", part)
 				if !part.IsEmpty() {
-					log.Printf("      UUID: %s", part.Type.String())
+					log.Printf("      UUID: %s\n", part.Type.String())
 				}
 			}
 		}
