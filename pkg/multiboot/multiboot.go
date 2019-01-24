@@ -32,13 +32,9 @@ type Multiboot struct {
 	cmdLine    string
 	bootloader string
 
-	// trampoline is a path to an executable blob, which should set machine
-	// to a specific state defined by multiboot v1 spec (will be removed in future releases).
+	// trampoline is a path to an executable blob, which contains a trampoline segment.
+	// Trampoline sets machine to a specific state defined by multiboot v1 spec.
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
-
-	// Trampoline should use a long word value stored right after "u-root-ebx-long" byte sequence
-	// as a value to be stored in ebx register and use a quad word value stored right after
-	// "u-root-ep-quad" as kernel entry point.
 	trampoline string
 
 	header Header
