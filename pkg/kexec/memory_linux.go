@@ -23,11 +23,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var pageMask uint
-
-func init() {
-	pageMask = uint(os.Getpagesize() - 1)
-}
+var pageMask = uint(os.Getpagesize() - 1)
 
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
@@ -228,6 +224,7 @@ func (e ErrKexec) Error() string {
 	return fmt.Sprintf("entry %x, flags %x, errno %d, segments %v", e.Entry, e.Flags, e.Errno, e.Segments)
 }
 
+// rawLoad is a wrapper around kexec_load(2) syscall.
 // Preconditions:
 // - segments must not overlap
 // - segments must be full pages
@@ -441,7 +438,7 @@ func (m Memory) availableRAM() (avail []TypedAddressRange) {
 		x uintptr
 		// start is true if the point is the beginning of segment.
 		start bool
-		// ram it true if the point is part of a RAM segmnts.
+		// ram is true if the point is part of a RAM segment.
 		ram bool
 	}
 	// points stores starting and ending points of segments
@@ -505,8 +502,7 @@ func (m Memory) availableRAM() (avail []TypedAddressRange) {
 
 		if p.ram {
 			ramRange = p.start
-		}
-		if !p.ram {
+		} else {
 			kexecRange = p.start
 		}
 	}
