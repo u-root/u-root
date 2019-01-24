@@ -15,7 +15,7 @@
 //     --reuse-commandline:           Use the kernel command line from running system
 //     --i=FILE or --initrd=FILE:     Use file as the kernel's initial ramdisk
 //     -l or --load:                  Load the new kernel into the current kernel
-//     -e or --exec:		      Execute a currently loaded kernel
+//     -e or --exec:                  Execute a currently loaded kernel
 package main
 
 import (
