@@ -98,7 +98,7 @@ jobs:
           command: go test -cover ./...
   test-integration-amd64:
     docker:
-      - image: uroottest/test-image-amd64:v3.2.2
+      - image: uroottest/test-image-amd64:v3.2.3
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
