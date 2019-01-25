@@ -60,7 +60,7 @@ RUN set -eux;                                                          \
 
 # Build Multiboot kernel
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v1.00                                 \
+    git clone --depth=1 --branch=v1.01                                 \
            https://github.com/u-root/multiboot-test-kernel;            \
     cd multiboot-test-kernel;                                          \
     make;                                                              \
