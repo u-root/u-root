@@ -82,7 +82,7 @@ const (
 	errNoWrapTransport
 	errAuditFailUnsuccessful
 	errAuditFailSuccessful
-	errNotResetable
+	errNotResettable
 	errNotLocal
 	errBadType
 	errInvalidResource
@@ -108,7 +108,7 @@ const (
 	errNoOperator
 	errResourceMissing
 	errDelegateLock
-	errDelegateFamliy
+	errDelegateFamily
 	errDelegateAdmin
 	errTransportNotExclusive
 	errOwnerControl
@@ -118,7 +118,7 @@ const (
 	errDAAIssuerSettings
 	errDAASettings
 	errDAAState
-	errDAAIssuerVailidity
+	errDAAIssuerValidity
 	errDAAWrongW
 	errBadHandle
 	errBadDelegate
@@ -184,7 +184,7 @@ var tpmErrMsgs = map[tpmError]string{
 	errNoWrapTransport:       "the TPM does not allow for wrapped transport sessions",
 	errAuditFailUnsuccessful: "TPM audit construction failed and the underlying command was returning a failure code also",
 	errAuditFailSuccessful:   "TPM audit construction failed and the underlying command was returning success",
-	errNotResetable:          "attempt to reset a PCR register that does not have the resettable attribute",
+	errNotResettable:          "attempt to reset a PCR register that does not have the resettable attribute",
 	errNotLocal:              "attempt to reset a PCR register that requires locality and locality modifier not part of command transport",
 	errBadType:               "make identity blob not properly typed",
 	errInvalidResource:       "when saving context identified resource type does not match actual resource",
@@ -210,7 +210,7 @@ var tpmErrMsgs = map[tpmError]string{
 	errNoOperator:            "no operator AuthData value is set",
 	errResourceMissing:       "the resource pointed to by context is not loaded",
 	errDelegateLock:          "the delegate administration is locked",
-	errDelegateFamliy:        "attempt to manage a family other than the delegated family",
+	errDelegateFamily:        "attempt to manage a family other than the delegated family",
 	errDelegateAdmin:         "delegation table management not enabled",
 	errTransportNotExclusive: "there was a command executed outside of an exclusive transport session",
 	errOwnerControl:          "attempt to context save a owner evict controlled key",
@@ -220,7 +220,7 @@ var tpmErrMsgs = map[tpmError]string{
 	errDAAIssuerSettings:     "the consistency check on DAA_issuerSettings has failed",
 	errDAASettings:           "the consistency check on DAA_tpmSpecific has failed",
 	errDAAState:              "the atomic process indicated by the submitted DAA command is not the expected process",
-	errDAAIssuerVailidity:    "the issuer's validity check has detected an inconsistency",
+	errDAAIssuerValidity:    "the issuer's validity check has detected an inconsistency",
 	errDAAWrongW:             "the consistency check on w has failed",
 	errBadHandle:             "the handle is incorrect",
 	errBadDelegate:           "delegation is not correct",

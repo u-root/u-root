@@ -178,7 +178,7 @@ func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcr
 }
 
 // quote performs a TPM 1.1 quote operation: it signs data using the
-// TPM_QUOTE_INFO structure for the current values of a selectied set of PCRs.
+// TPM_QUOTE_INFO structure for the current values of a selected set of PCRs.
 func quote(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrSelection, ca *commandAuth) (*pcrComposite, []byte, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, hash, pcrs, ca}
 	var pcrc pcrComposite
