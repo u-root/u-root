@@ -43,14 +43,14 @@ func UnmarshalRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 // unmarshalRSAPublicKey unmarshals a TPM key into a crypto/rsa.PublicKey.
 func (k *key) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	// Currently, we only support algRSA
-	if k.AlgorithmParms.AlgID != algRSA {
+	if k.AlgorithmParams.AlgID != algRSA {
 		return nil, errors.New("only TPM_ALG_RSA is supported")
 	}
 
-	// This means that k.AlgorithmsParms.Parms is an rsaKeyParms, which is
+	// This means that k.AlgorithmsParams.Params is an rsaKeyParams, which is
 	// enough to create the exponent, and k.PubKey contains the key.
-	var rsakp rsaKeyParms
-	if _, err := tpmutil.Unpack(k.AlgorithmParms.Parms, &rsakp); err != nil {
+	var rsakp rsaKeyParams
+	if _, err := tpmutil.Unpack(k.AlgorithmParams.Params, &rsakp); err != nil {
 		return nil, err
 	}
 
@@ -82,14 +82,14 @@ func UnmarshalPubRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 // This is almost identical to the identically named function for a TPM key.
 func (pk *pubKey) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	// Currently, we only support algRSA
-	if pk.AlgorithmParms.AlgID != algRSA {
+	if pk.AlgorithmParams.AlgID != algRSA {
 		return nil, errors.New("only TPM_ALG_RSA is supported")
 	}
 
-	// This means that pk.AlgorithmsParms.Parms is an rsaKeyParms, which is
+	// This means that pk.AlgorithmsParams.Params is an rsaKeyParams, which is
 	// enough to create the exponent, and pk.Key contains the key.
-	var rsakp rsaKeyParms
-	if _, err := tpmutil.Unpack(pk.AlgorithmParms.Parms, &rsakp); err != nil {
+	var rsakp rsaKeyParams
+	if _, err := tpmutil.Unpack(pk.AlgorithmParams.Params, &rsakp); err != nil {
 		return nil, err
 	}
 
