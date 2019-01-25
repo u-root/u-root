@@ -47,7 +47,7 @@ func readRtc(rtcFile *os.File) (time.Time, error) {
 		uintptr(unsafe.Pointer(&ptm)),
 	)
 	if errno != 0 {
-		return ret, fmt.Errorf("%v", errno)
+		return ret, errno 
 	}
 
 	ret = time.Date(int(ptm.Year)+startYear,
@@ -84,10 +84,7 @@ func setRtcFromSysClock(rtcFile *os.File) error {
 		uintptr(unix.RTC_SET_TIME),
 		uintptr(unsafe.Pointer(&stm)),
 	)
-	if errno != 0 {
-		return fmt.Errorf("%v", errno)
-	}
-	return nil
+	return errno
 }
 
 func main() {
