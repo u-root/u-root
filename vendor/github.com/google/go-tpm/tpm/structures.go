@@ -69,7 +69,7 @@ type pcrInfo struct {
 
 // A capVersionInfo contains information about the TPM itself. Note that this
 // is deserialized specially, since it has a variable-length byte array but no
-// length. It is preceeded with a length in the response to the Quote2 command.
+// length. It is preceded with a length in the response to the Quote2 command.
 type capVersionInfo struct {
 	CapVersionFixed capVersionInfoFixed
 	VendorSpecific  []byte
@@ -188,23 +188,23 @@ func (ra responseAuth) String() string {
 }
 
 // These are the parameters of a TPM key.
-type keyParms struct {
+type keyParams struct {
 	AlgID     uint32
 	EncScheme uint16
 	SigScheme uint16
-	Parms     []byte // Serialized rsaKeyParms or symmetricKeyParms.
+	Params     []byte // Serialized rsaKeyParams or symmetricKeyParams.
 }
 
-// An rsaKeyParms encodes the length of the RSA prime in bits, the number of
+// An rsaKeyParams encodes the length of the RSA prime in bits, the number of
 // primes in its factored form, and the exponent used for public-key
 // encryption.
-type rsaKeyParms struct {
+type rsaKeyParams struct {
 	KeyLength uint32
 	NumPrimes uint32
 	Exponent  []byte
 }
 
-type symmetricKeyParms struct {
+type symmetricKeyParams struct {
 	KeyLength uint32
 	BlockSize uint32
 	IV        []byte
@@ -216,7 +216,7 @@ type key struct {
 	KeyUsage       uint16
 	KeyFlags       uint32
 	AuthDataUsage  byte
-	AlgorithmParms keyParms
+	AlgorithmParams keyParams
 	PCRInfo        []byte
 	PubKey         []byte
 	EncData        []byte
@@ -229,7 +229,7 @@ type key12 struct {
 	KeyUsage       uint16
 	KeyFlags       uint32
 	AuthDataUsage  byte
-	AlgorithmParms keyParms
+	AlgorithmParams keyParams
 	PCRInfo        []byte // This must be a serialization of a pcrInfoLong.
 	PubKey         []byte
 	EncData        []byte
@@ -237,7 +237,7 @@ type key12 struct {
 
 // A pubKey represents a public key known to the TPM.
 type pubKey struct {
-	AlgorithmParms keyParms
+	AlgorithmParams keyParams
 	Key            []byte
 }
 
@@ -285,7 +285,7 @@ func convertPubKey(pk crypto.PublicKey) (*pubKey, error) {
 		return nil, errors.New("The provided Privacy CA RSA public key was not a 2048-bit key")
 	}
 
-	rsakp := rsaKeyParms{
+	rsakp := rsaKeyParams{
 		KeyLength: 2048,
 		NumPrimes: 2,
 		Exponent:  big.NewInt(int64(pkRSA.E)).Bytes(),
@@ -294,16 +294,16 @@ func convertPubKey(pk crypto.PublicKey) (*pubKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	kp := keyParms{
+	kp := keyParams{
 		AlgID:     algRSA,
 		EncScheme: esNone,
 		SigScheme: ssRSASaPKCS1v15SHA1,
-		Parms:     rsakpb,
+		Params:     rsakpb,
 	}
-	pubk := pubKey{
-		AlgorithmParms: kp,
+	pubKey := pubKey{
+		AlgorithmParams: kp,
 		Key:            pkRSA.N.Bytes(),
 	}
 
-	return &pubk, nil
+	return &pubKey, nil
 }

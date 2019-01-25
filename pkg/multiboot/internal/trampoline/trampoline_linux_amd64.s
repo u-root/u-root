@@ -18,10 +18,6 @@
 
 #define MAGIC	0x2BADB002
 
-#define RETF	BYTE $0xCB
-#define PUSHL	PUSHQ
-#define POPL	POPQ
-
 TEXT begin(SB),NOSPLIT,$0
 	// u-root-trampoline-begin
 	BYTE $'u'; BYTE $'-'; BYTE $'r'; BYTE $'o'; BYTE $'o';

@@ -26,7 +26,9 @@ func TestGrep(t *testing.T) {
 		// If you just use hix with no newline the test will fail. Yuck.
 		{"hix\n", "hix\n", 0, []string{"."}},
 		{"hix\n", "", 0, []string{"-q", "."}},
-		{"hix\n", "", 1, []string{"-q", "hox"}},
+		{"hix\n", "hix\n", 0, []string{"-i", "hix"}},
+		{"hix\n", "", 0, []string{"-i", "hox"}},
+		{"HiX\n", "HiX\n", 0, []string{"-i", "hix"}},
 	}
 
 	tmpDir, err := ioutil.TempDir("", "TestGrep")
@@ -44,7 +46,7 @@ func TestGrep(t *testing.T) {
 			continue
 		}
 		if string(o) != v.o {
-			t.Errorf("Grep %v < %v: want '%v', got '%v'", v.a, v.i, v.o, string(o))
+			t.Errorf("Grep %v != %v: want '%v', got '%v'", v.a, v.i, v.o, string(o))
 			continue
 		}
 	}
