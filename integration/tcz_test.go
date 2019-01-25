@@ -17,6 +17,8 @@ func TestTczclient(t *testing.T) {
 		t.Skipf("test not supported on %s", TestArch())
 	}
 
+	t.Skip("This test is flaky, and must be fixed")
+
 	network := qemu.NewNetwork()
 	// TODO: On the next iteration, this will serve and provide a missing tcz.
 	var sb wc
