@@ -5,6 +5,44 @@ A new release happens every 6 weeks:
 - 1st day on the first month of each quarter
 - 15th day of the second month of each quarter
 
+
+## v4.0.0 (2018-01-26)
+
+- Multiboot as a kexec target -- Thank you Max!
+  - Use with kexec, also see the new module argument
+  - Experimental support for esxi, see xcmds/esxiboot
+  - Integration tests for multiboot
+    - Using the test kernel at: github.com/u-root/multiboot-test-kernel
+  - Trampoline is written in Go assembly
+  - Support for gzipped kernels
+- New commands:
+  - tac: Reads file lines in reverse order
+  - xcmds/sshd: Like sshd, but supports port forwarding
+- New packages:
+  - forth: An interpreter for Forth
+  - ubinary: Gives machine's native endianess
+- New flags:
+  - grep -c : Print counts
+  - grep -i : Case insensitive search
+  - uname -p : Alias for machine
+- Improved arm support:
+  - io command supports arm Linux kernels
+  - zImage parser for kernel format
+  - Basic integration tests and minimal config
+- Miscellaneous improvements:
+  - Consolidation of similar circleci tests into a single uroot_test.go which
+    can be run with "go test"
+  - Integration test for tcz
+  - configs are organized into a new directory
+- Fixes:
+  - pkg/complete and xcmds/ash: now works in a sane way
+  - Append rsdp onto kernel command line
+  - A number of fixes to various symlink issues
+- Tested with:
+  - Linux 4.17
+  - Golang 1.11
+
+
 ## v3.0.0 (2018-11-21)
 
 - Reduced size of shell by 20%
@@ -39,6 +77,7 @@ A new release happens every 6 weeks:
 - Tested with:
   - Linux 4.17
   - Golang 1.11
+
 
 ## v1.0.0 (2018-08-15)
 
