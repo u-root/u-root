@@ -1,0 +1,3 @@
+- fdt.dtb is the Flattened Device Tree created by QEMU virt machine.
+- fdt.dts was obtained by running `fdtdump fdt.bin`.
+- fdt.json was obtained by marshalling the `FDT` struct in Go.
