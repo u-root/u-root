@@ -78,9 +78,17 @@ following diagram:
 ![LinuxBoot and coreboot](resources/LinuxBoot.png)
 (images from coreboot.org and wikipedia.org, diagram generated with draw.io)
 
+## Build and run as a fully open source bootloader in Qemu
+
+Systemboot is one of the parts of a bigger picture: running Linux as firmware.
+We call this [LinuxBoot](https://linuxboot.org), and it can be achieved in various
+ways. One of these is by combining [coreboot](https://coreboot.org), [Linux](https://kernel.org),
+[u-root](https://u-root.tk) and `systemboot`. Check out the instructions on the 
+[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/tree/master/11.coreboot.u-root.systemboot)
+chapter of the [LinuxBoot Book](https://github.com/linuxboot/book).
+
 ## TODO
 
-* Instructions to build a suitable kernel and run it with Qemu
 * verified and measured boot
 * a proper GRUB config parser
 * backwards compatibility with BIOS-style partitions
