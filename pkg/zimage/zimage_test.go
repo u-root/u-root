@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var table = &ZImage{
+var testData = &ZImage{
 	Header: Header{
 		Magic:      0x16f2818,
 		Start:      0x0,
@@ -27,7 +27,7 @@ var table = &ZImage{
 	},
 }
 
-func TestZImage(t *testing.T) {
+func TestParse(t *testing.T) {
 	f, err := os.Open("testdata/zImage")
 	if err != nil {
 		t.Fatal(err)
@@ -39,13 +39,13 @@ func TestZImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(z, table) {
-		t.Errorf(`Parse("testdata/zImage") = %#v; want %#v`, z, table)
+	if !reflect.DeepEqual(z, testData) {
+		t.Errorf(`Parse("testdata/zImage") = %#v; want %#v`, z, testData)
 	}
 }
 
 func TestKernelSizes(t *testing.T) {
-	piggySizeAddr, kernelBSSSize, err := table.GetKernelSizes()
+	piggySizeAddr, kernelBSSSize, err := testData.GetKernelSizes()
 	if err != nil {
 		t.Fatal(err)
 	}
