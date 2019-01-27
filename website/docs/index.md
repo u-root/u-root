@@ -13,7 +13,8 @@ init program and four Go compiler binaries.
 
 ## Setup
 
-On an Ubuntu system, install prerequisites and ensure Go is at least version 1.7:
+On an Ubuntu system, install prerequisites and ensure Go is at least version
+1.11:
 
 ```sh
 sudo apt-get install git golang build-essential
@@ -30,13 +31,12 @@ Clone u-root:
 
 ```sh
 go get github.com/u-root/u-root
-cd "$GOPATH/src/github.com/u-root/u-root"
 ```
 
-Generate an initramfs of all u-root Go tools:
+Generate an initramfs containing u-root Go tools:
 
 ```sh
-go run u-root.go -o initramfs.cpio
+u-root -format=cpio -o initramfs.cpio
 ```
 
 You can use this initramfs with your favorite Linux kernel in QEMU to try it
@@ -91,3 +91,4 @@ local and get a userland portable (it's a goal).
 * [Chris Koch](https://github.com/hugelgupf)
 * [Andrea Barberio](https://github.com/insomniacslk)
 * [Jean-Marie Verdun](https://github.com/vejmarie)
+* [Max Shegai](https://github.com/n-canter)
