@@ -5,13 +5,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	l "log"
 	"net"
 	"os"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/vishvananda/netlink"
 )
@@ -127,6 +129,13 @@ func addrip() error {
 		return fmt.Errorf("devip: arg[0] changed: can't happen")
 	}
 	return nil
+}
+
+func neigh() error {
+	if len(arg) != 1 {
+		return errors.New("neigh subcommands not supported yet")
+	}
+	return showNeighbours(os.Stdout, true)
 }
 
 func linkshow() error {
@@ -288,7 +297,7 @@ func route() error {
 
 func main() {
 	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = []string{"addr", "route", "link"}
+	whatIWant = []string{"addr", "route", "link", "neigh"}
 	cursor = 0
 	flag.Parse()
 	arg = flag.Args()
@@ -318,6 +327,8 @@ func main() {
 		err = link()
 	case "route":
 		err = route()
+	case "neigh":
+		err = neigh()
 	default:
 		usage()
 	}
