@@ -6,7 +6,7 @@ A new release happens every 6 weeks:
 - 15th day of the second month of each quarter
 
 
-## v4.0.0 (2018-01-26)
+## v4.0.0 (2019-01-26)
 
 - Multiboot as a kexec target -- Thank you Max!
   - Use with kexec, also see the new module argument
