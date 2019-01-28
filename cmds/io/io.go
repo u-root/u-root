@@ -1,16 +1,27 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2010-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// io lets you do IO operations.
+// io reads and writes to physical memory and ports.
 //
 // Synopsis:
-//     io [inb|inw|inl] address
-//     io [outb|outw|outl] address value
+//     io (r{b,w,l,q} address)...
+//     io (w{b,w,l,q} address value)...
+//     # x86 only:
+//     io (in{b,w,l} address)
+//     io (out{b,w,l} address value)...
 //
 // Description:
-//     io will let you do IO instructions on various architectures that support it.
+//     io lets you read/write 1/2/4/8-bytes to memory with the {r,w}{b,w,l,q}
+//     commands respectively.
 //
+//     On x86 platforms, {in,out}{b,w,l} allow for port io.
+//
+// Examples:
+//     # Read 8-bytes from address 0x10000 and 0x10000
+//     io rq 0x10000 rq 0x10008
+//     # Write to the serial port on x86
+//     io outb 0x3f8 50
 package main
 
 import (
@@ -18,106 +29,122 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/u-root/u-root/pkg/io"
 )
 
-const usage = `io [inb|inw|inl|rb|rw|rl|rq] address
-io [outb|outw|outl|wb|ww|wl|wq] address value`
-
-type iod struct {
-	nargs    int
-	addrbits int // not all addresses are multiples of 8 in size.
-	val      interface{}
-	valbits  int // not all value bits are multiples of 8 in size.
-	format   string
-	dev      string
-	mode     int
+type cmd struct {
+	f                 func(addr int64, data io.UintN) error
+	addrBits, valBits int
 }
 
 var (
-	ios = map[string]iod{
-		"inb":  {2, 16, &b, 8, "%#02x", "/dev/port", os.O_RDONLY},
-		"inw":  {2, 16, &w, 16, "%#04x", "/dev/port", os.O_RDONLY},
-		"inl":  {2, 16, &l, 32, "%#08x", "/dev/port", os.O_RDONLY},
-		"outb": {3, 16, b, 8, "", "/dev/port", os.O_WRONLY},
-		"outw": {3, 16, w, 16, "", "/dev/port", os.O_WRONLY},
-		"outl": {3, 16, l, 32, "", "/dev/port", os.O_WRONLY},
-		"rb":   {2, 64, &b, 8, "%#02x", "/dev/mem", os.O_RDONLY},
-		"rw":   {2, 64, &w, 16, "%#04x", "/dev/mem", os.O_RDONLY},
-		"rl":   {2, 64, &l, 32, "%#08x", "/dev/mem", os.O_RDONLY},
-		"rq":   {2, 64, &q, 64, "%#16x", "/dev/mem", os.O_RDONLY},
-		"wb":   {3, 64, b, 8, "", "/dev/mem", os.O_WRONLY},
-		"ww":   {3, 64, w, 16, "", "/dev/mem", os.O_WRONLY},
-		"wl":   {3, 64, l, 32, "", "/dev/mem", os.O_WRONLY},
-		"wq":   {3, 64, q, 64, "", "/dev/mem", os.O_WRONLY},
+	readCmds = map[string]cmd{
+		"rb": {io.Read, 64, 8},
+		"rw": {io.Read, 64, 16},
+		"rl": {io.Read, 64, 32},
+		"rq": {io.Read, 64, 64},
 	}
-	b    byte
-	w    uint16
-	l    uint32
-	q    uint64
-	addr uint64
+	writeCmds = map[string]cmd{
+		"wb": {io.Write, 64, 8},
+		"ww": {io.Write, 64, 16},
+		"wl": {io.Write, 64, 32},
+		"wq": {io.Write, 64, 64},
+	}
 )
 
-func main() {
-	var err error
-	a := os.Args[1:]
+var usageMsg = `io (r{b,w,l,q} address)...
+io (w{b,w,l,q} address value)...
+`
 
-	if len(a) == 0 {
-		log.Fatal(usage)
-	}
+func usage() {
+	fmt.Print(usageMsg)
+	os.Exit(1)
+}
 
-	i, ok := ios[a[0]]
-	if !ok || len(a) != i.nargs {
-		log.Fatal(usage)
-	}
-
-	f, err := os.OpenFile(i.dev, i.mode, 0)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-
-	addr, err := strconv.ParseUint(a[1], 0, i.addrbits)
-	if err != nil {
-		log.Fatalf("Parsing address for %d bits: %v %v", i.addrbits, a[1], err)
-	}
-
-	switch a[0][0] {
-	case 'i', 'r':
-		err = in(f, addr, i.val)
-	case 'o', 'w':
-		var v uint64
-		v, err = strconv.ParseUint(a[2], 0, i.valbits)
-		if err != nil {
-			log.Fatalf("%v: %v", a, err)
-		}
-		switch i.valbits {
-		case 8:
-			err = out(f, addr, uint8(v))
-		case 16:
-			err = out(f, addr, uint16(v))
-		case 32:
-			err = out(f, addr, uint32(v))
-		case 64:
-			err = out(f, addr, uint64(v))
-		}
+// newInt constructs a UintN with the specified value and bits.
+func newInt(val uint64, bits int) io.UintN {
+	switch bits {
+	case 8:
+		val := io.Uint8(int8(val))
+		return &val
+	case 16:
+		val := io.Uint16(uint16(val))
+		return &val
+	case 32:
+		val := io.Uint32(uint32(val))
+		return &val
+	case 64:
+		val := io.Uint64(uint64(val))
+		return &val
 	default:
-		log.Fatalf(usage)
+		panic(fmt.Sprintf("invalid number of bits %d", bits))
 	}
+}
 
-	if err != nil {
-		log.Fatalf("%v: %v", a, err)
+func main() {
+	if len(os.Args) < 3 {
+		usage()
 	}
+	os.Args = os.Args[1:]
 
-	if i.format != "" {
-		switch i.val.(type) {
-		case *uint8:
-			fmt.Printf(i.format, *i.val.(*uint8))
-		case *uint16:
-			fmt.Printf(i.format, *i.val.(*uint16))
-		case *uint32:
-			fmt.Printf(i.format, *i.val.(*uint32))
-		case *uint64:
-			fmt.Printf(i.format, *i.val.(*uint64))
+	// To avoid the command list from being partially executed when the
+	// args fail to parse, queue them up and run all at once at the end.
+	queue := []func(){}
+
+	for len(os.Args) > 0 {
+		var cmdStr string
+		cmdStr, os.Args = os.Args[0], os.Args[1:]
+		if c, ok := readCmds[cmdStr]; ok {
+			// Parse arguments.
+			if len(os.Args) < 1 {
+				usage()
+			}
+			var addrStr string
+			addrStr, os.Args = os.Args[0], os.Args[1:]
+			addr, err := strconv.ParseUint(addrStr, 0, c.addrBits)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			queue = append(queue, func() {
+				// Read from addr and print.
+				data := newInt(0, c.valBits)
+				if err := c.f(int64(addr), data); err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("%s\n", data)
+			})
+		} else if c, ok := writeCmds[cmdStr]; ok {
+			// Parse arguments.
+			if len(os.Args) < 2 {
+				usage()
+			}
+			var addrStr, dataStr string
+			addrStr, dataStr, os.Args = os.Args[0], os.Args[1], os.Args[2:]
+			addr, err := strconv.ParseUint(addrStr, 0, c.addrBits)
+			if err != nil {
+				log.Fatal(err)
+			}
+			value, err := strconv.ParseUint(dataStr, 0, c.valBits)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			queue = append(queue, func() {
+				// Write data to addr.
+				data := newInt(value, c.valBits)
+				if err := c.f(int64(addr), data); err != nil {
+					log.Fatal(err)
+				}
+			})
+		} else {
+			usage()
 		}
+	}
 
+	// Run all commands.
+	for _, c := range queue {
+		c()
 	}
 }

@@ -10,6 +10,11 @@ import (
 
 // TestMountKexec runs an init which mounts a filesystem and kexecs a kernel.
 func TestMountKexec(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{

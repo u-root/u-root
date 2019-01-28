@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 type grepResult struct {
@@ -49,15 +50,16 @@ type oneGrep struct {
 }
 
 var (
-	match       = flag.Bool("v", true, "Print only non-matching lines")
-	recursive   = flag.Bool("r", false, "recursive")
-	noshowmatch = flag.Bool("l", false, "list only files")
-	quiet       = flag.Bool("q", false, "Don't print matches; exit on first match")
-	count       = flag.Bool("c", false, "Just show counts")
-	showname    bool
-	allGrep     = make(chan *oneGrep)
-	nGrep       int
-	matchCount  int
+	match           = flag.Bool("v", true, "Print only non-matching lines")
+	recursive       = flag.Bool("r", false, "recursive")
+	noshowmatch     = flag.Bool("l", false, "list only files")
+	quiet           = flag.Bool("q", false, "Don't print matches; exit on first match")
+	count           = flag.Bool("c", false, "Just show counts")
+	caseinsensitive = flag.Bool("i", false, "case-insensitive matching")
+	showname        bool
+	allGrep         = make(chan *oneGrep)
+	nGrep           int
+	matchCount      int
 )
 
 // grep reads data from the os.File embedded in grepCommand.
@@ -116,6 +118,9 @@ func main() {
 	a := flag.Args()
 	if len(a) > 0 {
 		r = a[0]
+	}
+	if *caseinsensitive && !strings.HasPrefix(r, "(?i)") {
+		r = "(?i)" + r
 	}
 	re := regexp.MustCompile(r)
 	// very special case, just stdin ...

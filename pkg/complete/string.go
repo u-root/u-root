@@ -23,13 +23,13 @@ func NewStringCompleter(s []string) Completer {
 
 // Complete returns a []string for each string of which the
 // passed in string is a prefix. The error for now is always nil.
-// If there is an exact match, per bash and other matching rules,
-// only that match is returned.
-func (f *StringCompleter) Complete(s string) ([]string, error) {
+// If there is an exact match, only that match is returned, 
+// which is arguably wrong.
+func (f *StringCompleter) Complete(s string) (string, []string, error) {
 	var names []string
 	for _, n := range f.Names {
 		if n == s {
-			return []string{s}, nil
+			return s, []string{}, nil
 		}
 		Debug("Check %v against %v", n, s)
 		if strings.HasPrefix(n, s) {
@@ -37,5 +37,5 @@ func (f *StringCompleter) Complete(s string) ([]string, error) {
 			names = append(names, n)
 		}
 	}
-	return names, nil
+	return "", names, nil
 }

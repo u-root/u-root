@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
@@ -33,13 +32,9 @@ type Multiboot struct {
 	cmdLine    string
 	bootloader string
 
-	// trampoline is a path to an executable blob, which should set machine
-	// to a specific state defined by multiboot v1 spec (will be removed in future releases).
+	// trampoline is a path to an executable blob, which contains a trampoline segment.
+	// Trampoline sets machine to a specific state defined by multiboot v1 spec.
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
-
-	// Trampoline should use a long word value stored right after "u-root-ebx-long" byte sequence
-	// as a value to be stored in ebx register and use a quad word value stored right after
-	// "u-root-ep-quad" as kernel entry point.
 	trampoline string
 
 	header Header
@@ -81,12 +76,12 @@ type memoryMaps []MemoryMap
 
 // Probe checks if file is multiboot v1 kernel.
 func Probe(file string) error {
-	f, err := os.Open(file)
+	b, err := readFile(file)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = parseHeader(f)
+	kernel := &kernelReader{buf: b}
+	_, err = parseHeader(kernel)
 	return err
 }
 
@@ -105,14 +100,13 @@ func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
 // Load loads and parses multiboot information from m.file.
 func (m *Multiboot) Load(debug bool) error {
 	log.Printf("Parsing file %v", m.file)
-	kernel, err := os.Open(m.file)
+	b, err := readFile(m.file)
 	if err != nil {
 		return err
 	}
-	defer kernel.Close()
-
+	kernel := kernelReader{buf: b}
 	log.Println("Parsing Multiboot Header")
-	if m.header, err = parseHeader(kernel); err != nil {
+	if m.header, err = parseHeader(&kernel); err != nil {
 		return fmt.Errorf("Error parsing headers: %v", err)
 	}
 

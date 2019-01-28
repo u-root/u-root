@@ -6,7 +6,7 @@ package multiboot
 
 import (
 	"bytes"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -40,16 +40,16 @@ func (m Multiboot) Description() (string, error) {
 	var modules []ModuleDesc
 	for i, mod := range m.loadedModules {
 		name := strings.Fields(m.modules[i])[0]
-		b, err := readModule(name)
+		b, err := readFile(name)
 		if err != nil {
 			return "", nil
 		}
-		hash := md5.Sum(b)
+		hash := sha256.Sum256(b)
 		modules = append(modules, ModuleDesc{
 			Start:   mod.Start,
 			End:     mod.End,
 			CmdLine: m.modules[i],
-			MD5:     fmt.Sprintf("%x", hash),
+			SHA256:  fmt.Sprintf("%x", hash),
 		})
 
 	}
@@ -82,7 +82,7 @@ type ModuleDesc struct {
 	Start   uint32 `json:"start"`
 	End     uint32 `json:"end"`
 	CmdLine string `json:"cmdline"`
-	MD5     string `json:"md5"`
+	SHA256  string `json:"sha256"`
 }
 
 type mmap struct {

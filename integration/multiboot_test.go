@@ -7,24 +7,25 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/multiboot"
 )
 
-func TestMultiboot(t *testing.T) {
+func testMultiboot(t *testing.T, kernel string) {
 	var serial wc
 	q, cleanup := QEMUTest(t, &Options{
 		Files: []string{
-			"/home/circleci/kernel:kernel",
+			fmt.Sprintf("/home/circleci/%v:kernel", kernel),
 		},
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/init",
 			"github.com/u-root/u-root/cmds/kexec",
 		},
 		Uinit: []string{
-			`kexec -l /kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
+			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 		},
 		SerialOutput: &serial,
 	})
@@ -61,5 +62,18 @@ func TestMultiboot(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("kexec failed: got %v, want %v", got, want)
+	}
+}
+
+func TestMultiboot(t *testing.T) {
+	// TODO: support arm
+	if TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", TestArch())
+	}
+
+	for _, kernel := range []string{"/kernel", "/kernel.gz"} {
+		t.Run(kernel, func(t *testing.T) {
+			testMultiboot(t, kernel)
+		})
 	}
 }
