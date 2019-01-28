@@ -67,7 +67,7 @@ func Parse(f io.ReadSeeker) (*ZImage, error) {
 		return nil, err
 	}
 	if z.Header.Magic != Magic {
-		return z, fmt.Errorf("invalid zImage magic, got %#v, expected %#v",
+		return z, fmt.Errorf("invalid zImage magic, got %#08x, expected %#08x",
 			z.Header.Magic, Magic)
 	}
 	if z.Header.Endianess != Endianess {
