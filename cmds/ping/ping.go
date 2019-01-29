@@ -62,21 +62,6 @@ func optwithoutparam() {
 	usage()
 }
 
-func beatifulLatency(before time.Time) (latency string) {
-	now := float64(time.Since(before).Nanoseconds())
-
-	switch {
-	case now > 1e6:
-		latency = fmt.Sprintf("%.2f ms", now/1e6)
-	case now > 1e3:
-		latency = fmt.Sprintf("%.2f µ", now/1e3)
-	default:
-		latency = fmt.Sprintf("%v ns", now)
-	}
-
-	return latency
-}
-
 func cksum(bs []byte) uint16 {
 	sum := uint32(0)
 
@@ -117,13 +102,14 @@ func ping1(netname string, host string, i uint64) (string, error) {
 	}
 
 	// Get ICMP Echo Reply
-	before := time.Now()
 	c.SetDeadline(time.Now().Add(waitFor))
 	rmsg := make([]byte, *packetSize+256)
+	before := time.Now()
 	amt, rerr := c.Read(rmsg[:])
 	if rerr != nil {
 		return "", fmt.Errorf("Read failed: %v", rerr)
 	}
+	latency := time.Since(before)
 	if (rmsg[0] & 0x0F) == 6 {
 		rmsg = rmsg[ICMP_ECHO_REPLY_HEADER_IPV6_OFFSET:]
 	} else {
@@ -137,7 +123,6 @@ func ping1(netname string, host string, i uint64) (string, error) {
 	if cks != cksum(rmsg) {
 		return "", fmt.Errorf("Bad ICMP checksum: %v (expected %v)", cks, cksum(rmsg))
 	}
-	latency := beatifulLatency(before)
 	id := binary.BigEndian.Uint16(rmsg[4:])
 	seq := binary.BigEndian.Uint16(rmsg[6:])
 	rseq := uint64(id)<<16 + uint64(seq)
