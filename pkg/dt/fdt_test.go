@@ -28,13 +28,13 @@ func TestRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	z, err := Read(f)
+	fdt, err := ReadFDT(f)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(z, testData) {
-		got, err := json.MarshalIndent(z, "", "    ")
+	if !reflect.DeepEqual(fdt, testData) {
+		got, err := json.MarshalIndent(fdt, "", "    ")
 		if err != nil {
 			t.Fatal(err)
 		}

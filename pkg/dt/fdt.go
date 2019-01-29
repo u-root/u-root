@@ -69,8 +69,8 @@ type ReserveEntry struct {
 	Size    uint64
 }
 
-// Read an FDT from an io.ReaderSeeker.
-func Read(f io.ReadSeeker) (*FDT, error) {
+// ReadFDT reads FDT from an io.ReaderSeeker.
+func ReadFDT(f io.ReadSeeker) (*FDT, error) {
 	fdt := &FDT{}
 	if err := fdt.readHeader(f); err != nil {
 		return nil, err
