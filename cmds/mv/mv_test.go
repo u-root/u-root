@@ -234,6 +234,53 @@ func TestMvUpdate(t *testing.T) {
 	}
 }
 
+func TestMvNoClobber(t *testing.T) {
+	*noClobber = true
+	d, err := setup()
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(d)
+	t.Logf("Testing mv -n...")
+
+	// Check that it doesn't override files with -n switch
+	{
+		files := []string{"-n", filepath.Join(d, old.n), filepath.Join(d, new.n)}
+		res := testutil.Command(t, files...)
+		_, err = res.CombinedOutput()
+		if err = testutil.IsExitCode(err, 0); err != nil {
+			t.Error(err)
+		}
+		newContent, err := ioutil.ReadFile(filepath.Join(d, new.n))
+		if err != nil {
+			t.Error(err)
+		}
+		if bytes.Equal(newContent, old.c) {
+			t.Error("File was overwritten. Should not happen with -u.")
+		}
+	}
+
+	// Check that it does mv files with -u switch
+	{
+		files := []string{"-n", filepath.Join(d, new.n), filepath.Join(d, "hi3.txt")}
+		res := testutil.Command(t, files...)
+		_, err = res.CombinedOutput()
+		if err = testutil.IsExitCode(err, 0); err != nil {
+			t.Error(err)
+		}
+		newContent, err := ioutil.ReadFile(filepath.Join(d, "hi3.txt"))
+		if err != nil {
+			t.Error(err)
+		}
+		if !bytes.Equal(newContent, new.c) {
+			t.Error("File was not moved. Should happen with -u.")
+		}
+		if _, err := os.Lstat(filepath.Join(d, old.n)); err != nil {
+			t.Error("File was copied but not moved.")
+		}
+	}
+}
+
 func TestMain(m *testing.M) {
 	testutil.Run(m, main)
 }

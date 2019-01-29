@@ -1,0 +1,1142 @@
+{
+    "Header": {
+        "Magic": 3490578157,
+        "TotalSize": 1048576,
+        "OffDtStruct": 64,
+        "OffDtStrings": 6816,
+        "OffMemRsvmap": 48,
+        "Version": 17,
+        "LastCompVersion": 16,
+        "BootCpuidPhys": 0,
+        "SizeDtStrings": 463,
+        "SizeDtStruct": 6752
+    },
+    "ReserveEntries": [],
+    "RootNode": {
+        "Name": "",
+        "Properties": [
+            {
+                "Name": "interrupt-parent",
+                "Value": "AACAAQ=="
+            },
+            {
+                "Name": "#size-cells",
+                "Value": "AAAAAg=="
+            },
+            {
+                "Name": "#address-cells",
+                "Value": "AAAAAg=="
+            },
+            {
+                "Name": "compatible",
+                "Value": "bGludXgsZHVtbXktdmlydAA="
+            }
+        ],
+        "Children": [
+            {
+                "Name": "psci",
+                "Properties": [
+                    {
+                        "Name": "migrate",
+                        "Value": "hAAABQ=="
+                    },
+                    {
+                        "Name": "cpu_on",
+                        "Value": "hAAAAw=="
+                    },
+                    {
+                        "Name": "cpu_off",
+                        "Value": "hAAAAg=="
+                    },
+                    {
+                        "Name": "cpu_suspend",
+                        "Value": "hAAAAQ=="
+                    },
+                    {
+                        "Name": "method",
+                        "Value": "aHZjAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLHBzY2ktMC4yAGFybSxwc2NpAA=="
+                    }
+                ]
+            },
+            {
+                "Name": "memory@40000000",
+                "Properties": [
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAEAAAAAAAAAACAAAAA=="
+                    },
+                    {
+                        "Name": "device_type",
+                        "Value": "bWVtb3J5AA=="
+                    }
+                ]
+            },
+            {
+                "Name": "platform@c000000",
+                "Properties": [
+                    {
+                        "Name": "interrupt-parent",
+                        "Value": "AACAAQ=="
+                    },
+                    {
+                        "Name": "ranges",
+                        "Value": "AAAAAAAAAAAMAAAAAgAAAA=="
+                    },
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "cWVtdSxwbGF0Zm9ybQBzaW1wbGUtYnVzAA=="
+                    }
+                ]
+            },
+            {
+                "Name": "fw-cfg@9020000",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAkCAAAAAAAAAAAAGA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "cWVtdSxmdy1jZmctbW1pbwA="
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000000",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABAAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAAAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000200",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABEAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAAgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000400",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABIAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoABAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000600",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABMAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoABgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000800",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABQAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoACAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000a00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABUAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoACgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000c00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABYAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoADAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a000e00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABcAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoADgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001000",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABgAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAEAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001200",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABkAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAEgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001400",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABoAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAFAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001600",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABsAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAFgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001800",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAABwAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAGAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001a00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAB0AAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAGgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001c00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAB4AAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAHAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a001e00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAB8AAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAHgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002000",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACAAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAIAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002200",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACEAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAIgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002400",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACIAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAJAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002600",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACMAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAJgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002800",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACQAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAKAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002a00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACUAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAKgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002c00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACYAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoALAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a002e00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACcAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoALgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003000",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACgAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAMAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003200",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACkAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAMgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003400",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACoAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoANAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003600",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACsAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoANgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003800",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAACwAAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAOAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003a00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAC0AAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAOgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003c00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAC4AAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAPAAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "virtio_mmio@a003e00",
+                "Properties": [
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAC8AAAAB"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAoAPgAAAAAAAAACAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "dmlydGlvLG1taW8A"
+                    }
+                ]
+            },
+            {
+                "Name": "gpio-keys",
+                "Properties": [
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "Z3Bpby1rZXlzAA=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "poweroff",
+                        "Properties": [
+                            {
+                                "Name": "gpios",
+                                "Value": "AACAAwAAAAMAAAAA"
+                            },
+                            {
+                                "Name": "linux,code",
+                                "Value": "AAAAdA=="
+                            },
+                            {
+                                "Name": "label",
+                                "Value": "R1BJTyBLZXkgUG93ZXJvZmYA"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "pl061@9030000",
+                "Properties": [
+                    {
+                        "Name": "phandle",
+                        "Value": "AACAAw=="
+                    },
+                    {
+                        "Name": "clock-names",
+                        "Value": "YXBiX3BjbGsA"
+                    },
+                    {
+                        "Name": "clocks",
+                        "Value": "AACAAA=="
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAAcAAAAE"
+                    },
+                    {
+                        "Name": "gpio-controller",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "#gpio-cells",
+                        "Value": "AAAAAg=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLHBsMDYxAGFybSxwcmltZWNlbGwA"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAkDAAAAAAAAAAAQAA=="
+                    }
+                ]
+            },
+            {
+                "Name": "pcie@10000000",
+                "Properties": [
+                    {
+                        "Name": "interrupt-map-mask",
+                        "Value": "AAAYAAAAAAAAAAAAAAAABw=="
+                    },
+                    {
+                        "Name": "interrupt-map",
+                        "Value": "AAAAAAAAAAAAAAAAAAAAAQAAgAEAAAAAAAAAAAAAAAAAAAADAAAABAAAAAAAAAAAAAAAAAAAAAIAAIABAAAAAAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAAAAAADAACAAQAAAAAAAAAAAAAAAAAAAAUAAAAEAAAAAAAAAAAAAAAAAAAABAAAgAEAAAAAAAAAAAAAAAAAAAAGAAAABAAACAAAAAAAAAAAAAAAAAEAAIABAAAAAAAAAAAAAAAAAAAABAAAAAQAAAgAAAAAAAAAAAAAAAACAACAAQAAAAAAAAAAAAAAAAAAAAUAAAAEAAAIAAAAAAAAAAAAAAAAAwAAgAEAAAAAAAAAAAAAAAAAAAAGAAAABAAACAAAAAAAAAAAAAAAAAQAAIABAAAAAAAAAAAAAAAAAAAAAwAAAAQAABAAAAAAAAAAAAAAAAABAACAAQAAAAAAAAAAAAAAAAAAAAUAAAAEAAAQAAAAAAAAAAAAAAAAAgAAgAEAAAAAAAAAAAAAAAAAAAAGAAAABAAAEAAAAAAAAAAAAAAAAAMAAIABAAAAAAAAAAAAAAAAAAAAAwAAAAQAABAAAAAAAAAAAAAAAAAEAACAAQAAAAAAAAAAAAAAAAAAAAQAAAAEAAAYAAAAAAAAAAAAAAAAAQAAgAEAAAAAAAAAAAAAAAAAAAAGAAAABAAAGAAAAAAAAAAAAAAAAAIAAIABAAAAAAAAAAAAAAAAAAAAAwAAAAQAABgAAAAAAAAAAAAAAAADAACAAQAAAAAAAAAAAAAAAAAAAAQAAAAEAAAYAAAAAAAAAAAAAAAABAAAgAEAAAAAAAAAAAAAAAAAAAAFAAAABA=="
+                    },
+                    {
+                        "Name": "#interrupt-cells",
+                        "Value": "AAAAAQ=="
+                    },
+                    {
+                        "Name": "ranges",
+                        "Value": "AQAAAAAAAAAAAAAAAAAAAD7/AAAAAAAAAAEAAAIAAAAAAAAAEAAAAAAAAAAQAAAAAAAAAC7/AAADAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAA"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAQBAAAAAAAAAAEAAAAA=="
+                    },
+                    {
+                        "Name": "msi-parent",
+                        "Value": "AACAAg=="
+                    },
+                    {
+                        "Name": "dma-coherent",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "bus-range",
+                        "Value": "AAAAAAAAAP8="
+                    },
+                    {
+                        "Name": "linux,pci-domain",
+                        "Value": "AAAAAA=="
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAg=="
+                    },
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAw=="
+                    },
+                    {
+                        "Name": "device_type",
+                        "Value": "cGNpAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "cGNpLWhvc3QtZWNhbS1nZW5lcmljAA=="
+                    }
+                ]
+            },
+            {
+                "Name": "pl031@9010000",
+                "Properties": [
+                    {
+                        "Name": "clock-names",
+                        "Value": "YXBiX3BjbGsA"
+                    },
+                    {
+                        "Name": "clocks",
+                        "Value": "AACAAA=="
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAAIAAAAE"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAkBAAAAAAAAAAAQAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLHBsMDMxAGFybSxwcmltZWNlbGwA"
+                    }
+                ]
+            },
+            {
+                "Name": "pl011@9000000",
+                "Properties": [
+                    {
+                        "Name": "clock-names",
+                        "Value": "dWFydGNsawBhcGJfcGNsawA="
+                    },
+                    {
+                        "Name": "clocks",
+                        "Value": "AACAAAAAgAA="
+                    },
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAAAAAAEAAAAE"
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAkAAAAAAAAAAAAQAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLHBsMDExAGFybSxwcmltZWNlbGwA"
+                    }
+                ]
+            },
+            {
+                "Name": "intc@8000000",
+                "Properties": [
+                    {
+                        "Name": "phandle",
+                        "Value": "AACAAQ=="
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAgAAAAAAAAAAAEAAAAAAAAIAQAAAAAAAAABAAA="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLGNvcnRleC1hMTUtZ2ljAA=="
+                    },
+                    {
+                        "Name": "ranges",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAg=="
+                    },
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAg=="
+                    },
+                    {
+                        "Name": "interrupt-controller",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "#interrupt-cells",
+                        "Value": "AAAAAw=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "v2m@8020000",
+                        "Properties": [
+                            {
+                                "Name": "phandle",
+                                "Value": "AACAAg=="
+                            },
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAAgCAAAAAAAAAAAQAA=="
+                            },
+                            {
+                                "Name": "msi-controller",
+                                "Value": ""
+                            },
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGdpYy12Mm0tZnJhbWUA"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "flash@0",
+                "Properties": [
+                    {
+                        "Name": "bank-width",
+                        "Value": "AAAABA=="
+                    },
+                    {
+                        "Name": "reg",
+                        "Value": "AAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAA="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "Y2ZpLWZsYXNoAA=="
+                    }
+                ]
+            },
+            {
+                "Name": "cpus",
+                "Properties": [
+                    {
+                        "Name": "#size-cells",
+                        "Value": "AAAAAA=="
+                    },
+                    {
+                        "Name": "#address-cells",
+                        "Value": "AAAAAQ=="
+                    }
+                ],
+                "Children": [
+                    {
+                        "Name": "cpu@0",
+                        "Properties": [
+                            {
+                                "Name": "reg",
+                                "Value": "AAAAAA=="
+                            },
+                            {
+                                "Name": "compatible",
+                                "Value": "YXJtLGNvcnRleC1hMTUA"
+                            },
+                            {
+                                "Name": "device_type",
+                                "Value": "Y3B1AA=="
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "Name": "timer",
+                "Properties": [
+                    {
+                        "Name": "interrupts",
+                        "Value": "AAAAAQAAAA0AAAEEAAAAAQAAAA4AAAEEAAAAAQAAAAsAAAEEAAAAAQAAAAoAAAEE"
+                    },
+                    {
+                        "Name": "always-on",
+                        "Value": ""
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "YXJtLGFybXY3LXRpbWVyAA=="
+                    }
+                ]
+            },
+            {
+                "Name": "apb-pclk",
+                "Properties": [
+                    {
+                        "Name": "phandle",
+                        "Value": "AACAAA=="
+                    },
+                    {
+                        "Name": "clock-output-names",
+                        "Value": "Y2xrMjRtaHoA"
+                    },
+                    {
+                        "Name": "clock-frequency",
+                        "Value": "AW42AA=="
+                    },
+                    {
+                        "Name": "#clock-cells",
+                        "Value": "AAAAAA=="
+                    },
+                    {
+                        "Name": "compatible",
+                        "Value": "Zml4ZWQtY2xvY2sA"
+                    }
+                ]
+            },
+            {
+                "Name": "chosen",
+                "Properties": [
+                    {
+                        "Name": "linux,initrd-end",
+                        "Value": "RMuPxA=="
+                    },
+                    {
+                        "Name": "linux,initrd-start",
+                        "Value": "RAAAAA=="
+                    },
+                    {
+                        "Name": "stdout-path",
+                        "Value": "L3BsMDExQDkwMDAwMDAA"
+                    }
+                ]
+            }
+        ]
+    }
+}

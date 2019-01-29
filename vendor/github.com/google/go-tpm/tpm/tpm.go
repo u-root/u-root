@@ -257,7 +257,7 @@ func newOSAPSession(rw io.ReadWriter, entityType uint16, entityValue tpmutil.Han
 	hm.Write(osapData)
 	// Note that crypto/hash.Sum returns a slice rather than an array, so we
 	// have to copy this into an array to make sure that serialization doesn't
-	// preprend a length in tpmutil.Pack().
+	// prepend a length in tpmutil.Pack().
 	sharedSecretBytes := hm.Sum(nil)
 	copy(sharedSecret[:], sharedSecretBytes)
 	return sharedSecret, osapr, nil
@@ -548,14 +548,14 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 	}
 
 	if pk != nil {
-		pubk, err := convertPubKey(pk)
+		pubKey, err := convertPubKey(pk)
 		if err != nil {
 			return nil, err
 		}
 
 		// We can't pack the pair of values directly, since the label is
 		// included directly as bytes, without any length.
-		fullpkb, err := tpmutil.Pack(pubk)
+		fullpkb, err := tpmutil.Pack(pubKey)
 		if err != nil {
 			return nil, err
 		}
@@ -564,21 +564,21 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 		caDigest = sha1.Sum(caDigestBytes)
 	}
 
-	rsaAIKParms := rsaKeyParms{
+	rsaAIKParams := rsaKeyParams{
 		KeyLength: 2048,
 		NumPrimes: 2,
 		//Exponent:  big.NewInt(0x10001).Bytes(), // 65537. Implicit?
 	}
-	packedParms, err := tpmutil.Pack(rsaAIKParms)
+	packedParams, err := tpmutil.Pack(rsaAIKParams)
 	if err != nil {
 		return nil, err
 	}
 
-	aikParms := keyParms{
+	aikParams := keyParams{
 		AlgID:     algRSA,
 		EncScheme: esNone,
 		SigScheme: ssRSASaPKCS1v15SHA1,
-		Parms:     packedParms,
+		Params:     packedParams,
 	}
 
 	aik := &key{
@@ -586,7 +586,7 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 		KeyUsage:       keyIdentity,
 		KeyFlags:       0,
 		AuthDataUsage:  authAlways,
-		AlgorithmParms: aikParms,
+		AlgorithmParams: aikParams,
 	}
 
 	// The digest input for MakeIdentity authentication is
@@ -619,7 +619,7 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 		return nil, err
 	}
 
-	// TODO(tmroeder): check the signature against the pubek.
+	// TODO(tmroeder): check the signature against the pubEK.
 	blob, err := tpmutil.Pack(k)
 	if err != nil {
 		return nil, err
@@ -818,7 +818,7 @@ func TakeOwnership(rw io.ReadWriter, newOwnerAuth digest, newSRKAuth digest, pub
 	// - Sig must be None
 	// - Key usage must be Storage
 	// - Key must not be migratable
-	srkRSAParams := rsaKeyParms{
+	srkRSAParams := rsaKeyParams{
 		KeyLength: 2048,
 		NumPrimes: 2,
 	}
@@ -826,18 +826,18 @@ func TakeOwnership(rw io.ReadWriter, newOwnerAuth digest, newSRKAuth digest, pub
 	if err != nil {
 		return err
 	}
-	srkParams := keyParms{
+	srkParams := keyParams{
 		AlgID:     algRSA,
 		EncScheme: esRSAEsOAEPSHA1MGF1,
 		SigScheme: ssNone,
-		Parms:     srkpb,
+		Params:     srkpb,
 	}
 	srk := &key{
 		Version:        0x01010000,
 		KeyUsage:       keyStorage,
 		KeyFlags:       0,
 		AuthDataUsage:  authAlways,
-		AlgorithmParms: srkParams,
+		AlgorithmParams: srkParams,
 	}
 
 	// Get command auth using OIAP with the new owner auth.
@@ -899,7 +899,7 @@ func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth digest, migration
 		encMigrationAuth[i] = encAuthDataKey[i] ^ migrationAuth[i]
 	}
 
-	rParams := rsaKeyParms{
+	rParams := rsaKeyParams{
 		KeyLength: 2048,
 		NumPrimes: 2,
 	}
@@ -925,11 +925,11 @@ func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth digest, migration
 		KeyUsage:      keySigning,
 		KeyFlags:      0,
 		AuthDataUsage: authAlways,
-		AlgorithmParms: keyParms{
+		AlgorithmParams: keyParams{
 			AlgID:     algRSA,
 			EncScheme: esNone,
 			SigScheme: ssRSASaPKCS1v15DER,
-			Parms:     rParamsPacked,
+			Params:     rParamsPacked,
 		},
 		PCRInfo: pcrInfoBytes,
 	}

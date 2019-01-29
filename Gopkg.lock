@@ -49,8 +49,7 @@
   revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
 
 [[projects]]
-  branch = "master"
-  digest = "1:ad759e987dbb97e0a2bccce708e30ba1cc9a0f9931902c598b095b8aa6a91361"
+  digest = "1:a4f7dd66f23555c3618bf8d3f2eb68631276e9e9ff18e10978aa2a7fba10a22f"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
@@ -58,7 +57,8 @@
     "tpmutil/tbs",
   ]
   pruneopts = "NUT"
-  revision = "316d2c3af8a21149ef7630ccb8b8a75ecb0af6d2"
+  revision = "4bb2f51305cbb7ca075f781ededfa879e26dc843"
+  version = "v0.1.0"
 
 [[projects]]
   branch = "master"
@@ -78,7 +78,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c4784c7ea68629f4dfb9da8f8b2c5be5ca3c01abfc6c7d9cc332d7a952dcdc6c"
+  digest = "1:5ae012a655f8f5ceca6b2a95d26fe89b143ad4efdf0c08280e419933366bea67"
   name = "github.com/google/netstack"
   packages = [
     "ilist",
@@ -89,7 +89,7 @@
     "waiter",
   ]
   pruneopts = "NUT"
-  revision = "4e2c9778d4e522fbda04c390af75533e2e118688"
+  revision = "47d86e38c9148b4c03ed2a2058aa05724adecf24"
 
 [[projects]]
   digest = "1:c01767916c59f084bb7c41a7d5877c0f3099b1595cfa066e84ec6ad6b084dd89"
@@ -193,11 +193,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:57b12b43d385bb8b585c5cef4a2e7a6d91d78f3a15c1151e6f0ce0122c3997cc"
+  digest = "1:6022d8987643a603f69616699ba517019b353c0f6fd521372d465f3acbf081d5"
   name = "github.com/nsf/termbox-go"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "60ab7e3d12ed91bc1b2486559c4b3a6b62297577"
+  revision = "02980233997d87bbda048393d47b4d453f7a398d"
 
 [[projects]]
   branch = "master"
@@ -239,14 +239,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d4458b17fd58217ec1f754eab39f0b9b66d75e7c19ca11a0477e3922b1c60f5a"
+  digest = "1:ecd40121b90217c9dbad17001924b2f477faf2dc7413ff6a81ccff3da4a360a8"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "e37f4b431a44d87d6301065bb908a1813c594b82"
+  revision = "1e2e7ab670e05e2fd29bf5d0bcab2f9907e9f9f4"
 
 [[projects]]
   branch = "master"
@@ -258,7 +258,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1ce7902fc9abeca23799b9027dd3dd2cf6839a5e282211ba14849767d4956b59"
+  digest = "1:282968c50f595583afbf43ec10f13e2f7ed1f9b22ad0e0963def48e728bc5b49"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -281,11 +281,11 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "8d7daa0c54b357f3071e11eaef7efc4e19a417e2"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
 
 [[projects]]
   branch = "master"
-  digest = "1:1cea5c02079247fde34247c1a1b97ff8e450d0869bb712414a90703eb31fb354"
+  digest = "1:81805c86477e31f08c391598e54e0dae2a71cbbb138ed27ee554177541721100"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -294,22 +294,22 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
+  revision = "4b62a64f59f73840b9ab79204c94fee61cd1ba2c"
 
 [[projects]]
   branch = "master"
-  digest = "1:07aaaa686ca4f19afc6a85c83991253218d1582fb536078ae2fcde1df0d0ec91"
+  digest = "1:a669a86ec285537ab21ad4440697eb657a1387727537c3646e8bd4de66d291ec"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "82a175fd1598e8a172e58ebdf5ed262bb29129e5"
+  revision = "b90733256f2e882e81d52f9126de08df5615afd9"
 
 [[projects]]
   branch = "master"
-  digest = "1:4ec6135045fa6d5f7eddba2aad273581ac6f66e4e27ddc920affc104b4b9044e"
+  digest = "1:e97f89df92c40f9815adfea740acf7a7c685184295c470ec22322879d394a896"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -322,18 +322,19 @@
     "imports",
     "internal/fastwalk",
     "internal/gopathwalk",
+    "internal/module",
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "ca9055ed7d0470e61b81778f76637846e891ff60"
+  revision = "cc6a436ffe6b424fffa1d91862c9b664d8407828"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
   name = "google.golang.org/grpc"
   packages = ["codes"]
   pruneopts = "NUT"
-  revision = "df014850f6dee74ba2fc94874043a9f3f75fbfd8"
-  version = "v1.17.0"
+  revision = "a02b0774206b209466313a0b525d2c738fe407eb"
+  version = "v1.18.0"
 
 [[projects]]
   digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"

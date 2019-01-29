@@ -1,7 +1,7 @@
 # Circleci Images
 
 Each folder contains the Dockerfile for running integration tests with a
-different architectures.
+different architecture.
 
 
 ## Build and Run
@@ -16,10 +16,15 @@ See previously built images at:
 
     https://hub.docker.com/r/uroottest/test-image-$GOARCH/tags
 
+Note: If `id | grep docker` contains no matches, your user is not a member of
+the docker group, so you will need to run each of the following `docker`
+commands with `sudo`.
+
 Build and run a new image:
 
-    sudo docker build . -t uroottest/test-image-$GOARCH:$VERSION
-    sudo docker run --rm -it uroottest/test-image-$GOARCH:$VERSION
+    cd test-image-$GOARCH
+    docker build . -t uroottest/test-image-$GOARCH:$VERSION
+    docker run --rm -it uroottest/test-image-$GOARCH:$VERSION
 
 
 ## Push
@@ -27,7 +32,10 @@ Build and run a new image:
 Push:
 
     # Ping Ryan O'Leary (on slack or via email) for push access.
-    sudo docker push uroottest/test-image-$GOARCH:$VERSION
+    docker login
+    docker push uroottest/test-image-$GOARCH:$VERSION
+
+Remember to update the image version in `.circleci/config.yml`.
 
 More instructions:
 
