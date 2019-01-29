@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	update = flag.Bool("u", false, "move only when the SOURCE file is newer than the destination file or when the destination file is missing")
+	update    = flag.Bool("u", false, "move only when the SOURCE file is newer than the destination file or when the destination file is missing")
+	noClobber = flag.Bool("n", false, "do not overwrite an existing file")
 )
 
 func usage() {
@@ -32,6 +33,15 @@ func usage() {
 }
 
 func moveFile(source string, dest string) error {
+
+	if *noClobber {
+		_, err := os.Lstat(dest)
+		if !os.IsNotExist(err) {
+			// This is either a real error if something unexpected happen during Lstat or nil
+			return err
+		}
+	}
+
 	if *update {
 		sourceInfo, err := os.Lstat(source)
 		if err != nil {
