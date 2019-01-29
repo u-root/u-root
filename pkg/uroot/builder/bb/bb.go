@@ -259,6 +259,11 @@ func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer t
 		return err
 	}
 	dest := filepath.Join(buildp.Dir, ".bb")
+	// If .bb directory already exists, delete it. This will prevent stale
+	// files from being included in the build.
+	if err := os.RemoveAll(dest); err != nil {
+		return fmt.Errorf("error removing stale directory %q: %v", dest, err)
+	}
 	return p.Rewrite(dest, bbImportPath)
 }
 
