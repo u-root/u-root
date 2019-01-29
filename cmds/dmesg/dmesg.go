@@ -16,12 +16,11 @@ import (
 	"flag"
 	"log"
 	"os"
-	"syscall"
-	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
-	_SYSLOG_ACTION_READ       = 2
 	_SYSLOG_ACTION_READ_ALL   = 3
 	_SYSLOG_ACTION_READ_CLEAR = 4
 	_SYSLOG_ACTION_CLEAR      = 5
@@ -44,7 +43,7 @@ func main() {
 		log.Fatalf("cannot specify both -clear and -read-clear")
 	}
 
-	level := uintptr(_SYSLOG_ACTION_READ_ALL)
+	level := _SYSLOG_ACTION_READ_ALL
 	if clear {
 		level = _SYSLOG_ACTION_CLEAR
 	}
@@ -53,8 +52,8 @@ func main() {
 	}
 
 	b := make([]byte, 256*1024)
-	amt, _, err := syscall.Syscall(syscall.SYS_SYSLOG, level, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)))
-	if err != 0 {
+	amt, err := unix.Klogctl(level, b)
+	if err != nil {
 		log.Fatalf("syslog failed: %v", err)
 	}
 
