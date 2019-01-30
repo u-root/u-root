@@ -25,8 +25,9 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 		flags |= unix.KEXEC_FILE_NO_INITRAMFS
 	}
 
-	if rsdp, _ := util.GetRSDP(); rsdp != "" {
-		cmdline += " acpi_rsdp=" + rsdp
+	if rsdp, _ := util.GetRSDP(); len(rsdp) != 0 {
+		// Prepend the RSDP.
+		cmdline = fmt.Sprintf("acpi_rsdp=%s %s", rsdp, cmdline)
 	}
 
 	if err := unix.KexecFileLoad(int(kernel.Fd()), ramfsfd, cmdline, flags); err != nil {
