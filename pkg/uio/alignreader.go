@@ -15,7 +15,7 @@ type AlignReader struct {
 	N int
 }
 
-// Read reads from an io.Reader.
+// Read reads from the underlying io.Reader.
 func (r *AlignReader) Read(b []byte) (int, error) {
 	n, err := r.R.Read(b)
 	r.N += n

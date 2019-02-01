@@ -54,6 +54,19 @@ type Node struct {
 	Children   []*Node    `json:",omitempty"`
 }
 
+// Walk calls f on a Node and alls its descendents.
+func (n *Node) Walk(f func(*Node) error) error {
+	if err := f(n); err != nil {
+		return err
+	}
+	for _, child := range n.Children {
+		if err := child.Walk(f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Property is a name-value pair. Note the PropertyType of Value is not
 // encoded.
 type Property struct {

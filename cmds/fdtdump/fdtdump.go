@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	asJSON = flag.Bool("json", false, "Pring json with base64 encoded values.")
+	asJSON = flag.Bool("json", false, "Print json with base64 encoded values.")
 )
 
 func main() {
