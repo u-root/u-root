@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"io"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 const (
@@ -181,16 +183,21 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 
 	// Buffer file so we don't perform a bajillion syscalls when looking for
 	// null-terminating characters.
-	b := bufio.NewReader(&io.LimitedReader{R: f, N: int64(fdt.Header.SizeDtStruct)})
-	off := 0 // byte read
+	r := &uio.AlignReader{
+		R: bufio.NewReader(
+			&io.LimitedReader{
+				R: f,
+				N: int64(fdt.Header.SizeDtStruct),
+			},
+		),
+	}
 
 	stack := []*Node{}
 	for {
 		var t token
-		if err := binary.Read(b, binary.BigEndian, &t); err != nil {
+		if err := binary.Read(r, binary.BigEndian, &t); err != nil {
 			return err
 		}
-		off += int(unsafe.Sizeof(t))
 		switch t {
 		case tokenBeginNode:
 			// Push new node onto the stack.
@@ -211,7 +218,7 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 			// The name is a null-terminating string.
 			for {
 				c := make([]byte, 1)
-				if _, err := io.ReadFull(b, c); err != nil {
+				if _, err := io.ReadFull(r, c); err != nil {
 					return err
 				} else if c[0] == 0 {
 					break
@@ -219,7 +226,6 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 					child.Name += string(c[0])
 				}
 			}
-			off += len(child.Name) + 1
 
 		case tokenEndNode:
 			if len(stack) == 0 {
@@ -232,10 +238,9 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 			pHeader := struct {
 				Len, Nameoff uint32
 			}{}
-			if err := binary.Read(b, binary.BigEndian, &pHeader); err != nil {
+			if err := binary.Read(r, binary.BigEndian, &pHeader); err != nil {
 				return err
 			}
-			off += int(unsafe.Sizeof(pHeader))
 			if pHeader.Nameoff >= uint32(len(strs)) {
 				return fmt.Errorf(
 					"name offset is larger than strings block: %#x >= %#x",
@@ -251,11 +256,10 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 				Name:  string(strs[pHeader.Nameoff : pHeader.Nameoff+uint32(null)]),
 				Value: make([]byte, pHeader.Len),
 			}
-			n, err := io.ReadFull(b, p.Value)
+			_, err := io.ReadFull(r, p.Value)
 			if err != nil {
 				return err
 			}
-			off += n
 			if len(stack) == 0 {
 				return fmt.Errorf("property %q appears outside a node", p.Name)
 			}
@@ -265,10 +269,10 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 		case tokenNop:
 
 		case tokenEnd:
-			if uint32(off) < fdt.Header.SizeDtStruct {
+			if uint32(r.N) < fdt.Header.SizeDtStruct {
 				return fmt.Errorf(
 					"extra data at end of structure block, %#x < %#x",
-					uint32(off), fdt.Header.SizeDtStruct)
+					uint32(r.N), fdt.Header.SizeDtStruct)
 			}
 			if fdt.RootNode == nil {
 				return errors.New("no root node")
@@ -279,18 +283,15 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 			return fmt.Errorf("undefined token %d", t)
 		}
 
-		// Pad to four bytes.
-		if off%4 != 0 {
-			pad := make([]byte, 4-off%4)
-			if _, err := io.ReadFull(b, pad); err != nil {
-				return err
-			}
-			off += len(pad)
-			for _, v := range pad {
-				if v != 0 {
-					// TODO: Some of the padding is not zero. Is this a mistake?
-					//return fmt.Errorf("padding is non-zero: %d", v)
-				}
+		// Align to four bytes.
+		pad, err := r.Align(4)
+		if err != nil {
+			return err
+		}
+		for _, v := range pad {
+			if v != 0 {
+				// TODO: Some of the padding is not zero. Is this a mistake?
+				//return fmt.Errorf("padding is non-zero: %d", v)
 			}
 		}
 	}
