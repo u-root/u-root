@@ -19,7 +19,7 @@ import (
 
 const (
 	// Magic value seen in the FDT Header.
-	Magic = 0xd00dfeed
+	Magic uint32 = 0xd00dfeed
 
 	// MaxTotalSize is a limitation imposed by this implementation. This
 	// prevents the integers from wrapping around. Typically, the total size is
@@ -31,10 +31,10 @@ type token uint32
 
 const (
 	tokenBeginNode token = 0x1
-	tokenEndNode         = 0x2
-	tokenProp            = 0x3
-	tokenNop             = 0x4
-	tokenEnd             = 0x9
+	tokenEndNode   token = 0x2
+	tokenProp      token = 0x3
+	tokenNop       token = 0x4
+	tokenEnd       token = 0x9
 )
 
 // FDT contains the parsed contents of a Flattend Device Tree (.dtb).
@@ -297,9 +297,120 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 	}
 }
 
+func align4(x int) uint32 {
+	return uint32((x + 0x3) &^ 0x3)
+}
+
+func align16(x int) uint32 {
+	return uint32((x + 0xf) &^ 0xf)
+}
+
 // Write marshals the FDT to an io.Writer and returns the size.
-// TODO: implement
 func (fdt *FDT) Write(f io.Writer) (int, error) {
-	// TODO: implement
-	return -1, errors.New("not yet implemented")
+	// Create string block and offset map.
+	strs := []byte{}
+	strOff := map[string]uint32{}
+	fdt.RootNode.Walk(func(n *Node) error {
+		for _, p := range n.Properties {
+			if _, ok := strOff[p.Name]; !ok { // deduplicate
+				strOff[p.Name] = uint32(len(strs))
+				strs = append(strs, []byte(p.Name)...)
+				strs = append(strs, 0)
+			}
+		}
+		return nil
+	})
+
+	// Calculate block sizes and offsets.
+	fdt.Header.SizeDtStrings = uint32(len(strs))
+	fdt.Header.SizeDtStruct = 4
+	fdt.RootNode.Walk(func(n *Node) error {
+		fdt.Header.SizeDtStruct += 8 + align4(len(n.Name)+1)
+		for _, p := range n.Properties {
+			fdt.Header.SizeDtStruct += 12 + align4(len(p.Value))
+		}
+		return nil
+	})
+	fdt.Header.OffMemRsvmap = align16(int(unsafe.Sizeof(fdt.Header)))
+	fdt.Header.OffDtStruct = fdt.Header.OffMemRsvmap +
+		align4((len(fdt.ReserveEntries)+1)*int(unsafe.Sizeof(ReserveEntry{})))
+	fdt.Header.OffDtStrings = fdt.Header.OffDtStruct + fdt.Header.SizeDtStruct
+	fdt.Header.TotalSize = fdt.Header.OffDtStrings + fdt.Header.SizeDtStrings
+
+	// Setup AlignWriter.
+	w := &uio.AlignWriter{W: f}
+
+	// Write header.
+	if err := binary.Write(w, binary.BigEndian, fdt.Header); err != nil {
+		return w.N, err
+	}
+
+	// Write memreserve block.
+	if err := w.Align(16, 0x00); err != nil {
+		return w.N, err
+	}
+	if err := binary.Write(w, binary.BigEndian, &fdt.ReserveEntries); err != nil {
+		return w.N, err
+	}
+	if err := binary.Write(w, binary.BigEndian, &ReserveEntry{}); err != nil {
+		return w.N, err
+	}
+
+	// Write struct block.
+	if err := w.Align(4, 0x00); err != nil {
+		return w.N, err
+	}
+	var writeNode func(n *Node) error
+	writeNode = func(n *Node) error {
+		if err := binary.Write(w, binary.BigEndian, tokenBeginNode); err != nil {
+			return err
+		}
+		if _, err := w.Write([]byte(n.Name + "\000")); err != nil {
+			return err
+		}
+		if err := w.Align(4, 0x00); err != nil {
+			return err
+		}
+		for _, p := range n.Properties {
+			property := struct {
+				Token        token
+				Len, Nameoff uint32
+			}{
+				tokenProp,
+				uint32(len(p.Value)),
+				strOff[p.Name],
+			}
+			if err := binary.Write(w, binary.BigEndian, &property); err != nil {
+				return err
+			}
+			if _, err := w.Write(p.Value); err != nil {
+				return err
+			}
+			if err := w.Align(4, 0x00); err != nil {
+				return err
+			}
+		}
+		for _, child := range n.Children {
+			if err := writeNode(child); err != nil {
+				return err
+			}
+		}
+		if err := binary.Write(w, binary.BigEndian, tokenEndNode); err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := writeNode(fdt.RootNode); err != nil {
+		return w.N, err
+	}
+	if err := binary.Write(w, binary.BigEndian, tokenEnd); err != nil {
+		return w.N, err
+	}
+
+	// Write strings block
+	if _, err := w.Write(strs); err != nil {
+		return w.N, err
+	}
+
+	return w.N, nil
 }
