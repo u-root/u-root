@@ -22,6 +22,13 @@ func (r *AlignReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
+// ReadByte reads one byte from the underlying io.Reader.
+func (r *AlignReader) ReadByte() (byte, error) {
+	b := make([]byte, 1)
+	_, err := io.ReadFull(r, b)
+	return b[0], err
+}
+
 // Align aligns the reader to the given number of bytes and returns the
 // bytes read to pad it.
 func (r *AlignReader) Align(n int) ([]byte, error) {
