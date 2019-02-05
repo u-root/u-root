@@ -34,7 +34,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 			return nil, fmt.Errorf("cannot get interface %q by name: %v", ifname, err)
 		}
 
-		if iface.Attrs().OperState == netlink.OperUp {
+		if iface.Attrs().Flags&net.FlagUp == net.FlagUp {
 			return iface, nil
 		}
 
