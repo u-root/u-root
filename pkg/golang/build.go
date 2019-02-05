@@ -59,7 +59,7 @@ type ListPackage struct {
 
 func (c Environ) goCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command(filepath.Join(c.GOROOT, "bin", "go"), args...)
-	cmd.Env = append(os.Environ(), c.Env()...)
+	cmd.Env = append(os.Environ(), append(c.Env(), "CGO_ENABLED=0")...)
 	return cmd
 }
 
