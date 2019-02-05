@@ -139,7 +139,7 @@ func main() {
 	for _, v := range cmdList {
 		debug("Let's try to run %v", v)
 		if _, err := os.Stat(v); os.IsNotExist(err) {
-			log.Printf("it's not there")
+			debug("it's not there")
 			continue
 		}
 
