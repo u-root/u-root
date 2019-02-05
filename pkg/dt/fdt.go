@@ -71,7 +71,7 @@ type ReserveEntry struct {
 	Size    uint64
 }
 
-// ReadFDT reads FDT from an io.ReaderSeeker.
+// ReadFDT reads FDT from an io.ReadSeeker.
 func ReadFDT(f io.ReadSeeker) (*FDT, error) {
 	fdt := &FDT{}
 	if err := fdt.readHeader(f); err != nil {
@@ -217,13 +217,12 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 
 			// The name is a null-terminating string.
 			for {
-				c := make([]byte, 1)
-				if _, err := io.ReadFull(r, c); err != nil {
+				if b, err := r.ReadByte(); err != nil {
 					return err
-				} else if c[0] == 0 {
+				} else if b == 0 {
 					break
 				} else {
-					child.Name += string(c[0])
+					child.Name += string(b)
 				}
 			}
 
@@ -408,9 +407,6 @@ func (fdt *FDT) Write(f io.Writer) (int, error) {
 	}
 
 	// Write strings block
-	if _, err := w.Write(strs); err != nil {
-		return w.N, err
-	}
-
-	return w.N, nil
+	_, err := w.Write(strs)
+	return w.N, err
 }
