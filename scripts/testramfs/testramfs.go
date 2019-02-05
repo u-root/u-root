@@ -116,6 +116,7 @@ func main() {
 	cmd.C.SysProcAttr.Chroot = tempDir
 	cmd.C.SysProcAttr.Cloneflags = cloneFlags
 	cmd.C.SysProcAttr.Unshareflags = cloneFlags
+	cmd.C.Env = append(cmd.C.Env, "CGO_ENABLED=0")
 	if *interactive {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
