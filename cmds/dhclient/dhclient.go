@@ -178,11 +178,13 @@ func main() {
 		wg.Add(1)
 		go func(ifname string) {
 			defer wg.Done()
+			debug("Bringing up interface %s...", ifname)
 			iface, err := dhclient.IfUp(ifname)
 			if err != nil {
 				done <- err
 				return
 			}
+			debug("Brought up interface %v", ifname)
 			if *ipv4 {
 				wg.Add(1)
 				go func() {
