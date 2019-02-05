@@ -37,6 +37,7 @@ var (
 
 const (
 	interfaceUpTimeout = 10 * time.Second
+	maxHTTPAttempts    = 3
 )
 
 var banner = `
@@ -109,6 +110,29 @@ func main() {
 	log.Fatalln("Could not boot from any interfaces")
 }
 
+func retryableNetError(err error) bool {
+	if err == nil {
+		return false
+	}
+	switch err := err.(type) {
+	case net.Error:
+		if err.Timeout() {
+			return true
+		}
+	}
+	return false
+}
+
+func retryableHTTPError(resp *http.Response) bool {
+	if resp == nil {
+		return false
+	}
+	if resp.StatusCode == 500 || resp.StatusCode == 502 {
+		return true
+	}
+	return false
+}
+
 func boot(ifname string, dhcp dhcpFunc) error {
 	var (
 		netconf  *netboot.NetConf
@@ -145,8 +169,16 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 
 	log.Printf("DHCP: fetching boot file URL: %s", bootfile)
-	resp, err := http.Get(bootfile)
-	if err != nil {
+	var resp *http.Response
+	for attempt := 0; attempt < maxHTTPAttempts; attempt++ {
+		log.Printf("netboot: attempt %d for http.Get", attempt+1)
+		resp, err = http.Get(bootfile)
+		if err != nil && retryableNetError(err) || retryableHTTPError(resp) {
+			continue
+		}
+		if err == nil {
+			break
+		}
 		return fmt.Errorf("DHCP: http.Get of %s failed: %v", bootfile, err)
 	}
 	// FIXME this will not be called if something fails after this point
