@@ -38,6 +38,7 @@ var (
 const (
 	interfaceUpTimeout = 10 * time.Second
 	maxHTTPAttempts    = 3
+	retryInterval      = time.Second
 )
 
 var banner = `
@@ -174,6 +175,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		log.Printf("netboot: attempt %d for http.Get", attempt+1)
 		resp, err = http.Get(bootfile)
 		if err != nil && retryableNetError(err) || retryableHTTPError(resp) {
+			time.Sleep(retryInterval)
 			continue
 		}
 		if err == nil {
