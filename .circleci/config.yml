@@ -27,6 +27,8 @@ jobs:
     docker:
       - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
     steps:
       - checkout
       - run:
