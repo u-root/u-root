@@ -95,7 +95,7 @@ func (c Environ) Env() []string {
 		env = append(env, fmt.Sprintf("GOPATH=%s", c.GOPATH))
 	}
 	var cgo int8
-	if c.CgoEnabled {
+	if os.Getenv("CGO_ENABLED") == "1" {
 		cgo = 1
 	}
 	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
