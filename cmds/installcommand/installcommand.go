@@ -147,6 +147,7 @@ func main() {
 	env := golang.Default()
 	env.Context.GOROOT = r("/go")
 	env.Context.GOPATH = r("/")
+	env.Context.CgoEnabled = false
 
 	var srcDir string
 	err := filepath.Walk(r("/src"), func(p string, fi os.FileInfo, err error) error {
