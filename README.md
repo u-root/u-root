@@ -28,6 +28,11 @@ modes:
     In this mode, u-root copies and rewrites the source of the tools you asked
     to include to be able to compile everything into one busybox-like binary.
 
+# Contributing
+
+For information about contributing, including how we sign off commits, please see
+CONTRIBUTING.md
+
 # Usage
 
 Make sure your Go version is 1.11. Make sure your `GOPATH` is set

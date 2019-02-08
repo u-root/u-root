@@ -2,6 +2,15 @@
 
 We need help with this project. Contributions are very welcome. See the [roadmap](roadmap.md), open [issues](https://github.com/u-root/u-root/issues), and join us in [Slack](CONTRIBUTING.md#communication) to talk about your cool ideas for the project.
 
+## Developer Sign-Off
+
+For purposes of tracking code-origination, we follow a simple sign-off
+process.  If you can attest to the [Developer Certificate of
+Origin](https://developercertificate.org/) then you append in each git
+commit text a line such as:
+```
+Signed-off-by: Your Name <username@youremail.com>
+```
 ## Code of Conduct
 
 Conduct collaboration around u-root in accordance to the [Code of
@@ -39,15 +48,6 @@ We have a few rules not covered by these tools:
     )
     ```
 
-## Developer Sign-Off
-
-For purposes of tracking code-origination, we follow a simple sign-off
-process.  If you can attest to the [Developer Certificate of
-Origin](https://developercertificate.org/) then you append in each git
-commit text a line such as:
-```
-Signed-off-by: Your Name <username@youremail.com>
-```
 ## Patch Format
 
 Well formatted patches aide code review pre-merge and code archaeology in
