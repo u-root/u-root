@@ -71,7 +71,7 @@ func ifup(ifname string) (netlink.Link, error) {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	return nil, fmt.Errorf("Link %v still down after %d seconds", ifname, linkUpAttempt)
+	return nil, fmt.Errorf("Link %v still down after %s", ifname, linkUpAttempt)
 }
 
 func dhclient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
@@ -178,11 +178,13 @@ func main() {
 		wg.Add(1)
 		go func(ifname string) {
 			defer wg.Done()
+			debug("Bringing up interface %s...", ifname)
 			iface, err := dhclient.IfUp(ifname)
 			if err != nil {
 				done <- err
 				return
 			}
+			debug("Brought up interface %v", ifname)
 			if *ipv4 {
 				wg.Add(1)
 				go func() {
@@ -218,5 +220,5 @@ func main() {
 	if nif == 0 {
 		log.Fatalf("No interfaces match %v\n", ifName)
 	}
-	fmt.Printf("%d dhclient attempts were sent", nif)
+	fmt.Printf("%d dhclient attempts were sent\n", nif)
 }
