@@ -13,11 +13,13 @@ import (
 	"fmt"
 	"io"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 const (
 	// Magic value seen in the FDT Header.
-	Magic = 0xd00dfeed
+	Magic uint32 = 0xd00dfeed
 
 	// MaxTotalSize is a limitation imposed by this implementation. This
 	// prevents the integers from wrapping around. Typically, the total size is
@@ -29,10 +31,10 @@ type token uint32
 
 const (
 	tokenBeginNode token = 0x1
-	tokenEndNode         = 0x2
-	tokenProp            = 0x3
-	tokenNop             = 0x4
-	tokenEnd             = 0x9
+	tokenEndNode   token = 0x2
+	tokenProp      token = 0x3
+	tokenNop       token = 0x4
+	tokenEnd       token = 0x9
 )
 
 // FDT contains the parsed contents of a Flattend Device Tree (.dtb).
@@ -69,8 +71,8 @@ type ReserveEntry struct {
 	Size    uint64
 }
 
-// Read an FDT from an io.ReaderSeeker.
-func Read(f io.ReadSeeker) (*FDT, error) {
+// ReadFDT reads FDT from an io.ReadSeeker.
+func ReadFDT(f io.ReadSeeker) (*FDT, error) {
 	fdt := &FDT{}
 	if err := fdt.readHeader(f); err != nil {
 		return nil, err
@@ -181,16 +183,21 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 
 	// Buffer file so we don't perform a bajillion syscalls when looking for
 	// null-terminating characters.
-	b := bufio.NewReader(&io.LimitedReader{R: f, N: int64(fdt.Header.SizeDtStruct)})
-	off := 0 // byte read
+	r := &uio.AlignReader{
+		R: bufio.NewReader(
+			&io.LimitedReader{
+				R: f,
+				N: int64(fdt.Header.SizeDtStruct),
+			},
+		),
+	}
 
 	stack := []*Node{}
 	for {
 		var t token
-		if err := binary.Read(b, binary.BigEndian, &t); err != nil {
+		if err := binary.Read(r, binary.BigEndian, &t); err != nil {
 			return err
 		}
-		off += int(unsafe.Sizeof(t))
 		switch t {
 		case tokenBeginNode:
 			// Push new node onto the stack.
@@ -210,16 +217,14 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 
 			// The name is a null-terminating string.
 			for {
-				c := make([]byte, 1)
-				if _, err := io.ReadFull(b, c); err != nil {
+				if b, err := r.ReadByte(); err != nil {
 					return err
-				} else if c[0] == 0 {
+				} else if b == 0 {
 					break
 				} else {
-					child.Name += string(c[0])
+					child.Name += string(b)
 				}
 			}
-			off += len(child.Name) + 1
 
 		case tokenEndNode:
 			if len(stack) == 0 {
@@ -232,10 +237,9 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 			pHeader := struct {
 				Len, Nameoff uint32
 			}{}
-			if err := binary.Read(b, binary.BigEndian, &pHeader); err != nil {
+			if err := binary.Read(r, binary.BigEndian, &pHeader); err != nil {
 				return err
 			}
-			off += int(unsafe.Sizeof(pHeader))
 			if pHeader.Nameoff >= uint32(len(strs)) {
 				return fmt.Errorf(
 					"name offset is larger than strings block: %#x >= %#x",
@@ -251,11 +255,10 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 				Name:  string(strs[pHeader.Nameoff : pHeader.Nameoff+uint32(null)]),
 				Value: make([]byte, pHeader.Len),
 			}
-			n, err := io.ReadFull(b, p.Value)
+			_, err := io.ReadFull(r, p.Value)
 			if err != nil {
 				return err
 			}
-			off += n
 			if len(stack) == 0 {
 				return fmt.Errorf("property %q appears outside a node", p.Name)
 			}
@@ -265,10 +268,10 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 		case tokenNop:
 
 		case tokenEnd:
-			if uint32(off) < fdt.Header.SizeDtStruct {
+			if uint32(r.N) < fdt.Header.SizeDtStruct {
 				return fmt.Errorf(
 					"extra data at end of structure block, %#x < %#x",
-					uint32(off), fdt.Header.SizeDtStruct)
+					uint32(r.N), fdt.Header.SizeDtStruct)
 			}
 			if fdt.RootNode == nil {
 				return errors.New("no root node")
@@ -279,26 +282,131 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 			return fmt.Errorf("undefined token %d", t)
 		}
 
-		// Pad to four bytes.
-		if off%4 != 0 {
-			pad := make([]byte, 4-off%4)
-			if _, err := io.ReadFull(b, pad); err != nil {
-				return err
-			}
-			off += len(pad)
-			for _, v := range pad {
-				if v != 0 {
-					// TODO: Some of the padding is not zero. Is this a mistake?
-					//return fmt.Errorf("padding is non-zero: %d", v)
-				}
+		// Align to four bytes.
+		pad, err := r.Align(4)
+		if err != nil {
+			return err
+		}
+		for _, v := range pad {
+			if v != 0 {
+				// TODO: Some of the padding is not zero. Is this a mistake?
+				//return fmt.Errorf("padding is non-zero: %d", v)
 			}
 		}
 	}
 }
 
+func align4(x int) uint32 {
+	return uint32((x + 0x3) &^ 0x3)
+}
+
+func align16(x int) uint32 {
+	return uint32((x + 0xf) &^ 0xf)
+}
+
 // Write marshals the FDT to an io.Writer and returns the size.
-// TODO: implement
 func (fdt *FDT) Write(f io.Writer) (int, error) {
-	// TODO: implement
-	return -1, errors.New("not yet implemented")
+	// Create string block and offset map.
+	strs := []byte{}
+	strOff := map[string]uint32{}
+	fdt.RootNode.Walk(func(n *Node) error {
+		for _, p := range n.Properties {
+			if _, ok := strOff[p.Name]; !ok { // deduplicate
+				strOff[p.Name] = uint32(len(strs))
+				strs = append(strs, []byte(p.Name)...)
+				strs = append(strs, 0)
+			}
+		}
+		return nil
+	})
+
+	// Calculate block sizes and offsets.
+	fdt.Header.SizeDtStrings = uint32(len(strs))
+	fdt.Header.SizeDtStruct = 4
+	fdt.RootNode.Walk(func(n *Node) error {
+		fdt.Header.SizeDtStruct += 8 + align4(len(n.Name)+1)
+		for _, p := range n.Properties {
+			fdt.Header.SizeDtStruct += 12 + align4(len(p.Value))
+		}
+		return nil
+	})
+	fdt.Header.OffMemRsvmap = align16(int(unsafe.Sizeof(fdt.Header)))
+	fdt.Header.OffDtStruct = fdt.Header.OffMemRsvmap +
+		align4((len(fdt.ReserveEntries)+1)*int(unsafe.Sizeof(ReserveEntry{})))
+	fdt.Header.OffDtStrings = fdt.Header.OffDtStruct + fdt.Header.SizeDtStruct
+	fdt.Header.TotalSize = fdt.Header.OffDtStrings + fdt.Header.SizeDtStrings
+
+	// Setup AlignWriter.
+	w := &uio.AlignWriter{W: f}
+
+	// Write header.
+	if err := binary.Write(w, binary.BigEndian, fdt.Header); err != nil {
+		return w.N, err
+	}
+
+	// Write memreserve block.
+	if err := w.Align(16, 0x00); err != nil {
+		return w.N, err
+	}
+	if err := binary.Write(w, binary.BigEndian, &fdt.ReserveEntries); err != nil {
+		return w.N, err
+	}
+	if err := binary.Write(w, binary.BigEndian, &ReserveEntry{}); err != nil {
+		return w.N, err
+	}
+
+	// Write struct block.
+	if err := w.Align(4, 0x00); err != nil {
+		return w.N, err
+	}
+	var writeNode func(n *Node) error
+	writeNode = func(n *Node) error {
+		if err := binary.Write(w, binary.BigEndian, tokenBeginNode); err != nil {
+			return err
+		}
+		if _, err := w.Write([]byte(n.Name + "\000")); err != nil {
+			return err
+		}
+		if err := w.Align(4, 0x00); err != nil {
+			return err
+		}
+		for _, p := range n.Properties {
+			property := struct {
+				Token        token
+				Len, Nameoff uint32
+			}{
+				tokenProp,
+				uint32(len(p.Value)),
+				strOff[p.Name],
+			}
+			if err := binary.Write(w, binary.BigEndian, &property); err != nil {
+				return err
+			}
+			if _, err := w.Write(p.Value); err != nil {
+				return err
+			}
+			if err := w.Align(4, 0x00); err != nil {
+				return err
+			}
+		}
+		for _, child := range n.Children {
+			if err := writeNode(child); err != nil {
+				return err
+			}
+		}
+		if err := binary.Write(w, binary.BigEndian, tokenEndNode); err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := writeNode(fdt.RootNode); err != nil {
+		return w.N, err
+	}
+	if err := binary.Write(w, binary.BigEndian, tokenEnd); err != nil {
+		return w.N, err
+	}
+
+	// Write strings block
+	_, err := w.Write(strs)
+	return w.N, err
 }

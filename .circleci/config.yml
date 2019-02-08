@@ -27,6 +27,8 @@ jobs:
     docker:
       - image: circleci/golang:1.11
     working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
     steps:
       - checkout
       - run:
@@ -95,7 +97,7 @@ jobs:
           command: go test -a -ldflags '-s' ./...
       - run:
           name: Test coverage
-          command: go test -cover ./...
+          command: go test -cover `go list ./... | grep github.com/u-root/u-root/`
   test-integration-amd64:
     docker:
       - image: uroottest/test-image-amd64:v3.2.3
@@ -132,7 +134,7 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race ./...
+          command: go test -race `go list ./... | grep github.com/u-root/u-root/`
   compile_cmds:
     docker:
       - image: circleci/golang:1.11
