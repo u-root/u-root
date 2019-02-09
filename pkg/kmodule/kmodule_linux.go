@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -102,21 +103,14 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 		return fmt.Errorf("could not find module path %q: %v", name, err)
 	}
 
-	if deps[modPath].state == builtin {
+	dep := deps[modPath]
+
+	if dep.state == builtin || dep.state == loaded {
 		return nil
 	}
 
-	if opts.DryRunCB == nil {
-		// if the module is already loaded or does not have deps, or all of them are loaded
-		// then this succeeds and we are done
-		if err := loadModule(modPath, modParams, opts); err == nil {
-			return nil
-		}
-		// okay, we have to try the hard way and load dependencies first.
-	}
-
-	deps[modPath].state = loading
-	for _, d := range deps[modPath].deps {
+	dep.state = loading
+	for _, d := range dep.deps {
 		if err := loadDeps(d, deps, opts); err != nil {
 			return err
 		}
@@ -124,8 +118,7 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	if err := loadModule(modPath, modParams, opts); err != nil {
 		return err
 	}
-	// we don't care to set the state to loaded
-	// deps[modPath].state = loaded
+
 	return nil
 }
 
@@ -201,6 +194,12 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 		return nil, err
 	}
 
+	fm, err := os.Open("/proc/modules")
+	if err == nil {
+		defer fm.Close()
+		genLoadedMods(fm, deps)
+	}
+
 	return deps, nil
 }
 
@@ -260,4 +259,21 @@ func loadModule(path, modParams string, opts ProbeOpts) error {
 	}
 
 	return nil
+}
+
+func genLoadedMods(r io.Reader, deps depMap) error {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		arr := strings.Split(scanner.Text(), " ")
+		name := strings.Replace(arr[0], "_", "-", -1)
+		modPath, err := findModPath(name, deps)
+		if err != nil {
+			return fmt.Errorf("could not find module path %q: %v", name, err)
+		}
+		if deps[modPath] == nil {
+			deps[modPath] = new(dependency)
+		}
+		deps[modPath].state = loaded
+	}
+	return scanner.Err()
 }
