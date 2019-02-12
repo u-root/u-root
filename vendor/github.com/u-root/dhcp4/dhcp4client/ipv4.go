@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package header
+package dhcp4client
 
 import (
 	"encoding/binary"
+	"net"
 
-	"github.com/google/netstack/tcpip"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 const (
@@ -32,6 +33,9 @@ const (
 	srcAddr  = 12
 	dstAddr  = 16
 )
+
+// TransportProtocolNumber is the number of a transport protocol.
+type TransportProtocolNumber uint32
 
 // IPv4Fields contains the fields of an IPv4 packet. It is used to describe the
 // fields of a packet that needs to be encoded.
@@ -64,10 +68,10 @@ type IPv4Fields struct {
 	Checksum uint16
 
 	// SrcAddr is the "source ip address" of an IPv4 packet.
-	SrcAddr tcpip.Address
+	SrcAddr net.IP
 
 	// DstAddr is the "destination ip address" of an IPv4 packet.
-	DstAddr tcpip.Address
+	DstAddr net.IP
 }
 
 // IPv4 represents an ipv4 header stored in a byte array.
@@ -88,17 +92,16 @@ const (
 	// IPv4AddressSize is the size, in bytes, of an IPv4 address.
 	IPv4AddressSize = 4
 
-	// IPv4ProtocolNumber is IPv4's network protocol number.
-	IPv4ProtocolNumber tcpip.NetworkProtocolNumber = 0x0800
-
 	// IPv4Version is the version of the ipv4 protocol.
 	IPv4Version = 4
+)
 
+var (
 	// IPv4Broadcast is the broadcast address of the IPv4 procotol.
-	IPv4Broadcast tcpip.Address = "\xff\xff\xff\xff"
+	IPv4Broadcast = net.IP{0xff, 0xff, 0xff, 0xff}
 
 	// IPv4Any is the non-routable IPv4 "any" meta address.
-	IPv4Any tcpip.Address = "\x00\x00\x00\x00"
+	IPv4Any = net.IP{0, 0, 0, 0}
 )
 
 // Flags that may be set in an IPv4 packet.
@@ -159,19 +162,19 @@ func (b IPv4) Checksum() uint16 {
 }
 
 // SourceAddress returns the "source address" field of the ipv4 header.
-func (b IPv4) SourceAddress() tcpip.Address {
-	return tcpip.Address(b[srcAddr : srcAddr+IPv4AddressSize])
+func (b IPv4) SourceAddress() net.IP {
+	return net.IP(b[srcAddr : srcAddr+IPv4AddressSize])
 }
 
 // DestinationAddress returns the "destination address" field of the ipv4
 // header.
-func (b IPv4) DestinationAddress() tcpip.Address {
-	return tcpip.Address(b[dstAddr : dstAddr+IPv4AddressSize])
+func (b IPv4) DestinationAddress() net.IP {
+	return net.IP(b[dstAddr : dstAddr+IPv4AddressSize])
 }
 
 // TransportProtocol implements Network.TransportProtocol.
-func (b IPv4) TransportProtocol() tcpip.TransportProtocolNumber {
-	return tcpip.TransportProtocolNumber(b.Protocol())
+func (b IPv4) TransportProtocol() TransportProtocolNumber {
+	return TransportProtocolNumber(b.Protocol())
 }
 
 // Payload implements Network.Payload.
@@ -217,14 +220,14 @@ func (b IPv4) SetID(v uint16) {
 }
 
 // SetSourceAddress sets the "source address" field of the ipv4 header.
-func (b IPv4) SetSourceAddress(addr tcpip.Address) {
-	copy(b[srcAddr:srcAddr+IPv4AddressSize], addr)
+func (b IPv4) SetSourceAddress(addr net.IP) {
+	copy(b[srcAddr:srcAddr+IPv4AddressSize], addr.To4())
 }
 
 // SetDestinationAddress sets the "destination address" field of the ipv4
 // header.
-func (b IPv4) SetDestinationAddress(addr tcpip.Address) {
-	copy(b[dstAddr:dstAddr+IPv4AddressSize], addr)
+func (b IPv4) SetDestinationAddress(addr net.IP) {
+	copy(b[dstAddr:dstAddr+IPv4AddressSize], addr.To4())
 }
 
 // CalculateChecksum calculates the checksum of the ipv4 header.
@@ -274,9 +277,181 @@ func (b IPv4) IsValid(pktSize int) bool {
 // IsV4MulticastAddress determines if the provided address is an IPv4 multicast
 // address (range 224.0.0.0 to 239.255.255.255). The four most significant bits
 // will be 1110 = 0xe0.
-func IsV4MulticastAddress(addr tcpip.Address) bool {
+func IsV4MulticastAddress(addr net.IP) bool {
 	if len(addr) != IPv4AddressSize {
 		return false
 	}
 	return (addr[0] & 0xf0) == 0xe0
+}
+
+const (
+	udpSrcPort  = 0
+	udpDstPort  = 2
+	udpLength   = 4
+	udpChecksum = 6
+)
+
+// UDPFields contains the fields of a UDP packet. It is used to describe the
+// fields of a packet that needs to be encoded.
+type UDPFields struct {
+	// SrcPort is the "source port" field of a UDP packet.
+	SrcPort uint16
+
+	// DstPort is the "destination port" field of a UDP packet.
+	DstPort uint16
+
+	// Length is the "length" field of a UDP packet.
+	Length uint16
+
+	// Checksum is the "checksum" field of a UDP packet.
+	Checksum uint16
+}
+
+// UDP represents a UDP header stored in a byte array.
+type UDP []byte
+
+const (
+	// UDPMinimumSize is the minimum size of a valid UDP packet.
+	UDPMinimumSize = 8
+
+	// UDPProtocolNumber is UDP's transport protocol number.
+	UDPProtocolNumber TransportProtocolNumber = 17
+)
+
+// SourcePort returns the "source port" field of the udp header.
+func (b UDP) SourcePort() uint16 {
+	return binary.BigEndian.Uint16(b[udpSrcPort:])
+}
+
+// DestinationPort returns the "destination port" field of the udp header.
+func (b UDP) DestinationPort() uint16 {
+	return binary.BigEndian.Uint16(b[udpDstPort:])
+}
+
+// Length returns the "length" field of the udp header.
+func (b UDP) Length() uint16 {
+	return binary.BigEndian.Uint16(b[udpLength:])
+}
+
+// SetSourcePort sets the "source port" field of the udp header.
+func (b UDP) SetSourcePort(port uint16) {
+	binary.BigEndian.PutUint16(b[udpSrcPort:], port)
+}
+
+// SetDestinationPort sets the "destination port" field of the udp header.
+func (b UDP) SetDestinationPort(port uint16) {
+	binary.BigEndian.PutUint16(b[udpDstPort:], port)
+}
+
+// SetChecksum sets the "checksum" field of the udp header.
+func (b UDP) SetChecksum(checksum uint16) {
+	binary.BigEndian.PutUint16(b[udpChecksum:], checksum)
+}
+
+// Payload returns the data contained in the UDP datagram.
+func (b UDP) Payload() []byte {
+	return b[UDPMinimumSize:]
+}
+
+// Checksum returns the "checksum" field of the udp header.
+func (b UDP) Checksum() uint16 {
+	return binary.BigEndian.Uint16(b[udpChecksum:])
+}
+
+// CalculateChecksum calculates the checksum of the udp packet, given the total
+// length of the packet and the checksum of the network-layer pseudo-header
+// (excluding the total length) and the checksum of the payload.
+func (b UDP) CalculateChecksum(partialChecksum uint16, totalLen uint16) uint16 {
+	// Add the length portion of the checksum to the pseudo-checksum.
+	tmp := make([]byte, 2)
+	binary.BigEndian.PutUint16(tmp, totalLen)
+	checksum := Checksum(tmp, partialChecksum)
+
+	// Calculate the rest of the checksum.
+	return Checksum(b[:UDPMinimumSize], checksum)
+}
+
+// Encode encodes all the fields of the udp header.
+func (b UDP) Encode(u *UDPFields) {
+	binary.BigEndian.PutUint16(b[udpSrcPort:], u.SrcPort)
+	binary.BigEndian.PutUint16(b[udpDstPort:], u.DstPort)
+	binary.BigEndian.PutUint16(b[udpLength:], u.Length)
+	binary.BigEndian.PutUint16(b[udpChecksum:], u.Checksum)
+}
+
+func calculateChecksum(buf []byte, initial uint32) uint16 {
+	v := initial
+
+	l := len(buf)
+	if l&1 != 0 {
+		l--
+		v += uint32(buf[l]) << 8
+	}
+
+	for i := 0; i < l; i += 2 {
+		v += (uint32(buf[i]) << 8) + uint32(buf[i+1])
+	}
+
+	return ChecksumCombine(uint16(v), uint16(v>>16))
+}
+
+// Checksum calculates the checksum (as defined in RFC 1071) of the bytes in the
+// given byte array.
+//
+// The initial checksum must have been computed on an even number of bytes.
+func Checksum(buf []byte, initial uint16) uint16 {
+	return calculateChecksum(buf, uint32(initial))
+}
+
+// ChecksumCombine combines the two uint16 to form their checksum. This is done
+// by adding them and the carry.
+//
+// Note that checksum a must have been computed on an even number of bytes.
+func ChecksumCombine(a, b uint16) uint16 {
+	v := uint32(a) + uint32(b)
+	return uint16(v + v>>16)
+}
+
+// PseudoHeaderChecksum calculates the pseudo-header checksum for the
+// given destination protocol and network address, ignoring the length
+// field. Pseudo-headers are needed by transport layers when calculating
+// their own checksum.
+func PseudoHeaderChecksum(protocol TransportProtocolNumber, srcAddr net.IP, dstAddr net.IP) uint16 {
+	xsum := Checksum([]byte(srcAddr), 0)
+	xsum = Checksum([]byte(dstAddr), xsum)
+	return Checksum([]byte{0, uint8(protocol)}, xsum)
+}
+
+func udp4pkt(packet []byte, dest *net.UDPAddr, src *net.UDPAddr) []byte {
+	ipLen := IPv4MinimumSize
+	udpLen := UDPMinimumSize
+
+	h := make([]byte, 0, ipLen+udpLen+len(packet))
+	hdr := uio.NewBigEndianBuffer(h)
+
+	ipv4fields := &IPv4Fields{
+		IHL:         IPv4MinimumSize,
+		TotalLength: uint16(ipLen + udpLen + len(packet)),
+		TTL:         30,
+		Protocol:    uint8(UDPProtocolNumber),
+		SrcAddr:     src.IP.To4(),
+		DstAddr:     dest.IP.To4(),
+	}
+	ipv4hdr := IPv4(hdr.WriteN(ipLen))
+	ipv4hdr.Encode(ipv4fields)
+	ipv4hdr.SetChecksum(^ipv4hdr.CalculateChecksum())
+
+	udphdr := UDP(hdr.WriteN(udpLen))
+	udphdr.Encode(&UDPFields{
+		SrcPort: uint16(src.Port),
+		DstPort: uint16(dest.Port),
+		Length:  uint16(udpLen + len(packet)),
+	})
+
+	xsum := Checksum(packet, PseudoHeaderChecksum(
+		ipv4hdr.TransportProtocol(), ipv4fields.SrcAddr, ipv4fields.DstAddr))
+	udphdr.SetChecksum(^udphdr.CalculateChecksum(xsum, udphdr.Length()))
+
+	hdr.WriteBytes(packet)
+	return hdr.Data()
 }

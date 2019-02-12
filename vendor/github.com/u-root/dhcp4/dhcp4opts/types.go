@@ -9,7 +9,7 @@ import (
 	"net"
 
 	"github.com/u-root/dhcp4"
-	"github.com/u-root/dhcp4/internal/buffer"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // DHCPMessageType implements encoding.BinaryMarshaler and encapsulates binary
@@ -36,12 +36,9 @@ func (d DHCPMessageType) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the DHCP message type option from binary.
 func (d *DHCPMessageType) UnmarshalBinary(p []byte) error {
-	if len(p) < 1 {
-		return io.ErrUnexpectedEOF
-	}
-
-	*d = DHCPMessageType(p[0])
-	return nil
+	buf := uio.NewBigEndianBuffer(p)
+	*d = DHCPMessageType(buf.Read8())
+	return buf.FinError()
 }
 
 // SubnetMask implements encoding.BinaryMarshaler and encapsulates binary
@@ -56,13 +53,9 @@ func (s SubnetMask) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary reads the subnet mask option from binary.
 func (s *SubnetMask) UnmarshalBinary(p []byte) error {
-	if len(p) < net.IPv4len {
-		return io.ErrUnexpectedEOF
-	}
-
-	*s = make([]byte, net.IPv4len)
-	copy(*s, p[:net.IPv4len])
-	return nil
+	buf := uio.NewBigEndianBuffer(p)
+	*s = buf.CopyN(net.IPv4len)
+	return buf.FinError()
 }
 
 // IP implements encoding.BinaryMarshaler and encapsulates binary encoding and
@@ -106,7 +99,7 @@ type IPs []net.IP
 
 // MarshalBinary writes the list of IPs to binary.
 func (i IPs) MarshalBinary() ([]byte, error) {
-	b := buffer.New(make([]byte, 0, net.IPv4len*len(i)))
+	b := uio.NewBigEndianBuffer(make([]byte, 0, net.IPv4len*len(i)))
 	for _, ip := range i {
 		b.WriteBytes(ip.To4())
 	}
@@ -115,18 +108,13 @@ func (i IPs) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary reads a list of IPs from binary.
 func (i *IPs) UnmarshalBinary(p []byte) error {
-	b := buffer.New(p)
-	if b.Len() == 0 || b.Len()%net.IPv4len != 0 {
-		return io.ErrUnexpectedEOF
-	}
+	b := uio.NewBigEndianBuffer(p)
 
 	*i = make([]net.IP, 0, b.Len()/net.IPv4len)
-	for b.Len() > 0 {
-		ip := make(net.IP, net.IPv4len)
-		b.ReadBytes(ip)
-		*i = append(*i, ip)
+	for b.Has(net.IPv4len) {
+		*i = append(*i, net.IP(b.CopyN(net.IPv4len)))
 	}
-	return nil
+	return b.FinError()
 }
 
 // GetIPs returns the list of IPs encoded in `code` option of `o`.
@@ -137,7 +125,7 @@ func GetIPs(code dhcp4.OptionCode, o dhcp4.Options) IPs {
 	}
 
 	var i IPs
-	if err := (&i).UnmarshalBinary(v); err != nil {
+	if err := i.UnmarshalBinary(v); err != nil {
 		return nil
 	}
 	return i
@@ -169,7 +157,7 @@ type OptionCodes []dhcp4.OptionCode
 
 // MarshalBinary writes the option code list to binary.
 func (o OptionCodes) MarshalBinary() ([]byte, error) {
-	b := buffer.New(nil)
+	b := uio.NewBigEndianBuffer(nil)
 	for _, code := range o {
 		b.Write8(uint8(code))
 	}
@@ -178,12 +166,12 @@ func (o OptionCodes) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary reads the option code list from binary.
 func (o *OptionCodes) UnmarshalBinary(p []byte) error {
-	b := buffer.New(p)
+	b := uio.NewBigEndianBuffer(p)
 	*o = make(OptionCodes, 0, b.Len())
-	for b.Len() > 0 {
+	for b.Has(1) {
 		*o = append(*o, dhcp4.OptionCode(b.Read8()))
 	}
-	return nil
+	return b.FinError()
 }
 
 // Uint16 implements encoding.BinaryMarshaler and encapsulates binary encoding
@@ -192,19 +180,16 @@ type Uint16 uint16
 
 // MarshalBinary writes the uint16 to binary.
 func (u Uint16) MarshalBinary() ([]byte, error) {
-	b := buffer.New(nil)
+	b := uio.NewBigEndianBuffer(nil)
 	b.Write16(uint16(u))
 	return b.Data(), nil
 }
 
 // UnmarshalBinary reads the uint16 from binary.
 func (u *Uint16) UnmarshalBinary(p []byte) error {
-	b := buffer.New(p)
-	if b.Len() < 2 {
-		return io.ErrUnexpectedEOF
-	}
+	b := uio.NewBigEndianBuffer(p)
 	*u = Uint16(b.Read16())
-	return nil
+	return b.FinError()
 }
 
 // Uint32 implements encoding.BinaryMarshaler and encapsulates binary encoding
@@ -213,17 +198,14 @@ type Uint32 uint32
 
 // MarshalBinary writes the uint32 to binary.
 func (u Uint32) MarshalBinary() ([]byte, error) {
-	b := buffer.New(nil)
+	b := uio.NewBigEndianBuffer(nil)
 	b.Write32(uint32(u))
 	return b.Data(), nil
 }
 
 // UnmarshalBinary reads the uint32 from binary.
 func (u *Uint32) UnmarshalBinary(p []byte) error {
-	b := buffer.New(p)
-	if b.Len() < 2 {
-		return io.ErrUnexpectedEOF
-	}
+	b := uio.NewBigEndianBuffer(p)
 	*u = Uint32(b.Read32())
-	return nil
+	return b.FinError()
 }
