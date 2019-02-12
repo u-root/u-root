@@ -10,7 +10,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/u-root/dhcp4/internal/buffer"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // Options is a map of OptionCode keys with a slice of byte values.
@@ -67,11 +67,11 @@ func (o Options) Get(key OptionCode) []byte {
 // It is used with various different types to enable parsing of both top-level
 // options. If options data is malformed, it returns ErrInvalidOptions or
 // io.ErrUnexpectedEOF.
-func (o *Options) Unmarshal(buf *buffer.Buffer) error {
+func (o *Options) Unmarshal(buf *uio.Lexer) error {
 	*o = make(Options)
 
 	var end bool
-	for buf.Len() >= 1 {
+	for buf.Has(1) {
 		// 1 byte: option code
 		// 1 byte: option length n
 		// n bytes: data
@@ -113,7 +113,7 @@ func (o *Options) Unmarshal(buf *buffer.Buffer) error {
 	}
 
 	// Any bytes left must be padding.
-	for buf.Len() >= 1 {
+	for buf.Has(1) {
 		if OptionCode(buf.Read8()) != Pad {
 			return ErrInvalidOptions
 		}
@@ -122,7 +122,7 @@ func (o *Options) Unmarshal(buf *buffer.Buffer) error {
 }
 
 // Marshal writes options into the provided Buffer sorted by option codes.
-func (o Options) Marshal(b *buffer.Buffer) {
+func (o Options) Marshal(b *uio.Lexer) {
 	for _, c := range o.sortedKeys() {
 		code := OptionCode(c)
 		data := o[code]

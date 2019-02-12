@@ -9,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/u-root/dhcp4/internal/buffer"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 const (
@@ -92,7 +92,7 @@ func NewPacket(op OpCode) *Packet {
 	}
 }
 
-func writeIP(b *buffer.Buffer, ip net.IP) {
+func writeIP(b *uio.Lexer, ip net.IP) {
 	var zeros [net.IPv4len]byte
 	if ip == nil {
 		b.WriteBytes(zeros[:])
@@ -103,7 +103,7 @@ func writeIP(b *buffer.Buffer, ip net.IP) {
 
 // MarshalBinary writes the packet to binary.
 func (p *Packet) MarshalBinary() ([]byte, error) {
-	b := buffer.New(make([]byte, 0, minPacketLen))
+	b := uio.NewBigEndianBuffer(make([]byte, 0, minPacketLen))
 	b.Write8(uint8(p.Op))
 	b.Write8(p.HType)
 
@@ -154,10 +154,7 @@ func ParsePacket(q []byte) (*Packet, error) {
 
 // UnmarshalBinary reads the packet from binary.
 func (p *Packet) UnmarshalBinary(q []byte) error {
-	b := buffer.New(q)
-	if b.Len() < minPacketLen {
-		return ErrInvalidPacket
-	}
+	b := uio.NewBigEndianBuffer(q)
 
 	p.Op = OpCode(b.Read8())
 	p.HType = b.Read8()
@@ -210,5 +207,8 @@ func (p *Packet) UnmarshalBinary(q []byte) error {
 		return fmt.Errorf("malformed DHCP packet: got magic cookie %v, want %v", cookie[:], magicCookie[:])
 	}
 
-	return (&p.Options).Unmarshal(b)
+	if err := p.Options.Unmarshal(b); err != nil {
+		return err
+	}
+	return b.FinError()
 }

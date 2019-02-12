@@ -41,14 +41,6 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:05f95ffdfcf651bdb0f05b40b69e7f5663047f8da75c72d58728acb59b5cc107"
-  name = "github.com/google/btree"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
-
-[[projects]]
   digest = "1:a4f7dd66f23555c3618bf8d3f2eb68631276e9e9ff18e10978aa2a7fba10a22f"
   name = "github.com/google/go-tpm"
   packages = [
@@ -77,35 +69,12 @@
   revision = "70e1c263818522aa1ecbdd34d7e143639d447ced"
 
 [[projects]]
-  branch = "master"
-  digest = "1:5ae012a655f8f5ceca6b2a95d26fe89b143ad4efdf0c08280e419933366bea67"
-  name = "github.com/google/netstack"
-  packages = [
-    "ilist",
-    "tcpip",
-    "tcpip/buffer",
-    "tcpip/header",
-    "tcpip/seqnum",
-    "waiter",
-  ]
-  pruneopts = "NUT"
-  revision = "47d86e38c9148b4c03ed2a2058aa05724adecf24"
-
-[[projects]]
-  digest = "1:c01767916c59f084bb7c41a7d5877c0f3099b1595cfa066e84ec6ad6b084dd89"
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
-  version = "v1.1.1"
-
-[[projects]]
-  digest = "1:bf5cf1d53d703332e9bd8984c69784645b73a938317bf5ace9aadf20ac49379a"
+  digest = "1:f9c7b395f10bd6d881b1f2d71715906b4481a04e46870cdd2647d50caa3358c2"
   name = "github.com/gorilla/mux"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
-  version = "v1.6.2"
+  revision = "a7962380ca08b5a188038c69871b8d3fbdf31e89"
+  version = "v1.7.0"
 
 [[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
@@ -201,14 +170,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
-  name = "github.com/petar/GoLLRB"
-  packages = ["llrb"]
-  pruneopts = "NUT"
-  revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
-
-[[projects]]
-  branch = "master"
   digest = "1:22ffe7a0e80f54e5a5ee408e2f6a4717ee8c5c3ecd94530963d1362efa178df5"
   name = "github.com/rck/unit"
   packages = ["."]
@@ -225,28 +186,27 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c957c59d79725aaaa66a94019b58c0502d2b2317a670962481c19c416b04d2c9"
+  digest = "1:3558696ea81f7baf02aa5a1c641d720cdcd1c56d0aaf6ae91dca3780c436c8ee"
   name = "github.com/u-root/dhcp4"
   packages = [
     ".",
     "dhcp4client",
     "dhcp4opts",
     "dhcp4server",
-    "internal/buffer",
   ]
   pruneopts = "NUT"
-  revision = "a43f2d9a00229396313a05985b772ede29cd02fc"
+  revision = "03363dc71ec82763595440b4b2c3e5f69f47a4e0"
 
 [[projects]]
   branch = "master"
-  digest = "1:ecd40121b90217c9dbad17001924b2f477faf2dc7413ff6a81ccff3da4a360a8"
+  digest = "1:a315dbe56bff8c505524aa56d5e057d2a4496c642aa781e9f365508b5b9e66af"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "1e2e7ab670e05e2fd29bf5d0bcab2f9907e9f9f4"
+  revision = "b9cafe4a8544a27110dad06be07d48bbe5f292dd"
 
 [[projects]]
   branch = "master"
@@ -258,7 +218,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:282968c50f595583afbf43ec10f13e2f7ed1f9b22ad0e0963def48e728bc5b49"
+  digest = "1:036e1291f3212a67568d2452f9ce38e4d29f26204c9c38758bf96b65fef90d9f"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -281,7 +241,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
+  revision = "74369b46fc6756741c016591724fd1cb8e26845f"
 
 [[projects]]
   branch = "master"
@@ -294,7 +254,7 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "4b62a64f59f73840b9ab79204c94fee61cd1ba2c"
+  revision = "65e2d4e15006aab9813ff8769e768bbf4bb667a0"
 
 [[projects]]
   branch = "master"
@@ -309,7 +269,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e97f89df92c40f9815adfea740acf7a7c685184295c470ec22322879d394a896"
+  digest = "1:f57e88c4326d5433c2f4eb28fcd1662be003cb0d11dd13710c8828e687303c76"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -326,7 +286,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "cc6a436ffe6b424fffa1d91862c9b664d8407828"
+  revision = "44bee7e801e4a70b5fc9a91ff23830ab4df55d5e"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"

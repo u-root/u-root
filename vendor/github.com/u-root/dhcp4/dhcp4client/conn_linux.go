@@ -9,11 +9,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
 	"github.com/mdlayher/ethernet"
 	"github.com/mdlayher/raw"
-	"github.com/u-root/dhcp4/internal/buffer"
+	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
 )
 
@@ -103,8 +101,8 @@ func udpMatch(addr *net.UDPAddr, bound *net.UDPAddr) bool {
 // ReadFrom reads raw IP packets and will try to match them against
 // upc.boundAddr. Any matching packets are returned via the given buffer.
 func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
-	ipLen := header.IPv4MaximumHeaderSize
-	udpLen := header.UDPMinimumSize
+	ipLen := IPv4MaximumHeaderSize
+	udpLen := UDPMinimumSize
 
 	for {
 		pkt := make([]byte, ipLen+udpLen+len(b))
@@ -113,16 +111,16 @@ func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
 			return 0, nil, err
 		}
 		pkt = pkt[:n]
-		buf := buffer.New(pkt)
+		buf := uio.NewBigEndianBuffer(pkt)
 
 		// To read the header length, access data directly.
-		ipHdr := header.IPv4(buf.Data())
-		ipHdr = header.IPv4(buf.Consume(int(ipHdr.HeaderLength())))
+		ipHdr := IPv4(buf.Data())
+		ipHdr = IPv4(buf.Consume(int(ipHdr.HeaderLength())))
 
-		if ipHdr.TransportProtocol() != header.UDPProtocolNumber {
+		if ipHdr.TransportProtocol() != UDPProtocolNumber {
 			continue
 		}
-		udpHdr := header.UDP(buf.Consume(udpLen))
+		udpHdr := UDP(buf.Consume(udpLen))
 
 		addr := &net.UDPAddr{
 			IP:   net.IP(ipHdr.DestinationAddress()),
@@ -131,7 +129,7 @@ func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		if !udpMatch(addr, upc.boundAddr) {
 			continue
 		}
-		return copy(b, buf.Remaining()), addr, nil
+		return copy(b, buf.ReadAll()), addr, nil
 	}
 }
 
@@ -149,38 +147,4 @@ func (upc *UDPPacketConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 	// Using the boundAddr is not quite right here, but it works.
 	packet := udp4pkt(b, udpAddr, upc.boundAddr)
 	return upc.PacketConn.WriteTo(packet, &raw.Addr{HardwareAddr: BroadcastMac})
-}
-
-func udp4pkt(packet []byte, dest *net.UDPAddr, src *net.UDPAddr) []byte {
-	ipLen := header.IPv4MinimumSize
-	udpLen := header.UDPMinimumSize
-
-	h := make([]byte, 0, ipLen+udpLen+len(packet))
-	hdr := buffer.New(h)
-
-	ipv4fields := &header.IPv4Fields{
-		IHL:         header.IPv4MinimumSize,
-		TotalLength: uint16(ipLen + udpLen + len(packet)),
-		TTL:         30,
-		Protocol:    uint8(header.UDPProtocolNumber),
-		SrcAddr:     tcpip.Address(src.IP.To4()),
-		DstAddr:     tcpip.Address(dest.IP.To4()),
-	}
-	ipv4hdr := header.IPv4(hdr.WriteN(ipLen))
-	ipv4hdr.Encode(ipv4fields)
-	ipv4hdr.SetChecksum(^ipv4hdr.CalculateChecksum())
-
-	udphdr := header.UDP(hdr.WriteN(udpLen))
-	udphdr.Encode(&header.UDPFields{
-		SrcPort: uint16(src.Port),
-		DstPort: uint16(dest.Port),
-		Length:  uint16(udpLen + len(packet)),
-	})
-
-	xsum := header.Checksum(packet, header.PseudoHeaderChecksum(
-		ipv4hdr.TransportProtocol(), ipv4fields.SrcAddr, ipv4fields.DstAddr))
-	udphdr.SetChecksum(^udphdr.CalculateChecksum(xsum, udphdr.Length()))
-
-	hdr.WriteBytes(packet)
-	return hdr.Data()
 }
