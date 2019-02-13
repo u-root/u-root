@@ -65,6 +65,7 @@ var rules = []rule{
 	reject(`cmds/ping/.*`),    // Go authors
 	reject(`xcmds/ectool/.*`), // Chromium authors
 
+	reject(`cmds/man/data/data.go`),            // generated
 	reject(`pkg/diskboot/entrytype_string.go`), // generated
 }
 
