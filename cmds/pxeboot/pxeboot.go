@@ -13,7 +13,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/u-root/dhcp4/dhcp4client"
+	"github.com/insomniacslk/dhcp/dhcpv4/client4"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/pxe"
 	"github.com/vishvananda/netlink"
@@ -30,14 +30,14 @@ func attemptDHCPLease(iface netlink.Link, timeout time.Duration, retry int) (*dh
 		return nil, err
 	}
 
-	client, err := dhcp4client.New(iface,
-		dhcp4client.WithTimeout(timeout),
-		dhcp4client.WithRetry(retry))
+	client, err := client4.New(iface.Attrs().Name, iface.Attrs().HardwareAddr,
+		client4.WithTimeout(timeout),
+		client4.WithRetry(retry))
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := client.Request()
+	_, p, err := client.Request()
 	if err != nil {
 		return nil, err
 	}

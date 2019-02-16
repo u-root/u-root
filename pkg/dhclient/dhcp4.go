@@ -8,17 +8,16 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/u-root/dhcp4"
-	"github.com/u-root/dhcp4/dhcp4opts"
+	"github.com/insomniacslk/dhcp/dhcpv4"
 )
 
 // Packet4 implements convenience functions for DHCPv4 packets.
 type Packet4 struct {
-	P *dhcp4.Packet
+	P *dhcpv4.DHCPv4
 }
 
 // NewPacket4 wraps a DHCPv4 packet with some convenience methods.
-func NewPacket4(p *dhcp4.Packet) *Packet4 {
+func NewPacket4(p *dhcpv4.DHCPv4) *Packet4 {
 	return &Packet4{
 		P: p,
 	}
@@ -26,7 +25,7 @@ func NewPacket4(p *dhcp4.Packet) *Packet4 {
 
 // Lease returns the IPNet assigned.
 func (p *Packet4) Lease() *net.IPNet {
-	netmask := dhcp4opts.GetSubnetMask(p.P.Options)
+	netmask := p.P.SubnetMask()
 	if netmask == nil {
 		// If they did not offer a subnet mask, we choose the most
 		// restrictive option.
@@ -34,7 +33,7 @@ func (p *Packet4) Lease() *net.IPNet {
 	}
 
 	return &net.IPNet{
-		IP:   p.P.YIAddr,
+		IP:   p.P.YourIPAddr,
 		Mask: net.IPMask(netmask),
 	}
 }
@@ -44,7 +43,7 @@ func (p *Packet4) Lease() *net.IPNet {
 // OptionRouter is used as opposed to GIAddr, which seems unused by most DHCP
 // servers?
 func (p *Packet4) Gateway() net.IP {
-	gw := dhcp4opts.GetRouters(p.P.Options)
+	gw := p.P.Router()
 	if gw == nil {
 		return nil
 	}
@@ -53,11 +52,7 @@ func (p *Packet4) Gateway() net.IP {
 
 // DNS returns DNS IPs assigned.
 func (p *Packet4) DNS() []net.IP {
-	ips := dhcp4opts.GetDomainNameServers(p.P.Options)
-	if ips == nil {
-		return nil
-	}
-	return []net.IP(ips)
+	return p.P.DNS()
 }
 
 // Boot returns the boot file assigned.
@@ -67,7 +62,7 @@ func (p *Packet4) Boot() (url.URL, error) {
 	// ServerName fields.
 
 	// While the default is tftp, servers may specify HTTP or FTP URIs.
-	u, err := url.Parse(p.P.BootFile)
+	u, err := url.Parse(p.P.BootFileName)
 	if err != nil {
 		return url.URL{}, err
 	}
@@ -75,15 +70,15 @@ func (p *Packet4) Boot() (url.URL, error) {
 	if len(u.Scheme) == 0 {
 		// Defaults to tftp is not specified.
 		u.Scheme = "tftp"
-		u.Path = p.P.BootFile
-		if len(p.P.ServerName) == 0 {
-			server := dhcp4opts.GetServerIdentifier(p.P.Options)
+		u.Path = p.P.BootFileName
+		if len(p.P.ServerHostName) == 0 {
+			server := p.P.ServerIdentifier()
 			if server == nil {
 				return url.URL{}, err
 			}
 			u.Host = net.IP(server).String()
 		} else {
-			u.Host = p.P.ServerName
+			u.Host = p.P.ServerHostName
 		}
 	}
 	return *u, nil

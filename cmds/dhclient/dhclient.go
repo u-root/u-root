@@ -22,8 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/u-root/dhcp4"
-	"github.com/u-root/dhcp4/dhcp4client"
+	"github.com/insomniacslk/dhcp/dhcpv4/client4"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/dhcp6client"
 	"github.com/vishvananda/netlink"
@@ -36,16 +35,16 @@ const (
 )
 
 var (
-	ifName         = "^e.*"
-	leasetimeout   = flag.Int("timeout", 15, "Lease timeout in seconds")
-	retry          = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	renewals       = flag.Int("renewals", 0, "Number of DHCP renewals before exiting. -1 means infinity")
-	renewalTimeout = flag.Int("renewal timeout", 3600, "How long to wait before renewing in seconds")
-	verbose        = flag.Bool("verbose", false, "Verbose output")
-	ipv4           = flag.Bool("ipv4", true, "use IPV4")
-	ipv6           = flag.Bool("ipv6", true, "use IPV6")
-	test           = flag.Bool("test", false, "Test mode")
-	debug          = func(string, ...interface{}) {}
+	ifName          = "^e.*"
+	dhcpConnTimeout = flag.Int("timeout", 10, "DHCP connection timeout in seconds")
+	retry           = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
+	renewals        = flag.Int("renewals", 0, "Number of DHCP renewals before exiting. -1 means infinity")
+	renewalTimeout  = flag.Int("renewal timeout", 3600, "How long to wait before renewing in seconds")
+	verbose         = flag.Bool("verbose", false, "Verbose output")
+	ipv4            = flag.Bool("ipv4", true, "use IPV4")
+	ipv6            = flag.Bool("ipv6", true, "use IPV6")
+	test            = flag.Bool("test", false, "Test mode")
+	debug           = func(string, ...interface{}) {}
 )
 
 func ifup(ifname string) (netlink.Link, error) {
@@ -75,25 +74,24 @@ func ifup(ifname string) (netlink.Link, error) {
 }
 
 func dhclient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
-	client, err := dhcp4client.New(iface,
-		dhcp4client.WithTimeout(timeout),
-		dhcp4client.WithRetry(retry))
+	client, err := client4.New(iface.Attrs().Name, iface.Attrs().HardwareAddr,
+		client4.WithTimeout(timeout),
+		client4.WithRetry(retry))
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 
 	for i := 0; numRenewals < 0 || i <= numRenewals; i++ {
-		var packet *dhcp4.Packet
-		var err error
-		if i == 0 {
-			packet, err = client.Request()
-		} else {
+		if i != 0 {
 			time.Sleep(time.Duration(*renewalTimeout) * time.Second)
-			packet, err = client.Renew(packet)
 		}
+		_, packet, err := client.Request()
 		if err != nil {
 			return err
 		}
+
+		log.Printf("Configuring interface with packet:\n%s", packet.Summary())
 
 		if err := dhclient.Configure4(iface, packet); err != nil {
 			return err
@@ -162,12 +160,7 @@ func main() {
 		log.Fatalf("Can't get list of link names: %v", err)
 	}
 
-	timeout := time.Duration(*leasetimeout) * time.Second
-	// if timeout is < slop, it's too short.
-	if timeout < slop {
-		timeout = 2 * slop
-		log.Printf("increased lease timeout to %s", timeout)
-	}
+	timeout := time.Duration(*dhcpConnTimeout) * time.Second
 
 	var wg sync.WaitGroup
 	done := make(chan error)

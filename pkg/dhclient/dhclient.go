@@ -14,9 +14,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/mdlayher/dhcp6"
 	"github.com/mdlayher/dhcp6/dhcp6opts"
-	"github.com/u-root/dhcp4"
 	"github.com/vishvananda/netlink"
 )
 
@@ -48,7 +48,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 }
 
 // Configure4 adds IP addresses, routes, and DNS servers to the system.
-func Configure4(iface netlink.Link, packet *dhcp4.Packet) error {
+func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
 	p := NewPacket4(packet)
 
 	l := p.Lease()

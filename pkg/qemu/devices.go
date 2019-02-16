@@ -72,9 +72,9 @@ func (rod ReadOnlyDirectory) Cmdline() []string {
 
 	// Expose the temp directory to QEMU as /dev/sda1
 	return []string{
-		"-drive", fmt.Sprintf("file=fat:ro:%s,if=none,id=tmpdir", rod.Dir),
-		"-device", "ich9-ahci,id=ahci",
-		"-device", "ide-drive,drive=tmpdir,bus=ahci.0",
+		// This is rw instead of ro because QEMU has some bug with
+		// read-only directories.
+		"-drive", fmt.Sprintf("file=fat:rw:%s,format=raw", rod.Dir),
 	}
 }
 
