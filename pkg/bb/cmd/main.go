@@ -24,7 +24,7 @@ func isSymlink(f string) bool {
 	if err != nil {
 		return false
 	}
-	return s.Mode()&os.ModeSymlink != 0
+	return (s.Mode() & os.ModeSymlink) == os.ModeSymlink
 }
 
 func main() {
