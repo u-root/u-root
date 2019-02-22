@@ -239,29 +239,25 @@ type IBFT struct {
 	Target1   IBFTTarget
 }
 
-func init() {
-	marshalers[reflect.TypeOf(&IBFT{}).Kind()] = marshalIBFT
-}
-
-func marshalIBFT(head, heap *bytes.Buffer, i interface{}) error {
+func (ibft *IBFT) Marshal() ([]byte, error) {
+	var head, heap bytes.Buffer
 	Debug("IBFT")
-	ibft := i.(*IBFT)
 	f, err := flags(ibft.Multi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	control.Flags = acpiIBFTControlFlags(f)
-	w(head, 1, []byte(rawIBTFHeader), control)
+	w(&head, 1, []byte(rawIBTFHeader), control)
 	Debug("Done IBFTHeader: head is %d bytes", head.Len())
-	if err := mIBFT(head, heap, ibft); err != nil {
-		return err
+	if err := mIBFT(&head, &heap, ibft); err != nil {
+		return nil, err
 	}
 	if head.Len() != int(ibftHeadersLen) {
-		return fmt.Errorf("Expected headers len is wrong; got %d, want %d", head.Len(), ibftHeadersLen)
+		return nil, fmt.Errorf("Expected headers len is wrong; got %d, want %d", head.Len(), ibftHeadersLen)
 	}
-	w(head, 1, heap.Bytes())
-	heap.Reset()
-	return nil
+	w(&head, 1, heap.Bytes())
+
+	return head.Bytes(), nil
 }
 
 func mIBFT(head, heap *bytes.Buffer, i interface{}) error {

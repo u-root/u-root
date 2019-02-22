@@ -11,6 +11,7 @@ import (
 	"testing"
 )
 
+/*
 func testTarget(t *testing.T) {
 	var tests = []struct {
 		n   string
@@ -29,7 +30,7 @@ func testTarget(t *testing.T) {
 		t.Logf("%s: (%T, %v) -> (%v, %v)", tst.n, tst.v, tst.v, b, err)
 	}
 }
-
+*/
 func TestSizes(t *testing.T) {
 	if len(rawIBTFHeader) != 48 {
 		t.Errorf("length of rawIBTFHeader: got %v, want 48", len(rawIBTFHeader))

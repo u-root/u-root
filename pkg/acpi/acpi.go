@@ -8,24 +8,29 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"reflect"
 	"strconv"
 )
 
+type ACPIMarshaler interface {
+	Marshal() ([]byte, error)
+}
 type (
 	// marshalers marshal ACPI tables into a head and a heap.
 	marshaler func(head, heap *bytes.Buffer, i interface{}) error
 )
 
 const (
+	// LengthOffset is the offset of the table length
+	LengthOffset = 4
 	// CSUMOffset is the offset of the single byte checksum in *most* ACPI tables
 	CSUMOffset = 9
+	// MinTableLength is the minimum length: 4 byte tag, 4 byte length, 1 byte revision, 1 byte checksum, 
+	MinTableLength = 10
 )
 
 var (
 	// Debug implements fmt.Sprintf and can be used for debug printing
-	Debug      = func(string, ...interface{}) {}
-	marshalers = map[reflect.Kind]marshaler{}
+	Debug = func(string, ...interface{}) {}
 )
 
 // Flags takes 0 or more flags and produces a uint32 value.
@@ -90,30 +95,26 @@ func uw(b *bytes.Buffer, s string, bits int) error {
 }
 
 // Marshal marshals support ACPI tables into a byte slice.
-func Marshal(i interface{}) ([]byte, error) {
-	var head, heap bytes.Buffer
+func Marshal(i ACPIMarshaler) ([]byte, error) {
+
 	Debug("Marshall %T", i)
-	m, ok := marshalers[reflect.TypeOf(i).Kind()]
-	if !ok {
-		return nil, fmt.Errorf("No marshaler for %T, have %v", i, marshalers)
-	}
-	Debug("Marshaler is %v", m)
 	// We pass in both a head and a heap. For most ACPI tables,
 	// only the head is written. For some tables, the heap is used
 	// as well. The top level handler in marshal is required to return
 	// with the heap reset and the head containing any tables.
-	if err := m(&head, &heap, i); err != nil {
+	b, err := i.Marshal()
+	if err != nil {
 		return nil, err
 	}
 
-	if heap.Len() != 0 {
-		return nil, fmt.Errorf("%T top level returned with non-empty heap", i)
+	if len(b) < MinTableLength {
+		return nil, fmt.Errorf("%v is too short to contain a table", b)
 	}
-	s := head.Bytes()
-	binary.LittleEndian.PutUint32(s[4:], uint32(len(s)))
-	c := gencsum(head.Bytes())
-	Debug("CSUM is %#x", c)
-	s[9] = c
 
-	return s, nil
+	binary.LittleEndian.PutUint32(b[LengthOffset:], uint32(len(b)))
+	c := gencsum(b)
+	Debug("CSUM is %#x", c)
+	b[CSUMOffset] = c
+
+	return b, nil
 }
