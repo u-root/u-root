@@ -8,13 +8,13 @@
 
 //
 // Synopsis:
-//	boot [-dev][-v][-dryrun]
+//	boot [-dev][-v][-dry-run]
 //
 // Description:
 //	If returns to u-root shell, the code didn't found a local bootable option
 //      -dev glob to use; default is /sys/class/block/*
 //      -v prints messages
-//      -dryrun doesn't really boot
+//      -dry-run doesn't really boot
 //
 // Notes:
 //	The code is looking for boot/grub/grub.cfg file as to identify the
@@ -55,9 +55,9 @@ type bootEntry struct {
 
 var (
 	devGlob     = flag.String("dev", "/sys/block/*", "Glob for devices")
-	v           = flag.Bool("v", false, "Print debug messages")
-	verbose     = func(string, ...interface{}) {}
-	dryrun      = flag.Bool("dryrun", true, "Boot")
+	verbose     = flag.Bool("v", false, "Print debug messages")
+	debug       = func(string, ...interface{}) {}
+	dryRun      = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
 	defaultBoot = flag.String("boot", "default", "Default entry to boot")
 	uroot       string
 )
@@ -105,7 +105,7 @@ func getSupportedFilesystem() ([]string, error) {
 // partitioned; and all its partitions.
 func mountEntry(d string, supportedFilesystem []string) error {
 	var err error
-	verbose("Try to mount %v", d)
+	debug("Try to mount %v", d)
 
 	// find or create the mountpoint.
 	m := filepath.Join(uroot, d)
@@ -113,17 +113,17 @@ func mountEntry(d string, supportedFilesystem []string) error {
 		err = os.MkdirAll(m, 0777)
 	}
 	if err != nil {
-		verbose("Can't make %v", m)
+		debug("Can't make %v", m)
 		return err
 	}
 	for _, filesystem := range supportedFilesystem {
 		var flags = uintptr(syscall.MS_RDONLY)
-		verbose("\twith %v", filesystem)
+		debug("\twith %v", filesystem)
 		if err := syscall.Mount(d, m, filesystem, flags, ""); err == nil {
 			return err
 		}
 	}
-	verbose("No mount succeeded")
+	debug("No mount succeeded")
 	return fmt.Errorf("Unable to mount any partition on %v", d)
 }
 
@@ -210,12 +210,12 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 		}
 	}()
 
-	verbose("getBootEntries: %s", lines)
+	debug("getBootEntries: %s", lines)
 	curLabel := ""
 	for _, line = range lines {
 		lineno++
 		f = strings.Fields(line)
-		verbose("%d: %q, %q", lineno, line, f)
+		debug("%d: %q, %q", lineno, line, f)
 		if len(f) == 0 {
 			continue
 		}
@@ -230,7 +230,7 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 				bootVars[vals[0]] = vals[1]
 			}
 		case "menuentry", "label":
-			verbose("Menuentry %v", line)
+			debug("Menuentry %v", line)
 			// nasty, but the alternatives are not much better.
 			// grub config language is kind of arbitrary
 			curEntry = fmt.Sprintf("\"%s\"", strconv.Itoa(numEntry))
@@ -246,11 +246,11 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 			}
 			bootVars["default"] = curLabel
 		case "linux", "kernel":
-			verbose("linux %v", line)
+			debug("linux %v", line)
 			be.kernel = f[1]
 			be.cmdline = strings.Join(f[2:], " ")
 		case "initrd":
-			verbose("initrd %v", line)
+			debug("initrd %v", line)
 			be.initrd = f[1]
 		case "append":
 			// Format is a little bit strange
@@ -271,7 +271,7 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 			}
 		}
 	}
-	verbose("grub config menu decoded to [%q, %q, %v]", bootEntries, bootVars, err)
+	debug("grub config menu decoded to [%q, %q, %v]", bootEntries, bootVars, err)
 	return bootEntries, bootVars, err
 
 }
@@ -316,13 +316,13 @@ func copyLocal(path string) (string, error) {
 
 // kexecLoad Loads a new kernel and initrd.
 func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
-	verbose("kexecEntry: boot from %v", grubConfPath)
+	debug("kexecEntry: boot from %v", grubConfPath)
 	b, v, err := getBootEntries(grub)
 	if err != nil {
 		return err
 	}
 
-	verbose("Boot Entries: %q", b)
+	debug("Boot Entries: %q", b)
 	entry, ok := v[*defaultBoot]
 	if !ok {
 		return fmt.Errorf("Entry %v not found in config file", *defaultBoot)
@@ -332,25 +332,25 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 		return fmt.Errorf("Entry %v not found in boot entries file", entry)
 	}
 
-	verbose("Boot params: %q", be)
+	debug("Boot params: %q", be)
 	localKernelPath, err := copyLocal(filepath.Join(mountPoint, be.kernel))
 	if err != nil {
-		verbose("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.kernel), err)
+		debug("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.kernel), err)
 		return err
 	}
 	localInitrdPath, err := copyLocal(filepath.Join(mountPoint, be.initrd))
 	if err != nil {
-		verbose("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.initrd), err)
+		debug("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.initrd), err)
 		return err
 	}
-	verbose(localKernelPath)
+	debug(localKernelPath)
 
 	// We can kexec the kernel with localKernelPath as kernel entry, kernelParameter as parameter and initrd as initrd !
 	log.Printf("Loading %s for kernel\n", localKernelPath)
 
 	kernelDesc, err := os.OpenFile(localKernelPath, os.O_RDONLY, 0)
 	if err != nil {
-		verbose("%v", err)
+		debug("%v", err)
 		return err
 	}
 	// defer kernelDesc.Close()
@@ -358,7 +358,7 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	log.Printf("Loading %s for initramfs", localInitrdPath)
 	ramfs, err := os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
 	if err != nil {
-		verbose("%v", err)
+		debug("%v", err)
 		return err
 	}
 	// defer ramfs.Close()
@@ -366,15 +366,15 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	log.Printf("Kernel cmdline %s", be.cmdline)
 
 	if err := kexec.FileLoad(kernelDesc, ramfs, be.cmdline); err != nil {
-		verbose("%v", err)
+		debug("%v", err)
 		return err
 	}
 	if err = ramfs.Close(); err != nil {
-		verbose("%v", err)
+		debug("%v", err)
 		return err
 	}
 	if err = kernelDesc.Close(); err != nil {
-		verbose("%v", err)
+		debug("%v", err)
 		return err
 	}
 	return err
@@ -384,14 +384,14 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 func main() {
 	flag.Parse()
 
-	if *v {
-		verbose = log.Printf
+	if *verbose {
+		debug = log.Printf
 	}
 	fs, err := getSupportedFilesystem()
 	if err != nil {
 		log.Panic("No filesystem support found")
 	}
-	verbose("Supported filesystems: %v", fs)
+	debug("Supported filesystems: %v", fs)
 	sysList, err := filepath.Glob(*devGlob)
 	if err != nil {
 		log.Panic("No available block devices to boot from")
@@ -416,7 +416,7 @@ func main() {
 			log.Printf("MBR for %s failed: %v", d, err)
 			continue
 		}
-		verbose("Bootable device %v found", d)
+		debug("Bootable device %v found", d)
 		// You can't just look for numbers to match. Consider names like
 		// mmcblk0, where has parts like mmcblk0p1. Just glob.
 		g := d + "*"
@@ -430,31 +430,31 @@ func main() {
 	if err != nil {
 		log.Fatalf("Can't create tmpdir: %v", err)
 	}
-	verbose("Trying to boot from %v", allparts)
+	debug("Trying to boot from %v", allparts)
 	for _, d := range allparts {
 		if err := mountEntry(d, fs); err != nil {
 			continue
 		}
-		verbose("mount succeed")
+		debug("mount succeed")
 		u := filepath.Join(uroot, d)
 		config, fileDir, root, err := checkBootEntry(u)
 		if err != nil {
-			verbose("d: %v", d, err)
+			debug("d: %v", d, err)
 			if err := umountEntry(u); err != nil {
 				log.Printf("Can't unmount %v: %v", u, err)
 			}
 			continue
 		}
-		verbose("calling basic kexec: content %v, path %v", config, fileDir)
+		debug("calling basic kexec: content %v, path %v", config, fileDir)
 		if err = kexecLoad(fileDir, config, root); err != nil {
 			log.Printf("kexec on %v failed: %v", u, err)
 		}
-		verbose("kexecLoad succeeded")
+		debug("kexecLoad succeeded")
 
 		if err := umountEntry(u); err != nil {
 			log.Printf("Can't unmount %v: %v", u, err)
 		}
-		if *dryrun {
+		if *dryRun {
 			continue
 		}
 		if err := kexec.Reboot(); err != nil {
