@@ -255,9 +255,9 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 		case "append":
 			// Format is a little bit strange
 			//   append   MENU=/bin/cdrom-checker-menu vga=788 initrd=/install/initrd.gz quiet --
-			var current_parameter int
+			var currentParameter int
 			for _, parameter := range f {
-				if current_parameter > 0 {
+				if currentParameter > 0 {
 					if strings.HasPrefix(parameter, "initrd") {
 						initrd := strings.Split(parameter, "=")
 						bootEntries[curEntry].initrd = bootEntries[curEntry].initrd + initrd[1]
@@ -267,7 +267,7 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 						}
 					}
 				}
-				current_parameter++
+				currentParameter++
 			}
 		}
 	}
