@@ -29,9 +29,9 @@ package main
 
 import (
 	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
-	"github.com/u-root/u-root/pkg/kexec"
 	"io"
 	"io/ioutil"
 	"log"
@@ -40,6 +40,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/kexec"
 )
 
 const (
@@ -381,20 +383,16 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 
 }
 
-func main() {
-	flag.Parse()
-
-	if *verbose {
-		debug = log.Printf
-	}
+// Localboot tries to boot from any local filesystem by parsing grub configuration
+func Localboot() error {
 	fs, err := getSupportedFilesystem()
 	if err != nil {
-		log.Panic("No filesystem support found")
+		return errors.New("No filesystem support found")
 	}
 	debug("Supported filesystems: %v", fs)
 	sysList, err := filepath.Glob(*devGlob)
 	if err != nil {
-		log.Panic("No available block devices to boot from")
+		return errors.New("No available block devices to boot from")
 	}
 	// The Linux /sys file system is a bit, er, awkward. You can't find
 	// the device special in there; just everything else.
@@ -428,7 +426,7 @@ func main() {
 	}
 	uroot, err = ioutil.TempDir("", "u-root-boot")
 	if err != nil {
-		log.Fatalf("Can't create tmpdir: %v", err)
+		return fmt.Errorf("Can't create tmpdir: %v", err)
 	}
 	debug("Trying to boot from %v", allparts)
 	for _, d := range allparts {
@@ -460,6 +458,19 @@ func main() {
 		if err := kexec.Reboot(); err != nil {
 			log.Printf("Kexec Reboot %v failed, %v. Sorry", u, err)
 		}
+		return nil
 	}
-	log.Fatalf("Sorry no bootable device found")
+	return fmt.Errorf("Sorry no bootable device found")
+}
+
+func main() {
+	flag.Parse()
+
+	if *verbose {
+		debug = log.Printf
+	}
+
+	if err := Localboot(); err != nil {
+		log.Fatal(err)
+	}
 }
