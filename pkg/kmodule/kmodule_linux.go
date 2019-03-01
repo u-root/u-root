@@ -82,6 +82,7 @@ type ProbeOpts struct {
 	DryRunCB func(string)
 	RootDir  string
 	KVer     string
+	IgnoreProcMods bool
 }
 
 // Probe loads the given kernel module and its dependencies.
@@ -194,10 +195,12 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 		return nil, err
 	}
 
-	fm, err := os.Open("/proc/modules")
-	if err == nil {
-		defer fm.Close()
-		genLoadedMods(fm, deps)
+	if !opts.IgnoreProcMods {
+		fm, err := os.Open("/proc/modules")
+		if err == nil {
+			defer fm.Close()
+			genLoadedMods(fm, deps)
+		}
 	}
 
 	return deps, nil
