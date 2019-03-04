@@ -19,13 +19,16 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
@@ -38,11 +41,13 @@ type options struct {
 	load         bool
 	exec         bool
 	debug        bool
+	acpi         string
 	modules      []string
 }
 
 func registerFlags() *options {
 	o := &options{}
+	flag.StringVarP(&o.acpi, "acpi", "b", "", "Add an acpi table")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
@@ -63,6 +68,7 @@ type file struct {
 
 type mboot struct {
 	debug   bool
+	acpi    string
 	modules []string
 }
 
@@ -81,7 +87,6 @@ func (f file) Load(path, cmdLine string) error {
 		}
 		defer ramfs.Close()
 	}
-
 	return kexec.FileLoad(kernel, ramfs, cmdLine)
 }
 
@@ -99,8 +104,34 @@ func (mb mboot) Load(path, cmdLine string) error {
 	if err := m.Load(mb.debug); err != nil {
 		return fmt.Errorf("Load failed: %v", err)
 	}
+	segs := m.Segments()
+	if mb.acpi != "" {
+		b, err := ioutil.ReadFile(mb.acpi)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// Find a place to put the table. It needs to be big enough to also hold
+		// the RSDP. It would be easiest to sleaze out and just allocate a single
+		// segment holding page 0 and the the table but that's harder than doing
+		// two seperate allocs. The allocators force things to page alignment so
+		// the 16 byte alignment constraint is also met.
+		tab := append(make([]byte, acpi.RSDPLen), b...)
+		addr, err := m.Mem.AddKexecSegmentBaseLimit(b, 0x1000, 1048576)
+		if err != nil {
+			return fmt.Errorf("Allocating segment for ACPI in low 1m: %v", err)
+		}
+		// Looks good. Now fill in the rsdp.
+		r := acpi.NewRSDP(addr, uint(len(b)))
+		copy(tab, r)
 
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
+		var rsdpp [4096]byte
+		if _, err := m.Mem.AddKexecSegmentBaseLimit(rsdpp[:], 0x0, 0x1024); err != nil {
+			return fmt.Errorf("Can't get page 0 for rsdp pointer: %v", err)
+		}
+		binary.LittleEndian.PutUint16(rsdpp[0x40e:], uint16(addr>>4))
+	}
+
+	if err := kexec.Load(m.EntryPoint, segs, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
@@ -135,6 +166,10 @@ func main() {
 		}
 	}
 
+	if (opts.initramfs != "" || opts.acpi != "") && !opts.load {
+		log.Fatal("If you want an initramfs you must set it up at load time")
+	}
+
 	if opts.load {
 		kernelpath := flag.Args()[0]
 		log.Printf("Loading %s for kernel\n", kernelpath)
@@ -149,7 +184,6 @@ func main() {
 		} else if err == multiboot.ErrFlagsNotSupported {
 			log.Fatal(err)
 		}
-
 		if err := l.Load(kernelpath, newCmdLine); err != nil {
 			log.Fatal(err)
 		}

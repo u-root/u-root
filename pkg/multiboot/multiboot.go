@@ -24,7 +24,7 @@ const bootloader = "u-root kexec"
 
 // Multiboot defines parameters for working with multiboot kernels.
 type Multiboot struct {
-	mem kexec.Memory
+	Mem kexec.Memory
 
 	file    string
 	modules []string
@@ -93,7 +93,7 @@ func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
 		cmdLine:    cmdLine,
 		trampoline: trampoline,
 		bootloader: bootloader,
-		mem:        kexec.Memory{},
+		Mem:        kexec.Memory{},
 	}
 }
 
@@ -116,12 +116,12 @@ func (m *Multiboot) Load(debug bool) error {
 	}
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(kernel); err != nil {
+	if err := m.Mem.LoadElfSegments(kernel); err != nil {
 		return fmt.Errorf("Error loading ELF segments: %v", err)
 	}
 
 	log.Printf("Parsing memory map")
-	if err := m.mem.ParseMemoryMap(); err != nil {
+	if err := m.Mem.ParseMemoryMap(); err != nil {
 		return fmt.Errorf("Error parsing memory map: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func (m *Multiboot) addInfo() (addr uintptr, err error) {
 		return 0, err
 	}
 
-	addr, err = m.mem.FindSpace(infoSize)
+	addr, err = m.Mem.FindSpace(infoSize)
 	if err != nil {
 		return 0, err
 	}
@@ -175,7 +175,7 @@ func (m *Multiboot) addInfo() (addr uintptr, err error) {
 	}
 	m.info = iw.Info
 
-	addr, err = m.mem.AddKexecSegment(d)
+	addr, err = m.Mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, err
 	}
@@ -184,7 +184,7 @@ func (m *Multiboot) addInfo() (addr uintptr, err error) {
 
 func (m Multiboot) memoryMap() memoryMaps {
 	var ret memoryMaps
-	for _, r := range m.mem.Phys {
+	for _, r := range m.Mem.Phys {
 		typ, ok := rangeTypes[r.Type]
 		if !ok {
 			typ = rangeTypes[kexec.RangeDefault]
@@ -207,7 +207,7 @@ func (m *Multiboot) addMmap() (addr uintptr, size uint, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	addr, err = m.mem.AddKexecSegment(d)
+	addr, err = m.Mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -217,7 +217,7 @@ func (m *Multiboot) addMmap() (addr uintptr, size uint, err error) {
 func (m Multiboot) memoryBoundaries() (lower, upper uint32) {
 	const M1 = 1048576
 	const K640 = 640 * 1024
-	for _, r := range m.mem.Phys {
+	for _, r := range m.Mem.Phys {
 		if r.Type != kexec.RangeRAM {
 			continue
 		}
@@ -283,7 +283,7 @@ func (m *Multiboot) newMultibootInfo() (*infoWrapper, error) {
 // Segments returns kexec.Segments, where all the multiboot related
 // information is stored.
 func (m Multiboot) Segments() []kexec.Segment {
-	return m.mem.Segments
+	return m.Mem.Segments
 }
 
 // marshal writes out the exact bytes expected by the multiboot info header
@@ -303,7 +303,7 @@ func (m *Multiboot) addTrampoline() (entry uintptr, err error) {
 		return 0, err
 	}
 
-	addr, err := m.mem.AddKexecSegment(d)
+	addr, err := m.Mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, err
 	}

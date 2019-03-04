@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -153,9 +154,6 @@ func AlignPhys(s Segment) Segment {
 	// Round up to page size.
 	s.Phys.Size = alignUp(s.Phys.Size + uint(diff))
 
-	if s.Buf.Start < diff {
-		panic("cannot have virtual memory address within first page")
-	}
 	s.Buf.Start -= diff
 
 	if s.Buf.Size > 0 {
@@ -382,21 +380,29 @@ type TypedAddressRange struct {
 var ErrNotEnoughSpace = errors.New("not enough space")
 
 // FindSpace returns pointer to the physical memory,
-// where array of size sz can be stored during next
-// AddKexecSegment call.
-func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
-	sz = alignUp(sz)
+// which is a superset of r, where the region can be stored
+// during next AddKexecSegment call. The region to find is bounded
+// by lim, with the relation:
+// lim is a superset of the range being checked which must be a superset of r.
+// The type of the memory range and r must be the same.
+func (m Memory) FindSpaceRange(lim, r TypedAddressRange) (start uintptr, err error) {
 	ranges := m.availableRAM()
-	for _, r := range ranges {
-		// don't use memory below 1M, just in case.
-		if uint(r.Start)+r.Size < 1048576 {
+	for _, rs := range ranges {
+		if r.Type != rs.Type {
 			continue
 		}
-		if r.Size >= sz {
-			return r.Start, nil
+		if lim.Range.IsSupersetOf(rs.Range) {
+			return rs.Start, nil
+		}
+		if rs.Range.IsSupersetOf(r.Range) {
+			return rs.Start, nil
 		}
 	}
 	return 0, ErrNotEnoughSpace
+}
+
+func (m Memory) FindSpace(s uint) (start uintptr, err error) {
+	return m.FindSpaceRange(TypedAddressRange{Range: Range{1048576, math.MaxUint64 - 1048576}, Type: RangeRAM}, TypedAddressRange{Range: Range{1048576, s}, Type: RangeRAM})
 }
 
 func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
@@ -411,15 +417,21 @@ func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
 	})
 }
 
-// AddKexecSegment adds d to a new kexec segment
-func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
-	size := uint(len(d))
-	start, err := m.FindSpace(size)
+// AddKexecSegment adds d to a new kexec segment, starting at base.
+// base is allowed to be 0.
+func (m *Memory) AddKexecSegmentBaseLimit(d []byte, base uintptr, limit uint) (addr uintptr, err error) {
+	start, err := m.FindSpaceRange(TypedAddressRange{Range: Range{base, limit}, Type: RangeRAM}, TypedAddressRange{Range: Range{base, uint(len(d))}, Type: RangeRAM})
 	if err != nil {
 		return 0, err
 	}
 	m.addKexecSegment(start, d)
 	return start, nil
+}
+
+// AddKexecSegment adds d to a new kexec segment
+// It only allocates segments above from 1M to max 64-bit addr - 1M
+func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
+	return m.AddKexecSegmentBaseLimit(d, 1048576, math.MaxUint64-1048576)
 }
 
 // availableRAM subtracts physical ranges of kexec segments from
