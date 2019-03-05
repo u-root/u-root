@@ -47,7 +47,7 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVarP(&o.acpi, "acpi", "b", "", "Add an acpi table")
+	flag.StringVarP(&o.acpi, "acpi", "a", "", "Add an acpi table")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
@@ -68,7 +68,6 @@ type file struct {
 
 type mboot struct {
 	debug   bool
-	acpi    string
 	modules []string
 }
 
@@ -105,40 +104,6 @@ func (mb mboot) Load(path, cmdLine string) error {
 		return fmt.Errorf("Load failed: %v", err)
 	}
 	segs := m.Segments()
-	if mb.acpi != "" {
-		// it's extremely unlikely that we are replacing all acpi tables.
-		// For now, assume we are appending.
-		b, err := acpi.TablesData()
-		if err != nil {
-			return err
-		}
-
-		addb, err := ioutil.ReadFile(mb.acpi)
-		if err != nil {
-			log.Fatal(err)
-		}
-		b = append(b, addb...)
-		// Find a place to put the table. It needs to be big enough to also hold
-		// the RSDP. It would be easiest to sleaze out and just allocate a single
-		// segment holding page 0 and the the table but that's harder than doing
-		// two seperate allocs. The allocators force things to page alignment so
-		// the 16 byte alignment constraint is also met.
-		tab := append(make([]byte, acpi.RSDPLen), b...)
-		addr, err := m.Mem.AddKexecSegmentBaseLimit(b, 0x1000, 1048576)
-		if err != nil {
-			return fmt.Errorf("Allocating segment for ACPI in low 1m: %v", err)
-		}
-		// Looks good. Now fill in the rsdp.
-		r := acpi.NewRSDP(addr, uint(len(b)))
-		copy(tab, r)
-
-		var rsdpp [4096]byte
-		if _, err := m.Mem.AddKexecSegmentBaseLimit(rsdpp[:], 0x0, 0x1024); err != nil {
-			return fmt.Errorf("Can't get page 0 for rsdp pointer: %v", err)
-		}
-		binary.LittleEndian.PutUint16(rsdpp[0x40e:], uint16(addr>>4))
-	}
-
 	if err := kexec.Load(m.EntryPoint, segs, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
@@ -195,6 +160,44 @@ func main() {
 		if err := l.Load(kernelpath, newCmdLine); err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	if opts.acpi != "" {
+		var m kexec.Memory
+		if err := m.ParseMemoryMap(); err != nil {
+			log.Fatal(err)
+		}
+		// it's extremely unlikely that we are replacing all acpi tables.
+		// For now, assume we are appending.
+		b, err := acpi.TablesData()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		addb, err := ioutil.ReadFile(opts.acpi)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b = append(b, addb...)
+		// Find a place to put the table. It needs to be big enough to also hold
+		// the RSDP. It would be easiest to sleaze out and just allocate a single
+		// segment holding page 0 and the the table but that's harder than doing
+		// two seperate allocs. The allocators force things to page alignment so
+		// the 16 byte alignment constraint is also met.
+		tab := append(make([]byte, acpi.RSDPLen), b...)
+		addr, err := m.AddKexecSegmentBaseLimit(b, 0x1000, 1048576)
+		if err != nil {
+			log.Fatalf("Allocating segment for ACPI in low 1m: %v", err)
+		}
+		// Looks good. Now fill in the rsdp.
+		r := acpi.NewRSDP(addr, uint(len(b)))
+		copy(tab, r)
+
+		var rsdpp [4096]byte
+		if _, err := m.AddKexecSegmentBaseLimit(rsdpp[:], 0x40e, 02); err != nil {
+			log.Fatalf("Can't get page 0 for rsdp pointer: %v", err)
+		}
+		binary.LittleEndian.PutUint16(rsdpp[:], uint16(addr>>4))
 	}
 
 	if opts.exec {

@@ -35,6 +35,10 @@ type Range struct {
 	Size uint
 }
 
+func (r Range) String() string {
+	return fmt.Sprintf("%#08x:%#08x", r.Start, r.Size)
+}
+
 // Overlaps returns true if r and r2 overlap.
 func (r Range) Overlaps(r2 Range) bool {
 	return r.Start < (r2.Start+uintptr(r2.Size)) && r2.Start < (r.Start+uintptr(r.Size))
@@ -377,6 +381,10 @@ type TypedAddressRange struct {
 	Type RangeType
 }
 
+func (t *TypedAddressRange) String() string {
+	return fmt.Sprintf("%s: %s", t.Range.String(), t.Type)
+}
+
 var ErrNotEnoughSpace = errors.New("not enough space")
 
 // FindSpace returns pointer to the physical memory,
@@ -387,14 +395,21 @@ var ErrNotEnoughSpace = errors.New("not enough space")
 // The type of the memory range and r must be the same.
 func (m Memory) FindSpaceRange(lim, r TypedAddressRange) (start uintptr, err error) {
 	ranges := m.availableRAM()
+	Debug("Find range in %s for %s", lim, r)
+
 	for _, rs := range ranges {
+		Debug("Check %s", rs)
 		if r.Type != rs.Type {
+			Debug("Mismatch type")
 			continue
 		}
-		if lim.Range.IsSupersetOf(rs.Range) {
+		if !lim.Range.IsSupersetOf(rs.Range) {
+			Debug("Not a subset of lim")
 			return rs.Start, nil
 		}
-		if rs.Range.IsSupersetOf(r.Range) {
+
+		if !rs.Range.IsSupersetOf(r.Range) {
+			Debug("Not a superset of r")
 			return rs.Start, nil
 		}
 	}

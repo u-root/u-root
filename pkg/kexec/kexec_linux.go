@@ -6,8 +6,11 @@ package kexec
 
 import (
 	"fmt"
+	"log"
 	"syscall"
 )
+
+var Debug = log.Printf
 
 // Reboot executes a kernel previously loaded with FileInit.
 func Reboot() error {
