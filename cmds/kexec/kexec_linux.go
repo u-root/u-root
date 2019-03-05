@@ -191,6 +191,7 @@ func main() {
 		if err := m.AddKexecRSDP(addr); err != nil {
 			log.Fatalf("Can't get page 0 for rsdp pointer: %v", err)
 		}
+		log.Printf("ACPI loaded: m is %s", m)
 
 	}
 

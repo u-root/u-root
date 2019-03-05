@@ -38,6 +38,10 @@ type Range struct {
 	Size uint
 }
 
+func (r Range) String() string {
+	return fmt.Sprintf("%#08x:%#04x", r.Start, r.Size)
+}
+
 // Overlaps returns true if r and r2 overlap.
 func (r Range) Overlaps(r2 Range) bool {
 	return r.Start < (r2.Start+uintptr(r2.Size)) && r2.Start < (r.Start+uintptr(r.Size))
@@ -377,10 +381,25 @@ type Memory struct {
 	Segments []Segment
 }
 
+func (m Memory) String() string {
+	var r string
+	for _, p := range m.Phys {
+		r += fmt.Sprintf("%s\n", p.String())
+	}
+	for _, s := range m.Segments {
+		r += fmt.Sprintf("%s\n", s.String())
+	}
+	return r
+}
+
 // TypedAddressRange represents range of physical memory.
 type TypedAddressRange struct {
 	Range
 	Type RangeType
+}
+
+func (t TypedAddressRange) String() string {
+	return fmt.Sprintf("%s: %s", t.Range.String(), t.Type)
 }
 
 var ErrNotEnoughSpace = errors.New("not enough space")
@@ -398,6 +417,35 @@ func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
 		}
 		if r.Size >= sz {
 			return r.Start, nil
+		}
+	}
+	return 0, ErrNotEnoughSpace
+}
+
+// FindSpace returns pointer to the physical memory,
+// where array of size sz can be stored during next
+// AddKexecSegment call.
+func (m Memory) FindACPI(sz uint) (start uintptr, err error) {
+	r := m.availableRAM()
+	sx := -1
+	for i := range r {
+		if r[i].Type != RangeACPI && r[i].Type != RangeNVACPI {
+			if sx == -1 {
+				continue
+			}
+			// So far, these ranges are contiguous. Further, they
+			// are page aligned. We can take the end of this,
+			// page align it, and the range is
+			// r.[sx].Start to end
+			end := alignUpPtr(r[i].Start + uintptr(r[i].Size))
+			avail := end - r[i].Start
+			if avail < uintptr(sz) {
+				return 0, fmt.Errorf("%v: only %d available", ErrNotEnoughSpace, avail)
+			}
+			return r[sx].Start, nil
+		}
+		if sx == -1 {
+			sx = i
 		}
 	}
 	return 0, ErrNotEnoughSpace
