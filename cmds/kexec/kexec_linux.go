@@ -19,7 +19,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -179,25 +178,20 @@ func main() {
 			log.Fatal(err)
 		}
 		b = append(b, addb...)
-		// Find a place to put the table. It needs to be big enough to also hold
-		// the RSDP. It would be easiest to sleaze out and just allocate a single
-		// segment holding page 0 and the the table but that's harder than doing
-		// two seperate allocs. The allocators force things to page alignment so
-		// the 16 byte alignment constraint is also met.
-		tab := append(make([]byte, acpi.RSDPLen), b...)
-		addr, err := m.AddKexecSegmentBaseLimit(b, 0x1000, 1048576)
+		addr, err := m.AddKexecSegment(b)
 		if err != nil {
-			log.Fatalf("Allocating segment for ACPI in low 1m: %v", err)
+			log.Fatalf("Allocating segment for ACPI: %v", err)
 		}
-		// Looks good. Now fill in the rsdp.
-		r := acpi.NewRSDP(addr, uint(len(b)))
-		copy(tab, r)
 
-		var rsdpp [4096]byte
-		if _, err := m.AddKexecSegmentBaseLimit(rsdpp[:], 0x40e, 02); err != nil {
+		r := acpi.NewRSDP(addr, uint(len(b)))
+		if addr, err = m.AddKexecSegment1M(r); err != nil {
+			log.Fatalf("Allocating RSDP in low 1m: %v", err)
+		}
+
+		if err := m.AddKexecRSDP(addr); err != nil {
 			log.Fatalf("Can't get page 0 for rsdp pointer: %v", err)
 		}
-		binary.LittleEndian.PutUint16(rsdpp[:], uint16(addr>>4))
+
 	}
 
 	if opts.exec {

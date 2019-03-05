@@ -6,11 +6,11 @@ package kexec
 
 import (
 	"debug/elf"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,7 +24,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var pageMask = uint(os.Getpagesize() - 1)
+var (
+	pageMask         = uint(os.Getpagesize() - 1)
+	low1M    uintptr = 0x1000 // known to be valid but we can put more logic to it should we ever need it.
+)
 
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
@@ -33,10 +36,6 @@ type Range struct {
 	// Size is the size of the range.
 	// Start+Size is the exclusive end of the range.
 	Size uint
-}
-
-func (r Range) String() string {
-	return fmt.Sprintf("%#08x:%#08x", r.Start, r.Size)
 }
 
 // Overlaps returns true if r and r2 overlap.
@@ -158,6 +157,9 @@ func AlignPhys(s Segment) Segment {
 	// Round up to page size.
 	s.Phys.Size = alignUp(s.Phys.Size + uint(diff))
 
+	if s.Buf.Start < diff {
+		panic("cannot have virtual memory address within first page")
+	}
 	s.Buf.Start -= diff
 
 	if s.Buf.Size > 0 {
@@ -381,43 +383,24 @@ type TypedAddressRange struct {
 	Type RangeType
 }
 
-func (t *TypedAddressRange) String() string {
-	return fmt.Sprintf("%s: %s", t.Range.String(), t.Type)
-}
-
 var ErrNotEnoughSpace = errors.New("not enough space")
 
 // FindSpace returns pointer to the physical memory,
-// which is a superset of r, where the region can be stored
-// during next AddKexecSegment call. The region to find is bounded
-// by lim, with the relation:
-// lim is a superset of the range being checked which must be a superset of r.
-// The type of the memory range and r must be the same.
-func (m Memory) FindSpaceRange(lim, r TypedAddressRange) (start uintptr, err error) {
+// where array of size sz can be stored during next
+// AddKexecSegment call.
+func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
+	sz = alignUp(sz)
 	ranges := m.availableRAM()
-	Debug("Find range in %s for %s", lim, r)
-
-	for _, rs := range ranges {
-		Debug("Check %s", rs)
-		if r.Type != rs.Type {
-			Debug("Mismatch type")
+	for _, r := range ranges {
+		// don't use memory below 1M, just in case.
+		if uint(r.Start)+r.Size < 1048576 {
 			continue
 		}
-		if !lim.Range.IsSupersetOf(rs.Range) {
-			Debug("Not a subset of lim")
-			return rs.Start, nil
-		}
-
-		if !rs.Range.IsSupersetOf(r.Range) {
-			Debug("Not a superset of r")
-			return rs.Start, nil
+		if r.Size >= sz {
+			return r.Start, nil
 		}
 	}
 	return 0, ErrNotEnoughSpace
-}
-
-func (m Memory) FindSpace(s uint) (start uintptr, err error) {
-	return m.FindSpaceRange(TypedAddressRange{Range: Range{1048576, math.MaxUint64 - 1048576}, Type: RangeRAM}, TypedAddressRange{Range: Range{1048576, s}, Type: RangeRAM})
 }
 
 func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
@@ -432,10 +415,10 @@ func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
 	})
 }
 
-// AddKexecSegment adds d to a new kexec segment, starting at base.
-// base is allowed to be 0.
-func (m *Memory) AddKexecSegmentBaseLimit(d []byte, base uintptr, limit uint) (addr uintptr, err error) {
-	start, err := m.FindSpaceRange(TypedAddressRange{Range: Range{base, limit}, Type: RangeRAM}, TypedAddressRange{Range: Range{base, uint(len(d))}, Type: RangeRAM})
+// AddKexecSegment adds d to a new kexec segment
+func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
+	size := uint(len(d))
+	start, err := m.FindSpace(size)
 	if err != nil {
 		return 0, err
 	}
@@ -443,10 +426,25 @@ func (m *Memory) AddKexecSegmentBaseLimit(d []byte, base uintptr, limit uint) (a
 	return start, nil
 }
 
-// AddKexecSegment adds d to a new kexec segment
-// It only allocates segments above from 1M to max 64-bit addr - 1M
-func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
-	return m.AddKexecSegmentBaseLimit(d, 1048576, math.MaxUint64-1048576)
+// AddKexecSegment1M adds d to a new kexec segment in the low 1M.
+// There are very few if any things that go here.
+func (m *Memory) AddKexecSegment1M(d []byte) (addr uintptr, err error) {
+	start := low1M // someday we may want a fancy allocator. Unlikely.
+	m.addKexecSegment(start, d)
+	return start, nil
+}
+
+// AddKexecSegmentRSDP adds a segment that is at 0x4e for the RSDP
+// We don't use any kind of general "page 0 allocator" because we should
+// almost never do anything in page 0.
+func (m *Memory) AddKexecRSDP(addr uintptr) error {
+	if addr > 10485786 {
+		return fmt.Errorf("rsdp of %#x is above the 1M limit", addr)
+	}
+	var rsdp [2]byte
+	binary.LittleEndian.PutUint16(rsdp[:], uint16(addr>>4))
+	m.addKexecSegment(0x40e, rsdp[:])
+	return nil
 }
 
 // availableRAM subtracts physical ranges of kexec segments from
