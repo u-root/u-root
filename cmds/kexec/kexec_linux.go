@@ -106,10 +106,18 @@ func (mb mboot) Load(path, cmdLine string) error {
 	}
 	segs := m.Segments()
 	if mb.acpi != "" {
-		b, err := ioutil.ReadFile(mb.acpi)
+		// it's extremely unlikely that we are replacing all acpi tables.
+		// For now, assume we are appending.
+		b, err := acpi.TablesData()
+		if err != nil {
+			return err
+		}
+
+		addb, err := ioutil.ReadFile(mb.acpi)
 		if err != nil {
 			log.Fatal(err)
 		}
+		b = append(b, addb...)
 		// Find a place to put the table. It needs to be big enough to also hold
 		// the RSDP. It would be easiest to sleaze out and just allocate a single
 		// segment holding page 0 and the the table but that's harder than doing
