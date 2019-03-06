@@ -61,7 +61,7 @@ func (p *Packet4) DNS() []net.IP {
 }
 
 // Boot returns the boot file assigned.
-func (p *Packet4) Boot() (url.URL, error) {
+func (p *Packet4) Boot() (*url.URL, error) {
 	// TODO: This is not 100% right -- if a certain option is set, this
 	// stuff is encoded in options instead of in the packet's BootFile and
 	// ServerName fields.
@@ -69,7 +69,7 @@ func (p *Packet4) Boot() (url.URL, error) {
 	// While the default is tftp, servers may specify HTTP or FTP URIs.
 	u, err := url.Parse(p.P.BootFile)
 	if err != nil {
-		return url.URL{}, err
+		return nil, err
 	}
 
 	if len(u.Scheme) == 0 {
@@ -79,12 +79,12 @@ func (p *Packet4) Boot() (url.URL, error) {
 		if len(p.P.ServerName) == 0 {
 			server := dhcp4opts.GetServerIdentifier(p.P.Options)
 			if server == nil {
-				return url.URL{}, err
+				return nil, err
 			}
 			u.Host = net.IP(server).String()
 		} else {
 			u.Host = p.P.ServerName
 		}
 	}
-	return *u, nil
+	return u, nil
 }
