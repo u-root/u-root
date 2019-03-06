@@ -54,6 +54,11 @@ func NewLinuxImageFromArchive(a *cpio.Archive) (*LinuxImage, error) {
 	return li, nil
 }
 
+// String prints a human-readable version of this linux image.
+func (li *LinuxImage) String() string {
+	return fmt.Sprintf("LinuxImage(\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Kernel, li.Initrd, li.Cmdline)
+}
+
 // Pack implements OSImage.Pack and writes all necessary files to the modules
 // directory of `sw`.
 func (li *LinuxImage) Pack(sw cpio.RecordWriter) error {

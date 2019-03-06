@@ -28,6 +28,7 @@ func newMockImage(*cpio.Archive) (OSImage, error) {
 func (mockOSImage) ExecutionInfo(log *log.Logger)     {}
 func (mockOSImage) Execute() error                    { return nil }
 func (m mockOSImage) Pack(sw cpio.RecordWriter) error { return m.packErr }
+func (mockOSImage) String() string                    { return "" }
 
 func packageEqual(p1, p2 *Package) bool {
 	li1, ok := p1.OSImage.(*LinuxImage)

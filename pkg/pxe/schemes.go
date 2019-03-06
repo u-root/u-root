@@ -92,6 +92,18 @@ func GetFile(u *url.URL) (io.ReaderAt, error) {
 	return DefaultSchemes.GetFile(u)
 }
 
+// file is an io.ReaderAt with a nice Stringer.
+type file struct {
+	io.ReaderAt
+
+	url *url.URL
+}
+
+// String implements fmt.Stringer.
+func (f file) String() string {
+	return f.url.String()
+}
+
 // GetFile downloads the file with the given `u`. `u.Scheme` is used to
 // select the FileScheme via `s`.
 //
@@ -106,7 +118,7 @@ func (s Schemes) GetFile(u *url.URL) (io.ReaderAt, error) {
 	if err != nil {
 		return nil, &URLError{URL: u, Err: err}
 	}
-	return r, nil
+	return &file{ReaderAt: r, url: u}, nil
 }
 
 // LazyGetFile calls LazyGetFile on DefaultSchemes. See Schemes.LazyGetFile.
@@ -123,13 +135,16 @@ func (s Schemes) LazyGetFile(u *url.URL) (io.ReaderAt, error) {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
 
-	return uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
-		r, err := fg.GetFile(u)
-		if err != nil {
-			return nil, &URLError{URL: u, Err: err}
-		}
-		return r, nil
-	}), nil
+	return &file{
+		url: u,
+		ReaderAt: uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
+			r, err := fg.GetFile(u)
+			if err != nil {
+				return nil, &URLError{URL: u, Err: err}
+			}
+			return r, nil
+		}),
+	}, nil
 }
 
 // TFTPClient implements FileScheme for TFTP files.

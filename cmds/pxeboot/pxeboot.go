@@ -81,7 +81,7 @@ func Netboot() error {
 			continue
 		}
 
-		log.Printf("Boot URI: %v", uri)
+		log.Printf("Boot URI: %s", uri)
 
 		wd := &url.URL{
 			Scheme: uri.Scheme,
@@ -94,7 +94,7 @@ func Netboot() error {
 		}
 
 		label := pc.Entries[pc.DefaultEntry]
-		log.Printf("Got configuration: %v", label)
+		log.Printf("Got configuration: %s", label)
 
 		if *dryRun {
 			label.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))

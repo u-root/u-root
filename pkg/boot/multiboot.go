@@ -30,6 +30,11 @@ func (multibootImage) Execute() error {
 	return fmt.Errorf("multiboot images unimplemented")
 }
 
+// String implements fmt.Stringer.
+func (multibootImage) String() string {
+	return fmt.Sprintf("multiboot images unimplemented")
+}
+
 // Pack implements OSImage.Pack.
 func (multibootImage) Pack(sw cpio.RecordWriter) error {
 	return fmt.Errorf("multiboot images unimplemented")
