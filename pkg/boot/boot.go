@@ -5,6 +5,7 @@
 package boot
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -12,6 +13,8 @@ import (
 
 // OSImage represents a bootable OS package.
 type OSImage interface {
+	fmt.Stringer
+
 	// ExecutionInfo prints information about the OS image. A user should
 	// be able to use the kexec command line tool to execute the OSImage
 	// given the printed information.

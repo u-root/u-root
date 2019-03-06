@@ -55,21 +55,21 @@ func (p *Packet6) DNS() []net.IP {
 // TODO: RFC 5970 is helpfully avoidant of where these options are used. Are
 // they added to the packet? Are they added to an IANA?  It *seems* like it's
 // in the packet.
-func (p *Packet6) Boot() (url.URL, string, error) {
+func (p *Packet6) Boot() (*url.URL, string, error) {
 	uri, err := dhcp6opts.GetBootFileURL(p.p.Options)
 	if err != nil {
-		return url.URL{}, "", err
+		return nil, "", err
 	}
 
 	// Having this value is optional.
 	bfp, err := dhcp6opts.GetBootFileParam(p.p.Options)
 	if err != dhcp6.ErrOptionNotPresent {
-		return url.URL{}, "", err
+		return nil, "", err
 	}
 
 	var cmdline string
 	if bfp != nil {
 		cmdline = strings.Join(bfp, " ")
 	}
-	return url.URL(*uri), cmdline, nil
+	return (*url.URL)(uri), cmdline, nil
 }
