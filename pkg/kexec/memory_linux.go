@@ -359,11 +359,11 @@ func (m *Memory) ParseMemoryMap() error {
 type RangeType string
 
 const (
-	RangeRAM     RangeType = "System RAM"
-	RangeDefault           = "Default"
-	RangeNVACPI            = "ACPI Non-volatile Storage"
-	RangeACPI              = "ACPI Tables"
-	RangeNVS               = "Reserved"
+	RangeRAM      RangeType = "System RAM"
+	RangeDefault            = "Default"
+	RangeACPI               = "ACPI Tables"
+	RangeNVS                = "ACPI Non-volatile Storage"
+	RangeReserved           = "Reserved"
 )
 
 // Memory provides routines to work with physical memory ranges.
