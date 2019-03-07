@@ -41,14 +41,11 @@ type FullAddress struct {
 // GetAddress reads an sockaddr struct from the given address and converts it
 // to the FullAddress format. It supports AF_UNIX, AF_INET and AF_INET6
 // addresses.
-func GetAddress(t *Tracer, sfamily int, addr []byte) (FullAddress, error) {
+func GetAddress(t *Tracer, addr []byte) (FullAddress, error) {
 	r := bytes.NewBuffer(addr[:2])
 	var fam uint16
 	if err := binary.Read(r, ByteOrder, &fam); err != nil {
 		return FullAddress{}, unix.EFAULT
-	}
-	if fam != uint16(sfamily) {
-		return FullAddress{}, unix.ENOTSUP
 	}
 
 	// Get the rest of the fields based on the address family.
