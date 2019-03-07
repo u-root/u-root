@@ -429,8 +429,11 @@ func (m Memory) FindACPI(sz uint) (start uintptr, err error) {
 	r := m.availableRAM()
 	sx := -1
 	for i := range r {
+		Debug("Check %s", r[i].String())
 		if r[i].Type != RangeACPI && r[i].Type != RangeNVACPI {
 			if sx == -1 {
+				sx = i
+				Debug("sx is now %d", sx)
 				continue
 			}
 			// So far, these ranges are contiguous. Further, they
@@ -467,6 +470,18 @@ func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
 func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 	size := uint(len(d))
 	start, err := m.FindSpace(size)
+	if err != nil {
+		return 0, err
+	}
+	m.addKexecSegment(start, d)
+	return start, nil
+}
+
+// AddKexecSegmentACPI adds d to a new kexec segment, using existing ACPI
+// tables gleaned from the memmap.
+func (m *Memory) AddKexecSegmentACPI(d []byte) (addr uintptr, err error) {
+	size := uint(len(d))
+	start, err := m.FindACPI(size)
 	if err != nil {
 		return 0, err
 	}

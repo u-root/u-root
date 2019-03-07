@@ -4,7 +4,18 @@
 
 package acpi
 
-import "encoding/binary"
+import (
+	"bufio"
+	"encoding/binary"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/u-root/u-root/pkg/io"
+)
 
 const (
 	Revision    = 2 // always
@@ -14,6 +25,8 @@ const (
 	XSDTLenOff  = 20
 	XSDTAddrOff = 24
 )
+
+var pageMask = uint64(os.Getpagesize() - 1)
 
 // We just define the real one for 2 and later here. It's the only
 // one that matters. This whole layout is typical of the overall
@@ -46,4 +59,89 @@ func NewRSDP(addr uintptr, len uint) []byte {
 	binary.LittleEndian.PutUint64(r[XSDTAddrOff:], uint64(addr))
 	r[CSUM2Off] = gencsum(r[:])
 	return r[:]
+}
+
+func readRSDP(base int64) (int64, []byte, error) {
+	b := make([]byte, RSDPLen)
+	for i := range b {
+		var d io.Uint8
+		if err := io.Read(base+int64(i), &d); err != nil {
+			return 0, nil, err
+		}
+		b[i] = uint8(d)
+	}
+	return base, b, nil
+}
+
+func getRSDPEFI() (int64, []byte, error) {
+	file, err := os.Open("/sys/firmware/efi/systab")
+	if err != nil {
+		return 0, nil, err
+	}
+	defer file.Close()
+
+	const (
+		acpi20 = "ACPI20="
+		acpi   = "ACPI="
+	)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		start := ""
+		if strings.HasPrefix(line, acpi20) {
+			start = strings.TrimPrefix(line, acpi20)
+		}
+		if strings.HasPrefix(line, acpi) {
+			start = strings.TrimPrefix(line, acpi)
+		}
+		if start == "" {
+			continue
+		}
+		rsdp, err := strconv.ParseInt(start, 0, 64)
+		if err != nil {
+			continue
+		}
+		return readRSDP(rsdp)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("error while reading EFI systab: %v", err)
+	}
+	return 0, nil, fmt.Errorf("invalid efi/systab file")
+}
+
+func num(n string, i int) (uint64, error) {
+	b, err := ioutil.ReadFile(fmt.Sprintf("/sys/firmware/memmap/%d/%s", i, n))
+	if err != nil {
+		return 0, err
+	}
+	start, err := strconv.ParseUint(string(b), 0, 64)
+	return start, err
+}
+
+// get RSDPmem is the option of last choice, it just grovels through
+// the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
+// These are well-known addresses for 20+ years.
+func getRSDPmem() (int64, []byte, error) {
+	for base := int64(0xe0000); base < 0xffff0; base += 16 {
+		var r io.Uint64
+		if err := io.Read(base, &r); err != nil {
+			continue
+		}
+		if r != 0x2052545020445352 {
+			continue
+		}
+		return readRSDP(base)
+	}
+	return 0, nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
+}
+
+func GetRSDP() (int64, []byte, error) {
+	for _, f := range []func() (int64, []byte, error){getRSDPEFI, getRSDPmem} {
+		s, b, err := f()
+		if err == nil {
+			return s, b, nil
+		}
+	}
+	return 0, nil, fmt.Errorf("Can't find an RSDP")
 }

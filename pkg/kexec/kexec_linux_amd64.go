@@ -16,7 +16,7 @@ import (
 // cmdline.
 //
 // The kexec_file_load(2) syscall is x86-64 bit only.
-func FileLoad(kernel, ramfs *os.File, cmdline string) error {
+func FileLoad(kernel, ramfs *os.File, cmdline string, segs ...Segment) error {
 	var flags int
 	var ramfsfd int
 	if ramfs != nil {
@@ -30,6 +30,11 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 		cmdline = fmt.Sprintf("acpi_rsdp=%s %s", rsdp, cmdline)
 	}
 
+	if segs != nil {
+		if err := rawLoad(0, append([]Segment{}, segs...), 0); err != nil {
+			return err
+		}
+	}
 	if err := unix.KexecFileLoad(int(kernel.Fd()), ramfsfd, cmdline, flags); err != nil {
 		return fmt.Errorf("sys_kexec(%d, %d, %s, %x) = %v", kernel.Fd(), ramfsfd, cmdline, flags, err)
 	}
