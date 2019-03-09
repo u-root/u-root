@@ -63,13 +63,16 @@ type loader interface {
 
 type file struct {
 	initramfs string
+}
+
+type memory struct {
+	initramfs string
 	s         []kexec.Segment
 }
 
 type mboot struct {
 	debug   bool
 	modules []string
-	s       []kexec.Segment
 }
 
 func (f file) Load(path, cmdLine string) error {
@@ -87,7 +90,33 @@ func (f file) Load(path, cmdLine string) error {
 		}
 		defer ramfs.Close()
 	}
-	return kexec.FileLoad(kernel, ramfs, cmdLine, f.s...)
+	return kexec.FileLoad(kernel, ramfs, cmdLine)
+}
+
+func (me memory) Load(path, cmdLine string) error {
+	var m kexec.Memory
+	if err := m.ParseMemoryMap(); err != nil {
+		return err
+	}
+	kernel, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open(%q): %v", path, err)
+	}
+	defer kernel.Close()
+	if err := m.LoadElfSegments(kernel); err != nil {
+		return err
+	}
+	if false {
+		var ramfs *os.File
+		if me.initramfs != "" {
+			ramfs, err = os.OpenFile(me.initramfs, os.O_RDONLY, 0)
+			if err != nil {
+				return fmt.Errorf("open(%q): %v", me.initramfs, err)
+			}
+			defer ramfs.Close()
+		}
+	}
+	return kexec.Load(0x100000, m.Segments, 0)
 }
 
 func (mb mboot) Load(path, cmdLine string) error {
@@ -105,7 +134,7 @@ func (mb mboot) Load(path, cmdLine string) error {
 		return fmt.Errorf("Load failed: %v", err)
 	}
 	segs := m.Segments()
-	if err := kexec.Load(m.EntryPoint, append(mb.s, segs...), 0); err != nil {
+	if err := kexec.Load(m.EntryPoint, segs, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
@@ -144,45 +173,50 @@ func main() {
 		log.Fatal("If you want an initramfs you must set it up at load time")
 	}
 
-	var acpiseg []kexec.Segment
 	if opts.acpi != "" {
-		var m kexec.Memory
-		if err := m.ParseMemoryMap(); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("acpi load: m is %s", m.String())
-		// it's extremely unlikely that we are replacing all acpi tables.
-		// For now, assume we are appending.
-		b, err := acpi.TablesData()
-		if err != nil {
-			log.Fatal(err)
-		}
+		if false {
+			var m kexec.Memory
+			if err := m.ParseMemoryMap(); err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("acpi load: m is %s", m.String())
+			// it's extremely unlikely that we are replacing all acpi tables.
+			// For now, assume we are appending.
+			b, err := acpi.TablesData()
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		addb, err := ioutil.ReadFile(opts.acpi)
-		if err != nil {
-			log.Fatal(err)
-		}
-		b = append(b, addb...)
-		addr, err := m.AddKexecSegmentACPI(b)
-		if err != nil {
-			log.Fatalf("Allocating segment for ACPI: %v", err)
-		}
+			addb, err := ioutil.ReadFile(opts.acpi)
+			if err != nil {
+				log.Fatal(err)
+			}
+			b = append(b, addb...)
+			addr, err := m.AddKexecSegmentACPI(b)
+			if err != nil {
+				log.Fatalf("Allocating segment for ACPI: %v", err)
+			}
 
-		log.Printf("ACPI loaded: addr is %#x, m is %s", addr, m)
-		acpiseg = m.Segments
+			log.Printf("ACPI loaded: addr is %#x, m is %s", addr, m)
+		}
+		var l loader = memory{}
+		kernelpath := flag.Args()[0]
+		if err := l.Load(kernelpath, newCmdLine); err != nil {
+			log.Fatal(err)
+
+		}
 	}
 
 	if opts.load {
 		kernelpath := flag.Args()[0]
 		log.Printf("Loading %s for kernel\n", kernelpath)
 
-		var l loader = file{initramfs: opts.initramfs, s: acpiseg}
+		var l loader = file{initramfs: opts.initramfs}
 		if err := multiboot.Probe(kernelpath); err == nil {
 			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
 			l = mboot{
 				debug:   opts.debug,
 				modules: opts.modules,
-				s:       acpiseg,
 			}
 		} else if err == multiboot.ErrFlagsNotSupported {
 			log.Fatal(err)
