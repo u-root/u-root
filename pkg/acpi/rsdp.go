@@ -44,6 +44,7 @@ type RSDP struct {
 	Address   uint64 // XSDT address, the only one you should use
 	Checksum  uint8
 	_         [3]uint8
+	data      [RSDPLen]byte
 }
 
 var defaultRSDP = []byte("RSDP PTR U-ROOT\x02")

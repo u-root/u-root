@@ -31,13 +31,13 @@ func testTarget(t *testing.T) {
 	}
 }
 */
-func TestSizes(t *testing.T) {
+func TestIBFTSizes(t *testing.T) {
 	if len(rawIBTFHeader) != 48 {
 		t.Errorf("length of rawIBTFHeader: got %v, want 48", len(rawIBTFHeader))
 	}
 }
 
-func TestMarshal(t *testing.T) {
+func TestIBFTMarshal(t *testing.T) {
 	i := &IBFT{
 		Multi: "1",
 		Initiator: IBFTInitiator{
