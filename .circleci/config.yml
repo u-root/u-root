@@ -25,44 +25,23 @@ workflows:
 jobs:
   clean-code:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
-          name: Install dep
+          name: Install tools
           command: |
-            wget https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
-            mv dep-linux-amd64 dep
-            chmod +x dep
-      - run:
-          name: Install gometalinter
-          command: |
-            go get -u golang.org/x/lint/golint
-            go get github.com/alecthomas/gometalinter
-      - run:
-          name: Install ineffassign
-          command: go get github.com/gordonklaus/ineffassign
-      - run:
-          name: Check vendored dependencies
-          command: |
-            ./dep version
-            ./dep status
-            ./dep ensure -vendor-only
-            git status
-            if [[ -n "$(git status --porcelain vendor)" ]]; then
-              echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
-              echo 'If `dep ensure` results in no changes, make sure you are using the latest relase of dep'
-              git status --porcelain vendor
-              exit 1
-            fi
+            go install golang.org/x/lint/golint
+            go install github.com/alecthomas/gometalinter
+            go install github.com/gordonklaus/ineffassign
       - run:
           name: vet
           command: |
-            go tool vet cmds xcmds pkg
-            go tool vet u-root.go
+            go vet github.com/u-root/u-root/...
       - run:
           name: gofmt
           command: |
@@ -86,10 +65,11 @@ jobs:
           command: ineffassign .
   test:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
@@ -104,6 +84,7 @@ jobs:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
@@ -117,6 +98,7 @@ jobs:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
@@ -126,10 +108,11 @@ jobs:
           path: integration/serial
   race:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 1
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
@@ -137,10 +120,11 @@ jobs:
           command: go test -race `go list ./... | grep github.com/u-root/u-root/`
   compile_cmds:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
@@ -154,10 +138,11 @@ jobs:
             go install -a ./...
   check_licenses:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
@@ -165,10 +150,11 @@ jobs:
           command: go run scripts/checklicenses/checklicenses.go
   check_symlinks:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: 'on'
     steps:
       - checkout
       - run:
