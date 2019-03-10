@@ -35,16 +35,16 @@ var pageMask = uint64(os.Getpagesize() - 1)
 // and had to backtrack and fix it later. We don't use this struct below,
 // it's only worthwhile as documentation. The RSDP has not changed in 20 years.
 type RSDP struct {
-	Signature [8]byte `Align:"16", Default:"RSDP PTR "`
-	V1CSUM    uint8   // This was the checksum, which we are pretty sure is ignored now.
-	OEMID     [6]byte
-	Revision  uint8  `Default:"2"`
-	_         uint32 // was RSDT, but you're not supposed to use it any more.
-	Length    uint32
-	Address   uint64 // XSDT address, the only one you should use
-	Checksum  uint8
-	_         [3]uint8
-	data      [RSDPLen]byte
+	sign     [8]byte `Align:"16", Default:"RSDP PTR "`
+	v1CSUM   uint8   // This was the checksum, which we are pretty sure is ignored now.
+	oemid    [6]byte
+	revision uint8  `Default:"2"`
+	_        uint32 // was RSDT, but you're not supposed to use it any more.
+	length   uint32
+	base     uint64 // XSDT address, the only one you should use
+	checksum uint8
+	_        [3]uint8
+	data     [RSDPLen]byte
 }
 
 var defaultRSDP = []byte("RSDP PTR U-ROOT\x02")
@@ -62,22 +62,56 @@ func NewRSDP(addr uintptr, len uint) []byte {
 	return r[:]
 }
 
-func readRSDP(base int64) (int64, []byte, error) {
-	b := make([]byte, RSDPLen)
-	for i := range b {
-		var d io.Uint8
-		if err := io.Read(base+int64(i), &d); err != nil {
-			return 0, nil, err
-		}
-		b[i] = uint8(d)
-	}
-	return base, b, nil
+// Len returns the RSDP length
+func (r *RSDP) Len() int {
+	return len(r.data)
 }
 
-func getRSDPEFI() (int64, []byte, error) {
+// Base returns the RSDP base address as an int64
+// We use int64 for compatibility with Go notions
+// of offsets.
+func (r *RSDP) Base() int64 {
+	return int64(r.base)
+}
+
+// Data returns the RSDP as a []byte
+func (r *RSDP) Data() []byte {
+	return r.data[:]
+}
+
+// Sig returns the RSDP signature
+func (r *RSDP) Sig() string {
+	return string(r.data[:8])
+}
+
+// OEMID returns the RSDP OEMID
+func (r *RSDP) OEMID() string {
+	return string(r.data[9:15])
+}
+
+// Revision returns the RSDP revision, which
+// after 2002 should be >= 2
+func (r *RSDP) Revision() uint8 {
+	return r.revision
+}
+
+func readRSDP(base int64) (Table, error) {
+	r := &RSDP{}
+	r.base = uint64(base)
+	for i := range r.data {
+		var d io.Uint8
+		if err := io.Read(base+int64(i), &d); err != nil {
+			return nil, err
+		}
+		r.data[i] = uint8(d)
+	}
+	return r, nil
+}
+
+func getRSDPEFI() (Table, error) {
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -108,7 +142,7 @@ func getRSDPEFI() (int64, []byte, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("error while reading EFI systab: %v", err)
 	}
-	return 0, nil, fmt.Errorf("invalid efi/systab file")
+	return nil, fmt.Errorf("invalid efi/systab file")
 }
 
 func num(n string, i int) (uint64, error) {
@@ -123,7 +157,7 @@ func num(n string, i int) (uint64, error) {
 // get RSDPmem is the option of last choice, it just grovels through
 // the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
 // These are well-known addresses for 20+ years.
-func getRSDPmem() (int64, []byte, error) {
+func getRSDPmem() (Table, error) {
 	for base := int64(0xe0000); base < 0xffff0; base += 16 {
 		var r io.Uint64
 		if err := io.Read(base, &r); err != nil {
@@ -134,15 +168,15 @@ func getRSDPmem() (int64, []byte, error) {
 		}
 		return readRSDP(base)
 	}
-	return 0, nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
+	return nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
 }
 
-func GetRSDP() (int64, []byte, error) {
-	for _, f := range []func() (int64, []byte, error){getRSDPEFI, getRSDPmem} {
-		s, b, err := f()
+func GetRSDP() (Table, error) {
+	for _, f := range []func() (Table, error){getRSDPEFI, getRSDPmem} {
+		r, err := f()
 		if err == nil {
-			return s, b, nil
+			return r, nil
 		}
 	}
-	return 0, nil, fmt.Errorf("Can't find an RSDP")
+	return nil, fmt.Errorf("Can't find an RSDP")
 }

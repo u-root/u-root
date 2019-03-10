@@ -116,7 +116,7 @@ func (me memory) Load(path, cmdLine string) error {
 			defer ramfs.Close()
 		}
 	}
-	return kexec.Load(0x1000000, append(m.Segments/*, me.s...*/), 0)
+	return kexec.Load(0x1000000, append(m.Segments /*, me.s...*/), 0)
 }
 
 func (mb mboot) Load(path, cmdLine string) error {
@@ -171,7 +171,7 @@ func main() {
 
 	if opts.acpi != "" {
 
-		b, err := acpi.TablesData()
+		b, err := acpi.RawTablesData()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -181,11 +181,11 @@ func main() {
 			log.Fatal(err)
 		}
 		b = append(b, addb...)
-		base, _, err := acpi.GetRSDP()
+		r, err := acpi.GetRSDP()
 		if err != nil {
 			log.Fatalf("Finding RSDP: %v", err)
 		}
-		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(base), Size: uint(len(b))})
+		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(r.Base()), Size: uint(len(b))})
 		log.Printf("ACPI loaded: addr is %#x", seg)
 
 		var l loader = memory{s: []kexec.Segment{seg}}

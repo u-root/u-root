@@ -9,34 +9,37 @@ import (
 	"path/filepath"
 )
 
+// The RawTable is used until such time as we've implemented Table
+// or a standin for everything.
+
 // Table contains a []byte for a single ACPI table.
 // The Name is provided for convenience.
-type Table struct {
+type RawTable struct {
 	Name string
 	Data []byte
 }
 
-// Tables returns an array of Table
-func Tables() ([]*Table, error) {
+// RawTables returns an array of RawTable
+func RawTables() ([]*RawTable, error) {
 	n, err := filepath.Glob("/sys/firmware/acpi/tables/[A-Z]*")
 	if err != nil {
 		return nil, err
 	}
 
-	var tabs []*Table
+	var tabs []*RawTable
 	for _, t := range n {
 		b, err := ioutil.ReadFile(t)
 		if err != nil {
 			return nil, err
 		}
-		tabs = append(tabs, &Table{Name: t, Data: b})
+		tabs = append(tabs, &RawTable{Name: t, Data: b})
 	}
 	return tabs, nil
 }
 
 // TablesData returns all ACPI tables as a single []byte
-func TablesData() ([]byte, error) {
-	t, err := Tables()
+func RawTablesData() ([]byte, error) {
+	t, err := RawTables()
 	if err != nil {
 		return nil, err
 	}
