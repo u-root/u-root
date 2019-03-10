@@ -477,6 +477,14 @@ func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 	return start, nil
 }
 
+// AddKexecSegment adds d to a new kexec segment starting at base
+// We kind of have to trust that the caller knows what they are doing, as Linux
+// e820maps have zero consistency about types of segments and so on.
+func (m *Memory) AddKexecSegmentBase(d []byte, base uint64) error {
+	m.addKexecSegment(uintptr(base), d)
+	return nil
+}
+
 // AddKexecSegmentACPI adds d to a new kexec segment, using existing ACPI
 // tables gleaned from the memmap.
 func (m *Memory) AddKexecSegmentACPI(d []byte) (addr uintptr, err error) {

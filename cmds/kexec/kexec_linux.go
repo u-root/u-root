@@ -116,7 +116,7 @@ func (me memory) Load(path, cmdLine string) error {
 			defer ramfs.Close()
 		}
 	}
-	return kexec.Load(0x100000, m.Segments, 0)
+	return kexec.Load(0x1000000, append(m.Segments/*, me.s...*/), 0)
 }
 
 func (mb mboot) Load(path, cmdLine string) error {
@@ -154,7 +154,7 @@ func main() {
 		log.Fatalf("--reuse-cmdline and other command line options are mutually exclusive")
 	}
 
-	if opts.load == false && opts.exec == false {
+	if opts.load == false && opts.exec == false && opts.acpi == "" {
 		opts.load = true
 		opts.exec = true
 	}
@@ -169,37 +169,26 @@ func main() {
 		}
 	}
 
-	if (opts.initramfs != "" || opts.acpi != "") && !opts.load {
-		log.Fatal("If you want an initramfs you must set it up at load time")
-	}
-
 	if opts.acpi != "" {
-		if false {
-			var m kexec.Memory
-			if err := m.ParseMemoryMap(); err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("acpi load: m is %s", m.String())
-			// it's extremely unlikely that we are replacing all acpi tables.
-			// For now, assume we are appending.
-			b, err := acpi.TablesData()
-			if err != nil {
-				log.Fatal(err)
-			}
 
-			addb, err := ioutil.ReadFile(opts.acpi)
-			if err != nil {
-				log.Fatal(err)
-			}
-			b = append(b, addb...)
-			addr, err := m.AddKexecSegmentACPI(b)
-			if err != nil {
-				log.Fatalf("Allocating segment for ACPI: %v", err)
-			}
-
-			log.Printf("ACPI loaded: addr is %#x, m is %s", addr, m)
+		b, err := acpi.TablesData()
+		if err != nil {
+			log.Fatal(err)
 		}
-		var l loader = memory{}
+
+		addb, err := ioutil.ReadFile(opts.acpi)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b = append(b, addb...)
+		base, _, err := acpi.GetRSDP()
+		if err != nil {
+			log.Fatalf("Finding RSDP: %v", err)
+		}
+		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(base), Size: uint(len(b))})
+		log.Printf("ACPI loaded: addr is %#x", seg)
+
+		var l loader = memory{s: []kexec.Segment{seg}}
 		kernelpath := flag.Args()[0]
 		if err := l.Load(kernelpath, newCmdLine); err != nil {
 			log.Fatal(err)
