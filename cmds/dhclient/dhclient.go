@@ -48,32 +48,6 @@ var (
 	debug          = func(string, ...interface{}) {}
 )
 
-func ifup(ifname string) (netlink.Link, error) {
-	debug("Try bringing up %v", ifname)
-	start := time.Now()
-	for time.Since(start) < linkUpAttempt {
-		// Note that it may seem odd to keep trying the
-		// LinkByName operation, by consider that a hotplug
-		// device such as USB ethernet can just vanish.
-		iface, err := netlink.LinkByName(ifname)
-		debug("LinkByName(%v) returns (%v, %v)", ifname, iface, err)
-		if err != nil {
-			return nil, fmt.Errorf("cannot get interface by name %v: %v", ifname, err)
-		}
-
-		if iface.Attrs().OperState == netlink.OperUp {
-			debug("Link %v is up", ifname)
-			return iface, nil
-		}
-
-		if err := netlink.LinkSetUp(iface); err != nil {
-			return nil, fmt.Errorf("%v: %v can't make it up: %v", ifname, iface, err)
-		}
-		time.Sleep(1 * time.Second)
-	}
-	return nil, fmt.Errorf("Link %v still down after %s", ifname, linkUpAttempt)
-}
-
 func dhclient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
 	client, err := dhcp4client.New(iface,
 		dhcp4client.WithTimeout(timeout),

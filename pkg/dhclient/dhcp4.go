@@ -10,18 +10,30 @@ import (
 
 	"github.com/u-root/dhcp4"
 	"github.com/u-root/dhcp4/dhcp4opts"
+	"github.com/vishvananda/netlink"
 )
 
 // Packet4 implements convenience functions for DHCPv4 packets.
 type Packet4 struct {
-	P *dhcp4.Packet
+	iface netlink.Link
+	P     *dhcp4.Packet
 }
 
 // NewPacket4 wraps a DHCPv4 packet with some convenience methods.
-func NewPacket4(p *dhcp4.Packet) *Packet4 {
+func NewPacket4(iface netlink.Link, p *dhcp4.Packet) *Packet4 {
 	return &Packet4{
-		P: p,
+		iface: iface,
+		P:     p,
 	}
+}
+
+func (p *Packet4) Link() netlink.Link {
+	return p.iface
+}
+
+// Configure configures interface using this packet.
+func (p *Packet4) Configure() error {
+	return Configure4(p.iface, p.P)
 }
 
 // Lease returns the IPNet assigned.

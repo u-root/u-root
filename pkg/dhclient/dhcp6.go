@@ -7,24 +7,35 @@ package dhclient
 import (
 	"net"
 	"net/url"
-	"strings"
 
 	"github.com/mdlayher/dhcp6"
 	"github.com/mdlayher/dhcp6/dhcp6opts"
+	"github.com/vishvananda/netlink"
 )
 
 // Packet6 implements Packet for IPv6 DHCP.
 type Packet6 struct {
-	p    *dhcp6.Packet
-	iana *dhcp6opts.IANA
+	p     *dhcp6.Packet
+	iana  *dhcp6opts.IANA
+	iface netlink.Link
 }
 
 // NewPacket6 wraps a DHCPv6 packet with some convenience methods.
-func NewPacket6(p *dhcp6.Packet, ianaLease *dhcp6opts.IANA) *Packet6 {
+func NewPacket6(iface netlink.Link, p *dhcp6.Packet, ianaLease *dhcp6opts.IANA) *Packet6 {
 	return &Packet6{
-		p:    p,
-		iana: ianaLease,
+		p:     p,
+		iface: iface,
+		iana:  ianaLease,
 	}
+}
+
+func (p *Packet6) Link() netlink.Link {
+	return p.iface
+}
+
+// Configure configures interface using this packet.
+func (p *Packet6) Configure() error {
+	return Configure6(p.iface, p.p, p.iana)
 }
 
 // Lease returns lease information assigned.
@@ -55,21 +66,10 @@ func (p *Packet6) DNS() []net.IP {
 // TODO: RFC 5970 is helpfully avoidant of where these options are used. Are
 // they added to the packet? Are they added to an IANA?  It *seems* like it's
 // in the packet.
-func (p *Packet6) Boot() (*url.URL, string, error) {
+func (p *Packet6) Boot() (*url.URL, error) {
 	uri, err := dhcp6opts.GetBootFileURL(p.p.Options)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-
-	// Having this value is optional.
-	bfp, err := dhcp6opts.GetBootFileParam(p.p.Options)
-	if err != dhcp6.ErrOptionNotPresent {
-		return nil, "", err
-	}
-
-	var cmdline string
-	if bfp != nil {
-		cmdline = strings.Join(bfp, " ")
-	}
-	return (*url.URL)(uri), cmdline, nil
+	return (*url.URL)(uri), nil
 }
