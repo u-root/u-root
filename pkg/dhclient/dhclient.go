@@ -49,7 +49,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 
 // Configure4 adds IP addresses, routes, and DNS servers to the system.
 func Configure4(iface netlink.Link, packet *dhcp4.Packet) error {
-	p := NewPacket4(packet)
+	p := NewPacket4(iface, packet)
 
 	l := p.Lease()
 	if l == nil {
@@ -87,7 +87,7 @@ func Configure4(iface netlink.Link, packet *dhcp4.Packet) error {
 
 // Configure6 adds IPv6 addresses, routes, and DNS servers to the system.
 func Configure6(iface netlink.Link, packet *dhcp6.Packet, iana *dhcp6opts.IANA) error {
-	p := NewPacket6(packet, iana)
+	p := NewPacket6(iface, packet, iana)
 
 	l := p.Lease()
 	if l == nil {
