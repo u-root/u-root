@@ -5,6 +5,7 @@
 package dhclient
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 
@@ -36,6 +37,10 @@ func (p *Packet6) Link() netlink.Link {
 // Configure configures interface using this packet.
 func (p *Packet6) Configure() error {
 	return Configure6(p.iface, p.p, p.iana)
+}
+
+func (p *Packet6) String() string {
+	return fmt.Sprintf("IPv6 DHCP Lease IP %s", p.Lease().IP)
 }
 
 // Lease returns lease information assigned.

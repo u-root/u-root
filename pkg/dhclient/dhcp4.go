@@ -5,6 +5,7 @@
 package dhclient
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 
@@ -34,6 +35,10 @@ func (p *Packet4) Link() netlink.Link {
 // Configure configures interface using this packet.
 func (p *Packet4) Configure() error {
 	return Configure4(p.iface, p.P)
+}
+
+func (p *Packet4) String() string {
+	return fmt.Sprintf("IPv4 DHCP Lease IP %s", p.Lease())
 }
 
 // Lease returns the IPNet assigned.
