@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -33,6 +37,8 @@ var (
 	readTimeout        = flag.Int("timeout", 3, "Read timeout in seconds")
 	dhcpRetries        = flag.Int("retries", 3, "Number of times a DHCP request is retried")
 	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
+	caCertFile         = flag.String("cacerts", "", "Base64 encoded CA cert file")
+	skipCertVerify     = flag.Bool("skip-cert-verify", false, "Don't authenticate https certs")
 )
 
 const (
@@ -150,7 +156,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		}
 		debug("DHCP: network configuration: %+v", netconf)
 		if !*dryRun {
-			log.Printf("DHCP: configuring network interface %s", ifname)
+			log.Printf("DHCP: configuring network interface %s with %v", ifname, netconf)
 			if err = netboot.ConfigureInterface(ifname, netconf); err != nil {
 				return fmt.Errorf("DHCP: cannot configure interface %s: %v", ifname, err)
 			}
@@ -165,15 +171,28 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	debug("DHCP: boot file URL is %s", bootfile)
 	// check for supported schemes
-	if !strings.HasPrefix(bootfile, "http://") {
-		return fmt.Errorf("DHCP: can only handle http scheme")
+	scheme, err := getScheme(bootfile)
+	if err != nil {
+		return fmt.Errorf("DHCP: cannot get scheme from URL: %v", err)
+	}
+	if scheme == "" {
+		return errors.New("DHCP: no valid scheme found in URL")
 	}
 
+	client, err := getClientForBootfile(bootfile)
+	if err != nil {
+		return fmt.Errorf("DHCP: cannot get client for %s: %v", bootfile, err)
+	}
 	log.Printf("DHCP: fetching boot file URL: %s", bootfile)
+
 	var resp *http.Response
 	for attempt := 0; attempt < maxHTTPAttempts; attempt++ {
 		log.Printf("netboot: attempt %d for http.Get", attempt+1)
-		resp, err = http.Get(bootfile)
+		req, err := http.NewRequest(http.MethodGet, bootfile, nil)
+		if err != nil {
+			return fmt.Errorf("could not build request for %s: %v", bootfile, err)
+		}
+		resp, err = client.Do(req)
 		if err != nil && retryableNetError(err) || retryableHTTPError(resp) {
 			time.Sleep(retryInterval)
 			continue
@@ -186,7 +205,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	// FIXME this will not be called if something fails after this point
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Status code is not 200 OK: %d", resp.StatusCode)
+		return fmt.Errorf("status code is not 200 OK: %d", resp.StatusCode)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -199,11 +218,11 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	// extract file name component
 	if strings.HasSuffix(u.Path, "/") {
-		return fmt.Errorf("Invalid file path, cannot end with '/': %s", u.Path)
+		return fmt.Errorf("invalid file path, cannot end with '/': %s", u.Path)
 	}
 	filename := filepath.Base(u.Path)
 	if filename == "." || filename == "" {
-		return fmt.Errorf("Invalid empty file name extracted from file path %s", u.Path)
+		return fmt.Errorf("invalid empty file name extracted from file path %s", u.Path)
 	}
 	if err = ioutil.WriteFile(filename, body, 0400); err != nil {
 		return fmt.Errorf("DHCP: cannot write to file %s: %v", filename, err)
@@ -223,6 +242,84 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		}
 	}
 	return nil
+}
+
+func getScheme(urlstring string) (string, error) {
+	u, err := url.Parse(urlstring)
+	if err != nil {
+		return "", err
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return "", fmt.Errorf("URL scheme '%s' must be http or https", scheme)
+	}
+	return scheme, nil
+}
+
+func loadCaCerts() (*x509.CertPool, error) {
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+	if rootCAs == nil {
+		debug("certs: rootCAs == nil")
+		rootCAs = x509.NewCertPool()
+	}
+	base64Certs, err := ioutil.ReadFile(*caCertFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not find cert file '%v' - %v", *caCertFile, err)
+	}
+	// TODO: Decide if this should also support compressed certs
+	// Might be better to have a generic compressed config API
+	decLen := base64.StdEncoding.DecodedLen(len(base64Certs))
+	certs := make([]byte, decLen)
+	n, err := base64.StdEncoding.Decode(certs, base64Certs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to append %s to RootCAs: %v", *caCertFile, err)
+	}
+	if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+		debug("No certs extracted from VPD, using system certs only")
+	} else {
+		debug("%d bytes of certs extrated from VPD", n)
+	}
+	return rootCAs, nil
+
+}
+
+func getClientForBootfile(bootfile string) (*http.Client, error) {
+	var client *http.Client
+	scheme, err := getScheme(bootfile)
+	if err != nil {
+		return nil, err
+	}
+
+	switch scheme {
+	case "https":
+		var config *tls.Config
+		if *skipCertVerify {
+			config = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		} else if *caCertFile != "" {
+			rootCAs, err := loadCaCerts()
+			if err != nil {
+				return nil, err
+			}
+			config = &tls.Config{
+				RootCAs: rootCAs,
+			}
+		}
+		tr := &http.Transport{TLSClientConfig: config}
+		client = &http.Client{Transport: tr}
+		debug("https client setup (use certs from VPD: %t, skipCertVerify %t)",
+			*skipCertVerify, *caCertFile != "")
+	case "http":
+		client = &http.Client{}
+		debug("http client setup")
+	default:
+		return nil, fmt.Errorf("Scheme %s is unsupported", scheme)
+	}
+	return client, nil
 }
 
 type dhcpFunc func(string) (*netboot.NetConf, string, error)
