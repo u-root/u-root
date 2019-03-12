@@ -57,33 +57,22 @@ type bootEntry struct {
 }
 
 var (
-	devGlob          = flag.String("dev", "/sys/block/*", "Glob for devices")
-	verbose          = flag.Bool("v", false, "Print debug messages")
-	debug            = func(string, ...interface{}) {}
-	dryRun           = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
-	defaultBoot      = flag.String("boot", "default", "Default entry to boot")
-	uroot            string
-	reuseCmdlineItem = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
-	appendCmdline    = flag.String("append", "", "Additional kernel params")
+	devGlob           = flag.String("dev", "/sys/block/*", "Glob for devices")
+	verbose           = flag.Bool("v", false, "Print debug messages")
+	debug             = func(string, ...interface{}) {}
+	dryRun            = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
+	defaultBoot       = flag.String("boot", "default", "Default entry to boot")
+	uroot             string
+	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
+	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
+	appendCmdline     = flag.String("append", "", "Additional kernel params")
 )
 
-// updateBootCmdline get the kernel command line parameters and append extra
-// parameters from the append and reuse flags
+// updateBootCmdline get the kernel command line parameters and filter it:
+// it removes parameters listed in 'remove' and append extra parameters from
+// the 'append' and 'reuse' flags
 func updateBootCmdline(cl string) string {
-	acl := ""
-	if len(*appendCmdline) > 0 {
-		acl = " " + *appendCmdline
-	}
-	for _, f := range strings.Split(*reuseCmdlineItem, ",") {
-		value, present := cmdline.Flag(f)
-		if present {
-			debug("Cmdline reuse: %s=%v", f, value)
-			acl = fmt.Sprintf("%s %s=%s", acl, f, value)
-		}
-		debug("appendCmdline : '%v'", acl)
-	}
-
-	return cl + acl
+	return cmdline.UpdateFilter(cl, *appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
 }
 
 // checkForBootableMBR is looking for bootable MBR signature
