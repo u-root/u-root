@@ -69,7 +69,7 @@ func TestDhclient(t *testing.T) {
 
 	t.Logf("Now we wait!")
 
-	if err := dhcpClient.Expect("err from done <nil>"); err != nil {
+	if err := dhcpClient.Expect("Configured eth0 with IPv4 DHCP Lease"); err != nil {
 		t.Error(err)
 	}
 

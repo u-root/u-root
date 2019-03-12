@@ -14,91 +14,27 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"flag"
-	"fmt"
 	"log"
 	"regexp"
-	"sync"
 	"time"
 
-	"github.com/u-root/dhcp4"
-	"github.com/u-root/dhcp4/dhcp4client"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/dhcp6client"
 	"github.com/vishvananda/netlink"
 )
 
-const (
-	// slop is the slop in our lease time.
-	slop          = 10 * time.Second
-	linkUpAttempt = 30 * time.Second
-)
-
 var (
-	ifName         = "^e.*"
-	leasetimeout   = flag.Int("timeout", 15, "Lease timeout in seconds")
-	retry          = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	renewals       = flag.Int("renewals", 0, "Number of DHCP renewals before exiting. -1 means infinity")
-	renewalTimeout = flag.Int("renewal timeout", 3600, "How long to wait before renewing in seconds")
-	verbose        = flag.Bool("verbose", false, "Verbose output")
-	ipv4           = flag.Bool("ipv4", true, "use IPV4")
-	ipv6           = flag.Bool("ipv6", true, "use IPV6")
-	test           = flag.Bool("test", false, "Test mode")
-	debug          = func(string, ...interface{}) {}
+	ifName  = "^e.*"
+	timeout = flag.Int("timeout", 15, "Lease timeout in seconds")
+	retry   = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
+	verbose = flag.Bool("verbose", false, "Verbose output")
+	ipv4    = flag.Bool("ipv4", true, "use IPV4")
+	ipv6    = flag.Bool("ipv6", true, "use IPV6")
+	test    = flag.Bool("test", false, "Test mode")
+	debug   = func(string, ...interface{}) {}
 )
-
-func dhclient4(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
-	client, err := dhcp4client.New(iface,
-		dhcp4client.WithTimeout(timeout),
-		dhcp4client.WithRetry(retry))
-	if err != nil {
-		return err
-	}
-
-	for i := 0; numRenewals < 0 || i <= numRenewals; i++ {
-		var packet *dhcp4.Packet
-		var err error
-		if i == 0 {
-			packet, err = client.Request()
-		} else {
-			time.Sleep(time.Duration(*renewalTimeout) * time.Second)
-			packet, err = client.Renew(packet)
-		}
-		if err != nil {
-			return err
-		}
-
-		if err := dhclient.Configure4(iface, packet); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func dhclient6(iface netlink.Link, timeout time.Duration, retry int, numRenewals int) error {
-	client, err := dhcp6client.New(iface,
-		dhcp6client.WithTimeout(timeout),
-		dhcp6client.WithRetry(retry))
-	if err != nil {
-		return err
-	}
-
-	for i := 0; numRenewals < 0 || i <= numRenewals; i++ {
-		if i != 0 {
-			time.Sleep(time.Duration(*renewalTimeout) * time.Second)
-		}
-		iana, packet, err := client.RapidSolicit()
-		if err != nil {
-			return err
-		}
-
-		if err := dhclient.Configure6(iface, packet, iana); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func main() {
 	flag.Parse()
@@ -136,63 +72,46 @@ func main() {
 		log.Fatalf("Can't get list of link names: %v", err)
 	}
 
-	timeout := time.Duration(*leasetimeout) * time.Second
-	// if timeout is < slop, it's too short.
-	if timeout < slop {
-		timeout = 2 * slop
-		log.Printf("increased lease timeout to %s", timeout)
+	var filteredIfs []netlink.Link
+	for _, iface := range ifnames {
+		if ifRE.MatchString(iface.Attrs().Name) {
+			filteredIfs = append(filteredIfs, iface)
+		}
 	}
 
-	var wg sync.WaitGroup
-	done := make(chan error)
-	for _, i := range ifnames {
-		if !ifRE.MatchString(i.Attrs().Name) {
-			continue
-		}
-		wg.Add(1)
-		go func(ifname string) {
-			defer wg.Done()
-			debug("Bringing up interface %s...", ifname)
-			iface, err := dhclient.IfUp(ifname)
-			if err != nil {
-				done <- err
+	if len(filteredIfs) == 0 {
+		log.Fatalf("No interfaces match %s", ifName)
+	}
+
+	configureAll(filteredIfs)
+}
+
+func configureAll(ifs []netlink.Link) {
+	timeout := time.Duration(*timeout) * time.Second
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Duration(*retry))
+	defer cancel()
+
+	r := dhclient.SendRequests(ifs, timeout, *retry, *ipv4, *ipv6)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Done with dhclient: %v", ctx.Err())
+			return
+
+		case result, ok := <-r:
+			if !ok {
+				log.Printf("Configured all interfaces.")
 				return
 			}
-			debug("Brought up interface %v", ifname)
-			if *ipv4 {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					done <- dhclient4(iface, timeout, *retry, *renewals)
-				}()
+			if result.Err != nil {
+				log.Printf("Could not configure %s: %v", result.Interface.Attrs().Name, result.Err)
+			} else if err := result.Lease.Configure(); err != nil {
+				log.Printf("Could not configure %s: %v", result.Interface.Attrs().Name, err)
+			} else {
+				log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
 			}
-			if *ipv6 {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					done <- dhclient6(iface, timeout, *retry, *renewals)
-				}()
-			}
-			debug("Done dhclient for %v", ifname)
-		}(i.Attrs().Name)
-	}
-
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-	// Wait for all goroutines to finish.
-	var nif int
-	for err := range done {
-		debug("err from done %v", err)
-		if err != nil {
-			log.Print(err)
 		}
-		nif++
 	}
-
-	if nif == 0 {
-		log.Fatalf("No interfaces match %v\n", ifName)
-	}
-	fmt.Printf("%d dhclient attempts were sent\n", nif)
 }
