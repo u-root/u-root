@@ -187,8 +187,11 @@ func main() {
 		}
 		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(r.Base()), Size: uint(len(b))})
 		log.Printf("ACPI loaded: addr is %#x", seg)
-
-		var l loader = memory{s: []kexec.Segment{seg}}
+		bp, err := kexec.BootParams()
+		if err != nil {
+			log.Fatalf("Can't read bootparams: %v", err)
+		}
+		var l loader = memory{s: append(bp, seg)}
 		kernelpath := flag.Args()[0]
 		if err := l.Load(kernelpath, newCmdLine); err != nil {
 			log.Fatal(err)
