@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/diskboot"
 	"github.com/u-root/u-root/pkg/kexec"
@@ -21,11 +22,13 @@ var (
 	verbose = func(string, ...interface{}) {}
 	dryrun  = flag.Bool("dryrun", false, "Only print out kexec commands")
 
-	devGlob       = flag.String("dev", "/sys/class/block/*", "Device glob")
-	sDeviceIndex  = flag.String("d", "", "Device index")
-	sConfigIndex  = flag.String("c", "", "Config index")
-	sEntryIndex   = flag.String("n", "", "Entry index")
-	appendCmdline = flag.String("append", "", "Additional kernel params")
+	devGlob           = flag.String("dev", "/sys/class/block/*", "Device glob")
+	sDeviceIndex      = flag.String("d", "", "Device index")
+	sConfigIndex      = flag.String("c", "", "Config index")
+	sEntryIndex       = flag.String("n", "", "Entry index")
+	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
+	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
+	appendCmdline     = flag.String("append", "", "Additional kernel params")
 
 	devices []*diskboot.Device
 )
@@ -101,7 +104,7 @@ func getEntry(config *diskboot.Config) (*diskboot.Entry, error) {
 
 func bootEntry(config *diskboot.Config, entry *diskboot.Entry) error {
 	verbose("Booting entry: %v", entry)
-	err := entry.KexecLoad(config.MountPath, *appendCmdline, *dryrun)
+	err := entry.KexecLoad(config.MountPath, *appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","), *dryrun)
 	if err != nil {
 		return fmt.Errorf("wrror doing kexec load: %v", err)
 	}
