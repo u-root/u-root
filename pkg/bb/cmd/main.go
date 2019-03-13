@@ -19,42 +19,50 @@ func run() {
 	}
 }
 
-func isSymlink(f string) bool {
-	s, err := os.Stat(f)
+func isTargetSymlink(originalFile, target string) bool {
+	s, err := os.Lstat(absSymlink(originalFile, target))
 	if err != nil {
 		return false
 	}
 	return (s.Mode() & os.ModeSymlink) == os.ModeSymlink
 }
 
-func main() {
-	arg1 := os.Args[0]
-	for s, err := os.Readlink(arg1); err == nil && isSymlink(s); s, err = os.Readlink(arg1) {
-		arg1 = s
+func absSymlink(originalFile, target string) string {
+	if !filepath.IsAbs(originalFile) {
+		var err error
+		originalFile, err = filepath.Abs(originalFile)
+		if err != nil {
+			// This should not happen on Unix systems, or you're
+			// already royally screwed.
+			log.Fatalf("could not determine absolute path for %v: %v", originalFile, err)
+		}
 	}
-	os.Args[0] = arg1
+	// Relative symlinks are resolved relative to the original file's
+	// parent directory.
+	//
+	// E.g. /bin/defaultsh -> ../bbin/elvish
+	if !filepath.IsAbs(target) {
+		return filepath.Join(filepath.Dir(originalFile), target)
+	}
+	return target
+}
+
+// resolveUntilLastSymlink resolves until the last symlink, e.g.
+func resolveUntilLastSymlink(p string) string {
+	for target, err := os.Readlink(p); err == nil && isTargetSymlink(p, target); target, err = os.Readlink(p) {
+		p = absSymlink(p, target)
+	}
+	return p
+}
+
+func main() {
+	os.Args[0] = resolveUntilLastSymlink(os.Args[0])
 
 	run()
 }
 
 func init() {
 	m := func() {
-		if len(os.Args) == 0 {
-			log.Fatal("Arg len is 0. This is impossible")
-		}
-		if len(os.Args) == 1 {
-			// This might be a symlink, and have been invoked by an sshd.
-			// Let's try this: readlink until we get a terminal link.
-			// If the final link is "", then forget it.
-			var arg1 string
-			for s, err := os.Readlink(os.Args[0]); err == nil && isSymlink(s); s, err = os.Readlink(arg1) {
-				arg1 = s
-			}
-			if arg1 == "" {
-				log.Fatalf("os.Args is %v: you need to specify which command to invoke.", os.Args)
-			}
-			os.Args = append(os.Args, arg1)
-		}
 		// Use argv[1] as the name.
 		os.Args = os.Args[1:]
 		run()

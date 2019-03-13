@@ -194,7 +194,7 @@ func sockAddr(t *Tracer, addr Addr, length uint32) string {
 
 	switch family {
 	case unix.AF_INET, unix.AF_INET6, unix.AF_UNIX:
-		fa, err := GetAddress(t, int(family), b)
+		fa, err := GetAddress(t, b)
 		if err != nil {
 			return fmt.Sprintf("%#x {Family: %s, error extracting address: %v}", addr, familyStr, err)
 		}

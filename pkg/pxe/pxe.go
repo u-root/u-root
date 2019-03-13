@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/url"
 	"path"
@@ -158,6 +159,7 @@ func (c *Config) AppendFile(url string) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("Got config file %s:\n%s\n", r, string(config))
 	return c.Append(string(config))
 }
 
