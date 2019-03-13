@@ -116,7 +116,7 @@ func (me memory) Load(path, cmdLine string) error {
 			defer ramfs.Close()
 		}
 	}
-	return kexec.Load(0x1000000, append(m.Segments /*, me.s...*/), 0)
+	return kexec.Load(0x1000000, append(m.Segments, me.s...), 0)
 }
 
 func (mb mboot) Load(path, cmdLine string) error {
@@ -187,11 +187,16 @@ func main() {
 		}
 		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(r.Base()), Size: uint(len(b))})
 		log.Printf("ACPI loaded: addr is %#x", seg)
-		bp, err := kexec.BootParams()
+		bp := kexec.NewLinuxBootParams()
+		log.Printf("Set command line to %v", newCmdLine)
+		copy(bp.CmdLine[:], []byte(newCmdLine))
+		log.Printf("bootparams %v\n", bp)
+		bs, err := bp.Segment()
 		if err != nil {
-			log.Fatalf("Can't read bootparams: %v", err)
+			log.Fatalf("Can't marshall bootparams: %v", err)
 		}
-		var l loader = memory{s: append(bp, seg)}
+		log.Printf("bootparams loaded: addr is %#x", bs)
+		var l loader = memory{s: append(bs, seg)}
 		kernelpath := flag.Args()[0]
 		if err := l.Load(kernelpath, newCmdLine); err != nil {
 			log.Fatal(err)

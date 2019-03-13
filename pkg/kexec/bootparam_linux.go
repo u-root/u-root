@@ -240,6 +240,10 @@ func (bp *LinuxBootParams) Marshal() ([]byte, error) {
 	b.Write(make([]byte, 0x1000-b.Len()))
 	return b.Bytes(), nil
 }
-func (*LinuxBootParams) Segment() *Segment {
-	return nil
+func (bp *LinuxBootParams) Segment() ([]Segment, error) {
+	b, err := bp.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	return []Segment{NewSegment(b, Range{Start: 0x90000, Size: uint(len(b))})}, nil
 }
