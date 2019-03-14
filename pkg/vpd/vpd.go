@@ -10,7 +10,8 @@ import (
 // VpdDir points to the base directory where the VPD sysfs interface is located.
 // It is an exported variable to allow for testing
 var (
-	VpdDir = "/sys/firmware/vpd"
+	VpdDir       = "/sys/firmware/vpd"
+	MaxBootEntry = 9999
 )
 
 func getBaseDir(readOnly bool) string {
