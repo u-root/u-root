@@ -249,7 +249,7 @@ func dhcp4(ifname string) (*netboot.NetConf, string, error) {
 	log.Printf("Trying to obtain a DHCPv4 lease on %s", ifname)
 	var modifiers []dhcpv4.Modifier
 	if *userClass != "" {
-		modifiers = append(modifiers, dhcpv4.WithUserClass([]byte(*userClass), false))
+		modifiers = append(modifiers, dhcpv4.WithUserClass(*userClass, false))
 	}
 	conversation, err := netboot.RequestNetbootv4(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	for _, m := range conversation {
