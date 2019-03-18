@@ -5,85 +5,15 @@
 package pxe
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
-	"path"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
-
-type MockScheme struct {
-	// scheme is the scheme name.
-	scheme string
-
-	// hosts is a map of host -> relative filename to host -> file contents.
-	hosts map[string]map[string]string
-
-	// numCalled is a map of URL string -> number of times GetFile has been
-	// called on that URL.
-	numCalled map[string]uint
-}
-
-func NewMockScheme(scheme string) *MockScheme {
-	return &MockScheme{
-		scheme:    scheme,
-		hosts:     make(map[string]map[string]string),
-		numCalled: make(map[string]uint),
-	}
-}
-
-func (m *MockScheme) Add(host string, p string, content string) {
-	_, ok := m.hosts[host]
-	if !ok {
-		m.hosts[host] = make(map[string]string)
-	}
-
-	m.hosts[host][path.Clean(p)] = content
-}
-
-func (m *MockScheme) NumCalled(u *url.URL) uint {
-	url := u.String()
-	if c, ok := m.numCalled[url]; ok {
-		return c
-	}
-	return 0
-}
-
-var (
-	errWrongScheme = errors.New("wrong scheme")
-	errNoSuchHost  = errors.New("no such host exists")
-	errNoSuchFile  = errors.New("no such file exists on this host")
-)
-
-func (m *MockScheme) GetFile(u *url.URL) (io.ReaderAt, error) {
-	url := u.String()
-	if _, ok := m.numCalled[url]; ok {
-		m.numCalled[url]++
-	} else {
-		m.numCalled[url] = 1
-	}
-
-	if u.Scheme != m.scheme {
-		return nil, errWrongScheme
-	}
-
-	files, ok := m.hosts[u.Host]
-	if !ok {
-		return nil, errNoSuchHost
-	}
-
-	content, ok := files[path.Clean(u.Path)]
-	if !ok {
-		return nil, errNoSuchFile
-	}
-	return strings.NewReader(content), nil
-}
 
 func TestGetFile(t *testing.T) {
 	for i, tt := range []struct {
@@ -124,7 +54,7 @@ func TestGetFile(t *testing.T) {
 				Scheme: "fooftp",
 				Host:   "someotherplace",
 			},
-			err: errNoSuchHost,
+			err: ErrNoSuchHost,
 		},
 		{
 			scheme: func() *MockScheme {
@@ -137,13 +67,13 @@ func TestGetFile(t *testing.T) {
 				Host:   "somehost",
 				Path:   "/someotherfile",
 			},
-			err: errNoSuchFile,
+			err: ErrNoSuchFile,
 		},
 	} {
 		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
 			fs := tt.scheme()
 			s := make(Schemes)
-			s.Register(fs.scheme, fs)
+			s.Register(fs.Scheme, fs)
 
 			// Test both GetFile and LazyGetFile.
 			for _, f := range []func(url *url.URL) (io.ReaderAt, error){
