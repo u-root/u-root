@@ -8,13 +8,16 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"path"
 	"time"
 
 	"github.com/u-root/dhcp4/dhcp4client"
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dhclient"
+	"github.com/u-root/u-root/pkg/ipxe"
 	"github.com/u-root/u-root/pkg/pxe"
 	"github.com/vishvananda/netlink"
 )
@@ -42,6 +45,33 @@ func attemptDHCPLease(iface netlink.Link, timeout time.Duration, retry int) (*dh
 		return nil, err
 	}
 	return dhclient.NewPacket4(p), nil
+}
+
+// getBootImage attempts to parse the file at uri as an ipxe config and returns
+// the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
+// ip, and mac address to search for pxe configs.
+func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
+	// Attempt to read the given boot path as an ipxe config file.
+	if ipc, err := ipxe.NewConfig(uri); err == nil {
+		log.Printf("Got configuration: %s", ipc.BootImage)
+		return ipc.BootImage, nil
+	}
+
+	// Fallback to pxe boot.
+	wd := &url.URL{
+		Scheme: uri.Scheme,
+		Host:   uri.Host,
+		Path:   path.Dir(uri.Path),
+	}
+
+	pc := pxe.NewConfig(wd)
+	if err := pc.FindConfigFile(mac, ip); err != nil {
+		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
+	}
+
+	label := pc.Entries[pc.DefaultEntry]
+	log.Printf("Got configuration: %s", label)
+	return label, nil
 }
 
 func Netboot() error {
@@ -83,22 +113,14 @@ func Netboot() error {
 
 		log.Printf("Boot URI: %s", uri)
 
-		wd := &url.URL{
-			Scheme: uri.Scheme,
-			Host:   uri.Host,
-			Path:   path.Dir(uri.Path),
+		img, err := getBootImage(uri, iface.Attrs().HardwareAddr, packet.Lease().IP)
+		if err != nil {
+			return err
 		}
-		pc := pxe.NewConfig(wd)
-		if err := pc.FindConfigFile(iface.Attrs().HardwareAddr, packet.Lease().IP); err != nil {
-			return fmt.Errorf("failed to parse pxelinux config: %v", err)
-		}
-
-		label := pc.Entries[pc.DefaultEntry]
-		log.Printf("Got configuration: %s", label)
 
 		if *dryRun {
-			label.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
-		} else if err := label.Execute(); err != nil {
+			img.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
+		} else if err := img.Execute(); err != nil {
 			log.Printf("Kexec error: %v", err)
 		}
 	}
