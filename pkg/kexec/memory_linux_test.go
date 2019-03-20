@@ -43,21 +43,21 @@ func TestParseMemoryMap(t *testing.T) {
 	if err := create("0", 0, 50, RangeRAM); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("1", 100, 150, RangeNVACPI); err != nil {
+	if err := create("1", 100, 150, RangeACPI); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("2", 200, 250, RangeACPI); err != nil {
+	if err := create("2", 200, 250, RangeNVS); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("3", 300, 350, RangeNVS); err != nil {
+	if err := create("3", 300, 350, RangeReserved); err != nil {
 		t.Fatal(err)
 	}
 
 	want := []TypedAddressRange{
 		{Range: Range{Start: 0, Size: 50}, Type: RangeRAM},
-		{Range: Range{Start: 100, Size: 50}, Type: RangeNVACPI},
-		{Range: Range{Start: 200, Size: 50}, Type: RangeACPI},
-		{Range: Range{Start: 300, Size: 50}, Type: RangeNVS},
+		{Range: Range{Start: 100, Size: 50}, Type: RangeACPI},
+		{Range: Range{Start: 200, Size: 50}, Type: RangeNVS},
+		{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
 	}
 
 	if err := mem.ParseMemoryMap(); err != nil {
