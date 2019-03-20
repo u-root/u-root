@@ -59,13 +59,14 @@ func Netboot(ctx context.Context, ifaceNames string) error {
 				log.Printf("Configured all interfaces.")
 				return fmt.Errorf("nothing bootable found")
 			}
-			if result.Err == nil {
-				if err := Boot(result.Lease); err != nil {
-					log.Printf("Failed to boot lease %v: %v", result.Lease, err)
-					continue
-				} else {
-					return nil
-				}
+			if result.Err != nil {
+				continue
+			}
+			if err := Boot(result.Lease); err != nil {
+				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
+				continue
+			} else {
+				return nil
 			}
 		}
 	}

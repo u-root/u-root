@@ -153,10 +153,6 @@ func lease4(iface netlink.Link, timeout time.Duration, retries int) (Lease, erro
 	}
 
 	packet := NewPacket4(iface, p)
-	if _, err := packet.Boot(); err != nil {
-		return nil, fmt.Errorf("valid DHCPv4 lease without PXE info: %v", err)
-	}
-
 	log.Printf("Got DHCPv4 lease on %s", iface.Attrs().Name)
 	return packet, nil
 }
@@ -176,10 +172,6 @@ func lease6(iface netlink.Link, timeout time.Duration, retries int) (Lease, erro
 	}
 
 	packet := NewPacket6(iface, p, iana)
-	if _, err := packet.Boot(); err != nil {
-		return nil, fmt.Errorf("valid DHCPv6 lease without PXE info: %v", err)
-	}
-
 	log.Printf("Got DHCPv6 lease on %s", iface.Attrs().Name)
 	return packet, nil
 }
