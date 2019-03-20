@@ -29,73 +29,9 @@ type LinuxImage struct {
 
 var _ OSImage = &LinuxImage{}
 
-// NewLinuxImageFromArchive reads a netboot21 Linux OSImage from a CPIO file
-// archive.
-func NewLinuxImageFromArchive(a *cpio.Archive) (*LinuxImage, error) {
-	kernel, ok := a.Files["modules/kernel/content"]
-	if !ok {
-		return nil, fmt.Errorf("kernel missing from archive")
-	}
-
-	li := &LinuxImage{}
-	li.Kernel = kernel
-
-	if params, ok := a.Files["modules/kernel/params"]; ok {
-		b, err := uio.ReadAll(params)
-		if err != nil {
-			return nil, err
-		}
-		li.Cmdline = string(b)
-	}
-
-	if initrd, ok := a.Files["modules/initrd/content"]; ok {
-		li.Initrd = initrd
-	}
-	return li, nil
-}
-
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
 	return fmt.Sprintf("LinuxImage(\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Kernel, li.Initrd, li.Cmdline)
-}
-
-// Pack implements OSImage.Pack and writes all necessary files to the modules
-// directory of `sw`.
-func (li *LinuxImage) Pack(sw cpio.RecordWriter) error {
-	if err := sw.WriteRecord(cpio.Directory("modules", 0700)); err != nil {
-		return err
-	}
-	if err := sw.WriteRecord(cpio.Directory("modules/kernel", 0700)); err != nil {
-		return err
-	}
-	if li.Kernel == nil {
-		return ErrKernelMissing
-	}
-	kernel, err := uio.ReadAll(li.Kernel)
-	if err != nil {
-		return err
-	}
-	if err := sw.WriteRecord(cpio.StaticFile("modules/kernel/content", string(kernel), 0700)); err != nil {
-		return err
-	}
-	if err := sw.WriteRecord(cpio.StaticFile("modules/kernel/params", li.Cmdline, 0700)); err != nil {
-		return err
-	}
-
-	if li.Initrd != nil {
-		if err := sw.WriteRecord(cpio.Directory("modules/initrd", 0700)); err != nil {
-			return err
-		}
-		initrd, err := uio.ReadAll(li.Initrd)
-		if err != nil {
-			return err
-		}
-		if err := sw.WriteRecord(cpio.StaticFile("modules/initrd/content", string(initrd), 0700)); err != nil {
-			return err
-		}
-	}
-
-	return sw.WriteRecord(cpio.StaticFile("package_type", "linux", 0700))
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
