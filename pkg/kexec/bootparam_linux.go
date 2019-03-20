@@ -18,24 +18,24 @@ const (
 	paramSize = 0x1000
 )
 
-type e820type uint32
+// E820type is the range of E820 memory types
+type E820type uint32
 
 const (
-	ram e820type = 1
-	reserved
-	acpi
-	nvs
+	Ram E820type = 1
+	Reserved
+	ACPI
+	ACPINVS
 )
 
-type e820 struct {
-	addr uint64
-	size uint64
-	typ  e820type
+// E820 defines on e820 entry
+type E820 struct {
+	Addr uint64
+	Size uint64
+	Typ  E820type
 }
 
-///* The header of Linux/i386 kernel */
-//struct linux_header {
-//	u8 reserved1[0x1f1];	/* 0x000 */
+// struct setup_header {
 //	u8 setup_sects;		/* 0x1f1 */
 //	u16 root_flags;		/* 0x1f2 */
 //	u32 syssize;		/* 0x1f4 (2.04+) */
@@ -170,6 +170,7 @@ type LinuxBootParams struct {
 	OrigRootDev uint16 `offset:"0x1fc"`
 	//_                   [1]uint8     `offset:"0x1fe"`
 	AuxDeviceInfo uint8 `offset:"0x1ff"`
+	// LinuxHdr `offset:"0x1f1"`
 	//_                   [2]uint8     `offset:"0x200"`
 	ParamBlockSignature [4]uint8 `offset:"0x202"`
 	ParamBlockVersion   uint16   `offset:"0x206"`
@@ -186,11 +187,12 @@ type LinuxBootParams struct {
 	KernelAlignment   uint32 `offset:"0x230"`
 	RelocatableKernel uint8  `offset:"0x234"`
 	//_                   [0x2b]uint8  `offset:"0x235"`
-	InitSize uint32 `offset:"0x260"`
+	SetupData uint64 `offset:"0x250"`
+	InitSize  uint32 `offset:"0x260"`
 	//_                   [0x6c]uint8  `offset:"0x264"`
 	// This fails as Go has to pad the struct since it contains
 	// mixed 32 and 64 bit.
-	E820Map [e820max]e820 `offset:"0x2d0"`
+	E820Map [e820max]E820 `offset:"0x2d0"`
 	//_       [688]uint8             `offset:"0x550"`
 	CmdLine [commandLineSize]uint8 `offset:"0x800"`
 	//_       [1792]uint8            `offset:"0x900"` // - 0x1000
@@ -209,8 +211,15 @@ func NewLinuxBootParams() *LinuxBootParams {
 		MountRootRdonly: 1,
 		//OrigRootDev: xx,
 		//InitSize: notsure,
-		LoaderType: 0xff,
-		CmdLinePtr: 0x90800,
+		LoaderType:          kernel,
+		CmdLinePtr:          0x90800,
+		KernelStart:         0x1000000,
+		KernelAlignment:     0x200000,
+		E820MapNr:           2,
+		E820Map:             [e820max]E820{{0x1000, 0xa0000 - 0x1000, Ram}, {0x100000, 0x40000000, Ram}},
+		ParamBlockSignature: [4]uint8{'H', 'd', 'r', 'S'},
+		ParamBlockVersion:   0x202,
+		SetupData:           0x901f1,
 	}
 	return b
 }

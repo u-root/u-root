@@ -103,7 +103,7 @@ func (me memory) Load(path, cmdLine string) error {
 		return fmt.Errorf("open(%q): %v", path, err)
 	}
 	defer kernel.Close()
-	if err := m.LoadElfSegments(kernel); err != nil {
+	if err := m.LoadSegments(kernel); err != nil {
 		return err
 	}
 	if false {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/bzimage"
 	"golang.org/x/sys/unix"
 )
 
@@ -254,6 +256,57 @@ func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
 	return nil
 }
 
+type Loader func(r io.ReaderAt) error
+
+// LoadElfSegments loads loadable ELF segments.
+func (m *Memory) LoadbzImageSegments(r io.ReaderAt) error {
+	bzimage.Debug = log.Printf
+	var (
+		at int64
+		b  = make([]byte, 8192)
+		f  []byte
+	)
+
+	for {
+		n, err := r.ReadAt(b, at)
+		if n < 0 {
+			return fmt.Errorf("bzimage: n %d err %v", n, err)
+		}
+		f = append(f, b[:n]...)
+		if n == 0 {
+			break
+		}
+		at += int64(n)
+	}
+	log.Printf("Read %d bytes of bzimage", len(f))
+	var bz bzimage.BzImage
+	if err := bz.UnmarshalBinary(f); err != nil {
+		return err
+	}
+
+	e, err := bz.ELF()
+	if err != nil {
+		return fmt.Errorf("Extracting elf from bzImage: %v", err)
+	}
+	log.Printf("Header: %v", e.FileHeader)
+	for i, p := range e.Progs {
+		log.Printf("%d: %v", i, *p)
+	}
+
+	for _, p := range e.Progs {
+		if p.Type != elf.PT_LOAD {
+			continue
+		}
+		s := NewSegment(bz.KernelCode[p.Off:p.Off+p.Filesz], Range{
+			Start: uintptr(p.Paddr),
+			Size:  uint(p.Memsz),
+		})
+
+		m.Segments = append(m.Segments, s)
+	}
+	return nil
+}
+
 // LoadElfSegments loads loadable ELF segments.
 func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 	f, err := elf.NewFile(r)
@@ -279,6 +332,19 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 		})
 
 		m.Segments = append(m.Segments, s)
+	}
+	return nil
+}
+
+func (m *Memory) LoadSegments(r io.ReaderAt) error {
+	var errs string
+	for _, f := range []Loader{m.LoadElfSegments, m.LoadbzImageSegments} {
+		if err := f(r); err != nil {
+			errs = fmt.Sprintf("%s%v;", errs, err)
+		}
+	}
+	if errs != "" {
+		return fmt.Errorf("%s", errs)
 	}
 	return nil
 }
