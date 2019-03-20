@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
@@ -22,7 +24,8 @@ import (
 
 const bootloader = "u-root kexec"
 
-// Multiboot defines parameters for working with multiboot kernels.
+// Multiboot defines parameters for working with multiboot kernels and
+// implements boot.OSImage.
 type Multiboot struct {
 	mem kexec.Memory
 
@@ -43,11 +46,12 @@ type Multiboot struct {
 	infoAddr uintptr
 	// kernelEntry is a pointer to entry point of kernel.
 	kernelEntry uintptr
-	// EntryPoint is a pointer to trampoline.
-	EntryPoint uintptr
+	// entryPoint is a pointer to trampoline.
+	entryPoint uintptr
 
 	info          Info
 	loadedModules []Module
+	loaded        bool
 }
 
 var rangeTypes = map[kexec.RangeType]uint32{
@@ -86,7 +90,17 @@ func Probe(file string) error {
 }
 
 // New returns a new Multiboot instance.
-func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
+func New(file, cmdLine string, modules []string) (*Multiboot, error) {
+	// Trampoline should be a part of current binary.
+	p, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("cannot find current executable path: %v", err)
+	}
+	trampoline, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return nil, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
+	}
+
 	return &Multiboot{
 		file:       file,
 		modules:    modules,
@@ -94,11 +108,44 @@ func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
 		trampoline: trampoline,
 		bootloader: bootloader,
 		mem:        kexec.Memory{},
+	}, nil
+}
+
+// ExecutionInfo implements boot.OSImage.ExecutionInfo.
+func (m *Multiboot) ExecutionInfo(l *log.Logger) {
+	if err := m.load(); err != nil {
+		log.Printf("%v could not load multiboot image: %v", err)
 	}
+
+	info, err := m.Description()
+	if err != nil {
+		log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
+	}
+	log.Printf("%v %v", DebugPrefix, info)
+}
+
+// Execute implements boot.OSImage.Execute.
+func (m *Multiboot) Execute() error {
+	if err := m.load(); err != nil {
+		return fmt.Errorf("load failed: %v", err)
+	}
+
+	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
+		return fmt.Errorf("kexec.Load() error: %v", err)
+	}
+
+	return kexec.Reboot()
 }
 
 // Load loads and parses multiboot information from m.file.
-func (m *Multiboot) Load(debug bool) error {
+func (m *Multiboot) load() error {
+	if m.loaded {
+		return nil
+	}
+
+	defer func() {
+		m.loaded = true
+	}()
 	log.Printf("Parsing file %v", m.file)
 	b, err := readFile(m.file)
 	if err != nil {
@@ -131,16 +178,8 @@ func (m *Multiboot) Load(debug bool) error {
 	}
 
 	log.Printf("Adding trampoline")
-	if m.EntryPoint, err = m.addTrampoline(); err != nil {
+	if m.entryPoint, err = m.addTrampoline(); err != nil {
 		return fmt.Errorf("Error adding trampoline: %v", err)
-	}
-
-	if debug {
-		info, err := m.Description()
-		if err != nil {
-			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
-		}
-		log.Printf("%v %v", DebugPrefix, info)
 	}
 
 	return nil
@@ -278,12 +317,6 @@ func (m *Multiboot) newMultibootInfo() (*infoWrapper, error) {
 		CmdLine:        m.cmdLine,
 		BootLoaderName: m.bootloader,
 	}, nil
-}
-
-// Segments returns kexec.Segments, where all the multiboot related
-// information is stored.
-func (m Multiboot) Segments() []kexec.Segment {
-	return m.mem.Segments
 }
 
 // marshal writes out the exact bytes expected by the multiboot info header

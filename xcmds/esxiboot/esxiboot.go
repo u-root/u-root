@@ -34,13 +34,11 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 
 	"github.com/u-root/u-root/pkg/gpt"
-	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
 )
 
@@ -167,24 +165,11 @@ func main() {
 		}
 	}
 
-	p, err := os.Executable()
+	m, err := multiboot.New(opts.kernel, opts.args, opts.modules)
 	if err != nil {
-		log.Fatalf("Cannot find current executable path: %v", err)
+		log.Fatalf("Could not execute multiboot image: %v", err)
 	}
-	trampoline, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		log.Fatalf("Cannot eval symlinks for %v: %v", p, err)
-	}
-
-	m := multiboot.New(opts.kernel, opts.args, trampoline, opts.modules)
-	if err := m.Load(false); err != nil {
-		log.Fatalf("Load failed: %v", err)
-	}
-
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
-		log.Fatalf("kexec.Load() error: %v", err)
-	}
-	if err := kexec.Reboot(); err != nil {
-		log.Fatalf("kexec.Reboot() error: %v", err)
+	if err := m.Execute(); err != nil {
+		log.Fatalf("Could not execute multitboot image: %v", err)
 	}
 }

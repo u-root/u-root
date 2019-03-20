@@ -12,7 +12,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/uio"
 )
