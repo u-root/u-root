@@ -73,6 +73,7 @@ type memory struct {
 type mboot struct {
 	debug   bool
 	modules []string
+	segs []kexec.Segment
 }
 
 func (f file) Load(path, cmdLine string) error {
@@ -133,7 +134,7 @@ func (mb mboot) Load(path, cmdLine string) error {
 	if err := m.Load(mb.debug); err != nil {
 		return fmt.Errorf("Load failed: %v", err)
 	}
-	segs := m.Segments()
+	segs := append(m.Segments(), mb.segs...)
 	if err := kexec.Load(m.EntryPoint, segs, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
@@ -169,6 +170,7 @@ func main() {
 		}
 	}
 
+	var segs []kexec.Segment // used to add other segments for, e.g., multiboot
 	if opts.acpi != "" {
 
 		b, err := acpi.RawTablesData()
@@ -187,6 +189,7 @@ func main() {
 		}
 		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(r.Base()), Size: uint(len(b))})
 		log.Printf("ACPI loaded: addr is %#x", seg)
+		if false { 
 		bp := kexec.NewLinuxBootParams()
 		log.Printf("Set command line to %v", newCmdLine)
 		copy(bp.CmdLine[:], []byte(newCmdLine))
@@ -203,6 +206,7 @@ func main() {
 
 		}
 	}
+	}
 
 	if opts.load {
 		kernelpath := flag.Args()[0]
@@ -214,6 +218,7 @@ func main() {
 			l = mboot{
 				debug:   opts.debug,
 				modules: opts.modules,
+				segs: segs,
 			}
 		} else if err == multiboot.ErrFlagsNotSupported {
 			log.Fatal(err)

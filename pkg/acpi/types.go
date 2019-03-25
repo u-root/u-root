@@ -10,6 +10,9 @@ package acpi
 // In one case, the sheap, they serialize into the head and the heap.
 type (
 	// These are serialized as:
+	sig      string
+	oem      string
+	tableid  string
 	ipaddr   string // 16 byte IP4 or IP6 addr
 	sockaddr string // IP addr as above and 2 byte port
 	flag     string // with other flags in the struct as one u32
@@ -18,6 +21,7 @@ type (
 	sheap    string // string placed into the heap, with u16 len and offset in header
 	u8       string // 1 byte unsigned
 	u16      string // 2 byte unsigned
+	u32      string // 4 byte unsigned
 	u64      string // 8 byte unsigned
 )
 

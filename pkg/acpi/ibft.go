@@ -315,7 +315,7 @@ func mIBFT(head, heap *bytes.Buffer, i interface{}) error {
 			}
 
 		default:
-			if err := MarshalBasicTypes(head, heap, s); err != nil {
+			if err := HeapMarshalBasicTypes(head, heap, s); err != nil {
 				return err
 			}
 		}

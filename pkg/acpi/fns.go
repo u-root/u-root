@@ -21,7 +21,7 @@ func gencsum(b []uint8) uint8 {
 }
 
 // MarshalBasicTypes marshals simple non-struct types into the head and heap.
-func MarshalBasicTypes(head, heap *bytes.Buffer, i interface{}) error {
+func HeapMarshalBasicTypes(head, heap *bytes.Buffer, i interface{}) error {
 	switch s := i.(type) {
 	case sockaddr:
 		Debug("addr")

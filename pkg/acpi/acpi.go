@@ -2,6 +2,37 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// The ACPI package began life as a relatively simple set of functions.
+// At some point we wanted to be able to extend the ACPI table over a
+// kexec and that's when it all went nasty.
+// A few issues crop up.
+// In theory, one should be able to put tables anywhere. In practice,
+// even in the EFI age, this is not simple. The root pointer
+// for tables, RSDP, Root Services Data Pointer, is in memory protected by
+// the southbridge/ICH/PCH with lockdown bits (disable writes once, can
+// not be reset until power on/reset). Writes to it are transparently discarded.
+// (This makes sense, as crap DOS programs probably tried to write that area all
+// the time. Everything -- everything! -- about x86 and BIOS is explainable
+// by DOS, 16 bits addresses, 4 bit segments, 20 bits, and the incredible failure
+// of vision in 1999 of building a bunch of tables with 32 bit pointers in them.
+// The x86 world is nothing if not consistent: short-sighted decisions for 40+ years).
+// The two-byte EBDA pointer (16 bits) is shifted left 4 bits to get a 20-bit address
+// which points to *the range of memory* containing, maybe, the RSDP.
+// The RSDP has to live in the low 20 bits of address space (remember 20 bits, right?)
+// The RSDP has two pointers in, one of both containing a value: 32 bit pointer or 64 bit
+// pointer to the RSDT or XSDT. RSDT has 32-bit pointers, XSDT 64-bit pointers.
+// The spec recommends you ignore the 32-bit pointer variants but as of 2019,
+// I still see use of them; this package will read and write the variants but the
+// internal structs are defined with 64-bit pointers (oh, if only the ACPICA code
+// had gotten this right, but that code is pretty bad too).
+// What's really fun: when you generate the [RX]SDT, you need to generate pointers
+// too. It's best to keep those tables in a physically contiguous area, so we do;
+// not all systems follow this rule, which is asking for trouble.
+// Finally, not all tables are generated in a consistent way, e.g. the IBFT is not like
+// most other tables containing variable length data, because the people who created it
+// are Klever. IBFT has its own heap.
+// If you really look at ACPI closely, you can kind of see that it's optimized for NASM,
+// which is part of what makes it so unpleasant. But, it's what we have.
 package acpi
 
 import (
@@ -11,9 +42,11 @@ import (
 	"strconv"
 )
 
-type ACPIMarshaler interface {
+// Marshaler marshals tables into a []byte
+type Marshaler interface {
 	Marshal() ([]byte, error)
 }
+
 type (
 	// marshalers marshal ACPI tables into a head and a heap.
 	marshaler func(head, heap *bytes.Buffer, i interface{}) error
@@ -24,7 +57,7 @@ const (
 	LengthOffset = 4
 	// CSUMOffset is the offset of the single byte checksum in *most* ACPI tables
 	CSUMOffset = 9
-	// MinTableLength is the minimum length: 4 byte tag, 4 byte length, 1 byte revision, 1 byte checksum, 
+	// MinTableLength is the minimum length: 4 byte tag, 4 byte length, 1 byte revision, 1 byte checksum,
 	MinTableLength = 10
 )
 
@@ -32,6 +65,22 @@ var (
 	// Debug implements fmt.Sprintf and can be used for debug printing
 	Debug = func(string, ...interface{}) {}
 )
+
+// This is the standard header for all ACPI tables, except the
+// ones that don't use it.
+// We use types that we hope are easy to read; they in turn
+// make writing marshal code with type switches very convenient.
+type Header struct {
+	Sig             sig
+	Length          u32
+	Revision        u8
+	CheckSum        u8
+	OEMID           oem
+	OEMTableID      tableid
+	OEMRevision     u32
+	CreatorID       u32
+	CreatorRevision u32
+}
 
 // Flags takes 0 or more flags and produces a uint32 value.
 // Each argument represents one bit position, with the first flag
@@ -95,7 +144,7 @@ func uw(b *bytes.Buffer, s string, bits int) error {
 }
 
 // Marshal marshals support ACPI tables into a byte slice.
-func Marshal(i ACPIMarshaler) ([]byte, error) {
+func Marshal(i Marshaler) ([]byte, error) {
 
 	Debug("Marshall %T", i)
 	// We pass in both a head and a heap. For most ACPI tables,
