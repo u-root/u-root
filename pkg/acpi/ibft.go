@@ -240,27 +240,27 @@ type IBFT struct {
 }
 
 func (ibft *IBFT) Marshal() ([]byte, error) {
-	var head, heap bytes.Buffer
+	var h = HeapTable{Head: &bytes.Buffer{}, Heap: &bytes.Buffer{}}
 	Debug("IBFT")
 	f, err := flags(ibft.Multi)
 	if err != nil {
 		return nil, err
 	}
 	control.Flags = acpiIBFTControlFlags(f)
-	w(&head, 1, []byte(rawIBTFHeader), control)
-	Debug("Done IBFTHeader: head is %d bytes", head.Len())
-	if err := mIBFT(&head, &heap, ibft); err != nil {
+	w(h.Head, 1, []byte(rawIBTFHeader), control)
+	Debug("Done IBFTHeader: head is %d bytes", h.Head.Len())
+	if err := mIBFT(&h, ibft); err != nil {
 		return nil, err
 	}
-	if head.Len() != int(ibftHeadersLen) {
-		return nil, fmt.Errorf("Expected headers len is wrong; got %d, want %d", head.Len(), ibftHeadersLen)
+	if h.Head.Len() != int(ibftHeadersLen) {
+		return nil, fmt.Errorf("Expected headers len is wrong; got %d, want %d", h.Head.Len(), ibftHeadersLen)
 	}
-	w(&head, 1, heap.Bytes())
+	w(h.Head, 1, h.Heap.Bytes())
 
-	return head.Bytes(), nil
+	return h.Head.Bytes(), nil
 }
 
-func mIBFT(head, heap *bytes.Buffer, i interface{}) error {
+func mIBFT(h *HeapTable, i interface{}) error {
 	nt := reflect.TypeOf(i).Elem()
 	nv := reflect.ValueOf(i).Elem()
 	for i := 0; i < nt.NumField(); i++ {
@@ -268,7 +268,7 @@ func mIBFT(head, heap *bytes.Buffer, i interface{}) error {
 		ft := f.Type
 		fv := nv.Field(i)
 
-		Debug("Field %d: (%d, %d) ml %v %T (%v, %v)", i, head.Len(), heap.Len(), f, f, ft, fv)
+		Debug("Field %d: (%d, %d) ml %v %T (%v, %v)", i, h.Head.Len(), h.Heap.Len(), f, f, ft, fv)
 		switch s := fv.Interface().(type) {
 		case IBFTInitiator:
 			f, err := flags(s.Valid, s.Boot)
@@ -276,10 +276,10 @@ func mIBFT(head, heap *bytes.Buffer, i interface{}) error {
 				return fmt.Errorf("Parsing %v: %v", []flag{s.Valid, s.Boot}, err)
 			}
 			// we can do this hack with Index; it will only ever be
-			// 0 or 1.
-			w(head, ibftInitiator, ibftVersion, ibftInitiatorLen, uint8(0), f)
-			Debug("Wrote initiatior header len is %d", head.Len())
-			if err := mIBFT(head, heap, &s); err != nil {
+			// 0 or 1. The IBFT allows lots, in principle, but only 2, in practice.
+			w(h.Head, ibftInitiator, ibftVersion, ibftInitiatorLen, uint8(0), f)
+			Debug("Wrote initiatior header len is %d", h.Head.Len())
+			if err := mIBFT(h, &s); err != nil {
 				return err
 			}
 		case IBFTNIC:
@@ -288,13 +288,13 @@ func mIBFT(head, heap *bytes.Buffer, i interface{}) error {
 				return fmt.Errorf("Parsing %v: %v", []flag{s.Valid, s.Boot, s.Global}, err)
 			}
 			// we can do this hack with Index; it will only ever be
-			// 0 or 1.
+			// 0 or 1. See above snarky comment.
 			x, err := flags(s.Index)
 			if err != nil {
 				return fmt.Errorf("Parsing NICIndex %s: %v", s.Index, err)
 			}
-			w(head, ibftNIC, ibftVersion, ibftNICLen, x, f)
-			if err := mIBFT(head, heap, &s); err != nil {
+			w(h.Head, ibftNIC, ibftVersion, ibftNICLen, x, f)
+			if err := mIBFT(h, &s); err != nil {
 				return err
 			}
 
@@ -303,23 +303,21 @@ func mIBFT(head, heap *bytes.Buffer, i interface{}) error {
 			if err != nil {
 				return fmt.Errorf("Parsing %v: %v", []flag{s.Valid, s.Boot, s.CHAP, s.RCHAP}, err)
 			}
-			// we can do this hack with Index; it will only ever be
-			// 0 or 1.
 			x, err := flags(s.Index)
 			if err != nil {
 				return fmt.Errorf("Parsing NICIndex %s: %v", s.Index, err)
 			}
-			w(head, ibftTarget, ibftVersion, ibftTargetLen, x, f)
-			if err := mIBFT(head, heap, &s); err != nil {
+			w(h.Head, ibftTarget, ibftVersion, ibftTargetLen, x, f)
+			if err := mIBFT(h, &s); err != nil {
 				return err
 			}
 
 		default:
-			if err := HeapMarshalBasicTypes(head, heap, s); err != nil {
+			if err := h.Marshal(s); err != nil {
 				return err
 			}
 		}
 	}
-	Debug("mIBFT done, head is %d bytes, heap is %d bytes", head.Len(), heap.Len())
+	Debug("mIBFT done, head is %d bytes, heap is %d bytes", h.Head.Len(), h.Heap.Len())
 	return nil
 }

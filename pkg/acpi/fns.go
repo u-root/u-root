@@ -20,8 +20,13 @@ func gencsum(b []uint8) uint8 {
 	return ^csum + 1
 }
 
-// MarshalBasicTypes marshals simple non-struct types into the head and heap.
-func HeapMarshalBasicTypes(head, heap *bytes.Buffer, i interface{}) error {
+type HeapTable struct {
+	Head *bytes.Buffer
+	Heap *bytes.Buffer
+}
+
+// Marshal marshals basic types into HeapTable
+func (h *HeapTable) Marshal(i interface{}) error {
 	switch s := i.(type) {
 	case sockaddr:
 		Debug("addr")
@@ -29,13 +34,13 @@ func HeapMarshalBasicTypes(head, heap *bytes.Buffer, i interface{}) error {
 		if err != nil {
 			return fmt.Errorf("addr %s: %v", s, err)
 		}
-		w(head, a.IP.To16(), uint16(a.Port))
+		w(h.Head, a.IP.To16(), uint16(a.Port))
 	case ipaddr:
 		a, err := net.ResolveIPAddr("ip", string(s))
 		if err != nil {
 			return fmt.Errorf("addr %s: %v", s, err)
 		}
-		w(head, a.IP.To16())
+		w(h.Head, a.IP.To16())
 		Debug("net")
 	case flag:
 	case mac:
@@ -46,31 +51,31 @@ func HeapMarshalBasicTypes(head, heap *bytes.Buffer, i interface{}) error {
 		if len(hw) != 6 {
 			return fmt.Errorf("%q is not an ethernet MAC", s)
 		}
-		w(head, hw)
+		w(h.Head, hw)
 		Debug("mac")
 	case bdf:
-		if err := uw(head, string(s), 16); err != nil {
+		if err := uw(h.Head, string(s), 16); err != nil {
 			return err
 		}
 		Debug("bdf")
 	case u8:
-		if err := uw(head, string(s), 8); err != nil {
+		if err := uw(h.Head, string(s), 8); err != nil {
 			return err
 		}
 
 	case u16:
-		if err := uw(head, string(s), 16); err != nil {
+		if err := uw(h.Head, string(s), 16); err != nil {
 			return err
 		}
 
 	case u64:
-		if err := uw(head, string(s), 64); err != nil {
+		if err := uw(h.Head, string(s), 64); err != nil {
 			return err
 		}
 	case sheap:
-		w(head, uint16(len(s)), uint16(heap.Len()))
+		w(h.Head, uint16(len(s)), uint16(h.Heap.Len()))
 		Debug("Write %q to heap", string(s))
-		w(heap, []byte(s))
+		w(h.Heap, []byte(s))
 	default:
 		return fmt.Errorf("Don't know what to do with %T", s)
 	}
