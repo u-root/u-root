@@ -168,11 +168,18 @@ func Marshal(i ACPIWriter) ([]byte, error) {
 	return b, nil
 }
 
-// UnMarshall unmarshals a single table
+// UnMarshall unmarshals a single table.
 func UnMarshal(b []byte) (*Table, error) {
 	if len(b) < MinTableLength {
 		return nil, fmt.Errorf("%v is too short to contain a table", b)
 	}
 
+	return nil, nil
+}
+
+func UnMarshallSDT(r *RSDP) {
+}
+
+func UnMarshalAll(s *SDT) (*[]Table, error) {
 	return nil, nil
 }

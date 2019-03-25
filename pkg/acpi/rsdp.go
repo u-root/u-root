@@ -47,7 +47,10 @@ type RSDP struct {
 	data     [RSDPLen]byte
 }
 
-var defaultRSDP = []byte("RSDP PTR U-ROOT\x02")
+var (
+	defaultRSDP = []byte("RSDP PTR U-ROOT\x02")
+	_           = Tabler(&RSDP{})
+)
 
 func NewRSDP(addr uintptr, len uint) []byte {
 	var r [RSDPLen]byte

@@ -24,3 +24,13 @@ type (
 	u32      string // 4 byte unsigned
 	u64      string // 8 byte unsigned
 )
+
+// Table is the interface to ACPI tables.
+type Tabler interface {
+	Len() int
+	Base() int64
+	Data() []byte
+	Sig() string
+	OEMID() string
+	Revision() uint8
+}
