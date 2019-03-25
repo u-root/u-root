@@ -42,15 +42,9 @@ import (
 	"strconv"
 )
 
-// Marshaler marshals tables into a []byte
-type Marshaler interface {
+type ACPIWriter interface {
 	Marshal() ([]byte, error)
 }
-
-type (
-	// marshalers marshal ACPI tables into a head and a heap.
-	marshaler func(head, heap *bytes.Buffer, i interface{}) error
-)
 
 const (
 	// LengthOffset is the offset of the table length
@@ -80,6 +74,16 @@ type Header struct {
 	OEMRevision     u32
 	CreatorID       u32
 	CreatorRevision u32
+}
+
+// Table is a basic ACPI table. All tables consist of the
+// Header and then a bunch of table-specific data.
+// Because we do not care about most tables, we have
+// this "generic" type which we can Unmarshal into
+// and Marshal from.
+type Table struct {
+	Header
+	Data []byte
 }
 
 // Flags takes 0 or more flags and produces a uint32 value.
@@ -143,14 +147,10 @@ func uw(b *bytes.Buffer, s string, bits int) error {
 
 }
 
-// Marshal marshals support ACPI tables into a byte slice.
-func Marshal(i Marshaler) ([]byte, error) {
+// Marshal marshals a single ACPI table into a byte slice.
+func Marshal(i ACPIWriter) ([]byte, error) {
 
 	Debug("Marshall %T", i)
-	// We pass in both a head and a heap. For most ACPI tables,
-	// only the head is written. For some tables, the heap is used
-	// as well. The top level handler in marshal is required to return
-	// with the heap reset and the head containing any tables.
 	b, err := i.Marshal()
 	if err != nil {
 		return nil, err
@@ -166,4 +166,13 @@ func Marshal(i Marshaler) ([]byte, error) {
 	b[CSUMOffset] = c
 
 	return b, nil
+}
+
+// UnMarshall unmarshals a single table
+func UnMarshal(b []byte) (*Table, error) {
+	if len(b) < MinTableLength {
+		return nil, fmt.Errorf("%v is too short to contain a table", b)
+	}
+
+	return nil, nil
 }

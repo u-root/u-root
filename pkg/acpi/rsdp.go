@@ -95,7 +95,7 @@ func (r *RSDP) Revision() uint8 {
 	return r.revision
 }
 
-func readRSDP(base int64) (Table, error) {
+func readRSDP(base int64) (*RSDP, error) {
 	r := &RSDP{}
 	r.base = uint64(base)
 	for i := range r.data {
@@ -108,7 +108,7 @@ func readRSDP(base int64) (Table, error) {
 	return r, nil
 }
 
-func getRSDPEFI() (Table, error) {
+func getRSDPEFI() (*RSDP, error) {
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func num(n string, i int) (uint64, error) {
 // get RSDPmem is the option of last choice, it just grovels through
 // the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
 // These are well-known addresses for 20+ years.
-func getRSDPmem() (Table, error) {
+func getRSDPmem() (*RSDP, error) {
 	for base := int64(0xe0000); base < 0xffff0; base += 16 {
 		var r io.Uint64
 		if err := io.Read(base, &r); err != nil {
@@ -171,8 +171,8 @@ func getRSDPmem() (Table, error) {
 	return nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
 }
 
-func GetRSDP() (Table, error) {
-	for _, f := range []func() (Table, error){getRSDPEFI, getRSDPmem} {
+func GetRSDP() (*RSDP, error) {
+	for _, f := range []func() (*RSDP, error){getRSDPEFI, getRSDPmem} {
 		r, err := f()
 		if err == nil {
 			return r, nil

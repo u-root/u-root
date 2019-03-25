@@ -24,15 +24,3 @@ type (
 	u32      string // 4 byte unsigned
 	u64      string // 8 byte unsigned
 )
-
-// Table is an interface to ACPI tables. It is not used yet but
-// may be. We're still trying to figure how how far to go with this
-// idea, since LinuxBoot is not currently planned to generate ACPI.
-type Table interface {
-	Len() int
-	Base() int64
-	Data() []byte
-	Sig() string
-	OEMID() string
-	Revision() uint8
-}
