@@ -35,7 +35,6 @@ type Tabler interface {
 	OEMTableID() tableid
 	OEMRevision() u32
 	CreatorID() u32
-	VendorID() u32
 	CreatorRevision() u32
 	Revision() u8
 	CheckSum() u8

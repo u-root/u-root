@@ -4,17 +4,25 @@
 
 package acpi
 
+import "fmt"
+
 type SDT struct {
-	Header
+	Generic
 	Tables []uint64
-	data   []byte
 }
 
 func unmarshalSDT(t Tabler) (Tabler, error) {
 	s := &SDT{
-		Header: *GetHeader(t),
-		data:   t.AllData(),
+		Generic: Generic{
+			Header: *GetHeader(t),
+			data:   t.AllData(),
+		},
 	}
+
+	if s.Sig() != "RSDT" && s.Sig() != "XSDT" {
+		return nil, fmt.Errorf("%v is not RSDT or XSDT", s.Sig())
+	}
+
 	// Now the fun. In 1999, 64-bit micros had been out for about 10 years.
 	// Intel had announced the ia64 years earlier. In 2000 the ACPI committee
 	// chose 32-bit pointers anyway, then had to backfill a bunch of table

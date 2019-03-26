@@ -66,28 +66,28 @@ var (
 // We use types that we hope are easy to read; they in turn
 // make writing marshal code with type switches very convenient.
 type Header struct {
-	Sig             sig
-	Length          u32
-	Revision        u8
-	CheckSum        u8
-	OEMID           oem
-	OEMTableID      tableid
-	OEMRevision     u32
-	CreatorID       u32
-	CreatorRevision u32
+	sig             sig
+	length          u32
+	revision        u8
+	checkSum        u8
+	oemID           oem
+	oemTableID      tableid
+	oemRevision     u32
+	creatorID       u32
+	creatorRevision u32
 }
 
 func GetHeader(t Tabler) *Header {
 	return &Header{
-		Sig:             t.Sig(),
-		Length:          u32(t.Len()),
-		Revision:        t.Revision(),
-		CheckSum:        t.CheckSum(),
-		OEMID:           t.OEMID(),
-		OEMTableID:      t.OEMTableID(),
-		OEMRevision:     t.OEMRevision(),
-		CreatorID:       t.CreatorID(),
-		CreatorRevision: t.CreatorRevision(),
+		sig:             t.Sig(),
+		length:          u32(t.Len()),
+		revision:        t.Revision(),
+		checkSum:        t.CheckSum(),
+		oemID:           t.OEMID(),
+		oemTableID:      t.OEMTableID(),
+		oemRevision:     t.OEMRevision(),
+		creatorID:       t.CreatorID(),
+		creatorRevision: t.CreatorRevision(),
 	}
 }
 
