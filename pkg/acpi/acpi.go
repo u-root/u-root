@@ -57,7 +57,8 @@ const (
 
 var (
 	// Debug implements fmt.Sprintf and can be used for debug printing
-	Debug = func(string, ...interface{}) {}
+	Debug        = func(string, ...interface{}) {}
+	unmarshalers = map[sig]func(Tabler) (Tabler, error){}
 )
 
 // This is the standard header for all ACPI tables, except the
@@ -74,6 +75,20 @@ type Header struct {
 	OEMRevision     u32
 	CreatorID       u32
 	CreatorRevision u32
+}
+
+func GetHeader(t Tabler) *Header {
+	return &Header{
+		Sig:             t.Sig(),
+		Length:          u32(t.Len()),
+		Revision:        t.Revision(),
+		CheckSum:        t.CheckSum(),
+		OEMID:           t.OEMID(),
+		OEMTableID:      t.OEMTableID(),
+		OEMRevision:     t.OEMRevision(),
+		CreatorID:       t.CreatorID(),
+		CreatorRevision: t.CreatorRevision(),
+	}
 }
 
 // Table is a basic ACPI table. All tables consist of the
@@ -169,15 +184,23 @@ func Marshal(i ACPIWriter) ([]byte, error) {
 }
 
 // UnMarshall unmarshals a single table.
-func UnMarshal(b []byte) (*Table, error) {
-	if len(b) < MinTableLength {
-		return nil, fmt.Errorf("%v is too short to contain a table", b)
+// If the table is one of the many we don't care about we
+// just return a raw table, which can be easily written out
+// again if needed. If it has an UnMarshal registered we use
+// that instead.
+func UnMarshal(b []byte) (Tabler, error) {
+	r, err := NewRaw(b)
+	if err != nil {
+		return nil, err
+	}
+	if m, ok := unmarshalers[r.Sig()]; ok {
+		return m(r)
 	}
 
-	return nil, nil
+	return r, nil
 }
 
-// UnMarshalSDT unmarshals and SDT.
+// UnMarshalSDT unmarshals an SDT.
 func UnMarshallSDT(r *RSDP) {
 }
 

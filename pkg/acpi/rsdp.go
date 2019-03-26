@@ -78,48 +78,53 @@ func (r *RSDP) Base() int64 {
 }
 
 // Data returns the RSDP as a []byte
-func (r *RSDP) Data() []byte {
+func (r *RSDP) AllData() []byte {
 	return r.data[:]
 }
 
+// TableData returns the RSDP table data as a []byte
+func (r *RSDP) TableData() []byte {
+	return r.data[36:]
+}
+
 // Sig returns the RSDP signature
-func (r *RSDP) Sig() string {
-	return string(r.data[:8])
+func (r *RSDP) Sig() sig {
+	return sig(r.data[:8])
 }
 
 // OEMID returns the RSDP OEMID
-func (r *RSDP) OEMID() string {
-	return string(r.data[9:15])
+func (r *RSDP) OEMID() oem {
+	return oem(r.data[9:15])
 }
 
-func (r *RSDP) OEMTableID() string {
+func (r *RSDP) OEMTableID() tableid {
 	return "rsdp?"
 }
 
 // Revision returns the RSDP revision, which
 // after 2002 should be >= 2
-func (r *RSDP) Revision() uint8 {
-	return r.revision
+func (r *RSDP) Revision() u8 {
+	return u8(r.revision)
 }
 
-func (r *RSDP) OEMRevision() uint32 {
-	return 0
+func (r *RSDP) OEMRevision() u32 {
+	return u32(0)
 }
 
-func (r *RSDP) Checksum() uint8 {
-	return r.checksum
+func (r *RSDP) CheckSum() u8 {
+	return u8(r.checksum)
 }
 
-func (r *RSDP) CreatorID() uint32 {
-	return 0
+func (r *RSDP) CreatorID() u32 {
+	return u32(0)
 }
 
-func (r *RSDP) VendorID() uint32 {
-	return 0
+func (r *RSDP) VendorID() u32 {
+	return u32(0)
 }
 
-func (r *RSDP) CreatorRevision() uint32 {
-	return 0
+func (r *RSDP) CreatorRevision() u32 {
+	return u32(0)
 }
 
 func readRSDP(base int64) (*RSDP, error) {

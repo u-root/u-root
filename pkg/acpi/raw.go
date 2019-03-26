@@ -23,46 +23,50 @@ func (r *Raw) Len() int {
 	return len([]byte(r.data))
 }
 
-func (r *Raw) Data() []byte {
+func (r *Raw) AllData() []byte {
 	return r.data
 }
 
-func (r *Raw) Sig() string {
-	return fmt.Sprintf("%s", r.data[:4])
+func (r *Raw) TableData() []byte {
+	return r.data[36:]
 }
 
-func (r *Raw) OEMID() string {
-	return fmt.Sprintf("%s", r.data[10:16])
+func (r *Raw) Sig() sig {
+	return sig(fmt.Sprintf("%s", r.data[:4]))
 }
 
-func (r *Raw) OEMTableID() string {
-	return fmt.Sprintf("%s", r.data[16:24])
+func (r *Raw) OEMID() oem {
+	return oem(fmt.Sprintf("%s", r.data[10:16]))
 }
 
-func (r *Raw) OEMRevision() uint32 {
+func (r *Raw) OEMTableID() tableid {
+	return tableid(fmt.Sprintf("%s", r.data[16:24]))
+}
+
+func (r *Raw) OEMRevision() u32 {
 	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u
+	return u32(u)
 }
 
-func (r *Raw) CreatorID() uint32 {
+func (r *Raw) CreatorID() u32 {
 	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u
+	return u32(u)
 }
 
-func (r *Raw) VendorID() uint32 {
+func (r *Raw) VendorID() u32 {
 	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u
+	return u32(u)
 }
 
-func (r *Raw) CreatorRevision() uint32 {
+func (r *Raw) CreatorRevision() u32 {
 	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u
+	return u32(u)
 }
 
-func (r *Raw) Revision() uint8 {
-	return r.data[8]
+func (r *Raw) Revision() u8 {
+	return u8(r.data[8])
 }
 
-func (r *Raw) Checksum() uint8 {
-	return r.data[9]
+func (r *Raw) CheckSum() u8 {
+	return u8(r.data[9])
 }
