@@ -122,7 +122,8 @@ func (r *RSDP) CreatorRevision() u32 {
 
 // Base returns a base address or the [RX]SDT.
 func (r *RSDP) Base() int64 {
-	b := int64(binary.LittleEndian.Uint64(r.data[16:20]))
+	log.Printf("Bse %v data len %d", r, len(r.data))
+	b := int64(binary.LittleEndian.Uint32(r.data[16:20]))
 	if b != 0 {
 		return b
 	}
@@ -205,8 +206,11 @@ func getRSDPmem() (*RSDP, error) {
 	return nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
 }
 
+// You can change the getters if you wish for testing.
+var getters = []func() (*RSDP, error){getRSDPEFI, getRSDPmem}
+
 func GetRSDP() (*RSDP, error) {
-	for _, f := range []func() (*RSDP, error){getRSDPEFI, getRSDPmem} {
+	for _, f := range getters {
 		r, err := f()
 		if err == nil {
 			return r, nil

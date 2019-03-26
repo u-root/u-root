@@ -211,7 +211,7 @@ func UnMarshal(a int64) (Tabler, error) {
 // UnMarshalSDT unmarshals an SDT.
 // It's pretty much impossible for the RSDP to point to
 // anything else so we mainly do the unmarshal and check the sig.
-func UnMarshallSDT(r *RSDP) (*SDT, error) {
+func UnMarshalSDT(r *RSDP) (*SDT, error) {
 	s, err := UnMarshal(r.Base())
 	if err != nil {
 		return nil, err
