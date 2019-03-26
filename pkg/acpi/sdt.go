@@ -7,11 +7,13 @@ package acpi
 type SDT struct {
 	Header
 	Tables []uint64
+	data   []byte
 }
 
 func unmarshalSDT(t Tabler) (Tabler, error) {
 	s := &SDT{
 		Header: *GetHeader(t),
+		data:   t.AllData(),
 	}
 	// Now the fun. In 1999, 64-bit micros had been out for about 10 years.
 	// Intel had announced the ia64 years earlier. In 2000 the ACPI committee
