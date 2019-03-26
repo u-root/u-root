@@ -25,5 +25,7 @@ func TestRSDP(t *testing.T) {
 		t.Fatalf("UnMarshalAll: got %v, want nil", err)
 	}
 	t.Logf("%d entries", len(tab))
-	t.Logf("%v", tab)
+	for i, tt := range tab {
+		t.Logf("%d: %v, %d bytes", i, tt.Sig(), tt.Len())
+	}
 }
