@@ -177,6 +177,7 @@ func UnMarshal(b []byte) (*Table, error) {
 	return nil, nil
 }
 
+// UnMarshalSDT unmarshals and SDT.
 func UnMarshallSDT(r *RSDP) {
 }
 

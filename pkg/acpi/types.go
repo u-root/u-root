@@ -28,9 +28,14 @@ type (
 // Table is the interface to ACPI tables.
 type Tabler interface {
 	Len() int
-	Base() int64
 	Data() []byte
 	Sig() string
 	OEMID() string
+	OEMTableID() string
+	OEMRevision() uint32
+	CreatorID() uint32
+	VendorID() uint32
+	CreatorRevision() uint32
 	Revision() uint8
+	Checksum() uint8
 }

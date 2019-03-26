@@ -92,10 +92,34 @@ func (r *RSDP) OEMID() string {
 	return string(r.data[9:15])
 }
 
+func (r *RSDP) OEMTableID() string {
+	return "rsdp?"
+}
+
 // Revision returns the RSDP revision, which
 // after 2002 should be >= 2
 func (r *RSDP) Revision() uint8 {
 	return r.revision
+}
+
+func (r *RSDP) OEMRevision() uint32 {
+	return 0
+}
+
+func (r *RSDP) Checksum() uint8 {
+	return r.checksum
+}
+
+func (r *RSDP) CreatorID() uint32 {
+	return 0
+}
+
+func (r *RSDP) VendorID() uint32 {
+	return 0
+}
+
+func (r *RSDP) CreatorRevision() uint32 {
+	return 0
 }
 
 func readRSDP(base int64) (*RSDP, error) {

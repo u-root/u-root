@@ -47,7 +47,7 @@ func TestIBFTMarshal(t *testing.T) {
 			SLPServer:             "localhost",
 			PrimaryRadiusServer:   "121.1.1.1",
 			SecondaryRadiusServer: "222.3.4.5",
-			Name:                  "myinitor",
+			Name: "myinitor",
 		},
 		NIC0: IBFTNIC{
 			Valid:        "1",
