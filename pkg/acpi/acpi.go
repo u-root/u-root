@@ -196,8 +196,8 @@ func Marshal(i ACPIWriter) ([]byte, error) {
 // just return a raw table, which can be easily written out
 // again if needed. If it has an UnMarshal registered we use
 // that instead.
-func UnMarshal(b []byte) (Tabler, error) {
-	r, err := NewRaw(b)
+func UnMarshal(a int64) (Tabler, error) {
+	r, err := ReadRaw(a)
 	if err != nil {
 		return nil, err
 	}
@@ -212,19 +212,22 @@ func UnMarshal(b []byte) (Tabler, error) {
 // It's pretty much impossible for the RSDP to point to
 // anything else so we mainly do the unmarshal and check the sig.
 func UnMarshallSDT(r *RSDP) (*SDT, error) {
-	// suck in the raw table, then marshal it.
-	// There should have been a marshaler registered.
-	raw, err := ReadRaw(r.Base())
-	if err != nil {
-		return nil, err
-	}
-	s, err := UnMarshal(raw.AllData())
+	s, err := UnMarshal(r.Base())
 	if err != nil {
 		return nil, err
 	}
 	return s.(*SDT), nil
 }
 
-func UnMarshalAll(s *SDT) (*[]Table, error) {
-	return nil, nil
+func UnMarshalAll(s *SDT) ([]Tabler, error) {
+	var tab []Tabler
+	for _, a := range s.Tables {
+		t, err := UnMarshal(a)
+		if err != nil {
+			return nil, err
+		}
+		tab = append(tab, t)
+	}
+
+	return tab, nil
 }

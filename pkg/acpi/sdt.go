@@ -11,7 +11,7 @@ import (
 
 type SDT struct {
 	Generic
-	Tables []uint64
+	Tables []int64
 }
 
 func init() {
@@ -43,11 +43,11 @@ func unmarshalSDT(t Tabler) (Tabler, error) {
 	d := t.TableData()
 
 	for i := 0; i < len(d); i += esize {
-		val := uint64(0)
+		val := int64(0)
 		if sig == "XSDT" {
-			val = binary.LittleEndian.Uint64(d[i : i+8])
+			val = int64(binary.LittleEndian.Uint64(d[i : i+8]))
 		} else {
-			val = uint64(binary.LittleEndian.Uint32(d[i : i+4]))
+			val = int64(binary.LittleEndian.Uint32(d[i : i+4]))
 		}
 		s.Tables = append(s.Tables, val)
 	}
