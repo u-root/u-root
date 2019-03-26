@@ -39,6 +39,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -60,6 +61,13 @@ var (
 	Debug        = func(string, ...interface{}) {}
 	unmarshalers = map[sig]func(Tabler) (Tabler, error){}
 )
+
+func addUnMarshaler(n string, f func(Tabler) (Tabler, error)) {
+	if _, ok := unmarshalers[sig(n)]; ok {
+		log.Fatalf("Can't add %s; already in use", n)
+	}
+	unmarshalers[sig(n)] = f
+}
 
 // This is the standard header for all ACPI tables, except the
 // ones that don't use it.
@@ -201,7 +209,20 @@ func UnMarshal(b []byte) (Tabler, error) {
 }
 
 // UnMarshalSDT unmarshals an SDT.
-func UnMarshallSDT(r *RSDP) {
+// It's pretty much impossible for the RSDP to point to
+// anything else so we mainly do the unmarshal and check the sig.
+func UnMarshallSDT(r *RSDP) (*SDT, error) {
+	// suck in the raw table, then marshal it.
+	// There should have been a marshaler registered.
+	raw, err := ReadRaw(r.Base())
+	if err != nil {
+		return nil, err
+	}
+	s, err := UnMarshal(raw.AllData())
+	if err != nil {
+		return nil, err
+	}
+	return s.(*SDT), nil
 }
 
 func UnMarshalAll(s *SDT) (*[]Table, error) {

@@ -22,11 +22,10 @@ func NewRaw(b []byte) (Tabler, error) {
 }
 
 // ReadRaw reads a full table in, given an address.
-func ReadRaw(addr uint64) (Tabler, error) {
+func ReadRaw(a int64) (Tabler, error) {
 	var u io.Uint32
 	// Read the table size at a+4
-	a := int64(addr)
-	if err := io.Read(int64(a+4), &u); err != nil {
+	if err := io.Read(a+4, &u); err != nil {
 		return nil, err
 	}
 	dat := make([]byte, u)

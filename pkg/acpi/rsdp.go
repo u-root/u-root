@@ -39,7 +39,7 @@ type RSDP struct {
 	v1CSUM   uint8   // This was the checksum, which we are pretty sure is ignored now.
 	oemid    [6]byte
 	revision uint8  `Default:"2"`
-	_        uint32 // was RSDT, but you're not supposed to use it any more.
+	obase    uint32 // was RSDT, but you're not supposed to use it any more.
 	length   uint32
 	base     uint64 // XSDT address, the only one you should use
 	checksum uint8
@@ -68,13 +68,6 @@ func NewRSDP(addr uintptr, len uint) []byte {
 // Len returns the RSDP length
 func (r *RSDP) Len() int {
 	return len(r.data)
-}
-
-// Base returns the RSDP base address as an int64
-// We use int64 for compatibility with Go notions
-// of offsets.
-func (r *RSDP) Base() int64 {
-	return int64(r.base)
 }
 
 // Data returns the RSDP as a []byte
@@ -125,6 +118,15 @@ func (r *RSDP) VendorID() u32 {
 
 func (r *RSDP) CreatorRevision() u32 {
 	return u32(0)
+}
+
+// Base returns a base address or the [RX]SDT.
+func (r *RSDP) Base() int64 {
+	b := int64(binary.LittleEndian.Uint64(r.data[16:20]))
+	if b != 0 {
+		return b
+	}
+	return int64(binary.LittleEndian.Uint64(r.data[24:32]))
 }
 
 func readRSDP(base int64) (*RSDP, error) {

@@ -14,6 +14,11 @@ type SDT struct {
 	Tables []uint64
 }
 
+func init() {
+	addUnMarshaler("RSDT", unmarshalSDT)
+	addUnMarshaler("XSDT", unmarshalSDT)
+}
+
 func unmarshalSDT(t Tabler) (Tabler, error) {
 	s := &SDT{
 		Generic: Generic{
