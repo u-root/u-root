@@ -32,6 +32,9 @@ func TestSDT(t *testing.T) {
 		t.Fatalf("Marshaling SDT: got %q, want nil", err)
 	}
 	t.Logf("%q", b)
+	// The sdt marshaling, because we need it to, also marshals the tables. Just check
+	// the header bytes.
+	b = b[:len(sraw.AllData())]
 	if !reflect.DeepEqual(sraw.AllData(), b) {
 		for i, c := range sraw.AllData() {
 			t.Logf("%d: raw %#02x b %#02x", i, c, b[i])
