@@ -53,3 +53,7 @@ func unmarshalSDT(t Tabler) (Tabler, error) {
 	}
 	return s, nil
 }
+
+func (t *SDT) Marshal() ([]byte, error) {
+	return nil, fmt.Errorf("not yet")
+}
