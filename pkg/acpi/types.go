@@ -38,6 +38,7 @@ type Tabler interface {
 	CreatorRevision() uint32
 	AllData() []byte
 	TableData() []byte
+	Marshal() ([]byte, error)
 }
 
 // This is the standard header for all ACPI tables, except the

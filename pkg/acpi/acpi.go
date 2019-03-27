@@ -43,10 +43,6 @@ import (
 	"strconv"
 )
 
-type ACPIWriter interface {
-	Marshal() ([]byte, error)
-}
-
 const (
 	// LengthOffset is the offset of the table length
 	LengthOffset = 4
@@ -155,10 +151,10 @@ func uw(b *bytes.Buffer, s string, bits int) error {
 }
 
 // Marshal marshals a single ACPI table into a byte slice.
-func Marshal(i ACPIWriter) ([]byte, error) {
+func Marshal(t Tabler) ([]byte, error) {
 
-	Debug("Marshall %T", i)
-	b, err := i.Marshal()
+	Debug("Marshall %T", t)
+	b, err := t.Marshal()
 	if err != nil {
 		return nil, err
 	}

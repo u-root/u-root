@@ -1,5 +1,9 @@
 package acpi
 
+import (
+	"encoding/binary"
+)
+
 // Generic is the generic ACPI table, with a header and data
 type Generic struct {
 	Header
@@ -16,6 +20,24 @@ func NewGeneric(b []byte) (Tabler, error) {
 	return &Generic{Header: *GetHeader(t), data: t.AllData()}, nil
 }
 
+// Marshal marshals Generic tables. The main use of this function
+// is when you want to tweak the header a bit; you can convert a Raw
+// table to a Generic table, do what you wish, and write it out.
+func (g *Generic) Marshal() ([]byte, error) {
+	// Marshal the header, as it may be changed.
+	h, err := g.Header.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	// Append only the table data.
+	h = append(h, g.TableData()...)
+	binary.LittleEndian.PutUint32(h[LengthOffset:], uint32(len(h)))
+	h[CSUMOffset] = 0
+	c := gencsum(h)
+	Debug("CSUM is %#x", c)
+	h[CSUMOffset] = c
+	return h, nil
+}
 func (r *Generic) Len() uint32 {
 	return uint32(len(r.data))
 }

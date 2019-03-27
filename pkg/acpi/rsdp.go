@@ -52,6 +52,10 @@ var (
 	_           = Tabler(&RSDP{})
 )
 
+func (t *RSDP) Marshal() ([]byte, error) {
+	return nil, fmt.Errorf("Marshal RSDP: not yet")
+}
+
 func NewRSDP(addr uintptr, len uint) []byte {
 	var r [RSDPLen]byte
 	copy(r[:], defaultRSDP)
@@ -122,7 +126,7 @@ func (r *RSDP) CreatorRevision() uint32 {
 
 // Base returns a base address or the [RX]SDT.
 func (r *RSDP) Base() int64 {
-	log.Printf("Bse %v data len %d", r, len(r.data))
+	Debug("Bse %v data len %d", r, len(r.data))
 	b := int64(binary.LittleEndian.Uint32(r.data[16:20]))
 	if b != 0 {
 		return b

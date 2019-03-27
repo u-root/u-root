@@ -13,6 +13,7 @@ import (
 type SDT struct {
 	Generic
 	Tables []int64
+	Base   int64
 }
 
 func init() {
@@ -55,20 +56,57 @@ func unmarshalSDT(t Tabler) (Tabler, error) {
 	return s, nil
 }
 
-func (t *SDT) Marshal() ([]byte, error) {
-	h, err := t.Generic.Header.Marshal()
+// Marshal marshals out an SDT.
+// We're going to try an experiment here: no matter whether we pulled in an RSDT
+// or XSDT, we're going to always write an XSDT. Easy to change later and what can
+// go wrong? Besides the ACPICA code shitting the bed, of course, which it does
+// have a habit of doing.
+// The basic idea:
+// 1. Count the number of tables
+// 2. compute the new XSDT size.
+// 3. Serialize the tables.
+// 4. Compute []int64 addresses
+// 5. Serialize out the SDT header
+// 6. addresses
+// 7. tables
+func (s *SDT) Marshal() ([]byte, error) {
+	var tabs [][]byte
+	for _, addr := range s.Tables {
+		// We need to read the table in, and add it the things
+		// we marshal out. That's far safer than assuming it just ends up magically
+		// there.
+		t, err := ReadRaw(addr)
+		if err != nil {
+			return nil, err
+		}
+		b, err := Marshal(t)
+		if err != nil {
+			return nil, fmt.Errorf("Serializing %s: %v", ShowTable(t), err)
+		}
+		tabs = append(tabs, b)
+	}
+	Debug("processed tables")
+	// The length of the SDT is SSDTSize + len(s.Tables) * 8 (64-bit pointers)
+	// The easiest path here is to replace the data with the new data, but first we have to
+	// compute the pointers. So we do this as follows:
+	// truncate ssd to just the header.
+	s.Generic.data = s.Generic.data[:SSDTSize]
+	var (
+		addrs bytes.Buffer
+		st    []byte
+	)
+
+	base := s.Base
+	for _, t := range tabs {
+		st = append(st, t...)
+		binary.Write(&addrs, binary.LittleEndian, base)
+		base += int64(len(t))
+	}
+	s.Generic.data = append(s.Generic.data, append(addrs.Bytes(), st...)...)
+	h, err := s.Generic.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	b := bytes.NewBuffer(h)
-	sig := t.Sig()
-	for _, p := range t.Tables {
-		if sig == "XSDT" {
-			binary.Write(b, binary.LittleEndian, p)
-		} else {
-			binary.Write(b, binary.LittleEndian, uint32(p))
-		}
-	}
-	return b.Bytes(), nil
+	return h, nil
 }

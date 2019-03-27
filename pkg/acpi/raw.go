@@ -40,6 +40,10 @@ func ReadRaw(a int64) (Tabler, error) {
 	return &Raw{data: dat}, nil
 }
 
+func (r *Raw) Marshal() ([]byte, error) {
+	return r.data, nil
+}
+
 func (r *Raw) AllData() []byte {
 	return r.data
 }
@@ -85,4 +89,3 @@ func (r *Raw) CreatorRevision() uint32 {
 	u := binary.LittleEndian.Uint32(r.data[32 : 32+4])
 	return u
 }
-

@@ -230,6 +230,7 @@ type IBFTTarget struct {
 
 // IBFT defines all the bits of an IBDT users might want to set.
 type IBFT struct {
+	Generic
 	// Control
 	Multi     flag
 	Initiator IBFTInitiator
@@ -270,6 +271,9 @@ func mIBFT(h *HeapTable, i interface{}) error {
 
 		Debug("Field %d: (%d, %d) ml %v %T (%v, %v)", i, h.Head.Len(), h.Heap.Len(), f, f, ft, fv)
 		switch s := fv.Interface().(type) {
+		case Generic:
+			// This is not used yet. When we started this work, we never thought we'd
+			// need to go this far.
 		case IBFTInitiator:
 			f, err := flags(s.Valid, s.Boot)
 			if err != nil {
