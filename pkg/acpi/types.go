@@ -39,3 +39,19 @@ type Tabler interface {
 	Revision() u8
 	CheckSum() u8
 }
+
+// This is the standard header for all ACPI tables, except the
+// ones that don't use it. (That's a joke. So is ACPI.)
+// We use types that we hope are easy to read; they in turn
+// make writing marshal code with type switches very convenient.
+type Header struct {
+	Sig             sig
+	Length          u32
+	Revision        u8
+	CheckSum        u8
+	OEMID           oem
+	OEMTableID      tableid
+	OEMRevision     u32
+	CreatorID       u32
+	CreatorRevision u32
+}

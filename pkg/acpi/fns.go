@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"reflect"
 )
 
 // gencsum generates a uint8 checksum of a []uint8
@@ -80,4 +81,42 @@ func (h *HeapTable) Marshal(i interface{}) error {
 		return fmt.Errorf("Don't know what to do with %T", s)
 	}
 	return nil
+}
+
+// Marshal marshals an ACPI Header into a []byte.
+func (h *Header) Marshal() ([]byte, error) {
+	nt := reflect.TypeOf(h).Elem()
+	nv := reflect.ValueOf(h).Elem()
+	var b = &bytes.Buffer{}
+	for i := 0; i < nt.NumField(); i++ {
+		f := nt.Field(i)
+		ft := f.Type
+		fv := nv.Field(i)
+
+		Debug("Field %d: %d ml %v %T (%v, %v)", i, b.Len(), f, f, ft, fv)
+		switch s := fv.Interface().(type) {
+
+		case u8:
+			if err := uw(b, string(s), 8); err != nil {
+				return nil, err
+			}
+
+		case u16:
+			if err := uw(b, string(s), 16); err != nil {
+				return nil, err
+			}
+
+		case u32:
+			if err := uw(b, string(s), 32); err != nil {
+				return nil, err
+			}
+		case u64:
+			if err := uw(b, string(s), 64); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("Don't know what to do with %T", s)
+		}
+	}
+	return b.Bytes(), nil
 }

@@ -29,33 +29,33 @@ func (r *Generic) TableData() []byte {
 }
 
 func (r *Generic) Sig() sig {
-	return r.Header.sig
+	return r.Header.Sig
 }
 
 func (r *Generic) OEMID() oem {
-	return r.Header.oemID
+	return r.Header.OEMID
 }
 
 func (r *Generic) OEMTableID() tableid {
-	return r.Header.oemTableID
+	return r.Header.OEMTableID
 }
 
 func (r *Generic) OEMRevision() u32 {
-	return r.Header.oemRevision
+	return r.Header.OEMRevision
 }
 
 func (r *Generic) CreatorID() u32 {
-	return r.Header.creatorID
+	return r.Header.CreatorID
 }
 
 func (r *Generic) CreatorRevision() u32 {
-	return r.Header.creatorRevision
+	return r.Header.CreatorRevision
 }
 
 func (r *Generic) Revision() u8 {
-	return r.Header.revision
+	return r.Header.Revision
 }
 
 func (r *Generic) CheckSum() u8 {
-	return r.Header.checkSum
+	return r.Header.CheckSum
 }

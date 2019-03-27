@@ -69,33 +69,17 @@ func addUnMarshaler(n string, f func(Tabler) (Tabler, error)) {
 	unmarshalers[sig(n)] = f
 }
 
-// This is the standard header for all ACPI tables, except the
-// ones that don't use it.
-// We use types that we hope are easy to read; they in turn
-// make writing marshal code with type switches very convenient.
-type Header struct {
-	sig             sig
-	length          u32
-	revision        u8
-	checkSum        u8
-	oemID           oem
-	oemTableID      tableid
-	oemRevision     u32
-	creatorID       u32
-	creatorRevision u32
-}
-
 func GetHeader(t Tabler) *Header {
 	return &Header{
-		sig:             t.Sig(),
-		length:          u32(t.Len()),
-		revision:        t.Revision(),
-		checkSum:        t.CheckSum(),
-		oemID:           t.OEMID(),
-		oemTableID:      t.OEMTableID(),
-		oemRevision:     t.OEMRevision(),
-		creatorID:       t.CreatorID(),
-		creatorRevision: t.CreatorRevision(),
+		Sig:             t.Sig(),
+		Length:          u32(t.Len()),
+		Revision:        t.Revision(),
+		CheckSum:        t.CheckSum(),
+		OEMID:           t.OEMID(),
+		OEMTableID:      t.OEMTableID(),
+		OEMRevision:     t.OEMRevision(),
+		CreatorID:       t.CreatorID(),
+		CreatorRevision: t.CreatorRevision(),
 	}
 }
 
@@ -105,8 +89,8 @@ func GetHeader(t Tabler) *Header {
 // this "generic" type which we can Unmarshal into
 // and Marshal from.
 type Table struct {
-	Header
-	Data []byte
+	Header Header
+	Data   []byte
 }
 
 // Flags takes 0 or more flags and produces a uint32 value.

@@ -5,6 +5,7 @@
 package acpi
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 )
@@ -55,5 +56,19 @@ func unmarshalSDT(t Tabler) (Tabler, error) {
 }
 
 func (t *SDT) Marshal() ([]byte, error) {
-	return nil, fmt.Errorf("not yet")
+	h, err := t.Generic.Header.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	b := bytes.NewBuffer(h)
+	sig := t.Sig()
+	for _, p := range t.Tables {
+		if sig == "XSDT" {
+			binary.Write(b, binary.LittleEndian, p)
+		} else {
+			binary.Write(b, binary.LittleEndian, uint32(p))
+		}
+	}
+	return b.Bytes(), nil
 }
