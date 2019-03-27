@@ -66,8 +66,8 @@ func NewRSDP(addr uintptr, len uint) []byte {
 }
 
 // Len returns the RSDP length
-func (r *RSDP) Len() int {
-	return len(r.data)
+func (r *RSDP) Len() uint32 {
+	return uint32(len(r.data))
 }
 
 // Data returns the RSDP as a []byte
@@ -96,28 +96,28 @@ func (r *RSDP) OEMTableID() tableid {
 
 // Revision returns the RSDP revision, which
 // after 2002 should be >= 2
-func (r *RSDP) Revision() u8 {
-	return u8(r.revision)
+func (r *RSDP) Revision() uint8 {
+	return r.revision
 }
 
-func (r *RSDP) OEMRevision() u32 {
-	return u32(0)
+func (r *RSDP) OEMRevision() uint32 {
+	return 0
 }
 
-func (r *RSDP) CheckSum() u8 {
-	return u8(r.checksum)
+func (r *RSDP) CheckSum() uint8 {
+	return uint8(r.checksum)
 }
 
-func (r *RSDP) CreatorID() u32 {
-	return u32(0)
+func (r *RSDP) CreatorID() uint32 {
+	return uint32(0)
 }
 
-func (r *RSDP) VendorID() u32 {
-	return u32(0)
+func (r *RSDP) VendorID() uint32 {
+	return uint32(0)
 }
 
-func (r *RSDP) CreatorRevision() u32 {
-	return u32(0)
+func (r *RSDP) CreatorRevision() uint32 {
+	return 0
 }
 
 // Base returns a base address or the [RX]SDT.

@@ -28,6 +28,7 @@ func ReadRaw(a int64) (Tabler, error) {
 	if err := io.Read(a+4, &u); err != nil {
 		return nil, err
 	}
+	Debug("ReadRaw: Size is %d", u)
 	dat := make([]byte, u)
 	for i := range dat {
 		var d io.Uint8
@@ -37,10 +38,6 @@ func ReadRaw(a int64) (Tabler, error) {
 		dat[i] = uint8(d)
 	}
 	return &Raw{data: dat}, nil
-}
-
-func (r *Raw) Len() int {
-	return len([]byte(r.data))
 }
 
 func (r *Raw) AllData() []byte {
@@ -55,6 +52,17 @@ func (r *Raw) Sig() sig {
 	return sig(fmt.Sprintf("%s", r.data[:4]))
 }
 
+func (r *Raw) Len() uint32 {
+	return uint32(len([]byte(r.data)))
+}
+
+func (r *Raw) Revision() uint8 {
+	return uint8(r.data[8])
+}
+
+func (r *Raw) CheckSum() uint8 {
+	return uint8(r.data[9])
+}
 func (r *Raw) OEMID() oem {
 	return oem(fmt.Sprintf("%s", r.data[10:16]))
 }
@@ -63,30 +71,18 @@ func (r *Raw) OEMTableID() tableid {
 	return tableid(fmt.Sprintf("%s", r.data[16:24]))
 }
 
-func (r *Raw) OEMRevision() u32 {
-	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u32(u)
+func (r *Raw) OEMRevision() uint32 {
+	u := binary.LittleEndian.Uint32(r.data[24 : 24+4])
+	return u
 }
 
-func (r *Raw) CreatorID() u32 {
-	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u32(u)
+func (r *Raw) CreatorID() uint32 {
+	u := binary.LittleEndian.Uint32(r.data[28 : 28+4])
+	return u
 }
 
-func (r *Raw) VendorID() u32 {
-	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u32(u)
+func (r *Raw) CreatorRevision() uint32 {
+	u := binary.LittleEndian.Uint32(r.data[32 : 32+4])
+	return u
 }
 
-func (r *Raw) CreatorRevision() u32 {
-	u := binary.LittleEndian.Uint32(r.data[LengthOffset : LengthOffset+4])
-	return u32(u)
-}
-
-func (r *Raw) Revision() u8 {
-	return u8(r.data[8])
-}
-
-func (r *Raw) CheckSum() u8 {
-	return u8(r.data[9])
-}

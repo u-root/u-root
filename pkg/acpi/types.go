@@ -27,17 +27,17 @@ type (
 
 // Table is the interface to ACPI tables.
 type Tabler interface {
-	Len() int
-	AllData() []byte
-	TableData() []byte
 	Sig() sig
+	Len() uint32
+	Revision() uint8
+	CheckSum() uint8
 	OEMID() oem
 	OEMTableID() tableid
-	OEMRevision() u32
-	CreatorID() u32
-	CreatorRevision() u32
-	Revision() u8
-	CheckSum() u8
+	OEMRevision() uint32
+	CreatorID() uint32
+	CreatorRevision() uint32
+	AllData() []byte
+	TableData() []byte
 }
 
 // This is the standard header for all ACPI tables, except the
@@ -46,12 +46,12 @@ type Tabler interface {
 // make writing marshal code with type switches very convenient.
 type Header struct {
 	Sig             sig
-	Length          u32
-	Revision        u8
-	CheckSum        u8
+	Length          uint32
+	Revision        uint8
+	CheckSum        uint8
 	OEMID           oem
 	OEMTableID      tableid
-	OEMRevision     u32
-	CreatorID       u32
-	CreatorRevision u32
+	OEMRevision     uint32
+	CreatorID       uint32
+	CreatorRevision uint32
 }

@@ -16,8 +16,8 @@ func NewGeneric(b []byte) (Tabler, error) {
 	return &Generic{Header: *GetHeader(t), data: t.AllData()}, nil
 }
 
-func (r *Generic) Len() int {
-	return len(r.data)
+func (r *Generic) Len() uint32 {
+	return uint32(len(r.data))
 }
 
 func (r *Generic) AllData() []byte {
@@ -40,22 +40,22 @@ func (r *Generic) OEMTableID() tableid {
 	return r.Header.OEMTableID
 }
 
-func (r *Generic) OEMRevision() u32 {
+func (r *Generic) OEMRevision() uint32 {
 	return r.Header.OEMRevision
 }
 
-func (r *Generic) CreatorID() u32 {
+func (r *Generic) CreatorID() uint32 {
 	return r.Header.CreatorID
 }
 
-func (r *Generic) CreatorRevision() u32 {
+func (r *Generic) CreatorRevision() uint32 {
 	return r.Header.CreatorRevision
 }
 
-func (r *Generic) Revision() u8 {
+func (r *Generic) Revision() uint8 {
 	return r.Header.Revision
 }
 
-func (r *Generic) CheckSum() u8 {
+func (r *Generic) CheckSum() uint8 {
 	return r.Header.CheckSum
 }

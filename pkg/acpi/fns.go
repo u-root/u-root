@@ -6,7 +6,9 @@ package acpi
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"reflect"
 )
@@ -93,7 +95,8 @@ func (h *Header) Marshal() ([]byte, error) {
 		ft := f.Type
 		fv := nv.Field(i)
 
-		Debug("Field %d: %d ml %v %T (%v, %v)", i, b.Len(), f, f, ft, fv)
+		Debug("Header Marshal Field %d: %d ml %v %T (%v, %v)", i, b.Len(), f, f, ft, fv)
+		var err error
 		switch s := fv.Interface().(type) {
 
 		case u8:
@@ -114,9 +117,42 @@ func (h *Header) Marshal() ([]byte, error) {
 			if err := uw(b, string(s), 64); err != nil {
 				return nil, err
 			}
+		case sig:
+			if err := binary.Write(b, binary.LittleEndian, []byte(s)); err != nil {
+				return nil, err
+			}
+		case oem:
+			if err := binary.Write(b, binary.LittleEndian, []byte(s)); err != nil {
+				return nil, err
+			}
+		case tableid:
+			if err := binary.Write(b, binary.LittleEndian, []byte(s)); err != nil {
+				return nil, err
+			}
+		case uint32, uint8, uint16, uint64:
+			err = binary.Write(b, binary.LittleEndian, s)
+
 		default:
+			log.Panicf("Don't know what to do with %T", s)
 			return nil, fmt.Errorf("Don't know what to do with %T", s)
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	return b.Bytes(), nil
+}
+
+func ShowTable(t Tabler) string {
+	return fmt.Sprintf("%s %d %d %#02x %s %s %#08x %#08x %#08x",
+		t.Sig(),
+		t.Len(),
+		t.Revision(),
+		t.CheckSum(),
+		t.OEMID(),
+		t.OEMTableID(),
+		t.OEMRevision(),
+		t.CreatorID(),
+		t.CreatorRevision())
+
 }

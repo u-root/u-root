@@ -72,7 +72,7 @@ func addUnMarshaler(n string, f func(Tabler) (Tabler, error)) {
 func GetHeader(t Tabler) *Header {
 	return &Header{
 		Sig:             t.Sig(),
-		Length:          u32(t.Len()),
+		Length:          t.Len(),
 		Revision:        t.Revision(),
 		CheckSum:        t.CheckSum(),
 		OEMID:           t.OEMID(),
@@ -185,6 +185,7 @@ func UnMarshal(a int64) (Tabler, error) {
 	if err != nil {
 		return nil, err
 	}
+	Debug("Raw table: %q", r)
 	if m, ok := unmarshalers[r.Sig()]; ok {
 		return m(r)
 	}
@@ -194,12 +195,13 @@ func UnMarshal(a int64) (Tabler, error) {
 
 // UnMarshalSDT unmarshals an SDT.
 // It's pretty much impossible for the RSDP to point to
-// anything else so we mainly do the unmarshal and check the sig.
+// anything else so we mainly do the unmarshal and type assertion.
 func UnMarshalSDT(r *RSDP) (*SDT, error) {
 	s, err := UnMarshal(r.Base())
 	if err != nil {
 		return nil, err
 	}
+	Debug("SDT: %q", s)
 	return s.(*SDT), nil
 }
 
