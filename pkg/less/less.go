@@ -45,7 +45,7 @@ const (
 
 type Less struct {
 	// src is the source file being displayed.
-	src lineio.LineReader
+	src *lineio.LineReader
 
 	// tabStop is the number of spaces per tab.
 	tabStop int

@@ -172,8 +172,8 @@ func (l *LineReader) SearchLine(r *regexp.Regexp, line int64) ([][]int, error) {
 	return r.FindAllIndex(buf, -1), nil
 }
 
-func NewLineReader(src io.ReaderAt) LineReader {
-	l := LineReader{
+func NewLineReader(src io.ReaderAt) *LineReader {
+	l := &LineReader{
 		src:         src,
 		offsetCache: sortedmap.NewMap(),
 	}
