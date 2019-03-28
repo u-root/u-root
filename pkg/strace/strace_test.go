@@ -39,4 +39,7 @@ func TestBasicStrace(t *testing.T) {
 	}
 
 	go c.RunTracerFromCmd(exec.Command("ls", "/etc/hosts"))
+	for range c.Records {
+
+	}
 }
