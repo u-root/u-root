@@ -144,7 +144,7 @@ func ReadSDT() (*SDT, error) {
 	return s, err
 }
 
-func NewSDT(opt ...func(*SDT)) *SDT {
+func NewSDT(opt ...func(*SDT)) (*SDT, error) {
 	var s = &SDT{
 		Generic: Generic{
 			Header: Header{
@@ -157,11 +157,19 @@ func NewSDT(opt ...func(*SDT)) *SDT {
 				CreatorID:       1,
 				CreatorRevision: 1,
 			},
-			data: make([]byte, SSDTSize),
 		},
 	}
 	for _, o := range opt {
 		o(s)
 	}
-	return s
+	// It may seem odd to check for a marshaling error
+	// in something that does no I/O, but consider this
+	// is a good place to see that the user did not set
+	// something wrong.
+	h, err := s.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	s.data = h
+	return s, nil
 }

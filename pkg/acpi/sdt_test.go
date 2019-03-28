@@ -42,3 +42,13 @@ func TestSDT(t *testing.T) {
 		t.Fatalf("TestSDT: input and output []byte differ: in %q, out %q: want same", sraw, b)
 	}
 }
+
+func TestNewSDT(t *testing.T) {
+	s, err := NewSDT()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.data) != SSDTSize {
+		t.Fatalf("NewSDT: got size %d, want %d", len(s.data), SSDTSize)
+	}
+}
