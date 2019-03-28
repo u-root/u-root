@@ -61,8 +61,7 @@ jobs:
       - run:
           name: vet
           command: |
-            go tool vet cmds xcmds pkg
-            go tool vet u-root.go
+            go vet -composites=false ./cmds/... ./xcmds/... ./pkg/... ./
       - run:
           name: gofmt
           command: |
