@@ -7,7 +7,10 @@ package acpi
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"log"
+	"os"
 )
 
 type SDT struct {
@@ -90,7 +93,8 @@ func (s *SDT) Marshal() ([]byte, error) {
 // 7. tables
 func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 	var tabs [][]byte
-	for _, addr := range s.Tables {
+	log.Printf("SDT MarshalAll has %d tables %d extra tables", len(s.Tables), len(t))
+	for i, addr := range s.Tables {
 		// We need to read the table in, and add it the things
 		// we marshal out. That's far safer than assuming it just ends up magically
 		// there.
@@ -98,18 +102,20 @@ func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("SDT MarshalAll: processed table %d to %d bytes", i, len(t.AllData()))
 		tabs = append(tabs, t.AllData())
 	}
 
-	for _, tt := range t {
+	for i, tt := range t {
 		b, err := Marshal(tt)
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("SDT MarshalAll: processed extra table %d to %d bytes", i, len(b))
 		tabs = append(tabs, b)
 	}
 
-	Debug("processed tables")
+	log.Printf("processed tables")
 	// The length of the SDT is SSDTSize + len(s.Tables) * 8 (64-bit pointers)
 	// The easiest path here is to replace the data with the new data, but first we have to
 	// compute the pointers. So we do this as follows:
@@ -120,18 +126,41 @@ func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 		st    []byte
 	)
 
-	base := s.Base
-	for _, t := range tabs {
+	base := s.Base + SSDTSize  // This is where the pointers start
+	x := s.Sig() == "XSDT"
+	if x {
+		base += int64(len(tabs) * 8)
+	} else {
+		base += int64(len(tabs) * 4)
+	}
+	for i, t := range tabs {
+		log.Printf("Table %d: len %d, base %#x", i, len(t), base)
 		st = append(st, t...)
-		binary.Write(&addrs, binary.LittleEndian, base)
+		if x {
+			u := uint64(base)
+			binary.Write(&addrs, binary.LittleEndian, u)
+		} else {
+			u := uint32(base)
+			binary.Write(&addrs, binary.LittleEndian, u)
+		}
 		base += int64(len(t))
 	}
-	s.Generic.data = append(s.Generic.data, append(addrs.Bytes(), st...)...)
+	d := hex.Dumper(os.Stdout)
+	log.Printf("Generic data before we add addrs")
+	d.Write(s.Generic.data)
+	s.Generic.data = append(s.Generic.data, addrs.Bytes()...)
+	log.Printf("Generic data after we add addrs is ")
+	d.Write(s.Generic.data)
 	h, err := s.Generic.Marshal()
+	log.Printf("marshalled sdt is ")
+	d.Write(h)
 	if err != nil {
 		return nil, err
 	}
 
+	// Append the tables. We have to do this after Marshaling the SDT
+	// as the ACPI tables length should not be included in the SDT length.
+	h = append(h, st...)
 	return h, nil
 }
 

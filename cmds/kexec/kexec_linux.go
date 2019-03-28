@@ -144,6 +144,9 @@ func main() {
 	opts := registerFlags()
 	flag.Parse()
 
+	if opts.debug {
+		acpi.Debug = log.Printf
+	}
 	if (opts.exec == false && flag.NArg() == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
 		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
@@ -179,7 +182,10 @@ func main() {
 			log.Fatalf("Trying to read RSDP: %v", err)
 		}
 
-		s := acpi.NewSDT()
+		s, err := acpi.NewSDT()
+		if err != nil {
+			log.Fatal(err)
+		}
 		s.Base = r.Base()
 		// We can't use the table pointers in SDT as Linux seems to want to deny
 		// access. So we have an SDT full of pointers we can't use. Awesome!
@@ -193,12 +199,15 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		b, err := s.MarshalAll(append(rr, xtra)...)
+		rr = append(rr, xtra)
+		log.Printf("Calling SDT Marshal with %d tables", rr)
+		b, err := s.MarshalAll(rr...)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("Marshal'ed %d bytes for ACPI segment", len(b))
 		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(s.Base), Size: uint(len(b))})
-		log.Printf("ACPI loaded: addr is %#x base %#x", seg, s.Base)
+		log.Printf("ACPI loaded: addr is %v base %#x", seg, s.Base)
 		segs = append(segs, seg)
 		if false {
 			bp := kexec.NewLinuxBootParams()
