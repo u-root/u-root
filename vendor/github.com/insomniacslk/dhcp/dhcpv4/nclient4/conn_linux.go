@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package dhcp4client
+// +build go1.12
+
+package nclient4
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/mdlayher/ethernet"
 	"github.com/mdlayher/raw"
 	"github.com/u-root/u-root/pkg/uio"
@@ -16,15 +20,20 @@ import (
 )
 
 var (
+	// BroadcastMac is the broadcast MAC address.
+	//
+	// Any UDP packet sent to this address is broadcast on the subnet.
 	BroadcastMac = net.HardwareAddr([]byte{255, 255, 255, 255, 255, 255})
 )
 
 // NewIPv4UDPConn returns a UDP connection bound to both the interface and port
 // given based on a IPv4 DGRAM socket. The UDP connection allows broadcasting.
+//
+// The interface must already be configured.
 func NewIPv4UDPConn(iface string, port int) (net.PacketConn, error) {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot get a UDP socket: %v", err)
 	}
 	f := os.NewFile(uintptr(fd), "")
 	// net.FilePacketConn dups the FD, so we have to close this in any case.
@@ -32,27 +41,31 @@ func NewIPv4UDPConn(iface string, port int) (net.PacketConn, error) {
 
 	// Allow broadcasting.
 	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_BROADCAST, 1); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot set broadcasting on socket: %v", err)
 	}
 	// Allow reusing the addr to aid debugging.
 	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEADDR, 1); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot set reuseaddr on socket: %v", err)
 	}
-	// Bind directly to the interface.
-	if err := unix.BindToDevice(fd, iface); err != nil {
-		return nil, err
+	if len(iface) != 0 {
+		// Bind directly to the interface.
+		if err := dhcpv4.BindToInterface(fd, iface); err != nil {
+			return nil, fmt.Errorf("cannot bind to interface %s: %v", iface, err)
+		}
 	}
 	// Bind to the port.
 	if err := unix.Bind(fd, &unix.SockaddrInet4{Port: port}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot bind to port %d: %v", port, err)
 	}
 
 	return net.FilePacketConn(f)
 }
 
-// NewPacketUDPConn returns a UDP connection bound to the interface and port
+// NewRawUDPConn returns a UDP connection bound to the interface and port
 // given based on a raw packet socket. All packets are broadcasted.
-func NewPacketUDPConn(iface string, port int) (net.PacketConn, error) {
+//
+// The interface can be completely unconfigured.
+func NewRawUDPConn(iface string, port int) (net.PacketConn, error) {
 	ifc, err := net.InterfaceByName(iface)
 	if err != nil {
 		return nil, err
@@ -64,12 +77,13 @@ func NewPacketUDPConn(iface string, port int) (net.PacketConn, error) {
 	return NewBroadcastUDPConn(rawConn, &net.UDPAddr{Port: port}), nil
 }
 
-// UDPPacketConn implements net.PacketConn and marshals and unmarshals UDP
-// packets.
-type UDPPacketConn struct {
+// BroadcastRawUDPConn uses a raw socket to send UDP packets to the broadcast
+// MAC address.
+type BroadcastRawUDPConn struct {
+	// PacketConn is a raw DGRAM socket.
 	net.PacketConn
 
-	// boundAddr is the address this UDPPacketConn is "bound" to.
+	// boundAddr is the address this RawUDPConn is "bound" to.
 	//
 	// Calls to ReadFrom will only return packets destined to this address.
 	boundAddr *net.UDPAddr
@@ -80,7 +94,7 @@ type UDPPacketConn struct {
 //
 // Calls to ReadFrom will only return packets destined to boundAddr.
 func NewBroadcastUDPConn(rawPacketConn net.PacketConn, boundAddr *net.UDPAddr) net.PacketConn {
-	return &UDPPacketConn{
+	return &BroadcastRawUDPConn{
 		PacketConn: rawPacketConn,
 		boundAddr:  boundAddr,
 	}
@@ -100,7 +114,7 @@ func udpMatch(addr *net.UDPAddr, bound *net.UDPAddr) bool {
 //
 // ReadFrom reads raw IP packets and will try to match them against
 // upc.boundAddr. Any matching packets are returned via the given buffer.
-func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
+func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
 	ipLen := IPv4MaximumHeaderSize
 	udpLen := UDPMinimumSize
 
@@ -109,6 +123,9 @@ func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		n, _, err := upc.PacketConn.ReadFrom(pkt)
 		if err != nil {
 			return 0, nil, err
+		}
+		if n == 0 {
+			return 0, nil, io.EOF
 		}
 		pkt = pkt[:n]
 		buf := uio.NewBigEndianBuffer(pkt)
@@ -129,7 +146,11 @@ func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		if !udpMatch(addr, upc.boundAddr) {
 			continue
 		}
-		return copy(b, buf.ReadAll()), addr, nil
+		srcAddr := &net.UDPAddr{
+			IP:   net.IP(ipHdr.SourceAddress()),
+			Port: int(udpHdr.SourcePort()),
+		}
+		return copy(b, buf.ReadAll()), srcAddr, nil
 	}
 }
 
@@ -138,7 +159,7 @@ func (upc *UDPPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
 //
 // WriteTo wraps the given packet in the appropriate UDP and IP header before
 // sending it on the packet conn.
-func (upc *UDPPacketConn) WriteTo(b []byte, addr net.Addr) (int, error) {
+func (upc *BroadcastRawUDPConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 	udpAddr, ok := addr.(*net.UDPAddr)
 	if !ok {
 		return 0, fmt.Errorf("must supply UDPAddr")
@@ -146,5 +167,7 @@ func (upc *UDPPacketConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 
 	// Using the boundAddr is not quite right here, but it works.
 	packet := udp4pkt(b, udpAddr, upc.boundAddr)
+
+	// Broadcasting is not always right, but hell, what the ARP do I know.
 	return upc.PacketConn.WriteTo(packet, &raw.Addr{HardwareAddr: BroadcastMac})
 }

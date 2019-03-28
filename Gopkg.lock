@@ -77,6 +77,19 @@
   version = "v1.7.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:7ad51b13962492bc596acf87382c75dbe6d5a04686b0b7586897f1cbe83df2db"
+  name = "github.com/insomniacslk/dhcp"
+  packages = [
+    "dhcpv4",
+    "dhcpv4/nclient4",
+    "iana",
+    "rfc1035label",
+  ]
+  pruneopts = "NUT"
+  revision = "3a7c900b28b944b07cf6606a787f8223947fcd0e"
+
+[[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
@@ -186,11 +199,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3558696ea81f7baf02aa5a1c641d720cdcd1c56d0aaf6ae91dca3780c436c8ee"
+  digest = "1:7964b3b34b74b6c7dfbd5775d8bb82bef69e9729f4c7d341a9b73b0820b5c41a"
   name = "github.com/u-root/dhcp4"
   packages = [
     ".",
-    "dhcp4client",
     "dhcp4opts",
     "dhcp4server",
   ]
@@ -318,6 +330,8 @@
     "github.com/google/go-tpm/tpm",
     "github.com/google/goexpect",
     "github.com/gorilla/mux",
+    "github.com/insomniacslk/dhcp/dhcpv4",
+    "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
@@ -327,9 +341,6 @@
     "github.com/nsf/termbox-go",
     "github.com/rck/unit",
     "github.com/spf13/pflag",
-    "github.com/u-root/dhcp4",
-    "github.com/u-root/dhcp4/dhcp4client",
-    "github.com/u-root/dhcp4/dhcp4opts",
     "github.com/u-root/dhcp4/dhcp4server",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
