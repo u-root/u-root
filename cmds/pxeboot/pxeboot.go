@@ -33,7 +33,7 @@ const (
 )
 
 // Netboot boots all interfaces matched by the regex in ifaceNames.
-func Netboot(ctx context.Context, ifaceNames string) error {
+func Netboot(ifaceNames string) error {
 	ifs, err := netlink.LinkList()
 	if err != nil {
 		return err
@@ -47,7 +47,10 @@ func Netboot(ctx context.Context, ifaceNames string) error {
 		}
 	}
 
-	r := dhclient.SendRequests(filteredIfs, dhcpTimeout, dhcpTries, true, true)
+	ctx, cancel := context.WithTimeout(context.Background(), dhcpTries*dhcpTimeout)
+	defer cancel()
+
+	r := dhclient.SendRequests(ctx, filteredIfs, dhcpTimeout, dhcpTries, true, true)
 
 	for {
 		select {
@@ -62,12 +65,27 @@ func Netboot(ctx context.Context, ifaceNames string) error {
 			if result.Err != nil {
 				continue
 			}
-			if err := Boot(result.Lease); err != nil {
+
+			img, err := Boot(result.Lease)
+			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
-			} else {
+			}
+
+			// Cancel other DHCP requests in flight.
+			cancel()
+			log.Printf("Got configuration: %s", img)
+
+			if *dryRun {
+				img.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
 				return nil
 			}
+			if err := img.Execute(); err != nil {
+				return fmt.Errorf("kexec of %v failed: %v", img, err)
+			}
+
+			// Kexec should either return an error or not return.
+			panic("unreachable")
 		}
 	}
 }
@@ -97,14 +115,14 @@ func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxIma
 	return label, nil
 }
 
-func Boot(lease dhclient.Lease) error {
+func Boot(lease dhclient.Lease) (*boot.LinuxImage, error) {
 	if err := lease.Configure(); err != nil {
-		return err
+		return nil, err
 	}
 
 	uri, err := lease.Boot()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Printf("Boot URI: %s", uri)
 
@@ -114,29 +132,13 @@ func Boot(lease dhclient.Lease) error {
 	if p4, ok := lease.(*dhclient.Packet4); ok {
 		ip = p4.Lease().IP
 	}
-	img, err := getBootImage(uri, lease.Link().Attrs().HardwareAddr, ip)
-	if err != nil {
-		return err
-	}
-	log.Printf("Got configuration: %s", img)
-
-	if *dryRun {
-		img.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
-		return nil
-	} else if err := img.Execute(); err != nil {
-		return fmt.Errorf("kexec of %v failed: %v", img, err)
-	}
-
-	// Kexec should either return an error or not return.
-	panic("unreachable")
+	return getBootImage(uri, lease.Link().Attrs().HardwareAddr, ip)
 }
 
 func main() {
 	flag.Parse()
 
-	ctx, cancel := context.WithTimeout(context.Background(), dhcpTries*dhcpTimeout)
-	defer cancel()
-	if err := Netboot(ctx, "eth0"); err != nil {
+	if err := Netboot("eth0"); err != nil {
 		log.Fatal(err)
 	}
 }

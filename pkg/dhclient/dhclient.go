@@ -8,6 +8,7 @@ package dhclient
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -17,10 +18,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/dhcpv4/nclient4"
 	"github.com/mdlayher/dhcp6"
 	"github.com/mdlayher/dhcp6/dhcp6opts"
-	"github.com/u-root/dhcp4"
-	"github.com/u-root/dhcp4/dhcp4client"
 	"github.com/u-root/u-root/pkg/dhcp6client"
 	"github.com/vishvananda/netlink"
 )
@@ -53,7 +54,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 }
 
 // Configure4 adds IP addresses, routes, and DNS servers to the system.
-func Configure4(iface netlink.Link, packet *dhcp4.Packet) error {
+func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
 	p := NewPacket4(iface, packet)
 
 	l := p.Lease()
@@ -138,16 +139,16 @@ type Lease interface {
 	Link() netlink.Link
 }
 
-func lease4(iface netlink.Link, timeout time.Duration, retries int) (Lease, error) {
-	client, err := dhcp4client.New(iface,
-		dhcp4client.WithTimeout(timeout),
-		dhcp4client.WithRetry(retries))
+func lease4(ctx context.Context, iface netlink.Link, timeout time.Duration, retries int) (Lease, error) {
+	client, err := nclient4.New(iface.Attrs().Name, iface.Attrs().HardwareAddr,
+		nclient4.WithTimeout(timeout),
+		nclient4.WithRetry(retries))
 	if err != nil {
 		return nil, err
 	}
 
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
-	p, err := client.Request()
+	_, p, err := client.Request(ctx, dhcpv4.WithNetboot)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +183,7 @@ type Result struct {
 	Err       error
 }
 
-func SendRequests(ifs []netlink.Link, timeout time.Duration, retries int, ipv4, ipv6 bool) chan *Result {
+func SendRequests(ctx context.Context, ifs []netlink.Link, timeout time.Duration, retries int, ipv4, ipv6 bool) chan *Result {
 	// Yeah, this is a hack, until we can cancel all leases in progress.
 	r := make(chan *Result, 3*len(ifs))
 
@@ -202,7 +203,7 @@ func SendRequests(ifs []netlink.Link, timeout time.Duration, retries int, ipv4, 
 				wg.Add(1)
 				go func(iface netlink.Link) {
 					defer wg.Done()
-					lease, err := lease4(iface, timeout, retries)
+					lease, err := lease4(ctx, iface, timeout, retries)
 					r <- &Result{iface, lease, err}
 				}(iface)
 			}
@@ -222,6 +223,5 @@ func SendRequests(ifs []netlink.Link, timeout time.Duration, retries int, ipv4, 
 		wg.Wait()
 		close(r)
 	}()
-
 	return r
 }
