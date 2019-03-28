@@ -88,7 +88,7 @@ func (s *SDT) Marshal() ([]byte, error) {
 // 5. Serialize out the SDT header
 // 6. addresses
 // 7. tables
-func (s *SDT) MarshalAll() ([]byte, error) {
+func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 	var tabs [][]byte
 	for _, addr := range s.Tables {
 		// We need to read the table in, and add it the things
@@ -98,12 +98,17 @@ func (s *SDT) MarshalAll() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, err := Marshal(t)
+		tabs = append(tabs, t.AllData())
+	}
+
+	for _, tt := range t {
+		b, err := Marshal(tt)
 		if err != nil {
-			return nil, fmt.Errorf("Serializing %s: %v", ShowTable(t), err)
+			return nil, err
 		}
 		tabs = append(tabs, b)
 	}
+
 	Debug("processed tables")
 	// The length of the SDT is SSDTSize + len(s.Tables) * 8 (64-bit pointers)
 	// The easiest path here is to replace the data with the new data, but first we have to
@@ -128,4 +133,35 @@ func (s *SDT) MarshalAll() ([]byte, error) {
 	}
 
 	return h, nil
+}
+
+func ReadSDT() (*SDT, error) {
+	r, err := GetRSDP()
+	if err != nil {
+		return nil, err
+	}
+	s, err := UnMarshalSDT(r)
+	return s, err
+}
+
+func NewSDT(opt ...func(*SDT)) *SDT {
+	var s = &SDT{
+		Generic: Generic{
+			Header: Header{
+				Sig:             "XSDT",
+				Length:          SSDTSize,
+				Revision:        1,
+				OEMID:           "GOOGLE",
+				OEMTableID:      "ACPI=TOY",
+				OEMRevision:     1,
+				CreatorID:       1,
+				CreatorRevision: 1,
+			},
+			data: make([]byte, SSDTSize),
+		},
+	}
+	for _, o := range opt {
+		o(s)
+	}
+	return s
 }

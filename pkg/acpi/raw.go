@@ -3,6 +3,7 @@ package acpi
 import (
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/u-root/u-root/pkg/io"
 )
@@ -19,6 +20,15 @@ var _ = Tabler(&Raw{})
 func NewRaw(b []byte) (Tabler, error) {
 	u := binary.LittleEndian.Uint32(b[LengthOffset : LengthOffset+4])
 	return &Raw{data: b[0:u]}, nil
+}
+
+// RawFromFile reads a raw table in from a file.
+func RawFromFile(n string) (Tabler, error) {
+	b, err := ioutil.ReadFile(n)
+	if err != nil {
+		return nil, err
+	}
+	return NewRaw(b)
 }
 
 // ReadRaw reads a full table in, given an address.

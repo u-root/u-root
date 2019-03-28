@@ -20,7 +20,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -73,7 +72,7 @@ type memory struct {
 type mboot struct {
 	debug   bool
 	modules []string
-	segs []kexec.Segment
+	segs    []kexec.Segment
 }
 
 func (f file) Load(path, cmdLine string) error {
@@ -172,40 +171,52 @@ func main() {
 
 	var segs []kexec.Segment // used to add other segments for, e.g., multiboot
 	if opts.acpi != "" {
-
-		b, err := acpi.RawTablesData()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		addb, err := ioutil.ReadFile(opts.acpi)
-		if err != nil {
-			log.Fatal(err)
-		}
-		b = append(b, addb...)
+		// NewSDT won't work on some linux kernels that limit reading
+		// above 1m. So we have to read the rsdp, which seems ok; then cons up
+		// a new SDT from scratch, since there is not one in /sys.
 		r, err := acpi.GetRSDP()
 		if err != nil {
-			log.Fatalf("Finding RSDP: %v", err)
+			log.Fatalf("Trying to read RSDP: %v", err)
 		}
-		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(r.Base()), Size: uint(len(b))})
-		log.Printf("ACPI loaded: addr is %#x", seg)
-		if false { 
-		bp := kexec.NewLinuxBootParams()
-		log.Printf("Set command line to %v", newCmdLine)
-		copy(bp.CmdLine[:], []byte(newCmdLine))
-		log.Printf("bootparams %v\n", bp)
-		bs, err := bp.Segment()
-		if err != nil {
-			log.Fatalf("Can't marshall bootparams: %v", err)
-		}
-		log.Printf("bootparams loaded: addr is %#x", bs)
-		var l loader = memory{s: append(bs, seg)}
-		kernelpath := flag.Args()[0]
-		if err := l.Load(kernelpath, newCmdLine); err != nil {
-			log.Fatal(err)
 
+		s := acpi.NewSDT()
+		s.Base = r.Base()
+		// We can't use the table pointers in SDT as Linux seems to want to deny
+		// access. So we have an SDT full of pointers we can't use. Awesome!
+		// And we can't read the SDT. I'm just chock full of good news today.
+		// acpi.RawTables reads from files in /sys
+		rr, err := acpi.RawTables()
+		if err != nil {
+			log.Fatal(err)
 		}
-	}
+		xtra, err := acpi.RawFromFile(opts.acpi)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, err := s.MarshalAll(append(rr, xtra)...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		seg := kexec.NewSegment(b, kexec.Range{Start: uintptr(s.Base), Size: uint(len(b))})
+		log.Printf("ACPI loaded: addr is %#x base %#x", seg, s.Base)
+		segs = append(segs, seg)
+		if false {
+			bp := kexec.NewLinuxBootParams()
+			log.Printf("Set command line to %v", newCmdLine)
+			copy(bp.CmdLine[:], []byte(newCmdLine))
+			log.Printf("bootparams %v\n", bp)
+			bs, err := bp.Segment()
+			if err != nil {
+				log.Fatalf("Can't marshall bootparams: %v", err)
+			}
+			log.Printf("bootparams loaded: addr is %#x", bs)
+			var l loader = memory{s: append(bs, seg)}
+			kernelpath := flag.Args()[0]
+			if err := l.Load(kernelpath, newCmdLine); err != nil {
+				log.Fatal(err)
+
+			}
+		}
 	}
 
 	if opts.load {
@@ -218,7 +229,7 @@ func main() {
 			l = mboot{
 				debug:   opts.debug,
 				modules: opts.modules,
-				segs: segs,
+				segs:    segs,
 			}
 		} else if err == multiboot.ErrFlagsNotSupported {
 			log.Fatal(err)
