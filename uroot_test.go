@@ -44,6 +44,10 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 	}
 	defer os.RemoveAll(dir)
 
+	if err := os.Mkdir(filepath.Join(dir, "tmp"), 0755); err != nil {
+		return err
+	}
+
 	// Unpack into dir.
 	err = cpio.ForEachRecord(a.Reader(), func(r cpio.Record) error {
 		return cpio.CreateFileInRoot(r, dir, false)
@@ -58,6 +62,7 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 	c := exec.Command(filepath.Join(goroot, "bin/go"), "build", filepath.Join(gopath, "src/..."))
 	c.Env = append(b.env,
 		fmt.Sprintf("GOPATH=%s", gopath),
+		fmt.Sprintf("GOCACHE=%s", filepath.Join(dir, "tmp")),
 		fmt.Sprintf("GOROOT=%s", goroot))
 	out, err := c.CombinedOutput()
 	if err != nil {
