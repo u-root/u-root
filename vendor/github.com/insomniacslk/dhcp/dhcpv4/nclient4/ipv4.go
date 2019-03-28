@@ -11,8 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// This file contains code taken from gVisor.
 
-package dhcp4client
+// +build go1.12
+
+package nclient4
 
 import (
 	"encoding/binary"
@@ -110,55 +114,15 @@ const (
 	IPv4FlagDontFragment
 )
 
-// IPVersion returns the version of IP used in the given packet. It returns -1
-// if the packet is not large enough to contain the version field.
-func IPVersion(b []byte) int {
-	// Length must be at least offset+length of version field.
-	if len(b) < versIHL+1 {
-		return -1
-	}
-	return int(b[versIHL] >> 4)
-}
-
 // HeaderLength returns the value of the "header length" field of the ipv4
 // header.
 func (b IPv4) HeaderLength() uint8 {
 	return (b[versIHL] & 0xf) * 4
 }
 
-// ID returns the value of the identifier field of the ipv4 header.
-func (b IPv4) ID() uint16 {
-	return binary.BigEndian.Uint16(b[id:])
-}
-
 // Protocol returns the value of the protocol field of the ipv4 header.
 func (b IPv4) Protocol() uint8 {
 	return b[protocol]
-}
-
-// Flags returns the "flags" field of the ipv4 header.
-func (b IPv4) Flags() uint8 {
-	return uint8(binary.BigEndian.Uint16(b[flagsFO:]) >> 13)
-}
-
-// TTL returns the "TTL" field of the ipv4 header.
-func (b IPv4) TTL() uint8 {
-	return b[ttl]
-}
-
-// FragmentOffset returns the "fragment offset" field of the ipv4 header.
-func (b IPv4) FragmentOffset() uint16 {
-	return binary.BigEndian.Uint16(b[flagsFO:]) << 3
-}
-
-// TotalLength returns the "total length" field of the ipv4 header.
-func (b IPv4) TotalLength() uint16 {
-	return binary.BigEndian.Uint16(b[totalLen:])
-}
-
-// Checksum returns the checksum field of the ipv4 header.
-func (b IPv4) Checksum() uint16 {
-	return binary.BigEndian.Uint16(b[checksum:])
 }
 
 // SourceAddress returns the "source address" field of the ipv4 header.
@@ -187,14 +151,9 @@ func (b IPv4) PayloadLength() uint16 {
 	return b.TotalLength() - uint16(b.HeaderLength())
 }
 
-// TOS returns the "type of service" field of the ipv4 header.
-func (b IPv4) TOS() (uint8, uint32) {
-	return b[tos], 0
-}
-
-// SetTOS sets the "type of service" field of the ipv4 header.
-func (b IPv4) SetTOS(v uint8, _ uint32) {
-	b[tos] = v
+// TotalLength returns the "total length" field of the ipv4 header.
+func (b IPv4) TotalLength() uint16 {
+	return binary.BigEndian.Uint16(b[totalLen:])
 }
 
 // SetTotalLength sets the "total length" field of the ipv4 header.
@@ -212,11 +171,6 @@ func (b IPv4) SetChecksum(v uint16) {
 func (b IPv4) SetFlagsFragmentOffset(flags uint8, offset uint16) {
 	v := (uint16(flags) << 13) | (offset >> 3)
 	binary.BigEndian.PutUint16(b[flagsFO:], v)
-}
-
-// SetID sets the identification field.
-func (b IPv4) SetID(v uint16) {
-	binary.BigEndian.PutUint16(b[id:], v)
 }
 
 // SetSourceAddress sets the "source address" field of the ipv4 header.
@@ -247,41 +201,6 @@ func (b IPv4) Encode(i *IPv4Fields) {
 	b.SetChecksum(i.Checksum)
 	copy(b[srcAddr:srcAddr+IPv4AddressSize], i.SrcAddr)
 	copy(b[dstAddr:dstAddr+IPv4AddressSize], i.DstAddr)
-}
-
-// EncodePartial updates the total length and checksum fields of ipv4 header,
-// taking in the partial checksum, which is the checksum of the header without
-// the total length and checksum fields. It is useful in cases when similar
-// packets are produced.
-func (b IPv4) EncodePartial(partialChecksum, totalLength uint16) {
-	b.SetTotalLength(totalLength)
-	checksum := Checksum(b[totalLen:totalLen+2], partialChecksum)
-	b.SetChecksum(^checksum)
-}
-
-// IsValid performs basic validation on the packet.
-func (b IPv4) IsValid(pktSize int) bool {
-	if len(b) < IPv4MinimumSize {
-		return false
-	}
-
-	hlen := int(b.HeaderLength())
-	tlen := int(b.TotalLength())
-	if hlen > tlen || tlen > pktSize {
-		return false
-	}
-
-	return true
-}
-
-// IsV4MulticastAddress determines if the provided address is an IPv4 multicast
-// address (range 224.0.0.0 to 239.255.255.255). The four most significant bits
-// will be 1110 = 0xe0.
-func IsV4MulticastAddress(addr net.IP) bool {
-	if len(addr) != IPv4AddressSize {
-		return false
-	}
-	return (addr[0] & 0xf0) == 0xe0
 }
 
 const (
