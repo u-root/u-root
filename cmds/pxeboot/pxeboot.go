@@ -108,7 +108,8 @@ func Boot(lease dhclient.Lease) error {
 	}
 	log.Printf("Boot URI: %s", uri)
 
-	// IP only makes sense for v4 anyway.
+	// IP only makes sense for v4 anyway, because the PXE probing of files
+	// uses a MAC address and an IPv4 address to look at files.
 	var ip net.IP
 	if p4, ok := lease.(*dhclient.Packet4); ok {
 		ip = p4.Lease().IP
