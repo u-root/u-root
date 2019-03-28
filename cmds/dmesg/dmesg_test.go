@@ -14,7 +14,7 @@ func TestDmesg(t *testing.T) {
 	cmd := testutil.Command(t)
 	out, err := cmd.Output()
 	if err != nil || len(out) == 0 {
-		t.Fatal(err)
+		t.Fatalf("Error: %v, Output: %v", err, string(out))
 	}
 }
 
