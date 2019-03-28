@@ -9,24 +9,21 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/mdlayher/dhcp6"
-	"github.com/mdlayher/dhcp6/dhcp6opts"
+	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/vishvananda/netlink"
 )
 
 // Packet6 implements Packet for IPv6 DHCP.
 type Packet6 struct {
-	p     *dhcp6.Packet
-	iana  *dhcp6opts.IANA
+	p     *dhcpv6.Message
 	iface netlink.Link
 }
 
 // NewPacket6 wraps a DHCPv6 packet with some convenience methods.
-func NewPacket6(iface netlink.Link, p *dhcp6.Packet, ianaLease *dhcp6opts.IANA) *Packet6 {
+func NewPacket6(iface netlink.Link, p *dhcpv6.Message) *Packet6 {
 	return &Packet6{
 		p:     p,
 		iface: iface,
-		iana:  ianaLease,
 	}
 }
 
@@ -36,34 +33,39 @@ func (p *Packet6) Link() netlink.Link {
 
 // Configure configures interface using this packet.
 func (p *Packet6) Configure() error {
-	return Configure6(p.iface, p.p, p.iana)
+	return Configure6(p.iface, p.p)
 }
 
 func (p *Packet6) String() string {
-	return fmt.Sprintf("IPv6 DHCP Lease IP %s", p.Lease().IP)
+	return fmt.Sprintf("IPv6 DHCP Lease IP %s", p.Lease().IPv6Addr)
 }
 
 // Lease returns lease information assigned.
-func (p *Packet6) Lease() *dhcp6opts.IAAddr {
-	// TODO: Can a DHCPv6 server return multiple IAAddrs for one IANA?
-	// There certainly doesn't seem to be a way to request multiple other
-	// than requesting multiple IANAs.
-	iaAddrs, err := dhcp6opts.GetIAAddr(p.iana.Options)
-	if err != nil || len(iaAddrs) == 0 {
+func (p *Packet6) Lease() *dhcpv6.OptIAAddress {
+	// TODO(chrisko): Reform dhcpv6 option handling to be like dhcpv4.
+	ianaOpt := p.p.GetOneOption(dhcpv6.OptionIANA)
+	iana, ok := ianaOpt.(*dhcpv6.OptIANA)
+	if !ok {
 		return nil
 	}
 
-	return iaAddrs[0]
+	iaAddrOpt := iana.Options.GetOne(dhcpv6.OptionIAAddr)
+	iaAddr, ok := iaAddrOpt.(*dhcpv6.OptIAAddress)
+	if !ok {
+		return nil
+	}
+	return iaAddr
 }
 
 // DNS returns DNS servers assigned.
 func (p *Packet6) DNS() []net.IP {
 	// TODO: Would the IANA contain this, or the packet?
-	ips, err := dhcp6opts.GetDNSServers(p.p.Options)
-	if err != nil {
+	dnsOpt := p.p.GetOneOption(dhcpv6.OptionDNSRecursiveNameServer)
+	dns, ok := dnsOpt.(*dhcpv6.OptDNSRecursiveNameServer)
+	if !ok {
 		return nil
 	}
-	return []net.IP(ips)
+	return dns.NameServers
 }
 
 // Boot returns the boot file URL and parameters assigned.
@@ -72,9 +74,11 @@ func (p *Packet6) DNS() []net.IP {
 // they added to the packet? Are they added to an IANA?  It *seems* like it's
 // in the packet.
 func (p *Packet6) Boot() (*url.URL, error) {
-	uri, err := dhcp6opts.GetBootFileURL(p.p.Options)
-	if err != nil {
-		return nil, err
+	uriOpt := p.p.GetOneOption(dhcpv6.OptionBootfileURL)
+	uri, ok := uriOpt.(*dhcpv6.OptBootFileURL)
+	if !ok {
+		return nil, fmt.Errorf("packet does not contain boot file URL")
 	}
-	return (*url.URL)(uri), nil
+	// Srsly, a []byte?
+	return url.Parse(string(uri.BootFileURL))
 }
