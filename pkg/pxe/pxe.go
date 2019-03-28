@@ -274,9 +274,11 @@ func probeFiles(ethernetMac net.HardwareAddr, ip net.IP) []string {
 	files = append(files, fmt.Sprintf("01-%s", strings.ToLower(strings.Replace(ethernetMac.String(), ":", "-", -1))))
 
 	// IP address in upper case hex, chopping one letter off at a time.
-	ipf := strings.ToUpper(hex.EncodeToString(ip))
-	for n := len(ipf); n >= 1; n-- {
-		files = append(files, ipf[:n])
+	if ip != nil {
+		ipf := strings.ToUpper(hex.EncodeToString(ip))
+		for n := len(ipf); n >= 1; n-- {
+			files = append(files, ipf[:n])
+		}
 	}
 	files = append(files, "default")
 	return files
