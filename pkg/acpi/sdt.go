@@ -59,6 +59,8 @@ func unmarshalSDT(t Tabler) (Tabler, error) {
 	return s, nil
 }
 
+// Marshal marshals an [RX]SDT. If it has tables, it marshals them too.
+// Note that tables are just pointers in this case.
 func (s *SDT) Marshal() ([]byte, error) {
 	h, err := s.Generic.Header.Marshal()
 	if err != nil {
@@ -164,6 +166,7 @@ func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 	return h, nil
 }
 
+// ReadSDT reads an SDT in from memory.
 func ReadSDT() (*SDT, error) {
 	r, err := GetRSDP()
 	if err != nil {
