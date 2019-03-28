@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// rdsp implements ACPI operations on RSDP.
+// RSDP don't quite follow the ACPI table standard,
+// so some things return empty values. It has nevertheless proven
+// useful to have them.
 package acpi
 
 import (
@@ -18,8 +22,7 @@ import (
 )
 
 const (
-	Revision    = 2 // always
-	RSDPLen     = 36
+	Revision    = 2  // always
 	CSUM1Off    = 8  // Checksum1 offset in packet.
 	CSUM2Off    = 32 // Checksum2 offset
 	XSDTLenOff  = 20
@@ -28,7 +31,7 @@ const (
 
 var pageMask = uint64(os.Getpagesize() - 1)
 
-// We just define the real one for 2 and later here. It's the only
+// We just define the RSDP for v2 and later here. It's the only
 // one that matters. This whole layout is typical of the overall
 // Failure Of Vision that is ACPI. 64-bit micros had existed for 10 years
 // when ACPI was defined, and they still wired in 32-bit pointer assumptions,
@@ -44,7 +47,7 @@ type RSDP struct {
 	base     uint64 // XSDT address, the only one you should use
 	checksum uint8
 	_        [3]uint8
-	data     [RSDPLen]byte
+	data     [HeaderLength]byte
 }
 
 var (
@@ -52,12 +55,15 @@ var (
 	_           = Tabler(&RSDP{})
 )
 
+// Marshal fails to marshal an RSDP.
 func (t *RSDP) Marshal() ([]byte, error) {
 	return nil, fmt.Errorf("Marshal RSDP: not yet")
 }
 
+// NewRSDP returns a new and partially initalized RSDP, setting only
+// the defaultRSDP values, address, length, and signature.
 func NewRSDP(addr uintptr, len uint) []byte {
-	var r [RSDPLen]byte
+	var r [HeaderLength]byte
 	copy(r[:], defaultRSDP)
 	// This is a bit of a cheat. All the fields are 0.
 	// So we get a checksum, set up the
@@ -94,6 +100,7 @@ func (r *RSDP) OEMID() oem {
 	return oem(r.data[9:15])
 }
 
+// OEMTableID returns the RSDP OEMTableID
 func (r *RSDP) OEMTableID() tableid {
 	return "rsdp?"
 }
@@ -104,29 +111,31 @@ func (r *RSDP) Revision() uint8 {
 	return r.revision
 }
 
+// OEMRevision returns the table OEMRevision.
 func (r *RSDP) OEMRevision() uint32 {
 	return 0
 }
 
+// CheckSum returns the table CheckSum.
 func (r *RSDP) CheckSum() uint8 {
 	return uint8(r.checksum)
 }
 
+// CreatorID returns the table CreatorID.
 func (r *RSDP) CreatorID() uint32 {
 	return uint32(0)
 }
 
-func (r *RSDP) VendorID() uint32 {
-	return uint32(0)
-}
-
+// CreatorRevision returns the table CreatorRevision.
 func (r *RSDP) CreatorRevision() uint32 {
 	return 0
 }
 
 // Base returns a base address or the [RX]SDT.
+// It will preferentially return the XSDT, but if that is
+// 0 it will return the RSDT address.
 func (r *RSDP) Base() int64 {
-	Debug("Bse %v data len %d", r, len(r.data))
+	Debug("Base %v data len %d", r, len(r.data))
 	b := int64(binary.LittleEndian.Uint32(r.data[16:20]))
 	if b != 0 {
 		return b
@@ -213,6 +222,9 @@ func getRSDPmem() (*RSDP, error) {
 // You can change the getters if you wish for testing.
 var getters = []func() (*RSDP, error){getRSDPEFI, getRSDPmem}
 
+// GetRSDP gets an RSDP.
+// It is able to use several methods, because there is no consistency
+// about how it is done.
 func GetRSDP() (*RSDP, error) {
 	for _, f := range getters {
 		r, err := f()

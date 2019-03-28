@@ -13,14 +13,17 @@
 // not be reset until power on/reset). Writes to it are transparently discarded.
 // (This makes sense, as crap DOS programs probably tried to write that area all
 // the time. Everything -- everything! -- about x86 and BIOS is explainable
-// by DOS, 16 bits addresses, 4 bit segments, 20 bits, and the incredible failure
+// by DOS, 16 bit addresses, 4 bit segments, 20 bits, and the incredible failure
 // of vision in 1999 of building a bunch of tables with 32 bit pointers in them.
 // The x86 world is nothing if not consistent: short-sighted decisions for 40+ years).
 // The two-byte EBDA pointer (16 bits) is shifted left 4 bits to get a 20-bit address
 // which points to *the range of memory* containing, maybe, the RSDP.
 // The RSDP has to live in the low 20 bits of address space (remember 20 bits, right?)
-// The RSDP has two pointers in, one of both containing a value: 32 bit pointer or 64 bit
-// pointer to the RSDT or XSDT. RSDT has 32-bit pointers, XSDT 64-bit pointers.
+// (Yes, I know about the EFI tables which make this restriction less of a problem,
+//  but for now all the firmware I've seen adheres to the "RSDP in e or f segment" rule.)
+// The RSDP has two pointers in it, one or both containing a value: 32 bit pointer or 64 bit
+// pointer to the RSDT or XSDT. (see "failure of vision" above.)
+// RSDT has 32-bit pointers, XSDT 64-bit pointers.
 // The spec recommends you ignore the 32-bit pointer variants but as of 2019,
 // I still see use of them; this package will read and write the variants but the
 // internal structs are defined with 64-bit pointers (oh, if only the ACPICA code
@@ -30,7 +33,8 @@
 // not all systems follow this rule, which is asking for trouble.
 // Finally, not all tables are generated in a consistent way, e.g. the IBFT is not like
 // most other tables containing variable length data, because the people who created it
-// are Klever. IBFT has its own heap.
+// are Klever. IBFT has its own heap, and the elements in the heap follow rules unlike
+// all other tables. Nice!
 // If you really look at ACPI closely, you can kind of see that it's optimized for NASM,
 // which is part of what makes it so unpleasant. But, it's what we have.
 package acpi
@@ -58,6 +62,9 @@ var (
 	unmarshalers = map[sig]func(Tabler) (Tabler, error){}
 )
 
+// addUnMarshaler is intended to be called by init functions
+// in this package. It adds an UnMarshaler for a given
+// ACPI signature.
 func addUnMarshaler(n string, f func(Tabler) (Tabler, error)) {
 	if _, ok := unmarshalers[sig(n)]; ok {
 		log.Fatalf("Can't add %s; already in use", n)
@@ -65,6 +72,7 @@ func addUnMarshaler(n string, f func(Tabler) (Tabler, error)) {
 	unmarshalers[sig(n)] = f
 }
 
+// GetHeader extracts a Header from a Tabler and returns a reference to it.
 func GetHeader(t Tabler) *Header {
 	return &Header{
 		Sig:             t.Sig(),
@@ -77,16 +85,6 @@ func GetHeader(t Tabler) *Header {
 		CreatorID:       t.CreatorID(),
 		CreatorRevision: t.CreatorRevision(),
 	}
-}
-
-// Table is a basic ACPI table. All tables consist of the
-// Header and then a bunch of table-specific data.
-// Because we do not care about most tables, we have
-// this "generic" type which we can Unmarshal into
-// and Marshal from.
-type Table struct {
-	Header Header
-	Data   []byte
 }
 
 // Flags takes 0 or more flags and produces a uint32 value.
@@ -150,9 +148,11 @@ func uw(b *bytes.Buffer, s string, bits int) error {
 
 }
 
-// Marshal marshals a single ACPI table into a byte slice.
+// Marshal marshals a Tabler into a byte slice.
+// Once marshaling is done, it inserts the length into
+// the standard place at LengthOffsert, and then generates and inserts
+// a checksum at CSUMOffset.
 func Marshal(t Tabler) ([]byte, error) {
-
 	Debug("Marshall %T", t)
 	b, err := t.Marshal()
 	if err != nil {
@@ -171,11 +171,11 @@ func Marshal(t Tabler) ([]byte, error) {
 	return b, nil
 }
 
-// UnMarshall unmarshals a single table.
+// UnMarshall unmarshals a single table and returns a Tabler.
 // If the table is one of the many we don't care about we
-// just return a raw table, which can be easily written out
+// just return a Raw table, which can be easily written out
 // again if needed. If it has an UnMarshal registered we use
-// that instead.
+// that instead once the Raw is unmarshaled.
 func UnMarshal(a int64) (Tabler, error) {
 	r, err := ReadRaw(a)
 	if err != nil {
@@ -201,6 +201,10 @@ func UnMarshalSDT(r *RSDP) (*SDT, error) {
 	return s.(*SDT), nil
 }
 
+// UnMarshalAll takes an SDT and unmarshals all the tables
+// using UnMarshal. It returns a []Tabler. In most cases,
+// the tables will be Raw, but in a few cases they might be
+// further converted. 
 func UnMarshalAll(s *SDT) ([]Tabler, error) {
 	var tab []Tabler
 	for _, a := range s.Tables {

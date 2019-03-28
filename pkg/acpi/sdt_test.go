@@ -48,7 +48,7 @@ func TestNewSDT(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s.data) != SSDTSize {
-		t.Fatalf("NewSDT: got size %d, want %d", len(s.data), SSDTSize)
+	if len(s.data) != HeaderLength {
+		t.Fatalf("NewSDT: got size %d, want %d", len(s.data), HeaderLength)
 	}
 }

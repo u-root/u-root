@@ -120,13 +120,13 @@ func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 	// The easiest path here is to replace the data with the new data, but first we have to
 	// compute the pointers. So we do this as follows:
 	// truncate ssd to just the header.
-	s.Generic.data = s.Generic.data[:SSDTSize]
+	s.Generic.data = s.Generic.data[:HeaderLength]
 	var (
 		addrs bytes.Buffer
 		st    []byte
 	)
 
-	base := s.Base + SSDTSize  // This is where the pointers start
+	base := s.Base + HeaderLength // This is where the pointers start
 	x := s.Sig() == "XSDT"
 	if x {
 		base += int64(len(tabs) * 8)
@@ -178,7 +178,7 @@ func NewSDT(opt ...func(*SDT)) (*SDT, error) {
 		Generic: Generic{
 			Header: Header{
 				Sig:             "XSDT",
-				Length:          SSDTSize,
+				Length:          HeaderLength,
 				Revision:        1,
 				OEMID:           "GOOGLE",
 				OEMTableID:      "ACPI=TOY",

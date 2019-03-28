@@ -6,9 +6,6 @@ package acpi
 
 import "bytes"
 
-// SSDTSize is the size of a basic, empty SSDT.
-const SSDTSize = 36
-
 // genssdt generates an ssdt header for an existing []byte.
 // It is only useful if the slice contains AML, not a table, so we don't actually
 // use it currently. It turns out that it's easisest just to do it programatically
@@ -31,8 +28,7 @@ func genssdt(b []byte) []byte {
 		csum uint8
 	)
 
-	// The basic SSDT is 36 bytes.
-	l := uint32(SSDTSize + len(b))
+	l := uint32(HeaderLength + len(b))
 	w(ssdt, 1, []byte("SSDT"), l, uint8(0), csum, []byte("ACPIXX"), []byte("GOXR00LZ"), uint32(0), []byte("VEND"), uint32(0xdecafbad), b)
 	csum = gencsum(ssdt.Bytes())
 	Debug("CSUM is %#x", csum)

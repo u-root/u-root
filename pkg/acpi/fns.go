@@ -23,6 +23,10 @@ func gencsum(b []uint8) uint8 {
 	return ^csum + 1
 }
 
+// HeapTable is for ACPI tables that have a heap, i.e. the strings
+// are not subtables, as in most ACPI, but are contained in an area
+// at the end of the tables, after the other table elements. So far,
+// we only know of one such table, the IBFT.
 type HeapTable struct {
 	Head *bytes.Buffer
 	Heap *bytes.Buffer
@@ -143,6 +147,7 @@ func (h *Header) Marshal() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// ShowTable converts a Table into string.
 func ShowTable(t Tabler) string {
 	return fmt.Sprintf("%s %d %d %#02x %s %s %#08x %#08x %#08x",
 		t.Sig(),

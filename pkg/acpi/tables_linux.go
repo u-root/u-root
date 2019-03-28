@@ -10,7 +10,8 @@ import (
 	"path/filepath"
 )
 
-// RawTables returns an array of Raw, derived from /sys
+// RawTables returns an array of Raw, for all ACPI tables
+// available in /sys
 func RawTables() ([]Tabler, error) {
 	n, err := filepath.Glob("/sys/firmware/acpi/tables/[A-Z]*")
 	if err != nil {

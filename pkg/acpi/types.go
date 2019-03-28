@@ -25,7 +25,9 @@ type (
 	u64      string // 8 byte unsigned
 )
 
-// Table is the interface to ACPI tables.
+// Table is the interface to ACPI tables, be they
+// held in memory as a byte slice, header and byte slice,
+// or more complex struct.
 type Tabler interface {
 	Sig() sig
 	Len() uint32
