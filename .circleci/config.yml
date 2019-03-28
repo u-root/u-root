@@ -25,7 +25,7 @@ workflows:
 jobs:
   clean-code:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -86,7 +86,7 @@ jobs:
           command: ineffassign .
   test:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -100,7 +100,7 @@ jobs:
           command: go test -cover `go list ./... | grep github.com/u-root/u-root/`
   test-integration-amd64:
     docker:
-      - image: uroottest/test-image-amd64:v3.2.3
+      - image: uroottest/test-image-amd64:v3.2.4
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -113,7 +113,7 @@ jobs:
           path: integration/serial
   test-integration-arm:
     docker:
-      - image: uroottest/test-image-arm:v3.0.0
+      - image: uroottest/test-image-arm:v3.0.1
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -126,7 +126,7 @@ jobs:
           path: integration/serial
   race:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 1
@@ -137,7 +137,7 @@ jobs:
           command: go test -race `go list ./... | grep github.com/u-root/u-root/`
   compile_cmds:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -154,7 +154,7 @@ jobs:
             go install -a ./...
   check_licenses:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -165,7 +165,7 @@ jobs:
           command: go run scripts/checklicenses/checklicenses.go
   check_symlinks:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
