@@ -12,7 +12,7 @@ import (
 
 func TestDmesg(t *testing.T) {
 	cmd := testutil.Command(t)
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	if err != nil || len(out) == 0 {
 		t.Fatalf("Error: %v, Output: %v", err, string(out))
 	}
