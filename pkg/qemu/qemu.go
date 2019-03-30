@@ -102,7 +102,9 @@ func (o *Options) Cmdline() []string {
 	// - o.KernelArgs: extra, optional kernel arguments
 	if len(o.Kernel) != 0 {
 		args = append(args, "-kernel", o.Kernel)
-		args = append(args, "-append", o.KernelArgs)
+		if len(o.KernelArgs) != 0 {
+			args = append(args, "-append", o.KernelArgs)
+		}
 	}
 	if len(o.Initramfs) != 0 {
 		args = append(args, "-initrd", o.Initramfs)
