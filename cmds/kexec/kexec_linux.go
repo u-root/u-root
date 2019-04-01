@@ -11,6 +11,7 @@
 //		 Loads a kernel for later execution.
 //
 // Options:
+//     --acpi=STRING or -a=string      Add an ACPI table (only one at present)
 //     --cmdline=STRING or -c=STRING: Set the kernel command line
 //     --reuse-commandline:           Use the kernel command line from running system
 //     --i=FILE or --initrd=FILE:     Use file as the kernel's initial ramdisk
@@ -26,6 +27,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
@@ -38,11 +40,13 @@ type options struct {
 	load         bool
 	exec         bool
 	debug        bool
+	acpi         string
 	modules      []string
 }
 
 func registerFlags() *options {
 	o := &options{}
+	flag.StringVarP(&o.acpi, "acpi", "a", "", "Add an acpi table")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
@@ -64,6 +68,7 @@ type file struct {
 type mboot struct {
 	debug   bool
 	modules []string
+	acpi    string
 }
 
 func (f file) Load(path, cmdLine string) error {
@@ -81,7 +86,6 @@ func (f file) Load(path, cmdLine string) error {
 		}
 		defer ramfs.Close()
 	}
-
 	return kexec.FileLoad(kernel, ramfs, cmdLine)
 }
 
@@ -99,6 +103,11 @@ func (mb mboot) Load(path, cmdLine string) error {
 	if err := m.Load(mb.debug); err != nil {
 		return fmt.Errorf("Load failed: %v", err)
 	}
+	if mb.acpi != "" {
+		if err := m.ACPI(mb.acpi); err != nil {
+			return err
+		}
+	}
 
 	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
@@ -110,6 +119,9 @@ func main() {
 	opts := registerFlags()
 	flag.Parse()
 
+	if opts.debug {
+		acpi.Debug = log.Printf
+	}
 	if (opts.exec == false && flag.NArg() == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
 		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
@@ -120,7 +132,7 @@ func main() {
 		log.Fatalf("--reuse-cmdline and other command line options are mutually exclusive")
 	}
 
-	if opts.load == false && opts.exec == false {
+	if opts.load == false && opts.exec == false && opts.acpi == "" {
 		opts.load = true
 		opts.exec = true
 	}
@@ -135,21 +147,32 @@ func main() {
 		}
 	}
 
+	// mbk indicates that we are a multiboot kernel
+	var mbk bool
+	var kernelpath string
 	if opts.load {
-		kernelpath := flag.Args()[0]
+		kernelpath = flag.Arg(0)
 		log.Printf("Loading %s for kernel\n", kernelpath)
 
-		var l loader = file{opts.initramfs}
 		if err := multiboot.Probe(kernelpath); err == nil {
+			mbk = true
+		} else if err == multiboot.ErrFlagsNotSupported {
+			log.Fatal(err)
+		}
+	}
+	if opts.acpi != "" && !mbk {
+		log.Fatal("You can only specify -a when loading (-l) multiboot kernels")
+	}
+	if opts.load {
+		var l loader = file{initramfs: opts.initramfs}
+		if mbk {
 			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
 			l = mboot{
 				debug:   opts.debug,
 				modules: opts.modules,
+				acpi:    opts.acpi,
 			}
-		} else if err == multiboot.ErrFlagsNotSupported {
-			log.Fatal(err)
 		}
-
 		if err := l.Load(kernelpath, newCmdLine); err != nil {
 			log.Fatal(err)
 		}
