@@ -49,10 +49,14 @@ func (n *Network) Cmdline() []string {
 	mac := net.HardwareAddr{0x0e, 0x00, 0x00, 0x00, 0x00, byte(num)}
 
 	args := []string{"-net", fmt.Sprintf("nic,macaddr=%s", mac)}
+	// Note: QEMU in CircleCI seems to in solve cases fail when using just ':1234' format.
+	// It fails with "address resolution failed for :1234: Name or service not known"
+	// hinting that this is somehow related to DNS resolution. To work around this,
+	// we explicitly bind to 127.0.0.1 (IPv6 [::1] is not parsed correctly by QEMU).
 	if num != 0 {
-		args = append(args, "-net", fmt.Sprintf("socket,connect=:%d", n.port))
+		args = append(args, "-net", fmt.Sprintf("socket,connect=127.0.0.1:%d", n.port))
 	} else {
-		args = append(args, "-net", fmt.Sprintf("socket,listen=:%d", n.port))
+		args = append(args, "-net", fmt.Sprintf("socket,listen=127.0.0.1:%d", n.port))
 	}
 	return args
 }
