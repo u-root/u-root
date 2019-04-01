@@ -368,8 +368,7 @@ const (
 
 // Memory provides routines to work with physical memory ranges.
 type Memory struct {
-	Phys []TypedAddressRange
-
+	Phys     []TypedAddressRange
 	Segments []Segment
 }
 

@@ -14,13 +14,22 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 const bootloader = "u-root kexec"
+
+var (
+	// Debug can be set to, e.g, log.Printf for debugging
+	// For now, we are leaving it on. Once we have done enough
+	// testing, we can turn it off.
+	Debug = log.Printf // func(string, ...interface{}) {}
+)
 
 // Multiboot defines parameters for working with multiboot kernels.
 type Multiboot struct {
@@ -50,13 +59,16 @@ type Multiboot struct {
 	loadedModules []Module
 }
 
-var rangeTypes = map[kexec.RangeType]uint32{
-	kexec.RangeRAM:      1,
-	kexec.RangeDefault:  2,
-	kexec.RangeACPI:     3,
-	kexec.RangeNVS:      4,
-	kexec.RangeReserved: 2,
-}
+var (
+	rangeTypes = map[kexec.RangeType]uint32{
+		kexec.RangeRAM:      1,
+		kexec.RangeDefault:  2,
+		kexec.RangeACPI:     3,
+		kexec.RangeNVS:      4,
+		kexec.RangeReserved: 2,
+	}
+	PageSize = os.Getpagesize()
+)
 
 var sizeofMemoryMap = uint(binary.Size(MemoryMap{}))
 
@@ -146,6 +158,58 @@ func (m *Multiboot) Load(debug bool) error {
 	return nil
 }
 
+// ACPI adds an ACPI segment to be added to the existing ACPI
+// tables. This will currently only work for one new ACPI table.  If
+// there is ever a need (unlikely!) we can add support for 2 or more
+// later.  N.B. Multiboot2 lets us name the new RSDP, which would have
+// been nice.  Multiboot1 only mentions the APM table, which is
+// surprising; I had no idea it was that old.
+func (m *Multiboot) ACPI(n string) error {
+	// NewSDT won't work on some linux kernels that limit reading
+	// above 1m. So we have to read the rsdp, which seems ok; then cons up
+	// a new SDT from scratch, since there is not one in /sys.
+	r, err := acpi.GetRSDP()
+	if err != nil {
+		return err
+	}
+
+	s, err := acpi.NewSDT()
+	if err != nil {
+		return err
+	}
+	s.Base = r.Base()
+	// We can't use the table pointers in SDT as Linux seems to want to deny
+	// access. So we have an SDT full of pointers we can't use. Awesome!
+	// And we can't read the SDT. I'm just chock full of good news today.
+	// acpi.RawTables reads from files in /sys
+	rr, err := acpi.RawTables()
+	if err != nil {
+		return err
+	}
+	xtra, err := acpi.RawFromFile(n)
+	if err != nil {
+		return err
+	}
+	rr = append(rr, xtra)
+
+	log.Printf("Calling SDT Marshal with %d tables", rr)
+	b, err := s.MarshalAll(rr...)
+	if err != nil {
+		return err
+	}
+	log.Printf("Marshal'ed %d bytes for ACPI segment", len(b))
+	a := kexec.NewSegment(b, kexec.Range{Start: uintptr(s.Base), Size: uint(len(b))})
+	if err := m.EnsureSize(a.Phys, kexec.RangeACPI); err != nil {
+		// Last chance: maybe you have buggy crap bios and it marks it
+		// incorrectly.
+		if err := m.EnsureSize(a.Phys, kexec.RangeReserved); err != nil {
+			return err
+		}
+	}
+	m.mem.Segments = append(m.mem.Segments, a)
+	return nil
+}
+
 func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 	f, err := elf.NewFile(r)
 	if err != nil {
@@ -199,6 +263,63 @@ func (m Multiboot) memoryMap() memoryMaps {
 		ret = append(ret, v)
 	}
 	return ret
+}
+
+// EnsureSize ensures m.mem.Phys can contain a kexec.Range of a kexec.RangeType.
+// The only use at present is ensuring that our ACPI tables live safely
+// in an ACPI or Reserved area.
+// If not, it will grow the memmap region at the expense of the following
+// region. The following region must be kexec.RangeRAM
+// There are a few rules:
+// Start must be in the region
+//   i.e. for this implementation we don't grow down.
+//   This is a limitation but I doubt a serious one
+// Type must match exactly
+// Region must be growing or at least not shrinking -- if shrinking, but it fits, we leave it alone.
+// There must be a following map entry of type kexec.RangeRam
+// which we will shrink, and it must be at least one page in size.
+//   We still do not handle what happens when ACPI grows into the ACPINVS range.
+//   Since ACPI NVS can be pointed to be (e.g.) SMM code, for S3 and S4, moving it
+//   around is not really an option. In future, we may have to move the ACPI table,
+//   or make it discontiguous, if we run out of memory. This need can be acommodated
+//   in the ACPI function.
+func (m Multiboot) EnsureSize(r kexec.Range, typ kexec.RangeType) error {
+	Debug("find %#x %v", r, typ)
+	for i, mr := range m.mem.Phys {
+		Debug("check %#x", mr)
+		if r.Start < mr.Start {
+			Debug("start %#x too low for %#x", r.Start, mr.Start)
+			continue
+		}
+		if r.Start > mr.Start+uintptr(mr.Size) {
+			Debug("start %#x too high for %#x", r.Start, mr.Start+uintptr(mr.Size))
+			continue
+		}
+
+		if mr.Type != typ {
+			Debug("type wrong")
+			continue
+		}
+		if mr.Start+uintptr(mr.Size) >= r.Start+uintptr(r.Size) {
+			Debug("size is ok")
+			return nil
+		}
+		Debug("need to adjust")
+		if i == len(m.mem.Phys)-1 {
+			return fmt.Errorf("Growmap: can't grow last segment element")
+		}
+		n := m.mem.Phys[i+1]
+		adjust := uint(r.Start + uintptr(r.Size+uint(PageSize)-1-mr.Size) & ^uintptr(PageSize-1))
+		if n.Size < adjust {
+			return fmt.Errorf("Growmap: next segment len is %d, must be at least %d", mr.Size, adjust)
+		}
+		Debug("adjust it")
+		mr.Size += adjust
+		n.Start += uintptr(adjust)
+		n.Size -= adjust
+		return nil
+	}
+	return fmt.Errorf("Can not ensure %#x type %v: no room", r, typ)
 }
 
 func (m *Multiboot) addMmap() (addr uintptr, size uint, err error) {
