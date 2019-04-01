@@ -160,6 +160,7 @@ var (
 
 		Dir{Name: "/sys", Mode: 0555},
 		Mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
+		Mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
 	}
 	cgroupsnamespace = []Creator{
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
