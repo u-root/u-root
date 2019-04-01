@@ -26,8 +26,7 @@ func mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, offset int6
 	page := addr &^ (pageSize - 1)
 	offset = addr - page
 	mapSize := offset + size
-	mem, err = syscall.Mmap(int(f.Fd()), int64(page),
-		int(mapSize), prot, syscall.MAP_SHARED)
+	mem, err = syscall.Mmap(int(f.Fd()), int64(page), int(mapSize), prot, syscall.MAP_SHARED)
 	return
 }
 
@@ -42,13 +41,16 @@ func Read(addr int64, data UintN) error {
 
 	mem, offset, err := mmap(f, addr, data.Size(), syscall.PROT_READ)
 	if err != nil {
-		return err
+		return fmt.Errorf("Reading %#x/%d: %v", addr, data.Size(), err)
 	}
 	defer syscall.Munmap(mem)
 
 	// MMIO makes this a bit tricky. Reads must be conducted in one load
 	// operation. Review the generated assembly to make sure.
-	return data.read(unsafe.Pointer(&mem[offset]))
+	if err := data.read(unsafe.Pointer(&mem[offset])); err != nil {
+		return fmt.Errorf("Reading %#x/%d: %v", addr, data.Size(), err)
+	}
+	return nil
 }
 
 // Write writes data to physical memory at address addr. On x86 platforms, this
