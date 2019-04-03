@@ -148,13 +148,11 @@ func (r *RSDP) Base() int64 {
 func readRSDP(base int64) (*RSDP, error) {
 	r := &RSDP{}
 	r.base = uint64(base)
-	for i := range r.data {
-		var d io.Uint8
-		if err := io.Read(base+int64(i), &d); err != nil {
-			return nil, err
-		}
-		r.data[i] = uint8(d)
+	dat := io.ByteSlice(make([]byte, len(r.data)))
+	if err := io.Read(base, &dat); err != nil {
+		return nil, err
 	}
+	copy(r.data[:], dat)
 	return r, nil
 }
 
