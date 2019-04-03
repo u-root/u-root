@@ -55,15 +55,11 @@ func ReadRaw(a int64) (Tabler, error) {
 		return nil, err
 	}
 	Debug("ReadRaw: Size is %d", u)
-	dat := make([]byte, u)
-	for i := range dat {
-		var d io.Uint8
-		if err := io.Read(a+int64(i), &d); err != nil {
-			return nil, err
-		}
-		dat[i] = uint8(d)
+	dat := io.ByteSlice(make([]byte, u))
+	if err := io.Read(a, &dat); err != nil {
+		return nil, err
 	}
-	return &Raw{data: dat}, nil
+	return &Raw{data: []byte(dat)}, nil
 }
 
 // Marshal marshals Raw tables to a byte slice.

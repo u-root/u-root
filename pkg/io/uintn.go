@@ -37,6 +37,9 @@ type Uint32 uint32
 // Uint64 is a wrapper around uint64.
 type Uint64 uint64
 
+// ByteSlice is a wrapper around []byte.
+type ByteSlice []byte
+
 // Size of uint8 is 1.
 func (u *Uint8) Size() int64 {
 	return 1
@@ -57,6 +60,11 @@ func (u *Uint64) Size() int64 {
 	return 8
 }
 
+// Size of []byte.
+func (s *ByteSlice) Size() int64 {
+	return int64(len(*s))
+}
+
 // String formats a uint8 in hex.
 func (u *Uint8) String() string {
 	return fmt.Sprintf("%#02x", *u)
@@ -75,6 +83,11 @@ func (u *Uint32) String() string {
 // String formats a uint64 in hex.
 func (u *Uint64) String() string {
 	return fmt.Sprintf("%#016x", *u)
+}
+
+// String formats a []byte in hex.
+func (s *ByteSlice) String() string {
+	return fmt.Sprintf("%#x", *s)
 }
 
 func (u *Uint8) read(addr unsafe.Pointer) error {
@@ -98,6 +111,14 @@ func (u *Uint64) read(addr unsafe.Pointer) error {
 	return nil                    // TODO: catch misalign, segfault, sigbus, ...
 }
 
+func (s *ByteSlice) read(addr unsafe.Pointer) error {
+	for i := 0; i < len(*s); i++ {
+		(*s)[i] = *(*byte)(addr)
+		addr = unsafe.Pointer(uintptr(addr) + 1)
+	}
+	return nil // TODO: catch misalign, segfault, sigbus, ...
+}
+
 func (u *Uint8) write(addr unsafe.Pointer) error {
 	*(*uint8)(addr) = uint8(*u) // TODO: rewrite in Go assembly for ARM
 	return nil                  // TODO: catch misalign, segfault, sigbus, ...
@@ -117,4 +138,12 @@ func (u *Uint64) write(addr unsafe.Pointer) error {
 	// Warning: On arm, this uses two str's rather than strd.
 	*(*uint64)(addr) = uint64(*u) // TODO: rewrite in Go assembly for ARM
 	return nil                    // TODO: catch misalign, segfault, sigbus, ...
+}
+
+func (s *ByteSlice) write(addr unsafe.Pointer) error {
+	for i := 0; i < len(*s); i++ {
+		*(*byte)(addr) = (*s)[i]
+		addr = unsafe.Pointer(uintptr(addr) + 1)
+	}
+	return nil // TODO: catch misalign, segfault, sigbus, ...
 }
