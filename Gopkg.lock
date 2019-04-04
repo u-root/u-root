@@ -141,31 +141,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e17892c6c0570a5f6523513c67c1b4dc173fda4f1548c6c478991d48530cb75c"
-  name = "github.com/mdlayher/dhcp6"
-  packages = [
-    ".",
-    "dhcp6opts",
-    "internal/buffer",
-  ]
-  pruneopts = "NUT"
-  revision = "2a67805d7d0b0bad6c1103058981afdea583b459"
-
-[[projects]]
-  branch = "master"
   digest = "1:88810ec115324c260951440d11f030e4bfe451cd888720481e1ddc037a5c8678"
   name = "github.com/mdlayher/ethernet"
   packages = ["."]
   pruneopts = "NUT"
   revision = "5b5fc417d966b71d3781b0d5860413e9fae947c1"
-
-[[projects]]
-  branch = "master"
-  digest = "1:dc8097cc1f6d5cfe11684242e360da6789368b2a1f54f32d08a416c6253ab9d3"
-  name = "github.com/mdlayher/eui64"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "eee6532bb9adf30c2a17e9963ed90aa14161dae9"
 
 [[projects]]
   branch = "master"
@@ -339,9 +319,6 @@
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
-    "github.com/mdlayher/dhcp6",
-    "github.com/mdlayher/dhcp6/dhcp6opts",
-    "github.com/mdlayher/eui64",
     "github.com/nsf/termbox-go",
     "github.com/rck/unit",
     "github.com/spf13/pflag",
