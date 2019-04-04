@@ -78,11 +78,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ad0166fef7064682a2133218910be3899d9a568775253880b520368b8c5e945d"
+  digest = "1:47e09aecde10462df0b66085adc497458785427c6fcd958e9fd655861af41053"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
     "dhcpv4/nclient4",
+    "dhcpv6",
+    "dhcpv6/nclient6",
     "iana",
     "rfc1035label",
   ]
@@ -332,6 +334,8 @@
     "github.com/gorilla/mux",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
+    "github.com/insomniacslk/dhcp/dhcpv6",
+    "github.com/insomniacslk/dhcp/dhcpv6/nclient6",
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
