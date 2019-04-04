@@ -520,6 +520,21 @@ func (d *DHCPv4) Router() []net.IP {
 	return GetIPs(OptionRouter, d.Options)
 }
 
+// ClasslessStaticRoute parses the DHCPv4 Classless Static Route option if present.
+//
+// The Classless Static Route option is described by RFC 3442.
+func (d *DHCPv4) ClasslessStaticRoute() []*Route {
+	v := d.Options.Get(OptionClasslessStaticRoute)
+	if v == nil {
+		return nil
+	}
+	var routes Routes
+	if err := routes.FromBytes(v); err != nil {
+		return nil
+	}
+	return routes
+}
+
 // NTPServers parses the DHCPv4 NTP Servers option if present.
 //
 // The NTP servers option is described by RFC 2132, Section 8.3.

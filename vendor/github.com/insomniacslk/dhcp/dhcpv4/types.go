@@ -247,8 +247,8 @@ const (
 	OptionNameServiceSearch               optionCode = 117
 	OptionSubnetSelection                 optionCode = 118
 	OptionDNSDomainSearchList             optionCode = 119
-	OptionSIPServersDHCPOption            optionCode = 120
-	OptionClasslessStaticRouteOption      optionCode = 121
+	OptionSIPServers                      optionCode = 120
+	OptionClasslessStaticRoute            optionCode = 121
 	OptionCCC                             optionCode = 122
 	OptionGeoConf                         optionCode = 123
 	OptionVendorIdentifyingVendorClass    optionCode = 124
@@ -410,8 +410,8 @@ var optionCodeToString = map[OptionCode]string{
 	OptionNameServiceSearch:               "Name Service Search",
 	OptionSubnetSelection:                 "Subnet Selection",
 	OptionDNSDomainSearchList:             "DNS Domain Search List",
-	OptionSIPServersDHCPOption:            "SIP Servers DHCP Option",
-	OptionClasslessStaticRouteOption:      "Classless Static Route Option",
+	OptionSIPServers:                      "SIP Servers",
+	OptionClasslessStaticRoute:            "Classless Static Route",
 	OptionCCC:                             "CCC, CableLabs Client Configuration",
 	OptionGeoConf:                         "GeoConf",
 	OptionVendorIdentifyingVendorClass:    "Vendor-Identifying Vendor Class",

@@ -78,7 +78,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d48656baae28abfc32e96442fd174c542241d60c0673212039895b9144bdd9dc"
+  digest = "1:ad0166fef7064682a2133218910be3899d9a568775253880b520368b8c5e945d"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -87,7 +87,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "625d653f51917b167cc2e53ef8fe595e85dd5fa4"
+  revision = "175868d67987770d2d729186f7676e0b98f925df"
 
 [[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
@@ -253,7 +253,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "8e1b8d32e692162a446e97250c5d34f5a52efed6"
+  revision = "38d8ce5564a5b71b2e3a00553993f1b9a7ae852f"
 
 [[projects]]
   branch = "master"
@@ -298,7 +298,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "8a44e74612bcf51f0d4407df3d3a8377cb99c2d8"
+  revision = "923d25813098b2ffdf1b4bb7ee4ec425fef796a9"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
