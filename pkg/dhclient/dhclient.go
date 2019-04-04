@@ -56,39 +56,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 // Configure4 adds IP addresses, routes, and DNS servers to the system.
 func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
 	p := NewPacket4(iface, packet)
-
-	l := p.Lease()
-	if l == nil {
-		return fmt.Errorf("no lease returned")
-	}
-
-	// Add the address to the iface.
-	dst := &netlink.Addr{
-		IPNet: l,
-	}
-	if err := netlink.AddrReplace(iface, dst); err != nil {
-		if os.IsExist(err) {
-			return fmt.Errorf("add/replace %s to %v: %v", dst, iface, err)
-		}
-	}
-
-	if gw := p.Gateway(); gw != nil {
-		r := &netlink.Route{
-			LinkIndex: iface.Attrs().Index,
-			Gw:        gw,
-		}
-
-		if err := netlink.RouteReplace(r); err != nil {
-			return fmt.Errorf("%s: add %s: %v", iface.Attrs().Name, r, err)
-		}
-	}
-
-	if ips := p.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips); err != nil {
-			return err
-		}
-	}
-	return nil
+	return p.Configure()
 }
 
 // Configure6 adds IPv6 addresses, routes, and DNS servers to the system.
