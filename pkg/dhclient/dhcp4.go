@@ -33,7 +33,54 @@ func (p *Packet4) Link() netlink.Link {
 
 // Configure configures interface using this packet.
 func (p *Packet4) Configure() error {
-	return Configure4(p.iface, p.P)
+	l := p.Lease()
+	if l == nil {
+		return fmt.Errorf("packet has no IP lease")
+	}
+
+	// Add the address to the iface.
+	dst := &netlink.Addr{
+		IPNet: l,
+	}
+	if err := netlink.AddrReplace(p.iface, dst); err != nil {
+		return fmt.Errorf("add/replace %s to %v: %v", dst, p.iface, err)
+	}
+
+	// RFC 3442 notes that if classless static routes are available, they
+	// have priority. You have to ignore the Route Option.
+	if routes := p.P.ClasslessStaticRoute(); routes != nil {
+		for _, route := range routes {
+			r := &netlink.Route{
+				LinkIndex: p.iface.Attrs().Index,
+				Dst:       route.Dest,
+				Gw:        route.Router,
+			}
+			// If no gateway is specified, the destination must be link-local.
+			if r.Gw == nil || r.Gw.Equal(net.IPv4zero) {
+				r.Scope = netlink.SCOPE_LINK
+			}
+
+			if err := netlink.RouteReplace(r); err != nil {
+				return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
+			}
+		}
+	} else if gw := p.P.Router(); gw != nil && len(gw) > 0 {
+		r := &netlink.Route{
+			LinkIndex: p.iface.Attrs().Index,
+			Gw:        gw[0],
+		}
+
+		if err := netlink.RouteReplace(r); err != nil {
+			return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
+		}
+	}
+
+	if ips := p.P.DNS(); ips != nil {
+		if err := WriteDNSSettings(ips); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *Packet4) String() string {
@@ -53,23 +100,6 @@ func (p *Packet4) Lease() *net.IPNet {
 		IP:   p.P.YourIPAddr,
 		Mask: net.IPMask(netmask),
 	}
-}
-
-// Gateway returns the gateway IP assigned.
-//
-// OptionRouter is used as opposed to GIAddr, which seems unused by most DHCP
-// servers?
-func (p *Packet4) Gateway() net.IP {
-	gw := p.P.Router()
-	if gw == nil {
-		return nil
-	}
-	return gw[0]
-}
-
-// DNS returns DNS IPs assigned.
-func (p *Packet4) DNS() []net.IP {
-	return p.P.DNS()
 }
 
 // Boot returns the boot file assigned.
