@@ -58,7 +58,10 @@ type acpiIBFTHeader struct {
 	Reserved   [24]byte `offset:"24" desc:"Reserved"`
 }
 
-var rawIBTFHeader = "IBFT\x00\x08\x00\x001\x00ACPIXXACPISUCK1234567890abcdef01234567"
+var (
+	rawIBTFHeader = "IBFT\x00\x08\x00\x001\x00ACPIXXACPISUCK1234567890abcdef01234567"
+	_             = Tabler(&IBFT{})
+)
 
 // acpiIBFTStructHeader defines the common components of the structure headers.
 // In the standard, IBM made the flags common, even though the values
