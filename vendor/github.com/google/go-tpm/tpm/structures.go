@@ -192,7 +192,7 @@ type keyParams struct {
 	AlgID     uint32
 	EncScheme uint16
 	SigScheme uint16
-	Params     []byte // Serialized rsaKeyParams or symmetricKeyParams.
+	Params    []byte // Serialized rsaKeyParams or symmetricKeyParams.
 }
 
 // An rsaKeyParams encodes the length of the RSA prime in bits, the number of
@@ -212,33 +212,33 @@ type symmetricKeyParams struct {
 
 // A key is a TPM representation of a key.
 type key struct {
-	Version        uint32
-	KeyUsage       uint16
-	KeyFlags       uint32
-	AuthDataUsage  byte
+	Version         uint32
+	KeyUsage        uint16
+	KeyFlags        uint32
+	AuthDataUsage   byte
 	AlgorithmParams keyParams
-	PCRInfo        []byte
-	PubKey         []byte
-	EncData        []byte
+	PCRInfo         []byte
+	PubKey          []byte
+	EncData         []byte
 }
 
 // A key12 is a newer TPM representation of a key.
 type key12 struct {
-	Tag            uint16
-	Zero           uint16 // Always all 0.
-	KeyUsage       uint16
-	KeyFlags       uint32
-	AuthDataUsage  byte
+	Tag             uint16
+	Zero            uint16 // Always all 0.
+	KeyUsage        uint16
+	KeyFlags        uint32
+	AuthDataUsage   byte
 	AlgorithmParams keyParams
-	PCRInfo        []byte // This must be a serialization of a pcrInfoLong.
-	PubKey         []byte
-	EncData        []byte
+	PCRInfo         []byte // This must be a serialization of a pcrInfoLong.
+	PubKey          []byte
+	EncData         []byte
 }
 
 // A pubKey represents a public key known to the TPM.
 type pubKey struct {
 	AlgorithmParams keyParams
-	Key            []byte
+	Key             []byte
 }
 
 // A tpmStoredData holds sealed data from the TPM.
@@ -298,11 +298,11 @@ func convertPubKey(pk crypto.PublicKey) (*pubKey, error) {
 		AlgID:     algRSA,
 		EncScheme: esNone,
 		SigScheme: ssRSASaPKCS1v15SHA1,
-		Params:     rsakpb,
+		Params:    rsakpb,
 	}
 	pubKey := pubKey{
 		AlgorithmParams: kp,
-		Key:            pkRSA.N.Bytes(),
+		Key:             pkRSA.N.Bytes(),
 	}
 
 	return &pubKey, nil

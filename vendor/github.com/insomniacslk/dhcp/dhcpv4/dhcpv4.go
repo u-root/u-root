@@ -16,7 +16,7 @@
 package dhcpv4
 
 import (
-	"crypto/rand"
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -25,6 +25,7 @@ import (
 
 	"github.com/insomniacslk/dhcp/iana"
 	"github.com/insomniacslk/dhcp/rfc1035label"
+	"github.com/u-root/u-root/pkg/rand"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -39,6 +40,9 @@ const (
 
 	// MaxMessageSize is the maximum size in bytes that a DHCPv4 packet can hold.
 	MaxMessageSize = 576
+
+	// Per RFC 951, the minimum length of a packet is 300 bytes.
+	bootpMinLen = 300
 )
 
 // magicCookie is the magic 4-byte value at the beginning of the list of options
@@ -425,6 +429,8 @@ func writeIP(b *uio.Lexer, ip net.IP) {
 	if ip == nil {
 		b.WriteBytes(zeros[:])
 	} else {
+		// Converting IP to 4 byte format
+		ip = ip.To4()
 		b.WriteBytes(ip[:net.IPv4len])
 	}
 }
@@ -468,8 +474,20 @@ func (d *DHCPv4) ToBytes() []byte {
 	// Write all options.
 	d.Options.Marshal(buf)
 
+	// DHCP is based on BOOTP, and BOOTP messages have a minimum length of
+	// 300 bytes per RFC 951. This not stated explicitly, but if you sum up
+	// all the bytes in the message layout, you'll get 300 bytes.
+	//
+	// Some DHCP servers and relay agents care about this BOOTP legacy B.S.
+	// and "conveniently" drop messages that are less than 300 bytes long.
+	//
+	// We subtract one byte for the OptionEnd option.
+	if buf.Len()+1 < bootpMinLen {
+		buf.WriteBytes(bytes.Repeat([]byte{OptionPad.Code()}, bootpMinLen-1-buf.Len()))
+	}
+
 	// Finish the packet.
-	buf.Write8(uint8(OptionEnd))
+	buf.Write8(OptionEnd.Code())
 
 	return buf.Data()
 }
@@ -500,6 +518,21 @@ func (d *DHCPv4) ServerIdentifier() net.IP {
 // The Router option is described by RFC 2132, Section 3.5.
 func (d *DHCPv4) Router() []net.IP {
 	return GetIPs(OptionRouter, d.Options)
+}
+
+// ClasslessStaticRoute parses the DHCPv4 Classless Static Route option if present.
+//
+// The Classless Static Route option is described by RFC 3442.
+func (d *DHCPv4) ClasslessStaticRoute() []*Route {
+	v := d.Options.Get(OptionClasslessStaticRoute)
+	if v == nil {
+		return nil
+	}
+	var routes Routes
+	if err := routes.FromBytes(v); err != nil {
+		return nil
+	}
+	return routes
 }
 
 // NTPServers parses the DHCPv4 NTP Servers option if present.

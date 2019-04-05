@@ -578,14 +578,14 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 		AlgID:     algRSA,
 		EncScheme: esNone,
 		SigScheme: ssRSASaPKCS1v15SHA1,
-		Params:     packedParams,
+		Params:    packedParams,
 	}
 
 	aik := &key{
-		Version:        0x01010000,
-		KeyUsage:       keyIdentity,
-		KeyFlags:       0,
-		AuthDataUsage:  authAlways,
+		Version:         0x01010000,
+		KeyUsage:        keyIdentity,
+		KeyFlags:        0,
+		AuthDataUsage:   authAlways,
 		AlgorithmParams: aikParams,
 	}
 
@@ -830,13 +830,13 @@ func TakeOwnership(rw io.ReadWriter, newOwnerAuth digest, newSRKAuth digest, pub
 		AlgID:     algRSA,
 		EncScheme: esRSAEsOAEPSHA1MGF1,
 		SigScheme: ssNone,
-		Params:     srkpb,
+		Params:    srkpb,
 	}
 	srk := &key{
-		Version:        0x01010000,
-		KeyUsage:       keyStorage,
-		KeyFlags:       0,
-		AuthDataUsage:  authAlways,
+		Version:         0x01010000,
+		KeyUsage:        keyStorage,
+		KeyFlags:        0,
+		AuthDataUsage:   authAlways,
 		AlgorithmParams: srkParams,
 	}
 
@@ -929,7 +929,7 @@ func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth digest, migration
 			AlgID:     algRSA,
 			EncScheme: esNone,
 			SigScheme: ssRSASaPKCS1v15DER,
-			Params:     rParamsPacked,
+			Params:    rParamsPacked,
 		},
 		PCRInfo: pcrInfoBytes,
 	}
