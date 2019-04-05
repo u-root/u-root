@@ -165,6 +165,14 @@ func (m *Multiboot) Load(debug bool) error {
 // been nice.  Multiboot1 only mentions the APM table, which is
 // surprising; I had no idea it was that old.
 func (m *Multiboot) ACPI(n string) error {
+	xtra, err := acpi.RawFromFile(n)
+	if err != nil {
+		return err
+	}
+	return m.ACPITable(xtra)
+}
+
+func (m *Multiboot) ACPITable(t ...acpi.Tabler) error {
 	// NewSDT won't work on some linux kernels that limit reading
 	// above 1m. So we have to read the rsdp, which seems ok; then cons up
 	// a new SDT from scratch, since there is not one in /sys.
@@ -186,13 +194,9 @@ func (m *Multiboot) ACPI(n string) error {
 	if err != nil {
 		return err
 	}
-	xtra, err := acpi.RawFromFile(n)
-	if err != nil {
-		return err
-	}
-	rr = append(rr, xtra)
+	rr = append(rr, t...)
 
-	log.Printf("Calling SDT Marshal with %d tables", rr)
+	log.Printf("Calling SDT Marshal with %d tables", len(rr))
 	b, err := s.MarshalAll(rr...)
 	if err != nil {
 		return err
