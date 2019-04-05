@@ -45,6 +45,12 @@ var tests = []struct {
 		writeData: &[]Uint64{0x1234567890abcdef}[0],
 		readData:  new(Uint64),
 	},
+	{
+		name:      "byte slice",
+		addr:      0x50,
+		writeData: &[]ByteSlice{[]byte("Hello")}[0],
+		readData:  &[]ByteSlice{make([]byte, 5)}[0],
+	},
 }
 
 func TestIO(t *testing.T) {
