@@ -189,6 +189,7 @@ func (af *Files) fillInParents() {
 func (af *Files) WriteTo(w Writer) error {
 	// Add parent directories when not added specifically.
 	af.fillInParents()
+	cr := cpio.NewRecorder()
 
 	// Reproducible builds: Files should be added to the archive in the
 	// same order.
@@ -199,7 +200,7 @@ func (af *Files) WriteTo(w Writer) error {
 			}
 		}
 		if src, ok := af.Files[path]; ok {
-			if err := writeFile(w, src, path); err != nil {
+			if err := writeFile(w, cr, src, path); err != nil {
 				return err
 			}
 		}
@@ -211,8 +212,8 @@ func (af *Files) WriteTo(w Writer) error {
 // archive `w` at path `dest`.
 //
 // If `src` is a directory, its children will be added to the archive as well.
-func writeFile(w Writer, src, dest string) error {
-	record, err := cpio.GetRecord(src)
+func writeFile(w Writer, r *cpio.Recorder, src, dest string) error {
+	record, err := r.GetRecord(src)
 	if err != nil {
 		return err
 	}

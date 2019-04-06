@@ -83,11 +83,12 @@ func main() {
 
 	case "o":
 		rw := archiver.Writer(os.Stdout)
+		cr := cpio.NewRecorder()
 		scanner := bufio.NewScanner(os.Stdin)
 
 		for scanner.Scan() {
 			name := scanner.Text()
-			rec, err := cpio.GetRecord(name)
+			rec, err := cr.GetRecord(name)
 			if err != nil {
 				log.Fatalf("Getting record of %q failed: %v", name, err)
 			}

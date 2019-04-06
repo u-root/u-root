@@ -191,10 +191,10 @@ type devInode struct {
 	ino uint64
 }
 
-var (
-	inodeMap = map[devInode]Info{}
+type Recorder struct {
+	inodeMap map[devInode]Info
 	inumber  uint64
-)
+}
 
 // Certain elements of the file can not be set by cpio:
 // the Inode #
@@ -207,18 +207,18 @@ var (
 // If not, we get a new inumber for it and save the inode away.
 // This eliminates two of the messier parts of creating reproducible
 // output streams.
-func inode(i Info) (Info, bool) {
+func (r *Recorder) inode(i Info) (Info, bool) {
 	d := devInode{dev: i.Dev, ino: i.Ino}
 	i.Dev = 0
 
-	if d, ok := inodeMap[d]; ok {
+	if d, ok := r.inodeMap[d]; ok {
 		i.Ino = d.Ino
 		return i, true
 	}
 
-	i.Ino = inumber
-	inumber++
-	inodeMap[d] = i
+	i.Ino = r.inumber
+	r.inumber++
+	r.inodeMap[d] = i
 
 	return i, false
 }
@@ -233,14 +233,14 @@ func newLazyFile(name string) io.ReaderAt {
 //
 // GetRecord does not follow symlinks. If path is a symlink, the record
 // returned will reflect that symlink.
-func GetRecord(path string) (Record, error) {
+func (r *Recorder) GetRecord(path string) (Record, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return Record{}, err
 	}
 
 	sys := fi.Sys().(*syscall.Stat_t)
-	info, done := inode(sysInfo(path, sys))
+	info, done := r.inode(sysInfo(path, sys))
 
 	switch fi.Mode() & os.ModeType {
 	case 0: // Regular file.
@@ -259,4 +259,15 @@ func GetRecord(path string) (Record, error) {
 	default:
 		return StaticRecord(nil, info), nil
 	}
+}
+
+// Create a new Recorder.
+//
+// A recorder is a structure that contains variables used to calculate
+// file parameters such as inode numbers for a CPIO file. The life-time
+// of a Record structure is meant to be the same as the construction of a
+// single CPIO archive. Do not reuse between CPIOs if you don't know what
+// you're doing.
+func NewRecorder() *Recorder {
+	return &Recorder{make(map[devInode]Info), 0}
 }
