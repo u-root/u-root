@@ -90,15 +90,30 @@ func NewIPv6UDPConn(iface string, port int) (net.PacketConn, error) {
 	})
 }
 
-// New creates a new DHCP client that sends and receives packets on the given
-// interface.
-func New(ifaceHWAddr net.HardwareAddr, opts ...ClientOpt) (*Client, error) {
+// New returns a new DHCPv6 client for the given network interface.
+func New(iface string, opts ...ClientOpt) (*Client, error) {
+	c, err := NewIPv6UDPConn(iface, dhcpv6.DefaultClientPort)
+	if err != nil {
+		return nil, err
+	}
+
+	i, err := net.InterfaceByName(iface)
+	if err != nil {
+		return nil, err
+	}
+	return NewWithConn(c, i.HardwareAddr, opts...)
+}
+
+// NewWithConn creates a new DHCP client that sends and receives packets on the
+// given interface.
+func NewWithConn(conn net.PacketConn, ifaceHWAddr net.HardwareAddr, opts ...ClientOpt) (*Client, error) {
 	c := &Client{
 		ifaceHWAddr: ifaceHWAddr,
 		timeout:     5 * time.Second,
 		retry:       3,
-		serverAddr:  AllDHCPServers,
+		serverAddr:  AllDHCPRelayAgentsAndServers,
 		bufferCap:   5,
+		conn:        conn,
 
 		done:    make(chan struct{}),
 		pending: make(map[dhcpv6.TransactionID]*pendingCh),
@@ -237,6 +252,20 @@ func IsMessageType(t dhcpv6.MessageType) Matcher {
 	return func(p *dhcpv6.Message) bool {
 		return p.MessageType == t || t == dhcpv6.MessageTypeNone
 	}
+}
+
+// RapidSolicit sends a solicitation message with the RapidCommit option and
+// returns the first valid reply received.
+func (c *Client) RapidSolicit(ctx context.Context, modifiers ...dhcpv6.Modifier) (*dhcpv6.Message, error) {
+	solicit, err := dhcpv6.NewSolicit(c.ifaceHWAddr, append(modifiers, dhcpv6.WithRapidCommit)...)
+	if err != nil {
+		return nil, err
+	}
+	msg, err := c.SendAndRead(ctx, c.serverAddr, solicit, IsMessageType(dhcpv6.MessageTypeReply))
+	if err != nil {
+		return nil, err
+	}
+	return msg, nil
 }
 
 // Solicit sends a solicitation message and returns the first valid

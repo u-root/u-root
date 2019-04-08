@@ -94,13 +94,17 @@ type Client struct {
 }
 
 // New returns a client usable with an unconfigured interface.
-func New(ifaceName string, ifaceHWAddr net.HardwareAddr, opts ...ClientOpt) (*Client, error) {
-	c := NewWithConn(nil, ifaceHWAddr, opts...)
+func New(iface string, opts ...ClientOpt) (*Client, error) {
+	i, err := net.InterfaceByName(iface)
+	if err != nil {
+		return nil, err
+	}
+	c := NewWithConn(nil, i.HardwareAddr, opts...)
 
 	// Do this after so that a caller can still use a WithConn to override
 	// the connection.
 	if c.conn == nil {
-		pc, err := NewRawUDPConn(ifaceName, ClientPort)
+		pc, err := NewRawUDPConn(iface, ClientPort)
 		if err != nil {
 			return nil, err
 		}

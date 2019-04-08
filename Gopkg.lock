@@ -69,16 +69,16 @@
   revision = "ce302be1d1149d49ed520b8f0d9c956b2663b3d6"
 
 [[projects]]
-  digest = "1:f9c7b395f10bd6d881b1f2d71715906b4481a04e46870cdd2647d50caa3358c2"
+  digest = "1:f03d1f27dee54a6f51200778991db9b7a91e9d9cc42395ba813fc9efc490a9a2"
   name = "github.com/gorilla/mux"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "a7962380ca08b5a188038c69871b8d3fbdf31e89"
-  version = "v1.7.0"
+  revision = "c5c6c98bc25355028a63748a498942a6398ccd22"
+  version = "v1.7.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:47e09aecde10462df0b66085adc497458785427c6fcd958e9fd655861af41053"
+  digest = "1:f55ffe028761947faf43bcb08ce942f8f7730b251a5c282b96b6f40c47daed7b"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -89,7 +89,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "175868d67987770d2d729186f7676e0b98f925df"
+  revision = "b88ad4b870e4c440db756d101fe448f47a487dd8"
 
 [[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
@@ -248,11 +248,11 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "b630fd6fe46bcfc98f989005d8b8ec1400e60a6e"
+  revision = "eb5bcb51f2a31c7d5141d810b70815c05d9c9146"
 
 [[projects]]
   branch = "master"
-  digest = "1:9f77b6996c379558bc11696785bfa8386893febd5cb474c8f161dfc7f93d9e79"
+  digest = "1:a26ebff2301ac8a4c8cedfec085e8190b035a7eec6b5614b7501f4714138a679"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -260,11 +260,11 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "81d4e9dc473e5e8c933f2aaeba2a3d81efb9aed2"
+  revision = "4b34438f7a67ee5f45cc6132e2bad873a20324e9"
 
 [[projects]]
   branch = "master"
-  digest = "1:59b401940f79c311efa01c10e2fa8e78522a978538127f369fb39690a03c3eb4"
+  digest = "1:797d26136f04e8b3731c21e7ed71cd881d95325f46d81f8a6bc24b1c80cb0e8a"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -280,7 +280,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "923d25813098b2ffdf1b4bb7ee4ec425fef796a9"
+  revision = "0fdf0c73855bae8482c5d3907a9e06f33ff70a10"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
