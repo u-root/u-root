@@ -173,3 +173,25 @@ jobs:
       - run:
           name: Symbol tests to ensure we do not break symlink handling
           command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -build=bb -files /tmp/usr minimal
+  check_templates:
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: ensure that every template builds for a variety of options.
+          command: |
+                  go run u-root.go -build=bb minimal
+                  go run u-root.go minimal
+                  go run u-root.go -build=bb core
+                  go run u-root.go core
+                  go run u-root.go -build=bb coreboot-app
+                  go run u-root.go coreboot-app
+                  go run u-root.go -build=bb all
+                  go run u-root.go all
+                  go run u-root.go -build=bb all core
+                  go run u-root.go all core
+                  go run u-root.go -fourbins minimal
