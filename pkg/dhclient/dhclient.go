@@ -107,7 +107,7 @@ type Lease interface {
 }
 
 func lease4(ctx context.Context, iface netlink.Link, timeout time.Duration, retries int) (Lease, error) {
-	client, err := nclient4.New(iface.Attrs().Name, iface.Attrs().HardwareAddr,
+	client, err := nclient4.New(iface.Attrs().Name,
 		nclient4.WithTimeout(timeout),
 		nclient4.WithRetry(retries))
 	if err != nil {
@@ -121,12 +121,12 @@ func lease4(ctx context.Context, iface netlink.Link, timeout time.Duration, retr
 	}
 
 	packet := NewPacket4(iface, p)
-	log.Printf("Got DHCPv4 lease on %s", iface.Attrs().Name)
+	log.Printf("Got DHCPv4 lease on %s: %v", iface.Attrs().Name, p.Summary())
 	return packet, nil
 }
 
 func lease6(ctx context.Context, iface netlink.Link, timeout time.Duration, retries int) (Lease, error) {
-	client, err := nclient6.New(iface.Attrs().HardwareAddr,
+	client, err := nclient6.New(iface.Attrs().Name,
 		nclient6.WithTimeout(timeout),
 		nclient6.WithRetry(retries))
 	if err != nil {
@@ -134,13 +134,13 @@ func lease6(ctx context.Context, iface netlink.Link, timeout time.Duration, retr
 	}
 
 	log.Printf("Attempting to get DHCPv6 lease on %s", iface.Attrs().Name)
-	p, err := client.Solicit(ctx, dhcpv6.WithRapidCommit, dhcpv6.WithNetboot)
+	p, err := client.RapidSolicit(ctx, dhcpv6.WithNetboot)
 	if err != nil {
 		return nil, err
 	}
 
 	packet := NewPacket6(iface, p)
-	log.Printf("Got DHCPv6 lease on %s", iface.Attrs().Name)
+	log.Printf("Got DHCPv6 lease on %s: %v", iface.Attrs().Name, p.Summary())
 	return packet, nil
 }
 
