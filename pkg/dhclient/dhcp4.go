@@ -5,6 +5,7 @@
 package dhclient
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -18,6 +19,8 @@ type Packet4 struct {
 	iface netlink.Link
 	P     *dhcpv4.DHCPv4
 }
+
+var _ Lease = &Packet4{}
 
 // NewPacket4 wraps a DHCPv4 packet with some convenience methods.
 func NewPacket4(iface netlink.Link, p *dhcpv4.DHCPv4) *Packet4 {
@@ -102,11 +105,19 @@ func (p *Packet4) Lease() *net.IPNet {
 	}
 }
 
+var (
+	ErrNoBootFile       = errors.New("no boot file name present in DHCP message")
+	ErrNoServerHostName = errors.New("no server host name present in DHCP message")
+)
+
 // Boot returns the boot file assigned.
 func (p *Packet4) Boot() (*url.URL, error) {
 	// TODO: This is not 100% right -- if a certain option is set, this
 	// stuff is encoded in options instead of in the packet's BootFile and
 	// ServerName fields.
+	if len(p.P.BootFileName) == 0 {
+		return nil, ErrNoBootFile
+	}
 
 	// While the default is tftp, servers may specify HTTP or FTP URIs.
 	u, err := url.Parse(p.P.BootFileName)
@@ -120,10 +131,13 @@ func (p *Packet4) Boot() (*url.URL, error) {
 		u.Path = p.P.BootFileName
 		if len(p.P.ServerHostName) == 0 {
 			server := p.P.ServerIdentifier()
-			if server == nil {
-				return nil, err
+			if server != nil {
+				u.Host = server.String()
+			} else if !p.P.ServerIPAddr.Equal(net.IPv4zero) {
+				u.Host = p.P.ServerIPAddr.String()
+			} else {
+				return nil, ErrNoServerHostName
 			}
-			u.Host = server.String()
 		} else {
 			u.Host = p.P.ServerHostName
 		}
