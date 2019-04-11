@@ -13,9 +13,9 @@ import (
 	"os"
 	"strings"
 
-	flag "github.com/spf13/pflag"
+	"golang.org/x/sys/unix"
 
-	"github.com/vishvananda/netlink"
+	flag "github.com/spf13/pflag"
 )
 
 // The language implemented by the standard 'ip' is not super consistent
@@ -45,12 +45,12 @@ var (
 	whatIWant []string
 	log       = l.New(os.Stdout, "ip: ", 0)
 
-	addrScopes = map[netlink.Scope]string{
-		netlink.SCOPE_UNIVERSE: "global",
-		netlink.SCOPE_HOST:     "host",
-		netlink.SCOPE_SITE:     "site",
-		netlink.SCOPE_LINK:     "link",
-		netlink.SCOPE_NOWHERE:  "nowhere",
+	addrScopes = map[uint8]string{
+		unix.RT_SCOPE_UNIVERSE: "global",
+		unix.RT_SCOPE_HOST:     "host",
+		unix.RT_SCOPE_SITE:     "site",
+		unix.RT_SCOPE_LINK:     "link",
+		unix.RT_SCOPE_NOWHERE:  "nowhere",
 	}
 )
 
@@ -80,19 +80,19 @@ func one(cmd string, cmds []string) string {
 // in the ip command, turns out 'dev' is a noise word.
 // The BNF it shows is not right in that case.
 // Always make 'dev' optional.
-func dev() (netlink.Link, error) {
+func dev() (*net.Interface, error) {
 	cursor++
 	whatIWant = []string{"dev", "device name"}
 	if arg[cursor] == "dev" {
 		cursor++
 	}
 	whatIWant = []string{"device name"}
-	return netlink.LinkByName(arg[cursor])
+	return net.InterfaceByName(arg[cursor])
 }
 
 func addrip() error {
 	var err error
-	var addr *netlink.Addr
+	var addr *net.IPNet
 	if len(arg) == 1 {
 		return showLinks(os.Stdout, true)
 	}
@@ -105,7 +105,7 @@ func addrip() error {
 	case "add", "del":
 		cursor++
 		whatIWant = []string{"CIDR format address"}
-		addr, err = netlink.ParseAddr(arg[cursor])
+		_, addr, err = net.ParseCIDR(arg[cursor])
 		if err != nil {
 			return err
 		}
@@ -118,11 +118,11 @@ func addrip() error {
 	}
 	switch c {
 	case "add":
-		if err := netlink.AddrAdd(iface, addr); err != nil {
+		if err := addrAdd(iface, addr); err != nil {
 			return fmt.Errorf("Adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
-		if err := netlink.AddrDel(iface, addr); err != nil {
+		if err := addrDel(iface, addr); err != nil {
 			return fmt.Errorf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
@@ -147,14 +147,14 @@ func linkshow() error {
 	return nil
 }
 
-func setHardwareAddress(iface netlink.Link) error {
+func setHardwareAddress(iface *net.Interface) error {
 	cursor++
 	hwAddr, err := net.ParseMAC(arg[cursor])
 	if err != nil {
 
 		return fmt.Errorf("%v cant parse mac addr %v: %v", iface, hwAddr, err)
 	}
-	err = netlink.LinkSetHardwareAddr(iface, hwAddr)
+	err = linkSetHardwareAddr(iface, hwAddr)
 	if err != nil {
 		return fmt.Errorf("%v cant set mac addr %v: %v", iface, hwAddr, err)
 	}
@@ -173,11 +173,11 @@ func linkset() error {
 	case "address":
 		return setHardwareAddress(iface)
 	case "up":
-		if err := netlink.LinkSetUp(iface); err != nil {
+		if err := linkSetUp(iface); err != nil {
 			return fmt.Errorf("%v can't make it up: %v", iface, err)
 		}
 	case "down":
-		if err := netlink.LinkSetDown(iface); err != nil {
+		if err := linkSetDown(iface); err != nil {
 			return fmt.Errorf("%v can't make it down: %v", iface, err)
 		}
 	default:
@@ -219,7 +219,7 @@ func nodespec() string {
 	return arg[cursor]
 }
 
-func nexthop() (string, *netlink.Addr, error) {
+func nexthop() (string, *net.IPNet, error) {
 	cursor++
 	whatIWant = []string{"via"}
 	if arg[cursor] != "via" {
@@ -228,7 +228,7 @@ func nexthop() (string, *netlink.Addr, error) {
 	nh := arg[cursor]
 	cursor++
 	whatIWant = []string{"Gateway CIDR"}
-	addr, err := netlink.ParseAddr(arg[cursor])
+	_, addr, err := net.ParseCIDR(arg[cursor])
 	if err != nil {
 		return "", nil, fmt.Errorf("Gateway CIDR: %v", err)
 	}
@@ -248,8 +248,7 @@ func routeadddefault() error {
 	switch nh {
 	case "via":
 		log.Printf("Add default route %v via %v", nhval, l)
-		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval.IPNet.IP}
-		if err := netlink.RouteAdd(r); err != nil {
+		if err := routeAdd(l, net.IPNet{}, nhval.IP); err != nil {
 			return fmt.Errorf("Add default route: %v", err)
 		}
 		return nil
@@ -263,7 +262,7 @@ func routeadd() error {
 	case "default":
 		return routeadddefault()
 	default:
-		addr, err := netlink.ParseAddr(arg[cursor])
+		_, addr, err := net.ParseCIDR(arg[cursor])
 		if err != nil {
 			return usage()
 		}
@@ -271,9 +270,8 @@ func routeadd() error {
 		if err != nil {
 			return usage()
 		}
-		r := &netlink.Route{LinkIndex: d.Attrs().Index, Dst: addr.IPNet}
-		if err := netlink.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding route %s -> %s: %v", addr, d, err)
+		if err := routeAdd(d, *addr, nil); err != nil {
+			return fmt.Errorf("error adding route %s -> %s: %v", addr, d.Name, err)
 		}
 		return nil
 	}

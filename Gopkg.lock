@@ -3,82 +3,63 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4d3dc52be088499ee1b86a009bf217aa398f3337121584fee4763989862f063b"
   name = "github.com/anmitsu/go-shlex"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "648efa622239a2f6ff949fed78ee37b48d499ba4"
 
 [[projects]]
-  digest = "1:e6c88dab8edc42242a2035bba3a869993ff08a3e245a445ea75f436e1bb27c33"
   name = "github.com/beevik/ntp"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "62c80a04de2086884d8296004b6d74ee1846c582"
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:b7ffca49e9cfd3dfb04a8e0a59347708c6f78f68476a32c5e0a0edca5d1b258c"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:e8301df5b11c8c13927a26a88ee7ec65410024f75c0fc3c8e6421aa6833808ac"
   name = "github.com/gliderlabs/ssh"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
 
 [[projects]]
-  digest = "1:3c04690dd1d3fad9a36c492c32863fad91bcf822fd95d5c4cae97be1e9abc361"
   name = "github.com/go-test/deep"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:28c6f29a00fc674ce801a4e8e10eacdbb49dbe2eea79a2b3d60b405cc0bd2b2d"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
     "tpmutil",
-    "tpmutil/tbs",
+    "tpmutil/tbs"
   ]
-  pruneopts = "NUT"
   revision = "ed7874b59abd5749750978becf34e4b094126de2"
   version = "v0.1.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:b4205462c2dfe9a2ad718107012129c98e5ef82ae2bbd19e21f1a8230e30711e"
   name = "github.com/google/goexpect"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "ebfe2174586a5f4f9ec8b504e19cc9faf16dc7bc"
 
 [[projects]]
   branch = "master"
-  digest = "1:5b66c432b11dc4996e583c298c03a3120c9f2e1c68d05b72adceff13595892c3"
   name = "github.com/google/goterm"
   packages = ["term"]
-  pruneopts = "NUT"
   revision = "ce302be1d1149d49ed520b8f0d9c956b2663b3d6"
 
 [[projects]]
-  digest = "1:f03d1f27dee54a6f51200778991db9b7a91e9d9cc42395ba813fc9efc490a9a2"
   name = "github.com/gorilla/mux"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "c5c6c98bc25355028a63748a498942a6398ccd22"
   version = "v1.7.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:f55ffe028761947faf43bcb08ce942f8f7730b251a5c282b96b6f40c47daed7b"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -86,133 +67,213 @@
     "dhcpv6",
     "dhcpv6/nclient6",
     "iana",
-    "rfc1035label",
+    "rfc1035label"
   ]
-  pruneopts = "NUT"
   revision = "b88ad4b870e4c440db756d101fe448f47a487dd8"
 
 [[projects]]
-  digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
+  branch = "master"
+  name = "github.com/jsimonetti/rtnetlink"
+  packages = ["."]
+  revision = "9c928e1cf777fc0f98eef3ad8d078e628ca8a5fb"
+
+[[projects]]
   name = "github.com/klauspost/compress"
   packages = ["flate"]
-  pruneopts = "NUT"
   revision = "30be6041bed523c18e269a700ebd9c2ea9328574"
   version = "v1.4.1"
 
 [[projects]]
-  digest = "1:f44ca3e400a23dc9cf76a09d71891da95193c0c7da2008205f8f20154f49b22d"
   name = "github.com/klauspost/cpuid"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "e7e905edc00ea8827e58662220139109efea09db"
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:f3f3545a30b934b75ad9cf9c7e9543f84f1d1aee3e534f6d01ab1776fa519fb9"
   name = "github.com/klauspost/pgzip"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "083b1c3f84dd6486588802e5ce295de3a7f41a8b"
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:563fcc691498b68d6236cb0f9f224e5214d89c4588922bc1d307279f7bde6de6"
   name = "github.com/kr/pty"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "521317be5ebc228a0f0ede099fa2a0b5ece22e49"
   version = "v1.1.4"
 
 [[projects]]
-  digest = "1:85edcc76fa95b8b312642905b56284f4fe5c42d8becb219481adba7e97d4f5c5"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7"
   version = "v0.0.7"
 
 [[projects]]
-  digest = "1:70ef8268170621826f8c111ac1674afe75136f526f449453b4a6631c6dba1946"
   name = "github.com/mattn/go-runewidth"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "3ee7d812e62a0804a7d0a324e0249ca2db3476d3"
   version = "v0.0.4"
 
 [[projects]]
   branch = "master"
-  digest = "1:88810ec115324c260951440d11f030e4bfe451cd888720481e1ddc037a5c8678"
   name = "github.com/mdlayher/ethernet"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "5b5fc417d966b71d3781b0d5860413e9fae947c1"
 
 [[projects]]
   branch = "master"
-  digest = "1:82baf000055f2497bdf17392c4e70f10f910490de2f0ebac885acbd031f822f3"
+  name = "github.com/mdlayher/netlink"
+  packages = [
+    ".",
+    "nlenc"
+  ]
+  revision = "11939a169225a13c54d4099899357e2a67577fee"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mdlayher/raw"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "b0647ab7d8b35d5b8b734462042628e5af82f7f4"
 
 [[projects]]
   branch = "master"
-  digest = "1:6022d8987643a603f69616699ba517019b353c0f6fd521372d465f3acbf081d5"
   name = "github.com/nsf/termbox-go"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "288510b9734e30e7966ec2f22b87c5f8e67345e3"
 
 [[projects]]
   branch = "master"
-  digest = "1:22ffe7a0e80f54e5a5ee408e2f6a4717ee8c5c3ecd94530963d1362efa178df5"
   name = "github.com/rck/unit"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
 
 [[projects]]
-  digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
   name = "github.com/spf13/pflag"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
   version = "v1.0.3"
 
 [[projects]]
   branch = "master"
-  digest = "1:7964b3b34b74b6c7dfbd5775d8bb82bef69e9729f4c7d341a9b73b0820b5c41a"
   name = "github.com/u-root/dhcp4"
   packages = [
     ".",
     "dhcp4opts",
-    "dhcp4server",
+    "dhcp4server"
   ]
-  pruneopts = "NUT"
   revision = "03363dc71ec82763595440b4b2c3e5f69f47a4e0"
 
 [[projects]]
   branch = "master"
-  digest = "1:2c6c98c684af5b5981082d8049fd9e7a02c1923374db65cb09c70de8f758e820"
+  name = "github.com/u-root/u-root"
+  packages = [
+    "cmds/elvish/build",
+    "cmds/elvish/edit",
+    "cmds/elvish/edit/completion",
+    "cmds/elvish/edit/eddefs",
+    "cmds/elvish/edit/highlight",
+    "cmds/elvish/edit/history",
+    "cmds/elvish/edit/lastcmd",
+    "cmds/elvish/edit/location",
+    "cmds/elvish/edit/prompt",
+    "cmds/elvish/edit/tty",
+    "cmds/elvish/edit/ui",
+    "cmds/elvish/eval",
+    "cmds/elvish/eval/bundled",
+    "cmds/elvish/eval/vals",
+    "cmds/elvish/eval/vars",
+    "cmds/elvish/getopt",
+    "cmds/elvish/glob",
+    "cmds/elvish/hash",
+    "cmds/elvish/hashmap",
+    "cmds/elvish/parse",
+    "cmds/elvish/parse/parseutil",
+    "cmds/elvish/program",
+    "cmds/elvish/program/shell",
+    "cmds/elvish/runtime",
+    "cmds/elvish/store",
+    "cmds/elvish/store/storedefs",
+    "cmds/elvish/sys",
+    "cmds/elvish/tt",
+    "cmds/elvish/util",
+    "cmds/elvish/vector",
+    "cmds/man/data",
+    "pkg/abi",
+    "pkg/acpi",
+    "pkg/bb",
+    "pkg/binary",
+    "pkg/boot",
+    "pkg/bzimage",
+    "pkg/cmdline",
+    "pkg/complete",
+    "pkg/cp",
+    "pkg/cpio",
+    "pkg/dhclient",
+    "pkg/diskboot",
+    "pkg/dt",
+    "pkg/find",
+    "pkg/forth",
+    "pkg/golang",
+    "pkg/gpt",
+    "pkg/gzip",
+    "pkg/io",
+    "pkg/ipxe",
+    "pkg/kexec",
+    "pkg/kmodule",
+    "pkg/ldd",
+    "pkg/less",
+    "pkg/lineio",
+    "pkg/lockfile",
+    "pkg/loop",
+    "pkg/ls",
+    "pkg/mount",
+    "pkg/multiboot",
+    "pkg/multiboot/internal/trampoline",
+    "pkg/null",
+    "pkg/pci",
+    "pkg/pty",
+    "pkg/pxe",
+    "pkg/qemu",
+    "pkg/rand",
+    "pkg/rtc",
+    "pkg/sh",
+    "pkg/sortedmap",
+    "pkg/sos",
+    "pkg/strace",
+    "pkg/tar",
+    "pkg/termios",
+    "pkg/testutil",
+    "pkg/ubinary",
+    "pkg/uio",
+    "pkg/uroot",
+    "pkg/uroot/builder",
+    "pkg/uroot/builder/bb",
+    "pkg/uroot/initramfs",
+    "pkg/uroot/initramfs/test",
+    "pkg/uroot/logger",
+    "pkg/uroot/util",
+    "pkg/wifi",
+    "pkg/wpa/passphrase",
+    "pkg/zimage"
+  ]
+  revision = "d6d5e43c7bdb9105bbee6d95e8e9f79360fb94c9"
+
+[[projects]]
+  branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
-    "nl",
+    "nl"
   ]
-  pruneopts = "NUT"
   revision = "f504738125a57f35f87fc30fb69b8df75237ccde"
 
 [[projects]]
   branch = "master"
-  digest = "1:2a1bbe57bb2602803e0f142d88453b0d9fec89e496aaa2cd8807bcae2e05a4a7"
   name = "github.com/vishvananda/netns"
   packages = ["."]
-  pruneopts = "NUT"
   revision = "13995c7128ccc8e51e9a6bd2b551020a27180abd"
 
 [[projects]]
   branch = "master"
-  digest = "1:69458fde745988d318e90cd314cb26e139a50eb160ce9169a92574d57a8854f1"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -232,39 +293,33 @@
     "poly1305",
     "ripemd160",
     "sha3",
-    "ssh",
+    "ssh"
   ]
-  pruneopts = "NUT"
   revision = "38d8ce5564a5b71b2e3a00553993f1b9a7ae852f"
 
 [[projects]]
   branch = "master"
-  digest = "1:cd54f1899e8e8769b9bc7c4922fc44c8c62a54cf63753b228b9c59d42e7ea0e5"
   name = "golang.org/x/net"
   packages = [
     "bpf",
     "internal/iana",
     "internal/socket",
-    "ipv4",
+    "ipv4"
   ]
-  pruneopts = "NUT"
   revision = "eb5bcb51f2a31c7d5141d810b70815c05d9c9146"
 
 [[projects]]
   branch = "master"
-  digest = "1:a26ebff2301ac8a4c8cedfec085e8190b035a7eec6b5614b7501f4714138a679"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
-    "windows",
+    "windows"
   ]
-  pruneopts = "NUT"
-  revision = "4b34438f7a67ee5f45cc6132e2bad873a20324e9"
+  revision = "0ad05ae3009d6413d3363aa09b350b2ec37daf09"
 
 [[projects]]
   branch = "master"
-  digest = "1:797d26136f04e8b3731c21e7ed71cd881d95325f46d81f8a6bc24b1c80cb0e8a"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -277,67 +332,28 @@
     "internal/fastwalk",
     "internal/gopathwalk",
     "internal/module",
-    "internal/semver",
+    "internal/semver"
   ]
-  pruneopts = "NUT"
   revision = "0fdf0c73855bae8482c5d3907a9e06f33ff70a10"
 
 [[projects]]
-  digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
   name = "google.golang.org/grpc"
   packages = ["codes"]
-  pruneopts = "NUT"
   revision = "3507fb8e1a5ad030303c106fef3a47c9fdad16ad"
   version = "v1.19.1"
 
 [[projects]]
-  digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"
   name = "pack.ag/tftp"
   packages = [
     ".",
-    "netascii",
+    "netascii"
   ]
-  pruneopts = "NUT"
   revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
   version = "v1.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/beevik/ntp",
-    "github.com/dustin/go-humanize",
-    "github.com/gliderlabs/ssh",
-    "github.com/go-test/deep",
-    "github.com/google/go-tpm/tpm",
-    "github.com/google/goexpect",
-    "github.com/gorilla/mux",
-    "github.com/insomniacslk/dhcp/dhcpv4",
-    "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
-    "github.com/insomniacslk/dhcp/dhcpv6",
-    "github.com/insomniacslk/dhcp/dhcpv6/nclient6",
-    "github.com/klauspost/pgzip",
-    "github.com/kr/pty",
-    "github.com/mattn/go-isatty",
-    "github.com/nsf/termbox-go",
-    "github.com/rck/unit",
-    "github.com/spf13/pflag",
-    "github.com/u-root/dhcp4/dhcp4server",
-    "github.com/vishvananda/netlink",
-    "golang.org/x/crypto/ed25519",
-    "golang.org/x/crypto/md4",
-    "golang.org/x/crypto/openpgp",
-    "golang.org/x/crypto/openpgp/errors",
-    "golang.org/x/crypto/openpgp/packet",
-    "golang.org/x/crypto/pbkdf2",
-    "golang.org/x/crypto/ripemd160",
-    "golang.org/x/crypto/sha3",
-    "golang.org/x/crypto/ssh",
-    "golang.org/x/sys/unix",
-    "golang.org/x/sys/windows",
-    "golang.org/x/tools/go/ast/astutil",
-    "golang.org/x/tools/imports",
-    "pack.ag/tftp",
-  ]
+  inputs-digest = "70f9b275b63642ca0263eb81ee5b9ead324072d8ed1f1274a507dbeb437764ba"
   solver-name = "gps-cdcl"
   solver-version = 1
