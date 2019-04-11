@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 
@@ -24,9 +23,12 @@ func addrAdd(iface *net.Interface, addr *net.IPNet) error {
 	}
 	ones, _ := addr.Mask.Size()
 
-	brd, err := broadcastAddr(addr)
-	if err != nil {
-		return err
+	var brd net.IP
+	if addr.IP.To4() != nil {
+		brd, err = broadcastAddr(addr)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = conn.Address.New(&rtnetlink.AddressMessage{
@@ -390,10 +392,9 @@ var linkStates = map[rtnetlink.OperationalState]string{
 	rtnetlink.OperStateUp:             "up",
 }
 
-// TODO: fix this to work for ipv6 too
 func broadcastAddr(n *net.IPNet) (net.IP, error) {
 	if n.IP.To4() == nil {
-		return net.IP{}, errors.New("does not support IPv6 addresses.")
+		return net.IP{}, fmt.Errorf("does not support IPv6 addresses.")
 	}
 	ip := make(net.IP, len(n.IP.To4()))
 	binary.BigEndian.PutUint32(ip, binary.BigEndian.Uint32(n.IP.To4())|^binary.BigEndian.Uint32(net.IP(n.Mask).To4()))
