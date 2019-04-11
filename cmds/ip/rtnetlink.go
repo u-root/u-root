@@ -131,8 +131,33 @@ func routeAdd(iface *net.Interface, dst net.IPNet, gw net.IP) error {
 	return nil
 }
 
-func neighList(iface *net.Interface, family uint8) ([]rtnetlink.NeighMessage, error) {
-	return nil, nil
+func neighList(iface *net.Interface, family uint16) ([]rtnetlink.NeighMessage, error) {
+	conn, err := rtnetlink.Dial(nil)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	msg, err := conn.Neigh.List()
+	if err != nil {
+		return nil, err
+	}
+
+	var neigh []rtnetlink.NeighMessage
+	for _, v := range msg {
+		add := true
+		if iface != nil && v.Index != uint32(iface.Index) {
+			add = false
+		}
+		if family != 0 && v.Family != family {
+			add = false
+		}
+		if add {
+			neigh = append(neigh, v)
+		}
+	}
+
+	return neigh, nil
 }
 
 var flagNames = map[int]string{

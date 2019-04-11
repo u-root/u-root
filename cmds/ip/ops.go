@@ -92,7 +92,7 @@ func showNeighbours(w io.Writer, withAddresses bool) error {
 		return err
 	}
 	for _, iface := range ifaces {
-		neighs, err := neighList(&iface, 0)
+		neighs, err := neighList(&iface, unix.AF_INET)
 		if err != nil {
 			return fmt.Errorf("Can't list neighbours? %v", err)
 		}
