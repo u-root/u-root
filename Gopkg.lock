@@ -75,7 +75,7 @@
   branch = "master"
   name = "github.com/jsimonetti/rtnetlink"
   packages = ["."]
-  revision = "9c928e1cf777fc0f98eef3ad8d078e628ca8a5fb"
+  revision = "00c3908f53782802e518ee7b06882e6feeab88a3"
 
 [[projects]]
   name = "github.com/klauspost/compress"

@@ -20,9 +20,9 @@ var (
 var _ Message = &RouteMessage{}
 
 type RouteMessage struct {
-	Family    uint8 // Address family (current AFInet or AFInet6)
-	DstLength uint8 // Length of destination
-	SrcLength uint8 // Length of source
+	Family    uint8 // Address family (current unix.AF_INET or unix.AF_INET6)
+	DstLength uint8 // Length of destination prefix
+	SrcLength uint8 // Length of source prefix
 	Tos       uint8 // TOS filter
 	Table     uint8 // Routing table ID
 	Protocol  uint8 // Routing protocol
@@ -35,26 +35,6 @@ type RouteMessage struct {
 
 func (m *RouteMessage) MarshalBinary() ([]byte, error) {
 	b := make([]byte, unix.SizeofRtMsg)
-
-	// ensure that DstLength and SrcLength are correct
-	if m.Attributes.Dst != nil {
-		if m.Attributes.Dst.To4() != nil {
-			m.DstLength = 32
-		} else if m.Attributes.Dst.To16() != nil {
-			m.DstLength = 128
-		} else {
-			return nil, errInvalidRouteMessageAttr
-		}
-	}
-	if m.Attributes.Src != nil {
-		if m.Attributes.Src.To4() != nil {
-			m.SrcLength = 32
-		} else if m.Attributes.Src.To16() != nil {
-			m.SrcLength = 128
-		} else {
-			return nil, errInvalidRouteMessageAttr
-		}
-	}
 
 	b[0] = m.Family
 	b[1] = m.DstLength

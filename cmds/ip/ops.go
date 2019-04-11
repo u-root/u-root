@@ -51,11 +51,11 @@ func showLinkAddresses(w io.Writer, link *net.Interface) error {
 			return fmt.Errorf("Can't figure out IP protocol version")
 		}
 
-		fmt.Fprintf(w, "    %s %s", inet, addr.Attributes.Address)
+		fmt.Fprintf(w, "    %s %s/%d", inet, addr.Attributes.Address, addr.PrefixLength)
 		if addr.Attributes.Broadcast != nil {
 			fmt.Fprintf(w, " brd %s", addr.Attributes.Broadcast)
 		}
-		fmt.Fprintf(w, " scope %s %s\n", addrScopes[addr.Scope], addr.Attributes.Label)
+		fmt.Fprintf(w, " scope %s %s %s\n", addrScopes[addr.Scope], addrFlags(addr.Attributes.Flags), addr.Attributes.Label)
 
 		var validLft, preferredLft string
 		if addr.Attributes.CacheInfo.Prefered == math.MaxUint32 {

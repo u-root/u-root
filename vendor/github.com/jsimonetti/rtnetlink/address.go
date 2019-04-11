@@ -22,7 +22,7 @@ var _ Message = &AddressMessage{}
 
 // A AddressMessage is a route netlink address message.
 type AddressMessage struct {
-	// Address family (current AFInet or AFInet6)
+	// Address family (current unix.AF_INET or unix.AF_INET6)
 	Family uint8
 
 	// Prefix length
@@ -102,15 +102,8 @@ func (a *AddressService) New(req *AddressMessage) error {
 	return nil
 }
 
-// Delete removes an address by ip and interface index.
-func (a *AddressService) Delete(address net.IP, index uint32) error {
-	req := &AddressMessage{
-		Index: index,
-		Attributes: AddressAttributes{
-			Address: address,
-		},
-	}
-
+// Delete removes an address using the AddressMessage information.
+func (a *AddressService) Delete(req *AddressMessage) error {
 	flags := netlink.Request | netlink.Acknowledge
 	_, err := a.c.Execute(req, unix.RTM_DELADDR, flags)
 	if err != nil {

@@ -157,29 +157,13 @@ func unpackMessages(msgs []netlink.Message) ([]Message, error) {
 	for _, nm := range msgs {
 		var m Message
 		switch nm.Header.Type {
-		case unix.RTM_GETLINK:
-			fallthrough
-		case unix.RTM_NEWLINK:
-			fallthrough
-		case unix.RTM_DELLINK:
+		case unix.RTM_GETLINK, unix.RTM_NEWLINK, unix.RTM_DELLINK:
 			m = &LinkMessage{}
-		case unix.RTM_GETADDR:
-			fallthrough
-		case unix.RTM_NEWADDR:
-			fallthrough
-		case unix.RTM_DELADDR:
+		case unix.RTM_GETADDR, unix.RTM_NEWADDR, unix.RTM_DELADDR:
 			m = &AddressMessage{}
-		case unix.RTM_GETROUTE:
-			fallthrough
-		case unix.RTM_NEWROUTE:
-			fallthrough
-		case unix.RTM_DELROUTE:
+		case unix.RTM_GETROUTE, unix.RTM_NEWROUTE, unix.RTM_DELROUTE:
 			m = &RouteMessage{}
-		case unix.RTM_GETNEIGH:
-			fallthrough
-		case unix.RTM_NEWNEIGH:
-			fallthrough
-		case unix.RTM_DELNEIGH:
+		case unix.RTM_GETNEIGH, unix.RTM_NEWNEIGH, unix.RTM_DELNEIGH:
 			m = &NeighMessage{}
 		default:
 			continue
