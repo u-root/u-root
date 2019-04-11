@@ -22,10 +22,10 @@ func showLinks(w io.Writer, withAddresses bool) error {
 
 	for _, l := range ifaces {
 		fmt.Fprintf(w, "%d: %s: <%s> mtu %d state %s\n", l.Index, l.Attributes.Name,
-			strings.Replace(strings.ToUpper(fmt.Sprintf("%x", l.Flags)), "|", ",", -1),
-			l.Attributes.MTU, strings.ToUpper(string(l.Attributes.OperationalState)))
+			linkFlags(l.Flags),
+			l.Attributes.MTU, linkStates[l.Attributes.OperationalState])
 
-		fmt.Fprintf(w, "    link/%x %s\n", l.Type, l.Attributes.Address)
+		fmt.Fprintf(w, "    link/%s %s\n", encapType(l.Type), l.Attributes.Address)
 
 		if withAddresses {
 			showLinkAddresses(w, &net.Interface{Index: int(l.Index)})
