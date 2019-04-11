@@ -228,14 +228,15 @@ func routeAdd(iface *net.Interface, dst net.IPNet, gw net.IP) error {
 	if gw == nil {
 		attr.Gateway = gw
 	}
+	ones, _ := dst.Mask.Size()
 
-	// TODO: fix this code
 	err = conn.Route.Add(&rtnetlink.RouteMessage{
 		Family:     unix.AF_INET,
 		Table:      unix.RT_TABLE_MAIN,
 		Protocol:   unix.RTPROT_BOOT,
 		Scope:      unix.RT_SCOPE_LINK,
 		Type:       unix.RTN_UNICAST,
+		DstLength:  uint8(ones),
 		Attributes: attr,
 	})
 
