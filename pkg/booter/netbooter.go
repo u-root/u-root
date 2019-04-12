@@ -78,6 +78,13 @@ func (nb *NetBooter) Boot() error {
 	if nb.Retries != nil {
 		bootcmd = append(bootcmd, "-retries", strconv.Itoa(*nb.Retries))
 	}
+	if nb.Method == "dhcpv6" {
+		bootcmd = append(bootcmd, []string{"-6=true", "-4=false"}...)
+	} else if nb.Method == "dhcpv4" {
+		bootcmd = append(bootcmd, []string{"-6=false", "-4=true"}...)
+	} else {
+		return fmt.Errorf("netboot: unknown method %s", nb.Method)
+	}
 	log.Printf("Executing command: %v", bootcmd)
 	cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
