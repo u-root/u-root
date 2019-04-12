@@ -13,17 +13,19 @@ import (
 	"strings"
 )
 
-// ExtractDir extracts all the contents of the tar file to the given directory.
-func ExtractDir(tarFile io.Reader, dir string) error {
-	return ExtractDirFilter(tarFile, dir, NoFilter)
+// passesFilters returns true if the given file passes all filters, false otherwise.
+func passesFilters(hdr *tar.Header, filters []Filter) bool {
+	for _, filter := range filters {
+		if !filter(hdr) {
+			return false
+		}
+	}
+	return true
 }
 
-// ExtractDirFilter extracts a tar file with the given filter.
-func ExtractDirFilter(tarFile io.Reader, dir string, filter Filter) error {
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-		return fmt.Errorf("could not stat directory %s: %v", dir, err)
-	}
-
+// applyToArchive applies function f to all files in the given archive
+func applyToArchive(
+	tarFile io.Reader, f func(tr *tar.Reader, hdr *tar.Header) error) error {
 	tr := tar.NewReader(tarFile)
 	for {
 		hdr, err := tr.Next()
@@ -33,58 +35,85 @@ func ExtractDirFilter(tarFile io.Reader, dir string, filter Filter) error {
 		if err != nil {
 			return err
 		}
-		if !filter(hdr) {
-			continue
-		}
-		if err := createFileInRoot(hdr, tr, dir); err != nil {
+		if err := f(tr, hdr); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// CreateDir creates a new tar file with all the contents of a directory.
-func CreateDir(tarFile io.Writer, dir string) error {
-	return CreateDirFilter(tarFile, dir, NoFilter)
+// ListArchive lists the contents of the given tar archive.
+func ListArchive(tarFile io.Reader) error {
+	return applyToArchive(tarFile, func(tr *tar.Reader, hdr *tar.Header) error {
+		fmt.Println(hdr.Name)
+		return nil
+	})
 }
 
-// CreateDirFilter creates a new tar file with the given filter.
-func CreateDirFilter(tarFile io.Writer, dir string, filter Filter) error {
-	tw := tar.NewWriter(tarFile)
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		symlink := ""
-		if info.Mode()&os.ModeSymlink != 0 {
-			// TODO: symlinks
-			return fmt.Errorf("symlinks not yet supported: %q", path)
-		}
-		hdr, err := tar.FileInfoHeader(info, symlink)
-		if err != nil {
-			return err
-		}
-		hdr.Name = path
-		if !filter(hdr) {
+// ExtractDir extracts all the contents of the tar file to the given directory.
+func ExtractDir(tarFile io.Reader, dir string) error {
+	return ExtractDirFilter(tarFile, dir, nil)
+}
+
+// ExtractDirFilter extracts a tar file with the given filter.
+func ExtractDirFilter(tarFile io.Reader, dir string, filters []Filter) error {
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return fmt.Errorf("could not stat directory %s: %v", dir, err)
+	}
+
+	return applyToArchive(tarFile, func(tr *tar.Reader, hdr *tar.Header) error {
+		if !passesFilters(hdr, filters) {
 			return nil
 		}
-		if err := tw.WriteHeader(hdr); err != nil {
-			return err
-		}
-		switch hdr.Typeflag {
-		case tar.TypeLink, tar.TypeSymlink, tar.TypeChar, tar.TypeBlock, tar.TypeDir, tar.TypeFifo:
-		default:
-			f, err := os.Open(path)
+		return createFileInRoot(hdr, tr, dir)
+	})
+}
+
+// CreateDirs creates a new tar file with all the contents of a directory.
+func CreateDirs(tarFile io.Writer, dirs []string) error {
+	return CreateDirsFilter(tarFile, dirs, nil)
+}
+
+// CreateDirsFilter creates a new tar file with the given filter.
+func CreateDirsFilter(tarFile io.Writer, dirs []string, filters []Filter) error {
+	tw := tar.NewWriter(tarFile)
+	for _, dir := range dirs {
+		err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			symlink := ""
+			if info.Mode()&os.ModeSymlink != 0 {
+				// TODO: symlinks
+				return fmt.Errorf("symlinks not yet supported: %q", path)
+			}
+			hdr, err := tar.FileInfoHeader(info, symlink)
 			if err != nil {
 				return err
 			}
-			if _, err := io.Copy(tw, f); err != nil {
-				f.Close()
+			hdr.Name = path
+			if !passesFilters(hdr, filters) {
+				return nil
+			}
+			if err := tw.WriteHeader(hdr); err != nil {
 				return err
 			}
-			f.Close()
+			switch hdr.Typeflag {
+			case tar.TypeLink, tar.TypeSymlink, tar.TypeChar, tar.TypeBlock, tar.TypeDir, tar.TypeFifo:
+			default:
+				f, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				if _, err := io.Copy(tw, f); err != nil {
+					f.Close()
+					return err
+				}
+				f.Close()
+				// TODO add to a list?
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 	if err := tw.Close(); err != nil {
 		return err

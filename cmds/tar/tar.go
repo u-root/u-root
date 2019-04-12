@@ -5,18 +5,21 @@
 // Create and extract tar archives.
 //
 // Synopsis:
-//     tar [-cxvf] DIRECTORY
+//     tar [OPTION...] [FILE]...
 //
 // Description:
-//     There are only two ways to use this command line:
-//        tar -cvf x.tar directory/  # create
-//        tar -xvf x.tar directory/  # extract
+//     This command line can be used only in the following ways:
+//        tar -cvf x.tar directory/         # create
+//        tar -cvf x.tar file1 file2 ...    # create
+//        tar -tvf x.tar                    # list
+//        tar -xvf x.tar directory/         # extract
 //
 // Options:
 //     -c: create a new tar archive from the given directory
 //     -x: extract a tar archive to the given directory
 //     -v: verbose, print each filename (optional)
 //     -f: tar filename (required)
+//     -t: list the contents of an archive
 //
 // TODO: The arguments deviates slightly from gnu tar.
 package main
@@ -34,18 +37,10 @@ var (
 	extract = flag.BoolP("extract", "x", false, "extract a tar archive from the given directory")
 	verbose = flag.BoolP("verbose", "v", false, "print each filename")
 	file    = flag.StringP("file", "f", "", "tar file")
+	list    = flag.BoolP("list", "t", false, "list the contents of an archive")
 )
 
 func main() {
-	flag.Parse()
-	if flag.NArg() != 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	if !*create && !*extract {
-		log.Fatal("must supply at least one of -c or -x")
-	}
 	if *create && *extract {
 		log.Fatal("cannot supply both -c and -x")
 	}
@@ -54,31 +49,42 @@ func main() {
 		log.Fatal("tar filename is required")
 	}
 
-	filter := tar.NoFilter
+	var filters []tar.Filter
 	if *verbose {
-		filter = tar.VerboseFilter
+		filters = []tar.Filter{tar.VerboseFilter}
 	}
 
-	if *create {
+	switch {
+	case *create:
 		f, err := os.Create(*file)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := tar.CreateDirFilter(f, flag.Arg(0), filter); err != nil {
+		if err := tar.CreateDirsFilter(f, flag.Args(), filters); err != nil {
 			f.Close()
 			log.Fatal(err)
 		}
 		if err := f.Close(); err != nil {
 			log.Fatal(err)
 		}
-	} else {
+	case *extract:
+		if flag.NArg() != 1 {
+			flag.Usage()
+			os.Exit(1)
+		}
 		f, err := os.Open(*file)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		if err := tar.ExtractDirFilter(f, flag.Arg(0), filter); err != nil {
+		if err := tar.ExtractDirFilter(f, flag.Arg(0), filters); err != nil {
 			log.Fatal(err)
 		}
+	case *list:
+		if err := tar.ListArchive(f); err != nil {
+			log.Fatal(err)
+		}
+	default:
+		log.Fatal("must supply at least one of: -c, -x, -t")
 	}
 }
