@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
@@ -37,7 +36,7 @@ var (
 	readTimeout        = flag.Int("timeout", 3, "Read timeout in seconds")
 	dhcpRetries        = flag.Int("retries", 3, "Number of times a DHCP request is retried")
 	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
-	caCertFile         = flag.String("cacerts", "", "Base64 encoded CA cert file")
+	caCertFile         = flag.String("cacerts", "/etc/cacerts.pem", "CA cert file")
 	skipCertVerify     = flag.Bool("skip-cert-verify", false, "Don't authenticate https certs")
 )
 
@@ -265,22 +264,16 @@ func loadCaCerts() (*x509.CertPool, error) {
 		debug("certs: rootCAs == nil")
 		rootCAs = x509.NewCertPool()
 	}
-	base64Certs, err := ioutil.ReadFile(*caCertFile)
+	caCerts, err := ioutil.ReadFile(*caCertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not find cert file '%v' - %v", *caCertFile, err)
 	}
 	// TODO: Decide if this should also support compressed certs
 	// Might be better to have a generic compressed config API
-	decLen := base64.StdEncoding.DecodedLen(len(base64Certs))
-	certs := make([]byte, decLen)
-	n, err := base64.StdEncoding.Decode(certs, base64Certs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to append %s to RootCAs: %v", *caCertFile, err)
-	}
-	if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-		debug("No certs extracted from VPD, using system certs only")
+	if ok := rootCAs.AppendCertsFromPEM(caCerts); !ok {
+		debug("Failed to append CA Certs from %s, using system certs only", *caCertFile)
 	} else {
-		debug("%d bytes of certs extrated from VPD", n)
+		debug("CA certs appended from PEM")
 	}
 	return rootCAs, nil
 
