@@ -3,5 +3,7 @@ localboot/localboot
 localboot/.bb
 netboot/netboot
 netboot/.bb
+cmds/vpdbootmanager/vpdbootmanager
+cmds/fixmynetboot/fixmynetboot
 uinit/uinit
 uinit/.bb
