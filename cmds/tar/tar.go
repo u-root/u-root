@@ -41,8 +41,14 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	if *create && *extract {
 		log.Fatal("cannot supply both -c and -x")
+	} else if *create && *list {
+		log.Fatal("cannot supply both -c and -t")
+	} else if *extract && *list {
+		log.Fatal("cannot supply both -x and -t")
 	}
 
 	if *file == "" {
@@ -60,7 +66,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := tar.CreateDirsFilter(f, flag.Args(), filters); err != nil {
+		if err := tar.CreateTarFilter(f, flag.Args(), filters); err != nil {
 			f.Close()
 			log.Fatal(err)
 		}
@@ -81,6 +87,11 @@ func main() {
 			log.Fatal(err)
 		}
 	case *list:
+		f, err := os.Open(*file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
 		if err := tar.ListArchive(f); err != nil {
 			log.Fatal(err)
 		}

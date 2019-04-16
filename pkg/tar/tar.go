@@ -69,16 +69,16 @@ func ExtractDirFilter(tarFile io.Reader, dir string, filters []Filter) error {
 	})
 }
 
-// CreateDirs creates a new tar file with all the contents of a directory.
-func CreateDirs(tarFile io.Writer, dirs []string) error {
-	return CreateDirsFilter(tarFile, dirs, nil)
+// CreateTar creates a new tar file with all the contents of a directory.
+func CreateTar(tarFile io.Writer, files []string) error {
+	return CreateTarFilter(tarFile, files, nil)
 }
 
-// CreateDirsFilter creates a new tar file with the given filter.
-func CreateDirsFilter(tarFile io.Writer, dirs []string, filters []Filter) error {
+// CreateTarFilter creates a new tar file of the given files, with the given filter.
+func CreateTarFilter(tarFile io.Writer, files []string, filters []Filter) error {
 	tw := tar.NewWriter(tarFile)
-	for _, dir := range dirs {
-		err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	for _, file := range files {
+		err := filepath.Walk(file, func(path string, info os.FileInfo, err error) error {
 			symlink := ""
 			if info.Mode()&os.ModeSymlink != 0 {
 				// TODO: symlinks
@@ -107,7 +107,6 @@ func CreateDirsFilter(tarFile io.Writer, dirs []string, filters []Filter) error 
 					return err
 				}
 				f.Close()
-				// TODO add to a list?
 			}
 			return nil
 		})
