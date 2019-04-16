@@ -48,7 +48,7 @@ func TestExtractDir(t *testing.T) {
 	}
 }
 
-func TestCreateDirsSingle(t *testing.T) {
+func TestCreateTarSingleFile(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "tartest")
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestCreateDirsSingle(t *testing.T) {
 	}
 	defer f.Close()
 
-	if err := CreateDirs(f, []string{"test0"}); err != nil {
+	if err := CreateTar(f, []string{"test0"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -80,7 +80,7 @@ test0/dir/b.txt
 	}
 }
 
-func TestCreateDirsMultiple(t *testing.T) {
+func TestCreateTarMultFiles(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "tartest")
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestCreateDirsMultiple(t *testing.T) {
 	defer f.Close()
 
 	files := []string{"test0", "test1", "test2.txt"}
-	if err := CreateDirs(f, files); err != nil {
+	if err := CreateTar(f, files); err != nil {
 		t.Fatal(err)
 	}
 
