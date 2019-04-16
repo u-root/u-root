@@ -1,4 +1,4 @@
-// Copyright 2017-2018 the u-root Authors. All rights reserved
+// Copyright 2017-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,6 +9,7 @@ package dhclient
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -23,9 +24,28 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/insomniacslk/dhcp/dhcpv6/nclient6"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 const linkUpAttempt = 30 * time.Second
+
+// isIpv6LinkReady returns true iff the interface has a link-local address
+// which is not tentative.
+func isIpv6LinkReady(l netlink.Link) (bool, error) {
+	addrs, err := netlink.AddrList(l, netlink.FAMILY_V6)
+	if err != nil {
+		return false, err
+	}
+	for _, addr := range addrs {
+		if addr.IP.IsLinkLocalUnicast() && (addr.Flags&unix.IFA_F_TENTATIVE == 0) {
+			if addr.Flags&unix.IFA_F_DADFAILED != 0 {
+				log.Printf("DADFAILED for %v, continuing anyhow", addr.IP)
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
 
 // IfUp ensures the given network interface is up and returns the link object.
 func IfUp(ifname string) (netlink.Link, error) {
@@ -126,6 +146,23 @@ func lease4(ctx context.Context, iface netlink.Link, timeout time.Duration, retr
 }
 
 func lease6(ctx context.Context, iface netlink.Link, timeout time.Duration, retries int) (Lease, error) {
+	// For ipv6, we cannot bind to the port until Duplicate Address
+	// Detection (DAD) is complete which is indicated by the link being no
+	// longer marked as "tentative". This usually takes about a second.
+	for {
+		if ready, err := isIpv6LinkReady(iface); err != nil {
+			return nil, err
+		} else if ready {
+			break
+		}
+		select {
+		case <-time.After(100 * time.Millisecond):
+			continue
+		case <-ctx.Done():
+			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
+		}
+	}
+
 	client, err := nclient6.New(iface.Attrs().Name,
 		nclient6.WithTimeout(timeout),
 		nclient6.WithRetry(retries))
