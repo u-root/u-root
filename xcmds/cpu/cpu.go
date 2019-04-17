@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2018-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -20,40 +20,52 @@ import (
 	"syscall"
 	"unsafe"
 
+	// We use this ssh because it implements port redirection.
+	// It can not, however, unpack password-protected keys yet.
+	"github.com/gliderlabs/ssh"
+	"github.com/kr/pty" // TODO: get rid of krpty
 	"github.com/u-root/u-root/pkg/termios"
-	"golang.org/x/crypto/ssh"
+	"github.com/u-root/u-root/pkg/uroot/util"
+	// We use this ssh because it can unpack password-protected private keys.
+	ossh "golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
 )
 
 var (
-	debug       = flag.Bool("d", false, "enable debug prints")
-	v           = func(string, ...interface{}) {}
-	remote      = flag.Bool("remote", false, "Indicates we are the remote side of the cpu session")
-	network     = flag.String("network", "tcp", "network to use")
-	host        = flag.String("h", "localhost", "host to use")
-	port        = flag.String("p", "22", "port to use")
-	keyFile     = flag.String("key", filepath.Join(os.Getenv("HOME"), ".ssh/cpu_rsa"), "key file")
-	hostKeyFile = flag.String("hostkey", "" /*filepath.Join(os.Getenv("HOME"), ".ssh/hostkeyfile"), */, "host key file")
-	srv9p       = flag.String("srv", "unpfs", "what server to run")
-	bin         = flag.String("bin", "cpu", "path of cpu binary")
-	port9p      = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
-	dbg9p       = flag.Bool("dbg9p", false, "show 9p io")
+	// For the ssh server part
+	hostKeyFile = flag.String("hk", "" /*"/etc/ssh/ssh_host_rsa_key"*/, "file for host key")
+	pubKeyFile  = flag.String("pk", "key.pub", "file for public key")
+	port        = flag.String("sp", "2222", "ssh default port")
+
+	debug     = flag.Bool("d", false, "enable debug prints")
+	runAsInit = flag.Bool("init", false, "run as init (Debug only; normal test is if we are pid 1")
+	v         = func(string, ...interface{}) {}
+	remote    = flag.Bool("remote", false, "indicates we are the remote side of the cpu session")
+	network   = flag.String("network", "tcp", "network to use")
+	host      = flag.String("h", "localhost", "host to use")
+	keyFile   = flag.String("key", filepath.Join(os.Getenv("HOME"), ".ssh/cpu_rsa"), "key file")
+	srv9p     = flag.String("srv", "unpfs", "what server to run")
+	bin       = flag.String("bin", "cpu", "path of cpu binary")
+	port9p    = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
+	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
+	root      = flag.String("root", "/", "9p root")
+	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": seperated list of directories in /tmp/cpu to bind over /")
 )
 
 func verbose(f string, a ...interface{}) {
 	v(f+"\r\n", a...)
 }
 
-func dial(n, a string, config *ssh.ClientConfig) (*ssh.Client, error) {
-	client, err := ssh.Dial(n, a, config)
+func dial(n, a string, config *ossh.ClientConfig) (*ossh.Client, error) {
+	client, err := ossh.Dial(n, a, config)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial: %v", err)
 	}
 	return client, nil
 }
 
-func config(kf string) (*ssh.ClientConfig, error) {
-	cb := ssh.InsecureIgnoreHostKey()
+func config(kf string) (*ossh.ClientConfig, error) {
+	cb := ossh.InsecureIgnoreHostKey()
 	//var hostKey ssh.PublicKey
 	// A public key may be used to authenticate against the remote
 	// server by using an unencrypted PEM-encoded private key file.
@@ -66,26 +78,33 @@ func config(kf string) (*ssh.ClientConfig, error) {
 	}
 
 	// Create the Signer for this private key.
-	signer, err := ssh.ParsePrivateKey(key)
+	signer, err := ossh.ParsePrivateKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("ParsePrivateKey %v: %v", kf, err)
 	}
 	if *hostKeyFile != "" {
-		return nil, fmt.Errorf("no support for hostkeyfile arg yet")
-		//cb = ssh.FixedHostKey(hostKeyFile)
+		hk, err := ioutil.ReadFile(*hostKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read host key %v: %v", *hostKeyFile, err)
+		}
+		pk, err := ossh.ParsePublicKey(hk)
+		if err != nil {
+			return nil, fmt.Errorf("host key %v: %v", string(hk), err)
+		}
+		cb = ossh.FixedHostKey(pk)
 	}
-	config := &ssh.ClientConfig{
+	config := &ossh.ClientConfig{
 		User: os.Getenv("USER"),
-		Auth: []ssh.AuthMethod{
+		Auth: []ossh.AuthMethod{
 			// Use the PublicKeys method for remote authentication.
-			ssh.PublicKeys(signer),
+			ossh.PublicKeys(signer),
 		},
 		HostKeyCallback: cb,
 	}
 	return config, nil
 }
 
-func cmd(client *ssh.Client, s string) ([]byte, error) {
+func cmd(client *ossh.Client, s string) ([]byte, error) {
 	session, err := client.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create session: %v", err)
@@ -120,7 +139,7 @@ func dropPrivs() error {
 // issue the mount command
 // test via an ls of /tmp/cpu
 // TODO: unshare first
-// We enter here are uid 0 and once the mount is done, back down.
+// We enter here as uid 0 and once the mount is done, back down.
 func runRemote(cmd, port9p string) error {
 	// for some reason echo is not set.
 	t, err := termios.New()
@@ -140,8 +159,10 @@ func runRemote(cmd, port9p string) error {
 
 	// It's true we are making this directory while still root.
 	// This ought to be safe as it is a private namespace mount.
-	if err := os.Mkdir("/tmp/cpu", 0666); err != nil && !os.IsExist(err) {
-		log.Println(err)
+	for _, n := range []string{"/tmp/cpu", "/tmp/local", "/tmp/merge", "/tmp/root"} {
+		if err := os.Mkdir(n, 0666); err != nil && !os.IsExist(err) {
+			log.Println(err)
+		}
 	}
 
 	user := os.Getenv("USER")
@@ -152,6 +173,37 @@ func runRemote(cmd, port9p string) error {
 	opts := fmt.Sprintf("version=9p2000.L,trans=tcp,port=%v,uname=%v", port9p, user)
 	if err := unix.Mount("127.0.0.1", "/tmp/cpu", "9p", flags, opts); err != nil {
 		return fmt.Errorf("9p mount %v", err)
+	}
+
+	// Further, bind / onto /tmp/local so a non-hacked-on version may be visible.
+	if err := unix.Mount("/", "/tmp/local", "", syscall.MS_BIND, ""); err != nil {
+		log.Printf("Warning: binding / over /tmp/cpu did not work: %v, continuing anyway", err)
+	}
+
+	var overlaid bool
+	if util.FindFileSystem("overlay") == nil {
+		if err := unix.Mount("overlay", "/tmp/root", "overlay", unix.MS_MGC_VAL, "lowerdir=/tmp/cpu,upperdir=/tmp/local,workdir=/tmp/merge"); err == nil {
+			//overlaid = true
+		} else {
+			log.Printf("Overlayfs mount failed: %v. Proceeding with selective mounts from /tmp/cpu into /", err)
+		}
+	}
+	if !overlaid {
+		// We could not get an overlayfs mount.
+		// There are lots of cases where binaries REQUIRE that ld.so be in the right place.
+		// In some cases if you set LD_LIBRARY_PATH it is ignored.
+		// This is disappointing to say the least. We just bind a few things into /
+		// bind *may* hide local resources but for now it's the least worst option.
+		dirs := strings.Split(*bindover, ":")
+		for _, n := range dirs {
+			t := filepath.Join("/tmp/cpu", n)
+			if err := unix.Mount(t, n, "", syscall.MS_BIND, ""); err != nil {
+				log.Printf("Warning: mounting %v on %v failed: %v", t, n, err)
+			} else {
+				log.Printf("Mounted %v on %v", t, n)
+			}
+
+		}
 	}
 	// We don't want to run as the wrong uid.
 	if err := dropPrivs(); err != nil {
@@ -168,7 +220,7 @@ func runRemote(cmd, port9p string) error {
 // TODO: make it more private, and also, have server only take
 // one connection or use stdin/stdout
 func srv(ctx context.Context) (net.Conn, *exec.Cmd, error) {
-	c := exec.CommandContext(ctx, "unpfs", "tcp!localhost!5641", os.Getenv("HOME"))
+	c := exec.CommandContext(ctx, "unpfs", "tcp!localhost!5641", *root)
 	o, err := c.StdoutPipe()
 	if err != nil {
 		return nil, nil, err
@@ -261,16 +313,17 @@ func runClient(a string) error {
 // will have no meaning to elvish. If there are simpler environment variables
 // you want to set, add them here. Note however that even basic ones like TERM
 // don't work either.
-func env(s *ssh.Session) {
-	e := []string{"HOME", "PATH"}
+func env(s *ossh.Session) {
+	e := []string{"HOME", "PATH", "LD_LIBRARY_PATH"}
 	// HOME and PATH are not allowed to be set by many sshds. Annoying.
-	for _, v := range e[2:] {
+	for _, v := range e {
 		if err := s.Setenv(v, os.Getenv(v)); err != nil {
 			log.Printf("Warning: s.Setenv(%q, %q): %v", v, os.Getenv(v), err)
 		}
 	}
 }
-func shell(client *ssh.Client, a, port9p string) error {
+
+func shell(client *ossh.Client, a, port9p string) error {
 	t, err := termios.New()
 	if err != nil {
 		return err
@@ -294,10 +347,10 @@ func shell(client *ssh.Client, a, port9p string) error {
 	defer session.Close()
 	env(session)
 	// Set up terminal modes
-	modes := ssh.TerminalModes{
-		ssh.ECHO:          0,     // disable echoing
-		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
-		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	modes := ossh.TerminalModes{
+		ossh.ECHO:          0,     // disable echoing
+		ossh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ossh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
 	}
 	// Request pseudo terminal
 	if err := session.RequestPty("ansi", 40, 80, modes); err != nil {
@@ -326,7 +379,8 @@ func shell(client *ssh.Client, a, port9p string) error {
 	// so does no harm. Our use case for elvish is u-root, and
 	// we will have the right path anyway, so it will still work.
 	// It is working well in testing.
-	cmd := fmt.Sprintf("PATH=$PATH:%s %s", os.Getenv("PATH"), a)
+	//	cmd := fmt.Sprintf("PATH=$PATH:%s %s", os.Getenv("PATH"), a)
+	cmd := a
 	v("Start remote with command %q", cmd)
 	if err := session.Start(cmd); err != nil {
 		return fmt.Errorf("Failed to run %v: %v", a, err.Error())
@@ -343,6 +397,10 @@ func shell(client *ssh.Client, a, port9p string) error {
 func init() {
 	flag.Parse()
 	if *debug {
+		v = log.Printf
+	}
+	if os.Getpid() == 1 {
+		*runAsInit, *debug = true, true
 		v = log.Printf
 	}
 	if *remote {
@@ -371,19 +429,183 @@ func init() {
 		}
 	}
 }
+
+func setWinsize(f *os.File, w, h int) {
+	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
+		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
+}
+
+// adjust adjusts environment variables containing paths from
+// / to /tmp/cpu. On Plan 9 this is done with a union mount.
+// PATH variables are the union mounts of Unix so we use them
+// instead.
+func adjust(env []string) []string {
+	var res []string
+	for _, e := range env {
+		n := strings.SplitN(e, "=", 2)
+		if len(n) < 2 {
+			res = append(res, e)
+			continue
+		}
+		v := strings.Split(n[1], ":")
+		for i := range v {
+			if filepath.IsAbs(v[i]) {
+				v[i] = filepath.Join("/tmp/cpu", v[i])
+			}
+		}
+		res = append(res, n[0]+"="+strings.Join(v, ":"))
+	}
+	return res
+}
+
+func handler(s ssh.Session) {
+	a := s.Command()
+	verbose("the handler is here, cmd is %v", a)
+	cmd := exec.Command(a[0], a[1:]...)
+	log.Printf("cmd.Env ius %v", cmd.Env)
+	adj := adjust(s.Environ())
+	log.Printf("s.Environt is %v, adjusted is %v", s.Environ(), adj)
+	cmd.Env = append(cmd.Env, adj...)
+	ptyReq, winCh, isPty := s.Pty()
+	verbose("the command is %v", *cmd)
+	if isPty {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
+		f, err := pty.Start(cmd)
+		verbose("command started with pty")
+		if err != nil {
+			log.Print(err)
+			return
+		}
+		go func() {
+			for win := range winCh {
+				setWinsize(f, win.Width, win.Height)
+			}
+		}()
+		go func() {
+			io.Copy(f, s) // stdin
+		}()
+		io.Copy(s, f) // stdout
+	} else {
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = s, s, s
+		verbose("running command without pty")
+		if err := cmd.Run(); err != nil {
+			log.Print(err)
+			return
+		}
+	}
+	verbose("handler exits")
+}
+
+func doInit() error {
+	if err := cpuSetup(); err != nil {
+		log.Printf("CPU setup error with cpu running as init: %v", err)
+	}
+	cmds := [][]string{[]string{"/bin/defaultsh"}, []string{"/bbin/dhclient", "-verbose"}}
+	verbose("Try to run %v", cmds)
+
+	for _, v := range cmds {
+		verbose("Let's try to run %v", v)
+		if _, err := os.Stat(v[0]); os.IsNotExist(err) {
+			verbose("it's not there")
+			continue
+		}
+
+		// I *love* special cases. Evaluate just the top-most symlink.
+		//
+		// In source mode, this would be a symlink like
+		// /buildbin/defaultsh -> /buildbin/elvish ->
+		// /buildbin/installcommand.
+		//
+		// To actually get the command to build, argv[0] has to end
+		// with /elvish, so we resolve one level of symlink.
+		if filepath.Base(v[0]) == "defaultsh" {
+			s, err := os.Readlink(v[0])
+			if err == nil {
+				v[0] = s
+			}
+			verbose("readlink of %v returns %v", v[0], s)
+			// and, well, it might be a relative link.
+			// We must go deeper.
+			d, b := filepath.Split(v[0])
+			d = filepath.Base(d)
+			v[0] = filepath.Join("/", os.Getenv("UROOT_ROOT"), d, b)
+			verbose("is now %v", v[0])
+		}
+
+		cmd := exec.Command(v[0], v[1:]...)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
+		verbose("Run %v", cmd)
+		if err := cmd.Start(); err != nil {
+			log.Printf("Error starting %v: %v", v, err)
+			continue
+		}
+	}
+	publicKeyOption := func(ctx ssh.Context, key ssh.PublicKey) bool {
+		// Glob the users's home directory for all the
+		// possible keys?
+		data, err := ioutil.ReadFile(*pubKeyFile)
+		if err != nil {
+			fmt.Print(err)
+			return false
+		}
+		allowed, _, _, _, _ := ssh.ParseAuthorizedKey(data)
+		return ssh.KeysEqual(key, allowed)
+	}
+
+	// Now we run as an ssh server, and each time we get a connection,
+	// we run that command after setting things up for it.
+	server := ssh.Server{
+		LocalPortForwardingCallback: ssh.LocalPortForwardingCallback(func(ctx ssh.Context, dhost string, dport uint32) bool {
+			log.Println("Accepted forward", dhost, dport)
+			return true
+		}),
+		Addr:             ":" + *port,
+		PublicKeyHandler: publicKeyOption,
+		ReversePortForwardingCallback: ssh.ReversePortForwardingCallback(func(ctx ssh.Context, host string, port uint32) bool {
+			log.Println("attempt to bind", host, port, "granted")
+			return true
+		}),
+		Handler: handler,
+	}
+
+	// start the process reaper
+	procs := make(chan int)
+	go cpuDone(procs)
+
+	server.SetOption(ssh.HostKeyFile(*hostKeyFile))
+	log.Println("starting ssh server on port " + *port)
+	if err := server.ListenAndServe(); err != nil {
+		log.Print(err)
+	}
+	verbose("server.ListenAndServer returned")
+
+	numprocs := <- procs
+	verbose("Reaped %d procs", numprocs)
+	return nil
+}
+
 func main() {
+	verbose("Args %v pid %d *runasinit %v *remote %v", os.Args, os.Getpid(), *runAsInit, *remote)
 	a := strings.Join(flag.Args(), " ")
-	if *remote {
+	switch {
+	case *runAsInit:
+		verbose("Running as Init")
+		if err := doInit(); err != nil {
+			log.Fatal(err)
+		}
+	case *remote:
+		verbose("Running as remote")
 		if err := runRemote(a, *port9p); err != nil {
 			log.Fatal(err)
 		}
-		return
+	default:
+		verbose("Running as client")
+		if a == "" {
+			a = os.Getenv("SHELL")
+		}
+		if err := runClient(a); err != nil {
+			log.Fatal(err)
+		}
 	}
-	if a == "" {
-		a = os.Getenv("SHELL")
-	}
-	if err := runClient(a); err != nil {
-		log.Fatal(err)
-	}
-
 }
