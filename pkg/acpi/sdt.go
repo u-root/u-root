@@ -177,7 +177,7 @@ func (s *SDT) MarshalAll(t ...Tabler) ([]byte, error) {
 // ReadSDT reads an SDT in from memory, using UnMarshalSDT, which uses
 // the io package. This is increasingly unlikely to work over time.
 func ReadSDT() (*SDT, error) {
-	r, err := GetRSDP()
+	_, r, err := GetRSDP()
 	if err != nil {
 		return nil, err
 	}

@@ -156,10 +156,10 @@ func readRSDP(base int64) (*RSDP, error) {
 	return r, nil
 }
 
-func getRSDPEFI() (*RSDP, error) {
+func getRSDPEFI() (int64, *RSDP, error) {
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
-		return nil, err
+		return -1, nil, err
 	}
 	defer file.Close()
 
@@ -181,16 +181,20 @@ func getRSDPEFI() (*RSDP, error) {
 		if start == "" {
 			continue
 		}
-		rsdp, err := strconv.ParseInt(start, 0, 64)
+		base, err := strconv.ParseInt(start, 0, 64)
 		if err != nil {
 			continue
 		}
-		return readRSDP(rsdp)
+		rsdp, err := readRSDP(base)
+		if err != nil {
+			continue
+		}
+		return base, rsdp, nil
 	}
 	if err := scanner.Err(); err != nil {
 		log.Printf("error while reading EFI systab: %v", err)
 	}
-	return nil, fmt.Errorf("invalid efi/systab file")
+	return -1, nil, fmt.Errorf("invalid efi/systab file")
 }
 
 func num(n string, i int) (uint64, error) {
@@ -205,7 +209,7 @@ func num(n string, i int) (uint64, error) {
 // getRSDPmem is the option of last choice, it just grovels through
 // the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
 // These are well-known addresses for 20+ years.
-func getRSDPmem() (*RSDP, error) {
+func getRSDPmem() (int64, *RSDP, error) {
 	for base := int64(0xe0000); base < 0xffff0; base += 16 {
 		var r io.Uint64
 		if err := io.Read(base, &r); err != nil {
@@ -214,23 +218,27 @@ func getRSDPmem() (*RSDP, error) {
 		if r != 0x2052545020445352 {
 			continue
 		}
-		return readRSDP(base)
+		rsdp, err := readRSDP(base)
+		if err != nil {
+			return -1, nil, err
+		}
+		return base, rsdp, nil
 	}
-	return nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
+	return -1, nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
 }
 
 // You can change the getters if you wish for testing.
-var getters = []func() (*RSDP, error){getRSDPEFI, getRSDPmem}
+var getters = []func() (int64, *RSDP, error){getRSDPEFI, getRSDPmem}
 
 // GetRSDP gets an RSDP.
 // It is able to use several methods, because there is no consistency
-// about how it is done.
-func GetRSDP() (*RSDP, error) {
+// about how it is done. The base is also returned.
+func GetRSDP() (base int64, rsdp *RSDP, err error) {
 	for _, f := range getters {
-		r, err := f()
+		base, r, err := f()
 		if err == nil {
-			return r, nil
+			return base, r, nil
 		}
 	}
-	return nil, fmt.Errorf("Can't find an RSDP")
+	return -1, nil, fmt.Errorf("Can't find an RSDP")
 }
