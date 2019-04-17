@@ -27,6 +27,7 @@ func main() {
 		Check{"wlp2s0 exists", interfaceExists("wlp2s0"), nil, false},
 		Check{"eth0 exists", interfaceExists("eth0"), interfaceRemediate("eth0"), false},
 		Check{"eth0 has link-local", interfaceHasLinkLocalAddress("wlp2s0"), nil, false},
+		Check{"eth0 has global addresses", interfaceHasGlobalAddresses("wlp2s0"), nil, false},
 	}
 
 	for idx, check := range checklist {

@@ -13,26 +13,53 @@ func interfaceExists(ifname string) Checker {
 	}
 }
 
+func addresses(ifname string) ([]net.IP, error) {
+	iface, err := net.InterfaceByName(ifname)
+	if err != nil {
+		return nil, err
+	}
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return nil, err
+	}
+	iplist := make([]net.IP, 0)
+	for _, addr := range addrs {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok {
+			return nil, errors.New("not a net.IPNet")
+		}
+		iplist = append(iplist, ipnet.IP)
+	}
+	return iplist, nil
+}
+
 func interfaceHasLinkLocalAddress(ifname string) Checker {
 	return func() error {
-		iface, err := net.InterfaceByName(ifname)
-		if err != nil {
-			return err
-		}
-		addrs, err := iface.Addrs()
+		addrs, err := addresses(ifname)
 		if err != nil {
 			return err
 		}
 		for _, addr := range addrs {
-			ipnet, ok := addr.(*net.IPNet)
-			if !ok {
-				return errors.New("not a net.IPNet")
-			}
-			if ipnet.IP.IsLinkLocalUnicast() {
+			if addr.IsLinkLocalUnicast() {
 				return nil
 			}
 		}
 		return fmt.Errorf("no link local addresses for interface %s", ifname)
+	}
+}
+
+func interfaceHasGlobalAddresses(ifname string) Checker {
+	return func() error {
+		addrs, err := addresses(ifname)
+		if err != nil {
+			return err
+		}
+		for _, addr := range addrs {
+			if addr.IsGlobalUnicast() {
+				return nil
+			}
+		}
+		return fmt.Errorf("no unicast global addresses for interface %s", ifname)
 	}
 }
 
