@@ -23,7 +23,7 @@ func pathRead(path string, addr int64, data UintN) error {
 	}
 	defer f.Close()
 
-	if _, err := f.Seek(addr, io.SeekCurrent); err != nil {
+	if _, err := f.Seek(addr, io.SeekStart); err != nil {
 		return err
 	}
 	return binary.Read(f, ubinary.NativeEndian, data)
@@ -42,7 +42,7 @@ func pathWrite(path string, addr int64, data UintN) error {
 	}
 	defer f.Close()
 
-	if _, err := f.Seek(addr, io.SeekCurrent); err != nil {
+	if _, err := f.Seek(addr, io.SeekStart); err != nil {
 		return err
 	}
 	return binary.Write(f, ubinary.NativeEndian, data)
