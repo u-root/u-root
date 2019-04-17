@@ -18,7 +18,7 @@ func TestSDT(t *testing.T) {
 		t.Logf("NOT root, skipping")
 		t.Skip()
 	}
-	r, err := GetRSDP()
+	_, r, err := GetRSDP()
 	if err != nil {
 		t.Fatalf("TestSDT GetRSDP: got %v, want nil", err)
 	}

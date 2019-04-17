@@ -176,7 +176,7 @@ func (m *Multiboot) ACPITable(t ...acpi.Tabler) error {
 	// NewSDT won't work on some linux kernels that limit reading
 	// above 1m. So we have to read the rsdp, which seems ok; then cons up
 	// a new SDT from scratch, since there is not one in /sys.
-	r, err := acpi.GetRSDP()
+	_, r, err := acpi.GetRSDP()
 	if err != nil {
 		return err
 	}

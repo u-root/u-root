@@ -23,7 +23,7 @@ import (
 	"log"
 
 	flag "github.com/spf13/pflag"
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/acpi"
 )
 
 var (
@@ -39,9 +39,9 @@ func main() {
 	if flag.NArg() != 0 {
 		usage()
 	}
-	rsdp_value, err := util.GetRSDP()
+	base, _, err := acpi.GetRSDP()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf(" acpi_rsdp=%s \n", rsdp_value)
+	fmt.Printf(" acpi_rsdp=%#x \n", base)
 }
