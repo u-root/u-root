@@ -1,4 +1,4 @@
-package main
+package checker
 
 import (
 	"errors"
@@ -6,7 +6,9 @@ import (
 	"net"
 )
 
-func interfaceExists(ifname string) Checker {
+// InterfaceExists returns a Checker that verifies if an interface is present on
+// the system
+func InterfaceExists(ifname string) Checker {
 	return func() error {
 		_, err := net.InterfaceByName(ifname)
 		return err
@@ -33,7 +35,9 @@ func addresses(ifname string) ([]net.IP, error) {
 	return iplist, nil
 }
 
-func interfaceHasLinkLocalAddress(ifname string) Checker {
+// InterfaceHasLinkLocalAddress returns a Checker that verifies if an interface
+// has a configured link-local address.
+func InterfaceHasLinkLocalAddress(ifname string) Checker {
 	return func() error {
 		addrs, err := addresses(ifname)
 		if err != nil {
@@ -48,7 +52,9 @@ func interfaceHasLinkLocalAddress(ifname string) Checker {
 	}
 }
 
-func interfaceHasGlobalAddresses(ifname string) Checker {
+// InterfaceHasGlobalAddresses returns a Checker that verifies if an interface has
+// at least one global address.
+func InterfaceHasGlobalAddresses(ifname string) Checker {
 	return func() error {
 		addrs, err := addresses(ifname)
 		if err != nil {
@@ -63,7 +69,9 @@ func interfaceHasGlobalAddresses(ifname string) Checker {
 	}
 }
 
-func interfaceRemediate(ifname string) Remediator {
+// InterfaceRemediate returns a Remediator that tries to fix a missing
+// interface issue.
+func InterfaceRemediate(ifname string) Remediator {
 	return func() error {
 		// TODO implement driver checking logic
 		dmesg, err := getDmesg()
