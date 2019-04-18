@@ -80,6 +80,9 @@ func clonetree(tree string) error {
 	debug("Clone tree %v", tree)
 	lt := len(tree)
 	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
 		debug("Clone tree with path %s fi %v", path, fi)
 		if fi.IsDir() {
