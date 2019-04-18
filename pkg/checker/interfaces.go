@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	"github.com/safchain/ethtool"
 )
 
 // InterfaceExists returns a Checker that verifies if an interface is present on
@@ -12,6 +14,49 @@ func InterfaceExists(ifname string) Checker {
 	return func() error {
 		_, err := net.InterfaceByName(ifname)
 		return err
+	}
+}
+
+func ethStats(ifname string) (*ethtool.EthtoolCmd, error) {
+	cmd := ethtool.EthtoolCmd{}
+	_, err := cmd.CmdGet(ifname)
+	if err != nil {
+		return nil, err
+	}
+	return &cmd, nil
+}
+
+// LinkSpeed checks the link speed, and complains if smaller than `min`
+// megabit/s.
+func LinkSpeed(ifname string, minSpeed int) Checker {
+	return func() error {
+		eth, err := ethStats(ifname)
+		if err != nil {
+			return err
+		}
+		if int(eth.Speed) < minSpeed {
+			return fmt.Errorf("link speed %d < %d", eth.Speed, minSpeed)
+		}
+		return nil
+	}
+}
+
+// LinkAutoneg checks if the link auto-negotiation state, and return an error if
+// it's not the expected state.
+func LinkAutoneg(ifname string, expected bool) Checker {
+	return func() error {
+		eth, err := ethStats(ifname)
+		if err != nil {
+			return err
+		}
+		var want uint8
+		if expected == true {
+			want = 1
+		}
+		if eth.Autoneg != want {
+			return fmt.Errorf("link autoneg %d; want %d", eth.Autoneg, want)
+		}
+		return nil
 	}
 }
 
