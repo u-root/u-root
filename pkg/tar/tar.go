@@ -79,6 +79,9 @@ func CreateTarFilter(tarFile io.Writer, files []string, filters []Filter) error 
 	tw := tar.NewWriter(tarFile)
 	for _, file := range files {
 		err := filepath.Walk(file, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			symlink := ""
 			if info.Mode()&os.ModeSymlink != 0 {
 				// TODO: symlinks

@@ -28,6 +28,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -138,6 +139,12 @@ func main() {
 				// just ignore the errors. If there is not a single one that works,
 				// then all the sizes will be 0 and we'll just fall through.
 				filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
+					if err != nil {
+						// This is non-fatal because grep searches through
+						// all the files it has access to.
+						log.Print(err)
+						return nil
+					}
 					if fi.IsDir() && !*recursive {
 						fmt.Fprintf(os.Stderr, "grep: %v: Is a directory\n", name)
 						return filepath.SkipDir
