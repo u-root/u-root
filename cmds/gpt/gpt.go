@@ -56,20 +56,26 @@ func main() {
 		log.Fatal(err)
 	}
 
+	blockSize, err := gpt.GetBlockSize(n)
+	if err != nil {
+		log.Fatalf("Failed to get block size: %v", err)
+	}
+	blockSize64 := int64(blockSize)
+
 	switch *write {
 	case true:
 		var p = &gpt.PartitionTable{}
 		if err := json.NewDecoder(os.Stdin).Decode(&p); err != nil {
 			log.Fatalf("Reading in JSON: %v", err)
 		}
-		if err := gpt.Write(f, p); err != nil {
+		if err := gpt.Write(f, p, blockSize64); err != nil {
 			log.Fatalf("Writing %v: %v", n, err)
 		}
 	default:
 		// We might get one back, we might get both.
 		// In the event of an error, we show what we can
 		// so you can at least see what went wrong.
-		p, err := gpt.New(f)
+		p, err := gpt.New(f, blockSize64)
 		if err != nil {
 			log.Printf("Error reading %v: %v", n, err)
 		}

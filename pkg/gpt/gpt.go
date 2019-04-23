@@ -19,10 +19,12 @@ import (
 	"hash/crc32"
 	"io"
 	"log"
+	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
-	BlockSize         = 512
 	HeaderOff         = 0x200
 	HeaderSize        = 0x5c               // They claim it can vary. Give me a break.
 	Signature  uint64 = 0x5452415020494645 // ("EFI PART", 45h 46h 49h 20h 50h 41h 52h 54h on little-endian machines)
@@ -37,7 +39,7 @@ type GUID struct {
 	B  [8]byte
 }
 
-type MBR [BlockSize]byte
+type MBR []byte
 type Header struct {
 	Signature  uint64
 	Revision   uint32 // (for GPT version 1.0 (through at least UEFI version 2.7 (May 2017)), the value is 00h 00h 01h 00h)
@@ -204,9 +206,9 @@ func EqualParts(p, b *GPT) (err error) {
 // Table reads a GPT table at the given offset.  It checks that
 // the Signature, Revision, HeaderSize, and MaxPart are reasonable. It
 // also verifies the header and partition table CRC32 values.
-func Table(r io.ReaderAt, off int64) (*GPT, error) {
+func Table(r io.ReaderAt, blockSize, off int64) (*GPT, error) {
 	which := "Primary"
-	if off != BlockSize {
+	if off != blockSize {
 		which = "Backup"
 	}
 	var g = &GPT{}
@@ -232,7 +234,7 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 	// it's sensible to check it first.
 	s := int64(g.PartSize)
 	partBlocks := make([]byte, int64(g.NPart)*s)
-	n, err := r.ReadAt(partBlocks, int64(g.PartStart)*BlockSize)
+	n, err := r.ReadAt(partBlocks, int64(g.PartStart)*blockSize)
 	if n != len(partBlocks) || err != nil {
 		return nil, fmt.Errorf("%s Reading partitions: Wanted %d bytes, got %d: %v", which, n, len(partBlocks), err)
 	}
@@ -255,7 +257,7 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 	g.Parts = make([]Part, g.NPart)
 
 	for i := range g.Parts {
-		if err := binary.Read(io.NewSectionReader(r, int64(g.PartStart*BlockSize)+int64(i)*s, s), binary.LittleEndian, &g.Parts[i]); err != nil {
+		if err := binary.Read(io.NewSectionReader(r, int64(g.PartStart)*blockSize+int64(i)*s, s), binary.LittleEndian, &g.Parts[i]); err != nil {
 			return nil, fmt.Errorf("%s GPT partition %d failed: %v", which, i, err)
 		}
 	}
@@ -265,15 +267,15 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 }
 
 // Write writes the MBR and primary and backup GPTs to w.
-func Write(w io.WriterAt, p *PartitionTable) error {
-	if _, err := w.WriteAt(p.MasterBootRecord[:], 0); err != nil {
+func Write(w io.WriterAt, p *PartitionTable, blockSize int64) error {
+	if _, err := w.WriteAt(*p.MasterBootRecord, 0); err != nil {
 		return err
 	}
-	if err := writeGPT(w, p.Primary); err != nil {
+	if err := writeGPT(w, p.Primary, blockSize); err != nil {
 		return err
 	}
 
-	if err := writeGPT(w, p.Backup); err != nil {
+	if err := writeGPT(w, p.Backup, blockSize); err != nil {
 		return err
 	}
 	return nil
@@ -281,7 +283,7 @@ func Write(w io.WriterAt, p *PartitionTable) error {
 }
 
 // Write writes the GPT to w. It generates the partition and header CRC before writing.
-func writeGPT(w io.WriterAt, g *GPT) error {
+func writeGPT(w io.WriterAt, g *GPT, blockSize int64) error {
 	// The maximum extent is NPart * PartSize
 	var h = make([]byte, uint64(g.NPart*g.PartSize))
 	s := int64(g.PartSize)
@@ -293,7 +295,7 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 		copy(h[i*s:], b.Bytes())
 	}
 
-	ps := int64(g.PartStart * BlockSize)
+	ps := int64(g.PartStart) * blockSize
 	if _, err := w.WriteAt(h, ps); err != nil {
 		return fmt.Errorf("Writing %d bytes of partition table at %v: %v", len(h), ps, err)
 	}
@@ -313,7 +315,7 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 	}
 	copy(h[16:], b.Bytes())
 
-	_, err := w.WriteAt(h, int64(g.CurrentLBA*BlockSize))
+	_, err := w.WriteAt(h, int64(g.CurrentLBA)*blockSize)
 	return err
 }
 
@@ -321,15 +323,15 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 // There are some checks it can apply. It can return with a
 // one or more headers AND an error. Sorry. Experience with some real USB sticks
 // is showing that we need to return data even if there are some things wrong.
-func New(r io.ReaderAt) (*PartitionTable, error) {
+func New(r io.ReaderAt, blockSize int64) (*PartitionTable, error) {
 	var p = &PartitionTable{}
-	var mbr = &MBR{}
+	var mbr = make(MBR, blockSize)
 	n, err := r.ReadAt(mbr[:], 0)
-	if n != BlockSize || err != nil {
+	if n != int(blockSize) || err != nil {
 		return p, err
 	}
-	p.MasterBootRecord = mbr
-	g, err := Table(r, HeaderOff)
+	p.MasterBootRecord = &mbr
+	g, err := Table(r, blockSize, HeaderOff)
 	// If we can't read the table it's kinda hard to find the backup.
 	// Bit of a flaw in the design, eh?
 	// "We can't recover the backup from the error with the primary because there
@@ -340,7 +342,7 @@ func New(r io.ReaderAt) (*PartitionTable, error) {
 	}
 	p.Primary = g
 
-	b, err := Table(r, int64(g.BackupLBA*BlockSize))
+	b, err := Table(r, blockSize, int64(g.BackupLBA)*blockSize)
 	if err != nil {
 		// you go to war with the army you have
 		return p, err
@@ -358,8 +360,11 @@ func New(r io.ReaderAt) (*PartitionTable, error) {
 	return p, EqualParts(g, b)
 }
 
-// GetBlockSize returns the block size of device.
+// GetBlockSize returns the block size of the given device.
 func GetBlockSize(device string) (int, error) {
-	// TODO: scan device to determine block size.
-	return BlockSize, nil
+	f, err := os.OpenFile(device, os.O_RDWR, 0)
+	if err != nil {
+		return 0, err
+	}
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKSSZGET)
 }

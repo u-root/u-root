@@ -17,6 +17,7 @@ import (
 const (
 	equalHeaderError = "p.Signature(0x5452415020494646) != b.Signature(0x5452415020494645); p.Revision(65537) != b.Revision(65536); p.HeaderSize(93) != b.HeaderSize(92); p.CurrentLBA(0x2) != b.BackupLBA(0x1); p.FirstLBA(0x23) != b.FirstLBA(0x22); p.LastLBA(0x43cf9f) != b.LastLBA(0x43cf9e); p.DiskGUID({0xbad41e2d 0x93ef 0xb04a 0x856e2e3a6a2d73bf}) != b.DiskGUID({0xbad41e2d 0x93ef 0xb04a 0x846e2e3a6a2d73bf}); p.NPart(127) != b.NPart(128); p.PartSize(127) != b.PartSize(128)"
 	equalPartsError  = "Partition 3: p.PartGUID({0xfe3a2a5d 0x4f32 0x41a7 0xb825accc3285a309}) != b.PartGUID({0xfe3a2a5d 0x4f32 0x41a7 0xb725accc3285a309}); Partition 8: p.UniqueGUID({0x513a98ed 0xc43e 0x144a 0x8399a47a7e6ae42c}) != b.UniqueGUID({0x513a98ed 0xc43e 0x144a 0x8398a47a7e6ae42c}); Partition 11: p.FirstLBA(0x3d001) != b.FirstLBA(0x3d000); Partition 21: p.LastLBA(0x1) != b.LastLBA(0x0); Partition 61: p.Name(0x000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) != b.Name(0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)"
+	blockSize        = 512
 )
 
 var (
@@ -62,11 +63,11 @@ func TestGPTTable(t *testing.T) {
 	for _, test := range tests {
 		InstallGPT()
 		if test.mangle > -1 {
-			disk[BlockSize+test.mangle] = 0xff
+			disk[blockSize+test.mangle] = 0xff
 
 		}
 		r := bytes.NewReader(disk)
-		g, err := Table(r, BlockSize)
+		g, err := Table(r, blockSize, blockSize)
 		if err != nil {
 			if err.Error() != test.msg {
 				t.Errorf("New GPT: got %q, want %q", err, test.msg)
@@ -107,10 +108,10 @@ func TestGPTTables(t *testing.T) {
 	for _, test := range tests {
 		InstallGPT()
 		if test.mangle > -1 {
-			disk[BlockSize+test.mangle] = 0xff
+			disk[blockSize+test.mangle] = 0xff
 		}
 		r := bytes.NewReader(disk)
-		_, err := New(r)
+		_, err := New(r, blockSize)
 		switch {
 		case err != nil && test.mangle > -1:
 			t.Logf("Got expected error %s", test.what)
@@ -131,7 +132,7 @@ func TestGPTTables(t *testing.T) {
 func TestEqualHeader(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)
-	p, err := New(r)
+	p, err := New(r, blockSize)
 	if err != nil {
 		t.Fatalf("TestEqualHeader: Reading in gpt: got %v, want nil", err)
 	}
@@ -164,7 +165,7 @@ func TestEqualHeader(t *testing.T) {
 func TestEqualParts(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)
-	p, err := New(r)
+	p, err := New(r, blockSize)
 	if err != nil {
 		t.Fatalf("TestEqualParts: Reading in gpt: got %v, want nil", err)
 	}
@@ -203,16 +204,16 @@ func (d *iodisk) WriteAt(b []byte, off int64) (int, error) {
 func TestWrite(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)
-	p, err := New(r)
+	p, err := New(r, blockSize)
 	if err != nil {
 		t.Fatalf("Reading partitions: got %v, want nil", err)
 	}
 	var targ = make(iodisk, len(disk))
 
-	if err := Write(&targ, p); err != nil {
+	if err := Write(&targ, p, blockSize); err != nil {
 		t.Fatalf("Writing: got %v, want nil", err)
 	}
-	if n, err := New(bytes.NewReader([]byte(targ))); err != nil {
+	if n, err := New(bytes.NewReader([]byte(targ)), blockSize); err != nil {
 		t.Logf("Old GPT: %s", p.Primary)
 		var b bytes.Buffer
 		w := hex.Dumper(&b)
