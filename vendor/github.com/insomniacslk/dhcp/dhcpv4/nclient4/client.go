@@ -99,23 +99,16 @@ func New(iface string, opts ...ClientOpt) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := NewWithConn(nil, i.HardwareAddr, opts...)
-
-	// Do this after so that a caller can still use a WithConn to override
-	// the connection.
-	if c.conn == nil {
-		pc, err := NewRawUDPConn(iface, ClientPort)
-		if err != nil {
-			return nil, err
-		}
-		c.conn = pc
+	pc, err := NewRawUDPConn(iface, ClientPort)
+	if err != nil {
+		return nil, err
 	}
-	return c, nil
+	return NewWithConn(pc, i.HardwareAddr, opts...)
 }
 
 // NewWithConn creates a new DHCP client that sends and receives packets on the
 // given interface.
-func NewWithConn(conn net.PacketConn, ifaceHWAddr net.HardwareAddr, opts ...ClientOpt) *Client {
+func NewWithConn(conn net.PacketConn, ifaceHWAddr net.HardwareAddr, opts ...ClientOpt) (*Client, error) {
 	c := &Client{
 		ifaceHWAddr: ifaceHWAddr,
 		timeout:     defaultTimeout,
@@ -132,9 +125,12 @@ func NewWithConn(conn net.PacketConn, ifaceHWAddr net.HardwareAddr, opts ...Clie
 		opt(c)
 	}
 
+	if c.conn == nil {
+		return nil, fmt.Errorf("no connection given")
+	}
 	c.wg.Add(1)
 	go c.receiveLoop()
-	return c
+	return c, nil
 }
 
 // Close closes the underlying connection.
@@ -241,13 +237,6 @@ func withBufferCap(n int) ClientOpt {
 func WithRetry(r int) ClientOpt {
 	return func(c *Client) {
 		c.retry = r
-	}
-}
-
-// WithConn configures the packet connection to use.
-func WithConn(conn net.PacketConn) ClientOpt {
-	return func(c *Client) {
-		c.conn = conn
 	}
 }
 
