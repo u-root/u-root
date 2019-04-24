@@ -23,7 +23,7 @@ import (
 // Mount a vfat volume and run the tests within.
 func main() {
 	sh.RunOrDie("mkdir", "/testdata")
-	sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
+	sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/vda1", "/testdata")
 
 	// Gather list of tests.
 	files, err := ioutil.ReadDir("/testdata/tests")

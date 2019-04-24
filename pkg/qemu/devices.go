@@ -74,11 +74,9 @@ func (rod ReadOnlyDirectory) Cmdline() []string {
 		return nil
 	}
 
-	// Expose the temp directory to QEMU as /dev/sda1
+	// Expose the temp directory to QEMU as /dev/vda1
 	return []string{
-		"-drive", fmt.Sprintf("file=fat:rw:%s,if=none,id=tmpdir", rod.Dir),
-		"-device", "ich9-ahci,id=ahci",
-		"-device", "ide-drive,drive=tmpdir,bus=ahci.0",
+		"-drive", fmt.Sprintf("file=fat:rw:%s,if=virtio", rod.Dir),
 	}
 }
 
