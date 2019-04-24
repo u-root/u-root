@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -186,6 +187,12 @@ func NoFilter(hdr *tar.Header) bool {
 // VerboseFilter prints the name of every file.
 func VerboseFilter(hdr *tar.Header) bool {
 	fmt.Println(hdr.Name)
+	return true
+}
+
+// VerboseLogFilter logs the name of every file.
+func VerboseLogFilter(hdr *tar.Header) bool {
+	log.Println(hdr.Name)
 	return true
 }
 
