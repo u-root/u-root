@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
+	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/safchain/ethtool"
 )
 
@@ -118,7 +120,7 @@ func InterfaceHasGlobalAddresses(ifname string) Checker {
 // interface issue.
 func InterfaceRemediate(ifname string) Remediator {
 	return func() error {
-		// TODO implement driver checking logic
+		// TODO implement driver loading logic
 		dmesg, err := getDmesg()
 		if err != nil {
 			return fmt.Errorf("cannot read dmesg to look for NIC driver information: %v", err)
@@ -130,5 +132,18 @@ func InterfaceRemediate(ifname string) Remediator {
 		// TODO should this be returned as a string to the caller?
 		fmt.Printf("  found %d references to %s in dmesg\n", len(lines), ifname)
 		return nil
+	}
+}
+
+// InterfaceCanDoDHCPv6 checks whether DHCPv6 succeeds on an interface, and if
+// it has a valid netboot URL.
+func InterfaceCanDoDHCPv6(ifname string) Checker {
+	return func() error {
+		conv, err := netboot.RequestNetbootv6(ifname, 10*time.Second, 2)
+		if err != nil {
+			return err
+		}
+		_, _, err = netboot.ConversationToNetconf(conv)
+		return err
 	}
 }

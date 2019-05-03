@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ var (
 	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
 	caCertFile         = flag.String("cacerts", "/etc/cacerts.pem", "CA cert file")
 	skipCertVerify     = flag.Bool("skip-cert-verify", false, "Don't authenticate https certs")
+	doFix              = flag.Bool("fix", false, "Try to run fixmynetboot if netboot fails")
 )
 
 const (
@@ -108,6 +110,16 @@ func main() {
 		}
 		for _, d := range dhcp {
 			if err := boot(iface.Name, d); err != nil {
+				if *doFix {
+					cmd := exec.Command("fixmynetboot", iface.Name)
+					log.Printf("Running %s", strings.Join(cmd.Args, " "))
+					cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+					if err := cmd.Run(); err != nil {
+						log.Printf("Error calling fixmynetboot: %v", err)
+						log.Print("fixmynetboot failed. Check the above output to manually debug the issue.")
+						os.Exit(1)
+					}
+				}
 				log.Printf("Could not boot from %s: %v", iface.Name, err)
 			}
 		}

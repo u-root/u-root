@@ -18,28 +18,33 @@ type Check struct {
 
 // Run runs the checks and remediations from a check list, in order, and prints the
 // check and remediation status.
-func Run(checklist []Check) {
+func Run(checklist []Check) error {
 	for idx, check := range checklist {
 		fmt.Printf(green("#%d", idx+1)+" Running check '%s'.. ", check.Name)
-		if err := check.Run(); err != nil {
-			fmt.Println(red("failed: %v", err))
+		if checkErr := check.Run(); checkErr != nil {
+			fmt.Println(red("failed: %v", checkErr))
 			if check.Remediate != nil {
 				fmt.Println(yellow("  -> running remediation"))
-				if err := check.Remediate(); err != nil {
-					fmt.Printf(red("     Remediation for '%s' failed: %v\n", check.Name, err))
+				if remErr := check.Remediate(); remErr != nil {
+					fmt.Printf(red("     Remediation for '%s' failed: %v\n", check.Name, remErr))
 					if check.StopOnError {
 						fmt.Println("Exiting")
-						return
+						return remErr
 					}
 				} else {
 					fmt.Printf("     Remediation for '%s' succeeded\n", check.Name)
 				}
 			} else {
-				fmt.Printf(yellow(" -> no remediation found for '%s', skipping\n", check.Name))
+				msg := fmt.Sprintf(" -> no remediation found for %s", check.Name)
+				if check.StopOnError {
+					fmt.Println(yellow(msg + ", stop on error requested. Exiting."))
+					return checkErr
+				}
+				fmt.Println(yellow(msg + ", skipping."))
 			}
 		} else {
 			fmt.Println(green("OK"))
 		}
 	}
-	return
+	return nil
 }
