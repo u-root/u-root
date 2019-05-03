@@ -13,17 +13,22 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"net/rpc"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"testing/iotest"
+	"time"
 	"unsafe"
 
 	// We use this ssh because it implements port redirection.
 	// It can not, however, unpack password-protected keys yet.
 	"github.com/gliderlabs/ssh"
 	"github.com/kr/pty" // TODO: get rid of krpty
+	"github.com/u-root/fuse"
+	"github.com/u-root/u-root/pkg/netfuse"
 	"github.com/u-root/u-root/pkg/termios"
 	"github.com/u-root/u-root/pkg/uroot/util"
 	// We use this ssh because it can unpack password-protected private keys.
@@ -44,10 +49,12 @@ var (
 	network   = flag.String("network", "tcp", "network to use")
 	host      = flag.String("h", "localhost", "host to use")
 	keyFile   = flag.String("key", filepath.Join(os.Getenv("HOME"), ".ssh/cpu_rsa"), "key file")
-	srv9p     = flag.String("srv", "unpfs", "what server to run")
+	npserver  = flag.String("srv9p", "unpfs", "what server to run")
+	fumount   = flag.String("fusermount", "/bbin/fusermount", "path to fusermount")
 	bin       = flag.String("bin", "cpu", "path of cpu binary")
 	port9p    = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
 	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
+	use9p     = flag.Bool("use9p", false, "use 9p instead of netfuse")
 	root      = flag.String("root", "/", "9p root")
 	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": seperated list of directories in /tmp/cpu to bind over /")
 )
@@ -157,38 +164,86 @@ func runRemote(cmd, port9p string) error {
 		}
 	}
 
-	// It's true we are making this directory while still root.
-	// This ought to be safe as it is a private namespace mount.
-	for _, n := range []string{"/tmp/cpu", "/tmp/local", "/tmp/merge", "/tmp/root"} {
-		if err := os.Mkdir(n, 0666); err != nil && !os.IsExist(err) {
-			log.Println(err)
-		}
-	}
+	dirs()
 
 	user := os.Getenv("USER")
 	if user == "" {
 		user = "nouser"
 	}
-	flags := uintptr(unix.MS_NODEV | unix.MS_NOSUID)
-	opts := fmt.Sprintf("version=9p2000.L,trans=tcp,port=%v,uname=%v", port9p, user)
-	if err := unix.Mount("127.0.0.1", "/tmp/cpu", "9p", flags, opts); err != nil {
-		return fmt.Errorf("9p mount %v", err)
+	if *use9p {
+		flags := uintptr(unix.MS_NODEV | unix.MS_NOSUID)
+		opts := fmt.Sprintf("version=9p2000.L,trans=tcp,port=%v,uname=%v", port9p, user)
+		if err := unix.Mount("127.0.0.1", "/tmp/cpu", "9p", flags, opts); err != nil {
+			return fmt.Errorf("9p mount %v", err)
+		}
+	} else {
+		ctx := context.Background()
+		cl, err := rpc.Dial("tcp", "127.0.0.1:"+port9p)
+		if err != nil {
+			return fmt.Errorf("Dial netfuse %v", err)
+		}
+		p := os.Getenv("PATH")
+		os.Setenv("PATH", p+":/ubin:/bbin")
+		fu, err := exec.LookPath("fusermount")
+		log.Printf("PATH %s os.LookPath(fusermount) %v %v", os.Getenv("PATH"), fu, err)
+		s := netfuse.NewClntFS(cl)
+		mc := &fuse.MountConfig{}
+		if *debug {
+			mc.DebugLogger = log.New(os.Stderr, "debug: ", 0)
+			mc.ErrorLogger = log.New(os.Stderr, "error: ", 0)
+			netfuse.ClntDebug = log.Printf
+			netfuse.FSDebug = log.Printf
+		}
+
+		// Before we do anything at all, ping the
+		// server.
+		v("Ping server")
+		var r netfuse.PingResp
+		if err := cl.Call("FSID.Ping", &netfuse.PingReq{}, &r); err != nil {
+			v("Ping: %v", err)
+			return fmt.Errorf("Ping failed %v", err)
+		}
+
+		// hack.
+		mfs, err := fuse.Mount("/tmp/cpu", s, mc)
+
+		if err != nil {
+			log.Fatalf("fuse.Mount: %v", err)
+		}
+
+		defer func() {
+			// Don't use fuse.Unmount, it forks off fusermount, and we don't need to do that.
+			if err := unix.Unmount("/tmp/cpu", unix.UMOUNT_NOFOLLOW|unix.MNT_FORCE); err != nil {
+				log.Printf("First umount got %v; try one more time", err)
+				if err := unix.Unmount("/tmp/cpu", unix.UMOUNT_NOFOLLOW|unix.MNT_FORCE); err != nil {
+					log.Printf("Second mount got %v; that's all we do", err)
+				}
+			}
+
+			if err := mfs.Join(ctx); err != nil {
+				log.Printf("Joining: %v", err)
+			}
+		}()
+
+		//defer fuse.Unmount(mfs.Dir())
 	}
 
 	// Further, bind / onto /tmp/local so a non-hacked-on version may be visible.
-	if err := unix.Mount("/", "/tmp/local", "", syscall.MS_BIND, ""); err != nil {
-		log.Printf("Warning: binding / over /tmp/cpu did not work: %v, continuing anyway", err)
+	if false {
+		if err := unix.Mount("/", "/tmp/local", "", syscall.MS_BIND, ""); err != nil {
+			log.Printf("Warning: binding / over /tmp/local did not work: %v, continuing anyway", err)
+		}
 	}
 
 	var overlaid bool
-	if util.FindFileSystem("overlay") == nil {
+	if false && util.FindFileSystem("overlay") == nil {
 		if err := unix.Mount("overlay", "/tmp/root", "overlay", unix.MS_MGC_VAL, "lowerdir=/tmp/cpu,upperdir=/tmp/local,workdir=/tmp/merge"); err == nil {
 			//overlaid = true
 		} else {
 			log.Printf("Overlayfs mount failed: %v. Proceeding with selective mounts from /tmp/cpu into /", err)
 		}
 	}
-	if !overlaid {
+	if true && !overlaid {
 		// We could not get an overlayfs mount.
 		// There are lots of cases where binaries REQUIRE that ld.so be in the right place.
 		// In some cases if you set LD_LIBRARY_PATH it is ignored.
@@ -211,16 +266,16 @@ func runRemote(cmd, port9p string) error {
 	}
 	// The unmount happens for free since we unshared.
 	v("runRemote: command is %q", cmd)
-	c := exec.Command("/bin/sh", "-c", cmd)
+	c := exec.Command("/bbin/elvish", "-c", cmd)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return c.Run()
 }
 
-// srv on 5641.
+// srv 9p on 5641.
 // TODO: make it more private, and also, have server only take
 // one connection or use stdin/stdout
-func srv(ctx context.Context) (net.Conn, *exec.Cmd, error) {
-	c := exec.CommandContext(ctx, "unpfs", "tcp!localhost!5641", *root)
+func srv9p(ctx context.Context) (net.Conn, *exec.Cmd, error) {
+	c := exec.CommandContext(ctx, *npserver, "tcp!localhost!5641", *root)
 	o, err := c.StdoutPipe()
 	if err != nil {
 		return nil, nil, err
@@ -244,19 +299,44 @@ func srv(ctx context.Context) (net.Conn, *exec.Cmd, error) {
 	return srvSock, c, nil
 }
 
+// srv netfuse. Since we don't need to fork off a 9p server, this is easier.
+// TODO: make it more private, and also, have server only take
+// one connection or use stdin/stdout
+func srvnetfuse(ctx context.Context) (net.Conn, *exec.Cmd, error) {
+	srv, clnt := net.Pipe()
+
+	go func() {
+		if *debug {
+			netfuse.SrvDebug = log.Printf
+		}
+		if err := netfuse.Serve(*root, srv); err != nil {
+			log.Fatalf("netfuse serve: %v", err)
+		}
+		log.Printf("srvnetfuse ends")
+	}()
+	sl := 1 * time.Second
+	v("Sleep %v", sl)
+	time.Sleep(sl)
+	return clnt, nil, nil
+}
+
 // We only do one accept for now.
-func forward(l net.Listener, s net.Conn) error {
-	//if err := l.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-	//return fmt.Errorf("Can't set 9p client listen deadline: %v", err)
-	//}
-	c, err := l.Accept()
-	v("forward: c %v err %v", c, err)
+func forward(l net.Listener, server net.Conn) error {
+	client, err := l.Accept()
+	v("forward: c %v err %v", client, err)
 	if err != nil {
 		v("forward: accept: %v", err)
 		return err
 	}
-	go io.Copy(s, c)
-	go io.Copy(c, s)
+	clientRead, clientWrite, serverRead, serverWrite := io.Reader(client), io.Writer(client), io.Reader(server), io.Writer(server)
+	if *debug && false {
+		clientRead = iotest.NewReadLogger("CReq", clientRead)
+		clientWrite = iotest.NewWriteLogger("CResp", clientWrite)
+		serverRead = iotest.NewReadLogger("SResp", serverRead)
+		serverWrite = iotest.NewWriteLogger("SReq", serverWrite)
+	}
+	go io.Copy(serverWrite, clientRead)
+	go io.Copy(clientWrite, serverRead)
 	return nil
 }
 
@@ -271,15 +351,29 @@ func runClient(a string) error {
 		return err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	srvSock, p, err := srv(ctx)
-	if err != nil {
-		cancel()
-		return err
+	var srvSock net.Conn
+	if *use9p {
+		s, p, err := srv9p(ctx)
+		if err != nil {
+			cancel()
+			return err
+		}
+		defer func() {
+			cancel()
+			p.Wait()
+		}()
+		srvSock = s
+	} else {
+		s, _, err := srvnetfuse(ctx)
+		if err != nil {
+			cancel()
+			return err
+		}
+		defer func() {
+			cancel()
+		}()
+		srvSock = s
 	}
-	defer func() {
-		cancel()
-		p.Wait()
-	}()
 	// Arrange port forwarding from remote ssh to our server.
 
 	// Request the remote side to open port 5640 on all interfaces.
@@ -295,8 +389,8 @@ func runClient(a string) error {
 	}
 	port := ap[len(ap)-1]
 	v("listener %T %v addr %v port %v", l, l, l.Addr().String(), port)
-
 	go forward(l, srvSock)
+
 	v("Connected to %v", cl)
 
 	// now run stuff.
@@ -580,7 +674,7 @@ func doInit() error {
 	}
 	verbose("server.ListenAndServer returned")
 
-	numprocs := <- procs
+	numprocs := <-procs
 	verbose("Reaped %d procs", numprocs)
 	return nil
 }

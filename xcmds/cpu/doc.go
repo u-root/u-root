@@ -86,7 +86,7 @@
 //     2019/05/17 16:53:22 Mounted /tmp/cpu/etc on /etc
 //     Fri May 17 16:53:23 UTC 2019
 // cpu to a machine and run $SHELL (since no arguments were given)
-// NOTE: $SHELL is NOT installed on the remote machine! It (and all its .so's and . files) 
+// NOTE: $SHELL is NOT installed on the remote machine! It (and all its .so's and . files)
 // come from the local machine.
 // cpu sp -23
 //    2019/05/17 16:58:04 Overlayfs mount failed: invalid argument. Proceeding with selective mounts from /tmp/cpu into /
@@ -106,7 +106,7 @@
 //    root@(none):/# depmod
 //    depmod: ERROR: could not open directory /lib/modules/5.0.0-rc3+: No such file or directory
 //    depmod: FATAL: could not search modules: No such file or directory
-//    root@(none):/# 
+//    root@(none):/#
 //    # Note that, if we had the right modules on our LOCAL machine for this remote machine, we could
 //    # insert them. This further means you can build a modular kernel in FLASH and insmod needed modules
 //    # later (as long as your core kernel has networking, that is!). Modules could include, e.g., an AHCI

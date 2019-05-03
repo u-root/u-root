@@ -34,6 +34,12 @@ var oklicenses = []*regexp.Regexp{
 //
 // Licensed under the Apache License, Version 2.0.*
 `),
+	// Google keeps changing its copyright rules.
+	regexp.MustCompile(
+		`^// Copyright [\d\-, ]+ Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0.*
+`),
 }
 
 type rule struct {

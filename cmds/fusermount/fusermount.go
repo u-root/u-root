@@ -44,7 +44,8 @@ const (
 var (
 	unmount = flag.BoolP("unmount", "u", false, "unmount")
 	lazy    = flag.BoolP("lazy", "z", false, "lazy unmount")
-	verbose = flag.BoolP("verbose", "v", false, "verbose")
+	verbose = flag.BoolP("verbose", "v", true, "verbose")
+	opts = flag.StringP("opts", "o", "", "mount options")
 	debug   = func(string, ...interface{}) {}
 	mpt     string
 )
@@ -133,7 +134,12 @@ func doMount(fd int) error {
 	//		return 0;
 	// Yeah. You get EINVAL if any one of these is not set.
 	// Docs? what? Docs?
-	return unix.Mount("nodev", ".", "fuse", flags, fmt.Sprintf("rootmode=%o,user_id=0,group_id=0,fd=%d", unix.S_IFDIR, fd))
+	o := fmt.Sprintf("rootmode=%o,user_id=0,group_id=0,fd=%d", unix.S_IFDIR, fd)
+	if *opts != "" {
+		o = o + "," + *opts
+	}
+	debug("unix.Mount(nodev, %s, fuse, uintptr(unix.MS_NODEV | unix.MS_NOSUID), %s", mpt, o)
+	return unix.Mount("nodev", mpt, "fuse", flags, o)
 }
 
 // returnResult returns the result from earlier operations.

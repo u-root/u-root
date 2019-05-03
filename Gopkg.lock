@@ -92,6 +92,57 @@
   revision = "32228cdfe81f31b2ac5d6bbfbe36db7cdee92ea6"
 
 [[projects]]
+  branch = "master"
+  digest = "1:93c1a5215a96cc056547241b5f95e992e780a819129495e233be83f12e8ebf55"
+  name = "github.com/jacobsa/oglematchers"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "141901ea67cd4769c6800aa7bfdfc558fa22bda5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:33f88909d135c8c982aaa774568c4865bc07b0978b4fb53174162442bc396098"
+  name = "github.com/jacobsa/oglemock"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "e94d794d06ffc6de42cb19d0dab3c219efdd6dcf"
+
+[[projects]]
+  branch = "master"
+  digest = "1:4df2aa98233c4a9a8486950931a244cf3cdf8d7d8706a36720cc1ff867a6c7d7"
+  name = "github.com/jacobsa/ogletest"
+  packages = [
+    ".",
+    "srcutil",
+  ]
+  pruneopts = "NUT"
+  revision = "80d50a735a1108a2aeb7abc4a988d183f20c5292"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b2fed5b0dcb3c1bd8817a22e0fe426e0f54afb569076e6e9a97e141b4496c0f9"
+  name = "github.com/jacobsa/reqtrace"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "245c9e0234cb2ad542483a336324e982f1a22934"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e792c76c07edf1e254d7ae58539fc98168923439fb3b1bb0dfeeb51e3cdb1ee8"
+  name = "github.com/jacobsa/syncutil"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "228ac8e5a6c3992346c7d4565650c37f7bb477b6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:41f5e5d39855bd13aafecb48b75b546fcbe5ed847fcbe01a2ccf156506b681c1"
+  name = "github.com/jacobsa/timeutil"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "577e5acbbcf60f68c80c6f5edfeefe50e477c853"
+
+[[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
@@ -193,6 +244,23 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:0b259ae87965a8b433355ec447a5ec42035cec2c79dd2bd23842df56a474e893"
+  name = "github.com/u-root/fuse"
+  packages = [
+    ".",
+    "fuseops",
+    "fusetesting",
+    "fuseutil",
+    "internal/buffer",
+    "internal/freelist",
+    "internal/fusekernel",
+    "samples",
+  ]
+  pruneopts = "NUT"
+  revision = "3a5cf19c66bd38740ccd68d451fb1015440a3c71"
+
+[[projects]]
+  branch = "master"
   digest = "1:cce17c64be3a2970ae606c6f4d8dd0bffa5232477dbf5826f078b4f64875e5f5"
   name = "github.com/vishvananda/netlink"
   packages = [
@@ -200,7 +268,7 @@
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "00009fb8606a3b58605059db3a56262f763299d4"
+  revision = "1187dc929741434daaa7a2627014d0bad223fff2"
 
 [[projects]]
   branch = "master"
@@ -212,7 +280,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d40dc03b0a704c8a036afd669aa446bb1aac9a18e5a8b799c5f90ab7518df5d9"
+  digest = "1:fbd29c188dde15a6f28eb6ac350015ff6223aa68d5c921fbc197ab518fe2266e"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -235,14 +303,15 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "22d7a77e9e5f409e934ed268692e56707cd169e5"
+  revision = "20be4c3c3ed52bfccdb2d59a412ee1a936d175a7"
 
 [[projects]]
   branch = "master"
-  digest = "1:ba78ed229b3ccef643b46644a6387bff86af2ef7ffc0fd9c56c72c59d903b555"
+  digest = "1:f18d2f5e691d57147f3f7215a3b4bfad9164f2be2e0a639a34df9f8f082abb27"
   name = "golang.org/x/net"
   packages = [
     "bpf",
+    "context",
     "internal/iana",
     "internal/socket",
     "ipv4",
@@ -281,7 +350,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "fb6c8ffd22070e69b7642308d055748cda081989"
+  revision = "2b03ca6e44eb97adb8824db161059e54d6014dc3"
 
 [[projects]]
   digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
@@ -317,6 +386,9 @@
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv6",
     "github.com/insomniacslk/dhcp/dhcpv6/nclient6",
+    "github.com/jacobsa/oglematchers",
+    "github.com/jacobsa/ogletest",
+    "github.com/jacobsa/syncutil",
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
@@ -324,6 +396,11 @@
     "github.com/rck/unit",
     "github.com/spf13/pflag",
     "github.com/u-root/dhcp4/dhcp4server",
+    "github.com/u-root/fuse",
+    "github.com/u-root/fuse/fuseops",
+    "github.com/u-root/fuse/fusetesting",
+    "github.com/u-root/fuse/fuseutil",
+    "github.com/u-root/fuse/samples",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",

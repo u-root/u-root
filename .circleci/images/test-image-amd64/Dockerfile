@@ -12,6 +12,7 @@ RUN sudo apt-get update &&                          \
         bc                                          \
         bison                                       \
         flex                                        \
+        fuse                                        \
         gcc                                         \
         make                                        \
         `# QEMU dependencies`                       \
