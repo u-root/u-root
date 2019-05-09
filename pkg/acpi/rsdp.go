@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/io"
+	"github.com/u-root/u-root/pkg/memio"
 )
 
 const (
@@ -148,8 +148,8 @@ func (r *RSDP) Base() int64 {
 func readRSDP(base int64) (*RSDP, error) {
 	r := &RSDP{}
 	r.base = uint64(base)
-	dat := io.ByteSlice(make([]byte, len(r.data)))
-	if err := io.Read(base, &dat); err != nil {
+	dat := memio.ByteSlice(make([]byte, len(r.data)))
+	if err := memio.Read(base, &dat); err != nil {
 		return nil, err
 	}
 	copy(r.data[:], dat)
@@ -211,8 +211,8 @@ func num(n string, i int) (uint64, error) {
 // These are well-known addresses for 20+ years.
 func getRSDPmem() (int64, *RSDP, error) {
 	for base := int64(0xe0000); base < 0xffff0; base += 16 {
-		var r io.Uint64
-		if err := io.Read(base, &r); err != nil {
+		var r memio.Uint64
+		if err := memio.Read(base, &r); err != nil {
 			continue
 		}
 		if r != 0x2052545020445352 {
