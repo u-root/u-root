@@ -29,7 +29,7 @@ import (
 	"os"
 
 	flag "github.com/spf13/pflag"
-	"github.com/u-root/u-root/pkg/tar"
+	"github.com/u-root/u-root/pkg/tarutil"
 )
 
 var (
@@ -55,9 +55,9 @@ func main() {
 		log.Fatal("tar filename is required")
 	}
 
-	var filters []tar.Filter
+	var filters []tarutil.Filter
 	if *verbose {
-		filters = []tar.Filter{tar.VerboseFilter}
+		filters = []tarutil.Filter{tarutil.VerboseFilter}
 	}
 
 	switch {
@@ -66,7 +66,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := tar.CreateTarFilter(f, flag.Args(), filters); err != nil {
+		if err := tarutil.CreateTarFilter(f, flag.Args(), filters); err != nil {
 			f.Close()
 			log.Fatal(err)
 		}
@@ -83,7 +83,7 @@ func main() {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		if err := tar.ExtractDirFilter(f, flag.Arg(0), filters); err != nil {
+		if err := tarutil.ExtractDirFilter(f, flag.Arg(0), filters); err != nil {
 			log.Fatal(err)
 		}
 	case *list:
@@ -92,7 +92,7 @@ func main() {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		if err := tar.ListArchive(f); err != nil {
+		if err := tarutil.ListArchive(f); err != nil {
 			log.Fatal(err)
 		}
 	default:

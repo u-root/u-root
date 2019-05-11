@@ -4,7 +4,7 @@
 
 // +build linux,!arm,!arm64
 
-package io
+package memio
 
 import (
 	"encoding/binary"
