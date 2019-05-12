@@ -30,26 +30,26 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/u-root/u-root/pkg/io"
+	"github.com/u-root/u-root/pkg/memio"
 )
 
 type cmd struct {
-	f                 func(addr int64, data io.UintN) error
+	f                 func(addr int64, data memio.UintN) error
 	addrBits, valBits int
 }
 
 var (
 	readCmds = map[string]cmd{
-		"rb": {io.Read, 64, 8},
-		"rw": {io.Read, 64, 16},
-		"rl": {io.Read, 64, 32},
-		"rq": {io.Read, 64, 64},
+		"rb": {memio.Read, 64, 8},
+		"rw": {memio.Read, 64, 16},
+		"rl": {memio.Read, 64, 32},
+		"rq": {memio.Read, 64, 64},
 	}
 	writeCmds = map[string]cmd{
-		"wb": {io.Write, 64, 8},
-		"ww": {io.Write, 64, 16},
-		"wl": {io.Write, 64, 32},
-		"wq": {io.Write, 64, 64},
+		"wb": {memio.Write, 64, 8},
+		"ww": {memio.Write, 64, 16},
+		"wl": {memio.Write, 64, 32},
+		"wq": {memio.Write, 64, 64},
 	}
 )
 
@@ -63,19 +63,19 @@ func usage() {
 }
 
 // newInt constructs a UintN with the specified value and bits.
-func newInt(val uint64, bits int) io.UintN {
+func newInt(val uint64, bits int) memio.UintN {
 	switch bits {
 	case 8:
-		val := io.Uint8(int8(val))
+		val := memio.Uint8(int8(val))
 		return &val
 	case 16:
-		val := io.Uint16(uint16(val))
+		val := memio.Uint16(uint16(val))
 		return &val
 	case 32:
-		val := io.Uint32(uint32(val))
+		val := memio.Uint32(uint32(val))
 		return &val
 	case 64:
-		val := io.Uint64(uint64(val))
+		val := memio.Uint64(uint64(val))
 		return &val
 	default:
 		panic(fmt.Sprintf("invalid number of bits %d", bits))
