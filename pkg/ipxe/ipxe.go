@@ -61,12 +61,16 @@ func (c *Config) getAndParseFile(u *url.URL) error {
 	if err != nil {
 		return err
 	}
-	config, err := uio.ReadAll(r)
+	data, err := uio.ReadAll(r)
 	if err != nil {
 		return err
 	}
-	log.Printf("Got config file %s:\n%s\n", r, string(config))
-	return c.parseIpxe(string(config))
+	config := string(data)
+	if !strings.HasPrefix(config, "#!ipxe") {
+		return ErrNotIpxeScript
+	}
+	log.Printf("Got ipxe config file %s:\n%s\n", r, config)
+	return c.parseIpxe(config)
 }
 
 // getFile parses `surl` and returns an io.Reader for the requested url.
@@ -83,14 +87,15 @@ func (c *Config) getFile(surl string) (io.ReaderAt, error) {
 func (c *Config) parseIpxe(config string) error {
 	// A trivial ipxe script parser.
 	// Currently only supports kernel and initrd commands.
-	if !strings.HasPrefix(config, "#!ipxe") {
-		return ErrNotIpxeScript
-	}
-	config = strings.TrimPrefix(config, "#!ipxe\n")
-
 	c.BootImage = &boot.LinuxImage{}
 
 	for _, line := range strings.Split(config, "\n") {
+		// Skip blank lines and comment lines.
+		line = strings.TrimSpace(line)
+		if line == "" || line[0] == '#' {
+			continue
+		}
+
 		args := strings.Fields(line)
 		if len(args) <= 1 {
 			log.Printf("Ignoring unsupported ipxe cmd: %s\n", line)
