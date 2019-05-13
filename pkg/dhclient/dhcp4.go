@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/vishvananda/netlink"
@@ -112,15 +113,18 @@ var (
 
 // Boot returns the boot file assigned.
 func (p *Packet4) Boot() (*url.URL, error) {
-	// TODO: This is not 100% right -- if a certain option is set, this
-	// stuff is encoded in options instead of in the packet's BootFile and
-	// ServerName fields.
-	if len(p.P.BootFileName) == 0 {
-		return nil, ErrNoBootFile
+	// Look for dhcp option presence first, then legacy BootFileName in header.
+	bootFileName := p.P.BootFileNameOption()
+	bootFileName = strings.TrimRight(bootFileName, "\x00")
+	if bootFileName == "" {
+		if len(p.P.BootFileName) == 0 {
+			return nil, ErrNoBootFile
+		}
+		bootFileName = p.P.BootFileName
 	}
 
 	// While the default is tftp, servers may specify HTTP or FTP URIs.
-	u, err := url.Parse(p.P.BootFileName)
+	u, err := url.Parse(bootFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +132,7 @@ func (p *Packet4) Boot() (*url.URL, error) {
 	if len(u.Scheme) == 0 {
 		// Defaults to tftp is not specified.
 		u.Scheme = "tftp"
-		u.Path = p.P.BootFileName
+		u.Path = bootFileName
 		if len(p.P.ServerHostName) == 0 {
 			server := p.P.ServerIdentifier()
 			if server != nil {
