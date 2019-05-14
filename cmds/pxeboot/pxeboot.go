@@ -95,9 +95,11 @@ func Netboot(ifaceNames string) error {
 // ip, and mac address to search for pxe configs.
 func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
 	// Attempt to read the given boot path as an ipxe config file.
-	if ipc, err := ipxe.NewConfig(uri); err == nil {
+	ipc, err := ipxe.NewConfig(uri)
+	if err == nil {
 		return ipc.BootImage, nil
 	}
+	log.Printf("Falling back to pxe boot: %v", err)
 
 	// Fallback to pxe boot.
 	wd := &url.URL{

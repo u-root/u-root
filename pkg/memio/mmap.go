@@ -4,7 +4,7 @@
 
 // +build linux,arm linux,arm64
 
-package io
+package memio
 
 import (
 	"fmt"
