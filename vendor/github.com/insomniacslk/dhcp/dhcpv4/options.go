@@ -175,7 +175,7 @@ func (o Options) sortedKeys() []int {
 		codes = append(codes, int(k))
 	}
 
-	sort.Sort(sort.IntSlice(codes))
+	sort.Ints(codes)
 	return codes
 }
 
