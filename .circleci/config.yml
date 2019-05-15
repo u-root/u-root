@@ -1,4 +1,27 @@
 version: 2
+
+templates:
+  golang-template: &golang-template
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+  integration-template: &integration-template
+    working_directory: /go/src/github.com/u-root/u-root
+    environment:
+      - CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Test integration
+          command: go test -v -a -ldflags '-s' ./integration/...
+      - run:
+          name: Copying serial output to /tmp/serial
+          command: cp -R integration/serial /tmp/serial
+      - store_artifacts:
+          path: /tmp/serial
+
 workflows:
   version: 2
   build_and_test:
@@ -24,11 +47,7 @@ workflows:
             - clean-code
 jobs:
   clean-code:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
+    <<: *golang-template
     steps:
       - checkout
       - run:
@@ -84,11 +103,7 @@ jobs:
           name: ineffassign
           command: ineffassign .
   test:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
+    <<: *golang-template
     steps:
       - checkout
       - run:
@@ -97,36 +112,8 @@ jobs:
       - run:
           name: Test coverage
           command: go test -cover `go list ./... | grep github.com/u-root/u-root/`
-  test-integration-amd64:
-    docker:
-      - image: uroottest/test-image-amd64:v3.2.4
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
-    steps:
-      - checkout
-      - run:
-          name: Test integration amd64
-          command: go test -v -a -ldflags '-s' ./integration/...
-      - store_artifacts:
-          path: integration/serial
-  test-integration-arm:
-    docker:
-      - image: uroottest/test-image-arm:v3.0.1
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
-    steps:
-      - checkout
-      - run:
-          name: Test integration arm
-          command: go test -v -a -ldflags '-s' ./integration/...
-      - store_artifacts:
-          path: integration/serial
   race:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
+    <<: *golang-template
     environment:
       - CGO_ENABLED: 1
     steps:
@@ -135,11 +122,7 @@ jobs:
           name: Race detector
           command: go test -race `go list ./... | grep github.com/u-root/u-root/`
   compile_cmds:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
+    <<: *golang-template
     steps:
       - checkout
       - run:
@@ -152,33 +135,21 @@ jobs:
             cd ../xcmds
             go install -a ./...
   check_licenses:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
+    <<: *golang-template
     steps:
       - checkout
       - run:
           name: Check licenses
           command: go run scripts/checklicenses/checklicenses.go
   check_symlinks:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
+    <<: *golang-template
     steps:
       - checkout
       - run:
           name: Symbol tests to ensure we do not break symlink handling
           command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -build=bb -files /tmp/usr minimal
   check_templates:
-    docker:
-      - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/u-root/u-root
-    environment:
-      - CGO_ENABLED: 0
+    <<: *golang-template
     steps:
       - checkout
       - run:
@@ -195,3 +166,11 @@ jobs:
                   go run u-root.go -build=bb all core
                   go run u-root.go all core
                   go run u-root.go -fourbins minimal
+  test-integration-amd64:
+    <<: *integration-template
+    docker:
+      - image: uroottest/test-image-amd64:v3.2.4
+  test-integration-arm:
+    <<: *integration-template
+    docker:
+      - image: uroottest/test-image-arm:v3.0.1
