@@ -36,6 +36,13 @@ func WithServerIP(ip net.IP) Modifier {
 	}
 }
 
+// WithGatewayIP sets the Gateway IP for the DHCPv4 packet.
+func WithGatewayIP(ip net.IP) Modifier {
+	return func(d *DHCPv4) {
+		d.GatewayIPAddr = ip
+	}
+}
+
 // WithReply fills in opcode, hwtype, xid, clienthwaddr, flags, and gateway ip
 // addr from the given packet.
 func WithReply(request *DHCPv4) Modifier {
@@ -49,7 +56,6 @@ func WithReply(request *DHCPv4) Modifier {
 		d.TransactionID = request.TransactionID
 		d.ClientHWAddr = request.ClientHWAddr
 		d.Flags = request.Flags
-		d.GatewayIPAddr = request.GatewayIPAddr
 	}
 }
 

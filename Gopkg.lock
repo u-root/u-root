@@ -54,11 +54,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b4205462c2dfe9a2ad718107012129c98e5ef82ae2bbd19e21f1a8230e30711e"
+  digest = "1:2f034349e8e48ad028ae922fc5f8de90d79f583d85d193bf8fae0b8a23dc4f8e"
   name = "github.com/google/goexpect"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "ad7fe45ef179b699c10b4023805faec2d63fdcb0"
+  revision = "112704a48083c3a1fd07ca0c04394a2dc8e5b816"
 
 [[projects]]
   branch = "master"
@@ -78,7 +78,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:03ab42a35498d3f5f3f889aba5511e97463c79b30c89117980243326aa9cca4f"
+  digest = "1:23f197a37fc5edf3e3b18f8d77ce18fe097f7eaa0f5a69d837dd6d7cce006a6a"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -89,7 +89,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "ebf43962e121b9c5c982d6a647a29fa4ae9b6a14"
+  revision = "1a0fc7419d4541c26b2d25b4d089a66853e91d76"
 
 [[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
@@ -193,14 +193,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2c6c98c684af5b5981082d8049fd9e7a02c1923374db65cb09c70de8f758e820"
+  digest = "1:376515b14447d6cbbf8cf113f592ed3a05945ffc54cf7e51b58b63344ee7980d"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "f504738125a57f35f87fc30fb69b8df75237ccde"
+  revision = "fafc1e7b600abbb5cdcf1ebc90e4865423733a0c"
 
 [[projects]]
   branch = "master"
@@ -212,7 +212,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0e66ee015772e66e6255691a7bd1dfbc577a5f694a09d78af0b12a697d984fd1"
+  digest = "1:d40dc03b0a704c8a036afd669aa446bb1aac9a18e5a8b799c5f90ab7518df5d9"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -235,7 +235,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "d864b10871cd4370fe574816b489c819c675ccc7"
+  revision = "22d7a77e9e5f409e934ed268692e56707cd169e5"
 
 [[projects]]
   branch = "master"
@@ -248,11 +248,11 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "afa5a82059c6356159f699d81beff22a81842231"
+  revision = "3ec19112720433827bbce8be9342797f5a6aaaf9"
 
 [[projects]]
   branch = "master"
-  digest = "1:4dd9493d1182d8afdc4ee8db4c84111e463941d695e00a973b3adf6e195eec12"
+  digest = "1:c6190024641b1cff70f2d28c6ddc0ea0f1d76b0632c3215e4c9eae6703abba65"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -260,11 +260,11 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "953cdadca894cdc07be76fc99f95b40c28f06623"
+  revision = "87c872767d25fb96dfe96c794fd028b38a08440b"
 
 [[projects]]
   branch = "master"
-  digest = "1:be1ab6d2b333b1d487c01f1328aef9dc76cee4ff4f780775a552d2a1653f0207"
+  digest = "1:93f3f17886abf8d17ff07ece88d6e1974226f5638d216041bd2234ca03ef848c"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -280,7 +280,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "fe54fb35175bb1c0c175e2335e23d7fa90ca987a"
+  revision = "7c3f65130f290a790cd2a8742f0636e46e345bc2"
 
 [[projects]]
   digest = "1:8061e1ede5067e386972621147c69c9183d3dc3215056465206fc4202b3a15e7"
