@@ -1,4 +1,4 @@
 DEFAULT normal
 
 LABEL normal
-LINUX bzImage
+LINUX kernel
