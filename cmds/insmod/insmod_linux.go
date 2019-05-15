@@ -30,13 +30,7 @@ func main() {
 	// Everything else is module options
 	options := strings.Join(os.Args[2:], " ")
 
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("could not open %q: %v", filename, err)
-	}
-	defer f.Close()
-
-	if err := kmodule.FileInit(f, options, 0); err != nil {
+	if err := kmodule.LoadModule(filename, options, 0, kmodule.ProbeOpts{}); err != nil {
 		log.Fatalf("insmod: could not load %q: %v", filename, err)
 	}
 }

@@ -192,6 +192,19 @@
   revision = "03363dc71ec82763595440b4b2c3e5f69f47a4e0"
 
 [[projects]]
+  digest = "1:5f252b001e9573efb54ffae53b96bb5bfa4963afec4f35d607121ebb4a4dff81"
+  name = "github.com/ulikunitz/xz"
+  packages = [
+    ".",
+    "internal/hash",
+    "internal/xlog",
+    "lzma",
+  ]
+  pruneopts = "NUT"
+  revision = "6f934d456d51e742b4eeab20d925a827ef22320a"
+  version = "v0.5.6"
+
+[[projects]]
   branch = "master"
   digest = "1:376515b14447d6cbbf8cf113f592ed3a05945ffc54cf7e51b58b63344ee7980d"
   name = "github.com/vishvananda/netlink"
@@ -323,6 +336,7 @@
     "github.com/rck/unit",
     "github.com/spf13/pflag",
     "github.com/u-root/dhcp4/dhcp4server",
+    "github.com/ulikunitz/xz",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",

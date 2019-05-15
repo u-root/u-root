@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ulikunitz/xz"
 	"golang.org/x/sys/unix"
 )
 
@@ -30,28 +31,6 @@ const (
 // Init loads the kernel module given by image with the given options.
 func Init(image []byte, opts string) error {
 	return unix.InitModule(image, opts)
-}
-
-// FileInit loads the kernel module contained by `f` with the given opts and
-// flags.
-//
-// FileInit falls back to Init when the finit_module(2) syscall is not available.
-func FileInit(f *os.File, opts string, flags uintptr) error {
-	err := unix.FinitModule(int(f.Fd()), opts, int(flags))
-	if err == unix.ENOSYS {
-		if flags != 0 {
-			return err
-		}
-
-		// Fall back to regular init_module(2).
-		img, err := ioutil.ReadAll(f)
-		if err != nil {
-			return err
-		}
-		return Init(img, opts)
-	}
-
-	return err
 }
 
 // Delete removes a kernel module.
@@ -79,9 +58,9 @@ type depMap map[string]*dependency
 //
 // An empty ProbeOpts{} should lead to the default behavior.
 type ProbeOpts struct {
-	DryRunCB func(string)
-	RootDir  string
-	KVer     string
+	DryRunCB       func(string)
+	RootDir        string
+	KVer           string
 	IgnoreProcMods bool
 }
 
@@ -116,7 +95,7 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 			return err
 		}
 	}
-	if err := loadModule(modPath, modParams, opts); err != nil {
+	if err := LoadModule(modPath, modParams, 0, opts); err != nil {
 		return err
 	}
 
@@ -237,7 +216,7 @@ func loadDeps(path string, m depMap, opts ProbeOpts) error {
 	}
 
 	// done with dependencies, load module
-	if err := loadModule(path, "", opts); err != nil {
+	if err := LoadModule(path, "", 0, opts); err != nil {
 		return err
 	}
 	m[path].state = loaded
@@ -245,23 +224,64 @@ func loadDeps(path string, m depMap, opts ProbeOpts) error {
 	return nil
 }
 
-func loadModule(path, modParams string, opts ProbeOpts) error {
+// loadModule loads a file as a module. Because of all the various hacks -- er,
+// improvements, made to module loading over 20 years, this gets messy.
+// o finit_module is optional and only takes an fd
+// o you can only use flags with finit_module
+// o some distros have compressed modules
+//   - can you uncompress those to a file?
+//     what if /tmp is not there for some reason? What if the module you are
+//     loading is tmpfs and you can't make temp files until you modprobe tmpfs?
+//     [this can happen]
+//   - Can you write the uncompressed data to a pipe and pass that fd?
+//     You may not be able to write all the data to a pipe. 4k is a common size.
+//     What if the module loader stats the pipe? It won't get the right answer.
+//     What if the writer gets behind and kernel reads 0 bytes for some reason and assumes EOF?
+//     What if a writer messes up due to bad compression and you block the kernel?
+// It's a mess.
+//
+// With luck, this function covers all the cases.
+// I put it back in one function as I found it a bit more readable straight line --
+// it's less than a page.
+// Note that, at present, we don't even set flags. Arguably, using FinitModule
+// is a waste of time.
+func LoadModule(path, modParams string, flags int, opts ProbeOpts) error {
 	if opts.DryRunCB != nil {
 		opts.DryRunCB(path)
 		return nil
 	}
 
+	isXZ := strings.HasSuffix(path, ".xz")
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	if err := FileInit(f, modParams, 0); err != nil && err != unix.EEXIST {
+	if !isXZ {
+		// Use e instead of err to ensure visitors from the future don't see err
+		// and think the := is a typo.
+		if e := unix.FinitModule(int(f.Fd()), modParams, flags); e != unix.ENOSYS {
+			return e
+		}
+	}
+
+	if flags != 0 {
+		return fmt.Errorf("Can not have non-zero flags (%#x) with init_module", flags)
+	}
+
+	var r = io.Reader(f)
+	if isXZ {
+		if r, err = xz.NewReader(f); err != nil {
+			return err
+		}
+	}
+	img, err := ioutil.ReadAll(r)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return Init(img, modParams)
 }
 
 func genLoadedMods(r io.Reader, deps depMap) error {
