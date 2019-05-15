@@ -49,7 +49,8 @@ type Options struct {
 	// Extra kernel command-line arguments.
 	KernelArgs string
 
-	// Where to send serial output.
+	// Where to send serial output. This is written to from a separate
+	// goroutine, so you are responsible for ensuring synchronization.
 	SerialOutput io.WriteCloser
 
 	// Timeout is the expect timeout.
@@ -155,8 +156,10 @@ func (v *VM) CmdlineQuoted() string {
 
 // Close stops QEMU.
 func (v *VM) Close() {
-	v.gExpect.Close()
-	v.gExpect = nil
+	if v.gExpect != nil {
+		v.gExpect.Close()
+		v.gExpect = nil
+	}
 }
 
 // Send sends a string to QEMU's serial.

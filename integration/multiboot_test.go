@@ -35,6 +35,12 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Fatalf(`expected '"status": "ok"', got error: %v`, err)
 	}
 
+	// The serial bytes.Buffer is written from a different goroutine. Waiting
+	// for the VM to close provides enough synchronization to thread-safely
+	// read from the buffer.
+	q.Close()
+	q.Wait()
+
 	output := serial.Bytes()
 
 	i := bytes.Index(output, []byte(multiboot.DebugPrefix))

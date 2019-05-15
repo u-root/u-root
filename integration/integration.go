@@ -96,7 +96,8 @@ type Options struct {
 	// Extra environment variables to set when building (used by u-bmc)
 	ExtraBuildEnv []string
 
-	// Serial Output
+	// Where to send serial output. This is written to from a separate
+	// goroutine, so you are responsible for ensuring synchronization.
 	SerialOutput io.WriteCloser
 }
 
