@@ -82,6 +82,30 @@ func TestIpxeConfig(t *testing.T) {
 			},
 		},
 		{
+			desc: "comments and blank lines",
+			schemeFunc: func() pxe.Schemes {
+				s := make(pxe.Schemes)
+				fs := pxe.NewMockScheme("http")
+				conf := `#!ipxe
+				# the next line is blank
+
+				kernel http://someplace.com/foobar/pxefiles/kernel
+				boot`
+				fs.Add("someplace.com", "/foobar/pxefiles/ipxeconfig", conf)
+				fs.Add("someplace.com", "/foobar/pxefiles/kernel", content1)
+				s.Register(fs.Scheme, fs)
+				return s
+			},
+			curl: &url.URL{
+				Scheme: "http",
+				Host:   "someplace.com",
+				Path:   "/foobar/pxefiles/ipxeconfig",
+			},
+			want: config{
+				kernel: content1,
+			},
+		},
+		{
 			desc: "kernel does not exist, simple config",
 			schemeFunc: func() pxe.Schemes {
 				s := make(pxe.Schemes)
