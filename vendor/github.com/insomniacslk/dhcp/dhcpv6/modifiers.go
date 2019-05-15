@@ -41,7 +41,6 @@ func WithNetboot(d DHCPv6) {
 	oro.AddRequestedOption(OptionBootfileURL)
 	oro.AddRequestedOption(OptionBootfileParam)
 	msg.UpdateOption(oro)
-	return
 }
 
 // WithUserClass adds a user class option to the packet
@@ -73,6 +72,21 @@ func WithIANA(addrs ...OptIAAddress) Modifier {
 		for _, addr := range addrs {
 			iaNa.AddOption(&addr)
 		}
+		d.UpdateOption(iaNa)
+	}
+}
+
+// WithIAID updates an OptIANA option with the provided IAID
+func WithIAID(iaid [4]byte) Modifier {
+	return func(d DHCPv6) {
+		opt := d.GetOneOption(OptionIANA)
+		if opt == nil {
+			opt = &OptIANA{
+				Options: Options{},
+			}
+		}
+		iaNa := opt.(*OptIANA)
+		copy(iaNa.IaId[:], iaid[:])
 		d.UpdateOption(iaNa)
 	}
 }

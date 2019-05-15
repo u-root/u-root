@@ -35,7 +35,7 @@ func main() {
 		sh.RunOrDie("kexec",
 			"-i", "/testdata/initramfs.cpio",
 			"-c", cmdLine,
-			"/testdata/bzImage")
+			"/testdata/kernel")
 	} else {
 		unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 	}

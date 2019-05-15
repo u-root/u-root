@@ -283,9 +283,9 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		return nil, err
 	}
 
-	// Copy kernel to tmpDir.
-	bzImage := filepath.Join(tmpDir, "bzImage")
-	if err := cp.Copy(os.Getenv("UROOT_KERNEL"), bzImage); err != nil {
+	// Copy kernel to tmpDir for tests involving kexec.
+	kernel := filepath.Join(tmpDir, "kernel")
+	if err := cp.Copy(os.Getenv("UROOT_KERNEL"), kernel); err != nil {
 		return nil, err
 	}
 
@@ -309,7 +309,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 
 	return &qemu.Options{
 		Initramfs:    outputFile,
-		Kernel:       bzImage,
+		Kernel:       kernel,
 		KernelArgs:   kernelArgs,
 		SerialOutput: logFile,
 		Timeout:      o.Timeout,
