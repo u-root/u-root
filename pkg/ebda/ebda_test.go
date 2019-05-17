@@ -27,7 +27,7 @@ func checkEqualsEBDA(t *testing.T, testName string, e, g *EBDA) {
 	} else if e == nil && g != nil {
 		t.Errorf("test %s expected no EBDA, got %v", testName, *g)
 	} else if e != nil && g != nil {
-		if e.BaseOffset != g.BaseOffset || e.Length != g.Length || !bytes.Equal(e.Buf, g.Buf) {
+		if e.BaseOffset != g.BaseOffset || e.Length != g.Length || !bytes.Equal(e.Data, g.Data) {
 			t.Errorf("test %s expected EBDA: \n%v,\ngot:\n%v", testName, *e, *g)
 		}
 	}
@@ -107,7 +107,7 @@ func TestReadEBDA(t *testing.T) {
 			ebda: &EBDA{
 				BaseOffset: 0x9000,
 				Length:     1024,
-				Buf:        fakeEBDA(1),
+				Data:       fakeEBDA(1),
 			},
 		},
 	} {
@@ -139,7 +139,7 @@ func TestWriteEBDA(t *testing.T) {
 			fakeMem: make([]byte, 1),
 			ebda: &EBDA{
 				Length: 1024,
-				Buf:    fakeEBDA(1),
+				Data:   fakeEBDA(1),
 			},
 			errPrefix: "unable to read EBDA Pointer:",
 		},
@@ -148,7 +148,7 @@ func TestWriteEBDA(t *testing.T) {
 			fakeMem: fakeDevMemEBDA(0x9000, 1),
 			ebda: &EBDA{
 				Length: 1023,
-				Buf:    fakeEBDA(1),
+				Data:   fakeEBDA(1),
 			},
 			errPrefix: "length is not an integer multiple of 1 KiB, got",
 		},
@@ -158,7 +158,7 @@ func TestWriteEBDA(t *testing.T) {
 			ebda: &EBDA{
 				BaseOffset: 0x9000,
 				Length:     1024,
-				Buf:        fakeEBDA(2),
+				Data:       fakeEBDA(2),
 			},
 			errPrefix: "length field is not equal to buffer length",
 		},
@@ -168,7 +168,7 @@ func TestWriteEBDA(t *testing.T) {
 			ebda: &EBDA{
 				BaseOffset: 0x9000,
 				Length:     256 * 1024,
-				Buf:        fakeEBDA(256),
+				Data:       fakeEBDA(256),
 			},
 			errPrefix: "length is greater than 255 KiB",
 		},
@@ -178,7 +178,7 @@ func TestWriteEBDA(t *testing.T) {
 			ebda: &EBDA{
 				BaseOffset: 0x9000,
 				Length:     1024,
-				Buf:        fakeEBDA(1),
+				Data:       fakeEBDA(1),
 			},
 		},
 	} {
