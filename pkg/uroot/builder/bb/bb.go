@@ -100,10 +100,16 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 	var bbPackages []string
 	// Move and rewrite package files.
 	importer := importer.For("source", nil)
+	seenPackages := map[string]bool{}
 	for _, pkg := range pkgs {
-		if _, ok := skip[path.Base(pkg)]; ok {
+		basePkg := path.Base(pkg)
+		if _, ok := skip[basePkg]; ok {
 			continue
 		}
+		if _, ok := seenPackages[path.Base(pkg)]; ok {
+			return fmt.Errorf("Failed to build with bb: found duplicate pkgs %s", basePkg)
+		}
+		seenPackages[basePkg] = true
 
 		// TODO: use bbDir to derive import path below or vice versa.
 		if err := RewritePackage(env, pkg, "github.com/u-root/u-root/pkg/bb", importer); err != nil {
