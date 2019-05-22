@@ -236,6 +236,9 @@ var getters = []func() (int64, *RSDP, error){getRSDPEFI, getRSDPmem}
 func GetRSDP() (base int64, rsdp *RSDP, err error) {
 	for _, f := range getters {
 		base, r, err := f()
+		if err != nil {
+			log.Print(err)
+		}
 		if err == nil {
 			return base, r, nil
 		}
