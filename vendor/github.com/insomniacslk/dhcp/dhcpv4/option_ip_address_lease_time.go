@@ -1,7 +1,6 @@
 package dhcpv4
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
@@ -27,7 +26,7 @@ func (d Duration) ToBytes() []byte {
 
 // String returns a human-readable string for this option.
 func (d Duration) String() string {
-	return fmt.Sprintf("%s", time.Duration(d))
+	return time.Duration(d).String()
 }
 
 // OptIPAddressLeaseTime returns a new IP address lease time option.

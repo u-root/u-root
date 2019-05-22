@@ -42,8 +42,15 @@ func GetTime() uint32 {
 	return uint32((now.Nanoseconds() / 1000000000) % 0xffffffff)
 }
 
-// NewSolicitWithCID creates a new SOLICIT message with CID.
-func NewSolicitWithCID(duid Duid, modifiers ...Modifier) (*Message, error) {
+// NewSolicit creates a new SOLICIT message, using the given hardware address to
+// derive the IAID in the IA_NA option.
+func NewSolicit(hwaddr net.HardwareAddr, modifiers ...Modifier) (*Message, error) {
+	duid := Duid{
+		Type:          DUID_LLT,
+		HwType:        iana.HWTypeEthernet,
+		Time:          GetTime(),
+		LinkLayerAddr: hwaddr,
+	}
 	m, err := NewMessage()
 	if err != nil {
 		return nil, err
@@ -57,29 +64,18 @@ func NewSolicitWithCID(duid Duid, modifiers ...Modifier) (*Message, error) {
 	})
 	m.AddOption(oro)
 	m.AddOption(&OptElapsedTime{})
-	// FIXME use real values for IA_NA
-	iaNa := &OptIANA{}
-	iaNa.IaId = [4]byte{0xfa, 0xce, 0xb0, 0x0c}
-	iaNa.T1 = 0xe10
-	iaNa.T2 = 0x1518
-	m.AddOption(iaNa)
+	if len(hwaddr) < 4 {
+		return nil, errors.New("short hardware addrss: less than 4 bytes")
+	}
+	l := len(hwaddr)
+	var iaid [4]byte
+	copy(iaid[:], hwaddr[l-4:l])
+	modifiers = append([]Modifier{WithIAID(iaid)}, modifiers...)
 	// Apply modifiers
 	for _, mod := range modifiers {
 		mod(m)
 	}
 	return m, nil
-}
-
-// NewSolicit creates a new SOLICIT message with DUID-LLT, using the
-// given network interface's hardware address and current time
-func NewSolicit(ifaceHWAddr net.HardwareAddr, modifiers ...Modifier) (*Message, error) {
-	duid := Duid{
-		Type:          DUID_LLT,
-		HwType:        iana.HWTypeEthernet,
-		Time:          GetTime(),
-		LinkLayerAddr: ifaceHWAddr,
-	}
-	return NewSolicitWithCID(duid, modifiers...)
 }
 
 // NewAdvertiseFromSolicit creates a new ADVERTISE packet based on an SOLICIT packet.
@@ -165,17 +161,23 @@ func NewRequestFromAdvertise(adv *Message, modifiers ...Modifier) (*Message, err
 }
 
 // NewReplyFromMessage creates a new REPLY packet based on a
-// Message. The function is to be used when generating a reply to
-// REQUEST, CONFIRM, RENEW, REBIND, RELEASE and INFORMATION-REQUEST packets.
+// Message. The function is to be used when generating a reply to a SOLICIT with
+// rapid-commit, REQUEST, CONFIRM, RENEW, REBIND, RELEASE and INFORMATION-REQUEST
+// packets.
 func NewReplyFromMessage(msg *Message, modifiers ...Modifier) (*Message, error) {
 	if msg == nil {
-		return nil, errors.New("Message cannot be nil")
+		return nil, errors.New("message cannot be nil")
 	}
 	switch msg.Type() {
+	case MessageTypeSolicit:
+		if msg.GetOneOption(OptionRapidCommit) == nil {
+			return nil, errors.New("cannot create REPLY from a SOLICIT without rapid-commit option")
+		}
+		modifiers = append([]Modifier{WithRapidCommit}, modifiers...)
 	case MessageTypeRequest, MessageTypeConfirm, MessageTypeRenew,
 		MessageTypeRebind, MessageTypeRelease, MessageTypeInformationRequest:
 	default:
-		return nil, errors.New("Cannot create REPLY from the passed message type set")
+		return nil, errors.New("cannot create REPLY from the passed message type set")
 	}
 
 	// build REPLY from MESSAGE

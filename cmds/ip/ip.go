@@ -18,6 +18,8 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+var inet6 = flag.BoolP("6", "6", false, "use ipv6")
+
 // The language implemented by the standard 'ip' is not super consistent
 // and has lots of convenience shortcuts.
 // The BNF the standard ip  shows you doesn't show many of these short cuts, and
@@ -205,7 +207,11 @@ func link() error {
 }
 
 func routeshow() error {
-	b, err := ioutil.ReadFile("/proc/net/route")
+	path := "/proc/net/route"
+	if *inet6 {
+		path = "/proc/net/ipv6_route"
+	}
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Route show failed: %v", err)
 	}

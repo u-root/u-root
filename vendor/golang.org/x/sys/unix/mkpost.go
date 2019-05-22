@@ -96,6 +96,15 @@ func main() {
 	cgoCommandRegex := regexp.MustCompile(`(cgo -godefs .*)`)
 	b = cgoCommandRegex.ReplaceAll(b, []byte(replacement))
 
+	// Rename Stat_t time fields
+	if goos == "freebsd" && goarch == "386" {
+		// Hide Stat_t.[AMCB]tim_ext fields
+		renameStatTimeExtFieldsRegex := regexp.MustCompile(`[AMCB]tim_ext`)
+		b = renameStatTimeExtFieldsRegex.ReplaceAll(b, []byte("_"))
+	}
+	renameStatTimeFieldsRegex := regexp.MustCompile(`([AMCB])(?:irth)?time?(?:spec)?\s+(Timespec|StTimespec)`)
+	b = renameStatTimeFieldsRegex.ReplaceAll(b, []byte("${1}tim ${2}"))
+
 	// gofmt
 	b, err = format.Source(b)
 	if err != nil {

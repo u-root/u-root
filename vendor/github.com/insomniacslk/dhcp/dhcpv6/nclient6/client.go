@@ -30,11 +30,6 @@ var (
 	}
 )
 
-const (
-	maxUDPReceivedPacketSize = 8192
-	maxMessageSize           = 1500
-)
-
 var (
 	// ErrNoResponse is returned when no response packet is received.
 	ErrNoResponse = errors.New("no matching response packet received")
@@ -203,12 +198,6 @@ func (c *Client) receiveLoop() {
 
 // ClientOpt is a function that configures the Client.
 type ClientOpt func(*Client)
-
-func withBufferCap(n int) ClientOpt {
-	return func(c *Client) {
-		c.bufferCap = n
-	}
-}
 
 // WithTimeout configures the retransmission timeout.
 //

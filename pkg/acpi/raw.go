@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/u-root/u-root/pkg/io"
+	"github.com/u-root/u-root/pkg/memio"
 )
 
 // Raw ACPI table support. Raw tables are those tables
@@ -49,14 +49,14 @@ func RawFromFile(n string) (Tabler, error) {
 // if the kernel has restrictions on reading memory above
 // the 1M boundary, and the tables are above boundary.
 func ReadRaw(a int64) (Tabler, error) {
-	var u io.Uint32
+	var u memio.Uint32
 	// Read the table size at a+4
-	if err := io.Read(a+4, &u); err != nil {
+	if err := memio.Read(a+4, &u); err != nil {
 		return nil, err
 	}
 	Debug("ReadRaw: Size is %d", u)
-	dat := io.ByteSlice(make([]byte, u))
-	if err := io.Read(a, &dat); err != nil {
+	dat := memio.ByteSlice(make([]byte, u))
+	if err := memio.Read(a, &dat); err != nil {
 		return nil, err
 	}
 	return &Raw{data: []byte(dat)}, nil
