@@ -224,7 +224,7 @@ func NewRoot(newRoot string) error {
 
 	log.Printf("switch_root: Deleting old /")
 	if err := RecursiveDelete(int(oldRoot.Fd())); err != nil {
-		panic(err)
+		return err
 	}
 	return nil
 }
