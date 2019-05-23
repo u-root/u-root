@@ -95,6 +95,14 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "fix usage of an absolute path",
+			args: []string{"-nocmd", "-files=/bin:/bin"},
+			err:  nil,
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"bin/bash"},
+			},
+		},
+		{
 			name: "include multiple extra files",
 			args: []string{"-nocmd", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
 			validators: []itest.ArchiveValidator{

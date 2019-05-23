@@ -196,10 +196,19 @@ func TestFilesAddFile(t *testing.T) {
 			},
 		},
 		{
-			name:        "destination path must not be absolute",
-			src:         regularFile.Name(),
-			dest:        "/bar/foo",
-			errContains: "must not be absolute",
+			name: "absolute destination paths are made relative",
+			af: &Files{
+				Files: map[string]string{},
+			},
+			src:  dir,
+			dest: "/bar/foo",
+			result: &Files{
+				Files: map[string]string{
+					"bar/foo":      dir,
+					"bar/foo/foo":  filepath.Join(dir, "foo"),
+					"bar/foo/foo2": filepath.Join(dir, "foo2"),
+				},
+			},
 		},
 		{
 			name: "add a directory",
