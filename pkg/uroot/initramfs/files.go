@@ -6,6 +6,7 @@ package initramfs
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -52,7 +53,12 @@ func (af *Files) addFile(src string, dest string, follow bool) error {
 	src = filepath.Clean(src)
 	dest = path.Clean(dest)
 	if path.IsAbs(dest) {
-		return fmt.Errorf("archive path %q must not be absolute (host source %q)", dest, src)
+		r, err := filepath.Rel("/", dest)
+		if err != nil {
+			return fmt.Errorf("%q is an absolute path and can't make it relative to /: %v", dest, err)
+		}
+		log.Printf("Warning: You used an absolute path %q and it was adjusted to %q", dest, r)
+		dest = r
 	}
 
 	// We check if it's a directory first. If a directory already exists as
