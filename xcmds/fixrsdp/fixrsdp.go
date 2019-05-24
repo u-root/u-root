@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Find the EBDA
-	f, err := os.Open("/dev/mem")
+	f, err := os.OpenFile("/dev/mem", os.O_RDWR, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
