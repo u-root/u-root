@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 	"pack.ag/tftp"
@@ -199,6 +200,50 @@ func (h HTTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 		return nil, fmt.Errorf("HTTP server responded with code %d, want 200: response %v", resp.StatusCode, resp)
 	}
 	return uio.NewCachingReader(resp.Body), nil
+}
+
+// HTTPClientWithRetries implements FileScheme for HTTP files. It retries
+// until a response is received or until the timeout.
+type HTTPClientWithRetries struct {
+	Client  *http.Client
+	Timeout time.Duration
+}
+
+// GetFile implements FileScheme.GetFile.
+func (h HTTPClientWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	counter := 0
+	delay := 500 * time.Millisecond
+	maxDelay := 10 * time.Second
+
+	timer := time.NewTimer(h.Timeout)
+	defer timer.Stop()
+	for {
+		resp, err := h.Client.Do(req)
+		if err == nil {
+			if resp.StatusCode != 200 {
+				return nil, fmt.Errorf("HTTP server responded with code %d, want 200: response %v",
+					resp.StatusCode, resp)
+			}
+			return uio.NewCachingReader(resp.Body), nil
+		}
+		counter++
+
+		// Backoff
+		delay += delay / 2
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+		select {
+		case <-timer.C:
+			return nil, fmt.Errorf("http timeout after %d tries: %v", counter, err)
+		case <-time.After(delay):
+		}
+	}
 }
 
 // LocalFileClient implements FileScheme for files on disk.
