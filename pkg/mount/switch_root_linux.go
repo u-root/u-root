@@ -148,17 +148,14 @@ func AddSpecialMounts(newRoot string) error {
 			continue
 		}
 		// Make sure the target dir exists and is empty.
-		if _, err := os.Stat(path); os.IsNotExist(err) {
+		if fi, err := os.Stat(path); os.IsNotExist(err) {
 			if err := unix.Mkdir(path, 0); err != nil {
 				return err
 			}
 		} else if err != nil {
 			return err
-		}
-		if empty, err := DirIsEmpty(path); err != nil {
-			return err
-		} else if !empty {
-			return fmt.Errorf("%v must be empty", path)
+		} else if !fi.IsDir() {
+			return fmt.Errorf("%v must be a dir", path)
 		}
 		if err := MoveMount(mount, path); err != nil {
 			return err
