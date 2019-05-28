@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/u-root/u-root/pkg/acpi"
 	"golang.org/x/sys/unix"
 )
 
@@ -23,11 +22,6 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 		ramfsfd = int(ramfs.Fd())
 	} else {
 		flags |= unix.KEXEC_FILE_NO_INITRAMFS
-	}
-
-	if base, _, err := acpi.GetRSDP(); err != nil {
-		// Prepend the RSDP.
-		cmdline = fmt.Sprintf("acpi_rsdp=%#x %s", base, cmdline)
 	}
 
 	if err := unix.KexecFileLoad(int(kernel.Fd()), ramfsfd, cmdline, flags); err != nil {
