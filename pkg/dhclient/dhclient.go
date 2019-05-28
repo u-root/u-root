@@ -95,6 +95,11 @@ func Configure6(iface netlink.Link, packet *dhcpv6.Message) error {
 		},
 		PreferedLft: int(l.PreferredLifetime),
 		ValidLft:    int(l.ValidLifetime),
+		// Optimistic DAD (Duplicate Address Detection) means we can
+		// use the address before DAD is complete. The DHCP server's
+		// job was to give us a unique IP so there is little risk of a
+		// collision.
+		Flags: unix.IFA_F_OPTIMISTIC,
 	}
 	if err := netlink.AddrReplace(iface, dst); err != nil {
 		if os.IsExist(err) {
