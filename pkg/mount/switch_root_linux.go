@@ -147,17 +147,9 @@ func AddSpecialMounts(newRoot string) error {
 			log.Printf("switch_root: Skipping %q as it is not a mount", mount)
 			continue
 		}
-		// Make sure the target dir exists and is empty.
-		fi, err := os.Stat(path)
-		if os.IsNotExist(err) {
-			if err := unix.Mkdir(path, 0); err != nil {
-				return err
-			}
-		} else if err != nil {
+		// Make sure the target dir exists.
+		if err := os.MkdirAll(path, 0755); err != nil {
 			return err
-		}
-		if !fi.IsDir() {
-			return fmt.Errorf("%q must be a dir", path)
 		}
 		if err := MoveMount(mount, path); err != nil {
 			return err
