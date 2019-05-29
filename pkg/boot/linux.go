@@ -144,6 +144,10 @@ func (li *LinuxImage) ExecutionInfo(l *log.Logger) {
 
 // Execute implements OSImage.Execute and kexec's the kernel with its initramfs.
 func (li *LinuxImage) Execute() error {
+	if li.Kernel == nil {
+		return errors.New("LinuxImage.Kernel must be non-nil")
+	}
+
 	k, err := copyToFile(uio.Reader(li.Kernel))
 	if err != nil {
 		return err
