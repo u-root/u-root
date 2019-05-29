@@ -135,7 +135,7 @@ func AddSpecialMounts(newRoot string) error {
 		path := filepath.Join(newRoot, mount)
 		// Skip all mounting if the directory does not exist.
 		if _, err := os.Stat(mount); os.IsNotExist(err) {
-			log.Printf("switch_root: Skipping %s as the dir does not exist", mount)
+			log.Printf("switch_root: Skipping %q as the dir does not exist", mount)
 			continue
 		} else if err != nil {
 			return err
@@ -144,18 +144,20 @@ func AddSpecialMounts(newRoot string) error {
 		if same, err := SameFilesystem("/", mount); err != nil {
 			return err
 		} else if same {
-			log.Printf("switch_root: Skipping %s as it is not a mount", mount)
+			log.Printf("switch_root: Skipping %q as it is not a mount", mount)
 			continue
 		}
 		// Make sure the target dir exists and is empty.
-		if fi, err := os.Stat(path); os.IsNotExist(err) {
+		fi, err := os.Stat(path)
+		if os.IsNotExist(err) {
 			if err := unix.Mkdir(path, 0); err != nil {
 				return err
 			}
 		} else if err != nil {
 			return err
-		} else if !fi.IsDir() {
-			return fmt.Errorf("%v must be a dir", path)
+		}
+		if !fi.IsDir() {
+			return fmt.Errorf("%q must be a dir", path)
 		}
 		if err := MoveMount(mount, path); err != nil {
 			return err
