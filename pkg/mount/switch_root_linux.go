@@ -126,38 +126,50 @@ func MoveMount(oldPath string, newPath string) error {
 // 'special' in this context refers to the following non-blockdevice backed
 // mounts that are almost always used: /dev, /proc, /sys, and /run.
 // This function will create the target directories, if necessary.
-// If the target directories already exists, they must be empty.
+// If the target directories already exist, they must be empty.
 // This function skips missing mounts.
 func AddSpecialMounts(newRoot string) error {
 	var mounts = []string{"/dev", "/proc", "/sys", "/run"}
 
 	for _, mount := range mounts {
 		path := filepath.Join(newRoot, mount)
-		// Skip all mounting if the directory does not exists.
+		// Skip all mounting if the directory does not exist.
 		if _, err := os.Stat(mount); os.IsNotExist(err) {
-			fmt.Println("switch_root: Skipping", mount)
+			log.Printf("switch_root: Skipping %q as the dir does not exist", mount)
 			continue
 		} else if err != nil {
 			return err
 		}
-		// Make sure the target dir exists and is empty.
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if err := unix.Mkdir(path, 0); err != nil {
-				return err
-			}
-		} else if err != nil {
+		// Also skip if not currently a mount point
+		if same, err := SameFilesystem("/", mount); err != nil {
 			return err
+		} else if same {
+			log.Printf("switch_root: Skipping %q as it is not a mount", mount)
+			continue
 		}
-		if empty, err := DirIsEmpty(path); err != nil {
+		// Make sure the target dir exists.
+		if err := os.MkdirAll(path, 0755); err != nil {
 			return err
-		} else if !empty {
-			return fmt.Errorf("%v must be empty", path)
 		}
 		if err := MoveMount(mount, path); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// SameFilesystem returns true if both paths reside in the same filesystem.
+// This is achieved by comparing Stat_t.Dev, which contains the fs device's
+// major/minor numbers.
+func SameFilesystem(path1, path2 string) (bool, error) {
+	var stat1, stat2 unix.Stat_t
+	if err := unix.Stat(path1, &stat1); err != nil {
+		return false, err
+	}
+	if err := unix.Stat(path2, &stat2); err != nil {
+		return false, err
+	}
+	return stat1.Dev == stat2.Dev, nil
 }
 
 // SwitchRoot moves special mounts (dev, proc, sys, run) to the new directory,
@@ -203,7 +215,7 @@ func NewRoot(newRoot string) error {
 
 	log.Printf("switch_root: Deleting old /")
 	if err := RecursiveDelete(int(oldRoot.Fd())); err != nil {
-		panic(err)
+		return err
 	}
 	return nil
 }

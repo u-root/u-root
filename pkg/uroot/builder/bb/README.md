@@ -94,7 +94,7 @@ func Init() {
 }
 
 func Main() {
-  log.Printf("main")
+  log.Printf("train")
 }
 
 func init() {
