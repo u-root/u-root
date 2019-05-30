@@ -77,7 +77,7 @@ import (
 )
 
 // Type has to be inferred through type checking.
-var name string
+var name *string
 
 func Init0() {
   log.Printf("init %s", *name)
