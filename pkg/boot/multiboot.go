@@ -12,7 +12,8 @@ import (
 	"github.com/u-root/u-root/pkg/multiboot"
 )
 
-// MultibootImage is a multiboot-formated OSImage.
+// MultibootImage is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,
+// tboot.
 type MultibootImage struct {
 	Debug   bool
 	Path    string
@@ -27,8 +28,8 @@ func (MultibootImage) ExecutionInfo(log *log.Logger) {
 	log.Printf("Multiboot images are unsupported")
 }
 
-// Execute implements OSImage.Execute.
-func (mi *MultibootImage) Execute() error {
+// Load implements OSImage.Load.
+func (mi *MultibootImage) Load() error {
 	m, err := multiboot.New(mi.Path, mi.Cmdline, mi.Modules)
 	if err != nil {
 		return err
@@ -39,7 +40,7 @@ func (mi *MultibootImage) Execute() error {
 	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
-	return kexec.Reboot()
+	return nil
 }
 
 // String implements fmt.Stringer.

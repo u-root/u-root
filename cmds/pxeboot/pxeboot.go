@@ -80,7 +80,10 @@ func Netboot(ifaceNames string) error {
 				img.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
 				return nil
 			}
-			if err := img.Execute(); err != nil {
+			if err := img.Load(); err != nil {
+				return fmt.Errorf("kexec load of %v failed: %v", img, err)
+			}
+			if err := boot.Execute(); err != nil {
 				return fmt.Errorf("kexec of %v failed: %v", img, err)
 			}
 
