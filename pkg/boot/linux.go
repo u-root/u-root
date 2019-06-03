@@ -50,32 +50,8 @@ func copyToFile(r io.Reader) (*os.File, error) {
 	return readOnlyF, nil
 }
 
-// ExecutionInfo implements OSImage.ExecutionInfo.
-func (li *LinuxImage) ExecutionInfo(l *log.Logger) {
-	k, err := copyToFile(uio.Reader(li.Kernel))
-	if err != nil {
-		l.Printf("Copying kernel to file: %v", err)
-	}
-	defer k.Close()
-
-	var i *os.File
-	if li.Initrd != nil {
-		i, err = copyToFile(uio.Reader(li.Initrd))
-		if err != nil {
-			l.Printf("Copying initrd to file: %v", err)
-		}
-		defer i.Close()
-	}
-
-	l.Printf("Kernel: %s", k.Name())
-	if i != nil {
-		l.Printf("Initrd: %s", i.Name())
-	}
-	l.Printf("Command line: %s", li.Cmdline)
-}
-
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
-func (li *LinuxImage) Load() error {
+func (li *LinuxImage) Load(verbose bool) error {
 	if li.Kernel == nil {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
@@ -95,5 +71,10 @@ func (li *LinuxImage) Load() error {
 		defer i.Close()
 	}
 
+	log.Printf("Kernel: %s", k.Name())
+	if i != nil {
+		log.Printf("Initrd: %s", i.Name())
+	}
+	log.Printf("Command line: %s", li.Cmdline)
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

@@ -6,7 +6,6 @@ package boot
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/multiboot"
@@ -15,7 +14,6 @@ import (
 // MultibootImage is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,
 // tboot.
 type MultibootImage struct {
-	Debug   bool
 	Path    string
 	Cmdline string
 	Modules []string
@@ -23,14 +21,9 @@ type MultibootImage struct {
 
 var _ OSImage = &MultibootImage{}
 
-// ExecutionInfo implements OSImage.ExecutionInfo.
-func (MultibootImage) ExecutionInfo(log *log.Logger) {
-	log.Printf("Multiboot images are unsupported")
-}
-
 // Load implements OSImage.Load.
-func (mi *MultibootImage) Load() error {
-	return multiboot.Load(mi.Debug, mi.Path, mi.Cmdline, mi.Modules)
+func (mi *MultibootImage) Load(verbose bool) error {
+	return multiboot.Load(verbose, mi.Path, mi.Cmdline, mi.Modules)
 }
 
 // String implements fmt.Stringer.

@@ -104,13 +104,12 @@ func main() {
 		if mbk {
 			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
 			image = &boot.MultibootImage{
-				Debug:   opts.debug,
 				Modules: opts.modules,
 				Path:    kernelpath,
 				Cmdline: newCmdline,
 			}
 		}
-		if err := image.Load(); err != nil {
+		if err := image.Load(opts.debug); err != nil {
 			log.Fatal(err)
 		}
 	}
