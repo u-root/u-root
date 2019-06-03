@@ -7,6 +7,7 @@ package boot
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/multiboot"
 )
@@ -33,6 +34,7 @@ func (mi *MultibootImage) Load() error {
 }
 
 // String implements fmt.Stringer.
-func (MultibootImage) String() string {
-	return fmt.Sprintf("multiboot images unimplemented")
+func (mi *MultibootImage) String() string {
+	return fmt.Sprintf("MultibootImage(\n  KernelPath: %s\n  Cmdline: %s\n  Modules: %s\n)",
+		mi.Path, mi.Cmdline, strings.Join(mi.Modules, ", "))
 }
