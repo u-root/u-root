@@ -7,18 +7,12 @@ package boot
 import (
 	"fmt"
 	"log"
-
-	"github.com/u-root/u-root/pkg/cpio"
 )
 
 // multibootImage is a multiboot-formated OSImage.
 type multibootImage struct{}
 
 var _ OSImage = &multibootImage{}
-
-func newMultibootImage(a *cpio.Archive) (OSImage, error) {
-	return nil, fmt.Errorf("multiboot images unimplemented")
-}
 
 // ExecutionInfo implements OSImage.ExecutionInfo.
 func (multibootImage) ExecutionInfo(log *log.Logger) {
@@ -33,9 +27,4 @@ func (multibootImage) Execute() error {
 // String implements fmt.Stringer.
 func (multibootImage) String() string {
 	return fmt.Sprintf("multiboot images unimplemented")
-}
-
-// Pack implements OSImage.Pack.
-func (multibootImage) Pack(sw cpio.RecordWriter) error {
-	return fmt.Errorf("multiboot images unimplemented")
 }
