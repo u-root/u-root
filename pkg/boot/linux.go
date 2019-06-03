@@ -74,8 +74,8 @@ func (li *LinuxImage) ExecutionInfo(l *log.Logger) {
 	l.Printf("Command line: %s", li.Cmdline)
 }
 
-// Execute implements OSImage.Execute and kexec's the kernel with its initramfs.
-func (li *LinuxImage) Execute() error {
+// Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
+func (li *LinuxImage) Load() error {
 	if li.Kernel == nil {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
@@ -95,8 +95,5 @@ func (li *LinuxImage) Execute() error {
 		defer i.Close()
 	}
 
-	if err := kexec.FileLoad(k, i, li.Cmdline); err != nil {
-		return err
-	}
-	return kexec.Reboot()
+	return kexec.FileLoad(k, i, li.Cmdline)
 }

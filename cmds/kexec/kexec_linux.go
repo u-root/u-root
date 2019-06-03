@@ -19,16 +19,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 type options struct {
@@ -53,39 +52,6 @@ func registerFlags() *options {
 	return o
 }
 
-type loader interface {
-	Load(path, cmdLine string) error
-}
-
-type file struct {
-	initramfs string
-}
-
-type mboot struct {
-}
-
-func (f file) Load(path, cmdLine string) error {
-	kernel, err := os.OpenFile(path, os.O_RDONLY, 0)
-	if err != nil {
-		return fmt.Errorf("open(%q): %v", path, err)
-	}
-	defer kernel.Close()
-
-	var ramfs *os.File
-	if f.initramfs != "" {
-		ramfs, err = os.OpenFile(f.initramfs, os.O_RDONLY, 0)
-		if err != nil {
-			return fmt.Errorf("open(%q): %v", f.initramfs, err)
-		}
-		defer ramfs.Close()
-	}
-	return kexec.FileLoad(kernel, ramfs, cmdLine)
-}
-
-func (mb mboot) Load(path, cmdLine string) error {
-	return multiboot.Load(mb.debug, path, cmdLine, mb.modules)
-}
-
 func main() {
 	opts := registerFlags()
 	flag.Parse()
@@ -105,13 +71,13 @@ func main() {
 		opts.exec = true
 	}
 
-	newCmdLine := opts.cmdline
+	newCmdline := opts.cmdline
 	if opts.reuseCmdline {
 		procCmdLine := cmdline.NewCmdLine()
 		if procCmdLine.Err != nil {
 			log.Fatal("Couldn't read /proc/cmdline")
 		} else {
-			newCmdLine = procCmdLine.Raw
+			newCmdline = procCmdLine.Raw
 		}
 	}
 
@@ -120,7 +86,7 @@ func main() {
 	var kernelpath string
 	if opts.load {
 		kernelpath = flag.Arg(0)
-		log.Printf("Loading %s for kernel\n", kernelpath)
+		log.Printf("Loading %s for kernel.", kernelpath)
 
 		if err := multiboot.Probe(kernelpath); err == nil {
 			mbk = true
@@ -129,15 +95,22 @@ func main() {
 		}
 	}
 	if opts.load {
-		var l loader = file{initramfs: opts.initramfs}
+		var image boot.OSImage
+		image = &boot.LinuxImage{
+			Kernel:  uio.NewLazyFile(kernelpath),
+			Initrd:  uio.NewLazyFile(opts.initramfs),
+			Cmdline: newCmdline,
+		}
 		if mbk {
 			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
-			l = mboot{
-				debug:   opts.debug,
-				modules: opts.modules,
+			image = &boot.MultibootImage{
+				Debug:   opts.debug,
+				Modules: opts.modules,
+				Path:    kernelpath,
+				Cmdline: newCmdline,
 			}
 		}
-		if err := l.Load(kernelpath, newCmdLine); err != nil {
+		if err := image.Load(); err != nil {
 			log.Fatal(err)
 		}
 	}

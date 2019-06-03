@@ -6,6 +6,7 @@ package uio
 
 import (
 	"io"
+	"os"
 )
 
 // LazyOpener is a lazy io.Reader.
@@ -59,6 +60,16 @@ type LazyOpenerAt struct {
 	r    io.ReaderAt
 	err  error
 	open func() (io.ReaderAt, error)
+}
+
+// NewLazyFile returns a lazy ReaderAt opened from path.
+func NewLazyFile(path string) ReadAtCloser {
+	if len(path) == 0 {
+		return nil
+	}
+	return NewLazyOpenerAt(func() (io.ReaderAt, error) {
+		return os.Open(path)
+	})
 }
 
 // NewLazyOpenerAt returns a lazy io.ReaderAt based on `open`.

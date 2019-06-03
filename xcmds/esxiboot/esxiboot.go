@@ -34,14 +34,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/gpt"
-	"github.com/u-root/u-root/pkg/kexec"
-	"github.com/u-root/u-root/pkg/multiboot"
 )
 
 var cfg = flag.StringP("config", "c", "", "Set the ESXi config")
@@ -167,24 +165,16 @@ func main() {
 		}
 	}
 
-	p, err := os.Executable()
-	if err != nil {
-		log.Fatalf("Cannot find current executable path: %v", err)
-	}
-	trampoline, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		log.Fatalf("Cannot eval symlinks for %v: %v", p, err)
+	mi := &boot.MultibootImage{
+		Path:    opts.kernel,
+		Cmdline: opts.args,
+		Modules: opts.modules,
 	}
 
-	m := multiboot.New(opts.kernel, opts.args, trampoline, opts.modules)
-	if err := m.Load(false); err != nil {
-		log.Fatalf("Load failed: %v", err)
+	if err := mi.Load(); err != nil {
+		log.Fatalf("Failed to load multiboot image: %v", err)
 	}
-
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
-		log.Fatalf("kexec.Load() error: %v", err)
-	}
-	if err := kexec.Reboot(); err != nil {
-		log.Fatalf("kexec.Reboot() error: %v", err)
+	if err := boot.Execute(); err != nil {
+		log.Fatalf("boot.Execute() error: %v", err)
 	}
 }
