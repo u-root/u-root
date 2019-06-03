@@ -62,8 +62,6 @@ type file struct {
 }
 
 type mboot struct {
-	debug   bool
-	modules []string
 }
 
 func (f file) Load(path, cmdLine string) error {
@@ -85,23 +83,7 @@ func (f file) Load(path, cmdLine string) error {
 }
 
 func (mb mboot) Load(path, cmdLine string) error {
-	// Trampoline should be a part of current binary.
-	p, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("Cannot find current executable path: %v", err)
-	}
-	trampoline, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		return fmt.Errorf("Cannot eval symlinks for %v: %v", p, err)
-	}
-	m := multiboot.New(path, cmdLine, trampoline, mb.modules)
-	if err := m.Load(mb.debug); err != nil {
-		return fmt.Errorf("Load failed: %v", err)
-	}
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
-	}
-	return nil
+	return multiboot.Load(mb.debug, path, cmdLine, mb.modules)
 }
 
 func main() {

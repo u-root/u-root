@@ -15,6 +15,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
@@ -64,7 +65,7 @@ var (
 
 var sizeofMemoryMap = uint(binary.Size(MemoryMap{}))
 
-// MemoryMap represents a reserved range of memory passed via the Multiboot Info header.
+// MemoryMap represents a reserved range of memory passed via the multiboot Info header.
 type MemoryMap struct {
 	// Size is the size of the associated structure in bytes.
 	Size uint32
@@ -89,8 +90,18 @@ func Probe(file string) error {
 	return err
 }
 
-// New returns a new Multiboot instance.
-func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
+// New returns a new multiboot instance.
+func New(file, cmdLine string, modules []string) (*Multiboot, error) {
+	// Trampoline should be a part of current binary.
+	p, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot find current executable path: %v", err)
+	}
+	trampoline, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot eval symlinks for %v: %v", p, err)
+	}
+
 	return &Multiboot{
 		file:       file,
 		modules:    modules,
@@ -98,10 +109,24 @@ func New(file, cmdLine, trampoline string, modules []string) *Multiboot {
 		trampoline: trampoline,
 		bootloader: bootloader,
 		mem:        kexec.Memory{},
-	}
+	}, nil
 }
 
-// Load loads and parses multiboot information from m.file.
+func Load(debug bool, file, cmdline string, modules []string) error {
+	m, err := New(file, cmdline, modules)
+	if err != nil {
+		return err
+	}
+	if err := m.Load(debug); err != nil {
+		return err
+	}
+	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
+		return fmt.Errorf("kexec.Load() error: %v", err)
+	}
+	return nil
+}
+
+// load loads and parses multiboot information from m.file.
 func (m *Multiboot) Load(debug bool) error {
 	log.Printf("Parsing file %v", m.file)
 	b, err := readFile(m.file)
@@ -109,7 +134,7 @@ func (m *Multiboot) Load(debug bool) error {
 		return err
 	}
 	kernel := kernelReader{buf: b}
-	log.Println("Parsing Multiboot Header")
+	log.Println("Parsing multiboot Header")
 	if m.header, err = parseHeader(&kernel); err != nil {
 		return fmt.Errorf("Error parsing headers: %v", err)
 	}
@@ -129,9 +154,9 @@ func (m *Multiboot) Load(debug bool) error {
 		return fmt.Errorf("Error parsing memory map: %v", err)
 	}
 
-	log.Printf("Preparing Multiboot Info")
+	log.Printf("Preparing multiboot Info")
 	if m.infoAddr, err = m.addInfo(); err != nil {
-		return fmt.Errorf("Error preparing Multiboot Info: %v", err)
+		return fmt.Errorf("Error preparing multiboot Info: %v", err)
 	}
 
 	log.Printf("Adding trampoline")
@@ -159,7 +184,7 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 }
 
 func (m *Multiboot) addInfo() (addr uintptr, err error) {
-	iw, err := m.newMultibootInfo()
+	iw, err := m.newmultibootInfo()
 	if err != nil {
 		return 0, err
 	}
@@ -247,7 +272,7 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (m *Multiboot) newMultibootInfo() (*infoWrapper, error) {
+func (m *Multiboot) newmultibootInfo() (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
 		return nil, err
