@@ -7,24 +7,42 @@ package boot
 import (
 	"fmt"
 	"log"
+
+	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/multiboot"
 )
 
-// multibootImage is a multiboot-formated OSImage.
-type multibootImage struct{}
+// MultibootImage is a multiboot-formated OSImage.
+type MultibootImage struct {
+	Debug   bool
+	Path    string
+	Cmdline string
+	Modules []string
+}
 
-var _ OSImage = &multibootImage{}
+var _ OSImage = &MultibootImage{}
 
 // ExecutionInfo implements OSImage.ExecutionInfo.
-func (multibootImage) ExecutionInfo(log *log.Logger) {
+func (MultibootImage) ExecutionInfo(log *log.Logger) {
 	log.Printf("Multiboot images are unsupported")
 }
 
 // Execute implements OSImage.Execute.
-func (multibootImage) Execute() error {
-	return fmt.Errorf("multiboot images unimplemented")
+func (mi *MultibootImage) Execute() error {
+	m, err := multiboot.New(mi.Path, mi.Cmdline, mi.Modules)
+	if err != nil {
+		return err
+	}
+	if err := m.Load(mi.Debug); err != nil {
+		return err
+	}
+	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
+		return fmt.Errorf("kexec.Load() error: %v", err)
+	}
+	return kexec.Reboot()
 }
 
 // String implements fmt.Stringer.
-func (multibootImage) String() string {
+func (MultibootImage) String() string {
 	return fmt.Sprintf("multiboot images unimplemented")
 }
