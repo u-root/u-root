@@ -11,7 +11,6 @@ import (
 	"log"
 	"net"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
 	"time"
@@ -76,12 +75,11 @@ func Netboot(ifaceNames string) error {
 			cancel()
 			log.Printf("Got configuration: %s", img)
 
-			if *dryRun {
-				img.ExecutionInfo(log.New(os.Stderr, "", log.LstdFlags))
-				return nil
-			}
-			if err := img.Load(); err != nil {
+			if err := img.Load(*dryRun); err != nil {
 				return fmt.Errorf("kexec load of %v failed: %v", img, err)
+			}
+			if *dryRun {
+				return nil
 			}
 			if err := boot.Execute(); err != nil {
 				return fmt.Errorf("kexec of %v failed: %v", img, err)

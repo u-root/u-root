@@ -8,7 +8,6 @@ package boot
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/u-root/u-root/pkg/kexec"
 )
@@ -17,16 +16,16 @@ import (
 type OSImage interface {
 	fmt.Stringer
 
-	// ExecutionInfo prints information about the OS image. A user should
-	// be able to use the kexec command line tool to execute the OSImage
-	// given the printed information.
-	ExecutionInfo(log *log.Logger)
-
 	// Load loads the OS image into kernel memory, ready for execution.
-	Load() error
+	//
+	// After Load is called, call boot.Execute() to stop Linux and boot the
+	// loaded OSImage.
+	Load(verbose bool) error
 }
 
 // Execute executes a previously loaded OSImage.
+//
+// This will only work if OSImage.Load was called on some OSImage.
 func Execute() error {
 	return kexec.Reboot()
 }

@@ -171,7 +171,7 @@ func main() {
 		Modules: opts.modules,
 	}
 
-	if err := mi.Load(); err != nil {
+	if err := mi.Load(false /*not verbose*/); err != nil {
 		log.Fatalf("Failed to load multiboot image: %v", err)
 	}
 	if err := boot.Execute(); err != nil {
