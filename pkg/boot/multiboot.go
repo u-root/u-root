@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
 )
 
@@ -30,17 +29,7 @@ func (MultibootImage) ExecutionInfo(log *log.Logger) {
 
 // Load implements OSImage.Load.
 func (mi *MultibootImage) Load() error {
-	m, err := multiboot.New(mi.Path, mi.Cmdline, mi.Modules)
-	if err != nil {
-		return err
-	}
-	if err := m.Load(mi.Debug); err != nil {
-		return err
-	}
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
-	}
-	return nil
+	return multiboot.Load(mi.Debug, mi.Path, mi.Cmdline, mi.Modules)
 }
 
 // String implements fmt.Stringer.

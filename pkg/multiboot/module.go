@@ -34,7 +34,7 @@ type Module struct {
 
 type modules []Module
 
-func (m *Multiboot) addModules() (uintptr, error) {
+func (m *multiboot) addModules() (uintptr, error) {
 	loaded, data, err := loadModules(m.modules)
 	if err != nil {
 		return 0, err

@@ -24,8 +24,8 @@ import (
 
 const bootloader = "u-root kexec"
 
-// Multiboot defines parameters for working with multiboot kernels.
-type Multiboot struct {
+// multiboot defines parameters for working with multiboot kernels.
+type multiboot struct {
 	mem kexec.Memory
 
 	file    string
@@ -77,7 +77,7 @@ type MemoryMap struct {
 	Type uint32
 }
 
-type memoryMaps []MemoryMap
+type MemoryMaps []MemoryMap
 
 // Probe checks if file is multiboot v1 kernel.
 func Probe(file string) error {
@@ -90,8 +90,8 @@ func Probe(file string) error {
 	return err
 }
 
-// New returns a new multiboot instance.
-func New(file, cmdLine string, modules []string) (*Multiboot, error) {
+// newMB returns a new multiboot instance.
+func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
@@ -102,7 +102,7 @@ func New(file, cmdLine string, modules []string) (*Multiboot, error) {
 		return nil, fmt.Errorf("Cannot eval symlinks for %v: %v", p, err)
 	}
 
-	return &Multiboot{
+	return &multiboot{
 		file:       file,
 		modules:    modules,
 		cmdLine:    cmdLine,
@@ -112,12 +112,21 @@ func New(file, cmdLine string, modules []string) (*Multiboot, error) {
 	}, nil
 }
 
+// Load parses and loads a multiboot kernel `file` using kexec_load.
+//
+// debug turns on debug logging.
+//
+// Load can set up an arbitrary number of modules, and takes care of the
+// multiboot info structure, including the memory map.
+//
+// After Load is called, kexec.Reboot() is ready to be called any time to stop
+// Linux and execute the loaded kernel.
 func Load(debug bool, file, cmdline string, modules []string) error {
-	m, err := New(file, cmdline, modules)
+	m, err := newMB(file, cmdline, modules)
 	if err != nil {
 		return err
 	}
-	if err := m.Load(debug); err != nil {
+	if err := m.load(debug); err != nil {
 		return err
 	}
 	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
@@ -127,7 +136,7 @@ func Load(debug bool, file, cmdline string, modules []string) error {
 }
 
 // load loads and parses multiboot information from m.file.
-func (m *Multiboot) Load(debug bool) error {
+func (m *multiboot) load(debug bool) error {
 	log.Printf("Parsing file %v", m.file)
 	b, err := readFile(m.file)
 	if err != nil {
@@ -183,7 +192,7 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 	return uintptr(f.Entry), err
 }
 
-func (m *Multiboot) addInfo() (addr uintptr, err error) {
+func (m *multiboot) addInfo() (addr uintptr, err error) {
 	iw, err := m.newmultibootInfo()
 	if err != nil {
 		return 0, err
@@ -211,8 +220,8 @@ func (m *Multiboot) addInfo() (addr uintptr, err error) {
 	return addr, nil
 }
 
-func (m Multiboot) memoryMap() memoryMaps {
-	var ret memoryMaps
+func (m multiboot) memoryMap() MemoryMaps {
+	var ret MemoryMaps
 	for _, r := range m.mem.Phys {
 		typ, ok := rangeTypes[r.Type]
 		if !ok {
@@ -230,7 +239,7 @@ func (m Multiboot) memoryMap() memoryMaps {
 	return ret
 }
 
-func (m *Multiboot) addMmap() (addr uintptr, size uint, err error) {
+func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	mmap := m.memoryMap()
 	d, err := mmap.marshal()
 	if err != nil {
@@ -243,7 +252,7 @@ func (m *Multiboot) addMmap() (addr uintptr, size uint, err error) {
 	return addr, uint(len(mmap)) * sizeofMemoryMap, nil
 }
 
-func (m Multiboot) memoryBoundaries() (lower, upper uint32) {
+func (m multiboot) memoryBoundaries() (lower, upper uint32) {
 	const M1 = 1048576
 	const K640 = 640 * 1024
 	for _, r := range m.mem.Phys {
@@ -272,7 +281,7 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (m *Multiboot) newmultibootInfo() (*infoWrapper, error) {
+func (m *multiboot) newmultibootInfo() (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
 		return nil, err
@@ -311,20 +320,20 @@ func (m *Multiboot) newmultibootInfo() (*infoWrapper, error) {
 
 // Segments returns kexec.Segments, where all the multiboot related
 // information is stored.
-func (m Multiboot) Segments() []kexec.Segment {
+func (m multiboot) Segments() []kexec.Segment {
 	return m.mem.Segments
 }
 
 // marshal writes out the exact bytes expected by the multiboot info header
 // specified in
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format.
-func (m memoryMaps) marshal() ([]byte, error) {
+func (m MemoryMaps) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := binary.Write(&buf, ubinary.NativeEndian, m)
 	return buf.Bytes(), err
 }
 
-func (m *Multiboot) addTrampoline() (entry uintptr, err error) {
+func (m *multiboot) addTrampoline() (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
 	d, err := trampoline.Setup(m.trampoline, m.infoAddr, m.kernelEntry)
