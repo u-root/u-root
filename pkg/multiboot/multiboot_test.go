@@ -11,8 +11,6 @@ import (
 	"io"
 	"reflect"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/kexec"
 )
 
 func createFile(hdr *Header, offset, size int) (io.Reader, error) {
@@ -118,41 +116,5 @@ func TestParseHeader(t *testing.T) {
 			}
 
 		})
-	}
-}
-
-func TestEnsure(t *testing.T) {
-	Debug = t.Logf
-	var m = New("a", "b", "c", []string{})
-	// we may not be able to do this; it's not an error.
-	if err := m.mem.ParseMemoryMap(); err != nil {
-		t.Skip(err)
-	}
-	// fake up a simple acpi segment
-	mm := m.memoryMap()
-	var i = -1
-	for x, m := range mm {
-		if m.Type == rangeTypes[kexec.RangeACPI] {
-			i = x
-			break
-		}
-	}
-	if i == -1 {
-		t.Fatalf("Finding RangeACPI in %v: got -1, want valid index", mm)
-	}
-	a := &mm[i]
-	nr := kexec.Range{Start: uintptr(a.BaseAddr + 3), Size: uint(a.Size - 3)}
-	if err := m.EnsureSize(nr, kexec.RangeACPI); err != nil {
-		t.Fatalf("1st Ensure same size: got %v, want nil", err)
-	}
-	t.Logf("First check ok")
-	nr.Size += 1024
-	if err := m.EnsureSize(nr, kexec.RangeACPI); err != nil {
-		t.Fatalf("Growing table: got %v, want nil", err)
-	}
-	t.Logf("Next segment size is %d", mm[i+1].Size)
-	nr.Size += 1048576
-	if err := m.EnsureSize(nr, kexec.RangeACPI); err == nil {
-		t.Fatalf("Ensure same size: got nil, want error")
 	}
 }
