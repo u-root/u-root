@@ -55,7 +55,7 @@ import (
 var name = flag.String("name", "", "Gimme name")
 
 func init() {
-  log.Printf("init")
+  log.Printf("init %s", *name)
 }
 
 func main() {
@@ -77,10 +77,10 @@ import (
 )
 
 // Type has to be inferred through type checking.
-var name string
+var name *string
 
 func Init0() {
-  log.Printf("init")
+  log.Printf("init %s", *name)
 }
 
 func Init1() {
@@ -89,8 +89,8 @@ func Init1() {
 
 func Init() {
   // Order is determined by go/types.Info.InitOrder.
-  Init0()
   Init1()
+  Init0()
 }
 
 func Main() {
