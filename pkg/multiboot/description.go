@@ -36,7 +36,7 @@ type Description struct {
 
 // Description returns string representation of
 // multiboot information.
-func (m multiboot) Description() (string, error) {
+func (m multiboot) description() (string, error) {
 	var modules []ModuleDesc
 	for i, mod := range m.loadedModules {
 		name := strings.Fields(m.modules[i])[0]
