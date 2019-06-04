@@ -81,31 +81,19 @@ func main() {
 		}
 	}
 
-	// mbk indicates that we are a multiboot kernel
-	var mbk bool
-	var kernelpath string
 	if opts.load {
-		kernelpath = flag.Arg(0)
-		log.Printf("Loading %s for kernel.", kernelpath)
-
-		if err := multiboot.Probe(kernelpath); err == nil {
-			mbk = true
-		} else if err == multiboot.ErrFlagsNotSupported {
-			log.Fatal(err)
-		}
-	}
-	if opts.load {
+		kernelpath := flag.Arg(0)
 		var image boot.OSImage
-		image = &boot.LinuxImage{
-			Kernel:  uio.NewLazyFile(kernelpath),
-			Initrd:  uio.NewLazyFile(opts.initramfs),
-			Cmdline: newCmdline,
-		}
-		if mbk {
-			log.Printf("%s is a multiboot v1 kernel.", kernelpath)
+		if err := multiboot.Probe(kernelpath); err == nil {
 			image = &boot.MultibootImage{
 				Modules: opts.modules,
 				Path:    kernelpath,
+				Cmdline: newCmdline,
+			}
+		} else {
+			image = &boot.LinuxImage{
+				Kernel:  uio.NewLazyFile(kernelpath),
+				Initrd:  uio.NewLazyFile(opts.initramfs),
 				Cmdline: newCmdline,
 			}
 		}

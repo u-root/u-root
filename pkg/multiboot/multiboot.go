@@ -46,7 +46,7 @@ type multiboot struct {
 	// kernelEntry is a pointer to entry point of kernel.
 	kernelEntry uintptr
 	// EntryPoint is a pointer to trampoline.
-	EntryPoint uintptr
+	entryPoint uintptr
 
 	info          Info
 	loadedModules []Module
@@ -77,7 +77,7 @@ type MemoryMap struct {
 	Type uint32
 }
 
-type MemoryMaps []MemoryMap
+type memoryMaps []MemoryMap
 
 // Probe checks if file is multiboot v1 kernel.
 func Probe(file string) error {
@@ -129,7 +129,7 @@ func Load(debug bool, file, cmdline string, modules []string) error {
 	if err := m.load(debug); err != nil {
 		return err
 	}
-	if err := kexec.Load(m.EntryPoint, m.Segments(), 0); err != nil {
+	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
@@ -143,38 +143,40 @@ func (m *multiboot) load(debug bool) error {
 		return err
 	}
 	kernel := kernelReader{buf: b}
-	log.Println("Parsing multiboot Header")
+	log.Println("Parsing multiboot header")
 	if m.header, err = parseHeader(&kernel); err != nil {
-		return fmt.Errorf("Error parsing headers: %v", err)
+		return fmt.Errorf("error parsing headers: %v", err)
 	}
 
 	log.Printf("Getting kernel entry point")
 	if m.kernelEntry, err = getEntryPoint(kernel); err != nil {
-		return fmt.Errorf("Error getting kernel entry point: %v", err)
+		return fmt.Errorf("error getting kernel entry point: %v", err)
 	}
+	log.Printf("Kernel entry point at %#x", m.kernelEntry)
 
 	log.Printf("Parsing ELF segments")
 	if err := m.mem.LoadElfSegments(kernel); err != nil {
-		return fmt.Errorf("Error loading ELF segments: %v", err)
+		return fmt.Errorf("error loading ELF segments: %v", err)
 	}
 
 	log.Printf("Parsing memory map")
 	if err := m.mem.ParseMemoryMap(); err != nil {
-		return fmt.Errorf("Error parsing memory map: %v", err)
+		return fmt.Errorf("error parsing memory map: %v", err)
 	}
 
-	log.Printf("Preparing multiboot Info")
+	log.Printf("Preparing multiboot info")
 	if m.infoAddr, err = m.addInfo(); err != nil {
-		return fmt.Errorf("Error preparing multiboot Info: %v", err)
+		return fmt.Errorf("error preparing multiboot info: %v", err)
 	}
 
 	log.Printf("Adding trampoline")
-	if m.EntryPoint, err = m.addTrampoline(); err != nil {
-		return fmt.Errorf("Error adding trampoline: %v", err)
+	if m.entryPoint, err = m.addTrampoline(); err != nil {
+		return fmt.Errorf("error adding trampoline: %v", err)
 	}
+	log.Printf("Trampoline entry point at %#x", m.entryPoint)
 
 	if debug {
-		info, err := m.Description()
+		info, err := m.description()
 		if err != nil {
 			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
 		}
@@ -193,7 +195,7 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 }
 
 func (m *multiboot) addInfo() (addr uintptr, err error) {
-	iw, err := m.newmultibootInfo()
+	iw, err := m.newMultibootInfo()
 	if err != nil {
 		return 0, err
 	}
@@ -220,8 +222,8 @@ func (m *multiboot) addInfo() (addr uintptr, err error) {
 	return addr, nil
 }
 
-func (m multiboot) memoryMap() MemoryMaps {
-	var ret MemoryMaps
+func (m multiboot) memoryMap() memoryMaps {
+	var ret memoryMaps
 	for _, r := range m.mem.Phys {
 		typ, ok := rangeTypes[r.Type]
 		if !ok {
@@ -281,7 +283,7 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (m *multiboot) newmultibootInfo() (*infoWrapper, error) {
+func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
 		return nil, err
@@ -318,16 +320,10 @@ func (m *multiboot) newmultibootInfo() (*infoWrapper, error) {
 	}, nil
 }
 
-// Segments returns kexec.Segments, where all the multiboot related
-// information is stored.
-func (m multiboot) Segments() []kexec.Segment {
-	return m.mem.Segments
-}
-
 // marshal writes out the exact bytes expected by the multiboot info header
 // specified in
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format.
-func (m MemoryMaps) marshal() ([]byte, error) {
+func (m memoryMaps) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := binary.Write(&buf, ubinary.NativeEndian, m)
 	return buf.Bytes(), err
