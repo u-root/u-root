@@ -42,6 +42,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if goos == "aix" {
+		// Replace type of Atim, Mtim and Ctim by Timespec in Stat_t
+		// to avoid having both StTimespec and Timespec.
+		sttimespec := regexp.MustCompile(`_Ctype_struct_st_timespec`)
+		b = sttimespec.ReplaceAll(b, []byte("Timespec"))
+	}
+
 	// Intentionally export __val fields in Fsid and Sigset_t
 	valRegex := regexp.MustCompile(`type (Fsid|Sigset_t) struct {(\s+)X__val(\s+\S+\s+)}`)
 	b = valRegex.ReplaceAll(b, []byte("type $1 struct {${2}Val$3}"))
