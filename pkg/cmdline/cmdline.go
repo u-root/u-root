@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The cmdline package provides a parser and convenience functions for reading
+// Package cmdline provides a parser and convenience functions for reading
 // configuration data from /proc/cmdline it's conformant with
 // https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html,
 // though making 'var_name' and 'var-name' equivalent may need to be done
@@ -74,8 +74,8 @@ func parse(cmdlineReader io.Reader) CmdLine {
 	return line
 }
 
-// parseToMap turns a space-separated kernel commandline into a map
-func parseToMap(input string) map[string]string {
+//
+func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
 
 	lastQuote := rune(0)
 	quotedFieldsCheck := func(c rune) bool {
@@ -93,7 +93,6 @@ func parseToMap(input string) map[string]string {
 		}
 	}
 
-	flagMap := make(map[string]string)
 	for _, flag := range strings.FieldsFunc(string(input), quotedFieldsCheck) {
 		// kernel variables must allow '-' and '_' to be equivalent in variable
 		// names. We will replace dashes with underscores for processing.
@@ -112,13 +111,25 @@ func parseToMap(input string) map[string]string {
 			key = flag[:split]
 			value = flag[split+1:]
 		}
-		// We store the value twice, once with dash, once with underscores
-		// Just in case people check with the wrong method
 		canonicalKey := strings.Replace(key, "-", "_", -1)
 		trimmedValue := strings.Trim(value, "\"'")
+
+		// Call the user handler
+		handler(flag, key, canonicalKey, value, trimmedValue)
+	}
+
+}
+
+// parseToMap turns a space-separated kernel commandline into a map
+func parseToMap(input string) map[string]string {
+
+	flagMap := make(map[string]string)
+	doParse(input, func(flag, key, canonicalKey, value, trimmedValue string) {
+		// We store the value twice, once with dash, once with underscores
+		// Just in case people check with the wrong method
 		flagMap[canonicalKey] = trimmedValue
 		flagMap[key] = trimmedValue
-	}
+	})
 
 	return flagMap
 }
