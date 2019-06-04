@@ -6,18 +6,14 @@ package main
 
 var templates = map[string][]string{
 	"all": {
-		"github.com/u-root/u-root/cmds/*",
+		"github.com/u-root/u-root/*cmds/*",
 	},
 	// Core should be things you don't want to live without.
 	"core": {
-		"github.com/u-root/u-root/cmds/ansi",
-		"github.com/u-root/u-root/cmds/boot",
 		"github.com/u-root/u-root/cmds/cat",
-		"github.com/u-root/u-root/cmds/cbmem",
 		"github.com/u-root/u-root/cmds/chmod",
 		"github.com/u-root/u-root/cmds/chroot",
 		"github.com/u-root/u-root/cmds/cmp",
-		"github.com/u-root/u-root/cmds/console",
 		"github.com/u-root/u-root/cmds/cp",
 		"github.com/u-root/u-root/cmds/cpio",
 		"github.com/u-root/u-root/cmds/date",
@@ -29,11 +25,8 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/echo",
 		"github.com/u-root/u-root/cmds/elvish",
 		"github.com/u-root/u-root/cmds/false",
-		"github.com/u-root/u-root/cmds/field",
 		"github.com/u-root/u-root/cmds/find",
 		"github.com/u-root/u-root/cmds/free",
-		"github.com/u-root/u-root/cmds/freq",
-		"github.com/u-root/u-root/cmds/gpgv",
 		"github.com/u-root/u-root/cmds/gpt",
 		"github.com/u-root/u-root/cmds/grep",
 		"github.com/u-root/u-root/cmds/gzip",
@@ -54,7 +47,6 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/mkdir",
 		"github.com/u-root/u-root/cmds/mkfifo",
 		"github.com/u-root/u-root/cmds/mknod",
-		"github.com/u-root/u-root/cmds/modprobe",
 		"github.com/u-root/u-root/cmds/mount",
 		"github.com/u-root/u-root/cmds/msr",
 		"github.com/u-root/u-root/cmds/mv",
@@ -65,7 +57,6 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/printenv",
 		"github.com/u-root/u-root/cmds/ps",
 		"github.com/u-root/u-root/cmds/pwd",
-		"github.com/u-root/u-root/cmds/pxeboot",
 		"github.com/u-root/u-root/cmds/readlink",
 		"github.com/u-root/u-root/cmds/rm",
 		"github.com/u-root/u-root/cmds/rmmod",
@@ -85,11 +76,13 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/uname",
 		"github.com/u-root/u-root/cmds/uniq",
 		"github.com/u-root/u-root/cmds/unshare",
-		"github.com/u-root/u-root/cmds/validate",
-		"github.com/u-root/u-root/cmds/vboot",
 		"github.com/u-root/u-root/cmds/wc",
 		"github.com/u-root/u-root/cmds/wget",
 		"github.com/u-root/u-root/cmds/which",
+	},
+	"boot": {
+		"github.com/u-root/u-root/cmds/*",
+		"github.com/u-root/u-root/systemboot/*",
 	},
 	// Minimal should be things you can't live without.
 	"minimal": {

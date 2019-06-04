@@ -112,7 +112,7 @@ func TestPxeboot(t *testing.T) {
 			"github.com/u-root/u-root/cmds/init",
 			"github.com/u-root/u-root/cmds/ip",
 			"github.com/u-root/u-root/cmds/shutdown",
-			"github.com/u-root/u-root/cmds/pxeboot",
+			"github.com/u-root/u-root/systemboot/pxeboot",
 		},
 		Uinit: []string{
 			"ip route add 255.255.255.255/32 dev eth0",
