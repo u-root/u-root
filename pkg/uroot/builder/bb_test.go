@@ -26,7 +26,7 @@ func TestBBBuild(t *testing.T) {
 		Env: golang.Default(),
 		Packages: []string{
 			"github.com/u-root/u-root/pkg/uroot/test/foo",
-			"github.com/u-root/u-root/cmds/elvish",
+			"github.com/u-root/u-root/cmds/core/elvish",
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",

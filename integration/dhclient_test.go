@@ -23,11 +23,11 @@ func TestDhclient(t *testing.T) {
 		Name:         "TestDhclient_Server",
 		SerialOutput: &sb,
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/echo",
-			"github.com/u-root/u-root/cmds/ip",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/sleep",
-			"github.com/u-root/u-root/cmds/shutdown",
+			"github.com/u-root/u-root/cmds/core/echo",
+			"github.com/u-root/u-root/cmds/core/ip",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/sleep",
+			"github.com/u-root/u-root/cmds/core/shutdown",
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
 		Uinit: []string{
@@ -48,11 +48,11 @@ func TestDhclient(t *testing.T) {
 		Name:         "TestDhclient_Client",
 		SerialOutput: &cb,
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/echo",
-			"github.com/u-root/u-root/cmds/ip",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/dhclient",
-			"github.com/u-root/u-root/cmds/shutdown",
+			"github.com/u-root/u-root/cmds/core/echo",
+			"github.com/u-root/u-root/cmds/core/ip",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/dhclient",
+			"github.com/u-root/u-root/cmds/core/shutdown",
 		},
 		Uinit: []string{
 			"echo DO THAT DHCLIENT",
@@ -89,8 +89,8 @@ func TestPxeboot(t *testing.T) {
 	dhcpServer, scleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Server",
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/ip",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
 		Uinit: []string{
@@ -109,10 +109,10 @@ func TestPxeboot(t *testing.T) {
 	dhcpClient, ccleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Client",
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/ip",
-			"github.com/u-root/u-root/cmds/shutdown",
-			"github.com/u-root/u-root/cmds/pxeboot",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/ip",
+			"github.com/u-root/u-root/cmds/core/shutdown",
+			"github.com/u-root/u-root/cmds/boot/pxeboot",
 		},
 		Uinit: []string{
 			"ip route add 255.255.255.255/32 dev eth0",

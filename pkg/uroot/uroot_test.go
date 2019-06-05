@@ -67,9 +67,9 @@ func TestResolvePackagePaths(t *testing.T) {
 		// Single go package import
 		{
 			env: defaultEnv,
-			in:  []string{"github.com/u-root/u-root/cmds/ls"},
+			in:  []string{"github.com/u-root/u-root/cmds/core/ls"},
 			// We expect the full URL format because that's the path in our default GOPATH
-			expected: []string{"github.com/u-root/u-root/cmds/ls"},
+			expected: []string{"github.com/u-root/u-root/cmds/core/ls"},
 			wantErr:  false,
 		},
 		// Single package directory relative to working dir
@@ -195,8 +195,8 @@ func TestCreateInitramfs(t *testing.T) {
 					{
 						Builder: builder.BusyBox,
 						Packages: []string{
-							"github.com/u-root/u-root/cmds/init",
-							"github.com/u-root/u-root/cmds/ls",
+							"github.com/u-root/u-root/cmds/core/init",
+							"github.com/u-root/u-root/cmds/core/ls",
 						},
 					},
 				},
@@ -241,7 +241,7 @@ func TestCreateInitramfs(t *testing.T) {
 					{
 						Builder: builder.Binary,
 						Packages: []string{
-							"github.com/u-root/u-root/cmds/ls",
+							"github.com/u-root/u-root/cmds/core/ls",
 						},
 					},
 				},
@@ -280,23 +280,23 @@ func TestCreateInitramfs(t *testing.T) {
 					{
 						Builder: builder.BusyBox,
 						Packages: []string{
-							"github.com/u-root/u-root/cmds/init",
-							"github.com/u-root/u-root/cmds/ls",
+							"github.com/u-root/u-root/cmds/core/init",
+							"github.com/u-root/u-root/cmds/core/ls",
 						},
 					},
 					{
 						Builder: builder.Binary,
 						Packages: []string{
-							"github.com/u-root/u-root/cmds/cp",
-							"github.com/u-root/u-root/cmds/dd",
+							"github.com/u-root/u-root/cmds/core/cp",
+							"github.com/u-root/u-root/cmds/core/dd",
 						},
 					},
 					{
 						Builder: builder.Source,
 						Packages: []string{
-							"github.com/u-root/u-root/cmds/cat",
-							"github.com/u-root/u-root/cmds/chroot",
-							"github.com/u-root/u-root/cmds/installcommand",
+							"github.com/u-root/u-root/cmds/core/cat",
+							"github.com/u-root/u-root/cmds/core/chroot",
+							"github.com/u-root/u-root/cmds/core/installcommand",
 						},
 					},
 				},
@@ -320,9 +320,9 @@ func TestCreateInitramfs(t *testing.T) {
 				itest.HasRecord{cpio.Symlink("buildbin/cat", "installcommand")},
 				itest.HasRecord{cpio.Symlink("buildbin/chroot", "installcommand")},
 				itest.HasFile{"buildbin/installcommand"},
-				itest.HasFile{"src/github.com/u-root/u-root/cmds/cat/cat.go"},
-				itest.HasFile{"src/github.com/u-root/u-root/cmds/chroot/chroot.go"},
-				itest.HasFile{"src/github.com/u-root/u-root/cmds/installcommand/installcommand.go"},
+				itest.HasFile{"src/github.com/u-root/u-root/cmds/core/cat/cat.go"},
+				itest.HasFile{"src/github.com/u-root/u-root/cmds/core/chroot/chroot.go"},
+				itest.HasFile{"src/github.com/u-root/u-root/cmds/core/installcommand/installcommand.go"},
 			},
 		},
 	} {

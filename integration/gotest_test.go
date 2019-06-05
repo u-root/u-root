@@ -23,7 +23,9 @@ func testPkgs(t *testing.T) []string {
 	// Packages which do not contain tests (or do not contain tests for the
 	// build target) will still compile a test binary which vacuously pass.
 	cmd := exec.Command("go", "list",
-		"github.com/u-root/u-root/cmds/...",
+		"github.com/u-root/u-root/cmds/core/...",
+		"github.com/u-root/u-root/cmds/boot/...",
+		"github.com/u-root/u-root/cmds/nichrome/...",
 		// TODO: only running tests in cmds because tests in pkg have
 		// duplicate names which confuses the test runner. This should
 		// get fixed.
@@ -42,20 +44,19 @@ func testPkgs(t *testing.T) []string {
 	// 1. either it requires networking (not enabled in the kernel)
 	// 2. or it depends on some test files (for example /bin/sleep)
 	blacklist := []string{
-		"github.com/u-root/u-root/cmds/bzimage",
-		"github.com/u-root/u-root/cmds/cmp",
-		"github.com/u-root/u-root/cmds/dd",
-		"github.com/u-root/u-root/cmds/dhclient",
-		"github.com/u-root/u-root/cmds/elvish/eval",
-		"github.com/u-root/u-root/cmds/fmap",
-		"github.com/u-root/u-root/cmds/fusermount",
-		"github.com/u-root/u-root/cmds/gpt",
-		"github.com/u-root/u-root/cmds/kill",
-		"github.com/u-root/u-root/cmds/mount",
-		"github.com/u-root/u-root/cmds/tail",
-		"github.com/u-root/u-root/cmds/wget",
-		"github.com/u-root/u-root/cmds/which",
-		"github.com/u-root/u-root/cmds/wifi",
+		"github.com/u-root/u-root/cmds/core/cmp",
+		"github.com/u-root/u-root/cmds/core/dd",
+		"github.com/u-root/u-root/cmds/core/dhclient",
+		"github.com/u-root/u-root/cmds/core/elvish/eval",
+		"github.com/u-root/u-root/cmds/core/fmap",
+		"github.com/u-root/u-root/cmds/core/fusermount",
+		"github.com/u-root/u-root/cmds/core/gpt",
+		"github.com/u-root/u-root/cmds/core/kill",
+		"github.com/u-root/u-root/cmds/core/mount",
+		"github.com/u-root/u-root/cmds/core/tail",
+		"github.com/u-root/u-root/cmds/core/wget",
+		"github.com/u-root/u-root/cmds/core/which",
+		"github.com/u-root/u-root/cmds/nichrome/wifi",
 	}
 	for i := 0; i < len(pkgs); i++ {
 		for _, b := range blacklist {
@@ -108,12 +109,12 @@ func TestGoTest(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
-			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/core/init",
 			// Used by gotest/uinit.
-			"github.com/u-root/u-root/cmds/mkdir",
-			"github.com/u-root/u-root/cmds/mount",
+			"github.com/u-root/u-root/cmds/core/mkdir",
+			"github.com/u-root/u-root/cmds/core/mount",
 			// Used by an elvish test.
-			"github.com/u-root/u-root/cmds/ls",
+			"github.com/u-root/u-root/cmds/core/ls",
 		},
 		TmpDir: tmpDir,
 	})

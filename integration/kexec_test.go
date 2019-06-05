@@ -19,9 +19,9 @@ func TestMountKexec(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/kexec/uinit",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/mount",
-			"github.com/u-root/u-root/cmds/kexec",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/mount",
+			"github.com/u-root/u-root/cmds/core/kexec",
 		},
 	})
 	defer cleanup()

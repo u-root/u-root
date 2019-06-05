@@ -21,8 +21,8 @@ func TestIO(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/io/uinit",
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/io",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/io",
 		},
 	})
 	defer cleanup()
