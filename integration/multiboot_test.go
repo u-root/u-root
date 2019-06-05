@@ -21,8 +21,8 @@ func testMultiboot(t *testing.T, kernel string) {
 			fmt.Sprintf("/home/circleci/%v:kernel", kernel),
 		},
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/kexec",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/kexec",
 		},
 		Uinit: []string{
 			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,

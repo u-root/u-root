@@ -156,7 +156,7 @@ func Main() error {
 			pkgs = append(pkgs, p...)
 		}
 		if len(pkgs) == 0 {
-			pkgs = []string{"github.com/u-root/u-root/cmds/*"}
+			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
 		}
 
 		if *fourbins && *build == "source" {

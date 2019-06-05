@@ -38,7 +38,7 @@ func init() {
 		return
 	}
 
-	c := exec.Command("/go/bin/go", "build", "-o", "/buildbin/installcommand", "github.com/u-root/u-root/cmds/installcommand")
+	c := exec.Command("/go/bin/go", "build", "-o", "/buildbin/installcommand", "github.com/u-root/u-root/cmds/core/installcommand")
 	c.Env = append(c.Env,  []string{"GOROOT=/go", "GOPATH=/",}...)
 	o, err := c.CombinedOutput()
 	if err != nil {

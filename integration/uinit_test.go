@@ -13,7 +13,7 @@ func TestHelloWorld(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
-			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/core/init",
 		},
 	})
 	defer cleanup()
@@ -28,7 +28,7 @@ func TestHelloWorldNegative(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
-			"github.com/u-root/u-root/cmds/init",
+			"github.com/u-root/u-root/cmds/core/init",
 		},
 	})
 	defer cleanup()
@@ -42,9 +42,9 @@ func TestScript(t *testing.T) {
 	q, cleanup := QEMUTest(t, &Options{
 		Name: "ShellScript",
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/init",
-			"github.com/u-root/u-root/cmds/shutdown",
-			"github.com/u-root/u-root/cmds/echo",
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/shutdown",
+			"github.com/u-root/u-root/cmds/core/echo",
 		},
 		Uinit: []string{
 			"echo HELLO WORLD",

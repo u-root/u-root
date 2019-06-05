@@ -80,7 +80,7 @@ jobs:
       - run:
           name: vet
           command: |
-            go vet -composites=false ./cmds/... ./xcmds/... ./pkg/... ./
+            go vet -composites=false ./cmds/... ./pkg/... ./
       - run:
           name: gofmt
           command: |
@@ -90,7 +90,7 @@ jobs:
           command: |
               gometalinter --vendor ./... --disable-all --enable=golint \
                 --skip=pkg/uroot/test \
-                --skip=cmds/elvish \
+                --skip=cmds/core/elvish \
                 --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
                 --exclude="don't use underscores" \
                 --exclude="don't use ALL_CAPS" \
@@ -132,15 +132,13 @@ jobs:
             go install -a ./...
             cd ../tools
             go install -a ./...
-            cd ../xcmds
-            go install -a ./...
   check_licenses:
     <<: *golang-template
     steps:
       - checkout
       - run:
           name: Check licenses
-          command: go run scripts/checklicenses/checklicenses.go
+          command: go run tools/checklicenses/checklicenses.go
   check_symlinks:
     <<: *golang-template
     steps:

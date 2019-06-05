@@ -21,14 +21,14 @@ import (
 )
 
 var twocmds = []string{
-	"github.com/u-root/u-root/cmds/ls",
-	"github.com/u-root/u-root/cmds/init",
+	"github.com/u-root/u-root/cmds/core/ls",
+	"github.com/u-root/u-root/cmds/core/init",
 }
 
 var srcmds = []string{
-	"github.com/u-root/u-root/cmds/ls",
-	"github.com/u-root/u-root/cmds/init",
-	"github.com/u-root/u-root/cmds/installcommand",
+	"github.com/u-root/u-root/cmds/core/ls",
+	"github.com/u-root/u-root/cmds/core/init",
+	"github.com/u-root/u-root/cmds/core/installcommand",
 }
 
 type buildSourceValidator struct {
