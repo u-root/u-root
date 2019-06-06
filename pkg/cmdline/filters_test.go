@@ -13,11 +13,11 @@ func TestRemoveFilter(t *testing.T) {
 	toRemove := []string{"remove-1", "remove_2"}
 
 	cl := `keep=5 remove_1=wontbethere remove-2=nomore keep2`
-	exp := `keep=5 keep2`
+	want := `keep=5 keep2`
 
-	res := removeFilter(cl, toRemove)
-	if res != exp {
-		t.Errorf("error, expected: `%v`, got: `%v`", exp, res)
+	got := removeFilter(cl, toRemove)
+	if got != want {
+		t.Errorf("removeFilter(%v,%v) = %v, want %v", cl, toRemove, got, want)
 	}
 }
 
@@ -44,11 +44,11 @@ func TestUpdateFilter(t *testing.T) {
 	toAppend := "append=me"
 
 	cl := `keep=5 console=ttyS1 keep2 earlyconsole=ttyS1`
-	exp := `keep=5 keep2 append=me console=ttyS0,115200`
+	want := `keep=5 keep2 append=me console=ttyS0,115200`
 
 	filter := NewUpdateFilter(toAppend, toRemove, toReuse)
-	res := filter.Update(cl)
-	if res != exp {
-		t.Errorf("error, expected: `%v`, got: `%v`", exp, res)
+	got := filter.Update(cl)
+	if got != want {
+		t.Errorf("Update(%v) = %v, want %v", cl, got, want)
 	}
 }
