@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"reflect"
 )
 
 type inMemReaderAt interface {
@@ -36,19 +37,12 @@ func Reader(r io.ReaderAt) io.Reader {
 // ReaderAtEqual compares the contents of r1 and r2.
 func ReaderAtEqual(r1, r2 io.ReaderAt) bool {
 	var c, d []byte
-	var err error
+	var r1err, r2err error
 	if r1 != nil {
-		c, err = ReadAll(r1)
-		if err != nil {
-			return false
-		}
+		c, r1err = ReadAll(r1)
 	}
-
 	if r2 != nil {
-		d, err = ReadAll(r2)
-		if err != nil {
-			return false
-		}
+		d, r2err = ReadAll(r2)
 	}
-	return bytes.Equal(c, d)
+	return bytes.Equal(c, d) && reflect.DeepEqual(r1err, r2err)
 }
