@@ -10,7 +10,7 @@ import (
 )
 
 // RemoveFilter filters out variable for a given space-separated kernel commandline
-func RemoveFilter(input string, variables []string) string {
+func removeFilter(input string, variables []string) string {
 	var newCl []string
 
 	// kernel variables must allow '-' and '_' to be equivalent in variable
@@ -36,20 +36,41 @@ func RemoveFilter(input string, variables []string) string {
 	return strings.Join(newCl, " ")
 }
 
-// UpdateFilter get the kernel command line parameters and filter it:
-// it removes parameters listed in 'remove' and append extra parameters from
-// the 'append' and 'reuse' flags
-func UpdateFilter(cl, append string, remove, reuse []string) string {
-	acl := ""
-	if len(append) > 0 {
-		acl = " " + append
+// Filter represents and kernel commandline filter
+type Filter interface {
+	// Update filters a given space-separated kernel commandline
+	Update(cmdline string) string
+}
+
+type updater struct {
+	appendCmd string
+	removeVar []string
+	reuseVar  []string
+}
+
+// NewUpdateFilter return a kernel command line Filter that:
+// removes variables listed in 'removeVar',
+// append extra parameters from the 'appendCmd' and
+// append variables listed in 'reuseVar' using the value from the running kernel
+func NewUpdateFilter(appendCmd string, removeVar, reuseVar []string) Filter {
+	return &updater{
+		appendCmd: appendCmd,
+		removeVar: removeVar,
+		reuseVar:  reuseVar,
 	}
-	for _, f := range reuse {
+}
+
+func (u *updater) Update(cmdline string) string {
+	acl := ""
+	if len(u.appendCmd) > 0 {
+		acl = " " + u.appendCmd
+	}
+	for _, f := range u.reuseVar {
 		value, present := Flag(f)
 		if present {
 			acl = fmt.Sprintf("%s %s=%s", acl, f, value)
 		}
 	}
 
-	return RemoveFilter(cl, remove) + acl
+	return removeFilter(cmdline, u.removeVar) + acl
 }

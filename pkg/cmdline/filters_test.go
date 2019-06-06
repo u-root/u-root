@@ -15,7 +15,7 @@ func TestRemoveFilter(t *testing.T) {
 	cl := `keep=5 remove_1=wontbethere remove-2=nomore keep2`
 	exp := `keep=5 keep2`
 
-	res := RemoveFilter(cl, toRemove)
+	res := removeFilter(cl, toRemove)
 	if res != exp {
 		t.Errorf("error, expected: `%v`, got: `%v`", exp, res)
 	}
@@ -46,7 +46,8 @@ func TestUpdateFilter(t *testing.T) {
 	cl := `keep=5 console=ttyS1 keep2 earlyconsole=ttyS1`
 	exp := `keep=5 keep2 append=me console=ttyS0,115200`
 
-	res := UpdateFilter(cl, toAppend, toRemove, toReuse)
+	filter := NewUpdateFilter(toAppend, toRemove, toReuse)
+	res := filter.Update(cl)
 	if res != exp {
 		t.Errorf("error, expected: `%v`, got: `%v`", exp, res)
 	}
