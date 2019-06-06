@@ -13,12 +13,12 @@ import (
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
-var sizeofInfo = uint32(binary.Size(Info{}))
+var sizeofInfo = uint32(binary.Size(info{}))
 
-type Flag uint32
+type flag uint32
 
 const (
-	flagInfoMemory Flag = 1 << iota
+	flagInfoMemory flag = 1 << iota
 	flagInfoBootDev
 	flagInfoCmdLine
 	flagInfoMods
@@ -33,9 +33,9 @@ const (
 	flagInfoFrameBuffer
 )
 
-// Info represents the Multiboot v1 info passed to the loaded kernel.
-type Info struct {
-	Flags    Flag
+// info represents the Multiboot v1 info passed to the loaded kernel.
+type info struct {
+	Flags    flag
 	MemLower uint32
 	MemUpper uint32
 
@@ -82,7 +82,7 @@ type Info struct {
 }
 
 type infoWrapper struct {
-	Info
+	info
 
 	CmdLine        string
 	BootLoaderName string
@@ -92,12 +92,12 @@ type infoWrapper struct {
 // expected by the kernel being loaded.
 func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
 	offset := sizeofInfo + uint32(base)
-	iw.Info.CmdLine = offset
+	iw.info.CmdLine = offset
 	offset += uint32(len(iw.CmdLine)) + 1
-	iw.Info.BootLoaderName = offset
+	iw.info.BootLoaderName = offset
 
 	buf := bytes.Buffer{}
-	if err := binary.Write(&buf, ubinary.NativeEndian, iw.Info); err != nil {
+	if err := binary.Write(&buf, ubinary.NativeEndian, iw.info); err != nil {
 		return nil, err
 	}
 

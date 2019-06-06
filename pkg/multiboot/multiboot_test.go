@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func createFile(hdr *Header, offset, size int) (io.Reader, error) {
+func createFile(hdr *header, offset, size int) (io.Reader, error) {
 	buf := bytes.Repeat([]byte{0xDE, 0xAD, 0xBE, 0xEF}, (size+4)/4)
 	buf = buf[:size]
 	if hdr != nil {
@@ -26,16 +26,16 @@ func createFile(hdr *Header, offset, size int) (io.Reader, error) {
 	return bytes.NewReader(buf), nil
 }
 
-type flag string
+type testFlag string
 
 const (
-	flagGood        flag = "good"
-	flagUnsupported      = "unsup"
-	flagBad              = "bad"
+	flagGood        testFlag = "good"
+	flagUnsupported          = "unsup"
+	flagBad                  = "bad"
 )
 
-func createHeader(fl flag) Header {
-	flags := Flag(0x00000002)
+func createHeader(fl testFlag) header {
+	flags := headerFlag(0x00000002)
 	var checksum uint32
 	switch fl {
 	case flagGood:
@@ -47,7 +47,7 @@ func createHeader(fl flag) Header {
 		checksum = 0xFFFFFFFF - headerMagic - uint32(flags) + 1
 	}
 
-	return Header{
+	return header{
 		mandatory: mandatory{
 			Magic:    headerMagic,
 			Flags:    flags,
@@ -74,7 +74,7 @@ func TestParseHeader(t *testing.T) {
 	sizeofHeader := mandatorySize + optionalSize
 
 	for _, test := range []struct {
-		flags  flag
+		flags  testFlag
 		offset int
 		size   int
 		err    error
