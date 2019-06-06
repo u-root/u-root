@@ -72,7 +72,8 @@ var (
 // it removes parameters listed in 'remove' and append extra parameters from
 // the 'append' and 'reuse' flags
 func updateBootCmdline(cl string) string {
-	return cmdline.UpdateFilter(cl, *appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
+	f := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
+	return f.Update(cl)
 }
 
 // checkForBootableMBR is looking for bootable MBR signature

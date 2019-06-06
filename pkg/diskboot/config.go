@@ -64,7 +64,7 @@ type Entry struct {
 
 // KexecLoad calls the appropriate kexec load routines based on the
 // type of Entry
-func (e *Entry) KexecLoad(mountPath, appendCmdline string, removeCmdline, reuseCmdline []string, dryrun bool) error {
+func (e *Entry) KexecLoad(mountPath string, filterCmdline cmdline.Filter, dryrun bool) error {
 	switch e.Type {
 	case Multiboot:
 		// TODO: implement using kexec_load syscall
@@ -82,7 +82,9 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string, removeCmdline, reuseC
 		log.Print("Kernel Path:", kernelPath)
 		kernel, err := os.OpenFile(kernelPath, os.O_RDONLY, 0)
 		commandline := e.Modules[0].Params
-		commandline = cmdline.UpdateFilter(commandline, appendCmdline, removeCmdline, reuseCmdline)
+		if filterCmdline != nil {
+			commandline = filterCmdline.Update(commandline)
+		}
 
 		log.Print("Kernel Params:", commandline)
 		if err != nil {

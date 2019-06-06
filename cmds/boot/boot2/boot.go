@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/diskboot"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/mount"
@@ -104,7 +105,8 @@ func getEntry(config *diskboot.Config) (*diskboot.Entry, error) {
 
 func bootEntry(config *diskboot.Config, entry *diskboot.Entry) error {
 	verbose("Booting entry: %v", entry)
-	err := entry.KexecLoad(config.MountPath, *appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","), *dryrun)
+	filter := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
+	err := entry.KexecLoad(config.MountPath, filter, *dryrun)
 	if err != nil {
 		return fmt.Errorf("wrror doing kexec load: %v", err)
 	}
