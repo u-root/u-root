@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/systemboot/systemboot/pkg/crypto"
-	"github.com/systemboot/systemboot/pkg/vpd"
+	"github.com/u-root/u-root/pkg/crypto"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 // Get, Set and GetAll are defined here as variables so they can be overridden

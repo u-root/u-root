@@ -9,9 +9,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/systemboot/systemboot/pkg/booter"
+	"github.com/u-root/u-root/pkg/booter"
 
-	"github.com/systemboot/systemboot/pkg/vpd"
+	"github.com/u-root/u-root/pkg/vpd"
 
 	"github.com/stretchr/testify/require"
 )

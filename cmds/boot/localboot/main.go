@@ -8,8 +8,8 @@ import (
 	"path"
 	"syscall"
 
-	"github.com/systemboot/systemboot/pkg/bootconfig"
-	"github.com/systemboot/systemboot/pkg/storage"
+	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/storage"
 )
 
 // TODO backward compatibility for BIOS mode with partition type 0xee

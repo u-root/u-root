@@ -13,8 +13,8 @@ import (
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/systemboot/systemboot/pkg/bootconfig"
-	"github.com/systemboot/systemboot/pkg/storage"
+	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/storage"
 )
 
 // List of directories where to recursively look for grub config files. The root dorectory
