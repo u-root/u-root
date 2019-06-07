@@ -1,0 +1,13 @@
+---
+pcr0:
+  - method: extend
+    hashes:
+      - 8dad1c80be028384f26b929b7e7e251fbe3c1d5
+pcr1:
+  - method: dynamic
+pcr2:
+  - method: static
+    hash: c4018af653e2f1a16118dd8bab2f409fbc82aa9f
+pcr3:
+  - method: log
+    firmware: BIOS
