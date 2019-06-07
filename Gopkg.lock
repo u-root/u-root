@@ -18,6 +18,14 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  pruneopts = "NUT"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:b7ffca49e9cfd3dfb04a8e0a59347708c6f78f68476a32c5e0a0edca5d1b258c"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
@@ -78,18 +86,33 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5b9e6ad83c942ce32ddedc80f0e644fdffbd4d2a96e918bcef1fe3f2eb1418d6"
+  digest = "1:a773fde5c7272381036fbfe35ce2966255c042c0b8b84920b2646897ddf3a8b0"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
+    "dhcpv4/client4",
     "dhcpv4/nclient4",
     "dhcpv6",
+    "dhcpv6/client6",
     "dhcpv6/nclient6",
     "iana",
+    "interfaces",
+    "netboot",
     "rfc1035label",
   ]
   pruneopts = "NUT"
   revision = "32228cdfe81f31b2ac5d6bbfbe36db7cdee92ea6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2cee01130fc698f9b1efa0b4cc7a3d5a9dfb009133bddec45dcf2a626d3e47d4"
+  name = "github.com/jsimonetti/rtnetlink"
+  packages = [
+    ".",
+    "rtnl",
+  ]
+  pruneopts = "NUT"
+  revision = "9527aa82566a98cba454092e94cddf4dd943e960"
 
 [[projects]]
   digest = "1:cbf515e2ef22155a1ccaa9e6d8c86f7c84cc7f95f13341d06649492bf8e5d9d5"
@@ -149,6 +172,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:0f48e04250f9f70c8e60f23029f3538e23cd20b524a18dc294221176a3bc962d"
+  name = "github.com/mdlayher/netlink"
+  packages = [
+    ".",
+    "nlenc",
+  ]
+  pruneopts = "NUT"
+  revision = "01e33241bf02887f1d810eb7d8a82f0c0fec1a54"
+
+[[projects]]
+  branch = "master"
   digest = "1:82baf000055f2497bdf17392c4e70f10f910490de2f0ebac885acbd031f822f3"
   name = "github.com/mdlayher/raw"
   packages = ["."]
@@ -164,6 +198,14 @@
   revision = "288510b9734e30e7966ec2f22b87c5f8e67345e3"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "NUT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:22ffe7a0e80f54e5a5ee408e2f6a4717ee8c5c3ecd94530963d1362efa178df5"
   name = "github.com/rck/unit"
@@ -172,12 +214,47 @@
   revision = "16d9ed3d60d943bbb0ed704264795a2541457601"
 
 [[projects]]
+  branch = "master"
+  digest = "1:d9528b930e94f1ca3daa6b35a8ef697f932853faf79e29b628b6d3861f383ed7"
+  name = "github.com/rekby/gpt"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "520ac65554cffa63270eeb0723c59c08b319a94d"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5d2421b0615c860ebcae3529066cd7a59a7234ea1fff93e0db5ea796b8e7d784"
+  name = "github.com/safchain/ethtool"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[projects]]
   digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "NUT"
   revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
   version = "v1.0.3"
+
+[[projects]]
+  digest = "1:85adecf1dbfae5769cc62a8bcea6498f8e9f0e2452e4e6686eb36fa4428a5a6e"
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "require",
+  ]
+  pruneopts = "NUT"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
+
+[[projects]]
+  digest = "1:1cc23d714b88f09aa41060e8a83f40ba5db4f319baed0999aaec5b2c6425528a"
+  name = "github.com/systemboot/tpmtool"
+  packages = ["pkg/tpm"]
+  pruneopts = "NUT"
+  revision = "304bb9ad19f03ad69bad1dff43103730558233b6"
+  version = "v3"
 
 [[projects]]
   branch = "master"
@@ -263,6 +340,21 @@
   revision = "6a60838ec2595395fabc7b2e6c2ae9fb5a87722d"
 
 [[projects]]
+  digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
+  name = "golang.org/x/text"
+  packages = [
+    "internal/gen",
+    "internal/triegen",
+    "internal/ucd",
+    "transform",
+    "unicode/cldr",
+    "unicode/norm",
+  ]
+  pruneopts = "NUT"
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
+
+[[projects]]
   branch = "master"
   digest = "1:3c33b1894328d3b445f25909c5737e795e2e8b0f0fcec5ea3542c0298b56c750"
   name = "golang.org/x/tools"
@@ -317,12 +409,20 @@
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv6",
     "github.com/insomniacslk/dhcp/dhcpv6/nclient6",
+    "github.com/insomniacslk/dhcp/iana",
+    "github.com/insomniacslk/dhcp/interfaces",
+    "github.com/insomniacslk/dhcp/netboot",
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
     "github.com/nsf/termbox-go",
     "github.com/rck/unit",
+    "github.com/rekby/gpt",
+    "github.com/safchain/ethtool",
     "github.com/spf13/pflag",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "github.com/systemboot/tpmtool/pkg/tpm",
     "github.com/u-root/dhcp4/dhcp4server",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
@@ -336,6 +436,8 @@
     "golang.org/x/crypto/ssh",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
+    "golang.org/x/text/transform",
+    "golang.org/x/text/unicode/norm",
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/imports",
     "pack.ag/tftp",
