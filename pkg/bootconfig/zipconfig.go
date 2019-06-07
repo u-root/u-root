@@ -50,7 +50,7 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	crypto.TryMeasureData(crypto.Blob, data, filename)
+	crypto.TryMeasureData(crypto.BlobPCR, data, filename)
 	zipbytes := data
 	// Load the public key and, if a valid one is specified, match the
 	// signature. The signature is appended to the ZIP file, and can be present

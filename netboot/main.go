@@ -222,7 +222,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	if err != nil {
 		return fmt.Errorf("DHCP: cannot read boot file from the network: %v", err)
 	}
-	crypto.TryMeasureData(crypto.BootConfig, body, bootfile)
+	crypto.TryMeasureData(crypto.BootConfigPCR, body, bootfile)
 	u, err := url.Parse(bootfile)
 	if err != nil {
 		return fmt.Errorf("DHCP: cannot parse URL %s: %v", bootfile, err)

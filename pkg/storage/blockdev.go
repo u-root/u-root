@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,8 +22,9 @@ var (
 
 // BlockDev maps a device name to a BlockStat structure for a given block device
 type BlockDev struct {
-	Name string
-	Stat BlockStat
+	Name   string
+	Stat   BlockStat
+	FsUUID string
 }
 
 // Summary prints a multiline summary of the BlockDev object
@@ -165,9 +167,146 @@ func GetBlockStats() ([]BlockDev, error) {
 		if err != nil {
 			return nil, err
 		}
-		blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat})
+		devpath := path.Join("/dev/", devname)
+		uuid := getUUID(devpath)
+		blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat, FsUUID: uuid})
 	}
 	return blockdevs, nil
+}
+
+func getUUID(devpath string) (fsuuid string) {
+
+	fsuuid = tryVFAT(devpath)
+	if fsuuid != "" {
+		log.Printf("###### FsUUIS in %s: %s", devpath, fsuuid)
+		return fsuuid
+	}
+	fsuuid = tryEXT4(devpath)
+	if fsuuid != "" {
+		log.Printf("###### FsUUIS in %s: %s", devpath, fsuuid)
+		return fsuuid
+	}
+	log.Printf("###### FsUUIS in %s: NONE", devpath)
+	return ""
+}
+
+//see https://www.nongnu.org/ext2-doc/ext2.html#DISK-ORGANISATION
+const (
+	EXT2SprblkOff       = 1024 // Offset of superblock in partition
+	EXT2SprblkSize      = 512  // Actually 1024 but most of the last byters are reserved
+	EXT2SprblkMagicOff  = 56   // Offset of magic number in suberblock
+	EXT2SprblkMagicSize = 2
+	EXT2SprblkMagic     = '\uEF53' // fixed value
+	EXT2SprblkUUIDOff   = 104      // Offset of UUID in superblock
+	EXT2SprblkUUIDSize  = 16
+)
+
+func tryEXT4(devname string) (uuid string) {
+	log.Printf("try ext4")
+	var off int64
+	b := make([]byte, 0)
+
+	file, err := os.Open(devname)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	defer file.Close()
+
+	fileinfo, err := file.Stat()
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	fmt.Printf("%s %d\n", fileinfo.Name(), fileinfo.Size())
+
+	// magic number
+	b = make([]byte, EXT2SprblkMagicSize)
+	off = EXT2SprblkOff + EXT2SprblkMagicOff
+	_, err = file.ReadAt(b, off)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	magic := uint16(b[1])<<8 + uint16(b[0])
+	fmt.Printf("magic: 0x%x\n", magic)
+	if magic != EXT2SprblkMagic {
+		log.Printf("try ext4")
+		return ""
+	}
+
+	// filesystem UUID
+	b = make([]byte, EXT2SprblkUUIDSize)
+	off = EXT2SprblkOff + EXT2SprblkUUIDOff
+	_, err = file.ReadAt(b, off)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	uuid = fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+		b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8],
+		b[9], b[10], b[11], b[12], b[13], b[14], b[15])
+	fmt.Printf("UUID=%s\n", uuid)
+
+	return uuid
+}
+
+// see https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau
+const (
+	FAT32MagicOff  = 82 // Offset of magic number
+	FAT32MagicSize = 8
+	FAT32Magic     = "FAT32   " // fixed value
+	FAT32IDOff     = 67         // Offset of filesystem-ID / serielnumber. Treated as short filesystem UUID
+	FAT32IDSize    = 4
+)
+
+func tryVFAT(devname string) (uuid string) {
+	log.Printf("try vfat")
+	var off int64
+	b := make([]byte, 0)
+
+	file, err := os.Open(devname)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	defer file.Close()
+
+	fileinfo, err := file.Stat()
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	fmt.Printf("%s %d\n", fileinfo.Name(), fileinfo.Size())
+
+	// magic number
+	b = make([]byte, FAT32MagicSize)
+	off = 0 + FAT32MagicOff
+	_, err = file.ReadAt(b, off)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	magic := string(b)
+	fmt.Printf("magic: %s\n", magic)
+	if magic != FAT32Magic {
+		log.Printf("no vfat")
+		return ""
+	}
+
+	// filesystem UUID
+	b = make([]byte, FAT32IDSize)
+	off = 0 + FAT32IDOff
+	_, err = file.ReadAt(b, off)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	uuid = fmt.Sprintf("%02x%02x-%02x%02x",
+		b[3], b[2], b[1], b[0])
+	fmt.Printf("UUID=%s\n", uuid)
+
+	return uuid
 }
 
 // GetGPTTable tries to read a GPT table from the block device described by the
@@ -195,7 +334,7 @@ func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
 }
 
 // PartitionsByGUID returns a list of BlockDev objects whose underlying
-// block device ahs the given GUID
+// block device has the given GUID
 func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
 	partitions := make([]BlockDev, 0)
 	for _, device := range devices {
@@ -214,6 +353,18 @@ func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
 		}
 	}
 	return partitions, nil
+}
+
+// PartitionsByFsUUID returns a list of BlockDev objects whose underlying
+// block device has a filesystem with the given UUID
+func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
+	partitions := make([]BlockDev, 0)
+	for _, device := range devices {
+		if device.FsUUID == fsuuid {
+			partitions = append(partitions, device)
+		}
+	}
+	return partitions
 }
 
 // GetMountpointByDevice gets the mountpoint by given
