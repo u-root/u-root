@@ -204,7 +204,6 @@ const (
 func tryEXT4(devname string) (uuid string) {
 	log.Printf("try ext4")
 	var off int64
-	b := make([]byte, 0)
 
 	file, err := os.Open(devname)
 	if err != nil {
@@ -221,7 +220,7 @@ func tryEXT4(devname string) (uuid string) {
 	fmt.Printf("%s %d\n", fileinfo.Name(), fileinfo.Size())
 
 	// magic number
-	b = make([]byte, EXT2SprblkMagicSize)
+	b := make([]byte, EXT2SprblkMagicSize)
 	off = EXT2SprblkOff + EXT2SprblkMagicOff
 	_, err = file.ReadAt(b, off)
 	if err != nil {
@@ -263,7 +262,6 @@ const (
 func tryVFAT(devname string) (uuid string) {
 	log.Printf("try vfat")
 	var off int64
-	b := make([]byte, 0)
 
 	file, err := os.Open(devname)
 	if err != nil {
@@ -280,7 +278,7 @@ func tryVFAT(devname string) (uuid string) {
 	fmt.Printf("%s %d\n", fileinfo.Name(), fileinfo.Size())
 
 	// magic number
-	b = make([]byte, FAT32MagicSize)
+	b := make([]byte, FAT32MagicSize)
 	off = 0 + FAT32MagicOff
 	_, err = file.ReadAt(b, off)
 	if err != nil {
