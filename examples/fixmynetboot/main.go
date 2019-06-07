@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/systemboot/systemboot/pkg/checker"
+	"github.com/u-root/u-root/pkg/checker"
 )
 
 // fixmynetboot is a troubleshooting tool that can help you identify issues that

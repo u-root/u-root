@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/systemboot/systemboot/pkg/crypto"
+	"github.com/u-root/u-root/pkg/crypto"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot"
 )

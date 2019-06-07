@@ -10,7 +10,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/systemboot/systemboot/pkg/crypto"
+	"github.com/u-root/u-root/pkg/crypto"
 	"golang.org/x/crypto/ed25519"
 )
 

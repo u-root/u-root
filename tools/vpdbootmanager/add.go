@@ -8,8 +8,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/systemboot/systemboot/pkg/booter"
-	"github.com/systemboot/systemboot/pkg/vpd"
+	"github.com/u-root/u-root/pkg/booter"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 var dryRun = false

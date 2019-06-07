@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/systemboot/systemboot/pkg/booter"
+	"github.com/u-root/u-root/pkg/booter"
 )
 
 var (

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/systemboot/systemboot/pkg/recovery"
+	"github.com/u-root/u-root/pkg/recovery"
 )
 
 // The concept
