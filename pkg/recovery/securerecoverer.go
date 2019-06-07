@@ -1,0 +1,47 @@
+package recovery
+
+import (
+	"log"
+	"syscall"
+	"time"
+)
+
+// DebugTimeout sets the timeout for how long
+// the debug message is shown before power cycle.
+const DebugTimeout time.Duration = 10
+
+// SecureRecoverer properties
+// Reboot: does a reboot if true
+// Sync: sync file descriptors and devices
+// Debug: enables debug messages
+type SecureRecoverer struct {
+	Reboot bool
+	Sync   bool
+	Debug  bool
+}
+
+// Recover by reboot or poweroff without or with sync
+func (sr SecureRecoverer) Recover(message string) error {
+	if sr.Sync {
+		syscall.Sync()
+	}
+
+	if sr.Debug {
+		if message != "" {
+			log.Print(message)
+		}
+		time.Sleep(DebugTimeout * time.Second)
+	}
+
+	if sr.Reboot {
+		if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
+			return err
+		}
+	} else {
+		if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
