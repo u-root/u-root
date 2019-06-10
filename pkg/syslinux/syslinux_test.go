@@ -14,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 func mustReadAll(r io.ReaderAt) string {
@@ -44,7 +45,7 @@ func TestAppendFile(t *testing.T) {
 	for i, tt := range []struct {
 		desc          string
 		configFileURI string
-		schemeFunc    func() Schemes
+		schemeFunc    func() urlfetch.Schemes
 		wd            *url.URL
 		want          *Config
 		err           error
@@ -52,9 +53,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "all files exist, simple config with cmdline initrd",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default foo
 				label foo
@@ -85,9 +86,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "all files exist, simple config with directive initrd",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default foo
 				label foo
@@ -119,9 +120,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "all files exist, simple config, no initrd",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default foo
 				label foo
@@ -150,9 +151,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "kernel does not exist, simple config",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default foo
 				label foo
@@ -170,13 +171,13 @@ func TestAppendFile(t *testing.T) {
 				DefaultEntry: "foo",
 				Entries: map[string]*boot.LinuxImage{
 					"foo": {
-						Kernel: errorReader{&URLError{
+						Kernel: errorReader{&urlfetch.URLError{
 							URL: &url.URL{
 								Scheme: "tftp",
 								Host:   "1.2.3.4",
 								Path:   "/foobar/pxefiles/kernel",
 							},
-							Err: ErrNoSuchFile,
+							Err: urlfetch.ErrNoSuchFile,
 						}},
 						Initrd:  nil,
 						Cmdline: "",
@@ -187,9 +188,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "config file does not exist",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				s.Register(fs.Scheme, fs)
 				return s
 			},
@@ -198,21 +199,21 @@ func TestAppendFile(t *testing.T) {
 				Host:   "1.2.3.4",
 				Path:   "/foobar",
 			},
-			err: &URLError{
+			err: &urlfetch.URLError{
 				URL: &url.URL{
 					Scheme: "tftp",
 					Host:   "1.2.3.4",
 					Path:   "/foobar/pxelinux.cfg/default",
 				},
-				Err: ErrNoSuchHost,
+				Err: urlfetch.ErrNoSuchHost,
 			},
 		},
 		{
 			desc:          "empty config",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", "")
 				s.Register(fs.Scheme, fs)
 				return s
@@ -229,9 +230,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "valid config with two Entries",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default foo
 
@@ -270,9 +271,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "valid config with global APPEND directive",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default foo
 				append foo=bar
@@ -322,9 +323,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "valid config with global APPEND with initrd",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default mcnulty
 				append initrd=./pxefiles/normal_person
@@ -339,7 +340,7 @@ func TestAppendFile(t *testing.T) {
 				label omar
 				kernel ./pxefiles/drugkernel
 				append -
-				
+
 				label stringer
 				kernel ./pxefiles/drugkernel
 				initrd ./pxefiles/criminal
@@ -388,9 +389,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "default label does not exist",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				conf := `default avon`
 
 				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
@@ -410,22 +411,22 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "multi-scheme valid config",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
+			schemeFunc: func() urlfetch.Schemes {
 				conf := `default sheeeit
 
 				label sheeeit
 				kernel ./pxefiles/kernel
 				initrd http://someplace.com/someinitrd.gz`
 
-				tftp := NewMockScheme("tftp")
+				tftp := urlfetch.NewMockScheme("tftp")
 				tftp.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				tftp.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
 				tftp.Add("1.2.3.4", "/foobar/pxefiles/kernel", content2)
 
-				http := NewMockScheme("http")
+				http := urlfetch.NewMockScheme("http")
 				http.Add("someplace.com", "/someinitrd.gz", content3)
 
-				s := make(Schemes)
+				s := make(urlfetch.Schemes)
 				s.Register(tftp.Scheme, tftp)
 				s.Register(http.Scheme, http)
 				return s
@@ -448,9 +449,9 @@ func TestAppendFile(t *testing.T) {
 		{
 			desc:          "valid config with three includes",
 			configFileURI: "pxelinux.cfg/default",
-			schemeFunc: func() Schemes {
-				s := make(Schemes)
-				fs := NewMockScheme("tftp")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("tftp")
 				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
 				conf := `default mcnulty
 
@@ -547,6 +548,52 @@ func TestAppendFile(t *testing.T) {
 				if _, ok := tt.want.Entries[labelName]; !ok {
 					t.Errorf("config has extra label %s, but not wanted", labelName)
 				}
+			}
+		})
+	}
+}
+
+func TestParseURL(t *testing.T) {
+	for i, tt := range []struct {
+		url  string
+		wd   *url.URL
+		err  bool
+		want *url.URL
+	}{
+		{
+			url: "default",
+			wd: &url.URL{
+				Scheme: "tftp",
+				Host:   "192.168.1.1",
+				Path:   "/foobar/pxelinux.cfg",
+			},
+			want: &url.URL{
+				Scheme: "tftp",
+				Host:   "192.168.1.1",
+				Path:   "/foobar/pxelinux.cfg/default",
+			},
+		},
+		{
+			url: "http://192.168.2.1/configs/your-machine.cfg",
+			wd: &url.URL{
+				Scheme: "tftp",
+				Host:   "192.168.1.1",
+				Path:   "/foobar/pxelinux.cfg",
+			},
+			want: &url.URL{
+				Scheme: "http",
+				Host:   "192.168.2.1",
+				Path:   "/configs/your-machine.cfg",
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
+			got, err := parseURL(tt.url, tt.wd)
+			if (err != nil) != tt.err {
+				t.Errorf("Wanted error (%v), but got %v", tt.err, err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseURL() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package syslinux
+// Package urlfetch implements routines to fetch files given a URL.
+//
+// urlfetch currently supports HTTP, TFTP, local files, and a retrying HTTP
+// client.
+package urlfetch
 
 import (
 	"errors"
@@ -21,23 +25,23 @@ import (
 )
 
 var (
-	// ErrNoSuchScheme is returned by Schemes.GetFile and
-	// Schemes.LazyGetFile if there is no registered FileScheme
+	// ErrNoSuchScheme is returned by Schemes.Fetch and
+	// Schemes.LazyFetch if there is no registered FileScheme
 	// implementation for the given URL scheme.
 	ErrNoSuchScheme = errors.New("no such scheme")
 )
 
 // FileScheme represents the implementation of a URL scheme and gives access to
-// downloading files of that scheme.
+// fetching files of that scheme.
 //
-// For example, an http FileScheme implementation would download files using
+// For example, an http FileScheme implementation would fetch files using
 // the HTTP protocol.
 type FileScheme interface {
-	// GetFile returns a reader that gives the contents of `u`.
+	// Fetch returns a reader that gives the contents of `u`.
 	//
-	// It may do so by downloading `u` and placing it in a buffer, or by
-	// returning an io.ReaderAt that downloads the file.
-	GetFile(u *url.URL) (io.ReaderAt, error)
+	// It may do so by fetching `u` and placing it in a buffer, or by
+	// returning an io.ReaderAt that fetchs the file.
+	Fetch(u *url.URL) (io.ReaderAt, error)
 }
 
 var (
@@ -50,7 +54,7 @@ var (
 	// DefaultTFTPClient is the default TFTP FileScheme.
 	DefaultTFTPClient = NewTFTPClient()
 
-	// DefaultSchemes are the schemes supported by PXE by default.
+	// DefaultSchemes are the schemes supported by default.
 	DefaultSchemes = Schemes{
 		"tftp": DefaultTFTPClient,
 		"http": DefaultHTTPClient,
@@ -76,7 +80,7 @@ func IsURLError(err error) bool {
 }
 
 // Schemes is a map of URL scheme identifier -> implementation that can
-// download a file for that scheme.
+// fetch a file for that scheme.
 type Schemes map[string]FileScheme
 
 // RegisterScheme calls DefaultSchemes.Register.
@@ -89,10 +93,9 @@ func (s Schemes) Register(scheme string, fs FileScheme) {
 	s[scheme] = fs
 }
 
-// GetFile downloads a file via DefaultSchemes. See Schemes.GetFile for
-// details.
-func GetFile(u *url.URL) (io.ReaderAt, error) {
-	return DefaultSchemes.GetFile(u)
+// Fetch fetchs a file via DefaultSchemes.
+func Fetch(u *url.URL) (io.ReaderAt, error) {
+	return DefaultSchemes.Fetch(u)
 }
 
 // file is an io.ReaderAt with a nice Stringer.
@@ -107,32 +110,32 @@ func (f file) String() string {
 	return f.url.String()
 }
 
-// GetFile downloads the file with the given `u`. `u.Scheme` is used to
+// Fetch fetchs the file with the given `u`. `u.Scheme` is used to
 // select the FileScheme via `s`.
 //
 // If `s` does not contain a FileScheme for `u.Scheme`, ErrNoSuchScheme is
 // returned.
-func (s Schemes) GetFile(u *url.URL) (io.ReaderAt, error) {
+func (s Schemes) Fetch(u *url.URL) (io.ReaderAt, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
-	r, err := fg.GetFile(u)
+	r, err := fg.Fetch(u)
 	if err != nil {
 		return nil, &URLError{URL: u, Err: err}
 	}
 	return &file{ReaderAt: r, url: u}, nil
 }
 
-// LazyGetFile calls LazyGetFile on DefaultSchemes. See Schemes.LazyGetFile.
-func LazyGetFile(u *url.URL) (io.ReaderAt, error) {
-	return DefaultSchemes.LazyGetFile(u)
+// LazyFetch calls LazyFetch on DefaultSchemes.
+func LazyFetch(u *url.URL) (io.ReaderAt, error) {
+	return DefaultSchemes.LazyFetch(u)
 }
 
-// LazyGetFile returns a reader that will download the file given by `u` when
-// Read is called, based on `u`s scheme. See Schemes.GetFile for more
+// LazyFetch returns a reader that will Fetch the file given by `u` when
+// Read is called, based on `u`s scheme. See Schemes.Fetch for more
 // details.
-func (s Schemes) LazyGetFile(u *url.URL) (io.ReaderAt, error) {
+func (s Schemes) LazyFetch(u *url.URL) (io.ReaderAt, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
@@ -141,7 +144,7 @@ func (s Schemes) LazyGetFile(u *url.URL) (io.ReaderAt, error) {
 	return &file{
 		url: u,
 		ReaderAt: uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
-			r, err := fg.GetFile(u)
+			r, err := fg.Fetch(u)
 			if err != nil {
 				return nil, &URLError{URL: u, Err: err}
 			}
@@ -162,8 +165,8 @@ func NewTFTPClient(opts ...tftp.ClientOpt) FileScheme {
 	}
 }
 
-// GetFile implements FileScheme.GetFile.
-func (t *TFTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
+// Fetch implements FileScheme.Fetch.
+func (t *TFTPClient) Fetch(u *url.URL) (io.ReaderAt, error) {
 	// TODO(hugelgupf): These clients are basically stateless, except for
 	// the options. Figure out whether you actually have to re-establish
 	// this connection every time. Audit the TFTP library.
@@ -180,14 +183,14 @@ func (t *TFTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 }
 
 // SchemeWithRetries wraps a FileScheme and automatically retries (with
-// backoff) when GetFile returns a non-nil err.
+// backoff) when Fetch returns a non-nil err.
 type SchemeWithRetries struct {
 	Scheme  FileScheme
 	BackOff backoff.BackOff
 }
 
-// GetFile implements FileScheme.GetFile.
-func (s *SchemeWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
+// Fetch implements FileScheme.Fetch.
+func (s *SchemeWithRetries) Fetch(u *url.URL) (io.ReaderAt, error) {
 	var err error
 	s.BackOff.Reset()
 	for d := time.Duration(0); d != backoff.Stop; d = s.BackOff.NextBackOff() {
@@ -196,7 +199,7 @@ func (s *SchemeWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
 		}
 
 		var r io.ReaderAt
-		r, err = s.Scheme.GetFile(u)
+		r, err = s.Scheme.Fetch(u)
 		if err != nil {
 			log.Printf("Error: Getting %v: %v", u, err)
 			continue
@@ -220,8 +223,8 @@ func NewHTTPClient(c *http.Client) *HTTPClient {
 	}
 }
 
-// GetFile implements FileScheme.GetFile.
-func (h HTTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
+// Fetch implements FileScheme.Fetch.
+func (h HTTPClient) Fetch(u *url.URL) (io.ReaderAt, error) {
 	resp, err := h.c.Get(u.String())
 	if err != nil {
 		return nil, err
@@ -240,8 +243,8 @@ type HTTPClientWithRetries struct {
 	BackOff backoff.BackOff
 }
 
-// GetFile implements FileScheme.GetFile.
-func (h HTTPClientWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
+// Fetch implements FileScheme.Fetch.
+func (h HTTPClientWithRetries) Fetch(u *url.URL) (io.ReaderAt, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -273,7 +276,7 @@ func (h HTTPClientWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
 // LocalFileClient implements FileScheme for files on disk.
 type LocalFileClient struct{}
 
-// GetFile implements FileScheme.GetFile.
-func (lfs LocalFileClient) GetFile(u *url.URL) (io.ReaderAt, error) {
+// Fetch implements FileScheme.Fetch.
+func (lfs LocalFileClient) Fetch(u *url.URL) (io.ReaderAt, error) {
 	return os.Open(filepath.Clean(u.Path))
 }
