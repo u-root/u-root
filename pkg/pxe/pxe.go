@@ -16,13 +16,14 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/syslinux"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 // ParseConfig probes for config files based on the Mac and IP given.
 func ParseConfig(workingDir *url.URL, mac net.HardwareAddr, ip net.IP) (*syslinux.Config, error) {
 	for _, relname := range probeFiles(mac, ip) {
 		c, err := syslinux.ParseConfigFile(path.Join("pxelinux.cfg", relname), workingDir)
-		if syslinux.IsURLError(err) {
+		if urlfetch.IsURLError(err) {
 			// We didn't find the file.
 			// TODO(hugelgupf): log this.
 			continue

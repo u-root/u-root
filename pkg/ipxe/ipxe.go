@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/syslinux"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 type parser struct {
 	bootImage *boot.LinuxImage
 
-	schemes syslinux.Schemes
+	schemes urlfetch.Schemes
 }
 
 // ParseConfig returns a new  configuration with the file at URL and default
@@ -38,14 +38,14 @@ type parser struct {
 //
 // See ParseConfigWithSchemes for more details.
 func ParseConfig(configURL *url.URL) (*boot.LinuxImage, error) {
-	return ParseConfigWithSchemes(configURL, syslinux.DefaultSchemes)
+	return ParseConfigWithSchemes(configURL, urlfetch.DefaultSchemes)
 }
 
 // ParseConfigWithSchemes returns a new  configuration with the file at URL
 // and schemes `s`.
 //
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfigWithSchemes(configURL *url.URL, s syslinux.Schemes) (*boot.LinuxImage, error) {
+func ParseConfigWithSchemes(configURL *url.URL, s urlfetch.Schemes) (*boot.LinuxImage, error) {
 	c := &parser{
 		schemes: s,
 	}
@@ -57,7 +57,7 @@ func ParseConfigWithSchemes(configURL *url.URL, s syslinux.Schemes) (*boot.Linux
 
 // getAndParse parses the config file downloaded from `url` and fills in `c`.
 func (c *parser) getAndParseFile(u *url.URL) error {
-	r, err := c.schemes.LazyGetFile(u)
+	r, err := c.schemes.LazyFetch(u)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (c *parser) getFile(surl string) (io.ReaderAt, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
 	}
-	return c.schemes.LazyGetFile(u)
+	return c.schemes.LazyFetch(u)
 }
 
 // parseIpxe parses `config` and constructs a BootImage for `c`.

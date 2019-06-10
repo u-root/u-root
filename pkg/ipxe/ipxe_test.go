@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/syslinux"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 func mustReadAll(r io.ReaderAt) string {
@@ -42,16 +42,16 @@ func TestIpxeConfig(t *testing.T) {
 
 	for i, tt := range []struct {
 		desc       string
-		schemeFunc func() syslinux.Schemes
+		schemeFunc func() urlfetch.Schemes
 		curl       *url.URL
 		want       *boot.LinuxImage
 		err        error
 	}{
 		{
 			desc: "all files exist, simple config with no cmdline",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe
 				kernel http://someplace.com/foobar/pxefiles/kernel
 				initrd http://someplace.com/foobar/pxefiles/initrd
@@ -74,9 +74,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "all files exist, simple config, no initrd",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe
 				kernel http://someplace.com/foobar/pxefiles/kernel
 				boot`
@@ -96,9 +96,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "comments and blank lines",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe
 				# the next line is blank
 
@@ -120,9 +120,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "kernel does not exist, simple config",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe
 				kernel http://someplace.com/foobar/pxefiles/kernel
 				boot`
@@ -136,13 +136,13 @@ func TestIpxeConfig(t *testing.T) {
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
 			want: &boot.LinuxImage{
-				Kernel: errorReader{&syslinux.URLError{
+				Kernel: errorReader{&urlfetch.URLError{
 					URL: &url.URL{
 						Scheme: "http",
 						Host:   "someplace.com",
 						Path:   "/foobar/pxefiles/kernel",
 					},
-					Err: syslinux.ErrNoSuchFile,
+					Err: urlfetch.ErrNoSuchFile,
 				}},
 				Initrd:  nil,
 				Cmdline: "",
@@ -150,9 +150,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "config file does not exist",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				s.Register(fs.Scheme, fs)
 				return s
 			},
@@ -161,20 +161,20 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			err: &syslinux.URLError{
+			err: &urlfetch.URLError{
 				URL: &url.URL{
 					Scheme: "http",
 					Host:   "someplace.com",
 					Path:   "/foobar/pxefiles/ipxeconfig",
 				},
-				Err: syslinux.ErrNoSuchHost,
+				Err: urlfetch.ErrNoSuchHost,
 			},
 		},
 		{
 			desc: "invalid config",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				fs.Add("someplace.com", "/foobar/pxefiles/ipxeconfig", "")
 				s.Register(fs.Scheme, fs)
 				return s
@@ -188,9 +188,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "empty config",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe`
 				fs.Add("someplace.com", "/foobar/pxefiles/ipxeconfig", conf)
 				s.Register(fs.Scheme, fs)
@@ -205,9 +205,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "valid config with kernel cmdline args",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe
 				kernel http://someplace.com/foobar/pxefiles/kernel earlyprintk=ttyS0 printk=ttyS0
 				boot`
@@ -228,20 +228,20 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "multi-scheme valid config",
-			schemeFunc: func() syslinux.Schemes {
+			schemeFunc: func() urlfetch.Schemes {
 				conf := `#!ipxe
 				kernel tftp://1.2.3.4/foobar/pxefiles/kernel
                                 initrd http://someplace.com/someinitrd.gz
 				boot`
 
-				tftp := syslinux.NewMockScheme("tftp")
+				tftp := urlfetch.NewMockScheme("tftp")
 				tftp.Add("1.2.3.4", "/foobar/pxefiles/kernel", content1)
 
-				http := syslinux.NewMockScheme("http")
+				http := urlfetch.NewMockScheme("http")
 				http.Add("someplace.com", "/foobar/pxefiles/ipxeconfig", conf)
 				http.Add("someplace.com", "/someinitrd.gz", content2)
 
-				s := make(syslinux.Schemes)
+				s := make(urlfetch.Schemes)
 				s.Register(tftp.Scheme, tftp)
 				s.Register(http.Scheme, http)
 				return s
@@ -258,9 +258,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 		{
 			desc: "valid config with unsupported cmds",
-			schemeFunc: func() syslinux.Schemes {
-				s := make(syslinux.Schemes)
-				fs := syslinux.NewMockScheme("http")
+			schemeFunc: func() urlfetch.Schemes {
+				s := make(urlfetch.Schemes)
+				fs := urlfetch.NewMockScheme("http")
 				conf := `#!ipxe
 				kernel http://someplace.com/foobar/pxefiles/kernel
                                 initrd http://someplace.com/someinitrd.gz

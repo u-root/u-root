@@ -22,6 +22,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -51,7 +52,8 @@ type Config struct {
 // Currently, only the APPEND, INCLUDE, KERNEL, LABEL, DEFAULT, and INITRD
 // directives are partially supported.
 //
-// DefaultSchemes is used to fetch any files that must be parsed or provided.
+// urlfetch.DefaultSchemes is used to fetch any files that must be parsed or
+// provided.
 //
 // `wd` is the default scheme, host, and path for any files named as a
 // relative path - e.g. kernel, include, and initramfs paths are requested
@@ -73,7 +75,7 @@ type parser struct {
 	scope        scope
 	curEntry     string
 	wd           *url.URL
-	schemes      Schemes
+	schemes      urlfetch.Schemes
 }
 
 type scope uint8
@@ -88,7 +90,7 @@ const (
 //
 // See newParserWithSchemes for more details.
 func newParser(wd *url.URL) *parser {
-	return newParserWithSchemes(wd, DefaultSchemes)
+	return newParserWithSchemes(wd, urlfetch.DefaultSchemes)
 }
 
 // newParserWithSchemes returns a new PXE parser using working directory `wd`
@@ -99,7 +101,7 @@ func newParser(wd *url.URL) *parser {
 // resulting URL is roughly `wd.String()/path`.
 //
 // `s` is used to get files referred to by URLs.
-func newParserWithSchemes(wd *url.URL, s Schemes) *parser {
+func newParserWithSchemes(wd *url.URL, s urlfetch.Schemes) *parser {
 	return &parser{
 		config: &Config{
 			Entries: make(map[string]*boot.LinuxImage),
@@ -140,7 +142,7 @@ func (c *parser) getFile(url string) (io.ReaderAt, error) {
 		return nil, err
 	}
 
-	return c.schemes.LazyGetFile(u)
+	return c.schemes.LazyFetch(u)
 }
 
 // appendFile parses the config file downloaded from `url` and adds it to `c`.
@@ -179,7 +181,7 @@ func (c *parser) append(config string) error {
 			c.config.DefaultEntry = arg
 
 		case "include":
-			if err := c.appendFile(arg); IsURLError(err) {
+			if err := c.appendFile(arg); urlfetch.IsURLError(err) {
 				// Means we didn't find the file. Just ignore
 				// it.
 				// TODO(hugelgupf): plumb a logger through here.
