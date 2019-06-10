@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package multiboot implements basic primitives
-// to load multiboot kernels as defined in
+// Package multiboot implements bootloading multiboot kernels as defined by
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html.
+//
+// Package multiboot crafts kexec segments that can be used with the kexec_load
+// system call.
 package multiboot
 
 import (
@@ -39,7 +41,7 @@ type multiboot struct {
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 	trampoline string
 
-	header Header
+	header header
 
 	// infoAddr is a pointer to multiboot info.
 	infoAddr uintptr
@@ -48,8 +50,8 @@ type multiboot struct {
 	// EntryPoint is a pointer to trampoline.
 	entryPoint uintptr
 
-	info          Info
-	loadedModules []Module
+	info          info
+	loadedModules []module
 }
 
 var (
@@ -113,6 +115,9 @@ func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 }
 
 // Load parses and loads a multiboot kernel `file` using kexec_load.
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
 //
 // debug turns on debug logging.
 //
@@ -213,7 +218,7 @@ func (m *multiboot) addInfo() (addr uintptr, err error) {
 	if err != nil {
 		return 0, err
 	}
-	m.info = iw.Info
+	m.info = iw.info
 
 	addr, err = m.mem.AddKexecSegment(d)
 	if err != nil {
@@ -288,10 +293,10 @@ func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	var info Info
+	var inf info
 	if m.header.Flags&flagHeaderMemoryInfo != 0 {
 		lower, upper := m.memoryBoundaries()
-		info = Info{
+		inf = info{
 			Flags:      flagInfoMemMap | flagInfoMemory,
 			MemLower:   min(uint32(lower>>10), 0xFFFFFFFF),
 			MemUpper:   min(uint32(upper>>10), 0xFFFFFFFF),
@@ -305,16 +310,16 @@ func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
 		if err != nil {
 			return nil, err
 		}
-		info.Flags |= flagInfoMods
-		info.ModsAddr = uint32(modAddr)
-		info.ModsCount = uint32(len(m.modules))
+		inf.Flags |= flagInfoMods
+		inf.ModsAddr = uint32(modAddr)
+		inf.ModsCount = uint32(len(m.modules))
 	}
 
-	info.CmdLine = sizeofInfo
-	info.BootLoaderName = sizeofInfo + uint32(len(m.cmdLine)) + 1
-	info.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
+	inf.CmdLine = sizeofInfo
+	inf.BootLoaderName = sizeofInfo + uint32(len(m.cmdLine)) + 1
+	inf.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
 	return &infoWrapper{
-		Info:           info,
+		info:           inf,
 		CmdLine:        m.cmdLine,
 		BootLoaderName: m.bootloader,
 	}, nil
