@@ -6,6 +6,17 @@
 //
 // pxeboot combines a DHCP client with a TFTP/HTTP client to download files as
 // well as pxelinux and iPXE configuration file parsing.
+//
+// PXE-based booting requests a DHCP lease, and looks at the BootFileName and
+// ServerName options (which may be embedded in the original BOOTP message, or
+// as option codes) to find something to boot.
+//
+// This BootFileName may point to
+//
+// - an iPXE script beginning with #!ipxe
+//
+// - a pxelinux.0, in which case we will ignore the pxelinux and try to parse
+//   pxelinux.cfg/<files>
 package main
 
 import (
