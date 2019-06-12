@@ -140,7 +140,9 @@ func lease4(ctx context.Context, iface netlink.Link, timeout time.Duration, retr
 	}
 
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
-	_, p, err := client.Request(ctx, dhcpv4.WithNetboot)
+	_, p, err := client.Request(ctx, dhcpv4.WithNetboot,
+		dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
+		dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask))
 	if err != nil {
 		return nil, err
 	}
