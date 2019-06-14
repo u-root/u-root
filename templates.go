@@ -92,7 +92,7 @@ var templates = map[string][]string{
 	// coreboot-app minimal environment
 	"coreboot-app": {
 		"github.com/u-root/u-root/cmds/core/cat",
-		"github.com/u-root/u-root/cmds/core/cbmem",
+		"github.com/u-root/u-root/cmds/exp/cbmem",
 		"github.com/u-root/u-root/cmds/core/chroot",
 		"github.com/u-root/u-root/cmds/core/cp",
 		"github.com/u-root/u-root/cmds/core/dd",
