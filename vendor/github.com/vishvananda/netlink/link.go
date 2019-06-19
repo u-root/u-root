@@ -311,6 +311,8 @@ type Tuntap struct {
 	NonPersist bool
 	Queues     int
 	Fds        []*os.File
+	Owner      uint32
+	Group      uint32
 }
 
 func (tuntap *Tuntap) Attrs() *LinkAttrs {
@@ -324,7 +326,8 @@ func (tuntap *Tuntap) Type() string {
 // Veth devices must specify PeerName on create
 type Veth struct {
 	LinkAttrs
-	PeerName string // veth on create only
+	PeerName         string // veth on create only
+	PeerHardwareAddr net.HardwareAddr
 }
 
 func (veth *Veth) Attrs() *LinkAttrs {
