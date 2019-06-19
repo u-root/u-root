@@ -18,8 +18,8 @@ import (
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
-// A Module represents a module to be loaded along with the kernel.
-type Module struct {
+// A module represents a module to be loaded along with the kernel.
+type module struct {
 	// Start is the inclusive start of the Module memory location
 	Start uint32
 	// End is the exclusive end of the Module memory location.
@@ -32,7 +32,7 @@ type Module struct {
 	Reserved uint32
 }
 
-type modules []Module
+type modules []module
 
 func (m *multiboot) addModules() (uintptr, error) {
 	loaded, data, err := loadModules(m.modules)
@@ -100,7 +100,7 @@ func alignUp(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *Module) loadModule(buf *bytes.Buffer, name string) error {
+func (m *module) loadModule(buf *bytes.Buffer, name string) error {
 	log.Printf("Adding module %v", name)
 
 	b, err := readFile(name)
@@ -122,7 +122,7 @@ func (m *Module) loadModule(buf *bytes.Buffer, name string) error {
 	return nil
 }
 
-func (m *Module) setCmdLine(buf *bytes.Buffer, cmdLine string) error {
+func (m *module) setCmdLine(buf *bytes.Buffer, cmdLine string) error {
 	m.CmdLine = uint32(buf.Len())
 	if _, err := buf.WriteString(cmdLine); err != nil {
 		return err

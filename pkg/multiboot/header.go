@@ -21,9 +21,11 @@ var ErrFlagsNotSupported = errors.New("multiboot header flags not supported yet"
 
 const headerMagic = 0x1BADB002
 
+type headerFlag uint32
+
 const (
-	flagHeaderPageAlign  Flag = 0x00000001
-	flagHeaderMemoryInfo      = 0x00000002
+	flagHeaderPageAlign  headerFlag = 0x00000001
+	flagHeaderMemoryInfo            = 0x00000002
 
 	// ignore this flag for now
 	flagHeaderMultibootVideoMode = 0x00000004
@@ -34,7 +36,7 @@ const (
 // mandatory is a mandatory part of Multiboot v1 header.
 type mandatory struct {
 	Magic    uint32
-	Flags    Flag
+	Flags    headerFlag
 	Checksum uint32
 }
 
@@ -52,19 +54,19 @@ type optional struct {
 	Depth    uint32
 }
 
-// Header represents a Multiboot v1 header loaded from the file.
-type Header struct {
+// header represents a Multiboot v1 header loaded from the file.
+type header struct {
 	mandatory
 	optional
 }
 
 // parseHeader parses multiboot header as defined in
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
-func parseHeader(r io.Reader) (Header, error) {
+func parseHeader(r io.Reader) (header, error) {
 	mandatorySize := binary.Size(mandatory{})
 	optionalSize := binary.Size(optional{})
 	sizeofHeader := mandatorySize + optionalSize
-	var hdr Header
+	var hdr header
 	// The multiboot header must be contained completely within the
 	// first 8192 bytes of the OS image.
 	buf := make([]byte, 8192)
