@@ -14,16 +14,11 @@ import (
 	"unsafe"
 
 	"golang.org/x/net/bpf"
+	"golang.org/x/sys/unix"
 )
 
-const (
-	// bpfDIn tells BPF to pass through only incoming packets, so we do not
-	// receive the packets we send using BPF.
-	bpfDIn = 0
-
-	// osFreeBSD is the GOOS name for FreeBSD.
-	osFreeBSD = "freebsd"
-)
+// osFreeBSD is the GOOS name for FreeBSD.
+const osFreeBSD = "freebsd"
 
 // bpfLen returns the length of the BPF header prepended to each incoming ethernet
 // frame.  FreeBSD uses a slightly modified header from other BSD variants.
@@ -42,10 +37,8 @@ func bpfLen() int {
 	return bpfHeaderLen
 }
 
-var (
-	// Must implement net.PacketConn at compile-time.
-	_ net.PacketConn = &packetConn{}
-)
+// Must implement net.PacketConn at compile-time.
+var _ net.PacketConn = &packetConn{}
 
 // packetConn is the Linux-specific implementation of net.PacketConn for this
 // package.
@@ -63,8 +56,7 @@ type packetConn struct {
 
 // listenPacket creates a net.PacketConn which can be used to send and receive
 // data at the device driver level.
-func listenPacket(ifi *net.Interface, proto uint16, _ Config) (*packetConn, error) {
-	// Config is, as of now, unused on BSD.
+func listenPacket(ifi *net.Interface, proto uint16, cfg Config) (*packetConn, error) {
 	// TODO(mdlayher): consider porting NoTimeouts option to BSD if it pans out.
 
 	var f *os.File
@@ -99,7 +91,7 @@ func listenPacket(ifi *net.Interface, proto uint16, _ Config) (*packetConn, erro
 	}
 
 	// Configure BPF device to send and receive data
-	buflen, err := configureBPF(fd, ifi, proto)
+	buflen, err := configureBPF(fd, ifi, proto, cfg.BPFDirection)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +104,10 @@ func listenPacket(ifi *net.Interface, proto uint16, _ Config) (*packetConn, erro
 		buflen: buflen,
 	}, nil
 }
+
+// Maximum read timeout per syscall.
+// It is required because read/recvfrom won't be interrupted on closing of the file descriptor.
+const readTimeout = 200 * time.Millisecond
 
 // ReadFrom implements the net.PacketConn.ReadFrom method.
 func (p *packetConn) ReadFrom(b []byte) (int, net.Addr, error) {
@@ -134,16 +130,14 @@ func (p *packetConn) ReadFrom(b []byte) (int, net.Addr, error) {
 			}
 		}
 
-		tv, err := newTimeval(timeout)
-		if err != nil {
-			return 0, nil, err
-		}
-		if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(p.fd), syscall.BIOCSRTIMEOUT, uintptr(unsafe.Pointer(tv))); err != 0 {
+		tv := unix.NsecToTimeval(timeout.Nanoseconds())
+		if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(p.fd), syscall.BIOCSRTIMEOUT, uintptr(unsafe.Pointer(&tv))); err != 0 {
 			return 0, nil, syscall.Errno(err)
 		}
 
 		// Attempt to receive on socket
 		// The read sycall will NOT be interrupted by closing of the socket
+		var err error
 		n, err = syscall.Read(p.fd, buf)
 		if err != nil {
 			return n, nil, err
@@ -235,7 +229,7 @@ func (p *packetConn) Stats() (*Stats, error) {
 
 // configureBPF configures a BPF device with the specified file descriptor to
 // use the specified network and interface and protocol.
-func configureBPF(fd int, ifi *net.Interface, proto uint16) (int, error) {
+func configureBPF(fd int, ifi *net.Interface, proto uint16, direction int) (int, error) {
 	// Use specified interface with BPF device
 	if err := syscall.SetBpfInterface(fd, ifi.Name); err != nil {
 		return 0, err
@@ -257,8 +251,8 @@ func configureBPF(fd int, ifi *net.Interface, proto uint16) (int, error) {
 		return 0, err
 	}
 
-	// Only retrieve incoming traffic using BPF device
-	if err := setBPFDirection(fd, bpfDIn); err != nil {
+	// Specify incoming only or bidirectional traffic using BPF device
+	if err := setBPFDirection(fd, direction); err != nil {
 		return 0, err
 	}
 

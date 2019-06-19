@@ -374,8 +374,8 @@ func (d *DHCPv4) UpdateOption(opt Option) {
 
 // String implements fmt.Stringer.
 func (d *DHCPv4) String() string {
-	return fmt.Sprintf("DHCPv4(opcode=%s xid=%s hwtype=%s hwaddr=%s)",
-		d.OpCode, d.TransactionID, d.HWType, d.ClientHWAddr)
+	return fmt.Sprintf("DHCPv4(xid=%s hwaddr=%s msg_type=%s, your_ip=%s, server_ip=%s)",
+		d.TransactionID, d.ClientHWAddr, d.MessageType(), d.YourIPAddr, d.ServerIPAddr)
 }
 
 // SummaryWithVendor prints a summary of the packet, interpreting the
