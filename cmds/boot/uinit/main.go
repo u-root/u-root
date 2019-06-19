@@ -23,7 +23,7 @@ var (
 )
 
 var defaultBootsequence = [][]string{
-	[]string{"netboot", "-userclass", "linuxboot"},
+	[]string{"fbnetboot", "-userclass", "linuxboot"},
 	[]string{"localboot", "-grub"},
 }
 
