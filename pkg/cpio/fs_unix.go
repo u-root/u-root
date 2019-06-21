@@ -223,9 +223,39 @@ func (r *Recorder) inode(i Info) (Info, bool) {
 	return i, false
 }
 
+type null struct{}
+
+func (*null) ReadAt([]byte, int64) (int, error) {
+	return -1, io.EOF
+}
+
 func newLazyFile(name string) io.ReaderAt {
 	return uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
-		return os.Open(name)
+		f, oerr := os.Open(name)
+		if oerr == nil {
+			return f, oerr
+		}
+		// There are a few special case files that have
+		// only write permissions set. In those cases,
+		// create a record for a zero-length file.
+		if !os.IsPermission(oerr) {
+			return nil, oerr
+		}
+		i, err := os.Stat(name)
+		if err != nil {
+			return nil, oerr
+		}
+		// is it ONLY writeable?
+		m := i.Mode()
+		// If there are not-write modes set, then
+		// this is not just a writeonly file
+		if m&0555 != 0 {
+			return f, oerr
+		}
+		// At this point, it is either a file which
+		// only allows write or has no permissions at all.
+		// Either way, we can include it.
+		return &null{}, nil
 	})
 }
 

@@ -6,8 +6,12 @@ package cpio
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 	"syscall"
 	"testing"
@@ -136,6 +140,39 @@ func TestReadWrite(t *testing.T) {
 		}
 		if !bytes.Equal(contents1, contents2) {
 			t.Errorf("index %d content: file 1 (%q) is %v, file 2 (%q) wanted %v", i, f1.Name, contents1, f2.Name, contents2)
+		}
+	}
+}
+
+func TestWriteOnlyFile(t *testing.T) {
+	var b bytes.Buffer
+	dir, err := ioutil.TempDir("", "cpio.TestWriteOnlyFile")
+	if err != nil {
+		t.Fatalf("TempDir: got %v, want nil", err)
+	}
+	var permTest = []os.FileMode{000, 002, 020, 0200}
+	var names []string
+	for i, n := range permTest {
+		names = append(names, filepath.Join(dir, fmt.Sprintf("%d", n)))
+		f, err := os.OpenFile(names[i], os.O_CREATE, n)
+		if err != nil {
+			t.Fatalf("Create %v: got %v, want nil", names[i], err)
+		}
+		f.Close()
+	}
+	archiver, err := Format("newc")
+	if err != nil {
+		log.Fatalf("Format newc: got %v, want nil", err)
+	}
+	rw := archiver.Writer(&b)
+	cr := NewRecorder()
+	for _, n := range names {
+		rec, err := cr.GetRecord(n)
+		if err != nil {
+			log.Fatalf("Getting record of %q got %v, want nil", n, err)
+		}
+		if err := rw.WriteRecord(rec); err != nil {
+			log.Fatalf("Writing record %q failed: got %v, want nil", n, err)
 		}
 	}
 }
