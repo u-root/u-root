@@ -50,6 +50,7 @@ func main() {
 	flag.Parse()
 	if *d {
 		debug = log.Printf
+		cpio.Debug = log.Printf
 	}
 
 	a := flag.Args()
@@ -90,7 +91,8 @@ func main() {
 			name := scanner.Text()
 			rec, err := cr.GetRecord(name)
 			if err != nil {
-				log.Fatalf("Getting record of %q failed: %v", name, err)
+				log.Printf("Getting record of %q failed: %v", name, err)
+				continue
 			}
 			if err := rw.WriteRecord(rec); err != nil {
 				log.Fatalf("Writing record %q failed: %v", name, err)

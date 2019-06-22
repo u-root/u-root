@@ -247,6 +247,13 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 		if done {
 			return Record{Info: info}, nil
 		}
+		// Check whether we can access it at all.
+		// If not, return an error. Callers of this function
+		// can determine whether that is fatal; in the cpio
+		// command, it should not be.
+		if err := unix.Access(path, unix.R_OK); err != nil {
+			return Record{}, err
+		}
 		return Record{Info: info, ReaderAt: newLazyFile(path)}, nil
 
 	case os.ModeSymlink:

@@ -6,8 +6,11 @@ package cpio
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"syscall"
 	"testing"
@@ -138,6 +141,64 @@ func TestReadWrite(t *testing.T) {
 			t.Errorf("index %d content: file 1 (%q) is %v, file 2 (%q) wanted %v", i, f1.Name, contents1, f2.Name, contents2)
 		}
 	}
+}
+
+func TestWriteOnlyFile(t *testing.T) {
+	dir, err := ioutil.TempDir("", "cpio.TestWriteOnlyFile")
+	if err != nil {
+		t.Fatalf("TempDir: got %v, want nil", err)
+	}
+	var permTest = []os.FileMode{000, 002, 020, 0200}
+	var names []string
+	for i, n := range permTest {
+		names = append(names, filepath.Join(dir, fmt.Sprintf("%d", n)))
+		f, err := os.OpenFile(names[i], os.O_CREATE, n)
+		if err != nil {
+			t.Fatalf("Create %v: got %v, want nil", names[i], err)
+		}
+		f.Close()
+	}
+	cr := NewRecorder()
+	for _, n := range names {
+		if _, err := cr.GetRecord(n); err == nil {
+			t.Errorf("Getting record of %q got nil, want an error", n)
+		}
+	}
+}
+
+// This is testing that we properly pad a read of a bogus file,
+// namely a synthetic that we can open but can't read.
+func TestCantRead(t *testing.T) {
+	g := "/sys/bus/pci/slots/*/a[dt][dt]*"
+	names, err := filepath.Glob(g)
+	if err != nil {
+		t.Fatalf("Glob %q: got %v, want nil", g, err)
+	}
+	if len(names) == 0 {
+		t.Skipf("Skipping, no files in %q match", g)
+	}
+	t.Logf("Checking %v", names)
+	for _, n := range names {
+		if _, err := os.Open(n); err != nil {
+			t.Errorf("%s: got %v, want nil", n, err)
+		}
+		r, err := NewRecorder().GetRecord(n)
+		if err != nil {
+			t.Errorf("Getting record of %q got %v, want an error", n, err)
+		}
+		b := &bytes.Buffer{}
+		w := Newc.Writer(b)
+		if err := w.WriteRecord(r); err != nil {
+			t.Errorf("WriteRecord: %v", err)
+		}
+		// we don't know exact length, it may vary, but we do know it should
+		// be at least 4k.
+		if b.Len() < 4096 {
+			t.Errorf("Writing %q: got %d, expect at least 4096", n, b.Len())
+		}
+		t.Logf("%v with FileSize %v wrote a file of %d bytes", n, r.Info.FileSize, b.Len())
+	}
+
 }
 
 func TestBad(t *testing.T) {

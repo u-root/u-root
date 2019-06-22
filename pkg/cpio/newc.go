@@ -160,14 +160,37 @@ func (w *writer) WriteRecord(f Record) error {
 
 	// Write file contents.
 	m, err := io.Copy(w, uio.Reader(f))
+	// An odd wrinkle: in standard cpio and tar, if you get this far, then
+	// an error is not really an error. It's considered a short read.
+	// And, short reads are always padded to info.FileSize.
+	// The problem is what to do with the error. Just printing it here
+	// is a bad idea. Returning it is a bad idea, it will confuse callers.
+	// Perhaps we need to create our own error interface as upspin did, and
+	// implement a Warning(). For now, just pad it.
+	// We don't allocate a byte slice as big as FileSize; that could get big
+	// and we're trying to keep little systems in mind. In fact the "pad to 4k"
+	// covers 100% of the cases we've seen.
 	if err != nil {
-		return err
+		m = 0
 	}
-	if c, ok := f.ReaderAt.(io.Closer); ok {
-		if err := c.Close(); err != nil {
+	for uint64(m) < f.Info.FileSize {
+		var b = make([]byte, 4096)
+		amt := int(f.Info.FileSize - uint64(m))
+		if amt > len(b) {
+			amt = len(b)
+		}
+		n, err := w.Write(b[:amt])
+		if err != nil {
 			return err
 		}
+		m += int64(n)
 	}
+
+	defer func() {
+		if c, ok := f.ReaderAt.(io.Closer); ok {
+			c.Close()
+		}
+	}()
 	if m > 0 {
 		return w.pad()
 	}
