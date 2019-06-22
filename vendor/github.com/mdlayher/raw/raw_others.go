@@ -9,10 +9,8 @@ import (
 	"golang.org/x/net/bpf"
 )
 
-var (
-	// Must implement net.PacketConn at compile-time.
-	_ net.PacketConn = &packetConn{}
-)
+// Must implement net.PacketConn at compile-time.
+var _ net.PacketConn = &packetConn{}
 
 // packetConn is the generic implementation of net.PacketConn for this package.
 type packetConn struct{}

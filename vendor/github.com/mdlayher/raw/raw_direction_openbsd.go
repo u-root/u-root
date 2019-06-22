@@ -14,7 +14,7 @@ func setBPFDirection(fd int, direction int) error {
 	var dirfilt uint
 
 	switch direction {
-	case bpfDIn:
+	case 0:
 		// filter outbound
 		dirfilt = syscall.BPF_DIRECTION_OUT
 	default:
