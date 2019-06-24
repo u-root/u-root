@@ -7,6 +7,7 @@ package uio
 import (
 	"fmt"
 	"io"
+	"os"
 	"testing"
 )
 
@@ -21,6 +22,16 @@ type mockReader struct {
 func (m *mockReader) Read([]byte) (int, error) {
 	m.called = true
 	return 0, m.err
+}
+
+func (m *mockReader) Close() error {
+	if m == nil {
+		return os.ErrInvalid
+	}
+	if m.err != nil {
+		return os.ErrInvalid
+	}
+	return nil
 }
 
 func TestLazyOpenerRead(t *testing.T) {
@@ -67,6 +78,9 @@ func TestLazyOpenerRead(t *testing.T) {
 				if tt.openReader.err != nil && err != tt.openReader.err {
 					t.Errorf("Read() = %v, want %v", err, tt.openReader.err)
 				}
+			}
+			if err := lr.Close(); err != nil {
+				t.Errorf("Close(): got %v, want nil", err)
 			}
 		})
 	}

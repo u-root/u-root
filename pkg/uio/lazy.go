@@ -41,7 +41,7 @@ func (lr *LazyOpener) Read(p []byte) (int, error) {
 // Close implements io.Closer.Close.
 func (lr *LazyOpener) Close() error {
 	if c, ok := lr.r.(io.Closer); ok {
-		return c.Close()
+		c.Close()
 	}
 	return nil
 }
