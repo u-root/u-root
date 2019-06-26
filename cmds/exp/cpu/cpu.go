@@ -49,7 +49,7 @@ var (
 	port9p    = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
 	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
 	root      = flag.String("root", "/", "9p root")
-	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": seperated list of directories in /tmp/cpu to bind over /")
+	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": separated list of directories in /tmp/cpu to bind over /")
 )
 
 func verbose(f string, a ...interface{}) {
