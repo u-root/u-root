@@ -200,12 +200,12 @@ func (l *Lexer) append(n int) []byte {
 	return l.Buffer.WriteN(n)
 }
 
-// Error returns an error if an error occured reading from the buffer.
+// Error returns an error if an error occurred reading from the buffer.
 func (l *Lexer) Error() error {
 	return l.err
 }
 
-// FinError returns an error if an error occured or if there is more data left
+// FinError returns an error if an error occurred or if there is more data left
 // to read in the buffer.
 func (l *Lexer) FinError() error {
 	if l.err != nil {
@@ -219,7 +219,7 @@ func (l *Lexer) FinError() error {
 
 // Read8 reads a byte from the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Read8() uint8 {
 	v := l.Consume(1)
 	if v == nil {
@@ -230,7 +230,7 @@ func (l *Lexer) Read8() uint8 {
 
 // Read16 reads a 16-bit value from the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Read16() uint16 {
 	v := l.Consume(2)
 	if v == nil {
@@ -241,7 +241,7 @@ func (l *Lexer) Read16() uint16 {
 
 // Read32 reads a 32-bit value from the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Read32() uint32 {
 	v := l.Consume(4)
 	if v == nil {
@@ -252,7 +252,7 @@ func (l *Lexer) Read32() uint32 {
 
 // Read64 reads a 64-bit value from the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Read64() uint64 {
 	v := l.Consume(8)
 	if v == nil {
@@ -263,7 +263,7 @@ func (l *Lexer) Read64() uint64 {
 
 // CopyN returns a copy of the next n bytes.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) CopyN(n int) []byte {
 	v := l.Consume(n)
 	if v == nil {
@@ -277,14 +277,14 @@ func (l *Lexer) CopyN(n int) []byte {
 
 // ReadAll Consumes and returns a copy of all remaining bytes in the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) ReadAll() []byte {
 	return l.CopyN(l.Len())
 }
 
 // ReadBytes reads exactly len(p) values from the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) ReadBytes(p []byte) {
 	copy(p, l.Consume(len(p)))
 }
@@ -302,7 +302,7 @@ func (l *Lexer) Read(p []byte) (int, error) {
 //
 // See binary.Read.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) ReadData(data interface{}) {
 	l.setError(binary.Read(l, l.order, data))
 }
@@ -311,56 +311,56 @@ func (l *Lexer) ReadData(data interface{}) {
 //
 // See binary.Write.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) WriteData(data interface{}) {
 	l.setError(binary.Write(l, l.order, data))
 }
 
 // Write8 writes a byte to the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Write8(v uint8) {
 	l.append(1)[0] = byte(v)
 }
 
 // Write16 writes a 16-bit value to the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Write16(v uint16) {
 	l.order.PutUint16(l.append(2), v)
 }
 
 // Write32 writes a 32-bit value to the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Write32(v uint32) {
 	l.order.PutUint32(l.append(4), v)
 }
 
 // Write64 writes a 64-bit value to the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Write64(v uint64) {
 	l.order.PutUint64(l.append(8), v)
 }
 
 // Append returns a newly appended n-size Buffer to write to.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Append(n int) []byte {
 	return l.append(n)
 }
 
 // WriteBytes writes p to the Buffer.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) WriteBytes(p []byte) {
 	copy(l.append(len(p)), p)
 }
 
 // Write implements io.Writer.Write.
 //
-// If an error occured, Error() will return a non-nil error.
+// If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Write(p []byte) (int, error) {
 	return copy(l.append(len(p)), p), nil
 }
