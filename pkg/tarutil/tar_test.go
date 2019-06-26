@@ -12,29 +12,18 @@ import (
 	"testing"
 )
 
-func TestExtractDir(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "tartest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+func extractAndCompare(t *testing.T, files []struct{ name, body string }) {
 	f, err := os.Open("test.tar")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
 
+	tmpDir := "tartest"
 	if err := ExtractDir(f, tmpDir); err != nil {
 		t.Fatal(err)
 	}
 
-	var files = []struct {
-		name, body string
-	}{
-		{"a.txt", "hello\n"},
-		{"dir/b.txt", "world\n"},
-	}
 	for _, f := range files {
 		body, err := ioutil.ReadFile(filepath.Join(tmpDir, f.name))
 		if err != nil {
@@ -46,6 +35,35 @@ func TestExtractDir(t *testing.T) {
 				f.name, string(body), f.body)
 		}
 	}
+}
+
+func TestExtractDir(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "tartest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	var files = []struct {
+		name, body string
+	}{
+		{"a.txt", "hello\n"},
+		{"dir/b.txt", "world\n"},
+	}
+	extractAndCompare(t, files)
+}
+
+func TestExtractDirNotExist(t *testing.T) {
+	tmpDir := "tartest"
+	defer os.RemoveAll(tmpDir) // ExtractDir should have created dir
+
+	var files = []struct {
+		name, body string
+	}{
+		{"a.txt", "hello\n"},
+		{"dir/b.txt", "world\n"},
+	}
+	extractAndCompare(t, files)
 }
 
 func TestCreateTarSingleFile(t *testing.T) {
