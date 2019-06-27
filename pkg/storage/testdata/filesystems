@@ -1,0 +1,6 @@
+nodev	sysfs
+nodev	proc
+	ext4
+	ext3
+nodev	fuse
+	vfat

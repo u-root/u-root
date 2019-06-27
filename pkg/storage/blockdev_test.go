@@ -13,7 +13,7 @@ import (
 // TestFindMountPointNotExists checks that non existent
 // entry is checked and nil returned
 func TestFindMountPointNotExists(t *testing.T) {
-	LinuxMountsPath = "tests/mounts"
+	LinuxMountsPath = "testdata/mounts"
 	_, err := GetMountpointByDevice("/dev/mapper/sys-oldxxxxxx")
 	require.Error(t, err)
 }
@@ -21,7 +21,7 @@ func TestFindMountPointNotExists(t *testing.T) {
 // TestFindMountPointValid check for valid output of
 // test mountpoint.
 func TestFindMountPointValid(t *testing.T) {
-	LinuxMountsPath = "tests/mounts"
+	LinuxMountsPath = "testdata/mounts"
 	mountpoint, err := GetMountpointByDevice("/dev/mapper/sys-old")
 	require.NoError(t, err)
 	require.Equal(t, *mountpoint, "/media/usb")
