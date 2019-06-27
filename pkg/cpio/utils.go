@@ -50,6 +50,14 @@ func Symlink(name string, target string) Record {
 	}
 }
 
+// Hardlink returns a hardlink record from an existing file.
+// Everything is the same save the Name. The reader is empty.
+func Hardlink(name string, i Info) Record {
+	var r = Record{Info: i}
+	r.Info.Name = name
+	return r
+}
+
 // Directory returns a directory record at name.
 func Directory(name string, mode uint64) Record {
 	return Record{

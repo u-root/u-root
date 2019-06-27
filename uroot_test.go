@@ -48,9 +48,12 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 		return err
 	}
 
+	w := cpio.NewUnixFiler(func(f*cpio.UnixFiler){
+		f.Root = dir
+	})
 	// Unpack into dir.
 	err = cpio.ForEachRecord(a.Reader(), func(r cpio.Record) error {
-		return cpio.CreateFileInRoot(r, dir, false)
+		return w.Create(r)
 	})
 	if err != nil {
 		return err

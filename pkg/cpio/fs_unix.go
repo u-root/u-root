@@ -32,6 +32,16 @@ const (
 	modePermissions = 0000777
 )
 
+type inumber uint64
+
+type UnixFiler struct {
+	Root       string
+	CreateDevs bool
+	// inodes is a record of inodes we have created. We do not protect it with a
+	// mutex as cpio reading is inherently serial.
+	inodes map[inumber]Record
+}
+
 var modeMap = map[uint64]os.FileMode{
 	modeSocket:  os.ModeSocket,
 	modeSymlink: os.ModeSymlink,
@@ -40,6 +50,24 @@ var modeMap = map[uint64]os.FileMode{
 	modeDir:     os.ModeDir,
 	modeChar:    os.ModeCharDevice,
 	modeFIFO:    os.ModeNamedPipe,
+}
+
+// NewUnixFiler returns a new Filer for Unix-like systems.
+// For any given build of this package,
+// for a target operating sytems, we'll only support one flavor of filer.
+// We thought about having multiple filer
+// types, and being able to specify them in the command line, but given
+// the existence of the VFS layer in the kernel, which exists to abstract
+// all kinds of file systems to a single standard API, it was hard to
+// make a case for recreating a "vfs" layer in this package.
+// Realistically, for cpio, we're almost certainly never going to have
+// anything but Unix-like kernels.
+func NewUnixFiler(opts ...func(*UnixFiler)) Filer {
+	var f = &UnixFiler{Root: ".", inodes: map[inumber]Record{}}
+	for _, o := range opts {
+		o(f)
+	}
+	return f
 }
 
 // setModes sets the modes, changing the easy ones first and the harder ones last.
@@ -98,15 +126,6 @@ func linuxModeToFileType(m uint64) (os.FileMode, error) {
 	return 0, fmt.Errorf("Invalid file type %#o", m&modeTypeMask)
 }
 
-// CreateFile creates a local file for f relative to the current working
-// directory.
-//
-// CreateFile will attempt to set all metadata for the file, including
-// ownership, times, and permissions.
-func CreateFile(f Record) error {
-	return CreateFileInRoot(f, ".", true)
-}
-
 // CreateFileInRoot creates a local file for f relative to rootDir.
 //
 // It will attempt to set all metadata for the file, including ownership,
@@ -114,65 +133,83 @@ func CreateFile(f Record) error {
 // forcePriv is true.
 //
 // Block and char device creation will only return error if forcePriv is true.
-func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
-	m, err := linuxModeToFileType(f.Mode)
+func (f *UnixFiler) Create(r Record) error {
+	m, err := linuxModeToFileType(r.Mode)
 	if err != nil {
 		return err
 	}
 
-	f.Name = filepath.Clean(filepath.Join(rootDir, f.Name))
-	dir := filepath.Dir(f.Name)
+	r.Name = filepath.Clean(filepath.Join(f.Root, r.Name))
+	dir := filepath.Dir(r.Name)
 	// The problem: many cpio archives do not specify the directories and
 	// hence the permissions. They just specify the whole path.  In order
 	// to create files in these directories, we have to make them at least
 	// mode 755.
 	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("CreateFileInRoot %q: %v", f.Name, err)
+			return fmt.Errorf("CreateFileInRoot %q: %v", r.Name, err)
 		}
 	}
 
 	switch m {
 	case os.ModeSocket, os.ModeNamedPipe:
-		return fmt.Errorf("%q: type %v: cannot create IPC endpoints", f.Name, m)
+		return fmt.Errorf("%q: type %v: cannot create IPC endpoints", r.Name, m)
 
 	case os.ModeSymlink:
-		content, err := ioutil.ReadAll(uio.Reader(f))
+		content, err := ioutil.ReadAll(uio.Reader(r))
 		if err != nil {
 			return err
 		}
-		return os.Symlink(string(content), f.Name)
+		return os.Symlink(string(content), r.Name)
 
 	case os.FileMode(0):
-		nf, err := os.Create(f.Name)
+		// Check the dev/inumber. If we have seen it before, create a hardlink
+		// and return. The data associated with a set of records
+		// with the same inumber will always be attached to the first
+		// record, so we need not worry whether the data was written.
+		// If r.Ino is 0, the archive was produced on a
+		// system that does not have hard links (e.g. Plan 9); a file system
+		// that does not have hard links (e.g. vfat); or by a program/pkg that
+		// does not create hard link records (pkg/uroot).
+		// In that case, we need not check.
+		if r.Ino != 0 {
+			if of, ok := f.inodes[inumber(r.Ino)]; ok {
+				if err := os.Link(of.Name, r.Name); err != nil {
+					return err
+				}
+			}
+		}
+		nf, err := os.Create(r.Name)
 		if err != nil {
 			return err
 		}
+		f.inodes[inumber(r.Ino)] = r
 		defer nf.Close()
-		if _, err := io.Copy(nf, uio.Reader(f)); err != nil {
+
+		if _, err := io.Copy(nf, uio.Reader(r)); err != nil {
 			return err
 		}
 
 	case os.ModeDir:
-		if err := os.MkdirAll(f.Name, toFileMode(f)); err != nil {
+		if err := os.MkdirAll(r.Name, toFileMode(r)); err != nil {
 			return err
 		}
 
 	case os.ModeDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
+		if err := syscall.Mknod(r.Name, perm(r)|syscall.S_IFBLK, dev(r)); err != nil && f.CreateDevs {
 			return err
 		}
 
 	case os.ModeCharDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
+		if err := syscall.Mknod(r.Name, perm(r)|syscall.S_IFCHR, dev(r)); err != nil && f.CreateDevs {
 			return err
 		}
 
 	default:
-		return fmt.Errorf("%v: Unknown type %#o", f.Name, m)
+		return fmt.Errorf("%v: Unknown type %#o", r.Name, m)
 	}
 
-	if err := setModes(f); err != nil && forcePriv {
+	if err := setModes(r); err != nil && f.CreateDevs {
 		return err
 	}
 	return nil
@@ -208,17 +245,23 @@ type Recorder struct {
 // This eliminates two of the messier parts of creating reproducible
 // output streams.
 func (r *Recorder) inode(i Info) (Info, bool) {
-	d := devInode{dev: i.Dev, ino: i.Ino}
+	dvi := devInode{dev: i.Dev, ino: i.Ino}
+
+	// The Dev has no meaning to the eventual destination;
+	// for reproducibility, zero it.
 	i.Dev = 0
 
-	if d, ok := r.inodeMap[d]; ok {
+	// The inumber has no meaning to the eventual destination.
+	// Create a new one but, first, see if we are a hard link.
+	if d, ok := r.inodeMap[dvi]; ok {
 		i.Ino = d.Ino
 		return i, true
 	}
 
-	i.Ino = r.inumber
+	// Make synthetic inumbers always start at 1.
 	r.inumber++
-	r.inodeMap[d] = i
+	i.Ino = r.inumber
+	r.inodeMap[dvi] = i
 
 	return i, false
 }

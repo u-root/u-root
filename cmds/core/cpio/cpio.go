@@ -67,6 +67,7 @@ func main() {
 	switch op {
 	case "i":
 		rr := archiver.Reader(os.Stdin)
+		ww := cpio.NewUnixFiler()
 		for {
 			rec, err := rr.ReadRecord()
 			if err == io.EOF {
@@ -76,7 +77,7 @@ func main() {
 				log.Fatalf("error reading records: %v", err)
 			}
 			debug("Creating %s\n", rec)
-			if err := cpio.CreateFile(rec); err != nil {
+			if err := ww.Create(rec); err != nil {
 				log.Printf("Creating %q failed: %v", rec.Name, err)
 			}
 		}

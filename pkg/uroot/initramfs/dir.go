@@ -41,17 +41,19 @@ func (da DirArchiver) OpenWriter(l logger.Logger, path, goos, goarch string) (Wr
 		}
 	}
 	l.Printf("Path is %s", path)
-	return dirWriter{path}, nil
+	return &dirWriter{Filer: cpio.NewUnixFiler(func(f *cpio.UnixFiler) {
+		f.Root = path
+	})}, nil
 }
 
 // dirWriter implements Writer.
 type dirWriter struct {
-	dir string
+	cpio.Filer
 }
 
 // WriteRecord implements Writer.WriteRecord.
 func (dw dirWriter) WriteRecord(r cpio.Record) error {
-	return cpio.CreateFileInRoot(r, dw.dir, false)
+	return dw.Filer.Create(r)
 }
 
 // Finish implements Writer.Finish.

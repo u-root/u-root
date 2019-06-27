@@ -97,6 +97,9 @@ func main() {
 	}
 
 	r := archiver.Reader(f)
+	w := cpio.NewUnixFiler(func(f *cpio.UnixFiler) {
+		f.Root = tempDir
+	})
 	for {
 		rec, err := r.ReadRecord()
 		if err == io.EOF {
@@ -105,7 +108,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		cpio.CreateFileInRoot(rec, tempDir, false)
+		if err := w.Create(rec); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	cmd, err := pty.New()

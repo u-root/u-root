@@ -45,7 +45,10 @@ import (
 
 var (
 	formatMap = make(map[string]RecordFormat)
-	Debug     = func(string, ...interface{}) {}
+
+	// Debug can be used to set a logging function, e.g. log.Printf,
+	// for debug messages.
+	Debug = func(string, ...interface{}) {}
 )
 
 // Record represents a CPIO record, which represents a Unix file.
@@ -124,6 +127,11 @@ type RecordWriter interface {
 type RecordFormat interface {
 	Reader(r io.ReaderAt) RecordReader
 	Writer(w io.Writer) RecordWriter
+}
+
+// A Filer is used to create files from Records.
+type Filer interface {
+	Create(Record) error
 }
 
 // Format returns the RecordFormat with that name, if it exists.
