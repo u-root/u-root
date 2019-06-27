@@ -8,7 +8,6 @@ var templates = map[string][]string{
 	"all": {
 		"github.com/u-root/u-root/cmds/core/*",
 		"github.com/u-root/u-root/cmds/boot/*",
-		"github.com/u-root/u-root/cmds/nichrome/*",
 	},
 	"boot": {
 		"github.com/u-root/u-root/cmds/boot/boot",
