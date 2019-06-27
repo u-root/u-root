@@ -5,8 +5,8 @@
 package storage
 
 import (
-	"bufio"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -20,24 +20,25 @@ type Mountpoint struct {
 	FsType     string
 }
 
-// GetSupportedFilesystems returns the supported file systems for block devices,
-func GetSupportedFilesystems() ([]string, error) {
-	fd, err := os.Open("/proc/filesystems")
-	if err != nil {
-		return nil, err
+// GetSupportedFilesystems returns the supported file systems for block devices
+func GetSupportedFilesystems() (fstypes []string, err error) {
+	return internalGetFilesystems("/proc/filesystems")
+}
+
+func internalGetFilesystems(file string) (fstypes []string, err error) {
+	var bytes []byte
+	if bytes, err = ioutil.ReadFile(file); err != nil {
+		return nil, fmt.Errorf("Failed to read %s: %v", file, err)
 	}
-	filesystems := make([]string, 0)
-	scanner := bufio.NewScanner(fd)
-	for scanner.Scan() {
-		fields := strings.Split(scanner.Text(), "\t")
-		if fields[0] == "" {
-			filesystems = append(filesystems, fields[1])
+	for _, line := range strings.Split(string(bytes), "\n") {
+		//len(fields)==1, 2 possibilites for fs: "nodev" fs and
+		// fs's. "nodev" fs cannot be mounted through devices.
+		// len(fields)==1 prevents this from occurring.
+		if fields := strings.Fields(line); len(fields) == 1 {
+			fstypes = append(fstypes, fields[0])
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return filesystems, nil
+	return fstypes, nil
 }
 
 // Mount tries to mount a block device on the given mountpoint, trying in order
