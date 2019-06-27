@@ -397,7 +397,7 @@ func (l *Less) search(s string) *searchResults {
 		nextLine++
 	}
 
-	// Collect the remaing results.
+	// Collect the remaining results.
 	for count < nextLine-1 {
 		waitResult()
 	}
