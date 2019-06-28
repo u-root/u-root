@@ -77,16 +77,8 @@
   revision = "ce302be1d1149d49ed520b8f0d9c956b2663b3d6"
 
 [[projects]]
-  digest = "1:caf94762c0e0a1bdd44d9307d319f2841939399c86db9f04b4d2e470c51aa007"
-  name = "github.com/gorilla/mux"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "ed099d42384823742bba0bf9a72b53b55c9e2e38"
-  version = "v1.7.2"
-
-[[projects]]
   branch = "master"
-  digest = "1:6e3a72dd74185a70400fd25ecb79518ffd45639d65195a1ac07732073e9a79a8"
+  digest = "1:8e591f627c1ed8a29b707c2afe46cebd5abc9fb77b5d586679d883b563c1a3b6"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -101,7 +93,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "797593413f957bdc1ac7896a3cfc99333ec1bc00"
+  revision = "498b45cac80e2856fdcebfc0b4ebd446cc7ef87e"
 
 [[projects]]
   branch = "master"
@@ -195,7 +187,7 @@
   name = "github.com/nsf/termbox-go"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "288510b9734e30e7966ec2f22b87c5f8e67345e3"
+  revision = "eeb6cd0a176293eeb2c69270d83835972e3567bc"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -270,22 +262,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2afb0affa2aea1e68c58c1f6ae5c8856a4d36375d9942591f84060f99434331c"
+  digest = "1:ff16cd9d71e063d5b060073ea46149a5fe92b688d201e3939673686bcb3c84af"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "99a56c251ae6d00ce3d73cf8ee0b9ecb94fe323b"
+  revision = "a8241965b5fba0ec02d248784b768b1adb31daa8"
 
 [[projects]]
   branch = "master"
-  digest = "1:2a1bbe57bb2602803e0f142d88453b0d9fec89e496aaa2cd8807bcae2e05a4a7"
+  digest = "1:ad33f5e23a9fbcdbdf7f8412a035d1f70274691345890289dd390359e574c017"
   name = "github.com/vishvananda/netns"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "13995c7128ccc8e51e9a6bd2b551020a27180abd"
+  revision = "7109fa855b0ff1ebef7fbd2f6aa613e8db7cfbc0"
 
 [[projects]]
   branch = "master"
@@ -312,11 +304,11 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "ea8f1a30c4438cc8b13f05538385ad8dc6049b43"
+  revision = "cc06ce4a13d484c0101a9e92913248488a75786d"
 
 [[projects]]
   branch = "master"
-  digest = "1:f78c8a06f8889fd6e742cbdc8c9f9d8684b3fe99cee697bf4cbd5c029a0bd8e3"
+  digest = "1:64048d1baf49e847abfcaabab3f17494f07da9b3b82a3d3b16e6ebe50f91baea"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -325,11 +317,11 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "b5b0513f8c1bb7c1e3e6f168fba117131fe2614a"
+  revision = "da137c7871d730100384dbcf36e6f8fa493aef5b"
 
 [[projects]]
   branch = "master"
-  digest = "1:ba2e3ab9619d6c9e6ab42d98729720e27d52c3441d4ffcbbc6677eee297ca5e9"
+  digest = "1:bf9a6904b352093a9a9825aaa49c0123658619111a915c51562a514aff8aaae2"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -337,7 +329,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "17bc6164aac4cb0a31185672304df091fd0a42cc"
+  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -356,7 +348,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d8d292553e3e987d610a5f76795e44c15ea8552aca63e6e9d63f86cddcd3583e"
+  digest = "1:3498d9ffb33636ae6782189176e94742af94490d49c2eaf9e3d3e1ab529132f8"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -373,7 +365,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "4adf7a708c2de4c9ea24a1f351c2e1c9b82fbde8"
+  revision = "59bec042292dcfabf5c63176f6468abd2c8fc2d0"
 
 [[projects]]
   digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
@@ -404,7 +396,6 @@
     "github.com/go-test/deep",
     "github.com/google/go-tpm/tpm",
     "github.com/google/goexpect",
-    "github.com/gorilla/mux",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv6",
