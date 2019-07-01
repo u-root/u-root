@@ -159,6 +159,10 @@ type ErrKexec struct {
 	Errno    syscall.Errno
 }
 
+func (e ErrKexec) Error() string {
+    return "<ErrKexec>"
+}
+
 //
 //
 // Preconditions:
