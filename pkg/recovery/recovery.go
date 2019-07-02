@@ -8,7 +8,7 @@ package recovery
 // from critical errors in different ways.
 // Currently permissiverecoverer with log
 // output and securerecovery with shutdown
-// capabilites are supported.
+// capabilities are supported.
 type Recoverer interface {
 	Recover(message string) error
 }

@@ -102,7 +102,7 @@ func (r *Raw) OEMID() string {
 	return fmt.Sprintf("%s", r.data[10:16])
 }
 
-// OEMTableID retuns the table OEMTableID.
+// OEMTableID returns the table OEMTableID.
 func (r *Raw) OEMTableID() string {
 	return fmt.Sprintf("%s", r.data[16:24])
 }
