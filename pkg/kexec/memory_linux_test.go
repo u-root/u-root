@@ -63,6 +63,7 @@ func TestParseMemoryMap(t *testing.T) {
 		t.Errorf("ParseMemoryMap() got %v, want %v", phys, want)
 	}
 }
+
 func TestAvailableRAM(t *testing.T) {
 	old := pageMask
 	defer func() {
@@ -458,6 +459,16 @@ func TestMinusRange(t *testing.T) {
 			// r contained completely within r2.
 			r:    Range{Start: 0x100, Size: 0x50},
 			r2:   Range{Start: 0x90, Size: 0x100},
+			want: nil,
+		},
+		{
+			r:    Range{Start: 0x100, Size: 0x50},
+			r2:   Range{Start: 0x100, Size: 0x100},
+			want: nil,
+		},
+		{
+			r:    Range{Start: 0x100, Size: 0x50},
+			r2:   Range{Start: 0xf0, Size: 0x60},
 			want: nil,
 		},
 		{
