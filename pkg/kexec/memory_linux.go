@@ -6,7 +6,6 @@ package kexec
 
 import (
 	"debug/elf"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,31 +16,118 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
+
+// ErrNotEnoughSpace is returned by the FindSpace family of functions if no
+// range is large enough to accommodate the request.
+type ErrNotEnoughSpace struct {
+	Size uint
+}
+
+func (e ErrNotEnoughSpace) Error() string {
+	return fmt.Sprintf("not enough space to allocate %#x bytes", e.Size)
+}
 
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
 	// Start is the inclusive start of the range.
 	Start uintptr
-	// Size is the size of the range.
+
+	// Size is the number of elements in the range.
+	//
 	// Start+Size is the exclusive end of the range.
 	Size uint
 }
 
+// RangeFromInterval returns a Range representing [start, end).
+func RangeFromInterval(start, end uintptr) Range {
+	return Range{
+		Start: start,
+		Size:  uint(end - start),
+	}
+}
+
+// String returns [Start, Start+Size) as a string.
+func (r Range) String() string {
+	return fmt.Sprintf("[%#x, %#x)", r.Start, r.End())
+}
+
+// End returns the uintptr *after* the end of the interval.
+func (r Range) End() uintptr {
+	return r.Start + uintptr(r.Size)
+}
+
+// Adjacent returns true if r and r2 do not overlap, but are immediately next
+// to each other.
+func (r Range) Adjacent(r2 Range) bool {
+	return r2.End() == r.Start || r.End() == r2.Start
+}
+
+// Contains returns true iff p is in the interval described by r.
+func (r Range) Contains(p uintptr) bool {
+	return r.Start <= p && p < r.End()
+}
+
+func min(a, b uintptr) uintptr {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b uintptr) uintptr {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// Intersect returns the continuous range of points common to r and r2 if there
+// is one.
+func (r Range) Intersect(r2 Range) *Range {
+	if !r.Overlaps(r2) {
+		return nil
+	}
+	i := RangeFromInterval(max(r.Start, r2.Start), min(r.End(), r2.End()))
+	return &i
+}
+
+// Minus removes all points in r2 from r.
+func (r Range) Minus(r2 Range) []Range {
+	var result []Range
+	if r.Contains(r2.Start) {
+		result = append(result, Range{
+			Start: r.Start,
+			Size:  uint(r2.Start - r.Start),
+		})
+	}
+	if r.Contains(r2.End()) {
+		result = append(result, Range{
+			Start: r2.End(),
+			Size:  uint(r.End() - r2.End()),
+		})
+	}
+	// Neither end was in r?
+	//
+	// Either r is a subset of r2 and r disappears completely, or they are
+	// completely disjunct.
+	if len(result) == 0 && r.Disjunct(r2) {
+		result = append(result, r)
+	}
+	return result
+}
+
 // Overlaps returns true if r and r2 overlap.
 func (r Range) Overlaps(r2 Range) bool {
-	return r.Start < (r2.Start+uintptr(r2.Size)) && r2.Start < (r.Start+uintptr(r.Size))
+	return r.Start < r2.End() && r2.Start < r.End()
 }
 
 // IsSupersetOf returns true if r2 in r.
 func (r Range) IsSupersetOf(r2 Range) bool {
-	return r.Start <= r2.Start && (r.Start+uintptr(r.Size)) >= (r2.Start+uintptr(r2.Size))
+	return r.Start <= r2.Start && r.End() >= r2.End()
 }
 
 // Disjunct returns true if r and r2 do not overlap.
@@ -60,6 +146,50 @@ func (r Range) toSlice() []byte {
 	return data
 }
 
+// Ranges is a list of non-overlapping ranges.
+type Ranges []Range
+
+// Minus removes all points in r from all ranges in rs.
+func (rs Ranges) Minus(r Range) Ranges {
+	var ram Ranges
+	for _, oldRange := range rs {
+		ram = append(ram, oldRange.Minus(r)...)
+	}
+	return ram
+}
+
+// FindSpace finds a continguous piece of sz points within Ranges and returns
+// the starting point.
+func (rs Ranges) FindSpace(sz uint) (start uintptr, err error) {
+	return rs.FindSpaceAbove(sz, 0)
+}
+
+const MaxAddr = ^uintptr(0)
+
+// FindSpaceAbove finds a continguous piece of sz points within Ranges and returns
+// a starting point >= minAddr.
+func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (start uintptr, err error) {
+	return rs.FindSpaceIn(sz, RangeFromInterval(minAddr, MaxAddr))
+}
+
+// FindSpaceIn finds a continguous piece of sz points within Ranges and returns
+// a starting point >= minAddr, with start+sz < maxAddr
+func (rs Ranges) FindSpaceIn(sz uint, limit Range) (start uintptr, err error) {
+	for _, r := range rs {
+		if overlap := r.Intersect(limit); overlap != nil && overlap.Size >= sz {
+			return overlap.Start, nil
+		}
+	}
+	return 0, ErrNotEnoughSpace{Size: sz}
+}
+
+// Sort sorts ranges by their start point.
+func (rs *Ranges) Sort() {
+	sort.Slice(*rs, func(i, j int) bool {
+		return (*rs)[i].Start < (*rs)[j].Start
+	})
+}
+
 // pool stores byte slices pointed by the pointers Segments.Buf to
 // prevent underlying arrays to be collected by garbage collector.
 var pool [][]byte
@@ -68,6 +198,7 @@ var pool [][]byte
 type Segment struct {
 	// Buf is a buffer in user space.
 	Buf Range
+
 	// Phys is a physical address of kernel.
 	Phys Range
 }
@@ -164,9 +295,23 @@ func AlignPhys(s Segment) Segment {
 	return s
 }
 
-// Dedup merges segments in segs as much as possible.
-func Dedup(segs []Segment) []Segment {
-	var s []Segment
+// Segments is a collection of segments.
+type Segments []Segment
+
+// PhysContains returns whether p exists in any of segs' physical memory
+// ranges.
+func (segs Segments) PhysContains(p uintptr) bool {
+	for _, s := range segs {
+		if s.Phys.Contains(p) {
+			return true
+		}
+	}
+	return false
+}
+
+// Dedup deduplicates overlapping and merges adjacent segments in segs.
+func Dedup(segs Segments) Segments {
+	var s Segments
 	sort.Slice(segs, func(i, j int) bool {
 		if segs[i].Phys.Start == segs[j].Phys.Start {
 			// let segs[i] be the superset of segs[j]
@@ -190,60 +335,18 @@ func Dedup(segs []Segment) []Segment {
 	return s
 }
 
-// Load loads the given segments into memory to be executed on a kexec-reboot.
-//
-// It is assumed that segments is made up of the next kernel's code and text
-// segments, and that `entry` is the entry point, either kernel entry point or trampoline.
-func Load(entry uintptr, segments []Segment, flags uint64) error {
-	for i := range segments {
-		segments[i] = AlignPhys(segments[i])
-	}
+// Memory provides routines to work with physical memory ranges.
+type Memory struct {
+	// Phys defines the layout of physical memory.
+	//
+	// Phys is used to tell loaded operating systems what memory is usable
+	// as RAM, and what memory is reserved (for ACPI or other reasons).
+	Phys MemoryMap
 
-	segments = Dedup(segments)
-	ok := false
-	for _, s := range segments {
-		ok = ok || (s.Phys.Start <= entry && entry < s.Phys.Start+uintptr(s.Phys.Size))
-	}
-	if !ok {
-		return fmt.Errorf("entry point %#v is not covered by any segment", entry)
-	}
-
-	return rawLoad(entry, segments, flags)
-}
-
-// ErrKexec is the error type returned kexec.
-// It describes entry point, flags, errno and kernel layout.
-type ErrKexec struct {
-	Entry    uintptr
+	// Segments are the segments used to load a new operating system.
+	//
+	// Each segment also contains a physical memory region it maps to.
 	Segments []Segment
-	Flags    uint64
-	Errno    syscall.Errno
-}
-
-func (e ErrKexec) Error() string {
-	return fmt.Sprintf("entry %x, flags %x, errno %d, segments %v", e.Entry, e.Flags, e.Errno, e.Segments)
-}
-
-// rawLoad is a wrapper around kexec_load(2) syscall.
-// Preconditions:
-// - segments must not overlap
-// - segments must be full pages
-func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
-	if _, _, errno := unix.Syscall6(
-		unix.SYS_KEXEC_LOAD,
-		entry,
-		uintptr(len(segments)),
-		uintptr(unsafe.Pointer(&segments[0])),
-		uintptr(flags),
-		0, 0); errno != 0 {
-		return ErrKexec{
-			Entry:    entry,
-			Segments: segments,
-			Flags:    flags,
-			Errno:    errno,
-		}
-	}
-	return nil
 }
 
 // LoadElfSegments loads loadable ELF segments.
@@ -257,6 +360,7 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 		if p.Type != elf.PT_LOAD {
 			continue
 		}
+
 		d := make([]byte, p.Filesz)
 		n, err := r.ReadAt(d, int64(p.Off))
 		if err != nil {
@@ -265,6 +369,7 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 		if n < len(d) {
 			return fmt.Errorf("not all data of the segment was read")
 		}
+		// TODO(hugelgupf): check if this is within availableRAM??
 		s := NewSegment(d, Range{
 			Start: uintptr(p.Paddr),
 			Size:  uint(p.Memsz),
@@ -275,11 +380,24 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 	return nil
 }
 
+// ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
+func (m *Memory) ParseMemoryMap() error {
+	p, err := ParseMemoryMap()
+	if err != nil {
+		return err
+	}
+	m.Phys = p
+	return nil
+}
+
 var memoryMapRoot = "/sys/firmware/memmap/"
 
-// ParseMemoryMap reads firmware provided memory map
-// from /sys/firmware/memmap.
-func (m *Memory) ParseMemoryMap() error {
+// ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
+func ParseMemoryMap() (MemoryMap, error) {
+	return internalParseMemoryMap(memoryMapRoot)
+}
+
+func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 	type memRange struct {
 		// start and addresses are inclusive
 		start, end uintptr
@@ -335,12 +453,13 @@ func (m *Memory) ParseMemoryMap() error {
 		return nil
 	}
 
-	if err := filepath.Walk(memoryMapRoot, walker); err != nil {
-		return err
+	if err := filepath.Walk(memoryMapDir, walker); err != nil {
+		return nil, err
 	}
 
+	var phys []TypedRange
 	for _, r := range ranges {
-		m.Phys = append(m.Phys, TypedAddressRange{
+		phys = append(phys, TypedRange{
 			Range: Range{
 				Start: r.start,
 				Size:  uint(r.end - r.start),
@@ -348,54 +467,23 @@ func (m *Memory) ParseMemoryMap() error {
 			Type: r.typ,
 		})
 	}
-	sort.Slice(m.Phys, func(i, j int) bool {
-		return m.Phys[i].Start < m.Phys[j].Start
+	sort.Slice(phys, func(i, j int) bool {
+		return phys[i].Start < phys[j].Start
 	})
-	return nil
+	return phys, nil
 }
 
-// RangeType defines type of a TypedAddressRange based on the Linux
-// kernel string provided by firmware memory map.
-type RangeType string
+// M1 is 1 Megabyte in bits.
+const M1 = 1 << 20
 
-const (
-	RangeRAM      RangeType = "System RAM"
-	RangeDefault            = "Default"
-	RangeACPI               = "ACPI Tables"
-	RangeNVS                = "ACPI Non-volatile Storage"
-	RangeReserved           = "Reserved"
-)
-
-// Memory provides routines to work with physical memory ranges.
-type Memory struct {
-	Phys     []TypedAddressRange
-	Segments []Segment
-}
-
-// TypedAddressRange represents range of physical memory.
-type TypedAddressRange struct {
-	Range
-	Type RangeType
-}
-
-var ErrNotEnoughSpace = errors.New("not enough space")
-
-// FindSpace returns pointer to the physical memory,
-// where array of size sz can be stored during next
-// AddKexecSegment call.
+// FindSpace returns pointer to the physical memory, where array of size sz can
+// be stored during next AddKexecSegment call.
 func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
+	// Allocate full pages.
 	sz = alignUp(sz)
-	ranges := m.availableRAM()
-	for _, r := range ranges {
-		// don't use memory below 1M, just in case.
-		if uint(r.Start)+r.Size < 1048576 {
-			continue
-		}
-		if r.Size >= sz {
-			return r.Start, nil
-		}
-	}
-	return 0, ErrNotEnoughSpace
+
+	// Don't use memory below 1M, just in case.
+	return m.AvailableRAM().FindSpaceAbove(sz, M1)
 }
 
 func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
@@ -421,9 +509,10 @@ func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 	return start, nil
 }
 
-// availableRAM subtracts physical ranges of kexec segments from
-// RAM segments of TypedAddressRange aligning range beginnings
-// to a page boundary.
+// AvailableRAM returns page-aligned unused regions of RAM.
+//
+// AvailableRAM takes all RAM-marked pages in the memory map and subtracts the
+// kexec segments already allocated. RAM segments begin at a page boundary.
 //
 // E.g if page size is 4K and RAM segments are
 //            [{start:0 size:8192} {start:8192 size:8000}]
@@ -431,80 +520,68 @@ func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
 //            [{start:40 size:50} {start:8000 size:2000}]
 // result should be
 //            [{start:0 size:40} {start:4096 end:8000 - 4096}]
-func (m Memory) availableRAM() (avail []TypedAddressRange) {
-	type point struct {
-		// x is a point coordinate on an axis.
-		x uintptr
-		// start is true if the point is the beginning of segment.
-		start bool
-		// ram is true if the point is part of a RAM segment.
-		ram bool
-	}
-	// points stores starting and ending points of segments
-	// sorted by coordinate.
-	var points []point
-	addPoint := func(r Range, ram bool) {
-		points = append(points,
-			point{x: r.Start, start: true, ram: ram},
-			point{x: r.Start + uintptr(r.Size) - 1, start: false, ram: ram},
-		)
-	}
+func (m Memory) AvailableRAM() Ranges {
+	ram := m.Phys.FilterByType(RangeRAM)
 
-	for _, s := range m.Phys {
-		if s.Type == RangeRAM {
-			addPoint(s.Range, true)
-		}
-	}
+	// Remove all points in Segments from available RAM.
 	for _, s := range m.Segments {
-		addPoint(s.Phys, false)
+		ram = ram.Minus(s.Phys)
 	}
 
-	sort.Slice(points, func(i, j int) bool {
-		return points[i].x < points[j].x
-	})
-
-	add := func(start, end uintptr, ramRange, kexecRange bool) {
-		if !ramRange || kexecRange {
-			return
-		}
-		start = alignUpPtr(start)
-		if start >= end {
-			return
-		}
-		avail = append(avail, TypedAddressRange{
-			Range: Range{
-				Start: start,
-				Size:  uint(end-start) + 1,
-			},
-			Type: RangeRAM,
-		})
-	}
-
-	var start uintptr
-	var ramRange bool
-	var kexecRange bool
-	for _, p := range points {
-		switch {
-		case p.start && p.ram:
-			start = p.x
-		case p.start && !p.ram:
-			if start != p.x {
-				add(start, p.x-1, ramRange, kexecRange)
-			}
-		case !p.start && p.ram:
-			add(start, p.x, ramRange, kexecRange)
-		case !p.start && !p.ram:
-			if ramRange {
-				start = p.x + 1
-			}
-		}
-
-		if p.ram {
-			ramRange = p.start
-		} else {
-			kexecRange = p.start
+	// Only return Ranges starting at an aligned size.
+	var alignedRanges Ranges
+	for _, r := range ram {
+		alignedStart := alignUpPtr(r.Start)
+		if alignedStart < r.End() {
+			alignedRanges = append(alignedRanges, Range{
+				Start: alignedStart,
+				Size:  r.Size - uint(alignedStart-r.Start),
+			})
 		}
 	}
+	return alignedRanges
+}
 
-	return avail
+// RangeType defines type of a TypedRange based on the Linux
+// kernel string provided by firmware memory map.
+type RangeType string
+
+const (
+	RangeRAM      RangeType = "System RAM"
+	RangeDefault            = "Default"
+	RangeACPI               = "ACPI Tables"
+	RangeNVS                = "ACPI Non-volatile Storage"
+	RangeReserved           = "Reserved"
+)
+
+// String implements fmt.Stringer.
+func (r RangeType) String() string {
+	return string(r)
+}
+
+// TypedRange represents range of physical memory.
+type TypedRange struct {
+	Range
+	Type RangeType
+}
+
+func (tr TypedRange) String() string {
+	return fmt.Sprintf("{addr: %s, type: %s}", tr.Range, tr.Type)
+}
+
+// MemoryMap defines the layout of physical memory.
+//
+// MemoryMap defines which ranges in memory are usable RAM and which are
+// reserved for various reasons.
+type MemoryMap []TypedRange
+
+// Filter only returns ranges of the given typ.
+func (m MemoryMap) FilterByType(typ RangeType) Ranges {
+	var rs Ranges
+	for _, tr := range m {
+		if tr.Type == typ {
+			rs = append(rs, tr.Range)
+		}
+	}
+	return rs
 }

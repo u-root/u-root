@@ -22,6 +22,7 @@ import (
 type module struct {
 	// Start is the inclusive start of the Module memory location
 	Start uint32
+
 	// End is the exclusive end of the Module memory location.
 	End uint32
 
