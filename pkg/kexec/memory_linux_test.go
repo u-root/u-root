@@ -15,16 +15,11 @@ import (
 )
 
 func TestParseMemoryMap(t *testing.T) {
-	var mem Memory
 	root, err := ioutil.TempDir("", "memmap")
 	if err != nil {
 		t.Fatalf("Cannot create test dir: %v", err)
 	}
 	defer os.RemoveAll(root)
-
-	old := memoryMapRoot
-	memoryMapRoot = root
-	defer func() { memoryMapRoot = old }()
 
 	create := func(dir string, start, end uintptr, typ RangeType) error {
 		p := path.Join(root, dir)
@@ -53,21 +48,21 @@ func TestParseMemoryMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := []TypedAddressRange{
+	want := MemoryMap{
 		{Range: Range{Start: 0, Size: 50}, Type: RangeRAM},
 		{Range: Range{Start: 100, Size: 50}, Type: RangeACPI},
 		{Range: Range{Start: 200, Size: 50}, Type: RangeNVS},
 		{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
 	}
 
-	if err := mem.ParseMemoryMap(); err != nil {
+	phys, err := internalParseMemoryMap(root)
+	if err != nil {
 		t.Fatalf("ParseMemoryMap() error: %v", err)
 	}
-	if !reflect.DeepEqual(mem.Phys, want) {
-		t.Errorf("ParseMemoryMap() got %v, want %v", mem.Phys, want)
+	if !reflect.DeepEqual(phys, want) {
+		t.Errorf("ParseMemoryMap() got %v, want %v", phys, want)
 	}
 }
-
 func TestAvailableRAM(t *testing.T) {
 	old := pageMask
 	defer func() {
@@ -77,12 +72,12 @@ func TestAvailableRAM(t *testing.T) {
 	pageMask = 4095
 
 	var mem Memory
-	mem.Phys = []TypedAddressRange{
-		TypedAddressRange{Range: Range{Start: 0, Size: 8192}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 8192, Size: 8000}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 20480, Size: 1000}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 24576, Size: 1000}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 28672, Size: 1000}, Type: RangeRAM},
+	mem.Phys = MemoryMap{
+		TypedRange{Range: Range{Start: 0, Size: 8192}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 8192, Size: 8000}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 20480, Size: 1000}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 24576, Size: 1000}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 28672, Size: 1000}, Type: RangeRAM},
 	}
 
 	mem.Segments = []Segment{
@@ -93,17 +88,17 @@ func TestAvailableRAM(t *testing.T) {
 		Segment{Phys: Range{Start: 28000, Size: 10000}},
 	}
 
-	want := []TypedAddressRange{
-		TypedAddressRange{Range: Range{Start: 0, Size: 40}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 4096, Size: 8000 - 4096}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 12288, Size: 8192 + 8000 - 12288}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 20480, Size: 1000}, Type: RangeRAM},
-		TypedAddressRange{Range: Range{Start: 24576, Size: 24}, Type: RangeRAM},
+	want := Ranges{
+		Range{Start: 0, Size: 40},
+		Range{Start: 4096, Size: 8000 - 4096},
+		Range{Start: 12288, Size: 8192 + 8000 - 12288},
+		Range{Start: 20480, Size: 1000},
+		Range{Start: 24576, Size: 24},
 	}
 
-	got := mem.availableRAM()
+	got := mem.AvailableRAM()
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("availableRAM() got %+v, want %+v", got, want)
+		t.Errorf("AvailableRAM() got %+v, want %+v", got, want)
 	}
 }
 
@@ -256,5 +251,314 @@ func TestDedup(t *testing.T) {
 			t.Errorf("Dedup() got %v, want %v", got[i].Phys, want[i])
 		}
 	}
+}
 
+func TestFindSpaceIn(t *testing.T) {
+	for i, tt := range []struct {
+		name    string
+		rs      Ranges
+		size    uint
+		limit   Range
+		minAddr uintptr
+		maxAddr uintptr
+		want    uintptr
+		err     error
+	}{
+		{
+			name: "no space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0x1000, MaxAddr),
+			want:  0,
+			err:   ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "no space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0, 0x1000),
+			want:  0,
+			err:   ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0x1000, MaxAddr),
+			want:  0x1000,
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0, 0x1000),
+			want:  0xFF0,
+		},
+		{
+			name: "all spaces abvoe 0x1000 and under 0x2000 are too small",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0xf},
+				Range{Start: 0x1010, Size: 0xf},
+				Range{Start: 0x1f00, Size: 0xf},
+				Range{Start: 0x2000, Size: 0x10},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0x1000, 0x2000),
+			want:  0,
+			err:   ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0x1000, MaxAddr),
+			want:  0x1000,
+		},
+		{
+			name: "space is split across 0x1000, with enough space under",
+			rs: Ranges{
+				Range{Start: 0xFF0, Size: 0x20},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0, 0x1000),
+			want:  0xFF0,
+		},
+		{
+			name: "space is split across 0x1000 and 0x2000, but not enough space above or below",
+			rs: Ranges{
+				Range{Start: 0xFF1, Size: 0xf + 0xf},
+				Range{Start: 0x1FF1, Size: 0xf + 0xf},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0x1000, 0x2000),
+			want:  0,
+			err:   ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size:  0x10,
+			limit: RangeFromInterval(0x1000, MaxAddr),
+			want:  0x1010,
+		},
+		{
+			name:  "no ranges",
+			rs:    Ranges{},
+			size:  0x10,
+			limit: RangeFromInterval(0, MaxAddr),
+			want:  0,
+			err:   ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name:  "no ranges, zero size",
+			rs:    Ranges{},
+			size:  0,
+			limit: RangeFromInterval(0, MaxAddr),
+			want:  0,
+			err:   ErrNotEnoughSpace{Size: 0},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
+			got, err := tt.rs.FindSpaceIn(tt.size, tt.limit)
+			if got != tt.want || err != tt.err {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.limit, got, err, tt.want, tt.err)
+			}
+		})
+	}
+}
+
+func TestIntersection(t *testing.T) {
+	for i, tt := range []struct {
+		r             Range
+		r2            Range
+		wantOverlap   bool
+		wantIntersect *Range
+	}{
+		{
+			r:             Range{Start: 0, Size: 50},
+			r2:            Range{Start: 49, Size: 1},
+			wantOverlap:   true,
+			wantIntersect: &Range{Start: 49, Size: 1},
+		},
+		{
+			r:             Range{Start: 0, Size: 50},
+			r2:            Range{Start: 50, Size: 1},
+			wantOverlap:   false,
+			wantIntersect: nil,
+		},
+		{
+			r:             Range{Start: 49, Size: 1},
+			r2:            Range{Start: 0, Size: 50},
+			wantOverlap:   true,
+			wantIntersect: &Range{Start: 49, Size: 1},
+		},
+		{
+			r:             Range{Start: 50, Size: 1},
+			r2:            Range{Start: 0, Size: 50},
+			wantOverlap:   false,
+			wantIntersect: nil,
+		},
+		{
+			r:             Range{Start: 0, Size: 50},
+			r2:            Range{Start: 10, Size: 1},
+			wantOverlap:   true,
+			wantIntersect: &Range{Start: 10, Size: 1},
+		},
+		{
+			r:             Range{Start: 10, Size: 1},
+			r2:            Range{Start: 0, Size: 50},
+			wantOverlap:   true,
+			wantIntersect: &Range{Start: 10, Size: 1},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
+			if got := tt.r.Overlaps(tt.r2); got != tt.wantOverlap {
+				t.Errorf("%s.Overlaps(%s) = %v, want %v", tt.r, tt.r2, got, tt.wantOverlap)
+			}
+			if got := tt.r.Intersect(tt.r2); !reflect.DeepEqual(got, tt.wantIntersect) {
+				t.Errorf("%s.Intersect(%s) = %v, want %v", tt.r, tt.r2, got, tt.wantIntersect)
+			}
+		})
+	}
+}
+
+func TestMinusRange(t *testing.T) {
+	for i, tt := range []struct {
+		r    Range
+		r2   Range
+		want []Range
+	}{
+		{
+			// r2 contained completely within r.
+			r:  Range{Start: 0x100, Size: 0x200},
+			r2: Range{Start: 0x150, Size: 0x50},
+			want: []Range{
+				Range{Start: 0x100, Size: 0x50},
+				Range{Start: 0x1a0, Size: 0x160},
+			},
+		},
+		{
+			// r contained completely within r2.
+			r:    Range{Start: 0x100, Size: 0x50},
+			r2:   Range{Start: 0x90, Size: 0x100},
+			want: nil,
+		},
+		{
+			// Overlaps to the right.
+			r:  Range{Start: 0x100, Size: 0x100},
+			r2: Range{Start: 0x150, Size: 0x100},
+			want: []Range{
+				Range{Start: 0x100, Size: 0x50},
+			},
+		},
+		{
+			// Overlaps to the left.
+			r:  Range{Start: 0x100, Size: 0x100},
+			r2: Range{Start: 0x50, Size: 0x100},
+			want: []Range{
+				Range{Start: 0x150, Size: 0xb0},
+			},
+		},
+		{
+			// Doesn't overlap at all.
+			r:  Range{Start: 0x100, Size: 0x100},
+			r2: Range{Start: 0x200, Size: 0x100},
+			want: []Range{
+				Range{Start: 0x100, Size: 0x100},
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
+			if got := tt.r.Minus(tt.r2); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s minus %s = %v, want %v", tt.r, tt.r2, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContains(t *testing.T) {
+	for i, tt := range []struct {
+		r    Range
+		p    uintptr
+		want bool
+	}{
+		{
+			r:    Range{Start: 0, Size: 50},
+			p:    50,
+			want: false,
+		},
+		{
+			r:    Range{Start: 0, Size: 50},
+			p:    49,
+			want: true,
+		},
+		{
+			r:    Range{Start: 50, Size: 50},
+			p:    49,
+			want: false,
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
+			if got := tt.r.Contains(tt.p); got != tt.want {
+				t.Errorf("%s.Contains(%#x) = %v, want %v", tt.r, tt.p, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAdjacent(t *testing.T) {
+	for i, tt := range []struct {
+		r1   Range
+		r2   Range
+		want bool
+	}{
+		{
+			r1:   Range{Start: 0, Size: 50},
+			r2:   Range{Start: 50, Size: 50},
+			want: true,
+		},
+		{
+			r1:   Range{Start: 0, Size: 40},
+			r2:   Range{Start: 41, Size: 50},
+			want: false,
+		},
+		{
+			r1:   Range{Start: 10, Size: 40},
+			r2:   Range{Start: 0, Size: 10},
+			want: true,
+		},
+		{
+			r1:   Range{Start: 10, Size: 39},
+			r2:   Range{Start: 40, Size: 50},
+			want: false,
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
+			got1 := tt.r1.Adjacent(tt.r2)
+			got2 := tt.r2.Adjacent(tt.r1)
+			if got1 != tt.want {
+				t.Errorf("%s.Adjacent(%s) = %v, want %v", tt.r1, tt.r2, got1, tt.want)
+			}
+			if got2 != tt.want {
+				t.Errorf("%s.Adjacent(%s) = %v, want %v", tt.r2, tt.r1, got2, tt.want)
+			}
+		})
+	}
 }
