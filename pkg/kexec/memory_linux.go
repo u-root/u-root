@@ -99,13 +99,13 @@ func (r Range) Intersect(r2 Range) *Range {
 // Minus removes all points in r2 from r.
 func (r Range) Minus(r2 Range) []Range {
 	var result []Range
-	if r.Contains(r2.Start) {
+	if r.Contains(r2.Start) && r.Start != r2.Start {
 		result = append(result, Range{
 			Start: r.Start,
 			Size:  uint(r2.Start - r.Start),
 		})
 	}
-	if r.Contains(r2.End()) {
+	if r.Contains(r2.End()) && r.End() != r2.End() {
 		result = append(result, Range{
 			Start: r2.End(),
 			Size:  uint(r.End() - r2.End()),
