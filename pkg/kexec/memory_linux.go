@@ -400,7 +400,7 @@ func ParseMemoryMap() (MemoryMap, error) {
 
 func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 	type memRange struct {
-		// start and addresses are inclusive
+		// start and end addresses are inclusive
 		start, end uintptr
 		typ        RangeType
 	}
@@ -466,12 +466,19 @@ func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 
 	var phys []TypedRange
 	for _, r := range ranges {
+		// Range's end address is exclusive, while Linux's sysfs prints
+		// the end address inclusive.
+		//
+		// E.g. sysfs will contain
+		//
+		// start: 0x100, end: 0x1ff
+		//
+		// while we represent
+		//
+		// start: 0x100, size: 0x100.
 		phys = append(phys, TypedRange{
-			Range: Range{
-				Start: r.start,
-				Size:  uint(r.end - r.start),
-			},
-			Type: r.typ,
+			Range: RangeFromInterval(r.start, r.end+1),
+			Type:  r.typ,
 		})
 	}
 	sort.Slice(phys, func(i, j int) bool {
