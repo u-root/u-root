@@ -35,16 +35,16 @@ func TestParseMemoryMap(t *testing.T) {
 		return ioutil.WriteFile(path.Join(p, "type"), append([]byte(typ), '\n'), 0655)
 	}
 
-	if err := create("0", 0, 50, RangeRAM); err != nil {
+	if err := create("0", 0, 49, RangeRAM); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("1", 100, 150, RangeACPI); err != nil {
+	if err := create("1", 100, 149, RangeACPI); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("2", 200, 250, RangeNVS); err != nil {
+	if err := create("2", 200, 249, RangeNVS); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("3", 300, 350, RangeReserved); err != nil {
+	if err := create("3", 300, 349, RangeReserved); err != nil {
 		t.Fatal(err)
 	}
 
