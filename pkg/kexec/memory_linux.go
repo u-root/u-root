@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -434,7 +435,13 @@ func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 		data := strings.TrimSpace(string(b))
 		r := ranges[dir]
 		if base == typ {
-			r.typ = RangeType(data)
+			typ, ok := sysfsToRangeType[data]
+			if !ok {
+				log.Printf("Sysfs file %q contains unrecognized memory map type %q, defaulting to Reserved", name, data)
+				r.typ = RangeReserved
+			} else {
+				r.typ = typ
+			}
 			ranges[dir] = r
 			return nil
 		}
@@ -557,6 +564,15 @@ const (
 // String implements fmt.Stringer.
 func (r RangeType) String() string {
 	return string(r)
+}
+
+var sysfsToRangeType = map[string]RangeType{
+	"System RAM":                RangeRAM,
+	"Default":                   RangeDefault,
+	"ACPI Tables":               RangeACPI,
+	"ACPI Non-volatile Storage": RangeNVS,
+	"Reserved":                  RangeReserved,
+	"reserved":                  RangeReserved,
 }
 
 // TypedRange represents range of physical memory.
