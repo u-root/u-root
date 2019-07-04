@@ -56,7 +56,7 @@ func TestDhclient(t *testing.T) {
 		},
 		Uinit: []string{
 			"echo DO THAT DHCLIENT",
-			"dhclient -ipv6=false -verbose",
+			"dhclient -ipv6=false -v",
 			"echo BACK, WHAT IP",
 			"ip a",
 			"echo OK, ALL DONE",
@@ -117,12 +117,15 @@ func TestPxeboot(t *testing.T) {
 		Uinit: []string{
 			"ip route add 255.255.255.255/32 dev eth0",
 			"pxeboot --dry-run",
+			"echo PXE SUCCESSFUL",
 			"shutdown -h",
 		},
 		Network: network,
 	})
 	defer ccleanup()
 
-	dhcpClient.Expect("")
+	if err := dhcpClient.Expect("PXE SUCCESSFUL"); err != nil {
+		t.Errorf("Expected PXE SUCCESSFUL: %v", err)
+	}
 	dhcpServer.Expect("")
 }
