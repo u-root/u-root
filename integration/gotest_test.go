@@ -25,7 +25,6 @@ func testPkgs(t *testing.T) []string {
 	cmd := exec.Command("go", "list",
 		"github.com/u-root/u-root/cmds/core/...",
 		"github.com/u-root/u-root/cmds/boot/...",
-		"github.com/u-root/u-root/cmds/nichrome/...",
 		// TODO: only running tests in cmds because tests in pkg have
 		// duplicate names which confuses the test runner. This should
 		// get fixed.
@@ -56,7 +55,6 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/core/tail",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
-		"github.com/u-root/u-root/cmds/nichrome/wifi",
 	}
 	for i := 0; i < len(pkgs); i++ {
 		for _, b := range blacklist {

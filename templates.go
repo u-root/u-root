@@ -8,10 +8,23 @@ var templates = map[string][]string{
 	"all": {
 		"github.com/u-root/u-root/cmds/core/*",
 		"github.com/u-root/u-root/cmds/boot/*",
-		"github.com/u-root/u-root/cmds/nichrome/*",
 	},
 	"boot": {
-		"github.com/u-root/u-root/cmds/boot/*",
+		"github.com/u-root/u-root/cmds/boot/boot",
+		"github.com/u-root/u-root/cmds/boot/boot2",
+		"github.com/u-root/u-root/cmds/boot/fbnetboot",
+		"github.com/u-root/u-root/cmds/boot/pxeboot",
+		"github.com/u-root/u-root/cmds/boot/localboot",
+		"github.com/u-root/u-root/cmds/exp/esxiboot",
+	},
+	"systemboot": {
+		"github.com/u-root/u-root/cmds/boot/boot",
+		"github.com/u-root/u-root/cmds/boot/boot2",
+		"github.com/u-root/u-root/cmds/boot/fbnetboot",
+		"github.com/u-root/u-root/cmds/boot/pxeboot",
+		"github.com/u-root/u-root/cmds/boot/localboot",
+		"github.com/u-root/u-root/cmds/exp/esxiboot",
+		"github.com/u-root/u-root/cmds/boot/uinit",
 	},
 	// Core should be things you don't want to live without.
 	"core": {
@@ -78,7 +91,7 @@ var templates = map[string][]string{
 	// coreboot-app minimal environment
 	"coreboot-app": {
 		"github.com/u-root/u-root/cmds/core/cat",
-		"github.com/u-root/u-root/cmds/core/cbmem",
+		"github.com/u-root/u-root/cmds/exp/cbmem",
 		"github.com/u-root/u-root/cmds/core/chroot",
 		"github.com/u-root/u-root/cmds/core/cp",
 		"github.com/u-root/u-root/cmds/core/dd",
