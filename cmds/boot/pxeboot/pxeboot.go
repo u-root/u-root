@@ -23,11 +23,12 @@ import (
 )
 
 var (
-	dryRun = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
+	dryRun  = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
+	verbose = flag.Bool("v", false, "Verbose output")
 )
 
 const (
-	dhcpTimeout = 15 * time.Second
+	dhcpTimeout = 5 * time.Second
 	dhcpTries   = 3
 )
 
@@ -46,10 +47,17 @@ func Netboot(ifaceNames string) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), dhcpTries*dhcpTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), (1<<dhcpTries)*dhcpTimeout)
 	defer cancel()
 
-	r := dhclient.SendRequests(ctx, filteredIfs, dhcpTimeout, dhcpTries, true, true)
+	c := dhclient.Config{
+		Timeout: dhcpTimeout,
+		Retries: dhcpTries,
+	}
+	if *verbose {
+		c.LogLevel = dhclient.LogSummary
+	}
+	r := dhclient.SendRequests(ctx, filteredIfs, true, true, c)
 
 	for {
 		select {

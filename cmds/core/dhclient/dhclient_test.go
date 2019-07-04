@@ -14,20 +14,18 @@ import (
 var tests = []struct {
 	iface  string
 	isIPv4 string
-	test   string
 	out    string
 }{
 	{
 		iface:  "nosuchanimal",
 		isIPv4: "-ipv4=true",
-		test:   "-test=true",
 		out:    "No interfaces match nosuchanimal\n",
 	},
 }
 
 func TestDhclient(t *testing.T) {
 	for _, tt := range tests {
-		out, err := testutil.Command(t, tt.isIPv4, tt.test, tt.iface).CombinedOutput()
+		out, err := testutil.Command(t, tt.isIPv4, tt.iface).CombinedOutput()
 		if err == nil {
 			t.Errorf("%v: got nil, want err", tt)
 		}
