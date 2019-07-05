@@ -23,6 +23,7 @@ import (
 )
 
 var (
+	noLoad  = flag.Bool("no-load", false, "get DHCP response, but don't load the kernel")
 	dryRun  = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
 	verbose = flag.Bool("v", false, "Verbose output")
 )
@@ -83,6 +84,9 @@ func Netboot(ifaceNames string) error {
 			cancel()
 			log.Printf("Got configuration: %s", img)
 
+			if *noLoad {
+				return nil
+			}
 			if err := img.Load(*dryRun); err != nil {
 				return fmt.Errorf("kexec load of %v failed: %v", img, err)
 			}
