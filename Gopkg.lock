@@ -78,12 +78,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8e591f627c1ed8a29b707c2afe46cebd5abc9fb77b5d586679d883b563c1a3b6"
+  digest = "1:fa32754239ef762b21ebbd582cef0d561821eb8ff39c9c573acf8b4327104274"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
     "dhcpv4/client4",
     "dhcpv4/nclient4",
+    "dhcpv4/server4",
     "dhcpv6",
     "dhcpv6/client6",
     "dhcpv6/nclient6",
@@ -250,18 +251,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7964b3b34b74b6c7dfbd5775d8bb82bef69e9729f4c7d341a9b73b0820b5c41a"
-  name = "github.com/u-root/dhcp4"
-  packages = [
-    ".",
-    "dhcp4opts",
-    "dhcp4server",
-  ]
-  pruneopts = "NUT"
-  revision = "03363dc71ec82763595440b4b2c3e5f69f47a4e0"
-
-[[projects]]
-  branch = "master"
   digest = "1:ff16cd9d71e063d5b060073ea46149a5fe92b688d201e3939673686bcb3c84af"
   name = "github.com/vishvananda/netlink"
   packages = [
@@ -398,6 +387,7 @@
     "github.com/google/goexpect",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
+    "github.com/insomniacslk/dhcp/dhcpv4/server4",
     "github.com/insomniacslk/dhcp/dhcpv6",
     "github.com/insomniacslk/dhcp/dhcpv6/nclient6",
     "github.com/insomniacslk/dhcp/iana",
@@ -414,7 +404,6 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/systemboot/tpmtool/pkg/tpm",
-    "github.com/u-root/dhcp4/dhcp4server",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",
