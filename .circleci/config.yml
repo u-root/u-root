@@ -15,7 +15,7 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: go test -v -a -ldflags '-s' ./integration/...
+          command: go test -a -ldflags '-s' ./integration/...
       - run:
           name: Copying serial output to /tmp/serial
           command: cp -R integration/serial /tmp/serial
