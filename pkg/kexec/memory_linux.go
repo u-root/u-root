@@ -160,34 +160,34 @@ func (rs Ranges) Minus(r Range) Ranges {
 }
 
 // FindSpace finds a continguous piece of sz points within Ranges and returns
-// the starting point.
-func (rs Ranges) FindSpace(sz uint) (start uintptr, err error) {
+// the Range pointing to it.
+func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
 	return rs.FindSpaceAbove(sz, 0)
 }
 
 const MaxAddr = ^uintptr(0)
 
-// FindSpaceAbove finds a continguous piece of sz points within Ranges and returns
-// a starting point >= minAddr.
-func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (start uintptr, err error) {
+// FindSpaceAbove finds a continguous piece of sz points within Ranges and
+// returns a space.Start >= minAddr.
+func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (space Range, err error) {
 	return rs.FindSpaceIn(sz, RangeFromInterval(minAddr, MaxAddr))
 }
 
 // FindSpaceIn finds a continguous piece of sz points within Ranges and returns
-// a starting point >= minAddr, with start+sz < maxAddr
-func (rs Ranges) FindSpaceIn(sz uint, limit Range) (start uintptr, err error) {
+// a Range where space.Start >= limit.Start, with space.End() < limit.End().
+func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
 	for _, r := range rs {
 		if overlap := r.Intersect(limit); overlap != nil && overlap.Size >= sz {
-			return overlap.Start, nil
+			return Range{Start: overlap.Start, Size: sz}, nil
 		}
 	}
-	return 0, ErrNotEnoughSpace{Size: sz}
+	return Range{}, ErrNotEnoughSpace{Size: sz}
 }
 
 // Sort sorts ranges by their start point.
-func (rs *Ranges) Sort() {
-	sort.Slice(*rs, func(i, j int) bool {
-		return (*rs)[i].Start < (*rs)[j].Start
+func (rs Ranges) Sort() {
+	sort.Slice(rs, func(i, j int) bool {
+		return rs[i].Start < rs[j].Start
 	})
 }
 
@@ -219,7 +219,7 @@ func NewSegment(buf []byte, phys Range) Segment {
 }
 
 func (s Segment) String() string {
-	return fmt.Sprintf("(virt: %#x + %#x | phys: %#x + %#x)", s.Buf.Start, s.Buf.Size, s.Phys.Start, s.Phys.Size)
+	return fmt.Sprintf("(virt: %s, phys: %s)", s.Buf, s.Phys)
 }
 
 func ptrToSlice(ptr uintptr, size int) []byte {
@@ -282,10 +282,11 @@ func AlignPhys(s Segment) Segment {
 	s.Phys.Start = s.Phys.Start &^ uintptr(pageMask)
 
 	diff := orig - s.Phys.Start
+
 	// Round up to page size.
 	s.Phys.Size = alignUp(s.Phys.Size + uint(diff))
 
-	if s.Buf.Start < diff {
+	if s.Buf.Start < diff && diff > 0 {
 		panic("cannot have virtual memory address within first page")
 	}
 	s.Buf.Start -= diff
@@ -308,6 +309,18 @@ func (segs Segments) PhysContains(p uintptr) bool {
 		}
 	}
 	return false
+}
+
+// Insert inserts s assuming it does not overlap with an existing segment.
+func (segs *Segments) Insert(s Segment) {
+	*segs = append(*segs, s)
+	segs.sort()
+}
+
+func (segs Segments) sort() {
+	sort.Slice(segs, func(i, j int) bool {
+		return segs[i].Phys.Start < segs[j].Phys.Start
+	})
 }
 
 // Dedup deduplicates overlapping and merges adjacent segments in segs.
@@ -347,7 +360,7 @@ type Memory struct {
 	// Segments are the segments used to load a new operating system.
 	//
 	// Each segment also contains a physical memory region it maps to.
-	Segments []Segment
+	Segments Segments
 }
 
 // LoadElfSegments loads loadable ELF segments.
@@ -375,8 +388,7 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 			Start: uintptr(p.Paddr),
 			Size:  uint(p.Memsz),
 		})
-
-		m.Segments = append(m.Segments, s)
+		m.Segments.Insert(s)
 	}
 	return nil
 }
@@ -492,7 +504,7 @@ const M1 = 1 << 20
 
 // FindSpace returns pointer to the physical memory, where array of size sz can
 // be stored during next AddKexecSegment call.
-func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
+func (m Memory) FindSpace(sz uint) (Range, error) {
 	// Allocate full pages.
 	sz = alignUp(sz)
 
@@ -500,27 +512,42 @@ func (m Memory) FindSpace(sz uint) (start uintptr, err error) {
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
 }
 
-func (m *Memory) addKexecSegment(addr uintptr, d []byte) {
-	s := NewSegment(d, Range{
-		Start: addr,
-		Size:  uint(len(d)),
+// ReservePhys reserves page-aligned sz bytes in the physical memmap within
+// the given limit address range.
+func (m *Memory) ReservePhys(sz uint, limit Range) (Range, error) {
+	sz = alignUp(sz)
+
+	r, err := m.AvailableRAM().FindSpaceIn(sz, limit)
+	if err != nil {
+		return Range{}, err
+	}
+
+	m.Phys.Insert(TypedRange{
+		Range: r,
+		Type:  RangeReserved,
 	})
-	s = AlignPhys(s)
-	m.Segments = append(m.Segments, s)
-	sort.Slice(m.Segments, func(i, j int) bool {
-		return m.Segments[i].Phys.Start < m.Segments[j].Phys.Start
-	})
+	return r, nil
+}
+
+// AddPhysSegment reserves len(d) bytes in the physical memmap within limit and
+// adds a kexec segment with d in that range.
+func (m *Memory) AddPhysSegment(d []byte, limit Range) (Range, error) {
+	r, err := m.ReservePhys(uint(len(d)), limit)
+	if err != nil {
+		return Range{}, err
+	}
+	m.Segments.Insert(NewSegment(d, r))
+	return r, nil
 }
 
 // AddKexecSegment adds d to a new kexec segment
-func (m *Memory) AddKexecSegment(d []byte) (addr uintptr, err error) {
-	size := uint(len(d))
-	start, err := m.FindSpace(size)
+func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
+	r, err := m.FindSpace(uint(len(d)))
 	if err != nil {
-		return 0, err
+		return Range{}, err
 	}
-	m.addKexecSegment(start, d)
-	return start, nil
+	m.Segments.Insert(NewSegment(d, r))
+	return r, nil
 }
 
 // AvailableRAM returns page-aligned unused regions of RAM.
@@ -607,4 +634,30 @@ func (m MemoryMap) FilterByType(typ RangeType) Ranges {
 		}
 	}
 	return rs
+}
+
+func (m MemoryMap) sort() {
+	sort.Slice(m, func(i, j int) bool {
+		return m[i].Start < m[j].Start
+	})
+}
+
+// Insert a new TypedRange into the memory map, removing chunks of other ranges
+// as necessary.
+//
+// Assumes that TypedRange is a valid range -- no checking.
+func (m *MemoryMap) Insert(r TypedRange) {
+	var newMap MemoryMap
+
+	// Remove points in r from all existing physical ranges.
+	for _, q := range *m {
+		split := q.Range.Minus(r.Range)
+		for _, r2 := range split {
+			newMap = append(newMap, TypedRange{Range: r2, Type: q.Type})
+		}
+	}
+
+	newMap = append(newMap, r)
+	newMap.sort()
+	*m = newMap
 }
