@@ -6,12 +6,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/u-root/dhcp4/dhcp4server"
@@ -23,23 +20,6 @@ var (
 	subnet    = flag.String("subnet", "192.168.1.0/24", "CIDR of network to assign to clients")
 	directory = flag.String("dir", "", "Directory to serve")
 )
-
-func serve(w tftp.ReadRequest) {
-	path := filepath.Join(*directory, filepath.Clean(w.Name()))
-
-	file, err := os.Open(path)
-	if err != nil {
-		w.WriteError(tftp.ErrCodeFileNotFound, fmt.Sprintf("File %q does not exist", w.Name()))
-		return
-	}
-	defer file.Close()
-
-	finfo, _ := file.Stat()
-	w.WriteSize(finfo.Size())
-	if _, err = io.Copy(w, file); err != nil {
-		log.Println(err)
-	}
-}
 
 func main() {
 	flag.Parse()
@@ -55,7 +35,7 @@ func main() {
 			}
 
 			log.Println("starting file server")
-			server.ReadHandler(tftp.ReadHandlerFunc(serve))
+			server.ReadHandler(tftp.FileServer(*directory))
 			log.Fatal(server.ListenAndServe())
 		}()
 	}
