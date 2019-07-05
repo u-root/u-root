@@ -235,7 +235,7 @@ func (m multiboot) memoryMap() memoryMaps {
 			// Size is really used for skipping to the next pair.
 			Size:     uint32(sizeofMemoryMap) - 4,
 			BaseAddr: uint64(r.Start),
-			Length:   uint64(r.Size) + 1,
+			Length:   uint64(r.Size),
 			Type:     typ,
 		}
 		ret = append(ret, v)
