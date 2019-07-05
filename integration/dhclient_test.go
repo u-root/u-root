@@ -18,10 +18,12 @@ func TestDhclient(t *testing.T) {
 	}
 
 	network := qemu.NewNetwork()
-	var sb, cb wc
 	_, scleanup := QEMUTest(t, &Options{
-		Name:         "TestDhclient_Server",
-		SerialOutput: &sb,
+		Name: "TestDhclient_Server",
+		SerialOutput: &TestLineWriter{
+			TB:     t,
+			Prefix: "server",
+		},
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/echo",
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -31,35 +33,31 @@ func TestDhclient(t *testing.T) {
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
 		Uinit: []string{
-			"ip addr add 192.168.0.1/24 dev eth0",
 			"ip link set eth0 up",
-			"ip route add 255.255.255.255/32 dev eth0",
-			"echo RUN THAT PXE SERVER",
+			"ip addr add 192.168.0.1/24 dev eth0",
+			"ip route add 0.0.0.0/0 dev eth0",
 			"pxeserver",
-			"echo ALL DONE",
-			"sleep 15",
-			"shutdown -h",
 		},
 		Network: network,
 	})
 	defer scleanup()
 
 	dhcpClient, ccleanup := QEMUTest(t, &Options{
-		Name:         "TestDhclient_Client",
-		SerialOutput: &cb,
+		Name: "TestDhclient_Client",
+		SerialOutput: &TestLineWriter{
+			TB:     t,
+			Prefix: "client",
+		},
 		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/echo",
 			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/dhclient",
 			"github.com/u-root/u-root/cmds/core/shutdown",
 		},
 		Uinit: []string{
-			"echo DO THAT DHCLIENT",
 			"dhclient -ipv6=false -v",
-			"echo BACK, WHAT IP",
 			"ip a",
-			"echo OK, ALL DONE",
+			"sleep 5",
 			"shutdown -h",
 		},
 		Network: network,
@@ -67,16 +65,12 @@ func TestDhclient(t *testing.T) {
 	})
 	defer ccleanup()
 
-	t.Logf("Now we wait!")
-
 	if err := dhcpClient.Expect("Configured eth0 with IPv4 DHCP Lease"); err != nil {
 		t.Error(err)
 	}
-
-	if err := dhcpClient.Expect("inet 192.168.1.0"); err != nil {
+	if err := dhcpClient.Expect("inet 192.168.0.2"); err != nil {
 		t.Error(err)
 	}
-	t.Logf("Server: %s\nClient: %s", sb.String(), cb.String())
 }
 
 func TestPxeboot(t *testing.T) {
@@ -88,26 +82,37 @@ func TestPxeboot(t *testing.T) {
 	network := qemu.NewNetwork()
 	dhcpServer, scleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Server",
+		SerialOutput: &TestLineWriter{
+			TB:     t,
+			Prefix: "server",
+		},
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/ip",
+			"github.com/u-root/u-root/cmds/core/ls",
 			"github.com/u-root/u-root/integration/testcmd/pxeserver",
 		},
 		Uinit: []string{
 			"ip addr add 192.168.0.1/24 dev eth0",
 			"ip link set eth0 up",
-			"ip route add 255.255.255.255/32 dev eth0",
+			"ip route add 0.0.0.0/0 dev eth0",
+			"ls -l /pxeroot",
 			"pxeserver -dir=/pxeroot",
 		},
 		Files: []string{
 			"./testdata/pxe:pxeroot",
 		},
 		Network: network,
+		Timeout: 15 * time.Second,
 	})
 	defer scleanup()
 
 	dhcpClient, ccleanup := QEMUTest(t, &Options{
 		Name: "TestPxeboot_Client",
+		SerialOutput: &TestLineWriter{
+			TB:     t,
+			Prefix: "client",
+		},
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -115,17 +120,21 @@ func TestPxeboot(t *testing.T) {
 			"github.com/u-root/u-root/cmds/boot/pxeboot",
 		},
 		Uinit: []string{
-			"ip route add 255.255.255.255/32 dev eth0",
-			"pxeboot --dry-run",
-			"echo PXE SUCCESSFUL",
+			"pxeboot --dry-run --no-load -v",
 			"shutdown -h",
 		},
 		Network: network,
+		Timeout: 15 * time.Second,
 	})
 	defer ccleanup()
 
-	if err := dhcpClient.Expect("PXE SUCCESSFUL"); err != nil {
-		t.Errorf("Expected PXE SUCCESSFUL: %v", err)
+	if err := dhcpServer.Expect("starting file server"); err != nil {
+		t.Error(err)
 	}
-	dhcpServer.Expect("")
+	if err := dhcpClient.Expect("Got DHCPv4 lease on eth0:"); err != nil {
+		t.Error(err)
+	}
+	if err := dhcpClient.Expect("Boot URI: tftp://192.168.0.1/pxelinux.0"); err != nil {
+		t.Error(err)
+	}
 }

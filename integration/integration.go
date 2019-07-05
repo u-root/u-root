@@ -5,6 +5,7 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -127,6 +128,42 @@ func callerName(depth int) string {
 	return last(f.Name())
 }
 
+// TestLineWriter is an io.Writer that waits for a full line of prints before
+// logging to TB.
+type TestLineWriter struct {
+	TB     testing.TB
+	Prefix string
+
+	buffer []byte
+}
+
+func (tsw *TestLineWriter) printBuf() {
+	bufs := bytes.Split(tsw.buffer, []byte{'\n'})
+	for _, buf := range bufs {
+		if len(buf) != 0 {
+			tsw.TB.Logf("%s: %s", tsw.Prefix, string(buf))
+		}
+	}
+	tsw.buffer = nil
+}
+
+func (tsw *TestLineWriter) Write(p []byte) (int, error) {
+	i := bytes.LastIndexByte(p, '\n')
+	if i == -1 {
+		tsw.buffer = append(tsw.buffer, p...)
+	} else {
+		tsw.buffer = append(tsw.buffer, p[:i]...)
+		tsw.printBuf()
+		tsw.buffer = append([]byte{}, p[i:]...)
+	}
+	return len(p), nil
+}
+
+func (tsw *TestLineWriter) Close() error {
+	tsw.printBuf()
+	return nil
+}
+
 // TestArch returns the architecture under test. Pass this as GOARCH when
 // building Go programs to be run in the QEMU environment.
 func TestArch() string {
@@ -156,6 +193,12 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	}
 	if o.Logger == nil {
 		o.Logger = &testLogger{t}
+	}
+	if o.SerialOutput == nil {
+		o.SerialOutput = &TestLineWriter{
+			TB:     t,
+			Prefix: "serial",
+		}
 	}
 
 	qOpts, err := QEMU(o)
