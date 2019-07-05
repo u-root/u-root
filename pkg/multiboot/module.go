@@ -41,12 +41,12 @@ func (m *multiboot) addModules() (uintptr, error) {
 		return 0, err
 	}
 
-	addr, err := m.mem.AddKexecSegment(data)
+	cmdlineRange, err := m.mem.AddKexecSegment(data)
 	if err != nil {
 		return 0, err
 	}
 
-	loaded.fix(uint32(addr))
+	loaded.fix(uint32(cmdlineRange.Start))
 
 	m.loadedModules = loaded
 
@@ -54,7 +54,11 @@ func (m *multiboot) addModules() (uintptr, error) {
 	if err != nil {
 		return 0, err
 	}
-	return m.mem.AddKexecSegment(b)
+	modRange, err := m.mem.AddKexecSegment(b)
+	if err != nil {
+		return 0, err
+	}
+	return modRange.Start, nil
 }
 
 // loadModules loads module files.

@@ -61,7 +61,7 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Fatalf("Cannot unmarshal multiboot information from executed kernel: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("kexec failed: got %v, want %v", got, want)
+		t.Errorf("kexec failed: got\n%#v, want\n%#v", got, want)
 	}
 }
 
