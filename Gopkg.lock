@@ -18,6 +18,14 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:cdee563173093e5ae7ab2a19c298e0904129719e1919a3c532b7bb0c3398b818"
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4b4cebaf850ec58f1bb1fec5bdebdf8501c2bc3f"
+  version = "v3.0.0"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -380,6 +388,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/beevik/ntp",
+    "github.com/cenkalti/backoff",
     "github.com/dustin/go-humanize",
     "github.com/gliderlabs/ssh",
     "github.com/go-test/deep",
