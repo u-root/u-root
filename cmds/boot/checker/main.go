@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/systemboot/systemboot/pkg/checker"
+	"github.com/u-root/u-root/pkg/checker"
 )
 
 var configFile = flag.String("c", "", "Configuration file that defines checks and remediations")
