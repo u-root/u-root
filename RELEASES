@@ -6,6 +6,16 @@ A new release happens every 6 weeks:
 - 15th day of the second month of each quarter
 
 
+## V5.0.0 (2019-07-09}
+
+- Renamed commands
+  - core commands are in core
+  - experimental commands are in exp
+  - others are in other places
+- Remove NiChromne
+  - it needed its own space
+- Welcome systemboot!
+
 ## v4.0.0 (2019-01-26)
 
 - Multiboot as a kexec target -- Thank you Max!
