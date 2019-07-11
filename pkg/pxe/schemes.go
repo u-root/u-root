@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/u-root/u-root/pkg/uio"
 	"pack.ag/tftp"
 )
@@ -177,6 +179,35 @@ func (t *TFTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 	return uio.NewCachingReader(r), nil
 }
 
+// SchemeWithRetries wraps a FileScheme and automatically retries (with
+// backoff) when GetFile returns a non-nil err.
+type SchemeWithRetries struct {
+	Scheme  FileScheme
+	BackOff backoff.BackOff
+}
+
+// GetFile implements FileScheme.GetFile.
+func (s *SchemeWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
+	var err error
+	s.BackOff.Reset()
+	for d := time.Duration(0); d != backoff.Stop; d = s.BackOff.NextBackOff() {
+		if d > 0 {
+			time.Sleep(d)
+		}
+
+		var r io.ReaderAt
+		r, err = s.Scheme.GetFile(u)
+		if err != nil {
+			log.Printf("Error: Getting %v: %v", u, err)
+			continue
+		}
+		return r, nil
+	}
+
+	log.Printf("Error: Too many retries to get file %v", u)
+	return nil, err
+}
+
 // HTTPClient implements FileScheme for HTTP files.
 type HTTPClient struct {
 	c *http.Client
@@ -202,11 +233,11 @@ func (h HTTPClient) GetFile(u *url.URL) (io.ReaderAt, error) {
 	return uio.NewCachingReader(resp.Body), nil
 }
 
-// HTTPClientWithRetries implements FileScheme for HTTP files. It retries
-// until a response is received or until the timeout.
+// HTTPClientWithRetries implements FileScheme for HTTP files and automatically
+// retries (with backoff) upon an error.
 type HTTPClientWithRetries struct {
 	Client  *http.Client
-	Timeout time.Duration
+	BackOff backoff.BackOff
 }
 
 // GetFile implements FileScheme.GetFile.
@@ -216,34 +247,27 @@ func (h HTTPClientWithRetries) GetFile(u *url.URL) (io.ReaderAt, error) {
 		return nil, err
 	}
 
-	counter := 0
-	delay := 500 * time.Millisecond
-	maxDelay := 10 * time.Second
+	h.BackOff.Reset()
+	for d := time.Duration(0); d != backoff.Stop; d = h.BackOff.NextBackOff() {
+		if d > 0 {
+			time.Sleep(d)
+		}
 
-	timer := time.NewTimer(h.Timeout)
-	defer timer.Stop()
-	for {
-		resp, err := h.Client.Do(req)
-		if err == nil {
-			if resp.StatusCode != 200 {
-				return nil, fmt.Errorf("HTTP server responded with code %d, want 200: response %v",
-					resp.StatusCode, resp)
-			}
-			return uio.NewCachingReader(resp.Body), nil
+		var resp *http.Response
+		// Note: err uses the scope outside the for loop.
+		resp, err = h.Client.Do(req)
+		if err != nil {
+			log.Printf("Error: HTTP client: %v", err)
+			continue
 		}
-		counter++
-
-		// Backoff
-		delay += delay / 2
-		if delay > maxDelay {
-			delay = maxDelay
+		if resp.StatusCode != 200 {
+			log.Printf("Error: HTTP server responded with code %d, want 200: response %v", resp.StatusCode, resp)
+			continue
 		}
-		select {
-		case <-timer.C:
-			return nil, fmt.Errorf("http timeout after %d tries: %v", counter, err)
-		case <-time.After(delay):
-		}
+		return uio.NewCachingReader(resp.Body), nil
 	}
+	log.Printf("Error: Too many retries to download %v", u)
+	return nil, fmt.Errorf("too many HTTP retries: %v", err)
 }
 
 // LocalFileClient implements FileScheme for files on disk.
