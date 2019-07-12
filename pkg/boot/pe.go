@@ -56,6 +56,24 @@ func (p *PEImage) Execute() error {
 	}
 
 	var segment []kexec.Segment
+
+	// Windows loader expects to also fing the header of the EFI file.
+	// We add everything before the first section as the first segment.
+	var section_0 = f.Sections[0]
+	s := kexec.Segment{
+		Buf: kexec.Range{
+			Start: uintptr(unsafe.Pointer(&kernelBuf[0])),
+			Size:  uint(section_0.Offset),
+		},
+		Phys: kexec.Range{
+			Start: M16,
+			Size:  uint(uint64(section_0.VirtualAddress)),
+		},
+	}
+	log.Printf("virt: %#x + %#x | phys: %#x + %#x", s.Buf.Start, s.Buf.Size, s.Phys.Start, s.Phys.Size)
+	segment = append(segment, s)
+
+	// Now add the actuall sections
 	for _, section := range f.Sections {
 		s := kexec.Segment{
 			Buf: kexec.Range{
