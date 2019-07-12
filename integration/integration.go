@@ -99,7 +99,20 @@ type Options struct {
 
 	// Serial Output
 	SerialOutput io.WriteCloser
+
+	// Use virtual vfat rather than 9pfs
+	UseVVFAT bool
+
+	// QOptModifier is a func able to further alter qemu options.
+	QOptModifier QOptFunc
+
+	// UOptModifier is a func able to further alter initramfs options.
+	UOptModifier UOptFunc
 }
+
+type QOptFunc func(o *qemu.Options) error
+
+type UOptFunc func(o *uroot.Opts) error
 
 func last(s string) string {
 	l := strings.Split(s, ".")
@@ -325,6 +338,13 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 		InitCmd:      "init",
 		DefaultShell: "elvish",
 	}
+	if o.UOptModifier != nil {
+		err := o.UOptModifier(&opts)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
 	if err := uroot.CreateInitramfs(o.Logger, opts); err != nil {
 		return nil, "", err
 	}
@@ -353,16 +373,31 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 		kernelArgs = "console=ttyAMA0"
 	}
 
-	return &qemu.Options{
+	var dir qemu.Device
+	if o.UseVVFAT {
+		dir = qemu.ReadOnlyDirectory{Dir: tmpDir}
+	} else {
+		dir = qemu.P9Directory{Dir: tmpDir}
+	}
+	devices := []qemu.Device{
+		qemu.VirtioRandom{},
+		o.Network,
+		dir,
+	}
+
+	qo := &qemu.Options{
 		Initramfs:    outputFile,
 		Kernel:       kernel,
 		KernelArgs:   kernelArgs,
 		SerialOutput: logFile,
 		Timeout:      o.Timeout,
-		Devices: []qemu.Device{
-			qemu.ReadOnlyDirectory{Dir: tmpDir},
-			qemu.VirtioRandom{},
-			o.Network,
-		},
-	}, tmpDir, nil
+		Devices:      devices,
+	}
+	if o.QOptModifier != nil {
+		err := o.QOptModifier(qo)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+	return qo, tmpDir, nil
 }
