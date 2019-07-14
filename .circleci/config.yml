@@ -15,12 +15,12 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: go test -a -ldflags '-s' ./integration/...
-      - run:
-          name: Copying serial output to /tmp/serial
-          command: cp -R integration/serial /tmp/serial
+          command: |
+            go test -v -a -ldflags '-s' ./integration/...
+            find
       - store_artifacts:
-          path: /tmp/serial
+          path: integration/serial
+          destination: serial
 
 workflows:
   version: 2
