@@ -141,7 +141,7 @@ func (tsw *TestLineWriter) printBuf() {
 	bufs := bytes.Split(tsw.buffer, []byte{'\n'})
 	for _, buf := range bufs {
 		if len(buf) != 0 {
-			tsw.TB.Logf("%s: %s", tsw.Prefix, string(buf))
+			tsw.TB.Logf("%s: %s", tsw.Prefix, strings.ReplaceAll(string(buf), "\033", "~"))
 		}
 	}
 	tsw.buffer = nil
