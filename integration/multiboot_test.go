@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -16,9 +17,15 @@ import (
 
 func testMultiboot(t *testing.T, kernel string) {
 	var serial wc
+
+	src := fmt.Sprintf("/home/circleci/%v", kernel)
+	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
+		t.Skip("multiboot kernel is not present")
+	}
+
 	q, cleanup := QEMUTest(t, &Options{
 		Files: []string{
-			fmt.Sprintf("/home/circleci/%v:kernel", kernel),
+			src + ":kernel",
 		},
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
