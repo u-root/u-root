@@ -42,7 +42,7 @@ func (v Value) String() string {
 // SetOutputValue configures the gpio as an output pin with the given value.
 func SetOutputValue(pin int, val Value) error {
 	dir := val.Dir()
-	path := filepath.Join(gpioPath, "gpio", strconv.Itoa(pin), "direction")
+	path := filepath.Join(gpioPath, fmt.Sprintf("gpio%d", pin), "direction")
 	outFile, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %v", path, err)
@@ -57,7 +57,7 @@ func SetOutputValue(pin int, val Value) error {
 // ReadValue returns the value of the given gpio pin. If the read was
 // unsuccessful, it returns a value of Low and the associated error.
 func ReadValue(pin int) (Value, error) {
-	path := filepath.Join(gpioPath, "gpio", strconv.Itoa(pin), "value")
+	path := filepath.Join(gpioPath, fmt.Sprintf("gpio%d", pin), "value")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return Low, fmt.Errorf("failed to read value of gpio %d: %v", pin, err)
