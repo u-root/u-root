@@ -7,17 +7,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"sort"
 	"time"
 
-	"golang.org/x/sys/unix"
-
+	"github.com/u-root/u-root/integration/internal/gotest"
 	"github.com/u-root/u-root/pkg/sh"
+	"golang.org/x/sys/unix"
 )
 
 // Mount a vfat volume and run the tests within.
@@ -29,34 +26,15 @@ func main() {
 		sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
 	}
 
-	// Gather list of tests.
-	files, err := ioutil.ReadDir("/testdata/tests")
-	if err != nil {
-		log.Fatal(err)
-	}
-	tests := []string{}
-	for _, f := range files {
-		tests = append(tests, f.Name())
-	}
-
-	// Sort tests.
-	sort.Strings(tests)
-
-	// We are using TAP-style test output. See: https://testanything.org/
-	// One unfortunate design in TAP is "ok" is a subset of "not ok", so we
-	// prepend each line with "TAP: " and search for for "TAP: ok".
-	log.Printf("TAP: 1..%d", len(tests))
-
-	// Run tests.
-	for i, t := range tests {
-		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, t)
-		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, t)
-		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, t)
+	gotest.WalkTests("/testdata/tests", func(i int, path, pkgName string) {
+		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, pkgName)
+		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, pkgName)
+		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, pkgName)
 		log.Println(runMsg)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, filepath.Join("/testdata/tests", t))
+		cmd := exec.CommandContext(ctx, path)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		err := cmd.Run()
 
@@ -69,7 +47,7 @@ func main() {
 			log.Println(err)
 			log.Println(failMsg)
 		}
-	}
+	})
 
 	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 }

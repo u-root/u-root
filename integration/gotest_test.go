@@ -12,10 +12,11 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/u-root/u-root/integration/internal/gotest"
 )
 
 // testPkgs returns a slice of tests to run.
@@ -84,11 +85,16 @@ func TestGoTest(t *testing.T) {
 
 	// Statically build tests and add them to the temporary directory.
 	pkgs := testPkgs(t)
-	tests := []string{}
+	var tests []string
 	os.Setenv("CGO_ENABLED", "0")
 	testDir := filepath.Join(tmpDir, "tests")
 	for _, pkg := range pkgs {
-		testFile := filepath.Join(testDir, path.Base(pkg))
+		pkgDir := filepath.Join(testDir, pkg)
+		if err := os.MkdirAll(pkgDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		testFile := filepath.Join(pkgDir, fmt.Sprintf("%s.test", path.Base(pkg)))
 		cmd := exec.Command("go", "test", "-ldflags", "-s -w", "-c", pkg, "-o", testFile)
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("could not build %s: %v", pkg, err)
@@ -117,22 +123,8 @@ func TestGoTest(t *testing.T) {
 	})
 	defer cleanup()
 
-	// Tests are run and checked in sorted order.
-	bases := []string{}
-	for _, test := range tests {
-		bases = append(bases, path.Base(test))
-	}
-	sort.Strings(bases)
-
-	// Check that the test runner is running inside QEMU.
-	headerMsg := fmt.Sprintf("TAP: 1..%d", len(bases))
-	if err := q.ExpectTimeout(headerMsg, 30*time.Second); err != nil {
-		t.Fatalf("cannot communicate with test runner: %v", err)
-	}
-	t.Log(headerMsg)
-
 	// Check that each test passed.
-	for i, base := range bases {
+	gotest.WalkTests(testDir, func(i int, _ string, base string) {
 		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, base)
 		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, base)
 		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, base)
@@ -153,5 +145,5 @@ func TestGoTest(t *testing.T) {
 		} else {
 			t.Error(failMsg)
 		}
-	}
+	})
 }
