@@ -28,11 +28,8 @@ func testPkgs(t *testing.T) []string {
 	cmd := exec.Command("go", "list",
 		"github.com/u-root/u-root/cmds/core/...",
 		"github.com/u-root/u-root/cmds/boot/...",
-		// TODO: only running tests in cmds because tests in pkg have
-		// duplicate names which confuses the test runner. This should
-		// get fixed.
-		// "github.com/u-root/u-root/xcmds/...",
-		// "github.com/u-root/u-root/pkg/...",
+		"github.com/u-root/u-root/pkg/...",
+		"github.com/u-root/u-root/cmds/exp/...",
 	)
 	cmd.Env = append(os.Environ(), "GOARCH="+TestArch())
 	out, err := cmd.CombinedOutput()
@@ -53,6 +50,24 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/core/fusermount",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
+		"github.com/u-root/u-root/cmds/exp/rush",
+		"github.com/u-root/u-root/cmds/exp/pox",
+		"github.com/u-root/u-root/pkg/crypto",
+		"github.com/u-root/u-root/pkg/tarutil",
+		"github.com/u-root/u-root/pkg/ldd",
+		//"github.com/u-root/u-root/pkg/pty",
+
+		// Missing xzcat in VM.
+		"github.com/u-root/u-root/cmds/exp/bzimage",
+		"github.com/u-root/u-root/pkg/bzimage",
+
+		// Missing /dev/mem and /sys/firmware/efi
+		"github.com/u-root/u-root/pkg/acpi",
+
+		// No Go compiler in VM.
+		"github.com/u-root/u-root/pkg/bb",
+		"github.com/u-root/u-root/pkg/uroot",
+		"github.com/u-root/u-root/pkg/uroot/builder",
 	}
 	for i := 0; i < len(pkgs); i++ {
 		for _, b := range blacklist {
@@ -164,6 +179,7 @@ func TestGoTest(t *testing.T) {
 			// Used by an elvish test.
 			"github.com/u-root/u-root/cmds/core/ls",
 			"github.com/u-root/u-root/cmds/core/sleep",
+			"github.com/u-root/u-root/cmds/core/echo",
 		},
 		TmpDir: tmpDir,
 		SerialOutput: uio.ClosingMultiWriter(
