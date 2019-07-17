@@ -47,7 +47,6 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/core/dd",
 		"github.com/u-root/u-root/cmds/core/dhclient",
 		"github.com/u-root/u-root/cmds/core/elvish/eval",
-		"github.com/u-root/u-root/cmds/core/fmap",
 		"github.com/u-root/u-root/cmds/core/fusermount",
 		"github.com/u-root/u-root/cmds/core/gpt",
 		"github.com/u-root/u-root/cmds/core/kill",
