@@ -6,6 +6,7 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/integration/internal/gotest"
+	"github.com/u-root/u-root/pkg/golang"
 )
 
 // testPkgs returns a slice of tests to run.
@@ -67,6 +69,37 @@ func testPkgs(t *testing.T) []string {
 	return pkgs
 }
 
+func copyRelativeFiles(src string, dst string) error {
+	return filepath.Walk(src, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+
+		if fi.Mode().IsDir() {
+			return os.MkdirAll(filepath.Join(dst, rel), fi.Mode().Perm())
+		} else if fi.Mode().IsRegular() {
+			srcf, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer srcf.Close()
+			dstf, err := os.Create(filepath.Join(dst, rel))
+			if err != nil {
+				return err
+			}
+			defer dstf.Close()
+			_, err = io.Copy(dstf, srcf)
+			return err
+		}
+		return nil
+	})
+}
+
 // TestGoTest effectively runs "go test ./..." inside a QEMU instance. The
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
@@ -82,6 +115,10 @@ func TestGoTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	env := golang.Default()
+	env.CgoEnabled = false
+	env.GOARCH = TestArch()
 
 	// Statically build tests and add them to the temporary directory.
 	pkgs := testPkgs(t)
@@ -105,6 +142,16 @@ func TestGoTest(t *testing.T) {
 		// `tests` list.
 		if _, err := os.Stat(testFile); !os.IsNotExist(err) {
 			tests = append(tests, pkg)
+
+			p, err := env.Package(pkg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Optimistically copy any files in the pkg's
+			// directory, in case e.g. a testdata dir is there.
+			if err := copyRelativeFiles(p.Dir, filepath.Join(testDir, pkg)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
