@@ -12,13 +12,13 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/u-root/u-root/integration/internal/gotest"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/json2test"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // testPkgs returns a slice of tests to run.
@@ -47,6 +47,7 @@ func testPkgs(t *testing.T) []string {
 	// 2. or it depends on some test files (for example /bin/sleep)
 	blacklist := []string{
 		"github.com/u-root/u-root/cmds/core/cmp",
+		"github.com/u-root/u-root/cmds/core/basename",
 		"github.com/u-root/u-root/cmds/core/dd",
 		"github.com/u-root/u-root/cmds/core/dhclient",
 		"github.com/u-root/u-root/cmds/core/elvish/eval",
@@ -155,6 +156,8 @@ func TestGoTest(t *testing.T) {
 		}
 	}
 
+	tc := json2test.NewTestCollector()
+
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
 		Cmds: []string{
@@ -167,30 +170,29 @@ func TestGoTest(t *testing.T) {
 			"github.com/u-root/u-root/cmds/core/ls",
 		},
 		TmpDir: tmpDir,
+		SerialOutput: uio.ClosingMultiWriter(
+			// Collect JSON test events in tc.
+			json2test.EventParser(tc),
+			// Write non-JSON output to log.
+			JSONLessTestLineWriter(t, "serial"),
+		),
 	})
 	defer cleanup()
 
-	// Check that each test passed.
-	gotest.WalkTests(testDir, func(i int, _ string, base string) {
-		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, base)
-		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, base)
-		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, base)
-		passOrFailMsg := regexp.MustCompile(fmt.Sprintf("TAP: (not )?ok %d - %s", i, base))
+	if err := q.ExpectTimeout("GoTest Done", 60*time.Second); err != nil {
+		t.Errorf("Waiting for GoTest Done: %v", err)
+	}
 
-		t.Log(runMsg)
-		str, err := q.ExpectRETimeout(passOrFailMsg, 30*time.Second)
-		if err != nil {
-			// If we can neither find the "ok" nor the "not ok" message, the
-			// test runner inside QEMU is misbehaving and we fatal early
-			// instead of wasting time.
-			t.Logf(failMsg)
-			t.Fatal("TAP: Bail out! QEMU test runner stopped printing.")
+	for pkg, test := range tc.Tests {
+		switch test.State {
+		case json2test.StateFail:
+			t.Errorf("Test %v failed:\n%v", pkg, test.FullOutput)
+		case json2test.StateSkip:
+			t.Logf("Test %v skipped", pkg)
+		case json2test.StatePass:
+			// Nothing.
+		default:
+			t.Errorf("Test %v left in state %v:\n%v", pkg, test.State, test.FullOutput)
 		}
-
-		if strings.Contains(str, passMsg) {
-			t.Log(passMsg)
-		} else {
-			t.Error(failMsg)
-		}
-	})
+	}
 }
