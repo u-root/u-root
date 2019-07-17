@@ -19,11 +19,8 @@ func TestDhclient(t *testing.T) {
 
 	network := qemu.NewNetwork()
 	_, scleanup := QEMUTest(t, &Options{
-		Name: "TestDhclient_Server",
-		SerialOutput: &TestLineWriter{
-			TB:     t,
-			Prefix: "server",
-		},
+		Name:         "TestDhclient_Server",
+		SerialOutput: TestLineWriter(t, "server"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/echo",
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -43,11 +40,8 @@ func TestDhclient(t *testing.T) {
 	defer scleanup()
 
 	dhcpClient, ccleanup := QEMUTest(t, &Options{
-		Name: "TestDhclient_Client",
-		SerialOutput: &TestLineWriter{
-			TB:     t,
-			Prefix: "client",
-		},
+		Name:         "TestDhclient_Client",
+		SerialOutput: TestLineWriter(t, "client"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/cmds/core/init",
@@ -81,11 +75,8 @@ func TestPxeboot(t *testing.T) {
 
 	network := qemu.NewNetwork()
 	dhcpServer, scleanup := QEMUTest(t, &Options{
-		Name: "TestPxeboot_Server",
-		SerialOutput: &TestLineWriter{
-			TB:     t,
-			Prefix: "server",
-		},
+		Name:         "TestPxeboot_Server",
+		SerialOutput: TestLineWriter(t, "server"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -108,11 +99,8 @@ func TestPxeboot(t *testing.T) {
 	defer scleanup()
 
 	dhcpClient, ccleanup := QEMUTest(t, &Options{
-		Name: "TestPxeboot_Client",
-		SerialOutput: &TestLineWriter{
-			TB:     t,
-			Prefix: "client",
-		},
+		Name:         "TestPxeboot_Client",
+		SerialOutput: TestLineWriter(t, "client"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/ip",

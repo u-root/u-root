@@ -21,6 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -141,40 +142,25 @@ func callerName(depth int) string {
 	return last(f.Name())
 }
 
-// TestLineWriter is an io.Writer that waits for a full line of prints before
-// logging to TB.
-type TestLineWriter struct {
-	TB     testing.TB
-	Prefix string
-
-	buffer []byte
+// TestLineWriter is an io.Writer that logs full lines of serial to tb.
+func TestLineWriter(tb testing.TB, prefix string) io.WriteCloser {
+	return uio.FullLineWriter(&testLineWriter{tb: tb, prefix: prefix})
 }
 
-func (tsw *TestLineWriter) printBuf() {
-	bufs := bytes.Split(tsw.buffer, []byte{'\n'})
+// testLineWriter is an io.Writer that logs full lines of serial to tb.
+type testLineWriter struct {
+	tb     testing.TB
+	prefix string
+}
+
+func (tsw *testLineWriter) Write(p []byte) (int, error) {
+	bufs := bytes.Split(p, []byte{'\n'})
 	for _, buf := range bufs {
 		if len(buf) != 0 {
-			tsw.TB.Logf("%s: %s", tsw.Prefix, strings.ReplaceAll(string(buf), "\033", "~"))
+			tsw.tb.Logf("%s: %s", tsw.prefix, strings.ReplaceAll(string(buf), "\033", "~"))
 		}
 	}
-	tsw.buffer = nil
-}
-
-func (tsw *TestLineWriter) Write(p []byte) (int, error) {
-	i := bytes.LastIndexByte(p, '\n')
-	if i == -1 {
-		tsw.buffer = append(tsw.buffer, p...)
-	} else {
-		tsw.buffer = append(tsw.buffer, p[:i]...)
-		tsw.printBuf()
-		tsw.buffer = append([]byte{}, p[i:]...)
-	}
 	return len(p), nil
-}
-
-func (tsw *TestLineWriter) Close() error {
-	tsw.printBuf()
-	return nil
 }
 
 // TestArch returns the architecture under test. Pass this as GOARCH when
@@ -208,10 +194,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		o.Logger = &testLogger{t}
 	}
 	if o.SerialOutput == nil {
-		o.SerialOutput = &TestLineWriter{
-			TB:     t,
-			Prefix: "serial",
-		}
+		o.SerialOutput = TestLineWriter(t, "serial")
 	}
 	if TestArch() == "arm" {
 		//currently, 9p does not work on arm
