@@ -6,17 +6,33 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/u-root/u-root/integration/internal/gotest"
 	"github.com/u-root/u-root/pkg/sh"
 	"golang.org/x/sys/unix"
 )
+
+func walkTests(testRoot string, fn func(string, string)) error {
+	return filepath.Walk(testRoot, func(path string, info os.FileInfo, err error) error {
+		if !info.Mode().IsRegular() || !strings.HasSuffix(path, ".test") || err != nil {
+			return nil
+		}
+		t2, err := filepath.Rel(testRoot, path)
+		if err != nil {
+			return err
+		}
+		pkgName := filepath.Dir(t2)
+
+		fn(path, pkgName)
+		return nil
+	})
+}
 
 // Mount a vfat volume and run the tests within.
 func main() {
@@ -27,29 +43,52 @@ func main() {
 		sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
 	}
 
-	gotest.WalkTests("/testdata/tests", func(i int, path, pkgName string) {
-		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, pkgName)
-		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, pkgName)
-		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, pkgName)
-		log.Println(runMsg)
+	walkTests("/testdata/tests", func(path, pkgName string) {
+		log.Printf("package: %v @ %v", pkgName, path)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, path)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		cmd.Dir = filepath.Dir(path)
-		err := cmd.Run()
 
-		if ctx.Err() == context.DeadlineExceeded {
-			log.Println("TAP: # timed out")
-			log.Println(failMsg)
-		} else if err == nil {
-			log.Println(passMsg)
-		} else {
-			log.Println(err)
-			log.Println(failMsg)
+		r, w, err := os.Pipe()
+		if err != nil {
+			log.Printf("Failed to get pipe: %v", err)
+			return
 		}
+
+		cmd := exec.CommandContext(ctx, path, "-test.v")
+		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
+
+		// Write to stdout for humans, write to w for the JSON converter.
+		//
+		// The test collector will gobble up JSON for statistics, and
+		// print non-JSON for humans to consume.
+		cmd.Stdout = io.MultiWriter(os.Stdout, w)
+
+		// Start test in its own dir so that testdata is available as a
+		// relative directory.
+		cmd.Dir = filepath.Dir(path)
+		if err := cmd.Start(); err != nil {
+			log.Printf("Failed to start %v: %v", path, err)
+			return
+		}
+
+		j := exec.CommandContext(ctx, "test2json", "-t", "-p", pkgName)
+		j.Stdin = r
+		j.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := j.Start(); err != nil {
+			log.Printf("Failed to start test2json: %v", err)
+			return
+		}
+
+		// Don't do anything if the test fails. The log collector will
+		// deal with it. ¯\_(ツ)_/¯
+		cmd.Wait()
+		// Close the pipe so test2json will quit.
+		w.Close()
+		j.Wait()
 	})
+
+	log.Printf("GoTest Done")
 
 	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 }
