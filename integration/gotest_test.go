@@ -173,10 +173,7 @@ func TestGoTest(t *testing.T) {
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
 			"github.com/u-root/u-root/cmds/core/init",
-			// Used by gotest/uinit.
-			"github.com/u-root/u-root/cmds/core/mkdir",
-			"github.com/u-root/u-root/cmds/core/mount",
-			// Used by an elvish test.
+			// Used by different tests.
 			"github.com/u-root/u-root/cmds/core/ls",
 			"github.com/u-root/u-root/cmds/core/sleep",
 			"github.com/u-root/u-root/cmds/core/echo",

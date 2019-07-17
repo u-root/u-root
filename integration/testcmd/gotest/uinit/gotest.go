@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/u-root/u-root/pkg/sh"
+	"github.com/u-root/u-root/pkg/mount"
 	"golang.org/x/sys/unix"
 )
 
@@ -36,11 +36,17 @@ func walkTests(testRoot string, fn func(string, string)) error {
 
 // Mount a vfat volume and run the tests within.
 func main() {
-	sh.RunOrDie("mkdir", "/testdata")
+	if err := os.MkdirAll("/testdata", 0755); err != nil {
+		log.Fatalf("Couldn't create testdata: %v", err)
+	}
+	var err error
 	if os.Getenv("UROOT_USE_9P") == "1" {
-		sh.RunOrDie("mount", "-t", "9p", "tmpdir", "/testdata")
+		err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
 	} else {
-		sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
+		err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
+	}
+	if err != nil {
+		log.Fatalf("Couldn't mount /dev/sda1: %v", err)
 	}
 
 	walkTests("/testdata/tests", func(path, pkgName string) {
