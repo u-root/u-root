@@ -201,7 +201,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		}
 	}
 
-	qOpts, err := QEMU(o)
+	qOpts, tmpDir, err := QEMU(o)
 	if err != nil {
 		t.Fatalf("Failed to create QEMU VM %s: %v", o.Name, err)
 	}
@@ -214,18 +214,22 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 
 	return vm, func() {
 		vm.Close()
-		dir := vm.Options.Devices[0].(qemu.ReadOnlyDirectory).Dir
 		if t.Failed() {
-			t.Log("keeping temp dir: ", dir)
+			t.Log("Keeping temp dir: ", tmpDir)
 		} else if len(o.TmpDir) == 0 {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Logf("failed to remove temporary directory %s: %v", dir, err)
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("failed to remove temporary directory %s: %v", tmpDir, err)
 			}
 		}
 	}
 }
 
-func QEMU(o *Options) (*qemu.Options, error) {
+// QEMU builds the u-root environment and prepares QEMU options given the test
+// options and environment variables.
+//
+// QEMU returns the QEMU launch options, the temporary directory exposed to the
+// QEMU VM, or an error.
+func QEMU(o *Options) (*qemu.Options, string, error) {
 	if len(o.Name) == 0 {
 		o.Name = callerName(2)
 	}
@@ -240,7 +244,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	if len(o.LogFile) == 0 {
 		// Create file for serial logs.
 		if err := os.MkdirAll(logDir, 0755); err != nil {
-			return nil, fmt.Errorf("could not create serial log directory: %v", err)
+			return nil, "", fmt.Errorf("could not create serial log directory: %v", err)
 		}
 
 		o.LogFile = filepath.Join(logDir, fmt.Sprintf("%s.log", o.Name))
@@ -256,18 +260,18 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	if len(o.Uinit) > 0 {
 		urootPkg, err := o.Env.Package("github.com/u-root/u-root/integration")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		testDir := filepath.Join(urootPkg.Dir, "testcmd")
 
 		dirpath, err := ioutil.TempDir(testDir, "uinit-")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		defer os.RemoveAll(dirpath)
 
 		if err := os.MkdirAll(filepath.Join(dirpath, "uinit"), 0755); err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		var realUinit [][]string
@@ -279,7 +283,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 			filepath.Join(dirpath, "uinit", "uinit.go"),
 			[]byte(fmt.Sprintf(template, realUinit)),
 			0755); err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		cmds = append(cmds, path.Join("github.com/u-root/u-root/integration/testcmd", filepath.Base(dirpath), "uinit"))
 	}
@@ -290,7 +294,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		var err error
 		tmpDir, err = ioutil.TempDir("", "uroot-integration")
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 	}
 
@@ -302,7 +306,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	outputFile := filepath.Join(tmpDir, "initramfs.cpio")
 	w, err := initramfs.CPIO.OpenWriter(o.Logger, outputFile, "", "")
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Build u-root
@@ -322,13 +326,13 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		DefaultShell: "elvish",
 	}
 	if err := uroot.CreateInitramfs(o.Logger, opts); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Copy kernel to tmpDir for tests involving kexec.
 	kernel := filepath.Join(tmpDir, "kernel")
 	if err := cp.Copy(os.Getenv("UROOT_KERNEL"), kernel); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	logFile := o.SerialOutput
@@ -336,7 +340,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		if o.LogFile != "" {
 			logFile, err = os.Create(o.LogFile)
 			if err != nil {
-				return nil, fmt.Errorf("could not create log file: %v", err)
+				return nil, "", fmt.Errorf("could not create log file: %v", err)
 			}
 		}
 	}
@@ -360,5 +364,5 @@ func QEMU(o *Options) (*qemu.Options, error) {
 			qemu.VirtioRandom{},
 			o.Network,
 		},
-	}, nil
+	}, tmpDir, nil
 }
