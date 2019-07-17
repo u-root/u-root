@@ -79,9 +79,9 @@ type depMap map[string]*dependency
 //
 // An empty ProbeOpts{} should lead to the default behavior.
 type ProbeOpts struct {
-	DryRunCB func(string)
-	RootDir  string
-	KVer     string
+	DryRunCB       func(string)
+	RootDir        string
+	KVer           string
 	IgnoreProcMods bool
 }
 

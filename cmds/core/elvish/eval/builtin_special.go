@@ -48,11 +48,11 @@ var IsBuiltinSpecial = map[string]bool{}
 func init() {
 	// Needed to avoid initialization loop
 	builtinSpecials = map[string]compileBuiltin{
-		"del":   compileDel,
-		"fn":    compileFn,
-		"use":   compileUse,
-		"and":   compileAnd,
-		"or":    compileOr,
+		"del": compileDel,
+		"fn":  compileFn,
+		"use": compileUse,
+		"and": compileAnd,
+		"or":  compileOr,
 	}
 	for name := range builtinSpecials {
 		IsBuiltinSpecial[name] = true

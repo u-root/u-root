@@ -34,9 +34,8 @@ var styleForSep = map[string]string{
 	"?>": "green",
 	"|":  "green",
 
-	"(":  "bold",
-	")":  "bold",
+	"(": "bold",
+	")": "bold",
 
 	"&": "bold",
-
 }

@@ -71,7 +71,7 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 		// The signature is appended to the zip file and has length
 		// `ed25519.SignatureSize`. We read these bytes from the end of the file and
 		// treat them as the attached signature.
-		signature := data[len(data)-ed25519.SignatureSize : len(data)]
+		signature := data[len(data)-ed25519.SignatureSize:]
 		if len(signature) != ed25519.SignatureSize {
 			return nil, "", fmt.Errorf("Short read when reading signature: want %d bytes, got %d", ed25519.SignatureSize, len(signature))
 		}

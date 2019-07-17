@@ -428,7 +428,7 @@ var ipProtocol = FlagSet{
 var SocketProtocol = map[int32]FlagSet{
 	unix.AF_INET:  ipProtocol,
 	unix.AF_INET6: ipProtocol,
-	unix.AF_NETLINK: FlagSet{
+	unix.AF_NETLINK: {
 		&Value{
 			Value: unix.NETLINK_ROUTE,
 			Name:  "NETLINK_ROUTE",
