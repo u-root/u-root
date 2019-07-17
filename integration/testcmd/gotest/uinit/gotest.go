@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/u-root/u-root/integration/internal/gotest"
@@ -36,6 +37,7 @@ func main() {
 		defer cancel()
 		cmd := exec.CommandContext(ctx, path)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		cmd.Dir = filepath.Dir(path)
 		err := cmd.Run()
 
 		if ctx.Err() == context.DeadlineExceeded {
