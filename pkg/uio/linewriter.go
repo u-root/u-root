@@ -21,7 +21,12 @@ type fullLineWriter struct {
 }
 
 func (fsw *fullLineWriter) printBuf() {
-	fsw.w.Write(fsw.buffer)
+	bufs := bytes.Split(fsw.buffer, []byte{'\n'})
+	for _, buf := range bufs {
+		if len(buf) != 0 {
+			fsw.w.Write(buf)
+		}
+	}
 	fsw.buffer = nil
 }
 
