@@ -7,8 +7,8 @@ import (
 	"github.com/u-root/u-root/cmds/core/elvish/edit/ui"
 	"github.com/u-root/u-root/cmds/core/elvish/eval"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
-	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
+	"github.com/u-root/u-root/cmds/core/elvish/parse"
 )
 
 var errValueShouldBeFn = errors.New("value should be function")

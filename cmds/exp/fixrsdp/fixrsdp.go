@@ -13,8 +13,8 @@ package main
 import (
 	"bytes"
 	"log"
-	"syscall"
 	"os"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/ebda"

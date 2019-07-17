@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
-	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/hash"
+	"github.com/u-root/u-root/cmds/core/elvish/parse"
 )
 
 // Source describes a piece of source code.
