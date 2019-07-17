@@ -51,7 +51,6 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/core/elvish/eval",
 		"github.com/u-root/u-root/cmds/core/elvish/edit/tty",
 		"github.com/u-root/u-root/cmds/core/fusermount",
-		"github.com/u-root/u-root/cmds/core/kill",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
 	}
@@ -164,6 +163,7 @@ func TestGoTest(t *testing.T) {
 			"github.com/u-root/u-root/cmds/core/mount",
 			// Used by an elvish test.
 			"github.com/u-root/u-root/cmds/core/ls",
+			"github.com/u-root/u-root/cmds/core/sleep",
 		},
 		TmpDir: tmpDir,
 		SerialOutput: uio.ClosingMultiWriter(
