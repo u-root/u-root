@@ -317,6 +317,10 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 				Builder:  builder.BusyBox,
 				Packages: cmds,
 			},
+			{
+				Builder:  builder.Binary,
+				Packages: []string{"cmd/test2json"},
+			},
 		},
 		ExtraFiles:   o.Files,
 		TempDir:      tmpDir,
