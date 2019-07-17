@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -44,7 +43,6 @@ func TestMknodFifo(t *testing.T) {
 	}
 
 	// Make a pipe and check that it exists.
-	fmt.Print(pipepath)
 	c := testutil.Command(t, pipepath, "p")
 	c.Run()
 	if _, err := os.Stat(pipepath); os.IsNotExist(err) {
