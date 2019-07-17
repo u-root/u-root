@@ -34,9 +34,7 @@ func TestShutdown(t *testing.T) {
 		var retCode int
 		c := exec.Command(os.Args[0], append([]string{"-test.run=TestHelperProcess", "--"}, tt.args...)...)
 		c.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		t.Logf("Run %v", c)
 		_, err := c.Output()
-		t.Logf("err %v", err)
 		if err != nil {
 			exitErr, ok := err.(*exec.ExitError)
 			if !ok {
