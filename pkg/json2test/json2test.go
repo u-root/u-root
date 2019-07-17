@@ -5,7 +5,6 @@
 package json2test
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"time"
@@ -53,21 +52,17 @@ type eventParser struct {
 	hs []Handler
 }
 
-func (ep *eventParser) Write(b []byte) (int, error) {
-	l := bytes.Split(b, []byte{'\n'})
-	for _, line := range l {
-		// Poor man's JSON detector.
-		if len(line) == 0 || line[0] != '{' {
-			continue
-		}
-
-		var e TestEvent
-		if err := json.Unmarshal(line, &e); err != nil {
-			continue
-		}
-		for _, h := range ep.hs {
-			h.Handle(e)
-		}
+func (ep *eventParser) OneLine(line []byte) {
+	// Poor man's JSON detector.
+	if len(line) == 0 || line[0] != '{' {
+		return
 	}
-	return len(b), nil
+
+	var e TestEvent
+	if err := json.Unmarshal(line, &e); err != nil {
+		return
+	}
+	for _, h := range ep.hs {
+		h.Handle(e)
+	}
 }

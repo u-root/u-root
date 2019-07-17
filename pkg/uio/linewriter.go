@@ -9,14 +9,20 @@ import (
 	"io"
 )
 
+// LineWriter processes one line of log output at a time.
+type LineWriter interface {
+	// OneLine is always called with exactly one line of output.
+	OneLine(b []byte)
+}
+
 // FullLineWriter returns an io.Writer that waits for a full line of prints
 // before calling w.Write on one line each.
-func FullLineWriter(w io.Writer) io.WriteCloser {
+func FullLineWriter(w LineWriter) io.WriteCloser {
 	return &fullLineWriter{w: w}
 }
 
 type fullLineWriter struct {
-	w      io.Writer
+	w      LineWriter
 	buffer []byte
 }
 
@@ -24,7 +30,7 @@ func (fsw *fullLineWriter) printBuf() {
 	bufs := bytes.Split(fsw.buffer, []byte{'\n'})
 	for _, buf := range bufs {
 		if len(buf) != 0 {
-			fsw.w.Write(buf)
+			fsw.w.OneLine(buf)
 		}
 	}
 	fsw.buffer = nil

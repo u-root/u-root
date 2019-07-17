@@ -44,8 +44,6 @@ func main() {
 	}
 
 	walkTests("/testdata/tests", func(path, pkgName string) {
-		log.Printf("package: %v @ %v", pkgName, path)
-
 		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
 		defer cancel()
 

@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -147,20 +146,30 @@ func TestLineWriter(tb testing.TB, prefix string) io.WriteCloser {
 	return uio.FullLineWriter(&testLineWriter{tb: tb, prefix: prefix})
 }
 
+type jsonStripper struct {
+	uio.LineWriter
+}
+
+func (j jsonStripper) OneLine(p []byte) {
+	// Poor man's JSON detector.
+	if len(p) == 0 || p[0] == '{' {
+		return
+	}
+	j.LineWriter.OneLine(p)
+}
+
+func JSONLessTestLineWriter(tb testing.TB, prefix string) io.WriteCloser {
+	return uio.FullLineWriter(jsonStripper{&testLineWriter{tb: tb, prefix: prefix}})
+}
+
 // testLineWriter is an io.Writer that logs full lines of serial to tb.
 type testLineWriter struct {
 	tb     testing.TB
 	prefix string
 }
 
-func (tsw *testLineWriter) Write(p []byte) (int, error) {
-	bufs := bytes.Split(p, []byte{'\n'})
-	for _, buf := range bufs {
-		if len(buf) != 0 {
-			tsw.tb.Logf("%s: %s", tsw.prefix, strings.ReplaceAll(string(buf), "\033", "~"))
-		}
-	}
-	return len(p), nil
+func (tsw *testLineWriter) OneLine(p []byte) {
+	tsw.tb.Logf("%s: %s", tsw.prefix, strings.ReplaceAll(string(p), "\033", "~"))
 }
 
 // TestArch returns the architecture under test. Pass this as GOARCH when
