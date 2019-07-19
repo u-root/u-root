@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	controlD = 4
+	controlD  = 4
 	backSpace = 8
-	del = 127
+	del       = 127
 )
 
 // LineReader has three things and returns one string.

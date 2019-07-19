@@ -23,8 +23,8 @@ var (
 )
 
 var defaultBootsequence = [][]string{
-	[]string{"fbnetboot", "-userclass", "linuxboot"},
-	[]string{"localboot", "-grub"},
+	{"fbnetboot", "-userclass", "linuxboot"},
+	{"localboot", "-grub"},
 }
 
 func main() {

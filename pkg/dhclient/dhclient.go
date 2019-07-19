@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -108,18 +109,28 @@ func Configure6(iface netlink.Link, packet *dhcpv6.Message) error {
 	}
 
 	if ips := p.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips); err != nil {
+		if err := WriteDNSSettings(ips, nil, ""); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// WriteDNSSettings writes the given IPs as nameservers to resolv.conf.
-func WriteDNSSettings(ips []net.IP) error {
+// WriteDNSSettings writes the given nameservers, search list, and domain to resolv.conf.
+func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 	rc := &bytes.Buffer{}
-	for _, ip := range ips {
-		rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
+	if domain != "" {
+		rc.WriteString(fmt.Sprintf("domain %s\n", domain))
+	}
+	if ns != nil {
+		for _, ip := range ns {
+			rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
+		}
+	}
+	if sl != nil {
+		rc.WriteString("search ")
+		rc.WriteString(strings.Join(sl, " "))
+		rc.WriteString("\n")
 	}
 	return ioutil.WriteFile("/etc/resolv.conf", rc.Bytes(), 0644)
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/hash"
+	"github.com/u-root/u-root/cmds/core/elvish/parse"
 )
 
 // File wraps a pointer to os.File.

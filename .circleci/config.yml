@@ -84,7 +84,7 @@ jobs:
       - run:
           name: gofmt
           command: |
-              test -z "$(gofmt -s -l $(go list ./... | grep -v /vendor/))"
+            test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
       - run:
           name: gometalinter
           command: |

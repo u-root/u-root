@@ -500,7 +500,7 @@ func doInit() error {
 	if err := cpuSetup(); err != nil {
 		log.Printf("CPU setup error with cpu running as init: %v", err)
 	}
-	cmds := [][]string{[]string{"/bin/defaultsh"}, []string{"/bbin/dhclient", "-verbose"}}
+	cmds := [][]string{{"/bin/defaultsh"}, {"/bbin/dhclient", "-verbose"}}
 	verbose("Try to run %v", cmds)
 
 	for _, v := range cmds {
@@ -580,7 +580,7 @@ func doInit() error {
 	}
 	verbose("server.ListenAndServer returned")
 
-	numprocs := <- procs
+	numprocs := <-procs
 	verbose("Reaped %d procs", numprocs)
 	return nil
 }
