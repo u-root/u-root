@@ -325,7 +325,7 @@ func NewPackage(name string, pkgPath string, srcFiles []string, importer types.I
 	}
 	tpkg, err := conf.Check(pkgPath, p.fset, p.sortedFiles, &p.typeInfo)
 	if err != nil {
-		return nil, fmt.Errorf("type checking failed: %#v: %v", importer, err)
+		return nil, fmt.Errorf("type checking failed: %v", err)
 	}
 	p.types = tpkg
 	return p, nil
