@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -128,14 +129,7 @@ func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 	}
 	if sl != nil {
 		rc.WriteString("search ")
-		for index, label := range sl {
-			if index != len(sl)-1 {
-				rc.WriteString(fmt.Sprintf("%s ", label))
-			} else {
-				rc.WriteString(fmt.Sprintf("%s", label))
-
-			}
-		}
+		rc.WriteString(strings.Join(sl, " "))
 		rc.WriteString("\n")
 	}
 	return ioutil.WriteFile("/etc/resolv.conf", rc.Bytes(), 0644)

@@ -123,9 +123,9 @@ func (p *Packet4) Lease() *net.IPNet {
 }
 
 var (
-	//ErrNoBootFile represents that no pxe boot file was found
+	// ErrNoBootFile represents that no pxe boot file was found.
 	ErrNoBootFile = errors.New("no boot file name present in DHCP message")
-	//ErrNoServerHostName represents that no pxe boot server was found
+	// ErrNoServerHostName represents that no pxe boot server was found.
 	ErrNoServerHostName = errors.New("no server host name present in DHCP message")
 )
 
