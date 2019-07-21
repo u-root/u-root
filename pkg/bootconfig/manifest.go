@@ -50,3 +50,14 @@ func (mc *Manifest) GetBootConfig(idx int) (*BootConfig, error) {
 	}
 	return &mc.Configs[idx], nil
 }
+
+// IsValid returns true if all BootConfig objects inside the manifes has valid
+// content.
+func (mc *Manifest) IsValid() bool {
+	for _, config := range mc.Configs {
+		if !config.IsValid() {
+			return false
+		}
+	}
+	return true
+}
