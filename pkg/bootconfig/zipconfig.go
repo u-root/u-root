@@ -6,6 +6,7 @@ package bootconfig
 
 import (
 	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -140,4 +141,111 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 		return nil, "", errors.New("No manifest found")
 	}
 	return manifest, tempDir, nil
+}
+
+// ToZip tries to pack all files specifoed in the the provided manifest.json
+// into a zip archive. An error is returned, if the files (kernel, initrd, etc)
+// doesn't exist at the paths written inside the manifest.json relative to its
+// location. After creating the archive an ed25519 signature is added to the
+// archive. If not allready present, a .zip extendion is added to the output file
+func ToZip(output string, manifest string, privkeyfile *string, passphrase []byte) error {
+	// Get manifest from file. Make sure the file is named accordingliy, since
+	// FromZip will search 'manifest.json' while extraction.
+	if base := path.Base(manifest); base != "manifest.json" {
+		return fmt.Errorf("Invalid manifest name. Want 'manifest.json', got: %s", base)
+	}
+	manifestBody, err := ioutil.ReadFile(manifest)
+	if err != nil {
+		return err
+	}
+	mf, err := ManifestFromBytes(manifestBody)
+	if err != nil {
+		return err
+	} else if !mf.IsValid() {
+		return errors.New("Manifest is not valid")
+	}
+
+	// Collect filenames relative to manifest.json
+	files := make([]string, 0)
+	files = append(files, path.Base(manifest))
+	for _, cfg := range mf.Configs {
+		if cfg.Kernel != "" {
+			files = append(files, cfg.Kernel)
+		}
+		if cfg.Initramfs != "" {
+			files = append(files, cfg.Initramfs)
+		}
+		if cfg.DeviceTree != "" {
+			files = append(files, cfg.DeviceTree)
+		}
+	}
+
+	// Create a buffer to write the archive to.
+	buf := new(bytes.Buffer)
+	// Create a new zip archive.
+	w := zip.NewWriter(buf)
+
+	// Archive files
+	dir := path.Dir(manifest)
+	for _, file := range files {
+		// Create directories of each filepath first
+		for d := file; ; {
+			d, _ = path.Split(d)
+			if d != "" {
+				w.Create(d)
+				d = path.Clean(d)
+			} else {
+				break
+			}
+		}
+		// Create new file in archive
+		dst, err := w.Create(file)
+		if err != nil {
+			return err
+		}
+		// Copy content from inputpath to new file
+		p := path.Join(dir, file)
+		src, err := os.Open(p)
+		if err != nil {
+			return fmt.Errorf("Cannot find %s specified in %s", p, manifest)
+		}
+		_, err = io.Copy(dst, src)
+		if err != nil {
+			return err
+		}
+		err = src.Close()
+		if err != nil {
+			return err
+		}
+	}
+	// Write central directory of archive
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	// Measure buf
+	privateKey, err := crypto.LoadPrivateKeyFromFile(*privkeyfile, passphrase)
+	if err != nil {
+		return err
+	}
+	signature := ed25519.Sign(privateKey, buf.Bytes())
+	if len(signature) <= 0 {
+		return fmt.Errorf("Signing boot configuration failed")
+	}
+
+	// Add signature
+	if n, _ := buf.Write(signature); n < len(signature) {
+		return fmt.Errorf("Adding signature to archive faild")
+	}
+
+	// Write buf to disk
+	if path.Ext(output) != ".zip" {
+		output = output + ".zip"
+	}
+	err = ioutil.WriteFile(output, buf.Bytes(), 0777)
+	if err != nil {
+		return err
+	}
+	return nil
 }
