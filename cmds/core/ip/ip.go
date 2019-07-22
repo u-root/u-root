@@ -236,34 +236,26 @@ func routeshow() error {
 	*/
 		// Split the string by new line (Assumed format above)
 		rows := strings.Split(string(b),"\n")
-		// flog.Printf("%s %d", string(b), len(string(b)))
 
 		// May be over kill but check for the format of the headerpattern for ubunto (is this this same
 		// for all linux implementations??? No clue, need to check with Andrea)
-		ubunto_headerpattern := "Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT"
-		ubunto_bodypattern := "^([a-z])\\w+((\\d){2})	([0-9A-F]{8})	([0-9A-F]{8})	((\\d){1,4})	((\\d){1})	((\\d){1})	((\\d){1,4})	([0-9A-F]{8})	((\\d){1})	((\\d){1})	((\\d){1})"
-		ubunto_eof := "^$"
+		ubunto_headerpattern,_  := regexp.Compile("Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT")
+		ubunto_bodypattern,_ := regexp.Compile(("([a-z])\\w+	([0-9A-F]{8})	([0-9A-F]{8})	(000[1-3])	(\\d){1}	(\\d){1}	(\\d){3,4}	([0-9A-F]{8})	(\\d){1}	(\\d){1}	(\\d){1}"))
+		ubunto_eofpattern,_ := regexp.Compile("^$")
 
 		// check for the ubunto to line for ipv4
-		if matched, err := regexp.MatchString(ubunto_headerpattern, rows[0]); matched && err == nil {
-
-			// flog.Printf("Trying to match header content '%s'", rows[0])
+		if matched:= ubunto_headerpattern.MatchString(rows[0]); matched {
 
 			// Skip the top line, (already verified with regex)
 			for v :=1; v < len(rows); v++ {
 
-				// flog.Printf("Trying to match body content '%s'", rows[v])
-
-				if matched, err = regexp.MatchString(ubunto_eof, rows[v]); matched && err == nil  {
-						//flog.Printf("EOF")
+				if matched = ubunto_eofpattern.MatchString(rows[v]); matched  {
 						// Got to the EOF, exit cleanly
 						return nil
-				} else if matched, err = regexp.MatchString(ubunto_bodypattern, rows[v]); matched && err == nil {
+				} else if matched = ubunto_bodypattern.MatchString(rows[v]); matched {
 
 					// Get the cols, can make some assumptions based on the regex match used
 					cols := strings.Split(strings.Trim(rows[v]," "), "\t")
-
-					// flog.Printf("Found body entry with %d cols %v", len(cols), cols)
 
 					// Create a simple array to hold the output
 					var o []string
@@ -272,51 +264,32 @@ func routeshow() error {
 						flog.Printf("Cannot decode the source ip address %v",err)
 						return err
 					} else {
-						// pos 0
 						o = append(o, src_address)
 						if gateway_address, err := hextoipaddress(cols[2]); err!=nil {
 							flog.Printf("Cannot decode the gateway ip address %v",err)
 							return err
 						}	else {
-							// pos 1
 							o = append(o, gateway_address)
-
 							if mask_address,err := hextoipaddress(cols[7]); err!=nil {
 								flog.Printf("Cannot decode the mask ip address %v",err)
 								return err
 							} else {
 								mask_address := net.IPMask(net.ParseIP(mask_address).To4())
 								mask_size, _ := mask_address.Size()
-
-								// If it's not 0, create the full CIDR address
 								if mask_size != 0 {
 										o[0] += "/"
 										o[0] += strconv.Itoa(mask_size)
 								}
-
-								// pos 3 iface
 								o = append(o, cols[0])
-								// pos 4 metric
 								o = append(o, cols[6])
-								// flog.Printf("output array '%v'",output)
 							}
 						}
 					}
-					// Print the output
 					flog.Printf("%s via %s ?dev? %s ?proto? ?dhcp? metric %s",o[0],o[1],o[2],o[3])
-					/*
-					default via 172.16.194.2 dev ens33 proto dhcp metric 100
-					169.254.0.0/16 dev ens33 scope link metric 1000
-					172.16.194.0/24 dev ens33 proto kernel scope link src 172.16.194.129 metric 100
-					*/
-
 					/*
 					Flags := cols[3]
 					RefCnt := cols[4]
 					Use := cols[5]
-					*/
-
-					/*
 					MTU := cols[8]
 					Window := cols[9]
 					IRTT := cols[10]
@@ -335,12 +308,12 @@ func routeshow() error {
 					10 ip: col content '0'
 					*/
 				} else {
-						flog.Printf("error matching body %b %v", matched, err)
+						flog.Printf("error matching body %t %v", matched, err)
 						return nil
 				}
 			}
 		} else {
-				flog.Printf("error matching header %b %v", matched, err)
+				flog.Printf("error matching header %t %v", matched, err)
 				return nil
 		}
 	} else {
