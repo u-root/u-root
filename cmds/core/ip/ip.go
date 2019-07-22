@@ -240,7 +240,7 @@ func routeshow() error {
 		// May be over kill but check for the format of the headerpattern for ubunto (is this this same
 		// for all linux implementations??? No clue, need to check with Andrea)
 		ubunto_headerpattern,_  := regexp.Compile("Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT")
-		ubunto_bodypattern,_ := regexp.Compile(z"([a-z])\\w+	([0-9A-F]{8})	([0-9A-F]{8})	(000[1-3])	(\\d){1}	(\\d){1}	(\\d){3,4}	([0-9A-F]{8})	(\\d){1}	(\\d){1}	(\\d){1}"))
+		ubunto_bodypattern,_ := regexp.Compile(("([a-z])\\w+	([0-9A-F]{8})	([0-9A-F]{8})	(000[1-3])	(\\d){1}	(\\d){1}	(\\d){3,4}	([0-9A-F]{8})	(\\d){1}	(\\d){1}	(\\d){1}"))
 		ubunto_eofpattern,_ := regexp.Compile("^$")
 
 		// check for the ubunto to line for ipv4
