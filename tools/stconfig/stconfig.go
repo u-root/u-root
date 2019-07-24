@@ -14,9 +14,9 @@ import (
 
 const (
 	// Author is the author
-	Author = "Philipp Deppenwiese"
+	Author = "Philipp Deppenwiese, Jens Drenhaus"
 	// HelpText is the command line help
-	HelpText = "A tool for managing boot configurations"
+	HelpText = "A tool for managing System Transparency boot configurations"
 )
 
 var goversion string
