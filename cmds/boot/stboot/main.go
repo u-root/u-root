@@ -1,14 +1,23 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/u-root/u-root/pkg/bootconfig"
 	"github.com/u-root/u-root/pkg/storage"
@@ -23,9 +32,11 @@ var (
 )
 
 const (
-	eth          = "eth0"
-	bootFilePath = "root/bz.zip"
-	netVarsPath  = "netvars.json"
+	eth            = "eth0"
+	bootFilePath   = "root/bc.zip"
+	netVarsPath    = "netvars.json"
+	rootCACertPath = "/root/LetsEncrypt_Authority_X3.pem"
+	entropyAvail   = "/proc/sys/kernel/random/entropy_avail"
 )
 
 var banner = `
@@ -167,36 +178,91 @@ func main() {
 		}
 	}
 
+	// load CA certificate
+	debug("Load %s as CA certificate", rootCACertPath)
+	rootCertBytes, err := ioutil.ReadFile(rootCACertPath)
+	if err != nil {
+		log.Fatalf("Failed to read CA root certificate file: %s\n", err)
+	}
+	rootCertPem, _ := pem.Decode(rootCertBytes)
+	if rootCertPem.Type != "CERTIFICATE" {
+		log.Fatalf("Failed decoding certificate: Certificate is of the wrong type. PEM Type is: %s\n", rootCertPem.Type)
+	}
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM([]byte(rootCertBytes))
+	if !ok {
+		log.Fatalf("Error parsing CA root certificate")
+	}
+	debug("CA certificate: \n %s", string(rootCertBytes))
+
+	// setup https client
+	client := http.Client{
+		Transport: (&http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig: (&tls.Config{
+				RootCAs: roots,
+			}),
+		}),
+	}
+	// check available kernel entropy
+	e, err := ioutil.ReadFile(entropyAvail)
+	es := strings.TrimSpace(string(e))
+	entr, err := strconv.Atoi(es)
+	if err != nil {
+		log.Fatalf("Cannot evaluate entropy, %v", err)
+	}
+	debug("Available kernel entropy: %d", entr)
+	if entr < 128 {
+		log.Print("WARNING: low entropy!")
+		log.Printf("%s : %d", entropyAvail, entr)
+	}
 	// get remote boot bundle
 	log.Print("Get boot files from " + vars.BootstrapURL)
-	cmd = exec.Command("wget", "-O", bootFilePath, vars.BootstrapURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
+	resp, err := client.Get(vars.BootstrapURL)
+	if err != nil {
+		log.Fatalf("HTTTP GET failed: %v", err)
 	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Fatalf("non-200 HTTP status: %d", resp.StatusCode)
+	}
+	f, err := os.Create(bootFilePath)
+	if err != nil {
+		log.Fatalf("Failed create boot config file: %v", err)
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		log.Fatalf("Failed to write boot config file: %v", err)
+	}
+
 	// create pup_key.pem
 	p := path.Join(os.TempDir(), "pub_key.pem")
 	debug("Write public key from netvars.json to %s", p)
 	debug("Public key is: %s", vars.SignaturePubKey)
 	// If the file doesn't exist, create it, or append to the file
-	f, err := os.Create(p)
+	t, err := os.Create(p)
 	if err != nil {
-		log.Fatalf("Faild to create public key file: %+v", err)
+		log.Fatalf("Failed to create public key file: %+v", err)
 	}
 
-	_, err = f.WriteString("-----BEGIN PUBLIC KEY-----\n")
-	_, err = f.WriteString(vars.SignaturePubKey + "\n")
-	_, err = f.WriteString("-----END PUBLIC KEY-----\n")
+	_, err = t.WriteString("-----BEGIN PUBLIC KEY-----\n")
+	_, err = t.WriteString(vars.SignaturePubKey + "\n")
+	_, err = t.WriteString("-----END PUBLIC KEY-----\n")
 	if err != nil {
-		log.Fatalf("Faild to write public key file: %+v", err)
+		log.Fatalf("Failed to write public key file: %+v", err)
 	}
-	f.Close()
-
-	// err = ioutil.WriteFile(p, []byte("-----BEGIN PUBLIC KEY-----"+vars.SignaturePubKey+"-----END PUBLIC KEY-----"), 0555)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	t.Close()
 
 	// check signature and unpck
 	manifest, outputDir, err := bootconfig.FromZip(bootFilePath, &p)
