@@ -12,14 +12,12 @@ import (
 	"net"
 	"net/url"
 	"path"
-	"regexp"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/ipxe"
 	"github.com/u-root/u-root/pkg/pxe"
-	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -35,17 +33,9 @@ const (
 
 // Netboot boots all interfaces matched by the regex in ifaceNames.
 func Netboot(ifaceNames string) error {
-	ifs, err := netlink.LinkList()
+	filteredIfs, err := dhclient.Interfaces(ifaceNames)
 	if err != nil {
 		return err
-	}
-
-	var filteredIfs []netlink.Link
-	ifregex := regexp.MustCompilePOSIX(ifaceNames)
-	for _, iface := range ifs {
-		if ifregex.MatchString(iface.Attrs().Name) {
-			filteredIfs = append(filteredIfs, iface)
-		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), (1<<dhcpTries)*dhcpTimeout)
