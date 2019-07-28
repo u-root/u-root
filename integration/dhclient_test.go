@@ -9,18 +9,19 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestDhclient(t *testing.T) {
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	network := qemu.NewNetwork()
-	_, scleanup := QEMUTest(t, &Options{
+	_, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name:         "TestDhclient_Server",
-		SerialOutput: TestLineWriter(t, "server"),
+		SerialOutput: vmtest.TestLineWriter(t, "server"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/echo",
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -39,9 +40,9 @@ func TestDhclient(t *testing.T) {
 	})
 	defer scleanup()
 
-	dhcpClient, ccleanup := QEMUTest(t, &Options{
+	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name:         "TestDhclient_Client",
-		SerialOutput: TestLineWriter(t, "client"),
+		SerialOutput: vmtest.TestLineWriter(t, "client"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/cmds/core/init",
@@ -69,14 +70,14 @@ func TestDhclient(t *testing.T) {
 
 func TestPxeboot(t *testing.T) {
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	network := qemu.NewNetwork()
-	dhcpServer, scleanup := QEMUTest(t, &Options{
+	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name:         "TestPxeboot_Server",
-		SerialOutput: TestLineWriter(t, "server"),
+		SerialOutput: vmtest.TestLineWriter(t, "server"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -98,9 +99,9 @@ func TestPxeboot(t *testing.T) {
 	})
 	defer scleanup()
 
-	dhcpClient, ccleanup := QEMUTest(t, &Options{
+	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name:         "TestPxeboot_Client",
-		SerialOutput: TestLineWriter(t, "client"),
+		SerialOutput: vmtest.TestLineWriter(t, "client"),
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/u-root/u-root/cmds/core/ip",
