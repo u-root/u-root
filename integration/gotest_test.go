@@ -19,6 +19,7 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/json2test"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 // testPkgs returns a slice of tests to run.
@@ -31,7 +32,7 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/exp/...",
 		"github.com/u-root/u-root/pkg/...",
 	)
-	cmd.Env = append(os.Environ(), "GOARCH="+TestArch())
+	cmd.Env = append(os.Environ(), "GOARCH="+vmtest.TestArch())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
@@ -114,11 +115,11 @@ func copyRelativeFiles(src string, dst string) error {
 // TestGoTest effectively runs "go test ./..." inside a QEMU instance. The
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
-	SkipWithoutQEMU(t)
+	vmtest.SkipWithoutQEMU(t)
 
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	// Create a temporary directory.
@@ -129,7 +130,7 @@ func TestGoTest(t *testing.T) {
 
 	env := golang.Default()
 	env.CgoEnabled = false
-	env.GOARCH = TestArch()
+	env.GOARCH = vmtest.TestArch()
 
 	// Statically build tests and add them to the temporary directory.
 	pkgs := testPkgs(t)
@@ -169,7 +170,7 @@ func TestGoTest(t *testing.T) {
 	tc := json2test.NewTestCollector()
 
 	// Create the CPIO and start QEMU.
-	q, cleanup := QEMUTest(t, &Options{
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
 			"github.com/u-root/u-root/cmds/core/init",
@@ -183,7 +184,7 @@ func TestGoTest(t *testing.T) {
 			// Collect JSON test events in tc.
 			json2test.EventParser(tc),
 			// Write non-JSON output to log.
-			JSONLessTestLineWriter(t, "serial"),
+			vmtest.JSONLessTestLineWriter(t, "serial"),
 		),
 	})
 	defer cleanup()

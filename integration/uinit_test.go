@@ -6,11 +6,13 @@ package integration
 
 import (
 	"testing"
+
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 // TestHelloWorld runs an init which prints the string "HELLO WORLD" and exits.
 func TestHelloWorld(t *testing.T) {
-	q, cleanup := QEMUTest(t, &Options{
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
 			"github.com/u-root/u-root/cmds/core/init",
@@ -25,7 +27,7 @@ func TestHelloWorld(t *testing.T) {
 
 // TestHelloWorldNegative runs an init which does not print the string "HELLO WORLD".
 func TestHelloWorldNegative(t *testing.T) {
-	q, cleanup := QEMUTest(t, &Options{
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Cmds: []string{
 			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
 			"github.com/u-root/u-root/cmds/core/init",
@@ -39,7 +41,7 @@ func TestHelloWorldNegative(t *testing.T) {
 }
 
 func TestScript(t *testing.T) {
-	q, cleanup := QEMUTest(t, &Options{
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "ShellScript",
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
