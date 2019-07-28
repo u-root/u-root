@@ -179,7 +179,7 @@ func TestGoTest(t *testing.T) {
 			"github.com/u-root/u-root/cmds/core/echo",
 		},
 		TmpDir: tmpDir,
-		SerialOutput: uio.ClosingMultiWriter(
+		SerialOutput: uio.MultiWriteCloser(
 			// Collect JSON test events in tc.
 			json2test.EventParser(tc),
 			// Write non-JSON output to log.

@@ -13,6 +13,8 @@ type multiCloser struct {
 	writers []io.Writer
 }
 
+// Close implements io.Closer and closes any io.Writers that are also
+// io.Closers.
 func (mc *multiCloser) Close() error {
 	var allErr error
 	for _, w := range mc.writers {
@@ -25,7 +27,9 @@ func (mc *multiCloser) Close() error {
 	return allErr
 }
 
-func ClosingMultiWriter(w ...io.Writer) io.WriteCloser {
+// MultiWriteCloser is an io.MultiWriter that has an io.Closer and attempts to
+// close those w's that have optional io.Closers.
+func MultiWriteCloser(w ...io.Writer) io.WriteCloser {
 	return &multiCloser{
 		Writer:  io.MultiWriter(w...),
 		writers: w,
