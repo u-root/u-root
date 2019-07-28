@@ -188,7 +188,7 @@ func TestGoTest(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := q.ExpectTimeout("GoTest Done", 60*time.Second); err != nil {
+	if err := q.ExpectTimeout("GoTest Done", 120*time.Second); err != nil {
 		t.Errorf("Waiting for GoTest Done: %v", err)
 	}
 

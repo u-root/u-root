@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +31,16 @@ var DefaultTimeout = 7 * time.Second
 
 // TimeoutMultiplier increases all timeouts proportionally. Useful when running
 // QEMU on a slow machine.
-var TimeoutMultiplier = 2.0
+var TimeoutMultiplier = 1.0
+
+func init() {
+	if timeoutMultS := os.Getenv("UROOT_QEMU_TIMEOUT_X"); len(timeoutMultS) > 0 {
+		t, err := strconv.ParseFloat(timeoutMultS, 64)
+		if err == nil {
+			TimeoutMultiplier = t
+		}
+	}
+}
 
 // Options are VM start-up parameters.
 type Options struct {
