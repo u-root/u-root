@@ -26,10 +26,10 @@ func testPkgs(t *testing.T) []string {
 	// Packages which do not contain tests (or do not contain tests for the
 	// build target) will still compile a test binary which vacuously pass.
 	cmd := exec.Command("go", "list",
-		"github.com/u-root/u-root/cmds/core/...",
 		"github.com/u-root/u-root/cmds/boot/...",
-		"github.com/u-root/u-root/pkg/...",
+		"github.com/u-root/u-root/cmds/core/...",
 		"github.com/u-root/u-root/cmds/exp/...",
+		"github.com/u-root/u-root/pkg/...",
 	)
 	cmd.Env = append(os.Environ(), "GOARCH="+TestArch())
 	out, err := cmd.CombinedOutput()
