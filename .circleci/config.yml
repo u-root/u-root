@@ -108,7 +108,8 @@ jobs:
       - checkout
       - run:
           name: Test all
-          command: go test -a -ldflags '-s' ./...
+          command: go test -a -timeout 15m -ldflags '-s' ./...
+          no_output_timeout: 15m
       - run:
           name: Test coverage
           command: go test -cover `go list ./... | grep github.com/u-root/u-root/`
