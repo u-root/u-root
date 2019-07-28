@@ -6,6 +6,7 @@ package integration
 
 import (
 	"testing"
+	"time"
 
 	"github.com/u-root/u-root/pkg/vmtest"
 )
@@ -25,6 +26,7 @@ func TestMountKexec(t *testing.T) {
 			"github.com/u-root/u-root/cmds/core/mount",
 			"github.com/u-root/u-root/cmds/core/kexec",
 		},
+		Timeout: 30 * time.Second,
 	})
 	defer cleanup()
 
