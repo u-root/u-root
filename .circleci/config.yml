@@ -3,19 +3,23 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: circleci/golang:1.12
+      - image: uroottest/test-image-amd64:v3.2.4
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      # Double all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 2
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      # Double all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 2
     steps:
       - checkout
       - run:
           name: Test integration
-          command: UROOT_QEMU_TIMEOUT_X=2 go test -a -ldflags '-s' ./integration/...
+          command: go test -a -ldflags '-s' ./integration/...
       - run:
           name: Copying serial output to /tmp/serial
           command: cp -R integration/serial /tmp/serial
