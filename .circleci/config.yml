@@ -15,7 +15,7 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: go test -a -ldflags '-s' ./integration/...
+          command: UROOT_QEMU_TIMEOUT_X=2 go test -a -ldflags '-s' ./integration/...
       - run:
           name: Copying serial output to /tmp/serial
           command: cp -R integration/serial /tmp/serial
