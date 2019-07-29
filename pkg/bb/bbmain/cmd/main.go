@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package main is the busybox main.go template.
 package main
 
 import (
@@ -9,13 +10,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/u-root/u-root/pkg/bb"
+	"github.com/u-root/u-root/pkg/bb/bbmain"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 func run() {
 	name := filepath.Base(os.Args[0])
-	if err := bb.Run(name); err != nil {
+	if err := bbmain.Run(name); err != nil {
 		log.Fatalf("%s: %v", name, err)
 	}
 }
@@ -32,6 +33,6 @@ func init() {
 		os.Args = os.Args[1:]
 		run()
 	}
-	bb.Register("bb", bb.Noop, m)
-	bb.RegisterDefault(bb.Noop, m)
+	bbmain.Register("bb", bbmain.Noop, m)
+	bbmain.RegisterDefault(bbmain.Noop, m)
 }

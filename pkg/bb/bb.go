@@ -1,7 +1,25 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package bb implements a Go source-to-source transformation on pure Go code.
+//
+// This AST transformation does the following:
+//
+// - Takes a Go command's source files and rewrites them into Go package files
+//   without global side effects.
+// - Writes a `main.go` file with a `main()` that calls into the appropriate Go
+//   command package based on `argv[0]`.
+//
+// This allows you to take two Go commands, such as Go implementations of `sl`
+// and `cowsay` and compile them into one binary.
+//
+// Which command is invoked is determined by `argv[0]` or `argv[1]` if
+// `argv[0]` is not recognized.
+//
+// Principally, the AST transformation moves all global side-effects into
+// callable package functions. E.g. `main` becomes `Main`, each `init` becomes
+// `InitN`, and global variable assignments are moved into their own `InitN`.
 package bb
 
 import (
@@ -112,14 +130,14 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 		seenPackages[basePkg] = true
 
 		// TODO: use bbDir to derive import path below or vice versa.
-		if err := RewritePackage(env, pkg, "github.com/u-root/u-root/pkg/bb", importer); err != nil {
+		if err := RewritePackage(env, pkg, "github.com/u-root/u-root/pkg/bb/bbmain", importer); err != nil {
 			return err
 		}
 
 		bbPackages = append(bbPackages, path.Join(pkg, ".bb"))
 	}
 
-	bb, err := NewPackageFromEnv(env, "github.com/u-root/u-root/pkg/bb/cmd", importer)
+	bb, err := NewPackageFromEnv(env, "github.com/u-root/u-root/pkg/bb/bbmain/cmd", importer)
 	if err != nil {
 		return err
 	}
