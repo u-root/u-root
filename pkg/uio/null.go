@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,9 +6,7 @@
 // https://golang.org/src/io/ioutil/ioutil.go.
 // Copyright 2009 The Go Authors. All rights reserved.
 
-// Package null extends ioutil.Discard and adds an io.WriteCloser
-// and WriteNameCloser for use within u-root.
-package null
+package uio
 
 import (
 	"io"
@@ -67,10 +65,6 @@ type WriteNameCloser interface {
 	Name() string
 }
 
-// WriteNameClose is an WriteNameCloser on which all Write and Close calls succeed
+// Discard is a WriteNameCloser on which all Write and Close calls succeed
 // without doing anything, and the Name call returns "null".
-var WriteNameClose WriteNameCloser = devNull(0)
-
-// WriteClose is an WriteCloser on which all Write and Close calls succeed
-// without doing anything.
-var WriteClose io.WriteCloser = devNull(0)
+var Discard WriteNameCloser = devNull(0)
