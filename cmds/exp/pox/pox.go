@@ -138,11 +138,11 @@ func pox() error {
 	if !*debug {
 		defer os.RemoveAll(dir)
 	}
-	m, err := loop.New(*file, dir, "squashfs", 0, "")
+	m, err := loop.New(*file, "squashfs", "")
 	if err != nil {
 		return err
 	}
-	if err := m.Mount(); err != nil {
+	if err := m.Mount(dir, 0); err != nil {
 		return err
 	}
 	c := exec.Command(names[0])
