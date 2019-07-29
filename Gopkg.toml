@@ -20,10 +20,6 @@ ignored = ["github.com/u-root/u-root/bb*"]
   branch = "master"
   name = "github.com/rck/unit"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/u-root/dhcp4"
-
 [prune]
   non-go = true
   go-tests = true
