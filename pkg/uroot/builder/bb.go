@@ -9,8 +9,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/u-root/u-root/pkg/bb"
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/uroot/builder/bb"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
