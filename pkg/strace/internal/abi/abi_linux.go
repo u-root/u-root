@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/u-root/u-root/pkg/binary"
+	"github.com/u-root/u-root/pkg/strace/internal/binary"
 	"golang.org/x/sys/unix"
 )
 
