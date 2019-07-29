@@ -213,6 +213,10 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 			Prefix: "serial",
 		}
 	}
+	if TestArch() == "arm" {
+		//currently, 9p does not work on arm
+		o.UseVVFAT = true
+	}
 
 	qOpts, tmpDir, err := QEMU(o)
 	if err != nil {
