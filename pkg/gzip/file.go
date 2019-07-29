@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/null"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // File is a file path to be compressed or decompressed.
@@ -98,12 +98,12 @@ func (f *File) Process() error {
 	}
 	defer i.Close()
 
-	// Use the null.WriteNameCloser interface so both *os.File and
-	// null.WriteNameClose can be assigned to var o without any type casting below.
-	var o null.WriteNameCloser
+	// Use the uio.WriteNameCloser interface so both *os.File and
+	// uio.WriteNameClose can be assigned to var o without any type casting below.
+	var o uio.WriteNameCloser
 
 	if f.Options.Test {
-		o = null.WriteNameClose
+		o = uio.Discard
 	} else if f.Options.Stdout {
 		o = os.Stdout
 	} else {

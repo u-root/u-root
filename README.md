@@ -20,7 +20,7 @@ u-root embodies four different projects.
     are to make transition to LinuxBoot easier.
 
 *   A way to create very small Go programs using
-    [busybox mode](pkg/uroot/builder/bb/README.md) or source mode (see below).
+    [busybox mode](pkg/bb/README.md) or source mode (see below).
 
 *   A way to create initramfs (an archive of files) to use with Linux kernels.
 
@@ -37,7 +37,7 @@ u-root can create an initramfs in two different modes:
     one in tmpfs. Don't worry: the Go compiler is pretty fast.
 
 *   bb mode: One busybox-like binary comprising all the Go tools you ask to
-    include. See [here for how it works](pkg/uroot/builder/bb/README.md).
+    include. See [here for how it works](pkg/bb/README.md).
 
     In this mode, u-root copies and rewrites the source of the tools you asked
     to include to be able to compile everything into one busybox-like binary.
