@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/abi"
 	"github.com/u-root/u-root/pkg/binary"
+	"github.com/u-root/u-root/pkg/strace/internal/abi"
 	"golang.org/x/sys/unix"
 )
 

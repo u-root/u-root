@@ -14,7 +14,7 @@
 
 package strace
 
-import "github.com/u-root/u-root/pkg/abi"
+import "github.com/u-root/u-root/pkg/strace/internal/abi"
 
 // ReadMessageHeader64 reads a MessageHeader64
 func ReadMessageHeader64(t *Tracer, addr Addr, msg *abi.MessageHeader64) error {
