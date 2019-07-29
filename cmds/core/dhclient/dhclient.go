@@ -17,7 +17,6 @@ import (
 	"context"
 	"flag"
 	"log"
-	"regexp"
 	"time"
 
 	"github.com/u-root/u-root/pkg/dhclient"
@@ -43,22 +42,9 @@ func main() {
 		ifName = flag.Args()[0]
 	}
 
-	ifRE := regexp.MustCompilePOSIX(ifName)
-
-	ifnames, err := netlink.LinkList()
+	filteredIfs, err := dhclient.Interfaces(ifName)
 	if err != nil {
-		log.Fatalf("Can't get list of link names: %v", err)
-	}
-
-	var filteredIfs []netlink.Link
-	for _, iface := range ifnames {
-		if ifRE.MatchString(iface.Attrs().Name) {
-			filteredIfs = append(filteredIfs, iface)
-		}
-	}
-
-	if len(filteredIfs) == 0 {
-		log.Fatalf("No interfaces match %s", ifName)
+		log.Fatal(err)
 	}
 
 	configureAll(filteredIfs)
