@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package boot is the high-level interface for booting another operating
-// system.
+// system from Linux using kexec.
 package boot
 
 import (
