@@ -278,7 +278,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8a178641959d5795f12b28440459c27dcf8764aeb3f2a90bee65ea1dd728407e"
+  digest = "1:bffde63f02a1990954af42b938a41df338158e9a3041518327045549bf1fd885"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -294,7 +294,6 @@
     "openpgp/errors",
     "openpgp/packet",
     "openpgp/s2k",
-    "pbkdf2",
     "poly1305",
     "ripemd160",
     "sha3",
@@ -419,7 +418,6 @@
     "golang.org/x/crypto/openpgp",
     "golang.org/x/crypto/openpgp/errors",
     "golang.org/x/crypto/openpgp/packet",
-    "golang.org/x/crypto/pbkdf2",
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
