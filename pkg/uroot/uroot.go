@@ -425,3 +425,46 @@ func ParseExtraFiles(logger logger.Logger, archive *initramfs.Files, extraFiles 
 	}
 	return nil
 }
+
+// AddCommands adds commands to the build.
+func (o *Opts) AddCommands(c ...Commands) {
+	o.Commands = append(o.Commands, c...)
+}
+
+func (o *Opts) AddBusyBoxCommands(pkgs ...string) {
+	for i, cmds := range o.Commands {
+		if cmds.Builder == builder.BusyBox {
+			o.Commands[i].Packages = append(cmds.Packages, pkgs...)
+			return
+		}
+	}
+
+	// Not found? Add first busybox.
+	o.AddCommands(BusyBoxCmds(pkgs...)...)
+}
+
+// BinaryCmds returns a list of Commands with cmds built as a busybox.
+func BinaryCmds(cmds ...string) []Commands {
+	if len(cmds) == 0 {
+		return nil
+	}
+	return []Commands{
+		{
+			Builder:  builder.Binary,
+			Packages: cmds,
+		},
+	}
+}
+
+// BusyBoxCmds returns a list of Commands with cmds built as a busybox.
+func BusyBoxCmds(cmds ...string) []Commands {
+	if len(cmds) == 0 {
+		return nil
+	}
+	return []Commands{
+		{
+			Builder:  builder.BusyBox,
+			Packages: cmds,
+		},
+	}
+}

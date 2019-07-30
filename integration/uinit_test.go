@@ -9,15 +9,18 @@ package integration
 import (
 	"testing"
 
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 // TestHelloWorld runs an init which prints the string "HELLO WORLD" and exits.
 func TestHelloWorld(t *testing.T) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Cmds: []string{
-			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
-			"github.com/u-root/u-root/cmds/core/init",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+				"github.com/u-root/u-root/cmds/core/init",
+			),
 		},
 	})
 	defer cleanup()
@@ -30,9 +33,11 @@ func TestHelloWorld(t *testing.T) {
 // TestHelloWorldNegative runs an init which does not print the string "HELLO WORLD".
 func TestHelloWorldNegative(t *testing.T) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Cmds: []string{
-			"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
-			"github.com/u-root/u-root/cmds/core/init",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+				"github.com/u-root/u-root/cmds/core/init",
+			),
 		},
 	})
 	defer cleanup()
@@ -45,10 +50,12 @@ func TestHelloWorldNegative(t *testing.T) {
 func TestScript(t *testing.T) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "ShellScript",
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/shutdown",
-			"github.com/u-root/u-root/cmds/core/echo",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/core/echo",
+			),
 		},
 		Uinit: []string{
 			"echo HELLO WORLD",
