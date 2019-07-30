@@ -30,13 +30,17 @@ type Network struct {
 	numVMs uint32
 }
 
+// NewNetwork creates a new QEMU network between QEMU VMs.
+//
+// The network is closed from the world and only between the QEMU VMs.
 func NewNetwork() *Network {
 	return &Network{
 		port: 1234,
 	}
 }
 
-func (n *Network) Cmdline() []string {
+// NewVM returns a Device that can be used with a new QEMU VM.
+func (n *Network) NewVM() Device {
 	if n == nil {
 		return nil
 	}
@@ -59,10 +63,18 @@ func (n *Network) Cmdline() []string {
 	} else {
 		args = append(args, "-net", fmt.Sprintf("socket,listen=127.0.0.1:%d", n.port))
 	}
-	return args
+	return networkImpl{args}
 }
 
-func (*Network) KArgs() []string { return nil }
+type networkImpl struct {
+	args []string
+}
+
+func (n networkImpl) Cmdline() []string {
+	return n.args
+}
+
+func (n networkImpl) KArgs() []string { return nil }
 
 // ReadOnlyDirectory is a Device that exposes a directory as a /dev/sda1
 // readonly vfat partition in the VM.

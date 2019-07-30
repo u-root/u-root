@@ -36,6 +36,9 @@ func TestDhclient(t *testing.T) {
 		},
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
 		},
 		Uinit: []string{
 			"ip link set eth0 up",
@@ -43,7 +46,6 @@ func TestDhclient(t *testing.T) {
 			"ip route add 0.0.0.0/0 dev eth0",
 			"pxeserver",
 		},
-		Network: network,
 	})
 	defer scleanup()
 
@@ -60,6 +62,9 @@ func TestDhclient(t *testing.T) {
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
 			Timeout:      30 * time.Second,
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
 		},
 		Uinit: []string{
 			"dhclient -ipv6=false -v",
@@ -67,7 +72,6 @@ func TestDhclient(t *testing.T) {
 			"sleep 5",
 			"shutdown -h",
 		},
-		Network: network,
 	})
 	defer ccleanup()
 
@@ -106,10 +110,12 @@ func TestPxeboot(t *testing.T) {
 			"ls -l /pxeroot",
 			"pxeserver -dir=/pxeroot",
 		},
-		Network: network,
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
 			Timeout:      15 * time.Second,
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
 		},
 	})
 	defer scleanup()
@@ -128,10 +134,12 @@ func TestPxeboot(t *testing.T) {
 			"pxeboot --dry-run --no-load -v",
 			"shutdown -h",
 		},
-		Network: network,
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
 			Timeout:      15 * time.Second,
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
 		},
 	})
 	defer ccleanup()
