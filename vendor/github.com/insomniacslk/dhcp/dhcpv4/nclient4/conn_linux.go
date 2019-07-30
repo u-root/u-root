@@ -140,14 +140,14 @@ func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		udpHdr := UDP(buf.Consume(udpHdrLen))
 
 		addr := &net.UDPAddr{
-			IP:   net.IP(ipHdr.DestinationAddress()),
+			IP:   ipHdr.DestinationAddress(),
 			Port: int(udpHdr.DestinationPort()),
 		}
 		if !udpMatch(addr, upc.boundAddr) {
 			continue
 		}
 		srcAddr := &net.UDPAddr{
-			IP:   net.IP(ipHdr.SourceAddress()),
+			IP:   ipHdr.SourceAddress(),
 			Port: int(udpHdr.SourcePort()),
 		}
 		// Extra padding after end of IP packet should be ignored,

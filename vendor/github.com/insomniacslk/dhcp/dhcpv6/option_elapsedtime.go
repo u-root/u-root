@@ -21,7 +21,7 @@ func (op *OptElapsedTime) Code() OptionCode {
 // ToBytes marshals this option to bytes.
 func (op *OptElapsedTime) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write16(uint16(op.ElapsedTime))
+	buf.Write16(op.ElapsedTime)
 	return buf.Data()
 }
 

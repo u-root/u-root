@@ -22,7 +22,7 @@ func (op *OptVendorClass) Code() OptionCode {
 // ToBytes serializes the option and returns it as a sequence of bytes
 func (op *OptVendorClass) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write32(uint32(op.EnterpriseNumber))
+	buf.Write32(op.EnterpriseNumber)
 	for _, data := range op.Data {
 		buf.Write16(uint16(len(data)))
 		buf.WriteBytes(data)
