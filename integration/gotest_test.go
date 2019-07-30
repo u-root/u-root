@@ -78,5 +78,5 @@ func testPkgs(t *testing.T) []string {
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
 	pkgs := testPkgs(t)
-	vmtest.GolangTest(t, pkgs)
+	vmtest.GolangTest(t, pkgs, nil)
 }
