@@ -324,7 +324,7 @@ func (es manyErrors) Error() string {
 // ConfigureAll gets DHCP config and configures all ifNames.
 //
 // ifName is a regular expression for interface names.
-func ConfigureAll(ctx context.Context, ifName string, c Config) error {
+func ConfigureAll(ctx context.Context, ifName string, c Config, ipv4, ipv6 bool) error {
 	ifs, err := Interfaces(ifName)
 	if err != nil {
 		return err
@@ -333,8 +333,7 @@ func ConfigureAll(ctx context.Context, ifName string, c Config) error {
 	nctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Do both v4 and v6.
-	r := SendRequests(nctx, ifs, true, true, c)
+	r := SendRequests(nctx, ifs, ipv4, ipv6, c)
 
 	var es manyErrors
 	for {

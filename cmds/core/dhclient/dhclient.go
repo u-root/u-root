@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -42,51 +41,16 @@ func main() {
 		ifName = flag.Args()[0]
 	}
 
-	filteredIfs, err := dhclient.Interfaces(ifName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	configureAll(filteredIfs)
-}
-
-func configureAll(ifs []netlink.Link) {
-	packetTimeout := time.Duration(*timeout) * time.Second
-
-	ctx := context.Background()
-	if *retry >= 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, packetTimeout*time.Duration(1<<uint(*retry)))
-		defer cancel()
-	}
-
 	c := dhclient.Config{
-		Timeout: packetTimeout,
+		Timeout: time.Duration(*timeout) * time.Second,
 		Retries: *retry,
 	}
 	if *verbose {
 		c.LogLevel = dhclient.LogSummary
 	}
-	r := dhclient.SendRequests(ctx, ifs, *ipv4, *ipv6, c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("Done with dhclient: %v", ctx.Err())
-			return
-
-		case result, ok := <-r:
-			if !ok {
-				log.Printf("Configured all interfaces.")
-				return
-			}
-			if result.Err != nil {
-				log.Printf("Could not configure %s: %v", result.Interface.Attrs().Name, result.Err)
-			} else if err := result.Lease.Configure(); err != nil {
-				log.Printf("Could not configure %s: %v", result.Interface.Attrs().Name, err)
-			} else {
-				log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
-			}
-		}
+	if err := dhclient.ConfigureAll(context.Background(), ifName, c, *ipv4, *ipv6); err != nil {
+		log.Fatalf("ConfigureAll(%s) failed: %v", ifName, err)
+	} else {
+		log.Printf("Configured all interfaces.")
 	}
 }
