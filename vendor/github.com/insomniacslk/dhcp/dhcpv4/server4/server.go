@@ -90,11 +90,24 @@ func (s *Server) Serve() error {
 			log.Printf("Error parsing DHCPv4 request: %v", err)
 			continue
 		}
-		go s.Handler(s.conn, peer, m)
+
+		upeer, ok := peer.(*net.UDPAddr)
+		if !ok {
+			log.Printf("Not a UDP connection? Peer is %s", peer)
+			continue
+		}
+		// Set peer to broadcast if the client did not have an IP.
+		if upeer.IP == nil || upeer.IP.Equal(net.IPv4zero) {
+			upeer = &net.UDPAddr{
+				IP:   net.IPv4bcast,
+				Port: upeer.Port,
+			}
+		}
+		go s.Handler(s.conn, upeer, m)
 	}
 }
 
-// Close sends a termination request to the server, and closes the UDP listener
+// Close sends a termination request to the server, and closes the UDP listener.
 func (s *Server) Close() error {
 	return s.conn.Close()
 }
