@@ -13,7 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uio"
@@ -91,10 +90,6 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	o.BuildOpts.AddBusyBoxCommands(
 		"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
 		"github.com/u-root/u-root/cmds/core/init",
-		// Used by different tests.
-		"github.com/u-root/u-root/cmds/core/ls",
-		"github.com/u-root/u-root/cmds/core/sleep",
-		"github.com/u-root/u-root/cmds/core/echo",
 	)
 
 	tc := json2test.NewTestCollector()
@@ -112,7 +107,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	q, cleanup := QEMUTest(t, o)
 	defer cleanup()
 
-	if err := q.ExpectTimeout("GoTest Done", 120*time.Second); err != nil {
+	if err := q.Expect("GoTest Done"); err != nil {
 		t.Errorf("Waiting for GoTest Done: %v", err)
 	}
 

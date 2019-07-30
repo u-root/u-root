@@ -11,7 +11,10 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -49,6 +52,7 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/crypto",
 		"github.com/u-root/u-root/pkg/tarutil",
 		"github.com/u-root/u-root/pkg/ldd",
+		"github.com/u-root/u-root/pkg/loop",
 		//"github.com/u-root/u-root/pkg/pty",
 
 		// Missing xzcat in VM.
@@ -78,5 +82,19 @@ func testPkgs(t *testing.T) []string {
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
 	pkgs := testPkgs(t)
-	vmtest.GolangTest(t, pkgs, nil)
+
+	o := &vmtest.Options{
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				// Used by different tests.
+				"github.com/u-root/u-root/cmds/core/ls",
+				"github.com/u-root/u-root/cmds/core/sleep",
+				"github.com/u-root/u-root/cmds/core/echo",
+			),
+		},
+		QEMUOpts: qemu.Options{
+			Timeout: 120 * time.Second,
+		},
+	}
+	vmtest.GolangTest(t, pkgs, o)
 }
