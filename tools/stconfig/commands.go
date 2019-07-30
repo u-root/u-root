@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path"
 
@@ -34,23 +33,27 @@ func GenKeys() error {
 // binaries and a manifest. The files to be included are taken from the
 // path specified in the provided manifest.json
 func PackBootConfiguration() error {
-	return bootconfig.ToZip(*packOutputFilename, *packManifest, packSignPrivateKeyFile, []byte(*packSignPassphrase))
+	if *createSignZipPrivKey == "" {
+		// ToZip does not sign the packed boot file, if key path is nil
+		createSignZipPrivKey = nil
+	}
+	return bootconfig.ToZip(*createOutputFilename, *createManifest, createSignZipPrivKey, []byte(*createSignZipPassphrase))
 }
 
 // UnpackBootConfiguration unpacks a boot configuration file and returns the
 // file path of a directory containing the data
-func UnpackBootConfiguration() error {
-	if *unpackVerifyPublicKeyFile == "" {
-		// FromZip expects that no key is provided, only if pointer is nil
-		unpackVerifyPublicKeyFile = nil
-	}
+// func UnpackBootConfiguration() error {
+// 	if *unpackVerifyPublicKeyFile == "" {
+// 		// FromZip expects that no key is provided, only if pointer is nil
+// 		unpackVerifyPublicKeyFile = nil
+// 	}
 
-	_, outputDir, err := bootconfig.FromZip(*unpackInputFilename, unpackVerifyPublicKeyFile)
-	if err != nil {
-		return err
-	}
+// 	_, outputDir, err := bootconfig.FromZip(*unpackInputFilename, unpackVerifyPublicKeyFile)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	fmt.Println("Boot configuration unpacked into: " + outputDir)
+// 	fmt.Println("Boot configuration unpacked into: " + outputDir)
 
-	return nil
-}
+// 	return nil
+// }
