@@ -15,6 +15,8 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -27,17 +29,21 @@ func testMultiboot(t *testing.T, kernel string) {
 	}
 
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Files: []string{
-			src + ":kernel",
-		},
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/kexec",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/kexec",
+			),
+			ExtraFiles: []string{
+				src + ":kernel",
+			},
 		},
 		Uinit: []string{
 			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 		},
-		SerialOutput: &serial,
+		QEMUOpts: qemu.Options{
+			SerialOutput: &serial,
+		},
 	})
 	defer cleanup()
 

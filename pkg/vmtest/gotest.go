@@ -16,7 +16,9 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest/internal/json2test"
 )
 
@@ -82,21 +84,25 @@ func GolangTest(t *testing.T, pkgs []string) {
 
 	// Create the CPIO and start QEMU.
 	q, cleanup := QEMUTest(t, &Options{
-		Cmds: []string{
-			"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
-			"github.com/u-root/u-root/cmds/core/init",
-			// Used by different tests.
-			"github.com/u-root/u-root/cmds/core/ls",
-			"github.com/u-root/u-root/cmds/core/sleep",
-			"github.com/u-root/u-root/cmds/core/echo",
+		BuildOpts: uroot.Opts{
+			Commands: append(uroot.BinaryCmds("cmd/test2json"), uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
+				"github.com/u-root/u-root/cmds/core/init",
+				// Used by different tests.
+				"github.com/u-root/u-root/cmds/core/ls",
+				"github.com/u-root/u-root/cmds/core/sleep",
+				"github.com/u-root/u-root/cmds/core/echo",
+			)...),
+			TempDir: tmpDir,
 		},
-		TmpDir: tmpDir,
-		SerialOutput: uio.MultiWriteCloser(
-			// Collect JSON test events in tc.
-			json2test.EventParser(tc),
-			// Write non-JSON output to log.
-			JSONLessTestLineWriter(t, "serial"),
-		),
+		QEMUOpts: qemu.Options{
+			SerialOutput: uio.MultiWriteCloser(
+				// Collect JSON test events in tc.
+				json2test.EventParser(tc),
+				// Write non-JSON output to log.
+				JSONLessTestLineWriter(t, "serial"),
+			),
+		},
 	})
 	defer cleanup()
 

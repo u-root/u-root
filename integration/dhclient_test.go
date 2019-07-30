@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -22,15 +23,19 @@ func TestDhclient(t *testing.T) {
 
 	network := qemu.NewNetwork()
 	_, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name:         "TestDhclient_Server",
-		SerialOutput: vmtest.TestLineWriter(t, "server"),
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/echo",
-			"github.com/u-root/u-root/cmds/core/ip",
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/sleep",
-			"github.com/u-root/u-root/cmds/core/shutdown",
-			"github.com/u-root/u-root/integration/testcmd/pxeserver",
+		Name: "TestDhclient_Server",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/echo",
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/sleep",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/integration/testcmd/pxeserver",
+			),
+		},
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "server"),
 		},
 		Uinit: []string{
 			"ip link set eth0 up",
@@ -43,13 +48,18 @@ func TestDhclient(t *testing.T) {
 	defer scleanup()
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name:         "TestDhclient_Client",
-		SerialOutput: vmtest.TestLineWriter(t, "client"),
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/ip",
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/dhclient",
-			"github.com/u-root/u-root/cmds/core/shutdown",
+		Name: "TestDhclient_Client",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/dhclient",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+			),
+		},
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "client"),
+			Timeout:      30 * time.Second,
 		},
 		Uinit: []string{
 			"dhclient -ipv6=false -v",
@@ -58,7 +68,6 @@ func TestDhclient(t *testing.T) {
 			"shutdown -h",
 		},
 		Network: network,
-		Timeout: 30 * time.Second,
 	})
 	defer ccleanup()
 
@@ -78,13 +87,17 @@ func TestPxeboot(t *testing.T) {
 
 	network := qemu.NewNetwork()
 	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name:         "TestPxeboot_Server",
-		SerialOutput: vmtest.TestLineWriter(t, "server"),
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/ip",
-			"github.com/u-root/u-root/cmds/core/ls",
-			"github.com/u-root/u-root/integration/testcmd/pxeserver",
+		Name: "TestPxeboot_Server",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/ls",
+				"github.com/u-root/u-root/integration/testcmd/pxeserver",
+			),
+			ExtraFiles: []string{
+				"./testdata/pxe:pxeroot",
+			},
 		},
 		Uinit: []string{
 			"ip addr add 192.168.0.1/24 dev eth0",
@@ -93,29 +106,33 @@ func TestPxeboot(t *testing.T) {
 			"ls -l /pxeroot",
 			"pxeserver -dir=/pxeroot",
 		},
-		Files: []string{
-			"./testdata/pxe:pxeroot",
-		},
 		Network: network,
-		Timeout: 15 * time.Second,
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "server"),
+			Timeout:      15 * time.Second,
+		},
 	})
 	defer scleanup()
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name:         "TestPxeboot_Client",
-		SerialOutput: vmtest.TestLineWriter(t, "client"),
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/ip",
-			"github.com/u-root/u-root/cmds/core/shutdown",
-			"github.com/u-root/u-root/cmds/boot/pxeboot",
+		Name: "TestPxeboot_Client",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/boot/pxeboot",
+			),
 		},
 		Uinit: []string{
 			"pxeboot --dry-run --no-load -v",
 			"shutdown -h",
 		},
 		Network: network,
-		Timeout: 15 * time.Second,
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "client"),
+			Timeout:      15 * time.Second,
+		},
 	})
 	defer ccleanup()
 
