@@ -16,7 +16,6 @@ import (
 	"path"
 
 	"github.com/u-root/u-root/pkg/crypto"
-	"golang.org/x/crypto/ed25519"
 )
 
 var (
@@ -45,6 +44,7 @@ func (r *memoryZipReader) ReadAt(p []byte, offset int64) (n int, err error) {
 	return n, err
 }
 
+// FIXME:
 // FromZip tries to extract a boot configuration from a ZIP file after verifying
 // its signature with the provided public key file. The signature is expected to
 // be appended to the ZIP file and have fixed length `ed25519.SignatureSize` .
@@ -52,7 +52,7 @@ func (r *memoryZipReader) ReadAt(p []byte, offset int64) (n int, err error) {
 // extracted, if successful.
 // No decoder (e.g. JSON, ZIP) or other function parsing the input file is called
 // before verifying the signature.
-func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
+func FromZip(filename string) (*Manifest, string, error) {
 	// load the whole zip file in memory - we need it anyway for the signature
 	// matching.
 	// TODO refuse to read if too big?
@@ -61,51 +61,8 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 		return nil, "", err
 	}
 	crypto.TryMeasureData(crypto.BlobPCR, data, filename)
-	var zipbytes []byte
-	switch meta := data[len(data)-1:][0]; meta {
-	case signed:
-		log.Printf("Zip archive is signed")
-		zipbytes = data[:len(data)-(ed25519.SignatureSize+1)]
-		// Load the public key and, if a valid one is specified, match the
-		// signature. The signature is appended to the ZIP file, and can be present
-		// or not. A ZIP file is still valid if arbitrary content is appended after
-		// its end.
-		if pubkeyfile != nil {
-			pubkey, err := crypto.LoadPublicKeyFromFile(*pubkeyfile)
-			if err != nil {
-				return nil, "", err
-			}
+	zipbytes := data
 
-			// Load the signature.
-			// The signature is appended to the zip file and has length
-			// `ed25519.SignatureSize`. We read these bytes from the end of the file and
-			// treat them as the attached signature.
-			signature := data[len(data)-ed25519.SignatureSize:]
-			if len(signature) != ed25519.SignatureSize {
-				return nil, "", fmt.Errorf("Short read when reading signature: want %d bytes, got %d", ed25519.SignatureSize, len(signature))
-			}
-
-			// Verify the signature against the public key and the zip file bytes
-			if ok := ed25519.Verify(pubkey, zipbytes, signature); !ok {
-				return nil, "", fmt.Errorf("Invalid ed25519 signature for file %s", filename)
-			}
-			log.Printf("Signature is valid")
-		} else {
-			log.Printf("Skip verification")
-		}
-	case notSigned:
-		if pubkeyfile == nil {
-			log.Printf("Zip archive is not signed, continue")
-			zipbytes = data[:len(data)-1]
-		} else {
-			return nil, "", errors.New("Zip archive is not signed")
-		}
-	default:
-		return nil, "", errors.New("Unknown metadata appended to zip archive")
-	}
-
-	// At this point the signature is valid. Unzip the file and decode the boot
-	// configuration.
 	r, err := zip.NewReader(&memoryZipReader{Content: zipbytes}, int64(len(zipbytes)))
 	if err != nil {
 		return nil, "", err
@@ -161,13 +118,14 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 	return manifest, tempDir, nil
 }
 
+// FIXME:
 // ToZip tries to pack all files specifoed in the the provided manifest.json
 // into a zip archive. An error is returned, if the files (kernel, initrd, etc)
 // doesn't exist at the paths written inside the manifest.json relative to its
 // location. Optionally , if privkeyfile is not nil, after creating the archive an ed25519 signature is added to the
 // archive. A copy of manifest.json is included in the final with adopted path of the
 // bootfiles to mach teir location relative to the archive root.
-func ToZip(output string, manifest string, privkeyfile *string, passphrase []byte) error {
+func ToZip(output string, manifest string) error {
 	// Get manifest from file. Make sure the file is named accordingliy, since
 	// FromZip will search 'manifest.json' while extraction.
 	if base := path.Base(manifest); base != "manifest.json" {
@@ -241,33 +199,6 @@ func ToZip(output string, manifest string, privkeyfile *string, passphrase []byt
 	err = w.Close()
 	if err != nil {
 		return err
-	}
-
-	if privkeyfile != nil {
-		// Measure buf
-		privateKey, err := crypto.LoadPrivateKeyFromFile(*privkeyfile, passphrase)
-		if err != nil {
-			return err
-		}
-		signature := ed25519.Sign(privateKey, buf.Bytes())
-		if len(signature) <= 0 {
-			return fmt.Errorf("Signing boot configuration failed")
-		}
-
-		// Add signature
-		if n, _ := buf.Write(signature); n < len(signature) {
-			return fmt.Errorf("Adding signature to archive faild")
-		}
-
-		// Add metadata
-		if err = buf.WriteByte(signed); err != nil {
-			return fmt.Errorf("Adding metadata to archive faild")
-		}
-	} else {
-		// Add metadata
-		if err = buf.WriteByte(notSigned); err != nil {
-			return fmt.Errorf("Adding metadata to archive faild")
-		}
 	}
 
 	// Write buf to disk

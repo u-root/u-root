@@ -33,11 +33,7 @@ func GenKeys() error {
 // binaries and a manifest. The files to be included are taken from the
 // path specified in the provided manifest.json
 func PackBootConfiguration() error {
-	if *createSignZipPrivKey == "" {
-		// ToZip does not sign the packed boot file, if key path is nil
-		createSignZipPrivKey = nil
-	}
-	return bootconfig.ToZip(*createOutputFilename, *createManifest, createSignZipPrivKey, []byte(*createSignZipPassphrase))
+	return bootconfig.ToZip(*createOutputFilename, *createManifest)
 }
 
 // UnpackBootConfiguration unpacks a boot configuration file and returns the
