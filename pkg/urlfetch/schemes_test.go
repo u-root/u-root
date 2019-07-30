@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package pxe
+package urlfetch
 
 import (
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
-	"reflect"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-func TestGetFile(t *testing.T) {
+func TestFetch(t *testing.T) {
 	for i, tt := range []struct {
 		scheme func() *MockScheme
 		url    *url.URL
@@ -37,8 +36,7 @@ func TestGetFile(t *testing.T) {
 		},
 		{
 			scheme: func() *MockScheme {
-				s := NewMockScheme("fooftp")
-				return s
+				return NewMockScheme("fooftp")
 			},
 			url: &url.URL{
 				Scheme: "nosuch",
@@ -47,8 +45,7 @@ func TestGetFile(t *testing.T) {
 		},
 		{
 			scheme: func() *MockScheme {
-				s := NewMockScheme("fooftp")
-				return s
+				return NewMockScheme("fooftp")
 			},
 			url: &url.URL{
 				Scheme: "fooftp",
@@ -75,16 +72,16 @@ func TestGetFile(t *testing.T) {
 			s := make(Schemes)
 			s.Register(fs.Scheme, fs)
 
-			// Test both GetFile and LazyGetFile.
+			// Test both Fetch and LazyFetch.
 			for _, f := range []func(url *url.URL) (io.ReaderAt, error){
-				s.GetFile,
-				s.LazyGetFile,
+				s.Fetch,
+				s.LazyFetch,
 			} {
 				r, err := f(tt.url)
 				if uErr, ok := err.(*URLError); ok && uErr.Err != tt.err {
-					t.Errorf("GetFile() = %v, want %v", uErr.Err, tt.err)
+					t.Errorf("Fetch() = %v, want %v", uErr.Err, tt.err)
 				} else if !ok && err != tt.err {
-					t.Errorf("GetFile() = %v, want %v", err, tt.err)
+					t.Errorf("Fetch() = %v, want %v", err, tt.err)
 				}
 				if err != nil {
 					return
@@ -94,54 +91,8 @@ func TestGetFile(t *testing.T) {
 					t.Errorf("bytes.Buffer read returned an error? %v", err)
 				}
 				if got, want := string(content), tt.want; got != want {
-					t.Errorf("GetFile() = %v, want %v", got, want)
+					t.Errorf("Fetch() = %v, want %v", got, want)
 				}
-			}
-		})
-	}
-}
-
-func TestParseURL(t *testing.T) {
-	for i, tt := range []struct {
-		url  string
-		wd   *url.URL
-		err  bool
-		want *url.URL
-	}{
-		{
-			url: "default",
-			wd: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg",
-			},
-			want: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg/default",
-			},
-		},
-		{
-			url: "http://192.168.2.1/configs/your-machine.cfg",
-			wd: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg",
-			},
-			want: &url.URL{
-				Scheme: "http",
-				Host:   "192.168.2.1",
-				Path:   "/configs/your-machine.cfg",
-			},
-		},
-	} {
-		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
-			got, err := parseURL(tt.url, tt.wd)
-			if (err != nil) != tt.err {
-				t.Errorf("Wanted error (%v), but got %v", tt.err, err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseURL() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

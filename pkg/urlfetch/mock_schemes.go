@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package pxe
+package urlfetch
 
 import (
 	"errors"
@@ -20,7 +20,7 @@ type MockScheme struct {
 	// hosts is a map of host -> relative filename to host -> file contents.
 	hosts map[string]map[string]string
 
-	// numCalled is a map of URL string -> number of times GetFile has been
+	// numCalled is a map of URL string -> number of times Fetch has been
 	// called on that URL.
 	numCalled map[string]uint
 }
@@ -62,8 +62,8 @@ var (
 	ErrNoSuchFile = errors.New("no such file exists on this host")
 )
 
-// GetFile implements FileScheme.GetFile.
-func (m *MockScheme) GetFile(u *url.URL) (io.ReaderAt, error) {
+// Fetch implements FileScheme.Fetch.
+func (m *MockScheme) Fetch(u *url.URL) (io.ReaderAt, error) {
 	url := u.String()
 	if _, ok := m.numCalled[url]; ok {
 		m.numCalled[url]++

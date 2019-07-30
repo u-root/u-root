@@ -2,6 +2,21 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Command pxeboot implements PXE-based booting.
+//
+// pxeboot combines a DHCP client with a TFTP/HTTP client to download files as
+// well as pxelinux and iPXE configuration file parsing.
+//
+// PXE-based booting requests a DHCP lease, and looks at the BootFileName and
+// ServerName options (which may be embedded in the original BOOTP message, or
+// as option codes) to find something to boot.
+//
+// This BootFileName may point to
+//
+// - an iPXE script beginning with #!ipxe
+//
+// - a pxelinux.0, in which case we will ignore the pxelinux and try to parse
+//   pxelinux.cfg/<files>
 package main
 
 import (
@@ -98,9 +113,9 @@ func Netboot(ifaceNames string) error {
 // ip, and mac address to search for pxe configs.
 func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
 	// Attempt to read the given boot path as an ipxe config file.
-	ipc, err := ipxe.NewConfig(uri)
+	ipc, err := ipxe.ParseConfig(uri)
 	if err == nil {
-		return ipc.BootImage, nil
+		return ipc, nil
 	}
 	log.Printf("Falling back to pxe boot: %v", err)
 
@@ -110,9 +125,8 @@ func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxIma
 		Host:   uri.Host,
 		Path:   path.Dir(uri.Path),
 	}
-
-	pc := pxe.NewConfig(wd)
-	if err := pc.FindConfigFile(mac, ip); err != nil {
+	pc, err := pxe.ParseConfig(wd, mac, ip)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
 	}
 
