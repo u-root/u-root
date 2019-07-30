@@ -59,8 +59,10 @@ func TestTczclient(t *testing.T) {
 			},
 			QEMUOpts: qemu.Options{
 				SerialOutput: &sb,
+				Devices: []qemu.Device{
+					network.NewVM(),
+				},
 			},
-			Network: network,
 		})
 		if err := q.Expect("shutdown"); err != nil {
 			t.Logf("got %v", err)

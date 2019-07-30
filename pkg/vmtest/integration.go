@@ -85,9 +85,6 @@ type Options struct {
 	// Logger logs build statements.
 	Logger logger.Logger
 
-	// Network is the VM's network.
-	Network *qemu.Network
-
 	// Extra environment variables to set when building (used by u-bmc)
 	ExtraBuildEnv []string
 
@@ -343,7 +340,7 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 	} else {
 		dir = qemu.P9Directory{Dir: o.BuildOpts.TempDir}
 	}
-	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, o.Network, dir)
+	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, dir)
 
 	return &o.QEMUOpts, o.BuildOpts.TempDir, nil
 }
