@@ -27,8 +27,9 @@ import (
 // implement booter interface
 
 var (
-	dryRun  = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
-	doDebug = flag.Bool("d", false, "Print debug output")
+	verifyZip = flag.Bool("verify-zip", false, "If set, the archive will not be processed without a valid signature appended")
+	dryRun    = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
+	doDebug   = flag.Bool("d", false, "Print debug output")
 )
 
 const (
@@ -246,26 +247,28 @@ func main() {
 		log.Fatalf("Failed to write boot config file: %v", err)
 	}
 
-	// create pup_key.pem
-	p := path.Join(os.TempDir(), "pub_key.pem")
-	debug("Write public key from netvars.json to %s", p)
-	debug("Public key is: %s", vars.SignaturePubKey)
-	// If the file doesn't exist, create it, or append to the file
-	t, err := os.Create(p)
-	if err != nil {
-		log.Fatalf("Failed to create public key file: %+v", err)
+	var zipPubkeyPath *string
+	if *verifyZip {
+		// create pup_key.pem
+		zipPubkeyPath := path.Join(os.TempDir(), "pub_key.pem")
+		debug("Write public key from netvars.json to %s", zipPubkeyPath)
+		debug("Public key is: %s", vars.SignaturePubKey)
+		t, err := os.Create(zipPubkeyPath)
+		if err != nil {
+			log.Fatalf("Failed to create public key file: %+v", err)
+		}
+
+		_, err = t.WriteString("-----BEGIN PUBLIC KEY-----\n")
+		_, err = t.WriteString(vars.SignaturePubKey + "\n")
+		_, err = t.WriteString("-----END PUBLIC KEY-----\n")
+		if err != nil {
+			log.Fatalf("Failed to write public key file: %+v", err)
+		}
+		t.Close()
 	}
 
-	_, err = t.WriteString("-----BEGIN PUBLIC KEY-----\n")
-	_, err = t.WriteString(vars.SignaturePubKey + "\n")
-	_, err = t.WriteString("-----END PUBLIC KEY-----\n")
-	if err != nil {
-		log.Fatalf("Failed to write public key file: %+v", err)
-	}
-	t.Close()
-
-	// check signature and unpck
-	manifest, outputDir, err := bootconfig.FromZip(bootFilePath, &p)
+	// check signature if necessary and unpck
+	manifest, outputDir, err := bootconfig.FromZip(bootFilePath, zipPubkeyPath)
 	if err != nil {
 		log.Fatal(err)
 	}
