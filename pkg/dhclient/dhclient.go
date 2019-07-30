@@ -306,3 +306,57 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 	}()
 	return r
 }
+
+type manyErrors []error
+
+func (es *manyErrors) add(e error) {
+	*es = append(*es, e)
+}
+
+func (es manyErrors) Error() string {
+	var f []string
+	for _, e := range es {
+		f = append(f, e.Error())
+	}
+	return fmt.Sprintf("multiple errors occured: %s", strings.Join(f, ";\n"))
+}
+
+// ConfigureAll gets DHCP config and configures all ifNames.
+//
+// ifName is a regular expression for interface names.
+func ConfigureAll(ctx context.Context, ifName string, c Config) error {
+	ifs, err := Interfaces(ifName)
+	if err != nil {
+		return err
+	}
+
+	nctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Do both v4 and v6.
+	r := SendRequests(nctx, ifs, true, true, c)
+
+	var es manyErrors
+	for {
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == nil && len(es) == 0 {
+				return nil
+			}
+			es.add(fmt.Errorf("dhclient is done and at least one interface wasn't configured: %v", ctx.Err()))
+			return es
+
+		case result, ok := <-r:
+			if !ok {
+				return es
+			}
+			if result.Err != nil {
+				es.add(fmt.Errorf("could not configure %s: %v", result.Interface.Attrs().Name, result.Err))
+			} else if err := result.Lease.Configure(); err != nil {
+				es.add(fmt.Errorf("could not configure %s: %v", result.Interface.Attrs().Name, err))
+			} else {
+				log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
+			}
+		}
+	}
+}
