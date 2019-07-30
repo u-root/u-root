@@ -1,0 +1,17 @@
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Product Name: UX305LA
+	Version: 1.0       
+	Serial Number: FCN0CJ03468352B     
+	UUID: 850F3E82-9F38-694A-8840-2F8B0CF5D3D0
+	Wake-up Type: Power Switch
+	SKU Number: ASUS-NotebookSKU
+	Family: UX
+
+Handle 0x000c, DMI type 32, 20 bytes
+Unsupported
+	Header and Data:
+		20 14 0C 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00
+
