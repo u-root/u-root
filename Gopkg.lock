@@ -108,6 +108,19 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:79010d143b3a132808a76a612ad34b878a1020a30016a60cd879d60bf63308e1"
+  name = "github.com/hugelgupf/p9"
+  packages = [
+    "localfs",
+    "p9",
+    "unimplfs",
+    "vecnet",
+  ]
+  pruneopts = "NUT"
+  revision = "7ba0920fba11f7a99b28401f1a01852643f3717d"
+
+[[projects]]
+  branch = "master"
   digest = "1:9e9d2460ed0526ccf14606cf378a608a7a1a3c538f368e9989c8e0d70837cf56"
   name = "github.com/insomniacslk/dhcp"
   packages = [
@@ -417,6 +430,8 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-tpm/tpm",
     "github.com/google/goexpect",
+    "github.com/hugelgupf/p9/localfs",
+    "github.com/hugelgupf/p9/p9",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv4/server4",

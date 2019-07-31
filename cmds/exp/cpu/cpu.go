@@ -23,6 +23,8 @@ import (
 	// We use this ssh because it implements port redirection.
 	// It can not, however, unpack password-protected keys yet.
 	"github.com/gliderlabs/ssh"
+	"github.com/hugelgupf/p9/localfs"
+	"github.com/hugelgupf/p9/p9"
 	"github.com/kr/pty" // TODO: get rid of krpty
 	"github.com/u-root/u-root/pkg/termios"
 	"github.com/u-root/u-root/pkg/uroot/util"
@@ -37,14 +39,14 @@ var (
 	pubKeyFile  = flag.String("pk", "key.pub", "file for public key")
 	port        = flag.String("sp", "2222", "ssh default port")
 
-	debug     = flag.Bool("d", false, "enable debug prints")
+	debug     = flag.Bool("d", true, "enable debug prints")
 	runAsInit = flag.Bool("init", false, "run as init (Debug only; normal test is if we are pid 1")
 	v         = func(string, ...interface{}) {}
 	remote    = flag.Bool("remote", false, "indicates we are the remote side of the cpu session")
 	network   = flag.String("network", "tcp", "network to use")
 	host      = flag.String("h", "localhost", "host to use")
 	keyFile   = flag.String("key", filepath.Join(os.Getenv("HOME"), ".ssh/cpu_rsa"), "key file")
-	srv9p     = flag.String("srv", "unpfs", "what server to run")
+	srv9p     = flag.String("srv", "", "what server to run -- to use internal servers, leave this empty")
 	bin       = flag.String("bin", "cpu", "path of cpu binary")
 	port9p    = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
 	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
@@ -220,7 +222,7 @@ func runRemote(cmd, port9p string) error {
 // TODO: make it more private, and also, have server only take
 // one connection or use stdin/stdout
 func srv(ctx context.Context) (net.Conn, *exec.Cmd, error) {
-	c := exec.CommandContext(ctx, "unpfs", "tcp!localhost!5641", *root)
+	c := exec.CommandContext(ctx, *srv9p, "tcp!localhost!5641", *root)
 	o, err := c.StdoutPipe()
 	if err != nil {
 		return nil, nil, err
@@ -270,18 +272,7 @@ func runClient(a string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	srvSock, p, err := srv(ctx)
-	if err != nil {
-		cancel()
-		return err
-	}
-	defer func() {
-		cancel()
-		p.Wait()
-	}()
 	// Arrange port forwarding from remote ssh to our server.
-
 	// Request the remote side to open port 5640 on all interfaces.
 	// Note: cl.Listen returns a TCP listener with network is "tcp"
 	// or variants. This lets us use a listen deadline.
@@ -296,9 +287,33 @@ func runClient(a string) error {
 	port := ap[len(ap)-1]
 	v("listener %T %v addr %v port %v", l, l, l.Addr().String(), port)
 
-	go forward(l, srvSock)
-	v("Connected to %v", cl)
-
+	if *srv9p == "" {
+		if false {
+			c, err := l.Accept()
+			v("forward: c %v err %v", c, err)
+			if err != nil {
+				v("forward: accept: %v", err)
+				return err
+			}
+			if err := p9.NewServer(&localfs.Local{}).Serve(l); err != nil {
+				return err
+			}
+		}
+		go p9.NewServer(&localfs.Local{}).Serve(l)
+	} else {
+		ctx, cancel := context.WithCancel(context.Background())
+		srvSock, p, err := srv(ctx)
+		if err != nil {
+			cancel()
+			return err
+		}
+		defer func() {
+			cancel()
+			p.Wait()
+		}()
+		go forward(l, srvSock)
+		v("Connected to %v", cl)
+	}
 	// now run stuff.
 	if err := shell(cl, a, port); err != nil {
 		return err
@@ -500,7 +515,7 @@ func doInit() error {
 	if err := cpuSetup(); err != nil {
 		log.Printf("CPU setup error with cpu running as init: %v", err)
 	}
-	cmds := [][]string{{"/bin/defaultsh"}, {"/bbin/dhclient", "-verbose"}}
+	cmds := [][]string{{"/bin/defaultsh"}, {"/bbin/dhclient", "-v"}}
 	verbose("Try to run %v", cmds)
 
 	for _, v := range cmds {
