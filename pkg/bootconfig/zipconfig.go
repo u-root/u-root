@@ -137,21 +137,6 @@ func ToZip(output string, manifest string) error {
 		return errors.New("Manifest is not valid")
 	}
 
-	// Collect botfiles and root certificate relative to manifest.json
-	// files := make([]string, 0)
-	// files = append(files, path.Base(manifest))
-	// for _, cfg := range mf.Configs {
-	// 	if cfg.Kernel != "" {
-	// 		files = append(files, cfg.Kernel)
-	// 	}
-	// 	if cfg.Initramfs != "" {
-	// 		files = append(files, cfg.Initramfs)
-	// 	}
-	// 	if cfg.DeviceTree != "" {
-	// 		files = append(files, cfg.DeviceTree)
-	// 	}
-	// }
-
 	// Create a buffer to write the archive to.
 	buf := new(bytes.Buffer)
 	// Create a new zip archive.
@@ -210,45 +195,6 @@ func ToZip(output string, manifest string) error {
 		return err
 	}
 
-	// Archive files
-	// dir := path.Dir(manifest)
-	// for _, file := range files {
-	// 	// Create directories of each filepath first
-	// 	for d := file; ; {
-	// 		d, _ = path.Split(d)
-	// 		if d != "" {
-	// 			w.Create(d)
-	// 			d = path.Clean(d)
-	// 		} else {
-	// 			break
-	// 		}
-	// 	}
-	// 	// Create new file in archive
-	// 	dst, err := w.Create(file)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	// Copy content from inputpath to new file
-	// 	p := path.Join(dir, file)
-	// 	src, err := os.Open(p)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Cannot find %s specified in %s", p, manifest)
-	// 	}
-	// 	_, err = io.Copy(dst, src)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	err = src.Close()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	// Write central directory of archive
-	// err = w.Close()
-	// if err != nil {
-	// 	return err
-	// }
-
 	// Write buf to disk
 	if path.Ext(output) != ".zip" {
 		output = output + ".zip"
@@ -275,4 +221,38 @@ func toZip(w *zip.Writer, newPath, originPath string) error {
 		return err
 	}
 	return src.Close()
+}
+
+// AddSignature signes the bootfiles inside an stboot.zip and inserts the
+// signatures into the archive along with the respective certificate
+func AddSignature(archive, privKey, certificate string) error {
+	mf, dir, err := FromZip(archive)
+	if err != nil {
+		return err
+	}
+
+	// collect boot binaries
+	bins := make([]string, 0)
+	for i, cfg := range mf.Configs {
+		dir := fmt.Sprintf("bootconfig_%d", i)
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+		for _, file := range files {
+			if !file.IsDir() {
+				bins = append(bins, file.Name())
+			}
+		}
+	}
+	// TODO:
+	// read all kernel files in a byte buffer
+	// sign it
+	// save signature in dir/certs/signatureX
+	// save certificate in dir/certs/certificateX
+	// update manifest and write it to dir
+	// pack everything back tp zip (ToZiP)
+
+	// make use of it in /cmds/boot/stboot/main.go
+
 }
