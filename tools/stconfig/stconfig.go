@@ -30,8 +30,8 @@ var (
 	genkeysPublicKeyFile  = genkeys.Arg("publicKey", "File path to write the public key").Required().String()
 	genkeysPassphrase     = genkeys.Flag("passphrase", "Encrypt keypair in PKCS8 format").String()
 
+	createOutputFilename = create.Flag("output", "Path to output file").PlaceHolder("PATH").Default("stboot.zip").Short('o').String()
 	createManifest       = create.Arg("manifest", "Path to the manifest file in JSON format").Required().String()
-	createOutputFilename = create.Arg("bc-file", "Path to output file").Required().String()
 
 	// unpackInputFilename       = unpack.Arg("bc-file", "Boot configuration file").Required().String()
 	// unpackVerifyPublicKeyFile = unpack.Arg("public-key", "Path to the public key file").String()
