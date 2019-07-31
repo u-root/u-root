@@ -195,7 +195,7 @@ func (o Options) Marshal(b *uio.Lexer) {
 		// option is simply listed multiple times.
 		for len(data) > 0 {
 			// 1 byte: option code
-			b.Write8(uint8(code))
+			b.Write8(code)
 
 			n := len(data)
 			if n > math.MaxUint8 {

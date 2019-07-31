@@ -351,7 +351,7 @@ var syscalls = SyscallMap{
 // FillArgs pulls the correct registers to populate system call arguments
 // and the system call number into a TraceRecord. Note that the system
 // call number is not technically an argument. This is good, in a sense,
-// since it makes the function arguements end up in "the right place"
+// since it makes the function arguments end up in "the right place"
 // from the point of view of the caller. The performance improvement is
 // negligible, as you can see by a look at the GNU runtime.
 func (rec *TraceRecord) FillArgs() {

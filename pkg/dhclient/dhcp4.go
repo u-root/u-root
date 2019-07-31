@@ -31,8 +31,24 @@ func NewPacket4(iface netlink.Link, p *dhcpv4.DHCPv4) *Packet4 {
 	}
 }
 
+// Link is a netlink link
 func (p *Packet4) Link() netlink.Link {
 	return p.iface
+}
+
+// GatherDNSSettings gets the DNS related infromation from a dhcp packet
+// including, nameservers, domain, and search options
+func (p *Packet4) GatherDNSSettings() (ns []net.IP, sl []string, dom string) {
+	if nameservers := p.P.DNS(); nameservers != nil {
+		ns = nameservers
+	}
+	if searchList := p.P.DomainSearch(); searchList != nil {
+		sl = searchList.Labels
+	}
+	if domain := p.P.DomainName(); domain != "" {
+		dom = domain
+	}
+	return
 }
 
 // Configure configures interface using this packet.
@@ -79,11 +95,11 @@ func (p *Packet4) Configure() error {
 		}
 	}
 
-	if ips := p.P.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips); err != nil {
-			return err
-		}
+	nameServers, searchList, domain := p.GatherDNSSettings()
+	if err := WriteDNSSettings(nameServers, searchList, domain); err != nil {
+		return err
 	}
+
 	return nil
 }
 
@@ -107,7 +123,9 @@ func (p *Packet4) Lease() *net.IPNet {
 }
 
 var (
-	ErrNoBootFile       = errors.New("no boot file name present in DHCP message")
+	// ErrNoBootFile represents that no pxe boot file was found.
+	ErrNoBootFile = errors.New("no boot file name present in DHCP message")
+	// ErrNoServerHostName represents that no pxe boot server was found.
 	ErrNoServerHostName = errors.New("no server host name present in DHCP message")
 )
 

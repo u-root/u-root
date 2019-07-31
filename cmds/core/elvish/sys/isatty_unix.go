@@ -3,8 +3,8 @@
 package sys
 
 import (
-	"os"
 	"github.com/u-root/u-root/pkg/termios"
+	"os"
 )
 
 // IsATTY returns true if the given file is a terminal.

@@ -163,6 +163,9 @@ func (w *writer) WriteRecord(f Record) error {
 	if err != nil {
 		return err
 	}
+	if m != int64(f.Info.FileSize) {
+		return fmt.Errorf("WriteRecord: %s: wrote %d bytes of file instead of %d bytes; archive is now corrupt", f.Info.Name, m, f.Info.FileSize)
+	}
 	if c, ok := f.ReaderAt.(io.Closer); ok {
 		if err := c.Close(); err != nil {
 			return err

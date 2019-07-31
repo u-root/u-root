@@ -49,7 +49,7 @@ var (
 	port9p    = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
 	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
 	root      = flag.String("root", "/", "9p root")
-	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": seperated list of directories in /tmp/cpu to bind over /")
+	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": separated list of directories in /tmp/cpu to bind over /")
 )
 
 func verbose(f string, a ...interface{}) {
@@ -500,7 +500,7 @@ func doInit() error {
 	if err := cpuSetup(); err != nil {
 		log.Printf("CPU setup error with cpu running as init: %v", err)
 	}
-	cmds := [][]string{[]string{"/bin/defaultsh"}, []string{"/bbin/dhclient", "-verbose"}}
+	cmds := [][]string{{"/bin/defaultsh"}, {"/bbin/dhclient", "-verbose"}}
 	verbose("Try to run %v", cmds)
 
 	for _, v := range cmds {
@@ -580,7 +580,7 @@ func doInit() error {
 	}
 	verbose("server.ListenAndServer returned")
 
-	numprocs := <- procs
+	numprocs := <-procs
 	verbose("Reaped %d procs", numprocs)
 	return nil
 }

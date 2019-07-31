@@ -20,7 +20,11 @@ func main() {
 	if err := os.MkdirAll("/testdata", 0755); err != nil {
 		log.Fatal(err)
 	}
-	sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
+	if os.Getenv("UROOT_USE_9P") == "1" {
+		sh.RunOrDie("mount", "-t", "9p", "tmpdir", "/testdata")
+	} else {
+		sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
+	}
 
 	// Get and increment the counter.
 	kExecCounter, ok := cmdline.Flag("kexeccounter")

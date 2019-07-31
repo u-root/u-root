@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/storage"
 	"golang.org/x/sys/unix"
 )
 
@@ -23,22 +23,10 @@ type Device struct {
 }
 
 // fstypes returns all block file system supported by the linuxboot kernel
-func fstypes() (fstypes []string, err error) {
-	var bytes []byte
-	if bytes, err = ioutil.ReadFile("/proc/filesystems"); err != nil {
-		return nil, fmt.Errorf("Failed to read /proc/filesystems: %v", err)
-	}
-	for _, line := range strings.Split(string(bytes), "\n") {
-		if fields := strings.Fields(line); len(fields) == 1 {
-			fstypes = append(fstypes, fields[0])
-		}
-	}
-	return fstypes, nil
-}
 
 // FindDevices searches for devices with bootable configs
 func FindDevices(devicesGlob string) (devices []*Device) {
-	fstypes, err := fstypes()
+	fstypes, err := storage.GetSupportedFilesystems()
 	if err != nil {
 		return nil
 	}
@@ -63,7 +51,7 @@ func FindDevices(devicesGlob string) (devices []*Device) {
 
 // FindDevice attempts to construct a boot device at the given path
 func FindDevice(devPath string) (*Device, error) {
-	fstypes, err := fstypes()
+	fstypes, err := storage.GetSupportedFilesystems()
 	if err != nil {
 		return nil, nil
 	}

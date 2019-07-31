@@ -23,7 +23,7 @@ func NewStringCompleter(s []string) Completer {
 
 // Complete returns a []string for each string of which the
 // passed in string is a prefix. The error for now is always nil.
-// If there is an exact match, only that match is returned, 
+// If there is an exact match, only that match is returned,
 // which is arguably wrong.
 func (f *StringCompleter) Complete(s string) (string, []string, error) {
 	var names []string

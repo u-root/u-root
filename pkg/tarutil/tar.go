@@ -58,7 +58,12 @@ func ExtractDir(tarFile io.Reader, dir string) error {
 
 // ExtractDirFilter extracts a tar file with the given filter.
 func ExtractDirFilter(tarFile io.Reader, dir string, filters []Filter) error {
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+	fi, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		if err := os.Mkdir(dir, os.ModePerm); err != nil {
+			return fmt.Errorf("could not create directory %s: %v", dir, err)
+		}
+	} else if err != nil || !fi.IsDir() {
 		return fmt.Errorf("could not stat directory %s: %v", dir, err)
 	}
 

@@ -17,7 +17,6 @@ import (
 	"context"
 	"flag"
 	"log"
-	"regexp"
 	"time"
 
 	"github.com/u-root/u-root/pkg/dhclient"
@@ -28,19 +27,13 @@ var (
 	ifName  = "^e.*"
 	timeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	retry   = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	verbose = flag.Bool("verbose", false, "Verbose output")
+	verbose = flag.Bool("v", false, "Verbose output")
 	ipv4    = flag.Bool("ipv4", true, "use IPV4")
 	ipv6    = flag.Bool("ipv6", true, "use IPV6")
-	test    = flag.Bool("test", false, "Test mode")
-	debug   = func(string, ...interface{}) {}
 )
 
 func main() {
 	flag.Parse()
-	if *verbose {
-		debug = log.Printf
-	}
-
 	if len(flag.Args()) > 1 {
 		log.Fatalf("only one re")
 	}
@@ -49,22 +42,9 @@ func main() {
 		ifName = flag.Args()[0]
 	}
 
-	ifRE := regexp.MustCompilePOSIX(ifName)
-
-	ifnames, err := netlink.LinkList()
+	filteredIfs, err := dhclient.Interfaces(ifName)
 	if err != nil {
-		log.Fatalf("Can't get list of link names: %v", err)
-	}
-
-	var filteredIfs []netlink.Link
-	for _, iface := range ifnames {
-		if ifRE.MatchString(iface.Attrs().Name) {
-			filteredIfs = append(filteredIfs, iface)
-		}
-	}
-
-	if len(filteredIfs) == 0 {
-		log.Fatalf("No interfaces match %s", ifName)
+		log.Fatal(err)
 	}
 
 	configureAll(filteredIfs)
@@ -73,10 +53,17 @@ func main() {
 func configureAll(ifs []netlink.Link) {
 	packetTimeout := time.Duration(*timeout) * time.Second
 
-	ctx, cancel := context.WithTimeout(context.Background(), packetTimeout*time.Duration(*retry))
+	ctx, cancel := context.WithTimeout(context.Background(), packetTimeout*time.Duration(1<<uint(*retry)))
 	defer cancel()
 
-	r := dhclient.SendRequests(ctx, ifs, packetTimeout, *retry, *ipv4, *ipv6)
+	c := dhclient.Config{
+		Timeout: packetTimeout,
+		Retries: *retry,
+	}
+	if *verbose {
+		c.LogLevel = dhclient.LogSummary
+	}
+	r := dhclient.SendRequests(ctx, ifs, *ipv4, *ipv6, c)
 
 	for {
 		select {

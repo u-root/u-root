@@ -101,7 +101,7 @@ const (
 )
 
 var (
-	// IPv4Broadcast is the broadcast address of the IPv4 procotol.
+	// IPv4Broadcast is the broadcast address of the IPv4 protocol.
 	IPv4Broadcast = net.IP{0xff, 0xff, 0xff, 0xff}
 
 	// IPv4Any is the non-routable IPv4 "any" meta address.

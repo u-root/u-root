@@ -6,8 +6,8 @@ import (
 
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vars"
-	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/hash"
+	"github.com/u-root/u-root/cmds/core/elvish/parse"
 )
 
 // ErrArityMismatch is thrown by a closure when the number of arguments the user

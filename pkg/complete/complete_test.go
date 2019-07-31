@@ -250,8 +250,8 @@ func TestLineReader(t *testing.T) {
 			choices []string
 			out     string
 		}{
-			{"ther\t", []string{"there"}, "there", []string{}, "there"},
-			{"ther", []string{"there"}, "", []string{}, "there"},
+			{"there\t", []string{"there"}, "there", []string{}, "there"},
+			{"there", []string{"there"}, "", []string{}, "there"},
 			{"\n", []string{}, "", []string{}, ""},
 			{"", []string{}, "", []string{}, ""},
 			{" ", []string{}, "", []string{}, ""},

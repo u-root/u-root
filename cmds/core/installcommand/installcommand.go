@@ -46,7 +46,7 @@ var (
 
 	verbose = flag.Bool("v", false, "print all build commands")
 	debug   = func(string, ...interface{}) {}
-	r = util.UrootPath
+	r       = util.UrootPath
 )
 
 type form struct {
@@ -72,8 +72,11 @@ func parseCommandLine() form {
 	// First form:
 	//     SYMLINK [ARGS...]
 	if !strings.HasSuffix(os.Args[0], "installcommand") {
+		// This is almost certain to be a symlink, and it's no harm
+		// to check it.
+		f := util.ResolveUntilLastSymlink(os.Args[0])
 		return form{
-			cmdName: filepath.Base(os.Args[0]),
+			cmdName: filepath.Base(f),
 			cmdArgs: os.Args[1:],
 			lowPri:  *lowpri,
 			exec:    *exe,
@@ -131,7 +134,6 @@ func main() {
 		debug = log.Printf
 	}
 
-	debug("Command name: %v\n", form.cmdName)
 	destFile := filepath.Join(r("/ubin"), form.cmdName)
 
 	// Is the command there? This covers a race condition

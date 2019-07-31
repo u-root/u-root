@@ -209,22 +209,19 @@ func (m *multiboot) addInfo() (addr uintptr, err error) {
 		return 0, err
 	}
 
-	addr, err = m.mem.FindSpace(infoSize)
+	r, err := m.mem.FindSpace(infoSize)
 	if err != nil {
 		return 0, err
 	}
 
-	d, err := iw.marshal(addr)
+	d, err := iw.marshal(r.Start)
 	if err != nil {
 		return 0, err
 	}
 	m.info = iw.info
 
-	addr, err = m.mem.AddKexecSegment(d)
-	if err != nil {
-		return 0, err
-	}
-	return addr, nil
+	m.mem.Segments.Insert(kexec.NewSegment(d, r))
+	return r.Start, nil
 }
 
 func (m multiboot) memoryMap() memoryMaps {
@@ -238,7 +235,7 @@ func (m multiboot) memoryMap() memoryMaps {
 			// Size is really used for skipping to the next pair.
 			Size:     uint32(sizeofMemoryMap) - 4,
 			BaseAddr: uint64(r.Start),
-			Length:   uint64(r.Size) + 1,
+			Length:   uint64(r.Size),
 			Type:     typ,
 		}
 		ret = append(ret, v)
@@ -252,11 +249,11 @@ func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	addr, err = m.mem.AddKexecSegment(d)
+	r, err := m.mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, 0, err
 	}
-	return addr, uint(len(mmap)) * sizeofMemoryMap, nil
+	return r.Start, uint(len(mmap)) * sizeofMemoryMap, nil
 }
 
 func (m multiboot) memoryBoundaries() (lower, upper uint32) {
@@ -342,10 +339,9 @@ func (m *multiboot) addTrampoline() (entry uintptr, err error) {
 		return 0, err
 	}
 
-	addr, err := m.mem.AddKexecSegment(d)
+	r, err := m.mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, err
 	}
-
-	return addr, nil
+	return r.Start, nil
 }

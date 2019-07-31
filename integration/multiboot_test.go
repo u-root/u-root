@@ -2,23 +2,33 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !race
+
 package integration
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func testMultiboot(t *testing.T, kernel string) {
 	var serial wc
-	q, cleanup := QEMUTest(t, &Options{
+
+	src := fmt.Sprintf("/home/circleci/%v", kernel)
+	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
+		t.Skip("multiboot kernel is not present")
+	}
+
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Files: []string{
-			fmt.Sprintf("/home/circleci/%v:kernel", kernel),
+			src + ":kernel",
 		},
 		Cmds: []string{
 			"github.com/u-root/u-root/cmds/core/init",
@@ -61,14 +71,14 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Fatalf("Cannot unmarshal multiboot information from executed kernel: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("kexec failed: got %v, want %v", got, want)
+		t.Errorf("kexec failed: got\n%#v, want\n%#v", got, want)
 	}
 }
 
 func TestMultiboot(t *testing.T) {
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {

@@ -19,7 +19,7 @@ const (
 	TableMagic = 0x45454545
 )
 
-// Tags used by TableEntry (at the time of writting, there is only one tag).
+// Tags used by TableEntry (at the time of writing, there is only one tag).
 const (
 	TagKernelSize Tag = 0x5a534c4b
 )

@@ -55,3 +55,4 @@ vmlinux
 
 # Vim swap files
 *.swp
+.*.swp

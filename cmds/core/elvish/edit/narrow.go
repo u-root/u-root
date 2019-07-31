@@ -10,8 +10,8 @@ import (
 	"github.com/u-root/u-root/cmds/core/elvish/eval"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vars"
-	"github.com/u-root/u-root/cmds/core/elvish/parse/parseutil"
 	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
+	"github.com/u-root/u-root/cmds/core/elvish/parse/parseutil"
 )
 
 // narrow implements a listing mode that supports the notion of selecting an

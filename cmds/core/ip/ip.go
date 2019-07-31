@@ -153,12 +153,11 @@ func setHardwareAddress(iface netlink.Link) error {
 	cursor++
 	hwAddr, err := net.ParseMAC(arg[cursor])
 	if err != nil {
-
-		return fmt.Errorf("%v cant parse mac addr %v: %v", iface, hwAddr, err)
+		return fmt.Errorf("%v cant parse mac addr %v: %v", iface.Attrs().Name, hwAddr, err)
 	}
 	err = netlink.LinkSetHardwareAddr(iface, hwAddr)
 	if err != nil {
-		return fmt.Errorf("%v cant set mac addr %v: %v", iface, hwAddr, err)
+		return fmt.Errorf("%v cant set mac addr %v: %v", iface.Attrs().Name, hwAddr, err)
 	}
 	return nil
 }
@@ -176,11 +175,11 @@ func linkset() error {
 		return setHardwareAddress(iface)
 	case "up":
 		if err := netlink.LinkSetUp(iface); err != nil {
-			return fmt.Errorf("%v can't make it up: %v", iface, err)
+			return fmt.Errorf("%v can't make it up: %v", iface.Attrs().Name, err)
 		}
 	case "down":
 		if err := netlink.LinkSetDown(iface); err != nil {
-			return fmt.Errorf("%v can't make it down: %v", iface, err)
+			return fmt.Errorf("%v can't make it down: %v", iface.Attrs().Name, err)
 		}
 	default:
 		return usage()
@@ -253,10 +252,10 @@ func routeadddefault() error {
 	}
 	switch nh {
 	case "via":
-		log.Printf("Add default route %v via %v", nhval, l)
+		log.Printf("Add default route %v via %v", nhval, l.Attrs().Name)
 		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval.IPNet.IP}
 		if err := netlink.RouteAdd(r); err != nil {
-			return fmt.Errorf("Add default route: %v", err)
+			return fmt.Errorf("error adding default route to %v: %v", l.Attrs().Name, err)
 		}
 		return nil
 	}
@@ -279,7 +278,7 @@ func routeadd() error {
 		}
 		r := &netlink.Route{LinkIndex: d.Attrs().Index, Dst: addr.IPNet}
 		if err := netlink.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding route %s -> %s: %v", addr, d, err)
+			return fmt.Errorf("error adding route %s -> %s: %v", addr, d.Attrs().Name, err)
 		}
 		return nil
 	}

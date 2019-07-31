@@ -125,7 +125,7 @@ func TestGet(t *testing.T) {
 		t.Errorf("want 20 got %d for Get(2)", v)
 	}
 
-	// Non-existant key
+	// Non-existent key
 	if _, ok = m.Get(3); ok {
 		t.Errorf("want not ok got ok for Get(3)")
 	}

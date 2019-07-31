@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kexec"
 )
 
@@ -63,7 +64,7 @@ type Entry struct {
 
 // KexecLoad calls the appropriate kexec load routines based on the
 // type of Entry
-func (e *Entry) KexecLoad(mountPath, appendCmdline string, dryrun bool) error {
+func (e *Entry) KexecLoad(mountPath string, filterCmdline cmdline.Filter, dryrun bool) error {
 	switch e.Type {
 	case Multiboot:
 		// TODO: implement using kexec_load syscall
@@ -80,11 +81,12 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string, dryrun bool) error {
 		kernelPath := filepath.Join(mountPath, e.Modules[0].Path)
 		log.Print("Kernel Path:", kernelPath)
 		kernel, err := os.OpenFile(kernelPath, os.O_RDONLY, 0)
-		cmdline := e.Modules[0].Params
-		if appendCmdline != "" {
-			cmdline += " " + appendCmdline
+		commandline := e.Modules[0].Params
+		if filterCmdline != nil {
+			commandline = filterCmdline.Update(commandline)
 		}
-		log.Print("Kernel Params:", cmdline)
+
+		log.Print("Kernel Params:", commandline)
 		if err != nil {
 			return fmt.Errorf("failed to load kernel: %v", err)
 		}
@@ -97,7 +99,7 @@ func (e *Entry) KexecLoad(mountPath, appendCmdline string, dryrun bool) error {
 			}
 		}
 		if !dryrun {
-			return kexec.FileLoad(kernel, ramfs, cmdline)
+			return kexec.FileLoad(kernel, ramfs, commandline)
 		}
 	}
 	return nil

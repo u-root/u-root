@@ -44,6 +44,7 @@ type LinkAttrs struct {
 	GSOMaxSize   uint32
 	GSOMaxSegs   uint32
 	Vfs          []VfInfo // virtual functions available on link
+	Group        uint32
 }
 
 // VfInfo represents configuration of virtual function
@@ -52,9 +53,11 @@ type VfInfo struct {
 	Mac       net.HardwareAddr
 	Vlan      int
 	Qos       int
-	TxRate    int
+	TxRate    int // IFLA_VF_TX_RATE  Max TxRate
 	Spoofchk  bool
 	LinkState uint32
+	MaxTxRate uint32 // IFLA_VF_RATE Max TxRate
+	MinTxRate uint32 // IFLA_VF_RATE Min TxRate
 }
 
 // LinkOperState represents the values of the IFLA_OPERSTATE link
@@ -311,6 +314,8 @@ type Tuntap struct {
 	NonPersist bool
 	Queues     int
 	Fds        []*os.File
+	Owner      uint32
+	Group      uint32
 }
 
 func (tuntap *Tuntap) Attrs() *LinkAttrs {
@@ -324,7 +329,8 @@ func (tuntap *Tuntap) Type() string {
 // Veth devices must specify PeerName on create
 type Veth struct {
 	LinkAttrs
-	PeerName string // veth on create only
+	PeerName         string // veth on create only
+	PeerHardwareAddr net.HardwareAddr
 }
 
 func (veth *Veth) Attrs() *LinkAttrs {
@@ -393,9 +399,18 @@ const (
 	IPVLAN_MODE_MAX
 )
 
+type IPVlanFlag uint16
+
+const (
+	IPVLAN_FLAG_BRIDGE IPVlanFlag = iota
+	IPVLAN_FLAG_PRIVATE
+	IPVLAN_FLAG_VEPA
+)
+
 type IPVlan struct {
 	LinkAttrs
 	Mode IPVlanMode
+	Flag IPVlanFlag
 }
 
 func (ipvlan *IPVlan) Attrs() *LinkAttrs {

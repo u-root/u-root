@@ -8,9 +8,9 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
+	"github.com/u-root/u-root/cmds/core/elvish/hash"
 	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/util"
-	"github.com/u-root/u-root/cmds/core/elvish/hash"
 )
 
 var (

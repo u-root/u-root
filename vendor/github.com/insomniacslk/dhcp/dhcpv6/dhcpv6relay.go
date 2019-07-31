@@ -57,7 +57,7 @@ func (r *RelayMessage) Summary() string {
 func (r *RelayMessage) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(make([]byte, 0, RelayHeaderSize))
 	buf.Write8(byte(r.MessageType))
-	buf.Write8(byte(r.HopCount))
+	buf.Write8(r.HopCount)
 	buf.WriteBytes(r.LinkAddr.To16())
 	buf.WriteBytes(r.PeerAddr.To16())
 	buf.WriteBytes(r.Options.ToBytes())

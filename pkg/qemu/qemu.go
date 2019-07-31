@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +31,16 @@ var DefaultTimeout = 7 * time.Second
 
 // TimeoutMultiplier increases all timeouts proportionally. Useful when running
 // QEMU on a slow machine.
-var TimeoutMultiplier = 2.0
+var TimeoutMultiplier = 1.0
+
+func init() {
+	if timeoutMultS := os.Getenv("UROOT_QEMU_TIMEOUT_X"); len(timeoutMultS) > 0 {
+		t, err := strconv.ParseFloat(timeoutMultS, 64)
+		if err == nil {
+			TimeoutMultiplier = t
+		}
+	}
+}
 
 // Options are VM start-up parameters.
 type Options struct {
@@ -61,7 +71,10 @@ type Options struct {
 
 // Start starts a QEMU VM.
 func (o *Options) Start() (*VM, error) {
-	cmdline := o.Cmdline()
+	cmdline, err := o.Cmdline()
+	if err != nil {
+		return nil, err
+	}
 
 	gExpect, ch, err := expect.SpawnWithArgs(cmdline, -1,
 		expect.Tee(o.SerialOutput),
@@ -79,7 +92,7 @@ func (o *Options) Start() (*VM, error) {
 
 // cmdline returns the command line arguments used to start QEMU. These
 // arguments are derived from the given QEMU struct.
-func (o *Options) Cmdline() []string {
+func (o *Options) Cmdline() ([]string, error) {
 	var args []string
 	if len(o.QEMUPath) > 0 {
 		args = append(args, o.QEMUPath)
@@ -100,11 +113,22 @@ func (o *Options) Cmdline() []string {
 	// - earlyprintk=ttyS0: print very early debug messages to the serial
 	// - console=ttyS0: /dev/console points to /dev/ttyS0 (the serial port)
 	// - o.KernelArgs: extra, optional kernel arguments
+	// - args required by devices
+	for _, dev := range o.Devices {
+		if dev != nil {
+			if a := dev.KArgs(); a != nil {
+				o.KernelArgs += " " + strings.Join(a, " ")
+			}
+		}
+	}
 	if len(o.Kernel) != 0 {
 		args = append(args, "-kernel", o.Kernel)
 		if len(o.KernelArgs) != 0 {
 			args = append(args, "-append", o.KernelArgs)
 		}
+	} else if len(o.KernelArgs) != 0 {
+		err := fmt.Errorf("kernel args are required but cannot be added due to bootloader")
+		return nil, err
 	}
 	if len(o.Initramfs) != 0 {
 		args = append(args, "-initrd", o.Initramfs)
@@ -117,7 +141,7 @@ func (o *Options) Cmdline() []string {
 			}
 		}
 	}
-	return args
+	return args, nil
 }
 
 // VM is a running QEMU virtual machine.

@@ -10,11 +10,9 @@ import (
 	"golang.org/x/net/bpf"
 )
 
-var (
-	// ErrNotImplemented is returned when certain functionality is not yet
-	// implemented for the host operating system.
-	ErrNotImplemented = errors.New("raw: not implemented")
-)
+// ErrNotImplemented is returned when certain functionality is not yet
+// implemented for the host operating system.
+var ErrNotImplemented = errors.New("raw: not implemented")
 
 var _ net.Addr = &Addr{}
 
@@ -153,4 +151,9 @@ type Config struct {
 	// Linux only: initial filter to apply to the connection. This avoids
 	// capturing random packets before SetBPF is called.
 	Filter []bpf.RawInstruction
+
+	// BSD only: configure the BPF direction flag to allow selection of inbound
+	// only (0 - default) or bidirectional (1) packet processing.
+	// Has no effect on other operating systems.
+	BPFDirection int
 }

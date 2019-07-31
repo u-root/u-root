@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kr/pty"
 	"github.com/u-root/u-root/cmds/core/elvish/eval"
 	"github.com/u-root/u-root/cmds/core/elvish/sys"
-	"github.com/kr/pty"
 )
 
 // readLineTest contains the data for a test case of ReadLine.

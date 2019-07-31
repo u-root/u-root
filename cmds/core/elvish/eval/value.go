@@ -12,4 +12,3 @@ var (
 	// NoOpts is an empty option map. It can be used as an argument to Call.
 	NoOpts = map[string]interface{}{}
 )
-

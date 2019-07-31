@@ -2,11 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The mount package implements functions for mounting and unmounting
-// file systems and defines the mount interface.
+// Package mount implements mounting, moving, and unmounting file systems.
 package mount
 
+// Mounter is an object that can be mounted.
 type Mounter interface {
-	Mount() error
+	// Mount mounts the file system at path.
+	Mount(path string, flags uintptr) error
+
+	// Unmount unmounts a file system that was previously mounted.
+	//
+	// Mount must have been previously called on this same object.
 	Unmount(flags int) error
 }

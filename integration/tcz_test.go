@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !race
+
 package integration
 
 import (
@@ -9,12 +11,13 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestTczclient(t *testing.T) {
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	t.Skip("This test is flaky, and must be fixed")
@@ -23,7 +26,7 @@ func TestTczclient(t *testing.T) {
 	// TODO: On the next iteration, this will serve and provide a missing tcz.
 	var sb wc
 	if true {
-		q, scleanup := QEMUTest(t, &Options{
+		q, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
 			Name:         "TestTczclient_Server",
 			SerialOutput: &sb,
 			Cmds: []string{
@@ -63,7 +66,7 @@ func TestTczclient(t *testing.T) {
 	}
 
 	var b wc
-	tczClient, ccleanup := QEMUTest(t, &Options{
+	tczClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name:         "TestTczclient_Client",
 		SerialOutput: &b,
 		Cmds: []string{

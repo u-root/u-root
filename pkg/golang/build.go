@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package golang is an API to the Go compiler.
 package golang
 
 import (
@@ -132,6 +133,9 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
 		"-ldflags", "-s -w", // Strip all symbols.
+	}
+	if len(c.BuildTags) > 0 {
+		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
 	}
 	if opts.ExtraArgs != nil {
 		args = append(args, opts.ExtraArgs...)

@@ -138,7 +138,7 @@ func (t *Tracer) Step(e EventType) (int, error) {
 // It has to handle a few events specially:
 // o if a wait fails, the process has exited, and must no longer be commanded
 //   this is indicated by a wait followed by an error on PtraceGetRegs
-// o if a process forks successully, we must add it to our set of traced processes.
+// o if a process forks successfully, we must add it to our set of traced processes.
 //   We attach that process, wait for it, then issue a ptrace system call command
 //   to it. We don't use the Linux SEIZE command as we can do this in a more generic
 //   Unix way.

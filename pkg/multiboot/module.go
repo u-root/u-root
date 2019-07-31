@@ -22,6 +22,7 @@ import (
 type module struct {
 	// Start is the inclusive start of the Module memory location
 	Start uint32
+
 	// End is the exclusive end of the Module memory location.
 	End uint32
 
@@ -40,12 +41,12 @@ func (m *multiboot) addModules() (uintptr, error) {
 		return 0, err
 	}
 
-	addr, err := m.mem.AddKexecSegment(data)
+	cmdlineRange, err := m.mem.AddKexecSegment(data)
 	if err != nil {
 		return 0, err
 	}
 
-	loaded.fix(uint32(addr))
+	loaded.fix(uint32(cmdlineRange.Start))
 
 	m.loadedModules = loaded
 
@@ -53,7 +54,11 @@ func (m *multiboot) addModules() (uintptr, error) {
 	if err != nil {
 		return 0, err
 	}
-	return m.mem.AddKexecSegment(b)
+	modRange, err := m.mem.AddKexecSegment(b)
+	if err != nil {
+		return 0, err
+	}
+	return modRange.Start, nil
 }
 
 // loadModules loads module files.

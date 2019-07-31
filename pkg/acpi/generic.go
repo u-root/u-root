@@ -72,7 +72,7 @@ func (g *Generic) OEMID() string {
 	return string(g.Header.OEMID)
 }
 
-// OEMTableID retuns the table OEMTableID.
+// OEMTableID returns the table OEMTableID.
 func (g *Generic) OEMTableID() string {
 	return string(g.Header.OEMTableID)
 }

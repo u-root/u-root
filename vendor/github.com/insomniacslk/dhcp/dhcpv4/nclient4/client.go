@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -62,12 +63,45 @@ type pendingCh struct {
 	ch chan<- *dhcpv4.DHCPv4
 }
 
+type logger interface {
+	Printf(format string, v ...interface{})
+	PrintMessage(prefix string, message *dhcpv4.DHCPv4)
+}
+
+type emptyLogger struct{}
+
+func (e emptyLogger) Printf(format string, v ...interface{})             {}
+func (e emptyLogger) PrintMessage(prefix string, message *dhcpv4.DHCPv4) {}
+
+type shortSummaryLogger struct {
+	*log.Logger
+}
+
+func (s shortSummaryLogger) Printf(format string, v ...interface{}) {
+	s.Logger.Printf(format, v...)
+}
+func (s shortSummaryLogger) PrintMessage(prefix string, message *dhcpv4.DHCPv4) {
+	s.Printf("%s: %s", prefix, message)
+}
+
+type debugLogger struct {
+	*log.Logger
+}
+
+func (d debugLogger) Printf(format string, v ...interface{}) {
+	d.Logger.Printf(format, v...)
+}
+func (d debugLogger) PrintMessage(prefix string, message *dhcpv4.DHCPv4) {
+	d.Printf("%s: %s", prefix, message.Summary())
+}
+
 // Client is an IPv4 DHCP client.
 type Client struct {
 	ifaceHWAddr net.HardwareAddr
 	conn        net.PacketConn
 	timeout     time.Duration
 	retry       int
+	logger      logger
 
 	// bufferCap is the channel capacity for each TransactionID.
 	bufferCap int
@@ -116,6 +150,7 @@ func NewWithConn(conn net.PacketConn, ifaceHWAddr net.HardwareAddr, opts ...Clie
 		serverAddr:  DefaultServers,
 		bufferCap:   defaultBufferCap,
 		conn:        conn,
+		logger:      emptyLogger{},
 
 		done:    make(chan struct{}),
 		pending: make(map[dhcpv4.TransactionID]*pendingCh),
@@ -173,7 +208,7 @@ func (c *Client) receiveLoop() {
 		n, _, err := c.conn.ReadFrom(b)
 		if err != nil {
 			if !isErrClosing(err) {
-				log.Printf("error reading from UDP connection: %v", err)
+				c.logger.Printf("error reading from UDP connection: %v", err)
 			}
 			return
 		}
@@ -222,6 +257,24 @@ type ClientOpt func(*Client)
 func WithTimeout(d time.Duration) ClientOpt {
 	return func(c *Client) {
 		c.timeout = d
+	}
+}
+
+// WithSummaryLogger logs one-line DHCPv4 message summarys when sent & received.
+func WithSummaryLogger() ClientOpt {
+	return func(c *Client) {
+		c.logger = shortSummaryLogger{
+			Logger: log.New(os.Stderr, "[dhcpv4]", log.LstdFlags),
+		}
+	}
+}
+
+// WithDebugLogger logs multi-line full DHCPv4 messages when sent & received.
+func WithDebugLogger() ClientOpt {
+	return func(c *Client) {
+		c.logger = debugLogger{
+			Logger: log.New(os.Stderr, "[dhcpv4]", log.LstdFlags),
+		}
 	}
 }
 
@@ -352,6 +405,7 @@ func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcpv4.D
 		if err != nil {
 			return err
 		}
+		c.logger.PrintMessage("sent message", p)
 		defer rem()
 
 		for {
@@ -367,6 +421,7 @@ func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, p *dhcpv4.D
 
 			case packet := <-ch:
 				if match == nil || match(packet) {
+					c.logger.PrintMessage("received message", packet)
 					response = packet
 					return nil
 				}

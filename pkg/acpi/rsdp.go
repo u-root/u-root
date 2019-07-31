@@ -62,7 +62,7 @@ func (r *RSDP) Marshal() ([]byte, error) {
 	return nil, fmt.Errorf("Marshal RSDP: not yet")
 }
 
-// NewRSDP returns a new and partially initalized RSDP, setting only
+// NewRSDP returns a new and partially initialized RSDP, setting only
 // the defaultRSDP values, address, length, and signature.
 func NewRSDP(addr uintptr, len uint) []byte {
 	var r [HeaderLength]byte

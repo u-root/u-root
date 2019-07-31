@@ -12,10 +12,10 @@ import (
 	"github.com/u-root/u-root/cmds/core/elvish/eval/bundled"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vars"
+	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
 	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/sys"
 	"github.com/u-root/u-root/cmds/core/elvish/util"
-	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
 	"github.com/u-root/u-root/cmds/core/elvish/vector"
 )
 
