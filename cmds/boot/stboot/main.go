@@ -33,7 +33,7 @@ var (
 
 const (
 	eth            = "eth0"
-	bootFilePath   = "root/bc.zip"
+	bootFilePath   = "root/stboot.zip"
 	netVarsPath    = "netvars.json"
 	rootCACertPath = "/root/LetsEncrypt_Authority_X3.pem"
 	entropyAvail   = "/proc/sys/kernel/random/entropy_avail"
