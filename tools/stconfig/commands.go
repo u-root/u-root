@@ -39,7 +39,7 @@ func PackBootConfiguration() error {
 
 // AddSignatureToBootConfiguration TODO:
 func AddSignatureToBootConfiguration() error {
-	return nil
+	return bootconfig.AddSignature(*signInputBootfile, *signPrivKeyFile, *signCertFile)
 }
 
 // UnpackBootConfiguration unpacks a boot configuration file and returns the
