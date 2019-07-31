@@ -17,8 +17,8 @@ var (
 // BootSignature conteins the Signature of a BootConfig and the corresponing
 // Certificate
 type BootSignature struct {
-	Signature   []byte
-	Certificate []byte
+	Signature   string
+	Certificate string
 }
 
 // Manifest is a list of BootConfig objects. The goal is to provide  multiple
@@ -76,6 +76,9 @@ func (mc *Manifest) IsValid() bool {
 		if !config.IsValid() {
 			return false
 		}
+	}
+	if mc.RootCertPath == "" {
+		return false
 	}
 	return true
 }
