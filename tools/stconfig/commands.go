@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path"
 
@@ -36,20 +37,20 @@ func PackBootConfiguration() error {
 	return bootconfig.ToZip(*createOutputFilename, *createManifest)
 }
 
+// AddSignatureToBootConfiguration TODO:
+func AddSignatureToBootConfiguration() error {
+	return nil
+}
+
 // UnpackBootConfiguration unpacks a boot configuration file and returns the
 // file path of a directory containing the data
-// func UnpackBootConfiguration() error {
-// 	if *unpackVerifyPublicKeyFile == "" {
-// 		// FromZip expects that no key is provided, only if pointer is nil
-// 		unpackVerifyPublicKeyFile = nil
-// 	}
+func UnpackBootConfiguration() error {
+	_, outputDir, err := bootconfig.FromZip(*unpackInputFilename)
+	if err != nil {
+		return err
+	}
 
-// 	_, outputDir, err := bootconfig.FromZip(*unpackInputFilename, unpackVerifyPublicKeyFile)
-// 	if err != nil {
-// 		return err
-// 	}
+	fmt.Println("Boot configuration unpacked into: " + outputDir)
 
-// 	fmt.Println("Boot configuration unpacked into: " + outputDir)
-
-// 	return nil
-// }
+	return nil
+}
