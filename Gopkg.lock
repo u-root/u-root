@@ -79,7 +79,7 @@
   version = "v0.3.1"
 
 [[projects]]
-  digest = "1:28c6f29a00fc674ce801a4e8e10eacdbb49dbe2eea79a2b3d60b405cc0bd2b2d"
+  digest = "1:d8722cefa91420cef071a1df2c30b4c2a66388fe3385cb06b36cce8394c0734e"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
@@ -87,8 +87,8 @@
     "tpmutil/tbs",
   ]
   pruneopts = "NUT"
-  revision = "ed7874b59abd5749750978becf34e4b094126de2"
-  version = "v0.1.1"
+  revision = "b2c8857856f7516bb35d299c6b5d19f64e4ad579"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -105,6 +105,18 @@
   packages = ["term"]
   pruneopts = "NUT"
   revision = "fc88cf888a3fa99ecc23d1efc1a44284268457d3"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5e315098411db629f87dacc82113e404c224583b17b70c625d9f7ee5efaa0668"
+  name = "github.com/hugelgupf/p9"
+  packages = [
+    "p9",
+    "unimplfs",
+    "vecnet",
+  ]
+  pruneopts = "NUT"
+  revision = "f08d8f7f979b47427657239b19535d5559d15c3b"
 
 [[projects]]
   branch = "master"
@@ -142,8 +154,8 @@
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   pruneopts = "NUT"
-  revision = "fdc46f09595ea8241b9bfe291bbc868a7af19e10"
-  version = "v1.8.2"
+  revision = "9342d2c87674fc9ed5324d5d77d5f11f328bc11b"
+  version = "v1.8.3"
 
 [[projects]]
   digest = "1:7dc14952637aea1ef99bc1d9ad1374ddf0fa10d7b608cf5cb72d3f4fa7e4b579"
@@ -322,7 +334,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "094676da4a83be5288d281081bba63a173ce6772"
+  revision = "227b76d455e791cb042b03e633e2f7fbcfdf74a5"
 
 [[projects]]
   branch = "master"
@@ -339,7 +351,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:58b412f10b7343a2c0bdfb074c6ad0a9b5532382a3adff86f5db8f693d201d22"
+  digest = "1:f16e41e16053205fa245362be76fe3859e8670a49628fdd4da5605a39a1b0332"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -347,7 +359,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "f460065e899abee61eb86816fd1fd684ea5a0f26"
+  revision = "bbd175535a8b9969bb0b33f1502f681ee0b122bd"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -366,7 +378,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a4820af8a99b0467f43d19a071379bc2a0c54a955e18af7f1661e8407f73d7b2"
+  digest = "1:35e56b1ec75d32dc6322ecf15ab979ce45b29176ee2da79ad589889318c104fe"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -383,7 +395,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "5b82db07426dbac2c94df2e3a85e83f3026c088c"
+  revision = "16c5e0f7d110d27323e11cae5489d256bc6134d3"
 
 [[projects]]
   digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
@@ -425,6 +437,8 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-tpm/tpm",
     "github.com/google/goexpect",
+    "github.com/hugelgupf/p9/p9",
+    "github.com/hugelgupf/p9/unimplfs",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv4/server4",

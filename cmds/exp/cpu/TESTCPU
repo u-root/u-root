@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+# You will need to put your host key and private key somewhere. They will be placed in the proper place in the image.
+go run . -build=bb \
+	-initcmd=/bbin/cpu\
+        	-files ~/.ssh/cpu_rsa.pub:key.pub -files /bin/fusermount all github.com/u-root/u-root/cmds/exp/cpu
+
+echo	-files ssh_host_rsa_key:etc/ssh/ssh_host_rsa_key \
+
+sudo /usr/bin/qemu-system-x86_64 -kernel \
+     /home/rminnich/projects/linuxboot/linux/arch/x86/boot/bzImage \
+	-cpu  max \
+     -s   \
+     -m 1024m \
+     -machine q35  \
+     -initrd /tmp/initramfs.linux_amd64.cpio \
+    -object rng-random,filename=/dev/urandom,id=rng0 \
+    -device virtio-rng-pci,rng=rng0 \
+     -device e1000,netdev=n1 \
+     -netdev user,id=n1,hostfwd=tcp:127.0.0.1:23-:2222,net=192.168.1.0/24,host=192.168.1.1 \
+     -serial stdio  \
+     -append earlyprintk=ttyS0,115200\ console=ttyS0 \
+     -monitor /dev/null  \
+
+
+     exit 0
+     -cdrom /tmp/iso
+     
+     # note we will exit here so the trash below is not a problem
+     exit 0
+
+
+# add the following line to qemu if you want to snoop packets.
+	-object filter-dump,id=f1,netdev=n1,file=/tmp/vm0.pcap \
+
+
+# from the client side, you can, for example:
+./cpu  -srv=unpfs -h 127.0.0.1 -sp 23 -key ~/.ssh/cpu_rsa

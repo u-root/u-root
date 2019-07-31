@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Google Inc. All rights reserved.
+// Copyright (c) 2018, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +13,12 @@
 // limitations under the License.
 
 // Package tpmutil provides common utility functions for both TPM 1.2 and TPM 2.0 devices.
-//
-// Users should call either UseTPM12LengthPrefixSize or
-// UseTPM20LengthPrefixSize before using this package, depending on their type
-// of TPM device.
 package tpmutil
 
 import (
 	"errors"
 	"io"
+	"os"
 )
 
 // maxTPMResponse is the largest possible response from the TPM. We need to know
@@ -38,7 +35,6 @@ func RunCommand(rw io.ReadWriter, tag Tag, cmd Command, in ...interface{}) ([]by
 	if rw == nil {
 		return nil, 0, errors.New("nil TPM handle")
 	}
-
 	ch := commandHeader{tag, 0, cmd}
 	inb, err := packWithHeader(ch, in...)
 	if err != nil {
@@ -47,6 +43,14 @@ func RunCommand(rw io.ReadWriter, tag Tag, cmd Command, in ...interface{}) ([]by
 
 	if _, err := rw.Write(inb); err != nil {
 		return nil, 0, err
+	}
+
+	// If the TPM is a real device, it may not be ready for reading immediately after writing
+	// the command. Wait until the file descriptor is ready to be read from.
+	if f, ok := rw.(*os.File); ok {
+		if err = poll(f); err != nil {
+			return nil, 0, err
+		}
 	}
 
 	outb := make([]byte, maxTPMResponse)

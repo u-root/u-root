@@ -1,4 +1,4 @@
-// Copyright (c) 2014, Google Inc. All rights reserved.
+// Copyright (c) 2014, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -192,7 +192,7 @@ type keyParams struct {
 	AlgID     uint32
 	EncScheme uint16
 	SigScheme uint16
-	Params    []byte // Serialized rsaKeyParams or symmetricKeyParams.
+	Params    tpmutil.U32Bytes // Serialized rsaKeyParams or symmetricKeyParams.
 }
 
 // An rsaKeyParams encodes the length of the RSA prime in bits, the number of
@@ -201,13 +201,13 @@ type keyParams struct {
 type rsaKeyParams struct {
 	KeyLength uint32
 	NumPrimes uint32
-	Exponent  []byte
+	Exponent  tpmutil.U32Bytes
 }
 
 type symmetricKeyParams struct {
 	KeyLength uint32
 	BlockSize uint32
-	IV        []byte
+	IV        tpmutil.U32Bytes
 }
 
 // A key is a TPM representation of a key.
@@ -217,9 +217,9 @@ type key struct {
 	KeyFlags        uint32
 	AuthDataUsage   byte
 	AlgorithmParams keyParams
-	PCRInfo         []byte
-	PubKey          []byte
-	EncData         []byte
+	PCRInfo         tpmutil.U32Bytes
+	PubKey          tpmutil.U32Bytes
+	EncData         tpmutil.U32Bytes
 }
 
 // A key12 is a newer TPM representation of a key.
@@ -230,22 +230,29 @@ type key12 struct {
 	KeyFlags        uint32
 	AuthDataUsage   byte
 	AlgorithmParams keyParams
-	PCRInfo         []byte // This must be a serialization of a pcrInfoLong.
-	PubKey          []byte
-	EncData         []byte
+	PCRInfo         tpmutil.U32Bytes // This must be a serialization of a pcrInfoLong.
+	PubKey          tpmutil.U32Bytes
+	EncData         tpmutil.U32Bytes
 }
 
 // A pubKey represents a public key known to the TPM.
 type pubKey struct {
 	AlgorithmParams keyParams
-	Key             []byte
+	Key             tpmutil.U32Bytes
+}
+
+// A symKey is a TPM representation of a symmetric key.
+type symKey struct {
+	AlgID     uint32
+	EncScheme uint16
+	Key       tpmutil.U16Bytes // TPM_SYMMETRIC_KEY uses a 16-bit header for Key data
 }
 
 // A tpmStoredData holds sealed data from the TPM.
 type tpmStoredData struct {
 	Version uint32
-	Info    []byte
-	Enc     []byte
+	Info    tpmutil.U32Bytes
+	Enc     tpmutil.U32Bytes
 }
 
 // String returns a string representation of a tpmStoredData.
@@ -271,7 +278,7 @@ type quoteInfo struct {
 // A pcrComposite stores a selection of PCRs with the selected PCR values.
 type pcrComposite struct {
 	Selection pcrSelection
-	Values    []byte
+	Values    tpmutil.U32Bytes
 }
 
 // convertPubKey converts a public key into TPM form. Currently, this function

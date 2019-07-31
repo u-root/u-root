@@ -20,6 +20,7 @@
         "cmds/core/elvish/.*",
         "cmds/core/ping/.*",
         "cmds/exp/ectool/.*",
+        "cmds/exp/cpu/cpu9p.go",
         "cmds/core/man/data/data.go",
         "pkg/diskboot/entrytype_string.go"
     ]

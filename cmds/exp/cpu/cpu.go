@@ -23,6 +23,7 @@ import (
 	// We use this ssh because it implements port redirection.
 	// It can not, however, unpack password-protected keys yet.
 	"github.com/gliderlabs/ssh"
+	"github.com/hugelgupf/p9/p9"
 	"github.com/kr/pty" // TODO: get rid of krpty
 	"github.com/u-root/u-root/pkg/termios"
 	"github.com/u-root/u-root/pkg/uroot/util"
@@ -43,16 +44,18 @@ var (
 	remote    = flag.Bool("remote", false, "indicates we are the remote side of the cpu session")
 	network   = flag.String("network", "tcp", "network to use")
 	keyFile   = flag.String("key", filepath.Join(os.Getenv("HOME"), ".ssh/cpu_rsa"), "key file")
-	srv9p     = flag.String("srv", "unpfs", "what server to run")
+	srv9p     = flag.String("srv", "", "what server to run -- to use internal servers, leave this empty")
 	bin       = flag.String("bin", "cpu", "path of cpu binary")
 	port9p    = flag.String("port9p", "", "port9p # on remote machine for 9p mount")
 	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
 	root      = flag.String("root", "/", "9p root")
 	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": separated list of directories in /tmp/cpu to bind over /")
+	mountopts = flag.String("mountopts", "", "Extra options to add to the 9p mount")
+	msize     = flag.Int("msize", 1048576, "msize to use")
 )
 
 func verbose(f string, a ...interface{}) {
-	v(f+"\r\n", a...)
+	v("\r\n"+f+"\r\n", a...)
 }
 
 func dial(n, a string, config *ossh.ClientConfig) (*ossh.Client, error) {
@@ -169,7 +172,10 @@ func runRemote(cmd, port9p string) error {
 		user = "nouser"
 	}
 	flags := uintptr(unix.MS_NODEV | unix.MS_NOSUID)
-	opts := fmt.Sprintf("version=9p2000.L,trans=tcp,port=%v,uname=%v", port9p, user)
+	opts := fmt.Sprintf("version=9p2000.L,trans=tcp,port=%v,uname=%v,debug=0,msize=%d", port9p, user, *msize)
+	if *mountopts != "" {
+		opts += "," + *mountopts
+	}
 	if err := unix.Mount("127.0.0.1", "/tmp/cpu", "9p", flags, opts); err != nil {
 		return fmt.Errorf("9p mount %v", err)
 	}
@@ -187,7 +193,7 @@ func runRemote(cmd, port9p string) error {
 			log.Printf("Overlayfs mount failed: %v. Proceeding with selective mounts from /tmp/cpu into /", err)
 		}
 	}
-	if !overlaid {
+	if !overlaid && *bindover != "" {
 		// We could not get an overlayfs mount.
 		// There are lots of cases where binaries REQUIRE that ld.so be in the right place.
 		// In some cases if you set LD_LIBRARY_PATH it is ignored.
@@ -210,7 +216,8 @@ func runRemote(cmd, port9p string) error {
 	}
 	// The unmount happens for free since we unshared.
 	v("runRemote: command is %q", cmd)
-	c := exec.Command("/bin/sh", "-c", cmd)
+	f := strings.Fields(cmd)
+	c := exec.Command(f[0], f[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return c.Run()
 }
@@ -219,7 +226,7 @@ func runRemote(cmd, port9p string) error {
 // TODO: make it more private, and also, have server only take
 // one connection or use stdin/stdout
 func srv(ctx context.Context) (net.Conn, *exec.Cmd, error) {
-	c := exec.CommandContext(ctx, "unpfs", "tcp!localhost!5641", *root)
+	c := exec.CommandContext(ctx, *srv9p, "tcp!localhost!5641", *root)
 	o, err := c.StdoutPipe()
 	if err != nil {
 		return nil, nil, err
@@ -269,18 +276,7 @@ func runClient(host, a string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	srvSock, p, err := srv(ctx)
-	if err != nil {
-		cancel()
-		return err
-	}
-	defer func() {
-		cancel()
-		p.Wait()
-	}()
 	// Arrange port forwarding from remote ssh to our server.
-
 	// Request the remote side to open port 5640 on all interfaces.
 	// Note: cl.Listen returns a TCP listener with network is "tcp"
 	// or variants. This lets us use a listen deadline.
@@ -295,9 +291,22 @@ func runClient(host, a string) error {
 	port := ap[len(ap)-1]
 	v("listener %T %v addr %v port %v", l, l, l.Addr().String(), port)
 
-	go forward(l, srvSock)
-	v("Connected to %v", cl)
-
+	if *srv9p == "" {
+		go p9.NewServer(&cpu9p{path: *root}).Serve(l)
+	} else {
+		ctx, cancel := context.WithCancel(context.Background())
+		srvSock, p, err := srv(ctx)
+		if err != nil {
+			cancel()
+			return err
+		}
+		defer func() {
+			cancel()
+			p.Wait()
+		}()
+		go forward(l, srvSock)
+		v("Connected to %v", cl)
+	}
 	// now run stuff.
 	if err := shell(cl, a, port); err != nil {
 		return err
@@ -395,11 +404,10 @@ func shell(client *ossh.Client, a, port9p string) error {
 // single threaded.
 func init() {
 	flag.Parse()
-	if *debug {
-		v = log.Printf
-	}
 	if os.Getpid() == 1 {
-		*runAsInit, *debug = true, true
+		*runAsInit, *debug = true, false
+	}
+	if *debug {
 		v = log.Printf
 	}
 	if *remote {

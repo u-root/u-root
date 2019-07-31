@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Google Inc. All rights reserved.
+// Copyright (c) 2018, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,102 @@
 
 package tpmutil
 
+import (
+	"encoding/binary"
+	"fmt"
+	"io"
+)
+
 // RawBytes is for Pack and RunCommand arguments that are already encoded.
 // Compared to []byte, RawBytes will not be prepended with slice length during
 // encoding.
 type RawBytes []byte
+
+// U16Bytes is a byte slice with a 16-bit header
+type U16Bytes []byte
+
+// TPMMarshal packs U16Bytes
+func (b *U16Bytes) TPMMarshal(out io.Writer) error {
+	size := uint16(len([]byte(*b)))
+	if err := binary.Write(out, binary.BigEndian, size); err != nil {
+		return err
+	}
+
+	n, err := out.Write(*b)
+	if err != nil {
+		return err
+	}
+	if n != int(size) {
+		return fmt.Errorf("unable to write all contents of U16Bytes")
+	}
+	return nil
+}
+
+// TPMUnmarshal unpacks a U16Bytes
+func (b *U16Bytes) TPMUnmarshal(in io.Reader) error {
+	var tmpSize uint16
+	if err := binary.Read(in, binary.BigEndian, &tmpSize); err != nil {
+		return err
+	}
+	size := int(tmpSize)
+	if len(*b) >= size {
+		*b = (*b)[:size]
+	} else {
+		*b = append(*b, make([]byte, size-len(*b))...)
+	}
+
+	n, err := in.Read(*b)
+	if err != nil {
+		return err
+	}
+	if n != size {
+		return fmt.Errorf("unable to read all contents in to U16Bytes")
+	}
+	return nil
+}
+
+// U32Bytes is a byte slice with a 32-bit header
+type U32Bytes []byte
+
+// TPMMarshal packs U32Bytes
+func (b *U32Bytes) TPMMarshal(out io.Writer) error {
+	size := uint32(len([]byte(*b)))
+	if err := binary.Write(out, binary.BigEndian, size); err != nil {
+		return err
+	}
+
+	n, err := out.Write(*b)
+	if err != nil {
+		return err
+	}
+	if n != int(size) {
+		return fmt.Errorf("unable to write all contents of U32Bytes")
+	}
+	return nil
+}
+
+// TPMUnmarshal unpacks a U32Bytes
+func (b *U32Bytes) TPMUnmarshal(in io.Reader) error {
+	var tmpSize uint32
+	if err := binary.Read(in, binary.BigEndian, &tmpSize); err != nil {
+		return err
+	}
+	size := int(tmpSize)
+	if len(*b) >= size {
+		*b = (*b)[:size]
+	} else {
+		*b = append(*b, make([]byte, size-len(*b))...)
+	}
+
+	n, err := in.Read(*b)
+	if err != nil {
+		return err
+	}
+	if n != size {
+		return fmt.Errorf("unable to read all contents in to U32Bytes")
+	}
+	return nil
+}
 
 // Tag is a command tag.
 type Tag uint16
@@ -48,3 +140,32 @@ type responseHeader struct {
 
 // A Handle is a reference to a TPM object.
 type Handle uint32
+
+type handleList []Handle
+
+func (l *handleList) TPMMarshal(out io.Writer) error {
+	return fmt.Errorf("TPMMarhsal on []Handle is not supported yet")
+}
+
+func (l *handleList) TPMUnmarshal(in io.Reader) error {
+	var numHandles uint16
+	if err := binary.Read(in, binary.BigEndian, &numHandles); err != nil {
+		return err
+	}
+
+	// Make len(e) match size exactly.
+	size := int(numHandles)
+	if len(*l) >= size {
+		*l = (*l)[:size]
+	} else {
+		*l = append(*l, make([]Handle, size-len(*l))...)
+	}
+	return binary.Read(in, binary.BigEndian, *l)
+}
+
+// SelfMarshaler allows custom types to override default encoding/decoding
+// behavior in Pack, Unpack and UnpackBuf.
+type SelfMarshaler interface {
+	TPMMarshal(out io.Writer) error
+	TPMUnmarshal(in io.Reader) error
+}
