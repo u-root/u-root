@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	flag "github.com/spf13/pflag"
 )
 
 const (
@@ -28,9 +30,10 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 	expectedOutFile = filepath.Join(testDataDir, expectedOutFile)
 	actualOutFile := fmt.Sprintf("%s.actual", expectedOutFile)
 	os.Remove(actualOutFile)
-	resetFlags()
 	os.Args = []string{os.Args[0], "--from-dump", dumpFile}
 	os.Args = append(os.Args, args...)
+	flag.Parse()
+	defer resetFlags()
 	out := bytes.NewBuffer(nil)
 	if _, err := dmiDecode(out); err != nil {
 		t.Errorf("%+v %+v %+v: error: %s", dumpFile, args, expectedOutFile, err)

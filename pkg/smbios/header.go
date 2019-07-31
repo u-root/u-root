@@ -7,7 +7,6 @@ package smbios
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 )
 
@@ -20,14 +19,7 @@ type Header struct {
 
 // Parse parses the header from the binary data.
 func (h *Header) Parse(data []byte) error {
-	if len(data) < 4 {
-		return errors.New("data too short for a header")
-	}
-	b := bytes.NewBuffer(data)
-	binary.Read(b, binary.LittleEndian, &h.Type)
-	binary.Read(b, binary.LittleEndian, &h.Length)
-	binary.Read(b, binary.LittleEndian, &h.Handle)
-	return nil
+	return binary.Read(bytes.NewReader(data), binary.LittleEndian, h)
 }
 
 // String returns string representation os the header.
