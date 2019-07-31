@@ -56,7 +56,6 @@ func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 }
 
 func dmiDecode(textOut io.Writer) (int, error) {
-	flag.Parse()
 	typeFilter, err := parseTypeFilter(*flagType)
 	if err != nil {
 		return 2, fmt.Errorf("invalid --type: %s", err)
@@ -87,6 +86,7 @@ func dmiDecode(textOut io.Writer) (int, error) {
 }
 
 func main() {
+	flag.Parse()
 	if code, err := dmiDecode(os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(code)
