@@ -18,11 +18,6 @@ import (
 	"github.com/u-root/u-root/pkg/crypto"
 )
 
-var (
-	signed    byte = 0xff
-	notSigned byte = 0x11
-)
-
 // memoryZipReader is used to unpack a zip file from a byte sequence in memory.
 type memoryZipReader struct {
 	Content []byte
@@ -142,64 +137,117 @@ func ToZip(output string, manifest string) error {
 		return errors.New("Manifest is not valid")
 	}
 
-	// Collect botfiles relative to manifest.json
-	files := make([]string, 0)
-	files = append(files, path.Base(manifest))
-	for _, cfg := range mf.Configs {
-		if cfg.Kernel != "" {
-			files = append(files, cfg.Kernel)
-		}
-		if cfg.Initramfs != "" {
-			files = append(files, cfg.Initramfs)
-		}
-		if cfg.DeviceTree != "" {
-			files = append(files, cfg.DeviceTree)
-		}
-	}
+	// Collect botfiles and root certificate relative to manifest.json
+	// files := make([]string, 0)
+	// files = append(files, path.Base(manifest))
+	// for _, cfg := range mf.Configs {
+	// 	if cfg.Kernel != "" {
+	// 		files = append(files, cfg.Kernel)
+	// 	}
+	// 	if cfg.Initramfs != "" {
+	// 		files = append(files, cfg.Initramfs)
+	// 	}
+	// 	if cfg.DeviceTree != "" {
+	// 		files = append(files, cfg.DeviceTree)
+	// 	}
+	// }
 
 	// Create a buffer to write the archive to.
 	buf := new(bytes.Buffer)
 	// Create a new zip archive.
-	w := zip.NewWriter(buf)
+	z := zip.NewWriter(buf)
 
-	// Archive files
-	dir := path.Dir(manifest)
-	for _, file := range files {
-		// Create directories of each filepath first
-		for d := file; ; {
-			d, _ = path.Split(d)
-			if d != "" {
-				w.Create(d)
-				d = path.Clean(d)
-			} else {
-				break
-			}
+	var dest, origin string
+	//Archive boot files
+	for i, cfg := range mf.Configs {
+		dir := fmt.Sprintf("bootconfig_%d/", i)
+		z.Create(dir)
+		if cfg.Kernel != "" {
+			dest = path.Join(dir, path.Base(cfg.Kernel))
+			origin = path.Join(path.Dir(manifest), cfg.Kernel)
+			toZip(z, dest, origin)
+			cfg.Kernel = dest
 		}
-		// Create new file in archive
-		dst, err := w.Create(file)
-		if err != nil {
-			return err
+		if cfg.Initramfs != "" {
+			dest = path.Join(dir, path.Base(cfg.Initramfs))
+			origin = path.Join(path.Dir(manifest), cfg.Initramfs)
+			toZip(z, dest, origin)
+			cfg.Initramfs = dest
 		}
-		// Copy content from inputpath to new file
-		p := path.Join(dir, file)
-		src, err := os.Open(p)
-		if err != nil {
-			return fmt.Errorf("Cannot find %s specified in %s", p, manifest)
+		if cfg.DeviceTree != "" {
+			dest = path.Join(dir, path.Base(cfg.DeviceTree))
+			origin = path.Join(path.Dir(manifest), cfg.DeviceTree)
+			toZip(z, dest, origin)
+			cfg.DeviceTree = dest
 		}
-		_, err = io.Copy(dst, src)
-		if err != nil {
-			return err
-		}
-		err = src.Close()
-		if err != nil {
-			return err
-		}
+		mf.Configs[i] = cfg
 	}
-	// Write central directory of archive
-	err = w.Close()
+
+	// Archive root certificate
+	z.Create("certs/")
+	dest = path.Join("certs/", path.Base(mf.RootCertPath))
+	origin = path.Join(path.Dir(manifest), mf.RootCertPath)
+	toZip(z, dest, origin)
+	mf.RootCertPath = dest
+
+	// Archive manifest
+	newManifest, err := ManifestToBytes(mf)
 	if err != nil {
 		return err
 	}
+	dst, err := z.Create(path.Base(manifest))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(dst, bytes.NewReader(newManifest))
+	if err != nil {
+		return err
+	}
+
+	// Write central directory of archive
+	err = z.Close()
+	if err != nil {
+		return err
+	}
+
+	// Archive files
+	// dir := path.Dir(manifest)
+	// for _, file := range files {
+	// 	// Create directories of each filepath first
+	// 	for d := file; ; {
+	// 		d, _ = path.Split(d)
+	// 		if d != "" {
+	// 			w.Create(d)
+	// 			d = path.Clean(d)
+	// 		} else {
+	// 			break
+	// 		}
+	// 	}
+	// 	// Create new file in archive
+	// 	dst, err := w.Create(file)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	// Copy content from inputpath to new file
+	// 	p := path.Join(dir, file)
+	// 	src, err := os.Open(p)
+	// 	if err != nil {
+	// 		return fmt.Errorf("Cannot find %s specified in %s", p, manifest)
+	// 	}
+	// 	_, err = io.Copy(dst, src)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	err = src.Close()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// Write central directory of archive
+	// err = w.Close()
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Write buf to disk
 	if path.Ext(output) != ".zip" {
@@ -210,4 +258,21 @@ func ToZip(output string, manifest string) error {
 		return err
 	}
 	return nil
+}
+
+func toZip(w *zip.Writer, newPath, originPath string) error {
+	dst, err := w.Create(newPath)
+	if err != nil {
+		return err
+	}
+	// Copy content from inputpath to new file
+	src, err := os.Open(originPath)
+	if err != nil {
+		return fmt.Errorf("Cannot find %s specified in manifest", originPath)
+	}
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
+	return src.Close()
 }

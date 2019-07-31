@@ -14,14 +14,23 @@ var (
 	CurrentManifestVersion = 1
 )
 
+// BootSignature conteins the Signature of a BootConfig and the corresponing
+// Certificate
+type BootSignature struct {
+	Signature   []byte
+	Certificate []byte
+}
+
 // Manifest is a list of BootConfig objects. The goal is to provide  multiple
 // configurations to choose from.
 type Manifest struct {
 	// Version is a positive integer that determines the version of the Manifest
 	// structure. This will be used when introducing breaking changes in the
 	// Manifest interface.
-	Version int          `json:"version"`
-	Configs []BootConfig `json:"configs"`
+	Version      int             `json:"version"`
+	Configs      []BootConfig    `json:"configs"`
+	RootCertPath string          `json:"rootCert"`
+	Signatures   []BootSignature `json:"signatures"`
 }
 
 // NewManifest returns a new empty Manifest structure with the current version
@@ -40,6 +49,15 @@ func ManifestFromBytes(data []byte) (*Manifest, error) {
 		return nil, err
 	}
 	return &manifest, nil
+}
+
+// ManifestToBytes serializes a Manifest into a byte slice
+func ManifestToBytes(mf *Manifest) ([]byte, error) {
+	buf, err := json.Marshal(mf)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
 
 // GetBootConfig returns the i-th boot configuration from the manifest, or an
