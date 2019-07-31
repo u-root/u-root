@@ -175,7 +175,6 @@ func NewDiscoveryForInterface(ifname string, modifiers ...Modifier) (*DHCPv4, er
 // HW type and specified hardware address.
 func NewDiscovery(hwaddr net.HardwareAddr, modifiers ...Modifier) (*DHCPv4, error) {
 	return New(PrependModifiers(modifiers,
-		WithBroadcast(true),
 		WithHwAddr(hwaddr),
 		WithRequestedOptions(
 			OptionSubnetMask,

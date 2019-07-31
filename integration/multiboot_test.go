@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !race
+
 package integration
 
 import (
@@ -13,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func testMultiboot(t *testing.T, kernel string) {
@@ -23,7 +26,7 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Skip("multiboot kernel is not present")
 	}
 
-	q, cleanup := QEMUTest(t, &Options{
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Files: []string{
 			src + ":kernel",
 		},
@@ -74,8 +77,8 @@ func testMultiboot(t *testing.T, kernel string) {
 
 func TestMultiboot(t *testing.T) {
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package integration
+package vmtest
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,6 +20,7 @@ import (
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -141,40 +141,35 @@ func callerName(depth int) string {
 	return last(f.Name())
 }
 
-// TestLineWriter is an io.Writer that waits for a full line of prints before
-// logging to TB.
-type TestLineWriter struct {
-	TB     testing.TB
-	Prefix string
-
-	buffer []byte
+// TestLineWriter is an io.Writer that logs full lines of serial to tb.
+func TestLineWriter(tb testing.TB, prefix string) io.WriteCloser {
+	return uio.FullLineWriter(&testLineWriter{tb: tb, prefix: prefix})
 }
 
-func (tsw *TestLineWriter) printBuf() {
-	bufs := bytes.Split(tsw.buffer, []byte{'\n'})
-	for _, buf := range bufs {
-		if len(buf) != 0 {
-			tsw.TB.Logf("%s: %s", tsw.Prefix, strings.ReplaceAll(string(buf), "\033", "~"))
-		}
+type jsonStripper struct {
+	uio.LineWriter
+}
+
+func (j jsonStripper) OneLine(p []byte) {
+	// Poor man's JSON detector.
+	if len(p) == 0 || p[0] == '{' {
+		return
 	}
-	tsw.buffer = nil
+	j.LineWriter.OneLine(p)
 }
 
-func (tsw *TestLineWriter) Write(p []byte) (int, error) {
-	i := bytes.LastIndexByte(p, '\n')
-	if i == -1 {
-		tsw.buffer = append(tsw.buffer, p...)
-	} else {
-		tsw.buffer = append(tsw.buffer, p[:i]...)
-		tsw.printBuf()
-		tsw.buffer = append([]byte{}, p[i:]...)
-	}
-	return len(p), nil
+func JSONLessTestLineWriter(tb testing.TB, prefix string) io.WriteCloser {
+	return uio.FullLineWriter(jsonStripper{&testLineWriter{tb: tb, prefix: prefix}})
 }
 
-func (tsw *TestLineWriter) Close() error {
-	tsw.printBuf()
-	return nil
+// testLineWriter is an io.Writer that logs full lines of serial to tb.
+type testLineWriter struct {
+	tb     testing.TB
+	prefix string
+}
+
+func (tsw *testLineWriter) OneLine(p []byte) {
+	tsw.tb.Logf("%s: %s", tsw.prefix, strings.ReplaceAll(string(p), "\033", "~"))
 }
 
 // TestArch returns the architecture under test. Pass this as GOARCH when
@@ -208,10 +203,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		o.Logger = &testLogger{t}
 	}
 	if o.SerialOutput == nil {
-		o.SerialOutput = &TestLineWriter{
-			TB:     t,
-			Prefix: "serial",
-		}
+		o.SerialOutput = TestLineWriter(t, "serial")
 	}
 	if TestArch() == "arm" {
 		//currently, 9p does not work on arm
@@ -333,6 +325,10 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 			{
 				Builder:  builder.BusyBox,
 				Packages: cmds,
+			},
+			{
+				Builder:  builder.Binary,
+				Packages: []string{"cmd/test2json"},
 			},
 		},
 		ExtraFiles:   o.Files,

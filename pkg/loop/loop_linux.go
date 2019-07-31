@@ -35,7 +35,7 @@ type Loop struct {
 	dir string
 }
 
-// New initializes a Loop struct and allocates a loodevice to it.
+// New initializes a Loop struct and allocates a loop device to it.
 //
 // source is the file to use as a loop block device. fstype the file system
 // name. data is the data argument to the mount(2) syscall.

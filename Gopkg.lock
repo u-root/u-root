@@ -26,6 +26,14 @@
   version = "v3.0.0"
 
 [[projects]]
+  digest = "1:5b9ec589d739f9dc806a72739960d6e73ef18cf539841c85220f2fe32502a53a"
+  name = "github.com/creack/pty"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "2769f65a3a94eb8f876f44a0459d24ae7ad2e488"
+  version = "v1.1.7"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -49,12 +57,12 @@
   revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
 
 [[projects]]
-  digest = "1:3c04690dd1d3fad9a36c492c32863fad91bcf822fd95d5c4cae97be1e9abc361"
+  digest = "1:5d0848fa4e2b7c3c54a9d87ee9f74e1c08f0426465b968b76baec0baa03ab73b"
   name = "github.com/go-test/deep"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
-  version = "v1.0.1"
+  revision = "cf67d735e69b4a4d50cdf571a92b0144786080f7"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:28c6f29a00fc674ce801a4e8e10eacdbb49dbe2eea79a2b3d60b405cc0bd2b2d"
@@ -74,7 +82,7 @@
   name = "github.com/google/goexpect"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "b674c1c17d90d1eb62b39e96d3b521e409c1986b"
+  revision = "c416f18ae5af08f6c8e6b116ab427441cc67a593"
 
 [[projects]]
   branch = "master"
@@ -82,11 +90,11 @@
   name = "github.com/google/goterm"
   packages = ["term"]
   pruneopts = "NUT"
-  revision = "ce302be1d1149d49ed520b8f0d9c956b2663b3d6"
+  revision = "fc88cf888a3fa99ecc23d1efc1a44284268457d3"
 
 [[projects]]
   branch = "master"
-  digest = "1:fa32754239ef762b21ebbd582cef0d561821eb8ff39c9c573acf8b4327104274"
+  digest = "1:9e9d2460ed0526ccf14606cf378a608a7a1a3c538f368e9989c8e0d70837cf56"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -102,7 +110,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "498b45cac80e2856fdcebfc0b4ebd446cc7ef87e"
+  revision = "6d0d21cc633742eb4de9b08ad7a53572a6907623"
 
 [[projects]]
   branch = "master"
@@ -120,8 +128,8 @@
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   pruneopts = "NUT"
-  revision = "7a873649b01a9669308e8d58b6bcbbccc0b06b5d"
-  version = "v1.7.1"
+  revision = "23256797d1e4ccac36fad828362cdfef5b3aeb90"
+  version = "v1.7.4"
 
 [[projects]]
   digest = "1:7dc14952637aea1ef99bc1d9ad1374ddf0fa10d7b608cf5cb72d3f4fa7e4b579"
@@ -140,12 +148,12 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:a709833ed0ac737f4f9d81be2a4699510780ca12b84a63133ca439fb5dc13a70"
+  digest = "1:797f9322a4864f6a4781ab80433dcf248581ed2f31bd5e152f50bd3a3a8c5ad8"
   name = "github.com/kr/pty"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "b6e1bdd4a4f88614e0c6e5e8089c7abed98aae17"
-  version = "v1.1.5"
+  revision = "24b51915630e1d9d3c6adf15a3a96796bbc3cd43"
+  version = "v1.1.8"
 
 [[projects]]
   digest = "1:666428435471609937bd13f56e2e31501b5660ffc44a786cf2217dc53291a604"
@@ -259,14 +267,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ff16cd9d71e063d5b060073ea46149a5fe92b688d201e3939673686bcb3c84af"
+  digest = "1:badbd25e98974dc2bec0d02dad67a79a74e1e65ef32a423e75fa1fe80aec57dc"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "a8241965b5fba0ec02d248784b768b1adb31daa8"
+  revision = "b4e9f47a11c0950050d6c44ef7f0ba09bce6418d"
 
 [[projects]]
   branch = "master"
@@ -300,7 +308,7 @@
     "ssh",
   ]
   pruneopts = "NUT"
-  revision = "cc06ce4a13d484c0101a9e92913248488a75786d"
+  revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
 
 [[projects]]
   branch = "master"
@@ -313,11 +321,11 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "da137c7871d730100384dbcf36e6f8fa493aef5b"
+  revision = "ca1201d0de80cfde86cb01aea620983605dfe99b"
 
 [[projects]]
   branch = "master"
-  digest = "1:bf9a6904b352093a9a9825aaa49c0123658619111a915c51562a514aff8aaae2"
+  digest = "1:7a9d37d6b986937aadaf23b125ee6a6d4e3e6eec8560b51ac18fd2adf62e6406"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -325,7 +333,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
+  revision = "fc99dfbffb4e5ed5758a37e31dd861afe285406b"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -344,7 +352,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3498d9ffb33636ae6782189176e94742af94490d49c2eaf9e3d3e1ab529132f8"
+  digest = "1:87f3ab7c6341b1be840c580bdf23dcce036916bf1859e8ab8667033a09ae6097"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -361,15 +369,15 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "59bec042292dcfabf5c63176f6468abd2c8fc2d0"
+  revision = "ff9f1409240a6589b749f29c118cc0ac9bd5bcde"
 
 [[projects]]
   digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
   name = "google.golang.org/grpc"
   packages = ["codes"]
   pruneopts = "NUT"
-  revision = "501c41df7f472c740d0674ff27122f3f48c80ce7"
-  version = "v1.21.1"
+  revision = "045159ad57f3781d409358e3ade910a018c16b30"
+  version = "v1.22.1"
 
 [[projects]]
   digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"

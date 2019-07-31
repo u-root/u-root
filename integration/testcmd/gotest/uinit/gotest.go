@@ -6,70 +6,93 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"strings"
 	"time"
 
+	"github.com/u-root/u-root/pkg/mount"
 	"golang.org/x/sys/unix"
-
-	"github.com/u-root/u-root/pkg/sh"
 )
+
+func walkTests(testRoot string, fn func(string, string)) error {
+	return filepath.Walk(testRoot, func(path string, info os.FileInfo, err error) error {
+		if !info.Mode().IsRegular() || !strings.HasSuffix(path, ".test") || err != nil {
+			return nil
+		}
+		t2, err := filepath.Rel(testRoot, path)
+		if err != nil {
+			return err
+		}
+		pkgName := filepath.Dir(t2)
+
+		fn(path, pkgName)
+		return nil
+	})
+}
 
 // Mount a vfat volume and run the tests within.
 func main() {
-	sh.RunOrDie("mkdir", "/testdata")
+	if err := os.MkdirAll("/testdata", 0755); err != nil {
+		log.Fatalf("Couldn't create testdata: %v", err)
+	}
+	var err error
 	if os.Getenv("UROOT_USE_9P") == "1" {
-		sh.RunOrDie("mount", "-t", "9p", "tmpdir", "/testdata")
+		err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
 	} else {
-		sh.RunOrDie("mount", "-r", "-t", "vfat", "/dev/sda1", "/testdata")
+		err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
 	}
-
-	// Gather list of tests.
-	files, err := ioutil.ReadDir("/testdata/tests")
 	if err != nil {
-		log.Fatal(err)
-	}
-	tests := []string{}
-	for _, f := range files {
-		tests = append(tests, f.Name())
+		log.Fatalf("Couldn't mount /dev/sda1: %v", err)
 	}
 
-	// Sort tests.
-	sort.Strings(tests)
-
-	// We are using TAP-style test output. See: https://testanything.org/
-	// One unfortunate design in TAP is "ok" is a subset of "not ok", so we
-	// prepend each line with "TAP: " and search for for "TAP: ok".
-	log.Printf("TAP: 1..%d", len(tests))
-
-	// Run tests.
-	for i, t := range tests {
-		runMsg := fmt.Sprintf("TAP: # running %d - %s", i, t)
-		passMsg := fmt.Sprintf("TAP: ok %d - %s", i, t)
-		failMsg := fmt.Sprintf("TAP: not ok %d - %s", i, t)
-		log.Println(runMsg)
-
+	walkTests("/testdata/tests", func(path, pkgName string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, filepath.Join("/testdata/tests", t))
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		err := cmd.Run()
 
-		if ctx.Err() == context.DeadlineExceeded {
-			log.Println("TAP: # timed out")
-			log.Println(failMsg)
-		} else if err == nil {
-			log.Println(passMsg)
-		} else {
-			log.Println(err)
-			log.Println(failMsg)
+		r, w, err := os.Pipe()
+		if err != nil {
+			log.Printf("Failed to get pipe: %v", err)
+			return
 		}
-	}
+
+		cmd := exec.CommandContext(ctx, path, "-test.v")
+		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
+
+		// Write to stdout for humans, write to w for the JSON converter.
+		//
+		// The test collector will gobble up JSON for statistics, and
+		// print non-JSON for humans to consume.
+		cmd.Stdout = io.MultiWriter(os.Stdout, w)
+
+		// Start test in its own dir so that testdata is available as a
+		// relative directory.
+		cmd.Dir = filepath.Dir(path)
+		if err := cmd.Start(); err != nil {
+			log.Printf("Failed to start %v: %v", path, err)
+			return
+		}
+
+		j := exec.CommandContext(ctx, "test2json", "-t", "-p", pkgName)
+		j.Stdin = r
+		j.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := j.Start(); err != nil {
+			log.Printf("Failed to start test2json: %v", err)
+			return
+		}
+
+		// Don't do anything if the test fails. The log collector will
+		// deal with it. ¯\_(ツ)_/¯
+		cmd.Wait()
+		// Close the pipe so test2json will quit.
+		w.Close()
+		j.Wait()
+	})
+
+	log.Printf("GoTest Done")
 
 	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
 }
