@@ -56,3 +56,6 @@ vmlinux
 # Vim swap files
 *.swp
 .*.swp
+
+# tools
+tools/checklicenses/checklicenses
