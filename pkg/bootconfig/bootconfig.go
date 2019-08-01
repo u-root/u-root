@@ -94,7 +94,7 @@ func (bc *BootConfig) Boot() error {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
 		}
-		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules); err != nil {
+		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
 		}
 	}

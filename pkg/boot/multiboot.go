@@ -23,7 +23,7 @@ var _ OSImage = &MultibootImage{}
 
 // Load implements OSImage.Load.
 func (mi *MultibootImage) Load(verbose bool) error {
-	return multiboot.Load(verbose, mi.Path, mi.Cmdline, mi.Modules)
+	return multiboot.Load(verbose, mi.Path, mi.Cmdline, mi.Modules, nil)
 }
 
 // String implements fmt.Stringer.
