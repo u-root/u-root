@@ -364,3 +364,9 @@ func (l *Lexer) WriteBytes(p []byte) {
 func (l *Lexer) Write(p []byte) (int, error) {
 	return copy(l.append(len(p)), p), nil
 }
+
+// Align appends bytes to align the length of the buffer to be divisible by n.
+func (l *Lexer) Align(n int) {
+	pad := ((l.Len() + n - 1) &^ (n - 1)) - l.Len()
+	l.Append(pad)
+}

@@ -1,0 +1,26 @@
+{
+    "gopkg": "github.com/u-root/u-root",
+    "licenses": [
+        [
+            "^// Copyright [\\d\\-, ]+ the u-root Authors\\. All rights reserved",
+            "// Use of this source code is governed by a BSD-style",
+            "// license that can be found in the LICENSE file\\."
+        ],
+        [
+            "^// Copyright [\\d\\-, ]+ Google LLC.",
+            "//",
+            "// Licensed under the Apache License, Version 2.0.*"
+        ]
+    ],
+    "accept": [
+        ".*\\.go"
+    ],
+    "reject": [
+        "vendor/.*",
+        "cmds/core/elvish/.*",
+        "cmds/core/ping/.*",
+        "cmds/exp/ectool/.*",
+        "cmds/core/man/data/data.go",
+        "pkg/diskboot/entrytype_string.go"
+    ]
+}

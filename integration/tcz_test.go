@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -27,16 +28,20 @@ func TestTczclient(t *testing.T) {
 	var sb wc
 	if true {
 		q, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-			Name:         "TestTczclient_Server",
-			SerialOutput: &sb,
-			Cmds: []string{
-				"github.com/u-root/u-root/cmds/core/dmesg",
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/init",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/exp/srvfiles",
+			Name: "TestTczclient_Server",
+			BuildOpts: uroot.Opts{
+				Commands: uroot.BusyBoxCmds(
+					"github.com/u-root/u-root/cmds/core/dmesg",
+					"github.com/u-root/u-root/cmds/core/echo",
+					"github.com/u-root/u-root/cmds/core/ip",
+					"github.com/u-root/u-root/cmds/core/init",
+					"github.com/u-root/u-root/cmds/core/shutdown",
+					"github.com/u-root/u-root/cmds/core/sleep",
+					"github.com/u-root/u-root/cmds/exp/srvfiles",
+				),
+				ExtraFiles: []string{
+					"./testdata/tczserver:tcz",
+				},
 			},
 			Uinit: []string{
 				"dmesg",
@@ -52,10 +57,12 @@ func TestTczclient(t *testing.T) {
 				"echo The Server Completes",
 				"shutdown -h",
 			},
-			Files: []string{
-				"./testdata/tczserver:tcz",
+			QEMUOpts: qemu.Options{
+				SerialOutput: &sb,
+				Devices: []qemu.Device{
+					network.NewVM(),
+				},
 			},
-			Network: network,
 		})
 		if err := q.Expect("shutdown"); err != nil {
 			t.Logf("got %v", err)
@@ -67,16 +74,20 @@ func TestTczclient(t *testing.T) {
 
 	var b wc
 	tczClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name:         "TestTczclient_Client",
-		SerialOutput: &b,
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/cat",
-			"github.com/u-root/u-root/cmds/core/echo",
-			"github.com/u-root/u-root/cmds/core/ip",
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/exp/tcz",
-			"github.com/u-root/u-root/cmds/core/shutdown",
-			"github.com/u-root/u-root/cmds/core/ls",
+		Name: "TestTczclient_Client",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/cat",
+				"github.com/u-root/u-root/cmds/core/echo",
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/exp/tcz",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/core/ls",
+			),
+			ExtraFiles: []string{
+				"./testdata/tczclient:tcz",
+			},
 		},
 		Uinit: []string{
 			"ip addr add 192.168.0.2/24 dev eth0",
@@ -97,8 +108,8 @@ func TestTczclient(t *testing.T) {
 			"ls /TinyCorePackages/tcloop",
 			"shutdown -h",
 		},
-		Files: []string{
-			"./testdata/tczclient:tcz",
+		QEMUOpts: qemu.Options{
+			SerialOutput: &b,
 		},
 	})
 	defer ccleanup()

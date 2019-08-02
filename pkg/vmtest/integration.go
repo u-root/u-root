@@ -15,14 +15,12 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/uroot"
-	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 	"github.com/u-root/u-root/pkg/uroot/logger"
 )
@@ -55,64 +53,44 @@ func main() {
 
 // Options are integration test options.
 type Options struct {
-	// Env is the Go environment to use to build u-root.
-	Env *golang.Environ
+	// BuildOpts are u-root initramfs options.
+	//
+	// Fields that are not set are populated by QEMU and QEMUTest as
+	// possible.
+	BuildOpts uroot.Opts
+
+	// QEMUOpts are QEMU VM options for the test.
+	//
+	// Fields that are not set are populated by QEMU and QEMUTest as
+	// possible.
+	QEMUOpts qemu.Options
+
+	// DontSetEnv doesn't set the BuildOpts.Env and uses the user-supplied one.
+	//
+	// TODO: make uroot.Opts.Env a pointer?
+	DontSetEnv bool
 
 	// Name is the test's name.
 	//
 	// If name is left empty, the calling function's function name will be
-	// used as determined by runtime.Caller
+	// used as determined by runtime.Caller.
 	Name string
-
-	// Go commands to include in the initramfs for the VM.
-	//
-	// If left empty, all u-root commands will be included.
-	Cmds []string
 
 	// Uinit are commands to execute after init.
 	//
-	// If populated, a uinit.go will be generated from these.
+	// If populated, a uinit.go will be generated from these and added to
+	// the busybox generated in BuildOpts.Commands.
 	Uinit []string
-
-	// Files are files to include in the VMs initramfs.
-	Files []string
-
-	// TmpDir is a temporary directory for build artifacts.
-	TmpDir string
-
-	// LogFile is a file to log serial output to.
-	//
-	// The default is serial/$Name.log
-	LogFile string
 
 	// Logger logs build statements.
 	Logger logger.Logger
 
-	// Timeout is the timeout for expect statements.
-	Timeout time.Duration
-
-	// Network is the VM's network.
-	Network *qemu.Network
-
 	// Extra environment variables to set when building (used by u-bmc)
 	ExtraBuildEnv []string
 
-	// Serial Output
-	SerialOutput io.WriteCloser
-
 	// Use virtual vfat rather than 9pfs
 	UseVVFAT bool
-
-	// QOptModifier is a func able to further alter qemu options.
-	QOptModifier QOptFunc
-
-	// UOptModifier is a func able to further alter initramfs options.
-	UOptModifier UOptFunc
 }
-
-type QOptFunc func(o *qemu.Options) error
-
-type UOptFunc func(o *uroot.Opts) error
 
 func last(s string) string {
 	l := strings.Split(s, ".")
@@ -202,8 +180,8 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	if o.Logger == nil {
 		o.Logger = &testLogger{t}
 	}
-	if o.SerialOutput == nil {
-		o.SerialOutput = TestLineWriter(t, "serial")
+	if o.QEMUOpts.SerialOutput == nil {
+		o.QEMUOpts.SerialOutput = TestLineWriter(t, "serial")
 	}
 	if TestArch() == "arm" {
 		//currently, 9p does not work on arm
@@ -225,9 +203,9 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		vm.Close()
 		if t.Failed() {
 			t.Log("Keeping temp dir: ", tmpDir)
-		} else if len(o.TmpDir) == 0 {
-			if err := os.RemoveAll(tmpDir); err != nil {
-				t.Logf("failed to remove temporary directory %s: %v", tmpDir, err)
+		} else if len(o.BuildOpts.TempDir) == 0 {
+			if err := os.RemoveAll(o.BuildOpts.TempDir); err != nil {
+				t.Logf("failed to remove temporary directory %s: %v", o.BuildOpts.TempDir, err)
 			}
 		}
 	}
@@ -236,6 +214,10 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 // QEMU builds the u-root environment and prepares QEMU options given the test
 // options and environment variables.
 //
+// QEMU will augment o.BuildOpts and o.QEMUOpts with configuration that the
+// caller either requested (through the Options.Uinit field, for example) or
+// that the caller did not set.
+//
 // QEMU returns the QEMU launch options, the temporary directory exposed to the
 // QEMU VM, or an error.
 func QEMU(o *Options) (*qemu.Options, string, error) {
@@ -243,161 +225,122 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 		o.Name = callerName(2)
 	}
 
-	if o.Env == nil {
-		env := golang.Default()
-		o.Env = &env
-		o.Env.CgoEnabled = false
-		env.GOARCH = TestArch()
-	}
-
-	if len(o.LogFile) == 0 {
-		// Create file for serial logs.
-		if err := os.MkdirAll(logDir, 0755); err != nil {
-			return nil, "", fmt.Errorf("could not create serial log directory: %v", err)
+	if len(o.QEMUOpts.Initramfs) == 0 {
+		if !o.DontSetEnv {
+			env := golang.Default()
+			env.CgoEnabled = false
+			env.GOARCH = TestArch()
+			o.BuildOpts.Env = env
 		}
 
-		o.LogFile = filepath.Join(logDir, fmt.Sprintf("%s.log", o.Name))
-	}
-
-	var cmds []string
-	if len(o.Cmds) == 0 {
-		cmds = append(cmds, "github.com/u-root/u-root/cmds/*")
-	} else {
-		cmds = append(cmds, o.Cmds...)
-	}
-	// Create a uinit from the commands given.
-	if len(o.Uinit) > 0 {
-		urootPkg, err := o.Env.Package("github.com/u-root/u-root/integration")
-		if err != nil {
-			return nil, "", err
+		var cmds []string
+		if len(o.BuildOpts.Commands) == 0 {
+			cmds = append(cmds, "github.com/u-root/u-root/cmds/*")
 		}
-		testDir := filepath.Join(urootPkg.Dir, "testcmd")
-
-		dirpath, err := ioutil.TempDir(testDir, "uinit-")
-		if err != nil {
-			return nil, "", err
-		}
-		defer os.RemoveAll(dirpath)
-
-		if err := os.MkdirAll(filepath.Join(dirpath, "uinit"), 0755); err != nil {
-			return nil, "", err
-		}
-
-		var realUinit [][]string
-		for _, cmd := range o.Uinit {
-			realUinit = append(realUinit, fields(cmd))
-		}
-
-		if err := ioutil.WriteFile(
-			filepath.Join(dirpath, "uinit", "uinit.go"),
-			[]byte(fmt.Sprintf(template, realUinit)),
-			0755); err != nil {
-			return nil, "", err
-		}
-		cmds = append(cmds, path.Join("github.com/u-root/u-root/integration/testcmd", filepath.Base(dirpath), "uinit"))
-	}
-
-	// Create or reuse a temporary directory.
-	tmpDir := o.TmpDir
-	if len(tmpDir) == 0 {
-		var err error
-		tmpDir, err = ioutil.TempDir("", "uroot-integration")
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	if o.Logger == nil {
-		o.Logger = log.New(os.Stderr, "", 0)
-	}
-
-	// OutputFile
-	outputFile := filepath.Join(tmpDir, "initramfs.cpio")
-	w, err := initramfs.CPIO.OpenWriter(o.Logger, outputFile, "", "")
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Build u-root
-	opts := uroot.Opts{
-		Env: *o.Env,
-		Commands: []uroot.Commands{
-			{
-				Builder:  builder.BusyBox,
-				Packages: cmds,
-			},
-			{
-				Builder:  builder.Binary,
-				Packages: []string{"cmd/test2json"},
-			},
-		},
-		ExtraFiles:   o.Files,
-		TempDir:      tmpDir,
-		BaseArchive:  uroot.DefaultRamfs.Reader(),
-		OutputFile:   w,
-		InitCmd:      "init",
-		DefaultShell: "elvish",
-	}
-	if o.UOptModifier != nil {
-		err := o.UOptModifier(&opts)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	if err := uroot.CreateInitramfs(o.Logger, opts); err != nil {
-		return nil, "", err
-	}
-
-	// Copy kernel to tmpDir for tests involving kexec.
-	kernel := filepath.Join(tmpDir, "kernel")
-	if err := cp.Copy(os.Getenv("UROOT_KERNEL"), kernel); err != nil {
-		return nil, "", err
-	}
-
-	logFile := o.SerialOutput
-	if logFile == nil {
-		if o.LogFile != "" {
-			logFile, err = os.Create(o.LogFile)
+		// Create a uinit from the commands given.
+		if len(o.Uinit) > 0 {
+			urootPkg, err := o.BuildOpts.Env.Package("github.com/u-root/u-root/integration")
 			if err != nil {
-				return nil, "", fmt.Errorf("could not create log file: %v", err)
+				return nil, "", err
 			}
+			testDir := filepath.Join(urootPkg.Dir, "testcmd")
+
+			dirpath, err := ioutil.TempDir(testDir, "uinit-")
+			if err != nil {
+				return nil, "", err
+			}
+			defer os.RemoveAll(dirpath)
+
+			if err := os.MkdirAll(filepath.Join(dirpath, "uinit"), 0755); err != nil {
+				return nil, "", err
+			}
+
+			var realUinit [][]string
+			for _, cmd := range o.Uinit {
+				realUinit = append(realUinit, fields(cmd))
+			}
+
+			if err := ioutil.WriteFile(
+				filepath.Join(dirpath, "uinit", "uinit.go"),
+				[]byte(fmt.Sprintf(template, realUinit)),
+				0755); err != nil {
+				return nil, "", err
+			}
+			cmds = append(cmds, path.Join("github.com/u-root/u-root/integration/testcmd", filepath.Base(dirpath), "uinit"))
 		}
+		// Add our commands to the build opts.
+		if len(cmds) > 0 {
+			o.BuildOpts.AddBusyBoxCommands(cmds...)
+		}
+
+		// Create or reuse a temporary directory.
+		if len(o.BuildOpts.TempDir) == 0 {
+			tmpDir, err := ioutil.TempDir("", "uroot-integration")
+			if err != nil {
+				return nil, "", err
+			}
+			o.BuildOpts.TempDir = tmpDir
+		}
+		if o.BuildOpts.BaseArchive == nil {
+			o.BuildOpts.BaseArchive = uroot.DefaultRamfs.Reader()
+		}
+		if len(o.BuildOpts.InitCmd) == 0 {
+			o.BuildOpts.InitCmd = "init"
+		}
+		if len(o.BuildOpts.DefaultShell) == 0 {
+			o.BuildOpts.DefaultShell = "elvish"
+		}
+
+		if o.Logger == nil {
+			o.Logger = log.New(os.Stderr, "", 0)
+		}
+
+		// OutputFile
+		var outputFile string
+		if o.BuildOpts.OutputFile == nil {
+			outputFile = filepath.Join(o.BuildOpts.TempDir, "initramfs.cpio")
+			w, err := initramfs.CPIO.OpenWriter(o.Logger, outputFile, "", "")
+			if err != nil {
+				return nil, "", err
+			}
+			o.BuildOpts.OutputFile = w
+		}
+
+		// Finally, create an initramfs!
+		if err := uroot.CreateInitramfs(o.Logger, o.BuildOpts); err != nil {
+			return nil, "", err
+		}
+
+		o.QEMUOpts.Initramfs = outputFile
 	}
 
-	kernelArgs := ""
-	switch TestArch() {
-	case "amd64":
-		kernelArgs = "console=ttyS0 earlyprintk=ttyS0"
-	case "arm":
-		kernelArgs = "console=ttyAMA0"
+	if len(o.QEMUOpts.Kernel) == 0 {
+		// Copy kernel to tmpDir for tests involving kexec.
+		kernel := filepath.Join(o.BuildOpts.TempDir, "kernel")
+		if err := cp.Copy(os.Getenv("UROOT_KERNEL"), kernel); err != nil {
+			return nil, "", err
+		}
+		o.QEMUOpts.Kernel = kernel
+	}
+
+	if len(o.QEMUOpts.KernelArgs) == 0 {
+		var kernelArgs string
+		switch TestArch() {
+		case "amd64":
+			kernelArgs = "console=ttyS0 earlyprintk=ttyS0"
+		case "arm":
+			kernelArgs = "console=ttyAMA0"
+		}
+		o.QEMUOpts.KernelArgs = kernelArgs
 	}
 
 	var dir qemu.Device
 	if o.UseVVFAT {
-		dir = qemu.ReadOnlyDirectory{Dir: tmpDir}
+		dir = qemu.ReadOnlyDirectory{Dir: o.BuildOpts.TempDir}
 	} else {
-		dir = qemu.P9Directory{Dir: tmpDir}
+		dir = qemu.P9Directory{Dir: o.BuildOpts.TempDir}
 	}
-	devices := []qemu.Device{
-		qemu.VirtioRandom{},
-		o.Network,
-		dir,
-	}
+	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, dir)
 
-	qo := &qemu.Options{
-		Initramfs:    outputFile,
-		Kernel:       kernel,
-		KernelArgs:   kernelArgs,
-		SerialOutput: logFile,
-		Timeout:      o.Timeout,
-		Devices:      devices,
-	}
-	if o.QOptModifier != nil {
-		err := o.QOptModifier(qo)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-	return qo, tmpDir, nil
+	return &o.QEMUOpts, o.BuildOpts.TempDir, nil
 }

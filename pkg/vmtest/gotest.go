@@ -13,36 +13,43 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest/internal/json2test"
 )
 
 // GolangTest compiles the unit tests found in pkgs and runs them in a QEMU VM.
-func GolangTest(t *testing.T, pkgs []string) {
+func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	SkipWithoutQEMU(t)
-
 	// TODO: support arm
 	if TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", TestArch())
 	}
 
+	if o == nil {
+		o = &Options{}
+	}
+
 	// Create a temporary directory.
-	tmpDir, err := ioutil.TempDir("", "uroot-integration")
-	if err != nil {
-		t.Fatal(err)
+	if len(o.BuildOpts.TempDir) == 0 {
+		tmpDir, err := ioutil.TempDir("", "uroot-integration")
+		if err != nil {
+			t.Fatal(err)
+		}
+		o.BuildOpts.TempDir = tmpDir
 	}
 
 	env := golang.Default()
 	env.CgoEnabled = false
 	env.GOARCH = TestArch()
+	o.BuildOpts.Env = env
 
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
 	os.Setenv("CGO_ENABLED", "0")
-	testDir := filepath.Join(tmpDir, "tests")
+	testDir := filepath.Join(o.BuildOpts.TempDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
 		if err := os.MkdirAll(pkgDir, 0755); err != nil {
@@ -66,7 +73,7 @@ func GolangTest(t *testing.T, pkgs []string) {
 		if _, err := os.Stat(testFile); !os.IsNotExist(err) {
 			tests = append(tests, pkg)
 
-			p, err := env.Package(pkg)
+			p, err := o.BuildOpts.Env.Package(pkg)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -78,29 +85,29 @@ func GolangTest(t *testing.T, pkgs []string) {
 		}
 	}
 
-	tc := json2test.NewTestCollector()
-
 	// Create the CPIO and start QEMU.
-	q, cleanup := QEMUTest(t, &Options{
-		Cmds: []string{
-			"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
-			"github.com/u-root/u-root/cmds/core/init",
-			// Used by different tests.
-			"github.com/u-root/u-root/cmds/core/ls",
-			"github.com/u-root/u-root/cmds/core/sleep",
-			"github.com/u-root/u-root/cmds/core/echo",
-		},
-		TmpDir: tmpDir,
-		SerialOutput: uio.MultiWriteCloser(
-			// Collect JSON test events in tc.
-			json2test.EventParser(tc),
-			// Write non-JSON output to log.
-			JSONLessTestLineWriter(t, "serial"),
-		),
-	})
+	o.BuildOpts.AddCommands(uroot.BinaryCmds("cmd/test2json")...)
+	o.BuildOpts.AddBusyBoxCommands(
+		"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
+		"github.com/u-root/u-root/cmds/core/init",
+	)
+
+	tc := json2test.NewTestCollector()
+	serial := []io.Writer{
+		// Collect JSON test events in tc.
+		json2test.EventParser(tc),
+		// Write non-JSON output to log.
+		JSONLessTestLineWriter(t, "serial"),
+	}
+	if o.QEMUOpts.SerialOutput != nil {
+		serial = append(serial, o.QEMUOpts.SerialOutput)
+	}
+	o.QEMUOpts.SerialOutput = uio.MultiWriteCloser(serial...)
+
+	q, cleanup := QEMUTest(t, o)
 	defer cleanup()
 
-	if err := q.ExpectTimeout("GoTest Done", 120*time.Second); err != nil {
+	if err := q.Expect("GoTest Done"); err != nil {
 		t.Errorf("Waiting for GoTest Done: %v", err)
 	}
 

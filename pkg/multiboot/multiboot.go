@@ -18,7 +18,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/u-root/u-root/pkg/ibft"
 	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
@@ -79,7 +81,21 @@ type MemoryMap struct {
 	Type uint32
 }
 
+// String returns a readable representation of a MemoryMap entry.
+func (m MemoryMap) String() string {
+	return fmt.Sprintf("[0x%x, 0x%x) (len: 0x%x, size: 0x%x, type: %d)", m.BaseAddr, m.BaseAddr+m.Length, m.Length, m.Size, m.Type)
+}
+
 type memoryMaps []MemoryMap
+
+// String returns a new-line-separated representation of the entire memory map.
+func (m memoryMaps) String() string {
+	var s []string
+	for _, mm := range m {
+		s = append(s, mm.String())
+	}
+	return strings.Join(s, "\n")
+}
 
 // Probe checks if file is multiboot v1 kernel.
 func Probe(file string) error {
@@ -126,12 +142,12 @@ func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 //
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
-func Load(debug bool, file, cmdline string, modules []string) error {
+func Load(debug bool, file, cmdline string, modules []string, ibft *ibft.IBFT) error {
 	m, err := newMB(file, cmdline, modules)
 	if err != nil {
 		return err
 	}
-	if err := m.load(debug); err != nil {
+	if err := m.load(debug, ibft); err != nil {
 		return err
 	}
 	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
@@ -141,7 +157,7 @@ func Load(debug bool, file, cmdline string, modules []string) error {
 }
 
 // load loads and parses multiboot information from m.file.
-func (m *multiboot) load(debug bool) error {
+func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	log.Printf("Parsing file %v", m.file)
 	b, err := readFile(m.file)
 	if err != nil {
@@ -167,6 +183,25 @@ func (m *multiboot) load(debug bool) error {
 	log.Printf("Parsing memory map")
 	if err := m.mem.ParseMemoryMap(); err != nil {
 		return fmt.Errorf("error parsing memory map: %v", err)
+	}
+
+	// Insert the iBFT now, since nothing else has been allocated and this
+	// is the most restricted allocation we're gonna have to make.
+	if ibft != nil {
+		ibuf := ibft.Marshal()
+
+		// The iBFT may sit between 512K and 1M in physical memory. The
+		// loaded OS finds it by scanning this region.
+		allowedRange := kexec.Range{
+			Start: 0x80000,
+			Size:  0x80000,
+		}
+		r, err := m.mem.ReservePhys(uint(len(ibuf)), allowedRange)
+		if err != nil {
+			return fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
+		}
+		log.Printf("iBFT was allocated at %s: %#v", r, ibft)
+		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
 	}
 
 	log.Printf("Preparing multiboot info")
@@ -245,6 +280,7 @@ func (m multiboot) memoryMap() memoryMaps {
 
 func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	mmap := m.memoryMap()
+	log.Printf("Memory map:\n%s", mmap)
 	d, err := mmap.marshal()
 	if err != nil {
 		return 0, 0, err
