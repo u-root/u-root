@@ -62,11 +62,11 @@ func dmiDecode(textOut io.Writer) (int, error) {
 	}
 	entry, data, err := getData(*flagFromDump, "/sys/firmware/dmi/tables")
 	if err != nil {
-		return 2, fmt.Errorf("error parsing loading data: %s", err)
+		return 1, fmt.Errorf("error parsing loading data: %s", err)
 	}
 	si, err := smbios.ParseInfo(entry, data)
 	if err != nil {
-		return 2, fmt.Errorf("error parsing data: %s", err)
+		return 1, fmt.Errorf("error parsing data: %s", err)
 	}
 	for _, t := range si.Tables {
 		if len(typeFilter) != 0 && !typeFilter[t.Type] {
