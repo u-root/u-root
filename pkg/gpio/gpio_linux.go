@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 const gpioPath = "/sys/class/gpio"
@@ -37,6 +38,46 @@ func (v Value) String() string {
 		return "0"
 	}
 	return "1"
+}
+
+// GetPinID computes the sysfs pin ID for a specific port on a specific GPIO
+// controller chip. The controller arg is matched to a gpiochip's label in
+// sysfs. GetPinID gets the base offset of that chip, and adds the specific
+// pin number.
+func GetPinID(controller string, pin int) (int, error) {
+	controllers, err := filepath.Glob(fmt.Sprintf("%s/gpiochip*", gpioPath))
+	if err != nil {
+		return 0, err
+	}
+
+	for _, c := range controllers {
+		// Get label (name of the controller)
+		buf, err := ioutil.ReadFile(filepath.Join(c, "label"))
+		if err != nil {
+			return 0, fmt.Errorf("failed to read label of %s: %v", c, err)
+		}
+		label := strings.TrimSpace(string(buf))
+
+		// Check that this is the controller we want
+		if strings.TrimSpace(label) != controller {
+			continue
+		}
+
+		// Get base offset (the first GPIO managed by this chip)
+		buf, err = ioutil.ReadFile(filepath.Join(c, "base"))
+		if err != nil {
+			return 0, fmt.Errorf("failed to read base of %s: %v", c, err)
+		}
+		baseStr := strings.TrimSpace(string(buf))
+		base, err := strconv.Atoi(baseStr)
+		if err != nil {
+			return 0, fmt.Errorf("could not get base offset for %s: %v", c, err)
+		}
+
+		return base + pin, nil
+	}
+
+	return 0, fmt.Errorf("could not find controller %s", controller)
 }
 
 // SetOutputValue configures the gpio as an output pin with the given value.
