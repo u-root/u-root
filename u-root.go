@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -68,6 +70,20 @@ func main() {
 	log.Printf("Successfully wrote initramfs.")
 }
 
+var recommendedVersions = []string{
+	"go1.12",
+	"go1.13",
+}
+
+func isRecommendedVersion(v string) bool {
+	for _, r := range recommendedVersions {
+		if strings.HasPrefix(v, r) {
+			return true
+		}
+	}
+	return false
+}
+
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
 func Main() error {
@@ -82,6 +98,19 @@ func Main() error {
 	log.Printf("Build environment: %s", env)
 	if env.GOOS != "linux" {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+	}
+
+	v, err := env.Version()
+	if err != nil {
+		log.Printf("Could not get environment's Go version, using runtime's version: %v", err)
+		v = runtime.Version()
+	}
+	if !isRecommendedVersion(v) {
+		log.Printf(`WARNING: You are not using one of the recommended Go versions (have = %s, recommended = %v).
+			Some packages may not compile.
+			Go to https://golang.org/doc/install to find out how to install a newer version of Go,
+			or use https://godoc.org/golang.org/dl/%s to install an additional version of Go.`,
+			v, recommendedVersions, recommendedVersions[0])
 	}
 
 	archiver, err := initramfs.GetArchiver(*format)
