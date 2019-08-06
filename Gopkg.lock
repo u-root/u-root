@@ -138,12 +138,12 @@
   revision = "9527aa82566a98cba454092e94cddf4dd943e960"
 
 [[projects]]
-  digest = "1:2add1a2bd5034733f485898c817d4cf3c767c3a08962ad08cc860dd0e9d73580"
+  digest = "1:be0ad31291f6e6809b5d3ca85f4f2bd46f43bffb07cbc8104eecfb14cd74ad30"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   pruneopts = "NUT"
-  revision = "23256797d1e4ccac36fad828362cdfef5b3aeb90"
-  version = "v1.7.4"
+  revision = "53fd0299b54f91f5d91c50ee5f4d5e0393e45eb8"
+  version = "v1.7.5"
 
 [[projects]]
   digest = "1:7dc14952637aea1ef99bc1d9ad1374ddf0fa10d7b608cf5cb72d3f4fa7e4b579"
@@ -339,7 +339,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7a9d37d6b986937aadaf23b125ee6a6d4e3e6eec8560b51ac18fd2adf62e6406"
+  digest = "1:fac91f8c6996469de63f537b598f42d79a915488211fdf18111d9955f4d6d68f"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -347,7 +347,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "fc99dfbffb4e5ed5758a37e31dd861afe285406b"
+  revision = "51ab0e2deafac1f46c46ad59cf0921be2f180c3d"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -366,7 +366,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:87f3ab7c6341b1be840c580bdf23dcce036916bf1859e8ab8667033a09ae6097"
+  digest = "1:fb5cf331f3037a2d153a00650e61b4469769d4c93aa1ab479827a8e7fd4a907d"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -383,7 +383,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "ff9f1409240a6589b749f29c118cc0ac9bd5bcde"
+  revision = "c5a2fd39b72a2403dae32d544b008ff4973c8b29"
 
 [[projects]]
   digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
