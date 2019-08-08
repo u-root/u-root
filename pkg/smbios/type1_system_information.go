@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const TableTypeSystemInformation TableType = 1
+
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
 // SystemInformation is defined in DSP0134 7.2.

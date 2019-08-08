@@ -39,16 +39,19 @@ System Information
 	Family: UX
 
 Handle 0x0002, DMI type 2, 15 bytes
-Unsupported
-	Header and Data:
-		02 0F 02 00 01 02 03 04 05 09 06 03 00 0A 00
-	Strings:
-		ASUSTeK COMPUTER INC.
-		UX305LA
-		1.0       
-		BSN12345678901234567
-		ATN12345678901234567
-		MIDDLE              
+Base Board Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Product Name: UX305LA
+	Version: 1.0       
+	Serial Number: BSN12345678901234567
+	Asset Tag: ATN12345678901234567
+	Features:
+		Board is replaceable
+		Board is a hosting board
+	Location In Chassis: MIDDLE              
+	Chassis Handle: 0x0003
+	Type: Motherboard
+	Contained Object Handles: 0
 
 Handle 0x0003, DMI type 3, 25 bytes
 Unsupported

@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const TableTypeBIOSInformation TableType = 0
+
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
 // BIOSInformation is Defined in DSP0134 7.1.
