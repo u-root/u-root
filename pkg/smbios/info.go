@@ -54,3 +54,16 @@ func (i *Info) GetSystemInformation() (*SystemInformation, error) {
 	// There can only be one of these.
 	return NewSystemInformation(bt[0])
 }
+
+// GetBaseboardInformation returns all the Baseboard Information (type 2) tables present.
+func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
+	var res []*BaseboardInformation
+	for _, t := range i.GetTablesByType(TableTypeBaseboardInformation) {
+		bi, err := NewBaseboardInformation(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, bi)
+	}
+	return res, nil
+}
