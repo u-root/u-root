@@ -57,4 +57,5 @@ func TestDMIDecode(t *testing.T) {
 	testOutput(t, "UX307LA.bin", nil, "UX307LA.txt")
 	testOutput(t, "UX307LA.bin", []string{"-t", "system"}, "UX307LA.system.txt")
 	testOutput(t, "UX307LA.bin", []string{"-t", "1,131"}, "UX307LA.1_131.txt")
+	testOutput(t, "T480S.bin", nil, "T480S.txt")
 }
