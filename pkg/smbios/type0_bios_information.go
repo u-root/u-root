@@ -43,6 +43,9 @@ type BIOSCharacteristicsExt2 uint8
 
 // NewBIOSInformation parses a generic Table into BIOSInformation.
 func NewBIOSInformation(t *Table) (*BIOSInformation, error) {
+	if t.Type != TableTypeBIOSInformation {
+		return nil, fmt.Errorf("invalid table type %d", t.Type)
+	}
 	if t.Len() < 0x12 {
 		return nil, errors.New("required fields missing")
 	}
@@ -58,7 +61,12 @@ func (bi *BIOSInformation) GetROMSizeBytes() uint {
 	if bi.ROMSize != 0xff {
 		return 65536 * (uint(bi.ROMSize) + 1)
 	}
-	extSize := uint(bi.ExtendedROMSize)
+	var extSize uint
+	if bi.Len() >= 0x1a {
+		extSize = uint(bi.ExtendedROMSize)
+	} else {
+		extSize = 0x10 // 16 MB
+	}
 	unit := (extSize >> 14)
 	multiplier := uint(1)
 	switch unit {
@@ -76,16 +84,34 @@ func (bi *BIOSInformation) String() string {
 		fmt.Sprintf("\tVendor: %s", bi.Vendor),
 		fmt.Sprintf("\tVersion: %s", bi.Version),
 		fmt.Sprintf("\tRelease Date: %s", bi.ReleaseDate),
-		fmt.Sprintf("\tROM Size: %d kB", bi.GetROMSizeBytes()/1024),
+	}
+	if bi.StartingAddressSegment != 0 {
+		lines = append(lines,
+			fmt.Sprintf("\tAddress: 0x%04X0", bi.StartingAddressSegment),
+			fmt.Sprintf("\tRuntime Size: %d kB", ((0x10000-int(bi.StartingAddressSegment))<<4)/1024),
+		)
+	}
+	bs := bi.GetROMSizeBytes()
+	switch {
+	case bs < 1024:
+		lines = append(lines, fmt.Sprintf("\tROM Size: %d", bs))
+	case bs < 1024*1024:
+		lines = append(lines, fmt.Sprintf("\tROM Size: %d kB", bs/1024))
+	case bs < 1024*1024*1024:
+		lines = append(lines, fmt.Sprintf("\tROM Size: %d MB", bs/1024/1024))
+	default:
+		lines = append(lines, fmt.Sprintf("\tROM Size: %d GB", bs/1024/1024/1024))
+	}
+	lines = append(lines,
 		fmt.Sprintf("\tCharacteristics:\n%s", bi.Characteristics),
 		fmt.Sprintf("%s", bi.CharacteristicsExt1),
 		fmt.Sprintf("%s", bi.CharacteristicsExt2),
-	}
-	if bi.Len() >= 0x16 { // 2.4+
+	)
+	if bi.Len() >= 0x16 && bi.SystemBIOSMajorRelease != 0xff { // 2.4+
 		lines = append(lines, fmt.Sprintf("\tBIOS Revision: %d.%d", bi.SystemBIOSMajorRelease, bi.SystemBIOSMinorRelease))
 	}
 	if bi.Len() >= 0x18 && bi.EmbeddedControllerFirmwareMajorRelease != 0xff {
-		lines = append(lines, fmt.Sprintf("\tEC Revision: %d.%d", bi.EmbeddedControllerFirmwareMajorRelease, bi.EmbeddedControllerFirmwareMinorRelease))
+		lines = append(lines, fmt.Sprintf("\tFirmware Revision: %d.%d", bi.EmbeddedControllerFirmwareMajorRelease, bi.EmbeddedControllerFirmwareMinorRelease))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -138,7 +164,7 @@ func (v BIOSCharacteristics) String() string {
 		lines = append(lines, "\t\tUnknown")
 	}
 	if v&BIOSCharacteristicsBIOSCharacteristicsAreNotSupported != 0 {
-		lines = append(lines, "\t\tBIOS Characteristics are not supported")
+		lines = append(lines, "\t\tBIOS characteristics not supported")
 	}
 	if v&BIOSCharacteristicsISAIsSupported != 0 {
 		lines = append(lines, "\t\tISA is supported")
@@ -153,22 +179,22 @@ func (v BIOSCharacteristics) String() string {
 		lines = append(lines, "\t\tPCI is supported")
 	}
 	if v&BIOSCharacteristicsPCCardPCMCIAIsSupported != 0 {
-		lines = append(lines, "\t\tPC card (PCMCIA) is supported")
+		lines = append(lines, "\t\tPC Card (PCMCIA) is supported")
 	}
 	if v&BIOSCharacteristicsPlugAndPlayIsSupported != 0 {
-		lines = append(lines, "\t\tPlug and Play is supported")
+		lines = append(lines, "\t\tPNP is supported")
 	}
 	if v&BIOSCharacteristicsAPMIsSupported != 0 {
 		lines = append(lines, "\t\tAPM is supported")
 	}
 	if v&BIOSCharacteristicsBIOSIsUpgradeableFlash != 0 {
-		lines = append(lines, "\t\tBIOS is upgradeable (Flash)")
+		lines = append(lines, "\t\tBIOS is upgradeable")
 	}
 	if v&BIOSCharacteristicsBIOSShadowingIsAllowed != 0 {
 		lines = append(lines, "\t\tBIOS shadowing is allowed")
 	}
 	if v&BIOSCharacteristicsVLVESAIsSupported != 0 {
-		lines = append(lines, "\t\tVL-VESA is supported")
+		lines = append(lines, "\t\tVLB is supported")
 	}
 	if v&BIOSCharacteristicsESCDSupportIsAvailable != 0 {
 		lines = append(lines, "\t\tESCD support is available")
@@ -183,43 +209,43 @@ func (v BIOSCharacteristics) String() string {
 		lines = append(lines, "\t\tBIOS ROM is socketed")
 	}
 	if v&BIOSCharacteristicsBootFromPCCardPCMCIAIsSupported != 0 {
-		lines = append(lines, "\t\tBoot from PC card (PCMCIA) is supported")
+		lines = append(lines, "\t\tBoot from PC Card (PCMCIA) is supported")
 	}
 	if v&BIOSCharacteristicsEDDSpecificationIsSupported != 0 {
-		lines = append(lines, "\t\tEDD specification is supported")
+		lines = append(lines, "\t\tEDD is supported")
 	}
 	if v&BIOSCharacteristicsInt13hJapaneseFloppyForNEC980012MB351KBytessector360RPMIsSupported != 0 {
-		lines = append(lines, "\t\tJapanese floppy for NEC 9800 1.2 MB (3.5”, 1K bytes/sector, 360 RPM) is supported")
+		lines = append(lines, "\t\tJapanese floppy for NEC 9800 1.2 MB is supported (int 13h)")
 	}
 	if v&BIOSCharacteristicsInt13hJapaneseFloppyForToshiba12MB35360RPMIsSupported != 0 {
-		lines = append(lines, "\t\tJapanese floppy for Toshiba 1.2 MB (3.5”, 360 RPM) is supported")
+		lines = append(lines, "\t\tJapanese floppy for Toshiba 1.2 MB is supported (int 13h)")
 	}
 	if v&BIOSCharacteristicsInt13h525360KBFloppyServicesAreSupported != 0 {
-		lines = append(lines, "\t\t5.25\"/360 KB floppy services are supported")
+		lines = append(lines, "\t\t5.25\"/360 kB floppy services are supported (int 13h)")
 	}
 	if v&BIOSCharacteristicsInt13h52512MBFloppyServicesAreSupported != 0 {
-		lines = append(lines, "\t\t5.25\"/1.2 MB floppy services are supported")
+		lines = append(lines, "\t\t5.25\"/1.2 MB floppy services are supported (int 13h)")
 	}
 	if v&BIOSCharacteristicsInt13h35720KBFloppyServicesAreSupported != 0 {
-		lines = append(lines, "\t\t3.5\"/720 KB floppy services are supported")
+		lines = append(lines, "\t\t3.5\"/720 kB floppy services are supported (int 13h)")
 	}
 	if v&BIOSCharacteristicsInt13h35288MBFloppyServicesAreSupported != 0 {
-		lines = append(lines, "\t\t3.5\"/2.88 MB floppy services are supported")
+		lines = append(lines, "\t\t3.5\"/2.88 MB floppy services are supported (int 13h)")
 	}
 	if v&BIOSCharacteristicsInt5hPrintScreenServiceIsSupported != 0 {
-		lines = append(lines, "\t\tInt 5h, print screen Service is supported")
+		lines = append(lines, "\t\tPrint screen service is supported (int 5h)")
 	}
 	if v&BIOSCharacteristicsInt9h8042KeyboardServicesAreSupported != 0 {
-		lines = append(lines, "\t\tInt 9h, 8042 keyboard services are supported")
+		lines = append(lines, "\t\t8042 keyboard services are supported (int 9h)")
 	}
 	if v&BIOSCharacteristicsInt14hSerialServicesAreSupported != 0 {
-		lines = append(lines, "\t\tInt 14h, serial services are supported")
+		lines = append(lines, "\t\tSerial services are supported (int 14h)")
 	}
 	if v&BIOSCharacteristicsInt17hPrinterServicesAreSupported != 0 {
-		lines = append(lines, "\t\tInt 17h, printer services are supported")
+		lines = append(lines, "\t\tPrinter services are supported (int 17h)")
 	}
 	if v&BIOSCharacteristicsInt10hCGAMonoVideoServicesAreSupported != 0 {
-		lines = append(lines, "\t\tInt 10h, CGA/Mono Video Services are supported")
+		lines = append(lines, "\t\tCGA/mono video services are supported (int 10h)")
 	}
 	if v&BIOSCharacteristicsNECPC98 != 0 {
 		lines = append(lines, "\t\tNEC PC-98")
@@ -245,7 +271,7 @@ func (v BIOSCharacteristicsExt1) String() string {
 		lines = append(lines, "\t\tACPI is supported")
 	}
 	if v&BIOSCharacteristicsExt1USBLegacyIsSupported != 0 {
-		lines = append(lines, "\t\tUSB Legacy is supported")
+		lines = append(lines, "\t\tUSB legacy is supported")
 	}
 	if v&BIOSCharacteristicsExt1AGPIsSupported != 0 {
 		lines = append(lines, "\t\tAGP is supported")
@@ -254,13 +280,13 @@ func (v BIOSCharacteristicsExt1) String() string {
 		lines = append(lines, "\t\tI2O boot is supported")
 	}
 	if v&BIOSCharacteristicsExt1LS120SuperDiskBootIsSupported != 0 {
-		lines = append(lines, "\t\tLS-120 SuperDisk boot is supported")
+		lines = append(lines, "\t\tLS-120 boot is supported")
 	}
 	if v&BIOSCharacteristicsExt1ATAPIZIPDriveBootIsSupported != 0 {
-		lines = append(lines, "\t\tATAPI ZIP drive boot is supported")
+		lines = append(lines, "\t\tATAPI Zip drive boot is supported")
 	}
 	if v&BIOSCharacteristicsExt11394BootIsSupported != 0 {
-		lines = append(lines, "\t\t1394 boot is supported")
+		lines = append(lines, "\t\tIEEE 1394 boot is supported")
 	}
 	if v&BIOSCharacteristicsExt1SmartBatteryIsSupported != 0 {
 		lines = append(lines, "\t\tSmart battery is supported")
@@ -280,19 +306,19 @@ const (
 func (v BIOSCharacteristicsExt2) String() string {
 	var lines []string
 	if v&BIOSCharacteristicsExt2BIOSBootSpecificationIsSupported != 0 {
-		lines = append(lines, "\t\tBIOS Boot Specification is supported")
+		lines = append(lines, "\t\tBIOS boot specification is supported")
 	}
 	if v&BIOSCharacteristicsExt2FunctionKeyinitiatedNetworkServiceBootIsSupported != 0 {
-		lines = append(lines, "\t\tFunction key-initiated network service boot is supported")
+		lines = append(lines, "\t\tFunction key-initiated network boot is supported")
 	}
 	if v&BIOSCharacteristicsExt2TargetedContentDistributionIsSupported != 0 {
 		lines = append(lines, "\t\tTargeted content distribution is supported")
 	}
 	if v&BIOSCharacteristicsExt2UEFISpecificationIsSupported != 0 {
-		lines = append(lines, "\t\tUEFI Specification is supported")
+		lines = append(lines, "\t\tUEFI is supported")
 	}
 	if v&BIOSCharacteristicsExt2SMBIOSTableDescribesAVirtualMachine != 0 {
-		lines = append(lines, "\t\tSMBIOS table describes a virtual machine")
+		lines = append(lines, "\t\tSystem is a virtual machine")
 	}
 	return strings.Join(lines, "\n")
 }

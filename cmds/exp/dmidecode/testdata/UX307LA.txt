@@ -3,28 +3,30 @@ BIOS Information
 	Vendor: American Megatrends Inc.
 	Version: UX305LA.206
 	Release Date: 08/03/2015
-	ROM Size: 6464 kB
+	Address: 0xF0000
+	Runtime Size: 64 kB
+	ROM Size: 6 MB
 	Characteristics:
 		PCI is supported
-		BIOS is upgradeable (Flash)
+		BIOS is upgradeable
 		BIOS shadowing is allowed
 		Boot from CD is supported
 		Selectable boot is supported
 		BIOS ROM is socketed
-		EDD specification is supported
-		5.25"/1.2 MB floppy services are supported
-		3.5"/720 KB floppy services are supported
-		3.5"/2.88 MB floppy services are supported
-		Int 5h, print screen Service is supported
-		Int 9h, 8042 keyboard services are supported
-		Int 14h, serial services are supported
-		Int 17h, printer services are supported
+		EDD is supported
+		5.25"/1.2 MB floppy services are supported (int 13h)
+		3.5"/720 kB floppy services are supported (int 13h)
+		3.5"/2.88 MB floppy services are supported (int 13h)
+		Print screen service is supported (int 5h)
+		8042 keyboard services are supported (int 9h)
+		Serial services are supported (int 14h)
+		Printer services are supported (int 17h)
 		ACPI is supported
-		USB Legacy is supported
+		USB legacy is supported
 		Smart battery is supported
-		BIOS Boot Specification is supported
+		BIOS boot specification is supported
 		Targeted content distribution is supported
-		UEFI Specification is supported
+		UEFI is supported
 	BIOS Revision: 5.6
 
 Handle 0x0001, DMI type 1, 27 bytes
@@ -33,7 +35,7 @@ System Information
 	Product Name: UX305LA
 	Version: 1.0       
 	Serial Number: FCN0CJ03468352B     
-	UUID: 850F3E82-9F38-694A-8840-2F8B0CF5D3D0
+	UUID: 850f3e82-9f38-694a-8840-2f8b0cf5d3d0
 	Wake-up Type: Power Switch
 	SKU Number: ASUS-NotebookSKU
 	Family: UX
@@ -46,8 +48,8 @@ Base Board Information
 	Serial Number: BSN12345678901234567
 	Asset Tag: ATN12345678901234567
 	Features:
-		Board is replaceable
 		Board is a hosting board
+		Board is replaceable
 	Location In Chassis: MIDDLE              
 	Chassis Handle: 0x0003
 	Type: Motherboard
@@ -99,13 +101,13 @@ Unsupported
 		 
 		 
 
-Handle 0x000c, DMI type 32, 20 bytes
+Handle 0x000C, DMI type 32, 20 bytes
 Unsupported
 	Header and Data:
 		20 14 0C 00 00 00 00 00 00 00 00 00 00 00 00 00
 		00 00 00 00
 
-Handle 0x000d, DMI type 7, 19 bytes
+Handle 0x000D, DMI type 7, 19 bytes
 Unsupported
 	Header and Data:
 		07 13 0D 00 01 80 01 20 00 20 00 20 00 20 00 00
@@ -113,7 +115,7 @@ Unsupported
 	Strings:
 		L1 Cache
 
-Handle 0x000e, DMI type 7, 19 bytes
+Handle 0x000E, DMI type 7, 19 bytes
 Unsupported
 	Header and Data:
 		07 13 0E 00 01 80 01 20 00 20 00 20 00 20 00 00
@@ -121,7 +123,7 @@ Unsupported
 	Strings:
 		L1 Cache
 
-Handle 0x000f, DMI type 7, 19 bytes
+Handle 0x000F, DMI type 7, 19 bytes
 Unsupported
 	Header and Data:
 		07 13 0F 00 01 81 01 00 01 00 01 20 00 20 00 00
@@ -229,7 +231,7 @@ OEM-specific Type
 		SA-CRID New Value
 		OPROM - VBIOS
 
-Handle 0x001a, DMI type 221, 26 bytes
+Handle 0x001A, DMI type 221, 26 bytes
 OEM-specific Type
 	Header and Data:
 		DD 1A 1A 00 03 01 00 02 06 00 00 00 02 00 FF FF
@@ -240,7 +242,7 @@ OEM-specific Type
 		ME Firmware Version
 		1.5MB SKU
 
-Handle 0x001b, DMI type 221, 68 bytes
+Handle 0x001B, DMI type 221, 68 bytes
 OEM-specific Type
 	Header and Data:
 		DD 44 1B 00 09 01 00 02 06 00 00 00 02 03 FF FF
@@ -260,7 +262,7 @@ OEM-specific Type
 		PCH9S A0 Hsio Version
 		WPTLp B0 Hsio Version
 
-Handle 0x001c, DMI type 221, 26 bytes
+Handle 0x001C, DMI type 221, 26 bytes
 OEM-specific Type
 	Header and Data:
 		DD 1A 1C 00 03 01 00 02 06 00 00 00 02 00 00 00
@@ -270,7 +272,7 @@ OEM-specific Type
 		uCode Version
 		TXT ACM version
 
-Handle 0x001d, DMI type 13, 22 bytes
+Handle 0x001D, DMI type 13, 22 bytes
 Unsupported
 	Header and Data:
 		0D 16 1D 00 01 00 00 00 00 00 00 00 00 00 00 00
@@ -278,7 +280,7 @@ Unsupported
 	Strings:
 		en|US|iso8859-1
 
-Handle 0x001e, DMI type 131, 64 bytes
+Handle 0x001E, DMI type 131, 64 bytes
 OEM-specific Type
 	Header and Data:
 		83 40 1E 00 31 00 00 00 00 00 00 00 00 00 00 00
@@ -286,7 +288,7 @@ OEM-specific Type
 		E8 03 26 00 00 00 00 00 C8 00 FF FF 00 00 00 00
 		00 00 00 00 26 00 00 00 76 50 72 6F 00 00 00 00
 
-Handle 0x001f, DMI type 14, 20 bytes
+Handle 0x001F, DMI type 14, 20 bytes
 Unsupported
 	Header and Data:
 		0E 14 1F 00 01 DD 12 00 DD 19 00 DD 1A 00 DD 1B
@@ -296,6 +298,4 @@ Unsupported
 
 Handle 0x0020, DMI type 127, 4 bytes
 End Of Table
-	Header and Data:
-		7F 04 20 00
 
