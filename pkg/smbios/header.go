@@ -25,6 +25,6 @@ func (h *Header) Parse(data []byte) error {
 // String returns string representation os the header.
 func (h *Header) String() string {
 	return fmt.Sprintf(
-		"Handle 0x%04x, DMI type %d, %d bytes\n%s",
+		"Handle 0x%04X, DMI type %d, %d bytes\n%s",
 		h.Handle, h.Type, h.Length, h.Type)
 }

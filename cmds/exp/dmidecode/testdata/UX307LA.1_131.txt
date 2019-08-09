@@ -4,12 +4,12 @@ System Information
 	Product Name: UX305LA
 	Version: 1.0       
 	Serial Number: FCN0CJ03468352B     
-	UUID: 850F3E82-9F38-694A-8840-2F8B0CF5D3D0
+	UUID: 850f3e82-9f38-694a-8840-2f8b0cf5d3d0
 	Wake-up Type: Power Switch
 	SKU Number: ASUS-NotebookSKU
 	Family: UX
 
-Handle 0x001e, DMI type 131, 64 bytes
+Handle 0x001E, DMI type 131, 64 bytes
 OEM-specific Type
 	Header and Data:
 		83 40 1E 00 31 00 00 00 00 00 00 00 00 00 00 00

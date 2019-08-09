@@ -89,7 +89,7 @@ func (t *Table) GetStringAt(offset int) (string, error) {
 	stringIndex := t.data[offset]
 	switch {
 	case stringIndex == 0:
-		return "", nil
+		return "Not Specified", nil
 	case int(stringIndex) <= len(t.strings):
 		return t.strings[stringIndex-1], nil
 	default:

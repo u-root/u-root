@@ -35,6 +35,9 @@ type WakeupType uint8
 
 // NewSystemInformation parses a generic Table into SystemInformation.
 func NewSystemInformation(t *Table) (*SystemInformation, error) {
+	if t.Type != TableTypeSystemInformation {
+		return nil, fmt.Errorf("invalid table type %d", t.Type)
+	}
 	if t.Len() < 8 {
 		return nil, errors.New("required fields missing")
 	}
@@ -79,7 +82,7 @@ func (si *SystemInformation) String() string {
 }
 
 func (u UUID) String() string {
-	return fmt.Sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
 		u[3], u[2], u[1], u[0],
 		u[5], u[4],
 		u[7], u[6],

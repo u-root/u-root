@@ -51,6 +51,8 @@ func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 		// Inactive table cannot be further parsed. Documentation suggests that it can be any table
 		// that is temporarily marked inactive by tweaking the type field.
 		return t, nil
+	case TableTypeEndOfTable:
+		return NewEndOfTable(t)
 	}
 	return nil, ErrUnsupportedTableType
 }
