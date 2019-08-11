@@ -255,7 +255,9 @@ func CreateInitramfs(logger logger.Logger, opts Opts) error {
 			if err != nil {
 				return err
 			}
-			if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
+			if rtarget == "init" {
+				logger.Printf("not creating symlink init -> init")
+			} else if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
 				return err
 			}
 		}
