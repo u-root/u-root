@@ -84,18 +84,65 @@ Unsupported
 		L3 Cache
 
 Handle 0x000A, DMI type 4, 48 bytes
-Unsupported
-	Header and Data:
-		04 30 0A 00 01 03 C6 02 EA 06 08 00 FF FB EB BF
-		03 8B 64 00 34 08 6C 07 41 33 07 00 08 00 09 00
-		04 05 06 04 04 08 FC 00 C6 00 04 00 04 00 08 00
-	Strings:
-		U3E1
-		Intel(R) Corporation
-		Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
-		None
-		None
-		None
+Processor Information
+	Socket Designation: U3E1
+	Type: Central Processor
+	Family: Core i7
+	Manufacturer: Intel(R) Corporation
+	ID: EA 06 08 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 142, Stepping 10
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+	Voltage: 1.1 V
+	External Clock: 100 MHz
+	Max Speed: 2100 MHz
+	Current Speed: 1900 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket BGA1356
+	L1 Cache Handle: 0x0007
+	L2 Cache Handle: 0x0008
+	L3 Cache Handle: 0x0009
+	Serial Number: None
+	Asset Tag: None
+	Part Number: None
+	Core Count: 4
+	Core Enabled: 4
+	Thread Count: 8
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Hardware Thread
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
 
 Handle 0x000B, DMI type 0, 24 bytes
 BIOS Information
