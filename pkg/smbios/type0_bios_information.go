@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-const TableTypeBIOSInformation TableType = 0
-
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
 // BIOSInformation is Defined in DSP0134 7.1.
@@ -31,15 +29,6 @@ type BIOSInformation struct {
 	EmbeddedControllerFirmwareMinorRelease uint8                   // 17h
 	ExtendedROMSize                        uint16                  // 18h
 }
-
-// BIOSCharacteristics is defined in DSP0134 7.1.1.
-type BIOSCharacteristics uint64
-
-// BIOSCharacteristicsExt1 is defined in DSP0134 7.1.2.1.
-type BIOSCharacteristicsExt1 uint8
-
-// BIOSCharacteristicsExt2 is defined in DSP0134 7.1.2.2.
-type BIOSCharacteristicsExt2 uint8
 
 // NewBIOSInformation parses a generic Table into BIOSInformation.
 func NewBIOSInformation(t *Table) (*BIOSInformation, error) {
@@ -115,6 +104,9 @@ func (bi *BIOSInformation) String() string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// BIOSCharacteristics is defined in DSP0134 7.1.1.
+type BIOSCharacteristics uint64
 
 // BIOSCharacteristics fields are defined in DSP0134 7.1.1.
 const (
@@ -254,6 +246,9 @@ func (v BIOSCharacteristics) String() string {
 }
 
 // BIOSCharacteristicsExt1 is defined in DSP0134 7.1.2.1.
+type BIOSCharacteristicsExt1 uint8
+
+// BIOSCharacteristicsExt1 is defined in DSP0134 7.1.2.1.
 const (
 	BIOSCharacteristicsExt1ACPIIsSupported               BIOSCharacteristicsExt1 = (1 << 0) // ACPI is supported.
 	BIOSCharacteristicsExt1USBLegacyIsSupported                                  = (1 << 1) // USB Legacy is supported.
@@ -293,6 +288,9 @@ func (v BIOSCharacteristicsExt1) String() string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// BIOSCharacteristicsExt2 is defined in DSP0134 7.1.2.2.
+type BIOSCharacteristicsExt2 uint8
 
 // BIOSCharacteristicsExt1 is defined in DSP0134 7.1.2.2.
 const (

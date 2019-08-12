@@ -154,16 +154,22 @@ Base Board Information
 	Contained Object Handles: 0
 
 Handle 0x000E, DMI type 3, 22 bytes
-Unsupported
-	Header and Data:
-		03 16 0E 00 01 0A 02 03 04 02 02 02 02 00 00 00
-		00 00 00 00 00 00
-	Strings:
-		LENOVO
-		None
-		PC131TBF
-		No Asset Information
-		LENOVO_MT_20L8_BU_Think_FM_ThinkPad T480s
+Chassis Information
+	Manufacturer: LENOVO
+	Type: Notebook
+	Lock: Not Present
+	Version: None
+	Serial Number: PC131TBF
+	Asset Tag: No Asset Information
+	Boot-up State: Unknown
+	Power Supply State: Unknown
+	Thermal State: Unknown
+	Security Status: Unknown
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: Unspecified
+	Contained Elements: 0
+	SKU Number: 
 
 Handle 0x000F, DMI type 8, 9 bytes
 Unsupported
