@@ -147,18 +147,65 @@ Unsupported
 		L3 Cache
 
 Handle 0x0011, DMI type 4, 42 bytes
-Unsupported
-	Header and Data:
-		04 2A 11 00 01 03 C6 02 D4 06 03 00 FF FB EB BF
-		03 89 64 00 60 09 60 09 41 2E 0E 00 0F 00 10 00
-		04 05 06 02 02 04 FC 00 C6 00
-	Strings:
-		SOCKET 0
-		Intel(R) Corporation
-		Intel(R) Core(TM) i7-5500U CPU @ 2.40GHz
-		NULL
-		To Be Filled By O.E.M
-		To Be Filled By O.E.M
+Processor Information
+	Socket Designation: SOCKET 0
+	Type: Central Processor
+	Family: Core i7
+	Manufacturer: Intel(R) Corporation
+	ID: D4 06 03 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 61, Stepping 4
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Core(TM) i7-5500U CPU @ 2.40GHz
+	Voltage: 0.9 V
+	External Clock: 100 MHz
+	Max Speed: 2400 MHz
+	Current Speed: 2400 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket BGA1168
+	L1 Cache Handle: 0x000E
+	L2 Cache Handle: 0x000F
+	L3 Cache Handle: 0x0010
+	Serial Number: NULL
+	Asset Tag: To Be Filled By O.E.M
+	Part Number: To Be Filled By O.E.M
+	Core Count: 2
+	Core Enabled: 2
+	Thread Count: 4
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Hardware Thread
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
 
 Handle 0x0012, DMI type 221, 12 bytes
 OEM-specific Type

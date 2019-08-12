@@ -80,3 +80,16 @@ func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
 	}
 	return res, nil
 }
+
+// GetProcessorInformation returns all the Processor Information (type 4) tables present.
+func (i *Info) GetProcessorInformation() ([]*ProcessorInformation, error) {
+	var res []*ProcessorInformation
+	for _, t := range i.GetTablesByType(TableTypeProcessorInformation) {
+		bi, err := NewProcessorInformation(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, bi)
+	}
+	return res, nil
+}
