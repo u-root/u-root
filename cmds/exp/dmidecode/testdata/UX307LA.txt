@@ -56,16 +56,23 @@ Base Board Information
 	Contained Object Handles: 0
 
 Handle 0x0003, DMI type 3, 25 bytes
-Unsupported
-	Header and Data:
-		03 19 03 00 01 0A 02 03 04 03 03 03 03 00 00 00
-		00 00 01 01 03 00 00 00 05
-	Strings:
-		ASUSTeK COMPUTER INC.
-		1.0       
-		FCN0CJ03468352B     
-		ATN12345678901234567
-		To be filled by O.E.M.
+Chassis Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Type: Notebook
+	Lock: Not Present
+	Version: 1.0       
+	Serial Number: FCN0CJ03468352B     
+	Asset Tag: ATN12345678901234567
+	Boot-up State: Safe
+	Power Supply State: Safe
+	Thermal State: Safe
+	Security Status: None
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: 1
+	Contained Elements: 1
+		0 0-0
+	SKU Number: To be filled by O.E.M.
 
 Handle 0x0004, DMI type 10, 26 bytes
 Unsupported

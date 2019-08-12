@@ -67,3 +67,16 @@ func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
 	}
 	return res, nil
 }
+
+// GetChassisInformation returns all the Chassis Information (type 3) tables present.
+func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
+	var res []*ChassisInformation
+	for _, t := range i.GetTablesByType(TableTypeChassisInformation) {
+		bi, err := NewChassisInformation(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, bi)
+	}
+	return res, nil
+}

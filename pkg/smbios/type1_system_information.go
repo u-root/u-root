@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-const TableTypeSystemInformation TableType = 1
-
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
 // SystemInformation is defined in DSP0134 7.2.
@@ -26,12 +24,6 @@ type SystemInformation struct {
 	SKUNumber    string     // 19h
 	Family       string     // 1Ah
 }
-
-// UUID is defined in DSP0134 7.2.1.
-type UUID [16]byte
-
-// WakeupType is defined in DSP0134 7.2.2.
-type WakeupType uint8
 
 // NewSystemInformation parses a generic Table into SystemInformation.
 func NewSystemInformation(t *Table) (*SystemInformation, error) {
@@ -81,6 +73,9 @@ func (si *SystemInformation) String() string {
 	return strings.Join(lines, "\n\t")
 }
 
+// UUID is defined in DSP0134 7.2.1.
+type UUID [16]byte
+
 func (u UUID) String() string {
 	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
 		u[3], u[2], u[1], u[0],
@@ -90,6 +85,9 @@ func (u UUID) String() string {
 		u[10], u[11], u[12], u[13], u[14], u[15],
 	)
 }
+
+// WakeupType is defined in DSP0134 7.2.2.
+type WakeupType uint8
 
 // WakeupType values are defined in DSP0134 7.2.2.
 const (

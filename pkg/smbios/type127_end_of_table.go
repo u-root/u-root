@@ -8,10 +8,12 @@ import (
 	"fmt"
 )
 
+// EndOfTable is Defined in DSP0134 7.46.
 type EndOfTable struct {
 	Table
 }
 
+// NewEndOfTable parses a generic Table into EndOfTable.
 func NewEndOfTable(t *Table) (*EndOfTable, error) {
 	if t.Type != TableTypeEndOfTable {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
