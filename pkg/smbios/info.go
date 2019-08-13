@@ -72,11 +72,11 @@ func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
 func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
 	var res []*ChassisInformation
 	for _, t := range i.GetTablesByType(TableTypeChassisInformation) {
-		bi, err := NewChassisInformation(t)
+		ci, err := NewChassisInformation(t)
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, bi)
+		res = append(res, ci)
 	}
 	return res, nil
 }
@@ -85,11 +85,24 @@ func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
 func (i *Info) GetProcessorInformation() ([]*ProcessorInformation, error) {
 	var res []*ProcessorInformation
 	for _, t := range i.GetTablesByType(TableTypeProcessorInformation) {
-		bi, err := NewProcessorInformation(t)
+		pi, err := NewProcessorInformation(t)
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, bi)
+		res = append(res, pi)
+	}
+	return res, nil
+}
+
+// GetCacheInformation returns all the Cache Information (type 7) tables present.
+func (i *Info) GetCacheInformation() ([]*CacheInformation, error) {
+	var res []*CacheInformation
+	for _, t := range i.GetTablesByType(TableTypeCacheInformation) {
+		ci, err := NewCacheInformation(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, ci)
 	}
 	return res, nil
 }
