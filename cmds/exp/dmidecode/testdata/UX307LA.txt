@@ -115,36 +115,68 @@ Unsupported
 		00 00 00 00
 
 Handle 0x000D, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 0D 00 01 80 01 20 00 20 00 20 00 20 00 00
-		04 04 07
-	Strings:
-		L1 Cache
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 32 kB
+	Maximum Size: 32 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Data
+	Associativity: 8-way Set-associative
 
 Handle 0x000E, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 0E 00 01 80 01 20 00 20 00 20 00 20 00 00
-		04 03 07
-	Strings:
-		L1 Cache
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 32 kB
+	Maximum Size: 32 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Instruction
+	Associativity: 8-way Set-associative
 
 Handle 0x000F, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 0F 00 01 81 01 00 01 00 01 20 00 20 00 00
-		05 05 07
-	Strings:
-		L2 Cache
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 256 kB
+	Maximum Size: 256 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
 
 Handle 0x0010, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 10 00 01 82 01 00 10 00 10 20 00 20 00 00
-		06 05 08
-	Strings:
-		L3 Cache
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 4 MB
+	Maximum Size: 4 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 16-way Set-associative
 
 Handle 0x0011, DMI type 4, 42 bytes
 Processor Information

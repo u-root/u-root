@@ -19,6 +19,7 @@ const (
 	TableTypeBaseboardInformation           = 2
 	TableTypeChassisInformation             = 3
 	TableTypeProcessorInformation           = 4
+	TableTypeCacheInformation               = 7
 	TableTypeInactive                       = 126
 	TableTypeEndOfTable                     = 127
 )
@@ -35,6 +36,8 @@ func (t TableType) String() string {
 		return "Chassis Information"
 	case TableTypeProcessorInformation:
 		return "Processor Information"
+	case TableTypeCacheInformation:
+		return "Cache Information"
 	case TableTypeInactive:
 		return "Inactive"
 	case TableTypeEndOfTable:
@@ -50,21 +53,23 @@ func (t TableType) String() string {
 // ParseTypedTable parses generic Table into a typed struct.
 func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 	switch t.Type {
-	case TableTypeBIOSInformation:
+	case TableTypeBIOSInformation: // 0
 		return NewBIOSInformation(t)
-	case TableTypeSystemInformation:
+	case TableTypeSystemInformation: // 1
 		return NewSystemInformation(t)
-	case TableTypeBaseboardInformation:
+	case TableTypeBaseboardInformation: // 2
 		return NewBaseboardInformation(t)
-	case TableTypeChassisInformation:
+	case TableTypeChassisInformation: // 3
 		return NewChassisInformation(t)
-	case TableTypeProcessorInformation:
+	case TableTypeProcessorInformation: // 4
 		return NewProcessorInformation(t)
-	case TableTypeInactive:
+	case TableTypeCacheInformation: // 7
+		return NewCacheInformation(t)
+	case TableTypeInactive: // 126
 		// Inactive table cannot be further parsed. Documentation suggests that it can be any table
 		// that is temporarily marked inactive by tweaking the type field.
 		return t, nil
-	case TableTypeEndOfTable:
+	case TableTypeEndOfTable: // 127
 		return NewEndOfTable(t)
 	}
 	return nil, ErrUnsupportedTableType

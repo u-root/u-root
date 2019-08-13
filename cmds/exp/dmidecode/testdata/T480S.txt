@@ -60,28 +60,52 @@ Unsupported
 		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
 Handle 0x0007, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 07 00 01 80 01 00 01 00 01 20 00 20 00 00
-		04 05 07
-	Strings:
-		L1 Cache
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 256 kB
+	Maximum Size: 256 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Unified
+	Associativity: 8-way Set-associative
 
 Handle 0x0008, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 08 00 01 81 01 00 04 00 04 20 00 20 00 00
-		05 05 05
-	Strings:
-		L2 Cache
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 1 MB
+	Maximum Size: 1 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 4-way Set-associative
 
 Handle 0x0009, DMI type 7, 19 bytes
-Unsupported
-	Header and Data:
-		07 13 09 00 01 82 01 00 20 00 20 20 00 20 00 00
-		06 05 08
-	Strings:
-		L3 Cache
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 8 MB
+	Maximum Size: 8 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 16-way Set-associative
 
 Handle 0x000A, DMI type 4, 48 bytes
 Processor Information

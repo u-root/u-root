@@ -165,3 +165,18 @@ func ParseTable(data []byte) (*Table, []byte, error) {
 	}
 	return &Table{Header: h, data: structData, strings: strings}, data, err
 }
+
+func kmgt(v uint64) string {
+	switch {
+	case v >= 1024*1024*1024*1024:
+		return fmt.Sprintf("%d TB", v/(1024*1024*1024*1024))
+	case v >= 1024*1024*1024:
+		return fmt.Sprintf("%d GB", v/(1024*1024*1024))
+	case v >= 1024*1024:
+		return fmt.Sprintf("%d MB", v/(1024*1024))
+	case v >= 1024:
+		return fmt.Sprintf("%d kB", v/1024)
+	default:
+		return fmt.Sprintf("%d bytes", v)
+	}
+}
