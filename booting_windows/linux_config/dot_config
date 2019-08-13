@@ -1,0 +1,71 @@
+# vfat filesystem:
+
+CONFIG_BLOCK=y
+CONFIG_ATA=y
+CONFIG_SATA_AHCI=y
+CONFIG_BLK_DEV_SD=y
+CONFIG_MSDOS_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_FAT_DEFAULT_CODEPAGE=437
+CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+CONFIG_NLS=y
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_ISO8859_1=y
+
+# Loop device for tcz:
+
+CONFIG_BLK_DEV_LOOP=y
+CONFIG_MISC_FILESYSTEMS=y
+CONFIG_SQUASHFS=y
+
+# Minimal kernel config needed for Go and serial port:
+
+CONFIG_64BIT=y
+CONFIG_BINFMT_ELF=y
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_DEVTMPFS=y
+CONFIG_EARLY_PRINTK=y
+CONFIG_EPOLL=y
+CONFIG_FUTEX=y
+CONFIG_PRINTK=y
+CONFIG_PROC_FS=y
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+CONFIG_TTY=y
+
+# Add /dev/port for io command:
+
+CONFIG_PCI=y
+CONFIG_DEVPORT=y
+
+# For the kernel doing the kexec'ing:
+
+CONFIG_CRYPTO=y
+CONFIG_KEXEC=y
+CONFIG_KEXEC_FILE=y
+
+# For the kernel being kexec'ed:
+
+CONFIG_RELOCATABLE=y
+
+# Prevent usage of segment registers as part of stack protections:
+# TODO: Investigate how to enable stack protection without segment registers
+CONFIG_STACKPROTECTOR=n
+CONFIG_STACKPROTECTOR_STRONG=n
+
+# TODO: Add support for KASLR
+CONFIG_RANDOMIZE_BASE=n
+CONFIG_RANDOMIZE_MEMORY=n
+CONFIG_DYNAMIC_MEMORY_LAYOUT=n
+
+# Allows using -hda when running QEMU
+CONFIG_ATA_PIIX=y
+
+# Add EFI support
+CONFIG_EFI=y
+
+# Frame buffer support
+CONFIG_FB_SIMPLE=y
+CONFIG_FB=y
+CONFIG_X86_SYSFB=y
+
