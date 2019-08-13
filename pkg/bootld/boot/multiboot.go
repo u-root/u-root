@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/bootld/multiboot"
 )
 
 // MultibootImage is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,

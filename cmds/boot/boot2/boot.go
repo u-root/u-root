@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/bootld/diskboot"
+	"github.com/u-root/u-root/pkg/bootld/kexec"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/diskboot"
-	"github.com/u-root/u-root/pkg/kexec"
 	"github.com/u-root/u-root/pkg/mount"
 )
 

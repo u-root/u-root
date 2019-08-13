@@ -29,10 +29,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/bootld/boot"
+	"github.com/u-root/u-root/pkg/bootld/ipxe"
+	"github.com/u-root/u-root/pkg/bootld/pxe"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/ipxe"
-	"github.com/u-root/u-root/pkg/pxe"
 )
 
 var (

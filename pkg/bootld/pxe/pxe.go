@@ -15,7 +15,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/syslinux"
+	"github.com/u-root/u-root/pkg/bootld/syslinux"
 	"github.com/u-root/u-root/pkg/urlfetch"
 )
 

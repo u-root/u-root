@@ -13,8 +13,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/bootld/kexec"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/kexec"
 )
 
 // Config contains boot entries for a single configuration file

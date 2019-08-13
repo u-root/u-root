@@ -23,10 +23,10 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/bootld/boot"
+	"github.com/u-root/u-root/pkg/bootld/kexec"
+	"github.com/u-root/u-root/pkg/bootld/multiboot"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/kexec"
-	"github.com/u-root/u-root/pkg/multiboot"
 	"github.com/u-root/u-root/pkg/uio"
 )
 

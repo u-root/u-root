@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/bootld/boot"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/urlfetch"
 )

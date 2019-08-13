@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/bootld/boot"
 )
 
 func TestParse(t *testing.T) {

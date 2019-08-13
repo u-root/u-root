@@ -9,7 +9,7 @@ package boot
 import (
 	"fmt"
 
-	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/bootld/kexec"
 )
 
 // OSImage represents a bootable OS package.

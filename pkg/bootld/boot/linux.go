@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/bootld/kexec"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
