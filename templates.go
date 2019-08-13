@@ -4,26 +4,21 @@
 
 package main
 
+// TODO: make templates able to include other templates.
+// e.g. "all" below should just say "core" and "boot"
+// and "systemboot" should say "core", "boot", "github.com/u-root/u-root/cmds/boot/uinit"
+// Or just call it a day, now that we have the new directory structure, and dump the templates
+// completely; that may be our best bet.
 var templates = map[string][]string{
 	"all": {
 		"github.com/u-root/u-root/cmds/core/*",
-		"github.com/u-root/u-root/cmds/boot/*",
+		"github.com/u-root/u-root/cmds/boot/*boot*",
 	},
 	"boot": {
-		"github.com/u-root/u-root/cmds/boot/boot",
-		"github.com/u-root/u-root/cmds/boot/boot2",
-		"github.com/u-root/u-root/cmds/boot/fbnetboot",
-		"github.com/u-root/u-root/cmds/boot/pxeboot",
-		"github.com/u-root/u-root/cmds/boot/localboot",
-		"github.com/u-root/u-root/cmds/exp/esxiboot",
+		"github.com/u-root/u-root/cmds/boot/*boot*",
 	},
 	"systemboot": {
-		"github.com/u-root/u-root/cmds/boot/boot",
-		"github.com/u-root/u-root/cmds/boot/boot2",
-		"github.com/u-root/u-root/cmds/boot/fbnetboot",
-		"github.com/u-root/u-root/cmds/boot/pxeboot",
-		"github.com/u-root/u-root/cmds/boot/localboot",
-		"github.com/u-root/u-root/cmds/exp/esxiboot",
+		"github.com/u-root/u-root/cmds/boot/*boot*",
 		"github.com/u-root/u-root/cmds/boot/uinit",
 	},
 	// Core should be things you don't want to live without.
