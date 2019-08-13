@@ -112,7 +112,7 @@ func TestPxeboot(t *testing.T) {
 		},
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
-			Timeout:      15 * time.Second,
+			Timeout:      30 * time.Second,
 			Devices: []qemu.Device{
 				network.NewVM(),
 			},
@@ -136,7 +136,7 @@ func TestPxeboot(t *testing.T) {
 		},
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
-			Timeout:      15 * time.Second,
+			Timeout:      30 * time.Second,
 			Devices: []qemu.Device{
 				network.NewVM(),
 			},
