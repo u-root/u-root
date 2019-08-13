@@ -53,8 +53,12 @@ func main() {
 func configureAll(ifs []netlink.Link) {
 	packetTimeout := time.Duration(*timeout) * time.Second
 
-	ctx, cancel := context.WithTimeout(context.Background(), packetTimeout*time.Duration(1<<uint(*retry)))
-	defer cancel()
+	ctx := context.Background()
+	if *retry >= 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, packetTimeout*time.Duration(1<<uint(*retry)))
+		defer cancel()
+	}
 
 	c := dhclient.Config{
 		Timeout: packetTimeout,
