@@ -253,32 +253,46 @@ Unsupported
 		00 00 00 00 00 00 00
 
 Handle 0x0014, DMI type 17, 34 bytes
-Unsupported
-	Header and Data:
-		11 22 14 00 13 00 FE FF 40 00 40 00 00 10 0D 00
-		01 02 1D 80 00 40 06 03 04 05 06 02 00 00 00 00
-		40 06
-	Strings:
-		ChannelA-DIMM0
-		BANK 0
-		Elpida
-		00000000
-		9876543210
-		                  
+Memory Device
+	Array Handle: 0x0013
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: ChannelA-DIMM0
+	Bank Locator: BANK 0
+	Type: LPDDR3
+	Type Detail: Synchronous
+	Speed: 1600 MT/s
+	Manufacturer: Elpida
+	Serial Number: 00000000
+	Asset Tag: 9876543210
+	Part Number:                   
+	Rank: 2
+	Configured Memory Speed: 1600 MT/s
 
 Handle 0x0015, DMI type 17, 34 bytes
-Unsupported
-	Header and Data:
-		11 22 15 00 13 00 FE FF 40 00 40 00 00 10 0D 00
-		01 02 1D 80 00 40 06 03 04 05 06 02 00 00 00 00
-		40 06
-	Strings:
-		ChannelB-DIMM0
-		BANK 2
-		Elpida
-		00000000
-		9876543210
-		                  
+Memory Device
+	Array Handle: 0x0013
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: ChannelB-DIMM0
+	Bank Locator: BANK 2
+	Type: LPDDR3
+	Type Detail: Synchronous
+	Speed: 1600 MT/s
+	Manufacturer: Elpida
+	Serial Number: 00000000
+	Asset Tag: 9876543210
+	Part Number:                   
+	Rank: 2
+	Configured Memory Speed: 1600 MT/s
 
 Handle 0x0016, DMI type 19, 31 bytes
 Unsupported

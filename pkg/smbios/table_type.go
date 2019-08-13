@@ -20,6 +20,7 @@ const (
 	TableTypeChassisInformation             = 3
 	TableTypeProcessorInformation           = 4
 	TableTypeCacheInformation               = 7
+	TableTypeMemoryDevice                   = 17
 	TableTypeInactive                       = 126
 	TableTypeEndOfTable                     = 127
 )
@@ -38,6 +39,8 @@ func (t TableType) String() string {
 		return "Processor Information"
 	case TableTypeCacheInformation:
 		return "Cache Information"
+	case TableTypeMemoryDevice:
+		return "Memory Device"
 	case TableTypeInactive:
 		return "Inactive"
 	case TableTypeEndOfTable:
@@ -65,6 +68,8 @@ func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 		return NewProcessorInformation(t)
 	case TableTypeCacheInformation: // 7
 		return NewCacheInformation(t)
+	case TableTypeMemoryDevice: // 17
+		return NewMemoryDevice(t)
 	case TableTypeInactive: // 126
 		// Inactive table cannot be further parsed. Documentation suggests that it can be any table
 		// that is temporarily marked inactive by tweaking the type field.
