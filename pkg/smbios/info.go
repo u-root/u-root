@@ -106,3 +106,16 @@ func (i *Info) GetCacheInformation() ([]*CacheInformation, error) {
 	}
 	return res, nil
 }
+
+// GetMemoryDevices returns all the Cache Information (type 17) present.
+func (i *Info) GetMemoryDevices() ([]*MemoryDevice, error) {
+	var res []*MemoryDevice
+	for _, t := range i.GetTablesByType(TableTypeMemoryDevice) {
+		ci, err := NewMemoryDevice(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, ci)
+	}
+	return res, nil
+}

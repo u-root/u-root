@@ -26,32 +26,52 @@ Unsupported
 		00 00 00 00 00 00 00
 
 Handle 0x0004, DMI type 17, 40 bytes
-Unsupported
-	Header and Data:
-		11 28 04 00 03 00 FE FF 40 00 40 00 00 20 0D 00
-		01 02 1A 80 40 60 09 03 04 05 06 01 00 00 00 00
-		60 09 00 00 00 00 B0 04
-	Strings:
-		ChannelA-DIMM0
-		BANK 0
-		SK Hynix
-		00000000
-		None
-		HMAA51S6AMR6N-UH    
+Memory Device
+	Array Handle: 0x0003
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 8 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: ChannelA-DIMM0
+	Bank Locator: BANK 0
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2400 MT/s
+	Manufacturer: SK Hynix
+	Serial Number: 00000000
+	Asset Tag: None
+	Part Number: HMAA51S6AMR6N-UH    
+	Rank: 1
+	Configured Memory Speed: 2400 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: 1.2 V
 
 Handle 0x0005, DMI type 17, 40 bytes
-Unsupported
-	Header and Data:
-		11 28 05 00 03 00 FE FF 40 00 40 00 00 40 0D 00
-		01 02 1A 80 40 60 09 03 04 05 06 02 00 00 00 00
-		60 09 00 00 00 00 B0 04
-	Strings:
-		ChannelB-DIMM0
-		BANK 2
-		Samsung
-		417B9BB7
-		None
-		M471A2K43CB1-CRC    
+Memory Device
+	Array Handle: 0x0003
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: ChannelB-DIMM0
+	Bank Locator: BANK 2
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2400 MT/s
+	Manufacturer: Samsung
+	Serial Number: 417B9BB7
+	Asset Tag: None
+	Part Number: M471A2K43CB1-CRC    
+	Rank: 2
+	Configured Memory Speed: 2400 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: 1.2 V
 
 Handle 0x0006, DMI type 19, 31 bytes
 Unsupported
@@ -240,7 +260,7 @@ Chassis Information
 	Height: Unspecified
 	Number Of Power Cords: Unspecified
 	Contained Elements: 0
-	SKU Number: 
+	SKU Number: Not Specified
 
 Handle 0x000F, DMI type 8, 9 bytes
 Unsupported
