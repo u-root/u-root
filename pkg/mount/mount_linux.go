@@ -18,7 +18,7 @@ import (
 // specific file system.
 func Mount(dev, path, fsType, data string, flags uintptr) error {
 	if err := unix.Mount(dev, path, fsType, flags, data); err != nil {
-		return fmt.Errorf("Mount %q on %q type %q flags %x: %v",
+		return fmt.Errorf("mount(%q on %q [type %q flags %x]): %v",
 			dev, path, fsType, flags, err)
 	}
 	return nil
