@@ -22,8 +22,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/ipxe"
-	"github.com/u-root/u-root/pkg/pxe"
+	"github.com/u-root/u-root/pkg/netboot/ipxe"
+	"github.com/u-root/u-root/pkg/netboot/pxe"
 	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
