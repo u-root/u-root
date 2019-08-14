@@ -40,8 +40,8 @@ fi
 # We want to mask all writes to the original Windows image. We therefore
 # create a new snampshot file, which is a delta file. We remove it before
 # every run to make sure we start fresh with the original image.
-WINDOWS_IMAGE="${WORKSPACE}"/win2019.raw
-WINDOWS_DISK=win2019_write_masking.img
+WINDOWS_IMAGE="${WORKSPACE}"/windows.img
+WINDOWS_DISK=windows_write_masking.img
 
 if [[ ! -f "${WINDOWS_DISK}" ]]; then
   qemu-img create -f qcow2 -b "${WINDOWS_IMAGE}" "${WINDOWS_DISK}"
@@ -49,6 +49,9 @@ fi
 
 KERNEL_PATH=linux/arch/x86_64/boot/bzImage
 BOOT_FLAGS="earlyprintk=ttyS0 printk=ttyS0 console=ttyS0 root=/dev/sda1 noefi"
+
+# Make sure we get the graphical terminal
+export DISPLAY=:0
 
 qemu-system-x86_64 -L .                   \
   -bios "${BIOS_PATH}"                    \
@@ -58,8 +61,6 @@ qemu-system-x86_64 -L .                   \
   -append "${BOOT_FLAGS}"                 \
   -m ${MEM}                               \
   -smp "$(nproc)"                         \
-  -net user,hostfwd=tcp::5000-:22         \
-  -net nic                                \
   -serial stdio                           \
   -s
 

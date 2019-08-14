@@ -5,13 +5,16 @@
 you read them carefully before running them!
 
 1. Golang, see `https://golang.org/`.
+   Don't forget to have go/bin in your path via `export PATH=${HOME}/go/bin:${PATH}`
 1. Packages required to build Linux kernel
-1. A functional Windows Server 2019 image, asumed to exist at
-   `"${WORKSPACE}"/win2019.raw`. `setup.sh` will create a masking image over it,
-   so the original image will not be modified.
+1. A functional Windows Server 2019 or Windows 10 **raw** image, asumed to exist at
+   `"${WORKSPACE}"/windows.img`. `setup.sh` will create a masking image over it,
+   so the original image will not be modified. Windows boot manager,
+   bootmgfw.efi is assumed to exist in the 2nd partition of the image.
 1. An environment variable `EFI_WORKSPACE`, where files will be downloaded to or
    otherwise created.
-
+1. kpartx . Install via `sudo apt-get install kpartx`
+1. alien. Install via `sudo apt-get install alien`
 ## Installing the Modified u-root
 1.  Install u-root:
 
@@ -25,7 +28,7 @@ you read them carefully before running them!
     pushd ~/go/src/github.com/u-root/u-root
     git remote add oweisse https://github.com/oweisse/u-root  # our revised uroot repo
     git fetch oweisse
-    git checkout -b kexec_test oweisse/kexec
+    git checkout -b kexec_test oweisse/kexec_test
     go install
     popd
     ```

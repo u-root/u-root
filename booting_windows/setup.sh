@@ -1,16 +1,15 @@
 #!/bin/bash
 set -euo pipefail
-
-# Path to a working Windows 2019 image:
-WINDOWS_DISK=$(WORKSPACE)/win2019.raw
+set -v
+# Path to a working Windows *raw* image:
+WINDOWS_DISK="${WORKSPACE}"/windows.img
 
 START_PATH=$(realpath .)
 
 ### Downloading and extracting ovmf EFI firmawre ###
 mkdir -p "${EFI_WORKSPACE}"/downloads
 cd "${EFI_WORKSPACE}"/downloads
-
-FIRMWARE_URL=https://www.kraxel.org/repos/jenkins/edk2/edk2.git-ovmf-x64-0-20190516.1084.g3604174718.noarch.rpm
+FIRMWARE_URL=https://www.kraxel.org/repos/jenkins/edk2/edk2.git-ovmf-x64-0-20190704.1194.g073f2cede8.noarch.rpm
 FIRMWARE_IMAGE=$(basename ${FIRMWARE_URL})
 echo "${FIRMWARE_IMAGE}"
 
@@ -38,17 +37,21 @@ echo "Extracting Windows Loader from Windows Image, requires sudo:"
 
 WINDOWS_LOADER=${EFI_WORKSPACE}/efi_fs/bootmgfw.efi
 
+# Loop device for mounting Windows image. You may want to run
+# `losetup --list` to see which device is available
+LOOP_DEVICE=loop4
+
 if [[ ! -f "${WINDOWS_LOADER}" ]]; then
-  sudo losetup loop1 "${WINDOWS_DISK}"  # Attach raw disk to loop1
-  sudo kpartx -a /dev/loop1         # Create /dev/mapper/loop1* partitions
+  sudo losetup "${LOOP_DEVICE}" "${WINDOWS_DISK}"  # Attach raw disk to loop1
+  sudo kpartx -a /dev/"${LOOP_DEVICE}"         # Create /dev/mapper/loop1* partitions
   sudo mkdir -p /mnt/win_disk
-  sudo mount /dev/mapper/loop1p2 /mnt/win_disk
+  sudo mount /dev/mapper/"${LOOP_DEVICE}"p2 /mnt/win_disk
 
   cp /mnt/win_disk/EFI/Microsoft/Boot/bootmgfw.efi "${WINDOWS_LOADER}"
 
   sudo umount /mnt/win_disk
-  sudo kpartx -d /dev/loop1         # Remove /dev/mapper paritions
-  sudo losetup -d /dev/loop1        # Dettach WINDOWS_DISK
+  sudo kpartx -d /dev/"${LOOP_DEVICE}"         # Remove /dev/mapper paritions
+  sudo losetup -d /dev/"${LOOP_DEVICE}"        # Dettach WINDOWS_DISK
 
 else
   echo "NOTE: Windows loader already exists, " 1>&2
@@ -68,6 +71,4 @@ make olddefconfig # populate config with default values which may be missing
 
 echo "Installing libelf-dev, may prompt for sudo password:"
 sudo apt-get install libelf-dev
-
-make -j$(($(nproc)+2))
 
