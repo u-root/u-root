@@ -60,7 +60,13 @@ type Config struct {
 // relative to the wd. The default path for config files is assumed to be
 // `wd.Path`/pxelinux.cfg/.
 func ParseConfigFile(url string, wd *url.URL) (*Config, error) {
-	p := newParser(wd)
+	return ParseConfigFileWithSchemes(urlfetch.DefaultSchemes, url, wd)
+}
+
+// ParseConfigFileWithSchemes is like ParseConfigFile, but uses the given
+// schemes explicitly.
+func ParseConfigFileWithSchemes(s urlfetch.Schemes, url string, wd *url.URL) (*Config, error) {
+	p := newParserWithSchemes(wd, s)
 	if err := p.appendFile(url); err != nil {
 		return nil, err
 	}
@@ -84,14 +90,6 @@ const (
 	scopeGlobal scope = iota
 	scopeEntry
 )
-
-// newParser returns a new PXE parser using working directory `wd` and default
-// schemes.
-//
-// See newParserWithSchemes for more details.
-func newParser(wd *url.URL) *parser {
-	return newParserWithSchemes(wd, urlfetch.DefaultSchemes)
-}
 
 // newParserWithSchemes returns a new PXE parser using working directory `wd`
 // and schemes `s`.

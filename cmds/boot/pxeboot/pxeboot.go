@@ -24,15 +24,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
-	"net/url"
-	"path"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/ipxe"
-	"github.com/u-root/u-root/pkg/pxe"
+	"github.com/u-root/u-root/pkg/netboot"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -79,7 +76,11 @@ func Netboot(ifaceNames string) error {
 				continue
 			}
 
-			img, err := Boot(result.Lease)
+			if err := result.Lease.Configure(); err != nil {
+				log.Printf("Failed to configure lease %s: %v", result.Lease, err)
+				continue
+			}
+			img, err := netboot.BootImage(urlfetch.DefaultSchemes, result.Lease)
 			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
@@ -106,52 +107,6 @@ func Netboot(ifaceNames string) error {
 			panic("unreachable")
 		}
 	}
-}
-
-// getBootImage attempts to parse the file at uri as an ipxe config and returns
-// the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
-// ip, and mac address to search for pxe configs.
-func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
-	// Attempt to read the given boot path as an ipxe config file.
-	ipc, err := ipxe.ParseConfig(uri)
-	if err == nil {
-		return ipc, nil
-	}
-	log.Printf("Falling back to pxe boot: %v", err)
-
-	// Fallback to pxe boot.
-	wd := &url.URL{
-		Scheme: uri.Scheme,
-		Host:   uri.Host,
-		Path:   path.Dir(uri.Path),
-	}
-	pc, err := pxe.ParseConfig(wd, mac, ip)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
-	}
-
-	label := pc.Entries[pc.DefaultEntry]
-	return label, nil
-}
-
-func Boot(lease dhclient.Lease) (*boot.LinuxImage, error) {
-	if err := lease.Configure(); err != nil {
-		return nil, err
-	}
-
-	uri, err := lease.Boot()
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("Boot URI: %s", uri)
-
-	// IP only makes sense for v4 anyway, because the PXE probing of files
-	// uses a MAC address and an IPv4 address to look at files.
-	var ip net.IP
-	if p4, ok := lease.(*dhclient.Packet4); ok {
-		ip = p4.Lease().IP
-	}
-	return getBootImage(uri, lease.Link().Attrs().HardwareAddr, ip)
 }
 
 func main() {
