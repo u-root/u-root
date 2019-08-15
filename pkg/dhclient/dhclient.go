@@ -147,6 +147,10 @@ type Lease interface {
 	// the network config.
 	Boot() (*url.URL, error)
 
+	// ISCSIBoot returns the target address and volume name to boot from if
+	// they were part of the DHCP message.
+	ISCSIBoot() (*net.TCPAddr, string, error)
+
 	// Link is the interface the configuration is for.
 	Link() netlink.Link
 }

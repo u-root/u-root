@@ -82,3 +82,17 @@ func (p *Packet6) Boot() (*url.URL, error) {
 	// Srsly, a []byte?
 	return url.Parse(string(uri.BootFileURL))
 }
+
+// ISCSIBoot returns the target address and volume name to boot from if
+// they were part of the DHCP message.
+//
+// Parses the DHCPv6 Boot File for iSCSI target and volume as specified by RFC
+// 4173 and RFC 5970.
+func (p *Packet6) ISCSIBoot() (*net.TCPAddr, string, error) {
+	uriOpt := p.p.GetOneOption(dhcpv6.OptionBootfileURL)
+	uri, ok := uriOpt.(*dhcpv6.OptBootFileURL)
+	if !ok {
+		return nil, "", fmt.Errorf("packet does not contain boot file URL")
+	}
+	return parseISCSIURI(string(uri.BootFileURL))
+}
