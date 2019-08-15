@@ -66,25 +66,7 @@ func (p *Packet4) Configure() error {
 		return fmt.Errorf("add/replace %s to %v: %v", dst, p.iface, err)
 	}
 
-	// RFC 3442 notes that if classless static routes are available, they
-	// have priority. You have to ignore the Route Option.
-	if routes := p.P.ClasslessStaticRoute(); routes != nil {
-		for _, route := range routes {
-			r := &netlink.Route{
-				LinkIndex: p.iface.Attrs().Index,
-				Dst:       route.Dest,
-				Gw:        route.Router,
-			}
-			// If no gateway is specified, the destination must be link-local.
-			if r.Gw == nil || r.Gw.Equal(net.IPv4zero) {
-				r.Scope = netlink.SCOPE_LINK
-			}
-
-			if err := netlink.RouteReplace(r); err != nil {
-				return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
-			}
-		}
-	} else if gw := p.P.Router(); gw != nil && len(gw) > 0 {
+	if gw := p.P.Router(); gw != nil && len(gw) > 0 {
 		r := &netlink.Route{
 			LinkIndex: p.iface.Attrs().Index,
 			Gw:        gw[0],
