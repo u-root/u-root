@@ -9,7 +9,7 @@ START_PATH=$(realpath .)
 ### Downloading and extracting ovmf EFI firmawre ###
 mkdir -p "${EFI_WORKSPACE}"/downloads
 cd "${EFI_WORKSPACE}"/downloads
-FIRMWARE_URL=https://www.kraxel.org/repos/jenkins/edk2/edk2.git-ovmf-x64-0-20190704.1194.g073f2cede8.noarch.rpm
+FIRMWARE_URL=https://www.kraxel.org/repos/jenkins/edk2/edk2.git-ovmf-x64-0-20190704.1206.g48d8d4d80b.noarch.rpm
 FIRMWARE_IMAGE=$(basename ${FIRMWARE_URL})
 echo "${FIRMWARE_IMAGE}"
 
