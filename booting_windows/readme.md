@@ -10,7 +10,8 @@ you read them carefully before running them!
 1. A functional Windows Server 2019 or Windows 10 **raw** image, asumed to exist at
    `"${WORKSPACE}"/windows.img`. `setup.sh` will create a masking image over it,
    so the original image will not be modified. Windows boot manager,
-   bootmgfw.efi is assumed to exist in the 2nd partition of the image.
+   bootmgfw.efi is assumed to exist in the 2nd partition of the image. See
+   `install_windows.sh` for an example.
 1. An environment variable `EFI_WORKSPACE`, where files will be downloaded to or
    otherwise created.
 1. kpartx . Install via `sudo apt-get install kpartx`
