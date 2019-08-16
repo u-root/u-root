@@ -14,15 +14,16 @@ type TableType uint8
 
 // Supported table types.
 const (
-	TableTypeBIOSInformation      TableType = 0
-	TableTypeSystemInformation              = 1
-	TableTypeBaseboardInformation           = 2
-	TableTypeChassisInformation             = 3
-	TableTypeProcessorInformation           = 4
-	TableTypeCacheInformation               = 7
-	TableTypeMemoryDevice                   = 17
-	TableTypeInactive                       = 126
-	TableTypeEndOfTable                     = 127
+	TableTypeBIOSInformation       TableType = 0
+	TableTypeSystemInformation               = 1
+	TableTypeBaseboardInformation            = 2
+	TableTypeChassisInformation              = 3
+	TableTypeProcessorInformation            = 4
+	TableTypeCacheInformation                = 7
+	TableTypeMemoryDevice                    = 17
+	TableTypeIPMIDeviceInformation           = 38
+	TableTypeInactive                        = 126
+	TableTypeEndOfTable                      = 127
 )
 
 func (t TableType) String() string {
@@ -41,6 +42,8 @@ func (t TableType) String() string {
 		return "Cache Information"
 	case TableTypeMemoryDevice:
 		return "Memory Device"
+	case TableTypeIPMIDeviceInformation:
+		return "IPMI Device Information"
 	case TableTypeInactive:
 		return "Inactive"
 	case TableTypeEndOfTable:
@@ -70,6 +73,8 @@ func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 		return NewCacheInformation(t)
 	case TableTypeMemoryDevice: // 17
 		return NewMemoryDevice(t)
+	case TableTypeIPMIDeviceInformation: // 38
+		return NewIPMIDeviceInformation(t)
 	case TableTypeInactive: // 126
 		// Inactive table cannot be further parsed. Documentation suggests that it can be any table
 		// that is temporarily marked inactive by tweaking the type field.

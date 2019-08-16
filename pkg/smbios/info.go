@@ -107,7 +107,7 @@ func (i *Info) GetCacheInformation() ([]*CacheInformation, error) {
 	return res, nil
 }
 
-// GetMemoryDevices returns all the Cache Information (type 17) present.
+// GetMemoryDevices returns all the Memory Device (type 17) tables present.
 func (i *Info) GetMemoryDevices() ([]*MemoryDevice, error) {
 	var res []*MemoryDevice
 	for _, t := range i.GetTablesByType(TableTypeMemoryDevice) {
@@ -116,6 +116,19 @@ func (i *Info) GetMemoryDevices() ([]*MemoryDevice, error) {
 			return nil, err
 		}
 		res = append(res, ci)
+	}
+	return res, nil
+}
+
+// GetIPMIDeviceInformation returns all the IPMI Device Information (type 38) tables present.
+func (i *Info) GetIPMIDeviceInformation() ([]*IPMIDeviceInformation, error) {
+	var res []*IPMIDeviceInformation
+	for _, t := range i.GetTablesByType(TableTypeIPMIDeviceInformation) {
+		d, err := NewIPMIDeviceInformation(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, d)
 	}
 	return res, nil
 }
