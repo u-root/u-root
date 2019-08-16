@@ -77,4 +77,297 @@ gdb vmlinux -ex "target remote :1234"     \
             -ex "focus next"              \
             -ex "focus next" -ex "c"
 ```
+## Debugging Crashes
 
+Windows loading has 3 stages:
+
+1. Boot loader, e.g., `bootmgfw.efi`
+1. Windows loader, .e.g., `Winload.efi`, located  in `C:\Windows\System32`
+1. Windows kernel - `ntoskrnl.exe`, located in  `C:\Windows\System32`
+
+When windows launch crashes, we want to pin point the exact location of the crash
+(or hang) to be able to fix the problem. This section is a **very** short
+tutorial on how to find the crash location and navigate around the loaded
+binaries using *gdb*. We are using *objdump* and *IDA* for static analysis
+(https://www.hex-rays.com/products/ida/). *IDA* is extremely helpfull since it
+automatically pulls symbols from Microsoft symbol server, which makes much
+easier debugging. It is also beneficial to look at ReactOS
+(https://github.com/reactos), since their code looks very similar to what you'll
+find in Windows binaries.
+
+### Initial Binary Analysis with *objdump*
+1. First we need to extract `Winload.efi` & `ntoskrnl.exe`. This can be done in
+   a similar way to what `setup.sh` is doing:
+
+  ```shell
+  # Location to store the analyzed binaries:
+  WINDOWS_BINARIES=~/windows_binaries/
+
+  # Loop device. You may need to choose another loop device, see `losetup --list`
+  LOOP_DEVICE=loop1
+
+  sudo losetup "${LOOP_DEVICE}" "${WINDOWS_DISK}"  # Attach raw disk to loop1
+  sudo kpartx -a /dev/"${LOOP_DEVICE}" # Create /dev/mapper/loop1* partitions
+
+  sudo mkdir -p /mnt/win_disk2
+  sudo mkdir -p /mnt/win_disk3
+
+  # The boot-manager is typically on the 2nd partition
+  # The "C drive"  is typically on the 3rd partition
+  sudo mount /dev/mapper/"${LOOP_DEVICE}"p2 /mnt/win_disk2
+  sudo mount /dev/mapper/"${LOOP_DEVICE}"p3 /mnt/win_disk3
+
+  cp /mnt/win_disk2/EFI/Microsoft/Boot/bootmgfw.efi "${WINDOWS_BINARIES}"
+  cp /mnt/win_disk3/C/Windows/System32/Winload.efi "${WINDOWS_BINARIES}"
+  cp /mnt/win_disk3/C/Windows/System32/ntoskrnl "${WINDOWS_BINARIES}"
+
+  sudo umount /mnt/win_disk2
+  sudo umount /mnt/win_disk3
+
+  sudo kpartx -d /dev/"${LOOP_DEVICE}"         # Remove /dev/mapper paritions
+  sudo losetup -d /dev/"${LOOP_DEVICE}"        # Dettach WINDOWS_DISK
+  ```
+
+1. Let's analyze the binaries:
+	```shell
+	cd "${WINDOWS_BINARIES}"
+	objdump -xd bootmgfw.efi > bootmgfw.efi.disas
+	objdump -xd Winload.efi > Winload.efi.disas
+	objdump -xd ntoskrnl.exe > ntoskrnl.exe.disas
+	```
+1. In the beginning of every `*.disas` file you'll find three important numbers:
+  - *AddressOfEntryPoint* - offset of first instruction to be executed
+    from the **very beginning** of the code segment.
+  - *ImageBase* - "The preferred address of the first byte of image when
+    loaded into memory". Read more at
+    https://docs.microsoft.com/en-us/windows/win32/debug/pe-format.
+  - *start address* - which is the *ImageBase* + *AddressOfEntryPoint*
+  ```
+  # From bootmgfw.efi.disas
+  start address       0x000000001001edd0
+  AddressOfEntryPoint 000000000001edd0
+  ImageBase           0000000010000000
+  ```
+  We will need the *AddressOfEntryPoint* and *ImageBase* for the following steps.
+
+### Dynamic Analysis with *gdb* - Analyzing *bootmgfw.efi*
+1. We will have a total of 3 terminal windows:
+  1. Running the VM with u-root
+  1. Running *gdb*
+  1. Running `debugging_tools.py` which opens an IPython dynamic shell.
+1. In one terminal, launch u-root via `run_vm.sh`
+1. In another terminal, launch *gdb*
+   ```shell
+   # replace vmlinux with the full path to the linux kernel.
+   gdb "${EFI_WORKSPACE}"/linux/vmlinux  \
+       -ex "target remote :1234"         \
+       -ex "hbreak launch_efi_app"       \
+       -ex "layout regs"                 \
+       -ex "focus next"                  \
+       -ex "focus next" -ex "c"
+   ```
+   Hit ENTER to resume the VM
+1. In the u-root shell run `pekexec bootmgfw.efi`
+1. gdb will break on `launch_efi_app`. Scroll through the output in the u-root
+   shell. Look for a line that looks like
+   `Entry point: (64 bytes @   0x000000001001edd0)`.
+   This line means that the **dynamic** entry point of
+   *bootmgfw.efi*  is `0x000000001001edd0`. In our current implementation this
+   is identical to "start address" in *bootmgfw.efi.disas* but this may change
+   in the future.
+1. Open yet another terminal, and run `debugging_tools.py`. This will launch an
+   IPython shell. Let's intialize our *Reverser* to help "reverse engineer"
+   windows loading process:
+   ```
+   In [1]: bootmg = Reverser( live_entry_point  = 0x1001edd0,
+                              image_base        = 0x10000000,
+                              image_entry_point = 0x1edd0 )
+   ```
+1. Open IDA (ida64, to be exact) and load *bootmgfw.efi*. IDA will prompt to ask
+   if you want it to load symbols from Microsoft symbol servers. The answer is
+   definitely YES. Quick look around will show us that the very first steps of
+   execution are:
+   1. Our entry point:
+   `.text:000000001001EDD0 EfiEntry proc near`
+   1. Which calls
+   `.text:000000001001F0EC BmMain proc near`
+   1. Which then calls
+   `.text:0000000010082620 BlInitializeLibrary proc near`
+1. Say we crash and we don't know why.  Let's see if we even get to
+  `BlInitializeLibrary`. In our IPython shell try this:
+	```
+	In [2]: bootmg.breakpointFromImageAddr( 0x010082620)
+    b *0x10082620
+	```
+  Copy the output line `b *0x10082620` and paste it in gdb. Continue execution in
+  gdb via the `c`. gdb will break at the entrance to `BlInitializeLibrary`.
+  NOTE: It may now seem very unimpressive, sice for bootmgfw.efi the dynamic and
+  static addresses are the same. This will be much more interesting when we'll
+  get to dig  into Winload.efi and ntoskrnl.exe which have drastically
+  differentdynamic addresses.
+
+
+1. We now want to understand where in `BlInitializeLibrary` are we crashing. In
+   a normal debugging setting, we whould just use the *step* and *next*
+   instructions in *gdb*. However, since there is no source code available, this
+   is not possible. We therefore resort to simply place a breakpoint on every
+   *call* instruction and it's following instruction to simpulate this *step*
+   functionality.  From the IPython she;;
+  ```
+  In [3]: bootmg.generateBreakpoinCmdsOnCalls( imageDisasPath = "bootmg.efi.disas",
+                                               liveStartAddress = 0x10082620)
+  Will search for code starting at 0x10082620
+  Starting analysis at: 10082620:	48 89 5c 24 08       	mov    %rbx,0x8(%rsp)
+  Found call at: 10082685:	e8 3e 03 00 00       	callq  0x100829c8
+  Found call at: 100826a4:	e8 db de fa ff       	callq  0x10030584
+  Found call at: 100826ab:	e8 b8 3d 00 00       	callq  0x10086468
+  Found call at: 100826b5:	e8 8a 88 02 00       	callq  0x100aaf44
+  Found call at: 100826c1:	e8 7a ae fe ff       	callq  0x1006d540
+  Found call at: 100826cd:	e8 8e 0f 00 00       	callq  0x10083660
+  Reached end of function at: 100826e5:	c3                   	retq
+  b *0x10082685
+  b *0x1008268a
+  b *0x100826a4
+  b *0x100826a9
+  b *0x100826ab
+  b *0x100826b0
+  b *0x100826b5
+  b *0x100826ba
+  b *0x100826c1
+  b *0x100826c6
+  b *0x100826cd
+  b *0x100826d2
+  ```
+  Copy-paste all the breakpoint commands into *gdb*.  IMPORTANT: This is obviously
+  just a heuristic. What it does is linearly searching for calls until it hit a
+  ret instruction. It may fail to find all the "calls" in a function. Inspect
+  the binary in IDA to see if you are missing any breakpoints.
+
+1. You may now realize that Windows loader is crahing when calling (for example)
+   `100826C1 call    BlpDisplayInitialize`. What you want to do now is to go to
+   the implemantation of BlpDisplayInitialize (double click it in IDA) and
+   continue the process from there.  For instance, if `BlpDisplayInitialize` is
+   in **dynamic** address `0x1006D540`, try running:
+  ```
+  In [3]: bootmg.generateBreakpoinCmdsOnCalls( imageDisasPath = "bootmg.efi.disas",
+                                               liveStartAddress = 0x1006D540)
+  Starting analysis at: 1006d540:	48 83 ec 28          	sub    $0x28,%rsp
+  Found call at: 1006d549:	e8 16 07 00 00       	callq  0x1006dc64
+  Found call at: 1006d567:	ff d0                	callq  *%rax
+  Found call at: 1006d583:	ff d0                	callq  *%rax
+  Reached end of function at: 1006d58c:	c3                   	retq
+  b *0x1006d549
+  b *0x1006d54e
+  b *0x1006d567
+  b *0x1006d569
+  b *0x1006d583
+  b *0x1006d585
+  ```
+
+10. This process is effectively a "bianry" search for the offending instruction.
+    We start from the top (BmMain) and we find the child call that crashes. We
+    repeat this process recursiveky until we get to a function with no "calls".
+    Then we can try understanding what went wrong.
+
+### Finding the Dynamic Addresses of Winload.efi
+
+So you think *bootmgfw.efi* if running to completion. But maybe Windows boot
+process crashes during *Winload.efi* execution.
+
+1. In IDA, locate a function called `Archpx64TransferTo64BitApplicationAsm`. In
+   this function, you'll see an instruction like this:
+   `.text:0000000010137EE4   call    rax ; ArchpChildAppEntryRoutine`
+   (potentially in a different address).
+1. Use the IPython shell to generate a breakpoing command:
+	```
+	In [4]: bootmg.breakpointFromImageAddr( 0x10137EE4)
+    b *0x10137EE4
+	```
+1. Copy-paste the breakpoint command and continue (c). When you hit the
+   breakpoint, execute a single instruction via `si`.
+1. Look at that! We just jumpt into *Winload.efi*. Which means we now know the
+   **dynamic** address of the entry point. For example, let's say that *gdb* is
+   now at address `0x100920090`. If we inspect `Winload.efi.disas` we see that:
+	```
+	start address 0x0000000180001090
+
+	Characteristics 0x2022
+			executable
+			large address aware
+			DLL
+
+	Time/Date               Sat May 11 15:47:20 2019
+	Magic                   020b    (PE32+)
+	MajorLinkerVersion      14
+	MinorLinkerVersion      13
+	SizeOfCode              00158c00
+	SizeOfInitializedData   00040200
+	SizeOfUninitializedData 00000000
+	AddressOfEntryPoint     0000000000001090
+	BaseOfCode              0000000000001000
+	ImageBase               0000000180000000
+	```
+
+  Based on that information, we can initialize a new Reverser object in our IPython shell:
+  ```
+  In [5]: winload = Reverser( live_entry_point  = 0x100920090,
+                              image_base        = 0x180000000,
+                              image_entry_point = 0x1090 )
+  ```
+
+1. Now that the **dynamic** entry point is vastly different that the **static**
+  entry point, we can really see the benefit of the *Reverser* class.  In IDA, we
+  see, for example, the following function of Winload.efi:
+  `.text:0000000180002174 OslpMain proc near`
+
+	We can now create a dynamic breakpoint for it based only on the address we see
+  in IDA:
+	```
+	In [6]: winload.breakpointFromImageAddr( 0x180002174 )
+  b *0x100921174
+	```
+	Copy-paste this breakpoint command and hit `c`.
+1. Let's try to generate breakpoints on all *calls* inside OslpMain. Notice that
+   we use the **dynamic** address that we see in gdb.
+  ```
+  In [7]: winload.generateBreakpoinCmdsOnCalls( "winload.efi.disas",
+                                                liveStartAddress = 0x100921174)
+  Will search for code starting at 0x180002174
+  Starting analysis at: 180002174:	48 89 5c 24 08       	mov    %rbx,0x8(%rsp)
+  Found call at: 1800021a5:	e8 1a 19 0f 00       	callq  0x1800f3ac4
+  Found call at: 1800021e7:	e8 20 1c 0f 00       	callq  0x1800f3e0c
+  Found call at: 1800021fe:	e8 2d 41 14 00       	callq  0x180146330
+  Found call at: 18000224d:	e8 6e 1c 0f 00       	callq  0x1800f3ec0
+  Found call at: 18000227a:	e8 b9 03 00 00       	callq  0x180002638
+  Found call at: 18000228e:	e8 39 c1 00 00       	callq  0x18000e3cc
+  Found call at: 180002295:	e8 c6 39 01 00       	callq  0x180015c60
+  Found call at: 1800022a4:	e8 cb 7a 02 00       	callq  0x180029d74
+  Reached end of function at: 1800022bb:	c3                   	retq
+  b *0x1009211a5
+  b *0x1009211aa
+  b *0x1009211e7
+  b *0x1009211ec
+  b *0x1009211fe
+  b *0x100921203
+  b *0x10092124d
+  b *0x100921252
+  b *0x10092127a
+  b *0x10092127f
+  b *0x10092128e
+  b *0x100921293
+  b *0x100921295
+  b *0x10092129a
+  b *0x1009212a4
+  b *0x1009212a9
+  ```
+
+### Dynamic Debugging Summary
+
+Finding the function that crashes the entire machine is clearly just the
+beginning of the rabbit hole. If there is a NULL-pointer access (or access to
+0x42) one must dig deeper and query how did a register received a value of 0x42.
+I woukd highly recommend searching the function names in ReactOS source code.
+While the code there is different from what you'll find in Windows, it is
+sufficiently similar to be helpful to understand the boot process. If you're
+lucky enough to have a licence to IDA decompiler, you can press F5 in IDA to
+"decompile" the binary code.
