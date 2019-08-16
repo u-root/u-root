@@ -56,24 +56,24 @@ func (u *UUID) ParseField(t *Table, off int) (int, error) {
 func (si *SystemInformation) String() string {
 	lines := []string{
 		si.Header.String(),
-		fmt.Sprintf("\tManufacturer: %s", si.Manufacturer),
-		fmt.Sprintf("\tProduct Name: %s", si.ProductName),
-		fmt.Sprintf("\tVersion: %s", si.Version),
-		fmt.Sprintf("\tSerial Number: %s", si.SerialNumber),
+		fmt.Sprintf("Manufacturer: %s", si.Manufacturer),
+		fmt.Sprintf("Product Name: %s", si.ProductName),
+		fmt.Sprintf("Version: %s", si.Version),
+		fmt.Sprintf("Serial Number: %s", si.SerialNumber),
 	}
 	if si.Len() >= 8 { // 2.1+
 		lines = append(lines,
-			fmt.Sprintf("\tUUID: %s", si.UUID),
-			fmt.Sprintf("\tWake-up Type: %s", si.WakeupType),
+			fmt.Sprintf("UUID: %s", si.UUID),
+			fmt.Sprintf("Wake-up Type: %s", si.WakeupType),
 		)
 	}
 	if si.Len() >= 0x19 { // 2.4+
 		lines = append(lines,
-			fmt.Sprintf("\tSKU Number: %s", si.SKUNumber),
-			fmt.Sprintf("\tFamily: %s", si.Family),
+			fmt.Sprintf("SKU Number: %s", si.SKUNumber),
+			fmt.Sprintf("Family: %s", si.Family),
 		)
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n\t")
 }
 
 func (u UUID) String() string {
