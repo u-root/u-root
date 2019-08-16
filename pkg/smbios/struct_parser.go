@@ -74,9 +74,8 @@ func parseStruct(t *Table, off int, complete bool, sp interface{}) (int, error) 
 			verr = err
 			off += 8
 		case reflect.String:
-			v, err := t.GetStringAt(off)
+			v, _ := t.GetStringAt(off)
 			fv.SetString(v)
-			verr = err
 			off++
 		default:
 			if reflect.PtrTo(ft).Implements(fieldParserInterfaceType) {

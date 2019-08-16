@@ -132,3 +132,16 @@ func (i *Info) GetIPMIDeviceInformation() ([]*IPMIDeviceInformation, error) {
 	}
 	return res, nil
 }
+
+// GetTPMDevices returns all the TPM Device (type 43) tables present.
+func (i *Info) GetTPMDevices() ([]*TPMDevice, error) {
+	var res []*TPMDevice
+	for _, t := range i.GetTablesByType(TableTypeTPMDevice) {
+		d, err := NewTPMDevice(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, d)
+	}
+	return res, nil
+}
