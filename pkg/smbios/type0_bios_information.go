@@ -46,18 +46,18 @@ func NewBIOSInformation(t *Table) (*BIOSInformation, error) {
 }
 
 // GetROMSizeBytes returns ROM size in bytes.
-func (bi *BIOSInformation) GetROMSizeBytes() uint {
+func (bi *BIOSInformation) GetROMSizeBytes() uint64 {
 	if bi.ROMSize != 0xff {
-		return 65536 * (uint(bi.ROMSize) + 1)
+		return 65536 * (uint64(bi.ROMSize) + 1)
 	}
-	var extSize uint
+	var extSize uint64
 	if bi.Len() >= 0x1a {
-		extSize = uint(bi.ExtendedROMSize)
+		extSize = uint64(bi.ExtendedROMSize)
 	} else {
 		extSize = 0x10 // 16 MB
 	}
 	unit := (extSize >> 14)
-	multiplier := uint(1)
+	multiplier := uint64(1)
 	switch unit {
 	case 0:
 		multiplier = 1024 * 1024
@@ -80,18 +80,8 @@ func (bi *BIOSInformation) String() string {
 			fmt.Sprintf("\tRuntime Size: %d kB", ((0x10000-int(bi.StartingAddressSegment))<<4)/1024),
 		)
 	}
-	bs := bi.GetROMSizeBytes()
-	switch {
-	case bs < 1024:
-		lines = append(lines, fmt.Sprintf("\tROM Size: %d", bs))
-	case bs < 1024*1024:
-		lines = append(lines, fmt.Sprintf("\tROM Size: %d kB", bs/1024))
-	case bs < 1024*1024*1024:
-		lines = append(lines, fmt.Sprintf("\tROM Size: %d MB", bs/1024/1024))
-	default:
-		lines = append(lines, fmt.Sprintf("\tROM Size: %d GB", bs/1024/1024/1024))
-	}
 	lines = append(lines,
+		fmt.Sprintf("\tROM Size: %s", kmgt(bi.GetROMSizeBytes())),
 		fmt.Sprintf("\tCharacteristics:\n%s", bi.Characteristics),
 		fmt.Sprintf("%s", bi.CharacteristicsExt1),
 		fmt.Sprintf("%s", bi.CharacteristicsExt2),

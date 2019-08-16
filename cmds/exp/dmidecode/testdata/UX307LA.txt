@@ -5,7 +5,7 @@ BIOS Information
 	Release Date: 08/03/2015
 	Address: 0xF0000
 	Runtime Size: 64 kB
-	ROM Size: 6 MB
+	ROM Size: 6464 kB
 	Characteristics:
 		PCI is supported
 		BIOS is upgradeable
