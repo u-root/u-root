@@ -28,6 +28,8 @@ var (
 	ErrUnsupportedTableType = errors.New("unsupported table type")
 
 	errEndOfTable = errors.New("end of table")
+
+	tableSep = []byte{0, 0}
 )
 
 // Len returns length of the structured part of the table.
@@ -135,25 +137,29 @@ func ParseTable(data []byte) (*Table, []byte, error) {
 	}
 	structData := data[:h.Length]
 	data = data[h.Length:]
+	stringData := data
 	var strings []string
 	for len(data) > 0 && err == nil {
-		end := bytes.IndexByte(data, 0)
+		end := bytes.IndexByte(stringData, 0)
 		if end < 0 {
 			return nil, data, errors.New("unterminated string")
 		}
-		s := string(data[:end])
-		data = data[end+1:]
+		s := string(stringData[:end])
+		stringData = stringData[end+1:]
 		if len(s) > 0 {
 			strings = append(strings, s)
 		}
 		if end == 0 { // End of strings
-			if len(strings) == 0 {
-				// There's an extra 0 at the end.
-				data = data[1:]
-			}
 			break
 		}
 	}
+	// One would think that next table always follows previous table's strings.
+	// One would be wrong.
+	endOfTableIndex := bytes.Index(data, tableSep)
+	if endOfTableIndex < 0 {
+		return nil, nil, errors.New("end of table not found")
+	}
+	data = data[endOfTableIndex+2:]
 	if h.Type == TableTypeEndOfTable {
 		err = errEndOfTable
 	}
