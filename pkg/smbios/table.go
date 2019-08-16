@@ -32,6 +32,10 @@ var (
 	tableSep = []byte{0, 0}
 )
 
+const (
+	outOfSpec = "<OUT OF SPEC>"
+)
+
 // Len returns length of the structured part of the table.
 func (t *Table) Len() int {
 	return len(t.data)
