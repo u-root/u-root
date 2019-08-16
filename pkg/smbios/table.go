@@ -97,7 +97,7 @@ func (t *Table) GetStringAt(offset int) (string, error) {
 	case int(stringIndex) <= len(t.strings):
 		return t.strings[stringIndex-1], nil
 	default:
-		return "", fmt.Errorf("invalid string index %d", stringIndex)
+		return "<BAD INDEX>", fmt.Errorf("invalid string index %d", stringIndex)
 	}
 }
 
