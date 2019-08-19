@@ -1,32 +1,28 @@
 #!/bin/bash
 set -euo pipefail
-set -v
+
 # Path to a working Windows *raw* image:
 WINDOWS_DISK="${WORKSPACE}"/windows.img
 
 START_PATH=$(realpath .)
 
-### Downloading and extracting ovmf EFI firmawre ###
-mkdir -p "${EFI_WORKSPACE}"/downloads
-cd "${EFI_WORKSPACE}"/downloads
-FIRMWARE_URL=https://www.kraxel.org/repos/jenkins/edk2/edk2.git-ovmf-x64-0-20190704.1206.g48d8d4d80b.noarch.rpm
-FIRMWARE_IMAGE=$(basename ${FIRMWARE_URL})
-echo "${FIRMWARE_IMAGE}"
+### Extracting ovmf EFI firmawre ###
+cd "${EFI_WORKSPACE}"
+FIRMWARE_TAR="${START_PATH}"/ovmf_uefi.tar.gz
+FIRMWARE_IMAGE=OVMF-pure-efi.fd
+
+# The OVMF EFI can be downloaded from:
+# https://www.kraxel.org/repos/jenkins/edk2/edk2.git-ovmf-x64-0-20190704.1206.g48d8d4d80b.noarch.rpm
+# Exact filename might be different
+
+echo "Will try to unpack ${FIRMWARE_TAR}"
 
 if [[ ! -f ${FIRMWARE_IMAGE} ]]; then
-  wget "${FIRMWARE_URL}" -O "${FIRMWARE_IMAGE}"
-
-  fakeroot alien -d "${FIRMWARE_IMAGE}"
-
-  # Assuming there is exatcly one .deb file:
-  FIRMWARE_DEB=$(find . -name '*edk2.git-ovmf*deb*')
-
-  rm -rf ovmf
-  dpkg-deb -x "${FIRMWARE_DEB}" ovmf
+  echo "Unpacking OVMF EFI"
+  tar -xvf "${FIRMWARE_TAR}"
 
 else
-  echo "NOTE: $(realpath "${FIRMWARE_IMAGE}") exists!! " \
-       "Remove file to re-download EFI firmware." 1>&2
+  echo "NOTE: $(realpath "${FIRMWARE_IMAGE}") exists!! "
 fi
 
 ### Creating EFI filesystem dir ###

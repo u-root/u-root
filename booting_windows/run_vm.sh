@@ -20,7 +20,7 @@ MEM=4096 # 4G of DRAM for the virtual machine
 
 pushd "${EFI_WORKSPACE}"
 
-BIOS_PATH=${EFI_WORKSPACE}/downloads/ovmf/usr/share/edk2.git/ovmf-x64/OVMF-pure-efi.fd
+BIOS_PATH=${EFI_WORKSPACE}/OVMF-pure-efi.fd
 
 if [[ "${PARAM1}" == "rebuild_kernel" ]] || \
    [[ "${PARAM2}" == "rebuild_kernel" ]]; then
