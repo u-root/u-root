@@ -1,11 +1,16 @@
 package main
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,13 +19,16 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/loop"
 	"github.com/u-root/u-root/pkg/storage"
+	"golang.org/x/sys/unix"
 )
 
 // TODO:
@@ -61,6 +69,127 @@ type netVars struct {
 
 	BootstrapURL    string `json:"bootstrap_url"`
 	SignaturePubKey string `json:"signature_pub_key"`
+
+	MinimalAmountSignatures int `json:"minimal-amount-signatures"`
+}
+
+func stbootSetupIOFromNetVars(vars netVars) error {
+	//setup ip
+	log.Print("Setup network configuration with IP: " + vars.HostIP)
+	cmd := exec.Command("ip", "addr", "add", vars.HostIP, "dev", eth)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+	cmd = exec.Command("ip", "link", "set", eth, "up")
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+	cmd = exec.Command("ip", "route", "add", "default", "via", vars.DefaultGateway, "dev", eth)
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+
+	if *doDebug {
+		cmd = exec.Command("ip", "addr")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("Error executing %v: %v", cmd, err)
+		}
+		cmd = exec.Command("ip", "route")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("Error executing %v: %v", cmd, err)
+		}
+	}
+
+	return nil
+}
+
+func stbootVerifySignatureInPath(path string, hashValue []byte, opts x509.VerifyOptions, minAmountValid int) error {
+	validSignatures := 0
+
+	// Check certs and signatures
+	filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() && (filepath.Ext(info.Name()) == ".cert") {
+			// Read cert and verify
+			userCert, err := ioutil.ReadFile(path)
+			if err == nil {
+				block, _ := pem.Decode(userCert)
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err == nil {
+					// verify certificates with root certificate
+					_, err = cert.Verify(opts)
+					if err == nil {
+						// Read signature and verify it.
+						signatureFilename := strings.TrimSuffix(path, filepath.Ext(path)) + ".signature"
+						signatureRaw, err := ioutil.ReadFile(signatureFilename)
+
+						if err != nil {
+							log.Println(fmt.Sprintf("Unable to read signature at %s. Erroring.", signatureFilename))
+							return err
+						}
+
+						opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
+						err = rsa.VerifyPSS(cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hashValue, signatureRaw, opts)
+						if err != nil {
+							log.Println(fmt.Sprintf("Signature Verification failed for %s.", filepath.Base(signatureFilename)))
+						} else {
+							validSignatures++
+							debug(fmt.Sprintf("%s verfied.", signatureFilename))
+						}
+					} else {
+						log.Fatal(err)
+					}
+				} else {
+					log.Fatal(err)
+				}
+			} else {
+				log.Fatal(fmt.Sprintf("Unable to read user certificate %s", path))
+			}
+		}
+
+		return nil
+	})
+
+	if validSignatures < minAmountValid {
+		log.Fatalf("Did not found enough valid signatures. Only %d (%d required) are valid.", validSignatures, minAmountValid)
+		return errors.New(("Not enough valid signatures found."))
+	}
+
+	return nil
+}
+
+func stbootMountIso(pathToIso string, mountPoint string) (string, string, error) {
+
+	// Mount the iso
+	log.Println(fmt.Sprintf("Trying to mount %s in /tmp/iso", pathToIso))
+	os.MkdirAll(mountPoint, os.ModeDir|os.FileMode(0700))
+	var flags = uintptr(unix.UMOUNT_NOFOLLOW)
+	flags |= unix.MNT_FORCE
+
+	device, err := loop.New(pathToIso, mountPoint, "iso9660", flags, "")
+	if err != nil {
+		log.Println(fmt.Sprintf("%v", err))
+		return "", "", err
+	}
+	device.Mount()
+	log.Println("Mounted.")
+
+	kernelPath := path.Join(mountPoint, "vmlinuz")
+	initramfsPath := path.Join(mountPoint, "initramf")
+
+	return kernelPath, initramfsPath, nil
 }
 
 func main() {
@@ -113,6 +242,7 @@ func main() {
 	}()
 
 	// search for a netvars.json
+	// FIXME if already mounted - cant find netvars.json
 	var data []byte
 	for _, mountpoint := range mounted {
 		path := path.Join(mountpoint.Path, netVarsPath)
@@ -140,42 +270,15 @@ func main() {
 
 		log.Print("BootstrapURL: " + vars.BootstrapURL)
 		log.Print("SignaturePupKey: " + vars.SignaturePubKey)
+		log.Print("MinimalAmountSignatures: ", vars.MinimalAmountSignatures)
 	}
 
-	//setup ip
-	log.Print("Setup network configuration with IP: " + vars.HostIP)
-	cmd := exec.Command("ip", "addr", "add", vars.HostIP, "dev", eth)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-	}
-	cmd = exec.Command("ip", "link", "set", eth, "up")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-	}
-	cmd = exec.Command("ip", "route", "add", "default", "via", vars.DefaultGateway, "dev", eth)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-	}
-
-	if *doDebug {
-		cmd = exec.Command("ip", "addr")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Printf("Error executing %v: %v", cmd, err)
-		}
-		cmd = exec.Command("ip", "route")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Printf("Error executing %v: %v", cmd, err)
-		}
+	// Setup IO from NetVars
+	err = stbootSetupIOFromNetVars(vars)
+	if err != nil {
+		log.Fatal("Can not set up IO from NetVars")
+		log.Fatal(err)
+		return
 	}
 
 	// load CA certificate
@@ -270,10 +373,70 @@ func main() {
 	}
 	debug("Adjusted Bootconfig: %+v", *cfg)
 
+	// Hash payload -  right now it is the kernel
+	hash := sha512.New()
+	hash.Reset()
+	kernelRaw, _ := ioutil.ReadFile(cfg.Kernel)
+	hash.Write(kernelRaw)
+	kernelHash := hash.Sum(nil)
+
+	// Verify Boot Config
+	// Search for signatures to this bootconfig
+	certPath := strings.Replace(path.Dir(manifest.Configs[0].Kernel), outputDir, "", -1)
+	certPath = path.Join(outputDir, "certs/", certPath)
+
+	// TODO: Check if path really exists
+
+	rootCert, err := ioutil.ReadFile(path.Join(outputDir, "certs/root.cert"))
+	if err != nil {
+		log.Println("Root Certificate not found.")
+		return
+	}
+
+	root := x509.NewCertPool()
+	ok = root.AppendCertsFromPEM(rootCert)
+	if !ok {
+		log.Fatalln("Failed to parse root certificate")
+		return
+	}
+
+	opts := x509.VerifyOptions{
+		Roots: root,
+	}
+
+	err = stbootVerifySignatureInPath(certPath, kernelHash, opts, vars.MinimalAmountSignatures)
+
+	if err != nil {
+		log.Fatal("The bootconfig seems to be not trustworthy.")
+		return
+	}
+
 	if *dryRun {
 		debug("Dryrun mode: will not boot")
 		return
 	}
+
+	tmpPath, err := ioutil.TempDir(os.TempDir(), "iso")
+	if err != nil {
+		log.Fatalf("Unable to create temporary dir in %v", err)
+		return
+	}
+	kernelPath, initramfsPath, err := stbootMountIso(cfg.Kernel, tmpPath)
+
+	if err != nil || kernelPath == "" || initramfsPath == "" {
+		log.Fatalln("Error Mounting Iso.")
+		return
+	}
+
+	// Extend arguments.
+	cfg.KernelArgs = cfg.KernelArgs + " root=/var/squashfs/filesystem.squashfs"
+	cfg.Kernel = kernelPath
+	cfg.Initramfs = initramfsPath
+
+	log.Printf("%v", cfg)
+
+	log.Println("Starting up new kernel.")
+
 	// boot
 	if err := cfg.Boot(); err != nil {
 		log.Printf("Failed to boot kernel %s: %v", cfg.Kernel, err)
