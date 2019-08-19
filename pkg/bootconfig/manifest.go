@@ -27,10 +27,9 @@ type Manifest struct {
 	// Version is a positive integer that determines the version of the Manifest
 	// structure. This will be used when introducing breaking changes in the
 	// Manifest interface.
-	Version      int             `json:"version"`
-	Configs      []BootConfig    `json:"configs"`
-	RootCertPath string          `json:"rootCert"`
-	Signatures   []BootSignature `json:"signatures"`
+	Version      int          `json:"version"`
+	Configs      []BootConfig `json:"configs"`
+	RootCertPath string       `json:"rootCert"`
 }
 
 // NewManifest returns a new empty Manifest structure with the current version
