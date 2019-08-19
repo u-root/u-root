@@ -7,6 +7,12 @@ package bootconfig
 import (
 	"archive/zip"
 	"bytes"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -14,8 +20,11 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
+	"time"
 
-	"github.com/u-root/u-root/pkg/crypto"
+	urootcrypto "github.com/u-root/u-root/pkg/crypto"
 )
 
 // memoryZipReader is used to unpack a zip file from a byte sequence in memory.
@@ -55,7 +64,7 @@ func FromZip(filename string) (*Manifest, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	crypto.TryMeasureData(crypto.BlobPCR, data, filename)
+	urootcrypto.TryMeasureData(urootcrypto.BlobPCR, data, filename)
 	zipbytes := data
 
 	r, err := zip.NewReader(&memoryZipReader{Content: zipbytes}, int64(len(zipbytes)))
@@ -69,43 +78,46 @@ func FromZip(filename string) (*Manifest, string, error) {
 	log.Printf("Created temporary directory %s", tempDir)
 	var manifest *Manifest
 	for _, f := range r.File {
+		if f.FileInfo().IsDir() {
+			// Dont care - will be handled later
+			continue
+		}
+
 		destination := path.Join(tempDir, f.Name)
 		if len(f.Name) == 0 {
 			log.Printf("Warning: skipping zero-length file name (flags: %d, mode: %s)", f.Flags, f.Mode())
 			continue
 		}
-		if f.Name[len(f.Name)-1] == '/' {
-			// it's a directory, create it
-			if err := os.MkdirAll(destination, os.ModeDir|os.FileMode(0700)); err != nil {
+		// Check if folder exists
+		if _, err := os.Stat(destination); os.IsNotExist(err) {
+			if err := os.MkdirAll(path.Dir(destination), os.ModeDir|os.FileMode(0700)); err != nil {
 				return nil, "", err
 			}
-			log.Printf("Extracted directory %s (flags: %d)", f.Name, f.Flags)
-		} else {
-			fd, err := f.Open()
-			if err != nil {
-				return nil, "", err
-			}
-			buf, err := ioutil.ReadAll(fd)
-			if err != nil {
-				return nil, "", err
-			}
-			if f.Name == "manifest.json" {
-				// make sure it's not a duplicate manifest within the ZIP file
-				// and inform the user otherwise
-				if manifest != nil {
-					log.Printf("Warning: duplicate manifest.json found, the last found wins")
-				}
-				// parse the Manifest containing the boot configurations
-				manifest, err = ManifestFromBytes(buf)
-				if err != nil {
-					return nil, "", err
-				}
-			}
-			if err := ioutil.WriteFile(destination, buf, f.Mode()); err != nil {
-				return nil, "", err
-			}
-			log.Printf("Extracted file %s (flags: %d, mode: %s)", f.Name, f.Flags, f.Mode())
 		}
+		fd, err := f.Open()
+		if err != nil {
+			return nil, "", err
+		}
+		buf, err := ioutil.ReadAll(fd)
+		if err != nil {
+			return nil, "", err
+		}
+		if f.Name == "manifest.json" {
+			// make sure it's not a duplicate manifest within the ZIP file
+			// and inform the user otherwise
+			if manifest != nil {
+				log.Printf("Warning: duplicate manifest.json found, the last found wins")
+			}
+			// parse the Manifest containing the boot configurations
+			manifest, err = ManifestFromBytes(buf)
+			if err != nil {
+				return nil, "", err
+			}
+		}
+		if err := ioutil.WriteFile(destination, buf, f.Mode()); err != nil {
+			return nil, "", err
+		}
+		log.Printf("Extracted file %s (flags: %d, mode: %s)", f.Name, f.Flags, f.Mode())
 	}
 	if manifest == nil {
 		return nil, "", errors.New("No manifest found")
@@ -114,7 +126,7 @@ func FromZip(filename string) (*Manifest, string, error) {
 }
 
 // FIXME:
-// ToZip tries to pack all files specifoed in the the provided manifest.json
+// ToZip tries to pack all files specified in the the provided manifest.json
 // into a zip archive. An error is returned, if the files (kernel, initrd, etc)
 // doesn't exist at the paths written inside the manifest.json relative to its
 // location. Optionally , if privkeyfile is not nil, after creating the archive an ed25519 signature is added to the
@@ -123,6 +135,7 @@ func FromZip(filename string) (*Manifest, string, error) {
 func ToZip(output string, manifest string) error {
 	// Get manifest from file. Make sure the file is named accordingliy, since
 	// FromZip will search 'manifest.json' while extraction.
+
 	if base := path.Base(manifest); base != "manifest.json" {
 		return fmt.Errorf("Invalid manifest name. Want 'manifest.json', got: %s", base)
 	}
@@ -170,7 +183,7 @@ func ToZip(output string, manifest string) error {
 
 	// Archive root certificate
 	z.Create("certs/")
-	dest = path.Join("certs/", path.Base(mf.RootCertPath))
+	dest = "certs/root.cert"
 	origin = path.Join(path.Dir(manifest), mf.RootCertPath)
 	toZip(z, dest, origin)
 	mf.RootCertPath = dest
@@ -226,33 +239,148 @@ func toZip(w *zip.Writer, newPath, originPath string) error {
 // AddSignature signes the bootfiles inside an stboot.zip and inserts the
 // signatures into the archive along with the respective certificate
 func AddSignature(archive, privKey, certificate string) error {
+
 	mf, dir, err := FromZip(archive)
 	if err != nil {
 		return err
 	}
 
 	// collect boot binaries
-	bins := make([]string, 0)
-	for i, cfg := range mf.Configs {
-		dir := fmt.Sprintf("bootconfig_%d", i)
-		files, err := ioutil.ReadDir(dir)
+	// XXX Refactor if we remove bootconfig from manifest
+	// Maybe just walk through certs/folders and match do root/bootconfig
+	for i := range mf.Configs {
+		// Init hash
+		hash := sha512.New()
+		hash.Reset()
+
+		bootconfigDir := path.Join(dir, fmt.Sprintf("bootconfig_%d", i))
+		files, err := ioutil.ReadDir(bootconfigDir)
 		if err != nil {
 			return err
 		}
 		for _, file := range files {
 			if !file.IsDir() {
-				bins = append(bins, file.Name())
+				// Open file and extend hash
+				fh, err := os.Open(path.Join(bootconfigDir, file.Name()))
+				if err != nil {
+					log.Printf("Error opening file %s\n", file.Name())
+				}
+				buff := make([]byte, file.Size())
+
+				n, err := fh.Read(buff)
+				if err != nil {
+					log.Printf("Encountered error %s while opening %s\n", err, file.Name())
+					return err
+				}
+
+				// Write to hash
+				hash.Write(buff[0:n])
 			}
 		}
+		// Sign hash with Key
+		buff, err := ioutil.ReadFile(privKey)
+		privPem, _ := pem.Decode(buff)
+		rsaPrivKey, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
+
+		if rsaPrivKey == nil {
+			panic("RSA Key is nil")
+		}
+
+		log.Println("Signing..")
+
+		completeHash := hash.Sum(nil)
+		opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
+
+		signature, err := rsa.SignPSS(rand.Reader, rsaPrivKey, crypto.SHA512, completeHash[:], opts)
+		if signature == nil {
+			panic("Signing failed.")
+		}
+
+		fmt.Println(fmt.Sprintf("%x", signature))
+
+		// Create dir for signature
+		err = os.MkdirAll(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/", i)), os.ModeDir|os.FileMode(0700))
+		if err != nil {
+			log.Println(fmt.Sprintf("Creating directories in %s for signatures failed - Check permissions.", dir))
+			return err
+		}
+
+		// Extract part of Public Key for identification
+		certificateString, err := ioutil.ReadFile(certificate)
+		if err != nil {
+			log.Println(fmt.Sprintf("Failed to read certificate - Err %s", err))
+			return err
+		}
+
+		cert, err := parseCertificate(certificateString)
+		if err != nil {
+			log.Println(fmt.Sprintf("Failed to parse certificate %s", certificateString))
+		}
+
+		// Write signature to folder
+		err = ioutil.WriteFile(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/%s.signature", i, fmt.Sprintf("%x", cert.PublicKey)[2:18])), signature, 0644)
+		if err != nil {
+			log.Println(fmt.Sprintf("Writing into %s failed - Check permissions.", dir))
+			return err
+		}
+
+		// cp cert to folder
+		err = ioutil.WriteFile(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/%s.cert", i, fmt.Sprintf("%x", cert.PublicKey)[2:18])), certificateString, 0644)
+		if err != nil {
+			log.Println(fmt.Sprintf("Copying certificate %s to .zip failed - Check permissions.", certificate))
+			return err
+		}
 	}
-	// TODO:
-	// read all kernel files in a byte buffer
-	// sign it
-	// save signature in dir/certs/signatureX
-	// save certificate in dir/certs/certificateX
-	// update manifest and write it to dir
-	// pack everything back tp zip (ToZiP)
 
-	// make use of it in /cmds/boot/stboot/main.go
+	// Pack it again
+	// Create a buffer to write the archive to.
+	buf := new(bytes.Buffer)
+	// Create a new zip archive.
+	z := zip.NewWriter(buf)
 
+	// Walk the directory and pack it.
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			err := toZip(z, strings.Replace(path, dir, "", -1)[1:], path)
+			if err != nil {
+				log.Println(fmt.Sprintf("Error adding file %s to .zip archive again", strings.Replace(path, dir, "", -1)))
+			}
+		}
+
+		return nil
+	})
+
+	z.Close()
+
+	pathToZip := fmt.Sprintf("./.original/%d", time.Now().Unix())
+	os.MkdirAll(pathToZip, os.ModePerm)
+	os.Rename(archive, pathToZip+"/stboot.zip")
+	log.Println("Backed up old stboot.zip to " + pathToZip)
+
+	err = ioutil.WriteFile(archive, buf.Bytes(), 0777)
+	if err != nil {
+		log.Println(fmt.Sprintf("Unable to write new stboot.zip file - recover old from %s", pathToZip))
+		return err
+	}
+	log.Println("Stboot file has been written to " + archive)
+
+	return nil
+
+}
+
+// parseCertificate parses certificate from raw certificate
+func parseCertificate(rawCertificate []byte) (x509.Certificate, error) {
+
+	block, _ := pem.Decode(rawCertificate)
+	if block == nil {
+		panic("failed to parse PEM block containing the public key")
+	}
+
+	pub, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		fmt.Println("failed to parse DER encoded public key: " + err.Error())
+		return *pub, err
+	}
+
+	return *pub, nil
 }
