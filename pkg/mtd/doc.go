@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package mtd supports manipulation of Memory Technology
+// Device chips.
+//
 // Chips are made by vendors, and an individual vendor is
 // defined by a 1 to 8 byte vendor id stored in the chip.
 // An instance of a type of chip, with, e.g., a particular size,
@@ -60,6 +63,14 @@
 // to balance time costs of writing, expected costs of too many erase
 // cycles, and several other factors I can not recall just now. Watch
 // this space.
+//
+// A note on the separation of ChipInfo from Flasher:
+// A ChipInfo is intended to tell us all we need to know about a device.
+// It might be derived from the /dev/mtd, a dediprog, or a person
+// forcing the vendor and device id. A Flasher performs the act.
+// One might derive a ChipInfo from /dev/mtd, but use a dediprog
+// to flash it. Hence we keep these two items separate. A ChipInfo
+// is like an os.Info, a Flasher like os.File.
 //
 // TODO: figure out some minimum set of config options for Linux, with
 // the proviso that this will be very kernel version dependent.

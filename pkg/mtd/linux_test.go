@@ -10,16 +10,17 @@ import (
 )
 
 func TestOpen(t *testing.T) {
-	// If there's no such device then don't bother with the
-	// test.
-	if _, err := os.Stat(DevName); err != nil {
+	Debug = t.Logf
+	d := DevName + "0"
+	if _, err := os.Stat(d); err != nil {
 		t.Skip("No device to test")
 	}
-	m, err := NewDev(DevName)
+	m, err := NewChipInfoFromDev(d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.Close(); err != nil {
-		t.Fatal(err)
+	if m == nil {
+		t.Errorf("no ChipInfo found in sysfs")
 	}
+	t.Logf("Chip info: name %v string %v", m.Name(), m.String())
 }

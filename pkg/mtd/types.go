@@ -5,15 +5,6 @@
 package mtd
 
 // Flasher defines the interface to flash drivers.
-//
-// Many devices must have lazy writes; SyncWrite should always be
-// called after a sequence of QueueWrite commands.  Close should
-// return an error if there are queued write commands. To erase a
-// device, one calls chip Blank(), QueueWrite(), and SyncWrite(). The
-// operators are deined for the Flasher, not the Chipper, since
-// flashing can involve driver-level operations such as unlocking
-// protection bits on a bridge that are more than just a chip
-// operation.
 type Flasher interface {
 	// ReadAt implements io.ReadAt for a flash device.
 	ReadAt([]byte, int64) (int, error)
@@ -46,7 +37,7 @@ type ChipSize uint
 // Vendor defines operations on vendor data.
 type Vendor interface {
 	// Chip returns a Chip, given a DeviceID
-	Chip(ChipID) (Chip, error)
+	ChipInfo(ChipID) (ChipInfo, error)
 	// ID Returns the VendorID
 	ID() VendorID
 	// Name() returns the canonical name
@@ -55,8 +46,10 @@ type Vendor interface {
 	Synonyms() []VendorName
 }
 
-// Chip defines operations on Chips.
-type Chip interface {
+// ChipInfo provides information about a chip, possibly derived from /dev/mtdx,
+// possibly from vendor and device ID read from a programmer, possibly from
+// vendor and device ID provided by a user.
+type ChipInfo interface {
 	// Name returns the chip name
 	Name() ChipName
 	// ID returns the chip ID
@@ -79,9 +72,10 @@ type vendor struct {
 	id    VendorID
 }
 
-// ChipDevice has information about a chip, include Vendor, Device,
-// sizes, and so on; and a reference to common properties.
-// As in Vendors, there are several names for a chip.
+// ChipDevice has information about a chip as found in a table,
+// including Vendor, Device, sizes, and so on; and a reference to
+// common properties.  As in Vendors, there are several names for a
+// chip.
 type ChipDevice struct {
 	vendor   VendorName
 	devices  []ChipName

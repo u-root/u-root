@@ -28,8 +28,8 @@ func VendorFromName(v VendorName) (Vendor, error) {
 	return nil, fmt.Errorf("%v: not a known vendor", v)
 }
 
-// Chip returns a Chip or error given a ChipID.
-func (v *vendor) Chip(id ChipID) (Chip, error) {
+// ChipInfo returns a Chip or error given a ChipID.
+func (v *vendor) ChipInfo(id ChipID) (ChipInfo, error) {
 	for _, d := range devices {
 		if d.vendor == v.names[0] && d.id == id {
 			return &d, nil
@@ -53,13 +53,13 @@ func (v *vendor) Synonyms() []VendorName {
 	return v.names[1:]
 }
 
-// ChipFromVIDDID will return a Chip struct, given a Vendor and Device ID.
-func ChipFromVIDDID(vid VendorID, did ChipID) (Chip, error) {
+// ChipInfoFromVIDDID will return a ChipInfo struct, given a Vendor and Device ID.
+func ChipInfoFromVIDDID(vid VendorID, did ChipID) (ChipInfo, error) {
 	v, err := VendorFromID(vid)
 	if err != nil {
 		return nil, err
 	}
-	return v.Chip(did)
+	return v.ChipInfo(did)
 }
 
 // ID returns the ChipID.
@@ -95,6 +95,6 @@ func (c *ChipDevice) String() string {
 }
 
 // Supported returns true if a chip is supported by this package.
-func Supported(c Chip) bool {
+func Supported(c ChipInfo) bool {
 	return c.Size() != 0
 }

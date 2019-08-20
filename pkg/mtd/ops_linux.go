@@ -5,26 +5,18 @@
 package mtd
 
 import (
+	"fmt"
 	"os"
 )
 
-// Dev contains information about ongoing MTD status and operation.
+// Dev is a Linux device to be used for operations on MTDs.
 type Dev struct {
 	*os.File
-	devName string
-	data    []byte
 }
 
-// DevName is the default name for the MTD device.
-var DevName = "/dev/mtd0"
-
-// NewDev creates a Dev, returning Flasher or error.
-func NewDev(n string) (Flasher, error) {
-	f, err := os.OpenFile(n, os.O_RDWR, 0)
-	if err != nil {
-		return nil, err
-	}
-	return &Dev{File: f, devName: n}, nil
+// NewFlasher returns a Flasher or an error
+func NewFlasher(n string) (Flasher, error) {
+	return nil, fmt.Errorf("not yet")
 }
 
 // QueueWrite adds a []byte to the pending write queue.
@@ -49,5 +41,5 @@ func (m *Dev) Close() error {
 
 // DevName returns the name of the flash device.
 func (m *Dev) DevName() string {
-	return m.devName
+	return m.File.Name()
 }

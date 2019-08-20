@@ -49,11 +49,11 @@ func TestFindDevice(t *testing.T) {
 
 	for _, tt := range tests {
 		v, err := VendorFromName(tt.v)
-		t.Logf("vformname %v", v)
+		t.Logf("vendorfromname %v", v)
 		if err != nil {
 			t.Errorf("VendorFromName(%v): got %v, want nil", tt.v, err)
 		}
-		d, err := v.Chip(tt.id)
+		d, err := v.ChipInfo(tt.id)
 		if fmt.Sprintf("%v", err) != fmt.Sprintf("%v", tt.e) {
 			t.Errorf("(%q,%v): got %v want %v", tt.v, tt.id, err, tt.e)
 		}
