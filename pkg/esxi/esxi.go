@@ -131,9 +131,20 @@ func mountPartition(dev string) (*options, error) {
 }
 
 func getBootImage(opts options, device string, partition int) (*boot.MultibootImage, error) {
-	// esx-boot/safeboot/bootbank.c:bank_scan says only "valid" and "dirty"
-	// are bootable partitions.
-	if opts.bootstate != bootValid && opts.bootstate != bootDirty {
+	// Only valid and upgrading are bootable partitions.
+	//
+	// We are supposed to support the following two state transitions (only
+	// one transition every boot!):
+	//
+	// upgrading -> dirty
+	// dirty -> invalid
+	//
+	// A validly booted system will set its own bootstate to "valid" from
+	// "dirty".
+	//
+	// We currently don't support writing the state back to disk, which is
+	// fine in our manual testing.
+	if opts.bootstate != bootValid && opts.bootstate != bootUpgrading {
 		return nil, fmt.Errorf("boot state %d invalid", opts.bootstate)
 	}
 
