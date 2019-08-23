@@ -39,13 +39,6 @@ var (
 // at /boot/efi/EFI/distro/ , 4 might be a good choice.
 const searchDepth = 4
 
-type grubVersion int
-
-var (
-	grubV1 grubVersion = 1
-	grubV2 grubVersion = 2
-)
-
 func isGrubSearchDir(dirname string) bool {
 	for _, dir := range GrubSearchDirectories {
 		if dirname == dir {
@@ -59,14 +52,10 @@ func isGrubSearchDir(dirname string) bool {
 // BootConfig structures, one for each menuentry, in the same order as they
 // appear in grub.cfg. All opened kernel and initrd files are relative to
 // basedir.
-func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, basedir string) []bootconfig.BootConfig {
+func ParseGrubCfg(devices []storage.BlockDev, grubcfg string, basedir string) []bootconfig.BootConfig {
 	// This parser sucks. It's not even a parser, it just looks for lines
 	// starting with menuentry, linux or initrd.
 	// TODO use a parser, e.g. https://github.com/alecthomas/participle
-	if ver != grubV1 && ver != grubV2 {
-		log.Printf("Warning: invalid GRUB version: %d", ver)
-		return nil
-	}
 	kernelBasedir := basedir
 	bootconfigs := make([]bootconfig.BootConfig, 0)
 	inMenuEntry := false
@@ -96,7 +85,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 			name := ""
 			if len(sline) > 1 {
 				name = strings.Join(sline[1:], " ")
-				name = unquote(ver, name)
+				name = unquote(name)
 				name = strings.Split(name, "--")[0]
 			}
 			cfg.Name = name
@@ -136,7 +125,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 			if sline[0] == "linux" || sline[0] == "linux16" || sline[0] == "linuxefi" {
 				kernel := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
-				cmdline = unquote(ver, cmdline)
+				cmdline = unquote(cmdline)
 				cfg.Kernel = path.Join(kernelBasedir, kernel)
 				cfg.KernelArgs = cmdline
 			} else if sline[0] == "initrd" || sline[0] == "initrd16" || sline[0] == "initrdefi" {
@@ -145,13 +134,13 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 			} else if sline[0] == "multiboot" || sline[0] == "multiboot2" {
 				multiboot := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
-				cmdline = unquote(ver, cmdline)
+				cmdline = unquote(cmdline)
 				cfg.Multiboot = path.Join(kernelBasedir, multiboot)
 				cfg.MultibootArgs = cmdline
 			} else if sline[0] == "module" || sline[0] == "module2" {
 				module := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
-				cmdline = unquote(ver, cmdline)
+				cmdline = unquote(cmdline)
 				module = path.Join(kernelBasedir, module)
 				if cmdline != "" {
 					module = module + " " + cmdline
@@ -177,15 +166,11 @@ func isValidFsUUID(uuid string) bool {
 	return true
 }
 
-func unquote(ver grubVersion, text string) string {
-	if ver == grubV2 {
-		// if grub2, unquote the string, as directives could be quoted
-		// https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
-		// TODO unquote everything, not just \$
-		return strings.Replace(text, `\$`, "$", -1)
-	}
-	// otherwise return the unmodified string
-	return text
+func unquote(text string) string {
+	// unquote the string, as directives could be quoted
+	// https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
+	// TODO unquote everything, not just \$
+	return strings.Replace(text, `\$`, "$", -1)
 }
 
 func isMn(r rune) bool {
@@ -223,13 +208,7 @@ func ScanGrubConfigs(devices []storage.BlockDev, basedir string) []bootconfig.Bo
 			return nil
 		}
 		cfgname := info.Name()
-		var ver grubVersion
-		switch cfgname {
-		case "grub.cfg":
-			ver = grubV1
-		case "grub2.cfg":
-			ver = grubV2
-		default:
+		if cfgname != "grub.cfg" && cfgname != "grub2.cfg" {
 			return nil
 		}
 		log.Printf("Parsing %s", currentPath)
@@ -237,7 +216,7 @@ func ScanGrubConfigs(devices []storage.BlockDev, basedir string) []bootconfig.Bo
 		if err != nil {
 			return err
 		}
-		cfgs := ParseGrubCfg(ver, devices, string(data), basedir)
+		cfgs := ParseGrubCfg(devices, string(data), basedir)
 		bootconfigs = append(bootconfigs, cfgs...)
 		return nil
 	})
