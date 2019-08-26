@@ -7,9 +7,10 @@ TODO: godoc link
 Types are defined in [DMTF DSP0134](https://www.dmtf.org/dsp/DSP0134). As of July 2019, the most recent published version is 3.2.0.
 
 Adding a type largely consists of copy-pasting a bunch of information from the doicument to define a Go struct and its string representation.
-To make that easier, a set of tools is provided under the [tools](tools/) directory. These are Python scripts that take chunks of data copy-pasted
-from this document and produce a struct, anum or bit field declaration. These are by no means perfect and do not handle all the cases of weird formatting
-in the document, and may be broken completely by future formatting changes (but hopefully can be fixed if needed).
+To make that easier, a set of tools is provided ina Gist [here](https://gist.github.com/rojer/4fa173442fb00e24dc7b9d120c2e30af).
+These are Python scripts that take chunks of data copy-pasted from this document and produce a struct, anum or bit field declaration.
+These are by no means perfect and do not handle all the cases of weird formatting in the document,
+and may be broken completely by future formatting changes (but hopefully can be fixed if needed).
 
 So, adding a type should looks omething like this:
  * Create `typeXXX_new_information.go` with boilerplate from some other type (copyright, imports).

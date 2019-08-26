@@ -36,6 +36,11 @@ var (
 	}
 )
 
+type dmiDecodeError struct {
+	error
+	code int
+}
+
 // parseTypeFilter parses the --type argument(s) and returns a set of types taht should be included.
 func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 	types := map[smbios.TableType]bool{}
@@ -55,18 +60,18 @@ func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 	return types, nil
 }
 
-func dmiDecode(textOut io.Writer) (int, error) {
+func dmiDecode(textOut io.Writer) *dmiDecodeError {
 	typeFilter, err := parseTypeFilter(*flagType)
 	if err != nil {
-		return 2, fmt.Errorf("invalid --type: %s", err)
+		return &dmiDecodeError{code: 2, error: fmt.Errorf("invalid --type: %s", err)}
 	}
 	entry, data, err := getData(*flagFromDump, "/sys/firmware/dmi/tables")
 	if err != nil {
-		return 1, fmt.Errorf("error parsing loading data: %s", err)
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing loading data: %s", err)}
 	}
 	si, err := smbios.ParseInfo(entry, data)
 	if err != nil {
-		return 1, fmt.Errorf("error parsing data: %s", err)
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing data: %s", err)}
 	}
 	for _, t := range si.Tables {
 		if len(typeFilter) != 0 && !typeFilter[t.Type] {
@@ -82,13 +87,14 @@ func dmiDecode(textOut io.Writer) (int, error) {
 		}
 		fmt.Fprintf(textOut, "%s\n\n", pt)
 	}
-	return 0, nil
+	return nil
 }
 
 func main() {
 	flag.Parse()
-	if code, err := dmiDecode(os.Stdout); err != nil {
+	err := dmiDecode(os.Stdout)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(code)
+		os.Exit(err.code)
 	}
 }

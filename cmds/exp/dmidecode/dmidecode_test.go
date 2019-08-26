@@ -35,7 +35,7 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 	flag.Parse()
 	defer resetFlags()
 	out := bytes.NewBuffer(nil)
-	if _, err := dmiDecode(out); err != nil {
+	if err := dmiDecode(out); err != nil {
 		t.Errorf("%+v %+v %+v: error: %s", dumpFile, args, expectedOutFile, err)
 		return
 	}
