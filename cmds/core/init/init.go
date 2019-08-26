@@ -29,6 +29,21 @@ var (
 	osInitGo = func() {}
 )
 
+func init() {
+	r := util.UrootPath
+	cmdList = []string{
+		r("/inito"),
+
+		r("/bbin/uinit"),
+		r("/bin/uinit"),
+		r("/buildbin/uinit"),
+
+		r("/bin/defaultsh"),
+		r("/bin/sh"),
+		r("/"),
+	}
+}
+
 func main() {
 	flag.Parse()
 
