@@ -25,6 +25,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
+
+	"github.com/insomniacslk/dhcp/dhcpv4/client4"
+
+	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/u-root/u-root/pkg/bootconfig"
 	"github.com/u-root/u-root/pkg/loop"
 	"github.com/u-root/u-root/pkg/storage"
@@ -40,20 +45,21 @@ var (
 )
 
 const (
-	eth            = "eth0"
-	bootFilePath   = "root/stboot.zip"
-	netVarsPath    = "netvars.json"
-	rootCACertPath = "/root/LetsEncrypt_Authority_X3.pem"
-	entropyAvail   = "/proc/sys/kernel/random/entropy_avail"
+	eth                = "eth0"
+	bootFilePath       = "root/stboot.zip"
+	netVarsPath        = "netvars.json"
+	rootCACertPath     = "/root/LetsEncrypt_Authority_X3.pem"
+	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
+	interfaceUpTimeout = 10 * time.Second
 )
 
 var banner = `
-  _____ _______   ____   ____   ____ _______ 
- / ____|__   __| |  _ \ / __ \ / __ \__   __|
-| (___    | |    | |_) | |  | | |  | | | |   
- \___ \   | |    |  _ <| |  | | |  | | | |   
- ____) |  | |    | |_) | |__| | |__| | | |   
-|_____/   |_|    |____/ \____/ \____/  |_|   
+  _____ _______   _____   ____   ____________
+ / ____|__   __|  |  _ \ / __ \ / __ \__   __|
+| (___    | |     | |_) | |  | | |  | | | |   
+ \___ \   | |     |  _ <| |  | | |  | | | |   
+ ____) |  | |     | |_) | |__| | |__| | | |   
+|_____/   |_|     |____/ \____/ \____/  |_|   
 											
 `
 var debug = func(string, ...interface{}) {}
@@ -73,51 +79,24 @@ type netVars struct {
 	MinimalAmountSignatures int `json:"minimal-amount-signatures"`
 }
 
-func stbootSetupIOFromNetVars(vars netVars) error {
-	//setup ip
-	log.Print("Setup network configuration with IP: " + vars.HostIP)
-	cmd := exec.Command("ip", "addr", "add", vars.HostIP, "dev", eth)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
-	}
-	cmd = exec.Command("ip", "link", "set", eth, "up")
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
-	}
-	cmd = exec.Command("ip", "route", "add", "default", "via", vars.DefaultGateway, "dev", eth)
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
-	}
-
-	if *doDebug {
-		cmd = exec.Command("ip", "addr")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Printf("Error executing %v: %v", cmd, err)
-		}
-		cmd = exec.Command("ip", "route")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Printf("Error executing %v: %v", cmd, err)
-		}
-	}
-
-	return nil
-}
-
-func stbootVerifySignatureInPath(path string, hashValue []byte, opts x509.VerifyOptions, minAmountValid int) error {
+// stbootVerifySignatureInPath takes path as rootPath and walks
+// the directory. Every .cert file it sees, it verifies the .cert
+// file with the root certificate, checks if a .signture file
+// exists, verify if the signature is correct according to the
+// hashValue.
+func stbootVerifySignatureInPath(path string, hashValue []byte, rootCert []byte, minAmountValid int) error {
 	validSignatures := 0
+
+	// Build up tree
+	root := x509.NewCertPool()
+	ok := root.AppendCertsFromPEM(rootCert)
+	if !ok {
+		return errors.New("Failed to parse root certificate")
+	}
+
+	opts := x509.VerifyOptions{
+		Roots: root,
+	}
 
 	// Check certs and signatures
 	filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -170,6 +149,8 @@ func stbootVerifySignatureInPath(path string, hashValue []byte, opts x509.Verify
 	return nil
 }
 
+// stbootMountIso mounts an iso to mountPoint. WIthin the .iso file
+// there should be a kernel and initramfs - returns path to both.
 func stbootMountIso(pathToIso string, mountPoint string) (string, string, error) {
 
 	// Mount the iso
@@ -192,12 +173,202 @@ func stbootMountIso(pathToIso string, mountPoint string) (string, string, error)
 	return kernelPath, initramfsPath, nil
 }
 
+// stbootDownloardFromHTTPS downloads the stboot.zip file
+// to a specific destination via HTTPS.
+func stbootDownloardFromHTTPS(url string, destination string) error {
+
+	roots := x509.NewCertPool()
+	if !stbootLoadAndVerifyCertificate(roots) {
+		return errors.New("Failed to verify root certificate")
+	}
+
+	// setup https client
+	client := http.Client{
+		Transport: (&http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig: (&tls.Config{
+				RootCAs: roots,
+			}),
+		}),
+	}
+
+	// check available kernel entropy
+	e, err := ioutil.ReadFile(entropyAvail)
+	es := strings.TrimSpace(string(e))
+	entr, err := strconv.Atoi(es) // XXX: Insecure?
+	if err != nil {
+		log.Fatalf("Cannot evaluate entropy, %v", err)
+	}
+	debug("Available kernel entropy: %d", entr)
+	if entr < 128 {
+		log.Print("WARNING: low entropy!")
+		log.Printf("%s : %d", entropyAvail, entr)
+	}
+	// get remote boot bundle
+	log.Print("Get boot files from " + url)
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("non-200 HTTP status: %d", resp.StatusCode)
+	}
+	f, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("Failed create boot config file: %v", err)
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		return fmt.Errorf("Failed to write boot config file: %v", err)
+	}
+
+	return nil
+}
+
+// stbootLoadAndVerifyCertificate loads the certificate needed
+// for HTTPS and verifies it.
+func stbootLoadAndVerifyCertificate(roots *x509.CertPool) bool {
+	// load CA certificate
+	debug("Load %s as CA certificate", rootCACertPath)
+	rootCertBytes, err := ioutil.ReadFile(rootCACertPath)
+	if err != nil {
+		log.Fatalf("Failed to read CA root certificate file: %s\n", err)
+		return false
+	}
+	rootCertPem, _ := pem.Decode(rootCertBytes)
+	if rootCertPem.Type != "CERTIFICATE" {
+		log.Fatalf("Failed decoding certificate: Certificate is of the wrong type. PEM Type is: %s\n", rootCertPem.Type)
+		return false
+	}
+	ok := roots.AppendCertsFromPEM([]byte(rootCertBytes))
+	if !ok {
+		log.Fatalf("Error parsing CA root certificate")
+		return false
+	}
+	debug("CA certificate: \n %s", string(rootCertBytes))
+
+	return true
+}
+
+// stbootSetupIOFromNetVars sets up your eth interface from netvars.json
+func stbootConfigureStaticNetwork(vars netVars) error {
+	//setup ip
+	log.Print("Setup network configuration with IP: " + vars.HostIP)
+	cmd := exec.Command("ip", "addr", "add", vars.HostIP, "dev", eth)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+	cmd = exec.Command("ip", "link", "set", eth, "up")
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+	cmd = exec.Command("ip", "route", "add", "default", "via", vars.DefaultGateway, "dev", eth)
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+
+	if *doDebug {
+		cmd = exec.Command("ip", "addr")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("Error executing %v: %v", cmd, err)
+		}
+		cmd = exec.Command("ip", "route")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("Error executing %v: %v", cmd, err)
+		}
+	}
+
+	return nil
+}
+
+// stbootConfigureDHCPNetwork configures DHCP on eth0
+func stbootConfigureDHCPNetwork() error {
+
+	debug("Trying to configure network configuration dynamically..")
+	attempts := 10
+	var conversation []*dhcpv4.DHCPv4
+
+	_, err := netboot.IfUp(eth, interfaceUpTimeout)
+	if err != nil {
+		log.Println("Enabling eth0 failed.")
+		return fmt.Errorf("Ifup failed: %v", err)
+	}
+	if attempts < 1 {
+		attempts = 1
+	}
+
+	client := client4.NewClient()
+	for attempt := 0; attempt < attempts; attempt++ {
+		debug("Attempt to get DHCP lease %d of %d for interface %s", attempt+1, attempts, eth)
+		conversation, err = client.Exchange(eth)
+
+		if err != nil && attempt < attempts {
+			log.Printf("Error: %v", err)
+			continue
+		}
+		break
+	}
+
+	if conversation[3] == nil {
+		return fmt.Errorf("Gateway is null")
+	}
+	netbootConfig, err := netboot.GetNetConfFromPacketv4(conversation[3])
+
+	if err != nil {
+		log.Printf("Error: %v", err)
+		return err
+	}
+
+	err = netboot.ConfigureInterface(eth, netbootConfig)
+
+	if err != nil {
+		log.Printf("Error: %v", err)
+		return err
+	}
+
+	// Some manual shit - for now
+	cmd := exec.Command("ip", "route", "add", "default", "via", netbootConfig.Routers[0].String()+"/24", "dev", eth)
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error executing %v: %v", cmd, err)
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	flag.Parse()
 	if *doDebug {
 		debug = log.Printf
 	}
 	log.Print(banner)
+
+	*doDebug = true
 
 	// get block devices
 	devices, err := storage.GetBlockStats()
@@ -273,86 +444,34 @@ func main() {
 		log.Print("MinimalAmountSignatures: ", vars.MinimalAmountSignatures)
 	}
 
-	// Setup IO from NetVars
-	err = stbootSetupIOFromNetVars(vars)
+	debug("Configuring network interfaces")
+
+	// If we do not have a HostIP we configure it dynamically
+	if vars.HostIP != "" {
+		// Setup IO from NetVars
+		err = stbootConfigureStaticNetwork(vars)
+	} else {
+		err = stbootConfigureDHCPNetwork()
+	}
+
 	if err != nil {
-		log.Fatal("Can not set up IO from NetVars")
-		log.Fatal(err)
+		log.Println("Can not set up IO.")
+		log.Println(err)
 		return
 	}
 
-	// load CA certificate
-	debug("Load %s as CA certificate", rootCACertPath)
-	rootCertBytes, err := ioutil.ReadFile(rootCACertPath)
+	err = stbootDownloardFromHTTPS(vars.BootstrapURL, bootFilePath)
 	if err != nil {
-		log.Fatalf("Failed to read CA root certificate file: %s\n", err)
-	}
-	rootCertPem, _ := pem.Decode(rootCertBytes)
-	if rootCertPem.Type != "CERTIFICATE" {
-		log.Fatalf("Failed decoding certificate: Certificate is of the wrong type. PEM Type is: %s\n", rootCertPem.Type)
-	}
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM([]byte(rootCertBytes))
-	if !ok {
-		log.Fatalf("Error parsing CA root certificate")
-	}
-	debug("CA certificate: \n %s", string(rootCertBytes))
-
-	// setup https client
-	client := http.Client{
-		Transport: (&http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
-			}).DialContext,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: (&tls.Config{
-				RootCAs: roots,
-			}),
-		}),
-	}
-	// check available kernel entropy
-	e, err := ioutil.ReadFile(entropyAvail)
-	es := strings.TrimSpace(string(e))
-	entr, err := strconv.Atoi(es)
-	if err != nil {
-		log.Fatalf("Cannot evaluate entropy, %v", err)
-	}
-	debug("Available kernel entropy: %d", entr)
-	if entr < 128 {
-		log.Print("WARNING: low entropy!")
-		log.Printf("%s : %d", entropyAvail, entr)
-	}
-	// get remote boot bundle
-	log.Print("Get boot files from " + vars.BootstrapURL)
-	resp, err := client.Get(vars.BootstrapURL)
-	if err != nil {
-		log.Fatalf("HTTTP GET failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		log.Fatalf("non-200 HTTP status: %d", resp.StatusCode)
-	}
-	f, err := os.Create(bootFilePath)
-	if err != nil {
-		log.Fatalf("Failed create boot config file: %v", err)
-	}
-	defer f.Close()
-
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		log.Fatalf("Failed to write boot config file: %v", err)
+		log.Printf("Error verifing or download file from %s", vars.BootstrapURL)
+		log.Println(err)
+		return
 	}
 
-	// check signature if necessary and unpck
+	// Unpack
 	manifest, outputDir, err := bootconfig.FromZip(bootFilePath)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	debug("Boot files unpacked into: " + outputDir)
 	debug("Manifest: %+v", *manifest)
@@ -360,6 +479,8 @@ func main() {
 	cfg, err := manifest.GetBootConfig(0)
 	if err != nil {
 		log.Fatal(err)
+		// XXX Should be loop through all bootconfigs?
+		// XXX Make sure 0 exists.
 	}
 	debug("Bootconfig: %+v", *cfg)
 
@@ -376,7 +497,11 @@ func main() {
 	// Hash payload -  right now it is the kernel
 	hash := sha512.New()
 	hash.Reset()
-	kernelRaw, _ := ioutil.ReadFile(cfg.Kernel)
+	kernelRaw, err := ioutil.ReadFile(cfg.Kernel)
+	if err != nil {
+		log.Fatalf("Unable to read .iso file: %v", err)
+		return
+	}
 	hash.Write(kernelRaw)
 	kernelHash := hash.Sum(nil)
 
@@ -393,18 +518,7 @@ func main() {
 		return
 	}
 
-	root := x509.NewCertPool()
-	ok = root.AppendCertsFromPEM(rootCert)
-	if !ok {
-		log.Fatalln("Failed to parse root certificate")
-		return
-	}
-
-	opts := x509.VerifyOptions{
-		Roots: root,
-	}
-
-	err = stbootVerifySignatureInPath(certPath, kernelHash, opts, vars.MinimalAmountSignatures)
+	err = stbootVerifySignatureInPath(certPath, kernelHash, rootCert, vars.MinimalAmountSignatures)
 
 	if err != nil {
 		log.Fatal("The bootconfig seems to be not trustworthy.")
