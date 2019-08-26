@@ -47,6 +47,7 @@ func init() {
 
 		r("/bin/defaultsh"),
 		r("/bin/sh"),
+		r("/"),
 	}
 }
 
