@@ -38,4 +38,7 @@ func TestProgressReader(t *testing.T) {
 	if string(stdout.Bytes()) != "###" {
 		t.Errorf("found %q, expected %q to be written", stdout.Bytes(), "###")
 	}
+	if string(output) != "456789012" {
+		t.Errorf("found %q, expected %q to be written", string(output), "456789012")
+	}
 }
