@@ -96,13 +96,11 @@ func (o *Options) validate(moreArgs bool) error {
 		o.Stdout = true
 	}
 
-	// Stat os.Stdin and ignore errors. stat will be a nil FileInfo if there is an
-	// error.
 	stat, _ := os.Stdin.Stat()
 
-	// No files passed and arguments and Stdin piped data found.
+	// No files passed and no arguments, Stdin piped data found.
 	// Stdin piped data is ignored if arguments are found.
-	if !moreArgs && (stat.Mode()&os.ModeNamedPipe) != 0 {
+	if !moreArgs && ((stat.Mode() & os.ModeCharDevice) == 0) {
 		o.Stdin = true
 		// Enable force to ignore suffix checks
 		o.Force = true
