@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha512"
@@ -265,7 +266,7 @@ func stbootLoadAndVerifyCertificate(roots *x509.CertPool) bool {
 // stbootSetupIOFromNetVars sets up your eth interface from netvars.json
 func stbootConfigureStaticNetwork(vars netVars) error {
 	//setup ip
-	log.Print("Setup network configuration with IP: " + vars.HostIP)
+	debug("Setup network configuration with IP: " + vars.HostIP)
 	cmd := exec.Command("ip", "addr", "add", vars.HostIP, "dev", eth)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -368,8 +369,6 @@ func main() {
 	}
 	log.Print(banner)
 
-	*doDebug = true
-
 	// get block devices
 	devices, err := storage.GetBlockStats()
 	if err != nil {
@@ -425,12 +424,12 @@ func main() {
 		log.Printf("cannot open %s: %v", path, err)
 	}
 
-	log.Printf("Parse network variables")
 	vars := netVars{}
 	json.Unmarshal(data, &vars)
 	// FIXME: : error handling
 	// print network variables
 	if *doDebug {
+		log.Printf("Parse network variables")
 		log.Print("HostIP: " + vars.HostIP)
 		log.Print("HostNetmask: " + vars.HostNetmask)
 		log.Print("DefaultGateway: " + vars.DefaultGateway)
@@ -550,6 +549,9 @@ func main() {
 	log.Printf("%v", cfg)
 
 	log.Println("Starting up new kernel.")
+
+	log.Print("Press 'Enter' to continue...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	// boot
 	if err := cfg.Boot(); err != nil {
