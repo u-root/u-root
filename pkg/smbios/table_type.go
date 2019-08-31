@@ -4,6 +4,10 @@
 
 package smbios
 
+import (
+	"fmt"
+)
+
 // TableType specifies the DMI type of the table.
 // Types are defined in DMTF DSP0134.
 type TableType uint8
@@ -35,7 +39,7 @@ func (t TableType) String() string {
 }
 
 // ParseTypedTable parses generic Table into a typed struct.
-func ParseTypedTable(t *Table) (interface{}, error) {
+func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 	switch t.Type {
 	case TableTypeBIOSInformation:
 		return NewBIOSInformation(t)
