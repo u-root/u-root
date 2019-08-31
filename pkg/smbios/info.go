@@ -42,7 +42,7 @@ func (i *Info) GetBIOSInformation() (*BIOSInformation, error) {
 		return nil, ErrTableNotFound
 	}
 	// There can only be one of these.
-	return NewBIOSInformation(bt[1])
+	return NewBIOSInformation(bt[0])
 }
 
 // GetSystemInformation returns the System Information (type 1) table, if present.
@@ -52,5 +52,5 @@ func (i *Info) GetSystemInformation() (*SystemInformation, error) {
 		return nil, ErrTableNotFound
 	}
 	// There can only be one of these.
-	return NewSystemInformation(bt[1])
+	return NewSystemInformation(bt[0])
 }
