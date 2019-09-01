@@ -63,7 +63,7 @@ func TestGetPinID(t *testing.T) {
 
 	// There are only 10 GPIOs, so expect this to fail.
 	if _, err := GetPinID("gpio-mockup-A", 12); err == nil {
-		t.Errorf("GetPinID(gpio-mockup-A, 2) = nil, but wanted error")
+		t.Errorf("GetPinID(gpio-mockup-A, 12) = nil, but wanted error")
 	}
 
 }

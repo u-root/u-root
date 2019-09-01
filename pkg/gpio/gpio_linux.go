@@ -40,11 +40,25 @@ func (v Value) String() string {
 	return "1"
 }
 
+func readInt(filename string) (int, error) {
+	// Get base offset (the first GPIO managed by this chip)
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read integer out of %s: %v", filename, err)
+	}
+	baseStr := strings.TrimSpace(string(buf))
+	num, err := strconv.Atoi(baseStr)
+	if err != nil {
+		return 0, fmt.Errorf("could not convert %s contents %s to integer: %v", filename, baseStr, err)
+	}
+	return num, nil
+}
+
 // GetPinID computes the sysfs pin ID for a specific port on a specific GPIO
 // controller chip. The controller arg is matched to a gpiochip's label in
 // sysfs. GetPinID gets the base offset of that chip, and adds the specific
 // pin number.
-func GetPinID(controller string, pin int) (int, error) {
+func GetPinID(controller string, pin uint) (int, error) {
 	controllers, err := filepath.Glob(fmt.Sprintf("%s/gpiochip*", gpioPath))
 	if err != nil {
 		return 0, err
@@ -64,17 +78,21 @@ func GetPinID(controller string, pin int) (int, error) {
 		}
 
 		// Get base offset (the first GPIO managed by this chip)
-		buf, err = ioutil.ReadFile(filepath.Join(c, "base"))
+		base, err := readInt(filepath.Join(c, "base"))
 		if err != nil {
-			return 0, fmt.Errorf("failed to read base of %s: %v", c, err)
-		}
-		baseStr := strings.TrimSpace(string(buf))
-		base, err := strconv.Atoi(baseStr)
-		if err != nil {
-			return 0, fmt.Errorf("could not get base offset for %s: %v", c, err)
+			return 0, fmt.Errorf("failed to read base: %v", err)
 		}
 
-		return base + pin, nil
+		// Get the number of GPIOs managed by this chip.
+		ngpio, err := readInt(filepath.Join(c, "ngpio"))
+		if err != nil {
+			return 0, fmt.Errorf("failed to read number of gpios: %v", err)
+		}
+		if int(pin) >= ngpio {
+			return 0, fmt.Errorf("requested pin %d of controller %s, but controller only has %d pins", pin, controller, ngpio)
+		}
+
+		return base + int(pin), nil
 	}
 
 	return 0, fmt.Errorf("could not find controller %s", controller)
