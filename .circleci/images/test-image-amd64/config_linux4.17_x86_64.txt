@@ -1416,7 +1416,8 @@ CONFIG_DEVPORT=y
 # Enable PHYLIB and NETWORK_PHY_TIMESTAMPING to see the additional clocks.
 #
 # CONFIG_PINCTRL is not set
-# CONFIG_GPIOLIB is not set
+CONFIG_GPIOLIB=y
+CONFIG_GPIO_MOCKUP=y
 # CONFIG_W1 is not set
 # CONFIG_POWER_AVS is not set
 # CONFIG_POWER_RESET is not set
