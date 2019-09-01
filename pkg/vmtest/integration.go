@@ -323,15 +323,11 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 		o.QEMUOpts.Kernel = kernel
 	}
 
-	if len(o.QEMUOpts.KernelArgs) == 0 {
-		var kernelArgs string
-		switch TestArch() {
-		case "amd64":
-			kernelArgs = "console=ttyS0 earlyprintk=ttyS0"
-		case "arm":
-			kernelArgs = "console=ttyAMA0"
-		}
-		o.QEMUOpts.KernelArgs = kernelArgs
+	switch TestArch() {
+	case "amd64":
+		o.QEMUOpts.KernelArgs += " console=ttyS0 earlyprintk=ttyS0"
+	case "arm":
+		o.QEMUOpts.KernelArgs += " console=ttyAMA0"
 	}
 
 	var dir qemu.Device
