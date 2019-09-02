@@ -7,7 +7,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	l "log"
 	"net"
 	"os"
@@ -45,7 +44,7 @@ var (
 	cursor    int
 	arg       []string
 	whatIWant []string
-	log       = l.New(os.Stdout, "ip: ", 0)
+	log       = l.New(os.Stdout, "", 0)
 
 	addrScopes = map[netlink.Scope]string{
 		netlink.SCOPE_UNIVERSE: "global",
@@ -206,16 +205,7 @@ func link() error {
 }
 
 func routeshow() error {
-	path := "/proc/net/route"
-	if *inet6 {
-		path = "/proc/net/ipv6_route"
-	}
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("Route show failed: %v", err)
-	}
-	log.Printf("%s", string(b))
-	return nil
+	return showRoutes(*inet6)
 }
 
 func nodespec() string {
