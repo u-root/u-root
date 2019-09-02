@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 func showLinks(w io.Writer, withAddresses bool) error {
@@ -128,5 +129,68 @@ func showNeighbours(w io.Writer, withAddresses bool) error {
 			fmt.Println(entry)
 		}
 	}
+	return nil
+}
+
+const (
+	defaultFmt = "default via %v dev %s proto %s metric %d\n"
+	routeFmt   = "%v dev %s proto %s scope %s src %s metric %d\n"
+)
+
+var rtProto = map[int]string{
+	unix.RTPROT_BOOT:   "boot",
+	unix.RTPROT_KERNEL: "kernel",
+	unix.RTPROT_STATIC: "static",
+	unix.RTPROT_DHCP:   "dhcp",
+}
+
+func showRoutes(inet6 bool) error {
+	var f int
+	if inet6 {
+		//TODO: implement ipv6 implementation
+		//f = netlink.FAMILY_V6
+		return fmt.Errorf("ipv6 route not implemented yet")
+	}
+	f = netlink.FAMILY_V4
+
+	routes, err := netlink.RouteList(nil, f)
+	if err != nil {
+		return err
+	}
+	for _, route := range routes {
+		if route.Gw != nil {
+			err = defaultRoute(route)
+		} else {
+			err = showRoute(route)
+		}
+	}
+	return err
+}
+
+func defaultRoute(r netlink.Route) error {
+	l, err := netlink.LinkByIndex(r.LinkIndex)
+	if err != nil {
+		return err
+	}
+	gw := r.Gw
+	name := l.Attrs().Name
+	proto := rtProto[r.Protocol]
+	metric := r.Priority
+	fmt.Printf(defaultFmt, gw, name, proto, metric)
+	return nil
+}
+
+func showRoute(r netlink.Route) error {
+	l, err := netlink.LinkByIndex(r.LinkIndex)
+	if err != nil {
+		return err
+	}
+	dest := r.Dst
+	name := l.Attrs().Name
+	proto := rtProto[r.Protocol]
+	scope := addrScopes[r.Scope]
+	src := r.Src
+	metric := r.Priority
+	fmt.Printf(routeFmt, dest, name, proto, scope, src, metric)
 	return nil
 }
