@@ -49,7 +49,6 @@ var (
 	dbg9p     = flag.Bool("dbg9p", false, "show 9p io")
 	root      = flag.String("root", "/", "9p root")
 	bindover  = flag.String("bindover", "/lib:/lib64:/lib32:/usr:/bin:/etc", ": separated list of directories in /tmp/cpu to bind over /")
-	host      string
 )
 
 func verbose(f string, a ...interface{}) {
@@ -261,7 +260,7 @@ func forward(l net.Listener, s net.Conn) error {
 }
 
 // To make sure defer gets run and you tty is sane on exit
-func runClient(a string) error {
+func runClient(host, a string) error {
 	c, err := config(*keyFile)
 	if err != nil {
 		return err
@@ -597,11 +596,6 @@ func usage() {
 func main() {
 	verbose("Args %v pid %d *runasinit %v *remote %v", os.Args, os.Getpid(), *runAsInit, *remote)
 	args := flag.Args()
-	if len(args) == 0 {
-		usage()
-	}
-	host = args[0]
-	a := strings.Join(args[1:], " ")
 	switch {
 	case *runAsInit:
 		verbose("Running as Init")
@@ -610,15 +604,20 @@ func main() {
 		}
 	case *remote:
 		verbose("Running as remote")
-		if err := runRemote(a, *port9p); err != nil {
+		if err := runRemote(strings.Join(flag.Args(), " "), *port9p); err != nil {
 			log.Fatal(err)
 		}
 	default:
+		if len(args) == 0 {
+			usage()
+		}
+		host := args[0]
+		a := strings.Join(args[1:], " ")
 		verbose("Running as client")
 		if a == "" {
 			a = os.Getenv("SHELL")
 		}
-		if err := runClient(a); err != nil {
+		if err := runClient(host, a); err != nil {
 			log.Fatal(err)
 		}
 	}
