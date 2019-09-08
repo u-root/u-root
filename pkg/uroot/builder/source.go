@@ -177,8 +177,8 @@ func buildToolchain(opts Opts) error {
 	return nil
 }
 
-func goListPkg(opts Opts, importPath string, out *initramfs.Files) *golang.ListPackage {
-	p, err := opts.Env.Deps(importPath)
+func goListPkg(opts Opts, importPath string, out *initramfs.Files) *golang.Package {
+	p, err := opts.Env.FindOne(importPath)
 	if err != nil {
 		log.Printf("Can't list Go dependencies for %v; ignoring.", importPath)
 		return nil

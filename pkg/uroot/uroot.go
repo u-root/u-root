@@ -327,47 +327,28 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 
 // resolvePackagePath finds import paths for a single import path or directory string
 func resolvePackagePath(logger ulog.Logger, env golang.Environ, pkg string) ([]string, error) {
-	// Search the current working directory, as well GOROOT and GOPATHs
-	prefixes := append([]string{""}, env.SrcDirs()...)
-	// Resolve file system paths to package import paths.
-	for _, prefix := range prefixes {
-		path := filepath.Join(prefix, pkg)
-		matches, err := filepath.Glob(path)
-		if len(matches) == 0 || err != nil {
-			continue
+	pkgs, err := env.FindCmds(pkg)
+	if err != nil {
+		return nil, err
+	}
+	var importPaths []string
+	for _, p := range pkgs {
+		if p.ImportPath == "." {
+			// TODO: I do not completely understand why
+			// this is triggered. This is only an issue
+			// while this function is run inside the
+			// process of a "go test".
+			importPaths = append(importPaths, pkg)
+		} else {
+			importPaths = append(importPaths, p.ImportPath)
 		}
-
-		var importPaths []string
-		for _, match := range matches {
-
-			// Only match directories for building.
-			// Skip anything that is not a directory
-			fileInfo, _ := os.Stat(match)
-			if !fileInfo.IsDir() {
-				continue
-			}
-
-			p, err := env.PackageByPath(match)
-			if err != nil {
-				logger.Printf("Skipping package %q: %v", match, err)
-			} else if p.ImportPath == "." {
-				// TODO: I do not completely understand why
-				// this is triggered. This is only an issue
-				// while this function is run inside the
-				// process of a "go test".
-				importPaths = append(importPaths, pkg)
-			} else {
-				importPaths = append(importPaths, p.ImportPath)
-			}
-		}
-		return importPaths, nil
 	}
 
 	// No file import paths found. Check if pkg still resolves as a package name.
-	if _, err := env.Package(pkg); err != nil {
+	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("%q is neither package or path/glob: %v", pkg, err)
 	}
-	return []string{pkg}, nil
+	return importPaths, nil
 }
 
 func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {

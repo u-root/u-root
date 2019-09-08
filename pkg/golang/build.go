@@ -6,6 +6,7 @@
 package golang
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/build"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Environ struct {
@@ -25,29 +27,14 @@ func Default() Environ {
 	return Environ{Context: build.Default}
 }
 
-// PackageByPath retrieves information about a package by its file system path.
-//
-// `path` is assumed to be the directory containing the package.
-func (c Environ) PackageByPath(path string) (*build.Package, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-	return c.Context.ImportDir(abs, 0)
-}
-
-// Package retrieves information about a package by its Go import path.
-func (c Environ) Package(importPath string) (*build.Package, error) {
-	return c.Context.Import(importPath, "", 0)
-}
-
-// ListPackage matches a subset of the JSON output of the `go list -json`
+// Package matches a subset of the JSON output of the `go list -json`
 // command.
 //
 // See `go help list` for the full structure.
 //
 // This currently contains an incomplete list of dependencies.
-type ListPackage struct {
+type Package struct {
+	Name       string
 	Dir        string
 	Deps       []string
 	GoFiles    []string
@@ -55,7 +42,27 @@ type ListPackage struct {
 	HFiles     []string
 	Goroot     bool
 	Root       string
+	Module     *Module
 	ImportPath string
+}
+
+type Module struct {
+	Path      string       // module path
+	Version   string       // module version
+	Versions  []string     // available module versions (with -versions)
+	Replace   *Module      // replaced by this module
+	Time      *time.Time   // time version was created
+	Update    *Module      // available update, if any (with -u)
+	Main      bool         // is this the main module?
+	Indirect  bool         // is this module only an indirect dependency of main module?
+	Dir       string       // directory holding files for this module, if any
+	GoMod     string       // path to go.mod file for this module, if any
+	GoVersion string       // go version used in module
+	Error     *ModuleError // error loading module
+}
+
+type ModuleError struct {
+	Err string
 }
 
 // GoCmd runs a go command in the environment.
@@ -80,21 +87,67 @@ func (c Environ) Version() (string, error) {
 	return s[2], nil
 }
 
-// Deps lists all dependencies of the package given by `importPath`.
-func (c Environ) Deps(importPath string) (*ListPackage, error) {
+// Find lists all dependencies of the package given by `importPath`.
+func (c Environ) Find(pattern string) ([]*Package, error) {
 	// The output of this is almost the same as build.Import, except for
 	// the dependencies.
-	cmd := c.GoCmd("list", "-json", importPath)
-	out, err := cmd.CombinedOutput()
+	cmd := c.GoCmd("list", "-json", pattern)
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("go list -json %q: %v", pattern, stderr.String())
+	}
+
+	var ps []*Package
+	for dec := json.NewDecoder(stdout); dec.More(); {
+		var p Package
+		if err := dec.Decode(&p); err != nil {
+			return nil, fmt.Errorf("json unmarshal of go list -json %q: %v", pattern, err)
+		}
+		ps = append(ps, &p)
+	}
+	return ps, nil
+}
+
+func (c Environ) FindCmds(pattern string) ([]*Package, error) {
+	ps, err := c.Find(pattern)
 	if err != nil {
 		return nil, err
 	}
+	var cmds []*Package
+	for _, p := range ps {
+		if p.Name == "main" {
+			cmds = append(cmds, p)
+		}
+	}
+	if len(cmds) == 0 {
+		return nil, fmt.Errorf("pattern %q did not find commands, only packages", pattern)
+	}
+	return cmds, nil
+}
 
-	var p ListPackage
-	if err := json.Unmarshal(out, &p); err != nil {
+func (c Environ) FindOne(pattern string) (*Package, error) {
+	ps, err := c.Find(pattern)
+	if err != nil {
 		return nil, err
 	}
-	return &p, nil
+	if len(ps) != 1 {
+		return nil, fmt.Errorf("pattern %q returned %d packages, wanted one", pattern, len(ps))
+	}
+	return ps[0], nil
+}
+
+func (c Environ) FindOneCmd(pattern string) (*Package, error) {
+	ps, err := c.FindCmds(pattern)
+	if err != nil {
+		return nil, err
+	}
+	if len(ps) != 1 {
+		return nil, fmt.Errorf("pattern %q returned %d packages, wanted one", pattern, len(ps))
+	}
+	return ps[0], nil
 }
 
 func (c Environ) Env() []string {
@@ -134,11 +187,10 @@ type BuildOpts struct {
 // Build compiles the package given by `importPath`, writing the build object
 // to `binaryPath`.
 func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) error {
-	p, err := c.Package(importPath)
+	p, err := c.FindOneCmd(importPath)
 	if err != nil {
 		return err
 	}
-
 	return c.BuildDir(p.Dir, binaryPath, opts)
 }
 
@@ -151,6 +203,7 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
 		"-gcflags=all=-l", // Disable "function inlining" to get a smaller binary
+		"-trimpath",       // Reproducible builds.
 	}
 	if !opts.NoStrip {
 		args = append(args, `-ldflags=-s -w`) // Strip all symbols.

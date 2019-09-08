@@ -153,8 +153,7 @@ func main() {
 
 		if fi.IsDir() && filepath.Base(p) == form.cmdName {
 			// Make sure it's an actual Go command.
-			pkg, err := env.PackageByPath(p)
-			if err == nil && pkg.IsCommand() {
+			if _, err := env.FindOneCmd(p); err == nil {
 				srcDir = p
 			}
 		}
