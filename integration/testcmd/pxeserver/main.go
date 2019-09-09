@@ -78,7 +78,7 @@ func main() {
 		defer wg.Done()
 
 		laddr := &net.UDPAddr{Port: 67}
-		server, err := server4.NewServer(laddr, dhcpHandler)
+		server, err := server4.NewServer("eth0", laddr, dhcpHandler)
 		if err != nil {
 			log.Fatal(err)
 		}
