@@ -91,6 +91,12 @@ func cpArgs(args []string) error {
 		// (2) the user is asked about overwriting an existing file if
 		//     one is already there.
 		PreCallback: func(src, dst string, srcfi os.FileInfo) error {
+			// check if src is dir
+			if !flags.recursive && srcfi.IsDir() == true {
+				log.Printf("cp: -r not specified, omitting directory %s", src)
+				return cp.ErrSkip
+			}
+
 			dstfi, err := os.Stat(dst)
 			if err != nil && !os.IsNotExist(err) {
 				log.Printf("cp: %q: can't handle error %v", dst, err)

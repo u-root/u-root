@@ -7,11 +7,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cp"
@@ -97,6 +100,39 @@ func TestCpSimple(t *testing.T) {
 	}
 	if err := cmp.IsEqualTree(cp.Default, srcf, dstf); err != nil {
 		t.Fatalf("copy(%q -> %q): file trees not equal: %v", srcf, dstf, err)
+	}
+}
+
+// TestCpSrcDirectory tests copying source to destination without recursive
+// cmd-line equivalent: cp ~/dir ~/dir2
+func TestCpSrcDirectory(t *testing.T) {
+	flags.recursive = false
+	defer resetFlags()
+
+	tempDir, err := ioutil.TempDir("", "TestCpSrcDirectory")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	tempDirTwo, err := ioutil.TempDir("", "TestCpSrcDirectoryTwo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDirTwo)
+
+	// capture log output to verify
+	var logBytes bytes.Buffer
+	log.SetOutput(&logBytes)
+
+	if err := cpArgs([]string{tempDir, tempDirTwo}); err != nil {
+		t.Fatalf("copy(%q -> %q) = %v, want nil", tempDir, tempDirTwo, err)
+	}
+
+	outString := fmt.Sprintf("cp: -r not specified, omitting directory %s", tempDir)
+	capturedString := logBytes.String()
+	if !strings.Contains(capturedString, outString) {
+		t.Fatalf("copy(%q -> %q) = %v, want %v", tempDir, tempDirTwo, capturedString, outString)
 	}
 }
 

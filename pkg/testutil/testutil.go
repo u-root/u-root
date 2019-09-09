@@ -131,3 +131,10 @@ func run(m *testing.M, mainFn func()) int {
 func Run(m *testing.M, mainFn func()) {
 	os.Exit(run(m, mainFn))
 }
+
+// SkipIfNotRoot skips the calling test if uid != 0.
+func SkipIfNotRoot(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skipf("Skipping test since we are not root")
+	}
+}
