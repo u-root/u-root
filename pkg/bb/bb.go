@@ -64,6 +64,9 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 		}
 	}()
 
+	// INB4: yes, this *is* too clever. It's because Go modules are too
+	// clever. Sorry.
+	//
 	// Inevitably, we will build commands across multiple modules, e.g.
 	// u-root and u-bmc each have their own go.mod, but will get built into
 	// one busybox executable.
@@ -205,22 +208,22 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 	//
 	// The module name is something that'll never be online, lest Go
 	// decides to go on the internet.
-	if len(modulePaths) > 0 {
-		content := `module bb.u-root.com`
-		for _, mpath := range modulePaths {
-			content += fmt.Sprintf("\nreplace %s => ./src/%s\n", mpath, mpath)
-		}
-		if err := ioutil.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(content), 0755); err != nil {
-			return err
-		}
-
+	if len(modulePaths) == 0 {
+		env.GOPATH = tmpDir
 		// Compile bb.
-		return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{NoStrip: noStrip})
+		return env.Build("bb", binaryPath, golang.BuildOpts{NoStrip: noStrip})
 	}
 
-	env.GOPATH = tmpDir
+	content := `module bb.u-root.com`
+	for _, mpath := range modulePaths {
+		content += fmt.Sprintf("\nreplace %s => ./src/%s\n", mpath, mpath)
+	}
+	if err := ioutil.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(content), 0755); err != nil {
+		return err
+	}
+
 	// Compile bb.
-	return env.Build("bb", binaryPath, golang.BuildOpts{NoStrip: noStrip})
+	return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{NoStrip: noStrip})
 }
 
 func writeDeps(env golang.Environ, pkgDir string, p *packages.Package) ([]string, string, error) {
@@ -234,13 +237,16 @@ func writeDeps(env golang.Environ, pkgDir string, p *packages.Package) ([]string
 		if err := os.MkdirAll(filepath.Join(pkgDir, listp.Module.Path), 0755); err != nil {
 			return nil, "", err
 		}
+
 		// Use the module file for all outside dependencies.
 		if err := cp.Copy(listp.Module.GoMod, filepath.Join(pkgDir, listp.Module.Path, "go.mod")); err != nil {
 			return nil, "", err
 		}
 
+		// Collect all "local" dependency packages, to be copied into
+		// the temporary directory structure later.
 		for _, dep := range listp.Deps {
-			// Is this a dependency within the module? Copy that shirt.
+			// Is this a dependency within the module?
 			if strings.HasPrefix(dep, listp.Module.Path) {
 				deps = append(deps, dep)
 			}
@@ -248,6 +254,8 @@ func writeDeps(env golang.Environ, pkgDir string, p *packages.Package) ([]string
 		return deps, listp.Module.Path, nil
 	}
 
+	// If modules are not enabled, we need a copy of *ALL*
+	// non-standard-library dependencies in the temporary directory.
 	for _, dep := range listp.Deps {
 		// First component of package path contains a "."?
 		//
