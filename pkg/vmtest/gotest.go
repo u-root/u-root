@@ -76,7 +76,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		if _, err := os.Stat(testFile); !os.IsNotExist(err) {
 			tests = append(tests, pkg)
 
-			p, err := o.BuildOpts.Env.Package(pkg)
+			p, err := o.BuildOpts.Env.FindOne(pkg)
 			if err != nil {
 				t.Fatal(err)
 			}
