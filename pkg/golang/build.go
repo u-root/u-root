@@ -19,12 +19,17 @@ import (
 
 type Environ struct {
 	build.Context
+
+	GO111MODULE string
 }
 
 // Default is the default build environment comprised of the default GOPATH,
 // GOROOT, GOOS, GOARCH, and CGO_ENABLED values.
 func Default() Environ {
-	return Environ{Context: build.Default}
+	return Environ{
+		Context:     build.Default,
+		GO111MODULE: os.Getenv("GO111MODULE"),
+	}
 }
 
 // Package matches a subset of the JSON output of the `go list -json`
@@ -150,6 +155,7 @@ func (c Environ) FindOneCmd(pattern string) (*Package, error) {
 	return ps[0], nil
 }
 
+// Env returns all environment variables for invoking a Go command.
 func (c Environ) Env() []string {
 	var env []string
 	if c.GOARCH != "" {
@@ -157,9 +163,6 @@ func (c Environ) Env() []string {
 	}
 	if c.GOOS != "" {
 		env = append(env, fmt.Sprintf("GOOS=%s", c.GOOS))
-	}
-	if c.GOROOT != "" {
-		env = append(env, fmt.Sprintf("GOROOT=%s", c.GOROOT))
 	}
 	if c.GOPATH != "" {
 		env = append(env, fmt.Sprintf("GOPATH=%s", c.GOPATH))
@@ -169,9 +172,20 @@ func (c Environ) Env() []string {
 		cgo = 1
 	}
 	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
+	env = append(env, fmt.Sprintf("GO111MODULE=%s", c.GO111MODULE))
+
+	if c.GOROOT != "" {
+		env = append(env, fmt.Sprintf("GOROOT=%s", c.GOROOT))
+
+		// If GOROOT is set to a different version of Go, we must
+		// ensure that $GOROOT/bin is also in path to make the "go"
+		// binary available to golang.org/x/tools/packages.
+		env = append(env, fmt.Sprintf("PATH=%s:%s", filepath.Join(c.GOROOT, "bin"), os.Getenv("PATH")))
+	}
 	return env
 }
 
+// String returns all environment variables for Go invocations.
 func (c Environ) String() string {
 	return strings.Join(c.Env(), " ")
 }
@@ -199,20 +213,40 @@ func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) err
 func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) error {
 	args := []string{
 		"build",
-		"-a", // Force rebuilding of packages.
+
+		// Force rebuilding of packages.
+		"-a",
+
+		// Strip all symbols, and don't embed a Go build ID to be reproducible.
+		"-ldflags", "-s -w -buildid=",
+
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
+
 		"-gcflags=all=-l", // Disable "function inlining" to get a smaller binary
-		"-trimpath",       // Reproducible builds.
 	}
 	if !opts.NoStrip {
 		args = append(args, `-ldflags=-s -w`) // Strip all symbols.
 	}
+
+	v, err := c.Version()
+	if err != nil {
+		return err
+	}
+
+	// Reproducible builds: Trim any GOPATHs out of the executable's
+	// debugging information.
+	//
+	// E.g. Trim /tmp/bb-*/ from /tmp/bb-12345567/src/github.com/...
+	if strings.Contains(v, "go1.13") || strings.Contains(v, "go1.14") || strings.Contains(v, "gotip") {
+		args = append(args, "-trimpath")
+	} else {
+		args = append(args, "-gcflags", fmt.Sprintf("-trimpath=%s", c.GOPATH))
+		args = append(args, "-asmflags", fmt.Sprintf("-trimpath=%s", c.GOPATH))
+	}
+
 	if len(c.BuildTags) > 0 {
 		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
-	}
-	if opts.ExtraArgs != nil {
-		args = append(args, opts.ExtraArgs...)
 	}
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")

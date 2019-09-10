@@ -160,10 +160,11 @@ func (sb SourceBuilder) Build(af *initramfs.Files, opts Opts) error {
 // asm.
 func buildToolchain(opts Opts) error {
 	goBin := filepath.Join(opts.TempDir, "go/bin/go")
-	tcbo := golang.BuildOpts{
-		ExtraArgs: []string{"-tags", "cmd_go_bootstrap"},
-	}
-	if err := opts.Env.Build("cmd/go", goBin, tcbo); err != nil {
+
+	// Make an env copy just for the bootstrapping.
+	env := opts.Env
+	env.BuildTags = append(env.BuildTags, "cmd_go_bootstrap")
+	if err := env.Build("cmd/go", goBin, golang.BuildOpts{}); err != nil {
 		return err
 	}
 

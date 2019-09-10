@@ -215,7 +215,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 		}
 
 		// Compile bb.
-		return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{})
+		return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{NoStrip: noStrip})
 	}
 
 	env.GOPATH = tmpDir
