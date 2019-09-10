@@ -513,6 +513,7 @@
     "golang.org/x/text/transform",
     "golang.org/x/text/unicode/norm",
     "golang.org/x/tools/go/ast/astutil",
+    "golang.org/x/tools/go/packages",
     "golang.org/x/tools/imports",
     "gopkg.in/alecthomas/kingpin.v2",
     "pack.ag/tftp",
