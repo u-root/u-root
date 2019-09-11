@@ -105,6 +105,26 @@ func TestResolvePackagePaths(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		// Package Go glob
+		{
+			env: gopath2Env,
+			in:  []string{"./..."},
+			expected: []string{
+				"mypkga",
+				"mypkgb",
+			},
+			wantErr: false,
+		},
+		// Package Go glob
+		{
+			env: defaultEnv,
+			in:  []string{"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/..."},
+			expected: []string{
+				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkga",
+				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkgb",
+			},
+			wantErr: false,
+		},
 		// GOPATH glob
 		{
 			env: gopath2Env,
@@ -118,9 +138,9 @@ func TestResolvePackagePaths(t *testing.T) {
 		// Single ambiguous package - exists in both GOROOT and GOPATH
 		{
 			env: gopath1Env,
-			in:  []string{"os"},
+			in:  []string{"cmd/go"}, // must be a command.
 			expected: []string{
-				"os",
+				"cmd/go",
 			},
 			wantErr: false,
 		},
