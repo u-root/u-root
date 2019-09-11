@@ -139,7 +139,8 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race ./cmds/... ./pkg/...
+          command: go test -race -timeout 15m ./cmds/... ./pkg/...
+          no_output_timeout: 15m
   compile_cmds:
     <<: *golang-template
     steps:
