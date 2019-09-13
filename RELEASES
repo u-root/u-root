@@ -5,8 +5,24 @@ A new release happens every 6 weeks:
 - 1st day on the first month of each quarter
 - 15th day of the second month of each quarter
 
+## v6.0.0 (2019-08-14)
 
-## V5.0.0 (2019-07-09}
+- Bug fixes:
+  - Ensure that cpio does not create corrupt archives
+  - Honor build tags in build.Context
+  - Fix negative -retry flag
+- New packages:
+  - gpio
+- Testing improvements:
+  - Use 9pfs to share files with intergration test instead of vfat
+  - Replace ANSI escape codes with ~ character
+  - Run integration tests on pkg/ as well
+- checklicenses command is generalized to be used by other projects.
+- Tested with:
+  - Linux 4.17
+  - Golang 1.12
+
+## V5.0.0 (2019-07-09)
 
 - Renamed commands
   - core commands are in core

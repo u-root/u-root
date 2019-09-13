@@ -21,7 +21,7 @@ func (c *Conn) RouteAddSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw
 		return err
 	}
 	dstlen, _ := dst.Mask.Size()
-	scope := addrScope(dst.IP)
+	scope := routeScope(dst.IP)
 	if len(dst.IP) == net.IPv6len && dst.IP.To4() == nil {
 		scope = unix.RT_SCOPE_UNIVERSE
 	}
@@ -68,4 +68,11 @@ func (c *Conn) RouteDel(ifc *net.Interface, dst net.IPNet) error {
 		Attributes: attr,
 	}
 	return c.Conn.Route.Delete(tx)
+}
+
+func routeScope(ip net.IP) int {
+	if ip.IsUnspecified() {
+		return unix.RT_SCOPE_UNIVERSE
+	}
+	return unix.RT_SCOPE_LINK
 }

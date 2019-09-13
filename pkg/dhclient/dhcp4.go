@@ -125,6 +125,7 @@ func (p *Packet4) Lease() *net.IPNet {
 var (
 	// ErrNoBootFile represents that no pxe boot file was found.
 	ErrNoBootFile = errors.New("no boot file name present in DHCP message")
+
 	// ErrNoServerHostName represents that no pxe boot server was found.
 	ErrNoServerHostName = errors.New("no server host name present in DHCP message")
 )
@@ -165,4 +166,17 @@ func (p *Packet4) Boot() (*url.URL, error) {
 		}
 	}
 	return u, nil
+}
+
+// ISCSIBoot returns the target address and volume name to boot from if
+// they were part of the DHCP message.
+//
+// Parses the IPv4 DHCP Root Path for iSCSI target and volume as specified by
+// RFC 4173.
+func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
+	rp := p.P.RootPath()
+	if len(rp) == 0 {
+		return nil, "", fmt.Errorf("no root path in DHCP message")
+	}
+	return parseISCSIURI(rp)
 }

@@ -46,8 +46,6 @@
 //     -d    enable debug prints
 //     -dbg9p
 //           show 9p io
-//     -h string
-//           host to use (default "localhost")
 //     -hostkey string
 //           host key file
 //     -key string
