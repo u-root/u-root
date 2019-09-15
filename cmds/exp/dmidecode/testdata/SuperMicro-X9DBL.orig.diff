@@ -1,0 +1,1385 @@
+--- testdata/SuperMicro-X9DBL.orig.txt
++++ testdata/SuperMicro-X9DBL.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/SuperMicro-X9DBL.bin.
+ SMBIOS 2.7 present.
+ 115 structures occupying 4631 bytes.
+@@ -295,208 +295,188 @@
+ 	Associativity: 20-way Set-associative
+ 
+ Handle 0x000C, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1A1
+-	Internal Connector Type: None
+-	External Reference Designator: PS2Mouse
+-	External Connector Type: PS/2
+-	Port Type: Mouse Port
++Unsupported
++	Header and Data:
++		08 09 0C 00 01 00 02 0F 0E
++	Strings:
++		J1A1
++		PS2Mouse
+ 
+ Handle 0x000D, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1A1
+-	Internal Connector Type: None
+-	External Reference Designator: Keyboard
+-	External Connector Type: PS/2
+-	Port Type: Keyboard Port
++Unsupported
++	Header and Data:
++		08 09 0D 00 01 00 02 0F 0D
++	Strings:
++		J1A1
++		Keyboard
+ 
+ Handle 0x000E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2A1
+-	Internal Connector Type: None
+-	External Reference Designator: TV Out
+-	External Connector Type: Mini Centronics Type-14
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 0E 00 01 00 02 1D FF
++	Strings:
++		J2A1
++		TV Out
+ 
+ Handle 0x000F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2A2A
+-	Internal Connector Type: None
+-	External Reference Designator: COM A
+-	External Connector Type: DB-9 male
+-	Port Type: Serial Port 16550A Compatible
++Unsupported
++	Header and Data:
++		08 09 0F 00 01 00 02 08 09
++	Strings:
++		J2A2A
++		COM A
+ 
+ Handle 0x0010, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2A2B
+-	Internal Connector Type: None
+-	External Reference Designator: Video
+-	External Connector Type: DB-15 female
+-	Port Type: Video Port
++Unsupported
++	Header and Data:
++		08 09 10 00 01 00 02 07 1C
++	Strings:
++		J2A2B
++		Video
+ 
+ Handle 0x0011, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3A1
+-	Internal Connector Type: None
+-	External Reference Designator: USB1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 11 00 01 00 02 12 10
++	Strings:
++		J3A1
++		USB1
+ 
+ Handle 0x0012, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3A1
+-	Internal Connector Type: None
+-	External Reference Designator: USB2
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 12 00 01 00 02 12 10
++	Strings:
++		J3A1
++		USB2
+ 
+ Handle 0x0013, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3A1
+-	Internal Connector Type: None
+-	External Reference Designator: USB3
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 13 00 01 00 02 12 10
++	Strings:
++		J3A1
++		USB3
+ 
+ Handle 0x0014, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9A1 - TPM HDR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 14 00 01 FF 00 00 FF
++	Strings:
++		J9A1 - TPM HDR
+ 
+ Handle 0x0015, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9C1 - PCIE DOCKING CONN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 15 00 01 FF 00 00 FF
++	Strings:
++		J9C1 - PCIE DOCKING CONN
+ 
+ Handle 0x0016, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2B3 - CPU FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 16 00 01 FF 00 00 FF
++	Strings:
++		J2B3 - CPU FAN
+ 
+ Handle 0x0017, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J6C2 - EXT HDMI
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 17 00 01 FF 00 00 FF
++	Strings:
++		J6C2 - EXT HDMI
+ 
+ Handle 0x0018, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3C1 - GMCH FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 18 00 01 FF 00 00 FF
++	Strings:
++		J3C1 - GMCH FAN
+ 
+ Handle 0x0019, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1D1 - ITP
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 19 00 01 FF 00 00 FF
++	Strings:
++		J1D1 - ITP
+ 
+ Handle 0x001A, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9E2 - MDC INTPSR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 1A 00 01 FF 00 00 FF
++	Strings:
++		J9E2 - MDC INTPSR
+ 
+ Handle 0x001B, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9E4 - MDC INTPSR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 1B 00 01 FF 00 00 FF
++	Strings:
++		J9E4 - MDC INTPSR
+ 
+ Handle 0x001C, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9E3 - LPC HOT DOCKING
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 1C 00 01 FF 00 00 FF
++	Strings:
++		J9E3 - LPC HOT DOCKING
+ 
+ Handle 0x001D, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9E1 - SCAN MATRIX
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 1D 00 01 FF 00 00 FF
++	Strings:
++		J9E1 - SCAN MATRIX
+ 
+ Handle 0x001E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J9G1 - LPC SIDE BAND
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 1E 00 01 FF 00 00 FF
++	Strings:
++		J9G1 - LPC SIDE BAND
+ 
+ Handle 0x001F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J8F1 - UNIFIED
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 1F 00 01 FF 00 00 FF
++	Strings:
++		J8F1 - UNIFIED
+ 
+ Handle 0x0020, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J6F1 - LVDS
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 20 00 01 FF 00 00 FF
++	Strings:
++		J6F1 - LVDS
+ 
+ Handle 0x0021, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2F1 - LAI FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 21 00 01 FF 00 00 FF
++	Strings:
++		J2F1 - LAI FAN
+ 
+ Handle 0x0022, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2G1 - GFX VID
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 22 00 01 FF 00 00 FF
++	Strings:
++		J2G1 - GFX VID
+ 
+ Handle 0x0023, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1G6 - AC JACK
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 23 00 01 FF 00 00 FF
++	Strings:
++		J1G6 - AC JACK
+ 
+ Handle 0x0024, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: SLOT1 PCI 33MHZ
+-	Type: 32-bit PCI
+-	Current Usage: Available
+-	Length: Short
+-	ID: 1
+-	Characteristics:
+-		5.0 V is provided
+-		PME signal is supported
+-	Bus Address: 0000:02:00.0
++Unsupported
++	Header and Data:
++		09 11 24 00 01 06 05 03 03 01 00 02 01 00 00 02
++		00
++	Strings:
++		SLOT1 PCI 33MHZ
+ 
+ Handle 0x0025, DMI type 126, 17 bytes
+ Inactive
+@@ -505,71 +485,59 @@
+ Inactive
+ 
+ Handle 0x0027, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: CPU2 SLOT4 PCI-E 3.0 X8
+-	Type: x8 PCI Express 3 x8
+-	Current Usage: In Use
+-	Length: Short
+-	ID: 4
+-	Characteristics:
+-		3.3 V is provided
+-		PME signal is supported
+-	Bus Address: 0000:03:00.0
++Unsupported
++	Header and Data:
++		09 11 27 00 01 B5 0B 04 03 04 00 04 01 00 00 03
++		00
++	Strings:
++		CPU2 SLOT4 PCI-E 3.0 X8
+ 
+ Handle 0x0028, DMI type 126, 17 bytes
+ Inactive
+ 
+ Handle 0x0029, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: CPU1 SLOT6 PCI-E 3.0 X16
+-	Type: x16 PCI Express 3 x16
+-	Current Usage: In Use
+-	Length: Long
+-	ID: 6
+-	Characteristics:
+-		3.3 V is provided
+-		PME signal is supported
+-	Bus Address: 0000:00:00.0
++Unsupported
++	Header and Data:
++		09 11 29 00 01 B6 0D 04 04 06 00 04 01 00 00 00
++		00
++	Strings:
++		CPU1 SLOT6 PCI-E 3.0 X16
+ 
+ Handle 0x002A, DMI type 10, 10 bytes
+-On Board Device 1 Information
+-	Type: Video
+-	Status: Enabled
+-	Description:  Matrox VGA
+-On Board Device 2 Information
+-	Type: Ethernet
+-	Status: Enabled
+-	Description:  Intel 82574L Ethernet 1
+-On Board Device 3 Information
+-	Type: Ethernet
+-	Status: Enabled
+-	Description:  Intel 82574L Ethernet 2
++Unsupported
++	Header and Data:
++		0A 0A 2A 00 83 01 85 02 85 03
++	Strings:
++		 Matrox VGA
++		 Intel 82574L Ethernet 1
++		 Intel 82574L Ethernet 2
+ 
+ Handle 0x002B, DMI type 11, 5 bytes
+-OEM Strings
+-	String 1: Intel SandyBridge/Patsburg/Romley
+-	String 2: Supermicro motherboard-X9 Series 
++Unsupported
++	Header and Data:
++		0B 05 2B 00 02
++	Strings:
++		Intel SandyBridge/Patsburg/Romley
++		Supermicro motherboard-X9 Series 
+ 
+ Handle 0x002C, DMI type 12, 5 bytes
+-System Configuration Options
+-	Option 1: To Be Filled By O.E.M.
++Unsupported
++	Header and Data:
++		0C 05 2C 00 01
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x002D, DMI type 16, 23 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: Multi-bit ECC
+-	Maximum Capacity: 48 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 3
++Unsupported
++	Header and Data:
++		10 17 2D 00 03 03 06 00 00 00 03 FE FF 03 00 00
++		00 00 00 00 00 00 00
+ 
+ Handle 0x002E, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x005FFFFFFFF
+-	Range Size: 24 GB
+-	Physical Array Handle: 0x002D
+-	Partition Width: 1
++Unsupported
++	Header and Data:
++		13 1F 2E 00 00 00 00 00 FF FF 7F 01 2D 00 01 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x002F, DMI type 17, 34 bytes
+ Memory Device
+@@ -593,13 +561,11 @@
+ 	Configured Memory Speed: 1333 MT/s
+ 
+ Handle 0x0030, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x000FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x002F
+-	Memory Array Mapped Address Handle: 0x002E
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 23 30 00 00 00 00 00 FF FF 3F 00 2F 00 2E 00
++		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0031, DMI type 17, 34 bytes
+ Memory Device
+@@ -623,13 +589,11 @@
+ 	Configured Memory Speed: 1333 MT/s
+ 
+ Handle 0x0032, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00100000000
+-	Ending Address: 0x001FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x0031
+-	Memory Array Mapped Address Handle: 0x002E
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 23 32 00 00 00 40 00 FF FF 7F 00 31 00 2E 00
++		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0033, DMI type 17, 34 bytes
+ Memory Device
+@@ -653,30 +617,23 @@
+ 	Configured Memory Speed: 1333 MT/s
+ 
+ Handle 0x0034, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00200000000
+-	Ending Address: 0x005FFFFFFFF
+-	Range Size: 16 GB
+-	Physical Device Handle: 0x0033
+-	Memory Array Mapped Address Handle: 0x002E
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 23 34 00 00 00 80 00 FF FF 7F 01 33 00 2E 00
++		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0035, DMI type 16, 23 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: Multi-bit ECC
+-	Maximum Capacity: 48 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 3
++Unsupported
++	Header and Data:
++		10 17 35 00 03 03 06 00 00 00 03 FE FF 03 00 00
++		00 00 00 00 00 00 00
+ 
+ Handle 0x0036, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00600000000
+-	Ending Address: 0x00BFFFFFFFF
+-	Range Size: 24 GB
+-	Physical Array Handle: 0x0035
+-	Partition Width: 1
++Unsupported
++	Header and Data:
++		13 1F 36 00 00 00 80 01 FF FF FF 02 35 00 01 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x0037, DMI type 17, 34 bytes
+ Memory Device
+@@ -700,13 +657,11 @@
+ 	Configured Memory Speed: 1333 MT/s
+ 
+ Handle 0x0038, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00600000000
+-	Ending Address: 0x006FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x0037
+-	Memory Array Mapped Address Handle: 0x0036
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 23 38 00 00 00 80 01 FF FF BF 01 37 00 36 00
++		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0039, DMI type 17, 34 bytes
+ Memory Device
+@@ -730,13 +685,11 @@
+ 	Configured Memory Speed: 1333 MT/s
+ 
+ Handle 0x003A, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00700000000
+-	Ending Address: 0x007FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x0039
+-	Memory Array Mapped Address Handle: 0x0036
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 23 3A 00 00 00 C0 01 FF FF FF 01 39 00 36 00
++		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x003B, DMI type 17, 34 bytes
+ Memory Device
+@@ -760,471 +713,351 @@
+ 	Configured Memory Speed: 1333 MT/s
+ 
+ Handle 0x003C, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00800000000
+-	Ending Address: 0x00BFFFFFFFF
+-	Range Size: 16 GB
+-	Physical Device Handle: 0x003B
+-	Memory Array Mapped Address Handle: 0x0036
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 23 3C 00 00 00 00 02 FF FF FF 02 3B 00 36 00
++		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x003D, DMI type 32, 20 bytes
+-System Boot Information
+-	Status: No errors detected
++Unsupported
++	Header and Data:
++		20 14 3D 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00
+ 
+ Handle 0x003E, DMI type 34, 11 bytes
+-Management Device
+-	Description: LM78-1
+-	Type: LM78
+-	Address: 0x00000000
+-	Address Type: I/O Port
++Unsupported
++	Header and Data:
++		22 0B 3E 00 01 04 00 00 00 00 03
++	Strings:
++		LM78-1
+ 
+ Handle 0x003F, DMI type 26, 22 bytes
+-Voltage Probe
+-	Description: LM78A
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1A 16 3F 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78A
+ 
+ Handle 0x0040, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 40 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x0041, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x003E
+-	Component Handle: 0x003E
+-	Threshold Handle: 0x003F
++Unsupported
++	Header and Data:
++		23 0B 41 00 01 3E 00 3E 00 3F 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0042, DMI type 28, 22 bytes
+-Temperature Probe
+-	Description: LM78A
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1C 16 42 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78A
+ 
+ Handle 0x0043, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 43 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x0044, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x003E
+-	Component Handle: 0x0041
+-	Threshold Handle: 0x0042
++Unsupported
++	Header and Data:
++		23 0B 44 00 01 3E 00 41 00 42 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0045, DMI type 27, 15 bytes
+-Cooling Device
+-	Temperature Probe Handle: 0x0042
+-	Type: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Cooling Unit Group: 1
+-	OEM-specific Information: 0x00000000
+-	Nominal Speed: Unknown Or Non-rotating
+-	Description: Cooling Dev 1
++Unsupported
++	Header and Data:
++		1B 0F 45 00 42 00 12 01 00 00 00 00 00 80 01
++	Strings:
++		Cooling Dev 1
+ 
+ Handle 0x0046, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 46 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x0047, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x003E
+-	Component Handle: 0x0044
+-	Threshold Handle: 0x0045
++Unsupported
++	Header and Data:
++		23 0B 47 00 01 3E 00 44 00 45 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0048, DMI type 27, 15 bytes
+-Cooling Device
+-	Temperature Probe Handle: 0x0042
+-	Type: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Cooling Unit Group: 1
+-	OEM-specific Information: 0x00000000
+-	Nominal Speed: Unknown Or Non-rotating
+-	Description: Not Specified
++Unsupported
++	Header and Data:
++		1B 0F 48 00 42 00 12 01 00 00 00 00 00 80 00
+ 
+ Handle 0x0049, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 49 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x004A, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x003E
+-	Component Handle: 0x0047
+-	Threshold Handle: 0x0048
++Unsupported
++	Header and Data:
++		23 0B 4A 00 01 3E 00 47 00 48 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x004B, DMI type 29, 22 bytes
+-Electrical Current Probe
+-	Description: ABC
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1D 16 4B 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		ABC
+ 
+ Handle 0x004C, DMI type 36, 16 bytes
+-Management Device Threshold Data
++Unsupported
++	Header and Data:
++		24 10 4C 00 00 80 00 80 00 80 00 80 00 80 00 80
+ 
+ Handle 0x004D, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x003E
+-	Component Handle: 0x004A
+-	Threshold Handle: 0x0048
++Unsupported
++	Header and Data:
++		23 0B 4D 00 01 3E 00 4A 00 48 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x004E, DMI type 34, 16 bytes
+-Management Device
+-	Description: LM78-2
+-	Type: LM78
+-	Address: 0x00000000
+-	Address Type: I/O Port
++Unsupported
++	Header and Data:
++		22 10 4E 00 01 04 00 00 00 00 03 4C 4D 37 38 2D
++	Strings:
++		2
+ 
+ Handle 0x004F, DMI type 26, 22 bytes
+-Voltage Probe
+-	Description: LM78B
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1A 16 4F 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78B
+ 
+ Handle 0x0050, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 7
+-	Upper Non-critical Threshold: 8
+-	Lower Critical Threshold: 8
+-	Upper Critical Threshold: 10
+-	Lower Non-recoverable Threshold: 11
+-	Upper Non-recoverable Threshold: 12
++Unsupported
++	Header and Data:
++		24 10 50 00 07 00 08 00 08 00 0A 00 0B 00 0C 00
+ 
+ Handle 0x0051, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x004E
+-	Threshold Handle: 0x004F
++Unsupported
++	Header and Data:
++		23 0B 51 00 01 4E 00 4E 00 4F 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0052, DMI type 26, 22 bytes
+-Voltage Probe
+-	Description: LM78B
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1A 16 52 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78B
+ 
+ Handle 0x0053, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 13
+-	Upper Non-critical Threshold: 14
+-	Lower Critical Threshold: 15
+-	Upper Critical Threshold: 16
+-	Lower Non-recoverable Threshold: 17
+-	Upper Non-recoverable Threshold: 18
++Unsupported
++	Header and Data:
++		24 10 53 00 0D 00 0E 00 0F 00 10 00 11 00 12 00
+ 
+ Handle 0x0054, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x0051
+-	Threshold Handle: 0x0052
++Unsupported
++	Header and Data:
++		23 0B 54 00 01 4E 00 51 00 52 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0055, DMI type 28, 22 bytes
+-Temperature Probe
+-	Description: LM78B
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1C 16 55 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78B
+ 
+ Handle 0x0056, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 56 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x0057, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x0054
+-	Threshold Handle: 0x0055
++Unsupported
++	Header and Data:
++		23 0B 57 00 01 4E 00 54 00 55 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0058, DMI type 27, 15 bytes
+-Cooling Device
+-	Temperature Probe Handle: 0x0055
+-	Type: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Cooling Unit Group: 1
+-	OEM-specific Information: 0x00000000
+-	Nominal Speed: Unknown Or Non-rotating
+-	Description: Cooling Dev 2
++Unsupported
++	Header and Data:
++		1B 0F 58 00 55 00 12 01 00 00 00 00 00 80 01
++	Strings:
++		Cooling Dev 2
+ 
+ Handle 0x0059, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 59 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x005A, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x0057
+-	Threshold Handle: 0x0058
++Unsupported
++	Header and Data:
++		23 0B 5A 00 01 4E 00 57 00 58 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x005B, DMI type 28, 22 bytes
+-Temperature Probe
+-	Description: LM78B
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1C 16 5B 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78B
+ 
+ Handle 0x005C, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 5C 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x005D, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x005A
+-	Threshold Handle: 0x005B
++Unsupported
++	Header and Data:
++		23 0B 5D 00 01 4E 00 5A 00 5B 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x005E, DMI type 27, 15 bytes
+-Cooling Device
+-	Temperature Probe Handle: 0x005B
+-	Type: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Cooling Unit Group: 1
+-	OEM-specific Information: 0x00000000
+-	Nominal Speed: Unknown Or Non-rotating
+-	Description: Cooling Dev 2
++Unsupported
++	Header and Data:
++		1B 0F 5E 00 5B 00 12 01 00 00 00 00 00 80 01
++	Strings:
++		Cooling Dev 2
+ 
+ Handle 0x005F, DMI type 36, 16 bytes
+-Management Device Threshold Data
+-	Lower Non-critical Threshold: 1
+-	Upper Non-critical Threshold: 2
+-	Lower Critical Threshold: 3
+-	Upper Critical Threshold: 4
+-	Lower Non-recoverable Threshold: 5
+-	Upper Non-recoverable Threshold: 6
++Unsupported
++	Header and Data:
++		24 10 5F 00 01 00 02 00 03 00 04 00 05 00 06 00
+ 
+ Handle 0x0060, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x005D
+-	Threshold Handle: 0x005E
++Unsupported
++	Header and Data:
++		23 0B 60 00 01 4E 00 5D 00 5E 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0061, DMI type 29, 22 bytes
+-Electrical Current Probe
+-	Description: DEF
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1D 16 61 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		DEF
+ 
+ Handle 0x0062, DMI type 36, 16 bytes
+-Management Device Threshold Data
++Unsupported
++	Header and Data:
++		24 10 62 00 00 80 00 80 00 80 00 80 00 80 00 80
+ 
+ Handle 0x0063, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x0060
+-	Threshold Handle: 0x005E
++Unsupported
++	Header and Data:
++		23 0B 63 00 01 4E 00 60 00 5E 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0064, DMI type 29, 22 bytes
+-Electrical Current Probe
+-	Description: GHI
+-	Location: <OUT OF SPEC>
+-	Status: <OUT OF SPEC>
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1D 16 64 00 01 00 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		GHI
+ 
+ Handle 0x0065, DMI type 36, 16 bytes
+-Management Device Threshold Data
++Unsupported
++	Header and Data:
++		24 10 65 00 00 80 00 80 00 80 00 80 00 80 00 80
+ 
+ Handle 0x0066, DMI type 35, 11 bytes
+-Management Device Component
+-	Description: To Be Filled By O.E.M.
+-	Management Device Handle: 0x004E
+-	Component Handle: 0x0063
+-	Threshold Handle: 0x005E
++Unsupported
++	Header and Data:
++		23 0B 66 00 01 4E 00 63 00 5E 00
++	Strings:
++		To Be Filled By O.E.M.
+ 
+ Handle 0x0067, DMI type 26, 22 bytes
+-Voltage Probe
+-	Description: LM78A
+-	Location: Power Unit
+-	Status: OK
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1A 16 67 00 01 6A 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78A
+ 
+ Handle 0x0068, DMI type 28, 22 bytes
+-Temperature Probe
+-	Description: LM78A
+-	Location: Power Unit
+-	Status: OK
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1C 16 68 00 01 6A 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		LM78A
+ 
+ Handle 0x0069, DMI type 27, 15 bytes
+-Cooling Device
+-	Temperature Probe Handle: 0x0068
+-	Type: Power Supply Fan
+-	Status: OK
+-	Cooling Unit Group: 1
+-	OEM-specific Information: 0x00000000
+-	Nominal Speed: Unknown Or Non-rotating
+-	Description: Cooling Dev 1
++Unsupported
++	Header and Data:
++		1B 0F 69 00 68 00 67 01 00 00 00 00 00 80 01
++	Strings:
++		Cooling Dev 1
+ 
+ Handle 0x006A, DMI type 29, 22 bytes
+-Electrical Current Probe
+-	Description: ABC
+-	Location: Power Unit
+-	Status: OK
+-	Maximum Value: Unknown
+-	Minimum Value: Unknown
+-	Resolution: Unknown
+-	Tolerance: Unknown
+-	Accuracy: Unknown
+-	OEM-specific Information: 0x00000000
+-	Nominal Value: Unknown
++Unsupported
++	Header and Data:
++		1D 16 6A 00 01 6A 00 80 00 80 00 80 00 80 00 80
++		00 00 00 00 00 80
++	Strings:
++		ABC
+ 
+ Handle 0x006B, DMI type 39, 22 bytes
+-System Power Supply
+-	Power Unit Group: 1
+-	Location: To Be Filled By O.E.M.
+-	Name: To Be Filled By O.E.M.
+-	Manufacturer: To Be Filled By O.E.M.
+-	Serial Number: To Be Filled By O.E.M.
+-	Asset Tag: To Be Filled By O.E.M.
+-	Model Part Number: To Be Filled By O.E.M.
+-	Revision: To Be Filled By O.E.M.
+-	Max Power Capacity: Unknown
+-	Status: Present, OK
+-	Type: Switching
+-	Input Voltage Range Switching: Auto-switch
+-	Plugged: Yes
+-	Hot Replaceable: No
+-	Input Voltage Probe Handle: 0x0067
+-	Cooling Device Handle: 0x0069
+-	Input Current Probe Handle: 0x006A
++Unsupported
++	Header and Data:
++		27 16 6B 00 01 01 02 03 04 05 06 07 00 80 A2 11
++		67 00 69 00 6A 00
++	Strings:
++		To Be Filled By O.E.M.
++		To Be Filled By O.E.M.
++		To Be Filled By O.E.M.
++		To Be Filled By O.E.M.
++		To Be Filled By O.E.M.
++		To Be Filled By O.E.M.
++		To Be Filled By O.E.M.
+ 
+ Handle 0x006C, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation:  Matrox VGA
+-	Type: Video
+-	Status: Enabled
+-	Type Instance: 1
+-	Bus Address: 0000:07:01.0
++Unsupported
++	Header and Data:
++		29 0B 6C 00 01 83 01 00 00 07 08
++	Strings:
++		 Matrox VGA
+ 
+ Handle 0x006D, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation:  Intel 82574L Ethernet 1
+-	Type: Ethernet
+-	Status: Enabled
+-	Type Instance: 1
+-	Bus Address: 0000:05:00.0
++Unsupported
++	Header and Data:
++		29 0B 6D 00 01 85 01 00 00 05 00
++	Strings:
++		 Intel 82574L Ethernet 1
+ 
+ Handle 0x006E, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation:  Intel 82574L Ethernet 2
+-	Type: Ethernet
+-	Status: Enabled
+-	Type Instance: 2
+-	Bus Address: 0000:06:00.0
++Unsupported
++	Header and Data:
++		29 0B 6E 00 01 85 02 00 00 06 00
++	Strings:
++		 Intel 82574L Ethernet 2
+ 
+ Handle 0x006F, DMI type 38, 18 bytes
+ IPMI Device Information
+@@ -1236,74 +1069,21 @@
+ 	Register Spacing: Successive Byte Boundaries
+ 
+ Handle 0x0078, DMI type 15, 73 bytes
+-System Event Log
+-	Area Length: 0 bytes
+-	Header Start Offset: 0x0000
+-	Header Length: 16 bytes
+-	Data Start Offset: 0x0010
+-	Access Method: Memory-mapped physical 32-bit address
+-	Access Address: 0xFFC50000
+-	Status: Valid, Not Full
+-	Change Token: 0x00000001
+-	Header Format: Type 1
+-	Supported Log Type Descriptors: 25
+-	Descriptor 1: Single-bit ECC memory error
+-	Data Format 1: Handle
+-	Descriptor 2: Multi-bit ECC memory error
+-	Data Format 2: Handle
+-	Descriptor 3: Parity memory error
+-	Data Format 3: None
+-	Descriptor 4: Bus timeout
+-	Data Format 4: None
+-	Descriptor 5: I/O channel block
+-	Data Format 5: None
+-	Descriptor 6: Software NMI
+-	Data Format 6: None
+-	Descriptor 7: POST memory resize
+-	Data Format 7: None
+-	Descriptor 8: POST error
+-	Data Format 8: POST results bitmap
+-	Descriptor 9: PCI parity error
+-	Data Format 9: Multiple-event handle
+-	Descriptor 10: PCI system error
+-	Data Format 10: Multiple-event handle
+-	Descriptor 11: CPU failure
+-	Data Format 11: None
+-	Descriptor 12: EISA failsafe timer timeout
+-	Data Format 12: None
+-	Descriptor 13: Correctable memory log disabled
+-	Data Format 13: None
+-	Descriptor 14: Logging disabled
+-	Data Format 14: None
+-	Descriptor 15: System limit exceeded
+-	Data Format 15: None
+-	Descriptor 16: Asynchronous hardware timer expired
+-	Data Format 16: None
+-	Descriptor 17: System configuration information
+-	Data Format 17: None
+-	Descriptor 18: Hard disk information
+-	Data Format 18: None
+-	Descriptor 19: System reconfigured
+-	Data Format 19: None
+-	Descriptor 20: Uncorrectable CPU-complex error
+-	Data Format 20: None
+-	Descriptor 21: Log area reset/cleared
+-	Data Format 21: None
+-	Descriptor 22: System boot
+-	Data Format 22: None
+-	Descriptor 23: End of log
+-	Data Format 23: None
+-	Descriptor 24: OEM-specific
+-	Data Format 24: OEM-specific
+-	Descriptor 25: OEM-specific
+-	Data Format 25: OEM-specific
++Unsupported
++	Header and Data:
++		0F 49 78 00 00 00 00 00 10 00 03 01 01 00 00 00
++		00 00 C5 FF 01 19 02 01 01 02 01 03 00 04 00 05
++		00 06 00 07 00 08 04 09 03 0A 03 0B 00 0C 00 0D
++		00 0E 00 10 00 11 00 12 00 13 00 14 00 15 00 16
++		00 17 00 FF 00 E0 E0 E1 E1
+ 
+ Handle 0x0081, DMI type 13, 22 bytes
+-BIOS Language Information
+-	Language Description Format: Long
+-	Installable Languages: 1
++Unsupported
++	Header and Data:
++		0D 16 81 00 01 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
+ 		en|US|iso8859-1
+-	Currently Installed Language: en|US|iso8859-1
+ 
+ Handle 0x0082, DMI type 127, 4 bytes
+ End Of Table

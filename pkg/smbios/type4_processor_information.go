@@ -72,11 +72,11 @@ func (pi *ProcessorInformation) GetVoltage() float32 {
 	if pi.Voltage&0x80 == 0 {
 		switch {
 		case pi.Voltage&1 != 0:
-			return 5000
+			return 5.0
 		case pi.Voltage&2 != 0:
-			return 3300
+			return 3.3
 		case pi.Voltage&4 != 0:
-			return 2900
+			return 2.9
 		}
 		return 0
 	}
@@ -116,7 +116,7 @@ func (pi *ProcessorInformation) String() string {
 	}
 	cacheHandleStr := func(h uint16) string {
 		if h == 0xffff {
-			return "n/a"
+			return "Not Provided"
 		}
 		return fmt.Sprintf("0x%04X", h)
 	}
@@ -213,7 +213,7 @@ func (pi *ProcessorInformation) String() string {
 			"SS (Self-snoop)",
 			"HTT (Multi-threading)",
 			"TM (Thermal monitor supported)",
-			"",                            /* 30 */
+			"", /* 30 */
 			"PBE (Pending break enabled)", /* 31 */
 		} {
 			if edx&(1<<uint(n)) != 0 && s != "" {
@@ -248,9 +248,11 @@ func (pi *ProcessorInformation) String() string {
 		lines = append(lines,
 			fmt.Sprintf("Core Count: %d", pi.GetCoreCount()),
 			fmt.Sprintf("Core Enabled: %d", pi.GetCoreEnabled()),
-			fmt.Sprintf("Thread Count: %d", pi.GetThreadCount()),
-			fmt.Sprintf("Characteristics:\n%s", pi.Characteristics),
 		)
+		if pi.GetThreadCount() > 0 {
+			lines = append(lines, fmt.Sprintf("Thread Count: %d", pi.GetThreadCount()))
+		}
+		lines = append(lines, fmt.Sprintf("Characteristics:\n%s", pi.Characteristics))
 	}
 	return strings.Join(lines, "\n\t")
 }

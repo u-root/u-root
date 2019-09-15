@@ -81,9 +81,7 @@ func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 	case TableTypeTPMDevice: // 43
 		return NewTPMDevice(t)
 	case TableTypeInactive: // 126
-		// Inactive table cannot be further parsed. Documentation suggests that it can be any table
-		// that is temporarily marked inactive by tweaking the type field.
-		return t, nil
+		return NewInactiveTable(t)
 	case TableTypeEndOfTable: // 127
 		return NewEndOfTable(t)
 	}

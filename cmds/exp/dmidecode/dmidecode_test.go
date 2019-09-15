@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	flag "github.com/spf13/pflag"
@@ -27,8 +28,6 @@ func resetFlags() {
 }
 
 func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile string) {
-	dumpFile = filepath.Join(testDataDir, dumpFile)
-	expectedOutFile = filepath.Join(testDataDir, expectedOutFile)
 	actualOutFile := fmt.Sprintf("%s.actual", expectedOutFile)
 	os.Remove(actualOutFile)
 	os.Args = []string{os.Args[0], "--from-dump", dumpFile}
@@ -55,10 +54,16 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 }
 
 func TestDMIDecode(t *testing.T) {
-	testOutput(t, "UX307LA.bin", nil, "UX307LA.txt")
-	testOutput(t, "UX307LA.bin", []string{"-t", "system"}, "UX307LA.system.txt")
-	testOutput(t, "UX307LA.bin", []string{"-t", "1,131"}, "UX307LA.1_131.txt")
-	testOutput(t, "T480S.bin", nil, "T480S.txt")
+	bf, _ := filepath.Glob("testdata/*.bin")
+	for _, dumpFile := range bf {
+		txtFile := strings.Replace(dumpFile, ".bin", ".txt", 1)
+		testOutput(t, dumpFile, nil, txtFile)
+	}
+}
+
+func TestDMIDecodeTypeFilters(t *testing.T) {
+	testOutput(t, "testdata/Asus-UX307LA.bin", []string{"-t", "system"}, "testdata/Asus-UX307LA.system.txt")
+	testOutput(t, "testdata/Asus-UX307LA.bin", []string{"-t", "1,131"}, "testdata/Asus-UX307LA.1_131.txt")
 }
 
 func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {

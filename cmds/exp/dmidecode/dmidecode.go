@@ -115,7 +115,7 @@ func dmiDecode(textOut io.Writer) *dmiDecodeError {
 		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing data: %s", err)}
 	}
 	if si.Entry64 != nil {
-		fmt.Fprintf(textOut, "SMBIOS %d.%d.%d present.\n\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion(), si.GetSMBIOSDocRev())
+		fmt.Fprintf(textOut, "SMBIOS %d.%d.%d present.\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion(), si.GetSMBIOSDocRev())
 	} else {
 		fmt.Fprintf(textOut, "SMBIOS %d.%d present.\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion())
 	}

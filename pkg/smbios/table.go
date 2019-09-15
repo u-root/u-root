@@ -178,7 +178,7 @@ func kmgt(v uint64) string {
 		return fmt.Sprintf("%d GB", v/(1024*1024*1024))
 	case v >= 1024*1024 && v%(1024*1024) == 0:
 		return fmt.Sprintf("%d MB", v/(1024*1024))
-	case v >= 1024:
+	case v >= 1024 && v%1024 == 0:
 		return fmt.Sprintf("%d kB", v/1024)
 	default:
 		return fmt.Sprintf("%d bytes", v)

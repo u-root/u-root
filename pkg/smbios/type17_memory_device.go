@@ -86,7 +86,7 @@ func (md *MemoryDevice) String() string {
 	ehStr := ""
 	switch md.MemoryErrorInformationHandle {
 	case 0xffff:
-		ehStr = "Unknown"
+		ehStr = "No Error"
 	case 0xfffe:
 		ehStr = "Not Provided"
 	default:

@@ -1,0 +1,443 @@
+# dmidecode 3.2
+Reading SMBIOS/DMI data from file testdata/Asus-UX307LA.bin.
+SMBIOS 2.8 present.
+27 structures occupying 2158 bytes.
+
+Handle 0x0000, DMI type 0, 24 bytes
+BIOS Information
+	Vendor: American Megatrends Inc.
+	Version: UX305LA.206
+	Release Date: 08/03/2015
+	Address: 0xF0000
+	Runtime Size: 64 kB
+	ROM Size: 6464 kB
+	Characteristics:
+		PCI is supported
+		BIOS is upgradeable
+		BIOS shadowing is allowed
+		Boot from CD is supported
+		Selectable boot is supported
+		BIOS ROM is socketed
+		EDD is supported
+		5.25"/1.2 MB floppy services are supported (int 13h)
+		3.5"/720 kB floppy services are supported (int 13h)
+		3.5"/2.88 MB floppy services are supported (int 13h)
+		Print screen service is supported (int 5h)
+		8042 keyboard services are supported (int 9h)
+		Serial services are supported (int 14h)
+		Printer services are supported (int 17h)
+		ACPI is supported
+		USB legacy is supported
+		Smart battery is supported
+		BIOS boot specification is supported
+		Targeted content distribution is supported
+		UEFI is supported
+	BIOS Revision: 5.6
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Product Name: UX305LA
+	Version: 1.0       
+	Serial Number: FCN0CJ03468352B     
+	UUID: 850f3e82-9f38-694a-8840-2f8b0cf5d3d0
+	Wake-up Type: Power Switch
+	SKU Number: ASUS-NotebookSKU
+	Family: UX
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Product Name: UX305LA
+	Version: 1.0       
+	Serial Number: BSN12345678901234567
+	Asset Tag: ATN12345678901234567
+	Features:
+		Board is a hosting board
+		Board is replaceable
+	Location In Chassis: MIDDLE              
+	Chassis Handle: 0x0003
+	Type: Motherboard
+	Contained Object Handles: 0
+
+Handle 0x0003, DMI type 3, 25 bytes
+Chassis Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Type: Notebook
+	Lock: Not Present
+	Version: 1.0       
+	Serial Number: FCN0CJ03468352B     
+	Asset Tag: ATN12345678901234567
+	Boot-up State: Safe
+	Power Supply State: Safe
+	Thermal State: Safe
+	Security Status: None
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: 1
+	Contained Elements: 1
+		<OUT OF SPEC> (0)
+	SKU Number: To be filled by O.E.M.
+
+Handle 0x0004, DMI type 10, 26 bytes
+On Board Device 1 Information
+	Type: Video
+	Status: Enabled
+	Description:  VGA
+On Board Device 2 Information
+	Type: Ethernet
+	Status: Enabled
+	Description:  GLAN
+On Board Device 3 Information
+	Type: Ethernet
+	Status: Enabled
+	Description:  WLAN
+On Board Device 4 Information
+	Type: Sound
+	Status: Enabled
+	Description:  Audio CODEC 
+On Board Device 5 Information
+	Type: SATA Controller
+	Status: Enabled
+	Description:  SATA Controller
+On Board Device 6 Information
+	Type: Other
+	Status: Enabled
+	Description:  USB 2.0 Controller
+On Board Device 7 Information
+	Type: Other
+	Status: Enabled
+	Description:  USB 3.0 Controller
+On Board Device 8 Information
+	Type: Other
+	Status: Enabled
+	Description:  SMBus Controller
+On Board Device 9 Information
+	Type: Other
+	Status: Enabled
+	Description:  Card Reader
+On Board Device 10 Information
+	Type: Other
+	Status: Enabled
+	Description:  Cmos Camera
+On Board Device 11 Information
+	Type: Other
+	Status: Enabled
+	Description:  Bluetooth
+
+Handle 0x0005, DMI type 11, 5 bytes
+OEM Strings
+	String 1:              
+	String 2:              
+	String 3:              
+	String 4: 90NB08T5-M04040
+	String 5:  
+	String 6:  
+	String 7:  
+	String 8:  
+	String 9:  
+	String 10:  
+
+Handle 0x000C, DMI type 32, 20 bytes
+System Boot Information
+	Status: No errors detected
+
+Handle 0x000D, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 32 kB
+	Maximum Size: 32 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Data
+	Associativity: 8-way Set-associative
+
+Handle 0x000E, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 32 kB
+	Maximum Size: 32 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Instruction
+	Associativity: 8-way Set-associative
+
+Handle 0x000F, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 256 kB
+	Maximum Size: 256 kB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
+
+Handle 0x0010, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 4 MB
+	Maximum Size: 4 MB
+	Supported SRAM Types:
+		Synchronous
+	Installed SRAM Type: Synchronous
+	Speed: Unknown
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 16-way Set-associative
+
+Handle 0x0011, DMI type 4, 42 bytes
+Processor Information
+	Socket Designation: SOCKET 0
+	Type: Central Processor
+	Family: Core i7
+	Manufacturer: Intel(R) Corporation
+	ID: D4 06 03 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 61, Stepping 4
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Core(TM) i7-5500U CPU @ 2.40GHz
+	Voltage: 0.9 V
+	External Clock: 100 MHz
+	Max Speed: 2400 MHz
+	Current Speed: 2400 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket BGA1168
+	L1 Cache Handle: 0x000E
+	L2 Cache Handle: 0x000F
+	L3 Cache Handle: 0x0010
+	Serial Number: NULL
+	Asset Tag: To Be Filled By O.E.M
+	Part Number: To Be Filled By O.E.M
+	Core Count: 2
+	Core Enabled: 2
+	Thread Count: 4
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Hardware Thread
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
+
+Handle 0x0012, DMI type 221, 12 bytes
+OEM-specific Type
+	Header and Data:
+		DD 0C 12 00 01 01 00 02 06 00 00 00
+	Strings:
+		Reference Code - ACPI
+
+Handle 0x0013, DMI type 16, 23 bytes
+Physical Memory Array
+	Location: System Board Or Motherboard
+	Use: System Memory
+	Error Correction Type: None
+	Maximum Capacity: 16 GB
+	Error Information Handle: Not Provided
+	Number Of Devices: 2
+
+Handle 0x0014, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x0013
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: ChannelA-DIMM0
+	Bank Locator: BANK 0
+	Type: LPDDR3
+	Type Detail: Synchronous
+	Speed: 1600 MT/s
+	Manufacturer: Elpida
+	Serial Number: 00000000
+	Asset Tag: 9876543210
+	Part Number:                   
+	Rank: 2
+	Configured Memory Speed: 1600 MT/s
+
+Handle 0x0015, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x0013
+	Error Information Handle: Not Provided
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: ChannelB-DIMM0
+	Bank Locator: BANK 2
+	Type: LPDDR3
+	Type Detail: Synchronous
+	Speed: 1600 MT/s
+	Manufacturer: Elpida
+	Serial Number: 00000000
+	Asset Tag: 9876543210
+	Part Number:                   
+	Rank: 2
+	Configured Memory Speed: 1600 MT/s
+
+Handle 0x0016, DMI type 19, 31 bytes
+Memory Array Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x001FFFFFFFF
+	Range Size: 8 GB
+	Physical Array Handle: 0x0013
+	Partition Width: 2
+
+Handle 0x0017, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x000FFFFFFFF
+	Range Size: 4 GB
+	Physical Device Handle: 0x0015
+	Memory Array Mapped Address Handle: 0x0016
+	Partition Row Position: Unknown
+	Interleave Position: 1
+	Interleaved Data Depth: 1
+
+Handle 0x0018, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x00100000000
+	Ending Address: 0x001FFFFFFFF
+	Range Size: 4 GB
+	Physical Device Handle: 0x0015
+	Memory Array Mapped Address Handle: 0x0016
+	Partition Row Position: Unknown
+	Interleave Position: 2
+	Interleaved Data Depth: 1
+
+Handle 0x0019, DMI type 221, 54 bytes
+OEM-specific Type
+	Header and Data:
+		DD 36 19 00 07 01 00 02 06 00 00 00 02 00 02 06
+		00 00 00 03 00 02 06 00 00 00 04 05 FF FF FF FF
+		FF 06 00 FF FF FF 09 00 07 00 FF FF FF 09 00 08
+		00 FF FF FF FF FF
+	Strings:
+		Reference Code - SA - System Agent
+		Reference Code - MRC
+		SA - PCIe Version
+		SA-CRID Status
+		Disabled
+		SA-CRID Original Value
+		SA-CRID New Value
+		OPROM - VBIOS
+
+Handle 0x001A, DMI type 221, 26 bytes
+OEM-specific Type
+	Header and Data:
+		DD 1A 1A 00 03 01 00 02 06 00 00 00 02 00 FF FF
+		FF FF 00 03 04 0A 00 26 E8 03
+	Strings:
+		Reference Code - ME 10.0
+		MEBx version
+		ME Firmware Version
+		1.5MB SKU
+
+Handle 0x001B, DMI type 221, 68 bytes
+OEM-specific Type
+	Header and Data:
+		DD 44 1B 00 09 01 00 02 06 00 00 00 02 03 FF FF
+		FF FF FF 04 00 FF FF FF 03 00 05 00 FF FF FF 03
+		00 06 00 FF FF FF FF FF 07 00 19 00 00 00 00 08
+		00 2C 00 00 00 00 09 00 03 00 00 00 00 0A 00 01
+		00 00 00 00
+	Strings:
+		Reference Code - PCH - Lynxpoint
+		PCH-CRID Status
+		Disabled
+		PCH-CRID Original Value
+		PCH-CRID New Value
+		OPROM - RST - RAID
+		LPTLp Bx Hsio Version
+		LPTH Cx Hsio Version
+		PCH9S A0 Hsio Version
+		WPTLp B0 Hsio Version
+
+Handle 0x001C, DMI type 221, 26 bytes
+OEM-specific Type
+	Header and Data:
+		DD 1A 1C 00 03 01 00 02 06 00 00 00 02 00 00 00
+		00 1D 00 03 00 00 05 00 00 00
+	Strings:
+		Reference Code - CPU
+		uCode Version
+		TXT ACM version
+
+Handle 0x001D, DMI type 13, 22 bytes
+BIOS Language Information
+	Language Description Format: Long
+	Installable Languages: 1
+		en|US|iso8859-1
+	Currently Installed Language: en|US|iso8859-1
+
+Handle 0x001E, DMI type 131, 64 bytes
+OEM-specific Type
+	Header and Data:
+		83 40 1E 00 31 00 00 00 00 00 00 00 00 00 00 00
+		F8 00 C3 9C 00 00 00 00 01 40 00 00 00 00 0A 00
+		E8 03 26 00 00 00 00 00 C8 00 FF FF 00 00 00 00
+		00 00 00 00 26 00 00 00 76 50 72 6F 00 00 00 00
+
+Handle 0x001F, DMI type 14, 20 bytes
+Group Associations
+	Name: Firmware Version Info
+	Items: 5
+		0x0012 (OEM-specific)
+		0x0019 (OEM-specific)
+		0x001A (OEM-specific)
+		0x001B (OEM-specific)
+		0x001C (OEM-specific)
+
+Handle 0x0020, DMI type 127, 4 bytes
+End Of Table
+
