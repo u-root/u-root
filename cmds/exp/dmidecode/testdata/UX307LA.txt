@@ -1,3 +1,8 @@
+# dmidecode-go
+Reading SMBIOS/DMI data from file testdata/UX307LA.bin.
+SMBIOS 2.8 present.
+27 structures occupying 2158 bytes.
+
 Handle 0x0000, DMI type 0, 24 bytes
 BIOS Information
 	Vendor: American Megatrends Inc.
