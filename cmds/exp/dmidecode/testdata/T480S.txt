@@ -1,3 +1,8 @@
+# dmidecode-go
+Reading SMBIOS/DMI data from file testdata/T480S.bin.
+SMBIOS 3.0.0 present.
+
+
 Handle 0x0000, DMI type 222, 14 bytes
 OEM-specific Type
 	Header and Data:

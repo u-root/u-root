@@ -4,24 +4,64 @@
 
 package smbios
 
+import (
+	"fmt"
+)
+
 // Info contains the SMBIOS information.
 type Info struct {
-	// TODO(rojer): Add entrypoint information.
-	Tables []*Table
+	Entry32 *Entry32
+	Entry64 *Entry64
+	Tables  []*Table
 }
 
 // ParseInfo parses SMBIOS information from binary data.
-func ParseInfo(entry, data []byte) (*Info, error) {
-	var tables []*Table
-	for len(data) > 0 {
-		t, remainder, err := ParseTable(data)
+func ParseInfo(entryData, tableData []byte) (*Info, error) {
+	info := &Info{}
+	var err error
+	info.Entry32, info.Entry64, err = ParseEntry(entryData)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing entry point structure: %s", err)
+	}
+	for len(tableData) > 0 {
+		t, remainder, err := ParseTable(tableData)
 		if err != nil && err != errEndOfTable {
 			return nil, err
 		}
-		tables = append(tables, t)
-		data = remainder
+		info.Tables = append(info.Tables, t)
+		tableData = remainder
 	}
-	return &Info{Tables: tables}, nil
+	return info, nil
+}
+
+// GetSMBIOSMajorVersion return major version of the SMBIOS spec.
+func (i *Info) GetSMBIOSMajorVersion() uint8 {
+	if i.Entry64 != nil {
+		return i.Entry64.SMBIOSMajorVersion
+	}
+	if i.Entry32 != nil {
+		return i.Entry32.SMBIOSMajorVersion
+	}
+	return 0
+}
+
+// GetSMBIOSMinorVersion return minor version of the SMBIOS spec.
+func (i *Info) GetSMBIOSMinorVersion() uint8 {
+	if i.Entry64 != nil {
+		return i.Entry64.SMBIOSMinorVersion
+	}
+	if i.Entry32 != nil {
+		return i.Entry32.SMBIOSMinorVersion
+	}
+	return 0
+}
+
+// GetSMBIOSDocRev return document revision of the SMBIOS spec.
+func (i *Info) GetSMBIOSDocRev() uint8 {
+	if i.Entry64 != nil {
+		return i.Entry64.SMBIOSDocRev
+	}
+	return 0
 }
 
 // GetTablesByType returns tables of specific type.

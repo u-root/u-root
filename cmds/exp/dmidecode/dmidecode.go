@@ -65,7 +65,8 @@ func dmiDecode(textOut io.Writer) *dmiDecodeError {
 	if err != nil {
 		return &dmiDecodeError{code: 2, error: fmt.Errorf("invalid --type: %s", err)}
 	}
-	entry, data, err := getData(*flagFromDump, "/sys/firmware/dmi/tables")
+	fmt.Fprintf(textOut, "# dmidecode-go\n") // TODO: version.
+	entry, data, err := getData(textOut, *flagFromDump, "/sys/firmware/dmi/tables")
 	if err != nil {
 		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing loading data: %s", err)}
 	}
@@ -73,6 +74,15 @@ func dmiDecode(textOut io.Writer) *dmiDecodeError {
 	if err != nil {
 		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing data: %s", err)}
 	}
+	if si.Entry64 != nil {
+		fmt.Fprintf(textOut, "SMBIOS %d.%d.%d present.\n\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion(), si.GetSMBIOSDocRev())
+	} else {
+		fmt.Fprintf(textOut, "SMBIOS %d.%d present.\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion())
+	}
+	if si.Entry32 != nil {
+		fmt.Fprintf(textOut, "%d structures occupying %d bytes.\n", si.Entry32.NumberOfStructs, si.Entry32.StructTableLength)
+	}
+	fmt.Fprintf(textOut, "\n")
 	for _, t := range si.Tables {
 		if len(typeFilter) != 0 && !typeFilter[t.Type] {
 			continue

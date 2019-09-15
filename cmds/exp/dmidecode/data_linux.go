@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 )
@@ -14,10 +15,11 @@ import (
 // getData returns SMBIOS entry point and DMI table data.
 // If dumpFile is non-empty, it is read from that file, otherwise it is read
 // from sysfsPath (smbios_entry_point and DMI files respectively).
-func getData(dumpFile, sysfsPath string) ([]byte, []byte, error) {
+func getData(textOut io.Writer, dumpFile, sysfsPath string) ([]byte, []byte, error) {
 	var err error
 	var entry, data []byte
 	if dumpFile != "" {
+		fmt.Fprintf(textOut, "Reading SMBIOS/DMI data from file %s.\n", dumpFile)
 		data, err = ioutil.ReadFile(dumpFile)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error reading dump: %s", err)
@@ -28,6 +30,7 @@ func getData(dumpFile, sysfsPath string) ([]byte, []byte, error) {
 		entry = data[:32]
 		data = data[32:]
 	} else {
+		fmt.Fprintf(textOut, "Reading SMBIOS/DMI data from sysfs.\n")
 		entry, err = ioutil.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error reading DMI data: %s", err)
