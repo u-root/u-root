@@ -77,7 +77,7 @@ func (bi *BIOSInformation) String() string {
 	if bi.StartingAddressSegment != 0 {
 		lines = append(lines,
 			fmt.Sprintf("\tAddress: 0x%04X0", bi.StartingAddressSegment),
-			fmt.Sprintf("\tRuntime Size: %d kB", ((0x10000-int(bi.StartingAddressSegment))<<4)/1024),
+			fmt.Sprintf("\tRuntime Size: %s", kmgt(uint64((0x10000-int(bi.StartingAddressSegment))<<4))),
 		)
 	}
 	lines = append(lines,

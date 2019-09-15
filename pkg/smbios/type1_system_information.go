@@ -5,6 +5,7 @@
 package smbios
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -77,6 +78,15 @@ func (si *SystemInformation) String() string {
 type UUID [16]byte
 
 func (u UUID) String() string {
+	if bytes.Compare(u[:], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) == 0 {
+		return "Not Settable"
+	}
+	if bytes.Compare(u[:], []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}) == 0 {
+		return "Not Present"
+	}
+	// Note: First three fields use LE byte order, last two use BE (network).
+	// Reasons for this are described in 7.2.1 (basically: historic).
+	// dmidecode(8) only does this for 2.6+ SMBIOS versions but we don't make that distinction.
 	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
 		u[3], u[2], u[1], u[0],
 		u[5], u[4],

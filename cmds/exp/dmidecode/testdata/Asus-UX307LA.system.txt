@@ -1,5 +1,5 @@
 # dmidecode-go
-Reading SMBIOS/DMI data from file testdata/UX307LA.bin.
+Reading SMBIOS/DMI data from file testdata/Asus-UX307LA.bin.
 SMBIOS 2.8 present.
 27 structures occupying 2158 bytes.
 

@@ -1,7 +1,6 @@
 # dmidecode-go
-Reading SMBIOS/DMI data from file testdata/T480S.bin.
+Reading SMBIOS/DMI data from file testdata/Lenovo-ThinkPad-T480.bin.
 SMBIOS 3.0.0 present.
-
 
 Handle 0x0000, DMI type 222, 14 bytes
 OEM-specific Type
@@ -301,43 +300,18 @@ Unsupported
 
 Handle 0x0013, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 13 00 01 00 02 12 10
-	Strings:
-		Not Available
-		USB 5
 
 Handle 0x0014, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 14 00 01 00 02 12 10
-	Strings:
-		Not Available
-		USB 6
 
 Handle 0x0015, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 15 00 01 00 02 12 10
-	Strings:
-		Not Available
-		USB 7
 
 Handle 0x0016, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 16 00 01 00 02 12 10
-	Strings:
-		Not Available
-		USB 8
 
 Handle 0x0017, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 17 00 01 00 02 12 10
-	Strings:
-		Not Available
-		USB 9
 
 Handle 0x0018, DMI type 8, 9 bytes
 Unsupported
@@ -349,11 +323,6 @@ Unsupported
 
 Handle 0x0019, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 19 00 01 00 02 07 1C
-	Strings:
-		Not Available
-		External Monitor
 
 Handle 0x001A, DMI type 8, 9 bytes
 Unsupported
@@ -365,27 +334,12 @@ Unsupported
 
 Handle 0x001B, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 1B 00 01 00 02 FF 1C
-	Strings:
-		Not Available
-		Hdmi2
 
 Handle 0x001C, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 1C 00 01 00 02 FF 1C
-	Strings:
-		Not Available
-		DisplayPort1
 
 Handle 0x001D, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 1D 00 01 00 02 FF 1C
-	Strings:
-		Not Available
-		DisplayPort2
 
 Handle 0x001E, DMI type 8, 9 bytes
 Unsupported
@@ -397,11 +351,6 @@ Unsupported
 
 Handle 0x001F, DMI type 126, 9 bytes
 Inactive
-	Header and Data:
-		7E 09 1F 00 01 00 02 1F 1D
-	Strings:
-		Not Available
-		Headphone/Microphone Combo Jack2
 
 Handle 0x0020, DMI type 9, 17 bytes
 Unsupported
@@ -446,9 +395,6 @@ Unsupported
 
 Handle 0x0025, DMI type 126, 26 bytes
 Inactive
-	Header and Data:
-		7E 1A 25 00 01 02 00 00 03 02 00 00 00 00 04 FF
-		00 00 00 00 05 0A 00 00 00 00
 
 Handle 0x0026, DMI type 133, 5 bytes
 OEM-specific Type

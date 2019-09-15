@@ -1,0 +1,1090 @@
+# dmidecode-go
+Reading SMBIOS/DMI data from file testdata/SuperMicro-X9DBL.bin.
+SMBIOS 2.7 present.
+115 structures occupying 4631 bytes.
+
+Handle 0x0000, DMI type 0, 24 bytes
+BIOS Information
+	Vendor: American Megatrends Inc.
+	Version: 3.00
+	Release Date: 12/06/2013
+	Address: 0xF0000
+	Runtime Size: 64 kB
+	ROM Size: 4 MB
+	Characteristics:
+		PCI is supported
+		BIOS is upgradeable
+		BIOS shadowing is allowed
+		Boot from CD is supported
+		Selectable boot is supported
+		BIOS ROM is socketed
+		EDD is supported
+		5.25"/1.2 MB floppy services are supported (int 13h)
+		3.5"/720 kB floppy services are supported (int 13h)
+		3.5"/2.88 MB floppy services are supported (int 13h)
+		Print screen service is supported (int 5h)
+		8042 keyboard services are supported (int 9h)
+		Serial services are supported (int 14h)
+		Printer services are supported (int 17h)
+		ACPI is supported
+		USB legacy is supported
+		BIOS boot specification is supported
+		Function key-initiated network boot is supported
+		Targeted content distribution is supported
+		UEFI is supported
+	BIOS Revision: 3.0
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: Thomas-Krenn.AG
+	Product Name: X9DBL-3F/X9DBL-iF
+	Version: 0123456789
+	Serial Number: 9000116105
+	UUID: 00000000-0000-0000-0000-0cc47a133878
+	Wake-up Type: Power Switch
+	SKU Number: To be filled by O.E.M.
+	Family: To be filled by O.E.M.
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+	Manufacturer: Supermicro
+	Product Name: X9DBL-3F/X9DBL-iF
+	Version: 0123456789
+	Serial Number: VM147S018307
+	Asset Tag: To be filled by O.E.M.
+	Features:
+		Board is a hosting board
+		Board is replaceable
+	Location In Chassis: To be filled by O.E.M.
+	Chassis Handle: 0x0003
+	Type: Motherboard
+	Contained Object Handles: 0
+
+Handle 0x0003, DMI type 3, 22 bytes
+Chassis Information
+	Manufacturer: Supermicro
+	Type: Main Server Chassis
+	Lock: Not Present
+	Version: 0123456789
+	Serial Number: 0123456789
+	Asset Tag: To Be Filled By O.E.M.
+	Boot-up State: Safe
+	Power Supply State: Safe
+	Thermal State: Safe
+	Security Status: None
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: 1
+	Contained Elements: 0
+	SKU Number: To be filled by O.E.M.
+
+Handle 0x0004, DMI type 4, 42 bytes
+Processor Information
+	Socket Designation: SOCKET 0
+	Type: Central Processor
+	Family: Xeon
+	Manufacturer: Intel
+	ID: E4 06 03 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 62, Stepping 4
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Xeon(R) CPU E5-2403 v2 @ 1.80GHz
+	Voltage: 0.0 V
+	External Clock: 100 MHz
+	Max Speed: 4000 MHz
+	Current Speed: 1800 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket LGA2011
+	L1 Cache Handle: 0x0005
+	L2 Cache Handle: 0x0006
+	L3 Cache Handle: 0x0007
+	Serial Number: Not Specified
+	Asset Tag: 62B5CED09D1D555C
+	Part Number: Not Specified
+	Core Count: 4
+	Core Enabled: 4
+	Thread Count: 4
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
+
+Handle 0x0005, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 256 kB
+	Maximum Size: 256 kB
+	Supported SRAM Types:
+		Unknown
+	Installed SRAM Type: Unknown
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Other
+	Associativity: 8-way Set-associative
+
+Handle 0x0006, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 1 MB
+	Maximum Size: 1 MB
+	Supported SRAM Types:
+		Unknown
+	Installed SRAM Type: Unknown
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
+
+Handle 0x0007, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 10 MB
+	Maximum Size: 10 MB
+	Supported SRAM Types:
+		Unknown
+	Installed SRAM Type: Unknown
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 20-way Set-associative
+
+Handle 0x0008, DMI type 4, 42 bytes
+Processor Information
+	Socket Designation: SOCKET 1
+	Type: Central Processor
+	Family: Xeon
+	Manufacturer: Intel
+	ID: E4 06 03 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 62, Stepping 4
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Xeon(R) CPU E5-2403 v2 @ 1.80GHz
+	Voltage: 0.0 V
+	External Clock: 100 MHz
+	Max Speed: 4000 MHz
+	Current Speed: 1800 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket LGA2011
+	L1 Cache Handle: 0x0009
+	L2 Cache Handle: 0x000A
+	L3 Cache Handle: 0x000B
+	Serial Number: Not Specified
+	Asset Tag: Not Specified
+	Part Number: Not Specified
+	Core Count: 4
+	Core Enabled: 4
+	Thread Count: 4
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
+
+Handle 0x0009, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L1 Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 256 kB
+	Maximum Size: 256 kB
+	Supported SRAM Types:
+		Unknown
+	Installed SRAM Type: Unknown
+	Speed: Unknown
+	Error Correction Type: Parity
+	System Type: Other
+	Associativity: 8-way Set-associative
+
+Handle 0x000A, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L2 Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 1 MB
+	Maximum Size: 1 MB
+	Supported SRAM Types:
+		Unknown
+	Installed SRAM Type: Unknown
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
+
+Handle 0x000B, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L3 Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 10 MB
+	Maximum Size: 10 MB
+	Supported SRAM Types:
+		Unknown
+	Installed SRAM Type: Unknown
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 20-way Set-associative
+
+Handle 0x000C, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 0C 00 01 00 02 0F 0E
+	Strings:
+		J1A1
+		PS2Mouse
+
+Handle 0x000D, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 0D 00 01 00 02 0F 0D
+	Strings:
+		J1A1
+		Keyboard
+
+Handle 0x000E, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 0E 00 01 00 02 1D FF
+	Strings:
+		J2A1
+		TV Out
+
+Handle 0x000F, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 0F 00 01 00 02 08 09
+	Strings:
+		J2A2A
+		COM A
+
+Handle 0x0010, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 10 00 01 00 02 07 1C
+	Strings:
+		J2A2B
+		Video
+
+Handle 0x0011, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 11 00 01 00 02 12 10
+	Strings:
+		J3A1
+		USB1
+
+Handle 0x0012, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 12 00 01 00 02 12 10
+	Strings:
+		J3A1
+		USB2
+
+Handle 0x0013, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 13 00 01 00 02 12 10
+	Strings:
+		J3A1
+		USB3
+
+Handle 0x0014, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 14 00 01 FF 00 00 FF
+	Strings:
+		J9A1 - TPM HDR
+
+Handle 0x0015, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 15 00 01 FF 00 00 FF
+	Strings:
+		J9C1 - PCIE DOCKING CONN
+
+Handle 0x0016, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 16 00 01 FF 00 00 FF
+	Strings:
+		J2B3 - CPU FAN
+
+Handle 0x0017, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 17 00 01 FF 00 00 FF
+	Strings:
+		J6C2 - EXT HDMI
+
+Handle 0x0018, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 18 00 01 FF 00 00 FF
+	Strings:
+		J3C1 - GMCH FAN
+
+Handle 0x0019, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 19 00 01 FF 00 00 FF
+	Strings:
+		J1D1 - ITP
+
+Handle 0x001A, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1A 00 01 FF 00 00 FF
+	Strings:
+		J9E2 - MDC INTPSR
+
+Handle 0x001B, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1B 00 01 FF 00 00 FF
+	Strings:
+		J9E4 - MDC INTPSR
+
+Handle 0x001C, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1C 00 01 FF 00 00 FF
+	Strings:
+		J9E3 - LPC HOT DOCKING
+
+Handle 0x001D, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1D 00 01 FF 00 00 FF
+	Strings:
+		J9E1 - SCAN MATRIX
+
+Handle 0x001E, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1E 00 01 FF 00 00 FF
+	Strings:
+		J9G1 - LPC SIDE BAND
+
+Handle 0x001F, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1F 00 01 FF 00 00 FF
+	Strings:
+		J8F1 - UNIFIED
+
+Handle 0x0020, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 20 00 01 FF 00 00 FF
+	Strings:
+		J6F1 - LVDS
+
+Handle 0x0021, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 21 00 01 FF 00 00 FF
+	Strings:
+		J2F1 - LAI FAN
+
+Handle 0x0022, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 22 00 01 FF 00 00 FF
+	Strings:
+		J2G1 - GFX VID
+
+Handle 0x0023, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 23 00 01 FF 00 00 FF
+	Strings:
+		J1G6 - AC JACK
+
+Handle 0x0024, DMI type 9, 17 bytes
+Unsupported
+	Header and Data:
+		09 11 24 00 01 06 05 03 03 01 00 02 01 00 00 02
+		00
+	Strings:
+		SLOT1 PCI 33MHZ
+
+Handle 0x0025, DMI type 126, 17 bytes
+Inactive
+
+Handle 0x0026, DMI type 126, 17 bytes
+Inactive
+
+Handle 0x0027, DMI type 9, 17 bytes
+Unsupported
+	Header and Data:
+		09 11 27 00 01 B5 0B 04 03 04 00 04 01 00 00 03
+		00
+	Strings:
+		CPU2 SLOT4 PCI-E 3.0 X8
+
+Handle 0x0028, DMI type 126, 17 bytes
+Inactive
+
+Handle 0x0029, DMI type 9, 17 bytes
+Unsupported
+	Header and Data:
+		09 11 29 00 01 B6 0D 04 04 06 00 04 01 00 00 00
+		00
+	Strings:
+		CPU1 SLOT6 PCI-E 3.0 X16
+
+Handle 0x002A, DMI type 10, 10 bytes
+Unsupported
+	Header and Data:
+		0A 0A 2A 00 83 01 85 02 85 03
+	Strings:
+		 Matrox VGA
+		 Intel 82574L Ethernet 1
+		 Intel 82574L Ethernet 2
+
+Handle 0x002B, DMI type 11, 5 bytes
+Unsupported
+	Header and Data:
+		0B 05 2B 00 02
+	Strings:
+		Intel SandyBridge/Patsburg/Romley
+		Supermicro motherboard-X9 Series 
+
+Handle 0x002C, DMI type 12, 5 bytes
+Unsupported
+	Header and Data:
+		0C 05 2C 00 01
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x002D, DMI type 16, 23 bytes
+Unsupported
+	Header and Data:
+		10 17 2D 00 03 03 06 00 00 00 03 FE FF 03 00 00
+		00 00 00 00 00 00 00
+
+Handle 0x002E, DMI type 19, 31 bytes
+Unsupported
+	Header and Data:
+		13 1F 2E 00 00 00 00 00 FF FF 7F 01 2D 00 01 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+Handle 0x002F, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x002D
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: P1-DIMM1A
+	Bank Locator: P0_Node0_Channel0_Dimm0
+	Type: DDR3
+	Type Detail: Registered (Buffered)
+	Speed: 1333 MT/s
+	Manufacturer: Undefined         
+	Serial Number: AEEE0705    
+	Asset Tag: Dimm0_AssetTag
+	Part Number: AL12P72A8BLK0M    
+	Rank: 1
+	Configured Memory Speed: 1333 MT/s
+
+Handle 0x0030, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 30 00 00 00 00 00 FF FF 3F 00 2F 00 2E 00
+		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0031, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x002D
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: P1-DIMM1B
+	Bank Locator: P0_Node0_Channel1_Dimm0
+	Type: DDR3
+	Type Detail: Registered (Buffered)
+	Speed: 1333 MT/s
+	Manufacturer: Undefined         
+	Serial Number: ADEE0705    
+	Asset Tag: Dimm1_AssetTag
+	Part Number: AL12P72A8BLK0M    
+	Rank: 1
+	Configured Memory Speed: 1333 MT/s
+
+Handle 0x0032, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 32 00 00 00 40 00 FF FF 7F 00 31 00 2E 00
+		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0033, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x002D
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: P1-DIMM1C
+	Bank Locator: P0_Node0_Channel2_Dimm0
+	Type: DDR3
+	Type Detail: Registered (Buffered)
+	Speed: 1333 MT/s
+	Manufacturer: Micron            
+	Serial Number: 15C774EF    
+	Asset Tag: Dimm2_AssetTag
+	Part Number: 36KSF2G72PZ-1G6N1 
+	Rank: 2
+	Configured Memory Speed: 1333 MT/s
+
+Handle 0x0034, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 34 00 00 00 80 00 FF FF 7F 01 33 00 2E 00
+		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0035, DMI type 16, 23 bytes
+Unsupported
+	Header and Data:
+		10 17 35 00 03 03 06 00 00 00 03 FE FF 03 00 00
+		00 00 00 00 00 00 00
+
+Handle 0x0036, DMI type 19, 31 bytes
+Unsupported
+	Header and Data:
+		13 1F 36 00 00 00 80 01 FF FF FF 02 35 00 01 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+Handle 0x0037, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x0035
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: P2-DIMM1D
+	Bank Locator: P1_Node1_Channel0_Dimm0
+	Type: DDR3
+	Type Detail: Registered (Buffered)
+	Speed: 1333 MT/s
+	Manufacturer: Undefined         
+	Serial Number: 5F730705    
+	Asset Tag: Dimm0_AssetTag
+	Part Number: AL12P72A8BLK0M    
+	Rank: 1
+	Configured Memory Speed: 1333 MT/s
+
+Handle 0x0038, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 38 00 00 00 80 01 FF FF BF 01 37 00 36 00
+		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0039, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x0035
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: P2-DIMM1E
+	Bank Locator: P1_Node1_Channel1_Dimm0
+	Type: DDR3
+	Type Detail: Registered (Buffered)
+	Speed: 1333 MT/s
+	Manufacturer: Undefined         
+	Serial Number: 32730705    
+	Asset Tag: Dimm1_AssetTag
+	Part Number: AL12P72A8BLK0M    
+	Rank: 1
+	Configured Memory Speed: 1333 MT/s
+
+Handle 0x003A, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 3A 00 00 00 C0 01 FF FF FF 01 39 00 36 00
+		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x003B, DMI type 17, 34 bytes
+Memory Device
+	Array Handle: 0x0035
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: P2-DIMM1F
+	Bank Locator: P1_Node1_Channel2_Dimm0
+	Type: DDR3
+	Type Detail: Registered (Buffered)
+	Speed: 1333 MT/s
+	Manufacturer: Micron            
+	Serial Number: 15C774EB    
+	Asset Tag: Dimm2_AssetTag
+	Part Number: 36KSF2G72PZ-1G6N1 
+	Rank: 2
+	Configured Memory Speed: 1333 MT/s
+
+Handle 0x003C, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 3C 00 00 00 00 02 FF FF FF 02 3B 00 36 00
+		01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x003D, DMI type 32, 20 bytes
+Unsupported
+	Header and Data:
+		20 14 3D 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0x003E, DMI type 34, 11 bytes
+Unsupported
+	Header and Data:
+		22 0B 3E 00 01 04 00 00 00 00 03
+	Strings:
+		LM78-1
+
+Handle 0x003F, DMI type 26, 22 bytes
+Unsupported
+	Header and Data:
+		1A 16 3F 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78A
+
+Handle 0x0040, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 40 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x0041, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 41 00 01 3E 00 3E 00 3F 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0042, DMI type 28, 22 bytes
+Unsupported
+	Header and Data:
+		1C 16 42 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78A
+
+Handle 0x0043, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 43 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x0044, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 44 00 01 3E 00 41 00 42 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0045, DMI type 27, 15 bytes
+Unsupported
+	Header and Data:
+		1B 0F 45 00 42 00 12 01 00 00 00 00 00 80 01
+	Strings:
+		Cooling Dev 1
+
+Handle 0x0046, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 46 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x0047, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 47 00 01 3E 00 44 00 45 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0048, DMI type 27, 15 bytes
+Unsupported
+	Header and Data:
+		1B 0F 48 00 42 00 12 01 00 00 00 00 00 80 00
+
+Handle 0x0049, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 49 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x004A, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 4A 00 01 3E 00 47 00 48 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x004B, DMI type 29, 22 bytes
+Unsupported
+	Header and Data:
+		1D 16 4B 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		ABC
+
+Handle 0x004C, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 4C 00 00 80 00 80 00 80 00 80 00 80 00 80
+
+Handle 0x004D, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 4D 00 01 3E 00 4A 00 48 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x004E, DMI type 34, 16 bytes
+Unsupported
+	Header and Data:
+		22 10 4E 00 01 04 00 00 00 00 03 4C 4D 37 38 2D
+	Strings:
+		2
+
+Handle 0x004F, DMI type 26, 22 bytes
+Unsupported
+	Header and Data:
+		1A 16 4F 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78B
+
+Handle 0x0050, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 50 00 07 00 08 00 08 00 0A 00 0B 00 0C 00
+
+Handle 0x0051, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 51 00 01 4E 00 4E 00 4F 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0052, DMI type 26, 22 bytes
+Unsupported
+	Header and Data:
+		1A 16 52 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78B
+
+Handle 0x0053, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 53 00 0D 00 0E 00 0F 00 10 00 11 00 12 00
+
+Handle 0x0054, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 54 00 01 4E 00 51 00 52 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0055, DMI type 28, 22 bytes
+Unsupported
+	Header and Data:
+		1C 16 55 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78B
+
+Handle 0x0056, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 56 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x0057, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 57 00 01 4E 00 54 00 55 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0058, DMI type 27, 15 bytes
+Unsupported
+	Header and Data:
+		1B 0F 58 00 55 00 12 01 00 00 00 00 00 80 01
+	Strings:
+		Cooling Dev 2
+
+Handle 0x0059, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 59 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x005A, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 5A 00 01 4E 00 57 00 58 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x005B, DMI type 28, 22 bytes
+Unsupported
+	Header and Data:
+		1C 16 5B 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78B
+
+Handle 0x005C, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 5C 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x005D, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 5D 00 01 4E 00 5A 00 5B 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x005E, DMI type 27, 15 bytes
+Unsupported
+	Header and Data:
+		1B 0F 5E 00 5B 00 12 01 00 00 00 00 00 80 01
+	Strings:
+		Cooling Dev 2
+
+Handle 0x005F, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 5F 00 01 00 02 00 03 00 04 00 05 00 06 00
+
+Handle 0x0060, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 60 00 01 4E 00 5D 00 5E 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0061, DMI type 29, 22 bytes
+Unsupported
+	Header and Data:
+		1D 16 61 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		DEF
+
+Handle 0x0062, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 62 00 00 80 00 80 00 80 00 80 00 80 00 80
+
+Handle 0x0063, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 63 00 01 4E 00 60 00 5E 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0064, DMI type 29, 22 bytes
+Unsupported
+	Header and Data:
+		1D 16 64 00 01 00 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		GHI
+
+Handle 0x0065, DMI type 36, 16 bytes
+Unsupported
+	Header and Data:
+		24 10 65 00 00 80 00 80 00 80 00 80 00 80 00 80
+
+Handle 0x0066, DMI type 35, 11 bytes
+Unsupported
+	Header and Data:
+		23 0B 66 00 01 4E 00 63 00 5E 00
+	Strings:
+		To Be Filled By O.E.M.
+
+Handle 0x0067, DMI type 26, 22 bytes
+Unsupported
+	Header and Data:
+		1A 16 67 00 01 6A 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78A
+
+Handle 0x0068, DMI type 28, 22 bytes
+Unsupported
+	Header and Data:
+		1C 16 68 00 01 6A 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		LM78A
+
+Handle 0x0069, DMI type 27, 15 bytes
+Unsupported
+	Header and Data:
+		1B 0F 69 00 68 00 67 01 00 00 00 00 00 80 01
+	Strings:
+		Cooling Dev 1
+
+Handle 0x006A, DMI type 29, 22 bytes
+Unsupported
+	Header and Data:
+		1D 16 6A 00 01 6A 00 80 00 80 00 80 00 80 00 80
+		00 00 00 00 00 80
+	Strings:
+		ABC
+
+Handle 0x006B, DMI type 39, 22 bytes
+Unsupported
+	Header and Data:
+		27 16 6B 00 01 01 02 03 04 05 06 07 00 80 A2 11
+		67 00 69 00 6A 00
+	Strings:
+		To Be Filled By O.E.M.
+		To Be Filled By O.E.M.
+		To Be Filled By O.E.M.
+		To Be Filled By O.E.M.
+		To Be Filled By O.E.M.
+		To Be Filled By O.E.M.
+		To Be Filled By O.E.M.
+
+Handle 0x006C, DMI type 41, 11 bytes
+Unsupported
+	Header and Data:
+		29 0B 6C 00 01 83 01 00 00 07 08
+	Strings:
+		 Matrox VGA
+
+Handle 0x006D, DMI type 41, 11 bytes
+Unsupported
+	Header and Data:
+		29 0B 6D 00 01 85 01 00 00 05 00
+	Strings:
+		 Intel 82574L Ethernet 1
+
+Handle 0x006E, DMI type 41, 11 bytes
+Unsupported
+	Header and Data:
+		29 0B 6E 00 01 85 02 00 00 06 00
+	Strings:
+		 Intel 82574L Ethernet 2
+
+Handle 0x006F, DMI type 38, 18 bytes
+IPMI Device Information
+	Interface Type: KCS (Keyboard Control Style)
+	Specification Version: 2.0
+	I2C Slave Address: 0x00
+	NV Storage Device: Not Present
+	Base Address: 0x0000000000000CA2 (I/O)
+	Register Spacing: Successive Byte Boundaries
+
+Handle 0x0078, DMI type 15, 73 bytes
+Unsupported
+	Header and Data:
+		0F 49 78 00 00 00 00 00 10 00 03 01 01 00 00 00
+		00 00 C5 FF 01 19 02 01 01 02 01 03 00 04 00 05
+		00 06 00 07 00 08 04 09 03 0A 03 0B 00 0C 00 0D
+		00 0E 00 10 00 11 00 12 00 13 00 14 00 15 00 16
+		00 17 00 FF 00 E0 E0 E1 E1
+
+Handle 0x0081, DMI type 13, 22 bytes
+Unsupported
+	Header and Data:
+		0D 16 81 00 01 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 01
+	Strings:
+		en|US|iso8859-1
+
+Handle 0x0082, DMI type 127, 4 bytes
+End Of Table
+

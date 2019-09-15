@@ -1,0 +1,690 @@
+# dmidecode-go
+Reading SMBIOS/DMI data from file testdata/Lenovo-ThinkPad-W510.bin.
+SMBIOS 2.6 present.
+82 structures occupying 3123 bytes.
+
+Handle 0x0000, DMI type 0, 24 bytes
+BIOS Information
+	Vendor: LENOVO
+	Version: 6NET84WW (1.45 )
+	Release Date: 10/03/2012
+	Address: 0xE0000
+	Runtime Size: 128 kB
+	ROM Size: 8 MB
+	Characteristics:
+		PCI is supported
+		PC Card (PCMCIA) is supported
+		PNP is supported
+		BIOS is upgradeable
+		BIOS shadowing is allowed
+		ESCD support is available
+		Boot from CD is supported
+		Selectable boot is supported
+		EDD is supported
+		3.5"/720 kB floppy services are supported (int 13h)
+		Print screen service is supported (int 5h)
+		8042 keyboard services are supported (int 9h)
+		Serial services are supported (int 14h)
+		Printer services are supported (int 17h)
+		CGA/mono video services are supported (int 10h)
+		ACPI is supported
+		USB legacy is supported
+		BIOS boot specification is supported
+		Targeted content distribution is supported
+	BIOS Revision: 1.69
+	Firmware Revision: 1.33
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: LENOVO
+	Product Name: 431924G
+	Version: ThinkPad W510
+	Serial Number: R86W27P
+	UUID: 01f055ee-7b50-cb11-89b7-b3fc67fdc149
+	Wake-up Type: Power Switch
+	SKU Number: Not Specified
+	Family: ThinkPad W510
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+	Manufacturer: LENOVO
+	Product Name: 431924G
+	Version: Not Available
+	Serial Number: 1ZHRZ05562E
+	Asset Tag: Not Specified
+	Features:
+		
+	Location In Chassis: Not Specified
+	Chassis Handle: 0xFFFF
+	Type: Unknown
+	Contained Object Handles: 0
+
+Handle 0x0003, DMI type 3, 21 bytes
+Chassis Information
+	Manufacturer: LENOVO
+	Type: Notebook
+	Lock: Not Present
+	Version: Not Available
+	Serial Number: R86W27P
+	Asset Tag: No Asset Information
+	Boot-up State: Unknown
+	Power Supply State: Unknown
+	Thermal State: Unknown
+	Security Status: Unknown
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: Unspecified
+	Contained Elements: 0
+
+Handle 0x0004, DMI type 126, 21 bytes
+Inactive
+
+Handle 0x0005, DMI type 126, 21 bytes
+Inactive
+
+Handle 0x0006, DMI type 4, 42 bytes
+Processor Information
+	Socket Designation: None
+	Type: Central Processor
+	Family: Pentium 4
+	Manufacturer: GenuineIntel
+	ID: E5 06 01 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 30, Stepping 5
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Core(TM) i7 CPU       Q 720  @ 1.60GHz
+	Voltage: 1.3 V
+	External Clock: 133 MHz
+	Max Speed: 1600 MHz
+	Current Speed: 1600 MHz
+	Status: Populated, Enabled
+	Upgrade: None
+	L1 Cache Handle: 0x000C
+	L2 Cache Handle: 0x000D
+	L3 Cache Handle: 0x000E
+	Serial Number: Not Specified
+	Asset Tag: Not Specified
+	Part Number: Not Specified
+	Core Count: 4
+	Core Enabled: 4
+	Thread Count: 8
+	Characteristics:
+		Unknown
+
+Handle 0x0007, DMI type 5, 24 bytes
+Unsupported
+	Header and Data:
+		05 18 07 00 03 04 03 03 0E 01 00 00 05 04 04 08
+		00 09 00 0A 00 0B 00 02
+
+Handle 0x0008, DMI type 6, 12 bytes
+Unsupported
+	Header and Data:
+		06 0C 08 00 01 01 2B 00 05 0C 0C 00
+	Strings:
+		DIMM Slot 1
+
+Handle 0x0009, DMI type 6, 12 bytes
+Unsupported
+	Header and Data:
+		06 0C 09 00 01 23 2B 00 05 7F 7F 00
+	Strings:
+		DIMM Slot 2
+
+Handle 0x000A, DMI type 6, 12 bytes
+Unsupported
+	Header and Data:
+		06 0C 0A 00 01 45 2B 00 05 0C 0C 00
+	Strings:
+		DIMM Slot 3
+
+Handle 0x000B, DMI type 6, 12 bytes
+Unsupported
+	Header and Data:
+		06 0C 0B 00 01 67 2B 00 05 7F 7F 00
+	Strings:
+		DIMM Slot 4
+
+Handle 0x000C, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: Internal L1 Cache
+	Configuration: Enabled, Socketed, Level 1
+	Operational Mode: Write Through
+	Location: Internal
+	Installed Size: 32 kB
+	Maximum Size: 32 kB
+	Supported SRAM Types:
+		Burst
+		Pipeline Burst
+		Asynchronous
+	Installed SRAM Type: Asynchronous
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Data
+	Associativity: 8-way Set-associative
+
+Handle 0x000D, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: Internal L2 Cache
+	Configuration: Enabled, Socketed, Level 2
+	Operational Mode: Write Through
+	Location: Internal
+	Installed Size: 256 kB
+	Maximum Size: 256 kB
+	Supported SRAM Types:
+		Burst
+		Pipeline Burst
+		Asynchronous
+	Installed SRAM Type: Burst
+	Speed: Unknown
+	Error Correction Type: Single-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
+
+Handle 0x000E, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: Internal L3 Cache
+	Configuration: Enabled, Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 6 MB
+	Maximum Size: 8 MB
+	Supported SRAM Types:
+		Burst
+		Pipeline Burst
+		Asynchronous
+	Installed SRAM Type: Burst
+	Speed: Unknown
+	Error Correction Type: Unknown
+	System Type: Unknown
+	Associativity: Unknown
+
+Handle 0x000F, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 0F 00 01 00 02 07 1C
+	Strings:
+		Not Available
+		External Monitor
+
+Handle 0x0010, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 10 00 01 00 02 FF 1C
+	Strings:
+		Not Available
+		DisplayPort
+
+Handle 0x0011, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0012, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0013, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 13 00 01 00 02 1F 1D
+	Strings:
+		Not Available
+		Headphone/Microphone Combo Jack
+
+Handle 0x0014, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0015, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0016, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 16 00 01 00 02 0B 1F
+	Strings:
+		Not Available
+		Ethernet
+
+Handle 0x0017, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 17 00 01 00 02 0A 1E
+	Strings:
+		Not Available
+		Modem
+
+Handle 0x0018, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 18 00 01 00 02 12 10
+	Strings:
+		Not Available
+		USB 1
+
+Handle 0x0019, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 19 00 01 00 02 12 10
+	Strings:
+		Not Available
+		USB 2
+
+Handle 0x001A, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1A 00 01 00 02 12 10
+	Strings:
+		Not Available
+		USB 3
+
+Handle 0x001B, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 1B 00 01 00 02 12 10
+	Strings:
+		Not Available
+		USB 4
+
+Handle 0x001C, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x001D, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x001E, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x001F, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0020, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0021, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0022, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0023, DMI type 8, 9 bytes
+Unsupported
+	Header and Data:
+		08 09 23 00 01 00 02 22 20
+	Strings:
+		Not Available
+		eSATA 1
+
+Handle 0x0024, DMI type 126, 9 bytes
+Inactive
+
+Handle 0x0025, DMI type 9, 17 bytes
+Unsupported
+	Header and Data:
+		09 11 25 00 01 A5 08 03 01 00 00 00 02 FF 00 FF
+		FF
+	Strings:
+		ExpressCard Slot
+
+Handle 0x0026, DMI type 9, 17 bytes
+Unsupported
+	Header and Data:
+		09 11 26 00 01 01 01 03 01 04 00 00 02 FF 00 FF
+		FF
+	Strings:
+		Media Card Slot
+
+Handle 0x0027, DMI type 9, 17 bytes
+Unsupported
+	Header and Data:
+		09 11 27 00 01 01 01 03 01 04 00 00 02 FF 00 FF
+		FF
+	Strings:
+		SmartCard Slot
+
+Handle 0x0028, DMI type 10, 6 bytes
+Unsupported
+	Header and Data:
+		0A 06 28 00 01 01
+	Strings:
+		IBM Embedded Security hardware
+
+Handle 0x0029, DMI type 11, 5 bytes
+Unsupported
+	Header and Data:
+		0B 05 29 00 01
+	Strings:
+		IBM ThinkPad Embedded Controller -[6MHT46WW-1.21    ]-
+
+Handle 0x002A, DMI type 13, 22 bytes
+Unsupported
+	Header and Data:
+		0D 16 2A 00 01 01 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 01
+	Strings:
+		enUS
+
+Handle 0x002B, DMI type 15, 25 bytes
+Unsupported
+	Header and Data:
+		0F 19 2B 00 00 00 00 00 10 00 04 01 00 00 00 00
+		00 00 00 00 01 01 02 08 04
+
+Handle 0x002C, DMI type 16, 15 bytes
+Unsupported
+	Header and Data:
+		10 0F 2C 00 03 03 03 00 00 00 01 FE FF 04 00
+
+Handle 0x002D, DMI type 17, 28 bytes
+Memory Device
+	Array Handle: 0x002C
+	Error Information Handle: No Error
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: DIMM 1
+	Bank Locator: Bank 0/1
+	Type: DDR3
+	Type Detail: Synchronous
+	Speed: 1334 MT/s
+	Manufacturer: 859B            
+	Serial Number: 00000000        
+	Asset Tag: 0E08
+	Part Number: CT51264BF1339.C16F
+	Rank: Unknown
+
+Handle 0x002E, DMI type 17, 28 bytes
+Memory Device
+	Array Handle: 0x002C
+	Error Information Handle: No Error
+	Total Width: Unknown
+	Data Width: Unknown
+	Size: No Module Installed
+	Form Factor: SODIMM
+	Set: None
+	Locator: DIMM 2
+	Bank Locator: Bank 2/3
+	Type: Unknown
+	Type Detail: Synchronous
+	Speed: Unknown
+	Manufacturer:                 
+	Serial Number:                 
+	Asset Tag:     
+	Part Number:                   
+	Rank: Unknown
+
+Handle 0x002F, DMI type 17, 28 bytes
+Memory Device
+	Array Handle: 0x002C
+	Error Information Handle: No Error
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 4 GB
+	Form Factor: SODIMM
+	Set: None
+	Locator: DIMM 3
+	Bank Locator: Bank 4/5
+	Type: DDR3
+	Type Detail: Synchronous
+	Speed: 1334 MT/s
+	Manufacturer: 859B            
+	Serial Number: 00000000        
+	Asset Tag: 0E08
+	Part Number: CT51264BF1339.C16F
+	Rank: Unknown
+
+Handle 0x0030, DMI type 17, 28 bytes
+Memory Device
+	Array Handle: 0x002C
+	Error Information Handle: No Error
+	Total Width: Unknown
+	Data Width: Unknown
+	Size: No Module Installed
+	Form Factor: SODIMM
+	Set: None
+	Locator: DIMM 4
+	Bank Locator: Bank 6/7
+	Type: Unknown
+	Type Detail: Synchronous
+	Speed: Unknown
+	Manufacturer:                 
+	Serial Number:                 
+	Asset Tag:     
+	Part Number:                   
+	Rank: Unknown
+
+Handle 0x0031, DMI type 18, 23 bytes
+Unsupported
+	Header and Data:
+		12 17 31 00 03 02 02 00 00 00 00 00 00 00 80 00
+		00 00 80 00 00 00 80
+
+Handle 0x0032, DMI type 19, 15 bytes
+Unsupported
+	Header and Data:
+		13 0F 32 00 00 00 00 00 FF FF 7F 00 2C 00 02
+
+Handle 0x0033, DMI type 20, 19 bytes
+Unsupported
+	Header and Data:
+		14 13 33 00 00 00 00 00 FF FF 3F 00 2D 00 32 00
+		01 00 00
+
+Handle 0x0034, DMI type 20, 19 bytes
+Unsupported
+	Header and Data:
+		14 13 34 00 FF FF 3F 00 FF FF 3F 00 2E 00 32 00
+		01 00 00
+
+Handle 0x0035, DMI type 21, 7 bytes
+Unsupported
+	Header and Data:
+		15 07 35 00 05 04 03
+
+Handle 0x0036, DMI type 21, 7 bytes
+Unsupported
+	Header and Data:
+		15 07 36 00 07 04 00
+
+Handle 0x0037, DMI type 22, 26 bytes
+Unsupported
+	Header and Data:
+		16 1A 37 00 01 02 00 00 03 02 8A 21 30 2A 04 FF
+		9C 62 37 44 05 0A 00 00 00 00
+	Strings:
+		Rear
+		SANYO
+		45N1173
+		03.01
+		LION
+
+Handle 0x0038, DMI type 126, 26 bytes
+Inactive
+
+Handle 0x0039, DMI type 24, 5 bytes
+Unsupported
+	Header and Data:
+		18 05 39 00 03
+
+Handle 0x003A, DMI type 32, 11 bytes
+Unsupported
+	Header and Data:
+		20 0B 3A 00 00 00 00 00 00 00 00
+
+Handle 0x003B, DMI type 131, 17 bytes
+OEM-specific Type
+	Header and Data:
+		83 11 3B 00 01 02 03 FF FF 1F 00 00 00 00 00 03
+		00
+	Strings:
+		BOOTINF 20h
+		BOOTDEV 21h
+		KEYPTRS 23h
+
+Handle 0x003C, DMI type 131, 22 bytes
+OEM-specific Type
+	Header and Data:
+		83 16 3C 00 01 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 01
+	Strings:
+		TVT-Enablement
+
+Handle 0x003D, DMI type 132, 7 bytes
+OEM-specific Type
+	Header and Data:
+		84 07 3D 00 02 C0 36
+
+Handle 0x003E, DMI type 133, 5 bytes
+OEM-specific Type
+	Header and Data:
+		85 05 3E 00 01
+	Strings:
+		KHOIHGIUCCHHII
+
+Handle 0x003F, DMI type 134, 13 bytes
+OEM-specific Type
+	Header and Data:
+		86 0D 3F 00 23 05 10 20 00 00 00 00 00
+
+Handle 0x0040, DMI type 134, 16 bytes
+OEM-specific Type
+	Header and Data:
+		86 10 40 00 00 53 54 4D 20 01 01 00 00 02 01 02
+	Strings:
+		TPM INFO
+		System Reserved
+
+Handle 0x0041, DMI type 135, 13 bytes
+OEM-specific Type
+	Header and Data:
+		87 0D 41 00 54 50 07 00 01 00 00 00 00
+
+Handle 0x0042, DMI type 135, 18 bytes
+OEM-specific Type
+	Header and Data:
+		87 12 42 00 54 50 07 01 01 C1 00 00 00 00 00 00
+		00 00
+
+Handle 0x0043, DMI type 135, 58 bytes
+OEM-specific Type
+	Header and Data:
+		87 3A 43 00 54 50 07 02 42 41 59 20 49 2F 4F 20
+		02 00 04 FF 00 00 00 00 00 00 00 FF 00 00 00 00
+		00 00 00 FF 00 00 00 00 00 00 00 FF 00 00 00 00
+		00 00 00 06 00 02 FF FF 03 03
+
+Handle 0x0044, DMI type 135, 30 bytes
+OEM-specific Type
+	Header and Data:
+		87 1E 44 00 54 50 07 04 01 05 01 01 02 00 02 01
+		02 00 03 01 02 00 05 01 02 00 06 01 02 00
+
+Handle 0x0045, DMI type 135, 10 bytes
+OEM-specific Type
+	Header and Data:
+		87 0A 45 00 54 50 07 03 01 01
+
+Handle 0x0046, DMI type 136, 6 bytes
+OEM-specific Type
+	Header and Data:
+		88 06 46 00 5A 5A
+
+Handle 0x0047, DMI type 140, 67 bytes
+OEM-specific Type
+	Header and Data:
+		8C 43 47 00 4C 45 4E 4F 56 4F 0B 00 01 E8 0C 21
+		2C 33 BD 65 F7 9E 78 FE 64 5B C3 15 F7 01 00 08
+		96 7D FE C6 49 BB 28 80 13 8B 12 33 01 2B B6 01
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0048, DMI type 140, 47 bytes
+OEM-specific Type
+	Header and Data:
+		8C 2F 48 00 4C 45 4E 4F 56 4F 0B 01 01 09 00 08
+		CC 65 68 9A 05 A1 ED A8 91 0C 05 28 22 5E 77 00
+		00 00 00 10 00 10 00 10 01 D0 00 20 01 00 01
+
+Handle 0x0049, DMI type 140, 63 bytes
+OEM-specific Type
+	Header and Data:
+		8C 3F 49 00 4C 45 4E 4F 56 4F 0B 02 01 00 00 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+Handle 0x004A, DMI type 140, 17 bytes
+OEM-specific Type
+	Header and Data:
+		8C 11 4A 00 4C 45 4E 4F 56 4F 0B 03 01 00 00 00
+		00
+
+Handle 0x004B, DMI type 140, 19 bytes
+OEM-specific Type
+	Header and Data:
+		8C 13 4B 00 4C 45 4E 4F 56 4F 0B 04 01 B2 00 53
+		4D 20 00
+
+Handle 0x004C, DMI type 140, 19 bytes
+OEM-specific Type
+	Header and Data:
+		8C 13 4C 00 4C 45 4E 4F 56 4F 0B 05 01 07 00 00
+		00 53 55
+
+Handle 0x004D, DMI type 140, 23 bytes
+OEM-specific Type
+	Header and Data:
+		8C 17 4D 00 4C 45 4E 4F 56 4F 0B 06 01 7E 14 00
+		00 00 00 00 00 00 00
+
+Handle 0x004E, DMI type 129, 8 bytes
+OEM-specific Type
+	Header and Data:
+		81 08 4E 00 01 01 02 01
+	Strings:
+		Intel_ASF
+		Intel_ASF_001
+
+Handle 0x004F, DMI type 130, 20 bytes
+OEM-specific Type
+	Header and Data:
+		82 14 4F 00 24 41 4D 54 01 01 01 01 01 A5 8B 02
+		00 00 01 00
+
+Handle 0x0050, DMI type 131, 64 bytes
+OEM-specific Type
+	Header and Data:
+		83 40 50 00 35 00 00 00 00 00 00 00 00 00 00 00
+		F8 00 07 3B 00 00 00 00 09 41 6C 06 00 00 06 00
+		B8 04 1F 00 01 00 01 02 C8 00 EA 10 00 00 00 00
+		00 00 00 00 3E 00 00 00 76 50 72 6F 00 00 00 00
+
+Handle 0x0051, DMI type 127, 4 bytes
+End Of Table
+
