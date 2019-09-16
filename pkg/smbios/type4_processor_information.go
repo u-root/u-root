@@ -213,7 +213,7 @@ func (pi *ProcessorInformation) String() string {
 			"SS (Self-snoop)",
 			"HTT (Multi-threading)",
 			"TM (Thermal monitor supported)",
-			"", /* 30 */
+			"",                            /* 30 */
 			"PBE (Pending break enabled)", /* 31 */
 		} {
 			if edx&(1<<uint(n)) != 0 && s != "" {
