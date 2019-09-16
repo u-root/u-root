@@ -48,7 +48,7 @@ func registerFlags() *options {
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
-	flag.StringSliceVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
+	flag.StringArrayVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
 	return o
 }
 
