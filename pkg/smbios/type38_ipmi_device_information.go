@@ -116,5 +116,5 @@ func (v BMCInterfaceType) String() string {
 	case BMCInterfaceTypeSSIFSMBusSystemInterface:
 		return "SSIF (SMBus System Interface)"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }

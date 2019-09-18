@@ -267,7 +267,7 @@ func (v MemoryDeviceFormFactor) String() string {
 	case MemoryDeviceFormFactorFBDIMM:
 		return "FB-DIMM"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // MemoryDeviceType is defined in DSP0134 7.18.2.
@@ -364,7 +364,7 @@ func (v MemoryDeviceType) String() string {
 	case MemoryDeviceTypeLogicalNonvolatileDevice:
 		return "Logical non-volatile device"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // MemoryDeviceTypeDetail is defined in DSP0134 7.18.3.
@@ -473,7 +473,7 @@ func (v MemoryDeviceTechnology) String() string {
 	case MemoryDeviceTechnologyIntelPersistentMemory:
 		return "Intel persistent memory"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // MemoryDeviceOperatingModeCapability is defined in DSP0134 7.18.7.

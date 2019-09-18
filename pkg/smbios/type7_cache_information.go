@@ -199,7 +199,7 @@ func (v CacheErrorCorrectionType) String() string {
 	case CacheErrorCorrectionTypeMultibitECC:
 		return "Multi-bit ECC"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // CacheSystemType is defined in DSP0134 7.8.4.
@@ -227,7 +227,7 @@ func (v CacheSystemType) String() string {
 	case CacheSystemTypeUnified:
 		return "Unified"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // CacheAssociativity is defined in DSP0134 7.8.5.
@@ -282,5 +282,5 @@ func (v CacheAssociativity) String() string {
 	case CacheAssociativity20waySetAssociative:
 		return "20-way Set-associative"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }

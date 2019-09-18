@@ -11,7 +11,7 @@
  	Number Of Power Cords: 1
  	Contained Elements: 1
 -		<OUT OF SPEC> (0)
-+		0 0-0
++		0x0 0-0
  	SKU Number: To be filled by O.E.M.
  
  Handle 0x0004, DMI type 8, 9 bytes

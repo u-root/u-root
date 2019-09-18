@@ -157,5 +157,5 @@ func (v BoardType) String() string {
 	case BoardTypeInterconnectBoard:
 		return "Interconnect board"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
