@@ -20,6 +20,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -31,11 +32,17 @@ import (
 )
 
 var (
-	outPath = flag.String("O", "", "output file")
+	noCheckCert = flag.Bool("no-check-certificate", false, "Disables checking HTTPS certificates")
+	outPath     = flag.String("O", "", "output file")
 )
 
 func wget(arg, fileName string) error {
-	resp, err := http.Get(arg)
+	transCfg := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: *noCheckCert},
+	}
+	client := &http.Client{Transport: transCfg}
+
+	resp, err := client.Get(arg)
 	if err != nil {
 		return err
 	}
