@@ -25,7 +25,7 @@ func testMultiboot(t *testing.T, kernel string) {
 
 	src := fmt.Sprintf("/home/circleci/%v", kernel)
 	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
-		t.Skip("multiboot kernel is not present")
+		t.Skipf("multiboot kernel %q is not present", src)
 	}
 
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{

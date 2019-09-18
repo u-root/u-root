@@ -19,13 +19,15 @@ RUN sudo apt-get update &&                          \
         libfdt-dev                                  \
         libpixman-1-dev                             \
         zlib1g-dev                                  \
-	libcap-dev                                  \
-	libattr1-dev                                \
+        libcap-dev                                  \
+        libattr1-dev                                \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
         gcc-multilib                                \
-        gzip &&                                     \
+        gzip                                        \
+        `# sane debugging`                          \
+        bash &&                                     \
     sudo rm -rf /var/lib/apt/lists/*
 
 # Create working directory
@@ -72,7 +74,31 @@ RUN set -eux;                                                          \
     gzip -k kernel;                                                    \
     rm -rf multiboot-test-kernel/
 
+RUN set -eux;                                                          \
+    go get -u github.com/u-root/u-root;                                \
+    mkdir rootfs;                                                      \
+    u-root -build=bb -format=dir -o ./rootfs                           \
+      -defaultsh /bin/bash                                             \
+      -files /usr/local/go -files /usr/local/go/bin/go                 \
+      -files /home/circleci -files /home/circleci/qemu-system-x86_64   \
+      -files /bin/bash
+
+# We used the above to build everything. Let's build a tiny image that just has
+# the things we need to survive.
+FROM scratch AS release
+
+# unpack u-root initramfs at the root
+COPY --from=0 /home/circleci/rootfs /
+
 # Export paths to binaries.
+ENV GOPATH /go
+ENV GOROOT /usr/local/go
+ENV CGO_ENABLED 0
+ENV PATH /bbin:/bin:/usr/local/go/bin:/home/circleci/.local/bin:/usr/bin
+ENV HOME /home/circleci
+
 ENV UROOT_KERNEL /home/circleci/bzImage
 ENV UROOT_QEMU "/home/circleci/qemu-system-x86_64 -L /home/circleci/pc-bios -m 1G"
 ENV UROOT_TESTARCH amd64
+
+CMD ["elvish"]
