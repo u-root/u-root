@@ -1,10 +1,14 @@
 version: 2
 
 templates:
-  golang-template: &golang-template
-    docker:
-      - image: uroottest/test-image-amd64:v3.2.7
+  base-template: &base-template
     working_directory: /go/src/github.com/u-root/u-root
+    docker:
+      - image: circleci/golang:1.12
+  test-template: &test-template
+    working_directory: /go/src/github.com/u-root/u-root
+    docker:
+      - image: uroottest/test-image-amd64:chris-v3.2.8-test
     environment:
       - CGO_ENABLED: 0
       # Double all timeouts for QEMU VM tests since they run without KVM.
@@ -23,38 +27,31 @@ templates:
 
 workflows:
   version: 2
-  build_and_test:
+  clean_stuff:
     jobs:
       - clean-code
-      - test:
-          requires:
-            - clean-code
-      - test-integration-amd64:
-          requires:
-            - clean-code
-      - test-integration-arm:
-          requires:
-            - clean-code
-      - race:
-          requires:
-            - clean-code
-      - compile_cmds:
-          requires:
-            - clean-code
-      - check_licenses:
-          requires:
-            - clean-code
+      - check_licenses
+  build_and_test:
+    jobs:
+      - test
+      - test-integration-amd64
+      - test-integration-arm
+      - compile_cmds
+  race:
+    jobs:
+      - race
 jobs:
   clean-code:
-    <<: *golang-template
+    <<: *base-template
     steps:
       - checkout
       - run:
           name: Install dep
           command: |
+            #go build ./cmds/core/wget
             wget https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
             mv dep-linux-amd64 dep
-            chmod +x dep
+            chmod 0755 dep
       - run:
           name: Install gometalinter
           command: |
@@ -101,8 +98,28 @@ jobs:
       - run:
           name: ineffassign
           command: ineffassign .
+  check_licenses:
+    <<: *base-template
+    steps:
+      - checkout
+      - run:
+          name: Check licenses
+          command: go run tools/checklicenses/checklicenses.go -c tools/checklicenses/config.json
+  race:
+    # This intentionally does not use the template that has integration stuff
+    # available.
+    #
+    # The integration tests should not run under the race detector.
+    <<: *base-template
+    environment:
+      - CGO_ENABLED: 1
+    steps:
+      - checkout
+      - run:
+          name: Race detector
+          command: go test -race ./cmds/... ./pkg/...
   test:
-    <<: *golang-template
+    <<: *test-template
     steps:
       - checkout
       - run:
@@ -112,17 +129,8 @@ jobs:
       - run:
           name: Test coverage
           command: go test -cover ./cmds/... ./pkg/...
-  race:
-    <<: *golang-template
-    environment:
-      - CGO_ENABLED: 1
-    steps:
-      - checkout
-      - run:
-          name: Race detector
-          command: go test -race ./cmds/... ./pkg/...
   compile_cmds:
-    <<: *golang-template
+    <<: *test-template
     steps:
       - checkout
       - run:
@@ -132,22 +140,18 @@ jobs:
             go install -a ./...
             cd ../tools
             go install -a ./...
-  check_licenses:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Check licenses
-          command: go run tools/checklicenses/checklicenses.go -c tools/checklicenses/config.json
   check_symlinks:
-    <<: *golang-template
+    <<: *test-template
     steps:
       - checkout
       - run:
           name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -build=bb -files /tmp/usr minimal
+          command: |
+            mkdir /tmp/usr
+            ln -s /tmp/usr/x /tmp/usr/y
+            go run u-root.go -build=bb -files /tmp/usr minimal
   check_templates:
-    <<: *golang-template
+    <<: *test-template
     steps:
       - checkout
       - run:
@@ -167,7 +171,7 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.7
+      - image: uroottest/test-image-amd64:chris-v3.2.8-test
   test-integration-arm:
     <<: *integration-template
     docker:
