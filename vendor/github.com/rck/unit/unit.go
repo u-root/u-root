@@ -211,3 +211,6 @@ func (s *Value) Set(str string) error {
 	s.IsSet = true
 	return nil
 }
+
+// Type implements pflag.Value.Type.
+func (s *Value) Type() string { return "unit" }

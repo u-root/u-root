@@ -503,9 +503,7 @@ func TestAppendFile(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
 			s := tt.schemeFunc()
-
-			par := newParser(tt.wd)
-			par.schemes = s
+			par := newParserWithSchemes(tt.wd, s)
 
 			if err := par.appendFile(tt.configFileURI); !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)

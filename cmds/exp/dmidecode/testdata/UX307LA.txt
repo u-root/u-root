@@ -1,0 +1,298 @@
+Handle 0x0000, DMI type 0, 24 bytes
+BIOS Information
+	Vendor: American Megatrends Inc.
+	Version: UX305LA.206
+	Release Date: 08/03/2015
+	ROM Size: 6464 kB
+	Characteristics:
+		PCI is supported
+		BIOS is upgradeable (Flash)
+		BIOS shadowing is allowed
+		Boot from CD is supported
+		Selectable boot is supported
+		BIOS ROM is socketed
+		EDD specification is supported
+		5.25"/1.2 MB floppy services are supported
+		3.5"/720 KB floppy services are supported
+		3.5"/2.88 MB floppy services are supported
+		Int 5h, print screen Service is supported
+		Int 9h, 8042 keyboard services are supported
+		Int 14h, serial services are supported
+		Int 17h, printer services are supported
+		ACPI is supported
+		USB Legacy is supported
+		Smart battery is supported
+		BIOS Boot Specification is supported
+		Targeted content distribution is supported
+		UEFI Specification is supported
+	BIOS Revision: 5.6
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Product Name: UX305LA
+	Version: 1.0       
+	Serial Number: FCN0CJ03468352B     
+	UUID: 850F3E82-9F38-694A-8840-2F8B0CF5D3D0
+	Wake-up Type: Power Switch
+	SKU Number: ASUS-NotebookSKU
+	Family: UX
+
+Handle 0x0002, DMI type 2, 15 bytes
+Unsupported
+	Header and Data:
+		02 0F 02 00 01 02 03 04 05 09 06 03 00 0A 00
+	Strings:
+		ASUSTeK COMPUTER INC.
+		UX305LA
+		1.0       
+		BSN12345678901234567
+		ATN12345678901234567
+		MIDDLE              
+
+Handle 0x0003, DMI type 3, 25 bytes
+Unsupported
+	Header and Data:
+		03 19 03 00 01 0A 02 03 04 03 03 03 03 00 00 00
+		00 00 01 01 03 00 00 00 05
+	Strings:
+		ASUSTeK COMPUTER INC.
+		1.0       
+		FCN0CJ03468352B     
+		ATN12345678901234567
+		To be filled by O.E.M.
+
+Handle 0x0004, DMI type 10, 26 bytes
+Unsupported
+	Header and Data:
+		0A 1A 04 00 83 01 85 02 85 03 87 04 89 05 81 06
+		81 07 81 08 81 09 81 0A 81 0B
+	Strings:
+		 VGA
+		 GLAN
+		 WLAN
+		 Audio CODEC 
+		 SATA Controller
+		 USB 2.0 Controller
+		 USB 3.0 Controller
+		 SMBus Controller
+		 Card Reader
+		 Cmos Camera
+		 Bluetooth
+
+Handle 0x0005, DMI type 11, 5 bytes
+Unsupported
+	Header and Data:
+		0B 05 05 00 0A
+	Strings:
+		             
+		             
+		             
+		90NB08T5-M04040
+		 
+		 
+		 
+		 
+		 
+		 
+
+Handle 0x000c, DMI type 32, 20 bytes
+Unsupported
+	Header and Data:
+		20 14 0C 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00
+
+Handle 0x000d, DMI type 7, 19 bytes
+Unsupported
+	Header and Data:
+		07 13 0D 00 01 80 01 20 00 20 00 20 00 20 00 00
+		04 04 07
+	Strings:
+		L1 Cache
+
+Handle 0x000e, DMI type 7, 19 bytes
+Unsupported
+	Header and Data:
+		07 13 0E 00 01 80 01 20 00 20 00 20 00 20 00 00
+		04 03 07
+	Strings:
+		L1 Cache
+
+Handle 0x000f, DMI type 7, 19 bytes
+Unsupported
+	Header and Data:
+		07 13 0F 00 01 81 01 00 01 00 01 20 00 20 00 00
+		05 05 07
+	Strings:
+		L2 Cache
+
+Handle 0x0010, DMI type 7, 19 bytes
+Unsupported
+	Header and Data:
+		07 13 10 00 01 82 01 00 10 00 10 20 00 20 00 00
+		06 05 08
+	Strings:
+		L3 Cache
+
+Handle 0x0011, DMI type 4, 42 bytes
+Unsupported
+	Header and Data:
+		04 2A 11 00 01 03 C6 02 D4 06 03 00 FF FB EB BF
+		03 89 64 00 60 09 60 09 41 2E 0E 00 0F 00 10 00
+		04 05 06 02 02 04 FC 00 C6 00
+	Strings:
+		SOCKET 0
+		Intel(R) Corporation
+		Intel(R) Core(TM) i7-5500U CPU @ 2.40GHz
+		NULL
+		To Be Filled By O.E.M
+		To Be Filled By O.E.M
+
+Handle 0x0012, DMI type 221, 12 bytes
+OEM-specific Type
+	Header and Data:
+		DD 0C 12 00 01 01 00 02 06 00 00 00
+	Strings:
+		Reference Code - ACPI
+
+Handle 0x0013, DMI type 16, 23 bytes
+Unsupported
+	Header and Data:
+		10 17 13 00 03 03 03 00 00 00 01 FE FF 02 00 00
+		00 00 00 00 00 00 00
+
+Handle 0x0014, DMI type 17, 34 bytes
+Unsupported
+	Header and Data:
+		11 22 14 00 13 00 FE FF 40 00 40 00 00 10 0D 00
+		01 02 1D 80 00 40 06 03 04 05 06 02 00 00 00 00
+		40 06
+	Strings:
+		ChannelA-DIMM0
+		BANK 0
+		Elpida
+		00000000
+		9876543210
+		                  
+
+Handle 0x0015, DMI type 17, 34 bytes
+Unsupported
+	Header and Data:
+		11 22 15 00 13 00 FE FF 40 00 40 00 00 10 0D 00
+		01 02 1D 80 00 40 06 03 04 05 06 02 00 00 00 00
+		40 06
+	Strings:
+		ChannelB-DIMM0
+		BANK 2
+		Elpida
+		00000000
+		9876543210
+		                  
+
+Handle 0x0016, DMI type 19, 31 bytes
+Unsupported
+	Header and Data:
+		13 1F 16 00 00 00 00 00 FF FF 7F 00 13 00 02 00
+		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+Handle 0x0017, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 17 00 00 00 00 00 FF FF 3F 00 15 00 16 00
+		FF 01 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0018, DMI type 20, 35 bytes
+Unsupported
+	Header and Data:
+		14 23 18 00 00 00 40 00 FF FF 7F 00 15 00 16 00
+		FF 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00
+
+Handle 0x0019, DMI type 221, 54 bytes
+OEM-specific Type
+	Header and Data:
+		DD 36 19 00 07 01 00 02 06 00 00 00 02 00 02 06
+		00 00 00 03 00 02 06 00 00 00 04 05 FF FF FF FF
+		FF 06 00 FF FF FF 09 00 07 00 FF FF FF 09 00 08
+		00 FF FF FF FF FF
+	Strings:
+		Reference Code - SA - System Agent
+		Reference Code - MRC
+		SA - PCIe Version
+		SA-CRID Status
+		Disabled
+		SA-CRID Original Value
+		SA-CRID New Value
+		OPROM - VBIOS
+
+Handle 0x001a, DMI type 221, 26 bytes
+OEM-specific Type
+	Header and Data:
+		DD 1A 1A 00 03 01 00 02 06 00 00 00 02 00 FF FF
+		FF FF 00 03 04 0A 00 26 E8 03
+	Strings:
+		Reference Code - ME 10.0
+		MEBx version
+		ME Firmware Version
+		1.5MB SKU
+
+Handle 0x001b, DMI type 221, 68 bytes
+OEM-specific Type
+	Header and Data:
+		DD 44 1B 00 09 01 00 02 06 00 00 00 02 03 FF FF
+		FF FF FF 04 00 FF FF FF 03 00 05 00 FF FF FF 03
+		00 06 00 FF FF FF FF FF 07 00 19 00 00 00 00 08
+		00 2C 00 00 00 00 09 00 03 00 00 00 00 0A 00 01
+		00 00 00 00
+	Strings:
+		Reference Code - PCH - Lynxpoint
+		PCH-CRID Status
+		Disabled
+		PCH-CRID Original Value
+		PCH-CRID New Value
+		OPROM - RST - RAID
+		LPTLp Bx Hsio Version
+		LPTH Cx Hsio Version
+		PCH9S A0 Hsio Version
+		WPTLp B0 Hsio Version
+
+Handle 0x001c, DMI type 221, 26 bytes
+OEM-specific Type
+	Header and Data:
+		DD 1A 1C 00 03 01 00 02 06 00 00 00 02 00 00 00
+		00 1D 00 03 00 00 05 00 00 00
+	Strings:
+		Reference Code - CPU
+		uCode Version
+		TXT ACM version
+
+Handle 0x001d, DMI type 13, 22 bytes
+Unsupported
+	Header and Data:
+		0D 16 1D 00 01 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00 00 01
+	Strings:
+		en|US|iso8859-1
+
+Handle 0x001e, DMI type 131, 64 bytes
+OEM-specific Type
+	Header and Data:
+		83 40 1E 00 31 00 00 00 00 00 00 00 00 00 00 00
+		F8 00 C3 9C 00 00 00 00 01 40 00 00 00 00 0A 00
+		E8 03 26 00 00 00 00 00 C8 00 FF FF 00 00 00 00
+		00 00 00 00 26 00 00 00 76 50 72 6F 00 00 00 00
+
+Handle 0x001f, DMI type 14, 20 bytes
+Unsupported
+	Header and Data:
+		0E 14 1F 00 01 DD 12 00 DD 19 00 DD 1A 00 DD 1B
+		00 DD 1C 00
+	Strings:
+		Firmware Version Info
+
+Handle 0x0020, DMI type 127, 4 bytes
+End Of Table
+	Header and Data:
+		7F 04 20 00
+

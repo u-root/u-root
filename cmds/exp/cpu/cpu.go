@@ -42,7 +42,6 @@ var (
 	v         = func(string, ...interface{}) {}
 	remote    = flag.Bool("remote", false, "indicates we are the remote side of the cpu session")
 	network   = flag.String("network", "tcp", "network to use")
-	host      = flag.String("h", "localhost", "host to use")
 	keyFile   = flag.String("key", filepath.Join(os.Getenv("HOME"), ".ssh/cpu_rsa"), "key file")
 	srv9p     = flag.String("srv", "unpfs", "what server to run")
 	bin       = flag.String("bin", "cpu", "path of cpu binary")
@@ -261,12 +260,12 @@ func forward(l net.Listener, s net.Conn) error {
 }
 
 // To make sure defer gets run and you tty is sane on exit
-func runClient(a string) error {
+func runClient(host, a string) error {
 	c, err := config(*keyFile)
 	if err != nil {
 		return err
 	}
-	cl, err := dial(*network, *host+":"+*port, c)
+	cl, err := dial(*network, host+":"+*port, c)
 	if err != nil {
 		return err
 	}
@@ -500,7 +499,7 @@ func doInit() error {
 	if err := cpuSetup(); err != nil {
 		log.Printf("CPU setup error with cpu running as init: %v", err)
 	}
-	cmds := [][]string{{"/bin/defaultsh"}, {"/bbin/dhclient", "-verbose"}}
+	cmds := [][]string{{"/bin/defaultsh"}, {"/bbin/dhclient", "-v"}}
 	verbose("Try to run %v", cmds)
 
 	for _, v := range cmds {
@@ -585,9 +584,18 @@ func doInit() error {
 	return nil
 }
 
+// TODO: we've been tryinmg to figure out the right way to do usage for years.
+// If this is a good way, it belongs in the uroot package.
+func usage() {
+	var b bytes.Buffer
+	flag.CommandLine.SetOutput(&b)
+	flag.PrintDefaults()
+	log.Fatalf("Usage: cpu [options] host [shell command]:\n%v", b.String())
+}
+
 func main() {
 	verbose("Args %v pid %d *runasinit %v *remote %v", os.Args, os.Getpid(), *runAsInit, *remote)
-	a := strings.Join(flag.Args(), " ")
+	args := flag.Args()
 	switch {
 	case *runAsInit:
 		verbose("Running as Init")
@@ -596,15 +604,20 @@ func main() {
 		}
 	case *remote:
 		verbose("Running as remote")
-		if err := runRemote(a, *port9p); err != nil {
+		if err := runRemote(strings.Join(flag.Args(), " "), *port9p); err != nil {
 			log.Fatal(err)
 		}
 	default:
+		if len(args) == 0 {
+			usage()
+		}
+		host := args[0]
+		a := strings.Join(args[1:], " ")
 		verbose("Running as client")
 		if a == "" {
 			a = os.Getenv("SHELL")
 		}
-		if err := runClient(a); err != nil {
+		if err := runClient(host, a); err != nil {
 			log.Fatal(err)
 		}
 	}
