@@ -8,6 +8,7 @@ FROM circleci/golang:1.12
 RUN sudo apt-get update &&                          \
     sudo apt-get install -y --no-install-recommends \
         `# Linux dependencies`                      \
+        bash                                        \
         git                                         \
         bc                                          \
         bison                                       \
@@ -19,8 +20,8 @@ RUN sudo apt-get update &&                          \
         libfdt-dev                                  \
         libpixman-1-dev                             \
         zlib1g-dev                                  \
-	libcap-dev                                  \
-	libattr1-dev                                \
+        libcap-dev                                  \
+        libattr1-dev                                \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
@@ -76,3 +77,6 @@ RUN set -eux;                                                          \
 ENV UROOT_KERNEL /home/circleci/bzImage
 ENV UROOT_QEMU "/home/circleci/qemu-system-x86_64 -L /home/circleci/pc-bios -m 1G"
 ENV UROOT_TESTARCH amd64
+
+USER root
+CMD ["/bin/bash"]
