@@ -12,13 +12,14 @@ import (
 )
 
 func TestDmesg(t *testing.T) {
-	if uid := os.Getuid(); uid != 0 {
-		t.Skipf("test requires root on CircleCI, your uid is %d", uid)
+	if os.Getenv("IS_CIRCLECI") == "1" {
+		t.Skipf("test skipped on circleci, which doesn't allow access to dmesg at all")
 	}
 
 	cmd := testutil.Command(t)
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	if err != nil || len(out) == 0 {
+		t.Logf("Output: %s", string(out))
 		t.Fatal(err)
 	}
 }

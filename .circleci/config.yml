@@ -5,17 +5,21 @@ templates:
     working_directory: /go/src/github.com/u-root/u-root
     docker:
       - image: circleci/golang:1.12
+    environment:
+      - IS_CIRCLECI: 1
   test-template: &test-template
     working_directory: /go/src/github.com/u-root/u-root
     docker:
       - image: uroottest/test-image-amd64:chris-v3.2.8-test
     environment:
+      - IS_CIRCLECI: 1
       - CGO_ENABLED: 0
       # Double all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 2
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
+      - IS_CIRCLECI: 1
       - CGO_ENABLED: 0
       # Double all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 2
@@ -113,6 +117,7 @@ jobs:
     <<: *base-template
     environment:
       - CGO_ENABLED: 1
+      - IS_CIRCLECI: 1
     steps:
       - checkout
       - run:
