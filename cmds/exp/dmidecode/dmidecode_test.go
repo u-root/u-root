@@ -36,13 +36,13 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 	defer resetFlags()
 	out := bytes.NewBuffer(nil)
 	if err := dmiDecode(out); err != nil {
-		t.Errorf("%+v %+v %+v: error: %s", dumpFile, args, expectedOutFile, err)
+		t.Errorf("%+v %+v %+v: error: %v", dumpFile, args, expectedOutFile, err)
 		return
 	}
 	actualOut := out.Bytes()
 	expectedOut, err := ioutil.ReadFile(expectedOutFile)
 	if err != nil {
-		t.Errorf("%+v %+v %+v: failed to load %s: %s", dumpFile, args, expectedOutFile, expectedOutFile, err)
+		t.Errorf("%+v %+v %+v: failed to load %s: %v", dumpFile, args, expectedOutFile, expectedOutFile, err)
 		return
 	}
 	if bytes.Compare(actualOut, expectedOut) != 0 {
@@ -69,7 +69,7 @@ func TestDMIDecodeTypeFilters(t *testing.T) {
 func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {
 	tmpfile, err := ioutil.TempFile("", "dmidecode")
 	if err != nil {
-		t.Fatalf("error creating temp file: %s", err)
+		t.Fatalf("error creating temp file: %v", err)
 	}
 	tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
@@ -80,11 +80,11 @@ func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {
 		[]byte{0xaa, 0xbb}, // dummy
 		tmpfile.Name(),
 	); err != nil {
-		t.Fatalf("failed to dump bin: %s", err)
+		t.Fatalf("failed to dump bin: %v", err)
 	}
 	outData, err := ioutil.ReadFile(tmpfile.Name())
 	if err != nil {
-		t.Fatalf("failed to read output: %s", err)
+		t.Fatalf("failed to read output: %v", err)
 	}
 	if bytes.Compare(outData, expectedOutData) != 0 {
 		t.Fatalf("binary data mismatch,\nexpected:\n  %s\ngot:\n  %s", hex.EncodeToString(expectedOutData), hex.EncodeToString(outData))
