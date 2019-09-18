@@ -24,29 +24,29 @@ func TestFields(t *testing.T) {
 		},
 		{
 			data: `"foo bar" baz`,
-			want: []string{`"foo bar"`, "baz"},
+			want: []string{`foo bar`, "baz"},
 		},
 		{
 			data: `"foo\tbar" baz`,
-			want: []string{`"foo\tbar"`, "baz"},
+			want: []string{`foo\tbar`, "baz"},
 		},
 		{
 			data: `foo "bar baz"`,
-			want: []string{"foo", `"bar baz"`},
+			want: []string{"foo", `bar baz`},
 		},
 		{
 			data: `foo "bar' baz`,
-			want: []string{"foo", `"bar' baz`},
+			want: []string{"foo", `bar' baz`},
 		},
 		{
 			data: `foo bar "baz`,
-			want: []string{"foo", "bar", `"baz`},
+			want: []string{"foo", "bar", `baz`},
 		},
 	} {
 		t.Run(test.data, func(t *testing.T) {
 			got := fields(test.data)
 			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("fields() got %v, want %v", got, test.want)
+				t.Errorf("fields() got %#v, want %#v", got, test.want)
 			}
 		})
 	}
