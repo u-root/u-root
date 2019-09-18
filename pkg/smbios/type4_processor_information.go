@@ -285,7 +285,7 @@ func (v ProcessorType) String() string {
 	case ProcessorTypeVideoProcessor:
 		return "Video Processor"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // ProcessorFamily is defined in DSP0134 7.5.2.
@@ -934,7 +934,7 @@ func (v ProcessorFamily) String() string {
 	case ProcessorFamilyVideoProcessor:
 		return "Video Processor"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // ProcessorStatus is defined in DSP0134 7.5.
@@ -1141,7 +1141,7 @@ func (v ProcessorUpgrade) String() string {
 	case ProcessorUpgradeSocketBGA1528:
 		return "Socket BGA1528"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // ProcessorCharacteristics values are defined in DSP0134 7.5.9.

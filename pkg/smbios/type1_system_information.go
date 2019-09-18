@@ -133,5 +133,5 @@ func (v WakeupType) String() string {
 	case WakeupTypeACPowerRestored:
 		return "AC Power Restored"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }

@@ -245,7 +245,7 @@ func (v ChassisType) String() string {
 	case ChassisTypeStickPC:
 		return "Stick PC"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // ChassisState is defined in DSP0134 7.4.2.
@@ -276,7 +276,7 @@ func (v ChassisState) String() string {
 	case ChassisStateNonrecoverable:
 		return "Non-recoverable"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // ChassisSecurityStatus is defined in DSP0134 7.4.3.
@@ -304,7 +304,7 @@ func (v ChassisSecurityStatus) String() string {
 	case ChassisSecurityStatusExternalInterfaceEnabled:
 		return "External Interface Enabled"
 	}
-	return fmt.Sprintf("%d", v)
+	return fmt.Sprintf("%#x", uint8(v))
 }
 
 // ChassisElementType is defined in DSP0134 7.4.4.

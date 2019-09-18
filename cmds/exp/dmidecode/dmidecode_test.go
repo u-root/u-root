@@ -34,7 +34,7 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 	os.Args = append(os.Args, args...)
 	flag.Parse()
 	defer resetFlags()
-	out := bytes.NewBuffer(nil)
+	out := &bytes.Buffer{}
 	if err := dmiDecode(out); err != nil {
 		t.Errorf("%+v %+v %+v: error: %v", dumpFile, args, expectedOutFile, err)
 		return
@@ -54,9 +54,12 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 }
 
 func TestDMIDecode(t *testing.T) {
-	bf, _ := filepath.Glob("testdata/*.bin")
+	bf, err := filepath.Glob("testdata/*.bin")
+	if err != nil {
+		t.Fatalf("glob failed: %v", err)
+	}
 	for _, dumpFile := range bf {
-		txtFile := strings.Replace(dumpFile, ".bin", ".txt", 1)
+		txtFile := strings.TrimSuffix(dumpFile, ".bin") + ".txt"
 		testOutput(t, dumpFile, nil, txtFile)
 	}
 }
@@ -92,7 +95,7 @@ func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {
 }
 
 func TestDMIDecodeDumpBin32(t *testing.T) {
-	// We expect entry point address to be rewritten and chcecksum adjusted.
+	// We expect entry point address to be rewritten and checksum adjusted.
 	testDumpBin(
 		t,
 		[]byte{
@@ -108,7 +111,7 @@ func TestDMIDecodeDumpBin32(t *testing.T) {
 }
 
 func TestDMIDecodeDumpBin64(t *testing.T) {
-	// We expect entry point address to be rewritten and chcecksum adjusted.
+	// We expect entry point address to be rewritten and checksum adjusted.
 	testDumpBin(
 		t,
 		[]byte{
