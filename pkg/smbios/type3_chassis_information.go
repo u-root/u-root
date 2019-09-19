@@ -262,19 +262,16 @@ const (
 )
 
 func (v ChassisState) String() string {
-	switch v {
-	case ChassisStateOther:
-		return "Other"
-	case ChassisStateUnknown:
-		return "Unknown"
-	case ChassisStateSafe:
-		return "Safe"
-	case ChassisStateWarning:
-		return "Warning"
-	case ChassisStateCritical:
-		return "Critical"
-	case ChassisStateNonrecoverable:
-		return "Non-recoverable"
+	names := map[ChassisState]string{
+		ChassisStateOther:          "Other",
+		ChassisStateUnknown:        "Unknown",
+		ChassisStateSafe:           "Safe",
+		ChassisStateWarning:        "Warning",
+		ChassisStateCritical:       "Critical",
+		ChassisStateNonrecoverable: "Non-recoverable",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -292,17 +289,15 @@ const (
 )
 
 func (v ChassisSecurityStatus) String() string {
-	switch v {
-	case ChassisSecurityStatusOther:
-		return "Other"
-	case ChassisSecurityStatusUnknown:
-		return "Unknown"
-	case ChassisSecurityStatusNone:
-		return "None"
-	case ChassisSecurityStatusExternalInterfaceLockedOut:
-		return "External Interface Locked Out"
-	case ChassisSecurityStatusExternalInterfaceEnabled:
-		return "External Interface Enabled"
+	names := map[ChassisSecurityStatus]string{
+		ChassisSecurityStatusOther:                      "Other",
+		ChassisSecurityStatusUnknown:                    "Unknown",
+		ChassisSecurityStatusNone:                       "None",
+		ChassisSecurityStatusExternalInterfaceLockedOut: "External Interface Locked Out",
+		ChassisSecurityStatusExternalInterfaceEnabled:   "External Interface Enabled",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
