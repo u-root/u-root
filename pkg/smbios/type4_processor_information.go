@@ -1149,14 +1149,14 @@ type ProcessorCharacteristics uint16
 
 // ProcessorCharacteristics fields are defined in DSP0134 x.x.x
 const (
-	ProcessorCharacteristicsReserved                ProcessorCharacteristics = (1 << 0) // Reserved
-	ProcessorCharacteristicsUnknown                                          = (1 << 1) // Unknown
-	ProcessorCharacteristics64bitCapable                                     = (1 << 2) // 64-bit Capable
-	ProcessorCharacteristicsMultiCore                                        = (1 << 3) // Multi-Core
-	ProcessorCharacteristicsHardwareThread                                   = (1 << 4) // Hardware Thread
-	ProcessorCharacteristicsExecuteProtection                                = (1 << 5) // Execute Protection
-	ProcessorCharacteristicsEnhancedVirtualization                           = (1 << 6) // Enhanced Virtualization
-	ProcessorCharacteristicsPowerPerformanceControl                          = (1 << 7) // Power/Performance Control
+	ProcessorCharacteristicsReserved                ProcessorCharacteristics = 1 << 0 // Reserved
+	ProcessorCharacteristicsUnknown                                          = 1 << 1 // Unknown
+	ProcessorCharacteristics64bitCapable                                     = 1 << 2 // 64-bit Capable
+	ProcessorCharacteristicsMultiCore                                        = 1 << 3 // Multi-Core
+	ProcessorCharacteristicsHardwareThread                                   = 1 << 4 // Hardware Thread
+	ProcessorCharacteristicsExecuteProtection                                = 1 << 5 // Execute Protection
+	ProcessorCharacteristicsEnhancedVirtualization                           = 1 << 6 // Enhanced Virtualization
+	ProcessorCharacteristicsPowerPerformanceControl                          = 1 << 7 // Power/Performance Control
 )
 
 func (v ProcessorCharacteristics) String() string {

@@ -81,11 +81,11 @@ type BoardFeatures uint8
 
 // BoardFeatures fields are defined in DSP0134 7.3.1
 const (
-	BoardFeaturesIsHotSwappable                  BoardFeatures = (1 << 4) // Set to 1 if the board is hot swappable
-	BoardFeaturesIsReplaceable                                 = (1 << 3) // Set to 1 if the board is replaceable
-	BoardFeaturesIsRemovable                                   = (1 << 2) // Set to 1 if the board is removable
-	BoardFeaturesRequiresAtLeastOneDaughterBoard               = (1 << 1) // Set to 1 if the board requires at least one daughter board or auxiliary card to function
-	BoardFeaturesIsAHostingBoard                               = (1 << 0) // Set to 1 if the board is a hosting board (for example, a motherboard)
+	BoardFeaturesIsHotSwappable                  BoardFeatures = 1 << 4 // Set to 1 if the board is hot swappable
+	BoardFeaturesIsReplaceable                                 = 1 << 3 // Set to 1 if the board is replaceable
+	BoardFeaturesIsRemovable                                   = 1 << 2 // Set to 1 if the board is removable
+	BoardFeaturesRequiresAtLeastOneDaughterBoard               = 1 << 1 // Set to 1 if the board requires at least one daughter board or auxiliary card to function
+	BoardFeaturesIsAHostingBoard                               = 1 << 0 // Set to 1 if the board is a hosting board (for example, a motherboard)
 )
 
 func (v BoardFeatures) String() string {

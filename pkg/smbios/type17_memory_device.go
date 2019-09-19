@@ -372,21 +372,21 @@ type MemoryDeviceTypeDetail uint16
 
 // MemoryDeviceTypeDetail fields are defined in DSP0134 7.18.3
 const (
-	MemoryDeviceTypeDetailOther                  = (1 << 1)  // Other
-	MemoryDeviceTypeDetailUnknown                = (1 << 2)  // Unknown
-	MemoryDeviceTypeDetailFastpaged              = (1 << 3)  // Fast-paged
-	MemoryDeviceTypeDetailStaticColumn           = (1 << 4)  // Static column
-	MemoryDeviceTypeDetailPseudostatic           = (1 << 5)  // Pseudo-static
-	MemoryDeviceTypeDetailRAMBUS                 = (1 << 6)  // RAMBUS
-	MemoryDeviceTypeDetailSynchronous            = (1 << 7)  // Synchronous
-	MemoryDeviceTypeDetailCMOS                   = (1 << 8)  // CMOS
-	MemoryDeviceTypeDetailEDO                    = (1 << 9)  // EDO
-	MemoryDeviceTypeDetailWindowDRAM             = (1 << 10) // Window DRAM
-	MemoryDeviceTypeDetailCacheDRAM              = (1 << 11) // Cache DRAM
-	MemoryDeviceTypeDetailNonvolatile            = (1 << 12) // Non-volatile
-	MemoryDeviceTypeDetailRegisteredBuffered     = (1 << 13) // Registered (Buffered)
-	MemoryDeviceTypeDetailUnbufferedUnregistered = (1 << 14) // Unbuffered (Unregistered)
-	MemoryDeviceTypeDetailLRDIMM                 = (1 << 15) // LRDIMM
+	MemoryDeviceTypeDetailOther                  = 1 << 1  // Other
+	MemoryDeviceTypeDetailUnknown                = 1 << 2  // Unknown
+	MemoryDeviceTypeDetailFastpaged              = 1 << 3  // Fast-paged
+	MemoryDeviceTypeDetailStaticColumn           = 1 << 4  // Static column
+	MemoryDeviceTypeDetailPseudostatic           = 1 << 5  // Pseudo-static
+	MemoryDeviceTypeDetailRAMBUS                 = 1 << 6  // RAMBUS
+	MemoryDeviceTypeDetailSynchronous            = 1 << 7  // Synchronous
+	MemoryDeviceTypeDetailCMOS                   = 1 << 8  // CMOS
+	MemoryDeviceTypeDetailEDO                    = 1 << 9  // EDO
+	MemoryDeviceTypeDetailWindowDRAM             = 1 << 10 // Window DRAM
+	MemoryDeviceTypeDetailCacheDRAM              = 1 << 11 // Cache DRAM
+	MemoryDeviceTypeDetailNonvolatile            = 1 << 12 // Non-volatile
+	MemoryDeviceTypeDetailRegisteredBuffered     = 1 << 13 // Registered (Buffered)
+	MemoryDeviceTypeDetailUnbufferedUnregistered = 1 << 14 // Unbuffered (Unregistered)
+	MemoryDeviceTypeDetailLRDIMM                 = 1 << 15 // LRDIMM
 )
 
 func (v MemoryDeviceTypeDetail) String() string {
@@ -481,11 +481,11 @@ type MemoryDeviceOperatingModeCapability uint16
 
 // MemoryDeviceOperatingModeCapability fields are defined in DSP0134 x.x.x
 const (
-	MemoryDeviceOperatingModeCapabilityOther                           = (1 << 1) // Other
-	MemoryDeviceOperatingModeCapabilityUnknown                         = (1 << 2) // Unknown
-	MemoryDeviceOperatingModeCapabilityVolatileMemory                  = (1 << 3) // Volatile memory
-	MemoryDeviceOperatingModeCapabilityByteaccessiblePersistentMemory  = (1 << 4) // Byte-accessible persistent memory
-	MemoryDeviceOperatingModeCapabilityBlockaccessiblePersistentMemory = (1 << 5) // Block-accessible persistent memory
+	MemoryDeviceOperatingModeCapabilityOther                           = 1 << 1 // Other
+	MemoryDeviceOperatingModeCapabilityUnknown                         = 1 << 2 // Unknown
+	MemoryDeviceOperatingModeCapabilityVolatileMemory                  = 1 << 3 // Volatile memory
+	MemoryDeviceOperatingModeCapabilityByteaccessiblePersistentMemory  = 1 << 4 // Byte-accessible persistent memory
+	MemoryDeviceOperatingModeCapabilityBlockaccessiblePersistentMemory = 1 << 5 // Block-accessible persistent memory
 )
 
 func (v MemoryDeviceOperatingModeCapability) String() string {
