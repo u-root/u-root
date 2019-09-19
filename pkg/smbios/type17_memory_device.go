@@ -235,37 +235,25 @@ const (
 )
 
 func (v MemoryDeviceFormFactor) String() string {
-	switch v {
-	case MemoryDeviceFormFactorOther:
-		return "Other"
-	case MemoryDeviceFormFactorUnknown:
-		return "Unknown"
-	case MemoryDeviceFormFactorSIMM:
-		return "SIMM"
-	case MemoryDeviceFormFactorSIP:
-		return "SIP"
-	case MemoryDeviceFormFactorChip:
-		return "Chip"
-	case MemoryDeviceFormFactorDIP:
-		return "DIP"
-	case MemoryDeviceFormFactorZIP:
-		return "ZIP"
-	case MemoryDeviceFormFactorProprietaryCard:
-		return "Proprietary Card"
-	case MemoryDeviceFormFactorDIMM:
-		return "DIMM"
-	case MemoryDeviceFormFactorTSOP:
-		return "TSOP"
-	case MemoryDeviceFormFactorRowOfChips:
-		return "Row of chips"
-	case MemoryDeviceFormFactorRIMM:
-		return "RIMM"
-	case MemoryDeviceFormFactorSODIMM:
-		return "SODIMM"
-	case MemoryDeviceFormFactorSRIMM:
-		return "SRIMM"
-	case MemoryDeviceFormFactorFBDIMM:
-		return "FB-DIMM"
+	names := map[MemoryDeviceFormFactor]string{
+		MemoryDeviceFormFactorOther:           "Other",
+		MemoryDeviceFormFactorUnknown:         "Unknown",
+		MemoryDeviceFormFactorSIMM:            "SIMM",
+		MemoryDeviceFormFactorSIP:             "SIP",
+		MemoryDeviceFormFactorChip:            "Chip",
+		MemoryDeviceFormFactorDIP:             "DIP",
+		MemoryDeviceFormFactorZIP:             "ZIP",
+		MemoryDeviceFormFactorProprietaryCard: "Proprietary Card",
+		MemoryDeviceFormFactorDIMM:            "DIMM",
+		MemoryDeviceFormFactorTSOP:            "TSOP",
+		MemoryDeviceFormFactorRowOfChips:      "Row of chips",
+		MemoryDeviceFormFactorRIMM:            "RIMM",
+		MemoryDeviceFormFactorSODIMM:          "SODIMM",
+		MemoryDeviceFormFactorSRIMM:           "SRIMM",
+		MemoryDeviceFormFactorFBDIMM:          "FB-DIMM",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -306,63 +294,38 @@ const (
 )
 
 func (v MemoryDeviceType) String() string {
-	switch v {
-	case MemoryDeviceTypeOther:
-		return "Other"
-	case MemoryDeviceTypeUnknown:
-		return "Unknown"
-	case MemoryDeviceTypeDRAM:
-		return "DRAM"
-	case MemoryDeviceTypeEDRAM:
-		return "EDRAM"
-	case MemoryDeviceTypeVRAM:
-		return "VRAM"
-	case MemoryDeviceTypeSRAM:
-		return "SRAM"
-	case MemoryDeviceTypeRAM:
-		return "RAM"
-	case MemoryDeviceTypeROM:
-		return "ROM"
-	case MemoryDeviceTypeFlash:
-		return "Flash"
-	case MemoryDeviceTypeEEPROM:
-		return "EEPROM"
-	case MemoryDeviceTypeFEPROM:
-		return "FEPROM"
-	case MemoryDeviceTypeEPROM:
-		return "EPROM"
-	case MemoryDeviceTypeCDRAM:
-		return "CDRAM"
-	case MemoryDeviceType3DRAM:
-		return "3DRAM"
-	case MemoryDeviceTypeSDRAM:
-		return "SDRAM"
-	case MemoryDeviceTypeSGRAM:
-		return "SGRAM"
-	case MemoryDeviceTypeRDRAM:
-		return "RDRAM"
-	case MemoryDeviceTypeDDR:
-		return "DDR"
-	case MemoryDeviceTypeDDR2:
-		return "DDR2"
-	case MemoryDeviceTypeDDR2FBDIMM:
-		return "DDR2 FB-DIMM"
-	case MemoryDeviceTypeDDR3:
-		return "DDR3"
-	case MemoryDeviceTypeFBD2:
-		return "FBD2"
-	case MemoryDeviceTypeDDR4:
-		return "DDR4"
-	case MemoryDeviceTypeLPDDR:
-		return "LPDDR"
-	case MemoryDeviceTypeLPDDR2:
-		return "LPDDR2"
-	case MemoryDeviceTypeLPDDR3:
-		return "LPDDR3"
-	case MemoryDeviceTypeLPDDR4:
-		return "LPDDR4"
-	case MemoryDeviceTypeLogicalNonvolatileDevice:
-		return "Logical non-volatile device"
+	names := map[MemoryDeviceType]string{
+		MemoryDeviceTypeOther:                    "Other",
+		MemoryDeviceTypeUnknown:                  "Unknown",
+		MemoryDeviceTypeDRAM:                     "DRAM",
+		MemoryDeviceTypeEDRAM:                    "EDRAM",
+		MemoryDeviceTypeVRAM:                     "VRAM",
+		MemoryDeviceTypeSRAM:                     "SRAM",
+		MemoryDeviceTypeRAM:                      "RAM",
+		MemoryDeviceTypeROM:                      "ROM",
+		MemoryDeviceTypeFlash:                    "Flash",
+		MemoryDeviceTypeEEPROM:                   "EEPROM",
+		MemoryDeviceTypeFEPROM:                   "FEPROM",
+		MemoryDeviceTypeEPROM:                    "EPROM",
+		MemoryDeviceTypeCDRAM:                    "CDRAM",
+		MemoryDeviceType3DRAM:                    "3DRAM",
+		MemoryDeviceTypeSDRAM:                    "SDRAM",
+		MemoryDeviceTypeSGRAM:                    "SGRAM",
+		MemoryDeviceTypeRDRAM:                    "RDRAM",
+		MemoryDeviceTypeDDR:                      "DDR",
+		MemoryDeviceTypeDDR2:                     "DDR2",
+		MemoryDeviceTypeDDR2FBDIMM:               "DDR2 FB-DIMM",
+		MemoryDeviceTypeDDR3:                     "DDR3",
+		MemoryDeviceTypeFBD2:                     "FBD2",
+		MemoryDeviceTypeDDR4:                     "DDR4",
+		MemoryDeviceTypeLPDDR:                    "LPDDR",
+		MemoryDeviceTypeLPDDR2:                   "LPDDR2",
+		MemoryDeviceTypeLPDDR3:                   "LPDDR3",
+		MemoryDeviceTypeLPDDR4:                   "LPDDR4",
+		MemoryDeviceTypeLogicalNonvolatileDevice: "Logical non-volatile device",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -457,21 +420,17 @@ const (
 )
 
 func (v MemoryDeviceTechnology) String() string {
-	switch v {
-	case MemoryDeviceTechnologyOther:
-		return "Other"
-	case MemoryDeviceTechnologyUnknown:
-		return "Unknown"
-	case MemoryDeviceTechnologyDRAM:
-		return "DRAM"
-	case MemoryDeviceTechnologyNVDIMMN:
-		return "NVDIMM-N"
-	case MemoryDeviceTechnologyNVDIMMF:
-		return "NVDIMM-F"
-	case MemoryDeviceTechnologyNVDIMMP:
-		return "NVDIMM-P"
-	case MemoryDeviceTechnologyIntelPersistentMemory:
-		return "Intel persistent memory"
+	names := map[MemoryDeviceTechnology]string{
+		MemoryDeviceTechnologyOther:                 "Other",
+		MemoryDeviceTechnologyUnknown:               "Unknown",
+		MemoryDeviceTechnologyDRAM:                  "DRAM",
+		MemoryDeviceTechnologyNVDIMMN:               "NVDIMM-N",
+		MemoryDeviceTechnologyNVDIMMF:               "NVDIMM-F",
+		MemoryDeviceTechnologyNVDIMMP:               "NVDIMM-P",
+		MemoryDeviceTechnologyIntelPersistentMemory: "Intel persistent memory",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }

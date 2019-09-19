@@ -185,19 +185,16 @@ const (
 )
 
 func (v CacheErrorCorrectionType) String() string {
-	switch v {
-	case CacheErrorCorrectionTypeOther:
-		return "Other"
-	case CacheErrorCorrectionTypeUnknown:
-		return "Unknown"
-	case CacheErrorCorrectionTypeNone:
-		return "None"
-	case CacheErrorCorrectionTypeParity:
-		return "Parity"
-	case CacheErrorCorrectionTypeSinglebitECC:
-		return "Single-bit ECC"
-	case CacheErrorCorrectionTypeMultibitECC:
-		return "Multi-bit ECC"
+	names := map[CacheErrorCorrectionType]string{
+		CacheErrorCorrectionTypeOther:        "Other",
+		CacheErrorCorrectionTypeUnknown:      "Unknown",
+		CacheErrorCorrectionTypeNone:         "None",
+		CacheErrorCorrectionTypeParity:       "Parity",
+		CacheErrorCorrectionTypeSinglebitECC: "Single-bit ECC",
+		CacheErrorCorrectionTypeMultibitECC:  "Multi-bit ECC",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -215,17 +212,15 @@ const (
 )
 
 func (v CacheSystemType) String() string {
-	switch v {
-	case CacheSystemTypeOther:
-		return "Other"
-	case CacheSystemTypeUnknown:
-		return "Unknown"
-	case CacheSystemTypeInstruction:
-		return "Instruction"
-	case CacheSystemTypeData:
-		return "Data"
-	case CacheSystemTypeUnified:
-		return "Unified"
+	names := map[CacheSystemType]string{
+		CacheSystemTypeOther:       "Other",
+		CacheSystemTypeUnknown:     "Unknown",
+		CacheSystemTypeInstruction: "Instruction",
+		CacheSystemTypeData:        "Data",
+		CacheSystemTypeUnified:     "Unified",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -252,35 +247,24 @@ const (
 )
 
 func (v CacheAssociativity) String() string {
-	switch v {
-	case CacheAssociativityOther:
-		return "Other"
-	case CacheAssociativityUnknown:
-		return "Unknown"
-	case CacheAssociativityDirectMapped:
-		return "Direct Mapped"
-	case CacheAssociativity2waySetAssociative:
-		return "2-way Set-associative"
-	case CacheAssociativity4waySetAssociative:
-		return "4-way Set-associative"
-	case CacheAssociativityFullyAssociative:
-		return "Fully Associative"
-	case CacheAssociativity8waySetAssociative:
-		return "8-way Set-associative"
-	case CacheAssociativity16waySetAssociative:
-		return "16-way Set-associative"
-	case CacheAssociativity12waySetAssociative:
-		return "12-way Set-associative"
-	case CacheAssociativity24waySetAssociative:
-		return "24-way Set-associative"
-	case CacheAssociativity32waySetAssociative:
-		return "32-way Set-associative"
-	case CacheAssociativity48waySetAssociative:
-		return "48-way Set-associative"
-	case CacheAssociativity64waySetAssociative:
-		return "64-way Set-associative"
-	case CacheAssociativity20waySetAssociative:
-		return "20-way Set-associative"
+	names := map[CacheAssociativity]string{
+		CacheAssociativityOther:               "Other",
+		CacheAssociativityUnknown:             "Unknown",
+		CacheAssociativityDirectMapped:        "Direct Mapped",
+		CacheAssociativity2waySetAssociative:  "2-way Set-associative",
+		CacheAssociativity4waySetAssociative:  "4-way Set-associative",
+		CacheAssociativityFullyAssociative:    "Fully Associative",
+		CacheAssociativity8waySetAssociative:  "8-way Set-associative",
+		CacheAssociativity16waySetAssociative: "16-way Set-associative",
+		CacheAssociativity12waySetAssociative: "12-way Set-associative",
+		CacheAssociativity24waySetAssociative: "24-way Set-associative",
+		CacheAssociativity32waySetAssociative: "32-way Set-associative",
+		CacheAssociativity48waySetAssociative: "48-way Set-associative",
+		CacheAssociativity64waySetAssociative: "64-way Set-associative",
+		CacheAssociativity20waySetAssociative: "20-way Set-associative",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }

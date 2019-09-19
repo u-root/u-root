@@ -113,25 +113,19 @@ const (
 )
 
 func (v WakeupType) String() string {
-	switch v {
-	case WakeupTypeReserved:
-		return "Reserved"
-	case WakeupTypeOther:
-		return "Other"
-	case WakeupTypeUnknown:
-		return "Unknown"
-	case WakeupTypeAPMTimer:
-		return "APM Timer"
-	case WakeupTypeModemRing:
-		return "Modem Ring"
-	case WakeupTypeLANRemote:
-		return "LAN Remote"
-	case WakeupTypePowerSwitch:
-		return "Power Switch"
-	case WakeupTypePCIPME:
-		return "PCI PME#"
-	case WakeupTypeACPowerRestored:
-		return "AC Power Restored"
+	names := map[WakeupType]string{
+		WakeupTypeReserved:        "Reserved",
+		WakeupTypeOther:           "Other",
+		WakeupTypeUnknown:         "Unknown",
+		WakeupTypeAPMTimer:        "APM Timer",
+		WakeupTypeModemRing:       "Modem Ring",
+		WakeupTypeLANRemote:       "LAN Remote",
+		WakeupTypePowerSwitch:     "Power Switch",
+		WakeupTypePCIPME:          "PCI PME#",
+		WakeupTypeACPowerRestored: "AC Power Restored",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }

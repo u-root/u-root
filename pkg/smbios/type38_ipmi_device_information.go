@@ -104,17 +104,15 @@ const (
 )
 
 func (v BMCInterfaceType) String() string {
-	switch v {
-	case BMCInterfaceTypeUnknown:
-		return "Unknown"
-	case BMCInterfaceTypeKCSKeyboardControllerStyle:
-		return "KCS (Keyboard Control Style)"
-	case BMCInterfaceTypeSMICServerManagementInterfaceChip:
-		return "SMIC (Server Management Interface Chip)"
-	case BMCInterfaceTypeBTBlockTransfer:
-		return "BT (Block Transfer)"
-	case BMCInterfaceTypeSSIFSMBusSystemInterface:
-		return "SSIF (SMBus System Interface)"
+	names := map[BMCInterfaceType]string{
+		BMCInterfaceTypeUnknown:                           "Unknown",
+		BMCInterfaceTypeKCSKeyboardControllerStyle:        "KCS (Keyboard Control Style)",
+		BMCInterfaceTypeSMICServerManagementInterfaceChip: "SMIC (Server Management Interface Chip)",
+		BMCInterfaceTypeBTBlockTransfer:                   "BT (Block Transfer)",
+		BMCInterfaceTypeSSIFSMBusSystemInterface:          "SSIF (SMBus System Interface)",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }

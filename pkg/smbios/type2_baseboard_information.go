@@ -129,33 +129,23 @@ const (
 )
 
 func (v BoardType) String() string {
-	switch v {
-	case BoardTypeUnknown:
-		return "Unknown"
-	case BoardTypeOther:
-		return "Other"
-	case BoardTypeServerBlade:
-		return "Server Blade"
-	case BoardTypeConnectivitySwitch:
-		return "Connectivity Switch"
-	case BoardTypeSystemManagementModule:
-		return "System Management Module"
-	case BoardTypeProcessorModule:
-		return "Processor Module"
-	case BoardTypeIOModule:
-		return "I/O Module"
-	case BoardTypeMemoryModule:
-		return "Memory Module"
-	case BoardTypeDaughterBoard:
-		return "Daughter board"
-	case BoardTypeMotherboardIncludesProcessorMemoryAndIO:
-		return "Motherboard"
-	case BoardTypeProcessorMemoryModule:
-		return "Processor/Memory Module"
-	case BoardTypeProcessorIOModule:
-		return "Processor/IO Module"
-	case BoardTypeInterconnectBoard:
-		return "Interconnect board"
+	names := map[BoardType]string{
+		BoardTypeUnknown:                                 "Unknown",
+		BoardTypeOther:                                   "Other",
+		BoardTypeServerBlade:                             "Server Blade",
+		BoardTypeConnectivitySwitch:                      "Connectivity Switch",
+		BoardTypeSystemManagementModule:                  "System Management Module",
+		BoardTypeProcessorModule:                         "Processor Module",
+		BoardTypeIOModule:                                "I/O Module",
+		BoardTypeMemoryModule:                            "Memory Module",
+		BoardTypeDaughterBoard:                           "Daughter board",
+		BoardTypeMotherboardIncludesProcessorMemoryAndIO: "Motherboard",
+		BoardTypeProcessorMemoryModule:                   "Processor/Memory Module",
+		BoardTypeProcessorIOModule:                       "Processor/IO Module",
+		BoardTypeInterconnectBoard:                       "Interconnect board",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }

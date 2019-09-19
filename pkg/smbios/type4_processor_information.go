@@ -271,19 +271,16 @@ const (
 )
 
 func (v ProcessorType) String() string {
-	switch v {
-	case ProcessorTypeOther:
-		return "Other"
-	case ProcessorTypeUnknown:
-		return "Unknown"
-	case ProcessorTypeCentralProcessor:
-		return "Central Processor"
-	case ProcessorTypeMathProcessor:
-		return "Math Processor"
-	case ProcessorTypeDSPProcessor:
-		return "DSP Processor"
-	case ProcessorTypeVideoProcessor:
-		return "Video Processor"
+	names := map[ProcessorType]string{
+		ProcessorTypeOther:            "Other",
+		ProcessorTypeUnknown:          "Unknown",
+		ProcessorTypeCentralProcessor: "Central Processor",
+		ProcessorTypeMathProcessor:    "Math Processor",
+		ProcessorTypeDSPProcessor:     "DSP Processor",
+		ProcessorTypeVideoProcessor:   "Video Processor",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -508,431 +505,222 @@ const (
 )
 
 func (v ProcessorFamily) String() string {
-	switch v {
-	case ProcessorFamilyOther:
-		return "Other"
-	case ProcessorFamilyUnknown:
-		return "Unknown"
-	case ProcessorFamily8086:
-		return "8086"
-	case ProcessorFamily80286:
-		return "80286"
-	case ProcessorFamily80386:
-		return "80386"
-	case ProcessorFamily80486:
-		return "80486"
-	case ProcessorFamily8087:
-		return "8087"
-	case ProcessorFamily80287:
-		return "80287"
-	case ProcessorFamily80387:
-		return "80387"
-	case ProcessorFamily80487:
-		return "80487"
-	case ProcessorFamilyPentium:
-		return "Pentium"
-	case ProcessorFamilyPentiumPro:
-		return "Pentium Pro"
-	case ProcessorFamilyPentiumII:
-		return "Pentium II"
-	case ProcessorFamilyPentiumMMX:
-		return "Pentium MMX"
-	case ProcessorFamilyCeleron:
-		return "Celeron"
-	case ProcessorFamilyPentiumIIXeon:
-		return "Pentium II Xeon"
-	case ProcessorFamilyPentiumIII:
-		return "Pentium III"
-	case ProcessorFamilyM1:
-		return "M1"
-	case ProcessorFamilyM2:
-		return "M2"
-	case ProcessorFamilyCeleronM:
-		return "Celeron M"
-	case ProcessorFamilyPentium4HT:
-		return "Pentium 4 HT"
-	case ProcessorFamilyDuron:
-		return "Duron"
-	case ProcessorFamilyK5:
-		return "K5"
-	case ProcessorFamilyK6:
-		return "K6"
-	case ProcessorFamilyK62:
-		return "K6-2"
-	case ProcessorFamilyK63:
-		return "K6-3"
-	case ProcessorFamilyAthlon:
-		return "Athlon"
-	case ProcessorFamilyAMD29000:
-		return "AMD29000"
-	case ProcessorFamilyK62Plus:
-		return "K6-2+"
-	case ProcessorFamilyPowerPC:
-		return "Power PC"
-	case ProcessorFamilyPowerPC601:
-		return "Power PC 601"
-	case ProcessorFamilyPowerPC603:
-		return "Power PC 603"
-	case ProcessorFamilyPowerPC603Plus:
-		return "Power PC 603+"
-	case ProcessorFamilyPowerPC604:
-		return "Power PC 604"
-	case ProcessorFamilyPowerPC620:
-		return "Power PC 620"
-	case ProcessorFamilyPowerPCX704:
-		return "Power PC x704"
-	case ProcessorFamilyPowerPC750:
-		return "Power PC 750"
-	case ProcessorFamilyCoreDuo:
-		return "Core Duo"
-	case ProcessorFamilyCoreDuoMobile:
-		return "Core Duo Mobile"
-	case ProcessorFamilyCoreSoloMobile:
-		return "Core Solo Mobile"
-	case ProcessorFamilyAtom:
-		return "Atom"
-	case ProcessorFamilyCoreM:
-		return "Core M"
-	case ProcessorFamilyCoreM3:
-		return "Core m3"
-	case ProcessorFamilyCoreM5:
-		return "Core m5"
-	case ProcessorFamilyCoreM7:
-		return "Core m7"
-	case ProcessorFamilyAlpha:
-		return "Alpha"
-	case ProcessorFamilyAlpha21064:
-		return "Alpha 21064"
-	case ProcessorFamilyAlpha21066:
-		return "Alpha 21066"
-	case ProcessorFamilyAlpha21164:
-		return "Alpha 21164"
-	case ProcessorFamilyAlpha21164PC:
-		return "Alpha 21164PC"
-	case ProcessorFamilyAlpha21164a:
-		return "Alpha 21164a"
-	case ProcessorFamilyAlpha21264:
-		return "Alpha 21264"
-	case ProcessorFamilyAlpha21364:
-		return "Alpha 21364"
-	case ProcessorFamilyTurionIIUltraDualCoreMobileM:
-		return "Turion II Ultra Dual-Core Mobile M"
-	case ProcessorFamilyTurionIIDualCoreMobileM:
-		return "Turion II Dual-Core Mobile M"
-	case ProcessorFamilyAthlonIIDualCoreM:
-		return "Athlon II Dual-Core M"
-	case ProcessorFamilyOpteron6100:
-		return "Opteron 6100"
-	case ProcessorFamilyOpteron4100:
-		return "Opteron 4100"
-	case ProcessorFamilyOpteron6200:
-		return "Opteron 6200"
-	case ProcessorFamilyOpteron4200:
-		return "Opteron 4200"
-	case ProcessorFamilyFX:
-		return "FX"
-	case ProcessorFamilyMIPS:
-		return "MIPS"
-	case ProcessorFamilyMIPSR4000:
-		return "MIPS R4000"
-	case ProcessorFamilyMIPSR4200:
-		return "MIPS R4200"
-	case ProcessorFamilyMIPSR4400:
-		return "MIPS R4400"
-	case ProcessorFamilyMIPSR4600:
-		return "MIPS R4600"
-	case ProcessorFamilyMIPSR10000:
-		return "MIPS R10000"
-	case ProcessorFamilyCSeries:
-		return "C-Series"
-	case ProcessorFamilyESeries:
-		return "E-Series"
-	case ProcessorFamilyASeries:
-		return "A-Series"
-	case ProcessorFamilyGSeries:
-		return "G-Series"
-	case ProcessorFamilyZSeries:
-		return "Z-Series"
-	case ProcessorFamilyRSeries:
-		return "R-Series"
-	case ProcessorFamilyOpteron4300:
-		return "Opteron 4300"
-	case ProcessorFamilyOpteron6300:
-		return "Opteron 6300"
-	case ProcessorFamilyOpteron3300:
-		return "Opteron 3300"
-	case ProcessorFamilyFirePro:
-		return "FirePro"
-	case ProcessorFamilySPARC:
-		return "SPARC"
-	case ProcessorFamilySuperSPARC:
-		return "SuperSPARC"
-	case ProcessorFamilyMicroSPARCII:
-		return "MicroSPARC II"
-	case ProcessorFamilyMicroSPARCIIep:
-		return "MicroSPARC IIep"
-	case ProcessorFamilyUltraSPARC:
-		return "UltraSPARC"
-	case ProcessorFamilyUltraSPARCII:
-		return "UltraSPARC II"
-	case ProcessorFamilyUltraSPARCIIi:
-		return "UltraSPARC IIi"
-	case ProcessorFamilyUltraSPARCIII:
-		return "UltraSPARC III"
-	case ProcessorFamilyUltraSPARCIIIi:
-		return "UltraSPARC IIIi"
-	case ProcessorFamily68040:
-		return "68040"
-	case ProcessorFamily68xxx:
-		return "68xxx"
-	case ProcessorFamily68000:
-		return "68000"
-	case ProcessorFamily68010:
-		return "68010"
-	case ProcessorFamily68020:
-		return "68020"
-	case ProcessorFamily68030:
-		return "68030"
-	case ProcessorFamilyAthlonX4:
-		return "Athlon X4"
-	case ProcessorFamilyOpteronX1000:
-		return "Opteron X1000"
-	case ProcessorFamilyOpteronX2000:
-		return "Opteron X2000"
-	case ProcessorFamilyOpteronASeries:
-		return "Opteron A-Series"
-	case ProcessorFamilyOpteronX3000:
-		return "Opteron X3000"
-	case ProcessorFamilyZen:
-		return "Zen"
-	case ProcessorFamilyHobbit:
-		return "Hobbit"
-	case ProcessorFamilyCrusoeTM5000:
-		return "Crusoe TM5000"
-	case ProcessorFamilyCrusoeTM3000:
-		return "Crusoe TM3000"
-	case ProcessorFamilyEfficeonTM8000:
-		return "Efficeon TM8000"
-	case ProcessorFamilyWeitek:
-		return "Weitek"
-	case ProcessorFamilyItanium:
-		return "Itanium"
-	case ProcessorFamilyAthlon64:
-		return "Athlon 64"
-	case ProcessorFamilyOpteron:
-		return "Opteron"
-	case ProcessorFamilySempron:
-		return "Sempron"
-	case ProcessorFamilyTurion64:
-		return "Turion 64"
-	case ProcessorFamilyDualCoreOpteron:
-		return "Dual-Core Opteron"
-	case ProcessorFamilyAthlon64X2:
-		return "Athlon 64 X2"
-	case ProcessorFamilyTurion64X2:
-		return "Turion 64 X2"
-	case ProcessorFamilyQuadCoreOpteron:
-		return "Quad-Core Opteron"
-	case ProcessorFamilyThirdGenerationOpteron:
-		return "Third-Generation Opteron"
-	case ProcessorFamilyPhenomFX:
-		return "Phenom FX"
-	case ProcessorFamilyPhenomX4:
-		return "Phenom X4"
-	case ProcessorFamilyPhenomX2:
-		return "Phenom X2"
-	case ProcessorFamilyAthlonX2:
-		return "Athlon X2"
-	case ProcessorFamilyPARISC:
-		return "PA-RISC"
-	case ProcessorFamilyPARISC8500:
-		return "PA-RISC 8500"
-	case ProcessorFamilyPARISC8000:
-		return "PA-RISC 8000"
-	case ProcessorFamilyPARISC7300LC:
-		return "PA-RISC 7300LC"
-	case ProcessorFamilyPARISC7200:
-		return "PA-RISC 7200"
-	case ProcessorFamilyPARISC7100LC:
-		return "PA-RISC 7100LC"
-	case ProcessorFamilyPARISC7100:
-		return "PA-RISC 7100"
-	case ProcessorFamilyV30:
-		return "V30"
-	case ProcessorFamilyQuadCoreXeon3200:
-		return "Quad-Core Xeon 3200"
-	case ProcessorFamilyDualCoreXeon3000:
-		return "Dual-Core Xeon 3000"
-	case ProcessorFamilyQuadCoreXeon5300:
-		return "Quad-Core Xeon 5300"
-	case ProcessorFamilyDualCoreXeon5100:
-		return "Dual-Core Xeon 5100"
-	case ProcessorFamilyDualCoreXeon5000:
-		return "Dual-Core Xeon 5000"
-	case ProcessorFamilyDualCoreXeonLV:
-		return "Dual-Core Xeon LV"
-	case ProcessorFamilyDualCoreXeonULV:
-		return "Dual-Core Xeon ULV"
-	case ProcessorFamilyDualCoreXeon7100:
-		return "Dual-Core Xeon 7100"
-	case ProcessorFamilyQuadCoreXeon5400:
-		return "Quad-Core Xeon 5400"
-	case ProcessorFamilyQuadCoreXeon:
-		return "Quad-Core Xeon"
-	case ProcessorFamilyDualCoreXeon5200:
-		return "Dual-Core Xeon 5200"
-	case ProcessorFamilyDualCoreXeon7200:
-		return "Dual-Core Xeon 7200"
-	case ProcessorFamilyQuadCoreXeon7300:
-		return "Quad-Core Xeon 7300"
-	case ProcessorFamilyQuadCoreXeon7400:
-		return "Quad-Core Xeon 7400"
-	case ProcessorFamilyMultiCoreXeon7400:
-		return "Multi-Core Xeon 7400"
-	case ProcessorFamilyPentiumIIIXeon:
-		return "Pentium III Xeon"
-	case ProcessorFamilyPentiumIIISpeedstep:
-		return "Pentium III Speedstep"
-	case ProcessorFamilyPentium4:
-		return "Pentium 4"
-	case ProcessorFamilyXeon:
-		return "Xeon"
-	case ProcessorFamilyAS400:
-		return "AS400"
-	case ProcessorFamilyXeonMP:
-		return "Xeon MP"
-	case ProcessorFamilyAthlonXP:
-		return "Athlon XP"
-	case ProcessorFamilyAthlonMP:
-		return "Athlon MP"
-	case ProcessorFamilyItanium2:
-		return "Itanium 2"
-	case ProcessorFamilyPentiumM:
-		return "Pentium M"
-	case ProcessorFamilyCeleronD:
-		return "Celeron D"
-	case ProcessorFamilyPentiumD:
-		return "Pentium D"
-	case ProcessorFamilyPentiumEE:
-		return "Pentium EE"
-	case ProcessorFamilyCoreSolo:
-		return "Core Solo"
-	case ProcessorFamilyHandledAsASpecialCase:
-		return "handled as a special case */"
-	case ProcessorFamilyCore2Duo:
-		return "Core 2 Duo"
-	case ProcessorFamilyCore2Solo:
-		return "Core 2 Solo"
-	case ProcessorFamilyCore2Extreme:
-		return "Core 2 Extreme"
-	case ProcessorFamilyCore2Quad:
-		return "Core 2 Quad"
-	case ProcessorFamilyCore2ExtremeMobile:
-		return "Core 2 Extreme Mobile"
-	case ProcessorFamilyCore2DuoMobile:
-		return "Core 2 Duo Mobile"
-	case ProcessorFamilyCore2SoloMobile:
-		return "Core 2 Solo Mobile"
-	case ProcessorFamilyCoreI7:
-		return "Core i7"
-	case ProcessorFamilyDualCoreCeleron:
-		return "Dual-Core Celeron"
-	case ProcessorFamilyIBM390:
-		return "IBM390"
-	case ProcessorFamilyG4:
-		return "G4"
-	case ProcessorFamilyG5:
-		return "G5"
-	case ProcessorFamilyESA390G6:
-		return "ESA/390 G6"
-	case ProcessorFamilyZarchitecture:
-		return "z/Architecture"
-	case ProcessorFamilyCoreI5:
-		return "Core i5"
-	case ProcessorFamilyCoreI3:
-		return "Core i3"
-	case ProcessorFamilyCoreI9:
-		return "Core i9"
-	case ProcessorFamilyC7M:
-		return "C7-M"
-	case ProcessorFamilyC7D:
-		return "C7-D"
-	case ProcessorFamilyC7:
-		return "C7"
-	case ProcessorFamilyEden:
-		return "Eden"
-	case ProcessorFamilyMultiCoreXeon:
-		return "Multi-Core Xeon"
-	case ProcessorFamilyDualCoreXeon3xxx:
-		return "Dual-Core Xeon 3xxx"
-	case ProcessorFamilyQuadCoreXeon3xxx:
-		return "Quad-Core Xeon 3xxx"
-	case ProcessorFamilyNano:
-		return "Nano"
-	case ProcessorFamilyDualCoreXeon5xxx:
-		return "Dual-Core Xeon 5xxx"
-	case ProcessorFamilyQuadCoreXeon5xxx:
-		return "Quad-Core Xeon 5xxx"
-	case ProcessorFamilyDualCoreXeon7xxx:
-		return "Dual-Core Xeon 7xxx"
-	case ProcessorFamilyQuadCoreXeon7xxx:
-		return "Quad-Core Xeon 7xxx"
-	case ProcessorFamilyMultiCoreXeon7xxx:
-		return "Multi-Core Xeon 7xxx"
-	case ProcessorFamilyMultiCoreXeon3400:
-		return "Multi-Core Xeon 3400"
-	case ProcessorFamilyOpteron3000:
-		return "Opteron 3000"
-	case ProcessorFamilySempronII:
-		return "Sempron II"
-	case ProcessorFamilyEmbeddedOpteronQuadCore:
-		return "Embedded Opteron Quad-Core"
-	case ProcessorFamilyPhenomTripleCore:
-		return "Phenom Triple-Core"
-	case ProcessorFamilyTurionUltraDualCoreMobile:
-		return "Turion Ultra Dual-Core Mobile"
-	case ProcessorFamilyTurionDualCoreMobile:
-		return "Turion Dual-Core Mobile"
-	case ProcessorFamilyAthlonDualCore:
-		return "Athlon Dual-Core"
-	case ProcessorFamilySempronSI:
-		return "Sempron SI"
-	case ProcessorFamilyPhenomII:
-		return "Phenom II"
-	case ProcessorFamilyAthlonII:
-		return "Athlon II"
-	case ProcessorFamilySixCoreOpteron:
-		return "Six-Core Opteron"
-	case ProcessorFamilySempronM:
-		return "Sempron M"
-	case ProcessorFamilyI860:
-		return "i860"
-	case ProcessorFamilyI960:
-		return "i960"
-	case ProcessorFamilyARMv7:
-		return "ARMv7"
-	case ProcessorFamilyARMv8:
-		return "ARMv8"
-	case ProcessorFamilySH3:
-		return "SH-3"
-	case ProcessorFamilySH4:
-		return "SH-4"
-	case ProcessorFamilyARM:
-		return "ARM"
-	case ProcessorFamilyStrongARM:
-		return "StrongARM"
-	case ProcessorFamily6x86:
-		return "6x86"
-	case ProcessorFamilyMediaGX:
-		return "MediaGX"
-	case ProcessorFamilyMII:
-		return "MII"
-	case ProcessorFamilyWinChip:
-		return "WinChip"
-	case ProcessorFamilyDSP:
-		return "DSP"
-	case ProcessorFamilyVideoProcessor:
-		return "Video Processor"
+	names := map[ProcessorFamily]string{
+		ProcessorFamilyOther:                        "Other",
+		ProcessorFamilyUnknown:                      "Unknown",
+		ProcessorFamily8086:                         "8086",
+		ProcessorFamily80286:                        "80286",
+		ProcessorFamily80386:                        "80386",
+		ProcessorFamily80486:                        "80486",
+		ProcessorFamily8087:                         "8087",
+		ProcessorFamily80287:                        "80287",
+		ProcessorFamily80387:                        "80387",
+		ProcessorFamily80487:                        "80487",
+		ProcessorFamilyPentium:                      "Pentium",
+		ProcessorFamilyPentiumPro:                   "Pentium Pro",
+		ProcessorFamilyPentiumII:                    "Pentium II",
+		ProcessorFamilyPentiumMMX:                   "Pentium MMX",
+		ProcessorFamilyCeleron:                      "Celeron",
+		ProcessorFamilyPentiumIIXeon:                "Pentium II Xeon",
+		ProcessorFamilyPentiumIII:                   "Pentium III",
+		ProcessorFamilyM1:                           "M1",
+		ProcessorFamilyM2:                           "M2",
+		ProcessorFamilyCeleronM:                     "Celeron M",
+		ProcessorFamilyPentium4HT:                   "Pentium 4 HT",
+		ProcessorFamilyDuron:                        "Duron",
+		ProcessorFamilyK5:                           "K5",
+		ProcessorFamilyK6:                           "K6",
+		ProcessorFamilyK62:                          "K6-2",
+		ProcessorFamilyK63:                          "K6-3",
+		ProcessorFamilyAthlon:                       "Athlon",
+		ProcessorFamilyAMD29000:                     "AMD29000",
+		ProcessorFamilyK62Plus:                      "K6-2+",
+		ProcessorFamilyPowerPC:                      "Power PC",
+		ProcessorFamilyPowerPC601:                   "Power PC 601",
+		ProcessorFamilyPowerPC603:                   "Power PC 603",
+		ProcessorFamilyPowerPC603Plus:               "Power PC 603+",
+		ProcessorFamilyPowerPC604:                   "Power PC 604",
+		ProcessorFamilyPowerPC620:                   "Power PC 620",
+		ProcessorFamilyPowerPCX704:                  "Power PC x704",
+		ProcessorFamilyPowerPC750:                   "Power PC 750",
+		ProcessorFamilyCoreDuo:                      "Core Duo",
+		ProcessorFamilyCoreDuoMobile:                "Core Duo Mobile",
+		ProcessorFamilyCoreSoloMobile:               "Core Solo Mobile",
+		ProcessorFamilyAtom:                         "Atom",
+		ProcessorFamilyCoreM:                        "Core M",
+		ProcessorFamilyCoreM3:                       "Core m3",
+		ProcessorFamilyCoreM5:                       "Core m5",
+		ProcessorFamilyCoreM7:                       "Core m7",
+		ProcessorFamilyAlpha:                        "Alpha",
+		ProcessorFamilyAlpha21064:                   "Alpha 21064",
+		ProcessorFamilyAlpha21066:                   "Alpha 21066",
+		ProcessorFamilyAlpha21164:                   "Alpha 21164",
+		ProcessorFamilyAlpha21164PC:                 "Alpha 21164PC",
+		ProcessorFamilyAlpha21164a:                  "Alpha 21164a",
+		ProcessorFamilyAlpha21264:                   "Alpha 21264",
+		ProcessorFamilyAlpha21364:                   "Alpha 21364",
+		ProcessorFamilyTurionIIUltraDualCoreMobileM: "Turion II Ultra Dual-Core Mobile M",
+		ProcessorFamilyTurionIIDualCoreMobileM:      "Turion II Dual-Core Mobile M",
+		ProcessorFamilyAthlonIIDualCoreM:            "Athlon II Dual-Core M",
+		ProcessorFamilyOpteron6100:                  "Opteron 6100",
+		ProcessorFamilyOpteron4100:                  "Opteron 4100",
+		ProcessorFamilyOpteron6200:                  "Opteron 6200",
+		ProcessorFamilyOpteron4200:                  "Opteron 4200",
+		ProcessorFamilyFX:                           "FX",
+		ProcessorFamilyMIPS:                         "MIPS",
+		ProcessorFamilyMIPSR4000:                    "MIPS R4000",
+		ProcessorFamilyMIPSR4200:                    "MIPS R4200",
+		ProcessorFamilyMIPSR4400:                    "MIPS R4400",
+		ProcessorFamilyMIPSR4600:                    "MIPS R4600",
+		ProcessorFamilyMIPSR10000:                   "MIPS R10000",
+		ProcessorFamilyCSeries:                      "C-Series",
+		ProcessorFamilyESeries:                      "E-Series",
+		ProcessorFamilyASeries:                      "A-Series",
+		ProcessorFamilyGSeries:                      "G-Series",
+		ProcessorFamilyZSeries:                      "Z-Series",
+		ProcessorFamilyRSeries:                      "R-Series",
+		ProcessorFamilyOpteron4300:                  "Opteron 4300",
+		ProcessorFamilyOpteron6300:                  "Opteron 6300",
+		ProcessorFamilyOpteron3300:                  "Opteron 3300",
+		ProcessorFamilyFirePro:                      "FirePro",
+		ProcessorFamilySPARC:                        "SPARC",
+		ProcessorFamilySuperSPARC:                   "SuperSPARC",
+		ProcessorFamilyMicroSPARCII:                 "MicroSPARC II",
+		ProcessorFamilyMicroSPARCIIep:               "MicroSPARC IIep",
+		ProcessorFamilyUltraSPARC:                   "UltraSPARC",
+		ProcessorFamilyUltraSPARCII:                 "UltraSPARC II",
+		ProcessorFamilyUltraSPARCIIi:                "UltraSPARC IIi",
+		ProcessorFamilyUltraSPARCIII:                "UltraSPARC III",
+		ProcessorFamilyUltraSPARCIIIi:               "UltraSPARC IIIi",
+		ProcessorFamily68040:                        "68040",
+		ProcessorFamily68xxx:                        "68xxx",
+		ProcessorFamily68000:                        "68000",
+		ProcessorFamily68010:                        "68010",
+		ProcessorFamily68020:                        "68020",
+		ProcessorFamily68030:                        "68030",
+		ProcessorFamilyAthlonX4:                     "Athlon X4",
+		ProcessorFamilyOpteronX1000:                 "Opteron X1000",
+		ProcessorFamilyOpteronX2000:                 "Opteron X2000",
+		ProcessorFamilyOpteronASeries:               "Opteron A-Series",
+		ProcessorFamilyOpteronX3000:                 "Opteron X3000",
+		ProcessorFamilyZen:                          "Zen",
+		ProcessorFamilyHobbit:                       "Hobbit",
+		ProcessorFamilyCrusoeTM5000:                 "Crusoe TM5000",
+		ProcessorFamilyCrusoeTM3000:                 "Crusoe TM3000",
+		ProcessorFamilyEfficeonTM8000:               "Efficeon TM8000",
+		ProcessorFamilyWeitek:                       "Weitek",
+		ProcessorFamilyItanium:                      "Itanium",
+		ProcessorFamilyAthlon64:                     "Athlon 64",
+		ProcessorFamilyOpteron:                      "Opteron",
+		ProcessorFamilySempron:                      "Sempron",
+		ProcessorFamilyTurion64:                     "Turion 64",
+		ProcessorFamilyDualCoreOpteron:              "Dual-Core Opteron",
+		ProcessorFamilyAthlon64X2:                   "Athlon 64 X2",
+		ProcessorFamilyTurion64X2:                   "Turion 64 X2",
+		ProcessorFamilyQuadCoreOpteron:              "Quad-Core Opteron",
+		ProcessorFamilyThirdGenerationOpteron:       "Third-Generation Opteron",
+		ProcessorFamilyPhenomFX:                     "Phenom FX",
+		ProcessorFamilyPhenomX4:                     "Phenom X4",
+		ProcessorFamilyPhenomX2:                     "Phenom X2",
+		ProcessorFamilyAthlonX2:                     "Athlon X2",
+		ProcessorFamilyPARISC:                       "PA-RISC",
+		ProcessorFamilyPARISC8500:                   "PA-RISC 8500",
+		ProcessorFamilyPARISC8000:                   "PA-RISC 8000",
+		ProcessorFamilyPARISC7300LC:                 "PA-RISC 7300LC",
+		ProcessorFamilyPARISC7200:                   "PA-RISC 7200",
+		ProcessorFamilyPARISC7100LC:                 "PA-RISC 7100LC",
+		ProcessorFamilyPARISC7100:                   "PA-RISC 7100",
+		ProcessorFamilyV30:                          "V30",
+		ProcessorFamilyQuadCoreXeon3200:             "Quad-Core Xeon 3200",
+		ProcessorFamilyDualCoreXeon3000:             "Dual-Core Xeon 3000",
+		ProcessorFamilyQuadCoreXeon5300:             "Quad-Core Xeon 5300",
+		ProcessorFamilyDualCoreXeon5100:             "Dual-Core Xeon 5100",
+		ProcessorFamilyDualCoreXeon5000:             "Dual-Core Xeon 5000",
+		ProcessorFamilyDualCoreXeonLV:               "Dual-Core Xeon LV",
+		ProcessorFamilyDualCoreXeonULV:              "Dual-Core Xeon ULV",
+		ProcessorFamilyDualCoreXeon7100:             "Dual-Core Xeon 7100",
+		ProcessorFamilyQuadCoreXeon5400:             "Quad-Core Xeon 5400",
+		ProcessorFamilyQuadCoreXeon:                 "Quad-Core Xeon",
+		ProcessorFamilyDualCoreXeon5200:             "Dual-Core Xeon 5200",
+		ProcessorFamilyDualCoreXeon7200:             "Dual-Core Xeon 7200",
+		ProcessorFamilyQuadCoreXeon7300:             "Quad-Core Xeon 7300",
+		ProcessorFamilyQuadCoreXeon7400:             "Quad-Core Xeon 7400",
+		ProcessorFamilyMultiCoreXeon7400:            "Multi-Core Xeon 7400",
+		ProcessorFamilyPentiumIIIXeon:               "Pentium III Xeon",
+		ProcessorFamilyPentiumIIISpeedstep:          "Pentium III Speedstep",
+		ProcessorFamilyPentium4:                     "Pentium 4",
+		ProcessorFamilyXeon:                         "Xeon",
+		ProcessorFamilyAS400:                        "AS400",
+		ProcessorFamilyXeonMP:                       "Xeon MP",
+		ProcessorFamilyAthlonXP:                     "Athlon XP",
+		ProcessorFamilyAthlonMP:                     "Athlon MP",
+		ProcessorFamilyItanium2:                     "Itanium 2",
+		ProcessorFamilyPentiumM:                     "Pentium M",
+		ProcessorFamilyCeleronD:                     "Celeron D",
+		ProcessorFamilyPentiumD:                     "Pentium D",
+		ProcessorFamilyPentiumEE:                    "Pentium EE",
+		ProcessorFamilyCoreSolo:                     "Core Solo",
+		ProcessorFamilyHandledAsASpecialCase:        "handled as a special case */",
+		ProcessorFamilyCore2Duo:                     "Core 2 Duo",
+		ProcessorFamilyCore2Solo:                    "Core 2 Solo",
+		ProcessorFamilyCore2Extreme:                 "Core 2 Extreme",
+		ProcessorFamilyCore2Quad:                    "Core 2 Quad",
+		ProcessorFamilyCore2ExtremeMobile:           "Core 2 Extreme Mobile",
+		ProcessorFamilyCore2DuoMobile:               "Core 2 Duo Mobile",
+		ProcessorFamilyCore2SoloMobile:              "Core 2 Solo Mobile",
+		ProcessorFamilyCoreI7:                       "Core i7",
+		ProcessorFamilyDualCoreCeleron:              "Dual-Core Celeron",
+		ProcessorFamilyIBM390:                       "IBM390",
+		ProcessorFamilyG4:                           "G4",
+		ProcessorFamilyG5:                           "G5",
+		ProcessorFamilyESA390G6:                     "ESA/390 G6",
+		ProcessorFamilyZarchitecture:                "z/Architecture",
+		ProcessorFamilyCoreI5:                       "Core i5",
+		ProcessorFamilyCoreI3:                       "Core i3",
+		ProcessorFamilyCoreI9:                       "Core i9",
+		ProcessorFamilyC7M:                          "C7-M",
+		ProcessorFamilyC7D:                          "C7-D",
+		ProcessorFamilyC7:                           "C7",
+		ProcessorFamilyEden:                         "Eden",
+		ProcessorFamilyMultiCoreXeon:                "Multi-Core Xeon",
+		ProcessorFamilyDualCoreXeon3xxx:             "Dual-Core Xeon 3xxx",
+		ProcessorFamilyQuadCoreXeon3xxx:             "Quad-Core Xeon 3xxx",
+		ProcessorFamilyNano:                         "Nano",
+		ProcessorFamilyDualCoreXeon5xxx:             "Dual-Core Xeon 5xxx",
+		ProcessorFamilyQuadCoreXeon5xxx:             "Quad-Core Xeon 5xxx",
+		ProcessorFamilyDualCoreXeon7xxx:             "Dual-Core Xeon 7xxx",
+		ProcessorFamilyQuadCoreXeon7xxx:             "Quad-Core Xeon 7xxx",
+		ProcessorFamilyMultiCoreXeon7xxx:            "Multi-Core Xeon 7xxx",
+		ProcessorFamilyMultiCoreXeon3400:            "Multi-Core Xeon 3400",
+		ProcessorFamilyOpteron3000:                  "Opteron 3000",
+		ProcessorFamilySempronII:                    "Sempron II",
+		ProcessorFamilyEmbeddedOpteronQuadCore:      "Embedded Opteron Quad-Core",
+		ProcessorFamilyPhenomTripleCore:             "Phenom Triple-Core",
+		ProcessorFamilyTurionUltraDualCoreMobile:    "Turion Ultra Dual-Core Mobile",
+		ProcessorFamilyTurionDualCoreMobile:         "Turion Dual-Core Mobile",
+		ProcessorFamilyAthlonDualCore:               "Athlon Dual-Core",
+		ProcessorFamilySempronSI:                    "Sempron SI",
+		ProcessorFamilyPhenomII:                     "Phenom II",
+		ProcessorFamilyAthlonII:                     "Athlon II",
+		ProcessorFamilySixCoreOpteron:               "Six-Core Opteron",
+		ProcessorFamilySempronM:                     "Sempron M",
+		ProcessorFamilyI860:                         "i860",
+		ProcessorFamilyI960:                         "i960",
+		ProcessorFamilyARMv7:                        "ARMv7",
+		ProcessorFamilyARMv8:                        "ARMv8",
+		ProcessorFamilySH3:                          "SH-3",
+		ProcessorFamilySH4:                          "SH-4",
+		ProcessorFamilyARM:                          "ARM",
+		ProcessorFamilyStrongARM:                    "StrongARM",
+		ProcessorFamily6x86:                         "6x86",
+		ProcessorFamilyMediaGX:                      "MediaGX",
+		ProcessorFamilyMII:                          "MII",
+		ProcessorFamilyWinChip:                      "WinChip",
+		ProcessorFamilyDSP:                          "DSP",
+		ProcessorFamilyVideoProcessor:               "Video Processor",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
@@ -1019,127 +807,70 @@ const (
 )
 
 func (v ProcessorUpgrade) String() string {
-	switch v {
-	case ProcessorUpgradeOther:
-		return "Other"
-	case ProcessorUpgradeUnknown:
-		return "Unknown"
-	case ProcessorUpgradeDaughterBoard:
-		return "Daughter Board"
-	case ProcessorUpgradeZIFSocket:
-		return "ZIF Socket"
-	case ProcessorUpgradeReplaceablePiggyBack:
-		return "Replaceable Piggy Back"
-	case ProcessorUpgradeNone:
-		return "None"
-	case ProcessorUpgradeLIFSocket:
-		return "LIF Socket"
-	case ProcessorUpgradeSlot1:
-		return "Slot 1"
-	case ProcessorUpgradeSlot2:
-		return "Slot 2"
-	case ProcessorUpgrade370pinSocket:
-		return "370-pin Socket"
-	case ProcessorUpgradeSlotA:
-		return "Slot A"
-	case ProcessorUpgradeSlotM:
-		return "Slot M"
-	case ProcessorUpgradeSocket423:
-		return "Socket 423"
-	case ProcessorUpgradeSocketA:
-		return "Socket A (Socket 462)"
-	case ProcessorUpgradeSocket478:
-		return "Socket 478"
-	case ProcessorUpgradeSocket754:
-		return "Socket 754"
-	case ProcessorUpgradeSocket940:
-		return "Socket 940"
-	case ProcessorUpgradeSocket939:
-		return "Socket 939"
-	case ProcessorUpgradeSocketMpga604:
-		return "Socket mPGA604"
-	case ProcessorUpgradeSocketLGA771:
-		return "Socket LGA771"
-	case ProcessorUpgradeSocketLGA775:
-		return "Socket LGA775"
-	case ProcessorUpgradeSocketS1:
-		return "Socket S1"
-	case ProcessorUpgradeSocketAM2:
-		return "Socket AM2"
-	case ProcessorUpgradeSocketF1207:
-		return "Socket F (1207)"
-	case ProcessorUpgradeSocketLGA1366:
-		return "Socket LGA1366"
-	case ProcessorUpgradeSocketG34:
-		return "Socket G34"
-	case ProcessorUpgradeSocketAM3:
-		return "Socket AM3"
-	case ProcessorUpgradeSocketC32:
-		return "Socket C32"
-	case ProcessorUpgradeSocketLGA1156:
-		return "Socket LGA1156"
-	case ProcessorUpgradeSocketLGA1567:
-		return "Socket LGA1567"
-	case ProcessorUpgradeSocketPGA988A:
-		return "Socket PGA988A"
-	case ProcessorUpgradeSocketBGA1288:
-		return "Socket BGA1288"
-	case ProcessorUpgradeSocketRpga988b:
-		return "Socket rPGA988B"
-	case ProcessorUpgradeSocketBGA1023:
-		return "Socket BGA1023"
-	case ProcessorUpgradeSocketBGA1224:
-		return "Socket BGA1224"
-	case ProcessorUpgradeSocketBGA1155:
-		return "Socket BGA1155"
-	case ProcessorUpgradeSocketLGA1356:
-		return "Socket LGA1356"
-	case ProcessorUpgradeSocketLGA2011:
-		return "Socket LGA2011"
-	case ProcessorUpgradeSocketFS1:
-		return "Socket FS1"
-	case ProcessorUpgradeSocketFS2:
-		return "Socket FS2"
-	case ProcessorUpgradeSocketFM1:
-		return "Socket FM1"
-	case ProcessorUpgradeSocketFM2:
-		return "Socket FM2"
-	case ProcessorUpgradeSocketLGA20113:
-		return "Socket LGA2011-3"
-	case ProcessorUpgradeSocketLGA13563:
-		return "Socket LGA1356-3"
-	case ProcessorUpgradeSocketLGA1150:
-		return "Socket LGA1150"
-	case ProcessorUpgradeSocketBGA1168:
-		return "Socket BGA1168"
-	case ProcessorUpgradeSocketBGA1234:
-		return "Socket BGA1234"
-	case ProcessorUpgradeSocketBGA1364:
-		return "Socket BGA1364"
-	case ProcessorUpgradeSocketAM4:
-		return "Socket AM4"
-	case ProcessorUpgradeSocketLGA1151:
-		return "Socket LGA1151"
-	case ProcessorUpgradeSocketBGA1356:
-		return "Socket BGA1356"
-	case ProcessorUpgradeSocketBGA1440:
-		return "Socket BGA1440"
-	case ProcessorUpgradeSocketBGA1515:
-		return "Socket BGA1515"
-	case ProcessorUpgradeSocketLGA36471:
-		return "Socket LGA3647-1"
-	case ProcessorUpgradeSocketSP3:
-		return "Socket SP3"
-	case ProcessorUpgradeSocketSP3r2:
-		return "Socket SP3r2"
-	case ProcessorUpgradeSocketLGA2066:
-		return "Socket LGA2066"
-	case ProcessorUpgradeSocketBGA1392:
-		return "Socket BGA1392"
-	case ProcessorUpgradeSocketBGA1510:
-		return "Socket BGA1510"
-	case ProcessorUpgradeSocketBGA1528:
-		return "Socket BGA1528"
+	names := map[ProcessorUpgrade]string{
+		ProcessorUpgradeOther:                "Other",
+		ProcessorUpgradeUnknown:              "Unknown",
+		ProcessorUpgradeDaughterBoard:        "Daughter Board",
+		ProcessorUpgradeZIFSocket:            "ZIF Socket",
+		ProcessorUpgradeReplaceablePiggyBack: "Replaceable Piggy Back",
+		ProcessorUpgradeNone:                 "None",
+		ProcessorUpgradeLIFSocket:            "LIF Socket",
+		ProcessorUpgradeSlot1:                "Slot 1",
+		ProcessorUpgradeSlot2:                "Slot 2",
+		ProcessorUpgrade370pinSocket:         "370-pin Socket",
+		ProcessorUpgradeSlotA:                "Slot A",
+		ProcessorUpgradeSlotM:                "Slot M",
+		ProcessorUpgradeSocket423:            "Socket 423",
+		ProcessorUpgradeSocketA:              "Socket A (Socket 462)",
+		ProcessorUpgradeSocket478:            "Socket 478",
+		ProcessorUpgradeSocket754:            "Socket 754",
+		ProcessorUpgradeSocket940:            "Socket 940",
+		ProcessorUpgradeSocket939:            "Socket 939",
+		ProcessorUpgradeSocketMpga604:        "Socket mPGA604",
+		ProcessorUpgradeSocketLGA771:         "Socket LGA771",
+		ProcessorUpgradeSocketLGA775:         "Socket LGA775",
+		ProcessorUpgradeSocketS1:             "Socket S1",
+		ProcessorUpgradeSocketAM2:            "Socket AM2",
+		ProcessorUpgradeSocketF1207:          "Socket F (1207)",
+		ProcessorUpgradeSocketLGA1366:        "Socket LGA1366",
+		ProcessorUpgradeSocketG34:            "Socket G34",
+		ProcessorUpgradeSocketAM3:            "Socket AM3",
+		ProcessorUpgradeSocketC32:            "Socket C32",
+		ProcessorUpgradeSocketLGA1156:        "Socket LGA1156",
+		ProcessorUpgradeSocketLGA1567:        "Socket LGA1567",
+		ProcessorUpgradeSocketPGA988A:        "Socket PGA988A",
+		ProcessorUpgradeSocketBGA1288:        "Socket BGA1288",
+		ProcessorUpgradeSocketRpga988b:       "Socket rPGA988B",
+		ProcessorUpgradeSocketBGA1023:        "Socket BGA1023",
+		ProcessorUpgradeSocketBGA1224:        "Socket BGA1224",
+		ProcessorUpgradeSocketBGA1155:        "Socket BGA1155",
+		ProcessorUpgradeSocketLGA1356:        "Socket LGA1356",
+		ProcessorUpgradeSocketLGA2011:        "Socket LGA2011",
+		ProcessorUpgradeSocketFS1:            "Socket FS1",
+		ProcessorUpgradeSocketFS2:            "Socket FS2",
+		ProcessorUpgradeSocketFM1:            "Socket FM1",
+		ProcessorUpgradeSocketFM2:            "Socket FM2",
+		ProcessorUpgradeSocketLGA20113:       "Socket LGA2011-3",
+		ProcessorUpgradeSocketLGA13563:       "Socket LGA1356-3",
+		ProcessorUpgradeSocketLGA1150:        "Socket LGA1150",
+		ProcessorUpgradeSocketBGA1168:        "Socket BGA1168",
+		ProcessorUpgradeSocketBGA1234:        "Socket BGA1234",
+		ProcessorUpgradeSocketBGA1364:        "Socket BGA1364",
+		ProcessorUpgradeSocketAM4:            "Socket AM4",
+		ProcessorUpgradeSocketLGA1151:        "Socket LGA1151",
+		ProcessorUpgradeSocketBGA1356:        "Socket BGA1356",
+		ProcessorUpgradeSocketBGA1440:        "Socket BGA1440",
+		ProcessorUpgradeSocketBGA1515:        "Socket BGA1515",
+		ProcessorUpgradeSocketLGA36471:       "Socket LGA3647-1",
+		ProcessorUpgradeSocketSP3:            "Socket SP3",
+		ProcessorUpgradeSocketSP3r2:          "Socket SP3r2",
+		ProcessorUpgradeSocketLGA2066:        "Socket LGA2066",
+		ProcessorUpgradeSocketBGA1392:        "Socket BGA1392",
+		ProcessorUpgradeSocketBGA1510:        "Socket BGA1510",
+		ProcessorUpgradeSocketBGA1528:        "Socket BGA1528",
+	}
+	if name, ok := names[v]; ok {
+		return name
 	}
 	return fmt.Sprintf("%#x", uint8(v))
 }
