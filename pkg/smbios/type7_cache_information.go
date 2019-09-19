@@ -136,13 +136,13 @@ type CacheSRAMType uint16
 
 // CacheSRAMType fields are defined in DSP0134 7.8.2
 const (
-	CacheSRAMTypeOther         CacheSRAMType = (1 << 0) // Other
-	CacheSRAMTypeUnknown                     = (1 << 1) // Unknown
-	CacheSRAMTypeNonBurst                    = (1 << 2) // Non-Burst
-	CacheSRAMTypeBurst                       = (1 << 3) // Burst
-	CacheSRAMTypePipelineBurst               = (1 << 4) // Pipeline Burst
-	CacheSRAMTypeSynchronous                 = (1 << 5) // Synchronous
-	CacheSRAMTypeAsynchronous                = (1 << 6) // Asynchronous
+	CacheSRAMTypeOther         CacheSRAMType = 1 << 0 // Other
+	CacheSRAMTypeUnknown                     = 1 << 1 // Unknown
+	CacheSRAMTypeNonBurst                    = 1 << 2 // Non-Burst
+	CacheSRAMTypeBurst                       = 1 << 3 // Burst
+	CacheSRAMTypePipelineBurst               = 1 << 4 // Pipeline Burst
+	CacheSRAMTypeSynchronous                 = 1 << 5 // Synchronous
+	CacheSRAMTypeAsynchronous                = 1 << 6 // Asynchronous
 )
 
 func (v CacheSRAMType) String() string {
