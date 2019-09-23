@@ -165,3 +165,18 @@ func GetInitFlagMap() map[string]string {
 	initflags, _ := Flag("uroot.initflags")
 	return getFlagMap(initflags)
 }
+
+// GetFlagsForModule gets all flags for a designated module
+// and returns them as a space-seperated  string designed to be passed to insmod
+func GetFlagsForModule(name string) string {
+	ret := ""
+	// Module flags come as moduleName.flag in /proc/cmdline
+	prefix := name + "."
+	for flag, val := range NewCmdLine().AsMap {
+		if strings.HasPrefix(flag, prefix) {
+			// They are passed to insmod space seperated as flag=val
+			ret += strings.TrimPrefix(flag, prefix) + "=" + val + " "
+		}
+	}
+	return ret
+}
