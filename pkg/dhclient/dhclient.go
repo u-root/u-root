@@ -212,6 +212,10 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	// For ipv6, we cannot bind to the port until Duplicate Address
 	// Detection (DAD) is complete which is indicated by the link being no
 	// longer marked as "tentative". This usually takes about a second.
+
+	// If the link is never going to be ready, don't wait forever.
+	// (The user may not have configured a ctx with a timeout.)
+	linkTimeout := time.After(c.Timeout)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
@@ -221,6 +225,8 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		select {
 		case <-time.After(100 * time.Millisecond):
 			continue
+		case <-linkTimeout:
+			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		case <-ctx.Done():
 			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		}

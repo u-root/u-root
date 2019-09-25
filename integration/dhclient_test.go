@@ -69,6 +69,7 @@ func TestDhclient(t *testing.T) {
 		Uinit: []string{
 			"dhclient -ipv6=false -v",
 			"ip a",
+			// Sleep so serial console output gets flushed. The expect library is racy.
 			"sleep 5",
 			"shutdown -h",
 		},
@@ -130,11 +131,14 @@ func TestPxeboot(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/core/sleep",
 				"github.com/u-root/u-root/cmds/boot/pxeboot",
 			),
 		},
 		Uinit: []string{
 			"pxeboot --dry-run --no-load -v",
+			// Sleep so serial console output gets flushed. The expect library is racy.
+			"sleep 5",
 			"shutdown -h",
 		},
 		QEMUOpts: qemu.Options{
@@ -155,5 +159,43 @@ func TestPxeboot(t *testing.T) {
 	}
 	if err := dhcpClient.Expect("Boot URI: tftp://192.168.0.1/pxelinux.0"); err != nil {
 		t.Logf("Boot: %v", err)
+	}
+}
+
+func TestQEMUDHCPTimesOut(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+
+	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "TestQEMUDHCPTimesOut",
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/echo",
+				"github.com/u-root/u-root/cmds/core/dhclient",
+				"github.com/u-root/u-root/cmds/core/sleep",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+			),
+		},
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "client"),
+			Timeout:      40 * time.Second,
+		},
+		Uinit: []string{
+			// loopback should time out and it can't have configured anything.
+			"dhclient -v -retry 1 -timeout 10 lo",
+			"echo \"DHCP timed out\"",
+			// Sleep so serial console output gets flushed. The expect library is racy.
+			"sleep 5",
+			"shutdown -h",
+		},
+	})
+	defer ccleanup()
+
+	// Make sure that dhclient does not hang forever.
+	if err := dhcpClient.Expect("DHCP timed out"); err != nil {
+		t.Error(err)
 	}
 }
