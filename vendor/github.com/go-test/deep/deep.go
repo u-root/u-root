@@ -57,6 +57,9 @@ var errorType = reflect.TypeOf((*error)(nil)).Elem()
 //
 // If a type has an Equal method, like time.Equal, it is called to check for
 // equality.
+//
+// When comparing a struct, if a field has the tag `deep:"-"` then it will be
+// ignored.
 func Equal(a, b interface{}) []string {
 	aVal := reflect.ValueOf(a)
 	bVal := reflect.ValueOf(b)
@@ -186,6 +189,10 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 		for i := 0; i < a.NumField(); i++ {
 			if aType.Field(i).PkgPath != "" && !CompareUnexportedFields {
 				continue // skip unexported field, e.g. s in type T struct {s string}
+			}
+
+			if aType.Field(i).Tag.Get("deep") == "-" {
+				continue // field wants to be ignored
 			}
 
 			c.push(aType.Field(i).Name) // push field name to buff

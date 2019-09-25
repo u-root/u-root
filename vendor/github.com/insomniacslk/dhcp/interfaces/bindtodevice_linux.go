@@ -1,6 +1,6 @@
 // +build linux
 
-package dhcpv4
+package interfaces
 
 import "golang.org/x/sys/unix"
 

@@ -1,6 +1,6 @@
-// +build freebsd openbsd netbsd
+// +build freebsd openbsd netbsd darwin
 
-package dhcpv4
+package interfaces
 
 import (
 	"net"
