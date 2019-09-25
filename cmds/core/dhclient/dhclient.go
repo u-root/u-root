@@ -27,7 +27,8 @@ var (
 	ifName  = "^e.*"
 	timeout = flag.Int("timeout", 15, "Lease timeout in seconds")
 	retry   = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	verbose = flag.Bool("v", false, "Verbose output")
+	verbose = flag.Bool("v", false, "Verbose output (print message summary for each DHCP message sent/received)")
+	debug   = flag.Bool("d", false, "Really verbose output (print all message options for each DHCP message sent/received)")
 	ipv4    = flag.Bool("ipv4", true, "use IPV4")
 	ipv6    = flag.Bool("ipv6", true, "use IPV6")
 )
@@ -66,6 +67,9 @@ func configureAll(ifs []netlink.Link) {
 	}
 	if *verbose {
 		c.LogLevel = dhclient.LogSummary
+	}
+	if *debug {
+		c.LogLevel = dhclient.LogDebug
 	}
 	r := dhclient.SendRequests(ctx, ifs, *ipv4, *ipv6, c)
 
