@@ -54,13 +54,6 @@ func main() {
 func configureAll(ifs []netlink.Link) {
 	packetTimeout := time.Duration(*timeout) * time.Second
 
-	ctx := context.Background()
-	if *retry >= 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, packetTimeout*time.Duration(1<<uint(*retry)))
-		defer cancel()
-	}
-
 	c := dhclient.Config{
 		Timeout: packetTimeout,
 		Retries: *retry,
@@ -71,26 +64,16 @@ func configureAll(ifs []netlink.Link) {
 	if *vverbose {
 		c.LogLevel = dhclient.LogDebug
 	}
-	r := dhclient.SendRequests(ctx, ifs, *ipv4, *ipv6, c)
+	r := dhclient.SendRequests(context.Background(), ifs, *ipv4, *ipv6, c)
 
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("Done with dhclient: %v", ctx.Err())
-			return
-
-		case result, ok := <-r:
-			if !ok {
-				log.Printf("Configured all interfaces.")
-				return
-			}
-			if result.Err != nil {
-				log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, result.Err)
-			} else if err := result.Lease.Configure(); err != nil {
-				log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, err)
-			} else {
-				log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
-			}
+	for result := range r {
+		if result.Err != nil {
+			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, result.Err)
+		} else if err := result.Lease.Configure(); err != nil {
+			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, err)
+		} else {
+			log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
 		}
 	}
+	log.Printf("Finished trying to configure all interfaces.")
 }
