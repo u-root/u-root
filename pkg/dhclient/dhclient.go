@@ -226,9 +226,17 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		}
 	}
 
-	client, err := nclient6.New(iface.Attrs().Name,
+	mods := []nclient6.ClientOpt{
 		nclient6.WithTimeout(c.Timeout),
-		nclient6.WithRetry(c.Retries))
+		nclient6.WithRetry(c.Retries),
+	}
+	switch c.LogLevel {
+	case LogSummary:
+		mods = append(mods, nclient6.WithSummaryLogger())
+	case LogDebug:
+		mods = append(mods, nclient6.WithDebugLogger())
+	}
+	client, err := nclient6.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
