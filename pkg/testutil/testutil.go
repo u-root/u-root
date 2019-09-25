@@ -14,9 +14,16 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/u-root/u-root/pkg/golang"
 )
+
+// NowLog returns the current time formatted like the standard log package's
+// timestamp.
+func NowLog() string {
+	return time.Now().Format("2006/01/02 15:04:05")
+}
 
 var binary string
 
