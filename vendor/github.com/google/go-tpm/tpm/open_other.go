@@ -1,4 +1,6 @@
-// Copyright (c) 2018, Google Inc. All rights reserved.
+// +build !windows
+
+// Copyright (c) 2019, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,42 +14,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tpmutil
+package tpm
 
 import (
 	"fmt"
 	"io"
-	"net"
-	"os"
+
+	"github.com/google/go-tpm/tpmutil"
 )
 
 // OpenTPM opens a channel to the TPM at the given path. If the file is a
 // device, then it treats it like a normal TPM device, and if the file is a
 // Unix domain socket, then it opens a connection to the socket.
 func OpenTPM(path string) (io.ReadWriteCloser, error) {
-	// If it's a regular file, then open it
-	var rwc io.ReadWriteCloser
-	fi, err := os.Stat(path)
+	rwc, err := tpmutil.OpenTPM(path)
 	if err != nil {
 		return nil, err
 	}
 
-	if fi.Mode()&os.ModeDevice != 0 {
-		var f *os.File
-		f, err = os.OpenFile(path, os.O_RDWR, 0600)
-		if err != nil {
-			return nil, err
-		}
-		rwc = io.ReadWriteCloser(f)
-	} else if fi.Mode()&os.ModeSocket != 0 {
-		uc, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: path, Net: "unix"})
-		if err != nil {
-			return nil, err
-		}
-		rwc = io.ReadWriteCloser(uc)
-	} else {
-		return nil, fmt.Errorf("unsupported TPM file mode %s", fi.Mode().String())
+	// Make sure this is a TPM 1.2
+	_, err = GetManufacturer(rwc)
+	if err != nil {
+		rwc.Close()
+		return nil, fmt.Errorf("open %s: device is not a TPM 1.2", path)
 	}
-
 	return rwc, nil
 }

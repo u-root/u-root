@@ -264,7 +264,7 @@ func WithTimeout(d time.Duration) ClientOpt {
 func WithSummaryLogger() ClientOpt {
 	return func(c *Client) {
 		c.logger = shortSummaryLogger{
-			Logger: log.New(os.Stderr, "[dhcpv4]", log.LstdFlags),
+			Logger: log.New(os.Stderr, "[dhcpv4] ", log.LstdFlags),
 		}
 	}
 }
@@ -273,7 +273,7 @@ func WithSummaryLogger() ClientOpt {
 func WithDebugLogger() ClientOpt {
 	return func(c *Client) {
 		c.logger = debugLogger{
-			Logger: log.New(os.Stderr, "[dhcpv4]", log.LstdFlags),
+			Logger: log.New(os.Stderr, "[dhcpv4] ", log.LstdFlags),
 		}
 	}
 }

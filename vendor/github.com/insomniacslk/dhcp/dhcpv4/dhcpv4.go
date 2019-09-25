@@ -430,7 +430,20 @@ func (d *DHCPv4) Summary() string {
 // IsOptionRequested returns true if that option is within the requested
 // options of the DHCPv4 message.
 func (d *DHCPv4) IsOptionRequested(requested OptionCode) bool {
-	for _, o := range d.ParameterRequestList() {
+	rq := d.ParameterRequestList()
+	if rq == nil {
+		// RFC2131§3.5
+		// Not all clients require initialization of all parameters [...]
+		// Two techniques are used to reduce the number of parameters transmitted from
+		// the server to the client. [...] Second, in its initial DHCPDISCOVER or
+		// DHCPREQUEST message, a client may provide the server with a list of specific
+		// parameters the client is interested in.
+		// We interpret this to say that all available parameters should be sent if
+		// the parameter request list is not sent at all.
+		return true
+	}
+
+	for _, o := range rq {
 		if o == requested {
 			return true
 		}

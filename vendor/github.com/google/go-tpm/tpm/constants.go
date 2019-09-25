@@ -1,4 +1,4 @@
-// Copyright (c) 2014, Google Inc. All rights reserved.
+// Copyright (c) 2014, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,11 +15,6 @@
 package tpm
 
 import "github.com/google/go-tpm/tpmutil"
-
-func init() {
-	// TPM 1.2 spec uses uint32 for length prefix of byte arrays.
-	tpmutil.UseTPM12LengthPrefixSize()
-}
 
 // Supported TPM commands.
 const (
@@ -53,15 +48,23 @@ const (
 	ordForceClear           uint32 = 0x0000005D
 	ordGetCapability        uint32 = 0x00000065
 	ordMakeIdentity         uint32 = 0x00000079
+	ordActivateIdentity     uint32 = 0x0000007A
 	ordReadPubEK            uint32 = 0x0000007C
 	ordOwnerReadInternalPub uint32 = 0x00000081
 	ordFlushSpecific        uint32 = 0x000000BA
 	ordPcrReset             uint32 = 0x000000C8
+	ordNVReadValue          uint32 = 0x000000CF
 )
 
 // Capability types.
 const (
-	capHandle uint32 = 0x00000014
+	capProperty uint32 = 0x00000005
+	capHandle   uint32 = 0x00000014
+)
+
+// SubCapabilities
+const (
+	tpmCapPropManufacturer uint32 = 0x00000103
 )
 
 // Entity types. The LSB gives the entity type, and the MSB (currently fixed to
@@ -130,6 +133,7 @@ const (
 	esRSAEsOAEPSHA1MGF1
 	esSymCTR
 	esSymOFB
+	esSymCBCPKCS5 = 0xff // esSymCBCPKCS5 was taken from go-tspi
 )
 
 // Signature schemes. These are only valid under algRSA.
