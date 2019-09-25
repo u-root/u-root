@@ -252,8 +252,31 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	return packet, nil
 }
 
+type NetworkProtocol int
+
+const (
+	NetIPv4 NetworkProtocol = 1
+	NetIPv6 NetworkProtocol = 2
+	NetBoth NetworkProtocol = 3
+)
+
+func (n NetworkProtocol) String() string {
+	switch n {
+	case NetIPv4:
+		return "IPv4"
+	case NetIPv6:
+		return "IPv6"
+	case NetBoth:
+		return "IPv4+IPv6"
+	}
+	return fmt.Sprintf("unknown network protocol (%#x)", n)
+}
+
 // Result is the result of a particular DHCP attempt.
 type Result struct {
+	// Protocol is the IP protocol that we tried to configure.
+	Protocol NetworkProtocol
+
 	// Interface is the network interface the attempt was sent on.
 	Interface netlink.Link
 
@@ -293,7 +316,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				go func(iface netlink.Link) {
 					defer wg.Done()
 					lease, err := lease4(ctx, iface, c)
-					r <- &Result{iface, lease, err}
+					r <- &Result{NetIPv4, iface, lease, err}
 				}(iface)
 			}
 
@@ -302,7 +325,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				go func(iface netlink.Link) {
 					defer wg.Done()
 					lease, err := lease6(ctx, iface, c)
-					r <- &Result{iface, lease, err}
+					r <- &Result{NetIPv6, iface, lease, err}
 				}(iface)
 			}
 		}(iface)
