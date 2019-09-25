@@ -351,7 +351,7 @@ func udp4pkt(packet []byte, dest *net.UDPAddr, src *net.UDPAddr) []byte {
 	ipv4fields := &IPv4Fields{
 		IHL:         IPv4MinimumSize,
 		TotalLength: uint16(ipLen + udpLen + len(packet)),
-		TTL:         30,
+		TTL:         64, // Per RFC 1700's recommendation for IP time to live
 		Protocol:    uint8(UDPProtocolNumber),
 		SrcAddr:     src.IP.To4(),
 		DstAddr:     dest.IP.To4(),

@@ -212,6 +212,10 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	// For ipv6, we cannot bind to the port until Duplicate Address
 	// Detection (DAD) is complete which is indicated by the link being no
 	// longer marked as "tentative". This usually takes about a second.
+
+	// If the link is never going to be ready, don't wait forever.
+	// (The user may not have configured a ctx with a timeout.)
+	linkTimeout := time.After(c.Timeout)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
@@ -221,14 +225,24 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		select {
 		case <-time.After(100 * time.Millisecond):
 			continue
+		case <-linkTimeout:
+			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		case <-ctx.Done():
 			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		}
 	}
 
-	client, err := nclient6.New(iface.Attrs().Name,
+	mods := []nclient6.ClientOpt{
 		nclient6.WithTimeout(c.Timeout),
-		nclient6.WithRetry(c.Retries))
+		nclient6.WithRetry(c.Retries),
+	}
+	switch c.LogLevel {
+	case LogSummary:
+		mods = append(mods, nclient6.WithSummaryLogger())
+	case LogDebug:
+		mods = append(mods, nclient6.WithDebugLogger())
+	}
+	client, err := nclient6.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
@@ -244,8 +258,31 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	return packet, nil
 }
 
+type NetworkProtocol int
+
+const (
+	NetIPv4 NetworkProtocol = 1
+	NetIPv6 NetworkProtocol = 2
+	NetBoth NetworkProtocol = 3
+)
+
+func (n NetworkProtocol) String() string {
+	switch n {
+	case NetIPv4:
+		return "IPv4"
+	case NetIPv6:
+		return "IPv6"
+	case NetBoth:
+		return "IPv4+IPv6"
+	}
+	return fmt.Sprintf("unknown network protocol (%#x)", n)
+}
+
 // Result is the result of a particular DHCP attempt.
 type Result struct {
+	// Protocol is the IP protocol that we tried to configure.
+	Protocol NetworkProtocol
+
 	// Interface is the network interface the attempt was sent on.
 	Interface netlink.Link
 
@@ -285,7 +322,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				go func(iface netlink.Link) {
 					defer wg.Done()
 					lease, err := lease4(ctx, iface, c)
-					r <- &Result{iface, lease, err}
+					r <- &Result{NetIPv4, iface, lease, err}
 				}(iface)
 			}
 
@@ -294,7 +331,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				go func(iface netlink.Link) {
 					defer wg.Done()
 					lease, err := lease6(ctx, iface, c)
-					r <- &Result{iface, lease, err}
+					r <- &Result{NetIPv6, iface, lease, err}
 				}(iface)
 			}
 		}(iface)

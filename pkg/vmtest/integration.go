@@ -41,6 +41,7 @@ import (
 func main() {
 	for _, cmds := range %#v {
 		cmd := exec.Command(cmds[0], cmds[1:]...)
+		log.Printf("Execing %%#v", cmds)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()

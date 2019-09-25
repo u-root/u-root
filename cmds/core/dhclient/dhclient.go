@@ -24,12 +24,13 @@ import (
 )
 
 var (
-	ifName  = "^e.*"
-	timeout = flag.Int("timeout", 15, "Lease timeout in seconds")
-	retry   = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
-	verbose = flag.Bool("v", false, "Verbose output")
-	ipv4    = flag.Bool("ipv4", true, "use IPV4")
-	ipv6    = flag.Bool("ipv6", true, "use IPV6")
+	ifName   = "^e.*"
+	timeout  = flag.Int("timeout", 15, "Lease timeout in seconds")
+	retry    = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
+	verbose  = flag.Bool("v", false, "Verbose output (print message summary for each DHCP message sent/received)")
+	vverbose = flag.Bool("vv", false, "Really verbose output (print all message options for each DHCP message sent/received)")
+	ipv4     = flag.Bool("ipv4", true, "use IPV4")
+	ipv6     = flag.Bool("ipv6", true, "use IPV6")
 )
 
 func main() {
@@ -53,13 +54,6 @@ func main() {
 func configureAll(ifs []netlink.Link) {
 	packetTimeout := time.Duration(*timeout) * time.Second
 
-	ctx := context.Background()
-	if *retry >= 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, packetTimeout*time.Duration(1<<uint(*retry)))
-		defer cancel()
-	}
-
 	c := dhclient.Config{
 		Timeout: packetTimeout,
 		Retries: *retry,
@@ -67,26 +61,19 @@ func configureAll(ifs []netlink.Link) {
 	if *verbose {
 		c.LogLevel = dhclient.LogSummary
 	}
-	r := dhclient.SendRequests(ctx, ifs, *ipv4, *ipv6, c)
+	if *vverbose {
+		c.LogLevel = dhclient.LogDebug
+	}
+	r := dhclient.SendRequests(context.Background(), ifs, *ipv4, *ipv6, c)
 
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("Done with dhclient: %v", ctx.Err())
-			return
-
-		case result, ok := <-r:
-			if !ok {
-				log.Printf("Configured all interfaces.")
-				return
-			}
-			if result.Err != nil {
-				log.Printf("Could not configure %s: %v", result.Interface.Attrs().Name, result.Err)
-			} else if err := result.Lease.Configure(); err != nil {
-				log.Printf("Could not configure %s: %v", result.Interface.Attrs().Name, err)
-			} else {
-				log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
-			}
+	for result := range r {
+		if result.Err != nil {
+			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, result.Err)
+		} else if err := result.Lease.Configure(); err != nil {
+			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, err)
+		} else {
+			log.Printf("Configured %s with %s", result.Interface.Attrs().Name, result.Lease)
 		}
 	}
+	log.Printf("Finished trying to configure all interfaces.")
 }

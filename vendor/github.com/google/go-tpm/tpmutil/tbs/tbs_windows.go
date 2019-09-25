@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Google Inc. All rights reserved.
+// Copyright (c) 2018, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -130,6 +130,7 @@ var errorDescriptions = map[Error]string{
 // https://docs.microsoft.com/en-us/windows/desktop/TBS/tpm-base-services-portal
 var (
 	tbsDLL           = syscall.NewLazyDLL("Tbs.dll")
+	tbsGetDeviceInfo = tbsDLL.NewProc("Tbsi_GetDeviceInfo")
 	tbsCreateContext = tbsDLL.NewProc("Tbsi_Context_Create")
 	tbsContextClose  = tbsDLL.NewProc("Tbsip_Context_Close")
 	tbsSubmitCommand = tbsDLL.NewProc("Tbsip_Submit_Command")
@@ -142,6 +143,27 @@ func sliceAddress(s []byte) uintptr {
 		return 0
 	}
 	return uintptr(unsafe.Pointer(&(s[0])))
+}
+
+// Declaration of TPM_DEVICE_INFO from tbs.h
+type DeviceInfo struct {
+	StructVersion    uint32
+	TPMVersion       Version
+	TPMInterfaceType uint32
+	TPMImpRevision   uint32
+}
+
+func GetDeviceInfo() (*DeviceInfo, error) {
+	info := DeviceInfo{}
+	// TBS_RESULT Tbsi_GetDeviceInfo(
+	//   UINT32 Size,
+	//   PVOID  Info
+	// );
+	result, _, _ := tbsGetDeviceInfo.Call(
+		unsafe.Sizeof(info),
+		uintptr(unsafe.Pointer(&info)),
+	)
+	return &info, getError(result)
 }
 
 // CreateContext creates a new TPM context:
