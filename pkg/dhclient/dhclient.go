@@ -215,7 +215,10 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 
 	// If the link is never going to be ready, don't wait forever.
 	// (The user may not have configured a ctx with a timeout.)
-	linkTimeout := time.After(c.Timeout)
+	//
+	// TODO: these timeouts all accumulate in weird ways. IPv6 can delay
+	// DHCP for up to 15-45 seconds as opposed to IPv4 at this point.
+	linkTimeout := time.After(15 * time.Second)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
