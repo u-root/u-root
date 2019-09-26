@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 // Packet6 implements Packet for IPv6 DHCP.
@@ -31,9 +33,45 @@ func (p *Packet6) Link() netlink.Link {
 	return p.iface
 }
 
+// Configure6 adds IPv6 addresses, routes, and DNS servers to the system.
+func Configure6(iface netlink.Link, packet *dhcpv6.Message) error {
+	p := NewPacket6(iface, packet)
+	return p.Configure()
+}
+
 // Configure configures interface using this packet.
 func (p *Packet6) Configure() error {
-	return Configure6(p.iface, p.p)
+	l := p.Lease()
+	if l == nil {
+		return fmt.Errorf("no lease returned")
+	}
+
+	// Add the address to the iface.
+	dst := &netlink.Addr{
+		IPNet: &net.IPNet{
+			IP:   l.IPv6Addr,
+			Mask: net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::")),
+		},
+		PreferedLft: int(l.PreferredLifetime),
+		ValidLft:    int(l.ValidLifetime),
+		// Optimistic DAD (Duplicate Address Detection) means we can
+		// use the address before DAD is complete. The DHCP server's
+		// job was to give us a unique IP so there is little risk of a
+		// collision.
+		Flags: unix.IFA_F_OPTIMISTIC,
+	}
+	if err := netlink.AddrReplace(p.iface, dst); err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("add/replace %s to %v: %v", dst, p.iface, err)
+		}
+	}
+
+	if ips := p.DNS(); ips != nil {
+		if err := WriteDNSSettings(ips, nil, ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *Packet6) String() string {
