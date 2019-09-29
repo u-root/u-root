@@ -265,7 +265,7 @@ func runClient(host, a string) error {
 	if err != nil {
 		return err
 	}
-	cl, err := dial(*network, host+":"+*port, c)
+	cl, err := dial(*network, net.JoinHostPort(host, *port), c)
 	if err != nil {
 		return err
 	}
