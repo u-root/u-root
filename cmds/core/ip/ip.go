@@ -5,9 +5,10 @@
 package main
 
 import (
+	"bufio"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	l "log"
 	"net"
 	"os"
@@ -205,16 +206,132 @@ func link() error {
 	return usage()
 }
 
+func hexToBytes(xs string) ([]byte, error) {
+	x, err := hex.DecodeString(xs)
+	if err != nil {
+		return nil, err
+	}
+	if len(x) != net.IPv4len && len(x) != net.IPv6len {
+		return nil, fmt.Errorf("invalid IP address length: %d", len(x))
+	}
+	// entries are in network byte order, needs to be swapped
+	for i := 0; i < len(x)/2; i++ {
+		x[i], x[len(x)-i-1] = x[len(x)-i-1], x[i]
+	}
+	return x, nil
+}
+
+func hexToIP(xs string) (net.IP, error) {
+	x, err := hexToBytes(xs)
+	return net.IP(x), err
+}
+
+func printRoutev6(sc *bufio.Scanner) error {
+	for sc.Scan() {
+		fmt.Println(sc.Text())
+	}
+	return sc.Err()
+}
+
+// printRoutev4 interprets the content of /proc/net/route and prints as much as
+// possible according to the output of `ip route show` from iproute2. However
+// /proc/net/route does not contain all the necessary information, which should
+// be retrieved via rtnetlink instead. But at least now we can print some
+// interpreted route information.
+func printRoutev4(sc *bufio.Scanner) error {
+	expectedHeader := []string{
+		// fields from /proc/net/route
+		"Iface",
+		"Destination",
+		"Gateway",
+		"Flags",
+		"RefCnt",
+		"Use",
+		"Metric",
+		"Mask",
+		"MTU",
+		"Window",
+		"IRTT",
+	}
+	var lineno uint64
+	for sc.Scan() {
+		lineno++
+		fields := strings.Fields(sc.Text())
+		if len(fields) != len(expectedHeader) {
+			return fmt.Errorf("cannot parse IPv4 route entry: expected %d fields, got %d", len(expectedHeader), len(fields))
+		}
+		if lineno == 1 {
+			// parse as header
+			for i := 0; i < len(expectedHeader); i++ {
+				if fields[i] != expectedHeader[i] {
+					return fmt.Errorf("Invalid '%s' field at position %d: want %s", fields[i], i, expectedHeader[i])
+				}
+			}
+		} else {
+			// parse as entry
+			var out string
+			// parse destination
+			dest, err := hexToIP(fields[1])
+			if err != nil {
+				return fmt.Errorf("invalid hex-formatted destination IP %s: %v", fields[1], err)
+			}
+			if dest.Equal(net.IPv4zero) {
+				out += "default"
+			} else {
+				out += dest.String()
+				// add netmask
+				mask, err := hexToBytes(fields[7])
+				if err != nil {
+					return fmt.Errorf("invalid hex-formatted netmask %s: %v", fields[7], err)
+				}
+				ones, _ := net.IPMask(mask).Size()
+				out += fmt.Sprintf("/%d", ones)
+			}
+			// print gateway, if any
+			gw, err := hexToIP(fields[2])
+			if err != nil {
+				return fmt.Errorf("invalid hex-formatted gateway IP %s: %v", fields[2], err)
+			}
+			if !gw.Equal(net.IPv4zero) {
+				out += " via " + gw.String()
+			}
+			// print interface
+			out += " dev " + fields[0]
+			// print metric
+			// TODO check that metric is a valid positive integer string
+			out += " metric " + fields[6]
+			// TODO print proto, scope, src, status. This information is not
+			// present in /proc/net/route and needs to be retrieved via
+			// rtnetlink.
+			fmt.Println(out)
+		}
+	}
+	return sc.Err()
+}
+
 func routeshow() error {
 	path := "/proc/net/route"
 	if *inet6 {
 		path = "/proc/net/ipv6_route"
 	}
-	b, err := ioutil.ReadFile(path)
+	fd, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("Route show failed: %v", err)
+		return fmt.Errorf("failed to open %s: %v", path, err)
 	}
-	log.Printf("%s", string(b))
+	defer func() {
+		if err := fd.Close(); err != nil {
+			log.Printf("Warning: failed to close %s: %v", path, err)
+		}
+	}()
+	sc := bufio.NewScanner(fd)
+	if *inet6 {
+		err = printRoutev6(sc)
+	} else {
+		err = printRoutev4(sc)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %v", path, err)
+	}
 	return nil
 }
 
