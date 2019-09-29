@@ -235,7 +235,7 @@ func main() {
 
 	// Once a ServerConfig has been configured, connections can be
 	// accepted.
-	listener, err := net.Listen("tcp", *ip+":"+*port)
+	listener, err := net.Listen("tcp", net.JoinHostPort(*ip, *port))
 	if err != nil {
 		log.Fatal(err)
 	}
