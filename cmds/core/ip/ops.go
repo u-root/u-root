@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"net"
 	"strings"
@@ -137,6 +138,9 @@ const (
 	routeFmt   = "%v dev %s proto %s scope %s src %s metric %d\n"
 )
 
+// routing protocol identifier
+// specified in Linux Kernel header: include/uapi/linux/rtnetlink.h
+// See man IP-ROUTE(8) and RTNETLINK(7)
 var rtProto = map[int]string{
 	unix.RTPROT_BOOT:   "boot",
 	unix.RTPROT_KERNEL: "kernel",
@@ -147,9 +151,13 @@ var rtProto = map[int]string{
 func showRoutes(inet6 bool) error {
 	var f int
 	if inet6 {
-		//TODO: implement ipv6 implementation
-		//f = netlink.FAMILY_V6
-		return fmt.Errorf("ipv6 route not implemented yet")
+		path := "/proc/net/ipv6_route"
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("Route show failed: %v", err)
+		}
+		log.Printf("%s", string(b))
+		return nil
 	}
 	f = netlink.FAMILY_V4
 
@@ -158,33 +166,28 @@ func showRoutes(inet6 bool) error {
 		return err
 	}
 	for _, route := range routes {
+		link, err := netlink.LinkByIndex(route.LinkIndex)
+		if err != nil {
+			return err
+		}
 		if route.Gw != nil {
-			err = defaultRoute(route)
+			defaultRoute(route, link)
 		} else {
-			err = showRoute(route)
+			showRoute(route, link)
 		}
 	}
-	return err
+	return nil
 }
 
-func defaultRoute(r netlink.Route) error {
-	l, err := netlink.LinkByIndex(r.LinkIndex)
-	if err != nil {
-		return err
-	}
+func defaultRoute(r netlink.Route, l netlink.Link) {
 	gw := r.Gw
 	name := l.Attrs().Name
 	proto := rtProto[r.Protocol]
 	metric := r.Priority
 	fmt.Printf(defaultFmt, gw, name, proto, metric)
-	return nil
 }
 
-func showRoute(r netlink.Route) error {
-	l, err := netlink.LinkByIndex(r.LinkIndex)
-	if err != nil {
-		return err
-	}
+func showRoute(r netlink.Route, l netlink.Link) {
 	dest := r.Dst
 	name := l.Attrs().Name
 	proto := rtProto[r.Protocol]
@@ -192,5 +195,4 @@ func showRoute(r netlink.Route) error {
 	src := r.Src
 	metric := r.Priority
 	fmt.Printf(routeFmt, dest, name, proto, scope, src, metric)
-	return nil
 }
