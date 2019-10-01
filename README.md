@@ -57,6 +57,7 @@ these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
 
 *   `fbnetboot`: a network boot client that uses DHCP and HTTP to get a boot
     program based on Linux, and boots it. To be merged with `pxeboot`.
+    
 
 *   `localboot`: a tool that finds bootable kernel configurations on the local
     disks and boots them.
