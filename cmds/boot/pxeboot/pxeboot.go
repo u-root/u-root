@@ -78,7 +78,10 @@ func Netboot(ifaceNames string) error {
 
 			if err := result.Lease.Configure(); err != nil {
 				log.Printf("Failed to configure lease %s: %v", result.Lease, err)
-				continue
+				// Boot further regardless of lease configuration result.
+				//
+				// If lease failed, fall back to use locally configured
+				// ip/ipv6 address.
 			}
 			img, err := netboot.BootImage(urlfetch.DefaultSchemes, result.Lease)
 			if err != nil {
