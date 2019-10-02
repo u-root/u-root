@@ -15,7 +15,6 @@ import (
 	"log"
 	"net"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -30,7 +29,7 @@ import (
 
 const linkUpAttempt = 30 * time.Second
 
-// isIpv6LinkReady returns true iff the interface has a link-local address
+// isIpv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
 func isIpv6LinkReady(l netlink.Link) (bool, error) {
 	addrs, err := netlink.AddrList(l, netlink.FAMILY_V6)
@@ -71,49 +70,6 @@ func IfUp(ifname string) (netlink.Link, error) {
 	}
 
 	return nil, fmt.Errorf("link %q still down after %d seconds", ifname, linkUpAttempt)
-}
-
-// Configure4 adds IP addresses, routes, and DNS servers to the system.
-func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
-	p := NewPacket4(iface, packet)
-	return p.Configure()
-}
-
-// Configure6 adds IPv6 addresses, routes, and DNS servers to the system.
-func Configure6(iface netlink.Link, packet *dhcpv6.Message) error {
-	p := NewPacket6(iface, packet)
-
-	l := p.Lease()
-	if l == nil {
-		return fmt.Errorf("no lease returned")
-	}
-
-	// Add the address to the iface.
-	dst := &netlink.Addr{
-		IPNet: &net.IPNet{
-			IP:   l.IPv6Addr,
-			Mask: net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::")),
-		},
-		PreferedLft: int(l.PreferredLifetime),
-		ValidLft:    int(l.ValidLifetime),
-		// Optimistic DAD (Duplicate Address Detection) means we can
-		// use the address before DAD is complete. The DHCP server's
-		// job was to give us a unique IP so there is little risk of a
-		// collision.
-		Flags: unix.IFA_F_OPTIMISTIC,
-	}
-	if err := netlink.AddrReplace(iface, dst); err != nil {
-		if os.IsExist(err) {
-			return fmt.Errorf("add/replace %s to %v: %v", dst, iface, err)
-		}
-	}
-
-	if ips := p.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips, nil, ""); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // WriteDNSSettings writes the given nameservers, search list, and domain to resolv.conf.
