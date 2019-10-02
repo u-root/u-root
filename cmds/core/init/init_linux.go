@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"os"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kmodule"
