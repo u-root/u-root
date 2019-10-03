@@ -60,8 +60,6 @@ func main() {
 	fmt.Println(`  | |_| |____| | | (_) | (_) | |_`)
 	fmt.Println(`   \__,_|    |_|  \___/ \___/ \__|`)
 	fmt.Println()
-	util.Rootfs()
-	log.Printf("Done Rootfs")
 
 	if *verbose {
 		debug = log.Printf
@@ -76,6 +74,10 @@ func main() {
 			log.Printf("Could not set log level: %v", err)
 		}
 	}
+
+	// Create the root file systems.
+	util.Rootfs()
+
 	envs = os.Environ()
 	debug("envs %v", envs)
 
