@@ -29,7 +29,7 @@ import (
 
 const linkUpAttempt = 30 * time.Second
 
-// isIpv6LinkReady returns true iff the interface has a link-local address
+// isIpv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
 func isIpv6LinkReady(l netlink.Link) (bool, error) {
 	addrs, err := netlink.AddrList(l, netlink.FAMILY_V6)

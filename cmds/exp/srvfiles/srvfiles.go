@@ -16,6 +16,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net"
 	"net/http"
 )
 
@@ -49,5 +50,5 @@ func maxAgeHandler(h http.Handler) http.Handler {
 func main() {
 	flag.Parse()
 	http.Handle("/", maxAgeHandler(http.FileServer(http.Dir(*dir))))
-	log.Fatal(http.ListenAndServe(*host+":"+*port, nil))
+	log.Fatal(http.ListenAndServe(net.JoinHostPort(*host, *port), nil))
 }
