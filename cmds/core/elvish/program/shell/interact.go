@@ -82,12 +82,12 @@ func interact(ev *eval.Evaler, dataDir string) {
 func sourceRC(ev *eval.Evaler, dataDir string) error {
 	absPath, err := filepath.Abs(filepath.Join(dataDir, "rc.elv"))
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
 		return fmt.Errorf("cannot get full path of rc.elv: %v", err)
 	}
 	code, err := readFileUTF8(absPath)
+	if os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
