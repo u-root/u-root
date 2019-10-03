@@ -23,6 +23,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
@@ -70,10 +71,9 @@ func main() {
 	// spamming non-critical logs onto the shell frustrates users. The logs
 	// are still accessible through dmesg.
 	if !*verbose {
-		const sysLogActionConsoleLevel = 8
-		const kernNotice = 5 // Only messages more severe than "notice" are printed.
-		if _, _, err := syscall.Syscall(syscall.SYS_SYSLOG, sysLogActionConsoleLevel, 0, kernNotice); err != 0 {
-			log.Print("Could not set log level")
+		// Only messages more severe than "notice" are printed.
+		if err := ulog.KernelLog.SetConsoleLogLevel(ulog.KLogNotice); err != nil {
+			log.Printf("Could not set log level: %v", err)
 		}
 	}
 	envs = os.Environ()
