@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"sync/atomic"
+	"testing"
 
 	"golang.org/x/sys/unix"
 )
