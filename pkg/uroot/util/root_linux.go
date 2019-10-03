@@ -8,7 +8,6 @@ package util
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"runtime"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
 )
 
@@ -118,6 +118,13 @@ func (m Mount) String() string {
 }
 
 var (
+	preNamespace = []Creator{
+		// These have to be created / mounted first, so that the logging works correctly.
+		Dir{Name: "/dev", Mode: 0777},
+
+		// Kernel must be compiled with CONFIG_DEVTMPFS.
+		Mount{Source: "devtmpfs", Target: "/dev", FSType: "devtmpfs"},
+	}
 	namespace = []Creator{
 		Dir{Name: "/buildbin", Mode: 0777},
 		Dir{Name: "/ubin", Mode: 0777},
@@ -135,15 +142,9 @@ var (
 		Mount{Source: "proc", Target: "/proc", FSType: "proc"},
 		Mount{Source: "tmpfs", Target: "/tmp", FSType: "tmpfs"},
 
-		Dir{Name: "/dev", Mode: 0777},
 		Dev{Name: "/dev/tty", Mode: syscall.S_IFCHR | 0666, Dev: 0x0500},
 		Dev{Name: "/dev/urandom", Mode: syscall.S_IFCHR | 0444, Dev: 0x0109},
 		Dev{Name: "/dev/port", Mode: syscall.S_IFCHR | 0640, Dev: 0x0104},
-
-		// Kernel must be compiled with CONFIG_DEVTMPFS.
-		// Note that things kind of work even if this mount fails.
-		// TODO: move the Dir commands above below this line?
-		Mount{Source: "devtmpfs", Target: "/dev", FSType: "devtmpfs"},
 
 		Dir{Name: "/dev/pts", Mode: 0777},
 		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
@@ -205,15 +206,17 @@ func create(namespace []Creator) {
 	defer unix.Umask(m)
 	for _, c := range namespace {
 		if err := c.Create(); err != nil {
-			log.Printf("Error creating %s: %v", c, err)
-		} else {
-			log.Printf("Created %v", c)
+			ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
 		}
 	}
 }
 
 // build the root file system.
 func Rootfs() {
+	// Mount devtmpfs, then open /dev/kmsg with Reinit.
+	create(preNamespace)
+	ulog.KernelLog.Reinit()
+
 	Env["PATH"] = fmt.Sprintf("%v:%v:%v:%v", GoBin(), PATHHEAD, PATHMID, PATHTAIL)
 	for k, v := range Env {
 		os.Setenv(k, v)

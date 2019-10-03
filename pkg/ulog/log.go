@@ -33,8 +33,7 @@ var KernelLog = &KLog{
 }
 
 func init() {
-	f, _ := os.OpenFile("/dev/kmsg", os.O_RDWR, 0)
-	KernelLog.File = f
+	KernelLog.Reinit()
 }
 
 // KLog is a logger to the kernel syslog buffer.
@@ -46,6 +45,12 @@ type KLog struct {
 	//
 	// Should only be accessed atomically.
 	LogLevel uintptr
+}
+
+// Reinit reopens the /dev/kmsg file.
+func (k *KLog) Reinit() {
+	f, _ := os.OpenFile("/dev/kmsg", os.O_RDWR, 0)
+	KernelLog.File = f
 }
 
 // writeString returns true iff it was able to write the log to /dev/kmsg.
