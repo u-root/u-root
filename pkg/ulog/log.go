@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// ulog implements access to kernel logging.
+// ulog exposes logging via a Go interface.
+//
+// ulog has three implementations of the Logger interface: a Go standard
+// library "log" package Logger, a kernel syslog (dmesg) Logger, and a test
+// Logger that logs via a test's testing.TB.Logf.
 package ulog
 
 import (
@@ -15,7 +19,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Logger is any
+// Logger is a log receptacle.
+//
+// It puts your information somewhere for safekeeping.
 type Logger interface {
 	Printf(format string, v ...interface{})
 	Print(v ...interface{})
