@@ -123,3 +123,16 @@ func (k *KLog) Read(b []byte) (int, error) {
 func (k *KLog) ReadClear(b []byte) (int, error) {
 	return unix.Klogctl(_SYSLOG_ACTION_READ_CLEAR, b)
 }
+
+// TestLogger is a Logger implementation that logs to testing.TB.Logf.
+type TestLogger struct {
+	TB testing.TB
+}
+
+func (tl TestLogger) Printf(format string, v ...interface{}) {
+	tl.TB.Logf(format, v...)
+}
+
+func (tl TestLogger) Print(v ...interface{}) {
+	tl.TB.Log(v...)
+}
