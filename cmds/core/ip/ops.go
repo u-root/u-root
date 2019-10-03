@@ -7,7 +7,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
 	"strings"
@@ -134,32 +133,46 @@ func showNeighbours(w io.Writer, withAddresses bool) error {
 }
 
 const (
-	defaultFmt = "default via %v dev %s proto %s metric %d\n"
-	routeFmt   = "%v dev %s proto %s scope %s src %s metric %d\n"
+	defaultFmt   = "default via %v dev %s proto %s metric %d\n"
+	routeFmt     = "%v dev %s proto %s scope %s src %s metric %d\n"
+	route6Fmt    = "%s dev %s proto %s metric %d\n"
+	routeVia6Fmt = "%s via %s dev %s proto %s metric %d\n"
 )
 
 // routing protocol identifier
 // specified in Linux Kernel header: include/uapi/linux/rtnetlink.h
 // See man IP-ROUTE(8) and RTNETLINK(7)
 var rtProto = map[int]string{
-	unix.RTPROT_BOOT:   "boot",
-	unix.RTPROT_KERNEL: "kernel",
-	unix.RTPROT_STATIC: "static",
-	unix.RTPROT_DHCP:   "dhcp",
+	unix.RTPROT_BABEL:    "babel",
+	unix.RTPROT_BGP:      "bgp",
+	unix.RTPROT_BIRD:     "bird",
+	unix.RTPROT_BOOT:     "boot",
+	unix.RTPROT_DHCP:     "dhcp",
+	unix.RTPROT_DNROUTED: "dnrouted",
+	unix.RTPROT_EIGRP:    "eigrp",
+	unix.RTPROT_GATED:    "gated",
+	unix.RTPROT_ISIS:     "isis",
+	unix.RTPROT_KERNEL:   "kernel",
+	unix.RTPROT_MROUTED:  "mrouted",
+	unix.RTPROT_MRT:      "mrt",
+	unix.RTPROT_NTK:      "ntk",
+	unix.RTPROT_OSPF:     "ospf",
+	unix.RTPROT_RA:       "ra",
+	unix.RTPROT_REDIRECT: "redirect",
+	unix.RTPROT_RIP:      "rip",
+	unix.RTPROT_STATIC:   "static",
+	unix.RTPROT_UNSPEC:   "unspec",
+	unix.RTPROT_XORP:     "xorp",
+	unix.RTPROT_ZEBRA:    "zebra",
 }
 
 func showRoutes(inet6 bool) error {
 	var f int
 	if inet6 {
-		path := "/proc/net/ipv6_route"
-		b, err := ioutil.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("Route show failed: %v", err)
-		}
-		log.Printf("%s", string(b))
-		return nil
+		f = netlink.FAMILY_V6
+	} else {
+		f = netlink.FAMILY_V4
 	}
-	f = netlink.FAMILY_V4
 
 	routes, err := netlink.RouteList(nil, f)
 	if err != nil {
@@ -170,10 +183,10 @@ func showRoutes(inet6 bool) error {
 		if err != nil {
 			return err
 		}
-		if route.Gw != nil {
+		if route.Dst == nil {
 			defaultRoute(route, link)
 		} else {
-			showRoute(route, link)
+			showRoute(route, link, f)
 		}
 	}
 	return nil
@@ -187,12 +200,22 @@ func defaultRoute(r netlink.Route, l netlink.Link) {
 	fmt.Printf(defaultFmt, gw, name, proto, metric)
 }
 
-func showRoute(r netlink.Route, l netlink.Link) {
+func showRoute(r netlink.Route, l netlink.Link, f int) {
 	dest := r.Dst
 	name := l.Attrs().Name
 	proto := rtProto[r.Protocol]
-	scope := addrScopes[r.Scope]
-	src := r.Src
 	metric := r.Priority
-	fmt.Printf(routeFmt, dest, name, proto, scope, src, metric)
+	switch f {
+	case netlink.FAMILY_V4:
+		scope := addrScopes[r.Scope]
+		src := r.Src
+		fmt.Printf(routeFmt, dest, name, proto, scope, src, metric)
+	case netlink.FAMILY_V6:
+		if r.Gw != nil {
+			gw := r.Gw
+			fmt.Printf(routeVia6Fmt, dest, gw, name, proto, metric)
+		} else {
+			fmt.Printf(route6Fmt, dest, name, proto, metric)
+		}
+	}
 }
