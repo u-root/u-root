@@ -63,8 +63,8 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 			"-c", pkg,
 			"-o", testFile,
 		)
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("could not build %s: %v", pkg, err)
+		if stderr, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("could not build %s: %v\n%s", pkg, err, string(stderr))
 		}
 
 		// When a package does not contain any tests, the test
