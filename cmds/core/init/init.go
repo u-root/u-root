@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/libinit"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -50,6 +51,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+
 	log.Printf("Welcome to u-root!")
 	fmt.Println(`                              _`)
 	fmt.Println(`   _   _      _ __ ___   ___ | |_`)
@@ -57,6 +59,8 @@ func main() {
 	fmt.Println(`  | |_| |____| | | (_) | (_) | |_`)
 	fmt.Println(`   \__,_|    |_|  \___/ \___/ \__|`)
 	fmt.Println()
+
+	log.SetPrefix("init: ")
 
 	if *verbose {
 		debug = log.Printf
@@ -72,8 +76,9 @@ func main() {
 		}
 	}
 
+	libinit.SetEnv()
 	// Create the root file systems.
-	util.Rootfs()
+	libinit.CreateRootfs()
 
 	envs = os.Environ()
 	debug("envs %v", envs)
@@ -86,9 +91,9 @@ func main() {
 	osInitGo()
 
 	for _, v := range cmdList {
-		debug("Let's try to run %v", v)
+		debug("Trying to run %v", v)
 		if _, err := os.Stat(v); os.IsNotExist(err) {
-			debug("it's not there")
+			debug("%v", err)
 			continue
 		}
 
@@ -133,7 +138,7 @@ func main() {
 		} else {
 			cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
 		}
-		debug("Run %v", cmd)
+		debug("running %v", cmd)
 		if err := cmd.Start(); err != nil {
 			log.Printf("Error starting %v: %v", v, err)
 			continue
@@ -152,15 +157,15 @@ func main() {
 			}
 		}
 		if err := cmd.Process.Release(); err != nil {
-			log.Printf("Error releasing %v:%v", v, err)
+			log.Printf("Error releasing process %v: %v", v, err)
 		}
 	}
 	if cmdCount == 0 {
-		log.Printf("init: No suitable executable found in %+v", cmdList)
+		log.Printf("No suitable executable found in %+v", cmdList)
 	}
 
 	// We need to reap all children before exiting.
-	log.Printf("init: Waiting for orphaned children")
+	log.Printf("Waiting for orphaned children")
 	for {
 		var s syscall.WaitStatus
 		var r syscall.Rusage
@@ -170,8 +175,8 @@ func main() {
 		}
 		log.Printf("%v: exited with %v, status %v, rusage %v", p, err, s, r)
 	}
-	log.Printf("init: All commands exited")
-	log.Printf("init: Syncing filesystems")
+	log.Printf("All commands exited")
+	log.Printf("Syncing filesystems")
 	syscall.Sync()
-	log.Printf("init: Exiting...")
+	log.Printf("Exiting...")
 }

@@ -20,19 +20,18 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/libinit"
 )
 
 var (
-	test     = flag.Bool("test", false, "Test mode: don't try to set control tty")
-	osInitGo = func() {}
+	test = flag.Bool("test", false, "Test mode: don't try to set control tty")
 )
 
 func cpuSetup() error {
 	log.Printf("Welcome to Plan 9(tm)!")
-	util.Rootfs()
+	libinit.SetEnv()
+	libinit.CreateRootfs()
 	log.Printf("Done Rootfs")
-	osInitGo()
 	// TODO: this needs to be added as prt of the Rootfs() stuff
 	if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
 		log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
