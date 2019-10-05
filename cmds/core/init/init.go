@@ -16,8 +16,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/libinit"
@@ -95,28 +93,6 @@ func main() {
 		if _, err := os.Stat(v); os.IsNotExist(err) {
 			debug("%v", err)
 			continue
-		}
-
-		// I *love* special cases. Evaluate just the top-most symlink.
-		//
-		// In source mode, this would be a symlink like
-		// /buildbin/defaultsh -> /buildbin/elvish ->
-		// /buildbin/installcommand.
-		//
-		// To actually get the command to build, argv[0] has to end
-		// with /elvish, so we resolve one level of symlink.
-		if path.Base(v) == "defaultsh" {
-			s, err := os.Readlink(v)
-			if err == nil {
-				v = s
-			}
-			debug("readlink of %v returns %v", v, s)
-			// and, well, it might be a relative link.
-			// We must go deeper.
-			d, b := filepath.Split(v)
-			d = filepath.Base(d)
-			v = filepath.Join("/", os.Getenv("UROOT_ROOT"), d, b)
-			debug("is now %v", v)
 		}
 
 		// inito is (optionally) created by the u-root command when the
