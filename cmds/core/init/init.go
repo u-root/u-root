@@ -22,7 +22,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/libinit"
 	"github.com/u-root/u-root/pkg/ulog"
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 var (
@@ -36,7 +36,7 @@ var (
 )
 
 func init() {
-	r := util.UrootPath
+	r := upath.UrootPath
 	cmdList = []string{
 		r("/inito"),
 
