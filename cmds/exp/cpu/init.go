@@ -17,7 +17,6 @@ package main
 import (
 	"flag"
 	"log"
-	"os/exec"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/libinit"
@@ -31,11 +30,7 @@ func cpuSetup() error {
 	log.Printf("Welcome to Plan 9(tm)!")
 	libinit.SetEnv()
 	libinit.CreateRootfs()
-	log.Printf("Done Rootfs")
-	// TODO: this needs to be added as prt of the Rootfs() stuff
-	if o, err := exec.Command("ip", "link", "set", "dev", "lo", "up").CombinedOutput(); err != nil {
-		log.Fatalf("ip link set dev lo: %v (%v)", string(o), err)
-	}
+	libinit.NetInit()
 	return nil
 }
 
