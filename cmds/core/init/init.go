@@ -77,6 +77,7 @@ func main() {
 	libinit.SetEnv()
 	// Create the root file systems.
 	libinit.CreateRootfs()
+	libinit.NetInit()
 
 	envs = os.Environ()
 	debug("envs %v", envs)
