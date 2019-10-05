@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package util
+// Package upath contains utilities for dealing with symlinked paths.
+package upath
 
 import (
 	"log"
@@ -41,9 +42,17 @@ func IsTargetSymlink(originalFile, target string) bool {
 }
 
 // ResolveUntilLastSymlink resolves until the last symlink.
+//
 // This is needed when we have a chain of symlinks and want the last
 // symlink, not the file pointed to (which is why we don't use
 // filepath.EvalSymlinks)
+//
+// I.e.
+//
+// /foo/bar -> ../baz/foo
+// /baz/foo -> bla
+//
+// ResolveUntilLastSymlink(/foo/bar) returns /baz/foo.
 func ResolveUntilLastSymlink(p string) string {
 	for target, err := os.Readlink(p); err == nil && IsTargetSymlink(p, target); target, err = os.Readlink(p) {
 		p = AbsSymlink(p, target)
