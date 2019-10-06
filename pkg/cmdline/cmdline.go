@@ -155,14 +155,14 @@ func getFlagMap(flagName string) map[string]string {
 	return parseToMap(flagName)
 }
 
-// GetUinitFlagMap gets the uinit flags as a map
-func GetUinitFlagMap() map[string]string {
-	uinitflags, _ := Flag("uroot.uinitflags")
-	return getFlagMap(uinitflags)
-}
-
 // GetInitFlagMap gets the init flags as a map
 func GetInitFlagMap() map[string]string {
 	initflags, _ := Flag("uroot.initflags")
 	return getFlagMap(initflags)
+}
+
+// GetUinitArgs gets the uinit argvs.
+func GetUinitArgs() []string {
+	uinitargs, _ := Flag("uroot.uinitargs")
+	return strings.Fields(uinitargs)
 }

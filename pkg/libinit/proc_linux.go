@@ -98,7 +98,9 @@ func WithCloneFlags(flags uintptr) CommandModifier {
 // WithArguments adds command-line arguments to a command.
 func WithArguments(arg ...string) CommandModifier {
 	return func(c *exec.Cmd) {
-		c.Args = append(c.Args, arg...)
+		if len(arg) > 0 {
+			c.Args = append(c.Args, arg...)
+		}
 	}
 }
 
