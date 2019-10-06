@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package cmdline provides a parser and convenience functions for reading
-// configuration data from /proc/cmdline it's conformant with
+// Package cmdline is parser for kernel command-line args from /proc/cmdline.
+//
+// It's conformant with
 // https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html,
 // though making 'var_name' and 'var-name' equivalent may need to be done
 // separately.
