@@ -14,13 +14,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/libinit"
 	"github.com/u-root/u-root/pkg/ulog"
-	"github.com/u-root/u-root/pkg/upath"
 )
 
 var (
@@ -28,24 +26,7 @@ var (
 	test     = flag.Bool("test", false, "Test mode: don't try to set control tty")
 	debug    = func(string, ...interface{}) {}
 	osInitGo = func() {}
-	cmdList  []string
-	cmdCount int
-	envs     []string
 )
-
-func init() {
-	r := upath.UrootPath
-	cmdList = []string{
-		r("/inito"),
-
-		r("/bbin/uinit"),
-		r("/bin/uinit"),
-		r("/buildbin/uinit"),
-
-		r("/bin/defaultsh"),
-		r("/bin/sh"),
-	}
-}
 
 func main() {
 	flag.Parse()
@@ -75,83 +56,41 @@ func main() {
 	}
 
 	libinit.SetEnv()
-	// Create the root file systems.
 	libinit.CreateRootfs()
 	libinit.NetInit()
 
-	envs = os.Environ()
-	debug("envs %v", envs)
+	// Potentially exec systemd if we have been asked to.
+	osInitGo()
 
 	// Start background build.
 	if isBgBuildEnabled() {
 		go startBgBuild()
 	}
 
-	osInitGo()
+	// Turn off job control when test mode is on.
+	ctty := libinit.WithTTYControl(!*test)
 
-	for _, v := range cmdList {
-		debug("Trying to run %v", v)
-		if _, err := os.Stat(v); os.IsNotExist(err) {
-			debug("%v", err)
-			continue
-		}
-
+	cmdList := []*exec.Cmd{
 		// inito is (optionally) created by the u-root command when the
 		// u-root initramfs is merged with an existing initramfs that
 		// has a /init. The name inito means "original /init" There may
 		// be an inito if we are building on an existing initramfs. All
 		// initos need their own pid space.
-		var cloneFlags uintptr
-		if v == "/inito" {
-			cloneFlags = uintptr(syscall.CLONE_NEWPID)
-		}
+		libinit.Command("/inito", libinit.WithCloneFlags(syscall.CLONE_NEWPID), ctty),
 
-		cmdCount++
-		cmd := exec.Command(v)
-		cmd.Env = envs
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		if *test {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Cloneflags: cloneFlags}
-		} else {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Cloneflags: cloneFlags}
-		}
-		debug("running %v", cmd)
-		if err := cmd.Start(); err != nil {
-			log.Printf("Error starting %v: %v", v, err)
-			continue
-		}
-		for {
-			var s syscall.WaitStatus
-			var r syscall.Rusage
-			if p, err := syscall.Wait4(-1, &s, 0, &r); p == cmd.Process.Pid {
-				debug("Shell exited, exit status %d", s.ExitStatus())
-				break
-			} else if p != -1 {
-				debug("Reaped PID %d, exit status %d", p, s.ExitStatus())
-			} else {
-				debug("Error from Wait4 for orphaned child: %v", err)
-				break
-			}
-		}
-		if err := cmd.Process.Release(); err != nil {
-			log.Printf("Error releasing process %v: %v", v, err)
-		}
+		libinit.Command("/bbin/uinit", ctty),
+		libinit.Command("/bin/uinit", ctty),
+		libinit.Command("/buildbin/uinit", ctty),
+
+		libinit.Command("/bin/defaultsh", ctty),
+		libinit.Command("/bin/sh", ctty),
 	}
-	if cmdCount == 0 {
-		log.Printf("No suitable executable found in %+v", cmdList)
-	}
+
+	libinit.RunCommands(debug, cmdList...)
 
 	// We need to reap all children before exiting.
 	log.Printf("Waiting for orphaned children")
-	for {
-		var s syscall.WaitStatus
-		var r syscall.Rusage
-		p, err := syscall.Wait4(-1, &s, 0, &r)
-		if p == -1 {
-			break
-		}
-		log.Printf("%v: exited with %v, status %v, rusage %v", p, err, s, r)
-	}
+	libinit.WaitOrphans()
 	log.Printf("All commands exited")
 	log.Printf("Syncing filesystems")
 	syscall.Sync()

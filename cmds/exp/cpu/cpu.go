@@ -569,7 +569,7 @@ func doInit() error {
 	}
 
 	// start the process reaper
-	procs := make(chan int)
+	procs := make(chan uint)
 	go cpuDone(procs)
 
 	server.SetOption(ssh.HostKeyFile(*hostKeyFile))
