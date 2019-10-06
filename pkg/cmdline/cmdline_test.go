@@ -12,7 +12,7 @@ import (
 func TestCmdline(t *testing.T) {
 
 	exampleCmdLine := `BOOT_IMAGE=/vmlinuz-4.11.2 ro ` +
-		`test-flag test2-flag=8 uroot.uinitflags="a=3 skipfork test2-flag" ` +
+		`test-flag test2-flag=8 ` +
 		`uroot.initflags="systemd test-flag=3  test2-flag runlevel=2" ` +
 		`root=LABEL=/ biosdevname=0 net.ifnames=0 fsck.repair=yes ` +
 		`ipv6.autoconf=0 erst_disable nox2apic crashkernel=128M ` +
@@ -32,18 +32,19 @@ func TestCmdline(t *testing.T) {
 		t.Errorf("procCmdLine threw an error: %v", procCmdLine.Err)
 	}
 
-	if len(procCmdLine.Raw) != 393 {
-		t.Errorf("procCmdLine.Raw wrong length: %v != 417",
-			len(procCmdLine.Raw))
+	wantLen := len(exampleCmdLine)
+	if len(procCmdLine.Raw) != wantLen {
+		t.Errorf("procCmdLine.Raw wrong length: %v != %d",
+			len(procCmdLine.Raw), wantLen)
 	}
 
-	if len(FullCmdLine()) != 393 {
-		t.Errorf("FullCmdLine() returned wrong length: %v != 417",
-			len(FullCmdLine()))
+	if len(FullCmdLine()) != wantLen {
+		t.Errorf("FullCmdLine() returned wrong length: %v != %d",
+			len(FullCmdLine()), wantLen)
 	}
 
-	if len(procCmdLine.AsMap) != 22 {
-		t.Errorf("procCmdLine.Raw wrong length: %v != 22",
+	if len(procCmdLine.AsMap) != 21 {
+		t.Errorf("procCmdLine.AsMap wrong length: %v != 21",
 			len(procCmdLine.AsMap))
 	}
 
@@ -57,16 +58,6 @@ func TestCmdline(t *testing.T) {
 
 	if security, present := Flag("security"); !present || security != "selinux" {
 		t.Errorf("Flag 'security' is %v instead of 'selinux'", security)
-	}
-
-	uinitFlagMap := GetUinitFlagMap()
-
-	if _, present := uinitFlagMap["skipfork"]; !present {
-		t.Errorf("Can't find 'skipfork' flag in uinit flags: present == %v",
-			present)
-	}
-	if _, present := uinitFlagMap["madeup"]; present {
-		t.Error("Should not find a 'madeup' flag in uinit flags")
 	}
 
 	initFlagMap := GetInitFlagMap()

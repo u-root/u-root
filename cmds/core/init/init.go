@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/libinit"
 	"github.com/u-root/u-root/pkg/ulog"
 )
@@ -70,6 +71,11 @@ func main() {
 	// Turn off job control when test mode is on.
 	ctty := libinit.WithTTYControl(!*test)
 
+	// Allows passing args to uinit via kernel parameters, for example:
+	//
+	// uroot.uinitargs="-v --foobar"
+	uinitArgs := libinit.WithArguments(cmdline.GetUinitArgs()...)
+
 	cmdList := []*exec.Cmd{
 		// inito is (optionally) created by the u-root command when the
 		// u-root initramfs is merged with an existing initramfs that
@@ -78,9 +84,9 @@ func main() {
 		// initos need their own pid space.
 		libinit.Command("/inito", libinit.WithCloneFlags(syscall.CLONE_NEWPID), ctty),
 
-		libinit.Command("/bbin/uinit", ctty),
-		libinit.Command("/bin/uinit", ctty),
-		libinit.Command("/buildbin/uinit", ctty),
+		libinit.Command("/bbin/uinit", ctty, uinitArgs),
+		libinit.Command("/bin/uinit", ctty, uinitArgs),
+		libinit.Command("/buildbin/uinit", ctty, uinitArgs),
 
 		libinit.Command("/bin/defaultsh", ctty),
 		libinit.Command("/bin/sh", ctty),
