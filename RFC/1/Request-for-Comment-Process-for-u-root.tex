@@ -1,0 +1,57 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{Request for Comment Process for u-root}
+\author{Ron Minnich}
+\date{October 2019}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+We need a Request For Comment (RFC) process for u-root. This document outlines it.
+
+\section{Motivation}
+u-root has grown far faster, with wider usage, than we ever anticipated.
+It is straining to accommodate the growth.
+For example, the init system is not really adequate, but we want to avoid the mistakes of the past. 
+We need a way to present new ideas for u-root, get comments, come to agreement, and document the result. 
+
+It makes sense to retain the RFCs in u-root itself, under git control, and use the github PR process to modify and approve them.
+
+We tried something like this years ago in coreboot, but lacking the process proposed in this RFC, it never worked very well.
+I'm writing this document in hopes that building some rules will make it succeed.
+
+\section{Process}
+This RFC process is loosely based on the IETF RFC process\cite{RFC0001}.
+A user will submit a PR for an RFC, sequentially numbered so referring to it is easy,
+and we will use the github comment mechanism to refine it until it meets approval. 
+
+Just what constitutes approval is tricky, but we might consider requiring, say, three organizations to sign off; or we might have the Technical Steering Committee be the gatekeeper.
+
+\section{Format}
+RFCs should follow the Title, Introduction, Motivation pattern for the front matter. 
+Authors names can be listed at the front. 
+Authors names, and affiliations, can be listed at the end. 
+RFCs shall be written in Latex using the article documentclass.
+If you are not sure of how to use Latex, consider using overleaf.com (a sort of Google docs for Latex), or for local use, Texmaker.
+For citations, Google Scholar is very helpful for getting bibtex format entries.
+Each RFC will be contained in a directory with the directory name in the format
+RFC number-title-with-hyphens-for-spaces, e.g. this document is
+RFC/1/Request-for-Comment-Process-for-u-root.
+
+Common bibliograpy entries will be maintained at in the RFC directory itself as RFC/rfc.bib and can be referenced with cite commands; see the source of this document for an example.
+
+\section{Helpful hints}
+In general, in your latex files, use one sentence per line to make git reviews easier.
+
+\section{authors}
+Ron Minnich\\Google
+
+\bibliographystyle{plain}
+\bibliography{../rfc}
+\end{document}

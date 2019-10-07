@@ -50,3 +50,10 @@ vmlinux
 
 # tools
 tools/checklicenses/checklicenses
+
+# latex
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
