@@ -118,7 +118,7 @@ func (p *Packet6) Boot() (*url.URL, error) {
 		return nil, fmt.Errorf("packet does not contain boot file URL")
 	}
 	// Srsly, a []byte?
-	return url.Parse(string(uri.BootFileURL))
+	return url.Parse(string(uri.ToBytes()))
 }
 
 // ISCSIBoot returns the target address and volume name to boot from if
@@ -132,5 +132,5 @@ func (p *Packet6) ISCSIBoot() (*net.TCPAddr, string, error) {
 	if !ok {
 		return nil, "", fmt.Errorf("packet does not contain boot file URL")
 	}
-	return parseISCSIURI(string(uri.BootFileURL))
+	return parseISCSIURI(string(uri.ToBytes()))
 }

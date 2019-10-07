@@ -77,6 +77,8 @@ var (
 	procLoadLibraryExW                                       = modkernel32.NewProc("LoadLibraryExW")
 	procFreeLibrary                                          = modkernel32.NewProc("FreeLibrary")
 	procGetProcAddress                                       = modkernel32.NewProc("GetProcAddress")
+	procGetModuleFileNameW                                   = modkernel32.NewProc("GetModuleFileNameW")
+	procGetModuleHandleExW                                   = modkernel32.NewProc("GetModuleHandleExW")
 	procGetVersion                                           = modkernel32.NewProc("GetVersion")
 	procFormatMessageW                                       = modkernel32.NewProc("FormatMessageW")
 	procExitProcess                                          = modkernel32.NewProc("ExitProcess")
@@ -101,6 +103,8 @@ var (
 	procDeleteFileW                                          = modkernel32.NewProc("DeleteFileW")
 	procMoveFileW                                            = modkernel32.NewProc("MoveFileW")
 	procMoveFileExW                                          = modkernel32.NewProc("MoveFileExW")
+	procLockFileEx                                           = modkernel32.NewProc("LockFileEx")
+	procUnlockFileEx                                         = modkernel32.NewProc("UnlockFileEx")
 	procGetComputerNameW                                     = modkernel32.NewProc("GetComputerNameW")
 	procGetComputerNameExW                                   = modkernel32.NewProc("GetComputerNameExW")
 	procSetEndOfFile                                         = modkernel32.NewProc("SetEndOfFile")
@@ -681,6 +685,31 @@ func _GetProcAddress(module Handle, procname *byte) (proc uintptr, err error) {
 	return
 }
 
+func GetModuleFileName(module Handle, filename *uint16, size uint32) (n uint32, err error) {
+	r0, _, e1 := syscall.Syscall(procGetModuleFileNameW.Addr(), 3, uintptr(module), uintptr(unsafe.Pointer(filename)), uintptr(size))
+	n = uint32(r0)
+	if n == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func GetModuleHandleEx(flags uint32, moduleName *uint16, module *Handle) (err error) {
+	r1, _, e1 := syscall.Syscall(procGetModuleHandleExW.Addr(), 3, uintptr(flags), uintptr(unsafe.Pointer(moduleName)), uintptr(unsafe.Pointer(module)))
+	if r1 == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
 func GetVersion() (ver uint32, err error) {
 	r0, _, e1 := syscall.Syscall(procGetVersion.Addr(), 0, 0, 0, 0)
 	ver = uint32(r0)
@@ -984,6 +1013,30 @@ func MoveFile(from *uint16, to *uint16) (err error) {
 
 func MoveFileEx(from *uint16, to *uint16, flags uint32) (err error) {
 	r1, _, e1 := syscall.Syscall(procMoveFileExW.Addr(), 3, uintptr(unsafe.Pointer(from)), uintptr(unsafe.Pointer(to)), uintptr(flags))
+	if r1 == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func LockFileEx(file Handle, flags uint32, reserved uint32, bytesLow uint32, bytesHigh uint32, overlapped *Overlapped) (err error) {
+	r1, _, e1 := syscall.Syscall6(procLockFileEx.Addr(), 6, uintptr(file), uintptr(flags), uintptr(reserved), uintptr(bytesLow), uintptr(bytesHigh), uintptr(unsafe.Pointer(overlapped)))
+	if r1 == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func UnlockFileEx(file Handle, reserved uint32, bytesLow uint32, bytesHigh uint32, overlapped *Overlapped) (err error) {
+	r1, _, e1 := syscall.Syscall6(procUnlockFileEx.Addr(), 5, uintptr(file), uintptr(reserved), uintptr(bytesLow), uintptr(bytesHigh), uintptr(unsafe.Pointer(overlapped)), 0)
 	if r1 == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
