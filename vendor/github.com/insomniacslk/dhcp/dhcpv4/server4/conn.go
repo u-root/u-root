@@ -1,6 +1,7 @@
 package server4
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -13,7 +14,7 @@ import (
 // given based on a IPv4 DGRAM socket. The UDP connection allows broadcasting.
 //
 // The interface must already be configured.
-func NewIPv4UDPConn(iface string, port int) (net.PacketConn, error) {
+func NewIPv4UDPConn(iface string, port int) (*net.UDPConn, error) {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get a UDP socket: %v", err)
@@ -41,5 +42,13 @@ func NewIPv4UDPConn(iface string, port int) (net.PacketConn, error) {
 		return nil, fmt.Errorf("cannot bind to port %d: %v", port, err)
 	}
 
-	return net.FilePacketConn(f)
+	conn, err := net.FilePacketConn(f)
+	if err != nil {
+		return nil, err
+	}
+	udpconn, ok := conn.(*net.UDPConn)
+	if !ok {
+		return nil, errors.New("BUG(dhcp4): incorrect socket type, expected UDP")
+	}
+	return udpconn, nil
 }

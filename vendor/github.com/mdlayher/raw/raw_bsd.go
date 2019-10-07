@@ -63,7 +63,7 @@ func listenPacket(ifi *net.Interface, proto uint16, cfg Config) (*packetConn, er
 	var err error
 
 	// Try to find an available BPF device
-	for i := 0; i <= 10; i++ {
+	for i := 0; i <= 255; i++ {
 		bpfPath := fmt.Sprintf("/dev/bpf%d", i)
 		f, err = os.OpenFile(bpfPath, os.O_RDWR, 0666)
 		if err == nil {

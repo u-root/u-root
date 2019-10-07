@@ -153,6 +153,7 @@ type RouteAttributes struct {
 	OutIface uint32
 	Priority uint32
 	Table    uint32
+	Expires  *uint32
 }
 
 func (a *RouteAttributes) UnmarshalBinary(b []byte) error {
@@ -193,6 +194,12 @@ func (a *RouteAttributes) UnmarshalBinary(b []byte) error {
 				return errInvalidRouteMessageAttr
 			}
 			a.Table = nlenc.Uint32(attr.Data)
+		case unix.RTA_EXPIRES:
+			if len(attr.Data) != 4 {
+				return errInvalidRouteMessageAttr
+			}
+			timeout := nlenc.Uint32(attr.Data)
+			a.Expires = &timeout
 		}
 	}
 
@@ -268,6 +275,13 @@ func (a *RouteAttributes) MarshalBinary() ([]byte, error) {
 		attrs = append(attrs, netlink.Attribute{
 			Type: unix.RTA_TABLE,
 			Data: nlenc.Uint32Bytes(a.Table),
+		})
+	}
+
+	if a.Expires != nil {
+		attrs = append(attrs, netlink.Attribute{
+			Type: unix.RTA_EXPIRES,
+			Data: nlenc.Uint32Bytes(*a.Expires),
 		})
 	}
 
