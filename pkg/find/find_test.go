@@ -12,8 +12,6 @@ import (
 	"strings"
 	"syscall"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 // TODO: I don't now where this subtesting stuff originated, I just copied it,
@@ -127,15 +125,14 @@ func TestSimple(t *testing.T) {
 
 	// Make sure files are actually created with the permissions we ask for.
 	syscall.Umask(0)
-	var namespace = []util.Creator{
-		util.Dir{Name: filepath.Join(d, "root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz"), Mode: 0775},
-		util.File{Name: filepath.Join(d, "root//ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/file"), Mode: 0664},
-		util.File{Name: filepath.Join(d, "root//ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/0777"), Mode: 0444},
+	if err := os.MkdirAll(filepath.Join(d, "root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz"), 0775); err != nil {
+		t.Fatal(err)
 	}
-	for _, c := range namespace {
-		if err := c.Create(); err != nil {
-			t.Fatalf("Error creating %s: %v", c, err)
-		}
+	if err := ioutil.WriteFile(filepath.Join(d, "root//ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/file"), nil, 0664); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(d, "root//ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/0777"), nil, 0444); err != nil {
+		t.Fatal(err)
 	}
 
 	for _, tc := range testCases {

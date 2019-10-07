@@ -21,38 +21,19 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
+
+	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
 	outPath = flag.String("O", "", "output file")
 )
-
-func wget(arg, fileName string) error {
-	resp, err := http.Get(arg)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("non-200 HTTP status: %d", resp.StatusCode)
-	}
-
-	w, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	_, err = io.Copy(w, resp.Body)
-	return err
-}
 
 func usage() {
 	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
@@ -61,6 +42,8 @@ func usage() {
 }
 
 func main() {
+	log.SetPrefix("wget: ")
+
 	if flag.Parse(); flag.NArg() != 1 {
 		usage()
 	}
@@ -83,7 +66,27 @@ func main() {
 		}
 	}
 
-	if err := wget(argURL, *outPath); err != nil {
-		log.Fatalln(err)
+	schemes := urlfetch.Schemes{
+		"tftp": urlfetch.DefaultTFTPClient,
+		"http": urlfetch.DefaultHTTPClient,
+
+		// urlfetch.DefaultSchemes doesn't support HTTPS by default.
+		"https": urlfetch.DefaultHTTPClient,
+		"file":  &urlfetch.LocalFileClient{},
+	}
+
+	readerAt, err := schemes.Fetch(url)
+	if err != nil {
+		log.Fatalf("Failed to download %v: %v", argURL, err)
+	}
+
+	w, err := os.Create(*outPath)
+	if err != nil {
+		log.Fatalf("Failed to create output file %q: %v", *outPath, err)
+	}
+	defer w.Close()
+
+	if _, err := io.Copy(w, uio.Reader(readerAt)); err != nil {
+		log.Fatalf("Failed to read response data: %v", err)
 	}
 }

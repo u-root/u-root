@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/bb/bbmain"
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 func run() {
@@ -22,7 +22,7 @@ func run() {
 }
 
 func main() {
-	os.Args[0] = util.ResolveUntilLastSymlink(os.Args[0])
+	os.Args[0] = upath.ResolveUntilLastSymlink(os.Args[0])
 
 	run()
 }

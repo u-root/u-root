@@ -36,7 +36,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/golang"
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 var (
@@ -46,7 +46,7 @@ var (
 
 	verbose = flag.Bool("v", false, "print all build commands")
 	debug   = func(string, ...interface{}) {}
-	r       = util.UrootPath
+	r       = upath.UrootPath
 )
 
 type form struct {
@@ -74,7 +74,7 @@ func parseCommandLine() form {
 	if !strings.HasSuffix(os.Args[0], "installcommand") {
 		// This is almost certain to be a symlink, and it's no harm
 		// to check it.
-		f := util.ResolveUntilLastSymlink(os.Args[0])
+		f := upath.ResolveUntilLastSymlink(os.Args[0])
 		return form{
 			cmdName: filepath.Base(f),
 			cmdArgs: os.Args[1:],

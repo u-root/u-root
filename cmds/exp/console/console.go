@@ -17,8 +17,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/u-root/u-root/pkg/libinit"
 	"github.com/u-root/u-root/pkg/pty"
-	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
@@ -43,7 +43,8 @@ func main() {
 	// Make a good faith effort to set up root. This being
 	// a kind of init program, we do our best and keep going.
 	if *setupRoot {
-		util.Rootfs()
+		libinit.SetEnv()
+		libinit.CreateRootfs()
 	}
 
 	in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)

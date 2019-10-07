@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package util
+package upath
 
 import (
 	"testing"
@@ -22,7 +22,6 @@ func TestUrootPath(t *testing.T) {
 	for _, tt := range tests {
 		root = tt.urootRoot
 		o := UrootPath(tt.name)
-		t.Logf("%v", tt)
 		if o != tt.out {
 			t.Errorf("%v: got %v, want %v", tt, o, tt.out)
 		}

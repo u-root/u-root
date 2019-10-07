@@ -20,9 +20,9 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
-	"github.com/u-root/u-root/pkg/uroot/logger"
 )
 
 // Serial output is written to this directory and picked up by circleci, or
@@ -84,7 +84,7 @@ type Options struct {
 	Uinit []string
 
 	// Logger logs build statements.
-	Logger logger.Logger
+	Logger ulog.Logger
 
 	// Extra environment variables to set when building (used by u-bmc)
 	ExtraBuildEnv []string
@@ -96,18 +96,6 @@ type Options struct {
 func last(s string) string {
 	l := strings.Split(s, ".")
 	return l[len(l)-1]
-}
-
-type testLogger struct {
-	t *testing.T
-}
-
-func (tl testLogger) Printf(format string, v ...interface{}) {
-	tl.t.Logf(format, v...)
-}
-
-func (tl testLogger) Print(v ...interface{}) {
-	tl.t.Log(v...)
 }
 
 func callerName(depth int) string {
@@ -179,7 +167,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		o.Name = callerName(2)
 	}
 	if o.Logger == nil {
-		o.Logger = &testLogger{t}
+		o.Logger = &ulog.TestLogger{t}
 	}
 	if o.QEMUOpts.SerialOutput == nil {
 		o.QEMUOpts.SerialOutput = TestLineWriter(t, "serial")
