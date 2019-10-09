@@ -17,8 +17,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -148,6 +146,8 @@ func main() {
 	fmt.Fprintln(fd, `   \__,_|    |_|  \___/ \___/ \__|`)
 	fmt.Fprintln(fd)
 
+	log.SetPrefix("getty: ")
+
 	if term != "" {
 		err = os.Setenv("TERM", term)
 		if err != nil {
@@ -158,48 +158,26 @@ func main() {
 	debug("envs %v", envs)
 
 	for _, v := range cmdList {
-		debug("Let's try to run %v", v)
+		debug("Trying to run %v", v)
 		if _, err := os.Stat(v); os.IsNotExist(err) {
-			debug("it's not there")
+			debug("%v", err)
 			continue
-		}
-
-		// I *love* special cases. Evaluate just the top-most symlink.
-		//
-		// In source mode, this would be a symlink like
-		// /buildbin/defaultsh -> /buildbin/elvish ->
-		// /buildbin/installcommand.
-		//
-		// To actually get the command to build, argv[0] has to end
-		// with /elvish, so we resolve one level of symlink.
-		if path.Base(v) == "defaultsh" {
-			s, err := os.Readlink(v)
-			if err == nil {
-				v = s
-			}
-			debug("readlink of %v returns %v", v, s)
-			// and, well, it might be a relative link.
-			// We must go deeper.
-			d, b := filepath.Split(v)
-			d = filepath.Base(d)
-			v = filepath.Join("/", os.Getenv("UROOT_ROOT"), d, b)
-			debug("is now %v", v)
 		}
 
 		cmd := exec.Command(v)
 		cmd.Env = envs
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = fd, fd, fd
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true, Ctty: int(fd.Fd())}
-		debug("Run %v", cmd)
+		debug("running %v", cmd)
 		if err := cmd.Start(); err != nil {
 			log.Printf("Error starting %v: %v", v, err)
 			continue
 		}
 		if err := cmd.Process.Release(); err != nil {
-			log.Printf("Error releasing %v:%v", v, err)
+			log.Printf("Error releasing process %v:%v", v, err)
 		}
 		// stop after first valid command
 		return
 	}
-	log.Printf("getty: No suitable executable found in %+v", cmdList)
+	log.Printf("No suitable executable found in %+v", cmdList)
 }
