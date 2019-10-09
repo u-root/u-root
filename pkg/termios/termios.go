@@ -30,3 +30,23 @@ func (t *TTY) Raw() (*unix.Termios, error) {
 	}
 	return restorer, nil
 }
+
+func (t *TTY) Serial(baud int) (*unix.Termios, error) {
+	restorer, err := t.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	serial := MakeSerialDefault(restorer)
+	if baud != 0 {
+		serial, err = MakeSerialBaud(serial, baud)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := t.Set(serial); err != nil {
+		return nil, err
+	}
+	return restorer, nil
+}
