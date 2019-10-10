@@ -38,15 +38,18 @@ func (t *TTY) Serial(baud int) (*unix.Termios, error) {
 	}
 
 	serial := MakeSerialDefault(restorer)
+
 	if baud != 0 {
+		if err := t.Set(serial); err != nil {
+			return nil, err
+		}
+
 		serial, err = MakeSerialBaud(serial, baud)
 		if err != nil {
-			return nil, err
+			return restorer, err
 		}
 	}
 
-	if err := t.Set(serial); err != nil {
-		return nil, err
-	}
-	return restorer, nil
+	err = t.Set(serial)
+	return restorer, err
 }
