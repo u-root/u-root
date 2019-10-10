@@ -52,15 +52,15 @@ func main() {
 	}
 	term := flag.Arg(2)
 
+	log.SetPrefix("getty: ")
+
 	ttyS, err := termios.NewTTYS(port)
 	if err != nil {
-		debug("Unable to open port %s: %v", port, err)
-		return
+		log.Fatalf("Unable to open port %s: %v", port, err)
 	}
 
 	if _, err := ttyS.Serial(baud); err != nil {
-		debug("Unable to set port %s baudrate %d: %v", port, baud, err)
-		return
+		log.Printf("Unable to configure port %s and set baudrate %d: %v", port, baud, err)
 	}
 
 	// Output the u-root banner
@@ -71,8 +71,6 @@ func main() {
 	fmt.Fprintln(ttyS, `  | |_| |____| | | (_) | (_) | |_`)
 	fmt.Fprintln(ttyS, `   \__,_|    |_|  \___/ \___/ \__|`)
 	fmt.Fprintln(ttyS)
-
-	log.SetPrefix("getty: ")
 
 	if term != "" {
 		err = os.Setenv("TERM", term)
