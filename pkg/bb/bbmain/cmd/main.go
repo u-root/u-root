@@ -29,6 +29,9 @@ func main() {
 
 func init() {
 	m := func() {
+		if len(os.Args) == 1 {
+			log.Fatalf("Invalid busybox command: %q", os.Args)
+		}
 		// Use argv[1] as the name.
 		os.Args = os.Args[1:]
 		run()
