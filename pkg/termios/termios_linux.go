@@ -99,6 +99,7 @@ func MakeRaw(term *unix.Termios) *unix.Termios {
 	return &raw
 }
 
+// MakeSerialBaud updates the Termios to set the baudrate
 func MakeSerialBaud(term *unix.Termios, baud int) (*unix.Termios, error) {
 	t := *term
 	rate, ok := baud2unixB[baud]
@@ -114,6 +115,13 @@ func MakeSerialBaud(term *unix.Termios, baud int) (*unix.Termios, error) {
 	return &t, nil
 }
 
+// MakeSerialDefault updates the Termios to typical serial configuration:
+// - Ignore all flow control (modem, hardware, software...)
+// - Translate carriage return to newline on input
+// - Enable canonical mode: Input is available line by line, with line editing
+//   enabled (ERASE, KILL are supported)
+// - Local ECHO is added (and handled by line editing)
+// - Map newline to carriage return newline on output
 func MakeSerialDefault(term *unix.Termios) *unix.Termios {
 	t := *term
 	/* Clear all except baud, stop bit and parity settings */
