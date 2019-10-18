@@ -92,7 +92,10 @@ func main() {
 		libinit.Command("/bin/sh", ctty),
 	}
 
-	libinit.RunCommands(debug, cmdList...)
+	cmdCount := libinit.RunCommands(debug, cmdList...)
+	if cmdCount == 0 {
+		log.Printf("No suitable executable found in %v", cmdList)
+	}
 
 	// We need to reap all children before exiting.
 	log.Printf("Waiting for orphaned children")
