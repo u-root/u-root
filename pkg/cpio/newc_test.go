@@ -77,7 +77,7 @@ func TestWriteRead(t *testing.T) {
 		t.Errorf("Could not read %q: %v", rec2.Name, err)
 	}
 
-	if bytes.Compare(contents2, contents) != 0 {
+	if !bytes.Equal(contents2, contents) {
 		t.Errorf("Read(%q) = %s, want %s", rec2.Name, string(contents2), contents)
 	}
 }
