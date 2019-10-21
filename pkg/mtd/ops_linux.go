@@ -12,7 +12,6 @@ import (
 type Dev struct {
 	*os.File
 	devName string
-	data    []byte
 }
 
 // DevName is the default name for the MTD device.
