@@ -217,7 +217,7 @@ func findModPath(name string, m depMap) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Could not find path for module %q", name)
+	return "", fmt.Errorf("could not find path for module %q", name)
 }
 
 func loadDeps(path string, m depMap, opts ProbeOpts) error {
