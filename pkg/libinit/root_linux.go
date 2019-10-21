@@ -7,7 +7,6 @@ package libinit
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -36,20 +35,6 @@ func (d dir) String() string {
 	return fmt.Sprintf("dir %q (mode %#o)", d.Name, d.Mode)
 }
 
-type file struct {
-	Name     string
-	Contents string
-	Mode     os.FileMode
-}
-
-func (f file) create() error {
-	return ioutil.WriteFile(f.Name, []byte(f.Contents), f.Mode)
-}
-
-func (f file) String() string {
-	return fmt.Sprintf("file %q (mode %#o)", f.Name, f.Mode)
-}
-
 type symlink struct {
 	Target  string
 	NewPath string
@@ -62,20 +47,6 @@ func (s symlink) create() error {
 
 func (s symlink) String() string {
 	return fmt.Sprintf("symlink %q -> %q", s.NewPath, s.Target)
-}
-
-type link struct {
-	OldPath string
-	NewPath string
-}
-
-func (s link) create() error {
-	os.Remove(s.NewPath)
-	return os.Link(s.OldPath, s.NewPath)
-}
-
-func (s link) String() string {
-	return fmt.Sprintf("link %q -> %q", s.NewPath, s.OldPath)
 }
 
 type dev struct {
