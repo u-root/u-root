@@ -30,8 +30,8 @@ type testFlag string
 
 const (
 	flagGood        testFlag = "good"
-	flagUnsupported          = "unsup"
-	flagBad                  = "bad"
+	flagUnsupported testFlag = "unsup"
+	flagBad         testFlag = "bad"
 )
 
 func createHeader(fl testFlag) header {
