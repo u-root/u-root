@@ -133,41 +133,41 @@ type ChassisType uint8
 // ChassisType values are defined in DSP0134 7.4.1.
 const (
 	ChassisTypeOther               ChassisType = 0x01 // Other
-	ChassisTypeUnknown                         = 0x02 // Unknown
-	ChassisTypeDesktop                         = 0x03 // Desktop
-	ChassisTypeLowProfileDesktop               = 0x04 // Low Profile Desktop
-	ChassisTypePizzaBox                        = 0x05 // Pizza Box
-	ChassisTypeMiniTower                       = 0x06 // Mini Tower
-	ChassisTypeTower                           = 0x07 // Tower
-	ChassisTypePortable                        = 0x08 // Portable
-	ChassisTypeLaptop                          = 0x09 // Laptop
-	ChassisTypeNotebook                        = 0x0a // Notebook
-	ChassisTypeHandHeld                        = 0x0b // Hand Held
-	ChassisTypeDockingStation                  = 0x0c // Docking Station
-	ChassisTypeAllInOne                        = 0x0d // All in One
-	ChassisTypeSubNotebook                     = 0x0e // Sub Notebook
-	ChassisTypeSpacesaving                     = 0x0f // Space-saving
-	ChassisTypeLunchBox                        = 0x10 // Lunch Box
-	ChassisTypeMainServerChassis               = 0x11 // Main Server Chassis
-	ChassisTypeExpansionChassis                = 0x12 // Expansion Chassis
-	ChassisTypeSubChassis                      = 0x13 // SubChassis
-	ChassisTypeBusExpansionChassis             = 0x14 // Bus Expansion Chassis
-	ChassisTypePeripheralChassis               = 0x15 // Peripheral Chassis
-	ChassisTypeRAIDChassis                     = 0x16 // RAID Chassis
-	ChassisTypeRackMountChassis                = 0x17 // Rack Mount Chassis
-	ChassisTypeSealedcasePC                    = 0x18 // Sealed-case PC
-	ChassisTypeMultisystemChassis              = 0x19 // Multi-system chassis
-	ChassisTypeCompactPCI                      = 0x1a // Compact PCI
-	ChassisTypeAdvancedTCA                     = 0x1b // Advanced TCA
-	ChassisTypeBlade                           = 0x1c // Blade
-	ChassisTypeBladeChassis                    = 0x1d // Blade Chassis
-	ChassisTypeTablet                          = 0x1e // Tablet
-	ChassisTypeConvertible                     = 0x1f // Convertible
-	ChassisTypeDetachable                      = 0x20 // Detachable
-	ChassisTypeIoTGateway                      = 0x21 // IoT Gateway
-	ChassisTypeEmbeddedPC                      = 0x22 // Embedded PC
-	ChassisTypeMiniPC                          = 0x23 // Mini PC
-	ChassisTypeStickPC                         = 0x24 // Stick PC
+	ChassisTypeUnknown             ChassisType = 0x02 // Unknown
+	ChassisTypeDesktop             ChassisType = 0x03 // Desktop
+	ChassisTypeLowProfileDesktop   ChassisType = 0x04 // Low Profile Desktop
+	ChassisTypePizzaBox            ChassisType = 0x05 // Pizza Box
+	ChassisTypeMiniTower           ChassisType = 0x06 // Mini Tower
+	ChassisTypeTower               ChassisType = 0x07 // Tower
+	ChassisTypePortable            ChassisType = 0x08 // Portable
+	ChassisTypeLaptop              ChassisType = 0x09 // Laptop
+	ChassisTypeNotebook            ChassisType = 0x0a // Notebook
+	ChassisTypeHandHeld            ChassisType = 0x0b // Hand Held
+	ChassisTypeDockingStation      ChassisType = 0x0c // Docking Station
+	ChassisTypeAllInOne            ChassisType = 0x0d // All in One
+	ChassisTypeSubNotebook         ChassisType = 0x0e // Sub Notebook
+	ChassisTypeSpacesaving         ChassisType = 0x0f // Space-saving
+	ChassisTypeLunchBox            ChassisType = 0x10 // Lunch Box
+	ChassisTypeMainServerChassis   ChassisType = 0x11 // Main Server Chassis
+	ChassisTypeExpansionChassis    ChassisType = 0x12 // Expansion Chassis
+	ChassisTypeSubChassis          ChassisType = 0x13 // SubChassis
+	ChassisTypeBusExpansionChassis ChassisType = 0x14 // Bus Expansion Chassis
+	ChassisTypePeripheralChassis   ChassisType = 0x15 // Peripheral Chassis
+	ChassisTypeRAIDChassis         ChassisType = 0x16 // RAID Chassis
+	ChassisTypeRackMountChassis    ChassisType = 0x17 // Rack Mount Chassis
+	ChassisTypeSealedcasePC        ChassisType = 0x18 // Sealed-case PC
+	ChassisTypeMultisystemChassis  ChassisType = 0x19 // Multi-system chassis
+	ChassisTypeCompactPCI          ChassisType = 0x1a // Compact PCI
+	ChassisTypeAdvancedTCA         ChassisType = 0x1b // Advanced TCA
+	ChassisTypeBlade               ChassisType = 0x1c // Blade
+	ChassisTypeBladeChassis        ChassisType = 0x1d // Blade Chassis
+	ChassisTypeTablet              ChassisType = 0x1e // Tablet
+	ChassisTypeConvertible         ChassisType = 0x1f // Convertible
+	ChassisTypeDetachable          ChassisType = 0x20 // Detachable
+	ChassisTypeIoTGateway          ChassisType = 0x21 // IoT Gateway
+	ChassisTypeEmbeddedPC          ChassisType = 0x22 // Embedded PC
+	ChassisTypeMiniPC              ChassisType = 0x23 // Mini PC
+	ChassisTypeStickPC             ChassisType = 0x24 // Stick PC
 )
 
 func (v ChassisType) String() string {
@@ -254,11 +254,11 @@ type ChassisState uint8
 // ChassisState values are defined in DSP0134 7.4.2.
 const (
 	ChassisStateOther          ChassisState = 0x01 // Other
-	ChassisStateUnknown                     = 0x02 // Unknown
-	ChassisStateSafe                        = 0x03 // Safe
-	ChassisStateWarning                     = 0x04 // Warning
-	ChassisStateCritical                    = 0x05 // Critical
-	ChassisStateNonrecoverable              = 0x06 // Non-recoverable
+	ChassisStateUnknown        ChassisState = 0x02 // Unknown
+	ChassisStateSafe           ChassisState = 0x03 // Safe
+	ChassisStateWarning        ChassisState = 0x04 // Warning
+	ChassisStateCritical       ChassisState = 0x05 // Critical
+	ChassisStateNonrecoverable ChassisState = 0x06 // Non-recoverable
 )
 
 func (v ChassisState) String() string {
@@ -282,10 +282,10 @@ type ChassisSecurityStatus uint8
 // ChassisSecurityStatus values are defined in DSP0134 7.4.3.
 const (
 	ChassisSecurityStatusOther                      ChassisSecurityStatus = 0x01 // Other
-	ChassisSecurityStatusUnknown                                          = 0x02 // Unknown
-	ChassisSecurityStatusNone                                             = 0x03 // None
-	ChassisSecurityStatusExternalInterfaceLockedOut                       = 0x04 // External interface locked out
-	ChassisSecurityStatusExternalInterfaceEnabled                         = 0x05 // External interface enabled
+	ChassisSecurityStatusUnknown                    ChassisSecurityStatus = 0x02 // Unknown
+	ChassisSecurityStatusNone                       ChassisSecurityStatus = 0x03 // None
+	ChassisSecurityStatusExternalInterfaceLockedOut ChassisSecurityStatus = 0x04 // External interface locked out
+	ChassisSecurityStatusExternalInterfaceEnabled   ChassisSecurityStatus = 0x05 // External interface enabled
 )
 
 func (v ChassisSecurityStatus) String() string {

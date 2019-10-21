@@ -36,7 +36,7 @@ func (e *Entry32) UnmarshalBinary(data []byte) error {
 	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, e); err != nil {
 		return err
 	}
-	if bytes.Compare(e.Anchor[:], []byte("_SM_")) != 0 {
+	if !bytes.Equal(e.Anchor[:], []byte("_SM_")) {
 		return fmt.Errorf("invalid anchor string %q", string(e.Anchor[:]))
 	}
 	if int(e.Length) != 0x1f {
@@ -46,7 +46,7 @@ func (e *Entry32) UnmarshalBinary(data []byte) error {
 	if e.Checksum != cs {
 		return fmt.Errorf("checksum mismatch: 0x%02x vs 0x%02x", e.Checksum, cs)
 	}
-	if bytes.Compare(e.IntAnchor[:], []byte("_DMI_")) != 0 {
+	if !bytes.Equal(e.IntAnchor[:], []byte("_DMI_")) {
 		return fmt.Errorf("invalid intermediate anchor string %q", string(e.Anchor[:]))
 	}
 	intCs := calcChecksum(data[0x10:0x1f], 5)

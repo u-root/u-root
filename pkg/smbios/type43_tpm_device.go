@@ -88,9 +88,9 @@ type TPMDeviceCharacteristics uint8
 // TPMDeviceCharacteristics fields are defined in DSP0134 x.x.x
 const (
 	TPMDeviceCharacteristicsNotSupported                                 TPMDeviceCharacteristics = 1 << 2 // TPM Device Characteristics are not supported.
-	TPMDeviceCharacteristicsFamilyConfigurableViaFirmwareUpdate                                   = 1 << 3 // Family configurable via firmware update.
-	TPMDeviceCharacteristicsFamilyConfigurableViaPlatformSoftwareSupport                          = 1 << 4 // Family configurable via platform software support.
-	TPMDeviceCharacteristicsFamilyConfigurableViaOEMProprietaryMechanism                          = 1 << 5 // Family configurable via OEM proprietary mechanism.
+	TPMDeviceCharacteristicsFamilyConfigurableViaFirmwareUpdate          TPMDeviceCharacteristics = 1 << 3 // Family configurable via firmware update.
+	TPMDeviceCharacteristicsFamilyConfigurableViaPlatformSoftwareSupport TPMDeviceCharacteristics = 1 << 4 // Family configurable via platform software support.
+	TPMDeviceCharacteristicsFamilyConfigurableViaOEMProprietaryMechanism TPMDeviceCharacteristics = 1 << 5 // Family configurable via OEM proprietary mechanism.
 )
 
 func (v TPMDeviceCharacteristics) String() string {

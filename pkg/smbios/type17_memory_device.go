@@ -218,20 +218,20 @@ type MemoryDeviceFormFactor uint8
 // MemoryDeviceFormFactor values are defined in DSP0134 7.18.1.
 const (
 	MemoryDeviceFormFactorOther           MemoryDeviceFormFactor = 0x01 // Other
-	MemoryDeviceFormFactorUnknown                                = 0x02 // Unknown
-	MemoryDeviceFormFactorSIMM                                   = 0x03 // SIMM
-	MemoryDeviceFormFactorSIP                                    = 0x04 // SIP
-	MemoryDeviceFormFactorChip                                   = 0x05 // Chip
-	MemoryDeviceFormFactorDIP                                    = 0x06 // DIP
-	MemoryDeviceFormFactorZIP                                    = 0x07 // ZIP
-	MemoryDeviceFormFactorProprietaryCard                        = 0x08 // Proprietary Card
-	MemoryDeviceFormFactorDIMM                                   = 0x09 // DIMM
-	MemoryDeviceFormFactorTSOP                                   = 0x0a // TSOP
-	MemoryDeviceFormFactorRowOfChips                             = 0x0b // Row of chips
-	MemoryDeviceFormFactorRIMM                                   = 0x0c // RIMM
-	MemoryDeviceFormFactorSODIMM                                 = 0x0d // SODIMM
-	MemoryDeviceFormFactorSRIMM                                  = 0x0e // SRIMM
-	MemoryDeviceFormFactorFBDIMM                                 = 0x0f // FB-DIMM
+	MemoryDeviceFormFactorUnknown         MemoryDeviceFormFactor = 0x02 // Unknown
+	MemoryDeviceFormFactorSIMM            MemoryDeviceFormFactor = 0x03 // SIMM
+	MemoryDeviceFormFactorSIP             MemoryDeviceFormFactor = 0x04 // SIP
+	MemoryDeviceFormFactorChip            MemoryDeviceFormFactor = 0x05 // Chip
+	MemoryDeviceFormFactorDIP             MemoryDeviceFormFactor = 0x06 // DIP
+	MemoryDeviceFormFactorZIP             MemoryDeviceFormFactor = 0x07 // ZIP
+	MemoryDeviceFormFactorProprietaryCard MemoryDeviceFormFactor = 0x08 // Proprietary Card
+	MemoryDeviceFormFactorDIMM            MemoryDeviceFormFactor = 0x09 // DIMM
+	MemoryDeviceFormFactorTSOP            MemoryDeviceFormFactor = 0x0a // TSOP
+	MemoryDeviceFormFactorRowOfChips      MemoryDeviceFormFactor = 0x0b // Row of chips
+	MemoryDeviceFormFactorRIMM            MemoryDeviceFormFactor = 0x0c // RIMM
+	MemoryDeviceFormFactorSODIMM          MemoryDeviceFormFactor = 0x0d // SODIMM
+	MemoryDeviceFormFactorSRIMM           MemoryDeviceFormFactor = 0x0e // SRIMM
+	MemoryDeviceFormFactorFBDIMM          MemoryDeviceFormFactor = 0x0f // FB-DIMM
 )
 
 func (v MemoryDeviceFormFactor) String() string {
@@ -264,33 +264,33 @@ type MemoryDeviceType uint8
 // MemoryDeviceType values are defined in DSP0134 7.18.2.
 const (
 	MemoryDeviceTypeOther                    MemoryDeviceType = 0x01 // Other
-	MemoryDeviceTypeUnknown                                   = 0x02 // Unknown
-	MemoryDeviceTypeDRAM                                      = 0x03 // DRAM
-	MemoryDeviceTypeEDRAM                                     = 0x04 // EDRAM
-	MemoryDeviceTypeVRAM                                      = 0x05 // VRAM
-	MemoryDeviceTypeSRAM                                      = 0x06 // SRAM
-	MemoryDeviceTypeRAM                                       = 0x07 // RAM
-	MemoryDeviceTypeROM                                       = 0x08 // ROM
-	MemoryDeviceTypeFlash                                     = 0x09 // Flash
-	MemoryDeviceTypeEEPROM                                    = 0x0a // EEPROM
-	MemoryDeviceTypeFEPROM                                    = 0x0b // FEPROM
-	MemoryDeviceTypeEPROM                                     = 0x0c // EPROM
-	MemoryDeviceTypeCDRAM                                     = 0x0d // CDRAM
-	MemoryDeviceType3DRAM                                     = 0x0e // 3DRAM
-	MemoryDeviceTypeSDRAM                                     = 0x0f // SDRAM
-	MemoryDeviceTypeSGRAM                                     = 0x10 // SGRAM
-	MemoryDeviceTypeRDRAM                                     = 0x11 // RDRAM
-	MemoryDeviceTypeDDR                                       = 0x12 // DDR
-	MemoryDeviceTypeDDR2                                      = 0x13 // DDR2
-	MemoryDeviceTypeDDR2FBDIMM                                = 0x14 // DDR2 FB-DIMM
-	MemoryDeviceTypeDDR3                                      = 0x18 // DDR3
-	MemoryDeviceTypeFBD2                                      = 0x19 // FBD2
-	MemoryDeviceTypeDDR4                                      = 0x1a // DDR4
-	MemoryDeviceTypeLPDDR                                     = 0x1b // LPDDR
-	MemoryDeviceTypeLPDDR2                                    = 0x1c // LPDDR2
-	MemoryDeviceTypeLPDDR3                                    = 0x1d // LPDDR3
-	MemoryDeviceTypeLPDDR4                                    = 0x1e // LPDDR4
-	MemoryDeviceTypeLogicalNonvolatileDevice                  = 0x1f // Logical non-volatile device
+	MemoryDeviceTypeUnknown                  MemoryDeviceType = 0x02 // Unknown
+	MemoryDeviceTypeDRAM                     MemoryDeviceType = 0x03 // DRAM
+	MemoryDeviceTypeEDRAM                    MemoryDeviceType = 0x04 // EDRAM
+	MemoryDeviceTypeVRAM                     MemoryDeviceType = 0x05 // VRAM
+	MemoryDeviceTypeSRAM                     MemoryDeviceType = 0x06 // SRAM
+	MemoryDeviceTypeRAM                      MemoryDeviceType = 0x07 // RAM
+	MemoryDeviceTypeROM                      MemoryDeviceType = 0x08 // ROM
+	MemoryDeviceTypeFlash                    MemoryDeviceType = 0x09 // Flash
+	MemoryDeviceTypeEEPROM                   MemoryDeviceType = 0x0a // EEPROM
+	MemoryDeviceTypeFEPROM                   MemoryDeviceType = 0x0b // FEPROM
+	MemoryDeviceTypeEPROM                    MemoryDeviceType = 0x0c // EPROM
+	MemoryDeviceTypeCDRAM                    MemoryDeviceType = 0x0d // CDRAM
+	MemoryDeviceType3DRAM                    MemoryDeviceType = 0x0e // 3DRAM
+	MemoryDeviceTypeSDRAM                    MemoryDeviceType = 0x0f // SDRAM
+	MemoryDeviceTypeSGRAM                    MemoryDeviceType = 0x10 // SGRAM
+	MemoryDeviceTypeRDRAM                    MemoryDeviceType = 0x11 // RDRAM
+	MemoryDeviceTypeDDR                      MemoryDeviceType = 0x12 // DDR
+	MemoryDeviceTypeDDR2                     MemoryDeviceType = 0x13 // DDR2
+	MemoryDeviceTypeDDR2FBDIMM               MemoryDeviceType = 0x14 // DDR2 FB-DIMM
+	MemoryDeviceTypeDDR3                     MemoryDeviceType = 0x18 // DDR3
+	MemoryDeviceTypeFBD2                     MemoryDeviceType = 0x19 // FBD2
+	MemoryDeviceTypeDDR4                     MemoryDeviceType = 0x1a // DDR4
+	MemoryDeviceTypeLPDDR                    MemoryDeviceType = 0x1b // LPDDR
+	MemoryDeviceTypeLPDDR2                   MemoryDeviceType = 0x1c // LPDDR2
+	MemoryDeviceTypeLPDDR3                   MemoryDeviceType = 0x1d // LPDDR3
+	MemoryDeviceTypeLPDDR4                   MemoryDeviceType = 0x1e // LPDDR4
+	MemoryDeviceTypeLogicalNonvolatileDevice MemoryDeviceType = 0x1f // Logical non-volatile device
 )
 
 func (v MemoryDeviceType) String() string {
@@ -335,21 +335,21 @@ type MemoryDeviceTypeDetail uint16
 
 // MemoryDeviceTypeDetail fields are defined in DSP0134 7.18.3
 const (
-	MemoryDeviceTypeDetailOther                  = 1 << 1  // Other
-	MemoryDeviceTypeDetailUnknown                = 1 << 2  // Unknown
-	MemoryDeviceTypeDetailFastpaged              = 1 << 3  // Fast-paged
-	MemoryDeviceTypeDetailStaticColumn           = 1 << 4  // Static column
-	MemoryDeviceTypeDetailPseudostatic           = 1 << 5  // Pseudo-static
-	MemoryDeviceTypeDetailRAMBUS                 = 1 << 6  // RAMBUS
-	MemoryDeviceTypeDetailSynchronous            = 1 << 7  // Synchronous
-	MemoryDeviceTypeDetailCMOS                   = 1 << 8  // CMOS
-	MemoryDeviceTypeDetailEDO                    = 1 << 9  // EDO
-	MemoryDeviceTypeDetailWindowDRAM             = 1 << 10 // Window DRAM
-	MemoryDeviceTypeDetailCacheDRAM              = 1 << 11 // Cache DRAM
-	MemoryDeviceTypeDetailNonvolatile            = 1 << 12 // Non-volatile
-	MemoryDeviceTypeDetailRegisteredBuffered     = 1 << 13 // Registered (Buffered)
-	MemoryDeviceTypeDetailUnbufferedUnregistered = 1 << 14 // Unbuffered (Unregistered)
-	MemoryDeviceTypeDetailLRDIMM                 = 1 << 15 // LRDIMM
+	MemoryDeviceTypeDetailOther                  MemoryDeviceTypeDetail = 1 << 1  // Other
+	MemoryDeviceTypeDetailUnknown                MemoryDeviceTypeDetail = 1 << 2  // Unknown
+	MemoryDeviceTypeDetailFastpaged              MemoryDeviceTypeDetail = 1 << 3  // Fast-paged
+	MemoryDeviceTypeDetailStaticColumn           MemoryDeviceTypeDetail = 1 << 4  // Static column
+	MemoryDeviceTypeDetailPseudostatic           MemoryDeviceTypeDetail = 1 << 5  // Pseudo-static
+	MemoryDeviceTypeDetailRAMBUS                 MemoryDeviceTypeDetail = 1 << 6  // RAMBUS
+	MemoryDeviceTypeDetailSynchronous            MemoryDeviceTypeDetail = 1 << 7  // Synchronous
+	MemoryDeviceTypeDetailCMOS                   MemoryDeviceTypeDetail = 1 << 8  // CMOS
+	MemoryDeviceTypeDetailEDO                    MemoryDeviceTypeDetail = 1 << 9  // EDO
+	MemoryDeviceTypeDetailWindowDRAM             MemoryDeviceTypeDetail = 1 << 10 // Window DRAM
+	MemoryDeviceTypeDetailCacheDRAM              MemoryDeviceTypeDetail = 1 << 11 // Cache DRAM
+	MemoryDeviceTypeDetailNonvolatile            MemoryDeviceTypeDetail = 1 << 12 // Non-volatile
+	MemoryDeviceTypeDetailRegisteredBuffered     MemoryDeviceTypeDetail = 1 << 13 // Registered (Buffered)
+	MemoryDeviceTypeDetailUnbufferedUnregistered MemoryDeviceTypeDetail = 1 << 14 // Unbuffered (Unregistered)
+	MemoryDeviceTypeDetailLRDIMM                 MemoryDeviceTypeDetail = 1 << 15 // LRDIMM
 )
 
 func (v MemoryDeviceTypeDetail) String() string {
@@ -411,12 +411,12 @@ type MemoryDeviceTechnology uint8
 // MemoryDeviceTechnology values are defined in DSP0134 7.18.6.
 const (
 	MemoryDeviceTechnologyOther                 MemoryDeviceTechnology = 0x01 // Other
-	MemoryDeviceTechnologyUnknown                                      = 0x02 // Unknown
-	MemoryDeviceTechnologyDRAM                                         = 0x03 // DRAM
-	MemoryDeviceTechnologyNVDIMMN                                      = 0x04 // NVDIMM-N
-	MemoryDeviceTechnologyNVDIMMF                                      = 0x05 // NVDIMM-F
-	MemoryDeviceTechnologyNVDIMMP                                      = 0x06 // NVDIMM-P
-	MemoryDeviceTechnologyIntelPersistentMemory                        = 0x07 // Intel persistent memory
+	MemoryDeviceTechnologyUnknown               MemoryDeviceTechnology = 0x02 // Unknown
+	MemoryDeviceTechnologyDRAM                  MemoryDeviceTechnology = 0x03 // DRAM
+	MemoryDeviceTechnologyNVDIMMN               MemoryDeviceTechnology = 0x04 // NVDIMM-N
+	MemoryDeviceTechnologyNVDIMMF               MemoryDeviceTechnology = 0x05 // NVDIMM-F
+	MemoryDeviceTechnologyNVDIMMP               MemoryDeviceTechnology = 0x06 // NVDIMM-P
+	MemoryDeviceTechnologyIntelPersistentMemory MemoryDeviceTechnology = 0x07 // Intel persistent memory
 )
 
 func (v MemoryDeviceTechnology) String() string {
@@ -440,11 +440,11 @@ type MemoryDeviceOperatingModeCapability uint16
 
 // MemoryDeviceOperatingModeCapability fields are defined in DSP0134 x.x.x
 const (
-	MemoryDeviceOperatingModeCapabilityOther                           = 1 << 1 // Other
-	MemoryDeviceOperatingModeCapabilityUnknown                         = 1 << 2 // Unknown
-	MemoryDeviceOperatingModeCapabilityVolatileMemory                  = 1 << 3 // Volatile memory
-	MemoryDeviceOperatingModeCapabilityByteaccessiblePersistentMemory  = 1 << 4 // Byte-accessible persistent memory
-	MemoryDeviceOperatingModeCapabilityBlockaccessiblePersistentMemory = 1 << 5 // Block-accessible persistent memory
+	MemoryDeviceOperatingModeCapabilityOther                           MemoryDeviceOperatingModeCapability = 1 << 1 // Other
+	MemoryDeviceOperatingModeCapabilityUnknown                         MemoryDeviceOperatingModeCapability = 1 << 2 // Unknown
+	MemoryDeviceOperatingModeCapabilityVolatileMemory                  MemoryDeviceOperatingModeCapability = 1 << 3 // Volatile memory
+	MemoryDeviceOperatingModeCapabilityByteaccessiblePersistentMemory  MemoryDeviceOperatingModeCapability = 1 << 4 // Byte-accessible persistent memory
+	MemoryDeviceOperatingModeCapabilityBlockaccessiblePersistentMemory MemoryDeviceOperatingModeCapability = 1 << 5 // Block-accessible persistent memory
 )
 
 func (v MemoryDeviceOperatingModeCapability) String() string {
