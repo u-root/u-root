@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This command copies the existing RSDP into the EBDA. This is because
-// LinuxBoot tends to be EFI booted, which places the RSDP outside of the
-// low 1M or the EBDA. If Linuxboot legacy boots the following operating systems,
-// such as with kexec, they may not have a way to find the RSDP afterwards.
-// All u-root commands that open /dev/mem should also flock it to ensure safe,
-// sequential access
+// fixrsdp copies the existing RSDP into the EBDA region in low mem.
+//
+// This is because LinuxBoot tends to be EFI booted, which places the RSDP
+// outside of the low 1M or the EBDA. If Linuxboot legacy boots the following
+// operating systems, such as with kexec, they may not have a way to find the
+// RSDP afterwards.  All u-root commands that open /dev/mem should also flock
+// it to ensure safe, sequential access.
 package main
 
 import (
@@ -46,7 +47,7 @@ func main() {
 
 	fd := int(f.Fd())
 	if err = syscall.Flock(fd, syscall.LOCK_EX); err != nil {
-		log.Fatal(err)
+		log.Fatalf("File lock of /dev/mem failed: %v", err)
 	}
 	defer syscall.Flock(fd, syscall.LOCK_UN)
 
