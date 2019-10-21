@@ -217,7 +217,7 @@ func TestWrite(t *testing.T) {
 		var b bytes.Buffer
 		w := hex.Dumper(&b)
 		io.Copy(w, bytes.NewReader(disk[:4096]))
-		t.Logf("%s\n", string(b.Bytes()))
+		t.Logf("%s\n", b.String())
 		t.Fatalf("Reading back new header: new:%s\n%v", n, err)
 	}
 }
