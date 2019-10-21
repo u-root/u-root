@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Multiboot info as defined in
-// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 package multiboot
 
 import (
