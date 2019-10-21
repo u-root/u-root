@@ -5,10 +5,8 @@
 package builder
 
 import (
-	"go/ast"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/golang"
@@ -47,13 +45,4 @@ func TestBBBuild(t *testing.T) {
 		}
 	}
 
-}
-
-func findFile(filemap map[string]*ast.File, basename string) *ast.File {
-	for name, f := range filemap {
-		if filepath.Base(name) == basename {
-			return f
-		}
-	}
-	return nil
 }
