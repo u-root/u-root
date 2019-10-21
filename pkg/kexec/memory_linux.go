@@ -578,10 +578,10 @@ type RangeType string
 
 const (
 	RangeRAM      RangeType = "System RAM"
-	RangeDefault            = "Default"
-	RangeACPI               = "ACPI Tables"
-	RangeNVS                = "ACPI Non-volatile Storage"
-	RangeReserved           = "Reserved"
+	RangeDefault  RangeType = "Default"
+	RangeACPI     RangeType = "ACPI Tables"
+	RangeNVS      RangeType = "ACPI Non-volatile Storage"
+	RangeReserved RangeType = "Reserved"
 )
 
 // String implements fmt.Stringer.
