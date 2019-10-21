@@ -45,7 +45,7 @@ func (af *Files) sortedKeys() []string {
 	for dest := range af.Records {
 		keys = append(keys, dest)
 	}
-	sort.Sort(sort.StringSlice(keys))
+	sort.Strings(keys)
 	return keys
 }
 
@@ -65,7 +65,7 @@ func (af *Files) addFile(src string, dest string, follow bool) error {
 	// a record or file, we want to include its children anyway.
 	sInfo, err := os.Lstat(src)
 	if err != nil {
-		return fmt.Errorf("Adding %q to archive failed because Lstat failed: %v", src, err)
+		return fmt.Errorf("adding %q to archive failed because Lstat failed: %v", src, err)
 	}
 
 	// Recursively add children.
