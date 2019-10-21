@@ -25,10 +25,6 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-// Serial output is written to this directory and picked up by circleci, or
-// you, if you want to read the serial logs.
-const logDir = "serial"
-
 const template = `
 package main
 
