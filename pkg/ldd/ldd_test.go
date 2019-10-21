@@ -6,8 +6,6 @@ package ldd
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 )
@@ -75,22 +73,4 @@ func TestLddList(t *testing.T) {
 		}
 		t.Logf("%v has deps of %v", f, n)
 	}
-}
-
-// This could have been a great test, if ld.so actually followed ITS OWN DOCS
-// and used LD_LIBRARY_PATH. It doesn't.
-func testLddBadSo(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "ldd")
-	if err != nil {
-		t.Fatalf("TempDir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-	if err := os.Setenv("LD_LIBRARY_PATH", tempDir); err != nil {
-		t.Fatalf("Setting LDD_LIBRARY_PATH to %v: want nil, got %v", tempDir, err)
-	}
-	if _, err := Ldd([]string{"/bin/date"}); err == nil {
-		t.Fatalf("Ldd on /bin/date: want err, got nil")
-	}
-	t.Logf("Err on bad dir is %v", err)
-
 }
