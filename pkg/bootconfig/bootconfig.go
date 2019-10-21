@@ -41,9 +41,7 @@ func (bc *BootConfig) fileNames() []string {
 	str := make([]string, 0)
 	str = append(str, bc.Kernel)
 	str = append(str, bc.Initramfs)
-	for _, module := range bc.Modules {
-		str = append(str, module)
-	}
+	str = append(str, bc.Modules...)
 	return str
 }
 
