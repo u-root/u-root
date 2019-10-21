@@ -62,10 +62,10 @@ func ClearFD(fd int) error {
 // value is stored in a pointer in the normal style. Yuck.
 func GetFree(fd int) (int, error) {
 	r1, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), _LOOP_CTL_GET_FREE, 0)
-	if err >= 0 {
+	if err == 0 {
 		return int(r1), nil
 	}
-	return -1, err
+	return 0, err
 }
 
 // SetFD associates a loop device lfd with a regular file ffd.
