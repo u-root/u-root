@@ -39,9 +39,9 @@ func main() {
 	if flag.NArg() != 0 {
 		usage()
 	}
-	base, _, err := acpi.GetRSDP()
+	rsdp, err := acpi.GetRSDP()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf(" acpi_rsdp=%#x \n", base)
+	fmt.Printf(" acpi_rsdp=%#x \n", rsdp.RSDPAddr())
 }
