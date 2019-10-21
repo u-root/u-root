@@ -84,6 +84,52 @@ type capVersionInfoFixed struct {
 	VendorID  byte
 }
 
+// PermanentFlags contains persistent TPM properties
+type PermanentFlags struct {
+	Tag                          uint16
+	Disable                      bool
+	Ownership                    bool
+	Deactivated                  bool
+	ReadPubEK                    bool
+	DisableOwnerClear            bool
+	AllowMaintenance             bool
+	PhysicalPresenceLifetimeLock bool
+	PhysicalPresenceHWEnable     bool
+	PhysicalPresenceCMDEnable    bool
+	CEKPUsed                     bool
+	TPMPost                      bool
+	TPMPostLock                  bool
+	FIPS                         bool
+	Operator                     bool
+	EnableRevokeEK               bool
+	NVLocked                     bool
+	ReadSRKPub                   bool
+	TPMEstablished               bool
+	MaintenanceDone              bool
+	DisableFullDALogicInfo       bool
+}
+
+// NVDataPublic implements the structure of TPM_NV_DATA_PUBLIC
+// as described in TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P. 142
+type NVDataPublic struct {
+	Tag          tpmutil.Tag
+	NVIndex      uint32
+	PCRInfoRead  pcrInfoShort
+	PCRInfoWrite pcrInfoShort
+	permission   NVAttributes
+	ReadSTClear  bool
+	WriteSTClear bool
+	WriteDefine  bool
+	Size         uint32
+}
+
+// NVAttributes implements struct of TPM_NV_ATTRIBUTES
+// See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.140
+type NVAttributes struct {
+	tag        tpmutil.Tag
+	attributes permission
+}
+
 // CloseKey flushes the key associated with the tpmutil.Handle.
 func CloseKey(rw io.ReadWriter, h tpmutil.Handle) error {
 	return flushSpecific(rw, h, rtKey)
@@ -189,7 +235,7 @@ func (ra responseAuth) String() string {
 
 // These are the parameters of a TPM key.
 type keyParams struct {
-	AlgID     uint32
+	AlgID     Algorithm
 	EncScheme uint16
 	SigScheme uint16
 	Params    tpmutil.U32Bytes // Serialized rsaKeyParams or symmetricKeyParams.
@@ -243,7 +289,7 @@ type pubKey struct {
 
 // A symKey is a TPM representation of a symmetric key.
 type symKey struct {
-	AlgID     uint32
+	AlgID     Algorithm
 	EncScheme uint16
 	Key       tpmutil.U16Bytes // TPM_SYMMETRIC_KEY uses a 16-bit header for Key data
 }
@@ -302,7 +348,7 @@ func convertPubKey(pk crypto.PublicKey) (*pubKey, error) {
 		return nil, err
 	}
 	kp := keyParams{
-		AlgID:     algRSA,
+		AlgID:     AlgRSA,
 		EncScheme: esNone,
 		SigScheme: ssRSASaPKCS1v15SHA1,
 		Params:    rsakpb,
