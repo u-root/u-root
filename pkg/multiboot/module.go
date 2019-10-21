@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Module defines modules to be loaded along with the kernel.
-// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format.
-
 package multiboot
 
 import (
