@@ -76,7 +76,7 @@ func mountinfo() (mountinfomap, error) {
 // for tidiness, we decide to ignore filesystems of size 0
 // to exclude cgroup, procfs and sysfs types
 func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
-	ret := make(mountinfomap, 0)
+	ret := make(mountinfomap)
 	for _, line := range bytes.Split(buf, []byte{'\n'}) {
 		kv := bytes.SplitN(line, []byte{' '}, 6)
 		if len(kv) != 6 {
@@ -114,7 +114,6 @@ func DiskUsage(mnt *Mount) {
 	mnt.Used = (fs.Blocks - fs.Bfree) * uint64(fs.Bsize) / units
 	pct := float64((fs.Blocks - fs.Bfree)) * 100 / float64(fs.Blocks)
 	mnt.PCT = uint8(math.Ceil(pct))
-	return
 }
 
 // SetUnits takes the command line flags and configures

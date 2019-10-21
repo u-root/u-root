@@ -67,7 +67,7 @@ func moveFile(source string, dest string) error {
 }
 
 func mv(files []string, todir bool) error {
-	if len(files) == 2 && todir == false {
+	if len(files) == 2 && !todir {
 		// Rename/move a single file
 		if err := moveFile(files[0], files[1]); err != nil {
 			return err
@@ -98,7 +98,7 @@ func main() {
 	if destdir, err := os.Lstat(dest); err == nil {
 		todir = destdir.IsDir()
 	}
-	if flag.NArg() > 2 && todir == false {
+	if flag.NArg() > 2 && !todir {
 		fmt.Printf("Not a directory: %s\n", dest)
 		os.Exit(1)
 	}

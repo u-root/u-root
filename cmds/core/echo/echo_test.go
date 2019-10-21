@@ -32,8 +32,8 @@ func TestEcho(t *testing.T) {
 		if err := echo(v.f, &buf, v.s); err != nil {
 			t.Errorf("%s", err)
 		}
-		if string(buf.Bytes()) != v.r {
-			t.Fatalf("Want \"%v\", got \"%v\"", v.r, string(buf.Bytes()))
+		if buf.String() != v.r {
+			t.Fatalf("Want \"%v\", got \"%v\"", v.r, buf.String())
 		}
 		buf.Reset()
 	}

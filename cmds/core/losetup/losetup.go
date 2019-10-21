@@ -22,8 +22,7 @@ import (
 )
 
 var (
-	anyLoop = flag.Bool("A", true, "Pick any device")
-	detach  = flag.Bool("d", false, "Detach the device")
+	detach = flag.Bool("d", false, "Detach the device")
 )
 
 func main() {
