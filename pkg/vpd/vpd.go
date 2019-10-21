@@ -55,9 +55,9 @@ func Set(key string, value []byte, readOnly bool) error {
 // name:value couple. The `readOnly` flag specifies whether the variable is
 // read-only or read-write.
 func GetAll(readOnly bool) (map[string][]byte, error) {
-	vpdMap := make(map[string][]byte, 0)
+	vpdMap := make(map[string][]byte)
 	baseDir := getBaseDir(readOnly)
-	err := filepath.Walk(baseDir, func(fpath string, info os.FileInfo, err error) error {
+	err := filepath.Walk(baseDir, func(fpath string, info os.FileInfo, _ error) error {
 		key := path.Base(fpath)
 		if key == "." || key == "/" || fpath == baseDir {
 			// empty or all slashes?

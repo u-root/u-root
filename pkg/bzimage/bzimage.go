@@ -316,7 +316,7 @@ func (h *LinuxHeader) Show() []string {
 	for i := 0; i < val.NumField(); i++ {
 		v := val.Field(i)
 		k := reflect.ValueOf(v).Kind()
-		n := fmt.Sprintf("%s", val.Type().Field(i).Name)
+		n := val.Type().Field(i).Name
 		switch k {
 		case reflect.Slice:
 			s = append(s, fmt.Sprintf("%s:%#02x", n, v))

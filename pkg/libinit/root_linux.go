@@ -198,7 +198,7 @@ func CreateRootfs() {
 	initFlags := cmdline.GetInitFlagMap()
 	systemd, present := initFlags["systemd"]
 	systemdEnabled, boolErr := strconv.ParseBool(systemd)
-	if !present || boolErr != nil || systemdEnabled == false {
+	if !present || boolErr != nil || !systemdEnabled {
 		create(cgroupsnamespace)
 	}
 }

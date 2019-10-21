@@ -307,7 +307,7 @@ type ChassisElementType uint8
 
 func (v ChassisElementType) String() string {
 	if v&0x80 != 0 {
-		return fmt.Sprintf("%s", TableType(v&0x7f))
+		return TableType(v & 0x7f).String()
 	}
-	return fmt.Sprintf("%s", BoardType(v&0x7f))
+	return BoardType(v & 0x7f).String()
 }

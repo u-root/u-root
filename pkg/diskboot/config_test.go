@@ -18,8 +18,7 @@ func TestParseEmpty(t *testing.T) {
 	config := ParseConfig("/", "/grub.cfg", nil)
 	if config == nil {
 		t.Error("Expected non-nil config")
-	}
-	if len(config.Entries) > 0 {
+	} else if len(config.Entries) > 0 {
 		t.Error("Expected no entries: got", config.Entries)
 	}
 }
