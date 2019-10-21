@@ -26,7 +26,7 @@ func meminfo() (meminfomap, error) {
 // meminfoFromBytes returns a mapping that represents the fields contained in a
 // byte stream with a content compatible with /proc/meminfo
 func meminfoFromBytes(buf []byte) (meminfomap, error) {
-	ret := make(meminfomap, 0)
+	ret := make(meminfomap)
 	for _, line := range bytes.Split(buf, []byte{'\n'}) {
 		kv := bytes.SplitN(line, []byte{':'}, 2)
 		if len(kv) != 2 {
@@ -69,9 +69,6 @@ func getMainMemInfo(m meminfomap, config *FreeConfig) (*mainMemInfo, error) {
 	memCached := (m["Cached"] + m["SReclaimable"]) << KB
 	memBuffers := (m["Buffers"]) << KB
 	memUsed := memTotal - memFree - memCached - memBuffers
-	if memUsed < 0 {
-		memUsed = memTotal - memFree
-	}
 	memAvailable := m["MemAvailable"] << KB
 
 	mmi := mainMemInfo{
