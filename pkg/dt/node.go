@@ -203,7 +203,7 @@ func (p *Property) AsStringList() ([]string, error) {
 		}
 		strs = append(strs, string(str))
 	}
-	return []string{}, nil
+	return strs, nil
 }
 
 func isPrintableASCII(s []byte) bool {
