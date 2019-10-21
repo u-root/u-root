@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -319,7 +320,7 @@ func GetGPTTable(device BlockDev) (*gpt.Table, error) {
 		return nil, err
 	}
 	defer fd.Close()
-	if _, err = fd.Seek(512, os.SEEK_SET); err != nil {
+	if _, err = fd.Seek(512, io.SeekStart); err != nil {
 		return nil, err
 	}
 	table, err := gpt.ReadTable(fd, 512)
