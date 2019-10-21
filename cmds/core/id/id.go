@@ -132,7 +132,7 @@ func NewUser() (*User, error) {
 		if groupName, ok := groupsMap[groupNum]; ok {
 			u.groups[groupNum] = groupName
 		} else {
-			return nil, fmt.Errorf("Inconsistent %s file", GroupFile)
+			return nil, fmt.Errorf("inconsistent %s file", GroupFile)
 		}
 	}
 

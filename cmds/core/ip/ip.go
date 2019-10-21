@@ -60,7 +60,7 @@ var (
 // and why it did not work out.
 
 func usage() error {
-	return fmt.Errorf("This was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
+	return fmt.Errorf("this was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
 		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
 }
 
@@ -120,11 +120,11 @@ func addrip() error {
 	switch c {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("Adding %v to %v failed: %v", arg[1], arg[2], err)
+			return fmt.Errorf("adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
 		if err := netlink.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
+			return fmt.Errorf("deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
 		return fmt.Errorf("devip: arg[0] changed: can't happen")
@@ -225,7 +225,7 @@ func nexthop() (string, *netlink.Addr, error) {
 	whatIWant = []string{"Gateway CIDR"}
 	addr, err := netlink.ParseAddr(arg[cursor])
 	if err != nil {
-		return "", nil, fmt.Errorf("Gateway CIDR: %v", err)
+		return "", nil, fmt.Errorf("failed to parse gateway CIDR: %v", err)
 	}
 	return nh, addr, nil
 }

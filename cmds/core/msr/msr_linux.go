@@ -39,7 +39,7 @@ func openAll(m []string, o int) ([]*os.File, []error) {
 
 func doio(msr *os.File, addr uint32, f func(*os.File) error) error {
 	if _, err := msr.Seek(int64(addr), 0); err != nil {
-		return fmt.Errorf("Bad address %v: %v", addr, err)
+		return fmt.Errorf("bad address %v: %v", addr, err)
 	}
 	return f(msr)
 }

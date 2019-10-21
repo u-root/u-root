@@ -195,7 +195,7 @@ func getTime(z *time.Location, s string) (t time.Time, err error) {
 		s = s[0:4] + s[5:]
 		err = ints(s, &CC, &YY, &SS)
 	default:
-		err = fmt.Errorf("Optional string is %v instead of [[CC]YY][.ss]", s)
+		err = fmt.Errorf("optional string is %v instead of [[CC]YY][.ss]", s)
 	}
 
 	if err != nil {

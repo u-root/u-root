@@ -59,7 +59,7 @@ func getMainMemInfo(m meminfomap, config *FreeConfig) (*mainMemInfo, error) {
 		"MemAvailable",
 	}
 	if missingRequiredFields(m, fields) {
-		return nil, fmt.Errorf("Missing required fields from meminfo")
+		return nil, fmt.Errorf("missing required fields from meminfo")
 	}
 
 	// These values are expressed in kibibytes, convert to the desired unit
@@ -94,7 +94,7 @@ func getSwapInfo(m meminfomap, config *FreeConfig) (*swapInfo, error) {
 		"SwapFree",
 	}
 	if missingRequiredFields(m, fields) {
-		return nil, fmt.Errorf("Missing required fields from meminfo")
+		return nil, fmt.Errorf("missing required fields from meminfo")
 	}
 	// These values are expressed in kibibytes, convert to the desired unit
 	swapTotal := m["SwapTotal"] << KB

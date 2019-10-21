@@ -99,7 +99,7 @@ func RunTests(evalTests []Test, makeEvaler func() *Evaler) error {
 		errorf := func(format string, args ...interface{}) error {
 			if first {
 				first = false
-				return fmt.Errorf("eval(%q) fails:", tt.text)
+				return fmt.Errorf("eval(%q) fails: "+format, append([]interface{}{tt.text}, args...)...)
 			}
 			return fmt.Errorf("  "+format, args...)
 		}

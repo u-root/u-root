@@ -34,7 +34,7 @@ func mknod() error {
 	flag.Parse()
 	a := flag.Args()
 	if len(a) != 2 && len(a) != 4 {
-		return errors.New("Usage: mknod path type [major minor]")
+		return errors.New("usage: mknod path type [major minor]")
 	}
 	path := a[0]
 	devtype := a[1]

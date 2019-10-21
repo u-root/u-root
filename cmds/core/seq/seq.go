@@ -62,7 +62,7 @@ func seq(w io.Writer, args []string) error {
 	format := flags.format // I use that because I'll modify a global variable
 	argv, argc := args, len(args)
 	if argc < 1 || argc > 4 {
-		return fmt.Errorf("Mismatch n args; got %v, wants 1 >= n args >= 3", argc)
+		return fmt.Errorf("mismatch n args; got %v, wants 1 >= n args >= 3", argc)
 	}
 
 	// loading step value if args is <start> <step> <end>
