@@ -120,7 +120,7 @@ func uname(t *Tracer, addr Addr) string {
 		return fmt.Sprintf("%#x (error decoding utsname: %s)", addr, err)
 	}
 
-	return fmt.Sprintf("%#x %s", addr, u)
+	return fmt.Sprintf("%#x %v", addr, u)
 }
 
 // AlignUp rounds a length up to an alignment. align must be a power of 2.
