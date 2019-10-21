@@ -137,12 +137,12 @@ type CacheSRAMType uint16
 // CacheSRAMType fields are defined in DSP0134 7.8.2
 const (
 	CacheSRAMTypeOther         CacheSRAMType = 1 << 0 // Other
-	CacheSRAMTypeUnknown                     = 1 << 1 // Unknown
-	CacheSRAMTypeNonBurst                    = 1 << 2 // Non-Burst
-	CacheSRAMTypeBurst                       = 1 << 3 // Burst
-	CacheSRAMTypePipelineBurst               = 1 << 4 // Pipeline Burst
-	CacheSRAMTypeSynchronous                 = 1 << 5 // Synchronous
-	CacheSRAMTypeAsynchronous                = 1 << 6 // Asynchronous
+	CacheSRAMTypeUnknown       CacheSRAMType = 1 << 1 // Unknown
+	CacheSRAMTypeNonBurst      CacheSRAMType = 1 << 2 // Non-Burst
+	CacheSRAMTypeBurst         CacheSRAMType = 1 << 3 // Burst
+	CacheSRAMTypePipelineBurst CacheSRAMType = 1 << 4 // Pipeline Burst
+	CacheSRAMTypeSynchronous   CacheSRAMType = 1 << 5 // Synchronous
+	CacheSRAMTypeAsynchronous  CacheSRAMType = 1 << 6 // Asynchronous
 )
 
 func (v CacheSRAMType) String() string {
@@ -177,11 +177,11 @@ type CacheErrorCorrectionType uint8
 // CacheErrorCorrectionType values are defined in DSP0134 7.8.3.
 const (
 	CacheErrorCorrectionTypeOther        CacheErrorCorrectionType = 0x01 // Other
-	CacheErrorCorrectionTypeUnknown                               = 0x02 // Unknown
-	CacheErrorCorrectionTypeNone                                  = 0x03 // None
-	CacheErrorCorrectionTypeParity                                = 0x04 // Parity
-	CacheErrorCorrectionTypeSinglebitECC                          = 0x05 // Single-bit ECC
-	CacheErrorCorrectionTypeMultibitECC                           = 0x06 // Multi-bit ECC
+	CacheErrorCorrectionTypeUnknown      CacheErrorCorrectionType = 0x02 // Unknown
+	CacheErrorCorrectionTypeNone         CacheErrorCorrectionType = 0x03 // None
+	CacheErrorCorrectionTypeParity       CacheErrorCorrectionType = 0x04 // Parity
+	CacheErrorCorrectionTypeSinglebitECC CacheErrorCorrectionType = 0x05 // Single-bit ECC
+	CacheErrorCorrectionTypeMultibitECC  CacheErrorCorrectionType = 0x06 // Multi-bit ECC
 )
 
 func (v CacheErrorCorrectionType) String() string {
@@ -205,10 +205,10 @@ type CacheSystemType uint8
 // CacheSystemType values are defined in DSP0134 7.8.4.
 const (
 	CacheSystemTypeOther       CacheSystemType = 0x01 // Other
-	CacheSystemTypeUnknown                     = 0x02 // Unknown
-	CacheSystemTypeInstruction                 = 0x03 // Instruction
-	CacheSystemTypeData                        = 0x04 // Data
-	CacheSystemTypeUnified                     = 0x05 // Unified
+	CacheSystemTypeUnknown     CacheSystemType = 0x02 // Unknown
+	CacheSystemTypeInstruction CacheSystemType = 0x03 // Instruction
+	CacheSystemTypeData        CacheSystemType = 0x04 // Data
+	CacheSystemTypeUnified     CacheSystemType = 0x05 // Unified
 )
 
 func (v CacheSystemType) String() string {
@@ -231,19 +231,19 @@ type CacheAssociativity uint8
 // CacheAssociativity values are defined in DSP0134 7.8.5.
 const (
 	CacheAssociativityOther               CacheAssociativity = 0x01 // Other
-	CacheAssociativityUnknown                                = 0x02 // Unknown
-	CacheAssociativityDirectMapped                           = 0x03 // Direct Mapped
-	CacheAssociativity2waySetAssociative                     = 0x04 // 2-way Set-associative
-	CacheAssociativity4waySetAssociative                     = 0x05 // 4-way Set-associative
-	CacheAssociativityFullyAssociative                       = 0x06 // Fully Associative
-	CacheAssociativity8waySetAssociative                     = 0x07 // 8-way Set-associative
-	CacheAssociativity16waySetAssociative                    = 0x08 // 16-way Set-associative
-	CacheAssociativity12waySetAssociative                    = 0x09 // 12-way Set-associative
-	CacheAssociativity24waySetAssociative                    = 0x0a // 24-way Set-associative
-	CacheAssociativity32waySetAssociative                    = 0x0b // 32-way Set-associative
-	CacheAssociativity48waySetAssociative                    = 0x0c // 48-way Set-associative
-	CacheAssociativity64waySetAssociative                    = 0x0d // 64-way Set-associative
-	CacheAssociativity20waySetAssociative                    = 0x0e // 20-way Set-associative
+	CacheAssociativityUnknown             CacheAssociativity = 0x02 // Unknown
+	CacheAssociativityDirectMapped        CacheAssociativity = 0x03 // Direct Mapped
+	CacheAssociativity2waySetAssociative  CacheAssociativity = 0x04 // 2-way Set-associative
+	CacheAssociativity4waySetAssociative  CacheAssociativity = 0x05 // 4-way Set-associative
+	CacheAssociativityFullyAssociative    CacheAssociativity = 0x06 // Fully Associative
+	CacheAssociativity8waySetAssociative  CacheAssociativity = 0x07 // 8-way Set-associative
+	CacheAssociativity16waySetAssociative CacheAssociativity = 0x08 // 16-way Set-associative
+	CacheAssociativity12waySetAssociative CacheAssociativity = 0x09 // 12-way Set-associative
+	CacheAssociativity24waySetAssociative CacheAssociativity = 0x0a // 24-way Set-associative
+	CacheAssociativity32waySetAssociative CacheAssociativity = 0x0b // 32-way Set-associative
+	CacheAssociativity48waySetAssociative CacheAssociativity = 0x0c // 48-way Set-associative
+	CacheAssociativity64waySetAssociative CacheAssociativity = 0x0d // 64-way Set-associative
+	CacheAssociativity20waySetAssociative CacheAssociativity = 0x0e // 20-way Set-associative
 )
 
 func (v CacheAssociativity) String() string {

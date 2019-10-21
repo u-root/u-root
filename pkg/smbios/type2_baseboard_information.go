@@ -82,10 +82,10 @@ type BoardFeatures uint8
 // BoardFeatures fields are defined in DSP0134 7.3.1
 const (
 	BoardFeaturesIsHotSwappable                  BoardFeatures = 1 << 4 // Set to 1 if the board is hot swappable
-	BoardFeaturesIsReplaceable                                 = 1 << 3 // Set to 1 if the board is replaceable
-	BoardFeaturesIsRemovable                                   = 1 << 2 // Set to 1 if the board is removable
-	BoardFeaturesRequiresAtLeastOneDaughterBoard               = 1 << 1 // Set to 1 if the board requires at least one daughter board or auxiliary card to function
-	BoardFeaturesIsAHostingBoard                               = 1 << 0 // Set to 1 if the board is a hosting board (for example, a motherboard)
+	BoardFeaturesIsReplaceable                   BoardFeatures = 1 << 3 // Set to 1 if the board is replaceable
+	BoardFeaturesIsRemovable                     BoardFeatures = 1 << 2 // Set to 1 if the board is removable
+	BoardFeaturesRequiresAtLeastOneDaughterBoard BoardFeatures = 1 << 1 // Set to 1 if the board requires at least one daughter board or auxiliary card to function
+	BoardFeaturesIsAHostingBoard                 BoardFeatures = 1 << 0 // Set to 1 if the board is a hosting board (for example, a motherboard)
 )
 
 func (v BoardFeatures) String() string {
@@ -114,18 +114,18 @@ type BoardType uint8
 // BoardType values are defined in DSP0134 7.3.2
 const (
 	BoardTypeUnknown                                 BoardType = 0x01 // Unknown
-	BoardTypeOther                                             = 0x02 // Other
-	BoardTypeServerBlade                                       = 0x03 // Server Blade
-	BoardTypeConnectivitySwitch                                = 0x04 // Connectivity Switch
-	BoardTypeSystemManagementModule                            = 0x05 // System Management Module
-	BoardTypeProcessorModule                                   = 0x06 // Processor Module
-	BoardTypeIOModule                                          = 0x07 // I/O Module
-	BoardTypeMemoryModule                                      = 0x08 // Memory Module
-	BoardTypeDaughterBoard                                     = 0x09 // Daughter board
-	BoardTypeMotherboardIncludesProcessorMemoryAndIO           = 0x0a // Motherboard (includes processor, memory, and I/O)
-	BoardTypeProcessorMemoryModule                             = 0x0b // Processor/Memory Module
-	BoardTypeProcessorIOModule                                 = 0x0c // Processor/IO Module
-	BoardTypeInterconnectBoard                                 = 0x0d // Interconnect board
+	BoardTypeOther                                   BoardType = 0x02 // Other
+	BoardTypeServerBlade                             BoardType = 0x03 // Server Blade
+	BoardTypeConnectivitySwitch                      BoardType = 0x04 // Connectivity Switch
+	BoardTypeSystemManagementModule                  BoardType = 0x05 // System Management Module
+	BoardTypeProcessorModule                         BoardType = 0x06 // Processor Module
+	BoardTypeIOModule                                BoardType = 0x07 // I/O Module
+	BoardTypeMemoryModule                            BoardType = 0x08 // Memory Module
+	BoardTypeDaughterBoard                           BoardType = 0x09 // Daughter board
+	BoardTypeMotherboardIncludesProcessorMemoryAndIO BoardType = 0x0a // Motherboard (includes processor, memory, and I/O)
+	BoardTypeProcessorMemoryModule                   BoardType = 0x0b // Processor/Memory Module
+	BoardTypeProcessorIOModule                       BoardType = 0x0c // Processor/IO Module
+	BoardTypeInterconnectBoard                       BoardType = 0x0d // Interconnect board
 )
 
 func (v BoardType) String() string {

@@ -83,8 +83,8 @@ func (bi *BIOSInformation) String() string {
 	lines = append(lines,
 		fmt.Sprintf("\tROM Size: %s", kmgt(bi.GetROMSizeBytes())),
 		fmt.Sprintf("\tCharacteristics:\n%s", bi.Characteristics),
-		fmt.Sprintf("%s", bi.CharacteristicsExt1),
-		fmt.Sprintf("%s", bi.CharacteristicsExt2),
+		bi.CharacteristicsExt1.String(),
+		bi.CharacteristicsExt2.String(),
 	)
 	if bi.Len() >= 0x16 && bi.SystemBIOSMajorRelease != 0xff { // 2.4+
 		lines = append(lines, fmt.Sprintf("\tBIOS Revision: %d.%d", bi.SystemBIOSMajorRelease, bi.SystemBIOSMinorRelease))
@@ -101,37 +101,37 @@ type BIOSCharacteristics uint64
 // BIOSCharacteristics fields are defined in DSP0134 7.1.1.
 const (
 	BIOSCharacteristicsReserved                                                           BIOSCharacteristics = 1 << 0  // Reserved.
-	BIOSCharacteristicsReserved2                                                                              = 1 << 1  // Reserved.
-	BIOSCharacteristicsUnknown                                                                                = 1 << 2  // Unknown.
-	BIOSCharacteristicsBIOSCharacteristicsAreNotSupported                                                     = 1 << 3  // BIOS Characteristics are not supported.
-	BIOSCharacteristicsISAIsSupported                                                                         = 1 << 4  // ISA is supported.
-	BIOSCharacteristicsMCAIsSupported                                                                         = 1 << 5  // MCA is supported.
-	BIOSCharacteristicsEISAIsSupported                                                                        = 1 << 6  // EISA is supported.
-	BIOSCharacteristicsPCIIsSupported                                                                         = 1 << 7  // PCI is supported.
-	BIOSCharacteristicsPCCardPCMCIAIsSupported                                                                = 1 << 8  // PC card (PCMCIA) is supported.
-	BIOSCharacteristicsPlugAndPlayIsSupported                                                                 = 1 << 9  // Plug and Play is supported.
-	BIOSCharacteristicsAPMIsSupported                                                                         = 1 << 10 // APM is supported.
-	BIOSCharacteristicsBIOSIsUpgradeableFlash                                                                 = 1 << 11 // BIOS is upgradeable (Flash).
-	BIOSCharacteristicsBIOSShadowingIsAllowed                                                                 = 1 << 12 // BIOS shadowing is allowed.
-	BIOSCharacteristicsVLVESAIsSupported                                                                      = 1 << 13 // VL-VESA is supported.
-	BIOSCharacteristicsESCDSupportIsAvailable                                                                 = 1 << 14 // ESCD support is available.
-	BIOSCharacteristicsBootFromCDIsSupported                                                                  = 1 << 15 // Boot from CD is supported.
-	BIOSCharacteristicsSelectableBootIsSupported                                                              = 1 << 16 // Selectable boot is supported.
-	BIOSCharacteristicsBIOSROMIsSocketed                                                                      = 1 << 17 // BIOS ROM is socketed.
-	BIOSCharacteristicsBootFromPCCardPCMCIAIsSupported                                                        = 1 << 18 // Boot from PC card (PCMCIA) is supported.
-	BIOSCharacteristicsEDDSpecificationIsSupported                                                            = 1 << 19 // EDD specification is supported.
-	BIOSCharacteristicsInt13hJapaneseFloppyForNEC980012MB351KBytessector360RPMIsSupported                     = 1 << 20 // Japanese floppy for NEC 9800 1.2 MB (3.5”, 1K bytes/sector, 360 RPM) is
-	BIOSCharacteristicsInt13hJapaneseFloppyForToshiba12MB35360RPMIsSupported                                  = 1 << 21 // Japanese floppy for Toshiba 1.2 MB (3.5”, 360 RPM) is supported.
-	BIOSCharacteristicsInt13h525360KBFloppyServicesAreSupported                                               = 1 << 22 // 5.25” / 360 KB floppy services are supported.
-	BIOSCharacteristicsInt13h52512MBFloppyServicesAreSupported                                                = 1 << 23 // 5.25” /1.2 MB floppy services are supported.
-	BIOSCharacteristicsInt13h35720KBFloppyServicesAreSupported                                                = 1 << 24 // 3.5” / 720 KB floppy services are supported.
-	BIOSCharacteristicsInt13h35288MBFloppyServicesAreSupported                                                = 1 << 25 // 3.5” / 2.88 MB floppy services are supported.
-	BIOSCharacteristicsInt5hPrintScreenServiceIsSupported                                                     = 1 << 26 // Int 5h, print screen Service is supported.
-	BIOSCharacteristicsInt9h8042KeyboardServicesAreSupported                                                  = 1 << 27 // Int 9h, 8042 keyboard services are supported.
-	BIOSCharacteristicsInt14hSerialServicesAreSupported                                                       = 1 << 28 // Int 14h, serial services are supported.
-	BIOSCharacteristicsInt17hPrinterServicesAreSupported                                                      = 1 << 29 // Int 17h, printer services are supported.
-	BIOSCharacteristicsInt10hCGAMonoVideoServicesAreSupported                                                 = 1 << 30 // Int 10h, CGA/Mono Video Services are supported.
-	BIOSCharacteristicsNECPC98                                                                                = 1 << 31 // NEC PC-98.
+	BIOSCharacteristicsReserved2                                                          BIOSCharacteristics = 1 << 1  // Reserved.
+	BIOSCharacteristicsUnknown                                                            BIOSCharacteristics = 1 << 2  // Unknown.
+	BIOSCharacteristicsBIOSCharacteristicsAreNotSupported                                 BIOSCharacteristics = 1 << 3  // BIOS Characteristics are not supported.
+	BIOSCharacteristicsISAIsSupported                                                     BIOSCharacteristics = 1 << 4  // ISA is supported.
+	BIOSCharacteristicsMCAIsSupported                                                     BIOSCharacteristics = 1 << 5  // MCA is supported.
+	BIOSCharacteristicsEISAIsSupported                                                    BIOSCharacteristics = 1 << 6  // EISA is supported.
+	BIOSCharacteristicsPCIIsSupported                                                     BIOSCharacteristics = 1 << 7  // PCI is supported.
+	BIOSCharacteristicsPCCardPCMCIAIsSupported                                            BIOSCharacteristics = 1 << 8  // PC card (PCMCIA) is supported.
+	BIOSCharacteristicsPlugAndPlayIsSupported                                             BIOSCharacteristics = 1 << 9  // Plug and Play is supported.
+	BIOSCharacteristicsAPMIsSupported                                                     BIOSCharacteristics = 1 << 10 // APM is supported.
+	BIOSCharacteristicsBIOSIsUpgradeableFlash                                             BIOSCharacteristics = 1 << 11 // BIOS is upgradeable (Flash).
+	BIOSCharacteristicsBIOSShadowingIsAllowed                                             BIOSCharacteristics = 1 << 12 // BIOS shadowing is allowed.
+	BIOSCharacteristicsVLVESAIsSupported                                                  BIOSCharacteristics = 1 << 13 // VL-VESA is supported.
+	BIOSCharacteristicsESCDSupportIsAvailable                                             BIOSCharacteristics = 1 << 14 // ESCD support is available.
+	BIOSCharacteristicsBootFromCDIsSupported                                              BIOSCharacteristics = 1 << 15 // Boot from CD is supported.
+	BIOSCharacteristicsSelectableBootIsSupported                                          BIOSCharacteristics = 1 << 16 // Selectable boot is supported.
+	BIOSCharacteristicsBIOSROMIsSocketed                                                  BIOSCharacteristics = 1 << 17 // BIOS ROM is socketed.
+	BIOSCharacteristicsBootFromPCCardPCMCIAIsSupported                                    BIOSCharacteristics = 1 << 18 // Boot from PC card (PCMCIA) is supported.
+	BIOSCharacteristicsEDDSpecificationIsSupported                                        BIOSCharacteristics = 1 << 19 // EDD specification is supported.
+	BIOSCharacteristicsInt13hJapaneseFloppyForNEC980012MB351KBytessector360RPMIsSupported BIOSCharacteristics = 1 << 20 // Japanese floppy for NEC 9800 1.2 MB (3.5”, 1K bytes/sector, 360 RPM) is
+	BIOSCharacteristicsInt13hJapaneseFloppyForToshiba12MB35360RPMIsSupported              BIOSCharacteristics = 1 << 21 // Japanese floppy for Toshiba 1.2 MB (3.5”, 360 RPM) is supported.
+	BIOSCharacteristicsInt13h525360KBFloppyServicesAreSupported                           BIOSCharacteristics = 1 << 22 // 5.25” / 360 KB floppy services are supported.
+	BIOSCharacteristicsInt13h52512MBFloppyServicesAreSupported                            BIOSCharacteristics = 1 << 23 // 5.25” /1.2 MB floppy services are supported.
+	BIOSCharacteristicsInt13h35720KBFloppyServicesAreSupported                            BIOSCharacteristics = 1 << 24 // 3.5” / 720 KB floppy services are supported.
+	BIOSCharacteristicsInt13h35288MBFloppyServicesAreSupported                            BIOSCharacteristics = 1 << 25 // 3.5” / 2.88 MB floppy services are supported.
+	BIOSCharacteristicsInt5hPrintScreenServiceIsSupported                                 BIOSCharacteristics = 1 << 26 // Int 5h, print screen Service is supported.
+	BIOSCharacteristicsInt9h8042KeyboardServicesAreSupported                              BIOSCharacteristics = 1 << 27 // Int 9h, 8042 keyboard services are supported.
+	BIOSCharacteristicsInt14hSerialServicesAreSupported                                   BIOSCharacteristics = 1 << 28 // Int 14h, serial services are supported.
+	BIOSCharacteristicsInt17hPrinterServicesAreSupported                                  BIOSCharacteristics = 1 << 29 // Int 17h, printer services are supported.
+	BIOSCharacteristicsInt10hCGAMonoVideoServicesAreSupported                             BIOSCharacteristics = 1 << 30 // Int 10h, CGA/Mono Video Services are supported.
+	BIOSCharacteristicsNECPC98                                                            BIOSCharacteristics = 1 << 31 // NEC PC-98.
 )
 
 func (v BIOSCharacteristics) String() string {
@@ -241,13 +241,13 @@ type BIOSCharacteristicsExt1 uint8
 // BIOSCharacteristicsExt1 is defined in DSP0134 7.1.2.1.
 const (
 	BIOSCharacteristicsExt1ACPIIsSupported               BIOSCharacteristicsExt1 = 1 << 0 // ACPI is supported.
-	BIOSCharacteristicsExt1USBLegacyIsSupported                                  = 1 << 1 // USB Legacy is supported.
-	BIOSCharacteristicsExt1AGPIsSupported                                        = 1 << 2 // AGP is supported.
-	BIOSCharacteristicsExt1I2OBootIsSupported                                    = 1 << 3 // I2O boot is supported.
-	BIOSCharacteristicsExt1LS120SuperDiskBootIsSupported                         = 1 << 4 // LS-120 SuperDisk boot is supported.
-	BIOSCharacteristicsExt1ATAPIZIPDriveBootIsSupported                          = 1 << 5 // ATAPI ZIP drive boot is supported.
-	BIOSCharacteristicsExt11394BootIsSupported                                   = 1 << 6 // 1394 boot is supported.
-	BIOSCharacteristicsExt1SmartBatteryIsSupported                               = 1 << 7 // Smart battery is supported.
+	BIOSCharacteristicsExt1USBLegacyIsSupported          BIOSCharacteristicsExt1 = 1 << 1 // USB Legacy is supported.
+	BIOSCharacteristicsExt1AGPIsSupported                BIOSCharacteristicsExt1 = 1 << 2 // AGP is supported.
+	BIOSCharacteristicsExt1I2OBootIsSupported            BIOSCharacteristicsExt1 = 1 << 3 // I2O boot is supported.
+	BIOSCharacteristicsExt1LS120SuperDiskBootIsSupported BIOSCharacteristicsExt1 = 1 << 4 // LS-120 SuperDisk boot is supported.
+	BIOSCharacteristicsExt1ATAPIZIPDriveBootIsSupported  BIOSCharacteristicsExt1 = 1 << 5 // ATAPI ZIP drive boot is supported.
+	BIOSCharacteristicsExt11394BootIsSupported           BIOSCharacteristicsExt1 = 1 << 6 // 1394 boot is supported.
+	BIOSCharacteristicsExt1SmartBatteryIsSupported       BIOSCharacteristicsExt1 = 1 << 7 // Smart battery is supported.
 )
 
 func (v BIOSCharacteristicsExt1) String() string {
@@ -285,10 +285,10 @@ type BIOSCharacteristicsExt2 uint8
 // BIOSCharacteristicsExt1 is defined in DSP0134 7.1.2.2.
 const (
 	BIOSCharacteristicsExt2BIOSBootSpecificationIsSupported                  BIOSCharacteristicsExt2 = 1 << 0 // BIOS Boot Specification is supported.
-	BIOSCharacteristicsExt2FunctionKeyinitiatedNetworkServiceBootIsSupported                         = 1 << 1 // Function key-initiated network service boot is supported.
-	BIOSCharacteristicsExt2TargetedContentDistributionIsSupported                                    = 1 << 2 // Enable targeted content distribution.
-	BIOSCharacteristicsExt2UEFISpecificationIsSupported                                              = 1 << 3 // UEFI Specification is supported.
-	BIOSCharacteristicsExt2SMBIOSTableDescribesAVirtualMachine                                       = 1 << 4 // SMBIOS table describes a virtual machine. (If this bit is not set, no inference can be made
+	BIOSCharacteristicsExt2FunctionKeyinitiatedNetworkServiceBootIsSupported BIOSCharacteristicsExt2 = 1 << 1 // Function key-initiated network service boot is supported.
+	BIOSCharacteristicsExt2TargetedContentDistributionIsSupported            BIOSCharacteristicsExt2 = 1 << 2 // Enable targeted content distribution.
+	BIOSCharacteristicsExt2UEFISpecificationIsSupported                      BIOSCharacteristicsExt2 = 1 << 3 // UEFI Specification is supported.
+	BIOSCharacteristicsExt2SMBIOSTableDescribesAVirtualMachine               BIOSCharacteristicsExt2 = 1 << 4 // SMBIOS table describes a virtual machine. (If this bit is not set, no inference can be made
 )
 
 func (v BIOSCharacteristicsExt2) String() string {
