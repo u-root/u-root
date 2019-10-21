@@ -64,7 +64,6 @@ var (
 		kexec.RangeNVS:      4,
 		kexec.RangeReserved: 2,
 	}
-	PageSize = os.Getpagesize()
 )
 
 var sizeofMemoryMap = uint(binary.Size(MemoryMap{}))

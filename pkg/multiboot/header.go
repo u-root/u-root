@@ -15,8 +15,13 @@ import (
 )
 
 var (
-	ErrHeaderNotFound    = errors.New("multiboot header not found")
-	ErrFlagsNotSupported = errors.New("multiboot header flags not supported yet")
+	// ErrHeaderNotFound indicates that a multiboot header magic was not
+	// found in the given binary.
+	ErrHeaderNotFound = errors.New("multiboot header not found")
+
+	// ErrFlagsNotSupported indicates that a valid multiboot header
+	// contained flags this package does not support (yet).
+	ErrFlagsNotSupported = errors.New("multiboot header flags not supported	yet")
 )
 
 const headerMagic = 0x1BADB002
