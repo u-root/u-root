@@ -65,11 +65,7 @@ var (
 // Fetch implements FileScheme.Fetch.
 func (m *MockScheme) Fetch(u *url.URL) (io.ReaderAt, error) {
 	url := u.String()
-	if _, ok := m.numCalled[url]; ok {
-		m.numCalled[url]++
-	} else {
-		m.numCalled[url] = 1
-	}
+	m.numCalled[url]++
 
 	if u.Scheme != m.Scheme {
 		return nil, ErrWrongScheme
