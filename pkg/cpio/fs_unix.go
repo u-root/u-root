@@ -95,7 +95,7 @@ func linuxModeToFileType(m uint64) (os.FileMode, error) {
 	if t, ok := modeMap[m&modeTypeMask]; ok {
 		return t, nil
 	}
-	return 0, fmt.Errorf("Invalid file type %#o", m&modeTypeMask)
+	return 0, fmt.Errorf("invalid file type %#o", m&modeTypeMask)
 }
 
 // CreateFile creates a local file for f relative to the current working
