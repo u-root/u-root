@@ -197,7 +197,7 @@ func Tail(inFile *os.File, writer io.Writer, config TailConfig) error {
 		return fmt.Errorf("follow-mode not implemented yet")
 	}
 	if inFile == nil {
-		return fmt.Errorf("No input file specified")
+		return fmt.Errorf("no input file specified")
 	}
 	// try reading from the end of the file
 	retryFromBeginning := false
