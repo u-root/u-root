@@ -13,8 +13,6 @@ import (
 	"testing"
 )
 
-var u8 = Uint8(0x12)
-
 var tests = []struct {
 	name                string
 	addr                int64
