@@ -43,7 +43,7 @@ func UnmarshalRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 // unmarshalRSAPublicKey unmarshals a TPM key into a crypto/rsa.PublicKey.
 func (k *key) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	// Currently, we only support algRSA
-	if k.AlgorithmParams.AlgID != algRSA {
+	if k.AlgorithmParams.AlgID != AlgRSA {
 		return nil, errors.New("only TPM_ALG_RSA is supported")
 	}
 
@@ -81,8 +81,8 @@ func UnmarshalPubRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 // unmarshalRSAPublicKey unmarshals a TPM pub key into a crypto/rsa.PublicKey.
 // This is almost identical to the identically named function for a TPM key.
 func (pk *pubKey) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
-	// Currently, we only support algRSA
-	if pk.AlgorithmParams.AlgID != algRSA {
+	// Currently, we only support AlgRSA
+	if pk.AlgorithmParams.AlgID != AlgRSA {
 		return nil, errors.New("only TPM_ALG_RSA is supported")
 	}
 

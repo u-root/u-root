@@ -567,7 +567,7 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 	}
 
 	aikParams := keyParams{
-		AlgID:     algRSA,
+		AlgID:     AlgRSA,
 		EncScheme: esNone,
 		SigScheme: ssRSASaPKCS1v15SHA1,
 		Params:    packedParams,
@@ -707,7 +707,7 @@ func ActivateIdentity(rw io.ReadWriter, aikAuth []byte, ownerAuth []byte, aik tp
 		secret    []byte
 	)
 	switch id := symkey.AlgID; id {
-	case algAES128:
+	case AlgAES128:
 		block, err = aes.NewCipher(symkey.Key)
 		if err != nil {
 			return nil, fmt.Errorf("aes.NewCipher failed: %v", err)
@@ -843,7 +843,7 @@ func ReadEKCert(rw io.ReadWriter, ownAuth digest) ([]byte, error) {
 		CertSize uint16
 	}
 
-	data, err := NVReadValue(rw, certIndex, offset, uint32(binary.Size(header)), ownAuth)
+	data, err := NVReadValue(rw, certIndex, offset, uint32(binary.Size(header)), []byte(ownAuth[:]))
 	if err != nil {
 		return nil, err
 	}
@@ -862,7 +862,7 @@ func ReadEKCert(rw io.ReadWriter, ownAuth digest) ([]byte, error) {
 	switch header.CertType {
 	case tcgFullCert:
 		var tag uint16
-		data, err := NVReadValue(rw, certIndex, offset, uint32(binary.Size(tag)), ownAuth)
+		data, err := NVReadValue(rw, certIndex, offset, uint32(binary.Size(tag)), []byte(ownAuth[:]))
 		if err != nil {
 			return nil, err
 		}
@@ -892,7 +892,7 @@ func ReadEKCert(rw io.ReadWriter, ownAuth digest) ([]byte, error) {
 		if length > 128 {
 			length = 128
 		}
-		data, err = NVReadValue(rw, certIndex, offset, length, ownAuth)
+		data, err = NVReadValue(rw, certIndex, offset, length, []byte(ownAuth[:]))
 		if err != nil {
 			return nil, err
 		}
@@ -906,7 +906,17 @@ func ReadEKCert(rw io.ReadWriter, ownAuth digest) ([]byte, error) {
 
 // NVReadValue returns the value from a given index, offset, and length in NVRAM.
 // See TPM-Main-Part-2-TPM-Structures 19.1.
-func NVReadValue(rw io.ReadWriter, index, offset, len uint32, ownAuth digest) ([]byte, error) {
+// If TPM isn't locked, no authentification is needed.
+// This is for platform suppliers only.
+// See TPM-Main-Part-3-Commands-20.4
+func NVReadValue(rw io.ReadWriter, index, offset, len uint32, ownAuth []byte) ([]byte, error) {
+	if ownAuth == nil {
+		data, _, _, err := nvReadValue(rw, index, offset, len, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read from NVRAM: %v", err)
+		}
+		return data, nil
+	}
 	sharedSecretOwn, osaprOwn, err := newOSAPSession(rw, etOwner, khOwner, ownAuth[:])
 	if err != nil {
 		return nil, fmt.Errorf("failed to start new auth session: %v", err)
@@ -926,6 +936,7 @@ func NVReadValue(rw io.ReadWriter, index, offset, len uint32, ownAuth digest) ([
 	if err := ra.verify(ca.NonceOdd, sharedSecretOwn[:], raIn); err != nil {
 		return nil, fmt.Errorf("failed to verify authenticity of response: %v", err)
 	}
+
 	return data, nil
 }
 
@@ -973,6 +984,65 @@ func ReadPubEK(rw io.ReadWriter) ([]byte, error) {
 // GetManufacturer returns the manufacturer ID
 func GetManufacturer(rw io.ReadWriter) ([]byte, error) {
 	return getCapability(rw, capProperty, tpmCapPropManufacturer)
+}
+
+// GetPermanentFlags returns the TPM_PERMANENT_FLAGS structure.
+func GetPermanentFlags(rw io.ReadWriter) (PermanentFlags, error) {
+	var ret PermanentFlags
+
+	raw, err := getCapability(rw, capFlag, tpmCapFlagPermanent)
+	if err != nil {
+		return ret, err
+	}
+
+	_, err = tpmutil.Unpack(raw, &ret)
+	return ret, err
+}
+
+// GetAlgs returns a list of algorithms supported by the TPM device.
+func GetAlgs(rw io.ReadWriter) ([]Algorithm, error) {
+	var algs []Algorithm
+	for i := AlgRSA; i <= AlgXOR; i++ {
+		buf, err := getCapability(rw, capAlg, uint32(i))
+		if err != nil {
+			return nil, err
+		}
+		if uint8(buf[0]) > 0 {
+			algs = append(algs, Algorithm(i))
+		}
+
+	}
+	return algs, nil
+}
+
+// GetNVList returns a list of TPM_NV_INDEX values that
+// are currently allocated NV storage through TPM_NV_DefineSpace.
+func GetNVList(rw io.ReadWriter) ([]uint32, error) {
+	var nvList []uint32
+	buf, err := getCapability(rw, capNVList, 0)
+	if err != nil {
+		return nil, err
+	}
+	r := bytes.NewReader(buf)
+	err = binary.Read(r, binary.LittleEndian, &nvList)
+	return nvList, err
+}
+
+// GetNVIndex returns the structure of nvDataPublic which contains
+// information about the requested NV Index.
+// See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.167
+func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (NVDataPublic, error) {
+	var nvInfo NVDataPublic
+	buf, err := getCapability(rw, capNVIndex, 0)
+	if err != nil {
+		return nvInfo, fmt.Errorf("failed to get capability NVIndex: %v", err)
+	}
+	r := bytes.NewReader(buf)
+	err = binary.Read(r, binary.LittleEndian, &nvInfo)
+	if err != nil {
+		return nvInfo, fmt.Errorf("failed to read nvInfo: %v", err)
+	}
+	return nvInfo, nil
 }
 
 // OwnerClear uses owner auth to clear the TPM. After this operation, the TPM
@@ -1048,7 +1118,7 @@ func TakeOwnership(rw io.ReadWriter, newOwnerAuth digest, newSRKAuth digest, pub
 		return err
 	}
 	srkParams := keyParams{
-		AlgID:     algRSA,
+		AlgID:     AlgRSA,
 		EncScheme: esRSAEsOAEPSHA1MGF1,
 		SigScheme: ssNone,
 		Params:    srkpb,
@@ -1147,7 +1217,7 @@ func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth digest, migration
 		KeyFlags:      0,
 		AuthDataUsage: authAlways,
 		AlgorithmParams: keyParams{
-			AlgID:     algRSA,
+			AlgID:     AlgRSA,
 			EncScheme: esNone,
 			SigScheme: ssRSASaPKCS1v15DER,
 			Params:    rParamsPacked,
