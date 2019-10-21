@@ -61,7 +61,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	Debug("Header was %d bytes", len(d)-r.Len())
 	Debug("magic %x switch %v", b.Header.HeaderMagic, b.Header.RealModeSwitch)
 	if b.Header.HeaderMagic != HeaderMagic {
-		return fmt.Errorf("Not a bzImage: magic should be %02x, and is %02x", HeaderMagic, b.Header.HeaderMagic)
+		return fmt.Errorf("not a bzImage: magic should be %02x, and is %02x", HeaderMagic, b.Header.HeaderMagic)
 	}
 	Debug("RamDisk image %x size %x", b.Header.RamDiskImage, b.Header.RamDiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
@@ -81,17 +81,17 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	Debug("Remaining length is %d bytes, PayloadSize %d", r.Len(), b.Header.PayloadSize)
 	x := bytes.Index(r.Bytes(), xzmagic[:])
 	if x == -1 {
-		return fmt.Errorf("Can't find xz header")
+		return fmt.Errorf("can't find xz header")
 	}
 	Debug("xz is at %d", x)
 	b.HeadCode = make([]byte, x)
 	if _, err := r.Read(b.HeadCode); err != nil {
-		return fmt.Errorf("Can't read HeadCode: %v", err)
+		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
 	// Now size up the kernel code. Is it just PayloadSize?
 	b.compressed = make([]byte, b.Header.PayloadSize)
 	if _, err := r.Read(b.compressed); err != nil {
-		return fmt.Errorf("Can't read HeadCode: %v", err)
+		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
 	var err error
 	Debug("Uncompress %d bytes", len(b.compressed))
@@ -100,7 +100,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	}
 	b.TailCode = make([]byte, r.Len())
 	if _, err := r.Read(b.TailCode); err != nil {
-		return fmt.Errorf("Can't read TailCode: %v", err)
+		return fmt.Errorf("can't read TailCode: %v", err)
 	}
 	Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 	b.KernelBase = uintptr(0x100000)
@@ -122,7 +122,7 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 	}
 	dat = append(dat, initRAMFStag[:]...)
 	if len(dat) > len(b.compressed) {
-		return nil, fmt.Errorf("Marshal: compressed KernelCode too big: was %d, now %d", len(b.compressed), len(dat))
+		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d", len(b.compressed), len(dat))
 	}
 	Debug("b.compressed len %#x dat len %#x pad it out", len(b.compressed), len(dat))
 	if len(dat) < len(b.compressed) {
@@ -237,7 +237,7 @@ func (b *BzImage) ELF() (*elf.File, error) {
 
 func Equal(a, b []byte) error {
 	if len(a) != len(b) {
-		return fmt.Errorf("Images differ in len: %d bytes and %d bytes", len(a), len(b))
+		return fmt.Errorf("images differ in len: %d bytes and %d bytes", len(a), len(b))
 	}
 	var ba BzImage
 	if err := ba.UnmarshalBinary(a); err != nil {
@@ -248,21 +248,21 @@ func Equal(a, b []byte) error {
 		return err
 	}
 	if !reflect.DeepEqual(ba.Header, bb.Header) {
-		return fmt.Errorf("Headers do not match: %s", ba.Header.Diff(&bb.Header))
+		return fmt.Errorf("headers do not match: %s", ba.Header.Diff(&bb.Header))
 	}
 	// this is overkill, I can't see any way it can happen.
 	if len(ba.KernelCode) != len(bb.KernelCode) {
-		return fmt.Errorf("Kernel lengths differ: %d vs %d bytes", len(ba.KernelCode), len(bb.KernelCode))
+		return fmt.Errorf("kernel lengths differ: %d vs %d bytes", len(ba.KernelCode), len(bb.KernelCode))
 	}
 	if len(ba.BootCode) != len(bb.BootCode) {
-		return fmt.Errorf("BootCode lengths differ: %d vs %d bytes", len(ba.KernelCode), len(bb.KernelCode))
+		return fmt.Errorf("boot code lengths differ: %d vs %d bytes", len(ba.KernelCode), len(bb.KernelCode))
 	}
 
 	if !reflect.DeepEqual(ba.BootCode, bb.BootCode) {
-		return fmt.Errorf("BootCode does not match")
+		return fmt.Errorf("boot code does not match")
 	}
 	if !reflect.DeepEqual(ba.KernelCode, bb.KernelCode) {
-		return fmt.Errorf("Kernels do not match")
+		return fmt.Errorf("kernels do not match")
 	}
 	return nil
 }
@@ -288,7 +288,7 @@ func (b *BzImage) AddInitRAMFS(name string) error {
 	l := e - s
 
 	if len(d) > l {
-		return fmt.Errorf("New initramfs is %d bytes, won't fit in %d byte old one", len(d), l)
+		return fmt.Errorf("new initramfs is %d bytes, won't fit in %d byte old one", len(d), l)
 	}
 	// Do this in a stupid way that is easy to read.
 	// What's interesting: the kernel decompressor, if I read it right,
@@ -397,12 +397,12 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 		}
 	}
 	if dat == nil {
-		return -1, -1, fmt.Errorf("Can't find an RWE prog in kernel")
+		return -1, -1, fmt.Errorf("can't find an RWE prog in kernel")
 	}
 
 	archiver, err := cpio.Format("newc")
 	if err != nil {
-		return -1, -1, fmt.Errorf("Format newc not supported: %v", err)
+		return -1, -1, fmt.Errorf("format newc not supported: %v", err)
 	}
 	var cur int
 	for cur < len(dat) {

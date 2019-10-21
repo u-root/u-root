@@ -112,7 +112,7 @@ func TestSimple(t *testing.T) {
 			args:   []string{"initramfs", "bzImage", "init.cpio", "zz/zz/zz"},
 			name:   "too big initramfs",
 			status: 1,
-			out:    "New initramfs is 1536 bytes, won't fit in 480 byte old one\n",
+			out:    "new initramfs is 1536 bytes, won't fit in 480 byte old one\n",
 			skip:   uskip,
 		},
 		{

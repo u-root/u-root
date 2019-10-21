@@ -65,7 +65,7 @@ func NewLocalBooter(config []byte) (Booter, error) {
 	}
 	log.Printf("LocalBooter: %+v", lb)
 	if lb.Type != "localboot" {
-		return nil, fmt.Errorf("Wrong type for LocalBooter: %s", lb.Type)
+		return nil, fmt.Errorf("wrong type for LocalBooter: %s", lb.Type)
 	}
 	// the actual arguments validation is done in `Boot` to avoid duplicate code
 	return &lb, nil
@@ -88,7 +88,7 @@ func (lb *LocalBooter) Boot() error {
 			bootcmd = append(bootcmd, []string{"-cmdline", lb.KernelArgs}...)
 		}
 	} else {
-		return fmt.Errorf("Unknown boot method %s", lb.Method)
+		return fmt.Errorf("unknown boot method %s", lb.Method)
 	}
 
 	log.Printf("Executing command: %v", bootcmd)

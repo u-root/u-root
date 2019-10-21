@@ -100,7 +100,7 @@ func (bc *BootConfig) Boot() error {
 	}
 	err := kexec.Reboot()
 	if err == nil {
-		return errors.New("Unexpectedly returned from Reboot() without error. The system did not reboot")
+		return errors.New("unexpectedly returned from Reboot() without error: system did not reboot")
 	}
 	return err
 }
