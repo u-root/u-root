@@ -113,11 +113,11 @@ func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("Cannot find current executable path: %v", err)
+		return nil, fmt.Errorf("cannot find current executable path: %v", err)
 	}
 	trampoline, err := filepath.EvalSymlinks(p)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot eval symlinks for %v: %v", p, err)
+		return nil, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
 	}
 
 	return &multiboot{

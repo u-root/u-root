@@ -16,21 +16,20 @@ import (
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
-var ErrHeaderNotFound = errors.New("multiboot header not found")
-var ErrFlagsNotSupported = errors.New("multiboot header flags not supported yet")
+var (
+	ErrHeaderNotFound    = errors.New("multiboot header not found")
+	ErrFlagsNotSupported = errors.New("multiboot header flags not supported yet")
+)
 
 const headerMagic = 0x1BADB002
 
 type headerFlag uint32
 
 const (
-	flagHeaderPageAlign  headerFlag = 0x00000001
-	flagHeaderMemoryInfo            = 0x00000002
-
-	// ignore this flag for now
-	flagHeaderMultibootVideoMode = 0x00000004
-
-	flagHeaderUnsupported = 0x0000FFF8
+	flagHeaderPageAlign          headerFlag = 0x00000001
+	flagHeaderMemoryInfo         headerFlag = 0x00000002
+	flagHeaderMultibootVideoMode headerFlag = 0x00000004
+	flagHeaderUnsupported        headerFlag = 0x0000FFF8
 )
 
 // mandatory is a mandatory part of Multiboot v1 header.
