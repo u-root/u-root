@@ -45,7 +45,6 @@ var (
 	force  = flag.Bool("force", false, "build even if a file already exists at the destination")
 
 	verbose = flag.Bool("v", false, "print all build commands")
-	debug   = func(string, ...interface{}) {}
 	r       = upath.UrootPath
 )
 
@@ -128,10 +127,6 @@ func main() {
 		if err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, 20); err != nil {
 			log.Printf("Cannot set low priority: %v", err)
 		}
-	}
-
-	if form.verbose {
-		debug = log.Printf
 	}
 
 	destFile := filepath.Join(r("/ubin"), form.cmdName)

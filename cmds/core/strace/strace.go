@@ -28,7 +28,6 @@ import (
 var (
 	cmdUsage = "Usage: strace <command> [args...]"
 	debug    = flag.Bool("d", false, "enable debug printing")
-	tr       = make(chan *strace.TraceRecord)
 )
 
 func usage() {

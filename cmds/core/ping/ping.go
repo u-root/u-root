@@ -34,7 +34,6 @@ var (
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
-	help       = flag.Bool("h", false, "help")
 )
 
 const (
@@ -45,7 +44,7 @@ const (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stdout, "ping [-hV] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
+	fmt.Fprintf(os.Stdout, "ping [-V] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
 	os.Exit(0)
 }
 

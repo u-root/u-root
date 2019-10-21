@@ -170,17 +170,6 @@ func (p Process) GetUID() (int, error) {
 
 }
 
-// change p.Cmd to long command line with args
-func (p process) longCmdLine() (string, error) {
-	b, err := ioutil.ReadFile(filepath.Join(procdir, p.Pid, "cmdline"))
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
-
 // Get total time stat formated hh:mm:ss
 func (p process) getTime() string {
 	utime, _ := strconv.Atoi(p.Utime)

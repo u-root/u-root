@@ -148,7 +148,7 @@ func readLastLinesBackwards(input ReadAtSeeker, writer io.Writer, numLines uint)
 	}
 	// reposition the stream at the end, so the caller can keep reading the file
 	// (e.g. when using follow-mode)
-	_, err = input.Seek(lastPos, os.SEEK_SET)
+	_, err = input.Seek(lastPos, io.SeekStart)
 	return err
 }
 

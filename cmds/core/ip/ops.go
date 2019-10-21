@@ -25,7 +25,7 @@ func showLinks(w io.Writer, withAddresses bool) error {
 		l := v.Attrs()
 
 		fmt.Fprintf(w, "%d: %s: <%s> mtu %d state %s\n", l.Index, l.Name,
-			strings.Replace(strings.ToUpper(fmt.Sprintf("%s", l.Flags)), "|", ",", -1),
+			strings.Replace(strings.ToUpper(l.Flags.String()), "|", ",", -1),
 			l.MTU, strings.ToUpper(l.OperState.String()))
 
 		fmt.Fprintf(w, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
