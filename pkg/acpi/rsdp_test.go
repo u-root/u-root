@@ -5,31 +5,16 @@
 package acpi
 
 import (
-	"os"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestRSDP(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Logf("NOT root, skipping")
-		t.Skip()
-	}
-	_, r, err := GetRSDP()
+	testutil.SkipIfNotRoot(t)
+
+	_, err := GetRSDP()
 	if err != nil {
 		t.Fatalf("GetRSDP: got %v, want nil", err)
-	}
-	t.Logf("%v", r)
-	s, err := UnMarshalSDT(r)
-	if err != nil {
-		t.Fatalf("UnMarshalSDT: got %v, want nil", err)
-	}
-	t.Logf("SDT %v", s)
-	tab, err := UnMarshalAll(s)
-	if err != nil {
-		t.Fatalf("UnMarshalAll: got %v, want nil", err)
-	}
-	t.Logf("%d entries", len(tab))
-	for i, tt := range tab {
-		t.Logf("%d: %v, %d bytes", i, tt.Sig(), tt.Len())
 	}
 }

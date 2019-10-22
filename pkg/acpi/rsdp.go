@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package acpi can find and parse the RSDP pointer and struct.
 package acpi
 
 import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -18,58 +18,48 @@ import (
 )
 
 const (
-	// Revision marks lowest ACPI revision we support.
-	Revision    = 2
-	cSUM1Off    = 8  // Checksum1 offset in packet.
-	cSUM2Off    = 32 // Checksum2 offset
+	// checksum1 offset in RSDP struct.
+	cSUM1Off = 8
+
+	// checksum2 offset in RSDP struct.
+	cSUM2Off    = 32
 	xSDTLenOff  = 20
 	xSDTAddrOff = 24
+
+	// headerLength is a common header length for (almost)
+	// all ACPI tables.
+	headerLength = 36
 )
-
-var pageMask = uint64(os.Getpagesize() - 1)
-
-// RSDP is the v2 version of the RSDP struct, containing 32 and 64
-// bit pointers.
-// RSDP don't quite follow the ACPI table standard,
-// so some things return empty values. It has nevertheless proven
-// useful to have them.
-// We just define the RSDP for v2 and later here. It's the only
-// one that matters. This whole layout is typical of the overall
-// Failure Of Vision that is ACPI. 64-bit micros had existed for 10 years
-// when ACPI was defined, and they still wired in 32-bit pointer assumptions,
-// and had to backtrack and fix it later. We don't use this struct below,
-// it's only worthwhile as documentation. The RSDP has not changed in 20 years.
-type RSDP struct {
-	sign     [8]byte `Align:"16" Default:"RSDP PTR "`
-	v1CSUM   uint8   // This was the checksum, which we are pretty sure is ignored now.
-	oemid    [6]byte
-	revision uint8  `Default:"2"`
-	obase    uint32 // was RSDT, but you're not supposed to use it any more.
-	length   uint32
-	base     uint64 // XSDT address, the only one you should use
-	checksum uint8
-	_        [3]uint8
-	data     [HeaderLength]byte
-}
 
 var (
 	defaultRSDP = []byte("RSDP PTR U-ROOT\x02")
-	_           = Tabler(&RSDP{})
 )
 
-// Marshal fails to marshal an RSDP.
-func (r *RSDP) Marshal() ([]byte, error) {
-	return nil, fmt.Errorf("Marshal RSDP: not yet")
+// gencsum generates a uint8 checksum of a []uint8
+func gencsum(b []uint8) uint8 {
+	var csum uint8
+	for _, bb := range b {
+		csum += bb
+	}
+	return ^csum + 1
+}
+
+// RSDP is the v2 version of the ACPI RSDP struct.
+type RSDP struct {
+	// base is the base address of the RSDP struct in physical memory.
+	base uint64
+
+	data [headerLength]byte
 }
 
 // NewRSDP returns a new and partially initialized RSDP, setting only
 // the defaultRSDP values, address, length, and signature.
 func NewRSDP(addr uintptr, len uint) []byte {
-	var r [HeaderLength]byte
+	var r [headerLength]byte
 	copy(r[:], defaultRSDP)
-	// This is a bit of a cheat. All the fields are 0.
-	// So we get a checksum, set up the
-	// XSDT fields, get the second checksum.
+
+	// This is a bit of a cheat. All the fields are 0.  So we get a
+	// checksum, set up the XSDT fields, get the second checksum.
 	r[cSUM1Off] = gencsum(r[:])
 	binary.LittleEndian.PutUint32(r[xSDTLenOff:], uint32(len))
 	binary.LittleEndian.PutUint64(r[xSDTAddrOff:], uint64(addr))
@@ -102,64 +92,39 @@ func (r *RSDP) OEMID() string {
 	return string(r.data[9:15])
 }
 
-// OEMTableID returns the RSDP OEMTableID
-func (r *RSDP) OEMTableID() string {
-	return "rsdp?"
+// RSDPAddr returns the physical base address of the RSDP.
+func (r *RSDP) RSDPAddr() uint64 {
+	return r.base
 }
 
-// Revision returns the RSDP revision, which
-// after 2002 should be >= 2
-func (r *RSDP) Revision() uint8 {
-	return r.revision
-}
-
-// OEMRevision returns the table OEMRevision.
-func (r *RSDP) OEMRevision() uint32 {
-	return 0
-}
-
-// CheckSum returns the table CheckSum.
-func (r *RSDP) CheckSum() uint8 {
-	return uint8(r.checksum)
-}
-
-// CreatorID returns the table CreatorID.
-func (r *RSDP) CreatorID() uint32 {
-	return uint32(0)
-}
-
-// CreatorRevision returns the table CreatorRevision.
-func (r *RSDP) CreatorRevision() uint32 {
-	return 0
-}
-
-// Base returns a base address or the [RX]SDT.
+// SDTAddr returns a base address or the [RX]SDT.
+//
 // It will preferentially return the XSDT, but if that is
 // 0 it will return the RSDT address.
-func (r *RSDP) Base() int64 {
-	Debug("Base %v data len %d", r, len(r.data))
-	b := int64(binary.LittleEndian.Uint32(r.data[16:20]))
+func (r *RSDP) SDTAddr() uint64 {
+	b := uint64(binary.LittleEndian.Uint32(r.data[16:20]))
 	if b != 0 {
 		return b
 	}
-	return int64(binary.LittleEndian.Uint64(r.data[24:32]))
+	return uint64(binary.LittleEndian.Uint64(r.data[24:32]))
 }
 
-func readRSDP(base int64) (*RSDP, error) {
+func readRSDP(base uint64) (*RSDP, error) {
 	r := &RSDP{}
-	r.base = uint64(base)
+	r.base = base
+
 	dat := memio.ByteSlice(make([]byte, len(r.data)))
-	if err := memio.Read(base, &dat); err != nil {
+	if err := memio.Read(int64(base), &dat); err != nil {
 		return nil, err
 	}
 	copy(r.data[:], dat)
 	return r, nil
 }
 
-func getRSDPEFI() (int64, *RSDP, error) {
+func getRSDPEFI() (*RSDP, error) {
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
-		return -1, nil, err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -181,7 +146,7 @@ func getRSDPEFI() (int64, *RSDP, error) {
 		if start == "" {
 			continue
 		}
-		base, err := strconv.ParseInt(start, 0, 64)
+		base, err := strconv.ParseUint(start, 0, 64)
 		if err != nil {
 			continue
 		}
@@ -189,30 +154,21 @@ func getRSDPEFI() (int64, *RSDP, error) {
 		if err != nil {
 			continue
 		}
-		return base, rsdp, nil
+		return rsdp, nil
 	}
 	if err := scanner.Err(); err != nil {
 		log.Printf("error while reading EFI systab: %v", err)
 	}
-	return -1, nil, fmt.Errorf("invalid efi/systab file")
-}
-
-func num(n string, i int) (uint64, error) {
-	b, err := ioutil.ReadFile(fmt.Sprintf("/sys/firmware/memmap/%d/%s", i, n))
-	if err != nil {
-		return 0, err
-	}
-	start, err := strconv.ParseUint(string(b), 0, 64)
-	return start, err
+	return nil, fmt.Errorf("invalid /sys/firmware/efi/systab file")
 }
 
 // getRSDPmem is the option of last choice, it just grovels through
 // the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
 // These are well-known addresses for 20+ years.
-func getRSDPmem() (int64, *RSDP, error) {
-	for base := int64(0xe0000); base < 0xffff0; base += 16 {
+func getRSDPmem() (*RSDP, error) {
+	for base := uint64(0xe0000); base < 0xffff0; base += 16 {
 		var r memio.Uint64
-		if err := memio.Read(base, &r); err != nil {
+		if err := memio.Read(int64(base), &r); err != nil {
 			continue
 		}
 		if r != 0x2052545020445352 {
@@ -220,28 +176,29 @@ func getRSDPmem() (int64, *RSDP, error) {
 		}
 		rsdp, err := readRSDP(base)
 		if err != nil {
-			return -1, nil, err
+			return nil, err
 		}
-		return base, rsdp, nil
+		return rsdp, nil
 	}
-	return -1, nil, fmt.Errorf("No ACPI RSDP via /dev/mem")
+	return nil, fmt.Errorf("could not find ACPI RSDP via /dev/mem")
 }
 
 // You can change the getters if you wish for testing.
-var getters = []func() (int64, *RSDP, error){getRSDPEFI, getRSDPmem}
+var getters = []func() (*RSDP, error){getRSDPEFI, getRSDPmem}
 
-// GetRSDP gets an RSDP.
+// GetRSDP finds the RSDP pointer and struct in memory.
+//
 // It is able to use several methods, because there is no consistency
-// about how it is done. The base is also returned.
-func GetRSDP() (base int64, rsdp *RSDP, err error) {
+// about how it is done.
+func GetRSDP() (*RSDP, error) {
 	for _, f := range getters {
-		base, r, err := f()
+		r, err := f()
 		if err != nil {
 			log.Print(err)
 		}
 		if err == nil {
-			return base, r, nil
+			return r, nil
 		}
 	}
-	return -1, nil, fmt.Errorf("Can't find an RSDP")
+	return nil, fmt.Errorf("cannot find an RSDP")
 }

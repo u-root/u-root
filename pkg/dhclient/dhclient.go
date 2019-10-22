@@ -171,7 +171,9 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 
 	// If the link is never going to be ready, don't wait forever.
 	// (The user may not have configured a ctx with a timeout.)
-	linkTimeout := time.After(c.Timeout)
+	//
+	// Hardcode the timeout to 30s for now.
+	linkTimeout := time.After(linkUpAttempt)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
