@@ -59,12 +59,12 @@ func TestInvocationErrors(t *testing.T) {
 
 	devpath := filepath.Join(tmpDir, "testdev")
 	var tests = []test{
-		{args: []string{devpath}, expects: "Usage: mknod path type [major minor]\n"},
-		{args: []string{""}, expects: "Usage: mknod path type [major minor]\n"},
-		{args: []string{devpath, "p", "254", "3"}, expects: "device type p requires no other arguments\n"},
-		{args: []string{devpath, "b", "254"}, expects: "Usage: mknod path type [major minor]\n"},
-		{args: []string{devpath, "b"}, expects: "device type b requires a major and minor number\n"},
-		{args: []string{devpath, "k"}, expects: "device type not recognized: k\n"},
+		{args: []string{devpath}, expects: "mknod: usage: mknod path type [major minor]\n"},
+		{args: []string{""}, expects: "mknod: usage: mknod path type [major minor]\n"},
+		{args: []string{devpath, "p", "254", "3"}, expects: "mknod: device type p requires no other arguments\n"},
+		{args: []string{devpath, "b", "254"}, expects: "mknod: usage: mknod path type [major minor]\n"},
+		{args: []string{devpath, "b"}, expects: "mknod: device type b requires a major and minor number\n"},
+		{args: []string{devpath, "k"}, expects: "mknod: device type not recognized: k\n"},
 	}
 
 	for _, v := range tests {

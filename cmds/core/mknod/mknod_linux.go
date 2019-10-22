@@ -71,7 +71,7 @@ func mknod() error {
 	}
 
 	if err := unix.Mknod(path, mode, dev); err != nil {
-		return fmt.Errorf("mknod :%s: mode %x: %v", path, mode, err)
+		return fmt.Errorf("%q: mode %x: %v", path, mode, err)
 	}
 	return nil
 }
