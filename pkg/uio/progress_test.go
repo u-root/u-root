@@ -28,15 +28,15 @@ func TestProgressReader(t *testing.T) {
 		t.Errorf("found %q, but expected no bytes to be written", stdout)
 	}
 	pr.Read(output)
-	if string(stdout.Bytes()) != "#" {
-		t.Errorf("found %q, expected %q to be written", stdout.Bytes(), "#")
+	if stdout.String() != "#" {
+		t.Errorf("found %q, expected %q to be written", stdout.String(), "#")
 	}
 
 	// Read 9 bytes all at once.
 	output = make([]byte, 9)
 	pr.Read(output)
-	if string(stdout.Bytes()) != "###" {
-		t.Errorf("found %q, expected %q to be written", stdout.Bytes(), "###")
+	if stdout.String() != "###" {
+		t.Errorf("found %q, expected %q to be written", stdout.String(), "###")
 	}
 	if string(output) != "456789012" {
 		t.Errorf("found %q, expected %q to be written", string(output), "456789012")

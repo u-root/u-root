@@ -44,7 +44,7 @@ func TestFindDevice(t *testing.T) {
 		{"WINBOND", 0x32, "W49V002FA", nil},
 		// Test a synonym
 		{"AMD", 0x0212, "S25FL004A", nil},
-		{"ZETTADEVICE", 0xaa66aa44, "", fmt.Errorf("No chip with id 0xaa66aa44 for vendor [\"Zetta\"]")},
+		{"ZETTADEVICE", 0xaa66aa44, "", fmt.Errorf("no chip with id 0xaa66aa44 for vendor [\"Zetta\"]")},
 	}
 
 	for _, tt := range tests {

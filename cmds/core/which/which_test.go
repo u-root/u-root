@@ -74,7 +74,7 @@ func TestWhichUnique(t *testing.T) {
 
 	// Comparing against only the cat command.
 	if !reflect.DeepEqual(b.Bytes(), tests[0].pathOnSys) {
-		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(tests[0].pathOnSys), string(b.Bytes()))
+		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(tests[0].pathOnSys), b.String())
 	}
 }
 
@@ -101,6 +101,6 @@ func TestWhichMultiple(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(b.Bytes(), pathsCombined) {
-		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(pathsCombined), string(b.Bytes()))
+		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(pathsCombined), b.String())
 	}
 }

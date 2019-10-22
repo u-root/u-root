@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-// This is a real mess. Ubuntu keeps makimg it worse.
+// LdSo finds the loader binary.
 func LdSo(bit64 bool) (string, error) {
 	bits := 32
 	if bit64 {
@@ -25,5 +25,5 @@ func LdSo(bit64 bool) (string, error) {
 			return n[0], nil
 		}
 	}
-	return "", fmt.Errorf("No ld.so matches %v", choices)
+	return "", fmt.Errorf("could not find ld.so in %v", choices)
 }

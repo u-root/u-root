@@ -125,7 +125,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 			continue
 		}
 		if _, ok := seenPackages[path.Base(pkg)]; ok {
-			return fmt.Errorf("Failed to build with bb: found duplicate pkgs %s", basePkg)
+			return fmt.Errorf("failed to build with bb: found duplicate pkgs %s", basePkg)
 		}
 		seenPackages[basePkg] = true
 

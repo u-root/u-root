@@ -28,7 +28,7 @@ func (u *userSpec) Set(s string) error {
 	var err error
 	userspecSplit := strings.Split(s, ":")
 	if len(userspecSplit) != 2 || userspecSplit[1] == "" {
-		return fmt.Errorf("Expected user spec flag to be \":\" separated values received %s", s)
+		return fmt.Errorf("expected user spec flag to be \":\" separated values received %s", s)
 	}
 
 	u.uid, err = stringToUint32(userspecSplit[0])
@@ -128,7 +128,7 @@ func parseCommand(args []string) []string {
 
 func parseRoot(args []string) (root string, err error) {
 	if len(args) < 1 {
-		return "", fmt.Errorf("Missing operand")
+		return "", fmt.Errorf("missing operand")
 	}
 
 	return filepath.Abs(args[0])

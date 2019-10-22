@@ -10,6 +10,6 @@ import "errors"
 // set to, e.g., log.Printf if you want lots of debug.
 var (
 	Debug       = func(s string, v ...interface{}) {}
-	ErrEOL      = errors.New("EOL")
-	ErrEmptyEnv = errors.New("Empty environment variable")
+	ErrEOL      = errors.New("end of line")
+	ErrEmptyEnv = errors.New("empty environment variable")
 )

@@ -78,10 +78,8 @@ func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 	if domain != "" {
 		rc.WriteString(fmt.Sprintf("domain %s\n", domain))
 	}
-	if ns != nil {
-		for _, ip := range ns {
-			rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
-		}
+	for _, ip := range ns {
+		rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
 	}
 	if sl != nil {
 		rc.WriteString("search ")

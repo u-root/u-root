@@ -22,8 +22,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const sizeOfInt32 int = 4
-
 // Address is a byte slice cast as a string that represents the address of a
 // network node. Or, in the case of unix endpoints, it may represent a path.
 type Address string

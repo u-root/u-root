@@ -17,6 +17,6 @@ import "log"
 
 func main() {
 	if err := mknod(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("mknod: %v", err)
 	}
 }

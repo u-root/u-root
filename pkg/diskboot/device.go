@@ -62,7 +62,7 @@ func FindDevice(devPath string) (*Device, error) {
 func mountDevice(devPath string, fstypes []string) (*Device, error) {
 	mountPath, err := ioutil.TempDir("/tmp", "boot-")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create tmp mount directory: %v", err)
+		return nil, fmt.Errorf("failed to create tmp mount directory: %v", err)
 	}
 	for _, fstype := range fstypes {
 		if err := mount.Mount(devPath, mountPath, fstype, "", unix.MS_RDONLY); err != nil {
@@ -76,5 +76,5 @@ func mountDevice(devPath string, fstypes []string) (*Device, error) {
 
 		return &Device{devPath, mountPath, fstype, configs}, nil
 	}
-	return nil, fmt.Errorf("Failed to find a valid boot device with configs")
+	return nil, fmt.Errorf("failed to find a valid boot device with configs")
 }

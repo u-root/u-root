@@ -70,7 +70,7 @@ func extractMan(name string) (string, error) {
 }
 
 func walk(mans map[string]string, root string) (err error) {
-	re, err := regexp.Compile("_.*\\.go$")
+	re, err := regexp.Compile(`_.*\.go$`)
 	if err != nil {
 		return fmt.Errorf("error compiling regexp: %v", err)
 	}

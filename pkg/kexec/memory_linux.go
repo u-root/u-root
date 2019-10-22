@@ -222,17 +222,6 @@ func (s Segment) String() string {
 	return fmt.Sprintf("(virt: %s, phys: %s)", s.Buf, s.Phys)
 }
 
-func ptrToSlice(ptr uintptr, size int) []byte {
-	var data []byte
-
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-	sh.Data = ptr
-	sh.Len = size
-	sh.Cap = size
-
-	return data
-}
-
 func (s *Segment) tryMerge(s2 Segment) (ok bool) {
 	if s.Phys.Disjunct(s2.Phys) {
 		return false
@@ -589,10 +578,10 @@ type RangeType string
 
 const (
 	RangeRAM      RangeType = "System RAM"
-	RangeDefault            = "Default"
-	RangeACPI               = "ACPI Tables"
-	RangeNVS                = "ACPI Non-volatile Storage"
-	RangeReserved           = "Reserved"
+	RangeDefault  RangeType = "Default"
+	RangeACPI     RangeType = "ACPI Tables"
+	RangeNVS      RangeType = "ACPI Non-volatile Storage"
+	RangeReserved RangeType = "Reserved"
 )
 
 // String implements fmt.Stringer.

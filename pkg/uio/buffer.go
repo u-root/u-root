@@ -84,7 +84,6 @@ func NewBuffer(b []byte) *Buffer {
 // Preallocate increases the capacity of the buffer by n bytes.
 func (b *Buffer) Preallocate(n int) {
 	b.data = append(b.data, make([]byte, 0, n)...)
-	return
 }
 
 // WriteN appends n bytes to the Buffer and returns a slice pointing to the

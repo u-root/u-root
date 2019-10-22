@@ -15,16 +15,16 @@ type TableType uint8
 // Supported table types.
 const (
 	TableTypeBIOSInformation       TableType = 0
-	TableTypeSystemInformation               = 1
-	TableTypeBaseboardInformation            = 2
-	TableTypeChassisInformation              = 3
-	TableTypeProcessorInformation            = 4
-	TableTypeCacheInformation                = 7
-	TableTypeMemoryDevice                    = 17
-	TableTypeIPMIDeviceInformation           = 38
-	TableTypeTPMDevice                       = 43
-	TableTypeInactive                        = 126
-	TableTypeEndOfTable                      = 127
+	TableTypeSystemInformation     TableType = 1
+	TableTypeBaseboardInformation  TableType = 2
+	TableTypeChassisInformation    TableType = 3
+	TableTypeProcessorInformation  TableType = 4
+	TableTypeCacheInformation      TableType = 7
+	TableTypeMemoryDevice          TableType = 17
+	TableTypeIPMIDeviceInformation TableType = 38
+	TableTypeTPMDevice             TableType = 43
+	TableTypeInactive              TableType = 126
+	TableTypeEndOfTable            TableType = 127
 )
 
 func (t TableType) String() string {

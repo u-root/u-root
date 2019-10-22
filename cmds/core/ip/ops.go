@@ -18,14 +18,14 @@ import (
 func showLinks(w io.Writer, withAddresses bool) error {
 	ifaces, err := netlink.LinkList()
 	if err != nil {
-		return fmt.Errorf("Can't enumerate interfaces? %v", err)
+		return fmt.Errorf("can't enumerate interfaces: %v", err)
 	}
 
 	for _, v := range ifaces {
 		l := v.Attrs()
 
 		fmt.Fprintf(w, "%d: %s: <%s> mtu %d state %s\n", l.Index, l.Name,
-			strings.Replace(strings.ToUpper(fmt.Sprintf("%s", l.Flags)), "|", ",", -1),
+			strings.Replace(strings.ToUpper(l.Flags.String()), "|", ",", -1),
 			l.MTU, strings.ToUpper(l.OperState.String()))
 
 		fmt.Fprintf(w, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
@@ -40,7 +40,7 @@ func showLinks(w io.Writer, withAddresses bool) error {
 func showLinkAddresses(w io.Writer, link netlink.Link) error {
 	addrs, err := netlink.AddrList(link, netlink.FAMILY_ALL)
 	if err != nil {
-		return fmt.Errorf("Can't enumerate addresses: %v", err)
+		return fmt.Errorf("can't enumerate addresses: %v", err)
 	}
 
 	for _, addr := range addrs {
@@ -52,7 +52,7 @@ func showLinkAddresses(w io.Writer, link netlink.Link) error {
 		case 16:
 			inet = "inet6"
 		default:
-			return fmt.Errorf("Can't figure out IP protocol version")
+			return fmt.Errorf("can't figure out IP protocol version: IP length is %d", len(addr.IPNet.IP))
 		}
 
 		fmt.Fprintf(w, "    %s %s", inet, addr.IP)
@@ -111,7 +111,7 @@ func showNeighbours(w io.Writer, withAddresses bool) error {
 	for _, iface := range ifaces {
 		neighs, err := netlink.NeighList(iface.Index, 0)
 		if err != nil {
-			return fmt.Errorf("Can't list neighbours? %v", err)
+			return fmt.Errorf("can't list neighbours: %v", err)
 		}
 
 		for _, v := range neighs {

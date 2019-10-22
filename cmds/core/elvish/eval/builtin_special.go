@@ -33,10 +33,10 @@ type compileBuiltin func(*compiler, *parse.Form) OpBody
 var (
 	// ErrRelativeUseNotFromMod is thrown by "use" when relative use is used
 	// not from a module
-	ErrRelativeUseNotFromMod = errors.New("Relative use not from module")
+	ErrRelativeUseNotFromMod = errors.New("relative use not from module")
 	// ErrRelativeUseGoesOutsideLib is thrown when a relative use goes out of
 	// the library directory.
-	ErrRelativeUseGoesOutsideLib = errors.New("Module outside library directory")
+	ErrRelativeUseGoesOutsideLib = errors.New("module outside library directory")
 )
 
 var builtinSpecials map[string]compileBuiltin

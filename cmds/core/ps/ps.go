@@ -54,12 +54,11 @@ func init() {
 
 // ProcessTable holds all the information needed for ps
 type ProcessTable struct {
-	table    []*Process
-	mProc    *Process
-	headers  []string // each column to print
-	fields   []string // which fields of process to print, on order
-	fstring  []string // formated strings
-	maxwidth int      // DEPRECATED: reason -> remove terminal stuff
+	table   []*Process
+	mProc   *Process
+	headers []string // each column to print
+	fields  []string // which fields of process to print, on order
+	fstring []string // formated strings
 }
 
 // NewProcessTable creates an empty process table

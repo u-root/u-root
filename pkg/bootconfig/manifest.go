@@ -46,7 +46,7 @@ func ManifestFromBytes(data []byte) (*Manifest, error) {
 // error if an invalid index is passed.
 func (mc *Manifest) GetBootConfig(idx int) (*BootConfig, error) {
 	if idx < 0 || idx >= len(mc.Configs) {
-		return nil, fmt.Errorf("Invalid index: not in range: %d", idx)
+		return nil, fmt.Errorf("invalid index: not in range: %d", idx)
 	}
 	return &mc.Configs[idx], nil
 }

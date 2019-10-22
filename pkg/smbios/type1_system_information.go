@@ -78,10 +78,10 @@ func (si *SystemInformation) String() string {
 type UUID [16]byte
 
 func (u UUID) String() string {
-	if bytes.Compare(u[:], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) == 0 {
+	if bytes.Equal(u[:], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) {
 		return "Not Settable"
 	}
-	if bytes.Compare(u[:], []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}) == 0 {
+	if bytes.Equal(u[:], []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}) {
 		return "Not Present"
 	}
 	// Note: First three fields use LE byte order, last two use BE (network).
@@ -102,14 +102,14 @@ type WakeupType uint8
 // WakeupType values are defined in DSP0134 7.2.2.
 const (
 	WakeupTypeReserved        WakeupType = 0x00 // Reserved
-	WakeupTypeOther                      = 0x01 // Other
-	WakeupTypeUnknown                    = 0x02 // Unknown
-	WakeupTypeAPMTimer                   = 0x03 // APM Timer
-	WakeupTypeModemRing                  = 0x04 // Modem Ring
-	WakeupTypeLANRemote                  = 0x05 // LAN Remote
-	WakeupTypePowerSwitch                = 0x06 // Power Switch
-	WakeupTypePCIPME                     = 0x07 // PCI PME#
-	WakeupTypeACPowerRestored            = 0x08 // AC Power Restored
+	WakeupTypeOther           WakeupType = 0x01 // Other
+	WakeupTypeUnknown         WakeupType = 0x02 // Unknown
+	WakeupTypeAPMTimer        WakeupType = 0x03 // APM Timer
+	WakeupTypeModemRing       WakeupType = 0x04 // Modem Ring
+	WakeupTypeLANRemote       WakeupType = 0x05 // LAN Remote
+	WakeupTypePowerSwitch     WakeupType = 0x06 // Power Switch
+	WakeupTypePCIPME          WakeupType = 0x07 // PCI PME#
+	WakeupTypeACPowerRestored WakeupType = 0x08 // AC Power Restored
 )
 
 func (v WakeupType) String() string {

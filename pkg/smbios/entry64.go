@@ -32,7 +32,7 @@ func (e *Entry64) UnmarshalBinary(data []byte) error {
 	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, e); err != nil {
 		return err
 	}
-	if bytes.Compare(e.Anchor[:], []byte("_SM3_")) != 0 {
+	if !bytes.Equal(e.Anchor[:], []byte("_SM3_")) {
 		return fmt.Errorf("invalid anchor string %q", string(e.Anchor[:]))
 	}
 	if int(e.Length) != 0x18 {

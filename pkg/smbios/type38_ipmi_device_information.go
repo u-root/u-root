@@ -97,10 +97,10 @@ type BMCInterfaceType uint8
 // BMCInterfaceType values are defined in DSP0134 7.39.1.
 const (
 	BMCInterfaceTypeUnknown                           BMCInterfaceType = 0x00 // Unknown
-	BMCInterfaceTypeKCSKeyboardControllerStyle                         = 0x01 // KCS: Keyboard Controller Style
-	BMCInterfaceTypeSMICServerManagementInterfaceChip                  = 0x02 // SMIC: Server Management Interface Chip
-	BMCInterfaceTypeBTBlockTransfer                                    = 0x03 // BT: Block Transfer
-	BMCInterfaceTypeSSIFSMBusSystemInterface                           = 0x04 // SSIF: SMBus System Interface
+	BMCInterfaceTypeKCSKeyboardControllerStyle        BMCInterfaceType = 0x01 // KCS: Keyboard Controller Style
+	BMCInterfaceTypeSMICServerManagementInterfaceChip BMCInterfaceType = 0x02 // SMIC: Server Management Interface Chip
+	BMCInterfaceTypeBTBlockTransfer                   BMCInterfaceType = 0x03 // BT: Block Transfer
+	BMCInterfaceTypeSSIFSMBusSystemInterface          BMCInterfaceType = 0x04 // SSIF: SMBus System Interface
 )
 
 func (v BMCInterfaceType) String() string {

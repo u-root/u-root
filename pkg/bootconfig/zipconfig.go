@@ -73,12 +73,12 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 		// treat them as the attached signature.
 		signature := data[len(data)-ed25519.SignatureSize:]
 		if len(signature) != ed25519.SignatureSize {
-			return nil, "", fmt.Errorf("Short read when reading signature: want %d bytes, got %d", ed25519.SignatureSize, len(signature))
+			return nil, "", fmt.Errorf("short read when reading signature: want %d bytes, got %d", ed25519.SignatureSize, len(signature))
 		}
 
 		// Verify the signature against the public key and the zip file bytes
 		if ok := ed25519.Verify(pubkey, zipbytes, signature); !ok {
-			return nil, "", fmt.Errorf("Invalid ed25519 signature for file %s", filename)
+			return nil, "", fmt.Errorf("invalid ed25519 signature for file %s", filename)
 		}
 		log.Printf("Signature is valid")
 	} else {
@@ -137,7 +137,7 @@ func FromZip(filename string, pubkeyfile *string) (*Manifest, string, error) {
 		}
 	}
 	if manifest == nil {
-		return nil, "", errors.New("No manifest found")
+		return nil, "", errors.New("no manifest found")
 	}
 	return manifest, tempDir, nil
 }

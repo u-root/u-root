@@ -27,7 +27,7 @@ func runOSInitGo() {
 	// we can't start it in its own namespace. I just love systemd.
 	systemd, present := initFlags["systemd"]
 	systemdEnabled, boolErr := strconv.ParseBool(systemd)
-	if present && boolErr == nil && systemdEnabled == true {
+	if present && boolErr == nil && systemdEnabled {
 		if err := syscall.Exec("/inito", []string{"/inito"}, os.Environ()); err != nil {
 			log.Printf("Lucky you, systemd failed: %v", err)
 		}

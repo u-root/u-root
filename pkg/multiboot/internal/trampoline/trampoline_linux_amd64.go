@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Trampoline sets machine to a specific state defined
-// by multiboot v1 spec and boots the final kernel.
+// Package trampoline sets machine to a specific state defined by multiboot v1
+// spec and jumps to the intended kernel.
+//
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 package trampoline
 

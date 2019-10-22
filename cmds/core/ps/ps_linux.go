@@ -170,17 +170,6 @@ func (p Process) GetUID() (int, error) {
 
 }
 
-// change p.Cmd to long command line with args
-func (p process) longCmdLine() (string, error) {
-	b, err := ioutil.ReadFile(filepath.Join(procdir, p.Pid, "cmdline"))
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
-
 // Get total time stat formated hh:mm:ss
 func (p process) getTime() string {
 	utime, _ := strconv.Atoi(p.Utime)
@@ -223,7 +212,7 @@ func getAllStatNames(globs []string) ([]string, error) {
 		list = append(list, l...)
 	}
 	if len(list) == 0 {
-		return nil, fmt.Errorf("No files found in %q; check if proc is mounted", psglob)
+		return nil, fmt.Errorf("no files found in %q; check if proc is mounted", psglob)
 	}
 	return list, nil
 }
@@ -253,7 +242,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 		pid := filepath.Base(d)
 		pidno, err := strconv.Atoi(pid)
 		if err != nil {
-			return fmt.Errorf("Can't happen: last element of %v is not a number", pid)
+			return fmt.Errorf("last element of %v is not a number", pid)
 		}
 		p.status, err = file(filepath.Join(d, "status"))
 		if err != nil {

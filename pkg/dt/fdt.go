@@ -283,16 +283,17 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 		}
 
 		// Align to four bytes.
-		pad, err := r.Align(4)
+		// was: pad, err :=
+		_, err := r.Align(4)
 		if err != nil {
 			return err
 		}
-		for _, v := range pad {
+		/*for _, v := range pad {
 			if v != 0 {
 				// TODO: Some of the padding is not zero. Is this a mistake?
-				//return fmt.Errorf("padding is non-zero: %d", v)
+				return fmt.Errorf("padding is non-zero: %d", v)
 			}
-		}
+		}*/
 	}
 }
 

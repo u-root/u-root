@@ -111,6 +111,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		t.Errorf("Waiting for GoTest Done: %v", err)
 	}
 
+	// TODO: check that tc.Tests == tests
 	for pkg, test := range tc.Tests {
 		switch test.State {
 		case json2test.StateFail:
