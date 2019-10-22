@@ -165,6 +165,7 @@ func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
 	return rs.FindSpaceAbove(sz, 0)
 }
 
+// MaxAddr is the highest address in a 64bit address space.
 const MaxAddr = ^uintptr(0)
 
 // FindSpaceAbove finds a continguous piece of sz points within Ranges and
@@ -576,6 +577,7 @@ func (m Memory) AvailableRAM() Ranges {
 // kernel string provided by firmware memory map.
 type RangeType string
 
+// These are the range types we know Linux uses.
 const (
 	RangeRAM      RangeType = "System RAM"
 	RangeDefault  RangeType = "Default"
@@ -614,7 +616,7 @@ func (tr TypedRange) String() string {
 // reserved for various reasons.
 type MemoryMap []TypedRange
 
-// Filter only returns ranges of the given typ.
+// FilterByType only returns ranges of the given typ.
 func (m MemoryMap) FilterByType(typ RangeType) Ranges {
 	var rs Ranges
 	for _, tr := range m {

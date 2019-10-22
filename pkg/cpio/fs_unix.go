@@ -191,6 +191,11 @@ type devInode struct {
 	ino uint64
 }
 
+// A Recorder is a structure that contains variables used to calculate
+// file parameters such as inode numbers for a CPIO file. The life-time
+// of a Record structure is meant to be the same as the construction of a
+// single CPIO archive. Do not reuse between CPIOs if you don't know what
+// you're doing.
 type Recorder struct {
 	inodeMap map[devInode]Info
 	inumber  uint64
@@ -261,7 +266,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 	}
 }
 
-// Create a new Recorder.
+// NewRecorder creates a new Recorder.
 //
 // A recorder is a structure that contains variables used to calculate
 // file parameters such as inode numbers for a CPIO file. The life-time

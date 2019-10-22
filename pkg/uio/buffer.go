@@ -93,7 +93,7 @@ func (b *Buffer) WriteN(n int) []byte {
 	return b.data[len(b.data)-n:]
 }
 
-// Consume Consumes n bytes from the Buffer. It returns nil, false if there
+// ReadN consumes n bytes from the Buffer. It returns nil, false if there
 // aren't enough bytes left.
 func (b *Buffer) ReadN(n int) ([]byte, error) {
 	if !b.Has(n) {

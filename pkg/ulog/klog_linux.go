@@ -52,12 +52,14 @@ func (k *KLog) writeString(s string) bool {
 	return true
 }
 
+// Printf formats according to a format specifier and writes to kernel logging.
 func (k *KLog) Printf(format string, v ...interface{}) {
 	if !k.writeString(fmt.Sprintf(format, v...)) {
 		Log.Printf(format, v...)
 	}
 }
 
+// Print formats using the default operands for v and writes to kernel logging.
 func (k *KLog) Print(v ...interface{}) {
 	if !k.writeString(fmt.Sprint(v...)) {
 		Log.Print(v...)
