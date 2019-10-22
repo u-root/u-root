@@ -12,38 +12,24 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"reflect"
+	"unsafe"
 
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 const (
-	trampolineBeginLow  = "u-root-trampoline"
-	trampolineBeginHigh = "-begin"
-	trampolineEnd       = "u-root-trampoline-end"
-
 	trampolineEntry = "u-root-entry-long"
 	trampolineInfo  = "u-root-info-long"
 )
 
-var trampolineBegin []byte
-
-var alwaysFalse bool
-
 func start()
+func end()
 
-func init() {
-	// Cannot use "u-root-trampoline-begin" directly, because then there
-	// would be two locations of "u-root-trampoline-begin" sequence.
-	trampolineBegin = append([]byte(trampolineBeginLow), []byte(trampolineBeginHigh)...)
-
-	if alwaysFalse {
-		// Can never happen, but still need it for linker to include assembly to a binary.
-		start()
-	}
-
-	// Hope Go compiler will never get smart enough to optimize this function.
-}
+// funcPC gives the program counter of the given function.
+//
+//go:linkname funcPC runtime.funcPC
+func funcPC(f interface{}) uintptr
 
 // alignUp aligns x to a 0x10 bytes boundary.
 // go compiler aligns TEXT parts at 0x10 bytes boundary.
@@ -66,27 +52,32 @@ func Setup(path string, infoAddr, entryPoint uintptr) ([]byte, error) {
 // trampoline segment begins after "u-root-trampoline-begin" byte sequence + padding,
 // and ends at "u-root-trampoline-end" byte sequence.
 func extract(path string) ([]byte, error) {
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read trampoline file: %v", err)
+	// TODO(https://github.com/golang/go/issues/35055): deal with
+	// potentially non-contiguous trampoline. Rather than locating start
+	// and end, we should locate start,boot,farjump{32,64},gdt,info,entry
+	// individually and return one potentially really big trampoline slice.
+	tbegin := funcPC(start)
+	tend := funcPC(end)
+	if tend <= tbegin {
+		return nil, io.ErrUnexpectedEOF
 	}
+	tramp := ptrToSlice(tbegin, int(tend-tbegin))
 
-	begin := bytes.Index(d, trampolineBegin)
-	if begin == -1 {
-		return nil, io.ErrUnexpectedEOF
-	}
-	if begin = alignUp(begin + len(trampolineBegin)); begin > len(d) {
-		return nil, io.ErrUnexpectedEOF
-	}
-	if ind := bytes.Index(d[begin:], trampolineBegin); ind != -1 {
-		return nil, fmt.Errorf("multiple definition of %q label", trampolineBegin)
-	}
+	// tramp is read-only executable memory. So we gotta copy it to a
+	// slice. Gotta modify it later.
+	cp := append([]byte(nil), tramp...)
+	return cp, nil
+}
 
-	end := bytes.Index(d[begin:], []byte(trampolineEnd))
-	if end == -1 {
-		return nil, io.ErrUnexpectedEOF
-	}
-	return d[begin : begin+end], nil
+func ptrToSlice(ptr uintptr, size int) []byte {
+	var data []byte
+
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	sh.Data = ptr
+	sh.Len = size
+	sh.Cap = size
+
+	return data
 }
 
 // patch patches the trampoline code to store value for multiboot info address
