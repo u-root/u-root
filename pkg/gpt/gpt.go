@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// gpt implements reading and writing of GUID Partition tables.
-// GPTs are dumped in JSON format and written in same.
-// One complication is that we frequently only want to
-// write a very small subset of a GPT. For example,
-// we might only want to change the GUID. As it happens
-// it is simpler (and more useful) just to read and write
-// the whole thing. In for a penny, in for a pound.
+// Package gpt implements reading and writing of GUID Partition tables.
+//
+// GPTs are dumped in JSON format and written in same.  One complication is
+// that we frequently only want to write a very small subset of a GPT. For
+// example, we might only want to change the GUID. As it happens it is simpler
+// (and more useful) just to read and write the whole thing. In for a penny, in
+// for a pound.
 package gpt
 
 import (
@@ -277,7 +277,6 @@ func Write(w io.WriterAt, p *PartitionTable) error {
 		return err
 	}
 	return nil
-
 }
 
 // Write writes the GPT to w. It generates the partition and header CRC before writing.

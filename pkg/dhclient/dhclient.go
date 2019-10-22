@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package dhclient provides a unified interface for interfacing with both
-// DHCPv4 and DHCPv6 clients.
+// Package dhclient allows for getting both DHCPv4 and DHCPv6 leases on
+// multiple network interfaces in parallel.
 package dhclient
 
 import (
@@ -214,8 +214,10 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	return packet, nil
 }
 
+// NetworkProtocol is either IPv4 or IPv6.
 type NetworkProtocol int
 
+// Possible network protocols; either IPv4, IPv6, or both.
 const (
 	NetIPv4 NetworkProtocol = 1
 	NetIPv6 NetworkProtocol = 2

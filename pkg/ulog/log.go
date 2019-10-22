@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// ulog exposes logging via a Go interface.
+// Package ulog exposes logging via a Go interface.
 //
 // ulog has three implementations of the Logger interface: a Go standard
 // library "log" package Logger, a kernel syslog (dmesg) Logger, and a test
@@ -31,10 +31,12 @@ type TestLogger struct {
 	TB testing.TB
 }
 
+// Printf formats according to the format specifier and prints to a unit test's log.
 func (tl TestLogger) Printf(format string, v ...interface{}) {
 	tl.TB.Logf(format, v...)
 }
 
+// Print formats according the default formats for v and prints to a unit test's log.
 func (tl TestLogger) Print(v ...interface{}) {
 	tl.TB.Log(v...)
 }
