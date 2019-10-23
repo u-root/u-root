@@ -89,11 +89,11 @@ func TestDd(t *testing.T) {
 			compare: stdoutEqual,
 		},
 		{
-			name:    "512 MiB zeroed file in 1024 1KiB blocks",
-			flags:   []string{"bs=524288", "count=1024", "if=/dev/zero"},
+			name:    "256 MiB zeroed file in 1024 1KiB blocks",
+			flags:   []string{"bs=262144", "count=1024", "if=/dev/zero"},
 			stdin:   "",
 			stdout:  []byte("\x00"),
-			count:   1024 * 1024 * 512,
+			count:   1024 * 1024 * 256,
 			compare: byteCount,
 		},
 	}
