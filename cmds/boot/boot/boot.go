@@ -41,7 +41,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/cmdline"
 )
 
@@ -290,44 +290,6 @@ func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, e
 
 }
 
-func copyLocal(path string) (string, error) {
-	var dest string
-	var err error
-	result := strings.Split(path, "/")
-	for _, entry := range result {
-		dest = entry
-	}
-	dest = "/tmp/" + dest
-	srcFile, err := os.Open(path)
-	if err != nil {
-		return dest, err
-	}
-
-	destFile, err := os.Create(dest) // creates if file doesn't exist
-	if err != nil {
-		return dest, err
-	}
-
-	_, err = io.Copy(destFile, srcFile) // check first var for number of bytes copied
-	if err != nil {
-		return dest, err
-	}
-
-	err = destFile.Sync()
-	if err != nil {
-		return dest, err
-	}
-	err = destFile.Close()
-	if err != nil {
-		return dest, err
-	}
-	err = srcFile.Close()
-	if err != nil {
-		return dest, err
-	}
-	return dest, nil
-}
-
 // kexecLoad Loads a new kernel and initrd.
 func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	debug("kexecEntry: boot from %v", grubConfPath)
@@ -347,54 +309,37 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	}
 
 	debug("Boot params: %q", be)
-	localKernelPath, err := copyLocal(filepath.Join(mountPoint, be.kernel))
-	if err != nil {
-		debug("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.kernel), err)
-		return err
-	}
-	localInitrdPath, err := copyLocal(filepath.Join(mountPoint, be.initrd))
-	if err != nil {
-		debug("copyLocal(%v, %v): %v", filepath.Join(mountPoint, be.initrd), err)
-		return err
-	}
-	debug(localKernelPath)
-
-	// We can kexec the kernel with localKernelPath as kernel entry, kernelParameter as parameter and initrd as initrd !
-	log.Printf("Loading %s for kernel\n", localKernelPath)
+	localKernelPath := filepath.Join(mountPoint, be.kernel)
+	localInitrdPath := filepath.Join(mountPoint, be.initrd)
 
 	kernelDesc, err := os.OpenFile(localKernelPath, os.O_RDONLY, 0)
 	if err != nil {
 		debug("%v", err)
 		return err
 	}
-	// defer kernelDesc.Close()
+	defer kernelDesc.Close()
 
-	log.Printf("Loading %s for initramfs", localInitrdPath)
 	ramfs, err := os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
 	if err != nil {
 		debug("%v", err)
 		return err
 	}
-	// defer ramfs.Close()
+	defer ramfs.Close()
 
 	cl := updateBootCmdline(be.cmdline)
 
-	log.Printf("Kernel cmdline %s", cl)
+	osImage := &boot.LinuxImage{
+		Cmdline: cl,
+		Kernel:  kernelDesc,
+		Initrd:  ramfs,
+	}
 
-	if err := kexec.FileLoad(kernelDesc, ramfs, cl); err != nil {
+	if err := osImage.Load(false); err != nil {
 		debug("%v", err)
 		return err
 	}
-	if err = ramfs.Close(); err != nil {
-		debug("%v", err)
-		return err
-	}
-	if err = kernelDesc.Close(); err != nil {
-		debug("%v", err)
-		return err
-	}
-	return err
 
+	return nil
 }
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
@@ -469,9 +414,10 @@ func Localboot() error {
 		if *dryRun {
 			continue
 		}
-		if err := kexec.Reboot(); err != nil {
-			log.Printf("Kexec Reboot %v failed, %v. Sorry", u, err)
+		if err := boot.Execute(); err != nil {
+			log.Printf("boot.Execute of %v failed: %v", u, err)
 		}
+		// TODO: We should probably return a real error.
 		return nil
 	}
 	return fmt.Errorf("Sorry no bootable device found")
