@@ -26,12 +26,11 @@ func TestMountKexec(t *testing.T) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/integration/testcmd/kexec/uinit",
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/mount",
 				"github.com/u-root/u-root/cmds/core/kexec",
 			),
 		},
+		Uinit: "github.com/u-root/u-root/integration/testcmd/kexec/uinit",
 		QEMUOpts: qemu.Options{
 			Timeout: 30 * time.Second,
 		},
