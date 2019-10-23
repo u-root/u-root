@@ -9,6 +9,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"golang.org/x/sys/unix"
 )
 
@@ -24,6 +25,10 @@ type getrandomReader struct {
 // ReadContext implements a cancelable read from /dev/urandom.
 func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error) {
 	r.once.Do(func() {
+		if cmdline.ContainsFlag("uroot.nohwrng") {
+			r.backup = true
+			return
+		}
 		if _, err := unix.Getrandom(b, unix.GRND_NONBLOCK); err == syscall.ENOSYS {
 			r.backup = true
 		}
