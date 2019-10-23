@@ -33,12 +33,12 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	}
 
 	// Create a temporary directory.
-	if len(o.BuildOpts.TempDir) == 0 {
+	if len(o.TmpDir) == 0 {
 		tmpDir, err := ioutil.TempDir("", "uroot-integration")
 		if err != nil {
 			t.Fatal(err)
 		}
-		o.BuildOpts.TempDir = tmpDir
+		o.TmpDir = tmpDir
 	}
 
 	env := golang.Default()
@@ -49,7 +49,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
 	os.Setenv("CGO_ENABLED", "0")
-	testDir := filepath.Join(o.BuildOpts.TempDir, "tests")
+	testDir := filepath.Join(o.TmpDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
 		if err := os.MkdirAll(pkgDir, 0755); err != nil {
@@ -87,10 +87,9 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 
 	// Create the CPIO and start QEMU.
 	o.BuildOpts.AddCommands(uroot.BinaryCmds("cmd/test2json")...)
-	o.BuildOpts.AddBusyBoxCommands(
-		"github.com/u-root/u-root/integration/testcmd/gotest/uinit",
-		"github.com/u-root/u-root/cmds/core/init",
-	)
+
+	// Specify the custom gotest uinit.
+	o.Uinit = "github.com/u-root/u-root/integration/testcmd/gotest/uinit"
 
 	tc := json2test.NewTestCollector()
 	serial := []io.Writer{
