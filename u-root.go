@@ -40,6 +40,7 @@ var (
 	fourbins                                *bool
 	noCommands                              *bool
 	extraFiles                              multiFlag
+	buildTags                               *string
 )
 
 func init() {
@@ -58,6 +59,7 @@ func init() {
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
+	buildTags = flag.String("build-tags", "", "a space-separated list of build tags to consider satisfied during the build.")
 }
 
 func main() {
@@ -98,6 +100,12 @@ func Main() error {
 	log.Printf("Build environment: %s", env)
 	if env.GOOS != "linux" {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+	}
+
+	if *buildTags != "" {
+		tagList := strings.Split(*buildTags, " ")
+		env.BuildTags = append(env.BuildTags, tagList...)
+		log.Printf("Build tags: %s", env.BuildTags)
 	}
 
 	v, err := env.Version()
