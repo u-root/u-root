@@ -34,7 +34,6 @@ var (
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
-	help       = flag.Bool("h", false, "help")
 )
 
 const (
@@ -45,7 +44,7 @@ const (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stdout, "ping [-hV] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
+	fmt.Fprintf(os.Stdout, "ping [-V] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
 	os.Exit(0)
 }
 
@@ -98,7 +97,7 @@ func ping1(netname string, host string, i uint64) (string, error) {
 	binary.BigEndian.PutUint16(msg[4:], uint16(i>>16))
 	binary.BigEndian.PutUint16(msg[2:], cksum(msg))
 	if _, err := c.Write(msg[:]); err != nil {
-		return "", fmt.Errorf("Write failed: %v", err)
+		return "", fmt.Errorf("write failed: %v", err)
 	}
 
 	// Get ICMP Echo Reply
@@ -107,7 +106,7 @@ func ping1(netname string, host string, i uint64) (string, error) {
 	before := time.Now()
 	amt, rerr := c.Read(rmsg[:])
 	if rerr != nil {
-		return "", fmt.Errorf("Read failed: %v", rerr)
+		return "", fmt.Errorf("read failed: %v", rerr)
 	}
 	latency := time.Since(before)
 	if (rmsg[0] & 0x0F) == 6 {
@@ -116,12 +115,12 @@ func ping1(netname string, host string, i uint64) (string, error) {
 		rmsg = rmsg[ICMP_ECHO_REPLY_HEADER_IPV4_OFFSET:]
 	}
 	if rmsg[0] != ICMP_TYPE_ECHO_REPLY {
-		return "", fmt.Errorf("Bad ICMP echo reply type: %v", msg[0])
+		return "", fmt.Errorf("bad ICMP echo reply type: %v", msg[0])
 	}
 	cks := binary.BigEndian.Uint16(rmsg[2:])
 	binary.BigEndian.PutUint16(rmsg[2:], 0)
 	if cks != cksum(rmsg) {
-		return "", fmt.Errorf("Bad ICMP checksum: %v (expected %v)", cks, cksum(rmsg))
+		return "", fmt.Errorf("bad ICMP checksum: %v (expected %v)", cks, cksum(rmsg))
 	}
 	id := binary.BigEndian.Uint16(rmsg[4:])
 	seq := binary.BigEndian.Uint16(rmsg[6:])

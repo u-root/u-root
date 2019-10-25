@@ -35,7 +35,7 @@ func (v *vendor) Chip(id ChipID) (Chip, error) {
 			return &d, nil
 		}
 	}
-	return nil, fmt.Errorf("No chip with id %#x for vendor %q", id, v.Synonyms())
+	return nil, fmt.Errorf("no chip with id %#x for vendor %q", id, v.Synonyms())
 }
 
 // ID returns a VendorID.

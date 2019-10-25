@@ -1,0 +1,2798 @@
+--- testdata/VMWare.orig.txt
++++ testdata/VMWare.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/VMWare.bin.
+ SMBIOS 2.7 present.
+ 620 structures occupying 29060 bytes.
+@@ -54,7 +54,8 @@
+ 	Version: None
+ 	Serial Number: None
+ 	Asset Tag: Not Specified
+-	Features: None
++	Features:
++		
+ 	Location In Chassis: Not Specified
+ 	Chassis Handle: 0x0000
+ 	Type: Unknown
+@@ -3534,191 +3535,116 @@
+ 		Enhanced Virtualization
+ 
+ Handle 0x0084, DMI type 5, 46 bytes
+-Memory Controller Information
+-	Error Detecting Method: None
+-	Error Correcting Capabilities:
+-		None
+-	Supported Interleave: One-way Interleave
+-	Current Interleave: One-way Interleave
+-	Maximum Memory Module Size: 32768 MB
+-	Maximum Total Memory Size: 491520 MB
+-	Supported Speeds:
+-		70 ns
+-		60 ns
+-	Supported Memory Types:
+-		FPM
+-		EDO
+-		DIMM
+-		SDRAM
+-	Memory Module Voltage: 3.3 V
+-	Associated Memory Slots: 15
+-		0x0006
+-		0x0007
+-		0x0008
+-		0x0009
+-		0x000A
+-		0x000B
+-		0x000C
+-		0x000D
+-		0x000E
+-		0x000F
+-		0x0010
+-		0x0011
+-		0x0012
+-		0x0013
+-		0x0014
+-	Enabled Error Correcting Capabilities:
+-		None
++Unsupported
++	Header and Data:
++		05 2E 84 00 03 04 03 03 0F 0C 00 18 05 02 0F 06
++		00 07 00 08 00 09 00 0A 00 0B 00 0C 00 0D 00 0E
++		00 0F 00 10 00 11 00 12 00 13 00 14 00 04
+ 
+ Handle 0x0085, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #0
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: EDO DIMM
+-	Installed Size: 1024 MB (Single-bank Connection)
+-	Enabled Size: 1024 MB (Single-bank Connection)
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 85 00 01 FF 00 10 01 0A 0A 00
++	Strings:
++		RAM socket #0
+ 
+ Handle 0x0086, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #1
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 86 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #1
+ 
+ Handle 0x0087, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #2
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 87 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #2
+ 
+ Handle 0x0088, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #3
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 88 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #3
+ 
+ Handle 0x0089, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #4
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 89 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #4
+ 
+ Handle 0x008A, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #5
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 8A 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #5
+ 
+ Handle 0x008B, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #6
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 8B 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #6
+ 
+ Handle 0x008C, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #7
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 8C 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #7
+ 
+ Handle 0x008D, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #8
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 8D 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #8
+ 
+ Handle 0x008E, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #9
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 8E 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #9
+ 
+ Handle 0x008F, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #10
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 8F 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #10
+ 
+ Handle 0x0090, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #11
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 90 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #11
+ 
+ Handle 0x0091, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #12
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 91 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #12
+ 
+ Handle 0x0092, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #13
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 92 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #13
+ 
+ Handle 0x0093, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: RAM socket #14
+-	Bank Connections: None
+-	Current Speed: Unknown
+-	Type: DIMM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 93 00 01 FF 00 00 01 7F 7F 00
++	Strings:
++		RAM socket #14
+ 
+ Handle 0x0094, DMI type 7, 19 bytes
+ Cache Information
+@@ -6030,7 +5956,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6048,7 +5974,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6066,7 +5992,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6084,7 +6010,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6102,7 +6028,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6120,7 +6046,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6138,7 +6064,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6156,7 +6082,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6174,7 +6100,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6192,7 +6118,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6210,7 +6136,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6228,7 +6154,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6246,7 +6172,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6264,7 +6190,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6282,7 +6208,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6300,7 +6226,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6318,7 +6244,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6336,7 +6262,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6354,7 +6280,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6372,7 +6298,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6390,7 +6316,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6408,7 +6334,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6426,7 +6352,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6444,7 +6370,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6462,7 +6388,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6480,7 +6406,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6498,7 +6424,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6516,7 +6442,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6534,7 +6460,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6552,7 +6478,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6570,7 +6496,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6588,7 +6514,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6606,7 +6532,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6624,7 +6550,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6642,7 +6568,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6660,7 +6586,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6678,7 +6604,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6696,7 +6622,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6714,7 +6640,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6732,7 +6658,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6750,7 +6676,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6768,7 +6694,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6786,7 +6712,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6804,7 +6730,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6822,7 +6748,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6840,7 +6766,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6858,7 +6784,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6876,7 +6802,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6894,7 +6820,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6912,7 +6838,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6930,7 +6856,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6948,7 +6874,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6966,7 +6892,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -6984,7 +6910,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7002,7 +6928,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7020,7 +6946,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7038,7 +6964,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7056,7 +6982,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7074,7 +7000,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7092,7 +7018,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7110,7 +7036,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7128,7 +7054,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7146,7 +7072,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7164,7 +7090,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7182,7 +7108,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7200,7 +7126,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7218,7 +7144,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7236,7 +7162,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7254,7 +7180,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7272,7 +7198,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7290,7 +7216,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7308,7 +7234,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7326,7 +7252,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7344,7 +7270,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7362,7 +7288,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7380,7 +7306,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7398,7 +7324,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7416,7 +7342,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7434,7 +7360,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7452,7 +7378,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7470,7 +7396,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7488,7 +7414,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7506,7 +7432,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7524,7 +7450,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7542,7 +7468,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7560,7 +7486,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7578,7 +7504,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7596,7 +7522,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7614,7 +7540,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7632,7 +7558,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7650,7 +7576,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7668,7 +7594,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7686,7 +7612,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7704,7 +7630,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7722,7 +7648,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7740,7 +7666,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7758,7 +7684,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7776,7 +7702,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7794,7 +7720,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7812,7 +7738,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7830,7 +7756,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7848,7 +7774,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7866,7 +7792,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7884,7 +7810,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7902,7 +7828,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7920,7 +7846,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7938,7 +7864,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7956,7 +7882,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7974,7 +7900,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -7992,7 +7918,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8010,7 +7936,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8028,7 +7954,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8046,7 +7972,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8064,7 +7990,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8082,7 +8008,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8100,7 +8026,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8118,7 +8044,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8136,7 +8062,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8154,7 +8080,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8172,7 +8098,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8190,7 +8116,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8208,7 +8134,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8226,7 +8152,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8244,7 +8170,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8262,7 +8188,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8280,7 +8206,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8298,7 +8224,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8316,7 +8242,7 @@
+ 	Configuration: Enabled, Socketed, Level 2
+ 	Operational Mode: Write Back
+ 	Location: External
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 24 MB
+ 	Supported SRAM Types:
+ 		Burst
+@@ -8329,157 +8255,120 @@
+ 	Associativity: Unknown
+ 
+ Handle 0x0194, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J19
+-	Internal Connector Type: 9 Pin Dual Inline (pin 10 cut)
+-	External Reference Designator: COM 1
+-	External Connector Type: DB-9 male
+-	Port Type: Serial Port 16550A Compatible
++Unsupported
++	Header and Data:
++		08 09 94 01 01 18 02 08 09
++	Strings:
++		J19
++		COM 1
+ 
+ Handle 0x0195, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J23
+-	Internal Connector Type: 25 Pin Dual Inline (pin 26 cut)
+-	External Reference Designator: Parallel
+-	External Connector Type: DB-25 female
+-	Port Type: Parallel Port ECP/EPP
++Unsupported
++	Header and Data:
++		08 09 95 01 01 19 02 05 05
++	Strings:
++		J23
++		Parallel
+ 
+ Handle 0x0196, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J11
+-	Internal Connector Type: None
+-	External Reference Designator: Keyboard
+-	External Connector Type: Circular DIN-8 male
+-	Port Type: Keyboard Port
++Unsupported
++	Header and Data:
++		08 09 96 01 01 00 02 14 0D
++	Strings:
++		J11
++		Keyboard
+ 
+ Handle 0x0197, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J12
+-	Internal Connector Type: None
+-	External Reference Designator: PS/2 Mouse
+-	External Connector Type: Circular DIN-8 male
+-	Port Type: Keyboard Port
++Unsupported
++	Header and Data:
++		08 09 97 01 01 00 02 14 0D
++	Strings:
++		J12
++		PS/2 Mouse
+ 
+ Handle 0x0198, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: ISA Slot J8
+-	Type: 16-bit ISA
+-	Current Usage: Unknown
+-	Length: Short
+-	Characteristics:
+-		5.0 V is provided
+-	Bus Address: 00ff:ff:1f.7
++Unsupported
++	Header and Data:
++		09 11 98 01 01 03 04 02 03 00 00 02 00 FF 00 FF
++		FF
++	Strings:
++		ISA Slot J8
+ 
+ Handle 0x0199, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: ISA Slot J9
+-	Type: 16-bit ISA
+-	Current Usage: Unknown
+-	Length: Short
+-	Characteristics:
+-		5.0 V is provided
+-	Bus Address: 00ff:ff:1f.7
++Unsupported
++	Header and Data:
++		09 11 99 01 01 03 04 02 03 00 00 02 00 FF 00 FF
++		FF
++	Strings:
++		ISA Slot J9
+ 
+ Handle 0x019A, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: ISA Slot J10
+-	Type: 16-bit ISA
+-	Current Usage: Unknown
+-	Length: Short
+-	Characteristics:
+-		5.0 V is provided
+-	Bus Address: 00ff:ff:1f.7
++Unsupported
++	Header and Data:
++		09 11 9A 01 01 03 04 02 03 00 00 02 00 FF 00 FF
++		FF
++	Strings:
++		ISA Slot J10
+ 
+ Handle 0x019B, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCI Slot J11
+-	Type: 32-bit PCI
+-	Current Usage: In Use
+-	Length: Long
+-	ID: 1
+-	Characteristics:
+-		5.0 V is provided
+-		3.3 V is provided
+-	Bus Address: 0000:00:0f.0
++Unsupported
++	Header and Data:
++		09 11 9B 01 01 06 05 04 04 01 00 06 00 00 00 00
++		78
++	Strings:
++		PCI Slot J11
+ 
+ Handle 0x019C, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCI Slot J12
+-	Type: 32-bit PCI
+-	Current Usage: In Use
+-	Length: Long
+-	ID: 2
+-	Characteristics:
+-		5.0 V is provided
+-		3.3 V is provided
+-	Bus Address: 0000:00:10.0
++Unsupported
++	Header and Data:
++		09 11 9C 01 01 06 05 04 04 02 00 06 00 00 00 00
++		80
++	Strings:
++		PCI Slot J12
+ 
+ Handle 0x019D, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCI Slot J13
+-	Type: 32-bit PCI
+-	Current Usage: In Use
+-	Length: Long
+-	ID: 3
+-	Characteristics:
+-		5.0 V is provided
+-		3.3 V is provided
+-	Bus Address: 0000:00:11.0
++Unsupported
++	Header and Data:
++		09 11 9D 01 01 06 05 04 04 03 00 06 00 00 00 00
++		88
++	Strings:
++		PCI Slot J13
+ 
+ Handle 0x019E, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCI Slot J14
+-	Type: 32-bit PCI
+-	Current Usage: Available
+-	Length: Long
+-	ID: 4
+-	Characteristics:
+-		5.0 V is provided
+-		3.3 V is provided
+-	Bus Address: 0000:00:12.0
++Unsupported
++	Header and Data:
++		09 11 9E 01 01 06 05 03 04 04 00 06 00 00 00 00
++		90
++	Strings:
++		PCI Slot J14
+ 
+ Handle 0x019F, DMI type 10, 8 bytes
+-On Board Device 1 Information
+-	Type: Video
+-	Status: Disabled
+-	Description: VMware SVGA II
+-On Board Device 2 Information
+-	Type: Sound
+-	Status: Disabled
+-	Description: ES1371
++Unsupported
++	Header and Data:
++		0A 08 9F 01 03 01 07 02
++	Strings:
++		VMware SVGA II
++		ES1371
+ 
+ Handle 0x01A0, DMI type 11, 5 bytes
+-OEM Strings
+-	String 1: [MS_VM_CERT/SHA1/27d66596a61c48dd3dc7216fd715126e33f59ae7]
+-	String 2: Welcome to the Virtual Machine
++Unsupported
++	Header and Data:
++		0B 05 A0 01 02
++	Strings:
++		[MS_VM_CERT/SHA1/27d66596a61c48dd3dc7216fd715126e33f59ae7]
++		Welcome to the Virtual Machine
+ 
+ Handle 0x01A1, DMI type 15, 29 bytes
+-System Event Log
+-	Area Length: 16 bytes
+-	Header Start Offset: 0x0000
+-	Header Length: 16 bytes
+-	Data Start Offset: 0x0010
+-	Access Method: General-purpose non-volatile data functions
+-	Access Address: 0x0000
+-	Status: Invalid, Full
+-	Change Token: 0x00000036
+-	Header Format: Type 1
+-	Supported Log Type Descriptors: 3
+-	Descriptor 1: POST error
+-	Data Format 1: POST results bitmap
+-	Descriptor 2: Single-bit ECC memory error
+-	Data Format 2: Multiple-event
+-	Descriptor 3: Multi-bit ECC memory error
+-	Data Format 3: Multiple-event
++Unsupported
++	Header and Data:
++		0F 1D A1 01 10 00 00 00 10 00 04 02 36 00 00 00
++		00 00 00 00 01 03 02 08 04 01 02 02 02
+ 
+ Handle 0x01A2, DMI type 16, 23 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: None
+-	Maximum Capacity: 3 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 64
++Unsupported
++	Header and Data:
++		10 17 A2 01 03 03 03 00 00 30 00 FE FF 40 00 00
++		00 00 00 00 00 00 00
+ 
+ Handle 0x01A3, DMI type 17, 34 bytes
+ Memory Device
+@@ -11170,764 +11059,493 @@
+ 	Configured Memory Speed: Unknown
+ 
+ Handle 0x0223, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 23 02 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0224, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x0003FFFFFFF
+-	Range Size: 1 GB
+-	Physical Array Handle: 0x0025
+-	Partition Width: 64
++Unsupported
++	Header and Data:
++		13 1F 24 02 00 00 00 00 FF FF 0F 00 25 00 40 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x0225, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0026
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 25 02 00 00 10 00 FF FB FF 03 26 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0226, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0027
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 26 02 00 00 10 00 FF FB FF 03 27 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0227, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0028
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 27 02 00 00 10 00 FF FB FF 03 28 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0228, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0029
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 28 02 00 00 10 00 FF FB FF 03 29 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0229, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x002A
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 29 02 00 00 10 00 FF FB FF 03 2A 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x022A, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x002B
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 2A 02 00 00 10 00 FF FB FF 03 2B 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x022B, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x002C
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 2B 02 00 00 10 00 FF FB FF 03 2C 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x022C, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x002D
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 2C 02 00 00 10 00 FF FB FF 03 2D 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x022D, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x002E
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 2D 02 00 00 10 00 FF FB FF 03 2E 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x022E, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x002F
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 2E 02 00 00 10 00 FF FB FF 03 2F 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x022F, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0030
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 2F 02 00 00 10 00 FF FB FF 03 30 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0230, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0031
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 30 02 00 00 10 00 FF FB FF 03 31 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0231, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0032
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 31 02 00 00 10 00 FF FB FF 03 32 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0232, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0033
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 32 02 00 00 10 00 FF FB FF 03 33 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0233, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0034
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 33 02 00 00 10 00 FF FB FF 03 34 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0234, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0035
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 34 02 00 00 10 00 FF FB FF 03 35 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0235, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0036
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 35 02 00 00 10 00 FF FB FF 03 36 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0236, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0037
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 36 02 00 00 10 00 FF FB FF 03 37 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0237, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0038
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 37 02 00 00 10 00 FF FB FF 03 38 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0238, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0039
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 38 02 00 00 10 00 FF FB FF 03 39 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0239, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x003A
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 39 02 00 00 10 00 FF FB FF 03 3A 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x023A, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x003B
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 3A 02 00 00 10 00 FF FB FF 03 3B 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x023B, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x003C
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 3B 02 00 00 10 00 FF FB FF 03 3C 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x023C, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x003D
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 3C 02 00 00 10 00 FF FB FF 03 3D 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x023D, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x003E
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 3D 02 00 00 10 00 FF FB FF 03 3E 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x023E, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x003F
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 3E 02 00 00 10 00 FF FB FF 03 3F 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x023F, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0040
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 3F 02 00 00 10 00 FF FB FF 03 40 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0240, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0041
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 40 02 00 00 10 00 FF FB FF 03 41 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0241, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0042
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 41 02 00 00 10 00 FF FB FF 03 42 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0242, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0043
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 42 02 00 00 10 00 FF FB FF 03 43 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0243, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0044
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 43 02 00 00 10 00 FF FB FF 03 44 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0244, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0045
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 44 02 00 00 10 00 FF FB FF 03 45 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0245, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0046
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 45 02 00 00 10 00 FF FB FF 03 46 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0246, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0047
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 46 02 00 00 10 00 FF FB FF 03 47 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0247, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0048
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 47 02 00 00 10 00 FF FB FF 03 48 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0248, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0049
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 48 02 00 00 10 00 FF FB FF 03 49 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0249, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x004A
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 49 02 00 00 10 00 FF FB FF 03 4A 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x024A, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x004B
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 4A 02 00 00 10 00 FF FB FF 03 4B 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x024B, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x004C
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 4B 02 00 00 10 00 FF FB FF 03 4C 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x024C, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x004D
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 4C 02 00 00 10 00 FF FB FF 03 4D 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x024D, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x004E
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 4D 02 00 00 10 00 FF FB FF 03 4E 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x024E, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x004F
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 4E 02 00 00 10 00 FF FB FF 03 4F 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x024F, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0050
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 4F 02 00 00 10 00 FF FB FF 03 50 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0250, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0051
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 50 02 00 00 10 00 FF FB FF 03 51 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0251, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0052
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 51 02 00 00 10 00 FF FB FF 03 52 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0252, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0053
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 52 02 00 00 10 00 FF FB FF 03 53 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0253, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0054
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 53 02 00 00 10 00 FF FB FF 03 54 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0254, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0055
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 54 02 00 00 10 00 FF FB FF 03 55 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0255, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0056
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 55 02 00 00 10 00 FF FB FF 03 56 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0256, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0057
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 56 02 00 00 10 00 FF FB FF 03 57 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0257, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0058
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 57 02 00 00 10 00 FF FB FF 03 58 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0258, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0059
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 58 02 00 00 10 00 FF FB FF 03 59 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0259, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x005A
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 59 02 00 00 10 00 FF FB FF 03 5A 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x025A, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x005B
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 5A 02 00 00 10 00 FF FB FF 03 5B 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x025B, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x005C
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 5B 02 00 00 10 00 FF FB FF 03 5C 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x025C, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x005D
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 5C 02 00 00 10 00 FF FB FF 03 5D 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x025D, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x005E
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 5D 02 00 00 10 00 FF FB FF 03 5E 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x025E, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x005F
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 5E 02 00 00 10 00 FF FB FF 03 5F 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x025F, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0060
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 5F 02 00 00 10 00 FF FB FF 03 60 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0260, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0061
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 60 02 00 00 10 00 FF FB FF 03 61 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0261, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0062
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 61 02 00 00 10 00 FF FB FF 03 62 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0262, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0063
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 62 02 00 00 10 00 FF FB FF 03 63 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0263, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0064
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 63 02 00 00 10 00 FF FB FF 03 64 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0264, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x00FFFEFFFFF
+-	Range Size: 64511 MB
+-	Physical Device Handle: 0x0065
+-	Memory Array Mapped Address Handle: 0x00A7
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 64 02 00 00 10 00 FF FB FF 03 65 00 A7 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0265, DMI type 23, 13 bytes
+-System Reset
+-	Status: Enabled
+-	Watchdog Timer: Present
+-	Boot Option: Do Not Reboot
+-	Boot Option On Limit: Do Not Reboot
+-	Reset Count: Unknown
+-	Reset Limit: Unknown
+-	Timer Interval: Unknown
+-	Timeout: Unknown
++Unsupported
++	Header and Data:
++		17 0D 65 02 3F FF FF FF FF FF FF FF FF
+ 
+ Handle 0x0266, DMI type 24, 5 bytes
+-Hardware Security
+-	Power-On Password Status: Disabled
+-	Keyboard Password Status: Unknown
+-	Administrator Password Status: Enabled
+-	Front Panel Reset Status: Unknown
++Unsupported
++	Header and Data:
++		18 05 66 02 37
+ 
+ Handle 0x0267, DMI type 30, 6 bytes
+-Out-of-band Remote Access
+-	Manufacturer Name: Intel
+-	Inbound Connection: Enabled
+-	Outbound Connection: Disabled
++Unsupported
++	Header and Data:
++		1E 06 67 02 01 01
++	Strings:
++		Intel
+ 
+ Handle 0x0268, DMI type 32, 20 bytes
+-System Boot Information
+-	Status: No errors detected
++Unsupported
++	Header and Data:
++		20 14 68 02 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00
+ 
+ Handle 0x0269, DMI type 33, 31 bytes
+-64-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		21 1F 69 02 03 02 02 00 00 00 00 00 00 00 00 00
++		00 00 80 00 00 00 00 00 00 00 80 00 00 00 80
+ 
+ Handle 0x026A, DMI type 126, 4 bytes
+ Inactive

@@ -129,12 +129,12 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "AMD64 bb build",
 			env:  []string{"GOARCH=amd64"},
-			args: []string{"-build=bb"},
+			args: []string{"-build=bb", "all"},
 		},
 		{
 			name: "AMD64 source build",
 			env:  []string{"GOARCH=amd64"},
-			args: []string{"-build=source"},
+			args: []string{"-build=source", "all"},
 			validators: []itest.ArchiveValidator{
 				buildSourceValidator{
 					goroot: "/go",
@@ -146,17 +146,17 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "ARM7 bb build",
 			env:  []string{"GOARCH=arm", "GOARM=7"},
-			args: []string{"-build=bb"},
+			args: []string{"-build=bb", "all"},
 		},
 		{
 			name: "ARM64 bb build",
 			env:  []string{"GOARCH=arm64"},
-			args: []string{"-build=bb"},
+			args: []string{"-build=bb", "all"},
 		},
 		{
 			name: "Power 64bit bb build",
 			env:  []string{"GOARCH=ppc64le"},
-			args: []string{"-build=bb"},
+			args: []string{"-build=bb", "all"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

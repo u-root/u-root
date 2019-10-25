@@ -15,11 +15,9 @@
 package abi
 
 import (
-	"math"
+	"encoding/binary"
 	"syscall"
-	"time"
 
-	"github.com/u-root/u-root/pkg/strace/internal/binary"
 	"golang.org/x/sys/unix"
 )
 
@@ -155,9 +153,6 @@ const (
 	// TFD_TIMER_ABSTIME is a timerfd_settime flag.
 	TFD_TIMER_ABSTIME = 1
 )
-
-// The safe number of seconds you can represent by int64.
-const maxSecInDuration = math.MaxInt64 / int64(time.Second)
 
 // TimeT represents time_t in <time.h>. It represents time in seconds.
 type TimeT int64

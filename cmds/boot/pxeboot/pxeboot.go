@@ -33,6 +33,7 @@ import (
 )
 
 var (
+	ifName  = "^e.*"
 	noLoad  = flag.Bool("no-load", false, "get DHCP response, but don't load the kernel")
 	dryRun  = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
 	verbose = flag.Bool("v", false, "Verbose output")
@@ -78,7 +79,10 @@ func Netboot(ifaceNames string) error {
 
 			if err := result.Lease.Configure(); err != nil {
 				log.Printf("Failed to configure lease %s: %v", result.Lease, err)
-				continue
+				// Boot further regardless of lease configuration result.
+				//
+				// If lease failed, fall back to use locally configured
+				// ip/ipv6 address.
 			}
 			img, err := netboot.BootImage(urlfetch.DefaultSchemes, result.Lease)
 			if err != nil {
@@ -111,8 +115,15 @@ func Netboot(ifaceNames string) error {
 
 func main() {
 	flag.Parse()
+	if len(flag.Args()) > 1 {
+		log.Fatalf("Only one regexp-style argument is allowed, e.g.: " + ifName)
+	}
 
-	if err := Netboot("eth0"); err != nil {
+	if len(flag.Args()) > 0 {
+		ifName = flag.Args()[0]
+	}
+
+	if err := Netboot(ifName); err != nil {
 		log.Fatal(err)
 	}
 }

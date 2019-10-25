@@ -15,7 +15,10 @@ func isWhitespace(b byte) bool {
 //
 // fields is similar to strings.Fields() method, two main differences are:
 //     fields doesn't split substring of s if substring is inside of double quotes
+//       (there's no escaping of quotes).
 //     fields works only with ASCII strings.
+//
+// TODO(hugelgupf): just reuse elvish's command-line interpreter?
 func fields(s string) []string {
 	var ret []string
 	var token []byte
@@ -24,6 +27,8 @@ func fields(s string) []string {
 	for i := range s {
 		if s[i] == '"' {
 			quotes = !quotes
+			// Also strip out the quotes, like a normal shell interpreter.
+			continue
 		}
 
 		if !isWhitespace(s[i]) || quotes {

@@ -123,7 +123,7 @@ func WithConn(c net.PacketConn) ServerOpt {
 }
 
 // NewServer initializes and returns a new Server object
-func NewServer(addr *net.UDPAddr, handler Handler, opt ...ServerOpt) (*Server, error) {
+func NewServer(ifname string, addr *net.UDPAddr, handler Handler, opt ...ServerOpt) (*Server, error) {
 	s := &Server{
 		Handler: handler,
 	}
@@ -133,7 +133,7 @@ func NewServer(addr *net.UDPAddr, handler Handler, opt ...ServerOpt) (*Server, e
 	}
 	if s.conn == nil {
 		var err error
-		conn, err := net.ListenUDP("udp4", addr)
+		conn, err := NewIPv4UDPConn(ifname, addr.Port)
 		if err != nil {
 			return nil, err
 		}

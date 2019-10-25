@@ -28,7 +28,7 @@ func GetSupportedFilesystems() (fstypes []string, err error) {
 func internalGetFilesystems(file string) (fstypes []string, err error) {
 	var bytes []byte
 	if bytes, err = ioutil.ReadFile(file); err != nil {
-		return nil, fmt.Errorf("Failed to read %s: %v", file, err)
+		return nil, fmt.Errorf("failed to read %s: %v", file, err)
 	}
 	for _, line := range strings.Split(string(bytes), "\n") {
 		//len(fields)==1, 2 possibilites for fs: "nodev" fs and

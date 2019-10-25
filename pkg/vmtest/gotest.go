@@ -63,8 +63,8 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 			"-c", pkg,
 			"-o", testFile,
 		)
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("could not build %s: %v", pkg, err)
+		if stderr, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("could not build %s: %v\n%s", pkg, err, string(stderr))
 		}
 
 		// When a package does not contain any tests, the test
@@ -111,6 +111,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		t.Errorf("Waiting for GoTest Done: %v", err)
 	}
 
+	// TODO: check that tc.Tests == tests
 	for pkg, test := range tc.Tests {
 		switch test.State {
 		case json2test.StateFail:

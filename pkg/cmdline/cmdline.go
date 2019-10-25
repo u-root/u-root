@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package cmdline provides a parser and convenience functions for reading
-// configuration data from /proc/cmdline it's conformant with
+// Package cmdline is parser for kernel command-line args from /proc/cmdline.
+//
+// It's conformant with
 // https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html,
 // though making 'var_name' and 'var-name' equivalent may need to be done
 // separately.
@@ -154,14 +155,14 @@ func getFlagMap(flagName string) map[string]string {
 	return parseToMap(flagName)
 }
 
-// GetUinitFlagMap gets the uinit flags as a map
-func GetUinitFlagMap() map[string]string {
-	uinitflags, _ := Flag("uroot.uinitflags")
-	return getFlagMap(uinitflags)
-}
-
 // GetInitFlagMap gets the init flags as a map
 func GetInitFlagMap() map[string]string {
 	initflags, _ := Flag("uroot.initflags")
 	return getFlagMap(initflags)
+}
+
+// GetUinitArgs gets the uinit argvs.
+func GetUinitArgs() []string {
+	uinitargs, _ := Flag("uroot.uinitargs")
+	return strings.Fields(uinitargs)
 }

@@ -1,0 +1,371 @@
+--- testdata/Lenovo-ThinkPad-T480.orig.txt
++++ testdata/Lenovo-ThinkPad-T480.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/Lenovo-ThinkPad-T480.bin.
+ SMBIOS 3.0.0 present.
+ 
+@@ -12,10 +12,11 @@
+ 		BIOS Boot Complete
+ 
+ Handle 0x0001, DMI type 14, 8 bytes
+-Group Associations
+-	Name: Intel(R) Silicon View Technology
+-	Items: 1
+-		0x0000 (OEM-specific)
++Unsupported
++	Header and Data:
++		0E 08 01 00 01 DE 00 00
++	Strings:
++		Intel(R) Silicon View Technology
+ 
+ Handle 0x0002, DMI type 134, 13 bytes
+ OEM-specific Type
+@@ -23,13 +24,10 @@
+ 		86 0D 02 00 15 03 19 20 00 00 00 00 00
+ 
+ Handle 0x0003, DMI type 16, 23 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: None
+-	Maximum Capacity: 32 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 2
++Unsupported
++	Header and Data:
++		10 17 03 00 03 03 03 00 00 00 02 FE FF 02 00 00
++		00 00 00 00 00 00 00
+ 
+ Handle 0x0004, DMI type 17, 40 bytes
+ Memory Device
+@@ -80,12 +78,10 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0006, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x005FFFFFFFF
+-	Range Size: 24 GB
+-	Physical Array Handle: 0x0003
+-	Partition Width: 2
++Unsupported
++	Header and Data:
++		13 1F 06 00 00 00 00 00 FF FF 7F 01 03 00 02 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x0007, DMI type 7, 19 bytes
+ Cache Information
+@@ -271,36 +267,36 @@
+ 	SKU Number: Not Specified
+ 
+ Handle 0x000F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 0F 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 1
+ 
+ Handle 0x0010, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 2
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 10 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 2
+ 
+ Handle 0x0011, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 3
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 11 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 3
+ 
+ Handle 0x0012, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 4
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 12 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 4
+ 
+ Handle 0x0013, DMI type 126, 9 bytes
+ Inactive
+@@ -318,23 +314,23 @@
+ Inactive
+ 
+ Handle 0x0018, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: Ethernet
+-	External Connector Type: RJ-45
+-	Port Type: Network Port
++Unsupported
++	Header and Data:
++		08 09 18 00 01 00 02 0B 1F
++	Strings:
++		Not Available
++		Ethernet
+ 
+ Handle 0x0019, DMI type 126, 9 bytes
+ Inactive
+ 
+ Handle 0x001A, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: Hdmi1
+-	External Connector Type: Other
+-	Port Type: Video Port
++Unsupported
++	Header and Data:
++		08 09 1A 00 01 00 02 FF 1C
++	Strings:
++		Not Available
++		Hdmi1
+ 
+ Handle 0x001B, DMI type 126, 9 bytes
+ Inactive
+@@ -346,58 +342,56 @@
+ Inactive
+ 
+ Handle 0x001E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: Headphone/Microphone Combo Jack1
+-	External Connector Type: Mini Jack (headphones)
+-	Port Type: Audio Port
++Unsupported
++	Header and Data:
++		08 09 1E 00 01 00 02 1F 1D
++	Strings:
++		Not Available
++		Headphone/Microphone Combo Jack1
+ 
+ Handle 0x001F, DMI type 126, 9 bytes
+ Inactive
+ 
+ Handle 0x0020, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: Media Card Slot
+-	Type: Other
+-	Current Usage: Available
+-	Length: Other
+-	Characteristics:
+-		Hot-plug devices are supported
+-	Bus Address: 0000:00:00.0
++Unsupported
++	Header and Data:
++		09 11 20 00 01 01 01 03 01 00 00 00 02 00 00 00
++		00
++	Strings:
++		Media Card Slot
+ 
+ Handle 0x0021, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: SimCard Slot
+-	Type: Other
+-	Current Usage: Available
+-	Length: Other
+-	Characteristics: None
+-	Bus Address: 0000:00:00.0
++Unsupported
++	Header and Data:
++		09 11 21 00 01 01 01 03 01 00 00 00 00 00 00 00
++		00
++	Strings:
++		SimCard Slot
+ 
+ Handle 0x0022, DMI type 12, 5 bytes
+-System Configuration Options
++Unsupported
++	Header and Data:
++		0C 05 22 00 00
+ 
+ Handle 0x0023, DMI type 13, 22 bytes
+-BIOS Language Information
+-	Language Description Format: Abbreviated
+-	Installable Languages: 1
++Unsupported
++	Header and Data:
++		0D 16 23 00 01 01 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
+ 		en-US
+-	Currently Installed Language: en-US
+ 
+ Handle 0x0024, DMI type 22, 26 bytes
+-Portable Battery
+-	Location: Front
+-	Manufacturer: LGC
+-	Name: 01AV478
+-	Design Capacity: 57000 mWh
+-	Design Voltage: 11580 mV
+-	SBDS Version: 03.01
+-	Maximum Error: Unknown
+-	SBDS Serial Number: 070B
+-	SBDS Manufacture Date: 2019-02-09
+-	SBDS Chemistry: LiP
+-	OEM-specific Information: 0x00000000
++Unsupported
++	Header and Data:
++		16 1A 24 00 01 02 00 00 03 02 44 16 3C 2D 04 FF
++		0B 07 49 4E 05 0A 00 00 00 00
++	Strings:
++		Front
++		LGC
++		01AV478
++		03.01
++		LiP
+ 
+ Handle 0x0025, DMI type 126, 26 bytes
+ Inactive
+@@ -491,32 +485,15 @@
+ 		OPROM - VBIOS
+ 
+ Handle 0x002E, DMI type 15, 31 bytes
+-System Event Log
+-	Area Length: 50 bytes
+-	Header Start Offset: 0x0000
+-	Header Length: 16 bytes
+-	Data Start Offset: 0x0010
+-	Access Method: General-purpose non-volatile data functions
+-	Access Address: 0x00F0
+-	Status: Valid, Not Full
+-	Change Token: 0x00000002
+-	Header Format: Type 1
+-	Supported Log Type Descriptors: 4
+-	Descriptor 1: POST error
+-	Data Format 1: POST results bitmap
+-	Descriptor 2: PCI system error
+-	Data Format 2: None
+-	Descriptor 3: System reconfigured
+-	Data Format 3: None
+-	Descriptor 4: Log area reset/cleared
+-	Data Format 4: None
++Unsupported
++	Header and Data:
++		0F 1F 2E 00 32 00 00 00 10 00 04 01 02 00 00 00
++		F0 00 00 00 01 04 02 08 04 0A 00 14 00 16 00
+ 
+ Handle 0x002F, DMI type 24, 5 bytes
+-Hardware Security
+-	Power-On Password Status: Disabled
+-	Keyboard Password Status: Not Implemented
+-	Administrator Password Status: Disabled
+-	Front Panel Reset Status: Not Implemented
++Unsupported
++	Header and Data:
++		18 05 2F 00 22
+ 
+ Handle 0x0030, DMI type 132, 7 bytes
+ OEM-specific Type
+@@ -524,31 +501,28 @@
+ 		84 07 30 00 01 D8 36
+ 
+ Handle 0x0031, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 31 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0032, DMI type 21, 7 bytes
+-Built-in Pointing Device
+-	Type: Track Point
+-	Interface: PS/2
+-	Buttons: 3
++Unsupported
++	Header and Data:
++		15 07 32 00 05 04 03
+ 
+ Handle 0x0033, DMI type 21, 7 bytes
+-Built-in Pointing Device
+-	Type: Touch Pad
+-	Interface: PS/2
+-	Buttons: 2
++Unsupported
++	Header and Data:
++		15 07 33 00 07 04 02
+ 
+ Handle 0x0034, DMI type 131, 22 bytes
+-ThinkVantage Technologies
+-	Version: 1
+-	Diagnostics: No
++OEM-specific Type
++	Header and Data:
++		83 16 34 00 01 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
++		TVT-Enablement
+ 
+ Handle 0x0035, DMI type 136, 6 bytes
+ OEM-specific Type
+@@ -574,9 +548,12 @@
+ 		0D 03 50 00 00 00 00
+ 
+ Handle 0x0039, DMI type 140, 15 bytes
+-ThinkPad Embedded Controller Program
+-	Version ID: N22HT26W
+-	Release Date: 12/18/2018
++OEM-specific Type
++	Header and Data:
++		8C 0F 39 00 4C 45 4E 4F 56 4F 0B 07 01 01 02
++	Strings:
++		N22HT26W
++		12/18/2018
+ 
+ Handle 0x003A, DMI type 140, 43 bytes
+ OEM-specific Type
+@@ -592,10 +569,11 @@
+ 		00 00
+ 
+ Handle 0x003C, DMI type 14, 8 bytes
+-Group Associations
+-	Name: $MEI
+-	Items: 1
+-		0x0000 (OEM-specific)
++Unsupported
++	Header and Data:
++		0E 08 3C 00 01 DB 00 00
++	Strings:
++		$MEI
+ 
+ Handle 0x003D, DMI type 219, 81 bytes
+ OEM-specific Type

@@ -144,7 +144,7 @@ func doMount(fd int) error {
 func returnResult(cfd, ffd int, e error) error {
 	if e != nil {
 		if err := unix.Shutdown(cfd, unix.SHUT_RDWR); err != nil {
-			return fmt.Errorf("Shutting down after failed mount with %v: %v", e, err)
+			return fmt.Errorf("shutting down after failed mount with %v: %v", e, err)
 		}
 		return e
 	}

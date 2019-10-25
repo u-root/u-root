@@ -24,8 +24,8 @@ import (
 	// It can not, however, unpack password-protected keys yet.
 	"github.com/gliderlabs/ssh"
 	"github.com/kr/pty" // TODO: get rid of krpty
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/termios"
-	"github.com/u-root/u-root/pkg/uroot/util"
 	// We use this ssh because it can unpack password-protected private keys.
 	ossh "golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
@@ -180,7 +180,7 @@ func runRemote(cmd, port9p string) error {
 	}
 
 	var overlaid bool
-	if util.FindFileSystem("overlay") == nil {
+	if mount.FindFileSystem("overlay") == nil {
 		if err := unix.Mount("overlay", "/tmp/root", "overlay", unix.MS_MGC_VAL, "lowerdir=/tmp/cpu,upperdir=/tmp/local,workdir=/tmp/merge"); err == nil {
 			//overlaid = true
 		} else {
@@ -265,7 +265,7 @@ func runClient(host, a string) error {
 	if err != nil {
 		return err
 	}
-	cl, err := dial(*network, host+":"+*port, c)
+	cl, err := dial(*network, net.JoinHostPort(host, *port), c)
 	if err != nil {
 		return err
 	}
@@ -569,7 +569,7 @@ func doInit() error {
 	}
 
 	// start the process reaper
-	procs := make(chan int)
+	procs := make(chan uint)
 	go cpuDone(procs)
 
 	server.SetOption(ssh.HostKeyFile(*hostKeyFile))

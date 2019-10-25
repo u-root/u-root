@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/bb/bbmain"
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 func run() {
@@ -22,13 +22,16 @@ func run() {
 }
 
 func main() {
-	os.Args[0] = util.ResolveUntilLastSymlink(os.Args[0])
+	os.Args[0] = upath.ResolveUntilLastSymlink(os.Args[0])
 
 	run()
 }
 
 func init() {
 	m := func() {
+		if len(os.Args) == 1 {
+			log.Fatalf("Invalid busybox command: %q", os.Args)
+		}
 		// Use argv[1] as the name.
 		os.Args = os.Args[1:]
 		run()

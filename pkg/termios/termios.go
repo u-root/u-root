@@ -30,3 +30,27 @@ func (t *TTY) Raw() (*unix.Termios, error) {
 	}
 	return restorer, nil
 }
+
+// Serial configure the serial TTY at given baudrate with ECHO and character conversion (CRNL, ERASE, KILL)
+func (t *TTY) Serial(baud int) (*unix.Termios, error) {
+	restorer, err := t.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	serial := MakeSerialDefault(restorer)
+
+	if baud != 0 {
+		if err := t.Set(serial); err != nil {
+			return nil, err
+		}
+
+		serial, err = MakeSerialBaud(serial, baud)
+		if err != nil {
+			return restorer, err
+		}
+	}
+
+	err = t.Set(serial)
+	return restorer, err
+}

@@ -26,6 +26,7 @@ const (
 	High Value = true
 )
 
+// Dir returns the representation that sysfs likes to use.
 func (v Value) Dir() string {
 	if v == Low {
 		return "low"

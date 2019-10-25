@@ -30,7 +30,7 @@ func Run(checklist []Check) error {
 			if check.Remediate != nil {
 				fmt.Println(yellow("  -> running remediation"))
 				if remErr := check.Remediate(); remErr != nil {
-					fmt.Printf(red("     Remediation for '%s' failed: %v\n", check.Name, remErr))
+					fmt.Print(red("     Remediation for '%s' failed: %v\n", check.Name, remErr))
 					if check.StopOnError {
 						fmt.Println("Exiting")
 						return remErr

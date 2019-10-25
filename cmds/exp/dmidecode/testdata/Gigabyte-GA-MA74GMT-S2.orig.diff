@@ -1,0 +1,573 @@
+--- testdata/Gigabyte-GA-MA74GMT-S2.orig.txt
++++ testdata/Gigabyte-GA-MA74GMT-S2.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/Gigabyte-GA-MA74GMT-S2.bin.
+ SMBIOS 2.4 present.
+ 54 structures occupying 2797 bytes.
+@@ -45,17 +45,20 @@
+ 	Product Name: GA-MA74GMT-S2
+ 	Version:  
+ 	Serial Number:  
+-	UUID: 31433646-3635-3532-3445-3546ffffffff
++	UUID: 46364331-3536-3235-3445-3546ffffffff
+ 	Wake-up Type: Power Switch
+ 	SKU Number:  
+ 	Family:  
+ 
+ Handle 0x0002, DMI type 2, 8 bytes
+ Base Board Information
+-	Manufacturer: Gigabyte Technology Co., Ltd.
+-	Product Name: GA-MA74GMT-S2
+-	Version: x.x
+-	Serial Number:  
++	Header and Data:
++		02 08 02 00 01 02 03 04
++	Strings:
++		Gigabyte Technology Co., Ltd.
++		GA-MA74GMT-S2
++		x.x
++		 
+ 
+ Handle 0x0003, DMI type 3, 17 bytes
+ Chassis Information
+@@ -70,6 +73,9 @@
+ 	Thermal State: Unknown
+ 	Security Status: Unknown
+ 	OEM Information: 0x00000000
++	Height: Unspecified
++	Number Of Power Cords: Unspecified
++	Contained Elements: 0
+ 
+ Handle 0x0004, DMI type 4, 35 bytes
+ Processor Information
+@@ -118,68 +124,40 @@
+ 	Part Number:  
+ 
+ Handle 0x0005, DMI type 5, 24 bytes
+-Memory Controller Information
+-	Error Detecting Method: 64-bit ECC
+-	Error Correcting Capabilities:
+-		None
+-	Supported Interleave: One-way Interleave
+-	Current Interleave: One-way Interleave
+-	Maximum Memory Module Size: 1024 MB
+-	Maximum Total Memory Size: 4096 MB
+-	Supported Speeds:
+-		70 ns
+-		60 ns
+-	Supported Memory Types:
+-		Standard
+-		EDO
+-	Memory Module Voltage: 3.3 V
+-	Associated Memory Slots: 4
+-		0x0006
+-		0x0007
+-		0x0008
+-		0x0009
+-	Enabled Error Correcting Capabilities:
+-		None
++Unsupported
++	Header and Data:
++		05 18 05 00 06 04 03 03 0A 0C 00 14 00 02 04 06
++		00 07 00 08 00 09 00 04
++	Strings:
++		 
+ 
+ Handle 0x0006, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: A0
+-	Bank Connections: 1
+-	Current Speed: 42 ns
+-	Type: Other Unknown EDO
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 06 00 01 1F 2A 13 00 7F 7F 00
++	Strings:
++		A0
+ 
+ Handle 0x0007, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: A1
+-	Bank Connections: 2
+-	Current Speed: 42 ns
+-	Type: Other Unknown EDO
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 07 00 01 2F 2A 13 00 7F 7F 00
++	Strings:
++		A1
+ 
+ Handle 0x0008, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: A2
+-	Bank Connections: 3
+-	Current Speed: 42 ns
+-	Type: Other Unknown EDO
+-	Installed Size: 1024 MB (Single-bank Connection)
+-	Enabled Size: 1024 MB (Single-bank Connection)
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 08 00 01 3F 2A 13 00 0A 0A 00
++	Strings:
++		A2
+ 
+ Handle 0x0009, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: A3
+-	Bank Connections: 4
+-	Current Speed: 42 ns
+-	Type: Other Unknown EDO
+-	Installed Size: 1024 MB (Single-bank Connection)
+-	Enabled Size: 1024 MB (Single-bank Connection)
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 09 00 01 4F 2A 13 00 0A 0A 00
++	Strings:
++		A3
+ 
+ Handle 0x000A, DMI type 7, 19 bytes
+ Cache Information
+@@ -235,7 +213,7 @@
+ 	Configuration: Disabled, Not Socketed, Level 2
+ 	Operational Mode: Write Through
+ 	Location: Internal
+-	Installed Size: 0 kB
++	Installed Size: 0 bytes
+ 	Maximum Size: 1 MB
+ 	Supported SRAM Types:
+ 		Synchronous
+@@ -246,204 +224,186 @@
+ 	Associativity: Unknown
+ 
+ Handle 0x000E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: PRIMARY IDE
+-	Internal Connector Type: On Board IDE
+-	External Reference Designator:  
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 0E 00 01 16 02 00 FF
++	Strings:
++		PRIMARY IDE
++		 
+ 
+ Handle 0x000F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: FDD
+-	Internal Connector Type: On Board Floppy
+-	External Reference Designator:  
+-	External Connector Type: None
+-	Port Type: 8251 FIFO Compatible
++Unsupported
++	Header and Data:
++		08 09 0F 00 01 17 02 00 A1
++	Strings:
++		FDD
++		 
+ 
+ Handle 0x0010, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: COM1
+-	Internal Connector Type: 9 Pin Dual Inline (pin 10 cut)
+-	External Reference Designator:  
+-	External Connector Type: DB-9 male
+-	Port Type: Serial Port 16450 Compatible
++Unsupported
++	Header and Data:
++		08 09 10 00 01 18 02 08 07
++	Strings:
++		COM1
++		 
+ 
+ Handle 0x0011, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: LPT1
+-	Internal Connector Type: DB-25 female
+-	External Reference Designator:  
+-	External Connector Type: DB-25 female
+-	Port Type: Parallel Port ECP/EPP
++Unsupported
++	Header and Data:
++		08 09 11 00 01 05 02 05 05
++	Strings:
++		LPT1
++		 
+ 
+ Handle 0x0012, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Keyboard
+-	Internal Connector Type: Other
+-	External Reference Designator:  
+-	External Connector Type: PS/2
+-	Port Type: Keyboard Port
++Unsupported
++	Header and Data:
++		08 09 12 00 01 FF 02 0F 0D
++	Strings:
++		Keyboard
++		 
+ 
+ Handle 0x0013, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 13 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x0014, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 14 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x0015, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 15 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x0016, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 16 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x0017, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 17 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x0018, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 18 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x0019, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 19 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x001A, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1A 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x001B, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1B 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x001C, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1C 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x001D, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1D 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x001E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: USB
+-	Internal Connector Type: None
+-	External Reference Designator:  
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1E 00 01 00 02 12 10
++	Strings:
++		USB
++		 
+ 
+ Handle 0x001F, DMI type 9, 13 bytes
+-System Slot Information
+-	Designation: PCI
+-	Type: 32-bit PCI
+-	Current Usage: In Use
+-	Length: Long
+-	ID: 7
+-	Characteristics:
+-		5.0 V is provided
+-		3.3 V is provided
+-		PME signal is supported
+-		SMBus signal is supported
++Unsupported
++	Header and Data:
++		09 0D 1F 00 01 06 05 04 04 07 00 06 05
++	Strings:
++		PCI
+ 
+ Handle 0x0020, DMI type 9, 13 bytes
+-System Slot Information
+-	Designation: PCI
+-	Type: 32-bit PCI
+-	Current Usage: Available
+-	Length: Long
+-	ID: 6
+-	Characteristics:
+-		5.0 V is provided
+-		3.3 V is provided
+-		PME signal is supported
+-		SMBus signal is supported
++Unsupported
++	Header and Data:
++		09 0D 20 00 01 06 05 03 04 06 00 06 05
++	Strings:
++		PCI
+ 
+ Handle 0x0021, DMI type 9, 13 bytes
+-System Slot Information
+-	Designation: PCI Express x16
+-	Type: x16 PCI Express
+-	Current Usage: Unknown
+-	Length: Other
+-	ID: 0
+-	Characteristics:
+-		3.3 V is provided
++Unsupported
++	Header and Data:
++		09 0D 21 00 01 A5 0D 02 01 00 00 04 00
++	Strings:
++		PCI Express x16
+ 
+ Handle 0x0022, DMI type 9, 13 bytes
+-System Slot Information
+-	Designation: PCI Express x1
+-	Type: x1 PCI Express
+-	Current Usage: Unknown
+-	Length: Other
+-	ID: 0
+-	Characteristics:
+-		3.3 V is provided
++Unsupported
++	Header and Data:
++		09 0D 22 00 01 A5 08 02 01 00 00 04 00
++	Strings:
++		PCI Express x1
+ 
+ Handle 0x0023, DMI type 13, 22 bytes
+-BIOS Language Information
+-	Language Description Format: Long
+-	Installable Languages: 3
++Unsupported
++	Header and Data:
++		0D 16 23 00 03 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
+ 		n|US|iso8859-1
+ 		n|US|iso8859-1
+ 		r|CA|iso8859-1
+-	Currently Installed Language: n|US|iso8859-1
++		a|JP|unicode
+ 
+ Handle 0x0024, DMI type 16, 15 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: None
+-	Maximum Capacity: 16 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 4
++Unsupported
++	Header and Data:
++		10 0F 24 00 03 03 03 00 00 00 01 FE FF 04 00
++	Strings:
++		 
+ 
+ Handle 0x0025, DMI type 17, 27 bytes
+ Memory Device
+@@ -522,52 +482,50 @@
+ 	Part Number:  
+ 
+ Handle 0x0029, DMI type 19, 15 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x0007FFFFFFF
+-	Range Size: 2 GB
+-	Physical Array Handle: 0x0024
+-	Partition Width: 1
++Unsupported
++	Header and Data:
++		13 0F 29 00 00 00 00 00 FF FF 1F 00 24 00 01
++	Strings:
++		 
+ 
+ Handle 0x002A, DMI type 20, 19 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x000000003FF
+-	Range Size: 1 kB
+-	Physical Device Handle: 0x0025
+-	Memory Array Mapped Address Handle: 0x0029
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 13 2A 00 00 00 00 00 00 00 00 00 25 00 29 00
++		01 00 00
++	Strings:
++		 
+ 
+ Handle 0x002B, DMI type 20, 19 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x000000003FF
+-	Range Size: 1 kB
+-	Physical Device Handle: 0x0026
+-	Memory Array Mapped Address Handle: 0x0029
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 13 2B 00 00 00 00 00 00 00 00 00 26 00 29 00
++		01 00 00
++	Strings:
++		 
+ 
+ Handle 0x002C, DMI type 20, 19 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x0003FFFFFFF
+-	Range Size: 1 GB
+-	Physical Device Handle: 0x0027
+-	Memory Array Mapped Address Handle: 0x0029
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 13 2C 00 00 00 00 00 FF FF 0F 00 27 00 29 00
++		01 00 00
++	Strings:
++		 
+ 
+ Handle 0x002D, DMI type 20, 19 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00040000000
+-	Ending Address: 0x0007FFFFFFF
+-	Range Size: 1 GB
+-	Physical Device Handle: 0x0028
+-	Memory Array Mapped Address Handle: 0x0029
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 13 2D 00 00 00 10 00 FF FF 1F 00 28 00 29 00
++		01 00 00
++	Strings:
++		 
+ 
+ Handle 0x002E, DMI type 32, 11 bytes
+-System Boot Information
+-	Status: No errors detected
++Unsupported
++	Header and Data:
++		20 0B 2E 00 00 00 00 00 00 00 00
++	Strings:
++		 
+ 
+ Handle 0x002F, DMI type 188, 212 bytes
+ OEM-specific Type

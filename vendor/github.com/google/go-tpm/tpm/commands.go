@@ -1,4 +1,4 @@
-// Copyright (c) 2014, Google Inc. All rights reserved.
+// Copyright (c) 2014, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ func osap(rw io.ReadWriter, osap *osapCommand) (*osapResponse, error) {
 }
 
 // seal performs a seal operation on the TPM.
-func seal(rw io.ReadWriter, sc *sealCommand, pcrs *pcrInfoLong, data []byte, ca *commandAuth) (*tpmStoredData, *responseAuth, uint32, error) {
+func seal(rw io.ReadWriter, sc *sealCommand, pcrs *pcrInfoLong, data tpmutil.U32Bytes, ca *commandAuth) (*tpmStoredData, *responseAuth, uint32, error) {
 	pcrsize := binary.Size(pcrs)
 	if pcrsize < 0 {
 		return nil, nil, 0, errors.New("couldn't compute the size of a pcrInfoLong")
@@ -91,7 +91,7 @@ func seal(rw io.ReadWriter, sc *sealCommand, pcrs *pcrInfoLong, data []byte, ca 
 // unseal data sealed by the TPM.
 func unseal(rw io.ReadWriter, keyHandle tpmutil.Handle, sealed *tpmStoredData, ca1 *commandAuth, ca2 *commandAuth) ([]byte, *responseAuth, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, sealed, ca1, ca2}
-	var outb []byte
+	var outb tpmutil.U32Bytes
 	var ra1 responseAuth
 	var ra2 responseAuth
 	out := []interface{}{&outb, &ra1, &ra2}
@@ -143,6 +143,40 @@ func getPubKey(rw io.ReadWriter, keyHandle tpmutil.Handle, ca *commandAuth) (*pu
 	return &pk, &ra, ret, nil
 }
 
+// getCapability reads the requested capability and sub-capability from NVRAM
+func getCapability(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
+	subCapBytes, err := tpmutil.Pack(subcap)
+	if err != nil {
+		return nil, err
+	}
+	var b tpmutil.U32Bytes
+	in := []interface{}{cap, tpmutil.U32Bytes(subCapBytes)}
+	out := []interface{}{&b}
+	if _, err := submitTPMRequest(rw, tagRQUCommand, ordGetCapability, in, out); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// nvReadValue reads from the NVRAM
+// If TPM isn't locked, no authentification is needed.
+// See TPM-Main-Part-3-Commands-20.4
+func nvReadValue(rw io.ReadWriter, index, offset, len uint32, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+	var b tpmutil.U32Bytes
+	var ra responseAuth
+	in := []interface{}{index, offset, len}
+	if ca != nil {
+		in = append(in, ca)
+	}
+	out := []interface{}{&b, &ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVReadValue, in, out)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	return b, &ra, ret, nil
+}
+
 // quote2 signs arbitrary data under a given set of PCRs and using a key
 // specified by keyHandle. It returns information about the PCRs it signed
 // under, the signature, auth information, and optionally information about the
@@ -152,8 +186,8 @@ func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcr
 	in := []interface{}{keyHandle, hash, pcrs, addVersion, ca}
 	var pcrShort pcrInfoShort
 	var capInfo capVersionInfo
-	var capBytes []byte
-	var sig []byte
+	var capBytes tpmutil.U32Bytes
+	var sig tpmutil.U32Bytes
 	var ra responseAuth
 	out := []interface{}{&pcrShort, &capBytes, &sig, &ra}
 	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordQuote2, in, out)
@@ -162,17 +196,17 @@ func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcr
 	}
 
 	// Deserialize the capInfo, if any.
-	if len(capBytes) == 0 {
+	if len([]byte(capBytes)) == 0 {
 		return &pcrShort, nil, capBytes, sig, &ra, ret, nil
 	}
 
 	size := binary.Size(capInfo.CapVersionFixed)
-	capInfo.VendorSpecific = make([]byte, len(capBytes)-size)
-	if _, err := tpmutil.Unpack(capBytes[:size], &capInfo.CapVersionFixed); err != nil {
+	capInfo.VendorSpecific = make([]byte, len([]byte(capBytes))-size)
+	if _, err := tpmutil.Unpack([]byte(capBytes)[:size], &capInfo.CapVersionFixed); err != nil {
 		return nil, nil, nil, nil, nil, 0, err
 	}
 
-	copy(capInfo.VendorSpecific, capBytes[size:])
+	copy(capInfo.VendorSpecific, []byte(capBytes)[size:])
 
 	return &pcrShort, &capInfo, capBytes, sig, &ra, ret, nil
 }
@@ -182,7 +216,7 @@ func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcr
 func quote(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrSelection, ca *commandAuth) (*pcrComposite, []byte, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, hash, pcrs, ca}
 	var pcrc pcrComposite
-	var sig []byte
+	var sig tpmutil.U32Bytes
 	var ra responseAuth
 	out := []interface{}{&pcrc, &sig, &ra}
 	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordQuote, in, out)
@@ -198,7 +232,7 @@ func quote(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrS
 func makeIdentity(rw io.ReadWriter, encAuth digest, idDigest digest, k *key, ca1 *commandAuth, ca2 *commandAuth) (*key, []byte, *responseAuth, *responseAuth, uint32, error) {
 	in := []interface{}{encAuth, idDigest, k, ca1, ca2}
 	var aik key
-	var sig []byte
+	var sig tpmutil.U32Bytes
 	var ra1 responseAuth
 	var ra2 responseAuth
 	out := []interface{}{&aik, &sig, &ra1, &ra2}
@@ -208,6 +242,22 @@ func makeIdentity(rw io.ReadWriter, encAuth digest, idDigest digest, k *key, ca1
 	}
 
 	return &aik, sig, &ra1, &ra2, ret, nil
+}
+
+// activateIdentity provides the TPM with an EK encrypted challenge and asks it to
+// decrypt the challenge and return the secret (symmetric key).
+func activateIdentity(rw io.ReadWriter, keyHandle tpmutil.Handle, blob tpmutil.U32Bytes, ca1 *commandAuth, ca2 *commandAuth) (*symKey, *responseAuth, *responseAuth, uint32, error) {
+	in := []interface{}{keyHandle, blob, ca1, ca2}
+	var symkey symKey
+	var ra1 responseAuth
+	var ra2 responseAuth
+	out := []interface{}{&symkey, &ra1, &ra2}
+	ret, err := submitTPMRequest(rw, tagRQUAuth2Command, ordActivateIdentity, in, out)
+	if err != nil {
+		return nil, nil, nil, 0, err
+	}
+
+	return &symkey, &ra1, &ra2, ret, nil
 }
 
 // resetLockValue resets the dictionary-attack lock in the TPM, using owner
@@ -274,7 +324,7 @@ func ownerClear(rw io.ReadWriter, ca *commandAuth) (*responseAuth, uint32, error
 // owner auth. This operation can only be performed if there is no owner. The
 // TPM can be put into this state using TPM_OwnerClear. The encOwnerAuth and
 // encSRKAuth values must be encrypted using the endorsement key.
-func takeOwnership(rw io.ReadWriter, encOwnerAuth []byte, encSRKAuth []byte, srk *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
+func takeOwnership(rw io.ReadWriter, encOwnerAuth tpmutil.U32Bytes, encSRKAuth tpmutil.U32Bytes, srk *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
 	in := []interface{}{pidOwner, encOwnerAuth, encSRKAuth, srk, ca}
 	var k key
 	var ra responseAuth
@@ -301,9 +351,9 @@ func createWrapKey(rw io.ReadWriter, encUsageAuth digest, encMigrationAuth diges
 	return &k, &ra, ret, nil
 }
 
-func sign(rw io.ReadWriter, keyHandle tpmutil.Handle, data []byte, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+func sign(rw io.ReadWriter, keyHandle tpmutil.Handle, data tpmutil.U32Bytes, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, data, ca}
-	var signature []byte
+	var signature tpmutil.U32Bytes
 	var ra responseAuth
 	out := []interface{}{&signature, &ra}
 	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordSign, in, out)

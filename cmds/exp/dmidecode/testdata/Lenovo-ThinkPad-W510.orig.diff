@@ -1,0 +1,536 @@
+--- testdata/Lenovo-ThinkPad-W510.orig.txt
++++ testdata/Lenovo-ThinkPad-W510.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/Lenovo-ThinkPad-W510.bin.
+ SMBIOS 2.6 present.
+ 82 structures occupying 3123 bytes.
+@@ -52,7 +52,8 @@
+ 	Version: Not Available
+ 	Serial Number: 1ZHRZ05562E
+ 	Asset Tag: Not Specified
+-	Features: None
++	Features:
++		
+ 	Location In Chassis: Not Specified
+ 	Chassis Handle: 0xFFFF
+ 	Type: Unknown
+@@ -134,70 +135,42 @@
+ 	Core Count: 4
+ 	Core Enabled: 4
+ 	Thread Count: 8
+-	Characteristics: None
++	Characteristics:
++		Unknown
+ 
+ Handle 0x0007, DMI type 5, 24 bytes
+-Memory Controller Information
+-	Error Detecting Method: None
+-	Error Correcting Capabilities:
+-		None
+-	Supported Interleave: One-way Interleave
+-	Current Interleave: One-way Interleave
+-	Maximum Memory Module Size: 16384 MB
+-	Maximum Total Memory Size: 65536 MB
+-	Supported Speeds:
+-		Other
+-	Supported Memory Types:
+-		DIMM
+-		SDRAM
+-	Memory Module Voltage: 2.9 V
+-	Associated Memory Slots: 4
+-		0x0008
+-		0x0009
+-		0x000A
+-		0x000B
+-	Enabled Error Correcting Capabilities:
+-		Unknown
++Unsupported
++	Header and Data:
++		05 18 07 00 03 04 03 03 0E 01 00 00 05 04 04 08
++		00 09 00 0A 00 0B 00 02
+ 
+ Handle 0x0008, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: DIMM Slot 1
+-	Bank Connections: 0 1
+-	Current Speed: 43 ns
+-	Type: DIMM SDRAM
+-	Installed Size: 4096 MB (Single-bank Connection)
+-	Enabled Size: 4096 MB (Single-bank Connection)
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 08 00 01 01 2B 00 05 0C 0C 00
++	Strings:
++		DIMM Slot 1
+ 
+ Handle 0x0009, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: DIMM Slot 2
+-	Bank Connections: 2 3
+-	Current Speed: 43 ns
+-	Type: DIMM SDRAM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 09 00 01 23 2B 00 05 7F 7F 00
++	Strings:
++		DIMM Slot 2
+ 
+ Handle 0x000A, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: DIMM Slot 3
+-	Bank Connections: 4 5
+-	Current Speed: 43 ns
+-	Type: DIMM SDRAM
+-	Installed Size: 4096 MB (Single-bank Connection)
+-	Enabled Size: 4096 MB (Single-bank Connection)
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 0A 00 01 45 2B 00 05 0C 0C 00
++	Strings:
++		DIMM Slot 3
+ 
+ Handle 0x000B, DMI type 6, 12 bytes
+-Memory Module Information
+-	Socket Designation: DIMM Slot 4
+-	Bank Connections: 6 7
+-	Current Speed: 43 ns
+-	Type: DIMM SDRAM
+-	Installed Size: Not Installed
+-	Enabled Size: Not Installed
+-	Error Status: OK
++Unsupported
++	Header and Data:
++		06 0C 0B 00 01 67 2B 00 05 7F 7F 00
++	Strings:
++		DIMM Slot 4
+ 
+ Handle 0x000C, DMI type 7, 19 bytes
+ Cache Information
+@@ -254,20 +227,20 @@
+ 	Associativity: Unknown
+ 
+ Handle 0x000F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: External Monitor
+-	External Connector Type: DB-15 female
+-	Port Type: Video Port
++Unsupported
++	Header and Data:
++		08 09 0F 00 01 00 02 07 1C
++	Strings:
++		Not Available
++		External Monitor
+ 
+ Handle 0x0010, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: DisplayPort
+-	External Connector Type: Other
+-	Port Type: Video Port
++Unsupported
++	Header and Data:
++		08 09 10 00 01 00 02 FF 1C
++	Strings:
++		Not Available
++		DisplayPort
+ 
+ Handle 0x0011, DMI type 126, 9 bytes
+ Inactive
+@@ -276,12 +249,12 @@
+ Inactive
+ 
+ Handle 0x0013, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: Headphone/Microphone Combo Jack
+-	External Connector Type: Mini Jack (headphones)
+-	Port Type: Audio Port
++Unsupported
++	Header and Data:
++		08 09 13 00 01 00 02 1F 1D
++	Strings:
++		Not Available
++		Headphone/Microphone Combo Jack
+ 
+ Handle 0x0014, DMI type 126, 9 bytes
+ Inactive
+@@ -290,52 +263,52 @@
+ Inactive
+ 
+ Handle 0x0016, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: Ethernet
+-	External Connector Type: RJ-45
+-	Port Type: Network Port
++Unsupported
++	Header and Data:
++		08 09 16 00 01 00 02 0B 1F
++	Strings:
++		Not Available
++		Ethernet
+ 
+ Handle 0x0017, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: Modem
+-	External Connector Type: RJ-11
+-	Port Type: Modem Port
++Unsupported
++	Header and Data:
++		08 09 17 00 01 00 02 0A 1E
++	Strings:
++		Not Available
++		Modem
+ 
+ Handle 0x0018, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 18 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 1
+ 
+ Handle 0x0019, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 2
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 19 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 2
+ 
+ Handle 0x001A, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 3
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1A 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 3
+ 
+ Handle 0x001B, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: USB 4
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 1B 00 01 00 02 12 10
++	Strings:
++		Not Available
++		USB 4
+ 
+ Handle 0x001C, DMI type 126, 9 bytes
+ Inactive
+@@ -359,87 +332,72 @@
+ Inactive
+ 
+ Handle 0x0023, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: Not Available
+-	Internal Connector Type: None
+-	External Reference Designator: eSATA 1
+-	External Connector Type: SAS/SATA Plug Receptacle
+-	Port Type: SATA
++Unsupported
++	Header and Data:
++		08 09 23 00 01 00 02 22 20
++	Strings:
++		Not Available
++		eSATA 1
+ 
+ Handle 0x0024, DMI type 126, 9 bytes
+ Inactive
+ 
+ Handle 0x0025, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: ExpressCard Slot
+-	Type: x1 PCI Express
+-	Current Usage: Available
+-	Length: Other
+-	ID: 0
+-	Characteristics:
+-		Hot-plug devices are supported
+-	Bus Address: 00ff:ff:1f.7
++Unsupported
++	Header and Data:
++		09 11 25 00 01 A5 08 03 01 00 00 00 02 FF 00 FF
++		FF
++	Strings:
++		ExpressCard Slot
+ 
+ Handle 0x0026, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: Media Card Slot
+-	Type: Other
+-	Current Usage: Available
+-	Length: Other
+-	Characteristics:
+-		Hot-plug devices are supported
+-	Bus Address: 00ff:ff:1f.7
++Unsupported
++	Header and Data:
++		09 11 26 00 01 01 01 03 01 04 00 00 02 FF 00 FF
++		FF
++	Strings:
++		Media Card Slot
+ 
+ Handle 0x0027, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: SmartCard Slot
+-	Type: Other
+-	Current Usage: Available
+-	Length: Other
+-	Characteristics:
+-		Hot-plug devices are supported
+-	Bus Address: 00ff:ff:1f.7
++Unsupported
++	Header and Data:
++		09 11 27 00 01 01 01 03 01 04 00 00 02 FF 00 FF
++		FF
++	Strings:
++		SmartCard Slot
+ 
+ Handle 0x0028, DMI type 10, 6 bytes
+-On Board Device Information
+-	Type: Other
+-	Status: Disabled
+-	Description: IBM Embedded Security hardware
++Unsupported
++	Header and Data:
++		0A 06 28 00 01 01
++	Strings:
++		IBM Embedded Security hardware
+ 
+ Handle 0x0029, DMI type 11, 5 bytes
+-OEM Strings
+-	String 1: IBM ThinkPad Embedded Controller -[6MHT46WW-1.21    ]-
++Unsupported
++	Header and Data:
++		0B 05 29 00 01
++	Strings:
++		IBM ThinkPad Embedded Controller -[6MHT46WW-1.21    ]-
+ 
+ Handle 0x002A, DMI type 13, 22 bytes
+-BIOS Language Information
+-	Language Description Format: Abbreviated
+-	Installable Languages: 1
++Unsupported
++	Header and Data:
++		0D 16 2A 00 01 01 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
+ 		enUS
+-	Currently Installed Language: enUS
+ 
+ Handle 0x002B, DMI type 15, 25 bytes
+-System Event Log
+-	Area Length: 0 bytes
+-	Header Start Offset: 0x0000
+-	Header Length: 16 bytes
+-	Data Start Offset: 0x0010
+-	Access Method: General-purpose non-volatile data functions
+-	Access Address: 0x0000
+-	Status: Valid, Not Full
+-	Change Token: 0x00000000
+-	Header Format: Type 1
+-	Supported Log Type Descriptors: 1
+-	Descriptor 1: POST error
+-	Data Format 1: POST results bitmap
++Unsupported
++	Header and Data:
++		0F 19 2B 00 00 00 00 00 10 00 04 01 00 00 00 00
++		00 00 00 00 01 01 02 08 04
+ 
+ Handle 0x002C, DMI type 16, 15 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: None
+-	Maximum Capacity: 16 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 4
++Unsupported
++	Header and Data:
++		10 0F 2C 00 03 03 03 00 00 00 01 FE FF 04 00
+ 
+ Handle 0x002D, DMI type 17, 28 bytes
+ Memory Device
+@@ -522,80 +480,62 @@
+ 	Rank: Unknown
+ 
+ Handle 0x0031, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 31 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0032, DMI type 19, 15 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x001FFFFFFFF
+-	Range Size: 8 GB
+-	Physical Array Handle: 0x002C
+-	Partition Width: 2
++Unsupported
++	Header and Data:
++		13 0F 32 00 00 00 00 00 FF FF 7F 00 2C 00 02
+ 
+ Handle 0x0033, DMI type 20, 19 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x000FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x002D
+-	Memory Array Mapped Address Handle: 0x0032
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 13 33 00 00 00 00 00 FF FF 3F 00 2D 00 32 00
++		01 00 00
+ 
+ Handle 0x0034, DMI type 20, 19 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x000FFFFFC00
+-	Ending Address: 0x000FFFFFFFF
+-	Range Size: 1 kB
+-	Physical Device Handle: 0x002E
+-	Memory Array Mapped Address Handle: 0x0032
+-	Partition Row Position: 1
++Unsupported
++	Header and Data:
++		14 13 34 00 FF FF 3F 00 FF FF 3F 00 2E 00 32 00
++		01 00 00
+ 
+ Handle 0x0035, DMI type 21, 7 bytes
+-Built-in Pointing Device
+-	Type: Track Point
+-	Interface: PS/2
+-	Buttons: 3
++Unsupported
++	Header and Data:
++		15 07 35 00 05 04 03
+ 
+ Handle 0x0036, DMI type 21, 7 bytes
+-Built-in Pointing Device
+-	Type: Touch Pad
+-	Interface: PS/2
+-	Buttons: 0
++Unsupported
++	Header and Data:
++		15 07 36 00 07 04 00
+ 
+ Handle 0x0037, DMI type 22, 26 bytes
+-Portable Battery
+-	Location: Rear
+-	Manufacturer: SANYO
+-	Name: 45N1173
+-	Design Capacity: 85860 mWh
+-	Design Voltage: 10800 mV
+-	SBDS Version: 03.01
+-	Maximum Error: Unknown
+-	SBDS Serial Number: 629C
+-	SBDS Manufacture Date: 2014-01-23
+-	SBDS Chemistry: LION
+-	OEM-specific Information: 0x00000000
++Unsupported
++	Header and Data:
++		16 1A 37 00 01 02 00 00 03 02 8A 21 30 2A 04 FF
++		9C 62 37 44 05 0A 00 00 00 00
++	Strings:
++		Rear
++		SANYO
++		45N1173
++		03.01
++		LION
+ 
+ Handle 0x0038, DMI type 126, 26 bytes
+ Inactive
+ 
+ Handle 0x0039, DMI type 24, 5 bytes
+-Hardware Security
+-	Power-On Password Status: Disabled
+-	Keyboard Password Status: Disabled
+-	Administrator Password Status: Disabled
+-	Front Panel Reset Status: Unknown
++Unsupported
++	Header and Data:
++		18 05 39 00 03
+ 
+ Handle 0x003A, DMI type 32, 11 bytes
+-System Boot Information
+-	Status: No errors detected
++Unsupported
++	Header and Data:
++		20 0B 3A 00 00 00 00 00 00 00 00
+ 
+ Handle 0x003B, DMI type 131, 17 bytes
+ OEM-specific Type
+@@ -608,9 +548,12 @@
+ 		KEYPTRS 23h
+ 
+ Handle 0x003C, DMI type 131, 22 bytes
+-ThinkVantage Technologies
+-	Version: 1
+-	Diagnostics: No
++OEM-specific Type
++	Header and Data:
++		83 16 3C 00 01 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
++		TVT-Enablement
+ 
+ Handle 0x003D, DMI type 132, 7 bytes
+ OEM-specific Type
+@@ -663,8 +606,9 @@
+ 		02 00 03 01 02 00 05 01 02 00 06 01 02 00
+ 
+ Handle 0x0045, DMI type 135, 10 bytes
+-ThinkPad Device Presence Detection
+-	Fingerprint Reader: Present
++OEM-specific Type
++	Header and Data:
++		87 0A 45 00 54 50 07 03 01 01
+ 
+ Handle 0x0046, DMI type 136, 6 bytes
+ OEM-specific Type

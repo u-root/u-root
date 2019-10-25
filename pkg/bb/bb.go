@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package bb implements a Go source-to-source transformation on pure Go code.
-//
-// This AST transformation does the following:
-//
-// - Takes a Go command's source files and rewrites them into Go package files
-//   without global side effects.
-// - Writes a `main.go` file with a `main()` that calls into the appropriate Go
-//   command package based on `argv[0]`.
+// Package bb builds one busybox-like binary out of many Go command sources.
 //
 // This allows you to take two Go commands, such as Go implementations of `sl`
-// and `cowsay` and compile them into one binary.
+// and `cowsay` and compile them into one binary, callable like `./bb sl` and
+// `./bb cowsay`.
 //
 // Which command is invoked is determined by `argv[0]` or `argv[1]` if
 // `argv[0]` is not recognized.
+//
+// Under the hood, bb implements a Go source-to-source transformation on pure
+// Go code. This AST transformation does the following:
+//
+//   - Takes a Go command's source files and rewrites them into Go package files
+//     without global side effects.
+//   - Writes a `main.go` file with a `main()` that calls into the appropriate Go
+//     command package based on `argv[0]`.
 //
 // Principally, the AST transformation moves all global side-effects into
 // callable package functions. E.g. `main` becomes `Main`, each `init` becomes
@@ -125,7 +127,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 			continue
 		}
 		if _, ok := seenPackages[path.Base(pkg)]; ok {
-			return fmt.Errorf("Failed to build with bb: found duplicate pkgs %s", basePkg)
+			return fmt.Errorf("failed to build with bb: found duplicate pkgs %s", basePkg)
 		}
 		seenPackages[basePkg] = true
 
@@ -261,6 +263,7 @@ func ParseAST(files []string) (*token.FileSet, *ast.Package, error) {
 	return fset, p, nil
 }
 
+// SrcFiles lists all the Go source files for p.
 func SrcFiles(p *build.Package) []string {
 	files := make([]string, 0, len(p.GoFiles))
 	for _, name := range p.GoFiles {

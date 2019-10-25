@@ -181,6 +181,8 @@ func (v *VM) CmdlineQuoted() string {
 func (v *VM) Close() {
 	v.gExpect.Close()
 	v.gExpect = nil
+	// Ensure the logs are closed by waiting the complete end
+	<-v.errCh
 }
 
 // Send sends a string to QEMU's serial.

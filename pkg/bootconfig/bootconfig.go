@@ -41,9 +41,7 @@ func (bc *BootConfig) fileNames() []string {
 	str := make([]string, 0)
 	str = append(str, bc.Kernel)
 	str = append(str, bc.Initramfs)
-	for _, module := range bc.Modules {
-		str = append(str, module)
-	}
+	str = append(str, bc.Modules...)
 	return str
 }
 
@@ -100,7 +98,7 @@ func (bc *BootConfig) Boot() error {
 	}
 	err := kexec.Reboot()
 	if err == nil {
-		return errors.New("Unexpectedly returned from Reboot() without error. The system did not reboot")
+		return errors.New("unexpectedly returned from Reboot() without error: system did not reboot")
 	}
 	return err
 }

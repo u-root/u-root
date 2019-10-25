@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -24,6 +25,9 @@ func testMultiboot(t *testing.T, kernel string) {
 	var serial wc
 
 	src := fmt.Sprintf("/home/circleci/%v", kernel)
+	if tk := os.Getenv("UROOT_MULTIBOOT_TEST_KERNEL_DIR"); len(tk) > 0 {
+		src = filepath.Join(tk, kernel)
+	}
 	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
 		t.Skip("multiboot kernel is not present")
 	}
@@ -48,10 +52,12 @@ func testMultiboot(t *testing.T, kernel string) {
 	defer cleanup()
 
 	if err := q.Expect(`"status": "ok"`); err != nil {
+		t.Logf(string(serial.Bytes()))
 		t.Fatalf(`expected '"status": "ok"', got error: %v`, err)
 	}
 
 	output := serial.Bytes()
+	t.Logf(string(serial.Bytes()))
 
 	i := bytes.Index(output, []byte(multiboot.DebugPrefix))
 	if i == -1 {

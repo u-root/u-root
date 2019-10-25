@@ -78,7 +78,7 @@ func cpArgs(args []string) error {
 	if err == nil {
 		todir = toStat.IsDir()
 	}
-	if flag.NArg() > 2 && todir == false {
+	if flag.NArg() > 2 && !todir {
 		log.Fatalf("is not a directory: %s\n", to)
 	}
 
@@ -92,7 +92,7 @@ func cpArgs(args []string) error {
 		//     one is already there.
 		PreCallback: func(src, dst string, srcfi os.FileInfo) error {
 			// check if src is dir
-			if !flags.recursive && srcfi.IsDir() == true {
+			if !flags.recursive && srcfi.IsDir() {
 				log.Printf("cp: -r not specified, omitting directory %s", src)
 				return cp.ErrSkip
 			}

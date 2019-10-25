@@ -86,7 +86,7 @@ func setAvailableTRNG() error {
 	}
 
 	if selectedRNG == "" {
-		return errors.New("No TRNG found on platform")
+		return errors.New("no TRNG found on platform")
 	}
 
 	if err = ioutil.WriteFile(HwRandomCurrentFile, []byte(selectedRNG), 0644); err != nil {

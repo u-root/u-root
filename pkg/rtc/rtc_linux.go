@@ -32,7 +32,7 @@ func OpenRTC() (*RTC, error) {
 		}
 	}
 
-	return nil, errors.New("No RTC device found")
+	return nil, errors.New("no RTC device found")
 }
 
 func (r *RTC) Read() (time.Time, error) {

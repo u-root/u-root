@@ -404,5 +404,4 @@ func NewWord(f Forth, name string, cell Cell, cells ...Cell) {
 		Eval(f, cmd...)
 	}
 	Putop(name, newword)
-	return
 }

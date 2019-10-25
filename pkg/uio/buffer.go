@@ -84,7 +84,6 @@ func NewBuffer(b []byte) *Buffer {
 // Preallocate increases the capacity of the buffer by n bytes.
 func (b *Buffer) Preallocate(n int) {
 	b.data = append(b.data, make([]byte, 0, n)...)
-	return
 }
 
 // WriteN appends n bytes to the Buffer and returns a slice pointing to the
@@ -94,7 +93,7 @@ func (b *Buffer) WriteN(n int) []byte {
 	return b.data[len(b.data)-n:]
 }
 
-// Consume Consumes n bytes from the Buffer. It returns nil, false if there
+// ReadN consumes n bytes from the Buffer. It returns nil, false if there
 // aren't enough bytes left.
 func (b *Buffer) ReadN(n int) ([]byte, error) {
 	if !b.Has(n) {

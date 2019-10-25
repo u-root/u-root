@@ -5,7 +5,11 @@
 package termios
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -17,6 +21,14 @@ type TTY struct {
 
 func New() (*TTY, error) {
 	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return nil, err
+	}
+	return &TTY{f: f}, nil
+}
+
+func NewTTYS(port string) (*TTY, error) {
+	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0620)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +75,16 @@ func (t *TTY) SetWinSize(w *unix.Winsize) error {
 	return SetWinSize(t.f.Fd(), w)
 }
 
+func (t *TTY) Ctty(c *exec.Cmd) {
+	c.Stdin, c.Stdout, c.Stderr = t.f, t.f, t.f
+	if c.SysProcAttr == nil {
+		c.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	c.SysProcAttr.Setctty = true
+	c.SysProcAttr.Setsid = true
+	c.SysProcAttr.Ctty = int(t.f.Fd())
+}
+
 func MakeRaw(term *unix.Termios) *unix.Termios {
 	raw := *term
 	raw.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
@@ -75,4 +97,46 @@ func MakeRaw(term *unix.Termios) *unix.Termios {
 	raw.Cc[unix.VTIME] = 0
 
 	return &raw
+}
+
+// MakeSerialBaud updates the Termios to set the baudrate
+func MakeSerialBaud(term *unix.Termios, baud int) (*unix.Termios, error) {
+	t := *term
+	rate, ok := baud2unixB[baud]
+	if !ok {
+		return nil, fmt.Errorf("%d: Unrecognized baud rate", baud)
+	}
+
+	t.Cflag &^= unix.CBAUD
+	t.Cflag |= rate
+	t.Ispeed = rate
+	t.Ospeed = rate
+
+	return &t, nil
+}
+
+// MakeSerialDefault updates the Termios to typical serial configuration:
+// - Ignore all flow control (modem, hardware, software...)
+// - Translate carriage return to newline on input
+// - Enable canonical mode: Input is available line by line, with line editing
+//   enabled (ERASE, KILL are supported)
+// - Local ECHO is added (and handled by line editing)
+// - Map newline to carriage return newline on output
+func MakeSerialDefault(term *unix.Termios) *unix.Termios {
+	t := *term
+	/* Clear all except baud, stop bit and parity settings */
+	t.Cflag &= unix.CBAUD | unix.CSTOPB | unix.PARENB | unix.PARODD
+	/* Set: 8 bits; ignore Carrier Detect; enable receive */
+	t.Cflag |= unix.CS8 | unix.CLOCAL | unix.CREAD
+	t.Iflag = unix.ICRNL
+	t.Lflag = unix.ICANON | unix.ISIG | unix.ECHO | unix.ECHOE | unix.ECHOK | unix.ECHOKE | unix.ECHOCTL
+	/* non-raw output; add CR to each NL */
+	t.Oflag = unix.OPOST | unix.ONLCR
+	/* reads will block only if < 1 char is available */
+	t.Cc[unix.VMIN] = 1
+	/* no timeout (reads block forever) */
+	t.Cc[unix.VTIME] = 0
+	t.Line = 0
+
+	return &t
 }

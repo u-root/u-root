@@ -51,6 +51,12 @@ func (p *Packet4) GatherDNSSettings() (ns []net.IP, sl []string, dom string) {
 	return
 }
 
+// Configure4 adds IP addresses, routes, and DNS servers to the system.
+func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
+	p := NewPacket4(iface, packet)
+	return p.Configure()
+}
+
 // Configure configures interface using this packet.
 func (p *Packet4) Configure() error {
 	l := p.Lease()
@@ -84,7 +90,7 @@ func (p *Packet4) Configure() error {
 				return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
 			}
 		}
-	} else if gw := p.P.Router(); gw != nil && len(gw) > 0 {
+	} else if gw := p.P.Router(); len(gw) > 0 {
 		r := &netlink.Route{
 			LinkIndex: p.iface.Attrs().Index,
 			Gw:        gw[0],

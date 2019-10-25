@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/strace/internal/binary"
 	"golang.org/x/sys/unix"
 )
 
@@ -545,39 +544,6 @@ func SockFlags(flags int32) string {
 	return SocketFlagSet.Parse(uint64(flags))
 }
 
-// from gvisor sys_socket.go. They defined these as linux-specific but
-// for the most part they are common to many Unices.
-// minListenBacklog is the minimum reasonable backlog for listening sockets.
-const minListenBacklog = 8
-
-// maxListenBacklog is the maximum allowed backlog for listening sockets.
-const maxListenBacklog = 1024
-
-// maxAddrLen is the maximum socket address length we're willing to accept.
-const maxAddrLen = 200
-
-// maxOptLen is the maximum sockopt parameter length we're willing to accept.
-const maxOptLen = 1024
-
-// maxControlLen is the maximum length of the msghdr.msg_control buffer we're
-// willing to accept. Note that this limit is smaller than Linux, which allows
-// buffers upto INT_MAX.
-const maxControlLen = 10 * 1024 * 1024
-
-// nameLenOffset is the offset from the start of the MessageHeader64 struct to
-// the NameLen field.
-const nameLenOffset = 8
-
-// controlLenOffset is the offset form the start of the MessageHeader64 struct
-// to the ControlLen field.
-const controlLenOffset = 40
-
-// messageHeader64Len is the length of a MessageHeader64 struct.
-var messageHeader64Len = uint64(binary.Size(MessageHeader64{}))
-
-// multipleMessageHeader64Len is the length of a multipeMessageHeader64 struct.
-var multipleMessageHeader64Len = uint64(binary.Size(multipleMessageHeader64{}))
-
 // MessageHeader64 is the 64-bit representation of the msghdr struct used in
 // the recvmsg and sendmsg syscalls.
 type MessageHeader64 struct {
@@ -604,12 +570,4 @@ type MessageHeader64 struct {
 	// Flags on the sent/received message.
 	Flags int32
 	_     int32
-}
-
-// multipleMessageHeader64 is the 64-bit representation of the mmsghdr struct used in
-// the recvmmsg and sendmmsg syscalls.
-type multipleMessageHeader64 struct {
-	msgHdr MessageHeader64
-	msgLen uint32
-	_      int32
 }

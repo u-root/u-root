@@ -244,7 +244,7 @@ type EventType string
 
 const (
 	Enter EventType = "E"
-	Exit            = "X"
+	Exit  EventType = "X"
 )
 
 // String is a stringer for TraceRecords

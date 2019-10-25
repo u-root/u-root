@@ -1,4 +1,4 @@
-// Copyright (c) 2014, Google Inc. All rights reserved.
+// Copyright (c) 2014, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ func UnmarshalRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 // unmarshalRSAPublicKey unmarshals a TPM key into a crypto/rsa.PublicKey.
 func (k *key) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	// Currently, we only support algRSA
-	if k.AlgorithmParams.AlgID != algRSA {
+	if k.AlgorithmParams.AlgID != AlgRSA {
 		return nil, errors.New("only TPM_ALG_RSA is supported")
 	}
 
@@ -81,8 +81,8 @@ func UnmarshalPubRSAPublicKey(keyBlob []byte) (*rsa.PublicKey, error) {
 // unmarshalRSAPublicKey unmarshals a TPM pub key into a crypto/rsa.PublicKey.
 // This is almost identical to the identically named function for a TPM key.
 func (pk *pubKey) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
-	// Currently, we only support algRSA
-	if pk.AlgorithmParams.AlgID != algRSA {
+	// Currently, we only support AlgRSA
+	if pk.AlgorithmParams.AlgID != AlgRSA {
 		return nil, errors.New("only TPM_ALG_RSA is supported")
 	}
 
@@ -105,9 +105,9 @@ func (pk *pubKey) unmarshalRSAPublicKey() (*rsa.PublicKey, error) {
 	return rsapk, nil
 }
 
-// newQuoteInfo computes a quoteInfo structure for a given pair of data and PCR
+// NewQuoteInfo computes a quoteInfo structure for a given pair of data and PCR
 // values.
-func newQuoteInfo(data []byte, pcrNums []int, pcrs []byte) (*quoteInfo, error) {
+func NewQuoteInfo(data []byte, pcrNums []int, pcrs []byte) ([]byte, error) {
 	// Compute the composite hash for these PCRs.
 	pcrSel, err := newPCRSelection(pcrNums)
 	if err != nil {
@@ -126,17 +126,12 @@ func newQuoteInfo(data []byte, pcrNums []int, pcrs []byte) (*quoteInfo, error) {
 	}
 	copy(qi.CompositeDigest[:], comp)
 
-	return qi, nil
+	return tpmutil.Pack(qi)
 }
 
 // VerifyQuote verifies a quote against a given set of PCRs.
 func VerifyQuote(pk *rsa.PublicKey, data []byte, quote []byte, pcrNums []int, pcrs []byte) error {
-	qi, err := newQuoteInfo(data, pcrNums, pcrs)
-	if err != nil {
-		return err
-	}
-
-	p, err := tpmutil.Pack(qi)
+	p, err := NewQuoteInfo(data, pcrNums, pcrs)
 	if err != nil {
 		return err
 	}

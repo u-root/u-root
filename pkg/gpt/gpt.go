@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// gpt implements reading and writing of GUID Partition tables.
-// GPTs are dumped in JSON format and written in same.
-// One complication is that we frequently only want to
-// write a very small subset of a GPT. For example,
-// we might only want to change the GUID. As it happens
-// it is simpler (and more useful) just to read and write
-// the whole thing. In for a penny, in for a pound.
+// Package gpt implements reading and writing of GUID Partition tables.
+//
+// GPTs are dumped in JSON format and written in same.  One complication is
+// that we frequently only want to write a very small subset of a GPT. For
+// example, we might only want to change the GUID. As it happens it is simpler
+// (and more useful) just to read and write the whole thing. In for a penny, in
+// for a pound.
 package gpt
 
 import (
@@ -191,7 +191,7 @@ func EqualPart(p, b Part) (err error) {
 // Otherwise, we do a 1:1 comparison.
 func EqualParts(p, b *GPT) (err error) {
 	if len(p.Parts) != len(b.Parts) {
-		return fmt.Errorf("Primary Number of partitions (%d) differs from Backup (%d)", len(p.Parts), len(b.Parts))
+		return fmt.Errorf("primary Number of partitions (%d) differs from Backup (%d)", len(p.Parts), len(b.Parts))
 	}
 	for i := range p.Parts {
 		if e := EqualPart(p.Parts[i], b.Parts[i]); e != nil {
@@ -277,7 +277,6 @@ func Write(w io.WriterAt, p *PartitionTable) error {
 		return err
 	}
 	return nil
-
 }
 
 // Write writes the GPT to w. It generates the partition and header CRC before writing.
@@ -295,7 +294,7 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 
 	ps := int64(g.PartStart * BlockSize)
 	if _, err := w.WriteAt(h, ps); err != nil {
-		return fmt.Errorf("Writing %d bytes of partition table at %v: %v", len(h), ps, err)
+		return fmt.Errorf("writing %d bytes of partition table at %v: %v", len(h), ps, err)
 	}
 
 	g.PartCRC = crc32.ChecksumIEEE(h[:])
@@ -347,11 +346,11 @@ func New(r io.ReaderAt) (*PartitionTable, error) {
 	}
 
 	if err := EqualHeader(g.Header, b.Header); err != nil {
-		return p, fmt.Errorf("Primary GPT and backup GPT Header differ: %v", err)
+		return p, fmt.Errorf("primary GPT and backup GPT header differ: %v", err)
 	}
 
 	if g.CRC == b.CRC {
-		return p, fmt.Errorf("Primary (%v) and Backup (%v) Header CRC (%x) are the same and should differ", g.Header, b.Header, g.CRC)
+		return p, fmt.Errorf("primary (%v) and backup (%v) header CRC (%x) are the same and should differ", g.Header, b.Header, g.CRC)
 	}
 
 	p.Backup = b
