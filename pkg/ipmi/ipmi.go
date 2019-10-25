@@ -20,18 +20,18 @@ const (
 	_IOC_SIZESHIFT = _IOC_TYPESHIFT + _IOC_TYPEBITS
 	_IOC_DIRSHIFT  = _IOC_SIZESHIFT + _IOC_SIZEBITS
 
-	_IPMI_BMC_CHANNEL = 0xf
-	_IPMI_BUF_SIZE = 1024
-	_IPMI_IOC_MAGIC = 'i'
-	_IPMI_NETFN_APP = 0x6
-	_IPMI_OPENIPMI_READ_TIMEOUT = 15
+	_IPMI_BMC_CHANNEL                = 0xf
+	_IPMI_BUF_SIZE                   = 1024
+	_IPMI_IOC_MAGIC                  = 'i'
+	_IPMI_NETFN_APP                  = 0x6
+	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
 	_BMC_SET_WATCHDOG_TIMER = 0x24
 	_BMC_GET_WATCHDOG_TIMER = 0x25
 
-	_IPM_WATCHDOG_NO_ACTION = 0x00
-	_IPM_WATCHDOG_SMS_OS = 0x04
+	_IPM_WATCHDOG_NO_ACTION    = 0x00
+	_IPM_WATCHDOG_SMS_OS       = 0x04
 	_IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
 )
 
@@ -82,7 +82,7 @@ func ior(t int, nr int, size int) int {
 }
 
 func iowr(t int, nr int, size int) int {
-	return ioc(_IOC_READ | _IOC_WRITE, t, nr, size)
+	return ioc(_IOC_READ|_IOC_WRITE, t, nr, size)
 }
 
 func ioctl(fd int, name int, data unsafe.Pointer) syscall.Errno {
@@ -128,7 +128,7 @@ func (i *Ipmi) sendrecv(req *req) (*recv, error) {
 		Sec:  _IPMI_OPENIPMI_READ_TIMEOUT,
 		Usec: 0,
 	}
-	if _, err := syscall.Select(i.fd + 1, set, nil, nil, &time); err != nil {
+	if _, err := syscall.Select(i.fd+1, set, nil, nil, &time); err != nil {
 		return nil, err
 	}
 
@@ -146,7 +146,7 @@ func (i *Ipmi) sendrecv(req *req) (*recv, error) {
 
 func (i *Ipmi) WatchdogRunning() (bool, error) {
 	req := &req{}
-	req.msg.cmd   = _BMC_GET_WATCHDOG_TIMER
+	req.msg.cmd = _BMC_GET_WATCHDOG_TIMER
 	req.msg.netfn = _IPMI_NETFN_APP
 
 	recv, err := i.sendrecv(req)
@@ -154,7 +154,7 @@ func (i *Ipmi) WatchdogRunning() (bool, error) {
 		return false, err
 	}
 
-	use := (*[2]byte) (recv.msg.data)
+	use := (*[2]byte)(recv.msg.data)
 
 	if (use[1] & 0x40) != 0 {
 		return true, nil
@@ -165,16 +165,16 @@ func (i *Ipmi) WatchdogRunning() (bool, error) {
 
 func (i *Ipmi) ShutoffWatchdog() error {
 	req := &req{}
-	req.msg.cmd   = _BMC_SET_WATCHDOG_TIMER
+	req.msg.cmd = _BMC_SET_WATCHDOG_TIMER
 	req.msg.netfn = _IPMI_NETFN_APP
 
 	var data [6]byte
 	data[0] = _IPM_WATCHDOG_SMS_OS
 	data[1] = _IPM_WATCHDOG_NO_ACTION
-	data[2] = 0x00;  // pretimeout interval
+	data[2] = 0x00 // pretimeout interval
 	data[3] = _IPM_WATCHDOG_CLEAR_SMS_OS
-	data[4] = 0xb8;  // countdown lsb (100 ms/count)
-	data[5] = 0x0b;  // countdown msb - 5 mins
+	data[4] = 0xb8 // countdown lsb (100 ms/count)
+	data[5] = 0x0b // countdown msb - 5 mins
 	req.msg.data = unsafe.Pointer(&data)
 	req.msg.dataLen = 6
 
