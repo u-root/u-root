@@ -45,7 +45,7 @@ var (
 )
 
 type Ipmi struct {
-	fd int
+	*os.File
 }
 
 type msg struct {
@@ -89,12 +89,12 @@ func iowr(t int, nr int, size int) int {
 	return ioc(_IOC_READ|_IOC_WRITE, t, nr, size)
 }
 
-func ioctl(fd int, name int, data unsafe.Pointer) syscall.Errno {
-	_, _, err := syscall.RawSyscall(syscall.SYS_IOCTL, uintptr(fd), uintptr(name), uintptr(data))
+func ioctl(fd uintptr, name int, data unsafe.Pointer) syscall.Errno {
+	_, _, err := syscall.RawSyscall(syscall.SYS_IOCTL, fd, uintptr(name), uintptr(data))
 	return err
 }
 
-func fd_set(fd int, p *syscall.FdSet) {
+func fd_set(fd uintptr, p *syscall.FdSet) {
 	p.Bits[fd/64] |= 1 << (uint(fd) % 64)
 }
 
@@ -106,12 +106,7 @@ func Open(devnum int) (*Ipmi, error) {
 		return nil, err
 	}
 
-	fd := int(f.Fd())
-	return &Ipmi{fd: fd}, nil
-}
-
-func (i *Ipmi) Close() error {
-	return syscall.Close(i.fd)
+	return &Ipmi{File: f}, nil
 }
 
 func (i *Ipmi) sendrecv(req *req) (*recv, error) {
@@ -122,17 +117,17 @@ func (i *Ipmi) sendrecv(req *req) (*recv, error) {
 
 	req.addr = addr
 	req.addrLen = uint32(unsafe.Sizeof(addr))
-	if err := ioctl(i.fd, _IPMICTL_SEND_COMMAND, unsafe.Pointer(req)); err != 0 {
+	if err := ioctl(i.Fd(), _IPMICTL_SEND_COMMAND, unsafe.Pointer(req)); err != 0 {
 		return nil, err
 	}
 
 	set := &syscall.FdSet{}
-	fd_set(i.fd, set)
+	fd_set(i.Fd(), set)
 	time := syscall.Timeval{
 		Sec:  _IPMI_OPENIPMI_READ_TIMEOUT,
 		Usec: 0,
 	}
-	if _, err := syscall.Select(i.fd+1, set, nil, nil, &time); err != nil {
+	if _, err := syscall.Select(int(i.Fd()+1), set, nil, nil, &time); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +136,7 @@ func (i *Ipmi) sendrecv(req *req) (*recv, error) {
 	recv.addrLen = uint32(unsafe.Sizeof(addr))
 	recv.msg.data = unsafe.Pointer(new([_IPMI_BUF_SIZE]byte))
 	recv.msg.dataLen = _IPMI_BUF_SIZE
-	if err := ioctl(i.fd, _IPMICTL_RECEIVE_MSG, unsafe.Pointer(recv)); err != 0 {
+	if err := ioctl(i.Fd(), _IPMICTL_RECEIVE_MSG, unsafe.Pointer(recv)); err != 0 {
 		return nil, err
 	}
 
