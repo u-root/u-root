@@ -185,7 +185,10 @@ func ToZip(output string, manifest string) error {
 	z.Create("certs/")
 	dest = "certs/root.cert"
 	origin = path.Join(path.Dir(manifest), mf.RootCertPath)
-	toZip(z, dest, origin)
+	err = toZip(z, dest, origin)
+	if err != nil {
+		log.Fatal("DEBUG Error:", err)
+	}
 	mf.RootCertPath = dest
 
 	// Archive manifest
@@ -249,34 +252,15 @@ func AddSignature(archive, privKey, certificate string) error {
 	// XXX Refactor if we remove bootconfig from manifest
 	// Maybe just walk through certs/folders and match do root/bootconfig
 	for i := range mf.Configs {
-		// Init hash
-		hash := sha512.New()
-		hash.Reset()
 
 		bootconfigDir := path.Join(dir, fmt.Sprintf("bootconfig_%d", i))
-		files, err := ioutil.ReadDir(bootconfigDir)
+
+		bcHash, err := HashBootconfigDir(bootconfigDir)
 		if err != nil {
+			log.Println(fmt.Sprintf("Failed to hash bootconfig - Err %s", err))
 			return err
 		}
-		for _, file := range files {
-			if !file.IsDir() {
-				// Open file and extend hash
-				fh, err := os.Open(path.Join(bootconfigDir, file.Name()))
-				if err != nil {
-					log.Printf("Error opening file %s\n", file.Name())
-				}
-				buff := make([]byte, file.Size())
 
-				n, err := fh.Read(buff)
-				if err != nil {
-					log.Printf("Encountered error %s while opening %s\n", err, file.Name())
-					return err
-				}
-
-				// Write to hash
-				hash.Write(buff[0:n])
-			}
-		}
 		// Sign hash with Key
 		buff, err := ioutil.ReadFile(privKey)
 		privPem, _ := pem.Decode(buff)
@@ -286,17 +270,16 @@ func AddSignature(archive, privKey, certificate string) error {
 			panic("RSA Key is nil")
 		}
 
-		log.Println("Signing..")
-
-		completeHash := hash.Sum(nil)
 		opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 
-		signature, err := rsa.SignPSS(rand.Reader, rsaPrivKey, crypto.SHA512, completeHash[:], opts)
+		log.Printf("bootconfig hash is: %x", bcHash)
+		signature, err := rsa.SignPSS(rand.Reader, rsaPrivKey, crypto.SHA512, bcHash, opts)
 		if signature == nil {
 			panic("Signing failed.")
 		}
 
-		fmt.Println(fmt.Sprintf("%x", signature))
+		log.Println("Signing..")
+		log.Println(fmt.Sprintf("%x", signature))
 
 		// Create dir for signature
 		err = os.MkdirAll(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/", i)), os.ModeDir|os.FileMode(0700))
@@ -383,4 +366,29 @@ func parseCertificate(rawCertificate []byte) (x509.Certificate, error) {
 	}
 
 	return *pub, nil
+}
+
+// HashBootconfigDir hashes every file inside bootconigDir and returns a
+// SHA512 hash
+func HashBootconfigDir(bootconfigDir string) ([]byte, error) {
+
+	hash := sha512.New()
+	hash.Reset()
+
+	files, err := ioutil.ReadDir(bootconfigDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range files {
+		if !file.IsDir() {
+			p := path.Join(bootconfigDir, file.Name())
+			buf, err := ioutil.ReadFile(p)
+			if err != nil {
+				return nil, err
+			}
+			hash.Write(buf)
+
+		}
+	}
+	return hash.Sum(nil), nil
 }
