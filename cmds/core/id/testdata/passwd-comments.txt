@@ -1,0 +1,9 @@
+# has some
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+#comments
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+#adm:x:3:4:adm:/var/adm:/sbin/nologin
+lary:x:1000:1000:lary has spaces:/home/vagrant:/bin/bash
+curly:x:1001:1001:curly has % a symbol:/home/vagrant:/bin/bash
+moe:x:1002:2002:moe:/home/vagrant:/bin/bash

@@ -1,0 +1,6 @@
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+lary:x:1000:1000:this is lary:/home/vagrant:/bin/bash
+curly:x:1001:1001:this is curly:/home/vagrant:/bin/bash
+moe:x:1002:2002:moe:/home/vagrant:/bin/bash
