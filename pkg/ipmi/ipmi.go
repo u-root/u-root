@@ -5,7 +5,6 @@
 package ipmi
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
@@ -96,17 +95,6 @@ func ioctl(fd uintptr, name int, data unsafe.Pointer) syscall.Errno {
 
 func fd_set(fd uintptr, p *syscall.FdSet) {
 	p.Bits[fd/64] |= 1 << (uint(fd) % 64)
-}
-
-func Open(devnum int) (*Ipmi, error) {
-	d := fmt.Sprintf("/dev/ipmi%d", devnum)
-
-	f, err := os.OpenFile(d, os.O_RDWR, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Ipmi{File: f}, nil
 }
 
 func (i *Ipmi) sendrecv(req *req) (*recv, error) {
