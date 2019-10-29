@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"crypto"
 	"crypto/rsa"
-	"crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -474,12 +472,24 @@ func main() {
 	}
 	debug("Boot files unpacked into: " + outputDir)
 	debug("Manifest: %+v", *manifest)
-	// get first bootconfig from manifest
+
+	// just take the first bootconfig
+	// TODO: Should be loop through all bootconfigs?
+	// TODO: Make sure 0 exists.
+
+	// hash bootconfig
+	dir := path.Join(outputDir, "bootconfig_0")
+	hash, err := bootconfig.HashBootconfigDir(dir)
+	log.Printf("bootconfig hash is: %x", hash[:])
+	if err != nil {
+		log.Printf("Error hashing bootconfig files in %s", dir)
+		log.Println(err)
+		return
+	}
+
 	cfg, err := manifest.GetBootConfig(0)
 	if err != nil {
 		log.Fatal(err)
-		// XXX Should be loop through all bootconfigs?
-		// XXX Make sure 0 exists.
 	}
 	debug("Bootconfig: %+v", *cfg)
 
@@ -493,19 +503,6 @@ func main() {
 	}
 	debug("Adjusted Bootconfig: %+v", *cfg)
 
-	// Hash payload -  right now it is the kernel
-	hash := sha512.New()
-	hash.Reset()
-	kernelRaw, err := ioutil.ReadFile(cfg.Kernel)
-	if err != nil {
-		log.Fatalf("Unable to read .iso file: %v", err)
-		return
-	}
-	hash.Write(kernelRaw)
-	kernelHash := hash.Sum(nil)
-
-	// Verify Boot Config
-	// Search for signatures to this bootconfig
 	certPath := strings.Replace(path.Dir(manifest.Configs[0].Kernel), outputDir, "", -1)
 	certPath = path.Join(outputDir, "certs/", certPath)
 
@@ -516,11 +513,10 @@ func main() {
 		log.Println("Root Certificate not found.")
 		return
 	}
-
-	err = stbootVerifySignatureInPath(certPath, kernelHash, rootCert, vars.MinimalAmountSignatures)
+	err = stbootVerifySignatureInPath(certPath, hash, rootCert, vars.MinimalAmountSignatures)
 
 	if err != nil {
-		log.Fatal("The bootconfig seems to be not trustworthy.")
+		log.Fatal("The bootconfig seems to be not trustworthy. Err: ", err)
 		return
 	}
 
@@ -529,29 +525,29 @@ func main() {
 		return
 	}
 
-	tmpPath, err := ioutil.TempDir(os.TempDir(), "iso")
-	if err != nil {
-		log.Fatalf("Unable to create temporary dir in %v", err)
-		return
-	}
-	kernelPath, initramfsPath, err := stbootMountIso(cfg.Kernel, tmpPath)
+	// tmpPath, err := ioutil.TempDir(os.TempDir(), "iso")
+	// if err != nil {
+	// 	log.Fatalf("Unable to create temporary dir in %v", err)
+	// 	return
+	// }
+	// kernelPath, initramfsPath, err := stbootMountIso(cfg.Kernel, tmpPath)
 
-	if err != nil || kernelPath == "" || initramfsPath == "" {
-		log.Fatalln("Error Mounting Iso.")
-		return
-	}
+	// if err != nil || kernelPath == "" || initramfsPath == "" {
+	// 	log.Fatalln("Error Mounting Iso.")
+	// 	return
+	// }
 
-	// Extend arguments.
-	cfg.KernelArgs = cfg.KernelArgs + " root=/var/squashfs/filesystem.squashfs"
-	cfg.Kernel = kernelPath
-	cfg.Initramfs = initramfsPath
+	// // Extend arguments.
+	// cfg.KernelArgs = cfg.KernelArgs + " root=/var/squashfs/filesystem.squashfs"
+	// cfg.Kernel = kernelPath
+	// cfg.Initramfs = initramfsPath
 
 	log.Printf("%v", cfg)
 
 	log.Println("Starting up new kernel.")
 
-	log.Print("Press 'Enter' to continue...")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	// log.Print("Press 'Enter' to continue...")
+	// bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	// boot
 	if err := cfg.Boot(); err != nil {
