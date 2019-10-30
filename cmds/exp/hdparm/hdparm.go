@@ -14,7 +14,8 @@
 // We also have no plans to support ata12. It's 2019.
 //
 // Synopsis:
-//     hdparm [--security-unlock] [--user-master|--timeout] [device ...]
+//     hdparm [--identify] [--security-unlock] [--user-master|--timeout] [device ...]
+//
 package main
 
 import (
@@ -28,17 +29,19 @@ import (
 
 // Because all the verbs and options are switches, hence global,
 // we can have all the functions take one Disk as a parameter and
-// return an error. This simplifies other aspects of this program.
-type op func(scuzz.Disk) error
+// return a Response and error. This simplifies other aspects of this program.
+type op func(scuzz.Disk) (scuzz.Response, error)
 
 var (
 	verbose = flag.Bool("v", false, "verbose log")
 	debug   = func(string, ...interface{}) {}
 	unlock  = flag.String("security-unlock", "", "Unlock the drive")
+	_       = flag.Bool("identify", false, "Get drive identifying information")
 	master  = flag.Bool("user-master", false, "Unlock master (true) or user (false)")
 	timeout = flag.Uint("timeout", 15000, "Timeout for operations")
 	verbs   = map[string]op{
 		"--security-unlock": unlockop,
+		"--identify":        identifyop,
 	}
 )
 
@@ -64,8 +67,12 @@ func checkVerbs() (op, error) {
 	return verb, nil
 }
 
-func unlockop(d scuzz.Disk) error {
+func unlockop(d scuzz.Disk) (scuzz.Response, error) {
 	return scuzz.Unlock(d, *unlock, *timeout, *master)
+}
+
+func identifyop(d scuzz.Disk) (scuzz.Response, error) {
+	return scuzz.Identify(d, *timeout)
 }
 
 func main() {
@@ -86,8 +93,13 @@ func main() {
 		if err != nil {
 			log.Printf("%v: %v", n, err)
 		}
-		if err := verb(d); err != nil {
-			log.Printf("%v: %v", n, err)
+		r, err := verb(d)
+		if err != nil {
+			log.Printf("%v: Transport error %v", n, err)
+			continue
+		}
+		if err := r.Error(); err != nil {
+			log.Printf("%v: Target error %v", n, err)
 		}
 	}
 

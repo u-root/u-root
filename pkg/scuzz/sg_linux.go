@@ -29,6 +29,24 @@ func (s *sgRequest) String() string {
 	return fmt.Sprintf("%v %v", s.packet.cmd, s.packet.packetHeader)
 }
 
+// sgResponse implements Response for the Linux SG interface.
+type sgResponse struct {
+	status []byte
+	err    error
+}
+
+func (s *sgResponse) Error() error {
+	return s.err
+}
+
+func (s *sgResponse) Status() []byte {
+	return s.status
+}
+
+func (s *sgResponse) String() string {
+	return fmt.Sprintf("scsi generic error: %v %#02x", s.err, s.status)
+}
+
 // SGDisk is the Linux SCSI Generic interface to SCSI/SATA devices.
 // Control is achieved by ioctls on an fd.
 // SG is extremely low level, requiring the assembly of Command and Data Blocks,
@@ -111,6 +129,7 @@ type packet struct {
 	// This is additional, per-request-type information
 	// needed to create a command and data block.
 	// It is assembled from both the Disk and the request type.
+	ataType  uint8 // almost always lba48
 	transfer uint8
 	category uint8
 	protocol uint8
@@ -151,7 +170,7 @@ func NewSGDisk(n string) (Disk, error) {
 // Linux SGDisk.
 func (p *packet) genCommandDataBlock() {
 	p.command[0] = ata16
-	p.command[1] = lba48 | p.transfer | p.category | p.protocol
+	p.command[1] = p.ataType | p.transfer | p.category | p.protocol
 	switch {
 	case p.dma && p.dataLen != 0:
 		p.command[1] |= protoDMA
@@ -172,6 +191,8 @@ func (p *packet) genCommandDataBlock() {
 		p.command[2] |= tlenNsect | tlenSectors
 		if p.direction == to {
 			p.command[2] |= tdirTo
+		} else {
+			p.command[2] |= tdirFrom
 		}
 	} else {
 		p.command[2] = checkCond
@@ -190,7 +211,7 @@ func (p *packet) genCommandDataBlock() {
 	p.command[14] = uint8(p.cmd)
 }
 
-func (s *SGDisk) newPacket(cmd Cmd, direction direction, timeout uint) *packet {
+func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8, timeout uint) *packet {
 	var p = &packet{}
 	// These are invariant across all uses of SGDisk.
 	p.interfaceID = 'S'
@@ -212,12 +233,13 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, timeout uint) *packet {
 	p.iovCount = 0 // is this ever non-zero?
 	p.dataLen = uint32(oldSchoolBlockLen)
 	p.nsect = 1
+	p.ataType = ataType
 
 	return p
 }
 
 func (s *SGDisk) UnlockRequest(password string, timeout uint, master bool) Request {
-	p := s.newPacket(securityUnlock, to, timeout)
+	p := s.newPacket(securityUnlock, to, lba48, timeout)
 	p.genCommandDataBlock()
 
 	if s.master {
@@ -227,7 +249,22 @@ func (s *SGDisk) UnlockRequest(password string, timeout uint, master bool) Reque
 	return &sgRequest{packet: p}
 }
 
-func (s *SGDisk) Operate(r Request) error {
+func (s *SGDisk) IdentifyRequest(timeout uint) Request {
+	p := s.newPacket(identify, from, 0, timeout)
+	p.genCommandDataBlock()
+	return &sgRequest{packet: p}
+}
+
+func (s *SGDisk) Operate(r Request) (Response, error) {
 	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), r.Cmd(), r.Packet())
-	return err
+	if err != 0 {
+		return nil, err
+	}
+	var resp = &sgResponse{}
+	if r.(*sgRequest).packet.status[0] != 0 {
+		resp.status = r.(*sgRequest).packet.status[:]
+		resp.err = fmt.Errorf("drive error status: %#02x", resp.status)
+		return resp, nil
+	}
+	return resp, nil
 }

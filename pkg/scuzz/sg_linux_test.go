@@ -100,7 +100,7 @@ func TestSizes(t *testing.T) {
 	}
 }
 
-func TestWriteUnlock(t *testing.T) {
+func TestUnlock(t *testing.T) {
 	Debug = t.Logf
 	// This command: ./hdparm --security-unlock 12345678901234567890123456789012 /dev/null
 	// yields this header and data to ioctl(fd, SECURITY_UNLOCK, ...)
@@ -139,7 +139,47 @@ func TestWriteUnlock(t *testing.T) {
 				0x31, 0x32,
 			},
 		}
+		//sb statusBlock
 	)
 	r := (&SGDisk{dev: 0x40}).UnlockRequest("12345678901234567890123456789012", 15000, true)
+	check(t, r.(*sgRequest).packet, want)
+}
+
+func TestIdentify(t *testing.T) {
+	Debug = t.Logf
+	// The 'want' data is derived from a modified version of hdparm (github.com/rminnich/hdparmm)
+	// which prints the ioctl parameters as initialized go structs.
+	var (
+		want = &packet{
+			packetHeader: packetHeader{
+				interfaceID:       'S',
+				direction:         -3,
+				cmdLen:            16,
+				maxStatusBlockLen: 32,
+				iovCount:          0,
+				dataLen:           512,
+				data:              0,
+				cdb:               0,
+				sb:                0,
+				timeout:           15000,
+				flags:             0,
+				packID:            0,
+				usrPtr:            0,
+				status:            0,
+				maskedStatus:      0,
+				msgStatus:         0,
+				sbLen:             0,
+				hostStatus:        0,
+				driverStatus:      0,
+				resID:             0,
+				duration:          0,
+				info:              0,
+			},
+			command: commandDataBlock{0x85, 0x08, 0x0e, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0xec, 0x00},
+		}
+		// TODO: check status block. Requires a qemu device that supports these operations.
+		//sb = statusBlock{0x70, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	)
+	r := (&SGDisk{dev: 0x40}).IdentifyRequest(15000)
 	check(t, r.(*sgRequest).packet, want)
 }
