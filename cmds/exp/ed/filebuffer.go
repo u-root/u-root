@@ -1,6 +1,6 @@
 // Copyright 2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file
+// license that can be found in the LICENSE file.
 
 // filebuffer.go - defines the FileBuffer object
 package main
@@ -242,7 +242,7 @@ func (f *FileBuffer) ReadFile(line int, file string) (e error) {
 	}
 	defer fh.Close()
 
-	f.Read(line, fh)
+	e = f.Read(line, fh)
 	return
 }
 

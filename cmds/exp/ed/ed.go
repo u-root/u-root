@@ -1,6 +1,6 @@
 // Copyright 2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file
+// license that can be found in the LICENSE file.
 
 // This `ed` is intended to be a feature-complete mimick of [GNU Ed](https://www.gnu.org/software/ed//).  It is a close enough mimick that the [GNU Ed Man Page](https://www.gnu.org/software/ed/manual/ed_manual.html) should be a reliable source of documentation.  Divergence from the man page is generally considered a bug (unless it's an added feature).
 //
@@ -32,8 +32,6 @@ import (
 var (
 	fSuppress = flag.Bool("s", false, "suppress counts")
 	fPrompt   = flag.String("p", "*", "specify a command prompt")
-	fLoose    = flag.Bool("l", false, "loose exit mode, don't return errors for command failure (not implemented)")
-	fRestrict = flag.Bool("r", false, "no editing outside directory, no command exec (not implemented)")
 )
 
 // current FileBuffer
