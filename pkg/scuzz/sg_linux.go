@@ -12,23 +12,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// sgRequest implements Request for the Linux SG interface.
-type sgRequest struct {
-	packet *packet
-}
-
-func (s *sgRequest) Cmd() uintptr {
-	return uintptr(s.packet.cmd)
-}
-
-func (s *sgRequest) Packet() uintptr {
-	return uintptr(unsafe.Pointer(&s.packet.packetHeader))
-}
-
-func (s *sgRequest) String() string {
-	return fmt.Sprintf("%v %v", s.packet.cmd, s.packet.packetHeader)
-}
-
 // SGDisk is the Linux SCSI Generic interface to SCSI/SATA devices.
 // Control is achieved by ioctls on an fd.
 // SG is extremely low level, requiring the assembly of Command and Data Blocks,
@@ -111,6 +94,7 @@ type packet struct {
 	// This is additional, per-request-type information
 	// needed to create a command and data block.
 	// It is assembled from both the Disk and the request type.
+	ataType  uint8 // almost always lba48
 	transfer uint8
 	category uint8
 	protocol uint8
@@ -138,6 +122,7 @@ type SGDisk struct {
 	master bool
 }
 
+// NewSGDisk returns a Disk that uses the Linux SCSI Generic Device
 func NewSGDisk(n string) (Disk, error) {
 	f, err := os.OpenFile(n, os.O_RDWR, 0)
 	if err != nil {
@@ -151,7 +136,7 @@ func NewSGDisk(n string) (Disk, error) {
 // Linux SGDisk.
 func (p *packet) genCommandDataBlock() {
 	p.command[0] = ata16
-	p.command[1] = lba48 | p.transfer | p.category | p.protocol
+	p.command[1] = p.ataType | p.transfer | p.category | p.protocol
 	switch {
 	case p.dma && p.dataLen != 0:
 		p.command[1] |= protoDMA
@@ -172,6 +157,8 @@ func (p *packet) genCommandDataBlock() {
 		p.command[2] |= tlenNsect | tlenSectors
 		if p.direction == to {
 			p.command[2] |= tdirTo
+		} else {
+			p.command[2] |= tdirFrom
 		}
 	} else {
 		p.command[2] = checkCond
@@ -190,7 +177,7 @@ func (p *packet) genCommandDataBlock() {
 	p.command[14] = uint8(p.cmd)
 }
 
-func (s *SGDisk) newPacket(cmd Cmd, direction direction, timeout uint) *packet {
+func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8, timeout uint) *packet {
 	var p = &packet{}
 	// These are invariant across all uses of SGDisk.
 	p.interfaceID = 'S'
@@ -212,22 +199,53 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, timeout uint) *packet {
 	p.iovCount = 0 // is this ever non-zero?
 	p.dataLen = uint32(oldSchoolBlockLen)
 	p.nsect = 1
+	p.ataType = ataType
 
 	return p
 }
 
-func (s *SGDisk) UnlockRequest(password string, timeout uint, master bool) Request {
-	p := s.newPacket(securityUnlock, to, timeout)
+func (s *SGDisk) unlockPacket(password string, timeout uint, master bool) *packet {
+	p := s.newPacket(securityUnlock, to, lba48, timeout)
 	p.genCommandDataBlock()
-
 	if s.master {
 		p.block[1] = 1
 	}
 	copy(p.block[2:], []byte(password))
-	return &sgRequest{packet: p}
+	return p
 }
 
-func (s *SGDisk) Operate(r Request) error {
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), r.Cmd(), r.Packet())
-	return err
+// Unlock performs unlock requests for Linux SCSI Generic Disks
+func (s *SGDisk) Unlock(password string, timeout uint, master bool) error {
+	p := s.unlockPacket(password, timeout, master)
+	if err := s.operate(p); err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (s *SGDisk) identifyPacket(timeout uint) *packet {
+	p := s.newPacket(identify, from, 0, timeout)
+	p.genCommandDataBlock()
+	return p
+}
+
+// Identify returns identifying information for Linux SCSI Generic Disks.
+func (s *SGDisk) Identify(timeout uint) error {
+	p := s.identifyPacket(timeout)
+	if err := s.operate(p); err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (s *SGDisk) operate(p *packet) error {
+	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), uintptr(p.cmd), uintptr(unsafe.Pointer(&p.packetHeader)))
+	sb := p.status[0]
+	if err != 0 || sb != 0 {
+		return fmt.Errorf("SCSI generic error %v: drive error status: %#02x", err, sb)
+	}
+
+	return nil
 }
