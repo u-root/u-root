@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package ipmi implements functions to communicate with
+// the OpenIPMI driver interface.
 package ipmi
 
 import (
@@ -43,7 +45,7 @@ var (
 	_IPMICTL_SEND_COMMAND = ior(_IPMI_IOC_MAGIC, 13, int(unsafe.Sizeof(req{})))
 )
 
-type Ipmi struct {
+type IPMI struct {
 	*os.File
 }
 
@@ -57,22 +59,22 @@ type msg struct {
 type req struct {
 	addr    *systemInterfaceAddr
 	addrLen uint32
-	msgid   int64
+	msgid   int64 //nolint:structcheck
 	msg     msg
 }
 
 type recv struct {
-	recvType int32
+	recvType int32 //nolint:structcheck
 	addr     *systemInterfaceAddr
 	addrLen  uint32
-	msgid    int64
+	msgid    int64 //nolint:structcheck
 	msg      msg
 }
 
 type systemInterfaceAddr struct {
 	addrType int32
 	channel  int16
-	lun      byte
+	lun      byte //nolint:unused
 }
 
 func ioc(dir int, t int, nr int, size int) int {
@@ -89,49 +91,50 @@ func iowr(t int, nr int, size int) int {
 }
 
 func ioctl(fd uintptr, name int, data unsafe.Pointer) syscall.Errno {
-	_, _, err := syscall.RawSyscall(syscall.SYS_IOCTL, fd, uintptr(name), uintptr(data))
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(name), uintptr(data))
 	return err
 }
 
-func fd_set(fd uintptr, p *syscall.FdSet) {
+func fdSet(fd uintptr, p *syscall.FdSet) {
 	p.Bits[fd/64] |= 1 << (uint(fd) % 64)
 }
 
-func (i *Ipmi) sendrecv(req *req) (*recv, error) {
-	addr := &systemInterfaceAddr{
+func (i *IPMI) sendrecv(req *req) ([]byte, error) {
+	addr := systemInterfaceAddr{
 		addrType: _IPMI_SYSTEM_INTERFACE_ADDR_TYPE,
 		channel:  _IPMI_BMC_CHANNEL,
 	}
 
-	req.addr = addr
+	req.addr = &addr
 	req.addrLen = uint32(unsafe.Sizeof(addr))
 	if err := ioctl(i.Fd(), _IPMICTL_SEND_COMMAND, unsafe.Pointer(req)); err != 0 {
 		return nil, err
 	}
 
 	set := &syscall.FdSet{}
-	fd_set(i.Fd(), set)
-	time := syscall.Timeval{
+	fdSet(i.Fd(), set)
+	time := &syscall.Timeval{
 		Sec:  _IPMI_OPENIPMI_READ_TIMEOUT,
 		Usec: 0,
 	}
-	if _, err := syscall.Select(int(i.Fd()+1), set, nil, nil, &time); err != nil {
+	if _, err := syscall.Select(int(i.Fd()+1), set, nil, nil, time); err != nil {
 		return nil, err
 	}
 
 	recv := &recv{}
 	recv.addr = &systemInterfaceAddr{}
 	recv.addrLen = uint32(unsafe.Sizeof(addr))
-	recv.msg.data = unsafe.Pointer(new([_IPMI_BUF_SIZE]byte))
+	buf := make([]byte, _IPMI_BUF_SIZE)
+	recv.msg.data = unsafe.Pointer(&buf[0])
 	recv.msg.dataLen = _IPMI_BUF_SIZE
 	if err := ioctl(i.Fd(), _IPMICTL_RECEIVE_MSG, unsafe.Pointer(recv)); err != 0 {
 		return nil, err
 	}
 
-	return recv, nil
+	return buf[:recv.msg.dataLen:recv.msg.dataLen], nil
 }
 
-func (i *Ipmi) WatchdogRunning() (bool, error) {
+func (i *IPMI) WatchdogRunning() (bool, error) {
 	req := &req{}
 	req.msg.cmd = _BMC_GET_WATCHDOG_TIMER
 	req.msg.netfn = _IPMI_NETFN_APP
@@ -141,16 +144,14 @@ func (i *Ipmi) WatchdogRunning() (bool, error) {
 		return false, err
 	}
 
-	use := (*[2]byte)(recv.msg.data)
-
-	if (use[1] & 0x40) != 0 {
+	if len(recv) > 2 && (recv[1]&0x40) != 0 {
 		return true, nil
 	}
 
 	return false, nil
 }
 
-func (i *Ipmi) ShutoffWatchdog() error {
+func (i *IPMI) ShutoffWatchdog() error {
 	req := &req{}
 	req.msg.cmd = _BMC_SET_WATCHDOG_TIMER
 	req.msg.netfn = _IPMI_NETFN_APP

@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func Open(devnum int) (*Ipmi, error) {
+func Open(devnum int) (*IPMI, error) {
 	d := fmt.Sprintf("/dev/ipmi%d", devnum)
 
 	f, err := os.OpenFile(d, os.O_RDWR, 0)
@@ -17,5 +17,5 @@ func Open(devnum int) (*Ipmi, error) {
 		return nil, err
 	}
 
-	return &Ipmi{File: f}, nil
+	return &IPMI{File: f}, nil
 }
