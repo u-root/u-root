@@ -1,6 +1,6 @@
 // Copyright 2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file
+// license that can be found in the LICENSE file.
 
 // commands.go - defines editor commands
 package main
@@ -180,13 +180,15 @@ func cmdInput(ctx *Context) (e error) {
 		if r, e = buffer.AddrRange(ctx.addrs); e != nil {
 			return
 		}
-		buffer.Delete(r)
+		if e = buffer.Delete(r); e != nil {
+			return
+		}
 		e = buffer.Insert(r[0], nbuf)
 	}
 	return
 }
 
-var rxWrite = regexp.MustCompile("^(q)?(?: )?(!)?(.*)")
+var rxWrite = regexp.MustCompile(`^(q)?(?: )?(!)?(.*)`)
 
 func cmdWrite(ctx *Context) (e error) {
 	file := state.fileName
@@ -250,7 +252,9 @@ func cmdWrite(ctx *Context) (e error) {
 		}
 	}
 	if quit {
-		cmdQuit(ctx)
+		if e = cmdQuit(ctx); e != nil {
+			return
+		}
 	}
 	buffer.Clean()
 	return
@@ -452,10 +456,10 @@ func cmdPrompt(ctx *Context) (e error) {
 	return
 }
 
-var rxSanitize = regexp.MustCompile("\\\\.")
-var rxBackrefSanitize = regexp.MustCompile("\\\\\\\\")
-var rxBackref = regexp.MustCompile("\\\\([0-9]+)|&")
-var rxSubArgs = regexp.MustCompile("g|l|n|p|\\d+")
+var rxSanitize = regexp.MustCompile(`\\.`)
+var rxBackrefSanitize = regexp.MustCompile(`\\\\`)
+var rxBackref = regexp.MustCompile(`\\([0-9]+)|&`)
+var rxSubArgs = regexp.MustCompile(`g|l|n|p|\d+`)
 
 // FIXME: this is probably more convoluted than it needs to be
 func cmdSub(ctx *Context) (e error) {
@@ -583,8 +587,12 @@ func cmdSub(ctx *Context) (e error) {
 			oLin = m[1]
 		}
 		fLin += l[oLin:]
-		buffer.Delete([2]int{ln, ln})
-		buffer.Insert(ln, []string{fLin})
+		if e = buffer.Delete([2]int{ln, ln}); e != nil {
+			return
+		}
+		if e = buffer.Insert(ln, []string{fLin}); e != nil {
+			return
+		}
 		last = fLin
 		lastN = ln
 	}
@@ -614,7 +622,7 @@ func cmdDump(ctx *Context) (e error) {
 	return
 }
 
-var rxCmdSub = regexp.MustCompile("%")
+var rxCmdSub = regexp.MustCompile(`%`)
 
 func cmdCommand(ctx *Context) (e error) {
 	s := System{

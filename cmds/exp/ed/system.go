@@ -1,6 +1,6 @@
 // Copyright 2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file
+// license that can be found in the LICENSE file.
 
 // system.go implements the "System" wrapper class to exec.Cmd
 
@@ -24,7 +24,6 @@ type System struct {
 	Stderr io.Writer
 
 	cmdSane string
-	exe     *exec.Cmd
 }
 
 // Run a command (using the shell for arg processing)
