@@ -6,6 +6,7 @@ package storage
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -159,12 +160,7 @@ func GetBlockStats() ([]BlockDev, error) {
 		return nil, err
 	}
 	for _, devname := range devnames {
-		fd, err := os.Open(fmt.Sprintf("%s/%s/stat", root, devname))
-		if err != nil {
-			return nil, err
-		}
-		defer fd.Close()
-		buf, err := ioutil.ReadAll(fd)
+		buf, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/stat", root, devname))
 		if err != nil {
 			return nil, err
 		}
@@ -173,143 +169,135 @@ func GetBlockStats() ([]BlockDev, error) {
 			return nil, err
 		}
 		devpath := path.Join("/dev/", devname)
-		uuid := getUUID(devpath)
-		blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat, FsUUID: uuid})
+		if uuid, err := getUUID(devpath); err != nil {
+			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat})
+		} else {
+			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat, FsUUID: uuid})
+		}
 	}
 	return blockdevs, nil
 }
 
-func getUUID(devpath string) (fsuuid string) {
-
-	fsuuid = tryVFAT(devpath)
-	if fsuuid != "" {
-		log.Printf("###### FsUUIS in %s: %s", devpath, fsuuid)
-		return fsuuid
-	}
-	fsuuid = tryEXT4(devpath)
-	if fsuuid != "" {
-		log.Printf("###### FsUUIS in %s: %s", devpath, fsuuid)
-		return fsuuid
-	}
-	log.Printf("###### FsUUIS in %s: NONE", devpath)
-	return ""
-}
-
-//see https://www.nongnu.org/ext2-doc/ext2.html#DISK-ORGANISATION
-const (
-	EXT2SprblkOff       = 1024 // Offset of superblock in partition
-	EXT2SprblkSize      = 512  // Actually 1024 but most of the last byters are reserved
-	EXT2SprblkMagicOff  = 56   // Offset of magic number in suberblock
-	EXT2SprblkMagicSize = 2
-	EXT2SprblkMagic     = '\uEF53' // fixed value
-	EXT2SprblkUUIDOff   = 104      // Offset of UUID in superblock
-	EXT2SprblkUUIDSize  = 16
-)
-
-func tryEXT4(devname string) (uuid string) {
-	log.Printf("try ext4")
-	var off int64
-
-	file, err := os.Open(devname)
+func getUUID(devpath string) (string, error) {
+	file, err := os.Open(devpath)
 	if err != nil {
-		log.Println(err)
-		return ""
+		return "", err
 	}
 	defer file.Close()
 
-	fileinfo, err := file.Stat()
-	if err != nil {
-		log.Println(err)
-		return ""
+	fsuuid, err := tryVFAT(file)
+	if err == nil {
+		return fsuuid, nil
 	}
-	fmt.Printf("%s %d\n", fileinfo.Name(), fileinfo.Size())
-
-	// magic number
-	b := make([]byte, EXT2SprblkMagicSize)
-	off = EXT2SprblkOff + EXT2SprblkMagicOff
-	_, err = file.ReadAt(b, off)
-	if err != nil {
-		log.Println(err)
-		return ""
+	fsuuid, err = tryEXT4(file)
+	if err == nil {
+		return fsuuid, nil
 	}
-	magic := uint16(b[1])<<8 + uint16(b[0])
-	fmt.Printf("magic: 0x%x\n", magic)
-	if magic != EXT2SprblkMagic {
-		log.Printf("try ext4")
-		return ""
+	fsuuid, err = tryXFS(file)
+	if err == nil {
+		return fsuuid, nil
 	}
-
-	// filesystem UUID
-	b = make([]byte, EXT2SprblkUUIDSize)
-	off = EXT2SprblkOff + EXT2SprblkUUIDOff
-	_, err = file.ReadAt(b, off)
-	if err != nil {
-		fmt.Println(err)
-		return ""
-	}
-	uuid = fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8],
-		b[9], b[10], b[11], b[12], b[13], b[14], b[15])
-	fmt.Printf("UUID=%s\n", uuid)
-
-	return uuid
+	return "", fmt.Errorf("unknown UUID (not vfat, ext4, nor xfs)")
 }
 
-// see https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau
+// See https://www.nongnu.org/ext2-doc/ext2.html#DISK-ORGANISATION.
 const (
-	FAT32MagicOff  = 82 // Offset of magic number
-	FAT32MagicSize = 8
-	FAT32Magic     = "FAT32   " // fixed value
-	FAT32IDOff     = 67         // Offset of filesystem-ID / serielnumber. Treated as short filesystem UUID
-	FAT32IDSize    = 4
+	// Offset of superblock in partition.
+	ext2SprblkOff = 1024
+
+	// Offset of magic number in suberblock.
+	ext2SprblkMagicOff  = 56
+	ext2SprblkMagicSize = 2
+
+	ext2SprblkMagic = 0xEF53
+
+	// Offset of UUID in superblock.
+	ext2SprblkUUIDOff  = 104
+	ext2SprblkUUIDSize = 16
 )
 
-func tryVFAT(devname string) (uuid string) {
-	log.Printf("try vfat")
+func tryEXT4(file io.ReaderAt) (string, error) {
 	var off int64
 
-	file, err := os.Open(devname)
-	if err != nil {
-		fmt.Println(err)
-		return ""
+	// Read magic number.
+	b := make([]byte, ext2SprblkMagicSize)
+	off = ext2SprblkOff + ext2SprblkMagicOff
+	if _, err := file.ReadAt(b, off); err != nil {
+		return "", err
 	}
-	defer file.Close()
-
-	fileinfo, err := file.Stat()
-	if err != nil {
-		fmt.Println(err)
-		return ""
+	magic := binary.LittleEndian.Uint16(b[:2])
+	if magic != ext2SprblkMagic {
+		return "", fmt.Errorf("ext4 magic not found")
 	}
-	fmt.Printf("%s %d\n", fileinfo.Name(), fileinfo.Size())
 
-	// magic number
-	b := make([]byte, FAT32MagicSize)
-	off = 0 + FAT32MagicOff
-	_, err = file.ReadAt(b, off)
-	if err != nil {
-		fmt.Println(err)
-		return ""
+	// Filesystem UUID.
+	b = make([]byte, ext2SprblkUUIDSize)
+	off = ext2SprblkOff + ext2SprblkUUIDOff
+	if _, err := file.ReadAt(b, off); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]), nil
+}
+
+// See https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau.
+const (
+	fat32Magic = "FAT32   "
+
+	// Offset of magic number.
+	fat32MagicOff  = 82
+	fat32MagicSize = 8
+
+	// Offset of filesystem ID / serial number. Treated as short filesystem UUID.
+	fat32IDOff  = 67
+	fat32IDSize = 4
+)
+
+func tryVFAT(file io.ReaderAt) (string, error) {
+	// Read magic number.
+	b := make([]byte, fat32MagicSize)
+	if _, err := file.ReadAt(b, fat32MagicOff); err != nil {
+		return "", err
 	}
 	magic := string(b)
-	fmt.Printf("magic: %s\n", magic)
-	if magic != FAT32Magic {
-		log.Printf("no vfat")
-		return ""
+	if magic != fat32Magic {
+		return "", fmt.Errorf("fat32 magic not found")
 	}
 
-	// filesystem UUID
-	b = make([]byte, FAT32IDSize)
-	off = 0 + FAT32IDOff
-	_, err = file.ReadAt(b, off)
-	if err != nil {
-		fmt.Println(err)
-		return ""
+	// Filesystem UUID.
+	b = make([]byte, fat32IDSize)
+	if _, err := file.ReadAt(b, fat32IDOff); err != nil {
+		return "", err
 	}
-	uuid = fmt.Sprintf("%02x%02x-%02x%02x",
-		b[3], b[2], b[1], b[0])
-	fmt.Printf("UUID=%s\n", uuid)
 
-	return uuid
+	return fmt.Sprintf("%02x%02x-%02x%02x", b[3], b[2], b[1], b[0]), nil
+}
+
+const (
+	xfsMagic     = "XFSB"
+	xfsMagicSize = 4
+	xfsUUIDOff   = 32
+	xfsUUIDSize  = 16
+)
+
+func tryXFS(file io.ReaderAt) (string, error) {
+	// Read magic number.
+	b := make([]byte, xfsMagicSize)
+	if _, err := file.ReadAt(b, 0); err != nil {
+		return "", err
+	}
+	magic := string(b)
+	if magic != xfsMagic {
+		return "", fmt.Errorf("xfs magic not found")
+	}
+
+	// Filesystem UUID.
+	b = make([]byte, xfsUUIDSize)
+	if _, err := file.ReadAt(b, xfsUUIDOff); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]), nil
 }
 
 // GetGPTTable tries to read a GPT table from the block device described by the
