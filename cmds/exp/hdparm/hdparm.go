@@ -13,46 +13,51 @@
 //
 // We also have no plans to support ata12. It's 2019.
 //
+// Unlike the standard hdparm command, we do not allow empty
+// arguments for commands requiring a password.
+//
 // Synopsis:
-//     hdparm [--security-unlock] [--user-master|--timeout] [device ...]
+//     hdparm [--i] [--security-unlock[=password]] [--user-master|--timeout] [device ...]
+//
 package main
 
 import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/u-root/u-root/pkg/scuzz"
 )
 
 // Because all the verbs and options are switches, hence global,
 // we can have all the functions take one Disk as a parameter and
-// return an error. This simplifies other aspects of this program.
+// return a string and error. This simplifies other aspects of this program.
 type op func(scuzz.Disk) error
 
 var (
-	verbose = flag.Bool("v", false, "verbose log")
-	debug   = func(string, ...interface{}) {}
-	unlock  = flag.String("security-unlock", "", "Unlock the drive")
-	master  = flag.Bool("user-master", false, "Unlock master (true) or user (false)")
-	timeout = flag.Uint("timeout", 15000, "Timeout for operations")
-	verbs   = map[string]op{
-		"--security-unlock": unlockop,
-	}
+	verbose  = flag.Bool("v", false, "verbose log")
+	debug    = func(string, ...interface{}) {}
+	unlock   = flag.String("security-unlock", "", "Unlock the drive with a password")
+	identify = flag.Bool("i", false, "Get drive identifying information")
+	master   = flag.Bool("user-master", false, "Unlock master (true) or user (false)")
+	timeout  = flag.Uint("timeout", 15000, "Timeout for operations")
+	verbs    = []string{"security-unlock", "i"}
 )
 
 // The hdparm switches can conflict. This function returns nil if there is no conflict, and a (hopefully)
 // helpful error message otherwise. As a side effect it assigns verb.
+// TODO: use the visitor pattern to make this better. The next flag that's added will include that fix.
 func checkVerbs() (op, error) {
 	var v []string
 	var verb op
 
-	for _, a := range os.Args {
-		if f, ok := verbs[a]; ok {
-			v = append(v, a)
-			verb = f
-		}
+	if len(*unlock) > 0 {
+		verb = unlockop
+		v = append(v, "security-unlock")
+	}
+	if *identify {
+		verb = identifyop
+		v = append(v, "i")
 	}
 
 	if len(v) > 1 {
@@ -65,7 +70,11 @@ func checkVerbs() (op, error) {
 }
 
 func unlockop(d scuzz.Disk) error {
-	return scuzz.Unlock(d, *unlock, *timeout, *master)
+	return d.Unlock(*unlock, *timeout, *master)
+}
+
+func identifyop(d scuzz.Disk) error {
+	return d.Identify(*timeout)
 }
 
 func main() {
@@ -87,7 +96,7 @@ func main() {
 			log.Printf("%v: %v", n, err)
 		}
 		if err := verb(d); err != nil {
-			log.Printf("%v: %v", n, err)
+			log.Printf("%v: %v", n, err.Error())
 		}
 	}
 

@@ -14,8 +14,8 @@ const (
 	// don't work and are ugly.
 	// Sure, you can add a nolint tag, but as your
 	//	bidi int8 = -4  nolint:golint,unused
-	//from direction = -3
-	to direction = -2
+	from direction = -3
+	to   direction = -2
 	//none direction = -1
 
 	oldSchoolBlockLen = 512
@@ -54,13 +54,15 @@ const (
 	//	tlenBytes   = 0 << 2  nolint:golint,unused
 	tlenSectors = 1 << 2
 
-	tdirTo = 0 << 3
-	//	tdirFrom  = 1 << 3  nolint:golint,unused
+	tdirTo    = 0 << 3
+	tdirFrom  = 1 << 3
 	checkCond = 1 << 5
 )
 
 // Commands. We only export those we implement.
 const (
+	// identify gets identify information
+	identify = 0xec
 	// securityUnlock unlocks the drive with a given 32-byte password
 	securityUnlock = 0xf2
 )
