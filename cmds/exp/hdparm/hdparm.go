@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// hdparm perform control operations on disks
-// modeled after linux command of the same name.
-// The hdparm command is a mess. It is modeled on the
-// command [switches] verb model but many of the verbs
-// are switches which can conflict. To add to the
-// fun they decided a conf file in /etc/ would be
+// hdparm performs control operations on disks.
+//
+// hdparm is modeled after linux command of the same name,
+// using a command [switches] verb model, but many of the verbs
+// are also switches which can conflict.
+//
+// Upstream hdparm also decided a conf file in /etc/ would be
 // a good idea; we have no plans to support that.
 //
 // We also have no plans to support ata12. It's 2019.
 //
 // Synopsis:
-//     hdparm [not all the switches hdparm supports] [device ...]
+//     hdparm [--security-unlock] [--user-master|--timeout] [device ...]
 package main
 
 import (
@@ -28,7 +29,7 @@ import (
 // Because all the verbs and options are switches, hence global,
 // we can have all the functions take one Disk as a parameter and
 // return an error. This simplifies other aspects of this program.
-type op = func(scuzz.Disk) error
+type op func(scuzz.Disk) error
 
 var (
 	verbose = flag.Bool("v", false, "verbose log")
@@ -39,13 +40,13 @@ var (
 	verbs   = map[string]op{
 		"--security-unlock": unlockop,
 	}
-	verb op
 )
 
 // The hdparm switches can conflict. This function returns nil if there is no conflict, and a (hopefully)
 // helpful error message otherwise. As a side effect it assigns verb.
-func checkConflict() error {
+func checkVerbs() (op, error) {
 	var v []string
+	var verb op
 
 	for _, a := range os.Args {
 		if f, ok := verbs[a]; ok {
@@ -55,12 +56,12 @@ func checkConflict() error {
 	}
 
 	if len(v) > 1 {
-		return fmt.Errorf("%v verbs were invoked and only one is allowed", v)
+		return nil, fmt.Errorf("%v verbs were invoked and only one is allowed", v)
 	}
 	if len(v) < 1 {
-		return fmt.Errorf("no verbs were invoked and one of %v is required", verbs)
+		return nil, fmt.Errorf("no verbs were invoked and one of %v is required", verbs)
 	}
-	return nil
+	return verb, nil
 }
 
 func unlockop(d scuzz.Disk) error {
@@ -70,7 +71,8 @@ func unlockop(d scuzz.Disk) error {
 func main() {
 	flag.Parse()
 
-	if err := checkConflict(); err != nil {
+	verb, err := checkVerbs()
+	if err != nil {
 		log.Fatal(err)
 	}
 
