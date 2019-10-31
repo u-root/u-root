@@ -34,7 +34,7 @@ func (m *multiFlag) Set(value string) error {
 // Flags for u-root builder.
 var (
 	build, format, tmpDir, base, outputPath *string
-	initCmd                                 *string
+	uinitCmd, initCmd                       *string
 	defaultShell                            *string
 	useExistingInit                         *bool
 	fourbins                                *bool
@@ -54,7 +54,9 @@ func init() {
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
+	uinitCmd = flag.String("uinitcmd", "", "Symlink target for /bin/uinit. Can be an absolute path or a u-root command name. Use uinit=\"\" if you don't want the symlink.")
 	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
+
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
@@ -209,6 +211,7 @@ func Main() error {
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
+		UinitCmd:        *uinitCmd,
 		DefaultShell:    *defaultShell,
 	}
 	return uroot.CreateInitramfs(logger, opts)

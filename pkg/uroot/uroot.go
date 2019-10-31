@@ -168,8 +168,20 @@ type Opts struct {
 	// This can be an absolute path or the name of a command included in
 	// Commands.
 	//
-	// If this is empty, no init symlink will be created.
+	// If this is empty, no init symlink will be created, but a user may
+	// still specify a command called init or include an /init file.
 	InitCmd string
+
+	// UinitCmd is the name of a command to link /bin/uinit to.
+	//
+	// This can be an absolute path or the name of a command included in
+	// Commands.
+	//
+	// The u-root init will always attempt to fork/exec a uinit program.
+	//
+	// If this is empty, no uinit symlink will be created, but a user may
+	// still specify a command called uinit or include a /bin/uinit file.
+	UinitCmd string
 
 	// DefaultShell is the default shell to start after init.
 	//
@@ -220,54 +232,62 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 	}
 
 	// Open the target initramfs file.
-	archive := initramfs.Opts{
+	archive := &initramfs.Opts{
 		Files:           files,
 		OutputFile:      opts.OutputFile,
 		BaseArchive:     opts.BaseArchive,
 		UseExistingInit: opts.UseExistingInit,
 	}
-
-	if len(opts.DefaultShell) > 0 {
-		if target, err := resolveCommandOrPath(opts.DefaultShell, opts.Commands); err != nil {
-			logger.Printf("No default shell: %v", err)
-		} else {
-			rtarget, err := filepath.Rel("/", target)
-			if err != nil {
-				return err
-			}
-
-			if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", filepath.Join("..", rtarget))); err != nil {
-				return err
-			}
-			if err := archive.AddRecord(cpio.Symlink("bin/sh", filepath.Join("..", rtarget))); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(opts.InitCmd) > 0 {
-		if target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands); err != nil {
-			if opts.Commands != nil {
-				return fmt.Errorf("could not find init: %v", err)
-			}
-		} else {
-			rtarget, err := filepath.Rel("/", target)
-			if err != nil {
-				return err
-			}
-			if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
-				return err
-			}
-		}
-	}
-
 	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFiles, !opts.SkipLDD); err != nil {
 		return err
 	}
 
+	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
+		return err
+	}
+	if err := opts.addSymlinkTo(logger, archive, opts.UinitCmd, "bin/uinit"); err != nil {
+		return err
+	}
+	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
+		return err
+	}
+	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/defaultsh"); err != nil {
+		return err
+	}
+
 	// Finally, write the archive.
-	if err := initramfs.Write(&archive); err != nil {
+	if err := initramfs.Write(archive); err != nil {
 		return fmt.Errorf("error archiving: %v", err)
+	}
+	return nil
+}
+
+func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command string, source string) error {
+	if len(command) == 0 {
+		return nil
+	}
+
+	target, err := resolveCommandOrPath(command, o.Commands)
+	if err != nil {
+		if o.Commands != nil {
+			return fmt.Errorf("could not create symlink from %q to %q: %v", source, command, err)
+		}
+		logger.Printf("Could not create symlink from %q to %q: %v", source, command, err)
+		return nil
+	}
+
+	// Make a relative symlink from /source -> target
+	//
+	// E.g. bin/defaultsh -> target, so you need to
+	// filepath.Rel(/bin, target) since relative symlinks are
+	// evaluated from their PARENT directory.
+	relTarget, err := filepath.Rel(filepath.Join("/", filepath.Dir(source)), target)
+	if err != nil {
+		return err
+	}
+
+	if err := archive.AddRecord(cpio.Symlink(source, relTarget)); err != nil {
+		return fmt.Errorf("failed to add symlink %s -> %s to initramfs: %v", source, relTarget, err)
 	}
 	return nil
 }
@@ -318,14 +338,16 @@ func resolvePackagePath(logger ulog.Logger, env golang.Environ, pkg string) ([]s
 }
 
 func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
-	if filepath.IsAbs(cmd) {
+	if strings.ContainsRune(cmd, filepath.Separator) {
 		return cmd, nil
 	}
 
+	// Each build mode has its own binary dir (/bbin or /bin or /ubin).
+	//
+	// Figure out which build mode the shell is in, and symlink to that
+	// build mode.
 	for _, c := range cmds {
 		for _, p := range c.Packages {
-			// Figure out which build mode the shell is in, and symlink to
-			// that build modee
 			if name := path.Base(p); name == cmd {
 				return path.Join("/", c.TargetDir(), cmd), nil
 			}
