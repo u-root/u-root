@@ -123,11 +123,11 @@ func TestWget(t *testing.T) {
 
 	for i, tt := range tests {
 		args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
-		_, err := testutil.Command(t, args...).Output()
+		output, err := testutil.Command(t, args...).CombinedOutput()
 
 		// Check return code.
 		if err := testutil.IsExitCode(err, tt.retCode); err != nil {
-			t.Error(err)
+			t.Errorf("exit code: %v, output: %s", err, string(output))
 		}
 
 		if tt.content != "" {
