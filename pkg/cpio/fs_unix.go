@@ -159,12 +159,12 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		}
 
 	case os.ModeDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
+		if err := mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
 	case os.ModeCharDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
+		if err := mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
