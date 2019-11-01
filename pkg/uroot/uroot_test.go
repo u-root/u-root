@@ -179,7 +179,7 @@ func TestCreateInitramfs(t *testing.T) {
 	for i, tt := range []struct {
 		name       string
 		opts       Opts
-		want       error
+		want       string
 		validators []itest.ArchiveValidator
 	}{
 		{
@@ -201,7 +201,7 @@ func TestCreateInitramfs(t *testing.T) {
 					},
 				},
 			},
-			want: nil,
+			want: "",
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bbin/bb"},
 				itest.HasRecord{cpio.Symlink("bbin/init", "bb")},
@@ -217,8 +217,7 @@ func TestCreateInitramfs(t *testing.T) {
 				InitCmd:      "init",
 				DefaultShell: "",
 			},
-			// TODO: Ew. Our error types suck.
-			want: fmt.Errorf("temp dir \"\" must exist: stat : no such file or directory"),
+			want: "temp dir \"\" must exist: stat : no such file or directory",
 			validators: []itest.ArchiveValidator{
 				itest.IsEmpty{},
 			},
@@ -229,7 +228,7 @@ func TestCreateInitramfs(t *testing.T) {
 				Env:     golang.Default(),
 				TempDir: dir,
 			},
-			want: nil,
+			want: "",
 			validators: []itest.ArchiveValidator{
 				itest.MissingFile{"bbin/bb"},
 			},
@@ -250,7 +249,7 @@ func TestCreateInitramfs(t *testing.T) {
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
 			},
-			want: fmt.Errorf("could not find init: command or path \"foobar\" not included in u-root build"),
+			want: "could not create symlink from \"init\" to \"foobar\": command or path \"foobar\" not included in u-root build",
 			validators: []itest.ArchiveValidator{
 				itest.IsEmpty{},
 			},
@@ -262,7 +261,7 @@ func TestCreateInitramfs(t *testing.T) {
 				TempDir: dir,
 				InitCmd: "/bin/systemd",
 			},
-			want: nil,
+			want: "",
 			validators: []itest.ArchiveValidator{
 				itest.HasRecord{cpio.Symlink("init", "bin/systemd")},
 			},
@@ -301,7 +300,7 @@ func TestCreateInitramfs(t *testing.T) {
 					},
 				},
 			},
-			want: nil,
+			want: "",
 			validators: []itest.ArchiveValidator{
 				itest.HasRecord{cpio.Symlink("init", "bbin/init")},
 
@@ -330,7 +329,7 @@ func TestCreateInitramfs(t *testing.T) {
 			archive := inMemArchive{cpio.InMemArchive()}
 			tt.opts.OutputFile = archive
 			// Compare error type or error string.
-			if err := CreateInitramfs(l, tt.opts); err != tt.want && (tt.want == nil || err.Error() != tt.want.Error()) {
+			if err := CreateInitramfs(l, tt.opts); (err != nil && err.Error() != tt.want) || (len(tt.want) > 0 && err == nil) {
 				t.Errorf("CreateInitramfs(%v) = %v, want %v", tt.opts, err, tt.want)
 			}
 
