@@ -1,0 +1,6 @@
+printadmin:x:997:
+ssh_keys:x:996:
+rpcuser:x:29:curly
+nfsnobody:x:65534:
+sshd:x:74:larry
+wheel:x:10:larry,curly,moe
