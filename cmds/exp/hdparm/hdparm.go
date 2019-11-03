@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/u-root/u-root/pkg/scuzz"
 )
@@ -32,16 +33,16 @@ import (
 // Because all the verbs and options are switches, hence global,
 // we can have all the functions take one Disk as a parameter and
 // return a string and error. This simplifies other aspects of this program.
-type op func(scuzz.Disk) error
+type op func(scuzz.Disk) (string, error)
 
 var (
-	verbose  = flag.Bool("v", false, "verbose log")
-	debug    = func(string, ...interface{}) {}
-	unlock   = flag.String("security-unlock", "", "Unlock the drive with a password")
-	identify = flag.Bool("i", false, "Get drive identifying information")
-	master   = flag.Bool("user-master", false, "Unlock master (true) or user (false)")
-	timeout  = flag.Uint("timeout", 15000, "Timeout for operations")
-	verbs    = []string{"security-unlock", "i"}
+	verbose         = flag.Bool("v", false, "verbose log")
+	debug           = func(string, ...interface{}) {}
+	unlock          = flag.String("security-unlock", "", "Unlock the drive with a password")
+	identify        = flag.Bool("i", false, "Get drive identifying information")
+	master          = flag.Bool("user-master", false, "Unlock master (true) or user (false)")
+	timeoutDuration = flag.String("timeout", "15s", "Timeout for operations expressed as a Go duration (e.g. 15s)")
+	verbs           = []string{"security-unlock", "i"}
 )
 
 // The hdparm switches can conflict. This function returns nil if there is no conflict, and a (hopefully)
@@ -69,12 +70,16 @@ func checkVerbs() (op, error) {
 	return verb, nil
 }
 
-func unlockop(d scuzz.Disk) error {
-	return d.Unlock(*unlock, *timeout, *master)
+func unlockop(d scuzz.Disk) (string, error) {
+	return "", d.Unlock(*unlock, *master)
 }
 
-func identifyop(d scuzz.Disk) error {
-	return d.Identify(*timeout)
+func identifyop(d scuzz.Disk) (string, error) {
+	i, err := d.Identify()
+	if err != nil {
+		return "", err
+	}
+	return i.String(), nil
 }
 
 func main() {
@@ -90,13 +95,23 @@ func main() {
 	}
 	scuzz.Debug = debug
 
+	timeout, err := time.ParseDuration(*timeoutDuration)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for _, n := range flag.Args() {
-		d, err := scuzz.NewSGDisk(n)
+		d, err := scuzz.NewSGDisk(n, scuzz.WithTimeout(timeout))
 		if err != nil {
 			log.Printf("%v: %v", n, err)
+			continue
 		}
-		if err := verb(d); err != nil {
+		s, err := verb(d)
+		if err != nil {
 			log.Printf("%v: %v", n, err.Error())
+		}
+		if len(s) > 0 {
+			fmt.Println(s)
 		}
 	}
 
