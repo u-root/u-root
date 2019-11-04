@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/booter"
+	"github.com/u-root/u-root/pkg/ipmi"
 )
 
 var (
@@ -40,6 +41,14 @@ func main() {
 `)
 
 	sleepInterval := time.Duration(*interval) * time.Second
+
+	if ipmi, err := ipmi.Open(0); err != nil {
+		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
+	} else if err = ipmi.ShutoffWatchdog(); err != nil {
+		log.Printf("Failed to stop watchdog %v.", err)
+	} else {
+		log.Printf("Watchdog is stopped.")
+	}
 
 	if *allowInteractive {
 		log.Printf("**************************************************************************")
