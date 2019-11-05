@@ -24,9 +24,17 @@ func showLinks(w io.Writer, withAddresses bool) error {
 	for _, v := range ifaces {
 		l := v.Attrs()
 
-		fmt.Fprintf(w, "%d: %s: <%s> mtu %d state %s\n", l.Index, l.Name,
+		master := ""
+		if l.MasterIndex != 0 {
+			link, err := netlink.LinkByIndex(l.MasterIndex)
+			if err != nil {
+				return fmt.Errorf("can't get link with index %d: %v", l.MasterIndex, err)
+			}
+			master = fmt.Sprintf("master %s ", link.Attrs().Name)
+		}
+		fmt.Fprintf(w, "%d: %s: <%s> mtu %d %sstate %s\n", l.Index, l.Name,
 			strings.Replace(strings.ToUpper(l.Flags.String()), "|", ",", -1),
-			l.MTU, strings.ToUpper(l.OperState.String()))
+			l.MTU, master, strings.ToUpper(l.OperState.String()))
 
 		fmt.Fprintf(w, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
 
