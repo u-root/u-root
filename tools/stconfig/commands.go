@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/u-root/u-root/pkg/bootconfig"
@@ -27,6 +28,12 @@ func getFilePathsByDir(dirName string) ([]string, error) {
 
 // GenKeys generates ED25519 keypair and stores it on the harddrive
 func GenKeys() error {
+	if _, err := os.Stat(*genkeysPrivateKeyFile); os.IsNotExist(err) {
+		return fmt.Errorf("Private key file does not exist: %v", err)
+	}
+	if _, err := os.Stat(*genkeysPublicKeyFile); os.IsNotExist(err) {
+		return fmt.Errorf("Public key file does not exist: %v", err)
+	}
 	return crypto.GeneratED25519Key([]byte(*genkeysPassphrase), *genkeysPrivateKeyFile, *genkeysPublicKeyFile)
 }
 
@@ -34,11 +41,23 @@ func GenKeys() error {
 // binaries and a manifest. The files to be included are taken from the
 // path specified in the provided manifest.json
 func PackBootConfiguration() error {
+	if _, err := os.Stat(*createManifest); os.IsNotExist(err) {
+		return fmt.Errorf("manifest.json does not exist: %v", err)
+	}
 	return bootconfig.ToZip(*createOutputFilename, *createManifest)
 }
 
 // AddSignatureToBootConfiguration TODO:
 func AddSignatureToBootConfiguration() error {
+	if _, err := os.Stat(*signInputBootfile); os.IsNotExist(err) {
+		return fmt.Errorf("input boot file not found: %v", err)
+	}
+	if _, err := os.Stat(*signPrivKeyFile); os.IsNotExist(err) {
+		return fmt.Errorf("private key file found: %v", err)
+	}
+	if _, err := os.Stat(*signCertFile); os.IsNotExist(err) {
+		return fmt.Errorf("certificate file not found: %v", err)
+	}
 	return bootconfig.AddSignature(*signInputBootfile, *signPrivKeyFile, *signCertFile)
 }
 
