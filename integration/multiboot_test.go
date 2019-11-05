@@ -56,6 +56,11 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Fatalf(`expected '"status": "ok"', got error: %v`, err)
 	}
 
+	if err := q.Expect(`}`); err != nil {
+		t.Logf(string(serial.Bytes()))
+		t.Fatalf(`expected '}' = end of JSON, got error: %v`, err)
+	}
+
 	output := serial.Bytes()
 	t.Logf(string(serial.Bytes()))
 
