@@ -78,6 +78,7 @@ func (o *Options) Start() (*VM, error) {
 
 	gExpect, ch, err := expect.SpawnWithArgs(cmdline, -1,
 		expect.Tee(o.SerialOutput),
+		expect.PartialMatch(true),
 		expect.CheckDuration(2*time.Millisecond))
 	if err != nil {
 		return nil, err
