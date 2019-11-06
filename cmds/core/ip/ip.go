@@ -91,6 +91,16 @@ func dev() (netlink.Link, error) {
 	return netlink.LinkByName(arg[cursor])
 }
 
+func maybename() (string, error) {
+	cursor++
+	whatIWant = []string{"name", "device name"}
+	if arg[cursor] == "name" {
+		cursor++
+	}
+	whatIWant = []string{"device name"}
+	return arg[cursor], nil
+}
+
 func addrip() error {
 	var err error
 	var addr *netlink.Addr
@@ -168,7 +178,7 @@ func linkset() error {
 	}
 
 	cursor++
-	whatIWant = []string{"address", "up", "down"}
+	whatIWant = []string{"address", "up", "down", "master"}
 	switch one(arg[cursor], whatIWant) {
 	case "address":
 		return setHardwareAddress(iface)
@@ -180,10 +190,39 @@ func linkset() error {
 		if err := netlink.LinkSetDown(iface); err != nil {
 			return fmt.Errorf("%v can't make it down: %v", iface.Attrs().Name, err)
 		}
+	case "master":
+		cursor++
+		whatIWant = []string{"device name"}
+		master, err := netlink.LinkByName(arg[cursor])
+		if err != nil {
+			return err
+		}
+		return netlink.LinkSetMaster(iface, master)
 	default:
 		return usage()
 	}
 	return nil
+}
+
+func linkadd() error {
+	name, err := maybename()
+	if err != nil {
+		return err
+	}
+	attrs := netlink.LinkAttrs{Name: name}
+
+	cursor++
+	whatIWant = []string{"type"}
+	if arg[cursor] != "type" {
+		return usage()
+	}
+
+	cursor++
+	whatIWant = []string{"bridge"}
+	if arg[cursor] != "bridge" {
+		return usage()
+	}
+	return netlink.LinkAdd(&netlink.Bridge{LinkAttrs: attrs})
 }
 
 func link() error {
@@ -192,7 +231,7 @@ func link() error {
 	}
 
 	cursor++
-	whatIWant = []string{"show", "set"}
+	whatIWant = []string{"show", "set", "add"}
 	cmd := arg[cursor]
 
 	switch one(cmd, whatIWant) {
@@ -200,6 +239,8 @@ func link() error {
 		return linkshow()
 	case "set":
 		return linkset()
+	case "add":
+		return linkadd()
 	}
 	return usage()
 }
