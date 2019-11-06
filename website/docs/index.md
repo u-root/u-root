@@ -50,12 +50,6 @@ More instructions can be found in the repo's
 We use [GitHub Pull Requests](https://github.com/u-root/u-root/pulls) for code
 review. Pull requests must receive one approval and pass CI before being merged.
 
-For convenience, it is recommended to use this pre-commit hook:
-
-```sh
-ln -s -f ../../scripts/pre-commit .git/hooks/pre-commit
-```
-
 
 ## FAQs
 
