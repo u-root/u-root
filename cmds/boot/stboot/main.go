@@ -471,7 +471,6 @@ func main() {
 		return
 	}
 	debug("Boot files unpacked into: " + outputDir)
-	debug("Manifest: %+v", *manifest)
 
 	// just take the first bootconfig
 	// TODO: Should be loop through all bootconfigs?
@@ -491,7 +490,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	debug("Bootconfig: %+v", *cfg)
+	if *doDebug {
+		str, _ := json.MarshalIndent(*cfg, "", "  ")
+		log.Printf("Bootconfig: %s", str)
+	}
 
 	// update paths
 	cfg.Kernel = path.Join(outputDir, cfg.Kernel)
@@ -501,7 +503,11 @@ func main() {
 	if cfg.DeviceTree != "" {
 		cfg.Initramfs = path.Join(outputDir, cfg.DeviceTree)
 	}
-	debug("Adjusted Bootconfig: %+v", *cfg)
+
+	if *doDebug {
+		str, _ := json.MarshalIndent(*cfg, "", "  ")
+		log.Printf("Adjusted Bootconfig: %s", str)
+	}
 
 	certPath := strings.Replace(path.Dir(manifest.Configs[0].Kernel), outputDir, "", -1)
 	certPath = path.Join(outputDir, "certs/", certPath)
