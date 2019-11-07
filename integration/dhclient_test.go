@@ -31,7 +31,7 @@ func TestDhclient(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/sleep",
 				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/integration/testcmd/pxeserver",
+				"github.com/u-root/u-root/cmds/exp/pxeserver",
 			),
 		},
 		QEMUOpts: qemu.Options{
@@ -101,7 +101,7 @@ func TestPxeboot(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/ls",
-				"github.com/u-root/u-root/integration/testcmd/pxeserver",
+				"github.com/u-root/u-root/cmds/exp/pxeserver",
 			),
 			ExtraFiles: []string{
 				"./testdata/pxe:pxeroot",
@@ -112,7 +112,7 @@ func TestPxeboot(t *testing.T) {
 			"ip link set eth0 up",
 			"ip route add 0.0.0.0/0 dev eth0",
 			"ls -l /pxeroot",
-			"pxeserver -dir=/pxeroot",
+			"pxeserver -tftp-dir=/pxeroot",
 		},
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
