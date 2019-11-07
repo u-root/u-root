@@ -145,7 +145,7 @@ func ToZip(output string, manifest string) error {
 	}
 	mf, err := ManifestFromBytes(manifestBody)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error parsing manifest: %v", err)
 	} else if !mf.IsValid() {
 		return errors.New("Manifest is not valid")
 	}
