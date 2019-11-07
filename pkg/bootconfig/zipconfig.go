@@ -338,14 +338,15 @@ func AddSignature(archive, privKey, certificate string) error {
 	pathToZip := fmt.Sprintf("./.original/%d", time.Now().Unix())
 	os.MkdirAll(pathToZip, os.ModePerm)
 	os.Rename(archive, pathToZip+"/stboot.zip")
-	log.Println("Backed up old stboot.zip to " + pathToZip)
 
 	err = ioutil.WriteFile(archive, buf.Bytes(), 0777)
 	if err != nil {
 		log.Println(fmt.Sprintf("Unable to write new stboot.zip file - recover old from %s", pathToZip))
 		return err
 	}
-	log.Println("Stboot file has been written to " + archive)
+	log.Println("Updated Stboot file has been written to " + archive)
+
+	os.RemoveAll(pathToZip)
 
 	return nil
 
