@@ -531,29 +531,7 @@ func main() {
 		return
 	}
 
-	// tmpPath, err := ioutil.TempDir(os.TempDir(), "iso")
-	// if err != nil {
-	// 	log.Fatalf("Unable to create temporary dir in %v", err)
-	// 	return
-	// }
-	// kernelPath, initramfsPath, err := stbootMountIso(cfg.Kernel, tmpPath)
-
-	// if err != nil || kernelPath == "" || initramfsPath == "" {
-	// 	log.Fatalln("Error Mounting Iso.")
-	// 	return
-	// }
-
-	// // Extend arguments.
-	// cfg.KernelArgs = cfg.KernelArgs + " root=/var/squashfs/filesystem.squashfs"
-	// cfg.Kernel = kernelPath
-	// cfg.Initramfs = initramfsPath
-
-	log.Printf("%v", cfg)
-
 	log.Println("Starting up new kernel.")
-
-	// log.Print("Press 'Enter' to continue...")
-	// bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	// boot
 	if err := cfg.Boot(); err != nil {
