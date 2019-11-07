@@ -61,13 +61,13 @@ func (bc *BootConfig) Boot() error {
 	if bc.Kernel != "" {
 		kernel, err := os.Open(bc.Kernel)
 		if err != nil {
-			return err
+			return fmt.Errorf("can't open kernel file for measurement: %v", err)
 		}
 		var initramfs *os.File
 		if bc.Initramfs != "" {
 			initramfs, err = os.Open(bc.Initramfs)
 			if err != nil {
-				return err
+				return fmt.Errorf("can't open initramfs file for measurement: %v", err)
 			}
 		}
 		defer func() {
@@ -84,7 +84,7 @@ func (bc *BootConfig) Boot() error {
 			}
 		}()
 		if err := kexec.FileLoad(kernel, initramfs, bc.KernelArgs); err != nil {
-			return err
+			return fmt.Errorf("kexec.FileLoad() failed: %v", err)
 		}
 	} else if bc.Multiboot != "" {
 		mbkernel, err := os.Open(bc.Multiboot)
@@ -95,6 +95,7 @@ func (bc *BootConfig) Boot() error {
 		defer mbkernel.Close()
 
 		// check multiboot header
+<<<<<<< HEAD
 		if err := multiboot.Probe(mbkernel); err != nil {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
@@ -106,6 +107,13 @@ func (bc *BootConfig) Boot() error {
 		defer modules.Close()
 		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
+=======
+		if err := multiboot.Probe(bc.Multiboot); err != nil {
+			return fmt.Errorf("Error parsing multiboot header: %v", err)
+		}
+		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules); err != nil {
+			return fmt.Errorf("kexec.Load() multi boot error: %v", err)
+>>>>>>> Check filesize of kernel, initramfs and devicetree
 		}
 	}
 	err := kexec.Reboot()
