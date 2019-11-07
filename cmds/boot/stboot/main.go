@@ -224,13 +224,13 @@ func stbootDownloardFromHTTPS(url string, destination string) error {
 	}
 	f, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("Failed create boot config file: %v", err)
+		return fmt.Errorf("failed create boot config file: %v", err)
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return fmt.Errorf("Failed to write boot config file: %v", err)
+		return fmt.Errorf("failed to write boot config file: %v", err)
 	}
 
 	return nil
@@ -497,11 +497,38 @@ func main() {
 
 	// update paths
 	cfg.Kernel = path.Join(outputDir, cfg.Kernel)
+	kernelInfo, err := os.Stat(cfg.Kernel)
+	if err != nil {
+		log.Fatalf("cant read kernel file stats: %v", err)
+		return
+	}
+	if kernelInfo.Size() == int64(0) {
+		log.Fatalf("kernel file size is zero: %v", kernelInfo.Size())
+		return
+	}
 	if cfg.Initramfs != "" {
 		cfg.Initramfs = path.Join(outputDir, cfg.Initramfs)
+		initRAMinfo, err := os.Stat(cfg.Initramfs)
+		if err != nil {
+			log.Fatalf("cant read initramfs file stats: %v", err)
+			return
+		}
+		if initRAMinfo.Size() == int64(0) {
+			log.Fatalf("initramfs file size is zero: %v", kernelInfo.Size())
+			return
+		}
 	}
 	if cfg.DeviceTree != "" {
-		cfg.Initramfs = path.Join(outputDir, cfg.DeviceTree)
+		cfg.DeviceTree = path.Join(outputDir, cfg.DeviceTree)
+		deviceTreeInfo, err := os.Stat(cfg.DeviceTree)
+		if err != nil {
+			log.Fatalf("cant read device tree file stats: %v", err)
+			return
+		}
+		if deviceTreeInfo.Size() == int64(0) {
+			log.Fatalf("device tree file size is zero: %v", deviceTreeInfo.Size())
+			return
+		}
 	}
 
 	if *doDebug {
@@ -512,11 +539,14 @@ func main() {
 	certPath := strings.Replace(path.Dir(manifest.Configs[0].Kernel), outputDir, "", -1)
 	certPath = path.Join(outputDir, "certs/", certPath)
 
-	// TODO: Check if path really exists
+	if _, err = os.Stat(certPath); os.IsNotExist(err) {
+		log.Fatalf("cert path does not exist: %v", err)
+		return
+	}
 
 	rootCert, err := ioutil.ReadFile(path.Join(outputDir, "certs/root.cert"))
 	if err != nil {
-		log.Println("Root Certificate not found.")
+		log.Printf("Root Certificate not found: %v", err)
 		return
 	}
 	err = stbootVerifySignatureInPath(certPath, hash, rootCert, vars.MinimalAmountSignatures)
