@@ -135,7 +135,9 @@ func FromZip(filename string) (*Manifest, string, error) {
 func ToZip(output string, manifest string) error {
 	// Get manifest from file. Make sure the file is named accordingliy, since
 	// FromZip will search 'manifest.json' while extraction.
-
+	if _, err := os.Stat(manifest); os.IsNotExist(err) {
+		return fmt.Errorf("manifest.json not existent: %v", err)
+	}
 	if base := path.Base(manifest); base != "manifest.json" {
 		return fmt.Errorf("Invalid manifest name. Want 'manifest.json', got: %s", base)
 	}
@@ -163,19 +165,25 @@ func ToZip(output string, manifest string) error {
 		if cfg.Kernel != "" {
 			dest = path.Join(dir, path.Base(cfg.Kernel))
 			origin = path.Join(path.Dir(manifest), cfg.Kernel)
-			toZip(z, dest, origin)
+			if err := toZip(z, dest, origin); err != nil {
+				return fmt.Errorf("cant pack kernel: %v", err)
+			}
 			cfg.Kernel = dest
 		}
 		if cfg.Initramfs != "" {
 			dest = path.Join(dir, path.Base(cfg.Initramfs))
 			origin = path.Join(path.Dir(manifest), cfg.Initramfs)
-			toZip(z, dest, origin)
+			if err := toZip(z, dest, origin); err != nil {
+				return fmt.Errorf("cant pack initramfs: %v", err)
+			}
 			cfg.Initramfs = dest
 		}
 		if cfg.DeviceTree != "" {
 			dest = path.Join(dir, path.Base(cfg.DeviceTree))
 			origin = path.Join(path.Dir(manifest), cfg.DeviceTree)
-			toZip(z, dest, origin)
+			if err := toZip(z, dest, origin); err != nil {
+				return fmt.Errorf("cant pack device tree: %v", err)
+			}
 			cfg.DeviceTree = dest
 		}
 		mf.Configs[i] = cfg
@@ -185,9 +193,8 @@ func ToZip(output string, manifest string) error {
 	z.Create("certs/")
 	dest = "certs/root.cert"
 	origin = path.Join(path.Dir(manifest), mf.RootCertPath)
-	err = toZip(z, dest, origin)
-	if err != nil {
-		log.Fatal("DEBUG Error:", err)
+	if err = toZip(z, dest, origin); err != nil {
+		return fmt.Errorf("cant pack certificate: %v", err)
 	}
 	mf.RootCertPath = dest
 
@@ -230,7 +237,7 @@ func toZip(w *zip.Writer, newPath, originPath string) error {
 	// Copy content from inputpath to new file
 	src, err := os.Open(originPath)
 	if err != nil {
-		return fmt.Errorf("Cannot find %s specified in manifest", originPath)
+		return fmt.Errorf("cannot find %s specified in manifest", originPath)
 	}
 	_, err = io.Copy(dst, src)
 	if err != nil {
@@ -257,8 +264,7 @@ func AddSignature(archive, privKey, certificate string) error {
 
 		bcHash, err := HashBootconfigDir(bootconfigDir)
 		if err != nil {
-			log.Println(fmt.Sprintf("Failed to hash bootconfig - Err %s", err))
-			return err
+			return fmt.Errorf("failed to hash bootconfig - Err %s", err)
 		}
 
 		// Sign hash with Key
@@ -272,46 +278,41 @@ func AddSignature(archive, privKey, certificate string) error {
 
 		opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 
-		log.Printf("bootconfig hash is: %x", bcHash)
 		signature, err := rsa.SignPSS(rand.Reader, rsaPrivKey, crypto.SHA512, bcHash, opts)
-		if signature == nil {
-			panic("Signing failed.")
+		if err != nil {
+			return fmt.Errorf("signature generation failed: %v", err)
 		}
-
-		log.Println("Signing..")
-		log.Println(fmt.Sprintf("%x", signature))
+		if signature == nil {
+			return fmt.Errorf("signature is nil, %v", err)
+		}
 
 		// Create dir for signature
 		err = os.MkdirAll(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/", i)), os.ModeDir|os.FileMode(0700))
 		if err != nil {
-			log.Println(fmt.Sprintf("Creating directories in %s for signatures failed - Check permissions.", dir))
-			return err
+			return fmt.Errorf("Creating signatures directories in %s failed: %v", dir, err)
 		}
 
 		// Extract part of Public Key for identification
 		certificateString, err := ioutil.ReadFile(certificate)
 		if err != nil {
-			log.Println(fmt.Sprintf("Failed to read certificate - Err %s", err))
-			return err
+			return fmt.Errorf("Failed to read certificate - Err %s", err)
 		}
 
 		cert, err := parseCertificate(certificateString)
 		if err != nil {
-			log.Println(fmt.Sprintf("Failed to parse certificate %s", certificateString))
+			return fmt.Errorf("failed to parse certificate %s with %v", certificateString, err)
 		}
 
 		// Write signature to folder
 		err = ioutil.WriteFile(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/%s.signature", i, fmt.Sprintf("%x", cert.PublicKey)[2:18])), signature, 0644)
 		if err != nil {
-			log.Println(fmt.Sprintf("Writing into %s failed - Check permissions.", dir))
-			return err
+			return fmt.Errorf("writing into %v failed with %v - Check permissions", dir, err)
 		}
 
 		// cp cert to folder
 		err = ioutil.WriteFile(path.Join(dir, fmt.Sprintf("certs/bootconfig_%d/%s.cert", i, fmt.Sprintf("%x", cert.PublicKey)[2:18])), certificateString, 0644)
 		if err != nil {
-			log.Println(fmt.Sprintf("Copying certificate %s to .zip failed - Check permissions.", certificate))
-			return err
+			return fmt.Errorf("copying certificate %v to .zip failed with: %v - Check permissions", certificate, err)
 		}
 	}
 
@@ -341,11 +342,9 @@ func AddSignature(archive, privKey, certificate string) error {
 
 	err = ioutil.WriteFile(archive, buf.Bytes(), 0777)
 	if err != nil {
-		log.Println(fmt.Sprintf("Unable to write new stboot.zip file - recover old from %s", pathToZip))
-		return err
+		return fmt.Errorf("unable to write new stboot.zip file - recover old from %s", pathToZip)
 	}
 	log.Println("Updated Stboot file has been written to " + archive)
-
 	os.RemoveAll(pathToZip)
 
 	return nil
@@ -357,13 +356,12 @@ func parseCertificate(rawCertificate []byte) (x509.Certificate, error) {
 
 	block, _ := pem.Decode(rawCertificate)
 	if block == nil {
-		panic("failed to parse PEM block containing the public key")
+		log.Fatal("failed to parse PEM block containing the public key")
 	}
 
 	pub, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		fmt.Println("failed to parse DER encoded public key: " + err.Error())
-		return *pub, err
+		return *pub, fmt.Errorf("Failed to parse DER encoded public key: ", err)
 	}
 
 	return *pub, nil
