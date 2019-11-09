@@ -79,6 +79,12 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		opt, err = ParseOptClientArchType(optData)
 	case OptionNII:
 		opt, err = ParseOptNetworkInterfaceId(optData)
+	case Option4RD:
+		opt, err = ParseOpt4RD(optData)
+	case Option4RDMapRule:
+		opt, err = ParseOpt4RDMapRule(optData)
+	case Option4RDNonMapRule:
+		opt, err = ParseOpt4RDNonMapRule(optData)
 	default:
 		opt = &OptionGeneric{OptionCode: code, OptionData: optData}
 	}

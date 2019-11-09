@@ -50,9 +50,33 @@ func (o raiSubOptionCode) String() string {
 	return fmt.Sprintf("unknown (%d)", o)
 }
 
-// AgentCircuitIDSubOption as per https://tools.ietf.org/html/rfc3046#section-2.0
-const AgentCircuitIDSubOption raiSubOptionCode = 1
+// Option 82 Relay Agention Information Sub Options
+const (
+	AgentCircuitIDSubOption                raiSubOptionCode = 1   // RFC 3046
+	AgentRemoteIDSubOption                 raiSubOptionCode = 2   // RFC 3046
+	DOCSISDeviceClassSubOption             raiSubOptionCode = 4   // RFC 3256
+	LinkSelectionSubOption                 raiSubOptionCode = 5   // RFC 3527
+	SubscriberIDSubOption                  raiSubOptionCode = 6   // RFC 3993
+	RADIUSAttributesSubOption              raiSubOptionCode = 7   // RFC 4014
+	AuthenticationSubOption                raiSubOptionCode = 8   // RFC 4030
+	VendorSpecificInformationSubOption     raiSubOptionCode = 9   // RFC 4243
+	RelayAgentFlagsSubOption               raiSubOptionCode = 10  // RFC 5010
+	ServerIdentifierOverrideSubOption      raiSubOptionCode = 11  // RFC 5107
+	VirtualSubnetSelectionSubOption        raiSubOptionCode = 151 // RFC 6607
+	VirtualSubnetSelectionControlSubOption raiSubOptionCode = 152 // RFC 6607
+)
 
 var raiSubOptionCodeToString = map[raiSubOptionCode]string{
-	AgentCircuitIDSubOption: "Agent Circuit ID Sub-option",
+	AgentCircuitIDSubOption:                "Agent Circuit ID Sub-option",
+	AgentRemoteIDSubOption:                 "Agent Remote ID Sub-option",
+	DOCSISDeviceClassSubOption:             "DOCSIS Device Class Sub-option",
+	LinkSelectionSubOption:                 "Link Selection Sub-option",
+	SubscriberIDSubOption:                  "Subscriber ID Sub-option",
+	RADIUSAttributesSubOption:              "RADIUS Attributes Sub-option",
+	AuthenticationSubOption:                "Authentication Sub-option",
+	VendorSpecificInformationSubOption:     "Vendor Specific Sub-option",
+	RelayAgentFlagsSubOption:               "Relay Agent Flags Sub-option",
+	ServerIdentifierOverrideSubOption:      "Server Identifier Override Sub-option",
+	VirtualSubnetSelectionSubOption:        "Virtual Subnet Selection Sub-option",
+	VirtualSubnetSelectionControlSubOption: "Virtual Subnet Selection Control Sub-option",
 }

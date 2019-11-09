@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net"
 
+	"github.com/jsimonetti/rtnetlink/internal/unix"
+
 	"github.com/mdlayher/netlink"
-	"github.com/mdlayher/netlink/nlenc"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -44,9 +44,16 @@ func (m *RouteMessage) MarshalBinary() ([]byte, error) {
 	b[5] = m.Protocol
 	b[6] = m.Scope
 	b[7] = m.Type
-	nlenc.PutUint32(b[8:12], m.Flags)
+	nativeEndian.PutUint32(b[8:12], m.Flags)
 
-	a, err := m.Attributes.MarshalBinary()
+	ae := netlink.NewAttributeEncoder()
+	ae.ByteOrder = nativeEndian
+	err := m.Attributes.encode(ae)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := ae.Encode()
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +75,16 @@ func (m *RouteMessage) UnmarshalBinary(b []byte) error {
 	m.Protocol = uint8(b[5])
 	m.Scope = uint8(b[6])
 	m.Type = uint8(b[7])
-	m.Flags = nlenc.Uint32(b[8:12])
+	m.Flags = nativeEndian.Uint32(b[8:12])
 
 	if l > unix.SizeofRtMsg {
 		m.Attributes = RouteAttributes{}
-		err := m.Attributes.UnmarshalBinary(b[unix.SizeofRtMsg:])
+		ad, err := netlink.NewAttributeDecoder(b[unix.SizeofRtMsg:])
+		ad.ByteOrder = nativeEndian
+		if err != nil {
+			return err
+		}
+		err = m.Attributes.decode(ad)
 		if err != nil {
 			return err
 		}
@@ -156,49 +168,38 @@ type RouteAttributes struct {
 	Expires  *uint32
 }
 
-func (a *RouteAttributes) UnmarshalBinary(b []byte) error {
-	attrs, err := netlink.UnmarshalAttributes(b)
-	if err != nil {
-		return err
-	}
-	for _, attr := range attrs {
-		switch attr.Type {
+func (a *RouteAttributes) decode(ad *netlink.AttributeDecoder) error {
+
+	for ad.Next() {
+		switch ad.Type() {
 		case unix.RTA_UNSPEC:
+			//unused attribute
 		case unix.RTA_DST:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidRouteMessageAttr
 			}
-			a.Dst = attr.Data
+			a.Dst = ad.Bytes()
 		case unix.RTA_PREFSRC:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidRouteMessageAttr
 			}
-			a.Src = attr.Data
+			a.Src = ad.Bytes()
 		case unix.RTA_GATEWAY:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidRouteMessageAttr
 			}
-			a.Gateway = attr.Data
+			a.Gateway = ad.Bytes()
 		case unix.RTA_OIF:
-			if len(attr.Data) != 4 {
-				return errInvalidRouteMessageAttr
-			}
-			a.OutIface = nlenc.Uint32(attr.Data)
+			a.OutIface = ad.Uint32()
 		case unix.RTA_PRIORITY:
-			if len(attr.Data) != 4 {
-				return errInvalidRouteMessageAttr
-			}
-			a.Priority = nlenc.Uint32(attr.Data)
+			a.Priority = ad.Uint32()
 		case unix.RTA_TABLE:
-			if len(attr.Data) != 4 {
-				return errInvalidRouteMessageAttr
-			}
-			a.Table = nlenc.Uint32(attr.Data)
+			a.Table = ad.Uint32()
 		case unix.RTA_EXPIRES:
-			if len(attr.Data) != 4 {
-				return errInvalidRouteMessageAttr
-			}
-			timeout := nlenc.Uint32(attr.Data)
+			timeout := ad.Uint32()
 			a.Expires = &timeout
 		}
 	}
@@ -206,84 +207,53 @@ func (a *RouteAttributes) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-func (a *RouteAttributes) MarshalBinary() ([]byte, error) {
-	attrs := make([]netlink.Attribute, 0)
+func (a *RouteAttributes) encode(ae *netlink.AttributeEncoder) error {
 
 	if a.Dst != nil {
 		if ipv4 := a.Dst.To4(); ipv4 == nil {
 			// Dst Addr is IPv6
-			attrs = append(attrs, netlink.Attribute{
-				Type: unix.RTA_DST,
-				Data: a.Dst,
-			})
+			ae.Bytes(unix.RTA_DST, a.Dst)
 		} else {
 			// Dst Addr is IPv4
-			attrs = append(attrs, netlink.Attribute{
-				Type: unix.RTA_DST,
-				Data: ipv4,
-			})
+			ae.Bytes(unix.RTA_DST, ipv4)
 		}
 	}
 
 	if a.Src != nil {
 		if ipv4 := a.Src.To4(); ipv4 == nil {
 			// Src Addr is IPv6
-			attrs = append(attrs, netlink.Attribute{
-				Type: unix.RTA_PREFSRC,
-				Data: a.Src,
-			})
+			ae.Bytes(unix.RTA_PREFSRC, a.Src)
 		} else {
 			// Src Addr is IPv4
-			attrs = append(attrs, netlink.Attribute{
-				Type: unix.RTA_PREFSRC,
-				Data: ipv4,
-			})
+			ae.Bytes(unix.RTA_PREFSRC, ipv4)
 		}
 	}
 
 	if a.Gateway != nil {
 		if ipv4 := a.Gateway.To4(); ipv4 == nil {
 			// Gateway Addr is IPv6
-			attrs = append(attrs, netlink.Attribute{
-				Type: unix.RTA_GATEWAY,
-				Data: a.Gateway,
-			})
+			ae.Bytes(unix.RTA_GATEWAY, a.Gateway)
 		} else {
 			// Gateway Addr is IPv4
-			attrs = append(attrs, netlink.Attribute{
-				Type: unix.RTA_GATEWAY,
-				Data: ipv4,
-			})
+			ae.Bytes(unix.RTA_GATEWAY, ipv4)
 		}
 	}
 
 	if a.OutIface != 0 {
-		attrs = append(attrs, netlink.Attribute{
-			Type: unix.RTA_OIF,
-			Data: nlenc.Uint32Bytes(a.OutIface),
-		})
+		ae.Uint32(unix.RTA_OIF, a.OutIface)
 	}
 
 	if a.Priority != 0 {
-		attrs = append(attrs, netlink.Attribute{
-			Type: unix.RTA_PRIORITY,
-			Data: nlenc.Uint32Bytes(a.Priority),
-		})
+		ae.Uint32(unix.RTA_PRIORITY, a.Priority)
 	}
 
 	if a.Table != 0 {
-		attrs = append(attrs, netlink.Attribute{
-			Type: unix.RTA_TABLE,
-			Data: nlenc.Uint32Bytes(a.Table),
-		})
+		ae.Uint32(unix.RTA_TABLE, a.Table)
 	}
 
 	if a.Expires != nil {
-		attrs = append(attrs, netlink.Attribute{
-			Type: unix.RTA_EXPIRES,
-			Data: nlenc.Uint32Bytes(*a.Expires),
-		})
+		ae.Uint32(unix.RTA_EXPIRES, *a.Expires)
 	}
 
-	return netlink.MarshalAttributes(attrs)
+	return nil
 }

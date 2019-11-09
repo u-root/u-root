@@ -81,41 +81,41 @@ func (o OptionCode) String() string {
 
 // All DHCPv6 options.
 const (
-	OptionClientID    OptionCode = 1
-	OptionServerID    OptionCode = 2
-	OptionIANA        OptionCode = 3
-	OptionIATA        OptionCode = 4
-	OptionIAAddr      OptionCode = 5
-	OptionORO         OptionCode = 6
-	OptionPreference  OptionCode = 7
-	OptionElapsedTime OptionCode = 8
-	OptionRelayMsg    OptionCode = 9
-	// skip 10
-	OptionAuth                           OptionCode = 11
-	OptionUnicast                        OptionCode = 12
-	OptionStatusCode                     OptionCode = 13
-	OptionRapidCommit                    OptionCode = 14
-	OptionUserClass                      OptionCode = 15
-	OptionVendorClass                    OptionCode = 16
-	OptionVendorOpts                     OptionCode = 17
-	OptionInterfaceID                    OptionCode = 18
-	OptionReconfMessage                  OptionCode = 19
-	OptionReconfAccept                   OptionCode = 20
-	OptionSIPServersDomainNameList       OptionCode = 21
-	OptionSIPServersIPv6AddressList      OptionCode = 22
-	OptionDNSRecursiveNameServer         OptionCode = 23
-	OptionDomainSearchList               OptionCode = 24
-	OptionIAPD                           OptionCode = 25
-	OptionIAPrefix                       OptionCode = 26
-	OptionNISServers                     OptionCode = 27
-	OptionNISPServers                    OptionCode = 28
-	OptionNISDomainName                  OptionCode = 29
-	OptionNISPDomainName                 OptionCode = 30
-	OptionSNTPServerList                 OptionCode = 31
-	OptionInformationRefreshTime         OptionCode = 32
-	OptionBCMCSControllerDomainNameList  OptionCode = 33
-	OptionBCMCSControllerIPv6AddressList OptionCode = 34
-	// skip 35
+	OptionClientID                                OptionCode = 1
+	OptionServerID                                OptionCode = 2
+	OptionIANA                                    OptionCode = 3
+	OptionIATA                                    OptionCode = 4
+	OptionIAAddr                                  OptionCode = 5
+	OptionORO                                     OptionCode = 6
+	OptionPreference                              OptionCode = 7
+	OptionElapsedTime                             OptionCode = 8
+	OptionRelayMsg                                OptionCode = 9
+	_                                             OptionCode = 10
+	OptionAuth                                    OptionCode = 11
+	OptionUnicast                                 OptionCode = 12
+	OptionStatusCode                              OptionCode = 13
+	OptionRapidCommit                             OptionCode = 14
+	OptionUserClass                               OptionCode = 15
+	OptionVendorClass                             OptionCode = 16
+	OptionVendorOpts                              OptionCode = 17
+	OptionInterfaceID                             OptionCode = 18
+	OptionReconfMessage                           OptionCode = 19
+	OptionReconfAccept                            OptionCode = 20
+	OptionSIPServersDomainNameList                OptionCode = 21
+	OptionSIPServersIPv6AddressList               OptionCode = 22
+	OptionDNSRecursiveNameServer                  OptionCode = 23
+	OptionDomainSearchList                        OptionCode = 24
+	OptionIAPD                                    OptionCode = 25
+	OptionIAPrefix                                OptionCode = 26
+	OptionNISServers                              OptionCode = 27
+	OptionNISPServers                             OptionCode = 28
+	OptionNISDomainName                           OptionCode = 29
+	OptionNISPDomainName                          OptionCode = 30
+	OptionSNTPServerList                          OptionCode = 31
+	OptionInformationRefreshTime                  OptionCode = 32
+	OptionBCMCSControllerDomainNameList           OptionCode = 33
+	OptionBCMCSControllerIPv6AddressList          OptionCode = 34
+	_                                             OptionCode = 35
 	OptionGeoConfCivic                            OptionCode = 36
 	OptionRemoteID                                OptionCode = 37
 	OptionRelayAgentSubscriberID                  OptionCode = 38
@@ -154,79 +154,214 @@ const (
 	OptionMIPv6HomeNetworkPrefix                  OptionCode = 71
 	OptionMIPv6HomeAgentAddress                   OptionCode = 72
 	OptionMIPv6HomeAgentFQDN                      OptionCode = 73
+	OptionRDNSSSelection                          OptionCode = 74
+	OptionKRBPrincipalName                        OptionCode = 75
+	OptionKRBRealmName                            OptionCode = 76
+	OptionKRBDefaultRealmName                     OptionCode = 77
+	OptionKRBKDC                                  OptionCode = 78
+	OptionClientLinkLayerAddr                     OptionCode = 79
+	OptionLinkAddress                             OptionCode = 80
+	OptionRadius                                  OptionCode = 81
+	OptionSolMaxRT                                OptionCode = 82
+	OptionInfMaxRT                                OptionCode = 83
+	OptionAddrSel                                 OptionCode = 84
+	OptionAddrSelTable                            OptionCode = 85
+	OptionV6PCPServer                             OptionCode = 86
+	OptionDHCPv4Msg                               OptionCode = 87
+	OptionDHCP4oDHCP6Server                       OptionCode = 88
+	OptionS46Rule                                 OptionCode = 89
+	OptionS46BR                                   OptionCode = 90
+	OptionS46DMR                                  OptionCode = 91
+	OptionS46V4V6Bind                             OptionCode = 92
+	OptionS46PortParams                           OptionCode = 93
+	OptionS46ContMapE                             OptionCode = 94
+	OptionS46ContMapT                             OptionCode = 95
+	OptionS46ContLW                               OptionCode = 96
+	Option4RD                                     OptionCode = 97
+	Option4RDMapRule                              OptionCode = 98
+	Option4RDNonMapRule                           OptionCode = 99
+	OptionLQBaseTime                              OptionCode = 100
+	OptionLQStartTime                             OptionCode = 101
+	OptionLQEndTime                               OptionCode = 102
+	OptionCaptivePortal                           OptionCode = 103
+	OptionMPLParameters                           OptionCode = 104
+	OptionANIAccessTechType                       OptionCode = 105
+	OptionANINetworkName                          OptionCode = 106
+	OptionANIAccessPointName                      OptionCode = 107
+	OptionANIAccessPointBSSID                     OptionCode = 108
+	OptionANIOperatorID                           OptionCode = 109
+	OptionANIOperatorRealm                        OptionCode = 110
+	OptionS46Priority                             OptionCode = 111
+	OptionMUDUrlV6                                OptionCode = 112
+	OptionV6Prefix64                              OptionCode = 113
+	OptionFailoverBindingStatus                   OptionCode = 114
+	OptionFailoverConnectFlags                    OptionCode = 115
+	OptionFailoverDNSRemovalInfo                  OptionCode = 116
+	OptionFailoverDNSHostName                     OptionCode = 117
+	OptionFailoverDNSZoneName                     OptionCode = 118
+	OptionFailoverDNSFlags                        OptionCode = 119
+	OptionFailoverExpirationTime                  OptionCode = 120
+	OptionFailoverMaxUnackedBNDUPD                OptionCode = 121
+	OptionFailoverMCLT                            OptionCode = 122
+	OptionFailoverPartnerLifetime                 OptionCode = 123
+	OptionFailoverPartnerLifetimeSent             OptionCode = 124
+	OptionFailoverPartnerDownTime                 OptionCode = 125
+	OptionFailoverPartnerRawCLTTime               OptionCode = 126
+	OptionFailoverProtocolVersion                 OptionCode = 127
+	OptionFailoverKeepaliveTime                   OptionCode = 128
+	OptionFailoverReconfigureData                 OptionCode = 129
+	OptionFailoverRelationshipName                OptionCode = 130
+	OptionFailoverServerFlags                     OptionCode = 131
+	OptionFailoverServerState                     OptionCode = 132
+	OptionFailoverStartTimeOfState                OptionCode = 133
+	OptionFailoverStateExpirationTime             OptionCode = 134
+	OptionRelayPort                               OptionCode = 135
+	OptionV6SZTPRedirect                          OptionCode = 136
+	OptionS46BindIPv6Prefix                       OptionCode = 137
+	_                                             OptionCode = 138
+	_                                             OptionCode = 139
+	_                                             OptionCode = 140
+	_                                             OptionCode = 141
+	_                                             OptionCode = 142
+	OptionIPv6AddressANDSF                        OptionCode = 143
 )
 
 // optionCodeToString maps DHCPv6 OptionCodes to human-readable strings.
 var optionCodeToString = map[OptionCode]string{
-	OptionClientID:                                "OPTION_CLIENTID",
-	OptionServerID:                                "OPTION_SERVERID",
-	OptionIANA:                                    "OPTION_IA_NA",
-	OptionIATA:                                    "OPTION_IA_TA",
-	OptionIAAddr:                                  "OPTION_IAADDR",
-	OptionORO:                                     "OPTION_ORO",
-	OptionPreference:                              "OPTION_PREFERENCE",
-	OptionElapsedTime:                             "OPTION_ELAPSED_TIME",
-	OptionRelayMsg:                                "OPTION_RELAY_MSG",
-	OptionAuth:                                    "OPTION_AUTH",
-	OptionUnicast:                                 "OPTION_UNICAST",
-	OptionStatusCode:                              "OPTION_STATUS_CODE",
-	OptionRapidCommit:                             "OPTION_RAPID_COMMIT",
-	OptionUserClass:                               "OPTION_USER_CLASS",
-	OptionVendorClass:                             "OPTION_VENDOR_CLASS",
-	OptionVendorOpts:                              "OPTION_VENDOR_OPTS",
-	OptionInterfaceID:                             "OPTION_INTERFACE_ID",
-	OptionReconfMessage:                           "OPTION_RECONF_MSG",
-	OptionReconfAccept:                            "OPTION_RECONF_ACCEPT",
-	OptionSIPServersDomainNameList:                "SIP Servers Domain Name List",
-	OptionSIPServersIPv6AddressList:               "SIP Servers IPv6 Address List",
-	OptionDNSRecursiveNameServer:                  "DNS Recursive Name Server",
-	OptionDomainSearchList:                        "Domain Search List",
-	OptionIAPD:                                    "OPTION_IA_PD",
-	OptionIAPrefix:                                "OPTION_IAPREFIX",
-	OptionNISServers:                              "OPTION_NIS_SERVERS",
-	OptionNISPServers:                             "OPTION_NISP_SERVERS",
-	OptionNISDomainName:                           "OPTION_NIS_DOMAIN_NAME",
-	OptionNISPDomainName:                          "OPTION_NISP_DOMAIN_NAME",
-	OptionSNTPServerList:                          "SNTP Server List",
-	OptionInformationRefreshTime:                  "Information Refresh Time",
-	OptionBCMCSControllerDomainNameList:           "BCMCS Controller Domain Name List",
-	OptionBCMCSControllerIPv6AddressList:          "BCMCS Controller IPv6 Address List",
-	OptionGeoConfCivic:                            "OPTION_GEOCONF",
-	OptionRemoteID:                                "OPTION_REMOTE_ID",
-	OptionRelayAgentSubscriberID:                  "Relay-Agent Subscriber ID",
-	OptionFQDN:                                    "FQDN",
-	OptionPANAAuthenticationAgent:                 "PANA Authentication Agent",
-	OptionNewPOSIXTimezone:                        "OPTION_NEW_POSIX_TIME_ZONE",
-	OptionNewTZDBTimezone:                         "OPTION_NEW_TZDB_TIMEZONE",
-	OptionEchoRequest:                             "Echo Request",
-	OptionLQQuery:                                 "OPTION_LQ_QUERY",
-	OptionClientData:                              "OPTION_CLIENT_DATA",
-	OptionCLTTime:                                 "OPTION_CLT_TIME",
-	OptionLQRelayData:                             "OPTION_LQ_RELAY_DATA",
-	OptionLQClientLink:                            "OPTION_LQ_CLIENT_LINK",
-	OptionMIPv6HomeNetworkIDFQDN:                  "MIPv6 Home Network ID FQDN",
-	OptionMIPv6VisitedHomeNetworkInformation:      "MIPv6 Visited Home Network Information",
-	OptionLoSTServer:                              "LoST Server",
-	OptionCAPWAPAccessControllerAddresses:         "CAPWAP Access Controller Addresses",
-	OptionRelayID:                                 "RELAY_ID",
-	OptionIPv6AddressMOS:                          "OPTION-IPv6_Address-MoS",
-	OptionIPv6FQDNMOS:                             "OPTION-IPv6-FQDN-MoS",
-	OptionNTPServer:                               "OPTION_NTP_SERVER",
-	OptionV6AccessDomain:                          "OPTION_V6_ACCESS_DOMAIN",
-	OptionSIPUACSList:                             "OPTION_SIP_UA_CS_LIST",
-	OptionBootfileURL:                             "OPT_BOOTFILE_URL",
-	OptionBootfileParam:                           "OPT_BOOTFILE_PARAM",
-	OptionClientArchType:                          "OPTION_CLIENT_ARCH_TYPE",
-	OptionNII:                                     "OPTION_NII",
-	OptionGeolocation:                             "OPTION_GEOLOCATION",
-	OptionAFTRName:                                "OPTION_AFTR_NAME",
-	OptionERPLocalDomainName:                      "OPTION_ERP_LOCAL_DOMAIN_NAME",
-	OptionRSOO:                                    "OPTION_RSOO",
-	OptionPDExclude:                               "OPTION_PD_EXCLUDE",
-	OptionVirtualSubnetSelection:                  "Virtual Subnet Selection",
-	OptionMIPv6IdentifiedHomeNetworkInformation:   "MIPv6 Identified Home Network Information",
+	OptionClientID:                              "OPTION_CLIENTID",
+	OptionServerID:                              "OPTION_SERVERID",
+	OptionIANA:                                  "OPTION_IA_NA",
+	OptionIATA:                                  "OPTION_IA_TA",
+	OptionIAAddr:                                "OPTION_IAADDR",
+	OptionORO:                                   "OPTION_ORO",
+	OptionPreference:                            "OPTION_PREFERENCE",
+	OptionElapsedTime:                           "OPTION_ELAPSED_TIME",
+	OptionRelayMsg:                              "OPTION_RELAY_MSG",
+	OptionAuth:                                  "OPTION_AUTH",
+	OptionUnicast:                               "OPTION_UNICAST",
+	OptionStatusCode:                            "OPTION_STATUS_CODE",
+	OptionRapidCommit:                           "OPTION_RAPID_COMMIT",
+	OptionUserClass:                             "OPTION_USER_CLASS",
+	OptionVendorClass:                           "OPTION_VENDOR_CLASS",
+	OptionVendorOpts:                            "OPTION_VENDOR_OPTS",
+	OptionInterfaceID:                           "OPTION_INTERFACE_ID",
+	OptionReconfMessage:                         "OPTION_RECONF_MSG",
+	OptionReconfAccept:                          "OPTION_RECONF_ACCEPT",
+	OptionSIPServersDomainNameList:              "SIP Servers Domain Name List",
+	OptionSIPServersIPv6AddressList:             "SIP Servers IPv6 Address List",
+	OptionDNSRecursiveNameServer:                "DNS Recursive Name Server",
+	OptionDomainSearchList:                      "Domain Search List",
+	OptionIAPD:                                  "OPTION_IA_PD",
+	OptionIAPrefix:                              "OPTION_IAPREFIX",
+	OptionNISServers:                            "OPTION_NIS_SERVERS",
+	OptionNISPServers:                           "OPTION_NISP_SERVERS",
+	OptionNISDomainName:                         "OPTION_NIS_DOMAIN_NAME",
+	OptionNISPDomainName:                        "OPTION_NISP_DOMAIN_NAME",
+	OptionSNTPServerList:                        "SNTP Server List",
+	OptionInformationRefreshTime:                "Information Refresh Time",
+	OptionBCMCSControllerDomainNameList:         "BCMCS Controller Domain Name List",
+	OptionBCMCSControllerIPv6AddressList:        "BCMCS Controller IPv6 Address List",
+	OptionGeoConfCivic:                          "OPTION_GEOCONF",
+	OptionRemoteID:                              "OPTION_REMOTE_ID",
+	OptionRelayAgentSubscriberID:                "Relay-Agent Subscriber ID",
+	OptionFQDN:                                  "FQDN",
+	OptionPANAAuthenticationAgent:               "PANA Authentication Agent",
+	OptionNewPOSIXTimezone:                      "OPTION_NEW_POSIX_TIME_ZONE",
+	OptionNewTZDBTimezone:                       "OPTION_NEW_TZDB_TIMEZONE",
+	OptionEchoRequest:                           "Echo Request",
+	OptionLQQuery:                               "OPTION_LQ_QUERY",
+	OptionClientData:                            "OPTION_CLIENT_DATA",
+	OptionCLTTime:                               "OPTION_CLT_TIME",
+	OptionLQRelayData:                           "OPTION_LQ_RELAY_DATA",
+	OptionLQClientLink:                          "OPTION_LQ_CLIENT_LINK",
+	OptionMIPv6HomeNetworkIDFQDN:                "MIPv6 Home Network ID FQDN",
+	OptionMIPv6VisitedHomeNetworkInformation:    "MIPv6 Visited Home Network Information",
+	OptionLoSTServer:                            "LoST Server",
+	OptionCAPWAPAccessControllerAddresses:       "CAPWAP Access Controller Addresses",
+	OptionRelayID:                               "RELAY_ID",
+	OptionIPv6AddressMOS:                        "OPTION-IPv6_Address-MoS",
+	OptionIPv6FQDNMOS:                           "OPTION-IPv6-FQDN-MoS",
+	OptionNTPServer:                             "OPTION_NTP_SERVER",
+	OptionV6AccessDomain:                        "OPTION_V6_ACCESS_DOMAIN",
+	OptionSIPUACSList:                           "OPTION_SIP_UA_CS_LIST",
+	OptionBootfileURL:                           "OPT_BOOTFILE_URL",
+	OptionBootfileParam:                         "OPT_BOOTFILE_PARAM",
+	OptionClientArchType:                        "OPTION_CLIENT_ARCH_TYPE",
+	OptionNII:                                   "OPTION_NII",
+	OptionGeolocation:                           "OPTION_GEOLOCATION",
+	OptionAFTRName:                              "OPTION_AFTR_NAME",
+	OptionERPLocalDomainName:                    "OPTION_ERP_LOCAL_DOMAIN_NAME",
+	OptionRSOO:                                  "OPTION_RSOO",
+	OptionPDExclude:                             "OPTION_PD_EXCLUDE",
+	OptionVirtualSubnetSelection:                "Virtual Subnet Selection",
+	OptionMIPv6IdentifiedHomeNetworkInformation: "MIPv6 Identified Home Network Information",
 	OptionMIPv6UnrestrictedHomeNetworkInformation: "MIPv6 Unrestricted Home Network Information",
 	OptionMIPv6HomeNetworkPrefix:                  "MIPv6 Home Network Prefix",
 	OptionMIPv6HomeAgentAddress:                   "MIPv6 Home Agent Address",
 	OptionMIPv6HomeAgentFQDN:                      "MIPv6 Home Agent FQDN",
+	OptionRDNSSSelection:                          "RDNSS Selection",
+	OptionKRBPrincipalName:                        "Kerberos Principal Name",
+	OptionKRBRealmName:                            "Kerberos Realm Name",
+	OptionKRBDefaultRealmName:                     "Kerberos Default Realm Name",
+	OptionKRBKDC:                                  "Kerberos KDC",
+	OptionClientLinkLayerAddr:                     "Client Link-Layer Address",
+	OptionLinkAddress:                             "Link Address",
+	OptionRadius:                                  "OPTION_RADIUS",
+	OptionSolMaxRT:                                "Max Solicit Timeout Value",
+	OptionInfMaxRT:                                "Max Information-Request Timeout Value",
+	OptionAddrSel:                                 "Address Selection",
+	OptionAddrSelTable:                            "Address Selection Policy Table",
+	OptionV6PCPServer:                             "Port Control Protocol Server",
+	OptionDHCPv4Msg:                               "Encapsulated DHCPv4 Message",
+	OptionDHCP4oDHCP6Server:                       "DHCPv4-over-DHCPv6 Server",
+	OptionS46Rule:                                 "Softwire46 Rule",
+	OptionS46BR:                                   "Softwire46 Border Relay",
+	OptionS46DMR:                                  "Softwire46 Default Mapping Rule",
+	OptionS46V4V6Bind:                             "Softwire46 IPv4/IPv6 Address Binding",
+	OptionS46PortParams:                           "Softwire46 Port Parameters",
+	OptionS46ContMapE:                             "Softwire46 MAP-E Container",
+	OptionS46ContMapT:                             "Softwire46 MAP-T Container",
+	OptionS46ContLW:                               "Softwire46 Lightweight 4over6 Container",
+	Option4RD:                                     "IPv4 Residual Deployment",
+	Option4RDMapRule:                              "IPv4 Residual Deployment Mapping Rule",
+	Option4RDNonMapRule:                           "IPv4 Residual Deployment Non-Mapping Rule",
+	OptionLQBaseTime:                              "Leasequery Server Base time",
+	OptionLQStartTime:                             "Leasequery Server Query Start Time",
+	OptionLQEndTime:                               "Leasequery Server Query End Time",
+	OptionCaptivePortal:                           "Captive Portal URI",
+	OptionMPLParameters:                           "MPL Parameters",
+	OptionANIAccessTechType:                       "Access-Network-Information Access-Technology-Type",
+	OptionANINetworkName:                          "Access-Network-Information Network-Name",
+	OptionANIAccessPointName:                      "Access-Network-Information Access-Point-Name",
+	OptionANIAccessPointBSSID:                     "Access-Network-Information Access-Point-BSSID",
+	OptionANIOperatorID:                           "Access-Network-Information Operator-Identifier",
+	OptionANIOperatorRealm:                        "Access-Network-Information Operator-Realm",
+	OptionS46Priority:                             "Softwire46 Priority",
+	OptionMUDUrlV6:                                "Manufacturer Usage Description URL",
+	OptionV6Prefix64:                              "OPTION_V6_PREFIX64",
+	OptionFailoverBindingStatus:                   "Failover Binding Status",
+	OptionFailoverConnectFlags:                    "Failover Connection Flags",
+	OptionFailoverDNSRemovalInfo:                  "Failover DNS Removal Info",
+	OptionFailoverDNSHostName:                     "Failover DNS Removal Host Name",
+	OptionFailoverDNSZoneName:                     "Failover DNS Removal Zone Name",
+	OptionFailoverDNSFlags:                        "Failover DNS Removal Flags",
+	OptionFailoverExpirationTime:                  "Failover Maximum Expiration Time",
+	OptionFailoverMaxUnackedBNDUPD:                "Failover Maximum Unacked BNDUPD Messages",
+	OptionFailoverMCLT:                            "Failover Maximum Client Lead Time",
+	OptionFailoverPartnerLifetime:                 "Failover Partner Lifetime",
+	OptionFailoverPartnerLifetimeSent:             "Failover Received Partner Lifetime",
+	OptionFailoverPartnerDownTime:                 "Failover Last Partner Down Time",
+	OptionFailoverPartnerRawCLTTime:               "Failover Last Client Time",
+	OptionFailoverProtocolVersion:                 "Failover Protocol Version",
+	OptionFailoverKeepaliveTime:                   "Failover Keepalive Time",
+	OptionFailoverReconfigureData:                 "Failover Reconfigure Data",
+	OptionFailoverRelationshipName:                "Failover Relationship Name",
+	OptionFailoverServerFlags:                     "Failover Server Flags",
+	OptionFailoverServerState:                     "Failover Server State",
+	OptionFailoverStartTimeOfState:                "Failover State Start Time",
+	OptionFailoverStateExpirationTime:             "Failover State Expiration Time",
+	OptionRelayPort:                               "Relay Source Port",
+	OptionV6SZTPRedirect:                          "IPv6 Secure Zerotouch Provisioning Redirect",
+	OptionS46BindIPv6Prefix:                       "Softwire46 Source Binding Prefix Hint",
+	OptionIPv6AddressANDSF:                        "IPv6 Access Network Discovery and Selection Function Address",
 }

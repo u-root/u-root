@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/jsimonetti/rtnetlink/internal/unix"
+
 	"github.com/mdlayher/netlink"
-	"github.com/mdlayher/netlink/nlenc"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -49,9 +49,16 @@ func (m *AddressMessage) MarshalBinary() ([]byte, error) {
 	b[1] = m.PrefixLength
 	b[2] = m.Flags
 	b[3] = m.Scope
-	nlenc.PutUint32(b[4:8], m.Index)
+	nativeEndian.PutUint32(b[4:8], m.Index)
 
-	a, err := m.Attributes.MarshalBinary()
+	ae := netlink.NewAttributeEncoder()
+	ae.ByteOrder = nativeEndian
+	err := m.Attributes.encode(ae)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := ae.Encode()
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +77,16 @@ func (m *AddressMessage) UnmarshalBinary(b []byte) error {
 	m.PrefixLength = uint8(b[1])
 	m.Flags = uint8(b[2])
 	m.Scope = uint8(b[3])
-	m.Index = nlenc.Uint32(b[4:8])
+	m.Index = nativeEndian.Uint32(b[4:8])
 
 	if l > unix.SizeofIfAddrmsg {
 		m.Attributes = AddressAttributes{}
-		err := m.Attributes.UnmarshalBinary(b[unix.SizeofIfAddrmsg:])
+		ad, err := netlink.NewAttributeDecoder(b[unix.SizeofIfAddrmsg:])
+		if err != nil {
+			return err
+		}
+		ad.ByteOrder = nativeEndian
+		err = m.Attributes.decode(ad)
 		if err != nil {
 			return err
 		}
@@ -143,99 +155,74 @@ type AddressAttributes struct {
 	Flags     uint32    // Address flags
 }
 
-// UnmarshalBinary unmarshals the contents of a byte slice into a AddressMessage.
-func (a *AddressAttributes) UnmarshalBinary(b []byte) error {
-	attrs, err := netlink.UnmarshalAttributes(b)
-	if err != nil {
-		return err
-	}
-	for _, attr := range attrs {
-		switch attr.Type {
+func (a *AddressAttributes) decode(ad *netlink.AttributeDecoder) error {
+
+	for ad.Next() {
+		switch ad.Type() {
 		case unix.IFA_UNSPEC:
-			//unused attribute
+			// unused attribute
 		case unix.IFA_ADDRESS:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidAddressMessageAttr
 			}
-			a.Address = attr.Data
+			a.Address = ad.Bytes()
 		case unix.IFA_LOCAL:
-			if len(attr.Data) != 4 {
+			if len(ad.Bytes()) != 4 {
 				return errInvalidAddressMessageAttr
 			}
-			a.Local = attr.Data
+			a.Local = ad.Bytes()
 		case unix.IFA_LABEL:
-			a.Label = nlenc.String(attr.Data)
+			a.Label = ad.String()
 		case unix.IFA_BROADCAST:
-			if len(attr.Data) != 4 {
+			if len(ad.Bytes()) != 4 {
 				return errInvalidAddressMessageAttr
 			}
-			a.Broadcast = attr.Data
+			a.Broadcast = ad.Bytes()
 		case unix.IFA_ANYCAST:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidAddressMessageAttr
 			}
-			a.Anycast = attr.Data
+			a.Anycast = ad.Bytes()
 		case unix.IFA_CACHEINFO:
-			if len(attr.Data) != 16 {
+			if len(ad.Bytes()) != 16 {
 				return errInvalidAddressMessageAttr
 			}
-			err := a.CacheInfo.UnmarshalBinary(attr.Data)
+			err := a.CacheInfo.unmarshalBinary(ad.Bytes())
 			if err != nil {
 				return err
 			}
 		case unix.IFA_MULTICAST:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidAddressMessageAttr
 			}
-			a.Multicast = attr.Data
+			a.Multicast = ad.Bytes()
 		case unix.IFA_FLAGS:
-			if len(attr.Data) != 4 {
+			if len(ad.Bytes()) != 4 {
 				return errInvalidAddressMessageAttr
 			}
-			a.Flags = nlenc.Uint32(attr.Data)
+			a.Flags = ad.Uint32()
 		}
 	}
 
 	return nil
 }
 
-// MarshalBinary marshals a AddressAttributes into a byte slice.
-func (a *AddressAttributes) MarshalBinary() ([]byte, error) {
-	attrs := []netlink.Attribute{
-		{
-			Type: unix.IFA_UNSPEC,
-			Data: nlenc.Uint16Bytes(0),
-		},
-		{
-			Type: unix.IFA_ADDRESS,
-			Data: a.Address,
-		},
-		{
-			Type: unix.IFA_BROADCAST,
-			Data: a.Broadcast,
-		},
-		{
-			Type: unix.IFA_ANYCAST,
-			Data: a.Anycast,
-		},
-		{
-			Type: unix.IFA_MULTICAST,
-			Data: a.Multicast,
-		},
-		{
-			Type: unix.IFA_FLAGS,
-			Data: nlenc.Uint32Bytes(a.Flags),
-		},
-	}
+func (a *AddressAttributes) encode(ae *netlink.AttributeEncoder) error {
+	ae.Uint16(unix.IFA_UNSPEC, 0)
+	ae.Bytes(unix.IFA_ADDRESS, a.Address)
+	ae.Bytes(unix.IFA_BROADCAST, a.Broadcast)
+	ae.Bytes(unix.IFA_ANYCAST, a.Anycast)
+	ae.Bytes(unix.IFA_MULTICAST, a.Multicast)
+	ae.Uint32(unix.IFA_FLAGS, a.Flags)
 
 	if a.Local != nil {
-		attrs = append(attrs, netlink.Attribute{
-			Type: unix.IFA_LOCAL,
-			Data: a.Local,
-		})
+		ae.Bytes(unix.IFA_LOCAL, a.Local)
 	}
 
-	return netlink.MarshalAttributes(attrs)
+	return nil
 }
 
 // CacheInfo contains address information
@@ -246,16 +233,16 @@ type CacheInfo struct {
 	Updated  uint32
 }
 
-// UnmarshalBinary unmarshals the contents of a byte slice into a LinkMessage.
-func (c *CacheInfo) UnmarshalBinary(b []byte) error {
+// unmarshalBinary unmarshals the contents of a byte slice into a LinkMessage.
+func (c *CacheInfo) unmarshalBinary(b []byte) error {
 	if len(b) != 16 {
 		return fmt.Errorf("incorrect size, want: 16, got: %d", len(b))
 	}
 
-	c.Prefered = nlenc.Uint32(b[0:4])
-	c.Valid = nlenc.Uint32(b[4:8])
-	c.Created = nlenc.Uint32(b[8:12])
-	c.Updated = nlenc.Uint32(b[12:16])
+	c.Prefered = nativeEndian.Uint32(b[0:4])
+	c.Valid = nativeEndian.Uint32(b[4:8])
+	c.Created = nativeEndian.Uint32(b[8:12])
+	c.Updated = nativeEndian.Uint32(b[12:16])
 
 	return nil
 }

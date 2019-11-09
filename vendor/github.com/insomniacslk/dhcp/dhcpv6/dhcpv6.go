@@ -46,6 +46,9 @@ func MessageFromBytes(data []byte) (*Message, error) {
 		MessageType: messageType,
 	}
 	buf.ReadBytes(d.TransactionID[:])
+	if buf.Error() != nil {
+		return nil, fmt.Errorf("Error parsing DHCPv6 header: %v", buf.Error())
+	}
 	if err := d.Options.FromBytes(buf.Data()); err != nil {
 		return nil, err
 	}
@@ -68,6 +71,9 @@ func RelayMessageFromBytes(data []byte) (*RelayMessage, error) {
 	d.LinkAddr = net.IP(buf.CopyN(net.IPv6len))
 	d.PeerAddr = net.IP(buf.CopyN(net.IPv6len))
 
+	if buf.Error() != nil {
+		return nil, fmt.Errorf("Error parsing RelayMessage header: %v", buf.Error())
+	}
 	// TODO: fail if no OptRelayMessage is present.
 	if err := d.Options.FromBytes(buf.Data()); err != nil {
 		return nil, err
@@ -79,6 +85,9 @@ func RelayMessageFromBytes(data []byte) (*RelayMessage, error) {
 func FromBytes(data []byte) (DHCPv6, error) {
 	buf := uio.NewBigEndianBuffer(data)
 	messageType := MessageType(buf.Read8())
+	if buf.Error() != nil {
+		return nil, buf.Error()
+	}
 
 	if messageType == MessageTypeRelayForward || messageType == MessageTypeRelayReply {
 		return RelayMessageFromBytes(data)

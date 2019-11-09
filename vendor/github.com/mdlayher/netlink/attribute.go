@@ -17,7 +17,9 @@ type Attribute struct {
 	// Length of an Attribute, including this field and Type.
 	Length uint16
 
-	// The type of this Attribute, typically matched to a constant.
+	// The type of this Attribute, typically matched to a constant. Note that
+	// flags such as Nested and NetByteOrder must be handled manually when
+	// working with Attribute structures directly.
 	Type uint16
 
 	// An arbitrary payload which is specified by Type.
@@ -70,6 +72,9 @@ func (a *Attribute) unmarshal(b []byte) error {
 // MarshalAttributes packs a slice of Attributes into a single byte slice.
 // In most cases, the Length field of each Attribute should be set to 0, so it
 // can be calculated and populated automatically for each Attribute.
+//
+// It is recommend to use the AttributeEncoder type where possible instead of
+// calling MarshalAttributes and using package nlenc functions directly.
 func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 	// Count how many bytes we should allocate to store each attribute's contents.
 	var c int
@@ -184,9 +189,17 @@ func (ad *AttributeDecoder) Next() bool {
 
 // Type returns the Attribute.Type field of the current netlink attribute
 // pointed to by the decoder.
+//
+// Type masks off the high bits of the netlink attribute type which may contain
+// the Nested and NetByteOrder flags. If you need direct access to these flags,
+// consider using UnmarshalAttributes instead.
 func (ad *AttributeDecoder) Type() uint16 {
-	return ad.attr().Type
+	// Mask off any flags stored in the high bits.
+	return ad.attr().Type & attrTypeMask
 }
+
+// Len returns the number of netlink attributes pointed to by the decoder.
+func (ad *AttributeDecoder) Len() int { return len(ad.attrs) }
 
 // attr returns the current Attribute pointed to by the decoder.
 func (ad *AttributeDecoder) attr() Attribute {
@@ -314,6 +327,29 @@ func (ad *AttributeDecoder) Do(fn func(b []byte) error) {
 	if err := fn(b); err != nil {
 		ad.err = err
 	}
+}
+
+// Nested decodes data into a nested AttributeDecoder to handle nested netlink
+// attributes. When calling Nested, the Err method does not need to be called on
+// the nested AttributeDecoder.
+//
+// The nested AttributeDecoder nad inherits the same ByteOrder setting as the
+// top-level AttributeDecoder ad.
+func (ad *AttributeDecoder) Nested(fn func(nad *AttributeDecoder) error) {
+	// Because we are wrapping Do, there is no need to check ad.err immediately.
+	ad.Do(func(b []byte) error {
+		nad, err := NewAttributeDecoder(b)
+		if err != nil {
+			return err
+		}
+		nad.ByteOrder = ad.ByteOrder
+
+		if err := fn(nad); err != nil {
+			return err
+		}
+
+		return nad.Err()
+	})
 }
 
 // An AttributeEncoder provides a safe way to encode attributes.
@@ -455,6 +491,26 @@ func (ae *AttributeEncoder) Do(typ uint16, fn func() ([]byte, error)) {
 	ae.attrs = append(ae.attrs, Attribute{
 		Type: typ,
 		Data: b,
+	})
+}
+
+// Nested embeds data produced by a nested AttributeEncoder and flags that data
+// with the Nested flag. When calling Nested, the Encode method should not be
+// called on the nested AttributeEncoder.
+//
+// The nested AttributeEncoder nae inherits the same ByteOrder setting as the
+// top-level AttributeEncoder ae.
+func (ae *AttributeEncoder) Nested(typ uint16, fn func(nae *AttributeEncoder) error) {
+	// Because we are wrapping Do, there is no need to check ae.err immediately.
+	ae.Do(Nested|typ, func() ([]byte, error) {
+		nae := NewAttributeEncoder()
+		nae.ByteOrder = ae.ByteOrder
+
+		if err := fn(nae); err != nil {
+			return nil, err
+		}
+
+		return nae.Encode()
 	})
 }
 
