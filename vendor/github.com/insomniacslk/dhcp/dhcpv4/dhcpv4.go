@@ -262,6 +262,7 @@ func NewReplyFromRequest(request *DHCPv4, modifiers ...Modifier) (*DHCPv4, error
 	return New(PrependModifiers(modifiers,
 		WithReply(request),
 		WithGatewayIP(request.GatewayIPAddr),
+		WithRelayAgentInfo(request),
 	)...)
 }
 
