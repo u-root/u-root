@@ -7,6 +7,7 @@ package scuzz
 import (
 	"fmt"
 	"os"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -112,6 +113,7 @@ type packet struct {
 	command commandDataBlock
 	status  statusBlock
 	block   dataBlock
+	word    wordBlock
 }
 
 // SGDisk implements a Disk using the Linux SG device
@@ -119,17 +121,27 @@ type SGDisk struct {
 	f      *os.File
 	dev    uint8
 	packID uint32
-	master bool
+
+	// Timeuut is the timeout on a disk operation.
+	Timeout time.Duration
 }
 
-// NewSGDisk returns a Disk that uses the Linux SCSI Generic Device
-func NewSGDisk(n string) (Disk, error) {
+// NewSGDisk returns a Disk that uses the Linux SCSI Generic Device.
+// It also does an Identify to verify that the target name is a true
+// lba48 device.
+func NewSGDisk(n string, opt ...SGDiskOpt) (Disk, error) {
 	f, err := os.OpenFile(n, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: figure out the dev and packID, or if we even need them.
-	return &SGDisk{f: f}, nil
+	s := &SGDisk{f: f, Timeout: DefaultTimeout}
+	if _, err := s.Identify(); err != nil {
+		return nil, err
+	}
+	for _, o := range opt {
+		o(s)
+	}
+	return s, nil
 }
 
 // genCommandDataBlock creates a Command and Data Block used by
@@ -177,7 +189,7 @@ func (p *packet) genCommandDataBlock() {
 	p.command[14] = uint8(p.cmd)
 }
 
-func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8, timeout uint) *packet {
+func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8) *packet {
 	var p = &packet{}
 	// These are invariant across all uses of SGDisk.
 	p.interfaceID = 'S'
@@ -191,7 +203,8 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8, timeout 
 	p.dev = s.dev
 	p.packID = uint32(s.packID)
 	p.direction = direction
-	p.timeout = uint32(timeout)
+	// Go 1.12 appears not to have Milliseconds.
+	p.timeout = uint32(s.Timeout.Seconds() * 1000)
 
 	// These are reasonable defaults which the caller
 	// can override.
@@ -204,10 +217,10 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8, timeout 
 	return p
 }
 
-func (s *SGDisk) unlockPacket(password string, timeout uint, master bool) *packet {
-	p := s.newPacket(securityUnlock, to, lba48, timeout)
+func (s *SGDisk) unlockPacket(password string, master bool) *packet {
+	p := s.newPacket(securityUnlock, to, lba48)
 	p.genCommandDataBlock()
-	if s.master {
+	if master {
 		p.block[1] = 1
 	}
 	copy(p.block[2:], []byte(password))
@@ -215,8 +228,8 @@ func (s *SGDisk) unlockPacket(password string, timeout uint, master bool) *packe
 }
 
 // Unlock performs unlock requests for Linux SCSI Generic Disks
-func (s *SGDisk) Unlock(password string, timeout uint, master bool) error {
-	p := s.unlockPacket(password, timeout, master)
+func (s *SGDisk) Unlock(password string, master bool) error {
+	p := s.unlockPacket(password, master)
 	if err := s.operate(p); err != nil {
 		return err
 	}
@@ -224,28 +237,45 @@ func (s *SGDisk) Unlock(password string, timeout uint, master bool) error {
 
 }
 
-func (s *SGDisk) identifyPacket(timeout uint) *packet {
-	p := s.newPacket(identify, from, 0, timeout)
+func (s *SGDisk) identifyPacket() *packet {
+	p := s.newPacket(identify, from, 0)
 	p.genCommandDataBlock()
 	return p
 }
 
 // Identify returns identifying information for Linux SCSI Generic Disks.
-func (s *SGDisk) Identify(timeout uint) error {
-	p := s.identifyPacket(timeout)
+func (s *SGDisk) Identify() (*Info, error) {
+	p := s.identifyPacket()
 	if err := s.operate(p); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
-
+	return unpackIdentify(p.status, p.word)
 }
 
 func (s *SGDisk) operate(p *packet) error {
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), uintptr(p.cmd), uintptr(unsafe.Pointer(&p.packetHeader)))
+	_, _, uerr := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), uintptr(p.cmd), uintptr(unsafe.Pointer(&p.packetHeader)))
 	sb := p.status[0]
-	if err != 0 || sb != 0 {
-		return fmt.Errorf("SCSI generic error %v: drive error status: %#02x", err, sb)
+	if uerr != 0 || sb != 0 {
+		return fmt.Errorf("SCSI generic error %v: drive error status: %#02x", uerr, sb)
 	}
-
+	w, err := p.block.toWordBlock()
+	if err != nil {
+		return err
+	}
+	// the drive must be ata48. The status should show that even if we did not issue an ata48 command.
+	if err := w.mustLBA(); err != nil {
+		return err
+	}
+	p.word = w
 	return nil
+}
+
+// SGDiskOpt allows callers of NewSGDisk to set values
+type SGDiskOpt func(*SGDisk)
+
+// WithTimeout returns an SGDiskOpt that allows setting a non-default TimeOut
+func WithTimeout(timeout time.Duration) SGDiskOpt {
+	return func(s *SGDisk) {
+		s.Timeout = timeout
+	}
 }
