@@ -133,6 +133,7 @@ jobs:
           no_output_timeout: 15m
   race:
     <<: *golang-template
+    resource_class: large
     environment:
       - CGO_ENABLED: 1
     steps:
