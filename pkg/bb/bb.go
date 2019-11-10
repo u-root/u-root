@@ -47,11 +47,23 @@ import (
 	"github.com/u-root/u-root/pkg/golang"
 )
 
+func checkDuplicate(cmds []string) error {
+	seen := make(map[string]struct{})
+	for _, cmd := range cmds {
+		name := path.Base(cmd)
+		if _, ok := seen[name]; ok {
+			return fmt.Errorf("failed to build with bb: found duplicate command %s", name)
+		}
+		seen[name] = struct{}{}
+	}
+	return nil
+}
+
 // BuildBusybox builds a busybox of the given Go packages.
 //
 // pkgs is a list of Go import paths. If nil is returned, binaryPath will hold
 // the busybox-style binary.
-func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath string) (nerr error) {
+func BuildBusybox(env golang.Environ, cmdPaths []string, noStrip bool, binaryPath string) (nerr error) {
 	tmpDir, err := ioutil.TempDir("", "bb-")
 	if err != nil {
 		return err
@@ -120,44 +132,51 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 	pkgDir := filepath.Join(tmpDir, "src")
 
 	// Collect all packages that we need to actually re-write.
-	var fpkgs []string
-	seenPackages := make(map[string]struct{})
-	for _, pkg := range pkgs {
-		basePkg := path.Base(pkg)
-		if _, ok := seenPackages[basePkg]; ok {
-			return fmt.Errorf("failed to build with bb: found duplicate pkgs %s", basePkg)
-		}
-		seenPackages[basePkg] = struct{}{}
-
-		fpkgs = append(fpkgs, pkg)
+	if err := checkDuplicate(cmdPaths); err != nil {
+		return err
 	}
 
-	// Ask go about all the packages in one batch for dependency caching.
-	ps, err := NewPackages(env, fpkgs...)
+	// Ask go about all the commands in one batch for dependency caching.
+	cmds, err := NewPackages(env, cmdPaths...)
 	if err != nil {
 		return fmt.Errorf("finding packages failed: %v", err)
 	}
 
+	// List of packages to import in the real main file.
 	var bbImports []string
-	for _, p := range ps {
-		destination := filepath.Join(pkgDir, p.Pkg.PkgPath)
-		if err := p.Rewrite(destination, "github.com/u-root/u-root/pkg/bb/bbmain"); err != nil {
-			return fmt.Errorf("rewriting %q failed: %v", p.Pkg.PkgPath, err)
+	// Rewrite commands to packages.
+	for _, cmd := range cmds {
+		destination := filepath.Join(pkgDir, cmd.Pkg.PkgPath)
+		if err := cmd.Rewrite(destination, "github.com/u-root/u-root/pkg/bb/bbmain"); err != nil {
+			return fmt.Errorf("rewriting command %q failed: %v", cmd.Pkg.PkgPath, err)
 		}
-		bbImports = append(bbImports, p.Pkg.PkgPath)
+		bbImports = append(bbImports, cmd.Pkg.PkgPath)
 	}
 
 	bb, err := NewPackages(env, "github.com/u-root/u-root/pkg/bb/bbmain/cmd")
 	if err != nil {
 		return err
 	}
-	if len(bb) == 0 {
-		return fmt.Errorf("bb cmd template missing")
+
+	// Collect and write dependencies into pkgDir.
+	if err := dealWithDeps(env, tmpDir, pkgDir, append(cmds, bb[0])); err != nil {
+		return err
 	}
 
-	// Add bb to the list of packages that need their dependencies.
-	mainPkgs := append(ps, bb[0])
+	// Create bb main.go.
+	if err := CreateBBMainSource(bb[0].Pkg, bbImports, bbDir); err != nil {
+		return fmt.Errorf("creating bb main() file failed: %v", err)
+	}
 
+	// We do not support non-module compilation anymore, because the u-root
+	// dependencies need modules anyway. There's literally no way around
+	// them.
+
+	// Compile bb.
+	return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{NoStrip: noStrip})
+}
+
+func dealWithDeps(env golang.Environ, tmpDir, pkgDir string, mainPkgs []*Package) error {
 	// Module-enabled Go programs resolve their dependencies in one of two ways:
 	//
 	// - locally, if the dependency is *in* the module
@@ -167,31 +186,29 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 	//
 	// - local: github.com/u-root/u-root/pkg/uio
 	// - remote: github.com/hugelgupf/p9/p9
+	// - also local: a remote module, with a local replace rule
 	//
 	// For remote dependencies, we copy the go.mod into the temporary directory.
+	//
 	// For local dependencies, we copy all dependency packages' files over.
-	var depPkgs, modulePaths []string
+	var localDepPkgs, modules []string
 	for _, p := range mainPkgs {
 		// Find all dependency packages that are *within* module boundaries for this package.
 		//
 		// writeDeps also copies the go.mod into the right place.
-		mods, modulePath, err := writeDeps(env, pkgDir, p.Pkg)
+		localDeps, modulePath, err := writeDeps(env, pkgDir, p.Pkg)
 		if err != nil {
 			return fmt.Errorf("resolving dependencies for %q failed: %v", p.Pkg.PkgPath, err)
 		}
-		depPkgs = append(depPkgs, mods...)
+		localDepPkgs = append(localDepPkgs, localDeps...)
 		if len(modulePath) > 0 {
-			modulePaths = append(modulePaths, modulePath)
+			modules = append(modules, modulePath)
 		}
 	}
 
-	// Create bb main.go.
-	if err := CreateBBMainSource(bb[0].Pkg, bbImports, bbDir); err != nil {
-		return fmt.Errorf("creating bb main() file failed: %v", err)
-	}
-
-	// Copy local dependency packages into temporary module directories.
-	deps, err := NewPackages(env, depPkgs...)
+	// Copy local dependency packages into temporary module directories at
+	// tmpDir/src.
+	deps, err := NewPackages(env, localDepPkgs...)
 	if err != nil {
 		return err
 	}
@@ -201,6 +218,8 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 		}
 	}
 
+	// go.mod for the bb binary.
+	//
 	// Add local replace rules for all modules we're compiling.
 	//
 	// This is the only way to locally reference another modules'
@@ -208,22 +227,14 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 	//
 	// The module name is something that'll never be online, lest Go
 	// decides to go on the internet.
-	if len(modulePaths) == 0 {
-		env.GOPATH = tmpDir
-		// Compile bb.
-		return env.Build("bb", binaryPath, golang.BuildOpts{NoStrip: noStrip})
-	}
-
 	content := `module bb.u-root.com`
-	for _, mpath := range modulePaths {
+	for _, mpath := range modules {
 		content += fmt.Sprintf("\nreplace %s => ./src/%s\n", mpath, mpath)
 	}
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(content), 0755); err != nil {
 		return err
 	}
-
-	// Compile bb.
-	return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{NoStrip: noStrip})
+	return nil
 }
 
 func writeDeps(env golang.Environ, pkgDir string, p *packages.Package) ([]string, string, error) {
@@ -329,6 +340,9 @@ func NewPackages(env golang.Environ, names ...string) ([]*Package, error) {
 	ps, err := loadPkgs(env, names...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load package %v: %v", names, err)
+	}
+	if len(ps) == 0 {
+		return nil, fmt.Errorf("paths %v matched no packages", names)
 	}
 	var ips []*Package
 	for _, p := range ps {
