@@ -7,8 +7,10 @@
 package ipmi
 
 import (
+	"fmt"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -35,9 +37,19 @@ const (
 	_BMC_SET_WATCHDOG_TIMER = 0x24
 	_BMC_GET_WATCHDOG_TIMER = 0x25
 
+	_SET_SYSTEM_INFO_PARAMETERS = 0x58
+	_GET_SYSTEM_INFO_PARAMETERS = 0x59
+
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
 	_IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
+
+	_SYSTEM_INFO_BLK_SZ = 16
+
+	_SET_IN_PROGRESS   = 0
+	_SYSTEM_FW_VERSION = 1
+
+	_ASCII = 0
 )
 
 var (
@@ -75,6 +87,12 @@ type systemInterfaceAddr struct {
 	addrType int32
 	channel  int16
 	lun      byte //nolint:unused
+}
+
+type setSystemInfoReq struct {
+	paramSelector byte
+	setSelector   byte
+	version       [_SYSTEM_INFO_BLK_SZ]byte
 }
 
 func ioc(dir int, t int, nr int, size int) int {
@@ -169,6 +187,85 @@ func (i *IPMI) ShutoffWatchdog() error {
 	_, err := i.sendrecv(req)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (i *IPMI) waitForSetInProgressCleared() error {
+	req := &req{}
+	req.msg.cmd = _GET_SYSTEM_INFO_PARAMETERS
+	req.msg.netfn = _IPMI_NETFN_APP
+	var data [4]byte
+
+	data[0] = 0
+	data[1] = _SET_IN_PROGRESS
+	data[2] = 0
+	data[3] = 0
+	req.msg.data = unsafe.Pointer(&data)
+	req.msg.dataLen = 4
+
+	retry := 20
+	for retry > 0 {
+		recv, err := i.sendrecv(req)
+		if err != nil {
+			return err
+		}
+		// response data byte 3 bit[1:0] == 00b indicates set complete
+		if len(recv) == 3 && (recv[2]&0x3) == 0 {
+			return nil
+		}
+		time.Sleep(1 * time.Millisecond)
+		retry--
+	}
+
+	return fmt.Errorf("Wait for Set in Progress cleared timeout")
+
+}
+
+// SetSystemFWVersion sets the provided system firmware version to BMC via IPMI.
+func (i *IPMI) SetSystemFWVersion(version string) error {
+	strlenMax := 64 // Set 64 Bytes as the maximal version string length
+	len := len(version)
+
+	if len > strlenMax || len == 0 {
+		return fmt.Errorf("Version length is 0 or longer than the suggested maximal length %d", strlenMax)
+	}
+
+	req := &req{}
+	req.msg.cmd = _SET_SYSTEM_INFO_PARAMETERS
+	req.msg.netfn = _IPMI_NETFN_APP
+	var data setSystemInfoReq
+	var copied int
+	data.paramSelector = _SYSTEM_FW_VERSION
+	data.setSelector = 0
+	index := 0
+	for len > 0 {
+		if data.setSelector == 0 { // the fisrt block of string data
+			data.version[0] = _ASCII
+			data.version[1] = byte(len)
+			copied = copy(data.version[2:], version)
+			// dataLen needs to add the actual copied string data plus the first 2 bytes
+			req.msg.dataLen = uint16(int(unsafe.Sizeof(data.paramSelector)) + int(unsafe.Sizeof(data.setSelector)) + copied + 2)
+		} else {
+			copied = copy(data.version[:], version[index:])
+			req.msg.dataLen = uint16(int(unsafe.Sizeof(data.paramSelector)) + int(unsafe.Sizeof(data.setSelector)) + copied)
+		}
+		index += copied
+		req.msg.data = unsafe.Pointer(&data)
+		if err := i.waitForSetInProgressCleared(); err != nil {
+			return err
+		}
+
+		if _, err := i.sendrecv(req); err != nil {
+			return err
+		}
+
+		len -= copied
+		data.setSelector++
+		for j := range data.version { //reset to 0
+			data.version[j] = 0
+		}
 	}
 
 	return nil
