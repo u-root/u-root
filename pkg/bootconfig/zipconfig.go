@@ -139,7 +139,7 @@ func ToZip(output string, manifest string) error {
 		return fmt.Errorf("manifest.json not existent: %v", err)
 	}
 	if base := path.Base(manifest); base != "manifest.json" {
-		return fmt.Errorf("Invalid manifest name. Want 'manifest.json', got: %s", base)
+		return fmt.Errorf("invalid manifest name. Want 'manifest.json', got: %s", base)
 	}
 	manifestBody, err := ioutil.ReadFile(manifest)
 	if err != nil {
@@ -147,9 +147,9 @@ func ToZip(output string, manifest string) error {
 	}
 	mf, err := ManifestFromBytes(manifestBody)
 	if err != nil {
-		return fmt.Errorf("Error parsing manifest: %v", err)
+		return fmt.Errorf("error parsing manifest: %v", err)
 	} else if !mf.IsValid() {
-		return errors.New("Manifest is not valid")
+		return errors.New("manifest is not valid")
 	}
 
 	// Create a buffer to write the archive to.
@@ -271,9 +271,11 @@ func AddSignature(archive, privKey, certificate string) error {
 		buff, err := ioutil.ReadFile(privKey)
 		privPem, _ := pem.Decode(buff)
 		rsaPrivKey, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
-
+		if err != nil {
+			return fmt.Errorf("Can't parse private key: %v", err)
+		}
 		if rsaPrivKey == nil {
-			panic("RSA Key is nil")
+			return fmt.Errorf("RSA Key is nil: %v", err)
 		}
 
 		opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
@@ -295,7 +297,7 @@ func AddSignature(archive, privKey, certificate string) error {
 		// Extract part of Public Key for identification
 		certificateString, err := ioutil.ReadFile(certificate)
 		if err != nil {
-			return fmt.Errorf("Failed to read certificate - Err %s", err)
+			return fmt.Errorf("failed to read certificate - Err %s", err)
 		}
 
 		cert, err := parseCertificate(certificateString)
@@ -327,7 +329,7 @@ func AddSignature(archive, privKey, certificate string) error {
 		if !info.IsDir() {
 			err := toZip(z, strings.Replace(path, dir, "", -1)[1:], path)
 			if err != nil {
-				log.Println(fmt.Sprintf("Error adding file %s to .zip archive again", strings.Replace(path, dir, "", -1)))
+				return fmt.Errorf(fmt.Sprintf("Error adding file %s to .zip archive again", strings.Replace(path, dir, "", -1)))
 			}
 		}
 
@@ -344,7 +346,6 @@ func AddSignature(archive, privKey, certificate string) error {
 	if err != nil {
 		return fmt.Errorf("unable to write new stboot.zip file - recover old from %s", pathToZip)
 	}
-	log.Println("Updated Stboot file has been written to " + archive)
 	os.RemoveAll(pathToZip)
 
 	return nil
@@ -361,7 +362,7 @@ func parseCertificate(rawCertificate []byte) (x509.Certificate, error) {
 
 	pub, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return *pub, fmt.Errorf("Failed to parse DER encoded public key: ", err)
+		return *pub, fmt.Errorf("failed to parse DER encoded public key: ", err)
 	}
 
 	return *pub, nil
