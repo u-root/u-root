@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
@@ -38,7 +37,6 @@ const (
 	_BMC_GET_WATCHDOG_TIMER = 0x25
 
 	_SET_SYSTEM_INFO_PARAMETERS = 0x58
-	_GET_SYSTEM_INFO_PARAMETERS = 0x59
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
@@ -46,10 +44,12 @@ const (
 
 	_SYSTEM_INFO_BLK_SZ = 16
 
-	_SET_IN_PROGRESS   = 0
 	_SYSTEM_FW_VERSION = 1
 
 	_ASCII = 0
+
+	// Set 62 Bytes (4 sets) as the maximal string length
+	strlenMax = 62
 )
 
 var (
@@ -92,7 +92,7 @@ type systemInterfaceAddr struct {
 type setSystemInfoReq struct {
 	paramSelector byte
 	setSelector   byte
-	version       [_SYSTEM_INFO_BLK_SZ]byte
+	strData       [_SYSTEM_INFO_BLK_SZ]byte
 }
 
 func ioc(dir int, t int, nr int, size int) int {
@@ -192,79 +192,51 @@ func (i *IPMI) ShutoffWatchdog() error {
 	return nil
 }
 
-func (i *IPMI) waitForSetInProgressCleared() error {
+func (i *IPMI) setsysinfo(data *setSystemInfoReq) error {
 	req := &req{}
-	req.msg.cmd = _GET_SYSTEM_INFO_PARAMETERS
+	req.msg.cmd = _SET_SYSTEM_INFO_PARAMETERS
 	req.msg.netfn = _IPMI_NETFN_APP
-	var data [4]byte
+	req.msg.dataLen = 18 // size of setSystemInfoReq
+	req.msg.data = unsafe.Pointer(data)
 
-	data[0] = 0
-	data[1] = _SET_IN_PROGRESS
-	data[2] = 0
-	data[3] = 0
-	req.msg.data = unsafe.Pointer(&data)
-	req.msg.dataLen = 4
-
-	retry := 20
-	for retry > 0 {
-		recv, err := i.sendrecv(req)
-		if err != nil {
-			return err
-		}
-		// response data byte 3 bit[1:0] == 00b indicates set complete
-		if len(recv) == 3 && (recv[2]&0x3) == 0 {
-			return nil
-		}
-		time.Sleep(1 * time.Millisecond)
-		retry--
+	if _, err := i.sendrecv(req); err != nil {
+		return err
 	}
 
-	return fmt.Errorf("Wait for Set in Progress cleared timeout")
-
+	return nil
 }
 
 // SetSystemFWVersion sets the provided system firmware version to BMC via IPMI.
 func (i *IPMI) SetSystemFWVersion(version string) error {
-	strlenMax := 64 // Set 64 Bytes as the maximal version string length
 	len := len(version)
 
-	if len > strlenMax || len == 0 {
-		return fmt.Errorf("Version length is 0 or longer than the suggested maximal length %d", strlenMax)
+	if len == 0 {
+		return fmt.Errorf("Version length is 0")
+	} else if len > strlenMax {
+		len = strlenMax
 	}
 
-	req := &req{}
-	req.msg.cmd = _SET_SYSTEM_INFO_PARAMETERS
-	req.msg.netfn = _IPMI_NETFN_APP
 	var data setSystemInfoReq
 	var copied int
+	var index int
 	data.paramSelector = _SYSTEM_FW_VERSION
 	data.setSelector = 0
-	index := 0
-	for len > 0 {
+	for len > index {
 		if data.setSelector == 0 { // the fisrt block of string data
-			data.version[0] = _ASCII
-			data.version[1] = byte(len)
-			copied = copy(data.version[2:], version)
-			// dataLen needs to add the actual copied string data plus the first 2 bytes
-			req.msg.dataLen = uint16(int(unsafe.Sizeof(data.paramSelector)) + int(unsafe.Sizeof(data.setSelector)) + copied + 2)
+			data.strData[0] = _ASCII
+			data.strData[1] = byte(len)
+			copied = copy(data.strData[2:], version)
 		} else {
-			copied = copy(data.version[:], version[index:])
-			req.msg.dataLen = uint16(int(unsafe.Sizeof(data.paramSelector)) + int(unsafe.Sizeof(data.setSelector)) + copied)
+			copied = copy(data.strData[:], version[index:])
 		}
+
 		index += copied
-		req.msg.data = unsafe.Pointer(&data)
-		if err := i.waitForSetInProgressCleared(); err != nil {
+		if err := i.setsysinfo(&data); err != nil {
 			return err
 		}
-
-		if _, err := i.sendrecv(req); err != nil {
-			return err
-		}
-
-		len -= copied
 		data.setSelector++
-		for j := range data.version { //reset to 0
-			data.version[j] = 0
+		for j := range data.strData { //reset to 0
+			data.strData[j] = 0
 		}
 	}
 
