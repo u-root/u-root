@@ -171,4 +171,4 @@ jobs:
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v3.0.1
+      - image: uroottest/test-image-arm:3.0.2
