@@ -35,7 +35,7 @@ var (
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
-	audible    = flat.Bool("a", false, "Audible rings a bell when a packet is received")
+	audible    = flag.Bool("a", false, "Audible rings a bell when a packet is received")
 )
 
 const (
