@@ -153,10 +153,6 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	if o.QEMUOpts.SerialOutput == nil {
 		o.QEMUOpts.SerialOutput = TestLineWriter(t, "serial")
 	}
-	if TestArch() == "arm" {
-		//currently, 9p does not work on arm
-		o.UseVVFAT = true
-	}
 
 	// Create or reuse a temporary directory. This is exposed to the VM.
 	if o.TmpDir == "" {
@@ -301,7 +297,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	if o.UseVVFAT {
 		dir = qemu.ReadOnlyDirectory{Dir: o.TmpDir}
 	} else {
-		dir = qemu.P9Directory{Dir: o.TmpDir}
+		dir = qemu.P9Directory{Dir: o.TmpDir, Arch: TestArch()}
 	}
 	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, dir)
 
