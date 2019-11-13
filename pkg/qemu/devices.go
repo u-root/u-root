@@ -121,6 +121,10 @@ type P9Directory struct {
 	// Because the tag must be unique for each dir, if multiple non-boot
 	// P9Directory's are used, tag may be omitted for no more than one.
 	Tag string
+
+	// Arch is the architecture under test. This is used to determine the
+	// QEMU command line args.
+	Arch string
 }
 
 func (p P9Directory) Cmdline() []string {
@@ -144,12 +148,20 @@ func (p P9Directory) Cmdline() []string {
 	}
 
 	// Expose the temp directory to QEMU
+	var deviceArgs string
+	switch p.Arch {
+	case "arm":
+		deviceArgs = fmt.Sprintf("virtio-9p-device,fsdev=%s,mount_tag=%s", id, tag)
+	default:
+		deviceArgs = fmt.Sprintf("virtio-9p-pci,fsdev=%s,mount_tag=%s", id, tag)
+	}
+
 	return []string{
 		// security_model=mapped-file seems to be the best choice. It gives
 		// us control over uid/gid/mode seen in the guest, without requiring
 		// elevated perms on the host.
 		"-fsdev", fmt.Sprintf("local,id=%s,path=%s,security_model=mapped-file", id, p.Dir),
-		"-device", fmt.Sprintf("virtio-9p-pci,fsdev=%s,mount_tag=%s", id, tag),
+		"-device", deviceArgs,
 	}
 }
 
