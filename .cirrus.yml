@@ -23,4 +23,4 @@ build_task:
   prepare_script: 
     - dep ensure
   script:
-    - go_build
+    - go build
