@@ -8,7 +8,7 @@ test_task:
     dep status
     dep ensure -vendor-only
     git status
-    if [[ -n "$(git status --porcelain vendor)" ]]; then
+    if [ -n "$(git status --porcelain vendor)" ]; then
       echo '`vendor/` is out-of-date: run `dep ensure -vendor-only` and then'
       echo 'check in the changes. If `dep ensure` results in no changes, make'
       echo 'sure you are using the latest release of dep.'
