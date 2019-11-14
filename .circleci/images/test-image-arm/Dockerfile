@@ -25,11 +25,11 @@ RUN sudo apt-get update &&                          \
 
 # Create working directory
 WORKDIR /home/circleci
-COPY config_linux4.20_arm.txt .config
+COPY config_linux5.2.0_arm.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
-    git clone --depth=1 --branch=v4.20 https://github.com/torvalds/linux; \
+    git clone --depth=1 --branch=v5.2  https://github.com/torvalds/linux; \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
@@ -42,7 +42,7 @@ RUN set -eux;                                                             \
 
 # Build QEMU
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v2.12.0 https://github.com/qemu/qemu; \
+    git clone --depth=1 --branch=v3.1.0 https://github.com/qemu/qemu; \
     cd qemu;                                                           \
     mkdir build;                                                       \
     cd build;                                                          \

@@ -1,0 +1,26 @@
+freebsd_instance:
+  image_family: freebsd-12-0
+test_task:
+  install_script:
+    - pkg install -y go dep git
+  script: |
+    dep version
+    dep status
+    dep ensure -vendor-only
+    git status
+    if [[ -n "$(git status --porcelain vendor)" ]]; then
+      echo '`vendor/` is out-of-date: run `dep ensure -vendor-only` and then'
+      echo 'check in the changes. If `dep ensure` results in no changes, make'
+      echo 'sure you are using the latest release of dep.'
+      git status --porcelain vendor
+      exit 1
+    fi
+build_task:
+  depends_on:
+    - test
+  install_script:
+    - pkg install -y go dep git
+  prepare_script: 
+    - dep ensure
+  script:
+    - go build
