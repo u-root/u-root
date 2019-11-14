@@ -244,9 +244,6 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		}
 		if len(o.BuildOpts.DefaultShell) == 0 {
 			o.BuildOpts.DefaultShell = "elvish"
-
-			// We need to add elvish so the build will succeed.
-			o.BuildOpts.AddBusyBoxCommands("github.com/u-root/u-root/cmds/core/elvish")
 		}
 		if len(o.BuildOpts.TempDir) == 0 {
 			o.BuildOpts.TempDir = o.TmpDir

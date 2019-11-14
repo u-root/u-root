@@ -5,12 +5,10 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/u-root/u-root/pkg/mount"
 	"golang.org/x/sys/unix"
@@ -34,18 +32,13 @@ func main() {
 
 	// Run the test script test.elv
 	test := filepath.Join("/testdata", "test.elv")
-	if os.Stat(test); os.IsNotExist(err) {
+	if _, err := os.Stat(test); os.IsNotExist(err) {
 		log.Fatalf("Could not find any test script to run.")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "elvish", test)
+	cmd := exec.Command("elvish", test)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 
-	// TODO(plaud) start test in its own dir so that testdata is available as a
-	// relative directory?
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("test.elv ran unsuccessfully: %v", err)
 	}
