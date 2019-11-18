@@ -18,9 +18,6 @@ type NetVars struct {
 	DefaultGateway string `json:"gateway"`
 	DNSServer      string `json:"dns"`
 
-	HostPrivKey string `json:"host_priv_key"`
-	HostPupKey  string `json:"host_pub_key"`
-
 	BootstrapURL    string `json:"bootstrap_url"`
 	SignaturePubKey string `json:"signature_pub_key"`
 
@@ -31,13 +28,10 @@ const (
 	netVarsPath = "netvars.json"
 )
 
-// FindNetVars mounts all possible devices with every possible file system and looks for netvars.json
-func FindNetVars() (NetVars, error) {
+// FindNetVarsOnPartition mounts all possible devices with every possible
+// file system and looks for netvars.json partition root
+func FindNetVarsOnPartition() (NetVars, error) {
 	var vars NetVars
-	vars, err := findNetVarsInInitramfs(netVarsPath)
-	if err == nil {
-		return vars, nil
-	}
 	devices, err := storage.GetBlockStats()
 	if err != nil {
 		log.Fatal(err)
@@ -78,21 +72,23 @@ func FindNetVars() (NetVars, error) {
 	}
 
 	if err = json.Unmarshal(data, &vars); err != nil {
-		return vars, fmt.Errorf("unable to get netvars.json at all: %v", err)
+		return vars, fmt.Errorf("unable to parse netvars.json: %v", err)
 	}
 
 	return vars, nil
 }
 
-// FindNetVarsInInitramfs looks for netvars.json in a given path in the root file system
-func findNetVarsInInitramfs(path string) (NetVars, error) {
+// FindNetVarsInInitramfs looks for netvars.json at a given path inside
+// the initramfs file system. The netvars.json is
+// expected to be at the root of the file system.
+func FindNetVarsInInitramfs() (NetVars, error) {
 	var vars NetVars
-	if _, err := os.Stat(path); os.IsNotExist(err) != false {
-		return vars, fmt.Errorf("Path not found: %v", err)
+	if _, err := os.Stat("/netvars.json"); os.IsNotExist(err) != false {
+		return vars, fmt.Errorf("netvars.json not found: %v", err)
 	}
-	file, err := ioutil.ReadFile(path)
+	file, err := ioutil.ReadFile("/netvars.json")
 	if err != nil {
-		return vars, fmt.Errorf("cant open netvars.json in path: %v", err)
+		return vars, fmt.Errorf("cant open netvars.json: %v", err)
 	}
 	if err = json.Unmarshal(file, &vars); err != nil {
 		return vars, fmt.Errorf("cant parse data from netvars.json")
