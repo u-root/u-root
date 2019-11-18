@@ -37,7 +37,7 @@ func main() {
 	}
 	log.Print(banner)
 
-	vars, err := stboot.FindNetVars()
+	vars, err := stboot.FindNetVarsInInitramfs()
 	if err != nil {
 		log.Fatalf("Cant find Netvars at all: %v", err)
 	}
@@ -53,9 +53,6 @@ func main() {
 		log.Print("HostNetmask: " + vars.HostNetmask)
 		log.Print("DefaultGateway: " + vars.DefaultGateway)
 		log.Print("DNSServer: " + vars.DNSServer)
-
-		log.Print("HostPrivKey: " + vars.HostPrivKey)
-		log.Print("HostPubKey: " + vars.HostPupKey)
 
 		log.Print("BootstrapURL: " + vars.BootstrapURL)
 		log.Print("SignaturePupKey: " + vars.SignaturePubKey)
