@@ -112,6 +112,10 @@ jobs:
       - run:
           name: Test coverage
           command: go test -cover ./cmds/... ./pkg/...
+      - run:
+          name: Report coverage
+          when: on_success
+          command: bash <(curl -s https://codecov.io/bash)
   race:
     <<: *golang-template
     environment:
