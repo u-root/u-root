@@ -19,6 +19,8 @@ RUN sudo apt-get update &&                          \
         libfdt-dev                                  \
         libpixman-1-dev                             \
         zlib1g-dev                                  \
+	libcap-dev                                  \
+	libattr1-dev                                \
         `# Linux kernel build deps`                 \
         libelf-dev &&                               \
     sudo rm -rf /var/lib/apt/lists/*
@@ -48,6 +50,7 @@ RUN set -eux;                                                          \
     cd build;                                                          \
     ../configure                                                       \
         --target-list=arm-softmmu                                      \
+        --enable-virtfs                                                \
         --disable-docs                                                 \
         --disable-sdl                                                  \
         --disable-kvm;                                                 \

@@ -46,7 +46,7 @@ func main() {
 		err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
 	}
 	if err != nil {
-		log.Fatalf("Couldn't mount /dev/sda1: %v", err)
+		log.Fatalf("Failed to mount test directory: %v", err)
 	}
 
 	walkTests("/testdata/tests", func(path, pkgName string) {

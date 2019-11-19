@@ -24,11 +24,10 @@ func TestIO(t *testing.T) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/integration/testcmd/io/uinit",
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/io",
 			),
 		},
+		Uinit: "github.com/u-root/u-root/integration/testcmd/io/uinit",
 	})
 	defer cleanup()
 
