@@ -111,7 +111,7 @@ func (bc *BootConfig) Boot() error {
 		if err := multiboot.Probe(bc.Multiboot); err != nil {
 			return fmt.Errorf("error parsing multiboot header: %v", err)
 		}
-		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules); err != nil {
+		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() multi boot error: %v", err)
 >>>>>>> Check filesize of kernel, initramfs and devicetree
 		}
