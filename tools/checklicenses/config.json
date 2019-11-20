@@ -10,7 +10,12 @@
             "^// Copyright [\\d\\-, ]+ Google LLC.",
             "//",
             "// Licensed under the Apache License, Version 2.0.*"
-        ]
+        ],
+	[
+	    "^// Copyright [\\d\\-, ]+ The gVisor Authors.",
+	    "//",
+            "// Licensed under the Apache License, Version 2.0.*"
+	]
     ],
     "accept": [
         ".*\\.go"

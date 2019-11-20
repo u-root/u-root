@@ -35,4 +35,4 @@ ignored = ["github.com/u-root/u-root/bb*"]
 
 [[constraint]]
   name = "github.com/gliderlabs/ssh"
-  revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
+  version = "0.2.2"

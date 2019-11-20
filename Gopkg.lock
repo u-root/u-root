@@ -50,11 +50,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:e8301df5b11c8c13927a26a88ee7ec65410024f75c0fc3c8e6421aa6833808ac"
+  digest = "1:a7d572fb8bedc2ad7c530f7342fe68ffd2d8176c3f26366cafc451807123e387"
   name = "github.com/gliderlabs/ssh"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
+  revision = "5b6cc7030f17095c0cf23bb063b0bfe824fe5f8b"
+  version = "v0.2.2"
 
 [[projects]]
   digest = "1:4939d189513c3d3994fbf3359d6897a2687c28ecb05b3ba9116a16fe817cb5c6"
@@ -104,6 +105,18 @@
   packages = ["term"]
   pruneopts = "NUT"
   revision = "fc88cf888a3fa99ecc23d1efc1a44284268457d3"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b850f33189449c646a50055e21f927b9fac0e5a3d485aa02f4d2e87296f3c374"
+  name = "github.com/hugelgupf/p9"
+  packages = [
+    "p9",
+    "unimplfs",
+    "vecnet",
+  ]
+  pruneopts = "NUT"
+  revision = "ede262f409e34431adb8bee319b12151a16dce54"
 
 [[projects]]
   branch = "master"
@@ -418,6 +431,8 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-tpm/tpm",
     "github.com/google/goexpect",
+    "github.com/hugelgupf/p9/p9",
+    "github.com/hugelgupf/p9/unimplfs",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv4/server4",

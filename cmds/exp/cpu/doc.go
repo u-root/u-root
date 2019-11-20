@@ -7,6 +7,28 @@
 // Synopsis:
 //     cpu [OPTIONS]
 //
+// Advisory:
+//     cpu connects to a remote machine and serves a namespace to it.
+//     That namespace can be a restricted file system (recommended)
+//     or everything up to and including your /.
+//     We do cover a lot of the simpler adversarial attacks, via
+//     private name space mounts and the nonce on the 9p socket, and a
+//     quick review of this code by an expert suggest that on systems
+//     on which your adversary would only be those running at the same
+//     privilege level as you, you may be ok.
+//
+//     You should not use this command to connect to a host that might
+//     have an untrusted, privileged adversary, i.e. someone who might
+//     replace the remote version with a corrupted version, or might
+//     use a different attack to grab the nonce and mount your file
+//     system, changing files before the client cpu exits.
+//.
+//     cpu is best used to connect to a LinuxBoot machine with only one
+//     user, i.e. a non-time-shared machine.
+//
+//     We are developing a cpu we consider more trustworthy but that is a ways off.
+//     You Have Been Warned :-)
+//
 // Description:
 //     On local machine useful flags are all save -remote
 //     On remote machines, all save dbg9p, key, hostkey.
@@ -59,7 +81,7 @@
 //     -remote
 //           Indicates we are the remote side of the cpu session
 //     -srv string
-//           what server to run (default "unpfs")
+//           what server to run (default none; use internal)
 // Examples
 // In these examples, cpu runs with warning messages enabled.
 // The first message is a warning that cpu could not use overlayfs to build a
@@ -126,4 +148,74 @@
 //    rminnich@xcpu:~/gopath/src/github.com/u-root/u-root/xcmds/cpu$ ls -l ~/xyz
 //    -rw-r--r-- 1 rminnich rminnich 577 May 17 17:06 /home/rminnich/xyz
 //    rminnich@xcpu:~/gopath/src/github.com/u-root/u-root/xcmds/cpu$
+//
+// A note on sizes of things. We can get an image down to 3 MiB if the only
+// binary is cpu. See github.com:linuxboot/mainboards/aeeon/up for an example.
+//
+// You may see that the remote cpu writes a nonce back to the client, and wonder why
+// that is. This gets back to how we make the client name space available to remote processes.
+// To export the client name space to the remote cpu proc
+// we use a remote ssh forward so the remote kernel can mount
+// our built-in server over 9p. But how do we ensure the mount comes
+// from the remote cpu proc and not something else?
+// We need to ensure that the socket has only
+// been opened by the remote cpu process.
+// The way we do it here is the result of discussions with Eric Grosse, among others.
+// Not that he endorses this solution, but he raised awareness
+// of the issues.
+//
+// The 'remote' invocation of CPU is designed to work under
+// cpu acting as init OR an sshd (i.e. ssh host cpu -r ...)
+// Anything that makes the cpu init mode special is out; we would also have
+// to change sshd to do the same things and we can't change
+// every ssh server in the world. For anoher example, using Linux
+// private network name spaces for the ssh forward is out,
+// as not all ssh daemons support that.
+// Trying to use ssh-forwarded Unix domain sockets is out, as we would want them placed in the
+// private name space of the remote cpu process, and no ssh daemons support that; further
+// the Go ssh packages don't support Unix domain sockets. Even were we to add them (I did)
+// the approach fails as we can't specify that they be in a private name space.
+// We'd rather not do a full TLS transaction on the forwarded port,
+// since we for sure don't want another layer of encryption running
+// over our already-encrypted, already-authenticated ssh connection.
+//
+// In the last year we've experimented with several approaches that all failed
+// due to limits in how ssh protocol works, how the ssh packages work, how various ssh daemons work,
+// or how Linux manages name spaces. What we describe below is the simplest approach
+// that works on everything we've tried.
+//
+// We only do one accept on the client side.
+// For the kernel 9p mount at the remote, we use the fd transport.
+// The fd we pass is for a socket that has been verified.
+// We verify as follows:
+// client generates a nonce and adds it as an environment variable (not argv!).
+// We don't put the nonce in argv as an adversary could then see it in ps.
+// The remote cpu process reads that variable and removes it from the environment.
+// The remote cpu process writes that nonce back on the port forward socket within 10 ms.
+// The 10ms requirement is to defend (imperfectly) against a bad person running the remote
+// under ptrace control.
+// The client only accepts one connect.
+//
+// We did experiment with writing the nonce to stdin of the remote cpu
+// process, but that was not reliable, so we went with the environment.
+//
+// This is not perfect, but it's a lot better than having the kernel
+// mount from a socket.
+//
+// Note that in the original plan 9 cpu, all the communications over the
+// socket were 9p; further, the remote cpu recreates the name space of the
+// client by performing mounts as needed, not shuttling 9p requests back to the
+// cpu client. In other words, this cpu is a workalike, but is implemented
+// very differently. The use of 9p for all operations to the remote cpu sounds
+// nice but does not solve all problems; in particular, as delay-bandwidth products
+// get larger and larger, 9p's poor behavior becomes more apparent. Further, plan 9
+// cpu had weird issues with EOF, manifested in pipelines:
+// cpu host ls | cpu otherhost wc
+// would hang as often as it worked, which is why plan 9 had a remote execute
+// command as well as cpu. This cpu implementation acts a lot more like what ssh
+// users are used to.
+//
+// If you want to learn more read the factotum paper by Grosse et. al. and the original
+// Plan 9 papers on cpu, but be aware there are many subtle details visible only
+// in code.
 package main
