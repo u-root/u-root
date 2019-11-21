@@ -319,13 +319,16 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 	}
 	defer kernelDesc.Close()
 
-	ramfs, err := os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
-	if err != nil {
-		debug("%v", err)
-		return err
+	var ramfs io.ReaderAt
+	if be.initrd != "" {
+		ramfsfile, err := os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
+		if err != nil {
+			debug("%v", err)
+			return err
+		}
+		defer ramfsfile.Close()
+		ramfs = ramfsfile
 	}
-	defer ramfs.Close()
-
 	cl := updateBootCmdline(be.cmdline)
 
 	osImage := &boot.LinuxImage{
@@ -333,6 +336,7 @@ func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
 		Kernel:  kernelDesc,
 		Initrd:  ramfs,
 	}
+	log.Printf("%s", osImage)
 
 	if err := osImage.Load(false); err != nil {
 		debug("%v", err)
@@ -370,7 +374,7 @@ func Localboot() error {
 		err := checkForBootableMBR(d)
 		if err != nil {
 			// Not sure it matters; there can be many bogus entries?
-			log.Printf("MBR for %s failed: %v", d, err)
+			debug("MBR for %s failed: %v", d, err)
 			continue
 		}
 		debug("Bootable device %v found", d)
@@ -414,6 +418,7 @@ func Localboot() error {
 		if *dryRun {
 			continue
 		}
+
 		if err := boot.Execute(); err != nil {
 			log.Printf("boot.Execute of %v failed: %v", u, err)
 		}
