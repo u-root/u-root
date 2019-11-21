@@ -35,14 +35,13 @@ func testMultiboot(t *testing.T, kernel string) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/kexec",
 			),
 			ExtraFiles: []string{
 				src + ":kernel",
 			},
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 		},
 		QEMUOpts: qemu.Options{

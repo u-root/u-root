@@ -28,7 +28,6 @@ func TestDhclient(t *testing.T) {
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/echo",
 				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/sleep",
 				"github.com/u-root/u-root/cmds/core/shutdown",
 				"github.com/u-root/u-root/cmds/exp/pxeserver",
@@ -40,7 +39,7 @@ func TestDhclient(t *testing.T) {
 				network.NewVM(),
 			},
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			"ip link set eth0 up",
 			"ip addr add 192.168.0.1/24 dev eth0",
 			"ip route add 0.0.0.0/0 dev eth0",
@@ -54,7 +53,6 @@ func TestDhclient(t *testing.T) {
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/dhclient",
 				"github.com/u-root/u-root/cmds/core/shutdown",
 			),
@@ -66,7 +64,7 @@ func TestDhclient(t *testing.T) {
 				network.NewVM(),
 			},
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			"dhclient -ipv6=false -v",
 			"ip a",
 			// Sleep so serial console output gets flushed. The expect library is racy.
@@ -98,7 +96,6 @@ func TestPxeboot(t *testing.T) {
 		Name: "TestPxeboot_Server",
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/ls",
 				"github.com/u-root/u-root/cmds/exp/pxeserver",
@@ -107,7 +104,7 @@ func TestPxeboot(t *testing.T) {
 				"./testdata/pxe:pxeroot",
 			},
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			"ip addr add 192.168.0.1/24 dev eth0",
 			"ip link set eth0 up",
 			"ip route add 0.0.0.0/0 dev eth0",
@@ -128,14 +125,13 @@ func TestPxeboot(t *testing.T) {
 		Name: "TestPxeboot_Client",
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/shutdown",
 				"github.com/u-root/u-root/cmds/core/sleep",
 				"github.com/u-root/u-root/cmds/boot/pxeboot",
 			),
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			"pxeboot --dry-run --no-load -v",
 			// Sleep so serial console output gets flushed. The expect library is racy.
 			"sleep 5",
@@ -172,7 +168,6 @@ func TestQEMUDHCPTimesOut(t *testing.T) {
 		Name: "TestQEMUDHCPTimesOut",
 		BuildOpts: uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/echo",
 				"github.com/u-root/u-root/cmds/core/dhclient",
 				"github.com/u-root/u-root/cmds/core/sleep",
@@ -183,7 +178,7 @@ func TestQEMUDHCPTimesOut(t *testing.T) {
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
 			Timeout:      40 * time.Second,
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			// loopback should time out and it can't have configured anything.
 			"dhclient -v -retry 1 -timeout 10 lo",
 			"echo \"DHCP timed out\"",
