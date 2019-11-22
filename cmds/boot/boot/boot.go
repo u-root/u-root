@@ -35,14 +35,18 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/grub"
+	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/curl"
 )
 
 const (
@@ -60,8 +64,9 @@ var (
 	devGlob           = flag.String("dev", "/sys/block/*", "Glob for devices")
 	verbose           = flag.Bool("v", false, "Print debug messages")
 	debug             = func(string, ...interface{}) {}
-	dryRun            = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
-	defaultBoot       = flag.String("boot", "default", "Default entry to boot")
+	dryRun            = flag.Bool("dry-run", false, "load kernel, but don't kexec it")
+	defaultBoot       = flag.String("boot", "", "entry to boot (default to the configuration file default)")
+	list              = flag.Bool("list", false, "list found configurations")
 	uroot             string
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
@@ -145,207 +150,6 @@ func umountEntry(n string) error {
 	return syscall.Unmount(n, syscall.MNT_DETACH)
 }
 
-// loadISOLinux reads an isolinux.cfg file. It further needs to
-// process include directives.
-// The include files are correctly placed in line at the place they
-// were included. Include files can include other files, i.e. this
-// function can recurse.
-// It returns a []string of all the files, the path to the directory
-// contain the boot images (bzImage, initrd, etc.) and the mount point.
-// For now, these are the same, but in, e.g., grub, they are different,
-// and they might in future change here too.
-func loadISOLinux(dir, base string) ([]string, string, string, error) {
-	sol := filepath.Join(dir, base)
-	isolinux, err := ioutil.ReadFile(sol)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	// it's easier we think to do include processing here.
-	lines := strings.Split(string(isolinux), "\n")
-	var result []string
-	for _, l := range lines {
-		f := strings.Fields(l)
-		if len(f) == 0 {
-			continue
-		}
-		switch f[0] {
-		default:
-			result = append(result, l)
-		case "include":
-			i, _, _, err := loadISOLinux(dir, f[1])
-			if err != nil {
-				return nil, "", "", err
-			}
-			result = append(result, i...)
-			// If the string contain include
-			// we must call back as to read the content of the file
-		}
-	}
-	return result, dir, dir, nil
-}
-
-// checkBootEntry is looking for grub.cfg file
-// and return absolute path to it. It returns a []string with all the commands,
-// the path to the direction containing files to load for kexec, and the mountpoint.
-func checkBootEntry(mountPoint string) ([]string, string, string, error) {
-	grub, err := ioutil.ReadFile(filepath.Join(mountPoint, "boot/grub/grub.cfg"))
-	if err == nil {
-		return strings.Split(string(grub), "\n"), filepath.Join(mountPoint, "/boot"), mountPoint, nil
-	}
-	return loadISOLinux(filepath.Join(mountPoint, "isolinux"), "isolinux.cfg")
-}
-
-// getFileMenuContent is parsing a grub.cfg file
-// output: bootEntries
-// grub parsing is a good deal messier than it looks.
-// This is a simple parser will fail on anything tricky.
-func getBootEntries(lines []string) (map[string]*bootEntry, map[string]string, error) {
-	// There are two ways to reference a bootEntry: its order in the file and its
-	// name.
-	var (
-		lineno      int
-		line        string
-		err         error
-		curEntry    string
-		numEntry    int
-		bootEntries = make(map[string]*bootEntry)
-		bootVars    = make(map[string]string)
-		f           []string
-		be          *bootEntry
-	)
-	defer func() {
-		switch err := recover().(type) {
-		case nil:
-		case error:
-			log.Fatalf("Bummer: %v, line #%d, line %q, fields %q", err, lineno, line, f)
-		default:
-			log.Fatalf("unexpected panic value: %T(%v)", err, err)
-		}
-	}()
-
-	debug("getBootEntries: %s", lines)
-	curLabel := ""
-	for _, line = range lines {
-		lineno++
-		f = strings.Fields(line)
-		debug("%d: %q, %q", lineno, line, f)
-		if len(f) == 0 {
-			continue
-		}
-		switch f[0] {
-		default:
-		case "#":
-		case "default":
-			bootVars["default"] = f[1]
-		case "set":
-			vals := strings.SplitN(f[1], "=", 2)
-			if len(vals) == 2 {
-				bootVars[vals[0]] = vals[1]
-			}
-		case "menuentry", "label":
-			debug("Menuentry %v", line)
-			// nasty, but the alternatives are not much better.
-			// grub config language is kind of arbitrary
-			curEntry = fmt.Sprintf("\"%s\"", strconv.Itoa(numEntry))
-			be = &bootEntry{}
-			curLabel = f[1]
-			bootEntries[f[1]] = be
-			bootEntries[curEntry] = be
-			numEntry++
-		case "menu":
-			// keyword default marks this as default
-			if f[1] != "default" {
-				continue
-			}
-			bootVars["default"] = curLabel
-		case "linux", "kernel":
-			debug("linux %v", line)
-			be.kernel = f[1]
-			be.cmdline = strings.Join(f[2:], " ")
-		case "initrd":
-			debug("initrd %v", line)
-			be.initrd = f[1]
-		case "append":
-			// Format is a little bit strange
-			//   append   MENU=/bin/cdrom-checker-menu vga=788 initrd=/install/initrd.gz quiet --
-			var currentParameter int
-			for _, parameter := range f {
-				if currentParameter > 0 {
-					if strings.HasPrefix(parameter, "initrd") {
-						initrd := strings.Split(parameter, "=")
-						bootEntries[curEntry].initrd = bootEntries[curEntry].initrd + initrd[1]
-					} else {
-						if parameter != "--" {
-							bootEntries[curEntry].cmdline = bootEntries[curEntry].cmdline + " " + parameter
-						}
-					}
-				}
-				currentParameter++
-			}
-		}
-	}
-	debug("grub config menu decoded to [%q, %q, %v]", bootEntries, bootVars, err)
-	return bootEntries, bootVars, err
-
-}
-
-// kexecLoad Loads a new kernel and initrd.
-func kexecLoad(grubConfPath string, grub []string, mountPoint string) error {
-	debug("kexecEntry: boot from %v", grubConfPath)
-	b, v, err := getBootEntries(grub)
-	if err != nil {
-		return err
-	}
-
-	debug("Boot Entries: %q", b)
-	entry, ok := v[*defaultBoot]
-	if !ok {
-		return fmt.Errorf("Entry %v not found in config file", *defaultBoot)
-	}
-	be, ok := b[entry]
-	if !ok {
-		return fmt.Errorf("Entry %v not found in boot entries file", entry)
-	}
-
-	debug("Boot params: %q", be)
-	localKernelPath := filepath.Join(mountPoint, be.kernel)
-	localInitrdPath := filepath.Join(mountPoint, be.initrd)
-
-	kernelDesc, err := os.OpenFile(localKernelPath, os.O_RDONLY, 0)
-	if err != nil {
-		debug("%v", err)
-		return err
-	}
-	defer kernelDesc.Close()
-
-	var ramfs io.ReaderAt
-	if be.initrd != "" {
-		ramfsfile, err := os.OpenFile(localInitrdPath, os.O_RDONLY, 0)
-		if err != nil {
-			debug("%v", err)
-			return err
-		}
-		defer ramfsfile.Close()
-		ramfs = ramfsfile
-	}
-	cl := updateBootCmdline(be.cmdline)
-
-	osImage := &boot.LinuxImage{
-		Cmdline: cl,
-		Kernel:  kernelDesc,
-		Initrd:  ramfs,
-	}
-	log.Printf("%s", osImage)
-
-	if err := osImage.Load(false); err != nil {
-		debug("%v", err)
-		return err
-	}
-
-	return nil
-}
-
 // Localboot tries to boot from any local filesystem by parsing grub configuration
 func Localboot() error {
 	fs, err := getSupportedFilesystem()
@@ -398,19 +202,32 @@ func Localboot() error {
 		}
 		debug("mount succeed")
 		u := filepath.Join(uroot, d)
-		config, fileDir, root, err := checkBootEntry(u)
+		wd := &url.URL{
+			Scheme: "file",
+			Path:   u,
+		}
+
+		img, err := GrubBootImage(curl.DefaultSchemes, wd, *defaultBoot, *list)
 		if err != nil {
-			debug("d: %v", d, err)
+			log.Printf("GrubBootImage failed: %v", err)
+			// not grub config found, try isolinux
+			img, err = IsolinuxBootImage(curl.DefaultSchemes, wd)
+		}
+		if err != nil {
+			log.Printf("IsolinuxBootImage failed: %v", err)
 			if err := umountEntry(u); err != nil {
 				log.Printf("Can't unmount %v: %v", u, err)
 			}
 			continue
 		}
-		debug("calling basic kexec: content %v, path %v", config, fileDir)
-		if err = kexecLoad(fileDir, config, root); err != nil {
-			log.Printf("kexec on %v failed: %v", u, err)
+		if li, ok := img.(*boot.LinuxImage); ok {
+			// Filter the kernel command line
+			li.Cmdline = updateBootCmdline(li.Cmdline)
 		}
-		debug("kexecLoad succeeded")
+		log.Printf("BootImage: %s", img)
+		if err := img.Load(*verbose); err != nil {
+			return fmt.Errorf("kexec load of %v failed: %v", img, err)
+		}
 
 		if err := umountEntry(u); err != nil {
 			log.Printf("Can't unmount %v: %v", u, err)
@@ -438,4 +255,100 @@ func main() {
 	if err := Localboot(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// use syslinux parser
+
+func probeIsolinuxFiles() []string {
+	files := make([]string, 0, 10)
+	// search order from the syslinux wiki
+	// http://wiki.syslinux.org/wiki/index.php?title=Config
+	// TODO: do we want to handle extlinux too ?
+	dirs := []string{
+		"boot/isolinux",
+		"isolinux",
+		"boot/syslinux",
+		"syslinux",
+		"",
+	}
+	confs := []string{
+		"isolinux.cfg",
+		"syslinux.cfg",
+	}
+	for _, dir := range dirs {
+		for _, conf := range confs {
+			if dir == "" {
+				files = append(files, conf)
+			} else {
+				files = append(files, path.Join(dir, conf))
+			}
+		}
+	}
+	return files
+}
+
+func IsolinuxParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*syslinux.Config, error) {
+	for _, relname := range probeIsolinuxFiles() {
+		c, err := syslinux.ParseConfigFileWithSchemes(s, relname, workingDir)
+		if curl.IsURLError(err) {
+			continue
+		}
+		return c, err
+	}
+	return nil, fmt.Errorf("no valid syslinux config found")
+}
+
+// call IsolinuxBootImage(curl.DefaultSchemes, dir)
+func IsolinuxBootImage(schemes curl.Schemes, workingDir *url.URL) (*boot.LinuxImage, error) {
+	pc, err := IsolinuxParseConfigWithSchemes(workingDir, schemes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
+	}
+
+	label := pc.Entries[pc.DefaultEntry]
+	return label, nil
+}
+
+// grub parser
+
+var probeGrubFiles = []string{
+	"boot/grub/grub.cfg",
+	"grub/grub.cfg",
+	"grub2/grub.cfg",
+}
+
+func GrubParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*grub.Config, error) {
+	for _, relname := range probeGrubFiles {
+		c, err := grub.ParseConfigFileWithSchemes(s, relname, workingDir)
+		if curl.IsURLError(err) {
+			continue
+		}
+		return c, err
+	}
+	return nil, fmt.Errorf("no valid grub config found")
+}
+
+// GrubBootImage
+func GrubBootImage(schemes curl.Schemes, workingDir *url.URL, entryID string, list bool) (boot.OSImage, error) {
+	pc, err := GrubParseConfigWithSchemes(workingDir, schemes)
+	if err != nil && err != grub.ErrDefaultEntryNotFound {
+		return nil, fmt.Errorf("failed to parse grub config: %v", err)
+	}
+	if list {
+		fmt.Printf("%v\n", pc.Entries)
+	}
+	var entry boot.OSImage
+	if entryID == "" {
+		if err == grub.ErrDefaultEntryNotFound {
+			return nil, err
+		}
+		entry = pc.Entries[pc.DefaultEntry]
+	} else {
+		var ok bool
+		entry, ok = pc.Entries[entryID]
+		if !ok {
+			return nil, fmt.Errorf("entry not found in grub config: %v", entryID)
+		}
+	}
+	return entry, nil
 }
