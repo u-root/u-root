@@ -12,9 +12,11 @@ import (
 	"bytes"
 	"flag"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv4/server4"
@@ -69,7 +71,15 @@ func (s *server) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv
 		dhcpv4.WithRouter(s.self),
 		dhcpv4.WithNetmask(s.submask),
 		dhcpv4.WithYourIP(s.yourIP),
+		// RFC 2131, Section 4.3.1. Server Identifier: MUST
+		dhcpv4.WithOption(dhcpv4.OptServerIdentifier(s.self)),
+		// RFC 2131, Section 4.3.1. IP lease time: MUST
+		dhcpv4.WithOption(dhcpv4.OptIPAddressLeaseTime(time.Duration(math.MaxUint32)*time.Second)),
 	)
+	// RFC 6842, MUST include Client Identifier if client specified one.
+	if val := m.Options.Get(dhcpv4.OptionClientIdentifier); len(val) > 0 {
+		reply.UpdateOption(dhcpv4.OptGeneric(dhcpv4.OptionClientIdentifier, val))
+	}
 	if len(s.bootfilename) > 0 {
 		reply.BootFileName = s.bootfilename
 	}
