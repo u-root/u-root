@@ -14,7 +14,7 @@ const (
 	sysfsPath = "/sys/firmware/dmi/tables"
 )
 
-func getSmbiosData() ([]byte, []byte, error) {
+func getSMBIOSData() ([]byte, []byte, error) {
 	entry, err := ioutil.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading DMI data: %v", err)
