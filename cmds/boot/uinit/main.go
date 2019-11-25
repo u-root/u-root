@@ -30,7 +30,7 @@ var defaultBootsequence = [][]string{
 }
 
 func getSystemFWVersion() (string, error) {
-	entryData, tableData, err := getSmbiosData()
+	entryData, tableData, err := getSMBIOSData()
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +47,7 @@ func getSystemFWVersion() (string, error) {
 	return t0.Version, nil
 }
 
-func runIpmiCommands() {
+func runIPMICommands() {
 	ipmi, err := ipmi.Open(0)
 	if err != nil {
 		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
@@ -67,7 +67,6 @@ func runIpmiCommands() {
 			log.Printf("Failed to set system firmware version to BMC %v.", err)
 		}
 	}
-
 }
 
 func main() {
@@ -81,7 +80,7 @@ func main() {
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
-	runIpmiCommands()
+	runIPMICommands()
 	sleepInterval := time.Duration(*interval) * time.Second
 	if *allowInteractive {
 		log.Printf("**************************************************************************")
