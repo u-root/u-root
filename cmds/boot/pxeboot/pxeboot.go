@@ -2,6 +2,21 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Command pxeboot implements PXE-based booting.
+//
+// pxeboot combines a DHCP client with a TFTP/HTTP client to download files as
+// well as pxelinux and iPXE configuration file parsing.
+//
+// PXE-based booting requests a DHCP lease, and looks at the BootFileName and
+// ServerName options (which may be embedded in the original BOOTP message, or
+// as option codes) to find something to boot.
+//
+// This BootFileName may point to
+//
+// - an iPXE script beginning with #!ipxe
+//
+// - a pxelinux.0, in which case we will ignore the pxelinux and try to parse
+//   pxelinux.cfg/<files>
 package main
 
 import (
@@ -9,20 +24,16 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
-	"net/url"
-	"path"
-	"regexp"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/ipxe"
-	"github.com/u-root/u-root/pkg/pxe"
-	"github.com/vishvananda/netlink"
+	"github.com/u-root/u-root/pkg/netboot"
+	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
+	ifName  = "^e.*"
 	noLoad  = flag.Bool("no-load", false, "get DHCP response, but don't load the kernel")
 	dryRun  = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
 	verbose = flag.Bool("v", false, "Verbose output")
@@ -35,17 +46,9 @@ const (
 
 // Netboot boots all interfaces matched by the regex in ifaceNames.
 func Netboot(ifaceNames string) error {
-	ifs, err := netlink.LinkList()
+	filteredIfs, err := dhclient.Interfaces(ifaceNames)
 	if err != nil {
 		return err
-	}
-
-	var filteredIfs []netlink.Link
-	ifregex := regexp.MustCompilePOSIX(ifaceNames)
-	for _, iface := range ifs {
-		if ifregex.MatchString(iface.Attrs().Name) {
-			filteredIfs = append(filteredIfs, iface)
-		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), (1<<dhcpTries)*dhcpTimeout)
@@ -74,7 +77,14 @@ func Netboot(ifaceNames string) error {
 				continue
 			}
 
-			img, err := Boot(result.Lease)
+			if err := result.Lease.Configure(); err != nil {
+				log.Printf("Failed to configure lease %s: %v", result.Lease, err)
+				// Boot further regardless of lease configuration result.
+				//
+				// If lease failed, fall back to use locally configured
+				// ip/ipv6 address.
+			}
+			img, err := netboot.BootImage(urlfetch.DefaultSchemes, result.Lease)
 			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
@@ -103,57 +113,17 @@ func Netboot(ifaceNames string) error {
 	}
 }
 
-// getBootImage attempts to parse the file at uri as an ipxe config and returns
-// the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
-// ip, and mac address to search for pxe configs.
-func getBootImage(uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
-	// Attempt to read the given boot path as an ipxe config file.
-	ipc, err := ipxe.NewConfig(uri)
-	if err == nil {
-		return ipc.BootImage, nil
-	}
-	log.Printf("Falling back to pxe boot: %v", err)
-
-	// Fallback to pxe boot.
-	wd := &url.URL{
-		Scheme: uri.Scheme,
-		Host:   uri.Host,
-		Path:   path.Dir(uri.Path),
-	}
-
-	pc := pxe.NewConfig(wd)
-	if err := pc.FindConfigFile(mac, ip); err != nil {
-		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
-	}
-
-	label := pc.Entries[pc.DefaultEntry]
-	return label, nil
-}
-
-func Boot(lease dhclient.Lease) (*boot.LinuxImage, error) {
-	if err := lease.Configure(); err != nil {
-		return nil, err
-	}
-
-	uri, err := lease.Boot()
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("Boot URI: %s", uri)
-
-	// IP only makes sense for v4 anyway, because the PXE probing of files
-	// uses a MAC address and an IPv4 address to look at files.
-	var ip net.IP
-	if p4, ok := lease.(*dhclient.Packet4); ok {
-		ip = p4.Lease().IP
-	}
-	return getBootImage(uri, lease.Link().Attrs().HardwareAddr, ip)
-}
-
 func main() {
 	flag.Parse()
+	if len(flag.Args()) > 1 {
+		log.Fatalf("Only one regexp-style argument is allowed, e.g.: " + ifName)
+	}
 
-	if err := Netboot("eth0"); err != nil {
+	if len(flag.Args()) > 0 {
+		ifName = flag.Args()[0]
+	}
+
+	if err := Netboot(ifName); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -32,19 +32,10 @@ _testmain.go
 bin
 dev
 /buildbin
-etc/
-lib64/
-usr/
-/lib/
 tinycorelinux*
-tmp
 *.swp
 go.cpio
 initramfs.cpio
-src/init/init
-Core/
-/5.x
-/.bash_history
 /init
 bzImage
 vmlinux
@@ -56,3 +47,6 @@ vmlinux
 # Vim swap files
 *.swp
 .*.swp
+
+# tools
+tools/checklicenses/checklicenses

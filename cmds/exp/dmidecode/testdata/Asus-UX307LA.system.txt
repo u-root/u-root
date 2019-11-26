@@ -1,0 +1,22 @@
+# dmidecode-go
+Reading SMBIOS/DMI data from file testdata/Asus-UX307LA.bin.
+SMBIOS 2.8 present.
+27 structures occupying 2158 bytes.
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: ASUSTeK COMPUTER INC.
+	Product Name: UX305LA
+	Version: 1.0       
+	Serial Number: FCN0CJ03468352B     
+	UUID: 850f3e82-9f38-694a-8840-2f8b0cf5d3d0
+	Wake-up Type: Power Switch
+	SKU Number: ASUS-NotebookSKU
+	Family: UX
+
+Handle 0x000C, DMI type 32, 20 bytes
+Unsupported
+	Header and Data:
+		20 14 0C 00 00 00 00 00 00 00 00 00 00 00 00 00
+		00 00 00 00
+

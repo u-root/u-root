@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 const gpioPath = "/sys/class/gpio"
@@ -25,6 +26,7 @@ const (
 	High Value = true
 )
 
+// Dir returns the representation that sysfs likes to use.
 func (v Value) Dir() string {
 	if v == Low {
 		return "low"
@@ -39,10 +41,68 @@ func (v Value) String() string {
 	return "1"
 }
 
+func readInt(filename string) (int, error) {
+	// Get base offset (the first GPIO managed by this chip)
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read integer out of %s: %v", filename, err)
+	}
+	baseStr := strings.TrimSpace(string(buf))
+	num, err := strconv.Atoi(baseStr)
+	if err != nil {
+		return 0, fmt.Errorf("could not convert %s contents %s to integer: %v", filename, baseStr, err)
+	}
+	return num, nil
+}
+
+// GetPinID computes the sysfs pin ID for a specific port on a specific GPIO
+// controller chip. The controller arg is matched to a gpiochip's label in
+// sysfs. GetPinID gets the base offset of that chip, and adds the specific
+// pin number.
+func GetPinID(controller string, pin uint) (int, error) {
+	controllers, err := filepath.Glob(fmt.Sprintf("%s/gpiochip*", gpioPath))
+	if err != nil {
+		return 0, err
+	}
+
+	for _, c := range controllers {
+		// Get label (name of the controller)
+		buf, err := ioutil.ReadFile(filepath.Join(c, "label"))
+		if err != nil {
+			return 0, fmt.Errorf("failed to read label of %s: %v", c, err)
+		}
+		label := strings.TrimSpace(string(buf))
+
+		// Check that this is the controller we want
+		if strings.TrimSpace(label) != controller {
+			continue
+		}
+
+		// Get base offset (the first GPIO managed by this chip)
+		base, err := readInt(filepath.Join(c, "base"))
+		if err != nil {
+			return 0, fmt.Errorf("failed to read base: %v", err)
+		}
+
+		// Get the number of GPIOs managed by this chip.
+		ngpio, err := readInt(filepath.Join(c, "ngpio"))
+		if err != nil {
+			return 0, fmt.Errorf("failed to read number of gpios: %v", err)
+		}
+		if int(pin) >= ngpio {
+			return 0, fmt.Errorf("requested pin %d of controller %s, but controller only has %d pins", pin, controller, ngpio)
+		}
+
+		return base + int(pin), nil
+	}
+
+	return 0, fmt.Errorf("could not find controller %s", controller)
+}
+
 // SetOutputValue configures the gpio as an output pin with the given value.
 func SetOutputValue(pin int, val Value) error {
 	dir := val.Dir()
-	path := filepath.Join(gpioPath, "gpio", strconv.Itoa(pin), "direction")
+	path := filepath.Join(gpioPath, fmt.Sprintf("gpio%d", pin), "direction")
 	outFile, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %v", path, err)
@@ -57,7 +117,7 @@ func SetOutputValue(pin int, val Value) error {
 // ReadValue returns the value of the given gpio pin. If the read was
 // unsuccessful, it returns a value of Low and the associated error.
 func ReadValue(pin int) (Value, error) {
-	path := filepath.Join(gpioPath, "gpio", strconv.Itoa(pin), "value")
+	path := filepath.Join(gpioPath, fmt.Sprintf("gpio%d", pin), "value")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return Low, fmt.Errorf("failed to read value of gpio %d: %v", pin, err)

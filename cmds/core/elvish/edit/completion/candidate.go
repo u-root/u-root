@@ -8,8 +8,8 @@ import (
 	"github.com/u-root/u-root/cmds/core/elvish/edit/ui"
 	"github.com/u-root/u-root/cmds/core/elvish/eval"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
-	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/hash"
+	"github.com/u-root/u-root/cmds/core/elvish/parse"
 )
 
 type candidate struct {

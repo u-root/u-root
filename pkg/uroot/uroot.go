@@ -15,9 +15,9 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ldd"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
-	"github.com/u-root/u-root/pkg/uroot/logger"
 )
 
 // These constants are used in DefaultRamfs.
@@ -130,7 +130,7 @@ type Opts struct {
 	// packages.
 	//
 	// Shared library dependencies will automatically also be added to the
-	// archive using ldd.
+	// archive using ldd, unless SkipLDD (below) is true.
 	//
 	// The following formats are allowed in the list:
 	//
@@ -139,6 +139,15 @@ type Opts struct {
 	//     archive.
 	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
 	ExtraFiles []string
+
+	// If true, do not use ldd to pick up dependencies from local machine for
+	// ExtraFiles. Useful if you have all deps revision controlled and wish to
+	// ensure builds are repeatable, and/or if the local machine's binaries use
+	// instructions unavailable on the emulated cpu.
+	//
+	// If you turn this on but do not manually list all deps, affected binaries
+	// will misbehave.
+	SkipLDD bool
 
 	// OutputFile is the archive output file.
 	OutputFile initramfs.Writer
@@ -159,8 +168,20 @@ type Opts struct {
 	// This can be an absolute path or the name of a command included in
 	// Commands.
 	//
-	// If this is empty, no init symlink will be created.
+	// If this is empty, no init symlink will be created, but a user may
+	// still specify a command called init or include an /init file.
 	InitCmd string
+
+	// UinitCmd is the name of a command to link /bin/uinit to.
+	//
+	// This can be an absolute path or the name of a command included in
+	// Commands.
+	//
+	// The u-root init will always attempt to fork/exec a uinit program.
+	//
+	// If this is empty, no uinit symlink will be created, but a user may
+	// still specify a command called uinit or include a /bin/uinit file.
+	UinitCmd string
 
 	// DefaultShell is the default shell to start after init.
 	//
@@ -172,7 +193,7 @@ type Opts struct {
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
-func CreateInitramfs(logger logger.Logger, opts Opts) error {
+func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 	if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 		return fmt.Errorf("temp dir %q must exist: %v", opts.TempDir, err)
 	}
@@ -211,60 +232,68 @@ func CreateInitramfs(logger logger.Logger, opts Opts) error {
 	}
 
 	// Open the target initramfs file.
-	archive := initramfs.Opts{
+	archive := &initramfs.Opts{
 		Files:           files,
 		OutputFile:      opts.OutputFile,
 		BaseArchive:     opts.BaseArchive,
 		UseExistingInit: opts.UseExistingInit,
 	}
-
-	if len(opts.DefaultShell) > 0 {
-		if target, err := resolveCommandOrPath(opts.DefaultShell, opts.Commands); err != nil {
-			logger.Printf("No default shell: %v", err)
-		} else {
-			rtarget, err := filepath.Rel("/", target)
-			if err != nil {
-				return err
-			}
-
-			if err := archive.AddRecord(cpio.Symlink("bin/defaultsh", filepath.Join("..", rtarget))); err != nil {
-				return err
-			}
-			if err := archive.AddRecord(cpio.Symlink("bin/sh", filepath.Join("..", rtarget))); err != nil {
-				return err
-			}
-		}
+	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFiles, !opts.SkipLDD); err != nil {
+		return err
 	}
 
-	if len(opts.InitCmd) > 0 {
-		if target, err := resolveCommandOrPath(opts.InitCmd, opts.Commands); err != nil {
-			if opts.Commands != nil {
-				return fmt.Errorf("could not find init: %v", err)
-			}
-		} else {
-			rtarget, err := filepath.Rel("/", target)
-			if err != nil {
-				return err
-			}
-			if err := archive.AddRecord(cpio.Symlink("init", rtarget)); err != nil {
-				return err
-			}
-		}
+	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
+		return err
 	}
-
-	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFiles, true); err != nil {
+	if err := opts.addSymlinkTo(logger, archive, opts.UinitCmd, "bin/uinit"); err != nil {
+		return err
+	}
+	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
+		return err
+	}
+	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/defaultsh"); err != nil {
 		return err
 	}
 
 	// Finally, write the archive.
-	if err := initramfs.Write(&archive); err != nil {
+	if err := initramfs.Write(archive); err != nil {
 		return fmt.Errorf("error archiving: %v", err)
 	}
 	return nil
 }
 
+func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command string, source string) error {
+	if len(command) == 0 {
+		return nil
+	}
+
+	target, err := resolveCommandOrPath(command, o.Commands)
+	if err != nil {
+		if o.Commands != nil {
+			return fmt.Errorf("could not create symlink from %q to %q: %v", source, command, err)
+		}
+		logger.Printf("Could not create symlink from %q to %q: %v", source, command, err)
+		return nil
+	}
+
+	// Make a relative symlink from /source -> target
+	//
+	// E.g. bin/defaultsh -> target, so you need to
+	// filepath.Rel(/bin, target) since relative symlinks are
+	// evaluated from their PARENT directory.
+	relTarget, err := filepath.Rel(filepath.Join("/", filepath.Dir(source)), target)
+	if err != nil {
+		return err
+	}
+
+	if err := archive.AddRecord(cpio.Symlink(source, relTarget)); err != nil {
+		return fmt.Errorf("failed to add symlink %s -> %s to initramfs: %v", source, relTarget, err)
+	}
+	return nil
+}
+
 // resolvePackagePath finds import paths for a single import path or directory string
-func resolvePackagePath(logger logger.Logger, env golang.Environ, pkg string) ([]string, error) {
+func resolvePackagePath(logger ulog.Logger, env golang.Environ, pkg string) ([]string, error) {
 	// Search the current working directory, as well GOROOT and GOPATHs
 	prefixes := append([]string{""}, env.SrcDirs()...)
 	// Resolve file system paths to package import paths.
@@ -309,14 +338,16 @@ func resolvePackagePath(logger logger.Logger, env golang.Environ, pkg string) ([
 }
 
 func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
-	if filepath.IsAbs(cmd) {
+	if strings.ContainsRune(cmd, filepath.Separator) {
 		return cmd, nil
 	}
 
+	// Each build mode has its own binary dir (/bbin or /bin or /ubin).
+	//
+	// Figure out which build mode the shell is in, and symlink to that
+	// build mode.
 	for _, c := range cmds {
 		for _, p := range c.Packages {
-			// Figure out which build mode the shell is in, and symlink to
-			// that build modee
 			if name := path.Base(p); name == cmd {
 				return path.Join("/", c.TargetDir(), cmd), nil
 			}
@@ -338,7 +369,7 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
-func ResolvePackagePaths(logger logger.Logger, env golang.Environ, pkgs []string) ([]string, error) {
+func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) ([]string, error) {
 	var importPaths []string
 	for _, pkg := range pkgs {
 		paths, err := resolvePackagePath(logger, env, pkg)
@@ -360,7 +391,7 @@ func ResolvePackagePaths(logger logger.Logger, env golang.Environ, pkgs []string
 //   - "/home/foo" is equivalent to "/home/foo:home/foo".
 //
 // ParseExtraFiles will also add ldd-listed dependencies if lddDeps is true.
-func ParseExtraFiles(logger logger.Logger, archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
+func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []string, lddDeps bool) error {
 	var err error
 	// Add files from command line.
 	for _, file := range extraFiles {
@@ -415,4 +446,47 @@ func ParseExtraFiles(logger logger.Logger, archive *initramfs.Files, extraFiles 
 		}
 	}
 	return nil
+}
+
+// AddCommands adds commands to the build.
+func (o *Opts) AddCommands(c ...Commands) {
+	o.Commands = append(o.Commands, c...)
+}
+
+func (o *Opts) AddBusyBoxCommands(pkgs ...string) {
+	for i, cmds := range o.Commands {
+		if cmds.Builder == builder.BusyBox {
+			o.Commands[i].Packages = append(cmds.Packages, pkgs...)
+			return
+		}
+	}
+
+	// Not found? Add first busybox.
+	o.AddCommands(BusyBoxCmds(pkgs...)...)
+}
+
+// BinaryCmds returns a list of Commands with cmds built as a busybox.
+func BinaryCmds(cmds ...string) []Commands {
+	if len(cmds) == 0 {
+		return nil
+	}
+	return []Commands{
+		{
+			Builder:  builder.Binary,
+			Packages: cmds,
+		},
+	}
+}
+
+// BusyBoxCmds returns a list of Commands with cmds built as a busybox.
+func BusyBoxCmds(cmds ...string) []Commands {
+	if len(cmds) == 0 {
+		return nil
+	}
+	return []Commands{
+		{
+			Builder:  builder.BusyBox,
+			Packages: cmds,
+		},
+	}
 }

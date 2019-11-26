@@ -126,7 +126,7 @@ func report(c cnt, fname string) {
 		fields = append(fields, fmt.Sprintf("%d", c.nchar))
 	}
 	if fname != "" {
-		fields = append(fields, fmt.Sprintf("%s", fname))
+		fields = append(fields, fname)
 	}
 
 	fmt.Println(strings.Join(fields, " "))

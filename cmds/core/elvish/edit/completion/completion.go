@@ -33,9 +33,9 @@ package completion
 
 import (
 	"github.com/u-root/u-root/cmds/core/elvish/eval"
+	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
 	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/util"
-	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
 )
 
 var logger = util.GetLogger("[edit/completion] ")

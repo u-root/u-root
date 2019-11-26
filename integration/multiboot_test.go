@@ -2,40 +2,66 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !race
+
 package integration
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func testMultiboot(t *testing.T, kernel string) {
 	var serial wc
-	q, cleanup := QEMUTest(t, &Options{
-		Files: []string{
-			fmt.Sprintf("/home/circleci/%v:kernel", kernel),
+
+	src := fmt.Sprintf("/home/circleci/%v", kernel)
+	if tk := os.Getenv("UROOT_MULTIBOOT_TEST_KERNEL_DIR"); len(tk) > 0 {
+		src = filepath.Join(tk, kernel)
+	}
+	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
+		t.Skip("multiboot kernel is not present")
+	}
+
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/kexec",
+			),
+			ExtraFiles: []string{
+				src + ":kernel",
+			},
 		},
-		Cmds: []string{
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/kexec",
-		},
-		Uinit: []string{
+		TestCmds: []string{
 			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 		},
-		SerialOutput: &serial,
+		QEMUOpts: qemu.Options{
+			SerialOutput: &serial,
+		},
 	})
 	defer cleanup()
 
 	if err := q.Expect(`"status": "ok"`); err != nil {
+		t.Logf(serial.String())
 		t.Fatalf(`expected '"status": "ok"', got error: %v`, err)
 	}
 
+	if err := q.Expect(`}`); err != nil {
+		t.Logf(serial.String())
+		t.Fatalf(`expected '}' = end of JSON, got error: %v`, err)
+	}
+
 	output := serial.Bytes()
+	t.Logf(serial.String())
 
 	i := bytes.Index(output, []byte(multiboot.DebugPrefix))
 	if i == -1 {
@@ -67,8 +93,8 @@ func testMultiboot(t *testing.T, kernel string) {
 
 func TestMultiboot(t *testing.T) {
 	// TODO: support arm
-	if TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", TestArch())
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {

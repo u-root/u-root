@@ -48,7 +48,7 @@ func registerFlags() *options {
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
-	flag.StringSliceVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
+	flag.StringArrayVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
 	return o
 }
 
@@ -56,7 +56,7 @@ func main() {
 	opts := registerFlags()
 	flag.Parse()
 
-	if (opts.exec == false && flag.NArg() == 0) || flag.NArg() > 1 {
+	if (!opts.exec && flag.NArg() == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
 		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
 	}
@@ -66,7 +66,7 @@ func main() {
 		log.Fatalf("--reuse-cmdline and other command line options are mutually exclusive")
 	}
 
-	if opts.load == false && opts.exec == false {
+	if !opts.load && !opts.exec {
 		opts.load = true
 		opts.exec = true
 	}

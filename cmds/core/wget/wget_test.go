@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -28,7 +29,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte(content))
 	case "/302":
-		http.Redirect(w, r, "/200", 302)
+		http.Redirect(w, r, "/200", http.StatusFound /* 302 */)
 	case "/500":
 		w.WriteHeader(500)
 		w.Write([]byte(content))
@@ -117,16 +118,16 @@ func TestWget(t *testing.T) {
 
 	h := handler{}
 	go func() {
-		t.Fatal(http.Serve(l, h))
+		log.Fatal(http.Serve(l, h))
 	}()
 
 	for i, tt := range tests {
 		args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
-		_, err := testutil.Command(t, args...).Output()
+		output, err := testutil.Command(t, args...).CombinedOutput()
 
 		// Check return code.
 		if err := testutil.IsExitCode(err, tt.retCode); err != nil {
-			t.Error(err)
+			t.Errorf("exit code: %v, output: %s", err, string(output))
 		}
 
 		if tt.content != "" {

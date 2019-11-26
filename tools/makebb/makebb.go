@@ -11,9 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/u-root/u-root/pkg/bb"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
-	"github.com/u-root/u-root/pkg/uroot/builder/bb"
 )
 
 var outputPath = flag.String("o", "bb", "Path to busybox binary")

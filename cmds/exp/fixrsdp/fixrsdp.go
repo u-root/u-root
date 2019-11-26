@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This command copies the existing RSDP into the EBDA. This is because
-// LinuxBoot tends to be EFI booted, which places the RSDP outside of the
-// low 1M or the EBDA. If Linuxboot legacy boots the following operating systems,
-// such as with kexec, they may not have a way to find the RSDP afterwards.
-// All u-root commands that open /dev/mem should also flock it to ensure safe,
-// sequential access
+// fixrsdp copies the existing RSDP into the EBDA region in low mem.
+//
+// This is because LinuxBoot tends to be EFI booted, which places the RSDP
+// outside of the low 1M or the EBDA. If Linuxboot legacy boots the following
+// operating systems, such as with kexec, they may not have a way to find the
+// RSDP afterwards.  All u-root commands that open /dev/mem should also flock
+// it to ensure safe, sequential access.
 package main
 
 import (
 	"bytes"
 	"log"
-	"syscall"
 	"os"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/ebda"
@@ -22,7 +23,7 @@ import (
 
 func main() {
 	// Find the RSDP.
-	base, r, err := acpi.GetRSDP()
+	r, err := acpi.GetRSDP()
 	if err != nil {
 		log.Fatalf("Unable to find system RSDP, got: %v", err)
 	}
@@ -30,8 +31,9 @@ func main() {
 	rData := r.AllData()
 	rLen := len(rData)
 
+	base := r.RSDPAddr()
 	// Check if ACPI rsdp is already in low memory
-	if base >= 0xe0000 && base+int64(rLen) < 0xffff0 {
+	if base >= 0xe0000 && base+uint64(rLen) < 0xffff0 {
 		log.Printf("RSDP is already in low memory at %#X, no need to fix.", base)
 		return
 	}
@@ -45,7 +47,7 @@ func main() {
 
 	fd := int(f.Fd())
 	if err = syscall.Flock(fd, syscall.LOCK_EX); err != nil {
-		log.Fatal(err)
+		log.Fatalf("File lock of /dev/mem failed: %v", err)
 	}
 	defer syscall.Flock(fd, syscall.LOCK_UN)
 

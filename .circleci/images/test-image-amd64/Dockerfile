@@ -19,6 +19,8 @@ RUN sudo apt-get update &&                          \
         libfdt-dev                                  \
         libpixman-1-dev                             \
         zlib1g-dev                                  \
+	libcap-dev                                  \
+	libattr1-dev                                \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
@@ -49,6 +51,7 @@ RUN set -eux;                                                          \
     cd build;                                                          \
     ../configure                                                       \
         --target-list=x86_64-softmmu                                   \
+        --enable-virtfs                                                \
         --disable-docs                                                 \
         --disable-sdl                                                  \
         --disable-kvm;                                                 \

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package dhclient provides a unified interface for interfacing with both
-// DHCPv4 and DHCPv6 clients.
+// Package dhclient allows for getting both DHCPv4 and DHCPv6 leases on
+// multiple network interfaces in parallel.
 package dhclient
 
 import (
@@ -15,7 +15,7 @@ import (
 	"log"
 	"net"
 	"net/url"
-	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,7 +29,7 @@ import (
 
 const linkUpAttempt = 30 * time.Second
 
-// isIpv6LinkReady returns true iff the interface has a link-local address
+// isIpv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
 func isIpv6LinkReady(l netlink.Link) (bool, error) {
 	addrs, err := netlink.AddrList(l, netlink.FAMILY_V6)
@@ -72,54 +72,19 @@ func IfUp(ifname string) (netlink.Link, error) {
 	return nil, fmt.Errorf("link %q still down after %d seconds", ifname, linkUpAttempt)
 }
 
-// Configure4 adds IP addresses, routes, and DNS servers to the system.
-func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
-	p := NewPacket4(iface, packet)
-	return p.Configure()
-}
-
-// Configure6 adds IPv6 addresses, routes, and DNS servers to the system.
-func Configure6(iface netlink.Link, packet *dhcpv6.Message) error {
-	p := NewPacket6(iface, packet)
-
-	l := p.Lease()
-	if l == nil {
-		return fmt.Errorf("no lease returned")
-	}
-
-	// Add the address to the iface.
-	dst := &netlink.Addr{
-		IPNet: &net.IPNet{
-			IP:   l.IPv6Addr,
-			Mask: net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::")),
-		},
-		PreferedLft: int(l.PreferredLifetime),
-		ValidLft:    int(l.ValidLifetime),
-		// Optimistic DAD (Duplicate Address Detection) means we can
-		// use the address before DAD is complete. The DHCP server's
-		// job was to give us a unique IP so there is little risk of a
-		// collision.
-		Flags: unix.IFA_F_OPTIMISTIC,
-	}
-	if err := netlink.AddrReplace(iface, dst); err != nil {
-		if os.IsExist(err) {
-			return fmt.Errorf("add/replace %s to %v: %v", dst, iface, err)
-		}
-	}
-
-	if ips := p.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WriteDNSSettings writes the given IPs as nameservers to resolv.conf.
-func WriteDNSSettings(ips []net.IP) error {
+// WriteDNSSettings writes the given nameservers, search list, and domain to resolv.conf.
+func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 	rc := &bytes.Buffer{}
-	for _, ip := range ips {
+	if domain != "" {
+		rc.WriteString(fmt.Sprintf("domain %s\n", domain))
+	}
+	for _, ip := range ns {
 		rc.WriteString(fmt.Sprintf("nameserver %s\n", ip))
+	}
+	if sl != nil {
+		rc.WriteString("search ")
+		rc.WriteString(strings.Join(sl, " "))
+		rc.WriteString("\n")
 	}
 	return ioutil.WriteFile("/etc/resolv.conf", rc.Bytes(), 0644)
 }
@@ -135,6 +100,10 @@ type Lease interface {
 	// Boot is a URL to obtain booting information from that was part of
 	// the network config.
 	Boot() (*url.URL, error)
+
+	// ISCSIBoot returns the target address and volume name to boot from if
+	// they were part of the DHCP message.
+	ISCSIBoot() (*net.TCPAddr, string, error)
 
 	// Link is the interface the configuration is for.
 	Link() netlink.Link
@@ -197,6 +166,12 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	// For ipv6, we cannot bind to the port until Duplicate Address
 	// Detection (DAD) is complete which is indicated by the link being no
 	// longer marked as "tentative". This usually takes about a second.
+
+	// If the link is never going to be ready, don't wait forever.
+	// (The user may not have configured a ctx with a timeout.)
+	//
+	// Hardcode the timeout to 30s for now.
+	linkTimeout := time.After(linkUpAttempt)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
@@ -206,14 +181,24 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		select {
 		case <-time.After(100 * time.Millisecond):
 			continue
+		case <-linkTimeout:
+			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		case <-ctx.Done():
 			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		}
 	}
 
-	client, err := nclient6.New(iface.Attrs().Name,
+	mods := []nclient6.ClientOpt{
 		nclient6.WithTimeout(c.Timeout),
-		nclient6.WithRetry(c.Retries))
+		nclient6.WithRetry(c.Retries),
+	}
+	switch c.LogLevel {
+	case LogSummary:
+		mods = append(mods, nclient6.WithSummaryLogger())
+	case LogDebug:
+		mods = append(mods, nclient6.WithDebugLogger())
+	}
+	client, err := nclient6.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
@@ -229,8 +214,33 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	return packet, nil
 }
 
+// NetworkProtocol is either IPv4 or IPv6.
+type NetworkProtocol int
+
+// Possible network protocols; either IPv4, IPv6, or both.
+const (
+	NetIPv4 NetworkProtocol = 1
+	NetIPv6 NetworkProtocol = 2
+	NetBoth NetworkProtocol = 3
+)
+
+func (n NetworkProtocol) String() string {
+	switch n {
+	case NetIPv4:
+		return "IPv4"
+	case NetIPv6:
+		return "IPv6"
+	case NetBoth:
+		return "IPv4+IPv6"
+	}
+	return fmt.Sprintf("unknown network protocol (%#x)", n)
+}
+
 // Result is the result of a particular DHCP attempt.
 type Result struct {
+	// Protocol is the IP protocol that we tried to configure.
+	Protocol NetworkProtocol
+
 	// Interface is the network interface the attempt was sent on.
 	Interface netlink.Link
 
@@ -270,7 +280,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				go func(iface netlink.Link) {
 					defer wg.Done()
 					lease, err := lease4(ctx, iface, c)
-					r <- &Result{iface, lease, err}
+					r <- &Result{NetIPv4, iface, lease, err}
 				}(iface)
 			}
 
@@ -279,7 +289,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				go func(iface netlink.Link) {
 					defer wg.Done()
 					lease, err := lease6(ctx, iface, c)
-					r <- &Result{iface, lease, err}
+					r <- &Result{NetIPv6, iface, lease, err}
 				}(iface)
 			}
 		}(iface)

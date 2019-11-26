@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,6 +52,7 @@ type Client struct {
 	conn        net.PacketConn
 	timeout     time.Duration
 	retry       int
+	logger      logger
 
 	// bufferCap is the channel capacity for each TransactionID.
 	bufferCap int
@@ -74,6 +76,38 @@ type Client struct {
 	// TransactionID. receiveLoop uses this map to determine which channel
 	// to send a new DHCP message to.
 	pending map[dhcpv6.TransactionID]*pendingCh
+}
+
+type logger interface {
+	Printf(format string, v ...interface{})
+	PrintMessage(prefix string, message *dhcpv6.Message)
+}
+
+type emptyLogger struct{}
+
+func (e emptyLogger) Printf(format string, v ...interface{})              {}
+func (e emptyLogger) PrintMessage(prefix string, message *dhcpv6.Message) {}
+
+type shortSummaryLogger struct {
+	*log.Logger
+}
+
+func (s shortSummaryLogger) Printf(format string, v ...interface{}) {
+	s.Logger.Printf(format, v...)
+}
+func (s shortSummaryLogger) PrintMessage(prefix string, message *dhcpv6.Message) {
+	s.Printf("%s: %s", prefix, message)
+}
+
+type debugLogger struct {
+	*log.Logger
+}
+
+func (d debugLogger) Printf(format string, v ...interface{}) {
+	d.Logger.Printf(format, v...)
+}
+func (d debugLogger) PrintMessage(prefix string, message *dhcpv6.Message) {
+	d.Printf("%s: %s", prefix, message.Summary())
 }
 
 // NewIPv6UDPConn returns a UDP connection bound to both the interface and port
@@ -109,6 +143,7 @@ func NewWithConn(conn net.PacketConn, ifaceHWAddr net.HardwareAddr, opts ...Clie
 		serverAddr:  AllDHCPRelayAgentsAndServers,
 		bufferCap:   5,
 		conn:        conn,
+		logger:      emptyLogger{},
 
 		done:    make(chan struct{}),
 		pending: make(map[dhcpv6.TransactionID]*pendingCh),
@@ -168,7 +203,7 @@ func (c *Client) receiveLoop() {
 			n, _, err := c.conn.ReadFrom(b)
 			if err != nil {
 				if !isErrClosing(err) {
-					log.Printf("error reading from UDP connection: %v", err)
+					c.logger.Printf("error reading from UDP connection: %v", err)
 				}
 				return
 			}
@@ -228,6 +263,24 @@ func WithConn(conn net.PacketConn) ClientOpt {
 func WithBroadcastAddr(n *net.UDPAddr) ClientOpt {
 	return func(c *Client) {
 		c.serverAddr = n
+	}
+}
+
+// WithSummaryLogger logs one-line DHCPv6 message summarys when sent & received.
+func WithSummaryLogger() ClientOpt {
+	return func(c *Client) {
+		c.logger = shortSummaryLogger{
+			Logger: log.New(os.Stderr, "[dhcpv6] ", log.LstdFlags),
+		}
+	}
+}
+
+// WithDebugLogger logs multi-line full DHCPv6 messages when sent & received.
+func WithDebugLogger() ClientOpt {
+	return func(c *Client) {
+		c.logger = debugLogger{
+			Logger: log.New(os.Stderr, "[dhcpv6] ", log.LstdFlags),
+		}
 	}
 }
 
@@ -336,6 +389,7 @@ func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, msg *dhcpv6
 		if err != nil {
 			return err
 		}
+		c.logger.PrintMessage("sent message", msg)
 		defer rem()
 
 		for {
@@ -351,6 +405,7 @@ func (c *Client) SendAndRead(ctx context.Context, dest *net.UDPAddr, msg *dhcpv6
 
 			case packet := <-ch:
 				if match == nil || match(packet) {
+					c.logger.PrintMessage("received message", packet)
 					response = packet
 					return nil
 				}

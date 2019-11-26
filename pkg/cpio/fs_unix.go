@@ -95,7 +95,7 @@ func linuxModeToFileType(m uint64) (os.FileMode, error) {
 	if t, ok := modeMap[m&modeTypeMask]; ok {
 		return t, nil
 	}
-	return 0, fmt.Errorf("Invalid file type %#o", m&modeTypeMask)
+	return 0, fmt.Errorf("invalid file type %#o", m&modeTypeMask)
 }
 
 // CreateFile creates a local file for f relative to the current working
@@ -159,12 +159,12 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		}
 
 	case os.ModeDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
+		if err := mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
 	case os.ModeCharDevice:
-		if err := syscall.Mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
+		if err := mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
@@ -191,6 +191,11 @@ type devInode struct {
 	ino uint64
 }
 
+// A Recorder is a structure that contains variables used to calculate
+// file parameters such as inode numbers for a CPIO file. The life-time
+// of a Record structure is meant to be the same as the construction of a
+// single CPIO archive. Do not reuse between CPIOs if you don't know what
+// you're doing.
 type Recorder struct {
 	inodeMap map[devInode]Info
 	inumber  uint64
@@ -261,7 +266,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 	}
 }
 
-// Create a new Recorder.
+// NewRecorder creates a new Recorder.
 //
 // A recorder is a structure that contains variables used to calculate
 // file parameters such as inode numbers for a CPIO file. The life-time

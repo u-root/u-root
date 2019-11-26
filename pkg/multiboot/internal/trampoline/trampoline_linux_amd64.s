@@ -18,14 +18,6 @@
 
 #define MAGIC	0x2BADB002
 
-TEXT begin(SB),NOSPLIT,$0
-	// u-root-trampoline-begin
-	BYTE $'u'; BYTE $'-'; BYTE $'r'; BYTE $'o'; BYTE $'o';
-	BYTE $'t'; BYTE $'-'; BYTE $'t'; BYTE $'r'; BYTE $'a';
-	BYTE $'m'; BYTE $'p'; BYTE $'o'; BYTE $'l'; BYTE $'i';
-	BYTE $'n'; BYTE $'e'; BYTE $'-'; BYTE $'b'; BYTE $'e';
-	BYTE $'g'; BYTE $'i'; BYTE $'n';
-
 TEXT ·start(SB),NOSPLIT,$0
 	// Create GDT pointer on stack.
 	LEAQ	gdt(SB), CX
@@ -98,10 +90,8 @@ TEXT boot(SB),NOSPLIT,$0
 	// Unreachable code.
 	// Need reference text labels for compiler to
 	// include them to a binary.
-	JMP	begin(SB)
 	JMP	infotext(SB)
 	JMP	entrytext(SB)
-	JMP	end(SB)
 
 TEXT farjump64(SB),NOSPLIT,$0
 	BYTE	$0xFF; BYTE $0x2D; LONG $0x0 // ljmp *(ip)
@@ -139,10 +129,4 @@ TEXT entrytext(SB),NOSPLIT,$0
 TEXT entry(SB),NOSPLIT,$0
 	LONG	$0x0
 
-TEXT end(SB),NOSPLIT,$0
-	// u-root-trampoline-end
-	BYTE $'u'; BYTE $'-'; BYTE $'r'; BYTE $'o'; BYTE $'o';
-	BYTE $'t'; BYTE $'-'; BYTE $'t'; BYTE $'r'; BYTE $'a';
-	BYTE $'m'; BYTE $'p'; BYTE $'o'; BYTE $'l'; BYTE $'i';
-	BYTE $'n'; BYTE $'e'; BYTE $'-'; BYTE $'e'; BYTE $'n';
-	BYTE $'d';
+TEXT ·end(SB),NOSPLIT,$0

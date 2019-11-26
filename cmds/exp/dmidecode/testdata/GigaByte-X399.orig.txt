@@ -1,0 +1,985 @@
+# dmidecode 3.2
+Reading SMBIOS/DMI data from file testdata/GigaByte-X399.bin.
+SMBIOS 3.1.1 present.
+
+Handle 0x0000, DMI type 0, 26 bytes
+BIOS Information
+	Vendor: American Megatrends Inc.
+	Version: F4
+	Release Date: 10/04/2018
+	Address: 0xF0000
+	Runtime Size: 64 kB
+	ROM Size: 16 MB
+	Characteristics:
+		PCI is supported
+		BIOS is upgradeable
+		BIOS shadowing is allowed
+		Boot from CD is supported
+		Selectable boot is supported
+		BIOS ROM is socketed
+		EDD is supported
+		5.25"/1.2 MB floppy services are supported (int 13h)
+		3.5"/720 kB floppy services are supported (int 13h)
+		3.5"/2.88 MB floppy services are supported (int 13h)
+		Print screen service is supported (int 5h)
+		Serial services are supported (int 14h)
+		Printer services are supported (int 17h)
+		ACPI is supported
+		USB legacy is supported
+		BIOS boot specification is supported
+		Targeted content distribution is supported
+		UEFI is supported
+	BIOS Revision: 5.14
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+	Manufacturer: Gigabyte Technology Co., Ltd.
+	Product Name: X399 AORUS XTREME
+	Version: Default string
+	Serial Number: Default string
+	UUID: 032e02b4-0499-0533-a106-940700080009
+	Wake-up Type: Power Switch
+	SKU Number: Default string
+	Family: Default string
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+	Manufacturer: Gigabyte Technology Co., Ltd.
+	Product Name: X399 AORUS XTREME-CF
+	Version: x.x
+	Serial Number: Default string
+	Asset Tag: Default string
+	Features:
+		Board is a hosting board
+		Board is removable
+		Board is replaceable
+	Location In Chassis: Default string
+	Chassis Handle: 0x0003
+	Type: Motherboard
+	Contained Object Handles: 0
+
+Handle 0x0003, DMI type 3, 22 bytes
+Chassis Information
+	Manufacturer: Default string
+	Type: Desktop
+	Lock: Not Present
+	Version: Default string
+	Serial Number: Default string
+	Asset Tag: Default string
+	Boot-up State: Safe
+	Power Supply State: Safe
+	Thermal State: Safe
+	Security Status: None
+	OEM Information: 0x00000000
+	Height: Unspecified
+	Number Of Power Cords: 1
+	Contained Elements: 0
+	SKU Number: Default string
+
+Handle 0x0004, DMI type 10, 6 bytes
+On Board Device Information
+	Type: Video
+	Status: Enabled
+	Description:    To Be Filled By O.E.M.
+
+Handle 0x0005, DMI type 11, 5 bytes
+OEM Strings
+	String 1: Default string
+
+Handle 0x0006, DMI type 12, 5 bytes
+System Configuration Options
+	Option 1: Default string
+
+Handle 0x0007, DMI type 32, 20 bytes
+System Boot Information
+	Status: No errors detected
+
+Handle 0x0008, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0009, DMI type 16, 23 bytes
+Physical Memory Array
+	Location: System Board Or Motherboard
+	Use: System Memory
+	Error Correction Type: None
+	Maximum Capacity: 512 GB
+	Error Information Handle: 0x0008
+	Number Of Devices: 8
+
+Handle 0x000A, DMI type 19, 31 bytes
+Memory Array Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x0007FFFFFFF
+	Range Size: 2 GB
+	Physical Array Handle: 0x0009
+	Partition Width: 8
+
+Handle 0x000B, DMI type 19, 31 bytes
+Memory Array Mapped Address
+	Starting Address: 0x00100000000
+	Ending Address: 0x0207FFFFFFF
+	Range Size: 126 GB
+	Physical Array Handle: 0x0009
+	Partition Width: 8
+
+Handle 0x000C, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L1 - Cache
+	Configuration: Enabled, Not Socketed, Level 1
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 3 MB
+	Maximum Size: 3 MB
+	Supported SRAM Types:
+		Pipeline Burst
+	Installed SRAM Type: Pipeline Burst
+	Speed: 1 ns
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
+
+Handle 0x000D, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L2 - Cache
+	Configuration: Enabled, Not Socketed, Level 2
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 16 MB
+	Maximum Size: 16 MB
+	Supported SRAM Types:
+		Pipeline Burst
+	Installed SRAM Type: Pipeline Burst
+	Speed: 1 ns
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 8-way Set-associative
+
+Handle 0x000E, DMI type 7, 19 bytes
+Cache Information
+	Socket Designation: L3 - Cache
+	Configuration: Enabled, Not Socketed, Level 3
+	Operational Mode: Write Back
+	Location: Internal
+	Installed Size: 64 MB
+	Maximum Size: 64 MB
+	Supported SRAM Types:
+		Pipeline Burst
+	Installed SRAM Type: Pipeline Burst
+	Speed: 1 ns
+	Error Correction Type: Multi-bit ECC
+	System Type: Unified
+	Associativity: 64-way Set-associative
+
+Handle 0x000F, DMI type 4, 48 bytes
+Processor Information
+	Socket Designation: SP3r2
+	Type: Central Processor
+	Family: Zen
+	Manufacturer: Advanced Micro Devices, Inc.
+	ID: 82 0F 80 00 FF FB 8B 17
+	Signature: Family 23, Model 8, Stepping 2
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		HTT (Multi-threading)
+	Version: AMD Ryzen Threadripper 2990WX 32-Core Processor
+	Voltage: 1.0 V
+	External Clock: 100 MHz
+	Max Speed: 4200 MHz
+	Current Speed: 3000 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket SP3r2
+	L1 Cache Handle: 0x000C
+	L2 Cache Handle: 0x000D
+	L3 Cache Handle: 0x000E
+	Serial Number: Unknown
+	Asset Tag: Unknown
+	Part Number: Unknown
+	Core Count: 32
+	Core Enabled: 32
+	Thread Count: 64
+	Characteristics:
+		64-bit capable
+		Multi-Core
+		Hardware Thread
+		Execute Protection
+		Enhanced Virtualization
+		Power/Performance Control
+
+Handle 0x0010, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0011, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x0010
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 0
+	Bank Locator: P0 CHANNEL A
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 501C661C
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x0012, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x00FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x0011
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x0013, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0014, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x0013
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 1
+	Bank Locator: P0 CHANNEL A
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 4E396332
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x0015, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x00FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x0014
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x0016, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0017, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x0016
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 0
+	Bank Locator: P0 CHANNEL B
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 533CF631
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x0018, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x00FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x0017
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x0019, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x001A, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x0019
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 1
+	Bank Locator: P0 CHANNEL B
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 501C6D1C
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x001B, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x00000000000
+	Ending Address: 0x00FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x001A
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x001C, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x001D, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x001C
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 0
+	Bank Locator: P0 CHANNEL C
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 4E1CD81C
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x001E, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x01000000000
+	Ending Address: 0x01FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x001D
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x001F, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0020, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x001F
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 1
+	Bank Locator: P0 CHANNEL C
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 50395532
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x0021, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x01000000000
+	Ending Address: 0x01FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x0020
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x0022, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0023, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x0022
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 0
+	Bank Locator: P0 CHANNEL D
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 4F1CE71C
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x0024, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x01000000000
+	Ending Address: 0x01FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x0023
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x0025, DMI type 18, 23 bytes
+32-bit Memory Error Information
+	Type: OK
+	Granularity: Unknown
+	Operation: Unknown
+	Vendor Syndrome: Unknown
+	Memory Array Address: Unknown
+	Device Address: Unknown
+	Resolution: Unknown
+
+Handle 0x0026, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0009
+	Error Information Handle: 0x0025
+	Total Width: 64 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: DIMM 1
+	Bank Locator: P0 CHANNEL D
+	Type: DDR4
+	Type Detail: Synchronous Unbuffered (Unregistered)
+	Speed: 2933 MT/s
+	Manufacturer: Kingston
+	Serial Number: 543CF131
+	Asset Tag: Not Specified
+	Part Number: KHX2933C17D4/16G    
+	Rank: 2
+	Configured Memory Speed: 2933 MT/s
+	Minimum Voltage: 1.2 V
+	Maximum Voltage: 1.2 V
+	Configured Voltage: 1.2 V
+
+Handle 0x0027, DMI type 20, 35 bytes
+Memory Device Mapped Address
+	Starting Address: 0x01000000000
+	Ending Address: 0x01FFFFFFFFF
+	Range Size: 64 GB
+	Physical Device Handle: 0x0026
+	Memory Array Mapped Address Handle: 0x000B
+	Partition Row Position: Unknown
+	Interleave Position: Unknown
+	Interleaved Data Depth: Unknown
+
+Handle 0x0028, DMI type 13, 22 bytes
+BIOS Language Information
+	Language Description Format: Long
+	Installable Languages: 15
+		en|US|iso8859-1
+		zh|TW|unicode
+		zh|CN|unicode
+		ru|RU|iso8859-5
+		de|DE|iso8859-1
+		ja|JP|unicode
+		ko|KR|unicode
+		es|ES|iso8859-1
+		fr|FR|iso8859-1
+		it|IT|iso8859-1
+		pt|PT|iso8859-1
+		<BAD INDEX>
+		<BAD INDEX>
+		<BAD INDEX>
+		<BAD INDEX>
+	Currently Installed Language: en|US|iso8859-1
+
+Handle 0x0029, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1602
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G1 TypeC
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x002A, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1601
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G2 TypeC
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x002B, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1600
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G2 TypeA
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x002C, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1300
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G1
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x002D, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1300
+	Internal Connector Type: None
+	External Reference Designator: PT RJ45
+	External Connector Type: RJ-45
+	Port Type: Network Port
+
+Handle 0x002E, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J2000
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G1
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x002F, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J2000
+	Internal Connector Type: None
+	External Reference Designator: PT RJ45
+	External Connector Type: RJ-45
+	Port Type: Network Port
+
+Handle 0x0030, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1503
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G1
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x0031, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J1502
+	Internal Connector Type: None
+	External Reference Designator: USB3.1 G1
+	External Connector Type: Access Bus (USB)
+	Port Type: USB
+
+Handle 0x0032, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J2100
+	Internal Connector Type: None
+	External Reference Designator: Audio Jack
+	External Connector Type: Mini Jack (headphones)
+	Port Type: Audio Port
+
+Handle 0x0033, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J4306 - MEM FAN
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0034, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J3000 - ATX PWR
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0035, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J4300 - SYSTEM FAN
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0036, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J4305 - CPU FAN
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0037, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J3001 - ATX 12V PWR
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0038, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J4301 - MEM FAN
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0039, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J3002 - ATX 24PIN PWR
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x003A, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J49 - SATA
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: SATA
+
+Handle 0x003B, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J46 - iSATA
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: SATA
+
+Handle 0x003C, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J38 - iSATA
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: SATA
+
+Handle 0x003D, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J43 - iSATA
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: SATA
+
+Handle 0x003E, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J604 - Sink FAN
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x003F, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J4304 - PT FAN
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0040, DMI type 8, 9 bytes
+Port Connector Information
+	Internal Reference Designator: J202 - LPC HDR
+	Internal Connector Type: Other
+	External Reference Designator: Not Specified
+	External Connector Type: None
+	Port Type: Other
+
+Handle 0x0041, DMI type 9, 17 bytes
+System Slot Information
+	Designation: U1
+	Type: x4 M.2 Socket 1-DP
+	Current Usage: Available
+	Length: Short
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:00:01.2
+
+Handle 0x0042, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCIE1
+	Type: x8 PCI Express x8
+	Current Usage: Available
+	Length: Short
+	ID: 1
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:00:01.3
+
+Handle 0x0043, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCIE3
+	Type: x16 PCI Express x16
+	Current Usage: In Use
+	Length: Short
+	ID: 2
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:00:03.1
+
+Handle 0x0044, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCIE4
+	Type: x1 PCI Express x1
+	Current Usage: Available
+	Length: Short
+	ID: 3
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:02:03.0
+
+Handle 0x0045, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCIE6
+	Type: x4 PCI Express x4
+	Current Usage: In Use
+	Length: Short
+	ID: 4
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:02:04.0
+
+Handle 0x0046, DMI type 9, 17 bytes
+System Slot Information
+	Designation: J47
+	Type: x1 M.2 Socket 1-DP
+	Current Usage: In Use
+	Length: Short
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:02:01.0
+
+Handle 0x0047, DMI type 9, 17 bytes
+System Slot Information
+	Designation: U3600
+	Type: x4 M.2 Socket 1-DP
+	Current Usage: Available
+	Length: Short
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:40:01.1
+
+Handle 0x0048, DMI type 9, 17 bytes
+System Slot Information
+	Designation: U3601
+	Type: x4 M.2 Socket 1-DP
+	Current Usage: In Use
+	Length: Short
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:40:01.2
+
+Handle 0x0049, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCIE5
+	Type: x8 PCI Express x8
+	Current Usage: Available
+	Length: Short
+	ID: 8
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:40:01.3
+
+Handle 0x004A, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCIE7
+	Type: x16 PCI Express x16
+	Current Usage: Available
+	Length: Short
+	ID: 9
+	Characteristics:
+		3.3 V is provided
+		Opening is shared
+		PME signal is supported
+	Bus Address: 0000:40:03.1
+
+Handle 0x004B, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard LAN Atheros
+	Type: Ethernet
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:03:00.0
+
+Handle 0x004C, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard LAN Realtek
+	Type: Ethernet
+	Status: Enabled
+	Type Instance: 2
+	Bus Address: 0000:05:00.0
+
+Handle 0x004D, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Audio Codec ALC1220
+	Type: Sound
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:10:00.3
+
+Handle 0x004E, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Promontory SATA
+	Type: SATA Controller
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:01:00.1
+
+Handle 0x004F, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: DIE0 M.2 SATA
+	Type: SATA Controller
+	Status: Enabled
+	Type Instance: 2
+	Bus Address: 0000:10:00.2
+
+Handle 0x0050, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: DIE2 M.2 SATA
+	Type: SATA Controller
+	Status: Enabled
+	Type Instance: 3
+	Bus Address: 0000:43:00.2
+
+Handle 0x0051, DMI type 127, 4 bytes
+End Of Table
+

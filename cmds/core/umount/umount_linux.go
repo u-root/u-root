@@ -20,7 +20,7 @@ func umount() error {
 	flag.Parse()
 	a := flag.Args()
 	if len(a) != 1 {
-		return errors.New("Usage: umount [-f | -l] path")
+		return errors.New("usage: umount [-f | -l] path")
 	}
 	path := a[0]
 	return mount.Unmount(path, *force, *lazy)

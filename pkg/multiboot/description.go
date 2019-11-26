@@ -13,6 +13,7 @@ import (
 	"strings"
 )
 
+// DebugPrefix is a prefix that some messages are printed with for tests to parse.
 const DebugPrefix = "MULTIBOOT_DEBUG_INFO:"
 
 // Description stores representation of multiboot

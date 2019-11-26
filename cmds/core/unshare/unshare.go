@@ -41,13 +41,12 @@ import (
 )
 
 var (
-	ipc     = flag.Bool("ipc", false, "Unshare the IPC namespace")
-	mount   = flag.Bool("mount", false, "Unshare the mount namespace")
-	pid     = flag.Bool("pid", false, "Unshare the pid namespace")
-	net     = flag.Bool("net", false, "Unshare the net namespace")
-	uts     = flag.Bool("uts", false, "Unshare the uts namespace")
-	user    = flag.Bool("user", false, "Unshare the user namespace")
-	maproot = flag.Bool("map-root-user", false, "Map current uid to root. Not working")
+	ipc   = flag.Bool("ipc", false, "Unshare the IPC namespace")
+	mount = flag.Bool("mount", false, "Unshare the mount namespace")
+	pid   = flag.Bool("pid", false, "Unshare the pid namespace")
+	net   = flag.Bool("net", false, "Unshare the net namespace")
+	uts   = flag.Bool("uts", false, "Unshare the uts namespace")
+	user  = flag.Bool("user", false, "Unshare the user namespace")
 )
 
 func main() {
@@ -84,6 +83,6 @@ func main() {
 	c.Stderr = os.Stderr
 
 	if err := c.Run(); err != nil {
-		log.Printf(err.Error())
+		log.Fatalf("%v", err)
 	}
 }

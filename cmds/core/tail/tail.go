@@ -148,7 +148,7 @@ func readLastLinesBackwards(input ReadAtSeeker, writer io.Writer, numLines uint)
 	}
 	// reposition the stream at the end, so the caller can keep reading the file
 	// (e.g. when using follow-mode)
-	_, err = input.Seek(lastPos, os.SEEK_SET)
+	_, err = input.Seek(lastPos, io.SeekStart)
 	return err
 }
 
@@ -197,7 +197,7 @@ func Tail(inFile *os.File, writer io.Writer, config TailConfig) error {
 		return fmt.Errorf("follow-mode not implemented yet")
 	}
 	if inFile == nil {
-		return fmt.Errorf("No input file specified")
+		return fmt.Errorf("no input file specified")
 	}
 	// try reading from the end of the file
 	retryFromBeginning := false

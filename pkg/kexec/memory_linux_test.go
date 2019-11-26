@@ -82,11 +82,11 @@ func TestAvailableRAM(t *testing.T) {
 	}
 
 	mem.Segments = []Segment{
-		Segment{Phys: Range{Start: 40, Size: 50}},
-		Segment{Phys: Range{Start: 8000, Size: 200}},
-		Segment{Phys: Range{Start: 18000, Size: 1000}},
-		Segment{Phys: Range{Start: 24600, Size: 1000}},
-		Segment{Phys: Range{Start: 28000, Size: 10000}},
+		{Phys: Range{Start: 40, Size: 50}},
+		{Phys: Range{Start: 8000, Size: 200}},
+		{Phys: Range{Start: 18000, Size: 1000}},
+		{Phys: Range{Start: 24600, Size: 1000}},
+		{Phys: Range{Start: 28000, Size: 10000}},
 	}
 
 	want := Ranges{
@@ -251,10 +251,10 @@ func TestDedup(t *testing.T) {
 		NewSegment([]byte("test"), Range{Start: 350, Size: 100}),
 	}
 	want := []Range{
-		Range{Start: 0, Size: 100},
-		Range{Start: 100, Size: 100},
-		Range{Start: 200, Size: 100},
-		Range{Start: 300, Size: 150},
+		{Start: 0, Size: 100},
+		{Start: 100, Size: 100},
+		{Start: 200, Size: 100},
+		{Start: 300, Size: 150},
 	}
 
 	got := Dedup(s)
@@ -454,8 +454,8 @@ func TestMinusRange(t *testing.T) {
 			r:  Range{Start: 0x100, Size: 0x200},
 			r2: Range{Start: 0x150, Size: 0x50},
 			want: []Range{
-				Range{Start: 0x100, Size: 0x50},
-				Range{Start: 0x1a0, Size: 0x160},
+				{Start: 0x100, Size: 0x50},
+				{Start: 0x1a0, Size: 0x160},
 			},
 		},
 		{
@@ -479,7 +479,7 @@ func TestMinusRange(t *testing.T) {
 			r:  Range{Start: 0x100, Size: 0x100},
 			r2: Range{Start: 0x150, Size: 0x100},
 			want: []Range{
-				Range{Start: 0x100, Size: 0x50},
+				{Start: 0x100, Size: 0x50},
 			},
 		},
 		{
@@ -487,7 +487,7 @@ func TestMinusRange(t *testing.T) {
 			r:  Range{Start: 0x100, Size: 0x100},
 			r2: Range{Start: 0x50, Size: 0x100},
 			want: []Range{
-				Range{Start: 0x150, Size: 0xb0},
+				{Start: 0x150, Size: 0xb0},
 			},
 		},
 		{
@@ -495,7 +495,7 @@ func TestMinusRange(t *testing.T) {
 			r:  Range{Start: 0x100, Size: 0x100},
 			r2: Range{Start: 0x200, Size: 0x100},
 			want: []Range{
-				Range{Start: 0x100, Size: 0x100},
+				{Start: 0x100, Size: 0x100},
 			},
 		},
 	} {

@@ -41,9 +41,7 @@ func (bc *BootConfig) fileNames() []string {
 	str := make([]string, 0)
 	str = append(str, bc.Kernel)
 	str = append(str, bc.Initramfs)
-	for _, module := range bc.Modules {
-		str = append(str, module)
-	}
+	str = append(str, bc.Modules...)
 	return str
 }
 
@@ -94,13 +92,13 @@ func (bc *BootConfig) Boot() error {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
 		}
-		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules); err != nil {
+		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
 		}
 	}
 	err := kexec.Reboot()
 	if err == nil {
-		return errors.New("Unexpectedly returned from Reboot() without error. The system did not reboot")
+		return errors.New("unexpectedly returned from Reboot() without error: system did not reboot")
 	}
 	return err
 }

@@ -9,8 +9,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/u-root/u-root/pkg/bb"
 	"github.com/u-root/u-root/pkg/golang"
-	"github.com/u-root/u-root/pkg/uroot/builder/bb"
 )
 
 var (

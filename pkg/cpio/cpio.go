@@ -45,7 +45,10 @@ import (
 
 var (
 	formatMap = make(map[string]RecordFormat)
-	Debug     = func(string, ...interface{}) {}
+
+	// Debug can be set e.g. to log.Printf to enable debug prints from
+	// marshaling/unmarshaling cpio archives.
+	Debug = func(string, ...interface{}) {}
 )
 
 // Record represents a CPIO record, which represents a Unix file.

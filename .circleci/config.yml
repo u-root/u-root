@@ -3,14 +3,18 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: circleci/golang:1.12
+      - image: uroottest/test-image-amd64:v3.2.7
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      # Double all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 2
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      # Double all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 2
     steps:
       - checkout
       - run:
@@ -84,7 +88,7 @@ jobs:
       - run:
           name: gofmt
           command: |
-              test -z "$(gofmt -s -l $(go list ./... | grep -v /vendor/))"
+            test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
       - run:
           name: gometalinter
           command: |
@@ -108,10 +112,11 @@ jobs:
       - checkout
       - run:
           name: Test all
-          command: go test -a -ldflags '-s' ./...
+          command: go test -a -timeout 15m -ldflags '-s' ./cmds/... ./pkg/... .
+          no_output_timeout: 15m
       - run:
           name: Test coverage
-          command: go test -cover `go list ./... | grep github.com/u-root/u-root/`
+          command: go test -cover ./cmds/... ./pkg/...
   race:
     <<: *golang-template
     environment:
@@ -120,7 +125,7 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race `go list ./... | grep github.com/u-root/u-root/`
+          command: go test -race ./cmds/... ./pkg/...
   compile_cmds:
     <<: *golang-template
     steps:
@@ -138,7 +143,7 @@ jobs:
       - checkout
       - run:
           name: Check licenses
-          command: go run tools/checklicenses/checklicenses.go
+          command: go run tools/checklicenses/checklicenses.go -c tools/checklicenses/config.json
   check_symlinks:
     <<: *golang-template
     steps:
@@ -167,8 +172,8 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.4
+      - image: uroottest/test-image-amd64:v3.2.7
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v3.0.1
+      - image: uroottest/test-image-arm:v3.0.3

@@ -71,7 +71,7 @@ func NewNetBooter(config []byte) (Booter, error) {
 	}
 	log.Printf("NetBooter: %+v", nb)
 	if nb.Type != "netboot" {
-		return nil, fmt.Errorf("Wrong type for NetBooter: %s", nb.Type)
+		return nil, fmt.Errorf("wrong type for NetBooter: %s", nb.Type)
 	}
 	return &nb, nil
 }
@@ -100,7 +100,7 @@ func (nb *NetBooter) Boot() error {
 	cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Error executing %v: %v", cmd, err)
+		return fmt.Errorf("error executing %v: %v", cmd, err)
 	}
 	return nil
 }

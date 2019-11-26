@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Google Inc. All rights reserved.
+// Copyright (c) 2018, Google LLC All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,73 +23,10 @@ import (
 	"reflect"
 )
 
-// lengthPrefixSize is the size in bytes of length prefix for byte slices.
-//
-// In TPM 1.2 this is 4 bytes.
-// In TPM 2.0 this is 2 bytes.
-var lengthPrefixSize int
-
-const (
-	tpm12PrefixSize = 4
-	tpm20PrefixSize = 2
+var (
+	selfMarshalerType = reflect.TypeOf((*SelfMarshaler)(nil)).Elem()
+	handlesAreaType   = reflect.TypeOf((*[]Handle)(nil))
 )
-
-// UseTPM12LengthPrefixSize makes Pack/Unpack use TPM 1.2 encoding for byte
-// arrays.
-func UseTPM12LengthPrefixSize() {
-	lengthPrefixSize = tpm12PrefixSize
-}
-
-// UseTPM20LengthPrefixSize makes Pack/Unpack use TPM 2.0 encoding for byte
-// arrays.
-func UseTPM20LengthPrefixSize() {
-	lengthPrefixSize = tpm20PrefixSize
-}
-
-// packedSize computes the size of a sequence of types that can be passed to
-// binary.Read or binary.Write.
-func packedSize(elts ...interface{}) (int, error) {
-	var size int
-	for _, e := range elts {
-		v := reflect.ValueOf(e)
-		switch v.Kind() {
-		case reflect.Ptr:
-			s, err := packedSize(reflect.Indirect(v).Interface())
-			if err != nil {
-				return 0, err
-			}
-
-			size += s
-		case reflect.Struct:
-			for i := 0; i < v.NumField(); i++ {
-				s, err := packedSize(v.Field(i).Interface())
-				if err != nil {
-					return 0, err
-				}
-
-				size += s
-			}
-		case reflect.Slice:
-			switch s := e.(type) {
-			case []byte:
-				size += lengthPrefixSize + len(s)
-			case RawBytes:
-				size += len(s)
-			default:
-				return 0, fmt.Errorf("encoding of %T is not supported, only []byte and RawBytes slices are", e)
-			}
-		default:
-			s := binary.Size(e)
-			if s < 0 {
-				return 0, fmt.Errorf("can't calculate size of type %T", e)
-			}
-
-			size += s
-		}
-	}
-
-	return size, nil
-}
 
 // packWithHeader takes a header and a sequence of elements that are either of
 // fixed length or slices of fixed-length types and packs them into a single
@@ -97,14 +34,17 @@ func packedSize(elts ...interface{}) (int, error) {
 // length.
 func packWithHeader(ch commandHeader, cmd ...interface{}) ([]byte, error) {
 	hdrSize := binary.Size(ch)
-	bodySize, err := packedSize(cmd...)
+	body, err := Pack(cmd...)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't compute packed size for message body: %v", err)
+		return nil, fmt.Errorf("couldn't pack message body: %v", err)
 	}
+	bodySize := len(body)
 	ch.Size = uint32(hdrSize + bodySize)
-	in := []interface{}{ch}
-	in = append(in, cmd...)
-	return Pack(in...)
+	header, err := Pack(ch)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't pack message header: %v", err)
+	}
+	return append(header, body...), nil
 }
 
 // Pack encodes a set of elements into a single byte array, using
@@ -115,71 +55,97 @@ func packWithHeader(ch commandHeader, cmd ...interface{}) ([]byte, error) {
 // prepended length, to match how the TPM encodes variable-length arrays. If
 // you wish to add a byte slice without length prefix, use RawBytes.
 func Pack(elts ...interface{}) ([]byte, error) {
-	if lengthPrefixSize == 0 {
-		return nil, errors.New("lengthPrefixSize must be initialized")
-	}
-
 	buf := new(bytes.Buffer)
 	if err := packType(buf, elts...); err != nil {
 		return nil, err
 	}
-
 	return buf.Bytes(), nil
 }
 
-// packType recursively packs types the same way that encoding/binary does
-// under binary.BigEndian, but with one difference: it packs a byte slice as a
-// lengthPrefixSize size followed by the bytes. The function unpackType
-// performs the inverse operation of unpacking slices stored in this manner and
-// using encoding/binary for everything else.
-func packType(buf io.Writer, elts ...interface{}) error {
-	for _, e := range elts {
-		v := reflect.ValueOf(e)
-		switch v.Kind() {
-		case reflect.Ptr:
-			if err := packType(buf, reflect.Indirect(v).Interface()); err != nil {
-				return err
-			}
-		case reflect.Struct:
-			for i := 0; i < v.NumField(); i++ {
-				if err := packType(buf, v.Field(i).Interface()); err != nil {
-					return err
-				}
-			}
-		case reflect.Slice:
-			switch s := e.(type) {
-			case []byte:
-				switch lengthPrefixSize {
-				case tpm20PrefixSize:
-					if err := binary.Write(buf, binary.BigEndian, uint16(len(s))); err != nil {
-						return err
-					}
-				case tpm12PrefixSize:
-					if err := binary.Write(buf, binary.BigEndian, uint32(len(s))); err != nil {
-						return err
-					}
-				default:
-					return fmt.Errorf("lengthPrefixSize is %d, must be either 2 or 4", lengthPrefixSize)
-				}
-				if err := binary.Write(buf, binary.BigEndian, s); err != nil {
-					return err
-				}
-			case RawBytes:
-				if err := binary.Write(buf, binary.BigEndian, s); err != nil {
-					return err
-				}
-			default:
-				return fmt.Errorf("only []byte and RawBytes slices are supported, got %T", e)
-			}
-		default:
-			if err := binary.Write(buf, binary.BigEndian, e); err != nil {
+// tryMarshal attempts to use a TPMMarshal() method defined on the type
+// to pack v into buf. True is returned if the method exists and the
+// marshal was attempted.
+func tryMarshal(buf io.Writer, v reflect.Value) (bool, error) {
+	t := v.Type()
+	if t.Implements(selfMarshalerType) {
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			return true, fmt.Errorf("cannot call TPMMarshal on a nil pointer of type %T", v)
+		}
+		return true, v.Interface().(SelfMarshaler).TPMMarshal(buf)
+	}
+
+	// We might have a non-pointer struct field, but we dont have a
+	// pointer with which to implement the interface.
+	// If the pointer of the type implements the interface, we should be
+	// able to construct a value to call TPMMarshal() with.
+	// TODO(awly): Try and avoid blowing away private data by using Addr() instead of Set()
+	if reflect.PtrTo(t).Implements(selfMarshalerType) {
+		tmp := reflect.New(t)
+		tmp.Elem().Set(v)
+		return true, tmp.Interface().(SelfMarshaler).TPMMarshal(buf)
+	}
+
+	return false, nil
+}
+
+func packValue(buf io.Writer, v reflect.Value) error {
+	if v.Type() == handlesAreaType {
+		v = v.Convert(reflect.TypeOf((*handleList)(nil)))
+	}
+	if canMarshal, err := tryMarshal(buf, v); canMarshal {
+		return err
+	}
+
+	switch v.Kind() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return fmt.Errorf("cannot pack nil %s", v.Type().String())
+		}
+		return packValue(buf, v.Elem())
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			f := v.Field(i)
+			if err := packValue(buf, f); err != nil {
 				return err
 			}
 		}
+	default:
+		return binary.Write(buf, binary.BigEndian, v.Interface())
+	}
+	return nil
+}
 
+func packType(buf io.Writer, elts ...interface{}) error {
+	for _, e := range elts {
+		if err := packValue(buf, reflect.ValueOf(e)); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// tryUnmarshal attempts to use TPMUnmarshal() to perform the
+// unpack, if the given value implements SelfMarshaler.
+// True is returned if v implements SelfMarshaler & TPMUnmarshal
+// was called, along with an error returned from TPMUnmarshal.
+func tryUnmarshal(buf io.Reader, v reflect.Value) (bool, error) {
+	t := v.Type()
+	if t.Implements(selfMarshalerType) {
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			return true, fmt.Errorf("cannot call TPMUnmarshal on a nil pointer")
+		}
+		return true, v.Interface().(SelfMarshaler).TPMUnmarshal(buf)
+	}
+
+	// We might have a non-pointer struct field, which is addressable,
+	// If the pointer of the type implements the interface, and the
+	// value is addressable, we should be able to call TPMUnmarshal().
+	if v.CanAddr() && reflect.PtrTo(t).Implements(selfMarshalerType) {
+		return true, v.Addr().Interface().(SelfMarshaler).TPMUnmarshal(buf)
+	}
+
+	return false, nil
 }
 
 // Unpack is a convenience wrapper around UnpackBuf. Unpack returns the number
@@ -191,6 +157,37 @@ func Unpack(b []byte, elts ...interface{}) (int, error) {
 	return read, err
 }
 
+func unpackValue(buf io.Reader, v reflect.Value) error {
+	if v.Type() == handlesAreaType {
+		v = v.Convert(reflect.TypeOf((*handleList)(nil)))
+	}
+	if didUnmarshal, err := tryUnmarshal(buf, v); didUnmarshal {
+		return err
+	}
+
+	switch v.Kind() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return fmt.Errorf("cannot unpack nil %s", v.Type().String())
+		}
+		return unpackValue(buf, v.Elem())
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			f := v.Field(i)
+			if err := unpackValue(buf, f); err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		// binary.Read can only set pointer values, so we need to take the address.
+		if !v.CanAddr() {
+			return fmt.Errorf("cannot unpack unaddressable leaf type %q", v.Type().String())
+		}
+		return binary.Read(buf, binary.BigEndian, v.Addr().Interface())
+	}
+}
+
 // UnpackBuf recursively unpacks types from a reader just as encoding/binary
 // does under binary.BigEndian, but with one difference: it unpacks a byte
 // slice by first reading an integer with lengthPrefixSize bytes, then reading
@@ -199,88 +196,16 @@ func Unpack(b []byte, elts ...interface{}) (int, error) {
 func UnpackBuf(buf io.Reader, elts ...interface{}) error {
 	for _, e := range elts {
 		v := reflect.ValueOf(e)
-		k := v.Kind()
-		if k != reflect.Ptr {
-			return fmt.Errorf("all values passed to Unpack must be pointers, got %v", k)
+		if v.Kind() != reflect.Ptr {
+			return fmt.Errorf("non-pointer value %q passed to UnpackBuf", v.Type().String())
 		}
-
 		if v.IsNil() {
-			return errors.New("can't fill a nil pointer")
+			return errors.New("nil pointer passed to UnpackBuf")
 		}
 
-		iv := reflect.Indirect(v)
-		switch iv.Kind() {
-		case reflect.Struct:
-			// Decompose the struct and copy over the values.
-			for i := 0; i < iv.NumField(); i++ {
-				if err := UnpackBuf(buf, iv.Field(i).Addr().Interface()); err != nil {
-					return err
-				}
-			}
-		case reflect.Slice:
-			var size int
-			_, isHandles := e.(*[]Handle)
-
-			switch {
-			// []Handle always uses 2-byte length, even with TPM 1.2.
-			case isHandles:
-				var tmpSize uint16
-				if err := binary.Read(buf, binary.BigEndian, &tmpSize); err != nil {
-					return err
-				}
-				size = int(tmpSize)
-			// TPM 2.0
-			case lengthPrefixSize == tpm20PrefixSize:
-				var tmpSize uint16
-				if err := binary.Read(buf, binary.BigEndian, &tmpSize); err != nil {
-					return err
-				}
-				size = int(tmpSize)
-			// TPM 1.2
-			case lengthPrefixSize == tpm12PrefixSize:
-				var tmpSize uint32
-				if err := binary.Read(buf, binary.BigEndian, &tmpSize); err != nil {
-					return err
-				}
-				size = int(tmpSize)
-			default:
-				return fmt.Errorf("lengthPrefixSize is %d, must be either 2 or 4", lengthPrefixSize)
-			}
-
-			// A zero size is used by the TPM to signal that certain elements
-			// are not present.
-			if size == 0 {
-				continue
-			}
-
-			// Make len(e) match size exactly.
-			switch b := e.(type) {
-			case *[]byte:
-				if len(*b) >= size {
-					*b = (*b)[:size]
-				} else {
-					*b = append(*b, make([]byte, size-len(*b))...)
-				}
-			case *[]Handle:
-				if len(*b) >= size {
-					*b = (*b)[:size]
-				} else {
-					*b = append(*b, make([]Handle, size-len(*b))...)
-				}
-			default:
-				return fmt.Errorf("can't fill pointer to %T, only []byte or []Handle slices", e)
-			}
-
-			if err := binary.Read(buf, binary.BigEndian, e); err != nil {
-				return err
-			}
-		default:
-			if err := binary.Read(buf, binary.BigEndian, e); err != nil {
-				return err
-			}
+		if err := unpackValue(buf, v); err != nil {
+			return err
 		}
-
 	}
-
 	return nil
 }

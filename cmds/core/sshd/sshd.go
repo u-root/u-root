@@ -76,13 +76,12 @@ func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 		ps, _ = e.Process.Wait()
 	}
 
-	var ws syscall.WaitStatus
-	ws = ps.Sys().(syscall.WaitStatus)
-	if ws.Signaled() {
-		// TODO(bluecmd): If somebody wants we can send exit-signal to return
-		// information about signal termination, but leave it until somebody needs
-		// it.
-	}
+	ws := ps.Sys().(syscall.WaitStatus)
+	// TODO(bluecmd): If somebody wants we can send exit-signal to return
+	// information about signal termination, but leave it until somebody needs
+	// it.
+	// if ws.Signaled() {
+	// }
 	if ws.Exited() {
 		code := uint32(ws.ExitStatus())
 		dprintf("Exit status %v", code)
@@ -235,7 +234,7 @@ func main() {
 
 	// Once a ServerConfig has been configured, connections can be
 	// accepted.
-	listener, err := net.Listen("tcp", *ip+":"+*port)
+	listener, err := net.Listen("tcp", net.JoinHostPort(*ip, *port))
 	if err != nil {
 		log.Fatal(err)
 	}

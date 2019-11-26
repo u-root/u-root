@@ -8,18 +8,18 @@ package bzimage
 
 const (
 	Ram      e820type = 1
-	Reserved          = 2
-	ACPI              = 3
-	NVS               = 4
+	Reserved e820type = 2
+	ACPI     e820type = 3
+	NVS      e820type = 4
 )
 
 const (
 	NotSet    boottype = 0
-	LoadLin            = 1
-	BootSect           = 2
-	SysLinux           = 3
-	EtherBoot          = 4
-	Kernel             = 5
+	LoadLin   boottype = 1
+	BootSect  boottype = 2
+	SysLinux  boottype = 3
+	EtherBoot boottype = 4
+	Kernel    boottype = 5
 )
 
 const (
@@ -200,7 +200,7 @@ type LinuxParams struct {
 	InitrdAddrMax       uint32       `offset:"0x22c"`
 	/* 2.04+ */
 	KernelAlignment     uint32               `offset:"0x230"`
-	elocatableKernel    uint8                `offset:"0x234"`
+	RelocatableKernel   uint8                `offset:"0x234"`
 	MinAlignment        uint8                `offset:"0x235"`
 	XLoadFlags          uint16               `offset:"0x236"`
 	CmdLineSize         uint32               `offset:"0x238"`

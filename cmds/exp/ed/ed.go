@@ -1,101 +1,134 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// ED(1)               Unix Programmer's Manual                ED(1)
+// This `ed` is intended to be a feature-complete mimick of [GNU Ed](https://www.gnu.org/software/ed//).  It is a close enough mimick that the [GNU Ed Man Page](https://www.gnu.org/software/ed/manual/ed_manual.html) should be a reliable source of documentation.  Divergence from the man page is generally considered a bug (unless it's an added feature).
 //
-// NAME
-//   ed - text editor
+// There are a few known differences:
 //
-// SYNOPSIS
-//   ed [ - ] [ -d ] [ name ]
+// - `ed` uses `go`'s `regexp` package, and as such may have a somewhat different regular expression syntax.  Note, however, that backreferences follow the `ed` syntax of `\<ref>`, not the `go` syntax of `$<ref>`.
+// - there has been little/no attempt to make particulars like error messages match `GNU Ed`.
+// - rather than being an error, the 'g' option for 's' simply overrides any specified count.
+// - does not support "traditional" mode
 //
-// DESCRIPTION
-//   Ed is the standard text editor.
+// The following has been implemented:
+// - Full line address parsing (including RE and markings)
+// - Implmented commands: !, #, =, E, H, P, Q, W, a, c, d, e, f, h, i, j, k, l, m, n, p, q, r, s, t, u, w, x, y, z
 //
-// OPTIONS
+// The following has *not* yet been implemented, but will be eventually:
+// - Unimplemented commands: g, G, v, V
+// - does not (yet) support "loose" mode
+// - does not (yet) support "restricted" mod
 package main
 
 import (
 	"bufio"
 	"flag"
-	"io"
-	"log"
+	"fmt"
 	"os"
-	"regexp"
 )
 
-type editorArg func(Editor) error
-
+// flags
 var (
-	d                  = flag.Bool("d", false, "debug")
-	debug              = func(s string, i ...interface{}) {}
-	fail               = log.Printf
-	f           Editor = &file{}
-	num                = regexp.MustCompile("^[0-9][0-9]*")
-	startsearch        = regexp.MustCompile("^/[^/]/")
-	endsearch          = regexp.MustCompile("^,/[^/]/")
-	editors            = map[string]func(...editorArg) (Editor, error){
-		"text": NewTextEditor,
-		"bin":  NewBinEditor,
-	}
-	fileType = flag.String("t", "text", "type of file")
+	fSuppress = flag.Bool("s", false, "suppress counts")
+	fPrompt   = flag.String("p", "*", "specify a command prompt")
 )
 
-func readerio(r io.Reader) editorArg {
-	return func(f Editor) error {
-		_, err := f.Read(r, 0, 0)
-		return err
-	}
+// current FileBuffer
+var buffer *FileBuffer
+
+// current ed state
+var state struct {
+	fileName string // current filename
+	lastErr  error
+	printErr bool
+	prompt   bool
+	winSize  int
+	lastRep  string
+	lastSub  string
 }
 
-func readFile(n string) editorArg {
-	return func(f Editor) error {
-		r, err := os.Open(n)
-		if err != nil {
-			return err
-		}
-		if _, err := f.Read(r, 0, 0); err != nil {
-			return err
-		}
-		return nil
+// Parse input and run command
+func run(cmd string) (e error) {
+	ctx := &Context{
+		cmd: cmd,
 	}
+	if ctx.addrs, ctx.cmdOffset, e = buffer.ResolveAddrs(cmd); e != nil {
+		return
+	}
+	if len(cmd) <= ctx.cmdOffset {
+		// no command, default to print
+		ctx.cmd += "p"
+	}
+	if exe, ok := cmds[ctx.cmd[ctx.cmdOffset]]; ok {
+		buffer.Start()
+		if e = exe(ctx); e != nil {
+			return
+		}
+		buffer.End()
+	} else {
+		return fmt.Errorf("invalid command: %v", cmd[ctx.cmdOffset])
+	}
+	return
 }
 
+// Entry point
 func main() {
-	var (
-		args []editorArg
-		err  error
-	)
-
+	var e error
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [-s] [-p <prompt>] [file]\n", os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.Parse()
-
-	if *d {
-		debug = log.Printf
-	}
-
-	e, ok := editors[*fileType]
-	if !ok {
-		flag.Usage()
-	}
-
-	if len(flag.Args()) == 1 {
-		args = append(args, readFile(flag.Args()[0]))
-	}
-
-	ed, err := e(args...)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-
-	// Now just eat the lines, and turn them into commands.
-	// The format is a regular language.
-	// [start][,end]command[rest of line]
-	s := bufio.NewScanner(os.Stdin)
-
-	for s.Scan() {
-		if err := DoCommand(ed, s.Text()); err != nil {
-			log.Printf(err.Error())
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "p" {
+			state.prompt = true
 		}
+	})
+	args := flag.Args()
+	if len(args) > 1 { // we only accept one additional argument
+		flag.Usage()
+		os.Exit(1)
+	}
+	buffer = NewFileBuffer(nil)
+	if len(args) == 1 { // we were given a file name
+		state.fileName = args[0]
+		// try to read in the file
+		if _, e = os.Stat(state.fileName); os.IsNotExist(e) && !*fSuppress {
+			fmt.Fprintf(os.Stderr, "%s: No such file or directory", state.fileName)
+			// this is not fatal, we just start with an empty buffer
+		} else {
+			if buffer, e = FileToBuffer(state.fileName); e != nil {
+				fmt.Fprintln(os.Stderr, e)
+				os.Exit(1)
+			}
+			if !*fSuppress {
+				fmt.Println(buffer.Size())
+			}
+		}
+	}
+	state.winSize = 22 // we don't actually support getting the real window size
+	inScan := bufio.NewScanner(os.Stdin)
+	if state.prompt {
+		fmt.Printf("%s", *fPrompt)
+	}
+	for inScan.Scan() {
+		cmd := inScan.Text()
+		e = run(cmd)
+		if e != nil {
+			state.lastErr = e
+			if !*fSuppress && state.printErr {
+				fmt.Println(e)
+			} else {
+				fmt.Println("?")
+			}
+		}
+		if state.prompt {
+			fmt.Printf("%s", *fPrompt)
+		}
+	}
+	if inScan.Err() != nil {
+		fmt.Fprintf(os.Stderr, "error reading stdin: %v", inScan.Err())
+		os.Exit(1)
 	}
 }

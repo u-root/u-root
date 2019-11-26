@@ -32,8 +32,7 @@ func TestKillProcess(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Re-exec the test binary itself to emulate "sleep 1".
-	cmd := exec.Command("/bin/sleep", "10")
+	cmd := exec.Command("sleep", "10")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start test process: %v", err)
 	}

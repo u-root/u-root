@@ -115,7 +115,7 @@ func TestTR(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			out := &bytes.Buffer{}
 			test.t.run(bytes.NewBufferString(test.input), out)
-			res := string(out.Bytes())
+			res := out.String()
 			if test.output != res {
 				t.Errorf("run() want %q, got %q", test.output, res)
 			}

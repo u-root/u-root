@@ -47,7 +47,7 @@ type Iterator interface {
 }
 
 type vector struct {
-	pos int
+	pos   int
 	nodes []interface{}
 }
 
@@ -72,7 +72,7 @@ func (v *vector) Assoc(i int, val interface{}) Vector {
 		return nil
 	}
 	n := append(append(v.nodes[:i], val), v.nodes[i:]...)
-	return &vector{nodes: n,}
+	return &vector{nodes: n}
 }
 
 func (v *vector) Cons(val interface{}) Vector {
@@ -150,9 +150,9 @@ func (s *subVector) Iterator() Iterator {
 }
 
 type iterator struct {
-	v        *vector
-	index    int
-	end      int
+	v     *vector
+	index int
+	end   int
 }
 
 func newIterator(v *vector) *iterator {

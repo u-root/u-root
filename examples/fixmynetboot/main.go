@@ -32,30 +32,30 @@ var (
 
 func checkInterface(ifname string) error {
 	checklist := []checker.Check{
-		checker.Check{
+		{
 			Name:        fmt.Sprintf("%s exists", ifname),
 			Run:         checker.InterfaceExists(ifname),
 			Remediate:   checker.InterfaceRemediate(ifname),
 			StopOnError: true,
 		},
-		checker.Check{
+		{
 			Name:        fmt.Sprintf("%s link speed", ifname),
 			Run:         checker.LinkSpeed(ifname, 100),
 			Remediate:   nil,
 			StopOnError: false},
-		checker.Check{
+		{
 			Name:        fmt.Sprintf("%s link autoneg", ifname),
 			Run:         checker.LinkAutoneg(ifname, true),
 			Remediate:   nil,
 			StopOnError: false,
 		},
-		checker.Check{
+		{
 			Name:        fmt.Sprintf("%s has link-local", ifname),
 			Run:         checker.InterfaceHasLinkLocalAddress(ifname),
 			Remediate:   nil,
 			StopOnError: true,
 		},
-		checker.Check{
+		{
 			Name:        fmt.Sprintf("%s has global addresses", ifname),
 			Run:         checker.InterfaceHasGlobalAddresses("eth0"),
 			Remediate:   nil,

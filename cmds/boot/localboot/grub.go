@@ -96,7 +96,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 			name := ""
 			if len(sline) > 1 {
 				name = strings.Join(sline[1:], " ")
-				name = unquote(ver, name)
+				name = unquoteGrubString(name)
 				name = strings.Split(name, "--")[0]
 			}
 			cfg.Name = name
@@ -136,7 +136,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 			if sline[0] == "linux" || sline[0] == "linux16" || sline[0] == "linuxefi" {
 				kernel := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
-				cmdline = unquote(ver, cmdline)
+				cmdline = unquoteGrubString(cmdline)
 				cfg.Kernel = path.Join(kernelBasedir, kernel)
 				cfg.KernelArgs = cmdline
 			} else if sline[0] == "initrd" || sline[0] == "initrd16" || sline[0] == "initrdefi" {
@@ -145,13 +145,13 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 			} else if sline[0] == "multiboot" || sline[0] == "multiboot2" {
 				multiboot := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
-				cmdline = unquote(ver, cmdline)
+				cmdline = unquoteGrubString(cmdline)
 				cfg.Multiboot = path.Join(kernelBasedir, multiboot)
 				cfg.MultibootArgs = cmdline
 			} else if sline[0] == "module" || sline[0] == "module2" {
 				module := sline[1]
 				cmdline := strings.Join(sline[2:], " ")
-				cmdline = unquote(ver, cmdline)
+				cmdline = unquoteGrubString(cmdline)
 				module = path.Join(kernelBasedir, module)
 				if cmdline != "" {
 					module = module + " " + cmdline
@@ -177,15 +177,12 @@ func isValidFsUUID(uuid string) bool {
 	return true
 }
 
-func unquote(ver grubVersion, text string) string {
-	if ver == grubV2 {
-		// if grub2, unquote the string, as directives could be quoted
-		// https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
-		// TODO unquote everything, not just \$
-		return strings.Replace(text, `\$`, "$", -1)
-	}
-	// otherwise return the unmodified string
-	return text
+func unquoteGrubString(text string) string {
+	// unquote the string to prevent special characters used by GRUB
+	// from being passed thru kexec
+	// https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
+	// TODO unquote everything, not just \$
+	return strings.Replace(text, `\$`, "$", -1)
 }
 
 func isMn(r rune) bool {

@@ -1,0 +1,220 @@
+--- testdata/Asus-UX307LA.orig.txt
++++ testdata/Asus-UX307LA.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/Asus-UX307LA.bin.
+ SMBIOS 2.8 present.
+ 27 structures occupying 2158 bytes.
+@@ -76,71 +76,48 @@
+ 	Height: Unspecified
+ 	Number Of Power Cords: 1
+ 	Contained Elements: 1
+-		<OUT OF SPEC> (0)
++		0x0 0-0
+ 	SKU Number: To be filled by O.E.M.
+ 
+ Handle 0x0004, DMI type 10, 26 bytes
+-On Board Device 1 Information
+-	Type: Video
+-	Status: Enabled
+-	Description:  VGA
+-On Board Device 2 Information
+-	Type: Ethernet
+-	Status: Enabled
+-	Description:  GLAN
+-On Board Device 3 Information
+-	Type: Ethernet
+-	Status: Enabled
+-	Description:  WLAN
+-On Board Device 4 Information
+-	Type: Sound
+-	Status: Enabled
+-	Description:  Audio CODEC 
+-On Board Device 5 Information
+-	Type: SATA Controller
+-	Status: Enabled
+-	Description:  SATA Controller
+-On Board Device 6 Information
+-	Type: Other
+-	Status: Enabled
+-	Description:  USB 2.0 Controller
+-On Board Device 7 Information
+-	Type: Other
+-	Status: Enabled
+-	Description:  USB 3.0 Controller
+-On Board Device 8 Information
+-	Type: Other
+-	Status: Enabled
+-	Description:  SMBus Controller
+-On Board Device 9 Information
+-	Type: Other
+-	Status: Enabled
+-	Description:  Card Reader
+-On Board Device 10 Information
+-	Type: Other
+-	Status: Enabled
+-	Description:  Cmos Camera
+-On Board Device 11 Information
+-	Type: Other
+-	Status: Enabled
+-	Description:  Bluetooth
++Unsupported
++	Header and Data:
++		0A 1A 04 00 83 01 85 02 85 03 87 04 89 05 81 06
++		81 07 81 08 81 09 81 0A 81 0B
++	Strings:
++		 VGA
++		 GLAN
++		 WLAN
++		 Audio CODEC 
++		 SATA Controller
++		 USB 2.0 Controller
++		 USB 3.0 Controller
++		 SMBus Controller
++		 Card Reader
++		 Cmos Camera
++		 Bluetooth
+ 
+ Handle 0x0005, DMI type 11, 5 bytes
+-OEM Strings
+-	String 1:              
+-	String 2:              
+-	String 3:              
+-	String 4: 90NB08T5-M04040
+-	String 5:  
+-	String 6:  
+-	String 7:  
+-	String 8:  
+-	String 9:  
+-	String 10:  
++Unsupported
++	Header and Data:
++		0B 05 05 00 0A
++	Strings:
++		             
++		             
++		             
++		90NB08T5-M04040
++		 
++		 
++		 
++		 
++		 
++		 
+ 
+ Handle 0x000C, DMI type 32, 20 bytes
+-System Boot Information
+-	Status: No errors detected
++Unsupported
++	Header and Data:
++		20 14 0C 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00
+ 
+ Handle 0x000D, DMI type 7, 19 bytes
+ Cache Information
+@@ -275,13 +252,10 @@
+ 		Reference Code - ACPI
+ 
+ Handle 0x0013, DMI type 16, 23 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: None
+-	Maximum Capacity: 16 GB
+-	Error Information Handle: Not Provided
+-	Number Of Devices: 2
++Unsupported
++	Header and Data:
++		10 17 13 00 03 03 03 00 00 00 01 FE FF 02 00 00
++		00 00 00 00 00 00 00
+ 
+ Handle 0x0014, DMI type 17, 34 bytes
+ Memory Device
+@@ -326,34 +300,24 @@
+ 	Configured Memory Speed: 1600 MT/s
+ 
+ Handle 0x0016, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x001FFFFFFFF
+-	Range Size: 8 GB
+-	Physical Array Handle: 0x0013
+-	Partition Width: 2
++Unsupported
++	Header and Data:
++		13 1F 16 00 00 00 00 00 FF FF 7F 00 13 00 02 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x0017, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x000FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x0015
+-	Memory Array Mapped Address Handle: 0x0016
+-	Partition Row Position: Unknown
+-	Interleave Position: 1
+-	Interleaved Data Depth: 1
++Unsupported
++	Header and Data:
++		14 23 17 00 00 00 00 00 FF FF 3F 00 15 00 16 00
++		FF 01 01 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0018, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00100000000
+-	Ending Address: 0x001FFFFFFFF
+-	Range Size: 4 GB
+-	Physical Device Handle: 0x0015
+-	Memory Array Mapped Address Handle: 0x0016
+-	Partition Row Position: Unknown
+-	Interleave Position: 2
+-	Interleaved Data Depth: 1
++Unsupported
++	Header and Data:
++		14 23 18 00 00 00 40 00 FF FF 7F 00 15 00 16 00
++		FF 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0019, DMI type 221, 54 bytes
+ OEM-specific Type
+@@ -414,11 +378,12 @@
+ 		TXT ACM version
+ 
+ Handle 0x001D, DMI type 13, 22 bytes
+-BIOS Language Information
+-	Language Description Format: Long
+-	Installable Languages: 1
++Unsupported
++	Header and Data:
++		0D 16 1D 00 01 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
+ 		en|US|iso8859-1
+-	Currently Installed Language: en|US|iso8859-1
+ 
+ Handle 0x001E, DMI type 131, 64 bytes
+ OEM-specific Type
+@@ -429,14 +394,12 @@
+ 		00 00 00 00 26 00 00 00 76 50 72 6F 00 00 00 00
+ 
+ Handle 0x001F, DMI type 14, 20 bytes
+-Group Associations
+-	Name: Firmware Version Info
+-	Items: 5
+-		0x0012 (OEM-specific)
+-		0x0019 (OEM-specific)
+-		0x001A (OEM-specific)
+-		0x001B (OEM-specific)
+-		0x001C (OEM-specific)
++Unsupported
++	Header and Data:
++		0E 14 1F 00 01 DD 12 00 DD 19 00 DD 1A 00 DD 1B
++		00 DD 1C 00
++	Strings:
++		Firmware Version Info
+ 
+ Handle 0x0020, DMI type 127, 4 bytes
+ End Of Table

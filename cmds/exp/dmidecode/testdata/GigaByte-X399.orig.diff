@@ -1,0 +1,994 @@
+--- testdata/GigaByte-X399.orig.txt
++++ testdata/GigaByte-X399.txt
+@@ -1,4 +1,4 @@
+-# dmidecode 3.2
++# dmidecode-go
+ Reading SMBIOS/DMI data from file testdata/GigaByte-X399.bin.
+ SMBIOS 3.1.1 present.
+ 
+@@ -77,57 +77,55 @@
+ 	SKU Number: Default string
+ 
+ Handle 0x0004, DMI type 10, 6 bytes
+-On Board Device Information
+-	Type: Video
+-	Status: Enabled
+-	Description:    To Be Filled By O.E.M.
++Unsupported
++	Header and Data:
++		0A 06 04 00 83 01
++	Strings:
++		   To Be Filled By O.E.M.
+ 
+ Handle 0x0005, DMI type 11, 5 bytes
+-OEM Strings
+-	String 1: Default string
++Unsupported
++	Header and Data:
++		0B 05 05 00 01
++	Strings:
++		Default string
+ 
+ Handle 0x0006, DMI type 12, 5 bytes
+-System Configuration Options
+-	Option 1: Default string
++Unsupported
++	Header and Data:
++		0C 05 06 00 01
++	Strings:
++		Default string
+ 
+ Handle 0x0007, DMI type 32, 20 bytes
+-System Boot Information
+-	Status: No errors detected
++Unsupported
++	Header and Data:
++		20 14 07 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00
+ 
+ Handle 0x0008, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 08 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0009, DMI type 16, 23 bytes
+-Physical Memory Array
+-	Location: System Board Or Motherboard
+-	Use: System Memory
+-	Error Correction Type: None
+-	Maximum Capacity: 512 GB
+-	Error Information Handle: 0x0008
+-	Number Of Devices: 8
++Unsupported
++	Header and Data:
++		10 17 09 00 03 03 03 00 00 00 20 08 00 08 00 00
++		00 00 00 00 00 00 00
+ 
+ Handle 0x000A, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x0007FFFFFFF
+-	Range Size: 2 GB
+-	Physical Array Handle: 0x0009
+-	Partition Width: 8
++Unsupported
++	Header and Data:
++		13 1F 0A 00 00 00 00 00 FF FF 1F 00 09 00 08 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x000B, DMI type 19, 31 bytes
+-Memory Array Mapped Address
+-	Starting Address: 0x00100000000
+-	Ending Address: 0x0207FFFFFFF
+-	Range Size: 126 GB
+-	Physical Array Handle: 0x0009
+-	Partition Width: 8
++Unsupported
++	Header and Data:
++		13 1F 0B 00 00 00 40 00 FF FF 1F 08 09 00 08 00
++		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ 
+ Handle 0x000C, DMI type 7, 19 bytes
+ Cache Information
+@@ -234,14 +232,10 @@
+ 		Power/Performance Control
+ 
+ Handle 0x0010, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 10 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0011, DMI type 17, 40 bytes
+ Memory Device
+@@ -268,25 +262,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0012, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x00FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x0011
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 12 00 00 00 00 00 FF FF FF 03 11 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0013, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 13 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0014, DMI type 17, 40 bytes
+ Memory Device
+@@ -313,25 +299,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0015, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x00FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x0014
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 15 00 00 00 00 00 FF FF FF 03 14 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0016, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 16 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0017, DMI type 17, 40 bytes
+ Memory Device
+@@ -358,25 +336,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0018, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x00FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x0017
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 18 00 00 00 00 00 FF FF FF 03 17 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0019, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 19 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x001A, DMI type 17, 40 bytes
+ Memory Device
+@@ -403,25 +373,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x001B, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x00000000000
+-	Ending Address: 0x00FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x001A
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 1B 00 00 00 00 00 FF FF FF 03 1A 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x001C, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 1C 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x001D, DMI type 17, 40 bytes
+ Memory Device
+@@ -448,25 +410,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x001E, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x01000000000
+-	Ending Address: 0x01FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x001D
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 1E 00 00 00 00 04 FF FF FF 07 1D 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x001F, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 1F 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0020, DMI type 17, 40 bytes
+ Memory Device
+@@ -493,25 +447,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0021, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x01000000000
+-	Ending Address: 0x01FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x0020
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 21 00 00 00 00 04 FF FF FF 07 20 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0022, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 22 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0023, DMI type 17, 40 bytes
+ Memory Device
+@@ -538,25 +484,17 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0024, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x01000000000
+-	Ending Address: 0x01FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x0023
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 24 00 00 00 00 04 FF FF FF 07 23 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0025, DMI type 18, 23 bytes
+-32-bit Memory Error Information
+-	Type: OK
+-	Granularity: Unknown
+-	Operation: Unknown
+-	Vendor Syndrome: Unknown
+-	Memory Array Address: Unknown
+-	Device Address: Unknown
+-	Resolution: Unknown
++Unsupported
++	Header and Data:
++		12 17 25 00 03 02 02 00 00 00 00 00 00 00 80 00
++		00 00 80 00 00 00 80
+ 
+ Handle 0x0026, DMI type 17, 40 bytes
+ Memory Device
+@@ -583,20 +521,18 @@
+ 	Configured Voltage: 1.2 V
+ 
+ Handle 0x0027, DMI type 20, 35 bytes
+-Memory Device Mapped Address
+-	Starting Address: 0x01000000000
+-	Ending Address: 0x01FFFFFFFFF
+-	Range Size: 64 GB
+-	Physical Device Handle: 0x0026
+-	Memory Array Mapped Address Handle: 0x000B
+-	Partition Row Position: Unknown
+-	Interleave Position: Unknown
+-	Interleaved Data Depth: Unknown
++Unsupported
++	Header and Data:
++		14 23 27 00 00 00 00 04 FF FF FF 07 26 00 0B 00
++		FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00
+ 
+ Handle 0x0028, DMI type 13, 22 bytes
+-BIOS Language Information
+-	Language Description Format: Long
+-	Installable Languages: 15
++Unsupported
++	Header and Data:
++		0D 16 28 00 0F 00 00 00 00 00 00 00 00 00 00 00
++		00 00 00 00 00 01
++	Strings:
+ 		en|US|iso8859-1
+ 		zh|TW|unicode
+ 		zh|CN|unicode
+@@ -608,377 +544,306 @@
+ 		fr|FR|iso8859-1
+ 		it|IT|iso8859-1
+ 		pt|PT|iso8859-1
+-		<BAD INDEX>
+-		<BAD INDEX>
+-		<BAD INDEX>
+-		<BAD INDEX>
+-	Currently Installed Language: en|US|iso8859-1
+ 
+ Handle 0x0029, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1602
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G1 TypeC
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 29 00 01 00 02 12 10
++	Strings:
++		J1602
++		USB3.1 G1 TypeC
+ 
+ Handle 0x002A, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1601
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G2 TypeC
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 2A 00 01 00 02 12 10
++	Strings:
++		J1601
++		USB3.1 G2 TypeC
+ 
+ Handle 0x002B, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1600
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G2 TypeA
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 2B 00 01 00 02 12 10
++	Strings:
++		J1600
++		USB3.1 G2 TypeA
+ 
+ Handle 0x002C, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1300
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 2C 00 01 00 02 12 10
++	Strings:
++		J1300
++		USB3.1 G1
+ 
+ Handle 0x002D, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1300
+-	Internal Connector Type: None
+-	External Reference Designator: PT RJ45
+-	External Connector Type: RJ-45
+-	Port Type: Network Port
++Unsupported
++	Header and Data:
++		08 09 2D 00 01 00 02 0B 1F
++	Strings:
++		J1300
++		PT RJ45
+ 
+ Handle 0x002E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2000
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 2E 00 01 00 02 12 10
++	Strings:
++		J2000
++		USB3.1 G1
+ 
+ Handle 0x002F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2000
+-	Internal Connector Type: None
+-	External Reference Designator: PT RJ45
+-	External Connector Type: RJ-45
+-	Port Type: Network Port
++Unsupported
++	Header and Data:
++		08 09 2F 00 01 00 02 0B 1F
++	Strings:
++		J2000
++		PT RJ45
+ 
+ Handle 0x0030, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1503
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 30 00 01 00 02 12 10
++	Strings:
++		J1503
++		USB3.1 G1
+ 
+ Handle 0x0031, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J1502
+-	Internal Connector Type: None
+-	External Reference Designator: USB3.1 G1
+-	External Connector Type: Access Bus (USB)
+-	Port Type: USB
++Unsupported
++	Header and Data:
++		08 09 31 00 01 00 02 12 10
++	Strings:
++		J1502
++		USB3.1 G1
+ 
+ Handle 0x0032, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J2100
+-	Internal Connector Type: None
+-	External Reference Designator: Audio Jack
+-	External Connector Type: Mini Jack (headphones)
+-	Port Type: Audio Port
++Unsupported
++	Header and Data:
++		08 09 32 00 01 00 02 1F 1D
++	Strings:
++		J2100
++		Audio Jack
+ 
+ Handle 0x0033, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J4306 - MEM FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 33 00 01 FF 00 00 FF
++	Strings:
++		J4306 - MEM FAN
+ 
+ Handle 0x0034, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3000 - ATX PWR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 34 00 01 FF 00 00 FF
++	Strings:
++		J3000 - ATX PWR
+ 
+ Handle 0x0035, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J4300 - SYSTEM FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 35 00 01 FF 00 00 FF
++	Strings:
++		J4300 - SYSTEM FAN
+ 
+ Handle 0x0036, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J4305 - CPU FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 36 00 01 FF 00 00 FF
++	Strings:
++		J4305 - CPU FAN
+ 
+ Handle 0x0037, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3001 - ATX 12V PWR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 37 00 01 FF 00 00 FF
++	Strings:
++		J3001 - ATX 12V PWR
+ 
+ Handle 0x0038, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J4301 - MEM FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 38 00 01 FF 00 00 FF
++	Strings:
++		J4301 - MEM FAN
+ 
+ Handle 0x0039, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J3002 - ATX 24PIN PWR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 39 00 01 FF 00 00 FF
++	Strings:
++		J3002 - ATX 24PIN PWR
+ 
+ Handle 0x003A, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J49 - SATA
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: SATA
++Unsupported
++	Header and Data:
++		08 09 3A 00 01 FF 00 00 20
++	Strings:
++		J49 - SATA
+ 
+ Handle 0x003B, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J46 - iSATA
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: SATA
++Unsupported
++	Header and Data:
++		08 09 3B 00 01 FF 00 00 20
++	Strings:
++		J46 - iSATA
+ 
+ Handle 0x003C, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J38 - iSATA
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: SATA
++Unsupported
++	Header and Data:
++		08 09 3C 00 01 FF 00 00 20
++	Strings:
++		J38 - iSATA
+ 
+ Handle 0x003D, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J43 - iSATA
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: SATA
++Unsupported
++	Header and Data:
++		08 09 3D 00 01 FF 00 00 20
++	Strings:
++		J43 - iSATA
+ 
+ Handle 0x003E, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J604 - Sink FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 3E 00 01 FF 00 00 FF
++	Strings:
++		J604 - Sink FAN
+ 
+ Handle 0x003F, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J4304 - PT FAN
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 3F 00 01 FF 00 00 FF
++	Strings:
++		J4304 - PT FAN
+ 
+ Handle 0x0040, DMI type 8, 9 bytes
+-Port Connector Information
+-	Internal Reference Designator: J202 - LPC HDR
+-	Internal Connector Type: Other
+-	External Reference Designator: Not Specified
+-	External Connector Type: None
+-	Port Type: Other
++Unsupported
++	Header and Data:
++		08 09 40 00 01 FF 00 00 FF
++	Strings:
++		J202 - LPC HDR
+ 
+ Handle 0x0041, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: U1
+-	Type: x4 M.2 Socket 1-DP
+-	Current Usage: Available
+-	Length: Short
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:00:01.2
++Unsupported
++	Header and Data:
++		09 11 41 00 01 14 0A 03 03 00 00 0C 01 00 00 00
++		0A
++	Strings:
++		U1
+ 
+ Handle 0x0042, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCIE1
+-	Type: x8 PCI Express x8
+-	Current Usage: Available
+-	Length: Short
+-	ID: 1
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:00:01.3
++Unsupported
++	Header and Data:
++		09 11 42 00 01 A9 0B 03 03 01 00 0C 01 00 00 00
++		0B
++	Strings:
++		PCIE1
+ 
+ Handle 0x0043, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCIE3
+-	Type: x16 PCI Express x16
+-	Current Usage: In Use
+-	Length: Short
+-	ID: 2
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:00:03.1
++Unsupported
++	Header and Data:
++		09 11 43 00 01 AA 0D 04 03 02 00 0C 01 00 00 00
++		19
++	Strings:
++		PCIE3
+ 
+ Handle 0x0044, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCIE4
+-	Type: x1 PCI Express x1
+-	Current Usage: Available
+-	Length: Short
+-	ID: 3
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:02:03.0
++Unsupported
++	Header and Data:
++		09 11 44 00 01 A6 08 03 03 03 00 0C 01 00 00 02
++		18
++	Strings:
++		PCIE4
+ 
+ Handle 0x0045, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCIE6
+-	Type: x4 PCI Express x4
+-	Current Usage: In Use
+-	Length: Short
+-	ID: 4
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:02:04.0
++Unsupported
++	Header and Data:
++		09 11 45 00 01 A8 0A 04 03 04 00 0C 01 00 00 02
++		20
++	Strings:
++		PCIE6
+ 
+ Handle 0x0046, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: J47
+-	Type: x1 M.2 Socket 1-DP
+-	Current Usage: In Use
+-	Length: Short
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:02:01.0
++Unsupported
++	Header and Data:
++		09 11 46 00 01 14 08 04 03 05 00 0C 01 00 00 02
++		08
++	Strings:
++		J47
+ 
+ Handle 0x0047, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: U3600
+-	Type: x4 M.2 Socket 1-DP
+-	Current Usage: Available
+-	Length: Short
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:40:01.1
++Unsupported
++	Header and Data:
++		09 11 47 00 01 14 0A 03 03 06 00 0C 01 00 00 40
++		09
++	Strings:
++		U3600
+ 
+ Handle 0x0048, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: U3601
+-	Type: x4 M.2 Socket 1-DP
+-	Current Usage: In Use
+-	Length: Short
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:40:01.2
++Unsupported
++	Header and Data:
++		09 11 48 00 01 14 0A 04 03 07 00 0C 01 00 00 40
++		0A
++	Strings:
++		U3601
+ 
+ Handle 0x0049, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCIE5
+-	Type: x8 PCI Express x8
+-	Current Usage: Available
+-	Length: Short
+-	ID: 8
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:40:01.3
++Unsupported
++	Header and Data:
++		09 11 49 00 01 A9 0B 03 03 08 00 0C 01 00 00 40
++		0B
++	Strings:
++		PCIE5
+ 
+ Handle 0x004A, DMI type 9, 17 bytes
+-System Slot Information
+-	Designation: PCIE7
+-	Type: x16 PCI Express x16
+-	Current Usage: Available
+-	Length: Short
+-	ID: 9
+-	Characteristics:
+-		3.3 V is provided
+-		Opening is shared
+-		PME signal is supported
+-	Bus Address: 0000:40:03.1
++Unsupported
++	Header and Data:
++		09 11 4A 00 01 AA 0D 03 03 09 00 0C 01 00 00 40
++		19
++	Strings:
++		PCIE7
+ 
+ Handle 0x004B, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation: Onboard LAN Atheros
+-	Type: Ethernet
+-	Status: Enabled
+-	Type Instance: 1
+-	Bus Address: 0000:03:00.0
++Unsupported
++	Header and Data:
++		29 0B 4B 00 01 85 01 00 00 03 00
++	Strings:
++		Onboard LAN Atheros
+ 
+ Handle 0x004C, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation: Onboard LAN Realtek
+-	Type: Ethernet
+-	Status: Enabled
+-	Type Instance: 2
+-	Bus Address: 0000:05:00.0
++Unsupported
++	Header and Data:
++		29 0B 4C 00 01 85 02 00 00 05 00
++	Strings:
++		Onboard LAN Realtek
+ 
+ Handle 0x004D, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation: Audio Codec ALC1220
+-	Type: Sound
+-	Status: Enabled
+-	Type Instance: 1
+-	Bus Address: 0000:10:00.3
++Unsupported
++	Header and Data:
++		29 0B 4D 00 01 87 01 00 00 10 03
++	Strings:
++		Audio Codec ALC1220
+ 
+ Handle 0x004E, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation: Promontory SATA
+-	Type: SATA Controller
+-	Status: Enabled
+-	Type Instance: 1
+-	Bus Address: 0000:01:00.1
++Unsupported
++	Header and Data:
++		29 0B 4E 00 01 89 01 00 00 01 01
++	Strings:
++		Promontory SATA
+ 
+ Handle 0x004F, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation: DIE0 M.2 SATA
+-	Type: SATA Controller
+-	Status: Enabled
+-	Type Instance: 2
+-	Bus Address: 0000:10:00.2
++Unsupported
++	Header and Data:
++		29 0B 4F 00 01 89 02 00 00 10 02
++	Strings:
++		DIE0 M.2 SATA
+ 
+ Handle 0x0050, DMI type 41, 11 bytes
+-Onboard Device
+-	Reference Designation: DIE2 M.2 SATA
+-	Type: SATA Controller
+-	Status: Enabled
+-	Type Instance: 3
+-	Bus Address: 0000:43:00.2
++Unsupported
++	Header and Data:
++		29 0B 50 00 01 89 03 00 00 43 02
++	Strings:
++		DIE2 M.2 SATA
+ 
+ Handle 0x0051, DMI type 127, 4 bytes
+ End Of Table

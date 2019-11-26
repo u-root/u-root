@@ -8,9 +8,9 @@ import (
 
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vars"
+	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
 	"github.com/u-root/u-root/cmds/core/elvish/parse"
 	"github.com/u-root/u-root/cmds/core/elvish/util"
-	"github.com/u-root/u-root/cmds/core/elvish/hashmap"
 )
 
 // Op is an operation on an Frame.
@@ -342,7 +342,7 @@ func (op *formOp) Invoke(fm *Frame) (errRet error) {
 		if ks, ok := k.(string); ok {
 			convertedOpts[ks] = v
 		} else {
-			return fmt.Errorf("Option key must be string, got %s", vals.Kind(k))
+			return fmt.Errorf("option key must be string, got %s", vals.Kind(k))
 		}
 	}
 

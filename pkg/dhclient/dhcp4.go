@@ -31,8 +31,30 @@ func NewPacket4(iface netlink.Link, p *dhcpv4.DHCPv4) *Packet4 {
 	}
 }
 
+// Link is a netlink link
 func (p *Packet4) Link() netlink.Link {
 	return p.iface
+}
+
+// GatherDNSSettings gets the DNS related infromation from a dhcp packet
+// including, nameservers, domain, and search options
+func (p *Packet4) GatherDNSSettings() (ns []net.IP, sl []string, dom string) {
+	if nameservers := p.P.DNS(); nameservers != nil {
+		ns = nameservers
+	}
+	if searchList := p.P.DomainSearch(); searchList != nil {
+		sl = searchList.Labels
+	}
+	if domain := p.P.DomainName(); domain != "" {
+		dom = domain
+	}
+	return
+}
+
+// Configure4 adds IP addresses, routes, and DNS servers to the system.
+func Configure4(iface netlink.Link, packet *dhcpv4.DHCPv4) error {
+	p := NewPacket4(iface, packet)
+	return p.Configure()
 }
 
 // Configure configures interface using this packet.
@@ -68,7 +90,7 @@ func (p *Packet4) Configure() error {
 				return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
 			}
 		}
-	} else if gw := p.P.Router(); gw != nil && len(gw) > 0 {
+	} else if gw := p.P.Router(); len(gw) > 0 {
 		r := &netlink.Route{
 			LinkIndex: p.iface.Attrs().Index,
 			Gw:        gw[0],
@@ -79,11 +101,11 @@ func (p *Packet4) Configure() error {
 		}
 	}
 
-	if ips := p.P.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips); err != nil {
-			return err
-		}
+	nameServers, searchList, domain := p.GatherDNSSettings()
+	if err := WriteDNSSettings(nameServers, searchList, domain); err != nil {
+		return err
 	}
+
 	return nil
 }
 
@@ -107,7 +129,10 @@ func (p *Packet4) Lease() *net.IPNet {
 }
 
 var (
-	ErrNoBootFile       = errors.New("no boot file name present in DHCP message")
+	// ErrNoBootFile represents that no pxe boot file was found.
+	ErrNoBootFile = errors.New("no boot file name present in DHCP message")
+
+	// ErrNoServerHostName represents that no pxe boot server was found.
 	ErrNoServerHostName = errors.New("no server host name present in DHCP message")
 )
 
@@ -147,4 +172,17 @@ func (p *Packet4) Boot() (*url.URL, error) {
 		}
 	}
 	return u, nil
+}
+
+// ISCSIBoot returns the target address and volume name to boot from if
+// they were part of the DHCP message.
+//
+// Parses the IPv4 DHCP Root Path for iSCSI target and volume as specified by
+// RFC 4173.
+func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
+	rp := p.P.RootPath()
+	if len(rp) == 0 {
+		return nil, "", fmt.Errorf("no root path in DHCP message")
+	}
+	return parseISCSIURI(rp)
 }

@@ -11,7 +11,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/uroot/logger"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // DirArchiver implements Archiver for a directory.
@@ -25,7 +25,7 @@ func (da DirArchiver) Reader(io.ReaderAt) Reader {
 }
 
 // OpenWriter implements Archiver.OpenWriter.
-func (da DirArchiver) OpenWriter(l logger.Logger, path, goos, goarch string) (Writer, error) {
+func (da DirArchiver) OpenWriter(l ulog.Logger, path, goos, goarch string) (Writer, error) {
 	if len(path) == 0 {
 		var err error
 		path, err = ioutil.TempDir("", "u-root")

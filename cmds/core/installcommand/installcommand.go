@@ -36,7 +36,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/golang"
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 var (
@@ -45,8 +45,7 @@ var (
 	force  = flag.Bool("force", false, "build even if a file already exists at the destination")
 
 	verbose = flag.Bool("v", false, "print all build commands")
-	debug   = func(string, ...interface{}) {}
-	r       = util.UrootPath
+	r       = upath.UrootPath
 )
 
 type form struct {
@@ -74,7 +73,7 @@ func parseCommandLine() form {
 	if !strings.HasSuffix(os.Args[0], "installcommand") {
 		// This is almost certain to be a symlink, and it's no harm
 		// to check it.
-		f := util.ResolveUntilLastSymlink(os.Args[0])
+		f := upath.ResolveUntilLastSymlink(os.Args[0])
 		return form{
 			cmdName: filepath.Base(f),
 			cmdArgs: os.Args[1:],
@@ -128,10 +127,6 @@ func main() {
 		if err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, 20); err != nil {
 			log.Printf("Cannot set low priority: %v", err)
 		}
-	}
-
-	if form.verbose {
-		debug = log.Printf
 	}
 
 	destFile := filepath.Join(r("/ubin"), form.cmdName)

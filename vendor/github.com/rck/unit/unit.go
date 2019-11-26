@@ -8,6 +8,7 @@ package unit
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"unicode"
 )
@@ -89,7 +90,8 @@ func NewUnit(m map[string]int64) (*Unit, error) {
 	for _, mult := range m {
 		if mult == 1 {
 			found = true
-			break
+		} else if mult == 0 {
+			return nil, fmt.Errorf("mapping contains unit that maps to illegal multiplier 0 for %v", m)
 		}
 	}
 	if !found {
@@ -134,7 +136,7 @@ func (u *Unit) MustNewValue(value int64, explicitSign Sign) *Value {
 
 // ValueFromString converts the given string to a Value.
 // The string is allowed to have '+'/'-' as prefix, followed by a number, and
-// an optional unit character as defined in its mapping.
+// an optional unit name as defined in its mapping.
 func (u *Unit) ValueFromString(str string) (*Value, error) {
 	s := &Value{unit: u}
 
@@ -207,7 +209,13 @@ func (s *Value) Set(str string) error {
 		}
 		mult = 1
 	}
+	if (value > 0 && (math.MaxInt64/mult < value)) || (value < 0 && (math.MinInt64/mult > value)) {
+		return fmt.Errorf("size %d with unit %q is out of range", value, unitName)
+	}
 	s.Value = value * mult
 	s.IsSet = true
 	return nil
 }
+
+// Type implements pflag.Value.Type.
+func (s *Value) Type() string { return "unit" }

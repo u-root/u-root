@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/ibft"
 	"github.com/u-root/u-root/pkg/multiboot"
 )
 
@@ -17,13 +18,14 @@ type MultibootImage struct {
 	Path    string
 	Cmdline string
 	Modules []string
+	IBFT    *ibft.IBFT
 }
 
 var _ OSImage = &MultibootImage{}
 
 // Load implements OSImage.Load.
 func (mi *MultibootImage) Load(verbose bool) error {
-	return multiboot.Load(verbose, mi.Path, mi.Cmdline, mi.Modules)
+	return multiboot.Load(verbose, mi.Path, mi.Cmdline, mi.Modules, mi.IBFT)
 }
 
 // String implements fmt.Stringer.

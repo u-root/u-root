@@ -63,6 +63,7 @@ func checkPath(t *testing.T, path string, want os.FileMode) {
 			path, got, want)
 	}
 }
+
 func TestChmodRecursive(t *testing.T) {
 	// Temporary directories.
 	tempDir, err := ioutil.TempDir("", "TestChmodRecursive")
@@ -71,7 +72,6 @@ func TestChmodRecursive(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	var targetFiles []string
 	var targetDirectories []string
 	for _, dir := range []string{"L1_A", "L1_B", "L1_C",
 		filepath.Join("L1_A", "L2_A"),
@@ -90,12 +90,6 @@ func TestChmodRecursive(t *testing.T) {
 			t.Fatalf("cannot create test directory: %v", err)
 		}
 		targetDirectories = append(targetDirectories, dir)
-		targetFile, err := os.Create(filepath.Join(dir, "X"))
-		if err != nil {
-			t.Fatalf("cannot create temporary file: %v", err)
-		}
-		targetFiles = append(targetFiles, targetFile.Name())
-
 	}
 
 	// Build chmod binary.

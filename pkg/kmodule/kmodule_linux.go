@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package kmodule interfaces with Linux kernel modules.
+//
+// kmodule allows loading and unloading kernel modules with dependencies, as
+// well as locating them through probing.
 package kmodule
 
 import (
@@ -79,9 +83,9 @@ type depMap map[string]*dependency
 //
 // An empty ProbeOpts{} should lead to the default behavior.
 type ProbeOpts struct {
-	DryRunCB func(string)
-	RootDir  string
-	KVer     string
+	DryRunCB       func(string)
+	RootDir        string
+	KVer           string
 	IgnoreProcMods bool
 }
 
@@ -213,7 +217,7 @@ func findModPath(name string, m depMap) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Could not find path for module %q", name)
+	return "", fmt.Errorf("could not find path for module %q", name)
 }
 
 func loadDeps(path string, m depMap, opts ProbeOpts) error {

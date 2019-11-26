@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package golang is an API to the Go compiler.
 package golang
 
 import (
@@ -61,6 +62,21 @@ func (c Environ) goCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command(filepath.Join(c.GOROOT, "bin", "go"), args...)
 	cmd.Env = append(os.Environ(), c.Env()...)
 	return cmd
+}
+
+// Version returns the Go version string that runtime.Version would return for
+// the Go compiler in this environ.
+func (c Environ) Version() (string, error) {
+	cmd := c.goCmd("version")
+	v, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	s := strings.Fields(string(v))
+	if len(s) < 3 {
+		return "", fmt.Errorf("unknown go version, tool returned weird output for 'go version': %v", string(v))
+	}
+	return s[2], nil
 }
 
 // Deps lists all dependencies of the package given by `importPath`.

@@ -3,6 +3,7 @@
 package netlink
 
 import (
+	"errors"
 	"math"
 	"os"
 	"runtime"
@@ -14,6 +15,8 @@ import (
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 )
+
+var errNetNSCannotLockThread = errors.New("netns cannot be set when disableNSThreadLock is set")
 
 var _ Socket = &conn{}
 
@@ -339,7 +342,7 @@ type sysSocket struct {
 // to a single thread.
 func newSysSocket(config *Config) (*sysSocket, error) {
 	// Determine network namespaces using the threadNetNS function.
-	g, err := newLockedNetNSGoroutine(config.NetNS, threadNetNS)
+	g, err := newLockedNetNSGoroutine(config.NetNS, threadNetNS, !config.DisableNSLockThread)
 	if err != nil {
 		return nil, err
 	}
@@ -624,9 +627,15 @@ type lockedNetNSGoroutine struct {
 // newLockedNetNSGoroutine creates a lockedNetNSGoroutine that will enter the
 // specified network namespace netNS (by file descriptor), and will use the
 // getNS function to produce netNS handles.
-func newLockedNetNSGoroutine(netNS int, getNS func() (*netNS, error)) (*lockedNetNSGoroutine, error) {
+func newLockedNetNSGoroutine(netNS int, getNS func() (*netNS, error), lockThread bool) (*lockedNetNSGoroutine, error) {
 	// Any bare syscall errors (e.g. setns) should be wrapped with
 	// os.NewSyscallError for the remainder of this function.
+
+	// If the lockThread is set and the caller attempts to set a
+	// namespace, return an error.
+	if !lockThread && netNS != 0 {
+		return nil, errNetNSCannotLockThread
+	}
 
 	callerNS, err := getNS()
 	if err != nil {
@@ -660,9 +669,16 @@ func newLockedNetNSGoroutine(netNS int, getNS func() (*netNS, error)) (*lockedNe
 		// with the Go runtime for threads which are not unlocked, we have
 		// elected to temporarily unlock the thread when the goroutine terminates:
 		// https://github.com/golang/go/issues/25128#issuecomment-410764489.
+		//
+		// Locking the thread is not implemented if the caller explicitly asks
+		// for an unlocked thread.
 
-		runtime.LockOSThread()
-		defer runtime.UnlockOSThread()
+		// Only lock the tread, if the lockThread is set.
+		if lockThread {
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+		}
+
 		defer g.wg.Done()
 
 		// Get the current namespace of the thread the goroutine is locked to.

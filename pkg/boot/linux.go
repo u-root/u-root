@@ -56,7 +56,23 @@ func (li *LinuxImage) Load(verbose bool) error {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
 
-	k, err := copyToFile(uio.Reader(li.Kernel))
+	kernel, initrd := uio.Reader(li.Kernel), uio.Reader(li.Initrd)
+	if verbose {
+		// In verbose mode, print a dot every 5MiB. It is not pretty,
+		// but it at least proves the files are still downloading.
+		progress := func(r io.Reader) io.Reader {
+			return &uio.ProgressReader{
+				R:        r,
+				Symbol:   ".",
+				Interval: 5 * 1024 * 1024,
+				W:        os.Stdout,
+			}
+		}
+		kernel = progress(kernel)
+		initrd = progress(initrd)
+	}
+
+	k, err := copyToFile(kernel)
 	if err != nil {
 		return err
 	}
@@ -64,7 +80,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = copyToFile(uio.Reader(li.Initrd))
+		i, err = copyToFile(initrd)
 		if err != nil {
 			return err
 		}

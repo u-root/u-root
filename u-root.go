@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -32,7 +34,7 @@ func (m *multiFlag) Set(value string) error {
 // Flags for u-root builder.
 var (
 	build, format, tmpDir, base, outputPath *string
-	initCmd                                 *string
+	uinitCmd, initCmd                       *string
 	defaultShell                            *string
 	useExistingInit                         *bool
 	fourbins                                *bool
@@ -52,7 +54,9 @@ func init() {
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
+	uinitCmd = flag.String("uinitcmd", "", "Symlink target for /bin/uinit. Can be an absolute path or a u-root command name. Use uinit=\"\" if you don't want the symlink.")
 	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
+
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
@@ -66,6 +70,20 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("Successfully wrote initramfs.")
+}
+
+var recommendedVersions = []string{
+	"go1.12",
+	"go1.13",
+}
+
+func isRecommendedVersion(v string) bool {
+	for _, r := range recommendedVersions {
+		if strings.HasPrefix(v, r) {
+			return true
+		}
+	}
+	return false
 }
 
 // Main is a separate function so defers are run on return, which they wouldn't
@@ -82,6 +100,19 @@ func Main() error {
 	log.Printf("Build environment: %s", env)
 	if env.GOOS != "linux" {
 		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+	}
+
+	v, err := env.Version()
+	if err != nil {
+		log.Printf("Could not get environment's Go version, using runtime's version: %v", err)
+		v = runtime.Version()
+	}
+	if !isRecommendedVersion(v) {
+		log.Printf(`WARNING: You are not using one of the recommended Go versions (have = %s, recommended = %v).
+			Some packages may not compile.
+			Go to https://golang.org/doc/install to find out how to install a newer version of Go,
+			or use https://godoc.org/golang.org/dl/%s to install an additional version of Go.`,
+			v, recommendedVersions, recommendedVersions[0])
 	}
 
 	archiver, err := initramfs.GetArchiver(*format)
@@ -180,6 +211,7 @@ func Main() error {
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
+		UinitCmd:        *uinitCmd,
 		DefaultShell:    *defaultShell,
 	}
 	return uroot.CreateInitramfs(logger, opts)

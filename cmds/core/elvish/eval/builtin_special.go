@@ -33,10 +33,10 @@ type compileBuiltin func(*compiler, *parse.Form) OpBody
 var (
 	// ErrRelativeUseNotFromMod is thrown by "use" when relative use is used
 	// not from a module
-	ErrRelativeUseNotFromMod = errors.New("Relative use not from module")
+	ErrRelativeUseNotFromMod = errors.New("relative use not from module")
 	// ErrRelativeUseGoesOutsideLib is thrown when a relative use goes out of
 	// the library directory.
-	ErrRelativeUseGoesOutsideLib = errors.New("Module outside library directory")
+	ErrRelativeUseGoesOutsideLib = errors.New("module outside library directory")
 )
 
 var builtinSpecials map[string]compileBuiltin
@@ -48,11 +48,11 @@ var IsBuiltinSpecial = map[string]bool{}
 func init() {
 	// Needed to avoid initialization loop
 	builtinSpecials = map[string]compileBuiltin{
-		"del":   compileDel,
-		"fn":    compileFn,
-		"use":   compileUse,
-		"and":   compileAnd,
-		"or":    compileOr,
+		"del": compileDel,
+		"fn":  compileFn,
+		"use": compileUse,
+		"and": compileAnd,
+		"or":  compileOr,
 	}
 	for name := range builtinSpecials {
 		IsBuiltinSpecial[name] = true

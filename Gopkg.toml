@@ -21,8 +21,8 @@ ignored = ["github.com/u-root/u-root/bb*"]
   name = "github.com/rck/unit"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/u-root/dhcp4"
+  name = "github.com/google/go-tpm"
+  revision = "aab8d06b4c87613d2d8f0fcef5d2c9ebed0b6e2e"
 
 [prune]
   non-go = true

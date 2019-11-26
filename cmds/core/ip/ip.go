@@ -7,7 +7,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	l "log"
 	"net"
 	"os"
@@ -45,7 +44,7 @@ var (
 	cursor    int
 	arg       []string
 	whatIWant []string
-	log       = l.New(os.Stdout, "ip: ", 0)
+	log       = l.New(os.Stdout, "", 0)
 
 	addrScopes = map[netlink.Scope]string{
 		netlink.SCOPE_UNIVERSE: "global",
@@ -61,7 +60,7 @@ var (
 // and why it did not work out.
 
 func usage() error {
-	return fmt.Errorf("This was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
+	return fmt.Errorf("this was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
 		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
 }
 
@@ -90,6 +89,16 @@ func dev() (netlink.Link, error) {
 	}
 	whatIWant = []string{"device name"}
 	return netlink.LinkByName(arg[cursor])
+}
+
+func maybename() (string, error) {
+	cursor++
+	whatIWant = []string{"name", "device name"}
+	if arg[cursor] == "name" {
+		cursor++
+	}
+	whatIWant = []string{"device name"}
+	return arg[cursor], nil
 }
 
 func addrip() error {
@@ -121,11 +130,11 @@ func addrip() error {
 	switch c {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("Adding %v to %v failed: %v", arg[1], arg[2], err)
+			return fmt.Errorf("adding %v to %v failed: %v", arg[1], arg[2], err)
 		}
 	case "del":
 		if err := netlink.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("Deleting %v from %v failed: %v", arg[1], arg[2], err)
+			return fmt.Errorf("deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
 		return fmt.Errorf("devip: arg[0] changed: can't happen")
@@ -169,7 +178,7 @@ func linkset() error {
 	}
 
 	cursor++
-	whatIWant = []string{"address", "up", "down"}
+	whatIWant = []string{"address", "up", "down", "master"}
 	switch one(arg[cursor], whatIWant) {
 	case "address":
 		return setHardwareAddress(iface)
@@ -181,10 +190,39 @@ func linkset() error {
 		if err := netlink.LinkSetDown(iface); err != nil {
 			return fmt.Errorf("%v can't make it down: %v", iface.Attrs().Name, err)
 		}
+	case "master":
+		cursor++
+		whatIWant = []string{"device name"}
+		master, err := netlink.LinkByName(arg[cursor])
+		if err != nil {
+			return err
+		}
+		return netlink.LinkSetMaster(iface, master)
 	default:
 		return usage()
 	}
 	return nil
+}
+
+func linkadd() error {
+	name, err := maybename()
+	if err != nil {
+		return err
+	}
+	attrs := netlink.LinkAttrs{Name: name}
+
+	cursor++
+	whatIWant = []string{"type"}
+	if arg[cursor] != "type" {
+		return usage()
+	}
+
+	cursor++
+	whatIWant = []string{"bridge"}
+	if arg[cursor] != "bridge" {
+		return usage()
+	}
+	return netlink.LinkAdd(&netlink.Bridge{LinkAttrs: attrs})
 }
 
 func link() error {
@@ -193,7 +231,7 @@ func link() error {
 	}
 
 	cursor++
-	whatIWant = []string{"show", "set"}
+	whatIWant = []string{"show", "set", "add"}
 	cmd := arg[cursor]
 
 	switch one(cmd, whatIWant) {
@@ -201,21 +239,14 @@ func link() error {
 		return linkshow()
 	case "set":
 		return linkset()
+	case "add":
+		return linkadd()
 	}
 	return usage()
 }
 
 func routeshow() error {
-	path := "/proc/net/route"
-	if *inet6 {
-		path = "/proc/net/ipv6_route"
-	}
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("Route show failed: %v", err)
-	}
-	log.Printf("%s", string(b))
-	return nil
+	return showRoutes(*inet6)
 }
 
 func nodespec() string {
@@ -235,7 +266,7 @@ func nexthop() (string, *netlink.Addr, error) {
 	whatIWant = []string{"Gateway CIDR"}
 	addr, err := netlink.ParseAddr(arg[cursor])
 	if err != nil {
-		return "", nil, fmt.Errorf("Gateway CIDR: %v", err)
+		return "", nil, fmt.Errorf("failed to parse gateway CIDR: %v", err)
 	}
 	return nh, addr, nil
 }

@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build linux
-
 package mount
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,19 +16,17 @@ import (
 // getDev returns the device (as returned by the FSTAT syscall) for the given file descriptor.
 func getDev(fd int) (dev uint64, err error) {
 	var stat unix.Stat_t
-
 	if err := unix.Fstat(fd, &stat); err != nil {
 		return 0, err
 	}
-
 	return stat.Dev, nil
 }
 
-// RecursiveDelete deletes a directory identified by `fd` and everything in it.
+// recursiveDelete deletes a directory identified by `fd` and everything in it.
 //
 // This function allows deleting directories no longer referenceable by
 // any file name. This function does not descend into mounts.
-func RecursiveDelete(fd int) error {
+func recursiveDelete(fd int) error {
 	parentDev, err := getDev(fd)
 	if err != nil {
 		return err
@@ -80,7 +75,7 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 			return nil
 		}
 
-		if err := RecursiveDelete(childFd); err != nil {
+		if err := recursiveDelete(childFd); err != nil {
 			return err
 		}
 		// Back from recursion, the directory is now empty, delete.
@@ -91,28 +86,6 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 	return nil
 }
 
-// execCommand execs into the given command.
-//
-// In order to preserve whatever PID this program is running with,
-// the implementation does an actual EXEC syscall without forking.
-func execCommand(path string) error {
-	return unix.Exec(path, []string{path}, []string{})
-}
-
-// DirIsEmpty returns true if the directory with the given path is empty.
-func DirIsEmpty(name string) (bool, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return false, err
-	}
-	defer f.Close()
-
-	if _, err := f.Readdirnames(1); err == io.EOF {
-		return true, nil
-	}
-	return false, err
-}
-
 // MoveMount moves a mount from oldPath to newPath.
 //
 // This function is just a wrapper around the MOUNT syscall with the
@@ -121,14 +94,14 @@ func MoveMount(oldPath string, newPath string) error {
 	return unix.Mount(oldPath, newPath, "", unix.MS_MOVE, "")
 }
 
-// AddSpecialMounts moves the 'special' mounts to the given target path
+// addSpecialMounts moves the 'special' mounts to the given target path
 //
 // 'special' in this context refers to the following non-blockdevice backed
 // mounts that are almost always used: /dev, /proc, /sys, and /run.
 // This function will create the target directories, if necessary.
 // If the target directories already exist, they must be empty.
 // This function skips missing mounts.
-func AddSpecialMounts(newRoot string) error {
+func addSpecialMounts(newRoot string) error {
 	var mounts = []string{"/dev", "/proc", "/sys", "/run"}
 
 	for _, mount := range mounts {
@@ -172,27 +145,32 @@ func SameFilesystem(path1, path2 string) (bool, error) {
 	return stat1.Dev == stat2.Dev, nil
 }
 
-// SwitchRoot moves special mounts (dev, proc, sys, run) to the new directory,
-// then does a chroot, moves the root mount to the new directory and finally
+// SwitchRoot makes newRootDir the new root directory of the system.
+//
+// To be exact, it makes newRootDir the new root directory of the calling
+// process's mount namespace.
+//
+// It moves special mounts (dev, proc, sys, run) to the new directory, then
+// does a chroot, moves the root mount to the new directory and finally
 // DELETES EVERYTHING in the old root and execs the given init.
-func SwitchRoot(newRoot string, init string) error {
-	err := NewRoot(newRoot)
+func SwitchRoot(newRootDir string, init string) error {
+	err := newRoot(newRootDir)
 	if err != nil {
 		return err
 	}
-	return ExecInit(init)
+	return execInit(init)
 }
 
-// NewRoot is the "first half" of SwitchRoot - that is, it creates special mounts
+// newRoot is the "first half" of SwitchRoot - that is, it creates special mounts
 // in newRoot, chroot's there, and RECURSIVELY DELETES everything in the old root.
-func NewRoot(newRoot string) error {
+func newRoot(newRootDir string) error {
 	log.Printf("switch_root: moving mounts")
-	if err := AddSpecialMounts(newRoot); err != nil {
+	if err := addSpecialMounts(newRootDir); err != nil {
 		return fmt.Errorf("switch_root: moving mounts failed %v", err)
 	}
 
 	log.Printf("switch_root: Changing directory")
-	if err := unix.Chdir(newRoot); err != nil {
+	if err := unix.Chdir(newRootDir); err != nil {
 		return fmt.Errorf("switch_root: failed change directory to new_root %v", err)
 	}
 
@@ -204,7 +182,7 @@ func NewRoot(newRoot string) error {
 	defer oldRoot.Close()
 
 	log.Printf("switch_root: Moving /")
-	if err := MoveMount(newRoot, "/"); err != nil {
+	if err := MoveMount(newRootDir, "/"); err != nil {
 		return err
 	}
 
@@ -214,20 +192,16 @@ func NewRoot(newRoot string) error {
 	}
 
 	log.Printf("switch_root: Deleting old /")
-	if err := RecursiveDelete(int(oldRoot.Fd())); err != nil {
-		return err
-	}
-	return nil
+	return recursiveDelete(int(oldRoot.Fd()))
 }
 
-// Function ExecInit is generally only useful as part of SwitchRoot or similar.
+// execInit is generally only useful as part of SwitchRoot or similar.
 // It exec's the given binary in place of the current binary, necessary so that
 // the new binary can be pid 1.
-func ExecInit(init string) error {
+func execInit(init string) error {
 	log.Printf("switch_root: executing init")
-	if err := execCommand(init); err != nil {
+	if err := unix.Exec(init, []string{init}, []string{}); err != nil {
 		return fmt.Errorf("switch_root: exec failed %v", err)
 	}
-
 	return nil
 }

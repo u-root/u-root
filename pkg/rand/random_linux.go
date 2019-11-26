@@ -6,9 +6,12 @@ package rand
 
 import (
 	"context"
+	"log"
 	"sync"
 	"syscall"
+	"time"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"golang.org/x/sys/unix"
 )
 
@@ -24,6 +27,10 @@ type getrandomReader struct {
 // ReadContext implements a cancelable read from /dev/urandom.
 func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error) {
 	r.once.Do(func() {
+		if cmdline.ContainsFlag("uroot.nohwrng") {
+			r.backup = true
+			return
+		}
 		if _, err := unix.Getrandom(b, unix.GRND_NONBLOCK); err == syscall.ENOSYS {
 			r.backup = true
 		}
@@ -54,4 +61,17 @@ func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error
 			}
 		}
 	}
+}
+
+// ReadContextWithSlowLogs logs a helpful message if it takes a significant
+// amount of time (>2s) to produce random data.
+func (r *getrandomReader) ReadContextWithSlowLogs(ctx context.Context, b []byte) (int, error) {
+	d := 2 * time.Second
+	t := time.AfterFunc(d, func() {
+		log.Printf("getrandom is taking a long time (>%v). "+
+			"If running on hardware, consider enabling Linux's CONFIG_RANDOM_TRUST_CPU=y. "+
+			"If running in a VM/emulator, try setting up virtio-rng.", d)
+	})
+	defer t.Stop()
+	return r.ReadContext(ctx, b)
 }
