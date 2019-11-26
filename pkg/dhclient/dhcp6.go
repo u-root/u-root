@@ -29,6 +29,11 @@ func NewPacket6(iface netlink.Link, p *dhcpv6.Message) *Packet6 {
 	}
 }
 
+// Message returns the wrapped DHCPv6 packet.
+func (p *Packet6) Message() *dhcpv6.Message {
+	return p.p
+}
+
 // Link returns the interface this packet was received for.
 func (p *Packet6) Link() netlink.Link {
 	return p.iface
