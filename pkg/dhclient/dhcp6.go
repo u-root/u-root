@@ -119,7 +119,7 @@ func (p *Packet6) DNS() []net.IP {
 // in the packet.
 func (p *Packet6) Boot() (*url.URL, error) {
 	uriOpt := p.p.GetOneOption(dhcpv6.OptionBootfileURL)
-	uri, ok := uriOpt.(*dhcpv6.OptBootFileURL)
+	uri, ok := uriOpt.(dhcpv6.OptBootFileURL)
 	if !ok {
 		return nil, fmt.Errorf("packet does not contain boot file URL")
 	}
@@ -134,7 +134,7 @@ func (p *Packet6) Boot() (*url.URL, error) {
 // 4173 and RFC 5970.
 func (p *Packet6) ISCSIBoot() (*net.TCPAddr, string, error) {
 	uriOpt := p.p.GetOneOption(dhcpv6.OptionBootfileURL)
-	uri, ok := uriOpt.(*dhcpv6.OptBootFileURL)
+	uri, ok := uriOpt.(dhcpv6.OptBootFileURL)
 	if !ok {
 		return nil, "", fmt.Errorf("packet does not contain boot file URL")
 	}
