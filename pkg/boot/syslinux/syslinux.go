@@ -194,6 +194,7 @@ func (c *parser) append(config string) error {
 			c.curEntry = arg
 			c.config.Entries[c.curEntry] = &boot.LinuxImage{}
 			c.config.Entries[c.curEntry].Cmdline = c.globalAppend
+			c.config.Entries[c.curEntry].Name = c.curEntry
 
 		case "kernel":
 			k, err := c.getFile(arg)
