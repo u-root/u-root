@@ -1,0 +1,12 @@
+echo:[]string{}
+echo:[]string{"-n"}
+echo:[]string{"foo"}
+echo:[]string{"foo", "bar"}
+echo:[]string{"-n", "foo"}
+echo:[]string{"-e", "foo\\nbar"}
+echo:[]string{"-n", "-e", "foo\\nbar"}
+echo:[]string{"foo", "-n"}
+echo:[]string{"foo", "-n", "-e"}
+echo:[]string{"-------"}
+echo:[]string{"*"}
+echo:[]string{"*"}

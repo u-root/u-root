@@ -16,7 +16,7 @@ u-root embodies four different projects.
 *   Go bootloaders that use `kexec` to boot Linux or multiboot kernels such as
     ESXi, Xen, or tboot. They are meant to be used with
     [LinuxBoot](https://www.linuxboot.org). With that, parsers for
-    [GRUB config files](pkg/boot/diskboot) or
+    [GRUB config files](pkg/boot/grub) or
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
 
