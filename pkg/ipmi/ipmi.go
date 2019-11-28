@@ -33,9 +33,8 @@ const (
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
-	_BMC_SET_WATCHDOG_TIMER = 0x24
-	_BMC_GET_WATCHDOG_TIMER = 0x25
-
+	_BMC_SET_WATCHDOG_TIMER     = 0x24
+	_BMC_GET_WATCHDOG_TIMER     = 0x25
 	_SET_SYSTEM_INFO_PARAMETERS = 0x58
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
@@ -206,6 +205,14 @@ func (i *IPMI) setsysinfo(data *setSystemInfoReq) error {
 	return nil
 }
 
+func strcpyPadded(dst []byte, src string) {
+	dstLen := len(dst)
+	if copied := copy(dst, src); copied < dstLen {
+		padding := make([]byte, dstLen-copied)
+		copy(dst[copied:], padding)
+	}
+}
+
 // SetSystemFWVersion sets the provided system firmware version to BMC via IPMI.
 func (i *IPMI) SetSystemFWVersion(version string) error {
 	len := len(version)
@@ -217,7 +224,6 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 	}
 
 	var data setSystemInfoReq
-	var copied int
 	var index int
 	data.paramSelector = _SYSTEM_FW_VERSION
 	data.setSelector = 0
@@ -225,19 +231,17 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 		if data.setSelector == 0 { // the fisrt block of string data
 			data.strData[0] = _ASCII
 			data.strData[1] = byte(len)
-			copied = copy(data.strData[2:], version)
+			strcpyPadded(data.strData[2:], version)
+			index += _SYSTEM_INFO_BLK_SZ - 2
 		} else {
-			copied = copy(data.strData[:], version[index:])
+			strcpyPadded(data.strData[:], version)
+			index += _SYSTEM_INFO_BLK_SZ
 		}
 
-		index += copied
 		if err := i.setsysinfo(&data); err != nil {
 			return err
 		}
 		data.setSelector++
-		for j := range data.strData { //reset to 0
-			data.strData[j] = 0
-		}
 	}
 
 	return nil
