@@ -9,6 +9,7 @@ package main
 import (
 	"log"
 
+	"github.com/u-root/u-root/pkg/stconfig"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -48,19 +49,19 @@ func main() {
 
 	switch kingpin.Parse() {
 	case genkeys.FullCommand():
-		if err := GenKeys(); err != nil {
+		if err := stconfig.GenKeys(*genkeysPrivateKeyFile, *genkeysPublicKeyFile, *genkeysPassphrase); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case create.FullCommand():
-		if err := PackBootConfiguration(); err != nil {
+		if err := stconfig.PackBootConfiguration(*createOutputFilename, *createManifest); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case sign.FullCommand():
-		if err := AddSignatureToBootConfiguration(); err != nil {
+		if err := stconfig.AddSignatureToBootConfiguration(*signInputBootfile, *signPrivKeyFile, *signCertFile); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case unpack.FullCommand():
-		if err := UnpackBootConfiguration(); err != nil {
+		if err := stconfig.UnpackBootConfiguration(*unpackInputFilename); err != nil {
 			log.Fatalln(err.Error())
 		}
 	default:
