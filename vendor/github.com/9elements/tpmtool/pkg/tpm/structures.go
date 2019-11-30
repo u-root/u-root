@@ -145,16 +145,34 @@ type PCRDigestValue struct {
 	Digest    []byte
 }
 
-// PCRDigestInfo is the info about the measurements
-type PCRDigestInfo struct {
-	PcrIndex     int
-	PcrEventName string
-	PcrEventData string
-	Digests      []PCRDigestValue
+// PCREvent is a common interface for TcgPcrEvent & TcgPcrEvent2
+type PCREvent interface {
+	PcrIndex() int
+	PcrEventType() uint32
+	PcrEventName() string
+	PcrEventData() string
+	Digests() *[]PCRDigestValue
+	String() string
 }
 
 // PCRLog is a generic PCR eventlog structure
 type PCRLog struct {
-	Firmware string
-	PcrList  []PCRDigestInfo
+	Firmware FirmwareType
+	PcrList  []PCREvent
+
+}
+// [2] http://kib.kiev.ua/x86docs/SDMs/315168-011.pdf (Pre-TrEE MLE Guide)
+// [3] https://www.intel.com/content/dam/www/public/us/en/documents/guides/intel-txt-software-development-guide.pdf
+
+// TxtEventLogContainer is log header for TPM1.2 TXT log
+type TxtEventLogContainer struct {
+	Signature         [20]uint8
+	Reserved          [12]uint8
+	ContainerVerMajor uint8
+	ContainerVerMinor uint8
+	PcrEventVerMajor  uint8
+	PcrEventVerMinor  uint8
+	Size              uint32
+	PcrEventsOffset   uint32
+	NextEventOffset   uint32
 }
