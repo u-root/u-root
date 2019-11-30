@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:1cc23d714b88f09aa41060e8a83f40ba5db4f319baed0999aaec5b2c6425528a"
+  name = "github.com/9elements/tpmtool"
+  packages = ["pkg/tpm"]
+  pruneopts = "NUT"
+  revision = "304bb9ad19f03ad69bad1dff43103730558233b6"
+  version = "v3"
+
+[[projects]]
   branch = "master"
   digest = "1:4d3dc52be088499ee1b86a009bf217aa398f3337121584fee4763989862f063b"
   name = "github.com/anmitsu/go-shlex"
@@ -264,14 +272,6 @@
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:1cc23d714b88f09aa41060e8a83f40ba5db4f319baed0999aaec5b2c6425528a"
-  name = "github.com/systemboot/tpmtool"
-  packages = ["pkg/tpm"]
-  pruneopts = "NUT"
-  revision = "304bb9ad19f03ad69bad1dff43103730558233b6"
-  version = "v3"
-
-[[projects]]
   branch = "master"
   digest = "1:f8f11de5bbc787473bc72a26635508510f74840a43f9b74404e122e261bd34fd"
   name = "github.com/vishvananda/netlink"
@@ -409,6 +409,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/9elements/tpmtool/pkg/tpm",
     "github.com/beevik/ntp",
     "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",
@@ -436,7 +437,6 @@
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
-    "github.com/systemboot/tpmtool/pkg/tpm",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",

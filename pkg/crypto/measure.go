@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/systemboot/tpmtool/pkg/tpm"
+	"github.com/9elements/tpmtool/pkg/tpm"
 )
 
 const (
