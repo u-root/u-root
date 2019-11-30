@@ -328,351 +328,109 @@ func getEventDataString(eventType uint32, eventData []byte) (*string, error) {
 	return &eventInfo, errors.New("Event type couldn't get parsed")
 }
 
-func readTPM2Log(firmware string) (*PCRLog, error) {
+func readTPM2Log(firmware FirmwareType) (*PCRLog, error) {
 	var pcrLog PCRLog
-	pcrLog.Firmware = firmware
 
 	file, err := os.Open(DefaultTCPABinaryLog)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
-	var endianess binary.ByteOrder = binary.LittleEndian
-	var pcrDigest PCRDigestInfo
-	var pcrEvent TcgPcrEvent2
-	for {
-		if err := binary.Read(file, endianess, &pcrEvent.pcrIndex); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
+	pcrLog.Firmware = firmware
+
+	if pcrEvent, err := parseTcgPcrEvent(file); err != nil {
+		return nil, err
+	} else {
+		if efiSpecId, err := parseEfiSpecEvent(bytes.NewBuffer(pcrEvent.event)); efiSpecId == nil {
+			if err != nil {
+				return nil, err
+			} else {
+				return nil, errors.New("First event was not an EFI SpecID Event")
+			}
 		}
-		if err := binary.Read(file, endianess, &pcrEvent.eventType); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
 
-		if BIOSLogID(pcrEvent.eventType) == EvNoAction {
-			var efiSpecEvent TcgEfiSpecIDEvent
-			if err := binary.Read(file, endianess, make([]byte, TPMAlgShaSize)); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &pcrEvent.eventSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-			pcrEvent.event = make([]byte, pcrEvent.eventSize)
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.signature); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			identifier := string(bytes.Trim(efiSpecEvent.signature[:], "\x00"))
-			if string(identifier) != TCGAgileEventFormatID {
-				continue
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.platformClass); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.specVersionMinor); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.specVersionMajor); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.specErrata); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.uintnSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.numberOfAlgorithms); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			efiSpecEvent.digestSizes = make([]TcgEfiSpecIDEventAlgorithmSize, efiSpecEvent.numberOfAlgorithms)
-			for i := uint32(0); i < efiSpecEvent.numberOfAlgorithms; i++ {
-				if err := binary.Read(file, endianess, &efiSpecEvent.digestSizes[i].algorithID); err == io.EOF {
-					break
-				} else if err != nil {
-					return nil, err
-				}
-				if err := binary.Read(file, endianess, &efiSpecEvent.digestSizes[i].digestSize); err == io.EOF {
-					break
-				} else if err != nil {
-					return nil, err
-				}
-			}
-
-			if err := binary.Read(file, endianess, &efiSpecEvent.vendorInfoSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			efiSpecEvent.vendorInfo = make([]byte, efiSpecEvent.vendorInfoSize)
-			if err := binary.Read(file, endianess, &efiSpecEvent.vendorInfo); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			var in bytes.Buffer
-			binary.Write(&in, endianess, efiSpecEvent)
-			copy(pcrEvent.event, in.Bytes())
-
-			if BIOSLogTypes[BIOSLogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = BIOSLogTypes[BIOSLogID(pcrEvent.eventType)]
-			}
-			if EFILogTypes[EFILogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = EFILogTypes[EFILogID(pcrEvent.eventType)]
-			}
-
-			pcrDigest.PcrIndex = int(pcrEvent.pcrIndex)
-			pcrDigest.PcrEventData = string(pcrEvent.event)
-			pcrLog.PcrList = append(pcrLog.PcrList, pcrDigest)
-		} else {
-			if err := binary.Read(file, endianess, &pcrEvent.digests.count); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			pcrEvent.digests.digests = make([]THA, pcrEvent.digests.count)
-			for i := uint32(0); i < pcrEvent.digests.count; i++ {
-				if err := binary.Read(file, endianess, &pcrEvent.digests.digests[i].hashAlg); err == io.EOF {
-					break
-				} else if err != nil {
-					return nil, err
-				}
-
-				pcrEvent.digests.digests[i].digest.hash = make([]byte, HashAlgoToSize[pcrEvent.digests.digests[i].hashAlg])
-				if err := binary.Read(file, endianess, &pcrEvent.digests.digests[i].digest.hash); err == io.EOF {
-					break
-				} else if err != nil {
-					return nil, err
-				}
-			}
-
-			if err := binary.Read(file, endianess, &pcrEvent.eventSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			// Placeholder
-			pcrEvent.event = make([]byte, pcrEvent.eventSize)
-			if err := binary.Read(file, endianess, &pcrEvent.event); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			pcrDigest.Digests = make([]PCRDigestValue, pcrEvent.digests.count)
-			for i := uint32(0); i < pcrEvent.digests.count; i++ {
-				pcrDigest.Digests[i].DigestAlg = pcrEvent.digests.digests[i].hashAlg
-				pcrDigest.Digests[i].Digest = make([]byte, HashAlgoToSize[pcrEvent.digests.digests[i].hashAlg])
-				copy(pcrDigest.Digests[i].Digest, pcrEvent.digests.digests[i].digest.hash)
-			}
-
-			if BIOSLogTypes[BIOSLogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = BIOSLogTypes[BIOSLogID(pcrEvent.eventType)]
-			}
-			if EFILogTypes[EFILogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = EFILogTypes[EFILogID(pcrEvent.eventType)]
-			}
-
-			pcrDigest.PcrIndex = int(pcrEvent.pcrIndex)
-			eventDataString, _ := getEventDataString(pcrEvent.eventType, pcrEvent.event)
-			if eventDataString != nil {
-				pcrDigest.PcrEventData = *eventDataString
-			}
-			pcrLog.PcrList = append(pcrLog.PcrList, pcrDigest)
-		}
+		pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
 	}
-	file.Close()
+
+	for {
+		pcrEvent, err := parseTcgPcrEvent2(file)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		// There may be times when give part of the buffer past the last event,
+		// when that is the case just check to see if the event type is zero (reserved)
+		if pcrEvent.eventType == 0 {
+			break
+		}
+		pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
+	}
 
 	return &pcrLog, nil
 }
 
-func readTPM1Log(firmware string) (*PCRLog, error) {
+func readTPM1Log(firmware FirmwareType) (*PCRLog, error) {
 	var pcrLog PCRLog
-	pcrLog.Firmware = firmware
 
 	file, err := os.Open(DefaultTCPABinaryLog)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
-	var endianess binary.ByteOrder = binary.LittleEndian
-	var pcrDigest PCRDigestInfo
-	var pcrEvent TcgPcrEvent
-	for {
-		if err := binary.Read(file, endianess, &pcrEvent.pcrIndex); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		if err := binary.Read(file, endianess, &pcrEvent.eventType); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		if err := binary.Read(file, endianess, &pcrEvent.digest); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		if err := binary.Read(file, endianess, &pcrEvent.eventSize); err == io.EOF {
-			break
-		} else if err != nil {
+	pcrLog.Firmware = firmware
+
+	if firmware == "TXT" {
+		var pcrLog PCRLog
+
+		container, err := readTxtEventLogContainer(file)
+		if err != nil {
 			return nil, err
 		}
 
-		pcrDigest.Digests = make([]PCRDigestValue, 1)
-		pcrDigest.Digests[0].DigestAlg = TPMAlgSha
-		if BIOSLogID(pcrEvent.eventType) == EvNoAction {
-			var biosSpecEvent TcgBiosSpecIDEvent
-			if err := binary.Read(file, endianess, make([]byte, TPMAlgShaSize)); err == io.EOF {
+		// seek to first PCR event
+		file.Seek(int64(container.PcrEventsOffset), os.SEEK_SET)
+
+		for {
+			offset, err := file.Seek(0, os.SEEK_CUR)
+			if err != nil {
+				return nil, err
+			}
+
+			if offset >= int64(container.NextEventOffset) {
+				break
+			}
+
+			pcrEvent, err := parseTcgPcrEvent(file)
+			if err != nil {
+				// NB: error out even for EOF because it should
+				//     not be seen before NextEventOffset
+				return nil, err
+			}
+
+			pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
+		}
+	} else {
+		for {
+			pcrEvent, err := parseTcgPcrEvent(file)
+			if err == io.EOF {
 				break
 			} else if err != nil {
 				return nil, err
 			}
 
-			if err := binary.Read(file, endianess, &pcrEvent.eventSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-			pcrEvent.event = make([]byte, pcrEvent.eventSize)
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.signature); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			identifier := string(bytes.Trim(biosSpecEvent.signature[:], "\x00"))
-			if string(identifier) != TCGOldEfiFormatID {
-				continue
-			}
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.platformClass); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.specVersionMinor); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.specVersionMajor); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.specErrata); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.uintnSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			if err := binary.Read(file, endianess, &biosSpecEvent.vendorInfoSize); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			biosSpecEvent.vendorInfo = make([]byte, biosSpecEvent.vendorInfoSize)
-			if err := binary.Read(file, endianess, &biosSpecEvent.vendorInfo); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			var in bytes.Buffer
-			binary.Write(&in, endianess, biosSpecEvent)
-			copy(pcrEvent.event, in.Bytes())
-
-			if BIOSLogTypes[BIOSLogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = BIOSLogTypes[BIOSLogID(pcrEvent.eventType)]
-			}
-			if EFILogTypes[EFILogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = EFILogTypes[EFILogID(pcrEvent.eventType)]
-			}
-
-			pcrDigest.PcrIndex = int(pcrEvent.pcrIndex)
-			pcrDigest.PcrEventData = string(pcrEvent.event)
-			pcrLog.PcrList = append(pcrLog.PcrList, pcrDigest)
-		} else {
-			// Placeholder
-			pcrEvent.event = make([]byte, pcrEvent.eventSize)
-			if err := binary.Read(file, endianess, &pcrEvent.event); err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			pcrDigest.Digests[0].Digest = make([]byte, TPMAlgShaSize)
-			copy(pcrDigest.Digests[0].Digest, pcrEvent.digest[:])
-
-			if BIOSLogTypes[BIOSLogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = BIOSLogTypes[BIOSLogID(pcrEvent.eventType)]
-			}
-			if EFILogTypes[EFILogID(pcrEvent.eventType)] != "" {
-				pcrDigest.PcrEventName = EFILogTypes[EFILogID(pcrEvent.eventType)]
-			}
-
-			eventDataString, _ := getEventDataString(pcrEvent.eventType, pcrEvent.event)
-			if eventDataString != nil {
-				pcrDigest.PcrEventData = *eventDataString
-			}
-
-			pcrDigest.PcrIndex = int(pcrEvent.pcrIndex)
-			pcrLog.PcrList = append(pcrLog.PcrList, pcrDigest)
+			pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
 		}
 	}
-	file.Close()
 
 	return &pcrLog, nil
 }
 
 // ParseLog is a ,..
-func ParseLog(firmware string, tpmSpec string) (*PCRLog, error) {
+func ParseLog(firmware FirmwareType, tpmSpec string) (*PCRLog, error) {
 	var pcrLog *PCRLog
 	var err error
 
@@ -698,30 +456,9 @@ func ParseLog(firmware string, tpmSpec string) (*PCRLog, error) {
 	return pcrLog, nil
 }
 
-// DumpLog dumps the evenlog on stdio
 func DumpLog(tcpaLog *PCRLog) error {
 	for _, pcr := range tcpaLog.PcrList {
-		fmt.Printf("PCR: %d\n", pcr.PcrIndex)
-		fmt.Printf("Event Name: %s\n", pcr.PcrEventName)
-		fmt.Printf("Event Data: %s\n", stripControlSequences(pcr.PcrEventData))
-
-		for _, digest := range pcr.Digests {
-			var algoName string
-			switch digest.DigestAlg {
-			case TPMAlgSha:
-				algoName = "SHA1"
-			case TPMAlgSha256:
-				algoName = "SHA256"
-			case TPMAlgSha384:
-				algoName = "SHA384"
-			case TPMAlgSha512:
-				algoName = "SHA512"
-			case TPMAlgSm3s256:
-				algoName = "SM3"
-			}
-
-			fmt.Printf("%s Digest: %x\n", algoName, digest.Digest)
-		}
+		fmt.Printf("%s\n", pcr)
 
 		fmt.Println()
 	}

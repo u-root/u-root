@@ -158,3 +158,87 @@ const HCRTM string = "HCRTM"
 
 // FirmwareType (BIOS)
 type FirmwareType string
+
+const (
+	// Uefi is an Open Source UEFI implementation, www.tianocore.org
+	Uefi FirmwareType = "UEFI"
+	// Coreboot is an Open Source firmware, www.coreboot.org
+	Coreboot FirmwareType = "coreboot"
+	// UBoot is an Open Source firmware, www.denx.de/wiki/U-Boot
+	UBoot FirmwareType = "U-Boot"
+	// LinuxBoot is an Open Source firmware based on UEFI and a Linux runtime,
+	// www.linuxboot.org
+	LinuxBoot FirmwareType = "LinuxBoot"
+	// Bios is the legacy BIOS
+	Bios FirmwareType = "BIOS"
+	// TXT is Intel TXT launch
+	Txt FirmwareType = "TXT"
+)
+
+// TXT TPM1.2 log container signature
+const Txt12EvtLogSignature = "TXT Event Container\000"
+
+// TXT TPM1.2 log versions
+const (
+	Txt12EvtLog_Cntnr_Major_Ver = 1
+	Txt12EvtLog_Cntnr_Minor_Ver = 0
+	Txt12EvtLog_Evt_Major_Ver   = 1
+	Txt12EvtLog_Evt_Minor_Ver   = 0
+)
+
+type TxtLogID uint32
+
+const (
+	TxtEvTypeBase TxtLogID = iota + 0x400
+	TxtEvTypePcrMapping
+	TxtEvTypeHashStart
+	TxtEvTypeCombinedHash
+	TxtEvTypeMleHash
+	TxtEvTypeBiosAcRegData TxtLogID = iota + 0x405
+	TxtEvTypeCpuScrtmStat
+	TxtEvTypeLcpControlHash
+	TxtEvTypeElementsHash
+	TxtEvTypeStmHash
+	TxtEvTypeOsSinitDataCapHash
+	TxtEvTypeSinitPubKeyHash
+	TxtEvTypeLcpHash
+	TxtEvTypeLcpDetailsHash
+	TxtEvTypeLcpAuthoritiesHash
+	TxtEvTypeNvInfoHash
+	TxtEvTypeColdBootBiosHash
+	TxtEvTypeKmHash
+	TxtEvTypeBpmHash
+	TxtEvTypeKmInfoHash
+	TxtEvTypeBpmInfoHash
+	TxtEvTypeBootPolHash
+	TxtEvTypeRandValue TxtLogID = iota + 0x4e8
+	TxtEvTypeCapValue
+)
+
+// Txt12LogTypes are the Intel TXT eventlog types
+var TxtLogTypes = map[TxtLogID]string{
+	TxtEvTypeBase: "EVTYPE_BASE",
+	TxtEvTypePcrMapping: "EVTYPE_PCR_MAPPING",
+	TxtEvTypeHashStart: "EVTYPE_HASH_START",
+	TxtEvTypeCombinedHash: "EVTYPE_COMBINED_HASH",
+	TxtEvTypeMleHash: "EVTYPE_MLE_HASH",
+	TxtEvTypeBiosAcRegData: "EVTYPE_BIOSAC_REG_DATA",
+	TxtEvTypeCpuScrtmStat: "EVTYPE_CPU_SCRTM_STAT",
+	TxtEvTypeLcpControlHash: "EVTYPE_LCP_CONTROL_HASH",
+	TxtEvTypeElementsHash: "EVTYPE_ELEMENTS_HASH",
+	TxtEvTypeStmHash: "EVTYPE_STM_HASH",
+	TxtEvTypeOsSinitDataCapHash: "EVTYPE_OSSINITDATA_CAP_HASH",
+	TxtEvTypeSinitPubKeyHash: "EVTYPE_SINIT_PUBKEY_ HASH",
+	TxtEvTypeLcpHash: "EVTYPE_LCP_HASH",
+	TxtEvTypeLcpDetailsHash: "EVTYPE_LCP_DETAILS_HASH",
+	TxtEvTypeLcpAuthoritiesHash: "EVTYPE_LCP_AUTHORITIES_HASH",
+	TxtEvTypeNvInfoHash: "EVTYPE_NV_INFO_HASH",
+	TxtEvTypeColdBootBiosHash: "EVTYPE_COLD_BOOT_BIOS_HASH",
+	TxtEvTypeKmHash: "EVTYPE_KM_HASH",
+	TxtEvTypeBpmHash: "EVTYPE_KM_HASH",
+	TxtEvTypeKmInfoHash: "EVTYPE_KM_INFO_HASH",
+	TxtEvTypeBpmInfoHash: "EVTYPE_BPM_INFO_HASH",
+	TxtEvTypeBootPolHash: "EVTYPE_BOOT_POL_HASH",
+	TxtEvTypeRandValue: "EVTYPE_RANDOM_VALUE",
+	TxtEvTypeCapValue: "EVTYPE_CAP_VALUE",
+}
