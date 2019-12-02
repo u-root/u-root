@@ -143,7 +143,7 @@ func Find(ctx context.Context, opt ...Set) <-chan *File {
 	}
 
 	go func(f *finder) {
-		filepath.Walk(f.root, func(n string, fi os.FileInfo, err error) error {
+		_ = filepath.Walk(f.root, func(n string, fi os.FileInfo, err error) error {
 			if err != nil && !f.sendErrors {
 				// Don't send file on channel if user doesn't want them.
 				return nil
