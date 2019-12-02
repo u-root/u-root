@@ -90,9 +90,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v: %v\n", l.Name, l.Err)
 			continue
 		}
-		// TODO: get long listing formats out of ls and into a package.
 		if *long {
-			fmt.Printf("%v\n", l.FileInfo)
+			fmt.Printf("%s\n", l)
 			continue
 		}
 		fmt.Printf("%s\n", l.Name)
