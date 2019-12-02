@@ -14,18 +14,6 @@ import (
 )
 
 const (
-	_IOC_WRITE = 0x1
-	_IOC_READ  = 0x2
-
-	_IOC_NRBITS   = 8
-	_IOC_TYPEBITS = 8
-	_IOC_SIZEBITS = 14
-	_IOC_NRSHIFT  = 0
-
-	_IOC_TYPESHIFT = _IOC_NRSHIFT + _IOC_NRBITS
-	_IOC_SIZESHIFT = _IOC_TYPESHIFT + _IOC_TYPEBITS
-	_IOC_DIRSHIFT  = _IOC_SIZESHIFT + _IOC_SIZEBITS
-
 	_IPMI_BMC_CHANNEL                = 0xf
 	_IPMI_BUF_SIZE                   = 1024
 	_IPMI_IOC_MAGIC                  = 'i'
@@ -92,24 +80,6 @@ type setSystemInfoReq struct {
 	paramSelector byte
 	setSelector   byte
 	strData       [_SYSTEM_INFO_BLK_SZ]byte
-}
-
-func ioc(dir int, t int, nr int, size int) int {
-	return (dir << _IOC_DIRSHIFT) | (t << _IOC_TYPESHIFT) |
-		(nr << _IOC_NRSHIFT) | (size << _IOC_SIZESHIFT)
-}
-
-func ior(t int, nr int, size int) int {
-	return ioc(_IOC_READ, t, nr, size)
-}
-
-func iowr(t int, nr int, size int) int {
-	return ioc(_IOC_READ|_IOC_WRITE, t, nr, size)
-}
-
-func ioctl(fd uintptr, name int, data unsafe.Pointer) syscall.Errno {
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(name), uintptr(data))
-	return err
 }
 
 func fdSet(fd uintptr, p *syscall.FdSet) {
