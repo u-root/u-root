@@ -1,17 +1,49 @@
 # Integration Tests
 
-This tests core use cases for u-root such as:
+These are VM based tests for core u-root functionality such as:
 
 -   retrieving and kexec'ing a Linux kernel,
 -   DHCP client tests,
 -   uinit (user init), and
 -   running unit tests requiring root privileges.
 
-## Requirements
+To learn more about how these tests work under the hood, see the next section,
+otherwise jump ahead to the sections on how to write and run these tests.
+
+## VM Testing Infrastructure
+
+Our VM testing infrastructure starts a QEMU virtual machine that boots with
+our given kernel and initramfs, and runs the uinit or commands that we want to
+test.
+
+The test architecture, kernel and QEMU binary are set using environment
+variables.
+
+Testing mainly relies on 2 packages: [pkg/vmtest](/pkg/vmtest) and
+[pkg/qemu](/pkg/qemu).
+
+pkg/vmtest takes in integration test options, and given those and the
+environment variables, uses pkg/qemu to start a QEMU VM with the correct command
+line and configuration.
+
+There are a couple of ways to test:
+* Custom initramfs: provide an initramfs that will be used in the VM.
+* Custom uinit: provide a uinit. The testing setup will generate an initramfs 
+  with that uinit.
+* Test commands: provide the set of commands to be tested. The testing setup
+  will generate an initramfs that runs those commands.
+
+Files that need to be shared with the VM are written to a temp dir which is
+exposed as a Plan 9 (9p) filesystem in the VM.
+
+To check for the correct behavior, we use the go expect package to find
+expected output in QEMU's serial output within a given timeout.
+
+## Running Tests
 
 These tests only run on Linux on amd64 and arm.
 
-Environment variables:
+1. Set Environment variables:
 
 -   `UROOT_QEMU` points to a QEMU binary and args, e.g.
 
@@ -33,22 +65,36 @@ export UROOT_KERNEL="$HOME/linux/arch/x86/boot/bzImage"
     example, if you cannot turn on `-enable-kvm`, use `UROOT_QEMU_TIMEOUT_X=2`
     as our test automation does.
 
-The kernel used in our automated CI is a `v4.17` kernel built from
-[this .config file](/.circleci/images/test-image-amd64/config_linux4.17_x86_64.txt).
-You can look at the [Dockerfile](/.circleci/images/test-image-amd64/Dockerfile)
-to see what exactly is needed to build it.
 
-## Usage
+Our automated CI uses Dockerfiles to build a kernel and QEMU and set these
+environment variables. You can see the Dockerfile and the config file used to
+build the kernel for each supported architecture [here](/.circleci/images).
 
-Run the tests with:
+2. Run the tests with:
 
 ```sh
-go test
+go test [-v]
 ```
 
-Unless you want to wait a long time for all tests to complete, run just the test
-you need with
+The verbose flag is useful to see the QEMU command line being used and the full
+serial output. It is also useful to see which tests are being skipped and why
+(particularly for ARM, where many tests are currently skipped).
+
+Unless you want to wait a long time for all tests to complete, run just the
+specific test you want, e.g.
 
 ```sh
-go test -test.run=TestDhclient
+go test [-v] -test.run=TestDhclient
 ```
+
+## Writing a New Test
+
+To write a new test, first decide which of the options from the previous
+section best fit your case (custom initramfs, custom uinit, test commands).
+
+`vmtest.QEMUTest` is the function that starts the QEMU VM and returns the VM
+struct. There, provide the test options for your use case.
+
+The VM struct returned by `vmtest.QEMUTest` represents a running QEMU virtual
+machine. Use its family of Expect methods to check for the correct result.
+

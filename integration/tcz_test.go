@@ -43,7 +43,7 @@ func TestTczclient(t *testing.T) {
 					"./testdata/tczserver:tcz",
 				},
 			},
-			Uinit: []string{
+			TestCmds: []string{
 				"dmesg",
 				"ip l",
 				"echo NOW DO IT",
@@ -89,7 +89,7 @@ func TestTczclient(t *testing.T) {
 				"./testdata/tczclient:tcz",
 			},
 		},
-		Uinit: []string{
+		TestCmds: []string{
 			"ip addr add 192.168.0.2/24 dev eth0",
 			"ip link set eth0 up",
 			//"ip route add 255.255.255.255/32 dev eth0",

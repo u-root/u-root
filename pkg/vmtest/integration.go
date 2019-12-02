@@ -5,12 +5,10 @@
 package vmtest
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -21,37 +19,16 @@ import (
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
-
-const template = `
-package main
-
-import (
-	"log"
-	"os"
-	"os/exec"
-)
-
-func main() {
-	for _, cmds := range %#v {
-		cmd := exec.Command(cmds[0], cmds[1:]...)
-		log.Printf("Execing %%#v", cmds)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-`
 
 // Options are integration test options.
 type Options struct {
 	// BuildOpts are u-root initramfs options.
 	//
+	// They are used if the test needs to generate an initramfs.
 	// Fields that are not set are populated by QEMU and QEMUTest as
 	// possible.
 	BuildOpts uroot.Opts
@@ -73,11 +50,20 @@ type Options struct {
 	// used as determined by runtime.Caller.
 	Name string
 
-	// Uinit are commands to execute after init.
+	// Uinit is the uinit that should be added to a generated initramfs.
 	//
-	// If populated, a uinit.go will be generated from these and added to
-	// the busybox generated in BuildOpts.Commands.
-	Uinit []string
+	// If none is specified, the generic uinit will be used, which searches for
+	// and runs the script generated from TestCmds.
+	Uinit string
+
+	// TestCmds are commands to execute after init.
+	//
+	// QEMUTest generates an Elvish script with these commands. The script is
+	// shared with the VM, and is run from the generic uinit.
+	TestCmds []string
+
+	// TmpDir is the temporary directory exposed to the QEMU VM.
+	TmpDir string
 
 	// Logger logs build statements.
 	Logger ulog.Logger
@@ -163,17 +149,22 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		o.Name = callerName(2)
 	}
 	if o.Logger == nil {
-		o.Logger = &ulog.TestLogger{t}
+		o.Logger = &ulogtest.Logger{TB: t}
 	}
 	if o.QEMUOpts.SerialOutput == nil {
 		o.QEMUOpts.SerialOutput = TestLineWriter(t, "serial")
 	}
-	if TestArch() == "arm" {
-		//currently, 9p does not work on arm
-		o.UseVVFAT = true
+
+	// Create or reuse a temporary directory. This is exposed to the VM.
+	if o.TmpDir == "" {
+		tmpDir, err := ioutil.TempDir("", "uroot-integration")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		o.TmpDir = tmpDir
 	}
 
-	qOpts, tmpDir, err := QEMU(o)
+	qOpts, err := QEMU(o)
 	if err != nil {
 		t.Fatalf("Failed to create QEMU VM %s: %v", o.Name, err)
 	}
@@ -187,10 +178,10 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	return vm, func() {
 		vm.Close()
 		if t.Failed() {
-			t.Log("Keeping temp dir: ", tmpDir)
-		} else if len(o.BuildOpts.TempDir) == 0 {
-			if err := os.RemoveAll(o.BuildOpts.TempDir); err != nil {
-				t.Logf("failed to remove temporary directory %s: %v", o.BuildOpts.TempDir, err)
+			t.Log("Keeping temp dir: ", o.TmpDir)
+		} else if len(o.TmpDir) == 0 {
+			if err := os.RemoveAll(o.TmpDir); err != nil {
+				t.Logf("failed to remove temporary directory %s: %v", o.TmpDir, err)
 			}
 		}
 	}
@@ -203,13 +194,23 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 // caller either requested (through the Options.Uinit field, for example) or
 // that the caller did not set.
 //
-// QEMU returns the QEMU launch options, the temporary directory exposed to the
-// QEMU VM, or an error.
-func QEMU(o *Options) (*qemu.Options, string, error) {
+// QEMU returns the QEMU launch options or an error.
+func QEMU(o *Options) (*qemu.Options, error) {
 	if len(o.Name) == 0 {
 		o.Name = callerName(2)
 	}
 
+	// Generate Elvish shell script of test commands in o.TmpDir.
+	if len(o.TestCmds) > 0 {
+		testFile := filepath.Join(o.TmpDir, "test.elv")
+
+		if err := ioutil.WriteFile(
+			testFile, []byte(strings.Join(o.TestCmds, "\n")), 0777); err != nil {
+			return nil, err
+		}
+	}
+
+	// Create initramfs if caller did not provide one.
 	if len(o.QEMUOpts.Initramfs) == 0 {
 		if !o.DontSetEnv {
 			env := golang.Default()
@@ -218,54 +219,24 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 			o.BuildOpts.Env = env
 		}
 
-		var cmds []string
+		cmds := []string{
+			"github.com/u-root/u-root/cmds/core/init",
+			"github.com/u-root/u-root/cmds/core/elvish",
+		}
 		if len(o.BuildOpts.Commands) == 0 {
 			cmds = append(cmds, "github.com/u-root/u-root/cmds/*")
 		}
-		// Create a uinit from the commands given.
-		if len(o.Uinit) > 0 {
-			urootPkg, err := o.BuildOpts.Env.Package("github.com/u-root/u-root/integration")
-			if err != nil {
-				return nil, "", err
-			}
-			testDir := filepath.Join(urootPkg.Dir, "testcmd")
 
-			dirpath, err := ioutil.TempDir(testDir, "uinit-")
-			if err != nil {
-				return nil, "", err
-			}
-			defer os.RemoveAll(dirpath)
-
-			if err := os.MkdirAll(filepath.Join(dirpath, "uinit"), 0755); err != nil {
-				return nil, "", err
-			}
-
-			var realUinit [][]string
-			for _, cmd := range o.Uinit {
-				realUinit = append(realUinit, fields(cmd))
-			}
-
-			if err := ioutil.WriteFile(
-				filepath.Join(dirpath, "uinit", "uinit.go"),
-				[]byte(fmt.Sprintf(template, realUinit)),
-				0755); err != nil {
-				return nil, "", err
-			}
-			cmds = append(cmds, path.Join("github.com/u-root/u-root/integration/testcmd", filepath.Base(dirpath), "uinit"))
+		// If a custom uinit was not provided, use the generic test uinit. This will
+		// try to find and run the test commands shell script.
+		if len(o.Uinit) == 0 {
+			o.Uinit = "github.com/u-root/u-root/integration/testcmd/generic/uinit"
 		}
+		cmds = append(cmds, o.Uinit)
+
 		// Add our commands to the build opts.
-		if len(cmds) > 0 {
-			o.BuildOpts.AddBusyBoxCommands(cmds...)
-		}
+		o.BuildOpts.AddBusyBoxCommands(cmds...)
 
-		// Create or reuse a temporary directory.
-		if len(o.BuildOpts.TempDir) == 0 {
-			tmpDir, err := ioutil.TempDir("", "uroot-integration")
-			if err != nil {
-				return nil, "", err
-			}
-			o.BuildOpts.TempDir = tmpDir
-		}
 		if o.BuildOpts.BaseArchive == nil {
 			o.BuildOpts.BaseArchive = uroot.DefaultRamfs.Reader()
 		}
@@ -274,39 +245,41 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 		}
 		if len(o.BuildOpts.DefaultShell) == 0 {
 			o.BuildOpts.DefaultShell = "elvish"
-
-			// We need to add elvish so the build will succeed.
-			o.BuildOpts.AddBusyBoxCommands("github.com/u-root/u-root/cmds/core/elvish")
+		}
+		if len(o.BuildOpts.TempDir) == 0 {
+			o.BuildOpts.TempDir = o.TmpDir
 		}
 
 		if o.Logger == nil {
 			o.Logger = log.New(os.Stderr, "", 0)
 		}
 
-		// OutputFile
+		// Set OutputFile so that the initramfs is written to o.TmpDir.
+		// TODO(plaud) what if its non-empty, QEMUOpts initramfs would be ""?
 		var outputFile string
 		if o.BuildOpts.OutputFile == nil {
-			outputFile = filepath.Join(o.BuildOpts.TempDir, "initramfs.cpio")
+			outputFile = filepath.Join(o.TmpDir, "initramfs.cpio")
 			w, err := initramfs.CPIO.OpenWriter(o.Logger, outputFile, "", "")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 			o.BuildOpts.OutputFile = w
 		}
 
 		// Finally, create an initramfs!
 		if err := uroot.CreateInitramfs(o.Logger, o.BuildOpts); err != nil {
-			return nil, "", err
+			return nil, err
 		}
 
 		o.QEMUOpts.Initramfs = outputFile
+
 	}
 
 	if len(o.QEMUOpts.Kernel) == 0 {
-		// Copy kernel to tmpDir for tests involving kexec.
-		kernel := filepath.Join(o.BuildOpts.TempDir, "kernel")
+		// Copy kernel to o.TmpDir for tests involving kexec.
+		kernel := filepath.Join(o.TmpDir, "kernel")
 		if err := cp.Copy(os.Getenv("UROOT_KERNEL"), kernel); err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		o.QEMUOpts.Kernel = kernel
 	}
@@ -320,11 +293,11 @@ func QEMU(o *Options) (*qemu.Options, string, error) {
 
 	var dir qemu.Device
 	if o.UseVVFAT {
-		dir = qemu.ReadOnlyDirectory{Dir: o.BuildOpts.TempDir}
+		dir = qemu.ReadOnlyDirectory{Dir: o.TmpDir}
 	} else {
-		dir = qemu.P9Directory{Dir: o.BuildOpts.TempDir}
+		dir = qemu.P9Directory{Dir: o.TmpDir, Arch: TestArch()}
 	}
 	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, dir)
 
-	return &o.QEMUOpts, o.BuildOpts.TempDir, nil
+	return &o.QEMUOpts, nil
 }

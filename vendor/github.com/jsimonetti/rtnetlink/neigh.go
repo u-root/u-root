@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/jsimonetti/rtnetlink/internal/unix"
+
 	"github.com/mdlayher/netlink"
-	"github.com/mdlayher/netlink/nlenc"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -45,15 +45,22 @@ type NeighMessage struct {
 func (m *NeighMessage) MarshalBinary() ([]byte, error) {
 	b := make([]byte, unix.SizeofNdMsg)
 
-	nlenc.PutUint16(b[0:2], m.Family)
+	nativeEndian.PutUint16(b[0:2], m.Family)
 	// bytes 3 and 4 are padding
-	nlenc.PutUint32(b[4:8], m.Index)
-	nlenc.PutUint16(b[8:10], m.State)
+	nativeEndian.PutUint32(b[4:8], m.Index)
+	nativeEndian.PutUint16(b[8:10], m.State)
 	b[10] = m.Flags
 	b[11] = m.Type
 
 	if m.Attributes != nil {
-		a, err := m.Attributes.MarshalBinary()
+		ae := netlink.NewAttributeEncoder()
+		ae.ByteOrder = nativeEndian
+		err := m.Attributes.encode(ae)
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := ae.Encode()
 		if err != nil {
 			return nil, err
 		}
@@ -70,15 +77,20 @@ func (m *NeighMessage) UnmarshalBinary(b []byte) error {
 		return errInvalidNeighMessage
 	}
 
-	m.Family = nlenc.Uint16(b[0:2])
-	m.Index = nlenc.Uint32(b[4:8])
-	m.State = nlenc.Uint16(b[8:10])
+	m.Family = nativeEndian.Uint16(b[0:2])
+	m.Index = nativeEndian.Uint32(b[4:8])
+	m.State = nativeEndian.Uint16(b[8:10])
 	m.Flags = b[10]
 	m.Type = b[11]
 
 	if l > unix.SizeofNdMsg {
 		m.Attributes = &NeighAttributes{}
-		err := m.Attributes.UnmarshalBinary(b[unix.SizeofNdMsg:])
+		ad, err := netlink.NewAttributeDecoder(b[unix.SizeofNdMsg:])
+		if err != nil {
+			return err
+		}
+		ad.ByteOrder = nativeEndian
+		err = m.Attributes.decode(ad)
 		if err != nil {
 			return err
 		}
@@ -147,15 +159,15 @@ type NeighCacheInfo struct {
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into a NeighMessage.
-func (n *NeighCacheInfo) UnmarshalBinary(b []byte) error {
+func (n *NeighCacheInfo) unmarshalBinary(b []byte) error {
 	if len(b) != 16 {
 		return fmt.Errorf("incorrect size, want: 16, got: %d", len(b))
 	}
 
-	n.Confirmed = nlenc.Uint32(b[0:4])
-	n.Used = nlenc.Uint32(b[4:8])
-	n.Updated = nlenc.Uint32(b[8:12])
-	n.RefCount = nlenc.Uint32(b[12:16])
+	n.Confirmed = nativeEndian.Uint32(b[0:4])
+	n.Used = nativeEndian.Uint32(b[4:8])
+	n.Updated = nativeEndian.Uint32(b[8:12])
+	n.RefCount = nativeEndian.Uint32(b[12:16])
 
 	return nil
 }
@@ -168,64 +180,42 @@ type NeighAttributes struct {
 	IfIndex   uint32
 }
 
-// NeighAttributes unmarshals the contents of a byte slice into a NeighMessage.
-func (a *NeighAttributes) UnmarshalBinary(b []byte) error {
-	attrs, err := netlink.UnmarshalAttributes(b)
-	if err != nil {
-		return err
-	}
+func (a *NeighAttributes) decode(ad *netlink.AttributeDecoder) error {
 
-	for _, attr := range attrs {
-		switch attr.Type {
+	for ad.Next() {
+		switch ad.Type() {
 		case unix.NDA_UNSPEC:
-			//unused attribute
+			// unused attribute
 		case unix.NDA_DST:
-			if len(attr.Data) != 4 && len(attr.Data) != 16 {
+			l := len(ad.Bytes())
+			if l != 4 && l != 16 {
 				return errInvalidNeighMessageAttr
 			}
-			a.Address = attr.Data
+			a.Address = ad.Bytes()
 		case unix.NDA_LLADDR:
-			if len(attr.Data) != 6 {
+			if len(ad.Bytes()) != 6 {
 				return errInvalidNeighMessageAttr
 			}
-			a.LLAddress = attr.Data
+			a.LLAddress = ad.Bytes()
 		case unix.NDA_CACHEINFO:
 			a.CacheInfo = &NeighCacheInfo{}
-			err := a.CacheInfo.UnmarshalBinary(attr.Data)
+			err := a.CacheInfo.unmarshalBinary(ad.Bytes())
 			if err != nil {
 				return err
 			}
 		case unix.NDA_IFINDEX:
-			if len(attr.Data) != 4 {
-				return errInvalidNeighMessageAttr
-			}
-			a.IfIndex = nlenc.Uint32(attr.Data)
+			a.IfIndex = ad.Uint32()
 		}
 	}
 
 	return nil
 }
 
-// MarshalBinary marshals a NeighAttributes into a byte slice.
-func (a *NeighAttributes) MarshalBinary() ([]byte, error) {
-	attrs := []netlink.Attribute{
-		{
-			Type: unix.NDA_UNSPEC,
-			Data: nlenc.Uint16Bytes(0),
-		},
-		{
-			Type: unix.NDA_DST,
-			Data: a.Address,
-		},
-		{
-			Type: unix.NDA_LLADDR,
-			Data: a.LLAddress,
-		},
-		{
-			Type: unix.NDA_IFINDEX,
-			Data: nlenc.Uint32Bytes(a.IfIndex),
-		},
-	}
+func (a *NeighAttributes) encode(ae *netlink.AttributeEncoder) error {
+	ae.Uint16(unix.NDA_UNSPEC, 0)
+	ae.Bytes(unix.NDA_DST, a.Address)
+	ae.Bytes(unix.NDA_LLADDR, a.LLAddress)
+	ae.Uint32(unix.NDA_IFINDEX, a.IfIndex)
 
-	return netlink.MarshalAttributes(attrs)
+	return nil
 }

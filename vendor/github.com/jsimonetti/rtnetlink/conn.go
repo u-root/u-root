@@ -3,8 +3,9 @@ package rtnetlink
 import (
 	"encoding"
 
+	"github.com/jsimonetti/rtnetlink/internal/unix"
+
 	"github.com/mdlayher/netlink"
-	"golang.org/x/sys/unix"
 )
 
 // A Conn is a route netlink connection. A Conn can be used to send and

@@ -7,6 +7,16 @@ import (
 	"github.com/mdlayher/netlink/nlenc"
 )
 
+// Flags which may apply to netlink attribute types when communicating with
+// certain netlink families.
+const (
+	Nested       uint16 = 0x8000
+	NetByteOrder uint16 = 0x4000
+
+	// attrTypeMask masks off Type bits used for the above flags.
+	attrTypeMask uint16 = 0x3fff
+)
+
 // Various errors which may occur when attempting to marshal or unmarshal
 // a Message to and from its binary form.
 var (

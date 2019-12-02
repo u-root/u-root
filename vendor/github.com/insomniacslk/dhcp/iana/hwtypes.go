@@ -1,7 +1,7 @@
 package iana
 
 // HWType is a hardware type as per RFC 2132 and defined by the IANA.
-type HWType uint8
+type HWType uint16
 
 // See IANA for values.
 const (
