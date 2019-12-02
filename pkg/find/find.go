@@ -13,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/u-root/u-root/pkg/ls"
 )
 
 // File is a found file.
@@ -22,6 +24,19 @@ type File struct {
 
 	os.FileInfo
 	Err error
+}
+
+// String implements a fmt.Stringer for File.
+//
+// String returns a string long-formatted like `ls` would format it.
+func (f *File) String() string {
+	s := ls.LongStringer{
+		Human: true,
+		Name:  ls.NameStringer{},
+	}
+	rec := ls.FromOSFileInfo(f.Name, f.FileInfo)
+	rec.Name = f.Name
+	return s.FileString(rec)
 }
 
 type finder struct {
