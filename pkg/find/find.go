@@ -46,11 +46,12 @@ type finder struct {
 	pattern string
 
 	// Match is a pattern matching function.
-	match    func(pattern string, name string) (bool, error)
-	mode     os.FileMode
-	modeMask os.FileMode
-	debug    func(string, ...interface{})
-	files    chan *File
+	match      func(pattern string, name string) (bool, error)
+	mode       os.FileMode
+	modeMask   os.FileMode
+	debug      func(string, ...interface{})
+	files      chan *File
+	sendErrors bool
 }
 
 type Set func(*finder)
@@ -60,6 +61,13 @@ type Set func(*finder)
 func WithRoot(rootPath string) Set {
 	return func(f *finder) {
 		f.root = rootPath
+	}
+}
+
+// WithoutError filters out files with errors from being sent on the channel.
+func WithoutError() Set {
+	return func(f *finder) {
+		f.sendErrors = false
 	}
 }
 
@@ -121,10 +129,11 @@ func WithDebugLog(l func(string, ...interface{})) Set {
 //   )
 func Find(ctx context.Context, opt ...Set) <-chan *File {
 	f := &finder{
-		root:  "/",
-		debug: func(string, ...interface{}) {},
-		files: make(chan *File, 128),
-		match: filepath.Match,
+		root:       "/",
+		debug:      func(string, ...interface{}) {},
+		files:      make(chan *File, 128),
+		match:      filepath.Match,
+		sendErrors: true,
 	}
 
 	for _, o := range opt {
@@ -135,6 +144,11 @@ func Find(ctx context.Context, opt ...Set) <-chan *File {
 
 	go func(f *finder) {
 		filepath.Walk(f.root, func(n string, fi os.FileInfo, err error) error {
+			if err != nil && !f.sendErrors {
+				// Don't send file on channel if user doesn't want them.
+				return nil
+			}
+
 			file := &File{
 				Name:     n,
 				FileInfo: fi,
