@@ -9,11 +9,16 @@ import (
 )
 
 // AddrAdd associates an IP-address with an interface.
+//
+//	iface, _ := net.InterfaceByName("lo")
+//	conn.AddrAdd(iface, rtnl.MustParseAddr("127.0.0.1/8"))
+//
 func (c *Conn) AddrAdd(ifc *net.Interface, addr *net.IPNet) error {
 	af, err := addrFamily(addr.IP)
 	if err != nil {
 		return err
 	}
+
 	scope := addrScope(addr.IP)
 	prefixlen, _ := addr.Mask.Size()
 	tx := &rtnetlink.AddressMessage{
@@ -35,6 +40,10 @@ func (c *Conn) AddrAdd(ifc *net.Interface, addr *net.IPNet) error {
 }
 
 // AddrDel revokes an IP-address from an interface.
+//
+//	iface, _ := net.InterfaceByName("lo")
+//	conn.AddrDel(iface, rtnl.MustParseAddr("127.0.0.1/8"))
+//
 func (c *Conn) AddrDel(ifc *net.Interface, addr *net.IPNet) error {
 	af, err := addrFamily(addr.IP)
 	if err != nil {
@@ -98,6 +107,43 @@ func (c *Conn) Addrs(ifc *net.Interface, family int) (out []*net.IPNet, err erro
 	return
 }
 
+// ParseAddr parses a CIDR string into a host address and network mask.
+// This is a convenience wrapper around net.ParseCIDR(), which surprisingly
+// returns the network address and mask instead of the host address and mask.
+func ParseAddr(s string) (*net.IPNet, error) {
+	addr, cidr, err := net.ParseCIDR(s)
+	if err != nil {
+		return nil, err
+	}
+
+	// Overwrite cidr's network address with the host address
+	// parsed from the string representation.
+	cidr.IP = addr
+
+	if isSubnetAddr(cidr) {
+		return nil, &net.AddrError{
+			Err:  "attempted to parse a subnet address into a host address",
+			Addr: cidr.IP.String()}
+	}
+
+	return cidr, nil
+}
+
+// MustParseAddr wraps ParseAddr, but panics on error.
+// Use to conveniently parse a known-valid or hardcoded
+// address into a function argument.
+//
+//	iface, _ := net.InterfaceByName("enp2s0")
+//	conn.AddrDel(iface, rtnl.MustParseAddr("10.1.1.1/24"))
+//
+func MustParseAddr(s string) *net.IPNet {
+	n, err := ParseAddr(s)
+	if err != nil {
+		panic(err)
+	}
+	return n
+}
+
 func addrFamily(ip net.IP) (int, error) {
 	if ip.To4() != nil {
 		return unix.AF_INET, nil
@@ -111,6 +157,9 @@ func addrFamily(ip net.IP) (int, error) {
 func addrScope(ip net.IP) int {
 	if ip.IsGlobalUnicast() {
 		return unix.RT_SCOPE_UNIVERSE
+	}
+	if ip.IsLoopback() {
+		return unix.RT_SCOPE_HOST
 	}
 	return unix.RT_SCOPE_LINK
 }
@@ -130,4 +179,21 @@ func broadcastAddr(ipnet *net.IPNet) net.IP {
 		out[i] = ip[i] | ^mask[i]
 	}
 	return out
+}
+
+// isSubnetAddr returns true if ipnet is a network (subnet) address.
+// It applies ipnet's subnet mask onto itself and compares the result to the
+// value of ipnet's IP field.
+func isSubnetAddr(ipnet *net.IPNet) bool {
+
+	// Addresses with /32 and /128 are always hosts.
+	if ones, bits := ipnet.Mask.Size(); ones == bits {
+		return false
+	}
+
+	if ipnet.IP.Mask(ipnet.Mask).Equal(ipnet.IP) {
+		return true
+	}
+
+	return false
 }
