@@ -209,6 +209,15 @@ type Segment struct {
 // Segments should be created using NewSegment method to prevent
 // data pointed by Segment.Buf to be collected by garbage collector.
 func NewSegment(buf []byte, phys Range) Segment {
+	if buf == nil {
+		return Segment{
+			Buf: Range{
+				Start: 0,
+				Size:  0,
+			},
+			Phys: phys,
+		}
+	}
 	pool = append(pool, buf)
 	return Segment{
 		Buf: Range{
@@ -365,13 +374,19 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 			continue
 		}
 
-		d := make([]byte, p.Filesz)
-		n, err := r.ReadAt(d, int64(p.Off))
-		if err != nil {
-			return err
-		}
-		if n < len(d) {
-			return fmt.Errorf("not all data of the segment was read")
+		var d []byte
+		// Only load segment if there are some data. The kexec call will zero out the rest of the buffer (all of it if Filesz=0):
+		// | bufsz bytes are copied from the source buffer to the target kernel buffer. If bufsz is less than memsz, then the excess bytes in the kernel buffer are zeroed out.
+		// http://man7.org/linux/man-pages/man2/kexec_load.2.html
+		if p.Filesz != 0 {
+			d = make([]byte, p.Filesz)
+			n, err := r.ReadAt(d, int64(p.Off))
+			if err != nil {
+				return err
+			}
+			if n < len(d) {
+				return fmt.Errorf("not all data of the segment was read")
+			}
 		}
 		// TODO(hugelgupf): check if this is within availableRAM??
 		s := NewSegment(d, Range{
