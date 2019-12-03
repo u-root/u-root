@@ -141,7 +141,7 @@ func (p *packetConn) ReadFrom(b []byte) (int, net.Addr, error) {
 
 	// Retrieve hardware address and other information from addr.
 	sa, ok := addr.(*unix.SockaddrLinklayer)
-	if !ok || sa.Halen < 6 {
+	if !ok {
 		return n, nil, unix.EINVAL
 	}
 
@@ -163,7 +163,7 @@ func (p *packetConn) ReadFrom(b []byte) (int, net.Addr, error) {
 func (p *packetConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 	// Ensure correct Addr type.
 	a, ok := addr.(*Addr)
-	if !ok || a.HardwareAddr == nil || len(a.HardwareAddr) < 6 {
+	if !ok || a.HardwareAddr == nil {
 		return 0, unix.EINVAL
 	}
 

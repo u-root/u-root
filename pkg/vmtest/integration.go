@@ -19,6 +19,7 @@ import (
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -148,7 +149,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 		o.Name = callerName(2)
 	}
 	if o.Logger == nil {
-		o.Logger = &ulog.TestLogger{t}
+		o.Logger = &ulogtest.Logger{TB: t}
 	}
 	if o.QEMUOpts.SerialOutput == nil {
 		o.QEMUOpts.SerialOutput = TestLineWriter(t, "serial")

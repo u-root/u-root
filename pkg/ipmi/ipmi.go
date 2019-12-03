@@ -7,6 +7,7 @@
 package ipmi
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
@@ -32,12 +33,22 @@ const (
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
-	_BMC_SET_WATCHDOG_TIMER = 0x24
-	_BMC_GET_WATCHDOG_TIMER = 0x25
+	_BMC_SET_WATCHDOG_TIMER     = 0x24
+	_BMC_GET_WATCHDOG_TIMER     = 0x25
+	_SET_SYSTEM_INFO_PARAMETERS = 0x58
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
 	_IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
+
+	_SYSTEM_INFO_BLK_SZ = 16
+
+	_SYSTEM_FW_VERSION = 1
+
+	_ASCII = 0
+
+	// Set 62 Bytes (4 sets) as the maximal string length
+	strlenMax = 62
 )
 
 var (
@@ -75,6 +86,12 @@ type systemInterfaceAddr struct {
 	addrType int32
 	channel  int16
 	lun      byte //nolint:unused
+}
+
+type setSystemInfoReq struct {
+	paramSelector byte
+	setSelector   byte
+	strData       [_SYSTEM_INFO_BLK_SZ]byte
 }
 
 func ioc(dir int, t int, nr int, size int) int {
@@ -169,6 +186,62 @@ func (i *IPMI) ShutoffWatchdog() error {
 	_, err := i.sendrecv(req)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (i *IPMI) setsysinfo(data *setSystemInfoReq) error {
+	req := &req{}
+	req.msg.cmd = _SET_SYSTEM_INFO_PARAMETERS
+	req.msg.netfn = _IPMI_NETFN_APP
+	req.msg.dataLen = 18 // size of setSystemInfoReq
+	req.msg.data = unsafe.Pointer(data)
+
+	if _, err := i.sendrecv(req); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func strcpyPadded(dst []byte, src string) {
+	dstLen := len(dst)
+	if copied := copy(dst, src); copied < dstLen {
+		padding := make([]byte, dstLen-copied)
+		copy(dst[copied:], padding)
+	}
+}
+
+// SetSystemFWVersion sets the provided system firmware version to BMC via IPMI.
+func (i *IPMI) SetSystemFWVersion(version string) error {
+	len := len(version)
+
+	if len == 0 {
+		return fmt.Errorf("Version length is 0")
+	} else if len > strlenMax {
+		len = strlenMax
+	}
+
+	var data setSystemInfoReq
+	var index int
+	data.paramSelector = _SYSTEM_FW_VERSION
+	data.setSelector = 0
+	for len > index {
+		if data.setSelector == 0 { // the fisrt block of string data
+			data.strData[0] = _ASCII
+			data.strData[1] = byte(len)
+			strcpyPadded(data.strData[2:], version)
+			index += _SYSTEM_INFO_BLK_SZ - 2
+		} else {
+			strcpyPadded(data.strData[:], version)
+			index += _SYSTEM_INFO_BLK_SZ
+		}
+
+		if err := i.setsysinfo(&data); err != nil {
+			return err
+		}
+		data.setSelector++
 	}
 
 	return nil

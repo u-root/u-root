@@ -14,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/booter"
 	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/u-root/u-root/pkg/smbios"
 )
 
 var (
@@ -28,6 +29,46 @@ var defaultBootsequence = [][]string{
 	{"localboot", "-grub"},
 }
 
+func getSystemFWVersion() (string, error) {
+	entryData, tableData, err := getSMBIOSData()
+	if err != nil {
+		return "", err
+	}
+	si, err := smbios.ParseInfo(entryData, tableData)
+	if err != nil {
+		log.Printf("error parsing data: %v", err)
+		return "", err
+	}
+	t0, err := si.GetBIOSInformation()
+	if err != nil {
+		log.Printf("error Geting BIOS Information: %v", err)
+		return "", err
+	}
+	return t0.Version, nil
+}
+
+func runIPMICommands() {
+	ipmi, err := ipmi.Open(0)
+	if err != nil {
+		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
+		return
+	}
+	defer ipmi.Close()
+
+	if err = ipmi.ShutoffWatchdog(); err != nil {
+		log.Printf("Failed to stop watchdog %v.", err)
+	} else {
+		log.Printf("Watchdog is stopped.")
+	}
+
+	if fwVersion, err := getSystemFWVersion(); err == nil {
+		log.Printf("System firmware version: %s", fwVersion)
+		if err = ipmi.SetSystemFWVersion(fwVersion); err != nil {
+			log.Printf("Failed to set system firmware version to BMC %v.", err)
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -39,17 +80,8 @@ func main() {
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
-
+	runIPMICommands()
 	sleepInterval := time.Duration(*interval) * time.Second
-
-	if ipmi, err := ipmi.Open(0); err != nil {
-		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
-	} else if err = ipmi.ShutoffWatchdog(); err != nil {
-		log.Printf("Failed to stop watchdog %v.", err)
-	} else {
-		log.Printf("Watchdog is stopped.")
-	}
-
 	if *allowInteractive {
 		log.Printf("**************************************************************************")
 		log.Print("Starting boot sequence, press CTRL-C within 5 seconds to drop into a shell")

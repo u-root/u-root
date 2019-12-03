@@ -14,7 +14,7 @@ import (
 // given based on a IPv4 DGRAM socket. The UDP connection allows broadcasting.
 //
 // The interface must already be configured.
-func NewIPv4UDPConn(iface string, port int) (*net.UDPConn, error) {
+func NewIPv4UDPConn(iface string, addr *net.UDPAddr) (*net.UDPConn, error) {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get a UDP socket: %v", err)
@@ -37,9 +37,18 @@ func NewIPv4UDPConn(iface string, port int) (*net.UDPConn, error) {
 			return nil, fmt.Errorf("cannot bind to interface %s: %v", iface, err)
 		}
 	}
+
+	if addr == nil {
+		addr = &net.UDPAddr{Port: dhcpv4.ServerPort}
+	}
 	// Bind to the port.
-	if err := unix.Bind(fd, &unix.SockaddrInet4{Port: port}); err != nil {
-		return nil, fmt.Errorf("cannot bind to port %d: %v", port, err)
+	saddr := unix.SockaddrInet4{Port: addr.Port}
+	if addr.IP != nil && addr.IP.To4() == nil {
+		return nil, fmt.Errorf("wrong address family (expected v4) for %s", addr.IP)
+	}
+	copy(saddr.Addr[:], addr.IP.To4())
+	if err := unix.Bind(fd, &saddr); err != nil {
+		return nil, fmt.Errorf("cannot bind to port %d: %v", addr.Port, err)
 	}
 
 	conn, err := net.FilePacketConn(f)
