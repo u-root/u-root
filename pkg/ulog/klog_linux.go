@@ -14,9 +14,10 @@ import (
 
 // KernelLog is a logger that prints to the kernel syslog buffer.
 //
+// Default log level is KLogInfo.
+//
 // If the syslog buffer cannot be written to, KernelLog falls back to Log.
 var KernelLog = &KLog{
-	// Default log level is Info.
 	LogLevel: uintptr(KLogInfo),
 }
 
@@ -37,8 +38,10 @@ type KLog struct {
 
 // Reinit reopens the /dev/kmsg file.
 func (k *KLog) Reinit() {
-	f, _ := os.OpenFile("/dev/kmsg", os.O_RDWR, 0)
-	KernelLog.File = f
+	f, err := os.OpenFile("/dev/kmsg", os.O_RDWR, 0)
+	if err != nil {
+		KernelLog.File = f
+	}
 }
 
 // writeString returns true iff it was able to write the log to /dev/kmsg.
