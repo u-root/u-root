@@ -243,16 +243,16 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 	}
 
 	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
-		return err
+		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.UinitCmd, "bin/uinit"); err != nil {
-		return err
+		return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
-		return err
+		return fmt.Errorf("%v: specify -defaultsh=\"\" to ignore this error and build without a shell", err)
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/defaultsh"); err != nil {
-		return err
+		return fmt.Errorf("%v: specify -defaultsh=\"\" to ignore this error and build without a shell", err)
 	}
 
 	// Finally, write the archive.
