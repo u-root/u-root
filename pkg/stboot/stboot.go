@@ -50,7 +50,7 @@ func VerifySignatureInPath(path string, hashValue []byte, rootCert []byte, minAm
 	}
 
 	// Check certs and signatures
-	filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() && (filepath.Ext(info.Name()) == ".cert") {
 			// Read cert and verify
 			userCert, err := ioutil.ReadFile(path)
@@ -65,7 +65,7 @@ func VerifySignatureInPath(path string, hashValue []byte, rootCert []byte, minAm
 			// verify certificates with root certificate
 			_, err = cert.Verify(opts)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to verify %s with root certificate: %v", path, err)
 			}
 			// Read signature and verify it.
 			signatureFilename := strings.TrimSuffix(path, filepath.Ext(path)) + ".signature"
@@ -83,6 +83,9 @@ func VerifySignatureInPath(path string, hashValue []byte, rootCert []byte, minAm
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	if validSignatures < minAmountValid {
 		return fmt.Errorf("Did not found enough valid signatures. Only %d (%d required) are valid", validSignatures, minAmountValid)
 	}
