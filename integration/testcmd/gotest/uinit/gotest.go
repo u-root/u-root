@@ -39,15 +39,19 @@ func main() {
 	if err := os.MkdirAll("/testdata", 0755); err != nil {
 		log.Fatalf("Couldn't create testdata: %v", err)
 	}
-	var err error
+	var (
+		mp  *mount.MountPoint
+		err error
+	)
 	if os.Getenv("UROOT_USE_9P") == "1" {
-		err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
+		mp, err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
 	} else {
-		err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
+		mp, err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
 	}
 	if err != nil {
 		log.Fatalf("Failed to mount test directory: %v", err)
 	}
+	defer mp.Unmount(0) //nolint:errcheck
 
 	walkTests("/testdata/tests", func(path, pkgName string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)

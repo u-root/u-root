@@ -65,7 +65,7 @@ func mountDevice(devPath string, fstypes []string) (*Device, error) {
 		return nil, fmt.Errorf("failed to create tmp mount directory: %v", err)
 	}
 	for _, fstype := range fstypes {
-		if err := mount.Mount(devPath, mountPath, fstype, "", unix.MS_RDONLY); err != nil {
+		if _, err := mount.Mount(devPath, mountPath, fstype, "", unix.MS_RDONLY); err != nil {
 			continue
 		}
 

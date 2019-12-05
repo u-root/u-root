@@ -39,7 +39,7 @@ type Loop struct {
 //
 // source is the file to use as a loop block device. fstype the file system
 // name. data is the data argument to the mount(2) syscall.
-func New(source, fstype string, data string) (mount.Mounter, error) {
+func New(source, fstype string, data string) (*Loop, error) {
 	devicename, err := FindDevice()
 	if err != nil {
 		return nil, err
