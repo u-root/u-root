@@ -24,14 +24,23 @@ const (
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
+	// IPM Device "Global" Commands
+	_BMC_GET_DEVICE_ID = 0x01
+
+	// BMC Device and Messaging Commands
 	_BMC_SET_WATCHDOG_TIMER     = 0x24
 	_BMC_GET_WATCHDOG_TIMER     = 0x25
+	_BMC_SET_GLOBAL_ENABLES     = 0x2E
+	_BMC_GET_GLOBAL_ENABLES     = 0x2F
 	_SET_SYSTEM_INFO_PARAMETERS = 0x58
 	_BMC_ADD_SEL                = 0x44
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
 	_IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
+
+	_ADTL_SEL_DEVICE         = 0x04
+	_EN_SYSTEM_EVENT_LOGGING = 0x08
 
 	_SYSTEM_INFO_BLK_SZ = 16
 
@@ -124,6 +133,18 @@ type setSystemInfoReq struct {
 	paramSelector byte
 	setSelector   byte
 	strData       [_SYSTEM_INFO_BLK_SZ]byte
+}
+
+type DevID struct {
+	DeviceID          byte
+	DeviceRevision    byte
+	FwRev1            byte
+	FwRev2            byte
+	IpmiVersion       byte
+	AdtlDeviceSupport byte
+	ManufacturerID    [3]byte
+	ProductID         [2]byte
+	AuxFwRev          [4]byte
 }
 
 func fdSet(fd uintptr, p *syscall.FdSet) {
@@ -309,4 +330,70 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 	}
 
 	return nil
+}
+
+func (i *IPMI) GetDeviceID() (*DevID, error) {
+	req := &req{}
+	req.msg.netfn = _IPMI_NETFN_APP
+	req.msg.cmd = _BMC_GET_DEVICE_ID
+
+	data, err := i.sendrecv(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewReader(data[1:])
+	mcInfo := DevID{}
+
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo); err != nil {
+		return nil, err
+	}
+
+	return &mcInfo, nil
+}
+
+func (i *IPMI) setGlobalEnables(enables byte) error {
+	req := &req{}
+	req.msg.netfn = _IPMI_NETFN_APP
+	req.msg.cmd = _BMC_SET_GLOBAL_ENABLES
+	req.msg.data = unsafe.Pointer(&enables)
+	req.msg.dataLen = 1
+
+	_, err := i.sendrecv(req)
+	return err
+}
+
+func (i *IPMI) getGlobalEnables() ([]byte, error) {
+	req := &req{}
+	req.msg.netfn = _IPMI_NETFN_APP
+	req.msg.cmd = _BMC_GET_GLOBAL_ENABLES
+
+	return i.sendrecv(req)
+}
+
+func (i *IPMI) EnableSEL() (bool, error) {
+	// Check if SEL device is supported or not
+	mcInfo, err := i.GetDeviceID()
+
+	if err != nil {
+		return false, err
+	} else if (mcInfo.AdtlDeviceSupport & _ADTL_SEL_DEVICE) == 0 {
+		return false, nil
+	}
+
+	data, err := i.getGlobalEnables()
+
+	if err != nil {
+		return false, err
+	}
+
+	if (data[1] & _EN_SYSTEM_EVENT_LOGGING) == 0 {
+		// SEL is not enabled, enable SEL
+		if err = i.setGlobalEnables(data[1] | _EN_SYSTEM_EVENT_LOGGING); err != nil {
+			return false, err
+		}
+	}
+
+	return true, nil
 }

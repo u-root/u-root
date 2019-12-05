@@ -39,6 +39,7 @@ initramfs.cpio
 /init
 bzImage
 vmlinux
+*.patch
 
 # Python Virtual Env
 *.env
