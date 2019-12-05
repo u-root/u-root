@@ -27,3 +27,24 @@ func FindFileSystem(fs string) error {
 	}
 	return fmt.Errorf("%s not found", fs)
 }
+
+// GetBlockFilesystems returns the supported file systems for block devices.
+func GetBlockFilesystems() (fstypes []string, err error) {
+	return internalGetFilesystems("/proc/filesystems")
+}
+
+func internalGetFilesystems(file string) (fstypes []string, err error) {
+	var bytes []byte
+	if bytes, err = ioutil.ReadFile(file); err != nil {
+		return nil, fmt.Errorf("failed to read supported file systems: %v", err)
+	}
+	for _, line := range strings.Split(string(bytes), "\n") {
+		// len(fields)==1, 2 possibilites for fs: "nodev" fs and
+		// fs's. "nodev" fs cannot be mounted through devices.
+		// len(fields)==1 prevents this from occurring.
+		if fields := strings.Fields(line); len(fields) == 1 {
+			fstypes = append(fstypes, fields[0])
+		}
+	}
+	return fstypes, nil
+}
