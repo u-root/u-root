@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/netboot"
+	"github.com/u-root/u-root/pkg/boot/netboot"
 	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/dhclient"
 )
 
 var (

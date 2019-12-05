@@ -41,8 +41,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/kexec"
 )
 
 const (

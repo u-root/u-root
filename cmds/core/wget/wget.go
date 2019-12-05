@@ -27,8 +27,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 var (
