@@ -46,10 +46,9 @@ func getDevice() (*diskboot.Device, error) {
 	if len(devices) > 1 {
 		if *sDeviceIndex == "" {
 			for i, device := range devices {
-				log.Printf("Device #%v: path: %v type: %v",
-					i, device.DevPath, device.Fstype)
+				log.Printf("Device #%v: %s", i, device)
 			}
-			return nil, errors.New("Multiple devices found - must specify a device index")
+			return nil, errors.New("multiple devices found - must specify a device index")
 		}
 		if deviceIndex, err = strconv.Atoi(*sDeviceIndex); err != nil ||
 			deviceIndex < 0 || deviceIndex >= len(devices) {
@@ -124,8 +123,8 @@ func bootEntry(config *diskboot.Config, entry *diskboot.Entry) error {
 
 func cleanDevices() {
 	for _, device := range devices {
-		if err := mount.Unmount(device.MountPath, true, false); err != nil {
-			log.Printf("Error unmounting device %v: %v", device.DevPath, err)
+		if err := device.Unmount(mount.MNT_FORCE); err != nil {
+			log.Printf("Error unmounting device %s: %v", device, err)
 		}
 	}
 }
