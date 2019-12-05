@@ -138,25 +138,27 @@ func pox() error {
 	if !*debug {
 		defer os.RemoveAll(dir)
 	}
-	m, err := loop.New(*file, "squashfs", "")
+
+	lo, err := loop.New(*file, "squashfs", "")
 	if err != nil {
 		return err
 	}
-	if err := m.Mount(dir, 0); err != nil {
+	defer lo.Free() //nolint:errcheck
+
+	mountPoint, err := lo.Mount(dir, 0)
+	if err != nil {
 		return err
 	}
+	defer mountPoint.Unmount(0) //nolint:errcheck
+
 	c := exec.Command(names[0])
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 	c.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
 	}
 
-	err = c.Run()
-	if err != nil {
+	if err = c.Run(); err != nil {
 		log.Printf("Running test: %v", err)
-	}
-	if err := m.Unmount(0); err != nil {
-		v("Unmounting and freeing %v: %v", m, err)
 	}
 
 	v("Done, your pox is in %v", *file)
