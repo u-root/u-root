@@ -16,20 +16,20 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/syslinux"
-	"github.com/u-root/u-root/pkg/urlfetch"
+	"github.com/u-root/u-root/pkg/curl"
 )
 
 // ParseConfig probes for config files based on the Mac and IP given.
 func ParseConfig(workingDir *url.URL, mac net.HardwareAddr, ip net.IP) (*syslinux.Config, error) {
-	return ParseConfigWithSchemes(workingDir, mac, ip, urlfetch.DefaultSchemes)
+	return ParseConfigWithSchemes(workingDir, mac, ip, curl.DefaultSchemes)
 }
 
 // ParseConfigWithSchemes probes for config files based on the Mac and IP given
 // and uses s to fetch files.
-func ParseConfigWithSchemes(workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s urlfetch.Schemes) (*syslinux.Config, error) {
+func ParseConfigWithSchemes(workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s curl.Schemes) (*syslinux.Config, error) {
 	for _, relname := range probeFiles(mac, ip) {
 		c, err := syslinux.ParseConfigFileWithSchemes(s, path.Join("pxelinux.cfg", relname), workingDir)
-		if urlfetch.IsURLError(err) {
+		if curl.IsURLError(err) {
 			// We didn't find the file.
 			// TODO(hugelgupf): log this.
 			continue

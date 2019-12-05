@@ -24,7 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/netboot/ipxe"
 	"github.com/u-root/u-root/pkg/netboot/pxe"
-	"github.com/u-root/u-root/pkg/urlfetch"
+	"github.com/u-root/u-root/pkg/curl"
 )
 
 // BootImage figures out the image to boot from the given DHCP lease.
@@ -38,7 +38,7 @@ import (
 //
 // TODO: detect straight up multiboot and bzImage Linux kernel files rather
 // than just configuration scripts.
-func BootImage(s urlfetch.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
+func BootImage(s curl.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
 	uri, err := lease.Boot()
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func BootImage(s urlfetch.Schemes, lease dhclient.Lease) (*boot.LinuxImage, erro
 // getBootImage attempts to parse the file at uri as an ipxe config and returns
 // the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
 // ip, and mac address to search for pxe configs.
-func getBootImage(schemes urlfetch.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
+func getBootImage(schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
 	// Attempt to read the given boot path as an ipxe config file.
 	ipc, err := ipxe.ParseConfigWithSchemes(uri, schemes)
 	if err == nil {
