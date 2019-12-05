@@ -5,6 +5,7 @@
 package find
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,107 +15,51 @@ import (
 	"testing"
 )
 
-// TODO: I don't now where this subtesting stuff originated, I just copied it,
-// but it's bad practice as you can not pick individual tests.
-// Break this out into individual tests.
 func TestSimple(t *testing.T) {
 	type tests struct {
 		name  string
-		opts  func(*Finder) error
+		opts  Set
 		names []string
 	}
 
 	var testCases = []tests{
 		{
 			name: "basic find",
-			opts: func(_ *Finder) error { return nil },
+			opts: nil,
 			names: []string{
 				"",
 				"/root",
-				"/root/ab",
-				"/root/ab/c",
-				"/root/ab/c/d",
-				"/root/ab/c/d/e",
-				"/root/ab/c/d/e/f",
-				"/root/ab/c/d/e/f/ghij",
-				"/root/ab/c/d/e/f/ghij/k",
-				"/root/ab/c/d/e/f/ghij/k/l",
-				"/root/ab/c/d/e/f/ghij/k/l/m",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/0777",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/file",
+				"/root/xyz",
+				"/root/xyz/0777",
+				"/root/xyz/file",
 			},
 		},
 		{
 			name: "just a dir",
-			opts: func(f *Finder) error {
-				f.Mode = os.ModeDir
-				f.ModeMask = os.ModeDir
-				return nil
-			},
+			opts: WithModeMatch(os.ModeDir, os.ModeDir),
 			names: []string{
 				"",
 				"/root",
-				"/root/ab",
-				"/root/ab/c",
-				"/root/ab/c/d",
-				"/root/ab/c/d/e",
-				"/root/ab/c/d/e/f",
-				"/root/ab/c/d/e/f/ghij",
-				"/root/ab/c/d/e/f/ghij/k",
-				"/root/ab/c/d/e/f/ghij/k/l",
-				"/root/ab/c/d/e/f/ghij/k/l/m",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz",
+				"/root/xyz",
 			},
 		},
 		{
 			name: "just a file",
-			opts: func(f *Finder) error {
-				f.Mode = 0
-				f.ModeMask = os.ModeType
-				return nil
-			},
+			opts: WithModeMatch(0, os.ModeType),
 			names: []string{
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/0777",
-				"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/file",
+				"/root/xyz/0777",
+				"/root/xyz/file",
 			},
 		},
 		{
-			name: "file by mode",
-			opts: func(f *Finder) error {
-				f.Mode = 0444
-				f.ModeMask = os.ModePerm
-				return nil
-			},
-			names: []string{"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/0777"},
+			name:  "file by mode",
+			opts:  WithModeMatch(0444, os.ModePerm),
+			names: []string{"/root/xyz/0777"},
 		},
 		{
-			name: "file by name",
-			opts: func(f *Finder) error {
-				f.Pattern = "*file"
-				return nil
-			},
-			names: []string{"/root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/file"},
+			name:  "file by name",
+			opts:  WithFilenameMatch("*file"),
+			names: []string{"/root/xyz/file"},
 		},
 	}
 	d, err := ioutil.TempDir(os.TempDir(), "u-root.cmds.find")
@@ -125,29 +70,23 @@ func TestSimple(t *testing.T) {
 
 	// Make sure files are actually created with the permissions we ask for.
 	syscall.Umask(0)
-	if err := os.MkdirAll(filepath.Join(d, "root/ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz"), 0775); err != nil {
+	if err := os.MkdirAll(filepath.Join(d, "root/xyz"), 0775); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(d, "root//ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/file"), nil, 0664); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(d, "root/xyz/file"), nil, 0664); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(d, "root//ab/c/d/e/f/ghij/k/l/m/n/o/p/q/r/s/t/u/v/w/xyz/0777"), nil, 0444); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(d, "root/xyz/0777"), nil, 0444); err != nil {
 		t.Fatal(err)
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f, err := New(func(f *Finder) error {
-				f.Root = d
-				return nil
-			}, tc.opts)
-			if err != nil {
-				t.Fatal(err)
-			}
-			go f.Find()
+			ctx := context.Background()
+			files := Find(ctx, WithRoot(d), tc.opts)
 
 			var names []string
-			for o := range f.Names {
+			for o := range files {
 				if o.Err != nil {
 					t.Errorf("%v: got %v, want nil", o.Name, o.Err)
 				}

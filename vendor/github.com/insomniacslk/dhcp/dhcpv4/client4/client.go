@@ -1,3 +1,4 @@
+// Package client4 is deprecated. Use "nclient4" instead.
 package client4
 
 import (

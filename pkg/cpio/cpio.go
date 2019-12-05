@@ -67,7 +67,7 @@ type Record struct {
 
 // String implements a fmt.Stringer for Record.
 //
-// String returns a string formatted like `ls` would format it.
+// String returns a string long-formatted like `ls` would format it.
 func (r Record) String() string {
 	s := ls.LongStringer{
 		Human: true,

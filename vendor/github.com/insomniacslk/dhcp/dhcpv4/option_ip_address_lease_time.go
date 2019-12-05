@@ -1,10 +1,14 @@
 package dhcpv4
 
 import (
+	"math"
 	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
+
+// MaxLeaseTime is the maximum lease time that can be encoded.
+var MaxLeaseTime = math.MaxUint32 * time.Second
 
 // Duration implements the IP address lease time option described by RFC 2132,
 // Section 9.2.

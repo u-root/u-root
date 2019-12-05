@@ -262,7 +262,11 @@ func NewReplyFromRequest(request *DHCPv4, modifiers ...Modifier) (*DHCPv4, error
 	return New(PrependModifiers(modifiers,
 		WithReply(request),
 		WithGatewayIP(request.GatewayIPAddr),
-		WithRelayAgentInfo(request),
+		WithOptionCopied(request, OptionRelayAgentInformation),
+
+		// RFC 6842 states the Client Identifier option must be copied
+		// from the request if a client specified it.
+		WithOptionCopied(request, OptionClientIdentifier),
 	)...)
 }
 
