@@ -87,6 +87,23 @@ func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 	}, nil
 }
 
+// TryMount tries to mount a device on the given mountpoint, trying in order
+// the supported block device file systems on the system.
+func TryMount(device, path string, flags uintptr) (*MountPoint, error) {
+	fs, err := GetBlockFilesystems()
+	if err != nil {
+		return nil, fmt.Errorf("failed to mount %s on %s: %v", device, path, err)
+	}
+	for _, fstype := range fs {
+		mp, err := Mount(device, path, fstype, "", flags)
+		if err != nil {
+			continue
+		}
+		return mp, nil
+	}
+	return nil, fmt.Errorf("no suitable filesystem (out of %v) found to mount %s at %v", fs, device, path)
+}
+
 // Unmount detaches any file system mounted at path.
 //
 // force forces an unmount regardless of currently open or otherwise used files
