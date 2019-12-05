@@ -66,6 +66,11 @@ func (mp *MountPoint) Unmount(flags uintptr) error {
 // of a file, or a dummy string). data usually contains arguments for the
 // specific file system.
 func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
+	// Create the mount point if it doesn't already exist.
+	if err := os.MkdirAll(path, 0666); err != nil {
+		return nil, err
+	}
+
 	if err := unix.Mount(dev, path, fsType, flags, data); err != nil {
 		return nil, &os.PathError{
 			Op:   "mount",
