@@ -20,15 +20,19 @@ func main() {
 	}
 
 	// Mount a vfat volume and run the tests within.
-	var err error
+	var (
+		mp  *mount.MountPoint
+		err error
+	)
 	if os.Getenv("UROOT_USE_9P") == "1" {
-		err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
+		mp, err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
 	} else {
-		err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
+		mp, err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
 	}
 	if err != nil {
 		log.Fatalf("Failed to mount test directory: %v", err)
 	}
+	defer mp.Unmount(0) //nolint:errcheck
 
 	// Run the test script test.elv
 	test := filepath.Join("/testdata", "test.elv")
