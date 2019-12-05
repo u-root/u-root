@@ -79,11 +79,8 @@ func parseStruct(t *Table, off int, complete bool, sp interface{}) (int, error) 
 			off++
 		default:
 			if reflect.PtrTo(ft).Implements(fieldParserInterfaceType) {
-				ptm, _ := reflect.PtrTo(ft).MethodByName("ParseField")
-				rv := ptm.Func.Call([]reflect.Value{fv.Addr(), reflect.ValueOf(t), reflect.ValueOf(off)})
-				off = int(rv[0].Int())
-				if !rv[1].IsNil() {
-					err = rv[1].Interface().(error)
+				off, err = fv.Addr().Interface().(fieldParser).ParseField(t, off)
+				if err != nil {
 					return off, err
 				}
 				break
