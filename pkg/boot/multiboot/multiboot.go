@@ -20,9 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/ibft"
-	"github.com/u-root/u-root/pkg/kexec"
-	"github.com/u-root/u-root/pkg/multiboot/internal/trampoline"
+	"github.com/u-root/u-root/pkg/boot/ibft"
+	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 

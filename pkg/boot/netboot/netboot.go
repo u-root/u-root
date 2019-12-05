@@ -21,10 +21,10 @@ import (
 	"path"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/netboot/ipxe"
-	"github.com/u-root/u-root/pkg/netboot/pxe"
+	"github.com/u-root/u-root/pkg/boot/netboot/ipxe"
+	"github.com/u-root/u-root/pkg/boot/netboot/pxe"
 	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/dhclient"
 )
 
 // BootImage figures out the image to boot from the given DHCP lease.

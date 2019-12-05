@@ -11,9 +11,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/crypto"
-	"github.com/u-root/u-root/pkg/kexec"
-	"github.com/u-root/u-root/pkg/multiboot"
 )
 
 // BootConfig is a general-purpose boot configuration. It draws some
