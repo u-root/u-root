@@ -10,27 +10,16 @@ import (
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/mount"
-	"github.com/u-root/u-root/pkg/storage"
-	"golang.org/x/sys/unix"
 )
 
 // Device contains the path to a block filesystem along with its type
 type Device struct {
-	DevPath   string
-	MountPath string
-	Fstype    string
-	Configs   []*Config
+	*mount.MountPoint
+	Configs []*Config
 }
-
-// fstypes returns all block file system supported by the linuxboot kernel
 
 // FindDevices searches for devices with bootable configs
 func FindDevices(devicesGlob string) (devices []*Device) {
-	fstypes, err := storage.GetSupportedFilesystems()
-	if err != nil {
-		return nil
-	}
-
 	sysList, err := filepath.Glob(devicesGlob)
 	if err != nil {
 		return nil
@@ -40,41 +29,31 @@ func FindDevices(devicesGlob string) (devices []*Device) {
 	for _, sys := range sysList {
 		blk := filepath.Join("/dev", filepath.Base(sys))
 
-		dev, _ := mountDevice(blk, fstypes)
+		dev, _ := FindDevice(blk, mount.MS_RDONLY)
 		if dev != nil && len(dev.Configs) > 0 {
 			devices = append(devices, dev)
 		}
 	}
-
 	return devices
 }
 
 // FindDevice attempts to construct a boot device at the given path
-func FindDevice(devPath string) (*Device, error) {
-	fstypes, err := storage.GetSupportedFilesystems()
-	if err != nil {
-		return nil, nil
-	}
-
-	return mountDevice(devPath, fstypes)
-}
-
-func mountDevice(devPath string, fstypes []string) (*Device, error) {
+func FindDevice(devPath string, flags uintptr) (*Device, error) {
 	mountPath, err := ioutil.TempDir("/tmp", "boot-")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tmp mount directory: %v", err)
 	}
-	for _, fstype := range fstypes {
-		if _, err := mount.Mount(devPath, mountPath, fstype, "", unix.MS_RDONLY); err != nil {
-			continue
-		}
-
-		configs := FindConfigs(mountPath)
-		if len(configs) == 0 {
-			continue
-		}
-
-		return &Device{devPath, mountPath, fstype, configs}, nil
+	mp, err := mount.TryMount(devPath, mountPath, flags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find a valid boot device: %v", err)
 	}
-	return nil, fmt.Errorf("failed to find a valid boot device with configs")
+	configs := FindConfigs(mountPath)
+	if len(configs) == 0 {
+		return nil, fmt.Errorf("no configs on %s", devPath)
+	}
+
+	return &Device{
+		MountPoint: mp,
+		Configs:    configs,
+	}, nil
 }
