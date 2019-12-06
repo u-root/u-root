@@ -19,8 +19,8 @@ type TTY struct {
 	f *os.File
 }
 
-func New() (*TTY, error) {
-	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+func New(device string) (*TTY, error) {
+	f, err := os.OpenFile(device, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}

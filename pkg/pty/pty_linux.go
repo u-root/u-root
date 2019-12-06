@@ -23,14 +23,6 @@ import (
 // pty support. We used to import github.com/kr/pty but what we need is not that complex.
 // Thanks to keith rarick for these functions.
 func New() (*Pty, error) {
-	tty, err := termios.New()
-	if err != nil {
-		return nil, err
-	}
-	restorer, err := tty.Get()
-	if err != nil {
-		return nil, err
-	}
 	ptm, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
@@ -47,12 +39,23 @@ func New() (*Pty, error) {
 
 	// It can take a non-zero time for a pts to appear, it seems.
 	// Ten tries is reported to be far more than enough.
+	// We could consider something like inotify rather than polling?
 	for i := 0; i < 10; i++ {
 		_, err := os.Stat(sname)
 		if err == nil {
 			break
 		}
 	}
+
+	tty, err := termios.New(sname)
+	if err != nil {
+		return nil, err
+	}
+	restorer, err := tty.Get()
+	if err != nil {
+		return nil, err
+	}
+
 	pts, err := os.OpenFile(sname, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		return nil, err
