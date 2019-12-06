@@ -50,6 +50,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e289d5e7048337880ec469bf6e419b16852db7c214e810d6d3840e42d3adfa5b"
+  name = "github.com/digitalocean/go-smbios"
+  packages = ["smbios"]
+  pruneopts = "NUT"
+  revision = "390a4f403a8e94ca0acdcf609eb18eeae9d6d1ac"
+
+[[projects]]
   digest = "1:b7ffca49e9cfd3dfb04a8e0a59347708c6f78f68476a32c5e0a0edca5d1b258c"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
@@ -87,10 +95,11 @@
   version = "v0.3.1"
 
 [[projects]]
-  digest = "1:a79f4189566c6f8b2f0ff18a0be144dd3a608b7de4247431535f7ee1b22a170d"
+  digest = "1:9d89504c933705336ef7e829b3299cca79a83b66a9a12a12227a9cfee88a172e"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
+    "tpm2",
     "tpmutil",
     "tpmutil/tbs",
   ]
@@ -132,6 +141,14 @@
   ]
   pruneopts = "NUT"
   revision = "b3fbc9f9fdd5ac725d73f2a9109e59d4947f067d"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3526ea57285a47f99273a9b00252869d06888b08cd7358d6f89c35db6ec1605b"
+  name = "github.com/intel-go/cpuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "1a4a6f06a1c643c8fbd339bd61d980960627d09e"
 
 [[projects]]
   branch = "master"
@@ -412,11 +429,14 @@
     "github.com/beevik/ntp",
     "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",
+    "github.com/digitalocean/go-smbios/smbios",
     "github.com/dustin/go-humanize",
     "github.com/gliderlabs/ssh",
     "github.com/go-test/deep",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-tpm/tpm",
+    "github.com/google/go-tpm/tpm2",
+    "github.com/google/go-tpm/tpmutil",
     "github.com/google/goexpect",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
@@ -426,6 +446,7 @@
     "github.com/insomniacslk/dhcp/iana",
     "github.com/insomniacslk/dhcp/interfaces",
     "github.com/insomniacslk/dhcp/netboot",
+    "github.com/intel-go/cpuid",
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
