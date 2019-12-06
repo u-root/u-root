@@ -6,8 +6,10 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/sys/unix"
 
@@ -32,6 +34,22 @@ func main() {
 		kExecCounter = "0"
 	}
 	fmt.Printf("KEXECCOUNTER=%s\n", kExecCounter)
+
+	// Find initramfs
+
+	list, err := ioutil.ReadDir("/testdata")
+	if err != nil {
+		log.Fatal("DEBUG testdata DNE")
+	}
+	for _, f := range list {
+		log.Printf("DEBUG file %s", f.Name())
+	}
+
+	matches, err := filepath.Glob("/testdata/initramfs*")
+	if err != nil || matches == nil {
+		log.Fatalf("failed to find initramfs, %v", err)
+	}
+	// initramfs := matches[0]
 
 	if kExecCounter == "0" {
 		cmdLine := cmdline.FullCmdLine() + " kexeccounter=1"

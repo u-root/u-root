@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -16,21 +17,25 @@ import (
 )
 
 // TestMountKexec runs an init which mounts a filesystem and kexecs a kernel.
-func TestMountKexec(t *testing.T) {
+func RunTestMountKexec(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
+	if len(initramfs) == 0 {
+		f, err := vmtest.CreateTestInitramfs(
+			uroot.Opts{}, "github.com/u-root/u-root/integration/testcmd/kexec/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create test initramfs: %v", err)
+		}
+		defer os.Remove(f)
+		initramfs = f
+	}
+
 	// Create the CPIO and start QEMU.
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/mount",
-				"github.com/u-root/u-root/cmds/core/kexec",
-			),
-		},
-		Uinit: "github.com/u-root/u-root/integration/testcmd/kexec/uinit",
+		Initramfs: initramfs,
 		QEMUOpts: qemu.Options{
 			Timeout: 30 * time.Second,
 		},

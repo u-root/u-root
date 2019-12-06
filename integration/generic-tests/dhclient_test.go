@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func TestDhclient(t *testing.T) {
+func RunTestDhclient(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
@@ -23,16 +24,8 @@ func TestDhclient(t *testing.T) {
 
 	network := qemu.NewNetwork()
 	_, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient_Server",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/exp/pxeserver",
-			),
-		},
+		Name:      "TestDhclient_Server",
+		Initramfs: initramfs,
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
 			Devices: []qemu.Device{
@@ -49,14 +42,8 @@ func TestDhclient(t *testing.T) {
 	defer scleanup()
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient_Client",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/dhclient",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-			),
-		},
+		Name:      "TestDhclient_Client",
+		Initramfs: initramfs,
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
 			Timeout:      30 * time.Second,
@@ -85,25 +72,52 @@ func TestDhclient(t *testing.T) {
 // TestPxeboot runs a server and client to test pxebooting a node.
 // TODO: FIX THIS TEST!
 // Change the t.Logf below back to t.Errorf
-func TestPxeboot(t *testing.T) {
+func RunTestPxeboot(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
+	var serverInitramfs string
+	var clientInitramfs string
+	if len(initramfs) == 0 {
+		serverOpts := uroot.Opts{
+			ExtraFiles: []string{"../testdata/pxe:pxeroot"},
+		}
+		serverf, err := vmtest.CreateTestInitramfs(
+			serverOpts, "github.com/u-root/u-root/integration/testcmd/generic/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create server test initramfs: %v", err)
+		}
+		defer os.Remove(serverf)
+		serverInitramfs = serverf
+
+		clientOpts := uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/init",
+				"github.com/u-root/u-root/cmds/core/elvish",
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/core/sleep",
+				"github.com/u-root/u-root/cmds/boot/pxeboot",
+			),
+		}
+		clientf, err := vmtest.CreateTestInitramfs(
+			clientOpts, "github.com/u-root/u-root/integration/testcmd/generic/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create client test initramfs: %v", err)
+		}
+		defer os.Remove(clientf)
+		clientInitramfs = clientf
+	} else {
+		serverInitramfs = initramfs
+		clientInitramfs = initramfs
+	}
+
 	network := qemu.NewNetwork()
 	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestPxeboot_Server",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/ls",
-				"github.com/u-root/u-root/cmds/exp/pxeserver",
-			),
-			ExtraFiles: []string{
-				"./testdata/pxe:pxeroot",
-			},
-		},
+		Name:      "TestPxeboot_Server",
+		Initramfs: serverInitramfs,
 		TestCmds: []string{
 			"ip addr add 192.168.0.1/24 dev eth0",
 			"ip link set eth0 up",
@@ -122,15 +136,8 @@ func TestPxeboot(t *testing.T) {
 	defer scleanup()
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestPxeboot_Client",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/boot/pxeboot",
-			),
-		},
+		Name:      "TestPxeboot_Client",
+		Initramfs: clientInitramfs,
 		TestCmds: []string{
 			"pxeboot --dry-run --no-load -v",
 			// Sleep so serial console output gets flushed. The expect library is racy.
@@ -158,22 +165,15 @@ func TestPxeboot(t *testing.T) {
 	}
 }
 
-func TestQEMUDHCPTimesOut(t *testing.T) {
+func RunTestQEMUDHCPTimesOut(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestQEMUDHCPTimesOut",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/dhclient",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-			),
-		},
+		Name:      "TestQEMUDHCPTimesOut",
+		Initramfs: initramfs,
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
 			Timeout:      40 * time.Second,

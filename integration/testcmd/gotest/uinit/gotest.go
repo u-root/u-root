@@ -49,6 +49,7 @@ func main() {
 		log.Fatalf("Failed to mount test directory: %v", err)
 	}
 
+	log.Printf("WALKING TESTS")
 	walkTests("/testdata/tests", func(path, pkgName string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
 		defer cancel()

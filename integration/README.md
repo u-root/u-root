@@ -7,17 +7,52 @@ These are VM based tests for core u-root functionality such as:
 -   uinit (user init), and
 -   running unit tests requiring root privileges.
 
-To learn more about how these tests work under the hood, see the next section,
-otherwise jump ahead to the sections on how to write and run these tests.
+## Overview
+
+All tests are in the integration/ directory. Within that, there are a
+few subdirectories:
+
+* generic-tests/ : most tests can be put under this.
+* golang-tests/ : this is for Go unit tests that can be run inside the VM.
+* testcmd/ : this contains custom uinits for tests.
+* testdata/ : this contains any extra files for tests.
+
+### Generic Tests
+
+This is where most tests live. main\_test.go is the test orchestrator. It is 
+responsible for running all the tests in the directory.
+
+All tests must have an entry in the tests table in main\_test.go. Each test 
+entry has 2 things: a name, and a runner function. This runner function is where
+the actual test is taking place.
+
+main\_test.go will then go through the table and call the runner function
+for each test.
+
+When main\_test.go is invoked using `go test`, it takes a few flags:
+* kernel: path to the Linux kernel binary to use. eg. `-kernel="$HOME/linux/arch/x86/boot/bzImage"`
+* qemu: path to the QEMU binary and args to use. eg. `-qemu="$HOME/bin/qemu-system-x86_64 -enable-kvm"`
+* [optional] initramfs: path to an initramfs to use for all the tests. If one is not
+  provided, there is a default generic initramfs that includes all cmds and simply runs the test
+  commands given (using this is preferred).
+* [optional] testarch: test architecture to use (amd64 or arm).
+
+### Golang Tests 
+
+This is for running Go unit tests from all u-root packages in the VM.
+gotest\_test.go finds the tests from all packages (except those that are
+blacklisted) and executes the test.
 
 ## VM Testing Infrastructure
+
+This is a brief look at what's happening under the hood.
 
 Our VM testing infrastructure starts a QEMU virtual machine that boots with
 our given kernel and initramfs, and runs the uinit or commands that we want to
 test.
 
-The test architecture, kernel and QEMU binary are set using environment
-variables.
+The test architecture, kernel and QEMU binary can be set using environment
+variables, or flags.
 
 Testing mainly relies on 2 packages: [pkg/vmtest](/pkg/vmtest) and
 [pkg/qemu](/pkg/qemu).
@@ -25,13 +60,6 @@ Testing mainly relies on 2 packages: [pkg/vmtest](/pkg/vmtest) and
 pkg/vmtest takes in integration test options, and given those and the
 environment variables, uses pkg/qemu to start a QEMU VM with the correct command
 line and configuration.
-
-There are a couple of ways to test:
-* Custom initramfs: provide an initramfs that will be used in the VM.
-* Custom uinit: provide a uinit. The testing setup will generate an initramfs 
-  with that uinit.
-* Test commands: provide the set of commands to be tested. The testing setup
-  will generate an initramfs that runs those commands.
 
 Files that need to be shared with the VM are written to a temp dir which is
 exposed as a Plan 9 (9p) filesystem in the VM.
@@ -41,60 +69,68 @@ expected output in QEMU's serial output within a given timeout.
 
 ## Running Tests
 
-These tests only run on Linux on amd64 and arm.
+### Generic Tests
 
-1. Set Environment variables:
-
--   `UROOT_QEMU` points to a QEMU binary and args, e.g.
+To run all tests:
 
 ```sh
-export UROOT_QEMU="$HOME/bin/qemu-system-x86_64 -enable-kvm"
+cd generic-tests/
+go test [-v] -kernel </path/to/kernel> -qemu </path/to/qemu>
 ```
 
--   `UROOT_KERNEL` points to a Linux kernel binary, e.g.
-
-```sh
-export UROOT_KERNEL="$HOME/linux/arch/x86/boot/bzImage"
-```
-
--   (optional) `UROOT_TESTARCH` (defaults to host architecture) is the
-    architecture to test. Only `arm` and `amd64` are supported.
-
--   (optional) `UROOT_QEMU_TIMEOUT_X` (defaults to 1.0) can be used to multiply
-    the timeouts for each test in case QEMU on your machine is slower. For
-    example, if you cannot turn on `-enable-kvm`, use `UROOT_QEMU_TIMEOUT_X=2`
-    as our test automation does.
-
-
-Our automated CI uses Dockerfiles to build a kernel and QEMU and set these
-environment variables. You can see the Dockerfile and the config file used to
-build the kernel for each supported architecture [here](/.circleci/images).
-
-2. Run the tests with:
-
-```sh
-go test [-v]
-```
+You have an option to specify the test architecure (as of now, amd64 and arm are
+supported. defaults to host architecture), and custom initramfs as
+additional flags.
 
 The verbose flag is useful to see the QEMU command line being used and the full
 serial output. It is also useful to see which tests are being skipped and why
 (particularly for ARM, where many tests are currently skipped).
 
 Unless you want to wait a long time for all tests to complete, run just the
-specific test you want, e.g.
+specific test you want.
+
+To run a specific test:
 
 ```sh
-go test [-v] -test.run=TestDhclient
+go test [-v] -kernel </path/to/kernel> -qemu </path/to/qemu> -test.run=TestGeneric/NAME
 ```
 
-## Writing a New Test
+Here, NAME is the name from the test entry in main\_test.go.
 
-To write a new test, first decide which of the options from the previous
-section best fit your case (custom initramfs, custom uinit, test commands).
+### Golang Tests 
 
-`vmtest.QEMUTest` is the function that starts the QEMU VM and returns the VM
-struct. There, provide the test options for your use case.
+```sh
+cd golang-tests/
+go test [-v]
+```
 
-The VM struct returned by `vmtest.QEMUTest` represents a running QEMU virtual
-machine. Use its family of Expect methods to check for the correct result.
+## Writing Tests
+
+###  Generic Tests
+
+1. Write a test runner function.
+
+This is of the type `func(t *testing.T, initramfs string)`, where initramfs is
+the optional flag to test orchestrator. In the runner, you have the option to
+override this initramfs, or have another default besides the generic. (see
+dhclient\_test.go for examples).
+
+  a. Call `vmtest.QEMUTest` to start the VM.
+
+  `vmtest.QEMUTest` starts the QEMU VM and returns the VM struct. There, provide
+  the test options for your use case. You **must** pass in the Initramfs option to
+  use a non-generic initramfs (either caller-provided, or your own). The
+  TestCmds option is for specifying the actual commands you want to test. 
+
+  b. Use Expect to check for the correct results.
+
+  The VM struct returned by `vmtest.QEMUTest` represents a running QEMU virtual
+  machine. Use its family of Expect methods to check for the correct result.
+
+2. Add the test entry to main\_test.go.
+
+
+### Golang Tests
+
+Write Go unit tests in the package they are meant to test.
 

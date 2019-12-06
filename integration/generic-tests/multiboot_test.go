@@ -21,7 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func testMultiboot(t *testing.T, kernel string) {
+func testMultiboot(t *testing.T, kernel, initramfs string) {
 	var serial wc
 
 	src := fmt.Sprintf("/home/circleci/%v", kernel)
@@ -32,15 +32,21 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Skip("multiboot kernel is not present")
 	}
 
+	if len(initramfs) == 0 {
+		opts := uroot.Opts{
+			ExtraFiles: []string{src + ":kernel"},
+		}
+		f, err := vmtest.CreateTestInitramfs(
+			opts, "github.com/u-root/u-root/integration/testcmd/generic/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create test initramfs: %v", err)
+		}
+		defer os.Remove(f)
+		initramfs = f
+	}
+
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/kexec",
-			),
-			ExtraFiles: []string{
-				src + ":kernel",
-			},
-		},
+		Initramfs: initramfs,
 		TestCmds: []string{
 			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 		},
@@ -91,7 +97,7 @@ func testMultiboot(t *testing.T, kernel string) {
 	}
 }
 
-func TestMultiboot(t *testing.T) {
+func RunTestMultiboot(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
@@ -99,7 +105,7 @@ func TestMultiboot(t *testing.T) {
 
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {
 		t.Run(kernel, func(t *testing.T) {
-			testMultiboot(t, kernel)
+			testMultiboot(t, kernel, initramfs)
 		})
 	}
 }

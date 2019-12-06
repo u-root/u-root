@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/uroot"
@@ -14,9 +15,19 @@ import (
 )
 
 // TestHelloWorld runs an init which prints the string "HELLO WORLD" and exits.
-func TestHelloWorld(t *testing.T) {
+func RunTestHelloWorld(t *testing.T, initramfs string) {
+	if len(initramfs) == 0 {
+		f, err := vmtest.CreateTestInitramfs(
+			uroot.Opts{}, "github.com/u-root/u-root/integration/testcmd/helloworld/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create test initramfs: %v", err)
+		}
+		defer os.Remove(f)
+		initramfs = f
+	}
+
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Uinit: "github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+		Initramfs: initramfs,
 	})
 	defer cleanup()
 
@@ -26,30 +37,36 @@ func TestHelloWorld(t *testing.T) {
 }
 
 // TestHelloWorldNegative runs an init which does not print the string "HELLO WORLD".
-func TestHelloWorldNegative(t *testing.T) {
+func RunTestHelloWorldNegative(t *testing.T, initramfs string) {
+	if len(initramfs) == 0 {
+		f, err := vmtest.CreateTestInitramfs(
+			uroot.Opts{}, "github.com/u-root/u-root/integration/testcmd/helloworld/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create test initramfs: %v", err)
+		}
+		defer os.Remove(f)
+		initramfs = f
+	}
+
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Uinit: "github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+		Initramfs: initramfs,
 	})
 	defer cleanup()
 
 	if err := q.Expect("GOODBYE WORLD"); err == nil {
 		t.Fatal(`expected error, but matched "GOODBYE WORLD"`)
 	}
+
 }
 
-func TestScript(t *testing.T) {
+func RunTestScript(t *testing.T, initramfs string) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "ShellScript",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/echo",
-			),
-		},
 		TestCmds: []string{
 			"echo HELLO WORLD",
 			"shutdown -h",
 		},
+		Initramfs: initramfs,
 	})
 	defer cleanup()
 

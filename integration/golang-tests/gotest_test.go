@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"flag"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,8 +15,13 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
+)
+
+var (
+	kernelPath = flag.String("kernel", "", "path to the Linux kernel binary to use for tests")
+	qemuPath   = flag.String("qemu", "", "path to the QEMU binary to use for tests")
+	testarch   = flag.String("testarch", "", "name of the architecture to use for tests")
 )
 
 // testPkgs returns a slice of tests to run.
@@ -81,17 +87,19 @@ func testPkgs(t *testing.T) []string {
 // TestGoTest effectively runs "go test ./..." inside a QEMU instance. The
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
+	if len(*kernelPath) > 0 {
+		os.Setenv("UROOT_KERNEL", *kernelPath)
+	}
+	if len(*qemuPath) > 0 {
+		os.Setenv("UROOT_QEMU", *qemuPath)
+	}
+	if len(*testarch) > 0 {
+		os.Setenv("UROOT_TESTARCH", *testarch)
+	}
+
 	pkgs := testPkgs(t)
 
 	o := &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				// Used by different tests.
-				"github.com/u-root/u-root/cmds/core/ls",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/core/echo",
-			),
-		},
 		QEMUOpts: qemu.Options{
 			Timeout: 120 * time.Second,
 		},

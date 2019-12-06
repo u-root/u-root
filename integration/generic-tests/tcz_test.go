@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"os"
 	"regexp"
 	"testing"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func TestTczclient(t *testing.T) {
+func RunTestTczclient(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
@@ -23,26 +24,42 @@ func TestTczclient(t *testing.T) {
 
 	t.Skip("This test is flaky, and must be fixed")
 
+	var serverInitramfs string
+	var clientInitramfs string
+	if len(initramfs) == 0 {
+		serverOpts := uroot.Opts{
+			ExtraFiles: []string{"./testdata/tczserver:tcz"},
+		}
+		serverf, err := vmtest.CreateTestInitramfs(
+			serverOpts, "github.com/u-root/u-root/integration/testcmd/generic/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create server test initramfs: %v", err)
+		}
+		defer os.Remove(serverf)
+		serverInitramfs = serverf
+
+		clientOpts := uroot.Opts{
+			ExtraFiles: []string{"./testdata/tczclient:tcz"},
+		}
+		clientf, err := vmtest.CreateTestInitramfs(
+			clientOpts, "github.com/u-root/u-root/integration/testcmd/generic/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create client test initramfs: %v", err)
+		}
+		defer os.Remove(clientf)
+		clientInitramfs = clientf
+	} else {
+		serverInitramfs = initramfs
+		clientInitramfs = initramfs
+	}
+
 	network := qemu.NewNetwork()
 	// TODO: On the next iteration, this will serve and provide a missing tcz.
 	var sb wc
 	if true {
 		q, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-			Name: "TestTczclient_Server",
-			BuildOpts: uroot.Opts{
-				Commands: uroot.BusyBoxCmds(
-					"github.com/u-root/u-root/cmds/core/dmesg",
-					"github.com/u-root/u-root/cmds/core/echo",
-					"github.com/u-root/u-root/cmds/core/ip",
-					"github.com/u-root/u-root/cmds/core/init",
-					"github.com/u-root/u-root/cmds/core/shutdown",
-					"github.com/u-root/u-root/cmds/core/sleep",
-					"github.com/u-root/u-root/cmds/exp/srvfiles",
-				),
-				ExtraFiles: []string{
-					"./testdata/tczserver:tcz",
-				},
-			},
+			Name:      "TestTczclient_Server",
+			Initramfs: serverInitramfs,
 			TestCmds: []string{
 				"dmesg",
 				"ip l",
@@ -74,21 +91,8 @@ func TestTczclient(t *testing.T) {
 
 	var b wc
 	tczClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestTczclient_Client",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/init",
-				"github.com/u-root/u-root/cmds/exp/tcz",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/ls",
-			),
-			ExtraFiles: []string{
-				"./testdata/tczclient:tcz",
-			},
-		},
+		Name:      "TestTczclient_Client",
+		Initramfs: clientInitramfs,
 		TestCmds: []string{
 			"ip addr add 192.168.0.2/24 dev eth0",
 			"ip link set eth0 up",

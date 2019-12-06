@@ -5,6 +5,7 @@
 package vmtest
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,13 +27,6 @@ import (
 
 // Options are integration test options.
 type Options struct {
-	// BuildOpts are u-root initramfs options.
-	//
-	// They are used if the test needs to generate an initramfs.
-	// Fields that are not set are populated by QEMU and QEMUTest as
-	// possible.
-	BuildOpts uroot.Opts
-
 	// QEMUOpts are QEMU VM options for the test.
 	//
 	// Fields that are not set are populated by QEMU and QEMUTest as
@@ -50,11 +44,11 @@ type Options struct {
 	// used as determined by runtime.Caller.
 	Name string
 
-	// Uinit is the uinit that should be added to a generated initramfs.
+	// Initramfs is the initramfs to be used.
 	//
-	// If none is specified, the generic uinit will be used, which searches for
+	// If none is specified, the generic one will be used, which searches for
 	// and runs the script generated from TestCmds.
-	Uinit string
+	Initramfs string
 
 	// TestCmds are commands to execute after init.
 	//
@@ -190,7 +184,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 // QEMU builds the u-root environment and prepares QEMU options given the test
 // options and environment variables.
 //
-// QEMU will augment o.BuildOpts and o.QEMUOpts with configuration that the
+// QEMU will augment o.QEMUOpts with configuration that the
 // caller either requested (through the Options.Uinit field, for example) or
 // that the caller did not set.
 //
@@ -210,70 +204,19 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		}
 	}
 
-	// Create initramfs if caller did not provide one.
-	if len(o.QEMUOpts.Initramfs) == 0 {
-		if !o.DontSetEnv {
-			env := golang.Default()
-			env.CgoEnabled = false
-			env.GOARCH = TestArch()
-			o.BuildOpts.Env = env
-		}
-
-		cmds := []string{
-			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/elvish",
-		}
-		if len(o.BuildOpts.Commands) == 0 {
-			cmds = append(cmds, "github.com/u-root/u-root/cmds/*")
-		}
-
-		// If a custom uinit was not provided, use the generic test uinit. This will
-		// try to find and run the test commands shell script.
-		if len(o.Uinit) == 0 {
-			o.Uinit = "github.com/u-root/u-root/integration/testcmd/generic/uinit"
-		}
-		cmds = append(cmds, o.Uinit)
-
-		// Add our commands to the build opts.
-		o.BuildOpts.AddBusyBoxCommands(cmds...)
-
-		if o.BuildOpts.BaseArchive == nil {
-			o.BuildOpts.BaseArchive = uroot.DefaultRamfs.Reader()
-		}
-		if len(o.BuildOpts.InitCmd) == 0 {
-			o.BuildOpts.InitCmd = "init"
-		}
-		if len(o.BuildOpts.DefaultShell) == 0 {
-			o.BuildOpts.DefaultShell = "elvish"
-		}
-		if len(o.BuildOpts.TempDir) == 0 {
-			o.BuildOpts.TempDir = o.TmpDir
-		}
-
-		if o.Logger == nil {
-			o.Logger = log.New(os.Stderr, "", 0)
-		}
-
-		// Set OutputFile so that the initramfs is written to o.TmpDir.
-		// TODO(plaud) what if its non-empty, QEMUOpts initramfs would be ""?
-		var outputFile string
-		if o.BuildOpts.OutputFile == nil {
-			outputFile = filepath.Join(o.TmpDir, "initramfs.cpio")
-			w, err := initramfs.CPIO.OpenWriter(o.Logger, outputFile, "", "")
-			if err != nil {
-				return nil, err
-			}
-			o.BuildOpts.OutputFile = w
-		}
-
-		// Finally, create an initramfs!
-		if err := uroot.CreateInitramfs(o.Logger, o.BuildOpts); err != nil {
+	// Set initramfs, creating a generic initramfs if one isn't provided.
+	vmInitramfs := filepath.Join(o.TmpDir, "initramfs.cpio")
+	if len(o.Initramfs) != 0 {
+		if err := cp.Copy(o.Initramfs, vmInitramfs); err != nil {
 			return nil, err
 		}
-
-		o.QEMUOpts.Initramfs = outputFile
-
+	} else {
+		uinit := "github.com/u-root/u-root/integration/testcmd/generic/uinit"
+		if _, err := CreateTestInitramfs(uroot.Opts{}, uinit, vmInitramfs); err != nil {
+			return nil, err
+		}
 	}
+	o.QEMUOpts.Initramfs = vmInitramfs
 
 	if len(o.QEMUOpts.Kernel) == 0 {
 		// Copy kernel to o.TmpDir for tests involving kexec.
@@ -300,4 +243,70 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, dir)
 
 	return &o.QEMUOpts, nil
+}
+
+// CreateTestInitramfs creates an initramfs with the given build options and
+// uinit, and writes it to the given output file. If no output file is provided,
+// one will be created, and it is the caller's responsibility to remove it.
+// The output file name is returned.
+func CreateTestInitramfs(o uroot.Opts, uinit, outputFile string) (string, error) {
+	// TODO need to bring back the DontSetEnv check?
+	env := golang.Default()
+	env.CgoEnabled = false
+	env.GOARCH = TestArch()
+	o.Env = env
+
+	logger := log.New(os.Stderr, "", 0)
+
+	// If build opts don't specify any commands, include all commands. Else,
+	// always add init and elvish.
+	var cmds []string
+	if len(o.Commands) == 0 {
+		cmds = []string{
+			"github.com/u-root/u-root/cmds/core/*",
+			"github.com/u-root/u-root/cmds/exp/*",
+		}
+	}
+
+	if len(uinit) != 0 {
+		cmds = append(cmds, uinit)
+	}
+
+	// Add our commands to the build opts.
+	o.AddBusyBoxCommands(cmds...)
+
+	// Fill in the default build options if not specified.
+	if o.BaseArchive == nil {
+		o.BaseArchive = uroot.DefaultRamfs.Reader()
+	}
+	if len(o.InitCmd) == 0 {
+		o.InitCmd = "init"
+	}
+	if len(o.DefaultShell) == 0 {
+		o.DefaultShell = "elvish"
+	}
+	if len(o.TempDir) == 0 {
+		tempDir, err := ioutil.TempDir("", "initramfs-tempdir")
+		if err != nil {
+			return "", fmt.Errorf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tempDir)
+		o.TempDir = tempDir
+	}
+
+	// Create an output file if one was not provided.
+	if len(outputFile) == 0 {
+		f, err := ioutil.TempFile("", "initramfs")
+		if err != nil {
+			return "", fmt.Errorf("failed to create output file: %v", err)
+		}
+		outputFile = f.Name()
+	}
+	w, err := initramfs.CPIO.OpenWriter(logger, outputFile, "", "")
+	if err != nil {
+		return "", fmt.Errorf("Failed to create initramfs writer: %v", err)
+	}
+	o.OutputFile = w
+
+	return outputFile, uroot.CreateInitramfs(logger, o)
 }

@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/uroot"
@@ -14,20 +15,25 @@ import (
 )
 
 // TestIO tests the string "UART TEST" is written to the serial port on 0x3f8.
-func TestIO(t *testing.T) {
+func RunTestIO(t *testing.T, initramfs string) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
+	if len(initramfs) == 0 {
+		f, err := vmtest.CreateTestInitramfs(
+			uroot.Opts{}, "github.com/u-root/u-root/integration/testcmd/io/uinit", "")
+		if err != nil {
+			t.Errorf("failed to create test initramfs: %v", err)
+		}
+		defer os.Remove(f)
+		initramfs = f
+	}
+
 	// Create the CPIO and start QEMU.
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/io",
-			),
-		},
-		Uinit: "github.com/u-root/u-root/integration/testcmd/io/uinit",
+		Initramfs: initramfs,
 	})
 	defer cleanup()
 

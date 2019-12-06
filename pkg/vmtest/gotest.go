@@ -41,10 +41,13 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		o.TmpDir = tmpDir
 	}
 
+	// Set up u-root build options.
+	buildOpts := uroot.Opts{}
+
 	env := golang.Default()
 	env.CgoEnabled = false
 	env.GOARCH = TestArch()
-	o.BuildOpts.Env = env
+	buildOpts.Env = env
 
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
@@ -73,7 +76,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		if _, err := os.Stat(testFile); !os.IsNotExist(err) {
 			tests = append(tests, pkg)
 
-			p, err := o.BuildOpts.Env.Package(pkg)
+			p, err := buildOpts.Env.Package(pkg)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -86,10 +89,14 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	}
 
 	// Create the CPIO and start QEMU.
-	o.BuildOpts.AddCommands(uroot.BinaryCmds("cmd/test2json")...)
+	buildOpts.AddBusyBoxCommands("github.com/u-root/u-root/cmds/core/*")
+	buildOpts.AddCommands(uroot.BinaryCmds("cmd/test2json")...)
 
-	// Specify the custom gotest uinit.
-	o.Uinit = "github.com/u-root/u-root/integration/testcmd/gotest/uinit"
+	initramfs, err := CreateTestInitramfs(buildOpts, "github.com/u-root/u-root/integration/testcmd/gotest/uinit", "")
+	if err != nil {
+		t.Errorf("failed to create test initramfs: %v", err)
+	}
+	o.Initramfs = initramfs
 
 	tc := json2test.NewTestCollector()
 	serial := []io.Writer{
