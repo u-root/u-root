@@ -18,8 +18,10 @@ import (
 	"testing"
 )
 
+const defaultTTY = "/dev/tty"
+
 func TestNew(t *testing.T) {
-	if _, err := New(); os.IsNotExist(err) {
+	if _, err := New(defaultTTY); os.IsNotExist(err) {
 		t.Skipf("No /dev/tty here.")
 	} else if err != nil {
 		t.Errorf("TestNew: want nil, got %v", err)
@@ -28,7 +30,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestRaw(t *testing.T) {
-	tty, err := New()
+	tty, err := New(defaultTTY)
 	if os.IsNotExist(err) {
 		t.Skipf("No /dev/tty here.")
 	} else if err != nil {
