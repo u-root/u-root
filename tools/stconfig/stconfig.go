@@ -8,6 +8,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
@@ -22,24 +23,17 @@ const (
 var goversion string
 
 var (
-	genkeys = kingpin.Command("genkeys", "Generate RSA keypair")
-	create  = kingpin.Command("create", "Create boot configuration file from manifest.json")
-	sign    = kingpin.Command("sign", "Sign the binary inside the provided stboot.zip and add the signatures and certificates")
-	unpack  = kingpin.Command("unpack", "Unpack boot configuration file into directory")
+	create = kingpin.Command("create", "Create a boot ball from stconfig.json")
+	sign   = kingpin.Command("sign", "Sign the binary inside the provided stboot.ball and add the signatures and certificates")
+	unpack = kingpin.Command("unpack", "Unpack boot ball  file into directory")
 
-	genkeysPrivateKeyFile = genkeys.Arg("privateKey", "File path to write the private key").Required().String()
-	genkeysPublicKeyFile  = genkeys.Arg("publicKey", "File path to write the public key").Required().String()
-	genkeysPassphrase     = genkeys.Flag("passphrase", "Encrypt keypair in PKCS8 format").String()
+	createConfigFile = create.Arg("config", "Path to the manifest file in JSON format").Required().String()
 
-	createOutputFilename = create.Flag("output", "Path to output file").PlaceHolder("PATH").Default("stboot.zip").Short('o').String()
-	createManifest       = create.Arg("manifest", "Path to the manifest file in JSON format").Required().String()
+	signInFile      = sign.Arg("bootball", "Archive created by 'stconfig create'").Required().String()
+	signPrivKeyFile = sign.Arg("privkey", "Private key for signing").Required().String()
+	signCertFile    = sign.Arg("certificate", "Certificate to veryfy the signature").Required().String()
 
-	signInputBootfile = sign.Arg("input", "stboot.zip file created by 'stconfig create'").Required().String()
-	signPrivKeyFile   = sign.Arg("privkey", "private key for signing").Required().String()
-	signCertFile      = sign.Arg("certificate", "Certificate to veryfy the signature").Required().String()
-
-	unpackInputFilename = unpack.Arg("bc-file", "Boot configuration file").Required().String()
-	// unpackVerifyPublicKeyFile = unpack.Arg("public-key", "Path to the public key file").String()
+	unpackInFile = unpack.Arg("bootball", "Archive containing the boot files").Required().String()
 )
 
 func main() {
@@ -47,20 +41,31 @@ func main() {
 	kingpin.CommandLine.Help = HelpText
 
 	switch kingpin.Parse() {
-	case genkeys.FullCommand():
-		if err := GenKeys(); err != nil {
-			log.Fatalln(err.Error())
-		}
 	case create.FullCommand():
-		if err := PackBootConfiguration(); err != nil {
+		if _, err := os.Stat(*createConfigFile); os.IsNotExist(err) {
+			log.Fatalf("%s does not exist: %v", *createConfigFile, err)
+		}
+		if err := packBootBall(*createConfigFile); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case sign.FullCommand():
-		if err := AddSignatureToBootConfiguration(); err != nil {
+		if _, err := os.Stat(*signInFile); os.IsNotExist(err) {
+			log.Fatalf("%s does not exist: %v", *signInFile, err)
+		}
+		if _, err := os.Stat(*signPrivKeyFile); os.IsNotExist(err) {
+			log.Fatalf("%s does not exist: %v", *signPrivKeyFile, err)
+		}
+		if _, err := os.Stat(*signCertFile); os.IsNotExist(err) {
+			log.Fatalf("%s does not exist: %v", *signCertFile, err)
+		}
+		if err := addSignatureToBootBall(*signInFile, *signPrivKeyFile, *signCertFile); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case unpack.FullCommand():
-		if err := UnpackBootConfiguration(); err != nil {
+		if _, err := os.Stat(*unpackInFile); os.IsNotExist(err) {
+			log.Fatalf("%s does not exist: %v", *signInFile, err)
+		}
+		if err := unpackBootBall(*unpackInFile); err != nil {
 			log.Fatalln(err.Error())
 		}
 	default:
