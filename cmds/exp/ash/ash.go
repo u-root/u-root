@@ -57,7 +57,7 @@ func main() {
 		v = log.Printf
 		complete.Debug = verbose
 	}
-	t, err := termios.New("/dev/tty")
+	t, err := termios.New()
 	if err != nil {
 		log.Fatal(err)
 	}
