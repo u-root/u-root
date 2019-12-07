@@ -142,7 +142,7 @@ func dropPrivs() error {
 // We enter here as uid 0 and once the mount is done, back down.
 func runRemote(cmd, port9p string) error {
 	// for some reason echo is not set.
-	t, err := termios.New("/dev/tty")
+	t, err := termios.New()
 	if err != nil {
 		log.Printf("can't get a termios; oh well; %v", err)
 	} else {
@@ -324,7 +324,7 @@ func env(s *ossh.Session) {
 }
 
 func shell(client *ossh.Client, a, port9p string) error {
-	t, err := termios.New("/dev/tty")
+	t, err := termios.New()
 	if err != nil {
 		return err
 	}

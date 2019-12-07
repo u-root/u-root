@@ -22,8 +22,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const defaultTTY = "/dev/tty"
-
 type Pty struct {
 	C        *exec.Cmd
 	Ptm      *os.File
@@ -42,7 +40,7 @@ func (p *Pty) Command(cmd string, args ...string) {
 }
 
 func (p *Pty) Start() error {
-	tty, err := termios.New(defaultTTY)
+	tty, err := termios.New()
 	if err != nil {
 		return err
 	}

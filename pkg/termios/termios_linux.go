@@ -19,7 +19,13 @@ type TTY struct {
 	f *os.File
 }
 
-func New(device string) (*TTY, error) {
+// New creates a new TTY using /dev/tty
+func New() (*TTY, error) {
+	return NewWithDev("/dev/tty")
+}
+
+// NewWithDev creates a new TTY with the specified device
+func NewWithDev(device string) (*TTY, error) {
 	f, err := os.OpenFile(device, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err

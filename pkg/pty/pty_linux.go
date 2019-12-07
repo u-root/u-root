@@ -47,7 +47,7 @@ func New() (*Pty, error) {
 		}
 	}
 
-	tty, err := termios.New(sname)
+	tty, err := termios.NewWithDev(sname)
 	if err != nil {
 		return nil, err
 	}
