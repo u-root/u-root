@@ -62,8 +62,14 @@ func main() {
 		log.Printf("failed to get policy err=%v", err)
 		os.Exit(1)
 	}
-	slaunch.Debug("policy file successfully parsed=%v", p)
+	slaunch.Debug("policy file successfully parsed")
 
 	slaunch.Debug("********Step 3: Collecting Evidence ********")
-
+	for _, c := range p.Collectors {
+		slaunch.Debug("Input Collector: %v", c)
+		if e := c.Collect(tpmDev); e != nil {
+			log.Printf("Collector %v failed, err = %v", c, e)
+		}
+	}
+	slaunch.Debug("Collectors completed")
 }

@@ -7,7 +7,9 @@ package securelaunch
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -23,6 +25,37 @@ var storageBlkDevices []storage.BlockDev
  * kernel cmdline is checked in sluinit.
  */
 var Debug = func(string, ...interface{}) {}
+
+/*
+ * WriteToFile writes a byte slice to a target file on an
+ * already mounted disk and returns the target file path.
+ *
+ * defFileName is default dst file name, only used if user doesn't provide one.
+ */
+func WriteToFile(data []byte, dst, defFileName string) (string, error) {
+
+	// make sure dst is an absolute file path
+	if !filepath.IsAbs(dst) {
+		return "", fmt.Errorf("dst =%s Not an absolute path ", dst)
+	}
+
+	// target is the full absolute path where []byte will be written to
+	target := dst
+	dstInfo, err := os.Stat(dst)
+	if err == nil && dstInfo.IsDir() {
+		Debug("No file name provided. Adding it now. old target=%s", target)
+		target = filepath.Join(dst, defFileName)
+		Debug("New target=%s", target)
+	}
+
+	Debug("target=%s", target)
+	err = ioutil.WriteFile(target, data, 0644)
+	if err != nil {
+		return "", fmt.Errorf("failed to write date to file =%s, err=%v", target, err)
+	}
+	Debug("WriteToFile exit w success data written to target=%s", target)
+	return target, nil
+}
 
 /*
  * GetMountedFilePath returns a file path corresponding to a <device_identifier>:<path> user input format.
