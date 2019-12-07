@@ -5,12 +5,13 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/boot/stboot"
 	"github.com/u-root/u-root/pkg/bootconfig"
-	"github.com/u-root/u-root/pkg/stboot"
 )
 
 var debug = func(string, ...interface{}) {}
@@ -37,26 +38,14 @@ func main() {
 	}
 	log.Print(banner)
 
-	vars, err := stboot.FindNetVarsInInitramfs()
+	vars, err := stboot.FindHostVarsInInitramfs()
 	if err != nil {
 		log.Fatalf("Cant find Netvars at all: %v", err)
 	}
 
-	// search for a netvars.json
-	// FIXME if already mounted - cant find netvars.json
-
-	// FIXME: : error handling
-	// print network variables
 	if *doDebug {
-		log.Printf("Parse network variables")
-		log.Print("HostIP: " + vars.HostIP)
-		log.Print("HostNetmask: " + vars.HostNetmask)
-		log.Print("DefaultGateway: " + vars.DefaultGateway)
-		log.Print("DNSServer: " + vars.DNSServer)
-
-		log.Print("BootstrapURL: " + vars.BootstrapURL)
-		log.Print("SignaturePupKey: " + vars.SignaturePubKey)
-		log.Print("MinimalAmountSignatures: ", vars.MinimalAmountSignatures)
+		str, _ := json.MarshalIndent(vars, "", "  ")
+		log.Printf("Host variables: %s", str)
 	}
 
 	debug("Configuring network interfaces")
@@ -75,15 +64,22 @@ func main() {
 		return
 	}
 
-	err = stboot.DownloadFromHTTPS(vars.BootstrapURL, stboot.BootFilePath)
+	dest := path.Join("root/", stboot.BallName)
+	url, err := url.Parse(vars.BootstrapURL)
 	if err != nil {
-		log.Printf("Error verifing or download file from %s", vars.BootstrapURL)
+		log.Printf("Invalid bootstrap URL: %v", err)
+		return
+	}
+	url.Path = path.Join(url.Path, stboot.BallName)
+	err = stboot.DownloadFromHTTPS(url.String(), dest)
+	if err != nil {
+		log.Printf("Error downloading bootball from %s", url)
 		log.Println(err)
 		return
 	}
 
 	// Unpack
-	manifest, outputDir, err := bootconfig.FromZip(stboot.BootFilePath)
+	cfg, outputDir, err := stboot.FromZip(dest)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -104,43 +100,42 @@ func main() {
 		return
 	}
 
-	cfg, err := manifest.GetBootConfig(0)
+	bc, err := cfg.GetBootConfig(0)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if *doDebug {
-		str, _ := json.MarshalIndent(*cfg, "", "  ")
+		str, _ := json.MarshalIndent(*bc, "", "  ")
 		log.Printf("Bootconfig: %s", str)
 	}
 
 	// update paths
-	cfg.Kernel = path.Join(outputDir, cfg.Kernel)
-	kernelInfo, err := os.Stat(cfg.Kernel)
+	bc.Kernel = path.Join(outputDir, bc.Kernel)
+	kernelInfo, err := os.Stat(bc.Kernel)
 	if err != nil {
-		log.Fatalf("cant read kernel file stats: %v", err)
+		log.Fatalf("cannot read kernel file stats: %v", err)
 		return
 	}
 	if kernelInfo.Size() == int64(0) {
 		log.Fatalf("kernel file size is zero: %v", kernelInfo.Size())
 		return
 	}
-	if cfg.Initramfs != "" {
-		cfg.Initramfs = path.Join(outputDir, cfg.Initramfs)
-		initRAMinfo, err := os.Stat(cfg.Initramfs)
+	if bc.Initramfs != "" {
+		bc.Initramfs = path.Join(outputDir, bc.Initramfs)
+		initRAMinfo, err := os.Stat(bc.Initramfs)
 		if err != nil {
-			log.Fatalf("cant read initramfs file stats: %v", err)
+			log.Fatalf("cannot read initramfs file stats: %v", err)
 			return
 		}
 		if initRAMinfo.Size() == int64(0) {
 			log.Fatalf("initramfs file size is zero: %v", kernelInfo.Size())
-			return
 		}
 	}
-	if cfg.DeviceTree != "" {
-		cfg.DeviceTree = path.Join(outputDir, cfg.DeviceTree)
-		deviceTreeInfo, err := os.Stat(cfg.DeviceTree)
+	if bc.DeviceTree != "" {
+		bc.DeviceTree = path.Join(outputDir, bc.DeviceTree)
+		deviceTreeInfo, err := os.Stat(bc.DeviceTree)
 		if err != nil {
-			log.Fatalf("cant read device tree file stats: %v", err)
+			log.Fatalf("cannot read device tree file stats: %v", err)
 			return
 		}
 		if deviceTreeInfo.Size() == int64(0) {
@@ -150,11 +145,11 @@ func main() {
 	}
 
 	if *doDebug {
-		str, _ := json.MarshalIndent(*cfg, "", "  ")
+		str, _ := json.MarshalIndent(*bc, "", "  ")
 		log.Printf("Adjusted Bootconfig: %s", str)
 	}
 
-	certPath := strings.Replace(path.Dir(manifest.Configs[0].Kernel), outputDir, "", -1)
+	certPath := strings.Replace(path.Dir(cfg.BootConfigs[0].Kernel), outputDir, "", -1)
 	certPath = path.Join(outputDir, "certs/", certPath)
 
 	if _, err = os.Stat(certPath); os.IsNotExist(err) {
@@ -167,7 +162,7 @@ func main() {
 		log.Printf("Root Certificate not found: %v", err)
 		return
 	}
-	err = stboot.VerifySignatureInPath(certPath, hash, rootCert, vars.MinimalAmountSignatures)
+	err = stboot.VerifySignatureInPath(certPath, hash, rootCert, vars.MinimalSignaturesMatch)
 
 	if err != nil {
 		log.Fatal("The bootconfig seems to be not trustworthy. Err: ", err)
@@ -182,8 +177,8 @@ func main() {
 	log.Println("Starting up new kernel.")
 
 	// boot
-	if err := cfg.Boot(); err != nil {
-		log.Printf("Failed to boot kernel %s: %v", cfg.Kernel, err)
+	if err := bc.Boot(); err != nil {
+		log.Printf("Failed to boot kernel %s: %v", bc.Kernel, err)
 	}
 	// if we reach this point, no boot configuration succeeded
 	log.Print("No boot configuration succeeded")
