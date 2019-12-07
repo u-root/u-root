@@ -110,7 +110,7 @@ var (
 		dev{Name: "/dev/port", Mode: syscall.S_IFCHR | 0640, Dev: 0x0104},
 
 		dir{Name: "/dev/pts", Mode: 0777},
-		mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
+		mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "ptmxmode=666,gid=5,mode=620"},
 		dev{Name: "/dev/ptmx", Mode: syscall.S_IFCHR | 0666, Dev: 0x0502},
 		// Note: shm is required at least for Chrome. If you don't mount
 		// it chrome throws a bogus "out of memory" error, not the more
