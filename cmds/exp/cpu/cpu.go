@@ -26,6 +26,7 @@ import (
 	"github.com/kr/pty" // TODO: get rid of krpty
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/termios"
+
 	// We use this ssh because it can unpack password-protected private keys.
 	ossh "golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
@@ -141,7 +142,7 @@ func dropPrivs() error {
 // We enter here as uid 0 and once the mount is done, back down.
 func runRemote(cmd, port9p string) error {
 	// for some reason echo is not set.
-	t, err := termios.New()
+	t, err := termios.New("/dev/tty")
 	if err != nil {
 		log.Printf("can't get a termios; oh well; %v", err)
 	} else {
@@ -323,7 +324,7 @@ func env(s *ossh.Session) {
 }
 
 func shell(client *ossh.Client, a, port9p string) error {
-	t, err := termios.New()
+	t, err := termios.New("/dev/tty")
 	if err != nil {
 		return err
 	}
