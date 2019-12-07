@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -37,12 +38,26 @@ func (bc *BootConfig) IsValid() bool {
 }
 
 // FileNames returns a slice of all filenames in the bootconfig.
-func (bc *BootConfig) fileNames() []string {
-	str := make([]string, 0)
-	str = append(str, bc.Kernel)
-	str = append(str, bc.Initramfs)
-	str = append(str, bc.Modules...)
-	return str
+func (bc *BootConfig) FileNames() []string {
+	files := make([]string, 0)
+	if strings.Compare(bc.Kernel, "") != 0 {
+		files = append(files, bc.Kernel)
+	}
+	if strings.Compare(bc.Initramfs, "") != 0 {
+		files = append(files, bc.Initramfs)
+	}
+	if strings.Compare(bc.DeviceTree, "") != 0 {
+		files = append(files, bc.DeviceTree)
+	}
+	if strings.Compare(bc.Multiboot, "") != 0 {
+		files = append(files, bc.Multiboot)
+	}
+	for _, mod := range bc.Modules {
+		if strings.Compare(mod, "") != 0 {
+			files = append(files, mod)
+		}
+	}
+	return files
 }
 
 func (bc *BootConfig) bytestream() []byte {
@@ -57,7 +72,7 @@ func (bc *BootConfig) bytestream() []byte {
 // options. If a device-tree is specified, that will be used too
 func (bc *BootConfig) Boot() error {
 	crypto.TryMeasureData(crypto.BootConfigPCR, bc.bytestream(), "bootconfig")
-	crypto.TryMeasureFiles(bc.fileNames()...)
+	crypto.TryMeasureFiles(bc.FileNames()...)
 	if bc.Kernel != "" {
 		kernel, err := os.Open(bc.Kernel)
 		if err != nil {
