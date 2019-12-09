@@ -8,10 +8,24 @@ package pty
 
 import (
 	"testing"
+	"time"
 
+	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/pty"}, nil)
+	o := &vmtest.Options{
+		BuildOpts: uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				// Used by TestRunRestoreTTYMode
+				"github.com/u-root/u-root/cmds/core/echo",
+			),
+		},
+		QEMUOpts: qemu.Options{
+			Timeout: 120 * time.Second,
+		},
+	}
+	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/pty"}, o)
 }
