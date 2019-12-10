@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +18,7 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv4/client4"
 	"github.com/insomniacslk/dhcp/netboot"
+	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -33,41 +33,47 @@ const (
 func ConfigureStaticNetwork(vars HostVars, doDebug bool) error {
 	//setup ip
 	log.Printf("Setup network configuration with IP: " + vars.HostIP)
-	cmd := exec.Command("ip", "addr", "add", vars.HostIP, "dev", eth)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
+	addr, err := netlink.ParseAddr(vars.HostIP)
+	if err != nil {
+		log.Printf("Error parsing HostIP string to CIDR format address: %v", err)
 	}
-	cmd = exec.Command("ip", "link", "set", eth, "up")
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
+	iface, err := netlink.LinkByName(eth)
+	if err = netlink.AddrAdd(iface, addr); err != nil {
+		log.Printf("Error retrieving interface by name: %v", err)
 	}
-	cmd = exec.Command("ip", "route", "add", "default", "via", vars.DefaultGateway, "dev", eth)
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
+	if err = netlink.LinkSetUp(iface); err != nil {
+		log.Printf("Error bringing up interface:%v with error: %v", eth, err)
+	}
+	gateway, err := netlink.ParseAddr(vars.DefaultGateway)
+	if err != nil {
+		log.Printf("Error parsing GatewayIP string to CIDR format address: %v", err)
+	}
+	r := &netlink.Route{LinkIndex: iface.Attrs().Index, Gw: gateway.IPNet.IP}
+	if err = netlink.RouteAdd(r); err != nil {
+		log.Printf("Error setting default gateway: %v", err)
 	}
 
 	if doDebug {
-		cmd = exec.Command("ip", "addr")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Printf("Error executing %v: %v", cmd, err)
+		ifaces, err := netlink.LinkList()
+		if err != nil {
+			log.Printf("Debug: Error retrieving LinkList: %v", err)
 		}
-		cmd = exec.Command("ip", "route")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Printf("Error executing %v: %v", cmd, err)
+		for _, v := range ifaces {
+			addrs, err := netlink.AddrList(v, netlink.FAMILY_ALL)
+			if err != nil {
+				log.Printf("Debug: Error retrieving addresses")
+			}
+			for _, addr := range addrs {
+				log.Printf("Debug: IP Address: %v", addr.IPNet.IP)
+			}
 		}
+
+		path := "/proc/net/route"
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("Route show failed: %v", err)
+		}
+		log.Printf("%s", string(b))
 	}
 
 	return nil
@@ -119,10 +125,17 @@ func ConfigureDHCPNetwork() error {
 	}
 
 	// Some manual shit - for now
-	cmd := exec.Command("ip", "route", "add", "default", "via", netbootConfig.Routers[0].String()+"/24", "dev", eth)
-	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
-		return err
+	iface, err := netlink.LinkByName(eth)
+	if err != nil {
+		log.Printf("Error getting Link by Name: %v", err)
+	}
+	gateway, err := netlink.ParseAddr(netbootConfig.Routers[0].String() + "/24")
+	if err != nil {
+		log.Printf("Error parsing GatewayIP string to CIDR format address: %v", err)
+	}
+	r := &netlink.Route{LinkIndex: iface.Attrs().Index, Gw: gateway.IPNet.IP}
+	if err = netlink.RouteAdd(r); err != nil {
+		log.Printf("Error setting default gateway: %v", err)
 	}
 
 	return nil
