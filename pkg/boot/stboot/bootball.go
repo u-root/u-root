@@ -2,217 +2,350 @@ package stboot
 
 import (
 	"archive/zip"
-	"bytes"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
-
-	urootcrypto "github.com/u-root/u-root/pkg/crypto"
+	"path/filepath"
+	"strings"
 )
 
-// memoryZipReader is used to unpack a zip file from a byte sequence in memory.
-type memoryZipReader struct {
-	Content []byte
+const (
+	signaturesDirName string = "signatures"
+	rootCertName      string = "root.cert"
+	bootFilesDirName  string = "bootconfig"
+)
+
+type signature struct {
+	Bytes []byte
+	Cert  *x509.Certificate
 }
 
-func (r *memoryZipReader) ReadAt(p []byte, offset int64) (n int, err error) {
-	cLen := int64(len(r.Content))
-	if offset > cLen {
-		return 0, io.EOF
-	}
-	if cLen-offset >= int64(len(p)) {
-		n = len(p)
-		err = nil
-	} else {
-		err = io.EOF
-		n = int(int64(cLen) - offset)
-	}
-	copy(p, r.Content[offset:int(offset)+n])
-	return n, err
+type BootBall struct {
+	archive        string
+	dir            string
+	config         *Stconfig
+	numBootConfigs int
+	bootFiles      [][]string
+	rootCert       *x509.CertPool
+	signatures     []signature
+	hashes         [][]byte
 }
 
-// FromZip tries to extract a Stconfig from provided bootball. The returned
-// string argument is the temporary directory where the files were extracted,
-// otherwise an error is returned
-func FromZip(bootball string) (*Stconfig, string, error) {
-	// load the whole zip file in memory - we need it anyway for the signature
-	// matching.
-	// TODO refuse to read if too big?
-	data, err := ioutil.ReadFile(bootball)
-	if err != nil {
-		return nil, "", err
-	}
-	urootcrypto.TryMeasureData(urootcrypto.BlobPCR, data, bootball)
-	zipbytes := data
+func BootBallFromArchie(archive string) (BootBall, error) {
+	var ball BootBall
 
-	r, err := zip.NewReader(&memoryZipReader{Content: zipbytes}, int64(len(zipbytes)))
+	dir, err := ioutil.TempDir(os.TempDir(), "bootball")
 	if err != nil {
-		return nil, "", err
+		return ball, fmt.Errorf("bootball: cannot create tmp dir: %v", err)
 	}
-	tempDir, err := ioutil.TempDir(os.TempDir(), "bootconfig")
-	if err != nil {
-		return nil, "", err
-	}
-	log.Printf("Created temporary directory %s", tempDir)
-	var cfg *Stconfig
-	for _, f := range r.File {
-		if f.FileInfo().IsDir() {
-			// Dont care - will be handled later
-			continue
-		}
 
-		destination := path.Join(tempDir, f.Name)
-		if len(f.Name) == 0 {
-			log.Printf("Warning: skipping zero-length file name (flags: %d, mode: %s)", f.Flags, f.Mode())
-			continue
-		}
-		// Check if folder exists
-		if _, err := os.Stat(destination); os.IsNotExist(err) {
-			if err := os.MkdirAll(path.Dir(destination), os.ModeDir|os.FileMode(0700)); err != nil {
-				return nil, "", err
+	err = fromZip(archive, dir)
+	if err != nil {
+		return ball, fmt.Errorf("bootball: cannot unzip %s: %v", archive, err)
+	}
+
+	cfg, err := getConfig(filepath.Join(dir, ConfigName))
+	if err != nil {
+		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+	}
+
+	cert, err := getRootCert(filepath.Join(dir, signaturesDirName, rootCertName))
+	if err != nil {
+		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+	}
+
+	bootFiles, err := getBootFiles(cfg, dir)
+	if err != nil {
+		return ball, fmt.Errorf("bootball: getting boot files faild: %v", err)
+	}
+
+	ball.archive = archive
+	ball.dir = dir
+	ball.config = cfg
+	ball.rootCert = cert
+	ball.numBootConfigs = len(ball.config.BootConfigs)
+	ball.bootFiles = bootFiles
+
+	return ball, nil
+}
+
+func BootBallFromConfig(configFile string) (BootBall, error) {
+	var ball BootBall
+
+	archive := filepath.Join(filepath.Dir(configFile), BallName)
+
+	cfg, err := getConfig(configFile)
+	if err != nil {
+		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+	}
+
+	dir, err := makeConfigDir(cfg, filepath.Dir(configFile))
+	if err != nil {
+		return ball, fmt.Errorf("bootball: creating standard configuration directory faild: %v", err)
+	}
+
+	cert, err := getRootCert(filepath.Join(dir, signaturesDirName, rootCertName))
+	if err != nil {
+		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+	}
+
+	bootFiles, err := getBootFiles(cfg, dir)
+	if err != nil {
+		return ball, fmt.Errorf("bootball: getting boot files faild: %v", err)
+	}
+
+	ball.archive = archive
+	ball.dir = dir
+	ball.config = cfg
+	ball.rootCert = cert
+	ball.numBootConfigs = len(ball.config.BootConfigs)
+	ball.bootFiles = bootFiles
+
+	return ball, nil
+}
+
+func getConfig(dest string) (cfg *Stconfig, err error) {
+	cfgBytes, err := ioutil.ReadFile(dest)
+	if err != nil {
+		return
+	}
+	cfg, err = stconfigFromBytes(cfgBytes)
+	if err != nil {
+		return
+	}
+	if !(cfg.IsValid()) {
+		return cfg, errors.New("invalid configuration")
+	}
+	return
+}
+
+func getRootCert(dest string) (cert *x509.CertPool, err error) {
+	certBytes, err := ioutil.ReadFile(dest)
+	if err != nil {
+		return
+	}
+	cert, err = certPool(certBytes)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func getBootFiles(cfg *Stconfig, prefix string) (bootFiles [][]string, err error) {
+	bootFiles = make([][]string, 0)
+	for _, bc := range cfg.BootConfigs {
+		files := make([]string, 0)
+		for _, file := range bc.FileNames() {
+			file = filepath.Join(prefix, file)
+			files = append(files, file)
+			if err = validateFiles("", files...); err != nil {
+				return
 			}
 		}
-		fd, err := f.Open()
+		bootFiles = append(bootFiles, files)
+	}
+	return
+}
+
+func validateFiles(prefix string, files ...string) (err error) {
+	for _, file := range files {
+		_, err = os.Stat(filepath.Join(prefix, file))
 		if err != nil {
-			return nil, "", err
+			return
 		}
-		buf, err := ioutil.ReadAll(fd)
-		if err != nil {
-			return nil, "", err
-		}
-		if f.Name == ConfigName {
-			// make sure it's not a duplicate manifest within the ZIP file
-			// and inform the user otherwise
-			if cfg != nil {
-				log.Printf("Warning: duplicate config file found, the last found wins")
-			}
-			// parse the configuration
-			cfg, err = StconfigFromBytes(buf)
-			if err != nil {
-				return nil, "", err
-			}
-		}
-		if err := ioutil.WriteFile(destination, buf, f.Mode()); err != nil {
-			return nil, "", err
-		}
-		log.Printf("Extracted file %s (flags: %d, mode: %s)", f.Name, f.Flags, f.Mode())
 	}
-	if cfg == nil {
-		return nil, "", errors.New("no manifest found")
-	}
-	return cfg, tempDir, nil
+	return
 }
 
-// ToZip tries to pack all files specified in the the provided config file
-// into a zip archive. A copy of the config file is included in the resulting
-// archive with adopted paths. The archive is created at output. An error is
-// returned, if the files listed inside the file don't exist.
-func ToZip(output string, config string) error {
-	// Make sure the file is named according to the guidelines
-	if base := path.Base(config); base != ConfigName {
-		return fmt.Errorf("expect '%s', got: %s", ConfigName, base)
-	}
-	configBytes, err := ioutil.ReadFile(config)
-	if err != nil {
-		return err
-	}
-	cfg, err := StconfigFromBytes(configBytes)
-	if err != nil {
-		return fmt.Errorf("error parsing config: %v", err)
-	} else if !cfg.IsValid() {
-		return errors.New("config is not valid")
+func makeConfigDir(cfg *Stconfig, origDir string) (dir string, err error) {
+	if err = validateFiles(cfg.RootCertPath); err != nil {
+		return
 	}
 
-	// Create a buffer to write the archive to.
-	buf := new(bytes.Buffer)
-	// Create a new zip archive.
-	z := zip.NewWriter(buf)
+	for _, bc := range cfg.BootConfigs {
+		if err = validateFiles(origDir, bc.FileNames()...); err != nil {
+			return
+		}
+	}
 
-	var dest, origin string
-	//Archive boot files
+	dir, err = ioutil.TempDir(os.TempDir(), "bootball")
+	if err != nil {
+		return
+	}
+
+	dstPath := filepath.Join(dir, signaturesDirName, rootCertName)
+	srcPath := filepath.Join(origDir, cfg.RootCertPath)
+	copyFile(srcPath, dstPath)
+
 	for i, bc := range cfg.BootConfigs {
-		dir := fmt.Sprintf("bootconfig_%d/", i)
-		z.Create(dir)
+		dirName := fmt.Sprintf("%s%d", bootFilesDirName, i)
+		for _, file := range bc.FileNames() {
+			fileName := filepath.Base(file)
+			dstPath := filepath.Join(dir, dirName, fileName)
+			srcPath := filepath.Join(origDir, file)
+			copyFile(srcPath, dstPath)
+		}
+
 		if bc.Kernel != "" {
-			dest = path.Join(dir, path.Base(bc.Kernel))
-			origin = path.Join(path.Dir(config), bc.Kernel)
-			if err := toZip(z, dest, origin); err != nil {
-				return fmt.Errorf("cant pack kernel: %v", err)
-			}
-			bc.Kernel = dest
+			newPath := filepath.Join(dirName, path.Base(bc.Kernel))
+			bc.Kernel = newPath
 		}
 		if bc.Initramfs != "" {
-			dest = path.Join(dir, path.Base(bc.Initramfs))
-			origin = path.Join(path.Dir(config), bc.Initramfs)
-			if err := toZip(z, dest, origin); err != nil {
-				return fmt.Errorf("cant pack initramfs: %v", err)
-			}
-			bc.Initramfs = dest
+			newPath := filepath.Join(dirName, path.Base(bc.Initramfs))
+			bc.Initramfs = newPath
 		}
 		if bc.DeviceTree != "" {
-			dest = path.Join(dir, path.Base(bc.DeviceTree))
-			origin = path.Join(path.Dir(config), bc.DeviceTree)
-			if err := toZip(z, dest, origin); err != nil {
-				return fmt.Errorf("cant pack device tree: %v", err)
+			newPath := filepath.Join(dirName, path.Base(bc.DeviceTree))
+			bc.DeviceTree = newPath
+		}
+		if bc.Multiboot != "" {
+			newPath := filepath.Join(dirName, path.Base(bc.Multiboot))
+			bc.Multiboot = newPath
+		}
+		for j, mod := range bc.Modules {
+			if mod != "" {
+				newPath := filepath.Join(dirName, path.Base(mod))
+				bc.Modules[j] = newPath
 			}
-			bc.DeviceTree = dest
 		}
 		cfg.BootConfigs[i] = bc
 	}
 
-	// Archive root certificate
-	z.Create("certs/")
-	dest = "certs/root.cert"
-	origin = path.Join(path.Dir(config), cfg.RootCertPath)
-	if err = toZip(z, dest, origin); err != nil {
-		return fmt.Errorf("cannot pack certificate: %v", err)
+	dstPath = filepath.Join(dir, ConfigName)
+	bytes, err := cfg.bytes()
+	if err != nil {
+		return
 	}
-	cfg.RootCertPath = dest
+	ioutil.WriteFile(dstPath, bytes, os.ModePerm)
 
-	// Archive config
-	newConfig, err := StconfigToBytes(cfg)
-	if err != nil {
-		return fmt.Errorf("cannot serialize modified config: %v", err)
-	}
-	dst, err := z.Create(path.Base(config))
-	if err != nil {
-		return fmt.Errorf("cannot create modified config file in archive: %v", err)
-	}
-	_, err = io.Copy(dst, bytes.NewReader(newConfig))
-	if err != nil {
-		return fmt.Errorf("cannot write modified config: %v", err)
-	}
-
-	// Write central directory of archive
-	err = z.Close()
-	if err != nil {
-		return fmt.Errorf("cannot write central archive directory: %v", err)
-	}
-
-	err = ioutil.WriteFile(output, buf.Bytes(), 0777)
-	if err != nil {
-		return fmt.Errorf("cannot write archive to filesystem: %v", err)
-	}
-	return nil
+	return
 }
 
-func toZip(w *zip.Writer, newPath, originPath string) error {
-	dst, err := w.Create(newPath)
+func copyFile(src, dst string) (err error) {
+	in, err := os.Open(src)
 	if err != nil {
+		return
+	}
+	defer in.Close()
+
+	if err = os.MkdirAll(filepath.Dir(dst), os.ModePerm); err != nil {
+		return
+	}
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return
+	}
+	err = out.Sync()
+
+	return
+}
+
+func toZip(srcDir, dest string) (err error) {
+	info, err := os.Stat(srcDir)
+	if err != nil {
+		return
+	}
+	if !(info.IsDir()) {
+		return fmt.Errorf("%s is not a directory", srcDir)
+	}
+	archive, err := os.Create(dest)
+	if err != nil {
+		return
+	}
+	defer archive.Close()
+
+	z := zip.NewWriter(archive)
+	defer z.Close()
+
+	filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// do not include srcDir into archive
+		if strings.Compare(info.Name(), filepath.Base(srcDir)) == 0 {
+			return nil
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+
+		// adjust header.Name to preserve folder strulture
+		header.Name = strings.TrimPrefix(path, srcDir)
+
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Deflate
+		}
+
+		writer, err := z.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(writer, file)
 		return err
-	}
-	// Copy content from inputpath to new file
-	src, err := os.Open(originPath)
+	})
+
+	return
+}
+
+func fromZip(src, destDir string) (err error) {
+	z, err := zip.OpenReader(src)
 	if err != nil {
-		return fmt.Errorf("cannot find %s specified in config", originPath)
+		return
 	}
-	_, err = io.Copy(dst, src)
-	if err != nil {
-		return err
+
+	if err = os.MkdirAll(destDir, 0755); err != nil {
+		return
 	}
-	return src.Close()
+
+	for _, file := range z.File {
+		path := filepath.Join(destDir, file.Name)
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, file.Mode())
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(targetFile, fileReader); err != nil {
+			return err
+		}
+
+		fileReader.Close()
+		targetFile.Close()
+	}
+
+	return
 }

@@ -16,9 +16,8 @@ type Stconfig struct {
 	RootCertPath string `json:"root_cert"`
 }
 
-// StconfigFromBytes parses a manifest configuration, i.e. a list of boot
-// configurations, in JSON format and returns a Manifest object.
-func StconfigFromBytes(data []byte) (*Stconfig, error) {
+// StconfigFromBytes parses a Stcinfig from a byte slice
+func stconfigFromBytes(data []byte) (*Stconfig, error) {
 	var config Stconfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, err
@@ -26,18 +25,21 @@ func StconfigFromBytes(data []byte) (*Stconfig, error) {
 	return &config, nil
 }
 
-// StconfigToBytes serializes a Stconfig stuct into a byte slice
-func StconfigToBytes(cfg *Stconfig) ([]byte, error) {
-	buf, err := json.Marshal(cfg)
+// Bytes serializes a Stconfig stuct into a byte slice
+func (cfg *Stconfig) bytes() (buf []byte, err error) {
+	buf, err = json.Marshal(cfg)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return buf, nil
+	return
 }
 
 // IsValid returns true if all BootConfig structs inside the config has valid
 // content.
 func (cfg *Stconfig) IsValid() bool {
+	if len(cfg.BootConfigs) == 0 {
+		return false
+	}
 	for _, config := range cfg.BootConfigs {
 		if !config.IsValid() {
 			return false

@@ -105,7 +105,7 @@ func AddSignature(bootball, privKey, certFile string) error {
 	// Walk the directory and pack it.
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
-			err := toZip(z, strings.Replace(path, dir, "", -1)[1:], path)
+			err := tozip(z, strings.Replace(path, dir, "", -1)[1:], path)
 			if err != nil {
 				return fmt.Errorf(fmt.Sprintf("Error adding file %s to .zip archive again", strings.Replace(path, dir, "", -1)))
 			}
@@ -169,6 +169,15 @@ func parseCertificate(rawCertificate []byte) (x509.Certificate, error) {
 	}
 
 	return *pub, nil
+}
+
+func certPool(pem []byte) (*x509.CertPool, error) {
+	root := x509.NewCertPool()
+	ok := root.AppendCertsFromPEM(pem)
+	if !ok {
+		return nil, errors.New("Failed to parse root certificate")
+	}
+	return root, nil
 }
 
 // VerifySignatureInPath takes path as rootPath and walks
