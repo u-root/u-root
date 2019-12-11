@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package urlfetch implements routines to fetch files given a URL.
+// Package curl implements routines to fetch files given a URL.
 //
-// urlfetch currently supports HTTP, TFTP, local files, and a retrying HTTP
-// client.
-package urlfetch
+// curl currently supports HTTP, TFTP, local files, and a retrying HTTP client.
+package curl
 
 import (
 	"errors"

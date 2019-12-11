@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/kexec"
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -72,6 +72,12 @@ func (li *LinuxImage) Load(verbose bool) error {
 		initrd = progress(initrd)
 	}
 
+	// It seams inefficient to always copy, in particular when the reader
+	// is an io.File but that's not sufficient, os.File could be a socket,
+	// a pipe or some other strange thing. Also kexec_file_load will fail
+	// (similar to execve) if anything as the file opened for writing.
+	// That's unfortunately something we can't guarantee here - unless we
+	// make a copy of the file and dump it somewhere.
 	k, err := copyToFile(kernel)
 	if err != nil {
 		return err

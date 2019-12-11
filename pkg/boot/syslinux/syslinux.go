@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -52,7 +52,7 @@ type Config struct {
 // Currently, only the APPEND, INCLUDE, KERNEL, LABEL, DEFAULT, and INITRD
 // directives are partially supported.
 //
-// urlfetch.DefaultSchemes is used to fetch any files that must be parsed or
+// curl.DefaultSchemes is used to fetch any files that must be parsed or
 // provided.
 //
 // `wd` is the default scheme, host, and path for any files named as a
@@ -60,12 +60,12 @@ type Config struct {
 // relative to the wd. The default path for config files is assumed to be
 // `wd.Path`/pxelinux.cfg/.
 func ParseConfigFile(url string, wd *url.URL) (*Config, error) {
-	return ParseConfigFileWithSchemes(urlfetch.DefaultSchemes, url, wd)
+	return ParseConfigFileWithSchemes(curl.DefaultSchemes, url, wd)
 }
 
 // ParseConfigFileWithSchemes is like ParseConfigFile, but uses the given
 // schemes explicitly.
-func ParseConfigFileWithSchemes(s urlfetch.Schemes, url string, wd *url.URL) (*Config, error) {
+func ParseConfigFileWithSchemes(s curl.Schemes, url string, wd *url.URL) (*Config, error) {
 	p := newParserWithSchemes(wd, s)
 	if err := p.appendFile(url); err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ type parser struct {
 	scope        scope
 	curEntry     string
 	wd           *url.URL
-	schemes      urlfetch.Schemes
+	schemes      curl.Schemes
 }
 
 type scope uint8
@@ -99,7 +99,7 @@ const (
 // resulting URL is roughly `wd.String()/path`.
 //
 // `s` is used to get files referred to by URLs.
-func newParserWithSchemes(wd *url.URL, s urlfetch.Schemes) *parser {
+func newParserWithSchemes(wd *url.URL, s curl.Schemes) *parser {
 	return &parser{
 		config: &Config{
 			Entries: make(map[string]*boot.LinuxImage),
@@ -179,7 +179,7 @@ func (c *parser) append(config string) error {
 			c.config.DefaultEntry = arg
 
 		case "include":
-			if err := c.appendFile(arg); urlfetch.IsURLError(err) {
+			if err := c.appendFile(arg); curl.IsURLError(err) {
 				// Means we didn't find the file. Just ignore
 				// it.
 				// TODO(hugelgupf): plumb a logger through here.

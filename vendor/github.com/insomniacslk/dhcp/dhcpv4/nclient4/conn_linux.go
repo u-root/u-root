@@ -7,7 +7,7 @@
 package nclient4
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"net"
 
@@ -21,6 +21,11 @@ var (
 	//
 	// Any UDP packet sent to this address is broadcast on the subnet.
 	BroadcastMac = net.HardwareAddr([]byte{255, 255, 255, 255, 255, 255})
+)
+
+var (
+	// ErrUDPAddrIsRequired is an error used when a passed argument is not of type "*net.UDPAddr".
+	ErrUDPAddrIsRequired = errors.New("must supply UDPAddr")
 )
 
 // NewRawUDPConn returns a UDP connection bound to the interface and port
@@ -127,7 +132,7 @@ func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
 func (upc *BroadcastRawUDPConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 	udpAddr, ok := addr.(*net.UDPAddr)
 	if !ok {
-		return 0, fmt.Errorf("must supply UDPAddr")
+		return 0, ErrUDPAddrIsRequired
 	}
 
 	// Using the boundAddr is not quite right here, but it works.

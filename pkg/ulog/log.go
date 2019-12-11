@@ -24,4 +24,19 @@ type Logger interface {
 }
 
 // Log is a Logger that prints to stderr, like the default log package.
-var Log = log.New(os.Stderr, "", log.LstdFlags)
+var Log Logger = log.New(os.Stderr, "", log.LstdFlags)
+
+type emptyLogger struct{}
+
+func (emptyLogger) Printf(format string, v ...interface{}) {}
+func (emptyLogger) Print(v ...interface{})                 {}
+
+// Null is a logger that prints nothing.
+var Null Logger = emptyLogger{}
+
+// LogIfError logs "msg: err" if err is not nil.
+func LogIfError(l Logger, err error, msg string) {
+	if err != nil {
+		l.Printf("%s: %v", msg, err)
+	}
+}

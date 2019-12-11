@@ -16,8 +16,9 @@ u-root embodies four different projects.
 *   Go bootloaders that use `kexec` to boot Linux or multiboot kernels such as
     ESXi, Xen, or tboot. They are meant to be used with
     [LinuxBoot](https://www.linuxboot.org). With that, parsers for
-    [GRUB config files](pkg/diskboot) or [syslinux config files](pkg/syslinux)
-    are to make transition to LinuxBoot easier.
+    [GRUB config files](pkg/boot/diskboot) or
+    [syslinux config files](pkg/boot/syslinux) are to make transition to
+    LinuxBoot easier.
 
 *   A way to create very small Go programs using
     [busybox mode](pkg/bb/README.md) or source mode (see below).
@@ -74,8 +75,8 @@ for system firmwares.
 
 More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the
-[LinuxBoot book](https://github.com/linuxboot/book) chapter 11,
-[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/11.coreboot.u-root.systemboot/README.md).
+[LinuxBoot book](https://github.com/linuxboot/book) chapter 10,
+[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
 
 # Usage
 
@@ -128,9 +129,9 @@ sufficient to use an existing one. Usually you can find one in `/boot`.
 
 If you quickly need to obtain a kernel, for example, when you are on a non-Linux
 system, you can assemble a URL to download one through Arch Linux's
-[iPXE menu file](https://www.archlinux.org/releng/netboot/archlinux.ipxe).
-It would download from `${mirrorurl}iso/${release}/arch/boot/x86_64/vmlinuz`,
-so just search for a mirror URL you prefer and a release version, for example,
+[iPXE menu file](https://www.archlinux.org/releng/netboot/archlinux.ipxe). It
+would download from `${mirrorurl}iso/${release}/arch/boot/x86_64/vmlinuz`, so
+just search for a mirror URL you prefer and a release version, for example,
 `http://mirror.rackspace.com/archlinux/iso/2019.10.01/arch/boot/x86_64/vmlinuz`.
 
 > NOTE: you can compress the initramfs but for xz compression, the kernel has

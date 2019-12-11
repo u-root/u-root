@@ -35,7 +35,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/esxi"
+	"github.com/u-root/u-root/pkg/boot/esxi"
 )
 
 var (

@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -55,6 +56,7 @@ func main() {
 		flag.Usage()
 	}
 	root := a[0]
+
 	var mask, mode os.FileMode
 	if *perm != -1 {
 		mask = os.ModePerm
@@ -73,28 +75,23 @@ func main() {
 		mask |= os.ModeType
 	}
 
-	f, err := find.New(func(f *find.Finder) error {
-		f.Root = root
-		f.Pattern = *name
-		f.ModeMask = mask
-		f.Mode = mode
-		if *debug {
-			f.Debug = log.Printf
-		}
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
+	debugLog := func(string, ...interface{}) {}
+	if *debug {
+		debugLog = log.Printf
 	}
-	go f.Find()
-	for l := range f.Names {
+	names := find.Find(context.Background(),
+		find.WithRoot(root),
+		find.WithModeMatch(mode, mask),
+		find.WithFilenameMatch(*name),
+		find.WithDebugLog(debugLog),
+	)
+	for l := range names {
 		if l.Err != nil {
 			fmt.Fprintf(os.Stderr, "%v: %v\n", l.Name, l.Err)
 			continue
 		}
-		// TODO: get long listing formats out of ls and into a package.
 		if *long {
-			fmt.Printf("%v\n", l.FileInfo)
+			fmt.Printf("%s\n", l)
 			continue
 		}
 		fmt.Printf("%s\n", l.Name)
