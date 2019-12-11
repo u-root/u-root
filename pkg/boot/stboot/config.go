@@ -10,9 +10,9 @@ import (
 // Stconfig contains multiple u-root BootConfig stucts and additional
 // information for stboot
 type Stconfig struct {
-	// Configs is an array of u-root BootConfigs
+	// configs is an array of u-root BootConfigs
 	BootConfigs []bootconfig.BootConfig `json:"boot_configs"`
-	// RootCertPath is the path to root certificate of the signing
+	// rootCertPath is the path to root certificate of the signing
 	RootCertPath string `json:"root_cert"`
 }
 
@@ -53,9 +53,9 @@ func (cfg *Stconfig) IsValid() bool {
 
 // GetBootConfig returns the i-th boot configuration from the manifest, or an
 // error if an invalid index is passed.
-func (cfg *Stconfig) GetBootConfig(idx int) (*bootconfig.BootConfig, error) {
-	if idx < 0 || idx >= len(cfg.BootConfigs) {
-		return nil, fmt.Errorf("invalid index: not in range: %d", idx)
+func (cfg *Stconfig) getBootConfig(index int) (*bootconfig.BootConfig, error) {
+	if index < 0 || index >= len(cfg.BootConfigs) {
+		return nil, fmt.Errorf("invalid index: not in range: %d", index)
 	}
-	return &cfg.BootConfigs[idx], nil
+	return &cfg.BootConfigs[index], nil
 }

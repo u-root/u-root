@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -58,6 +59,46 @@ func (bc *BootConfig) FileNames() []string {
 		}
 	}
 	return files
+}
+
+func (bc *BootConfig) ChangeFilePaths(newPath string) {
+	if bc.Kernel != "" {
+		bc.Kernel = filepath.Join(newPath, filepath.Base(bc.Kernel))
+	}
+	if bc.Initramfs != "" {
+		bc.Initramfs = filepath.Join(newPath, filepath.Base(bc.Initramfs))
+	}
+	if bc.DeviceTree != "" {
+		bc.DeviceTree = filepath.Join(newPath, filepath.Base(bc.DeviceTree))
+	}
+	if bc.Multiboot != "" {
+		bc.Multiboot = filepath.Join(newPath, filepath.Base(bc.Multiboot))
+	}
+	for j, mod := range bc.Modules {
+		if mod != "" {
+			bc.Modules[j] = filepath.Join(newPath, filepath.Base(mod))
+		}
+	}
+}
+
+func (bc *BootConfig) SetFilePathsPrefix(newPath string) {
+	if bc.Kernel != "" {
+		bc.Kernel = filepath.Join(newPath, bc.Kernel)
+	}
+	if bc.Initramfs != "" {
+		bc.Initramfs = filepath.Join(newPath, bc.Initramfs)
+	}
+	if bc.DeviceTree != "" {
+		bc.DeviceTree = filepath.Join(newPath, bc.DeviceTree)
+	}
+	if bc.Multiboot != "" {
+		bc.Multiboot = filepath.Join(newPath, bc.Multiboot)
+	}
+	for j, mod := range bc.Modules {
+		if mod != "" {
+			bc.Modules[j] = filepath.Join(newPath, mod)
+		}
+	}
 }
 
 func (bc *BootConfig) bytestream() []byte {

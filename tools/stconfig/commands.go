@@ -2,25 +2,42 @@ package main
 
 import (
 	"log"
-	"path"
 
 	"github.com/u-root/u-root/pkg/boot/stboot"
 )
 
-func packBootBall(config string) error {
-	outPath := path.Join(path.Dir(config), stboot.BallName)
-	return stboot.ToZip(outPath, config)
+func packBootBall(config string) (err error) {
+	ball, err := stboot.BootBallFromConfig(config)
+	if err != nil {
+		return
+	}
+	err = ball.Pack()
+	if err != nil {
+		return
+	}
+	log.Printf("Bootball created at: " + ball.Archive)
+	return
+
 }
 
-func addSignatureToBootBall(bootBall, privKey, cert string) error {
-	return stboot.AddSignature(bootBall, privKey, cert)
+func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
+	ball, err := stboot.BootBallFromArchie(bootBall)
+	if err != nil {
+		return
+	}
+	err = ball.Sign(privKey, cert)
+	if err != nil {
+		return
+	}
+	log.Printf("tmp dir: %s", ball.Dir())
+	return ball.Pack()
 }
 
-func unpackBootBall(bootBall string) error {
-	_, outputDir, err := stboot.FromZip(bootBall)
+func unpackBootBall(bootBall string) (err error) {
+	ball, err := stboot.BootBallFromArchie(bootBall)
 	if err != nil {
 		return err
 	}
-	log.Println("Archive unpacked into: " + outputDir)
+	log.Println("Archive unpacked into: " + ball.Dir())
 	return nil
 }
