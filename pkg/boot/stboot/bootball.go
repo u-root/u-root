@@ -8,9 +8,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/bootconfig"
 )
 
 const (
@@ -19,20 +21,17 @@ const (
 	bootFilesDirName  string = "bootconfig"
 )
 
-type signature struct {
-	Bytes []byte
-	Cert  *x509.Certificate
-}
-
 type BootBall struct {
-	archive        string
+	Archive        string
 	dir            string
 	config         *Stconfig
 	numBootConfigs int
 	bootFiles      [][]string
 	rootCert       *x509.CertPool
-	signatures     []signature
+	signatures     [][]signature
 	hashes         [][]byte
+	hasher         Hasher
+	signer         Signer
 }
 
 func BootBallFromArchie(archive string) (BootBall, error) {
@@ -40,35 +39,37 @@ func BootBallFromArchie(archive string) (BootBall, error) {
 
 	dir, err := ioutil.TempDir(os.TempDir(), "bootball")
 	if err != nil {
-		return ball, fmt.Errorf("bootball: cannot create tmp dir: %v", err)
+		return ball, fmt.Errorf("BootBall: cannot create tmp dir: %v", err)
 	}
 
 	err = fromZip(archive, dir)
 	if err != nil {
-		return ball, fmt.Errorf("bootball: cannot unzip %s: %v", archive, err)
+		return ball, fmt.Errorf("BootBall: cannot unzip %s: %v", archive, err)
 	}
 
 	cfg, err := getConfig(filepath.Join(dir, ConfigName))
 	if err != nil {
-		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
 	}
 
 	cert, err := getRootCert(filepath.Join(dir, signaturesDirName, rootCertName))
 	if err != nil {
-		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
 	}
 
 	bootFiles, err := getBootFiles(cfg, dir)
 	if err != nil {
-		return ball, fmt.Errorf("bootball: getting boot files faild: %v", err)
+		return ball, fmt.Errorf("BootBall: getting boot files faild: %v", err)
 	}
 
-	ball.archive = archive
+	ball.Archive = archive
 	ball.dir = dir
 	ball.config = cfg
 	ball.rootCert = cert
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
+	ball.hasher = sha512Hasher{}
+	ball.signer = pssSigner{}
 
 	return ball, nil
 }
@@ -80,32 +81,110 @@ func BootBallFromConfig(configFile string) (BootBall, error) {
 
 	cfg, err := getConfig(configFile)
 	if err != nil {
-		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
 	}
 
 	dir, err := makeConfigDir(cfg, filepath.Dir(configFile))
 	if err != nil {
-		return ball, fmt.Errorf("bootball: creating standard configuration directory faild: %v", err)
+		return ball, fmt.Errorf("BootBall: creating standard configuration directory faild: %v", err)
 	}
 
 	cert, err := getRootCert(filepath.Join(dir, signaturesDirName, rootCertName))
 	if err != nil {
-		return ball, fmt.Errorf("bootball: getting configuration faild: %v", err)
+		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
 	}
 
 	bootFiles, err := getBootFiles(cfg, dir)
 	if err != nil {
-		return ball, fmt.Errorf("bootball: getting boot files faild: %v", err)
+		return ball, fmt.Errorf("BootBall: getting boot files faild: %v", err)
 	}
 
-	ball.archive = archive
+	ball.Archive = archive
 	ball.dir = dir
 	ball.config = cfg
 	ball.rootCert = cert
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
+	ball.hasher = sha512Hasher{}
+	ball.signer = pssSigner{}
+
+	err = ball.getSignatures()
+	if err != nil {
+		return ball, fmt.Errorf("BootBall: getting signatures: %v", err)
+	}
 
 	return ball, nil
+}
+
+// Pack writes the contents BootBall.Archive
+func (ball *BootBall) Pack() (err error) {
+	if ball.Archive == "" || ball.dir == "" {
+		return errors.New("BootBall.Pack: booball.archive and bootball.dir must be set")
+	}
+	return toZip(ball.dir, ball.Archive)
+}
+
+// Dir returns the directory associated with BootBall
+func (ball *BootBall) Dir() (dir string) {
+	return ball.dir
+}
+
+func (ball *BootBall) GetBootConfigByIndex(index int) (bc *bootconfig.BootConfig, err error) {
+	bc, err = ball.config.getBootConfig(index)
+	if err != nil {
+		return
+	}
+	bc.SetFilePathsPrefix(ball.dir)
+	return
+}
+
+func (ball *BootBall) Hash() (err error) {
+	ball.hashes = make([][]byte, len(ball.config.BootConfigs))
+	for i, files := range ball.bootFiles {
+		hash, herr := ball.hasher.hash(files...)
+		if herr != nil {
+			return herr
+		}
+		ball.hashes[i] = hash
+	}
+	return
+}
+
+func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
+	err = validateFiles("", privKeyFile, certFile)
+	if err != nil {
+		return
+	}
+
+	buf, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return
+	}
+
+	cert, err := parseCertificate(buf)
+	err = validateCertificate(cert, ball.rootCert)
+	if err != nil {
+		return
+	}
+
+	if ball.hashes == nil {
+		ball.Hash()
+	}
+	sigs := make([]signature, len(ball.config.BootConfigs))
+	for i, hash := range ball.hashes {
+		s, err := ball.signer.sign(privKeyFile, hash)
+		if err != nil {
+			return err
+		}
+		sigs[i].Bytes = s
+		sigs[i].Cert = cert
+	}
+
+	return writeSignatures(sigs, certFile, ball.dir)
+}
+
+func (ball *BootBall) Verify() (err error) {
+	return nil
 }
 
 func getConfig(dest string) (cfg *Stconfig, err error) {
@@ -151,11 +230,81 @@ func getBootFiles(cfg *Stconfig, prefix string) (bootFiles [][]string, err error
 	return
 }
 
+func (ball *BootBall) getSignatures() (err error) {
+	ball.signatures = make([][]signature, len(ball.config.BootConfigs))
+	path := filepath.Join(ball.dir, signaturesDirName)
+
+	sigPool := make([]signature, 0)
+	err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		ext := filepath.Ext(info.Name())
+
+		if !info.IsDir() && (ext == ".signature") {
+			sigBytes, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			dir := filepath.Dir(path)
+			index, err := strconv.Atoi(dir[len(dir)-1:])
+			if err != nil {
+				return err
+			}
+
+			certFile := strings.TrimSuffix(path, filepath.Ext(path)) + ".cert"
+			certBytes, err := ioutil.ReadFile(certFile)
+			if err != nil {
+				return err
+			}
+
+			cert, err := parseCertificate(certBytes)
+			if err != nil {
+				return err
+			}
+
+			sig := signature{
+				Bytes: sigBytes,
+				Cert:  cert,
+			}
+			sigPool = append(sigPool, sig)
+			ball.signatures[index] = sigPool
+		}
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	return
+}
+
 func validateFiles(prefix string, files ...string) (err error) {
 	for _, file := range files {
 		_, err = os.Stat(filepath.Join(prefix, file))
 		if err != nil {
 			return
+		}
+	}
+	return
+}
+
+func writeSignatures(sigs []signature, certFile, dir string) (err error) {
+	for i, sig := range sigs {
+		d := fmt.Sprintf("%s%d", bootFilesDirName, i)
+		path := filepath.Join(dir, signaturesDirName, d)
+		os.Mkdir(path, os.ModePerm)
+
+		id := fmt.Sprintf("%x", sig.Cert.PublicKey)[2:18]
+		sigName := fmt.Sprintf("%s.signature", id)
+		sigPath := filepath.Join(path, sigName)
+		werr := ioutil.WriteFile(sigPath, sig.Bytes, 0644)
+		if werr != nil {
+			return werr
+		}
+
+		certName := fmt.Sprintf("%s.cert", id)
+		certPath := filepath.Join(path, certName)
+		cerr := copyFile(certFile, certPath)
+		if cerr != nil {
+			return cerr
 		}
 	}
 	return
@@ -190,28 +339,7 @@ func makeConfigDir(cfg *Stconfig, origDir string) (dir string, err error) {
 			copyFile(srcPath, dstPath)
 		}
 
-		if bc.Kernel != "" {
-			newPath := filepath.Join(dirName, path.Base(bc.Kernel))
-			bc.Kernel = newPath
-		}
-		if bc.Initramfs != "" {
-			newPath := filepath.Join(dirName, path.Base(bc.Initramfs))
-			bc.Initramfs = newPath
-		}
-		if bc.DeviceTree != "" {
-			newPath := filepath.Join(dirName, path.Base(bc.DeviceTree))
-			bc.DeviceTree = newPath
-		}
-		if bc.Multiboot != "" {
-			newPath := filepath.Join(dirName, path.Base(bc.Multiboot))
-			bc.Multiboot = newPath
-		}
-		for j, mod := range bc.Modules {
-			if mod != "" {
-				newPath := filepath.Join(dirName, path.Base(mod))
-				bc.Modules[j] = newPath
-			}
-		}
+		bc.ChangeFilePaths(dirName)
 		cfg.BootConfigs[i] = bc
 	}
 
