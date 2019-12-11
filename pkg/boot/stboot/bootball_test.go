@@ -14,4 +14,5 @@ func TestBootBallFromConfig(t *testing.T) {
 	require.NoError(t, err)
 	_, err = os.Stat(ball.dir)
 	require.NoError(t, err)
+	// todo: test files, too
 }

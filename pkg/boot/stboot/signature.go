@@ -20,6 +20,191 @@ import (
 	"time"
 )
 
+type signature struct {
+	Bytes []byte
+	Cert  *x509.Certificate
+}
+
+type Hasher interface {
+	hash(files ...string) (hash []byte, err error)
+}
+
+type Signer interface {
+	sign(privKey string, data []byte) (sig []byte, err error)
+	verify(sig signature, root *x509.CertPool) (err error)
+}
+
+type sha512Hasher struct{}
+
+func (sha512Hasher) hash(files ...string) (hash []byte, err error) {
+	h := sha512.New()
+	h.Reset()
+
+	for _, file := range files {
+		buf, err := ioutil.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+		h.Write(buf)
+	}
+	return h.Sum(nil), nil
+}
+
+type pssSigner struct{}
+
+func (pssSigner) sign(privKey string, data []byte) (sig []byte, err error) {
+	buf, err := ioutil.ReadFile(privKey)
+	if err != nil {
+		return
+	}
+
+	privPem, _ := pem.Decode(buf)
+	key, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
+	if err != nil {
+		return
+	}
+	if key == nil {
+		err = fmt.Errorf("key is empty")
+		return
+	}
+
+	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
+
+	signed, err := rsa.SignPSS(rand.Reader, key, crypto.SHA512, data, opts)
+	if err != nil {
+		return
+	}
+	if signed == nil {
+		err = fmt.Errorf("signature is nil")
+		return
+	}
+	return
+}
+
+func (pssSigner) verify(sig signature, root *x509.CertPool) (err error) {
+	return nil
+}
+
+// parseCertificate parses certificate from raw certificate
+func parseCertificate(raw []byte) (cert *x509.Certificate, err error) {
+	block, _ := pem.Decode(raw)
+
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func certPool(pem []byte) (certPool *x509.CertPool, err error) {
+	certPool = x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(pem)
+	if !ok {
+		err = errors.New("Failed to parse root certificate")
+		return
+	}
+	return
+}
+
+func validateCertificate(cert *x509.Certificate, cerPool *x509.CertPool) (err error) {
+	opts := x509.VerifyOptions{
+		Roots: cerPool,
+	}
+	_, err = cert.Verify(opts)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// HashBootconfigDir hashes every file inside bootconigDir and returns a
+// SHA512 hash
+func hashBootconfigDir(bootconfigDir string) ([]byte, error) {
+
+	hash := sha512.New()
+	hash.Reset()
+
+	files, err := ioutil.ReadDir(bootconfigDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range files {
+		if !file.IsDir() {
+			p := path.Join(bootconfigDir, file.Name())
+			buf, err := ioutil.ReadFile(p)
+			if err != nil {
+				return nil, err
+			}
+			hash.Write(buf)
+
+		}
+	}
+	return hash.Sum(nil), nil
+}
+
+// VerifySignatureInPath takes path as rootPath and walks
+// the directory. Every .cert file it sees, it verifies the .cert
+// file with the root certificate, checks if a .signture file
+// exists, verify if the signature is correct according to the
+// hashValue.
+func VerifySignatureInPath(path string, hashValue []byte, rootCert []byte, minAmountValid int) error {
+	validSignatures := 0
+
+	// Build up tree
+	root := x509.NewCertPool()
+	ok := root.AppendCertsFromPEM(rootCert)
+	if !ok {
+		return errors.New("Failed to parse root certificate")
+	}
+
+	opts := x509.VerifyOptions{
+		Roots: root,
+	}
+
+	// Check certs and signatures
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() && (filepath.Ext(info.Name()) == ".cert") {
+			// Read cert and verify
+			userCert, err := ioutil.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("unable to read certificate: %v", err)
+			}
+			block, _ := pem.Decode(userCert)
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return fmt.Errorf("unable to parse certificate: %v", err)
+			}
+			// verify certificates with root certificate
+			_, err = cert.Verify(opts)
+			if err != nil {
+				return fmt.Errorf("unable to verify %s with root certificate: %v", path, err)
+			}
+			// Read signature and verify it.
+			signatureFilename := strings.TrimSuffix(path, filepath.Ext(path)) + ".signature"
+			signatureRaw, err := ioutil.ReadFile(signatureFilename)
+			if err != nil {
+				return fmt.Errorf("unable to read signature at %s with: %v", signatureFilename, err)
+			}
+			opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
+			err = rsa.VerifyPSS(cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hashValue, signatureRaw, opts)
+			if err != nil {
+				return fmt.Errorf("signature Verification failed for %s with %v", filepath.Base(signatureFilename), err)
+			}
+			validSignatures++
+			log.Print(fmt.Sprintf("%s verfied.", signatureFilename))
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if validSignatures < minAmountValid {
+		return fmt.Errorf("Did not found enough valid signatures. Only %d (%d required) are valid", validSignatures, minAmountValid)
+	}
+
+	return nil
+}
+
 // AddSignature signes the content of a ST bootball and inserts the
 // signature into the archive along with the respective certificate
 func AddSignature(bootball, privKey, certFile string) error {
@@ -128,117 +313,4 @@ func AddSignature(bootball, privKey, certFile string) error {
 
 	return nil
 
-}
-
-// HashBootconfigDir hashes every file inside bootconigDir and returns a
-// SHA512 hash
-func hashBootconfigDir(bootconfigDir string) ([]byte, error) {
-
-	hash := sha512.New()
-	hash.Reset()
-
-	files, err := ioutil.ReadDir(bootconfigDir)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		if !file.IsDir() {
-			p := path.Join(bootconfigDir, file.Name())
-			buf, err := ioutil.ReadFile(p)
-			if err != nil {
-				return nil, err
-			}
-			hash.Write(buf)
-
-		}
-	}
-	return hash.Sum(nil), nil
-}
-
-// parseCertificate parses certificate from raw certificate
-func parseCertificate(rawCertificate []byte) (x509.Certificate, error) {
-
-	block, _ := pem.Decode(rawCertificate)
-	if block == nil {
-		log.Fatal("failed to parse PEM block containing the public key")
-	}
-
-	pub, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return *pub, fmt.Errorf("failed to parse DER encoded public key: %v", err)
-	}
-
-	return *pub, nil
-}
-
-func certPool(pem []byte) (*x509.CertPool, error) {
-	root := x509.NewCertPool()
-	ok := root.AppendCertsFromPEM(pem)
-	if !ok {
-		return nil, errors.New("Failed to parse root certificate")
-	}
-	return root, nil
-}
-
-// VerifySignatureInPath takes path as rootPath and walks
-// the directory. Every .cert file it sees, it verifies the .cert
-// file with the root certificate, checks if a .signture file
-// exists, verify if the signature is correct according to the
-// hashValue.
-func VerifySignatureInPath(path string, hashValue []byte, rootCert []byte, minAmountValid int) error {
-	validSignatures := 0
-
-	// Build up tree
-	root := x509.NewCertPool()
-	ok := root.AppendCertsFromPEM(rootCert)
-	if !ok {
-		return errors.New("Failed to parse root certificate")
-	}
-
-	opts := x509.VerifyOptions{
-		Roots: root,
-	}
-
-	// Check certs and signatures
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && (filepath.Ext(info.Name()) == ".cert") {
-			// Read cert and verify
-			userCert, err := ioutil.ReadFile(path)
-			if err != nil {
-				return fmt.Errorf("unable to read certificate: %v", err)
-			}
-			block, _ := pem.Decode(userCert)
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return fmt.Errorf("unable to parse certificate: %v", err)
-			}
-			// verify certificates with root certificate
-			_, err = cert.Verify(opts)
-			if err != nil {
-				return fmt.Errorf("unable to verify %s with root certificate: %v", path, err)
-			}
-			// Read signature and verify it.
-			signatureFilename := strings.TrimSuffix(path, filepath.Ext(path)) + ".signature"
-			signatureRaw, err := ioutil.ReadFile(signatureFilename)
-			if err != nil {
-				return fmt.Errorf("unable to read signature at %s with: %v", signatureFilename, err)
-			}
-			opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
-			err = rsa.VerifyPSS(cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hashValue, signatureRaw, opts)
-			if err != nil {
-				return fmt.Errorf("signature Verification failed for %s with %v", filepath.Base(signatureFilename), err)
-			}
-			validSignatures++
-			log.Print(fmt.Sprintf("%s verfied.", signatureFilename))
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if validSignatures < minAmountValid {
-		return fmt.Errorf("Did not found enough valid signatures. Only %d (%d required) are valid", validSignatures, minAmountValid)
-	}
-
-	return nil
 }
