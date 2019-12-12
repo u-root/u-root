@@ -17,8 +17,8 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/acpi"
-	"github.com/u-root/u-root/pkg/ebda"
+	"github.com/u-root/u-root/pkg/boot/acpi"
+	"github.com/u-root/u-root/pkg/boot/ebda"
 )
 
 func main() {

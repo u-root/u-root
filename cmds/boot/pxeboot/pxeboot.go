@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/netboot"
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/u-root/u-root/pkg/netboot"
-	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -84,7 +84,7 @@ func Netboot(ifaceNames string) error {
 				// If lease failed, fall back to use locally configured
 				// ip/ipv6 address.
 			}
-			img, err := netboot.BootImage(urlfetch.DefaultSchemes, result.Lease)
+			img, err := netboot.BootImage(curl.DefaultSchemes, result.Lease)
 			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue

@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 type parser struct {
 	bootImage *boot.LinuxImage
 
-	schemes urlfetch.Schemes
+	schemes curl.Schemes
 }
 
 // ParseConfig returns a new  configuration with the file at URL and default
@@ -38,14 +38,14 @@ type parser struct {
 //
 // See ParseConfigWithSchemes for more details.
 func ParseConfig(configURL *url.URL) (*boot.LinuxImage, error) {
-	return ParseConfigWithSchemes(configURL, urlfetch.DefaultSchemes)
+	return ParseConfigWithSchemes(configURL, curl.DefaultSchemes)
 }
 
 // ParseConfigWithSchemes returns a new  configuration with the file at URL
 // and schemes `s`.
 //
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfigWithSchemes(configURL *url.URL, s urlfetch.Schemes) (*boot.LinuxImage, error) {
+func ParseConfigWithSchemes(configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
 	c := &parser{
 		schemes: s,
 	}

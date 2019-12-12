@@ -21,6 +21,6 @@
         "cmds/core/ping/.*",
         "cmds/exp/ectool/.*",
         "cmds/core/man/data/data.go",
-        "pkg/diskboot/entrytype_string.go"
+        "pkg/boot/diskboot/entrytype_string.go"
     ]
 }

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/ibft"
-	"github.com/u-root/u-root/pkg/multiboot"
+	"github.com/u-root/u-root/pkg/boot/ibft"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
 
 // MultibootImage is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,

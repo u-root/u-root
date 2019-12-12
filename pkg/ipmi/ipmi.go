@@ -20,6 +20,7 @@ const (
 	_IPMI_BUF_SIZE                   = 1024
 	_IPMI_IOC_MAGIC                  = 'i'
 	_IPMI_NETFN_APP                  = 0x6
+	_IPMI_NETFN_STORAGE              = 0xA
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
@@ -32,6 +33,7 @@ const (
 	_BMC_SET_GLOBAL_ENABLES     = 0x2E
 	_BMC_GET_GLOBAL_ENABLES     = 0x2F
 	_SET_SYSTEM_INFO_PARAMETERS = 0x58
+	_BMC_ADD_SEL                = 0x44
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
@@ -85,6 +87,46 @@ type systemInterfaceAddr struct {
 	addrType int32
 	channel  int16
 	lun      byte //nolint:unused
+}
+
+// StandardEvent is a standard systemevent.
+//
+// The data in this event should follow IPMI spec
+type StandardEvent struct {
+	Timestamp    uint32
+	GenID        uint16
+	EvMRev       uint8
+	SensorType   uint8
+	SensorNum    uint8
+	EventTypeDir uint8
+	EventData    [3]uint8
+}
+
+// OEMTsEvent is a timestamped OEM-custom event.
+//
+// It holds 6 bytes of OEM-defined arbitrary data.
+type OEMTsEvent struct {
+	Timestamp        uint32
+	ManfID           [3]uint8
+	OEMTsDefinedData [6]uint8
+}
+
+// OEMNonTsEvent is a non-timestamped OEM-custom event.
+//
+// It holds 13 bytes of OEM-defined arbitrary data.
+type OEMNontsEvent struct {
+	OEMNontsDefinedData [13]uint8
+}
+
+// Event is included three kinds of events, Standard, OEM timestamped and OEM non-timestamped
+//
+// The record type decides which event should be used
+type Event struct {
+	RecordID   uint16
+	RecordType uint8
+	StandardEvent
+	OEMTsEvent
+	OEMNontsEvent
 }
 
 type setSystemInfoReq struct {
@@ -182,6 +224,56 @@ func (i *IPMI) ShutoffWatchdog() error {
 	}
 
 	return nil
+}
+
+// marshall converts the Event struct to binary data and the content of returned data is based on the record type
+func (e *Event) marshall() ([]byte, error) {
+	buf := &bytes.Buffer{}
+
+	if err := binary.Write(buf, binary.LittleEndian, *e); err != nil {
+		return nil, err
+	}
+
+	data := make([]byte, 16)
+
+	// system event record
+	if buf.Bytes()[2] == 0x2 {
+		copy(data[:], buf.Bytes()[:16])
+	}
+
+	// OEM timestamped
+	if buf.Bytes()[2] >= 0xC0 && buf.Bytes()[2] <= 0xDF {
+		copy(data[0:3], buf.Bytes()[0:3])
+		copy(data[3:16], buf.Bytes()[16:29])
+	}
+
+	// OEM non-timestamped
+	if buf.Bytes()[2] >= 0xE0 && buf.Bytes()[2] <= 0xFF {
+		copy(data[0:3], buf.Bytes()[0:3])
+		copy(data[3:16], buf.Bytes()[29:42])
+	}
+
+	return data, nil
+}
+
+// LogSystemEvent adds an SEL (System Event Log) entry.
+func (i *IPMI) LogSystemEvent(e *Event) error {
+	req := &req{}
+	req.msg.cmd = _BMC_ADD_SEL
+	req.msg.netfn = _IPMI_NETFN_STORAGE
+
+	data, err := e.marshall()
+
+	if err != nil {
+		return err
+	}
+
+	req.msg.data = unsafe.Pointer(&data[0])
+	req.msg.dataLen = 16
+
+	_, err = i.sendrecv(req)
+
+	return err
 }
 
 func (i *IPMI) setsysinfo(data *setSystemInfoReq) error {

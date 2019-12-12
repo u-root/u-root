@@ -27,8 +27,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/u-root/pkg/urlfetch"
 )
 
 var (
@@ -66,13 +66,13 @@ func main() {
 		}
 	}
 
-	schemes := urlfetch.Schemes{
-		"tftp": urlfetch.DefaultTFTPClient,
-		"http": urlfetch.DefaultHTTPClient,
+	schemes := curl.Schemes{
+		"tftp": curl.DefaultTFTPClient,
+		"http": curl.DefaultHTTPClient,
 
-		// urlfetch.DefaultSchemes doesn't support HTTPS by default.
-		"https": urlfetch.DefaultHTTPClient,
-		"file":  &urlfetch.LocalFileClient{},
+		// curl.DefaultSchemes doesn't support HTTPS by default.
+		"https": curl.DefaultHTTPClient,
+		"file":  &curl.LocalFileClient{},
 	}
 
 	readerAt, err := schemes.Fetch(url)
