@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -166,6 +167,8 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 	if err != nil {
 		return
 	}
+
+	log.Printf("Signing with: %s", privKeyFile)
 
 	if ball.hashes == nil {
 		ball.Hash()
