@@ -29,7 +29,6 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 	if err != nil {
 		return
 	}
-	log.Printf("tmp dir: %s", ball.Dir())
 	return ball.Pack()
 }
 
