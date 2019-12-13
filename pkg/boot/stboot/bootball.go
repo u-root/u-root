@@ -35,8 +35,8 @@ type BootBall struct {
 	signer         Signer
 }
 
-func BootBallFromArchie(archive string) (BootBall, error) {
-	var ball BootBall
+func BootBallFromArchie(archive string) (*BootBall, error) {
+	var ball = new(BootBall)
 
 	dir, err := ioutil.TempDir(os.TempDir(), "bootball")
 	if err != nil {
@@ -75,8 +75,8 @@ func BootBallFromArchie(archive string) (BootBall, error) {
 	return ball, nil
 }
 
-func BootBallFromConfig(configFile string) (BootBall, error) {
-	var ball BootBall
+func BootBallFromConfig(configFile string) (*BootBall, error) {
+	var ball = new(BootBall)
 
 	archive := filepath.Join(filepath.Dir(configFile), BallName)
 
