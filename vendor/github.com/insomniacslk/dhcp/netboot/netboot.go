@@ -16,6 +16,20 @@ var sleeper = func(d time.Duration) {
 	time.Sleep(d)
 }
 
+// BootConf is a structure describes everything a host needs to know to boot over network
+type BootConf struct {
+	// NetConf is the network configuration of the client
+	NetConf
+
+	// BootfileURL is "where is the image (kernel)".
+	// See RFC5970 section 3.1 for IPv6 and RFC2132 section 9.5 ("Bootfile name") for IPv4
+	BootfileURL string
+
+	// BootfileParam is "what arguments should we pass (cmdline)".
+	// See RFC5970 section 3.2 for IPv6.
+	BootfileParam []string
+}
+
 // RequestNetbootv6 sends a netboot request via DHCPv6 and returns the exchanged packets. Additional modifiers
 // can be passed to manipulate both solicit and advertise packets.
 func RequestNetbootv6(ifname string, timeout time.Duration, retries int, modifiers ...dhcpv6.Modifier) ([]dhcpv6.DHCPv6, error) {
@@ -81,75 +95,71 @@ func RequestNetbootv4(ifname string, timeout time.Duration, retries int, modifie
 
 // ConversationToNetconf extracts network configuration and boot file URL from a
 // DHCPv6 4-way conversation and returns them, or an error if any.
-func ConversationToNetconf(conversation []dhcpv6.DHCPv6) (*NetConf, string, error) {
-	var reply dhcpv6.DHCPv6
+func ConversationToNetconf(conversation []dhcpv6.DHCPv6) (*BootConf, error) {
+	var advertise, reply, optionsSource dhcpv6.DHCPv6
 	for _, m := range conversation {
-		// look for a REPLY
-		if m.Type() == dhcpv6.MessageTypeReply {
+		switch m.Type() {
+		case dhcpv6.MessageTypeAdvertise:
+			advertise = m
+		case dhcpv6.MessageTypeReply:
 			reply = m
-			break
 		}
 	}
 	if reply == nil {
-		return nil, "", errors.New("no REPLY received")
+		return nil, errors.New("no REPLY received")
 	}
+
+	bootconf := &BootConf{}
 	netconf, err := GetNetConfFromPacketv6(reply.(*dhcpv6.Message))
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot get netconf from packet: %v", err)
+		return nil, fmt.Errorf("cannot get netconf from packet: %v", err)
 	}
-	// look for boot file
-	var (
-		opt      dhcpv6.Option
-		bootfile string
-	)
-	opt = reply.GetOneOption(dhcpv6.OptionBootfileURL)
-	if opt == nil {
-		log.Printf("no bootfile URL option found in REPLY, looking for it in ADVERTISE")
-		// as a fallback, look for bootfile URL in the advertise
-		var advertise dhcpv6.DHCPv6
-		for _, m := range conversation {
-			// look for an ADVERTISE
-			if m.Type() == dhcpv6.MessageTypeAdvertise {
-				advertise = m
-				break
-			}
-		}
-		if advertise == nil {
-			return nil, "", errors.New("no ADVERTISE found")
-		}
-		opt = advertise.GetOneOption(dhcpv6.OptionBootfileURL)
-		if opt == nil {
-			return nil, "", errors.New("no bootfile URL option found in ADVERTISE")
+	bootconf.NetConf = *netconf
+
+	if reply.GetOneOption(dhcpv6.OptionBootfileURL) != nil {
+		optionsSource = reply
+	} else {
+		log.Printf("no bootfile URL option found in REPLY, fallback to ADVERTISE's value")
+		if advertise.GetOneOption(dhcpv6.OptionBootfileURL) != nil {
+			optionsSource = advertise
 		}
 	}
-	if opt != nil {
-		obf := opt.(dhcpv6.OptBootFileURL)
-		bootfile = string(obf)
+	if optionsSource == nil {
+		return nil, errors.New("no bootfile URL option found")
 	}
-	return netconf, bootfile, nil
+	bootconf.BootfileURL = string(optionsSource.GetOneOption(dhcpv6.OptionBootfileURL).(dhcpv6.OptBootFileURL))
+
+	if bootfileParamOption := optionsSource.GetOneOption(dhcpv6.OptionBootfileParam); bootfileParamOption != nil {
+		bootconf.BootfileParam = bootfileParamOption.(dhcpv6.OptBootFileParam)
+	}
+	return bootconf, nil
 }
 
 // ConversationToNetconfv4 extracts network configuration and boot file URL from a
 // DHCPv4 4-way conversation and returns them, or an error if any.
-func ConversationToNetconfv4(conversation []*dhcpv4.DHCPv4) (*NetConf, string, error) {
+func ConversationToNetconfv4(conversation []*dhcpv4.DHCPv4) (*BootConf, error) {
 	var reply *dhcpv4.DHCPv4
-	var bootFileURL string
 	for _, m := range conversation {
 		// look for a BootReply packet of type Offer containing the bootfile URL.
 		// Normally both packets with Message Type OFFER or ACK do contain
 		// the bootfile URL.
 		if m.OpCode == dhcpv4.OpcodeBootReply && m.MessageType() == dhcpv4.MessageTypeOffer {
-			bootFileURL = m.BootFileName
 			reply = m
 			break
 		}
 	}
 	if reply == nil {
-		return nil, "", errors.New("no OFFER with valid bootfile URL received")
+		return nil, errors.New("no OFFER with valid bootfile URL received")
 	}
+
+	bootconf := &BootConf{}
 	netconf, err := GetNetConfFromPacketv4(reply)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not get netconf: %v", err)
+		return nil, fmt.Errorf("could not get netconf: %v", err)
 	}
-	return netconf, bootFileURL, nil
+	bootconf.NetConf = *netconf
+
+	bootconf.BootfileURL = reply.BootFileName
+	// TODO: should we support bootfile parameters here somehow? (see netconf.BootfileParam)
+	return bootconf, nil
 }
