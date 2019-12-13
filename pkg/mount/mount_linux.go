@@ -23,7 +23,10 @@ const (
 	MS_NOUSER   = unix.MS_NOUSER
 	MS_RELATIME = unix.MS_RELATIME
 	MS_SYNC     = unix.MS_SYNC
+)
 
+// Unmount flags.
+const (
 	MNT_FORCE  = unix.MNT_FORCE
 	MNT_DETACH = unix.MNT_DETACH
 )
