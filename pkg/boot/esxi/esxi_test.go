@@ -6,11 +6,14 @@ package esxi
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 func TestParse(t *testing.T) {
@@ -145,11 +148,35 @@ var (
 	device   = "testdata/dev"
 )
 
+// use that in test and pass it instead of the uio.NewLazyFile to getBootImage
+type testReaderAt struct {
+	Path string
+}
+
+// ReadAt implements io.ReaderAt.ReadAt.
+func (tra *testReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+// Close implements io.Closer.Close.
+func (tra *testReaderAt) Close() error {
+	return nil
+}
+
+func newTestReaderAt(path string) uio.ReadAtCloser {
+	return &testReaderAt{Path: path}
+}
+
 func TestDev5Valid(t *testing.T) {
+	prevFileOpener := fileOpener
+	defer func() { fileOpener = prevFileOpener }()
+	fileOpener = newTestReaderAt
+
 	want := []*boot.MultibootImage{
 		{
-			Path:    "testdata/k",
+			Kernel:  newTestReaderAt("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
+			Modules: []multiboot.Module{},
 		},
 	}
 
@@ -178,10 +205,15 @@ func TestDev5Valid(t *testing.T) {
 }
 
 func TestDev6Valid(t *testing.T) {
+	prevFileOpener := fileOpener
+	defer func() { fileOpener = prevFileOpener }()
+	fileOpener = newTestReaderAt
+
 	want := []*boot.MultibootImage{
 		{
-			Path:    "testdata/k",
+			Kernel:  newTestReaderAt("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
+			Modules: []multiboot.Module{},
 		},
 	}
 
@@ -210,6 +242,14 @@ func TestDev6Valid(t *testing.T) {
 }
 
 func TestImageOrder(t *testing.T) {
+	prevFileOpener := fileOpener
+	prevGetBlockSize := getBlockSize
+	defer func() {
+		fileOpener = prevFileOpener
+		getBlockSize = prevGetBlockSize
+	}()
+	fileOpener = newTestReaderAt
+
 	getBlockSize = func(dev string) (int, error) {
 		return 512, nil
 	}
@@ -220,8 +260,9 @@ func TestImageOrder(t *testing.T) {
 		bootstate: bootValid,
 	}
 	want5 := &boot.MultibootImage{
-		Path:    "foobar",
+		Kernel:  newTestReaderAt("foobar"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
+		Modules: []multiboot.Module{},
 	}
 
 	opt6 := &options{
@@ -230,8 +271,9 @@ func TestImageOrder(t *testing.T) {
 		bootstate: bootValid,
 	}
 	want6 := &boot.MultibootImage{
-		Path:    "testdata/k",
+		Kernel:  newTestReaderAt("testdata/k"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
+		Modules: []multiboot.Module{},
 	}
 
 	// Way 1.
