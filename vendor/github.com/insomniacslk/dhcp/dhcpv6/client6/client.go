@@ -177,6 +177,10 @@ func (c *Client) sendReceive(ifname string, packet dhcpv6.DHCPv6, expectedType d
 		adv, err = dhcpv6.FromBytes(buf[:n])
 		if err != nil {
 			// skip non-DHCP packets
+			//
+			// TODO: It also skips DHCP packets with any errors (for example
+			// if bootfile params are encoded incorrectly). We need to
+			// log such cases instead of silently skip them.
 			continue
 		}
 		if recvMsg, ok := adv.(*dhcpv6.Message); ok && isMessage {
