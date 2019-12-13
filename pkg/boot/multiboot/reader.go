@@ -37,6 +37,11 @@ func (kr *kernelReader) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
+// implement inMemReaderAt interface
+func (kr kernelReader) Bytes() []byte {
+	return kr.buf
+}
+
 func readGzip(r io.Reader) ([]byte, error) {
 	z, err := gzip.NewReader(r)
 	if err != nil {
