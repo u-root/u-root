@@ -6,6 +6,7 @@ package boot
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/ibft"
@@ -25,7 +26,13 @@ var _ OSImage = &MultibootImage{}
 
 // Load implements OSImage.Load.
 func (mi *MultibootImage) Load(verbose bool) error {
-	return multiboot.Load(verbose, mi.Path, mi.Cmdline, mi.Modules, mi.IBFT)
+	mbkernel, err := os.Open(mi.Path)
+	if err != nil {
+		return err
+	}
+	defer mbkernel.Close()
+
+	return multiboot.Load(verbose, mbkernel, mi.Cmdline, mi.Modules, mi.IBFT)
 }
 
 // String implements fmt.Stringer.
