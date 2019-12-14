@@ -77,10 +77,21 @@ func Init(ed eddefs.Editor, ns eval.Ns) {
 	ns.AddFn("match-subseq", matchSubseq)
 
 	// Other functions.
-	ns.AddBuiltinFns("edit:", map[string]interface{}{
-		"complete-getopt":   complGetopt,
-		"complex-candidate": makeComplexCandidate,
-	})
+	ns.AddBuiltinFn("edit:", "complete-getopt", complGetopt)
+	ns.AddBuiltinFnCustom("edit:", "complete-candidate", &makeComplexCandidateCallable{})
+}
+
+type makeComplexCandidateCallable struct {
+}
+
+func (*makeComplexCandidateCallable) Target() interface{} {
+	return makeComplexCandidate
+}
+
+func (*makeComplexCandidateCallable) Call(
+	f *eval.Frame, args []interface{}, opts eval.RawOptions, inputs eval.Inputs) ([]interface{}, error) {
+	out := makeComplexCandidate(opts, args[0].(string))
+	return []interface{}{out}, nil
 }
 
 func makeArgCompleter() hashmap.Map {
