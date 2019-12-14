@@ -117,6 +117,15 @@ func BootBallFromConfig(configFile string) (*BootBall, error) {
 	return ball, nil
 }
 
+func (ball *BootBall) Clean() (err error) {
+	err = os.RemoveAll(ball.dir)
+	if err != nil {
+		return
+	}
+	ball.dir = ""
+	return
+}
+
 // Pack writes the contents BootBall.Archive
 func (ball *BootBall) Pack() (err error) {
 	if ball.Archive == "" || ball.dir == "" {
