@@ -16,7 +16,6 @@ import (
 // for testing, or for using a key-value store other than VPD.
 var (
 	Get    = vpd.Get
-	Set    = vpd.Set
 	GetAll = vpd.GetAll
 )
 
