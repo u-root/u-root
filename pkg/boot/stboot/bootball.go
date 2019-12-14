@@ -31,7 +31,6 @@ type BootBall struct {
 	rootCert       *x509.CertPool
 	signatures     [][]signature
 	hashes         [][]byte
-	hasher         Hasher
 	signer         Signer
 }
 
@@ -69,8 +68,7 @@ func BootBallFromArchie(archive string) (*BootBall, error) {
 	ball.rootCert = cert
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
-	ball.hasher = sha512Hasher{}
-	ball.signer = pssSigner{}
+	ball.signer = sha512PssSigner{}
 
 	return ball, nil
 }
@@ -106,8 +104,7 @@ func BootBallFromConfig(configFile string) (*BootBall, error) {
 	ball.rootCert = cert
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
-	ball.hasher = sha512Hasher{}
-	ball.signer = pssSigner{}
+	ball.signer = sha512PssSigner{}
 
 	err = ball.getSignatures()
 	if err != nil {
@@ -151,7 +148,7 @@ func (ball *BootBall) GetBootConfigByIndex(index int) (bc *bootconfig.BootConfig
 func (ball *BootBall) Hash() (err error) {
 	ball.hashes = make([][]byte, len(ball.config.BootConfigs))
 	for i, files := range ball.bootFiles {
-		hash, herr := ball.hasher.hash(files...)
+		hash, herr := ball.signer.hash(files...)
 		if herr != nil {
 			return herr
 		}
