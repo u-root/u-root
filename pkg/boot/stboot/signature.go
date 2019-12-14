@@ -25,18 +25,33 @@ type signature struct {
 	Cert  *x509.Certificate
 }
 
-type Hasher interface {
-	hash(files ...string) (hash []byte, err error)
-}
-
 type Signer interface {
+	hash(files ...string) (hash []byte, err error)
 	sign(privKey string, data []byte) (sig []byte, err error)
 	verify(sig signature, root *x509.CertPool) (err error)
 }
 
-type sha512Hasher struct{}
+type dummySigner struct{}
 
-func (sha512Hasher) hash(files ...string) (hash []byte, err error) {
+type sha512PssSigner struct{}
+
+func (dummySigner) hash(files ...string) (hash []byte, err error) {
+	hash = make([]byte, 8)
+	rand.Read(hash)
+	return
+}
+
+func (dummySigner) sign(privKey string, data []byte) (sig []byte, err error) {
+	sig = make([]byte, 8)
+	rand.Read(sig)
+	return
+}
+
+func (dummySigner) verify(sig signature, root *x509.CertPool) (err error) {
+	return nil
+}
+
+func (sha512PssSigner) hash(files ...string) (hash []byte, err error) {
 	h := sha512.New()
 	h.Reset()
 
@@ -50,9 +65,7 @@ func (sha512Hasher) hash(files ...string) (hash []byte, err error) {
 	return h.Sum(nil), nil
 }
 
-type pssSigner struct{}
-
-func (pssSigner) sign(privKey string, data []byte) (sig []byte, err error) {
+func (sha512PssSigner) sign(privKey string, data []byte) (sig []byte, err error) {
 	buf, err := ioutil.ReadFile(privKey)
 	if err != nil {
 		return
@@ -81,7 +94,7 @@ func (pssSigner) sign(privKey string, data []byte) (sig []byte, err error) {
 	return
 }
 
-func (pssSigner) verify(sig signature, root *x509.CertPool) (err error) {
+func (sha512PssSigner) verify(sig signature, root *x509.CertPool) (err error) {
 	return nil
 }
 
