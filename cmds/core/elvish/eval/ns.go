@@ -98,6 +98,12 @@ func (ns Ns) AddBuiltinFn(nsName, name string, impl interface{}) Ns {
 	return ns.AddFn(name, NewBuiltinFn(nsName+name, impl))
 }
 
+// AddBuiltinFnCustom adds a builtin function to a namespace.
+// It returns the namespace itself.
+func (ns Ns) AddBuiltinFnCustom(nsName, name string, impl CustomCallable) Ns {
+	return ns.AddFn(name, NewBuiltinFnCustom(nsName+name, impl))
+}
+
 // AddBuiltinFns adds builtin functions to a namespace. It returns the namespace
 // itself.
 func (ns Ns) AddBuiltinFns(nsName string, fns map[string]interface{}) Ns {

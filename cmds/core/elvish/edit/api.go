@@ -90,17 +90,43 @@ func makeNs(ed *editor) eval.Ns {
 
 	// Functions.
 	fns := map[string]interface{}{
-		"binding-table": eddefs.MakeBindingMap,
 		"insert-at-dot": ed.InsertAtDot,
 		"replace-input": ed.replaceInput,
-		"styled":        styled,
-		"key":           ui.ToKey,
 		"wordify":       wordifyBuiltin,
 		"-dump-buf":     ed.dumpBuf,
 	}
 	ns.AddBuiltinFns("edit:", fns)
 
+	ns.AddBuiltinFnCustom("edit:", "binding-table", eddefs.MakeBindingMapCallable())
+	ns.AddBuiltinFnCustom("edit:", "styled", &styledCallable{})
+	ns.AddBuiltinFnCustom("edit:", "key", &uiToKeyCallable{})
+
 	return ns
+}
+
+type styledCallable struct {
+}
+
+func (*styledCallable) Target() interface{} {
+	return styled
+}
+
+func (*styledCallable) Call(
+	f *eval.Frame, args []interface{}, opts eval.RawOptions, inputs eval.Inputs) ([]interface{}, error) {
+	out, err := styled(args[0].(string), args[1])
+	return []interface{}{out}, err
+}
+
+type uiToKeyCallable struct {
+}
+
+func (*uiToKeyCallable) Target() interface{} {
+	return ui.ToKey
+}
+
+func (*uiToKeyCallable) Call(f *eval.Frame, args []interface{}, opts eval.RawOptions, inputs eval.Inputs) ([]interface{}, error) {
+	out := ui.ToKey(args[0])
+	return []interface{}{out}, nil
 }
 
 // CallFn calls an Fn, displaying its outputs and possible errors as editor
