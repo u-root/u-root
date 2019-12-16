@@ -107,6 +107,12 @@ type Lease interface {
 
 	// Link is the interface the configuration is for.
 	Link() netlink.Link
+
+	// Return the value of a particular DHCPv4 option code.
+	GetOneOption4(code dhcpv4.OptionCode) ([]byte, error)
+
+	// Return the value of a particular DHCPv6 option code.
+	GetOneOption6(code dhcpv6.OptionCode) ([]byte, error)
 }
 
 // LogLevel is the amount of information to log.
@@ -131,6 +137,12 @@ type Config struct {
 	// attempt. The highest log level should print each entire packet sent
 	// and received.
 	LogLevel LogLevel
+
+	// Modifiers4 allows modifications to the IPv4 DHCP request.
+	Modifiers4 []dhcpv4.Modifier
+
+	// Modifiers6 allows modifications to the IPv6 DHCP request.
+	Modifiers6 []dhcpv6.Modifier
 }
 
 func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
@@ -149,10 +161,17 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		return nil, err
 	}
 
+	// Prepend modifiers with default options, so they can be overriden.
+	reqmods := append(
+		[]dhcpv4.Modifier{
+			dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
+			dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask),
+			dhcpv4.WithNetboot,
+		},
+		c.Modifiers4...)
+
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
-	_, p, err := client.Request(ctx, dhcpv4.WithNetboot,
-		dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
-		dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask))
+	_, p, err := client.Request(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}
@@ -203,8 +222,15 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		return nil, err
 	}
 
+	// Prepend modifiers with default options, so they can be overriden.
+	reqmods := append(
+		[]dhcpv6.Modifier{
+			dhcpv6.WithNetboot,
+		},
+		c.Modifiers6...)
+
 	log.Printf("Attempting to get DHCPv6 lease on %s", iface.Attrs().Name)
-	p, err := client.RapidSolicit(ctx, dhcpv6.WithNetboot)
+	p, err := client.RapidSolicit(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}
