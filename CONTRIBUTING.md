@@ -104,4 +104,5 @@ pull request in order to instigate some code review.
 
 [CircleCI](https://circleci.com/gh/u-root/u-root) is used to test and build commits in a pull request.
 
-See [.circleci/config.yml](.circleci/config.yml) for the CI commands run. [test.sh](test.sh) is maintained as an easy way to run the commands locally. Additionally you can use [CircleCI's CLI tool](https://circleci.com/docs/2.0/local-jobs/) to run individual jobs from `.circlecl/config.yml` via Docker, eg. `circleci build --jobs dep`.
+See [.circleci/config.yml](.circleci/config.yml) for the CI commands run.
+You can use [CircleCI's CLI tool](https://circleci.com/docs/2.0/local-cli/#run-a-job-in-a-container-on-your-machine) to run individual jobs from `.circlecl/config.yml` via Docker, eg. `circleci build --job test`.
