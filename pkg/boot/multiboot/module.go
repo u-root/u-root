@@ -107,20 +107,17 @@ func alignUp(buf *bytes.Buffer) error {
 func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error {
 	log.Printf("Adding module %v", name)
 
-	b, err := uio.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
 	// place start of each module to a beginning of a page.
 	if err := alignUp(buf); err != nil {
 		return err
 	}
 
 	m.Start = uint32(buf.Len())
-	if _, err := buf.Write(b); err != nil {
+
+	if _, err := io.Copy(buf, uio.Reader(r)); err != nil {
 		return err
 	}
+
 	m.End = uint32(buf.Len())
 
 	return nil
