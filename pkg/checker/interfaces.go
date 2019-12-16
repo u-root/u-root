@@ -147,7 +147,7 @@ func InterfaceCanDoDHCPv6(ifname string) Checker {
 		if err != nil {
 			return err
 		}
-		_, err = netboot.ConversationToNetconf(conv)
+		_, _, err = netboot.ConversationToNetconf(conv)
 		return err
 	}
 }

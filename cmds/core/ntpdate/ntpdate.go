@@ -19,9 +19,10 @@ import (
 )
 
 var (
-	config  = flag.String("config", "/etc/ntp.conf", "NTP config file.")
-	verbose = flag.Bool("verbose", false, "Verbose output")
-	debug   = func(string, ...interface{}) {}
+	config   = flag.String("config", "/etc/ntp.conf", "NTP config file.")
+	verbose  = flag.Bool("verbose", false, "Verbose output")
+	debug    = func(string, ...interface{}) {}
+	protocol = flag.String("protocol", "udp", "udp/tcp/udp6/udp4")
 )
 
 const (
@@ -49,13 +50,16 @@ func parseServers(r *bufio.Reader) []string {
 }
 
 func getTime(servers []string) (t time.Time, err error) {
+  var response *ntp.Response
 	for _, s := range servers {
 		debug("Getting time from %v", s)
-		if t, err = ntp.Time(s); err == nil {
+		response, err = ntp.QueryWithOptions(s, ntp.QueryOptions{Protocol: *protocol})
+		if err == nil {
 			// Right now we return on the first valid time.
 			// We can implement better heuristics here.
 			debug("Got time %v", t)
-			return
+      t = response.Time
+			return response.Time, nil
 		}
 		debug("Error getting time: %v", err)
 	}
