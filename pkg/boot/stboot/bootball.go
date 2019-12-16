@@ -177,8 +177,12 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 	log.Printf("Signing with: %s", privKeyFile)
 
 	if ball.hashes == nil {
-		ball.Hash()
+		err = ball.Hash()
+		if err != nil {
+			return
+		}
 	}
+
 	sigs := make([]signature, len(ball.config.BootConfigs))
 	for i, hash := range ball.hashes {
 		s, err := ball.signer.sign(privKeyFile, hash)
@@ -192,8 +196,40 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 	return writeSignatures(sigs, certFile, ball.dir)
 }
 
-func (ball *BootBall) Verify() (err error) {
-	return nil
+func (ball *BootBall) VerifyBootconfigs() (verified []int, err error) {
+	verified = make([]int, len(ball.signatures))
+	for i := range ball.signatures {
+		n, err := ball.VerifyBootconfigByIndex(i)
+		if err != nil {
+			return verified, err
+		}
+		verified[i] = n
+	}
+	return
+}
+
+func (ball *BootBall) VerifyBootconfigByIndex(index int) (verified int, err error) {
+	if ball.hashes == nil {
+		err = ball.Hash()
+		if err != nil {
+			return
+		}
+	}
+
+	sigs := ball.signatures[index]
+	verified = 0
+	for _, sig := range sigs {
+		err = validateCertificate(sig.Cert, ball.rootCert)
+		if err != nil {
+			return
+		}
+		err = ball.signer.verify(sig, ball.hashes[index])
+		if err != nil {
+			return
+		}
+		verified++
+	}
+	return
 }
 
 func getConfig(dest string) (cfg *Stconfig, err error) {

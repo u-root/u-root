@@ -77,11 +77,16 @@ func main() {
 		log.Fatal("Cannot open bootball")
 	}
 
-	if err = ball.Verify(); err != nil {
-		log.Fatal("The bootconfig seems to be not trustworthy. Err: ", err)
+	// Just choose the first Bootconfig for now
+	var index = 0
+	n, err := ball.VerifyBootconfigByIndex(index)
+	if err != nil {
+		log.Fatalf("Bootconfig %d seems to be not trustworthy: %v", index, err)
+	}
+	if n < vars.MinimalSignaturesMatch {
+		log.Fatalf("Did not found enough valid signatures. %d valid, %d required", n, vars.MinimalSignaturesMatch)
 	}
 
-	var index = 0
 	bc, err := ball.GetBootConfigByIndex(index)
 	if err != nil {
 		log.Fatalf("Cannot get boot configuration %d: %v", index, err)
