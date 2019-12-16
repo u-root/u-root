@@ -52,23 +52,14 @@ func BootBallFromArchie(archive string) (*BootBall, error) {
 		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
 	}
 
-	cert, err := getRootCert(filepath.Join(dir, signaturesDirName, rootCertName))
-	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
-	}
-
-	bootFiles, err := getBootFiles(cfg, dir)
-	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting boot files faild: %v", err)
-	}
-
 	ball.Archive = archive
 	ball.dir = dir
 	ball.config = cfg
-	ball.rootCert = cert
-	ball.numBootConfigs = len(ball.config.BootConfigs)
-	ball.bootFiles = bootFiles
-	ball.signer = sha512PssSigner{}
+
+	err = ball.init()
+	if err != nil {
+		return ball, err
+	}
 
 	return ball, nil
 }
@@ -88,19 +79,29 @@ func BootBallFromConfig(configFile string) (*BootBall, error) {
 		return ball, fmt.Errorf("BootBall: creating standard configuration directory faild: %v", err)
 	}
 
-	cert, err := getRootCert(filepath.Join(dir, signaturesDirName, rootCertName))
-	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
-	}
-
-	bootFiles, err := getBootFiles(cfg, dir)
-	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting boot files faild: %v", err)
-	}
-
 	ball.Archive = archive
 	ball.dir = dir
 	ball.config = cfg
+
+	err = ball.init()
+	if err != nil {
+		return ball, err
+	}
+
+	return ball, nil
+}
+
+func (ball *BootBall) init() (err error) {
+	cert, err := getRootCert(filepath.Join(ball.dir, signaturesDirName, rootCertName))
+	if err != nil {
+		return fmt.Errorf("BootBall: getting configuration faild: %v", err)
+	}
+
+	bootFiles, err := getBootFiles(ball.config, ball.dir)
+	if err != nil {
+		return fmt.Errorf("BootBall: getting boot files faild: %v", err)
+	}
+
 	ball.rootCert = cert
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
@@ -108,10 +109,9 @@ func BootBallFromConfig(configFile string) (*BootBall, error) {
 
 	err = ball.getSignatures()
 	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting signatures: %v", err)
+		return fmt.Errorf("BootBall: getting signatures: %v", err)
 	}
-
-	return ball, nil
+	return
 }
 
 func (ball *BootBall) Clean() (err error) {
