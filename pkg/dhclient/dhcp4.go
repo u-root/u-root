@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/vishvananda/netlink"
 )
 
@@ -185,4 +186,14 @@ func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
 		return nil, "", fmt.Errorf("no root path in DHCP message")
 	}
 	return parseISCSIURI(rp)
+}
+
+// GetOneOption4 returns a specific option code value.
+func (p *Packet4) GetOneOption4(code dhcpv4.OptionCode) ([]byte, error) {
+	return p.P.GetOneOption(code), nil
+}
+
+// GetOneOption6 always returns and error - DHCPv4 does not implement DHCPv6 options.
+func (p *Packet4) GetOneOption6(code dhcpv6.OptionCode) ([]byte, error) {
+	return nil, fmt.Errorf("DHCPv4 packet has no DHCPv6 Options")
 }

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -139,4 +140,14 @@ func (p *Packet6) ISCSIBoot() (*net.TCPAddr, string, error) {
 		return nil, "", fmt.Errorf("packet does not contain boot file URL")
 	}
 	return parseISCSIURI(string(uri.ToBytes()))
+}
+
+// GetOneOption4 always returns and error - DHCPv6 does not implement DHCPv4 options.
+func (p *Packet6) GetOneOption4(code dhcpv4.OptionCode) ([]byte, error) {
+	return nil, fmt.Errorf("DHCPv6 packet has no DHCPv4 Options")
+}
+
+// GetOneOption6 returns a specific option code value.
+func (p *Packet6) GetOneOption6(code dhcpv6.OptionCode) ([]byte, error) {
+	return p.p.GetOneOption(code).ToBytes(), nil
 }
