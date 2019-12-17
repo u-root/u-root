@@ -19,8 +19,8 @@ RUN sudo apt-get update &&                          \
         libfdt-dev                                  \
         libpixman-1-dev                             \
         zlib1g-dev                                  \
-	libcap-dev                                  \
-	libattr1-dev                                \
+        libcap-dev                                  \
+        libattr1-dev                                \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
@@ -38,6 +38,7 @@ RUN set -eux;                                                             \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
+    make olddefconfig;                                                    \
     make -j$(($(nproc) * 2 + 1));                                         \
     cd ~;                                                                 \
     cp linux/arch/x86_64/boot/bzImage bzImage;                            \
