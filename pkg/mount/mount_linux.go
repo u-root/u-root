@@ -23,6 +23,9 @@ const (
 	MS_NOUSER   = unix.MS_NOUSER
 	MS_RELATIME = unix.MS_RELATIME
 	MS_SYNC     = unix.MS_SYNC
+	MS_NOATIME  = unix.MS_NOATIME
+
+	ReadOnly = unix.MS_RDONLY | unix.MS_NOATIME
 )
 
 // Unmount flags.
@@ -93,6 +96,12 @@ func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 // TryMount tries to mount a device on the given mountpoint, trying in order
 // the supported block device file systems on the system.
 func TryMount(device, path string, flags uintptr) (*MountPoint, error) {
+	// TryMount only works on existing block devices. No weirdo devices
+	// like 9P.
+	if _, err := os.Stat(device); err != nil {
+		return nil, err
+	}
+
 	fs, err := GetBlockFilesystems()
 	if err != nil {
 		return nil, fmt.Errorf("failed to mount %s on %s: %v", device, path, err)
