@@ -30,6 +30,7 @@ type BootBall struct {
 	bootFiles      [][]string
 	rootCert       *x509.CertPool
 	signatures     [][]signature
+	NumSignatures  int
 	hashes         [][]byte
 	signer         Signer
 }
@@ -111,6 +112,7 @@ func (ball *BootBall) init() (err error) {
 	if err != nil {
 		return fmt.Errorf("BootBall: getting signatures: %v", err)
 	}
+	ball.NumSignatures = len(ball.signatures[0])
 	return
 }
 
@@ -193,7 +195,12 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 		sigs[i].Cert = cert
 	}
 
-	return writeSignatures(sigs, certFile, ball.dir)
+	if err = writeSignatures(sigs, certFile, ball.dir); err != nil {
+		return
+	}
+
+	ball.NumSignatures++
+	return
 }
 
 func (ball *BootBall) VerifyBootconfigs() (verified []int, err error) {

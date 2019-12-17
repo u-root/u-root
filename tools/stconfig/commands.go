@@ -35,7 +35,12 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 		return
 	}
 
-	return ball.Pack()
+	if err = ball.Pack(); err != nil {
+		return
+	}
+
+	log.Printf("Signatures included for each bootconfig: %d", ball.NumSignatures)
+	return
 }
 
 func unpackBootBall(bootBall string) (err error) {
