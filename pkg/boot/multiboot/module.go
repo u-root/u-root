@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
@@ -87,9 +86,8 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 	}
 
 	for i, rmod := range rmods {
-		name := strings.Fields(rmod.CmdLine)[0]
-		if err := loaded[i].loadModule(&buf, rmod.Module, name); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", name, err)
+		if err := loaded[i].loadModule(&buf, rmod.Module, rmod.Name); err != nil {
+			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
 		}
 	}
 
