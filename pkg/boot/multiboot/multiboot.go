@@ -32,6 +32,7 @@ const bootloader = "u-root kexec"
 // Module describe a module by a ReaderAt and a `CmdLine`
 type Module struct {
 	Module  io.ReaderAt
+	Name    string
 	CmdLine string
 }
 
@@ -171,6 +172,7 @@ func OpenModules(cmds []string, uncompress bool) (Modules, error) {
 	for i, cmd := range cmds {
 		modules[i].CmdLine = cmd
 		name := strings.Fields(cmd)[0]
+		modules[i].Name = name
 		f, err := os.Open(name)
 		if err != nil {
 			// TODO close already open files
