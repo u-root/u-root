@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 // TestPxeboot runs a server and client to test pxebooting a node.
-func TestPxeboot(t *testing.T) {
+func TestPxeboot4(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
@@ -76,12 +77,12 @@ func TestPxeboot(t *testing.T) {
 	defer ccleanup()
 
 	if err := dhcpServer.Expect("starting file server"); err != nil {
-		t.Errorf("File server: %v", err)
+		t.Errorf("%s File server: %v", testutil.NowLog(), err)
 	}
 	if err := dhcpClient.Expect("Got DHCPv4 lease on eth0:"); err != nil {
-		t.Errorf("Lease %v:", err)
+		t.Errorf("%s Lease %v:", testutil.NowLog(), err)
 	}
 	if err := dhcpClient.Expect("Boot URI: tftp://192.168.0.1/pxelinux.0"); err != nil {
-		t.Errorf("Boot: %v", err)
+		t.Errorf("%s Boot: %v", testutil.NowLog(), err)
 	}
 }
