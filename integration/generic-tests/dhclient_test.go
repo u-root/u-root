@@ -19,7 +19,6 @@ import (
 
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -132,5 +131,61 @@ func TestDhclientTimesOut(t *testing.T) {
 	}
 	if err := dhcpClient.Expect("DHCP timed out"); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestDhclient6(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+
+	// QEMU doesn't support DHCPv6 for getting IP configuration, so we have
+	// to supply our own server.
+	//
+	// We don't currently have a radvd server we can use, so we also cannot
+	// try to download a file using the DHCP configuration.
+	network := qemu.NewNetwork()
+	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "TestDhclient6_Server",
+		TestCmds: []string{
+			"ip link set eth0 up",
+			"pxeserver -6 -your-ip6=fec0::3 -4=false",
+		},
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "server"),
+			Timeout:      30 * time.Second,
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
+		},
+	})
+	defer scleanup()
+
+	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "TestDhclient6_Client",
+		TestCmds: []string{
+			"dhclient -ipv4=false -vv",
+			"ip a",
+			"shutdown -h",
+		},
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "client"),
+			Timeout:      30 * time.Second,
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
+		},
+	})
+	defer ccleanup()
+
+	if err := dhcpServer.Expect("starting dhcpv6 server"); err != nil {
+		t.Errorf("%s dhcpv6 server: %v", testutil.NowLog(), err)
+	}
+	if err := dhcpClient.Expect("Configured eth0 with IPv6 DHCP Lease IP fec0::3"); err != nil {
+		t.Errorf("%s configure: %v", testutil.NowLog(), err)
+	}
+	if err := dhcpClient.Expect("inet6 fec0::3"); err != nil {
+		t.Errorf("%s ip: %v", testutil.NowLog(), err)
 	}
 }
