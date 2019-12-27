@@ -96,7 +96,7 @@ func LoadCDROM(device string) (*boot.MultibootImage, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
+	if _, err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
 		return nil, err
 	}
 	// Don't pass the device to ESXi. It doesn't need it.
@@ -118,7 +118,7 @@ func mountPartition(dev string) (*options, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
+	if _, err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
 		return nil, err
 	}
 

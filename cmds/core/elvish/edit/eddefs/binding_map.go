@@ -88,7 +88,12 @@ func (bt BindingMap) Dissoc(k interface{}) interface{} {
 	return BindingMap{bt.Map.Dissoc(ui.ToKey(k))}
 }
 
-func MakeBindingMap(raw hashmap.Map) (BindingMap, error) {
+// MakeBindingMapCallable implements eval.CustomCallable interface for makeBindingMap.
+func MakeBindingMapCallable() eval.CustomCallable {
+	return &makeBindingMapCallable{}
+}
+
+func makeBindingMap(raw hashmap.Map) (BindingMap, error) {
 	converted := vals.EmptyMap
 	for it := raw.Iterator(); it.HasElem(); it.Next() {
 		k, v := it.Elem()
@@ -100,4 +105,16 @@ func MakeBindingMap(raw hashmap.Map) (BindingMap, error) {
 	}
 
 	return BindingMap{converted}, nil
+}
+
+type makeBindingMapCallable struct {
+}
+
+func (*makeBindingMapCallable) Target() interface{} {
+	return makeBindingMap
+}
+
+func (*makeBindingMapCallable) Call(f *eval.Frame, args []interface{}, opts eval.RawOptions, inputs eval.Inputs) ([]interface{}, error) {
+	out, err := makeBindingMap(args[0].(hashmap.Map))
+	return []interface{}{out}, err
 }

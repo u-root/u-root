@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/rekby/gpt"
+	"github.com/u-root/u-root/pkg/mount"
 )
 
 var (
@@ -29,8 +30,24 @@ var (
 // BlockDev maps a device name to a BlockStat structure for a given block device
 type BlockDev struct {
 	Name   string
+	FSType string
 	Stat   BlockStat
 	FsUUID string
+}
+
+// String implements fmt.Stringer.
+func (b BlockDev) String() string {
+	return fmt.Sprintf("BlockDevice(name=%s, fs_uuid=%s)", b.Name, b.FsUUID)
+}
+
+// Mount implements mount.Mounter.
+func (b BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+	devpath := filepath.Join("/dev", b.Name)
+	if len(b.FSType) > 0 {
+		return mount.Mount(devpath, path, b.FSType, "", flags)
+	}
+
+	return mount.TryMount(devpath, path, flags)
 }
 
 // Summary prints a multiline summary of the BlockDev object

@@ -70,9 +70,11 @@ func TestSetFile(t *testing.T) {
 		t.Fatalf("Could not create /tmp/disk: %v", err)
 	}
 
-	if err := mount.Mount(loopdev, "/tmp/disk", "vfat", "", 0); err != nil {
+	mp, err := mount.Mount(loopdev, "/tmp/disk", "vfat", "", 0)
+	if err != nil {
 		t.Fatalf("Failed to mount /tmp/disk: %v", err)
 	}
+	defer mp.Unmount(0) //nolint:errcheck
 
 	if err := ioutil.WriteFile("/tmp/disk/foobar", []byte("Are you feeling it now Mr Krabs"), 0755); err != nil {
 		t.Fatal(err)

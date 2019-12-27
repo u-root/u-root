@@ -167,10 +167,10 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	if err != nil {
 		t.Fatalf("Failed to start QEMU VM %s: %v", o.Name, err)
 	}
-	t.Logf("QEMU command line for %s:\n%s", o.Name, vm.CmdlineQuoted())
 
 	return vm, func() {
 		vm.Close()
+		t.Logf("QEMU command line to reproduce %s:\n%s", o.Name, vm.CmdlineQuoted())
 		if t.Failed() {
 			t.Log("Keeping temp dir: ", o.TmpDir)
 		} else if len(o.TmpDir) == 0 {

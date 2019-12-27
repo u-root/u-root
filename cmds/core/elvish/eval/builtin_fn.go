@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/u-root/u-root/cmds/core/elvish/eval/vals"
 	"github.com/u-root/u-root/cmds/core/elvish/hash"
@@ -11,32 +12,23 @@ import (
 
 var ErrArgs = errors.New("args error")
 
-// BuiltinFn uses reflection to wrap arbitrary Go functions into Elvish
-// functions.
+// BuiltinFn uses reflection to wrap Go functions into Elvish functions.
+// Functions with simple signatures are handled by commonCallable,
+// more elaborate cases are handled by CustomCallable interface, e.g.
+// when importing the necessary types would have created a dependency loop.
 //
-// Parameters are passed following these rules:
-//
-// 1. If the first parameter of function has type *Frame, it gets the current
-// call frame.
-//
-// 2. If (possibly after a *Frame parameter) the first parameter has type
-// RawOptions, it gets a map of options. If the function has not declared an
-// RawOptions parameter but is passed options, an error is thrown.
-//
-// 3. If the last parameter is non-variadic and has type Inputs, it represents
-// an optional parameter that contains the input to this function. If the
-// argument is not supplied, the input channel of the Frame will be used to
-// supply the inputs.
-//
-// 4. Other parameters are converted using elvToGo.
+// Parameters are converted using ScanToGo.
 //
 // Return values go to the channel part of the stdout port, after being
 // converted using goToElv. If the last return value has type error and is not
 // nil, it is turned into an exception and no ouputting happens. If the last
 // return value is a nil error, it is ignored.
+//
+// Note: reflect.Call is deliberately not used as it disables DCE
+// (see https://github.com/u-root/u-root/issues/1477).
 type BuiltinFn struct {
 	name string
-	impl interface{}
+	impl CustomCallable
 
 	// Type information of impl.
 
@@ -51,6 +43,15 @@ type BuiltinFn struct {
 
 var _ Callable = &BuiltinFn{}
 
+// CustomCallable is an interface for functions that have complex signatures
+// not covered by commonCallable.
+type CustomCallable interface {
+	// Target returns the callable's target function, needed to examine arguments.
+	Target() interface{}
+	// Call invokes the target function.
+	Call(f *Frame, args []interface{}, opts RawOptions, inputs Inputs) ([]interface{}, error)
+}
+
 type (
 	Inputs func(func(interface{}))
 )
@@ -61,9 +62,9 @@ var (
 	inputsType     = reflect.TypeOf(Inputs(nil))
 )
 
-// NewBuiltinFn creates a new ReflectBuiltinFn instance.
-func NewBuiltinFn(name string, impl interface{}) *BuiltinFn {
-	implType := reflect.TypeOf(impl)
+// NewBuiltinFnCustom creates a new ReflectBuiltinFn instance.
+func NewBuiltinFnCustom(name string, impl CustomCallable) *BuiltinFn {
+	implType := reflect.TypeOf(impl.Target())
 	b := &BuiltinFn{name: name, impl: impl}
 
 	i := 0
@@ -89,6 +90,14 @@ func NewBuiltinFn(name string, impl interface{}) *BuiltinFn {
 		b.normalArgs = append(b.normalArgs, paramType)
 	}
 	return b
+}
+
+// NewBuiltinFn creates a new ReflectBuiltinFn instance.
+func NewBuiltinFn(name string, impl interface{}) *BuiltinFn {
+	if _, err := callFunc(impl, nil, nil, nil, nil, true); err != nil {
+		panic(fmt.Sprintf("%s: %v", name, err))
+	}
+	return NewBuiltinFnCustom(name, &commonCallable{target: impl})
 }
 
 // Kind returns "fn".
@@ -121,28 +130,22 @@ var errNoOptions = errors.New("function does not accept any options")
 func (b *BuiltinFn) Call(f *Frame, args []interface{}, opts map[string]interface{}) error {
 	if b.variadicArg != nil {
 		if len(args) < len(b.normalArgs) {
-			return fmt.Errorf("want %d or more arguments, got %d",
-				len(b.normalArgs), len(args))
+			return fmt.Errorf("%s: want %d or more arguments, got %d",
+				b.name, len(b.normalArgs), len(args))
 		}
 	} else if b.inputs {
 		if len(args) != len(b.normalArgs) && len(args) != len(b.normalArgs)+1 {
-			return fmt.Errorf("want %d or %d arguments, got %d",
-				len(b.normalArgs), len(b.normalArgs)+1, len(args))
+			return fmt.Errorf("%s: want %d or %d arguments, got %d",
+				b.name, len(b.normalArgs), len(b.normalArgs)+1, len(args))
 		}
 	} else if len(args) != len(b.normalArgs) {
-		return fmt.Errorf("want %d arguments, got %d", len(b.normalArgs), len(args))
+		return fmt.Errorf("%s: want %d arguments, got %d", b.name, len(b.normalArgs), len(args))
 	}
 	if !b.options && len(opts) > 0 {
 		return errNoOptions
 	}
 
-	var in []reflect.Value
-	if b.frame {
-		in = append(in, reflect.ValueOf(f))
-	}
-	if b.options {
-		in = append(in, reflect.ValueOf(opts))
-	}
+	var goArgs []interface{}
 	for i, arg := range args {
 		var typ reflect.Type
 		if i < len(b.normalArgs) {
@@ -157,13 +160,13 @@ func (b *BuiltinFn) Call(f *Frame, args []interface{}, opts map[string]interface
 		ptr := reflect.New(typ)
 		err := vals.ScanToGo(arg, ptr.Interface())
 		if err != nil {
-			return fmt.Errorf("wrong type of %d'th argument: %v", i+1, err)
+			return fmt.Errorf("%s: wrong type of %d'th argument: %v", b.name, i+1, err)
 		}
-		in = append(in, ptr.Elem())
+		goArgs = append(goArgs, ptr.Elem().Interface())
 	}
 
+	var inputs Inputs
 	if b.inputs {
-		var inputs Inputs
 		if len(args) == len(b.normalArgs) {
 			inputs = Inputs(f.IterateInputs)
 		} else {
@@ -177,21 +180,223 @@ func (b *BuiltinFn) Call(f *Frame, args []interface{}, opts map[string]interface
 				maybeThrow(err)
 			})
 		}
-		in = append(in, reflect.ValueOf(inputs))
 	}
 
-	outs := reflect.ValueOf(b.impl).Call(in)
-
-	if len(outs) > 0 && outs[len(outs)-1].Type() == errorType {
-		err := outs[len(outs)-1].Interface()
-		if err != nil {
-			return err.(error)
-		}
-		outs = outs[:len(outs)-1]
+	outs, err := b.impl.Call(f, goArgs, opts, inputs)
+	if err != nil {
+		return err
 	}
-
 	for _, out := range outs {
-		f.OutputChan() <- vals.FromGo(out.Interface())
+		f.OutputChan() <- vals.FromGo(out)
 	}
 	return nil
+}
+
+type commonCallable struct {
+	target interface{}
+}
+
+func (c *commonCallable) Target() interface{} {
+	return c.target
+}
+
+func (c *commonCallable) Call(
+	f *Frame, args []interface{}, opts RawOptions, inputs Inputs) ([]interface{}, error) {
+	return callFunc(c.target, f, args, opts, inputs, false)
+}
+
+func callFunc(fnp interface{}, f *Frame, args []interface{}, opts RawOptions, inputs Inputs, checkOnly bool) ([]interface{}, error) {
+	switch fn := fnp.(type) {
+	case func():
+		if checkOnly {
+			return nil, nil
+		}
+		fn()
+		return nil, nil
+
+	case func() error:
+		if checkOnly {
+			return nil, nil
+		}
+		err := fn()
+		return nil, err
+
+	case func() int:
+		if checkOnly {
+			return nil, nil
+		}
+		out := fn()
+		return []interface{}{out}, nil
+
+	case func(*Frame):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(f)
+		return nil, nil
+
+	case func(*Frame, RawOptions):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(f, opts)
+		return nil, nil
+
+	case func(*Frame, RawOptions, Callable, Callable):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(f, opts, args[0].(Callable), args[1].(Callable))
+		return nil, nil
+
+	case func(*Frame, RawOptions, string, Inputs):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(f, opts, args[0].(string), inputs)
+		return nil, nil
+
+	case func(*Frame, ...int):
+		if checkOnly {
+			return nil, nil
+		}
+		var vargs []int
+		for _, arg := range args {
+			vargs = append(vargs, arg.(int))
+		}
+		fn(f, vargs...)
+		return nil, nil
+
+	case func(*Frame, ...interface{}) error:
+		if checkOnly {
+			return nil, nil
+		}
+		err := fn(f, args...)
+		return nil, err
+
+	case func(*Frame, interface{}, interface{}, interface{}):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(f, args[0], args[1], args[2])
+		return nil, nil
+
+	case func(*Frame, ...int) error:
+		if checkOnly {
+			return nil, nil
+		}
+		var vargs []int
+		for _, arg := range args {
+			vargs = append(vargs, arg.(int))
+		}
+		err := fn(f, vargs...)
+		return nil, err
+
+	case func(*Frame, ...string) error:
+		if checkOnly {
+			return nil, nil
+		}
+		var vargs []string
+		for _, arg := range args {
+			vargs = append(vargs, arg.(string))
+		}
+		err := fn(f, vargs...)
+		return nil, err
+
+	case func(*Frame, string):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(f, args[0].(string))
+		return nil, nil
+
+	case func(*Frame, string) error:
+		if checkOnly {
+			return nil, nil
+		}
+		err := fn(f, args[0].(string))
+		return nil, err
+
+	case func(Inputs):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(inputs)
+		return nil, nil
+
+	case func(RawOptions):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(opts)
+		return nil, nil
+
+	case func(RawOptions, ...interface{}):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(opts, args...)
+		return nil, nil
+
+	case func(int, float64):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(args[0].(int), args[1].(float64))
+		return nil, nil
+
+	case func(...int) error:
+		if checkOnly {
+			return nil, nil
+		}
+		var vargs []int
+		for _, arg := range args {
+			vargs = append(vargs, arg.(int))
+		}
+		err := fn(vargs...)
+		return nil, err
+
+	case func(float64):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(args[0].(float64))
+		return nil, nil
+
+	case func(int):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(args[0].(int))
+		return nil, nil
+
+	case func(string):
+		if checkOnly {
+			return nil, nil
+		}
+		fn(args[0].(string))
+		return nil, nil
+
+	case func(string) string:
+		if checkOnly {
+			return nil, nil
+		}
+		out := fn(args[0].(string))
+		return []interface{}{out}, nil
+
+	case func(string, ...string):
+		if checkOnly {
+			return nil, nil
+		}
+		var vargs []string
+		for _, arg := range args[1:] {
+			vargs = append(vargs, arg.(string))
+		}
+		fn(args[0].(string), vargs...)
+		return nil, nil
+	}
+
+	sig := fmt.Sprintf("%#v", fnp)[1:]
+	sig = sig[:strings.LastIndex(sig, "(")-1]
+	return nil, fmt.Errorf("unsupported function signature: %s", sig)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/kr/pty" // TODO: get rid of krpty
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/termios"
+
 	// We use this ssh because it can unpack password-protected private keys.
 	ossh "golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"

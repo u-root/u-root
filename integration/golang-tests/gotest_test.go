@@ -58,8 +58,11 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/crypto",
 		"github.com/u-root/u-root/pkg/tarutil",
 		"github.com/u-root/u-root/pkg/ldd",
+
+		// These have special configuration.
 		"github.com/u-root/u-root/pkg/loop",
 		"github.com/u-root/u-root/pkg/gpio",
+		"github.com/u-root/u-root/pkg/mount",
 
 		// Missing xzcat in VM.
 		"github.com/u-root/u-root/cmds/exp/bzimage",

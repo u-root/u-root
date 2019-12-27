@@ -13,7 +13,7 @@ import (
 
 func TestNew(t *testing.T) {
 	if _, err := New(); os.IsNotExist(err) {
-		t.Skipf("No /dev/tty here.")
+		t.Skipf("Failed allocate /dev/pts device")
 	} else if err != nil {
 		t.Errorf("New pty: want nil, got %v", err)
 	}
@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 func TestRunRestoreTTYMode(t *testing.T) {
 	p, err := New()
 	if os.IsNotExist(err) {
-		t.Skipf("No /dev/tty here.")
+		t.Skipf("Failed to allocate /dev/pts device")
 	} else if err != nil {
 		t.Fatalf("TestStart New pty: want nil, got %v", err)
 	}

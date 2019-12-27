@@ -115,7 +115,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:52e6f593faf5fd66e6ed7231655f79c3d657190ded4770ad32c93a29d13bbfd7"
+  digest = "1:25914b93e1d9e1f87d5d1c33d3bf5da74d904db7f5cf52d9c4f30b52f1eb8948"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -131,7 +131,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "3997b8a58c66233275ad9b26612ef733a63bd9d3"
+  revision = "b3fbc9f9fdd5ac725d73f2a9109e59d4947f067d"
 
 [[projects]]
   branch = "master"
