@@ -27,17 +27,27 @@ type LinuxImage struct {
 
 var _ OSImage = &LinuxImage{}
 
+func stringer(mod io.ReaderAt) string {
+	if s, ok := mod.(fmt.Stringer); ok {
+		return s.String()
+	}
+	if f, ok := mod.(*os.File); ok {
+		return f.Name()
+	}
+	return fmt.Sprintf("%v", mod)
+}
+
 // Label returns either the Name or a short description.
 func (li *LinuxImage) Label() string {
 	if len(li.Name) > 0 {
 		return li.Name
 	}
-	return fmt.Sprintf("Linux(kernel=%s, initrd=%s)", li.Kernel, li.Initrd)
+	return fmt.Sprintf("Linux(kernel=%s, initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
 }
 
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
-	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, li.Kernel, li.Initrd, li.Cmdline)
+	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline)
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
