@@ -16,8 +16,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var errNetNSCannotLockThread = errors.New("netns cannot be set when disableNSThreadLock is set")
-
 var _ Socket = &conn{}
 
 var _ deadlineSetter = &conn{}
@@ -631,10 +629,10 @@ func newLockedNetNSGoroutine(netNS int, getNS func() (*netNS, error), lockThread
 	// Any bare syscall errors (e.g. setns) should be wrapped with
 	// os.NewSyscallError for the remainder of this function.
 
-	// If the lockThread is set and the caller attempts to set a
-	// namespace, return an error.
+	// If the caller has instructed us to not lock OS thread but also attempts
+	// to set a namespace, return an error.
 	if !lockThread && netNS != 0 {
-		return nil, errNetNSCannotLockThread
+		return nil, errors.New("netlink Conn attempted to set a namespace with OS thread locking disabled")
 	}
 
 	callerNS, err := getNS()

@@ -20,29 +20,42 @@ func (c *Conn) RouteAddSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw
 	if err != nil {
 		return err
 	}
-	dstlen, _ := dst.Mask.Size()
-	scope := routeScope(dst.IP)
-	if len(dst.IP) == net.IPv6len && dst.IP.To4() == nil {
+
+	// Determine scope
+	var scope uint8
+	switch {
+	case gw != nil:
 		scope = unix.RT_SCOPE_UNIVERSE
+	case len(dst.IP) == net.IPv6len && dst.IP.To4() == nil:
+		scope = unix.RT_SCOPE_UNIVERSE
+	default:
+		// Set default scope to LINK
+		scope = unix.RT_SCOPE_LINK
 	}
+
 	attr := rtnetlink.RouteAttributes{
 		Dst:      dst.IP,
 		OutIface: uint32(ifc.Index),
 	}
+
+	if gw != nil {
+		attr.Gateway = gw
+	}
+
 	var srclen int
 	if src != nil {
 		srclen, _ = src.Mask.Size()
 		attr.Src = src.IP
 	}
-	if gw != nil {
-		attr.Gateway = gw
-	}
+
+	dstlen, _ := dst.Mask.Size()
+
 	tx := &rtnetlink.RouteMessage{
 		Family:     uint8(af),
 		Table:      unix.RT_TABLE_MAIN,
 		Protocol:   unix.RTPROT_BOOT,
 		Type:       unix.RTN_UNICAST,
-		Scope:      uint8(scope),
+		Scope:      scope,
 		DstLength:  uint8(dstlen),
 		SrcLength:  uint8(srclen),
 		Attributes: attr,
@@ -68,11 +81,4 @@ func (c *Conn) RouteDel(ifc *net.Interface, dst net.IPNet) error {
 		Attributes: attr,
 	}
 	return c.Conn.Route.Delete(tx)
-}
-
-func routeScope(ip net.IP) int {
-	if ip.IsUnspecified() {
-		return unix.RT_SCOPE_UNIVERSE
-	}
-	return unix.RT_SCOPE_LINK
 }
