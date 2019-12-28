@@ -37,6 +37,10 @@ const (
 // TCGVendorID TPM manufacturer id
 type TCGVendorID uint32
 
+func (id TCGVendorID) String() string {
+	return vendors[id]
+}
+
 // TPMVersion is used to configure a preference in
 // which TPM to use, if multiple are available.
 type TPMVersion uint8
@@ -83,14 +87,6 @@ const (
 	TPMInterfaceDaemonManaged
 )
 
-// OpenConfig encapsulates settings passed to OpenTPM().
-type OpenConfig struct {
-	// TPMVersion indicates which TPM version the library should
-	// attempt to use. If the specified version is not available,
-	// ErrTPMNotAvailable is returned. Defaults to TPMVersionAgnostic.
-	TPMVersion TPMVersion
-}
-
 // TPM interfaces with a TPM device on the system.
 type TPM struct {
 	version TPMVersion
@@ -120,10 +116,6 @@ type TPMInfo struct {
 	// for TPM 2.0 devices.
 	FirmwareVersionMajor int
 	FirmwareVersionMinor int
-}
-
-func (id TCGVendorID) String() string {
-	return vendors[id]
 }
 
 func readTPM12VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
