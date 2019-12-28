@@ -37,6 +37,25 @@
   revision = "648efa622239a2f6ff949fed78ee37b48d499ba4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:c47755ec3b319ff6b47762ace40f68c0999cba307394a95d99517c09378ad225"
+  name = "github.com/awnumar/memcall"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "73db50fd9f807b4e2811f9f0b33c92e9da6b2489"
+
+[[projects]]
+  digest = "1:34ef62befdb36b9ba24bf70aba9ba16d02d30fb9d58bd1e68babbedde852cfef"
+  name = "github.com/awnumar/memguard"
+  packages = [
+    ".",
+    "core",
+  ]
+  pruneopts = "NUT"
+  revision = "34f885f80d8f0bc385ce249bba4bdb7ddfa4df84"
+  version = "v0.21.0"
+
+[[projects]]
   digest = "1:e6c88dab8edc42242a2035bba3a869993ff08a3e245a445ea75f436e1bb27c33"
   name = "github.com/beevik/ntp"
   packages = ["."]
@@ -324,6 +343,7 @@
     "ed25519/internal/edwards25519",
     "internal/subtle",
     "md4",
+    "nacl/secretbox",
     "openpgp",
     "openpgp/armor",
     "openpgp/elgamal",
@@ -332,6 +352,7 @@
     "openpgp/s2k",
     "poly1305",
     "ripemd160",
+    "salsa20/salsa",
     "sha3",
     "ssh",
     "ssh/internal/bcrypt_pbkdf",
@@ -436,6 +457,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/9elements/tpmtool/pkg/tpm",
+    "github.com/awnumar/memguard",
     "github.com/beevik/ntp",
     "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",
@@ -475,6 +497,7 @@
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
+    "golang.org/x/crypto/ssh/terminal",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/text/transform",
