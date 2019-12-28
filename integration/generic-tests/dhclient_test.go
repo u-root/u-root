@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
@@ -138,6 +139,40 @@ func TestPxeboot(t *testing.T) {
 	}
 	if err := dhcpClient.Expect("Boot URI: tftp://192.168.0.1/pxelinux.0"); err != nil {
 		t.Logf("Boot: %v", err)
+	}
+}
+
+func TestDhclientQEMU4(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+
+	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "client"),
+			Timeout:      30 * time.Second,
+			Devices: []qemu.Device{
+				qemu.ArbitraryArgs{
+					"-device", "e1000,netdev=host0",
+					"-netdev", "user,id=host0,net=192.168.0.0/24,dhcpstart=192.168.0.10,ipv6=off",
+				},
+			},
+		},
+		Uinit: []string{
+			"dhclient -ipv6=false -v",
+			"ip a",
+			"sleep 5",
+			"shutdown -h",
+		},
+	})
+	defer ccleanup()
+
+	if err := dhcpClient.Expect("Configured eth0 with IPv4 DHCP Lease"); err != nil {
+		t.Errorf("%s: %v", testutil.NowLog(), err)
+	}
+	if err := dhcpClient.Expect("inet 192.168.0.10"); err != nil {
+		t.Errorf("%s: %v", testutil.NowLog(), err)
 	}
 }
 
