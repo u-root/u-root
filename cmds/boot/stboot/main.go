@@ -157,12 +157,16 @@ func configureStaticNetwork(vars stboot.HostVars, doDebug bool) error {
 	}
 
 	iface, err := netlink.LinkByName(eth)
+	if err != nil {
+		return fmt.Errorf("Error retrieving interface %s: %v", eth, err)
+	}
+
 	if err = netlink.AddrAdd(iface, addr); err != nil {
-		return fmt.Errorf("Error retrieving interface by name: %v", err)
+		return fmt.Errorf("Error adding address: %v", err)
 	}
 
 	if err = netlink.LinkSetUp(iface); err != nil {
-		return fmt.Errorf("Error bringing up interface:%v with error: %v", eth, err)
+		return fmt.Errorf("Error bringing up interface %s: %v", eth, err)
 	}
 
 	gateway, err := netlink.ParseAddr(vars.DefaultGateway)
@@ -186,7 +190,7 @@ func configureDHCPNetwork() error {
 
 	_, err := netboot.IfUp(eth, interfaceUpTimeout)
 	if err != nil {
-		return fmt.Errorf("Ifup with %s failed: %v", eth, err)
+		return fmt.Errorf("Error bringing up interface %s: %v", eth, err)
 	}
 	if attempts < 1 {
 		attempts = 1
@@ -207,32 +211,18 @@ func configureDHCPNetwork() error {
 	if conversation[3] == nil {
 		return fmt.Errorf("Gateway is null")
 	}
+
 	netbootConfig, err := netboot.GetNetConfFromPacketv4(conversation[3])
-
 	if err != nil {
 		return err
 	}
 
-	err = netboot.ConfigureInterface(eth, netbootConfig)
-
-	if err != nil {
-		return err
+	if *doDebug {
+		str, _ := json.MarshalIndent(netbootConfig, "", "  ")
+		log.Printf("Network configuration: %s", str)
 	}
 
-	iface, err := netlink.LinkByName(eth)
-	if err != nil {
-		return fmt.Errorf("Error getting Link by Name: %v", err)
-	}
-	gateway, err := netlink.ParseAddr(netbootConfig.Routers[0].String() + "/24")
-	if err != nil {
-		return fmt.Errorf("Error parsing GatewayIP string to CIDR format address: %v", err)
-	}
-	r := &netlink.Route{LinkIndex: iface.Attrs().Index, Gw: gateway.IPNet.IP}
-	if err = netlink.RouteAdd(r); err != nil {
-		return fmt.Errorf("Error setting default gateway: %v", err)
-	}
-
-	return nil
+	return netboot.ConfigureInterface(eth, netbootConfig)
 }
 
 func downloadFromHTTPS(url string, destination string) error {
