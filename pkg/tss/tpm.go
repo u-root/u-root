@@ -31,6 +31,8 @@ func OpenTPM(config *OpenConfig) (*TPM, error) {
 	return nil, errors.New("TPM device not available")
 }
 
+// MeasurementLog reads the TCPA eventlog in binary format
+// from the Linux kernel
 func (t *TPM) MeasurementLog() ([]byte, error) {
 	return ioutil.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
 }
