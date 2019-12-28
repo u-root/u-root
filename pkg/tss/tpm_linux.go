@@ -1,6 +1,16 @@
-// Copyright 2019 the u-root Authors. All rights reserved
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2019 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not
+// use this file except in compliance with the License. You may obtain a copy of
+// the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
 
 package tss
 
@@ -247,31 +257,4 @@ func openTPM(pTPM probedTPM) (*TPM, error) {
 		sysPath: pTPM.Path,
 		rwc:     rwc,
 	}, nil
-}
-
-func (t *TPM) tpmVersion() TPMVersion {
-	return t.version
-}
-
-func (t *TPM) close() error {
-	return t.rwc.Close()
-}
-
-// Info returns information about the TPM.
-func (t *TPM) info() (*TPMInfo, error) {
-	var info TPMInfo
-	var err error
-	switch t.version {
-	case TPMVersion12:
-		info, err = readTPM12VendorAttributes(t.rwc)
-	case TPMVersion20:
-		info, err = readTPM20VendorAttributes(t.rwc)
-	default:
-		return nil, fmt.Errorf("unsupported TPM version: %x", t.version)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return &info, nil
 }
