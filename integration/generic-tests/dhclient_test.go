@@ -16,57 +16,6 @@ import (
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func TestDhclient(t *testing.T) {
-	// TODO: support arm
-	if vmtest.TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", vmtest.TestArch())
-	}
-
-	network := qemu.NewNetwork()
-	_, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient_Server",
-		QEMUOpts: qemu.Options{
-			SerialOutput: vmtest.TestLineWriter(t, "server"),
-			Devices: []qemu.Device{
-				network.NewVM(),
-			},
-		},
-		TestCmds: []string{
-			"ip link set eth0 up",
-			"ip addr add 192.168.0.1/24 dev eth0",
-			"ip route add 0.0.0.0/0 dev eth0",
-			"pxeserver",
-		},
-	})
-	defer scleanup()
-
-	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient_Client",
-		QEMUOpts: qemu.Options{
-			SerialOutput: vmtest.TestLineWriter(t, "client"),
-			Timeout:      30 * time.Second,
-			Devices: []qemu.Device{
-				network.NewVM(),
-			},
-		},
-		TestCmds: []string{
-			"dhclient -ipv6=false -v",
-			"ip a",
-			// Sleep so serial console output gets flushed. The expect library is racy.
-			"sleep 5",
-			"shutdown -h",
-		},
-	})
-	defer ccleanup()
-
-	if err := dhcpClient.Expect("Configured eth0 with IPv4 DHCP Lease"); err != nil {
-		t.Error(err)
-	}
-	if err := dhcpClient.Expect("inet 192.168.0.2"); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestDhclientQEMU4(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
@@ -101,7 +50,7 @@ func TestDhclientQEMU4(t *testing.T) {
 	}
 }
 
-func TestQEMUDHCPTimesOut(t *testing.T) {
+func TestDhclientTimesOut(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
