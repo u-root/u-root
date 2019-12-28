@@ -27,11 +27,11 @@ type BootBall struct {
 	dir            string
 	config         *Stconfig
 	numBootConfigs int
-	bootFiles      [][]string
+	bootFiles      map[string][]string
 	rootCert       *x509.CertPool
-	signatures     [][]signature
+	signatures     map[string][]signature
 	NumSignatures  int
-	hashes         [][]byte
+	hashes         map[string][]byte
 	signer         Signer
 }
 
@@ -112,7 +112,18 @@ func (ball *BootBall) init() (err error) {
 	if err != nil {
 		return fmt.Errorf("BootBall: getting signatures: %v", err)
 	}
-	ball.NumSignatures = len(ball.signatures[0])
+
+	var x int = 0
+	for _, sigPool := range ball.signatures {
+		if x == 0 {
+			x = len(sigPool)
+			continue
+		}
+		if len(sigPool) != x {
+			return errors.New("BootBall: invalid map of signatures")
+		}
+	}
+	ball.NumSignatures = x
 	return
 }
 
@@ -148,7 +159,7 @@ func (ball *BootBall) GetBootConfigByIndex(index int) (bc *bootconfig.BootConfig
 }
 
 func (ball *BootBall) Hash() (err error) {
-	ball.hashes = make([][]byte, len(ball.config.BootConfigs))
+	ball.hashes = make(map[string][]byte)
 	for i, files := range ball.bootFiles {
 		hash, herr := ball.signer.hash(files...)
 		if herr != nil {
@@ -185,14 +196,15 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 		}
 	}
 
-	sigs := make([]signature, len(ball.config.BootConfigs))
-	for i, hash := range ball.hashes {
+	sigs := make([]signature, 0)
+	for _, hash := range ball.hashes {
 		s, err := ball.signer.sign(privKeyFile, hash)
 		if err != nil {
 			return err
 		}
-		sigs[i].Bytes = s
-		sigs[i].Cert = cert
+		sigs = append(sigs, signature{
+			Bytes: s,
+			Cert:  cert})
 	}
 
 	if err = writeSignatures(sigs, certFile, ball.dir); err != nil {
@@ -205,7 +217,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 
 func (ball *BootBall) VerifyBootconfigs() (verified []int, err error) {
 	verified = make([]int, len(ball.signatures))
-	for i := range ball.signatures {
+	for i := 0; 1 < ball.NumSignatures; i++ {
 		n, err := ball.VerifyBootconfigByIndex(i)
 		if err != nil {
 			return verified, err
@@ -216,6 +228,11 @@ func (ball *BootBall) VerifyBootconfigs() (verified []int, err error) {
 }
 
 func (ball *BootBall) VerifyBootconfigByIndex(index int) (verified int, err error) {
+	bcName := ball.config.BootConfigs[index].Name
+	return ball.VerifyBootconfigByName(bcName)
+}
+
+func (ball *BootBall) VerifyBootconfigByName(name string) (verified int, err error) {
 	if ball.hashes == nil {
 		err = ball.Hash()
 		if err != nil {
@@ -223,14 +240,14 @@ func (ball *BootBall) VerifyBootconfigByIndex(index int) (verified int, err erro
 		}
 	}
 
-	sigs := ball.signatures[index]
+	sigs := ball.signatures[name]
 	verified = 0
 	for _, sig := range sigs {
 		err = validateCertificate(sig.Cert, ball.rootCert)
 		if err != nil {
 			return
 		}
-		err = ball.signer.verify(sig, ball.hashes[index])
+		err = ball.signer.verify(sig, ball.hashes[name])
 		if err != nil {
 			return
 		}
@@ -266,8 +283,8 @@ func getRootCert(dest string) (cert *x509.CertPool, err error) {
 	return
 }
 
-func getBootFiles(cfg *Stconfig, prefix string) (bootFiles [][]string, err error) {
-	bootFiles = make([][]string, 0)
+func getBootFiles(cfg *Stconfig, prefix string) (bootFiles map[string][]string, err error) {
+	bootFiles = make(map[string][]string)
 	for _, bc := range cfg.BootConfigs {
 		files := make([]string, 0)
 		for _, file := range bc.FileNames() {
@@ -277,13 +294,13 @@ func getBootFiles(cfg *Stconfig, prefix string) (bootFiles [][]string, err error
 				return
 			}
 		}
-		bootFiles = append(bootFiles, files)
+		bootFiles[bc.Name] = files
 	}
 	return
 }
 
 func (ball *BootBall) getSignatures() (err error) {
-	ball.signatures = make([][]signature, len(ball.config.BootConfigs))
+	ball.signatures = make(map[string][]signature)
 	path := filepath.Join(ball.dir, signaturesDirName)
 
 	sigPool := make([]signature, 0)
@@ -318,7 +335,8 @@ func (ball *BootBall) getSignatures() (err error) {
 				Cert:  cert,
 			}
 			sigPool = append(sigPool, sig)
-			ball.signatures[index] = sigPool
+			key := ball.config.BootConfigs[index].Name
+			ball.signatures[key] = sigPool
 		}
 		return nil
 	})
