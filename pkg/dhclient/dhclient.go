@@ -141,6 +141,20 @@ type Config struct {
 
 	// Modifiers6 allows modifications to the IPv6 DHCP request.
 	Modifiers6 []dhcpv6.Modifier
+
+	// V6ServerAddr can be a unicast or broadcast destination for DHCPv6
+	// messages.
+	//
+	// If not set, it will default to nclient6's default (all servers &
+	// relay agents).
+	V6ServerAddr *net.UDPAddr
+
+	// V4ServerAddr can be a unicast or broadcast destination for IPv4 DHCP
+	// messages.
+	//
+	// If not set, it will default to nclient4's default (DHCP broadcast
+	// address).
+	V4ServerAddr *net.UDPAddr
 }
 
 func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
@@ -153,6 +167,9 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		mods = append(mods, nclient4.WithSummaryLogger())
 	case LogDebug:
 		mods = append(mods, nclient4.WithDebugLogger())
+	}
+	if c.V4ServerAddr != nil {
+		mods = append(mods, nclient4.WithServerAddr(c.V4ServerAddr))
 	}
 	client, err := nclient4.New(iface.Attrs().Name, mods...)
 	if err != nil {
@@ -214,6 +231,9 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		mods = append(mods, nclient6.WithSummaryLogger())
 	case LogDebug:
 		mods = append(mods, nclient6.WithDebugLogger())
+	}
+	if c.V6ServerAddr != nil {
+		mods = append(mods, nclient6.WithBroadcastAddr(c.V6ServerAddr))
 	}
 	client, err := nclient6.New(iface.Attrs().Name, mods...)
 	if err != nil {
