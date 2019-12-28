@@ -87,10 +87,11 @@
   version = "v0.3.1"
 
 [[projects]]
-  digest = "1:a79f4189566c6f8b2f0ff18a0be144dd3a608b7de4247431535f7ee1b22a170d"
+  digest = "1:9d89504c933705336ef7e829b3299cca79a83b66a9a12a12227a9cfee88a172e"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
+    "tpm2",
     "tpmutil",
     "tpmutil/tbs",
   ]
@@ -418,6 +419,7 @@
     "github.com/go-test/deep",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-tpm/tpm",
+    "github.com/google/go-tpm/tpm2",
     "github.com/google/goexpect",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
