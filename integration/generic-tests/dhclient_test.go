@@ -182,24 +182,29 @@ func TestQEMUDHCPTimesOut(t *testing.T) {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
+	network := qemu.NewNetwork()
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "TestQEMUDHCPTimesOut",
 		QEMUOpts: qemu.Options{
-			SerialOutput: vmtest.TestLineWriter(t, "client"),
-			Timeout:      40 * time.Second,
+			Timeout: 50 * time.Second,
+			Devices: []qemu.Device{
+				network.NewVM(),
+			},
 		},
-		TestCmds: []string{
-			// loopback should time out and it can't have configured anything.
-			"dhclient -v -retry 1 -timeout 10 lo",
+		Uinit: []string{
+			"dhclient -v -retry 2 -timeout 10",
 			"echo \"DHCP timed out\"",
-			// Sleep so serial console output gets flushed. The expect library is racy.
-			"sleep 5",
 			"shutdown -h",
 		},
 	})
 	defer ccleanup()
 
-	// Make sure that dhclient does not hang forever.
+	if err := dhcpClient.Expect("Could not configure eth0 for IPv"); err != nil {
+		t.Error(err)
+	}
+	if err := dhcpClient.Expect("Could not configure eth0 for IPv"); err != nil {
+		t.Error(err)
+	}
 	if err := dhcpClient.Expect("DHCP timed out"); err != nil {
 		t.Error(err)
 	}
