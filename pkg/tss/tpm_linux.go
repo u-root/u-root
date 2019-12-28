@@ -24,6 +24,7 @@ const (
 	tpmPtFwVersion1   = 0x00000100 + 11 // PT_FIXED + offset of 11
 )
 
+// TCGVendorID TPM manufacturer id
 type TCGVendorID uint32
 
 // TPMVersion is used to configure a preference in
@@ -80,7 +81,7 @@ type OpenConfig struct {
 	TPMVersion TPMVersion
 }
 
-// platformTPM interfaces with a TPM device on the system.
+// TPM interfaces with a TPM device on the system.
 type TPM struct {
 	version TPMVersion
 	interf  TPMInterface
@@ -118,16 +119,16 @@ func (id TCGVendorID) String() string {
 func readTPM12VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 	var vendorInfo string
 
-	manufacturer, err := tpm.GetManufacturer()
+	_, err := tpm.GetManufacturer(rwc)
 	if err != nil {
 		return TPMInfo{}, err
 	}
 
 	return TPMInfo{
 		VendorInfo:           strings.Trim(vendorInfo, "\x00"), // Stubbed
-		Manufacturer:         TCGVendorID(manufacturer),
-		FirmwareVersionMajor: int(0), // Stubbed
-		FirmwareVersionMinor: int(0), // Stubbed
+		Manufacturer:         TCGVendorID(uint32(0)),           // Stubbed
+		FirmwareVersionMajor: int(0),                           // Stubbed
+		FirmwareVersionMinor: int(0),                           // Stubbed
 	}, nil
 }
 
@@ -213,7 +214,7 @@ func openTPM(pTPM probedTPM) (*TPM, error) {
 
 	switch pTPM.Version {
 	case TPMVersion12:
-		devPath := path.Join("/dev", f[0].Name())
+		devPath := path.Join("/dev", path.Base(pTPM.Path))
 		interf = TPMInterfaceKernelManaged
 
 		rwc, err = tpm.OpenTPM(devPath)
