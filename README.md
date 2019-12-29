@@ -127,6 +127,14 @@ qemu-system-x86_64 -nographic -kernel path/to/kernel -initrd /tmp/initramfs.linu
 Note that you do not have to build a special kernel on your own, it is
 sufficient to use an existing one. Usually you can find one in `/boot`.
 
+For framebuffer support, append a VESA mode via the `vga` kernel parameter:
+
+```shell
+qemu-system-x86_64 -kernel path/to/kernel -initrd /tmp/initramfs.linux_amd64.cpio -append "vga=769"
+```
+
+For a list of modes, refer to the [Linux kernel documentation](https://github.com/torvalds/linux/blob/master/Documentation/fb/vesafb.rst#how-to-use-it).
+
 If you quickly need to obtain a kernel, for example, when you are on a non-Linux
 system, you can assemble a URL to download one through Arch Linux's
 [iPXE menu file](https://www.archlinux.org/releng/netboot/archlinux.ipxe). It
