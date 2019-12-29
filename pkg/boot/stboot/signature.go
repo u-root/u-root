@@ -17,33 +17,38 @@ type signature struct {
 	Cert  *x509.Certificate
 }
 
+// Signer is used by BootBall to hash, sign and varify the BootConfigs
+// with appropriate algorithms
 type Signer interface {
 	hash(files ...string) (hash []byte, err error)
 	sign(privKey string, data []byte) (sig []byte, err error)
 	verify(sig signature, hash []byte) (err error)
 }
 
-type dummySigner struct{}
+// DummySigner creates signatures that are always valid.
+type DummySigner struct{}
 
-type sha512PssSigner struct{}
-
-func (dummySigner) hash(files ...string) (hash []byte, err error) {
+func (DummySigner) hash(files ...string) (hash []byte, err error) {
 	hash = make([]byte, 8)
 	rand.Read(hash)
 	return
 }
 
-func (dummySigner) sign(privKey string, data []byte) (sig []byte, err error) {
+func (DummySigner) sign(privKey string, data []byte) (sig []byte, err error) {
 	sig = make([]byte, 8)
 	rand.Read(sig)
 	return
 }
 
-func (dummySigner) verify(sig signature, hash []byte) (err error) {
+func (DummySigner) verify(sig signature, hash []byte) (err error) {
 	return nil
 }
 
-func (sha512PssSigner) hash(files ...string) (hash []byte, err error) {
+// Sha512PssSigner uses SHA512 hashes ans PSS signatures along with
+// x509 certificates.
+type Sha512PssSigner struct{}
+
+func (Sha512PssSigner) hash(files ...string) (hash []byte, err error) {
 	h := sha512.New()
 	h.Reset()
 
@@ -57,7 +62,7 @@ func (sha512PssSigner) hash(files ...string) (hash []byte, err error) {
 	return h.Sum(nil), nil
 }
 
-func (sha512PssSigner) sign(privKey string, data []byte) (sig []byte, err error) {
+func (Sha512PssSigner) sign(privKey string, data []byte) (sig []byte, err error) {
 	buf, err := ioutil.ReadFile(privKey)
 	if err != nil {
 		return
@@ -86,7 +91,7 @@ func (sha512PssSigner) sign(privKey string, data []byte) (sig []byte, err error)
 	return
 }
 
-func (sha512PssSigner) verify(sig signature, hash []byte) (err error) {
+func (Sha512PssSigner) verify(sig signature, hash []byte) (err error) {
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 	err = rsa.VerifyPSS(sig.Cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hash, sig.Bytes, opts)
 	if err != nil {
