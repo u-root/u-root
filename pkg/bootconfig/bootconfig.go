@@ -39,7 +39,7 @@ func (bc *BootConfig) IsValid() bool {
 
 // FileNames returns a slice of all filenames in the bootconfig.
 func (bc *BootConfig) FileNames() []string {
-	files := make([]string, 0)
+	var files []string
 	if bc.Kernel != "" {
 		files = append(files, bc.Kernel)
 	}
@@ -60,6 +60,9 @@ func (bc *BootConfig) FileNames() []string {
 	return files
 }
 
+// ChangeFilePaths modifies the filepaths inside BootConfig. It replaces
+// the current paths with new path leaving the last element of the path
+// unchanged.
 func (bc *BootConfig) ChangeFilePaths(newPath string) {
 	if bc.Kernel != "" {
 		bc.Kernel = filepath.Join(newPath, filepath.Base(bc.Kernel))
@@ -80,22 +83,24 @@ func (bc *BootConfig) ChangeFilePaths(newPath string) {
 	}
 }
 
-func (bc *BootConfig) SetFilePathsPrefix(newPath string) {
+// SetFilePathsPrefix modifies the filepaths inside BootConfig. It appends
+// prefix at the beginning of the current paths
+func (bc *BootConfig) SetFilePathsPrefix(prefix string) {
 	if bc.Kernel != "" {
-		bc.Kernel = filepath.Join(newPath, bc.Kernel)
+		bc.Kernel = filepath.Join(prefix, bc.Kernel)
 	}
 	if bc.Initramfs != "" {
-		bc.Initramfs = filepath.Join(newPath, bc.Initramfs)
+		bc.Initramfs = filepath.Join(prefix, bc.Initramfs)
 	}
 	if bc.DeviceTree != "" {
-		bc.DeviceTree = filepath.Join(newPath, bc.DeviceTree)
+		bc.DeviceTree = filepath.Join(prefix, bc.DeviceTree)
 	}
 	if bc.Multiboot != "" {
-		bc.Multiboot = filepath.Join(newPath, bc.Multiboot)
+		bc.Multiboot = filepath.Join(prefix, bc.Multiboot)
 	}
 	for j, mod := range bc.Modules {
 		if mod != "" {
-			bc.Modules[j] = filepath.Join(newPath, mod)
+			bc.Modules[j] = filepath.Join(prefix, mod)
 		}
 	}
 }
