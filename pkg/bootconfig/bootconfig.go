@@ -11,7 +11,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -41,20 +40,20 @@ func (bc *BootConfig) IsValid() bool {
 // FileNames returns a slice of all filenames in the bootconfig.
 func (bc *BootConfig) FileNames() []string {
 	files := make([]string, 0)
-	if strings.Compare(bc.Kernel, "") != 0 {
+	if bc.Kernel != "" {
 		files = append(files, bc.Kernel)
 	}
-	if strings.Compare(bc.Initramfs, "") != 0 {
+	if bc.Initramfs != "" {
 		files = append(files, bc.Initramfs)
 	}
-	if strings.Compare(bc.DeviceTree, "") != 0 {
+	if bc.DeviceTree != "" {
 		files = append(files, bc.DeviceTree)
 	}
-	if strings.Compare(bc.Multiboot, "") != 0 {
+	if bc.Multiboot != "" {
 		files = append(files, bc.Multiboot)
 	}
 	for _, mod := range bc.Modules {
-		if strings.Compare(mod, "") != 0 {
+		if mod != "" {
 			files = append(files, mod)
 		}
 	}
