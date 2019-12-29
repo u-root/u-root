@@ -20,15 +20,17 @@ type signature struct {
 // Signer is used by BootBall to hash, sign and varify the BootConfigs
 // with appropriate algorithms
 type Signer interface {
-	hash(files ...string) ([]byte, error)
-	sign(privKey string, data []byte) ([]byte, error)
-	verify(sig signature, hash []byte) error
+	Hash(files ...string) ([]byte, error)
+	Sign(privKey string, data []byte) ([]byte, error)
+	Verify(sig signature, hash []byte) error
 }
 
 // DummySigner creates signatures that are always valid.
 type DummySigner struct{}
 
-func (DummySigner) hash(files ...string) ([]byte, error) {
+// Hash hashes the the provided files. I case of DummySigner
+// just 8 random bytes are returned.
+func (DummySigner) Hash(files ...string) ([]byte, error) {
 	hash := make([]byte, 8)
 	_, err := rand.Read(hash)
 	if err != nil {
@@ -37,7 +39,9 @@ func (DummySigner) hash(files ...string) ([]byte, error) {
 	return hash, nil
 }
 
-func (DummySigner) sign(privKey string, data []byte) ([]byte, error) {
+// Sign signes the provided data with privKey. In case of DummySigner
+// just 8 random bytes are returned
+func (DummySigner) Sign(privKey string, data []byte) ([]byte, error) {
 	sig := make([]byte, 8)
 	_, err := rand.Read(sig)
 	if err != nil {
@@ -46,7 +50,9 @@ func (DummySigner) sign(privKey string, data []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func (DummySigner) verify(sig signature, hash []byte) error {
+// Verify checks if sig contains a valid signature of hash. In case of
+// DummySigner this is allwazs the case.
+func (DummySigner) Verify(sig signature, hash []byte) error {
 	return nil
 }
 
@@ -54,7 +60,9 @@ func (DummySigner) verify(sig signature, hash []byte) error {
 // x509 certificates.
 type Sha512PssSigner struct{}
 
-func (Sha512PssSigner) hash(files ...string) ([]byte, error) {
+// Hash hashes the the provided files. I case of Sha512PssSigner
+// it is a SHA512 hash.
+func (Sha512PssSigner) Hash(files ...string) ([]byte, error) {
 	h := sha512.New()
 	h.Reset()
 
@@ -68,7 +76,9 @@ func (Sha512PssSigner) hash(files ...string) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func (Sha512PssSigner) sign(privKey string, data []byte) ([]byte, error) {
+// Sign signes the provided data with privKey. In case of Sha512PssSigner
+// it is a PSS signature.
+func (Sha512PssSigner) Sign(privKey string, data []byte) ([]byte, error) {
 	buf, err := ioutil.ReadFile(privKey)
 	if err != nil {
 		return nil, err
@@ -96,7 +106,8 @@ func (Sha512PssSigner) sign(privKey string, data []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func (Sha512PssSigner) verify(sig signature, hash []byte) error {
+// Verify checks if sig contains a valid signature of hash. In case of
+func (Sha512PssSigner) Verify(sig signature, hash []byte) error {
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 	err := rsa.VerifyPSS(sig.Cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hash, sig.Bytes, opts)
 	if err != nil {
