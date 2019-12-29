@@ -1,0 +1,150 @@
+package rtnetlink
+
+import (
+	"bytes"
+	"net"
+	"reflect"
+	"testing"
+
+	"github.com/jsimonetti/rtnetlink/internal/unix"
+)
+
+// Tests will only pass on little endian machines
+
+func TestNeighMessageMarshalBinary(t *testing.T) {
+	skipBigEndian(t)
+
+	tests := []struct {
+		name string
+		m    Message
+		b    []byte
+		err  error
+	}{
+		{
+			name: "empty",
+			m:    &NeighMessage{},
+			b: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+			},
+		},
+		{
+			name: "no attributes",
+			m: &NeighMessage{
+				Index: 2,
+				State: 64,
+				Type:  unix.NTF_PROXY,
+			},
+			b: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+				0x40, 0x00, 0x00, 0x08,
+			},
+		},
+		{
+			name: "attributes",
+			m: &NeighMessage{
+				Index: 2,
+				State: 64,
+				Type:  unix.NTF_PROXY,
+				Attributes: &NeighAttributes{
+					Address:   net.ParseIP("10.0.0.0"),
+					LLAddress: []byte{0x33, 0x33, 0x00, 0x00, 0x00, 0x16},
+					IfIndex:   0,
+					CacheInfo: &NeighCacheInfo{},
+				},
+			},
+			b: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+				0x40, 0x00, 0x00, 0x08, 0x06, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0xff, 0xff, 0x0a, 0x00, 0x00, 0x00,
+				0x0a, 0x00, 0x02, 0x00, 0x33, 0x33, 0x00, 0x00,
+				0x00, 0x16, 0x00, 0x00, 0x08, 0x00, 0x08, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := tt.m.MarshalBinary()
+
+			if want, got := tt.err, err; want != got {
+				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v", want, got)
+			}
+			if err != nil {
+				return
+			}
+
+			if want, got := tt.b, b; !bytes.Equal(want, got) {
+				t.Fatalf("unexpected Message bytes:\n- want: [%# x]\n-  got: [%# x]", want, got)
+			}
+		})
+	}
+}
+
+func TestNeighMessageUnmarshalBinary(t *testing.T) {
+	skipBigEndian(t)
+
+	tests := []struct {
+		name string
+		b    []byte
+		m    Message
+		err  error
+	}{
+		{
+			name: "empty",
+			err:  errInvalidNeighMessage,
+		},
+		{
+			name: "short",
+			b:    make([]byte, 11),
+			err:  errInvalidNeighMessage,
+		},
+		{
+			name: "invalid attr",
+			b: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x04, 0x00, 0x01, 0x00, 0x04, 0x00, 0x02, 0x00,
+				0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x08, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x08, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x05, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			err: errInvalidNeighMessageAttr,
+		},
+		{
+			name: "data",
+			b: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+				0x40, 0x00, 0x00, 0x08,
+			},
+			m: &NeighMessage{
+				Index: 2,
+				State: 64,
+				Type:  unix.NTF_PROXY,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &NeighMessage{}
+			err := (m).UnmarshalBinary(tt.b)
+
+			if want, got := tt.err, err; want != got {
+				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v", want, got)
+			}
+			if err != nil {
+				return
+			}
+
+			if want, got := tt.m, m; !reflect.DeepEqual(want, got) {
+				t.Fatalf("unexpected Message:\n- want: %#v\n-  got: %#v", want, got)
+			}
+		})
+	}
+}
