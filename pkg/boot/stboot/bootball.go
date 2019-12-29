@@ -22,6 +22,9 @@ const (
 	bootFilesDirName  string = "bootconfig"
 )
 
+// BootBall contains data to operate on the system transparency
+// bootball archive. There is an underlaying temporary directory
+// representing the extracted archive.
 type BootBall struct {
 	Archive        string
 	dir            string
@@ -32,9 +35,10 @@ type BootBall struct {
 	signatures     map[string][]signature
 	NumSignatures  int
 	hashes         map[string][]byte
-	signer         Signer
+	Signer         Signer
 }
 
+// BootBallFromArchie constructs a BootBall zip file at archive
 func BootBallFromArchie(archive string) (*BootBall, error) {
 	var ball = new(BootBall)
 
@@ -65,6 +69,9 @@ func BootBallFromArchie(archive string) (*BootBall, error) {
 	return ball, nil
 }
 
+// BootBallFromConfig constructs a BootBall from a stconfig.json at configFile.
+// the underlaying tmporary directory is created with standardized path and an
+// updated copy of stconfig.json
 func BootBallFromConfig(configFile string) (*BootBall, error) {
 	var ball = new(BootBall)
 
@@ -106,7 +113,7 @@ func (ball *BootBall) init() (err error) {
 	ball.rootCert = cert
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
-	ball.signer = sha512PssSigner{}
+	ball.Signer = Sha512PssSigner{}
 
 	err = ball.getSignatures()
 	if err != nil {
@@ -127,6 +134,7 @@ func (ball *BootBall) init() (err error) {
 	return
 }
 
+// Clean removes the underlaying temporary directory.
 func (ball *BootBall) Clean() (err error) {
 	err = os.RemoveAll(ball.dir)
 	if err != nil {
@@ -136,19 +144,21 @@ func (ball *BootBall) Clean() (err error) {
 	return
 }
 
-// Pack writes the contents BootBall.Archive
+// Pack archives the all contents of the underlaying temporary
+// directory using zip.
 func (ball *BootBall) Pack() (err error) {
 	if ball.Archive == "" || ball.dir == "" {
-		return errors.New("BootBall.Pack: booball.archive and bootball.dir must be set")
+		return errors.New("BootBall.Pacstandak: booball.archive and bootball.dir must be set")
 	}
 	return toZip(ball.dir, ball.Archive)
 }
 
-// Dir returns the directory associated with BootBall
+// Dir returns the temporary directory associated with BootBall.
 func (ball *BootBall) Dir() (dir string) {
 	return ball.dir
 }
 
+// GetBootConfigByIndex returns the Bootconfig at index from the BootBall's configs arrey.
 func (ball *BootBall) GetBootConfigByIndex(index int) (bc *bootconfig.BootConfig, err error) {
 	bc, err = ball.config.getBootConfig(index)
 	if err != nil {
@@ -158,10 +168,12 @@ func (ball *BootBall) GetBootConfigByIndex(index int) (bc *bootconfig.BootConfig
 	return
 }
 
+// Hash calculates hashes of all boot configurations in BootBall using the
+// BootBall.Signer's hash function
 func (ball *BootBall) Hash() (err error) {
 	ball.hashes = make(map[string][]byte)
 	for i, files := range ball.bootFiles {
-		hash, herr := ball.signer.hash(files...)
+		hash, herr := ball.Signer.hash(files...)
 		if herr != nil {
 			return herr
 		}
@@ -170,6 +182,9 @@ func (ball *BootBall) Hash() (err error) {
 	return
 }
 
+// Sign signes the hashes of all boot configurations in BootBall using the
+// BootBall.Signer's hash function with the provided privKeyFile. The signature
+// is stored along with the provided certFile inside the BootBall.
 func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 	err = validateFiles("", privKeyFile, certFile)
 	if err != nil {
@@ -198,7 +213,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 
 	sigs := make([]signature, 0)
 	for _, hash := range ball.hashes {
-		s, err := ball.signer.sign(privKeyFile, hash)
+		s, err := ball.Signer.sign(privKeyFile, hash)
 		if err != nil {
 			return err
 		}
@@ -215,23 +230,33 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) (err error) {
 	return
 }
 
-func (ball *BootBall) VerifyBootconfigs() (verified []int, err error) {
-	verified = make([]int, len(ball.signatures))
+// VerifyBootconfigs validates the certificates stored together with the
+// signatures of each boot configuration in BootBall and verifies the
+// signatures. A map is returned with the BootConfig's name as key and the
+// according number of valid signatures of this BootConfig.
+func (ball *BootBall) VerifyBootconfigs() (verified map[string]int, err error) {
+	verified = make(map[string]int)
 	for i := 0; 1 < ball.NumSignatures; i++ {
 		n, err := ball.VerifyBootconfigByIndex(i)
 		if err != nil {
 			return verified, err
 		}
-		verified[i] = n
+		verified[ball.config.BootConfigs[i].Name] = n
 	}
 	return
 }
 
+// VerifyBootconfigByIndex validates the certificates stored together with the
+// signatures of BootConfig index at BootBall.Config.BootConfigs[] and verifies
+// the signatures. The number of valid signatures is returned.
 func (ball *BootBall) VerifyBootconfigByIndex(index int) (verified int, err error) {
 	bcName := ball.config.BootConfigs[index].Name
 	return ball.VerifyBootconfigByName(bcName)
 }
 
+// VerifyBootconfigByName validates the certificates stored together with the
+// signatures of BootConfig name and verifies the signatures. The number of
+// valid signatures is returned.
 func (ball *BootBall) VerifyBootconfigByName(name string) (verified int, err error) {
 	if ball.hashes == nil {
 		err = ball.Hash()
@@ -247,7 +272,7 @@ func (ball *BootBall) VerifyBootconfigByName(name string) (verified int, err err
 		if err != nil {
 			return
 		}
-		err = ball.signer.verify(sig, ball.hashes[name])
+		err = ball.Signer.verify(sig, ball.hashes[name])
 		if err != nil {
 			return
 		}
