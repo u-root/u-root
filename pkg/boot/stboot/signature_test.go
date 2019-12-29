@@ -10,7 +10,7 @@ var testHash = []byte{184, 125, 17, 19, 148, 144, 119, 239, 215, 18, 102, 79, 23
 
 // not ready yet
 func TestHash(t *testing.T) {
-	signer := sha512PssSigner{}
+	signer := Sha512PssSigner{}
 	hash, err := signer.hash("testdata/testConfigDir/kernels/kernel1.vmlinuz")
 	lenght := len(hash)
 	t.Logf("hash: %v", hash)
@@ -20,7 +20,7 @@ func TestHash(t *testing.T) {
 
 //not ready yet
 func TestSign(t *testing.T) {
-	signer := sha512PssSigner{}
+	signer := Sha512PssSigner{}
 	sig, err := signer.sign("testdata/keys/signing-key-1.key", testHash)
 	t.Logf("signature: %v", sig)
 	require.NoError(t, err)
