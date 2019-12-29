@@ -1,0 +1,5 @@
+linters:
+  golint:
+    fixer: true
+fixers:
+  enable: true
