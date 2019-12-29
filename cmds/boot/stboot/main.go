@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,10 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insomniacslk/dhcp/dhcpv4"
-	"github.com/insomniacslk/dhcp/dhcpv4/client4"
-	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/u-root/u-root/pkg/boot/stboot"
+	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/vishvananda/netlink"
 )
 
@@ -85,7 +85,7 @@ func main() {
 	debug("Configuring network interfaces")
 
 	if vars.HostIP != "" {
-		err = configureStaticNetwork(vars, *doDebug)
+		err = configureStaticNetwork(vars)
 	} else {
 		err = configureDHCPNetwork()
 	}
@@ -102,7 +102,7 @@ func main() {
 	url.Path = path.Join(url.Path, stboot.BallName)
 	err = downloadFromHTTPS(url.String(), ballPath)
 	if err != nil {
-		log.Fatalf("Downloading bootball from %s failed: %v", url, err)
+		log.Fatalf("Downloading bootball failed: %v", err)
 	}
 
 	ball, err := stboot.BootBallFromArchie(ballPath)
@@ -149,7 +149,7 @@ func main() {
 	return
 }
 
-func configureStaticNetwork(vars stboot.HostVars, doDebug bool) error {
+func configureStaticNetwork(vars stboot.HostVars) error {
 	log.Printf("Setup network configuration with IP: " + vars.HostIP)
 	addr, err := netlink.ParseAddr(vars.HostIP)
 	if err != nil {
@@ -183,46 +183,40 @@ func configureStaticNetwork(vars stboot.HostVars, doDebug bool) error {
 }
 
 func configureDHCPNetwork() error {
-
 	log.Printf("Trying to configure network configuration dynamically...")
-	attempts := 10
-	var conversation []*dhcpv4.DHCPv4
 
-	_, err := netboot.IfUp(eth, interfaceUpTimeout)
-	if err != nil {
-		return fmt.Errorf("Error bringing up interface %s: %v", eth, err)
-	}
-	if attempts < 1 {
-		attempts = 1
-	}
-
-	client := client4.NewClient()
-	for attempt := 0; attempt < attempts; attempt++ {
-		log.Printf("Attempt to get DHCP lease %d of %d for interface %s", attempt+1, attempts, eth)
-		conversation, err = client.Exchange(eth)
-
-		if err != nil && attempt < attempts {
-			log.Printf("Error: %v", err)
-			continue
-		}
-		break
-	}
-
-	if conversation[3] == nil {
-		return fmt.Errorf("Gateway is null")
-	}
-
-	netbootConfig, err := netboot.GetNetConfFromPacketv4(conversation[3])
+	link, err := dhclient.IfUp(eth)
 	if err != nil {
 		return err
 	}
 
+	var links []netlink.Link
+	links = append(links, link)
+
+	var level dhclient.LogLevel
 	if *doDebug {
-		str, _ := json.MarshalIndent(netbootConfig, "", "  ")
-		log.Printf("Network configuration: %s", str)
+		level = 1
+	} else {
+		level = 0
+	}
+	config := dhclient.Config{
+		Timeout:  time.Second * 6,
+		Retries:  4,
+		LogLevel: level,
 	}
 
-	return netboot.ConfigureInterface(eth, netbootConfig)
+	r := dhclient.SendRequests(context.TODO(), links, true, false, config)
+	for result := range r {
+		if result.Interface == link {
+			if result.Err == nil {
+				result.Lease.Configure()
+				return nil
+			} else if *doDebug {
+				log.Printf("dhcp response error: %v", err)
+			}
+		}
+	}
+	return errors.New("no valid DHCP configuration recieved")
 }
 
 func downloadFromHTTPS(url string, destination string) error {
