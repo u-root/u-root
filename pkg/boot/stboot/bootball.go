@@ -173,7 +173,7 @@ func (ball *BootBall) GetBootConfigByIndex(index int) (*bootconfig.BootConfig, e
 func (ball *BootBall) Hash() error {
 	ball.hashes = make(map[string][]byte)
 	for i, files := range ball.bootFiles {
-		hash, herr := ball.Signer.hash(files...)
+		hash, herr := ball.Signer.Hash(files...)
 		if herr != nil {
 			return herr
 		}
@@ -213,7 +213,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 
 	sigs := make([]signature, 0)
 	for _, hash := range ball.hashes {
-		s, err := ball.Signer.sign(privKeyFile, hash)
+		s, err := ball.Signer.Sign(privKeyFile, hash)
 		if err != nil {
 			return err
 		}
@@ -272,7 +272,7 @@ func (ball *BootBall) VerifyBootconfigByName(name string) (int, error) {
 		if err != nil {
 			return verified, err
 		}
-		err = ball.Signer.verify(sig, ball.hashes[name])
+		err = ball.Signer.Verify(sig, ball.hashes[name])
 		if err != nil {
 			return verified, err
 		}
