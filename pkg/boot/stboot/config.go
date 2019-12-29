@@ -26,12 +26,12 @@ func stconfigFromBytes(data []byte) (*Stconfig, error) {
 }
 
 // Bytes serializes a Stconfig stuct into a byte slice
-func (cfg *Stconfig) bytes() (buf []byte, err error) {
-	buf, err = json.Marshal(cfg)
+func (cfg *Stconfig) bytes() ([]byte, error) {
+	buf, err := json.Marshal(cfg)
 	if err != nil {
-		return
+		return nil, err
 	}
-	return
+	return buf, nil
 }
 
 // IsValid returns true if all BootConfig structs inside the config has valid
