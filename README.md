@@ -136,6 +136,46 @@ would download from `${mirrorurl}iso/${release}/arch/boot/x86_64/vmlinuz`, so
 just search for a mirror URL you prefer and a release version, for example,
 `http://mirror.rackspace.com/archlinux/iso/2019.10.01/arch/boot/x86_64/vmlinuz`.
 
+### Framebuffer
+
+For framebuffer support, append a VESA mode via the `vga` kernel parameter:
+
+```shell
+qemu-system-x86_64 \
+  -kernel path/to/kernel \
+  -initrd /tmp/initramfs.linux_amd64.cpio \
+  -append "vga=786"
+```
+
+For a list of modes, refer to the [Linux kernel documentation](https://github.com/torvalds/linux/blob/master/Documentation/fb/vesafb.rst#how-to-use-it).
+
+### Entropy / Random Number Generator
+
+Some utilities, e.g., `dhclient`, require entropy to be present. For a speedy
+virtualized random number generator, the kernel should have the following:
+```
+CONFIG_VIRTIO_PCI=y
+CONFIG_HW_RANDOM_VIRTIO=y
+CONFIG_CRYPTO_DEV_VIRTIO=y
+```
+
+Then you can run your kernel in QEMU with a `virtio-rng-pci` device:
+```sh
+qemu-system-x86_64 \
+  -device virtio-rng-pci \
+  -kernel vmlinuz \
+  -initrd /tmp/initramfs.linux_amd64.cpio
+```
+
+In addition, you can pass your host's RNG:
+```sh
+qemu-system-x86_64 \
+  -object rng-random,filename=/dev/urandom,id=rng0 \
+  -device virtio-rng-pci,rng=rng0 \
+  -kernel vmlinuz \
+  -initrd /tmp/initramfs.linux_amd64.cpio
+```
+
 > NOTE: you can compress the initramfs but for xz compression, the kernel has
 > some restrictions on the compression options and it is suggested to align the
 > file to 512 byte boundaries `shell xz --check=crc32 -9 --lzma2=dict=1MiB
