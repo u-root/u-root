@@ -7,12 +7,14 @@ templates:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: off
       # Double all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 2
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
+      - GO111MODULE: off
       # Double all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 2
     steps:
@@ -116,6 +118,7 @@ jobs:
     <<: *golang-template
     environment:
       - CGO_ENABLED: 1
+      - GO111MODULE: off
     steps:
       - checkout
       - run:

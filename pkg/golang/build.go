@@ -114,7 +114,7 @@ func (c Environ) Env() []string {
 	if c.CgoEnabled {
 		cgo = 1
 	}
-	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
+	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo), "GO111MODULE=off")
 	return env
 }
 

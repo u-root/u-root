@@ -49,6 +49,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
 	os.Setenv("CGO_ENABLED", "0")
+	os.Setenv("GO111MODULE", "off")
 	testDir := filepath.Join(o.TmpDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)

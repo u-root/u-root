@@ -175,6 +175,7 @@ func SetEnv() {
 		"GOPATH":          "/",
 		"GOBIN":           "/ubin",
 		"CGO_ENABLED":     "0",
+		"GO111MODULE":     "off",
 	}
 
 	// Not all these paths may be populated or even exist but OTOH they might.
