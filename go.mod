@@ -17,10 +17,12 @@ require (
 	github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
 	github.com/insomniacslk/dhcp v0.0.0-20210314223004-28f74147e2e8
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
+	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/klauspost/compress v1.10.6 // indirect
 	github.com/klauspost/pgzip v1.2.4
 	github.com/kr/pty v1.1.8
 	github.com/mattn/go-isatty v0.0.12
+	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/pborman/getopt/v2 v2.1.0
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
