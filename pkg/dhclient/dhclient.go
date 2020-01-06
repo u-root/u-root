@@ -108,11 +108,9 @@ type Lease interface {
 	// Link is the interface the configuration is for.
 	Link() netlink.Link
 
-	// Return the value of a particular DHCPv4 option code.
-	GetOneOption4(code dhcpv4.OptionCode) ([]byte, error)
-
-	// Return the value of a particular DHCPv6 option code.
-	GetOneOption6(code dhcpv6.OptionCode) ([]byte, error)
+	// Return the full DHCP response, this is either a *dhcpv4.DHCPv4 or a
+	// *dhcpv6.Message.
+	Message() (*dhcpv4.DHCPv4, *dhcpv6.Message)
 }
 
 // LogLevel is the amount of information to log.
