@@ -32,6 +32,11 @@ func NewPacket4(iface netlink.Link, p *dhcpv4.DHCPv4) *Packet4 {
 	}
 }
 
+// Message returns the unwrapped DHCPv4 packet.
+func (p *Packet4) Message() (*dhcpv4.DHCPv4, *dhcpv6.Message) {
+	return p.P, nil
+}
+
 // Link is a netlink link
 func (p *Packet4) Link() netlink.Link {
 	return p.iface
@@ -188,12 +193,7 @@ func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
 	return parseISCSIURI(rp)
 }
 
-// GetOneOption4 returns a specific option code value.
-func (p *Packet4) GetOneOption4(code dhcpv4.OptionCode) ([]byte, error) {
-	return p.P.GetOneOption(code), nil
-}
-
-// GetOneOption6 always returns and error - DHCPv4 does not implement DHCPv6 options.
-func (p *Packet4) GetOneOption6(code dhcpv6.OptionCode) ([]byte, error) {
-	return nil, fmt.Errorf("DHCPv4 packet has no DHCPv6 Options")
+// Response returns the DHCP response
+func (p *Packet4) Response() interface{} {
+	return p.P
 }
