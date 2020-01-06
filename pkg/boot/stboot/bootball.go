@@ -42,7 +42,7 @@ type BootBall struct {
 func BootBallFromArchie(archive string) (*BootBall, error) {
 	var ball = new(BootBall)
 
-	dir, err := ioutil.TempDir(os.TempDir(), "bootball")
+	dir, err := ioutil.TempDir("", "bootball")
 	if err != nil {
 		return ball, fmt.Errorf("BootBall: cannot create tmp dir: %v", err)
 	}
