@@ -197,6 +197,10 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 	}
 
 	cert, err := parseCertificate(buf)
+	if err != nil {
+		return err
+	}
+
 	err = validateCertificate(cert, ball.rootCert)
 	if err != nil {
 		return err
@@ -441,9 +445,12 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 	dstPath = filepath.Join(dir, ConfigName)
 	bytes, err := cfg.bytes()
 	if err != nil {
-		return "", nil
+		return "", err
 	}
-	ioutil.WriteFile(dstPath, bytes, os.ModePerm)
+	err = ioutil.WriteFile(dstPath, bytes, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
 
 	return dir, nil
 }
@@ -566,8 +573,13 @@ func fromZip(src, destDir string) error {
 			return err
 		}
 
-		fileReader.Close()
-		targetFile.Close()
+		if err = fileReader.Close(); err != nil {
+			return err
+		}
+
+		if err = targetFile.Close(); err != nil {
+			return err
+		}
 	}
 
 	return nil
