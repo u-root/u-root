@@ -1,7 +1,6 @@
 package stboot
 
 import (
-	"archive/zip"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/uzip"
 )
 
 const (
@@ -47,7 +47,7 @@ func BootBallFromArchie(archive string) (*BootBall, error) {
 		return ball, fmt.Errorf("BootBall: cannot create tmp dir: %v", err)
 	}
 
-	err = fromZip(archive, dir)
+	err = uzip.FromZip(archive, dir)
 	if err != nil {
 		return ball, fmt.Errorf("BootBall: cannot unzip %s: %v", archive, err)
 	}
@@ -150,7 +150,7 @@ func (ball *BootBall) Pack() error {
 	if ball.Archive == "" || ball.dir == "" {
 		return errors.New("BootBall.Pacstandak: booball.archive and bootball.dir must be set")
 	}
-	return toZip(ball.dir, ball.Archive)
+	return uzip.ToZip(ball.dir, ball.Archive)
 }
 
 // Dir returns the temporary directory associated with BootBall.
@@ -476,111 +476,6 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	err = out.Sync()
-
-	return nil
-}
-
-func toZip(srcDir, dest string) error {
-	info, err := os.Stat(srcDir)
-	if err != nil {
-		return err
-	}
-	if !(info.IsDir()) {
-		return fmt.Errorf("%s is not a directory", srcDir)
-	}
-	archive, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer archive.Close()
-
-	z := zip.NewWriter(archive)
-	defer z.Close()
-
-	filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// do not include srcDir into archive
-		if strings.Compare(info.Name(), filepath.Base(srcDir)) == 0 {
-			return nil
-		}
-
-		header, err := zip.FileInfoHeader(info)
-		if err != nil {
-			return err
-		}
-
-		// adjust header.Name to preserve folder strulture
-		header.Name = strings.TrimPrefix(path, srcDir)
-
-		if info.IsDir() {
-			header.Name += "/"
-		} else {
-			header.Method = zip.Deflate
-		}
-
-		writer, err := z.CreateHeader(header)
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		_, err = io.Copy(writer, file)
-		return err
-	})
-
-	return nil
-}
-
-func fromZip(src, destDir string) error {
-	z, err := zip.OpenReader(src)
-	if err != nil {
-		return err
-	}
-
-	if err = os.MkdirAll(destDir, 0755); err != nil {
-		return err
-	}
-
-	for _, file := range z.File {
-		path := filepath.Join(destDir, file.Name)
-		if file.FileInfo().IsDir() {
-			os.MkdirAll(path, file.Mode())
-			continue
-		}
-
-		fileReader, err := file.Open()
-		if err != nil {
-			return err
-		}
-
-		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-		if err != nil {
-			return err
-		}
-
-		if _, err := io.Copy(targetFile, fileReader); err != nil {
-			return err
-		}
-
-		if err = fileReader.Close(); err != nil {
-			return err
-		}
-
-		if err = targetFile.Close(); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
