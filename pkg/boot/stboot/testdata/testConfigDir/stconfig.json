@@ -4,7 +4,7 @@
         "name": "Standard Configuration 1", 
         "kernel": "kernels/kernel1.vmlinuz", 
         "kernel_args": "-a -b -c arg1",  
-        "initramfs": "initrds/initramfs.cpio",
+        "initramfs": "initrds/initramfs",
         "devicetree": "",
         "multiboot_kernel": "",
         "multiboot_args": "",
