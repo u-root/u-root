@@ -37,7 +37,7 @@ const (
 	eth                = "eth0"
 	rootCACertPath     = "/root/LetsEncrypt_Authority_X3.pem"
 	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
-	interfaceUpTimeout = 10 * time.Second
+	interfaceUpTimeout = 6 * time.Second
 )
 
 var banner = `
@@ -145,8 +145,6 @@ func main() {
 	}
 	// if we reach this point, no boot configuration succeeded
 	log.Print("No boot configuration succeeded")
-
-	return
 }
 
 func configureStaticNetwork(vars stboot.HostVars) error {
@@ -200,7 +198,7 @@ func configureDHCPNetwork() error {
 		level = 0
 	}
 	config := dhclient.Config{
-		Timeout:  time.Second * 6,
+		Timeout:  interfaceUpTimeout,
 		Retries:  4,
 		LogLevel: level,
 	}
@@ -208,8 +206,7 @@ func configureDHCPNetwork() error {
 	r := dhclient.SendRequests(context.TODO(), links, true, false, config)
 	for result := range r {
 		if result.Err == nil {
-			result.Lease.Configure()
-			return nil
+			return result.Lease.Configure()
 		} else if *doDebug {
 			log.Printf("dhcp response error: %v", result.Err)
 		}
@@ -244,6 +241,9 @@ func downloadFromHTTPS(url string, destination string) error {
 
 	// check available kernel entropy
 	e, err := ioutil.ReadFile(entropyAvail)
+	if err != nil {
+		return fmt.Errorf("Cannot evaluate entropy, %v", err)
+	}
 	es := strings.TrimSpace(string(e))
 	entr, err := strconv.Atoi(es)
 	if err != nil {
