@@ -392,21 +392,24 @@ func writeSignatures(sigs []signature, certFile, dir string) error {
 	for i, sig := range sigs {
 		d := fmt.Sprintf("%s%d", bootFilesDirName, i)
 		path := filepath.Join(dir, signaturesDirName, d)
-		os.Mkdir(path, os.ModePerm)
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			return err
+		}
 
 		id := fmt.Sprintf("%x", sig.Cert.PublicKey)[2:18]
 		sigName := fmt.Sprintf("%s.signature", id)
 		sigPath := filepath.Join(path, sigName)
-		werr := ioutil.WriteFile(sigPath, sig.Bytes, 0644)
-		if werr != nil {
-			return werr
+		err = ioutil.WriteFile(sigPath, sig.Bytes, 0644)
+		if err != nil {
+			return err
 		}
 
 		certName := fmt.Sprintf("%s.cert", id)
 		certPath := filepath.Join(path, certName)
-		cerr := copyFile(certFile, certPath)
-		if cerr != nil {
-			return cerr
+		err = copyFile(certFile, certPath)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -425,7 +428,9 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 
 	dstPath := filepath.Join(dir, signaturesDirName, rootCertName)
 	srcPath := filepath.Join(origDir, cfg.RootCertPath)
-	copyFile(srcPath, dstPath)
+	if err := copyFile(srcPath, dstPath); err != nil {
+		return "", err
+	}
 
 	for i, bc := range cfg.BootConfigs {
 		dirName := fmt.Sprintf("%s%d", bootFilesDirName, i)
@@ -433,7 +438,9 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 			fileName := filepath.Base(file)
 			dstPath := filepath.Join(dir, dirName, fileName)
 			srcPath := filepath.Join(origDir, file)
-			copyFile(srcPath, dstPath)
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return "", err
+			}
 		}
 
 		bc.ChangeFilePaths(dirName)
@@ -476,7 +483,6 @@ func copyFile(src, dst string) error {
 	if _, err = io.Copy(out, in); err != nil {
 		return err
 	}
-	err = out.Sync()
 
-	return nil
+	return out.Sync()
 }

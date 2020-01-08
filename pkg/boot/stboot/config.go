@@ -45,10 +45,7 @@ func (cfg *Stconfig) IsValid() bool {
 			return false
 		}
 	}
-	if cfg.RootCertPath == "" {
-		return false
-	}
-	return true
+	return cfg.RootCertPath != ""
 }
 
 // GetBootConfig returns the i-th boot configuration from the manifest, or an
