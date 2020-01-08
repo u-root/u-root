@@ -28,7 +28,11 @@ func TestFromZip(t *testing.T) {
 	require.NotEmpty(t, z)
 
 	out := filepath.Join(tmpDir, "unziped")
-	os.MkdirAll(out, os.ModePerm)
+	err = os.MkdirAll(out, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = FromZip(f, out)
 	if err != nil {
 		t.Fatal(err)
