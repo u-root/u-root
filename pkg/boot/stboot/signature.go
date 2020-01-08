@@ -60,12 +60,10 @@ func (DummySigner) Verify(sig signature, hash []byte) error {
 // x509 certificates.
 type Sha512PssSigner struct{}
 
-// Hash hashes the the provided files. I case of Sha512PssSigner
+// Hash hashes the the provided files. In case of Sha512PssSigner
 // it is a SHA512 hash.
 func (Sha512PssSigner) Hash(files ...string) ([]byte, error) {
 	h := sha512.New()
-	h.Reset()
-
 	for _, file := range files {
 		buf, err := ioutil.ReadFile(file)
 		if err != nil {
@@ -119,12 +117,7 @@ func (Sha512PssSigner) Verify(sig signature, hash []byte) error {
 // parseCertificate parses certificate from raw certificate
 func parseCertificate(raw []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(raw)
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return cert, nil
+	return x509.ParseCertificate(block.Bytes)
 }
 
 // certPool returns a x509 certificate pool from raw certificate
@@ -144,8 +137,5 @@ func validateCertificate(cert *x509.Certificate, cerPool *x509.CertPool) error {
 		Roots: cerPool,
 	}
 	_, err := cert.Verify(opts)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
