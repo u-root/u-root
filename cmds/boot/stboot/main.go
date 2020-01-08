@@ -207,13 +207,11 @@ func configureDHCPNetwork() error {
 
 	r := dhclient.SendRequests(context.TODO(), links, true, false, config)
 	for result := range r {
-		if result.Interface == link {
-			if result.Err == nil {
-				result.Lease.Configure()
-				return nil
-			} else if *doDebug {
-				log.Printf("dhcp response error: %v", err)
-			}
+		if result.Err == nil {
+			result.Lease.Configure()
+			return nil
+		} else if *doDebug {
+			log.Printf("dhcp response error: %v", result.Err)
 		}
 	}
 	return errors.New("no valid DHCP configuration recieved")
