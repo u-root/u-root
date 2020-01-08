@@ -186,8 +186,7 @@ func (ball *BootBall) Hash() error {
 // BootBall.Signer's hash function with the provided privKeyFile. The signature
 // is stored along with the provided certFile inside the BootBall.
 func (ball *BootBall) Sign(privKeyFile, certFile string) error {
-	err := validateFiles("", privKeyFile, certFile)
-	if err != nil {
+	if _, err := os.Stat(privKeyFile); err != nil {
 		return err
 	}
 
@@ -386,16 +385,9 @@ func (ball *BootBall) getSignatures() error {
 	return nil
 }
 
-func validateFiles(prefix string, files ...string) error {
-	for _, file := range files {
-		_, err := os.Stat(filepath.Join(prefix, file))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
+// writeSignatures writes the contents of sigs to corresponding
+// files dir along with certFile. An error is returned if one of the
+// files cannot be written.
 func writeSignatures(sigs []signature, certFile, dir string) error {
 	for i, sig := range sigs {
 		d := fmt.Sprintf("%s%d", bootFilesDirName, i)
@@ -426,16 +418,6 @@ func writeSignatures(sigs []signature, certFile, dir string) error {
 // If one of the files in cfg does not exist or copying fails an error is
 // returned.
 func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
-	if err := validateFiles(cfg.RootCertPath); err != nil {
-		return "", err
-	}
-
-	for _, bc := range cfg.BootConfigs {
-		if err := validateFiles(origDir, bc.FileNames()...); err != nil {
-			return "", err
-		}
-	}
-
 	dir, err := ioutil.TempDir(os.TempDir(), "bootball")
 	if err != nil {
 		return "", err
