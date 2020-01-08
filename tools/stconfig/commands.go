@@ -11,7 +11,6 @@ func packBootBall(config string) (err error) {
 	if err != nil {
 		return
 	}
-	defer ball.Clean()
 
 	err = ball.Pack()
 	if err != nil {
@@ -19,7 +18,7 @@ func packBootBall(config string) (err error) {
 	}
 
 	log.Printf("Bootball created at: " + ball.Archive)
-	return
+	return ball.Clean()
 
 }
 
@@ -28,7 +27,6 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 	if err != nil {
 		return
 	}
-	defer ball.Clean()
 
 	err = ball.Sign(privKey, cert)
 	if err != nil {
@@ -40,7 +38,7 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 	}
 
 	log.Printf("Signatures included for each bootconfig: %d", ball.NumSignatures)
-	return
+	return ball.Clean()
 }
 
 func unpackBootBall(bootBall string) (err error) {
@@ -48,8 +46,7 @@ func unpackBootBall(bootBall string) (err error) {
 	if err != nil {
 		return err
 	}
-	defer ball.Clean()
 
 	log.Println("Archive unpacked into: " + ball.Dir())
-	return nil
+	return ball.Clean()
 }
