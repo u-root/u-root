@@ -127,6 +127,7 @@ func parseCertificate(raw []byte) (*x509.Certificate, error) {
 	return cert, nil
 }
 
+// certPool returns a x509 certificate pool from raw certificate
 func certPool(pem []byte) (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pem)
@@ -136,6 +137,8 @@ func certPool(pem []byte) (*x509.CertPool, error) {
 	return certPool, nil
 }
 
+// validateCertificate validates cert against certPool. If cert is not signed
+// by a certificate of certPool an error is returned.
 func validateCertificate(cert *x509.Certificate, cerPool *x509.CertPool) error {
 	opts := x509.VerifyOptions{
 		Roots: cerPool,
