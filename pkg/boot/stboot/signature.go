@@ -69,7 +69,10 @@ func (Sha512PssSigner) Hash(files ...string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		h.Write(buf)
+		_, err = h.Write(buf)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return h.Sum(nil), nil
 }
