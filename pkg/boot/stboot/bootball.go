@@ -23,7 +23,7 @@ const (
 )
 
 // BootBall contains data to operate on the system transparency
-// bootball archive. There is an underlaying temporary directory
+// bootball archive. There is an underlying temporary directory
 // representing the extracted archive.
 type BootBall struct {
 	Archive        string
@@ -70,7 +70,7 @@ func BootBallFromArchie(archive string) (*BootBall, error) {
 }
 
 // BootBallFromConfig constructs a BootBall from a stconfig.json at configFile.
-// the underlaying tmporary directory is created with standardized path and an
+// the underlying tmporary directory is created with standardized paths and an
 // updated copy of stconfig.json
 func BootBallFromConfig(configFile string) (*BootBall, error) {
 	var ball = new(BootBall)
@@ -134,7 +134,7 @@ func (ball *BootBall) init() error {
 	return nil
 }
 
-// Clean removes the underlaying temporary directory.
+// Clean removes the underlying temporary directory.
 func (ball *BootBall) Clean() error {
 	err := os.RemoveAll(ball.dir)
 	if err != nil {
@@ -144,7 +144,7 @@ func (ball *BootBall) Clean() error {
 	return nil
 }
 
-// Pack archives the all contents of the underlaying temporary
+// Pack archives the all contents of the underlying temporary
 // directory using zip.
 func (ball *BootBall) Pack() error {
 	if ball.Archive == "" || ball.dir == "" {
@@ -285,8 +285,9 @@ func (ball *BootBall) VerifyBootconfigByName(name string) (int, error) {
 	return verified, nil
 }
 
-func getConfig(dest string) (*Stconfig, error) {
-	cfgBytes, err := ioutil.ReadFile(dest)
+// getConfig returns a Stconfig struct from a JSON file at src
+func getConfig(src string) (*Stconfig, error) {
+	cfgBytes, err := ioutil.ReadFile(src)
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +301,8 @@ func getConfig(dest string) (*Stconfig, error) {
 	return cfg, nil
 }
 
+// getRootCert returns a reference to a *x509.CertPool a
+// certificate file at src
 func getRootCert(dest string) (*x509.CertPool, error) {
 	certBytes, err := ioutil.ReadFile(dest)
 	if err != nil {
@@ -312,22 +315,30 @@ func getRootCert(dest string) (*x509.CertPool, error) {
 	return cert, nil
 }
 
+// getBootFiles returns the file paths of all files of a u-root bootconfig
+// for all bootconfigs in cfg.BootConfigs. Prefix is added in front of each
+// file path. The map's keys are set to the respective bootconfig's name.
+// An error is returned in case one of the files does not exist.
 func getBootFiles(cfg *Stconfig, prefix string) (map[string][]string, error) {
 	bootFiles := make(map[string][]string)
 	for _, bc := range cfg.BootConfigs {
 		files := make([]string, 0)
 		for _, file := range bc.FileNames() {
 			file = filepath.Join(prefix, file)
-			files = append(files, file)
-			if err := validateFiles("", files...); err != nil {
+			if _, err := os.Stat(file); err != nil {
 				return nil, err
 			}
+			files = append(files, file)
 		}
 		bootFiles[bc.Name] = files
 	}
 	return bootFiles, nil
 }
 
+// getSignatures initializes ball.signatures with the corresponding signatures
+// and certificates found in the signatures folder (stboot.signaturesDirName)
+// of ball's underlying tmpDir (ball.dir). An error is returned if one of the
+// files cannot be read or parsed.
 func (ball *BootBall) getSignatures() error {
 	ball.signatures = make(map[string][]signature)
 	path := filepath.Join(ball.dir, signaturesDirName)
@@ -409,6 +420,11 @@ func writeSignatures(sigs []signature, certFile, dir string) error {
 	return nil
 }
 
+// makeConfigDir copies the files named in cfg to well known directory tree
+// inside the bootball's underlying tmpDir since the files in user's cfg can
+// reside anywhere in the file system. The created tmpDir is returned.
+// If one of the files in cfg does not exist or copying fails an error is
+// returned.
 func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 	if err := validateFiles(cfg.RootCertPath); err != nil {
 		return "", err
@@ -455,6 +471,9 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 	return dir, nil
 }
 
+// copyFiles copies the content of the file at src to dst. If dst does not
+// exist it is created. In case case src does not exist, creation of dst
+// or copying fails an error is returned
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
