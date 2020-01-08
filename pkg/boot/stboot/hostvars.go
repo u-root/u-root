@@ -26,7 +26,7 @@ type HostVars struct {
 func FindHostVarsInInitramfs() (HostVars, error) {
 	var vars HostVars
 	file := path.Join("etc/", HostVarsName)
-	if _, err := os.Stat(file); os.IsNotExist(err) != false {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return vars, fmt.Errorf("%s not found: %v", file, err)
 	}
 	data, err := ioutil.ReadFile(file)

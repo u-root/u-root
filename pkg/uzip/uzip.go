@@ -28,7 +28,7 @@ func ToZip(dir, dest string) error {
 	z := zip.NewWriter(archive)
 	defer z.Close()
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func ToZip(dir, dest string) error {
 		return err
 	})
 
-	return nil
+	return err
 }
 
 // FromZip extracts the zip archive at src to dir.
@@ -87,7 +87,9 @@ func FromZip(src, dir string) error {
 	for _, file := range z.File {
 		path := filepath.Join(dir, file.Name)
 		if file.FileInfo().IsDir() {
-			os.MkdirAll(path, file.Mode())
+			if err = os.MkdirAll(path, file.Mode()); err != nil {
+				return err
+			}
 			continue
 		}
 
