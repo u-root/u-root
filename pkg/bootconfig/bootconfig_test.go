@@ -48,3 +48,11 @@ func TestNewBootConfigMissingKernel(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, c.IsValid())
 }
+
+func TestID(t *testing.T) {
+	bc := BootConfig{
+		Name: "deiner mudda \\ sein /slash",
+	}
+	id := bc.ID()
+	t.Log(id)
+}
