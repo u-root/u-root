@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -35,6 +37,29 @@ type BootConfig struct {
 // otherwise
 func (bc *BootConfig) IsValid() bool {
 	return (bc.Kernel != "" && bc.Multiboot == "") || (bc.Kernel == "" && bc.Multiboot != "")
+}
+
+// ID retrurns an identifyer composed of bc's name and crc32 hash of bc.
+// The ID is suitable to be used as part of a filepath.
+func (bc *BootConfig) ID() string {
+	id := strings.Title(strings.ToLower(bc.Name))
+	id = strings.ReplaceAll(id, " ", "")
+	id = strings.ReplaceAll(id, "/", "")
+	id = strings.ReplaceAll(id, "\\", "")
+
+	buf := []byte(filepath.Base(bc.Kernel))
+	buf = append(buf, []byte(bc.KernelArgs)...)
+	buf = append(buf, []byte(filepath.Base(bc.Initramfs))...)
+	buf = append(buf, []byte(filepath.Base(bc.DeviceTree))...)
+	buf = append(buf, []byte(filepath.Base(bc.Multiboot))...)
+	buf = append(buf, []byte(bc.MultibootArgs)...)
+	for _, mod := range bc.Modules {
+		buf = append(buf, []byte(filepath.Base(mod))...)
+	}
+	h := crc32.ChecksumIEEE(buf)
+	x := fmt.Sprintf("%x", h)
+
+	return "BC_" + id + x
 }
 
 // FileNames returns a slice of all filenames in the bootconfig.
