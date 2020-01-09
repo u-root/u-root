@@ -142,6 +142,8 @@ just search for a mirror URL you prefer and a release version, for example,
 > --stdout /tmp/initramfs.linux_amd64.cpio \ | dd conv=sync bs=512
 > of=/tmp/initramfs.linux_amd64.cpio.xz`
 
+## Extra Files
+
 You may also include additional files in the initramfs using the `-files` flag.
 If you add binaries with `-files` are listed, their ldd dependencies will be
 included as well. As example for Debian, you want to add two kernel modules for
