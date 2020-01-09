@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build darwin dragonfly freebsd nacl netbsd openbsd plan9 solaris linux
+// +build aix darwin dragonfly freebsd nacl netbsd openbsd plan9 solaris linux
 
 // Package rand implements cancelable reads from a cryptographically safe
 // random number source.
