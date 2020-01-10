@@ -176,11 +176,18 @@ qemu-system-x86_64 \
   -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
-> NOTE: you can compress the initramfs but for xz compression, the kernel has
-> some restrictions on the compression options and it is suggested to align the
-> file to 512 byte boundaries `shell xz --check=crc32 -9 --lzma2=dict=1MiB
-> --stdout /tmp/initramfs.linux_amd64.cpio \ | dd conv=sync bs=512
-> of=/tmp/initramfs.linux_amd64.cpio.xz`
+## Compression
+
+You can compress the initramfs. However, for xz compression, the kernel has some
+restrictions on the compression options and it is suggested to align the file
+to 512 byte boundaries:
+
+```shell
+xz --check=crc32 -9 --lzma2=dict=1MiB \
+   --stdout /tmp/initramfs.linux_amd64.cpio \
+   | dd conv=sync bs=512 \
+   of=/tmp/initramfs.linux_amd64.cpio.xz
+```
 
 ## Extra Files
 
