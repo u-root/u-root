@@ -11,28 +11,45 @@
 // Yeah.
 //
 // Synopsis:
-//     pox [-[-debug]|d] -[-run|r file] [-[-create]|c]  [-[-file]|f tcz-file] file [...file]
+//     pox [-[-debug]|d] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]
 //
 // Description:
 //     pox makes portable executables in squashfs format compatible with
 //     tcz format. We don't build in the execution code, rather, we set it
-//     up so we can use the command itself. You can create, create and run a command,
-//     mount a pox, or mount a pox and run a command in it.
+//     up so we can use the command itself. You can either create the TCZ image
+//     or run a command within an image that was previously created.
 //
 // Options:
 //     debug|d: verbose
 //     file|f file: file name (default /tmp/pox.tcz)
-//     run|r: run a file by loopback mounting the squashfs and using the first arg as a command to run in a chroot
-//     create|c: create the file.
-//     both -c and -r can be used on the same command.
+//     run|r: run a file by loopback mounting the squashfs and using the first arg to pox as the command to run.
+//     create|c: create the TCZ file.
+//     Exactly one of -c and -r must be used on the same command.
 //
 // Example:
-//	pox -d -r /bin/bash /bin/cat /bin/ls /etc/hosts
-//	Will build a squashfs, mount it, and drop you into it running bash.
+//	$ pox -c /bin/bash /bin/cat /bin/ls /etc/hosts
+//	Will build a squashfs, which will be /tmp/pox.tcz
+//
+//	$ sudo pox -r /bin/bash
+//	Will drop you into the /tmp/pox.tcz running bash
 //	You can use ls and cat on /etc/hosts.
+//
 //	Simpler example:
-//	pox -d -r /bin/ls /etc/hosts
+//	$ sudo pox -r /bin/ls
 //	will run ls and exit.
+//
+// Notes:
+// - When running a pox, you likely need sudo to access /dev/loop*.
+//
+// - Your binaries and programs show up in the TCZ using whatever path you
+// provided to pox.  For instance, if you are in /home/you/somedir/ and have
+// ./bin/foo, and you pox -c bin/foo, your TCZ will contain bin/foo.  If you
+// pox /home/you/somedir/bin/foo, your TCZ will contain the full path.
+//
+// - When creating a pox with an executable with shared libraries that are not
+// installed on your system, such as for a project installed in your home
+// directory, run pox from the installation prefix directory, such that the
+// libraries and binaries are below pox's working directory.
 package main
 
 import (
@@ -50,12 +67,12 @@ import (
 	"github.com/u-root/u-root/pkg/loop"
 )
 
-const usage = "pox [-[-debug]|d] -[-run|r file] [-[-create]|c]  [-[-file]|f tcz-file] file [...file]"
+const usage = "pox [-[-debug]|d] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]"
 
 var (
 	debug  = flag.BoolP("debug", "d", false, "enable debug prints")
-	run    = flag.BoolP("run", "r", false, "run a test with the first argument")
-	create = flag.BoolP("create", "c", true, "create it")
+	run    = flag.BoolP("run", "r", false, "Run the first file argument")
+	create = flag.BoolP("create", "c", false, "create it")
 	file   = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
 	v      = func(string, ...interface{}) {}
 )
@@ -64,6 +81,9 @@ func pox() error {
 	flag.Parse()
 	if *debug {
 		v = log.Printf
+	}
+	if (*create && *run) || (!*create && !*run) {
+		return fmt.Errorf(usage)
 	}
 	names := flag.Args()
 	if len(names) == 0 {
@@ -131,6 +151,7 @@ func pox() error {
 		if err != nil {
 			return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
 		}
+		v("Done, your pox is in %v", *file)
 	}
 
 	if !*run {
@@ -166,7 +187,6 @@ func pox() error {
 		log.Printf("Running test: %v", err)
 	}
 
-	v("Done, your pox is in %v", *file)
 	return err
 }
 
