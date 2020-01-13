@@ -129,8 +129,10 @@ func main() {
 
 	// At this point you could use an array of commands/output templates to
 	// drive the test, and end with the exit command shown nere.
-	if n, err := cmd.Ptm.Write([]byte("exit\n")); err != nil {
-		log.Printf("Writing exit: want (5, nil); got (%d, %v)\n", n, err)
+	for _, c := range []string{"date\n", "exit\n", "exit\n", "exit\n"} {
+		if _, err := cmd.Ptm.Write([]byte(c)); err != nil {
+			log.Printf("Writing %s: %v", c, err)
+		}
 	}
 	if err := cmd.Wait(); err != nil {
 		log.Fatal(err)
