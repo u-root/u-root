@@ -124,16 +124,21 @@ func main() {
 
 	if *doDebug {
 		str, _ := json.MarshalIndent(*bc, "", "  ")
-		log.Printf("Bootconfig: %s", str)
+		log.Printf("Bootconfig (ID: %s): %s", bc.ID(), str)
 	}
 
-	n, err := ball.VerifyBootconfigByName(bc.Name)
+	n, valid, err := ball.VerifyBootconfigByID(bc.ID())
 	if err != nil {
-		log.Fatalf("Bootconfig %d seems to be not trustworthy: %v", index, err)
+		log.Fatalf("Error verifying bootconfig %d: %v", index, err)
 	}
-	if n < vars.MinimalSignaturesMatch {
-		log.Fatalf("Did not found enough valid signatures. %d valid, %d required", n, vars.MinimalSignaturesMatch)
+	if valid < vars.MinimalSignaturesMatch {
+		log.Fatalf("Did not found enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
+
+	if *doDebug {
+		log.Printf("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
+	}
+
 	log.Printf("Bootconfig '%s' passed verification", bc.Name)
 	log.Print(check)
 
