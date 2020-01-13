@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/bootconfig"
@@ -176,12 +175,12 @@ func (ball *BootBall) GetBootConfigByIndex(index int) (*bootconfig.BootConfig, e
 // BootBall.Signer's hash function
 func (ball *BootBall) Hash() error {
 	ball.hashes = make(map[string][]byte)
-	for i, files := range ball.bootFiles {
+	for key, files := range ball.bootFiles {
 		hash, herr := ball.Signer.Hash(files...)
 		if herr != nil {
 			return herr
 		}
-		ball.hashes[i] = hash
+		ball.hashes[key] = hash
 	}
 	return nil
 }
@@ -218,74 +217,51 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		}
 	}
 
-	sigs := make([]signature, 0)
-	for _, hash := range ball.hashes {
+	for key, hash := range ball.hashes {
 		s, err := ball.Signer.Sign(privKeyFile, hash)
 		if err != nil {
 			return err
 		}
-		sigs = append(sigs, signature{
+		sig := signature{
 			Bytes: s,
-			Cert:  cert})
-	}
-
-	if err = writeSignatures(sigs, certFile, ball.dir); err != nil {
-		return err
+			Cert:  cert}
+		ball.signatures[key] = append(ball.signatures[key], sig)
+		d := filepath.Join(ball.dir, signaturesDirName, key)
+		if err = writeSignature(d, certFile, sig); err != nil {
+			return err
+		}
 	}
 
 	ball.NumSignatures++
 	return nil
 }
 
-// VerifyBootconfigs validates the certificates stored together with the
-// signatures of each boot configuration in BootBall and verifies the
-// signatures. A map is returned with the BootConfig's name as key and the
-// according number of valid signatures of this BootConfig.
-func (ball *BootBall) VerifyBootconfigs() (map[string]int, error) {
-	verified := make(map[string]int)
-	for i := 0; 1 < ball.NumSignatures; i++ {
-		n, err := ball.VerifyBootconfigByIndex(i)
-		if err != nil {
-			return nil, err
-		}
-		verified[ball.config.BootConfigs[i].Name] = n
-	}
-	return verified, nil
-}
-
-// VerifyBootconfigByIndex validates the certificates stored together with the
-// signatures of BootConfig index at BootBall.Config.BootConfigs[] and verifies
-// the signatures. The number of valid signatures is returned.
-func (ball *BootBall) VerifyBootconfigByIndex(index int) (int, error) {
-	bcName := ball.config.BootConfigs[index].Name
-	return ball.VerifyBootconfigByName(bcName)
-}
-
-// VerifyBootconfigByName validates the certificates stored together with the
-// signatures of BootConfig name and verifies the signatures. The number of
+// VerifyBootconfigByID validates the certificates stored together with the
+// signatures of BootConfig id and verifies the signatures. The number of
 // valid signatures is returned.
-func (ball *BootBall) VerifyBootconfigByName(name string) (int, error) {
+func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err error) {
 	if ball.hashes == nil {
 		err := ball.Hash()
 		if err != nil {
-			return 0, err
+			return 0, 0, err
 		}
 	}
 
-	sigs := ball.signatures[name]
-	var verified int = 0
-	for _, sig := range sigs {
+	found = 0
+	verified = 0
+	for _, sig := range ball.signatures[id] {
 		err := validateCertificate(sig.Cert, ball.rootCert)
 		if err != nil {
-			return verified, err
+			return found, verified, err
 		}
-		err = ball.Signer.Verify(sig, ball.hashes[name])
+		found++
+		err = ball.Signer.Verify(sig, ball.hashes[id])
 		if err != nil {
-			return verified, err
+			log.Print(err)
 		}
 		verified++
 	}
-	return verified, nil
+	return found, verified, nil
 }
 
 // getConfig returns a Stconfig struct from a JSON file at src
@@ -333,7 +309,7 @@ func getBootFiles(cfg *Stconfig, prefix string) (map[string][]string, error) {
 			}
 			files = append(files, file)
 		}
-		bootFiles[bc.Name] = files
+		bootFiles[bc.ID()] = files
 	}
 	return bootFiles, nil
 }
@@ -356,12 +332,6 @@ func (ball *BootBall) getSignatures() error {
 				return err
 			}
 
-			dir := filepath.Dir(path)
-			index, err := strconv.Atoi(dir[len(dir)-1:])
-			if err != nil {
-				return err
-			}
-
 			certFile := strings.TrimSuffix(path, filepath.Ext(path)) + ".cert"
 			certBytes, err := ioutil.ReadFile(certFile)
 			if err != nil {
@@ -378,7 +348,7 @@ func (ball *BootBall) getSignatures() error {
 				Cert:  cert,
 			}
 			sigPool = append(sigPool, sig)
-			key := ball.config.BootConfigs[index].Name
+			key := filepath.Base(filepath.Dir(path))
 			ball.signatures[key] = sigPool
 		}
 		return nil
@@ -389,34 +359,26 @@ func (ball *BootBall) getSignatures() error {
 	return nil
 }
 
-// writeSignatures writes the contents of sigs to corresponding
-// files dir along with certFile. An error is returned if one of the
-// files cannot be written.
-func writeSignatures(sigs []signature, certFile, dir string) error {
-	for i, sig := range sigs {
-		d := fmt.Sprintf("%s%d", bootFilesDirName, i)
-		path := filepath.Join(dir, signaturesDirName, d)
-		err := os.MkdirAll(path, os.ModePerm)
-		if err != nil {
-			return err
-		}
-
-		id := fmt.Sprintf("%x", sig.Cert.PublicKey)[2:18]
-		sigName := fmt.Sprintf("%s.signature", id)
-		sigPath := filepath.Join(path, sigName)
-		err = ioutil.WriteFile(sigPath, sig.Bytes, 0644)
-		if err != nil {
-			return err
-		}
-
-		certName := fmt.Sprintf("%s.cert", id)
-		certPath := filepath.Join(path, certName)
-		err = copyFile(certFile, certPath)
-		if err != nil {
-			return err
-		}
+// writeSignature writes the signature represented by sig to a file in
+// dir along with a copy of certFile. The filenames are composed of the
+// first piece of the public key of the certificate.
+func writeSignature(dir, certFile string, sig signature) error {
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	id := fmt.Sprintf("%x", sig.Cert.PublicKey)[2:18]
+	sigName := fmt.Sprintf("%s.signature", id)
+	sigPath := filepath.Join(dir, sigName)
+	err = ioutil.WriteFile(sigPath, sig.Bytes, 0644)
+	if err != nil {
+		return err
+	}
+
+	certName := fmt.Sprintf("%s.cert", id)
+	certPath := filepath.Join(dir, certName)
+	return copyFile(certFile, certPath)
 }
 
 // makeConfigDir copies the files named in cfg to well known directory tree
@@ -437,7 +399,7 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 	}
 
 	for i, bc := range cfg.BootConfigs {
-		dirName := fmt.Sprintf("%s%d", bootFilesDirName, i)
+		dirName := bc.ID()
 		for _, file := range bc.FileNames() {
 			fileName := filepath.Base(file)
 			dstPath := filepath.Join(dir, dirName, fileName)
