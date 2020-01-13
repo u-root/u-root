@@ -77,85 +77,79 @@ var (
 	v      = func(string, ...interface{}) {}
 )
 
-func pox() error {
-	flag.Parse()
-	if *debug {
-		v = log.Printf
-	}
-	if (*create && *run) || (!*create && !*run) {
-		return fmt.Errorf(usage)
-	}
-	names := flag.Args()
+func poxCreate(names []string) error {
 	if len(names) == 0 {
 		return fmt.Errorf(usage)
 	}
-
-	if *create {
-		l, err := ldd.Ldd(names)
-		if err != nil {
-			var stderr []byte
-			if eerr, ok := err.(*exec.ExitError); ok {
-				stderr = eerr.Stderr
-			}
-			return fmt.Errorf("Running ldd on %v: %v %s", names,
-				err, stderr)
+	l, err := ldd.Ldd(names)
+	if err != nil {
+		var stderr []byte
+		if eerr, ok := err.(*exec.ExitError); ok {
+			stderr = eerr.Stderr
 		}
+		return fmt.Errorf("Running ldd on %v: %v %s", names,
+			err, stderr)
+	}
 
-		for _, dep := range l {
-			v("%s", dep.FullName)
-			names = append(names, dep.FullName)
-		}
-		// Now we need to make a template file hierarchy and put
-		// the stuff we want in there.
-		dir, err := ioutil.TempDir("", "pox")
+	for _, dep := range l {
+		v("%s", dep.FullName)
+		names = append(names, dep.FullName)
+	}
+	// Now we need to make a template file hierarchy and put
+	// the stuff we want in there.
+	dir, err := ioutil.TempDir("", "pox")
+	if err != nil {
+		return err
+	}
+	if !*debug {
+		defer os.RemoveAll(dir)
+	}
+	// We don't use defer() here to close files as
+	// that can cause open failures with a large enough number.
+	for _, f := range names {
+		v("Process %v", f)
+		fi, err := os.Stat(f)
 		if err != nil {
 			return err
 		}
-		if !*debug {
-			defer os.RemoveAll(dir)
-		}
-		// We don't use defer() here to close files as
-		// that can cause open failures with a large enough number.
-		for _, f := range names {
-			v("Process %v", f)
-			fi, err := os.Stat(f)
-			if err != nil {
-				return err
-			}
-			in, err := os.Open(f)
-			if err != nil {
-				return err
-			}
-			dfile := filepath.Join(dir, f)
-			d := filepath.Dir(dfile)
-			if err := os.MkdirAll(d, 0755); err != nil {
-				in.Close()
-				return err
-			}
-			out, err := os.OpenFile(dfile, os.O_WRONLY|os.O_CREATE, fi.Mode().Perm())
-			if err != nil {
-				in.Close()
-				return err
-			}
-			_, err = io.Copy(out, in)
-			in.Close()
-			out.Close()
-			if err != nil {
-				return err
-			}
-
-		}
-		c := exec.Command("mksquashfs", dir, *file, "-noappend")
-		o, err := c.CombinedOutput()
-		v("%v", string(o))
+		in, err := os.Open(f)
 		if err != nil {
-			return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
+			return err
 		}
-		v("Done, your pox is in %v", *file)
-	}
+		dfile := filepath.Join(dir, f)
+		d := filepath.Dir(dfile)
+		if err := os.MkdirAll(d, 0755); err != nil {
+			in.Close()
+			return err
+		}
+		out, err := os.OpenFile(dfile, os.O_WRONLY|os.O_CREATE,
+			fi.Mode().Perm())
+		if err != nil {
+			in.Close()
+			return err
+		}
+		_, err = io.Copy(out, in)
+		in.Close()
+		out.Close()
+		if err != nil {
+			return err
+		}
 
-	if !*run {
-		return nil
+	}
+	c := exec.Command("mksquashfs", dir, *file, "-noappend")
+	o, err := c.CombinedOutput()
+	v("%v", string(o))
+	if err != nil {
+		return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
+	}
+	v("Done, your pox is in %v", *file)
+
+	return nil
+}
+
+func poxRun(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf(usage)
 	}
 	dir, err := ioutil.TempDir("", "pox")
 	if err != nil {
@@ -177,7 +171,7 @@ func pox() error {
 	}
 	defer mountPoint.Unmount(0) //nolint:errcheck
 
-	c := exec.Command(names[0])
+	c := exec.Command(args[0])
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 	c.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
@@ -188,6 +182,23 @@ func pox() error {
 	}
 
 	return err
+}
+
+func pox() error {
+	flag.Parse()
+	if *debug {
+		v = log.Printf
+	}
+	if (*create && *run) || (!*create && !*run) {
+		return fmt.Errorf(usage)
+	}
+	if *create {
+		return poxCreate(flag.Args())
+	}
+	if *run {
+		return poxRun(flag.Args())
+	}
+	return fmt.Errorf(usage)
 }
 
 func main() {
