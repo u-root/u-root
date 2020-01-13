@@ -22,7 +22,6 @@ import (
 const (
 	signaturesDirName string = "signatures"
 	rootCertName      string = "root.cert"
-	bootFilesDirName  string = "bootconfig"
 )
 
 // BootBall contains data to operate on the system transparency
