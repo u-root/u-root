@@ -11,7 +11,8 @@
 // Yeah.
 //
 // Synopsis:
-//     pox [-[-debug]|d] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]
+//     pox [-[-debug]|d] [-[-file]|f tcz-file] -[-create]|c FILE [...FILE]
+//     pox [-[-debug]|d] [-[-file]|f tcz-file] -[-run|r] PROGRAM -- [...ARGS]
 //
 // Description:
 //     pox makes portable executables in squashfs format compatible with
@@ -22,7 +23,10 @@
 // Options:
 //     debug|d: verbose
 //     file|f file: file name (default /tmp/pox.tcz)
-//     run|r: run a file by loopback mounting the squashfs and using the first arg to pox as the command to run.
+//     run|r: run a program by loopback mounting the squashfs.  Runs the first
+//            non-flag argument to pox.  Remaining arguments will be passed to
+//            the program.  Use '--' before any flag-like arguments to prevent
+//            pox from interpretting the flags.
 //     create|c: create the TCZ file.
 //     Exactly one of -c and -r must be used on the same command.
 //
@@ -34,9 +38,12 @@
 //	Will drop you into the /tmp/pox.tcz running bash
 //	You can use ls and cat on /etc/hosts.
 //
-//	Simpler example:
-//	$ sudo pox -r /bin/ls
-//	will run ls and exit.
+//	Simpler example, with arguments:
+//	$ sudo pox -r /bin/ls -- -la
+//	will run `ls -la` and exit.
+//
+//	$ sudo pox -r -- /bin/ls -la
+//	Syntactically easier: the program name can come after '--'
 //
 // Notes:
 // - When running a pox, you likely need sudo to access /dev/loop*.
@@ -171,7 +178,7 @@ func poxRun(args []string) error {
 	}
 	defer mountPoint.Unmount(0) //nolint:errcheck
 
-	c := exec.Command(args[0])
+	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 	c.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
