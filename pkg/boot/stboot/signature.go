@@ -111,7 +111,7 @@ func (Sha512PssSigner) Sign(privKey string, data []byte) ([]byte, error) {
 	return sig, nil
 }
 
-// Verify checks if sig contains a valid signature of hash. In case of
+// Verify checks if sig contains a valid signature of hash.
 func (Sha512PssSigner) Verify(sig signature, hash []byte) error {
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 	err := rsa.VerifyPSS(sig.Cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hash, sig.Bytes, opts)
@@ -121,13 +121,13 @@ func (Sha512PssSigner) Verify(sig signature, hash []byte) error {
 	return nil
 }
 
-// parseCertificate parses certificate from raw certificate
+// parseCertificate parses certificate from raw certificate.
 func parseCertificate(raw []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(raw)
 	return x509.ParseCertificate(block.Bytes)
 }
 
-// certPool returns a x509 certificate pool from raw certificate
+// certPool returns a x509 certificate pool from raw certificate.
 func certPool(pem []byte) (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pem)
