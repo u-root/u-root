@@ -40,8 +40,8 @@ type BootBall struct {
 	Signer         Signer
 }
 
-// BootBallFromArchie constructs a BootBall zip file at archive
-func BootBallFromArchie(archive string) (*BootBall, error) {
+// BootBallFromArchive constructs a BootBall zip file at archive
+func BootBallFromArchive(archive string) (*BootBall, error) {
 	var ball = new(BootBall)
 
 	dir, err := ioutil.TempDir("", "bootball")
