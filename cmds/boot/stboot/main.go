@@ -38,7 +38,6 @@ var (
 )
 
 const (
-	eth                = "eth0"
 	rootCACertPath     = "/root/LetsEncrypt_Authority_X3.pem"
 	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
 	interfaceUpTimeout = 6 * time.Second
@@ -85,8 +84,6 @@ func main() {
 		str, _ := json.MarshalIndent(vars, "", "  ")
 		log.Printf("Host variables: %s", str)
 	}
-
-	debug("Configuring network interfaces")
 
 	if vars.HostIP != "" {
 		err = configureStaticNetwork(vars)
@@ -163,17 +160,17 @@ func configureStaticNetwork(vars stboot.HostVars) error {
 		return fmt.Errorf("Error parsing HostIP string to CIDR format address: %v", err)
 	}
 
-	iface, err := netlink.LinkByName(eth)
+	link, err := findNetworkInterface()
 	if err != nil {
-		return fmt.Errorf("Error retrieving interface %s: %v", eth, err)
+		return err
 	}
 
-	if err = netlink.AddrAdd(iface, addr); err != nil {
+	if err = netlink.AddrAdd(link, addr); err != nil {
 		return fmt.Errorf("Error adding address: %v", err)
 	}
 
-	if err = netlink.LinkSetUp(iface); err != nil {
-		return fmt.Errorf("Error bringing up interface %s: %v", eth, err)
+	if err = netlink.LinkSetUp(link); err != nil {
+		return fmt.Errorf("Error bringing up interface: %v", err)
 	}
 
 	gateway, err := netlink.ParseAddr(vars.DefaultGateway)
@@ -181,7 +178,7 @@ func configureStaticNetwork(vars stboot.HostVars) error {
 		return fmt.Errorf("Error parsing GatewayIP string to CIDR format address: %v", err)
 	}
 
-	r := &netlink.Route{LinkIndex: iface.Attrs().Index, Gw: gateway.IPNet.IP}
+	r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: gateway.IPNet.IP}
 	if err = netlink.RouteAdd(r); err != nil {
 		return fmt.Errorf("Error setting default gateway: %v", err)
 	}
@@ -192,7 +189,7 @@ func configureStaticNetwork(vars stboot.HostVars) error {
 func configureDHCPNetwork() error {
 	log.Printf("Trying to configure network configuration dynamically...")
 
-	link, err := dhclient.IfUp(eth)
+	link, err := findNetworkInterface()
 	if err != nil {
 		return err
 	}
@@ -221,6 +218,42 @@ func configureDHCPNetwork() error {
 		}
 	}
 	return errors.New("no valid DHCP configuration recieved")
+}
+
+func findNetworkInterface() (netlink.Link, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ifaces) == 0 {
+		return nil, errors.New("No network interface found")
+	}
+
+	var ifnames []string
+	for _, iface := range ifaces {
+		if *doDebug {
+			log.Print("Found interface")
+			log.Printf("Index: %d", iface.Index)
+			log.Printf("Name: %s", iface.Name)
+			log.Printf("MTU: %d", iface.MTU)
+			log.Printf("Hardware Addr: %s", iface.HardwareAddr.String())
+			log.Printf("Flags: %v", iface.Flags)
+		}
+		ifnames = append(ifnames, iface.Name)
+		// skip loopback
+		if iface.Flags&net.FlagLoopback != 0 || iface.HardwareAddr.String() == "" {
+			continue
+		}
+		log.Printf("Try using %s", iface.Name)
+		link, err := netlink.LinkByName(iface.Name)
+		if err == nil {
+			return link, nil
+		}
+		log.Print(err)
+	}
+
+	return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
 }
 
 func downloadFromHTTPS(url string, destination string) error {
