@@ -183,6 +183,7 @@ func poxRun(args []string) error {
 	c.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
 	}
+	c.Env = append(os.Environ(), "PWD=.")
 
 	if err = c.Run(); err != nil {
 		log.Printf("Running test: %v", err)
