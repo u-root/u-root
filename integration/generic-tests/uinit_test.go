@@ -9,7 +9,6 @@ package integration
 import (
 	"testing"
 
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -40,12 +39,6 @@ func TestHelloWorldNegative(t *testing.T) {
 func TestScript(t *testing.T) {
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "ShellScript",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/echo",
-			),
-		},
 		TestCmds: []string{
 			"echo HELLO WORLD",
 			"shutdown -h",

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -87,14 +86,6 @@ func TestGoTest(t *testing.T) {
 	pkgs := testPkgs(t)
 
 	o := &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				// Used by different tests.
-				"github.com/u-root/u-root/cmds/core/ls",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/core/echo",
-			),
-		},
 		QEMUOpts: qemu.Options{
 			Timeout: 120 * time.Second,
 		},
