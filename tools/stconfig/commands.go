@@ -27,7 +27,7 @@ func packBootBall(config string) (err error) {
 }
 
 func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
-	ball, err := stboot.BootBallFromArchie(bootBall)
+	ball, err := stboot.BootBallFromArchive(bootBall)
 	if err != nil {
 		return
 	}
@@ -46,7 +46,7 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 }
 
 func unpackBootBall(bootBall string) (err error) {
-	ball, err := stboot.BootBallFromArchie(bootBall)
+	ball, err := stboot.BootBallFromArchive(bootBall)
 	if err != nil {
 		return err
 	}

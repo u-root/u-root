@@ -109,7 +109,7 @@ func main() {
 		log.Fatalf("Downloading bootball failed: %v", err)
 	}
 
-	ball, err := stboot.BootBallFromArchie(ballPath)
+	ball, err := stboot.BootBallFromArchive(ballPath)
 	if err != nil {
 		log.Fatal("Cannot open bootball")
 	}
