@@ -9,7 +9,6 @@ package integration
 import (
 	"testing"
 
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -22,11 +21,6 @@ func TestIO(t *testing.T) {
 
 	// Create the CPIO and start QEMU.
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/io",
-			),
-		},
 		Uinit: "github.com/u-root/u-root/integration/testcmd/io/uinit",
 	})
 	defer cleanup()

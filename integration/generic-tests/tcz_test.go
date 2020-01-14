@@ -30,15 +30,6 @@ func TestTczclient(t *testing.T) {
 		q, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
 			Name: "TestTczclient_Server",
 			BuildOpts: uroot.Opts{
-				Commands: uroot.BusyBoxCmds(
-					"github.com/u-root/u-root/cmds/core/dmesg",
-					"github.com/u-root/u-root/cmds/core/echo",
-					"github.com/u-root/u-root/cmds/core/ip",
-					"github.com/u-root/u-root/cmds/core/init",
-					"github.com/u-root/u-root/cmds/core/shutdown",
-					"github.com/u-root/u-root/cmds/core/sleep",
-					"github.com/u-root/u-root/cmds/exp/srvfiles",
-				),
 				ExtraFiles: []string{
 					"./testdata/tczserver:tcz",
 				},
@@ -76,15 +67,6 @@ func TestTczclient(t *testing.T) {
 	tczClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "TestTczclient_Client",
 		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/init",
-				"github.com/u-root/u-root/cmds/exp/tcz",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/ls",
-			),
 			ExtraFiles: []string{
 				"./testdata/tczclient:tcz",
 			},

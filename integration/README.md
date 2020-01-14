@@ -2,10 +2,18 @@
 
 These are VM based tests for core u-root functionality such as:
 
--   retrieving and kexec'ing a Linux kernel,
--   DHCP client tests,
--   uinit (user init), and
--   running unit tests requiring root privileges.
+* retrieving and kexec'ing a Linux kernel,
+* DHCP client tests,
+* uinit (user init), and
+* running unit tests requiring root privileges.
+
+All tests are in the integration/ directory. Within that, there are a
+few subdirectories:
+
+* generic-tests/ : most tests can be put under this.
+* golang-tests/ : this is for Go unit tests that can be run inside the VM.
+* testcmd/ : this contains custom uinits for tests.
+* testdata/ : this contains any extra files for tests.
 
 To learn more about how these tests work under the hood, see the next section,
 otherwise jump ahead to the sections on how to write and run these tests.
@@ -16,9 +24,6 @@ Our VM testing infrastructure starts a QEMU virtual machine that boots with
 our given kernel and initramfs, and runs the uinit or commands that we want to
 test.
 
-The test architecture, kernel and QEMU binary are set using environment
-variables.
-
 Testing mainly relies on 2 packages: [pkg/vmtest](/pkg/vmtest) and
 [pkg/qemu](/pkg/qemu).
 
@@ -26,12 +31,15 @@ pkg/vmtest takes in integration test options, and given those and the
 environment variables, uses pkg/qemu to start a QEMU VM with the correct command
 line and configuration.
 
-There are a couple of ways to test:
-* Custom initramfs: provide an initramfs that will be used in the VM.
-* Custom uinit: provide a uinit. The testing setup will generate an initramfs 
-  with that uinit.
-* Test commands: provide the set of commands to be tested. The testing setup
-  will generate an initramfs that runs those commands.
+The test architecture, kernel and QEMU binary are set using environment
+variables.
+
+The initramfs can come from one of the following ways:
+* Custom initramfs: run the tests with an initramfs provided by the user
+* Custom u-root opts: define u-root opts in the test itself (eg. custom uinit).
+  The testing setup will generate an initramfs with those options.
+* Default: provide the set of commands to be tested. The testing setup
+  will generate a generic initramfs that runs those commands.
 
 Files that need to be shared with the VM are written to a temp dir which is
 exposed as a Plan 9 (9p) filesystem in the VM.
@@ -43,7 +51,7 @@ expected output in QEMU's serial output within a given timeout.
 
 These tests only run on Linux on amd64 and arm.
 
-1. Set Environment variables:
+1. **Set Environment Variables**
 
 -   `UROOT_QEMU` points to a QEMU binary and args, e.g.
 
@@ -56,6 +64,8 @@ export UROOT_QEMU="$HOME/bin/qemu-system-x86_64 -enable-kvm"
 ```sh
 export UROOT_KERNEL="$HOME/linux/arch/x86/boot/bzImage"
 ```
+-   (optional) `UROOT_INITRAMFS` is a custom initramfs to use for all tests.
+    This will override all other initramfs options defined by the tests.
 
 -   (optional) `UROOT_TESTARCH` (defaults to host architecture) is the
     architecture to test. Only `arm` and `amd64` are supported.
@@ -70,7 +80,10 @@ Our automated CI uses Dockerfiles to build a kernel and QEMU and set these
 environment variables. You can see the Dockerfile and the config file used to
 build the kernel for each supported architecture [here](/.circleci/images).
 
-2. Run the tests with:
+2. **Run Tests**
+
+Recall that there are 2 subdirectories with tests, generic-tests/ and gotests/.
+Enter each directory and run
 
 ```sh
 go test [-v]

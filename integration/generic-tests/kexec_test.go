@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -24,12 +23,6 @@ func TestMountKexec(t *testing.T) {
 
 	// Create the CPIO and start QEMU.
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/mount",
-				"github.com/u-root/u-root/cmds/core/kexec",
-			),
-		},
 		Uinit: "github.com/u-root/u-root/integration/testcmd/kexec/uinit",
 		QEMUOpts: qemu.Options{
 			Timeout: 30 * time.Second,
