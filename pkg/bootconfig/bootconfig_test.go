@@ -51,7 +51,7 @@ func TestNewBootConfigMissingKernel(t *testing.T) {
 
 func TestID(t *testing.T) {
 	bc := BootConfig{
-		Name: "deiner mudda \\ sein /slash",
+		Name: "Slash and space should not \\ appear /here",
 	}
 	id := bc.ID()
 	t.Log(id)
