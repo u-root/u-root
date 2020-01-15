@@ -1,0 +1,77 @@
+// Copyright 2019 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package measurement
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"os"
+
+	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/tpm"
+)
+
+/* describes the "storage" portion of policy file */
+type StorageCollector struct {
+	Type  string   `json:"type"`
+	Paths []string `json:"paths"`
+}
+
+/*
+ * NewStorageCollector extracts the "storage" portion from the policy file.
+ * initializes a new StorageCollector structure.
+ * returns error if unmarshalling of StorageCollector fails
+ */
+func NewStorageCollector(config []byte) (Collector, error) {
+	slaunch.Debug("New Storage Collector initialized\n")
+	var sc = new(StorageCollector)
+	err := json.Unmarshal(config, &sc)
+	if err != nil {
+		return nil, err
+	}
+	return sc, nil
+}
+
+/*
+ * measureStorageDevice reads the disk path input by user,
+ * and then extends the pcr with it.
+ *
+ * Hashing of buffer is handled by tpm package.
+ * - tpmHandle - tpm device where measurements are stored.
+ * - blkDevicePath - string e.g /dev/sda
+ * returns
+ * - error if Reading the block device fails.
+ */
+func measureStorageDevice(tpmHandle io.ReadWriteCloser, blkDevicePath string) error {
+
+	log.Printf("Storage Collector: Measuring block device %s\n", blkDevicePath)
+	file, err := os.Open(blkDevicePath)
+	if err != nil {
+		return fmt.Errorf("couldn't open disk=%s err=%v", blkDevicePath, err)
+	}
+
+	return tpm.ExtendPCRDebug(tpmHandle, pcr, file)
+}
+
+/*
+ * Collect satisfies Collector Interface. It loops over all storage paths provided
+ * by user and calls measureStorageDevice for each storage path. storage path is of
+ * form /dev/sda. measureStorageDevice in turn calls tpm
+ * package which further hashes this buffer and extends pcr.
+ */
+func (s *StorageCollector) Collect(tpmHandle io.ReadWriteCloser) error {
+
+	for _, inputVal := range s.Paths {
+		err := measureStorageDevice(tpmHandle, inputVal) // inputVal is blkDevicePath e.g /dev/sda
+		if err != nil {
+			log.Printf("Storage Collector: input = %s, err = %v", inputVal, err)
+			return err
+		}
+	}
+
+	return nil
+}
