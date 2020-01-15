@@ -60,11 +60,6 @@ func main() {
 	}
 	log.Print(banner)
 
-	err := validateSystemTime()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	vars, err := stboot.FindHostVarsInInitramfs()
 	if err != nil {
 		log.Fatalf("Cant find Netvars at all: %v", err)
@@ -83,6 +78,11 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Can not set up IO: %v", err)
+	}
+
+	err = validateSystemTime()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	ballPath := path.Join("root/", stboot.BallName)
