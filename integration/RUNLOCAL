@@ -5,7 +5,7 @@
 # ./RUNLOCAL
 # ./RUNLOCAL -v -test.run=TestScript
 
-export UROOT_QEMU="qemu-system-x86_64" 
+export UROOT_QEMU="qemu-system-x86_64 -enable-kvm" 
 export UROOT_KERNEL=bzImage 
 
 go test "$@" ./...

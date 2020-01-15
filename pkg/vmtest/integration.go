@@ -40,11 +40,6 @@ type Options struct {
 	// possible.
 	QEMUOpts qemu.Options
 
-	// DontSetEnv doesn't set the BuildOpts.Env and uses the user-supplied one.
-	//
-	// TODO: make uroot.Opts.Env a pointer?
-	DontSetEnv bool
-
 	// Name is the test's name.
 	//
 	// If name is left empty, the calling function's function name will be
@@ -248,16 +243,14 @@ func QEMU(o *Options) (*qemu.Options, error) {
 
 // ChooseTestInitramfs chooses which initramfs will be used for a given test and
 // places it at the location given by outputFile.
-// Default to the override initramfs if one was given. Else, build an initramfs
-// with the given parameters. If no uinit was provided, the generic one is used.
+// Default to the override initramfs if one is specified in the UROOT_INITRAMFS
+// environment variable. Else, build an initramfs with the given parameters.
+// If no uinit was provided, the generic one is used.
 func ChooseTestInitramfs(o uroot.Opts, uinit, outputFile string) error {
 	override := os.Getenv("UROOT_INITRAMFS")
 	if len(override) > 0 {
-		log.Printf("Overriding with initramfs %s", override)
-		if err := cp.Copy(override, outputFile); err != nil {
-			return err
-		}
-		return nil
+		log.Printf("Overriding with initramfs %q", override)
+		return cp.Copy(override, outputFile)
 	}
 
 	if len(uinit) == 0 {
@@ -271,10 +264,11 @@ func ChooseTestInitramfs(o uroot.Opts, uinit, outputFile string) error {
 
 // CreateTestInitramfs creates an initramfs with the given build options and
 // uinit, and writes it to the given output file. If no output file is provided,
-// one will be created, and it is the caller's responsibility to remove it.
-// The output file name is returned.
+// one will be created.
+// The output file name is returned. It is the caller's responsibility to remove
+// the initramfs file after use.
 func CreateTestInitramfs(o uroot.Opts, uinit, outputFile string) (string, error) {
-	// TODO need to bring back the DontSetEnv check?
+	// TODO make uroot.Opts Env a pointer to allow user-supplied Env.
 	env := golang.Default()
 	env.CgoEnabled = false
 	env.GOARCH = TestArch()

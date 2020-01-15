@@ -14,26 +14,29 @@ import (
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-// TestMountKexec runs an init which mounts a filesystem and kexecs a kernel.
+// TestMountKexec tests that kexec occurs correctly by checking the kernel cmdline.
+// This is possible because the generic initramfs ensures that we mount the
+// testdata directory containing the initramfs and kernel used in the VM.
 func TestMountKexec(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
-	// Create the CPIO and start QEMU.
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Uinit: "github.com/u-root/u-root/integration/testcmd/kexec/uinit",
+		TestCmds: []string{
+			"CMDLINE = (cat /proc/cmdline)",
+			"SUFFIX = $CMDLINE[-7:]",
+			"echo SAW $SUFFIX",
+			"kexec -i /testdata/initramfs.cpio -c $CMDLINE' KEXEC=Y' /testdata/kernel",
+		},
 		QEMUOpts: qemu.Options{
-			Timeout: 30 * time.Second,
+			Timeout: 20 * time.Second,
 		},
 	})
 	defer cleanup()
 
-	if err := q.Expect("KEXECCOUNTER=0"); err != nil {
-		t.Fatal(err)
-	}
-	if err := q.Expect("KEXECCOUNTER=1"); err != nil {
+	if err := q.Expect("SAW KEXEC=Y"); err != nil {
 		t.Fatal(err)
 	}
 }

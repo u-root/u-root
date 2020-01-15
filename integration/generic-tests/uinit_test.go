@@ -35,18 +35,3 @@ func TestHelloWorldNegative(t *testing.T) {
 		t.Fatal(`expected error, but matched "GOODBYE WORLD"`)
 	}
 }
-
-func TestScript(t *testing.T) {
-	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "ShellScript",
-		TestCmds: []string{
-			"echo HELLO WORLD",
-			"shutdown -h",
-		},
-	})
-	defer cleanup()
-
-	if err := q.Expect("HELLO WORLD"); err != nil {
-		t.Fatal(`expected "HELLO WORLD", got error: `, err)
-	}
-}

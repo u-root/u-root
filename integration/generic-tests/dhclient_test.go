@@ -7,7 +7,6 @@
 package integration
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -76,22 +75,12 @@ func TestPxeboot(t *testing.T) {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
-	serverOpts := uroot.Opts{
-		ExtraFiles: []string{"../testdata/pxe:pxeroot"},
-	}
-	serverInitramfs, err := vmtest.CreateTestInitramfs(
-		serverOpts, "github.com/u-root/u-root/integration/testcmd/generic/uinit", "")
-	if err != nil {
-		t.Errorf("failed to create server test initramfs: %v", err)
-	}
-	defer os.Remove(serverInitramfs)
-
 	network := qemu.NewNetwork()
 	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "TestPxeboot_Server",
 		BuildOpts: uroot.Opts{
 			ExtraFiles: []string{
-				"../testdata/pxe:pxeroot",
+				"testdata/pxe:pxeroot",
 			},
 		},
 		TestCmds: []string{

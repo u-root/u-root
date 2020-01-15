@@ -7,6 +7,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/vmtest"
@@ -19,9 +20,14 @@ func TestIO(t *testing.T) {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
+	testCmds := []string{}
+	for _, b := range []byte("UART TEST\r\n") {
+		testCmds = append(testCmds, fmt.Sprintf("io outb 0x3f8 %d", b))
+	}
+
 	// Create the CPIO and start QEMU.
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Uinit: "github.com/u-root/u-root/integration/testcmd/io/uinit",
+		TestCmds: testCmds,
 	})
 	defer cleanup()
 

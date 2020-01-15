@@ -68,7 +68,7 @@ func TestTczclient(t *testing.T) {
 		Name: "TestTczclient_Client",
 		BuildOpts: uroot.Opts{
 			ExtraFiles: []string{
-				"./testdata/tczclient:tcz",
+				"testdata/tczclient:tcz",
 			},
 		},
 		TestCmds: []string{
