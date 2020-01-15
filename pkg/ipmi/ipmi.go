@@ -427,18 +427,16 @@ func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 	req.msg.cmd = _BMC_GET_CHASSIS_STATUS
 
 	data, err := i.sendrecv(req)
-
 	if err != nil {
 		return nil, err
 	}
 
 	buf := bytes.NewReader(data[1:])
-	status := ChassisStatus{}
 
+	var status ChassisStatus
 	if err := binary.Read(buf, binary.LittleEndian, &status); err != nil {
 		return nil, err
 	}
-
 	return &status, nil
 }
 
@@ -448,17 +446,15 @@ func (i *IPMI) GetSELInfo() (*SELInfo, error) {
 	req.msg.cmd = _BMC_GET_SEL_INFO
 
 	data, err := i.sendrecv(req)
-
 	if err != nil {
 		return nil, err
 	}
 
 	buf := bytes.NewReader(data[1:])
-	info := SELInfo{}
 
+	var info SELInfo
 	if err := binary.Read(buf, binary.LittleEndian, &info); err != nil {
 		return nil, err
 	}
-
 	return &info, nil
 }
