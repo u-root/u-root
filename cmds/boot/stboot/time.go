@@ -11,10 +11,10 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/beevik/ntp"
+	"github.com/systemboot/systemboot/pkg/recovery"
 	"golang.org/x/sys/unix"
 )
 
@@ -135,10 +135,15 @@ func validateSystemTime() error {
 		if err != nil {
 			return err
 		}
+		recover := recovery.SecureRecoverer{
+			Reboot: true,
+		}
+		recover.Recover("system time update")
 	}
-	tv := syscall.Timeval{
-		Sec:  rtcTime.Unix(),
-		Usec: int64(rtcTime.UnixNano() / 1000 % 1000),
-	}
-	return syscall.Settimeofday(&tv)
+	// tv := syscall.Timeval{
+	// 	Sec:  rtcTime.Unix(),
+	// 	Usec: int64(rtcTime.UnixNano() / 1000 % 1000),
+	// }
+	// return syscall.Settimeofday(&tv)
+	return nil
 }
