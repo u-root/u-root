@@ -11,7 +11,7 @@ All tests are in the integration/ directory. Within that, there are a
 few subdirectories:
 
 * generic-tests/ : most tests can be put under this.
-* golang-tests/ : this is for Go unit tests that can be run inside the VM.
+* gotests/ : this is for Go unit tests that can be run inside the VM.
 * testcmd/ : this contains custom uinits for tests.
 * testdata/ : this contains any extra files for tests.
 
@@ -34,8 +34,10 @@ line and configuration.
 The test architecture, kernel and QEMU binary are set using environment
 variables.
 
-The initramfs can come from one of the following ways:
-* Custom initramfs: run the tests with an initramfs provided by the user
+The initramfs can come from the following sources:
+* User overridden: when the `UROOT_INITRAMFS` environment variable is used to 
+  override the initramfs. The user is responsible for ensuring the initramfs 
+  contains the correct binaries.
 * Custom u-root opts: define u-root opts in the test itself (eg. custom uinit).
   The testing setup will generate an initramfs with those options.
 * Default: provide the set of commands to be tested. The testing setup
@@ -83,10 +85,10 @@ build the kernel for each supported architecture [here](/.circleci/images).
 2. **Run Tests**
 
 Recall that there are 2 subdirectories with tests, generic-tests/ and gotests/.
-Enter each directory and run
+To run tests in both directories, run:
 
 ```sh
-go test [-v]
+go test [-v] ./...
 ```
 
 The verbose flag is useful to see the QEMU command line being used and the full
@@ -94,11 +96,15 @@ serial output. It is also useful to see which tests are being skipped and why
 (particularly for ARM, where many tests are currently skipped).
 
 Unless you want to wait a long time for all tests to complete, run just the
-specific test you want, e.g.
+specific test you want from inside the correct directory e.g.
 
 ```sh
+cd generic-tests/
 go test [-v] -test.run=TestDhclient
 ```
+
+*To avoid having to do this every time, check the instructions for the RUNLOCAL
+script.*
 
 ## Writing a New Test
 
