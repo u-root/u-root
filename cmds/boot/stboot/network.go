@@ -106,12 +106,9 @@ func findNetworkInterface() (netlink.Link, error) {
 	var ifnames []string
 	for _, iface := range ifaces {
 		if *doDebug {
-			log.Print("Found interface")
-			log.Printf("Index: %d", iface.Index)
-			log.Printf("Name: %s", iface.Name)
-			log.Printf("MTU: %d", iface.MTU)
-			log.Printf("Hardware Addr: %s", iface.HardwareAddr.String())
-			log.Printf("Flags: %v", iface.Flags)
+			log.Printf("Found interface %s", iface.Name)
+			log.Printf("    MTU: %d Hardware Addr: %s", iface.MTU, iface.HardwareAddr.String())
+			log.Printf("    Flags: %v", iface.Flags)
 		}
 		ifnames = append(ifnames, iface.Name)
 		// skip loopback
