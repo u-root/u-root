@@ -31,6 +31,10 @@ pkg/vmtest takes in integration test options, and given those and the
 environment variables, uses pkg/qemu to start a QEMU VM with the correct command
 line and configuration.
 
+Files that need to be shared with the VM are written to a temp dir which is
+exposed as a Plan 9 (9p) filesystem in the VM. This includes the kernel and 
+initramfs being used for the VM.
+
 The test architecture, kernel and QEMU binary are set using environment
 variables.
 
@@ -40,11 +44,10 @@ The initramfs can come from the following sources:
   contains the correct binaries.
 * Custom u-root opts: define u-root opts in the test itself (eg. custom uinit).
   The testing setup will generate an initramfs with those options.
-* Default: provide the set of commands to be tested. The testing setup
-  will generate a generic initramfs that runs those commands.
-
-Files that need to be shared with the VM are written to a temp dir which is
-exposed as a Plan 9 (9p) filesystem in the VM.
+* Default: provide the set of commands to be tested. The commands are written to
+  an elvish script in the shared dir. The testing setup will generate a generic 
+  initramfs that mounts the shared 9p filesystem as '/testdata', and then finds
+  and runs the elvish script.
 
 To check for the correct behavior, we use the go expect package to find
 expected output in QEMU's serial output within a given timeout.
