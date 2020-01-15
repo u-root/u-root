@@ -321,9 +321,9 @@ func (ball *BootBall) getSignatures() error {
 	ball.signatures = make(map[string][]signature)
 	path := filepath.Join(ball.dir, signaturesDirName)
 
-	sigPool := make([]signature, 0)
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		ext := filepath.Ext(info.Name())
+		sigPool := make([]signature, 0)
 
 		if !info.IsDir() && (ext == ".signature") {
 			sigBytes, err := ioutil.ReadFile(path)
