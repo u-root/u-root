@@ -67,6 +67,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	flag "github.com/spf13/pflag"
@@ -111,6 +112,10 @@ func poxCreate(names []string) error {
 	if !*debug {
 		defer os.RemoveAll(dir)
 	}
+	pwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	// We don't use defer() here to close files as
 	// that can cause open failures with a large enough number.
 	for _, f := range names {
@@ -123,6 +128,7 @@ func poxCreate(names []string) error {
 		if err != nil {
 			return err
 		}
+		f = strings.TrimPrefix(f, pwd)
 		dfile := filepath.Join(dir, f)
 		d := filepath.Dir(dfile)
 		if err := os.MkdirAll(d, 0755); err != nil {
