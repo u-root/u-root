@@ -23,11 +23,12 @@
 // Options:
 //     debug|d: verbose
 //     file|f file: file name (default /tmp/pox.tcz)
-//     run|r: run a program by loopback mounting the squashfs.  Runs the first
-//            non-flag argument to pox.  Remaining arguments will be passed to
-//            the program.  Use '--' before any flag-like arguments to prevent
-//            pox from interpretting the flags.
+//     run|r: Runs the first non-flag argument to pox.  Remaining arguments will
+//            be passed to the program.  Use '--' before any flag-like arguments
+//            to prevent pox from interpretting the flags.
 //     create|c: create the TCZ file.
+//     zip|z: Use zip and unzip instead of a loopback mounted squashfs.  Be sure
+//            to use -z for both creation and running, or not at all.
 //     Exactly one of -c and -r must be used on the same command.
 //
 // Example:
@@ -46,7 +47,7 @@
 //	Syntactically easier: the program name can come after '--'
 //
 // Notes:
-// - When running a pox, you likely need sudo to access /dev/loop*.
+// - When running a pox, you likely need sudo to chroot
 //
 // - Your binaries and programs show up in the TCZ using whatever path you
 // provided to pox.  For instance, if you are in /home/you/somedir/ and have
@@ -81,6 +82,7 @@ var (
 	debug  = flag.BoolP("debug", "d", false, "enable debug prints")
 	run    = flag.BoolP("run", "r", false, "Run the first file argument")
 	create = flag.BoolP("create", "c", false, "create it")
+	zip    = flag.BoolP("zip", "z", false, "use zip instead of squashfs")
 	file   = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
 	v      = func(string, ...interface{}) {}
 )
@@ -149,7 +151,21 @@ func poxCreate(names []string) error {
 		}
 
 	}
-	c := exec.Command("mksquashfs", dir, *file, "-noappend")
+	err = os.Remove(*file)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	var c *exec.Cmd
+	if *zip {
+		fileAbs, err := filepath.Abs(*file)
+		if err != nil {
+			return err
+		}
+		c = exec.Command("zip", "-r", fileAbs, ".")
+		c.Dir = dir
+	} else {
+		c = exec.Command("mksquashfs", dir, *file, "-noappend")
+	}
 	o, err := c.CombinedOutput()
 	v("%v", string(o))
 	if err != nil {
@@ -172,17 +188,26 @@ func poxRun(args []string) error {
 		defer os.RemoveAll(dir)
 	}
 
-	lo, err := loop.New(*file, "squashfs", "")
-	if err != nil {
-		return err
-	}
-	defer lo.Free() //nolint:errcheck
+	if *zip {
+		c := exec.Command("unzip", *file, "-d", dir)
+		o, err := c.CombinedOutput()
+		v("%v", string(o))
+		if err != nil {
+			return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
+		}
+	} else {
+		lo, err := loop.New(*file, "squashfs", "")
+		if err != nil {
+			return err
+		}
+		defer lo.Free() //nolint:errcheck
 
-	mountPoint, err := lo.Mount(dir, 0)
-	if err != nil {
-		return err
+		mountPoint, err := lo.Mount(dir, 0)
+		if err != nil {
+			return err
+		}
+		defer mountPoint.Unmount(0) //nolint:errcheck
 	}
-	defer mountPoint.Unmount(0) //nolint:errcheck
 
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
