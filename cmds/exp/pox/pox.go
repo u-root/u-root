@@ -209,6 +209,14 @@ func poxRun(args []string) error {
 		defer mountPoint.Unmount(0) //nolint:errcheck
 	}
 
+	// If you pass Command a path with no slashes, it'll use PATH from the
+	// parent to resolve the path to exec.  Once we chroot, whatever path we
+	// picked is undoubtably wrong.  Let's help them out: if they give us a
+	// program with no /, let's look in /bin/.  If they want the root of the
+	// chroot, they can use "./"
+	if filepath.Base(args[0]) == args[0] {
+		args[0] = filepath.Join(string(os.PathSeparator), "bin", args[0])
+	}
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 	c.SysProcAttr = &syscall.SysProcAttr{
