@@ -49,15 +49,30 @@
 // Notes:
 // - When running a pox, you likely need sudo to chroot
 //
-// - Your binaries and programs show up in the TCZ using whatever path you
-// provided to pox.  For instance, if you are in /home/you/somedir/ and have
-// ./bin/foo, and you pox -c bin/foo, your TCZ will contain bin/foo.  If you
-// pox /home/you/somedir/bin/foo, your TCZ will contain the full path.
+// - Binaries run out of a chroot often need files you are unaware of.  For
+// instance, if bash can't find terminfo files, it won't know to handle
+// backspaces properly.  (They occur, but are not shown).  To fix this, pass pox
+// all of the files you need.  For bash: `find /lib/terminfo -type f`.
+//
+// Other programs rely on help functions, such as '/bin/man'.  If your program
+// has built-in help commands that trigger man pages, e.g. "git help foo",
+// you'll want to include /bin/man too.  But you'll also need everything that
+// man uses, such as /etc/manpath.config.  My advice: skip it.
+//
+// - When adding all files in a directory, the easiest thing to do is:
+// `find $DIR -type f`  (Note the ticks: this is a bash command execution).
 //
 // - When creating a pox with an executable with shared libraries that are not
 // installed on your system, such as for a project installed in your home
 // directory, run pox from the installation prefix directory, such that the
-// libraries and binaries are below pox's working directory.
+// lib/ and bin/ are in pox's working directory.  Pox will strip its working
+// directory from the paths of the files it builds.  Having bin/ in the root of
+// the pox file helps with PATH lookups, and not having the full path from your
+// machine in the pox file makes it easier to extract a pox file to /usr/local/.
+//
+// - Consider adding a --extract | -x option to install to the host.  One issue
+// would be how to handle collisions, e.g. libc.  Your app may not like the libc
+// on the system you run on.
 package main
 
 import (
