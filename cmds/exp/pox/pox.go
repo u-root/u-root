@@ -74,6 +74,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/loop"
+	"github.com/u-root/u-root/pkg/mount"
 )
 
 const usage = "pox [-[-debug]|d] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]"
@@ -86,6 +87,23 @@ var (
 	file   = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
 	v      = func(string, ...interface{}) {}
 )
+
+// When chrooting, programs often want to access various system directories:
+var chrootMounts = []struct {
+	source string
+	target string
+	fstype string
+	flags  uintptr
+	data   string
+	perm   os.FileMode // for target in the chroot
+}{
+	// mount --bind /sys /chroot/sys
+	{"/sys", "/sys", "", mount.MS_BIND, "", 0555},
+	// mount -t proc /proc /chroot/proc
+	{"/proc", "/proc", "proc", 0, "", 0555},
+	// mount --bind /dev /chroot/dev
+	{"/dev", "/dev", "", mount.MS_BIND, "", 0755},
+}
 
 func poxCreate(names []string) error {
 	if len(names) == 0 {
@@ -151,6 +169,11 @@ func poxCreate(names []string) error {
 		}
 
 	}
+	for _, m := range chrootMounts {
+		if err := os.MkdirAll(filepath.Join(dir, m.target), m.perm); err != nil {
+			return err
+		}
+	}
 	err = os.Remove(*file)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -207,6 +230,14 @@ func poxRun(args []string) error {
 			return err
 		}
 		defer mountPoint.Unmount(0) //nolint:errcheck
+	}
+	for _, m := range chrootMounts {
+		mp, err := mount.Mount(m.source, filepath.Join(dir, m.target),
+			m.fstype, m.data, m.flags)
+		if err != nil {
+			return err
+		}
+		defer mp.Unmount(0) //nolint:errcheck
 	}
 
 	// If you pass Command a path with no slashes, it'll use PATH from the
