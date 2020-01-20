@@ -51,6 +51,6 @@ func unpackBootBall(bootBall string) (err error) {
 		return err
 	}
 
-	log.Println("Archive unpacked into: " + ball.Dir())
-	return ball.Clean()
+	log.Println("Archive unpacked into: " + ball.Dir() + " Remember to delte folder afterwards")
+	return
 }
