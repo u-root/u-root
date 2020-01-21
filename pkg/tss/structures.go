@@ -4,7 +4,6 @@
 
 // Package tss provides TPM 1.2/2.0 core functionality and
 // abstraction layer for high-level functions
-
 package tss
 
 import (
@@ -71,7 +70,7 @@ type TPM struct {
 	RWC     io.ReadWriteCloser
 }
 
-// probedTPM identifies a TPM device on the system, which
+// ProbedTPM identifies a TPM device on the system, which
 // is a candidate for being used.
 type ProbedTPM struct {
 	Version TPMVersion

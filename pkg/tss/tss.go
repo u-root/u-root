@@ -4,15 +4,16 @@
 
 // Package tss provides TPM 1.2/2.0 core functionality and
 // abstraction layer for high-level functions
-
 package tss
 
 import (
+	"crypto"
 	"errors"
 	"fmt"
 	"io/ioutil"
 
 	"github.com/awnumar/memguard"
+	"github.com/google/go-tpm/tpm2"
 )
 
 // OpenTPM initializes access to the TPM based on the
@@ -59,8 +60,8 @@ func (t *TPM) Info() (*TPMInfo, error) {
 	return &info, nil
 }
 
-// Version returns the TPM version
-func (t *TPM) Version() TPMVersion {
+// GetVersion returns the TPM version
+func (t *TPM) GetVersion() TPMVersion {
 	return t.Version
 }
 
@@ -68,6 +69,26 @@ func (t *TPM) Version() TPMVersion {
 func (t *TPM) Close() error {
 	memguard.Purge()
 	return t.RWC.Close()
+}
+
+func (a HashAlg) cryptoHash() crypto.Hash {
+	switch a {
+	case HashSHA1:
+		return crypto.SHA1
+	case HashSHA256:
+		return crypto.SHA256
+	}
+	return 0
+}
+
+func (a HashAlg) goTPMAlg() tpm2.Algorithm {
+	switch a {
+	case HashSHA1:
+		return tpm2.AlgSHA1
+	case HashSHA256:
+		return tpm2.AlgSHA256
+	}
+	return 0
 }
 
 // String returns a human-friendly representation of the hash algorithm.
@@ -122,7 +143,13 @@ func (t *TPM) ReadPCRs(alg HashAlg) ([]PCR, error) {
 func (t *TPM) Extend(hash []byte, pcrIndex uint32, alg HashAlg) error {
 	switch t.Version {
 	case TPMVersion12:
-		err := extendPCR12(t.RWC, pcrIndex, hash)
+		var thash [20]byte
+		hashlen := len(hash)
+		if hashlen != 20 {
+			return fmt.Errorf("hash length insufficient - need 20, got: %v", hashlen)
+		}
+		copy(thash[:], hash[:20])
+		err := extendPCR12(t.RWC, pcrIndex, thash)
 		if err != nil {
 			return err
 		}
@@ -144,7 +171,13 @@ func (t *TPM) Measure(data []byte, pcrIndex uint32, alg HashAlg) error {
 	case TPMVersion12:
 		hashFunc := HashSHA1.cryptoHash().New()
 		hash := hashFunc.Sum(data)
-		err := extendPCR12(t.RWC, pcrIndex, hash)
+		var thash [20]byte
+		hashlen := len(hash)
+		if hashlen != 20 {
+			return fmt.Errorf("hash length insufficient - need 20, got: %v", hashlen)
+		}
+		copy(thash[:], hash[:20])
+		err := extendPCR12(t.RWC, pcrIndex, thash)
 		if err != nil {
 			return err
 		}
