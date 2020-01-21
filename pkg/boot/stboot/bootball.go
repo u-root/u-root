@@ -321,7 +321,6 @@ func (ball *BootBall) getSignatures() error {
 	ball.signatures = make(map[string][]signature)
 	path := filepath.Join(ball.dir, signaturesDirName)
 
-	sigPool := make([]signature, 0)
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		ext := filepath.Ext(info.Name())
 
@@ -346,9 +345,8 @@ func (ball *BootBall) getSignatures() error {
 				Bytes: sigBytes,
 				Cert:  cert,
 			}
-			sigPool = append(sigPool, sig)
 			key := filepath.Base(filepath.Dir(path))
-			ball.signatures[key] = sigPool
+			ball.signatures[key] = append(ball.signatures[key], sig)
 		}
 		return nil
 	})
