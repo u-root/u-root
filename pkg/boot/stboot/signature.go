@@ -139,10 +139,14 @@ func certPool(pem []byte) (*x509.CertPool, error) {
 
 // validateCertificate validates cert against certPool. If cert is not signed
 // by a certificate of certPool an error is returned.
-func validateCertificate(cert *x509.Certificate, cerPool *x509.CertPool) error {
-	opts := x509.VerifyOptions{
-		Roots: cerPool,
+func validateCertificate(cert *x509.Certificate, rootCertPEM []byte) error {
+	certPool, err := certPool(rootCertPEM)
+	if err != nil {
+		return err
 	}
-	_, err := cert.Verify(opts)
+	opts := x509.VerifyOptions{
+		Roots: certPool,
+	}
+	_, err = cert.Verify(opts)
 	return err
 }
