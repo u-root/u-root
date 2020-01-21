@@ -328,7 +328,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d4b51e67b0443872f5f38ff3745b3e73ae535c51a3bf5ce3a5e9706f1079fc32"
+  digest = "1:005d4e50a07c8b8d1751dd749e92033b8159131926be2bdaeb449f81dc475668"
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
@@ -351,7 +351,6 @@
     "salsa20/salsa",
     "sha3",
     "ssh",
-    "ssh/terminal",
   ]
   pruneopts = "NUT"
   revision = "53104e6ec876ad4e22ad27cce588b01392043c1b"
@@ -490,7 +489,6 @@
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
-    "golang.org/x/crypto/ssh/terminal",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/text/transform",
