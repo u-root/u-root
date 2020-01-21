@@ -1,20 +1,14 @@
-// Copyright 2019 Google Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not
-// use this file except in compliance with the License. You may obtain a copy of
-// the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations under
-// the License.
+// Copyright 2020 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package tss provides TPM 1.2/2.0 core functionality and
+// abstraction layer for high-level functions
 
 package tss
 
 import (
+	"crypto"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,6 +18,7 @@ import (
 
 	"github.com/google/go-tpm/tpm"
 	"github.com/google/go-tpm/tpm2"
+	"github.com/google/go-tpm/tpmutil"
 )
 
 const (
@@ -33,90 +28,6 @@ const (
 	tpmPtVendorString = 0x00000100 + 6  // PT_FIXED + offset of 6
 	tpmPtFwVersion1   = 0x00000100 + 11 // PT_FIXED + offset of 11
 )
-
-// TCGVendorID TPM manufacturer id
-type TCGVendorID uint32
-
-func (id TCGVendorID) String() string {
-	return vendors[id]
-}
-
-// TPMVersion is used to configure a preference in
-// which TPM to use, if multiple are available.
-type TPMVersion uint8
-
-// TPMInterface indicates how the client communicates
-// with the TPM.
-type TPMInterface uint8
-
-var vendors = map[TCGVendorID]string{
-	1095582720: "AMD",
-	1096043852: "Atmel",
-	1112687437: "Broadcom",
-	1229081856: "IBM",
-	1213220096: "HPE",
-	1297303124: "Microsoft",
-	1229346816: "Infineon",
-	1229870147: "Intel",
-	1279610368: "Lenovo",
-	1314082080: "National Semiconductor",
-	1314150912: "Nationz",
-	1314145024: "Nuvoton Technology",
-	1363365709: "Qualcomm",
-	1397576515: "SMSC",
-	1398033696: "ST Microelectronics",
-	1397576526: "Samsung",
-	1397641984: "Sinosun",
-	1415073280: "Texas Instruments",
-	1464156928: "Winbond",
-	1380926275: "Fuzhou Rockchip",
-	1196379975: "Google",
-}
-
-// TPM versions
-const (
-	TPMVersionAgnostic TPMVersion = iota
-	TPMVersion12
-	TPMVersion20
-)
-
-// TPM interfaces
-const (
-	TPMInterfaceDirect TPMInterface = iota
-	TPMInterfaceKernelManaged
-	TPMInterfaceDaemonManaged
-)
-
-// TPM interfaces with a TPM device on the system.
-type TPM struct {
-	version TPMVersion
-	interf  TPMInterface
-
-	sysPath string
-	rwc     io.ReadWriteCloser
-}
-
-// probedTPM identifies a TPM device on the system, which
-// is a candidate for being used.
-type probedTPM struct {
-	Version TPMVersion
-	Path    string
-}
-
-// TPMInfo contains information about the version & interface
-// of an open TPM.
-type TPMInfo struct {
-	Version      TPMVersion
-	Interface    TPMInterface
-	VendorInfo   string
-	Manufacturer TCGVendorID
-
-	// FirmwareVersionMajor and FirmwareVersionMinor describe
-	// the firmware version of the TPM, but are only available
-	// for TPM 2.0 devices.
-	FirmwareVersionMajor int
-	FirmwareVersionMinor int
-}
 
 func readTPM12VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 	var vendorInfo string
@@ -179,8 +90,8 @@ func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 	}, nil
 }
 
-func probeSystemTPMs() ([]probedTPM, error) {
-	var tpms []probedTPM
+func probeSystemTPMs() ([]ProbedTPM, error) {
+	var tpms []ProbedTPM
 
 	tpmDevs, err := ioutil.ReadDir(tpmRoot)
 	if err != nil && !os.IsNotExist(err) {
@@ -189,7 +100,7 @@ func probeSystemTPMs() ([]probedTPM, error) {
 	if err == nil {
 		for _, tpmDev := range tpmDevs {
 			if strings.HasPrefix(tpmDev.Name(), "tpm") {
-				tpm := probedTPM{
+				tpm := ProbedTPM{
 					Path: path.Join(tpmRoot, tpmDev.Name()),
 				}
 
@@ -209,7 +120,7 @@ func probeSystemTPMs() ([]probedTPM, error) {
 	return tpms, nil
 }
 
-func openTPM(pTPM probedTPM) (*TPM, error) {
+func openTPM(pTPM ProbedTPM) (*TPM, error) {
 	interf := TPMInterfaceDirect
 	var rwc io.ReadWriteCloser
 	var err error
@@ -244,9 +155,114 @@ func openTPM(pTPM probedTPM) (*TPM, error) {
 	}
 
 	return &TPM{
-		version: pTPM.Version,
-		interf:  interf,
-		sysPath: pTPM.Path,
-		rwc:     rwc,
+		Version: pTPM.Version,
+		Interf:  interf,
+		SysPath: pTPM.Path,
+		RWC:     rwc,
 	}, nil
+}
+
+func readAllPCRs20(tpm io.ReadWriter, alg tpm2.Algorithm) (map[uint32][]byte, error) {
+	numPCRs := 24
+	out := map[uint32][]byte{}
+
+	// The TPM 2.0 spec says that the TPM can partially fulfill the
+	// request. As such, we repeat the command up to 8 times to get all
+	// 24 PCRs.
+	for i := 0; i < numPCRs; i++ {
+		// Build a selection structure, specifying all PCRs we do
+		// not have the value for.
+		sel := tpm2.PCRSelection{Hash: alg}
+		for pcr := 0; pcr < numPCRs; pcr++ {
+			if _, present := out[uint32(pcr)]; !present {
+				sel.PCRs = append(sel.PCRs, pcr)
+			}
+		}
+
+		// Ask the TPM for those PCR values.
+		ret, err := tpm2.ReadPCRs(tpm, sel)
+		if err != nil {
+			return nil, fmt.Errorf("tpm2.ReadPCRs(%+v) failed with err: %v", sel, err)
+		}
+		// Keep track of the PCRs we were actually given.
+		for pcr, digest := range ret {
+			out[uint32(pcr)] = digest
+		}
+		if len(out) == numPCRs {
+			break
+		}
+	}
+
+	if len(out) != numPCRs {
+		return nil, fmt.Errorf("failed to read all PCRs, only read %d", len(out))
+	}
+
+	return out, nil
+}
+
+func readAllPCRs12(rwc io.ReadWriter) (map[uint32][]byte, error) {
+	numPCRs := 24
+	out := map[uint32][]byte{}
+
+	for i := 0; i < numPCRs; i++ {
+		// Ask the TPM for those PCR values.
+		pcr, err := tpm.ReadPCR(rwc, uint32(i))
+		if err != nil {
+			return nil, fmt.Errorf("tpm.ReadPCR(%d) failed with err: %v", i, err)
+		}
+		out[uint32(i)] = pcr
+		if len(out) == numPCRs {
+			break
+		}
+	}
+
+	if len(out) != numPCRs {
+		return nil, fmt.Errorf("failed to read all PCRs, only read %d", len(out))
+	}
+
+	return out, nil
+}
+
+func (a HashAlg) cryptoHash() crypto.Hash {
+	switch a {
+	case HashSHA1:
+		return crypto.SHA1
+	case HashSHA256:
+		return crypto.SHA256
+	}
+	return 0
+}
+
+func (a HashAlg) goTPMAlg() tpm2.Algorithm {
+	switch a {
+	case HashSHA1:
+		return tpm2.AlgSHA1
+	case HashSHA256:
+		return tpm2.AlgSHA256
+	}
+	return 0
+}
+
+func extendPCR12(rwc io.ReadWriter, pcrIndex uint32, hash [20]byte) error {
+	_, err := tpm.PcrExtend(rwc, pcrIndex, hash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func extendPCR20(rwc io.ReadWriter, pcrIndex uint32, hash []byte, alg HashAlg) error {
+	err := tpm2.PCRExtend(rwc, tpmutil.Handle(pcrIndex), alg.goTPMAlg(), hash, "")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func readPCR12(rwc io.ReadWriter, pcrIndex uint32) ([]byte, error) {
+	return tpm.ReadPCR(rwc, pcrIndex)
+}
+
+func readPCR20(rwc io.ReadWriter, pcrIndex uint32, alg HashAlg) ([]byte, error) {
+	return tpm2.ReadPCR(rwc, int(pcrIndex), alg.goTPMAlg())
 }
