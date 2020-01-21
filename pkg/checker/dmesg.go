@@ -6,20 +6,14 @@ package checker
 
 import (
 	"strings"
-	"syscall"
-	"unsafe"
-)
 
-// shamelessly copied from u-root/cmds/dmesg
-const (
-	_SYSLOG_ACTION_READ_ALL = 3
+	"golang.org/x/sys/unix"
 )
 
 func getDmesg() (string, error) {
-	level := uintptr(_SYSLOG_ACTION_READ_ALL)
 	b := make([]byte, 256*1024)
-	n, _, err := syscall.Syscall(syscall.SYS_SYSLOG, level, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)))
-	if err != 0 {
+	n, err := unix.Klogctl(unix.SYSLOG_ACTION_READ_ALL, b)
+	if err != nil {
 		return "", err
 	}
 	return string(b[:n]), nil
