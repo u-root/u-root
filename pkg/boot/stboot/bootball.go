@@ -5,7 +5,6 @@
 package stboot
 
 import (
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -33,7 +32,7 @@ type BootBall struct {
 	config         *Stconfig
 	numBootConfigs int
 	bootFiles      map[string][]string
-	rootCert       *x509.CertPool
+	RootCertPEM    []byte
 	signatures     map[string][]signature
 	NumSignatures  int
 	hashes         map[string][]byte
@@ -102,9 +101,9 @@ func BootBallFromConfig(configFile string) (*BootBall, error) {
 }
 
 func (ball *BootBall) init() error {
-	cert, err := getRootCert(filepath.Join(ball.dir, signaturesDirName, rootCertName))
+	certPEM, err := ioutil.ReadFile(filepath.Join(ball.dir, signaturesDirName, rootCertName))
 	if err != nil {
-		return fmt.Errorf("BootBall: getting configuration faild: %v", err)
+		return fmt.Errorf("BootBall: reading root certificate faild: %v", err)
 	}
 
 	bootFiles, err := getBootFiles(ball.config, ball.dir)
@@ -112,7 +111,7 @@ func (ball *BootBall) init() error {
 		return fmt.Errorf("BootBall: getting boot files faild: %v", err)
 	}
 
-	ball.rootCert = cert
+	ball.RootCertPEM = certPEM
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
 	ball.Signer = Sha512PssSigner{}
@@ -202,7 +201,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		return err
 	}
 
-	err = validateCertificate(cert, ball.rootCert)
+	err = validateCertificate(cert, ball.RootCertPEM)
 	if err != nil {
 		return err
 	}
@@ -249,7 +248,7 @@ func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err 
 	found = 0
 	verified = 0
 	for _, sig := range ball.signatures[id] {
-		err := validateCertificate(sig.Cert, ball.rootCert)
+		err := validateCertificate(sig.Cert, ball.RootCertPEM)
 		if err != nil {
 			return found, verified, err
 		}
@@ -277,20 +276,6 @@ func getConfig(src string) (*Stconfig, error) {
 		return nil, errors.New("invalid configuration")
 	}
 	return cfg, nil
-}
-
-// getRootCert returns a reference to a *x509.CertPool a
-// certificate file at src
-func getRootCert(dest string) (*x509.CertPool, error) {
-	certBytes, err := ioutil.ReadFile(dest)
-	if err != nil {
-		return nil, err
-	}
-	cert, err := certPool(certBytes)
-	if err != nil {
-		return nil, err
-	}
-	return cert, nil
 }
 
 // getBootFiles returns the file paths of all files of a u-root bootconfig
