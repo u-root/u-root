@@ -40,6 +40,11 @@ type Options struct {
 	// possible.
 	QEMUOpts qemu.Options
 
+	// DontSetEnv doesn't set the BuildOpts.Env and uses the user-supplied one.
+	//
+	// TODO: make uroot.Opts.Env a pointer?
+	DontSetEnv bool
+
 	// Name is the test's name.
 	//
 	// If name is left empty, the calling function's function name will be
@@ -209,7 +214,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	// Set the initramfs.
 	if len(o.QEMUOpts.Initramfs) == 0 {
 		o.QEMUOpts.Initramfs = filepath.Join(o.TmpDir, "initramfs.cpio")
-		if err := ChooseTestInitramfs(o.BuildOpts, o.Uinit, o.QEMUOpts.Initramfs); err != nil {
+		if err := ChooseTestInitramfs(o.DontSetEnv, o.BuildOpts, o.Uinit, o.QEMUOpts.Initramfs); err != nil {
 			return nil, err
 		}
 	}
@@ -246,7 +251,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 // Default to the override initramfs if one is specified in the UROOT_INITRAMFS
 // environment variable. Else, build an initramfs with the given parameters.
 // If no uinit was provided, the generic one is used.
-func ChooseTestInitramfs(o uroot.Opts, uinit, outputFile string) error {
+func ChooseTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string) error {
 	override := os.Getenv("UROOT_INITRAMFS")
 	if len(override) > 0 {
 		log.Printf("Overriding with initramfs %q", override)
@@ -258,7 +263,7 @@ func ChooseTestInitramfs(o uroot.Opts, uinit, outputFile string) error {
 		uinit = "github.com/u-root/u-root/integration/testcmd/generic/uinit"
 	}
 
-	_, err := CreateTestInitramfs(o, uinit, outputFile)
+	_, err := CreateTestInitramfs(dontSetEnv, o, uinit, outputFile)
 	return err
 }
 
@@ -267,12 +272,13 @@ func ChooseTestInitramfs(o uroot.Opts, uinit, outputFile string) error {
 // one will be created.
 // The output file name is returned. It is the caller's responsibility to remove
 // the initramfs file after use.
-func CreateTestInitramfs(o uroot.Opts, uinit, outputFile string) (string, error) {
-	// TODO make uroot.Opts Env a pointer to allow user-supplied Env.
-	env := golang.Default()
-	env.CgoEnabled = false
-	env.GOARCH = TestArch()
-	o.Env = env
+func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string) (string, error) {
+	if !dontSetEnv {
+		env := golang.Default()
+		env.CgoEnabled = false
+		env.GOARCH = TestArch()
+		o.Env = env
+	}
 
 	logger := log.New(os.Stderr, "", 0)
 
