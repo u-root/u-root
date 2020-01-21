@@ -4,27 +4,23 @@
 
 // Package tss provides TPM 1.2/2.0 core functionality and
 // abstraction layer for high-level functions
-
 package tss
 
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-
-	"github.com/awnumar/memguard"
 )
 
-// OpenTPM initializes access to the TPM based on the
+// NewTPM initializes access to the TPM based on the
 // config provided.
-func OpenTPM() (*TPM, error) {
+func NewTPM() (*TPM, error) {
 	candidateTPMs, err := probeSystemTPMs()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, tpm := range candidateTPMs {
-		tss, err := openTPM(tpm)
+		tss, err := newTPM(tpm)
 		if err != nil {
 			continue
 		}
@@ -32,12 +28,6 @@ func OpenTPM() (*TPM, error) {
 	}
 
 	return nil, errors.New("TPM device not available")
-}
-
-// MeasurementLog reads the TCPA eventlog in binary format
-// from the Linux kernel
-func (t *TPM) MeasurementLog() ([]byte, error) {
-	return ioutil.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
 }
 
 // Info returns information about the TPM.
@@ -59,26 +49,14 @@ func (t *TPM) Info() (*TPMInfo, error) {
 	return &info, nil
 }
 
-// Version returns the TPM version
-func (t *TPM) Version() TPMVersion {
+// GetVersion returns the TPM version
+func (t *TPM) GetVersion() TPMVersion {
 	return t.Version
 }
 
 // Close closes the TPM socket and wipe locked buffers
 func (t *TPM) Close() error {
-	memguard.Purge()
 	return t.RWC.Close()
-}
-
-// String returns a human-friendly representation of the hash algorithm.
-func (a HashAlg) String() string {
-	switch a {
-	case HashSHA1:
-		return "SHA1"
-	case HashSHA256:
-		return "SHA256"
-	}
-	return fmt.Sprintf("HashAlg<%d>", int(a))
 }
 
 // ReadPCRs reads all PCRs into the PCR structure
@@ -119,15 +97,21 @@ func (t *TPM) ReadPCRs(alg HashAlg) ([]PCR, error) {
 }
 
 // Extend extends a hash into a pcrIndex with a specific hash algorithm
-func (t *TPM) Extend(hash []byte, pcrIndex uint32, alg HashAlg) error {
+func (t *TPM) Extend(hash []byte, pcrIndex uint32) error {
 	switch t.Version {
 	case TPMVersion12:
-		err := extendPCR12(t.RWC, pcrIndex, hash)
+		var thash [20]byte
+		hashlen := len(hash)
+		if hashlen != 20 {
+			return fmt.Errorf("hash length invalid - need 20, got: %v", hashlen)
+		}
+		copy(thash[:], hash[:20])
+		err := extendPCR12(t.RWC, pcrIndex, thash)
 		if err != nil {
 			return err
 		}
 	case TPMVersion20:
-		err := extendPCR20(t.RWC, pcrIndex, hash, alg)
+		err := extendPCR20(t.RWC, pcrIndex, hash)
 		if err != nil {
 			return err
 		}
@@ -144,14 +128,20 @@ func (t *TPM) Measure(data []byte, pcrIndex uint32, alg HashAlg) error {
 	case TPMVersion12:
 		hashFunc := HashSHA1.cryptoHash().New()
 		hash := hashFunc.Sum(data)
-		err := extendPCR12(t.RWC, pcrIndex, hash)
+		var thash [20]byte
+		hashlen := len(hash)
+		if hashlen != 20 {
+			return fmt.Errorf("hash length insufficient - need 20, got: %v", hashlen)
+		}
+		copy(thash[:], hash[:20])
+		err := extendPCR12(t.RWC, pcrIndex, thash)
 		if err != nil {
 			return err
 		}
 	case TPMVersion20:
 		hashFunc := alg.cryptoHash().New()
 		hash := hashFunc.Sum(data)
-		err := extendPCR20(t.RWC, pcrIndex, hash, alg)
+		err := extendPCR20(t.RWC, pcrIndex, hash)
 		if err != nil {
 			return err
 		}
@@ -163,12 +153,12 @@ func (t *TPM) Measure(data []byte, pcrIndex uint32, alg HashAlg) error {
 }
 
 // ReadPCR reads a single PCR value by defining the pcrIndex
-func (t *TPM) ReadPCR(pcrIndex uint32, alg HashAlg) ([]byte, error) {
+func (t *TPM) ReadPCR(pcrIndex uint32) ([]byte, error) {
 	switch t.Version {
 	case TPMVersion12:
 		return readPCR12(t.RWC, pcrIndex)
 	case TPMVersion20:
-		return readPCR20(t.RWC, pcrIndex, alg)
+		return readPCR20(t.RWC, pcrIndex)
 	default:
 		return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
 	}
