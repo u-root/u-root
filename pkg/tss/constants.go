@@ -4,8 +4,13 @@
 
 // Package tss provides TPM 1.2/2.0 core functionality and
 // abstraction layer for high-level functions
-
 package tss
+
+const (
+	tpmPtManufacturer = 0x00000100 + 5  // PT_FIXED + offset of 5
+	tpmPtVendorString = 0x00000100 + 6  // PT_FIXED + offset of 6
+	tpmPtFwVersion1   = 0x00000100 + 11 // PT_FIXED + offset of 11
+)
 
 // Locality type
 type Locality byte
