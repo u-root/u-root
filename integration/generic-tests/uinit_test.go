@@ -9,7 +9,6 @@ package integration
 import (
 	"testing"
 
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -34,26 +33,5 @@ func TestHelloWorldNegative(t *testing.T) {
 
 	if err := q.Expect("GOODBYE WORLD"); err == nil {
 		t.Fatal(`expected error, but matched "GOODBYE WORLD"`)
-	}
-}
-
-func TestScript(t *testing.T) {
-	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "ShellScript",
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/echo",
-			),
-		},
-		TestCmds: []string{
-			"echo HELLO WORLD",
-			"shutdown -h",
-		},
-	})
-	defer cleanup()
-
-	if err := q.Expect("HELLO WORLD"); err != nil {
-		t.Fatal(`expected "HELLO WORLD", got error: `, err)
 	}
 }

@@ -62,10 +62,10 @@ these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
 *   `boot2`: similar to `localboot`, finds a bootable kernel configuration on
     disk (GRUB or syslinux) and boots it. To be merged into `localboot`.
 
-*   `uinit`: a wrapper around `netboot` and `localboot` that just mimicks a
-    BIOS/UEFI BDS behaviour, by looping between network booting and local
-    booting. The name `uinit` is necessary to be picked up as boot program by
-    u-root.
+*   `systemboot`: a wrapper around `fbnetboot` and `localboot` that just mimicks
+    a BIOS/UEFI BDS behaviour, by looping between network booting and local
+    booting. Use `-uinitcmd` argument to the u-root build tool to make it the
+    boot program.
 
 This project started as a loose collection of programs in u-root by various
 LinuxBoot contributors, as well as a personal experiment by
@@ -77,6 +77,12 @@ More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the
 [LinuxBoot book](https://github.com/linuxboot/book) chapter 10,
 [LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
+
+You can build systemboot like this:
+
+```sh
+u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
+```
 
 # Usage
 
@@ -147,12 +153,14 @@ qemu-system-x86_64 \
   -append "vga=786"
 ```
 
-For a list of modes, refer to the [Linux kernel documentation](https://github.com/torvalds/linux/blob/master/Documentation/fb/vesafb.rst#how-to-use-it).
+For a list of modes, refer to the
+[Linux kernel documentation](https://github.com/torvalds/linux/blob/master/Documentation/fb/vesafb.rst#how-to-use-it).
 
 ### Entropy / Random Number Generator
 
 Some utilities, e.g., `dhclient`, require entropy to be present. For a speedy
 virtualized random number generator, the kernel should have the following:
+
 ```
 CONFIG_VIRTIO_PCI=y
 CONFIG_HW_RANDOM_VIRTIO=y
@@ -160,27 +168,29 @@ CONFIG_CRYPTO_DEV_VIRTIO=y
 ```
 
 Then you can run your kernel in QEMU with a `virtio-rng-pci` device:
+
 ```sh
 qemu-system-x86_64 \
-  -device virtio-rng-pci \
-  -kernel vmlinuz \
-  -initrd /tmp/initramfs.linux_amd64.cpio
+    -device virtio-rng-pci \
+    -kernel vmlinuz \
+    -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
 In addition, you can pass your host's RNG:
+
 ```sh
 qemu-system-x86_64 \
-  -object rng-random,filename=/dev/urandom,id=rng0 \
-  -device virtio-rng-pci,rng=rng0 \
-  -kernel vmlinuz \
-  -initrd /tmp/initramfs.linux_amd64.cpio
+    -object rng-random,filename=/dev/urandom,id=rng0 \
+    -device virtio-rng-pci,rng=rng0 \
+    -kernel vmlinuz \
+    -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
 ## Compression
 
 You can compress the initramfs. However, for xz compression, the kernel has some
-restrictions on the compression options and it is suggested to align the file
-to 512 byte boundaries:
+restrictions on the compression options and it is suggested to align the file to
+512 byte boundaries:
 
 ```shell
 xz --check=crc32 -9 --lzma2=dict=1MiB \

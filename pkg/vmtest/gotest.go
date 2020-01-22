@@ -41,6 +41,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		o.TmpDir = tmpDir
 	}
 
+	// Set up u-root build options.
 	env := golang.Default()
 	env.CgoEnabled = false
 	env.GOARCH = TestArch()
@@ -87,6 +88,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	}
 
 	// Create the CPIO and start QEMU.
+	o.BuildOpts.AddBusyBoxCommands("github.com/u-root/u-root/cmds/core/*")
 	o.BuildOpts.AddCommands(uroot.BinaryCmds("cmd/test2json")...)
 
 	// Specify the custom gotest uinit.
