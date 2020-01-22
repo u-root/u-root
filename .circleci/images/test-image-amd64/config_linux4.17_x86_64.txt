@@ -94,3 +94,10 @@ CONFIG_GPIO_MOCKUP=y
 
 # Compressed initramfs
 CONFIG_KERNEL_GZIP=y
+
+# iSCSI initiator support
+CONFIG_ISCSI_TCP=y
+
+# NBD (Network Block Device) support: will automatically re-read partitions when
+# iSCSI disk is mounted.
+CONFIG_BLK_DEV_NBD=y
