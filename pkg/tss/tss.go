@@ -16,16 +16,16 @@ import (
 	"github.com/google/go-tpm/tpm2"
 )
 
-// OpenTPM initializes access to the TPM based on the
+// NewTPM initializes access to the TPM based on the
 // config provided.
-func OpenTPM() (*TPM, error) {
+func NewTPM() (*TPM, error) {
 	candidateTPMs, err := probeSystemTPMs()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, tpm := range candidateTPMs {
-		tss, err := openTPM(tpm)
+		tss, err := newTPM(tpm)
 		if err != nil {
 			continue
 		}
