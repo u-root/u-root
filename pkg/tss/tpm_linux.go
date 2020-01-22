@@ -10,7 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/go-tpm/tpm"
@@ -32,10 +32,10 @@ func probeSystemTPMs() ([]ProbedTPM, error) {
 		for _, tpmDev := range tpmDevs {
 			if strings.HasPrefix(tpmDev.Name(), "tpm") {
 				tpm := ProbedTPM{
-					Path: path.Join(tpmRoot, tpmDev.Name()),
+					Path: filepath.Join(tpmRoot, tpmDev.Name()),
 				}
 
-				if _, err := os.Stat(path.Join(tpm.Path, "caps")); err != nil {
+				if _, err := os.Stat(filepath.Join(tpm.Path, "caps")); err != nil {
 					if !os.IsNotExist(err) {
 						return nil, err
 					}
@@ -51,14 +51,14 @@ func probeSystemTPMs() ([]ProbedTPM, error) {
 	return tpms, nil
 }
 
-func openTPM(pTPM ProbedTPM) (*TPM, error) {
+func newTPM(pTPM ProbedTPM) (*TPM, error) {
 	interf := TPMInterfaceDirect
 	var rwc io.ReadWriteCloser
 	var err error
 
 	switch pTPM.Version {
 	case TPMVersion12:
-		devPath := path.Join("/dev", path.Base(pTPM.Path))
+		devPath := filepath.Join("/dev", filepath.Base(pTPM.Path))
 		interf = TPMInterfaceKernelManaged
 
 		rwc, err = tpm.OpenTPM(devPath)
@@ -68,14 +68,14 @@ func openTPM(pTPM ProbedTPM) (*TPM, error) {
 	case TPMVersion20:
 		// If the TPM has a kernel-provided resource manager, we should
 		// use that instead of communicating directly.
-		devPath := path.Join("/dev", path.Base(pTPM.Path))
-		f, err := ioutil.ReadDir(path.Join(pTPM.Path, "device", "tpmrm"))
+		devPath := filepath.Join("/dev", filepath.Base(pTPM.Path))
+		f, err := ioutil.ReadDir(filepath.Join(pTPM.Path, "device", "tpmrm"))
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return nil, err
 			}
 		} else if len(f) > 0 {
-			devPath = path.Join("/dev", f[0].Name())
+			devPath = filepath.Join("/dev", f[0].Name())
 			interf = TPMInterfaceKernelManaged
 		}
 
