@@ -38,7 +38,7 @@ func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 	// through the 4 indexes to get all 16 bytes & construct vendorInfo.
 	// See: TPM_PT_VENDOR_STRING_1 in TPM 2.0 Structures reference.
 	for i := 0; i < 4; i++ {
-		caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, tpmPtVendorString+uint32(i))
+		caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.VendorString1)+uint32(i))
 		if err != nil {
 			return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_VENDOR_STRING_%d) failed: %v", i+1, err)
 		}
@@ -50,7 +50,7 @@ func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 		vendorInfo += string(subset.Value&0xFF000000) + string(subset.Value&0xFF0000) + string(subset.Value&0xFF00) + string(subset.Value&0xFF)
 	}
 
-	caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, tpmPtManufacturer)
+	caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.Manufacturer))
 	if err != nil {
 		return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_MANUFACTURER) failed: %v", err)
 	}
@@ -59,7 +59,7 @@ func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 		return TPMInfo{}, fmt.Errorf("got capability of type %T, want tpm2.TaggedProperty", caps[0])
 	}
 
-	caps, _, err = tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, tpmPtFwVersion1)
+	caps, _, err = tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.FirmwareVersion1))
 	if err != nil {
 		return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_FIRMWARE_VERSION_1) failed: %v", err)
 	}
