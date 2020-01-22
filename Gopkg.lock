@@ -480,6 +480,7 @@
     "github.com/safchain/ethtool",
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/require",
+    "github.com/systemboot/systemboot/pkg/recovery",
     "github.com/vishvananda/netlink",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",
