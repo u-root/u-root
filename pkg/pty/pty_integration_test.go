@@ -11,18 +11,11 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegration(t *testing.T) {
 	o := &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				// Used by TestRunRestoreTTYMode
-				"github.com/u-root/u-root/cmds/core/echo",
-			),
-		},
 		QEMUOpts: qemu.Options{
 			Timeout: 120 * time.Second,
 		},

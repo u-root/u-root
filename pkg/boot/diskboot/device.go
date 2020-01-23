@@ -18,6 +18,32 @@ type Device struct {
 	Configs []*Config
 }
 
+// fstypes returns all block file system supported by the linuxboot kernel
+
+/*
+ * FindDevicesRW is identical to FindDevices, except the "RW" one
+ * calls FindDevice with 0 (read write flag option)
+ * In comparison, FindDevices calls FindDevice with unix.MS_RDONLY
+ * which mounts the device as read only.
+ */
+func FindDevicesRW(devicesGlob string) (devices []*Device) {
+	sysList, err := filepath.Glob(devicesGlob)
+	if err != nil {
+		return nil
+	}
+	// The Linux /sys file system is a bit, er, awkward. You can't find
+	// the device special in there; just everything else.
+	for _, sys := range sysList {
+		blk := filepath.Join("/dev", filepath.Base(sys))
+
+		dev, _ := FindDevice(blk, 0)
+		if dev != nil && len(dev.Configs) > 0 {
+			devices = append(devices, dev)
+		}
+	}
+	return devices
+}
+
 // FindDevices searches for devices with bootable configs
 func FindDevices(devicesGlob string) (devices []*Device) {
 	sysList, err := filepath.Glob(devicesGlob)

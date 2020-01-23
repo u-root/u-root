@@ -24,16 +24,27 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 const bootloader = "u-root kexec"
+
+// Module describe a module by a ReaderAt and a `CmdLine`
+type Module struct {
+	Module  io.ReaderAt
+	Name    string
+	CmdLine string
+}
+
+// Modules is a range of module with a Closer interface
+type Modules []Module
 
 // multiboot defines parameters for working with multiboot kernels.
 type multiboot struct {
 	mem kexec.Memory
 
-	file    string
-	modules []string
+	kernel  io.ReaderAt
+	modules []Module
 
 	cmdLine    string
 	bootloader string
@@ -96,19 +107,15 @@ func (m memoryMaps) String() string {
 	return strings.Join(s, "\n")
 }
 
-// Probe checks if file is multiboot v1 kernel.
-func Probe(file string) error {
-	b, err := readFile(file)
-	if err != nil {
-		return err
-	}
-	kernel := &kernelReader{buf: b}
-	_, err = parseHeader(kernel)
+// Probe checks if `kernel` is multiboot v1 kernel.
+func Probe(kernel io.ReaderAt) error {
+	r := tryGzipFilter(kernel)
+	_, err := parseHeader(uio.Reader(r))
 	return err
 }
 
 // newMB returns a new multiboot instance.
-func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
+func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, error) {
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
@@ -120,7 +127,7 @@ func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 	}
 
 	return &multiboot{
-		file:       file,
+		kernel:     kernel,
 		modules:    modules,
 		cmdLine:    cmdLine,
 		trampoline: trampoline,
@@ -129,10 +136,7 @@ func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 	}, nil
 }
 
-// Load parses and loads a multiboot kernel `file` using kexec_load.
-//
-// Each module is a path followed by optional command-line arguments, e.g.
-// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+// Load parses and loads a multiboot `kernel` using kexec_load.
 //
 // debug turns on debug logging.
 //
@@ -141,8 +145,10 @@ func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 //
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
-func Load(debug bool, file, cmdline string, modules []string, ibft *ibft.IBFT) error {
-	m, err := newMB(file, cmdline, modules)
+func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
+	kernel = tryGzipFilter(kernel)
+
+	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
 		return err
 	}
@@ -155,27 +161,62 @@ func Load(debug bool, file, cmdline string, modules []string, ibft *ibft.IBFT) e
 	return nil
 }
 
-// load loads and parses multiboot information from m.file.
-func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
-	log.Printf("Parsing file %v", m.file)
-	b, err := readFile(m.file)
-	if err != nil {
-		return err
+// OpenModules open modules as files and fill a range of `Module` struct
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+//
+// uncompress when true will try to uncompress modules if needed
+func OpenModules(cmds []string, uncompress bool) (Modules, error) {
+	modules := make([]Module, len(cmds))
+	for i, cmd := range cmds {
+		modules[i].CmdLine = cmd
+		name := strings.Fields(cmd)[0]
+		modules[i].Name = name
+		f, err := os.Open(name)
+		if err != nil {
+			// TODO close already open files
+			return nil, fmt.Errorf("error opening module %v: %v", name, err)
+		}
+		if uncompress {
+			modules[i].Module = tryGzipFilter(f)
+		} else {
+			modules[i].Module = f
+		}
 	}
-	kernel := kernelReader{buf: b}
+	return modules, nil
+}
+
+// Close closes all Modules ReaderAt implementing the io.Closer interface
+func (m Modules) Close() error {
+	// poor error handling inspired from uio.multiCloser
+	var allErr error
+	for _, mod := range m {
+		if c, ok := mod.Module.(io.Closer); ok {
+			if err := c.Close(); err != nil {
+				allErr = err
+			}
+		}
+	}
+	return allErr
+}
+
+// load loads and parses multiboot information from m.kernel.
+func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
+	var err error
 	log.Println("Parsing multiboot header")
-	if m.header, err = parseHeader(&kernel); err != nil {
+	if m.header, err = parseHeader(uio.Reader(m.kernel)); err != nil {
 		return fmt.Errorf("error parsing headers: %v", err)
 	}
 
 	log.Printf("Getting kernel entry point")
-	if m.kernelEntry, err = getEntryPoint(kernel); err != nil {
+	if m.kernelEntry, err = getEntryPoint(m.kernel); err != nil {
 		return fmt.Errorf("error getting kernel entry point: %v", err)
 	}
 	log.Printf("Kernel entry point at %#x", m.kernelEntry)
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(kernel); err != nil {
+	if err := m.mem.LoadElfSegments(m.kernel); err != nil {
 		return fmt.Errorf("error loading ELF segments: %v", err)
 	}
 

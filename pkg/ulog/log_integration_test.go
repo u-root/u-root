@@ -9,16 +9,9 @@ package ulog_test
 import (
 	"testing"
 
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/ulog"}, &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/dmesg",
-			),
-		},
-	})
+	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/ulog"}, &vmtest.Options{})
 }

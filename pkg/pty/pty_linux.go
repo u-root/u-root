@@ -23,6 +23,15 @@ import (
 // pty support. We used to import github.com/kr/pty but what we need is not that complex.
 // Thanks to keith rarick for these functions.
 func New() (*Pty, error) {
+	tty, err := termios.New()
+	if err != nil {
+		return nil, err
+	}
+	restorer, err := tty.Get()
+	if err != nil {
+		return nil, err
+	}
+
 	ptm, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
@@ -45,15 +54,6 @@ func New() (*Pty, error) {
 		if err == nil {
 			break
 		}
-	}
-
-	tty, err := termios.NewWithDev(sname)
-	if err != nil {
-		return nil, err
-	}
-	restorer, err := tty.Get()
-	if err != nil {
-		return nil, err
 	}
 
 	pts, err := os.OpenFile(sname, os.O_RDWR|syscall.O_NOCTTY, 0)
