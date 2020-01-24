@@ -2,9 +2,28 @@ package dhcpv6
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
+
+// Duration is a duration as embedded in IA messages (IAPD, IANA, IATA).
+type Duration struct {
+	time.Duration
+}
+
+// Marshal encodes the time in uint32 seconds as defined by RFC 3315 for IANA
+// messages.
+func (d Duration) Marshal(buf *uio.Lexer) {
+	buf.Write32(uint32(d.Duration.Round(time.Second) / time.Second))
+}
+
+// Unmarshal decodes time from uint32 seconds as defined by RFC 3315 for IANA
+// messages.
+func (d *Duration) Unmarshal(buf *uio.Lexer) {
+	t := buf.Read32()
+	d.Duration = time.Duration(t) * time.Second
+}
 
 // OptIANA implements the identity association for non-temporary addresses
 // option.
@@ -13,8 +32,8 @@ import (
 // https://www.ietf.org/rfc/rfc3633.txt
 type OptIANA struct {
 	IaId    [4]byte
-	T1      uint32
-	T2      uint32
+	T1      time.Duration
+	T2      time.Duration
 	Options Options
 }
 
@@ -26,8 +45,10 @@ func (op *OptIANA) Code() OptionCode {
 func (op *OptIANA) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
 	buf.WriteBytes(op.IaId[:])
-	buf.Write32(op.T1)
-	buf.Write32(op.T2)
+	t1 := Duration{op.T1}
+	t1.Marshal(buf)
+	t2 := Duration{op.T2}
+	t2.Marshal(buf)
 	buf.WriteBytes(op.Options.ToBytes())
 	return buf.Data()
 }
@@ -59,8 +80,13 @@ func ParseOptIANA(data []byte) (*OptIANA, error) {
 	var opt OptIANA
 	buf := uio.NewBigEndianBuffer(data)
 	buf.ReadBytes(opt.IaId[:])
-	opt.T1 = buf.Read32()
-	opt.T2 = buf.Read32()
+
+	var t1, t2 Duration
+	t1.Unmarshal(buf)
+	t2.Unmarshal(buf)
+	opt.T1 = t1.Duration
+	opt.T2 = t2.Duration
+
 	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
 		return nil, err
 	}
