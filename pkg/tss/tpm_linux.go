@@ -25,7 +25,7 @@ func probeSystemTPMs() ([]ProbedTPM, error) {
 	var tpms []ProbedTPM
 
 	tpmDevs, err := ioutil.ReadDir(tpmRoot)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return nil, err
 	}
 	if err == nil {
@@ -36,9 +36,6 @@ func probeSystemTPMs() ([]ProbedTPM, error) {
 				}
 
 				if _, err := os.Stat(filepath.Join(tpm.Path, "caps")); err != nil {
-					if !os.IsNotExist(err) {
-						return nil, err
-					}
 					tpm.Version = TPMVersion20
 				} else {
 					tpm.Version = TPMVersion12
@@ -71,9 +68,7 @@ func newTPM(pTPM ProbedTPM) (*TPM, error) {
 		devPath := filepath.Join("/dev", filepath.Base(pTPM.Path))
 		f, err := ioutil.ReadDir(filepath.Join(pTPM.Path, "device", "tpmrm"))
 		if err != nil {
-			if !os.IsNotExist(err) {
-				return nil, err
-			}
+			return nil, err
 		} else if len(f) > 0 {
 			devPath = filepath.Join("/dev", f[0].Name())
 			interf = TPMInterfaceKernelManaged
