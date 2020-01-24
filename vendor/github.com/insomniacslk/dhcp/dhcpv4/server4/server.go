@@ -97,7 +97,7 @@ func (s *Server) Serve() error {
 			continue
 		}
 		// Set peer to broadcast if the client did not have an IP.
-		if upeer.IP == nil || upeer.IP.Equal(net.IPv4zero) {
+		if upeer.IP == nil || upeer.IP.To4().Equal(net.IPv4zero) {
 			upeer = &net.UDPAddr{
 				IP:   net.IPv4bcast,
 				Port: upeer.Port,

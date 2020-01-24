@@ -8,6 +8,8 @@ import (
 
 const (
 	AF_INET              = linux.AF_INET
+	AF_INET6             = linux.AF_INET6
+	AF_UNSPEC            = linux.AF_UNSPEC
 	NETLINK_ROUTE        = linux.NETLINK_ROUTE
 	SizeofIfAddrmsg      = linux.SizeofIfAddrmsg
 	SizeofIfInfomsg      = linux.SizeofIfInfomsg
@@ -35,6 +37,11 @@ const (
 	IFA_CACHEINFO        = linux.IFA_CACHEINFO
 	IFA_MULTICAST        = linux.IFA_MULTICAST
 	IFA_FLAGS            = linux.IFA_FLAGS
+	IFF_UP               = linux.IFF_UP
+	IFF_BROADCAST        = linux.IFF_BROADCAST
+	IFF_LOOPBACK         = linux.IFF_LOOPBACK
+	IFF_POINTOPOINT      = linux.IFF_POINTOPOINT
+	IFF_MULTICAST        = linux.IFF_MULTICAST
 	IFLA_UNSPEC          = linux.IFLA_UNSPEC
 	IFLA_ADDRESS         = linux.IFLA_ADDRESS
 	IFLA_BROADCAST       = linux.IFLA_BROADCAST
@@ -67,6 +74,9 @@ const (
 	NTF_PROXY            = linux.NTF_PROXY
 	RTN_UNICAST          = linux.RTN_UNICAST
 	RT_TABLE_MAIN        = linux.RT_TABLE_MAIN
+	RTPROT_BOOT          = linux.RTPROT_BOOT
 	RTPROT_STATIC        = linux.RTPROT_STATIC
 	RT_SCOPE_UNIVERSE    = linux.RT_SCOPE_UNIVERSE
+	RT_SCOPE_HOST        = linux.RT_SCOPE_HOST
+	RT_SCOPE_LINK        = linux.RT_SCOPE_LINK
 )
