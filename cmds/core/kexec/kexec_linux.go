@@ -74,11 +74,11 @@ func main() {
 
 	newCmdline := opts.cmdline
 	if opts.reuseCmdline {
-		procCmdLine := cmdline.NewCmdLine()
-		if procCmdLine.Err != nil {
-			log.Fatal("Couldn't read /proc/cmdline")
+		procCmdLine, err := cmdline.HostCmdline()
+		if err != nil {
+			log.Fatal("Couldn't read /proc/cmdline: %v", err)
 		} else {
-			newCmdline = procCmdLine.Raw
+			newCmdline = procCmdLine.String()
 		}
 	}
 

@@ -31,6 +31,10 @@ func installModules() {
 		// print if there are none to install
 		return
 	}
+	hostCmdline, err := cmdline.HostCmdline()
+	if err != nil {
+		log.Printf("Failed to open host cmdline: %v", err)
+	}
 
 	for _, filename := range files {
 		f, err := os.Open(filename)
@@ -41,7 +45,7 @@ func installModules() {
 		// Module flags are passed to the command line in the form modulename.flag=val
 		// And must be passed to FileInit as flag=val to be installed properly
 		moduleName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
-		flags := cmdline.FlagsForModule(moduleName)
+		flags := hostCmdline.FlagsForModule(moduleName)
 		err = kmodule.FileInit(f, flags, 0)
 		f.Close()
 		if err != nil {

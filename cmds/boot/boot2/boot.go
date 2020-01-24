@@ -102,10 +102,20 @@ func getEntry(config *diskboot.Config) (*diskboot.Entry, error) {
 	return &config.Entries[entryIndex], nil
 }
 
+// updateBootCmdline get the kernel command line parameters and filter it:
+// it removes parameters listed in 'remove' and append extra parameters from
+// the 'append' and 'reuse' flags
+func updateBootCmdline(cl string) string {
+	c := cmdline.Parse(cl)
+	c.Append(*appendCmdline)
+	c.Remove(strings.Split(*removeCmdlineItem, ",")...)
+	c.Reuse(strings.Split(*reuseCmdlineItem, ",")...)
+	return c.String()
+}
+
 func bootEntry(config *diskboot.Config, entry *diskboot.Entry) error {
 	verbose("Booting entry: %v", entry)
-	filter := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
-	err := entry.KexecLoad(config.MountPath, filter, *dryrun)
+	err := entry.KexecLoad(config.MountPath, updateBootCmdline, *dryrun)
 	if err != nil {
 		return fmt.Errorf("wrror doing kexec load: %v", err)
 	}

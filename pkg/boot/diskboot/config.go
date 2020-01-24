@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"github.com/u-root/u-root/pkg/cmdline"
 )
 
 // Config contains boot entries for a single configuration file
@@ -64,7 +63,7 @@ type Entry struct {
 
 // KexecLoad calls the appropriate kexec load routines based on the
 // type of Entry
-func (e *Entry) KexecLoad(mountPath string, filterCmdline cmdline.Filter, dryrun bool) error {
+func (e *Entry) KexecLoad(mountPath string, filterCmdline func(string) string, dryrun bool) error {
 	switch e.Type {
 	case Multiboot:
 		// TODO: implement using kexec_load syscall
@@ -83,7 +82,7 @@ func (e *Entry) KexecLoad(mountPath string, filterCmdline cmdline.Filter, dryrun
 		kernel, err := os.OpenFile(kernelPath, os.O_RDONLY, 0)
 		commandline := e.Modules[0].Params
 		if filterCmdline != nil {
-			commandline = filterCmdline.Update(commandline)
+			commandline = filterCmdline(commandline)
 		}
 
 		log.Print("Kernel Params:", commandline)
