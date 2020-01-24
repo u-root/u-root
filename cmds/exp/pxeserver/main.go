@@ -41,7 +41,6 @@ var (
 type server struct {
 	mac          net.HardwareAddr
 	yourIP       net.IP
-	subnet       net.IP
 	submask      net.IPMask
 	self         net.IP
 	bootfilename string
@@ -49,7 +48,7 @@ type server struct {
 }
 
 func (s *server) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv4) {
-	log.Printf("Handling request peer %v %v", peer, m)
+	log.Printf("Handling request %v for peer %v", m, peer)
 
 	var replyType dhcpv4.MessageType
 	switch mt := m.MessageType(); mt {
@@ -91,8 +90,8 @@ func (s *server) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv
 		log.Printf("Could not create reply for %v: %v", m, err)
 		return
 	}
-	log.Printf("Sending %v to %v", reply.Summary(), s.subnet)
-	if _, err := conn.WriteTo(reply.ToBytes(), &net.UDPAddr{IP: s.subnet, Port: 68}); err != nil {
+	log.Printf("Sending %v to %v", reply.Summary(), peer)
+	if _, err := conn.WriteTo(reply.ToBytes(), peer); err != nil {
 		log.Printf("Could not write %v: %v", reply, err)
 	}
 }
@@ -144,7 +143,6 @@ func main() {
 			mac:          maca,
 			self:         net.ParseIP(*selfIP),
 			yourIP:       yourIP,
-			subnet:       yourIP.Mask(yourNet.Mask),
 			submask:      yourNet.Mask,
 			bootfilename: *bootfilename,
 			rootpath:     *rootpath,
