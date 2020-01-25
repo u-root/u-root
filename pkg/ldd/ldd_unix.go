@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build freebsd linux
+
 // ldd returns all the library dependencies of an executable.
 //
 // The way this is done on GNU-based systems is interesting. For each ELF, one
