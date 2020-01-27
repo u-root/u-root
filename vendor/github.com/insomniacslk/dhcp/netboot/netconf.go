@@ -20,8 +20,8 @@ import (
 // AddrConf holds a single IP address configuration for a NIC
 type AddrConf struct {
 	IPNet             net.IPNet
-	PreferredLifetime int
-	ValidLifetime     int
+	PreferredLifetime time.Duration
+	ValidLifetime     time.Duration
 }
 
 // NetConf holds multiple IP configuration for a NIC, and DNS configuration
@@ -55,8 +55,8 @@ func GetNetConfFromPacketv6(d *dhcpv6.Message) (*NetConf, error) {
 				IP:   iaaddr.IPv6Addr,
 				Mask: netmask,
 			},
-			PreferredLifetime: int(iaaddr.PreferredLifetime),
-			ValidLifetime:     int(iaaddr.ValidLifetime),
+			PreferredLifetime: iaaddr.PreferredLifetime,
+			ValidLifetime:     iaaddr.ValidLifetime,
 		})
 	}
 	// get DNS configuration
@@ -110,7 +110,7 @@ func GetNetConfFromPacketv4(d *dhcpv4.DHCPv4) (*NetConf, error) {
 			Mask: netmask,
 		},
 		PreferredLifetime: 0,
-		ValidLifetime:     int(leaseTime / time.Second),
+		ValidLifetime:     leaseTime,
 	})
 
 	// get DNS configuration

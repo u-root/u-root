@@ -2,6 +2,7 @@ package rtnetlink
 
 import (
 	"encoding"
+	"time"
 
 	"github.com/jsimonetti/rtnetlink/internal/unix"
 
@@ -26,6 +27,7 @@ type conn interface {
 	Send(m netlink.Message) (netlink.Message, error)
 	Receive() ([]netlink.Message, error)
 	Execute(m netlink.Message) ([]netlink.Message, error)
+	SetReadDeadline(t time.Time) error
 }
 
 // Dial dials a route netlink connection.  Config specifies optional
@@ -58,6 +60,14 @@ func newConn(c conn) *Conn {
 // Close closes the connection.
 func (c *Conn) Close() error {
 	return c.c.Close()
+}
+
+// SetReadDeadline sets the read deadline associated with the connection.
+//
+// Deadline functionality is only supported on Go 1.12+. Calling this function
+// on older versions of Go will result in an error.
+func (c *Conn) SetReadDeadline(t time.Time) error {
+	return c.c.SetReadDeadline(t)
 }
 
 // Send sends a single Message to netlink, wrapping it in a netlink.Message

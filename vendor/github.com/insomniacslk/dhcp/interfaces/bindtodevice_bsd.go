@@ -1,4 +1,4 @@
-// +build freebsd openbsd netbsd darwin
+// +build aix freebsd openbsd netbsd darwin
 
 package interfaces
 

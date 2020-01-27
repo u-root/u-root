@@ -4,29 +4,29 @@
 
 package main
 
-import (
-	"os"
-
-	"golang.org/x/sys/unix"
-)
+import "golang.org/x/sys/unix"
 
 var (
 	fileSystemUID, fileSystemGID int
 )
 
 func dropPrivs() error {
-	if fileSystemUID = unix.Getuid(); fileSystemUID == 0 {
+	uid := unix.Getuid()
+	if uid == 0 {
 		return nil
 	}
-	fileSystemGID = unix.Getgid()
-	if err := unix.Setfsuid(fileSystemUID); err != nil {
+
+	var err error
+	fileSystemUID, err = unix.SetfsuidRetUid(uid)
+	if err != nil {
 		return err
 	}
-	return unix.Setfsgid(fileSystemGID)
+	fileSystemGID, err = unix.SetfsgidRetGid(unix.Getgid())
+	return err
 }
 
 func restorePrivs() {
-	if os.Getuid() == 0 {
+	if unix.Getuid() == 0 {
 		return
 	}
 	// We're exiting, if there's an error, not much to do.

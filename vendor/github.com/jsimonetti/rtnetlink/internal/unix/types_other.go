@@ -4,6 +4,8 @@ package unix
 
 const (
 	AF_INET              = 0x2
+	AF_INET6             = 0xa
+	AF_UNSPEC            = 0x0
 	NETLINK_ROUTE        = 0x0
 	SizeofIfAddrmsg      = 0x8
 	SizeofIfInfomsg      = 0x10
@@ -31,6 +33,11 @@ const (
 	IFA_CACHEINFO        = 0x6
 	IFA_MULTICAST        = 0x7
 	IFA_FLAGS            = 0x8
+	IFF_UP               = 0x1
+	IFF_BROADCAST        = 0x2
+	IFF_LOOPBACK         = 0x8
+	IFF_POINTOPOINT      = 0x10
+	IFF_MULTICAST        = 0x1000
 	IFLA_UNSPEC          = 0x0
 	IFLA_ADDRESS         = 0x1
 	IFLA_BROADCAST       = 0x2
@@ -63,6 +70,9 @@ const (
 	NTF_PROXY            = 0x8
 	RTN_UNICAST          = 0x1
 	RT_TABLE_MAIN        = 0xfe
+	RTPROT_BOOT          = 0x3
 	RTPROT_STATIC        = 0x4
 	RT_SCOPE_UNIVERSE    = 0x0
+	RT_SCOPE_HOST        = 0xfe
+	RT_SCOPE_LINK        = 0xfd
 )
