@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -100,19 +99,7 @@ func (bc *BootConfig) Boot() error {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
 		}
-		modules := make([]multiboot.Module, len(bc.Modules))
-		for i, cmd := range bc.Modules {
-			modules[i].CmdLine = cmd
-			name := strings.Fields(cmd)[0]
-			f, err := os.Open(name)
-			if err != nil {
-				return fmt.Errorf("error opening module %v: %v", name, err)
-			}
-			defer f.Close()
-			modules[i].Module = f
-		}
-
-		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
+		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, bc.Modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
 		}
 	}
