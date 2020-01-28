@@ -6,7 +6,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -21,40 +20,6 @@ const (
 	timestampPath string = "/etc/timestamp"
 	ntpTimePool   string = "0.beevik-ntp.pool.ntp.org"
 )
-
-func getRTCMonth(month int32) (time.Month, error) {
-	switch month {
-	case 0:
-		return time.January, nil
-	case 1:
-		return time.February, nil
-	case 2:
-		return time.March, nil
-	case 3:
-		return time.April, nil
-	case 4:
-		return time.May, nil
-	case 5:
-		return time.June, nil
-	case 6:
-		return time.July, nil
-	case 7:
-		return time.August, nil
-	case 8:
-		return time.September, nil
-	case 9:
-		return time.October, nil
-	case 10:
-		return time.November, nil
-	case 11:
-		return time.December, nil
-	}
-	return 0, fmt.Errorf("invalid rtc month representation %d", month)
-}
-
-func getRTCYear(year int32) int {
-	return int(year + 1900)
-}
 
 func readRTCTime() (time.Time, error) {
 	rtc, err := rtc.OpenRTC()
