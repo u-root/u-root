@@ -15,12 +15,11 @@ import (
 
 	"github.com/beevik/ntp"
 	"github.com/systemboot/systemboot/pkg/recovery"
-	"golang.org/x/sys/unix"
+	"github.com/u-root/u-root/pkg/rtc"
 )
 
 const (
 	timestampPath string = "/etc/timestamp"
-	rtcPath       string = "/dev/rtc0"
 	ntpTimePool   string = "0.beevik-ntp.pool.ntp.org"
 )
 
@@ -59,45 +58,19 @@ func getRTCYear(year int32) int {
 }
 
 func readRTCTime() (time.Time, error) {
-	fd, err := unix.Open(rtcPath, unix.O_RDWR, 0)
+	rtc, err := rtc.OpenRTC()
 	if err != nil {
 		return time.Time{}, err
 	}
-	rtc, err := unix.IoctlGetRTCTime(fd)
-	if err != nil {
-		unix.Close(fd)
-		return time.Time{}, err
-	}
-	unix.Close(fd)
-	year := getRTCYear(rtc.Year)
-	month, err := getRTCMonth(rtc.Mon)
-	if err != nil {
-		// Use mid of the year for max 6 months miscalculation
-		month = time.June
-	}
-	localTime := time.Date(year, month, int(rtc.Mday), int(rtc.Hour), int(rtc.Min), int(rtc.Sec), 0, time.Local)
-	return localTime, nil
+	return rtc.Read()
 }
 
 func writeRTCTime(t time.Time) error {
-	fd, err := unix.Open(rtcPath, unix.O_RDWR, 0)
+	rtc, err := rtc.OpenRTC()
 	if err != nil {
 		return err
 	}
-	var rtc unix.RTCTime
-	rtc.Sec = int32(t.Local().Second())
-	rtc.Min = int32(t.Local().Minute())
-	rtc.Hour = int32(t.Local().Hour())
-	rtc.Mday = int32(t.Local().Day())
-	rtc.Mon = int32(t.Local().Month() - 1)
-	rtc.Year = int32(t.Local().Year() - 1900)
-	err = unix.IoctlSetRTCTime(fd, &rtc)
-	if err != nil {
-		unix.Close(fd)
-		return err
-	}
-	unix.Close(fd)
-	return nil
+	return rtc.Set(t)
 }
 
 // validateSystemTime sets RTC and OS time according to
