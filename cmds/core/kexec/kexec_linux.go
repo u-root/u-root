@@ -21,7 +21,6 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
 
 	flag "github.com/spf13/pflag"
 
@@ -92,22 +91,9 @@ func main() {
 		defer mbkernel.Close()
 		var image boot.OSImage
 		if err := multiboot.Probe(mbkernel); err == nil {
-
-			modules := make([]multiboot.Module, len(opts.modules))
-			for i, cmd := range opts.modules {
-				modules[i].CmdLine = cmd
-				name := strings.Fields(cmd)[0]
-				f, err := os.Open(name)
-				if err != nil {
-					log.Fatalf("error opening module %v: %v", name, err)
-				}
-				defer f.Close()
-				modules[i].Module = f
-			}
-
 			image = &boot.MultibootImage{
-				Modules: modules,
-				Kernel:  mbkernel,
+				Modules: opts.modules,
+				Path:    kernelpath,
 				Cmdline: newCmdline,
 			}
 		} else {
