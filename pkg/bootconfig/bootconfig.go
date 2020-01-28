@@ -87,19 +87,12 @@ func (bc *BootConfig) Boot() error {
 			return err
 		}
 	} else if bc.Multiboot != "" {
-		mbkernel, err := os.Open(bc.Multiboot)
-		if err != nil {
-			log.Printf("Error opening multiboot kernel file: %v", err)
-			return err
-		}
-		defer mbkernel.Close()
-
 		// check multiboot header
-		if err := multiboot.Probe(mbkernel); err != nil {
+		if err := multiboot.Probe(bc.Multiboot); err != nil {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
 		}
-		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, bc.Modules, nil); err != nil {
+		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
 		}
 	}

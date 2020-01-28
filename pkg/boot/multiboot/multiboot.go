@@ -97,10 +97,14 @@ func (m memoryMaps) String() string {
 	return strings.Join(s, "\n")
 }
 
-// Probe checks if `kernel` is multiboot v1 kernel.
-func Probe(kernel io.ReaderAt) error {
-	r := tryGzipFilter(kernel)
-	_, err := parseHeader(uio.Reader(r))
+// Probe checks if file is multiboot v1 kernel.
+func Probe(file string) error {
+	b, err := readFile(file)
+	if err != nil {
+		return err
+	}
+	kernel := &kernelReader{buf: b}
+	_, err = parseHeader(kernel)
 	return err
 }
 
@@ -126,7 +130,7 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, er
 	}, nil
 }
 
-// Load parses and loads a multiboot `kernel` using kexec_load.
+// Load parses and loads a multiboot kernel `file` using kexec_load.
 //
 // Each module is a path followed by optional command-line arguments, e.g.
 // []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
@@ -138,8 +142,12 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, er
 //
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
-func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []string, ibft *ibft.IBFT) error {
-	kernel = tryGzipFilter(kernel)
+func Load(debug bool, file, cmdline string, modules []string, ibft *ibft.IBFT) error {
+	b, err := readFile(file)
+	if err != nil {
+		return err
+	}
+	kernel := kernelReader{buf: b}
 	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
 		return err
