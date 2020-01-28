@@ -17,7 +17,7 @@ func TestFromZip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir)
 
 	f := filepath.Join(tmpDir, "test.zip")
 	err = ToZip("testdata/testFolder", f)
