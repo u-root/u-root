@@ -33,7 +33,7 @@ type BootBall struct {
 	numBootConfigs int
 	bootFiles      map[string][]string
 	RootCertPEM    []byte
-	signatures     map[string][]signature
+	signatures     map[string][]Signature
 	NumSignatures  int
 	hashes         map[string][]byte
 	Signer         Signer
@@ -220,7 +220,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		if err != nil {
 			return err
 		}
-		sig := signature{
+		sig := Signature{
 			Bytes: s,
 			Cert:  cert}
 		ball.signatures[key] = append(ball.signatures[key], sig)
@@ -303,10 +303,10 @@ func getBootFiles(cfg *Stconfig, prefix string) (map[string][]string, error) {
 // of ball's underlying tmpDir (ball.dir). An error is returned if one of the
 // files cannot be read or parsed.
 func (ball *BootBall) getSignatures() error {
-	ball.signatures = make(map[string][]signature)
+	ball.signatures = make(map[string][]Signature)
 	path := filepath.Join(ball.dir, signaturesDirName)
 
-	sigPool := make([]signature, 0)
+	sigPool := make([]Signature, 0)
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		ext := filepath.Ext(info.Name())
 
@@ -327,7 +327,7 @@ func (ball *BootBall) getSignatures() error {
 				return err
 			}
 
-			sig := signature{
+			sig := Signature{
 				Bytes: sigBytes,
 				Cert:  cert,
 			}
@@ -346,7 +346,7 @@ func (ball *BootBall) getSignatures() error {
 // writeSignature writes the signature represented by sig to a file in
 // dir along with a copy of certFile. The filenames are composed of the
 // first piece of the public key of the certificate.
-func writeSignature(dir, certFile string, sig signature) error {
+func writeSignature(dir, certFile string, sig Signature) error {
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return err
