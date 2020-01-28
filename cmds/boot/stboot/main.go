@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot/stboot"
+	"github.com/u-root/u-root/pkg/recovery"
 )
 
 var debug = func(string, ...interface{}) {}
@@ -173,4 +174,17 @@ func matchFingerprint(certPEM []byte, fingerprintHex string) bool {
 	fingerprintHex = strings.TrimSpace(fingerprintHex)
 
 	return str == fingerprintHex
+}
+
+//reboot trys to reboot the system in an infinity loop
+func reboot() {
+	for {
+		recover := recovery.SecureRecoverer{
+			Reboot: true,
+		}
+		err := recover.Recover("")
+		if err != nil {
+			continue
+		}
+	}
 }
