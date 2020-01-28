@@ -24,7 +24,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/ubinary"
-	"github.com/u-root/u-root/pkg/uio"
 )
 
 const bootloader = "u-root kexec"
@@ -33,7 +32,7 @@ const bootloader = "u-root kexec"
 type multiboot struct {
 	mem kexec.Memory
 
-	kernel  io.ReaderAt
+	file    string
 	modules []string
 
 	cmdLine    string
@@ -109,7 +108,7 @@ func Probe(file string) error {
 }
 
 // newMB returns a new multiboot instance.
-func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, error) {
+func newMB(file, cmdLine string, modules []string) (*multiboot, error) {
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
@@ -121,7 +120,7 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, er
 	}
 
 	return &multiboot{
-		kernel:     kernel,
+		file:       file,
 		modules:    modules,
 		cmdLine:    cmdLine,
 		trampoline: trampoline,
@@ -143,12 +142,7 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, er
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
 func Load(debug bool, file, cmdline string, modules []string, ibft *ibft.IBFT) error {
-	b, err := readFile(file)
-	if err != nil {
-		return err
-	}
-	kernel := kernelReader{buf: b}
-	m, err := newMB(kernel, cmdline, modules)
+	m, err := newMB(file, cmdline, modules)
 	if err != nil {
 		return err
 	}
@@ -161,22 +155,27 @@ func Load(debug bool, file, cmdline string, modules []string, ibft *ibft.IBFT) e
 	return nil
 }
 
-// load loads and parses multiboot information from m.kernel.
+// load loads and parses multiboot information from m.file.
 func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
-	var err error
+	log.Printf("Parsing file %v", m.file)
+	b, err := readFile(m.file)
+	if err != nil {
+		return err
+	}
+	kernel := kernelReader{buf: b}
 	log.Println("Parsing multiboot header")
-	if m.header, err = parseHeader(uio.Reader(m.kernel)); err != nil {
+	if m.header, err = parseHeader(&kernel); err != nil {
 		return fmt.Errorf("error parsing headers: %v", err)
 	}
 
 	log.Printf("Getting kernel entry point")
-	if m.kernelEntry, err = getEntryPoint(m.kernel); err != nil {
+	if m.kernelEntry, err = getEntryPoint(kernel); err != nil {
 		return fmt.Errorf("error getting kernel entry point: %v", err)
 	}
 	log.Printf("Kernel entry point at %#x", m.kernelEntry)
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(m.kernel); err != nil {
+	if err := m.mem.LoadElfSegments(kernel); err != nil {
 		return fmt.Errorf("error loading ELF segments: %v", err)
 	}
 
