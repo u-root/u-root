@@ -20,7 +20,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	flag "github.com/spf13/pflag"
 
@@ -84,13 +83,8 @@ func main() {
 
 	if opts.load {
 		kernelpath := flag.Arg(0)
-		mbkernel, err := os.Open(kernelpath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer mbkernel.Close()
 		var image boot.OSImage
-		if err := multiboot.Probe(mbkernel); err == nil {
+		if err := multiboot.Probe(kernelpath); err == nil {
 			image = &boot.MultibootImage{
 				Modules: opts.modules,
 				Path:    kernelpath,
