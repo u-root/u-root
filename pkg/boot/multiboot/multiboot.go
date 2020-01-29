@@ -168,9 +168,7 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 //
 // Each module is a path followed by optional command-line arguments, e.g.
 // []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
-//
-// uncompress when true will try to uncompress modules if needed
-func OpenModules(cmds []string, uncompress bool) (Modules, error) {
+func OpenModules(cmds []string) (Modules, error) {
 	modules := make([]Module, len(cmds))
 	for i, cmd := range cmds {
 		modules[i].CmdLine = cmd
@@ -181,11 +179,7 @@ func OpenModules(cmds []string, uncompress bool) (Modules, error) {
 			// TODO close already open files
 			return nil, fmt.Errorf("error opening module %v: %v", name, err)
 		}
-		if uncompress {
-			modules[i].Module = tryGzipFilter(f)
-		} else {
-			modules[i].Module = f
-		}
+		modules[i].Module = f
 	}
 	return modules, nil
 }
