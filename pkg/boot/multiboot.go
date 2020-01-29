@@ -31,8 +31,19 @@ func (mi *MultibootImage) Load(verbose bool) error {
 		return err
 	}
 	defer mbkernel.Close()
+	modules := make([]multiboot.Module, len(mi.Modules))
+	for i, cmd := range mi.Modules {
+		modules[i].CmdLine = cmd
+		name := strings.Fields(cmd)[0]
+		f, err := os.Open(name)
+		if err != nil {
+			return fmt.Errorf("error opening module %v: %v", name, err)
+		}
+		defer f.Close()
+		modules[i].Module = f
+	}
 
-	return multiboot.Load(verbose, mbkernel, mi.Cmdline, mi.Modules, mi.IBFT)
+	return multiboot.Load(verbose, mbkernel, mi.Cmdline, modules, mi.IBFT)
 }
 
 // String implements fmt.Stringer.
