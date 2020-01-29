@@ -99,7 +99,7 @@ func (bc *BootConfig) Boot() error {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
 		}
-		modules, err := multiboot.OpenModules(bc.Modules, true)
+		modules, err := multiboot.OpenModules(bc.Modules)
 		if err != nil {
 			return err
 		}
