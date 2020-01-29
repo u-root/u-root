@@ -72,7 +72,7 @@ func validateSystemTime() error {
 		if err != nil {
 			return err
 		}
-		reboot()
+		reboot("Set system time. Need reboot.")
 	}
 	return nil
 }

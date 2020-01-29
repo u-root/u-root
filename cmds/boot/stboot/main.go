@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -69,7 +70,7 @@ func main() {
 
 	vars, err := stboot.FindHostVarsInInitramfs()
 	if err != nil {
-		log.Fatalf("Cant find Netvars at all: %v", err)
+		reboot("Cant find Netvars at all: %v", err)
 	}
 
 	if *doDebug {
@@ -84,33 +85,33 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatalf("Can not set up IO: %v", err)
+		reboot("Can not set up IO: %v", err)
 	}
 
 	err = validateSystemTime()
 	if err != nil {
-		log.Fatal(err)
+		reboot("%v", err)
 	}
 
 	ballPath := path.Join("root/", stboot.BallName)
 	url, err := url.Parse(vars.BootstrapURL)
 	if err != nil {
-		log.Fatalf("Invalid bootstrap URL: %v", err)
+		reboot("Invalid bootstrap URL: %v", err)
 	}
 	url.Path = path.Join(url.Path, stboot.BallName)
 	err = downloadFromHTTPS(url.String(), ballPath)
 	if err != nil {
-		log.Fatalf("Downloading bootball failed: %v", err)
+		reboot("Downloading bootball failed: %v", err)
 	}
 
 	ball, err := stboot.BootBallFromArchive(ballPath)
 	if err != nil {
-		log.Fatalf("Cannot open bootball: %v", err)
+		reboot("Cannot open bootball: %v", err)
 	}
 
 	fp, err := ioutil.ReadFile(rootCertFingerprintPath)
 	if err != nil {
-		log.Fatalf("Cannot read fingerprint: %v", err)
+		reboot("Cannot read fingerprint: %v", err)
 	}
 
 	if *doDebug {
@@ -118,7 +119,7 @@ func main() {
 		log.Print(string(fp))
 	}
 	if !matchFingerprint(ball.RootCertPEM, string(fp)) {
-		log.Fatalf("Root certificate of boot ball does not match expacted fingerprint %v", err)
+		reboot("Root certificate of boot ball does not match expacted fingerprint %v", err)
 	}
 
 	// Just choose the first Bootconfig for now
@@ -126,7 +127,7 @@ func main() {
 	var index = 0
 	bc, err := ball.GetBootConfigByIndex(index)
 	if err != nil {
-		log.Fatalf("Cannot get boot configuration %d: %v", index, err)
+		reboot("Cannot get boot configuration %d: %v", index, err)
 	}
 
 	if *doDebug {
@@ -136,14 +137,14 @@ func main() {
 
 	n, valid, err := ball.VerifyBootconfigByID(bc.ID())
 	if err != nil {
-		log.Fatalf("Error verifying bootconfig %d: %v", index, err)
+		reboot("Error verifying bootconfig %d: %v", index, err)
 	}
 	if valid < vars.MinimalSignaturesMatch {
-		log.Fatalf("Did not found enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
+		reboot("Did not found enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
 
 	if *doDebug {
-		log.Printf("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
+		reboot("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
 
 	log.Printf("Bootconfig '%s' passed verification", bc.Name)
@@ -160,7 +161,7 @@ func main() {
 		log.Printf("Failed to boot kernel %s: %v", bc.Kernel, err)
 	}
 	// if we reach this point, no boot configuration succeeded
-	log.Print("No boot configuration succeeded")
+	reboot("No boot configuration succeeded")
 }
 
 // matchFingerprint returns true if fingerprintHex matches the SHA256
@@ -177,12 +178,14 @@ func matchFingerprint(certPEM []byte, fingerprintHex string) bool {
 }
 
 //reboot trys to reboot the system in an infinity loop
-func reboot() {
+func reboot(format string, v ...interface{}) {
 	for {
 		recover := recovery.SecureRecoverer{
-			Reboot: true,
+			Reboot:   true,
+			Debug:    true,
+			RandWait: true,
 		}
-		err := recover.Recover("")
+		err := recover.Recover(fmt.Sprintf(format, v...))
 		if err != nil {
 			continue
 		}
