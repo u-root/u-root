@@ -144,21 +144,23 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 //
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
-func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []string, ibft *ibft.IBFT) error {
+func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
 	kernel = tryGzipFilter(kernel)
-	readableModules := make([]Module, len(modules))
-	for i, cmd := range modules {
-		readableModules[i].CmdLine = cmd
-		name := strings.Fields(cmd)[0]
-		f, err := os.Open(name)
-		if err != nil {
-			return fmt.Errorf("error adding module %v: %v", name, err)
+	for i, mod := range modules {
+		// try open modules as file... we loop for the filter anyway
+		if mod.Module == nil {
+			name := strings.Fields(mod.CmdLine)[0]
+			f, err := os.Open(name)
+			if err != nil {
+				return fmt.Errorf("error opening module %v: %v", name, err)
+			}
+			defer f.Close()
+			mod.Module = f
 		}
-		defer f.Close()
-		readableModules[i].Module = tryGzipFilter(f)
+		modules[i].Module = tryGzipFilter(mod.Module)
 	}
 
-	m, err := newMB(kernel, cmdline, readableModules)
+	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
 		return err
 	}
