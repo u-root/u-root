@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 type kernelReader struct {
@@ -59,4 +61,15 @@ func readFile(name string) ([]byte, error) {
 	}
 
 	return ioutil.ReadAll(f)
+}
+
+// TODO: could be tryCompressionFilters, grub support gz,xz and lzop
+// TODO: do we want to keep the filter inside multiboot? This could be the responsibility of the caller...
+func tryGzipFilter(r io.ReaderAt) io.ReaderAt {
+	b, err := readGzip(uio.Reader(r))
+	if err == nil {
+		kernel := kernelReader{buf: b}
+		return kernel
+	}
+	return r
 }
