@@ -10,7 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // DebugPrefix is a prefix that some messages are printed with for tests to parse.
@@ -40,8 +41,7 @@ type Description struct {
 func (m multiboot) description() (string, error) {
 	var modules []ModuleDesc
 	for i, mod := range m.loadedModules {
-		name := strings.Fields(m.modules[i])[0]
-		b, err := readFile(name)
+		b, err := uio.ReadAll(m.modules[i].Module)
 		if err != nil {
 			return "", nil
 		}
@@ -49,7 +49,7 @@ func (m multiboot) description() (string, error) {
 		modules = append(modules, ModuleDesc{
 			Start:   mod.Start,
 			End:     mod.End,
-			CmdLine: m.modules[i],
+			CmdLine: m.modules[i].CmdLine,
 			SHA256:  fmt.Sprintf("%x", hash),
 		})
 
