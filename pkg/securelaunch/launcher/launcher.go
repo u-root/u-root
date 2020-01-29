@@ -24,6 +24,23 @@ type Launcher struct {
 	Params map[string]string `json:"params"`
 }
 
+func (l *Launcher) MeasureKernel(tpmDev io.ReadWriteCloser) error {
+
+	kernel := l.Params["kernel"]
+	initrd := l.Params["initrd"]
+
+	if e := measurement.HashFile(tpmDev, kernel); e != nil {
+		log.Printf("ERR: measure kernel input=%s, err=%v", kernel, e)
+		return e
+	}
+
+	if e := measurement.HashFile(tpmDev, initrd); e != nil {
+		log.Printf("ERR: measure initrd input=%s, err=%v", initrd, e)
+		return e
+	}
+	return nil
+}
+
 /*
  * Boot boots the target kernel based on information provided
  * in the "launcher" section of policy file.
@@ -51,17 +68,6 @@ func (l *Launcher) Boot(tpmDev io.ReadWriteCloser) error {
 	kernel := l.Params["kernel"]
 	initrd := l.Params["initrd"]
 	cmdline := l.Params["cmdline"]
-
-	slaunch.Debug("********Step 6: Measuring kernel, initrd ********")
-	if e := measurement.HashFile(tpmDev, kernel); e != nil {
-		log.Printf("launcher: ERR: measure kernel input=%s, err=%v", kernel, e)
-		return e
-	}
-
-	if e := measurement.HashFile(tpmDev, initrd); e != nil {
-		log.Printf("launcher: ERR: measure initrd input=%s, err=%v", initrd, e)
-		return e
-	}
 
 	k, _, e := slaunch.GetMountedFilePath(kernel, mount.MS_RDONLY)
 	if e != nil {
