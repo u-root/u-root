@@ -29,12 +29,18 @@ import (
 
 const bootloader = "u-root kexec"
 
+// Module describe a module by a ReaderAt and a `CmdLine`
+type Module struct {
+	Module  io.ReaderAt
+	CmdLine string
+}
+
 // multiboot defines parameters for working with multiboot kernels.
 type multiboot struct {
 	mem kexec.Memory
 
 	kernel  io.ReaderAt
-	modules []string
+	modules []Module
 
 	cmdLine    string
 	bootloader string
@@ -105,7 +111,7 @@ func Probe(kernel io.ReaderAt) error {
 }
 
 // newMB returns a new multiboot instance.
-func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, error) {
+func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, error) {
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
@@ -140,7 +146,19 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []string) (*multiboot, er
 // Linux and execute the loaded kernel.
 func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []string, ibft *ibft.IBFT) error {
 	kernel = tryGzipFilter(kernel)
-	m, err := newMB(kernel, cmdline, modules)
+	readableModules := make([]Module, len(modules))
+	for i, cmd := range modules {
+		readableModules[i].CmdLine = cmd
+		name := strings.Fields(cmd)[0]
+		f, err := os.Open(name)
+		if err != nil {
+			return fmt.Errorf("error adding module %v: %v", name, err)
+		}
+		defer f.Close()
+		readableModules[i].Module = tryGzipFilter(f)
+	}
+
+	m, err := newMB(kernel, cmdline, readableModules)
 	if err != nil {
 		return err
 	}
