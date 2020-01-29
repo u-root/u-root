@@ -147,6 +147,9 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 // Linux and execute the loaded kernel.
 func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
 	kernel = tryGzipFilter(kernel)
+	for i, mod := range modules {
+		modules[i].Module = tryGzipFilter(mod.Module)
+	}
 
 	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
