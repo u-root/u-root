@@ -91,13 +91,8 @@ func main() {
 		defer mbkernel.Close()
 		var image boot.OSImage
 		if err := multiboot.Probe(mbkernel); err == nil {
-			modules, err := multiboot.OpenModules(opts.modules)
-			if err != nil {
-				log.Fatalf("%v", err)
-			}
-			defer modules.Close()
 			image = &boot.MultibootImage{
-				Modules: modules,
+				Modules: multiboot.LazyOpenModules(opts.modules),
 				Kernel:  mbkernel,
 				Cmdline: newCmdline,
 			}

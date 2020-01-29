@@ -184,6 +184,23 @@ func OpenModules(cmds []string) (Modules, error) {
 	return modules, nil
 }
 
+// LazyOpenModules assigns modules to be opened as files.
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+func LazyOpenModules(cmds []string) Modules {
+	modules := make([]Module, 0, len(cmds))
+	for _, cmd := range cmds {
+		name := strings.Fields(cmd)[0]
+		modules = append(modules, Module{
+			CmdLine: cmd,
+			Name:    name,
+			Module:  uio.NewLazyFile(name),
+		})
+	}
+	return modules
+}
+
 // Close closes all Modules ReaderAt implementing the io.Closer interface
 func (m Modules) Close() error {
 	// poor error handling inspired from uio.multiCloser
