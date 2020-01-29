@@ -39,8 +39,10 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/gpt"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // LoadDisk loads the right ESXi multiboot kernel from partitions 5 or 6 of the
@@ -130,6 +132,9 @@ func mountPartition(dev string) (*options, error) {
 	return &opts, nil
 }
 
+// So tests can replace this and don't have to open actual files.
+var fileOpener func(string) uio.ReadAtCloser = uio.NewLazyFile
+
 func getBootImage(opts options, device string, partition int) (*boot.MultibootImage, error) {
 	// Only valid and upgrading are bootable partitions.
 	//
@@ -153,10 +158,17 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 			return nil, fmt.Errorf("cannot add boot uuid of %s: %v", device, err)
 		}
 	}
+	modules := make([]multiboot.Module, len(opts.modules))
+	for i, cmd := range opts.modules {
+		modules[i].CmdLine = cmd
+		name := strings.Fields(cmd)[0]
+		modules[i].Module = fileOpener(name)
+	}
+
 	return &boot.MultibootImage{
-		Path:    opts.kernel,
+		Kernel:  fileOpener(opts.kernel),
 		Cmdline: opts.args,
-		Modules: opts.modules,
+		Modules: modules,
 	}, nil
 }
 
