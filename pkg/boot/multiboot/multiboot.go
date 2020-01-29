@@ -35,6 +35,9 @@ type Module struct {
 	CmdLine string
 }
 
+// Modules is a range of module with a Closer interface
+type Modules []Module
+
 // multiboot defines parameters for working with multiboot kernels.
 type multiboot struct {
 	mem kexec.Memory
@@ -134,9 +137,6 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 
 // Load parses and loads a multiboot `kernel` using kexec_load.
 //
-// Each module is a path followed by optional command-line arguments, e.g.
-// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
-//
 // debug turns on debug logging.
 //
 // Load can set up an arbitrary number of modules, and takes care of the
@@ -146,19 +146,6 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 // Linux and execute the loaded kernel.
 func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
 	kernel = tryGzipFilter(kernel)
-	for i, mod := range modules {
-		// try open modules as file... we loop for the filter anyway
-		if mod.Module == nil {
-			name := strings.Fields(mod.CmdLine)[0]
-			f, err := os.Open(name)
-			if err != nil {
-				return fmt.Errorf("error opening module %v: %v", name, err)
-			}
-			defer f.Close()
-			mod.Module = f
-		}
-		modules[i].Module = tryGzipFilter(mod.Module)
-	}
 
 	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
@@ -171,6 +158,45 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
+}
+
+// OpenModules open modules as files and fill a range of `Module` struct
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+//
+// uncompress when true will try to uncompress modules if needed
+func OpenModules(cmds []string, uncompress bool) (Modules, error) {
+	modules := make([]Module, len(cmds))
+	for i, cmd := range cmds {
+		modules[i].CmdLine = cmd
+		name := strings.Fields(cmd)[0]
+		f, err := os.Open(name)
+		if err != nil {
+			// TODO close already open files
+			return nil, fmt.Errorf("error opening module %v: %v", name, err)
+		}
+		if uncompress {
+			modules[i].Module = tryGzipFilter(f)
+		} else {
+			modules[i].Module = f
+		}
+	}
+	return modules, nil
+}
+
+// Close closes all Modules ReaderAt implementing the io.Closer interface
+func (m Modules) Close() error {
+	// poor error handling inspired from uio.multiCloser
+	var allErr error
+	for _, mod := range m {
+		if c, ok := mod.Module.(io.Closer); ok {
+			if err := c.Close(); err != nil {
+				allErr = err
+			}
+		}
+	}
+	return allErr
 }
 
 // load loads and parses multiboot information from m.kernel.
