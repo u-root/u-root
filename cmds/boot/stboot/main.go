@@ -5,14 +5,20 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot/stboot"
+	"github.com/u-root/u-root/pkg/recovery"
 )
 
 var debug = func(string, ...interface{}) {}
@@ -23,9 +29,10 @@ var (
 )
 
 const (
-	rootCACertPath     = "/root/LetsEncrypt_Authority_X3.pem"
-	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
-	interfaceUpTimeout = 6 * time.Second
+	rootCACertPath          = "/root/LetsEncrypt_Authority_X3.pem"
+	rootCertFingerprintPath = "root/signing_rootcert.fingerprint"
+	entropyAvail            = "/proc/sys/kernel/random/entropy_avail"
+	interfaceUpTimeout      = 6 * time.Second
 )
 
 var banner = `
@@ -98,7 +105,20 @@ func main() {
 
 	ball, err := stboot.BootBallFromArchive(ballPath)
 	if err != nil {
-		log.Fatal("Cannot open bootball")
+		log.Fatalf("Cannot open bootball: %v", err)
+	}
+
+	fp, err := ioutil.ReadFile(rootCertFingerprintPath)
+	if err != nil {
+		log.Fatalf("Cannot read fingerprint: %v", err)
+	}
+
+	if *doDebug {
+		log.Print("Fingerprint of boot ball's root certificate:")
+		log.Print(string(fp))
+	}
+	if !matchFingerprint(ball.RootCertPEM, string(fp)) {
+		log.Fatalf("Root certificate of boot ball does not match expacted fingerprint %v", err)
 	}
 
 	// Just choose the first Bootconfig for now
@@ -141,4 +161,30 @@ func main() {
 	}
 	// if we reach this point, no boot configuration succeeded
 	log.Print("No boot configuration succeeded")
+}
+
+// matchFingerprint returns true if fingerprintHex matches the SHA256
+// hash calculated from pem decoded certPEM.
+func matchFingerprint(certPEM []byte, fingerprintHex string) bool {
+	block, _ := pem.Decode(certPEM)
+	fp := sha256.Sum256(block.Bytes)
+	str := hex.EncodeToString(fp[:])
+	str = strings.TrimSpace(str)
+
+	fingerprintHex = strings.TrimSpace(fingerprintHex)
+
+	return str == fingerprintHex
+}
+
+//reboot trys to reboot the system in an infinity loop
+func reboot() {
+	for {
+		recover := recovery.SecureRecoverer{
+			Reboot: true,
+		}
+		err := recover.Recover("")
+		if err != nil {
+			continue
+		}
+	}
 }

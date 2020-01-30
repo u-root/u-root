@@ -5,7 +5,6 @@
 package stboot
 
 import (
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -33,8 +32,8 @@ type BootBall struct {
 	config         *Stconfig
 	numBootConfigs int
 	bootFiles      map[string][]string
-	rootCert       *x509.CertPool
-	signatures     map[string][]signature
+	RootCertPEM    []byte
+	signatures     map[string][]Signature
 	NumSignatures  int
 	hashes         map[string][]byte
 	Signer         Signer
@@ -102,9 +101,9 @@ func BootBallFromConfig(configFile string) (*BootBall, error) {
 }
 
 func (ball *BootBall) init() error {
-	cert, err := getRootCert(filepath.Join(ball.dir, signaturesDirName, rootCertName))
+	certPEM, err := ioutil.ReadFile(filepath.Join(ball.dir, signaturesDirName, rootCertName))
 	if err != nil {
-		return fmt.Errorf("BootBall: getting configuration faild: %v", err)
+		return fmt.Errorf("BootBall: reading root certificate faild: %v", err)
 	}
 
 	bootFiles, err := getBootFiles(ball.config, ball.dir)
@@ -112,7 +111,7 @@ func (ball *BootBall) init() error {
 		return fmt.Errorf("BootBall: getting boot files faild: %v", err)
 	}
 
-	ball.rootCert = cert
+	ball.RootCertPEM = certPEM
 	ball.numBootConfigs = len(ball.config.BootConfigs)
 	ball.bootFiles = bootFiles
 	ball.Signer = Sha512PssSigner{}
@@ -202,7 +201,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		return err
 	}
 
-	err = validateCertificate(cert, ball.rootCert)
+	err = validateCertificate(cert, ball.RootCertPEM)
 	if err != nil {
 		return err
 	}
@@ -221,7 +220,7 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		if err != nil {
 			return err
 		}
-		sig := signature{
+		sig := Signature{
 			Bytes: s,
 			Cert:  cert}
 		ball.signatures[key] = append(ball.signatures[key], sig)
@@ -249,7 +248,7 @@ func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err 
 	found = 0
 	verified = 0
 	for _, sig := range ball.signatures[id] {
-		err := validateCertificate(sig.Cert, ball.rootCert)
+		err := validateCertificate(sig.Cert, ball.RootCertPEM)
 		if err != nil {
 			return found, verified, err
 		}
@@ -279,20 +278,6 @@ func getConfig(src string) (*Stconfig, error) {
 	return cfg, nil
 }
 
-// getRootCert returns a reference to a *x509.CertPool a
-// certificate file at src
-func getRootCert(dest string) (*x509.CertPool, error) {
-	certBytes, err := ioutil.ReadFile(dest)
-	if err != nil {
-		return nil, err
-	}
-	cert, err := certPool(certBytes)
-	if err != nil {
-		return nil, err
-	}
-	return cert, nil
-}
-
 // getBootFiles returns the file paths of all files of a u-root bootconfig
 // for all bootconfigs in cfg.BootConfigs. Prefix is added in front of each
 // file path. The map's keys are set to the respective bootconfig's name.
@@ -318,7 +303,7 @@ func getBootFiles(cfg *Stconfig, prefix string) (map[string][]string, error) {
 // of ball's underlying tmpDir (ball.dir). An error is returned if one of the
 // files cannot be read or parsed.
 func (ball *BootBall) getSignatures() error {
-	ball.signatures = make(map[string][]signature)
+	ball.signatures = make(map[string][]Signature)
 	path := filepath.Join(ball.dir, signaturesDirName)
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -341,7 +326,7 @@ func (ball *BootBall) getSignatures() error {
 				return err
 			}
 
-			sig := signature{
+			sig := Signature{
 				Bytes: sigBytes,
 				Cert:  cert,
 			}
@@ -359,7 +344,7 @@ func (ball *BootBall) getSignatures() error {
 // writeSignature writes the signature represented by sig to a file in
 // dir along with a copy of certFile. The filenames are composed of the
 // first piece of the public key of the certificate.
-func writeSignature(dir, certFile string, sig signature) error {
+func writeSignature(dir, certFile string, sig Signature) error {
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return err

@@ -16,7 +16,7 @@ import (
 	"io/ioutil"
 )
 
-type signature struct {
+type Signature struct {
 	Bytes []byte
 	Cert  *x509.Certificate
 }
@@ -26,7 +26,7 @@ type signature struct {
 type Signer interface {
 	Hash(files ...string) ([]byte, error)
 	Sign(privKey string, data []byte) ([]byte, error)
-	Verify(sig signature, hash []byte) error
+	Verify(sig Signature, hash []byte) error
 }
 
 // DummySigner creates signatures that are always valid.
@@ -56,7 +56,7 @@ func (DummySigner) Sign(privKey string, data []byte) ([]byte, error) {
 
 // Verify checks if sig contains a valid signature of hash. In case of
 // DummySigner this is allwazs the case.
-func (DummySigner) Verify(sig signature, hash []byte) error {
+func (DummySigner) Verify(sig Signature, hash []byte) error {
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (Sha512PssSigner) Sign(privKey string, data []byte) ([]byte, error) {
 }
 
 // Verify checks if sig contains a valid signature of hash.
-func (Sha512PssSigner) Verify(sig signature, hash []byte) error {
+func (Sha512PssSigner) Verify(sig Signature, hash []byte) error {
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 	err := rsa.VerifyPSS(sig.Cert.PublicKey.(*rsa.PublicKey), crypto.SHA512, hash, sig.Bytes, opts)
 	if err != nil {
@@ -139,10 +139,14 @@ func certPool(pem []byte) (*x509.CertPool, error) {
 
 // validateCertificate validates cert against certPool. If cert is not signed
 // by a certificate of certPool an error is returned.
-func validateCertificate(cert *x509.Certificate, cerPool *x509.CertPool) error {
-	opts := x509.VerifyOptions{
-		Roots: cerPool,
+func validateCertificate(cert *x509.Certificate, rootCertPEM []byte) error {
+	certPool, err := certPool(rootCertPEM)
+	if err != nil {
+		return err
 	}
-	_, err := cert.Verify(opts)
+	opts := x509.VerifyOptions{
+		Roots: certPool,
+	}
+	_, err = cert.Verify(opts)
 	return err
 }
