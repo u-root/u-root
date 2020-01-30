@@ -19,6 +19,7 @@ package ibft
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 
 	"github.com/u-root/u-root/pkg/uio"
@@ -283,6 +284,11 @@ type IBFT struct {
 
 	// Target offset: 0x110
 	Target0 Target
+}
+
+// String is a short summary of the iBFT contents.
+func (i *IBFT) String() string {
+	return fmt.Sprintf("iBFT(iSCSI target=%s, IP=%s)", i.Target0.Target, i.NIC0.IPNet)
 }
 
 type heapTable struct {

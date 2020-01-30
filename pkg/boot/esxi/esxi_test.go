@@ -159,6 +159,7 @@ func multibootEqual(a, b []*boot.MultibootImage) bool {
 func TestDev5Valid(t *testing.T) {
 	want := []*boot.MultibootImage{
 		{
+			Name:    "VMware ESXi from testdata/dev5",
 			Kernel:  uio.NewLazyFile("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
 			Modules: []multiboot.Module{},
@@ -192,6 +193,7 @@ func TestDev5Valid(t *testing.T) {
 func TestDev6Valid(t *testing.T) {
 	want := []*boot.MultibootImage{
 		{
+			Name:    "VMware ESXi from testdata/dev6",
 			Kernel:  uio.NewLazyFile("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
 			Modules: []multiboot.Module{},
@@ -237,6 +239,7 @@ func TestImageOrder(t *testing.T) {
 		bootstate: bootValid,
 	}
 	want5 := &boot.MultibootImage{
+		Name:    "VMware ESXi from testdata/dev5",
 		Kernel:  uio.NewLazyFile("foobar"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
 		Modules: []multiboot.Module{},
@@ -248,6 +251,7 @@ func TestImageOrder(t *testing.T) {
 		bootstate: bootValid,
 	}
 	want6 := &boot.MultibootImage{
+		Name:    "VMware ESXi from testdata/dev6",
 		Kernel:  uio.NewLazyFile("testdata/k"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
 		Modules: []multiboot.Module{},

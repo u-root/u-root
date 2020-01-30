@@ -157,6 +157,7 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 	}
 
 	return &boot.MultibootImage{
+		Name:    fmt.Sprintf("VMware ESXi from %s%d", device, partition),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
 		Modules: multiboot.LazyOpenModules(opts.modules),
