@@ -180,7 +180,6 @@ func (bc *BootConfig) Boot() error {
 		defer mbkernel.Close()
 
 		// check multiboot header
-<<<<<<< HEAD
 		if err := multiboot.Probe(mbkernel); err != nil {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
@@ -192,13 +191,6 @@ func (bc *BootConfig) Boot() error {
 		defer modules.Close()
 		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
-=======
-		if err := multiboot.Probe(bc.Multiboot); err != nil {
-			return fmt.Errorf("error parsing multiboot header: %v", err)
-		}
-		if err := multiboot.Load(true, bc.Multiboot, bc.MultibootArgs, bc.Modules, nil); err != nil {
-			return fmt.Errorf("kexec.Load() multi boot error: %v", err)
->>>>>>> Check filesize of kernel, initramfs and devicetree
 		}
 	}
 	err := kexec.Reboot()
