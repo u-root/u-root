@@ -34,7 +34,7 @@ func (sr SecureRecoverer) Recover(message string) error {
 
 	if sr.Debug {
 		if message != "" {
-			log.SetPrefix("recovery: ")
+			log.SetPrefix("RECOVERY: ")
 			log.Print(message)
 		}
 		time.Sleep(DebugTimeout * time.Second)
@@ -43,7 +43,7 @@ func (sr SecureRecoverer) Recover(message string) error {
 	if sr.RandWait {
 		rd := time.Duration(rand.Intn(15))
 		time.Sleep(rd * time.Second)
-		log.SetPrefix("recovery: ")
+		log.SetPrefix("RECOVERY: ")
 		log.Printf("Reboot in %s seconds", rd)
 	}
 

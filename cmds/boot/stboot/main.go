@@ -144,7 +144,7 @@ func main() {
 	}
 
 	if *doDebug {
-		reboot("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
+		log.Printf("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
 
 	log.Printf("Bootconfig '%s' passed verification", bc.Name)
@@ -158,7 +158,7 @@ func main() {
 	log.Println("Starting up new kernel.")
 
 	if err := bc.Boot(); err != nil {
-		log.Printf("Failed to boot kernel %s: %v", bc.Kernel, err)
+		reboot("Failed to boot kernel %s: %v", bc.Kernel, err)
 	}
 	// if we reach this point, no boot configuration succeeded
 	reboot("No boot configuration succeeded")
