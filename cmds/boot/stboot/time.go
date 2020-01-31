@@ -37,6 +37,20 @@ func writeRTCTime(t time.Time) error {
 	return rtc.Set(t)
 }
 
+// pollNTP queries the specified NTP server.
+// On error the query is repeated infinitally.
+func pollNTP() time.Time {
+	for {
+		log.Printf("Query NTP server %s", ntpTimePool)
+		t, err := ntp.Time(ntpTimePool)
+		if err == nil {
+			return t
+		}
+		log.Printf("NTP error: %v", err)
+		time.Sleep(3 * time.Second)
+	}
+}
+
 // validateSystemTime sets RTC and OS time according to
 // realtime clock, timestamp and ntp
 func validateSystemTime() error {
@@ -60,10 +74,7 @@ func validateSystemTime() error {
 	if rtcTime.UTC().Before(stampTime.UTC()) {
 		log.Printf("Systemtime is invalid: %v", rtcTime.UTC())
 		log.Printf("Receive time via NTP from %s", ntpTimePool)
-		ntpTime, err := ntp.Time(ntpTimePool)
-		if err != nil {
-			return err
-		}
+		ntpTime := pollNTP()
 		if ntpTime.UTC().Before(stampTime.UTC()) {
 			return errors.New("NTP spoof may happened")
 		}
