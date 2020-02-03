@@ -142,7 +142,7 @@ func (s Schemes) LazyFetch(u *url.URL) (io.ReaderAt, error) {
 
 	return &file{
 		url: u,
-		ReaderAt: uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
+		ReaderAt: uio.NewLazyOpenerAt(u.String(), func() (io.ReaderAt, error) {
 			r, err := fg.Fetch(u)
 			if err != nil {
 				return nil, &URLError{URL: u, Err: err}

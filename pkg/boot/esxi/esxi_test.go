@@ -6,7 +6,6 @@ package esxi
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -148,33 +147,20 @@ var (
 	device   = "testdata/dev"
 )
 
-// use that in test and pass it instead of the uio.NewLazyFile to getBootImage
-type testReaderAt struct {
-	Path string
-}
-
-// ReadAt implements io.ReaderAt.ReadAt.
-func (tra *testReaderAt) ReadAt(p []byte, off int64) (int, error) {
-	return 0, errors.New("not implemented")
-}
-
-// Close implements io.Closer.Close.
-func (tra *testReaderAt) Close() error {
-	return nil
-}
-
-func newTestReaderAt(path string) uio.ReadAtCloser {
-	return &testReaderAt{Path: path}
+// Poor man's equal.
+//
+// the Kernel and Modules fields will be full of uio.NewLazyFiles. We just want
+// them to be pointing to the same file name; we can't compare the function
+// pointers obviously. Lazy files will always print their name.
+func multibootEqual(a, b []*boot.MultibootImage) bool {
+	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 }
 
 func TestDev5Valid(t *testing.T) {
-	prevFileOpener := fileOpener
-	defer func() { fileOpener = prevFileOpener }()
-	fileOpener = newTestReaderAt
-
 	want := []*boot.MultibootImage{
 		{
-			Kernel:  newTestReaderAt("testdata/k"),
+			Name:    "VMware ESXi from testdata/dev5",
+			Kernel:  uio.NewLazyFile("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
 			Modules: []multiboot.Module{},
 		},
@@ -188,7 +174,7 @@ func TestDev5Valid(t *testing.T) {
 
 	// No opts6 at all.
 	imgs, _ := getImages(device, opts5, nil)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opts5, nil, imgs, want)
 	}
 
@@ -199,19 +185,16 @@ func TestDev5Valid(t *testing.T) {
 		bootstate: bootInvalid,
 	}
 	imgs, _ = getImages(device, opts5, invalidOpts6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opts5, invalidOpts6, imgs, want)
 	}
 }
 
 func TestDev6Valid(t *testing.T) {
-	prevFileOpener := fileOpener
-	defer func() { fileOpener = prevFileOpener }()
-	fileOpener = newTestReaderAt
-
 	want := []*boot.MultibootImage{
 		{
-			Kernel:  newTestReaderAt("testdata/k"),
+			Name:    "VMware ESXi from testdata/dev6",
+			Kernel:  uio.NewLazyFile("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
 			Modules: []multiboot.Module{},
 		},
@@ -225,7 +208,7 @@ func TestDev6Valid(t *testing.T) {
 
 	// No opts5 at all.
 	imgs, _ := getImages(device, nil, opts6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, nil, opts6, imgs, want)
 	}
 
@@ -236,20 +219,16 @@ func TestDev6Valid(t *testing.T) {
 		bootstate: bootInvalid,
 	}
 	imgs, _ = getImages(device, invalidOpts5, opts6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, invalidOpts5, opts6, imgs, want)
 	}
 }
 
 func TestImageOrder(t *testing.T) {
-	prevFileOpener := fileOpener
 	prevGetBlockSize := getBlockSize
 	defer func() {
-		fileOpener = prevFileOpener
 		getBlockSize = prevGetBlockSize
 	}()
-	fileOpener = newTestReaderAt
-
 	getBlockSize = func(dev string) (int, error) {
 		return 512, nil
 	}
@@ -260,7 +239,8 @@ func TestImageOrder(t *testing.T) {
 		bootstate: bootValid,
 	}
 	want5 := &boot.MultibootImage{
-		Kernel:  newTestReaderAt("foobar"),
+		Name:    "VMware ESXi from testdata/dev5",
+		Kernel:  uio.NewLazyFile("foobar"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
 		Modules: []multiboot.Module{},
 	}
@@ -271,7 +251,8 @@ func TestImageOrder(t *testing.T) {
 		bootstate: bootValid,
 	}
 	want6 := &boot.MultibootImage{
-		Kernel:  newTestReaderAt("testdata/k"),
+		Name:    "VMware ESXi from testdata/dev6",
+		Kernel:  uio.NewLazyFile("testdata/k"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
 		Modules: []multiboot.Module{},
 	}
@@ -279,7 +260,7 @@ func TestImageOrder(t *testing.T) {
 	// Way 1.
 	want := []*boot.MultibootImage{want5, want6}
 	imgs, _ := getImages(device, opt5, opt6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)
 	}
 
@@ -288,7 +269,7 @@ func TestImageOrder(t *testing.T) {
 	// Vice versa priority.
 	want = []*boot.MultibootImage{want6, want5}
 	imgs, _ = getImages(device, opt5, opt6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)
 	}
 }

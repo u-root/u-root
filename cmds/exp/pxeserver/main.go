@@ -48,7 +48,7 @@ type server struct {
 }
 
 func (s *server) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv4) {
-	log.Printf("Handling request %v", m)
+	log.Printf("Handling request %v for peer %v", m, peer)
 
 	var replyType dhcpv4.MessageType
 	switch mt := m.MessageType(); mt {
@@ -90,7 +90,8 @@ func (s *server) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv
 		log.Printf("Could not create reply for %v: %v", m, err)
 		return
 	}
-	if _, err := conn.WriteTo(reply.ToBytes(), &net.UDPAddr{IP: net.IP{255, 255, 255, 255}, Port: 68}); err != nil {
+	log.Printf("Sending %v to %v", reply.Summary(), peer)
+	if _, err := conn.WriteTo(reply.ToBytes(), peer); err != nil {
 		log.Printf("Could not write %v: %v", reply, err)
 	}
 }

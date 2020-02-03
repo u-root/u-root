@@ -3,6 +3,7 @@ package dhcpv6
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -13,8 +14,8 @@ import (
 // https://www.ietf.org/rfc/rfc3633.txt
 type OptIAAddress struct {
 	IPv6Addr          net.IP
-	PreferredLifetime uint32
-	ValidLifetime     uint32
+	PreferredLifetime time.Duration
+	ValidLifetime     time.Duration
 	Options           Options
 }
 
@@ -27,8 +28,12 @@ func (op *OptIAAddress) Code() OptionCode {
 func (op *OptIAAddress) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
 	buf.WriteBytes(op.IPv6Addr.To16())
-	buf.Write32(op.PreferredLifetime)
-	buf.Write32(op.ValidLifetime)
+
+	t1 := Duration{op.PreferredLifetime}
+	t1.Marshal(buf)
+	t2 := Duration{op.ValidLifetime}
+	t2.Marshal(buf)
+
 	buf.WriteBytes(op.Options.ToBytes())
 	return buf.Data()
 }
@@ -45,8 +50,13 @@ func ParseOptIAAddress(data []byte) (*OptIAAddress, error) {
 	var opt OptIAAddress
 	buf := uio.NewBigEndianBuffer(data)
 	opt.IPv6Addr = net.IP(buf.CopyN(net.IPv6len))
-	opt.PreferredLifetime = buf.Read32()
-	opt.ValidLifetime = buf.Read32()
+
+	var t1, t2 Duration
+	t1.Unmarshal(buf)
+	t2.Unmarshal(buf)
+	opt.PreferredLifetime = t1.Duration
+	opt.ValidLifetime = t2.Duration
+
 	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
 		return nil, err
 	}

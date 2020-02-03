@@ -16,6 +16,11 @@ import (
 type OSImage interface {
 	fmt.Stringer
 
+	// Label is a name or short description for this OSImage.
+	//
+	// Label is intended for boot menus.
+	Label() string
+
 	// Load loads the OS image into kernel memory, ready for execution.
 	//
 	// After Load is called, call boot.Execute() to stop Linux and boot the
