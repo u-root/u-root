@@ -21,37 +21,41 @@ const (
 	tpmRoot = "/sys/class/tpm"
 )
 
-func probeSystemTPMs() ([]ProbedTPM, error) {
-	var tpms []ProbedTPM
+func probeSystemTPMs() ([]probedTPM, error) {
+	var tpms []probedTPM
 
 	tpmDevs, err := ioutil.ReadDir(tpmRoot)
-	if err != nil && !os.IsNotExist(err) {
+	if os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
-	if err == nil {
-		for _, tpmDev := range tpmDevs {
-			if strings.HasPrefix(tpmDev.Name(), "tpm") {
-				tpm := ProbedTPM{
-					Path: filepath.Join(tpmRoot, tpmDev.Name()),
-				}
 
-				if _, err := os.Stat(filepath.Join(tpm.Path, "caps")); err != nil {
-					if !os.IsNotExist(err) {
-						return nil, err
-					}
-					tpm.Version = TPMVersion20
-				} else {
-					tpm.Version = TPMVersion12
-				}
-				tpms = append(tpms, tpm)
+	// TPM look up is hardcoded. Taken from googles go-attestation.
+	// go-tpm does not support GetCapability with the required subcommand.
+	// Implementation will be updated asap this is fixed in Go-tpm
+	for _, tpmDev := range tpmDevs {
+		if strings.HasPrefix(tpmDev.Name(), "tpm") {
+			tpm := probedTPM{
+				Path: filepath.Join(tpmRoot, tpmDev.Name()),
 			}
+
+			if _, err := os.Stat(filepath.Join(tpm.Path, "caps")); err != nil {
+				if !os.IsNotExist(err) {
+					return nil, err
+				}
+				tpm.Version = TPMVersion20
+			} else {
+				tpm.Version = TPMVersion12
+			}
+			tpms = append(tpms, tpm)
 		}
 	}
 
 	return tpms, nil
 }
 
-func newTPM(pTPM ProbedTPM) (*TPM, error) {
+func newTPM(pTPM probedTPM) (*TPM, error) {
 	interf := TPMInterfaceDirect
 	var rwc io.ReadWriteCloser
 	var err error

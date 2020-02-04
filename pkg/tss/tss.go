@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/awnumar/memguard"
 	"github.com/google/go-tpm/tpm2"
 )
 
@@ -67,7 +66,6 @@ func (t *TPM) GetVersion() TPMVersion {
 
 // Close closes the TPM socket and wipe locked buffers
 func (t *TPM) Close() error {
-	memguard.Purge()
 	return t.RWC.Close()
 }
 
@@ -140,13 +138,13 @@ func (t *TPM) ReadPCRs(alg HashAlg) ([]PCR, error) {
 }
 
 // Extend extends a hash into a pcrIndex with a specific hash algorithm
-func (t *TPM) Extend(hash []byte, pcrIndex uint32, alg HashAlg) error {
+func (t *TPM) Extend(hash []byte, pcrIndex uint32) error {
 	switch t.Version {
 	case TPMVersion12:
 		var thash [20]byte
 		hashlen := len(hash)
 		if hashlen != 20 {
-			return fmt.Errorf("hash length insufficient - need 20, got: %v", hashlen)
+			return fmt.Errorf("hash length invalid - need 20, got: %v", hashlen)
 		}
 		copy(thash[:], hash[:20])
 		err := extendPCR12(t.RWC, pcrIndex, thash)
@@ -154,7 +152,7 @@ func (t *TPM) Extend(hash []byte, pcrIndex uint32, alg HashAlg) error {
 			return err
 		}
 	case TPMVersion20:
-		err := extendPCR20(t.RWC, pcrIndex, hash, alg)
+		err := extendPCR20(t.RWC, pcrIndex, hash)
 		if err != nil {
 			return err
 		}
@@ -184,7 +182,7 @@ func (t *TPM) Measure(data []byte, pcrIndex uint32, alg HashAlg) error {
 	case TPMVersion20:
 		hashFunc := alg.cryptoHash().New()
 		hash := hashFunc.Sum(data)
-		err := extendPCR20(t.RWC, pcrIndex, hash, alg)
+		err := extendPCR20(t.RWC, pcrIndex, hash)
 		if err != nil {
 			return err
 		}
@@ -196,12 +194,12 @@ func (t *TPM) Measure(data []byte, pcrIndex uint32, alg HashAlg) error {
 }
 
 // ReadPCR reads a single PCR value by defining the pcrIndex
-func (t *TPM) ReadPCR(pcrIndex uint32, alg HashAlg) ([]byte, error) {
+func (t *TPM) ReadPCR(pcrIndex uint32) ([]byte, error) {
 	switch t.Version {
 	case TPMVersion12:
 		return readPCR12(t.RWC, pcrIndex)
 	case TPMVersion20:
-		return readPCR20(t.RWC, pcrIndex, alg)
+		return readPCR20(t.RWC, pcrIndex)
 	default:
 		return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
 	}
