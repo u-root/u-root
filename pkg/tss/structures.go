@@ -8,6 +8,7 @@ package tss
 
 import (
 	"crypto"
+	"fmt"
 	"io"
 
 	"github.com/google/go-tpm/tpm2"
@@ -17,7 +18,13 @@ import (
 type TCGVendorID uint32
 
 func (id TCGVendorID) String() string {
-	return vendors[id]
+
+	s, ok := vendors[id]
+	if !ok {
+		return fmt.Sprintf("unknown TPM vendor (%d)", id)
+	}
+	return s
+
 }
 
 // HashAlg is the TPM hash algorithm id
@@ -70,9 +77,9 @@ type TPM struct {
 	RWC     io.ReadWriteCloser
 }
 
-// ProbedTPM identifies a TPM device on the system, which
+// probedTPM identifies a TPM device on the system, which
 // is a candidate for being used.
-type ProbedTPM struct {
+type probedTPM struct {
 	Version TPMVersion
 	Path    string
 }

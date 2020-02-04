@@ -16,16 +16,14 @@ import (
 )
 
 func extendPCR12(rwc io.ReadWriter, pcrIndex uint32, hash [20]byte) error {
-	_, err := tpm.PcrExtend(rwc, pcrIndex, hash)
-	if err != nil {
+	if _, err := tpm.PcrExtend(rwc, pcrIndex, hash); err != nil {
 		return err
 	}
 	return nil
 }
 
-func extendPCR20(rwc io.ReadWriter, pcrIndex uint32, hash []byte, alg HashAlg) error {
-	err := tpm2.PCRExtend(rwc, tpmutil.Handle(pcrIndex), alg.goTPMAlg(), hash, "")
-	if err != nil {
+func extendPCR20(rwc io.ReadWriter, pcrIndex uint32, hash []byte) error {
+	if err := tpm2.PCRExtend(rwc, tpmutil.Handle(pcrIndex), HashSHA256.goTPMAlg(), hash, ""); err != nil {
 		return err
 	}
 	return nil
@@ -96,6 +94,6 @@ func readPCR12(rwc io.ReadWriter, pcrIndex uint32) ([]byte, error) {
 	return tpm.ReadPCR(rwc, pcrIndex)
 }
 
-func readPCR20(rwc io.ReadWriter, pcrIndex uint32, alg HashAlg) ([]byte, error) {
-	return tpm2.ReadPCR(rwc, int(pcrIndex), alg.goTPMAlg())
+func readPCR20(rwc io.ReadWriter, pcrIndex uint32) ([]byte, error) {
+	return tpm2.ReadPCR(rwc, int(pcrIndex), HashSHA256.goTPMAlg())
 }
