@@ -39,8 +39,10 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/gpt"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // LoadDisk loads the right ESXi multiboot kernel from partitions 5 or 6 of the
@@ -153,10 +155,12 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 			return nil, fmt.Errorf("cannot add boot uuid of %s: %v", device, err)
 		}
 	}
+
 	return &boot.MultibootImage{
-		Path:    opts.kernel,
+		Name:    fmt.Sprintf("VMware ESXi from %s%d", device, partition),
+		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
-		Modules: opts.modules,
+		Modules: multiboot.LazyOpenModules(opts.modules),
 	}, nil
 }
 

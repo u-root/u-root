@@ -20,12 +20,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
-	_SYSLOG_ACTION_READ_ALL   = 3
-	_SYSLOG_ACTION_READ_CLEAR = 4
-	_SYSLOG_ACTION_CLEAR      = 5
-)
-
 var (
 	clear     bool
 	readClear bool
@@ -43,12 +37,12 @@ func main() {
 		log.Fatalf("cannot specify both -clear and -read-clear")
 	}
 
-	level := _SYSLOG_ACTION_READ_ALL
+	level := unix.SYSLOG_ACTION_READ_ALL
 	if clear {
-		level = _SYSLOG_ACTION_CLEAR
+		level = unix.SYSLOG_ACTION_CLEAR
 	}
 	if readClear {
-		level = _SYSLOG_ACTION_READ_CLEAR
+		level = unix.SYSLOG_ACTION_READ_CLEAR
 	}
 
 	b := make([]byte, 256*1024)

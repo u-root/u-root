@@ -44,7 +44,7 @@ var (
 
 func init() {
 	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
-	build = flag.String("build", "source", "u-root build format (e.g. bb or source).")
+	build = flag.String("build", "bb", "u-root build format (e.g. bb or source).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")

@@ -76,6 +76,9 @@ func getBootImage(schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip n
 		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
 	}
 
-	label := pc.Entries[pc.DefaultEntry]
+	label, ok := pc.Entries[pc.DefaultEntry]
+	if !ok {
+		return nil, fmt.Errorf("Could not find %q from entries %v", pc.DefaultEntry, pc.Entries)
+	}
 	return label, nil
 }

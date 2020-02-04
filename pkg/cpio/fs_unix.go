@@ -228,12 +228,6 @@ func (r *Recorder) inode(i Info) (Info, bool) {
 	return i, false
 }
 
-func newLazyFile(name string) io.ReaderAt {
-	return uio.NewLazyOpenerAt(func() (io.ReaderAt, error) {
-		return os.Open(name)
-	})
-}
-
 // GetRecord returns a cpio Record for the given path on the local file system.
 //
 // GetRecord does not follow symlinks. If path is a symlink, the record
@@ -252,7 +246,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 		if done {
 			return Record{Info: info}, nil
 		}
-		return Record{Info: info, ReaderAt: newLazyFile(path)}, nil
+		return Record{Info: info, ReaderAt: uio.NewLazyFile(path)}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)

@@ -147,6 +147,7 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 		"-a", // Force rebuilding of packages.
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
+		"-gcflags=all=-l",   // Disable "function inlining" to get a smaller binary
 		"-ldflags", "-s -w", // Strip all symbols.
 	}
 	if len(c.BuildTags) > 0 {

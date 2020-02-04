@@ -8,11 +8,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/ubinary"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // A module represents a module to be loaded along with the kernel.
@@ -74,20 +75,19 @@ func (m *multiboot) addModules() (uintptr, error) {
 //			modules_n
 //
 // <padding> aligns the start of each module to a page beginning.
-func loadModules(cmds []string) (loaded modules, data []byte, err error) {
-	loaded = make(modules, len(cmds))
+func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
+	loaded = make(modules, len(rmods))
 	buf := bytes.Buffer{}
 
-	for i, cmd := range cmds {
-		if err := loaded[i].setCmdLine(&buf, cmd); err != nil {
+	for i, rmod := range rmods {
+		if err := loaded[i].setCmdLine(&buf, rmod.CmdLine); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	for i, cmd := range cmds {
-		name := strings.Fields(cmd)[0]
-		if err := loaded[i].loadModule(&buf, name); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", name, err)
+	for i, rmod := range rmods {
+		if err := loaded[i].loadModule(&buf, rmod.Module, rmod.Name); err != nil {
+			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
 		}
 	}
 
@@ -102,13 +102,8 @@ func alignUp(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *module) loadModule(buf *bytes.Buffer, name string) error {
+func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error {
 	log.Printf("Adding module %v", name)
-
-	b, err := readFile(name)
-	if err != nil {
-		return err
-	}
 
 	// place start of each module to a beginning of a page.
 	if err := alignUp(buf); err != nil {
@@ -116,9 +111,11 @@ func (m *module) loadModule(buf *bytes.Buffer, name string) error {
 	}
 
 	m.Start = uint32(buf.Len())
-	if _, err := buf.Write(b); err != nil {
+
+	if _, err := io.Copy(buf, uio.Reader(r)); err != nil {
 		return err
 	}
+
 	m.End = uint32(buf.Len())
 
 	return nil

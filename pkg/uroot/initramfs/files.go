@@ -61,6 +61,14 @@ func (af *Files) addFile(src string, dest string, follow bool) error {
 		dest = r
 	}
 
+	if follow {
+		s, err := filepath.EvalSymlinks(src)
+		if err != nil {
+			return err
+		}
+		src = s
+	}
+
 	// We check if it's a directory first. If a directory already exists as
 	// a record or file, we want to include its children anyway.
 	sInfo, err := os.Lstat(src)
@@ -85,13 +93,6 @@ func (af *Files) addFile(src string, dest string, follow bool) error {
 
 	if record, ok := af.Records[dest]; ok {
 		return fmt.Errorf("record for %q already exists in archive: %v", dest, record)
-	}
-
-	if follow && (sInfo.Mode()&os.ModeType == os.ModeSymlink) {
-		src, err = filepath.EvalSymlinks(src)
-		if err != nil {
-			return err
-		}
 	}
 
 	if srcFile, ok := af.Files[dest]; ok {

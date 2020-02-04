@@ -72,7 +72,7 @@ const (
 // MAX_GSTRINGS maximum number of stats entries that ethtool can
 // retrieve currently.
 const (
-	MAX_GSTRINGS       = 1000
+	MAX_GSTRINGS       = 4096
 	MAX_FEATURE_BLOCKS = (MAX_GSTRINGS + 32 - 1) / 32
 	EEPROM_LEN         = 640
 	PERMADDR_LEN       = 32

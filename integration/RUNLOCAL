@@ -3,5 +3,9 @@
 # To use this script, drop a bzImage here and away you go.
 # Some examples:
 # ./RUNLOCAL
-# ./RUNLOCAL -v  -test.run TestTczclient
-UROOT_QEMU="qemu-system-x86_64" UROOT_KERNEL=bzImage go test "$@"
+# ./RUNLOCAL -v -test.run=TestScript
+
+export UROOT_QEMU="qemu-system-x86_64 -enable-kvm" 
+export UROOT_KERNEL=bzImage 
+
+go test "$@" ./...

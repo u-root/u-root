@@ -18,6 +18,8 @@ import (
 
 // LinuxImage implements OSImage for a Linux kernel + initramfs.
 type LinuxImage struct {
+	Name string
+
 	Kernel  io.ReaderAt
 	Initrd  io.ReaderAt
 	Cmdline string
@@ -25,9 +27,17 @@ type LinuxImage struct {
 
 var _ OSImage = &LinuxImage{}
 
+// Label returns either the Name or a short description.
+func (li *LinuxImage) Label() string {
+	if len(li.Name) > 0 {
+		return li.Name
+	}
+	return fmt.Sprintf("Linux(kernel=%s, initrd=%d)", li.Kernel, li.Initrd)
+}
+
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
-	return fmt.Sprintf("LinuxImage(\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Kernel, li.Initrd, li.Cmdline)
+	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, li.Kernel, li.Initrd, li.Cmdline)
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {

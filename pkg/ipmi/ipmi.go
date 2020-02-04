@@ -19,6 +19,7 @@ const (
 	_IPMI_BMC_CHANNEL                = 0xf
 	_IPMI_BUF_SIZE                   = 1024
 	_IPMI_IOC_MAGIC                  = 'i'
+	_IPMI_NETFN_CHASSIS              = 0x0
 	_IPMI_NETFN_APP                  = 0x6
 	_IPMI_NETFN_STORAGE              = 0xA
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
@@ -34,6 +35,12 @@ const (
 	_BMC_GET_GLOBAL_ENABLES     = 0x2F
 	_SET_SYSTEM_INFO_PARAMETERS = 0x58
 	_BMC_ADD_SEL                = 0x44
+
+	// Chassis Device Commands
+	_BMC_GET_CHASSIS_STATUS = 0x01
+
+	// SEL device Commands
+	_BMC_GET_SEL_INFO = 0x40
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
@@ -145,6 +152,22 @@ type DevID struct {
 	ManufacturerID    [3]byte
 	ProductID         [2]byte
 	AuxFwRev          [4]byte
+}
+
+type ChassisStatus struct {
+	CurrentPowerState byte
+	LastPowerEvent    byte
+	MiscChassisState  byte
+	FrontPanelButton  byte
+}
+
+type SELInfo struct {
+	Version     byte
+	Entries     uint16
+	FreeSpace   uint16
+	LastAddTime uint32
+	LastDelTime uint32
+	OpSupport   byte
 }
 
 func fdSet(fd uintptr, p *syscall.FdSet) {
@@ -396,4 +419,42 @@ func (i *IPMI) EnableSEL() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
+	req := &req{}
+	req.msg.netfn = _IPMI_NETFN_CHASSIS
+	req.msg.cmd = _BMC_GET_CHASSIS_STATUS
+
+	data, err := i.sendrecv(req)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewReader(data[1:])
+
+	var status ChassisStatus
+	if err := binary.Read(buf, binary.LittleEndian, &status); err != nil {
+		return nil, err
+	}
+	return &status, nil
+}
+
+func (i *IPMI) GetSELInfo() (*SELInfo, error) {
+	req := &req{}
+	req.msg.netfn = _IPMI_NETFN_STORAGE
+	req.msg.cmd = _BMC_GET_SEL_INFO
+
+	data, err := i.sendrecv(req)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewReader(data[1:])
+
+	var info SELInfo
+	if err := binary.Read(buf, binary.LittleEndian, &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
 }
