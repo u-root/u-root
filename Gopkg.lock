@@ -140,7 +140,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "f7072f72789b2bbd1309b0da2e0a2bb55dd21c59"
+  revision = "5214532ecf392e5a8818355f3fff993aaef42c06"
 
 [[projects]]
   branch = "master"
@@ -231,11 +231,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:977443897e5a5777aa9af935842fb645e0382322d41daa4105dc4bb8fe15d10c"
+  digest = "1:9327b045950c44b41bc477abb9d650c2e5349375812cd03581aac494013f1a0d"
   name = "github.com/nsf/termbox-go"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "58d4fcbce2a7e6a3a48afbc6b7ec2a916ac33ee0"
+  revision = "4d2b513ad8bee47a9a5a65b0dee0182049a31916"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -263,11 +263,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ba27c3faa4d45cc2efe6a25f08c53a125b1c4e938bbfd4e7286f14db388fa150"
+  digest = "1:1757ed4b8d208e10a2ce6c31875311c1519ea7c32d2031cf0999ca6957e4a3a5"
   name = "github.com/safchain/ethtool"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "a1d1c7df6e6ac4867221c912ad60cbfc148dcb5c"
+  revision = "ef7e7c9c27639f149a3c4bfae07a9c0fc3a1691a"
 
 [[projects]]
   digest = "1:d115708a27806831d1babbc6f28a7478ddf8e32a7095507c816e2515fb03a810"
@@ -290,14 +290,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:183fdb1c17ac728274c6a291e1d27bc54c8250d070536d130377cafc66e2638d"
+  digest = "1:53c30700df8e991ffc4a2ec3944edf7b54dd964a1949d554d1abbcbcebc544dd"
   name = "github.com/vishvananda/netlink"
   packages = [
     ".",
     "nl",
   ]
   pruneopts = "NUT"
-  revision = "f049be6f391489d3f374498fe0c8df8449258372"
+  revision = "261f000a62279dad96e606b071274e6ecae6001b"
 
 [[projects]]
   branch = "master"
@@ -309,9 +309,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8790abee7265a7467d95274e6d4ce4d1e6b2ee1830eafc126b556a8265c057f8"
+  digest = "1:54d7b8ea7c0861142752419410a694b7dc82f530535cd060dd682ebd52df1fe2"
   name = "golang.org/x/crypto"
   packages = [
+    "blowfish",
     "cast5",
     "chacha20",
     "curve25519",
@@ -329,9 +330,10 @@
     "ripemd160",
     "sha3",
     "ssh",
+    "ssh/internal/bcrypt_pbkdf",
   ]
   pruneopts = "NUT"
-  revision = "530e935923ad688be97c15eeb8e5ee42ebf2b54a"
+  revision = "c9f3fb736b729628ec1e9c1a6b4313e883f452f9"
 
 [[projects]]
   branch = "master"
@@ -344,11 +346,11 @@
     "ipv4",
   ]
   pruneopts = "NUT"
-  revision = "6afb5195e5aab057fda82e27171243402346b0ad"
+  revision = "16171245cfb220d5317888b716d69c1fb4e7992b"
 
 [[projects]]
   branch = "master"
-  digest = "1:2e57e439a5852193d65a908bafd2e86f386eea8a2becd1e8eac6ea41e619d683"
+  digest = "1:db930a38f2ce644d060bc2e85c29c75f8d7987ebd12019d95b361de7cf0277b4"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -356,7 +358,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "9fbb57f87de9ccfe3a99d4e3270ce8a926ebba4f"
+  revision = "d101bd2416d505c0448a6ce8a282482678040a89"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -375,7 +377,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:614bd6748d48b8f6189a49aecdbf261ffafde77db62c4e599e9e1c95d9f62212"
+  digest = "1:4545f23bbb5672733589b87a54eeab6d1219368d12862a4888ec42921c4f332e"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -387,15 +389,15 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "8fe064f891f2084bc046f3ebf13b0c2258993b8c"
+  revision = "67a4523381ef904fe70f6cc4b54cf1baad90d21a"
 
 [[projects]]
   digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
   name = "google.golang.org/grpc"
   packages = ["codes"]
   pruneopts = "NUT"
-  revision = "f5b0812e6fe574d90da76b205e9eb51f6ddb1919"
-  version = "v1.26.0"
+  revision = "a89bee78ddf0f67f27c06b1b2b1b071c18408724"
+  version = "v1.27.0"
 
 [[projects]]
   digest = "1:d9b9ac6943a512737f76bf3d61b08d97121c66686bc02ffc231313563230b468"
