@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build freebsd linux
+
 // ldd returns all the library dependencies of an executable.
 //
 // The way this is done on GNU-based systems is interesting. For each ELF, one
@@ -94,6 +96,56 @@ type FileInfo struct {
 	os.FileInfo
 }
 
+func GetInterp(file string) (string, error) {
+	r, err := os.Open(file)
+	if err != nil {
+		return "fail", err
+	}
+	defer r.Close()
+	f, err := elf.NewFile(r)
+	if err != nil {
+		return "", nil
+	}
+	s := f.Section(".interp")
+	var interp string
+	if s != nil {
+		// If there is an interpreter section, it should be
+		// an error if we can't read it.
+		i, err := s.Data()
+		if err != nil {
+			return "fail", err
+		}
+		// Ignore #! interpreters
+		if len(i) > 1 && i[0] == '#' && i[1] == '!' {
+			return "", nil
+		}
+		// annoyingly, s.Data() seems to return the null at the end and,
+		// weirdly, that seems to confuse the kernel. Truncate it.
+		interp = string(i[:len(i)-1])
+	}
+	if interp == "" {
+		if f.Type != elf.ET_DYN || f.Class == elf.ELFCLASSNONE {
+			return "", nil
+		}
+		bit64 := true
+		if f.Class != elf.ELFCLASS64 {
+			bit64 = false
+		}
+
+		// This is a shared library. Turns out you can run an
+		// interpreter with --list and this shared library as an
+		// argument. What interpreter do we use? Well, there's no way to
+		// know. You have to guess.  I'm not sure why they could not
+		// just put an interp section in .so's but maybe that would
+		// cause trouble somewhere else.
+		interp, err = LdSo(bit64)
+		if err != nil {
+			return "fail", err
+		}
+	}
+	return interp, nil
+}
+
 // Ldd returns a list of all library dependencies for a set of files.
 //
 // If a file has no dependencies, that is not an error. The only possible error
@@ -113,50 +165,12 @@ func Ldd(names []string) ([]*FileInfo, error) {
 		}
 	}
 	for _, n := range names {
-		r, err := os.Open(n)
+		interp, err := GetInterp(n)
 		if err != nil {
 			return nil, err
 		}
-		defer r.Close()
-		f, err := elf.NewFile(r)
-		if err != nil {
-			continue
-		}
-		s := f.Section(".interp")
-		var interp string
-		if s != nil {
-			// If there is an interpreter section, it should be
-			// an error if we can't read it.
-			i, err := s.Data()
-			if err != nil {
-				return nil, err
-			}
-			// Ignore #! interpreters
-			if len(i) > 1 && i[0] == '#' && i[1] == '!' {
-				continue
-			}
-			// annoyingly, s.Data() seems to return the null at the end and,
-			// weirdly, that seems to confuse the kernel. Truncate it.
-			interp = string(i[:len(i)-1])
-		}
 		if interp == "" {
-			if f.Type != elf.ET_DYN || f.Class == elf.ELFCLASSNONE {
-				continue
-			}
-			bit64 := true
-			if f.Class != elf.ELFCLASS64 {
-				bit64 = false
-			}
-
-			// This is a shared library. Turns out you can run an interpreter with
-			// --list and this shared library as an argument. What interpreter
-			// do we use? Well, there's no way to know. You have to guess.
-			// I'm not sure why they could not just put an interp section in
-			// .so's but maybe that would cause trouble somewhere else.
-			interp, err = LdSo(bit64)
-			if err != nil {
-				return nil, err
-			}
+			continue
 		}
 		// We could just append the interp but people
 		// expect to see that first.

@@ -2,6 +2,7 @@ package dhcpv6
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -10,8 +11,8 @@ import (
 // delegation option defined by RFC 3633, Section 9.
 type OptIAForPrefixDelegation struct {
 	IaId    [4]byte
-	T1      uint32
-	T2      uint32
+	T1      time.Duration
+	T2      time.Duration
 	Options Options
 }
 
@@ -24,8 +25,12 @@ func (op *OptIAForPrefixDelegation) Code() OptionCode {
 func (op *OptIAForPrefixDelegation) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
 	buf.WriteBytes(op.IaId[:])
-	buf.Write32(op.T1)
-	buf.Write32(op.T2)
+
+	t1 := Duration{op.T1}
+	t1.Marshal(buf)
+	t2 := Duration{op.T2}
+	t2.Marshal(buf)
+
 	buf.WriteBytes(op.Options.ToBytes())
 	return buf.Data()
 }
@@ -53,8 +58,13 @@ func ParseOptIAForPrefixDelegation(data []byte) (*OptIAForPrefixDelegation, erro
 	var opt OptIAForPrefixDelegation
 	buf := uio.NewBigEndianBuffer(data)
 	buf.ReadBytes(opt.IaId[:])
-	opt.T1 = buf.Read32()
-	opt.T2 = buf.Read32()
+
+	var t1, t2 Duration
+	t1.Unmarshal(buf)
+	t2.Unmarshal(buf)
+	opt.T1 = t1.Duration
+	opt.T2 = t2.Duration
+
 	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
 		return nil, err
 	}

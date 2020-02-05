@@ -3,7 +3,7 @@ package rtnl
 import (
 	"net"
 
-	"golang.org/x/sys/unix"
+	"github.com/jsimonetti/rtnetlink/internal/unix"
 
 	"github.com/jsimonetti/rtnetlink"
 )

@@ -16,6 +16,8 @@ import (
 // MultibootImage is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,
 // tboot.
 type MultibootImage struct {
+	Name string
+
 	Kernel  io.ReaderAt
 	Cmdline string
 	Modules []multiboot.Module
@@ -23,6 +25,14 @@ type MultibootImage struct {
 }
 
 var _ OSImage = &MultibootImage{}
+
+// Label returns either Name or a short description.
+func (mi *MultibootImage) Label() string {
+	if len(mi.Name) > 0 {
+		return mi.Name
+	}
+	return fmt.Sprintf("Multiboot(kernel=%s, cmdline=%s, iBFT=%s)", mi.Kernel, mi.Cmdline, mi.IBFT)
+}
 
 // Load implements OSImage.Load.
 func (mi *MultibootImage) Load(verbose bool) error {
@@ -35,6 +45,6 @@ func (mi *MultibootImage) String() string {
 	for i, mod := range mi.Modules {
 		modules[i] = mod.CmdLine
 	}
-	return fmt.Sprintf("MultibootImage(\n  Kernel: %s\n  Cmdline: %s\n  Modules: %s\n)",
-		mi.Kernel, mi.Cmdline, strings.Join(modules, ", "))
+	return fmt.Sprintf("MultibootImage(\n  Name: %s\n  Kernel: %s\n  Cmdline: %s\n  iBFT: %s\n  Modules: %s\n)",
+		mi.Name, mi.Kernel, mi.Cmdline, mi.IBFT, strings.Join(modules, ", "))
 }

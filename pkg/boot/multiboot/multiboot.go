@@ -147,6 +147,9 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 // Linux and execute the loaded kernel.
 func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
 	kernel = tryGzipFilter(kernel)
+	for i, mod := range modules {
+		modules[i].Module = tryGzipFilter(mod.Module)
+	}
 
 	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
@@ -165,9 +168,7 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 //
 // Each module is a path followed by optional command-line arguments, e.g.
 // []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
-//
-// uncompress when true will try to uncompress modules if needed
-func OpenModules(cmds []string, uncompress bool) (Modules, error) {
+func OpenModules(cmds []string) (Modules, error) {
 	modules := make([]Module, len(cmds))
 	for i, cmd := range cmds {
 		modules[i].CmdLine = cmd
@@ -178,13 +179,26 @@ func OpenModules(cmds []string, uncompress bool) (Modules, error) {
 			// TODO close already open files
 			return nil, fmt.Errorf("error opening module %v: %v", name, err)
 		}
-		if uncompress {
-			modules[i].Module = tryGzipFilter(f)
-		} else {
-			modules[i].Module = f
-		}
+		modules[i].Module = f
 	}
 	return modules, nil
+}
+
+// LazyOpenModules assigns modules to be opened as files.
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+func LazyOpenModules(cmds []string) Modules {
+	modules := make([]Module, 0, len(cmds))
+	for _, cmd := range cmds {
+		name := strings.Fields(cmd)[0]
+		modules = append(modules, Module{
+			CmdLine: cmd,
+			Name:    name,
+			Module:  uio.NewLazyFile(name),
+		})
+	}
+	return modules
 }
 
 // Close closes all Modules ReaderAt implementing the io.Closer interface
