@@ -195,14 +195,6 @@
   version = "v0.0.12"
 
 [[projects]]
-  digest = "1:f48d9e339b6bb8cfd5cd2c67836bb6b57273ba324d38d162618064bfa488792b"
-  name = "github.com/mattn/go-runewidth"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "a4df4ddbff020e131056d91f580a1cdcd806e3ae"
-  version = "v0.0.8"
-
-[[projects]]
   branch = "master"
   digest = "1:88810ec115324c260951440d11f030e4bfe451cd888720481e1ddc037a5c8678"
   name = "github.com/mdlayher/ethernet"
@@ -228,14 +220,6 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "50f2db8cc0658568575938a39dbaa46172921d98"
-
-[[projects]]
-  branch = "master"
-  digest = "1:9327b045950c44b41bc477abb9d650c2e5349375812cd03581aac494013f1a0d"
-  name = "github.com/nsf/termbox-go"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "4d2b513ad8bee47a9a5a65b0dee0182049a31916"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -447,7 +431,6 @@
     "github.com/klauspost/pgzip",
     "github.com/kr/pty",
     "github.com/mattn/go-isatty",
-    "github.com/nsf/termbox-go",
     "github.com/rck/unit",
     "github.com/rekby/gpt",
     "github.com/safchain/ethtool",
