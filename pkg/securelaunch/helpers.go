@@ -17,7 +17,7 @@ import (
 )
 
 /* used to store all block devices returned from a call to storage.GetBlockStats */
-var storageBlkDevices []storage.BlockDev
+var StorageBlkDevices []storage.BlockDev
 
 /*
  * if kernel cmd line has uroot.uinitargs=-d, debug fn is enabled.
@@ -71,10 +71,10 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, string, error) 
 	// s[0] can be sda or UUID. if UUID, then we need to find its name
 	deviceId := s[0]
 	if !strings.HasPrefix(deviceId, "sd") {
-		if e := getBlkInfo(); e != nil {
-			return "", "", fmt.Errorf("getBlkInfo err=%s", e)
+		if e := GetBlkInfo(); e != nil {
+			return "", "", fmt.Errorf("GetBlkInfo err=%s", e)
 		}
-		devices := storage.PartitionsByFsUUID(storageBlkDevices, s[0]) // []BlockDev
+		devices := storage.PartitionsByFsUUID(StorageBlkDevices, s[0]) // []BlockDev
 		for _, device := range devices {
 			Debug("device =%s with fsuuid=%s", device.Name, s[0])
 			deviceId = device.Name
@@ -94,26 +94,26 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, string, error) 
 }
 
 /*
- * getBlkInfo calls storage package to get information on all block devices.
- * The information is stored in a global variable 'storageBlkDevices'
+ * GetBlkInfo calls storage package to get information on all block devices.
+ * The information is stored in a global variable 'StorageBlkDevices'
  * If the global variable is already non-zero, we skip the call to storage package.
  *
  * In debug mode, it also prints names and UUIDs for all devices.
  */
-func getBlkInfo() error {
-	if len(storageBlkDevices) == 0 {
+func GetBlkInfo() error {
+	if len(StorageBlkDevices) == 0 {
 		var err error
 		Debug("getBlkInfo: expensive function call to get block stats from storage pkg")
-		storageBlkDevices, err = storage.GetBlockStats()
+		StorageBlkDevices, err = storage.GetBlockStats()
 		if err != nil {
 			return fmt.Errorf("getBlkInfo: storage.GetBlockStats err=%v. Exiting", err)
 		}
 		// no block devices exist on the system.
-		if len(storageBlkDevices) == 0 {
+		if len(StorageBlkDevices) == 0 {
 			return fmt.Errorf("getBlkInfo: no block devices found")
 		}
 		// print the debug info only when expensive call to storage is made
-		for k, d := range storageBlkDevices {
+		for k, d := range StorageBlkDevices {
 			Debug("block device #%d, Name=%s, FSType=%s, FsUUID=%s", k, d.Name, d.FSType, d.FsUUID)
 		}
 		return nil
