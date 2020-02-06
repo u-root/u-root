@@ -143,7 +143,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5e855e15b3501ee27b1625de95e596f3980ae51c49bea70865d1865d8da8adb7"
+  digest = "1:4edc37fbad8ba8e8780933529da3b14b192310399ad6c38532999114ec564f82"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -153,6 +153,7 @@
     "dhcpv6",
     "dhcpv6/client6",
     "dhcpv6/nclient6",
+    "dhcpv6/server6",
     "iana",
     "interfaces",
     "netboot",
@@ -340,13 +341,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c5060ffaf26cf3ac386592a4fe87c8833b062839e7ce085eb0d90c06952c6e4c"
+  digest = "1:7182ef5a2af56ca8c788b291e7f9926b85c354eb0a93bc5a57ce19c99e42d74f"
   name = "golang.org/x/net"
   packages = [
     "bpf",
     "internal/iana",
     "internal/socket",
     "ipv4",
+    "ipv6",
   ]
   pruneopts = "NUT"
   revision = "16171245cfb220d5317888b716d69c1fb4e7992b"
@@ -451,6 +453,7 @@
     "github.com/insomniacslk/dhcp/dhcpv4/server4",
     "github.com/insomniacslk/dhcp/dhcpv6",
     "github.com/insomniacslk/dhcp/dhcpv6/nclient6",
+    "github.com/insomniacslk/dhcp/dhcpv6/server6",
     "github.com/insomniacslk/dhcp/iana",
     "github.com/insomniacslk/dhcp/interfaces",
     "github.com/insomniacslk/dhcp/netboot",
