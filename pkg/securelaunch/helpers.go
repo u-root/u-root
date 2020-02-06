@@ -8,7 +8,6 @@ package securelaunch
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -104,15 +103,21 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, string, error) 
 func getBlkInfo() error {
 	if len(storageBlkDevices) == 0 {
 		var err error
+		Debug("getBlkInfo: expensive function call to get block stats from storage pkg")
 		storageBlkDevices, err = storage.GetBlockStats()
 		if err != nil {
-			log.Printf("getBlkInfo: storage.GetBlockStats err=%v. Exiting", err)
-			return err
+			return fmt.Errorf("getBlkInfo: storage.GetBlockStats err=%v. Exiting", err)
 		}
+		// no block devices exist on the system.
+		if len(storageBlkDevices) == 0 {
+			return fmt.Errorf("getBlkInfo: no block devices found")
+		}
+		// print the debug info only when expensive call to storage is made
+		for k, d := range storageBlkDevices {
+			Debug("block device #%d, Name=%s, FSType=%s, FsUUID=%s", k, d.Name, d.FSType, d.FsUUID)
+		}
+		return nil
 	}
-
-	for k, d := range storageBlkDevices {
-		Debug("block device #%d, Name=%s, FsUUID=%s", k, d.Name, d.FsUUID)
-	}
+	Debug("getBlkInfo: noop")
 	return nil
 }
