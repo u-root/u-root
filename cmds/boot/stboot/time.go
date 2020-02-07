@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -20,22 +21,6 @@ const (
 	timestampPath string = "/etc/timestamp"
 	ntpTimePool   string = "0.beevik-ntp.pool.ntp.org"
 )
-
-func readRTCTime() (time.Time, error) {
-	rtc, err := rtc.OpenRTC()
-	if err != nil {
-		return time.Time{}, err
-	}
-	return rtc.Read()
-}
-
-func writeRTCTime(t time.Time) error {
-	rtc, err := rtc.OpenRTC()
-	if err != nil {
-		return err
-	}
-	return rtc.Set(t)
-}
 
 // pollNTP queries the specified NTP server.
 // On error the query is repeated infinitally.
@@ -66,10 +51,16 @@ func validateSystemTime() error {
 	if err != nil {
 		return err
 	}
-	rtcTime, err := readRTCTime()
+
+	rtc, err := rtc.OpenRTC()
 	if err != nil {
-		return err
+		return fmt.Errorf("opening RTC failed: %v", err)
 	}
+	rtcTime, err := rtc.Read()
+	if err != nil {
+		return fmt.Errorf("reading RTC failed: %v", err)
+	}
+
 	log.Printf("Systemtime: %v", rtcTime.UTC())
 	if rtcTime.UTC().Before(stampTime.UTC()) {
 		log.Printf("Systemtime is invalid: %v", rtcTime.UTC())
@@ -79,9 +70,9 @@ func validateSystemTime() error {
 			return errors.New("NTP spoof may happened")
 		}
 		log.Printf("Update RTC to %v", ntpTime.UTC())
-		err = writeRTCTime(ntpTime)
+		err = rtc.Set(ntpTime)
 		if err != nil {
-			return err
+			return fmt.Errorf("writing RTC failed: %v", err)
 		}
 		reboot("Set system time. Need reboot.")
 	}
