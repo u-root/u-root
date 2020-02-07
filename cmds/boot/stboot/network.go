@@ -33,42 +33,55 @@ func configureStaticNetwork(vars stboot.HostVars) error {
 		return fmt.Errorf("Error parsing HostIP string to CIDR format address: %v", err)
 	}
 
-	link, err := findNetworkInterface()
+	links, err := findNetworkInterfaces()
 	if err != nil {
 		return err
 	}
 
-	if err = netlink.AddrAdd(link, addr); err != nil {
-		return fmt.Errorf("Error adding address: %v", err)
-	}
+	for _, link := range links {
 
-	if err = netlink.LinkSetUp(link); err != nil {
-		return fmt.Errorf("Error bringing up interface: %v", err)
-	}
+		if err = netlink.AddrAdd(link, addr); err != nil {
+			if *doDebug {
+				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
+			}
+			continue
+		}
 
-	gateway, err := netlink.ParseAddr(vars.DefaultGateway)
-	if err != nil {
-		return fmt.Errorf("Error parsing GatewayIP string to CIDR format address: %v", err)
-	}
+		if err = netlink.LinkSetUp(link); err != nil {
+			if *doDebug {
+				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
+			}
+			continue
+		}
 
-	r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: gateway.IPNet.IP}
-	if err = netlink.RouteAdd(r); err != nil {
-		return fmt.Errorf("Error setting default gateway: %v", err)
-	}
+		gateway, err := netlink.ParseAddr(vars.DefaultGateway)
+		if err != nil {
+			if *doDebug {
+				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
+			}
+			continue
+		}
 
-	return nil
+		r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: gateway.IPNet.IP}
+		if err = netlink.RouteAdd(r); err != nil {
+			if *doDebug {
+				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
+			}
+		} else {
+			log.Printf("%s: IP configuration successful", link.Attrs().Name)
+			return nil
+		}
+	}
+	return errors.New("IP configuration failed")
 }
 
 func configureDHCPNetwork() error {
 	log.Printf("Trying to configure network configuration dynamically...")
 
-	link, err := findNetworkInterface()
+	links, err := findNetworkInterfaces()
 	if err != nil {
 		return err
 	}
-
-	var links []netlink.Link
-	links = append(links, link)
 
 	var level dhclient.LogLevel
 	if *doDebug {
@@ -84,16 +97,26 @@ func configureDHCPNetwork() error {
 
 	r := dhclient.SendRequests(context.TODO(), links, true, false, config)
 	for result := range r {
-		if result.Err == nil {
-			return result.Lease.Configure()
-		} else if *doDebug {
-			log.Printf("dhcp response error: %v", result.Err)
+		if result.Err != nil {
+			if *doDebug {
+				log.Printf("%s: DHCP response error: %v", result.Interface.Attrs().Name, result.Err)
+			}
+			continue
+		}
+		err = result.Lease.Configure()
+		if err != nil {
+			if *doDebug {
+				log.Printf("%s: DHCP configuration error: %v", result.Interface.Attrs().Name, err)
+			}
+		} else {
+			log.Printf("%s: DHCP successful", result.Interface.Attrs().Name)
+			return nil
 		}
 	}
-	return errors.New("no valid DHCP configuration recieved")
+	return errors.New("DHCP configuration failed")
 }
 
-func findNetworkInterface() (netlink.Link, error) {
+func findNetworkInterfaces() ([]netlink.Link, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -103,6 +126,7 @@ func findNetworkInterface() (netlink.Link, error) {
 		return nil, errors.New("No network interface found")
 	}
 
+	var links []netlink.Link
 	var ifnames []string
 	for _, iface := range ifaces {
 		if *doDebug {
@@ -115,15 +139,18 @@ func findNetworkInterface() (netlink.Link, error) {
 		if iface.Flags&net.FlagLoopback != 0 || iface.HardwareAddr.String() == "" {
 			continue
 		}
-		log.Printf("Try using %s", iface.Name)
 		link, err := netlink.LinkByName(iface.Name)
-		if err == nil {
-			return link, nil
+		if err != nil {
+			log.Print(err)
 		}
-		log.Print(err)
+		links = append(links, link)
 	}
 
-	return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
+	if len(links) <= 0 {
+		return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
+	}
+
+	return links, nil
 }
 
 func downloadFromHTTPS(url string, destination string) error {
