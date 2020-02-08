@@ -5,6 +5,7 @@
 package uio
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -46,35 +47,41 @@ func (lr *LazyOpener) Close() error {
 	return nil
 }
 
-// ReadAtCloser is an io.ReaderAt and an io.Closer.
-type ReadAtCloser interface {
-	io.ReaderAt
-	io.Closer
-}
-
 // LazyOpenerAt is a lazy io.ReaderAt.
 //
 // LazyOpenerAt will use a given open function to derive an io.ReaderAt when
 // ReadAt is first called.
 type LazyOpenerAt struct {
 	r    io.ReaderAt
+	s    string
 	err  error
 	open func() (io.ReaderAt, error)
 }
 
 // NewLazyFile returns a lazy ReaderAt opened from path.
-func NewLazyFile(path string) ReadAtCloser {
+func NewLazyFile(path string) *LazyOpenerAt {
 	if len(path) == 0 {
 		return nil
 	}
-	return NewLazyOpenerAt(func() (io.ReaderAt, error) {
+	return NewLazyOpenerAt(path, func() (io.ReaderAt, error) {
 		return os.Open(path)
 	})
 }
 
 // NewLazyOpenerAt returns a lazy io.ReaderAt based on `open`.
-func NewLazyOpenerAt(open func() (io.ReaderAt, error)) ReadAtCloser {
-	return &LazyOpenerAt{open: open}
+func NewLazyOpenerAt(filename string, open func() (io.ReaderAt, error)) *LazyOpenerAt {
+	return &LazyOpenerAt{s: filename, open: open}
+}
+
+// String implements fmt.Stringer.
+func (loa *LazyOpenerAt) String() string {
+	if len(loa.s) > 0 {
+		return loa.s
+	}
+	if loa.r != nil {
+		return fmt.Sprintf("%v", loa.r)
+	}
+	return "unopened mystery file"
 }
 
 // ReadAt implements io.ReaderAt.ReadAt.

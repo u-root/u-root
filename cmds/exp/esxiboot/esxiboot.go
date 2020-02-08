@@ -42,6 +42,7 @@ var (
 	cfg     = flag.StringP("config", "c", "", "ESXi config file")
 	cdrom   = flag.StringP("cdrom", "r", "", "ESXi CDROM boot device")
 	diskDev = flag.StringP("device", "d", "", "ESXi disk boot device")
+	dryRun  = flag.Bool("dry-run", false, "dry run (just mount + load the kernel, don't kexec)")
 )
 
 func main() {
@@ -63,6 +64,7 @@ func main() {
 			if err := img.Load(false); err != nil {
 				log.Printf("Failed to load ESXi image (%v) into memory: %v", img, err)
 			} else {
+				log.Printf("Loaded image: %v", img)
 				// We loaded one, that's it.
 				loaded = true
 				break
@@ -85,8 +87,13 @@ func main() {
 		if err := img.Load(false); err != nil {
 			log.Fatalf("Failed to load ESXi image (%v) into memory: %v", img, err)
 		}
+		log.Printf("Loaded image: %v", img)
 	}
 
+	if *dryRun {
+		log.Printf("Dry run: not booting kernel.")
+		os.Exit(0)
+	}
 	if err := boot.Execute(); err != nil {
 		log.Fatalf("Failed to boot image: %v", err)
 	}

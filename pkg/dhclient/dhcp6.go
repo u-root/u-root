@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -29,9 +30,9 @@ func NewPacket6(iface netlink.Link, p *dhcpv6.Message) *Packet6 {
 	}
 }
 
-// Message returns the wrapped DHCPv6 packet.
-func (p *Packet6) Message() *dhcpv6.Message {
-	return p.p
+// Message returns the unwrapped DHCPv6 packet.
+func (p *Packet6) Message() (*dhcpv4.DHCPv4, *dhcpv6.Message) {
+	return nil, p.p
 }
 
 // Link returns the interface this packet was received for.

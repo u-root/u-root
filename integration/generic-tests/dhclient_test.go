@@ -7,51 +7,77 @@
 package integration
 
 import (
+	"fmt"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func TestDhclient(t *testing.T) {
+// TestDhclientQEMU4 uses QEMU's DHCP server to test dhclient.
+func TestDhclientQEMU4(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
-	network := qemu.NewNetwork()
-	_, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient_Server",
-		QEMUOpts: qemu.Options{
-			SerialOutput: vmtest.TestLineWriter(t, "server"),
-			Devices: []qemu.Device{
-				network.NewVM(),
-			},
-		},
-		TestCmds: []string{
-			"ip link set eth0 up",
-			"ip addr add 192.168.0.1/24 dev eth0",
-			"ip route add 0.0.0.0/0 dev eth0",
-			"pxeserver",
-		},
-	})
-	defer scleanup()
+	// Create the file to download
+	dir, err := ioutil.TempDir("", "dhclient-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	want := "conteeent"
+	foobarFile := filepath.Join(dir, "foobar")
+	if err := ioutil.WriteFile(foobarFile, []byte(want), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Serve HTTP on the host on a random port.
+	http.Handle("/", http.FileServer(http.Dir(dir)))
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	s := &http.Server{}
+	wg.Add(1)
+	go func() {
+		_ = s.Serve(ln)
+		wg.Done()
+	}()
+	defer wg.Wait()
+	defer s.Close()
+
+	port := ln.Addr().(*net.TCPAddr).Port
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient_Client",
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "client"),
 			Timeout:      30 * time.Second,
 			Devices: []qemu.Device{
-				network.NewVM(),
+				qemu.ArbitraryArgs{
+					"-device", "e1000,netdev=host0",
+					"-netdev", "user,id=host0,net=192.168.0.0/24,dhcpstart=192.168.0.10,ipv6=off",
+				},
 			},
 		},
 		TestCmds: []string{
 			"dhclient -ipv6=false -v",
 			"ip a",
-			// Sleep so serial console output gets flushed. The expect library is racy.
+			// Download a file to make sure dhclient configures kernel networking correctly.
+			fmt.Sprintf("wget http://192.168.0.2:%d/foobar", port),
+			"cat ./foobar",
 			"sleep 5",
 			"shutdown -h",
 		},
@@ -59,36 +85,72 @@ func TestDhclient(t *testing.T) {
 	defer ccleanup()
 
 	if err := dhcpClient.Expect("Configured eth0 with IPv4 DHCP Lease"); err != nil {
-		t.Error(err)
+		t.Errorf("%s: %v", testutil.NowLog(), err)
 	}
-	if err := dhcpClient.Expect("inet 192.168.0.2"); err != nil {
-		t.Error(err)
+	if err := dhcpClient.Expect("inet 192.168.0.10"); err != nil {
+		t.Errorf("%s: %v", testutil.NowLog(), err)
+	}
+	// "cat ./foobar" should be outputting this.
+	if err := dhcpClient.Expect(want); err != nil {
+		t.Errorf("%s: %v", testutil.NowLog(), err)
 	}
 }
 
-// TestPxeboot runs a server and client to test pxebooting a node.
-// TODO: FIX THIS TEST!
-// Change the t.Logf below back to t.Errorf
-func TestPxeboot(t *testing.T) {
+func TestDhclientTimesOut(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
 	network := qemu.NewNetwork()
-	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestPxeboot_Server",
-		BuildOpts: uroot.Opts{
-			ExtraFiles: []string{
-				"testdata/pxe:pxeroot",
+	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "TestQEMUDHCPTimesOut",
+		QEMUOpts: qemu.Options{
+			Timeout: 50 * time.Second,
+			Devices: []qemu.Device{
+				// An empty new network is easier than
+				// configuring QEMU not to expose any
+				// networking. At the moment.
+				network.NewVM(),
 			},
 		},
 		TestCmds: []string{
-			"ip addr add 192.168.0.1/24 dev eth0",
+			"dhclient -v -retry 2 -timeout 10",
+			"echo \"DHCP timed out\"",
+			"sleep 5",
+			"shutdown -h",
+		},
+	})
+	defer ccleanup()
+
+	if err := dhcpClient.Expect("Could not configure eth0 for IPv"); err != nil {
+		t.Error(err)
+	}
+	if err := dhcpClient.Expect("Could not configure eth0 for IPv"); err != nil {
+		t.Error(err)
+	}
+	if err := dhcpClient.Expect("DHCP timed out"); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestDhclient6(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+
+	// QEMU doesn't support DHCPv6 for getting IP configuration, so we have
+	// to supply our own server.
+	//
+	// We don't currently have a radvd server we can use, so we also cannot
+	// try to download a file using the DHCP configuration.
+	network := qemu.NewNetwork()
+	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "TestDhclient6_Server",
+		TestCmds: []string{
 			"ip link set eth0 up",
-			"ip route add 0.0.0.0/0 dev eth0",
-			"ls -l /pxeroot",
-			"pxeserver -tftp-dir=/pxeroot",
+			"pxeserver -6 -your-ip6=fec0::3 -4=false",
 		},
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
@@ -101,23 +163,10 @@ func TestPxeboot(t *testing.T) {
 	defer scleanup()
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestPxeboot_Client",
-		BuildOpts: uroot.Opts{
-			// Specify commands to include because generic initramfs
-			// does not include cmds/boot.
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/init",
-				"github.com/u-root/u-root/cmds/core/elvish",
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/boot/pxeboot",
-			),
-		},
+		Name: "TestDhclient6_Client",
 		TestCmds: []string{
-			"pxeboot --dry-run --no-load -v",
-			// Sleep so serial console output gets flushed. The expect library is racy.
-			"sleep 5",
+			"dhclient -ipv4=false -vv",
+			"ip a",
 			"shutdown -h",
 		},
 		QEMUOpts: qemu.Options{
@@ -130,42 +179,13 @@ func TestPxeboot(t *testing.T) {
 	})
 	defer ccleanup()
 
-	if err := dhcpServer.Expect("starting file server"); err != nil {
-		t.Logf("File server: %v", err)
+	if err := dhcpServer.Expect("starting dhcpv6 server"); err != nil {
+		t.Errorf("%s dhcpv6 server: %v", testutil.NowLog(), err)
 	}
-	if err := dhcpClient.Expect("Got DHCPv4 lease on eth0:"); err != nil {
-		t.Logf("Lease %v:", err)
+	if err := dhcpClient.Expect("Configured eth0 with IPv6 DHCP Lease IP fec0::3"); err != nil {
+		t.Errorf("%s configure: %v", testutil.NowLog(), err)
 	}
-	if err := dhcpClient.Expect("Boot URI: tftp://192.168.0.1/pxelinux.0"); err != nil {
-		t.Logf("Boot: %v", err)
-	}
-}
-
-func TestQEMUDHCPTimesOut(t *testing.T) {
-	// TODO: support arm
-	if vmtest.TestArch() != "amd64" {
-		t.Skipf("test not supported on %s", vmtest.TestArch())
-	}
-
-	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestQEMUDHCPTimesOut",
-		QEMUOpts: qemu.Options{
-			SerialOutput: vmtest.TestLineWriter(t, "client"),
-			Timeout:      40 * time.Second,
-		},
-		TestCmds: []string{
-			// loopback should time out and it can't have configured anything.
-			"dhclient -v -retry 1 -timeout 10 lo",
-			"echo \"DHCP timed out\"",
-			// Sleep so serial console output gets flushed. The expect library is racy.
-			"sleep 5",
-			"shutdown -h",
-		},
-	})
-	defer ccleanup()
-
-	// Make sure that dhclient does not hang forever.
-	if err := dhcpClient.Expect("DHCP timed out"); err != nil {
-		t.Error(err)
+	if err := dhcpClient.Expect("inet6 fec0::3"); err != nil {
+		t.Errorf("%s ip: %v", testutil.NowLog(), err)
 	}
 }

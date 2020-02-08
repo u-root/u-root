@@ -107,6 +107,10 @@ type Lease interface {
 
 	// Link is the interface the configuration is for.
 	Link() netlink.Link
+
+	// Return the full DHCP response, this is either a *dhcpv4.DHCPv4 or a
+	// *dhcpv6.Message.
+	Message() (*dhcpv4.DHCPv4, *dhcpv6.Message)
 }
 
 // LogLevel is the amount of information to log.
@@ -131,6 +135,26 @@ type Config struct {
 	// attempt. The highest log level should print each entire packet sent
 	// and received.
 	LogLevel LogLevel
+
+	// Modifiers4 allows modifications to the IPv4 DHCP request.
+	Modifiers4 []dhcpv4.Modifier
+
+	// Modifiers6 allows modifications to the IPv6 DHCP request.
+	Modifiers6 []dhcpv6.Modifier
+
+	// V6ServerAddr can be a unicast or broadcast destination for DHCPv6
+	// messages.
+	//
+	// If not set, it will default to nclient6's default (all servers &
+	// relay agents).
+	V6ServerAddr *net.UDPAddr
+
+	// V4ServerAddr can be a unicast or broadcast destination for IPv4 DHCP
+	// messages.
+	//
+	// If not set, it will default to nclient4's default (DHCP broadcast
+	// address).
+	V4ServerAddr *net.UDPAddr
 }
 
 func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
@@ -144,15 +168,25 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	case LogDebug:
 		mods = append(mods, nclient4.WithDebugLogger())
 	}
+	if c.V4ServerAddr != nil {
+		mods = append(mods, nclient4.WithServerAddr(c.V4ServerAddr))
+	}
 	client, err := nclient4.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
 
+	// Prepend modifiers with default options, so they can be overriden.
+	reqmods := append(
+		[]dhcpv4.Modifier{
+			dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
+			dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask),
+			dhcpv4.WithNetboot,
+		},
+		c.Modifiers4...)
+
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
-	_, p, err := client.Request(ctx, dhcpv4.WithNetboot,
-		dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
-		dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask))
+	_, p, err := client.Request(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}
@@ -198,13 +232,23 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	case LogDebug:
 		mods = append(mods, nclient6.WithDebugLogger())
 	}
+	if c.V6ServerAddr != nil {
+		mods = append(mods, nclient6.WithBroadcastAddr(c.V6ServerAddr))
+	}
 	client, err := nclient6.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
 
+	// Prepend modifiers with default options, so they can be overriden.
+	reqmods := append(
+		[]dhcpv6.Modifier{
+			dhcpv6.WithNetboot,
+		},
+		c.Modifiers6...)
+
 	log.Printf("Attempting to get DHCPv6 lease on %s", iface.Attrs().Name)
-	p, err := client.RapidSolicit(ctx, dhcpv6.WithNetboot)
+	p, err := client.RapidSolicit(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/booter"
@@ -29,19 +30,31 @@ var defaultBootsequence = [][]string{
 	{"localboot", "-grub"},
 }
 
-func getSystemFWVersion() (string, error) {
-	entryData, tableData, err := getSMBIOSData()
+// Product list for running IPMI OEM commands
+var productList = [2]string{"Tioga Pass", "Mono Lake"}
+
+func isMatched(productName string) bool {
+	for _, v := range productList {
+		if strings.HasPrefix(productName, v) {
+			return true
+		}
+	}
+	return false
+}
+
+func getSystemProductName(si *smbios.Info) (string, error) {
+	t1, err := si.GetSystemInformation()
 	if err != nil {
+		log.Printf("Error getting System Information: %v", err)
 		return "", err
 	}
-	si, err := smbios.ParseInfo(entryData, tableData)
-	if err != nil {
-		log.Printf("error parsing data: %v", err)
-		return "", err
-	}
+	return t1.ProductName, nil
+}
+
+func getSystemFWVersion(si *smbios.Info) (string, error) {
 	t0, err := si.GetBIOSInformation()
 	if err != nil {
-		log.Printf("error Geting BIOS Information: %v", err)
+		log.Printf("Error getting BIOS Information: %v", err)
 		return "", err
 	}
 	return t0.Version, nil
@@ -61,12 +74,28 @@ func runIPMICommands() {
 		log.Printf("Watchdog is stopped.")
 	}
 
-	if fwVersion, err := getSystemFWVersion(); err == nil {
+	// Below IPMI commands would require SMBIOS data
+	si, err := getSMBIOSInfo()
+	if err != nil {
+		log.Printf("Error reading SMBIOS info: %v", err)
+		return
+	}
+
+	if fwVersion, err := getSystemFWVersion(si); err == nil {
 		log.Printf("System firmware version: %s", fwVersion)
 		if err = ipmi.SetSystemFWVersion(fwVersion); err != nil {
 			log.Printf("Failed to set system firmware version to BMC %v.", err)
 		}
 	}
+
+	if productName, err := getSystemProductName(si); err == nil {
+		if isMatched(productName) {
+			log.Printf("Running OEM IPMI commands.")
+		} else {
+			log.Printf("No product name is matched for OEM commands.")
+		}
+	}
+
 }
 
 func main() {
