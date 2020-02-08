@@ -161,7 +161,7 @@ func main() {
 			log.Fatalf("ping failed: %v", err)
 		}
 		if *audible {
-			fmt.Print("\a")
+			msg = "\a" + msg
 		}
 		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)
