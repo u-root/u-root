@@ -1,4 +1,5 @@
 <center>
+<img src="img/u-root-logo.png" alt="u-root logo" width=300 />
 </center>
 
 
@@ -91,8 +92,13 @@ The Go gopher was designed by Renee French.
 The u-root logo design is licensed under the Creative Commons 3.0 Attributions license.
 
 The logo is communicating several things:
+
 - u-root has several flavors: firmware and as a root file system
+
 - the gopher at the bottom is a firmware u-root; that gopher brings the machine up, hence the wrench. Its work is also done, so it is resting.
+
 - the other gophers can make more copies of u-root; hence the u-root logo on their chest.
+
 - the highest gopher is showing how u-root is a good root file system for a VM.
+
 - the U itself is a stylized tree, evocative of roots.
