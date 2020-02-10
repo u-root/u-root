@@ -1,4 +1,4 @@
-// Copyright 2013-2017 the u-root Authors. All rights reserved
+// Copyright 2013-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -66,6 +66,9 @@ func main() {
 
 	switch op {
 	case "i":
+		var inums map[uint64]string
+		inums = make(map[uint64]string)
+
 		rr := archiver.Reader(os.Stdin)
 		for {
 			rec, err := rr.ReadRecord()
@@ -76,6 +79,19 @@ func main() {
 				log.Fatalf("error reading records: %v", err)
 			}
 			debug("Creating %s\n", rec)
+
+			// A file with zero size could be a hard link to another file
+			// in the archive. The file with contents always comes first.
+			if rec.Info.FileSize == 0 {
+				if _, ok := inums[rec.Info.Ino]; ok {
+					err := os.Link(inums[rec.Info.Ino], rec.Name)
+					if err != nil {
+						log.Fatal(err)
+					}
+					continue
+				}
+			}
+			inums[rec.Info.Ino] = rec.Name
 			if err := cpio.CreateFile(rec); err != nil {
 				log.Printf("Creating %q failed: %v", rec.Name, err)
 			}
