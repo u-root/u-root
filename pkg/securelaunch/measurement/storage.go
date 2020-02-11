@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
@@ -67,7 +68,13 @@ func measureStorageDevice(tpmHandle io.ReadWriteCloser, blkDevicePath string) er
 func (s *StorageCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 
 	for _, inputVal := range s.Paths {
-		err := measureStorageDevice(tpmHandle, inputVal) // inputVal is blkDevicePath e.g /dev/sda
+		device, e := slaunch.GetStorageDevice(inputVal) // inputVal is blkDevicePath e.g UUID or sda
+		if e != nil {
+			log.Printf("Storage Collector: input = %s, GetStorageDevice: err = %v", inputVal, e)
+			return e
+		}
+		devPath := filepath.Join("/dev", device.Name)
+		err := measureStorageDevice(tpmHandle, devPath)
 		if err != nil {
 			log.Printf("Storage Collector: input = %s, err = %v", inputVal, err)
 			return err
