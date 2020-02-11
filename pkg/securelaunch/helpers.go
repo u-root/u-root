@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/boot/diskboot"
 	"github.com/u-root/u-root/pkg/storage"
 )
 
@@ -56,6 +55,44 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 	return target, nil
 }
 
+func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
+	if e := GetBlkInfo(); e != nil {
+		return storage.BlockDev{}, fmt.Errorf("GetBlkInfo err=%s", e)
+	}
+	devices := storage.PartitionsByFsUUID(StorageBlkDevices, uuid) // []BlockDev
+	Debug("%d device(s) matched with UUID=%s", len(devices), uuid)
+	for i, d := range devices {
+		Debug("No#%d ,device=%s with fsUUID=%s", i, d.Name, d.FsUUID)
+		return d, nil // return first device found
+	}
+	return storage.BlockDev{}, fmt.Errorf("no block device exists with UUID=%s", uuid)
+}
+
+func getDeviceFromName(name string) (storage.BlockDev, error) {
+	if e := GetBlkInfo(); e != nil {
+		return storage.BlockDev{}, fmt.Errorf("GetBlkInfo err=%s", e)
+	}
+	devices := storage.PartitionsByName(StorageBlkDevices, name) // []BlockDev
+	Debug("%d device(s) matched with Name=%s", len(devices), name)
+	for i, d := range devices {
+		Debug("No#%d ,device=%s with fsUUID=%s", i, d.Name, d.FsUUID)
+		return d, nil // return first device found
+	}
+	return storage.BlockDev{}, fmt.Errorf("no block device exists with name=%s", name)
+}
+
+func GetStorageDevice(input string) (storage.BlockDev, error) {
+	device, e := getDeviceFromUUID(input)
+	if e != nil {
+		d2, e2 := getDeviceFromName(input)
+		if e2 != nil {
+			return storage.BlockDev{}, fmt.Errorf("getDeviceFromUUID: err=%v, getDeviceFromName: err=%v", e, e2)
+		}
+		device = d2
+	}
+	return device, nil
+}
+
 /*
  * GetMountedFilePath returns a file path corresponding to a <device_identifier>:<path> user input format.
  * <device_identifier> may be a Linux block device identifier like sda or a FS UUID.
@@ -68,29 +105,26 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, string, error) 
 		return "", "", fmt.Errorf("%s: Usage: <block device identifier>:<path>", inputVal)
 	}
 
-	// s[0] can be sda or UUID. if UUID, then we need to find its name
-	deviceId := s[0]
-	if !strings.HasPrefix(deviceId, "sd") {
-		if e := GetBlkInfo(); e != nil {
-			return "", "", fmt.Errorf("GetBlkInfo err=%s", e)
-		}
-		devices := storage.PartitionsByFsUUID(StorageBlkDevices, s[0]) // []BlockDev
-		for _, device := range devices {
-			Debug("device =%s with fsuuid=%s", device.Name, s[0])
-			deviceId = device.Name
-		}
-	}
-
-	devicePath := filepath.Join("/dev", deviceId) // assumes deviceId is sda, devicePath=/dev/sda
-	Debug("Attempting to mount %s", devicePath)
-	dev, err := diskboot.FindDevice(devicePath, flags) // FindDevice fn mounts devicePath=/dev/sda.
+	// s[0] can be sda or UUID.
+	device, err := GetStorageDevice(s[0])
 	if err != nil {
-		return "", "", fmt.Errorf("failed to mount %v , flags=%v, err=%v", devicePath, flags, err)
+		return "", "", fmt.Errorf("fn GetStorageDevice: err = %v", err)
 	}
 
-	Debug("Mounted %s", devicePath)
-	fPath := filepath.Join(dev.MountPoint.Path, s[1]) // mountPath=/tmp/path/to/target/file if /dev/sda mounted on /tmp
-	return fPath, dev.MountPoint.Path, nil
+	devPath := filepath.Join("/dev", device.Name)
+	Debug("Attempting to mount %s", devPath)
+	mountPath, err := ioutil.TempDir("/tmp", "slaunch-")
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create tmp mount directory: %v", err)
+	}
+
+	if _, err := device.Mount(mountPath, flags); err != nil {
+		return "", "", fmt.Errorf("failed to mount %s , flags=%v, err=%v", devPath, flags, err)
+	}
+
+	Debug("Mounted %s", devPath)
+	fPath := filepath.Join(mountPath, s[1]) // mountPath=/tmp/path/to/target/file if /dev/sda mounted on /tmp
+	return fPath, mountPath, nil
 }
 
 /*

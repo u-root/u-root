@@ -375,6 +375,18 @@ func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
 	return partitions
 }
 
+// PartitionsByName returns a list of BlockDev objects whose underlying
+// block device has a Name with the given Name
+func PartitionsByName(devices []BlockDev, name string) []BlockDev {
+	partitions := make([]BlockDev, 0)
+	for _, device := range devices {
+		if device.Name == name {
+			partitions = append(partitions, device)
+		}
+	}
+	return partitions
+}
+
 // GetMountpointByDevice gets the mountpoint by given
 // device name. Returns on first match
 func GetMountpointByDevice(devicePath string) (*string, error) {

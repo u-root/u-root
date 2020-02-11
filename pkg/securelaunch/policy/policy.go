@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/u-root/u-root/pkg/boot/diskboot"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/mount"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
@@ -131,14 +130,26 @@ func locate() ([]byte, error) {
 		return d, nil
 	}
 
-	slaunch.Debug("Searching and mounting block devices with bootable configs")
-	blkDevices := diskboot.FindDevices("/sys/class/block/*") // FindDevices find and *mounts* the devices.
-	if len(blkDevices) == 0 {
-		return nil, errors.New("no block devices found")
+	slaunch.Debug("Searching for block devices")
+	if err := slaunch.GetBlkInfo(); err != nil {
+		return nil, err
 	}
 
-	for _, device := range blkDevices {
-		devicePath, mountPath := device.MountPoint.Device, device.MountPoint.Path
+	// devicePath = /dev/sda, mountPath = /tmp/sluinit-FOO/
+	for _, device := range slaunch.StorageBlkDevices {
+		devicePath := filepath.Join("/dev", device.Name)
+		slaunch.Debug("Attempting to mount %s", devicePath)
+		mountPath, err := ioutil.TempDir("/tmp", "slaunch-")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tmp mount directory: %v", err)
+		}
+
+		if _, err := device.Mount(mountPath, mount.MS_RDONLY); err != nil {
+			log.Printf("failed to mount %s, continuing to next block device", devicePath)
+			continue
+		}
+
+		slaunch.Debug("Mounted %s", devicePath)
 		slaunch.Debug("scanning for policy file under devicePath=%s, mountPath=%s", devicePath, mountPath)
 		raw := scanBlockDevice(mountPath)
 		if e := mount.Unmount(mountPath, true, false); e != nil {
