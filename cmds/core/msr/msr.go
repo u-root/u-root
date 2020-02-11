@@ -44,6 +44,7 @@ import (
 	"strconv"
 
 	"github.com/u-root/u-root/pkg/forth"
+	"github.com/u-root/u-root/pkg/msr"
 )
 
 // let's just do MSRs for now
@@ -62,7 +63,7 @@ var (
 		name string
 		op   forth.Op
 	}{
-		{name: "msr", op: msr},
+		{name: "msr", op: msrType},
 		{name: "reg", op: reg},
 		{name: "u64", op: u64},
 		{name: "rd", op: rd},
@@ -82,10 +83,10 @@ var (
 
 // Note that if any type asserts fail the forth interpret loop catches
 // it. It also catches stack underflow, all that stuff.
-func msr(f forth.Forth) {
+func msrType(f forth.Forth) {
 	forth.Debug("msr")
 	g := f.Pop().(string)
-	m := msrList(g)
+	m := msr.Paths(g)
 	forth.Debug("MSRs are %v", m)
 	f.Push(m)
 }
@@ -110,7 +111,7 @@ func rd(f forth.Forth) {
 	r := f.Pop().(uint32)
 	m := f.Pop().([]string)
 	forth.Debug("rd: %v %v", m, r)
-	data, errs := rdmsr(m, r)
+	data, errs := msr.Read(m, r)
 	forth.Debug("data %v errs %v", data, errs)
 	if errs != nil {
 		panic(fmt.Sprintf("%v", errs))
@@ -132,7 +133,7 @@ func wr(f forth.Forth) {
 	r := f.Pop().(uint32)
 	m := f.Pop().([]string)
 	forth.Debug("wr: %v %v %v", m, r, v)
-	errs := wrmsr(m, r, v)
+	errs := msr.Write(m, r, v)
 	forth.Debug("errs %v", errs)
 	if errs != nil {
 		f.Push(errs)
@@ -159,7 +160,7 @@ func swr(f forth.Forth) {
 		vv[i] = v
 	}
 	forth.Debug("swr: %v %v %v", m, r, vv)
-	errs := wrmsr(m, r, vv)
+	errs := msr.Write(m, r, vv)
 	forth.Debug("errs %v", errs)
 	if errs != nil {
 		f.Push(errs)
