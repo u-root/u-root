@@ -11,37 +11,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 
-	"github.com/digitalocean/go-smbios/smbios"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
+	"github.com/u-root/u-root/pkg/smbios"
 )
 
-// DMI Events are expected to be a COMBINED_EVENT extend, as such the json
-// definition is designed to allow clusters of DMI fields/strings.
-//
-// Example json:
-//	{
-//		"type": "dmi",
-//		[
-//			{
-//				"label": "BIOS",
-//				"fields": [
-//					"bios-vendor",
-//					"bios-version",
-//					"bios-release-date"
-//				]
-//			}
-//			{
-//				"label": "System",
-//				"fields": [
-//					"system-manufacturer",
-//					"system-product-name",
-//					"system-version"
-//				]
-//			}
-//		]
-//	}
 type fieldCluster struct {
 	Label  string   `json:"label"`
 	Fields []string `json:"fields"`
@@ -73,49 +49,60 @@ func NewDmiCollector(config []byte) (Collector, error) {
  * used to lookup the dmi type parsed from policy file.
  * e.g if policy file contains BIOS, this table would return 0.
  */
-var type_table = map[string]uint8{
-	"BIOS":                             0,
-	"System":                           1,
-	"Base Board":                       2,
-	"Chassis":                          3,
-	"Processor":                        4,
-	"Memory Controller":                5,
-	"Memory Module":                    6,
-	"Cache":                            7,
-	"Port Connector":                   8,
-	"System Slots":                     9,
-	"On Board Devices":                 10,
-	"OEM Strings":                      11,
-	"System Configuration Options":     12,
-	"BIOS Language":                    13,
-	"Group Associations":               14,
-	"System Event Log":                 15,
-	"Physical Memory Array":            16,
-	"Memory Device":                    17,
-	"32-bit Memory Error":              18,
-	"Memory Array Mapped Address":      19,
-	"Memory Device Mapped Address":     20,
-	"Built-in Pointing Device":         21,
-	"Portable Battery":                 22,
-	"System Reset":                     23,
-	"Hardware Security":                24,
-	"System Power Controls":            25,
-	"Voltage Probe":                    26,
-	"Cooling Device":                   27,
-	"Temperature Probe":                28,
-	"Electrical Current Probe":         29,
-	"Out-of-band Remote Access":        30,
-	"Boot Integrity Services":          31,
-	"System Boot":                      32,
-	"64-bit Memory Error":              33,
-	"Management Device":                34,
-	"Management Device Component":      35,
-	"Management Device Threshold Data": 36,
-	"Memory Channel":                   37,
-	"IPMI Device":                      38,
-	"Power Supply":                     39,
-	"Additional Information":           40,
-	"Onboard Device":                   41,
+var typeTable = map[string]uint8{
+	"bios":                             0,
+	"system":                           1,
+	"base board":                       2,
+	"chassis":                          3,
+	"processor":                        4,
+	"memory controller":                5,
+	"memory module":                    6,
+	"cache":                            7,
+	"port connector":                   8,
+	"system slots":                     9,
+	"on board devices":                 10,
+	"oem strings":                      11,
+	"system configuration options":     12,
+	"bios language":                    13,
+	"group associations":               14,
+	"system event log":                 15,
+	"physical memory array":            16,
+	"memory device":                    17,
+	"32-bit memory error":              18,
+	"memory array mapped address":      19,
+	"memory device mapped address":     20,
+	"built-in pointing device":         21,
+	"portable battery":                 22,
+	"system reset":                     23,
+	"hardware security":                24,
+	"system power controls":            25,
+	"voltage probe":                    26,
+	"cooling device":                   27,
+	"temperature probe":                28,
+	"electrical current probe":         29,
+	"out-of-band remote access":        30,
+	"boot integrity services":          31,
+	"system boot":                      32,
+	"64-bit memory error":              33,
+	"management device":                34,
+	"management device component":      35,
+	"management device threshold data": 36,
+	"memory channel":                   37,
+	"ipmi device":                      38,
+	"power supply":                     39,
+	"additional information":           40,
+	"onboard device":                   41,
+}
+
+// parseTypeFilter looks up type in typeTable and sets the corresponding entry in map to true.
+func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
+	types := map[smbios.TableType]bool{}
+	for _, ts := range typeStrings {
+		if tg, ok := typeTable[strings.ToLower(ts)]; ok {
+			types[smbios.TableType(tg)] = true
+		}
+	}
+	return types, nil
 }
 
 /*
@@ -130,49 +117,43 @@ func (s *DmiCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 		return errors.New("Invalid type passed to a DmiCollector method")
 	}
 
-	// Find SMBIOS data in operating system-specific location.
-	rc, _, err := smbios.Stream()
-	if err != nil {
-		return fmt.Errorf("failed to open stream: %v", err)
-	}
-
-	// Be sure to close the stream!
-	defer rc.Close()
-
-	// Decode SMBIOS structures from the stream.
-	d := smbios.NewDecoder(rc)
-	data, err := d.Decode()
-	if err != nil {
-		return fmt.Errorf("failed to decode structures: %v", err)
-	}
-
 	var labels []string // collect all types entered by user in one slice
 	for _, fieldCluster := range s.Clusters {
 		labels = append(labels, fieldCluster.Label)
 	}
 
-	for _, k := range data { // k ==> data for each dmi type
-		// Only look at types mentioned in policy file.
-		for _, label := range labels {
-			if k.Header.Type != type_table[label] {
-				continue
-			}
+	slaunch.Debug("DMI Collector: len(labels)=%d", len(labels))
 
-			slaunch.Debug("DMI Collector: Hashing %s information", label)
-			b := new(bytes.Buffer)
-			for _, str := range k.Strings {
-				b.WriteString(str)
-			}
+	// lables would be []{BIOS, Chassis, Processor}
+	typeFilter, err := parseTypeFilter(labels)
+	if err != nil {
+		return fmt.Errorf("invalid --type: %v", err)
+	}
 
-			// TODO: Extract and Measure specific "Fields" of a FieldCluster on user's request.
-			// For example: for BIOS type(type=0), currently we measure entire output
-			// but in future we could measure individual fields like bios-vendor, bios-version etc.
+	slaunch.Debug("DMI Collector: len(typeFilter)=%d", len(typeFilter))
 
-			eventDesc := fmt.Sprintf("DMI Collector: Measured dmi label=%s", label)
-			if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b.Bytes()), eventDesc); e != nil {
-				log.Printf("DMI Collector: err =%v", e)
-				return e
-			}
+	si, err := smbios.FromSysfs()
+	if err != nil {
+		return fmt.Errorf("error parsing data: %v", err)
+	}
+
+	slaunch.Debug("DMI Collector: len(si.Tables)=%d", len(si.Tables))
+
+	for _, t := range si.Tables {
+		if len(typeFilter) != 0 && !typeFilter[t.Type] {
+			continue
+		}
+
+		pt, err := smbios.ParseTypedTable(t)
+		if err != nil {
+			log.Printf("DMI Collector: skipping type %s, err=%v", t.Type, err)
+			continue
+		}
+		b := []byte(fmt.Sprintf("%s", pt))
+		eventDesc := fmt.Sprintf("DMI Collector: Measured dmi label=[%v]", t.Type)
+		if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b), eventDesc); e != nil {
+			log.Printf("DMI Collector: err =%v", e)
+			return e // return error if any single type fails ..
 		}
 	}
 
