@@ -168,8 +168,8 @@ func (s *DmiCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 			// For example: for BIOS type(type=0), currently we measure entire output
 			// but in future we could measure individual fields like bios-vendor, bios-version etc.
 
-			slaunch.Debug("DMI Collector: Measured dmi label=%s", label)
-			if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b.Bytes())); e != nil {
+			eventDesc := fmt.Sprintf("DMI Collector: Measured dmi label=%s", label)
+			if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b.Bytes()), eventDesc); e != nil {
 				log.Printf("DMI Collector: err =%v", e)
 				return e
 			}

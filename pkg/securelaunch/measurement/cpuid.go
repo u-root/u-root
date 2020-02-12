@@ -111,9 +111,9 @@ func getCPUIDInfo() []byte {
  * measureCPUIDFile stores the CPUIDInfo obtained from cpuid package
  * into the tpm device */
 func measureCPUIDFile(tpmHandle io.ReadWriteCloser) ([]byte, error) {
-
 	d := getCPUIDInfo() // return strings builder
-	if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(d)); e != nil {
+	eventDesc := "CPUID Collector: Measured CPUID Info"
+	if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(d), eventDesc); e != nil {
 		return nil, e
 	}
 
@@ -129,7 +129,6 @@ func measureCPUIDFile(tpmHandle io.ReadWriteCloser) ([]byte, error) {
  * - cpuidTargetPath - target file path on disk where cpuid info should be copied.
  */
 func persist(data []byte, cpuidTargetPath string) error {
-
 	// cpuidTargetPath is of form sda:/boot/cpuid.txt
 	filePath, mountPath, r := slaunch.GetMountedFilePath(cpuidTargetPath, 0) // 0 is flag for rw mount option
 	if r != nil {
