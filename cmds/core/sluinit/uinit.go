@@ -79,16 +79,22 @@ func main() {
 		unmountAndExit()
 	}
 
-	slaunch.Debug("********Step 5: Write eventlog to /boot partition*********")
-	if e := p.EventLog.Persist(); e != nil {
-		log.Printf("EventLog.Persist() failed err=%v", e)
+	slaunch.Debug("********Step 5: Parse eventlogs *********")
+	if e := p.EventLog.Parse(); e != nil {
+		log.Printf("EventLog.Parse() failed err=%v", e)
+		unmountAndExit()
+	}
+
+	slaunch.Debug("*****Step 6: Dump logs to disk *******")
+	if e := slaunch.ClearPersistQueue(); e != nil {
+		log.Printf("ClearPersistQueue failed err=%v", e)
 		unmountAndExit()
 	}
 
 	slaunch.Debug("********Step *: Unmount all ********")
 	slaunch.UnmountAll()
 
-	slaunch.Debug("********Step 6: Launcher called to Boot ********")
+	slaunch.Debug("********Step 7: Launcher called to Boot ********")
 	if err := p.Launcher.Boot(tpmDev); err != nil {
 		log.Printf("Boot failed. err=%s", err)
 		unmountAndExit()

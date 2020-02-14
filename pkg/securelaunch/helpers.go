@@ -18,6 +18,15 @@ import (
 	"github.com/u-root/u-root/pkg/storage"
 )
 
+type persistDataItem struct {
+	desc        string // Description
+	data        []byte
+	location    string // of form sda:/path/to/file
+	defaultFile string // if location turns out to be dir only
+}
+
+var persistData []persistDataItem
+
 type mountCacheData struct {
 	flags     uintptr
 	mountPath string
@@ -62,13 +71,49 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 		Debug("New target=%s", target)
 	}
 
-	Debug("target=%s", target)
+	Debug("WriteToFile: target=%s", target)
 	err = ioutil.WriteFile(target, data, 0644)
 	if err != nil {
 		return "", fmt.Errorf("failed to write date to file =%s, err=%v", target, err)
 	}
-	Debug("WriteToFile exit w success data written to target=%s", target)
+	Debug("WriteToFile: exit w success data written to target=%s", target)
 	return target, nil
+}
+
+// persist writes data to targetPath.
+// targetPath is of form sda:/boot/cpuid.txt
+func persist(data []byte, targetPath string, defaultFile string) error {
+
+	filePath, r := GetMountedFilePath(targetPath, 0) // 0 is flag for rw mount option
+	if r != nil {
+		return fmt.Errorf("persist: err: input %s could NOT be located, err=%v", targetPath, r)
+	}
+
+	dst := filePath // /tmp/boot-733276578/cpuid
+
+	target, err := WriteToFile(data, dst, defaultFile)
+	if err != nil {
+		log.Printf("persist: err=%s", err)
+		return err
+	}
+
+	Debug("persist: Target File%s", target)
+	return nil
+}
+
+func AddToPersistQueue(desc string, data []byte, location string, defFile string) error {
+	persistData = append(persistData, persistDataItem{desc, data, location, defFile})
+	return nil
+}
+
+func ClearPersistQueue() error {
+
+	for _, entry := range persistData {
+		if err := persist(entry.data, entry.location, entry.defaultFile); err != nil {
+			return fmt.Errorf("%s: persist failed for location %s", entry.desc, entry.location)
+		}
+	}
+	return nil
 }
 
 func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
