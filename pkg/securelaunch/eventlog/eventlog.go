@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/9elements/tpmtool/pkg/tpm"
-	"github.com/u-root/u-root/pkg/mount"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 )
 
@@ -86,7 +85,7 @@ func (e *EventLog) Persist() error {
 		return fmt.Errorf("empty eventlog path provided exiting")
 	}
 
-	filePath, mountPath, r := slaunch.GetMountedFilePath(eventlogPath, 0) // 0 is flag value for rw mount option
+	filePath, r := slaunch.GetMountedFilePath(eventlogPath, 0) // 0 is flag value for rw mount option
 	if r != nil {
 		return fmt.Errorf("failed to mount target disk for target=%s, err=%v", eventlogPath, r)
 	}
@@ -97,20 +96,11 @@ func (e *EventLog) Persist() error {
 	data, err := parseEvtLog(eventLogFile)
 	if err != nil {
 		log.Printf("tpmtool could NOT parse Eventlogfile=%s, err=%s", eventLogFile, err)
-		if ret := mount.Unmount(mountPath, true, false); ret != nil {
-			log.Printf("Unmount failed. PANIC")
-			panic(ret)
-		}
 		return fmt.Errorf("parseEvtLog err=%v", err)
 	}
 
 	// write parsed data onto disk
 	target, err := slaunch.WriteToFile(data, dst, defaultEventLogFile)
-	if ret := mount.Unmount(mountPath, true, false); ret != nil {
-		log.Printf("Unmount failed. PANIC")
-		panic(ret)
-	}
-
 	if err != nil {
 		log.Printf("EventLog: Write err=%v, dst=%s, exiting", err, dst)
 		return fmt.Errorf("failed to write parsed eventLog to disk, err=%v, dst=%s, exiting", err, dst)
