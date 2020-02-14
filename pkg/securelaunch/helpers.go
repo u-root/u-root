@@ -8,12 +8,28 @@ package securelaunch
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/storage"
 )
+
+type mountCacheData struct {
+	flags     uintptr
+	mountPath string
+}
+
+type mountCacheType struct {
+	m  map[string]mountCacheData
+	mu sync.RWMutex
+}
+
+// sluinit uses mountCache to reduce number of mount/unmount operations
+var mountCache = mountCacheType{m: make(map[string]mountCacheData)}
 
 /* used to store all block devices returned from a call to storage.GetBlockStats */
 var StorageBlkDevices []storage.BlockDev
@@ -93,38 +109,118 @@ func GetStorageDevice(input string) (storage.BlockDev, error) {
 	return device, nil
 }
 
+func deleteEntryMountCache(key string) {
+	mountCache.mu.Lock()
+	delete(mountCache.m, key)
+	mountCache.mu.Unlock()
+
+	Debug("mountCache: Deleted key %s", key)
+}
+
+func setMountCache(key string, val mountCacheData) {
+
+	mountCache.mu.Lock()
+	mountCache.m[key] = val
+	mountCache.mu.Unlock()
+
+	Debug("mountCache: Updated key %s, value %v", key, val)
+}
+
+// getMountCacheData looks up mountCache using devName as key
+// and clears an entry in cache if result is found with different
+// flags, otherwise returns the cached entry or nil.
+func getMountCacheData(key string, flags uintptr) (string, error) {
+
+	Debug("mountCache: Lookup with key %s", key)
+	cachedData, ok := mountCache.m[key]
+	if ok {
+		cachedMountPath := cachedData.mountPath
+		cachedFlags := cachedData.flags
+		Debug("mountCache: Lookup succeeded: cachedMountPath %s, cachedFlags %d found for key %s", cachedMountPath, cachedFlags, key)
+		if cachedFlags == flags {
+			return cachedMountPath, nil
+		}
+		Debug("mountCache: need to mount the same device with different flags")
+		Debug("mountCache: Unmounting %s first", cachedMountPath)
+		if e := mount.Unmount(cachedMountPath, true, false); e != nil {
+			log.Printf("Unmount failed for %s. PANIC")
+			panic(e)
+		}
+		Debug("mountCache: unmount successfull. lets delete entry in map")
+		deleteEntryMountCache(key)
+		return "", fmt.Errorf("device was already mounted. Mount again.")
+	}
+
+	return "", fmt.Errorf("Lookup mountCache failed: No key exists that matches %s", key)
+}
+
+func MountDevice(device storage.BlockDev, flags uintptr) (string, error) {
+
+	devName := device.Name
+
+	Debug("MountDevice: Checking cache first for %s", devName)
+	cachedMountPath, err := getMountCacheData(devName, flags)
+	if err == nil {
+		log.Printf("getMountCacheData succeeded for %s", devName)
+		return cachedMountPath, nil
+	}
+	Debug("MountDevice: cache lookup failed for %s", devName)
+
+	Debug("MountDevice: Attempting to mount %s with flags %d", devName, flags)
+	mountPath, err := ioutil.TempDir("/tmp", "slaunch-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create tmp mount directory: %v", err)
+	}
+
+	if _, err := device.Mount(mountPath, flags); err != nil {
+		return "", fmt.Errorf("failed to mount %s, flags %d, err=%v", devName, flags, err)
+	}
+
+	Debug("MountDevice: Mounted %s with flags %d", devName, flags)
+	setMountCache(devName, mountCacheData{flags: flags, mountPath: mountPath}) // update cache
+	return mountPath, nil
+}
+
 /*
  * GetMountedFilePath returns a file path corresponding to a <device_identifier>:<path> user input format.
  * <device_identifier> may be a Linux block device identifier like sda or a FS UUID.
- *
- * NOTE: Caller's responsbility to unmount this..use return var mountPath to unmount in caller.
  */
-func GetMountedFilePath(inputVal string, flags uintptr) (string, string, error) {
+func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	s := strings.Split(inputVal, ":")
 	if len(s) != 2 {
-		return "", "", fmt.Errorf("%s: Usage: <block device identifier>:<path>", inputVal)
+		return "", fmt.Errorf("%s: Usage: <block device identifier>:<path>", inputVal)
 	}
 
 	// s[0] can be sda or UUID.
 	device, err := GetStorageDevice(s[0])
 	if err != nil {
-		return "", "", fmt.Errorf("fn GetStorageDevice: err = %v", err)
+		return "", fmt.Errorf("fn GetStorageDevice: err = %v", err)
 	}
 
-	devPath := filepath.Join("/dev", device.Name)
-	Debug("Attempting to mount %s", devPath)
-	mountPath, err := ioutil.TempDir("/tmp", "slaunch-")
+	devName := device.Name
+	mountPath, err := MountDevice(device, flags)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create tmp mount directory: %v", err)
+		return "", fmt.Errorf("failed to mount %s , flags=%v, err=%v", devName, flags, err)
 	}
 
-	if _, err := device.Mount(mountPath, flags); err != nil {
-		return "", "", fmt.Errorf("failed to mount %s , flags=%v, err=%v", devPath, flags, err)
-	}
-
-	Debug("Mounted %s", devPath)
 	fPath := filepath.Join(mountPath, s[1]) // mountPath=/tmp/path/to/target/file if /dev/sda mounted on /tmp
-	return fPath, mountPath, nil
+	return fPath, nil
+}
+
+func UnmountAll() {
+
+	Debug("UnmountAll: %d devices need to be unmounted", len(mountCache.m))
+	for key, mountCacheData := range mountCache.m {
+		cachedMountPath := mountCacheData.mountPath
+		Debug("UnmountAll: Unmounting %s", cachedMountPath)
+		if e := mount.Unmount(cachedMountPath, true, false); e != nil {
+			log.Printf("Unmount failed for %s. PANIC", cachedMountPath)
+			panic(e)
+		}
+		Debug("UnmountAll: Unmounted %s", cachedMountPath)
+		deleteEntryMountCache(key)
+		Debug("UnmountAll: Deleted key %s from cache", key)
+	}
 }
 
 /*

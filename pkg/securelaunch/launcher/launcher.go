@@ -69,13 +69,13 @@ func (l *Launcher) Boot(tpmDev io.ReadWriteCloser) error {
 	initrd := l.Params["initrd"]
 	cmdline := l.Params["cmdline"]
 
-	k, kMountPath, e := slaunch.GetMountedFilePath(kernel, mount.MS_RDONLY)
+	k, e := slaunch.GetMountedFilePath(kernel, mount.MS_RDONLY)
 	if e != nil {
 		log.Printf("launcher: ERR: kernel input %s couldnt be located, err=%v", kernel, e)
 		return e
 	}
 
-	i, iMountPath, e := slaunch.GetMountedFilePath(initrd, mount.MS_RDONLY)
+	i, e := slaunch.GetMountedFilePath(initrd, mount.MS_RDONLY)
 	if e != nil {
 		log.Printf("launcher: ERR: initrd input %s couldnt be located, err=%v", initrd, e)
 		return e
@@ -90,24 +90,13 @@ func (l *Launcher) Boot(tpmDev io.ReadWriteCloser) error {
 	err := image.Load(false)
 	if err != nil {
 		log.Printf("kexec -l failed. err: %v", err)
-		goto ERR
+		return err
 	}
 
 	err = kexec.Reboot()
 	if err != nil {
 		log.Printf("kexec reboot failed. err=%v", err)
-		goto ERR
+		return err
 	}
 	return nil
-ERR:
-	// On error, unmount the filepaths holding kernel and initrd files.
-	if e := mount.Unmount(kMountPath, true, false); e != nil {
-		log.Printf("Unmount failed. PANIC")
-		panic(e)
-	}
-	if e := mount.Unmount(iMountPath, true, false); e != nil {
-		log.Printf("Unmount failed. PANIC")
-		panic(e)
-	}
-	return err
 }
