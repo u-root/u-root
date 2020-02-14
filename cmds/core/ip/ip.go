@@ -284,6 +284,22 @@ func routeadd() error {
 	}
 }
 
+func routedel() error {
+	// TODO: filters ? read more to figure out "table", "dev", "protocol"
+
+	// TODO: check if it is a valid route ?
+	// or simply let it fail by LBYL.
+
+	rn := arg[cursor]
+	if len(rn) <= 0 {
+		return usage()
+	}
+	if err := netlink.RouteDel(rn); err != nil {
+		return fmt.Errorf("error deleting route %s: %s", rn, err)
+	}
+	return nil
+}
+
 func route() error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
@@ -296,6 +312,8 @@ func route() error {
 		return routeshow()
 	case "add":
 		return routeadd()
+	case "del":
+		return routedel()
 	}
 	return usage()
 }
