@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,6 +14,11 @@ import (
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
+
+type fileModeTrans struct {
+	before os.FileMode
+	after  os.FileMode
+}
 
 func run(c *exec.Cmd) (string, string, error) {
 	var o, e bytes.Buffer
@@ -37,30 +41,59 @@ func TestChmodSimple(t *testing.T) {
 	}
 	defer f.Close()
 
-	for _, perm := range []os.FileMode{0777, 0644} {
+	for k, v := range map[string]fileModeTrans{
+		"0777":       {before: 0000, after: 0777},
+		"0644":       {before: 0777, after: 0644},
+		"u-rwx":      {before: 0777, after: 0077},
+		"g-rx":       {before: 0777, after: 0727},
+		"a-xr":       {before: 0222, after: 0222},
+		"a-xw":       {before: 0666, after: 0444},
+		"u-xw":       {before: 0666, after: 0466},
+		"a=":         {before: 0777, after: 0000},
+		"u=":         {before: 0777, after: 0077},
+		"u-":         {before: 0777, after: 0777},
+		"o+":         {before: 0700, after: 0700},
+		"g=rx":       {before: 0777, after: 0757},
+		"u=rx":       {before: 0077, after: 0577},
+		"o=rx":       {before: 0077, after: 0075},
+		"u=xw":       {before: 0742, after: 0342},
+		"a-rwx":      {before: 0777, after: 0000},
+		"a-rx":       {before: 0777, after: 0222},
+		"a-x":        {before: 0777, after: 0666},
+		"o+rwx":      {before: 0000, after: 0007},
+		"a+rwx":      {before: 0000, after: 0777},
+		"a+xrw":      {before: 0000, after: 0777},
+		"a+xxxxxxxx": {before: 0000, after: 0111},
+		"o+xxxxx":    {before: 0000, after: 0001},
+		"a+rx":       {before: 0000, after: 0555},
+		"a+r":        {before: 0111, after: 0555},
+		"a=rwx":      {before: 0000, after: 0777},
+		"a=rx":       {before: 0000, after: 0555}} {
+		// Set up the 'before' state
+		err := os.Chmod(f.Name(), v.before)
+		if err != nil {
+			t.Fatalf("chmod(%q) failed: %v", f.Name(), err)
+		}
+
 		// Set permissions using chmod.
-		c := testutil.Command(t, fmt.Sprintf("%0o", perm), f.Name())
-		c.Run()
+		c := testutil.Command(t, k, f.Name())
+		err = c.Run()
+		if err != nil {
+			t.Fatalf("setting permissions failed: %v", err)
+		}
 
 		// Check that it worked.
-		info, err := os.Stat(f.Name())
-		if err != nil {
-			t.Fatalf("stat(%q) failed: %v", f.Name(), err)
-		}
-		if got := info.Mode().Perm(); got != perm {
-			t.Errorf("Wrong file permissions on %q: got %0o, want %0o", f.Name(), got, perm)
-		}
+		checkPath(t, f.Name(), k, v)
 	}
 }
 
-func checkPath(t *testing.T, path string, want os.FileMode) {
+func checkPath(t *testing.T, path string, instruction string, v fileModeTrans) {
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("stat(%q) failed: %v", path, err)
 	}
-	if got := info.Mode().Perm(); got != want {
-		t.Fatalf("Wrong file permissions on file %q: got %0o, want %0o",
-			path, got, want)
+	if got := info.Mode().Perm(); got != v.after {
+		t.Errorf("Wrong file permissions on %q: executed %s, before %0o, got %0o, want %0o", path, instruction, v.before, got, v.after)
 	}
 }
 
@@ -92,18 +125,34 @@ func TestChmodRecursive(t *testing.T) {
 		targetDirectories = append(targetDirectories, dir)
 	}
 
-	// Build chmod binary.
-	for _, perm := range []os.FileMode{0707, 0770} {
-		// Set target file permissions using chmod.
-		c := testutil.Command(t,
-			"-R",
-			fmt.Sprintf("%0o", perm),
-			tempDir)
-		c.Run()
+	for k, v := range map[string]fileModeTrans{
+		"0707":      {before: 0755, after: 0707},
+		"0770":      {before: 0755, after: 0770},
+		"o-rwx":     {before: 0777, after: 0770},
+		"g-rx":      {before: 0777, after: 0727},
+		"a=rrrrrwx": {before: 0777, after: 0777},
+		"a+w":       {before: 0700, after: 0722},
+		"g+xr":      {before: 0700, after: 0750},
+		"a=rx":      {before: 0777, after: 0555}} {
+
+		// Set up the 'before' state
+		for _, dir := range targetDirectories {
+			err := os.Chmod(dir, v.before)
+			if err != nil {
+				t.Fatalf("chmod(%q) failed: %v", dir, err)
+			}
+		}
+
+		// Set permissions using chmod.
+		c := testutil.Command(t, "-R", k, tempDir)
+		err = c.Run()
+		if err != nil {
+			t.Fatalf("setting permissions failed: %v", err)
+		}
 
 		// Check that it worked.
 		for _, dir := range targetDirectories {
-			checkPath(t, dir, perm)
+			checkPath(t, dir, k, v)
 		}
 	}
 }
@@ -129,14 +178,20 @@ func TestChmodReference(t *testing.T) {
 	defer targetFile.Close()
 
 	for _, perm := range []os.FileMode{0777, 0644} {
-		os.Chmod(sourceFile.Name(), perm)
+		err = os.Chmod(sourceFile.Name(), perm)
+		if err != nil {
+			t.Fatalf("chmod(%q) failed: %v", sourceFile.Name(), err)
+		}
 
 		// Set target file permissions using chmod.
 		c := testutil.Command(t,
 			"--reference",
 			sourceFile.Name(),
 			targetFile.Name())
-		c.Run()
+		err = c.Run()
+		if err != nil {
+			t.Fatalf("setting permissions failed: %v", err)
+		}
 
 		// Check that it worked.
 		info, err := os.Stat(targetFile.Name())
@@ -190,13 +245,37 @@ func TestInvocationErrors(t *testing.T) {
 		},
 		{
 			args:     []string{"0abas", f.Name()},
-			want:     "Unable to decode mode \"0abas\". Please use an octal value: strconv.ParseUint: parsing \"0abas\": invalid syntax\n",
+			want:     "Unable to decode mode \"0abas\". Please use an octal value or a valid mode string.\n",
 			skipTo:   20,
 			skipFrom: -1,
 		},
 		{
 			args:     []string{"0777", "blah1234"},
 			want:     "chmod blah1234: no such file or directory\n",
+			skipTo:   20,
+			skipFrom: -1,
+		},
+		{
+			args:     []string{"a=9rwx", f.Name()},
+			want:     "Unable to decode mode \"a=9rwx\". Please use an octal value or a valid mode string.\n",
+			skipTo:   20,
+			skipFrom: -1,
+		},
+		{
+			args:     []string{"+r", f.Name()},
+			want:     "Unable to decode mode \"+r\". Please use an octal value or a valid mode string.\n",
+			skipTo:   20,
+			skipFrom: -1,
+		},
+		{
+			args:     []string{"a%rwx", f.Name()},
+			want:     "Unable to decode mode \"a%rwx\". Please use an octal value or a valid mode string.\n",
+			skipTo:   20,
+			skipFrom: -1,
+		},
+		{
+			args:     []string{"b=rwx", f.Name()},
+			want:     "Unable to decode mode \"b=rwx\". Please use an octal value or a valid mode string.\n",
 			skipTo:   20,
 			skipFrom: -1,
 		},
