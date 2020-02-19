@@ -15,6 +15,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
@@ -97,6 +98,21 @@ func (s *dserver4) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHC
 		log.Printf("Could not create reply for %v: %v", m, err)
 		return
 	}
+
+	// Experimentally determined. You can't just blindly send a broadcast packet
+	// with the broadcast address. You can, however, send a broadcast packet
+	// to a subnet for an interface. That actually makes some sense.
+	// This fixes the observed problem that OSX just swallows these
+	// packets if the peer is 255.255.255.255.
+	// I chose this way of doing it instead of files with build constraints
+	// because this is not that expensive and it's just a tiny bit easier to
+	// follow IMHO.
+	if runtime.GOOS == "darwin" {
+		p := &net.UDPAddr{IP: s.yourIP.Mask(s.submask), Port: 68}
+		log.Printf("Changing %v to %v", peer, p)
+		peer = p
+	}
+
 	log.Printf("Sending %v to %v", reply.Summary(), peer)
 	if _, err := conn.WriteTo(reply.ToBytes(), peer); err != nil {
 		log.Printf("Could not write %v: %v", reply, err)
