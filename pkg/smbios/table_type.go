@@ -63,21 +63,21 @@ func (t TableType) String() string {
 func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 	switch t.Type {
 	case TableTypeBIOSInformation: // 0
-		return NewBIOSInformation(t)
+		return ParseBIOSInformation(t)
 	case TableTypeSystemInformation: // 1
-		return NewSystemInformation(t)
+		return ParseSystemInformation(t)
 	case TableTypeBaseboardInformation: // 2
-		return NewBaseboardInformation(t)
+		return ParseBaseboardInformation(t)
 	case TableTypeChassisInformation: // 3
-		return NewChassisInformation(t)
+		return ParseChassisInformation(t)
 	case TableTypeProcessorInformation: // 4
-		return NewProcessorInformation(t)
+		return ParseProcessorInformation(t)
 	case TableTypeCacheInformation: // 7
-		return NewCacheInformation(t)
+		return ParseCacheInformation(t)
 	case TableTypeMemoryDevice: // 17
 		return NewMemoryDevice(t)
 	case TableTypeIPMIDeviceInformation: // 38
-		return NewIPMIDeviceInformation(t)
+		return ParseIPMIDeviceInformation(t)
 	case TableTypeTPMDevice: // 43
 		return NewTPMDevice(t)
 	case TableTypeInactive: // 126

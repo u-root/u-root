@@ -43,8 +43,8 @@ type ProcessorInformation struct {
 	ThreadCount2      uint16                   // 2Eh
 }
 
-// NewProcessorInformation parses a generic Table into ProcessorInformation.
-func NewProcessorInformation(t *Table) (*ProcessorInformation, error) {
+// ParseProcessorInformation parses a generic Table into ProcessorInformation.
+func ParseProcessorInformation(t *Table) (*ProcessorInformation, error) {
 	if t.Type != TableTypeProcessorInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}

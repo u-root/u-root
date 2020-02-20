@@ -26,8 +26,8 @@ type SystemInformation struct {
 	Family       string     // 1Ah
 }
 
-// NewSystemInformation parses a generic Table into SystemInformation.
-func NewSystemInformation(t *Table) (*SystemInformation, error) {
+// ParseSystemInformation parses a generic Table into SystemInformation.
+func ParseSystemInformation(t *Table) (*SystemInformation, error) {
 	if t.Type != TableTypeSystemInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}

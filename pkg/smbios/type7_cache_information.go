@@ -29,8 +29,8 @@ type CacheInformation struct {
 	InstalledSize2      uint32                   // 17h
 }
 
-// NewCacheInformation parses a generic Table into CacheInformation.
-func NewCacheInformation(t *Table) (*CacheInformation, error) {
+// ParseCacheInformation parses a generic Table into CacheInformation.
+func ParseCacheInformation(t *Table) (*CacheInformation, error) {
 	if t.Type != TableTypeCacheInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}

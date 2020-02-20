@@ -30,8 +30,8 @@ type BIOSInformation struct {
 	ExtendedROMSize                        uint16                  // 18h
 }
 
-// NewBIOSInformation parses a generic Table into BIOSInformation.
-func NewBIOSInformation(t *Table) (*BIOSInformation, error) {
+// ParseBIOSInformation parses a generic Table into BIOSInformation.
+func ParseBIOSInformation(t *Table) (*BIOSInformation, error) {
 	if t.Type != TableTypeBIOSInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
