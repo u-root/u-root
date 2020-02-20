@@ -42,8 +42,8 @@ type ChassisContainedElement struct {
 	Max  uint8              // 02h
 }
 
-// NewChassisInformation parses a generic Table into ChassisInformation.
-func NewChassisInformation(t *Table) (*ChassisInformation, error) {
+// ParseChassisInformation parses a generic Table into ChassisInformation.
+func ParseChassisInformation(t *Table) (*ChassisInformation, error) {
 	if t.Type != TableTypeChassisInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}

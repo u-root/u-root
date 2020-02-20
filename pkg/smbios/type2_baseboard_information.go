@@ -28,8 +28,8 @@ type BaseboardInformation struct {
 	ContainedObjectHandles         []uint16      `smbios:"-"` // 0Fh
 }
 
-// NewBaseboardInformation parses a generic Table into BaseboardInformation.
-func NewBaseboardInformation(t *Table) (*BaseboardInformation, error) {
+// ParseBaseboardInformation parses a generic Table into BaseboardInformation.
+func ParseBaseboardInformation(t *Table) (*BaseboardInformation, error) {
 	if t.Type != TableTypeBaseboardInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}

@@ -24,8 +24,8 @@ type IPMIDeviceInformation struct {
 	InterruptNumber                  uint8            // 11h
 }
 
-// NewIPMIDeviceInformation parses a generic Table into IPMIDeviceInformation.
-func NewIPMIDeviceInformation(t *Table) (*IPMIDeviceInformation, error) {
+// ParseIPMIDeviceInformation parses a generic Table into IPMIDeviceInformation.
+func ParseIPMIDeviceInformation(t *Table) (*IPMIDeviceInformation, error) {
 	if t.Type != TableTypeIPMIDeviceInformation {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}

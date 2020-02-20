@@ -87,7 +87,7 @@ func (i *Info) GetBIOSInformation() (*BIOSInformation, error) {
 		return nil, ErrTableNotFound
 	}
 	// There can only be one of these.
-	return NewBIOSInformation(bt[0])
+	return ParseBIOSInformation(bt[0])
 }
 
 // GetSystemInformation returns the System Information (type 1) table, if present.
@@ -97,14 +97,14 @@ func (i *Info) GetSystemInformation() (*SystemInformation, error) {
 		return nil, ErrTableNotFound
 	}
 	// There can only be one of these.
-	return NewSystemInformation(bt[0])
+	return ParseSystemInformation(bt[0])
 }
 
 // GetBaseboardInformation returns all the Baseboard Information (type 2) tables present.
 func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
 	var res []*BaseboardInformation
 	for _, t := range i.GetTablesByType(TableTypeBaseboardInformation) {
-		bi, err := NewBaseboardInformation(t)
+		bi, err := ParseBaseboardInformation(t)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +117,7 @@ func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
 func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
 	var res []*ChassisInformation
 	for _, t := range i.GetTablesByType(TableTypeChassisInformation) {
-		ci, err := NewChassisInformation(t)
+		ci, err := ParseChassisInformation(t)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
 func (i *Info) GetProcessorInformation() ([]*ProcessorInformation, error) {
 	var res []*ProcessorInformation
 	for _, t := range i.GetTablesByType(TableTypeProcessorInformation) {
-		pi, err := NewProcessorInformation(t)
+		pi, err := ParseProcessorInformation(t)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +143,7 @@ func (i *Info) GetProcessorInformation() ([]*ProcessorInformation, error) {
 func (i *Info) GetCacheInformation() ([]*CacheInformation, error) {
 	var res []*CacheInformation
 	for _, t := range i.GetTablesByType(TableTypeCacheInformation) {
-		ci, err := NewCacheInformation(t)
+		ci, err := ParseCacheInformation(t)
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +169,7 @@ func (i *Info) GetMemoryDevices() ([]*MemoryDevice, error) {
 func (i *Info) GetIPMIDeviceInformation() ([]*IPMIDeviceInformation, error) {
 	var res []*IPMIDeviceInformation
 	for _, t := range i.GetTablesByType(TableTypeIPMIDeviceInformation) {
-		d, err := NewIPMIDeviceInformation(t)
+		d, err := ParseIPMIDeviceInformation(t)
 		if err != nil {
 			return nil, err
 		}
