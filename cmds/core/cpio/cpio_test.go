@@ -95,14 +95,14 @@ func TestCpio(t *testing.T) {
 
 	// Cpio can't read from a non-seekable input (e.g. a pipe) in input mode.
 	// Write the archive to a file instead.
-	archiveFile, err := os.Create("archive.cpio")
+	archiveFile, err := ioutil.TempFile("", "archive.cpio")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove(archiveFile.Name())
 	defer archiveFile.Close()
 
-	_, err = archiveFile.Write(archive)
-	if err != nil {
+	if _, err := archiveFile.Write(archive); err != nil {
 		t.Fatal(err)
 	}
 
