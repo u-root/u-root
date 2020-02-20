@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package smbios parses SMBIOS tables into Go structures.
+//
+// smbios can read tables from binary data or from sysfs using the FromSysfs
+// and ParseInfo functions.
 package smbios
 
 import (
