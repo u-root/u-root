@@ -16,7 +16,7 @@ yourself.
 | ping           | -a              |                        |
 | :x: printf     |                 | Not implemented yet!   |
 | ps             |                 | Fix race conditions    |
-| readlink       | -emn            |                        |
+| readlink       | -em             |                        |
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |
 | sync           | -df             |                        |
