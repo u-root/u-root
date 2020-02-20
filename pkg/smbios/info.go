@@ -15,6 +15,11 @@ type Info struct {
 	Tables  []*Table
 }
 
+// String returns a summary of the SMBIOS version and number of tables.
+func (i *Info) String() string {
+	return fmt.Sprintf("SMBIOS %d.%d.%d (%d tables)", i.MajorVersion(), i.MinorVersion(), i.DocRev(), len(i.Tables))
+}
+
 // ParseInfo parses SMBIOS information from binary data.
 func ParseInfo(entryData, tableData []byte) (*Info, error) {
 	info := &Info{}
