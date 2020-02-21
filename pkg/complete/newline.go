@@ -132,6 +132,13 @@ func (l *NewerLineReader) ReadChar(b byte) (err error) {
 			l.Exact = x
 			return nil
 		}
+		// see if there is enough for a common prefix.
+		if x == "" {
+			p := Prefix(cmpl)
+			if p != "" {
+				l.Line = l.Line[:bl+1] + p
+			}
+		}
 	}
 	return nil
 }
