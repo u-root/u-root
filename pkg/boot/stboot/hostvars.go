@@ -14,14 +14,19 @@ import (
 
 // HostVars contains contains platform-specific data
 type HostVars struct {
+	//IP configuration. If empty DHCP will be used.
 	HostIP         string `json:"host_ip"`
 	HostNetmask    string `json:"netmask"`
 	DefaultGateway string `json:"gateway"`
 	DNSServer      string `json:"dns"`
-
+	// BootstrapURL is used to download the bootball
 	BootstrapURL string `json:"bootstrap_url"`
-
+	// MinimalSignaturesMatch is the min number of signatures that must pass validation.
 	MinimalSignaturesMatch int `json:"minimal_signatures_match"`
+	// Fingerprints are used to validate the root certificate insinde the bootball.
+	Fingerprints []string `json:"fingerprints"`
+	// Timestamp is the UNIX build time of the bootloader
+	Timestamp int `json:"build_timestamp"`
 }
 
 // FindHostVarsInInitramfs looks for netvars.json at a given path inside
@@ -42,54 +47,3 @@ func FindHostVarsInInitramfs() (HostVars, error) {
 	}
 	return vars, nil
 }
-
-// FindHostVarsOnPartition mounts all possible devices with every possible
-// // file system and looks for hostvars.json at root of partition
-// func FindHostVarsOnPartition() (HostVars, error) {
-// 	var vars HostVars
-// 	devices, err := storage.GetBlockStats()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	filesystems, err := storage.GetSupportedFilesystems()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	var mounted []storage.Mountpoint
-
-// 	mounted = make([]storage.Mountpoint, 0)
-// 	for _, dev := range devices {
-// 		devname := path.Join("/dev", dev.Name)
-// 		mountpath := path.Join("/mnt", dev.Name)
-// 		if mountpoint, err := storage.Mount(devname, mountpath, filesystems); err != nil {
-// 			fmt.Printf("Failed to mount %s on %s: %v", devname, mountpath, err)
-// 		} else {
-// 			mounted = append(mounted, *mountpoint)
-// 		}
-// 	}
-// 	defer func() {
-// 		// clean up
-// 		for _, mountpoint := range mounted {
-// 			syscall.Unmount(mountpoint.Path, syscall.MNT_DETACH)
-// 		}
-// 	}()
-
-// 	var data []byte
-// 	var file string
-// 	for _, mountpoint := range mounted {
-// 		file = path.Join(mountpoint.Path, HostVarsName)
-// 		log.Printf("Trying to read %s", file)
-// 		data, err = ioutil.ReadFile(file)
-// 		if err == nil {
-// 			break
-// 		}
-// 		log.Printf("cannot open %s: %v", file, err)
-// 	}
-
-// 	if err = json.Unmarshal(data, &vars); err != nil {
-// 		return vars, fmt.Errorf("unable to parse %s: %v", file, err)
-// 	}
-
-// 	return vars, nil
-// }

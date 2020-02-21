@@ -11,7 +11,6 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"path"
@@ -72,27 +71,38 @@ func main() {
 	if err != nil {
 		reboot("Cant find Netvars at all: %v", err)
 	}
-
 	if *doDebug {
 		str, _ := json.MarshalIndent(vars, "", "  ")
 		log.Printf("Host variables: %s", str)
 	}
 
+	//////////
+	// Network
+	//////////
 	if vars.HostIP != "" {
 		err = configureStaticNetwork(vars)
 	} else {
 		err = configureDHCPNetwork()
 	}
-
 	if err != nil {
 		reboot("Can not set up IO: %v", err)
 	}
 
-	err = validateSystemTime()
+	////////////////////
+	// Time validatition
+	////////////////////
+	if vars.Timestamp == 0 && *doDebug {
+		log.Printf("WARNING: No timestamp found in hostvars")
+	}
+	buildTime := time.Unix(int64(vars.Timestamp), 0)
+	err = validateSystemTime(buildTime)
 	if err != nil {
 		reboot("%v", err)
 	}
 
+	////////////////////
+	// Download bootball
+	////////////////////
 	ballPath := path.Join("root/", stboot.BallName)
 	url, err := url.Parse(vars.BootstrapURL)
 	if err != nil {
@@ -109,22 +119,26 @@ func main() {
 		reboot("Cannot open bootball: %v", err)
 	}
 
-	fp, err := ioutil.ReadFile(rootCertFingerprintPath)
-	if err != nil {
-		reboot("Cannot read fingerprint: %v", err)
+	////////////////////////////////////////////////
+	// Validate bootball's signing root certificates
+	////////////////////////////////////////////////
+	if len(vars.Fingerprints) == 0 {
+		reboot("No root certificate fingerprints found in hostvars")
 	}
 
 	if *doDebug {
 		log.Print("Fingerprint of boot ball's root certificate:")
-		log.Print(string(fp))
+		log.Print(vars.Fingerprints[1])
 	}
-	if !matchFingerprint(ball.RootCertPEM, string(fp)) {
+	if !matchFingerprint(ball.RootCertPEM, vars.Fingerprints) {
 		reboot("Root certificate of boot ball does not match expacted fingerprint %v", err)
 	}
 
-	// Just choose the first Bootconfig for now
+	////////////////////////////
+	// Verify boot configuration
+	////////////////////////////
 	log.Printf("Pick the first boot configuration")
-	var index = 0
+	var index = 0 // Just choose the first Bootconfig for now
 	bc, err := ball.GetBootConfigByIndex(index)
 	if err != nil {
 		reboot("Cannot get boot configuration %d: %v", index, err)
@@ -154,7 +168,9 @@ func main() {
 		debug("Dryrun mode: will not boot")
 		return
 	}
-
+	//////////
+	// Boot OS
+	//////////
 	log.Println("Starting up new kernel.")
 
 	if err := bc.Boot(); err != nil {
@@ -166,15 +182,19 @@ func main() {
 
 // matchFingerprint returns true if fingerprintHex matches the SHA256
 // hash calculated from pem decoded certPEM.
-func matchFingerprint(certPEM []byte, fingerprintHex string) bool {
+func matchFingerprint(certPEM []byte, fingerprintHexValues []string) bool {
 	block, _ := pem.Decode(certPEM)
 	fp := sha256.Sum256(block.Bytes)
 	str := hex.EncodeToString(fp[:])
 	str = strings.TrimSpace(str)
 
-	fingerprintHex = strings.TrimSpace(fingerprintHex)
-
-	return str == fingerprintHex
+	for _, f := range fingerprintHexValues {
+		f = strings.TrimSpace(f)
+		if str == f {
+			return true
+		}
+	}
+	return false
 }
 
 //reboot trys to reboot the system in an infinity loop

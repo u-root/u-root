@@ -7,10 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/beevik/ntp"
@@ -38,20 +35,7 @@ func pollNTP() time.Time {
 
 // validateSystemTime sets RTC and OS time according to
 // realtime clock, timestamp and ntp
-func validateSystemTime() error {
-	data, err := ioutil.ReadFile(timestampPath)
-	if err != nil {
-		return err
-	}
-	unixTime, err := strconv.Atoi(strings.Trim(string(data), "\n"))
-	if err != nil {
-		return err
-	}
-	stampTime := time.Unix(int64(unixTime), 0)
-	if err != nil {
-		return err
-	}
-
+func validateSystemTime(builtTime time.Time) error {
 	rtc, err := rtc.OpenRTC()
 	if err != nil {
 		return fmt.Errorf("opening RTC failed: %v", err)
@@ -62,11 +46,11 @@ func validateSystemTime() error {
 	}
 
 	log.Printf("Systemtime: %v", rtcTime.UTC())
-	if rtcTime.UTC().Before(stampTime.UTC()) {
+	if rtcTime.UTC().Before(builtTime.UTC()) {
 		log.Printf("Systemtime is invalid: %v", rtcTime.UTC())
 		log.Printf("Receive time via NTP from %s", ntpTimePool)
 		ntpTime := pollNTP()
-		if ntpTime.UTC().Before(stampTime.UTC()) {
+		if ntpTime.UTC().Before(builtTime.UTC()) {
 			return errors.New("NTP spoof may happened")
 		}
 		log.Printf("Update RTC to %v", ntpTime.UTC())
