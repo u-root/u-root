@@ -1,0 +1,1 @@
+To update the contents of /docs (which goes to github pages), cd to /website and run build.sh.
