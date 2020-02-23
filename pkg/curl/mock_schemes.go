@@ -23,6 +23,12 @@ type MockScheme struct {
 	// numCalled is a map of URL string -> number of times Fetch has been
 	// called on that URL.
 	numCalled map[string]uint
+
+	// nextErr is the error to return for the next nextErrCount calls to
+	// Fetch. Note this introduces state into the MockScheme which is only
+	// okay in this scenario because MockScheme is only used for testing.
+	nextErr      error
+	nextErrCount int
 }
 
 // NewMockScheme creates a new MockScheme with the given scheme name.
@@ -42,6 +48,12 @@ func (m *MockScheme) Add(host string, p string, content string) {
 	}
 
 	m.hosts[host][path.Clean(p)] = content
+}
+
+// SetErr sets the error which is returned on the next count calls to Fetch.
+func (m *MockScheme) SetErr(err error, count int) {
+	m.nextErr = err
+	m.nextErrCount = count
 }
 
 // NumCalled returns how many times a url has been looked up.
@@ -71,6 +83,11 @@ func (m *MockScheme) Fetch(u *url.URL) (io.ReaderAt, error) {
 		return nil, ErrWrongScheme
 	}
 
+	if m.nextErrCount > 0 {
+		m.nextErrCount--
+		return nil, m.nextErr
+	}
+
 	files, ok := m.hosts[u.Host]
 	if !ok {
 		return nil, ErrNoSuchHost
@@ -81,4 +98,31 @@ func (m *MockScheme) Fetch(u *url.URL) (io.ReaderAt, error) {
 		return nil, ErrNoSuchFile
 	}
 	return strings.NewReader(content), nil
+}
+
+// MockSchemeRetryFilter is a Scheme mock for testing and has a method to
+// implement FileSchemeRetryFilter.
+type MockSchemeRetryFilter struct {
+	*MockScheme
+
+	retryFilter func(*url.URL, error) bool
+}
+
+// NewMockSchemeRetryFilter creates a new MockSchemeRetryFilter with the given
+// scheme name.
+func NewMockSchemeRetryFilter(scheme string) *MockSchemeRetryFilter {
+	return &MockSchemeRetryFilter{NewMockScheme(scheme), nil}
+}
+
+// RetryFilter implements FileSchemeRetryFilter.
+func (m *MockSchemeRetryFilter) RetryFilter(u *url.URL, err error) bool {
+	if m.retryFilter == nil {
+		return true
+	}
+	return m.retryFilter(u, err)
+}
+
+// SetRetryFilter sets the function to be used by the RetryFilter method.
+func (m *MockSchemeRetryFilter) SetRetryFilter(f func(*url.URL, error) bool) {
+	m.retryFilter = f
 }
