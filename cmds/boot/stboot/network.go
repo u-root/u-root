@@ -194,7 +194,7 @@ func downloadFromHTTPS(url string, destination string) error {
 		log.Printf("%s : %d", entropyAvail, entr)
 	}
 	// get remote boot bundle
-	log.Print("Downloading bootball ...")
+	log.Printf("Downloading from %s", url)
 	resp, err := client.Get(url)
 	if err != nil {
 		return err

@@ -29,10 +29,10 @@ var (
 )
 
 const (
-	rootCACertPath          = "/root/LetsEncrypt_Authority_X3.pem"
-	rootCertFingerprintPath = "root/signing_rootcert.fingerprint"
-	entropyAvail            = "/proc/sys/kernel/random/entropy_avail"
-	interfaceUpTimeout      = 6 * time.Second
+	bootstrapURLFile   = "bootstrapURL.json"
+	rootCACertPath     = "/root/LetsEncrypt_Authority_X3.pem"
+	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
+	interfaceUpTimeout = 6 * time.Second
 )
 
 var banner = `
@@ -69,12 +69,14 @@ func main() {
 
 	vars, err := stboot.FindHostVarsInInitramfs()
 	if err != nil {
-		reboot("Cant find Netvars at all: %v", err)
+		reboot("Cannot find netvars: %v", err)
 	}
 	if *doDebug {
 		str, _ := json.MarshalIndent(vars, "", "  ")
 		log.Printf("Host variables: %s", str)
 	}
+
+	var data initramfsData
 
 	//////////
 	// Network
@@ -85,7 +87,7 @@ func main() {
 		err = configureDHCPNetwork()
 	}
 	if err != nil {
-		reboot("Can not set up IO: %v", err)
+		reboot("Cannot set up IO: %v", err)
 	}
 
 	////////////////////
@@ -104,14 +106,29 @@ func main() {
 	// Download bootball
 	////////////////////
 	ballPath := path.Join("root/", stboot.BallName)
-	url, err := url.Parse(vars.BootstrapURL)
+
+	bytes, err := data.get(bootstrapURLFile)
 	if err != nil {
-		reboot("Invalid bootstrap URL: %v", err)
+		reboot("Bootstrap URLs: %v", err)
 	}
-	url.Path = path.Join(url.Path, stboot.BallName)
-	err = downloadFromHTTPS(url.String(), ballPath)
-	if err != nil {
-		reboot("Downloading bootball failed: %v", err)
+	var urlStrings []string
+	if err = json.Unmarshal(bytes, &urlStrings); err != nil {
+		reboot("Bootstrap URLs: %v", err)
+	}
+
+	for _, rawurl := range urlStrings {
+		url, uerr := url.Parse(rawurl)
+		if uerr != nil {
+			debug("%v", uerr)
+			continue
+		}
+
+		url.Path = path.Join(url.Path, stboot.BallName)
+		uerr = downloadFromHTTPS(url.String(), ballPath)
+		if uerr == nil {
+			break
+		}
+		log.Printf("Download failed: %v", uerr)
 	}
 
 	ball, err := stboot.BootBallFromArchive(ballPath)

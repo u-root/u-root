@@ -4,7 +4,10 @@
 
 package main
 
-import "io/ioutil"
+import (
+	"io/ioutil"
+	"path/filepath"
+)
 
 type data interface {
 	get(filename string) ([]byte, error)
@@ -13,5 +16,6 @@ type data interface {
 type initramfsData struct{}
 
 func (*initramfsData) get(filename string) ([]byte, error) {
-	return ioutil.ReadFile(filename)
+	f := filepath.Join("/root", filename)
+	return ioutil.ReadFile(f)
 }
