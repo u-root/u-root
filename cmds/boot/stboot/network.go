@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -154,8 +153,8 @@ func findNetworkInterfaces() ([]netlink.Link, error) {
 }
 
 func downloadFromHTTPS(url string, destination string) error {
-	roots := x509.NewCertPool()
-	if err := loadHTTPSCertificate(roots); err != nil {
+	roots, err := loadHTTPSCertificates()
+	if err != nil {
 		return fmt.Errorf("Failed to load root certificate: %v", err)
 	}
 
@@ -188,7 +187,6 @@ func downloadFromHTTPS(url string, destination string) error {
 	if err != nil {
 		return fmt.Errorf("Cannot evaluate entropy, %v", err)
 	}
-	log.Printf("Available kernel entropy: %d", entr)
 	if entr < 128 {
 		log.Print("WARNING: low entropy!")
 		log.Printf("%s : %d", entropyAvail, entr)
@@ -219,19 +217,16 @@ func downloadFromHTTPS(url string, destination string) error {
 
 // loadHTTPSCertificate loads the certificate needed
 // for HTTPS and verifies it.
-func loadHTTPSCertificate(roots *x509.CertPool) error {
-	log.Printf("Load %s as CA certificate", rootCACertPath)
-	rootCertBytes, err := ioutil.ReadFile(rootCACertPath)
+func loadHTTPSCertificates() (*x509.CertPool, error) {
+	roots := x509.NewCertPool()
+	data := initramfsData{}
+	bytes, err := data.get(httpsRootsFile)
 	if err != nil {
-		return err
+		return roots, err
 	}
-	rootCertPem, _ := pem.Decode(rootCertBytes)
-	if rootCertPem.Type != "CERTIFICATE" {
-		return fmt.Errorf("Failed decoding certificate: Certificate is of the wrong type. PEM Type is: %s", rootCertPem.Type)
-	}
-	ok := roots.AppendCertsFromPEM([]byte(rootCertBytes))
+	ok := roots.AppendCertsFromPEM(bytes)
 	if !ok {
-		return fmt.Errorf("Error parsing CA root certificate")
+		return roots, fmt.Errorf("Error parsing %s", httpsRootsFile)
 	}
-	return nil
+	return roots, nil
 }

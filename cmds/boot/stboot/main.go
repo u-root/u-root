@@ -30,7 +30,7 @@ var (
 
 const (
 	bootstrapURLFile   = "bootstrapURL.json"
-	rootCACertPath     = "/root/LetsEncrypt_Authority_X3.pem"
+	httpsRootsFile     = "HTTPSroots.pem"
 	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
 	interfaceUpTimeout = 6 * time.Second
 )
