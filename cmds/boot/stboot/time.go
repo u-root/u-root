@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,23 +15,28 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
-const (
-	timestampPath string = "/etc/timestamp"
-	ntpTimePool   string = "0.beevik-ntp.pool.ntp.org"
-)
-
 // pollNTP queries the specified NTP server.
 // On error the query is repeated infinitally.
-func pollNTP() time.Time {
-	for {
-		log.Printf("Query NTP server %s", ntpTimePool)
-		t, err := ntp.Time(ntpTimePool)
+func pollNTP() (time.Time, error) {
+	data := initramfsData{}
+	bytes, err := data.get(ntpServerFile)
+	if err != nil {
+		reboot("Bootstrap URLs: %v", err)
+	}
+	var servers []string
+	if err = json.Unmarshal(bytes, &servers); err != nil {
+		return time.Time{}, err
+	}
+	for _, server := range servers {
+		log.Printf("Query NTP server %s", server)
+		t, err := ntp.Time(server)
 		if err == nil {
-			return t
+			return t, nil
 		}
 		log.Printf("NTP error: %v", err)
-		time.Sleep(3 * time.Second)
 	}
+	//time.Sleep(3 * time.Second)
+	return time.Time{}, errors.New("No NTP server resposnes")
 }
 
 // validateSystemTime sets RTC and OS time according to
@@ -48,8 +54,11 @@ func validateSystemTime(builtTime time.Time) error {
 	log.Printf("Systemtime: %v", rtcTime.UTC())
 	if rtcTime.UTC().Before(builtTime.UTC()) {
 		log.Printf("Systemtime is invalid: %v", rtcTime.UTC())
-		log.Printf("Receive time via NTP from %s", ntpTimePool)
-		ntpTime := pollNTP()
+		log.Printf("Receive time via NTP")
+		ntpTime, err := pollNTP()
+		if err != nil {
+			return err
+		}
 		if ntpTime.UTC().Before(builtTime.UTC()) {
 			return errors.New("NTP spoof may happened")
 		}

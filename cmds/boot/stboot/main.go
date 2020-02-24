@@ -31,6 +31,7 @@ var (
 const (
 	bootstrapURLFile   = "bootstrapURL.json"
 	httpsRootsFile     = "HTTPSroots.pem"
+	ntpServerFile      = "NTPserver.json"
 	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
 	interfaceUpTimeout = 6 * time.Second
 )
