@@ -33,6 +33,8 @@ var defaultBootsequence = [][]string{
 // Product list for running IPMI OEM commands
 var productList = [2]string{"Tioga Pass", "Mono Lake"}
 
+var selRecorded bool
+
 func isMatched(productName string) bool {
 	for _, v := range productList {
 		if strings.HasPrefix(productName, v) {
@@ -98,6 +100,29 @@ func runIPMICommands() {
 
 }
 
+func sendBootSEL(sequence string) {
+	var bootErr ipmi.Event
+
+	i, err := ipmi.Open(0)
+	if err != nil {
+		log.Printf("Failed to open ipmi device to send SEL %v", err)
+		return
+	}
+	defer i.Close()
+
+	switch sequence {
+	case "fbnetboot":
+		bootErr.RecordID = 0x0000
+		bootErr.RecordType = ipmi.OEM_NTS_TYPE
+		bootErr.OEMNontsDefinedData = [13]uint8{}
+
+		if err := i.LogSystemEvent(&bootErr); err != nil {
+			log.Printf("SEL recorded: %s fail\n", sequence)
+		}
+	default:
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -130,6 +155,7 @@ func main() {
 		log.Printf("Trying boot entry %s: %s", entry.Name, string(entry.Config))
 		if err := entry.Booter.Boot(); err != nil {
 			log.Printf("Warning: failed to boot with configuration: %+v", entry)
+			sendBootSEL(entry.Booter.TypeName())
 		}
 		if !*doQuiet {
 			log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
@@ -153,8 +179,13 @@ func main() {
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
 					log.Printf("Error executing %v: %v", cmd, err)
+					if !selRecorded {
+						sendBootSEL(bootcmd[0])
+					}
 				}
 			}
+			selRecorded = true
+
 			if !*doQuiet {
 				log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 			}
