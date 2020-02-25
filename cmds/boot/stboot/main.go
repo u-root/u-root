@@ -68,7 +68,7 @@ func main() {
 	}
 	log.Print(banner)
 
-	vars, err := stboot.FindHostVarsInInitramfs()
+	vars, err := stboot.FindHostVars()
 	if err != nil {
 		reboot("Cannot find netvars: %v", err)
 	}

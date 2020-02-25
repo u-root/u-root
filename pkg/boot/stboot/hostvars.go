@@ -29,10 +29,9 @@ type HostVars struct {
 	Timestamp int `json:"build_timestamp"`
 }
 
-// FindHostVarsInInitramfs looks for netvars.json at a given path inside
-// the initramfs file system. The hostvars.json is
-// expected to be in /etc.
-func FindHostVarsInInitramfs() (HostVars, error) {
+// FindHostVars parses hostvars.json file.
+// It is expected to be in /etc.
+func FindHostVars() (HostVars, error) {
 	var vars HostVars
 	file := path.Join("etc/", HostVarsName)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
