@@ -1,6 +1,6 @@
 site_name: u-root
 site_description: "u-root: A Go-based, Firmware Embeddable Root File System with On-demand Compilation"
-site_url: http://u-root.tk
+site_url: https://u-root.org
 site_favicon: img/favicon.png
 copyright: "Copyright 2016-2020 The u-root team"
 pages:
