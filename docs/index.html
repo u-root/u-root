@@ -1,118 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="u-root: A Go-based, Firmware Embeddable Root File System with On-demand Compilation">
-        
-        <link rel="canonical" href="https://u-root.org/">
-        <link rel="shortcut icon" href="./img/favicon.png">
-        
-        <title>u-root</title>
-        <link href="./css/bootstrap-custom.min.css" rel="stylesheet">
-        <link href="./css/font-awesome-4.5.0.css" rel="stylesheet">
-        <link href="./css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="./css/highlight.css">
-        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-        <!--[if lt IE 9]>
-            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-	
-	<script src="./js/jquery-1.10.2.min.js"></script>
-        <script src="./js/bootstrap-3.0.3.min.js"></script>
-        <script src="./js/highlight.pack.js"></script> 
-    </head>
-
-    <body class="homepage">
-
-        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
-    <div class="container">
-
-        <!-- Collapsed navigation -->
-        <div class="navbar-header">
-            <!-- Expander button -->
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href=".">u-root</a>
-        </div>
-
-        <!-- Expanded navigation -->
-        <div class="navbar-collapse collapse">
-
-            <ul class="nav navbar-nav navbar-right">
-                <li>
-                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
-                        <i class="fa fa-search"></i> Search
-                    </a>
-                </li>
-                    <li>
-                        <a href="https://github.com/u-root/u-root">
-                                <i class="fa fa-github"></i>GitHub
-                        </a>
-                    </li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-        <div class="container">
-                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
-    <ul class="nav bs-sidenav">
-        <li class="main active"><a href="#u-root">u-root</a></li>
-            <li><a href="#setup">Setup</a></li>
-            <li><a href="#submitting-changes">Submitting Changes</a></li>
-            <li><a href="#faqs">FAQs</a></li>
-            <li><a href="#community">Community</a></li>
-            <li><a href="#contributors">Contributors</a></li>
-            <li><a href="#logo">Logo</a></li>
-    </ul>
-</div></div>
-                <div class="col-md-9" role="main">
-
-<p><center>
+<center>
 <img src="img/u-root-logo.png" alt="u-root logo" width=300 />
-</center></p>
+</center>
 <h1 id="u-root">u-root</h1>
-<p>u-root is an embeddable root file system intended to be placed in a flash device
-as part of the firmware image, along with a Linux kernel. Unlike most embedded
-root file systems, which consist of large binaries, u-root only has five: an
-init program and four Go compiler binaries.</p>
+<p>u-root is an embeddable root file system intended to be placed in a flash device as part of the firmware image, along with a Linux kernel. Unlike most embedded root file systems, which consist of large binaries, u-root only has five: an init program and four Go compiler binaries.</p>
 <h2 id="setup">Setup</h2>
-<p>On an Ubuntu system, install prerequisites and ensure Go is at least version
-1.11:</p>
-<pre><code class="sh">sudo apt-get install git golang build-essential
-go version
-</code></pre>
-
+<p>On an Ubuntu system, install prerequisites and ensure Go is at least version 1.11:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" title="1"><span class="fu">sudo</span> apt-get install git golang build-essential</a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="ex">go</span> version</a></code></pre></div>
 <p>Set your <code>GOPATH</code>:</p>
-<pre><code class="sh">export GOPATH=&quot;$HOME/go&quot;
-</code></pre>
-
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" title="1"><span class="bu">export</span> <span class="va">GOPATH=</span><span class="st">&quot;</span><span class="va">$HOME</span><span class="st">/go&quot;</span></a></code></pre></div>
 <p>Clone u-root:</p>
-<pre><code class="sh">go get github.com/u-root/u-root
-</code></pre>
-
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" title="1"><span class="ex">go</span> get github.com/u-root/u-root</a></code></pre></div>
 <p>Generate an initramfs containing u-root Go tools:</p>
-<pre><code class="sh">u-root -format=cpio -o initramfs.cpio
-</code></pre>
-
-<p>You can use this initramfs with your favorite Linux kernel in QEMU to try it
-out.</p>
-<p>More instructions can be found in the repo's
-<a href="https://github.com/u-root/u-root/blob/master/README.md">README.md</a>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" title="1"><span class="ex">u-root</span> -format=cpio -o initramfs.cpio</a></code></pre></div>
+<p>You can use this initramfs with your favorite Linux kernel in QEMU to try it out.</p>
+<p>More instructions can be found in the repo’s <a href="https://github.com/u-root/u-root/blob/master/README.md">README.md</a>.</p>
 <h2 id="submitting-changes">Submitting Changes</h2>
-<p>We use <a href="https://github.com/u-root/u-root/pulls">GitHub Pull Requests</a> for code
-review. Pull requests must receive one approval and pass CI before being merged.</p>
+<p>We use <a href="https://github.com/u-root/u-root/pulls">GitHub Pull Requests</a> for code review. Pull requests must receive one approval and pass CI before being merged.</p>
 <h2 id="faqs">FAQs</h2>
-<h3 id="so-why-u-root">So, why "u-root"?</h3>
-<p>It's to reflect a universal root, you can mount on every
-local and get a userland portable (it's a goal).</p>
+<h3 id="so-why-u-root">So, why “u-root”?</h3>
+<p>It’s to reflect a universal root, you can mount on every local and get a userland portable (it’s a goal).</p>
 <h3 id="any-publications">Any publications?</h3>
 <ul>
 <li><a href="https://www.usenix.org/system/files/conference/atc15/atc15-paper-minnich.pdf">USENIX 2015 ATC Paper</a></li>
@@ -134,71 +41,19 @@ local and get a userland portable (it's a goal).</p>
 <li><a href="https://github.com/rafaelcn">Rafael C. Nunes</a></li>
 <li><a href="https://github.com/mathgamain">Matheus Pinto Rodrigues</a></li>
 <li><a href="https://github.com/GanShun">Gan Shun Lim</a></li>
-<li><a href="https://github.com/rjoleary">Ryan O'Leary</a></li>
+<li><a href="https://github.com/rjoleary">Ryan O’Leary</a></li>
 <li><a href="https://github.com/hugelgupf">Chris Koch</a></li>
 <li><a href="https://github.com/insomniacslk">Andrea Barberio</a></li>
 <li><a href="https://github.com/vejmarie">Jean-Marie Verdun</a></li>
 <li><a href="https://github.com/n-canter">Max Shegai</a></li>
 </ul>
 <h2 id="logo">Logo</h2>
-<p>The Go gopher was designed by Renee French.
-The u-root logo design is licensed under the Creative Commons 3.0 Attributions license.</p>
+<p>The Go gopher was designed by Renee French. The u-root logo design is licensed under the Creative Commons 3.0 Attributions license.</p>
 <p>The logo is communicating several things:</p>
 <ul>
-<li>
-<p>u-root has several flavors: firmware and as a root file system</p>
-</li>
-<li>
-<p>the gopher at the bottom is a firmware u-root; that gopher brings the machine up, hence the wrench. Its work is also done, so it is resting.</p>
-</li>
-<li>
-<p>the other gophers can make more copies of u-root; hence the u-root logo on their chest.</p>
-</li>
-<li>
-<p>the highest gopher is showing how u-root is a good root file system for a VM.</p>
-</li>
-<li>
-<p>the U itself is a stylized tree, evocative of roots.</p>
-</li>
-</ul></div>
-        </div>
-
-        <footer class="col-md-12">
-            <hr>
-                <p>Copyright 2016-2020 The u-root team</p>
-            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
-        </footer>
-        <script>var base_url = '.';</script>
-        <script data-main="./mkdocs/js/search.js" src="./mkdocs/js/require.js"></script>
-        <script src="./js/base.js"></script><div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="exampleModalLabel">Search</h4>
-            </div>
-            <div class="modal-body">
-                <p>
-                    From here you can search these documents. Enter
-                    your search terms below.
-                </p>
-                <form role="form">
-                    <div class="form-group">
-                        <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
-                    </div>
-                </form>
-                <div id="mkdocs-search-results"></div>
-            </div>
-            <div class="modal-footer">
-            </div>
-        </div>
-    </div>
-</div>
-
-    </body>
-</html>
-
-<!--
-MkDocs version : 0.16.3
-Build Date UTC : 2020-02-25 06:32:31
--->
+<li><p>u-root has several flavors: firmware and as a root file system</p></li>
+<li><p>the gopher at the bottom is a firmware u-root; that gopher brings the machine up, hence the wrench. Its work is also done, so it is resting.</p></li>
+<li><p>the other gophers can make more copies of u-root; hence the u-root logo on their chest.</p></li>
+<li><p>the highest gopher is showing how u-root is a good root file system for a VM.</p></li>
+<li><p>the U itself is a stylized tree, evocative of roots.</p></li>
+</ul>
