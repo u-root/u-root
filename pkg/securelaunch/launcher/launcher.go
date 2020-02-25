@@ -24,6 +24,8 @@ type Launcher struct {
 	Params map[string]string `json:"params"`
 }
 
+// MeasureKernel calls file collector in measurement pkg that
+// hashes kernel, initrd files and even store these hashes in tpm pcrs.
 func (l *Launcher) MeasureKernel(tpmDev io.ReadWriteCloser) error {
 
 	kernel := l.Params["kernel"]

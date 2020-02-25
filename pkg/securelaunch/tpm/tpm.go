@@ -121,7 +121,7 @@ func GetHandle() (io.ReadWriteCloser, error) {
 func ReadPCR(tpmHandle io.ReadWriteCloser, pcr int) ([]byte, error) {
 	val, err := tpm2.ReadPCR(tpmHandle, pcr, hashAlgo)
 	if err != nil {
-		return nil, fmt.Errorf("Can't read PCR %d, err= %v", pcr, err)
+		return nil, fmt.Errorf("can't read PCR %d, err= %v", pcr, err)
 	}
 	return val, nil
 }
@@ -157,7 +157,7 @@ func ExtendPCRDebug(tpmHandle io.ReadWriteCloser, pcr int, data io.Reader, event
 
 	slaunch.Debug("Adding hash=[%x] to PCR #%d", hash, pcr)
 	if e := ExtendPCR(tpmHandle, pcr, hash); e != nil {
-		return fmt.Errorf("Can't extend PCR %d, err=%v", pcr, e)
+		return fmt.Errorf("can't extend PCR %d, err=%v", pcr, e)
 	}
 	slaunch.Debug(eventDesc)
 
