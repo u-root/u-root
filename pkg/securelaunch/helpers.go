@@ -37,24 +37,20 @@ type mountCacheType struct {
 	mu sync.RWMutex
 }
 
-// sluinit uses mountCache to reduce number of mount/unmount operations
+// mountCache is used by sluinit to reduce number of mount/unmount operations
 var mountCache = mountCacheType{m: make(map[string]mountCacheData)}
 
-/* used to store all block devices returned from a call to storage.GetBlockStats */
+// StorageBlkDevices helps securelaunch pkg mount devices.
 var StorageBlkDevices []storage.BlockDev
 
-/*
- * if kernel cmd line has uroot.uinitargs=-d, debug fn is enabled.
- * kernel cmdline is checked in sluinit.
- */
+// Debug enables verbose logs if kernel cmd line has uroot.uinitargs=-d flag set.
+// kernel cmdline is checked in sluinit.
 var Debug = func(string, ...interface{}) {}
 
-/*
- * WriteToFile writes a byte slice to a target file on an
- * already mounted disk and returns the target file path.
- *
- * defFileName is default dst file name, only used if user doesn't provide one.
- */
+// WriteToFile writes a byte slice to a target file on an
+// already mounted disk and returns the target file path.
+//
+// defFileName is default dst file name, only used if user doesn't provide one.
 func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 
 	// make sure dst is an absolute file path
@@ -101,13 +97,15 @@ func persist(data []byte, targetPath string, defaultFile string) error {
 	return nil
 }
 
+// AddToPersistQueue enqueues an action item to persistData slice
+// so that it can be deferred to the last step of sluinit.
 func AddToPersistQueue(desc string, data []byte, location string, defFile string) error {
 	persistData = append(persistData, persistDataItem{desc, data, location, defFile})
 	return nil
 }
 
+// ClearPersistQueue persists any pending data/logs to disk
 func ClearPersistQueue() error {
-
 	for _, entry := range persistData {
 		if err := persist(entry.data, entry.location, entry.defaultFile); err != nil {
 			return fmt.Errorf("%s: persist failed for location %s", entry.desc, entry.location)
@@ -118,7 +116,7 @@ func ClearPersistQueue() error {
 
 func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
-		return storage.BlockDev{}, fmt.Errorf("GetBlkInfo err=%s", e)
+		return storage.BlockDev{}, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
 	devices := storage.PartitionsByFsUUID(StorageBlkDevices, uuid) // []BlockDev
 	Debug("%d device(s) matched with UUID=%s", len(devices), uuid)
@@ -131,7 +129,7 @@ func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
 
 func getDeviceFromName(name string) (storage.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
-		return storage.BlockDev{}, fmt.Errorf("GetBlkInfo err=%s", e)
+		return storage.BlockDev{}, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
 	devices := storage.PartitionsByName(StorageBlkDevices, name) // []BlockDev
 	Debug("%d device(s) matched with Name=%s", len(devices), name)
@@ -142,6 +140,8 @@ func getDeviceFromName(name string) (storage.BlockDev, error) {
 	return storage.BlockDev{}, fmt.Errorf("no block device exists with name=%s", name)
 }
 
+// GetStorageDevice parses input of type UUID:/tmp/foo or sda2:/tmp/foo,
+// and returns any matching devices.
 func GetStorageDevice(input string) (storage.BlockDev, error) {
 	device, e := getDeviceFromUUID(input)
 	if e != nil {
@@ -188,17 +188,19 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 		Debug("mountCache: need to mount the same device with different flags")
 		Debug("mountCache: Unmounting %s first", cachedMountPath)
 		if e := mount.Unmount(cachedMountPath, true, false); e != nil {
-			log.Printf("Unmount failed for %s. PANIC")
+			log.Printf("Unmount failed for %s. PANIC", cachedMountPath)
 			panic(e)
 		}
 		Debug("mountCache: unmount successfull. lets delete entry in map")
 		deleteEntryMountCache(key)
-		return "", fmt.Errorf("device was already mounted. Mount again.")
+		return "", fmt.Errorf("device was already mounted: mount again")
 	}
 
-	return "", fmt.Errorf("Lookup mountCache failed: No key exists that matches %s", key)
+	return "", fmt.Errorf("mountCache: lookup failed, no key exists that matches %s", key)
 }
 
+// MountDevice looks up mountCache map. if no entry is found, it
+// mounts a device and updates cache, otherwise returns mountPath.
 func MountDevice(device storage.BlockDev, flags uintptr) (string, error) {
 
 	devName := device.Name
@@ -226,10 +228,8 @@ func MountDevice(device storage.BlockDev, flags uintptr) (string, error) {
 	return mountPath, nil
 }
 
-/*
- * GetMountedFilePath returns a file path corresponding to a <device_identifier>:<path> user input format.
- * <device_identifier> may be a Linux block device identifier like sda or a FS UUID.
- */
+// GetMountedFilePath returns a file path corresponding to a <device_identifier>:<path> user input format.
+// <device_identifier> may be a Linux block device identifier like sda or a FS UUID.
 func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	s := strings.Split(inputVal, ":")
 	if len(s) != 2 {
@@ -252,8 +252,8 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	return fPath, nil
 }
 
+// UnmountAll loops detaches any mounted device from the file heirarchy.
 func UnmountAll() {
-
 	Debug("UnmountAll: %d devices need to be unmounted", len(mountCache.m))
 	for key, mountCacheData := range mountCache.m {
 		cachedMountPath := mountCacheData.mountPath
@@ -268,13 +268,11 @@ func UnmountAll() {
 	}
 }
 
-/*
- * GetBlkInfo calls storage package to get information on all block devices.
- * The information is stored in a global variable 'StorageBlkDevices'
- * If the global variable is already non-zero, we skip the call to storage package.
- *
- * In debug mode, it also prints names and UUIDs for all devices.
- */
+// GetBlkInfo calls storage package to get information on all block devices.
+// The information is stored in a global variable 'StorageBlkDevices'
+// If the global variable is already non-zero, we skip the call to storage package.
+//
+// In debug mode, it also prints names and UUIDs for all devices.
 func GetBlkInfo() error {
 	if len(StorageBlkDevices) == 0 {
 		var err error

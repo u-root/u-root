@@ -114,7 +114,7 @@ func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 func (s *DmiCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 	slaunch.Debug("DMI Collector: Entering ")
 	if s.Type != "dmi" {
-		return errors.New("Invalid type passed to a DmiCollector method")
+		return errors.New("invalid type passed to a DmiCollector method")
 	}
 
 	var labels []string // collect all types entered by user in one slice
@@ -149,7 +149,9 @@ func (s *DmiCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 			log.Printf("DMI Collector: skipping type %s, err=%v", t.Type, err)
 			continue
 		}
-		b := []byte(fmt.Sprintf("%s", pt))
+
+		slaunch.Debug(pt.String())
+		b := []byte(pt.String())
 		eventDesc := fmt.Sprintf("DMI Collector: Measured dmi label=[%v]", t.Type)
 		if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b), eventDesc); e != nil {
 			log.Printf("DMI Collector: err =%v", e)
