@@ -32,6 +32,9 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 		return
 	}
 
+	log.Print("Signing bootball ...")
+	log.Printf("private key: %s", privKey)
+	log.Printf("certificate: %s", cert)
 	err = ball.Sign(privKey, cert)
 	if err != nil {
 		return

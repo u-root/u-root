@@ -184,7 +184,7 @@ func (ball *BootBall) Hash() error {
 }
 
 // Sign signes the hashes of all boot configurations in BootBall using the
-// BootBall.Signer's hash function with the provided privKeyFile. The signature
+// BootBall.Signer's sign function with the provided privKeyFile. The signature
 // is stored along with the provided certFile inside the BootBall.
 func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 	if _, err := os.Stat(privKeyFile); err != nil {
@@ -206,8 +206,6 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		return err
 	}
 
-	log.Printf("Signing with: %s", privKeyFile)
-
 	if ball.hashes == nil {
 		err = ball.Hash()
 		if err != nil {
@@ -216,6 +214,13 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 	}
 
 	for key, hash := range ball.hashes {
+		// check for dublicate certificates
+		for _, sig := range ball.signatures[key] {
+			if sig.Cert.Equal(cert) {
+				return fmt.Errorf("certificate has already been used: %v", certFile)
+			}
+		}
+		// sign
 		s, err := ball.Signer.Sign(privKeyFile, hash)
 		if err != nil {
 			return err
@@ -223,6 +228,12 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		sig := Signature{
 			Bytes: s,
 			Cert:  cert}
+		// check
+		err = ball.Signer.Verify(sig, hash)
+		if err != nil {
+			return fmt.Errorf("public key in %s does not match the private key in %s", filepath.Base(certFile), filepath.Base(privKeyFile))
+		}
+		// save
 		ball.signatures[key] = append(ball.signatures[key], sig)
 		d := filepath.Join(ball.dir, signaturesDirName, key)
 		if err = writeSignature(d, certFile, sig); err != nil {
