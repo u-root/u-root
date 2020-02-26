@@ -143,14 +143,13 @@ func main() {
 	if len(vars.Fingerprints) == 0 {
 		reboot("No root certificate fingerprints found in hostvars")
 	}
-
-	if *doDebug {
-		log.Print("Fingerprint of boot ball's root certificate:")
-		log.Print(vars.Fingerprints[1])
+	fp := calculateFingerprint(ball.RootCertPEM)
+	log.Print("Fingerprint of boot ball's root certificate:")
+	log.Print(fp)
+	if !fingerprintIsValid(fp, vars.Fingerprints) {
+		reboot("Root certificate of boot ball does not match expacted fingerprint")
 	}
-	if !matchFingerprint(ball.RootCertPEM, vars.Fingerprints) {
-		reboot("Root certificate of boot ball does not match expacted fingerprint %v", err)
-	}
+	log.Print("OK!")
 
 	////////////////////////////
 	// Verify boot configuration
@@ -198,21 +197,25 @@ func main() {
 	reboot("No boot configuration succeeded")
 }
 
-// matchFingerprint returns true if fingerprintHex matches the SHA256
-// hash calculated from pem decoded certPEM.
-func matchFingerprint(certPEM []byte, fingerprintHexValues []string) bool {
-	block, _ := pem.Decode(certPEM)
-	fp := sha256.Sum256(block.Bytes)
-	str := hex.EncodeToString(fp[:])
-	str = strings.TrimSpace(str)
-
-	for _, f := range fingerprintHexValues {
+// fingerprintIsValid returns true if fpHex is equal to on of
+// those in expectedHex.
+func fingerprintIsValid(fpHex string, expectedHex []string) bool {
+	for _, f := range expectedHex {
 		f = strings.TrimSpace(f)
-		if str == f {
+		if fpHex == f {
 			return true
 		}
 	}
 	return false
+}
+
+// calculateFingerprint returns the SHA256 checksum of the
+// provided certificate.
+func calculateFingerprint(pemBytes []byte) string {
+	block, _ := pem.Decode(pemBytes)
+	fp := sha256.Sum256(block.Bytes)
+	str := hex.EncodeToString(fp[:])
+	return strings.TrimSpace(str)
 }
 
 //reboot trys to reboot the system in an infinity loop
