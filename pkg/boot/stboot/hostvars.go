@@ -19,8 +19,6 @@ type HostVars struct {
 	HostNetmask    string `json:"netmask"`
 	DefaultGateway string `json:"gateway"`
 	DNSServer      string `json:"dns"`
-	// BootstrapURL is used to download the bootball
-	BootstrapURL string `json:"bootstrap_url"`
 	// MinimalSignaturesMatch is the min number of signatures that must pass validation.
 	MinimalSignaturesMatch int `json:"minimal_signatures_match"`
 	// Fingerprints are used to validate the root certificate insinde the bootball.
