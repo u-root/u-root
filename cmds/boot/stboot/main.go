@@ -29,11 +29,11 @@ var (
 )
 
 const (
-	bootstrapURLFile   = "bootstrapURL.json"
-	httpsRootsFile     = "HTTPSroots.pem"
-	ntpServerFile      = "NTPserver.json"
-	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
-	interfaceUpTimeout = 6 * time.Second
+	provisioningServerFile = "provisioning-servers.json"
+	httpsRootsFile         = "https-root-certificates.pem"
+	ntpServerFile          = "ntp-servers.json"
+	entropyAvail           = "/proc/sys/kernel/random/entropy_avail"
+	interfaceUpTimeout     = 6 * time.Second
 )
 
 var banner = `
@@ -108,7 +108,7 @@ func main() {
 	////////////////////
 	ballPath := path.Join("root/", stboot.BallName)
 
-	bytes, err := data.get(bootstrapURLFile)
+	bytes, err := data.get(provisioningServerFile)
 	if err != nil {
 		reboot("Bootstrap URLs: %v", err)
 	}
