@@ -16,6 +16,8 @@ import (
 	"io/ioutil"
 )
 
+// Signature contains the signature bytes and the
+// corresponding certificate.
 type Signature struct {
 	Bytes []byte
 	Cert  *x509.Certificate
