@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,14 +21,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/u-root/u-root/pkg/boot/stboot"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/vishvananda/netlink"
 )
 
-func configureStaticNetwork(vars stboot.HostVars) error {
-	log.Printf("Setup network configuration with IP: " + vars.HostIP)
-	addr, err := netlink.ParseAddr(vars.HostIP)
+type netConf struct {
+	HostIP         string `json:"host_ip"`
+	HostNetmask    string `json:"netmask"`
+	DefaultGateway string `json:"gateway"`
+	DNSServer      string `json:"dns"`
+}
+
+func getNetConf() (netConf, error) {
+	data := initramfsData{}
+	bytes, err := data.get(networkFile)
+	var net netConf
+	if err != nil {
+		return net, err
+	}
+	err = json.Unmarshal(bytes, &net)
+	if err != nil {
+		return net, err
+	}
+	return net, nil
+}
+
+func configureStaticNetwork(nc netConf) error {
+	log.Printf("Setup network configuration with IP: " + nc.HostIP)
+	addr, err := netlink.ParseAddr(nc.HostIP)
 	if err != nil {
 		return fmt.Errorf("Error parsing HostIP string to CIDR format address: %v", err)
 	}
@@ -53,7 +74,7 @@ func configureStaticNetwork(vars stboot.HostVars) error {
 			continue
 		}
 
-		gateway, err := netlink.ParseAddr(vars.DefaultGateway)
+		gateway, err := netlink.ParseAddr(nc.DefaultGateway)
 		if err != nil {
 			if *doDebug {
 				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)

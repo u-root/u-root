@@ -31,6 +31,7 @@ var (
 
 const (
 	provisioningServerFile = "provisioning-servers.json"
+	networkFile            = "network.json"
 	httpsRootsFile         = "https-root-certificates.pem"
 	ntpServerFile          = "ntp-servers.json"
 	entropyAvail           = "/proc/sys/kernel/random/entropy_avail"
@@ -83,9 +84,23 @@ func main() {
 	//////////
 	// Network
 	//////////
-	if vars.HostIP != "" {
-		err = configureStaticNetwork(vars)
+	nc, err := getNetConf()
+	if err != nil {
+		debug("Cannot read network configuration file: %v", err)
+		err = configureDHCPNetwork()
+		if err != nil {
+			reboot("Cannot set up IO: %v", err)
+		}
+	}
+
+	if nc.HostIP != "" {
+		if *doDebug {
+			str, _ := json.MarshalIndent(nc, "", "  ")
+			log.Printf("Network configuration: %s", str)
+		}
+		err = configureStaticNetwork(nc)
 	} else {
+		debug("no IP specified %s", networkFile)
 		err = configureDHCPNetwork()
 	}
 	if err != nil {
