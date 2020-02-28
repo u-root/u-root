@@ -5,6 +5,7 @@
 package stboot
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -247,7 +248,10 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 
 // VerifyBootconfigByID validates the certificates stored together with the
 // signatures of BootConfig id and verifies the signatures. The number of
-// valid signatures is returned.
+// valid signatures is returned. A signature is valid if:
+// * Its certificate was signed by the bootball's root certificate
+// * Verification is passed
+// * No previous signature of this bootconfig has the same certificate
 func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err error) {
 	if ball.hashes == nil {
 		err := ball.Hash()
@@ -258,15 +262,30 @@ func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err 
 
 	found = 0
 	verified = 0
-	for _, sig := range ball.signatures[id] {
+	var certsUsed []*x509.Certificate
+	for i, sig := range ball.signatures[id] {
+		found++
 		err := validateCertificate(sig.Cert, ball.RootCertPEM)
 		if err != nil {
-			return found, verified, err
+			log.Printf("skip signature %d: %v", i, err)
+			continue
 		}
-		found++
+		var dublicate bool
+		for _, c := range certsUsed {
+			if c.Equal(sig.Cert) {
+				dublicate = true
+				break
+			}
+		}
+		if dublicate {
+			log.Printf("skip signature %d: dublicate", i)
+			continue
+		}
+		certsUsed = append(certsUsed, sig.Cert)
 		err = ball.Signer.Verify(sig, ball.hashes[id])
 		if err != nil {
-			log.Print(err)
+			log.Printf("skip signature %d: %v", i, err)
+			continue
 		}
 		verified++
 	}
