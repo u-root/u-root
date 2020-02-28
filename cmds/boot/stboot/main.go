@@ -175,10 +175,7 @@ func main() {
 		reboot("Did not found enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
 
-	if *doDebug {
-		log.Printf("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
-	}
-
+	debug("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	log.Printf("Bootconfig '%s' passed verification", bc.Name)
 	log.Print(check)
 
