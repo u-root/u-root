@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -201,6 +202,11 @@ func parse(pf []byte) (*Policy, error) {
 	return p, nil
 }
 
+func measure(tpmHandle io.ReadWriteCloser, b []byte) error {
+	eventDesc := "measured securelaunch policy file"
+	return measurement.HashBytes(tpmHandle, b, eventDesc)
+}
+
 /*
  * Get locates and parses the policy file.
  *
@@ -209,11 +215,17 @@ func parse(pf []byte) (*Policy, error) {
  *  (1) kernel cmdline "sl_policy" argument.
  *  (2) a file on any partition on any disk called "securelaunch.policy"
  */
-func Get() (*Policy, error) {
+func Get(tpmHandle io.ReadWriteCloser) (*Policy, error) {
 	b, err := locate()
 	if err != nil {
 		return nil, err
 	}
+
+	err = measure(tpmHandle, b)
+	if err != nil {
+		return nil, err
+	}
+
 	policy, err := parse(b)
 	if err != nil {
 		return nil, err

@@ -38,6 +38,12 @@ func NewFileCollector(config []byte) (Collector, error) {
 	return fc, nil
 }
 
+// HashBytes extends PCR with a byte array and sends an event to sysfs.
+// the sent event is described via eventDesc.
+func HashBytes(tpmHandle io.ReadWriteCloser, b []byte, eventDesc string) error {
+	return tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b), eventDesc)
+}
+
 /*
  * HashFile reads file input by user and calls TPM to measure it and store the hash.
  *

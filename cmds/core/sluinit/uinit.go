@@ -57,7 +57,7 @@ func main() {
 	defer tpmDev.Close()
 
 	slaunch.Debug("********Step 2: locate and parse SL Policy ********")
-	p, err := policy.Get()
+	p, err := policy.Get(tpmDev)
 	if err != nil {
 		log.Printf("failed to get policy err=%v", err)
 		unmountAndExit()
