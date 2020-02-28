@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -106,7 +107,7 @@ func main() {
 	////////////////////
 	// Download bootball
 	////////////////////
-	ballPath := path.Join("root/", stboot.BallName)
+	ballPath := filepath.Join("root/", stboot.BallName)
 
 	bytes, err := data.get(provisioningServerFile)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // HostVars contains contains platform-specific data
@@ -31,7 +31,7 @@ type HostVars struct {
 // It is expected to be in /etc.
 func FindHostVars() (HostVars, error) {
 	var vars HostVars
-	file := path.Join("etc/", HostVarsName)
+	file := filepath.Join("etc/", HostVarsName)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return vars, fmt.Errorf("%s not found: %v", file, err)
 	}
