@@ -8,6 +8,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
@@ -101,7 +102,10 @@ func main() {
 	}
 }
 
+// unmountAndExit is called on error and unmounts all devices.
+// sluinit ends here.
 func unmountAndExit() {
 	slaunch.UnmountAll()
+	time.Sleep(5 * time.Second) // let queued up debug statements get printed
 	os.Exit(1)
 }
