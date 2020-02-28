@@ -49,11 +49,12 @@ func checkDebugFlag() {
 func main() {
 	checkDebugFlag()
 
+	defer unmountAndExit() // called only on error, on success we kexec
 	slaunch.Debug("********Step 1: init completed. starting main ********")
 	tpmDev, err := tpm.GetHandle()
 	if err != nil {
 		log.Printf("tpm.getHandle failed. err=%v", err)
-		unmountAndExit()
+		return
 	}
 	defer tpmDev.Close()
 
@@ -61,7 +62,7 @@ func main() {
 	p, err := policy.Get(tpmDev)
 	if err != nil {
 		log.Printf("failed to get policy err=%v", err)
-		unmountAndExit()
+		return
 	}
 	slaunch.Debug("policy file successfully parsed")
 
@@ -75,21 +76,21 @@ func main() {
 	slaunch.Debug("Collectors completed")
 
 	slaunch.Debug("********Step 4: Measuring target kernel, initrd ********")
-	if e := p.Launcher.MeasureKernel(tpmDev); e != nil {
-		log.Printf("Launcher.MeasureKernel failed err=%v", e)
-		unmountAndExit()
+	if err := p.Launcher.MeasureKernel(tpmDev); err != nil {
+		log.Printf("Launcher.MeasureKernel failed err=%v", err)
+		return
 	}
 
 	slaunch.Debug("********Step 5: Parse eventlogs *********")
-	if e := p.EventLog.Parse(); e != nil {
-		log.Printf("EventLog.Parse() failed err=%v", e)
-		unmountAndExit()
+	if err := p.EventLog.Parse(); err != nil {
+		log.Printf("EventLog.Parse() failed err=%v", err)
+		return
 	}
 
 	slaunch.Debug("*****Step 6: Dump logs to disk *******")
-	if e := slaunch.ClearPersistQueue(); e != nil {
-		log.Printf("ClearPersistQueue failed err=%v", e)
-		unmountAndExit()
+	if err := slaunch.ClearPersistQueue(); err != nil {
+		log.Printf("ClearPersistQueue failed err=%v", err)
+		return
 	}
 
 	slaunch.Debug("********Step *: Unmount all ********")
@@ -98,7 +99,7 @@ func main() {
 	slaunch.Debug("********Step 7: Launcher called to Boot ********")
 	if err := p.Launcher.Boot(tpmDev); err != nil {
 		log.Printf("Boot failed. err=%s", err)
-		unmountAndExit()
+		return
 	}
 }
 
