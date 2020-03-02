@@ -1,0 +1,192 @@
+# github.com/9elements/tpmtool v0.0.0-20191130171819-da1d98c3e72c
+## explicit
+github.com/9elements/tpmtool/pkg/tpm
+# github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+## explicit
+github.com/alecthomas/template
+github.com/alecthomas/template/parse
+# github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
+## explicit
+github.com/alecthomas/units
+# github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239
+## explicit
+github.com/anmitsu/go-shlex
+# github.com/beevik/ntp v0.2.0
+## explicit
+github.com/beevik/ntp
+# github.com/cenkalti/backoff v2.2.1+incompatible
+## explicit
+github.com/cenkalti/backoff
+# github.com/creack/pty v1.1.9
+## explicit
+github.com/creack/pty
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/digitalocean/go-smbios v0.0.0-20180907143718-390a4f403a8e
+## explicit
+github.com/digitalocean/go-smbios/smbios
+# github.com/dustin/go-humanize v1.0.0
+## explicit
+github.com/dustin/go-humanize
+# github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568
+## explicit
+# github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
+## explicit
+github.com/gliderlabs/ssh
+# github.com/go-test/deep v1.0.5
+## explicit
+github.com/go-test/deep
+# github.com/google/go-cmp v0.4.0
+## explicit
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
+# github.com/google/go-tpm v0.2.1-0.20191020005914-aab8d06b4c87
+## explicit
+github.com/google/go-tpm/tpm
+github.com/google/go-tpm/tpm2
+github.com/google/go-tpm/tpmutil
+github.com/google/go-tpm/tpmutil/tbs
+# github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
+## explicit
+github.com/google/goexpect
+# github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
+## explicit
+github.com/google/goterm/term
+# github.com/hugelgupf/socketpair v0.0.0-20190730060125-05d35a94e714
+## explicit
+# github.com/insomniacslk/dhcp v0.0.0-20200124232130-5214532ecf39
+## explicit
+github.com/insomniacslk/dhcp/dhcpv4
+github.com/insomniacslk/dhcp/dhcpv4/client4
+github.com/insomniacslk/dhcp/dhcpv4/nclient4
+github.com/insomniacslk/dhcp/dhcpv4/server4
+github.com/insomniacslk/dhcp/dhcpv6
+github.com/insomniacslk/dhcp/dhcpv6/client6
+github.com/insomniacslk/dhcp/dhcpv6/nclient6
+github.com/insomniacslk/dhcp/dhcpv6/server6
+github.com/insomniacslk/dhcp/iana
+github.com/insomniacslk/dhcp/interfaces
+github.com/insomniacslk/dhcp/netboot
+github.com/insomniacslk/dhcp/rfc1035label
+# github.com/intel-go/cpuid v0.0.0-20181003105527-1a4a6f06a1c6
+## explicit
+github.com/intel-go/cpuid
+# github.com/jsimonetti/rtnetlink v0.0.0-20200117123717-f846d4f6c1f4
+## explicit
+github.com/jsimonetti/rtnetlink
+github.com/jsimonetti/rtnetlink/internal/unix
+github.com/jsimonetti/rtnetlink/rtnl
+# github.com/klauspost/compress v1.9.8
+## explicit
+github.com/klauspost/compress/flate
+# github.com/klauspost/pgzip v1.2.1
+## explicit
+github.com/klauspost/pgzip
+# github.com/kr/pty v1.1.8
+## explicit
+github.com/kr/pty
+# github.com/mattn/go-isatty v0.0.12
+## explicit
+github.com/mattn/go-isatty
+# github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
+## explicit
+github.com/mdlayher/ethernet
+# github.com/mdlayher/netlink v1.0.0
+github.com/mdlayher/netlink
+github.com/mdlayher/netlink/nlenc
+# github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
+## explicit
+github.com/mdlayher/raw
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/rck/unit v0.0.3
+## explicit
+github.com/rck/unit
+# github.com/rekby/gpt v0.0.0-20190209220743-520ac65554cf
+## explicit
+github.com/rekby/gpt
+# github.com/safchain/ethtool v0.0.0-20200128171343-ef7e7c9c2763
+## explicit
+github.com/safchain/ethtool
+# github.com/spf13/pflag v1.0.5
+## explicit
+github.com/spf13/pflag
+# github.com/stretchr/testify v1.4.0
+## explicit
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
+# github.com/vishvananda/netlink v1.1.1-0.20200127235254-261f000a6227
+## explicit
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+github.com/vishvananda/netns
+# golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
+## explicit
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/cast5
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/md4
+golang.org/x/crypto/openpgp
+golang.org/x/crypto/openpgp/armor
+golang.org/x/crypto/openpgp/elgamal
+golang.org/x/crypto/openpgp/errors
+golang.org/x/crypto/openpgp/packet
+golang.org/x/crypto/openpgp/s2k
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/ripemd160
+golang.org/x/crypto/sha3
+golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
+# golang.org/x/mod v0.2.0
+## explicit
+golang.org/x/mod/module
+golang.org/x/mod/semver
+# golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+## explicit
+golang.org/x/net/bpf
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
+# golang.org/x/sys v0.0.0-20200302083256-062a44052db1
+## explicit
+golang.org/x/sys/cpu
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# golang.org/x/text v0.3.2
+## explicit
+golang.org/x/text/transform
+golang.org/x/text/unicode/norm
+# golang.org/x/tools v0.0.0-20200301222351-066e0c02454c
+## explicit
+golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/imports
+golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/gopathwalk
+golang.org/x/tools/internal/imports
+# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
+# google.golang.org/grpc v1.27.0
+## explicit
+google.golang.org/grpc/codes
+# gopkg.in/alecthomas/kingpin.v2 v2.2.6
+## explicit
+gopkg.in/alecthomas/kingpin.v2
+# gopkg.in/yaml.v2 v2.2.8
+## explicit
+gopkg.in/yaml.v2
+# pack.ag/tftp v1.0.0
+## explicit
+pack.ag/tftp
+pack.ag/tftp/netascii
