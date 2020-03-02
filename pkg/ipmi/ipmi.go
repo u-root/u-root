@@ -9,6 +9,7 @@ package ipmi
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"syscall"
@@ -22,6 +23,7 @@ const (
 	_IPMI_NETFN_CHASSIS              = 0x0
 	_IPMI_NETFN_APP                  = 0x6
 	_IPMI_NETFN_STORAGE              = 0xA
+	_IPMI_NETFN_TRANSPORT            = 0xC
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
@@ -41,6 +43,9 @@ const (
 
 	// SEL device Commands
 	_BMC_GET_SEL_INFO = 0x40
+
+	//LAN Device Commands
+	_BMC_GET_LAN_CONFIG = 0x02
 
 	_IPM_WATCHDOG_NO_ACTION    = 0x00
 	_IPM_WATCHDOG_SMS_OS       = 0x04
@@ -457,4 +462,45 @@ func (i *IPMI) GetSELInfo() (*SELInfo, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+func (i *IPMI) GetLanConfig(channel byte, param byte) ([]byte, error) {
+	req := &req{}
+	req.msg.netfn = _IPMI_NETFN_TRANSPORT
+	req.msg.cmd = _BMC_GET_LAN_CONFIG
+
+	var data [4]byte
+	data[0] = channel
+	data[1] = param
+	data[2] = 0
+	data[3] = 0
+	req.msg.data = unsafe.Pointer(&data[0])
+	req.msg.dataLen = 4
+
+	return i.sendrecv(req)
+}
+
+func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
+	if len(param) < 2 {
+		return nil, errors.New("Not enough parameters given")
+	}
+
+	switch param[0] {
+	case
+		_IPMI_NETFN_CHASSIS,
+		_IPMI_NETFN_APP,
+		_IPMI_NETFN_STORAGE,
+		_IPMI_NETFN_TRANSPORT:
+
+		req := &req{}
+		req.msg.netfn = param[0]
+		req.msg.cmd = param[1]
+		if len(param) > 2 {
+			req.msg.data = unsafe.Pointer(&param[2])
+		}
+		req.msg.dataLen = uint16(len(param) - 2)
+		return i.sendrecv(req)
+	default:
+		return nil, errors.New("Parameter is invalid")
+	}
 }
