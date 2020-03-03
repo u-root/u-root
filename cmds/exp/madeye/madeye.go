@@ -2,11 +2,30 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// madeye merges u-root initramfs to form a single universal initramfs.
+// madeye merges multiple architecture u-root initramfs to form a single
+// universal initramfs.
+//
 // Synopsis:
 //     madeye initramfs [initramfs...]
 //
-// Description:
+// u-root was intended to be capable of function as a universal root, i.e. a
+// root file system that you could boot from different architectures. We call
+// this ability Multiple Architecture Device Image, or MADI, pronounced
+// Mad-Eye. (Apologies to Harry Potter.)
+//
+// Given a set of images, e.g. initramfs.linux_<arch>.cpio, madeye derives the
+// architecture from the name.  It then reads the cpio in. For a distinguished
+// set of directories, it relocates them from / to /<arch>/, a la Plan 9. If
+// there is a /init, it moves to /<arch>/init. It adjusts absolute path
+// symlinks.
+//
+// To boot a kernel with a MadEye, one must adjust the init= arg to prepend the
+// architecture. For example, on arm it would be init=/arm/init. For now, this
+// only works for bb mode.
+//
+// TODO: look for conflicting dev entries, and write them out.
+//
+// TODO: derive arch from the ELF file of bb instead of the name.
 package main
 
 import (
@@ -35,7 +54,7 @@ var (
 )
 
 func usage() {
-	log.Fatalf("Usage: madeye")
+	log.Fatalf("Usage: madeye initramfs [initramfs...]")
 }
 
 func file(archiver cpio.RecordFormat, n string, f io.ReaderAt) ([]cpio.Record, error) {
@@ -92,6 +111,7 @@ func file(archiver cpio.RecordFormat, n string, f io.ReaderAt) ([]cpio.Record, e
 	}
 	return r, nil
 }
+
 func main() {
 	flag.Parse()
 	if *d {
