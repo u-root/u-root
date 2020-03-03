@@ -47,8 +47,9 @@ var (
 	debug = func(string, ...interface{}) {}
 	d     = flag.Bool("v", false, "Debug prints")
 	arch  = map[string]string{
-		"initramfs.linux_amd64.cpio": "amd64",
-		"initramfs.linux_arm.cpio":   "arm",
+		"initramfs.linux_amd64.cpio":   "amd64",
+		"initramfs.linux_arm.cpio":     "arm",
+		"initramfs.linux_aarch64.cpio": "aarch64",
 	}
 	out = map[string]*cpio.Record{}
 )
