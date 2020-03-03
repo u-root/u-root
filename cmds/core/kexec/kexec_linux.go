@@ -19,6 +19,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 
@@ -97,9 +98,13 @@ func main() {
 				Cmdline: newCmdline,
 			}
 		} else {
+			var i io.ReaderAt
+			if opts.initramfs != "" {
+				i = uio.NewLazyFile(opts.initramfs)
+			}
 			image = &boot.LinuxImage{
 				Kernel:  uio.NewLazyFile(kernelpath),
-				Initrd:  uio.NewLazyFile(opts.initramfs),
+				Initrd:  i,
 				Cmdline: newCmdline,
 			}
 		}

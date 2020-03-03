@@ -12,8 +12,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// BIOSInformation is Defined in DSP0134 7.1.
-type BIOSInformation struct {
+// BIOSInfo is Defined in DSP0134 7.1.
+type BIOSInfo struct {
 	Table
 	Vendor                                 string                  // 04h
 	Version                                string                  // 05h
@@ -30,15 +30,15 @@ type BIOSInformation struct {
 	ExtendedROMSize                        uint16                  // 18h
 }
 
-// NewBIOSInformation parses a generic Table into BIOSInformation.
-func NewBIOSInformation(t *Table) (*BIOSInformation, error) {
-	if t.Type != TableTypeBIOSInformation {
+// ParseBIOSInfo parses a generic Table into BIOSInfo.
+func ParseBIOSInfo(t *Table) (*BIOSInfo, error) {
+	if t.Type != TableTypeBIOSInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
 	if t.Len() < 0x12 {
 		return nil, errors.New("required fields missing")
 	}
-	bi := &BIOSInformation{Table: *t}
+	bi := &BIOSInfo{Table: *t}
 	if _, err := parseStruct(t, 0 /* off */, false /* complete */, bi); err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func NewBIOSInformation(t *Table) (*BIOSInformation, error) {
 }
 
 // GetROMSizeBytes returns ROM size in bytes.
-func (bi *BIOSInformation) GetROMSizeBytes() uint64 {
+func (bi *BIOSInfo) GetROMSizeBytes() uint64 {
 	if bi.ROMSize != 0xff {
 		return 65536 * (uint64(bi.ROMSize) + 1)
 	}
@@ -67,7 +67,7 @@ func (bi *BIOSInformation) GetROMSizeBytes() uint64 {
 	return (extSize & 0x3fff) * multiplier
 }
 
-func (bi *BIOSInformation) String() string {
+func (bi *BIOSInfo) String() string {
 	lines := []string{
 		bi.Header.String(),
 		fmt.Sprintf("\tVendor: %s", bi.Vendor),

@@ -18,6 +18,7 @@ import (
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
@@ -119,7 +120,7 @@ type testLineWriter struct {
 }
 
 func (tsw *testLineWriter) OneLine(p []byte) {
-	tsw.tb.Logf("%s: %s", tsw.prefix, strings.ReplaceAll(string(p), "\033", "~"))
+	tsw.tb.Logf("%s %s: %s", testutil.NowLog(), tsw.prefix, strings.ReplaceAll(string(p), "\033", "~"))
 }
 
 // TestArch returns the architecture under test. Pass this as GOARCH when

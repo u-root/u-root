@@ -115,9 +115,9 @@ func dmiDecode(textOut io.Writer) *dmiDecodeError {
 		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing data: %v", err)}
 	}
 	if si.Entry64 != nil {
-		fmt.Fprintf(textOut, "SMBIOS %d.%d.%d present.\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion(), si.GetSMBIOSDocRev())
+		fmt.Fprintf(textOut, "SMBIOS %d.%d.%d present.\n", si.MajorVersion(), si.MinorVersion(), si.DocRev())
 	} else {
-		fmt.Fprintf(textOut, "SMBIOS %d.%d present.\n", si.GetSMBIOSMajorVersion(), si.GetSMBIOSMinorVersion())
+		fmt.Fprintf(textOut, "SMBIOS %d.%d present.\n", si.MajorVersion(), si.MinorVersion())
 	}
 	if si.Entry32 != nil {
 		fmt.Fprintf(textOut, "%d structures occupying %d bytes.\n", si.Entry32.NumberOfStructs, si.Entry32.StructTableLength)

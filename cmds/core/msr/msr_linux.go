@@ -28,13 +28,20 @@ func msrList(n string) []string {
 
 func openAll(m []string, o int) ([]*os.File, []error) {
 	var (
-		f    = make([]*os.File, len(m))
-		errs = make([]error, len(m))
+		f      = make([]*os.File, len(m))
+		errs   = make([]error, len(m))
+		hadErr bool
 	)
 	for i := range m {
 		f[i], errs[i] = os.OpenFile(m[i], o, 0)
+		if errs[i] != nil {
+			hadErr = true
+		}
 	}
-	return f, errs
+	if hadErr {
+		return nil, errs
+	}
+	return f, nil
 }
 
 func doio(msr *os.File, addr uint32, f func(*os.File) error) error {
@@ -45,30 +52,47 @@ func doio(msr *os.File, addr uint32, f func(*os.File) error) error {
 }
 
 func rdmsr(m []string, addr uint32) ([]uint64, []error) {
+	var hadErr bool
 	var regs = make([]uint64, len(m))
 
 	f, errs := openAll(m, os.O_RDONLY)
-	for i := range m {
-		if errs[i] != nil {
-			continue
-		}
+	if errs != nil {
+		return nil, errs
+	}
+	errs = make([]error, len(f))
+	for i := range f {
 		errs[i] = doio(f[i], addr, func(port *os.File) error {
 			return binary.Read(port, binary.LittleEndian, &regs[i])
 		})
+		if errs[i] != nil {
+			hadErr = true
+		}
 	}
-	return regs, errs
+	if hadErr {
+		return nil, errs
+	}
+
+	return regs, nil
 }
 
-func wrmsr(m []string, addr uint32, data uint64) []error {
+func wrmsr(m []string, addr uint32, data []uint64) []error {
+	var hadErr bool
 	f, errs := openAll(m, os.O_RDWR)
 
-	for i := range m {
-		if errs[i] != nil {
-			continue
-		}
-		errs[i] = doio(f[i], addr, func(port *os.File) error {
-			return binary.Write(port, binary.LittleEndian, data)
-		})
+	if errs != nil {
+		return errs
 	}
-	return errs
+	errs = make([]error, len(f))
+	for i := range m {
+		errs[i] = doio(f[i], addr, func(port *os.File) error {
+			return binary.Write(port, binary.LittleEndian, data[i])
+		})
+		if errs[i] != nil {
+			hadErr = true
+		}
+	}
+	if hadErr {
+		return errs
+	}
+	return nil
 }

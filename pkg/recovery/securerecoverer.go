@@ -6,6 +6,7 @@ package recovery
 
 import (
 	"log"
+	"math/rand"
 	"syscall"
 	"time"
 )
@@ -19,9 +20,10 @@ const DebugTimeout time.Duration = 10
 // Sync: sync file descriptors and devices
 // Debug: enables debug messages
 type SecureRecoverer struct {
-	Reboot bool
-	Sync   bool
-	Debug  bool
+	Reboot   bool
+	Sync     bool
+	Debug    bool
+	RandWait bool
 }
 
 // Recover by reboot or poweroff without or with sync
@@ -32,9 +34,17 @@ func (sr SecureRecoverer) Recover(message string) error {
 
 	if sr.Debug {
 		if message != "" {
+			log.SetPrefix("recovery: ")
 			log.Print(message)
 		}
 		time.Sleep(DebugTimeout * time.Second)
+	}
+
+	if sr.RandWait {
+		rd := time.Duration(rand.Intn(15))
+		time.Sleep(rd * time.Second)
+		log.SetPrefix("recovery: ")
+		log.Printf("Reboot in %s seconds", rd)
 	}
 
 	if sr.Reboot {

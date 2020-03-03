@@ -8,8 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -36,13 +39,95 @@ func (bc *BootConfig) IsValid() bool {
 	return (bc.Kernel != "" && bc.Multiboot == "") || (bc.Kernel == "" && bc.Multiboot != "")
 }
 
+// ID retrurns an identifyer composed of bc's name and crc32 hash of bc.
+// The ID is suitable to be used as part of a filepath.
+func (bc *BootConfig) ID() string {
+	id := strings.Title(strings.ToLower(bc.Name))
+	id = strings.ReplaceAll(id, " ", "")
+	id = strings.ReplaceAll(id, "/", "")
+	id = strings.ReplaceAll(id, "\\", "")
+
+	buf := []byte(filepath.Base(bc.Kernel))
+	buf = append(buf, []byte(bc.KernelArgs)...)
+	buf = append(buf, []byte(filepath.Base(bc.Initramfs))...)
+	buf = append(buf, []byte(filepath.Base(bc.DeviceTree))...)
+	buf = append(buf, []byte(filepath.Base(bc.Multiboot))...)
+	buf = append(buf, []byte(bc.MultibootArgs)...)
+	for _, mod := range bc.Modules {
+		buf = append(buf, []byte(filepath.Base(mod))...)
+	}
+	h := crc32.ChecksumIEEE(buf)
+	x := fmt.Sprintf("%x", h)
+
+	return "BC_" + id + x
+}
+
 // FileNames returns a slice of all filenames in the bootconfig.
-func (bc *BootConfig) fileNames() []string {
-	str := make([]string, 0)
-	str = append(str, bc.Kernel)
-	str = append(str, bc.Initramfs)
-	str = append(str, bc.Modules...)
-	return str
+func (bc *BootConfig) FileNames() []string {
+	var files []string
+	if bc.Kernel != "" {
+		files = append(files, bc.Kernel)
+	}
+	if bc.Initramfs != "" {
+		files = append(files, bc.Initramfs)
+	}
+	if bc.DeviceTree != "" {
+		files = append(files, bc.DeviceTree)
+	}
+	if bc.Multiboot != "" {
+		files = append(files, bc.Multiboot)
+	}
+	for _, mod := range bc.Modules {
+		if mod != "" {
+			files = append(files, mod)
+		}
+	}
+	return files
+}
+
+// ChangeFilePaths modifies the filepaths inside BootConfig. It replaces
+// the current paths with new path leaving the last element of the path
+// unchanged.
+func (bc *BootConfig) ChangeFilePaths(newPath string) {
+	if bc.Kernel != "" {
+		bc.Kernel = filepath.Join(newPath, filepath.Base(bc.Kernel))
+	}
+	if bc.Initramfs != "" {
+		bc.Initramfs = filepath.Join(newPath, filepath.Base(bc.Initramfs))
+	}
+	if bc.DeviceTree != "" {
+		bc.DeviceTree = filepath.Join(newPath, filepath.Base(bc.DeviceTree))
+	}
+	if bc.Multiboot != "" {
+		bc.Multiboot = filepath.Join(newPath, filepath.Base(bc.Multiboot))
+	}
+	for j, mod := range bc.Modules {
+		if mod != "" {
+			bc.Modules[j] = filepath.Join(newPath, filepath.Base(mod))
+		}
+	}
+}
+
+// SetFilePathsPrefix modifies the filepaths inside BootConfig. It appends
+// prefix at the beginning of the current paths
+func (bc *BootConfig) SetFilePathsPrefix(prefix string) {
+	if bc.Kernel != "" {
+		bc.Kernel = filepath.Join(prefix, bc.Kernel)
+	}
+	if bc.Initramfs != "" {
+		bc.Initramfs = filepath.Join(prefix, bc.Initramfs)
+	}
+	if bc.DeviceTree != "" {
+		bc.DeviceTree = filepath.Join(prefix, bc.DeviceTree)
+	}
+	if bc.Multiboot != "" {
+		bc.Multiboot = filepath.Join(prefix, bc.Multiboot)
+	}
+	for j, mod := range bc.Modules {
+		if mod != "" {
+			bc.Modules[j] = filepath.Join(prefix, mod)
+		}
+	}
 }
 
 func (bc *BootConfig) bytestream() []byte {
@@ -57,17 +142,17 @@ func (bc *BootConfig) bytestream() []byte {
 // options. If a device-tree is specified, that will be used too
 func (bc *BootConfig) Boot() error {
 	crypto.TryMeasureData(crypto.BootConfigPCR, bc.bytestream(), "bootconfig")
-	crypto.TryMeasureFiles(bc.fileNames()...)
+	crypto.TryMeasureFiles(bc.FileNames()...)
 	if bc.Kernel != "" {
 		kernel, err := os.Open(bc.Kernel)
 		if err != nil {
-			return err
+			return fmt.Errorf("can't open kernel file for measurement: %v", err)
 		}
 		var initramfs *os.File
 		if bc.Initramfs != "" {
 			initramfs, err = os.Open(bc.Initramfs)
 			if err != nil {
-				return err
+				return fmt.Errorf("can't open initramfs file for measurement: %v", err)
 			}
 		}
 		defer func() {
@@ -84,7 +169,7 @@ func (bc *BootConfig) Boot() error {
 			}
 		}()
 		if err := kexec.FileLoad(kernel, initramfs, bc.KernelArgs); err != nil {
-			return err
+			return fmt.Errorf("kexec.FileLoad() failed: %v", err)
 		}
 	} else if bc.Multiboot != "" {
 		mbkernel, err := os.Open(bc.Multiboot)

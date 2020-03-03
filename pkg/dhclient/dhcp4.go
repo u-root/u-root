@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/vishvananda/netlink"
 )
 
@@ -29,6 +30,11 @@ func NewPacket4(iface netlink.Link, p *dhcpv4.DHCPv4) *Packet4 {
 		iface: iface,
 		P:     p,
 	}
+}
+
+// Message returns the unwrapped DHCPv4 packet.
+func (p *Packet4) Message() (*dhcpv4.DHCPv4, *dhcpv6.Message) {
+	return p.P, nil
 }
 
 // Link is a netlink link
@@ -185,4 +191,9 @@ func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
 		return nil, "", fmt.Errorf("no root path in DHCP message")
 	}
 	return parseISCSIURI(rp)
+}
+
+// Response returns the DHCP response
+func (p *Packet4) Response() interface{} {
+	return p.P
 }

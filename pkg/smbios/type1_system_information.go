@@ -13,8 +13,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// SystemInformation is defined in DSP0134 7.2.
-type SystemInformation struct {
+// SystemInfo is defined in DSP0134 7.2.
+type SystemInfo struct {
 	Table
 	Manufacturer string     // 04h
 	ProductName  string     // 05h
@@ -26,15 +26,15 @@ type SystemInformation struct {
 	Family       string     // 1Ah
 }
 
-// NewSystemInformation parses a generic Table into SystemInformation.
-func NewSystemInformation(t *Table) (*SystemInformation, error) {
-	if t.Type != TableTypeSystemInformation {
+// ParseSystemInfo parses a generic Table into SystemInfo.
+func ParseSystemInfo(t *Table) (*SystemInfo, error) {
+	if t.Type != TableTypeSystemInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
 	if t.Len() < 8 {
 		return nil, errors.New("required fields missing")
 	}
-	si := &SystemInformation{Table: *t}
+	si := &SystemInfo{Table: *t}
 	if _, err := parseStruct(t, 0 /* off */, false /* complete */, si); err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (u *UUID) ParseField(t *Table, off int) (int, error) {
 	return off + 16, nil
 }
 
-func (si *SystemInformation) String() string {
+func (si *SystemInfo) String() string {
 	lines := []string{
 		si.Header.String(),
 		fmt.Sprintf("Manufacturer: %s", si.Manufacturer),

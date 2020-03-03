@@ -45,7 +45,7 @@ func (e *Entry64) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// MarshalBinary marshals the SMBIOS 32-Bit entry point structure to binary data.
+// MarshalBinary marshals the SMBIOS 64-Bit entry point structure to binary data.
 func (e *Entry64) MarshalBinary() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	if err := binary.Write(buf, binary.LittleEndian, e); err != nil {

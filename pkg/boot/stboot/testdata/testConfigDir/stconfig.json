@@ -1,0 +1,26 @@
+{  
+    "boot_configs": [ 
+      { 
+        "name": "Standard Configuration 1", 
+        "kernel": "kernels/kernel1.vmlinuz", 
+        "kernel_args": "-a -b -c arg1",  
+        "initramfs": "initrds/initramfs",
+        "devicetree": "",
+        "multiboot_kernel": "",
+        "multiboot_args": "",
+        "multiboot_modules": ["", "", ""]
+      },
+      {
+        "name": "Multiboot Configuration 2", 
+        "multiboot_kernel": "kernels/multibootkernel.vmlinuz",
+        "multiboot_args": "-a -b -c mulitboot_arg2",
+        "multiboot_modules": ["modules/mod1", "modules/mod2", "modules/mod3"]
+      },
+      {
+        "name": "Minimal Configuration 3", 
+        "kernel": "kernels/kernel2.vmlinuz",
+        "devicetree": "devtrees/tree"
+      }
+    ], 
+    "root_cert": "signing/root.cert" 
+  }
