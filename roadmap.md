@@ -8,7 +8,6 @@ yourself.
 | Command        | Flags TODO      | Comments               |
 | -------------- | --------------- | ---------------------- |
 | :x: flashrom   | -p internal     |                        |
-| :x: gitclone   |                 | Not implemented yet!   |
 | grep           | -cnF            | RE2-compatible only    |
 | ls             | -hFfS           | -r is raw not reverse  |
 | :x: man        | -k              | Not implemented yet!   |
