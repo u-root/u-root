@@ -12,8 +12,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// IPMIDeviceInformation is defined in DSP0134 7.39.
-type IPMIDeviceInformation struct {
+// IPMIDeviceInfo is defined in DSP0134 7.39.
+type IPMIDeviceInfo struct {
 	Table
 	InterfaceType                    BMCInterfaceType // 04h
 	IPMISpecificationRevision        uint8            // 05h
@@ -24,22 +24,22 @@ type IPMIDeviceInformation struct {
 	InterruptNumber                  uint8            // 11h
 }
 
-// NewIPMIDeviceInformation parses a generic Table into IPMIDeviceInformation.
-func NewIPMIDeviceInformation(t *Table) (*IPMIDeviceInformation, error) {
-	if t.Type != TableTypeIPMIDeviceInformation {
+// ParseIPMIDeviceInfo parses a generic Table into IPMIDeviceInfo.
+func ParseIPMIDeviceInfo(t *Table) (*IPMIDeviceInfo, error) {
+	if t.Type != TableTypeIPMIDeviceInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
 	if t.Len() < 0x12 {
 		return nil, errors.New("required fields missing")
 	}
-	di := &IPMIDeviceInformation{Table: *t}
+	di := &IPMIDeviceInfo{Table: *t}
 	if _, err := parseStruct(t, 0 /* off */, false /* complete */, di); err != nil {
 		return nil, err
 	}
 	return di, nil
 }
 
-func (di *IPMIDeviceInformation) String() string {
+func (di *IPMIDeviceInfo) String() string {
 	nvs := "Not Present"
 	if di.NVStorageDeviceAddress != 0xff {
 		nvs = fmt.Sprintf("%d", di.NVStorageDeviceAddress)

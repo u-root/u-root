@@ -34,7 +34,12 @@ func (f *FileCompleter) Complete(s string) (string, []string, error) {
 	g, err = filepath.Glob(p)
 	Debug("FileCompleter: %s*: matches %v, err %v", s, g, err)
 	if err != nil || len(g) == 0 {
-		return x, nil, err
+		// one last test: directory?
+		p = filepath.Join(f.Root, s, "*")
+		g, err = filepath.Glob(p)
+		if err != nil || len(g) == 0 {
+			return x, nil, err
+		}
 	}
 	// Here's a complication: we don't want to repeat
 	// the exact match in the g array

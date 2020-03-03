@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package smbios parses SMBIOS tables into Go structures.
+//
+// smbios can read tables from binary data or from sysfs using the FromSysfs
+// and ParseInfo functions.
 package smbios
 
 import (
@@ -13,6 +17,11 @@ type Info struct {
 	Entry32 *Entry32
 	Entry64 *Entry64
 	Tables  []*Table
+}
+
+// String returns a summary of the SMBIOS version and number of tables.
+func (i *Info) String() string {
+	return fmt.Sprintf("SMBIOS %d.%d.%d (%d tables)", i.MajorVersion(), i.MinorVersion(), i.DocRev(), len(i.Tables))
 }
 
 // ParseInfo parses SMBIOS information from binary data.
@@ -34,8 +43,8 @@ func ParseInfo(entryData, tableData []byte) (*Info, error) {
 	return info, nil
 }
 
-// GetSMBIOSMajorVersion return major version of the SMBIOS spec.
-func (i *Info) GetSMBIOSMajorVersion() uint8 {
+// MajorVersion return major version of the SMBIOS spec.
+func (i *Info) MajorVersion() uint8 {
 	if i.Entry64 != nil {
 		return i.Entry64.SMBIOSMajorVersion
 	}
@@ -45,8 +54,8 @@ func (i *Info) GetSMBIOSMajorVersion() uint8 {
 	return 0
 }
 
-// GetSMBIOSMinorVersion return minor version of the SMBIOS spec.
-func (i *Info) GetSMBIOSMinorVersion() uint8 {
+// MinorVersion return minor version of the SMBIOS spec.
+func (i *Info) MinorVersion() uint8 {
 	if i.Entry64 != nil {
 		return i.Entry64.SMBIOSMinorVersion
 	}
@@ -56,8 +65,8 @@ func (i *Info) GetSMBIOSMinorVersion() uint8 {
 	return 0
 }
 
-// GetSMBIOSDocRev return document revision of the SMBIOS spec.
-func (i *Info) GetSMBIOSDocRev() uint8 {
+// DocRev return document revision of the SMBIOS spec.
+func (i *Info) DocRev() uint8 {
 	if i.Entry64 != nil {
 		return i.Entry64.SMBIOSDocRev
 	}
@@ -75,31 +84,31 @@ func (i *Info) GetTablesByType(tt TableType) []*Table {
 	return res
 }
 
-// GetBIOSInformation returns the Bios Information (type 0) table, if present.
-func (i *Info) GetBIOSInformation() (*BIOSInformation, error) {
-	bt := i.GetTablesByType(TableTypeBIOSInformation)
+// GetBIOSInfo returns the Bios Info (type 0) table, if present.
+func (i *Info) GetBIOSInfo() (*BIOSInfo, error) {
+	bt := i.GetTablesByType(TableTypeBIOSInfo)
 	if len(bt) == 0 {
 		return nil, ErrTableNotFound
 	}
 	// There can only be one of these.
-	return NewBIOSInformation(bt[0])
+	return ParseBIOSInfo(bt[0])
 }
 
-// GetSystemInformation returns the System Information (type 1) table, if present.
-func (i *Info) GetSystemInformation() (*SystemInformation, error) {
-	bt := i.GetTablesByType(TableTypeSystemInformation)
+// GetSystemInfo returns the System Info (type 1) table, if present.
+func (i *Info) GetSystemInfo() (*SystemInfo, error) {
+	bt := i.GetTablesByType(TableTypeSystemInfo)
 	if len(bt) == 0 {
 		return nil, ErrTableNotFound
 	}
 	// There can only be one of these.
-	return NewSystemInformation(bt[0])
+	return ParseSystemInfo(bt[0])
 }
 
-// GetBaseboardInformation returns all the Baseboard Information (type 2) tables present.
-func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
-	var res []*BaseboardInformation
-	for _, t := range i.GetTablesByType(TableTypeBaseboardInformation) {
-		bi, err := NewBaseboardInformation(t)
+// GetBaseboardInfo returns all the Baseboard Info (type 2) tables present.
+func (i *Info) GetBaseboardInfo() ([]*BaseboardInfo, error) {
+	var res []*BaseboardInfo
+	for _, t := range i.GetTablesByType(TableTypeBaseboardInfo) {
+		bi, err := ParseBaseboardInfo(t)
 		if err != nil {
 			return nil, err
 		}
@@ -108,11 +117,11 @@ func (i *Info) GetBaseboardInformation() ([]*BaseboardInformation, error) {
 	return res, nil
 }
 
-// GetChassisInformation returns all the Chassis Information (type 3) tables present.
-func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
-	var res []*ChassisInformation
-	for _, t := range i.GetTablesByType(TableTypeChassisInformation) {
-		ci, err := NewChassisInformation(t)
+// GetChassisInfo returns all the Chassis Info (type 3) tables present.
+func (i *Info) GetChassisInfo() ([]*ChassisInfo, error) {
+	var res []*ChassisInfo
+	for _, t := range i.GetTablesByType(TableTypeChassisInfo) {
+		ci, err := ParseChassisInfo(t)
 		if err != nil {
 			return nil, err
 		}
@@ -121,11 +130,11 @@ func (i *Info) GetChassisInformation() ([]*ChassisInformation, error) {
 	return res, nil
 }
 
-// GetProcessorInformation returns all the Processor Information (type 4) tables present.
-func (i *Info) GetProcessorInformation() ([]*ProcessorInformation, error) {
-	var res []*ProcessorInformation
-	for _, t := range i.GetTablesByType(TableTypeProcessorInformation) {
-		pi, err := NewProcessorInformation(t)
+// GetProcessorInfo returns all the Processor Info (type 4) tables present.
+func (i *Info) GetProcessorInfo() ([]*ProcessorInfo, error) {
+	var res []*ProcessorInfo
+	for _, t := range i.GetTablesByType(TableTypeProcessorInfo) {
+		pi, err := ParseProcessorInfo(t)
 		if err != nil {
 			return nil, err
 		}
@@ -134,11 +143,11 @@ func (i *Info) GetProcessorInformation() ([]*ProcessorInformation, error) {
 	return res, nil
 }
 
-// GetCacheInformation returns all the Cache Information (type 7) tables present.
-func (i *Info) GetCacheInformation() ([]*CacheInformation, error) {
-	var res []*CacheInformation
-	for _, t := range i.GetTablesByType(TableTypeCacheInformation) {
-		ci, err := NewCacheInformation(t)
+// GetCacheInfo returns all the Cache Info (type 7) tables present.
+func (i *Info) GetCacheInfo() ([]*CacheInfo, error) {
+	var res []*CacheInfo
+	for _, t := range i.GetTablesByType(TableTypeCacheInfo) {
+		ci, err := ParseCacheInfo(t)
 		if err != nil {
 			return nil, err
 		}
@@ -160,11 +169,11 @@ func (i *Info) GetMemoryDevices() ([]*MemoryDevice, error) {
 	return res, nil
 }
 
-// GetIPMIDeviceInformation returns all the IPMI Device Information (type 38) tables present.
-func (i *Info) GetIPMIDeviceInformation() ([]*IPMIDeviceInformation, error) {
-	var res []*IPMIDeviceInformation
-	for _, t := range i.GetTablesByType(TableTypeIPMIDeviceInformation) {
-		d, err := NewIPMIDeviceInformation(t)
+// GetIPMIDeviceInfo returns all the IPMI Device Info (type 38) tables present.
+func (i *Info) GetIPMIDeviceInfo() ([]*IPMIDeviceInfo, error) {
+	var res []*IPMIDeviceInfo
+	for _, t := range i.GetTablesByType(TableTypeIPMIDeviceInfo) {
+		d, err := ParseIPMIDeviceInfo(t)
 		if err != nil {
 			return nil, err
 		}

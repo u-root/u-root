@@ -14,6 +14,7 @@
 //     -i: interval in milliseconds (default: 1000)
 //     -V: version
 //     -w: wait time in milliseconds (default: 100)
+//     -a: Audible rings a bell when a packet is received
 //     -h: help
 package main
 
@@ -34,6 +35,7 @@ var (
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
+	audible    = flag.Bool("a", false, "Audible rings a bell when a packet is received")
 )
 
 const (
@@ -157,6 +159,9 @@ func main() {
 		msg, err := ping1(netname, host, i)
 		if err != nil {
 			log.Fatalf("ping failed: %v", err)
+		}
+		if *audible {
+			msg = "\a" + msg
 		}
 		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)
