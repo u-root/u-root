@@ -17,7 +17,7 @@
 //     IA32_FEATURE_CONTROL -- equivalent to * msr 0x3a reg
 //     The next two commands use IA32_FEATURE_CONTROL:
 //     READ_IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd
-//     LOCK IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd IA32_FEATURE_CONTROL 1 val or wr
+//     LOCK IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd IA32_FEATURE_CONTROL 1 u64 or wr
 //     e.g.
 //./msr IA32_FEATURE_CONTROL
 // [[/dev/cpu/0/msr /dev/cpu/1/msr /dev/cpu/2/msr /dev/cpu/3/msr] 58]
@@ -56,7 +56,7 @@ var (
 	}{
 		{name: "IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "msr", "0x3a", "reg"}},
 		{name: "READ_IA32_FEATURE_CONTROL", w: []forth.Cell{"IA32_FEATURE_CONTROL", "rd"}},
-		{name: "LOCK_IA32_FEATURE_CONTROL", w: []forth.Cell{"IA32_FEATURE_CONTROL", "READ_IA32_FEATURE_CONTROL", "1", "val", "or", "wr"}},
+		{name: "LOCK_IA32_FEATURE_CONTROL", w: []forth.Cell{"IA32_FEATURE_CONTROL", "READ_IA32_FEATURE_CONTROL", "1", "u64", "or", "wr"}},
 	}
 	ops = []struct {
 		name string
@@ -64,7 +64,7 @@ var (
 	}{
 		{name: "msr", op: msr},
 		{name: "reg", op: reg},
-		{name: "val", op: val},
+		{name: "u64", op: u64},
 		{name: "rd", op: rd},
 		{name: "wr", op: wr},
 		{name: "swr", op: swr},
@@ -98,7 +98,7 @@ func reg(f forth.Forth) {
 	f.Push(uint32(n))
 }
 
-func val(f forth.Forth) {
+func u64(f forth.Forth) {
 	n, err := strconv.ParseUint(f.Pop().(string), 0, 64)
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
@@ -226,7 +226,14 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s msr %s reg %s val swr", a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s msr %s reg %s u64 swr", a[1], a[2], a[3])); err != nil {
+			log.Fatal(err)
+		}
+	case "lock":
+		if len(a) != 4 {
+			log.Fatal("Usage for lock: lock <msr-glob> <register> <bit>")
+		}
+		if err := forth.EvalString(f, fmt.Sprintf("'%s msr %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	default:
