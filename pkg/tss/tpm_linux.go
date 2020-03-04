@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tss provides TPM 1.2/2.0 core functionality and
-// abstraction layer for high-level functions
 package tss
 
 import (
@@ -95,4 +93,10 @@ func newTPM(pTPM probedTPM) (*TPM, error) {
 		SysPath: pTPM.Path,
 		RWC:     rwc,
 	}, nil
+}
+
+// MeasurementLog reads the TCPA eventlog in binary format
+// from the Linux kernel
+func (t *TPM) MeasurementLog() ([]byte, error) {
+	return ioutil.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
 }

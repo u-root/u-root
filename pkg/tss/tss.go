@@ -7,12 +7,8 @@
 package tss
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
-	"io/ioutil"
-
-	"github.com/google/go-tpm/tpm2"
 )
 
 // NewTPM initializes access to the TPM based on the
@@ -32,12 +28,6 @@ func NewTPM() (*TPM, error) {
 	}
 
 	return nil, errors.New("TPM device not available")
-}
-
-// MeasurementLog reads the TCPA eventlog in binary format
-// from the Linux kernel
-func (t *TPM) MeasurementLog() ([]byte, error) {
-	return ioutil.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
 }
 
 // Info returns information about the TPM.
@@ -67,37 +57,6 @@ func (t *TPM) GetVersion() TPMVersion {
 // Close closes the TPM socket and wipe locked buffers
 func (t *TPM) Close() error {
 	return t.RWC.Close()
-}
-
-func (a HashAlg) cryptoHash() crypto.Hash {
-	switch a {
-	case HashSHA1:
-		return crypto.SHA1
-	case HashSHA256:
-		return crypto.SHA256
-	}
-	return 0
-}
-
-func (a HashAlg) goTPMAlg() tpm2.Algorithm {
-	switch a {
-	case HashSHA1:
-		return tpm2.AlgSHA1
-	case HashSHA256:
-		return tpm2.AlgSHA256
-	}
-	return 0
-}
-
-// String returns a human-friendly representation of the hash algorithm.
-func (a HashAlg) String() string {
-	switch a {
-	case HashSHA1:
-		return "SHA1"
-	case HashSHA256:
-		return "SHA256"
-	}
-	return fmt.Sprintf("HashAlg<%d>", int(a))
 }
 
 // ReadPCRs reads all PCRs into the PCR structure

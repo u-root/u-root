@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tss provides TPM 1.2/2.0 core functionality and
-// abstraction layer for high-level functions
 package tss
 
 import (
 	"crypto"
 	"fmt"
 	"io"
-
-	"github.com/google/go-tpm/tpm2"
 )
 
 // TCGVendorID TPM manufacturer id
@@ -26,16 +22,6 @@ func (id TCGVendorID) String() string {
 	return s
 
 }
-
-// HashAlg is the TPM hash algorithm id
-type HashAlg uint8
-
-var (
-	// HashSHA1 is the TPM 1.2 identifier for SHA1
-	HashSHA1 = HashAlg(tpm2.AlgSHA1)
-	// HashSHA256 is the TPM 2.0 identifier for SHA256
-	HashSHA256 = HashAlg(tpm2.AlgSHA256)
-)
 
 var vendors = map[TCGVendorID]string{
 	1095582720: "AMD",

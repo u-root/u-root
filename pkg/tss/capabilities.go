@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tss provides TPM 1.2/2.0 core functionality and
-// abstraction layer for high-level functions
 package tss
 
 import (
