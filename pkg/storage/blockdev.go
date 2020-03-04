@@ -186,7 +186,7 @@ func GetBlockStats() ([]BlockDev, error) {
 			return nil, err
 		}
 		devpath := path.Join("/dev/", devname)
-		if uuid, err := getUUID(devpath); err != nil {
+		if uuid, err := getFilesystemUUID(devpath); err != nil {
 			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat})
 		} else {
 			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat, FsUUID: uuid})
@@ -195,7 +195,7 @@ func GetBlockStats() ([]BlockDev, error) {
 	return blockdevs, nil
 }
 
-func getUUID(devpath string) (string, error) {
+func getFilesystemUUID(devpath string) (string, error) {
 	file, err := os.Open(devpath)
 	if err != nil {
 		return "", err
