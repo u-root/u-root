@@ -363,6 +363,28 @@ func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
 	return partitions, nil
 }
 
+// PartitionsByLable returns a list of BlockDev objects whose underlying
+// block device has the given label
+func PartitionsByLable(devices []BlockDev, label string) ([]BlockDev, error) {
+	partitions := make([]BlockDev, 0)
+	for _, device := range devices {
+		table, err := GetGPTTable(device)
+		if err != nil {
+			log.Printf("Skipping %s: %v", device.Name, err)
+			continue
+		}
+		for _, part := range table.Partitions {
+			if part.IsEmpty() {
+				continue
+			}
+			if string(part.PartNameUTF16[:]) == label {
+				partitions = append(partitions, device)
+			}
+		}
+	}
+	return partitions, nil
+}
+
 // PartitionsByFsUUID returns a list of BlockDev objects whose underlying
 // block device has a filesystem with the given UUID
 func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
