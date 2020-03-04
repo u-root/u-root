@@ -18,7 +18,6 @@ import (
 // pollNTP queries the specified NTP server.
 // On error the query is repeated infinitally.
 func pollNTP() (time.Time, error) {
-	data := initramfsData{}
 	bytes, err := data.get(ntpServerFile)
 	if err != nil {
 		reboot("Bootstrap URLs: %v", err)

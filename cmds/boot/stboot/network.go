@@ -33,7 +33,6 @@ type netConf struct {
 }
 
 func getNetConf() (netConf, error) {
-	data := initramfsData{}
 	bytes, err := data.get(networkFile)
 	var net netConf
 	if err != nil {
@@ -240,7 +239,6 @@ func downloadFromHTTPS(url string, destination string) error {
 // for HTTPS and verifies it.
 func loadHTTPSCertificates() (*x509.CertPool, error) {
 	roots := x509.NewCertPool()
-	data := initramfsData{}
 	bytes, err := data.get(httpsRootsFile)
 	if err != nil {
 		return roots, err

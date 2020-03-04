@@ -22,11 +22,13 @@ import (
 	"github.com/u-root/u-root/pkg/recovery"
 )
 
-var debug = func(string, ...interface{}) {}
-
 var (
 	dryRun  = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 	doDebug = flag.Bool("d", false, "Print debug output")
+
+	debug = func(string, ...interface{}) {}
+
+	data dataPartition
 )
 
 const (
@@ -79,7 +81,14 @@ func main() {
 		log.Printf("Host variables: %s", str)
 	}
 
-	var data initramfsData
+	/////////////////
+	// Data partition
+	/////////////////
+
+	data, err = findDataPartition()
+	if err != nil {
+		reboot("%v", err)
+	}
 
 	//////////
 	// Network
