@@ -5,10 +5,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -16,7 +14,10 @@ import (
 	"github.com/u-root/u-root/pkg/storage"
 )
 
-const dataPartitionFSType = "ext4"
+const (
+	dataPartitionFSType = "ext4"
+	dataPartitionLabel  = "STDATA"
+)
 
 type dataPartition interface {
 	get(filename string) ([]byte, error)
@@ -45,30 +46,23 @@ func findDataPartition() (dataPartition, error) {
 		return nil, fmt.Errorf("no block devices: %v", err)
 	}
 
-	var mounted []*mount.MountPoint
-	for _, dev := range devices {
-		if strings.Contains(dev.Name, "loop") {
-			continue
-		}
-		devname := filepath.Join("/dev", dev.Name)
-		path := filepath.Join("/mnt", dev.Name)
-		mp, err := mount.Mount(devname, path, dataPartitionFSType, "", 0)
-		if err != nil {
-			debug("Skip %s: %v", devname, err)
-			continue
-		}
-		mounted = append(mounted, mp)
+	devices, err = storage.PartitionsByLable(devices, "STDATA")
+	if err != nil || len(devices) == 0 {
+		return nil, fmt.Errorf("no partitions with label %s", dataPartitionLabel)
 	}
+	if len(devices) > 1 {
+		debug("WARNING: multiple data partitions found! Take %s", devices[0].Name)
+	}
+
+	devname := filepath.Join("/dev", devices[0].Name)
+	path := filepath.Join("/mnt", devices[0].Name)
+	mp, err := mount.Mount(devname, path, dataPartitionFSType, "", 0)
+	if err != nil {
+		return nil, err
+	}
+
+	debug("data partition %s mounted at %s", mp.Device, mp.Path)
 	var p partition
-	for _, mp := range mounted {
-		f := filepath.Join(mp.Path, provisioningServerFile)
-		if _, err := os.Stat(f); err != nil {
-			debug("Skip %s : %v", mp.Device, err)
-			continue
-		}
-		debug("data partition %s mounted at %s", mp.Device, mp.Path)
-		p.mountpoint = mp.Path
-		return &p, nil
-	}
-	return nil, errors.New("No stboot data partition found")
+	p.mountpoint = mp.Path
+	return &p, nil
 }
