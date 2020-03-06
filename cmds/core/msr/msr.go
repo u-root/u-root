@@ -55,9 +55,40 @@ var (
 		name string
 		w    []forth.Cell
 	}{
-		{name: "IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "msr", "0x3a", "reg"}},
-		{name: "READ_IA32_FEATURE_CONTROL", w: []forth.Cell{"IA32_FEATURE_CONTROL", "rd"}},
-		{name: "LOCK_IA32_FEATURE_CONTROL", w: []forth.Cell{"IA32_FEATURE_CONTROL", "READ_IA32_FEATURE_CONTROL", "1", "u64", "or", "wr"}},
+		// Architectural MSR. All systems.
+		// Enables features like VMX.
+		{name: "MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "msr", "0x3a", "reg"}},
+		{name: "READ_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "rd"}},
+		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "u64", "or", "wr"}},
+		// Silvermont, Airmont, Nehalem...
+		// Controls Processor C States.
+		{name: "MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"'*", "msr", "0xe2", "reg"}},
+		{name: "READ_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "rd"}},
+		{name: "LOCK_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "READ_MSR_PKG_CST_CONFIG_CONTROL", uint64(1 << 15), "or", "wr"}},
+		// Westmere onwards.
+		// Note that this turns on AES instructions, however
+		// 3 will turn off AES until reset.
+		{name: "MSR_FEATURE_CONFIG", w: []forth.Cell{"'*", "msr", "0x13c", "reg"}},
+		{name: "READ_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "rd"}},
+		{name: "LOCK_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "READ_MSR_FEATURE_CONFIG", uint64(1 << 0), "or", "wr"}},
+		// Goldmont, SandyBridge
+		// Controls DRAM power limits. See Intel SDM
+		{name: "MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"'*", "msr", "0x618", "reg"}},
+		{name: "READ_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "rd"}},
+		{name: "LOCK_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "READ_MSR_DRAM_POWER_LIMIT", uint64(1 << 31), "or", "wr"}},
+		// IvyBridge Onwards.
+		// Not much information in the SDM, seems to control power limits
+		{name: "MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"'*", "msr", "0xe2", "reg"}},
+		{name: "READ_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "rd"}},
+		{name: "LOCK_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "READ_MSR_CONFIG_TDP_CONTROL", uint64(1 << 31), "or", "wr"}},
+		// Architectural MSR. All systems.
+		// This is the actual spelling of the MSR in the manual.
+		// Controls availability of silicon debug interfaces
+		{name: "IA32_DEBUG_INTERFACE", w: []forth.Cell{"'*", "msr", "0xe2", "reg"}},
+		{name: "READ_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "rd"}},
+		{name: "LOCK_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "READ_IA32_DEBUG_INTERFACE", uint64(1 << 15), "or", "wr"}},
+		// Locks all known msrs to lock
+		{name: "LOCK_KNOWN_MSRS", w: []forth.Cell{"LOCK_MSR_IA32_FEATURE_CONTROL", "LOCK_MSR_PKG_CST_CONFIG_CONTROL", "LOCK_MSR_FEATURE_CONFIG", "LOCK_MSR_DRAM_POWER_LIMIT", "LOCK_MSR_CONFIG_TDP_CONTROL", "LOCK_IA32_DEBUG_INTERFACE"}},
 	}
 	ops = []struct {
 		name string
