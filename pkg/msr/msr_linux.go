@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 )
 
+// Paths returns the paths to all instances of a specific msr
 func Paths(n string) []string {
 	m, err := filepath.Glob(filepath.Join("/dev/cpu", n, "msr"))
 	// This err will be if the glob was bad.
@@ -51,6 +52,7 @@ func doIO(msr *os.File, addr uint32, f func(*os.File) error) error {
 	return f(msr)
 }
 
+// Read reads from the msrs paths specified in m.
 func Read(m []string, addr uint32) ([]uint64, []error) {
 	var hadErr bool
 	var regs = make([]uint64, len(m))
@@ -75,6 +77,7 @@ func Read(m []string, addr uint32) ([]uint64, []error) {
 	return regs, nil
 }
 
+// Write writes the corresponding data to their specified msrs
 func Write(m []string, addr uint32, data []uint64) []error {
 	var hadErr bool
 	f, errs := openAll(m, os.O_RDWR)
