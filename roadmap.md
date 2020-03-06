@@ -19,7 +19,6 @@ yourself.
 | readlink       | -em             |                        |
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |
-| sync           | -df             |                        |
 | :x: time       | -p              |                        |
 | truncate       | -or             |                        |
 | uniq           | -i              |                        |
