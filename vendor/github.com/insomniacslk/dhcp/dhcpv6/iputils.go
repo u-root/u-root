@@ -83,11 +83,10 @@ func ExtractMAC(packet DHCPv6) (net.HardwareAddr, error) {
 			return nil, err
 		}
 	}
-	optclientid := msg.GetOneOption(OptionClientID)
-	if optclientid == nil {
+	duid := msg.(*Message).Options.ClientID()
+	if duid == nil {
 		return nil, fmt.Errorf("client ID not found in packet")
 	}
-	duid := optclientid.(*OptClientId).Cid
 	if duid.LinkLayerAddr == nil {
 		return nil, fmt.Errorf("failed to extract MAC")
 	}

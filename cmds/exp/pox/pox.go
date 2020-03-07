@@ -120,20 +120,20 @@ var chrootMounts = []struct {
 	{"/dev", "/dev", "", mount.MS_BIND, "", 0755},
 }
 
-func poxCreate(names []string) error {
-	if len(names) == 0 {
+func poxCreate(bin []string) error {
+	if len(bin) == 0 {
 		return fmt.Errorf(usage)
 	}
-	l, err := ldd.Ldd(names)
+	l, err := ldd.Ldd(bin)
 	if err != nil {
 		var stderr []byte
 		if eerr, ok := err.(*exec.ExitError); ok {
 			stderr = eerr.Stderr
 		}
-		return fmt.Errorf("Running ldd on %v: %v %s", names,
-			err, stderr)
+		return fmt.Errorf("Running ldd on %v: %v %s", bin, err, stderr)
 	}
 
+	var names []string
 	for _, dep := range l {
 		v("%s", dep.FullName)
 		names = append(names, dep.FullName)

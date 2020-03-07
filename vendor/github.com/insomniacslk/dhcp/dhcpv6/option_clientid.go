@@ -4,36 +4,31 @@ import (
 	"fmt"
 )
 
-// OptClientId represents a Client ID option
-//
-// This module defines the OptClientId and DUID structures.
-// https://www.ietf.org/rfc/rfc3315.txt
-type OptClientId struct {
-	Cid Duid
+// OptClientID represents a Client Identifier option as defined by RFC 3315
+// Section 22.2.
+func OptClientID(d Duid) Option {
+	return &optClientID{d}
 }
 
-func (op *OptClientId) Code() OptionCode {
+type optClientID struct {
+	Duid
+}
+
+func (*optClientID) Code() OptionCode {
 	return OptionClientID
 }
 
-// ToBytes marshals the Client ID option as defined by RFC 3315, Section 22.2.
-func (op *OptClientId) ToBytes() []byte {
-	return op.Cid.ToBytes()
+func (op *optClientID) String() string {
+	return fmt.Sprintf("ClientID: %v", op.Duid.String())
 }
 
-func (op *OptClientId) String() string {
-	return fmt.Sprintf("OptClientId{cid=%v}", op.Cid.String())
-}
-
-// ParseOptClientId builds an OptClientId structure from a sequence
+// parseOptClientID builds an OptClientId structure from a sequence
 // of bytes. The input data does not include option code and length
 // bytes.
-func ParseOptClientId(data []byte) (*OptClientId, error) {
-	var opt OptClientId
+func parseOptClientID(data []byte) (*optClientID, error) {
 	cid, err := DuidFromBytes(data)
 	if err != nil {
 		return nil, err
 	}
-	opt.Cid = *cid
-	return &opt, nil
+	return &optClientID{*cid}, nil
 }
