@@ -54,7 +54,7 @@ func (op *OptIANA) ToBytes() []byte {
 }
 
 func (op *OptIANA) String() string {
-	return fmt.Sprintf("OptIANA{IAID=%v, t1=%v, t2=%v, options=%v}",
+	return fmt.Sprintf("IANA: {IAID=%v, t1=%v, t2=%v, options=%v}",
 		op.IaId, op.T1, op.T2, op.Options)
 }
 

@@ -49,6 +49,16 @@ func (a Arch) String() string {
 // Archs represents multiple Arch values.
 type Archs []Arch
 
+// Contains returns whether b is one of the Archs in a.
+func (a Archs) Contains(b Arch) bool {
+	for _, t := range a {
+		if t == b {
+			return true
+		}
+	}
+	return false
+}
+
 // ToBytes returns the serialized option defined by RFC 4578 (DHCPv4) and RFC
 // 5970 (DHCPv6) as the Client System Architecture Option.
 func (a Archs) ToBytes() []byte {

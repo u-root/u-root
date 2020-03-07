@@ -4,30 +4,29 @@ import (
 	"fmt"
 )
 
-// OptBootFileURL implements the OptionBootfileURL option
-//
-// This module defines the OptBootFileURL structure.
-// https://www.ietf.org/rfc/rfc5970.txt
-type OptBootFileURL string
+// OptBootFileURL returns a OptionBootfileURL as defined by RFC 5970.
+func OptBootFileURL(url string) Option {
+	return optBootFileURL(url)
+}
 
-var _ Option = OptBootFileURL("")
+type optBootFileURL string
 
 // Code returns the option code
-func (op OptBootFileURL) Code() OptionCode {
+func (op optBootFileURL) Code() OptionCode {
 	return OptionBootfileURL
 }
 
 // ToBytes serializes the option and returns it as a sequence of bytes
-func (op OptBootFileURL) ToBytes() []byte {
+func (op optBootFileURL) ToBytes() []byte {
 	return []byte(op)
 }
 
-func (op OptBootFileURL) String() string {
-	return fmt.Sprintf("OptBootFileURL(%s)", string(op))
+func (op optBootFileURL) String() string {
+	return fmt.Sprintf("BootFileURL: %s", string(op))
 }
 
-// ParseOptBootFileURL builds an OptBootFileURL structure from a sequence
+// parseOptBootFileURL builds an optBootFileURL structure from a sequence
 // of bytes. The input data does not include option code and length bytes.
-func ParseOptBootFileURL(data []byte) (OptBootFileURL, error) {
-	return OptBootFileURL(string(data)), nil
+func parseOptBootFileURL(data []byte) (optBootFileURL, error) {
+	return optBootFileURL(string(data)), nil
 }

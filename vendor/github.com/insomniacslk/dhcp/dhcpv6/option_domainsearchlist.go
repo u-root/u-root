@@ -6,31 +6,32 @@ import (
 	"github.com/insomniacslk/dhcp/rfc1035label"
 )
 
-// OptDomainSearchList list implements a OptionDomainSearchList option
-//
-// This module defines the OptDomainSearchList structure.
-// https://www.ietf.org/rfc/rfc3646.txt
-type OptDomainSearchList struct {
+// OptDomainSearchList returns a DomainSearchList option as defined by RFC 3646.
+func OptDomainSearchList(labels *rfc1035label.Labels) Option {
+	return &optDomainSearchList{DomainSearchList: labels}
+}
+
+type optDomainSearchList struct {
 	DomainSearchList *rfc1035label.Labels
 }
 
-func (op *OptDomainSearchList) Code() OptionCode {
+func (op *optDomainSearchList) Code() OptionCode {
 	return OptionDomainSearchList
 }
 
 // ToBytes marshals this option to bytes.
-func (op *OptDomainSearchList) ToBytes() []byte {
+func (op *optDomainSearchList) ToBytes() []byte {
 	return op.DomainSearchList.ToBytes()
 }
 
-func (op *OptDomainSearchList) String() string {
-	return fmt.Sprintf("OptDomainSearchList{searchlist=%v}", op.DomainSearchList.Labels)
+func (op *optDomainSearchList) String() string {
+	return fmt.Sprintf("DomainSearchList: %s", op.DomainSearchList)
 }
 
 // ParseOptDomainSearchList builds an OptDomainSearchList structure from a sequence
 // of bytes. The input data does not include option code and length bytes.
-func ParseOptDomainSearchList(data []byte) (*OptDomainSearchList, error) {
-	var opt OptDomainSearchList
+func parseOptDomainSearchList(data []byte) (*optDomainSearchList, error) {
+	var opt optDomainSearchList
 	var err error
 	opt.DomainSearchList, err = rfc1035label.FromBytes(data)
 	if err != nil {

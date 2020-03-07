@@ -96,13 +96,13 @@ func RequestNetbootv4(ifname string, timeout time.Duration, retries int, modifie
 // ConversationToNetconf extracts network configuration and boot file URL from a
 // DHCPv6 4-way conversation and returns them, or an error if any.
 func ConversationToNetconf(conversation []dhcpv6.DHCPv6) (*BootConf, error) {
-	var advertise, reply, optionsSource dhcpv6.DHCPv6
+	var advertise, reply *dhcpv6.Message
 	for _, m := range conversation {
 		switch m.Type() {
 		case dhcpv6.MessageTypeAdvertise:
-			advertise = m
+			advertise = m.(*dhcpv6.Message)
 		case dhcpv6.MessageTypeReply:
-			reply = m
+			reply = m.(*dhcpv6.Message)
 		}
 	}
 	if reply == nil {
@@ -110,27 +110,24 @@ func ConversationToNetconf(conversation []dhcpv6.DHCPv6) (*BootConf, error) {
 	}
 
 	bootconf := &BootConf{}
-	netconf, err := GetNetConfFromPacketv6(reply.(*dhcpv6.Message))
+	netconf, err := GetNetConfFromPacketv6(reply)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get netconf from packet: %v", err)
 	}
 	bootconf.NetConf = *netconf
 
-	if reply.GetOneOption(dhcpv6.OptionBootfileURL) != nil {
-		optionsSource = reply
+	if u := reply.Options.BootFileURL(); len(u) > 0 {
+		bootconf.BootfileURL = u
+		bootconf.BootfileParam = reply.Options.BootFileParam()
 	} else {
 		log.Printf("no bootfile URL option found in REPLY, fallback to ADVERTISE's value")
-		if advertise.GetOneOption(dhcpv6.OptionBootfileURL) != nil {
-			optionsSource = advertise
+		if u := advertise.Options.BootFileURL(); len(u) > 0 {
+			bootconf.BootfileURL = u
+			bootconf.BootfileParam = advertise.Options.BootFileParam()
 		}
 	}
-	if optionsSource == nil {
+	if len(bootconf.BootfileURL) == 0 {
 		return nil, errors.New("no bootfile URL option found")
-	}
-	bootconf.BootfileURL = string(optionsSource.GetOneOption(dhcpv6.OptionBootfileURL).(dhcpv6.OptBootFileURL))
-
-	if bootfileParamOption := optionsSource.GetOneOption(dhcpv6.OptionBootfileParam); bootfileParamOption != nil {
-		bootconf.BootfileParam = bootfileParamOption.(dhcpv6.OptBootFileParam)
 	}
 	return bootconf, nil
 }
