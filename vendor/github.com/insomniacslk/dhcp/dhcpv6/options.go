@@ -40,17 +40,19 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	)
 	switch code {
 	case OptionClientID:
-		opt, err = ParseOptClientId(optData)
+		opt, err = parseOptClientID(optData)
 	case OptionServerID:
-		opt, err = ParseOptServerId(optData)
+		opt, err = parseOptServerID(optData)
 	case OptionIANA:
 		opt, err = ParseOptIANA(optData)
 	case OptionIAAddr:
 		opt, err = ParseOptIAAddress(optData)
 	case OptionORO:
-		opt, err = ParseOptRequestedOption(optData)
+		var o optRequestedOption
+		err = o.FromBytes(optData)
+		opt = &o
 	case OptionElapsedTime:
-		opt, err = ParseOptElapsedTime(optData)
+		opt, err = parseOptElapsedTime(optData)
 	case OptionRelayMsg:
 		opt, err = ParseOptRelayMsg(optData)
 	case OptionStatusCode:
@@ -64,23 +66,27 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	case OptionInterfaceID:
 		opt, err = ParseOptInterfaceId(optData)
 	case OptionDNSRecursiveNameServer:
-		opt, err = ParseOptDNSRecursiveNameServer(optData)
+		opt, err = parseOptDNS(optData)
 	case OptionDomainSearchList:
-		opt, err = ParseOptDomainSearchList(optData)
+		opt, err = parseOptDomainSearchList(optData)
 	case OptionIAPD:
 		opt, err = ParseOptIAForPrefixDelegation(optData)
 	case OptionIAPrefix:
 		opt, err = ParseOptIAPrefix(optData)
 	case OptionRemoteID:
 		opt, err = ParseOptRemoteId(optData)
+	case OptionFQDN:
+		opt, err = ParseOptFQDN(optData)
 	case OptionBootfileURL:
-		opt, err = ParseOptBootFileURL(optData)
+		opt, err = parseOptBootFileURL(optData)
 	case OptionBootfileParam:
-		opt, err = ParseOptBootFileParam(optData)
+		opt, err = parseOptBootFileParam(optData)
 	case OptionClientArchType:
-		opt, err = ParseOptClientArchType(optData)
+		opt, err = parseOptClientArchType(optData)
 	case OptionNII:
-		opt, err = ParseOptNetworkInterfaceId(optData)
+		var o OptNetworkInterfaceID
+		err = o.FromBytes(optData)
+		opt = &o
 	case Option4RD:
 		opt, err = ParseOpt4RD(optData)
 	case Option4RDMapRule:

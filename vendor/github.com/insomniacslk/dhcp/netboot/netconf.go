@@ -35,15 +35,15 @@ type NetConf struct {
 // GetNetConfFromPacketv6 extracts network configuration information from a DHCPv6
 // Reply packet and returns a populated NetConf structure
 func GetNetConfFromPacketv6(d *dhcpv6.Message) (*NetConf, error) {
-	opt := d.GetOneOption(dhcpv6.OptionIANA)
-	if opt == nil {
-		return nil, errors.New("No option IA NA found")
+	iana := d.Options.OneIANA()
+	if iana == nil {
+		return nil, errors.New("no option IA NA found")
 	}
 	netconf := NetConf{}
+
 	// get IP configuration
-	oiana := opt.(*dhcpv6.OptIANA)
 	iaaddrs := make([]*dhcpv6.OptIAAddress, 0)
-	for _, o := range oiana.Options {
+	for _, o := range iana.Options {
 		if o.Code() == dhcpv6.OptionIAAddr {
 			iaaddrs = append(iaaddrs, o.(*dhcpv6.OptIAAddress))
 		}
@@ -60,19 +60,15 @@ func GetNetConfFromPacketv6(d *dhcpv6.Message) (*NetConf, error) {
 		})
 	}
 	// get DNS configuration
-	opt = d.GetOneOption(dhcpv6.OptionDNSRecursiveNameServer)
-	if opt == nil {
-		return nil, errors.New("No option DNS Recursive Name Servers found ")
+	dns := d.Options.DNS()
+	if len(dns) == 0 {
+		return nil, errors.New("no option DNS Recursive Name Servers found")
 	}
-	odnsserv := opt.(*dhcpv6.OptDNSRecursiveNameServer)
-	// TODO should this be copied?
-	netconf.DNSServers = odnsserv.NameServers
+	netconf.DNSServers = dns
 
-	opt = d.GetOneOption(dhcpv6.OptionDomainSearchList)
-	if opt != nil {
-		odomains := opt.(*dhcpv6.OptDomainSearchList)
-		// TODO should this be copied?
-		netconf.DNSSearchList = odomains.DomainSearchList.Labels
+	domains := d.Options.DomainSearchList()
+	if domains != nil {
+		netconf.DNSSearchList = domains.Labels
 	}
 
 	return &netconf, nil
