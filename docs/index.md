@@ -12,8 +12,7 @@ init program and four Go compiler binaries.
 
 ## Setup
 
-On an Ubuntu system, install prerequisites and ensure Go is at least version
-1.11:
+On an Ubuntu system, install prerequisites and ensure Go is at least version 1.12:
 
 ```sh
 sudo apt-get install git golang build-essential
