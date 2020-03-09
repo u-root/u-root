@@ -57,34 +57,34 @@ var (
 	}{
 		// Architectural MSR. All systems.
 		// Enables features like VMX.
-		{name: "MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "msr", "0x3a", "reg"}},
+		{name: "MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "cpu", "0x3a", "reg"}},
 		{name: "READ_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "rd"}},
 		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "u64", "or", "wr"}},
 		// Silvermont, Airmont, Nehalem...
 		// Controls Processor C States.
-		{name: "MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"'*", "msr", "0xe2", "reg"}},
+		{name: "MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "rd"}},
 		{name: "LOCK_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "READ_MSR_PKG_CST_CONFIG_CONTROL", uint64(1 << 15), "or", "wr"}},
 		// Westmere onwards.
 		// Note that this turns on AES instructions, however
 		// 3 will turn off AES until reset.
-		{name: "MSR_FEATURE_CONFIG", w: []forth.Cell{"'*", "msr", "0x13c", "reg"}},
+		{name: "MSR_FEATURE_CONFIG", w: []forth.Cell{"'*", "cpu", "0x13c", "reg"}},
 		{name: "READ_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "rd"}},
 		{name: "LOCK_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "READ_MSR_FEATURE_CONFIG", uint64(1 << 0), "or", "wr"}},
 		// Goldmont, SandyBridge
 		// Controls DRAM power limits. See Intel SDM
-		{name: "MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"'*", "msr", "0x618", "reg"}},
+		{name: "MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"'*", "cpu", "0x618", "reg"}},
 		{name: "READ_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "rd"}},
 		{name: "LOCK_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "READ_MSR_DRAM_POWER_LIMIT", uint64(1 << 31), "or", "wr"}},
 		// IvyBridge Onwards.
 		// Not much information in the SDM, seems to control power limits
-		{name: "MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"'*", "msr", "0xe2", "reg"}},
+		{name: "MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "rd"}},
 		{name: "LOCK_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "READ_MSR_CONFIG_TDP_CONTROL", uint64(1 << 31), "or", "wr"}},
 		// Architectural MSR. All systems.
 		// This is the actual spelling of the MSR in the manual.
 		// Controls availability of silicon debug interfaces
-		{name: "IA32_DEBUG_INTERFACE", w: []forth.Cell{"'*", "msr", "0xe2", "reg"}},
+		{name: "IA32_DEBUG_INTERFACE", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "rd"}},
 		{name: "LOCK_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "READ_IA32_DEBUG_INTERFACE", uint64(1 << 15), "or", "wr"}},
 		// Locks all known msrs to lock
@@ -94,7 +94,7 @@ var (
 		name string
 		op   forth.Op
 	}{
-		{name: "msr", op: msrType},
+		{name: "cpu", op: cpus},
 		{name: "reg", op: reg},
 		{name: "u64", op: u64},
 		{name: "rd", op: rd},
@@ -114,12 +114,15 @@ var (
 
 // Note that if any type asserts fail the forth interpret loop catches
 // it. It also catches stack underflow, all that stuff.
-func msrType(f forth.Forth) {
-	forth.Debug("msr")
+func cpus(f forth.Forth) {
+	forth.Debug("cpu")
 	g := f.Pop().(string)
-	m := msr.Paths(g)
-	forth.Debug("MSRs are %v", m)
-	f.Push(m)
+	c, errs := msr.GlobCPUs(g)
+	if errs != nil {
+		panic(fmt.Sprintf("%v", errs))
+	}
+	forth.Debug("CPUs are %v", c)
+	f.Push(c)
 }
 
 func reg(f forth.Forth) {
@@ -127,7 +130,7 @@ func reg(f forth.Forth) {
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
-	f.Push(uint32(n))
+	f.Push(msr.MSR(n))
 }
 
 func u64(f forth.Forth) {
@@ -139,10 +142,10 @@ func u64(f forth.Forth) {
 }
 
 func rd(f forth.Forth) {
-	r := f.Pop().(uint32)
-	m := f.Pop().([]string)
-	forth.Debug("rd: %v %v", m, r)
-	data, errs := msr.Read(m, r)
+	r := f.Pop().(msr.MSR)
+	c := f.Pop().(msr.CPUs)
+	forth.Debug("rd: cpus %v, msr %v", c, r)
+	data, errs := r.Read(c)
 	forth.Debug("data %v errs %v", data, errs)
 	if errs != nil {
 		panic(fmt.Sprintf("%v", errs))
@@ -161,10 +164,10 @@ func rd(f forth.Forth) {
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
 	v := f.Pop().([]uint64)
-	r := f.Pop().(uint32)
-	m := f.Pop().([]string)
-	forth.Debug("wr: %v %v %v", m, r, v)
-	errs := msr.Write(m, r, v)
+	r := f.Pop().(msr.MSR)
+	c := f.Pop().(msr.CPUs)
+	forth.Debug("wr: cpus %v, msr %v, values %v", c, r, v)
+	errs := r.Write(c, v...)
 	forth.Debug("errs %v", errs)
 	if errs != nil {
 		f.Push(errs)
@@ -177,21 +180,14 @@ func wr(f forth.Forth) {
 // complicates the picture: we can't just read them, change them, and
 // write them; we would not even know if reading is side-effect free.
 //
-// Our beautiful scheme was murdered by a brutal gang of facts.
-//
-// To keep it simple, we have swr, for scalar write, which turns the
-// scalar value into a []u64.  This function pops the args, and turns
-// the scalar at TOS into a u64 for wrmsr.
+// Write now accepts a single value
 func swr(f forth.Forth) {
 	v := f.Pop().(uint64)
-	r := f.Pop().(uint32)
-	m := f.Pop().([]string)
-	var vv = make([]uint64, len(m))
-	for i := range vv {
-		vv[i] = v
-	}
-	forth.Debug("swr: %v %v %v", m, r, vv)
-	errs := msr.Write(m, r, vv)
+	r := f.Pop().(msr.MSR)
+	c := f.Pop().(msr.CPUs)
+
+	forth.Debug("swr: cpus %v, msr %v, %v", c, r, v)
+	errs := r.Write(c, v)
 	forth.Debug("errs %v", errs)
 	if errs != nil {
 		f.Push(errs)
