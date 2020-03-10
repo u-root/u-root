@@ -136,7 +136,7 @@ var chrootMounts = []mp{
 	// mount --bind /dev /chroot/dev
 	{"/dev", "/dev", "", mount.MS_BIND, "", 0755}}
 
-func poxCreate(bin []string) error {
+func poxCreate(bin ...string) error {
 	if len(bin) == 0 {
 		return fmt.Errorf(usage)
 	}
@@ -232,7 +232,7 @@ func poxCreate(bin []string) error {
 	return nil
 }
 
-func poxRun(args []string) error {
+func poxRun(args ...string) error {
 	if len(args) == 0 {
 		return fmt.Errorf(usage)
 	}
@@ -326,13 +326,16 @@ func pox() error {
 	if err := extraMounts(); err != nil {
 		return err
 	}
+	if !*create && !*run {
+		return fmt.Errorf(usage)
+	}
 	if *create {
-		if err := poxCreate(flag.Args()); err != nil {
+		if err := poxCreate(flag.Args()...); err != nil {
 			return err
 		}
 	}
 	if *run {
-		return poxRun(flag.Args())
+		return poxRun(flag.Args()...)
 	}
 	return nil
 }
