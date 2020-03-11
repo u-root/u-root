@@ -91,13 +91,7 @@ func (p *Packet6) Lease() *dhcpv6.OptIAAddress {
 	if iana == nil {
 		return nil
 	}
-
-	iaAddrOpt := iana.Options.GetOne(dhcpv6.OptionIAAddr)
-	iaAddr, ok := iaAddrOpt.(*dhcpv6.OptIAAddress)
-	if !ok {
-		return nil
-	}
-	return iaAddr
+	return iana.Options.OneAddress()
 }
 
 // DNS returns DNS servers assigned.
