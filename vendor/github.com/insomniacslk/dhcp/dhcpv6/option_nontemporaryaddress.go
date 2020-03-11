@@ -25,6 +25,45 @@ func (d *Duration) Unmarshal(buf *uio.Lexer) {
 	d.Duration = time.Duration(t) * time.Second
 }
 
+// IdentityOptions implement the options allowed for IA_NA and IA_TA messages.
+//
+// The allowed options are identified in RFC 3315 Appendix B.
+type IdentityOptions struct {
+	Options
+}
+
+// Addresses returns the addresses assigned to the identity.
+func (io IdentityOptions) Addresses() []*OptIAAddress {
+	opts := io.Options.Get(OptionIAAddr)
+	var iaAddrs []*OptIAAddress
+	for _, o := range opts {
+		iaAddrs = append(iaAddrs, o.(*OptIAAddress))
+	}
+	return iaAddrs
+}
+
+// OneAddress returns one address (of potentially many) assigned to the identity.
+func (io IdentityOptions) OneAddress() *OptIAAddress {
+	a := io.Addresses()
+	if len(a) == 0 {
+		return nil
+	}
+	return a[0]
+}
+
+// Status returns the status code associated with this option.
+func (io IdentityOptions) Status() *OptStatusCode {
+	opt := io.Options.GetOne(OptionStatusCode)
+	if opt == nil {
+		return nil
+	}
+	sc, ok := opt.(*OptStatusCode)
+	if !ok {
+		return nil
+	}
+	return sc
+}
+
 // OptIANA implements the identity association for non-temporary addresses
 // option.
 //
@@ -34,7 +73,7 @@ type OptIANA struct {
 	IaId    [4]byte
 	T1      time.Duration
 	T2      time.Duration
-	Options Options
+	Options IdentityOptions
 }
 
 func (op *OptIANA) Code() OptionCode {
@@ -56,22 +95,6 @@ func (op *OptIANA) ToBytes() []byte {
 func (op *OptIANA) String() string {
 	return fmt.Sprintf("IANA: {IAID=%v, t1=%v, t2=%v, options=%v}",
 		op.IaId, op.T1, op.T2, op.Options)
-}
-
-// AddOption adds an option at the end of the IA_NA options
-func (op *OptIANA) AddOption(opt Option) {
-	op.Options.Add(opt)
-}
-
-// GetOneOption will get an option of the give type from the Options field, if
-// it is present. It will return `nil` otherwise
-func (op *OptIANA) GetOneOption(code OptionCode) Option {
-	return op.Options.GetOne(code)
-}
-
-// DelOption will remove all the options that match a Option code.
-func (op *OptIANA) DelOption(code OptionCode) {
-	op.Options.Del(code)
 }
 
 // ParseOptIANA builds an OptIANA structure from a sequence of bytes.  The

@@ -119,15 +119,10 @@ func DecapsulateRelay(l DHCPv6) (DHCPv6, error) {
 	if !l.IsRelay() {
 		return l, nil
 	}
-	opt := l.GetOneOption(OptionRelayMsg)
-	if opt == nil {
-		return nil, fmt.Errorf("malformed Relay message: no OptRelayMsg found")
+	if rm := l.(*RelayMessage).Options.RelayMessage(); rm != nil {
+		return rm, nil
 	}
-	relayOpt := opt.(*OptRelayMsg)
-	if relayOpt.RelayMessage() == nil {
-		return nil, fmt.Errorf("malformed Relay message: encapsulated message is empty")
-	}
-	return relayOpt.RelayMessage(), nil
+	return nil, fmt.Errorf("malformed Relay message: no embedded message found")
 }
 
 // DecapsulateRelayIndex extracts the content of a relay message. It takes an
@@ -180,8 +175,7 @@ func EncapsulateRelay(d DHCPv6, mType MessageType, linkAddr, peerAddr net.IP) (*
 	} else {
 		outer.HopCount = 0
 	}
-	orm := OptRelayMsg{relayMessage: d}
-	outer.AddOption(&orm)
+	outer.AddOption(OptRelayMessage(d))
 	return &outer, nil
 }
 
