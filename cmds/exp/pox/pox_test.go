@@ -7,6 +7,7 @@ package main
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"syscall"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestSimple(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-
+	f := filepath.Join(tmpDir, "x.tcz")
 	var tests = []struct {
 		args   []string
 		name   string
@@ -41,25 +42,32 @@ func TestSimple(t *testing.T) {
 		//  -o, --output string   Output file (default "/tmp/pox.tcz")
 		//  -t, --test            run a test with the first argument
 		{
-			args:   []string{"-o", "/tmp/x/a/g/c/d/e/f/g", "bin/bash"},
-			name:   "Bad executable",
+			args:   []string{"-c", "-f", f, "bin/bash"},
+			name:   "Bad Executable",
 			status: 1,
-			out:    "open bin/bash: no such file or directory\n",
+			out:    "Running ldd on [bin/bash]: lstat bin/bash: no such file or directory \n",
 			skip:   uskip,
 		},
 		{
-			args:   []string{"-o", "/tmp/x/a/g/c/d/e/f/g", "/bin/bash"},
-			name:   "Bad output file",
-			status: 1,
-			out:    "/tmp/x/a/g/c/d/e/f/g -noappend]: Could not stat destination file: Not a directory\n: exit status 1\n",
-			skip:   uskip + len("[mksquashfs /tmp/pox373051153 "), // the tempname varies so skip it.
+			args:   []string{"-c", "-f", f, "/bin/bash"},
+			name:   "Build",
+			status: 0,
+			out:    "",
+			skip:   uskip,
 		},
 		{
-			args:  []string{"-t", "/bin/bash"},
-			name:  "shellexit",
-			out:   "shell-init: error retrieving current directory: getcwd: cannot access parent directories: No such file or directory\n",
-			skip:  0,
-			stdin: testutil.NewFakeStdin("exit"),
+			args:   []string{"-r", "-f", f, "/bin/bash"},
+			name:   "",
+			status: 0,
+			out:    "",
+			skip:   uskip,
+		},
+		{
+			args:   []string{"-r", "-f", f, "--", "/bin/bash", "-c", "echo hi"},
+			name:   "",
+			status: 0,
+			out:    "",
+			skip:   uskip,
 		},
 	}
 
@@ -71,6 +79,9 @@ func TestSimple(t *testing.T) {
 			// and most of these commands are supposed to get an error.
 			out, _ := c.CombinedOutput()
 			status := c.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+			if tt.status == status && len(tt.out) == 0 {
+				return
+			}
 			if tt.status != status {
 				t.Errorf("err got: %v want %v", status, tt.status)
 			}
