@@ -20,7 +20,7 @@ yourself.
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |
 | :x: time       | -p              |                        |
-| truncate       | -or             |                        |
+| truncate       | -r              |                        |
 | uniq           | -i              |                        |
 | unshare        |                 | Different flag names   |
 | wget           |                 | No args yet...         |
