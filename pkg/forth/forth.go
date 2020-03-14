@@ -179,38 +179,46 @@ func errRecover(errp *error) {
 	e := recover()
 	if e != nil {
 		if _, ok := e.(runtime.Error); ok {
+			Debug("errRecover panics with a runtime error")
 			panic(e)
 		}
+		Debug("errRecover returns %v", e)
 		*errp = fmt.Errorf("%v", e)
 	}
 }
 
 // Eval takes a Forth and []Cell, pushing each element on the stack or invoking the
 // operator if it is found in the opmap.
-func Eval(f Forth, cells ...Cell) (err error) {
-	defer errRecover(&err)
+func eval(f Forth, cells ...Cell) {
+	Debug("eval cells %v", cells)
 	for _, c := range cells {
-		Debug("eval %s(%T) stack %v", c, c, f.Stack())
+		Debug("eval %v(%T) stack %v", c, c, f.Stack())
 		switch s := c.(type) {
 		case string:
 			fun := Getop(s)
 			if fun != nil {
-				Debug("Eval ... %v:", f.Stack())
+				Debug("eval ... %v:", f.Stack())
 				fun(f)
-				Debug("Stack now %v", f.Stack())
+				Debug("eval: Stack now %v", f.Stack())
 				break
 			}
 			if s[0] == '\'' {
 				s = s[1:]
 			}
 			f.Push(s)
-			Debug("push %s, stack %v", s, f.Stack())
+			Debug("push %v(%T), stack %v", s, s, f.Stack())
 		default:
-			Debug("push %s, stack %v", s, f.Stack())
+			Debug("push %v(%T), stack %v", s, s, f.Stack())
 			f.Push(s)
 		}
 	}
-	return nil
+}
+
+// Eval calls eval and catches panics.
+func Eval(f Forth, cells ...Cell) (err error) {
+	defer errRecover(&err)
+	eval(f, cells...)
+	return
 }
 
 // EvalString takes a Forth and string and splits the string on space
@@ -218,7 +226,6 @@ func Eval(f Forth, cells ...Cell) (err error) {
 func EvalString(f Forth, s string) (err error) {
 	for _, c := range strings.Fields(s) {
 		if err = Eval(f, c); err != nil {
-			Debug("EvalString Eval err: err %v", err)
 			return
 		}
 	}
@@ -277,10 +284,8 @@ func toInt(f Forth) int64 {
 }
 
 func plus(f Forth) {
-	Debug("plus")
 	x := toInt(f)
 	y := toInt(f)
-	Debug("Plus %v %v", x, y)
 	z := x + y
 	f.Push(strconv.FormatInt(z, 10))
 }
@@ -303,11 +308,12 @@ func newword(f Forth) {
 		panic(fmt.Sprintf("newword %s: stack is %d elements, need %d", s, f.Length(), n))
 	}
 	var c = make([]Cell, n)
-	for i := range c {
-		c[i] = f.Pop()
+	for i := n; i > 0; i-- {
+		c[i-1] = f.Pop()
 	}
 	Putop(s, func(f Forth) {
-		Eval(f, c...)
+		Debug("c %v", c)
+		eval(f, c...)
 	})
 }
 
@@ -401,7 +407,7 @@ func hostbase(f Forth) {
 func NewWord(f Forth, name string, cell Cell, cells ...Cell) {
 	cmd := append([]Cell{cell}, cells...)
 	newword := func(f Forth) {
-		Eval(f, cmd...)
+		eval(f, cmd...)
 	}
 	Putop(name, newword)
 }
