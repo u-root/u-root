@@ -79,7 +79,10 @@ func main() {
 		log.Fatalf("Only Intel CPUs supported, expected GenuineIntel, got %v", cpuid.VendorIdentificatorString)
 	}
 
-	cpus := msr.AllCPUs
+	cpus, err := msr.AllCPUs()
+	if err != nil {
+		log.Fatal(err)
+	}
 	for _, m := range msrList {
 		if *verbose {
 			log.Printf("Locking MSR %v on cpus %v, clearmask 0x%8x, setmask 0x%8x", m.msrAdd, cpus, m.clearMask, m.setMask)
