@@ -12,8 +12,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// CacheInformation is defined in DSP0134 7.8.
-type CacheInformation struct {
+// CacheInfo is defined in DSP0134 7.8.
+type CacheInfo struct {
 	Table
 	SocketDesignation   string                   // 04h
 	Configuration       uint16                   // 05h
@@ -29,15 +29,15 @@ type CacheInformation struct {
 	InstalledSize2      uint32                   // 17h
 }
 
-// NewCacheInformation parses a generic Table into CacheInformation.
-func NewCacheInformation(t *Table) (*CacheInformation, error) {
-	if t.Type != TableTypeCacheInformation {
+// ParseCacheInfo parses a generic Table into CacheInfo.
+func ParseCacheInfo(t *Table) (*CacheInfo, error) {
+	if t.Type != TableTypeCacheInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
 	if t.Len() < 0xf {
 		return nil, errors.New("required fields missing")
 	}
-	ci := &CacheInformation{Table: *t}
+	ci := &CacheInfo{Table: *t}
 	_, err := parseStruct(t, 0 /* off */, false /* complete */, ci)
 	if err != nil {
 		return nil, err
@@ -61,16 +61,16 @@ func cacheSizeBytes2Or1(size1 uint16, size2 uint32) uint64 {
 }
 
 // GetMaxSizeBytes returns the maximum size  of the cache that can be installed, in bytes.
-func (ci *CacheInformation) GetMaxSizeBytes() uint64 {
+func (ci *CacheInfo) GetMaxSizeBytes() uint64 {
 	return cacheSizeBytes2Or1(ci.MaximumSize, ci.MaximumSize2)
 }
 
 // GetInstalledSizeBytes returns the currently installed cache size, in bytes.
-func (ci *CacheInformation) GetInstalledSizeBytes() uint64 {
+func (ci *CacheInfo) GetInstalledSizeBytes() uint64 {
 	return cacheSizeBytes2Or1(ci.InstalledSize, ci.InstalledSize2)
 }
 
-func (ci *CacheInformation) String() string {
+func (ci *CacheInfo) String() string {
 	enDis := "Disabled"
 	if ci.Configuration&0x80 != 0 {
 		enDis = "Enabled"

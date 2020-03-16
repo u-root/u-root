@@ -16,6 +16,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestNew(t *testing.T) {
@@ -28,6 +30,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestRaw(t *testing.T) {
+	// TestRaw no longer works in CircleCi, Restrict to only VM tests.
+	testutil.SkipIfNotRoot(t)
 	tty, err := New()
 	if os.IsNotExist(err) {
 		t.Skipf("No /dev/tty here.")

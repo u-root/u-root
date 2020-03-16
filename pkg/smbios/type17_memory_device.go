@@ -16,7 +16,7 @@ import (
 type MemoryDevice struct {
 	Table
 	PhysicalMemoryArrayHandle         uint16                              // 04h
-	MemoryErrorInformationHandle      uint16                              // 06h
+	MemoryErrorInfoHandle             uint16                              // 06h
 	TotalWidth                        uint16                              // 08h
 	DataWidth                         uint16                              // 0Ah
 	Size                              uint16                              // 0Ch
@@ -84,13 +84,13 @@ func (md *MemoryDevice) GetSizeBytes() uint64 {
 
 func (md *MemoryDevice) String() string {
 	ehStr := ""
-	switch md.MemoryErrorInformationHandle {
+	switch md.MemoryErrorInfoHandle {
 	case 0xffff:
 		ehStr = "No Error"
 	case 0xfffe:
 		ehStr = "Not Provided"
 	default:
-		ehStr = fmt.Sprintf("0x%04X", md.MemoryErrorInformationHandle)
+		ehStr = fmt.Sprintf("0x%04X", md.MemoryErrorInfoHandle)
 	}
 
 	bitWidthStr := func(v uint16) string {

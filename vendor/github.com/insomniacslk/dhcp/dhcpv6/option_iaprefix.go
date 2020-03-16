@@ -34,7 +34,12 @@ func (op *OptIAPrefix) ToBytes() []byte {
 	t2.Marshal(buf)
 
 	buf.Write8(op.prefixLength)
-	buf.WriteBytes(op.ipv6Prefix.To16())
+	prefix := op.ipv6Prefix.To16()
+	if prefix != nil {
+		buf.WriteBytes(prefix)
+	} else {
+		buf.WriteBytes(make([]byte, net.IPv6len))
+	}
 	buf.WriteBytes(op.Options.ToBytes())
 	return buf.Data()
 }

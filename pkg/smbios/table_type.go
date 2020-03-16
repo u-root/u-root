@@ -14,36 +14,36 @@ type TableType uint8
 
 // Supported table types.
 const (
-	TableTypeBIOSInformation       TableType = 0
-	TableTypeSystemInformation     TableType = 1
-	TableTypeBaseboardInformation  TableType = 2
-	TableTypeChassisInformation    TableType = 3
-	TableTypeProcessorInformation  TableType = 4
-	TableTypeCacheInformation      TableType = 7
-	TableTypeMemoryDevice          TableType = 17
-	TableTypeIPMIDeviceInformation TableType = 38
-	TableTypeTPMDevice             TableType = 43
-	TableTypeInactive              TableType = 126
-	TableTypeEndOfTable            TableType = 127
+	TableTypeBIOSInfo       TableType = 0
+	TableTypeSystemInfo     TableType = 1
+	TableTypeBaseboardInfo  TableType = 2
+	TableTypeChassisInfo    TableType = 3
+	TableTypeProcessorInfo  TableType = 4
+	TableTypeCacheInfo      TableType = 7
+	TableTypeMemoryDevice   TableType = 17
+	TableTypeIPMIDeviceInfo TableType = 38
+	TableTypeTPMDevice      TableType = 43
+	TableTypeInactive       TableType = 126
+	TableTypeEndOfTable     TableType = 127
 )
 
 func (t TableType) String() string {
 	switch t {
-	case TableTypeBIOSInformation:
+	case TableTypeBIOSInfo:
 		return "BIOS Information"
-	case TableTypeSystemInformation:
+	case TableTypeSystemInfo:
 		return "System Information"
-	case TableTypeBaseboardInformation:
+	case TableTypeBaseboardInfo:
 		return "Base Board Information"
-	case TableTypeChassisInformation:
+	case TableTypeChassisInfo:
 		return "Chassis Information"
-	case TableTypeProcessorInformation:
+	case TableTypeProcessorInfo:
 		return "Processor Information"
-	case TableTypeCacheInformation:
+	case TableTypeCacheInfo:
 		return "Cache Information"
 	case TableTypeMemoryDevice:
 		return "Memory Device"
-	case TableTypeIPMIDeviceInformation:
+	case TableTypeIPMIDeviceInfo:
 		return "IPMI Device Information"
 	case TableTypeTPMDevice:
 		return "TPM Device"
@@ -62,22 +62,22 @@ func (t TableType) String() string {
 // ParseTypedTable parses generic Table into a typed struct.
 func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 	switch t.Type {
-	case TableTypeBIOSInformation: // 0
-		return NewBIOSInformation(t)
-	case TableTypeSystemInformation: // 1
-		return NewSystemInformation(t)
-	case TableTypeBaseboardInformation: // 2
-		return NewBaseboardInformation(t)
-	case TableTypeChassisInformation: // 3
-		return NewChassisInformation(t)
-	case TableTypeProcessorInformation: // 4
-		return NewProcessorInformation(t)
-	case TableTypeCacheInformation: // 7
-		return NewCacheInformation(t)
+	case TableTypeBIOSInfo: // 0
+		return ParseBIOSInfo(t)
+	case TableTypeSystemInfo: // 1
+		return ParseSystemInfo(t)
+	case TableTypeBaseboardInfo: // 2
+		return ParseBaseboardInfo(t)
+	case TableTypeChassisInfo: // 3
+		return ParseChassisInfo(t)
+	case TableTypeProcessorInfo: // 4
+		return ParseProcessorInfo(t)
+	case TableTypeCacheInfo: // 7
+		return ParseCacheInfo(t)
 	case TableTypeMemoryDevice: // 17
 		return NewMemoryDevice(t)
-	case TableTypeIPMIDeviceInformation: // 38
-		return NewIPMIDeviceInformation(t)
+	case TableTypeIPMIDeviceInfo: // 38
+		return ParseIPMIDeviceInfo(t)
 	case TableTypeTPMDevice: // 43
 		return NewTPMDevice(t)
 	case TableTypeInactive: // 126

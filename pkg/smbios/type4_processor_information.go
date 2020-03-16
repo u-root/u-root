@@ -12,8 +12,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// ProcessorInformation is defined in DSP0134 x.x.
-type ProcessorInformation struct {
+// ProcessorInfo is defined in DSP0134 x.x.
+type ProcessorInfo struct {
 	Table
 	SocketDesignation string                   // 04h
 	Type              ProcessorType            // 05h
@@ -43,15 +43,15 @@ type ProcessorInformation struct {
 	ThreadCount2      uint16                   // 2Eh
 }
 
-// NewProcessorInformation parses a generic Table into ProcessorInformation.
-func NewProcessorInformation(t *Table) (*ProcessorInformation, error) {
-	if t.Type != TableTypeProcessorInformation {
+// ParseProcessorInfo parses a generic Table into ProcessorInfo.
+func ParseProcessorInfo(t *Table) (*ProcessorInfo, error) {
+	if t.Type != TableTypeProcessorInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
 	if t.Len() < 0x1a {
 		return nil, errors.New("required fields missing")
 	}
-	pi := &ProcessorInformation{Table: *t}
+	pi := &ProcessorInfo{Table: *t}
 	_, err := parseStruct(t, 0 /* off */, false /* complete */, pi)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func NewProcessorInformation(t *Table) (*ProcessorInformation, error) {
 }
 
 // GetFamily returns the processor family, taken from the appropriate field.
-func (pi *ProcessorInformation) GetFamily() ProcessorFamily {
+func (pi *ProcessorInfo) GetFamily() ProcessorFamily {
 	if pi.Family == 0xfe && pi.Len() >= 0x2a {
 		return pi.Family2
 	}
@@ -68,7 +68,7 @@ func (pi *ProcessorInformation) GetFamily() ProcessorFamily {
 }
 
 // GetVoltage returns the processor voltage, in volts.
-func (pi *ProcessorInformation) GetVoltage() float32 {
+func (pi *ProcessorInfo) GetVoltage() float32 {
 	if pi.Voltage&0x80 == 0 {
 		switch {
 		case pi.Voltage&1 != 0:
@@ -84,7 +84,7 @@ func (pi *ProcessorInformation) GetVoltage() float32 {
 }
 
 // GetCoreCount returns the number of cores detected by the BIOS for this processor socket.
-func (pi *ProcessorInformation) GetCoreCount() int {
+func (pi *ProcessorInfo) GetCoreCount() int {
 	if pi.Len() >= 0x2c && pi.CoreCount == 0xff {
 		return int(pi.CoreCount2)
 	}
@@ -92,7 +92,7 @@ func (pi *ProcessorInformation) GetCoreCount() int {
 }
 
 // GetCoreEnabled returns the number of cores that are enabled by the BIOS and available for Operating System use.
-func (pi *ProcessorInformation) GetCoreEnabled() int {
+func (pi *ProcessorInfo) GetCoreEnabled() int {
 	if pi.Len() >= 0x2e && pi.CoreEnabled == 0xff {
 		return int(pi.CoreEnabled2)
 	}
@@ -100,14 +100,14 @@ func (pi *ProcessorInformation) GetCoreEnabled() int {
 }
 
 // GetThreadCount returns the total number of threads detected by the BIOS for this processor socket.
-func (pi *ProcessorInformation) GetThreadCount() int {
+func (pi *ProcessorInfo) GetThreadCount() int {
 	if pi.Len() >= 0x30 && pi.ThreadCount == 0xff {
 		return int(pi.ThreadCount2)
 	}
 	return int(pi.ThreadCount)
 }
 
-func (pi *ProcessorInformation) String() string {
+func (pi *ProcessorInfo) String() string {
 	freqStr := func(v uint16) string {
 		if v == 0 {
 			return "Unknown"

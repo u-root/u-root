@@ -46,7 +46,7 @@ RUN set -eux;                                                             \
 
 # Build QEMU
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v2.12.0 https://github.com/qemu/qemu; \
+    git clone --depth=1 --branch=v4.2.0 https://github.com/qemu/qemu;  \
     cd qemu;                                                           \
     mkdir build;                                                       \
     cd build;                                                          \

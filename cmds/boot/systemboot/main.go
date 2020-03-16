@@ -45,7 +45,7 @@ func isMatched(productName string) bool {
 }
 
 func getSystemProductName(si *smbios.Info) (string, error) {
-	t1, err := si.GetSystemInformation()
+	t1, err := si.GetSystemInfo()
 	if err != nil {
 		log.Printf("Error getting System Information: %v", err)
 		return "", err
@@ -54,7 +54,7 @@ func getSystemProductName(si *smbios.Info) (string, error) {
 }
 
 func getSystemFWVersion(si *smbios.Info) (string, error) {
-	t0, err := si.GetBIOSInformation()
+	t0, err := si.GetBIOSInfo()
 	if err != nil {
 		log.Printf("Error getting BIOS Information: %v", err)
 		return "", err
@@ -77,7 +77,7 @@ func runIPMICommands() {
 	}
 
 	// Below IPMI commands would require SMBIOS data
-	si, err := getSMBIOSInfo()
+	si, err := smbios.FromSysfs()
 	if err != nil {
 		log.Printf("Error reading SMBIOS info: %v", err)
 		return

@@ -43,7 +43,7 @@
 //
 //    To read, then write all of them
 //    (the dup is so we have the msr list at TOS -- it's just a convenience)
-//    sudo msr 0 msr dup 0x3a reg rd 0x3a reg swap 1 val or wr
+//    sudo msr 0 msr dup 0x3a reg rd 0x3a reg swap 1 u64 or wr
 //    to just write them
 //
 //    Also, note, all the types are checked by assertions. The reg has to be

@@ -7,14 +7,14 @@ templates:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Double all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 2
+      # Triple all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 3
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Double all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 2
+      # Triple all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 3
     steps:
       - checkout
       - run:
@@ -52,7 +52,7 @@ jobs:
       - run:
           name: Install dep
           command: |
-            wget https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
+            wget https://github.com/golang/dep/releases/download/v0.5.4/dep-linux-amd64
             mv dep-linux-amd64 dep
             chmod +x dep
       - run:

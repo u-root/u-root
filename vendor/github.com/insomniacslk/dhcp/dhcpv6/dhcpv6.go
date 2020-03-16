@@ -1,7 +1,6 @@
 package dhcpv6
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -204,13 +203,9 @@ func IsUsingUEFI(msg *Message) bool {
 	//               7    EFI BC
 	//               8    EFI Xscale
 	//               9    EFI x86-64
-	if opt := msg.GetOneOption(OptionClientArchType); opt != nil {
-		optat := opt.(*OptClientArchType)
-		for _, at := range optat.ArchTypes {
-			// TODO investigate if other types are appropriate
-			if at == iana.EFI_BC || at == iana.EFI_X86_64 {
-				return true
-			}
+	if archTypes := msg.Options.ArchTypes(); archTypes != nil {
+		if archTypes.Contains(iana.EFI_BC) || archTypes.Contains(iana.EFI_X86_64) {
+			return true
 		}
 	}
 	if opt := msg.GetOneOption(OptionUserClass); opt != nil {
@@ -227,15 +222,9 @@ func IsUsingUEFI(msg *Message) bool {
 // GetTransactionID returns a transactionID of a message or its inner message
 // in case of relay
 func GetTransactionID(packet DHCPv6) (TransactionID, error) {
-	if message, ok := packet.(*Message); ok {
-		return message.TransactionID, nil
+	m, err := packet.GetInnerMessage()
+	if err != nil {
+		return TransactionID{0, 0, 0}, err
 	}
-	if relay, ok := packet.(*RelayMessage); ok {
-		message, err := relay.GetInnerMessage()
-		if err != nil {
-			return TransactionID{0, 0, 0}, err
-		}
-		return GetTransactionID(message)
-	}
-	return TransactionID{0, 0, 0}, errors.New("Invalid DHCPv6 packet")
+	return m.TransactionID, nil
 }

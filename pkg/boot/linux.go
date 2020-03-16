@@ -32,7 +32,7 @@ func (li *LinuxImage) Label() string {
 	if len(li.Name) > 0 {
 		return li.Name
 	}
-	return fmt.Sprintf("Linux(kernel=%s, initrd=%d)", li.Kernel, li.Initrd)
+	return fmt.Sprintf("Linux(kernel=%s, initrd=%s)", li.Kernel, li.Initrd)
 }
 
 // String prints a human-readable version of this linux image.

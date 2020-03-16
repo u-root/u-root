@@ -13,6 +13,7 @@
 // Synopsis:
 //     pox [-[-debug]|d] [-[-file]|f tcz-file] -[-create]|c FILE [...FILE]
 //     pox [-[-debug]|d] [-[-file]|f tcz-file] -[-run|r] PROGRAM -- [...ARGS]
+//     pox [-[-debug]|d] [-[-file]|f tcz-file] -[-create]|c -[-run|r] PROGRAM -- [...ARGS]
 //
 // Description:
 //     pox makes portable executables in squashfs format compatible with
@@ -29,7 +30,7 @@
 //     create|c: create the TCZ file.
 //     zip|z: Use zip and unzip instead of a loopback mounted squashfs.  Be sure
 //            to use -z for both creation and running, or not at all.
-//     Exactly one of -c and -r must be used on the same command.
+//     For convenience and testing, you can create and run a pox in one command.
 //
 // Example:
 //	$ pox -c /bin/bash /bin/cat /bin/ls /etc/hosts
@@ -45,6 +46,9 @@
 //
 //	$ sudo pox -r -- /bin/ls -la
 //	Syntactically easier: the program name can come after '--'
+//
+//	$ sudo pox -c -r /bin/bash
+//      Create a pox with a bash and run it.
 //
 // Notes:
 // - When running a pox, you likely need sudo to chroot
@@ -73,6 +77,12 @@
 // - Consider adding a --extract | -x option to install to the host.  One issue
 // would be how to handle collisions, e.g. libc.  Your app may not like the libc
 // on the system you run on.
+//
+// - pox is not a security boundary. chroot is well known to have holes. Pox is about
+//   enabling execution. Don't expect it to "wall things off". In fact, we mount
+//   /dev, /proc, and /sys; and you can add more things. Commands run under pox
+//   are just as dangerous as anything else.
+//
 package main
 
 import (
@@ -94,46 +104,52 @@ import (
 
 const usage = "pox [-[-debug]|d] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]"
 
-var (
-	debug  = flag.BoolP("debug", "d", false, "enable debug prints")
-	run    = flag.BoolP("run", "r", false, "Run the first file argument")
-	create = flag.BoolP("create", "c", false, "create it")
-	zip    = flag.BoolP("zip", "z", false, "use zip instead of squashfs")
-	file   = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
-	v      = func(string, ...interface{}) {}
-)
-
-// When chrooting, programs often want to access various system directories:
-var chrootMounts = []struct {
+type mp struct {
 	source string
 	target string
 	fstype string
 	flags  uintptr
 	data   string
 	perm   os.FileMode // for target in the chroot
-}{
+}
+
+var (
+	debug  = flag.BoolP("debug", "d", false, "enable debug prints")
+	run    = flag.BoolP("run", "r", false, "Run the first file argument")
+	create = flag.BoolP("create", "c", false, "create it")
+	zip    = flag.BoolP("zip", "z", false, "use zip instead of squashfs")
+	file   = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
+	extra  = flag.StringP("extra", "e", "", `comma-separated list of extra directories to add (on create) and binds to do (on run).
+You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
+pox -c -e /tmp,/etc commands ....
+pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
+`)
+	v = func(string, ...interface{}) {}
+)
+
+// When chrooting, programs often want to access various system directories:
+var chrootMounts = []mp{
 	// mount --bind /sys /chroot/sys
 	{"/sys", "/sys", "", mount.MS_BIND, "", 0555},
 	// mount -t proc /proc /chroot/proc
 	{"/proc", "/proc", "proc", 0, "", 0555},
 	// mount --bind /dev /chroot/dev
-	{"/dev", "/dev", "", mount.MS_BIND, "", 0755},
-}
+	{"/dev", "/dev", "", mount.MS_BIND, "", 0755}}
 
-func poxCreate(names []string) error {
-	if len(names) == 0 {
+func poxCreate(bin ...string) error {
+	if len(bin) == 0 {
 		return fmt.Errorf(usage)
 	}
-	l, err := ldd.Ldd(names)
+	l, err := ldd.Ldd(bin)
 	if err != nil {
 		var stderr []byte
 		if eerr, ok := err.(*exec.ExitError); ok {
 			stderr = eerr.Stderr
 		}
-		return fmt.Errorf("Running ldd on %v: %v %s", names,
-			err, stderr)
+		return fmt.Errorf("Running ldd on %v: %v %s", bin, err, stderr)
 	}
 
+	var names []string
 	for _, dep := range l {
 		v("%s", dep.FullName)
 		names = append(names, dep.FullName)
@@ -185,7 +201,9 @@ func poxCreate(names []string) error {
 
 	}
 	for _, m := range chrootMounts {
-		if err := os.MkdirAll(filepath.Join(dir, m.target), m.perm); err != nil {
+		d := filepath.Join(dir, m.target)
+		v("Mounts: create %q, perm %s", d, m.perm.String())
+		if err := os.MkdirAll(d, m.perm); err != nil {
 			return err
 		}
 	}
@@ -214,7 +232,7 @@ func poxCreate(names []string) error {
 	return nil
 }
 
-func poxRun(args []string) error {
+func poxRun(args ...string) error {
 	if len(args) == 0 {
 		return fmt.Errorf(usage)
 	}
@@ -247,8 +265,8 @@ func poxRun(args []string) error {
 		defer mountPoint.Unmount(0) //nolint:errcheck
 	}
 	for _, m := range chrootMounts {
-		mp, err := mount.Mount(m.source, filepath.Join(dir, m.target),
-			m.fstype, m.data, m.flags)
+		v("mount(%q, %q, %q, %q, %#x)", m.source, filepath.Join(dir, m.target), m.fstype, m.data, m.flags)
+		mp, err := mount.Mount(m.source, filepath.Join(dir, m.target), m.fstype, m.data, m.flags)
 		if err != nil {
 			return err
 		}
@@ -277,21 +295,49 @@ func poxRun(args []string) error {
 	return nil
 }
 
+func extraMounts() error {
+	if *extra == "" {
+		return nil
+	}
+	v("Extra: %q", *extra)
+	// We have to specify the extra directories and do the create here b/c it is a squashfs. Sorry.
+	for _, e := range strings.Split(*extra, ",") {
+		m := mp{flags: mount.MS_BIND, perm: 0755}
+		mp := strings.Split(e, ":")
+		switch len(mp) {
+		case 1:
+			m.source, m.target = mp[0], mp[0]
+		case 2:
+			m.source, m.target = mp[0], mp[1]
+		default:
+			return fmt.Errorf("-extra: argument (%v) is not in the form src:target", mp)
+		}
+		v("Extra: append %q to chrootMounts", m)
+		chrootMounts = append(chrootMounts, m)
+	}
+	return nil
+}
+
 func pox() error {
 	flag.Parse()
 	if *debug {
 		v = log.Printf
 	}
-	if (*create && *run) || (!*create && !*run) {
+	if err := extraMounts(); err != nil {
+		return err
+	}
+	if !*create && !*run {
 		return fmt.Errorf(usage)
 	}
 	if *create {
-		return poxCreate(flag.Args())
+		if err := poxCreate(flag.Args()...); err != nil {
+			return err
+		}
 	}
 	if *run {
-		return poxRun(flag.Args())
+		return poxRun(flag.Args()...)
 	}
-	return fmt.Errorf(usage)
+	return nil
 }
 
 func main() {

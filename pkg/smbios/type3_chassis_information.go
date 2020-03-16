@@ -14,8 +14,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// ChassisInformation is defined in DSP0134 7.4.
-type ChassisInformation struct {
+// ChassisInfo is defined in DSP0134 7.4.
+type ChassisInfo struct {
 	Table
 	Manufacturer                  string                    // 04h
 	Type                          ChassisType               // 05h
@@ -26,7 +26,7 @@ type ChassisInformation struct {
 	PowerSupplyState              ChassisState              // 0Ah
 	ThermalState                  ChassisState              // 0Bh
 	SecurityStatus                ChassisSecurityStatus     // 0Ch
-	OEMInformation                uint32                    // 0Dh
+	OEMInfo                       uint32                    // 0Dh
 	Height                        uint8                     // 11h
 	NumberOfPowerCords            uint8                     // 12h
 	ContainedElementCount         uint8                     // 13h
@@ -42,15 +42,15 @@ type ChassisContainedElement struct {
 	Max  uint8              // 02h
 }
 
-// NewChassisInformation parses a generic Table into ChassisInformation.
-func NewChassisInformation(t *Table) (*ChassisInformation, error) {
-	if t.Type != TableTypeChassisInformation {
+// ParseChassisInfo parses a generic Table into ChassisInfo.
+func ParseChassisInfo(t *Table) (*ChassisInfo, error) {
+	if t.Type != TableTypeChassisInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
 	if t.Len() < 0x9 {
 		return nil, errors.New("required fields missing")
 	}
-	si := &ChassisInformation{Table: *t}
+	si := &ChassisInfo{Table: *t}
 	off, err := parseStruct(t, 0 /* off */, false /* complete */, si)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func NewChassisInformation(t *Table) (*ChassisInformation, error) {
 	return si, nil
 }
 
-func (si *ChassisInformation) String() string {
+func (si *ChassisInfo) String() string {
 	lockStr := "Not Present"
 	if si.Type&0x80 != 0 {
 		lockStr = "Present"
@@ -106,7 +106,7 @@ func (si *ChassisInformation) String() string {
 			numPCStr = fmt.Sprintf("%d", si.NumberOfPowerCords)
 		}
 		lines = append(lines,
-			fmt.Sprintf("OEM Information: 0x%08X", si.OEMInformation),
+			fmt.Sprintf("OEM Information: 0x%08X", si.OEMInfo),
 			fmt.Sprintf("Height: %s", heightStr),
 			fmt.Sprintf("Number Of Power Cords: %s", numPCStr),
 		)
