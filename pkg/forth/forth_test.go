@@ -142,3 +142,30 @@ func TestNewWord(t *testing.T) {
 	}
 	t.Logf("stack %v", f.Stack())
 }
+
+// make sure that if we die in an Eval nested in an Eval, we fall all the way
+// back out.
+func TestEvalPanic(t *testing.T) {
+	f := New()
+	Debug = t.Logf
+	err := Eval(f, "0", "'+", "2", "p", "newword")
+	if err != nil {
+		t.Fatalf("newword: got %v, nil", err)
+	}
+	t.Logf("p created, now try problems")
+	err = Eval(f, "0", uint8(0), "+")
+	if err == nil {
+		t.Fatal("Got nil, want error")
+	}
+	t.Logf("Test plus with wrong types: %v", err)
+	f.Reset()
+	err = Eval(f, "p")
+	if err == nil {
+		t.Fatal("P with too few args: Got nil, want error")
+	}
+	t.Logf("p with too few args: %v", err)
+	err2 := Eval(f, "p", "0", uint8(0), "+")
+	if err2.Error() != err.Error() {
+		t.Fatalf("Got %v, want %v", err2, err)
+	}
+}
