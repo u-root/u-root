@@ -8,7 +8,6 @@ package msr
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,24 +16,19 @@ import (
 // CPUs is a slice of the various cpus to read or write the MSR to.
 type CPUs []uint64
 
-// AllCPUs is a helper variable that lists all the cpus available on the machine.
-var AllCPUs CPUs
-
-func init() {
-	var errs []error
-
-	if AllCPUs, errs = getAllCPUs(); errs != nil {
-		// Should I fatal here? panic?
-		log.Print("Failed to find all CPUs from /dev/cpu")
-		log.Print(errs)
+func AllCPUs() (CPUs, error) {
+	c, errs := GlobCPUs("*")
+	if errs != nil || len(c) == 0 {
+		return nil, fmt.Errorf("error finding all cpus, maybe try modprobe msr? : %v", errs)
 	}
+	return c, nil
 }
 
 // GlobCPUs allow the user to specify CPUs using a glob as one would in /dev/cpu
 func GlobCPUs(g string) (CPUs, []error) {
 	var hadErr bool
 
-	f, err := filepath.Glob(filepath.Join("/dev/cpu", g))
+	f, err := filepath.Glob(filepath.Join("/dev/cpu", g, "msr"))
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -42,7 +36,7 @@ func GlobCPUs(g string) (CPUs, []error) {
 	c := make([]uint64, len(f))
 	errs := make([]error, len(f))
 	for i, v := range f {
-		c[i], errs[i] = strconv.ParseUint(filepath.Base(v), 0, 64)
+		c[i], errs[i] = strconv.ParseUint(filepath.Base(filepath.Dir(v)), 0, 64)
 		if errs[i] != nil {
 			hadErr = true
 		}
@@ -51,10 +45,6 @@ func GlobCPUs(g string) (CPUs, []error) {
 		return nil, errs
 	}
 	return c, nil
-}
-
-func getAllCPUs() (CPUs, []error) {
-	return GlobCPUs("*")
 }
 
 // MSR is the address of the MSR we want to target.
