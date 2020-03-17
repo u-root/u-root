@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"sort"
 )
 
 const (
@@ -56,14 +57,32 @@ func (bus *bus) Read() (Devices, error) {
 	return devices, nil
 }
 
-// NewBusReader returns a BusReader, given a glob to match PCI devices against.
+// NewBusReader returns a BusReader, given a ...glob to match PCI devices against.
 // If it can't glob in pciPath/g then it returns an error.
+// For convenience, we use * as the glob if none are supplied.
 // We don't provide an option to do type I or PCIe MMIO config stuff.
-func NewBusReader(g string) (busReader, error) {
-	globs, err := filepath.Glob(filepath.Join(pciPath, g))
-	if err != nil {
-		return nil, err
+func NewBusReader(globs ...string) (busReader, error) {
+	if len(globs) == 0 {
+		globs = []string{"*"}
 	}
-
-	return &bus{Devices: globs}, nil
+	var exp []string
+	for _, g := range globs {
+		gg, err := filepath.Glob(filepath.Join(pciPath, g))
+		if err != nil {
+			return nil, err
+		}
+		exp = append(exp, gg...)
+	}
+	// uniq
+	var u = map[string]struct{}{}
+	for _, e := range exp {
+		u[e] = struct{}{}
+	}
+	exp = []string{}
+	for v := range u {
+		exp = append(exp, v)
+	}
+	// sort. This might even sort like a shell would do it.
+	sort.Strings(exp)
+	return &bus{Devices: exp}, nil
 }
