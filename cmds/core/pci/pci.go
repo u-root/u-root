@@ -107,7 +107,7 @@ func registers(d pci.Devices, cmds ...string) {
 }
 func main() {
 	flag.Parse()
-	r, err := pci.NewBusReader(*devs)
+	r, err := pci.NewBusReader(strings.Split(*devs, ",")...)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

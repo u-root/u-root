@@ -8,32 +8,35 @@ package msr
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
-func Paths(n string) []string {
-	m, err := filepath.Glob(filepath.Join("/dev/cpu", n, "msr"))
-	// This err will be if the glob was bad.
-	if err != nil {
-		log.Fatalf("No MSRs matched %v: %v", n, err)
+// CPUs is a slice of the various cpus to read or write the MSR to.
+type CPUs []uint64
+
+func AllCPUs() (CPUs, error) {
+	c, errs := GlobCPUs("*")
+	if errs != nil || len(c) == 0 {
+		return nil, fmt.Errorf("error finding all cpus, maybe try modprobe msr? : %v", errs)
 	}
-	// len will be zero for any of a number of reasons.
-	if len(m) == 0 {
-		log.Fatalf("No msrs found. Make sure your kernel is compiled with msrs, and you may need to 'sudo modprobe msr'. To see available msrs, ls /dev/cpu.")
-	}
-	return m
+	return c, nil
 }
 
-func openAll(m []string, o int) ([]*os.File, []error) {
-	var (
-		f      = make([]*os.File, len(m))
-		errs   = make([]error, len(m))
-		hadErr bool
-	)
-	for i := range m {
-		f[i], errs[i] = os.OpenFile(m[i], o, 0)
+// GlobCPUs allow the user to specify CPUs using a glob as one would in /dev/cpu
+func GlobCPUs(g string) (CPUs, []error) {
+	var hadErr bool
+
+	f, err := filepath.Glob(filepath.Join("/dev/cpu", g, "msr"))
+	if err != nil {
+		return nil, []error{err}
+	}
+
+	c := make([]uint64, len(f))
+	errs := make([]error, len(f))
+	for i, v := range f {
+		c[i], errs[i] = strconv.ParseUint(filepath.Base(filepath.Dir(v)), 0, 64)
 		if errs[i] != nil {
 			hadErr = true
 		}
@@ -41,27 +44,38 @@ func openAll(m []string, o int) ([]*os.File, []error) {
 	if hadErr {
 		return nil, errs
 	}
-	return f, nil
+	return c, nil
 }
 
-func doIO(msr *os.File, addr uint32, f func(*os.File) error) error {
-	if _, err := msr.Seek(int64(addr), 0); err != nil {
-		return fmt.Errorf("bad address %v: %v", addr, err)
+// MSR is the address of the MSR we want to target.
+type MSR uint32
+
+func (m MSR) String() string {
+	return fmt.Sprintf("%#x", uint32(m))
+}
+
+func (c CPUs) paths() []string {
+	var p = make([]string, len(c))
+
+	for i, v := range c {
+		p[i] = filepath.Join("/dev/cpu", strconv.Itoa(int(v)), "msr")
 	}
-	return f(msr)
+	return p
 }
 
-func Read(m []string, addr uint32) ([]uint64, []error) {
+func (m MSR) Read(c CPUs) ([]uint64, []error) {
 	var hadErr bool
-	var regs = make([]uint64, len(m))
+	var regs = make([]uint64, len(c))
 
-	f, errs := openAll(m, os.O_RDONLY)
+	paths := c.paths()
+	f, errs := openAll(paths, os.O_RDONLY)
 	if errs != nil {
 		return nil, errs
 	}
 	errs = make([]error, len(f))
 	for i := range f {
-		errs[i] = doIO(f[i], addr, func(port *os.File) error {
+		defer f[i].Close()
+		errs[i] = doIO(f[i], m, func(port *os.File) error {
 			return binary.Read(port, binary.LittleEndian, &regs[i])
 		})
 		if errs[i] != nil {
@@ -75,16 +89,24 @@ func Read(m []string, addr uint32) ([]uint64, []error) {
 	return regs, nil
 }
 
-func Write(m []string, addr uint32, data []uint64) []error {
+// Write writes the corresponding data to their specified msrs
+func (m MSR) Write(c CPUs, data ...uint64) []error {
 	var hadErr bool
-	f, errs := openAll(m, os.O_RDWR)
+
+	if len(data) != len(c) && len(data) != 1 {
+		return []error{fmt.Errorf("mismatched lengths: cpus %v, data %v", c, data)}
+	}
+
+	paths := c.paths()
+	f, errs := openAll(paths, os.O_RDWR)
 
 	if errs != nil {
 		return errs
 	}
 	errs = make([]error, len(f))
-	for i := range m {
-		errs[i] = doIO(f[i], addr, func(port *os.File) error {
+	for i := range f {
+		defer f[i].Close()
+		errs[i] = doIO(f[i], m, func(port *os.File) error {
 			return binary.Write(port, binary.LittleEndian, data[i])
 		})
 		if errs[i] != nil {
@@ -99,14 +121,17 @@ func Write(m []string, addr uint32, data []uint64) []error {
 
 // MaskBits takes a mask of bits to clear and to set, and applies them to the specified MSR in
 // each of the CPUs.
-func MaskBits(m []string, addr uint32, clearMask uint64, setMask uint64) []error {
-	f, errs := openAll(m, os.O_RDWR)
+func (m MSR) MaskBits(c CPUs, clearMask uint64, setMask uint64) []error {
+	paths := c.paths()
+	f, errs := openAll(paths, os.O_RDWR)
 
-	for i := range m {
-		if errs[i] != nil {
-			continue
-		}
-		errs[i] = doIO(f[i], addr, func(port *os.File) error {
+	if errs != nil {
+		return errs
+	}
+	errs = make([]error, len(f))
+	for i := range f {
+		defer f[i].Close()
+		errs[i] = doIO(f[i], m, func(port *os.File) error {
 			var v uint64
 			err := binary.Read(port, binary.LittleEndian, &v)
 			if err != nil {
@@ -118,4 +143,35 @@ func MaskBits(m []string, addr uint32, clearMask uint64, setMask uint64) []error
 		})
 	}
 	return errs
+}
+
+func openAll(m []string, o int) ([]*os.File, []error) {
+	var (
+		f      = make([]*os.File, len(m))
+		errs   = make([]error, len(m))
+		hadErr bool
+	)
+	for i := range m {
+		f[i], errs[i] = os.OpenFile(m[i], o, 0)
+		if errs[i] != nil {
+			hadErr = true
+			f[i] = nil // Not sure if I need to do this, it doesn't seem guaranteed.
+		}
+	}
+	if hadErr {
+		for i := range f {
+			if f[i] != nil {
+				f[i].Close()
+			}
+		}
+		return nil, errs
+	}
+	return f, nil
+}
+
+func doIO(msr *os.File, addr MSR, f func(*os.File) error) error {
+	if _, err := msr.Seek(int64(addr), 0); err != nil {
+		return fmt.Errorf("bad address %v: %v", addr, err)
+	}
+	return f(msr)
 }
