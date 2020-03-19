@@ -93,7 +93,13 @@ func (m MSR) Read(c CPUs) ([]uint64, []error) {
 func (m MSR) Write(c CPUs, data ...uint64) []error {
 	var hadErr bool
 
-	if len(data) != len(c) && len(data) != 1 {
+	if len(data) == 1 {
+		// Expand value to all cpus
+		for i := 1; i < len(c); i++ {
+			data = append(data, data[0])
+		}
+	}
+	if len(data) != len(c) {
 		return []error{fmt.Errorf("mismatched lengths: cpus %v, data %v", c, data)}
 	}
 
