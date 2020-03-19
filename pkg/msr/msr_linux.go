@@ -119,9 +119,9 @@ func (m MSR) Write(c CPUs, data ...uint64) []error {
 	return nil
 }
 
-// MaskBits takes a mask of bits to clear and to set, and applies them to the specified MSR in
-// each of the CPUs.
-func (m MSR) MaskBits(c CPUs, clearMask uint64, setMask uint64) []error {
+// TestAndSet takes a mask of bits to clear and to set, and applies them to the specified MSR in
+// each of the CPUs. Note that TestAndSet does not write if the mask does not change the MSR
+func (m MSR) TestAndSet(c CPUs, clearMask uint64, setMask uint64) []error {
 	paths := c.paths()
 	f, errs := openAll(paths, os.O_RDWR)
 
@@ -137,9 +137,15 @@ func (m MSR) MaskBits(c CPUs, clearMask uint64, setMask uint64) []error {
 			if err != nil {
 				return err
 			}
-			v &= ^clearMask
-			v |= setMask
-			return binary.Write(port, binary.LittleEndian, v)
+			n := v & ^clearMask
+			n |= setMask
+			// We write only if there is a change. This is to avoid
+			// cases where we try to set a lock bit again, but the bit is
+			// already set
+			if n != v {
+				return binary.Write(port, binary.LittleEndian, n)
+			}
+			return nil
 		})
 	}
 	return errs
