@@ -8,20 +8,78 @@ package msr
 import (
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 // CPUs is a slice of the various cpus to read or write the MSR to.
 type CPUs []uint64
 
-func AllCPUs() (CPUs, error) {
-	c, errs := GlobCPUs("*")
-	if errs != nil || len(c) == 0 {
-		return nil, fmt.Errorf("error finding all cpus, maybe try modprobe msr? : %v", errs)
+func parseCPUs(s string) (CPUs, error) {
+	cpus := make(CPUs, 0)
+	// We expect the format to be "0-5,7-8..." or we could also get just one cpu.
+	// We're unlikely to get more than one range since we're looking at present cpus,
+	// but handle it just in case.
+	ranges := strings.Split(strings.TrimSpace(s), ",")
+	for _, r := range ranges {
+		if len(r) == 0 {
+			continue
+		}
+		// Split on a - if it exists.
+		cs := strings.Split(r, "-")
+		switch len(cs) {
+		case 1:
+			u, err := strconv.ParseUint(cs[0], 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+			}
+			cpus = append(cpus, uint64(u))
+		case 2:
+			ul, err := strconv.ParseUint(cs[0], 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+			}
+			uh, err := strconv.ParseUint(cs[1], 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+			}
+			if ul > uh {
+				return nil, fmt.Errorf("invalid cpu range, upper bound greater than lower: %v", r)
+			}
+			for i := ul; i <= uh; i++ {
+				cpus = append(cpus, uint64(i))
+			}
+		default:
+			return nil, fmt.Errorf("unknown cpu range: %v", r)
+		}
 	}
-	return c, nil
+	if len(cpus) == 0 {
+		return nil, fmt.Errorf("no cpus found, input was %v", s)
+	}
+	sort.Slice(cpus, func(i, j int) bool { return cpus[i] < cpus[j] })
+	// Remove duplicates
+	for i := 0; i < len(cpus)-1; i++ {
+		if cpus[i] == cpus[i+1] {
+			cpus = append(cpus[:i], cpus[i+1:]...)
+			i--
+		}
+	}
+	return cpus, nil
+
+}
+
+// AllCPUs searches for actual present CPUs instead of relying on the glob.
+// This is more accurate than what's presented in /dev/cpu/*/msr
+func AllCPUs() (CPUs, error) {
+	v, err := ioutil.ReadFile("/sys/devices/system/cpu/present")
+	if err != nil {
+		return nil, err
+	}
+	return parseCPUs(string(v))
 }
 
 // GlobCPUs allow the user to specify CPUs using a glob as one would in /dev/cpu
