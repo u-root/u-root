@@ -143,7 +143,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4edc37fbad8ba8e8780933529da3b14b192310399ad6c38532999114ec564f82"
+  digest = "1:99664cf933fe4ba3822897e98936d605ac75da5a7c88c452cff9f2b07de9563b"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -160,7 +160,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "5214532ecf392e5a8818355f3fff993aaef42c06"
+  revision = "99cbb09fb7b9ed72366e4c3e7def412d8e461539"
 
 [[projects]]
   branch = "master"
@@ -413,7 +413,7 @@
   version = "v2.2.6"
 
 [[projects]]
-  digest = "1:1532269ea4c7a7fcb29639a46318dd00c0f99c2f308a2a2860acf5b5354b8acc"
+  digest = "1:d9b9ac6943a512737f76bf3d61b08d97121c66686bc02ffc231313563230b468"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = "NUT"

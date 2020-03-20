@@ -13,26 +13,26 @@ import (
 // https://www.ietf.org/rfc/rfc3315.txt
 type OptStatusCode struct {
 	StatusCode    iana.StatusCode
-	StatusMessage []byte
+	StatusMessage string
 }
 
-// Code returns the option code
+// Code returns the option code.
 func (op *OptStatusCode) Code() OptionCode {
 	return OptionStatusCode
 }
 
-// ToBytes serializes the option and returns it as a sequence of bytes
+// ToBytes serializes the option and returns it as a sequence of bytes.
 func (op *OptStatusCode) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
 	buf.Write16(uint16(op.StatusCode))
-	buf.WriteBytes(op.StatusMessage)
+	buf.WriteBytes([]byte(op.StatusMessage))
 	return buf.Data()
 }
 
+// String returns a human-readable option.
 func (op *OptStatusCode) String() string {
-	return fmt.Sprintf("OptStatusCode{code=%s (%d), message=%v}",
-		op.StatusCode.String(), op.StatusCode,
-		string(op.StatusMessage))
+	return fmt.Sprintf("StatusCode: Code: %s (%d); Message: %s",
+		op.StatusCode, op.StatusCode, op.StatusMessage)
 }
 
 // ParseOptStatusCode builds an OptStatusCode structure from a sequence of
@@ -41,6 +41,6 @@ func ParseOptStatusCode(data []byte) (*OptStatusCode, error) {
 	var opt OptStatusCode
 	buf := uio.NewBigEndianBuffer(data)
 	opt.StatusCode = iana.StatusCode(buf.Read16())
-	opt.StatusMessage = buf.ReadAll()
+	opt.StatusMessage = string(buf.ReadAll())
 	return &opt, buf.FinError()
 }

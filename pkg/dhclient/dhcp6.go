@@ -87,10 +87,8 @@ func (p *Packet6) String() string {
 
 // Lease returns lease information assigned.
 func (p *Packet6) Lease() *dhcpv6.OptIAAddress {
-	// TODO(chrisko): Reform dhcpv6 option handling to be like dhcpv4.
-	ianaOpt := p.p.GetOneOption(dhcpv6.OptionIANA)
-	iana, ok := ianaOpt.(*dhcpv6.OptIANA)
-	if !ok {
+	iana := p.p.Options.OneIANA()
+	if iana == nil {
 		return nil
 	}
 
@@ -104,28 +102,16 @@ func (p *Packet6) Lease() *dhcpv6.OptIAAddress {
 
 // DNS returns DNS servers assigned.
 func (p *Packet6) DNS() []net.IP {
-	// TODO: Would the IANA contain this, or the packet?
-	dnsOpt := p.p.GetOneOption(dhcpv6.OptionDNSRecursiveNameServer)
-	dns, ok := dnsOpt.(*dhcpv6.OptDNSRecursiveNameServer)
-	if !ok {
-		return nil
-	}
-	return dns.NameServers
+	return p.p.Options.DNS()
 }
 
 // Boot returns the boot file URL and parameters assigned.
-//
-// TODO: RFC 5970 is helpfully avoidant of where these options are used. Are
-// they added to the packet? Are they added to an IANA?  It *seems* like it's
-// in the packet.
 func (p *Packet6) Boot() (*url.URL, error) {
-	uriOpt := p.p.GetOneOption(dhcpv6.OptionBootfileURL)
-	uri, ok := uriOpt.(dhcpv6.OptBootFileURL)
-	if !ok {
+	uri := p.p.Options.BootFileURL()
+	if len(uri) == 0 {
 		return nil, fmt.Errorf("packet does not contain boot file URL")
 	}
-	// Srsly, a []byte?
-	return url.Parse(string(uri.ToBytes()))
+	return url.Parse(uri)
 }
 
 // ISCSIBoot returns the target address and volume name to boot from if
@@ -134,10 +120,9 @@ func (p *Packet6) Boot() (*url.URL, error) {
 // Parses the DHCPv6 Boot File for iSCSI target and volume as specified by RFC
 // 4173 and RFC 5970.
 func (p *Packet6) ISCSIBoot() (*net.TCPAddr, string, error) {
-	uriOpt := p.p.GetOneOption(dhcpv6.OptionBootfileURL)
-	uri, ok := uriOpt.(dhcpv6.OptBootFileURL)
-	if !ok {
+	uri := p.p.Options.BootFileURL()
+	if len(uri) == 0 {
 		return nil, "", fmt.Errorf("packet does not contain boot file URL")
 	}
-	return parseISCSIURI(string(uri.ToBytes()))
+	return parseISCSIURI(uri)
 }

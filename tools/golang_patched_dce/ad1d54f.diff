@@ -1,0 +1,201 @@
+From ad1d54f498bd0f9de434773b6272d70f5d8ee980 Mon Sep 17 00:00:00 2001
+From: Brad Fitzpatrick <bradfitz@golang.org>
+Date: Fri, 06 Dec 2019 18:19:03 +0000
+Subject: [PATCH] text/template: avoid a global map to help the linker's deadcode elimination
+
+Fixes #36021
+Updates #2559
+Updates #26775
+
+Change-Id: I2e6708691311035b63866f25d5b4b3977a118290
+---
+
+diff --git a/src/text/template/deadcode_test.go b/src/text/template/deadcode_test.go
+new file mode 100644
+index 0000000..7495f51
+--- /dev/null
++++ b/src/text/template/deadcode_test.go
+@@ -0,0 +1,64 @@
++// Copyright 2019 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++package template_test
++
++import (
++	"bytes"
++	"internal/testenv"
++	"io/ioutil"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"testing"
++)
++
++// Issue 36021: verify that text/template doesn't prevent the linker from removing
++// unused methods.
++func TestDeadCodeElimination(t *testing.T) {
++	if testing.Short() {
++		t.Skip("skipping in short mode")
++	}
++	testenv.MustHaveGoBuild(t)
++	const prog = `package main
++
++import (
++	_ "text/template"
++)
++
++type T struct{}
++
++func (t *T) Unused() { println("THIS SHOULD BE ELIMINATED") }
++func (t *T) Used() {}
++
++var sink *T
++
++func main() {
++	var t T
++	sink = &t
++	t.Used()
++}
++`
++	td, err := ioutil.TempDir("", "text_template_TestDeadCodeElimination")
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer os.Remove(td)
++
++	if err := ioutil.WriteFile(filepath.Join(td, "x.go"), []byte(prog), 0644); err != nil {
++		t.Fatal(err)
++	}
++	cmd := exec.Command("go", "build", "-o", "x.exe", "x.go")
++	cmd.Dir = td
++	if out, err := cmd.CombinedOutput(); err != nil {
++		t.Fatalf("go build: %v, %s", err, out)
++	}
++	slurp, err := ioutil.ReadFile(filepath.Join(td, "x.exe"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if bytes.Contains(slurp, []byte("THIS SHOULD BE ELIMINATED")) {
++		t.Error("binary contains code that should be deadcode eliminated")
++	}
++}
+diff --git a/src/text/template/funcs.go b/src/text/template/funcs.go
+index 0568c79..55470d6 100644
+--- a/src/text/template/funcs.go
++++ b/src/text/template/funcs.go
+@@ -12,6 +12,7 @@
+ 	"net/url"
+ 	"reflect"
+ 	"strings"
++	"sync"
+ 	"unicode"
+ 	"unicode/utf8"
+ )
+@@ -29,31 +30,49 @@
+ // type can return interface{} or reflect.Value.
+ type FuncMap map[string]interface{}
+ 
+-var builtins = FuncMap{
+-	"and":      and,
+-	"call":     call,
+-	"html":     HTMLEscaper,
+-	"index":    index,
+-	"slice":    slice,
+-	"js":       JSEscaper,
+-	"len":      length,
+-	"not":      not,
+-	"or":       or,
+-	"print":    fmt.Sprint,
+-	"printf":   fmt.Sprintf,
+-	"println":  fmt.Sprintln,
+-	"urlquery": URLQueryEscaper,
++// builtins returns the FuncMap.
++// It is not a global variable so the linker can dead code eliminate
++// more when this isn't called. See golang.org/issue/36021.
++// TODO: revert this back to a global map once golang.org/issue/2559 is fixed.
++func builtins() FuncMap {
++	return FuncMap{
++		"and":      and,
++		"call":     call,
++		"html":     HTMLEscaper,
++		"index":    index,
++		"slice":    slice,
++		"js":       JSEscaper,
++		"len":      length,
++		"not":      not,
++		"or":       or,
++		"print":    fmt.Sprint,
++		"printf":   fmt.Sprintf,
++		"println":  fmt.Sprintln,
++		"urlquery": URLQueryEscaper,
+ 
+-	// Comparisons
+-	"eq": eq, // ==
+-	"ge": ge, // >=
+-	"gt": gt, // >
+-	"le": le, // <=
+-	"lt": lt, // <
+-	"ne": ne, // !=
++		// Comparisons
++		"eq": eq, // ==
++		"ge": ge, // >=
++		"gt": gt, // >
++		"le": le, // <=
++		"lt": lt, // <
++		"ne": ne, // !=
++	}
+ }
+ 
+-var builtinFuncs = createValueFuncs(builtins)
++var builtinFuncsOnce struct {
++	sync.Once
++	v map[string]reflect.Value
++}
++
++// builtinFuncsOnce lazily computes & caches the builtinFuncs map.
++// TODO: revert this back to a global map once golang.org/issue/2559 is fixed.
++func builtinFuncs() map[string]reflect.Value {
++	builtinFuncsOnce.Do(func() {
++		builtinFuncsOnce.v = createValueFuncs(builtins())
++	})
++	return builtinFuncsOnce.v
++}
+ 
+ // createValueFuncs turns a FuncMap into a map[string]reflect.Value
+ func createValueFuncs(funcMap FuncMap) map[string]reflect.Value {
+@@ -125,7 +144,7 @@
+ 			return fn, true
+ 		}
+ 	}
+-	if fn := builtinFuncs[name]; fn.IsValid() {
++	if fn := builtinFuncs()[name]; fn.IsValid() {
+ 		return fn, true
+ 	}
+ 	return reflect.Value{}, false
+diff --git a/src/text/template/multi_test.go b/src/text/template/multi_test.go
+index 5769470..bf1f1b2 100644
+--- a/src/text/template/multi_test.go
++++ b/src/text/template/multi_test.go
+@@ -242,7 +242,7 @@
+ 		t.Fatal(err)
+ 	}
+ 	// Add a new parse tree.
+-	tree, err := parse.Parse("cloneText3", cloneText3, "", "", nil, builtins)
++	tree, err := parse.Parse("cloneText3", cloneText3, "", "", nil, builtins())
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/src/text/template/template.go b/src/text/template/template.go
+index 2c5ff01..e636907 100644
+--- a/src/text/template/template.go
++++ b/src/text/template/template.go
+@@ -198,7 +198,7 @@
+ func (t *Template) Parse(text string) (*Template, error) {
+ 	t.init()
+ 	t.muFuncs.RLock()
+-	trees, err := parse.Parse(t.name, text, t.leftDelim, t.rightDelim, t.parseFuncs, builtins)
++	trees, err := parse.Parse(t.name, text, t.leftDelim, t.rightDelim, t.parseFuncs, builtins())
+ 	t.muFuncs.RUnlock()
+ 	if err != nil {
+ 		return nil, err
