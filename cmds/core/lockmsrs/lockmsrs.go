@@ -87,7 +87,7 @@ func main() {
 		if *verbose {
 			log.Printf("Locking MSR %v on cpus %v, clearmask 0x%8x, setmask 0x%8x", m.msrAdd, cpus, m.clearMask, m.setMask)
 		}
-		errs := m.msrAdd.MaskBits(cpus, m.clearMask, m.setMask)
+		errs := m.msrAdd.TestAndSet(cpus, m.clearMask, m.setMask)
 		for i, e := range errs {
 			if e != nil {
 				// Hope no one ever modifies this slice.
