@@ -60,6 +60,26 @@ func getSystemFWVersion(si *smbios.Info) (string, error) {
 	return t0.Version, nil
 }
 
+func checkCMOSClear(ipmi *ipmi.IPMI) error {
+	if cmosclear, bootorder, err := ipmi.IsCMOSClearSet(); cmosclear == true {
+		log.Printf("CMOS clear starts")
+		if err = cmosClear(); err != nil {
+			return err
+		}
+		// ToDo: Reset RW_VPD to default values
+		if err = ipmi.ClearCMOSClearValidBits(bootorder); err != nil {
+			return err
+		}
+		if err = reboot(); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func runIPMICommands() {
 	ipmi, err := ipmi.Open(0)
 	if err != nil {
@@ -91,6 +111,9 @@ func runIPMICommands() {
 	if productName, err := getSystemProductName(si); err == nil {
 		if isMatched(productName) {
 			log.Printf("Running OEM IPMI commands.")
+			if err = checkCMOSClear(ipmi); err != nil {
+				log.Printf("IPMI CMOS clear err: %v", err)
+			}
 		} else {
 			log.Printf("No product name is matched for OEM commands.")
 		}
