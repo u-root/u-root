@@ -46,8 +46,8 @@ type pcrSelection struct {
 // pcrInfoLong stores detailed information about PCRs.
 type pcrInfoLong struct {
 	Tag              uint16
-	LocAtCreation    byte
-	LocAtRelease     byte
+	LocAtCreation    Locality
+	LocAtRelease     Locality
 	PCRsAtCreation   pcrSelection
 	PCRsAtRelease    pcrSelection
 	DigestAtCreation digest
@@ -56,8 +56,8 @@ type pcrInfoLong struct {
 
 // pcrInfoShort stores detailed information about PCRs.
 type pcrInfoShort struct {
-	LocAtRelease    byte
 	PCRsAtRelease   pcrSelection
+	LocAtRelease    Locality
 	DigestAtRelease digest
 }
 
@@ -109,25 +109,25 @@ type PermanentFlags struct {
 	DisableFullDALogicInfo       bool
 }
 
+// nvAttributes implements struct of TPM_NV_ATTRIBUTES
+// See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.140
+type nvAttributes struct {
+	Tag        uint16
+	Attributes permission
+}
+
 // NVDataPublic implements the structure of TPM_NV_DATA_PUBLIC
 // as described in TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P. 142
 type NVDataPublic struct {
-	Tag          tpmutil.Tag
+	Tag          uint16
 	NVIndex      uint32
 	PCRInfoRead  pcrInfoShort
 	PCRInfoWrite pcrInfoShort
-	permission   NVAttributes
+	Permission   nvAttributes
 	ReadSTClear  bool
 	WriteSTClear bool
 	WriteDefine  bool
 	Size         uint32
-}
-
-// NVAttributes implements struct of TPM_NV_ATTRIBUTES
-// See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.140
-type NVAttributes struct {
-	tag        tpmutil.Tag
-	attributes permission
 }
 
 // CloseKey flushes the key associated with the tpmutil.Handle.

@@ -22,7 +22,7 @@ const (
 	// WellKnownSecret is the 20 bytes zero
 	WellKnownSecret = ""
 	// DefaultLocality is the TPM locality mostly used
-	DefaultLocality byte = 0
+	DefaultLocality tspi.Locality = 1
 )
 
 // Info returns the TPMInfo object associated to this TPM device
@@ -131,7 +131,7 @@ func (t *TPM1) Measure(pcr uint32, data []byte) error {
 }
 
 // SealData seals data at locality with pcrs and srkPassword
-func (t *TPM1) SealData(locality byte, pcrs []int, data []byte, srkPassword string) ([]byte, error) {
+func (t *TPM1) SealData(locality tspi.Locality, pcrs []int, data []byte, srkPassword string) ([]byte, error) {
 	var srkAuth [20]byte
 	if srkPassword != "" {
 		srkAuth = sha1.Sum([]byte(srkPassword))
@@ -151,13 +151,13 @@ func (t *TPM1) SealData(locality byte, pcrs []int, data []byte, srkPassword stri
 // a hash.
 // data: Data which should be sealed against the PCR of pcrInfo.
 // srkPassword: The storage root key password of the TPM.
-func (t *TPM1) ResealData(locality byte, pcrInfo map[int][]byte, data []byte, srkPassword string) ([]byte, error) {
+func (t *TPM1) ResealData(loc tspi.Locality, pcrInfo map[int][]byte, data []byte, srkPassword string) ([]byte, error) {
 	var srkAuth [20]byte
 	if srkPassword != "" {
 		srkAuth = sha1.Sum([]byte(srkPassword))
 	}
 
-	sealed, err := tspi.Reseal(t.device, locality, pcrInfo, data, srkAuth[:])
+	sealed, err := tspi.Reseal(t.device, loc, pcrInfo, data, srkAuth[:])
 	if err != nil {
 		return nil, err
 	}
