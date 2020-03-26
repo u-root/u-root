@@ -61,7 +61,7 @@ func getSystemFWVersion(si *smbios.Info) (string, error) {
 }
 
 func checkCMOSClear(ipmi *ipmi.IPMI) error {
-	if cmosclear, bootorder, err := ipmi.IsCMOSClearSet(); cmosclear == true {
+	if cmosclear, bootorder, err := ipmi.IsCMOSClearSet(); cmosclear {
 		log.Printf("CMOS clear starts")
 		if err = cmosClear(); err != nil {
 			return err

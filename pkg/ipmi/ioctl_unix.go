@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	_IOC_NONE  = 0x0
 	_IOC_WRITE = 0x1
 	_IOC_READ  = 0x2
 
@@ -29,15 +30,19 @@ func ioc(dir int, t int, nr int, size int) int {
 		(nr << _IOC_NRSHIFT) | (size << _IOC_SIZESHIFT)
 }
 
-func ior(t int, nr int, size int) int {
+func IO(t int, nr int) int {
+	return ioc(_IOC_NONE, t, nr, 0)
+}
+
+func IOR(t int, nr int, size int) int {
 	return ioc(_IOC_READ, t, nr, size)
 }
 
-func iowr(t int, nr int, size int) int {
+func IOWR(t int, nr int, size int) int {
 	return ioc(_IOC_READ|_IOC_WRITE, t, nr, size)
 }
 
-func ioctl(fd uintptr, name int, data unsafe.Pointer) syscall.Errno {
+func Ioctl(fd uintptr, name int, data unsafe.Pointer) syscall.Errno {
 	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(name), uintptr(data))
 	return err
 }
