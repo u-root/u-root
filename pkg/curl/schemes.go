@@ -1,10 +1,10 @@
-// Copyright 2017-2018 the u-root Authors. All rights reserved
+// Copyright 2017-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 // Package curl implements routines to fetch files given a URL.
 //
-// curl currently supports HTTP, TFTP, local files, and a retrying HTTP client.
+// curl currently supports HTTP, TFTP, and local files.
 package curl
 
 import (
@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -41,6 +42,16 @@ type FileScheme interface {
 	// It may do so by fetching `u` and placing it in a buffer, or by
 	// returning an io.ReaderAt that fetchs the file.
 	Fetch(u *url.URL) (io.ReaderAt, error)
+}
+
+// FileSchemeRetryFilter contains extra RetryFilter method for a FileScheme
+// wrapped by SchemeWithRetries.
+type FileSchemeRetryFilter interface {
+	// RetryFilter lets a FileScheme filter for errors returned by Fetch
+	// which are worth retrying. If this interface is not implemented, the
+	// default for SchemeWithRetries is to always retry. RetryFilter
+	// returns true to indicate a request should be retried.
+	RetryFilter(u *url.URL, err error) bool
 }
 
 var (
@@ -126,6 +137,18 @@ func (s Schemes) Fetch(u *url.URL) (io.ReaderAt, error) {
 	return &file{ReaderAt: r, url: u}, nil
 }
 
+// RetryFilter implements FileSchemeRetryFilter.
+func (s Schemes) RetryFilter(u *url.URL, err error) bool {
+	fg, ok := s[u.Scheme]
+	if !ok {
+		return false
+	}
+	if fg, ok := fg.(FileSchemeRetryFilter); ok {
+		return fg.RetryFilter(u, err)
+	}
+	return true
+}
+
 // LazyFetch calls LazyFetch on DefaultSchemes.
 func LazyFetch(u *url.URL) (io.ReaderAt, error) {
 	return DefaultSchemes.LazyFetch(u)
@@ -181,6 +204,13 @@ func (t *TFTPClient) Fetch(u *url.URL) (io.ReaderAt, error) {
 	return uio.NewCachingReader(r), nil
 }
 
+// RetryFilter implements FileSchemeRetryFilter.
+func (t *TFTPClient) RetryFilter(u *url.URL, err error) bool {
+	// The tftp does not export the necessary structs to get the
+	// code out of the error message cleanly.
+	return !strings.Contains(err.Error(), "FILE_NOT_FOUND")
+}
+
 // SchemeWithRetries wraps a FileScheme and automatically retries (with
 // backoff) when Fetch returns a non-nil err.
 type SchemeWithRetries struct {
@@ -198,16 +228,33 @@ func (s *SchemeWithRetries) Fetch(u *url.URL) (io.ReaderAt, error) {
 		}
 
 		var r io.ReaderAt
+		// Note: err uses the scope outside the for loop.
 		r, err = s.Scheme.Fetch(u)
-		if err != nil {
-			log.Printf("Error: Getting %v: %v", u, err)
-			continue
+		if err == nil {
+			return r, nil
 		}
-		return r, nil
+
+		log.Printf("Error: Getting %v: %v", u, err)
+		if s, ok := s.Scheme.(FileSchemeRetryFilter); ok && !s.RetryFilter(u, err) {
+			return r, err
+		}
+		log.Printf("Retrying %v", u)
 	}
 
 	log.Printf("Error: Too many retries to get file %v", u)
 	return nil, err
+}
+
+// HTTPClientCodeError is returned by HTTPClient.Fetch when the server replies
+// with a non-200 code.
+type HTTPClientCodeError struct {
+	Err      error
+	HTTPCode int
+}
+
+// Error implements error for HTTPClientCodeError.
+func (h *HTTPClientCodeError) Error() string {
+	return fmt.Sprintf("HTTP server responded with error code %d, want 200: response %v", h.HTTPCode, h.Err)
 }
 
 // HTTPClient implements FileScheme for HTTP files.
@@ -230,46 +277,17 @@ func (h HTTPClient) Fetch(u *url.URL) (io.ReaderAt, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP server responded with code %d, want 200: response %v", resp.StatusCode, resp)
+		return nil, &HTTPClientCodeError{err, resp.StatusCode}
 	}
 	return uio.NewCachingReader(resp.Body), nil
 }
 
-// HTTPClientWithRetries implements FileScheme for HTTP files and automatically
-// retries (with backoff) upon an error.
-type HTTPClientWithRetries struct {
-	Client  *http.Client
-	BackOff backoff.BackOff
-}
-
-// Fetch implements FileScheme.Fetch.
-func (h HTTPClientWithRetries) Fetch(u *url.URL) (io.ReaderAt, error) {
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return nil, err
+// RetryFilter implements FileSchemeRetryFilter.
+func (h HTTPClient) RetryFilter(u *url.URL, err error) bool {
+	if err, ok := err.(*HTTPClientCodeError); ok && err.HTTPCode == 200 {
+		return false
 	}
-
-	h.BackOff.Reset()
-	for d := time.Duration(0); d != backoff.Stop; d = h.BackOff.NextBackOff() {
-		if d > 0 {
-			time.Sleep(d)
-		}
-
-		var resp *http.Response
-		// Note: err uses the scope outside the for loop.
-		resp, err = h.Client.Do(req)
-		if err != nil {
-			log.Printf("Error: HTTP client: %v", err)
-			continue
-		}
-		if resp.StatusCode != 200 {
-			log.Printf("Error: HTTP server responded with code %d, want 200: response %v", resp.StatusCode, resp)
-			continue
-		}
-		return uio.NewCachingReader(resp.Body), nil
-	}
-	log.Printf("Error: Too many retries to download %v", u)
-	return nil, fmt.Errorf("too many HTTP retries: %v", err)
+	return true
 }
 
 // LocalFileClient implements FileScheme for files on disk.

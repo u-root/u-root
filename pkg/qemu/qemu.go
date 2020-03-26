@@ -91,7 +91,7 @@ func (o *Options) Start() (*VM, error) {
 	}, nil
 }
 
-// cmdline returns the command line arguments used to start QEMU. These
+// Cmdline returns the command line arguments used to start QEMU. These
 // arguments are derived from the given QEMU struct.
 func (o *Options) Cmdline() ([]string, error) {
 	var args []string
