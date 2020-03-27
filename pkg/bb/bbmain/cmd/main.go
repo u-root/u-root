@@ -36,6 +36,6 @@ func init() {
 		os.Args = os.Args[1:]
 		run()
 	}
-	bbmain.Register("bb", bbmain.Noop, m)
+	bbmain.Register("bb", bbmain.Noop, bbmain.ListCmds)
 	bbmain.RegisterDefault(bbmain.Noop, m)
 }

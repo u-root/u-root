@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // ErrNotRegistered is returned by Run if the given command is not registered.
@@ -17,6 +18,73 @@ var ErrNotRegistered = errors.New("command not registered")
 
 // Noop is a noop function.
 var Noop = func() {}
+
+// ListCmds lists bb commands and verifies symlinks.
+// It is by convention called when the bb command is invoked directly.
+// For every command, there should be a symlink in /bbin,
+// and for every symlink, there should be a command.
+// Occasionally, we have bugs that result in one of these
+// being false. Just running bb is an easy way to tell if something
+// in your image is messed up.
+func ListCmds() {
+	type known struct {
+		name string
+		bb   string
+	}
+	names := map[string]*known{}
+	g, err := filepath.Glob("/bbin/*")
+	if err != nil {
+		fmt.Printf("bb: unable to enumerate /bbin")
+	}
+
+	// First step is to assemble a list of all possible
+	// names, both from /bbin/* and our built in commands.
+	for _, l := range g {
+		if l == "/bbin/bb" {
+			continue
+		}
+		b := filepath.Base(l)
+		names[b] = &known{name: l}
+	}
+	for n := range bbCmds {
+		if n == "bb" {
+			continue
+		}
+		if c, ok := names[n]; ok {
+			c.bb = n
+			continue
+		}
+		names[n] = &known{bb: n}
+	}
+	// Now walk the array of structs.
+	// We don't sort as we don't want the
+	// footprint of bringing in the package.
+	// If you want it sorted, bb | sort
+	var hadError bool
+	for c, k := range names {
+		if len(k.name) == 0 || len(k.bb) == 0 {
+			hadError = true
+			fmt.Printf("%s:\t", c)
+			if k.name == "" {
+				fmt.Printf("NO SYMLINK\t")
+			} else {
+				fmt.Printf("%q\t", k.name)
+			}
+			if k.bb == "" {
+				fmt.Printf("NO COMMAND\n")
+			} else {
+				fmt.Printf("%s\n", k.bb)
+			}
+		}
+	}
+	if hadError {
+		fmt.Println("There is at least one problem. Known causes:")
+		fmt.Println("At least two initrds -- one compiled in to the kernel, a second supplied by the bootloader.")
+		fmt.Println("The initrd cpio was changed after creation or merged with another one.")
+		fmt.Println("When the initrd was created, files were inserted into /bbin by mistake.")
+		fmt.Println("Post boot, files were added to /bbin.")
+	}
+}
 
 type bbCmd struct {
 	init, main func()
