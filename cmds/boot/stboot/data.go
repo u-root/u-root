@@ -119,10 +119,6 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 			debug("Skip %s: %v", device, err)
 			continue
 		}
-		if err != nil {
-			debug("Skip %s: %v", device, err)
-			continue
-		}
 		for n, part := range table.Partitions {
 			if part.IsEmpty() {
 				debug("Skip %s: no partitions found", device)
@@ -136,6 +132,7 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 			if l == label {
 				d = device
 				p = strconv.Itoa(n + 1)
+				debug("Found data partition on %s , partition %s", device, p)
 				break
 			}
 			debug("Skip %s partition %d: label does not match %s", device, n+1, label)
@@ -144,14 +141,17 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 			break
 		}
 	}
-	for _, device := range devices {
-		if !strings.HasPrefix(device, d) {
-			continue
+	if d != "" && p != "" {
+		for _, device := range devices {
+			if !strings.HasPrefix(device, d) {
+				continue
+			}
+			part := strings.TrimPrefix(device, d)
+			if strings.Contains(part, p) {
+				return device, nil
+			}
 		}
-		part := strings.TrimPrefix(device, d)
-		if strings.Contains(part, p) {
-			return device, nil
-		}
+		return "", fmt.Errorf("Cannot find partition %s of %s in %v", p, d, devices)
 	}
 	return "", fmt.Errorf("No device with partition labeled %s found", label)
 }
