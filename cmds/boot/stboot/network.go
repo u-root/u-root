@@ -27,7 +27,6 @@ import (
 
 type netConf struct {
 	HostIP         string `json:"host_ip"`
-	HostNetmask    string `json:"netmask"`
 	DefaultGateway string `json:"gateway"`
 	DNSServer      string `json:"dns"`
 }
@@ -49,7 +48,21 @@ func configureStaticNetwork(nc netConf) error {
 	log.Printf("Setup network configuration with IP: " + nc.HostIP)
 	addr, err := netlink.ParseAddr(nc.HostIP)
 	if err != nil {
-		return fmt.Errorf("Error parsing HostIP string to CIDR format address: %v", err)
+		return fmt.Errorf("error parsing HostIP string to CIDR format address: %v", err)
+	}
+	gateway, err := netlink.ParseAddr(nc.DefaultGateway)
+	if err != nil {
+		return fmt.Errorf("error parsing DefaultGateway string to CIDR format address: %v", err)
+	}
+	if nc.DNSServer != "" {
+		dns := net.ParseIP(nc.DNSServer)
+		if dns == nil {
+			return fmt.Errorf("cannot parse DNSServer string %s", nc.DNSServer)
+		}
+		resolvconf := fmt.Sprintf("nameserver %s\n", dns.String())
+		if err = ioutil.WriteFile("/etc/resolv.conf", []byte(resolvconf), 0644); err != nil {
+			return fmt.Errorf("could not write DNS servers to resolv.conf: %v", err)
+		}
 	}
 
 	links, err := findNetworkInterfaces()
@@ -60,38 +73,30 @@ func configureStaticNetwork(nc netConf) error {
 	for _, link := range links {
 
 		if err = netlink.AddrAdd(link, addr); err != nil {
-			if *doDebug {
-				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
-			}
+			debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
 		if err = netlink.LinkSetUp(link); err != nil {
-			if *doDebug {
-				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
-			}
+			debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
-		gateway, err := netlink.ParseAddr(nc.DefaultGateway)
 		if err != nil {
-			if *doDebug {
-				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
-			}
+			debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
 		r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: gateway.IPNet.IP}
 		if err = netlink.RouteAdd(r); err != nil {
-			if *doDebug {
-				log.Printf("%s: IP config failed: %v", link.Attrs().Name, err)
-			}
-		} else {
-			log.Printf("%s: IP configuration successful", link.Attrs().Name)
-			return nil
+			debug("%s: IP config failed: %v", link.Attrs().Name, err)
+			continue
 		}
+
+		log.Printf("%s: IP configuration successful", link.Attrs().Name)
+		return nil
 	}
-	return errors.New("IP configuration failed")
+	return errors.New("IP configuration failed for all interfaces")
 }
 
 func configureDHCPNetwork() error {
@@ -117,16 +122,12 @@ func configureDHCPNetwork() error {
 	r := dhclient.SendRequests(context.TODO(), links, true, false, config)
 	for result := range r {
 		if result.Err != nil {
-			if *doDebug {
-				log.Printf("%s: DHCP response error: %v", result.Interface.Attrs().Name, result.Err)
-			}
+			debug("%s: DHCP response error: %v", result.Interface.Attrs().Name, result.Err)
 			continue
 		}
 		err = result.Lease.Configure()
 		if err != nil {
-			if *doDebug {
-				log.Printf("%s: DHCP configuration error: %v", result.Interface.Attrs().Name, err)
-			}
+			debug("%s: DHCP configuration error: %v", result.Interface.Attrs().Name, err)
 		} else {
 			log.Printf("%s: DHCP successful", result.Interface.Attrs().Name)
 			return nil
@@ -142,17 +143,15 @@ func findNetworkInterfaces() ([]netlink.Link, error) {
 	}
 
 	if len(ifaces) == 0 {
-		return nil, errors.New("No network interface found")
+		return nil, errors.New("no network interface found")
 	}
 
 	var links []netlink.Link
 	var ifnames []string
 	for _, iface := range ifaces {
-		if *doDebug {
-			log.Printf("Found interface %s", iface.Name)
-			log.Printf("    MTU: %d Hardware Addr: %s", iface.MTU, iface.HardwareAddr.String())
-			log.Printf("    Flags: %v", iface.Flags)
-		}
+		debug("Found interface %s", iface.Name)
+		debug("    MTU: %d Hardware Addr: %s", iface.MTU, iface.HardwareAddr.String())
+		debug("    Flags: %v", iface.Flags)
 		ifnames = append(ifnames, iface.Name)
 		// skip loopback
 		if iface.Flags&net.FlagLoopback != 0 || iface.HardwareAddr.String() == "" {
@@ -160,13 +159,13 @@ func findNetworkInterfaces() ([]netlink.Link, error) {
 		}
 		link, err := netlink.LinkByName(iface.Name)
 		if err != nil {
-			log.Print(err)
+			debug("%v", err)
 		}
 		links = append(links, link)
 	}
 
 	if len(links) <= 0 {
-		return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
+		return nil, fmt.Errorf("could not find a non-loopback network interface with hardware address in any of %v", ifnames)
 	}
 
 	return links, nil
@@ -175,7 +174,7 @@ func findNetworkInterfaces() ([]netlink.Link, error) {
 func downloadFromHTTPS(url string, destination string) error {
 	roots, err := loadHTTPSCertificates()
 	if err != nil {
-		return fmt.Errorf("Failed to load root certificate: %v", err)
+		return fmt.Errorf("failed to load root certificate: %v", err)
 	}
 
 	// setup https client
@@ -200,12 +199,12 @@ func downloadFromHTTPS(url string, destination string) error {
 	// check available kernel entropy
 	e, err := ioutil.ReadFile(entropyAvail)
 	if err != nil {
-		return fmt.Errorf("Cannot evaluate entropy, %v", err)
+		return fmt.Errorf("cannot evaluate entropy, %v", err)
 	}
 	es := strings.TrimSpace(string(e))
 	entr, err := strconv.Atoi(es)
 	if err != nil {
-		return fmt.Errorf("Cannot evaluate entropy, %v", err)
+		return fmt.Errorf("cannot evaluate entropy, %v", err)
 	}
 	if entr < 128 {
 		log.Print("WARNING: low entropy!")
@@ -245,7 +244,7 @@ func loadHTTPSCertificates() (*x509.CertPool, error) {
 	}
 	ok := roots.AppendCertsFromPEM(bytes)
 	if !ok {
-		return roots, fmt.Errorf("Error parsing %s", httpsRootsFile)
+		return roots, fmt.Errorf("error parsing %s", httpsRootsFile)
 	}
 	return roots, nil
 }

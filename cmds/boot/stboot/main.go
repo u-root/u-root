@@ -103,14 +103,14 @@ func main() {
 		}
 	}
 
-	if nc.HostIP != "" {
+	if nc.HostIP != "" && nc.DefaultGateway != "" {
 		if *doDebug {
 			str, _ := json.MarshalIndent(nc, "", "  ")
 			log.Printf("Network configuration: %s", str)
 		}
 		err = configureStaticNetwork(nc)
 	} else {
-		debug("no IP specified %s", networkFile)
+		debug("no configuration specified in %s", networkFile)
 		err = configureDHCPNetwork()
 	}
 	if err != nil {
