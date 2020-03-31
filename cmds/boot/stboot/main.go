@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -156,10 +157,13 @@ func main() {
 		}
 		log.Printf("Download failed: %v", uerr)
 	}
+	if _, err = os.Stat(ballPath); err != nil {
+		reboot("Cannot open bootball: %v", err)
+	}
 
 	ball, err := stboot.BootBallFromArchive(ballPath)
 	if err != nil {
-		reboot("Cannot open bootball: %v", err)
+		reboot("%v", err)
 	}
 
 	////////////////////////////////////////////////
