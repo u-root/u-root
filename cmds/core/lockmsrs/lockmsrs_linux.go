@@ -34,7 +34,7 @@ func main() {
 	msr.Debug = debug
 
 	if *verify {
-		if err := msr.Verify(); err != nil {
+		if err := msr.Locked(); err != nil {
 			log.Fatal(err)
 		}
 		os.Exit(0)
@@ -44,9 +44,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, m := range msr.Intel {
+	for _, m := range msr.LockIntel {
 		debug("Lock MSR %s on cpus %v, clearmask %#08x, setmask %#08x", m.String(), cpus, m.Clear, m.Set)
-		errs := m.Addr.TestAndSet(cpus, m.Clear, m.Set)
+		var errs []error
+		if m.WriteOnly {
+			errs = m.Addr.Write(cpus, m.Set)
+		} else {
+			errs = m.Addr.TestAndSet(cpus, m.Clear, m.Set)
+		}
 
 		for i, e := range errs {
 			if e != nil {

@@ -4,15 +4,31 @@
 
 package msr
 
+// MSR defines an MSR address.
+type MSR uint32
+
+// MSRVal defines an MSR Value to be used in TestAndSet, Test, and other
+// operations.
 type MSRVal struct {
-	Addr  MSR
-	Name  string
+	// Addr is the address of the MSR.
+	Addr MSR
+	// Name is a printable name.
+	Name string
+	// Clear are bits to clear in TestAndSet and Test.
 	Clear uint64
-	Set   uint64
+	// Set are bits to set in TestAndSet and Test; or the value to write
+	// if the MSR is writeonly.
+	Set uint64
+	// WriteOnly indicats an MSR is writeonly.
+	WriteOnly bool
 }
 
+// String implements String() for MSRVal
 func (m MSRVal) String() string {
 	return m.Name
 }
 
+// Debug can be set for debug prints on MSR operaitons.
+// It can be set to, e.g., log.Printf.
+// It's default action is to do nothing.
 var Debug = func(string, ...interface{}) {}

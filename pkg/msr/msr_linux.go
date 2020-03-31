@@ -107,9 +107,7 @@ func GlobCPUs(g string) (CPUs, []error) {
 	return c, nil
 }
 
-// MSR is the address of the MSR we want to target.
-type MSR uint32
-
+// String implements String() for MSR.
 func (m MSR) String() string {
 	return fmt.Sprintf("%#x", uint32(m))
 }
@@ -123,6 +121,7 @@ func (c CPUs) paths() []string {
 	return p
 }
 
+// Read reads an MSR from a set of CPUs.
 func (m MSR) Read(c CPUs) ([]uint64, []error) {
 	var hadErr bool
 	var regs = make([]uint64, len(c))
@@ -149,7 +148,13 @@ func (m MSR) Read(c CPUs) ([]uint64, []error) {
 	return regs, nil
 }
 
-// Write writes the corresponding data to their specified msrs
+// Write writes values to an MSR on a set of CPUs.
+// The data must be passed as a scalar (single value) or a slice.
+// If the data slice has more than one element,
+// the length of the data slice and the CPU slice must be the same.
+// If a single value is given, it will be written to all the CPUs.
+// If multiple data values are given, each will be written to its corresponding
+// CPU.
 func (m MSR) Write(c CPUs, data ...uint64) []error {
 	var hadErr bool
 
@@ -240,7 +245,9 @@ func (m MSR) TestAndSet(c CPUs, clearMask uint64, setMask uint64) []error {
 	return m.testAndSetMaybe(c, clearMask, setMask, true)
 }
 
-func Verify() error {
+// Locked verifies that for all MSRVal's for the CPU vendor, the MSRs are locked.
+// TODO: this is another Intel-specific function at present.
+func Locked() error {
 	vendor := cpuid.VendorIdentificatorString
 	// TODO: support more than Intel. Use the vendor id to look up msrs.
 	if vendor != "GenuineIntel" {
@@ -253,8 +260,11 @@ func Verify() error {
 	}
 
 	var allerrors string
-	for _, m := range Intel {
+	for _, m := range LockIntel {
 		Debug("MSR %v on cpus %v, clearmask 0x%8x, setmask 0x%8x", m.Addr, cpus, m.Clear, m.Set)
+		if m.WriteOnly {
+			continue
+		}
 		errs := m.Addr.Test(cpus, m.Clear, m.Set)
 
 		for i, e := range errs {

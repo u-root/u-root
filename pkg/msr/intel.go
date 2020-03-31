@@ -15,7 +15,7 @@ const (
 	IntelIA32DebugInterface  MSR = 0xC80 // IA32_DEBUG_INTERFACE
 )
 
-var Intel = []MSRVal{
+var LockIntel = []MSRVal{
 	{
 		// Architectural MSR. All systems.
 		// Enables features like VMX.
