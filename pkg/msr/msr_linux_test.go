@@ -4,6 +4,7 @@
 package msr
 
 import (
+	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -105,5 +106,39 @@ func TestParseCPUs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// This is a hard one to test. But for many systems, 0x3a is a good bet.
+// but this is of necessity not a complete test! We don't want to set an MSR
+// as part of a test, it might cause real trouble.
+func TestTestAndSet(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skipf("Skipping test since we are not root")
+	}
+	c, err := AllCPUs()
+	if err != nil {
+		t.Fatalf("AllCPUs: got %v,want nil", err)
+	}
+	r := IntelIA32FeatureControl
+	vals, errs := r.Read(c)
+	if errs != nil {
+		t.Skipf("Skipping test, can't read %s", r)
+	}
+
+	if errs = r.Test(c, 0, 0); errs != nil {
+		t.Errorf("Test with good val: got %v, want nil", errs)
+	}
+
+	// clear every set bit, set every clear bit, this should not go well.
+	if errs = r.Test(c, vals[0], ^vals[0]); errs == nil {
+		t.Errorf("Test with bad clear/set/val 0x%#x: got nil, want err", vals[0])
+	}
+}
+
+func TestVerify(t *testing.T) {
+	// Passing this is basically optional, but at least try.
+	if err := Verify(); err != nil {
+		t.Logf("(warning only) Verify GenuineIntel: got %v, want nil", err)
 	}
 }
