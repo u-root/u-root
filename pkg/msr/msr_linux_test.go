@@ -136,9 +136,9 @@ func TestTestAndSet(t *testing.T) {
 	}
 }
 
-func TestVerify(t *testing.T) {
+func TestLocked(t *testing.T) {
 	// Passing this is basically optional, but at least try.
-	if err := Verify(); err != nil {
+	if err := Locked(); err != nil {
 		t.Logf("(warning only) Verify GenuineIntel: got %v, want nil", err)
 	}
 }
