@@ -149,10 +149,9 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 			continue
 		}
 		part := strings.TrimPrefix(device, d)
-		if !strings.Contains(part, p) {
-			continue
+		if strings.Contains(part, p) {
+			return device, nil
 		}
-		return device, nil
 	}
 	return "", fmt.Errorf("No device with partition labeled %s found", label)
 }
