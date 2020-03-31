@@ -7,12 +7,12 @@ package msr
 const (
 	// This is Intel's name. It makes no sense: this register is present
 	// in 64-bit CPUs.
-	IntelIA32FeatureControl  MSR = 0x3A
-	IntelPkgCstConfigControl MSR = 0xE2
-	IntelFeatureConfig       MSR = 0x13
-	IntelDramPowerLimit      MSR = 0x61
-	IntelConfigTDPControl    MSR = 0x64B
-	IntelIA32DebugInterface  MSR = 0xC80
+	IntelIA32FeatureControl  MSR = 0x3A  // MSR_IA32_FEATURE_CONTROL
+	IntelPkgCstConfigControl MSR = 0xE2  // MSR_PKG_CST_CONFIG_CONTROL
+	IntelFeatureConfig       MSR = 0x13c // MSR_FEATURE_CONFIG
+	IntelDramPowerLimit      MSR = 0x618 // MSR_DRAM_POWER_LIMIT
+	IntelConfigTDPControl    MSR = 0x64B // MSR_CONFIG_TDP_CONTROL
+	IntelIA32DebugInterface  MSR = 0xC80 // IA32_DEBUG_INTERFACE
 )
 
 var Intel = []MSRVal{
