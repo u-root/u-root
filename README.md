@@ -280,6 +280,8 @@ these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
     a BIOS/UEFI BDS behaviour, by looping between network booting and local
     booting. Use `-uinitcmd` argument to the u-root build tool to make it the
     boot program.
+    
+*   `stboot`: the bootloader implementation of the [System Transparency Project](https://www.system-transparency.org).
 
 This project started as a loose collection of programs in u-root by various
 LinuxBoot contributors, as well as a personal experiment by
