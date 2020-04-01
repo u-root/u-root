@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/beevik/ntp"
@@ -27,12 +26,12 @@ func pollNTP() (time.Time, error) {
 		return time.Time{}, err
 	}
 	for _, server := range servers {
-		log.Printf("Query NTP server %s", server)
+		info("Query NTP server %s", server)
 		t, err := ntp.Time(server)
 		if err == nil {
 			return t, nil
 		}
-		log.Printf("NTP error: %v", err)
+		debug("NTP error: %v", err)
 	}
 	//time.Sleep(3 * time.Second)
 	return time.Time{}, errors.New("No NTP server resposnes")
@@ -50,10 +49,10 @@ func validateSystemTime(builtTime time.Time) error {
 		return fmt.Errorf("reading RTC failed: %v", err)
 	}
 
-	log.Printf("Systemtime: %v", rtcTime.UTC())
+	info("Systemtime: %v", rtcTime.UTC())
 	if rtcTime.UTC().Before(builtTime.UTC()) {
-		log.Printf("Systemtime is invalid: %v", rtcTime.UTC())
-		log.Printf("Receive time via NTP")
+		info("Systemtime is invalid: %v", rtcTime.UTC())
+		info("Receive time via NTP")
 		ntpTime, err := pollNTP()
 		if err != nil {
 			return err
@@ -61,7 +60,7 @@ func validateSystemTime(builtTime time.Time) error {
 		if ntpTime.UTC().Before(builtTime.UTC()) {
 			return errors.New("NTP spoof may happened")
 		}
-		log.Printf("Update RTC to %v", ntpTime.UTC())
+		info("Update RTC to %v", ntpTime.UTC())
 		err = rtc.Set(ntpTime)
 		if err != nil {
 			return fmt.Errorf("writing RTC failed: %v", err)

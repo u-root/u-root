@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -45,7 +44,7 @@ func getNetConf() (netConf, error) {
 }
 
 func configureStaticNetwork(nc netConf) error {
-	log.Printf("Setup network configuration with IP: " + nc.HostIP)
+	info("Setup network configuration with IP: " + nc.HostIP)
 	addr, err := netlink.ParseAddr(nc.HostIP)
 	if err != nil {
 		return fmt.Errorf("error parsing HostIP string to CIDR format address: %v", err)
@@ -93,14 +92,14 @@ func configureStaticNetwork(nc netConf) error {
 			continue
 		}
 
-		log.Printf("%s: IP configuration successful", link.Attrs().Name)
+		info("%s: IP configuration successful", link.Attrs().Name)
 		return nil
 	}
 	return errors.New("IP configuration failed for all interfaces")
 }
 
 func configureDHCPNetwork() error {
-	log.Printf("Trying to configure network configuration dynamically...")
+	info("Trying to configure network configuration dynamically...")
 
 	links, err := findNetworkInterfaces()
 	if err != nil {
@@ -129,7 +128,7 @@ func configureDHCPNetwork() error {
 		if err != nil {
 			debug("%s: DHCP configuration error: %v", result.Interface.Attrs().Name, err)
 		} else {
-			log.Printf("%s: DHCP successful", result.Interface.Attrs().Name)
+			info("%s: DHCP successful", result.Interface.Attrs().Name)
 			return nil
 		}
 	}
@@ -207,28 +206,28 @@ func downloadFromHTTPS(url string, destination string) error {
 		return fmt.Errorf("cannot evaluate entropy, %v", err)
 	}
 	if entr < 128 {
-		log.Print("WARNING: low entropy!")
-		log.Printf("%s : %d", entropyAvail, entr)
+		debug("WARNING: low entropy!")
+		debug("%s : %d", entropyAvail, entr)
 	}
 	// get remote boot bundle
-	log.Printf("Downloading from %s", url)
+	info("Downloading from %s", url)
 	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("non-200 HTTP status: %d", resp.StatusCode)
+		return fmt.Errorf("download: %d", resp.StatusCode)
 	}
 	f, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("failed create boot config file: %v", err)
+		return fmt.Errorf("download: %v", err)
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to save bootball: %v", err)
+		return fmt.Errorf("download: %v", err)
 	}
 
 	return nil

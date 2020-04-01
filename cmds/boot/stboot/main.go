@@ -21,11 +21,13 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/stboot"
 	"github.com/u-root/u-root/pkg/recovery"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
 	dryRun  = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
-	doDebug = flag.Bool("d", false, "Print debug output")
+	doDebug = flag.Bool("debug", false, "Print additional debug output")
+	klog    = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
 
 	debug = func(string, ...interface{}) {}
 
@@ -66,20 +68,23 @@ valid    //   //
 
 func main() {
 	log.SetPrefix("stboot: ")
+	ulog.KernelLog.SetLogLevel(ulog.KLogNotice)
+	ulog.KernelLog.SetConsoleLogLevel(ulog.KLogInfo)
 
 	flag.Parse()
 	if *doDebug {
-		debug = log.Printf
+		debug = info
 	}
-	log.Print(banner)
+
+	info(banner)
 
 	vars, err := stboot.FindHostVars()
 	if err != nil {
-		reboot("Cannot find netvars: %v", err)
+		reboot("Cannot find hostvars: %v", err)
 	}
 	if *doDebug {
 		str, _ := json.MarshalIndent(vars, "", "  ")
-		log.Printf("Host variables: %s", str)
+		info("Host variables: %s", str)
 	}
 
 	/////////////////
@@ -106,7 +111,7 @@ func main() {
 	if nc.HostIP != "" && nc.DefaultGateway != "" {
 		if *doDebug {
 			str, _ := json.MarshalIndent(nc, "", "  ")
-			log.Printf("Network configuration: %s", str)
+			info("Network configuration: %s", str)
 		}
 		err = configureStaticNetwork(nc)
 	} else {
@@ -121,7 +126,7 @@ func main() {
 	// Time validatition
 	////////////////////
 	if vars.Timestamp == 0 && *doDebug {
-		log.Printf("WARNING: No timestamp found in hostvars")
+		info("WARNING: No timestamp found in hostvars")
 	}
 	buildTime := time.Unix(int64(vars.Timestamp), 0)
 	err = validateSystemTime(buildTime)
@@ -155,7 +160,7 @@ func main() {
 		if uerr == nil {
 			break
 		}
-		log.Printf("Download failed: %v", uerr)
+		info("Download failed: %v", uerr)
 	}
 	if _, err = os.Stat(ballPath); err != nil {
 		reboot("Cannot open bootball: %v", err)
@@ -173,17 +178,17 @@ func main() {
 		reboot("No root certificate fingerprints found in hostvars")
 	}
 	fp := calculateFingerprint(ball.RootCertPEM)
-	log.Print("Fingerprint of boot ball's root certificate:")
-	log.Print(fp)
+	info("Fingerprint of boot ball's root certificate:")
+	info(fp)
 	if !fingerprintIsValid(fp, vars.Fingerprints) {
 		reboot("Root certificate of boot ball does not match expacted fingerprint")
 	}
-	log.Print("OK!")
+	info("OK!")
 
 	////////////////////////////
 	// Verify boot configuration
 	////////////////////////////
-	log.Printf("Pick the first boot configuration")
+	info("Pick the first boot configuration")
 	var index = 0 // Just choose the first Bootconfig for now
 	bc, err := ball.GetBootConfigByIndex(index)
 	if err != nil {
@@ -192,7 +197,7 @@ func main() {
 
 	if *doDebug {
 		str, _ := json.MarshalIndent(*bc, "", "  ")
-		log.Printf("Bootconfig (ID: %s): %s", bc.ID(), str)
+		info("Bootconfig (ID: %s): %s", bc.ID(), str)
 	}
 
 	n, valid, err := ball.VerifyBootconfigByID(bc.ID())
@@ -204,8 +209,8 @@ func main() {
 	}
 
 	debug("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
-	log.Printf("Bootconfig '%s' passed verification", bc.Name)
-	log.Print(check)
+	info("Bootconfig '%s' passed verification", bc.Name)
+	info(check)
 
 	if *dryRun {
 		debug("Dryrun mode: will not boot")
@@ -214,7 +219,7 @@ func main() {
 	//////////
 	// Boot OS
 	//////////
-	log.Println("Starting up new kernel.")
+	info("Starting up new kernel.")
 
 	if err := bc.Boot(); err != nil {
 		reboot("Failed to boot kernel %s: %v", bc.Kernel, err)
@@ -246,6 +251,10 @@ func calculateFingerprint(pemBytes []byte) string {
 
 //reboot trys to reboot the system in an infinity loop
 func reboot(format string, v ...interface{}) {
+	if *klog {
+		info(format, v...)
+		info("REBOOT!")
+	}
 	for {
 		recover := recovery.SecureRecoverer{
 			Reboot:   true,
@@ -256,5 +265,13 @@ func reboot(format string, v ...interface{}) {
 		if err != nil {
 			continue
 		}
+	}
+}
+
+func info(format string, v ...interface{}) {
+	if *klog {
+		ulog.KernelLog.Printf("stboot: "+format, v...)
+	} else {
+		log.Printf(format, v...)
 	}
 }

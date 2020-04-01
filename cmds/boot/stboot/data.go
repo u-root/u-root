@@ -132,7 +132,7 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 			if l == label {
 				d = device
 				p = strconv.Itoa(n + 1)
-				debug("Found data partition on %s , partition %s", device, p)
+				info("Found data partition on %s , partition %s", device, p)
 				break
 			}
 			debug("Skip %s partition %d: label does not match %s", device, n+1, label)
