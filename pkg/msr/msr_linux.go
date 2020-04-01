@@ -8,20 +8,80 @@ package msr
 import (
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
+
+	"github.com/intel-go/cpuid"
 )
 
 // CPUs is a slice of the various cpus to read or write the MSR to.
 type CPUs []uint64
 
-func AllCPUs() (CPUs, error) {
-	c, errs := GlobCPUs("*")
-	if errs != nil || len(c) == 0 {
-		return nil, fmt.Errorf("error finding all cpus, maybe try modprobe msr? : %v", errs)
+func parseCPUs(s string) (CPUs, error) {
+	cpus := make(CPUs, 0)
+	// We expect the format to be "0-5,7-8..." or we could also get just one cpu.
+	// We're unlikely to get more than one range since we're looking at present cpus,
+	// but handle it just in case.
+	ranges := strings.Split(strings.TrimSpace(s), ",")
+	for _, r := range ranges {
+		if len(r) == 0 {
+			continue
+		}
+		// Split on a - if it exists.
+		cs := strings.Split(r, "-")
+		switch len(cs) {
+		case 1:
+			u, err := strconv.ParseUint(cs[0], 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+			}
+			cpus = append(cpus, uint64(u))
+		case 2:
+			ul, err := strconv.ParseUint(cs[0], 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+			}
+			uh, err := strconv.ParseUint(cs[1], 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+			}
+			if ul > uh {
+				return nil, fmt.Errorf("invalid cpu range, upper bound greater than lower: %v", r)
+			}
+			for i := ul; i <= uh; i++ {
+				cpus = append(cpus, uint64(i))
+			}
+		default:
+			return nil, fmt.Errorf("unknown cpu range: %v", r)
+		}
 	}
-	return c, nil
+	if len(cpus) == 0 {
+		return nil, fmt.Errorf("no cpus found, input was %v", s)
+	}
+	sort.Slice(cpus, func(i, j int) bool { return cpus[i] < cpus[j] })
+	// Remove duplicates
+	for i := 0; i < len(cpus)-1; i++ {
+		if cpus[i] == cpus[i+1] {
+			cpus = append(cpus[:i], cpus[i+1:]...)
+			i--
+		}
+	}
+	return cpus, nil
+
+}
+
+// AllCPUs searches for actual present CPUs instead of relying on the glob.
+// This is more accurate than what's presented in /dev/cpu/*/msr
+func AllCPUs() (CPUs, error) {
+	v, err := ioutil.ReadFile("/sys/devices/system/cpu/present")
+	if err != nil {
+		return nil, err
+	}
+	return parseCPUs(string(v))
 }
 
 // GlobCPUs allow the user to specify CPUs using a glob as one would in /dev/cpu
@@ -47,9 +107,7 @@ func GlobCPUs(g string) (CPUs, []error) {
 	return c, nil
 }
 
-// MSR is the address of the MSR we want to target.
-type MSR uint32
-
+// String implements String() for MSR.
 func (m MSR) String() string {
 	return fmt.Sprintf("%#x", uint32(m))
 }
@@ -63,6 +121,7 @@ func (c CPUs) paths() []string {
 	return p
 }
 
+// Read reads an MSR from a set of CPUs.
 func (m MSR) Read(c CPUs) ([]uint64, []error) {
 	var hadErr bool
 	var regs = make([]uint64, len(c))
@@ -89,11 +148,23 @@ func (m MSR) Read(c CPUs) ([]uint64, []error) {
 	return regs, nil
 }
 
-// Write writes the corresponding data to their specified msrs
+// Write writes values to an MSR on a set of CPUs.
+// The data must be passed as a scalar (single value) or a slice.
+// If the data slice has more than one element,
+// the length of the data slice and the CPU slice must be the same.
+// If a single value is given, it will be written to all the CPUs.
+// If multiple data values are given, each will be written to its corresponding
+// CPU.
 func (m MSR) Write(c CPUs, data ...uint64) []error {
 	var hadErr bool
 
-	if len(data) != len(c) && len(data) != 1 {
+	if len(data) == 1 {
+		// Expand value to all cpus
+		for i := 1; i < len(c); i++ {
+			data = append(data, data[0])
+		}
+	}
+	if len(data) != len(c) {
 		return []error{fmt.Errorf("mismatched lengths: cpus %v, data %v", c, data)}
 	}
 
@@ -119,9 +190,11 @@ func (m MSR) Write(c CPUs, data ...uint64) []error {
 	return nil
 }
 
-// MaskBits takes a mask of bits to clear and to set, and applies them to the specified MSR in
-// each of the CPUs.
-func (m MSR) MaskBits(c CPUs, clearMask uint64, setMask uint64) []error {
+// testAndSetMaybe takes a mask of bits to clear and to set, and applies them to the specified MSR in
+// each of the CPUs. It will set the MSR only if the value is different and a set is requested.
+// If the MSR is different for any reason that is an error.
+func (m MSR) testAndSetMaybe(c CPUs, clearMask uint64, setMask uint64, set bool) []error {
+	var hadErr bool
 	paths := c.paths()
 	f, errs := openAll(paths, os.O_RDWR)
 
@@ -137,12 +210,75 @@ func (m MSR) MaskBits(c CPUs, clearMask uint64, setMask uint64) []error {
 			if err != nil {
 				return err
 			}
-			v &= ^clearMask
-			v |= setMask
-			return binary.Write(port, binary.LittleEndian, v)
+			n := v & ^clearMask
+			n |= setMask
+			// We write only if there is a change. This is to avoid
+			// cases where we try to set a lock bit again, but the bit is
+			// already set
+			if n != v && set {
+				return binary.Write(port, binary.LittleEndian, n)
+			}
+			if n != v {
+				return fmt.Errorf("%#x", v)
+			}
+			return nil
 		})
+		if errs[i] != nil {
+			hadErr = true
+		}
 	}
-	return errs
+	if hadErr {
+		return errs
+	}
+	return nil
+}
+
+// Test takes a mask of bits to clear and to set, and returns an error for those
+// that do not match.
+func (m MSR) Test(c CPUs, clearMask uint64, setMask uint64) []error {
+	return m.testAndSetMaybe(c, clearMask, setMask, false)
+}
+
+// TestAndSet takes a mask of bits to clear and to set, and applies them to the specified MSR in
+// each of the CPUs. Note that TestAndSet does not write if the mask does not change the MSR.
+func (m MSR) TestAndSet(c CPUs, clearMask uint64, setMask uint64) []error {
+	return m.testAndSetMaybe(c, clearMask, setMask, true)
+}
+
+// Locked verifies that for all MSRVal's for the CPU vendor, the MSRs are locked.
+// TODO: this is another Intel-specific function at present.
+func Locked() error {
+	vendor := cpuid.VendorIdentificatorString
+	// TODO: support more than Intel. Use the vendor id to look up msrs.
+	if vendor != "GenuineIntel" {
+		return fmt.Errorf("Sorry, this package only supports Intel at present")
+	}
+
+	cpus, err := AllCPUs()
+	if err != nil {
+		return err
+	}
+
+	var allerrors string
+	for _, m := range LockIntel {
+		Debug("MSR %v on cpus %v, clearmask 0x%8x, setmask 0x%8x", m.Addr, cpus, m.Clear, m.Set)
+		if m.WriteOnly {
+			continue
+		}
+		errs := m.Addr.Test(cpus, m.Clear, m.Set)
+
+		for i, e := range errs {
+			if e != nil {
+				allerrors += fmt.Sprintf("[cpu%d(%s)%v ", cpus[i], m.String(), e)
+			}
+		}
+	}
+
+	if allerrors != "" {
+		return fmt.Errorf("%s: %v", vendor, allerrors)
+	}
+	return nil
+
 }
 
 func openAll(m []string, o int) ([]*os.File, []error) {

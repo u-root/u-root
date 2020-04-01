@@ -121,7 +121,8 @@ func readRSDP(base uint64) (*RSDP, error) {
 	return r, nil
 }
 
-func getRSDPEFI() (*RSDP, error) {
+// GetRSDPEFI finds the RSDP in the EFI System Table.
+func GetRSDPEFI() (*RSDP, error) {
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
 		return nil, err
@@ -162,10 +163,10 @@ func getRSDPEFI() (*RSDP, error) {
 	return nil, fmt.Errorf("invalid /sys/firmware/efi/systab file")
 }
 
-// getRSDPmem is the option of last choice, it just grovels through
+// GetRSDPMem is the option of last choice, it just grovels through
 // the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
 // These are well-known addresses for 20+ years.
-func getRSDPmem() (*RSDP, error) {
+func GetRSDPMem() (*RSDP, error) {
 	for base := uint64(0xe0000); base < 0xffff0; base += 16 {
 		var r memio.Uint64
 		if err := memio.Read(int64(base), &r); err != nil {
@@ -184,7 +185,7 @@ func getRSDPmem() (*RSDP, error) {
 }
 
 // You can change the getters if you wish for testing.
-var getters = []func() (*RSDP, error){getRSDPEFI, getRSDPmem}
+var getters = []func() (*RSDP, error){GetRSDPEFI, GetRSDPMem}
 
 // GetRSDP finds the RSDP pointer and struct in memory.
 //
