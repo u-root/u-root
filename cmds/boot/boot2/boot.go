@@ -138,17 +138,17 @@ func main() {
 
 	device, err := getDevice()
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	config, err := getConfig(device)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	entry, err := getEntry(config)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if err := bootEntry(config, entry); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 }
