@@ -39,7 +39,7 @@ type KLog struct {
 // Reinit reopens the /dev/kmsg file.
 func (k *KLog) Reinit() {
 	f, err := os.OpenFile("/dev/kmsg", os.O_RDWR, 0)
-	if err != nil {
+	if err == nil {
 		KernelLog.File = f
 	}
 }

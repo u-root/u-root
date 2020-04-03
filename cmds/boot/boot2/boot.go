@@ -107,7 +107,7 @@ func bootEntry(config *diskboot.Config, entry *diskboot.Entry) error {
 	filter := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
 	err := entry.KexecLoad(config.MountPath, filter, *dryrun)
 	if err != nil {
-		return fmt.Errorf("wrror doing kexec load: %v", err)
+		return fmt.Errorf("error doing kexec load: %v", err)
 	}
 
 	if *dryrun {
@@ -138,17 +138,17 @@ func main() {
 
 	device, err := getDevice()
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	config, err := getConfig(device)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	entry, err := getEntry(config)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if err := bootEntry(config, entry); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 }

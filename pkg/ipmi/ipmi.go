@@ -54,6 +54,10 @@ const (
 	_ADTL_SEL_DEVICE         = 0x04
 	_EN_SYSTEM_EVENT_LOGGING = 0x08
 
+	// SEL
+	// STD_TYPE  = 0x02
+	OEM_NTS_TYPE = 0xFB
+
 	_SYSTEM_INFO_BLK_SZ = 16
 
 	_SYSTEM_FW_VERSION = 1
@@ -65,8 +69,8 @@ const (
 )
 
 var (
-	_IPMICTL_RECEIVE_MSG  = iowr(_IPMI_IOC_MAGIC, 12, int(unsafe.Sizeof(recv{})))
-	_IPMICTL_SEND_COMMAND = ior(_IPMI_IOC_MAGIC, 13, int(unsafe.Sizeof(req{})))
+	_IPMICTL_RECEIVE_MSG  = IOWR(_IPMI_IOC_MAGIC, 12, int(unsafe.Sizeof(recv{})))
+	_IPMICTL_SEND_COMMAND = IOR(_IPMI_IOC_MAGIC, 13, int(unsafe.Sizeof(req{})))
 )
 
 type IPMI struct {
@@ -187,7 +191,7 @@ func (i *IPMI) sendrecv(req *req) ([]byte, error) {
 
 	req.addr = &addr
 	req.addrLen = uint32(unsafe.Sizeof(addr))
-	if err := ioctl(i.Fd(), _IPMICTL_SEND_COMMAND, unsafe.Pointer(req)); err != 0 {
+	if err := Ioctl(i.Fd(), _IPMICTL_SEND_COMMAND, unsafe.Pointer(req)); err != 0 {
 		return nil, err
 	}
 
@@ -207,7 +211,7 @@ func (i *IPMI) sendrecv(req *req) ([]byte, error) {
 	buf := make([]byte, _IPMI_BUF_SIZE)
 	recv.msg.data = unsafe.Pointer(&buf[0])
 	recv.msg.dataLen = _IPMI_BUF_SIZE
-	if err := ioctl(i.Fd(), _IPMICTL_RECEIVE_MSG, unsafe.Pointer(recv)); err != 0 {
+	if err := Ioctl(i.Fd(), _IPMICTL_RECEIVE_MSG, unsafe.Pointer(recv)); err != 0 {
 		return nil, err
 	}
 

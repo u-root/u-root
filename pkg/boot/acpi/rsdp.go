@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/boot/ebda"
 	"github.com/u-root/u-root/pkg/memio"
 )
 
@@ -121,7 +122,8 @@ func readRSDP(base uint64) (*RSDP, error) {
 	return r, nil
 }
 
-func getRSDPEFI() (*RSDP, error) {
+// GetRSDPEFI finds the RSDP in the EFI System Table.
+func GetRSDPEFI() (*RSDP, error) {
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
 		return nil, err
@@ -162,11 +164,24 @@ func getRSDPEFI() (*RSDP, error) {
 	return nil, fmt.Errorf("invalid /sys/firmware/efi/systab file")
 }
 
-// getRSDPmem is the option of last choice, it just grovels through
-// the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
-// These are well-known addresses for 20+ years.
-func getRSDPmem() (*RSDP, error) {
-	for base := uint64(0xe0000); base < 0xffff0; base += 16 {
+// GetRSDPEBDA finds the RSDP in the EBDA.
+func GetRSDPEBDA() (*RSDP, error) {
+	f, err := os.OpenFile("/dev/mem", os.O_RDONLY, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	e, err := ebda.ReadEBDA(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return getRSDPMem(uint64(e.BaseOffset), uint64(e.BaseOffset+e.Length))
+}
+
+func getRSDPMem(start, end uint64) (*RSDP, error) {
+	for base := start; base < end; base += 16 {
 		var r memio.Uint64
 		if err := memio.Read(int64(base), &r); err != nil {
 			continue
@@ -180,11 +195,18 @@ func getRSDPmem() (*RSDP, error) {
 		}
 		return rsdp, nil
 	}
-	return nil, fmt.Errorf("could not find ACPI RSDP via /dev/mem")
+	return nil, fmt.Errorf("could not find ACPI RSDP via /dev/mem from %#08x to %#08x", start, end)
+}
+
+// GetRSDPMem is the option of last choice, it just grovels through
+// the e0000-ffff0 area, 16 bytes at a time, trying to find an RSDP.
+// These are well-known addresses for 20+ years.
+func GetRSDPMem() (*RSDP, error) {
+	return getRSDPMem(0xe0000, 0xffff0)
 }
 
 // You can change the getters if you wish for testing.
-var getters = []func() (*RSDP, error){getRSDPEFI, getRSDPmem}
+var getters = []func() (*RSDP, error){GetRSDPEFI, GetRSDPEBDA, GetRSDPMem}
 
 // GetRSDP finds the RSDP pointer and struct in memory.
 //

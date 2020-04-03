@@ -38,8 +38,9 @@ var (
 	inf          = flag.String("interface", "eth0", "Interface to serve DHCPv4 on")
 
 	// DHCPv6-specific
-	ipv6    = flag.Bool("6", false, "DHCPv6 server")
-	yourIP6 = flag.String("your-ip6", "fec0::3", "IPv6 to hand to all clients")
+	ipv6           = flag.Bool("6", false, "DHCPv6 server")
+	yourIP6        = flag.String("your-ip6", "fec0::3", "IPv6 to hand to all clients")
+	v6Bootfilename = flag.String("v6-bootfilename", "", "Boot file to serve via DHCPv6")
 
 	// File serving
 	tftpDir = flag.String("tftp-dir", "", "Directory to serve over TFTP")
@@ -82,7 +83,7 @@ func (s *dserver4) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHC
 		// RFC 2131, Section 4.3.1. Server Identifier: MUST
 		dhcpv4.WithOption(dhcpv4.OptServerIdentifier(s.self)),
 		// RFC 2131, Section 4.3.1. IP lease time: MUST
-		dhcpv4.WithOption(dhcpv4.OptIPAddressLeaseTime(time.Duration(math.MaxUint32)*time.Second)),
+		dhcpv4.WithOption(dhcpv4.OptIPAddressLeaseTime(dhcpv4.MaxLeaseTime)),
 	)
 	// RFC 6842, MUST include Client Identifier if client specified one.
 	if val := m.Options.Get(dhcpv4.OptionClientIdentifier); len(val) > 0 {
@@ -120,8 +121,9 @@ func (s *dserver4) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHC
 }
 
 type dserver6 struct {
-	mac    net.HardwareAddr
-	yourIP net.IP
+	mac         net.HardwareAddr
+	yourIP      net.IP
+	bootfileurl string
 }
 
 func (s *dserver6) dhcpHandler(conn net.PacketConn, peer net.Addr, m dhcpv6.DHCPv6) {
@@ -158,19 +160,17 @@ func (s *dserver6) dhcpHandler(conn net.PacketConn, peer net.Addr, m dhcpv6.DHCP
 		return
 	}
 
-	ianaOpt := msg.GetOneOption(dhcpv6.OptionIANA)
-	iana, ok := ianaOpt.(*dhcpv6.OptIANA)
-	if ok {
-		reply.AddOption(&dhcpv6.OptIANA{
-			IaId: iana.IaId,
-			Options: []dhcpv6.Option{
-				&dhcpv6.OptIAAddress{
-					IPv6Addr:          s.yourIP,
-					PreferredLifetime: math.MaxUint32,
-					ValidLifetime:     math.MaxUint32,
-				},
-			},
+	iana := msg.Options.OneIANA()
+	if iana != nil {
+		iana.Options.Update(&dhcpv6.OptIAAddress{
+			IPv6Addr:          s.yourIP,
+			PreferredLifetime: math.MaxUint32 * time.Second,
+			ValidLifetime:     math.MaxUint32 * time.Second,
 		})
+		reply.AddOption(iana)
+	}
+	if len(s.bootfileurl) > 0 {
+		reply.Options.Add(dhcpv6.OptBootFileURL(s.bootfileurl))
 	}
 
 	if _, err := conn.WriteTo(reply.ToBytes(), peer); err != nil {
@@ -251,8 +251,9 @@ func main() {
 			defer wg.Done()
 
 			s := &dserver6{
-				mac:    maca,
-				yourIP: net.ParseIP(*yourIP6),
+				mac:         maca,
+				yourIP:      net.ParseIP(*yourIP6),
+				bootfileurl: *v6Bootfilename,
 			}
 			laddr := &net.UDPAddr{
 				IP:   net.IPv6unspecified,

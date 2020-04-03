@@ -3,18 +3,18 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.10
+      - image: uroottest/test-image-amd64:v3.2.11
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Double all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 2
+      # Triple all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 3
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Double all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 2
+      # Triple all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 3
     steps:
       - checkout
       - run:
@@ -167,7 +167,7 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.10
+      - image: uroottest/test-image-amd64:v3.2.11
   test-integration-arm:
     <<: *integration-template
     docker:
