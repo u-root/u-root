@@ -5,6 +5,7 @@
 package tss
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"strings"
@@ -72,4 +73,65 @@ func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 		FirmwareVersionMajor: int((fw.Value & 0xffff0000) >> 16),
 		FirmwareVersionMinor: int(fw.Value & 0x0000ffff),
 	}, nil
+}
+
+func takeOwnership12(rwc io.ReadWriteCloser, ownerPW, srkPW string) (bool, error) {
+	var ownerAuth [20]byte
+	var srkAuth [20]byte
+
+	if ownerPW != "" {
+		ownerAuth = sha1.Sum([]byte(ownerPW))
+	}
+
+	if srkPW != "" {
+		srkAuth = sha1.Sum([]byte(srkPW))
+	}
+
+	pubek, err := tpm.ReadPubEK(rwc)
+	if err != nil {
+		return false, err
+	}
+
+	if err := tpm.TakeOwnership(rwc, ownerAuth, srkAuth, pubek); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func takeOwnership20(rwc io.ReadWriteCloser, ownerPW, srkPW string) (bool, error) {
+	return false, fmt.Errorf("not supported by go-tpm for TPM2.0")
+}
+
+func readPubEK12(rwc io.ReadWriteCloser, ownerPW string) ([]byte, error) {
+	var ownerAuth [20]byte
+	if ownerPW != "" {
+		ownerAuth = sha1.Sum([]byte(ownerPW))
+	}
+
+	ek, err := tpm.OwnerReadPubEK(rwc, ownerAuth)
+	if err != nil {
+		return nil, err
+	}
+
+	return ek, nil
+}
+
+func readPubEK20(rwc io.ReadWriteCloser, ownerPW string) ([]byte, error) {
+	return nil, fmt.Errorf("not supported by go-tpm for TPM2.0")
+}
+
+func resetLockValue12(rwc io.ReadWriteCloser, ownerPW string) (bool, error) {
+	var ownerAuth [20]byte
+	if ownerPW != "" {
+		ownerAuth = sha1.Sum([]byte(ownerPW))
+	}
+
+	if err := tpm.ResetLockValue(rwc, ownerAuth); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func resetLockValue20(rwc io.ReadWriteCloser, ownerPW string) (bool, error) {
+	return false, fmt.Errorf("not yet supported by tss")
 }

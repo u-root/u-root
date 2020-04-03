@@ -9,6 +9,8 @@ package tss
 import (
 	"errors"
 	"fmt"
+
+	tpmutil "github.com/google/go-tpm/tpmutil"
 )
 
 // NewTPM initializes access to the TPM based on the
@@ -162,4 +164,49 @@ func (t *TPM) ReadPCR(pcrIndex uint32) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
 	}
+}
+
+func (t *TPM) TakeOwnership(newAuth, newSRKAuth string) (bool, error) {
+	switch t.Version {
+	case TPMVersion12:
+		return takeOwnership12(t.RWC, newAuth, newSRKAuth)
+	case TPMVersion20:
+		return takeOwnership20(t.RWC, newAuth, newSRKAuth)
+	}
+	return false, fmt.Errorf("unsupported TPM version: %x", t.Version)
+}
+
+func (t *TPM) ReadPubEK(ownerPW string) ([]byte, error) {
+	switch t.Version {
+	case TPMVersion12:
+		return readPubEK12(t.RWC, ownerPW)
+	case TPMVersion20:
+		return readPubEK20(t.RWC, ownerPW)
+	}
+	return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
+}
+
+func (t *TPM) ResetLockValue(ownerPW string) (bool, error) {
+	switch t.Version {
+	case TPMVersion12:
+		return resetLockValue12(t.RWC, ownerPW)
+	case TPMVersion20:
+		return resetLockValue20(t.RWC, ownerPW)
+	}
+	return false, fmt.Errorf("unsupported TPM version: %x", t.Version)
+}
+
+// NVReadValue reads a value from a given NVRAM index
+// Type and byte order for TPM1.2 interface:
+// (offset uint32)
+// Type and byte oder for TPM2.0 interface:
+// (authhandle uint32)
+func (t *TPM) NVReadValue(index uint32, ownerPassword string, size, offhandle uint32) ([]byte, error) {
+	switch t.Version {
+	case TPMVersion12:
+		return nvRead12(t.RWC, index, offhandle, size, ownerPassword)
+	case TPMVersion20:
+		return nvRead20(t.RWC, tpmutil.Handle(index), tpmutil.Handle(offhandle), ownerPassword, int(size))
+	}
+	return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
 }
