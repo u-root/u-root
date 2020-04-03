@@ -17,13 +17,17 @@ import (
 	"github.com/u-root/u-root/pkg/ts"
 )
 
+var first = flag.Bool("f", false, "All timestamps are relative to the first character")
+
 func main() {
 	flag.Parse()
 	if flag.NArg() != 0 {
 		log.Fatal("Usage: ts")
 	}
 
-	_, err := io.Copy(os.Stdout, ts.New(os.Stdin))
+	t := ts.New(os.Stdin)
+	t.ResetTimeOnNextRead = *first
+	_, err := io.Copy(os.Stdout, t)
 	if err != nil {
 		log.Fatal(err)
 	}
