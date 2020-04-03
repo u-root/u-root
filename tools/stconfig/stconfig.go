@@ -32,6 +32,7 @@ var (
 	unpack = kingpin.Command("unpack", "Unpack boot ball  file into directory")
 
 	createConfigFile = create.Arg("config", "Path to the manifest file in JSON format").Required().String()
+	createHWAddr     = create.Arg("mac", "Optional hardware address of the host if the created stboot.ball needs to be individual for a specific host.").String()
 
 	signInFile      = sign.Arg("bootball", "Archive created by 'stconfig create'").Required().String()
 	signPrivKeyFile = sign.Arg("privkey", "Private key for signing").Required().String()
@@ -49,7 +50,7 @@ func main() {
 		if _, err := os.Stat(*createConfigFile); os.IsNotExist(err) {
 			log.Fatalf("%s does not exist: %v", *createConfigFile, err)
 		}
-		if err := packBootBall(*createConfigFile); err != nil {
+		if err := packBootBall(*createConfigFile, *createHWAddr); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case sign.FullCommand():

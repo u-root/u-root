@@ -6,14 +6,29 @@ package main
 
 import (
 	"log"
+	"net"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/boot/stboot"
 )
 
-func packBootBall(config string) (err error) {
+func packBootBall(config string, mac string) (err error) {
+	var newName string
+	if mac != "" {
+		hwAddr, err := net.ParseMAC(mac)
+		if err != nil {
+			return err
+		}
+		newName = stboot.ComposeIndividualBallName(hwAddr)
+	}
+
 	ball, err := stboot.BootBallFromConfig(config)
 	if err != nil {
 		return
+	}
+
+	if newName != "" {
+		ball.Archive = filepath.Join(filepath.Dir(ball.Archive), newName)
 	}
 
 	err = ball.Pack()
@@ -21,7 +36,7 @@ func packBootBall(config string) (err error) {
 		return
 	}
 
-	log.Printf("Bootball created at: " + ball.Archive)
+	log.Printf("Bootball created at: %s", ball.Archive)
 	return ball.Clean()
 
 }
