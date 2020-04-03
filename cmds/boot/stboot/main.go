@@ -12,10 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -39,8 +35,6 @@ const (
 	networkFile            = "network.json"
 	httpsRootsFile         = "https-root-certificates.pem"
 	ntpServerFile          = "ntp-servers.json"
-	entropyAvail           = "/proc/sys/kernel/random/entropy_avail"
-	interfaceUpTimeout     = 6 * time.Second
 )
 
 var banner = `
@@ -122,6 +116,12 @@ func main() {
 		reboot("Cannot set up IO: %v", err)
 	}
 
+	hwAddr, err := hostHWAddr()
+	if err != nil {
+		reboot("%v", err)
+	}
+	info("Host's HW address: %s", hwAddr.String())
+
 	////////////////////
 	// Time validatition
 	////////////////////
@@ -137,7 +137,6 @@ func main() {
 	////////////////////
 	// Download bootball
 	////////////////////
-	ballPath := filepath.Join("root/", stboot.BallName)
 
 	bytes, err := data.get(provisioningServerFile)
 	if err != nil {
@@ -148,25 +147,20 @@ func main() {
 		reboot("Bootstrap URLs: %v", err)
 	}
 
-	for _, rawurl := range urlStrings {
-		url, uerr := url.Parse(rawurl)
-		if uerr != nil {
-			debug("%v", uerr)
-			continue
+	info("Try downloading individual bootball")
+	file := stboot.ComposeIndividualBallName(hwAddr)
+	dest, err := tryDownload(urlStrings, file)
+	if err != nil {
+		debug("%v", err)
+		info("Try downloading general bootball")
+		dest, err = tryDownload(urlStrings, stboot.BallName)
+		if err != nil {
+			debug("%v", err)
+			reboot("Cannot get appropriate bootball from provisioning servers")
 		}
-
-		url.Path = path.Join(url.Path, stboot.BallName)
-		uerr = downloadFromHTTPS(url.String(), ballPath)
-		if uerr == nil {
-			break
-		}
-		info("Download failed: %v", uerr)
-	}
-	if _, err = os.Stat(ballPath); err != nil {
-		reboot("Cannot open bootball: %v", err)
 	}
 
-	ball, err := stboot.BootBallFromArchive(ballPath)
+	ball, err := stboot.BootBallFromArchive(dest)
 	if err != nil {
 		reboot("%v", err)
 	}

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -15,13 +16,21 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/vishvananda/netlink"
+)
+
+const (
+	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
+	interfaceUpTimeout = 6 * time.Second
 )
 
 type netConf struct {
@@ -136,27 +145,27 @@ func configureDHCPNetwork() error {
 }
 
 func findNetworkInterfaces() ([]netlink.Link, error) {
-	ifaces, err := net.Interfaces()
+	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(ifaces) == 0 {
+	if len(interfaces) == 0 {
 		return nil, errors.New("no network interface found")
 	}
 
 	var links []netlink.Link
 	var ifnames []string
-	for _, iface := range ifaces {
-		debug("Found interface %s", iface.Name)
-		debug("    MTU: %d Hardware Addr: %s", iface.MTU, iface.HardwareAddr.String())
-		debug("    Flags: %v", iface.Flags)
-		ifnames = append(ifnames, iface.Name)
+	for _, i := range interfaces {
+		debug("Found interface %s", i.Name)
+		debug("    MTU: %d Hardware Addr: %s", i.MTU, i.HardwareAddr.String())
+		debug("    Flags: %v", i.Flags)
+		ifnames = append(ifnames, i.Name)
 		// skip loopback
-		if iface.Flags&net.FlagLoopback != 0 || iface.HardwareAddr.String() == "" {
+		if i.Flags&net.FlagLoopback != 0 || bytes.Compare(i.HardwareAddr, nil) == 0 {
 			continue
 		}
-		link, err := netlink.LinkByName(iface.Name)
+		link, err := netlink.LinkByName(i.Name)
 		if err != nil {
 			debug("%v", err)
 		}
@@ -170,7 +179,27 @@ func findNetworkInterfaces() ([]netlink.Link, error) {
 	return links, nil
 }
 
-func downloadFromHTTPS(url string, destination string) error {
+func tryDownload(urls []string, file string) (dest string, err error) {
+	dest = filepath.Join("/root", file)
+	for _, rawurl := range urls {
+		url, err := url.Parse(rawurl)
+		if err != nil {
+			debug("Skip %s : %v", rawurl, err)
+			continue
+		}
+
+		url.Path = path.Join(url.Path, file)
+		err = download(url.String(), dest)
+		if err != nil {
+			debug("%v", err)
+			continue
+		}
+		return dest, nil
+	}
+	return "", fmt.Errorf("cannot find %s on provisioning servers", file)
+}
+
+func download(url string, destination string) error {
 	roots, err := loadHTTPSCertificates()
 	if err != nil {
 		return fmt.Errorf("failed to load root certificate: %v", err)
@@ -210,24 +239,24 @@ func downloadFromHTTPS(url string, destination string) error {
 		debug("%s : %d", entropyAvail, entr)
 	}
 	// get remote boot bundle
-	info("Downloading from %s", url)
+	info("Downloading %s", url)
 	resp, err := client.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("HTTPS client: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("download: %d", resp.StatusCode)
+		return fmt.Errorf("HTTPS client: %d", resp.StatusCode)
 	}
 	f, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("download: %v", err)
+		return fmt.Errorf("Download: %v", err)
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return fmt.Errorf("download: %v", err)
+		return fmt.Errorf("Download: %v", err)
 	}
 
 	return nil
@@ -241,9 +270,23 @@ func loadHTTPSCertificates() (*x509.CertPool, error) {
 	if err != nil {
 		return roots, err
 	}
+
 	ok := roots.AppendCertsFromPEM(bytes)
 	if !ok {
 		return roots, fmt.Errorf("error parsing %s", httpsRootsFile)
 	}
 	return roots, nil
+}
+
+func hostHWAddr() (net.HardwareAddr, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return net.HardwareAddr{}, err
+	}
+	for _, i := range interfaces {
+		if i.Flags&net.FlagUp != 0 && bytes.Compare(i.HardwareAddr, nil) != 0 {
+			return i.HardwareAddr, nil
+		}
+	}
+	return net.HardwareAddr{}, fmt.Errorf("cannot find out hardware address")
 }

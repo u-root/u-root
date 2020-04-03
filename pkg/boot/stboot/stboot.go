@@ -4,6 +4,11 @@
 
 package stboot
 
+import (
+	"net"
+	"strings"
+)
+
 const (
 	// BallName is the file name of the archive, which is expected to contain
 	// the stboot configuration file along with the corresponding files
@@ -13,3 +18,11 @@ const (
 	//HostVarsName is the name of file containing host-specific data
 	HostVarsName string = "hostvars.json"
 )
+
+// ComposeIndividualBallName extends the general BallName
+// with an individual hardware address.
+func ComposeIndividualBallName(hwAddr net.HardwareAddr) string {
+	suffix := hwAddr.String()
+	suffix = strings.ReplaceAll(suffix, ":", "-")
+	return BallName + "." + suffix
+}
