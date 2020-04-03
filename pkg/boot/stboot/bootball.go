@@ -44,6 +44,10 @@ type BootBall struct {
 func BootBallFromArchive(archive string) (*BootBall, error) {
 	var ball = new(BootBall)
 
+	if _, err := os.Stat(archive); err != nil {
+		return ball, fmt.Errorf("BootBall: %v", err)
+	}
+
 	dir, err := ioutil.TempDir("", "bootball")
 	if err != nil {
 		return ball, fmt.Errorf("BootBall: cannot create tmp dir: %v", err)
