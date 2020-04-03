@@ -72,7 +72,7 @@ func main() {
 
 	info(banner)
 
-	vars, err := stboot.FindHostVars()
+	vars, err := loadHostvars()
 	if err != nil {
 		reboot("Cannot find hostvars: %v", err)
 	}

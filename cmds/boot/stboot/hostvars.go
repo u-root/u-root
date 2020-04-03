@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package stboot
+package main
 
 import (
 	"encoding/json"
@@ -11,8 +11,10 @@ import (
 	"path/filepath"
 )
 
-// HostVars contains contains platform-specific data
-type HostVars struct {
+const hostvarsFile = "hostvars.json"
+
+// Hostvars contains platform-specific data.
+type Hostvars struct {
 	// MinimalSignaturesMatch is the min number of signatures that must pass validation.
 	MinimalSignaturesMatch int `json:"minimal_signatures_match"`
 	// Fingerprints are used to validate the root certificate insinde the bootball.
@@ -23,9 +25,9 @@ type HostVars struct {
 
 // FindHostVars parses hostvars.json file.
 // It is expected to be in /etc.
-func FindHostVars() (HostVars, error) {
-	var vars HostVars
-	file := filepath.Join("etc/", HostVarsName)
+func loadHostvars() (Hostvars, error) {
+	var vars Hostvars
+	file := filepath.Join("etc/", hostvarsFile)
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return vars, err
