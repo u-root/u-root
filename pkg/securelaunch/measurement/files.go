@@ -38,6 +38,12 @@ func NewFileCollector(config []byte) (Collector, error) {
 	return fc, nil
 }
 
+// HashBytes extends PCR with a byte array and sends an event to sysfs.
+// the sent event is described via eventDesc.
+func HashBytes(tpmHandle io.ReadWriteCloser, b []byte, eventDesc string) error {
+	return tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b), eventDesc)
+}
+
 /*
  * HashFile reads file input by user and calls TPM to measure it and store the hash.
  *
@@ -51,26 +57,22 @@ func NewFileCollector(config []byte) (Collector, error) {
  */
 func HashFile(tpmHandle io.ReadWriteCloser, inputVal string) error {
 	// inputVal is of type sda:path
-	mntFilePath, mountPath, e := slaunch.GetMountedFilePath(inputVal, mount.MS_RDONLY)
+	mntFilePath, e := slaunch.GetMountedFilePath(inputVal, mount.MS_RDONLY)
 	if e != nil {
 		log.Printf("HashFile: GetMountedFilePath err=%v", e)
 		return fmt.Errorf("failed to get mount path, err=%v", e)
 	}
 	slaunch.Debug("File Collector: Reading file=%s", mntFilePath)
 
-	slaunch.Debug("File Collector: fileP=%s, mountP=%s\n", mntFilePath, mountPath)
+	slaunch.Debug("File Collector: fileP=%s\n", mntFilePath)
 	d, err := ioutil.ReadFile(mntFilePath)
-	if e := mount.Unmount(mountPath, true, false); e != nil {
-		log.Printf("File Collector: Unmount failed. PANIC\n")
-		panic(e)
-	}
-
 	if err != nil {
-		return fmt.Errorf("failed to read target file: filePath=%s, mountPath=%s, inputVal=%s, err=%v",
-			mntFilePath, mountPath, inputVal, err)
+		return fmt.Errorf("failed to read target file: filePath=%s, inputVal=%s, err=%v",
+			mntFilePath, inputVal, err)
 	}
 
-	return tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(d))
+	eventDesc := fmt.Sprintf("File Collector: measured %s", inputVal)
+	return tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(d), eventDesc)
 }
 
 /*
@@ -79,7 +81,6 @@ func HashFile(tpmHandle io.ReadWriteCloser, inputVal string) error {
  * that path and stores the result in TPM.
  */
 func (s *FileCollector) Collect(tpmHandle io.ReadWriteCloser) error {
-
 	for _, inputVal := range s.Paths {
 		// inputVal is of type sda:/path/to/file
 		err := HashFile(tpmHandle, inputVal)

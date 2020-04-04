@@ -9,12 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
-	"github.com/u-root/u-root/pkg/boot/diskboot"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/mount"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
@@ -56,7 +56,7 @@ func scanKernelCmdLine() []byte {
 	}
 
 	// val is of type sda:path/to/file or UUID:path/to/file
-	mntFilePath, mountPath, e := slaunch.GetMountedFilePath(val, mount.MS_RDONLY) // false means readonly mount
+	mntFilePath, e := slaunch.GetMountedFilePath(val, mount.MS_RDONLY) // false means readonly mount
 	if e != nil {
 		log.Printf("scanKernelCmdLine: GetMountedFilePath err=%v", e)
 		return nil
@@ -64,11 +64,6 @@ func scanKernelCmdLine() []byte {
 	slaunch.Debug("scanKernelCmdLine: Reading file=%s", mntFilePath)
 
 	d, err := ioutil.ReadFile(mntFilePath)
-	if e := mount.Unmount(mountPath, true, false); e != nil {
-		log.Printf("Unmount failed. PANIC")
-		panic(e)
-	}
-
 	if err != nil {
 		log.Printf("Error reading policy file:mountPath=%s, passed=%s", mntFilePath, val)
 		return nil
@@ -131,27 +126,29 @@ func locate() ([]byte, error) {
 		return d, nil
 	}
 
-	slaunch.Debug("Searching and mounting block devices with bootable configs")
-	blkDevices := diskboot.FindDevices("/sys/class/block/*") // FindDevices find and *mounts* the devices.
-	if len(blkDevices) == 0 {
-		return nil, errors.New("no block devices found")
+	slaunch.Debug("Searching for block devices")
+	if err := slaunch.GetBlkInfo(); err != nil {
+		return nil, err
 	}
 
-	for _, device := range blkDevices {
-		devicePath, mountPath := device.MountPoint.Device, device.MountPoint.Path
-		slaunch.Debug("scanning for policy file under devicePath=%s, mountPath=%s", devicePath, mountPath)
-		raw := scanBlockDevice(mountPath)
-		if e := mount.Unmount(mountPath, true, false); e != nil {
-			log.Printf("Unmount failed. PANIC")
-			panic(e)
+	// devName = sda, mountPath = /tmp/sluinit-FOO/
+	for _, device := range slaunch.StorageBlkDevices {
+
+		devName := device.Name
+		mountPath, err := slaunch.MountDevice(device, mount.MS_RDONLY)
+		if err != nil {
+			log.Printf("failed to mount %s, continuing to next block device", devName)
+			continue
 		}
 
+		slaunch.Debug("scanning for policy file under devName=%s, mountPath=%s", devName, mountPath)
+		raw := scanBlockDevice(mountPath)
 		if raw == nil {
 			log.Printf("no policy file found under this device")
 			continue
 		}
 
-		slaunch.Debug("policy file found at devicePath=%s", devicePath)
+		slaunch.Debug("policy file found at devName=%s", devName)
 		return raw, nil
 	}
 
@@ -205,6 +202,11 @@ func parse(pf []byte) (*Policy, error) {
 	return p, nil
 }
 
+func measure(tpmHandle io.ReadWriteCloser, b []byte) error {
+	eventDesc := "measured securelaunch policy file"
+	return measurement.HashBytes(tpmHandle, b, eventDesc)
+}
+
 /*
  * Get locates and parses the policy file.
  *
@@ -213,11 +215,17 @@ func parse(pf []byte) (*Policy, error) {
  *  (1) kernel cmdline "sl_policy" argument.
  *  (2) a file on any partition on any disk called "securelaunch.policy"
  */
-func Get() (*Policy, error) {
+func Get(tpmHandle io.ReadWriteCloser) (*Policy, error) {
 	b, err := locate()
 	if err != nil {
 		return nil, err
 	}
+
+	err = measure(tpmHandle, b)
+	if err != nil {
+		return nil, err
+	}
+
 	policy, err := parse(b)
 	if err != nil {
 		return nil, err

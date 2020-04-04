@@ -8,6 +8,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
@@ -48,19 +49,20 @@ func checkDebugFlag() {
 func main() {
 	checkDebugFlag()
 
+	defer unmountAndExit() // called only on error, on success we kexec
 	slaunch.Debug("********Step 1: init completed. starting main ********")
 	tpmDev, err := tpm.GetHandle()
 	if err != nil {
 		log.Printf("tpm.getHandle failed. err=%v", err)
-		os.Exit(1)
+		return
 	}
 	defer tpmDev.Close()
 
 	slaunch.Debug("********Step 2: locate and parse SL Policy ********")
-	p, err := policy.Get()
+	p, err := policy.Get(tpmDev)
 	if err != nil {
 		log.Printf("failed to get policy err=%v", err)
-		os.Exit(1)
+		return
 	}
 	slaunch.Debug("policy file successfully parsed")
 
@@ -73,13 +75,38 @@ func main() {
 	}
 	slaunch.Debug("Collectors completed")
 
-	slaunch.Debug("********Step 4: Write eventlog to /boot partition*********")
-	if e := p.EventLog.Persist(); e != nil {
-		log.Printf("EventLog.Persist() failed err=%v", e)
-		os.Exit(1)
+	slaunch.Debug("********Step 4: Measuring target kernel, initrd ********")
+	if err := p.Launcher.MeasureKernel(tpmDev); err != nil {
+		log.Printf("Launcher.MeasureKernel failed err=%v", err)
+		return
 	}
 
-	slaunch.Debug("********Step 5: Launcher called ********")
-	err = p.Launcher.Boot(tpmDev)
-	log.Printf("Boot failed. err=%s", err)
+	slaunch.Debug("********Step 5: Parse eventlogs *********")
+	if err := p.EventLog.Parse(); err != nil {
+		log.Printf("EventLog.Parse() failed err=%v", err)
+		return
+	}
+
+	slaunch.Debug("*****Step 6: Dump logs to disk *******")
+	if err := slaunch.ClearPersistQueue(); err != nil {
+		log.Printf("ClearPersistQueue failed err=%v", err)
+		return
+	}
+
+	slaunch.Debug("********Step *: Unmount all ********")
+	slaunch.UnmountAll()
+
+	slaunch.Debug("********Step 7: Launcher called to Boot ********")
+	if err := p.Launcher.Boot(tpmDev); err != nil {
+		log.Printf("Boot failed. err=%s", err)
+		return
+	}
+}
+
+// unmountAndExit is called on error and unmounts all devices.
+// sluinit ends here.
+func unmountAndExit() {
+	slaunch.UnmountAll()
+	time.Sleep(5 * time.Second) // let queued up debug statements get printed
+	os.Exit(1)
 }

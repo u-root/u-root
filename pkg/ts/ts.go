@@ -18,6 +18,11 @@ type PrependTimestamp struct {
 	StartTime time.Time
 	Format    func(startTime time.Time) string
 
+	// ResetTimeOnNextRead is set to force the StartTime to reset to the
+	// current time when data is next read. It is useful to set this to
+	// true initially for all times to be relative to the first line.
+	ResetTimeOnNextRead bool
+
 	// noPrintTS is true to indicate the timestamp should be printed
 	// in front of the next byte.
 	noPrintTS bool
@@ -61,6 +66,10 @@ func (t *PrependTimestamp) Read(p []byte) (n int, err error) {
 	scratch = scratch[:m]
 	if m == 0 {
 		return
+	}
+	if t.ResetTimeOnNextRead {
+		t.StartTime = time.Now()
+		t.ResetTimeOnNextRead = false
 	}
 	if err == io.EOF {
 		// Do not return EOF immediately because there may be more than

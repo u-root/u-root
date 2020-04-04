@@ -24,6 +24,25 @@ type Launcher struct {
 	Params map[string]string `json:"params"`
 }
 
+// MeasureKernel calls file collector in measurement pkg that
+// hashes kernel, initrd files and even store these hashes in tpm pcrs.
+func (l *Launcher) MeasureKernel(tpmDev io.ReadWriteCloser) error {
+
+	kernel := l.Params["kernel"]
+	initrd := l.Params["initrd"]
+
+	if e := measurement.HashFile(tpmDev, kernel); e != nil {
+		log.Printf("ERR: measure kernel input=%s, err=%v", kernel, e)
+		return e
+	}
+
+	if e := measurement.HashFile(tpmDev, initrd); e != nil {
+		log.Printf("ERR: measure initrd input=%s, err=%v", initrd, e)
+		return e
+	}
+	return nil
+}
+
 /*
  * Boot boots the target kernel based on information provided
  * in the "launcher" section of policy file.
@@ -52,24 +71,13 @@ func (l *Launcher) Boot(tpmDev io.ReadWriteCloser) error {
 	initrd := l.Params["initrd"]
 	cmdline := l.Params["cmdline"]
 
-	slaunch.Debug("********Step 6: Measuring kernel, initrd ********")
-	if e := measurement.HashFile(tpmDev, kernel); e != nil {
-		log.Printf("launcher: ERR: measure kernel input=%s, err=%v", kernel, e)
-		return e
-	}
-
-	if e := measurement.HashFile(tpmDev, initrd); e != nil {
-		log.Printf("launcher: ERR: measure initrd input=%s, err=%v", initrd, e)
-		return e
-	}
-
-	k, _, e := slaunch.GetMountedFilePath(kernel, mount.MS_RDONLY)
+	k, e := slaunch.GetMountedFilePath(kernel, mount.MS_RDONLY)
 	if e != nil {
 		log.Printf("launcher: ERR: kernel input %s couldnt be located, err=%v", kernel, e)
 		return e
 	}
 
-	i, _, e := slaunch.GetMountedFilePath(initrd, mount.MS_RDONLY)
+	i, e := slaunch.GetMountedFilePath(initrd, mount.MS_RDONLY)
 	if e != nil {
 		log.Printf("launcher: ERR: initrd input %s couldnt be located, err=%v", initrd, e)
 		return e
@@ -81,14 +89,16 @@ func (l *Launcher) Boot(tpmDev io.ReadWriteCloser) error {
 		Initrd:  uio.NewLazyFile(i),
 		Cmdline: cmdline,
 	}
-	if err := image.Load(false); err != nil {
+	err := image.Load(false)
+	if err != nil {
 		log.Printf("kexec -l failed. err: %v", err)
 		return err
 	}
 
-	err := kexec.Reboot()
+	err = kexec.Reboot()
 	if err != nil {
 		log.Printf("kexec reboot failed. err=%v", err)
+		return err
 	}
 	return nil
 }

@@ -69,14 +69,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:e289d5e7048337880ec469bf6e419b16852db7c214e810d6d3840e42d3adfa5b"
-  name = "github.com/digitalocean/go-smbios"
-  packages = ["smbios"]
-  pruneopts = "NUT"
-  revision = "390a4f403a8e94ca0acdcf609eb18eeae9d6d1ac"
-
-[[projects]]
   digest = "1:b7ffca49e9cfd3dfb04a8e0a59347708c6f78f68476a32c5e0a0edca5d1b258c"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
@@ -439,7 +431,6 @@
     "github.com/beevik/ntp",
     "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",
-    "github.com/digitalocean/go-smbios/smbios",
     "github.com/dustin/go-humanize",
     "github.com/gliderlabs/ssh",
     "github.com/go-test/deep",
