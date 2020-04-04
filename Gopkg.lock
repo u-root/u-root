@@ -45,12 +45,12 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:e02ffb382584a22c006311c9a9c39df1f2d65e2114e67dd2486f43924f141f0a"
+  digest = "1:82b27017fd8d5f4246c11f9f381325b3638007d2ca554e17d079e23ddd855fb6"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "a9a4cec6c9a26336ca42700ccc319ca842be56c0"
-  version = "v4.0.0"
+  revision = "18fe4ce5a8550e0d0919b680ad3c080a5455bddf"
+  version = "v4.0.2"
 
 [[projects]]
   digest = "1:5b9ec589d739f9dc806a72739960d6e73ef18cf539841c85220f2fe32502a53a"
@@ -135,7 +135,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6ef342513eb17076c4926cde86ebba59ebbda64cccf9b83148d5d7d5f84ba42d"
+  digest = "1:dd214385a3ce9988794eed3ff03d932cc39720fdbaa66ca90684efe30e3c5b7a"
   name = "github.com/insomniacslk/dhcp"
   packages = [
     "dhcpv4",
@@ -152,7 +152,7 @@
     "rfc1035label",
   ]
   pruneopts = "NUT"
-  revision = "15ad2c44a4ebc572866a5666c8875c3b192a4975"
+  revision = "5dd7202f19711228cb4a51aa8b3415421c2edefe"
 
 [[projects]]
   branch = "master"
@@ -164,7 +164,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6c9709c7e3ad44e5adefe779b053fce0a39d4c538349c918e683f924318ecc23"
+  digest = "1:bd17a80ec5b5de37e8ea5f5ffda49814f702598be195279d45c8230487b65cdd"
   name = "github.com/jsimonetti/rtnetlink"
   packages = [
     ".",
@@ -172,23 +172,23 @@
     "rtnl",
   ]
   pruneopts = "NUT"
-  revision = "7a753270ee41724b7852647bab4ab118fa31df6f"
+  revision = "d89fb9e420948a569579a7dab80193e9feff10f7"
 
 [[projects]]
   digest = "1:4503127bf29b7c09e404e4553e28449029a53b7d13805ba6f618aba955a9ed88"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   pruneopts = "NUT"
-  revision = "d4b3bb13d45b000ac3a915d4f32069a9284540bb"
-  version = "v1.10.2"
+  revision = "788b7f06fee85b7e1d2aa4a3a86f8dbbbcc771ae"
+  version = "v1.10.3"
 
 [[projects]]
-  digest = "1:f3f3545a30b934b75ad9cf9c7e9543f84f1d1aee3e534f6d01ab1776fa519fb9"
+  digest = "1:7a49027367484b42dd9d2515c2d884457a3f5ca36cb550904511735fa43e4698"
   name = "github.com/klauspost/pgzip"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "083b1c3f84dd6486588802e5ce295de3a7f41a8b"
-  version = "v1.2.1"
+  revision = "ad135240e5ef8fcb9b2fd20244be62a3ea68bcfa"
+  version = "v1.2.3"
 
 [[projects]]
   digest = "1:797f9322a4864f6a4781ab80433dcf248581ed2f31bd5e152f50bd3a3a8c5ad8"
@@ -305,7 +305,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:dcfe9bce9f3ee3591ee7cbfa678dc8a3d234e155b2e93cc8a1ba45f54f5c7736"
+  digest = "1:eee6db746b493c5ad71c8ec16e7c819855260f447eed87f8c212e574a354f310"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
@@ -329,7 +329,7 @@
     "ssh/internal/bcrypt_pbkdf",
   ]
   pruneopts = "NUT"
-  revision = "78000ba7a073cafc0278790f6bce552a0f25850e"
+  revision = "baeed622b8d86045ff442b324772b0ad306a2b3f"
 
 [[projects]]
   digest = "1:467bb8fb8fa786448b8d486cd0bb7c1a5577dcd7310441aa02a20110cd9f727d"
@@ -354,11 +354,11 @@
     "ipv6",
   ]
   pruneopts = "NUT"
-  revision = "244492dfa37ae2ce87222fd06250a03160745faa"
+  revision = "d3edc9973b7eb1fb302b0ff2c62357091cea9a30"
 
 [[projects]]
   branch = "master"
-  digest = "1:25e0e4b581c92dd8f9f56dbc547f4f445c12b61f4ef8898709c43274b3a19aea"
+  digest = "1:f5c39c7edc047576d659c8da8b9abc83a9c4411381ffa5e484ec5fa3fb515142"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -366,7 +366,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "5c8b2ff67527cb88b770f693cebf3799036d8bc0"
+  revision = "c3d80250170dec19bf61949c81233cede5ddaf61"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -385,7 +385,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6b0abdc8576d007c2b4b2b153d523563d5c0df4b45c4fe70a97bb33342c4bd76"
+  digest = "1:f09beeb593a009d70c55af474c713e5fdc13c0843896396db9e063c73fe572e4"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -396,7 +396,7 @@
     "internal/imports",
   ]
   pruneopts = "NUT"
-  revision = "71bfc1b943ce40133882e178c7eea559d5e7c22d"
+  revision = "44a64ad78b9b521790ab78240c17a3bc75b5eaa7"
 
 [[projects]]
   branch = "master"

@@ -70,7 +70,7 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	case OptionDomainSearchList:
 		opt, err = parseOptDomainSearchList(optData)
 	case OptionIAPD:
-		opt, err = ParseOptIAForPrefixDelegation(optData)
+		opt, err = ParseOptIAPD(optData)
 	case OptionIAPrefix:
 		opt, err = ParseOptIAPrefix(optData)
 	case OptionRemoteID:

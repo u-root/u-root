@@ -3,6 +3,7 @@ package server4
 import (
 	"log"
 	"net"
+	"os"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 )
@@ -68,32 +69,33 @@ type Handler func(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHCPv4)
 type Server struct {
 	conn    net.PacketConn
 	Handler Handler
+	logger  Logger
 }
 
 // Serve serves requests.
 func (s *Server) Serve() error {
-	log.Printf("Server listening on %s", s.conn.LocalAddr())
-	log.Print("Ready to handle requests")
+	s.logger.Printf("Server listening on %s", s.conn.LocalAddr())
+	s.logger.Printf("Ready to handle requests")
 
 	defer s.Close()
 	for {
 		rbuf := make([]byte, 4096) // FIXME this is bad
 		n, peer, err := s.conn.ReadFrom(rbuf)
 		if err != nil {
-			log.Printf("Error reading from packet conn: %v", err)
+			s.logger.Printf("Error reading from packet conn: %v", err)
 			return err
 		}
-		log.Printf("Handling request from %v", peer)
+		s.logger.Printf("Handling request from %v", peer)
 
 		m, err := dhcpv4.FromBytes(rbuf[:n])
 		if err != nil {
-			log.Printf("Error parsing DHCPv4 request: %v", err)
+			s.logger.Printf("Error parsing DHCPv4 request: %v", err)
 			continue
 		}
 
 		upeer, ok := peer.(*net.UDPAddr)
 		if !ok {
-			log.Printf("Not a UDP connection? Peer is %s", peer)
+			s.logger.Printf("Not a UDP connection? Peer is %s", peer)
 			continue
 		}
 		// Set peer to broadcast if the client did not have an IP.
@@ -126,6 +128,7 @@ func WithConn(c net.PacketConn) ServerOpt {
 func NewServer(ifname string, addr *net.UDPAddr, handler Handler, opt ...ServerOpt) (*Server, error) {
 	s := &Server{
 		Handler: handler,
+		logger:  EmptyLogger{},
 	}
 
 	for _, o := range opt {
@@ -140,4 +143,29 @@ func NewServer(ifname string, addr *net.UDPAddr, handler Handler, opt ...ServerO
 		s.conn = conn
 	}
 	return s, nil
+}
+
+// WithSummaryLogger logs one-line DHCPv4 message summaries when sent & received.
+func WithSummaryLogger() ServerOpt {
+	return func(s *Server) {
+		s.logger = ShortSummaryLogger{
+			Printfer: log.New(os.Stderr, "[dhcpv4] ", log.LstdFlags),
+		}
+	}
+}
+
+// WithDebugLogger logs multi-line full DHCPv4 messages when sent & received.
+func WithDebugLogger() ServerOpt {
+	return func(s *Server) {
+		s.logger = DebugLogger{
+			Printfer: log.New(os.Stderr, "[dhcpv4] ", log.LstdFlags),
+		}
+	}
+}
+
+// WithLogger set the logger (see interface Logger).
+func WithLogger(newLogger Logger) ServerOpt {
+	return func(s *Server) {
+		s.logger = newLogger
+	}
 }

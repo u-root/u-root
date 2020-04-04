@@ -33,7 +33,7 @@ func WithNetboot(d DHCPv6) {
 func WithFQDN(flags uint8, domainname string) Modifier {
 	return func(d DHCPv6) {
 		d.UpdateOption(&OptFQDN{
-			Flags:      flags,
+			Flags: flags,
 			DomainName: &rfc1035label.Labels{
 				Labels: []string{domainname},
 			},
@@ -136,19 +136,19 @@ func WithDHCP4oDHCP6Server(addrs ...net.IP) Modifier {
 
 // WithIAPD adds or updates an IAPD option with the provided IAID and
 // prefix options to a DHCPv6 packet.
-func WithIAPD(iaid [4]byte, prefixes ...OptIAPrefix) Modifier {
+func WithIAPD(iaid [4]byte, prefixes ...*OptIAPrefix) Modifier {
 	return func(d DHCPv6) {
-		opt := d.GetOneOption(OptionIAPD)
-		if opt == nil {
-			opt = &OptIAForPrefixDelegation{}
-		}
-		iaPd := opt.(*OptIAForPrefixDelegation)
+		if msg, ok := d.(*Message); ok {
+			opt := msg.Options.OneIAPD()
+			if opt == nil {
+				opt = &OptIAPD{}
+			}
+			copy(opt.IaId[:], iaid[:])
 
-		copy(iaPd.IaId[:], iaid[:])
-
-		for _, prefix := range prefixes {
-			iaPd.Options.Add(&prefix)
+			for _, prefix := range prefixes {
+				opt.Options.Add(prefix)
+			}
+			d.UpdateOption(opt)
 		}
-		d.UpdateOption(iaPd)
 	}
 }
