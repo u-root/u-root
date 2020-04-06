@@ -12,7 +12,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/stboot"
 )
 
-func packBootBall(config string, mac string) (err error) {
+func packBootBall(config string, mac string) error {
 	var newName string
 	if mac != "" {
 		hwAddr, err := net.ParseMAC(mac)
@@ -24,7 +24,7 @@ func packBootBall(config string, mac string) (err error) {
 
 	ball, err := stboot.BootBallFromConfig(config)
 	if err != nil {
-		return
+		return err
 	}
 
 	if newName != "" {
@@ -33,7 +33,7 @@ func packBootBall(config string, mac string) (err error) {
 
 	err = ball.Pack()
 	if err != nil {
-		return
+		return err
 	}
 
 	log.Printf("Bootball created at: %s", ball.Archive)
@@ -41,10 +41,10 @@ func packBootBall(config string, mac string) (err error) {
 
 }
 
-func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
+func addSignatureToBootBall(bootBall, privKey, cert string) error {
 	ball, err := stboot.BootBallFromArchive(bootBall)
 	if err != nil {
-		return
+		return err
 	}
 
 	log.Print("Signing bootball ...")
@@ -52,18 +52,18 @@ func addSignatureToBootBall(bootBall, privKey, cert string) (err error) {
 	log.Printf("certificate: %s", cert)
 	err = ball.Sign(privKey, cert)
 	if err != nil {
-		return
+		return err
 	}
 
 	if err = ball.Pack(); err != nil {
-		return
+		return err
 	}
 
 	log.Printf("Signatures included for each bootconfig: %d", ball.NumSignatures)
 	return ball.Clean()
 }
 
-func unpackBootBall(bootBall string) (err error) {
+func unpackBootBall(bootBall string) error {
 	ball, err := stboot.BootBallFromArchive(bootBall)
 	if err != nil {
 		return err
