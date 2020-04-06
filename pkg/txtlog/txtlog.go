@@ -1,4 +1,10 @@
-package tpm
+// Copyright 2020 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package txtlog provides reading/parsing of Intel TXT logs.
+// Huge parts were taken from 9elements/tpmtool
+package txtlog
 
 import (
 	"bytes"
@@ -8,6 +14,8 @@ import (
 	"io"
 	"os"
 	"unicode/utf16"
+
+	tss "github.com/u-root/u-root/pkg/tss"
 )
 
 /*
@@ -28,7 +36,6 @@ var (
 	DefaultTCPABinaryLog = "/sys/kernel/security/tpm0/binary_bios_measurements"
 )
 
-// HashAlgoToSize is a map converter for hash to length
 var HashAlgoToSize = map[IAlgHash]IAlgHashSize{
 	TPMAlgSha:     TPMAlgShaSize,
 	TPMAlgSha256:  TPMAlgSha256Size,
@@ -37,17 +44,142 @@ var HashAlgoToSize = map[IAlgHash]IAlgHashSize{
 	TPMAlgSm3s256: TPMAlgSm3s256Size,
 }
 
-func stripControlSequences(str string) string {
-	b := make([]byte, len(str))
-	var bl int
-	for i := 0; i < len(str); i++ {
-		c := str[i]
-		if c >= 32 && c < 127 {
-			b[bl] = c
-			bl++
+func ParseLog(firmware FirmwareType, tpmSpec tss.TPMVersion) (*PCRLog, error) {
+	var pcrLog *PCRLog
+	var err error
+
+	switch tpmSpec {
+	case tss.TPMVersion12:
+		pcrLog, err = readTPM1Log(firmware)
+		if err != nil {
+			return nil, err
+		}
+	case tss.TPMVersion20:
+		pcrLog, err = readTPM2Log(firmware)
+		if err != nil {
+			// Kernel eventlog workaround does not export agile measurement log..
+			pcrLog, err = readTPM1Log(firmware)
+			if err != nil {
+				return nil, err
+			}
+		}
+	default:
+		return nil, errors.New("No valid TPM specification found")
+	}
+
+	return pcrLog, nil
+}
+
+func DumpLog(tcpaLog *PCRLog) error {
+	for _, pcr := range tcpaLog.PcrList {
+		fmt.Printf("%s\n", pcr)
+
+		fmt.Println()
+	}
+
+	return nil
+}
+
+func readTPM1Log(firmware FirmwareType) (*PCRLog, error) {
+	var pcrLog PCRLog
+
+	file, err := os.Open(DefaultTCPABinaryLog)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	pcrLog.Firmware = firmware
+
+	if firmware == "TXT" {
+		var pcrLog PCRLog
+
+		container, err := readTxtEventLogContainer(file)
+		if err != nil {
+			return nil, err
+		}
+
+		// seek to first PCR event
+		if _, err := file.Seek(int64(container.PcrEventsOffset), io.SeekStart); err != nil {
+			return nil, err
+		}
+
+		for {
+			offset, err := file.Seek(0, io.SeekCurrent)
+			if err != nil {
+				return nil, err
+			}
+
+			if offset >= int64(container.NextEventOffset) {
+				break
+			}
+
+			pcrEvent, err := parseTcgPcrEvent(file)
+			if err != nil {
+				// NB: error out even for EOF because it should
+				//     not be seen before NextEventOffset
+				return nil, err
+			}
+
+			pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
+		}
+	} else {
+		for {
+			pcrEvent, err := parseTcgPcrEvent(file)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				return nil, err
+			}
+
+			pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
 		}
 	}
-	return string(b[:bl])
+
+	return &pcrLog, nil
+}
+
+func readTPM2Log(firmware FirmwareType) (*PCRLog, error) {
+	var pcrLog PCRLog
+	var pcrEvent *TcgPcrEvent
+
+	file, err := os.Open(DefaultTCPABinaryLog)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	pcrLog.Firmware = firmware
+
+	if pcrEvent, err = parseTcgPcrEvent(file); err != nil {
+		return nil, err
+	}
+	if efiSpecId, err := parseEfiSpecEvent(bytes.NewBuffer(pcrEvent.event)); efiSpecId == nil {
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("First event was not an EFI SpecID Event")
+	}
+
+	pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
+
+	for {
+		pcrEvent, err := parseTcgPcrEvent2(file)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		// There may be times when give part of the buffer past the last event,
+		// when that is the case just check to see if the event type is zero (reserved)
+		if pcrEvent.eventType == 0 {
+			break
+		}
+		pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
+	}
+
+	return &pcrLog, nil
 }
 
 func getTaggedEvent(eventData []byte) (*string, error) {
@@ -253,215 +385,4 @@ func getVariableDataString(eventData []byte) (*string, error) {
 	eventInfo += fmt.Sprintf("%s", string(utf16String))
 
 	return &eventInfo, nil
-}
-
-func getEventDataString(eventType uint32, eventData []byte) (*string, error) {
-	if eventType < uint32(EvEFIEventBase) {
-		switch BIOSLogID(eventType) {
-		case EvSeparator:
-			eventInfo := fmt.Sprintf("%x", eventData)
-			return &eventInfo, nil
-		case EvAction:
-			eventInfo := string(bytes.Trim(eventData, "\x00"))
-			return &eventInfo, nil
-		case EvOmitBootDeviceEvents:
-			eventInfo := string("BOOT ATTEMPTS OMITTED")
-			return &eventInfo, nil
-		case EvPostCode:
-			eventInfo := string(bytes.Trim(eventData, "\x00"))
-			return &eventInfo, nil
-		case EvEventTag:
-			eventInfo, err := getTaggedEvent(eventData)
-			if err != nil {
-				return nil, err
-			}
-			return eventInfo, nil
-		case EvSCRTMContents:
-			eventInfo := string(bytes.Trim(eventData, "\x00"))
-			return &eventInfo, nil
-		case EvIPL:
-			eventInfo := string(bytes.Trim(eventData, "\x00"))
-			return &eventInfo, nil
-		}
-	} else {
-		switch EFILogID(eventType) {
-		case EvEFIHCRTMEvent:
-			eventInfo := "HCRTM"
-			return &eventInfo, nil
-		case EvEFIAction:
-			eventInfo := string(bytes.Trim(eventData, "\x00"))
-			return &eventInfo, nil
-		case EvEFIVariableDriverConfig, EvEFIVariableBoot, EvEFIVariableAuthority:
-			eventInfo, err := getVariableDataString(eventData)
-			if err != nil {
-				return nil, err
-			}
-			return eventInfo, nil
-		case EvEFIRuntimeServicesDriver, EvEFIBootServicesDriver, EvEFIBootServicesApplication:
-			eventInfo, err := getImageLoadEventString(eventData)
-			if err != nil {
-				return nil, err
-			}
-			return eventInfo, nil
-		case EvEFIGPTEvent:
-			eventInfo, err := getGPTEventString(eventData)
-			if err != nil {
-				return nil, err
-			}
-			return eventInfo, nil
-		case EvEFIPlatformFirmwareBlob:
-			eventInfo, err := getPlatformFirmwareBlob(eventData)
-			if err != nil {
-				return nil, err
-			}
-			return eventInfo, nil
-		case EvEFIHandoffTables:
-			eventInfo, err := getHandoffTablePointers(eventData)
-			if err != nil {
-				return nil, err
-			}
-			return eventInfo, nil
-		}
-	}
-
-	eventInfo := string(bytes.Trim(eventData, "\x00"))
-	return &eventInfo, errors.New("Event type couldn't get parsed")
-}
-
-func readTPM2Log(firmware FirmwareType) (*PCRLog, error) {
-	var pcrLog PCRLog
-
-	file, err := os.Open(DefaultTCPABinaryLog)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	pcrLog.Firmware = firmware
-
-	if pcrEvent, err := parseTcgPcrEvent(file); err != nil {
-		return nil, err
-	} else {
-		if efiSpecId, err := parseEfiSpecEvent(bytes.NewBuffer(pcrEvent.event)); efiSpecId == nil {
-			if err != nil {
-				return nil, err
-			} else {
-				return nil, errors.New("First event was not an EFI SpecID Event")
-			}
-		}
-
-		pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
-	}
-
-	for {
-		pcrEvent, err := parseTcgPcrEvent2(file)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-
-		// There may be times when give part of the buffer past the last event,
-		// when that is the case just check to see if the event type is zero (reserved)
-		if pcrEvent.eventType == 0 {
-			break
-		}
-		pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
-	}
-
-	return &pcrLog, nil
-}
-
-func readTPM1Log(firmware FirmwareType) (*PCRLog, error) {
-	var pcrLog PCRLog
-
-	file, err := os.Open(DefaultTCPABinaryLog)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	pcrLog.Firmware = firmware
-
-	if firmware == "TXT" {
-		var pcrLog PCRLog
-
-		container, err := readTxtEventLogContainer(file)
-		if err != nil {
-			return nil, err
-		}
-
-		// seek to first PCR event
-		file.Seek(int64(container.PcrEventsOffset), os.SEEK_SET)
-
-		for {
-			offset, err := file.Seek(0, os.SEEK_CUR)
-			if err != nil {
-				return nil, err
-			}
-
-			if offset >= int64(container.NextEventOffset) {
-				break
-			}
-
-			pcrEvent, err := parseTcgPcrEvent(file)
-			if err != nil {
-				// NB: error out even for EOF because it should
-				//     not be seen before NextEventOffset
-				return nil, err
-			}
-
-			pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
-		}
-	} else {
-		for {
-			pcrEvent, err := parseTcgPcrEvent(file)
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				return nil, err
-			}
-
-			pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)
-		}
-	}
-
-	return &pcrLog, nil
-}
-
-// ParseLog is a ,..
-func ParseLog(firmware FirmwareType, tpmSpec string) (*PCRLog, error) {
-	var pcrLog *PCRLog
-	var err error
-
-	switch tpmSpec {
-	case TPM12:
-		pcrLog, err = readTPM1Log(firmware)
-		if err != nil {
-			return nil, err
-		}
-	case TPM20:
-		pcrLog, err = readTPM2Log(firmware)
-		if err != nil {
-			// Kernel eventlog workaround does not export agile measurement log..
-			pcrLog, err = readTPM1Log(firmware)
-			if err != nil {
-				return nil, err
-			}
-		}
-	default:
-		return nil, errors.New("No valid TPM specification found")
-	}
-
-	return pcrLog, nil
-}
-
-func DumpLog(tcpaLog *PCRLog) error {
-	for _, pcr := range tcpaLog.PcrList {
-		fmt.Printf("%s\n", pcr)
-
-		fmt.Println()
-	}
-
-	return nil
 }

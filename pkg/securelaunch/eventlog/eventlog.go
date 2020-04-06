@@ -12,8 +12,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/9elements/tpmtool/pkg/tpm"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	tss "github.com/u-root/u-root/pkg/tss"
+	txtlog "github.com/u-root/u-root/pkg/txtlog"
 )
 
 // EventLog stores location for dumping event logs on disk.
@@ -51,10 +52,10 @@ func Add(b []byte) error {
  * format. error is returned if parsing code fails in tpmtool.
  */
 func parseEvtLog(evtLogFile string) ([]byte, error) {
-	tpm.DefaultTCPABinaryLog = evtLogFile
-	firmware := tpm.Txt
-	TPMSpecVersion := tpm.TPM20
-	tcpaLog, err := tpm.ParseLog(firmware, TPMSpecVersion)
+	txtlog.DefaultTCPABinaryLog = evtLogFile
+	firmware := txtlog.Txt
+	TPMSpecVersion := tss.TPMVersion20
+	tcpaLog, err := txtlog.ParseLog(firmware, TPMSpecVersion)
 	if err != nil {
 		return nil, err
 	}

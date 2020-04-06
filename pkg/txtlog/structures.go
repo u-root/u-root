@@ -1,7 +1,41 @@
-package tpm
+// Copyright 2020 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+package txtlog
 
 import (
 	"github.com/rekby/gpt"
+)
+
+// IAlgHash is the TPM hash algorithm
+type IAlgHash uint16
+
+// We only define TPM hash algorithms here we use
+const (
+	// TPMAlgError is an algorithm error
+	TPMAlgError IAlgHash = 0x0000
+	// TPMAlgSha
+	TPMAlgSha     IAlgHash = 0x0004
+	TPMAlgSha256  IAlgHash = 0x000B
+	TPMAlgSha384  IAlgHash = 0x000C
+	TPMAlgSha512  IAlgHash = 0x000D
+	TPMAlgSm3s256 IAlgHash = 0x0012
+)
+
+// IAlgHashSize is the TPM hash algorithm length
+type IAlgHashSize uint8
+
+const (
+	// TPMAlgShaSize SHA hash size
+	TPMAlgShaSize IAlgHashSize = 20
+	// TPMAlgSha256Size SHA256 hash size
+	TPMAlgSha256Size IAlgHashSize = 32
+	// TPMAlgSha384Size SHA384 hash size
+	TPMAlgSha384Size IAlgHashSize = 48
+	// TPMAlgSha512Size SHA512 hash size
+	TPMAlgSha512Size IAlgHashSize = 64
+	// TPMAlgSm3s256Size SM3-256 hash size
+	TPMAlgSm3s256Size IAlgHashSize = 32
 )
 
 // [1] https://members.uefi.org/kws/documents/UEFI_Spec_2_7_A_Sept_6.pdf
@@ -159,8 +193,8 @@ type PCREvent interface {
 type PCRLog struct {
 	Firmware FirmwareType
 	PcrList  []PCREvent
-
 }
+
 // [2] http://kib.kiev.ua/x86docs/SDMs/315168-011.pdf (Pre-TrEE MLE Guide)
 // [3] https://www.intel.com/content/dam/www/public/us/en/documents/guides/intel-txt-software-development-guide.pdf
 
