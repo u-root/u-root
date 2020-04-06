@@ -12,7 +12,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
@@ -27,18 +26,17 @@ const (
 var goversion string
 
 var (
-	create = kingpin.Command("create", "Create a boot ball from stconfig.json")
-	sign   = kingpin.Command("sign", "Sign the binary inside the provided stboot.ball and add the signatures and certificates")
-	unpack = kingpin.Command("unpack", "Unpack boot ball  file into directory")
+	create           = kingpin.Command("create", "Create a bootball from the provided stconfig")
+	createHWAddr     = create.Flag("mac", "Hardware address of the host if the created stboot.ball needs to be individual for a specific host.").String()
+	createConfigFile = create.Arg("stconfig", "Path to the manifest file in JSON format").Required().ExistingFile()
 
-	createConfigFile = create.Arg("config", "Path to the manifest file in JSON format").Required().String()
-	createHWAddr     = create.Arg("mac", "Optional hardware address of the host if the created stboot.ball needs to be individual for a specific host.").String()
+	sign            = kingpin.Command("sign", "Sign the binary inside the provided bootball")
+	signPrivKeyFile = sign.Flag("key", "Private key for signing").Required().ExistingFile()
+	signCertFile    = sign.Flag("cert", "Certificate corresponding to the private key").Required().ExistingFile()
+	signInFile      = sign.Arg("bootball", "Archive created by 'stconfig create'").Required().ExistingFile()
 
-	signInFile      = sign.Arg("bootball", "Archive created by 'stconfig create'").Required().String()
-	signPrivKeyFile = sign.Arg("privkey", "Private key for signing").Required().String()
-	signCertFile    = sign.Arg("certificate", "Certificate to veryfy the signature").Required().String()
-
-	unpackInFile = unpack.Arg("bootball", "Archive containing the boot files").Required().String()
+	unpack       = kingpin.Command("unpack", "Unpack boot ball  file into directory")
+	unpackInFile = unpack.Arg("bootball", "Archive containing the boot files").Required().ExistingFile()
 )
 
 func main() {
@@ -47,29 +45,14 @@ func main() {
 
 	switch kingpin.Parse() {
 	case create.FullCommand():
-		if _, err := os.Stat(*createConfigFile); os.IsNotExist(err) {
-			log.Fatalf("%s does not exist: %v", *createConfigFile, err)
-		}
 		if err := packBootBall(*createConfigFile, *createHWAddr); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case sign.FullCommand():
-		if _, err := os.Stat(*signInFile); os.IsNotExist(err) {
-			log.Fatalf("%s does not exist: %v", *signInFile, err)
-		}
-		if _, err := os.Stat(*signPrivKeyFile); os.IsNotExist(err) {
-			log.Fatalf("%s does not exist: %v", *signPrivKeyFile, err)
-		}
-		if _, err := os.Stat(*signCertFile); os.IsNotExist(err) {
-			log.Fatalf("%s does not exist: %v", *signCertFile, err)
-		}
 		if err := addSignatureToBootBall(*signInFile, *signPrivKeyFile, *signCertFile); err != nil {
 			log.Fatalln(err.Error())
 		}
 	case unpack.FullCommand():
-		if _, err := os.Stat(*unpackInFile); os.IsNotExist(err) {
-			log.Fatalf("%s does not exist: %v", *signInFile, err)
-		}
 		if err := unpackBootBall(*unpackInFile); err != nil {
 			log.Fatalln(err.Error())
 		}
