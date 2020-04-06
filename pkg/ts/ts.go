@@ -110,3 +110,20 @@ func (t *PrependTimestamp) Read(p []byte) (n int, err error) {
 func DefaultFormat(startTime time.Time) string {
 	return fmt.Sprintf("[%06.4fs] ", time.Since(startTime).Seconds())
 }
+
+// NewRelativeFormat returns a format function which formats in seconds since
+// the previous line. Ex: [+1.0050s]
+func NewRelativeFormat() func(time.Time) string {
+	firstLine := true
+	var lastTime time.Time
+	return func(startTime time.Time) string {
+		if firstLine {
+			firstLine = false
+			lastTime = startTime
+		}
+		curTime := time.Now()
+		s := fmt.Sprintf("[+%06.4fs] ", curTime.Sub(lastTime).Seconds())
+		lastTime = curTime
+		return s
+	}
+}
