@@ -1,8 +1,12 @@
-package tpm
+// Copyright 2020 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+package txtlog
 
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -163,11 +167,11 @@ func (e *TcgPcrEvent) PcrEventName() string {
 func (e *TcgPcrEvent) PcrEventData() string {
 	if BIOSLogID(e.eventType) == EvNoAction {
 		return string(e.event)
-	} else {
-		eventDataString, _ := getEventDataString(e.eventType, e.event)
-		if eventDataString != nil {
-			return *eventDataString
-		}
+	}
+
+	eventDataString, _ := getEventDataString(e.eventType, e.event)
+	if eventDataString != nil {
+		return *eventDataString
 	}
 
 	return ""
@@ -257,11 +261,10 @@ func (e *TcgPcrEvent2) PcrEventName() string {
 func (e *TcgPcrEvent2) PcrEventData() string {
 	if BIOSLogID(e.eventType) == EvNoAction {
 		return string(e.event)
-	} else {
-		eventDataString, _ := getEventDataString(e.eventType, e.event)
-		if eventDataString != nil {
-			return *eventDataString
-		}
+	}
+	eventDataString, _ := getEventDataString(e.eventType, e.event)
+	if eventDataString != nil {
+		return *eventDataString
 	}
 
 	return ""
@@ -336,4 +339,90 @@ func readTxtEventLogContainer(handle io.Reader) (*TxtEventLogContainer, error) {
 	}
 
 	return &container, nil
+}
+
+func getEventDataString(eventType uint32, eventData []byte) (*string, error) {
+	if eventType < uint32(EvEFIEventBase) {
+		switch BIOSLogID(eventType) {
+		case EvSeparator:
+			eventInfo := fmt.Sprintf("%x", eventData)
+			return &eventInfo, nil
+		case EvAction:
+			eventInfo := string(bytes.Trim(eventData, "\x00"))
+			return &eventInfo, nil
+		case EvOmitBootDeviceEvents:
+			eventInfo := string("BOOT ATTEMPTS OMITTED")
+			return &eventInfo, nil
+		case EvPostCode:
+			eventInfo := string(bytes.Trim(eventData, "\x00"))
+			return &eventInfo, nil
+		case EvEventTag:
+			eventInfo, err := getTaggedEvent(eventData)
+			if err != nil {
+				return nil, err
+			}
+			return eventInfo, nil
+		case EvSCRTMContents:
+			eventInfo := string(bytes.Trim(eventData, "\x00"))
+			return &eventInfo, nil
+		case EvIPL:
+			eventInfo := string(bytes.Trim(eventData, "\x00"))
+			return &eventInfo, nil
+		}
+	} else {
+		switch EFILogID(eventType) {
+		case EvEFIHCRTMEvent:
+			eventInfo := "HCRTM"
+			return &eventInfo, nil
+		case EvEFIAction:
+			eventInfo := string(bytes.Trim(eventData, "\x00"))
+			return &eventInfo, nil
+		case EvEFIVariableDriverConfig, EvEFIVariableBoot, EvEFIVariableAuthority:
+			eventInfo, err := getVariableDataString(eventData)
+			if err != nil {
+				return nil, err
+			}
+			return eventInfo, nil
+		case EvEFIRuntimeServicesDriver, EvEFIBootServicesDriver, EvEFIBootServicesApplication:
+			eventInfo, err := getImageLoadEventString(eventData)
+			if err != nil {
+				return nil, err
+			}
+			return eventInfo, nil
+		case EvEFIGPTEvent:
+			eventInfo, err := getGPTEventString(eventData)
+			if err != nil {
+				return nil, err
+			}
+			return eventInfo, nil
+		case EvEFIPlatformFirmwareBlob:
+			eventInfo, err := getPlatformFirmwareBlob(eventData)
+			if err != nil {
+				return nil, err
+			}
+			return eventInfo, nil
+		case EvEFIHandoffTables:
+			eventInfo, err := getHandoffTablePointers(eventData)
+			if err != nil {
+				return nil, err
+			}
+			return eventInfo, nil
+		}
+	}
+
+	eventInfo := string(bytes.Trim(eventData, "\x00"))
+	return &eventInfo, errors.New("Event type couldn't get parsed")
+}
+
+func stripControlSequences(str string) string {
+	b := make([]byte, len(str))
+	var bl int
+	for i := 0; i < len(str); i++ {
+		c := str[i]
+		if c >= 32 && c < 127 {
+			b[bl] = c
+			bl++
+		}
+	}
+	return string(b[:bl])
 }

@@ -3,14 +3,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3eaa34649e055bb9e57fda3f9a9bc4512483d7cc8fe123a34fd9e49913ffd453"
-  name = "github.com/9elements/tpmtool"
-  packages = ["pkg/tpm"]
-  pruneopts = "NUT"
-  revision = "da1d98c3e72c8f9397bc533879ffa0a2df8ccbfc"
-
-[[projects]]
-  branch = "master"
   digest = "1:f3793f8a708522400cef1dba23385e901aede5519f68971fd69938ef330b07a1"
   name = "github.com/alecthomas/template"
   packages = [
@@ -427,7 +419,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/9elements/tpmtool/pkg/tpm",
     "github.com/beevik/ntp",
     "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",
