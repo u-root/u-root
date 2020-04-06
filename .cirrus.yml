@@ -1,5 +1,5 @@
 freebsd_instance:
-  image_family: freebsd-12-0
+  image_family: freebsd-13-0-snap
 
 task_template: &REGULAR_TASK_TEMPLATE
   provision_script:
