@@ -17,7 +17,10 @@ import (
 	"github.com/u-root/u-root/pkg/ts"
 )
 
-var first = flag.Bool("f", false, "All timestamps are relative to the first character")
+var (
+	first    = flag.Bool("f", false, "All timestamps are relative to the first character")
+	relative = flag.Bool("R", false, "Timestamps are relative to the previous timestamp")
+)
 
 func main() {
 	flag.Parse()
@@ -27,6 +30,10 @@ func main() {
 
 	t := ts.New(os.Stdin)
 	t.ResetTimeOnNextRead = *first
+	if *relative {
+		t.Format = ts.NewRelativeFormat()
+	}
+
 	_, err := io.Copy(os.Stdout, t)
 	if err != nil {
 		log.Fatal(err)

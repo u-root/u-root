@@ -109,6 +109,58 @@ func TestParseCPUs(t *testing.T) {
 	}
 }
 
+func TestCPUsString(t *testing.T) {
+	var tests = []struct {
+		name   string
+		cpus   CPUs
+		output string
+	}{
+		{
+			name:   "no cpus",
+			cpus:   []uint64{},
+			output: "nil",
+		},
+		{
+			name:   "1 cpu",
+			cpus:   []uint64{1},
+			output: "1",
+		},
+		{
+			name:   "2 cpu",
+			cpus:   []uint64{1, 2},
+			output: "1-2",
+		},
+		{
+			name:   "3 cpu",
+			cpus:   []uint64{1, 2},
+			output: "1-2",
+		},
+		{
+			name:   "3 cpu",
+			cpus:   []uint64{1, 2, 3},
+			output: "1-3",
+		},
+		{
+			name:   "3 noncontinuous cpu",
+			cpus:   []uint64{1, 2, 4},
+			output: "1-2,4",
+		},
+		{
+			name:   "large sequence",
+			cpus:   []uint64{1, 2, 4, 6, 7, 8, 9, 10, 11, 12, 13},
+			output: "1-2,4,6-13",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := test.cpus.String()
+			if s != test.output {
+				t.Errorf("CPUs(%v).String() == %q; want %q", []uint64(test.cpus), s, test.output)
+			}
+		})
+	}
+}
+
 // This is a hard one to test. But for many systems, 0x3a is a good bet.
 // but this is of necessity not a complete test! We don't want to set an MSR
 // as part of a test, it might cause real trouble.
