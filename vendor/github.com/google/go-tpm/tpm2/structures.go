@@ -1012,14 +1012,6 @@ type Ticket struct {
 	Digest    tpmutil.U16Bytes
 }
 
-func decodeTicket(in *bytes.Buffer) (*Ticket, error) {
-	var t Ticket
-	if err := tpmutil.UnpackBuf(in, &t.Type, &t.Hierarchy, &t.Digest); err != nil {
-		return nil, fmt.Errorf("decoding Type, Hierarchy, Digest: %v", err)
-	}
-	return &t, nil
-}
-
 // AuthCommand represents a TPMS_AUTH_COMMAND. This structure encapsulates parameters
 // which authorize the use of a given handle or parameter.
 type AuthCommand struct {
