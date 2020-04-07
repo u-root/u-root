@@ -24,10 +24,6 @@ ignored = ["github.com/u-root/u-root/bb*"]
   branch = "master"
   name = "github.com/google/go-tpm"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/9elements/tpmtool"
-
 [prune]
   non-go = true
   go-tests = true
