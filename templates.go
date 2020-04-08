@@ -1,12 +1,12 @@
-// Copyright 2015-2018 the u-root Authors. All rights reserved
+// Copyright 2015-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package main
 
 // TODO: make templates able to include other templates.
-// e.g. "all" below should just say "core" and "boot"
-// and "systemboot" should say "core", "boot", "github.com/u-root/u-root/cmds/boot/uinit"
+// e.g. "all" below should just say "core" and "boot". Use it to replace
+// the old 'systemboot' template.
 // Or just call it a day, now that we have the new directory structure, and dump the templates
 // completely; that may be our best bet.
 var templates = map[string][]string{
@@ -16,10 +16,6 @@ var templates = map[string][]string{
 	},
 	"boot": {
 		"github.com/u-root/u-root/cmds/boot/*boot*",
-	},
-	"systemboot": {
-		"github.com/u-root/u-root/cmds/boot/*boot*",
-		"github.com/u-root/u-root/cmds/boot/uinit",
 	},
 	// Core should be things you don't want to live without.
 	"core": {
