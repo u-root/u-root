@@ -30,6 +30,7 @@ var (
 	ifName   = "^e.*"
 	timeout  = flag.Int("timeout", 15, "Lease timeout in seconds")
 	retry    = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
+	dryRun   = flag.Bool("dry-run", false, "Just make the DHCP requests, but don't configure interfaces")
 	verbose  = flag.Bool("v", false, "Verbose output (print message summary for each DHCP message sent/received)")
 	vverbose = flag.Bool("vv", false, "Really verbose output (print all message options for each DHCP message sent/received)")
 	ipv4     = flag.Bool("ipv4", true, "use IPV4")
@@ -85,6 +86,8 @@ func configureAll(ifs []netlink.Link) {
 	for result := range r {
 		if result.Err != nil {
 			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, result.Err)
+		} else if *dryRun {
+			log.Printf("Dry run: would have configured %s with %s", result.Interface.Attrs().Name, result.Lease)
 		} else if err := result.Lease.Configure(); err != nil {
 			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, err)
 		} else {
