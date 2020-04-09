@@ -33,10 +33,3 @@ func (emptyLogger) Print(v ...interface{})                 {}
 
 // Null is a logger that prints nothing.
 var Null Logger = emptyLogger{}
-
-// LogIfError logs "msg: err" if err is not nil.
-func LogIfError(l Logger, err error, msg string) {
-	if err != nil {
-		l.Printf("%s: %v", msg, err)
-	}
-}
