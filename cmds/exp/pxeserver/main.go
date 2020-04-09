@@ -11,6 +11,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"math"
 	"net"
@@ -43,8 +44,10 @@ var (
 	v6Bootfilename = flag.String("v6-bootfilename", "", "Boot file to serve via DHCPv6")
 
 	// File serving
-	tftpDir = flag.String("tftp-dir", "", "Directory to serve over TFTP")
-	httpDir = flag.String("http-dir", "", "Directory to serve over HTTP")
+	tftpDir  = flag.String("tftp-dir", "", "Directory to serve over TFTP")
+	tftpPort = flag.Int("tftp-port", 69, "Port to serve TFTP on")
+	httpDir  = flag.String("http-dir", "", "Directory to serve over HTTP")
+	httpPort = flag.Int("http-port", 80, "Port to serve HTTP on")
 )
 
 type dserver4 struct {
@@ -202,7 +205,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			server, err := tftp.NewServer(":69")
+			server, err := tftp.NewServer(fmt.Sprintf(":%d", *tftpPort))
 			if err != nil {
 				log.Fatalf("Could not start TFTP server: %v", err)
 			}
@@ -217,7 +220,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			http.Handle("/", http.FileServer(http.Dir(*httpDir)))
-			log.Fatal(http.ListenAndServe(":80", nil))
+			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *httpPort), nil))
 		}()
 	}
 
