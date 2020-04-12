@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -144,11 +145,22 @@ func (t *tracer) call(p *process, rec *TraceRecord) error {
 	return nil
 }
 
+var traceActive uint32
+
 // Trace traces `c` and any children c clones.
+//
+// Only one trace can be active per process.
 //
 // recordCallback is called every time a process event happens with the process
 // in a stopped state.
 func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
+	if !atomic.CompareAndSwapUint32(&traceActive, 0, 1) {
+		return fmt.Errorf("a process trace is already active in this process")
+	}
+	defer func() {
+		atomic.StoreUint32(&traceActive, 0)
+	}()
+
 	if c.SysProcAttr == nil {
 		c.SysProcAttr = &syscall.SysProcAttr{}
 	}
