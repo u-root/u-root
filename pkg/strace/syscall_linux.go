@@ -146,18 +146,6 @@ func stringVector(t Task, addr Addr) string {
 		return fmt.Sprintf("%#x {error copying vector: %v}", addr, err)
 	}
 	return fmt.Sprintf("%q", vs)
-	/*
-		vec := []string{}
-		s := fmt.Sprintf("%#x [", addr)
-		for i, v := range vec {
-			if i != 0 {
-				s += ", "
-			}
-			s += fmt.Sprintf("%q", v)
-		}
-		s += "]"
-		return s
-	*/
 }
 
 func rusage(t Task, addr Addr) string {
