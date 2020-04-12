@@ -179,29 +179,37 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 		processes: make(map[int]*process),
 		callback:  recordCallback,
 	}
+
 	// Start will fork, set PTRACE_TRACEME, and then execve. Once that
-	// happens, we should be stopped at the execve Enter event, since we
-	// are being traced.
+	// happens, we should be stopped at the execve "exit". This wait will
+	// return at that exit point.
+	//
+	// The new task image has been loaded at this point, with us just about
+	// to jump into _start.
+	//
+	// It'd make sense to assume, but this stop is NOT a syscall-exit-stop
+	// of the execve. It is a signal-stop triggered at the end of execve,
+	// within the confines of the new task image.  This means the execve
+	// syscall args are not in their registers, and we can't print the
+	// exit.
+	//
+	// NOTE(chrisko): we could make it such that we can read the args of
+	// the execve. If we were to signal ourselves between PTRACE_TRACEME
+	// and execve, we'd stop before the execve and catch execve as a
+	// syscall-stop after. To do so, we have 3 options: (1) write a copy of
+	// stdlib exec.Cmd.Start/os.StartProcess with the change, or (2)
+	// upstreaming a change that would make it into the next Go version, or
+	// (3) use something other than *exec.Cmd as the API.
+	//
+	// A copy of the StartProcess logic would be tedious, an upstream
+	// change would take a while to get into Go, and we want this API to be
+	// easily usable. I think it's ok to sacrifice the execve for now.
 	if _, ws, err := wait(c.Process.Pid); err != nil {
 		return err
 	} else if ws.TrapCause() != 0 {
 		return fmt.Errorf("wait(pid=%d): got %v, want stopped process", c.Process.Pid, ws)
 	}
-
-	tracer.addProcess(c.Process.Pid, SyscallEnter)
-
-	rec := &TraceRecord{
-		PID:  c.Process.Pid,
-		Time: time.Now(),
-	}
-	// We entered execve. The next stop will be the exit.
-	if err := rec.syscallStop(tracer.processes[rec.PID]); err != nil {
-		return err
-	}
-
-	if err := tracer.call(tracer.processes[rec.PID], rec); err != nil {
-		return err
-	}
+	tracer.addProcess(c.Process.Pid, SyscallExit)
 
 	if err := unix.PtraceSetOptions(c.Process.Pid,
 		// Make it easy to distinguish syscall-stops from other SIGTRAPS.
