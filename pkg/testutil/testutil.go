@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/golang"
 )
 
@@ -152,6 +153,16 @@ func run(m *testing.M, mainFn func()) int {
 // m.Run.
 func Run(m *testing.M, mainFn func()) {
 	os.Exit(run(m, mainFn))
+}
+
+// SkipIfInVMTest skips a test if it's being executed in a u-root test VM.
+//
+// See pkg/vmtest/integration.go which starts the VM with the uroot.vmtest in
+// the kernel cmdline.
+func SkipIfInVMTest(t *testing.T) {
+	if cmdline.ContainsFlag("uroot.vmtest") {
+		t.Skipf("Skipping test since we are in a u-root test VM")
+	}
 }
 
 // SkipIfNotRoot skips the calling test if uid != 0.

@@ -12,10 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uio/uiotest"
 )
 
 func prepareTestCmd(t *testing.T, cmd string) {
+	// VM environment doesn't have makefiles or whatever. Just skip it.
+	testutil.SkipIfInVMTest(t)
+
 	if _, err := os.Stat(cmd); !os.IsNotExist(err) {
 		if err != nil {
 			t.Fatalf("Failed to find test program %q: %v", cmd, err)
