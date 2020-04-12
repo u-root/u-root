@@ -284,8 +284,8 @@ func (i *SyscallInfo) post(t Task, args SyscallArguments, rval SyscallArgument, 
 }
 
 // printEntry prints the given system call entry.
-func (i *SyscallInfo) printEnter(t Task, r *TraceRecord) string {
-	o := i.pre(t, r.Args, LogMaximumSize)
+func (i *SyscallInfo) printEnter(t Task, args SyscallArguments) string {
+	o := i.pre(t, args, LogMaximumSize)
 	switch len(o) {
 	case 0:
 		return fmt.Sprintf("%s E %s()", t.Name(), i.name)
@@ -307,43 +307,33 @@ func (i *SyscallInfo) printEnter(t Task, r *TraceRecord) string {
 
 }
 
-func sysCallEnter(t Task, r *TraceRecord) {
-	i := defaultSyscallInfo(r.Sysno)
-	if v, ok := syscalls[uintptr(r.Sysno)]; ok {
+func SysCallEnter(t Task, s *SyscallEvent) string {
+	i := defaultSyscallInfo(s.Sysno)
+	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
 		*i = v
 	}
-	r.Out = i.printEnter(t, r)
+	return i.printEnter(t, s.Args)
 }
 
-func sysCallExit(t Task, r *TraceRecord) {
-	i := defaultSyscallInfo(r.Sysno)
-	if v, ok := syscalls[uintptr(r.Sysno)]; ok {
+func SysCallExit(t Task, s *SyscallEvent) string {
+	i := defaultSyscallInfo(s.Sysno)
+	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
 		*i = v
 	}
-	r.Out = i.printExit(t, r.Time, r.Args, r.Ret[0], r.Err, r.Errno)
-}
-
-// SysCall takes a Tracer and a TraceRecord and adds prettyprint to the TraceRecord.
-func SysCall(t Task, r *TraceRecord) {
-	if r.EX == Enter {
-		sysCallEnter(t, r)
-		return
-	}
-	sysCallExit(t, r)
+	return i.printExit(t, s.Duration, s.Args, s.Ret[0], s.Errno)
 }
 
 // printExit prints the given system call exit.
-func (i *SyscallInfo) printExit(t Task, elapsed time.Duration, args SyscallArguments, retval SyscallArgument, err error, errno int) string {
-	// Ideally, we should have this output cached from the Enter event. But
-	// that's been broken since forever.
+func (i *SyscallInfo) printExit(t Task, elapsed time.Duration, args SyscallArguments, retval SyscallArgument, errno unix.Errno) string {
+	// Eventually, we'll be able to cache o and look at the entry record's output.
 	o := i.pre(t, args, LogMaximumSize)
 	var rval string
-	if err == nil {
+	if errno == 0 {
 		// Fill in the output after successful execution.
 		i.post(t, args, retval, o, LogMaximumSize)
-		rval = fmt.Sprintf("%#x (%v)", retval, elapsed)
+		rval = fmt.Sprintf("%#x (%v)", retval.Uint64(), elapsed)
 	} else {
-		rval = fmt.Sprintf("%#x errno=%d (%s) (%v)", retval, errno, err, elapsed)
+		rval = fmt.Sprintf("%s (%#x) (%v)", errno, errno, elapsed)
 	}
 
 	switch len(o) {
