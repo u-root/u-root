@@ -286,22 +286,6 @@ func (p *ProcIO) Read(b []byte) (int, error) {
 	return n, nil
 }
 
-// NewProcWriter returns an io.Writer for a ProcIO.
-func NewProcWriter(pid int, addr uintptr) io.Writer {
-	return &ProcIO{pid: pid, addr: addr}
-}
-
-// Write implements io.Write for a ProcIO.
-func (p *ProcIO) Write(b []byte) (int, error) {
-	n, err := unix.PtracePokeData(p.pid, p.addr, b)
-	if err != nil {
-		return n, err
-	}
-	p.addr += uintptr(n)
-	p.bytes += n
-	return n, nil
-}
-
 // Read reads from the process at Addr to the interface{}
 // and returns a byte count and error.
 func (t *Tracer) Read(addr Addr, v interface{}) (int, error) {
@@ -361,13 +345,6 @@ func ReadStringVector(t Task, addr Addr, maxsize, maxno int) ([]string, error) {
 		vs = append(vs, s)
 	}
 	return vs, nil
-}
-
-// Write writes to the process address sapce and returns a count and error.
-func (t *Tracer) Write(addr Addr, v interface{}) (int, error) {
-	p := NewProcWriter(t.Pid, uintptr(addr))
-	err := binary.Write(p, binary.LittleEndian, v)
-	return p.(*ProcIO).bytes, err
 }
 
 // CaptureAddress pulls a socket address from the process as a byte slice.
