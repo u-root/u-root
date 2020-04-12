@@ -411,6 +411,13 @@ func RecordTraces(c chan<- *TraceRecord) EventCallback {
 	}
 }
 
+func signalString(s unix.Signal) string {
+	if 0 <= s && int(s) < len(signals) {
+		return fmt.Sprintf("%s (%d)", signals[s], int(s))
+	}
+	return fmt.Sprintf("signal %d", int(s))
+}
+
 // PrintTraces prints every trace event to w.
 func PrintTraces(w io.Writer) EventCallback {
 	return func(t Task, record *TraceRecord) error {
@@ -420,11 +427,11 @@ func PrintTraces(w io.Writer) EventCallback {
 		case SyscallExit:
 			fmt.Fprintln(w, SysCallExit(t, record.Syscall))
 		case SignalExit:
-			fmt.Fprintf(w, "PID %d exited from signal %d\n", record.PID, record.SignalExit.Signal)
+			fmt.Fprintf(w, "PID %d exited from signal %s\n", record.PID, signalString(record.SignalExit.Signal))
 		case Exit:
 			fmt.Fprintf(w, "PID %d exited from exit status %d (code = %d)\n", record.PID, record.Exit.WaitStatus, record.Exit.WaitStatus.ExitStatus())
 		case SignalStop:
-			fmt.Fprintf(w, "PID %d got signal %d\n", record.PID, record.SignalStop.Signal)
+			fmt.Fprintf(w, "PID %d got signal %s\n", record.PID, signalString(record.SignalStop.Signal))
 		case NewChild:
 			fmt.Fprintf(w, "PID %d spawned new child %d\n", record.PID, record.NewChild.PID)
 		}
