@@ -69,7 +69,8 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 		}
 
 		i += abi.SizeOfControlMessageHeader
-		width := Width
+		// TODO: uh, what
+		width := archWidth
 		length := int(h.Length) - abi.SizeOfControlMessageHeader
 
 		if skipData {
@@ -160,6 +161,7 @@ func msghdr(t Task, addr Addr, printContent bool, maxBytes uint64) string {
 	if _, err := t.Read(addr, &msg); err != nil {
 		return fmt.Sprintf("%#x (error decoding msghdr: %v)", addr, err)
 	}
+
 	s := fmt.Sprintf(
 		"%#x {name=%#x, namelen=%d, iovecs=%s",
 		addr,

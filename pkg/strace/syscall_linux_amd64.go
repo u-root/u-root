@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const Width = 64
+const archWidth = 64
 
 // This is the amd64 syscall map. One might think that this one map could be used for all Linux
 // flavors on all architectures. Ah, no. It's Linux, not Plan 9. Every arch has a different
@@ -350,20 +350,21 @@ var syscalls = SyscallMap{
 // since it makes the function arguments end up in "the right place"
 // from the point of view of the caller. The performance improvement is
 // negligible, as you can see by a look at the GNU runtime.
-func (rec *TraceRecord) FillArgs() {
-	r := rec.Regs
-	rec.Args = SyscallArguments{
-		{uintptr(r.Rdi)},
-		{uintptr(r.Rsi)},
-		{uintptr(r.Rdx)},
-		{uintptr(r.R10)},
-		{uintptr(r.R8)},
-		{uintptr(r.R9)}}
-	rec.Sysno = int(uint32(r.Orig_rax))
+func (s *SyscallEvent) FillArgs() {
+	s.Args = SyscallArguments{
+		{uintptr(s.Regs.Rdi)},
+		{uintptr(s.Regs.Rsi)},
+		{uintptr(s.Regs.Rdx)},
+		{uintptr(s.Regs.R10)},
+		{uintptr(s.Regs.R8)},
+		{uintptr(s.Regs.R9)}}
+	s.Sysno = int(uint32(s.Regs.Orig_rax))
 }
 
 // FillRet fills the TraceRecord with the result values from the registers.
-func (rec *TraceRecord) FillRet() {
-	r := rec.Regs
-	rec.Ret = [2]SyscallArgument{{uintptr(r.Rax)}, {uintptr(r.Rdx)}}
+func (s *SyscallEvent) FillRet() {
+	s.Ret = [2]SyscallArgument{{uintptr(s.Regs.Rax)}, {uintptr(s.Regs.Rdx)}}
+	if errno := int(s.Regs.Rax); errno < 0 {
+		s.Errno = unix.Errno(-errno)
+	}
 }
