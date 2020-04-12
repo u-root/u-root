@@ -123,12 +123,12 @@ func uname(t Task, addr Addr) string {
 	return fmt.Sprintf("%#x %v", addr, u)
 }
 
-// AlignUp rounds a length up to an alignment. align must be a power of 2.
-func AlignUp(length int, align uint) int {
+// alignUp rounds a length up to an alignment. align must be a power of 2.
+func alignUp(length int, align uint) int {
 	return (length + int(align) - 1) & ^(int(align) - 1)
 }
 
-// AlignDown rounds a down to an alignment. align must be a power of 2.
-func AlignDown(length int, align uint) int {
+// alignDown rounds a down to an alignment. align must be a power of 2.
+func alignDown(length int, align uint) int {
 	return length & ^(int(align) - 1)
 }
