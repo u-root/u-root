@@ -35,7 +35,7 @@ var LogMaximumSize uint = DefaultLogMaximumSize
 // do anything useful with binary text dump of byte array arguments.
 var EventMaximumSize uint
 
-func dump(t *Tracer, addr Addr, size uint, maximumBlobSize uint) string {
+func dump(t Task, addr Addr, size uint, maximumBlobSize uint) string {
 	origSize := size
 	if size > maximumBlobSize {
 		size = maximumBlobSize
@@ -59,7 +59,7 @@ func dump(t *Tracer, addr Addr, size uint, maximumBlobSize uint) string {
 	return fmt.Sprintf("%#x %q%s", addr, b[:amt], dot)
 }
 
-func iovecs(t *Tracer, addr Addr, iovcnt int, printContent bool, maxBytes uint64) string {
+func iovecs(t Task, addr Addr, iovcnt int, printContent bool, maxBytes uint64) string {
 	if iovcnt < 0 || iovcnt > 0x10 /*unix.MSG_MAXIOVLEN*/ {
 		return fmt.Sprintf("%#x (error decoding iovecs: invalid iovcnt)", addr)
 	}
@@ -104,7 +104,7 @@ func iovecs(t *Tracer, addr Addr, iovcnt int, printContent bool, maxBytes uint64
 	return fmt.Sprintf("%#x %s", addr, strings.Join(iovs, ", "))
 }
 
-func fdpair(t *Tracer, addr Addr) string {
+func fdpair(t Task, addr Addr) string {
 	var fds [2]int32
 	_, err := t.Read(addr, &fds)
 	if err != nil {
@@ -114,7 +114,7 @@ func fdpair(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x [%d %d]", addr, fds[0], fds[1])
 }
 
-func uname(t *Tracer, addr Addr) string {
+func uname(t Task, addr Addr) string {
 	var u unix.Utsname
 	if _, err := t.Read(addr, &u); err != nil {
 		return fmt.Sprintf("%#x (error decoding utsname: %s)", addr, err)
