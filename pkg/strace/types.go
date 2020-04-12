@@ -11,6 +11,3 @@ type iovec struct {
 
 // Addr is an address for use in strace I/O
 type Addr uintptr
-
-// Arg is the argument type for system calls
-type Arg uintptr

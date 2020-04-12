@@ -48,12 +48,16 @@ type Tracer struct {
 	Records chan *TraceRecord
 	Count   int
 	Raw     bool // Set by the user, it disables pretty printing
-	Name    string
-	Printer func(t *Tracer, r *TraceRecord)
+	name    string
+	Printer func(t Task, r *TraceRecord)
 	Last    *TraceRecord
 	// We save the output from the previous Enter so Exit handling
 	// can both use and adjust it.
 	output []string
+}
+
+func (t *Tracer) Name() string {
+	return t.name
 }
 
 // New returns a new Tracer.
@@ -89,7 +93,7 @@ func (t *Tracer) RunTracerFromCmd(c *exec.Cmd) {
 		t.Records <- &TraceRecord{Err: err}
 	}
 	t.Pid = c.Process.Pid
-	t.Name = fmt.Sprintf("%s(%d)", c.Args[0], t.Pid)
+	t.name = fmt.Sprintf("%s(%d)", c.Args[0], t.Pid)
 	t.EX = Exit
 	Run(t)
 }
@@ -101,7 +105,7 @@ func NewTracerChild(pid int) (*Tracer, error) {
 		return nil, err
 	}
 	nt.Pid = pid
-	nt.Name = fmt.Sprintf("%d", pid)
+	nt.name = fmt.Sprintf("%d", pid)
 	nt.EX = Exit
 	return nt, nil
 }
@@ -308,7 +312,7 @@ func (t *Tracer) Read(addr Addr, v interface{}) (int, error) {
 
 // ReadString reads a null-terminated string from the process
 // at Addr and any errors.
-func (t *Tracer) ReadString(addr Addr, max int) (string, error) {
+func ReadString(t Task, addr Addr, max int) (string, error) {
 	if addr == 0 {
 		return "<nil>", nil
 	}
@@ -329,20 +333,18 @@ func (t *Tracer) ReadString(addr Addr, max int) (string, error) {
 
 // ReadStringVector takes an address, max string size, and max number of string to read,
 // and returns a string slice or error.
-func (t *Tracer) ReadStringVector(addr Addr, maxsize, maxno int) ([]string, error) {
+func ReadStringVector(t Task, addr Addr, maxsize, maxno int) ([]string, error) {
 	var v []Addr
 	if addr == 0 {
 		return []string{}, nil
 	}
 
-	fmt.Printf("read vec at %#x", addr)
 	// Read in a maximum of maxno addresses
 	for len(v) < maxno {
 		var a uint64
 		n, err := t.Read(addr, &a)
 		if err != nil {
-			fmt.Printf("Could not read vec elemtn at %v", addr)
-			return nil, err
+			return nil, fmt.Errorf("could not read vector element at %#x: %v", addr, err)
 		}
 		if a == 0 {
 			break
@@ -350,13 +352,11 @@ func (t *Tracer) ReadStringVector(addr Addr, maxsize, maxno int) ([]string, erro
 		addr += Addr(n)
 		v = append(v, Addr(a))
 	}
-	fmt.Printf("Read %v", v)
 	var vs []string
 	for _, a := range v {
-		s, err := t.ReadString(a, maxsize)
+		s, err := ReadString(t, a, maxsize)
 		if err != nil {
-			fmt.Printf("Could not read string at %v", a)
-			return vs, err
+			return vs, fmt.Errorf("could not read string at %#x: %v", a, err)
 		}
 		vs = append(vs, s)
 	}
@@ -372,7 +372,7 @@ func (t *Tracer) Write(addr Addr, v interface{}) (int, error) {
 
 // CaptureAddress pulls a socket address from the process as a byte slice.
 // It returns any errors.
-func CaptureAddress(t *Tracer, addr Addr, addrlen uint32) ([]byte, error) {
+func CaptureAddress(t Task, addr Addr, addrlen uint32) ([]byte, error) {
 	b := make([]byte, addrlen)
 	if _, err := t.Read(addr, b); err != nil {
 		return nil, err

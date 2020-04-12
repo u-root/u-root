@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
+func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 	if length > maxBytes {
 		return fmt.Sprintf("%#x (error decoding control: invalid length (%d))", addr, length)
 	}
@@ -154,9 +154,9 @@ func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
 	return fmt.Sprintf("%#x %s", addr, strings.Join(strs, ", "))
 }
 
-func msghdr(t *Tracer, addr Addr, printContent bool, maxBytes uint64) string {
+func msghdr(t Task, addr Addr, printContent bool, maxBytes uint64) string {
 	var msg abi.MessageHeader64
-	if err := ReadMessageHeader64(t, addr, &msg); err != nil {
+	if _, err := t.Read(addr, &msg); err != nil {
 		return fmt.Sprintf("%#x (error decoding msghdr: %v)", addr, err)
 	}
 	s := fmt.Sprintf(
@@ -174,7 +174,7 @@ func msghdr(t *Tracer, addr Addr, printContent bool, maxBytes uint64) string {
 	return fmt.Sprintf("%s, flags=%d}", s, msg.Flags)
 }
 
-func sockAddr(t *Tracer, addr Addr, length uint32) string {
+func sockAddr(t Task, addr Addr, length uint32) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -215,7 +215,7 @@ func sockAddr(t *Tracer, addr Addr, length uint32) string {
 	}
 }
 
-func postSockAddr(t *Tracer, addr Addr, lengthPtr Addr) string {
+func postSockAddr(t Task, addr Addr, lengthPtr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -232,14 +232,14 @@ func postSockAddr(t *Tracer, addr Addr, lengthPtr Addr) string {
 	return sockAddr(t, addr, l)
 }
 
-func copySockLen(t *Tracer, addr Addr) (uint32, error) {
+func copySockLen(t Task, addr Addr) (uint32, error) {
 	// socklen_t is 32-bits.
 	var l uint32
 	_, err := t.Read(addr, &l)
 	return l, err
 }
 
-func sockLenPointer(t *Tracer, addr Addr) string {
+func sockLenPointer(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
