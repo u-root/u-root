@@ -20,6 +20,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/strace/internal/abi"
 	"github.com/u-root/u-root/pkg/strace/internal/binary"
+	"github.com/u-root/u-root/pkg/ubinary"
 	"golang.org/x/sys/unix"
 )
 
@@ -42,7 +43,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 		}
 
 		var h abi.ControlMessageHeader
-		binary.Unmarshal(buf[i:i+abi.SizeOfControlMessageHeader], ByteOrder, &h)
+		binary.Unmarshal(buf[i:i+abi.SizeOfControlMessageHeader], ubinary.NativeEndian, &h)
 
 		var skipData bool
 		level := "SOL_SOCKET"
@@ -83,7 +84,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 
 			numRights := rightsSize / abi.SizeOfControlMessageRight
 			fds := make(abi.ControlMessageRights, numRights)
-			binary.Unmarshal(buf[i:i+rightsSize], ByteOrder, &fds)
+			binary.Unmarshal(buf[i:i+rightsSize], ubinary.NativeEndian, &fds)
 
 			rights := make([]string, 0, len(fds))
 			for _, fd := range fds {
@@ -134,7 +135,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 			}
 
 			var tv unix.Timeval
-			binary.Unmarshal(buf[i:i+abi.SizeOfTimeval], ByteOrder, &tv)
+			binary.Unmarshal(buf[i:i+abi.SizeOfTimeval], ubinary.NativeEndian, &tv)
 
 			strs = append(strs, fmt.Sprintf(
 				"{level=%s, type=%s, length=%d, Sec: %d, Usec: %d}",
@@ -188,7 +189,7 @@ func sockAddr(t Task, addr Addr, length uint32) string {
 	if len(b) < 2 {
 		return fmt.Sprintf("%#x {address too short: %d bytes}", addr, len(b))
 	}
-	family := ByteOrder.Uint16(b)
+	family := ubinary.NativeEndian.Uint16(b)
 
 	familyStr := abi.SocketFamily.Parse(uint64(family))
 

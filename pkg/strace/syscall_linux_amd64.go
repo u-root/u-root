@@ -15,14 +15,10 @@
 package strace
 
 import (
-	"encoding/binary"
-
 	"golang.org/x/sys/unix"
 )
 
 const Width = 64
-
-var ByteOrder = binary.LittleEndian
 
 // This is the amd64 syscall map. One might think that this one map could be used for all Linux
 // flavors on all architectures. Ah, no. It's Linux, not Plan 9. Every arch has a different
