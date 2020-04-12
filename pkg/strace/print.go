@@ -17,6 +17,7 @@
 package strace
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -114,13 +115,37 @@ func fdpair(t Task, addr Addr) string {
 	return fmt.Sprintf("%#x [%d %d]", addr, fds[0], fds[1])
 }
 
+type SaneUtsname struct {
+	Sysname    string
+	Nodename   string
+	Release    string
+	Version    string
+	Machine    string
+	Domainname string
+}
+
+func SaneUname(u unix.Utsname) SaneUtsname {
+	return SaneUtsname{
+		Sysname:    convertUname(u.Sysname),
+		Nodename:   convertUname(u.Nodename),
+		Release:    convertUname(u.Release),
+		Version:    convertUname(u.Version),
+		Machine:    convertUname(u.Machine),
+		Domainname: convertUname(u.Domainname),
+	}
+}
+
+func convertUname(s [65]uint8) string {
+	return string(bytes.TrimRight(s[:], "\x00"))
+}
+
 func uname(t Task, addr Addr) string {
 	var u unix.Utsname
 	if _, err := t.Read(addr, &u); err != nil {
 		return fmt.Sprintf("%#x (error decoding utsname: %s)", addr, err)
 	}
 
-	return fmt.Sprintf("%#x %v", addr, u)
+	return fmt.Sprintf("%#x %#v", addr, SaneUname(u))
 }
 
 // alignUp rounds a length up to an alignment. align must be a power of 2.
