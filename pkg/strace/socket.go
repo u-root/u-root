@@ -74,13 +74,13 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 
 		if skipData {
 			strs = append(strs, fmt.Sprintf("{level=%s, type=%s, length=%d}", level, typ, h.Length))
-			i += AlignUp(length, uint(width))
+			i += alignUp(length, uint(width))
 			continue
 		}
 
 		switch h.Type {
 		case unix.SCM_RIGHTS:
-			rightsSize := AlignDown(length, abi.SizeOfControlMessageRight)
+			rightsSize := alignDown(length, abi.SizeOfControlMessageRight)
 
 			numRights := rightsSize / abi.SizeOfControlMessageRight
 			fds := make(abi.ControlMessageRights, numRights)
@@ -149,7 +149,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 		default:
 			panic("unreachable")
 		}
-		i += AlignUp(length, uint(width))
+		i += alignUp(length, uint(width))
 	}
 
 	return fmt.Sprintf("%#x %s", addr, strings.Join(strs, ", "))
