@@ -298,6 +298,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:81a7d0f6d9b4e92b887599f98c21f95bb651f980ecb445ff56f69469a89bc9b3"
+  name = "github.com/vtolstov/go-ioctl"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "6be9cced4810d0afba42202cc6f0b0ac2a650f4b"
+
+[[projects]]
+  branch = "master"
   digest = "1:54d7b8ea7c0861142752419410a694b7dc82f530535cd060dd682ebd52df1fe2"
   name = "golang.org/x/crypto"
   packages = [
@@ -450,6 +458,7 @@
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/require",
     "github.com/vishvananda/netlink",
+    "github.com/vtolstov/go-ioctl",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/md4",
     "golang.org/x/crypto/openpgp",
