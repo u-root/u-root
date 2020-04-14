@@ -72,6 +72,7 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 		if err = ipmi.ClearCMOSClearValidBits(bootorder); err != nil {
 			return err
 		}
+		addSEL("cmosclear")
 		if err = reboot(); err != nil {
 			return err
 		}
@@ -144,7 +145,7 @@ func runIPMICommands() {
 	}
 }
 
-func sendBootSEL(sequence string) {
+func addSEL(sequence string) {
 	var bootErr ipmi.Event
 
 	i, err := ipmi.Open(0)
@@ -156,10 +157,24 @@ func sendBootSEL(sequence string) {
 
 	switch sequence {
 	case "fbnetboot":
-		bootErr.RecordID = 0x0000
+		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
-		bootErr.OEMNontsDefinedData = [13]uint8{}
-
+		bootErr.OEMNontsDefinedData[0] = 0x28
+		bootErr.OEMNontsDefinedData[5] = 0xf0
+		for idx := 6; idx < 13; idx++ {
+			bootErr.OEMNontsDefinedData[idx] = 0xff
+		}
+		if err := i.LogSystemEvent(&bootErr); err != nil {
+			log.Printf("SEL recorded: %s fail\n", sequence)
+		}
+	case "cmosclear":
+		bootErr.RecordID = 0
+		bootErr.RecordType = ipmi.OEM_NTS_TYPE
+		bootErr.OEMNontsDefinedData[0] = 0x28
+		bootErr.OEMNontsDefinedData[5] = 0xf1
+		for idx := 6; idx < 13; idx++ {
+			bootErr.OEMNontsDefinedData[idx] = 0xff
+		}
 		if err := i.LogSystemEvent(&bootErr); err != nil {
 			log.Printf("SEL recorded: %s fail\n", sequence)
 		}
@@ -199,7 +214,7 @@ func main() {
 		log.Printf("Trying boot entry %s: %s", entry.Name, string(entry.Config))
 		if err := entry.Booter.Boot(); err != nil {
 			log.Printf("Warning: failed to boot with configuration: %+v", entry)
-			sendBootSEL(entry.Booter.TypeName())
+			addSEL(entry.Booter.TypeName())
 		}
 		if !*doQuiet {
 			log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
@@ -224,7 +239,7 @@ func main() {
 				if err := cmd.Run(); err != nil {
 					log.Printf("Error executing %v: %v", cmd, err)
 					if !selRecorded {
-						sendBootSEL(bootcmd[0])
+						addSEL(bootcmd[0])
 					}
 				}
 			}

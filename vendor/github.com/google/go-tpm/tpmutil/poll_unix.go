@@ -16,7 +16,7 @@ func poll(f *os.File) error {
 			Fd:     int32(f.Fd()),
 			Events: 0x1, // POLLIN
 		}}
-		timeout = 0 // No timeout
+		timeout = -1 // Indefinite timeout
 	)
 
 	if _, err := unix.Poll(fds, timeout); err != nil {

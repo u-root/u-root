@@ -112,6 +112,34 @@ func (m MSR) String() string {
 	return fmt.Sprintf("%#x", uint32(m))
 }
 
+// String pretty prints the list of CPUs. For example: 1-2,4
+func (c CPUs) String() string {
+	if len(c) == 0 {
+		return "nil"
+	}
+	sort.Slice(c, func(i, j int) bool { return c[i] < c[j] })
+
+	var s []string
+	for i := 0; i < len(c); i++ {
+		// Find the last CPU in this continuous range.
+		j := i
+		for j+1 < len(c) && c[j]+1 == c[j+1] {
+			j++
+		}
+
+		if i == j {
+			// Continuous set of size 1.
+			s = append(s, fmt.Sprintf("%d", c[i]))
+		} else {
+			// Multiple CPUs in continous set.
+			s = append(s, fmt.Sprintf("%d-%d", c[i], c[j]))
+		}
+
+		i = j // Skip over set.
+	}
+	return strings.Join(s, ",")
+}
+
 func (c CPUs) paths() []string {
 	var p = make([]string, len(c))
 
