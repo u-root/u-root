@@ -100,6 +100,7 @@ import (
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/loop"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/uzip"
 )
 
 const usage = "pox [-[-debug]|d] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]"
@@ -211,25 +212,23 @@ func poxCreate(bin ...string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	var c *exec.Cmd
-	if *zip {
-		fileAbs, err := filepath.Abs(*file)
-		if err != nil {
-			return err
-		}
-		c = exec.Command("zip", "-r", fileAbs, ".")
-		c.Dir = dir
-	} else {
-		c = exec.Command("mksquashfs", dir, *file, "-noappend")
-	}
-	o, err := c.CombinedOutput()
-	v("%v", string(o))
-	if err != nil {
-		return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
-	}
-	v("Done, your pox is in %v", *file)
 
-	return nil
+	if *zip {
+		err = uzip.ToZip(dir, *file)
+	} else {
+		c := exec.Command("mksquashfs", dir, *file, "-noappend")
+		o, cerr := c.CombinedOutput()
+		v("%v", string(o))
+		if cerr != nil {
+			err = fmt.Errorf("%v: %v: %v", c.Args, string(o), cerr)
+		}
+	}
+
+	if err == nil {
+		v("Done, your pox is in %v", *file)
+	}
+
+	return err
 }
 
 func poxRun(args ...string) error {
@@ -245,11 +244,8 @@ func poxRun(args ...string) error {
 	}
 
 	if *zip {
-		c := exec.Command("unzip", *file, "-d", dir)
-		o, err := c.CombinedOutput()
-		v("%v", string(o))
-		if err != nil {
-			return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
+		if err := uzip.FromZip(*file, dir); err != nil {
+			return err
 		}
 	} else {
 		lo, err := loop.New(*file, "squashfs", "")
