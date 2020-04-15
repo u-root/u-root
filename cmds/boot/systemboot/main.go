@@ -84,14 +84,14 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 }
 
 func runIPMICommands() {
-	ipmi, err := ipmi.Open(0)
+	i, err := ipmi.Open(0)
 	if err != nil {
 		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
 		return
 	}
-	defer ipmi.Close()
+	defer i.Close()
 
-	if err = ipmi.ShutoffWatchdog(); err != nil {
+	if err = i.ShutoffWatchdog(); err != nil {
 		log.Printf("Failed to stop watchdog %v.", err)
 	} else {
 		log.Printf("Watchdog is stopped.")
@@ -106,7 +106,7 @@ func runIPMICommands() {
 
 	if fwVersion, err := getSystemFWVersion(si); err == nil {
 		log.Printf("System firmware version: %s", fwVersion)
-		if err = ipmi.SetSystemFWVersion(fwVersion); err != nil {
+		if err = i.SetSystemFWVersion(fwVersion); err != nil {
 			log.Printf("Failed to set system firmware version to BMC %v.", err)
 		}
 	}
@@ -114,14 +114,35 @@ func runIPMICommands() {
 	if productName, err := getSystemProductName(si); err == nil {
 		if isMatched(productName) {
 			log.Printf("Running OEM IPMI commands.")
-			if err = checkCMOSClear(ipmi); err != nil {
+			if err = checkCMOSClear(i); err != nil {
 				log.Printf("IPMI CMOS clear err: %v", err)
+			}
+
+			dimmInfo, err := ipmi.GetOemIpmiDimmInfo(si)
+			if err == nil {
+				if err = i.SendOemIpmiDimmInfo(dimmInfo); err == nil {
+					log.Printf("Send the information of DIMMs to BMC.")
+				} else {
+					log.Printf("Failed to send the information of DIMMs to BMC: %v.", err)
+				}
+			} else {
+				log.Printf("Failed to get the information of DIMMs: %v.", err)
+			}
+
+			processorInfo, err := ipmi.GetOemIpmiProcessorInfo(si)
+			if err == nil {
+				if err = i.SendOemIpmiProcessorInfo(processorInfo); err == nil {
+					log.Printf("Send the information of processors to BMC.")
+				} else {
+					log.Printf("Failed to send the information of processors to BMC: %v.", err)
+				}
+			} else {
+				log.Printf("Failed to get the information of Processors: %v.", err)
 			}
 		} else {
 			log.Printf("No product name is matched for OEM commands.")
 		}
 	}
-
 }
 
 func addSEL(sequence string) {

@@ -50,6 +50,28 @@ type MemoryDevice struct {
 	LogicalSize                       uint64                              // 4Ch
 }
 
+var MemoryDeviceManufacturer = map[string]uint16{
+	"Micron":   0x2C00,
+	"Samsung":  0xCE00,
+	"Montage":  0x3206,
+	"Kinston":  0x9801,
+	"Elpida":   0xFE02,
+	"Hynix":    0xAD00,
+	"Infineon": 0xC100,
+	"Smart":    0x9401,
+	"Aeneon":   0x5705,
+	"Qimonda":  0x5105,
+	"NEC":      0x1000,
+	"Nanya":    0x0B03,
+	"TI":       0x9700,
+	"IDT":      0xB300,
+	"TEK":      0x3D00,
+	"Agilent":  0xC802,
+	"Inphi":    0xB304,
+	"Intel":    0x8900,
+	"Viking":   0x4001,
+}
+
 // NewMemoryDevice parses a generic Table into MemoryDevice.
 func NewMemoryDevice(t *Table) (*MemoryDevice, error) {
 	if t.Type != TableTypeMemoryDevice {
