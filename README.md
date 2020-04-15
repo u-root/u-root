@@ -12,6 +12,11 @@ u-root embodies four different projects.
 *   Go versions of many standard Linux tools, such as [ls](cmds/core/ls/ls.go),
     [cp](cmds/core/cp/cp.go), or [shutdown](cmds/core/shutdown/shutdown.go). See
     [cmds/core](cmds/core) for most of these.
+    
+*   A way to compile many Go programs into a single Go binary with 
+    [busybox mode](pkg/bb/README.md).
+    
+*   A way to create initramfs (an archive of files) to use with Linux kernels.
 
 *   Go bootloaders that use `kexec` to boot Linux or multiboot kernels such as
     ESXi, Xen, or tboot. They are meant to be used with
@@ -19,15 +24,16 @@ u-root embodies four different projects.
     [GRUB config files](pkg/boot/diskboot) or
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
-
-*   A way to create very small Go programs using
-    [busybox mode](pkg/bb/README.md) or source mode (see below).
-
-*   A way to create initramfs (an archive of files) to use with Linux kernels.
-
+    
 # Creating Initramfs Archives
 
 u-root can create an initramfs in two different modes:
+
+*   bb mode: One busybox-like binary comprising all the Go tools you ask to
+    include. See [here for how it works](pkg/bb/README.md).
+
+    In this mode, u-root copies and rewrites the source of the tools you asked
+    to include to be able to compile everything into one busybox-like binary.
 
 *   source mode includes Go toolchain binaries + simple shell + Go source files
     in the initramfs archive. Tools are compiled from source on the fly by the
@@ -36,12 +42,6 @@ u-root can create an initramfs in two different modes:
     When you try to run a command that is not built, it is compiled first and
     stored in tmpfs. From that point on, when you run the command, you get the
     one in tmpfs. Don't worry: the Go compiler is pretty fast.
-
-*   bb mode: One busybox-like binary comprising all the Go tools you ask to
-    include. See [here for how it works](pkg/bb/README.md).
-
-    In this mode, u-root copies and rewrites the source of the tools you asked
-    to include to be able to compile everything into one busybox-like binary.
 
 # SystemBoot
 
