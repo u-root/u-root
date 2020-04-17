@@ -7,6 +7,7 @@ package diskboot
 import (
 	"log"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -100,13 +101,22 @@ func (p *parser) parseGrubEntry(line string) {
 		return
 	}
 
-	switch f[0] {
-	case "}":
+	matchPrefix := func(pattern, s string) bool {
+		b, err := regexp.MatchString(pattern, s)
+		if err != nil {
+			log.Printf("regexp matching failed: %v", err)
+		}
+		return b
+	}
+
+	prefix := f[0]
+	switch {
+	case prefix == "}":
 		p.finishEntry()
-	case "multiboot":
+	case prefix == "multiboot":
 		p.entry.Type = Multiboot
 		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], f[2:]))
-	case "module":
+	case prefix == "module":
 		var filteredParams []string
 		for _, param := range f {
 			if param != "--nounzip" {
@@ -115,9 +125,9 @@ func (p *parser) parseGrubEntry(line string) {
 		}
 		p.entry.Modules = append(p.entry.Modules,
 			NewModule(filteredParams[1], filteredParams[2:]))
-	case "linux":
+	case matchPrefix("linux.*", prefix):
 		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], f[2:]))
-	case "initrd":
+	case matchPrefix("initrd.*", prefix):
 		p.entry.Modules = append(p.entry.Modules, NewModule(f[1], nil))
 	}
 }
@@ -250,9 +260,9 @@ func ParseConfig(mountPath, configPath string, lines []string) *Config {
 		config: &Config{
 			MountPath:    mountPath,
 			ConfigPath:   configPath,
-			DefaultEntry: -1,
+			DefaultEntry: 0,
 		},
-		defaultIndex: -1,
+		defaultIndex: 0,
 	}
 	p.parseLines(lines)
 

@@ -40,13 +40,13 @@ func getDevice() (*diskboot.Device, error) {
 		return nil, errors.New("No devices found")
 	}
 
-	verbose("Got devices: %#v", devices)
+	verbose("Got devices: %v", devices)
 	var err error
 	deviceIndex := 0
 	if len(devices) > 1 {
 		if *sDeviceIndex == "" {
 			for i, device := range devices {
-				log.Printf("Device #%v: %s", i, device)
+				log.Printf("Device %v: %s", i, device)
 			}
 			return nil, errors.New("multiple devices found - must specify a device index")
 		}
@@ -64,13 +64,13 @@ func getConfig(device *diskboot.Device) (*diskboot.Config, error) {
 		return nil, errors.New("No config found")
 	}
 
-	verbose("Got configs: %#v", configs)
+	verbose("Got configs: %v", configs)
 	var err error
 	configIndex := 0
 	if len(configs) > 1 {
 		if *sConfigIndex == "" {
 			for i, config := range configs {
-				log.Printf("Config #%v: path: %v", i, config.ConfigPath)
+				log.Printf("Config %v: path: %v", i, config.ConfigPath)
 			}
 			return nil, errors.New("Multiple configs found - must specify a config index")
 		}
@@ -83,7 +83,7 @@ func getConfig(device *diskboot.Device) (*diskboot.Config, error) {
 }
 
 func getEntry(config *diskboot.Config) (*diskboot.Entry, error) {
-	verbose("Got entries: %#v", config.Entries)
+	verbose("Got entries: %v", config.Entries)
 	var err error
 	entryIndex := 0
 	if *sEntryIndex != "" {
@@ -95,7 +95,7 @@ func getEntry(config *diskboot.Config) (*diskboot.Entry, error) {
 		entryIndex = config.DefaultEntry
 	} else {
 		for i, entry := range config.Entries {
-			log.Printf("Entry #%v: %#v", i, entry)
+			log.Printf("Entry %v: %v", i, entry)
 		}
 		return nil, errors.New("No entry specified")
 	}

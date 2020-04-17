@@ -26,6 +26,16 @@ type Config struct {
 	DefaultEntry int
 }
 
+func (c Config) String() string {
+	return fmt.Sprintf(`
+		Config {
+			MountPath: %s,
+			ConfigPath: %s,
+			Entries: %v,
+			DefaultEntry: %d
+		}`, c.MountPath, c.ConfigPath, c.Entries, c.DefaultEntry)
+}
+
 // EntryType dictates the method by which kexec should use to load
 // the new kernel
 type EntryType int
@@ -60,6 +70,16 @@ type Entry struct {
 	Name    string
 	Type    EntryType
 	Modules []Module
+}
+
+func (e Entry) String() string {
+	return fmt.Sprintf(`
+		Entry {
+			Name: %s,
+			Type: %s,
+			Modules: %v
+	  }
+  `, e.Name, e.Type.String(), e.Modules)
 }
 
 // KexecLoad calls the appropriate kexec load routines based on the
