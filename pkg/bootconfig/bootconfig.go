@@ -33,6 +33,16 @@ type BootConfig struct {
 	Modules       []string `json:"multiboot_modules,omitempty"`
 }
 
+// NewBootConfig parses a boot configuration in JSON format and returns a
+// BootConfig object.
+func NewBootConfig(data []byte) (*BootConfig, error) {
+	var bootconfig BootConfig
+	if err := json.Unmarshal(data, &bootconfig); err != nil {
+		return nil, err
+	}
+	return &bootconfig, nil
+}
+
 // IsValid returns true if a BootConfig object has valid content, and false
 // otherwise
 func (bc *BootConfig) IsValid() bool {
@@ -62,8 +72,8 @@ func (bc *BootConfig) ID() string {
 	return "BC_" + id + x
 }
 
-// FileNames returns a slice of all filenames in the bootconfig.
-func (bc *BootConfig) FileNames() []string {
+// Files returns a slice of all filepaths in the bootconfig.
+func (bc *BootConfig) Files() []string {
 	var files []string
 	if bc.Kernel != "" {
 		files = append(files, bc.Kernel)
@@ -79,7 +89,8 @@ func (bc *BootConfig) FileNames() []string {
 	}
 	for _, mod := range bc.Modules {
 		if mod != "" {
-			files = append(files, mod)
+			name := strings.Fields(mod)[0]
+			files = append(files, name)
 		}
 	}
 	return files
@@ -101,9 +112,16 @@ func (bc *BootConfig) ChangeFilePaths(newPath string) {
 	if bc.Multiboot != "" {
 		bc.Multiboot = filepath.Join(newPath, filepath.Base(bc.Multiboot))
 	}
-	for j, mod := range bc.Modules {
+	for i, mod := range bc.Modules {
 		if mod != "" {
-			bc.Modules[j] = filepath.Join(newPath, filepath.Base(mod))
+			file := strings.Fields(mod)[0]
+			args := strings.Join(strings.Fields(mod)[1:], " ")
+			file = filepath.Join(newPath, filepath.Base(file))
+			if args != "" {
+				bc.Modules[i] = file + " " + args
+			} else {
+				bc.Modules[i] = file
+			}
 		}
 	}
 }
@@ -123,36 +141,35 @@ func (bc *BootConfig) SetFilePathsPrefix(prefix string) {
 	if bc.Multiboot != "" {
 		bc.Multiboot = filepath.Join(prefix, bc.Multiboot)
 	}
-	for j, mod := range bc.Modules {
+	for i, mod := range bc.Modules {
 		if mod != "" {
-			bc.Modules[j] = filepath.Join(prefix, mod)
+			file := strings.Fields(mod)[0]
+			args := strings.Join(strings.Fields(mod)[1:], " ")
+			file = filepath.Join(prefix, file)
+			if args != "" {
+				bc.Modules[i] = file + " " + args
+			} else {
+				bc.Modules[i] = file
+			}
 		}
 	}
-}
-
-func (bc *BootConfig) bytestream() []byte {
-	b := bc.Name + bc.Kernel + bc.Initramfs + bc.KernelArgs + bc.DeviceTree + bc.Multiboot + bc.MultibootArgs
-	for _, module := range bc.Modules {
-		b = b + module
-	}
-	return []byte(b)
 }
 
 // Boot tries to boot the kernel with optional initramfs and command line
 // options. If a device-tree is specified, that will be used too
 func (bc *BootConfig) Boot() error {
 	crypto.TryMeasureData(crypto.BootConfigPCR, bc.bytestream(), "bootconfig")
-	crypto.TryMeasureFiles(bc.FileNames()...)
+	crypto.TryMeasureFiles(bc.Files()...)
 	if bc.Kernel != "" {
 		kernel, err := os.Open(bc.Kernel)
 		if err != nil {
-			return fmt.Errorf("can't open kernel file for measurement: %v", err)
+			return err
 		}
 		var initramfs *os.File
 		if bc.Initramfs != "" {
 			initramfs, err = os.Open(bc.Initramfs)
 			if err != nil {
-				return fmt.Errorf("can't open initramfs file for measurement: %v", err)
+				return err
 			}
 		}
 		defer func() {
@@ -168,29 +185,31 @@ func (bc *BootConfig) Boot() error {
 				}
 			}
 		}()
-		if err := kexec.FileLoad(kernel, initramfs, bc.KernelArgs); err != nil {
-			return fmt.Errorf("kexec.FileLoad() failed: %v", err)
+
+		kexec.FileLoad(kernel, initramfs, bc.KernelArgs)
+		if err != nil {
+			return err
 		}
 	} else if bc.Multiboot != "" {
 		mbkernel, err := os.Open(bc.Multiboot)
 		if err != nil {
-			log.Printf("Error opening multiboot kernel file: %v", err)
 			return err
 		}
 		defer mbkernel.Close()
 
 		// check multiboot header
 		if err := multiboot.Probe(mbkernel); err != nil {
-			log.Printf("Error parsing multiboot header: %v", err)
-			return err
+			return fmt.Errorf("invalid multiboot header: %v", err)
 		}
 		modules, err := multiboot.OpenModules(bc.Modules)
 		if err != nil {
 			return err
 		}
 		defer modules.Close()
-		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
-			return fmt.Errorf("kexec.Load() error: %v", err)
+
+		multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil)
+		if err != nil {
+			return fmt.Errorf("loading multiboot kernel failed: %v", err)
 		}
 	}
 	err := kexec.Reboot()
@@ -200,12 +219,10 @@ func (bc *BootConfig) Boot() error {
 	return err
 }
 
-// NewBootConfig parses a boot configuration in JSON format and returns a
-// BootConfig object.
-func NewBootConfig(data []byte) (*BootConfig, error) {
-	var bootconfig BootConfig
-	if err := json.Unmarshal(data, &bootconfig); err != nil {
-		return nil, err
+func (bc *BootConfig) bytestream() []byte {
+	b := bc.Name + bc.Kernel + bc.Initramfs + bc.KernelArgs + bc.DeviceTree + bc.Multiboot + bc.MultibootArgs
+	for _, module := range bc.Modules {
+		b = b + module
 	}
-	return &bootconfig, nil
+	return []byte(b)
 }

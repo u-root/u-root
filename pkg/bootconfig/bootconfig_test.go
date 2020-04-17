@@ -53,6 +53,60 @@ func TestID(t *testing.T) {
 	bc := BootConfig{
 		Name: "Slash and space should not \\ appear /here",
 	}
-	id := bc.ID()
-	t.Log(id)
+	require.NotContains(t, bc.ID(), "/", "\\")
+}
+
+func TestFiles(t *testing.T) {
+	bc := BootConfig{
+		Kernel:    "path/to/kernel",
+		Initramfs: "path/to/initramfs",
+		Multiboot: "path/to/multibootkernel",
+		Modules: []string{
+			"path/to/mod1",
+			"path/to/mod2 -arg1 -arg2 -arg3",
+			"path/to/mod3 arg1",
+		},
+	}
+	names := bc.Files()
+	require.Equal(t, []string{"path/to/kernel", "path/to/initramfs", "path/to/multibootkernel", "path/to/mod1", "path/to/mod2", "path/to/mod3"}, names)
+}
+
+func TestChangeFilePaths(t *testing.T) {
+	bc := BootConfig{
+		Kernel:    "path/to/kernel",
+		Initramfs: "path/to/initramfs",
+		Multiboot: "path/to/multibootkernel",
+		Modules: []string{
+			"path/to/mod1",
+			"path/to/mod2 -arg1 -arg2 -arg3",
+			"path/to/mod3 arg1",
+		},
+	}
+	bc.ChangeFilePaths("new/path/with/same/base/")
+	require.Equal(t, "new/path/with/same/base/kernel", bc.Kernel)
+	require.Equal(t, "new/path/with/same/base/initramfs", bc.Initramfs)
+	require.Equal(t, "new/path/with/same/base/multibootkernel", bc.Multiboot)
+	require.Equal(t, "new/path/with/same/base/mod1", bc.Modules[0])
+	require.Equal(t, "new/path/with/same/base/mod2 -arg1 -arg2 -arg3", bc.Modules[1])
+	require.Equal(t, "new/path/with/same/base/mod3 arg1", bc.Modules[2])
+}
+
+func TestSetFilePathsPrefix(t *testing.T) {
+	bc := BootConfig{
+		Kernel:    "path/to/kernel",
+		Initramfs: "path/to/initramfs",
+		Multiboot: "path/to/multibootkernel",
+		Modules: []string{
+			"path/to/mod1",
+			"path/to/mod2 -arg1 -arg2 -arg3",
+			"path/to/mod3 arg1",
+		},
+	}
+	bc.SetFilePathsPrefix("prefix")
+	require.Equal(t, "prefix/path/to/kernel", bc.Kernel)
+	require.Equal(t, "prefix/path/to/initramfs", bc.Initramfs)
+	require.Equal(t, "prefix/path/to/multibootkernel", bc.Multiboot)
+	require.Equal(t, "prefix/path/to/mod1", bc.Modules[0])
+	require.Equal(t, "prefix/path/to/mod2 -arg1 -arg2 -arg3", bc.Modules[1])
+	require.Equal(t, "prefix/path/to/mod3 arg1", bc.Modules[2])
 }
