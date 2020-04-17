@@ -320,7 +320,7 @@ func getBootFiles(cfg *Stconfig, prefix string) (map[string][]string, error) {
 	bootFiles := make(map[string][]string)
 	for _, bc := range cfg.BootConfigs {
 		files := make([]string, 0)
-		for _, file := range bc.FileNames() {
+		for _, file := range bc.Files() {
 			file = filepath.Join(prefix, file)
 			if _, err := os.Stat(file); err != nil {
 				return nil, err
@@ -418,7 +418,7 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 
 	for i, bc := range cfg.BootConfigs {
 		dirName := bc.ID()
-		for _, file := range bc.FileNames() {
+		for _, file := range bc.Files() {
 			fileName := filepath.Base(file)
 			dstPath := filepath.Join(dir, dirName, fileName)
 			srcPath := filepath.Join(origDir, file)
