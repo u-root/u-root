@@ -35,3 +35,26 @@ func TestIO(t *testing.T) {
 		t.Fatal(`expected "UART TEST", got error: `, err)
 	}
 }
+
+// TestCMOS runs a series of cmos read and write commands and then checks if the changes to CMOS are reflected.
+func TestCMOS(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "ShellScript",
+		TestCmds: []string{
+			"io cw 14 1 cr 14 cw 14 0 cr 14",
+			"shutdown -h",
+		},
+	})
+	defer cleanup()
+
+	if err := q.Expect("0x01"); err != nil {
+		t.Fatal(`expected "0x01", got error: `, err)
+	}
+	if err := q.Expect("0x00"); err != nil {
+		t.Fatal(`expected "0x00", got error: `, err)
+	}
+}

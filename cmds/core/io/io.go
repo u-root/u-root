@@ -9,7 +9,9 @@
 //     io (w{b,w,l,q} address value)...
 //     # x86 only:
 //     io (in{b,w,l} address)
-//     io (out{b,w,l} address value)...
+//     io (out{b,w,l} address value)
+//     io (cr index}
+//     io {cw index value}...
 //
 // Description:
 //     io lets you read/write 1/2/4/8-bytes to memory with the {r,w}{b,w,l,q}
@@ -17,6 +19,7 @@
 //
 //     On x86 platforms, {in,out}{b,w,l} allow for port io.
 //
+//     Use cr / cw to write to cmos registers
 // Examples:
 //     # Read 8-bytes from address 0x10000 and 0x10000
 //     io rq 0x10000 rq 0x10008
