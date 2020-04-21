@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -278,6 +279,42 @@ func TestMvNoClobber(t *testing.T) {
 		if _, err := os.Lstat(filepath.Join(d, old.n)); err != nil {
 			t.Error("File was copied but not moved.")
 		}
+	}
+}
+
+func TestCrossFileSystems(t *testing.T) {
+	// The namespace creator does not have a teardown capability and it looked a bit
+	// tricky to add one.
+	if os.Getuid() != 0 {
+		t.Skip("Skipping, not root")
+	}
+	d1, err := ioutil.TempDir("", "mvfrom")
+	if err != nil {
+		t.Fatalf("from dir: got %v, want nil", err)
+	}
+	defer os.RemoveAll(d1)
+	m1, err := mount.Mount("tmpfs", d1, "tmpfs", "", 0)
+	if err != nil {
+		t.Fatalf("mount tmpfs on d1: got %v, want nil", err)
+	}
+	defer m1.Unmount(0)
+	d2, err := ioutil.TempDir("", "mvto")
+	if err != nil {
+		t.Fatalf("from dir: got %v, want nil", err)
+	}
+	defer os.RemoveAll(d2)
+	srcDir := filepath.Join(d1, "dir")
+	if err := os.Mkdir(srcDir, 0755); err != nil {
+		t.Fatalf("%s: got %v, want nil", srcDir, err)
+	}
+	srcFile := filepath.Join(srcDir, "file")
+	f, err := os.Create(srcFile)
+	if err != nil {
+		t.Fatalf("Create %s: got %v, want nil", srcFile, err)
+	}
+	f.Close()
+	if err := mv([]string{srcFile, d2}, true, false, false); err != nil {
+		t.Fatalf("%v -> %v: got %v, want nil", srcFile, d2, err)
 	}
 }
 

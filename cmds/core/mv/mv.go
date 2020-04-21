@@ -18,6 +18,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/u-root/u-root/pkg/cp"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -32,9 +35,8 @@ func usage() {
 	os.Exit(1)
 }
 
-func moveFile(source string, dest string) error {
-
-	if *noClobber {
+func moveFile(source string, dest string, noclobber, update bool) error {
+	if noclobber {
 		_, err := os.Lstat(dest)
 		if !os.IsNotExist(err) {
 			// This is either a real error if something unexpected happen during Lstat or nil
@@ -42,7 +44,7 @@ func moveFile(source string, dest string) error {
 		}
 	}
 
-	if *update {
+	if update {
 		sourceInfo, err := os.Lstat(source)
 		if err != nil {
 			return err
@@ -59,17 +61,23 @@ func moveFile(source string, dest string) error {
 			return nil
 		}
 	}
-
 	if err := os.Rename(source, dest); err != nil {
-		return err
+		// Check for EXDEV; if so, we'll do a CopyTree
+		uerr, ok := err.(*os.LinkError)
+		if !ok || uerr.Unwrap() != unix.EXDEV {
+			return err
+		}
+		if err := cp.CopyTree(source, dest); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func mv(files []string, todir bool) error {
+func mv(files []string, todir, noclobber, update bool) error {
 	if len(files) == 2 && !todir {
 		// Rename/move a single file
-		if err := moveFile(files[0], files[1]); err != nil {
+		if err := moveFile(files[0], files[1], noclobber, update); err != nil {
 			return err
 		}
 	} else {
@@ -77,7 +85,7 @@ func mv(files []string, todir bool) error {
 		destdir := files[len(files)-1]
 		for _, f := range files[:len(files)-1] {
 			newPath := filepath.Join(destdir, filepath.Base(f))
-			if err := moveFile(f, newPath); err != nil {
+			if err := moveFile(f, newPath, noclobber, update); err != nil {
 				return err
 			}
 		}
@@ -103,7 +111,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := mv(files, todir); err != nil {
+	if err := mv(files, todir, *noClobber, *update); err != nil {
 		log.Fatalf("%v", err)
 	}
 }
