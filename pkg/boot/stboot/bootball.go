@@ -166,7 +166,7 @@ func (ball *BootBall) Dir() string {
 
 // GetBootConfigByIndex returns the Bootconfig at index from the BootBall's configs arrey.
 func (ball *BootBall) GetBootConfigByIndex(index int) (*bootconfig.BootConfig, error) {
-	bc, err := ball.config.getBootConfig(index)
+	bc, err := ball.config.GetBootConfig(index)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +302,7 @@ func getConfig(src string) (*Stconfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg, err := stconfigFromBytes(cfgBytes)
+	cfg, err := StconfigFromBytes(cfgBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,7 @@ func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
 	}
 
 	dstPath = filepath.Join(dir, ConfigName)
-	bytes, err := cfg.bytes()
+	bytes, err := cfg.Bytes()
 	if err != nil {
 		return "", err
 	}

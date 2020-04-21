@@ -20,8 +20,8 @@ type Stconfig struct {
 	RootCertPath string `json:"root_cert"`
 }
 
-// StconfigFromBytes parses a Stcinfig from a byte slice
-func stconfigFromBytes(data []byte) (*Stconfig, error) {
+// StconfigFromBytes parses a Stconfig from a byte slice
+func StconfigFromBytes(data []byte) (*Stconfig, error) {
 	var config Stconfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func stconfigFromBytes(data []byte) (*Stconfig, error) {
 }
 
 // Bytes serializes a Stconfig stuct into a byte slice
-func (cfg *Stconfig) bytes() ([]byte, error) {
+func (cfg *Stconfig) Bytes() ([]byte, error) {
 	buf, err := json.Marshal(cfg)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (cfg *Stconfig) IsValid() bool {
 
 // GetBootConfig returns the i-th boot configuration from the manifest, or an
 // error if an invalid index is passed.
-func (cfg *Stconfig) getBootConfig(index int) (*bootconfig.BootConfig, error) {
+func (cfg *Stconfig) GetBootConfig(index int) (*bootconfig.BootConfig, error) {
 	if index < 0 || index >= len(cfg.BootConfigs) {
 		return nil, fmt.Errorf("invalid index: not in range: %d", index)
 	}
