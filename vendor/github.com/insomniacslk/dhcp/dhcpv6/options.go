@@ -54,7 +54,7 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	case OptionElapsedTime:
 		opt, err = parseOptElapsedTime(optData)
 	case OptionRelayMsg:
-		opt, err = ParseOptRelayMsg(optData)
+		opt, err = parseOptRelayMsg(optData)
 	case OptionStatusCode:
 		opt, err = ParseOptStatusCode(optData)
 	case OptionUserClass:
@@ -64,17 +64,17 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	case OptionVendorOpts:
 		opt, err = ParseOptVendorOpts(optData)
 	case OptionInterfaceID:
-		opt, err = ParseOptInterfaceId(optData)
+		opt, err = parseOptInterfaceID(optData)
 	case OptionDNSRecursiveNameServer:
 		opt, err = parseOptDNS(optData)
 	case OptionDomainSearchList:
 		opt, err = parseOptDomainSearchList(optData)
 	case OptionIAPD:
-		opt, err = ParseOptIAForPrefixDelegation(optData)
+		opt, err = ParseOptIAPD(optData)
 	case OptionIAPrefix:
 		opt, err = ParseOptIAPrefix(optData)
 	case OptionRemoteID:
-		opt, err = ParseOptRemoteId(optData)
+		opt, err = ParseOptRemoteID(optData)
 	case OptionFQDN:
 		opt, err = ParseOptFQDN(optData)
 	case OptionBootfileURL:
@@ -87,6 +87,10 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		var o OptNetworkInterfaceID
 		err = o.FromBytes(optData)
 		opt = &o
+	case OptionDHCPv4Msg:
+		opt, err = ParseOptDHCPv4Msg(optData)
+	case OptionDHCP4oDHCP6Server:
+		opt, err = ParseOptDHCP4oDHCP6Server(optData)
 	case Option4RD:
 		opt, err = ParseOpt4RD(optData)
 	case Option4RDMapRule:

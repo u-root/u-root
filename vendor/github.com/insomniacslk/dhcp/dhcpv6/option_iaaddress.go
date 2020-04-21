@@ -8,6 +8,26 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
+// AddressOptions are options valid for the IAAddress option field.
+//
+// RFC 8415 Appendix C lists only the Status Code option as valid.
+type AddressOptions struct {
+	Options
+}
+
+// Status returns the status code associated with this option.
+func (ao AddressOptions) Status() *OptStatusCode {
+	opt := ao.Options.GetOne(OptionStatusCode)
+	if opt == nil {
+		return nil
+	}
+	sc, ok := opt.(*OptStatusCode)
+	if !ok {
+		return nil
+	}
+	return sc
+}
+
 // OptIAAddress represents an OptionIAAddr.
 //
 // This module defines the OptIAAddress structure.
@@ -16,7 +36,7 @@ type OptIAAddress struct {
 	IPv6Addr          net.IP
 	PreferredLifetime time.Duration
 	ValidLifetime     time.Duration
-	Options           Options
+	Options           AddressOptions
 }
 
 // Code returns the option's code
@@ -27,7 +47,7 @@ func (op *OptIAAddress) Code() OptionCode {
 // ToBytes serializes the option and returns it as a sequence of bytes
 func (op *OptIAAddress) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
-	buf.WriteBytes(op.IPv6Addr.To16())
+	write16(buf, op.IPv6Addr)
 
 	t1 := Duration{op.PreferredLifetime}
 	t1.Marshal(buf)
@@ -39,7 +59,7 @@ func (op *OptIAAddress) ToBytes() []byte {
 }
 
 func (op *OptIAAddress) String() string {
-	return fmt.Sprintf("OptIAAddress{ipv6addr=%v, preferredlifetime=%v, validlifetime=%v, options=%v}",
+	return fmt.Sprintf("IAAddress: IP=%v PreferredLifetime=%v ValidLifetime=%v Options=%v",
 		op.IPv6Addr, op.PreferredLifetime, op.ValidLifetime, op.Options)
 }
 

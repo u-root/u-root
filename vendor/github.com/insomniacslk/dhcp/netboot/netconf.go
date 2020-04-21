@@ -41,19 +41,11 @@ func GetNetConfFromPacketv6(d *dhcpv6.Message) (*NetConf, error) {
 	}
 	netconf := NetConf{}
 
-	// get IP configuration
-	iaaddrs := make([]*dhcpv6.OptIAAddress, 0)
-	for _, o := range iana.Options {
-		if o.Code() == dhcpv6.OptionIAAddr {
-			iaaddrs = append(iaaddrs, o.(*dhcpv6.OptIAAddress))
-		}
-	}
-	netmask := net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::"))
-	for _, iaaddr := range iaaddrs {
+	for _, iaaddr := range iana.Options.Addresses() {
 		netconf.Addresses = append(netconf.Addresses, AddrConf{
 			IPNet: net.IPNet{
 				IP:   iaaddr.IPv6Addr,
-				Mask: netmask,
+				Mask: net.CIDRMask(64, 128),
 			},
 			PreferredLifetime: iaaddr.PreferredLifetime,
 			ValidLifetime:     iaaddr.ValidLifetime,
@@ -70,7 +62,6 @@ func GetNetConfFromPacketv6(d *dhcpv6.Message) (*NetConf, error) {
 	if domains != nil {
 		netconf.DNSSearchList = domains.Labels
 	}
-
 	return &netconf, nil
 }
 

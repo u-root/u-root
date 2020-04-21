@@ -1,42 +1,39 @@
 package dhcpv6
 
-// This module defines the OptRelayMsg structure.
+// This module defines the optRelayMsg structure.
 // https://www.ietf.org/rfc/rfc3315.txt
 
 import (
 	"fmt"
 )
 
-type OptRelayMsg struct {
-	relayMessage DHCPv6
+// OptRelayMessage embeds a message in a relay option.
+func OptRelayMessage(msg DHCPv6) Option {
+	return &optRelayMsg{Msg: msg}
 }
 
-func (op *OptRelayMsg) Code() OptionCode {
+type optRelayMsg struct {
+	Msg DHCPv6
+}
+
+func (op *optRelayMsg) Code() OptionCode {
 	return OptionRelayMsg
 }
 
-func (op *OptRelayMsg) ToBytes() []byte {
-	return op.relayMessage.ToBytes()
+func (op *optRelayMsg) ToBytes() []byte {
+	return op.Msg.ToBytes()
 }
 
-func (op *OptRelayMsg) RelayMessage() DHCPv6 {
-	return op.relayMessage
+func (op *optRelayMsg) String() string {
+	return fmt.Sprintf("RelayMsg: %v", op.Msg)
 }
 
-func (op *OptRelayMsg) SetRelayMessage(relayMessage DHCPv6) {
-	op.relayMessage = relayMessage
-}
-
-func (op *OptRelayMsg) String() string {
-	return fmt.Sprintf("OptRelayMsg{relaymsg=%v}", op.relayMessage)
-}
-
-// build an OptRelayMsg structure from a sequence of bytes.
+// build an optRelayMsg structure from a sequence of bytes.
 // The input data does not include option code and length bytes.
-func ParseOptRelayMsg(data []byte) (*OptRelayMsg, error) {
+func parseOptRelayMsg(data []byte) (*optRelayMsg, error) {
 	var err error
-	var opt OptRelayMsg
-	opt.relayMessage, err = FromBytes(data)
+	var opt optRelayMsg
+	opt.Msg, err = FromBytes(data)
 	if err != nil {
 		return nil, err
 	}
