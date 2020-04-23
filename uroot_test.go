@@ -156,8 +156,23 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "MIPS bb build",
+			env:  []string{"GOARCH=mips"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
 			name: "MIPSLE bb build",
 			env:  []string{"GOARCH=mipsle"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPS64 bb build",
+			env:  []string{"GOARCH=mips64"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPS64LE bb build",
+			env:  []string{"GOARCH=mips64le"},
 			args: []string{"-build=bb", "all"},
 		},
 		{
