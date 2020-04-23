@@ -20,6 +20,7 @@ import (
 	"os"
 	"log"
 	"fmt"
+	"github.com/u-root/u-root/pkg/cmos"
 	"github.com/u-root/u-root/pkg/memio"
 )
 
@@ -32,49 +33,32 @@ func usage() {
 	os.Exit(1)
 }
 
-func read(reg uint64, data memio.UintN) error {
-	regVal := memio.Uint8(reg)
-	if err := memio.Out(0x70, &regVal); err != nil {
-		return err
+func processRegStr(regStr string) uint64 {
+	reg, err := strconv.ParseUint(regStr, 10, 7)
+	if err != nil || reg < 14 {
+		log.Fatal("accessible bytes are only between 14-127")
 	}
-	return memio.In(0x71, data)
-}
-
-func write(reg uint64, data memio.UintN) error {
-	regVal := memio.Uint8(reg)
-	if err := memio.Out(0x70, &regVal); err != nil {
-		return err
-	}
-	return memio.Out(0x71, data)
+	return reg
 }
 
 func main() {
-	if len(os.Args) == 3 && os.Args[1] == "read" {
-		val, regStr := memio.Uint8(0), os.Args[2]
+	switch os.Args[1] {
+	case "read":
+		if len(os.Args) != 3 {
+			usage()
+		}
+		val := memio.Uint8(0)
 		data := &val
-		reg, err := strconv.ParseUint(regStr, 10, 7)
-		if err != nil {
-			fmt.Println("bytes above 127 inaccessable")
-			log.Fatal(err)
-		}
-		if reg < 14 {
-			fmt.Println("can't read bytes below 14")
-			os.Exit(1)
-		}
-		if err := read(reg, data); err != nil {
+		reg := processRegStr(os.Args[2])
+		if err := cmos.Read(reg, data); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("%s\n", data)
-	} else if len(os.Args) == 4 && os.Args[1] == "write" {
-		reg, err := strconv.ParseUint(os.Args[2], 10, 7)
-		if err != nil {
-			fmt.Println("bytes above 127 inaccessable")
-			log.Fatal(err)
+	case "write":
+		if len(os.Args) != 4 {
+			usage()
 		}
-		if reg < 14 {
-			fmt.Println("can't write to bytes below 14")
-			os.Exit(1)
-		}
+		reg := processRegStr(os.Args[2])
 		value, err := strconv.ParseUint(os.Args[3], 10, 8)
 		if err != nil {
 			log.Fatal(err)
@@ -82,10 +66,10 @@ func main() {
 
 		val := memio.Uint8(int8(value))
 		data := &val
-		if err := write(reg, data); err != nil {
+		if err := cmos.Write(reg, data); err != nil {
 			log.Fatal(err)
 		}
-	} else {
+	default:
 		usage()
 	}
 }
