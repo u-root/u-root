@@ -156,6 +156,11 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "MIPSLE bb build",
+			env:  []string{"GOARCH=mipsle"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
 			name: "ARM7 bb build",
 			env:  []string{"GOARCH=arm", "GOARM=7"},
 			args: []string{"-build=bb", "all"},
