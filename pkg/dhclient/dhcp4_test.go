@@ -103,3 +103,65 @@ func TestBoot(t *testing.T) {
 		})
 	}
 }
+
+func TestISCSIBoot(t *testing.T) {
+	for i, tt := range []struct {
+		message    *dhcpv4.DHCPv4
+		want       *net.TCPAddr
+		wantVolume string
+		err        error
+	}{
+		{
+			message: mustNew(t),
+			err:     ErrNoRootPath,
+		},
+		{
+			message: mustNew(t,
+				withNetbootInfo("pxelinux.0", "10.0.0.1"),
+			),
+			err: ErrNoRootPath,
+		},
+		{
+			message: mustNew(t,
+				dhcpv4.WithOption(dhcpv4.OptRootPath("iscsi:10.0.0.1::3260::iqn.2016-01.com.example:foo")),
+			),
+			want: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 3260,
+			},
+			wantVolume: "iqn.2016-01.com.example:foo",
+		},
+		{
+			message: mustNew(t,
+				withNetbootInfo("iscsi:10.0.0.1::3260::iqn.2016-01.com.example:foo", ""),
+			),
+			want: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 3260,
+			},
+			wantVolume: "iqn.2016-01.com.example:foo",
+		},
+		{
+			message: mustNew(t,
+				withNetbootInfo("iscsi:90.90.90.90::3261::iqn.2018-02.com.example:foo", ""),
+				dhcpv4.WithOption(dhcpv4.OptRootPath("iscsi:10.0.0.1::3260::iqn.2016-01.com.example:foo")),
+			),
+			want: &net.TCPAddr{
+				IP:   net.ParseIP("10.0.0.1"),
+				Port: 3260,
+			},
+			wantVolume: "iqn.2016-01.com.example:foo",
+		},
+	} {
+		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {
+			p := NewPacket4(nil, tt.message)
+			got, gotVolume, err := p.ISCSIBoot()
+			if err != tt.err {
+				t.Errorf("ISCSIBoot() = %v, want %v", err, tt.err)
+			}
+			if !reflect.DeepEqual(got, tt.want) || gotVolume != tt.wantVolume {
+				t.Errorf("ISCSIBoot() = (%s, %s), want (%s, %s)", got, gotVolume, tt.want, tt.wantVolume)
+			}
+		})
+	}
+}

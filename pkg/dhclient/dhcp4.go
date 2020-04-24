@@ -138,20 +138,31 @@ var (
 	// ErrNoBootFile represents that no pxe boot file was found.
 	ErrNoBootFile = errors.New("no boot file name present in DHCP message")
 
+	// ErrNoRootPath means no root path option was found in DHCP message.
+	ErrNoRootPath = errors.New("no root path in DHCP message")
+
 	// ErrNoServerHostName represents that no pxe boot server was found.
 	ErrNoServerHostName = errors.New("no server host name present in DHCP message")
 )
 
-// Boot returns the boot file assigned.
-func (p *Packet4) Boot() (*url.URL, error) {
+func (p *Packet4) bootfilename() string {
 	// Look for dhcp option presence first, then legacy BootFileName in header.
 	bootFileName := p.P.BootFileNameOption()
 	bootFileName = strings.TrimRight(bootFileName, "\x00")
-	if bootFileName == "" {
-		if len(p.P.BootFileName) == 0 {
-			return nil, ErrNoBootFile
-		}
-		bootFileName = p.P.BootFileName
+	if len(bootFileName) > 0 {
+		return bootFileName
+	}
+	if len(p.P.BootFileName) >= 0 {
+		return p.P.BootFileName
+	}
+	return ""
+}
+
+// Boot returns the boot file assigned.
+func (p *Packet4) Boot() (*url.URL, error) {
+	bootFileName := p.bootfilename()
+	if len(bootFileName) == 0 {
+		return nil, ErrNoBootFile
 	}
 
 	// While the default is tftp, servers may specify HTTP or FTP URIs.
@@ -187,10 +198,14 @@ func (p *Packet4) Boot() (*url.URL, error) {
 // RFC 4173.
 func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
 	rp := p.P.RootPath()
-	if len(rp) == 0 {
-		return nil, "", fmt.Errorf("no root path in DHCP message")
+	if len(rp) > 0 {
+		return parseISCSIURI(rp)
 	}
-	return parseISCSIURI(rp)
+	bootfilename := p.bootfilename()
+	if len(bootfilename) > 0 && strings.HasPrefix(bootfilename, "iscsi:") {
+		return parseISCSIURI(bootfilename)
+	}
+	return nil, "", ErrNoRootPath
 }
 
 // Response returns the DHCP response
