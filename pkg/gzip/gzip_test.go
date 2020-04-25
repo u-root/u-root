@@ -6,67 +6,57 @@ package gzip
 
 import (
 	"bytes"
-	"io"
+	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
-func Test_Compress(t *testing.T) {
-	type args struct {
-		r         io.Reader
+func TestCompress(t *testing.T) {
+	tests := []struct {
+		name      string
+		plain     string
 		level     int
 		blocksize int
 		processes int
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantW   []byte
-		wantErr bool
 	}{
 		{
-			name: "Basic Compress",
-			args: args{
-				r:         bytes.NewReader([]byte("Test Test Test")),
-				level:     9,
-				blocksize: 128,
-				processes: 1,
-			},
-			wantW:   []byte("\x1f\x8b\b\x00\x00\tn\x88\x02\xff\nI-.Q\x80\x13\x00\x00\x00\x00\xff\xff\x01\x00\x00\xff\xffG?\xfc\xcc\x0e\x00\x00\x00"),
-			wantErr: false,
+			name:      "Basic Compress",
+			plain:     "Test Test Test",
+			level:     9,
+			blocksize: 128,
+			processes: 1,
 		},
 		{
-			name: "Zeros",
-			args: args{
-				r:         bytes.NewReader([]byte("000000000000000000000000000000000000000000000000000")),
-				level:     9,
-				blocksize: 128,
-				processes: 1,
-			},
-			wantW:   []byte("\x1f\x8b\b\x00\x00\tn\x88\x02\xff2 \x1d\x00\x00\x00\x00\xff\xff\x01\x00\x00\xff\xffR6\xe3\xeb3\x00\x00\x00"),
-			wantErr: false,
+			name:      "Zeplainos",
+			plain:     "000000000000000000000000000000000000000000000000000",
+			level:     9,
+			blocksize: 128,
+			processes: 1,
 		},
 		{
-			name: "Nil",
-			args: args{
-				r:         bytes.NewReader([]byte(nil)),
-				level:     1,
-				blocksize: 128,
-				processes: 1,
-			},
-			wantW:   []byte("\x1f\x8b\b\x00\x00\tn\x88\x04\xff\x00\x00\x00\xff\xff\x01\x00\x00\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00"),
-			wantErr: false,
+			name:      "Empty stplaining",
+			plain:     "",
+			level:     1,
+			blocksize: 128,
+			processes: 1,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := bytes.Buffer{}
-			if err := Compress(tt.args.r, &w, tt.args.level, tt.args.blocksize, tt.args.processes); (err != nil) != tt.wantErr {
-				t.Errorf("Compress() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			var ciphertext bytes.Buffer
+			if err := Compress(strings.NewReader(tt.plain), &ciphertext, tt.level, tt.blocksize, tt.processes); err != nil {
+				t.Fatalf("Compress() error = %v, want nil", err)
 			}
-			gotW := w.Bytes()
-			if !bytes.Equal(gotW, tt.wantW) {
-				t.Errorf("Compress() = %q, want %q", gotW, tt.wantW)
+
+			var plaintext strings.Builder
+			if err := Decompress(&ciphertext, &plaintext, tt.blocksize, tt.processes); err != nil {
+				t.Fatalf("Decompress() = %v, want nil", err)
+			}
+
+			got := plaintext.String()
+			if !cmp.Equal(got, tt.plain) {
+				t.Errorf("Compress() = %q, want %q -- diff\n%s", got, tt.plain, cmp.Diff(got, tt.plain))
 			}
 		})
 	}
