@@ -32,8 +32,12 @@ func WithNetboot(d DHCPv6) {
 // WithFQDN adds a fully qualified domain name option to the packet
 func WithFQDN(flags uint8, domainname string) Modifier {
 	return func(d DHCPv6) {
-		ofqdn := OptFQDN{Flags: flags, DomainName: domainname}
-		d.AddOption(&ofqdn)
+		d.UpdateOption(&OptFQDN{
+			Flags: flags,
+			DomainName: &rfc1035label.Labels{
+				Labels: []string{domainname},
+			},
+		})
 	}
 }
 
@@ -63,7 +67,7 @@ func WithIANA(addrs ...OptIAAddress) Modifier {
 				iana = &OptIANA{}
 			}
 			for _, addr := range addrs {
-				iana.AddOption(&addr)
+				iana.Options.Add(&addr)
 			}
 			msg.UpdateOption(iana)
 		}
@@ -77,7 +81,7 @@ func WithIAID(iaid [4]byte) Modifier {
 			iana := msg.Options.OneIANA()
 			if iana == nil {
 				iana = &OptIANA{
-					Options: Options{},
+					Options: IdentityOptions{Options: []Option{}},
 				}
 			}
 			copy(iana.IaId[:], iaid[:])
@@ -116,6 +120,35 @@ func WithRequestedOptions(codes ...OptionCode) Modifier {
 				oro.Add(c)
 			}
 			d.UpdateOption(OptRequestedOption(oro...))
+		}
+	}
+}
+
+// WithDHCP4oDHCP6Server adds or updates an OptDHCP4oDHCP6Server
+func WithDHCP4oDHCP6Server(addrs ...net.IP) Modifier {
+	return func(d DHCPv6) {
+		opt := OptDHCP4oDHCP6Server{
+			DHCP4oDHCP6Servers: addrs,
+		}
+		d.UpdateOption(&opt)
+	}
+}
+
+// WithIAPD adds or updates an IAPD option with the provided IAID and
+// prefix options to a DHCPv6 packet.
+func WithIAPD(iaid [4]byte, prefixes ...*OptIAPrefix) Modifier {
+	return func(d DHCPv6) {
+		if msg, ok := d.(*Message); ok {
+			opt := msg.Options.OneIAPD()
+			if opt == nil {
+				opt = &OptIAPD{}
+			}
+			copy(opt.IaId[:], iaid[:])
+
+			for _, prefix := range prefixes {
+				opt.Options.Add(prefix)
+			}
+			d.UpdateOption(opt)
 		}
 	}
 }

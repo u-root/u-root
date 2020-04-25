@@ -8,17 +8,11 @@ import (
 	"github.com/jsimonetti/rtnetlink"
 )
 
-// RouteAdd adds infomation about a network route.
-func (c *Conn) RouteAdd(ifc *net.Interface, dst net.IPNet, gw net.IP) (err error) {
-	return c.RouteAddSrc(ifc, dst, nil, gw)
-}
-
-// RouteAddSrc adds infomation about a network route with the given destination
-// and source. If source is `nil` it's ignored.
-func (c *Conn) RouteAddSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (err error) {
+// generating route message
+func genRouteMessage(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (rm *rtnetlink.RouteMessage, err error) {
 	af, err := addrFamily(dst.IP)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Determine scope
@@ -60,7 +54,45 @@ func (c *Conn) RouteAddSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw
 		SrcLength:  uint8(srclen),
 		Attributes: attr,
 	}
-	return c.Conn.Route.Add(tx)
+	return tx, nil
+}
+
+// RouteAdd adds infomation about a network route.
+func (c *Conn) RouteAdd(ifc *net.Interface, dst net.IPNet, gw net.IP) (err error) {
+	rm, err := genRouteMessage(ifc, dst, nil, gw)
+	if err != nil {
+		return err
+	}
+	return c.Conn.Route.Add(rm)
+}
+
+// RouteReplace adds or replace information about a network route.
+func (c *Conn) RouteReplace(ifc *net.Interface, dst net.IPNet, gw net.IP) (err error) {
+	rm, err := genRouteMessage(ifc, dst, nil, gw)
+	if err != nil {
+		return err
+	}
+	return c.Conn.Route.Replace(rm)
+}
+
+// RouteReplaceSrc adds or replace infomation about a network route with the given destination
+// and source. If source is `nil` it's ignored.
+func (c *Conn) RouteReplaceSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (err error) {
+	rm, err := genRouteMessage(ifc, dst, src, gw)
+	if err != nil {
+		return err
+	}
+	return c.Conn.Route.Replace(rm)
+}
+
+// RouteAddSrc adds infomation about a network route with the given destination
+// and source. If source is `nil` it's ignored.
+func (c *Conn) RouteAddSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (err error) {
+	rm, err := genRouteMessage(ifc, dst, src, gw)
+	if err != nil {
+		return err
+	}
+	return c.Conn.Route.Add(rm)
 }
 
 // RouteDel deletes the route to the given destination.
