@@ -6,54 +6,37 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-// OptRemoteId implemens the Remote ID option.
-//
-// https://www.ietf.org/rfc/rfc4649.txt
-type OptRemoteId struct {
-	enterpriseNumber uint32
-	remoteId         []byte
+// OptRemoteID implemens the Remote ID option as defined by RFC 4649.
+type OptRemoteID struct {
+	EnterpriseNumber uint32
+	RemoteID         []byte
 }
 
-func (op *OptRemoteId) Code() OptionCode {
+// Code implements Option.Code.
+func (*OptRemoteID) Code() OptionCode {
 	return OptionRemoteID
 }
 
 // ToBytes serializes this option to a byte stream.
-func (op *OptRemoteId) ToBytes() []byte {
+func (op *OptRemoteID) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write32(op.enterpriseNumber)
-	buf.WriteBytes(op.remoteId)
+	buf.Write32(op.EnterpriseNumber)
+	buf.WriteBytes(op.RemoteID)
 	return buf.Data()
 }
 
-func (op *OptRemoteId) EnterpriseNumber() uint32 {
-	return op.enterpriseNumber
-}
-
-func (op *OptRemoteId) SetEnterpriseNumber(enterpriseNumber uint32) {
-	op.enterpriseNumber = enterpriseNumber
-}
-
-func (op *OptRemoteId) RemoteID() []byte {
-	return op.remoteId
-}
-
-func (op *OptRemoteId) SetRemoteID(remoteId []byte) {
-	op.remoteId = append([]byte(nil), remoteId...)
-}
-
-func (op *OptRemoteId) String() string {
-	return fmt.Sprintf("OptRemoteId{enterprisenum=%v, remoteid=%v}",
-		op.enterpriseNumber, op.remoteId,
+func (op *OptRemoteID) String() string {
+	return fmt.Sprintf("RemoteID: EnterpriseNumber %d RemoteID %v",
+		op.EnterpriseNumber, op.RemoteID,
 	)
 }
 
 // ParseOptRemoteId builds an OptRemoteId structure from a sequence of bytes.
 // The input data does not include option code and length bytes.
-func ParseOptRemoteId(data []byte) (*OptRemoteId, error) {
-	var opt OptRemoteId
+func ParseOptRemoteID(data []byte) (*OptRemoteID, error) {
+	var opt OptRemoteID
 	buf := uio.NewBigEndianBuffer(data)
-	opt.enterpriseNumber = buf.Read32()
-	opt.remoteId = buf.ReadAll()
+	opt.EnterpriseNumber = buf.Read32()
+	opt.RemoteID = buf.ReadAll()
 	return &opt, buf.FinError()
 }

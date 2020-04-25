@@ -36,6 +36,10 @@ const (
 	MessageTypeLeaseQueryReply    MessageType = 15
 	MessageTypeLeaseQueryDone     MessageType = 16
 	MessageTypeLeaseQueryData     MessageType = 17
+	_                             MessageType = 18
+	_                             MessageType = 19
+	MessageTypeDHCPv4Query        MessageType = 20
+	MessageTypeDHCPv4Response     MessageType = 21
 )
 
 // String prints the message type name.
@@ -66,6 +70,8 @@ var messageTypeToStringMap = map[MessageType]string{
 	MessageTypeLeaseQueryReply:    "LEASEQUERY-REPLY",
 	MessageTypeLeaseQueryDone:     "LEASEQUERY-DONE",
 	MessageTypeLeaseQueryData:     "LEASEQUERY-DATA",
+	MessageTypeDHCPv4Query:        "DHCPv4-QUERY",
+	MessageTypeDHCPv4Response:     "DHCPv4-RESPONSE",
 }
 
 // OptionCode is a single byte representing the code for a given Option.

@@ -68,17 +68,17 @@ func (mo MessageOptions) OneIANA() *OptIANA {
 }
 
 // IAPD returns all Identity Association for Prefix Delegation options.
-func (mo MessageOptions) IAPD() []*OptIAForPrefixDelegation {
+func (mo MessageOptions) IAPD() []*OptIAPD {
 	opts := mo.Get(OptionIAPD)
-	var ianas []*OptIAForPrefixDelegation
+	var ianas []*OptIAPD
 	for _, o := range opts {
-		ianas = append(ianas, o.(*OptIAForPrefixDelegation))
+		ianas = append(ianas, o.(*OptIAPD))
 	}
 	return ianas
 }
 
 // OneIAPD returns the first IAPD option.
-func (mo MessageOptions) OneIAPD() *OptIAForPrefixDelegation {
+func (mo MessageOptions) OneIAPD() *OptIAPD {
 	iapds := mo.IAPD()
 	if len(iapds) == 0 {
 		return nil
@@ -179,16 +179,40 @@ func (mo MessageOptions) UserClasses() [][]byte {
 	return nil
 }
 
-// VendorOpts returns the enterprise number and a list of vendor options.
-func (mo MessageOptions) VendorOpts() (uint32, Options) {
-	opt := mo.Options.GetOne(OptionVendorOpts)
+// VendorOpts returns the all vendor-specific options.
+//
+// RFC 8415 Section 21.17:
+//
+//   Multiple instances of the Vendor-specific Information option may appear in
+//   a DHCP message.
+func (mo MessageOptions) VendorOpts() []*OptVendorOpts {
+	opt := mo.Options.Get(OptionVendorOpts)
 	if opt == nil {
-		return 0, nil
+		return nil
 	}
-	if t, ok := opt.(*OptVendorOpts); ok {
-		return t.EnterpriseNumber, t.VendorOpts
+	var vo []*OptVendorOpts
+	for _, o := range opt {
+		if t, ok := o.(*OptVendorOpts); ok {
+			vo = append(vo, t)
+		}
 	}
-	return 0, nil
+	return vo
+}
+
+// VendorOpt returns the vendor options matching the given enterprise number.
+//
+// RFC 8415 Section 21.17:
+//
+//   Servers and clients MUST NOT send more than one instance of the
+//   Vendor-specific Information option with the same Enterprise Number.
+func (mo MessageOptions) VendorOpt(enterpriseNumber uint32) Options {
+	vo := mo.VendorOpts()
+	for _, v := range vo {
+		if v.EnterpriseNumber == enterpriseNumber {
+			return v.VendorOpts
+		}
+	}
+	return nil
 }
 
 // ElapsedTime returns the Elapsed Time option as defined by RFC 3315 Section 22.9.
@@ -213,6 +237,19 @@ func (mo MessageOptions) FQDN() *OptFQDN {
 	}
 	if fqdn, ok := opt.(*OptFQDN); ok {
 		return fqdn
+	}
+	return nil
+}
+
+// DHCP4oDHCP6Server returns the DHCP 4o6 Server Address option as
+// defined by RFC 7341.
+func (mo MessageOptions) DHCP4oDHCP6Server() *OptDHCP4oDHCP6Server {
+	opt := mo.Options.GetOne(OptionDHCP4oDHCP6Server)
+	if opt == nil {
+		return nil
+	}
+	if server, ok := opt.(*OptDHCP4oDHCP6Server); ok {
+		return server
 	}
 	return nil
 }
@@ -317,10 +354,11 @@ func NewRequestFromAdvertise(adv *Message, modifiers ...Modifier) (*Message, err
 		return nil, fmt.Errorf("The passed ADVERTISE must have ADVERTISE type set")
 	}
 	// build REQUEST from ADVERTISE
-	req := &Message{
-		MessageType:   MessageTypeRequest,
-		TransactionID: adv.TransactionID,
+	req, err := NewMessage()
+	if err != nil {
+		return nil, err
 	}
+	req.MessageType = MessageTypeRequest
 	// add Client ID
 	cid := adv.GetOneOption(OptionClientID)
 	if cid == nil {
@@ -341,6 +379,10 @@ func NewRequestFromAdvertise(adv *Message, modifiers ...Modifier) (*Message, err
 		return nil, fmt.Errorf("IA_NA cannot be nil in ADVERTISE when building REQUEST")
 	}
 	req.AddOption(iana)
+	// add IA_PD
+	if iaPd := adv.GetOneOption(OptionIAPD); iaPd != nil {
+		req.AddOption(iaPd)
+	}
 	req.AddOption(OptRequestedOption(
 		OptionDNSRecursiveNameServer,
 		OptionDomainSearchList,

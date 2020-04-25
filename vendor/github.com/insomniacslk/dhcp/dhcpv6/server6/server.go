@@ -56,6 +56,7 @@ func main() {
 import (
 	"log"
 	"net"
+	"os"
 
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"golang.org/x/net/ipv6"
@@ -69,27 +70,28 @@ type Handler func(conn net.PacketConn, peer net.Addr, m dhcpv6.DHCPv6)
 type Server struct {
 	conn    net.PacketConn
 	handler Handler
+	logger  Logger
 }
 
 // Serve starts the DHCPv6 server. The listener will run in background, and can
 // be interrupted with `Server.Close`.
 func (s *Server) Serve() error {
-	log.Printf("Server listening on %s", s.conn.LocalAddr())
-	log.Print("Ready to handle requests")
+	s.logger.Printf("Server listening on %s", s.conn.LocalAddr())
+	s.logger.Printf("Ready to handle requests")
 
 	defer s.Close()
 	for {
 		rbuf := make([]byte, 4096) // FIXME this is bad
 		n, peer, err := s.conn.ReadFrom(rbuf)
 		if err != nil {
-			log.Printf("Error reading from packet conn: %v", err)
+			s.logger.Printf("Error reading from packet conn: %v", err)
 			return err
 		}
-		log.Printf("Handling request from %v", peer)
+		s.logger.Printf("Handling request from %v", peer)
 
 		d, err := dhcpv6.FromBytes(rbuf[:n])
 		if err != nil {
-			log.Printf("Error parsing DHCPv6 request: %v", err)
+			s.logger.Printf("Error parsing DHCPv6 request: %v", err)
 			continue
 		}
 
@@ -125,6 +127,7 @@ func WithConn(conn net.PacketConn) ServerOpt {
 func NewServer(ifname string, addr *net.UDPAddr, handler Handler, opt ...ServerOpt) (*Server, error) {
 	s := &Server{
 		handler: handler,
+		logger:  EmptyLogger{},
 	}
 
 	for _, o := range opt {
@@ -180,4 +183,29 @@ func NewServer(ifname string, addr *net.UDPAddr, handler Handler, opt ...ServerO
 	}
 
 	return s, nil
+}
+
+// WithSummaryLogger logs one-line DHCPv6 message summaries when sent & received.
+func WithSummaryLogger() ServerOpt {
+	return func(s *Server) {
+		s.logger = ShortSummaryLogger{
+			Printfer: log.New(os.Stderr, "[dhcpv6] ", log.LstdFlags),
+		}
+	}
+}
+
+// WithDebugLogger logs multi-line full DHCPv6 messages when sent & received.
+func WithDebugLogger() ServerOpt {
+	return func(s *Server) {
+		s.logger = DebugLogger{
+			Printfer: log.New(os.Stderr, "[dhcpv6] ", log.LstdFlags),
+		}
+	}
+}
+
+// WithLogger set the logger (see interface Logger).
+func WithLogger(newLogger Logger) ServerOpt {
+	return func(s *Server) {
+		s.logger = newLogger
+	}
 }

@@ -4,39 +4,32 @@ import (
 	"fmt"
 )
 
-// OptInterfaceId implements the interface-id option as defined by RFC 3315,
+// OptInterfaceID returns an interface id option as defined by RFC 3315,
 // Section 22.18.
-//
-// This module defines the OptInterfaceId structure.
-// https://www.ietf.org/rfc/rfc3315.txt
-type OptInterfaceId struct {
-	interfaceId []byte
+func OptInterfaceID(id []byte) Option {
+	return &optInterfaceID{ID: id}
 }
 
-func (op *OptInterfaceId) Code() OptionCode {
+type optInterfaceID struct {
+	ID []byte
+}
+
+func (*optInterfaceID) Code() OptionCode {
 	return OptionInterfaceID
 }
 
-func (op *OptInterfaceId) ToBytes() []byte {
-	return op.interfaceId
+func (op *optInterfaceID) ToBytes() []byte {
+	return op.ID
 }
 
-func (op *OptInterfaceId) InterfaceID() []byte {
-	return op.interfaceId
+func (op *optInterfaceID) String() string {
+	return fmt.Sprintf("InterfaceID: %v", op.ID)
 }
 
-func (op *OptInterfaceId) SetInterfaceID(interfaceId []byte) {
-	op.interfaceId = append([]byte(nil), interfaceId...)
-}
-
-func (op *OptInterfaceId) String() string {
-	return fmt.Sprintf("OptInterfaceId{interfaceid=%v}", op.interfaceId)
-}
-
-// build an OptInterfaceId structure from a sequence of bytes.
+// build an optInterfaceID structure from a sequence of bytes.
 // The input data does not include option code and length bytes.
-func ParseOptInterfaceId(data []byte) (*OptInterfaceId, error) {
-	var opt OptInterfaceId
-	opt.interfaceId = append([]byte(nil), data...)
+func parseOptInterfaceID(data []byte) (*optInterfaceID, error) {
+	var opt optInterfaceID
+	opt.ID = append([]byte(nil), data...)
 	return &opt, nil
 }
