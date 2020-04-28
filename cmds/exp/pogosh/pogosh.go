@@ -18,7 +18,7 @@ func main() {
 		file = os.Args[1]
 	}
 
-	state := shell.DefaultState()
+	state := pogosh.DefaultState()
 	code, err := state.RunFile(file)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
