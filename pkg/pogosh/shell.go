@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package shell
+// Package pogosh implements a small POSIX-compatible shell.
+package pogosh
 
 import (
 	"fmt"

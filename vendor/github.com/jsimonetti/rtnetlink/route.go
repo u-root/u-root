@@ -111,6 +111,17 @@ func (r *RouteService) Add(req *RouteMessage) error {
 	return nil
 }
 
+// Replace or add new route
+func (r *RouteService) Replace(req *RouteMessage) error {
+	flags := netlink.Request | netlink.Create | netlink.Replace | netlink.Acknowledge
+	_, err := r.c.Execute(req, unix.RTM_NEWROUTE, flags)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Delete existing route
 func (r *RouteService) Delete(req *RouteMessage) error {
 	flags := netlink.Request | netlink.Acknowledge

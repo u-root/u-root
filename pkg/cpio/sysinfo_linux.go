@@ -17,11 +17,11 @@ func sysInfo(n string, sys *syscall.Stat_t) Info {
 		NLink:    uint64(sys.Nlink),
 		MTime:    uint64(sys.Mtim.Sec),
 		FileSize: uint64(sys.Size),
-		Dev:      sys.Dev,
-		Major:    sys.Dev >> 8,
-		Minor:    sys.Dev & 0xff,
-		Rmajor:   sys.Rdev >> 8,
-		Rminor:   sys.Rdev & 0xff,
+		Dev:      uint64(sys.Dev),
+		Major:    uint64(sys.Dev >> 8),
+		Minor:    uint64(sys.Dev & 0xff),
+		Rmajor:   uint64(sys.Rdev >> 8),
+		Rminor:   uint64(sys.Rdev & 0xff),
 		Name:     n,
 	}
 }

@@ -144,6 +144,38 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "386 source build",
+			env:  []string{"GOARCH=386"},
+			args: []string{"-build=source", "all"},
+			validators: []itest.ArchiveValidator{
+				buildSourceValidator{
+					goroot: "/go",
+					gopath: ".",
+					env:    []string{"GOARCH=386"},
+				},
+			},
+		},
+		{
+			name: "MIPS bb build",
+			env:  []string{"GOARCH=mips"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPSLE bb build",
+			env:  []string{"GOARCH=mipsle"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPS64 bb build",
+			env:  []string{"GOARCH=mips64"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPS64LE bb build",
+			env:  []string{"GOARCH=mips64le"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
 			name: "ARM7 bb build",
 			env:  []string{"GOARCH=arm", "GOARM=7"},
 			args: []string{"-build=bb", "all"},
@@ -151,6 +183,11 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "ARM64 bb build",
 			env:  []string{"GOARCH=arm64"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "386 (32 bit) bb build",
+			env:  []string{"GOARCH=386"},
 			args: []string{"-build=bb", "all"},
 		},
 		{

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !386,!mips,!mipsle,!mips64,!mips64le
+
 // strace is a simple multi-process tracer.
 // It starts the comand and lets the strace.Run() do all the work.
 //

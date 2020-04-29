@@ -19,7 +19,7 @@ func getDev(fd int) (dev uint64, err error) {
 	if err := unix.Fstat(fd, &stat); err != nil {
 		return 0, err
 	}
-	return stat.Dev, nil
+	return uint64(stat.Dev), nil
 }
 
 // recursiveDelete deletes a directory identified by `fd` and everything in it.
