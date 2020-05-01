@@ -235,6 +235,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	case "arm":
 		o.QEMUOpts.KernelArgs += " console=ttyAMA0"
 	}
+	o.QEMUOpts.KernelArgs += " uroot.vmtest"
 
 	var dir qemu.Device
 	if o.UseVVFAT {
