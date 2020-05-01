@@ -13,76 +13,17 @@ u-root embodies four different projects.
     [cp](cmds/core/cp/cp.go), or [shutdown](cmds/core/shutdown/shutdown.go). See
     [cmds/core](cmds/core) for most of these.
 
+*   A way to compile many Go programs into a single binary with
+    [busybox mode](pkg/bb/README.md).
+
+*   A way to create initramfs (an archive of files) to use with Linux kernels.
+
 *   Go bootloaders that use `kexec` to boot Linux or multiboot kernels such as
     ESXi, Xen, or tboot. They are meant to be used with
     [LinuxBoot](https://www.linuxboot.org). With that, parsers for
     [GRUB config files](pkg/boot/grub) or
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
-
-*   A way to create very small Go programs using
-    [busybox mode](pkg/bb/README.md) or source mode (see below).
-
-*   A way to create initramfs (an archive of files) to use with Linux kernels.
-
-# Creating Initramfs Archives
-
-u-root can create an initramfs in two different modes:
-
-*   source mode includes Go toolchain binaries + simple shell + Go source files
-    in the initramfs archive. Tools are compiled from source on the fly by the
-    shell.
-
-    When you try to run a command that is not built, it is compiled first and
-    stored in tmpfs. From that point on, when you run the command, you get the
-    one in tmpfs. Don't worry: the Go compiler is pretty fast.
-
-*   bb mode: One busybox-like binary comprising all the Go tools you ask to
-    include. See [here for how it works](pkg/bb/README.md).
-
-    In this mode, u-root copies and rewrites the source of the tools you asked
-    to include to be able to compile everything into one busybox-like binary.
-
-# SystemBoot
-
-SystemBoot is a set of bootloaders written in Go. It is meant to be a
-distribution for LinuxBoot to create a system firmware + bootloader. All of
-these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
-
-*   `pxeboot`: a network boot client that uses DHCP and HTTP or TFTP to get a
-    boot configuration which can be parsed as PXELinux or iPXE configuration
-    files to get a boot program.
-
-*   `fbnetboot`: a network boot client that uses DHCP and HTTP to get a boot
-    program based on Linux, and boots it. To be merged with `pxeboot`.
-
-*   `localboot`: a tool that finds bootable kernel configurations on the local
-    disks and boots them.
-
-*   `boot2`: similar to `localboot`, finds a bootable kernel configuration on
-    disk (GRUB or syslinux) and boots it. To be merged into `localboot`.
-
-*   `systemboot`: a wrapper around `fbnetboot` and `localboot` that just mimicks
-    a BIOS/UEFI BDS behaviour, by looping between network booting and local
-    booting. Use `-uinitcmd` argument to the u-root build tool to make it the
-    boot program.
-
-This project started as a loose collection of programs in u-root by various
-LinuxBoot contributors, as well as a personal experiment by
-[Andrea Barberio](https://github.com/insomniacslk) that has since been merged
-in. It is now an effort of a broader community and graduated to a real project
-for system firmwares.
-
-More detailed information about the build process for a full LinuxBoot firmware
-image using u-root/systemboot and coreboot can be found in the
-[LinuxBoot book](https://github.com/linuxboot/book) chapter 10,
-[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
-
-You can build systemboot like this:
-
-```sh
-u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
-```
 
 # Usage
 
@@ -235,6 +176,47 @@ qemu-system-x86_64 \
     -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
+## SystemBoot
+
+SystemBoot is a set of bootloaders written in Go. It is meant to be a
+distribution for LinuxBoot to create a system firmware + bootloader. All of
+these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
+
+*   `pxeboot`: a network boot client that uses DHCP and HTTP or TFTP to get a
+    boot configuration which can be parsed as PXELinux or iPXE configuration
+    files to get a boot program.
+
+*   `fbnetboot`: a network boot client that uses DHCP and HTTP to get a boot
+    program based on Linux, and boots it. To be merged with `pxeboot`.
+
+*   `localboot`: a tool that finds bootable kernel configurations on the local
+    disks and boots them.
+
+*   `boot2`: similar to `localboot`, finds a bootable kernel configuration on
+    disk (GRUB or syslinux) and boots it. To be merged into `localboot`.
+
+*   `systemboot`: a wrapper around `fbnetboot` and `localboot` that just mimicks
+    a BIOS/UEFI BDS behaviour, by looping between network booting and local
+    booting. Use `-uinitcmd` argument to the u-root build tool to make it the
+    boot program.
+
+This project started as a loose collection of programs in u-root by various
+LinuxBoot contributors, as well as a personal experiment by
+[Andrea Barberio](https://github.com/insomniacslk) that has since been merged
+in. It is now an effort of a broader community and graduated to a real project
+for system firmwares.
+
+More detailed information about the build process for a full LinuxBoot firmware
+image using u-root/systemboot and coreboot can be found in the
+[LinuxBoot book](https://github.com/linuxboot/book) chapter 10,
+[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
+
+You can build systemboot like this:
+
+```sh
+u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
+```
+
 ## Compression
 
 You can compress the initramfs. However, for xz compression, the kernel has some
@@ -308,6 +290,24 @@ that well for most people, a typical invocation looks like this:
 
 Or, on newer linux kernels (> 4.x) boot with ip=dhcp in the command line,
 assuming your kernel is configured to work that way.
+
+## Build Modes
+
+u-root can create an initramfs in two different modes:
+
+*   source mode includes Go toolchain binaries + simple shell + Go source files
+    in the initramfs archive. Tools are compiled from source on the fly by the
+    shell.
+
+    When you try to run a command that is not built, it is compiled first and
+    stored in tmpfs. From that point on, when you run the command, you get the
+    one in tmpfs. Don't worry: the Go compiler is pretty fast.
+
+*   bb mode: One busybox-like binary comprising all the Go tools you ask to
+    include. See [here for how it works](pkg/bb/README.md).
+
+    In this mode, u-root copies and rewrites the source of the tools you asked
+    to include to be able to compile everything into one busybox-like binary.
 
 ## Updating Dependencies
 
