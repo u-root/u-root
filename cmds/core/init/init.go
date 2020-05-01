@@ -16,11 +16,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
-	"strings"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/libinit"
+	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -81,7 +81,7 @@ func main() {
 	// /etc/uinit.flags.
 	args := cmdline.GetUinitArgs()
 	if contents, err := ioutil.ReadFile("/etc/uinit.flags"); err == nil {
-		args = append(args, strings.Fields(string(contents))...)
+		args = append(args, shlex.Argv(string(contents))...)
 	}
 	uinitArgs := libinit.WithArguments(args...)
 
