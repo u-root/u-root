@@ -95,6 +95,18 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "uinitcmd",
+			args: []string{"-build=bb", "-uinitcmd=echo foobar fuzz", "-defaultsh=", "./cmds/core/init", "./cmds/core/echo"},
+			err:  nil,
+			validators: []itest.ArchiveValidator{
+				itest.HasRecord{cpio.Symlink("bin/uinit", "../bbin/echo")},
+				itest.HasContent{
+					Path:    "etc/uinit.flags",
+					Content: "foobar fuzz",
+				},
+			},
+		},
+		{
 			name: "fix usage of an absolute path",
 			args: []string{"-nocmd", "-files=/bin:/bin"},
 			err:  nil,

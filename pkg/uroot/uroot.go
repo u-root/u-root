@@ -172,12 +172,14 @@ type Opts struct {
 	// still specify a command called init or include an /init file.
 	InitCmd string
 
-	// UinitCmd is the name of a command to link /bin/uinit to.
+	// UinitCmd is the name + args of a command to link /bin/uinit to.
 	//
 	// This can be an absolute path or the name of a command included in
 	// Commands.
 	//
-	// The u-root init will always attempt to fork/exec a uinit program.
+	// The u-root init will always attempt to fork/exec a uinit program,
+	// and append arguments from both the kernel command-line
+	// (uroot.uinitargs) as well as specified here.
 	//
 	// If this is empty, no uinit symlink will be created, but a user may
 	// still specify a command called uinit or include a /bin/uinit file.
@@ -242,11 +244,19 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		return err
 	}
 
+	uinit := strings.SplitN(opts.UinitCmd, " ", 2)
+	if len(uinit) > 0 {
+		if err := opts.addSymlinkTo(logger, archive, uinit[0], "bin/uinit"); err != nil {
+			return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
+		}
+	}
+	if len(uinit) > 1 {
+		if err := archive.AddRecord(cpio.StaticFile("etc/uinit.flags", uinit[1], 0444)); err != nil {
+			return fmt.Errorf("%v: could not add uinit arguments from -uinitcmd to initramfs", err)
+		}
+	}
 	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
 		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
-	}
-	if err := opts.addSymlinkTo(logger, archive, opts.UinitCmd, "bin/uinit"); err != nil {
-		return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
 		return fmt.Errorf("%v: specify -defaultsh=\"\" to ignore this error and build without a shell", err)
