@@ -267,7 +267,7 @@ for system firmwares.
 
 More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the
-[LinuxBoot book](https://github.com/linuxboot/book) chapter 10,
+[LinuxBoot book](https://github.com/linuxboot/book) chapter about
 [LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
 
 You can build systemboot like this:
