@@ -6,8 +6,6 @@
 package cmos
 
 import (
-	"fmt"
-
 	"github.com/u-root/u-root/pkg/memio"
 )
 
@@ -17,24 +15,16 @@ const (
 )
 
 // Read reads a register reg from CMOS into data.
-func Read(reg int64, data memio.UintN) error {
-	regVal := memio.Uint8(reg)
-	if regVal%128 < 14 {
-		return fmt.Errorf("byte %d is inside the range 0-13 which is reserved for RTC", regVal)
-	}
-	if err := memio.Out(cmosRegPort, &regVal); err != nil {
+func Read(reg memio.Uint8, data memio.UintN) error {
+	if err := memio.Out(cmosRegPort, &reg); err != nil {
 		return err
 	}
 	return memio.In(cmosDataPort, data)
 }
 
 // Write writes value data into CMOS register reg.
-func Write(reg int64, data memio.UintN) error {
-	regVal := memio.Uint8(reg)
-	if regVal%128 < 14 {
-		return fmt.Errorf("byte %d is inside the range 0-13 which is reserved for RTC", regVal)
-	}
-	if err := memio.Out(cmosRegPort, &regVal); err != nil {
+func Write(reg memio.Uint8, data memio.UintN) error {
+	if err := memio.Out(cmosRegPort, &reg); err != nil {
 		return err
 	}
 	return memio.Out(cmosDataPort, data)
