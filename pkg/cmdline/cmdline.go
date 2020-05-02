@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/u-root/u-root/pkg/shlex"
 )
 
 // CmdLine lets people view the raw & parsed /proc/cmdline in one place
@@ -164,7 +166,7 @@ func GetInitFlagMap() map[string]string {
 // GetUinitArgs gets the uinit argvs.
 func GetUinitArgs() []string {
 	uinitargs, _ := Flag("uroot.uinitargs")
-	return strings.Fields(uinitargs)
+	return shlex.Argv(uinitargs)
 }
 
 // FlagsForModule gets all flags for a designated module

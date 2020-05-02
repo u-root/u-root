@@ -13,12 +13,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os/exec"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/libinit"
+	"github.com/u-root/u-root/pkg/uflag"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -74,7 +76,14 @@ func main() {
 	// Allows passing args to uinit via kernel parameters, for example:
 	//
 	// uroot.uinitargs="-v --foobar"
-	uinitArgs := libinit.WithArguments(cmdline.GetUinitArgs()...)
+	//
+	// We also allow passing args to uinit via a flags file in
+	// /etc/uinit.flags.
+	args := cmdline.GetUinitArgs()
+	if contents, err := ioutil.ReadFile("/etc/uinit.flags"); err == nil {
+		args = append(args, uflag.FileToArgv(string(contents))...)
+	}
+	uinitArgs := libinit.WithArguments(args...)
 
 	cmdList := []*exec.Cmd{
 		// inito is (optionally) created by the u-root command when the

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -54,7 +55,7 @@ func init() {
 	outputPath = flag.String("o", "", "Path to output initramfs file.")
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
-	uinitCmd = flag.String("uinitcmd", "", "Symlink target for /bin/uinit. Can be an absolute path or a u-root command name. Use uinitcmd=\"\" if you don't want the symlink.")
+	uinitCmd = flag.String("uinitcmd", "", "Symlink target and arguments for /bin/uinit. Can be an absolute path or a u-root command name. Use uinitcmd=\"\" if you don't want the symlink. E.g. -uinitcmd=\"echo foobar\"")
 	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
 
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
@@ -212,8 +213,14 @@ func Main() error {
 		BaseArchive:     baseFile,
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
-		UinitCmd:        *uinitCmd,
 		DefaultShell:    *defaultShell,
+	}
+	uinitArgs := shlex.Argv(*uinitCmd)
+	if len(uinitArgs) > 0 {
+		opts.UinitCmd = uinitArgs[0]
+	}
+	if len(uinitArgs) > 1 {
+		opts.UinitArgs = uinitArgs[1:]
 	}
 	return uroot.CreateInitramfs(logger, opts)
 }

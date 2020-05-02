@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !386,!mips,!mipsle,!mips64,!mips64le
+// +build linux,amd64
 
-// strace is a simple multi-process tracer.
-// It starts the comand and lets the strace.Run() do all the work.
+// strace is a simple multi-process syscall & signal tracer.
 //
 // Synopsis:
 //     strace <command> [args...]
@@ -19,7 +18,6 @@ import (
 	// strace ls -l
 	// it tries to use the -l for strace instead of leaving it alone.
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -29,7 +27,6 @@ import (
 
 var (
 	cmdUsage = "Usage: strace <command> [args...]"
-	debug    = flag.Bool("d", false, "enable debug printing")
 )
 
 func usage() {
@@ -37,12 +34,8 @@ func usage() {
 }
 
 func main() {
-
 	flag.Parse()
 
-	if *debug {
-		strace.Debug = log.Printf
-	}
 	a := flag.Args()
 	if len(a) < 1 {
 		usage()
@@ -51,17 +44,7 @@ func main() {
 	c := exec.Command(a[0], a[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 
-	t, err := strace.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go t.RunTracerFromCmd(c)
-	for r := range t.Records {
-		if r.Err != nil {
-			fmt.Printf("Record shows error %v\n", r.Err)
-			continue
-		}
-		fmt.Printf("%s\n", r.Out)
+	if err := strace.Strace(c, os.Stdout); err != nil {
+		log.Printf("strace exited: %v", err)
 	}
 }

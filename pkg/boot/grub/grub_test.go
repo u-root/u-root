@@ -6,61 +6,8 @@ package grub
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 )
-
-func TestFields(t *testing.T) {
-	for i, tt := range []struct {
-		desc string
-		in   string
-		want []string
-	}{
-		{
-			desc: "nothing to do",
-			in:   "stuff",
-			want: []string{"stuff"},
-		},
-		{
-			desc: "split",
-			in:   "stuff more stuff",
-			want: []string{"stuff", "more", "stuff"},
-		},
-		{
-			desc: "escape",
-			in:   "stuff\\ more stuff",
-			want: []string{"stuff more", "stuff"},
-		},
-		{
-			desc: "quote",
-			in:   "stuff var='more stuff'",
-			want: []string{"stuff", "var=more stuff"},
-		},
-		{
-			desc: "double quote",
-			in:   "stuff var=\"more stuff\"",
-			want: []string{"stuff", "var=more stuff"},
-		},
-		{
-			desc: "quote specials",
-			in:   "stuff var='more stuff $ \\ \\$ \" '",
-			want: []string{"stuff", "var=more stuff $ \\ \\$ \" "},
-		},
-		{
-			desc: "double quote",
-			in:   "stuff var=\"more stuff $ \\ \\$ \\\" \"",
-			want: []string{"stuff", "var=more stuff $ \\ $ \" "},
-		},
-	} {
-		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
-			got := fields(tt.in)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("fields = %#v, want %#v", got, tt.want)
-			}
-
-		})
-	}
-}
 
 func TestCmdlineQuote(t *testing.T) {
 	for i, tt := range []struct {

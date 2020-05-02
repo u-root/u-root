@@ -20,10 +20,11 @@ import (
 
 	"github.com/u-root/u-root/pkg/strace/internal/abi"
 	"github.com/u-root/u-root/pkg/strace/internal/binary"
+	"github.com/u-root/u-root/pkg/ubinary"
 	"golang.org/x/sys/unix"
 )
 
-func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
+func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 	if length > maxBytes {
 		return fmt.Sprintf("%#x (error decoding control: invalid length (%d))", addr, length)
 	}
@@ -42,7 +43,7 @@ func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
 		}
 
 		var h abi.ControlMessageHeader
-		binary.Unmarshal(buf[i:i+abi.SizeOfControlMessageHeader], ByteOrder, &h)
+		binary.Unmarshal(buf[i:i+abi.SizeOfControlMessageHeader], ubinary.NativeEndian, &h)
 
 		var skipData bool
 		level := "SOL_SOCKET"
@@ -68,22 +69,23 @@ func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
 		}
 
 		i += abi.SizeOfControlMessageHeader
-		width := Width
+		// TODO: uh, what
+		width := archWidth
 		length := int(h.Length) - abi.SizeOfControlMessageHeader
 
 		if skipData {
 			strs = append(strs, fmt.Sprintf("{level=%s, type=%s, length=%d}", level, typ, h.Length))
-			i += AlignUp(length, uint(width))
+			i += alignUp(length, uint(width))
 			continue
 		}
 
 		switch h.Type {
 		case unix.SCM_RIGHTS:
-			rightsSize := AlignDown(length, abi.SizeOfControlMessageRight)
+			rightsSize := alignDown(length, abi.SizeOfControlMessageRight)
 
 			numRights := rightsSize / abi.SizeOfControlMessageRight
 			fds := make(abi.ControlMessageRights, numRights)
-			binary.Unmarshal(buf[i:i+rightsSize], ByteOrder, &fds)
+			binary.Unmarshal(buf[i:i+rightsSize], ubinary.NativeEndian, &fds)
 
 			rights := make([]string, 0, len(fds))
 			for _, fd := range fds {
@@ -134,7 +136,7 @@ func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
 			}
 
 			var tv unix.Timeval
-			binary.Unmarshal(buf[i:i+abi.SizeOfTimeval], ByteOrder, &tv)
+			binary.Unmarshal(buf[i:i+abi.SizeOfTimeval], ubinary.NativeEndian, &tv)
 
 			strs = append(strs, fmt.Sprintf(
 				"{level=%s, type=%s, length=%d, Sec: %d, Usec: %d}",
@@ -148,17 +150,18 @@ func cmsghdr(t *Tracer, addr Addr, length uint64, maxBytes uint64) string {
 		default:
 			panic("unreachable")
 		}
-		i += AlignUp(length, uint(width))
+		i += alignUp(length, uint(width))
 	}
 
 	return fmt.Sprintf("%#x %s", addr, strings.Join(strs, ", "))
 }
 
-func msghdr(t *Tracer, addr Addr, printContent bool, maxBytes uint64) string {
+func msghdr(t Task, addr Addr, printContent bool, maxBytes uint64) string {
 	var msg abi.MessageHeader64
-	if err := ReadMessageHeader64(t, addr, &msg); err != nil {
+	if _, err := t.Read(addr, &msg); err != nil {
 		return fmt.Sprintf("%#x (error decoding msghdr: %v)", addr, err)
 	}
+
 	s := fmt.Sprintf(
 		"%#x {name=%#x, namelen=%d, iovecs=%s",
 		addr,
@@ -174,7 +177,7 @@ func msghdr(t *Tracer, addr Addr, printContent bool, maxBytes uint64) string {
 	return fmt.Sprintf("%s, flags=%d}", s, msg.Flags)
 }
 
-func sockAddr(t *Tracer, addr Addr, length uint32) string {
+func sockAddr(t Task, addr Addr, length uint32) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -188,7 +191,7 @@ func sockAddr(t *Tracer, addr Addr, length uint32) string {
 	if len(b) < 2 {
 		return fmt.Sprintf("%#x {address too short: %d bytes}", addr, len(b))
 	}
-	family := ByteOrder.Uint16(b)
+	family := ubinary.NativeEndian.Uint16(b)
 
 	familyStr := abi.SocketFamily.Parse(uint64(family))
 
@@ -215,7 +218,7 @@ func sockAddr(t *Tracer, addr Addr, length uint32) string {
 	}
 }
 
-func postSockAddr(t *Tracer, addr Addr, lengthPtr Addr) string {
+func postSockAddr(t Task, addr Addr, lengthPtr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -232,14 +235,14 @@ func postSockAddr(t *Tracer, addr Addr, lengthPtr Addr) string {
 	return sockAddr(t, addr, l)
 }
 
-func copySockLen(t *Tracer, addr Addr) (uint32, error) {
+func copySockLen(t Task, addr Addr) (uint32, error) {
 	// socklen_t is 32-bits.
 	var l uint32
 	_, err := t.Read(addr, &l)
 	return l, err
 }
 
-func sockLenPointer(t *Tracer, addr Addr) string {
+func sockLenPointer(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}

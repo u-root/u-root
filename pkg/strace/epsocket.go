@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/ubinary"
 	"golang.org/x/sys/unix"
 )
 
@@ -39,10 +40,10 @@ type FullAddress struct {
 // GetAddress reads an sockaddr struct from the given address and converts it
 // to the FullAddress format. It supports AF_UNIX, AF_INET and AF_INET6
 // addresses.
-func GetAddress(t *Tracer, addr []byte) (FullAddress, error) {
+func GetAddress(t Task, addr []byte) (FullAddress, error) {
 	r := bytes.NewBuffer(addr[:2])
 	var fam uint16
-	if err := binary.Read(r, ByteOrder, &fam); err != nil {
+	if err := binary.Read(r, ubinary.NativeEndian, &fam); err != nil {
 		return FullAddress{}, unix.EFAULT
 	}
 
@@ -78,6 +79,7 @@ func GetAddress(t *Tracer, addr []byte) (FullAddress, error) {
 			out.Addr = ""
 		}
 		return out, nil
+
 	case unix.AF_INET6:
 		var a unix.RawSockaddrInet6
 		r = bytes.NewBuffer(addr)
@@ -98,8 +100,8 @@ func GetAddress(t *Tracer, addr []byte) (FullAddress, error) {
 			out.Addr = ""
 		}
 		return out, nil
-	default:
 
+	default:
 		return FullAddress{}, unix.ENOTSUP
 	}
 }
