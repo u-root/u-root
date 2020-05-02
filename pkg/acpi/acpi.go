@@ -53,18 +53,12 @@ type (
 	TableMethod func() ([]Table, error)
 )
 
-var (
-	// Debug implements fmt.Sprintf and can be used for debug printing
-	Debug = func(string, ...interface{}) {}
-)
-
 // gencsum generates a uint8 checksum of a []uint8
 func gencsum(b []uint8) uint8 {
 	var csum uint8
 	for _, bb := range b {
 		csum += bb
 	}
-	Debug("csum %#x %#x across %d bytes", csum, ^csum, len(b))
 	return ^csum + 1
 }
 
