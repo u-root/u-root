@@ -67,18 +67,19 @@ func RawFromName(n string) ([]Table, error) {
 	return RawFromFile(f)
 }
 
-// ReadRaw reads a full table in, given an address.
-// ReadRaw uses the io package. This may not always work
+// ReadRawTable reads a full table in, given an address.
+//
+// ReadRawTable uses the io package. This may not always work
 // if the kernel has restrictions on reading memory above
 // the 1M boundary, and the tables are above boundary.
-func ReadRaw(a int64) (Table, error) {
+func ReadRawTable(physAddr int64) (Table, error) {
 	var u memio.Uint32
 	// Read the table size at a+4
-	if err := memio.Read(a+4, &u); err != nil {
+	if err := memio.Read(physAddr+4, &u); err != nil {
 		return nil, err
 	}
 	dat := memio.ByteSlice(make([]byte, u))
-	if err := memio.Read(a, &dat); err != nil {
+	if err := memio.Read(physAddr, &dat); err != nil {
 		return nil, err
 	}
 	return &Raw{data: []byte(dat)}, nil
