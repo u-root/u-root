@@ -2,20 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Concurrent, parallel grep.
+// grep searches file contents using regular expressions.
 //
 // Synopsis:
 //     grep [-vrlq] [FILE]...
-//
-// Description:
-//     It has to deal with the EMFILE limit. To do so we have one chan that is
-//     bounded. From args, we use filepath.Walk to generate a chan of names.
-//     From that, we create a chan of grepCommands. From that, we create a chan
-//     of grepResults. The grepResults contain matches or not-matches only. If
-//     we are in -l mode, the goprocs handling the grep bail out as soon as the
-//     condition is met. This grep is about 2x faster than GNU grep for simple
-//     non-recursive greps and slower as soon as filepath. Walk enters the
-//     picture. Let's fix this.
 //
 // Options:
 //     -v: print only non-matching lines

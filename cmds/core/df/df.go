@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// df reports details of mounted filesystems
+// df reports details of mounted filesystems.
 //
 // Synopsis
 //  df [-k] [-m]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Print the date.
+// date prints the date.
 //
 // Synopsis:
 //     date [-u] [+format] | date [-u] [MMDDhhmm[CC]YY[.ss]]
