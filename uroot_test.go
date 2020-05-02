@@ -102,7 +102,7 @@ func TestUrootCmdline(t *testing.T) {
 				itest.HasRecord{cpio.Symlink("bin/uinit", "../bbin/echo")},
 				itest.HasContent{
 					Path:    "etc/uinit.flags",
-					Content: "foobar fuzz",
+					Content: "\"foobar\"\n\"fuzz\"",
 				},
 			},
 		},
