@@ -2,19 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
-
-// Install command from a go source file.
+// installcommand installs a command from Go source files.
 //
 // Synopsis:
 //     SYMLINK [ARGS...]
 //     installcommand [INSTALLCOMMAND_ARGS...] COMMAND [ARGS...]
 //
 // Description:
-//     u-root commands are lazily compiled. Uncompiled commands in the /bin
-//     directory are symbolic links to installcommand. When executed through
-//     the symbolic link, installcommand will build the command from source and
-//     exec it.
+//     In u-root's source mode, uncompiled commands in the /bin directory are
+//     symbolic links to installcommand. When executed through the symbolic
+//     link, installcommand will build the command from source and exec it.
 //
 //     The second form allows commands to be installed and exec'ed without a
 //     symbolic link. In this form additional arguments such as `-v` and
@@ -25,6 +22,8 @@ package main
 //     -exec:      build and exec the command
 //     -force:     do not build if a file already exists at the destination
 //     -v:         print all build commands
+package main
+
 import (
 	"flag"
 	"fmt"

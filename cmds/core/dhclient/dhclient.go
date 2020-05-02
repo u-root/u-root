@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// dhclient sets up DHCP.
+// dhclient sets up network config using DHCP.
 //
 // Synopsis:
 //     dhclient [OPTIONS...]
