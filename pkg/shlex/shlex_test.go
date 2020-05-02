@@ -51,6 +51,16 @@ func TestArgv(t *testing.T) {
 			in:   "stuff var=\"more stuff $ \\ \\$ \\\" \"",
 			want: []string{"stuff", "var=more stuff $ \\ $ \" "},
 		},
+		{
+			desc: "quote forgot close",
+			in:   "stuff var='more stuff",
+			want: []string{"stuff", "var=more stuff"},
+		},
+		{
+			desc: "empty",
+			in:   "",
+			want: nil,
+		},
 	} {
 		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
 			got := Argv(tt.in)
