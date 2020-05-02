@@ -33,7 +33,6 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.Parse()
 }
 
 func main() {

@@ -35,7 +35,6 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.Parse()
 }
 
 func readLink(file string) error {
@@ -57,6 +56,8 @@ func readLink(file string) error {
 }
 
 func main() {
+	flag.Parse()
+
 	var exitStatus int
 
 	for _, file := range flag.Args() {
