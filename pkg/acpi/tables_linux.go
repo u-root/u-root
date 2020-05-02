@@ -18,8 +18,12 @@ var (
 )
 
 // MethodNames returns the list of supported MethodNames.
-func MethodNames() string {
-	return "files"
+func MethodNames() []string {
+	var s []string
+	for name := range Methods {
+		s = append(s, name)
+	}
+	return s
 }
 
 // RawTablesFromSys returns an array of Raw tables, for all ACPI tables
