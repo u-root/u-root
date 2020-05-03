@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package shlex is a simplified command-line shell-like argument parser.
+//
+// shlex will parse for example
+//
+//     start --append="foobar foobaz" --nogood 'food'
+//
+// into the appropriate argvs to start the command.
 package shlex
 
 func isWhitespace(b byte) bool {

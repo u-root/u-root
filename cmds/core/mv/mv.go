@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Mv renames files and directories.
+// mv renames files and directories.
 //
 // Synopsis:
 //     mv SOURCE [-u] TARGET

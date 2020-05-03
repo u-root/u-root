@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package uroot creates root file systems from Go programs.
+//
+// uroot will appropriately compile the Go programs, create symlinks for their
+// names, and assemble an initramfs with additional files as specified.
 package uroot
 
 import (

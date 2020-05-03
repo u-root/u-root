@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// assumptions
-// we've been booted into a ramfs with all this stuff unpacked and ready.
-// we don't need a loop device mount because it's all there.
-// So we run /go/bin/go build installcommand
-// and then exec /buildbin/sh
-
+// init is u-root's standard userspace init process.
+//
+// init is intended to be the first process run by the kernel when it boots up.
+// init does some basic initialization (mount file systems, turn on loopback)
+// and then tries to execute, in order, /inito, a uinit (either in /bin, /bbin,
+// or /ubin), and then a shell (/bin/defaultsh and /bin/sh).
 package main
 
 import (

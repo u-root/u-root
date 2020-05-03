@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Convert and copy a file.
+// dd converts and copies a file.
 //
 // Synopsis:
 //     dd [OPTIONS...] [-inName FILE] [-outName FILE]

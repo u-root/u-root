@@ -63,7 +63,8 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 	c.Env = append(b.env,
 		fmt.Sprintf("GOPATH=%s", gopath),
 		fmt.Sprintf("GOCACHE=%s", filepath.Join(dir, "tmp")),
-		fmt.Sprintf("GOROOT=%s", goroot))
+		fmt.Sprintf("GOROOT=%s", goroot),
+		"CGO_ENABLED=0")
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not build go source %v; output\n%s", err, out)
@@ -152,18 +153,6 @@ func TestUrootCmdline(t *testing.T) {
 					goroot: "/go",
 					gopath: ".",
 					env:    []string{"GOARCH=amd64"},
-				},
-			},
-		},
-		{
-			name: "386 source build",
-			env:  []string{"GOARCH=386"},
-			args: []string{"-build=source", "all"},
-			validators: []itest.ArchiveValidator{
-				buildSourceValidator{
-					goroot: "/go",
-					gopath: ".",
-					env:    []string{"GOARCH=386"},
 				},
 			},
 		},
