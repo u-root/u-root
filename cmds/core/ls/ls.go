@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Ls prints the contents of a directory.
+// ls prints the contents of a directory.
 //
 // Synopsis:
 //     ls [OPTIONS] [DIRS]...

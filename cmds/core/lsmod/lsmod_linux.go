@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// List modules currently loaded in the Linux kernel
+// lsmod list currently loaded Linux kernel modules.
 //
 // Synopsis:
 //	lsmod

@@ -3,7 +3,7 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.11
+      - image: uroottest/test-image-amd64:v3.2.12
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -20,6 +20,9 @@ templates:
       - run:
           name: Test integration
           command: go test -a -ldflags '-s' ./integration/...
+  beefy-template: &beefy-template
+    <<: *golang-template
+    resource_class: large
 
 workflows:
   version: 2
@@ -27,6 +30,9 @@ workflows:
     jobs:
       - clean-code
       - test:
+          requires:
+            - clean-code
+      - test-build:
           requires:
             - clean-code
       - test-integration-amd64:
@@ -44,6 +50,7 @@ workflows:
       - check_licenses:
           requires:
             - clean-code
+
 jobs:
   clean-code:
     <<: *golang-template
@@ -107,11 +114,19 @@ jobs:
       - checkout
       - run:
           name: Test all
-          command: go test -a -timeout 15m -ldflags '-s' ./cmds/... ./pkg/... .
+          command: go test -a -timeout 15m -ldflags '-s' ./cmds/... ./pkg/...
           no_output_timeout: 15m
       - run:
           name: Test coverage
           command: go test -cover ./cmds/... ./pkg/...
+  test-build:
+    <<: *beefy-template
+    steps:
+      - checkout
+      - run:
+          name: Test u-root build
+          command: go test -a -timeout 15m .
+          no_output_timeout: 15m
   race:
     <<: *golang-template
     environment:
@@ -167,8 +182,8 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.11
+      - image: uroottest/test-image-amd64:v3.2.12
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v3.0.3
+      - image: uroottest/test-image-arm:v3.0.4

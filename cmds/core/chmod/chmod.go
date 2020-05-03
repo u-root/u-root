@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Change modifier bits of a file.
+// chmod changes mode bits (e.g. permissions) of a file.
 //
 // Synopsis:
 //     chmod MODE FILE...

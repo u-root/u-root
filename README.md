@@ -27,7 +27,7 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is 1.12. Make sure your `GOPATH` is set up correctly.
+Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
 
 Download and install u-root:
 

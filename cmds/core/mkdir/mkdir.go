@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Mkdir makes a new directory.
+// mkdir makes a new directory.
 //
 // Synopsis:
 //     mkdir [-m mode] [-v] [-p] DIRECTORY...

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Cmp compares two files and prints a message if their contents differ.
+// cmp compares two files and prints a message if their contents differ.
 //
 // Synopsis:
 //     cmp [–lLs] FILE1 FILE2 [OFFSET1 [OFFSET2]]
