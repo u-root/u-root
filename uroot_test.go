@@ -157,18 +157,6 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
-			name: "386 source build",
-			env:  []string{"GOARCH=386"},
-			args: []string{"-build=source", "all"},
-			validators: []itest.ArchiveValidator{
-				buildSourceValidator{
-					goroot: "/go",
-					gopath: ".",
-					env:    []string{"GOARCH=386"},
-				},
-			},
-		},
-		{
 			name: "MIPS bb build",
 			env:  []string{"GOARCH=mips"},
 			args: []string{"-build=bb", "all"},
