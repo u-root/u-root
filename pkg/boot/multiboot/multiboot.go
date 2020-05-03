@@ -43,7 +43,6 @@ type Modules []Module
 type multiboot struct {
 	mem kexec.Memory
 
-	kernel  io.ReaderAt
 	modules []Module
 
 	cmdLine    string
@@ -53,9 +52,6 @@ type multiboot struct {
 	// Trampoline sets machine to a specific state defined by multiboot v1 spec.
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 	trampoline string
-
-	// EntryPoint is a pointer to trampoline.
-	entryPoint uintptr
 
 	info          info
 	loadedModules modules
@@ -133,28 +129,6 @@ func Probe(kernel io.ReaderAt) error {
 	return err
 }
 
-// newMB returns a new multiboot instance.
-func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, error) {
-	// Trampoline should be a part of current binary.
-	p, err := os.Executable()
-	if err != nil {
-		return nil, fmt.Errorf("cannot find current executable path: %v", err)
-	}
-	trampoline, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		return nil, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
-	}
-
-	return &multiboot{
-		kernel:     kernel,
-		modules:    modules,
-		cmdLine:    cmdLine,
-		trampoline: trampoline,
-		bootloader: bootloader,
-		mem:        kexec.Memory{},
-	}, nil
-}
-
 // Load parses and loads a multiboot `kernel` using kexec_load.
 //
 // debug turns on debug logging.
@@ -169,15 +143,11 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 	for i, mod := range modules {
 		modules[i].Module = tryGzipFilter(mod.Module)
 	}
-
-	m, err := newMB(kernel, cmdline, modules)
+	args, err := load(kernel, cmdline, modules, debug, ibft)
 	if err != nil {
 		return err
 	}
-	if err := m.load(debug, ibft); err != nil {
-		return err
-	}
-	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
+	if err := kexec.Load(args.EntryPoint, args.Segments, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
@@ -234,44 +204,72 @@ func (m Modules) Close() error {
 	return allErr
 }
 
-// load loads and parses multiboot information from m.kernel.
-func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
-	var err error
+type kexecArgs struct {
+	Segments   kexec.Segments
+	EntryPoint uintptr
+}
+
+// load loads decompressed mu(l)tiboot kernel and modules into userspace
+// memory, and generates the mu(l)tiboot info structure, memory map, and iBFT
+// to be passed to the kernel upon execution.
+//
+// load returns a set of segments (relocations) that say which piece of
+// userspace memory must be moved to which place in physical memory in order to
+// jump to the mu(l)tiboot kernel.
+func load(kernel io.ReaderAt, cmdLine string, modules []Module, debug bool, ibft *ibft.IBFT) (*kexecArgs, error) {
+	// Trampoline should be a part of current binary.
+	p, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("cannot find current executable path: %v", err)
+	}
+	trampoline, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return nil, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
+	}
+
+	m := &multiboot{
+		modules:    modules,
+		cmdLine:    cmdLine,
+		trampoline: trampoline,
+		bootloader: bootloader,
+		mem:        kexec.Memory{},
+	}
+
 	log.Println("Parsing multiboot header")
 	// TODO: the kernel is opened like 4 separate times here. Just open it
 	// once and pass it around.
 
 	var header imageType
-	multibootHeader, err := parseHeader(uio.Reader(m.kernel))
+	multibootHeader, err := parseHeader(uio.Reader(kernel))
 	if err == nil {
 		header = multibootHeader
 	} else if err == ErrHeaderNotFound {
 		var mutibootHeader *mutibootHeader
 		// We don't even need the header at the moment. Just need to
 		// know it's there. Everything that matters is in the ELF.
-		mutibootHeader, err = parseMutiHeader(uio.Reader(m.kernel))
+		mutibootHeader, err = parseMutiHeader(uio.Reader(kernel))
 		header = mutibootHeader
 	}
 	if err != nil {
-		return fmt.Errorf("error parsing headers: %v", err)
+		return nil, fmt.Errorf("error parsing headers: %v", err)
 	}
 	log.Printf("Found %s image", header.name())
 
 	log.Printf("Getting kernel entry point")
-	kernelEntry, err := getEntryPoint(m.kernel)
+	kernelEntry, err := getEntryPoint(kernel)
 	if err != nil {
-		return fmt.Errorf("error getting kernel entry point: %v", err)
+		return nil, fmt.Errorf("error getting kernel entry point: %v", err)
 	}
 	log.Printf("Kernel entry point at %#x", kernelEntry)
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(m.kernel); err != nil {
-		return fmt.Errorf("error loading ELF segments: %v", err)
+	if err := m.mem.LoadElfSegments(kernel); err != nil {
+		return nil, fmt.Errorf("error loading ELF segments: %v", err)
 	}
 
 	log.Printf("Parsing memory map")
 	if err := m.mem.ParseMemoryMap(); err != nil {
-		return fmt.Errorf("error parsing memory map: %v", err)
+		return nil, fmt.Errorf("error parsing memory map: %v", err)
 	}
 
 	// Insert the iBFT now, since nothing else has been allocated and this
@@ -287,7 +285,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		}
 		r, err := m.mem.ReservePhys(uint(len(ibuf)), allowedRange)
 		if err != nil {
-			return fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
+			return nil, fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
 		}
 		log.Printf("iBFT was allocated at %s: %#v", r, ibft)
 		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
@@ -296,14 +294,15 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	log.Printf("Preparing %s info", header.name())
 	infoAddr, err := header.addInfo(m)
 	if err != nil {
-		return fmt.Errorf("error preparing %s info: %v", header.name(), err)
+		return nil, fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
 
 	log.Printf("Adding trampoline")
-	if m.entryPoint, err = m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry); err != nil {
-		return fmt.Errorf("error adding trampoline: %v", err)
+	entryPoint, err := m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry)
+	if err != nil {
+		return nil, fmt.Errorf("error adding trampoline: %v", err)
 	}
-	log.Printf("Trampoline entry point at %#x", m.entryPoint)
+	log.Printf("Trampoline entry point at %#x", entryPoint)
 
 	if debug {
 		info, err := m.description()
@@ -313,7 +312,10 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		log.Printf("%v %v", DebugPrefix, info)
 	}
 
-	return nil
+	return &kexecArgs{
+		Segments:   m.mem.Segments,
+		EntryPoint: entryPoint,
+	}, nil
 }
 
 func getEntryPoint(r io.ReaderAt) (uintptr, error) {
