@@ -123,6 +123,9 @@ var (
 		mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
 	}
+
+	// cgroups are optional for most u-root users, especially
+	// LinuxBoot/NERF. Some users use u-root for container stuff.
 	cgroupsnamespace = []creator{
 		mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
 		dir{Name: "/sys/fs/cgroup/memory", Mode: 0555},
@@ -156,13 +159,17 @@ func goBin() string {
 	return fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s", runtime.GOOS, runtime.GOARCH, runtime.GOOS, runtime.GOARCH)
 }
 
-func create(namespace []creator) {
+func create(namespace []creator, optional bool) {
 	// Clear umask bits so that we get stuff like ptmx right.
 	m := unix.Umask(0)
 	defer unix.Umask(m)
 	for _, c := range namespace {
 		if err := c.create(); err != nil {
-			ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
+			if optional {
+				ulog.KernelLog.Printf("u-root init [optional]: warning creating %s: %v", c, err)
+			} else {
+				ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
+			}
 		}
 	}
 }
@@ -189,10 +196,10 @@ func SetEnv() {
 // CreateRootfs creates the default u-root file system.
 func CreateRootfs() {
 	// Mount devtmpfs, then open /dev/kmsg with Reinit.
-	create(preNamespace)
+	create(preNamespace, false)
 	ulog.KernelLog.Reinit()
 
-	create(namespace)
+	create(namespace, false)
 
 	// systemd gets upset when it discovers something has already setup cgroups
 	// We have to do this after the base namespace is created, so we have /proc
@@ -200,6 +207,6 @@ func CreateRootfs() {
 	systemd, present := initFlags["systemd"]
 	systemdEnabled, boolErr := strconv.ParseBool(systemd)
 	if !present || boolErr != nil || !systemdEnabled {
-		create(cgroupsnamespace)
+		create(cgroupsnamespace, true)
 	}
 }
