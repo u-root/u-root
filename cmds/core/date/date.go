@@ -59,7 +59,6 @@ func init() {
 	}
 	flag.BoolVar(&flags.universal, "u", false, "Coordinated Universal Time (UTC)")
 	flag.StringVar(&flags.reference, "r", "", "Display the last midification time of FILE")
-	flag.Parse()
 }
 
 // regex search for +format POSIX patterns
@@ -212,6 +211,8 @@ func date(t time.Time, z *time.Location) string {
 }
 
 func main() {
+	flag.Parse()
+
 	t := time.Now()
 	z := time.Local
 	if flags.universal {
