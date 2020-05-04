@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 type ArchiveValidator interface {
@@ -39,6 +40,24 @@ func (hf HasFile) Validate(a *cpio.Archive) error {
 		return nil
 	}
 	return fmt.Errorf("archive does not contain %s, but should", hf.Path)
+}
+
+type HasContent struct {
+	Path    string
+	Content string
+}
+
+func (hc HasContent) Validate(a *cpio.Archive) error {
+	r, ok := a.Get(hc.Path)
+	if !ok {
+		return fmt.Errorf("archive does not contain %s, but should", hc.Path)
+	}
+	if c, err := uio.ReadAll(r); err != nil {
+		return fmt.Errorf("reading record %s failed: %v", hc.Path, err)
+	} else if string(c) != hc.Content {
+		return fmt.Errorf("content of %s is %s, want %s", hc.Path, string(c), hc.Content)
+	}
+	return nil
 }
 
 type MissingFile struct {

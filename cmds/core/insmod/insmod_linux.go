@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Insert a module into the Linux kernel
+// insmod inserts a module into the running Linux kernel.
 //
 // Synopsis:
 //	insmod [filename] [module options...]

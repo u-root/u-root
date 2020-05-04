@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// md5sum prints an md5 hash generated from file contents.
 package main
 
 import (
@@ -16,12 +17,10 @@ import (
 )
 
 func getInput() (input []byte, err error) {
-
 	return ioutil.ReadAll(os.Stdin)
 }
 
 func helpPrinter() {
-
 	fmt.Printf("Usage:\nmd5sum <File Name>\n")
 	pflag.PrintDefaults()
 	os.Exit(0)

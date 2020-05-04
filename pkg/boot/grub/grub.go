@@ -27,6 +27,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -172,111 +173,6 @@ func (c *parser) appendFile(url string) error {
 	return c.append(string(config))
 }
 
-func isWhitespace(b byte) bool {
-	return b == '\t' || b == '\n' || b == '\v' ||
-		b == '\f' || b == '\r' || b == ' '
-}
-
-type quote uint8
-
-const (
-	unquoted quote = iota
-	escape
-	singleQuote
-	doubleQuote
-	doubleQuoteEscape
-	comment
-)
-
-// Fields splits a grub line and unquote it's components according to
-// https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
-// except that the escaping of newline is not supported
-func fields(s string) []string {
-	var ret []string
-	var token []byte
-
-	var context quote
-	lastWhiteSpace := true
-	for i := range []byte(s) {
-		quotes := context != unquoted
-		switch context {
-		case unquoted:
-			switch s[i] {
-			case '\\':
-				context = escape
-				// strip out the quote
-				continue
-			case '\'':
-				context = singleQuote
-				// strip out the quote
-				continue
-			case '"':
-				context = doubleQuote
-				// strip out the quote
-				continue
-			case '#':
-				if lastWhiteSpace {
-					context = comment
-					// strip out the rest
-					continue
-				}
-			}
-
-		case escape:
-			context = unquoted
-
-		case singleQuote:
-			if s[i] == '\'' {
-				context = unquoted
-				// strip out the quote
-				continue
-			}
-
-		case doubleQuote:
-			switch s[i] {
-			case '\\':
-				context = doubleQuoteEscape
-				// strip out the quote
-				continue
-			case '"':
-				context = unquoted
-				// strip out the quote
-				continue
-			}
-
-		case doubleQuoteEscape:
-			switch s[i] {
-			case '$', '"', '\\', '\n': // or newline
-			default:
-				token = append(token, '\\')
-			}
-
-			context = doubleQuote
-
-		case comment:
-			// should end on newline
-
-			// strip out the rest
-			continue
-
-		}
-
-		lastWhiteSpace = isWhitespace(s[i])
-
-		if !isWhitespace(s[i]) || quotes {
-			token = append(token, s[i])
-		} else if len(token) > 0 {
-			ret = append(ret, string(token))
-			token = token[:0]
-		}
-	}
-
-	if len(token) > 0 {
-		ret = append(ret, string(token))
-	}
-	return ret
-}
-
 // CmdlineQuote quotes the command line as grub-core/lib/cmdline.c does
 func cmdlineQuote(args []string) string {
 	q := make([]string, len(args))
@@ -296,7 +192,7 @@ func cmdlineQuote(args []string) string {
 func (c *parser) append(config string) error {
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
-		kv := fields(line)
+		kv := shlex.Argv(line)
 		if len(kv) < 1 {
 			continue
 		}

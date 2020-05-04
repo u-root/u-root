@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Read or set the hardware clock (RTC) in UTC format.
+// hwclock reads or changes the hardware clock (RTC) in UTC format.
 //
 // Synopsis:
 //     hwclock [-w]

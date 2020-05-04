@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Echo writes its arguments separated by blanks and terminated by a newline on
+// echo writes its arguments separated by blanks and terminated by a newline on
 // the standard output.
 //
 // Synopsis:

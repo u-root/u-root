@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// assumptions
-// we've been booted into a ramfs with all this stuff unpacked and ready.
-// we don't need a loop device mount because it's all there.
-// So we run /go/bin/go build installcommand
-// and then exec /buildbin/sh
-
+// init is u-root's standard userspace init process.
+//
+// init is intended to be the first process run by the kernel when it boots up.
+// init does some basic initialization (mount file systems, turn on loopback)
+// and then tries to execute, in order, /inito, a uinit (either in /bin, /bbin,
+// or /ubin), and then a shell (/bin/defaultsh and /bin/sh).
 package main
 
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os/exec"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/libinit"
+	"github.com/u-root/u-root/pkg/uflag"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -74,7 +76,14 @@ func main() {
 	// Allows passing args to uinit via kernel parameters, for example:
 	//
 	// uroot.uinitargs="-v --foobar"
-	uinitArgs := libinit.WithArguments(cmdline.GetUinitArgs()...)
+	//
+	// We also allow passing args to uinit via a flags file in
+	// /etc/uinit.flags.
+	args := cmdline.GetUinitArgs()
+	if contents, err := ioutil.ReadFile("/etc/uinit.flags"); err == nil {
+		args = append(args, uflag.FileToArgv(string(contents))...)
+	}
+	uinitArgs := libinit.WithArguments(args...)
 
 	cmdList := []*exec.Cmd{
 		// inito is (optionally) created by the u-root command when the

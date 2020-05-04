@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Read the system log.
+// dmesg reads the system log.
 //
 // Synopsis:
 //     dmesg [-clear|-read-clear]
