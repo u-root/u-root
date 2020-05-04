@@ -296,6 +296,7 @@ func load(kernel io.ReaderAt, cmdLine string, modules []Module, debug bool, ibft
 	if err != nil {
 		return nil, fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
+	log.Printf("Info structure at %#x", infoAddr)
 
 	log.Printf("Adding trampoline")
 	entryPoint, err := m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry)
@@ -366,7 +367,7 @@ func (m multiboot) memoryMap() memoryMaps {
 		}
 		ret = append(ret, v)
 	}
-	log.Printf("Memory map: %v", ret)
+	log.Printf("Memory map:\n%v", ret)
 	return ret
 }
 
@@ -413,6 +414,19 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
+func (m *multiboot) addMmapInfo() (addr uintptr, size uint, err error) {
+	mmap := m.memoryMap()
+	d, err := mmap.marshal()
+	if err != nil {
+		return 0, 0, err
+	}
+	r, err := m.mem.AddKexecSegment(d)
+	if err != nil {
+		return 0, 0, err
+	}
+	return r.Start, uint(len(mmap)) * sizeofMemoryMap, nil
+}
+
 // addMultibootInfo puts the multiboot info structure into memory.
 //
 // addInfo collects and adds multiboot info into the relocations/segments.
@@ -426,12 +440,21 @@ func min(a, b uint32) uint32 {
 // - adds modules into memory + kernel command-line + bootloader name,
 // - adds pointers to modules into memory,
 // - then adds multiboot info structure with pointers to the above into mem.
+//
+// If contiguous memory is available, you'll end up with a layout like this:
+//
+//  1-2 pages memory map
+//  1-2 pages strings (cmdlines, bootloader name)
+//  page-aligned modules, one by one
+//  1-2 pages with multiboot_mod_list pointers to modules, their size, and their command-lines
+//  1 page multiboot_info struct, pointing to mod_list, strings, and memory map
 func (h *header) addInfo(m *multiboot) (uintptr, error) {
 	// Add memory map into memory.
-	mmapAddr, mmapSize, err := m.addMmap()
+	mmapAddr, mmapSize, err := m.addMmapInfo()
 	if err != nil {
 		return 0, err
 	}
+	log.Printf("Memory map at %#x", mmapAddr)
 
 	// Refer to the memory map in the info struct.
 	var inf info
@@ -453,6 +476,7 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 	if err != nil {
 		return 0, err
 	}
+	log.Printf("Module / cmdline area: %#x", extraPtrs[0])
 
 	// This loads pointers to modules + cmdline into memory, to be pointed
 	// to by the info struct.
@@ -465,6 +489,7 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 		if err != nil {
 			return 0, err
 		}
+		log.Printf("Module info area: %#x / %d modules", modRange.Start, len(m.modules))
 
 		inf.Flags |= flagInfoMods
 		inf.ModsAddr = uint32(modRange.Start)
@@ -472,9 +497,11 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 	}
 
 	// Now just fix up some pointers...
-	inf.CmdLine = uint32(extraPtrs[0])
-	inf.BootLoaderName = uint32(extraPtrs[1])
+	inf.CmdLine = uint32(extraPtrs[1])
+	inf.BootLoaderName = uint32(extraPtrs[0])
 	inf.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
+
+	log.Printf("Multiboot info: %#v", inf)
 
 	// Add the info struct itself.
 	mbInfo, err := inf.marshal()

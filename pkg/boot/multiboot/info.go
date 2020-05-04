@@ -81,6 +81,11 @@ type info struct {
 // expected by the kernel being loaded.
 func (i *info) marshal() ([]byte, error) {
 	var buf bytes.Buffer
-	err := binary.Write(&buf, ubinary.NativeEndian, i)
+	if err := binary.Write(&buf, ubinary.NativeEndian, i); err != nil {
+		return nil, err
+	}
+
+	size := (buf.Len() + 3) &^ 3
+	_, err := buf.Write(bytes.Repeat([]byte{0}, size-buf.Len()))
 	return buf.Bytes(), err
 }

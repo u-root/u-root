@@ -60,7 +60,6 @@ func (m *multiboot) loadModules(extraData ...string) ([]uintptr, modules, error)
 		buf.WriteString(d)
 		buf.WriteByte(0)
 	}
-	extraLen := buf.Len()
 
 	loaded, err := loadModules(&buf, m.modules)
 	if err != nil {
@@ -76,7 +75,7 @@ func (m *multiboot) loadModules(extraData ...string) ([]uintptr, modules, error)
 	for i := range extraPtrs {
 		extraPtrs[i] += uintptr(cmdlineRange.Start)
 	}
-	loaded.fix(uint32(extraLen) + uint32(cmdlineRange.Start))
+	loaded.fix(uint32(cmdlineRange.Start))
 	m.loadedModules = loaded
 
 	for i, mod := range loaded {
