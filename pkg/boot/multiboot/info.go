@@ -11,8 +11,6 @@ import (
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
-var sizeofInfo = uint32(binary.Size(info{}))
-
 type flag uint32
 
 const (
@@ -79,42 +77,10 @@ type info struct {
 	ColorInfo         [6]byte
 }
 
-type infoWrapper struct {
-	info
-
-	CmdLine        string
-	BootLoaderName string
-}
-
 // marshal writes out the exact bytes of multiboot info
 // expected by the kernel being loaded.
-func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
-	offset := sizeofInfo + uint32(base)
-	iw.info.CmdLine = offset
-	offset += uint32(len(iw.CmdLine)) + 1
-	iw.info.BootLoaderName = offset
-	iw.info.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
-
-	buf := bytes.Buffer{}
-	if err := binary.Write(&buf, ubinary.NativeEndian, iw.info); err != nil {
-		return nil, err
-	}
-
-	for _, s := range []string{iw.CmdLine, iw.BootLoaderName} {
-		if _, err := buf.WriteString(s); err != nil {
-			return nil, err
-		}
-		if err := buf.WriteByte(0); err != nil {
-			return nil, err
-		}
-	}
-
-	size := (buf.Len() + 3) &^ 3
-	_, err := buf.Write(bytes.Repeat([]byte{0}, size-buf.Len()))
+func (i *info) marshal() ([]byte, error) {
+	var buf bytes.Buffer
+	err := binary.Write(&buf, ubinary.NativeEndian, i)
 	return buf.Bytes(), err
-}
-
-func (iw infoWrapper) size() (uint, error) {
-	b, err := iw.marshal(0)
-	return uint(len(b)), err
 }

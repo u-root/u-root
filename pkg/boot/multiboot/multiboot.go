@@ -324,37 +324,6 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 	return uintptr(f.Entry), err
 }
 
-// addInfo collects and adds multiboot info into the relocations/segments.
-//
-// addInfo marshals out everything required for
-// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
-// which is a memory map; a list of module structures, pointed to by mods_addr
-// and mods_count; and the multiboot info structure itself.
-func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
-	iw, err := h.newMultibootInfo(m)
-	if err != nil {
-		return 0, err
-	}
-	infoSize, err := iw.size()
-	if err != nil {
-		return 0, err
-	}
-
-	r, err := m.mem.FindSpace(infoSize)
-	if err != nil {
-		return 0, err
-	}
-
-	d, err := iw.marshal(r.Start)
-	if err != nil {
-		return 0, err
-	}
-	m.info = iw.info
-
-	m.mem.Segments.Insert(kexec.NewSegment(d, r))
-	return r.Start, nil
-}
-
 // addInfo collects and adds mutiboot (without L!) into the segments.
 //
 // The format is described in the structs in
@@ -365,35 +334,18 @@ func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
 	var mi mutibootInfo
 
 	mi.elems = append(mi.elems, m.memoryMap().elems()...)
-	mods, err := m.loadModules()
+	cmdLinePtrs, mods, err := m.loadModules(m.cmdLine)
 	if err != nil {
 		return 0, err
 	}
 	mi.elems = append(mi.elems, mods.elems()...)
+	mi.cmdline = uint64(cmdLinePtrs[0])
 
-	// This marshals the mutiboot info with cmdline = 0. We're gonna append
-	// the cmdline, so we must know the size of the marshaled stuff first
-	// to be able to point to it.
-	//
-	// TODO: find a better place to put the cmdline so we don't do this
-	// bullshit.
-	b := mi.marshal()
-
-	// string + null-terminator
-	cmdlineLen := len(m.cmdLine) + 1
-
-	memRange, err := m.mem.FindSpace(uint(len(b) + cmdlineLen))
+	r, err := m.mem.AddKexecSegment(mi.marshal())
 	if err != nil {
 		return 0, err
 	}
-	mi.cmdline = uint64(memRange.Start + uintptr(len(b)))
-
-	// Re-marshal, now that the cmdline is set.
-	b = mi.marshal()
-	b = append(b, []byte(m.cmdLine)...)
-	b = append(b, 0)
-	m.mem.Segments.Insert(kexec.NewSegment(b, memRange))
-	return memRange.Start, nil
+	return r.Start, nil
 }
 
 func (m multiboot) memoryMap() memoryMaps {
@@ -459,11 +411,27 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
+// addMultibootInfo puts the multiboot info structure into memory.
+//
+// addInfo collects and adds multiboot info into the relocations/segments.
+//
+// addInfo marshals out everything required for
+// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
+// which is a memory map; a list of module structures, pointed to by mods_addr
+// and mods_count; and the multiboot info structure itself.
+//
+// - adds the memory map into memory,
+// - adds modules into memory + kernel command-line + bootloader name,
+// - adds pointers to modules into memory,
+// - then adds multiboot info structure with pointers to the above into mem.
+func (h *header) addInfo(m *multiboot) (uintptr, error) {
+	// Add memory map into memory.
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
+
+	// Refer to the memory map in the info struct.
 	var inf info
 	if h.Flags&flagHeaderMemoryInfo != 0 {
 		lower, upper := m.memoryBoundaries()
@@ -476,21 +444,46 @@ func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 		}
 	}
 
-	if len(m.modules) > 0 {
-		modAddr, err := m.addMultibootModules()
+	// Load bootloader name, kernel command-line, and modules and their
+	// cmdlines into memory.
+	extraData := []string{m.bootloader, m.cmdLine}
+	extraPtrs, loaded, err := m.loadModules(extraData...)
+	if err != nil {
+		return 0, err
+	}
+
+	// This loads pointers to modules + cmdline into memory, to be pointed
+	// to by the info struct.
+	if len(loaded) > 0 {
+		b, err := loaded.marshal()
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
+		modRange, err := m.mem.AddKexecSegment(b)
+		if err != nil {
+			return 0, err
+		}
+
 		inf.Flags |= flagInfoMods
-		inf.ModsAddr = uint32(modAddr)
+		inf.ModsAddr = uint32(modRange.Start)
 		inf.ModsCount = uint32(len(m.modules))
 	}
 
-	return &infoWrapper{
-		info:           inf,
-		CmdLine:        m.cmdLine,
-		BootLoaderName: m.bootloader,
-	}, nil
+	// Now just fix up some pointers...
+	inf.CmdLine = uint32(extraPtrs[0])
+	inf.BootLoaderName = uint32(extraPtrs[1])
+	inf.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
+
+	// Add the info struct itself.
+	mbInfo, err := inf.marshal()
+	if err != nil {
+		return 0, err
+	}
+	mbRange, err := m.mem.AddKexecSegment(mbInfo)
+	if err != nil {
+		return 0, err
+	}
+	return mbRange.Start, nil
 }
 
 func (m *multiboot) addTrampoline(magic, infoAddr, kernelEntry uintptr) (entry uintptr, err error) {

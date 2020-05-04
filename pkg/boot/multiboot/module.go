@@ -33,46 +33,12 @@ type module struct {
 
 type modules []module
 
-func (m *multiboot) loadModules() (modules, error) {
-	loaded, data, err := loadModules(m.modules)
-	if err != nil {
-		return nil, err
-	}
-
-	cmdlineRange, err := m.mem.AddKexecSegment(data)
-	if err != nil {
-		return nil, err
-	}
-
-	loaded.fix(uint32(cmdlineRange.Start))
-	m.loadedModules = loaded
-
-	for i, mod := range loaded {
-		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name, mod.Start, mod.End)
-	}
-
-	return loaded, nil
-}
-
-func (m *multiboot) addMultibootModules() (uintptr, error) {
-	loaded, err := m.loadModules()
-	if err != nil {
-		return 0, err
-	}
-	b, err := loaded.marshal()
-	if err != nil {
-		return 0, err
-	}
-	modRange, err := m.mem.AddKexecSegment(b)
-	if err != nil {
-		return 0, err
-	}
-	return modRange.Start, nil
-}
-
 // loadModules loads module files.
 // Returns loaded modules description and buffer storing loaded modules.
 // Memory layout of the loaded modules is following:
+//			extraData_1
+//			extraData_2
+//			...
 //			cmdLine_1
 //			cmdLine_2
 //			...
@@ -86,22 +52,54 @@ func (m *multiboot) addMultibootModules() (uintptr, error) {
 //			modules_n
 //
 // <padding> aligns the start of each module to a page beginning.
-func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
-	loaded = make(modules, len(rmods))
+func (m *multiboot) loadModules(extraData ...string) ([]uintptr, modules, error) {
 	var buf bytes.Buffer
+	var extraPtrs []uintptr
+	for _, d := range extraData {
+		extraPtrs = append(extraPtrs, uintptr(buf.Len()))
+		buf.WriteString(d)
+		buf.WriteByte(0)
+	}
+	extraLen := buf.Len()
+
+	loaded, err := loadModules(&buf, m.modules)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cmdlineRange, err := m.mem.AddKexecSegment(buf.Bytes())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Fix up module addresses and addresses for extraData.
+	for i := range extraPtrs {
+		extraPtrs[i] += uintptr(cmdlineRange.Start)
+	}
+	loaded.fix(uint32(extraLen) + uint32(cmdlineRange.Start))
+	m.loadedModules = loaded
+
+	for i, mod := range loaded {
+		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name, mod.Start, mod.End)
+	}
+	return extraPtrs, loaded, nil
+}
+
+func loadModules(buf *bytes.Buffer, rmods []Module) (loaded modules, err error) {
+	loaded = make(modules, len(rmods))
 
 	for i, rmod := range rmods {
-		if err := loaded[i].setCmdLine(&buf, rmod.CmdLine); err != nil {
-			return nil, nil, err
+		if err := loaded[i].setCmdLine(buf, rmod.CmdLine); err != nil {
+			return nil, err
 		}
 	}
 
 	for i, rmod := range rmods {
-		if err := loaded[i].loadModule(&buf, rmod.Module, rmod.Name); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
+		if err := loaded[i].loadModule(buf, rmod.Module, rmod.Name); err != nil {
+			return nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
 		}
 	}
-	return loaded, buf.Bytes(), nil
+	return loaded, nil
 }
 
 func pageAlign(val uint32) uint32 {
