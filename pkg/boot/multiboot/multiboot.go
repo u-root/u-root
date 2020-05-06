@@ -424,7 +424,7 @@ func (m memoryMaps) marshal() ([]byte, error) {
 func (m *multiboot) addTrampoline() (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := trampoline.Setup(m.trampoline, m.infoAddr, m.kernelEntry)
+	d, err := trampoline.Setup(m.trampoline, bootMagic, m.infoAddr, m.kernelEntry)
 	if err != nil {
 		return 0, err
 	}

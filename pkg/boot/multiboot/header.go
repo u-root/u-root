@@ -24,7 +24,10 @@ var (
 	ErrFlagsNotSupported = errors.New("multiboot header flags not supported	yet")
 )
 
-const headerMagic = 0x1BADB002
+const (
+	headerMagic = 0x1BADB002
+	bootMagic   = 0x2BADB002
+)
 
 type headerFlag uint32
 

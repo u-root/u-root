@@ -21,6 +21,7 @@ import (
 const (
 	trampolineEntry = "u-root-entry-long"
 	trampolineInfo  = "u-root-info-long"
+	trampolineMagic = "u-root-mb-magic"
 )
 
 func start()
@@ -40,12 +41,12 @@ func alignUp(x int) int {
 
 // Setup scans file for trampoline code and sets
 // values for multiboot info address and kernel entry point.
-func Setup(path string, infoAddr, entryPoint uintptr) ([]byte, error) {
+func Setup(path string, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
 	d, err := extract(path)
 	if err != nil {
 		return nil, err
 	}
-	return patch(d, infoAddr, entryPoint)
+	return patch(d, magic, infoAddr, entryPoint)
 }
 
 // extract extracts trampoline segment from file.
@@ -83,7 +84,7 @@ func ptrToSlice(ptr uintptr, size int) []byte {
 // patch patches the trampoline code to store value for multiboot info address
 // after "u-root-header-long" byte sequence + padding and value
 // for kernel entry point, after "u-root-entry-long" byte sequence + padding.
-func patch(trampoline []byte, infoAddr, entryPoint uintptr) ([]byte, error) {
+func patch(trampoline []byte, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
 	replace := func(d, label []byte, val uint32) error {
 		buf := make([]byte, 4)
 		ubinary.NativeEndian.PutUint32(buf, val)
@@ -104,6 +105,9 @@ func patch(trampoline []byte, infoAddr, entryPoint uintptr) ([]byte, error) {
 		return nil, err
 	}
 	if err := replace(trampoline, []byte(trampolineEntry), uint32(entryPoint)); err != nil {
+		return nil, err
+	}
+	if err := replace(trampoline, []byte(trampolineMagic), uint32(magic)); err != nil {
 		return nil, err
 	}
 	return trampoline, nil
