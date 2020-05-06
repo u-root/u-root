@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
@@ -69,7 +70,7 @@ type header struct {
 }
 
 type imageType interface {
-	addInfo(m *multiboot) (uintptr, error)
+	addInfo(mem *kexec.Memory, m *multiboot) (uintptr, error)
 	name() string
 	bootMagic() uintptr
 }

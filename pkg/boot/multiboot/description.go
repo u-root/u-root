@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -38,9 +39,9 @@ type Description struct {
 
 // Description returns string representation of
 // multiboot information.
-func (m multiboot) description() (string, error) {
+func (h *header) description(mem *kexec.Memory, loaded modules, info info) (string, error) {
 	var modules []ModuleDesc
-	for i, mod := range m.loadedModules {
+	for i, mod := range loaded {
 		b, err := uio.ReadAll(m.modules[i].Module)
 		if err != nil {
 			return "", nil
@@ -57,16 +58,16 @@ func (m multiboot) description() (string, error) {
 
 	b, err := json.Marshal(Description{
 		Status:     "ok",
-		Flags:      uint32(m.info.Flags),
-		MemLower:   m.info.MemLower,
-		MemUpper:   m.info.MemUpper,
-		MmapAddr:   m.info.MmapAddr,
-		MmapLength: m.info.MmapLength,
+		Flags:      uint32(info.Flags),
+		MemLower:   info.MemLower,
+		MemUpper:   info.MemUpper,
+		MmapAddr:   info.MmapAddr,
+		MmapLength: info.MmapLength,
 
-		CmdLine:    m.cmdLine,
-		Bootloader: m.bootloader,
+		CmdLine:    cmdLine,
+		Bootloader: bootloader,
 
-		Mmap:    m.memoryMap(),
+		Mmap:    memoryMap(mem),
 		Modules: modules,
 	})
 	if err != nil {

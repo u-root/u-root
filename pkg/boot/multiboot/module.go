@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -52,7 +53,7 @@ type modules []module
 //			modules_n
 //
 // <padding> aligns the start of each module to a page beginning.
-func (m *multiboot) loadModules(extraData ...string) ([]uintptr, modules, error) {
+func loadModulesAndStrings(mem *kexec.Memory, modules []Module, extraData ...string) ([]uintptr, modules, error) {
 	var buf bytes.Buffer
 	var extraPtrs []uintptr
 	for _, d := range extraData {
@@ -61,12 +62,12 @@ func (m *multiboot) loadModules(extraData ...string) ([]uintptr, modules, error)
 		buf.WriteByte(0)
 	}
 
-	loaded, err := loadModules(&buf, m.modules)
+	loaded, err := loadModules(&buf, modules)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	cmdlineRange, err := m.mem.AddKexecSegment(buf.Bytes())
+	cmdlineRange, err := mem.AddKexecSegment(buf.Bytes())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,10 +77,9 @@ func (m *multiboot) loadModules(extraData ...string) ([]uintptr, modules, error)
 		extraPtrs[i] += uintptr(cmdlineRange.Start)
 	}
 	loaded.fix(uint32(cmdlineRange.Start))
-	m.loadedModules = loaded
 
 	for i, mod := range loaded {
-		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name, mod.Start, mod.End)
+		log.Printf("Added module %s at [%#x, %#x)", modules[i].Name, mod.Start, mod.End)
 	}
 	return extraPtrs, loaded, nil
 }

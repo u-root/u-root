@@ -350,15 +350,18 @@ func Dedup(segs Segments) Segments {
 
 // Memory provides routines to work with physical memory ranges.
 type Memory struct {
-	// Phys defines the layout of physical memory.
-	//
-	// Phys is used to tell loaded operating systems what memory is usable
-	// as RAM, and what memory is reserved (for ACPI or other reasons).
+	// Phys is the layout of physical memory - which physical addresses are
+	// memory, which are reserved, which are IO.
 	Phys MemoryMap
 
 	// Segments are the segments used to load a new operating system.
 	//
-	// Each segment also contains a physical memory region it maps to.
+	// Segments map a buffer in this userspace to physical memory address
+	// it should end up in at boot time.
+	//
+	// Segments may be both in usable or reserved memory.
+	//
+	// Some bootloaders call these "relocations".
 	Segments Segments
 }
 
@@ -517,9 +520,9 @@ func (m Memory) FindSpace(sz uint) (Range, error) {
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
 }
 
-// ReservePhys reserves page-aligned sz bytes in the physical memmap within
+// FindSpaceAndReserve reserves page-aligned sz bytes in the physical memmap within
 // the given limit address range.
-func (m *Memory) ReservePhys(sz uint, limit Range) (Range, error) {
+func (m *Memory) FindSpaceAndReserve(sz uint, limit Range) (Range, error) {
 	sz = alignUp(sz)
 
 	r, err := m.AvailableRAM().FindSpaceIn(sz, limit)
@@ -537,7 +540,7 @@ func (m *Memory) ReservePhys(sz uint, limit Range) (Range, error) {
 // AddPhysSegment reserves len(d) bytes in the physical memmap within limit and
 // adds a kexec segment with d in that range.
 func (m *Memory) AddPhysSegment(d []byte, limit Range) (Range, error) {
-	r, err := m.ReservePhys(uint(len(d)), limit)
+	r, err := m.FindSpaceAndReserve(uint(len(d)), limit)
 	if err != nil {
 		return Range{}, err
 	}

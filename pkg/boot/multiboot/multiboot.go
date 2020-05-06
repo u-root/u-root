@@ -41,20 +41,8 @@ type Modules []Module
 
 // multiboot defines parameters for working with multiboot kernels.
 type multiboot struct {
-	mem kexec.Memory
-
 	modules []Module
-
-	cmdLine    string
-	bootloader string
-
-	// trampoline is a path to an executable blob, which contains a trampoline segment.
-	// Trampoline sets machine to a specific state defined by multiboot v1 spec.
-	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
-	trampoline string
-
-	info          info
-	loadedModules modules
+	cmdLine string
 }
 
 var (
@@ -217,23 +205,11 @@ type kexecArgs struct {
 // userspace memory must be moved to which place in physical memory in order to
 // jump to the mu(l)tiboot kernel.
 func load(kernel io.ReaderAt, cmdLine string, modules []Module, debug bool, ibft *ibft.IBFT) (*kexecArgs, error) {
-	// Trampoline should be a part of current binary.
-	p, err := os.Executable()
-	if err != nil {
-		return nil, fmt.Errorf("cannot find current executable path: %v", err)
-	}
-	trampoline, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		return nil, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
-	}
-
 	m := &multiboot{
-		modules:    modules,
-		cmdLine:    cmdLine,
-		trampoline: trampoline,
-		bootloader: bootloader,
-		mem:        kexec.Memory{},
+		modules: modules,
+		cmdLine: cmdLine,
 	}
+	var mem kexec.Memory
 
 	log.Println("Parsing multiboot header")
 	// TODO: the kernel is opened like 4 separate times here. Just open it
@@ -263,12 +239,12 @@ func load(kernel io.ReaderAt, cmdLine string, modules []Module, debug bool, ibft
 	log.Printf("Kernel entry point at %#x", kernelEntry)
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(kernel); err != nil {
+	if err := mem.LoadElfSegments(kernel); err != nil {
 		return nil, fmt.Errorf("error loading ELF segments: %v", err)
 	}
 
 	log.Printf("Parsing memory map")
-	if err := m.mem.ParseMemoryMap(); err != nil {
+	if err := mem.ParseMemoryMap(); err != nil {
 		return nil, fmt.Errorf("error parsing memory map: %v", err)
 	}
 
@@ -283,38 +259,30 @@ func load(kernel io.ReaderAt, cmdLine string, modules []Module, debug bool, ibft
 			Start: 0x80000,
 			Size:  0x80000,
 		}
-		r, err := m.mem.ReservePhys(uint(len(ibuf)), allowedRange)
+		r, err := mem.FindSpaceAndReserve(uint(len(ibuf)), allowedRange)
 		if err != nil {
 			return nil, fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
 		}
 		log.Printf("iBFT was allocated at %s: %#v", r, ibft)
-		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
+		mem.Segments.Insert(kexec.NewSegment(ibuf, r))
 	}
 
 	log.Printf("Preparing %s info", header.name())
-	infoAddr, err := header.addInfo(m)
+	infoAddr, err := header.addInfo(&mem, m)
 	if err != nil {
 		return nil, fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
 	log.Printf("Info structure at %#x", infoAddr)
 
 	log.Printf("Adding trampoline")
-	entryPoint, err := m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry)
+	entryPoint, err := addTrampoline(&mem, header.bootMagic(), infoAddr, kernelEntry)
 	if err != nil {
 		return nil, fmt.Errorf("error adding trampoline: %v", err)
 	}
 	log.Printf("Trampoline entry point at %#x", entryPoint)
 
-	if debug {
-		info, err := m.description()
-		if err != nil {
-			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
-		}
-		log.Printf("%v %v", DebugPrefix, info)
-	}
-
 	return &kexecArgs{
-		Segments:   m.mem.Segments,
+		Segments:   mem.Segments,
 		EntryPoint: entryPoint,
 	}, nil
 }
@@ -333,27 +301,27 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 // https://github.com/vmware/esx-boot/blob/master/include/mutiboot.h
 //
 // It includes a memory map and a list of modules.
-func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
+func (*mutibootHeader) addInfo(mem *kexec.Memory, m *multiboot) (addr uintptr, err error) {
 	var mi mutibootInfo
 
-	mi.elems = append(mi.elems, m.memoryMap().elems()...)
-	cmdLinePtrs, mods, err := m.loadModules(m.cmdLine)
+	mi.elems = append(mi.elems, memoryMap(mem).elems()...)
+	cmdLinePtrs, mods, err := loadModulesAndStrings(mem, m.modules, m.cmdLine)
 	if err != nil {
 		return 0, err
 	}
 	mi.elems = append(mi.elems, mods.elems()...)
 	mi.cmdline = uint64(cmdLinePtrs[0])
 
-	r, err := m.mem.AddKexecSegment(mi.marshal())
+	r, err := mem.AddKexecSegment(mi.marshal())
 	if err != nil {
 		return 0, err
 	}
 	return r.Start, nil
 }
 
-func (m multiboot) memoryMap() memoryMaps {
+func memoryMap(mem *kexec.Memory) memoryMaps {
 	var ret memoryMaps
-	for _, r := range m.mem.Phys {
+	for _, r := range mem.Phys {
 		typ, ok := rangeTypes[r.Type]
 		if !ok {
 			typ = rangeTypes[kexec.RangeDefault]
@@ -371,24 +339,10 @@ func (m multiboot) memoryMap() memoryMaps {
 	return ret
 }
 
-// addMmap adds a multiboot-marshaled memory map in memory.
-func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
-	mmap := m.memoryMap()
-	d, err := mmap.marshal()
-	if err != nil {
-		return 0, 0, err
-	}
-	r, err := m.mem.AddKexecSegment(d)
-	if err != nil {
-		return 0, 0, err
-	}
-	return r.Start, uint(len(mmap)) * sizeofMemoryMap, nil
-}
-
-func (m multiboot) memoryBoundaries() (lower, upper uint32) {
+func (*header) memoryBoundaries(mem *kexec.Memory) (lower, upper uint32) {
 	const M1 = 1048576
 	const K640 = 640 * 1024
-	for _, r := range m.mem.Phys {
+	for _, r := range mem.Phys {
 		if r.Type != kexec.RangeRAM {
 			continue
 		}
@@ -414,13 +368,13 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (m *multiboot) addMmapInfo() (addr uintptr, size uint, err error) {
-	mmap := m.memoryMap()
+func (*header) addMmapInfo(mem *kexec.Memory) (addr uintptr, size uint, err error) {
+	mmap := memoryMap(mem)
 	d, err := mmap.marshal()
 	if err != nil {
 		return 0, 0, err
 	}
-	r, err := m.mem.AddKexecSegment(d)
+	r, err := mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -448,9 +402,9 @@ func (m *multiboot) addMmapInfo() (addr uintptr, size uint, err error) {
 //  page-aligned modules, one by one
 //  1-2 pages with multiboot_mod_list pointers to modules, their size, and their command-lines
 //  1 page multiboot_info struct, pointing to mod_list, strings, and memory map
-func (h *header) addInfo(m *multiboot) (uintptr, error) {
+func (h *header) addInfo(mem *kexec.Memory, m *multiboot) (uintptr, error) {
 	// Add memory map into memory.
-	mmapAddr, mmapSize, err := m.addMmapInfo()
+	mmapAddr, mmapSize, err := h.addMmapInfo(mem)
 	if err != nil {
 		return 0, err
 	}
@@ -459,7 +413,7 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 	// Refer to the memory map in the info struct.
 	var inf info
 	if h.Flags&flagHeaderMemoryInfo != 0 {
-		lower, upper := m.memoryBoundaries()
+		lower, upper := h.memoryBoundaries(mem)
 		inf = info{
 			Flags:      flagInfoMemMap | flagInfoMemory,
 			MemLower:   min(uint32(lower>>10), 0xFFFFFFFF),
@@ -471,8 +425,8 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 
 	// Load bootloader name, kernel command-line, and modules and their
 	// cmdlines into memory.
-	extraData := []string{m.bootloader, m.cmdLine}
-	extraPtrs, loaded, err := m.loadModules(extraData...)
+	extraData := []string{bootloader, m.cmdLine}
+	extraPtrs, loaded, err := loadModulesAndStrings(mem, m.modules, extraData...)
 	if err != nil {
 		return 0, err
 	}
@@ -485,7 +439,7 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 		if err != nil {
 			return 0, err
 		}
-		modRange, err := m.mem.AddKexecSegment(b)
+		modRange, err := mem.AddKexecSegment(b)
 		if err != nil {
 			return 0, err
 		}
@@ -508,22 +462,41 @@ func (h *header) addInfo(m *multiboot) (uintptr, error) {
 	if err != nil {
 		return 0, err
 	}
-	mbRange, err := m.mem.AddKexecSegment(mbInfo)
+	mbRange, err := mem.AddKexecSegment(mbInfo)
 	if err != nil {
 		return 0, err
 	}
+
+	if debug {
+		info, err := h.description(mem, loaded, mbInfo)
+		if err != nil {
+			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
+		}
+		log.Printf("%v %v", DebugPrefix, info)
+	}
+
 	return mbRange.Start, nil
 }
 
-func (m *multiboot) addTrampoline(magic, infoAddr, kernelEntry uintptr) (entry uintptr, err error) {
+func addTrampoline(mem *kexec.Memory, magic, infoAddr, kernelEntry uintptr) (entry uintptr, err error) {
+	// Trampoline should be a part of current binary.
+	p, err := os.Executable()
+	if err != nil {
+		return 0, fmt.Errorf("cannot find current executable path: %v", err)
+	}
+	pathToSelf, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return 0, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
+	}
+
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := trampoline.Setup(m.trampoline, magic, infoAddr, kernelEntry)
+	d, err := trampoline.Setup(pathToSelf, magic, infoAddr, kernelEntry)
 	if err != nil {
 		return 0, err
 	}
 
-	r, err := m.mem.AddKexecSegment(d)
+	r, err := mem.AddKexecSegment(d)
 	if err != nil {
 		return 0, err
 	}
