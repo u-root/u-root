@@ -39,13 +39,6 @@ type Module struct {
 // Modules is a range of module with a Closer interface
 type Modules []Module
 
-type ImageType uint8
-
-const (
-	MultibootImage ImageType = 1
-	MutibootImage  ImageType = 2
-)
-
 // multiboot defines parameters for working with multiboot kernels.
 type multiboot struct {
 	mem kexec.Memory
@@ -248,20 +241,21 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	// TODO: the kernel is opened like 4 separate times here. Just open it
 	// once and pass it around.
 
+	var header imageType
 	multibootHeader, err := parseHeader(uio.Reader(m.kernel))
-	if err == ErrHeaderNotFound {
+	if err == nil {
+		header = multibootHeader
+	} else if err == ErrHeaderNotFound {
+		var mutibootHeader *mutibootHeader
 		// We don't even need the header at the moment. Just need to
 		// know it's there. Everything that matters is in the ELF.
-		_, err = parseMutiHeader(uio.Reader(m.kernel))
+		mutibootHeader, err = parseMutiHeader(uio.Reader(m.kernel))
+		header = mutibootHeader
 	}
 	if err != nil {
 		return fmt.Errorf("error parsing headers: %v", err)
 	}
-	if multibootHeader != nil {
-		log.Printf("Found Multiboot image")
-	} else {
-		log.Printf("Found Mutiboot image")
-	}
+	log.Printf("Found %s image", header.name())
 
 	log.Printf("Getting kernel entry point")
 	kernelEntry, err := getEntryPoint(m.kernel)
@@ -299,26 +293,14 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
 	}
 
-	log.Printf("Preparing mu(l)tiboot info")
-	var infoAddr uintptr
-	if multibootHeader != nil {
-		infoAddr, err = m.addMultibootInfo(multibootHeader)
-	} else {
-		infoAddr, err = m.addMutibootInfo()
-	}
+	log.Printf("Preparing %s info", header.name())
+	infoAddr, err := header.addInfo(m)
 	if err != nil {
-		return fmt.Errorf("error preparing multiboot info: %v", err)
-	}
-
-	var magic uintptr
-	if multibootHeader != nil {
-		magic = bootMagic
-	} else {
-		magic = mutibootMagic
+		return fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
 
 	log.Printf("Adding trampoline")
-	if m.entryPoint, err = m.addTrampoline(magic, infoAddr, kernelEntry); err != nil {
+	if m.entryPoint, err = m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry); err != nil {
 		return fmt.Errorf("error adding trampoline: %v", err)
 	}
 	log.Printf("Trampoline entry point at %#x", m.entryPoint)
@@ -342,8 +324,8 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 	return uintptr(f.Entry), err
 }
 
-func (m *multiboot) addMultibootInfo(h *header) (addr uintptr, err error) {
-	iw, err := m.newMultibootInfo(h)
+func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
+	iw, err := h.newMultibootInfo(m)
 	if err != nil {
 		return 0, err
 	}
@@ -367,7 +349,7 @@ func (m *multiboot) addMultibootInfo(h *header) (addr uintptr, err error) {
 	return r.Start, nil
 }
 
-func (m *multiboot) addMutibootInfo() (addr uintptr, err error) {
+func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
 	var mi mutibootInfo
 
 	mi.elems = append(mi.elems, m.memoryMap().elems()...)
@@ -464,13 +446,13 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (m *multiboot) newMultibootInfo(header *header) (*infoWrapper, error) {
+func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
 		return nil, err
 	}
 	var inf info
-	if header.Flags&flagHeaderMemoryInfo != 0 {
+	if h.Flags&flagHeaderMemoryInfo != 0 {
 		lower, upper := m.memoryBoundaries()
 		inf = info{
 			Flags:      flagInfoMemMap | flagInfoMemory,

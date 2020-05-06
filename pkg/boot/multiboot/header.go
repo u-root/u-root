@@ -65,6 +65,20 @@ type header struct {
 	optional
 }
 
+type imageType interface {
+	addInfo(m *multiboot) (uintptr, error)
+	name() string
+	bootMagic() uintptr
+}
+
+func (h *header) name() string {
+	return "multiboot"
+}
+
+func (h *header) bootMagic() uintptr {
+	return bootMagic
+}
+
 // parseHeader parses multiboot header as defined in
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 func parseHeader(r io.Reader) (*header, error) {

@@ -63,6 +63,14 @@ type mutibootHeader struct {
 	LoadESXVersion       uint32
 }
 
+func (m *mutibootHeader) name() string {
+	return "mutiboot"
+}
+
+func (m *mutibootHeader) bootMagic() uintptr {
+	return mutibootMagic
+}
+
 // parseMutiHeader parses mutiboot header.
 func parseMutiHeader(r io.Reader) (*mutibootHeader, error) {
 	sizeofHeader := binary.Size(mutibootHeader{})
