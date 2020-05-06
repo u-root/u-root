@@ -106,8 +106,8 @@ func TestParseHeader(t *testing.T) {
 				return
 			}
 			if test.size-test.offset > mandatorySize {
-				if !reflect.DeepEqual(got, want) {
-					t.Errorf("parseHeader() got %+v, want %+v", got, want)
+				if !reflect.DeepEqual(*got, want) {
+					t.Errorf("parseHeader() got %+v, want %+v", *got, want)
 				}
 			} else {
 				if !reflect.DeepEqual(got.mandatory, want.mandatory) {
