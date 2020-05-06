@@ -93,6 +93,7 @@ func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
 	iw.info.CmdLine = offset
 	offset += uint32(len(iw.CmdLine)) + 1
 	iw.info.BootLoaderName = offset
+	iw.info.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
 
 	buf := bytes.Buffer{}
 	if err := binary.Write(&buf, ubinary.NativeEndian, iw.info); err != nil {
