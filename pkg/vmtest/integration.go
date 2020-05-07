@@ -119,8 +119,18 @@ type testLineWriter struct {
 	prefix string
 }
 
+func replaceCtl(str []byte) []byte {
+	for i, c := range str {
+		if c == 9 || c == 10 {
+		} else if c < 32 || c == 127 {
+			str[i] = '~'
+		}
+	}
+	return str
+}
+
 func (tsw *testLineWriter) OneLine(p []byte) {
-	tsw.tb.Logf("%s %s: %s", testutil.NowLog(), tsw.prefix, strings.ReplaceAll(string(p), "\033", "~"))
+	tsw.tb.Logf("%s %s: %s", testutil.NowLog(), tsw.prefix, string(replaceCtl(p)))
 }
 
 // TestArch returns the architecture under test. Pass this as GOARCH when

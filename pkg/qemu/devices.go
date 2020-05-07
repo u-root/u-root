@@ -118,6 +118,30 @@ func (rod ReadOnlyDirectory) Cmdline() []string {
 
 func (ReadOnlyDirectory) KArgs() []string { return nil }
 
+// IDEBlockDevice emulates an AHCI/IDE block device.
+type IDEBlockDevice struct {
+	File string
+}
+
+func (ibd IDEBlockDevice) Cmdline() []string {
+	if len(ibd.File) == 0 {
+		return nil
+	}
+
+	// There's a better way to do this. I don't know what it is. Some day
+	// I'll learn QEMU's crazy command line.
+	//
+	// I wish someone would make a proto representation of the
+	// command-line. Would be so much more understandable how device
+	// backends and frontends relate to each other.
+	return []string{
+		"-device", "ich9-ahci,id=ahci",
+		"-device", "ide-drive,drive=disk,bus=ahci.0",
+		"-drive", fmt.Sprintf("file=%s,if=none,id=disk", ibd.File),
+	}
+}
+func (IDEBlockDevice) KArgs() []string { return nil }
+
 // P9Directory is a Device that exposes a directory as a Plan9 (9p)
 // read-write filesystem in the VM.
 type P9Directory struct {

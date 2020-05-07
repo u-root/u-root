@@ -226,3 +226,9 @@ func (v *VM) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) (str
 	str, _, err := v.gExpect.Expect(pattern, scaled)
 	return str, err
 }
+
+// ExpectBatch matches many regular expressions.
+func (v *VM) ExpectBatch(batch []expect.Batcher, timeout time.Duration) ([]expect.BatchRes, error) {
+	scaled := time.Duration(float64(timeout) * TimeoutMultiplier)
+	return v.gExpect.ExpectBatch(batch, scaled)
+}
