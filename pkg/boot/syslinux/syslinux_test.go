@@ -5,6 +5,7 @@
 package syslinux
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -592,7 +593,7 @@ func TestAppendFile(t *testing.T) {
 			s := tt.schemeFunc()
 			par := newParser(tt.wd, s)
 
-			if err := par.appendFile(tt.configFileURI); !reflect.DeepEqual(err, tt.err) {
+			if err := par.appendFile(context.Background(), tt.configFileURI); !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)
 			} else if err != nil {
 				return
