@@ -59,7 +59,7 @@ func BootImage(l ulog.Logger, s curl.Schemes, lease dhclient.Lease) (*boot.Linux
 // ip, and mac address to search for pxe configs.
 func getBootImage(l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
 	// Attempt to read the given boot path as an ipxe config file.
-	ipc, err := ipxe.ParseConfigWithSchemes(l, uri, schemes)
+	ipc, err := ipxe.ParseConfig(l, uri, schemes)
 	if err == nil {
 		return ipc, nil
 	}
@@ -71,7 +71,7 @@ func getBootImage(l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.Har
 		Host:   uri.Host,
 		Path:   path.Dir(uri.Path),
 	}
-	pc, err := pxe.ParseConfigWithSchemes(wd, mac, ip, schemes)
+	pc, err := pxe.ParseConfig(wd, mac, ip, schemes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
 	}

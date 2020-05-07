@@ -52,21 +52,14 @@ type Config struct {
 // Currently, only the APPEND, INCLUDE, KERNEL, LABEL, DEFAULT, and INITRD
 // directives are partially supported.
 //
-// curl.DefaultSchemes is used to fetch any files that must be parsed or
-// provided.
+// `s` is used to fetch any files that must be parsed or provided.
 //
 // `wd` is the default scheme, host, and path for any files named as a
 // relative path - e.g. kernel, include, and initramfs paths are requested
 // relative to the wd. The default path for config files is assumed to be
 // `wd.Path`/pxelinux.cfg/.
-func ParseConfigFile(url string, wd *url.URL) (*Config, error) {
-	return ParseConfigFileWithSchemes(curl.DefaultSchemes, url, wd)
-}
-
-// ParseConfigFileWithSchemes is like ParseConfigFile, but uses the given
-// schemes explicitly.
-func ParseConfigFileWithSchemes(s curl.Schemes, url string, wd *url.URL) (*Config, error) {
-	p := newParserWithSchemes(wd, s)
+func ParseConfigFile(s curl.Schemes, url string, wd *url.URL) (*Config, error) {
+	p := newParser(wd, s)
 	if err := p.appendFile(url); err != nil {
 		return nil, err
 	}
@@ -91,7 +84,7 @@ const (
 	scopeEntry
 )
 
-// newParserWithSchemes returns a new PXE parser using working directory `wd`
+// newParser returns a new PXE parser using working directory `wd`
 // and schemes `s`.
 //
 // If a path encountered in a configuration file is relative instead of a full
@@ -99,7 +92,7 @@ const (
 // resulting URL is roughly `wd.String()/path`.
 //
 // `s` is used to get files referred to by URLs.
-func newParserWithSchemes(wd *url.URL, s curl.Schemes) *parser {
+func newParser(wd *url.URL, s curl.Schemes) *parser {
 	return &parser{
 		config: &Config{
 			Entries: make(map[string]*boot.LinuxImage),

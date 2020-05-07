@@ -287,9 +287,9 @@ func probeIsolinuxFiles() []string {
 	return files
 }
 
-func IsolinuxParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*syslinux.Config, error) {
+func IsolinuxParseConfig(workingDir *url.URL, s curl.Schemes) (*syslinux.Config, error) {
 	for _, relname := range probeIsolinuxFiles() {
-		c, err := syslinux.ParseConfigFileWithSchemes(s, relname, workingDir)
+		c, err := syslinux.ParseConfigFile(s, relname, workingDir)
 		if curl.IsURLError(err) {
 			continue
 		}
@@ -300,7 +300,7 @@ func IsolinuxParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*sysli
 
 // call IsolinuxBootImage(curl.DefaultSchemes, dir)
 func IsolinuxBootImage(schemes curl.Schemes, workingDir *url.URL) (*boot.LinuxImage, error) {
-	pc, err := IsolinuxParseConfigWithSchemes(workingDir, schemes)
+	pc, err := IsolinuxParseConfig(workingDir, schemes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
 	}
@@ -317,9 +317,9 @@ var probeGrubFiles = []string{
 	"grub2/grub.cfg",
 }
 
-func GrubParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*grub.Config, error) {
+func GrubParseConfig(workingDir *url.URL, s curl.Schemes) (*grub.Config, error) {
 	for _, relname := range probeGrubFiles {
-		c, err := grub.ParseConfigFileWithSchemes(s, relname, workingDir)
+		c, err := grub.ParseConfigFile(s, relname, workingDir)
 		if curl.IsURLError(err) {
 			continue
 		}
@@ -330,7 +330,7 @@ func GrubParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*grub.Conf
 
 // GrubBootImage
 func GrubBootImage(schemes curl.Schemes, workingDir *url.URL, entryID string, list bool) (boot.OSImage, error) {
-	pc, err := GrubParseConfigWithSchemes(workingDir, schemes)
+	pc, err := GrubParseConfig(workingDir, schemes)
 	if err != nil && err != grub.ErrDefaultEntryNotFound {
 		return nil, fmt.Errorf("failed to parse grub config: %v", err)
 	}

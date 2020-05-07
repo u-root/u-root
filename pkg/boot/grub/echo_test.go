@@ -108,7 +108,7 @@ func TestGrubTests(t *testing.T) {
 				Scheme: "file",
 				Path:   "./testdata",
 			}
-			c := newParserWithSchemes(wd, curl.DefaultSchemes)
+			c := newParser(wd, curl.DefaultSchemes)
 			c.W = &b
 
 			script, err := ioutil.ReadFile(file)

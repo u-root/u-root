@@ -41,19 +41,11 @@ type parser struct {
 	schemes curl.Schemes
 }
 
-// ParseConfig returns a new  configuration with the file at URL and default
+// ParseConfig returns a new configuration with the file at URL and default
 // schemes.
 //
-// See ParseConfigWithSchemes for more details.
-func ParseConfig(l ulog.Logger, configURL *url.URL) (*boot.LinuxImage, error) {
-	return ParseConfigWithSchemes(l, configURL, curl.DefaultSchemes)
-}
-
-// ParseConfigWithSchemes returns a new  configuration with the file at URL
-// and schemes `s`.
-//
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfigWithSchemes(l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
+func ParseConfig(l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
 	c := &parser{
 		schemes: s,
 		log:     l,
