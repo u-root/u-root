@@ -8,6 +8,7 @@
 package pxe
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -21,9 +22,9 @@ import (
 
 // ParseConfig probes for config files based on the Mac and IP given
 // and uses s to fetch files.
-func ParseConfig(workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s curl.Schemes) (*syslinux.Config, error) {
+func ParseConfig(ctx context.Context, workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s curl.Schemes) (*syslinux.Config, error) {
 	for _, relname := range probeFiles(mac, ip) {
-		c, err := syslinux.ParseConfigFile(s, path.Join("pxelinux.cfg", relname), workingDir)
+		c, err := syslinux.ParseConfigFile(ctx, s, path.Join("pxelinux.cfg", relname), workingDir)
 		if curl.IsURLError(err) {
 			// We didn't find the file.
 			// TODO(hugelgupf): log this.

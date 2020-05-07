@@ -12,6 +12,7 @@
 package syslinux
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -58,9 +59,9 @@ type Config struct {
 // relative path - e.g. kernel, include, and initramfs paths are requested
 // relative to the wd. The default path for config files is assumed to be
 // `wd.Path`/pxelinux.cfg/.
-func ParseConfigFile(s curl.Schemes, url string, wd *url.URL) (*Config, error) {
+func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) (*Config, error) {
 	p := newParser(wd, s)
-	if err := p.appendFile(url); err != nil {
+	if err := p.appendFile(ctx, url); err != nil {
 		return nil, err
 	}
 	return p.config, nil
@@ -137,8 +138,13 @@ func (c *parser) getFile(url string) (io.ReaderAt, error) {
 }
 
 // appendFile parses the config file downloaded from `url` and adds it to `c`.
-func (c *parser) appendFile(url string) error {
-	r, err := c.getFile(url)
+func (c *parser) appendFile(ctx context.Context, url string) error {
+	u, err := parseURL(url, c.wd)
+	if err != nil {
+		return err
+	}
+
+	r, err := c.schemes.Fetch(ctx, u)
 	if err != nil {
 		return err
 	}
@@ -147,11 +153,11 @@ func (c *parser) appendFile(url string) error {
 		return err
 	}
 	log.Printf("Got config file %s:\n%s\n", r, string(config))
-	return c.append(string(config))
+	return c.append(ctx, string(config))
 }
 
 // Append parses `config` and adds the respective configuration to `c`.
-func (c *parser) append(config string) error {
+func (c *parser) append(ctx context.Context, config string) error {
 	var defaultEntry string
 	var nerfDefaultEntry string
 
@@ -178,7 +184,7 @@ func (c *parser) append(config string) error {
 			nerfDefaultEntry = arg
 
 		case "include":
-			if err := c.appendFile(arg); curl.IsURLError(err) {
+			if err := c.appendFile(ctx, arg); curl.IsURLError(err) {
 				// Means we didn't find the file. Just ignore
 				// it.
 				// TODO(hugelgupf): plumb a logger through here.
