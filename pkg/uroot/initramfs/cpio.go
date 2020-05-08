@@ -30,7 +30,7 @@ func (ca CPIOArchiver) OpenWriter(l ulog.Logger, path, goos, goarch string) (Wri
 	if len(path) == 0 {
 		path = fmt.Sprintf("/tmp/initramfs.%s_%s.cpio", goos, goarch)
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, err
 	}
