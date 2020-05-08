@@ -101,7 +101,7 @@ func (m memoryMaps) marshal() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// elems returns the info elements expected in the mutiboot info header.
+// elems adds mutiboot info elements describing the memory map of the system.
 func (m memoryMaps) elems() []elem {
 	var e []elem
 	for _, mm := range m {
@@ -324,6 +324,12 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 	return uintptr(f.Entry), err
 }
 
+// addInfo collects and adds multiboot info into the relocations/segments.
+//
+// addInfo marshals out everything required for
+// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
+// which is a memory map; a list of module structures, pointed to by mods_addr
+// and mods_count; and the multiboot info structure itself.
 func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
 	iw, err := h.newMultibootInfo(m)
 	if err != nil {
@@ -349,6 +355,12 @@ func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
 	return r.Start, nil
 }
 
+// addInfo collects and adds mutiboot (without L!) into the segments.
+//
+// The format is described in the structs in
+// https://github.com/vmware/esx-boot/blob/master/include/mutiboot.h
+//
+// It includes a memory map and a list of modules.
 func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
 	var mi mutibootInfo
 
@@ -404,6 +416,7 @@ func (m multiboot) memoryMap() memoryMaps {
 	return ret
 }
 
+// addMmap adds a multiboot-marshaled memory map in memory.
 func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	mmap := m.memoryMap()
 	d, err := mmap.marshal()

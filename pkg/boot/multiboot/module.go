@@ -150,15 +150,16 @@ func (m modules) fix(base uint32) {
 	}
 }
 
-// marshal writes out the exact bytes of modules to be loaded
-// along with the kernel.
+// marshal writes out the module list in multiboot info format, as described in
+// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 func (m modules) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := binary.Write(&buf, ubinary.NativeEndian, m)
 	return buf.Bytes(), err
 }
 
-// elems returns the elements expected by the mutiboot info header.
+// elems adds mutiboot info elements describing where to find each module and
+// its cmdline.
 func (m modules) elems() []elem {
 	var e []elem
 	for _, mm := range m {
