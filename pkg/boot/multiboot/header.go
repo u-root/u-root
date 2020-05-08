@@ -25,8 +25,11 @@ var (
 )
 
 const (
+	// headerMagic is the magic value found in a multiboot kernel header.
 	headerMagic = 0x1BADB002
-	bootMagic   = 0x2BADB002
+
+	// bootMagic is the magic expected by the loaded OS in EAX at boot handover.
+	bootMagic = 0x2BADB002
 )
 
 type headerFlag uint32

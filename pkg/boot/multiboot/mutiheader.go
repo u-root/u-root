@@ -13,6 +13,8 @@ import (
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
+// mutibootMagic is both the magic value found in the mutiboot kernel header as
+// well as the value the loaded OS expects in EAX at boot time.
 const mutibootMagic = 0x1BADB005
 
 type mutibootHeaderFlag uint32
