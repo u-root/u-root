@@ -42,8 +42,11 @@ func TestESXi(t *testing.T) {
 				// afaict.
 				qemu.ArbitraryArgs{"-cpu", "IvyBridge"},
 
-				// Min ESXi requirement is 4G of memory.
-				qemu.ArbitraryArgs{"-m", "4096"},
+				// Min ESXi requirement is 4G of memory, but in
+				// ESXi 7.0 some plugins fail to load at 4G
+				// under memory pressure, and we never get to
+				// "Boot Successful"
+				qemu.ArbitraryArgs{"-m", "8192"},
 			},
 		},
 	})
