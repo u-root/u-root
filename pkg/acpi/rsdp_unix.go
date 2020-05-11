@@ -28,10 +28,10 @@ func GetRSDPEBDA() (*RSDP, error) {
 		return nil, err
 	}
 
-	return getRSDPMem(uint64(e.BaseOffset), uint64(e.BaseOffset+e.Length))
+	return getRSDPMem(int64(e.BaseOffset), int64(e.BaseOffset+e.Length))
 }
 
-func getRSDPMem(start, end uint64) (*RSDP, error) {
+func getRSDPMem(start, end int64) (*RSDP, error) {
 	for base := start; base < end; base += 16 {
 		var r memio.Uint64
 		if err := memio.Read(int64(base), &r); err != nil {

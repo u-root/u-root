@@ -40,7 +40,7 @@ func GetRSDPEFI() (*RSDP, error) {
 		if start == "" {
 			continue
 		}
-		base, err := strconv.ParseUint(start, 0, 64)
+		base, err := strconv.ParseInt(start, 0, 63)
 		if err != nil {
 			continue
 		}
