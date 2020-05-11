@@ -18,7 +18,7 @@ var (
 // RSDP is the v2 version of the ACPI RSDP struct.
 type RSDP struct {
 	// base is the base address of the RSDP struct in physical memory.
-	base uint64
+	base int64
 
 	data [headerLength]byte
 }
@@ -64,7 +64,7 @@ func (r *RSDP) OEMID() string {
 }
 
 // RSDPAddr returns the physical base address of the RSDP.
-func (r *RSDP) RSDPAddr() uint64 {
+func (r *RSDP) RSDPAddr() int64 {
 	return r.base
 }
 
@@ -72,15 +72,15 @@ func (r *RSDP) RSDPAddr() uint64 {
 //
 // It will preferentially return the XSDT, but if that is
 // 0 it will return the RSDT address.
-func (r *RSDP) SDTAddr() uint64 {
+func (r *RSDP) SDTAddr() int64 {
 	b := uint64(binary.LittleEndian.Uint32(r.data[16:20]))
 	if b != 0 {
-		return b
+		return int64(b)
 	}
-	return binary.LittleEndian.Uint64(r.data[24:32])
+	return int64(binary.LittleEndian.Uint64(r.data[24:32]))
 }
 
-func readRSDP(base uint64) (*RSDP, error) {
+func readRSDP(base int64) (*RSDP, error) {
 	r := &RSDP{}
 	r.base = base
 

@@ -8,6 +8,7 @@ package acpi
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -41,4 +42,31 @@ func TestTabWrite(t *testing.T) {
 		t.Fatalf("Written table does not match")
 	}
 
+}
+
+// TestAddr tests the decoding of those stupid "use this 64-bit if set else 32 things"
+// that permeate ACPI
+func TestAddr(t *testing.T) {
+	var tests = []struct {
+		n   string
+		dat []byte
+		a64 int64
+		a32 int64
+		val int64
+		err error
+	}{
+		{n: "zero length data", dat: []byte{}, a64: 5, a32: 1, val: -1, err: fmt.Errorf("No 64-bit address at 5, no 32-bit address at 1, in 0-byte slice")},
+		{n: "32 bits at 1, no 64-bit", dat: []byte{1, 2, 3, 4, 5}, a64: 5, a32: 1, val: 84148994, err: nil},
+		{n: "64 bits at 5", dat: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, a64: 5, a32: 1, val: 940138559942690566, err: nil},
+	}
+	Debug = t.Logf
+	for _, tt := range tests {
+		v, err := getaddr(tt.dat, tt.a64, tt.a32)
+		if v != tt.val {
+			t.Errorf("Test %s: got %d, want %d", tt.n, v, tt.val)
+		}
+		if !reflect.DeepEqual(err, tt.err) {
+			t.Errorf("Test %s: got %v, want %v", tt.n, err, tt.err)
+		}
+	}
 }

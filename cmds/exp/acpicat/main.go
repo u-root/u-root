@@ -18,10 +18,14 @@ import (
 
 var (
 	source = flag.String("s", acpi.DefaultMethod, "source of the tables")
+	debug  = flag.Bool("d", false, "Enable debug prints")
 )
 
 func main() {
 	flag.Parse()
+	if *debug {
+		acpi.Debug = log.Printf
+	}
 	t, err := acpi.ReadTables(*source)
 	if err != nil {
 		log.Fatal(err)
