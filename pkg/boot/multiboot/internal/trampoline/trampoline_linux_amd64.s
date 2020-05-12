@@ -16,8 +16,6 @@
 #define DATA_SEGMENT	0x00CF92000000FFFF
 #define CODE_SEGMENT	0x00CF9A000000FFFF
 
-#define MAGIC	0x2BADB002
-
 TEXT ·start(SB),NOSPLIT,$0
 	// Create GDT pointer on stack.
 	LEAQ	gdt(SB), CX
@@ -30,6 +28,10 @@ TEXT ·start(SB),NOSPLIT,$0
 	// Store value of multiboot info addr in BX.
 	// Don't modify BX.
 	MOVL	info(SB), BX
+
+	// Store value of mu(l)tiboot magic in SI.
+	// Don't modify SI.
+	MOVL	magic(SB), SI
 
 	// Far return doesn't work on QEMU in 64-bit mode,
 	// let's do far jump.
@@ -84,7 +86,8 @@ TEXT boot(SB),NOSPLIT,$0
 	BYTE	$0x8e; BYTE $0xe0 // MOVL AX, FS
 	BYTE	$0x8e; BYTE $0xe8 // MOVL AX, GS
 
-	MOVL	$MAGIC, AX
+	// We stored the magic in SI before the far jump.
+	MOVL	SI, AX
 	JMP	farjump32(SB)
 
 	// Unreachable code.
@@ -92,6 +95,7 @@ TEXT boot(SB),NOSPLIT,$0
 	// include them to a binary.
 	JMP	infotext(SB)
 	JMP	entrytext(SB)
+  JMP magictext(SB)
 
 TEXT farjump64(SB),NOSPLIT,$0
 	BYTE	$0xFF; BYTE $0x2D; LONG $0x0 // ljmp *(ip)
@@ -127,6 +131,14 @@ TEXT entrytext(SB),NOSPLIT,$0
 	BYTE $'r'; BYTE $'y'; BYTE $'-'; BYTE $'l'; BYTE $'o';
 	BYTE $'n'; BYTE $'g';
 TEXT entry(SB),NOSPLIT,$0
+	LONG	$0x0
+
+TEXT magictext(SB),NOSPLIT,$0
+	// u-root-mb-magic
+	BYTE $'u'; BYTE $'-'; BYTE $'r'; BYTE $'o'; BYTE $'o';
+	BYTE $'t'; BYTE $'-'; BYTE $'m'; BYTE $'b'; BYTE $'-';
+	BYTE $'m'; BYTE $'a'; BYTE $'g'; BYTE $'i'; BYTE $'c';
+TEXT magic(SB),NOSPLIT,$0
 	LONG	$0x0
 
 TEXT ·end(SB),NOSPLIT,$0

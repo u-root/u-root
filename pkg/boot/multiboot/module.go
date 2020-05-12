@@ -33,21 +33,32 @@ type module struct {
 
 type modules []module
 
-func (m *multiboot) addModules() (uintptr, error) {
+func (m *multiboot) loadModules() (modules, error) {
 	loaded, data, err := loadModules(m.modules)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	cmdlineRange, err := m.mem.AddKexecSegment(data)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	loaded.fix(uint32(cmdlineRange.Start))
-
 	m.loadedModules = loaded
 
+	for i, mod := range loaded {
+		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name, mod.Start, mod.End)
+	}
+
+	return loaded, nil
+}
+
+func (m *multiboot) addMultibootModules() (uintptr, error) {
+	loaded, err := m.loadModules()
+	if err != nil {
+		return 0, err
+	}
 	b, err := loaded.marshal()
 	if err != nil {
 		return 0, err
@@ -77,7 +88,7 @@ func (m *multiboot) addModules() (uintptr, error) {
 // <padding> aligns the start of each module to a page beginning.
 func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 	loaded = make(modules, len(rmods))
-	buf := bytes.Buffer{}
+	var buf bytes.Buffer
 
 	for i, rmod := range rmods {
 		if err := loaded[i].setCmdLine(&buf, rmod.CmdLine); err != nil {
@@ -90,12 +101,16 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
 		}
 	}
-
 	return loaded, buf.Bytes(), nil
 }
 
-// alignUp pads buf to a page boundary.
-func alignUp(buf *bytes.Buffer) error {
+func pageAlign(val uint32) uint32 {
+	mask := uint32(os.Getpagesize() - 1)
+	return (val + mask) &^ mask
+}
+
+// pageAlignBuf pads buf to a page boundary.
+func pageAlignBuf(buf *bytes.Buffer) error {
 	mask := (os.Getpagesize() - 1)
 	size := (buf.Len() + mask) &^ mask
 	_, err := buf.Write(bytes.Repeat([]byte{0}, size-buf.Len()))
@@ -103,10 +118,8 @@ func alignUp(buf *bytes.Buffer) error {
 }
 
 func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error {
-	log.Printf("Adding module %v", name)
-
 	// place start of each module to a beginning of a page.
-	if err := alignUp(buf); err != nil {
+	if err := pageAlignBuf(buf); err != nil {
 		return err
 	}
 
@@ -117,7 +130,6 @@ func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error
 	}
 
 	m.End = uint32(buf.Len())
-
 	return nil
 }
 
@@ -138,10 +150,29 @@ func (m modules) fix(base uint32) {
 	}
 }
 
-// marshal writes out the exact bytes of modules to be loaded
-// along with the kernel.
+// marshal writes out the module list in multiboot info format, as described in
+// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 func (m modules) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
 	err := binary.Write(&buf, ubinary.NativeEndian, m)
 	return buf.Bytes(), err
+}
+
+// elems adds mutiboot info elements describing where to find each module and
+// its cmdline.
+func (m modules) elems() []elem {
+	var e []elem
+	for _, mm := range m {
+		e = append(e, &mutibootModule{
+			cmdline:    uint64(mm.CmdLine),
+			moduleSize: uint64(mm.End - mm.Start),
+			ranges: []mutibootModuleRange{
+				{
+					startPageNum: uint64(mm.Start / uint32(os.Getpagesize())),
+					numPages:     pageAlign(mm.End-mm.Start) / uint32(os.Getpagesize()),
+				},
+			},
+		})
+	}
+	return e
 }

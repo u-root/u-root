@@ -54,17 +54,11 @@ type multiboot struct {
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 	trampoline string
 
-	header header
-
-	// infoAddr is a pointer to multiboot info.
-	infoAddr uintptr
-	// kernelEntry is a pointer to entry point of kernel.
-	kernelEntry uintptr
 	// EntryPoint is a pointer to trampoline.
 	entryPoint uintptr
 
 	info          info
-	loadedModules []module
+	loadedModules modules
 }
 
 var (
@@ -98,6 +92,28 @@ func (m MemoryMap) String() string {
 
 type memoryMaps []MemoryMap
 
+// marshal writes out the exact bytes expected by the multiboot info header
+// specified in
+// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format.
+func (m memoryMaps) marshal() ([]byte, error) {
+	buf := bytes.Buffer{}
+	err := binary.Write(&buf, ubinary.NativeEndian, m)
+	return buf.Bytes(), err
+}
+
+// elems adds mutiboot info elements describing the memory map of the system.
+func (m memoryMaps) elems() []elem {
+	var e []elem
+	for _, mm := range m {
+		e = append(e, &mutibootMemRange{
+			startAddr: mm.BaseAddr,
+			length:    mm.Length,
+			memType:   mm.Type,
+		})
+	}
+	return e
+}
+
 // String returns a new-line-separated representation of the entire memory map.
 func (m memoryMaps) String() string {
 	var s []string
@@ -107,10 +123,13 @@ func (m memoryMaps) String() string {
 	return strings.Join(s, "\n")
 }
 
-// Probe checks if `kernel` is multiboot v1 kernel.
+// Probe checks if `kernel` is multiboot v1 or mutiboot kernel.
 func Probe(kernel io.ReaderAt) error {
 	r := tryGzipFilter(kernel)
 	_, err := parseHeader(uio.Reader(r))
+	if err == ErrHeaderNotFound {
+		_, err = parseMutiHeader(uio.Reader(r))
+	}
 	return err
 }
 
@@ -219,15 +238,31 @@ func (m Modules) Close() error {
 func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	var err error
 	log.Println("Parsing multiboot header")
-	if m.header, err = parseHeader(uio.Reader(m.kernel)); err != nil {
+	// TODO: the kernel is opened like 4 separate times here. Just open it
+	// once and pass it around.
+
+	var header imageType
+	multibootHeader, err := parseHeader(uio.Reader(m.kernel))
+	if err == nil {
+		header = multibootHeader
+	} else if err == ErrHeaderNotFound {
+		var mutibootHeader *mutibootHeader
+		// We don't even need the header at the moment. Just need to
+		// know it's there. Everything that matters is in the ELF.
+		mutibootHeader, err = parseMutiHeader(uio.Reader(m.kernel))
+		header = mutibootHeader
+	}
+	if err != nil {
 		return fmt.Errorf("error parsing headers: %v", err)
 	}
+	log.Printf("Found %s image", header.name())
 
 	log.Printf("Getting kernel entry point")
-	if m.kernelEntry, err = getEntryPoint(m.kernel); err != nil {
+	kernelEntry, err := getEntryPoint(m.kernel)
+	if err != nil {
 		return fmt.Errorf("error getting kernel entry point: %v", err)
 	}
-	log.Printf("Kernel entry point at %#x", m.kernelEntry)
+	log.Printf("Kernel entry point at %#x", kernelEntry)
 
 	log.Printf("Parsing ELF segments")
 	if err := m.mem.LoadElfSegments(m.kernel); err != nil {
@@ -258,13 +293,14 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
 	}
 
-	log.Printf("Preparing multiboot info")
-	if m.infoAddr, err = m.addInfo(); err != nil {
-		return fmt.Errorf("error preparing multiboot info: %v", err)
+	log.Printf("Preparing %s info", header.name())
+	infoAddr, err := header.addInfo(m)
+	if err != nil {
+		return fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
 
 	log.Printf("Adding trampoline")
-	if m.entryPoint, err = m.addTrampoline(); err != nil {
+	if m.entryPoint, err = m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry); err != nil {
 		return fmt.Errorf("error adding trampoline: %v", err)
 	}
 	log.Printf("Trampoline entry point at %#x", m.entryPoint)
@@ -288,8 +324,14 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 	return uintptr(f.Entry), err
 }
 
-func (m *multiboot) addInfo() (addr uintptr, err error) {
-	iw, err := m.newMultibootInfo()
+// addInfo collects and adds multiboot info into the relocations/segments.
+//
+// addInfo marshals out everything required for
+// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
+// which is a memory map; a list of module structures, pointed to by mods_addr
+// and mods_count; and the multiboot info structure itself.
+func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
+	iw, err := h.newMultibootInfo(m)
 	if err != nil {
 		return 0, err
 	}
@@ -313,6 +355,47 @@ func (m *multiboot) addInfo() (addr uintptr, err error) {
 	return r.Start, nil
 }
 
+// addInfo collects and adds mutiboot (without L!) into the segments.
+//
+// The format is described in the structs in
+// https://github.com/vmware/esx-boot/blob/master/include/mutiboot.h
+//
+// It includes a memory map and a list of modules.
+func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
+	var mi mutibootInfo
+
+	mi.elems = append(mi.elems, m.memoryMap().elems()...)
+	mods, err := m.loadModules()
+	if err != nil {
+		return 0, err
+	}
+	mi.elems = append(mi.elems, mods.elems()...)
+
+	// This marshals the mutiboot info with cmdline = 0. We're gonna append
+	// the cmdline, so we must know the size of the marshaled stuff first
+	// to be able to point to it.
+	//
+	// TODO: find a better place to put the cmdline so we don't do this
+	// bullshit.
+	b := mi.marshal()
+
+	// string + null-terminator
+	cmdlineLen := len(m.cmdLine) + 1
+
+	memRange, err := m.mem.FindSpace(uint(len(b) + cmdlineLen))
+	if err != nil {
+		return 0, err
+	}
+	mi.cmdline = uint64(memRange.Start + uintptr(len(b)))
+
+	// Re-marshal, now that the cmdline is set.
+	b = mi.marshal()
+	b = append(b, []byte(m.cmdLine)...)
+	b = append(b, 0)
+	m.mem.Segments.Insert(kexec.NewSegment(b, memRange))
+	return memRange.Start, nil
+}
+
 func (m multiboot) memoryMap() memoryMaps {
 	var ret memoryMaps
 	for _, r := range m.mem.Phys {
@@ -329,12 +412,13 @@ func (m multiboot) memoryMap() memoryMaps {
 		}
 		ret = append(ret, v)
 	}
+	log.Printf("Memory map: %v", ret)
 	return ret
 }
 
+// addMmap adds a multiboot-marshaled memory map in memory.
 func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	mmap := m.memoryMap()
-	log.Printf("Memory map:\n%s", mmap)
 	d, err := mmap.marshal()
 	if err != nil {
 		return 0, 0, err
@@ -375,13 +459,13 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
+func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
 		return nil, err
 	}
 	var inf info
-	if m.header.Flags&flagHeaderMemoryInfo != 0 {
+	if h.Flags&flagHeaderMemoryInfo != 0 {
 		lower, upper := m.memoryBoundaries()
 		inf = info{
 			Flags:      flagInfoMemMap | flagInfoMemory,
@@ -393,7 +477,7 @@ func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
 	}
 
 	if len(m.modules) > 0 {
-		modAddr, err := m.addModules()
+		modAddr, err := m.addMultibootModules()
 		if err != nil {
 			return nil, err
 		}
@@ -402,9 +486,6 @@ func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
 		inf.ModsCount = uint32(len(m.modules))
 	}
 
-	inf.CmdLine = sizeofInfo
-	inf.BootLoaderName = sizeofInfo + uint32(len(m.cmdLine)) + 1
-	inf.Flags |= flagInfoCmdLine | flagInfoBootLoaderName
 	return &infoWrapper{
 		info:           inf,
 		CmdLine:        m.cmdLine,
@@ -412,19 +493,10 @@ func (m *multiboot) newMultibootInfo() (*infoWrapper, error) {
 	}, nil
 }
 
-// marshal writes out the exact bytes expected by the multiboot info header
-// specified in
-// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format.
-func (m memoryMaps) marshal() ([]byte, error) {
-	buf := bytes.Buffer{}
-	err := binary.Write(&buf, ubinary.NativeEndian, m)
-	return buf.Bytes(), err
-}
-
-func (m *multiboot) addTrampoline() (entry uintptr, err error) {
+func (m *multiboot) addTrampoline(magic, infoAddr, kernelEntry uintptr) (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := trampoline.Setup(m.trampoline, m.infoAddr, m.kernelEntry)
+	d, err := trampoline.Setup(m.trampoline, magic, infoAddr, kernelEntry)
 	if err != nil {
 		return 0, err
 	}

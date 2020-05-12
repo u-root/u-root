@@ -8,6 +8,6 @@ package trampoline
 
 import "errors"
 
-func Setup(path string, infoAddr, entryPoint uintptr) ([]byte, error) {
+func Setup(path string, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
 	return nil, errors.New("not implemented yet")
 }

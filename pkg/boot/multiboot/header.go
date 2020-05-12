@@ -24,7 +24,13 @@ var (
 	ErrFlagsNotSupported = errors.New("multiboot header flags not supported	yet")
 )
 
-const headerMagic = 0x1BADB002
+const (
+	// headerMagic is the magic value found in a multiboot kernel header.
+	headerMagic = 0x1BADB002
+
+	// bootMagic is the magic expected by the loaded OS in EAX at boot handover.
+	bootMagic = 0x2BADB002
+)
 
 type headerFlag uint32
 
@@ -62,9 +68,23 @@ type header struct {
 	optional
 }
 
+type imageType interface {
+	addInfo(m *multiboot) (uintptr, error)
+	name() string
+	bootMagic() uintptr
+}
+
+func (h *header) name() string {
+	return "multiboot"
+}
+
+func (h *header) bootMagic() uintptr {
+	return bootMagic
+}
+
 // parseHeader parses multiboot header as defined in
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
-func parseHeader(r io.Reader) (header, error) {
+func parseHeader(r io.Reader) (*header, error) {
 	mandatorySize := binary.Size(mandatory{})
 	optionalSize := binary.Size(optional{})
 	sizeofHeader := mandatorySize + optionalSize
@@ -74,7 +94,7 @@ func parseHeader(r io.Reader) (header, error) {
 	buf := make([]byte, 8192)
 	n, err := io.ReadAtLeast(r, buf, mandatorySize)
 	if err != nil {
-		return hdr, err
+		return nil, err
 	}
 	buf = buf[:n]
 
@@ -86,19 +106,19 @@ func parseHeader(r io.Reader) (header, error) {
 	for len(buf) >= sizeofHeader {
 		br.Reset(buf)
 		if err := binary.Read(br, ubinary.NativeEndian, &hdr); err != nil {
-			return hdr, err
+			return nil, err
 		}
 		if hdr.Magic == headerMagic && (hdr.Magic+uint32(hdr.Flags)+hdr.Checksum) == 0 {
 			if hdr.Flags&flagHeaderUnsupported != 0 {
-				return hdr, ErrFlagsNotSupported
+				return nil, ErrFlagsNotSupported
 			}
 			if hdr.Flags&flagHeaderMultibootVideoMode != 0 {
 				log.Print("VideoMode flag is not supproted yet, trying to load anyway")
 			}
-			return hdr, nil
+			return &hdr, nil
 		}
 		// The Multiboot header must be 32-bit aligned.
 		buf = buf[4:]
 	}
-	return hdr, ErrHeaderNotFound
+	return nil, ErrHeaderNotFound
 }
