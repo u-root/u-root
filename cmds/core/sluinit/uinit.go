@@ -61,15 +61,14 @@ func main() {
 
 	defer unmountAndExit() // called only on error, on success we kexec
 	slaunch.Debug("********Step 1: init completed. starting main ********")
-	tpmDev, err := tpm.GetHandle()
-	if err != nil {
-		log.Printf("tpm.getHandle failed. err=%v", err)
+	if err := tpm.New(); err != nil {
+		log.Printf("tpm.New() failed. err=%v", err)
 		return
 	}
-	defer tpmDev.Close()
+	defer tpm.Close()
 
 	slaunch.Debug("********Step 2: locate and parse SL Policy ********")
-	p, err := policy.Get(tpmDev)
+	p, err := policy.Get()
 	if err != nil {
 		log.Printf("failed to get policy err=%v", err)
 		return
@@ -79,14 +78,14 @@ func main() {
 	slaunch.Debug("********Step 3: Collecting Evidence ********")
 	for _, c := range p.Collectors {
 		slaunch.Debug("Input Collector: %v", c)
-		if e := c.Collect(tpmDev); e != nil {
+		if e := c.Collect(); e != nil {
 			log.Printf("Collector %v failed, err = %v", c, e)
 		}
 	}
 	slaunch.Debug("Collectors completed")
 
 	slaunch.Debug("********Step 4: Measuring target kernel, initrd ********")
-	if err := p.Launcher.MeasureKernel(tpmDev); err != nil {
+	if err := p.Launcher.MeasureKernel(); err != nil {
 		log.Printf("Launcher.MeasureKernel failed err=%v", err)
 		return
 	}
@@ -107,7 +106,7 @@ func main() {
 	slaunch.UnmountAll()
 
 	slaunch.Debug("********Step 7: Launcher called to Boot ********")
-	if err := p.Launcher.Boot(tpmDev); err != nil {
+	if err := p.Launcher.Boot(); err != nil {
 		log.Printf("Boot failed. err=%s", err)
 		return
 	}

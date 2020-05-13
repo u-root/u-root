@@ -7,7 +7,6 @@ package launcher
 
 import (
 	"fmt"
-	"io"
 	"log"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -26,17 +25,17 @@ type Launcher struct {
 
 // MeasureKernel calls file collector in measurement pkg that
 // hashes kernel, initrd files and even store these hashes in tpm pcrs.
-func (l *Launcher) MeasureKernel(tpmDev io.ReadWriteCloser) error {
+func (l *Launcher) MeasureKernel() error {
 
 	kernel := l.Params["kernel"]
 	initrd := l.Params["initrd"]
 
-	if e := measurement.HashFile(tpmDev, kernel); e != nil {
+	if e := measurement.HashFile(kernel); e != nil {
 		log.Printf("ERR: measure kernel input=%s, err=%v", kernel, e)
 		return e
 	}
 
-	if e := measurement.HashFile(tpmDev, initrd); e != nil {
+	if e := measurement.HashFile(initrd); e != nil {
 		log.Printf("ERR: measure initrd input=%s, err=%v", initrd, e)
 		return e
 	}
@@ -57,7 +56,7 @@ func (l *Launcher) MeasureKernel(tpmDev io.ReadWriteCloser) error {
  * - if mount fails
  * - if kexec fails
  */
-func (l *Launcher) Boot(tpmDev io.ReadWriteCloser) error {
+func (l *Launcher) Boot() error {
 
 	if l.Type != "kexec" {
 		log.Printf("launcher: Unsupported launcher type. Exiting.")

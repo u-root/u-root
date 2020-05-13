@@ -7,7 +7,6 @@ package measurement
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -42,12 +41,11 @@ func NewStorageCollector(config []byte) (Collector, error) {
  * and then extends the pcr with it.
  *
  * Hashing of buffer is handled by tpm package.
- * - tpmHandle - tpm device where measurements are stored.
  * - blkDevicePath - string e.g /dev/sda
  * returns
  * - error if Reading the block device fails.
  */
-func measureStorageDevice(tpmHandle io.ReadWriteCloser, blkDevicePath string) error {
+func measureStorageDevice(blkDevicePath string) error {
 
 	log.Printf("Storage Collector: Measuring block device %s\n", blkDevicePath)
 	file, err := os.Open(blkDevicePath)
@@ -56,7 +54,7 @@ func measureStorageDevice(tpmHandle io.ReadWriteCloser, blkDevicePath string) er
 	}
 
 	eventDesc := fmt.Sprintf("Storage Collector: Measured %s", blkDevicePath)
-	return tpm.ExtendPCRDebug(tpmHandle, pcr, file, eventDesc)
+	return tpm.ExtendPCRDebug(pcr, file, eventDesc)
 }
 
 /*
@@ -65,7 +63,7 @@ func measureStorageDevice(tpmHandle io.ReadWriteCloser, blkDevicePath string) er
  * form /dev/sda. measureStorageDevice in turn calls tpm
  * package which further hashes this buffer and extends pcr.
  */
-func (s *StorageCollector) Collect(tpmHandle io.ReadWriteCloser) error {
+func (s *StorageCollector) Collect() error {
 
 	for _, inputVal := range s.Paths {
 		device, e := slaunch.GetStorageDevice(inputVal) // inputVal is blkDevicePath e.g UUID or sda
@@ -74,7 +72,7 @@ func (s *StorageCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 			return e
 		}
 		devPath := filepath.Join("/dev", device.Name)
-		err := measureStorageDevice(tpmHandle, devPath)
+		err := measureStorageDevice(devPath)
 		if err != nil {
 			log.Printf("Storage Collector: input = %s, err = %v", inputVal, err)
 			return err

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 
@@ -109,9 +108,9 @@ func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
  * Collect satisfies collector interface. It calls
  * 1. smbios package to get all smbios data,
  * 2. then, filters smbios data based on type provided in policy file, and
- * 3. the filtered data is then measured into the tpmHandle (tpm device).
+ * 3. the filtered data is then measured into the tpm device.
  */
-func (s *DmiCollector) Collect(tpmHandle io.ReadWriteCloser) error {
+func (s *DmiCollector) Collect() error {
 	slaunch.Debug("DMI Collector: Entering ")
 	if s.Type != "dmi" {
 		return errors.New("invalid type passed to a DmiCollector method")
@@ -153,7 +152,7 @@ func (s *DmiCollector) Collect(tpmHandle io.ReadWriteCloser) error {
 		slaunch.Debug(pt.String())
 		b := []byte(pt.String())
 		eventDesc := fmt.Sprintf("DMI Collector: Measured dmi label=[%v]", t.Type)
-		if e := tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b), eventDesc); e != nil {
+		if e := tpm.ExtendPCRDebug(pcr, bytes.NewReader(b), eventDesc); e != nil {
 			log.Printf("DMI Collector: err =%v", e)
 			return e // return error if any single type fails ..
 		}
