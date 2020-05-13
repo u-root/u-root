@@ -77,7 +77,7 @@ func (t *TPM) ReadPCRs(alg HashAlg) ([]PCR, error) {
 		}
 
 	case TPMVersion20:
-		PCRs, err = readAllPCRs20(t.RWC, alg.goTPMAlg())
+		PCRs, err = readAllPCRs20(t.RWC, alg.GoTPMAlg())
 		if err != nil {
 			return nil, fmt.Errorf("failed to read PCRs: %v", err)
 		}

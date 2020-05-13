@@ -21,7 +21,7 @@ func extendPCR12(rwc io.ReadWriter, pcrIndex uint32, hash [20]byte) error {
 }
 
 func extendPCR20(rwc io.ReadWriter, pcrIndex uint32, hash []byte) error {
-	if err := tpm2.PCRExtend(rwc, tpmutil.Handle(pcrIndex), HashSHA256.goTPMAlg(), hash, ""); err != nil {
+	if err := tpm2.PCRExtend(rwc, tpmutil.Handle(pcrIndex), HashSHA256.GoTPMAlg(), hash, ""); err != nil {
 		return err
 	}
 	return nil
@@ -93,5 +93,5 @@ func readPCR12(rwc io.ReadWriter, pcrIndex uint32) ([]byte, error) {
 }
 
 func readPCR20(rwc io.ReadWriter, pcrIndex uint32) ([]byte, error) {
-	return tpm2.ReadPCR(rwc, int(pcrIndex), HashSHA256.goTPMAlg())
+	return tpm2.ReadPCR(rwc, int(pcrIndex), HashSHA256.GoTPMAlg())
 }

@@ -58,7 +58,7 @@ func (a HashAlg) cryptoHash() crypto.Hash {
 	return 0
 }
 
-func (a HashAlg) goTPMAlg() tpm2.Algorithm {
+func (a HashAlg) GoTPMAlg() tpm2.Algorithm {
 	switch a {
 	case HashSHA1:
 		return tpm2.AlgSHA1
