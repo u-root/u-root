@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 
@@ -40,8 +39,8 @@ func NewFileCollector(config []byte) (Collector, error) {
 
 // HashBytes extends PCR with a byte array and sends an event to sysfs.
 // the sent event is described via eventDesc.
-func HashBytes(tpmHandle io.ReadWriteCloser, b []byte, eventDesc string) error {
-	return tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(b), eventDesc)
+func HashBytes(b []byte, eventDesc string) error {
+	return tpm.ExtendPCRDebug(pcr, bytes.NewReader(b), eventDesc)
 }
 
 /*
@@ -55,7 +54,7 @@ func HashBytes(tpmHandle io.ReadWriteCloser, b []byte, eventDesc string) error {
  * 3. Unmount device
  * 4. Call tpm package which measures byte slice and stores it.
  */
-func HashFile(tpmHandle io.ReadWriteCloser, inputVal string) error {
+func HashFile(inputVal string) error {
 	// inputVal is of type sda:path
 	mntFilePath, e := slaunch.GetMountedFilePath(inputVal, mount.MS_RDONLY)
 	if e != nil {
@@ -72,7 +71,7 @@ func HashFile(tpmHandle io.ReadWriteCloser, inputVal string) error {
 	}
 
 	eventDesc := fmt.Sprintf("File Collector: measured %s", inputVal)
-	return tpm.ExtendPCRDebug(tpmHandle, pcr, bytes.NewReader(d), eventDesc)
+	return tpm.ExtendPCRDebug(pcr, bytes.NewReader(d), eventDesc)
 }
 
 /*
@@ -80,10 +79,10 @@ func HashFile(tpmHandle io.ReadWriteCloser, inputVal string) error {
  * and for each file path,  calls HashFile. HashFile measures each file on
  * that path and stores the result in TPM.
  */
-func (s *FileCollector) Collect(tpmHandle io.ReadWriteCloser) error {
+func (s *FileCollector) Collect() error {
 	for _, inputVal := range s.Paths {
 		// inputVal is of type sda:/path/to/file
-		err := HashFile(tpmHandle, inputVal)
+		err := HashFile(inputVal)
 		if err != nil {
 			log.Printf("File Collector: input=%s, err = %v", inputVal, err)
 			return err

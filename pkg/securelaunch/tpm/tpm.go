@@ -12,20 +12,15 @@ import (
 	"fmt"
 	"io"
 	"log"
+    "errors"
 
-	"github.com/google/go-tpm/tpm2"
-	"github.com/google/go-tpm/tpmutil"
+	"github.com/u-root/u-root/pkg/tss"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 )
 
-/*
- * tpm2.ReadPCR and tpm2.ExtendPCR need hashAlgo passed.
- * using sha256 for now
- */
-const (
-	hashAlgo = tpm2.AlgSHA256
-)
+var hashAlgo = tss.HashSHA256.GoTPMAlg()
+var tpmHandle *tss.TPM = nil
 
 // marshalPcrEvent writes structure fields piecemeal to buffer.
 func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
@@ -99,27 +94,41 @@ func hashReader(f io.Reader) []byte {
 }
 
 /*
- * GetHandle returns a tpm device handle from go-tpm/tpm2
- * returns a tpm handle from go-tpm/tpm2
+ * New sets up a tpm device handle
  * that can be used for storing hashes.
  */
-func GetHandle() (io.ReadWriteCloser, error) {
-	tpm2, err := tpm2.OpenTPM("/dev/tpm0")
+func New() (error) {
+	tpm, err := tss.NewTPM()
 	if err != nil {
-		return nil, fmt.Errorf("couldn't talk to TPM Device: err=%v", err)
+		return fmt.Errorf("couldn't talk to TPM Device: err=%v", err)
 	}
 
-	return tpm2, nil
+    tpmHandle = tpm
+	return nil
 }
 
 /*
- * ReadPCR reads pcr#x, where x is provided by 'pcr' arg and returns
+ * Close ends connection to a tpm device handle
+ */
+func Close() {
+    if (tpmHandle != nil) {
+        tpmHandle.Close()
+        tpmHandle = nil
+    }
+}
+
+/*
+ * readPCR reads pcr#x, where x is provided by 'pcr' arg and returns
  * the result in a byte slice.
  * 'tpmHandle' is the tpm device that owns the 'pcr'.
  * err is returned if read fails.
  */
-func ReadPCR(tpmHandle io.ReadWriteCloser, pcr int) ([]byte, error) {
-	val, err := tpm2.ReadPCR(tpmHandle, pcr, hashAlgo)
+func readPCR(pcr uint32) ([]byte, error) {
+    if (tpmHandle == nil) {
+        return nil, errors.New("tpmHandle is nil")
+    }
+
+	val, err := tpmHandle.ReadPCR(pcr)
 	if err != nil {
 		return nil, fmt.Errorf("can't read PCR %d, err= %v", pcr, err)
 	}
@@ -127,14 +136,18 @@ func ReadPCR(tpmHandle io.ReadWriteCloser, pcr int) ([]byte, error) {
 }
 
 /*
- * ExtendPCR writes the measurements passed as 'hash' arg to pcr#x,
+ * extendPCR writes the measurements passed as 'hash' arg to pcr#x,
  * where x is provided by 'pcr' arg.
  *
  * pcr is owned by 'tpm2Handle', a tpm device handle.
  * err is returned if write to pcr fails.
  */
-func ExtendPCR(tpmHandle io.ReadWriteCloser, pcr int, hash []byte) error {
-	return tpm2.PCRExtend(tpmHandle, tpmutil.Handle(pcr), hashAlgo, hash, "")
+func extendPCR(pcr uint32, hash []byte) error {
+    if (tpmHandle == nil) {
+        return errors.New("tpmHandle is nil")
+    }
+
+	return tpmHandle.Extend(hash, pcr)
 }
 
 /*
@@ -146,27 +159,27 @@ func ExtendPCR(tpmHandle io.ReadWriteCloser, pcr int, hash []byte) error {
  * 2. new pcr values after hash is written to pcr
  * 3. compares old and new pcr values and prints error if they are not
  */
-func ExtendPCRDebug(tpmHandle io.ReadWriteCloser, pcr int, data io.Reader, eventDesc string) error {
-	oldPCRValue, err := ReadPCR(tpmHandle, pcr)
+func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
+	oldPCRValue, err := readPCR(pcr)
 	if err != nil {
-		return fmt.Errorf("ReadPCR failed, err=%v", err)
+		return fmt.Errorf("readPCR failed, err=%v", err)
 	}
 	slaunch.Debug("ExtendPCRDebug: oldPCRValue = [%x]", oldPCRValue)
 
 	hash := hashReader(data)
 
 	slaunch.Debug("Adding hash=[%x] to PCR #%d", hash, pcr)
-	if e := ExtendPCR(tpmHandle, pcr, hash); e != nil {
+	if e := extendPCR(pcr, hash); e != nil {
 		return fmt.Errorf("can't extend PCR %d, err=%v", pcr, e)
 	}
 	slaunch.Debug(eventDesc)
 
 	// send event if PCR was successfully extended above.
-	sendEventToSysfs(uint32(pcr), hash, []byte(eventDesc))
+	sendEventToSysfs(pcr, hash, []byte(eventDesc))
 
-	newPCRValue, err := ReadPCR(tpmHandle, pcr)
+	newPCRValue, err := readPCR(pcr)
 	if err != nil {
-		return fmt.Errorf("ReadPCR failed, err=%v", err)
+		return fmt.Errorf("readPCR failed, err=%v", err)
 	}
 	slaunch.Debug("ExtendPCRDebug: newPCRValue = [%x]", newPCRValue)
 

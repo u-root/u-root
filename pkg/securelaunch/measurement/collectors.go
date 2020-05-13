@@ -8,7 +8,6 @@ package measurement
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 )
 
 /*
@@ -16,7 +15,7 @@ import (
  * will be stored.
  */
 const (
-	pcr = int(22)
+	pcr = uint32(22)
 )
 
 /*
@@ -25,7 +24,7 @@ const (
  * owned by the tpm device.
  */
 type Collector interface {
-	Collect(tpmHandle io.ReadWriteCloser) error
+	Collect() error
 }
 
 var supportedCollectors = map[string]func([]byte) (Collector, error){
