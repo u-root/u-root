@@ -24,7 +24,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/kernel_cmdline_mods.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				modules: []module{
 					{
 						path:    "testdata/b.b00",
@@ -42,36 +42,45 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			file: "testdata/kernelopt_first.cfg",
+			want: options{
+				kernel: "testdata/b.b00",
+				args:   "b.b00 zee",
+			},
+		},
+		{
 			file: "testdata/empty_mods.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 			},
 		},
 		{
 			file: "testdata/no_mods.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 			},
 		},
 		{
 			file: "testdata/no_cmdline.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
+				args:   "b.b00 ",
 			},
 		},
 		{
 			file: "testdata/empty_cmdline.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
+				args:   "b.b00 ",
 			},
 		},
 		{
 			file: "testdata/empty_updated.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				updated: 0,
 			},
@@ -80,7 +89,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/updated_twice.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				updated: 0,
 			},
@@ -89,7 +98,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/updated.cfg",
 			want: options{
 				kernel:  "testdata/b.b00",
-				args:    "zee",
+				args:    "b.b00 zee",
 				updated: 4,
 			},
 		},
@@ -97,7 +106,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/empty_bootstate.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				bootstate: bootValid,
 			},
@@ -106,7 +115,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/bootstate_twice.cfg",
 			want: options{
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				bootstate: bootValid,
 			},
@@ -115,7 +124,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/bootstate.cfg",
 			want: options{
 				kernel:    "testdata/b.b00",
-				args:      "zee",
+				args:      "b.b00 zee",
 				bootstate: bootDirty,
 			},
 		},
@@ -123,7 +132,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/bootstate_invalid.cfg",
 			want: options{
 				kernel:    "testdata/b.b00",
-				args:      "zee",
+				args:      "b.b00 zee",
 				bootstate: bootInvalid,
 			},
 		},
@@ -131,7 +140,7 @@ func TestParse(t *testing.T) {
 			file: "testdata/no_bootstate.cfg",
 			want: options{
 				kernel:    "testdata/b.b00",
-				args:      "zee",
+				args:      "b.b00 zee",
 				bootstate: bootInvalid,
 			},
 		},
@@ -142,7 +151,7 @@ func TestParse(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("LoadConfig(%s) = %v want %v", tt.file, got, tt.want)
+			t.Errorf("LoadConfig(%s) = %#v want %#v", tt.file, got, tt.want)
 		}
 	}
 }
