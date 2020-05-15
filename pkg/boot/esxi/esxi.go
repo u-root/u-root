@@ -132,6 +132,23 @@ func mountPartition(dev string) (*options, error) {
 	return &opts, nil
 }
 
+// lazyOpenModules assigns modules to be opened as files.
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+func lazyOpenModules(mods []module) multiboot.Modules {
+	modules := make([]multiboot.Module, 0, len(mods))
+	for _, m := range mods {
+		name := strings.Fields(m.cmdline)[0]
+		modules = append(modules, multiboot.Module{
+			CmdLine: m.cmdline,
+			Name:    name,
+			Module:  uio.NewLazyFile(m.path),
+		})
+	}
+	return modules
+}
+
 func getBootImage(opts options, device string, partition int) (*boot.MultibootImage, error) {
 	// Only valid and upgrading are bootable partitions.
 	//
@@ -160,14 +177,19 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 		Name:    fmt.Sprintf("VMware ESXi from %s%d", device, partition),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
-		Modules: multiboot.LazyOpenModules(opts.modules),
+		Modules: lazyOpenModules(opts.modules),
 	}, nil
+}
+
+type module struct {
+	path    string
+	cmdline string
 }
 
 type options struct {
 	kernel    string
 	args      string
-	modules   []string
+	modules   []module
 	updated   int
 	bootstate bootstate
 }
@@ -313,8 +335,10 @@ func parse(configFile string) (options, error) {
 				tok = strings.TrimSpace(tok)
 				if len(tok) > 0 {
 					entry := strings.Fields(tok)
-					entry[0] = filepath.Join(dir, entry[0])
-					opt.modules = append(opt.modules, strings.Join(entry, " "))
+					opt.modules = append(opt.modules, module{
+						path:    filepath.Join(dir, entry[0]),
+						cmdline: tok,
+					})
 				}
 			}
 		}

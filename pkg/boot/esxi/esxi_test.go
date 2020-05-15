@@ -25,10 +25,19 @@ func TestParse(t *testing.T) {
 			want: options{
 				kernel: "testdata/b.b00",
 				args:   "zee",
-				modules: []string{
-					"testdata/b.b00 blabla",
-					"testdata/k.b00",
-					"testdata/m.m00 marg marg2",
+				modules: []module{
+					{
+						path:    "testdata/b.b00",
+						cmdline: "b.b00 blabla",
+					},
+					{
+						path:    "testdata/k.b00",
+						cmdline: "k.b00",
+					},
+					{
+						path:    "testdata/m.m00",
+						cmdline: "m.m00 marg marg2",
+					},
 				},
 			},
 		},
