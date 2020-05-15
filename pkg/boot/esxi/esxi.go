@@ -295,8 +295,21 @@ func parse(configFile string) (options, error) {
 		switch key {
 		case "kernel":
 			opt.kernel = filepath.Join(dir, val)
+
+			// The kernel cmdline is expected to have the filename
+			// first, as in cmdlines[0] here:
+			// https://github.com/vmware/esx-boot/blob/1380fc86cffdfb83448e2913ae11f6b7f248cf23/mboot/mutiboot.c#L870
+			//
+			// Note that the kernel is module 0 in the esx-boot
+			// code base, but it doesn't get loaded like that into
+			// the info structure; see -- so don't panic like I did
+			// when you read that!
+			// https://github.com/vmware/esx-boot/blob/1380fc86cffdfb83448e2913ae11f6b7f248cf23/mboot/mutiboot.c#L578
+			opt.args = val + " " + opt.args
+
 		case "kernelopt":
-			opt.args = val
+			opt.args += val
+
 		case "updated":
 			if len(val) == 0 {
 				// Explicitly setting to 0, as in
