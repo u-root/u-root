@@ -10,6 +10,8 @@
 package acpi
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 )
@@ -48,10 +50,14 @@ type (
 		CreatorRevision() uint32
 		Data() []byte
 		TableData() []byte
+		Address() int64
 	}
 	// TableMethod defines the type of functions used to read a table.
 	TableMethod func() ([]Table, error)
 )
+
+// Debug enables various debug prints. External code can set it to, e.g., log.Printf
+var Debug = func(string, ...interface{}) {}
 
 // gencsum generates a uint8 checksum of a []uint8
 func gencsum(b []uint8) uint8 {
@@ -60,6 +66,20 @@ func gencsum(b []uint8) uint8 {
 		csum += bb
 	}
 	return ^csum + 1
+}
+
+// getaddr gets an address, be it 64 or 32 bits, at the 64 or 32 bit offset, giving preference
+// to the 64-bit one.
+func getaddr(b []byte, addr64, addr32 int64) (int64, error) {
+	var a64 int64
+	if err := binary.Read(io.NewSectionReader(bytes.NewReader(b), addr64, 8), binary.LittleEndian, &a64); err == nil && a64 != 0 {
+		return a64, nil
+	}
+	var a32 int32
+	if err := binary.Read(io.NewSectionReader(bytes.NewReader(b), addr32, 4), binary.LittleEndian, &a32); err == nil {
+		return int64(a32), nil
+	}
+	return -1, fmt.Errorf("No 64-bit address at %d, no 32-bit address at %d, in %d-byte slice", addr64, addr32, len(b))
 }
 
 // Method accepts a method name and returns a TableMethod if one exists, or error othewise.
@@ -73,8 +93,9 @@ func Method(n string) (TableMethod, error) {
 
 // String pretty-prints a Table
 func String(t Table) string {
-	return fmt.Sprintf("%s %d %d %#02x %s %s %#08x %#08x %#08x",
+	return fmt.Sprintf("%s@%#x %d %d %#02x %s %s %#08x %#08x %#08x",
 		t.Sig(),
+		t.Address(),
 		t.Len(),
 		t.Revision(),
 		t.CheckSum(),

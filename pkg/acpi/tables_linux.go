@@ -11,9 +11,12 @@ import (
 )
 
 var (
+	// DefaultMethod is the name of the default method used to get tables.
 	DefaultMethod = "files"
-	Methods       = map[string]TableMethod{
+	// Methods is the map of all methods implemented for Linux.
+	Methods = map[string]TableMethod{
 		"files": RawTablesFromSys,
+		"ebda":  RawTablesFromMem,
 	}
 )
 

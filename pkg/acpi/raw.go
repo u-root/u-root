@@ -23,6 +23,7 @@ import (
 // for figuring out how to skip a table you don't care about or, possibly,
 // truncating a table and regenerating a checksum.
 type Raw struct {
+	addr int64
 	data []byte
 }
 
@@ -82,7 +83,12 @@ func ReadRawTable(physAddr int64) (Table, error) {
 	if err := memio.Read(physAddr, &dat); err != nil {
 		return nil, err
 	}
-	return &Raw{data: []byte(dat)}, nil
+	return &Raw{addr: physAddr, data: []byte(dat)}, nil
+}
+
+// Address returns the table's base address
+func (r *Raw) Address() int64 {
+	return r.addr
 }
 
 // Data returns all the data in a Raw table.
