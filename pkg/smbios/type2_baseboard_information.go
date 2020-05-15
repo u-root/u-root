@@ -33,7 +33,8 @@ func ParseBaseboardInfo(t *Table) (*BaseboardInfo, error) {
 	if t.Type != TableTypeBaseboardInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
-	if t.Len() < 0xf {
+	// Defined in DSP0134 7.3, length of the structure is at least 08h.
+	if t.Len() < 0x8 {
 		return nil, errors.New("required fields missing")
 	}
 	bi := &BaseboardInfo{Table: *t}
