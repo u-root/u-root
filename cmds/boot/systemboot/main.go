@@ -31,7 +31,7 @@ var defaultBootsequence = [][]string{
 }
 
 // Product list for running IPMI OEM commands
-var productList = [2]string{"Tioga Pass", "Mono Lake"}
+var productList = [3]string{"Tioga Pass", "Mono Lake", "Delta Lake"}
 
 var selRecorded bool
 
