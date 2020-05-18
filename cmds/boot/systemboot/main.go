@@ -44,13 +44,13 @@ func isMatched(productName string) bool {
 	return false
 }
 
-func getSystemProductName(si *smbios.Info) (string, error) {
-	t1, err := si.GetSystemInfo()
+func getBaseboardProductName(si *smbios.Info) (string, error) {
+	t2, err := si.GetBaseboardInfo()
 	if err != nil {
-		log.Printf("Error getting System Information: %v", err)
+		log.Printf("Error getting Baseboard Information: %v", err)
 		return "", err
 	}
-	return t1.ProductName, nil
+	return t2[0].Product, nil
 }
 
 func getSystemFWVersion(si *smbios.Info) (string, error) {
@@ -111,7 +111,7 @@ func runIPMICommands() {
 		}
 	}
 
-	if productName, err := getSystemProductName(si); err == nil {
+	if productName, err := getBaseboardProductName(si); err == nil {
 		if isMatched(productName) {
 			log.Printf("Running OEM IPMI commands.")
 			if err = checkCMOSClear(i); err != nil {
