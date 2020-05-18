@@ -52,13 +52,17 @@ System Information
 
 Handle 0x0002, DMI type 2, 8 bytes
 Base Board Information
-	Header and Data:
-		02 08 02 00 01 02 03 04
-	Strings:
-		Gigabyte Technology Co., Ltd.
-		GA-MA74GMT-S2
-		x.x
-		 
+	Manufacturer: Gigabyte Technology Co., Ltd.
+	Product Name: GA-MA74GMT-S2
+	Version: x.x
+	Serial Number:  
+	Asset Tag: 
+	Features:
+		
+	Location In Chassis: 
+	Chassis Handle: 0x0000
+	Type: 0x0
+	Contained Object Handles: 0
 
 Handle 0x0003, DMI type 3, 17 bytes
 Chassis Information
