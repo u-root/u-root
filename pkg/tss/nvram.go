@@ -18,7 +18,9 @@ func nvRead12(rwc io.ReadWriteCloser, index, offset, len uint32, ownerPW string)
 
 	if ownerPW != "" {
 		ownAuth = sha1.Sum([]byte(ownerPW))
+
 	}
+
 	return tpm1.NVReadValue(rwc, index, offset, len, []byte(ownAuth[:20]))
 }
 
