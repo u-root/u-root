@@ -159,7 +159,6 @@ func (c *parser) appendFile(url string) error {
 
 // Append parses `config` and adds the respective configuration to `c`.
 func (c *parser) append(config string) error {
-	chainloadsupport := ""
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
 		// This is stupid. There should be a FieldsN(...).
@@ -179,8 +178,8 @@ func (c *parser) append(config string) error {
 		case "default":
 			c.config.DefaultEntry = arg
 
-		case "prefix":
-			chainloadsupport = arg
+		case "nerfdefault":
+			c.config.DefaultEntry = arg
 
 		case "include":
 			if err := c.appendFile(arg); curl.IsURLError(err) {
@@ -200,21 +199,21 @@ func (c *parser) append(config string) error {
 			c.config.Entries[c.curEntry].Cmdline = c.globalAppend
 			c.config.Entries[c.curEntry].Name = c.curEntry
 
-		case chainloadsupport + "kernel":
+		case "kernel":
 			k, err := c.getFile(arg)
 			if err != nil {
 				return err
 			}
 			c.config.Entries[c.curEntry].Kernel = k
 
-		case chainloadsupport + "initrd":
+		case "initrd":
 			i, err := c.getFile(arg)
 			if err != nil {
 				return err
 			}
 			c.config.Entries[c.curEntry].Initrd = i
 
-		case chainloadsupport +  "append":
+		case "append":
 			switch c.scope {
 			case scopeGlobal:
 				c.globalAppend = arg
