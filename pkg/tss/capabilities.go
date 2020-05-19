@@ -6,6 +6,7 @@ package tss
 
 import (
 	"crypto/sha1"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"strings"
@@ -17,14 +18,14 @@ import (
 func readTPM12VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 	var vendorInfo string
 
-	_, err := tpm.GetManufacturer(rwc)
+	manufacturerRaw, err := tpm.GetManufacturer(rwc)
 	if err != nil {
 		return TPMInfo{}, err
 	}
-
+	manufacturerId := binary.BigEndian.Uint32(manufacturerRaw)
 	return TPMInfo{
 		VendorInfo:           strings.Trim(vendorInfo, "\x00"), // Stubbed
-		Manufacturer:         TCGVendorID(uint32(0)),           // Stubbed
+		Manufacturer:         TCGVendorID(manufacturerId),      // Stubbed
 		FirmwareVersionMajor: int(0),                           // Stubbed
 		FirmwareVersionMinor: int(0),                           // Stubbed
 	}, nil
