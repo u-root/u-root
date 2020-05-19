@@ -38,9 +38,9 @@ func (t *TPM) Info() (*TPMInfo, error) {
 	var err error
 	switch t.Version {
 	case TPMVersion12:
-		info, err = readTPM12VendorAttributes(t.RWC)
+		info, err = readTPM12Information(t.RWC)
 	case TPMVersion20:
-		info, err = readTPM20VendorAttributes(t.RWC)
+		info, err = readTPM20Information(t.RWC)
 	default:
 		return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
 	}

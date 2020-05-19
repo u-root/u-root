@@ -6,31 +6,46 @@ package tss
 
 import (
 	"crypto/sha1"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"strings"
 
-	"github.com/google/go-tpm/tpm"
-	"github.com/google/go-tpm/tpm2"
+	tpm1 "github.com/google/go-tpm/tpm"
+	tpm2 "github.com/google/go-tpm/tpm2"
 )
 
-func readTPM12VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
-	var vendorInfo string
+func readTPM12Information(rwc io.ReadWriter) (TPMInfo, error) {
+	var nvDataPublic []tpm1.NVDataPublic
 
-	_, err := tpm.GetManufacturer(rwc)
+	manufacturerRaw, err := tpm1.GetManufacturer(rwc)
 	if err != nil {
 		return TPMInfo{}, err
 	}
 
+	//Get NVList
+	nvList, err := tpm1.GetNVList(rwc)
+	if err != nil {
+		return TPMInfo{}, err
+	}
+	// Iterate over NVList to get all the NVDataPublics
+	for _, item := range nvList {
+		n, err := tpm1.GetNVIndex(rwc, item)
+		if err != nil {
+			return TPMInfo{}, err
+		}
+		nvDataPublic = append(nvDataPublic, n)
+	}
+
+	manufacturerId := binary.BigEndian.Uint32(manufacturerRaw)
 	return TPMInfo{
-		VendorInfo:           strings.Trim(vendorInfo, "\x00"), // Stubbed
-		Manufacturer:         TCGVendorID(uint32(0)),           // Stubbed
-		FirmwareVersionMajor: int(0),                           // Stubbed
-		FirmwareVersionMinor: int(0),                           // Stubbed
+		VendorInfo:   TCGVendorID(manufacturerId).String(),
+		Manufacturer: TCGVendorID(manufacturerId),
+		NVIndexData:  nvDataPublic,
 	}, nil
 }
 
-func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
+func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 	var vendorInfo string
 	// The Vendor String is split up into 4 sections of 4 bytes,
 	// for a maximum length of 16 octets of ASCII text. We iterate
@@ -87,12 +102,12 @@ func takeOwnership12(rwc io.ReadWriteCloser, ownerPW, srkPW string) error {
 		srkAuth = sha1.Sum([]byte(srkPW))
 	}
 
-	pubek, err := tpm.ReadPubEK(rwc)
+	pubek, err := tpm1.ReadPubEK(rwc)
 	if err != nil {
 		return err
 	}
 
-	if err := tpm.TakeOwnership(rwc, ownerAuth, srkAuth, pubek); err != nil {
+	if err := tpm1.TakeOwnership(rwc, ownerAuth, srkAuth, pubek); err != nil {
 		return err
 	}
 	return nil
@@ -109,9 +124,9 @@ func clearOwnership12(rwc io.ReadWriteCloser, ownerPW string) error {
 		ownerAuth = sha1.Sum([]byte(ownerPW))
 	}
 
-	err := tpm.OwnerClear(rwc, ownerAuth)
+	err := tpm1.OwnerClear(rwc, ownerAuth)
 	if err != nil {
-		err := tpm.ForceClear(rwc)
+		err := tpm1.ForceClear(rwc)
 		if err != nil {
 			return fmt.Errorf("couldn't clear TPM 1.2 with ownerauth nor force clear")
 		}
@@ -130,7 +145,7 @@ func readPubEK12(rwc io.ReadWriteCloser, ownerPW string) ([]byte, error) {
 		ownerAuth = sha1.Sum([]byte(ownerPW))
 	}
 
-	ek, err := tpm.OwnerReadPubEK(rwc, ownerAuth)
+	ek, err := tpm1.OwnerReadPubEK(rwc, ownerAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +163,7 @@ func resetLockValue12(rwc io.ReadWriteCloser, ownerPW string) (bool, error) {
 		ownerAuth = sha1.Sum([]byte(ownerPW))
 	}
 
-	if err := tpm.ResetLockValue(rwc, ownerAuth); err != nil {
+	if err := tpm1.ResetLockValue(rwc, ownerAuth); err != nil {
 		return false, err
 	}
 	return true, nil
