@@ -132,6 +132,23 @@ func mountPartition(dev string) (*options, error) {
 	return &opts, nil
 }
 
+// lazyOpenModules assigns modules to be opened as files.
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+func lazyOpenModules(mods []module) multiboot.Modules {
+	modules := make([]multiboot.Module, 0, len(mods))
+	for _, m := range mods {
+		name := strings.Fields(m.cmdline)[0]
+		modules = append(modules, multiboot.Module{
+			CmdLine: m.cmdline,
+			Name:    name,
+			Module:  uio.NewLazyFile(m.path),
+		})
+	}
+	return modules
+}
+
 func getBootImage(opts options, device string, partition int) (*boot.MultibootImage, error) {
 	// Only valid and upgrading are bootable partitions.
 	//
@@ -160,14 +177,19 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 		Name:    fmt.Sprintf("VMware ESXi from %s%d", device, partition),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
-		Modules: multiboot.LazyOpenModules(opts.modules),
+		Modules: lazyOpenModules(opts.modules),
 	}, nil
+}
+
+type module struct {
+	path    string
+	cmdline string
 }
 
 type options struct {
 	kernel    string
 	args      string
-	modules   []string
+	modules   []module
 	updated   int
 	bootstate bootstate
 }
@@ -273,8 +295,21 @@ func parse(configFile string) (options, error) {
 		switch key {
 		case "kernel":
 			opt.kernel = filepath.Join(dir, val)
+
+			// The kernel cmdline is expected to have the filename
+			// first, as in cmdlines[0] here:
+			// https://github.com/vmware/esx-boot/blob/1380fc86cffdfb83448e2913ae11f6b7f248cf23/mboot/mutiboot.c#L870
+			//
+			// Note that the kernel is module 0 in the esx-boot
+			// code base, but it doesn't get loaded like that into
+			// the info structure; see -- so don't panic like I did
+			// when you read that!
+			// https://github.com/vmware/esx-boot/blob/1380fc86cffdfb83448e2913ae11f6b7f248cf23/mboot/mutiboot.c#L578
+			opt.args = val + " " + opt.args
+
 		case "kernelopt":
-			opt.args = val
+			opt.args += val
+
 		case "updated":
 			if len(val) == 0 {
 				// Explicitly setting to 0, as in
@@ -313,8 +348,10 @@ func parse(configFile string) (options, error) {
 				tok = strings.TrimSpace(tok)
 				if len(tok) > 0 {
 					entry := strings.Fields(tok)
-					entry[0] = filepath.Join(dir, entry[0])
-					opt.modules = append(opt.modules, strings.Join(entry, " "))
+					opt.modules = append(opt.modules, module{
+						path:    filepath.Join(dir, entry[0]),
+						cmdline: tok,
+					})
 				}
 			}
 		}
