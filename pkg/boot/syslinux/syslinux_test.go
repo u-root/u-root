@@ -312,6 +312,50 @@ func TestAppendFile(t *testing.T) {
 			},
 		},
 		{
+			desc:          "valid config with two Entries, and a nerfdefault override, order agnostic",
+			configFileURI: "pxelinux.cfg/default",
+			schemeFunc: func() curl.Schemes {
+				s := make(curl.Schemes)
+				fs := curl.NewMockScheme("tftp")
+				fs.Add("1.2.3.4", "/foobar/pxelinux.0", "")
+				conf := `nerfdefault bar
+
+				default foo
+
+				label foo
+				kernel ./pxefiles/fookernel
+				append earlyprintk=ttyS0 printk=ttyS0
+
+				label bar
+				kernel ./pxefiles/barkernel
+				append console=ttyS0`
+				fs.Add("1.2.3.4", "/foobar/pxelinux.cfg/default", conf)
+				fs.Add("1.2.3.4", "/foobar/pxefiles/fookernel", content1)
+				fs.Add("1.2.3.4", "/foobar/pxefiles/barkernel", content2)
+				s.Register(fs.Scheme, fs)
+				return s
+			},
+			wd: &url.URL{
+				Scheme: "tftp",
+				Host:   "1.2.3.4",
+				Path:   "/foobar",
+			},
+			want: &Config{
+				DefaultEntry: "bar",
+				Entries: map[string]*boot.LinuxImage{
+					"foo": {
+						Kernel:  strings.NewReader(content1),
+						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+					},
+					"bar": {
+						Kernel:  strings.NewReader(content2),
+						Cmdline: "console=ttyS0",
+					},
+				},
+			},
+		},
+
+		{
 			desc:          "valid config with global APPEND directive",
 			configFileURI: "pxelinux.cfg/default",
 			schemeFunc: func() curl.Schemes {

@@ -159,6 +159,9 @@ func (c *parser) appendFile(url string) error {
 
 // Append parses `config` and adds the respective configuration to `c`.
 func (c *parser) append(config string) error {
+	var defaultEntry string
+	var nerfDefaultEntry string
+
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
 		// This is stupid. There should be a FieldsN(...).
@@ -176,10 +179,10 @@ func (c *parser) append(config string) error {
 
 		switch directive {
 		case "default":
-			c.config.DefaultEntry = arg
+			defaultEntry = arg
 
 		case "nerfdefault":
-			c.config.DefaultEntry = arg
+			nerfDefaultEntry = arg
 
 		case "include":
 			if err := c.appendFile(arg); curl.IsURLError(err) {
@@ -226,6 +229,14 @@ func (c *parser) append(config string) error {
 				}
 			}
 		}
+	}
+
+	// Select the default entry. "nerfdefault" takes precedence over
+	// "default"
+	if nerfDefaultEntry == "" {
+		c.config.DefaultEntry = defaultEntry
+	} else {
+		c.config.DefaultEntry = nerfDefaultEntry
 	}
 
 	// Go through all labels and download the initrds.
