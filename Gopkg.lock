@@ -306,7 +306,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4108cab2c3e5e7ae687e0a326792a08a4671a1c03047fbfb7cda921330e31358"
+  digest = "1:233498d2ebdbb1de1ca56c23617344ffa77a5f4e2eeda3ec7acca6a4e70afee2"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
@@ -328,6 +328,7 @@
     "sha3",
     "ssh",
     "ssh/internal/bcrypt_pbkdf",
+    "ssh/terminal",
   ]
   pruneopts = "NUT"
   revision = "06a226fb4e3765ef3f48aa2852b401bc7b98e981"
@@ -465,6 +466,7 @@
     "github.com/google/go-tpm/tpm2",
     "github.com/google/go-tpm/tpmutil",
     "github.com/google/goexpect",
+    "github.com/google/goterm/term",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv4/server4",
@@ -493,6 +495,7 @@
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
+    "golang.org/x/crypto/ssh/terminal",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/text/transform",
