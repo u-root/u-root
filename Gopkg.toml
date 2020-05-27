@@ -18,6 +18,10 @@ ignored = ["github.com/u-root/u-root/bb*"]
 
 [[constraint]]
   branch = "master"
+  name = "pack.ag/tftp"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/rck/unit"
 
 [[constraint]]

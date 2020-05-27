@@ -402,7 +402,7 @@
     "internal/imports",
   ]
   pruneopts = "NUT"
-  revision = "cb1345f3a375367f8439bba882e90348348288d9"
+  revision = "8b020aee10d2dc97e13b76ce01b59c9b5d4a4d0f"
 
 [[projects]]
   branch = "master"
@@ -440,15 +440,15 @@
   version = "v2.3.0"
 
 [[projects]]
-  digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"
+  branch = "master"
+  digest = "1:4dd51a952e2528212eeb80840dd84374f920bc366623df6e41f001cd5d3da906"
   name = "pack.ag/tftp"
   packages = [
     ".",
     "netascii",
   ]
   pruneopts = "NUT"
-  revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
-  version = "v1.0.0"
+  revision = "07909dfbde3c4e388a7e353351191fbb987ce5a5"
 
 [solve-meta]
   analyzer-name = "dep"
