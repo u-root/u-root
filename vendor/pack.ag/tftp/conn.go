@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultPort       = 69
+	defaultPort       = "69"
 	defaultMode       = ModeOctet
 	defaultUDPNet     = "udp"
 	defaultTimeout    = time.Second
