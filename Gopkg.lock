@@ -26,7 +26,7 @@
   name = "github.com/anmitsu/go-shlex"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "648efa622239a2f6ff949fed78ee37b48d499ba4"
+  revision = "38f4b401e2be5955e3e00b843d96e3c406f5094d"
 
 [[projects]]
   digest = "1:e6c88dab8edc42242a2035bba3a869993ff08a3e245a445ea75f436e1bb27c33"
@@ -45,12 +45,12 @@
   version = "v4.0.2"
 
 [[projects]]
-  digest = "1:5b9ec589d739f9dc806a72739960d6e73ef18cf539841c85220f2fe32502a53a"
+  digest = "1:f98a4ae92bd09599922c0f5c8133a951ac1d61dba4589e4347759145dec08c24"
   name = "github.com/creack/pty"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "3a6a957789163cacdfe0e291617a1c8e80612c11"
-  version = "v1.1.9"
+  revision = "2a38352e8b4d7ab6c336eef107e42a55e72e7fbc"
+  version = "v1.1.11"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -84,7 +84,7 @@
   version = "v1.0.6"
 
 [[projects]]
-  digest = "1:0aeda02073125667ac6c9df50c7921cb22c08a4accdc54589c697a7e76be65c2"
+  digest = "1:ea920fc7bb1d9a2fe99782eb6a5b4e809dfbfcfabd6ab55a387353934acbf09c"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -94,8 +94,8 @@
     "cmp/internal/value",
   ]
   pruneopts = "NUT"
-  revision = "5a6f75716e1203a923a78c9efb94089d857df0f6"
-  version = "v0.4.0"
+  revision = "7e5cb83929c528b29e5a8ac1244eab0436f79bce"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"
@@ -165,23 +165,23 @@
     "rtnl",
   ]
   pruneopts = "NUT"
-  revision = "2d3c724ef0c30cecc0a53779df81d9e2a83e8e1c"
+  revision = "3ee32e7e21a4d0cac6cc10a4b31ffd91c052ae52"
 
 [[projects]]
   digest = "1:9c75b27bec5c38d60bd7602c52133110270f7003932b52030938ff68dd257a5f"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   pruneopts = "NUT"
-  revision = "4a2d40e4b07e5b3d333bc0569facd0f2dbf4ef39"
-  version = "v1.10.5"
+  revision = "f54780da70be5dede240d84a5f8db8c249b63261"
+  version = "v1.10.6"
 
 [[projects]]
-  digest = "1:7a49027367484b42dd9d2515c2d884457a3f5ca36cb550904511735fa43e4698"
+  digest = "1:22d762141b1cb2efde1022400ecff73e9f5044f370f806095e8954b7e8fd7ac9"
   name = "github.com/klauspost/pgzip"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "ad135240e5ef8fcb9b2fd20244be62a3ea68bcfa"
-  version = "v1.2.3"
+  revision = "82f3a6575571ea114ed0cdc0711a226dcce876f1"
+  version = "v1.2.4"
 
 [[projects]]
   digest = "1:797f9322a4864f6a4781ab80433dcf248581ed2f31bd5e152f50bd3a3a8c5ad8"
@@ -290,11 +290,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ad33f5e23a9fbcdbdf7f8412a035d1f70274691345890289dd390359e574c017"
+  digest = "1:5696e62c343890871d7d91a7f88c09509712aab1610f61bc22dde88ff0ff5f08"
   name = "github.com/vishvananda/netns"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "0a2b9b5464df8343199164a0321edf3313202f7e"
+  revision = "52d707b772fe9481fde11266d26560bd2be7a780"
 
 [[projects]]
   branch = "master"
@@ -306,7 +306,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:855d573f1cc4f48a50005fe7a5022aeb24d6b0aa847e91e260ea429d5e90c129"
+  digest = "1:233498d2ebdbb1de1ca56c23617344ffa77a5f4e2eeda3ec7acca6a4e70afee2"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
@@ -328,9 +328,10 @@
     "sha3",
     "ssh",
     "ssh/internal/bcrypt_pbkdf",
+    "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "4bdfaf469ed5a1194e0ec57ec7b1af73991a7ee3"
+  revision = "06a226fb4e3765ef3f48aa2852b401bc7b98e981"
 
 [[projects]]
   digest = "1:467bb8fb8fa786448b8d486cd0bb7c1a5577dcd7310441aa02a20110cd9f727d"
@@ -340,12 +341,12 @@
     "semver",
   ]
   pruneopts = "NUT"
-  revision = "ed3ec21bb8e252814c380df79a80f366440ddb2d"
-  version = "v0.2.0"
+  revision = "859b3ef565e237f9f1a0fb6b55385c497545680d"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:a342b35551fa09b905a09cc3964bcfca537292ea5cc8993de0e02c9ed12a49a7"
+  digest = "1:1355e6900efa3eb3964e96fb5563d67067163a3b4b51fa604dc095da09bdb263"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -355,19 +356,20 @@
     "ipv6",
   ]
   pruneopts = "NUT"
-  revision = "e086a090c8fdb9982880f0fb6e3db47af1856533"
+  revision = "0ba52f642ac2f9371a88bfdde41f4b4e195a37c0"
 
 [[projects]]
   branch = "master"
-  digest = "1:11fbf8ac4c9490e508a93f5ff89d38610f52519eda4c4cb087390b3c8b14125e"
+  digest = "1:8a57a5ddd27159f5177a801e5fa48ed3bcb90e5618952d0efe0fb21b48f9dab9"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
+    "internal/unsafeheader",
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "1957bb5e6d1f523308b49060df02171d06ddfc77"
+  revision = "05986578812163b26672dabd9b425240ae2bb0ad"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -386,7 +388,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f37200de54b7c7af7e6bee5e2e8991b87393e7cb96aac2ae8b22d774c81d5b6e"
+  digest = "1:2d0e820872ce3347157bc2888a975cb58984ccd6ad1ad998e186de698c2ff005"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -401,7 +403,7 @@
     "internal/imports",
   ]
   pruneopts = "NUT"
-  revision = "358506031216dd7afbbfba86bf2a8eae6ed811cb"
+  revision = "8b020aee10d2dc97e13b76ce01b59c9b5d4a4d0f"
 
 [[projects]]
   branch = "master"
@@ -431,23 +433,23 @@
   version = "v2.2.6"
 
 [[projects]]
-  digest = "1:d9b9ac6943a512737f76bf3d61b08d97121c66686bc02ffc231313563230b468"
+  digest = "1:62a89978829993fb84e755bff5ae0e3d84837228898fd55b1a88a885036e1e51"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "53403b58ad1b561927d19068c655246f2db79d48"
-  version = "v2.2.8"
+  revision = "0b1645d91e851e735d3e23330303ce81f70adbe3"
+  version = "v2.3.0"
 
 [[projects]]
-  digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"
+  branch = "master"
+  digest = "1:4dd51a952e2528212eeb80840dd84374f920bc366623df6e41f001cd5d3da906"
   name = "pack.ag/tftp"
   packages = [
     ".",
     "netascii",
   ]
   pruneopts = "NUT"
-  revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
-  version = "v1.0.0"
+  revision = "07909dfbde3c4e388a7e353351191fbb987ce5a5"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -464,6 +466,7 @@
     "github.com/google/go-tpm/tpm2",
     "github.com/google/go-tpm/tpmutil",
     "github.com/google/goexpect",
+    "github.com/google/goterm/term",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv4/server4",
@@ -492,6 +495,7 @@
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
+    "golang.org/x/crypto/ssh/terminal",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/text/transform",
