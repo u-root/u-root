@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -29,6 +30,11 @@ var (
 // We currently only support kernel and initrd commands.
 type parser struct {
 	bootImage *boot.LinuxImage
+
+	// wd is the current working directory.
+	//
+	// Relative file paths are interpreted relative to this URL.
+	wd *url.URL
 
 	schemes curl.Schemes
 }
@@ -70,16 +76,48 @@ func (c *parser) getAndParseFile(u *url.URL) error {
 		return ErrNotIpxeScript
 	}
 	log.Printf("Got ipxe config file %s:\n%s\n", r, config)
+
+	// Parent dir of the config file.
+	c.wd = &url.URL{
+		Scheme: u.Scheme,
+		Host:   u.Host,
+		Path:   path.Dir(u.Path),
+	}
 	return c.parseIpxe(config)
 }
 
 // getFile parses `surl` and returns an io.Reader for the requested url.
 func (c *parser) getFile(surl string) (io.ReaderAt, error) {
-	u, err := url.Parse(surl)
+	u, err := parseURL(surl, c.wd)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
 	}
 	return c.schemes.LazyFetch(u)
+}
+
+func parseURL(name string, wd *url.URL) (*url.URL, error) {
+	u, err := url.Parse(name)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse URL %q: %v", name, err)
+	}
+
+	// If it parsed, but it didn't have a Scheme or Host, use the working
+	// directory's values.
+	if len(u.Scheme) == 0 {
+		u.Scheme = wd.Scheme
+
+		if len(u.Host) == 0 {
+			// If this is not there, it was likely just a path.
+			u.Host = wd.Host
+
+			// Absolute file names don't get the parent
+			// directories, just the host and scheme.
+			if !path.IsAbs(name) {
+				u.Path = path.Join(wd.Path, path.Clean(u.Path))
+			}
+		}
+	}
+	return u, nil
 }
 
 // parseIpxe parses `config` and constructs a BootImage for `c`.
