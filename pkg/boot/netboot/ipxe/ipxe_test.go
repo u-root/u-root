@@ -15,6 +15,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 )
 
 func mustReadAll(r io.ReaderAt) string {
@@ -325,7 +326,7 @@ func TestIpxeConfig(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
-			got, err := ParseConfigWithSchemes(tt.curl, tt.schemeFunc())
+			got, err := ParseConfigWithSchemes(ulogtest.Logger{t}, tt.curl, tt.schemeFunc())
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("NewConfigWithSchemes() got %v, want %v", err, tt.err)
 				return
