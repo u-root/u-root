@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package acpi is designed to support copying individual tables or
+// Package acpi reads, modifies, and writes ACPI tables.
+//
+// acpi is designed to support copying individual tables or
 // a blob containing many tables from one spot to another, supporting
 // filtering. For example, one might read tables from /dev/mem, using
 // the RSDP, so as to create an ACPI table blob for use in coreboot.
