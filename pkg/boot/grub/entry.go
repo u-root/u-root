@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package entry implements config file parsing for GRUB entry files. An entry
-// file is a GRUB environment file consisting of key-value pairs akin to the
-// GRUB commands load_env and save_env.
-package entry
+package grub
 
 import (
 	"bufio"
