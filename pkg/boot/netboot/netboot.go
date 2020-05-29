@@ -15,7 +15,6 @@ package netboot
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"path"
@@ -25,6 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/netboot/pxe"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // BootImage figures out the image to boot from the given DHCP lease.
@@ -38,12 +38,12 @@ import (
 //
 // TODO: detect straight up multiboot and bzImage Linux kernel files rather
 // than just configuration scripts.
-func BootImage(s curl.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
+func BootImage(l ulog.Logger, s curl.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
 	uri, err := lease.Boot()
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Boot URI: %s", uri)
+	l.Printf("Boot URI: %s", uri)
 
 	// IP only makes sense for v4 anyway, because the PXE probing of files
 	// uses a MAC address and an IPv4 address to look at files.
@@ -51,19 +51,19 @@ func BootImage(s curl.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
 	if p4, ok := lease.(*dhclient.Packet4); ok {
 		ip = p4.Lease().IP
 	}
-	return getBootImage(s, uri, lease.Link().Attrs().HardwareAddr, ip)
+	return getBootImage(l, s, uri, lease.Link().Attrs().HardwareAddr, ip)
 }
 
 // getBootImage attempts to parse the file at uri as an ipxe config and returns
 // the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
 // ip, and mac address to search for pxe configs.
-func getBootImage(schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
+func getBootImage(l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
 	// Attempt to read the given boot path as an ipxe config file.
-	ipc, err := ipxe.ParseConfigWithSchemes(uri, schemes)
+	ipc, err := ipxe.ParseConfigWithSchemes(l, uri, schemes)
 	if err == nil {
 		return ipc, nil
 	}
-	log.Printf("Falling back to pxe boot: %v", err)
+	l.Printf("Falling back to pxe boot: %v", err)
 
 	// Fallback to pxe boot.
 	wd := &url.URL{

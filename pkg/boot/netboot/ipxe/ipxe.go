@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"path"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
@@ -36,6 +36,8 @@ type parser struct {
 	// Relative file paths are interpreted relative to this URL.
 	wd *url.URL
 
+	log ulog.Logger
+
 	schemes curl.Schemes
 }
 
@@ -43,17 +45,18 @@ type parser struct {
 // schemes.
 //
 // See ParseConfigWithSchemes for more details.
-func ParseConfig(configURL *url.URL) (*boot.LinuxImage, error) {
-	return ParseConfigWithSchemes(configURL, curl.DefaultSchemes)
+func ParseConfig(l ulog.Logger, configURL *url.URL) (*boot.LinuxImage, error) {
+	return ParseConfigWithSchemes(l, configURL, curl.DefaultSchemes)
 }
 
 // ParseConfigWithSchemes returns a new  configuration with the file at URL
 // and schemes `s`.
 //
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfigWithSchemes(configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
+func ParseConfigWithSchemes(l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
 	c := &parser{
 		schemes: s,
+		log:     l,
 	}
 	if err := c.getAndParseFile(configURL); err != nil {
 		return nil, err
@@ -75,7 +78,7 @@ func (c *parser) getAndParseFile(u *url.URL) error {
 	if !strings.HasPrefix(config, "#!ipxe") {
 		return ErrNotIpxeScript
 	}
-	log.Printf("Got ipxe config file %s:\n%s\n", r, config)
+	c.log.Printf("Got ipxe config file %s:\n%s\n", r, config)
 
 	// Parent dir of the config file.
 	c.wd = &url.URL{
@@ -169,7 +172,7 @@ func (c *parser) parseIpxe(config string) error {
 			return nil
 
 		default:
-			log.Printf("Ignoring unsupported ipxe cmd: %s", line)
+			c.log.Printf("Ignoring unsupported ipxe cmd: %s", line)
 		}
 	}
 
