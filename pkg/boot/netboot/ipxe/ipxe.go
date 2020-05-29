@@ -134,19 +134,20 @@ func (c *parser) parseIpxe(config string) error {
 		}
 
 		args := strings.Fields(line)
-		if len(args) <= 1 {
-			log.Printf("Ignoring unsupported ipxe cmd: %s", line)
+		if len(args) == 0 {
 			continue
 		}
 		cmd := strings.ToLower(args[0])
 
 		switch cmd {
 		case "kernel":
-			k, err := c.getFile(args[1])
-			if err != nil {
-				return err
+			if len(args) > 1 {
+				k, err := c.getFile(args[1])
+				if err != nil {
+					return err
+				}
+				c.bootImage.Kernel = k
 			}
-			c.bootImage.Kernel = k
 
 			// Add cmdline if there are any.
 			if len(args) > 2 {
@@ -154,11 +155,18 @@ func (c *parser) parseIpxe(config string) error {
 			}
 
 		case "initrd":
-			i, err := c.getFile(args[1])
-			if err != nil {
-				return err
+			if len(args) > 1 {
+				i, err := c.getFile(args[1])
+				if err != nil {
+					return err
+				}
+				c.bootImage.Initrd = i
 			}
-			c.bootImage.Initrd = i
+
+		case "boot":
+			// Stop parsing at this point, we should go ahead and
+			// boot.
+			return nil
 
 		default:
 			log.Printf("Ignoring unsupported ipxe cmd: %s", line)
