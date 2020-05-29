@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/goterm/term"
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 type dummyEntry struct {
@@ -51,6 +52,10 @@ func (d *dummyEntry) IsDefault() bool {
 }
 
 func TestChoose(t *testing.T) {
+	// This test takes too long to run for the VM test and doesn't use
+	// anything root-specific.
+	testutil.SkipIfInVMTest(t)
+
 	entry1 := &dummyEntry{label: "1"}
 	entry2 := &dummyEntry{label: "2"}
 	entry3 := &dummyEntry{label: "3"}
@@ -150,6 +155,10 @@ func contains(s []string, t string) bool {
 }
 
 func TestShowMenuAndBoot(t *testing.T) {
+	// This test takes too long to run for the VM test and doesn't use
+	// anything root-specific.
+	testutil.SkipIfInVMTest(t)
+
 	tests := []struct {
 		name      string
 		entries   []*dummyEntry
