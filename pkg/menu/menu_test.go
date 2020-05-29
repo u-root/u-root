@@ -26,10 +26,9 @@ func (d *dummyEntry) Label() string {
 	defer d.mu.Unlock()
 	return d.label
 }
+
 func (d *dummyEntry) String() string {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.String()
+	return d.Label()
 }
 
 func (d *dummyEntry) Do() error {
@@ -38,11 +37,13 @@ func (d *dummyEntry) Do() error {
 	d.called = true
 	return d.do
 }
+
 func (d *dummyEntry) Called() bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.called
 }
+
 func (d *dummyEntry) IsDefault() bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
