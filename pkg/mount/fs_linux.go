@@ -14,18 +14,22 @@ import (
 //
 // It rereads /proc/filesystems each time as the supported file systems can change
 // as modules are added and removed.
-func FindFileSystem(fs string) error {
+func FindFileSystem(fstype string) error {
 	b, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
 		return err
 	}
-	for _, l := range strings.Split(string(b), "\n") {
+	return internalFindFileSystem(string(b), fstype)
+}
+
+func internalFindFileSystem(content string, fstype string) error {
+	for _, l := range strings.Split(content, "\n") {
 		f := strings.Fields(l)
-		if (len(f) > 1 && f[0] == "nodev" && f[1] == fs) || (len(f) > 0 && f[0] != "nodev" && f[0] == fs) {
+		if (len(f) > 1 && f[0] == "nodev" && f[1] == fstype) || (len(f) > 0 && f[0] != "nodev" && f[0] == fstype) {
 			return nil
 		}
 	}
-	return fmt.Errorf("%s not found", fs)
+	return fmt.Errorf("file system type %q not found", fstype)
 }
 
 // GetBlockFilesystems returns the supported file systems for block devices.
