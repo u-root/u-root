@@ -5,6 +5,7 @@
 package boot
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -23,6 +25,37 @@ type LinuxImage struct {
 	Kernel  io.ReaderAt
 	Initrd  io.ReaderAt
 	Cmdline string
+}
+
+func module(r io.ReaderAt) map[string]interface{} {
+	m := make(map[string]interface{})
+	if f, ok := r.(curl.File); ok {
+		m["url"] = f.URL().String()
+	} else if f, ok := r.(fmt.Stringer); ok {
+		m["stringer"] = f.String()
+	}
+	return m
+}
+
+// JSONMap is implemented only in order to compare LinuxImages in tests.
+//
+// It should be json-encodable and decodable.
+func (li *LinuxImage) JSONMap() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["image_type"] = "linux"
+	m["name"] = li.Name
+	m["cmdline"] = li.Cmdline
+	if li.Kernel != nil {
+		m["kernel"] = module(li.Kernel)
+	}
+	if li.Initrd != nil {
+		m["initrd"] = module(li.Initrd)
+	}
+	return m
+}
+
+func (li *LinuxImage) MarshalJSON() ([]byte, error) {
+	return json.Marshal(li.JSONMap())
 }
 
 var _ OSImage = &LinuxImage{}

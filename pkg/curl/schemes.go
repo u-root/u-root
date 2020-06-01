@@ -32,6 +32,14 @@ var (
 	ErrNoSuchScheme = errors.New("no such scheme")
 )
 
+// File is a reference to a file fetched through this library.
+type File interface {
+	io.ReaderAt
+
+	// URL is the file's original URL.
+	URL() *url.URL
+}
+
 // FileScheme represents the implementation of a URL scheme and gives access to
 // fetching files of that scheme.
 //
@@ -105,7 +113,7 @@ func (s Schemes) Register(scheme string, fs FileScheme) {
 }
 
 // Fetch fetchs a file via DefaultSchemes.
-func Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
+func Fetch(ctx context.Context, u *url.URL) (File, error) {
 	return DefaultSchemes.Fetch(ctx, u)
 }
 
@@ -114,6 +122,11 @@ type file struct {
 	io.ReaderAt
 
 	url *url.URL
+}
+
+// URL returns the file URL.
+func (f file) URL() *url.URL {
+	return f.url
 }
 
 // String implements fmt.Stringer.
@@ -126,7 +139,7 @@ func (f file) String() string {
 //
 // If `s` does not contain a FileScheme for `u.Scheme`, ErrNoSuchScheme is
 // returned.
-func (s Schemes) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
+func (s Schemes) Fetch(ctx context.Context, u *url.URL) (File, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
@@ -151,14 +164,14 @@ func (s Schemes) RetryFilter(u *url.URL, err error) bool {
 }
 
 // LazyFetch calls LazyFetch on DefaultSchemes.
-func LazyFetch(u *url.URL) (io.ReaderAt, error) {
+func LazyFetch(u *url.URL) (File, error) {
 	return DefaultSchemes.LazyFetch(u)
 }
 
 // LazyFetch returns a reader that will Fetch the file given by `u` when
 // Read is called, based on `u`s scheme. See Schemes.Fetch for more
 // details.
-func (s Schemes) LazyFetch(u *url.URL) (io.ReaderAt, error) {
+func (s Schemes) LazyFetch(u *url.URL) (File, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
