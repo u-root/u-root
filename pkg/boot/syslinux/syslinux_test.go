@@ -37,6 +37,37 @@ func (e errorReader) ReadAt(p []byte, n int64) (int, error) {
 	return 0, e.err
 }
 
+func sameBootImage(got, want boot.OSImage) error {
+	if got.Label() != want.Label() {
+		return fmt.Errorf("got image label %s, want %s", got.Label(), want.Label())
+	}
+
+	if gotLinux, ok := got.(*boot.LinuxImage); ok {
+		wantLinux, ok := want.(*boot.LinuxImage)
+		if !ok {
+			return fmt.Errorf("got image %s is Linux image, but %s is not", got, want)
+		}
+
+		// Same kernel?
+		if !uio.ReaderAtEqual(gotLinux.Kernel, wantLinux.Kernel) {
+			return fmt.Errorf("got kernel %s, want %s", mustReadAll(gotLinux.Kernel), mustReadAll(wantLinux.Kernel))
+		}
+
+		// Same initrd?
+		if !uio.ReaderAtEqual(gotLinux.Initrd, wantLinux.Initrd) {
+			return fmt.Errorf("got initrd %s, want %s", mustReadAll(gotLinux.Initrd), mustReadAll(wantLinux.Initrd))
+		}
+
+		// Same cmdline?
+		if gotLinux.Cmdline != wantLinux.Cmdline {
+			return fmt.Errorf("got cmdline %s, want %s", gotLinux.Cmdline, wantLinux.Cmdline)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("non-Linux images not supported yet")
+}
+
 func TestParseGeneral(t *testing.T) {
 	kernel1 := "kernel1"
 	kernel2 := "kernel2"
@@ -62,7 +93,7 @@ func TestParseGeneral(t *testing.T) {
 	for i, tt := range []struct {
 		desc        string
 		configFiles map[string]string
-		want        *Config
+		want        []boot.OSImage
 		err         error
 	}{
 		{
@@ -74,14 +105,12 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel1
 					append initrd=./pxefiles/global_initrd`,
 			},
-			want: &Config{
-				DefaultEntry: "foo",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel:  strings.NewReader(kernel1),
-						Initrd:  strings.NewReader(globalInitrd),
-						Cmdline: "initrd=./pxefiles/global_initrd",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Initrd:  strings.NewReader(globalInitrd),
+					Cmdline: "initrd=./pxefiles/global_initrd",
 				},
 			},
 		},
@@ -95,14 +124,12 @@ func TestParseGeneral(t *testing.T) {
 					initrd ./pxefiles/initrd1
 					append foo=bar`,
 			},
-			want: &Config{
-				DefaultEntry: "foo",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel:  strings.NewReader(kernel1),
-						Initrd:  strings.NewReader(initrd1),
-						Cmdline: "foo=bar",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Initrd:  strings.NewReader(initrd1),
+					Cmdline: "foo=bar",
 				},
 			},
 		},
@@ -114,14 +141,12 @@ func TestParseGeneral(t *testing.T) {
 					label foo
 					kernel ./pxefiles/kernel1`,
 			},
-			want: &Config{
-				DefaultEntry: "foo",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel:  strings.NewReader(kernel1),
-						Initrd:  nil,
-						Cmdline: "",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Initrd:  nil,
+					Cmdline: "",
 				},
 			},
 		},
@@ -133,21 +158,19 @@ func TestParseGeneral(t *testing.T) {
 					label foo
 					kernel ./pxefiles/does-not-exist`,
 			},
-			want: &Config{
-				DefaultEntry: "foo",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel: errorReader{&curl.URLError{
-							URL: &url.URL{
-								Scheme: "tftp",
-								Host:   "1.2.3.4",
-								Path:   "/foobar/pxefiles/does-not-exist",
-							},
-							Err: curl.ErrNoSuchFile,
-						}},
-						Initrd:  nil,
-						Cmdline: "",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name: "foo",
+					Kernel: errorReader{&curl.URLError{
+						URL: &url.URL{
+							Scheme: "tftp",
+							Host:   "1.2.3.4",
+							Path:   "/foobar/pxefiles/does-not-exist",
+						},
+						Err: curl.ErrNoSuchFile,
+					}},
+					Initrd:  nil,
+					Cmdline: "",
 				},
 			},
 		},
@@ -167,9 +190,7 @@ func TestParseGeneral(t *testing.T) {
 			configFiles: map[string]string{
 				"/foobar/pxelinux.cfg/default": "",
 			},
-			want: &Config{
-				DefaultEntry: "",
-			},
+			want: nil,
 		},
 		{
 			desc: "valid config with two Entries",
@@ -185,17 +206,16 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel2
 					append console=ttyS0`,
 			},
-			want: &Config{
-				DefaultEntry: "foo",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel:  strings.NewReader(kernel1),
-						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
-					},
-					"bar": {
-						Kernel:  strings.NewReader(kernel2),
-						Cmdline: "console=ttyS0",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:    "bar",
+					Kernel:  strings.NewReader(kernel2),
+					Cmdline: "console=ttyS0",
 				},
 			},
 		},
@@ -215,17 +235,16 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel2
 					append console=ttyS0`,
 			},
-			want: &Config{
-				DefaultEntry: "bar",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel:  strings.NewReader(kernel1),
-						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
-					},
-					"bar": {
-						Kernel:  strings.NewReader(kernel2),
-						Cmdline: "console=ttyS0",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "bar",
+					Kernel:  strings.NewReader(kernel2),
+					Cmdline: "console=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
 			},
 		},
@@ -245,17 +264,16 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel2
 					append console=ttyS0`,
 			},
-			want: &Config{
-				DefaultEntry: "bar",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel:  strings.NewReader(kernel1),
-						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
-					},
-					"bar": {
-						Kernel:  strings.NewReader(kernel2),
-						Cmdline: "console=ttyS0",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "bar",
+					Kernel:  strings.NewReader(kernel2),
+					Cmdline: "console=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
 			},
 		},
@@ -278,24 +296,24 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel2
 					append -`,
 			},
-			want: &Config{
-				DefaultEntry: "foo",
-				Entries: map[string]*boot.LinuxImage{
-					"foo": {
-						Kernel: strings.NewReader(kernel1),
-						// Does not contain global APPEND.
-						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
-					},
-					"bar": {
-						Kernel: strings.NewReader(kernel2),
-						// Contains only global APPEND.
-						Cmdline: "foo=bar",
-					},
-					"baz": {
-						Kernel: strings.NewReader(kernel2),
-						// "APPEND -" means ignore global APPEND.
-						Cmdline: "",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:   "foo",
+					Kernel: strings.NewReader(kernel1),
+					// Does not contain global APPEND.
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:   "bar",
+					Kernel: strings.NewReader(kernel2),
+					// Contains only global APPEND.
+					Cmdline: "foo=bar",
+				},
+				&boot.LinuxImage{
+					Name:   "baz",
+					Kernel: strings.NewReader(kernel2),
+					// "APPEND -" means ignore global APPEND.
+					Cmdline: "",
 				},
 			},
 		},
@@ -322,31 +340,32 @@ func TestParseGeneral(t *testing.T) {
 					initrd ./pxefiles/initrd2
 				`,
 			},
-			want: &Config{
-				DefaultEntry: "mcnulty",
-				Entries: map[string]*boot.LinuxImage{
-					"mcnulty": {
-						Kernel: strings.NewReader(kernel1),
-						// Does not contain global APPEND.
-						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
-					},
-					"lester": {
-						Kernel: strings.NewReader(kernel1),
-						Initrd: strings.NewReader(globalInitrd),
-						// Contains only global APPEND.
-						Cmdline: "initrd=./pxefiles/global_initrd",
-					},
-					"omar": {
-						Kernel: strings.NewReader(kernel2),
-						// "APPEND -" means ignore global APPEND.
-						Cmdline: "",
-					},
-					"stringer": {
-						Kernel: strings.NewReader(kernel2),
-						// See TODO in pxe.go initrd handling.
-						Initrd:  strings.NewReader(initrd2),
-						Cmdline: "initrd=./pxefiles/global_initrd",
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:   "mcnulty",
+					Kernel: strings.NewReader(kernel1),
+					// Does not contain global APPEND.
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:   "lester",
+					Kernel: strings.NewReader(kernel1),
+					Initrd: strings.NewReader(globalInitrd),
+					// Contains only global APPEND.
+					Cmdline: "initrd=./pxefiles/global_initrd",
+				},
+				&boot.LinuxImage{
+					Name:   "omar",
+					Kernel: strings.NewReader(kernel2),
+					// "APPEND -" means ignore global APPEND.
+					Cmdline: "",
+				},
+				&boot.LinuxImage{
+					Name:   "stringer",
+					Kernel: strings.NewReader(kernel2),
+					// See TODO in pxe.go initrd handling.
+					Initrd:  strings.NewReader(initrd2),
+					Cmdline: "initrd=./pxefiles/global_initrd",
 				},
 			},
 		},
@@ -355,10 +374,7 @@ func TestParseGeneral(t *testing.T) {
 			configFiles: map[string]string{
 				"/foobar/pxelinux.cfg/default": `default not-exist`,
 			},
-			err: ErrDefaultEntryNotFound,
-			want: &Config{
-				DefaultEntry: "avon",
-			},
+			want: nil,
 		},
 		{
 			desc: "multi-scheme valid config",
@@ -370,13 +386,11 @@ func TestParseGeneral(t *testing.T) {
 				kernel ./pxefiles/kernel2
 				initrd http://someplace.com/initrd2`,
 			},
-			want: &Config{
-				DefaultEntry: "sheeeit",
-				Entries: map[string]*boot.LinuxImage{
-					"sheeeit": {
-						Kernel: strings.NewReader(kernel2),
-						Initrd: strings.NewReader(initrd2),
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:   "sheeeit",
+					Kernel: strings.NewReader(kernel2),
+					Initrd: strings.NewReader(initrd2),
 				},
 			},
 		},
@@ -406,16 +420,15 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel2
 				`,
 			},
-			want: &Config{
-				DefaultEntry: "mcnulty",
-				Entries: map[string]*boot.LinuxImage{
-					"mcnulty": {
-						Kernel:  strings.NewReader(kernel1),
-						Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
-					},
-					"omar": {
-						Kernel: strings.NewReader(kernel2),
-					},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "mcnulty",
+					Kernel:  strings.NewReader(kernel1),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:   "omar",
+					Kernel: strings.NewReader(kernel2),
 				},
 			},
 		},
@@ -435,48 +448,20 @@ func TestParseGeneral(t *testing.T) {
 				Path:   "/foobar",
 			}
 
-			par := newParser(wd, s)
-			if err := par.appendFile(context.Background(), "pxelinux.cfg/default"); !reflect.DeepEqual(err, tt.err) {
+			got, err := ParseConfigFile(context.Background(), s, "pxelinux.cfg/default", wd)
+			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)
 			} else if err != nil {
 				return
 			}
 
-			c := par.config
-
-			if got, want := c.DefaultEntry, tt.want.DefaultEntry; got != want {
-				t.Errorf("DefaultEntry got %v, want %v", got, want)
+			if len(tt.want) != len(got) {
+				t.Errorf("ParseConfigFile yielded %d images, want %d images", len(got), len(tt.want))
 			}
 
-			for labelName, want := range tt.want.Entries {
-				t.Run(fmt.Sprintf("label %s", labelName), func(t *testing.T) {
-					got, ok := c.Entries[labelName]
-					if !ok {
-						t.Errorf("Config label %v does not exist", labelName)
-						return
-					}
-
-					// Same kernel?
-					if !uio.ReaderAtEqual(got.Kernel, want.Kernel) {
-						t.Errorf("got kernel %s, want %s", mustReadAll(got.Kernel), mustReadAll(want.Kernel))
-					}
-
-					// Same initrd?
-					if !uio.ReaderAtEqual(got.Initrd, want.Initrd) {
-						t.Errorf("got initrd %s, want %s", mustReadAll(got.Initrd), mustReadAll(want.Initrd))
-					}
-
-					// Same cmdline?
-					if got.Cmdline != want.Cmdline {
-						t.Errorf("got cmdline %s, want %s", got.Cmdline, want.Cmdline)
-					}
-				})
-			}
-
-			// Check that the parser didn't make up Entries.
-			for labelName := range c.Entries {
-				if _, ok := tt.want.Entries[labelName]; !ok {
-					t.Errorf("config has extra label %s, but not wanted", labelName)
+			for i, want := range tt.want {
+				if err := sameBootImage(got[i], want); err != nil {
+					t.Errorf("Boot image index %d not same: %v", i, err)
 				}
 			}
 		})
