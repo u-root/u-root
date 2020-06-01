@@ -25,6 +25,59 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
+func probeIsolinuxFiles() []string {
+	files := make([]string, 0, 10)
+	// search order from the syslinux wiki
+	// http://wiki.syslinux.org/wiki/index.php?title=Config
+	// TODO: do we want to handle extlinux too ?
+	dirs := []string{
+		"boot/isolinux",
+		"isolinux",
+		"boot/syslinux",
+		"syslinux",
+		"",
+	}
+	confs := []string{
+		"isolinux.cfg",
+		"syslinux.cfg",
+	}
+	for _, dir := range dirs {
+		for _, conf := range confs {
+			if dir == "" {
+				files = append(files, conf)
+			} else {
+				files = append(files, filepath.Join(dir, conf))
+			}
+		}
+	}
+	return files
+}
+
+// ParseLocalConfig treats diskDir like a mount point on the local file system
+// and finds an isolinux config under there.
+func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
+	for _, relname := range probeIsolinuxFiles() {
+		dir, name := filepath.Split(relname)
+
+		// "When booting, the initial working directory for SYSLINUX /
+		// ISOLINUX will be the directory containing the initial
+		// configuration file."
+		//
+		// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
+		wd := &url.URL{
+			Scheme: "file",
+			Path:   filepath.Join(diskDir, dir),
+		}
+
+		imgs, err := ParseConfigFile(ctx, curl.DefaultSchemes, name, wd)
+		if curl.IsURLError(err) {
+			continue
+		}
+		return imgs, err
+	}
+	return nil, fmt.Errorf("no valid syslinux config found on %s", diskDir)
+}
+
 // ParseConfigFile parses a Syslinux configuration as specified in
 // http://www.syslinux.org/wiki/index.php?title=Config
 //
@@ -35,8 +88,7 @@ import (
 //
 // `wd` is the default scheme, host, and path for any files named as a
 // relative path - e.g. kernel, include, and initramfs paths are requested
-// relative to the wd. The default path for config files is assumed to be
-// `wd.Path`/pxelinux.cfg/.
+// relative to the wd.
 func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) ([]boot.OSImage, error) {
 	p := newParser(wd, s)
 	if err := p.appendFile(ctx, url); err != nil {
