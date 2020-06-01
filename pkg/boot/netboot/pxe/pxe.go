@@ -16,21 +16,22 @@ import (
 	"path"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/curl"
 )
 
 // ParseConfig probes for config files based on the Mac and IP given
 // and uses s to fetch files.
-func ParseConfig(ctx context.Context, workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s curl.Schemes) (*syslinux.Config, error) {
+func ParseConfig(ctx context.Context, workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s curl.Schemes) ([]boot.OSImage, error) {
 	for _, relname := range probeFiles(mac, ip) {
-		c, err := syslinux.ParseConfigFile(ctx, s, path.Join("pxelinux.cfg", relname), workingDir)
+		imgs, err := syslinux.ParseConfigFile(ctx, s, path.Join("pxelinux.cfg", relname), workingDir)
 		if curl.IsURLError(err) {
 			// We didn't find the file.
 			// TODO(hugelgupf): log this.
 			continue
 		}
-		return c, err
+		return imgs, err
 	}
 	return nil, fmt.Errorf("no valid pxelinux config found")
 }
