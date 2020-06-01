@@ -110,7 +110,7 @@ func parseURL(surl string, wd *url.URL) (*url.URL, error) {
 		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
 	}
 
-	if len(u.Scheme) == 0 {
+	if len(u.Scheme) == 0 && wd != nil {
 		u.Scheme = wd.Scheme
 
 		if len(u.Host) == 0 {
