@@ -13,7 +13,6 @@ package syslinux
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,27 +24,6 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
-
-var (
-	// ErrDefaultEntryNotFound is returned when the configuration file
-	// names a default label that is not part of the configuration.
-	ErrDefaultEntryNotFound = errors.New("default label not found in configuration")
-)
-
-// Config encapsulates a parsed Syslinux configuration file.
-//
-// See http://www.syslinux.org/wiki/index.php?title=Config for the
-// configuration file specification.
-type Config struct {
-	// Entries is a map of label name -> label configuration.
-	Entries map[string]*boot.LinuxImage
-
-	// DefaultEntry is the default label key to use.
-	//
-	// If DefaultEntry is non-empty, the label is guaranteed to exist in
-	// `Entries`.
-	DefaultEntry string
-}
 
 // ParseConfigFile parses a Syslinux configuration as specified in
 // http://www.syslinux.org/wiki/index.php?title=Config
@@ -59,16 +37,58 @@ type Config struct {
 // relative path - e.g. kernel, include, and initramfs paths are requested
 // relative to the wd. The default path for config files is assumed to be
 // `wd.Path`/pxelinux.cfg/.
-func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) (*Config, error) {
+func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) ([]boot.OSImage, error) {
 	p := newParser(wd, s)
 	if err := p.appendFile(ctx, url); err != nil {
 		return nil, err
 	}
-	return p.config, nil
+
+	// Intended order:
+	//
+	// 1. nerfDefaultEntry
+	// 2. defaultEntry
+	// 3. labels in order they appeared in config
+	if len(p.labelOrder) == 0 {
+		return nil, nil
+	}
+	if len(p.defaultEntry) > 0 {
+		p.labelOrder = append([]string{p.defaultEntry}, p.labelOrder...)
+	}
+	if len(p.nerfDefaultEntry) > 0 {
+		p.labelOrder = append([]string{p.nerfDefaultEntry}, p.labelOrder...)
+	}
+	p.labelOrder = dedupStrings(p.labelOrder)
+
+	var images []boot.OSImage
+	for _, label := range p.labelOrder {
+		if img, ok := p.linuxEntries[label]; ok {
+			images = append(images, img)
+		}
+	}
+	return images, nil
+}
+
+func dedupStrings(list []string) []string {
+	var newList []string
+	seen := make(map[string]struct{})
+	for _, s := range list {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			newList = append(newList, s)
+		}
+	}
+	return newList
 }
 
 type parser struct {
-	config *Config
+	// linuxEntries is a map of label name -> label configuration.
+	linuxEntries map[string]*boot.LinuxImage
+
+	// labelOrder is the order of label entries in linuxEntries.
+	labelOrder []string
+
+	defaultEntry     string
+	nerfDefaultEntry string
 
 	// parser internals.
 	globalAppend string
@@ -95,12 +115,10 @@ const (
 // `s` is used to get files referred to by URLs.
 func newParser(wd *url.URL, s curl.Schemes) *parser {
 	return &parser{
-		config: &Config{
-			Entries: make(map[string]*boot.LinuxImage),
-		},
-		scope:   scopeGlobal,
-		wd:      wd,
-		schemes: s,
+		linuxEntries: make(map[string]*boot.LinuxImage),
+		scope:        scopeGlobal,
+		wd:           wd,
+		schemes:      s,
 	}
 }
 
@@ -158,9 +176,6 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 
 // Append parses `config` and adds the respective configuration to `c`.
 func (c *parser) append(ctx context.Context, config string) error {
-	var defaultEntry string
-	var nerfDefaultEntry string
-
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
 		// This is stupid. There should be a FieldsN(...).
@@ -178,10 +193,10 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 		switch directive {
 		case "default":
-			defaultEntry = arg
+			c.defaultEntry = arg
 
 		case "nerfdefault":
-			nerfDefaultEntry = arg
+			c.nerfDefaultEntry = arg
 
 		case "include":
 			if err := c.appendFile(ctx, arg); curl.IsURLError(err) {
@@ -197,23 +212,25 @@ func (c *parser) append(ctx context.Context, config string) error {
 			// We forever enter label scope.
 			c.scope = scopeEntry
 			c.curEntry = arg
-			c.config.Entries[c.curEntry] = &boot.LinuxImage{}
-			c.config.Entries[c.curEntry].Cmdline = c.globalAppend
-			c.config.Entries[c.curEntry].Name = c.curEntry
+			c.linuxEntries[c.curEntry] = &boot.LinuxImage{
+				Cmdline: c.globalAppend,
+				Name:    c.curEntry,
+			}
+			c.labelOrder = append(c.labelOrder, c.curEntry)
 
 		case "kernel":
 			k, err := c.getFile(arg)
 			if err != nil {
 				return err
 			}
-			c.config.Entries[c.curEntry].Kernel = k
+			c.linuxEntries[c.curEntry].Kernel = k
 
 		case "initrd":
 			i, err := c.getFile(arg)
 			if err != nil {
 				return err
 			}
-			c.config.Entries[c.curEntry].Initrd = i
+			c.linuxEntries[c.curEntry].Initrd = i
 
 		case "append":
 			switch c.scope {
@@ -222,24 +239,16 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 			case scopeEntry:
 				if arg == "-" {
-					c.config.Entries[c.curEntry].Cmdline = ""
+					c.linuxEntries[c.curEntry].Cmdline = ""
 				} else {
-					c.config.Entries[c.curEntry].Cmdline = arg
+					c.linuxEntries[c.curEntry].Cmdline = arg
 				}
 			}
 		}
 	}
 
-	// Select the default entry. "nerfdefault" takes precedence over
-	// "default"
-	if nerfDefaultEntry == "" {
-		c.config.DefaultEntry = defaultEntry
-	} else {
-		c.config.DefaultEntry = nerfDefaultEntry
-	}
-
 	// Go through all labels and download the initrds.
-	for _, label := range c.config.Entries {
+	for _, label := range c.linuxEntries {
 		// If the initrd was set via the INITRD directive, don't
 		// overwrite that.
 		//
@@ -262,12 +271,6 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			label.Initrd = i
-		}
-	}
-
-	if len(c.config.DefaultEntry) > 0 {
-		if _, ok := c.config.Entries[c.config.DefaultEntry]; !ok {
-			return ErrDefaultEntryNotFound
 		}
 	}
 	return nil
