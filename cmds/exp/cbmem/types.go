@@ -135,6 +135,7 @@ const (
 	LB_TAG_OPTION_DEFAULTS           = 203
 	CMOS_IMAGE_BUFFER_SIZE           = 256
 	LB_TAG_OPTION_CHECKSUM           = 204
+	LB_TAG_FSP_VERSION		 = 205
 	CHECKSUM_NONE                    = 0
 	CHECKSUM_PCBIOS                  = 1
 
