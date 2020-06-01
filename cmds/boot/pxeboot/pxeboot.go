@@ -24,9 +24,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/boot/netboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
@@ -45,11 +47,12 @@ const (
 	dhcpTries   = 3
 )
 
-// Netboot boots all interfaces matched by the regex in ifaceNames.
-func Netboot(ifaceNames string) error {
+// NetbootImages requests DHCP on every ifaceNames interface, and parses
+// netboot images from the DHCP leases. Returns bootable OSes.
+func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 	filteredIfs, err := dhclient.Interfaces(ifaceNames)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), (1<<dhcpTries)*dhcpTimeout)
@@ -67,12 +70,12 @@ func Netboot(ifaceNames string) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 
 		case result, ok := <-r:
 			if !ok {
 				log.Printf("Configured all interfaces.")
-				return fmt.Errorf("nothing bootable found")
+				return nil, fmt.Errorf("nothing bootable found")
 			}
 			if result.Err != nil {
 				continue
@@ -85,32 +88,14 @@ func Netboot(ifaceNames string) error {
 				// If lease failed, fall back to use locally configured
 				// ip/ipv6 address.
 			}
+
 			// Don't use the other context, as it's for the DHCP timeout.
-			img, err := netboot.BootImage(context.Background(), ulog.Log, curl.DefaultSchemes, result.Lease)
+			imgs, err := netboot.BootImages(context.Background(), ulog.Log, curl.DefaultSchemes, result.Lease)
 			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
 			}
-
-			// Cancel other DHCP requests in flight.
-			cancel()
-			log.Printf("Got configuration: %s", img)
-
-			if *noLoad {
-				return nil
-			}
-			if err := img.Load(*dryRun); err != nil {
-				return fmt.Errorf("kexec load of %v failed: %v", img, err)
-			}
-			if *dryRun {
-				return nil
-			}
-			if err := boot.Execute(); err != nil {
-				return fmt.Errorf("kexec of %v failed: %v", img, err)
-			}
-
-			// Kexec should either return an error or not return.
-			panic("unreachable")
+			return imgs, nil
 		}
 	}
 }
@@ -125,7 +110,22 @@ func main() {
 		ifName = flag.Args()[0]
 	}
 
-	if err := Netboot(ifName); err != nil {
+	images, err := NetbootImages(ifName)
+	if err != nil {
 		log.Fatal(err)
 	}
+
+	if *noLoad {
+		log.Printf("Got configuration: %s", images[0])
+		return
+	}
+	menuEntries := menu.OSImages(*dryRun, images...)
+	menuEntries = append(menuEntries, menu.Reboot{})
+	menuEntries = append(menuEntries, menu.StartShell{})
+
+	menu.ShowMenuAndBoot(os.Stdin, menuEntries...)
+
+	// Kexec should either return an error or not return.
+	panic("unreachable")
+
 }

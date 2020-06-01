@@ -164,6 +164,18 @@ func ShowMenuAndBoot(input *os.File, entries ...Entry) {
 	}
 }
 
+// OSImages returns menu entries for the given OSImages.
+func OSImages(dryRun bool, imgs ...boot.OSImage) []Entry {
+	var menu []Entry
+	for _, img := range imgs {
+		menu = append(menu, &OSImageAction{
+			OSImage: img,
+			DryRun:  dryRun,
+		})
+	}
+	return menu
+}
+
 // OSImageAction is a menu.Entry that boots an OSImage.
 type OSImageAction struct {
 	boot.OSImage
