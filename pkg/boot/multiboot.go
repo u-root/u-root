@@ -5,7 +5,6 @@
 package boot
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -23,33 +22,6 @@ type MultibootImage struct {
 	Cmdline string
 	Modules []multiboot.Module
 	IBFT    *ibft.IBFT
-}
-
-// JSONMap is implemented only in order to compare MultibootImages in tests.
-//
-// It should be json-encodable and decodable.
-func (mi *MultibootImage) JSONMap() map[string]interface{} {
-	m := make(map[string]interface{})
-	m["image_type"] = "multiboot"
-	m["name"] = mi.Name
-	m["cmdline"] = mi.Cmdline
-	if mi.Kernel != nil {
-		m["kernel"] = module(mi.Kernel)
-	}
-
-	var modules []map[string]interface{}
-	for _, mod := range mi.Modules {
-		mmod := module(mod.Module)
-		mmod["cmdline"] = mod.CmdLine
-		mmod["name"] = mod.Name
-		modules = append(modules, mmod)
-	}
-	m["modules"] = modules
-	return m
-}
-
-func (mi *MultibootImage) MarshalJSON() ([]byte, error) {
-	return json.Marshal(mi.JSONMap())
 }
 
 var _ OSImage = &MultibootImage{}

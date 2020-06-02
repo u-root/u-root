@@ -7,28 +7,16 @@ package syslinux
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/boottest"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
-	"github.com/u-root/u-root/pkg/uio"
 )
-
-func mustReadAll(r io.ReaderAt) string {
-	if r == nil {
-		return ""
-	}
-	b, err := uio.ReadAll(r)
-	if err != nil {
-		return fmt.Sprintf("read error: %s", err)
-	}
-	return string(b)
-}
 
 type errorReader struct {
 	err error
@@ -36,73 +24,6 @@ type errorReader struct {
 
 func (e errorReader) ReadAt(p []byte, n int64) (int, error) {
 	return 0, e.err
-}
-
-func sameBootImage(got, want boot.OSImage) error {
-	if got.Label() != want.Label() {
-		return fmt.Errorf("got image label %s, want %s", got.Label(), want.Label())
-	}
-
-	if gotLinux, ok := got.(*boot.LinuxImage); ok {
-		wantLinux, ok := want.(*boot.LinuxImage)
-		if !ok {
-			return fmt.Errorf("got image %s is Linux image, but %s is not", got, want)
-		}
-
-		// Same kernel?
-		if !uio.ReaderAtEqual(gotLinux.Kernel, wantLinux.Kernel) {
-			return fmt.Errorf("got kernel %s, want %s", mustReadAll(gotLinux.Kernel), mustReadAll(wantLinux.Kernel))
-		}
-
-		// Same initrd?
-		if !uio.ReaderAtEqual(gotLinux.Initrd, wantLinux.Initrd) {
-			return fmt.Errorf("got initrd %s, want %s", mustReadAll(gotLinux.Initrd), mustReadAll(wantLinux.Initrd))
-		}
-
-		// Same cmdline?
-		if gotLinux.Cmdline != wantLinux.Cmdline {
-			return fmt.Errorf("got cmdline %s, want %s", gotLinux.Cmdline, wantLinux.Cmdline)
-		}
-		return nil
-	}
-
-	if gotMB, ok := got.(*boot.MultibootImage); ok {
-		wantMB, ok := want.(*boot.MultibootImage)
-		if !ok {
-			return fmt.Errorf("got image %s is Multiboot image, but %s is not", got, want)
-		}
-
-		// Same kernel?
-		if !uio.ReaderAtEqual(gotMB.Kernel, wantMB.Kernel) {
-			return fmt.Errorf("got kernel %s, want %s", mustReadAll(gotMB.Kernel), mustReadAll(wantMB.Kernel))
-		}
-
-		// Same cmdline?
-		if gotMB.Cmdline != wantMB.Cmdline {
-			return fmt.Errorf("got cmdline %s, want %s", gotMB.Cmdline, wantMB.Cmdline)
-		}
-
-		if len(gotMB.Modules) != len(wantMB.Modules) {
-			return fmt.Errorf("got %d modules, want %d modules", len(gotMB.Modules), len(wantMB.Modules))
-		}
-
-		for i := range gotMB.Modules {
-			g := gotMB.Modules[i]
-			w := wantMB.Modules[i]
-			if g.Name != w.Name {
-				return fmt.Errorf("module %d got name %s, want %s", i, g.Name, w.Name)
-			}
-			if g.CmdLine != w.CmdLine {
-				return fmt.Errorf("module %d got name %s, want %s", i, g.CmdLine, w.CmdLine)
-			}
-			if !uio.ReaderAtEqual(g.Module, w.Module) {
-				return fmt.Errorf("got kernel %s, want %s", mustReadAll(g.Module), mustReadAll(w.Module))
-			}
-		}
-		return nil
-	}
-
-	return fmt.Errorf("image not supported")
 }
 
 func TestParseGeneral(t *testing.T) {
@@ -592,7 +513,7 @@ func TestParseGeneral(t *testing.T) {
 			}
 
 			for i, want := range tt.want {
-				if err := sameBootImage(got[i], want); err != nil {
+				if err := boottest.SameBootImage(got[i], want); err != nil {
 					t.Errorf("Boot image index %d not same: %v", i, err)
 				}
 			}

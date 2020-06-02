@@ -6,13 +6,12 @@ package syslinux
 
 import (
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/boot/boottest"
 )
 
 func TestConfigs(t *testing.T) {
@@ -23,29 +22,21 @@ func TestConfigs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		testJSON, err := ioutil.ReadFile(test)
-		if err != nil {
-			t.Errorf("Failed to read test json '%v':%v", test, err)
-		}
-		var wantConfigs interface{}
-		if err = json.Unmarshal(testJSON, &wantConfigs); err != nil {
-			t.Errorf("Failed to unmarshall test json '%v':%v", test, err)
-		}
-
 		configPath := strings.TrimRight(test, ".json")
-		configs, err := ParseLocalConfig(context.Background(), configPath)
-		if err != nil {
-			t.Fatalf("Failed to parse %s: %v", test, err)
-		}
+		t.Run(configPath, func(t *testing.T) {
+			want, err := ioutil.ReadFile(test)
+			if err != nil {
+				t.Errorf("Failed to read test json '%v':%v", test, err)
+			}
 
-		configJSON, _ := json.MarshalIndent(configs, "", "  ")
-		var gotConfigs interface{}
-		if err := json.Unmarshal(configJSON, &gotConfigs); err != nil {
-			t.Error(err)
-		}
+			imgs, err := ParseLocalConfig(context.Background(), configPath)
+			if err != nil {
+				t.Fatalf("Failed to parse %s: %v", test, err)
+			}
 
-		if !cmp.Equal(wantConfigs, gotConfigs) {
-			t.Errorf("ParseLocalConfig() mismatch(-want, +got):\n%s", cmp.Diff(wantConfigs, gotConfigs))
-		}
+			if err := boottest.CompareImagesToJSON(imgs, want); err != nil {
+				t.Errorf("ParseLocalConfig(): %v", err)
+			}
+		})
 	}
 }
