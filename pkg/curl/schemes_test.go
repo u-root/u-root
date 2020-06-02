@@ -5,6 +5,7 @@
 package curl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -182,7 +183,7 @@ func TestFetch(t *testing.T) {
 			s := make(Schemes)
 			s.Register(ms.Scheme, fs)
 
-			r, err = s.Fetch(tt.url)
+			r, err = s.Fetch(context.TODO(), tt.url)
 			if uErr, ok := err.(*URLError); ok && uErr.Err != tt.err {
 				t.Errorf("Fetch() = %v, want %v", uErr.Err, tt.err)
 			} else if !ok && err != tt.err {

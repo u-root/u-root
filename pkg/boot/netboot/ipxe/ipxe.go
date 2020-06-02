@@ -6,6 +6,7 @@
 package ipxe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -41,32 +42,24 @@ type parser struct {
 	schemes curl.Schemes
 }
 
-// ParseConfig returns a new  configuration with the file at URL and default
+// ParseConfig returns a new configuration with the file at URL and default
 // schemes.
 //
-// See ParseConfigWithSchemes for more details.
-func ParseConfig(l ulog.Logger, configURL *url.URL) (*boot.LinuxImage, error) {
-	return ParseConfigWithSchemes(l, configURL, curl.DefaultSchemes)
-}
-
-// ParseConfigWithSchemes returns a new  configuration with the file at URL
-// and schemes `s`.
-//
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfigWithSchemes(l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
+func ParseConfig(ctx context.Context, l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
 	c := &parser{
 		schemes: s,
 		log:     l,
 	}
-	if err := c.getAndParseFile(configURL); err != nil {
+	if err := c.getAndParseFile(ctx, configURL); err != nil {
 		return nil, err
 	}
 	return c.bootImage, nil
 }
 
 // getAndParse parses the config file downloaded from `url` and fills in `c`.
-func (c *parser) getAndParseFile(u *url.URL) error {
-	r, err := c.schemes.LazyFetch(u)
+func (c *parser) getAndParseFile(ctx context.Context, u *url.URL) error {
+	r, err := c.schemes.Fetch(ctx, u)
 	if err != nil {
 		return err
 	}

@@ -85,7 +85,8 @@ func Netboot(ifaceNames string) error {
 				// If lease failed, fall back to use locally configured
 				// ip/ipv6 address.
 			}
-			img, err := netboot.BootImage(ulog.Log, curl.DefaultSchemes, result.Lease)
+			// Don't use the other context, as it's for the DHCP timeout.
+			img, err := netboot.BootImage(context.Background(), ulog.Log, curl.DefaultSchemes, result.Lease)
 			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue

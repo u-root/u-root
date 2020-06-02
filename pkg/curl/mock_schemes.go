@@ -5,6 +5,7 @@
 package curl
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/url"
@@ -75,7 +76,7 @@ var (
 )
 
 // Fetch implements FileScheme.Fetch.
-func (m *MockScheme) Fetch(u *url.URL) (io.ReaderAt, error) {
+func (m *MockScheme) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
 	url := u.String()
 	m.numCalled[url]++
 
