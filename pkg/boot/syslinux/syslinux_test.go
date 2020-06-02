@@ -503,13 +503,13 @@ func TestParseGeneral(t *testing.T) {
 			s.Register(fs.Scheme, fs)
 			s.Register(http.Scheme, http)
 
-			wd := &url.URL{
+			rootdir := &url.URL{
 				Scheme: "tftp",
 				Host:   "1.2.3.4",
-				Path:   "/foobar",
+				Path:   "/",
 			}
 
-			got, err := ParseConfigFile(context.Background(), s, "pxelinux.cfg/default", wd)
+			got, err := ParseConfigFile(context.Background(), s, "pxelinux.cfg/default", rootdir, "foobar")
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)
 			} else if err != nil {
@@ -534,14 +534,15 @@ func TestParseCorner(t *testing.T) {
 		name       string
 		s          curl.Schemes
 		configFile string
-		wd         *url.URL
+		rootdir    *url.URL
+		wd         string
 		err        error
 	}{
 		{
 			name:       "no schemes",
 			s:          nil,
 			configFile: "pxelinux.cfg/default",
-			wd: &url.URL{
+			rootdir: &url.URL{
 				Scheme: "tftp",
 				Host:   "1.2.3.4",
 				Path:   "/foobar",
@@ -559,7 +560,7 @@ func TestParseCorner(t *testing.T) {
 			name:       "no scheme and config file",
 			s:          nil,
 			configFile: "",
-			wd: &url.URL{
+			rootdir: &url.URL{
 				Scheme: "tftp",
 				Host:   "1.2.3.4",
 				Path:   "/foobar",
@@ -577,7 +578,7 @@ func TestParseCorner(t *testing.T) {
 			name:       "no scheme, config file, and working dir",
 			s:          nil,
 			configFile: "",
-			wd:         nil,
+			rootdir:    nil,
 			err: &curl.URLError{
 				URL: &url.URL{},
 				Err: curl.ErrNoSuchScheme,
@@ -585,7 +586,7 @@ func TestParseCorner(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseConfigFile(context.Background(), tt.s, tt.configFile, tt.wd)
+			_, err := ParseConfigFile(context.Background(), tt.s, tt.configFile, tt.rootdir, tt.wd)
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("ParseConfigFile() = %v, want %v", err, tt.err)
 			}
@@ -596,37 +597,41 @@ func TestParseCorner(t *testing.T) {
 func TestParseURL(t *testing.T) {
 	for _, tt := range []struct {
 		filename string
-		wd       *url.URL
+		rootdir  *url.URL
+		wd       string
 		want     *url.URL
 	}{
 		{
 			filename: "foobar",
-			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
+			rootdir:  mustParseURL("http://[2001::1]:18282/"),
+			wd:       "files/more",
 			want:     mustParseURL("http://[2001::1]:18282/files/more/foobar"),
 		},
 		{
 			filename: "/foobar",
-			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
+			rootdir:  mustParseURL("http://[2001::1]:18282"),
+			wd:       "files/more",
 			want:     mustParseURL("http://[2001::1]:18282/foobar"),
 		},
 		{
 			filename: "http://[2002::2]/blabla",
-			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
+			rootdir:  mustParseURL("http://[2001::1]:18282/files"),
+			wd:       "more",
 			want:     mustParseURL("http://[2002::2]/blabla"),
 		},
 		{
 			filename: "http://[2002::2]/blabla",
-			wd:       nil,
+			rootdir:  nil,
 			want:     mustParseURL("http://[2002::2]/blabla"),
 		},
 	} {
-		got, err := parseURL(tt.filename, tt.wd)
+		got, err := parseURL(tt.filename, tt.rootdir, tt.wd)
 		if err != nil {
-			t.Errorf("parseURL(%q, %s) = %v, want %v", tt.filename, tt.wd, err, nil)
+			t.Errorf("parseURL(%q, %s, %s) = %v, want %v", tt.filename, tt.rootdir, tt.wd, err, nil)
 		}
 
 		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("parseURL(%q, %s) = %v, want %v", tt.filename, tt.wd, got, tt.want)
+			t.Errorf("parseURL(%q, %s, %s) = %v, want %v", tt.filename, tt.rootdir, tt.wd, got, tt.want)
 		}
 	}
 }
