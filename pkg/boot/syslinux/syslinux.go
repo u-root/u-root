@@ -58,6 +58,11 @@ func probeIsolinuxFiles() []string {
 // ParseLocalConfig treats diskDir like a mount point on the local file system
 // and finds an isolinux config under there.
 func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
+	rootdir := &url.URL{
+		Scheme: "file",
+		Path:   diskDir,
+	}
+
 	for _, relname := range probeIsolinuxFiles() {
 		dir, name := filepath.Split(relname)
 
@@ -66,12 +71,7 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 		// configuration file."
 		//
 		// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
-		wd := &url.URL{
-			Scheme: "file",
-			Path:   filepath.Join(diskDir, dir),
-		}
-
-		imgs, err := ParseConfigFile(ctx, curl.DefaultSchemes, name, wd)
+		imgs, err := ParseConfigFile(ctx, curl.DefaultSchemes, name, rootdir, dir)
 		if curl.IsURLError(err) {
 			continue
 		}
@@ -88,12 +88,18 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 //
 // `s` is used to fetch any files that must be parsed or provided.
 //
-// `wd` is the default scheme, host, and path for any files named as a
-// relative path - e.g. kernel, include, and initramfs paths are requested
-// relative to the wd.
-func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) ([]boot.OSImage, error) {
-	p := newParser(wd, s)
-	if err := p.appendFile(ctx, url); err != nil {
+// rootdir is the partition mount point that syslinux is operating under.
+// Parsed absolute paths will be interpreted relative to the rootdir.
+//
+// wd is a directory within rootdir that is the current working directory.
+// Parsed relative paths will be interpreted relative to rootdir + "/" + wd.
+//
+// For PXE clients, rootdir will be the the URL without the path, and wd the
+// path component of the URL (e.g. rootdir = http://foobar.com, wd =
+// barfoo/pxelinux.cfg/).
+func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, rootdir *url.URL, wd string) ([]boot.OSImage, error) {
+	p := newParser(rootdir, wd, s)
+	if err := p.appendFile(ctx, configFile); err != nil {
 		return nil, err
 	}
 
@@ -165,7 +171,8 @@ type parser struct {
 	globalAppend string
 	scope        scope
 	curEntry     string
-	wd           *url.URL
+	wd           string
+	rootdir      *url.URL
 	schemes      curl.Schemes
 }
 
@@ -184,18 +191,19 @@ const (
 // resulting URL is roughly `wd.String()/path`.
 //
 // `s` is used to get files referred to by URLs.
-func newParser(wd *url.URL, s curl.Schemes) *parser {
+func newParser(rootdir *url.URL, wd string, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*boot.LinuxImage),
 		mbEntries:    make(map[string]*boot.MultibootImage),
 		scope:        scopeGlobal,
 		wd:           wd,
+		rootdir:      rootdir,
 		schemes:      s,
 		menuLabel:    make(map[string]string),
 	}
 }
 
-func parseURL(name string, wd *url.URL) (*url.URL, error) {
+func parseURL(name string, rootdir *url.URL, wd string) (*url.URL, error) {
 	u, err := url.Parse(name)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse URL %q: %v", name, err)
@@ -203,12 +211,12 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 
 	// If it parsed, but it didn't have a Scheme or Host, use the working
 	// directory's values.
-	if len(u.Scheme) == 0 && wd != nil {
-		u.Scheme = wd.Scheme
+	if len(u.Scheme) == 0 && rootdir != nil {
+		u.Scheme = rootdir.Scheme
 
 		if len(u.Host) == 0 {
 			// If this is not there, it was likely just a path.
-			u.Host = wd.Host
+			u.Host = rootdir.Host
 
 			// Absolute file names don't get the parent
 			// directories, just the host and scheme.
@@ -218,8 +226,10 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 			// preceded with a slash."
 			//
 			// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
-			if !path.IsAbs(name) {
-				u.Path = path.Join(wd.Path, path.Clean(u.Path))
+			if path.IsAbs(name) {
+				u.Path = path.Join(rootdir.Path, path.Clean(u.Path))
+			} else {
+				u.Path = path.Join(rootdir.Path, wd, path.Clean(u.Path))
 			}
 		}
 	}
@@ -233,7 +243,7 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 // "working directory" of that relative path; the resulting URL is roughly
 // path.Join(wd.String(), url).
 func (c *parser) getFile(url string) (io.ReaderAt, error) {
-	u, err := parseURL(url, c.wd)
+	u, err := parseURL(url, c.rootdir, c.wd)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +253,7 @@ func (c *parser) getFile(url string) (io.ReaderAt, error) {
 
 // appendFile parses the config file downloaded from `url` and adds it to `c`.
 func (c *parser) appendFile(ctx context.Context, url string) error {
-	u, err := parseURL(url, c.wd)
+	u, err := parseURL(url, c.rootdir, c.wd)
 	if err != nil {
 		return err
 	}
