@@ -112,11 +112,15 @@ func main() {
 
 	images, err := NetbootImages(ifName)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Netboot failed: %v", err)
 	}
 
 	if *noLoad {
-		log.Printf("Got configuration: %s", images[0])
+		if len(images) > 0 {
+			log.Printf("Got configuration: %s", images[0])
+		} else {
+			log.Fatalf("Nothing bootable found.")
+		}
 		return
 	}
 	menuEntries := menu.OSImages(*dryRun, images...)
