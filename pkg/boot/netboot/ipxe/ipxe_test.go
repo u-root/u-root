@@ -5,6 +5,7 @@
 package ipxe
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -326,9 +327,9 @@ func TestIpxeConfig(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
-			got, err := ParseConfigWithSchemes(ulogtest.Logger{t}, tt.curl, tt.schemeFunc())
+			got, err := ParseConfig(context.Background(), ulogtest.Logger{t}, tt.curl, tt.schemeFunc())
 			if !reflect.DeepEqual(err, tt.err) {
-				t.Errorf("NewConfigWithSchemes() got %v, want %v", err, tt.err)
+				t.Errorf("ParseConfig() got %v, want %v", err, tt.err)
 				return
 			} else if err != nil {
 				return
