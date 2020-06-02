@@ -115,6 +115,16 @@ func TestParseGeneral(t *testing.T) {
 			},
 		},
 		{
+			desc: "empty label",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					default foo
+					label foo`,
+			},
+			want: nil,
+		},
+
+		{
 			desc: "all files exist, simple config with directive initrd",
 			configFiles: map[string]string{
 				"/foobar/pxelinux.cfg/default": `

@@ -113,7 +113,7 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.UR
 
 	var images []boot.OSImage
 	for _, label := range p.labelOrder {
-		if img, ok := p.linuxEntries[label]; ok {
+		if img, ok := p.linuxEntries[label]; ok && img.Kernel != nil {
 			images = append(images, img)
 		}
 	}
