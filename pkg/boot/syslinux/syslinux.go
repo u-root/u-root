@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -116,6 +117,9 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.UR
 		if img, ok := p.linuxEntries[label]; ok && img.Kernel != nil {
 			images = append(images, img)
 		}
+		if img, ok := p.mbEntries[label]; ok && img.Kernel != nil {
+			images = append(images, img)
+		}
 	}
 	return images, nil
 }
@@ -135,6 +139,7 @@ func dedupStrings(list []string) []string {
 type parser struct {
 	// linuxEntries is a map of label name -> label configuration.
 	linuxEntries map[string]*boot.LinuxImage
+	mbEntries    map[string]*boot.MultibootImage
 
 	// labelOrder is the order of label entries in linuxEntries.
 	labelOrder []string
@@ -168,6 +173,7 @@ const (
 func newParser(wd *url.URL, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*boot.LinuxImage),
+		mbEntries:    make(map[string]*boot.MultibootImage),
 		scope:        scopeGlobal,
 		wd:           wd,
 		schemes:      s,
@@ -294,7 +300,19 @@ func (c *parser) append(ctx context.Context, config string) error {
 			}
 			c.labelOrder = append(c.labelOrder, c.curEntry)
 
-		case "kernel", "linux":
+		case "kernel":
+			// I hate special cases like these, but we aren't gonna
+			// implement syslinux modules.
+			if arg == "mboot.c32" {
+				// Prepare for a multiboot kernel.
+				delete(c.linuxEntries, c.curEntry)
+				c.mbEntries[c.curEntry] = &boot.MultibootImage{
+					Name: c.curEntry,
+				}
+			}
+			fallthrough
+
+		case "linux":
 			if e, ok := c.linuxEntries[c.curEntry]; ok {
 				k, err := c.getFile(arg)
 				if err != nil {
@@ -324,20 +342,54 @@ func (c *parser) append(ctx context.Context, config string) error {
 				c.globalAppend = arg
 
 			case scopeEntry:
-				if arg == "-" {
-					c.linuxEntries[c.curEntry].Cmdline = ""
-				} else {
-					// Yes, we explicitly _override_, not
-					// concatenate. If a specific append
-					// directive is present, a global
-					// append directive is ignored.
-					//
-					// Also, "If you enter multiple APPEND
-					// statements in a single LABEL entry,
-					// only the last one will be used".
-					//
-					// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
-					c.linuxEntries[c.curEntry].Cmdline = arg
+				if e, ok := c.mbEntries[c.curEntry]; ok {
+					modules := strings.Split(arg, "---")
+					// The first module is special -- the kernel.
+					if len(modules) > 0 {
+						kernel := strings.Fields(modules[0])
+						k, err := c.getFile(kernel[0])
+						if err != nil {
+							return err
+						}
+						e.Kernel = k
+						if len(kernel) > 0 {
+							e.Cmdline = strings.Join(kernel[1:], " ")
+						}
+						modules = modules[1:]
+					}
+					for _, cmdline := range modules {
+						m := strings.Fields(cmdline)
+						if len(m) == 0 {
+							continue
+						}
+						name := m[0]
+						file, err := c.getFile(name)
+						if err != nil {
+							return err
+						}
+						e.Modules = append(e.Modules, multiboot.Module{
+							CmdLine: strings.Join(m, " "),
+							Name:    name,
+							Module:  file,
+						})
+					}
+				}
+				if e, ok := c.linuxEntries[c.curEntry]; ok {
+					if arg == "-" {
+						e.Cmdline = ""
+					} else {
+						// Yes, we explicitly _override_, not
+						// concatenate. If a specific append
+						// directive is present, a global
+						// append directive is ignored.
+						//
+						// Also, "If you enter multiple APPEND
+						// statements in a single LABEL entry,
+						// only the last one will be used".
+						//
+						// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
+						e.Cmdline = arg
+					}
 				}
 			}
 		}
