@@ -252,12 +252,36 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 		case "include":
 			if err := c.appendFile(ctx, arg); curl.IsURLError(err) {
+				log.Printf("failed to parse %s: %v", arg, err)
 				// Means we didn't find the file. Just ignore
 				// it.
 				// TODO(hugelgupf): plumb a logger through here.
 				continue
 			} else if err != nil {
 				return err
+			}
+
+		case "menu":
+			opt := strings.Fields(arg)
+			if len(opt) < 1 {
+				continue
+			}
+			switch strings.ToLower(opt[0]) {
+			case "label":
+				// Note that "menu label" only changes the
+				// displayed label, not the identifier for this
+				// entry.
+				if e, ok := c.linuxEntries[c.curEntry]; ok && len(opt) > 1 {
+					e.Name = strings.Join(opt[1:], " ")
+				}
+
+			case "default":
+				// Are we in label scope?
+				//
+				// "Only valid after a LABEL statement" -syslinux wiki.
+				if c.scope == scopeEntry {
+					c.defaultEntry = c.curEntry
+				}
 			}
 
 		case "label":
@@ -270,19 +294,29 @@ func (c *parser) append(ctx context.Context, config string) error {
 			}
 			c.labelOrder = append(c.labelOrder, c.curEntry)
 
-		case "kernel":
-			k, err := c.getFile(arg)
-			if err != nil {
-				return err
+		case "kernel", "linux":
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				k, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.Kernel = k
 			}
-			c.linuxEntries[c.curEntry].Kernel = k
 
 		case "initrd":
-			i, err := c.getFile(arg)
-			if err != nil {
-				return err
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				// TODO: support multiple comma-separated initrds.
+				// TODO: append "initrd=$arg" to the cmdline.
+				//
+				// For how this interacts with global appends,
+				// read
+				// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
+				i, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.Initrd = i
 			}
-			c.linuxEntries[c.curEntry].Initrd = i
 
 		case "append":
 			switch c.scope {
@@ -293,6 +327,16 @@ func (c *parser) append(ctx context.Context, config string) error {
 				if arg == "-" {
 					c.linuxEntries[c.curEntry].Cmdline = ""
 				} else {
+					// Yes, we explicitly _override_, not
+					// concatenate. If a specific append
+					// directive is present, a global
+					// append directive is ignored.
+					//
+					// Also, "If you enter multiple APPEND
+					// statements in a single LABEL entry,
+					// only the last one will be used".
+					//
+					// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
 					c.linuxEntries[c.curEntry].Cmdline = arg
 				}
 			}
@@ -308,6 +352,10 @@ func (c *parser) append(ctx context.Context, config string) error {
 		// INITRD trump cmdline? Does it trump global? What if both the
 		// directive and cmdline initrd= are set? Does it depend on the
 		// order in the config file? (My current best guess: order.)
+		//
+		// Answer: Normally, the INITRD directive appends to the
+		// cmdline, and the _last_ effective initrd= parameter is used
+		// for loading initrd files.
 		if label.Initrd != nil {
 			continue
 		}
