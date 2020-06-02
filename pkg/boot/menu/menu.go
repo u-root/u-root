@@ -47,9 +47,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	for i, e := range entries {
 		fmt.Printf("%02d. %s\n\n", i+1, e.Label())
 	}
-	// For some reason this has to be a non-empty empty line, so that the
-	// terminal prompt doesn't override it. Or something.
-	fmt.Println(" ")
+	fmt.Println("\r")
 
 	oldState, err := terminal.MakeRaw(int(input.Fd()))
 	if err != nil {
@@ -78,7 +76,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 			choice, err := term.ReadLine()
 			if err != nil {
 				if err != io.EOF {
-					fmt.Printf("BUG: Please report: Terminal read error: %v. ", err)
+					fmt.Printf("BUG: Please report: Terminal read error: %v.\r\n", err)
 				}
 				boot <- nil
 				return
@@ -91,11 +89,11 @@ func Choose(input *os.File, entries ...Entry) Entry {
 			}
 			num, err := strconv.Atoi(choice)
 			if err != nil {
-				fmt.Printf("%s is not a valid entry number: %v. ", choice, err)
+				fmt.Printf("%s is not a valid entry number: %v.\r\n", choice, err)
 				continue
 			}
 			if num-1 < 0 || num > len(entries) {
-				fmt.Printf("%s is not a valid entry number. ", choice)
+				fmt.Printf("%s is not a valid entry number.\r\n", choice)
 				continue
 			}
 			boot <- entries[num-1]
@@ -106,7 +104,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	select {
 	case entry := <-boot:
 		if entry != nil {
-			fmt.Printf("Chosen option %s.\n\n", entry.Label())
+			fmt.Printf("Chosen option %s.\r\n\r\n", entry.Label())
 		}
 		return entry
 
