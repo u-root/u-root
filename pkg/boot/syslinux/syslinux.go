@@ -17,6 +17,7 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -194,19 +195,32 @@ func newParser(wd *url.URL, s curl.Schemes) *parser {
 	}
 }
 
-func parseURL(surl string, wd *url.URL) (*url.URL, error) {
-	u, err := url.Parse(surl)
+func parseURL(name string, wd *url.URL) (*url.URL, error) {
+	u, err := url.Parse(name)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
+		return nil, fmt.Errorf("could not parse URL %q: %v", name, err)
 	}
 
+	// If it parsed, but it didn't have a Scheme or Host, use the working
+	// directory's values.
 	if len(u.Scheme) == 0 && wd != nil {
 		u.Scheme = wd.Scheme
 
 		if len(u.Host) == 0 {
 			// If this is not there, it was likely just a path.
 			u.Host = wd.Host
-			u.Path = filepath.Join(wd.Path, filepath.Clean(u.Path))
+
+			// Absolute file names don't get the parent
+			// directories, just the host and scheme.
+			//
+			// "All (paths to) file names inside the configuration
+			// file are relative to the Working Directory, unless
+			// preceded with a slash."
+			//
+			// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
+			if !path.IsAbs(name) {
+				u.Path = path.Join(wd.Path, path.Clean(u.Path))
+			}
 		}
 	}
 	return u, nil
