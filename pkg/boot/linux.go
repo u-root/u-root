@@ -5,6 +5,7 @@
 package boot
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,15 +14,28 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
 // LinuxImage implements OSImage for a Linux kernel + initramfs.
 type LinuxImage struct {
+	// Name is a label for this image.
 	Name string
 
-	Kernel  io.ReaderAt
-	Initrd  io.ReaderAt
+	// Kernel is a Linux kernel.
+	//
+	// Kernel may optionally implement curl.LazyFile in order for Load's
+	// context to be used.
+	Kernel io.ReaderAt
+
+	// Initrd is an optional initramfs root file system.
+	//
+	// Initrd may optionally implement curl.LazyFile in order for Load's
+	// context to be used.
+	Initrd io.ReaderAt
+
+	// Cmdline appends to the Linux kernel command-line.
 	Cmdline string
 }
 
@@ -71,12 +85,12 @@ func copyToFile(r io.Reader) (*os.File, error) {
 }
 
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
-func (li *LinuxImage) Load(verbose bool) error {
+func (li *LinuxImage) Load(ctx context.Context, verbose bool) error {
 	if li.Kernel == nil {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
 
-	kernel, initrd := uio.Reader(li.Kernel), uio.Reader(li.Initrd)
+	kernel, initrd := curl.Reader(ctx, li.Kernel), curl.Reader(ctx, li.Initrd)
 	if verbose {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
 		// but it at least proves the files are still downloading.

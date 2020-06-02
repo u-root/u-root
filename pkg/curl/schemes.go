@@ -34,11 +34,31 @@ var (
 )
 
 // File is a reference to a file fetched through this library.
+//
+// If File represents a remote file, this File can be a file download at any
+// stage in the process. This File may have already downloaded the contents
+// completely and hold them in memory; or it may have established the
+// connection but not read the file yet, or it may just be a reference to a
+// file not yet downloaded at all.
 type File interface {
 	io.ReaderAt
 
 	// URL is the file's original URL.
 	URL() *url.URL
+}
+
+// LazyFile is a reference to a fetchable File.
+type LazyFile interface {
+	// File fetches the file using the underlying library's default
+	// timeouts and cancellations.
+	//
+	// It is recommended to use Fetch if you want to supply your own
+	// context.
+	File
+
+	// Fetch fetches this file using ctx as the deadline and cancel
+	// context.
+	Fetch(ctx context.Context) (File, error)
 }
 
 // FileScheme represents the implementation of a URL scheme and gives access to
@@ -120,7 +140,7 @@ type file struct {
 	url *url.URL
 }
 
-// URL returns the file URL.
+// URL implements File.URL.
 func (f file) URL() *url.URL {
 	return f.url
 }
@@ -148,24 +168,77 @@ func (s Schemes) Fetch(ctx context.Context, u *url.URL) (File, error) {
 }
 
 // LazyFetch calls LazyFetch on DefaultSchemes.
-func LazyFetch(u *url.URL) (File, error) {
+func LazyFetch(u *url.URL) (LazyFile, error) {
 	return DefaultSchemes.LazyFetch(u)
+}
+
+type lazyFile struct {
+	io.ReaderAt
+
+	fs  FileScheme
+	url *url.URL
+}
+
+// URL implements File.URL.
+func (l lazyFile) URL() *url.URL {
+	return l.url
+}
+
+// String implements fmt.Stringer.
+func (l lazyFile) String() string {
+	return l.url.String()
+}
+
+// Fetch implements LazyFile.Fetch.
+func (l *lazyFile) Fetch(ctx context.Context) (File, error) {
+	reader, err := l.fs.Fetch(ctx, l.url)
+	if err != nil {
+		return nil, &URLError{URL: l.url, Err: err}
+	}
+	return &file{ReaderAt: reader, url: l.url}, nil
+}
+
+// ReadAll reads from r until io.EOF, unless r implements LazyFile, in which
+// case it will use Fetch.
+func ReadAll(ctx context.Context, r io.ReaderAt) ([]byte, error) {
+	if lf, ok := r.(LazyFile); ok {
+		cr, err := lf.Fetch(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return uio.ReadAll(cr)
+	}
+	return uio.ReadAll(r)
+}
+
+// Reader returns an io.Reader that reads from r from 0 to MaxInt64.
+//
+// If r implements LazyFile, Fetch's ReaderAt will be used.
+func Reader(ctx context.Context, r io.ReaderAt) io.Reader {
+	if lf, ok := r.(LazyFile); ok {
+		cr, err := lf.Fetch(ctx)
+		if err != nil {
+			return uio.Reader(r)
+		}
+		return uio.Reader(cr)
+	}
+	return uio.Reader(r)
 }
 
 // LazyFetch returns a reader that will Fetch the file given by `u` when
 // Read is called, based on `u`s scheme. See Schemes.Fetch for more
 // details.
-func (s Schemes) LazyFetch(u *url.URL) (File, error) {
+func (s Schemes) LazyFetch(u *url.URL) (LazyFile, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {
 		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
 	}
 
-	return &file{
+	return &lazyFile{
 		url: u,
+		fs:  fg,
 		ReaderAt: uio.NewLazyOpenerAt(u.String(), func() (io.ReaderAt, error) {
-			// TODO
-			r, err := fg.Fetch(context.TODO(), u)
+			r, err := fg.Fetch(context.Background(), u)
 			if err != nil {
 				return nil, &URLError{URL: u, Err: err}
 			}

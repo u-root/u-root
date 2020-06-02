@@ -6,6 +6,7 @@ package multiboot
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -69,7 +70,7 @@ type header struct {
 }
 
 type imageType interface {
-	addInfo(m *multiboot) (uintptr, error)
+	addInfo(ctx context.Context, m *multiboot) (uintptr, error)
 	name() string
 	bootMagic() uintptr
 }

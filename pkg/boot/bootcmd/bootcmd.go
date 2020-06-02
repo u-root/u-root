@@ -7,6 +7,7 @@
 package bootcmd
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -20,7 +21,7 @@ import (
 // mps are mounts to unmount before kexecing. noLoad prints the list of entries
 // and exits. If noLoad is false, a boot menu is shown to the user. The
 // user-chosen boot entry will be kexec'd unless noExec is true.
-func ShowMenuAndBoot(entries []menu.Entry, mps []*mount.MountPoint, noLoad, noExec bool) {
+func ShowMenuAndBoot(ctx context.Context, entries []menu.Entry, mps []*mount.MountPoint, noLoad, noExec bool) {
 	if noLoad {
 		log.Print("Not loading menu or kernel. Options:")
 		for i, entry := range entries {
@@ -30,7 +31,7 @@ func ShowMenuAndBoot(entries []menu.Entry, mps []*mount.MountPoint, noLoad, noEx
 		os.Exit(0)
 	}
 
-	loadedEntry := menu.ShowMenuAndLoad(os.Stdin, entries...)
+	loadedEntry := menu.ShowMenuAndLoad(ctx, os.Stdin, entries...)
 
 	// Clean up.
 	for _, mp := range mps {

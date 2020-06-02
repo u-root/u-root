@@ -7,6 +7,7 @@
 package menu
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -34,7 +35,7 @@ type Entry interface {
 
 	// Load is called when the entry is chosen, but does not transfer
 	// execution to another process or kernel.
-	Load() error
+	Load(ctx context.Context) error
 
 	// Exec transfers execution to another process or kernel.
 	//
@@ -123,7 +124,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 // returned.
 //
 // The user is left to call Entry.Exec when this function returns.
-func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
+func ShowMenuAndLoad(ctx context.Context, input *os.File, entries ...Entry) Entry {
 	// Clear the screen (ANSI terminal escape code for screen clear).
 	fmt.Printf("\033[1;1H\033[2J\n\n")
 	fmt.Printf("Welcome to NERF's Boot Menu\n\n")
@@ -139,7 +140,7 @@ func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
 			// If nothing was entered, fall back to default.
 			break
 		}
-		if err := entry.Load(); err != nil {
+		if err := entry.Load(ctx); err != nil {
 			log.Printf("Failed to load %s: %v", entry.Label(), err)
 			continue
 		}
@@ -160,7 +161,7 @@ func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
 		if e.IsDefault() {
 			fmt.Printf("Attempting to boot %s.\n\n", e)
 
-			if err := e.Load(); err != nil {
+			if err := e.Load(ctx); err != nil {
 				log.Printf("Failed to load %s: %v", e.Label(), err)
 				continue
 			}
@@ -194,8 +195,8 @@ type OSImageAction struct {
 }
 
 // Load implements Entry.Load by loading the OS image into memory.
-func (oia OSImageAction) Load() error {
-	if err := oia.OSImage.Load(oia.Verbose); err != nil {
+func (oia OSImageAction) Load(ctx context.Context) error {
+	if err := oia.OSImage.Load(ctx, oia.Verbose); err != nil {
 		return fmt.Errorf("could not load image %s: %v", oia.OSImage, err)
 	}
 	return nil
@@ -219,7 +220,7 @@ func (StartShell) Label() string {
 }
 
 // Load does nothing.
-func (StartShell) Load() error {
+func (StartShell) Load(context.Context) error {
 	return nil
 }
 
@@ -242,7 +243,7 @@ func (Reboot) Label() string {
 }
 
 // Load does nothing.
-func (Reboot) Load() error {
+func (Reboot) Load(context.Context) error {
 	return nil
 }
 

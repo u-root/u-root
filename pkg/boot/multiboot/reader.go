@@ -7,10 +7,11 @@ package multiboot
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"io"
 	"io/ioutil"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/curl"
 )
 
 func readGzip(r io.Reader) ([]byte, error) {
@@ -24,8 +25,8 @@ func readGzip(r io.Reader) ([]byte, error) {
 
 // TODO: could be tryCompressionFilters, grub support gz,xz and lzop
 // TODO: do we want to keep the filter inside multiboot? This could be the responsibility of the caller...
-func tryGzipFilter(r io.ReaderAt) io.ReaderAt {
-	b, err := readGzip(uio.Reader(r))
+func tryGzipFilter(ctx context.Context, r io.ReaderAt) io.ReaderAt {
+	b, err := readGzip(curl.Reader(ctx, r))
 	if err == nil {
 		return bytes.NewReader(b)
 	}

@@ -123,5 +123,5 @@ func main() {
 	menuEntries = append(menuEntries, menu.StartShell{})
 
 	// Boot does not return.
-	bootcmd.ShowMenuAndBoot(menuEntries, nil, *noLoad, *noExec)
+	bootcmd.ShowMenuAndBoot(context.Background(), menuEntries, nil, *noLoad, *noExec)
 }

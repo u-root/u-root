@@ -29,6 +29,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"strings"
@@ -92,5 +93,5 @@ func main() {
 	menuEntries = append(menuEntries, menu.StartShell{})
 
 	// Boot does not return.
-	bootcmd.ShowMenuAndBoot(menuEntries, mps, *noLoad, *noExec)
+	bootcmd.ShowMenuAndBoot(context.Background(), menuEntries, mps, *noLoad, *noExec)
 }

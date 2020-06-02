@@ -7,6 +7,7 @@
 package boot
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -25,7 +26,7 @@ type OSImage interface {
 	//
 	// After Load is called, call boot.Execute() to stop Linux and boot the
 	// loaded OSImage.
-	Load(verbose bool) error
+	Load(ctx context.Context, verbose bool) error
 }
 
 // Execute executes a previously loaded OSImage.

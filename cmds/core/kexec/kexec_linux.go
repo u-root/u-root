@@ -19,6 +19,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
@@ -91,7 +92,7 @@ func main() {
 		}
 		defer mbkernel.Close()
 		var image boot.OSImage
-		if err := multiboot.Probe(mbkernel); err == nil {
+		if err := multiboot.Probe(context.Background(), mbkernel); err == nil {
 			image = &boot.MultibootImage{
 				Modules: multiboot.LazyOpenModules(opts.modules),
 				Kernel:  mbkernel,
@@ -108,7 +109,7 @@ func main() {
 				Cmdline: newCmdline,
 			}
 		}
-		if err := image.Load(opts.debug); err != nil {
+		if err := image.Load(context.Background(), opts.debug); err != nil {
 			log.Fatal(err)
 		}
 	}

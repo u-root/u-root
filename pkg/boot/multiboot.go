@@ -5,6 +5,7 @@
 package boot
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -35,8 +36,8 @@ func (mi *MultibootImage) Label() string {
 }
 
 // Load implements OSImage.Load.
-func (mi *MultibootImage) Load(verbose bool) error {
-	return multiboot.Load(verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
+func (mi *MultibootImage) Load(ctx context.Context, verbose bool) error {
+	return multiboot.Load(ctx, verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
 }
 
 // String implements fmt.Stringer.

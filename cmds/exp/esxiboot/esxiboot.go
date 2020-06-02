@@ -30,6 +30,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -67,7 +68,7 @@ func main() {
 			if len(*appendCmdline) > 0 {
 				img.Cmdline = img.Cmdline + " " + strings.Join(*appendCmdline, " ")
 			}
-			if err := img.Load(false); err != nil {
+			if err := img.Load(context.Background(), false); err != nil {
 				log.Printf("Failed to load ESXi image (%v) into memory: %v", img, err)
 			} else {
 				log.Printf("Loaded image: %v", img)
@@ -99,7 +100,7 @@ func main() {
 		if len(*appendCmdline) > 0 {
 			img.Cmdline = img.Cmdline + " " + strings.Join(*appendCmdline, " ")
 		}
-		if err := img.Load(false); err != nil {
+		if err := img.Load(context.Background(), false); err != nil {
 			log.Fatalf("Failed to load ESXi image (%v) into memory: %v", img, err)
 		}
 		log.Printf("Loaded image: %v", img)

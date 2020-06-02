@@ -5,6 +5,7 @@
 package menu
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -40,7 +41,7 @@ func (d *testEntry) String() string {
 	return d.Label()
 }
 
-func (d *testEntry) Load() error {
+func (d *testEntry) Load(context.Context) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.loadCalled = true
@@ -238,7 +239,7 @@ func TestShowMenuAndLoad(t *testing.T) {
 
 			entry := make(chan Entry)
 			go func() {
-				entry <- ShowMenuAndLoad(pty.Slave, entries...)
+				entry <- ShowMenuAndLoad(context.Background(), pty.Slave, entries...)
 			}()
 
 			// Well this sucks.

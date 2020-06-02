@@ -5,6 +5,7 @@
 package jsonboot
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -180,7 +181,7 @@ func (bc *BootConfig) Boot() error {
 		defer mbkernel.Close()
 
 		// check multiboot header
-		if err := multiboot.Probe(mbkernel); err != nil {
+		if err := multiboot.Probe(context.Background(), mbkernel); err != nil {
 			log.Printf("Error parsing multiboot header: %v", err)
 			return err
 		}
@@ -189,7 +190,7 @@ func (bc *BootConfig) Boot() error {
 			return err
 		}
 		defer modules.Close()
-		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
+		if err := multiboot.Load(context.Background(), true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
 		}
 	}

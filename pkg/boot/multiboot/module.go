@@ -6,14 +6,15 @@ package multiboot
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/ubinary"
-	"github.com/u-root/u-root/pkg/uio"
 )
 
 // A module represents a module to be loaded along with the kernel.
@@ -33,8 +34,8 @@ type module struct {
 
 type modules []module
 
-func (m *multiboot) loadModules() (modules, error) {
-	loaded, data, err := loadModules(m.modules)
+func (m *multiboot) loadModules(ctx context.Context) (modules, error) {
+	loaded, data, err := loadModules(ctx, m.modules)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +55,8 @@ func (m *multiboot) loadModules() (modules, error) {
 	return loaded, nil
 }
 
-func (m *multiboot) addMultibootModules() (uintptr, error) {
-	loaded, err := m.loadModules()
+func (m *multiboot) addMultibootModules(ctx context.Context) (uintptr, error) {
+	loaded, err := m.loadModules(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -86,7 +87,7 @@ func (m *multiboot) addMultibootModules() (uintptr, error) {
 //			modules_n
 //
 // <padding> aligns the start of each module to a page beginning.
-func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
+func loadModules(ctx context.Context, rmods []Module) (loaded modules, data []byte, err error) {
 	loaded = make(modules, len(rmods))
 	var buf bytes.Buffer
 
@@ -97,7 +98,7 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 	}
 
 	for i, rmod := range rmods {
-		if err := loaded[i].loadModule(&buf, rmod.Module, rmod.Name); err != nil {
+		if err := loaded[i].loadModule(ctx, &buf, rmod.Module, rmod.Name); err != nil {
 			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
 		}
 	}
@@ -117,7 +118,7 @@ func pageAlignBuf(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error {
+func (m *module) loadModule(ctx context.Context, buf *bytes.Buffer, r io.ReaderAt, name string) error {
 	// place start of each module to a beginning of a page.
 	if err := pageAlignBuf(buf); err != nil {
 		return err
@@ -125,7 +126,7 @@ func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error
 
 	m.Start = uint32(buf.Len())
 
-	if _, err := io.Copy(buf, uio.Reader(r)); err != nil {
+	if _, err := io.Copy(buf, curl.Reader(ctx, r)); err != nil {
 		return err
 	}
 

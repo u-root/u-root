@@ -11,6 +11,7 @@ package multiboot
 
 import (
 	"bytes"
+	"context"
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
@@ -124,8 +125,8 @@ func (m memoryMaps) String() string {
 }
 
 // Probe checks if `kernel` is multiboot v1 or mutiboot kernel.
-func Probe(kernel io.ReaderAt) error {
-	r := tryGzipFilter(kernel)
+func Probe(ctx context.Context, kernel io.ReaderAt) error {
+	r := tryGzipFilter(ctx, kernel)
 	_, err := parseHeader(uio.Reader(r))
 	if err == ErrHeaderNotFound {
 		_, err = parseMutiHeader(uio.Reader(r))
@@ -164,17 +165,17 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 //
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
-func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
-	kernel = tryGzipFilter(kernel)
+func Load(ctx context.Context, debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
+	kernel = tryGzipFilter(ctx, kernel)
 	for i, mod := range modules {
-		modules[i].Module = tryGzipFilter(mod.Module)
+		modules[i].Module = tryGzipFilter(ctx, mod.Module)
 	}
 
 	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
 		return err
 	}
-	if err := m.load(debug, ibft); err != nil {
+	if err := m.load(ctx, debug, ibft); err != nil {
 		return err
 	}
 	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
@@ -235,7 +236,7 @@ func (m Modules) Close() error {
 }
 
 // load loads and parses multiboot information from m.kernel.
-func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
+func (m *multiboot) load(ctx context.Context, debug bool, ibft *ibft.IBFT) error {
 	var err error
 	log.Println("Parsing multiboot header")
 	// TODO: the kernel is opened like 4 separate times here. Just open it
@@ -294,7 +295,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	}
 
 	log.Printf("Preparing %s info", header.name())
-	infoAddr, err := header.addInfo(m)
+	infoAddr, err := header.addInfo(ctx, m)
 	if err != nil {
 		return fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
@@ -330,8 +331,8 @@ func getEntryPoint(r io.ReaderAt) (uintptr, error) {
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 // which is a memory map; a list of module structures, pointed to by mods_addr
 // and mods_count; and the multiboot info structure itself.
-func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
-	iw, err := h.newMultibootInfo(m)
+func (h *header) addInfo(ctx context.Context, m *multiboot) (addr uintptr, err error) {
+	iw, err := h.newMultibootInfo(ctx, m)
 	if err != nil {
 		return 0, err
 	}
@@ -361,11 +362,11 @@ func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
 // https://github.com/vmware/esx-boot/blob/master/include/mutiboot.h
 //
 // It includes a memory map and a list of modules.
-func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
+func (*mutibootHeader) addInfo(ctx context.Context, m *multiboot) (addr uintptr, err error) {
 	var mi mutibootInfo
 
 	mi.elems = append(mi.elems, m.memoryMap().elems()...)
-	mods, err := m.loadModules()
+	mods, err := m.loadModules(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -459,7 +460,7 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
+func (h *header) newMultibootInfo(ctx context.Context, m *multiboot) (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
 		return nil, err
@@ -477,7 +478,7 @@ func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 	}
 
 	if len(m.modules) > 0 {
-		modAddr, err := m.addMultibootModules()
+		modAddr, err := m.addMultibootModules(ctx)
 		if err != nil {
 			return nil, err
 		}
