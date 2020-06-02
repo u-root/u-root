@@ -67,6 +67,11 @@ func TestParseURL(t *testing.T) {
 			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
 			want:     mustParseURL("http://[2002::2]/blabla"),
 		},
+		{
+			filename: "http://[2002::2]/blabla",
+			wd:       nil,
+			want:     mustParseURL("http://[2002::2]/blabla"),
+		},
 	} {
 		got, err := parseURL(tt.filename, tt.wd)
 		if err != nil {

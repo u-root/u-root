@@ -18,6 +18,14 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 )
 
+func mustParseURL(s string) *url.URL {
+	u, err := url.Parse(s)
+	if err != nil {
+		panic(fmt.Sprintf("parsing %q failed: %v", s, err))
+	}
+	return u
+}
+
 type errorReader struct {
 	err error
 }
@@ -586,47 +594,39 @@ func TestParseCorner(t *testing.T) {
 }
 
 func TestParseURL(t *testing.T) {
-	for i, tt := range []struct {
-		url  string
-		wd   *url.URL
-		err  bool
-		want *url.URL
+	for _, tt := range []struct {
+		filename string
+		wd       *url.URL
+		want     *url.URL
 	}{
 		{
-			url: "default",
-			wd: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg",
-			},
-			want: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg/default",
-			},
+			filename: "foobar",
+			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
+			want:     mustParseURL("http://[2001::1]:18282/files/more/foobar"),
 		},
 		{
-			url: "http://192.168.2.1/configs/your-machine.cfg",
-			wd: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg",
-			},
-			want: &url.URL{
-				Scheme: "http",
-				Host:   "192.168.2.1",
-				Path:   "/configs/your-machine.cfg",
-			},
+			filename: "/foobar",
+			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
+			want:     mustParseURL("http://[2001::1]:18282/foobar"),
+		},
+		{
+			filename: "http://[2002::2]/blabla",
+			wd:       mustParseURL("http://[2001::1]:18282/files/more"),
+			want:     mustParseURL("http://[2002::2]/blabla"),
+		},
+		{
+			filename: "http://[2002::2]/blabla",
+			wd:       nil,
+			want:     mustParseURL("http://[2002::2]/blabla"),
 		},
 	} {
-		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
-			got, err := parseURL(tt.url, tt.wd)
-			if (err != nil) != tt.err {
-				t.Errorf("Wanted error (%v), but got %v", tt.err, err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseURL() = %#v, want %#v", got, tt.want)
-			}
-		})
+		got, err := parseURL(tt.filename, tt.wd)
+		if err != nil {
+			t.Errorf("parseURL(%q, %s) = %v, want %v", tt.filename, tt.wd, err, nil)
+		}
+
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("parseURL(%q, %s) = %v, want %v", tt.filename, tt.wd, got, tt.want)
+		}
 	}
 }
