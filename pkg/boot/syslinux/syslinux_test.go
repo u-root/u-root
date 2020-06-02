@@ -198,13 +198,14 @@ func TestParseGeneral(t *testing.T) {
 				"/foobar/pxelinux.cfg/default": `
 					default foo
 
+					label bar
+					menu label Bla Bla Bla
+					kernel ./pxefiles/kernel2
+					append console=ttyS0
+
 					label foo
 					kernel ./pxefiles/kernel1
-					append earlyprintk=ttyS0 printk=ttyS0
-
-					label bar
-					kernel ./pxefiles/kernel2
-					append console=ttyS0`,
+					append earlyprintk=ttyS0 printk=ttyS0`,
 			},
 			want: []boot.OSImage{
 				&boot.LinuxImage{
@@ -213,7 +214,34 @@ func TestParseGeneral(t *testing.T) {
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
 				&boot.LinuxImage{
-					Name:    "bar",
+					Name:    "Bla Bla Bla",
+					Kernel:  strings.NewReader(kernel2),
+					Cmdline: "console=ttyS0",
+				},
+			},
+		},
+		{
+			desc: "menu default, linux directives",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					label bar
+					menu label Bla Bla Bla
+					kernel ./pxefiles/kernel2
+					append console=ttyS0
+
+					label foo
+					menu default
+					linux ./pxefiles/kernel1
+					append earlyprintk=ttyS0 printk=ttyS0`,
+			},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:    "Bla Bla Bla",
 					Kernel:  strings.NewReader(kernel2),
 					Cmdline: "console=ttyS0",
 				},
@@ -363,8 +391,13 @@ func TestParseGeneral(t *testing.T) {
 				&boot.LinuxImage{
 					Name:   "stringer",
 					Kernel: strings.NewReader(kernel2),
-					// See TODO in pxe.go initrd handling.
-					Initrd:  strings.NewReader(initrd2),
+					Initrd: strings.NewReader(initrd2),
+
+					// TODO: See syslinux initrd handling. This SHOULD be
+					//
+					// initrd=./pxefiles/global_initrd initrd=./pxefiles/initrd2
+					//
+					// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
 					Cmdline: "initrd=./pxefiles/global_initrd",
 				},
 			},
