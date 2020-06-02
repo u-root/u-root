@@ -96,6 +96,16 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.UR
 		return nil, err
 	}
 
+	// Assign the right label to display to users.
+	for label, displayLabel := range p.menuLabel {
+		if e, ok := p.linuxEntries[label]; ok {
+			e.Name = displayLabel
+		}
+		if e, ok := p.mbEntries[label]; ok {
+			e.Name = displayLabel
+		}
+	}
+
 	// Intended order:
 	//
 	// 1. nerfDefaultEntry
@@ -144,6 +154,9 @@ type parser struct {
 	// labelOrder is the order of label entries in linuxEntries.
 	labelOrder []string
 
+	// menuLabel are human-readable labels defined by the "menu label" directive.
+	menuLabel map[string]string
+
 	defaultEntry     string
 	nerfDefaultEntry string
 
@@ -177,6 +190,7 @@ func newParser(wd *url.URL, s curl.Schemes) *parser {
 		scope:        scopeGlobal,
 		wd:           wd,
 		schemes:      s,
+		menuLabel:    make(map[string]string),
 	}
 }
 
@@ -277,9 +291,11 @@ func (c *parser) append(ctx context.Context, config string) error {
 				// Note that "menu label" only changes the
 				// displayed label, not the identifier for this
 				// entry.
-				if e, ok := c.linuxEntries[c.curEntry]; ok && len(opt) > 1 {
-					e.Name = strings.Join(opt[1:], " ")
-				}
+				//
+				// We track these separately because "menu
+				// label" directives may happen before we know
+				// whether this is a Linux or Multiboot entry.
+				c.menuLabel[c.curEntry] = strings.Join(opt[1:], " ")
 
 			case "default":
 				// Are we in label scope?
