@@ -368,7 +368,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 							return err
 						}
 						e.Kernel = k
-						if len(kernel) > 0 {
+						if len(kernel) > 1 {
 							e.Cmdline = strings.Join(kernel[1:], " ")
 						}
 						modules = modules[1:]
@@ -384,7 +384,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 							return err
 						}
 						e.Modules = append(e.Modules, multiboot.Module{
-							CmdLine: strings.Join(m, " "),
+							CmdLine: strings.TrimSpace(cmdline),
 							Name:    name,
 							Module:  file,
 						})
