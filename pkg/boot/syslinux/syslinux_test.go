@@ -527,6 +527,10 @@ func TestParseGeneral(t *testing.T) {
 					kernel mboot.c32
 					append xen.gz console=none --- ./pxefiles/kernel1 foobar hahaha --- ./pxefiles/initrd1
 
+					label mbootnomodules
+					kernel mboot.c32
+					append xen.gz
+
 					label foo
 					linux mboot.c32
 					append earlyprintk=ttyS0 printk=ttyS0`,
@@ -553,6 +557,10 @@ func TestParseGeneral(t *testing.T) {
 							CmdLine: "./pxefiles/initrd1",
 						},
 					},
+				},
+				&boot.MultibootImage{
+					Name:   "mbootnomodules",
+					Kernel: strings.NewReader(xengz),
 				},
 			},
 		},
