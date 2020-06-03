@@ -152,7 +152,7 @@ func ShowMenuAndBoot(input *os.File, entries ...Entry) {
 		// Only perform actions that are default actions. I.e. don't
 		// drop to shell.
 		if e.IsDefault() {
-			fmt.Printf("Attempting to boot %s.\n\n", e.Label())
+			fmt.Printf("Attempting to boot %s.\n\n", e)
 			if err := e.Do(); err == errStopTestOnly {
 				return
 			} else if err != nil {
