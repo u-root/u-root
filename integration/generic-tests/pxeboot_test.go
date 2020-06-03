@@ -61,7 +61,7 @@ func TestPxeboot4(t *testing.T) {
 			),
 		},
 		TestCmds: []string{
-			"pxeboot --dry-run --no-load -v",
+			"pxeboot --dry-run -v",
 			// Sleep so serial console output gets flushed. The expect library is racy.
 			"sleep 5",
 			"shutdown -h",
@@ -84,5 +84,16 @@ func TestPxeboot4(t *testing.T) {
 	}
 	if err := dhcpClient.Expect("Boot URI: tftp://192.168.0.1/pxelinux.0"); err != nil {
 		t.Errorf("%s Boot: %v", testutil.NowLog(), err)
+	}
+
+	// Boot menu should show the label from the pxelinux file.
+	if err := dhcpClient.Expect("01. some-random-kernel"); err != nil {
+		t.Errorf("%s Boot Menu: %v", testutil.NowLog(), err)
+	}
+	if err := dhcpClient.Expect("Attempting to boot"); err != nil {
+		t.Errorf("%s Boot Menu: %v", testutil.NowLog(), err)
+	}
+	if err := dhcpClient.Expect("Kernel: tftp://192.168.0.1/kernel"); err != nil {
+		t.Errorf("%s parsed kernel: %v", testutil.NowLog(), err)
 	}
 }
