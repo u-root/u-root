@@ -288,26 +288,28 @@ func probeIsolinuxFiles() []string {
 	return files
 }
 
-func IsolinuxParseConfig(ctx context.Context, workingDir *url.URL, s curl.Schemes) (*syslinux.Config, error) {
+func IsolinuxParseConfig(ctx context.Context, workingDir *url.URL, s curl.Schemes) ([]boot.OSImage, error) {
 	for _, relname := range probeIsolinuxFiles() {
-		c, err := syslinux.ParseConfigFile(ctx, s, relname, workingDir)
+		imgs, err := syslinux.ParseConfigFile(ctx, s, relname, workingDir)
 		if curl.IsURLError(err) {
 			continue
 		}
-		return c, err
+		return imgs, err
 	}
 	return nil, fmt.Errorf("no valid syslinux config found")
 }
 
 // call IsolinuxBootImage(curl.DefaultSchemes, dir)
-func IsolinuxBootImage(ctx context.Context, schemes curl.Schemes, workingDir *url.URL) (*boot.LinuxImage, error) {
-	pc, err := IsolinuxParseConfig(ctx, workingDir, schemes)
+func IsolinuxBootImage(ctx context.Context, schemes curl.Schemes, workingDir *url.URL) (boot.OSImage, error) {
+	imgs, err := IsolinuxParseConfig(ctx, workingDir, schemes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
 	}
 
-	label := pc.Entries[pc.DefaultEntry]
-	return label, nil
+	if len(imgs) > 0 {
+		return imgs[0], nil
+	}
+	return nil, fmt.Errorf("no isolinux config")
 }
 
 // grub parser
