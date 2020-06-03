@@ -1,0 +1,262 @@
+[
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-13.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-13.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-13.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen hypervisor"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-13.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-13.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-13.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-13.pvops.qubes.x86_64"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro single rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-13.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-13.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-13.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-13.pvops.qubes.x86_64 (recovery mode)"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-12.pvops.qubes.x86_64"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro single rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-12.pvops.qubes.x86_64 (recovery mode)"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.62-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.62-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.62-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.62-12.pvops.qubes.x86_64"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro single rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.62-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.62-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.62-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.62-12.pvops.qubes.x86_64 (recovery mode)"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5-heads.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-13.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-13.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-13.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-13.pvops.qubes.x86_64"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5-heads.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro single rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-13.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-13.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-13.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-13.pvops.qubes.x86_64 (recovery mode)"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5-heads.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-12.pvops.qubes.x86_64"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5-heads.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro single rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.67-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.67-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.67-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-12.pvops.qubes.x86_64 (recovery mode)"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5-heads.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.62-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.62-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.62-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.62-12.pvops.qubes.x86_64"
+  },
+  {
+    "cmdline": "placeholder ${xen_rm_opts}",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata-new/qubes-3.2-boot/xen-4.6.5-heads.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "placeholder root=/dev/mapper/luks-UUID2 ro single rd.qubes.hide_all_usb",
+        "name": "/vmlinuz-4.4.62-12.pvops.qubes.x86_64",
+        "url": "file://testdata-new/qubes-3.2-boot/vmlinuz-4.4.62-12.pvops.qubes.x86_64"
+      },
+      {
+        "cmdline": "/initramfs-4.4.62-12.pvops.qubes.x86_64.img",
+        "name": "--nounzip",
+        "url": "file://testdata-new/qubes-3.2-boot/--nounzip"
+      }
+    ],
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.62-12.pvops.qubes.x86_64 (recovery mode)"
+  }
+]
