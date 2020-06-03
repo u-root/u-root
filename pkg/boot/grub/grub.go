@@ -16,7 +16,6 @@ package grub
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -30,15 +29,6 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uio"
-)
-
-var (
-	// ErrInitrdUsedWithoutLinux is returned when an initrd directive is
-	// not following a linux directive in the same menu entry
-	ErrInitrdUsedWithoutLinux = errors.New("missing linux directive before initrd")
-	// ErrModuleUsedWithoutMultiboot is returned when a module directive is
-	// not following a multiboot directive in the same menu entry
-	ErrModuleUsedWithoutMultiboot = errors.New("missing multiboot directive before module")
 )
 
 var probeGrubFiles = []string{
@@ -229,6 +219,10 @@ func cmdlineQuote(args []string) string {
 }
 
 // append parses `config` and adds the respective configuration to `c`.
+//
+// NOTE: This parser has outlived its usefulness already, given that it doesn't
+// even understand the {} scoping in GRUB. But let's get the tests to pass, and
+// then we can do a rewrite.
 func (c *parser) append(ctx context.Context, config string) error {
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
@@ -285,15 +279,13 @@ func (c *parser) append(ctx context.Context, config string) error {
 			c.linuxEntries[c.curLabel] = entry
 
 		case "initrd", "initrd16", "initrdefi":
-			i, err := c.getFile(arg)
-			if err != nil {
-				return err
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				i, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.Initrd = i
 			}
-			entry, ok := c.linuxEntries[c.curEntry]
-			if !ok {
-				return ErrInitrdUsedWithoutLinux
-			}
-			entry.Initrd = i
 
 		case "multiboot":
 			// TODO handle --quirk-* arguments ? (change parsing)
@@ -312,22 +304,19 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 		case "module":
 			// TODO handle --nounzip arguments ? (change parsing)
-			m, err := c.getFile(arg)
-			if err != nil {
-				return err
+			if e, ok := c.mbEntries[c.curEntry]; ok {
+				m, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				// TODO: Lasy tryGzipFilter(m)
+				mod := multiboot.Module{
+					Module:  m,
+					Name:    arg,
+					CmdLine: cmdlineQuote(kv[2:]),
+				}
+				e.Modules = append(e.Modules, mod)
 			}
-			entry, ok := c.mbEntries[c.curEntry]
-			if !ok {
-				return ErrModuleUsedWithoutMultiboot
-			}
-			// TODO: Lasy tryGzipFilter(m)
-			mod := multiboot.Module{
-				Module:  m,
-				Name:    arg,
-				CmdLine: cmdlineQuote(kv[2:]),
-			}
-			entry.Modules = append(entry.Modules, mod)
-
 		}
 	}
 	return nil
