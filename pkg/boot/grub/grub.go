@@ -49,7 +49,26 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 		Path:   diskDir,
 	}
 
-	for _, relname := range probeGrubFiles {
+	// This is a hack. GRUB should stop caring about URLs at least in the
+	// way we use them today, because GRUB has additional path encoding
+	// methods. Sorry.
+	//
+	// Normally, stuff like this will be in EFI/BOOT/grub.cfg, but some
+	// distro's have their own directory in this EFI namespace. Just check
+	// 'em all.
+	files, err := filepath.Glob(filepath.Join(diskDir, "EFI", "*", "grub.cfg"))
+	if err != nil {
+		log.Printf("Could not glob for %s/EFI/*/grub.cfg: %v", diskDir, err)
+	}
+	var relNames []string
+	for _, file := range files {
+		base, err := filepath.Rel(diskDir, file)
+		if err == nil {
+			relNames = append(relNames, base)
+		}
+	}
+
+	for _, relname := range append(relNames, probeGrubFiles...) {
 		c, err := ParseConfigFile(ctx, curl.DefaultSchemes, relname, wd)
 		if curl.IsURLError(err) {
 			continue
