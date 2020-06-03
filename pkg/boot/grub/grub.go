@@ -33,9 +33,6 @@ import (
 )
 
 var (
-	// ErrDefaultEntryNotFound is returned when the configuration file
-	// names a default label that is not part of the configuration.
-	ErrDefaultEntryNotFound = errors.New("default variable not set in configuration")
 	// ErrInitrdUsedWithoutLinux is returned when an initrd directive is
 	// not following a linux directive in the same menu entry
 	ErrInitrdUsedWithoutLinux = errors.New("missing linux directive before initrd")
@@ -44,16 +41,32 @@ var (
 	ErrModuleUsedWithoutMultiboot = errors.New("missing multiboot directive before module")
 )
 
-// Config encapsulates a parsed grub configuration file.
-type Config struct {
-	// Entries is a map of label name -> label configuration.
-	Entries map[string]boot.OSImage
+var probeGrubFiles = []string{
+	"boot/grub/grub.cfg",
+	"grub/grub.cfg",
+	"grub2/grub.cfg",
+}
 
-	// DefaultEntry is the default label key to use.
-	//
-	// If DefaultEntry is non-empty, the label is guaranteed to exist in
-	// `Entries`.
-	DefaultEntry string
+// ParseLocalConfig looks for a GRUB config in the disk partition mounted at
+// diskDir and parses out OSes to boot.
+//
+// This... is at best crude, at worst totally wrong, since we fundamentally
+// assume that the kernels we boot are only on this one partition. But so is
+// this whole parser.
+func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
+	wd := &url.URL{
+		Scheme: "file",
+		Path:   diskDir,
+	}
+
+	for _, relname := range probeGrubFiles {
+		c, err := ParseConfigFile(ctx, curl.DefaultSchemes, relname, wd)
+		if curl.IsURLError(err) {
+			continue
+		}
+		return c, err
+	}
+	return nil, fmt.Errorf("no valid grub config found")
 }
 
 // ParseConfigFile parses a grub configuration as specified in
@@ -62,39 +75,65 @@ type Config struct {
 // Currently, only the linux[16|efi], initrd[16|efi], menuentry and set
 // directives are partially supported.
 //
-// curl.DefaultSchemes is used to fetch any files that must be parsed or
-// provided.
-//
 // `wd` is the default scheme, host, and path for any files named as a
 // relative path - e.g. kernel, include, and initramfs paths are requested
 // relative to the wd.
-func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) (*Config, error) {
+func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, wd *url.URL) ([]boot.OSImage, error) {
 	p := newParser(wd, s)
-	if err := p.appendFile(ctx, url); err != nil {
+	if err := p.appendFile(ctx, configFile); err != nil {
 		return nil, err
 	}
-	return p.config, nil
+
+	// Don't add entries twice.
+	//
+	// Multiple labels can refer to the same image, so we have to dedup by pointer.
+	seenLinux := make(map[*boot.LinuxImage]struct{})
+	seenMB := make(map[*boot.MultibootImage]struct{})
+
+	if len(p.defaultEntry) > 0 {
+		p.labelOrder = append([]string{p.defaultEntry}, p.labelOrder...)
+	}
+
+	var images []boot.OSImage
+	for _, label := range p.labelOrder {
+		if img, ok := p.linuxEntries[label]; ok {
+			if _, ok := seenLinux[img]; !ok {
+				images = append(images, img)
+				seenLinux[img] = struct{}{}
+			}
+		}
+
+		if img, ok := p.mbEntries[label]; ok {
+			if _, ok := seenMB[img]; !ok {
+				images = append(images, img)
+				seenMB[img] = struct{}{}
+			}
+		}
+	}
+	return images, nil
 }
 
 type parser struct {
-	config *Config
-	W      io.Writer
+	linuxEntries map[string]*boot.LinuxImage
+	mbEntries    map[string]*boot.MultibootImage
+
+	labelOrder   []string
+	defaultEntry string
+
+	W io.Writer
 
 	// parser internals.
-	scope    scope
 	numEntry int
+
+	// curEntry is the current entry number as a string.
 	curEntry string
+
+	// curLabel is the last parsed label from a "menuentry".
 	curLabel string
-	wd       *url.URL
-	schemes  curl.Schemes
+
+	wd      *url.URL
+	schemes curl.Schemes
 }
-
-type scope uint8
-
-const (
-	scopeGlobal scope = iota
-	scopeEntry
-)
 
 // newParser returns a new grub parser using working directory `wd`
 // and schemes `s`.
@@ -106,12 +145,10 @@ const (
 // `s` is used to get files referred to by URLs.
 func newParser(wd *url.URL, s curl.Schemes) *parser {
 	return &parser{
-		config: &Config{
-			Entries: make(map[string]boot.OSImage),
-		},
-		scope:   scopeGlobal,
-		wd:      wd,
-		schemes: s,
+		linuxEntries: make(map[string]*boot.LinuxImage),
+		mbEntries:    make(map[string]*boot.MultibootImage),
+		wd:           wd,
+		schemes:      s,
 	}
 }
 
@@ -154,6 +191,9 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Fetching %s", u)
+
 	r, err := c.schemes.Fetch(ctx, u)
 	if err != nil {
 		return err
@@ -188,7 +228,7 @@ func cmdlineQuote(args []string) string {
 	return strings.Join(q, " ")
 }
 
-// Append parses `config` and adds the respective configuration to `c`.
+// append parses `config` and adds the respective configuration to `c`.
 func (c *parser) append(ctx context.Context, config string) error {
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
@@ -214,7 +254,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				//TODO handle vars? bootVars[vals[0]] = vals[1]
 				//log.Printf("grubvar: %s=%s", vals[0], vals[1])
 				if vals[0] == "default" {
-					c.config.DefaultEntry = vals[1]
+					c.defaultEntry = vals[1]
 				}
 			}
 
@@ -225,10 +265,10 @@ func (c *parser) append(ctx context.Context, config string) error {
 			}
 
 		case "menuentry":
-			c.scope = scopeEntry
 			c.curEntry = strconv.Itoa(c.numEntry)
 			c.curLabel = arg
 			c.numEntry++
+			c.labelOrder = append(c.labelOrder, c.curEntry, c.curLabel)
 
 		case "linux", "linux16", "linuxefi":
 			k, err := c.getFile(arg)
@@ -241,15 +281,15 @@ func (c *parser) append(ctx context.Context, config string) error {
 				Kernel:  k,
 				Cmdline: cmdlineQuote(kv[2:]),
 			}
-			c.config.Entries[c.curEntry] = entry
-			c.config.Entries[c.curLabel] = entry
+			c.linuxEntries[c.curEntry] = entry
+			c.linuxEntries[c.curLabel] = entry
 
 		case "initrd", "initrd16", "initrdefi":
 			i, err := c.getFile(arg)
 			if err != nil {
 				return err
 			}
-			entry, ok := c.config.Entries[c.curEntry].(*boot.LinuxImage)
+			entry, ok := c.linuxEntries[c.curEntry]
 			if !ok {
 				return ErrInitrdUsedWithoutLinux
 			}
@@ -267,8 +307,8 @@ func (c *parser) append(ctx context.Context, config string) error {
 				Kernel:  k,
 				Cmdline: cmdlineQuote(kv[2:]),
 			}
-			c.config.Entries[c.curEntry] = entry
-			c.config.Entries[c.curLabel] = entry
+			c.mbEntries[c.curEntry] = entry
+			c.mbEntries[c.curLabel] = entry
 
 		case "module":
 			// TODO handle --nounzip arguments ? (change parsing)
@@ -276,7 +316,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			if err != nil {
 				return err
 			}
-			entry, ok := c.config.Entries[c.curEntry].(*boot.MultibootImage)
+			entry, ok := c.mbEntries[c.curEntry]
 			if !ok {
 				return ErrModuleUsedWithoutMultiboot
 			}
@@ -288,12 +328,6 @@ func (c *parser) append(ctx context.Context, config string) error {
 			}
 			entry.Modules = append(entry.Modules, mod)
 
-		}
-	}
-
-	if len(c.config.DefaultEntry) > 0 {
-		if _, ok := c.config.Entries[c.config.DefaultEntry]; !ok {
-			return ErrDefaultEntryNotFound
 		}
 	}
 	return nil
