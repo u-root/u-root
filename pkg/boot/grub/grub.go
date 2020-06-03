@@ -305,6 +305,13 @@ func (c *parser) append(ctx context.Context, config string) error {
 		case "module":
 			// TODO handle --nounzip arguments ? (change parsing)
 			if e, ok := c.mbEntries[c.curEntry]; ok {
+				// The only allowed arg
+				cmdline := kv[1:]
+				if arg == "--nounzip" {
+					arg = kv[2]
+					cmdline = kv[2:]
+				}
+
 				m, err := c.getFile(arg)
 				if err != nil {
 					return err
@@ -313,7 +320,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				mod := multiboot.Module{
 					Module:  m,
 					Name:    arg,
-					CmdLine: cmdlineQuote(kv[2:]),
+					CmdLine: cmdlineQuote(cmdline),
 				}
 				e.Modules = append(e.Modules, mod)
 			}
