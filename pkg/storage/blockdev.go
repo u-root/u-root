@@ -10,12 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unsafe"
 
@@ -33,7 +30,6 @@ var (
 type BlockDev struct {
 	Name   string
 	FSType string
-	Stat   BlockStat
 	FsUUID string
 }
 
@@ -102,60 +98,6 @@ func (b *BlockDev) Size() (uint64, error) {
 	return sz, nil
 }
 
-// Summary prints a multiline summary of the BlockDev object
-// https://www.kernel.org/doc/Documentation/block/stat.txt
-func (b BlockDev) Summary() string {
-	return fmt.Sprintf(`BlockStat{
-    Name: %v
-    ReadIOs: %v
-    ReadMerges: %v
-    ReadSectors: %v
-    ReadTicks: %v
-    WriteIOs: %v
-    WriteMerges: %v
-    WriteSectors: %v
-    WriteTicks: %v
-    InFlight: %v
-    IOTicks: %v
-    TimeInQueue: %v
-}`,
-		b.Name,
-		b.Stat.ReadIOs,
-		b.Stat.ReadMerges,
-		b.Stat.ReadSectors,
-		b.Stat.ReadTicks,
-		b.Stat.WriteIOs,
-		b.Stat.WriteMerges,
-		b.Stat.WriteSectors,
-		b.Stat.WriteTicks,
-		b.Stat.InFlight,
-		b.Stat.IOTicks,
-		b.Stat.TimeInQueue,
-	)
-}
-
-// BlockStat provides block device information as contained in
-// /sys/class/block/<device_name>/stat
-type BlockStat struct {
-	ReadIOs      uint64
-	ReadMerges   uint64
-	ReadSectors  uint64
-	ReadTicks    uint64
-	WriteIOs     uint64
-	WriteMerges  uint64
-	WriteSectors uint64
-	WriteTicks   uint64
-	InFlight     uint64
-	IOTicks      uint64
-	TimeInQueue  uint64
-	// Kernel 4.18 added four fields for discard tracking, see
-	// https://github.com/torvalds/linux/commit/bdca3c87fb7ad1cc61d231d37eb0d8f90d001e0c
-	DiscardIOs     uint64
-	DiscardMerges  uint64
-	DiscardSectors uint64
-	DiscardTicks   uint64
-}
-
 // SystemPartitionGUID is the GUID of EFI system partitions
 // EFI System partitions have GUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B
 var SystemPartitionGUID = gpt.Guid([...]byte{
@@ -165,45 +107,6 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 	0xba, 0x4b,
 	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 })
-
-// BlockStatFromBytes parses a block stat file and returns a BlockStat object.
-// The format of the block stat file is the one defined by Linux for
-// /sys/class/block/<device_name>/stat
-func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
-	fields := strings.Fields(string(buf))
-	// BlockStat has 11 fields
-	if len(fields) < 11 {
-		return nil, fmt.Errorf("BlockStatFromBytes: parsing %q: got %d fields(%q), want at least 11", buf, len(fields), fields)
-	}
-	intfields := make([]uint64, 0)
-	for _, field := range fields {
-		v, err := strconv.ParseUint(field, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		intfields = append(intfields, v)
-	}
-	bs := BlockStat{
-		ReadIOs:      intfields[0],
-		ReadMerges:   intfields[1],
-		ReadSectors:  intfields[2],
-		ReadTicks:    intfields[3],
-		WriteIOs:     intfields[4],
-		WriteMerges:  intfields[5],
-		WriteSectors: intfields[6],
-		WriteTicks:   intfields[7],
-		InFlight:     intfields[8],
-		IOTicks:      intfields[9],
-		TimeInQueue:  intfields[10],
-	}
-	if len(fields) >= 15 {
-		bs.DiscardIOs = intfields[11]
-		bs.DiscardMerges = intfields[12]
-		bs.DiscardSectors = intfields[13]
-		bs.DiscardTicks = intfields[14]
-	}
-	return &bs, nil
-}
 
 // GetBlockStats iterates over /sys/class/block entries and returns a list of
 // BlockDev objects, or an error if any
@@ -229,19 +132,11 @@ func GetBlockStats() ([]BlockDev, error) {
 		return nil, err
 	}
 	for _, devname := range devnames {
-		buf, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/stat", root, devname))
-		if err != nil {
-			return nil, err
-		}
-		bstat, err := BlockStatFromBytes(buf)
-		if err != nil {
-			return nil, err
-		}
-		devpath := path.Join("/dev/", devname)
+		devpath := filepath.Join("/dev/", devname)
 		if uuid, err := getUUID(devpath); err != nil {
-			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat})
+			blockdevs = append(blockdevs, BlockDev{Name: devname})
 		} else {
-			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat, FsUUID: uuid})
+			blockdevs = append(blockdevs, BlockDev{Name: devname, FsUUID: uuid})
 		}
 	}
 	return blockdevs, nil
