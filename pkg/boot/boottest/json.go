@@ -1,7 +1,19 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package boottest contains methods for comparing boot.OSImages to each other
+// and to JSON representations of themselves for use in tests.
+//
+// The JSON representation for boot.OSImages is special because the built-in
+// json.Marshal function cannot marshal interfaces such as io.ReaderAt nicely,
+// especially when the underlying members in structs used (such as *os.File or
+// curl.lazyFile) are not exported.
+//
+// They are not json.Marshalers as part of boot.OSImage itself because they're
+// not a fully accurate representation of an OSImage, not including file
+// contents and depending for example on the current working directory of the
+// calling process.
 package boottest
 
 import (
@@ -27,6 +39,8 @@ func module(r io.ReaderAt) map[string]interface{} {
 
 // CompareImagesToJSON compares the names, cmdlines, and file URLs in imgs to
 // the ones stored in jsonEncoded.
+//
+// You can obtain such a JSON encoding with ToJSONFile.
 func CompareImagesToJSON(imgs []boot.OSImage, jsonEncoded []byte) error {
 	var want interface{}
 	if err := json.Unmarshal(jsonEncoded, &want); err != nil {
@@ -54,6 +68,10 @@ func ToJSONFile(imgs []boot.OSImage, filename string) error {
 // the given boot images. This can be used in configuration parser tests (when
 // the content of the images doesn't matter, but the file URLs, cmdlines,
 // names, etc.)
+//
+// The JSON representation for boot.OSImages is special because the built-in
+// json.Marshal function cannot marshal interfaces such as io.ReaderAt nicely,
+// especially when the underlying structs used are not exported.
 func ImagesToJSONLike(imgs []boot.OSImage) []interface{} {
 	var infs []interface{}
 	for _, img := range imgs {
