@@ -21,9 +21,63 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
+
+func probeIsolinuxFiles() []string {
+	files := make([]string, 0, 10)
+	// search order from the syslinux wiki
+	// http://wiki.syslinux.org/wiki/index.php?title=Config
+	// TODO: do we want to handle extlinux too ?
+	dirs := []string{
+		"boot/isolinux",
+		"isolinux",
+		"boot/syslinux",
+		"syslinux",
+		"",
+	}
+	confs := []string{
+		"isolinux.cfg",
+		"syslinux.cfg",
+	}
+	for _, dir := range dirs {
+		for _, conf := range confs {
+			if dir == "" {
+				files = append(files, conf)
+			} else {
+				files = append(files, filepath.Join(dir, conf))
+			}
+		}
+	}
+	return files
+}
+
+// ParseLocalConfig treats diskDir like a mount point on the local file system
+// and finds an isolinux config under there.
+func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
+	for _, relname := range probeIsolinuxFiles() {
+		dir, name := filepath.Split(relname)
+
+		// "When booting, the initial working directory for SYSLINUX /
+		// ISOLINUX will be the directory containing the initial
+		// configuration file."
+		//
+		// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
+		wd := &url.URL{
+			Scheme: "file",
+			Path:   filepath.Join(diskDir, dir),
+		}
+
+		imgs, err := ParseConfigFile(ctx, curl.DefaultSchemes, name, wd)
+		if curl.IsURLError(err) {
+			continue
+		}
+		return imgs, err
+	}
+	return nil, fmt.Errorf("no valid syslinux config found on %s", diskDir)
+}
 
 // ParseConfigFile parses a Syslinux configuration as specified in
 // http://www.syslinux.org/wiki/index.php?title=Config
@@ -35,12 +89,21 @@ import (
 //
 // `wd` is the default scheme, host, and path for any files named as a
 // relative path - e.g. kernel, include, and initramfs paths are requested
-// relative to the wd. The default path for config files is assumed to be
-// `wd.Path`/pxelinux.cfg/.
+// relative to the wd.
 func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.URL) ([]boot.OSImage, error) {
 	p := newParser(wd, s)
 	if err := p.appendFile(ctx, url); err != nil {
 		return nil, err
+	}
+
+	// Assign the right label to display to users.
+	for label, displayLabel := range p.menuLabel {
+		if e, ok := p.linuxEntries[label]; ok {
+			e.Name = displayLabel
+		}
+		if e, ok := p.mbEntries[label]; ok {
+			e.Name = displayLabel
+		}
 	}
 
 	// Intended order:
@@ -61,7 +124,10 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, url string, wd *url.UR
 
 	var images []boot.OSImage
 	for _, label := range p.labelOrder {
-		if img, ok := p.linuxEntries[label]; ok {
+		if img, ok := p.linuxEntries[label]; ok && img.Kernel != nil {
+			images = append(images, img)
+		}
+		if img, ok := p.mbEntries[label]; ok && img.Kernel != nil {
 			images = append(images, img)
 		}
 	}
@@ -83,9 +149,13 @@ func dedupStrings(list []string) []string {
 type parser struct {
 	// linuxEntries is a map of label name -> label configuration.
 	linuxEntries map[string]*boot.LinuxImage
+	mbEntries    map[string]*boot.MultibootImage
 
 	// labelOrder is the order of label entries in linuxEntries.
 	labelOrder []string
+
+	// menuLabel are human-readable labels defined by the "menu label" directive.
+	menuLabel map[string]string
 
 	defaultEntry     string
 	nerfDefaultEntry string
@@ -116,9 +186,11 @@ const (
 func newParser(wd *url.URL, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*boot.LinuxImage),
+		mbEntries:    make(map[string]*boot.MultibootImage),
 		scope:        scopeGlobal,
 		wd:           wd,
 		schemes:      s,
+		menuLabel:    make(map[string]string),
 	}
 }
 
@@ -200,12 +272,38 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 		case "include":
 			if err := c.appendFile(ctx, arg); curl.IsURLError(err) {
+				log.Printf("failed to parse %s: %v", arg, err)
 				// Means we didn't find the file. Just ignore
 				// it.
 				// TODO(hugelgupf): plumb a logger through here.
 				continue
 			} else if err != nil {
 				return err
+			}
+
+		case "menu":
+			opt := strings.Fields(arg)
+			if len(opt) < 1 {
+				continue
+			}
+			switch strings.ToLower(opt[0]) {
+			case "label":
+				// Note that "menu label" only changes the
+				// displayed label, not the identifier for this
+				// entry.
+				//
+				// We track these separately because "menu
+				// label" directives may happen before we know
+				// whether this is a Linux or Multiboot entry.
+				c.menuLabel[c.curEntry] = strings.Join(opt[1:], " ")
+
+			case "default":
+				// Are we in label scope?
+				//
+				// "Only valid after a LABEL statement" -syslinux wiki.
+				if c.scope == scopeEntry {
+					c.defaultEntry = c.curEntry
+				}
 			}
 
 		case "label":
@@ -219,18 +317,40 @@ func (c *parser) append(ctx context.Context, config string) error {
 			c.labelOrder = append(c.labelOrder, c.curEntry)
 
 		case "kernel":
-			k, err := c.getFile(arg)
-			if err != nil {
-				return err
+			// I hate special cases like these, but we aren't gonna
+			// implement syslinux modules.
+			if arg == "mboot.c32" {
+				// Prepare for a multiboot kernel.
+				delete(c.linuxEntries, c.curEntry)
+				c.mbEntries[c.curEntry] = &boot.MultibootImage{
+					Name: c.curEntry,
+				}
 			}
-			c.linuxEntries[c.curEntry].Kernel = k
+			fallthrough
+
+		case "linux":
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				k, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.Kernel = k
+			}
 
 		case "initrd":
-			i, err := c.getFile(arg)
-			if err != nil {
-				return err
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				// TODO: support multiple comma-separated initrds.
+				// TODO: append "initrd=$arg" to the cmdline.
+				//
+				// For how this interacts with global appends,
+				// read
+				// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
+				i, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.Initrd = i
 			}
-			c.linuxEntries[c.curEntry].Initrd = i
 
 		case "append":
 			switch c.scope {
@@ -238,10 +358,54 @@ func (c *parser) append(ctx context.Context, config string) error {
 				c.globalAppend = arg
 
 			case scopeEntry:
-				if arg == "-" {
-					c.linuxEntries[c.curEntry].Cmdline = ""
-				} else {
-					c.linuxEntries[c.curEntry].Cmdline = arg
+				if e, ok := c.mbEntries[c.curEntry]; ok {
+					modules := strings.Split(arg, "---")
+					// The first module is special -- the kernel.
+					if len(modules) > 0 {
+						kernel := strings.Fields(modules[0])
+						k, err := c.getFile(kernel[0])
+						if err != nil {
+							return err
+						}
+						e.Kernel = k
+						if len(kernel) > 1 {
+							e.Cmdline = strings.Join(kernel[1:], " ")
+						}
+						modules = modules[1:]
+					}
+					for _, cmdline := range modules {
+						m := strings.Fields(cmdline)
+						if len(m) == 0 {
+							continue
+						}
+						name := m[0]
+						file, err := c.getFile(name)
+						if err != nil {
+							return err
+						}
+						e.Modules = append(e.Modules, multiboot.Module{
+							CmdLine: strings.TrimSpace(cmdline),
+							Name:    name,
+							Module:  file,
+						})
+					}
+				}
+				if e, ok := c.linuxEntries[c.curEntry]; ok {
+					if arg == "-" {
+						e.Cmdline = ""
+					} else {
+						// Yes, we explicitly _override_, not
+						// concatenate. If a specific append
+						// directive is present, a global
+						// append directive is ignored.
+						//
+						// Also, "If you enter multiple APPEND
+						// statements in a single LABEL entry,
+						// only the last one will be used".
+						//
+						// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
+						e.Cmdline = arg
+					}
 				}
 			}
 		}
@@ -256,6 +420,10 @@ func (c *parser) append(ctx context.Context, config string) error {
 		// INITRD trump cmdline? Does it trump global? What if both the
 		// directive and cmdline initrd= are set? Does it depend on the
 		// order in the config file? (My current best guess: order.)
+		//
+		// Answer: Normally, the INITRD directive appends to the
+		// cmdline, and the _last_ effective initrd= parameter is used
+		// for loading initrd files.
 		if label.Initrd != nil {
 			continue
 		}
