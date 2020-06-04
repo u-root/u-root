@@ -38,7 +38,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -212,7 +211,13 @@ func Localboot() error {
 		if err != nil {
 			log.Printf("GrubBootImage failed: %v", err)
 			// not grub config found, try isolinux
-			img, err = IsolinuxBootImage(context.Background(), curl.DefaultSchemes, wd)
+			var imgs []boot.OSImage
+			imgs, err = syslinux.ParseLocalConfig(context.Background(), u)
+			if len(imgs) == 0 {
+				err = fmt.Errorf("no valid syslinux config found")
+			} else {
+				img = imgs[0]
+			}
 		}
 		if err != nil {
 			log.Printf("IsolinuxBootImage failed: %v", err)
@@ -256,60 +261,6 @@ func main() {
 	if err := Localboot(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// use syslinux parser
-
-func probeIsolinuxFiles() []string {
-	files := make([]string, 0, 10)
-	// search order from the syslinux wiki
-	// http://wiki.syslinux.org/wiki/index.php?title=Config
-	// TODO: do we want to handle extlinux too ?
-	dirs := []string{
-		"boot/isolinux",
-		"isolinux",
-		"boot/syslinux",
-		"syslinux",
-		"",
-	}
-	confs := []string{
-		"isolinux.cfg",
-		"syslinux.cfg",
-	}
-	for _, dir := range dirs {
-		for _, conf := range confs {
-			if dir == "" {
-				files = append(files, conf)
-			} else {
-				files = append(files, path.Join(dir, conf))
-			}
-		}
-	}
-	return files
-}
-
-func IsolinuxParseConfig(ctx context.Context, workingDir *url.URL, s curl.Schemes) ([]boot.OSImage, error) {
-	for _, relname := range probeIsolinuxFiles() {
-		imgs, err := syslinux.ParseConfigFile(ctx, s, relname, workingDir)
-		if curl.IsURLError(err) {
-			continue
-		}
-		return imgs, err
-	}
-	return nil, fmt.Errorf("no valid syslinux config found")
-}
-
-// call IsolinuxBootImage(curl.DefaultSchemes, dir)
-func IsolinuxBootImage(ctx context.Context, schemes curl.Schemes, workingDir *url.URL) (boot.OSImage, error) {
-	imgs, err := IsolinuxParseConfig(ctx, workingDir, schemes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
-	}
-
-	if len(imgs) > 0 {
-		return imgs[0], nil
-	}
-	return nil, fmt.Errorf("no isolinux config")
 }
 
 // grub parser

@@ -75,7 +75,7 @@ func readTPM20VendorAttributes(rwc io.ReadWriter) (TPMInfo, error) {
 	}, nil
 }
 
-func takeOwnership12(rwc io.ReadWriteCloser, ownerPW, srkPW string) (bool, error) {
+func takeOwnership12(rwc io.ReadWriteCloser, ownerPW, srkPW string) error {
 	var ownerAuth [20]byte
 	var srkAuth [20]byte
 
@@ -89,17 +89,39 @@ func takeOwnership12(rwc io.ReadWriteCloser, ownerPW, srkPW string) (bool, error
 
 	pubek, err := tpm.ReadPubEK(rwc)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if err := tpm.TakeOwnership(rwc, ownerAuth, srkAuth, pubek); err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
-func takeOwnership20(rwc io.ReadWriteCloser, ownerPW, srkPW string) (bool, error) {
-	return false, fmt.Errorf("not supported by go-tpm for TPM2.0")
+func takeOwnership20(rwc io.ReadWriteCloser, ownerPW, srkPW string) error {
+	return fmt.Errorf("not supported by go-tpm for TPM2.0")
+}
+
+func clearOwnership12(rwc io.ReadWriteCloser, ownerPW string) error {
+	var ownerAuth [20]byte
+
+	if ownerPW != "" {
+		ownerAuth = sha1.Sum([]byte(ownerPW))
+	}
+
+	err := tpm.OwnerClear(rwc, ownerAuth)
+	if err != nil {
+		err := tpm.ForceClear(rwc)
+		if err != nil {
+			return fmt.Errorf("couldn't clear TPM 1.2 with ownerauth nor force clear")
+		}
+	}
+
+	return nil
+}
+
+func clearOwnership20(rwc io.ReadWriteCloser, ownerPW string) error {
+	return fmt.Errorf("not supported by go-tpm for TPM2.0")
 }
 
 func readPubEK12(rwc io.ReadWriteCloser, ownerPW string) ([]byte, error) {
