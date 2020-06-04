@@ -11,6 +11,7 @@
 //     -chassis : Print chassis power status.
 //     -sel     : Print SEL information.
 //     -lan     : Print IP information.
+//     -device  : Print device information.
 //     -raw     : Send raw command and print response.
 //     -help    : Print help message.
 package main
@@ -34,6 +35,7 @@ var (
 	flagLan     = flag.Bool("lan", false, "Print IP address")
 	flagRaw     = flag.Bool("raw", false, "Send IPMI raw command")
 	flagHelp    = flag.Bool("help", false, "print help message")
+	flagDev     = flag.Bool("device", false, "print device information")
 )
 
 func itob(i int) bool { return i != 0 }
@@ -64,6 +66,10 @@ func main() {
 
 	if *flagLan {
 		lanConfig()
+	}
+
+	if *flagDev {
+		deviceID()
 	}
 
 	if *flagRaw {
@@ -284,6 +290,74 @@ func lanConfig() {
 			fmt.Printf("%02x:%02x:%02x:%02x:%02x:%02x\n", buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
 		} else {
 			fmt.Printf("Unknown\n")
+		}
+	}
+}
+
+func deviceID() {
+	status := map[byte]string{
+		0x80: "yes",
+		0x00: "no",
+	}
+
+	adtlDevSupport := []string{
+		"Sensor Device",         /* bit 0 */
+		"SDR Repository Device", /* bit 1 */
+		"SEL Device",            /* bit 2 */
+		"FRU Inventory Device",  /* bit 3 */
+		"IPMB Event Receiver",   /* bit 4 */
+		"IPMB Event Generator",  /* bit 5 */
+		"Bridge",                /* bit	6 */
+		"Chassis Device",        /* bit 7 */
+	}
+
+	ipmi, err := ipmi.Open(0)
+	if err != nil {
+		fmt.Printf("Failed to open ipmi device: %v\n", err)
+	}
+	defer ipmi.Close()
+
+	if info, err := ipmi.GetDeviceID(); err != nil {
+		fmt.Printf("Failed to get device ID information: %v\n", err)
+	} else {
+		fmt.Println("Device ID information")
+		fmt.Printf("%-26s: %d\n", "Device ID", info.DeviceID)
+		fmt.Printf("%-26s: %d\n", "Device Revision", (info.DeviceRevision & 0x0F))
+		fmt.Printf("%-26s: %d.%02x\n", "Firmware Revision",
+			(info.FwRev1 & 0x3F), info.FwRev2)
+
+		spec := uint8(info.IpmiVersion)
+		fmt.Printf("%-26s: %x.%x\n", "IPMI Version", spec&0x0F, (spec&0xF0)>>4)
+
+		var mid uint32
+		mid = uint32(info.ManufacturerID[2]) << 16
+		mid |= uint32(info.ManufacturerID[1]) << 8
+		mid |= uint32(info.ManufacturerID[0])
+
+		fmt.Printf("%-26s: %d (0x%04X)\n", "Manufacturer ID", mid, mid)
+
+		var pid uint16
+		pid = uint16(info.ProductID[1]) << 8
+		pid |= uint16(info.ProductID[0])
+
+		fmt.Printf("%-26s: %d (0x%04X)\n", "Product ID", pid, pid)
+
+		// bit 7 == 0 indicates normal operation
+		fmt.Printf("%-26s: %s\n", "Device Available", status[(^info.FwRev1&0x80)])
+		fmt.Printf("%-26s: %s\n", "Provides Device SDRs",
+			status[(info.DeviceRevision&0x80)])
+
+		fmt.Printf("%-26s:\n", "Additional Device Support")
+		for i := 0; i < 8; i++ {
+			if (info.AdtlDeviceSupport & (1 << i)) != 0 {
+				fmt.Printf("    %s\n", adtlDevSupport[i])
+			}
+		}
+
+		// This field is optional, 4 bytes.
+		fmt.Printf("%-26s:\n", "Aux Firmware Rev Info")
+		for _, val := range info.AuxFwRev {
+			fmt.Printf("    0x%02x\n", val)
 		}
 	}
 }
