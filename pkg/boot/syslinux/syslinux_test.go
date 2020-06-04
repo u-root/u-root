@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -65,7 +66,43 @@ func sameBootImage(got, want boot.OSImage) error {
 		return nil
 	}
 
-	return fmt.Errorf("non-Linux images not supported yet")
+	if gotMB, ok := got.(*boot.MultibootImage); ok {
+		wantMB, ok := want.(*boot.MultibootImage)
+		if !ok {
+			return fmt.Errorf("got image %s is Multiboot image, but %s is not", got, want)
+		}
+
+		// Same kernel?
+		if !uio.ReaderAtEqual(gotMB.Kernel, wantMB.Kernel) {
+			return fmt.Errorf("got kernel %s, want %s", mustReadAll(gotMB.Kernel), mustReadAll(wantMB.Kernel))
+		}
+
+		// Same cmdline?
+		if gotMB.Cmdline != wantMB.Cmdline {
+			return fmt.Errorf("got cmdline %s, want %s", gotMB.Cmdline, wantMB.Cmdline)
+		}
+
+		if len(gotMB.Modules) != len(wantMB.Modules) {
+			return fmt.Errorf("got %d modules, want %d modules", len(gotMB.Modules), len(wantMB.Modules))
+		}
+
+		for i := range gotMB.Modules {
+			g := gotMB.Modules[i]
+			w := wantMB.Modules[i]
+			if g.Name != w.Name {
+				return fmt.Errorf("module %d got name %s, want %s", i, g.Name, w.Name)
+			}
+			if g.CmdLine != w.CmdLine {
+				return fmt.Errorf("module %d got name %s, want %s", i, g.CmdLine, w.CmdLine)
+			}
+			if !uio.ReaderAtEqual(g.Module, w.Module) {
+				return fmt.Errorf("got kernel %s, want %s", mustReadAll(g.Module), mustReadAll(w.Module))
+			}
+		}
+		return nil
+	}
+
+	return fmt.Errorf("image not supported")
 }
 
 func TestParseGeneral(t *testing.T) {
@@ -74,6 +111,8 @@ func TestParseGeneral(t *testing.T) {
 	globalInitrd := "globalInitrd"
 	initrd1 := "initrd1"
 	initrd2 := "initrd2"
+	xengz := "xengz"
+	mboot := "mboot.c32"
 
 	newMockScheme := func() *curl.MockScheme {
 		fs := curl.NewMockScheme("tftp")
@@ -83,6 +122,8 @@ func TestParseGeneral(t *testing.T) {
 		fs.Add("1.2.3.4", "/foobar/pxefiles/global_initrd", globalInitrd)
 		fs.Add("1.2.3.4", "/foobar/pxefiles/initrd1", initrd1)
 		fs.Add("1.2.3.4", "/foobar/pxefiles/initrd2", initrd2)
+		fs.Add("1.2.3.4", "/foobar/xen.gz", xengz)
+		fs.Add("1.2.3.4", "/foobar/mboot.c32", mboot)
 
 		fs.Add("2.3.4.5", "/barfoo/pxefiles/kernel1", kernel1)
 		return fs
@@ -114,6 +155,16 @@ func TestParseGeneral(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "empty label",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					default foo
+					label foo`,
+			},
+			want: nil,
+		},
+
 		{
 			desc: "all files exist, simple config with directive initrd",
 			configFiles: map[string]string{
@@ -198,13 +249,14 @@ func TestParseGeneral(t *testing.T) {
 				"/foobar/pxelinux.cfg/default": `
 					default foo
 
+					label bar
+					menu label Bla Bla Bla
+					kernel ./pxefiles/kernel2
+					append console=ttyS0
+
 					label foo
 					kernel ./pxefiles/kernel1
-					append earlyprintk=ttyS0 printk=ttyS0
-
-					label bar
-					kernel ./pxefiles/kernel2
-					append console=ttyS0`,
+					append earlyprintk=ttyS0 printk=ttyS0`,
 			},
 			want: []boot.OSImage{
 				&boot.LinuxImage{
@@ -213,7 +265,34 @@ func TestParseGeneral(t *testing.T) {
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
 				&boot.LinuxImage{
-					Name:    "bar",
+					Name:    "Bla Bla Bla",
+					Kernel:  strings.NewReader(kernel2),
+					Cmdline: "console=ttyS0",
+				},
+			},
+		},
+		{
+			desc: "menu default, linux directives",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					label bar
+					menu label Bla Bla Bla
+					kernel ./pxefiles/kernel2
+					append console=ttyS0
+
+					label foo
+					menu default
+					linux ./pxefiles/kernel1
+					append earlyprintk=ttyS0 printk=ttyS0`,
+			},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.LinuxImage{
+					Name:    "Bla Bla Bla",
 					Kernel:  strings.NewReader(kernel2),
 					Cmdline: "console=ttyS0",
 				},
@@ -363,8 +442,13 @@ func TestParseGeneral(t *testing.T) {
 				&boot.LinuxImage{
 					Name:   "stringer",
 					Kernel: strings.NewReader(kernel2),
-					// See TODO in pxe.go initrd handling.
-					Initrd:  strings.NewReader(initrd2),
+					Initrd: strings.NewReader(initrd2),
+
+					// TODO: See syslinux initrd handling. This SHOULD be
+					//
+					// initrd=./pxefiles/global_initrd initrd=./pxefiles/initrd2
+					//
+					// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
 					Cmdline: "initrd=./pxefiles/global_initrd",
 				},
 			},
@@ -429,6 +513,54 @@ func TestParseGeneral(t *testing.T) {
 				&boot.LinuxImage{
 					Name:   "omar",
 					Kernel: strings.NewReader(kernel2),
+				},
+			},
+		},
+		{
+			desc: "multiboot images",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					default foo
+
+					label bar
+					menu label Bla Bla Bla
+					kernel mboot.c32
+					append xen.gz console=none --- ./pxefiles/kernel1 foobar hahaha --- ./pxefiles/initrd1
+
+					label mbootnomodules
+					kernel mboot.c32
+					append xen.gz
+
+					label foo
+					linux mboot.c32
+					append earlyprintk=ttyS0 printk=ttyS0`,
+			},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "foo",
+					Kernel:  strings.NewReader(mboot),
+					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
+				},
+				&boot.MultibootImage{
+					Name:    "Bla Bla Bla",
+					Kernel:  strings.NewReader(xengz),
+					Cmdline: "console=none",
+					Modules: []multiboot.Module{
+						{
+							Module:  strings.NewReader(kernel1),
+							Name:    "./pxefiles/kernel1",
+							CmdLine: "./pxefiles/kernel1 foobar hahaha",
+						},
+						{
+							Module:  strings.NewReader(initrd1),
+							Name:    "./pxefiles/initrd1",
+							CmdLine: "./pxefiles/initrd1",
+						},
+					},
+				},
+				&boot.MultibootImage{
+					Name:   "mbootnomodules",
+					Kernel: strings.NewReader(xengz),
 				},
 			},
 		},

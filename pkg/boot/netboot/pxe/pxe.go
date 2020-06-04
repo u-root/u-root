@@ -25,6 +25,11 @@ import (
 // and uses s to fetch files.
 func ParseConfig(ctx context.Context, workingDir *url.URL, mac net.HardwareAddr, ip net.IP, s curl.Schemes) ([]boot.OSImage, error) {
 	for _, relname := range probeFiles(mac, ip) {
+		// "When booting, the initial working directory for PXELINUX
+		// will be the parent directory of pxelinux.0 unless overridden
+		// with DHCP option 210."
+		//
+		// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
 		imgs, err := syslinux.ParseConfigFile(ctx, s, path.Join("pxelinux.cfg", relname), workingDir)
 		if curl.IsURLError(err) {
 			// We didn't find the file.
