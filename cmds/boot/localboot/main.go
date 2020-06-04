@@ -201,7 +201,7 @@ func main() {
 	}
 
 	// Get all the available block devices
-	devices, err := storage.GetBlockStats()
+	devices, err := storage.GetBlockDevices()
 	if err != nil {
 		log.Fatal(err)
 	}

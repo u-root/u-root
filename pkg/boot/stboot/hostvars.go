@@ -47,7 +47,7 @@ func FindHostVarsInInitramfs() (HostVars, error) {
 // // file system and looks for hostvars.json at root of partition
 // func FindHostVarsOnPartition() (HostVars, error) {
 // 	var vars HostVars
-// 	devices, err := storage.GetBlockStats()
+// 	devices, err := storage.GetBlockDevices()
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
