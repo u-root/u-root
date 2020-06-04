@@ -290,3 +290,17 @@ func hostHWAddr() (net.HardwareAddr, error) {
 	}
 	return net.HardwareAddr{}, fmt.Errorf("cannot find out hardware address")
 }
+
+func forceHTTPS(urls []string) error {
+	for n, raw := range urls {
+		url, err := url.Parse(raw)
+		if err != nil {
+			return err
+		}
+		if url.Scheme != "https" {
+			url.Scheme = "https"
+		}
+		urls[n] = url.String()
+	}
+	return nil
+}

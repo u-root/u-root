@@ -146,6 +146,9 @@ func main() {
 	if err = json.Unmarshal(bytes, &urlStrings); err != nil {
 		reboot("Bootstrap URLs: %v", err)
 	}
+	if err = forceHTTPS(urlStrings); err != nil {
+		reboot("Bootstrap URLs: %v", err)
+	}
 
 	info("Try downloading individual bootball")
 	file := stboot.ComposeIndividualBallName(hwAddr)
