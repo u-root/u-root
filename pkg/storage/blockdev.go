@@ -52,6 +52,9 @@ func Device(maybeDevpath string) (*BlockDev, error) {
 
 // String implements fmt.Stringer.
 func (b BlockDev) String() string {
+	if len(b.FSType) > 0 {
+		return fmt.Sprintf("BlockDevice(name=%s, fs_type=%s, fs_uuid=%s)", b.Name, b.FSType, b.FsUUID)
+	}
 	return fmt.Sprintf("BlockDevice(name=%s, fs_uuid=%s)", b.Name, b.FsUUID)
 }
 
@@ -108,9 +111,9 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 })
 
-// GetBlockStats iterates over /sys/class/block entries and returns a list of
+// GetBlockDevices iterates over /sys/class/block entries and returns a list of
 // BlockDev objects, or an error if any
-func GetBlockStats() ([]BlockDev, error) {
+func GetBlockDevices() ([]BlockDev, error) {
 	blockdevs := make([]BlockDev, 0)
 	devnames := make([]string, 0)
 	root := "/sys/class/block"

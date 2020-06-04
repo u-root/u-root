@@ -277,9 +277,9 @@ func GetBlkInfo() error {
 	if len(StorageBlkDevices) == 0 {
 		var err error
 		Debug("getBlkInfo: expensive function call to get block stats from storage pkg")
-		StorageBlkDevices, err = storage.GetBlockStats()
+		StorageBlkDevices, err = storage.GetBlockDevices()
 		if err != nil {
-			return fmt.Errorf("getBlkInfo: storage.GetBlockStats err=%v. Exiting", err)
+			return fmt.Errorf("getBlkInfo: storage.GetBlockDevices err=%v. Exiting", err)
 		}
 		// no block devices exist on the system.
 		if len(StorageBlkDevices) == 0 {
@@ -287,7 +287,7 @@ func GetBlkInfo() error {
 		}
 		// print the debug info only when expensive call to storage is made
 		for k, d := range StorageBlkDevices {
-			Debug("block device #%d, Name=%s, FSType=%s, FsUUID=%s", k, d.Name, d.FSType, d.FsUUID)
+			Debug("block device #%d: %s", k, d)
 		}
 		return nil
 	}
