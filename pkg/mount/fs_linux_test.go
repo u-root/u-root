@@ -32,15 +32,26 @@ func TestEmptyFileSystems(t *testing.T) {
 }
 
 func TestFindFileSystem(t *testing.T) {
+	procfilesystems := `nodev   sysfs
+nodev   rootfs
+nodev   ramfs
+        vfat
+        btrfs
+        ext3
+        ext2
+        ext4
+`
+
 	for _, tt := range []struct {
 		name string
 		err  string
 	}{
 		{"rootfs", "<nil>"},
-		{"bogusfs", "bogusfs not found"},
+		{"ext3", "<nil>"},
+		{"bogusfs", "file system type \"bogusfs\" not found"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := FindFileSystem(tt.name)
+			err := internalFindFileSystem(procfilesystems, tt.name)
 			// There has to be a better way to do this.
 			if fmt.Sprintf("%v", err) != tt.err {
 				t.Errorf("%s: got %v, want %v", tt.name, err, tt.err)

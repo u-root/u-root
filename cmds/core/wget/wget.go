@@ -20,6 +20,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"io"
 	"log"
@@ -75,7 +76,7 @@ func main() {
 		"file":  &curl.LocalFileClient{},
 	}
 
-	readerAt, err := schemes.Fetch(url)
+	readerAt, err := schemes.Fetch(context.Background(), url)
 	if err != nil {
 		log.Fatalf("Failed to download %v: %v", argURL, err)
 	}

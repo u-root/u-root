@@ -84,6 +84,14 @@
   version = "v1.0.6"
 
 [[projects]]
+  digest = "1:112b07cad4bd500e6e445cc0b9294ca310faa41199c19475c557daa2c7519549"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  pruneopts = "NUT"
+  revision = "1b794fe86dd6a0c7c52ae69b5c9cb0aeedc52afa"
+  version = "v1.4.0"
+
+[[projects]]
   digest = "1:ea920fc7bb1d9a2fe99782eb6a5b4e809dfbfcfabd6ab55a387353934acbf09c"
   name = "github.com/google/go-cmp"
   packages = [
@@ -109,6 +117,17 @@
   ]
   pruneopts = "NUT"
   revision = "9cc5bb2cf703e5ec3b7393ad8c99bceb8e01ad4e"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e346063afb9f1c747e6cd9bd0bd4f786e508b57baa20a7534988b795c741b19a"
+  name = "github.com/google/go-tpm-tools"
+  packages = [
+    "proto",
+    "tpm2tools",
+  ]
+  pruneopts = "NUT"
+  revision = "4f3f3b508c7f808aec7ddbbe3ca3e1aa8276b0d6"
 
 [[projects]]
   branch = "master"
@@ -306,7 +325,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4108cab2c3e5e7ae687e0a326792a08a4671a1c03047fbfb7cda921330e31358"
+  digest = "1:233498d2ebdbb1de1ca56c23617344ffa77a5f4e2eeda3ec7acca6a4e70afee2"
   name = "golang.org/x/crypto"
   packages = [
     "blowfish",
@@ -328,6 +347,7 @@
     "sha3",
     "ssh",
     "ssh/internal/bcrypt_pbkdf",
+    "ssh/terminal",
   ]
   pruneopts = "NUT"
   revision = "06a226fb4e3765ef3f48aa2852b401bc7b98e981"
@@ -402,7 +422,7 @@
     "internal/imports",
   ]
   pruneopts = "NUT"
-  revision = "cb1345f3a375367f8439bba882e90348348288d9"
+  revision = "8b020aee10d2dc97e13b76ce01b59c9b5d4a4d0f"
 
 [[projects]]
   branch = "master"
@@ -424,6 +444,42 @@
   version = "v1.29.1"
 
 [[projects]]
+  digest = "1:f1865c7b6c5f85632ff40fd729aa3393e66a2db3de74d43ab7c594be7e9bfe25"
+  name = "google.golang.org/protobuf"
+  packages = [
+    "encoding/prototext",
+    "encoding/protowire",
+    "internal/descfmt",
+    "internal/descopts",
+    "internal/detrand",
+    "internal/encoding/defval",
+    "internal/encoding/messageset",
+    "internal/encoding/tag",
+    "internal/encoding/text",
+    "internal/errors",
+    "internal/fieldnum",
+    "internal/fieldsort",
+    "internal/filedesc",
+    "internal/filetype",
+    "internal/flags",
+    "internal/genname",
+    "internal/impl",
+    "internal/mapsort",
+    "internal/pragma",
+    "internal/set",
+    "internal/strs",
+    "internal/version",
+    "proto",
+    "reflect/protoreflect",
+    "reflect/protoregistry",
+    "runtime/protoiface",
+    "runtime/protoimpl",
+  ]
+  pruneopts = "NUT"
+  revision = "3b9eee12916ce611400f93d6c2fed2fc2911b0ad"
+  version = "v1.21.0"
+
+[[projects]]
   digest = "1:22b2dee6f30bc8601f087449a2a819df8388e54e9547349c658f14d8f8c590f2"
   name = "gopkg.in/alecthomas/kingpin.v2"
   packages = ["."]
@@ -440,15 +496,15 @@
   version = "v2.3.0"
 
 [[projects]]
-  digest = "1:6889c82820f81a4fc7c707b5ac38e06da0486865ae513b0c33c38bf3b3fc46da"
+  branch = "master"
+  digest = "1:4dd51a952e2528212eeb80840dd84374f920bc366623df6e41f001cd5d3da906"
   name = "pack.ag/tftp"
   packages = [
     ".",
     "netascii",
   ]
   pruneopts = "NUT"
-  revision = "d0fca786a8ea95ad4515bb83b2c34a11ec6a3fc0"
-  version = "v1.0.0"
+  revision = "07909dfbde3c4e388a7e353351191fbb987ce5a5"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -461,10 +517,13 @@
     "github.com/gliderlabs/ssh",
     "github.com/go-test/deep",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-tpm-tools/proto",
+    "github.com/google/go-tpm-tools/tpm2tools",
     "github.com/google/go-tpm/tpm",
     "github.com/google/go-tpm/tpm2",
     "github.com/google/go-tpm/tpmutil",
     "github.com/google/goexpect",
+    "github.com/google/goterm/term",
     "github.com/insomniacslk/dhcp/dhcpv4",
     "github.com/insomniacslk/dhcp/dhcpv4/nclient4",
     "github.com/insomniacslk/dhcp/dhcpv4/server4",
@@ -493,6 +552,7 @@
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh",
+    "golang.org/x/crypto/ssh/terminal",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/text/transform",

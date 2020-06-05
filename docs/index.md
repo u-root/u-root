@@ -66,7 +66,7 @@ local and get a userland portable (it's a goal).
 ## Community
 
 - [Join the mailing list](https://groups.google.com/forum/#!forum/u-root)
-- [Join slack](https://u-root.slack.com/) (Get an invite [here](http://slack.u-root.org).)
+- [Join slack](https://u-root.slack.com/) (Get an invite [here](http://slack.u-root.com).)
 - [Checkout the roadmap](https://github.com/u-root/u-root/blob/master/roadmap.md)
 
 

@@ -18,6 +18,10 @@ ignored = ["github.com/u-root/u-root/bb*"]
 
 [[constraint]]
   branch = "master"
+  name = "pack.ag/tftp"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/rck/unit"
 
 [[constraint]]
@@ -36,3 +40,7 @@ ignored = ["github.com/u-root/u-root/bb*"]
 [[constraint]]
   name = "github.com/gliderlabs/ssh"
   revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
+
+[[constraint]]
+  name = "github.com/google/go-tpm-tools"
+  branch = "master"

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package cmos lets you read and write to cmos registers while doing basic checks on valid register selections.
+// +build amd64 386
+
 package cmos
 
 import (

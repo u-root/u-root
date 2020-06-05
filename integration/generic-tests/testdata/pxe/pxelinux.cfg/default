@@ -1,4 +1,2 @@
-DEFAULT normal
-
-LABEL normal
-LINUX kernel
+LABEL some-random-kernel
+kernel kernel
