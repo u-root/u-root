@@ -8,11 +8,11 @@
 
 //
 // Synopsis:
-//	boot [-dev][-v][-dry-run]
+//	boot [-v][-dry-run]
 //
 // Description:
 //	If returns to u-root shell, the code didn't found a local bootable option
-//      -dev glob to use; default is /sys/class/block/*
+//
 //      -v prints messages
 //      -dry-run doesn't really boot
 //
@@ -29,23 +29,22 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bls"
 	"github.com/u-root/u-root/pkg/boot/grub"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/storage"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -61,13 +60,12 @@ type bootEntry struct {
 }
 
 var (
-	devGlob           = flag.String("dev", "/sys/block/*", "Glob for devices")
-	verbose           = flag.Bool("v", false, "Print debug messages")
-	debug             = func(string, ...interface{}) {}
-	dryRun            = flag.Bool("dry-run", false, "load kernel, but don't kexec it")
-	defaultBoot       = flag.String("boot", "", "entry to boot (default to the configuration file default)")
-	list              = flag.Bool("list", false, "list found configurations")
-	uroot             string
+	verbose     = flag.Bool("v", false, "Print debug messages")
+	debug       = func(string, ...interface{}) {}
+	dryRun      = flag.Bool("dry-run", false, "load kernel, but don't kexec it")
+	defaultBoot = flag.String("boot", "", "entry to boot (default to the configuration file default)")
+	list        = flag.Bool("list", false, "list found configurations")
+
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
 	appendCmdline     = flag.String("append", "", "Additional kernel params")
@@ -81,177 +79,82 @@ func updateBootCmdline(cl string) string {
 	return f.Update(cl)
 }
 
-// checkForBootableMBR is looking for bootable MBR signature
-// Current support is limited to Hard disk devices and USB devices
-func checkForBootableMBR(path string) error {
-	var sig uint16
-	f, err := os.Open(path)
+func mountAndBoot(device storage.BlockDev, mountDir string) {
+	os.MkdirAll(mountDir, 0777)
+
+	mp, err := device.Mount(mountDir, mount.ReadOnly)
 	if err != nil {
-		return err
+		return
 	}
-	if err := binary.Read(io.NewSectionReader(f, signatureOffset, 2), binary.LittleEndian, &sig); err != nil {
-		return err
-	}
-	if sig != bootableMBR {
-		err := fmt.Errorf("%v is not a bootable device", path)
-		return err
-	}
-	return nil
-}
+	defer mp.Unmount(mount.MNT_DETACH)
 
-// getSupportedFilesystem returns all block file system supported by the linuxboot kernel
-func getSupportedFilesystem() ([]string, error) {
-	var err error
-	fs, err := ioutil.ReadFile("/proc/filesystems")
+	imgs, err := bls.ScanBLSEntries(ulog.Log, mountDir)
 	if err != nil {
-		return nil, err
+		log.Printf("Failed to parse systemd-boot BootLoaderSpec configs, trying another format...: %v", err)
 	}
-	var returnValue []string
-	for _, f := range strings.Split(string(fs), "\n") {
-		n := strings.Fields(f)
-		if len(n) != 1 {
-			continue
-		}
-		returnValue = append(returnValue, n[0])
-	}
-	return returnValue, err
 
-}
-
-// mountEntry tries to mount a specific block device using a list of
-// supported file systems. We have to try to mount the device
-// itself, since devices can be filesystem formatted but not
-// partitioned; and all its partitions.
-func mountEntry(d string, supportedFilesystem []string) error {
-	var err error
-	debug("Try to mount %v", d)
-
-	// find or create the mountpoint.
-	m := filepath.Join(uroot, d)
-	if _, err = os.Stat(m); err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(m, 0777)
-	}
+	grubImgs, err := grub.ParseLocalConfig(context.Background(), mountDir)
 	if err != nil {
-		debug("Can't make %v", m)
-		return err
+		log.Printf("Failed to parse GRUB configs from %s, trying another format...: %v", device, err)
 	}
-	for _, filesystem := range supportedFilesystem {
-		var flags = uintptr(syscall.MS_RDONLY)
-		debug("\twith %v", filesystem)
-		if err := syscall.Mount(d, m, filesystem, flags, ""); err == nil {
-			return err
-		}
-	}
-	debug("No mount succeeded")
-	return fmt.Errorf("Unable to mount any partition on %v", d)
-}
+	imgs = append(imgs, grubImgs...)
 
-func umountEntry(n string) error {
-	return syscall.Unmount(n, syscall.MNT_DETACH)
+	// Grub config not found, try isolinux.
+	syslinuxImgs, err := syslinux.ParseLocalConfig(context.Background(), mountDir)
+	if err != nil {
+		log.Printf("Failed to parse syslinux configs from %s: %v", device, err)
+	}
+	imgs = append(imgs, syslinuxImgs...)
+
+	if len(imgs) == 0 {
+		return
+	}
+
+	// Boot just the first image.
+	img := imgs[0]
+
+	// Make changes to the kernel command line based on our cmdline.
+	if li, ok := img.(*boot.LinuxImage); ok {
+		li.Cmdline = updateBootCmdline(li.Cmdline)
+	}
+
+	log.Printf("BootImage: %s", img)
+	if err := img.Load(*verbose); err != nil {
+		log.Printf("kexec load of %v failed: %v", img, err)
+		return
+	}
+
+	if err := mp.Unmount(mount.MNT_DETACH); err != nil {
+		log.Printf("Can't unmount %v: %v", mp, err)
+	}
+	if *dryRun {
+		return
+	}
+
+	if err := boot.Execute(); err != nil {
+		log.Printf("boot.Execute of %v failed: %v", img, err)
+	}
+
+	// kexec was successful. kexec should have taken over. What happened?
+	log.Fatalf("kexec boot returned success, but new kernel is not running...")
 }
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
 func Localboot() error {
-	fs, err := getSupportedFilesystem()
+	blockDevs, err := storage.GetBlockDevices()
 	if err != nil {
-		return errors.New("No filesystem support found")
-	}
-	debug("Supported filesystems: %v", fs)
-	sysList, err := filepath.Glob(*devGlob)
-	if err != nil {
-		return errors.New("No available block devices to boot from")
-	}
-	// The Linux /sys file system is a bit, er, awkward. You can't find
-	// the device special in there; just everything else.
-	var blkList []string
-	for _, b := range sysList {
-		blkList = append(blkList, filepath.Join("/dev", filepath.Base(b)))
+		return errors.New("no available block devices to boot from")
 	}
 
-	// We must validate if the MBR is bootable or not and keep the
-	// devices which do have such support drive are easy to
-	// detect.  This whole loop is pretty bogus at present, it
-	// assumes the first partiton we find with grub.cfg is the one
-	// we want. It works for now but ...
-	var allparts []string
-	for _, d := range blkList {
-		err := checkForBootableMBR(d)
-		if err != nil {
-			// Not sure it matters; there can be many bogus entries?
-			debug("MBR for %s failed: %v", d, err)
-			continue
-		}
-		debug("Bootable device %v found", d)
-		// You can't just look for numbers to match. Consider names like
-		// mmcblk0, where has parts like mmcblk0p1. Just glob.
-		g := d + "*"
-		all, err := filepath.Glob(g)
-		if err != nil {
-			log.Printf("Glob for all partitions of %s failed: %v", g, err)
-		}
-		allparts = append(allparts, all...)
-	}
-	uroot, err = ioutil.TempDir("", "u-root-boot")
+	mountPoints, err := ioutil.TempDir("", "u-root-boot")
 	if err != nil {
 		return fmt.Errorf("Can't create tmpdir: %v", err)
 	}
-	debug("Trying to boot from %v", allparts)
-	for _, d := range allparts {
-		if err := mountEntry(d, fs); err != nil {
-			continue
-		}
-		debug("mount succeed")
-		u := filepath.Join(uroot, d)
+	defer os.RemoveAll(mountPoints)
 
-		imgs, err := bls.ScanBLSEntries(ulog.Log, u)
-		if err != nil {
-			log.Printf("Failed to parse systemd-boot BootLoaderSpec configs, trying another format...: %v", err)
-		}
-
-		grubImgs, err := grub.ParseLocalConfig(context.Background(), u)
-		if err != nil {
-			log.Printf("Failed to parse GRUB configs, trying another format...: %v", err)
-		}
-		imgs = append(imgs, grubImgs...)
-
-		// not grub config found, try isolinux
-		syslinuxImgs, err := syslinux.ParseLocalConfig(context.Background(), u)
-		if err != nil {
-			log.Printf("Failed to parse syslinux configs: %v", err)
-		}
-		imgs = append(imgs, syslinuxImgs...)
-
-		if len(imgs) == 0 {
-			if err := umountEntry(u); err != nil {
-				log.Printf("Can't unmount %v: %v", u, err)
-			}
-			continue
-		}
-
-		// Boot just the first image.
-		img := imgs[0]
-
-		if li, ok := img.(*boot.LinuxImage); ok {
-			// Filter the kernel command line
-			li.Cmdline = updateBootCmdline(li.Cmdline)
-		}
-		log.Printf("BootImage: %s", img)
-		if err := img.Load(*verbose); err != nil {
-			return fmt.Errorf("kexec load of %v failed: %v", img, err)
-		}
-
-		if err := umountEntry(u); err != nil {
-			log.Printf("Can't unmount %v: %v", u, err)
-		}
-		if *dryRun {
-			continue
-		}
-
-		if err := boot.Execute(); err != nil {
-			log.Printf("boot.Execute of %v failed: %v", u, err)
-		}
-		// TODO: We should probably return a real error.
-		return nil
+	for _, device := range blockDevs {
+		dir := filepath.Join(mountPoints, device.Name)
+		mountAndBoot(device, dir)
 	}
 	return fmt.Errorf("Sorry no bootable device found")
 }
