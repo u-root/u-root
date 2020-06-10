@@ -73,6 +73,24 @@ func (b BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
 	return mount.TryMount(devpath, path, flags)
 }
 
+// GPTTable tries to read a GPT table from the block device described by the
+// passed BlockDev object, and returns a gpt.Table object, or an error if any
+func (b BlockDev) GPTTable() (*gpt.Table, error) {
+	fd, err := os.Open(fmt.Sprintf("/dev/%s", b.Name))
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	if _, err = fd.Seek(512, io.SeekStart); err != nil {
+		return nil, err
+	}
+	table, err := gpt.ReadTable(fd, 512)
+	if err != nil {
+		return nil, err
+	}
+	return &table, nil
+}
+
 func ioctlGetUint64(fd int, req uint) (uint64, error) {
 	var value uint64
 	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&value)))
@@ -267,36 +285,21 @@ func tryXFS(file io.ReaderAt) (string, error) {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]), nil
 }
 
-// GetGPTTable tries to read a GPT table from the block device described by the
-// passed BlockDev object, and returns a gpt.Table object, or an error if any
-func GetGPTTable(device BlockDev) (*gpt.Table, error) {
-	fd, err := os.Open(fmt.Sprintf("/dev/%s", device.Name))
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-	if _, err = fd.Seek(512, io.SeekStart); err != nil {
-		return nil, err
-	}
-	table, err := gpt.ReadTable(fd, 512)
-	if err != nil {
-		return nil, err
-	}
-	return &table, nil
+// BlockDevices is a list of block devices.
+type BlockDevices []BlockDev
+
+// FilterESP returns a list of BlockDev objects whose underlying block device
+// is a valid EFI system partition.
+func (b BlockDevices) FilterESP() BlockDevices {
+	return b.FilterGUID(SystemPartitionGUID.String())
 }
 
-// FilterEFISystemPartitions returns a list of BlockDev objects whose underlying
-// block device is a valid EFI system partition, or an error if any
-func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
-	return PartitionsByGUID(devices, SystemPartitionGUID.String())
-}
-
-// PartitionsByGUID returns a list of BlockDev objects whose underlying
-// block device has the given GUID
-func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
-	partitions := make([]BlockDev, 0)
-	for _, device := range devices {
-		table, err := GetGPTTable(device)
+// FilterGUID returns a list of BlockDev objects whose underlying
+// block device has the given GPT partition GUID.
+func (b BlockDevices) FilterGUID(guid string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
+		table, err := device.GPTTable()
 		if err != nil {
 			log.Printf("Skipping %s: %v", device.Name, err)
 			continue
@@ -310,14 +313,14 @@ func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
 			}
 		}
 	}
-	return partitions, nil
+	return partitions
 }
 
-// PartitionsByFsUUID returns a list of BlockDev objects whose underlying
-// block device has a filesystem with the given UUID
-func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
-	partitions := make([]BlockDev, 0)
-	for _, device := range devices {
+// FilterFSUUID returns a list of BlockDev objects whose underlying block
+// device has a filesystem with the given UUID.
+func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
 		if device.FsUUID == fsuuid {
 			partitions = append(partitions, device)
 		}
@@ -325,11 +328,11 @@ func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
 	return partitions
 }
 
-// PartitionsByName returns a list of BlockDev objects whose underlying
+// FilterName returns a list of BlockDev objects whose underlying
 // block device has a Name with the given Name
-func PartitionsByName(devices []BlockDev, name string) []BlockDev {
-	partitions := make([]BlockDev, 0)
-	for _, device := range devices {
+func (b BlockDevices) FilterName(name string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
 		if device.Name == name {
 			partitions = append(partitions, device)
 		}

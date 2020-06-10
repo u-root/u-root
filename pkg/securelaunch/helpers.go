@@ -41,7 +41,7 @@ type mountCacheType struct {
 var mountCache = mountCacheType{m: make(map[string]mountCacheData)}
 
 // StorageBlkDevices helps securelaunch pkg mount devices.
-var StorageBlkDevices []storage.BlockDev
+var StorageBlkDevices storage.BlockDevices
 
 // Debug enables verbose logs if kernel cmd line has uroot.uinitargs=-d flag set.
 // kernel cmdline is checked in sluinit.
@@ -118,7 +118,7 @@ func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
 		return storage.BlockDev{}, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
-	devices := storage.PartitionsByFsUUID(StorageBlkDevices, uuid) // []BlockDev
+	devices := StorageBlkDevices.FilterFSUUID(uuid)
 	Debug("%d device(s) matched with UUID=%s", len(devices), uuid)
 	for i, d := range devices {
 		Debug("No#%d ,device=%s with fsUUID=%s", i, d.Name, d.FsUUID)
@@ -131,7 +131,7 @@ func getDeviceFromName(name string) (storage.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
 		return storage.BlockDev{}, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
-	devices := storage.PartitionsByName(StorageBlkDevices, name) // []BlockDev
+	devices := StorageBlkDevices.FilterName(name)
 	Debug("%d device(s) matched with Name=%s", len(devices), name)
 	for i, d := range devices {
 		Debug("No#%d ,device=%s with fsUUID=%s", i, d.Name, d.FsUUID)
