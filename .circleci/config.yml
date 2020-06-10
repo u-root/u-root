@@ -19,7 +19,7 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: go test -a -timeout 15m -ldflags '-s' ./integration/...
+          command: go test -a -v -timeout 15m -ldflags '-s' ./integration/...
           no_output_timeout: 15m
   beefy-template: &beefy-template
     <<: *golang-template
@@ -40,6 +40,9 @@ workflows:
           requires:
             - clean-code
       - test-integration-arm:
+          requires:
+            - clean-code
+      - test-integration-arm64:
           requires:
             - clean-code
       - race:
@@ -188,3 +191,8 @@ jobs:
     <<: *integration-template
     docker:
       - image: uroottest/test-image-arm:v3.0.4
+  test-integration-arm64:
+    <<: *integration-template
+    docker:
+      - image: uroottest/test-image-arm64:v0.0.1
+    working_directory: /home/circleci/go/src/github.com/u-root/u-root
