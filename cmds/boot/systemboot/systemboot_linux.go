@@ -6,10 +6,9 @@ package main
 
 import (
 	"os"
-	"syscall"
-	"unsafe"
 
-	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/vtolstov/go-ioctl"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -17,7 +16,7 @@ const (
 )
 
 // ioctl to clear whole CMOS/NV-RAM
-var _NVRAM_INIT = ipmi.IO(_IOC_NVRAM, 0x40)
+var _NVRAM_INIT = ioctl.IO(_IOC_NVRAM, 0x40)
 
 func cmosClear() error {
 	f, err := os.OpenFile("/dev/nvram", os.O_RDWR, 0)
@@ -25,13 +24,10 @@ func cmosClear() error {
 		return err
 	}
 	defer f.Close()
-	var i = 0
-	if errno := ipmi.Ioctl(uintptr(f.Fd()), _NVRAM_INIT, unsafe.Pointer(&i)); errno != 0 {
-		return errno
-	}
-	return nil
+
+	return unix.IoctlSetPointerInt(int(f.Fd()), uint(_NVRAM_INIT), 0)
 }
 
 func reboot() error {
-	return syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+	return unix.Reboot(unix.LINUX_REBOOT_CMD_RESTART)
 }
