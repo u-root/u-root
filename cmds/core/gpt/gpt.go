@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"text/tabwriter"
 
 	"github.com/u-root/u-root/pkg/gpt"
 )
@@ -27,7 +28,8 @@ import (
 const cmd = "gpt [options] file"
 
 var (
-	write = flag.Bool("w", false, "Write GPT to file")
+	write   = flag.Bool("w", false, "Write GPT to file")
+	jsonOut = flag.Bool("json", true, "Write JSON output")
 )
 
 func init() {
@@ -73,9 +75,22 @@ func main() {
 		if err != nil {
 			log.Printf("Error reading %v: %v", n, err)
 		}
-		// Emit this as a JSON array. Suggestions welcome on better ways to do this.
-		if _, err := fmt.Printf("%s\n", p); err != nil {
-			log.Fatal(err)
+		if *jsonOut {
+			// Emit this as a JSON array. Suggestions welcome on better ways to do this.
+			if _, err := fmt.Printf("%s\n", p); err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			fmt.Printf("Sector size: %d\n\n", 512)
+
+			writer := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight)
+			fmt.Fprintf(writer, "Number\tStart (sector)\tEnd (sector)\tType\tGUID\tName\n")
+			for i, part := range p.GPT.Partitions {
+				if !part.IsEmpty() {
+					fmt.Fprintf(writer, "%d\t%d\t%d\t%s\t%s\t%s\n", i+1, part.FirstLBA, part.LastLBA, part.Type, part.Id, part.Name())
+				}
+			}
+			writer.Flush()
 		}
 
 	}
