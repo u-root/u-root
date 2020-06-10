@@ -40,11 +40,11 @@ var debug = func(string, ...interface{}) {}
 // If more than one partition is found with the given GUID, the first that is
 // found is used.
 // This function returns a storage.Mountpoint object, or an error if any.
-func mountByGUID(devices []storage.BlockDev, guid, baseMountpoint string) (*mount.MountPoint, error) {
+func mountByGUID(devices storage.BlockDevices, guid, baseMountpoint string) (*mount.MountPoint, error) {
 	log.Printf("Looking for partition with GUID %s", guid)
-	partitions, err := storage.PartitionsByGUID(devices, guid)
-	if err != nil || len(partitions) == 0 {
-		return nil, fmt.Errorf("Error looking up for partition with GUID %s", guid)
+	partitions := devices.FilterGUID(guid)
+	if len(partitions) == 0 {
+		return nil, fmt.Errorf("no partitions with GUID %s", guid)
 	}
 	log.Printf("Partitions with GUID %s: %+v", guid, partitions)
 	if len(partitions) > 1 {
@@ -209,7 +209,7 @@ func main() {
 	if *flagDebug {
 		for _, dev := range devices {
 			log.Printf("Device: %+v", dev)
-			table, err := storage.GetGPTTable(dev)
+			table, err := dev.GPTTable()
 			if err != nil {
 				continue
 			}

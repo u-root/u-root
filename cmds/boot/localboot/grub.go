@@ -111,7 +111,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 							if isValidFsUUID(str2) {
 								kernelFsUUID := str2
 								log.Printf("fs-uuid: %s", kernelFsUUID)
-								partitions := storage.PartitionsByFsUUID(devices, kernelFsUUID)
+								partitions := devices.FilterFSUUID(kernelFsUUID)
 								if len(partitions) == 0 {
 									log.Printf("WARNING: No partition found with filesystem UUID:'%s' to load kernel from!", kernelFsUUID) // TODO throw error ?
 									continue
@@ -191,7 +191,7 @@ func isMn(r rune) bool {
 
 // ScanGrubConfigs looks for grub2 and grub legacy config files in the known
 // locations and returns a list of boot configurations.
-func ScanGrubConfigs(devices []storage.BlockDev, basedir string) []bootconfig.BootConfig {
+func ScanGrubConfigs(devices storage.BlockDevices, basedir string) []bootconfig.BootConfig {
 	bootconfigs := make([]bootconfig.BootConfig, 0)
 	err := filepath.Walk(basedir, func(currentPath string, info os.FileInfo, err error) error {
 		if err != nil {
