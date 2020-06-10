@@ -8,22 +8,21 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strings"
+)
+
+// direction is the transfer direction.
+type direction int32
+
+// These are the acceptable constants for the sg_io_hdr dxfer_direction field
+// defined by Linux.
+const (
+	_SG_DXFER_NONE     direction = -1
+	_SG_DXFER_TO_DEV   direction = -2
+	_SG_DXFER_FROM_DEV direction = -3
 )
 
 const (
-	// golangci's requirements around unused constants
-	// are inconsistent with how one writes user level drivers.
-	// Generally, in a user level driver, one wants to lay out all
-	// constants for all registers, unused or not; it makes
-	// the code far easier to read and work with.
-	// Anyway, I'll comment stuff out until used, since the directives
-	// don't work and are ugly.
-	// Sure, you can add a nolint tag, but as your
-	//	bidi int8 = -4  nolint:golint,unused
-	from direction = -3
-	to   direction = -2
-	//none direction = -1
-
 	oldSchoolBlockLen = 512
 
 	//	ataUsingLBA uint8 = (1 << 6)  nolint:golint,unused
@@ -65,14 +64,6 @@ const (
 	checkCond = 1 << 5
 )
 
-// Commands. We only export those we implement.
-const (
-	// identify gets identify information
-	identify = 0xec
-	// securityUnlock unlocks the drive with a given 32-byte password
-	securityUnlock = 0xf2
-)
-
 type (
 	// Cmd is an ATA command. See the ATA standard starting in the 80s.
 	Cmd uint8
@@ -93,14 +84,6 @@ type (
 
 	// statusBlock is the status returned from a drive operation.
 	statusBlock [maxStatusBlockLen]byte
-
-	direction int32
-
-	// ataString is 10 words. Each word contains two bytes of the string,
-	// in BigEndian order, i.e., byte order is 1032547698
-	// Hence, code can not just take a string from the
-	// drive and use it: it must swap the bytes in each word.
-	ataString [10]uint16
 )
 
 func (b dataBlock) toWordBlock() (wordBlock, error) {
@@ -129,41 +112,44 @@ func (w wordBlock) mustLBA() error {
 	for _, c := range check {
 		v, m, b := w[c.off], c.mask, c.bit
 		if (v & m) != b {
-			return fmt.Errorf("unsupported and probably non-ATA48 ddevice: word at offset %d: 0x%#x and should be 0x%#x", c.off, c.mask&v, b)
+			return fmt.Errorf("unsupported and probably non-ATA48 ddevice: word at offset %d: %#x and should be %#x", c.off, c.mask&v, b)
 		}
 	}
 	return nil
 }
 
-// String is a stringer for ataString
-func (a ataString) String() string {
-	var s []byte
-	for i := range a {
-		s = append(s, byte(a[i]), byte(a[i]>>8))
+// ataString writes out an ATAString in decoded human-readable form.
+//
+// ATA Command Set 4, Section 3.4.9: "Each pair of bytes in an ATA string is
+// swapped ...". That the space character is used as padding is not mandated in
+// the spec, but is used in the ATA string example, and on every device we've
+// tried.
+func ataString(a []byte) string {
+	var s strings.Builder
+	for i := 0; i < len(a); i += 2 {
+		s.WriteByte(a[i+1])
+		s.WriteByte(a[i])
 	}
-	return string(s)
+	return strings.TrimSpace(string(s.String()))
 }
 
 // unpackIdentify unpacks a wordBlock into an Info.
-func unpackIdentify(s statusBlock, w wordBlock) (*Info, error) {
-	// Double check that this is a true LBA48 packet.
-	if err := w.mustLBA(); err != nil {
-		return nil, err
-	}
-	var nsects uint64
-	var info = &Info{}
-	for i := 103; i >= 104; i-- {
-		nsects <<= 16
-		nsects |= uint64(w[i])
-	}
-	info.NumberSectors = nsects
-	// If you look at the Linux hdparm source, you will see it uses
-	// some values this function does not.
-	// Per the standard,
-	// offsets 1, 3, and 6 are obsolete;
-	// 4, 5, 9 are retired.
-	// hdparm presents these as RawCHS, TrkSize, and SecSize.
-	// We ignore them.
+func unpackIdentify(s statusBlock, d dataBlock, w wordBlock) *Info {
+	var info Info
+	info.NumberSectors = binary.LittleEndian.Uint64(d[200:208])
+
 	info.ECCBytes = uint(w[22])
-	return info, nil
+
+	info.OrigSerial = string(d[20:40])
+	info.OrigFirmwareRevision = string(d[46:54])
+	info.OrigModel = string(d[54:94])
+
+	info.Serial = ataString(d[20:40])
+	info.FirmwareRevision = ataString(d[46:54])
+	info.Model = ataString(d[54:94])
+
+	info.MasterPasswordRev = w[92]
+	info.SecurityStatus = w[128]
+	info.TrustedComputingSupport = w[48]
+	return &info
 }

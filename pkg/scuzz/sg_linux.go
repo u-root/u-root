@@ -57,8 +57,11 @@ import (
 // cdb[14] = command
 // Further, there is a direction which can be to, from, or none.
 
-// packetHeader is a PacketHeader for the SG device.
-// A pointer to this struct must be passed to the ioctl.
+// packetHeader is the Linux SCSI Generic driver version 3 header structure, or
+// sg_io_hdr_t in some code bases.
+//
+// A pointer to this struct must be passed to the SG_IO ioctl.
+//
 // Note that some pointers are not word-aligned, i.e. the
 // compiler will insert padding; this struct is larger than
 // the sum of its parts. This struct has some information
@@ -107,6 +110,7 @@ type packet struct {
 	dma      bool
 
 	// There are pointers in the packetHeader to this data.
+	//
 	// We maintain them here to ensure they don't
 	// get garbage collected, as the packetHeader only
 	// contains uintptrs to refer to them.
@@ -129,7 +133,7 @@ type SGDisk struct {
 // NewSGDisk returns a Disk that uses the Linux SCSI Generic Device.
 // It also does an Identify to verify that the target name is a true
 // lba48 device.
-func NewSGDisk(n string, opt ...SGDiskOpt) (Disk, error) {
+func NewSGDisk(n string, opt ...SGDiskOpt) (*SGDisk, error) {
 	f, err := os.OpenFile(n, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
@@ -155,7 +159,7 @@ func (p *packet) genCommandDataBlock() {
 	case p.dma && p.dataLen == 0:
 		p.command[1] |= nonData
 	case !p.dma && p.dataLen != 0:
-		if p.direction == to {
+		if p.direction == _SG_DXFER_TO_DEV {
 			p.command[1] |= pioOut
 		} else {
 			p.command[1] |= pioIn
@@ -167,7 +171,7 @@ func (p *packet) genCommandDataBlock() {
 	// We learned this from hdparm.
 	if p.dataLen != 0 {
 		p.command[2] |= tlenNsect | tlenSectors
-		if p.direction == to {
+		if p.direction == _SG_DXFER_TO_DEV {
 			p.command[2] |= tdirTo
 		} else {
 			p.command[2] |= tdirFrom
@@ -193,7 +197,7 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8) *packet 
 	var p = &packet{}
 	// These are invariant across all uses of SGDisk.
 	p.interfaceID = 'S'
-	p.cmdLen = ata16Len
+	p.cmdLen = uint8(len(p.command))
 	p.data = uintptr(unsafe.Pointer(&p.block[0]))
 	p.sb = uintptr(unsafe.Pointer(&p.status[0]))
 	p.cdb = uintptr(unsafe.Pointer(&p.command[0]))
@@ -218,7 +222,7 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8) *packet 
 }
 
 func (s *SGDisk) unlockPacket(password string, master bool) *packet {
-	p := s.newPacket(securityUnlock, to, lba48)
+	p := s.newPacket(unix.WIN_SECURITY_UNLOCK, _SG_DXFER_TO_DEV, lba48)
 	p.genCommandDataBlock()
 	if master {
 		p.block[1] = 1
@@ -234,11 +238,10 @@ func (s *SGDisk) Unlock(password string, master bool) error {
 		return err
 	}
 	return nil
-
 }
 
 func (s *SGDisk) identifyPacket() *packet {
-	p := s.newPacket(identify, from, 0)
+	p := s.newPacket(unix.WIN_IDENTIFY, _SG_DXFER_FROM_DEV, 0)
 	p.genCommandDataBlock()
 	return p
 }
@@ -249,23 +252,34 @@ func (s *SGDisk) Identify() (*Info, error) {
 	if err := s.operate(p); err != nil {
 		return nil, err
 	}
-	return unpackIdentify(p.status, p.word)
+	return unpackIdentify(p.status, p.block, p.word), nil
 }
 
+// _SG_IO is the ioctl request number for SCSI operations.
+const _SG_IO = 0x2285
+
 func (s *SGDisk) operate(p *packet) error {
-	_, _, uerr := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), uintptr(p.cmd), uintptr(unsafe.Pointer(&p.packetHeader)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(s.f.Fd()), _SG_IO, uintptr(unsafe.Pointer(&p.packetHeader)))
 	sb := p.status[0]
-	if uerr != 0 || sb != 0 {
-		return fmt.Errorf("SCSI generic error %v: drive error status: %#02x", uerr, sb)
+	if errno != 0 || sb != 0 {
+		return &os.PathError{
+			Op:   "ioctl SG_IO",
+			Path: s.f.Name(),
+			Err:  fmt.Errorf("SCSI generic error %v and drive error status %#02x", errno, sb),
+		}
 	}
 	w, err := p.block.toWordBlock()
 	if err != nil {
-		return err
+		return &os.PathError{
+			Op:   "converting SG_IO block output",
+			Path: s.f.Name(),
+			Err:  err,
+		}
 	}
 	// the drive must be ata48. The status should show that even if we did not issue an ata48 command.
-	if err := w.mustLBA(); err != nil {
+	/*if err := w.mustLBA(); err != nil {
 		return err
-	}
+	}*/
 	p.word = w
 	return nil
 }
