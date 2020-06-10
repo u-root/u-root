@@ -9,21 +9,20 @@ import (
 )
 
 func TestAtaString(t *testing.T) {
-	const want = "Copyright 2019 the u"
-	var ts = ataString{
-		'o'<<8 | 'C',
-		'y'<<8 | 'p',
-		'i'<<8 | 'r',
-		'h'<<8 | 'g',
-		' '<<8 | 't',
-		'0'<<8 | '2',
-		'9'<<8 | '1',
-		't'<<8 | ' ',
-		'e'<<8 | 'h',
-		'u'<<8 | ' ',
-	}
+	want := "Copyright 2019 the u"
+	got := ataString([]byte{
+		'o', 'C',
+		'y', 'p',
+		'i', 'r',
+		'h', 'g',
+		' ', 't',
+		'0', '2',
+		'9', '1',
+		't', ' ',
+		'e', 'h',
+		'u', ' ',
+	})
 
-	got := ts.String()
 	if got != want {
 		t.Fatalf("Got %v, want %v", got, want)
 	}
