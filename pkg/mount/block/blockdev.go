@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package storage
+// Package block finds, mounts, and modifies block devices on Linux systems.
+package block
 
 import (
 	"bufio"

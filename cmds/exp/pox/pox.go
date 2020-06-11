@@ -98,8 +98,8 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/ldd"
-	"github.com/u-root/u-root/pkg/loop"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/loop"
 	"github.com/u-root/u-root/pkg/uzip"
 )
 

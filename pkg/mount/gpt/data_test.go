@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+package gpt
+
 // This file is a GPT of a ChromeOS file system, which has
 // 12 partitions (more than most) and is hence useful to test
 // basic functions out. It includes a lot of data we don't
 // care about and some we do.
-
-package gpt
 
 var block = map[int64][]byte{
 	0x00000000: {0xde, 0xd7, 0xd2, 0xb2, 0x38, 0xd7, 0x46, 0x98, 0xa2, 0xec, 0x3f, 0x18, 0xc6, 0x01, 0x53, 0x37}, //|....8.F...?...S7|

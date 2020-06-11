@@ -13,5 +13,5 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/loop"}, nil)
+	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/mount/loop"}, nil)
 }
