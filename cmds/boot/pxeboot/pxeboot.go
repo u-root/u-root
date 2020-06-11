@@ -22,11 +22,9 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
-	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bootcmd"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/boot/netboot"
@@ -48,72 +46,34 @@ const (
 	dhcpTries   = 3
 )
 
-// NetbootImages requests DHCP on every ifaceNames interface, and parses
-// netboot images from the DHCP leases. Returns bootable OSes.
-func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
-	filteredIfs, err := dhclient.Interfaces(ifaceNames)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), (1<<dhcpTries)*dhcpTimeout)
-	defer cancel()
-
-	c := dhclient.Config{
-		Timeout: dhcpTimeout,
-		Retries: dhcpTries,
-	}
-	if *verbose {
-		c.LogLevel = dhclient.LogSummary
-	}
-	r := dhclient.SendRequests(ctx, filteredIfs, true, true, c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-
-		case result, ok := <-r:
-			if !ok {
-				return nil, fmt.Errorf("nothing bootable found, all interfaces are configured or timed out")
-			}
-			iname := result.Interface.Attrs().Name
-			if result.Err != nil {
-				log.Printf("Could not configure %s for %s: %v", iname, result.Protocol, result.Err)
-				continue
-			}
-
-			if *noNetConfig {
-				log.Printf("Skipping configuring %s with lease %s", iname, result.Lease)
-			} else if err := result.Lease.Configure(); err != nil {
-				log.Printf("Failed to configure lease %s: %v", result.Lease, err)
-				// Boot further regardless of lease configuration result.
-				//
-				// If lease failed, fall back to use locally configured
-				// ip/ipv6 address.
-			}
-
-			// Don't use the other context, as it's for the DHCP timeout.
-			imgs, err := netboot.BootImages(context.Background(), ulog.Log, curl.DefaultSchemes, result.Lease)
-			if err != nil {
-				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
-				continue
-			}
-			return imgs, nil
-		}
-	}
-}
-
 func main() {
 	flag.Parse()
 	if len(flag.Args()) > 1 {
 		log.Fatalf("Only one regexp-style argument is allowed, e.g.: " + ifName)
 	}
+
 	if len(flag.Args()) > 0 {
 		ifName = flag.Args()[0]
 	}
 
-	images, err := NetbootImages(ifName)
+	conf := dhclient.Config{
+		Timeout: dhcpTimeout,
+		Retries: dhcpTries,
+	}
+	if *verbose {
+		conf.LogLevel = dhclient.LogSummary
+	}
+
+	filteredIfs, err := dhclient.Interfaces(ifName)
+	if err != nil {
+		log.Fatalf("Netboot interfaces failed: %v", err)
+	}
+
+	parsers := []netboot.BootImageParser{
+		&netboot.IPXEParser{Log: ulog.Log, Schemes: curl.DefaultSchemes},
+		&netboot.PXEParser{Log: ulog.Log, Schemes: curl.DefaultSchemes},
+	}
+	images, err := netboot.DHCPAndParse(context.Background(), ulog.Log, filteredIfs, conf, parsers, *noNetConfig)
 	if err != nil {
 		log.Printf("Netboot failed: %v", err)
 	}
