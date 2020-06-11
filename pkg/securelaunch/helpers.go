@@ -114,9 +114,9 @@ func ClearPersistQueue() error {
 	return nil
 }
 
-func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
+func getDeviceFromUUID(uuid string) (*storage.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
-		return storage.BlockDev{}, fmt.Errorf("fn GetBlkInfo err=%s", e)
+		return nil, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
 	devices := StorageBlkDevices.FilterFSUUID(uuid)
 	Debug("%d device(s) matched with UUID=%s", len(devices), uuid)
@@ -124,12 +124,12 @@ func getDeviceFromUUID(uuid string) (storage.BlockDev, error) {
 		Debug("No#%d ,device=%s with fsUUID=%s", i, d.Name, d.FsUUID)
 		return d, nil // return first device found
 	}
-	return storage.BlockDev{}, fmt.Errorf("no block device exists with UUID=%s", uuid)
+	return nil, fmt.Errorf("no block device exists with UUID=%s", uuid)
 }
 
-func getDeviceFromName(name string) (storage.BlockDev, error) {
+func getDeviceFromName(name string) (*storage.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
-		return storage.BlockDev{}, fmt.Errorf("fn GetBlkInfo err=%s", e)
+		return nil, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
 	devices := StorageBlkDevices.FilterName(name)
 	Debug("%d device(s) matched with Name=%s", len(devices), name)
@@ -137,17 +137,17 @@ func getDeviceFromName(name string) (storage.BlockDev, error) {
 		Debug("No#%d ,device=%s with fsUUID=%s", i, d.Name, d.FsUUID)
 		return d, nil // return first device found
 	}
-	return storage.BlockDev{}, fmt.Errorf("no block device exists with name=%s", name)
+	return nil, fmt.Errorf("no block device exists with name=%s", name)
 }
 
 // GetStorageDevice parses input of type UUID:/tmp/foo or sda2:/tmp/foo,
 // and returns any matching devices.
-func GetStorageDevice(input string) (storage.BlockDev, error) {
+func GetStorageDevice(input string) (*storage.BlockDev, error) {
 	device, e := getDeviceFromUUID(input)
 	if e != nil {
 		d2, e2 := getDeviceFromName(input)
 		if e2 != nil {
-			return storage.BlockDev{}, fmt.Errorf("getDeviceFromUUID: err=%v, getDeviceFromName: err=%v", e, e2)
+			return nil, fmt.Errorf("getDeviceFromUUID: err=%v, getDeviceFromName: err=%v", e, e2)
 		}
 		device = d2
 	}
@@ -201,7 +201,7 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 
 // MountDevice looks up mountCache map. if no entry is found, it
 // mounts a device and updates cache, otherwise returns mountPath.
-func MountDevice(device storage.BlockDev, flags uintptr) (string, error) {
+func MountDevice(device *storage.BlockDev, flags uintptr) (string, error) {
 
 	devName := device.Name
 
