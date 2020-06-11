@@ -146,6 +146,10 @@ func Localboot() error {
 		return errors.New("no available block devices to boot from")
 	}
 
+	// Try to only boot from "good" block devices.
+	blockDevs = blockDevs.FilterZeroSize()
+	debug("Booting from the following block devices: %v", blockDevs)
+
 	mountPoints, err := ioutil.TempDir("", "u-root-boot")
 	if err != nil {
 		return fmt.Errorf("Can't create tmpdir: %v", err)

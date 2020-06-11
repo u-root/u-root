@@ -91,6 +91,16 @@ func (b *BlockDev) GPTTable() (*gpt.Table, error) {
 	return &table, nil
 }
 
+// BlockSize returns the block size.
+func (b *BlockDev) BlockSize() (int, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKBSZGET)
+}
+
 func ioctlGetUint64(fd int, req uint) (uint64, error) {
 	var value uint64
 	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&value)))
@@ -117,6 +127,17 @@ func (b *BlockDev) Size() (uint64, error) {
 		}
 	}
 	return sz, nil
+}
+
+// ReadPartitionTable prompts the kernel to re-read the partition table on this block device.
+func (b *BlockDev) ReadPartitionTable() error {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = unix.IoctlGetInt(int(f.Fd()), unix.BLKRRPART)
+	return err
 }
 
 // SystemPartitionGUID is the GUID of EFI system partitions
@@ -289,6 +310,22 @@ func tryXFS(file io.ReaderAt) (string, error) {
 // BlockDevices is a list of block devices.
 type BlockDevices []*BlockDev
 
+// FilterZeroSize attempts to find block devices that have at least one block
+// of content.
+//
+// This serves to eliminate block devices that have no backing storage, but
+// appear in /sys/class/block anyway (like some loop, nbd, or ram devices).
+func (b BlockDevices) FilterZeroSize() BlockDevices {
+	var nb BlockDevices
+	for _, device := range b {
+		if n, err := device.Size(); err != nil || n == 0 {
+			continue
+		}
+		nb = append(nb, device)
+	}
+	return nb
+}
+
 // FilterESP returns a list of BlockDev objects whose underlying block device
 // is a valid EFI system partition.
 func (b BlockDevices) FilterESP() BlockDevices {
@@ -302,7 +339,7 @@ func (b BlockDevices) FilterGUID(guid string) BlockDevices {
 	for _, device := range b {
 		table, err := device.GPTTable()
 		if err != nil {
-			log.Printf("Skipping %s: %v", device.Name, err)
+			log.Printf("Skipping; no GPT table on %s: %v", device.Name, err)
 			continue
 		}
 		for _, part := range table.Partitions {
