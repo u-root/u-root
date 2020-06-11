@@ -1,0 +1,24 @@
+[
+  {
+    "cmdline": "root=UUID=6e6a0373-fbdf-4e5b-9ea5-07117e10bea5 ro console=tty0 console=ttyS0,115200n8 no_timer_check net.ifnames=0 crashkernel=auto LANG=en_US.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata_new/rhel_7_8_another/boot/initramfs-3.10.0-1127.el7.x86_64.img"
+    },
+    "kernel": {
+      "url": "file://testdata_new/rhel_7_8_another/boot/vmlinuz-3.10.0-1127.el7.x86_64"
+    },
+    "name": "Red Hat Enterprise Linux Server (3.10.0-1127.el7.x86_64) 7.8 (Maipo)"
+  },
+  {
+    "cmdline": "root=UUID=6e6a0373-fbdf-4e5b-9ea5-07117e10bea5 ro console=tty0 console=ttyS0,115200n8 no_timer_check net.ifnames=0 crashkernel=auto",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata_new/rhel_7_8_another/boot/initramfs-0-rescue-8ae51ce6a0a74f8d85fe6f1281d8477f.img"
+    },
+    "kernel": {
+      "url": "file://testdata_new/rhel_7_8_another/boot/vmlinuz-0-rescue-8ae51ce6a0a74f8d85fe6f1281d8477f"
+    },
+    "name": "Red Hat Enterprise Linux Server (0-rescue-8ae51ce6a0a74f8d85fe6f1281d8477f) 7.8 (Maipo)"
+  }
+]
