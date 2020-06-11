@@ -18,8 +18,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/loop"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/loop"
 	"golang.org/x/sys/unix"
 )
 

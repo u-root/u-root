@@ -44,7 +44,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/mount"
-	"github.com/u-root/u-root/pkg/storage"
+	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -79,7 +79,7 @@ func updateBootCmdline(cl string) string {
 	return f.Update(cl)
 }
 
-func mountAndBoot(device *storage.BlockDev, mountDir string) {
+func mountAndBoot(device *block.BlockDev, mountDir string) {
 	os.MkdirAll(mountDir, 0777)
 
 	mp, err := device.Mount(mountDir, mount.ReadOnly)
@@ -141,7 +141,7 @@ func mountAndBoot(device *storage.BlockDev, mountDir string) {
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
 func Localboot() error {
-	blockDevs, err := storage.GetBlockDevices()
+	blockDevs, err := block.GetBlockDevices()
 	if err != nil {
 		return errors.New("no available block devices to boot from")
 	}

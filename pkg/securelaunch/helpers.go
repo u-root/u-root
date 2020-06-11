@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	"github.com/u-root/u-root/pkg/mount"
-	"github.com/u-root/u-root/pkg/storage"
+	"github.com/u-root/u-root/pkg/mount/block"
 )
 
 type persistDataItem struct {
@@ -41,7 +41,7 @@ type mountCacheType struct {
 var mountCache = mountCacheType{m: make(map[string]mountCacheData)}
 
 // StorageBlkDevices helps securelaunch pkg mount devices.
-var StorageBlkDevices storage.BlockDevices
+var StorageBlkDevices block.BlockDevices
 
 // Debug enables verbose logs if kernel cmd line has uroot.uinitargs=-d flag set.
 // kernel cmdline is checked in sluinit.
@@ -114,7 +114,7 @@ func ClearPersistQueue() error {
 	return nil
 }
 
-func getDeviceFromUUID(uuid string) (*storage.BlockDev, error) {
+func getDeviceFromUUID(uuid string) (*block.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
 		return nil, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
@@ -127,7 +127,7 @@ func getDeviceFromUUID(uuid string) (*storage.BlockDev, error) {
 	return nil, fmt.Errorf("no block device exists with UUID=%s", uuid)
 }
 
-func getDeviceFromName(name string) (*storage.BlockDev, error) {
+func getDeviceFromName(name string) (*block.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
 		return nil, fmt.Errorf("fn GetBlkInfo err=%s", e)
 	}
@@ -142,7 +142,7 @@ func getDeviceFromName(name string) (*storage.BlockDev, error) {
 
 // GetStorageDevice parses input of type UUID:/tmp/foo or sda2:/tmp/foo,
 // and returns any matching devices.
-func GetStorageDevice(input string) (*storage.BlockDev, error) {
+func GetStorageDevice(input string) (*block.BlockDev, error) {
 	device, e := getDeviceFromUUID(input)
 	if e != nil {
 		d2, e2 := getDeviceFromName(input)
@@ -201,7 +201,7 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 
 // MountDevice looks up mountCache map. if no entry is found, it
 // mounts a device and updates cache, otherwise returns mountPath.
-func MountDevice(device *storage.BlockDev, flags uintptr) (string, error) {
+func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
 
 	devName := device.Name
 
@@ -277,7 +277,7 @@ func GetBlkInfo() error {
 	if len(StorageBlkDevices) == 0 {
 		var err error
 		Debug("getBlkInfo: expensive function call to get block stats from storage pkg")
-		StorageBlkDevices, err = storage.GetBlockDevices()
+		StorageBlkDevices, err = block.GetBlockDevices()
 		if err != nil {
 			return fmt.Errorf("getBlkInfo: storage.GetBlockDevices err=%v. Exiting", err)
 		}

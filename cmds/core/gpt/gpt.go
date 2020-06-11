@@ -21,7 +21,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/gpt"
+	"github.com/u-root/u-root/pkg/mount/gpt"
 )
 
 const cmd = "gpt [options] file"

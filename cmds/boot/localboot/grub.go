@@ -18,7 +18,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/u-root/u-root/pkg/bootconfig"
-	"github.com/u-root/u-root/pkg/storage"
+	"github.com/u-root/u-root/pkg/mount/block"
 )
 
 // List of directories where to recursively look for grub config files. The root dorectory
@@ -59,7 +59,7 @@ func isGrubSearchDir(dirname string) bool {
 // BootConfig structures, one for each menuentry, in the same order as they
 // appear in grub.cfg. All opened kernel and initrd files are relative to
 // basedir.
-func ParseGrubCfg(ver grubVersion, devices storage.BlockDevices, grubcfg string, basedir string) []bootconfig.BootConfig {
+func ParseGrubCfg(ver grubVersion, devices block.BlockDevices, grubcfg string, basedir string) []bootconfig.BootConfig {
 	// This parser sucks. It's not even a parser, it just looks for lines
 	// starting with menuentry, linux or initrd.
 	// TODO use a parser, e.g. https://github.com/alecthomas/participle
@@ -191,7 +191,7 @@ func isMn(r rune) bool {
 
 // ScanGrubConfigs looks for grub2 and grub legacy config files in the known
 // locations and returns a list of boot configurations.
-func ScanGrubConfigs(devices storage.BlockDevices, basedir string) []bootconfig.BootConfig {
+func ScanGrubConfigs(devices block.BlockDevices, basedir string) []bootconfig.BootConfig {
 	bootconfigs := make([]bootconfig.BootConfig, 0)
 	err := filepath.Walk(basedir, func(currentPath string, info os.FileInfo, err error) error {
 		if err != nil {
