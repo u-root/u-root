@@ -59,7 +59,7 @@ func isGrubSearchDir(dirname string) bool {
 // BootConfig structures, one for each menuentry, in the same order as they
 // appear in grub.cfg. All opened kernel and initrd files are relative to
 // basedir.
-func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, basedir string) []bootconfig.BootConfig {
+func ParseGrubCfg(ver grubVersion, devices storage.BlockDevices, grubcfg string, basedir string) []bootconfig.BootConfig {
 	// This parser sucks. It's not even a parser, it just looks for lines
 	// starting with menuentry, linux or initrd.
 	// TODO use a parser, e.g. https://github.com/alecthomas/participle

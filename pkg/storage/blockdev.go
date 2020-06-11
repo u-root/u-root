@@ -51,7 +51,7 @@ func Device(maybeDevpath string) (*BlockDev, error) {
 }
 
 // String implements fmt.Stringer.
-func (b BlockDev) String() string {
+func (b *BlockDev) String() string {
 	if len(b.FSType) > 0 {
 		return fmt.Sprintf("BlockDevice(name=%s, fs_type=%s, fs_uuid=%s)", b.Name, b.FSType, b.FsUUID)
 	}
@@ -64,7 +64,7 @@ func (b BlockDev) DevicePath() string {
 }
 
 // Mount implements mount.Mounter.
-func (b BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+func (b *BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
 	devpath := filepath.Join("/dev", b.Name)
 	if len(b.FSType) > 0 {
 		return mount.Mount(devpath, path, b.FSType, "", flags)
@@ -75,7 +75,7 @@ func (b BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
 
 // GPTTable tries to read a GPT table from the block device described by the
 // passed BlockDev object, and returns a gpt.Table object, or an error if any
-func (b BlockDev) GPTTable() (*gpt.Table, error) {
+func (b *BlockDev) GPTTable() (*gpt.Table, error) {
 	fd, err := os.Open(fmt.Sprintf("/dev/%s", b.Name))
 	if err != nil {
 		return nil, err
@@ -131,9 +131,9 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 
 // GetBlockDevices iterates over /sys/class/block entries and returns a list of
 // BlockDev objects, or an error if any
-func GetBlockDevices() ([]BlockDev, error) {
-	blockdevs := make([]BlockDev, 0)
-	devnames := make([]string, 0)
+func GetBlockDevices() (BlockDevices, error) {
+	var blockdevs []*BlockDev
+	var devnames []string
 	root := "/sys/class/block"
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -152,12 +152,13 @@ func GetBlockDevices() ([]BlockDev, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for _, devname := range devnames {
 		devpath := filepath.Join("/dev/", devname)
 		if uuid, err := getUUID(devpath); err != nil {
-			blockdevs = append(blockdevs, BlockDev{Name: devname})
+			blockdevs = append(blockdevs, &BlockDev{Name: devname})
 		} else {
-			blockdevs = append(blockdevs, BlockDev{Name: devname, FsUUID: uuid})
+			blockdevs = append(blockdevs, &BlockDev{Name: devname, FsUUID: uuid})
 		}
 	}
 	return blockdevs, nil
@@ -286,7 +287,7 @@ func tryXFS(file io.ReaderAt) (string, error) {
 }
 
 // BlockDevices is a list of block devices.
-type BlockDevices []BlockDev
+type BlockDevices []*BlockDev
 
 // FilterESP returns a list of BlockDev objects whose underlying block device
 // is a valid EFI system partition.

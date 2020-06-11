@@ -79,7 +79,7 @@ func updateBootCmdline(cl string) string {
 	return f.Update(cl)
 }
 
-func mountAndBoot(device storage.BlockDev, mountDir string) {
+func mountAndBoot(device *storage.BlockDev, mountDir string) {
 	os.MkdirAll(mountDir, 0777)
 
 	mp, err := device.Mount(mountDir, mount.ReadOnly)

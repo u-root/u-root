@@ -72,7 +72,7 @@ func mountByGUID(devices storage.BlockDevices, guid, baseMountpoint string) (*mo
 // instead.
 // The fourth parameter, `dryrun`, will not boot the found configurations if set
 // to true.
-func BootGrubMode(devices []storage.BlockDev, baseMountpoint string, guid string, dryrun bool, configIdx int) error {
+func BootGrubMode(devices storage.BlockDevices, baseMountpoint string, guid string, dryrun bool, configIdx int) error {
 	var mounted []*mount.MountPoint
 	if guid == "" {
 		// try mounting all the available devices, with all the supported file
@@ -167,7 +167,7 @@ func BootGrubMode(devices []storage.BlockDev, baseMountpoint string, guid string
 // The third parameter, `guid`, is the partition GUID to look for.
 // The fourth parameter, `dryrun`, will not boot the found configurations if set
 // to true.
-func BootPathMode(devices []storage.BlockDev, baseMountpoint string, guid string, dryrun bool) error {
+func BootPathMode(devices storage.BlockDevices, baseMountpoint string, guid string, dryrun bool) error {
 	mount, err := mountByGUID(devices, guid, baseMountpoint)
 	if err != nil {
 		return err
