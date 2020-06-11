@@ -489,22 +489,14 @@ func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 		return nil, errors.New("Not enough parameters given")
 	}
 
-	switch param[0] {
-	case
-		_IPMI_NETFN_CHASSIS,
-		_IPMI_NETFN_APP,
-		_IPMI_NETFN_STORAGE,
-		_IPMI_NETFN_TRANSPORT:
-
-		req := &req{}
-		req.msg.netfn = param[0]
-		req.msg.cmd = param[1]
-		if len(param) > 2 {
-			req.msg.data = unsafe.Pointer(&param[2])
-		}
-		req.msg.dataLen = uint16(len(param) - 2)
-		return i.sendrecv(req)
-	default:
-		return nil, errors.New("Parameter is invalid")
+	req := &req{}
+	req.msg.netfn = param[0]
+	req.msg.cmd = param[1]
+	if len(param) > 2 {
+		req.msg.data = unsafe.Pointer(&param[2])
 	}
+
+	req.msg.dataLen = uint16(len(param) - 2)
+
+	return i.sendrecv(req)
 }
