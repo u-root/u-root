@@ -7,27 +7,23 @@ package syslinux
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/boottest"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
-	"github.com/u-root/u-root/pkg/uio"
 )
 
-func mustReadAll(r io.ReaderAt) string {
-	if r == nil {
-		return ""
-	}
-	b, err := uio.ReadAll(r)
+func mustParseURL(s string) *url.URL {
+	u, err := url.Parse(s)
 	if err != nil {
-		return fmt.Sprintf("read error: %s", err)
+		panic(fmt.Sprintf("parsing %q failed: %v", s, err))
 	}
-	return string(b)
+	return u
 }
 
 type errorReader struct {
@@ -36,73 +32,6 @@ type errorReader struct {
 
 func (e errorReader) ReadAt(p []byte, n int64) (int, error) {
 	return 0, e.err
-}
-
-func sameBootImage(got, want boot.OSImage) error {
-	if got.Label() != want.Label() {
-		return fmt.Errorf("got image label %s, want %s", got.Label(), want.Label())
-	}
-
-	if gotLinux, ok := got.(*boot.LinuxImage); ok {
-		wantLinux, ok := want.(*boot.LinuxImage)
-		if !ok {
-			return fmt.Errorf("got image %s is Linux image, but %s is not", got, want)
-		}
-
-		// Same kernel?
-		if !uio.ReaderAtEqual(gotLinux.Kernel, wantLinux.Kernel) {
-			return fmt.Errorf("got kernel %s, want %s", mustReadAll(gotLinux.Kernel), mustReadAll(wantLinux.Kernel))
-		}
-
-		// Same initrd?
-		if !uio.ReaderAtEqual(gotLinux.Initrd, wantLinux.Initrd) {
-			return fmt.Errorf("got initrd %s, want %s", mustReadAll(gotLinux.Initrd), mustReadAll(wantLinux.Initrd))
-		}
-
-		// Same cmdline?
-		if gotLinux.Cmdline != wantLinux.Cmdline {
-			return fmt.Errorf("got cmdline %s, want %s", gotLinux.Cmdline, wantLinux.Cmdline)
-		}
-		return nil
-	}
-
-	if gotMB, ok := got.(*boot.MultibootImage); ok {
-		wantMB, ok := want.(*boot.MultibootImage)
-		if !ok {
-			return fmt.Errorf("got image %s is Multiboot image, but %s is not", got, want)
-		}
-
-		// Same kernel?
-		if !uio.ReaderAtEqual(gotMB.Kernel, wantMB.Kernel) {
-			return fmt.Errorf("got kernel %s, want %s", mustReadAll(gotMB.Kernel), mustReadAll(wantMB.Kernel))
-		}
-
-		// Same cmdline?
-		if gotMB.Cmdline != wantMB.Cmdline {
-			return fmt.Errorf("got cmdline %s, want %s", gotMB.Cmdline, wantMB.Cmdline)
-		}
-
-		if len(gotMB.Modules) != len(wantMB.Modules) {
-			return fmt.Errorf("got %d modules, want %d modules", len(gotMB.Modules), len(wantMB.Modules))
-		}
-
-		for i := range gotMB.Modules {
-			g := gotMB.Modules[i]
-			w := wantMB.Modules[i]
-			if g.Name != w.Name {
-				return fmt.Errorf("module %d got name %s, want %s", i, g.Name, w.Name)
-			}
-			if g.CmdLine != w.CmdLine {
-				return fmt.Errorf("module %d got name %s, want %s", i, g.CmdLine, w.CmdLine)
-			}
-			if !uio.ReaderAtEqual(g.Module, w.Module) {
-				return fmt.Errorf("got kernel %s, want %s", mustReadAll(g.Module), mustReadAll(w.Module))
-			}
-		}
-		return nil
-	}
-
-	return fmt.Errorf("image not supported")
 }
 
 func TestParseGeneral(t *testing.T) {
@@ -574,13 +503,13 @@ func TestParseGeneral(t *testing.T) {
 			s.Register(fs.Scheme, fs)
 			s.Register(http.Scheme, http)
 
-			wd := &url.URL{
+			rootdir := &url.URL{
 				Scheme: "tftp",
 				Host:   "1.2.3.4",
-				Path:   "/foobar",
+				Path:   "/",
 			}
 
-			got, err := ParseConfigFile(context.Background(), s, "pxelinux.cfg/default", wd)
+			got, err := ParseConfigFile(context.Background(), s, "pxelinux.cfg/default", rootdir, "foobar")
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)
 			} else if err != nil {
@@ -592,7 +521,7 @@ func TestParseGeneral(t *testing.T) {
 			}
 
 			for i, want := range tt.want {
-				if err := sameBootImage(got[i], want); err != nil {
+				if err := boottest.SameBootImage(got[i], want); err != nil {
 					t.Errorf("Boot image index %d not same: %v", i, err)
 				}
 			}
@@ -605,14 +534,15 @@ func TestParseCorner(t *testing.T) {
 		name       string
 		s          curl.Schemes
 		configFile string
-		wd         *url.URL
+		rootdir    *url.URL
+		wd         string
 		err        error
 	}{
 		{
 			name:       "no schemes",
 			s:          nil,
 			configFile: "pxelinux.cfg/default",
-			wd: &url.URL{
+			rootdir: &url.URL{
 				Scheme: "tftp",
 				Host:   "1.2.3.4",
 				Path:   "/foobar",
@@ -630,7 +560,7 @@ func TestParseCorner(t *testing.T) {
 			name:       "no scheme and config file",
 			s:          nil,
 			configFile: "",
-			wd: &url.URL{
+			rootdir: &url.URL{
 				Scheme: "tftp",
 				Host:   "1.2.3.4",
 				Path:   "/foobar",
@@ -648,7 +578,7 @@ func TestParseCorner(t *testing.T) {
 			name:       "no scheme, config file, and working dir",
 			s:          nil,
 			configFile: "",
-			wd:         nil,
+			rootdir:    nil,
 			err: &curl.URLError{
 				URL: &url.URL{},
 				Err: curl.ErrNoSuchScheme,
@@ -656,7 +586,7 @@ func TestParseCorner(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseConfigFile(context.Background(), tt.s, tt.configFile, tt.wd)
+			_, err := ParseConfigFile(context.Background(), tt.s, tt.configFile, tt.rootdir, tt.wd)
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("ParseConfigFile() = %v, want %v", err, tt.err)
 			}
@@ -665,47 +595,43 @@ func TestParseCorner(t *testing.T) {
 }
 
 func TestParseURL(t *testing.T) {
-	for i, tt := range []struct {
-		url  string
-		wd   *url.URL
-		err  bool
-		want *url.URL
+	for _, tt := range []struct {
+		filename string
+		rootdir  *url.URL
+		wd       string
+		want     *url.URL
 	}{
 		{
-			url: "default",
-			wd: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg",
-			},
-			want: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg/default",
-			},
+			filename: "foobar",
+			rootdir:  mustParseURL("http://[2001::1]:18282/"),
+			wd:       "files/more",
+			want:     mustParseURL("http://[2001::1]:18282/files/more/foobar"),
 		},
 		{
-			url: "http://192.168.2.1/configs/your-machine.cfg",
-			wd: &url.URL{
-				Scheme: "tftp",
-				Host:   "192.168.1.1",
-				Path:   "/foobar/pxelinux.cfg",
-			},
-			want: &url.URL{
-				Scheme: "http",
-				Host:   "192.168.2.1",
-				Path:   "/configs/your-machine.cfg",
-			},
+			filename: "/foobar",
+			rootdir:  mustParseURL("http://[2001::1]:18282"),
+			wd:       "files/more",
+			want:     mustParseURL("http://[2001::1]:18282/foobar"),
+		},
+		{
+			filename: "http://[2002::2]/blabla",
+			rootdir:  mustParseURL("http://[2001::1]:18282/files"),
+			wd:       "more",
+			want:     mustParseURL("http://[2002::2]/blabla"),
+		},
+		{
+			filename: "http://[2002::2]/blabla",
+			rootdir:  nil,
+			want:     mustParseURL("http://[2002::2]/blabla"),
 		},
 	} {
-		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
-			got, err := parseURL(tt.url, tt.wd)
-			if (err != nil) != tt.err {
-				t.Errorf("Wanted error (%v), but got %v", tt.err, err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseURL() = %#v, want %#v", got, tt.want)
-			}
-		})
+		got, err := parseURL(tt.filename, tt.rootdir, tt.wd)
+		if err != nil {
+			t.Errorf("parseURL(%q, %s, %s) = %v, want %v", tt.filename, tt.rootdir, tt.wd, err, nil)
+		}
+
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("parseURL(%q, %s, %s) = %v, want %v", tt.filename, tt.rootdir, tt.wd, got, tt.want)
+		}
 	}
 }

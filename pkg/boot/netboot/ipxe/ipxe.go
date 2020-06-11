@@ -99,7 +99,7 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 
 	// If it parsed, but it didn't have a Scheme or Host, use the working
 	// directory's values.
-	if len(u.Scheme) == 0 {
+	if len(u.Scheme) == 0 && wd != nil {
 		u.Scheme = wd.Scheme
 
 		if len(u.Host) == 0 {

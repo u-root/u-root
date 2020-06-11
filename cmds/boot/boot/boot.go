@@ -36,7 +36,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +45,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot/grub"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/curl"
 )
 
 const (
@@ -202,30 +200,29 @@ func Localboot() error {
 		}
 		debug("mount succeed")
 		u := filepath.Join(uroot, d)
-		wd := &url.URL{
-			Scheme: "file",
-			Path:   u,
+
+		imgs, err := grub.ParseLocalConfig(context.Background(), u)
+		if err != nil {
+			log.Printf("Failed to parse GRUB configs, trying another format...: %v", err)
 		}
 
-		img, err := GrubBootImage(context.Background(), curl.DefaultSchemes, wd, *defaultBoot, *list)
+		// not grub config found, try isolinux
+		moreImgs, err := syslinux.ParseLocalConfig(context.Background(), u)
 		if err != nil {
-			log.Printf("GrubBootImage failed: %v", err)
-			// not grub config found, try isolinux
-			var imgs []boot.OSImage
-			imgs, err = syslinux.ParseLocalConfig(context.Background(), u)
-			if len(imgs) == 0 {
-				err = fmt.Errorf("no valid syslinux config found")
-			} else {
-				img = imgs[0]
-			}
+			log.Printf("Failed to parse syslinux configs: %v", err)
 		}
-		if err != nil {
-			log.Printf("IsolinuxBootImage failed: %v", err)
+		imgs = append(imgs, moreImgs...)
+
+		if len(imgs) == 0 {
 			if err := umountEntry(u); err != nil {
 				log.Printf("Can't unmount %v: %v", u, err)
 			}
 			continue
 		}
+
+		// Boot just the first image.
+		img := imgs[0]
+
 		if li, ok := img.(*boot.LinuxImage); ok {
 			// Filter the kernel command line
 			li.Cmdline = updateBootCmdline(li.Cmdline)
@@ -261,48 +258,4 @@ func main() {
 	if err := Localboot(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// grub parser
-
-var probeGrubFiles = []string{
-	"boot/grub/grub.cfg",
-	"grub/grub.cfg",
-	"grub2/grub.cfg",
-}
-
-func GrubParseConfig(ctx context.Context, workingDir *url.URL, s curl.Schemes) (*grub.Config, error) {
-	for _, relname := range probeGrubFiles {
-		c, err := grub.ParseConfigFile(ctx, s, relname, workingDir)
-		if curl.IsURLError(err) {
-			continue
-		}
-		return c, err
-	}
-	return nil, fmt.Errorf("no valid grub config found")
-}
-
-// GrubBootImage
-func GrubBootImage(ctx context.Context, schemes curl.Schemes, workingDir *url.URL, entryID string, list bool) (boot.OSImage, error) {
-	pc, err := GrubParseConfig(ctx, workingDir, schemes)
-	if err != nil && err != grub.ErrDefaultEntryNotFound {
-		return nil, fmt.Errorf("failed to parse grub config: %v", err)
-	}
-	if list {
-		fmt.Printf("%v\n", pc.Entries)
-	}
-	var entry boot.OSImage
-	if entryID == "" {
-		if err == grub.ErrDefaultEntryNotFound {
-			return nil, err
-		}
-		entry = pc.Entries[pc.DefaultEntry]
-	} else {
-		var ok bool
-		entry, ok = pc.Entries[entryID]
-		if !ok {
-			return nil, fmt.Errorf("entry not found in grub config: %v", entryID)
-		}
-	}
-	return entry, nil
 }
