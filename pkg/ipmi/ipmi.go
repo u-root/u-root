@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package ipmi implements functions to communicate with
-// the OpenIPMI driver interface.
+// Package ipmi implements functions to communicate with the OpenIPMI driver
+// interface.
 package ipmi
 
 import (
@@ -12,8 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"syscall"
 	"unsafe"
+
+	"github.com/vtolstov/go-ioctl"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -69,8 +73,8 @@ const (
 )
 
 var (
-	_IPMICTL_RECEIVE_MSG  = IOWR(_IPMI_IOC_MAGIC, 12, int(unsafe.Sizeof(recv{})))
-	_IPMICTL_SEND_COMMAND = IOR(_IPMI_IOC_MAGIC, 13, int(unsafe.Sizeof(req{})))
+	_IPMICTL_RECEIVE_MSG  = ioctl.IOWR(_IPMI_IOC_MAGIC, 12, uintptr(unsafe.Sizeof(recv{})))
+	_IPMICTL_SEND_COMMAND = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(req{})))
 )
 
 type IPMI struct {
@@ -89,6 +93,18 @@ type req struct {
 	addrLen uint32
 	msgid   int64 //nolint:structcheck
 	msg     msg
+}
+
+func ioctlSetReq(fd, name uintptr, req *req) error {
+	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(req)))
+	runtime.KeepAlive(req)
+	return err
+}
+
+func ioctlGetRecv(fd, name uintptr, recv *recv) error {
+	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(recv)))
+	runtime.KeepAlive(recv)
+	return err
 }
 
 type recv struct {
@@ -191,7 +207,7 @@ func (i *IPMI) sendrecv(req *req) ([]byte, error) {
 
 	req.addr = &addr
 	req.addrLen = uint32(unsafe.Sizeof(addr))
-	if err := Ioctl(i.Fd(), _IPMICTL_SEND_COMMAND, unsafe.Pointer(req)); err != 0 {
+	if err := ioctlSetReq(i.Fd(), _IPMICTL_SEND_COMMAND, req); err != nil {
 		return nil, err
 	}
 
@@ -211,7 +227,7 @@ func (i *IPMI) sendrecv(req *req) ([]byte, error) {
 	buf := make([]byte, _IPMI_BUF_SIZE)
 	recv.msg.data = unsafe.Pointer(&buf[0])
 	recv.msg.dataLen = _IPMI_BUF_SIZE
-	if err := Ioctl(i.Fd(), _IPMICTL_RECEIVE_MSG, unsafe.Pointer(recv)); err != 0 {
+	if err := ioctlGetRecv(i.Fd(), _IPMICTL_RECEIVE_MSG, recv); err != nil {
 		return nil, err
 	}
 

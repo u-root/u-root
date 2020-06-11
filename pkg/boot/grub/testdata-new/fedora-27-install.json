@@ -1,0 +1,35 @@
+[
+  {
+    "cmdline": "root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image rd.live.check quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/fedora-27-install/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file://testdata-new/fedora-27-install/images/pxeboot/vmlinuz"
+    },
+    "name": "Test this media \u0026 start Fedora-Workstation-Live 27"
+  },
+  {
+    "cmdline": "root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/fedora-27-install/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file://testdata-new/fedora-27-install/images/pxeboot/vmlinuz"
+    },
+    "name": "Start Fedora-Workstation-Live 27"
+  },
+  {
+    "cmdline": "root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image nomodeset quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/fedora-27-install/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file://testdata-new/fedora-27-install/images/pxeboot/vmlinuz"
+    },
+    "name": "Start Fedora-Workstation-Live 27 in basic graphics mode"
+  }
+]

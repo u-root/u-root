@@ -28,6 +28,7 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"flag"
@@ -35,9 +36,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -46,7 +45,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot/grub"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/curl"
 )
 
 const (
@@ -202,24 +200,29 @@ func Localboot() error {
 		}
 		debug("mount succeed")
 		u := filepath.Join(uroot, d)
-		wd := &url.URL{
-			Scheme: "file",
-			Path:   u,
+
+		imgs, err := grub.ParseLocalConfig(context.Background(), u)
+		if err != nil {
+			log.Printf("Failed to parse GRUB configs, trying another format...: %v", err)
 		}
 
-		img, err := GrubBootImage(curl.DefaultSchemes, wd, *defaultBoot, *list)
+		// not grub config found, try isolinux
+		moreImgs, err := syslinux.ParseLocalConfig(context.Background(), u)
 		if err != nil {
-			log.Printf("GrubBootImage failed: %v", err)
-			// not grub config found, try isolinux
-			img, err = IsolinuxBootImage(curl.DefaultSchemes, wd)
+			log.Printf("Failed to parse syslinux configs: %v", err)
 		}
-		if err != nil {
-			log.Printf("IsolinuxBootImage failed: %v", err)
+		imgs = append(imgs, moreImgs...)
+
+		if len(imgs) == 0 {
 			if err := umountEntry(u); err != nil {
 				log.Printf("Can't unmount %v: %v", u, err)
 			}
 			continue
 		}
+
+		// Boot just the first image.
+		img := imgs[0]
+
 		if li, ok := img.(*boot.LinuxImage); ok {
 			// Filter the kernel command line
 			li.Cmdline = updateBootCmdline(li.Cmdline)
@@ -255,100 +258,4 @@ func main() {
 	if err := Localboot(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// use syslinux parser
-
-func probeIsolinuxFiles() []string {
-	files := make([]string, 0, 10)
-	// search order from the syslinux wiki
-	// http://wiki.syslinux.org/wiki/index.php?title=Config
-	// TODO: do we want to handle extlinux too ?
-	dirs := []string{
-		"boot/isolinux",
-		"isolinux",
-		"boot/syslinux",
-		"syslinux",
-		"",
-	}
-	confs := []string{
-		"isolinux.cfg",
-		"syslinux.cfg",
-	}
-	for _, dir := range dirs {
-		for _, conf := range confs {
-			if dir == "" {
-				files = append(files, conf)
-			} else {
-				files = append(files, path.Join(dir, conf))
-			}
-		}
-	}
-	return files
-}
-
-func IsolinuxParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*syslinux.Config, error) {
-	for _, relname := range probeIsolinuxFiles() {
-		c, err := syslinux.ParseConfigFileWithSchemes(s, relname, workingDir)
-		if curl.IsURLError(err) {
-			continue
-		}
-		return c, err
-	}
-	return nil, fmt.Errorf("no valid syslinux config found")
-}
-
-// call IsolinuxBootImage(curl.DefaultSchemes, dir)
-func IsolinuxBootImage(schemes curl.Schemes, workingDir *url.URL) (*boot.LinuxImage, error) {
-	pc, err := IsolinuxParseConfigWithSchemes(workingDir, schemes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
-	}
-
-	label := pc.Entries[pc.DefaultEntry]
-	return label, nil
-}
-
-// grub parser
-
-var probeGrubFiles = []string{
-	"boot/grub/grub.cfg",
-	"grub/grub.cfg",
-	"grub2/grub.cfg",
-}
-
-func GrubParseConfigWithSchemes(workingDir *url.URL, s curl.Schemes) (*grub.Config, error) {
-	for _, relname := range probeGrubFiles {
-		c, err := grub.ParseConfigFileWithSchemes(s, relname, workingDir)
-		if curl.IsURLError(err) {
-			continue
-		}
-		return c, err
-	}
-	return nil, fmt.Errorf("no valid grub config found")
-}
-
-// GrubBootImage
-func GrubBootImage(schemes curl.Schemes, workingDir *url.URL, entryID string, list bool) (boot.OSImage, error) {
-	pc, err := GrubParseConfigWithSchemes(workingDir, schemes)
-	if err != nil && err != grub.ErrDefaultEntryNotFound {
-		return nil, fmt.Errorf("failed to parse grub config: %v", err)
-	}
-	if list {
-		fmt.Printf("%v\n", pc.Entries)
-	}
-	var entry boot.OSImage
-	if entryID == "" {
-		if err == grub.ErrDefaultEntryNotFound {
-			return nil, err
-		}
-		entry = pc.Entries[pc.DefaultEntry]
-	} else {
-		var ok bool
-		entry, ok = pc.Entries[entryID]
-		if !ok {
-			return nil, fmt.Errorf("entry not found in grub config: %v", entryID)
-		}
-	}
-	return entry, nil
 }

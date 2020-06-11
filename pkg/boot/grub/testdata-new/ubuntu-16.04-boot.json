@@ -1,0 +1,79 @@
+[
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-42-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-42-generic.efi.signed"
+    },
+    "name": "Ubuntu"
+  },
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-42-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-42-generic.efi.signed"
+    },
+    "name": "Ubuntu, with Linux 4.10.0-42-generic"
+  },
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff init=/sbin/upstart",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-42-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-42-generic.efi.signed"
+    },
+    "name": "Ubuntu, with Linux 4.10.0-42-generic (upstart)"
+  },
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro recovery nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-42-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-42-generic.efi.signed"
+    },
+    "name": "Ubuntu, with Linux 4.10.0-42-generic (recovery mode)"
+  },
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-40-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-40-generic.efi.signed"
+    },
+    "name": "Ubuntu, with Linux 4.10.0-40-generic"
+  },
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff init=/sbin/upstart",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-40-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-40-generic.efi.signed"
+    },
+    "name": "Ubuntu, with Linux 4.10.0-40-generic (upstart)"
+  },
+  {
+    "cmdline": "root=/dev/mapper/ubuntu--vg-root ro recovery nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/initrd.img-4.10.0-40-generic"
+    },
+    "kernel": {
+      "url": "file://testdata-new/ubuntu-16.04-boot/vmlinuz-4.10.0-40-generic.efi.signed"
+    },
+    "name": "Ubuntu, with Linux 4.10.0-40-generic (recovery mode)"
+  }
+]

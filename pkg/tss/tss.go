@@ -166,16 +166,29 @@ func (t *TPM) ReadPCR(pcrIndex uint32) ([]byte, error) {
 	}
 }
 
-func (t *TPM) TakeOwnership(newAuth, newSRKAuth string) (bool, error) {
+// TakeOwnership owns the TPM with an owner/srk password
+func (t *TPM) TakeOwnership(newAuth, newSRKAuth string) error {
 	switch t.Version {
 	case TPMVersion12:
 		return takeOwnership12(t.RWC, newAuth, newSRKAuth)
 	case TPMVersion20:
 		return takeOwnership20(t.RWC, newAuth, newSRKAuth)
 	}
-	return false, fmt.Errorf("unsupported TPM version: %x", t.Version)
+	return fmt.Errorf("unsupported TPM version: %x", t.Version)
 }
 
+// ClearOwnership tries to clear all credentials on a TPM
+func (t *TPM) ClearOwnership(ownerAuth string) error {
+	switch t.Version {
+	case TPMVersion12:
+		return clearOwnership12(t.RWC, ownerAuth)
+	case TPMVersion20:
+		return clearOwnership20(t.RWC, ownerAuth)
+	}
+	return fmt.Errorf("unsupported TPM version: %x", t.Version)
+}
+
+// ReadPubEK reads the Endorsement public key
 func (t *TPM) ReadPubEK(ownerPW string) ([]byte, error) {
 	switch t.Version {
 	case TPMVersion12:
@@ -186,6 +199,7 @@ func (t *TPM) ReadPubEK(ownerPW string) ([]byte, error) {
 	return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
 }
 
+// ResetLockValue resets the password counter to zero
 func (t *TPM) ResetLockValue(ownerPW string) (bool, error) {
 	switch t.Version {
 	case TPMVersion12:

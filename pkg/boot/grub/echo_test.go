@@ -6,6 +6,7 @@ package grub
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -108,14 +109,14 @@ func TestGrubTests(t *testing.T) {
 				Scheme: "file",
 				Path:   "./testdata",
 			}
-			c := newParserWithSchemes(wd, curl.DefaultSchemes)
+			c := newParser(wd, curl.DefaultSchemes)
 			c.W = &b
 
 			script, err := ioutil.ReadFile(file)
 			if err != nil {
 				t.Fatalf("error loading file `%s`, %v", file, err)
 			}
-			err = c.append(string(script))
+			err = c.append(context.Background(), string(script))
 			if err != nil {
 				t.Fatalf("error parsing file `%s`, %v", file, err)
 			}
