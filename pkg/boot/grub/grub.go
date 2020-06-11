@@ -35,6 +35,7 @@ var probeGrubFiles = []string{
 	"boot/grub/grub.cfg",
 	"grub/grub.cfg",
 	"grub2/grub.cfg",
+	"boot/grub2/grub.cfg",
 }
 
 // ParseLocalConfig looks for a GRUB config in the disk partition mounted at
