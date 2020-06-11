@@ -28,6 +28,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/bootcmd"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/boot/netboot"
+	"github.com/u-root/u-root/pkg/boot/netboot/iscsi"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/ulog"
@@ -72,8 +73,15 @@ func main() {
 	parsers := []netboot.BootImageParser{
 		&netboot.IPXEParser{Log: ulog.Log, Schemes: curl.DefaultSchemes},
 		&netboot.PXEParser{Log: ulog.Log, Schemes: curl.DefaultSchemes},
+		&iscsi.ISCSIBoot{
+			Log:        ulog.Log,
+			CreateIBFT: true,
+			DiskParsers: []iscsi.DiskParser{
+				iscsi.ESXIBoot{},
+			},
+		},
 	}
-	images, err := netboot.DHCPAndParse(context.Background(), ulog.Log, filteredIfs, conf, parsers, *noNetConfig)
+	entries, err := netboot.DHCPAndParse(context.Background(), ulog.Log, filteredIfs, conf, parsers, *noNetConfig)
 	if err != nil {
 		log.Printf("Netboot failed: %v", err)
 	}

@@ -23,6 +23,7 @@ import (
 	"path"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/boot/netboot/ipxe"
 	"github.com/u-root/u-root/pkg/boot/netboot/pxe"
 	"github.com/u-root/u-root/pkg/curl"
@@ -93,7 +94,7 @@ type IPXEParser struct {
 
 func (IPXEParser) Name() string { return "iPXE" }
 
-func (i *IPXEParser) Parse(ctx context.Context, lease dhclient.Lease) ([]boot.OSImage, error) {
+func (i *IPXEParser) Parse(ctx context.Context, lease dhclient.Lease) ([]menu.Entry, error) {
 	uri, err := lease.Boot()
 	if err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func (i *IPXEParser) Parse(ctx context.Context, lease dhclient.Lease) ([]boot.OS
 		return nil, err
 	}
 	if ipc != nil {
-		return []boot.OSImage{ipc}, nil
+		return menu.OSImages(true, ipc), nil
 	}
 	return nil, nil
 }
@@ -118,7 +119,7 @@ type PXEParser struct {
 
 func (PXEParser) Name() string { return "pxelinux" }
 
-func (p *PXEParser) Parse(ctx context.Context, lease dhclient.Lease) ([]boot.OSImage, error) {
+func (p *PXEParser) Parse(ctx context.Context, lease dhclient.Lease) ([]menu.Entry, error) {
 	uri, err := lease.Boot()
 	if err != nil {
 		return nil, err
@@ -142,17 +143,17 @@ func (p *PXEParser) Parse(ctx context.Context, lease dhclient.Lease) ([]boot.OSI
 	if err != nil {
 		return nil, err
 	}
-	return pxeImages, nil
+	return menu.OSImages(true, pxeImages...), nil
 }
 
 type BootImageParser interface {
 	Name() string
-	Parse(context.Context, dhclient.Lease) ([]boot.OSImage, error)
+	Parse(context.Context, dhclient.Lease) ([]menu.Entry, error)
 }
 
 // DHCPAndParse requests DHCP (v4 + v6) on every ifs given, and parses netboot
 // images from the DHCP leases. Returns bootable OSes.
-func DHCPAndParse(ctx context.Context, l ulog.Logger, ifs []netlink.Link, c dhclient.Config, parsers []BootImageParser, noNetConfig bool) ([]boot.OSImage, error) {
+func DHCPAndParse(ctx context.Context, l ulog.Logger, ifs []netlink.Link, c dhclient.Config, parsers []BootImageParser, noNetConfig bool) ([]menu.Entry, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -194,7 +195,7 @@ func DHCPAndParse(ctx context.Context, l ulog.Logger, ifs []netlink.Link, c dhcl
 				// ip/ipv6 address.
 			}
 
-			var images []boot.OSImage
+			var images []menu.Entry
 			for _, parser := range parsers {
 				imgs, err := parser.Parse(ctx, result.Lease)
 				if err != nil {
