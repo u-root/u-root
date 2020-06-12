@@ -10,11 +10,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/scuzz"
-	"github.com/u-root/u-root/pkg/storage"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -42,7 +43,7 @@ func TestIdentify(t *testing.T) {
 	}
 	t.Logf("Identify(/dev/sda): %v", info)
 
-	device, err := storage.Device("/dev/sda")
+	device, err := block.Device("/dev/sda")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,6 +54,75 @@ func TestIdentify(t *testing.T) {
 
 	if info.NumberSectors != size/512 {
 		t.Errorf("Identify(/dev/sda).NumberSectors = %d, want %d", info.NumberSectors, size/512)
+	}
+}
+
+func TestBlockDevices(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	want := block.BlockDevices{
+		&block.BlockDev{Name: "sda"},
+		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		// TODO: Why does the vfat one not have a UUID? That must be a bug?
+		&block.BlockDev{Name: "sda2"},
+		&block.BlockDev{Name: "sdb"},
+		&block.BlockDev{Name: "sdb1"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = %v want %v", devs, want)
+	}
+
+	sizes := map[string]uint64{
+		"sda":  2048 * 512,
+		"sda1": 1024 * 512,
+		"sda2": 1023 * 512,
+		"sdb":  24 * 512,
+		"sdb1": 23 * 512,
+	}
+	for _, dev := range devs {
+		size, err := dev.Size()
+		if err != nil {
+			t.Errorf("Size(%s) error: %v", dev, err)
+		}
+		if size != sizes[dev.Name] {
+			t.Errorf("Size(%s) = %v, want %v", dev, size, sizes[dev.Name])
+		}
+	}
+
+	blkSizes := map[string]int{
+		"sda":  4096,
+		"sda1": 4096,
+		"sda2": 512,
+		"sdb":  4096,
+		"sdb1": 512,
+	}
+	for _, dev := range devs {
+		blkSize, err := dev.BlockSize()
+		if err != nil {
+			t.Errorf("BlockSize(%s) error: %v", dev, err)
+		}
+		if blkSize != blkSizes[dev.Name] {
+			t.Errorf("BlockSize(%s) = %v, want %v", dev, blkSize, blkSizes[dev.Name])
+		}
+	}
+
+	wantRR := map[string]error{
+		"sda":  nil,
+		"sda1": syscall.EINVAL,
+		"sda2": syscall.EINVAL,
+		"sdb":  nil,
+		"sdb1": syscall.EINVAL,
+	}
+	for _, dev := range devs {
+		if err := dev.ReadPartitionTable(); err != wantRR[dev.Name] {
+			t.Errorf("ReadPartitionTable(%s) = %v, want %v", dev, err, wantRR[dev.Name])
+		}
 	}
 }
 

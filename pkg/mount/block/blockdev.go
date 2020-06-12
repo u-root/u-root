@@ -132,13 +132,12 @@ func (b *BlockDev) Size() (uint64, error) {
 
 // ReadPartitionTable prompts the kernel to re-read the partition table on this block device.
 func (b *BlockDev) ReadPartitionTable() error {
-	f, err := os.Open(b.DevicePath())
+	f, err := os.OpenFile(b.DevicePath(), os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	_, err = unix.IoctlGetInt(int(f.Fd()), unix.BLKRRPART)
-	return err
+	return unix.IoctlSetInt(int(f.Fd()), unix.BLKRRPART, 0)
 }
 
 // SystemPartitionGUID is the GUID of EFI system partitions
