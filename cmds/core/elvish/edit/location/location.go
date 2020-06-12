@@ -139,49 +139,6 @@ func (m *mode) start() {
 
 	ed.Notify("store offline, cannot start location mode")
 	return
-
-	/* what a fucking mess this is.
-
-	// Pinned directories are also blacklisted to prevent them from showing up
-	// twice.
-	black := convertListsToSet(m.hidden, m.pinned)
-	pwd, err := os.Getwd()
-	if err == nil {
-		black[pwd] = struct{}{}
-	}
-	stored, err := daemon.Dirs(black)
-	if err != nil {
-		ed.Notify("store error: %v", err)
-		return
-	}
-
-	// TODO: Move workspace filtering to the daemon.
-	ws := matchWorkspace(pwd, m.workspaces)
-	wsName := ""
-	if ws != nil {
-		wsName = ws.name
-	}
-	wsNameSlash := wsName + string(filepath.Separator)
-
-	var filtered []storedefs.Dir
-	for _, dir := range stored {
-		if filepath.IsAbs(dir.Path) || (wsName != "" && (dir.Path == wsName || strings.HasPrefix(dir.Path, wsNameSlash))) {
-			filtered = append(filtered, dir)
-		}
-	}
-
-	// Prepend pinned dirs.
-	pinnedDirs := convertListToDirs(m.pinned)
-	dirs := make([]storedefs.Dir, len(pinnedDirs)+len(filtered))
-	copy(dirs, pinnedDirs)
-	copy(dirs[len(pinnedDirs):], filtered)
-
-	// Drop the error. When there is an error, home is "", which is used to
-	// signify "no home known" in location.
-	home, _ := util.GetHome("")
-	ed.SetModeListing(m.binding,
-		newProvider(dirs, home, ws, ed.Evaler(), m.matcher))
-	*/
 }
 
 // convertListToDirs converts a list of strings to []storedefs.Dir. It uses the
