@@ -82,7 +82,4 @@ type TPMInfo struct {
 	// for TPM 2.0 devices.
 	FirmwareVersionMajor int
 	FirmwareVersionMinor int
-
-	// PublicInfo of NVIndicies
-	NVIndexData interface{}
 }

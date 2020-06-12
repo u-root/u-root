@@ -1152,31 +1152,28 @@ func GetAlgs(rw io.ReadWriter) ([]Algorithm, error) {
 // GetNVList returns a list of TPM_NV_INDEX values that
 // are currently allocated NV storage through TPM_NV_DefineSpace.
 func GetNVList(rw io.ReadWriter) ([]uint32, error) {
-	var nvList []uint32
 	buf, err := getCapability(rw, capNVList, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := bytes.NewReader(buf)
-	err = binary.Read(r, binary.LittleEndian, &nvList)
+	nvList := make([]uint32, len(buf)/4)
+	for i := range nvList {
+		nvList[i] = uint32(binary.BigEndian.Uint32(buf[i*4 : (i+1)*4]))
+	}
+
 	return nvList, err
 }
 
 // GetNVIndex returns the structure of NVDataPublic which contains
 // information about the requested NV Index.
 // See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.167
-func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (NVDataPublic, error) {
+func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (*NVDataPublic, error) {
 	var nvInfo NVDataPublic
-	buf, err := getCapability(rw, capNVIndex, 0)
-	if err != nil {
-		return nvInfo, fmt.Errorf("failed to get capability NVIndex: %v", err)
+	buf, _ := getCapability(rw, capNVIndex, nvIndex)
+	if _, err := tpmutil.Unpack(buf, &nvInfo); err != nil {
+		return &nvInfo, err
 	}
-	r := bytes.NewReader(buf)
-	err = binary.Read(r, binary.LittleEndian, &nvInfo)
-	if err != nil {
-		return nvInfo, fmt.Errorf("failed to read nvInfo: %v", err)
-	}
-	return nvInfo, nil
+	return &nvInfo, nil
 }
 
 // GetCapabilityRaw reads the requested capability and sub-capability from the
