@@ -4,21 +4,21 @@
 
 // +build !race
 
-package pty
+package gpio
 
 import (
 	"testing"
-	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegration(t *testing.T) {
-	o := &vmtest.Options{
+	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/dev/gpio"}, &vmtest.Options{
 		QEMUOpts: qemu.Options{
-			Timeout: 120 * time.Second,
+			// Make GPIOs nums 10 to 20 available through the
+			// mockup driver.
+			KernelArgs: "gpio-mockup.gpio_mockup_ranges=10,20",
 		},
-	}
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/pty"}, o)
+	})
 }

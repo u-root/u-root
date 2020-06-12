@@ -19,7 +19,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 	"github.com/u-root/u-root/pkg/upath"
 )
 

@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/ebda"
-	"github.com/u-root/u-root/pkg/memio"
+	"github.com/u-root/u-root/pkg/dev/memio"
 )
 
 const (

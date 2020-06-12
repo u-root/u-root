@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/dev/pty"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
-	"github.com/u-root/u-root/pkg/rtc"
+	"github.com/u-root/u-root/pkg/dev/rtc"
 )
 
 const (

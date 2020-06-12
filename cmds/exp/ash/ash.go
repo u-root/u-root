@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/complete"
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 )
 
 var (

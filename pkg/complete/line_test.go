@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 )
 
 // TestSh tests a bash-like line completer.

@@ -15,7 +15,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/msr"
+	"github.com/u-root/u-root/pkg/dev/msr"
 )
 
 var (

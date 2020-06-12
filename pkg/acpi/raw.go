@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/u-root/u-root/pkg/memio"
+	"github.com/u-root/u-root/pkg/dev/memio"
 )
 
 // Raw ACPI table support. Raw tables are those tables

@@ -9,7 +9,7 @@ import (
 	"log"
 
 	"github.com/u-root/u-root/pkg/crypto"
-	"github.com/u-root/u-root/pkg/vpd"
+	"github.com/u-root/u-root/pkg/dev/vpd"
 )
 
 // Get, Set and GetAll are defined here as variables so they can be overridden

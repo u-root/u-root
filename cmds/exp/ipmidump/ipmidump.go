@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/u-root/u-root/pkg/dev/ipmi"
 )
 
 const cmd = "ipmidump [options] "

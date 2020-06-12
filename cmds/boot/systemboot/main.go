@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/booter"
-	"github.com/u-root/u-root/pkg/ipmi"
-	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/dev/ipmi"
+	"github.com/u-root/u-root/pkg/dev/smbios"
 )
 
 var (

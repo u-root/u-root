@@ -15,7 +15,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/dev/pty"
 	"golang.org/x/crypto/ssh"
 )
 

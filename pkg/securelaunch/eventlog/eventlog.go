@@ -12,8 +12,8 @@ import (
 	"os"
 	"strings"
 
+	tss "github.com/u-root/u-root/pkg/dev/tss"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
-	tss "github.com/u-root/u-root/pkg/tss"
 	txtlog "github.com/u-root/u-root/pkg/txtlog"
 )
 

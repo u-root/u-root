@@ -30,7 +30,7 @@ _testmain.go
 
 *.exe
 bin
-dev
+/dev
 /buildbin
 tinycorelinux*
 *.swp

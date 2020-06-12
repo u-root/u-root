@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 )
 
 // pty support. We used to import github.com/kr/pty but what we need is not that complex.

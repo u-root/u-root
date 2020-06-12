@@ -43,8 +43,8 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/u-root/u-root/pkg/dev/msr"
 	"github.com/u-root/u-root/pkg/forth"
-	"github.com/u-root/u-root/pkg/msr"
 )
 
 // let's just do MSRs for now

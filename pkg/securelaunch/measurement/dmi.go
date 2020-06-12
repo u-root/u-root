@@ -13,9 +13,9 @@ import (
 	"log"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/dev/smbios"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
-	"github.com/u-root/u-root/pkg/smbios"
 )
 
 type fieldCluster struct {

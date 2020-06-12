@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/dev/smbios"
 )
 
 const (

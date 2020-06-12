@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	tss "github.com/u-root/u-root/pkg/tss"
+	tss "github.com/u-root/u-root/pkg/dev/tss"
 )
 
 const (

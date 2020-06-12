@@ -7,7 +7,7 @@ package main
 import (
 	"log"
 
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 )
 
 func raw() {

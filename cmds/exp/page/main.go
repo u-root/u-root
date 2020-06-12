@@ -21,7 +21,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 )
 
 func page(t *termios.TTY, r io.Reader, w io.Writer) error {

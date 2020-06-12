@@ -20,7 +20,7 @@ import (
 
 	"unsafe"
 
-	// "github.com/u-root/u-root/pkg/termios"
+	// "github.com/u-root/u-root/pkg/dev/termios"
 	"golang.org/x/sys/unix"
 )
 

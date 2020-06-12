@@ -27,7 +27,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/u-root/u-root/pkg/scuzz"
+	"github.com/u-root/u-root/pkg/dev/scuzz"
 )
 
 // Because all the verbs and options are switches, hence global,

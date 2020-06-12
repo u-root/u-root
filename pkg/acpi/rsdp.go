@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/u-root/u-root/pkg/memio"
+	"github.com/u-root/u-root/pkg/dev/memio"
 )
 
 var (

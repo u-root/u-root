@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/booter"
-	"github.com/u-root/u-root/pkg/vpd"
+	"github.com/u-root/u-root/pkg/dev/vpd"
 )
 
 var dryRun = false

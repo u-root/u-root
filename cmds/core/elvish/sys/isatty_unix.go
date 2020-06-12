@@ -3,7 +3,7 @@
 package sys
 
 import (
-	"github.com/u-root/u-root/pkg/termios"
+	"github.com/u-root/u-root/pkg/dev/termios"
 	"os"
 )
 
