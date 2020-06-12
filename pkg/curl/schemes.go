@@ -303,22 +303,22 @@ func (h HTTPClient) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) 
 
 // RetryFilter implements FileSchemeRetryFilter.
 func (h HTTPClient) RetryFilter(u *url.URL, err error) bool {
-	err, ok := err.(*HTTPClientCodeError)
+	e, ok := err.(*HTTPClientCodeError)
 	if !ok {
 		return true
 	}
-	if err.HTTPCode == 200 {
+	switch c := e.HTTPCode; {
+	case c == 200:
 		return false
-	}
-	if err.HTTPCode == 408 || err.HTTPCode == 409 || err.HTTPCode == 425 || err.HTTPCode == 429 {
+	case c == 408, c == 409, c == 425, c == 429:
 		// Retry for codes "Request Timeout(408), Conflict(409), Too Early(425), and Too Many Requests(429)"
 		return true
-	}
-	if ok && err.HTTPCode >= 400 && err.HTTPCode < 500 {
+	case c >= 400 && c < 500:
 		// We don't retry all other 400 codes, since the situation won't be improved with a retry.
 		return false
+	default:
+		return true
 	}
-	return true
 }
 
 // LocalFileClient implements FileScheme for files on disk.
