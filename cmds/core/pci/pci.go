@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/pci"
+	"github.com/u-root/u-root/pkg/dev/pci"
 )
 
 var (

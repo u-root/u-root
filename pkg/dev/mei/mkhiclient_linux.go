@@ -11,7 +11,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/u-root/u-root/pkg/pci"
+	"github.com/u-root/u-root/pkg/dev/pci"
 )
 
 // Intel MEI PCI dev IDs,
