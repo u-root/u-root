@@ -150,11 +150,29 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 })
 
+// Device makes sure the block device exists and returns a handle to it.
+//
+// maybeDevpath can be path like /dev/sda1, /sys/class/block/sda1 or just sda1.
+// We will just use the last component.
+func Device(maybeDevpath string) (*BlockDev, error) {
+	devname := filepath.Base(maybeDevpath)
+	if _, err := os.Stat(filepath.Join("/sys/class/block", devname)); err != nil {
+		return nil, err
+	}
+
+	devpath := filepath.Join("/dev/", devname)
+	if uuid, err := getUUID(devpath); err == nil {
+		return &BlockDev{Name: devname, FsUUID: uuid}, nil
+	}
+	return &BlockDev{Name: devname}, nil
+}
+
 // GetBlockDevices iterates over /sys/class/block entries and returns a list of
 // BlockDev objects, or an error if any
 func GetBlockDevices() (BlockDevices, error) {
 	var blockdevs []*BlockDev
 	var devnames []string
+
 	root := "/sys/class/block"
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -168,19 +186,15 @@ func GetBlockDevices() (BlockDevices, error) {
 			return nil
 		}
 		devnames = append(devnames, rel)
+		dev, err := Device(rel)
+		if err != nil {
+			return err
+		}
+		blockdevs = append(blockdevs, dev)
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	for _, devname := range devnames {
-		devpath := filepath.Join("/dev/", devname)
-		if uuid, err := getUUID(devpath); err != nil {
-			blockdevs = append(blockdevs, &BlockDev{Name: devname})
-		} else {
-			blockdevs = append(blockdevs, &BlockDev{Name: devname, FsUUID: uuid})
-		}
 	}
 	return blockdevs, nil
 }
