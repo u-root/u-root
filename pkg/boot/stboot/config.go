@@ -8,14 +8,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/boot/jsonboot"
 )
 
 // Stconfig contains multiple u-root BootConfig stucts and additional
 // information for stboot
 type Stconfig struct {
 	// configs is an array of u-root BootConfigs
-	BootConfigs []bootconfig.BootConfig `json:"boot_configs"`
+	BootConfigs []jsonboot.BootConfig `json:"boot_configs"`
 	// rootCertPath is the path to root certificate of the signing
 	RootCertPath string `json:"root_cert"`
 }
@@ -54,7 +54,7 @@ func (cfg *Stconfig) IsValid() bool {
 
 // GetBootConfig returns the i-th boot configuration from the manifest, or an
 // error if an invalid index is passed.
-func (cfg *Stconfig) getBootConfig(index int) (*bootconfig.BootConfig, error) {
+func (cfg *Stconfig) getBootConfig(index int) (*jsonboot.BootConfig, error) {
 	if index < 0 || index >= len(cfg.BootConfigs) {
 		return nil, fmt.Errorf("invalid index: not in range: %d", index)
 	}

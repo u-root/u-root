@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/boot/jsonboot"
 	"github.com/u-root/u-root/pkg/uzip"
 )
 
@@ -160,7 +160,7 @@ func (ball *BootBall) Dir() string {
 }
 
 // GetBootConfigByIndex returns the Bootconfig at index from the BootBall's configs arrey.
-func (ball *BootBall) GetBootConfigByIndex(index int) (*bootconfig.BootConfig, error) {
+func (ball *BootBall) GetBootConfigByIndex(index int) (*jsonboot.BootConfig, error) {
 	bc, err := ball.config.getBootConfig(index)
 	if err != nil {
 		return nil, err

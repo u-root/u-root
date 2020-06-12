@@ -12,14 +12,14 @@ import (
 	"net"
 	"os"
 
-	"github.com/u-root/u-root/pkg/booter"
+	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/vpd"
 )
 
 var dryRun = false
 
 func add(entrytype string, args []string) error {
-	var entry booter.Booter
+	var entry systembooter.Booter
 	var err error
 	switch entrytype {
 	case "netboot":
@@ -53,8 +53,8 @@ func add(entrytype string, args []string) error {
 	return addBootEntry(entry)
 }
 
-func parseLocalbootFlags(method string, args []string) (*booter.LocalBooter, error) {
-	cfg := &booter.LocalBooter{
+func parseLocalbootFlags(method string, args []string) (*systembooter.LocalBooter, error) {
+	cfg := &systembooter.LocalBooter{
 		Type:   "localboot",
 		Method: method,
 	}
@@ -80,7 +80,7 @@ func parseLocalbootFlags(method string, args []string) (*booter.LocalBooter, err
 	return cfg, nil
 }
 
-func parseNetbootFlags(method, mac string, args []string) (*booter.NetBooter, error) {
+func parseNetbootFlags(method, mac string, args []string) (*systembooter.NetBooter, error) {
 	if method != "dhcpv4" && method != "dhcpv6" {
 		return nil, fmt.Errorf("Method needs to be either dhcpv4 or dhcpv6")
 	}
@@ -90,7 +90,7 @@ func parseNetbootFlags(method, mac string, args []string) (*booter.NetBooter, er
 		return nil, err
 	}
 
-	cfg := &booter.NetBooter{
+	cfg := &systembooter.NetBooter{
 		Type:   "netboot",
 		Method: method,
 		MAC:    mac,
@@ -114,7 +114,7 @@ func parseNetbootFlags(method, mac string, args []string) (*booter.NetBooter, er
 	return cfg, nil
 }
 
-func addBootEntry(cfg booter.Booter) error {
+func addBootEntry(cfg systembooter.Booter) error {
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return err

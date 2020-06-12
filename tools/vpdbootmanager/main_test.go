@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/u-root/u-root/pkg/booter"
+	"github.com/u-root/u-root/pkg/boot/systembooter"
 )
 
 func TestInvalidCommand(t *testing.T) {
@@ -49,7 +49,7 @@ func TestAddNetbootEntryFull(t *testing.T) {
 	require.NoError(t, err)
 	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
-	var out booter.NetBooter
+	var out systembooter.NetBooter
 	err = json.Unmarshal([]byte(file), &out)
 	require.NoError(t, err)
 	require.Equal(t, "dhcpv6", out.Method)
@@ -73,7 +73,7 @@ func TestAddLocalbootEntryFull(t *testing.T) {
 	require.NoError(t, err)
 	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
-	var out booter.NetBooter
+	var out systembooter.NetBooter
 	err = json.Unmarshal([]byte(file), &out)
 	require.NoError(t, err)
 	require.Equal(t, "grub", out.Method)
