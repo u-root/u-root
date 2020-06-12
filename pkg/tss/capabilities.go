@@ -16,32 +16,16 @@ import (
 )
 
 func readTPM12Information(rwc io.ReadWriter) (TPMInfo, error) {
-	var nvDataPublic []tpm1.NVDataPublic
 
 	manufacturerRaw, err := tpm1.GetManufacturer(rwc)
 	if err != nil {
 		return TPMInfo{}, err
 	}
 
-	//Get NVList
-	nvList, err := tpm1.GetNVList(rwc)
-	if err != nil {
-		return TPMInfo{}, err
-	}
-	// Iterate over NVList to get all the NVDataPublics
-	for _, item := range nvList {
-		n, err := tpm1.GetNVIndex(rwc, item)
-		if err != nil {
-			return TPMInfo{}, err
-		}
-		nvDataPublic = append(nvDataPublic, n)
-	}
-
 	manufacturerId := binary.BigEndian.Uint32(manufacturerRaw)
 	return TPMInfo{
 		VendorInfo:   TCGVendorID(manufacturerId).String(),
 		Manufacturer: TCGVendorID(manufacturerId),
-		NVIndexData:  nvDataPublic,
 	}, nil
 }
 
