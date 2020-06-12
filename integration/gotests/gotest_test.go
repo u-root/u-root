@@ -35,10 +35,10 @@ func testPkgs(t *testing.T) []string {
 	pkgs := strings.Fields(strings.TrimSpace(string(out)))
 
 	// TODO: Some tests do not run properly in QEMU at the moment. They are
-	// blacklisted. These tests fail for mostly two reasons:
+	// blocklisted. These tests fail for mostly two reasons:
 	// 1. either it requires networking (not enabled in the kernel)
 	// 2. or it depends on some test files (for example /bin/sleep)
-	blacklist := []string{
+	blocklist := []string{
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/dd",
 		"github.com/u-root/u-root/cmds/core/elvish/eval",
@@ -70,7 +70,7 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/uroot/builder",
 	}
 	for i := 0; i < len(pkgs); i++ {
-		for _, b := range blacklist {
+		for _, b := range blocklist {
 			if pkgs[i] == b {
 				pkgs = append(pkgs[:i], pkgs[i+1:]...)
 			}
