@@ -42,8 +42,8 @@ func (s *DirHistory) DelDir(d string) error {
 }
 
 // Dirs lists all directories in the directory history whose names are not
-// in the blacklist. The results are ordered by scores in descending order.
-func (s *DirHistory) Dirs(blacklist map[string]struct{}) ([]storedefs.Dir, error) {
+// in the blocklist. The results are ordered by scores in descending order.
+func (s *DirHistory) Dirs(blocklist map[string]struct{}) ([]storedefs.Dir, error) {
 	var dirs []storedefs.Dir
 	return dirs, nil
 }
