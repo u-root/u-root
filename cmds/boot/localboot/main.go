@@ -12,7 +12,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/boot/jsonboot"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 )
@@ -105,7 +105,7 @@ func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string
 	}()
 
 	// search for a valid grub config and extracts the boot configuration
-	bootconfigs := make([]bootconfig.BootConfig, 0)
+	bootconfigs := make([]jsonboot.BootConfig, 0)
 	for _, mountpoint := range mounted {
 		bootconfigs = append(bootconfigs, ScanGrubConfigs(devices, mountpoint.Path)...)
 	}
@@ -175,7 +175,7 @@ func BootPathMode(devices block.BlockDevices, baseMountpoint string, guid string
 
 	fullKernelPath := path.Join(mount.Path, *flagKernelPath)
 	fullInitramfsPath := path.Join(mount.Path, *flagInitramfsPath)
-	cfg := bootconfig.BootConfig{
+	cfg := jsonboot.BootConfig{
 		Kernel:     fullKernelPath,
 		Initramfs:  fullInitramfsPath,
 		KernelArgs: *flagKernelCmdline,

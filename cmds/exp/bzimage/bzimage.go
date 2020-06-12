@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	flag "github.com/spf13/pflag"
-	"github.com/u-root/u-root/pkg/bzimage"
+	"github.com/u-root/u-root/pkg/boot/bzimage"
 )
 
 var argcounts = map[string]int{

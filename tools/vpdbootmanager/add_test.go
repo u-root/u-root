@@ -13,11 +13,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/booter"
-
-	"github.com/u-root/u-root/pkg/vpd"
-
 	"github.com/stretchr/testify/require"
+	"github.com/u-root/u-root/pkg/boot/systembooter"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 func TestParseNetboot(t *testing.T) {
@@ -139,13 +137,13 @@ func TestAddBootEntry(t *testing.T) {
 	os.MkdirAll(path.Join(dir, "rw"), 0700)
 	defer os.RemoveAll(dir)
 	vpd.VpdDir = dir
-	err = addBootEntry(&booter.LocalBooter{
+	err = addBootEntry(&systembooter.LocalBooter{
 		Method: "grub",
 	})
 	require.NoError(t, err)
 	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
-	var out booter.LocalBooter
+	var out systembooter.LocalBooter
 	err = json.Unmarshal([]byte(file), &out)
 	require.NoError(t, err)
 	require.Equal(t, "grub", out.Method)
@@ -160,13 +158,13 @@ func TestAddBootEntryMultiple(t *testing.T) {
 	defer os.RemoveAll(dir)
 	vpd.VpdDir = dir
 	for i := 1; i < 5; i++ {
-		err = addBootEntry(&booter.LocalBooter{
+		err = addBootEntry(&systembooter.LocalBooter{
 			Method: "grub",
 		})
 		require.NoError(t, err)
 		file, err := ioutil.ReadFile(path.Join(dir, "rw", fmt.Sprintf("Boot%04d", i)))
 		require.NoError(t, err)
-		var out booter.LocalBooter
+		var out systembooter.LocalBooter
 		err = json.Unmarshal([]byte(file), &out)
 		require.NoError(t, err)
 		require.Equal(t, "grub", out.Method)

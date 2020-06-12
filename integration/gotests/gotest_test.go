@@ -59,7 +59,7 @@ func testPkgs(t *testing.T) []string {
 
 		// Missing xzcat in VM.
 		"github.com/u-root/u-root/cmds/exp/bzimage",
-		"github.com/u-root/u-root/pkg/bzimage",
+		"github.com/u-root/u-root/pkg/boot/bzimage",
 
 		// Missing /dev/mem and /sys/firmware/efi
 		"github.com/u-root/u-root/pkg/boot/acpi",

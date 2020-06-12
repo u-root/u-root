@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/u-root/u-root/pkg/booter"
+	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/smbios"
 )
@@ -205,7 +205,7 @@ func main() {
 	}
 
 	// Get and show boot entries
-	bootEntries := booter.GetBootEntries()
+	bootEntries := systembooter.GetBootEntries()
 	log.Printf("BOOT ENTRIES:")
 	for _, entry := range bootEntries {
 		log.Printf("    %v) %+v", entry.Name, string(entry.Config))

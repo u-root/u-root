@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/bzimage"
+	"github.com/u-root/u-root/pkg/boot/bzimage"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -175,7 +175,7 @@ func TestSimple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := testutil.Command(t, tt.args...)
-			c.Dir = "../../../pkg/bzimage/testdata"
+			c.Dir = "../../../pkg/boot/bzimage/testdata"
 			// ignore the error, we deal with it via process status,
 			// and most of these commands are supposed to get an error.
 			out, _ := c.CombinedOutput()
