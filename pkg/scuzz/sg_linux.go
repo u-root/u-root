@@ -148,6 +148,11 @@ func NewSGDisk(n string, opt ...SGDiskOpt) (*SGDisk, error) {
 	return s, nil
 }
 
+// Close closes any open FDs.
+func (s *SGDisk) Close() error {
+	return s.f.Close()
+}
+
 // genCommandDataBlock creates a Command and Data Block used by
 // Linux SGDisk.
 func (p *packet) genCommandDataBlock() {
