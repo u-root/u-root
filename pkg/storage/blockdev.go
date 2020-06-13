@@ -17,9 +17,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -35,9 +37,31 @@ type BlockDev struct {
 	FsUUID string
 }
 
+// Device makes sure the block device exists and returns a handle to it.
+//
+// maybeDevpath can be path like /dev/sda1, /sys/class/block/sda1 or just sda1.
+// We will just use the last component.
+func Device(maybeDevpath string) (*BlockDev, error) {
+	devname := filepath.Base(maybeDevpath)
+	if _, err := os.Stat(filepath.Join("/sys/class/block", devname)); err != nil {
+		return nil, err
+	}
+
+	devpath := filepath.Join("/dev/", devname)
+	if uuid, err := getUUID(devpath); err == nil {
+		return &BlockDev{Name: devname, FsUUID: uuid}, nil
+	}
+	return &BlockDev{Name: devname}, nil
+}
+
 // String implements fmt.Stringer.
 func (b BlockDev) String() string {
 	return fmt.Sprintf("BlockDevice(name=%s, fs_uuid=%s)", b.Name, b.FsUUID)
+}
+
+// DevicePath is the path to the actual device.
+func (b BlockDev) DevicePath() string {
+	return filepath.Join("/dev/", b.Name)
 }
 
 // Mount implements mount.Mounter.
@@ -48,6 +72,34 @@ func (b BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
 	}
 
 	return mount.TryMount(devpath, path, flags)
+}
+
+func ioctlGetUint64(fd int, req uint) (uint64, error) {
+	var value uint64
+	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&value)))
+	if err != 0 {
+		return 0, err
+	}
+	return value, nil
+}
+
+// Size returns the size in bytes.
+func (b *BlockDev) Size() (uint64, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	sz, err := ioctlGetUint64(int(f.Fd()), unix.BLKGETSIZE64)
+	if err != nil {
+		return 0, &os.PathError{
+			Op:   "get size",
+			Path: b.DevicePath(),
+			Err:  os.NewSyscallError("ioctl(BLKGETSIZE64)", err),
+		}
+	}
+	return sz, nil
 }
 
 // Summary prints a multiline summary of the BlockDev object
