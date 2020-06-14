@@ -105,8 +105,7 @@ func TestBlockDevices(t *testing.T) {
 	want := block.BlockDevices{
 		&block.BlockDev{Name: "sda"},
 		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
-		// TODO: Why does the vfat one not have a UUID? That must be a bug?
-		&block.BlockDev{Name: "sda2"},
+		&block.BlockDev{Name: "sda2", FsUUID: "ace5-5144"},
 		&block.BlockDev{Name: "sdb"},
 		&block.BlockDev{Name: "sdb1"},
 		&block.BlockDev{Name: "sdc"},

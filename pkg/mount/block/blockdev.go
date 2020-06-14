@@ -215,7 +215,11 @@ func getUUID(devpath string) (string, error) {
 	}
 	defer file.Close()
 
-	fsuuid, err := tryVFAT(file)
+	fsuuid, err := tryFAT32(file)
+	if err == nil {
+		return fsuuid, nil
+	}
+	fsuuid, err = tryFAT16(file)
 	if err == nil {
 		return fsuuid, nil
 	}
@@ -272,10 +276,44 @@ func tryEXT4(file io.ReaderAt) (string, error) {
 
 // See https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau.
 const (
+	fat12Magic = "FAT12   "
+	fat16Magic = "FAT16   "
+
+	// Offset of magic number.
+	fat16MagicOff  = 0x36
+	fat16MagicSize = 8
+
+	// Offset of filesystem ID / serial number. Treated as short filesystem UUID.
+	fat16IDOff  = 0x27
+	fat16IDSize = 4
+)
+
+func tryFAT16(file io.ReaderAt) (string, error) {
+	// Read magic number.
+	b := make([]byte, fat16MagicSize)
+	if _, err := file.ReadAt(b, fat16MagicOff); err != nil {
+		return "", err
+	}
+	magic := string(b)
+	if magic != fat16Magic && magic != fat12Magic {
+		return "", fmt.Errorf("fat16 magic not found")
+	}
+
+	// Filesystem UUID.
+	b = make([]byte, fat16IDSize)
+	if _, err := file.ReadAt(b, fat16IDOff); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%02x%02x-%02x%02x", b[3], b[2], b[1], b[0]), nil
+}
+
+// See https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau.
+const (
 	fat32Magic = "FAT32   "
 
 	// Offset of magic number.
-	fat32MagicOff  = 82
+	fat32MagicOff  = 0x52
 	fat32MagicSize = 8
 
 	// Offset of filesystem ID / serial number. Treated as short filesystem UUID.
@@ -283,7 +321,7 @@ const (
 	fat32IDSize = 4
 )
 
-func tryVFAT(file io.ReaderAt) (string, error) {
+func tryFAT32(file io.ReaderAt) (string, error) {
 	// Read magic number.
 	b := make([]byte, fat32MagicSize)
 	if _, err := file.ReadAt(b, fat32MagicOff); err != nil {
