@@ -1,0 +1,13 @@
+[
+  {
+    "cmdline": "earlyprintk=ttyS0",
+    "image_type": "linux",
+    "initrd": {
+      "name": "testdata/madeup/loader/fakefile"
+    },
+    "kernel": {
+      "name": "testdata/madeup/loader/fakefile"
+    },
+    "name": "Fedora 19 (Rawhide) 3.8.0-2.fc19.x86_64"
+  }
+]

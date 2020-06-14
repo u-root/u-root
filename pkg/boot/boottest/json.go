@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/u-root/u-root/pkg/boot"
@@ -33,6 +34,8 @@ func module(r io.ReaderAt) map[string]interface{} {
 		m["url"] = f.URL().String()
 	} else if f, ok := r.(fmt.Stringer); ok {
 		m["stringer"] = f.String()
+	} else if f, ok := r.(*os.File); ok {
+		m["name"] = f.Name()
 	}
 	return m
 }
