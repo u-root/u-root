@@ -1,16 +1,5 @@
 [
   {
-    "cmdline": "BOOT_IMAGE=(hd0,gpt2)/vmlinuz-5.6.6-300.fc32.x86_64 root=UUID=b0b50629-c323-40de-9b01-05632be6dbd4 ro resume=UUID=abf0a2b5-f8db-411b-b534-1a431c63fbc0 console=ttyS0 rd.auto=1",
-    "image_type": "linux",
-    "initrd": {
-      "name": "testdata/fedora_32/de8380606ce44a2dabad127eb049acbe/0-rescue/initrd"
-    },
-    "kernel": {
-      "name": "testdata/fedora_32/de8380606ce44a2dabad127eb049acbe/0-rescue/linux"
-    },
-    "name": "Fedora 32 (Server Edition) - Rescue Image 5.6.6-300.fc32.x86_64"
-  },
-  {
     "cmdline": "root=UUID=b0b50629-c323-40de-9b01-05632be6dbd4 ro resume=UUID=abf0a2b5-f8db-411b-b534-1a431c63fbc0 console=ttyS0",
     "image_type": "linux",
     "initrd": {
@@ -20,5 +9,16 @@
       "name": "testdata/fedora_32/de8380606ce44a2dabad127eb049acbe/5.6.6-300.fc32.x86_64/linux"
     },
     "name": "Fedora 32 (Server Edition) 5.6.6-300.fc32.x86_64"
+  },
+  {
+    "cmdline": "BOOT_IMAGE=(hd0,gpt2)/vmlinuz-5.6.6-300.fc32.x86_64 root=UUID=b0b50629-c323-40de-9b01-05632be6dbd4 ro resume=UUID=abf0a2b5-f8db-411b-b534-1a431c63fbc0 console=ttyS0 rd.auto=1",
+    "image_type": "linux",
+    "initrd": {
+      "name": "testdata/fedora_32/de8380606ce44a2dabad127eb049acbe/0-rescue/initrd"
+    },
+    "kernel": {
+      "name": "testdata/fedora_32/de8380606ce44a2dabad127eb049acbe/0-rescue/linux"
+    },
+    "name": "Fedora 32 (Server Edition) - Rescue Image 5.6.6-300.fc32.x86_64"
   }
 ]
