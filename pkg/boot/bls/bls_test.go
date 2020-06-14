@@ -33,7 +33,7 @@ func TestParseBLSEntries(t *testing.T) {
 
 	for _, tt := range blsEntries {
 		t.Run(tt.entry, func(t *testing.T) {
-			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), dir)
+			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), fsRoot)
 			if err != nil {
 				if tt.err == "" {
 					t.Fatalf("Got error %v", err)
