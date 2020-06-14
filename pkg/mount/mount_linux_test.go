@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/scuzz"
@@ -27,6 +28,41 @@ import (
 //
 //   /dev/sdb is ./testdata/12Kzeros
 //	/dev/sdb1 exists, but is not formatted.
+//
+//   /dev/sdc is ./testdata/gptdisk
+//      /dev/sdc1 exists (EFI system partition), but is not formatted
+//      /dev/sdc2 exists (Linux), but is not formatted
+
+func TestGPT(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	disk, err := block.Device("/dev/sdc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parts, err := disk.GPTTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantParts := []gpt.Partition{
+		{FirstLBA: 34, LastLBA: 200},
+		{FirstLBA: 201, LastLBA: 366},
+	}
+	for i, p := range parts.Partitions {
+		if !p.IsEmpty() {
+			want := wantParts[i]
+			if p.FirstLBA != want.FirstLBA {
+				t.Errorf("partition %d: got FirstLBA %d want %d", i, p.FirstLBA, want.FirstLBA)
+			}
+			if p.LastLBA != want.LastLBA {
+				t.Errorf("partition %d: got LastLBA %d want %d", i, p.LastLBA, want.LastLBA)
+			}
+
+			t.Logf("partition: %v", p)
+		}
+	}
+}
 
 func TestIdentify(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
@@ -73,9 +109,12 @@ func TestBlockDevices(t *testing.T) {
 		&block.BlockDev{Name: "sda2"},
 		&block.BlockDev{Name: "sdb"},
 		&block.BlockDev{Name: "sdb1"},
+		&block.BlockDev{Name: "sdc"},
+		&block.BlockDev{Name: "sdc1"},
+		&block.BlockDev{Name: "sdc2"},
 	}
 	if !reflect.DeepEqual(devs, want) {
-		t.Fatalf("BlockDevices() = %v want %v", devs, want)
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
 	}
 
 	sizes := map[string]uint64{
@@ -84,6 +123,9 @@ func TestBlockDevices(t *testing.T) {
 		"sda2": 1023 * 512,
 		"sdb":  24 * 512,
 		"sdb1": 23 * 512,
+		"sdc":  50 * 4096,
+		"sdc1": 167 * 512,
+		"sdc2": 166 * 512,
 	}
 	for _, dev := range devs {
 		size, err := dev.Size()
@@ -95,20 +137,22 @@ func TestBlockDevices(t *testing.T) {
 		}
 	}
 
-	blkSizes := map[string]int{
-		"sda":  4096,
-		"sda1": 4096,
-		"sda2": 512,
-		"sdb":  4096,
-		"sdb1": 512,
-	}
+	wantBlkSize := 512
 	for _, dev := range devs {
-		blkSize, err := dev.BlockSize()
+		size, err := dev.BlockSize()
 		if err != nil {
-			t.Errorf("BlockSize(%s) error: %v", dev, err)
+			t.Errorf("BlockSize(%s) = %v", dev, err)
 		}
-		if blkSize != blkSizes[dev.Name] {
-			t.Errorf("BlockSize(%s) = %v, want %v", dev, blkSize, blkSizes[dev.Name])
+		if size != wantBlkSize {
+			t.Errorf("BlockSize(%s) = %d, want %d", dev, size, wantBlkSize)
+		}
+
+		pSize, err := dev.PhysicalBlockSize()
+		if err != nil {
+			t.Errorf("PhysicalBlockSize(%s) = %v", dev, err)
+		}
+		if pSize != wantBlkSize {
+			t.Errorf("PhysicalBlockSize(%s) = %d, want %d", dev, pSize, wantBlkSize)
 		}
 	}
 
@@ -118,6 +162,9 @@ func TestBlockDevices(t *testing.T) {
 		"sda2": syscall.EINVAL,
 		"sdb":  nil,
 		"sdb1": syscall.EINVAL,
+		"sdc":  nil,
+		"sdc1": syscall.EINVAL,
+		"sdc2": syscall.EINVAL,
 	}
 	for _, dev := range devs {
 		if err := dev.ReadPartitionTable(); err != wantRR[dev.Name] {
@@ -178,8 +225,8 @@ func TestTryMount(t *testing.T) {
 		t.Errorf("TryMount(/dev/sdb1) = %v, want an error containing 'no suitable filesystem'", err)
 	}
 
-	sdc1 := filepath.Join(d, "sdc1")
-	if _, err := mount.TryMount("/dev/sdc1", sdc1, mount.ReadOnly); !os.IsNotExist(err) {
-		t.Errorf("TryMount(/dev/sdc1) = %v, want an error equivalent to Does Not Exist", err)
+	sdz1 := filepath.Join(d, "sdz1")
+	if _, err := mount.TryMount("/dev/sdz1", sdz1, mount.ReadOnly); !os.IsNotExist(err) {
+		t.Errorf("TryMount(/dev/sdz1) = %v, want an error equivalent to Does Not Exist", err)
 	}
 }

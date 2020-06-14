@@ -77,23 +77,49 @@ func (b *BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) 
 // GPTTable tries to read a GPT table from the block device described by the
 // passed BlockDev object, and returns a gpt.Table object, or an error if any
 func (b *BlockDev) GPTTable() (*gpt.Table, error) {
-	fd, err := os.Open(fmt.Sprintf("/dev/%s", b.Name))
+	fd, err := os.Open(b.DevicePath())
 	if err != nil {
 		return nil, err
 	}
 	defer fd.Close()
-	if _, err = fd.Seek(512, io.SeekStart); err != nil {
+
+	blkSize, err := b.BlockSize()
+	if err != nil {
+		return nil, fmt.Errorf("failed to find block size: %v", err)
+	}
+
+	if _, err := fd.Seek(int64(blkSize), io.SeekStart); err != nil {
 		return nil, err
 	}
-	table, err := gpt.ReadTable(fd, 512)
+	table, err := gpt.ReadTable(fd, uint64(blkSize))
 	if err != nil {
 		return nil, err
 	}
 	return &table, nil
 }
 
-// BlockSize returns the block size.
+// PhysicalBlockSize returns the physical block size.
+func (b *BlockDev) PhysicalBlockSize() (int, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKPBSZGET)
+}
+
+// BlockSize returns the logical block size (BLKSSZGET).
 func (b *BlockDev) BlockSize() (int, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKSSZGET)
+}
+
+// KernelBlockSize returns the soft block size used inside the kernel (BLKBSZGET).
+func (b *BlockDev) KernelBlockSize() (int, error) {
 	f, err := os.Open(b.DevicePath())
 	if err != nil {
 		return 0, err
@@ -149,23 +175,6 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 	0xba, 0x4b,
 	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 })
-
-// Device makes sure the block device exists and returns a handle to it.
-//
-// maybeDevpath can be path like /dev/sda1, /sys/class/block/sda1 or just sda1.
-// We will just use the last component.
-func Device(maybeDevpath string) (*BlockDev, error) {
-	devname := filepath.Base(maybeDevpath)
-	if _, err := os.Stat(filepath.Join("/sys/class/block", devname)); err != nil {
-		return nil, err
-	}
-
-	devpath := filepath.Join("/dev/", devname)
-	if uuid, err := getUUID(devpath); err == nil {
-		return &BlockDev{Name: devname, FsUUID: uuid}, nil
-	}
-	return &BlockDev{Name: devname}, nil
-}
 
 // GetBlockDevices iterates over /sys/class/block entries and returns a list of
 // BlockDev objects, or an error if any
