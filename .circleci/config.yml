@@ -19,7 +19,8 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: go test -a -ldflags '-s' ./integration/...
+          command: go test -a -timeout 15m -ldflags '-s' ./integration/...
+          no_output_timeout: 15m
   beefy-template: &beefy-template
     <<: *golang-template
     resource_class: large
