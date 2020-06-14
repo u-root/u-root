@@ -42,9 +42,11 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/bls"
 	"github.com/u-root/u-root/pkg/boot/grub"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 const (
@@ -201,17 +203,23 @@ func Localboot() error {
 		debug("mount succeed")
 		u := filepath.Join(uroot, d)
 
-		imgs, err := grub.ParseLocalConfig(context.Background(), u)
+		imgs, err := bls.ScanBLSEntries(ulog.Log, u)
+		if err != nil {
+			log.Printf("Failed to parse systemd-boot BootLoaderSpec configs, trying another format...: %v", err)
+		}
+
+		grubImgs, err := grub.ParseLocalConfig(context.Background(), u)
 		if err != nil {
 			log.Printf("Failed to parse GRUB configs, trying another format...: %v", err)
 		}
+		imgs = append(imgs, grubImgs...)
 
 		// not grub config found, try isolinux
-		moreImgs, err := syslinux.ParseLocalConfig(context.Background(), u)
+		syslinuxImgs, err := syslinux.ParseLocalConfig(context.Background(), u)
 		if err != nil {
 			log.Printf("Failed to parse syslinux configs: %v", err)
 		}
-		imgs = append(imgs, moreImgs...)
+		imgs = append(imgs, syslinuxImgs...)
 
 		if len(imgs) == 0 {
 			if err := umountEntry(u); err != nil {
