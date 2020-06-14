@@ -5,14 +5,14 @@
 package bls
 
 import (
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/boot/boottest"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 )
-
-var fsRoot = "testdata"
 
 var blsEntries = []struct {
 	entry string
@@ -28,6 +28,7 @@ var blsEntries = []struct {
 }
 
 func TestParseBLSEntries(t *testing.T) {
+	fsRoot := "./testdata/madeup"
 	dir := filepath.Join(fsRoot, "loader/entries")
 
 	for _, tt := range blsEntries {
@@ -51,13 +52,50 @@ func TestParseBLSEntries(t *testing.T) {
 }
 
 func TestScanBLSEntries(t *testing.T) {
-	entries, err := ScanBLSEntries(ulogtest.Logger{t}, fsRoot)
+	// find all saved configs
+	tests, err := filepath.Glob("testdata/*.json")
 	if err != nil {
-		t.Errorf("Error scanning BLS entries: %v", err)
+		t.Error("Failed to find test config files:", err)
 	}
 
-	// TODO: have a better way of checking contents
-	if len(entries) < 1 {
-		t.Errorf("Expected at least BLS entry, found none")
+	for _, test := range tests {
+		configPath := strings.TrimRight(test, ".json")
+		t.Run(configPath, func(t *testing.T) {
+			want, err := ioutil.ReadFile(test)
+			if err != nil {
+				t.Errorf("Failed to read test json '%v':%v", test, err)
+			}
+
+			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath)
+			if err != nil {
+				t.Fatalf("Failed to parse %s: %v", test, err)
+			}
+
+			if err := boottest.CompareImagesToJSON(imgs, want); err != nil {
+				t.Errorf("ParseLocalConfig(): %v", err)
+			}
+		})
+	}
+}
+
+// Enable this temporarily to generate new configs. Double-check them by hand.
+func DISABLEDTestGenerateConfigs(t *testing.T) {
+	tests, err := filepath.Glob("testdata/*.json")
+	if err != nil {
+		t.Error("Failed to find test config files:", err)
+	}
+
+	for _, test := range tests {
+		configPath := strings.TrimRight(test, ".json")
+		t.Run(configPath, func(t *testing.T) {
+			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath)
+			if err != nil {
+				t.Fatalf("Failed to parse %s: %v", test, err)
+			}
+
+			if err := boottest.ToJSONFile(imgs, test); err != nil {
+				t.Errorf("failed to generate file: %v", err)
+			}
+		})
 	}
 }
