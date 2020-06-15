@@ -98,13 +98,19 @@ type req struct {
 func ioctlSetReq(fd, name uintptr, req *req) error {
 	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(req)))
 	runtime.KeepAlive(req)
-	return err
+	if err != 0 {
+		return err
+	}
+	return nil
 }
 
 func ioctlGetRecv(fd, name uintptr, recv *recv) error {
 	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(recv)))
 	runtime.KeepAlive(recv)
-	return err
+	if err != 0 {
+		return err
+	}
+	return nil
 }
 
 type recv struct {
