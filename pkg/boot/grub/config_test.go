@@ -16,7 +16,7 @@ import (
 
 // Enable this to generate new configs.
 func DISABLEDTestGenerateConfigs(t *testing.T) {
-	tests, err := filepath.Glob("testdata-new/*.json")
+	tests, err := filepath.Glob("testdata_new/*.json")
 	if err != nil {
 		t.Error("Failed to find test config files:", err)
 	}
@@ -38,7 +38,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 
 func TestConfigs(t *testing.T) {
 	// find all saved configs
-	tests, err := filepath.Glob("testdata-new/*.json")
+	tests, err := filepath.Glob("testdata_new/*.json")
 	if err != nil {
 		t.Error("Failed to find test config files:", err)
 	}
