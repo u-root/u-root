@@ -45,7 +45,7 @@ func Device(maybeDevpath string) (*BlockDev, error) {
 	}
 
 	devpath := filepath.Join("/dev/", devname)
-	if uuid, err := getUUID(devpath); err == nil {
+	if uuid, err := getFSUUID(devpath); err == nil {
 		return &BlockDev{Name: devname, FsUUID: uuid}, nil
 	}
 	return &BlockDev{Name: devname}, nil
@@ -208,7 +208,7 @@ func GetBlockDevices() (BlockDevices, error) {
 	return blockdevs, nil
 }
 
-func getUUID(devpath string) (string, error) {
+func getFSUUID(devpath string) (string, error) {
 	file, err := os.Open(devpath)
 	if err != nil {
 		return "", err
