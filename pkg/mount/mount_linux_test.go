@@ -16,7 +16,7 @@ import (
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
-	"github.com/u-root/u-root/pkg/scuzz"
+	"github.com/u-root/u-root/pkg/mount/scuzz"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
