@@ -99,7 +99,6 @@ func mountAndBoot(device *block.BlockDev, mountDir string) {
 	}
 	imgs = append(imgs, grubImgs...)
 
-	// Grub config not found, try isolinux.
 	syslinuxImgs, err := syslinux.ParseLocalConfig(context.Background(), mountDir)
 	if err != nil {
 		log.Printf("Failed to parse syslinux configs from %s: %v", device, err)
