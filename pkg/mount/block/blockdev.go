@@ -85,7 +85,7 @@ func (b *BlockDev) GPTTable() (*gpt.Table, error) {
 
 	blkSize, err := b.BlockSize()
 	if err != nil {
-		return nil, fmt.Errorf("failed to find block size: %v", err)
+		blkSize = 512
 	}
 
 	if _, err := fd.Seek(int64(blkSize), io.SeekStart); err != nil {
