@@ -20,6 +20,7 @@ func TestIntegration(t *testing.T) {
 				// CONFIG_ATA_PIIX is required for this option to work.
 				qemu.ArbitraryArgs{"-hda", "testdata/1MB.ext4_vfat"},
 				qemu.ArbitraryArgs{"-hdb", "testdata/12Kzeros"},
+				qemu.ArbitraryArgs{"-hdc", "testdata/gptdisk"},
 			},
 		},
 	}

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package storage
+// Package block finds, mounts, and modifies block devices on Linux systems.
+package block
 
 import (
 	"bufio"
@@ -10,12 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unsafe"
 
@@ -33,7 +31,6 @@ var (
 type BlockDev struct {
 	Name   string
 	FSType string
-	Stat   BlockStat
 	FsUUID string
 }
 
@@ -48,14 +45,17 @@ func Device(maybeDevpath string) (*BlockDev, error) {
 	}
 
 	devpath := filepath.Join("/dev/", devname)
-	if uuid, err := getUUID(devpath); err == nil {
+	if uuid, err := getFSUUID(devpath); err == nil {
 		return &BlockDev{Name: devname, FsUUID: uuid}, nil
 	}
 	return &BlockDev{Name: devname}, nil
 }
 
 // String implements fmt.Stringer.
-func (b BlockDev) String() string {
+func (b *BlockDev) String() string {
+	if len(b.FSType) > 0 {
+		return fmt.Sprintf("BlockDevice(name=%s, fs_type=%s, fs_uuid=%s)", b.Name, b.FSType, b.FsUUID)
+	}
 	return fmt.Sprintf("BlockDevice(name=%s, fs_uuid=%s)", b.Name, b.FsUUID)
 }
 
@@ -65,13 +65,67 @@ func (b BlockDev) DevicePath() string {
 }
 
 // Mount implements mount.Mounter.
-func (b BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+func (b *BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
 	devpath := filepath.Join("/dev", b.Name)
 	if len(b.FSType) > 0 {
 		return mount.Mount(devpath, path, b.FSType, "", flags)
 	}
 
 	return mount.TryMount(devpath, path, flags)
+}
+
+// GPTTable tries to read a GPT table from the block device described by the
+// passed BlockDev object, and returns a gpt.Table object, or an error if any
+func (b *BlockDev) GPTTable() (*gpt.Table, error) {
+	fd, err := os.Open(b.DevicePath())
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	blkSize, err := b.BlockSize()
+	if err != nil {
+		blkSize = 512
+	}
+
+	if _, err := fd.Seek(int64(blkSize), io.SeekStart); err != nil {
+		return nil, err
+	}
+	table, err := gpt.ReadTable(fd, uint64(blkSize))
+	if err != nil {
+		return nil, err
+	}
+	return &table, nil
+}
+
+// PhysicalBlockSize returns the physical block size.
+func (b *BlockDev) PhysicalBlockSize() (int, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKPBSZGET)
+}
+
+// BlockSize returns the logical block size (BLKSSZGET).
+func (b *BlockDev) BlockSize() (int, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKSSZGET)
+}
+
+// KernelBlockSize returns the soft block size used inside the kernel (BLKBSZGET).
+func (b *BlockDev) KernelBlockSize() (int, error) {
+	f, err := os.Open(b.DevicePath())
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return unix.IoctlGetInt(int(f.Fd()), unix.BLKBSZGET)
 }
 
 func ioctlGetUint64(fd int, req uint) (uint64, error) {
@@ -102,58 +156,14 @@ func (b *BlockDev) Size() (uint64, error) {
 	return sz, nil
 }
 
-// Summary prints a multiline summary of the BlockDev object
-// https://www.kernel.org/doc/Documentation/block/stat.txt
-func (b BlockDev) Summary() string {
-	return fmt.Sprintf(`BlockStat{
-    Name: %v
-    ReadIOs: %v
-    ReadMerges: %v
-    ReadSectors: %v
-    ReadTicks: %v
-    WriteIOs: %v
-    WriteMerges: %v
-    WriteSectors: %v
-    WriteTicks: %v
-    InFlight: %v
-    IOTicks: %v
-    TimeInQueue: %v
-}`,
-		b.Name,
-		b.Stat.ReadIOs,
-		b.Stat.ReadMerges,
-		b.Stat.ReadSectors,
-		b.Stat.ReadTicks,
-		b.Stat.WriteIOs,
-		b.Stat.WriteMerges,
-		b.Stat.WriteSectors,
-		b.Stat.WriteTicks,
-		b.Stat.InFlight,
-		b.Stat.IOTicks,
-		b.Stat.TimeInQueue,
-	)
-}
-
-// BlockStat provides block device information as contained in
-// /sys/class/block/<device_name>/stat
-type BlockStat struct {
-	ReadIOs      uint64
-	ReadMerges   uint64
-	ReadSectors  uint64
-	ReadTicks    uint64
-	WriteIOs     uint64
-	WriteMerges  uint64
-	WriteSectors uint64
-	WriteTicks   uint64
-	InFlight     uint64
-	IOTicks      uint64
-	TimeInQueue  uint64
-	// Kernel 4.18 added four fields for discard tracking, see
-	// https://github.com/torvalds/linux/commit/bdca3c87fb7ad1cc61d231d37eb0d8f90d001e0c
-	DiscardIOs     uint64
-	DiscardMerges  uint64
-	DiscardSectors uint64
-	DiscardTicks   uint64
+// ReadPartitionTable prompts the kernel to re-read the partition table on this block device.
+func (b *BlockDev) ReadPartitionTable() error {
+	f, err := os.OpenFile(b.DevicePath(), os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return unix.IoctlSetInt(int(f.Fd()), unix.BLKRRPART, 0)
 }
 
 // SystemPartitionGUID is the GUID of EFI system partitions
@@ -166,50 +176,12 @@ var SystemPartitionGUID = gpt.Guid([...]byte{
 	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 })
 
-// BlockStatFromBytes parses a block stat file and returns a BlockStat object.
-// The format of the block stat file is the one defined by Linux for
-// /sys/class/block/<device_name>/stat
-func BlockStatFromBytes(buf []byte) (*BlockStat, error) {
-	fields := strings.Fields(string(buf))
-	// BlockStat has 11 fields
-	if len(fields) < 11 {
-		return nil, fmt.Errorf("BlockStatFromBytes: parsing %q: got %d fields(%q), want at least 11", buf, len(fields), fields)
-	}
-	intfields := make([]uint64, 0)
-	for _, field := range fields {
-		v, err := strconv.ParseUint(field, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		intfields = append(intfields, v)
-	}
-	bs := BlockStat{
-		ReadIOs:      intfields[0],
-		ReadMerges:   intfields[1],
-		ReadSectors:  intfields[2],
-		ReadTicks:    intfields[3],
-		WriteIOs:     intfields[4],
-		WriteMerges:  intfields[5],
-		WriteSectors: intfields[6],
-		WriteTicks:   intfields[7],
-		InFlight:     intfields[8],
-		IOTicks:      intfields[9],
-		TimeInQueue:  intfields[10],
-	}
-	if len(fields) >= 15 {
-		bs.DiscardIOs = intfields[11]
-		bs.DiscardMerges = intfields[12]
-		bs.DiscardSectors = intfields[13]
-		bs.DiscardTicks = intfields[14]
-	}
-	return &bs, nil
-}
-
-// GetBlockStats iterates over /sys/class/block entries and returns a list of
+// GetBlockDevices iterates over /sys/class/block entries and returns a list of
 // BlockDev objects, or an error if any
-func GetBlockStats() ([]BlockDev, error) {
-	blockdevs := make([]BlockDev, 0)
-	devnames := make([]string, 0)
+func GetBlockDevices() (BlockDevices, error) {
+	var blockdevs []*BlockDev
+	var devnames []string
+
 	root := "/sys/class/block"
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -223,38 +195,31 @@ func GetBlockStats() ([]BlockDev, error) {
 			return nil
 		}
 		devnames = append(devnames, rel)
+		dev, err := Device(rel)
+		if err != nil {
+			return err
+		}
+		blockdevs = append(blockdevs, dev)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	for _, devname := range devnames {
-		buf, err := ioutil.ReadFile(fmt.Sprintf("%s/%s/stat", root, devname))
-		if err != nil {
-			return nil, err
-		}
-		bstat, err := BlockStatFromBytes(buf)
-		if err != nil {
-			return nil, err
-		}
-		devpath := path.Join("/dev/", devname)
-		if uuid, err := getUUID(devpath); err != nil {
-			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat})
-		} else {
-			blockdevs = append(blockdevs, BlockDev{Name: devname, Stat: *bstat, FsUUID: uuid})
-		}
-	}
 	return blockdevs, nil
 }
 
-func getUUID(devpath string) (string, error) {
+func getFSUUID(devpath string) (string, error) {
 	file, err := os.Open(devpath)
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
 
-	fsuuid, err := tryVFAT(file)
+	fsuuid, err := tryFAT32(file)
+	if err == nil {
+		return fsuuid, nil
+	}
+	fsuuid, err = tryFAT16(file)
 	if err == nil {
 		return fsuuid, nil
 	}
@@ -311,10 +276,44 @@ func tryEXT4(file io.ReaderAt) (string, error) {
 
 // See https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau.
 const (
+	fat12Magic = "FAT12   "
+	fat16Magic = "FAT16   "
+
+	// Offset of magic number.
+	fat16MagicOff  = 0x36
+	fat16MagicSize = 8
+
+	// Offset of filesystem ID / serial number. Treated as short filesystem UUID.
+	fat16IDOff  = 0x27
+	fat16IDSize = 4
+)
+
+func tryFAT16(file io.ReaderAt) (string, error) {
+	// Read magic number.
+	b := make([]byte, fat16MagicSize)
+	if _, err := file.ReadAt(b, fat16MagicOff); err != nil {
+		return "", err
+	}
+	magic := string(b)
+	if magic != fat16Magic && magic != fat12Magic {
+		return "", fmt.Errorf("fat16 magic not found")
+	}
+
+	// Filesystem UUID.
+	b = make([]byte, fat16IDSize)
+	if _, err := file.ReadAt(b, fat16IDOff); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%02x%02x-%02x%02x", b[3], b[2], b[1], b[0]), nil
+}
+
+// See https://de.wikipedia.org/wiki/File_Allocation_Table#Aufbau.
+const (
 	fat32Magic = "FAT32   "
 
 	// Offset of magic number.
-	fat32MagicOff  = 82
+	fat32MagicOff  = 0x52
 	fat32MagicSize = 8
 
 	// Offset of filesystem ID / serial number. Treated as short filesystem UUID.
@@ -322,7 +321,7 @@ const (
 	fat32IDSize = 4
 )
 
-func tryVFAT(file io.ReaderAt) (string, error) {
+func tryFAT32(file io.ReaderAt) (string, error) {
 	// Read magic number.
 	b := make([]byte, fat32MagicSize)
 	if _, err := file.ReadAt(b, fat32MagicOff); err != nil {
@@ -369,38 +368,39 @@ func tryXFS(file io.ReaderAt) (string, error) {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]), nil
 }
 
-// GetGPTTable tries to read a GPT table from the block device described by the
-// passed BlockDev object, and returns a gpt.Table object, or an error if any
-func GetGPTTable(device BlockDev) (*gpt.Table, error) {
-	fd, err := os.Open(fmt.Sprintf("/dev/%s", device.Name))
-	if err != nil {
-		return nil, err
+// BlockDevices is a list of block devices.
+type BlockDevices []*BlockDev
+
+// FilterZeroSize attempts to find block devices that have at least one block
+// of content.
+//
+// This serves to eliminate block devices that have no backing storage, but
+// appear in /sys/class/block anyway (like some loop, nbd, or ram devices).
+func (b BlockDevices) FilterZeroSize() BlockDevices {
+	var nb BlockDevices
+	for _, device := range b {
+		if n, err := device.Size(); err != nil || n == 0 {
+			continue
+		}
+		nb = append(nb, device)
 	}
-	defer fd.Close()
-	if _, err = fd.Seek(512, io.SeekStart); err != nil {
-		return nil, err
-	}
-	table, err := gpt.ReadTable(fd, 512)
-	if err != nil {
-		return nil, err
-	}
-	return &table, nil
+	return nb
 }
 
-// FilterEFISystemPartitions returns a list of BlockDev objects whose underlying
-// block device is a valid EFI system partition, or an error if any
-func FilterEFISystemPartitions(devices []BlockDev) ([]BlockDev, error) {
-	return PartitionsByGUID(devices, SystemPartitionGUID.String())
+// FilterESP returns a list of BlockDev objects whose underlying block device
+// is a valid EFI system partition.
+func (b BlockDevices) FilterESP() BlockDevices {
+	return b.FilterGUID(SystemPartitionGUID.String())
 }
 
-// PartitionsByGUID returns a list of BlockDev objects whose underlying
-// block device has the given GUID
-func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
-	partitions := make([]BlockDev, 0)
-	for _, device := range devices {
-		table, err := GetGPTTable(device)
+// FilterGUID returns a list of BlockDev objects whose underlying
+// block device has the given GPT partition GUID.
+func (b BlockDevices) FilterGUID(guid string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
+		table, err := device.GPTTable()
 		if err != nil {
-			log.Printf("Skipping %s: %v", device.Name, err)
+			log.Printf("Skipping; no GPT table on %s: %v", device.Name, err)
 			continue
 		}
 		for _, part := range table.Partitions {
@@ -412,14 +412,14 @@ func PartitionsByGUID(devices []BlockDev, guid string) ([]BlockDev, error) {
 			}
 		}
 	}
-	return partitions, nil
+	return partitions
 }
 
-// PartitionsByFsUUID returns a list of BlockDev objects whose underlying
-// block device has a filesystem with the given UUID
-func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
-	partitions := make([]BlockDev, 0)
-	for _, device := range devices {
+// FilterFSUUID returns a list of BlockDev objects whose underlying block
+// device has a filesystem with the given UUID.
+func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
 		if device.FsUUID == fsuuid {
 			partitions = append(partitions, device)
 		}
@@ -427,11 +427,11 @@ func PartitionsByFsUUID(devices []BlockDev, fsuuid string) []BlockDev {
 	return partitions
 }
 
-// PartitionsByName returns a list of BlockDev objects whose underlying
+// FilterName returns a list of BlockDev objects whose underlying
 // block device has a Name with the given Name
-func PartitionsByName(devices []BlockDev, name string) []BlockDev {
-	partitions := make([]BlockDev, 0)
-	for _, device := range devices {
+func (b BlockDevices) FilterName(name string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
 		if device.Name == name {
 			partitions = append(partitions, device)
 		}

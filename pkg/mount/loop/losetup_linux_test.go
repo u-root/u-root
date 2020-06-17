@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cp"
-	"github.com/u-root/u-root/pkg/mount"
 	"golang.org/x/sys/unix"
 )
 
@@ -57,20 +56,16 @@ func TestSetFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loopdev, err := FindDevice()
+	loopdev, err := New(testdisk, "vfat", "")
 	if err != nil {
-		t.Fatalf("Failed to find loop device: %v", err)
-	}
-
-	if err := SetFile(loopdev, testdisk); err != nil {
-		t.Fatalf("Failed to associate disk: %v", err)
+		t.Fatal(err)
 	}
 
 	if err := os.MkdirAll("/tmp/disk", 0755); err != nil && !os.IsExist(err) {
 		t.Fatalf("Could not create /tmp/disk: %v", err)
 	}
 
-	mp, err := mount.Mount(loopdev, "/tmp/disk", "vfat", "", 0)
+	mp, err := loopdev.Mount("/tmp/disk", 0)
 	if err != nil {
 		t.Fatalf("Failed to mount /tmp/disk: %v", err)
 	}

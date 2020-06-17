@@ -35,6 +35,7 @@ var probeGrubFiles = []string{
 	"boot/grub/grub.cfg",
 	"grub/grub.cfg",
 	"grub2/grub.cfg",
+	"boot/grub2/grub.cfg",
 }
 
 // ParseLocalConfig looks for a GRUB config in the disk partition mounted at
@@ -58,7 +59,7 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 	// 'em all.
 	files, err := filepath.Glob(filepath.Join(diskDir, "EFI", "*", "grub.cfg"))
 	if err != nil {
-		log.Printf("Could not glob for %s/EFI/*/grub.cfg: %v", diskDir, err)
+		log.Printf("[grub] Could not glob for %s/EFI/*/grub.cfg: %v", diskDir, err)
 	}
 	var relNames []string
 	for _, file := range files {
@@ -201,8 +202,6 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 		return err
 	}
 
-	log.Printf("Fetching %s", u)
-
 	r, err := c.schemes.Fetch(ctx, u)
 	if err != nil {
 		return err
@@ -215,9 +214,9 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 	if len(config) > 500 {
 		// Avoid flooding the console on real systems
 		// TODO: do we want to pass a verbose flag or a logger?
-		log.Printf("Got config file %s", r)
+		log.Printf("[grub] Got config file %s", r)
 	} else {
-		log.Printf("Got config file %s:\n%s\n", r, string(config))
+		log.Printf("[grub] Got config file %s:\n%s\n", r, string(config))
 	}
 	return c.append(ctx, string(config))
 }

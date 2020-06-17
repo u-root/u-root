@@ -18,7 +18,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/loop"
+	"github.com/u-root/u-root/pkg/mount/loop"
 )
 
 var (
