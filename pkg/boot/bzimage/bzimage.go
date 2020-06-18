@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// package bzImage implements encoding.UnmarshalBinary for bzImage files.
+// Package bzImage implements decoding for bzImage files.
+//
 // The bzImage struct contains all the information about the file and can
 // be used to create a new bzImage.
 package bzimage
 
 // xz --check=crc32 $BCJ --lzma2=$LZMA2OPTS,dict=32MiB
+
 import (
 	"bytes"
 	"debug/elf"

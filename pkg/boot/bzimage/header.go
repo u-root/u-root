@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+package bzimage
+
 // These are the semi-documented things that define a bzImage
 // Thanks to coreboot for documenting the basic layout.
-package bzimage
 
 const (
 	Ram      e820type = 1
