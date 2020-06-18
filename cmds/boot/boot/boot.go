@@ -8,13 +8,14 @@
 
 //
 // Synopsis:
-//	boot [-v][-dry-run]
+//	boot [-v][-no-load][-no-exec]
 //
 // Description:
 //	If returns to u-root shell, the code didn't found a local bootable option
 //
 //      -v prints messages
-//      -dry-run doesn't really boot
+//      -no-load prints the boot image paths it was going to load, but doesn't load + exec them
+//      -no-exec loads the boot image, but doesn't exec it
 //
 // Notes:
 //	The code is looking for boot/grub/grub.cfg file as to identify the
@@ -49,23 +50,11 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
-const (
-	bootableMBR     = 0xaa55
-	signatureOffset = 510
-)
-
-type bootEntry struct {
-	kernel  string
-	initrd  string
-	cmdline string
-}
-
 var (
-	verbose     = flag.Bool("v", false, "Print debug messages")
-	debug       = func(string, ...interface{}) {}
-	dryRun      = flag.Bool("dry-run", false, "load kernel, but don't kexec it")
-	defaultBoot = flag.String("boot", "", "entry to boot (default to the configuration file default)")
-	list        = flag.Bool("list", false, "list found configurations")
+	debug   = func(string, ...interface{}) {}
+	verbose = flag.Bool("v", false, "Print debug messages")
+	noLoad  = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
+	noExec  = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
 
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
@@ -153,7 +142,15 @@ func main() {
 		}
 	}
 
-	menuEntries := menu.OSImages(*dryRun, images...)
+	if *noLoad {
+		if len(images) > 0 {
+			log.Printf("Got configuration: %s", images[0])
+		} else {
+			log.Fatalf("Nothing bootable found.")
+		}
+		return
+	}
+	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 
@@ -168,7 +165,7 @@ func main() {
 	if chosenEntry == nil {
 		log.Fatalf("Nothing to boot.")
 	}
-	if *dryRun {
+	if *noExec {
 		log.Printf("Chosen menu entry: %s", chosenEntry)
 		os.Exit(0)
 	}

@@ -37,8 +37,8 @@ import (
 
 var (
 	ifName  = "^e.*"
-	noLoad  = flag.Bool("no-load", false, "get DHCP response, but don't load the kernel")
-	dryRun  = flag.Bool("dry-run", false, "download kernel, but don't kexec it")
+	noLoad  = flag.Bool("no-load", false, "get DHCP response, print chosen boot configuration, but do not download + exec it")
+	noExec  = flag.Bool("no-exec", false, "download boot configuration, but do not exec it")
 	verbose = flag.Bool("v", false, "Verbose output")
 )
 
@@ -122,8 +122,7 @@ func main() {
 		}
 		return
 	}
-
-	menuEntries := menu.OSImages(*dryRun, images...)
+	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 
@@ -131,7 +130,7 @@ func main() {
 	if chosenEntry == nil {
 		log.Fatalf("Nothing to boot.")
 	}
-	if *dryRun {
+	if *noExec {
 		log.Printf("Chosen menu entry: %s", chosenEntry)
 		os.Exit(0)
 	}
