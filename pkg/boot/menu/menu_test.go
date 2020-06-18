@@ -6,6 +6,7 @@ package menu
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -14,12 +15,19 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
+func TestMain(m *testing.M) {
+	initialTimeout = 2 * time.Second
+	subsequentTimeout = 6 * time.Second
+
+	os.Exit(m.Run())
+}
+
 type dummyEntry struct {
-	mu        sync.Mutex
-	label     string
-	isDefault bool
-	do        error
-	called    bool
+	mu         sync.Mutex
+	label      string
+	isDefault  bool
+	load       error
+	loadCalled bool
 }
 
 func (d *dummyEntry) Label() string {
@@ -32,17 +40,23 @@ func (d *dummyEntry) String() string {
 	return d.Label()
 }
 
-func (d *dummyEntry) Do() error {
+func (d *dummyEntry) Load() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	d.called = true
-	return d.do
+	d.loadCalled = true
+	return d.load
 }
 
-func (d *dummyEntry) Called() bool {
+func (d *dummyEntry) Exec() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return d.called
+	return nil
+}
+
+func (d *dummyEntry) LoadCalled() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.loadCalled
 }
 
 func (d *dummyEntry) IsDefault() bool {
@@ -112,7 +126,6 @@ func TestChoose(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			pty, err := term.OpenPTY()
 			if err != nil {
 				t.Fatalf("%v", err)
@@ -154,7 +167,7 @@ func contains(s []string, t string) bool {
 	return false
 }
 
-func TestShowMenuAndBoot(t *testing.T) {
+func TestShowMenuAndLoad(t *testing.T) {
 	// This test takes too long to run for the VM test and doesn't use
 	// anything root-specific.
 	testutil.SkipIfInVMTest(t)
@@ -170,8 +183,8 @@ func TestShowMenuAndBoot(t *testing.T) {
 		{
 			name: "default_entry",
 			entries: []*dummyEntry{
-				{label: "1", isDefault: true, do: errStopTestOnly},
-				{label: "2", isDefault: true, do: nil},
+				{label: "1", isDefault: true, load: nil},
+				{label: "2", isDefault: true, load: nil},
 			},
 			// user just hits enter.
 			userEntry:    []byte("\r\n"),
@@ -180,9 +193,9 @@ func TestShowMenuAndBoot(t *testing.T) {
 		{
 			name: "non_default_entry_default",
 			entries: []*dummyEntry{
-				{label: "1", isDefault: false, do: errStopTestOnly},
-				{label: "2", isDefault: true, do: errStopTestOnly},
-				{label: "3", isDefault: true, do: nil},
+				{label: "1", isDefault: false, load: nil},
+				{label: "2", isDefault: true, load: nil},
+				{label: "3", isDefault: true, load: nil},
 			},
 			// user just hits enter.
 			userEntry:    []byte("\r\n"),
@@ -191,9 +204,9 @@ func TestShowMenuAndBoot(t *testing.T) {
 		{
 			name: "non_default_entry_chosen_but_broken",
 			entries: []*dummyEntry{
-				{label: "1", isDefault: false, do: fmt.Errorf("borked")},
-				{label: "2", isDefault: true, do: errStopTestOnly},
-				{label: "3", isDefault: true, do: nil},
+				{label: "1", isDefault: false, load: fmt.Errorf("borked")},
+				{label: "2", isDefault: true, load: nil},
+				{label: "3", isDefault: true, load: nil},
 			},
 			userEntry:    []byte("1\r\n"),
 			calledLabels: []string{"1", "2"},
@@ -201,9 +214,9 @@ func TestShowMenuAndBoot(t *testing.T) {
 		{
 			name: "last_entry_works",
 			entries: []*dummyEntry{
-				{label: "1", isDefault: true, do: nil},
-				{label: "2", isDefault: true, do: nil},
-				{label: "3", isDefault: true, do: errStopTestOnly},
+				{label: "1", isDefault: true, load: fmt.Errorf("foo")},
+				{label: "2", isDefault: true, load: fmt.Errorf("bar")},
+				{label: "3", isDefault: true, load: nil},
 			},
 			// user just hits enter.
 			userEntry:    []byte("\r\n"),
@@ -212,7 +225,6 @@ func TestShowMenuAndBoot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			pty, err := term.OpenPTY()
 			if err != nil {
 				t.Fatalf("%v", err)
@@ -224,11 +236,9 @@ func TestShowMenuAndBoot(t *testing.T) {
 				entries = append(entries, e)
 			}
 
-			var wg sync.WaitGroup
-			wg.Add(1)
+			entry := make(chan Entry)
 			go func() {
-				ShowMenuAndBoot(pty.Slave, entries...)
-				wg.Done()
+				entry <- ShowMenuAndLoad(pty.Slave, entries...)
 			}()
 
 			// Well this sucks.
@@ -245,12 +255,15 @@ func TestShowMenuAndBoot(t *testing.T) {
 				}
 			}
 
-			wg.Wait()
+			got := <-entry
+			if want := tt.calledLabels[len(tt.calledLabels)-1]; got.Label() != want {
+				t.Errorf("got label %s want label %s", got.Label(), want)
+			}
 
 			for _, entry := range tt.entries {
 				wantCalled := contains(tt.calledLabels, entry.label)
-				if wantCalled != entry.Called() {
-					t.Errorf("Entry %s gotCalled %t, wantCalled %t", entry.Label(), entry.Called(), wantCalled)
+				if wantCalled != entry.LoadCalled() {
+					t.Errorf("Entry %s gotCalled %t, wantCalled %t", entry.Label(), entry.LoadCalled(), wantCalled)
 				}
 			}
 		})

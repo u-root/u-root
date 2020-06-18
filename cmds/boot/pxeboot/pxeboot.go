@@ -105,7 +105,6 @@ func main() {
 	if len(flag.Args()) > 1 {
 		log.Fatalf("Only one regexp-style argument is allowed, e.g.: " + ifName)
 	}
-
 	if len(flag.Args()) > 0 {
 		ifName = flag.Args()[0]
 	}
@@ -123,13 +122,24 @@ func main() {
 		}
 		return
 	}
+
 	menuEntries := menu.OSImages(*dryRun, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 
-	menu.ShowMenuAndBoot(os.Stdin, menuEntries...)
+	chosenEntry := menu.ShowMenuAndLoad(os.Stdin, menuEntries...)
+	if chosenEntry == nil {
+		log.Fatalf("Nothing to boot.")
+	}
+	if *dryRun {
+		log.Printf("Chosen menu entry: %s", chosenEntry)
+		os.Exit(0)
+	}
+	// Exec should either return an error or not return at all.
+	if err := chosenEntry.Exec(); err != nil {
+		log.Fatalf("Failed to exec %s: %v", chosenEntry, err)
+	}
 
-	// Kexec should either return an error or not return.
+	// Kexec should either return an error or not return at all.
 	panic("unreachable")
-
 }
