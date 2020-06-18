@@ -4,6 +4,8 @@
 
 // Package ipmi implements functions to communicate with the OpenIPMI driver
 // interface.
+// For a detailed description of OpenIPMI, see
+// http://openipmi.sourceforge.net/IPMI.pdf
 package ipmi
 
 import (
@@ -27,32 +29,34 @@ const (
 	_IPMI_BMC_CHANNEL                = 0xf
 	_IPMI_BUF_SIZE                   = 1024
 	_IPMI_IOC_MAGIC                  = 'i'
-	_IPMI_NETFN_CHASSIS              = 0x0
-	_IPMI_NETFN_APP                  = 0x6
-	_IPMI_NETFN_STORAGE              = 0xA
-	_IPMI_NETFN_TRANSPORT            = 0xC
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
+	// Net functions
+	_IPMI_NETFN_CHASSIS   NetFn = 0x0
+	_IPMI_NETFN_APP       NetFn = 0x6
+	_IPMI_NETFN_STORAGE   NetFn = 0xA
+	_IPMI_NETFN_TRANSPORT NetFn = 0xC
+
 	// IPM Device "Global" Commands
-	BMC_GET_DEVICE_ID = 0x01
+	BMC_GET_DEVICE_ID Command = 0x01
 
 	// BMC Device and Messaging Commands
-	BMC_SET_WATCHDOG_TIMER     = 0x24
-	BMC_GET_WATCHDOG_TIMER     = 0x25
-	BMC_SET_GLOBAL_ENABLES     = 0x2E
-	BMC_GET_GLOBAL_ENABLES     = 0x2F
-	SET_SYSTEM_INFO_PARAMETERS = 0x58
-	BMC_ADD_SEL                = 0x44
+	BMC_SET_WATCHDOG_TIMER     Command = 0x24
+	BMC_GET_WATCHDOG_TIMER     Command = 0x25
+	BMC_SET_GLOBAL_ENABLES     Command = 0x2E
+	BMC_GET_GLOBAL_ENABLES     Command = 0x2F
+	SET_SYSTEM_INFO_PARAMETERS Command = 0x58
+	BMC_ADD_SEL                Command = 0x44
 
 	// Chassis Device Commands
-	BMC_GET_CHASSIS_STATUS = 0x01
+	BMC_GET_CHASSIS_STATUS Command = 0x01
 
 	// SEL device Commands
-	BMC_GET_SEL_INFO = 0x40
+	BMC_GET_SEL_INFO Command = 0x40
 
 	//LAN Device Commands
-	BMC_GET_LAN_CONFIG = 0x02
+	BMC_GET_LAN_CONFIG Command = 0x02
 
 	IPM_WATCHDOG_NO_ACTION    = 0x00
 	IPM_WATCHDOG_SMS_OS       = 0x04
@@ -82,13 +86,21 @@ var (
 	timeout = 30 * time.Second
 )
 
+// IPMI represents access to the IPMI interface.
 type IPMI struct {
 	*os.File
 }
 
+// Command is the command code for a given message.
+type Command byte
+
+// NetFn is the network function of the class of message being sent.
+type NetFn byte
+
+// Msg is the full IPMI message to be sent.
 type Msg struct {
-	Netfn   byte
-	Cmd     byte
+	Netfn   NetFn
+	Cmd     Command
 	DataLen uint16
 	Data    unsafe.Pointer
 }
@@ -210,6 +222,21 @@ func ioctlGetRecv(fd, name uintptr, recv *recv) error {
 	return nil
 }
 
+// SendRecvBasic sends the IPMI message, receives the response, and returns the
+// response data. This is recommended for use unless the user must be able to
+// specify the data pointer and length on their own.
+func (i *IPMI) SendRecvBasic(netfn NetFn, cmd Command, data []byte) ([]byte, error) {
+	msg := Msg{
+		Netfn:   netfn,
+		Cmd:     cmd,
+		Data:    unsafe.Pointer(&data[0]),
+		DataLen: uint16(len(data)),
+	}
+	return i.SendRecv(msg)
+}
+
+// SendRecv sends the IPMI message, receives the response, and returns the
+// response data.
 func (i *IPMI) SendRecv(msg Msg) ([]byte, error) {
 	addr := &systemInterfaceAddr{
 		addrType: _IPMI_SYSTEM_INTERFACE_ADDR_TYPE,
@@ -546,8 +573,8 @@ func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 	}
 
 	msg := Msg{
-		Netfn: param[0],
-		Cmd:   param[1],
+		Netfn: NetFn(param[0]),
+		Cmd:   Command(param[1]),
 	}
 	if len(param) > 2 {
 		msg.Data = unsafe.Pointer(&param[2])

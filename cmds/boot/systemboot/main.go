@@ -15,6 +15,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/u-root/u-root/pkg/ipmi/wiwynn"
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
@@ -63,13 +64,13 @@ func getSystemFWVersion(si *smbios.Info) (string, error) {
 }
 
 func checkCMOSClear(ipmi *ipmi.IPMI) error {
-	if cmosclear, bootorder, err := ipmi.IsCMOSClearSet(); cmosclear {
+	if cmosclear, bootorder, err := wiwynn.IsCMOSClearSet(ipmi); cmosclear {
 		log.Printf("CMOS clear starts")
 		if err = cmosClear(); err != nil {
 			return err
 		}
 		// ToDo: Reset RW_VPD to default values
-		if err = ipmi.ClearCMOSClearValidBits(bootorder); err != nil {
+		if err = wiwynn.ClearCMOSClearValidBits(ipmi, bootorder); err != nil {
 			return err
 		}
 		addSEL("cmosclear")
@@ -118,9 +119,9 @@ func runIPMICommands() {
 				log.Printf("IPMI CMOS clear err: %v", err)
 			}
 
-			dimmInfo, err := ipmi.GetOemIpmiDimmInfo(si)
+			dimmInfo, err := wiwynn.GetOemIpmiDimmInfo(si)
 			if err == nil {
-				if err = i.SendOemIpmiDimmInfo(dimmInfo); err == nil {
+				if err = wiwynn.SendOemIpmiDimmInfo(i, dimmInfo); err == nil {
 					log.Printf("Send the information of DIMMs to BMC.")
 				} else {
 					log.Printf("Failed to send the information of DIMMs to BMC: %v.", err)
@@ -129,9 +130,9 @@ func runIPMICommands() {
 				log.Printf("Failed to get the information of DIMMs: %v.", err)
 			}
 
-			processorInfo, err := ipmi.GetOemIpmiProcessorInfo(si)
+			processorInfo, err := wiwynn.GetOemIpmiProcessorInfo(si)
 			if err == nil {
-				if err = i.SendOemIpmiProcessorInfo(processorInfo); err == nil {
+				if err = wiwynn.SendOemIpmiProcessorInfo(i, processorInfo); err == nil {
 					log.Printf("Send the information of processors to BMC.")
 				} else {
 					log.Printf("Failed to send the information of processors to BMC: %v.", err)
