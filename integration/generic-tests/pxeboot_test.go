@@ -61,7 +61,7 @@ func TestPxeboot4(t *testing.T) {
 			),
 		},
 		TestCmds: []string{
-			"pxeboot --dry-run -v",
+			"pxeboot --no-exec -v",
 			// Sleep so serial console output gets flushed. The expect library is racy.
 			"sleep 5",
 			"shutdown -h",

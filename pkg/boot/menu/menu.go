@@ -176,12 +176,12 @@ func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
 }
 
 // OSImages returns menu entries for the given OSImages.
-func OSImages(dryRun bool, imgs ...boot.OSImage) []Entry {
+func OSImages(verbose bool, imgs ...boot.OSImage) []Entry {
 	var menu []Entry
 	for _, img := range imgs {
 		menu = append(menu, &OSImageAction{
 			OSImage: img,
-			DryRun:  dryRun,
+			Verbose: verbose,
 		})
 	}
 	return menu
@@ -190,12 +190,12 @@ func OSImages(dryRun bool, imgs ...boot.OSImage) []Entry {
 // OSImageAction is a menu.Entry that boots an OSImage.
 type OSImageAction struct {
 	boot.OSImage
-	DryRun bool
+	Verbose bool
 }
 
 // Load implements Entry.Load by loading the OS image into memory.
 func (oia OSImageAction) Load() error {
-	if err := oia.OSImage.Load(oia.DryRun); err != nil {
+	if err := oia.OSImage.Load(oia.Verbose); err != nil {
 		return fmt.Errorf("could not load image %s: %v", oia.OSImage, err)
 	}
 	return nil
