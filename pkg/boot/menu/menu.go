@@ -7,7 +7,6 @@
 package menu
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,7 +22,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
+var (
 	initialTimeout    = 10 * time.Second
 	subsequentTimeout = 60 * time.Second
 )
@@ -33,8 +32,14 @@ type Entry interface {
 	// Label is the string displayed to the user in the menu.
 	Label() string
 
-	// Do is called when the entry is chosen.
-	Do() error
+	// Load is called when the entry is chosen, but does not transfer
+	// execution to another process or kernel.
+	Load() error
+
+	// Exec transfers execution to another process or kernel.
+	//
+	// Exec either returns an error or does not return at all.
+	Exec() error
 
 	// IsDefault indicates that this action should be run by default if the
 	// user didn't make an entry choice.
@@ -113,17 +118,12 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	}
 }
 
-// errStopTestOnly makes ShowMenuAndBoot return if Entry.Do returns it. This
-// exists because we expect all menu entries to take over execution context if
-// they succeed (e.g. exec a shell, reboot, exec a kernel). Success for Do() is
-// only if it never returns.
+// ShowMenuAndLoad lets the user choose one of entries and loads it. If no
+// entry is chosen by the user, an entry whose IsDefault() is true will be
+// returned.
 //
-// We can't test that it won't return, so we use this placeholder value instead
-// to indicate "it worked".
-var errStopTestOnly = errors.New("makes ShowMenuAndBoot return only in tests")
-
-// ShowMenuAndBoot lets the user choose one of entries and boots it.
-func ShowMenuAndBoot(input *os.File, entries ...Entry) {
+// The user is left to call Entry.Exec when this function returns.
+func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
 	// Clear the screen (ANSI terminal escape code for screen clear).
 	fmt.Printf("\033[1;1H\033[2J\n\n")
 	fmt.Printf("Welcome to NERF's Boot Menu\n\n")
@@ -139,9 +139,15 @@ func ShowMenuAndBoot(input *os.File, entries ...Entry) {
 			// If nothing was entered, fall back to default.
 			break
 		}
-		if err := entry.Do(); err != nil {
-			log.Printf("Failed to do %s: %v", entry.Label(), err)
+		if err := entry.Load(); err != nil {
+			log.Printf("Failed to load %s: %v", entry.Label(), err)
+			continue
 		}
+
+		// Entry was successfully loaded. Leave it to the caller to
+		// exec, so the caller can clean up the OS before rebooting or
+		// kexecing (e.g. unmount file systems).
+		return entry
 	}
 
 	fmt.Println("")
@@ -153,13 +159,20 @@ func ShowMenuAndBoot(input *os.File, entries ...Entry) {
 		// drop to shell.
 		if e.IsDefault() {
 			fmt.Printf("Attempting to boot %s.\n\n", e)
-			if err := e.Do(); err == errStopTestOnly {
-				return
-			} else if err != nil {
-				log.Printf("Failed to boot %s: %v", e.Label(), err)
+
+			if err := e.Load(); err != nil {
+				log.Printf("Failed to load %s: %v", e.Label(), err)
+				continue
 			}
+
+			// Entry was successfully loaded. Leave it to the
+			// caller to exec, so the caller can clean up the OS
+			// before rebooting or kexecing (e.g. unmount file
+			// systems).
+			return e
 		}
 	}
+	return nil
 }
 
 // OSImages returns menu entries for the given OSImages.
@@ -180,20 +193,17 @@ type OSImageAction struct {
 	DryRun bool
 }
 
-// Do implements Entry.Do by booting the image.
-func (oia OSImageAction) Do() error {
+// Load implements Entry.Load by loading the OS image into memory.
+func (oia OSImageAction) Load() error {
 	if err := oia.OSImage.Load(oia.DryRun); err != nil {
-		log.Printf("Could not load image %s: %v", oia.OSImage, err)
-	}
-	if oia.DryRun {
-		// err should only be nil in a dry run.
-		log.Printf("Loaded kernel %s.", oia.OSImage)
-		os.Exit(0)
-	}
-	if err := boot.Execute(); err != nil {
-		return err
+		return fmt.Errorf("could not load image %s: %v", oia.OSImage, err)
 	}
 	return nil
+}
+
+// Exec executes the loaded image.
+func (oia OSImageAction) Exec() error {
+	return boot.Execute()
 }
 
 // IsDefault returns true -- this action should be performed in order by
@@ -208,8 +218,13 @@ func (StartShell) Label() string {
 	return "Enter a LinuxBoot shell"
 }
 
-// Do implements Entry.Do by running /bin/defaultsh.
-func (StartShell) Do() error {
+// Load does nothing.
+func (StartShell) Load() error {
+	return nil
+}
+
+// Exec implements Entry.Exec by running /bin/defaultsh.
+func (StartShell) Exec() error {
 	// Reset signal handler for SIGINT to enable user interrupts again
 	signal.Reset(syscall.SIGINT)
 	return sh.RunWithLogs("/bin/defaultsh")
@@ -226,8 +241,13 @@ func (Reboot) Label() string {
 	return "Reboot"
 }
 
-// Do reboots the machine using sys_reboot.
-func (Reboot) Do() error {
+// Load does nothing.
+func (Reboot) Load() error {
+	return nil
+}
+
+// Exec reboots the machine using sys_reboot.
+func (Reboot) Exec() error {
 	unix.Sync()
 	return unix.Reboot(unix.LINUX_REBOOT_CMD_RESTART)
 }
