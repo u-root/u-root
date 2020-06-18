@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// OpenBMC IPMI Blob Protocol commands
+// Package blobs implements OpenBMC IPMI Blob Protocol commands.
+//
 // This file declares functions that implement the generic blob transfer
 // interface detailed at https://github.com/openbmc/phosphor-ipmi-blobs
 // with IPMI as a transport layer.
 // See https://github.com/openbmc/google-ipmi-i2c for details on OEM
 // commands.
-
 package blobs
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"unsafe"
 
 	"github.com/u-root/u-root/pkg/ipmi"
 )
@@ -34,19 +33,19 @@ type BlobStats struct {
 	metadata    []uint8
 }
 
+// BlobHandler provides an interface for the blob protocol. IT can be used
+// to call all the blob transfer commands.
 type BlobHandler struct {
-	Ipmi *ipmi.IPMI
+	IPMI *ipmi.IPMI
 }
 
 const (
-	IPMI_MAX_PAYLOAD_SIZE = 256
+	_IPMI_GGL_NET_FN   ipmi.NetFn   = 46
+	_IPMI_GGL_LUN                   = 0
+	_IPMI_GGL_BLOB_CMD ipmi.Command = 128
 
-	_IPMI_GGL_NET_FN   = 46
-	_IPMI_GGL_LUN      = 0
-	_IPMI_GGL_BLOB_CMD = 128
-
-	OEN_LEN = 3
-	CRC_LEN = 2
+	_OEN_LEN = 3
+	_CRC_LEN = 2
 )
 
 // Blob transfer command codes.
@@ -90,22 +89,24 @@ const (
 	REQ_RES_CRC CRCOption = "REQ_RES_CRC"
 )
 
-// Maps OEM names to a 3 byte OEM number.
+// OENMap maps OEM names to a 3 byte OEM number.
 // OENs are typically serialized as the first 3 bytes of a request body.
 var OENMap = map[string][3]uint8{
 	"OpenBMC": {0xcf, 0xc2, 0x00},
 }
 
+// NewBlobHandler takes an IPMI struct, which provides a reference to the IPMI
+// device driver, and returns a BlobHandler.
 func NewBlobHandler(i *ipmi.IPMI) *BlobHandler {
-	return &BlobHandler{Ipmi: i}
+	return &BlobHandler{IPMI: i}
 }
 
-// sendBmcCmd takes a command code, data given in little endian format, and
+// sendBlobCmd takes a command code, data given in little endian format, and
 // an option for cyclic redundancy checks (CRC). It constructs the request
 // and sends the command over IPMI. It receives the response, validates it,
 // and then returns the response body.
-func (h *BlobHandler) sendBmcCmd(code uint8, data []uint8, crcOpt CRCOption) ([]byte, error) {
-	i := h.Ipmi
+func (h *BlobHandler) sendBlobCmd(code uint8, data []uint8, crcOpt CRCOption) ([]byte, error) {
+	i := h.IPMI
 	// Initialize a buffer with the correct OEN and code.
 	oen, ok := OENMap["OpenBMC"]
 	if !ok {
@@ -131,14 +132,7 @@ func (h *BlobHandler) sendBmcCmd(code uint8, data []uint8, crcOpt CRCOption) ([]
 	// - (optionally) 2-byte CRC over request body in little endian format
 	// - request body in little endian format
 
-	msg := ipmi.Msg{
-		Netfn:   _IPMI_GGL_NET_FN,
-		Cmd:     _IPMI_GGL_BLOB_CMD,
-		Data:    unsafe.Pointer(&buf[0]),
-		DataLen: uint16(len(buf)),
-	}
-
-	res, err := i.SendRecv(msg)
+	res, err := i.SendRecvBasic(_IPMI_GGL_NET_FN, _IPMI_GGL_BLOB_CMD, buf)
 	if err != nil {
 		return nil, err
 	}
@@ -151,10 +145,10 @@ func (h *BlobHandler) sendBmcCmd(code uint8, data []uint8, crcOpt CRCOption) ([]
 	// - response body in little endian format
 	// We verify that the OEN and CRC match the expected values.
 
-	if len(res) < OEN_LEN {
+	if len(res) < _OEN_LEN {
 		return nil, fmt.Errorf("response too small: %d < size of OEN", len(res))
 	}
-	resOen, resBody := res[0:OEN_LEN], res[OEN_LEN:]
+	resOen, resBody := res[0:_OEN_LEN], res[_OEN_LEN:]
 
 	// if oen[0] != resOen[0] || oen[1] != resOen[1] || oen[2] != resOen[2] {
 	if !bytes.Equal(oen[0:3], resOen) {
@@ -166,7 +160,7 @@ func (h *BlobHandler) sendBmcCmd(code uint8, data []uint8, crcOpt CRCOption) ([]
 		if err := verifyCRC(resBody); err != nil {
 			return nil, fmt.Errorf("failed to verify response CRC: %v", err)
 		}
-		resBody = resBody[CRC_LEN:]
+		resBody = resBody[_CRC_LEN:]
 	}
 
 	return resBody, nil
@@ -205,16 +199,16 @@ func genCRC(data []uint8) uint16 {
 // Verifies the CRC in the buffer, which must be the first two bytes. The CRC
 // is validated against all data that follows it.
 func verifyCRC(buf []uint8) error {
-	if len(buf) < CRC_LEN {
+	if len(buf) < _CRC_LEN {
 		return fmt.Errorf("response too small")
 	}
 
 	var respCrc uint16
-	if err := binary.Read(bytes.NewReader(buf[0:CRC_LEN]), binary.LittleEndian, &respCrc); err != nil {
+	if err := binary.Read(bytes.NewReader(buf[0:_CRC_LEN]), binary.LittleEndian, &respCrc); err != nil {
 		return fmt.Errorf("failed to read response CRC: %v", err)
 	}
 
-	expCrc := genCRC(buf[CRC_LEN:])
+	expCrc := genCRC(buf[_CRC_LEN:])
 
 	if expCrc != respCrc {
 		return fmt.Errorf("CRC error: generated 0x%04X, got 0x%04X", expCrc, respCrc)
@@ -238,7 +232,7 @@ func appendLittleEndian(buf []uint8, args ...interface{}) ([]uint8, error) {
 
 // BlobGetCount returns the number of enumerable blobs available.
 func (h *BlobHandler) BlobGetCount() (int, error) {
-	data, err := h.sendBmcCmd(_BMC_BLOB_CMD_CODE_GET_COUNT, []uint8{}, RES_CRC)
+	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_GET_COUNT, []uint8{}, RES_CRC)
 	if err != nil {
 		return 0, err
 	}
@@ -264,7 +258,7 @@ func (h *BlobHandler) BlobEnumerate(index int) (string, error) {
 		return "", fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	data, err := h.sendBmcCmd(_BMC_BLOB_CMD_CODE_ENUMERATE, req, REQ_RES_CRC)
+	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_ENUMERATE, req, REQ_RES_CRC)
 	if err != nil {
 		return "", err
 	}
@@ -285,7 +279,7 @@ func (h *BlobHandler) BlobOpen(id string, flags int16) (SessionID, error) {
 		return 0, fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	data, err := h.sendBmcCmd(_BMC_BLOB_CMD_CODE_OPEN, req, REQ_RES_CRC)
+	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_OPEN, req, REQ_RES_CRC)
 	if err != nil {
 		return 0, err
 	}
@@ -311,7 +305,7 @@ func (h *BlobHandler) BlobRead(sid SessionID, offset, size uint32) ([]uint8, err
 		return nil, fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	data, err := h.sendBmcCmd(_BMC_BLOB_CMD_CODE_READ, req, REQ_RES_CRC)
+	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_READ, req, REQ_RES_CRC)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +325,7 @@ func (h *BlobHandler) BlobWrite(sid SessionID, offset int32, data []int8) error 
 		return fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	_, err = h.sendBmcCmd(_BMC_BLOB_CMD_CODE_WRITE, req, REQ_CRC)
+	_, err = h.sendBlobCmd(_BMC_BLOB_CMD_CODE_WRITE, req, REQ_CRC)
 	return err
 }
 
@@ -345,7 +339,7 @@ func (h *BlobHandler) BlobCommit(sid SessionID, data []int8) error {
 		return fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	_, err = h.sendBmcCmd(_BMC_BLOB_CMD_CODE_COMMIT, req, REQ_CRC)
+	_, err = h.sendBlobCmd(_BMC_BLOB_CMD_CODE_COMMIT, req, REQ_CRC)
 	return err
 }
 
@@ -358,7 +352,7 @@ func (h *BlobHandler) BlobClose(sid SessionID) error {
 		return fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	_, err = h.sendBmcCmd(_BMC_BLOB_CMD_CODE_CLOSE, req, REQ_CRC)
+	_, err = h.sendBlobCmd(_BMC_BLOB_CMD_CODE_CLOSE, req, REQ_CRC)
 	return err
 }
 
@@ -371,7 +365,7 @@ func (h *BlobHandler) BlobDelete(id string) error {
 		return fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	_, err = h.sendBmcCmd(_BMC_BLOB_CMD_CODE_DELETE, req, REQ_CRC)
+	_, err = h.sendBlobCmd(_BMC_BLOB_CMD_CODE_DELETE, req, REQ_CRC)
 	return err
 }
 
@@ -387,7 +381,7 @@ func (h *BlobHandler) BlobStat(id string) (*BlobStats, error) {
 		return &BlobStats{}, fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	data, err := h.sendBmcCmd(_BMC_BLOB_CMD_CODE_STAT, req, REQ_RES_CRC)
+	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_STAT, req, REQ_RES_CRC)
 	if err != nil {
 		return &BlobStats{}, err
 	}
@@ -413,7 +407,7 @@ func (h *BlobHandler) BlobSessionStat(sid SessionID) (*BlobStats, error) {
 		return &BlobStats{}, fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
-	data, err := h.sendBmcCmd(_BMC_BLOB_CMD_CODE_SESSION_STAT, req, REQ_RES_CRC)
+	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_SESSION_STAT, req, REQ_RES_CRC)
 	if err != nil {
 		return &BlobStats{}, err
 	}

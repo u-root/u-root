@@ -16,13 +16,13 @@ import (
 )
 
 const (
-	_IPMI_FB_OEM_NET_FUNCTION1 = 0x30
-	_IPMI_FB_OEM_NET_FUNCTION2 = 0x36
+	_IPMI_FB_OEM_NET_FUNCTION1 ipmi.NetFn = 0x30
+	_IPMI_FB_OEM_NET_FUNCTION2 ipmi.NetFn = 0x36
 
-	_FB_OEM_SET_PROC_INFO       = 0x10
-	_FB_OEM_SET_DIMM_INFO       = 0x12
-	_FB_OEM_SET_BIOS_BOOT_ORDER = 0x52
-	_FB_OEM_GET_BIOS_BOOT_ORDER = 0x53
+	_FB_OEM_SET_PROC_INFO       ipmi.Command = 0x10
+	_FB_OEM_SET_DIMM_INFO       ipmi.Command = 0x12
+	_FB_OEM_SET_BIOS_BOOT_ORDER ipmi.Command = 0x52
+	_FB_OEM_GET_BIOS_BOOT_ORDER ipmi.Command = 0x53
 )
 
 type ProcessorInfo struct {

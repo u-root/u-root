@@ -17,6 +17,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -37,7 +38,7 @@ const (
 )
 
 var (
-	diskName = "/dev/sda"
+	disk = flag.String("disk", "/dev/sda", "The disk to be unlocked")
 )
 
 // readHssBlob reads a host secret seed from the given blob id.
@@ -133,17 +134,17 @@ func main() {
 	log.Printf("Found %d Host Secret Seeds.", len(hssList))
 
 	// Open the disk. Read its identity, and use it to unlock the disk.
-	disk, err := scuzz.NewSGDisk(diskName)
+	sgdisk, err := scuzz.NewSGDisk(*disk)
 	if err != nil {
-		log.Fatalf("failed to open disk %v: %v", diskName, err)
+		log.Fatalf("failed to open disk %v: %v", *disk, err)
 	}
 
-	info, err := disk.Identify()
+	info, err := sgdisk.Identify()
 	if err != nil {
-		log.Fatalf("failed to read disk %v identity: %v", diskName, err)
+		log.Fatalf("failed to read disk %v identity: %v", *disk, err)
 	}
 
-	log.Printf("Disk info for %s: %s", diskName, info.String())
+	log.Printf("Disk info for %s: %s", *disk, info.String())
 
 	// Try using each HSS to unlock the disk - only 1 should work.
 	unlocked := false
@@ -154,7 +155,7 @@ func main() {
 			continue
 		}
 
-		if err := disk.Unlock((string)(key), false); err != nil {
+		if err := sgdisk.Unlock((string)(key), false); err != nil {
 			log.Printf("Couldn't unlock disk with HSS %d: %v", i, err)
 		} else {
 			unlocked = true
@@ -163,26 +164,27 @@ func main() {
 	}
 
 	if unlocked {
-		log.Printf("Successfully unlocked disk %s.", diskName)
+		log.Printf("Successfully unlocked disk %s.", *disk)
 	} else {
-		log.Fatalf("Failed to unlock disk %s with any HSS.", diskName)
+		log.Fatalf("Failed to unlock disk %s with any HSS.", *disk)
 	}
 
 	// Update partitions on the on the disk.
-	diskdev, err := block.Device("/dev/sda")
+	diskdev, err := block.Device(*disk)
 	if err != nil {
-		log.Fatalf("Could not find /dev/sda: %v", err)
+		log.Fatalf("Could not find %s: %v", *disk, err)
 	}
 
 	if err := diskdev.ReadPartitionTable(); err != nil {
 		log.Fatalf("Could not re-read partition table: %v", err)
 	}
 
-	parts, err := filepath.Glob("/sys/class/block/sda*")
+	glob := filepath.Join("/sys/class/block", diskdev.Name+"*")
+	parts, err := filepath.Glob(glob)
 	if err != nil {
-		log.Fatalf("Could not find /sys/class/block/sda* files: %v", err)
+		log.Fatalf("Could not find disk partitions: %v", err)
 	}
 
-	log.Printf("Found these sda partitions: %v", parts)
+	log.Printf("Found these %s unlocked partitions: %v", *disk, parts)
 
 }
