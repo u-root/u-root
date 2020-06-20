@@ -237,7 +237,8 @@ type SchemeWithRetries struct {
 func (s *SchemeWithRetries) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
 	var err error
 	s.BackOff.Reset()
-	for d := time.Duration(0); d != backoff.Stop; d = s.BackOff.NextBackOff() {
+	back := backoff.WithContext(s.BackOff, ctx)
+	for d := time.Duration(0); d != backoff.Stop; d = back.NextBackOff() {
 		if d > 0 {
 			time.Sleep(d)
 		}
