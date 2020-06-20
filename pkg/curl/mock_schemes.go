@@ -100,30 +100,3 @@ func (m *MockScheme) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error)
 	}
 	return strings.NewReader(content), nil
 }
-
-// MockSchemeRetryFilter is a Scheme mock for testing and has a method to
-// implement FileSchemeRetryFilter.
-type MockSchemeRetryFilter struct {
-	*MockScheme
-
-	retryFilter func(*url.URL, error) bool
-}
-
-// NewMockSchemeRetryFilter creates a new MockSchemeRetryFilter with the given
-// scheme name.
-func NewMockSchemeRetryFilter(scheme string) *MockSchemeRetryFilter {
-	return &MockSchemeRetryFilter{NewMockScheme(scheme), nil}
-}
-
-// RetryFilter implements FileSchemeRetryFilter.
-func (m *MockSchemeRetryFilter) RetryFilter(u *url.URL, err error) bool {
-	if m.retryFilter == nil {
-		return true
-	}
-	return m.retryFilter(u, err)
-}
-
-// SetRetryFilter sets the function to be used by the RetryFilter method.
-func (m *MockSchemeRetryFilter) SetRetryFilter(f func(*url.URL, error) bool) {
-	m.retryFilter = f
-}
