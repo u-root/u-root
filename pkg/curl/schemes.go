@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -53,16 +54,6 @@ type FileScheme interface {
 	Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error)
 }
 
-// FileSchemeRetryFilter contains extra RetryFilter method for a FileScheme
-// wrapped by SchemeWithRetries.
-type FileSchemeRetryFilter interface {
-	// RetryFilter lets a FileScheme filter for errors returned by Fetch
-	// which are worth retrying. If this interface is not implemented, the
-	// default for SchemeWithRetries is to always retry. RetryFilter
-	// returns true to indicate a request should be retried.
-	RetryFilter(u *url.URL, err error) bool
-}
-
 var (
 	// DefaultHTTPClient is the default HTTP FileScheme.
 	//
@@ -90,6 +81,11 @@ type URLError struct {
 // Error implements error.Error.
 func (s *URLError) Error() string {
 	return fmt.Sprintf("encountered error %v with %q", s.Err, s.URL)
+}
+
+// Unwrap unwraps the underlying error.
+func (s *URLError) Unwrap() error {
+	return s.Err
 }
 
 // IsURLError returns true iff err is a URLError.
@@ -151,18 +147,6 @@ func (s Schemes) Fetch(ctx context.Context, u *url.URL) (File, error) {
 	return &file{ReaderAt: r, url: u}, nil
 }
 
-// RetryFilter implements FileSchemeRetryFilter.
-func (s Schemes) RetryFilter(u *url.URL, err error) bool {
-	fg, ok := s[u.Scheme]
-	if !ok {
-		return false
-	}
-	if fg, ok := fg.(FileSchemeRetryFilter); ok {
-		return fg.RetryFilter(u, err)
-	}
-	return true
-}
-
 // LazyFetch calls LazyFetch on DefaultSchemes.
 func LazyFetch(u *url.URL) (File, error) {
 	return DefaultSchemes.LazyFetch(u)
@@ -219,17 +203,38 @@ func (t *TFTPClient) Fetch(_ context.Context, u *url.URL) (io.ReaderAt, error) {
 	return uio.NewCachingReader(r), nil
 }
 
-// RetryFilter implements FileSchemeRetryFilter.
-func (t *TFTPClient) RetryFilter(u *url.URL, err error) bool {
-	// The tftp does not export the necessary structs to get the
-	// code out of the error message cleanly.
+// RetryTFTP retries downloads if the error does not contain FILE_NOT_FOUND.
+//
+// pack.ag/tftp does not export the necessary structs to get the
+// code out of the error message cleanly, but it does embed FILE_NOT_FOUND in
+// the error string.
+func RetryTFTP(u *url.URL, err error) bool {
 	return !strings.Contains(err.Error(), "FILE_NOT_FOUND")
 }
+
+// DoRetry returns true if the Fetch request for the URL should be
+// retried. err is the error that Fetch previously returned.
+//
+// DoRetry lets a FileScheme filter for errors returned by Fetch
+// which are worth retrying. If this interface is not implemented, the
+// default for SchemeWithRetries is to always retry. DoRetry
+// returns true to indicate a request should be retried.
+type DoRetry func(u *url.URL, err error) bool
 
 // SchemeWithRetries wraps a FileScheme and automatically retries (with
 // backoff) when Fetch returns a non-nil err.
 type SchemeWithRetries struct {
-	Scheme  FileScheme
+	Scheme FileScheme
+
+	// DoRetry should return true to indicate the Fetch shall be retried.
+	// Even if DoRetry returns true, BackOff can still determine whether to
+	// stop.
+	//
+	// If DoRetry is nil, it will be retried if the BackOff agrees.
+	DoRetry DoRetry
+
+	// BackOff determines how often to retry and how long to wait between
+	// each retry.
 	BackOff backoff.BackOff
 }
 
@@ -251,7 +256,7 @@ func (s *SchemeWithRetries) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt,
 		}
 
 		log.Printf("Error: Getting %v: %v", u, err)
-		if s, ok := s.Scheme.(FileSchemeRetryFilter); ok && !s.RetryFilter(u, err) {
+		if s.DoRetry != nil && !s.DoRetry(u, err) {
 			return r, err
 		}
 		log.Printf("Retrying %v", u)
@@ -271,6 +276,11 @@ type HTTPClientCodeError struct {
 // Error implements error for HTTPClientCodeError.
 func (h *HTTPClientCodeError) Error() string {
 	return fmt.Sprintf("HTTP server responded with error code %d, want 200: response %v", h.HTTPCode, h.Err)
+}
+
+// Unwrap implements errors.Unwrap.
+func (h *HTTPClientCodeError) Unwrap() error {
+	return h.Err
 }
 
 // HTTPClient implements FileScheme for HTTP files.
@@ -302,21 +312,59 @@ func (h HTTPClient) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) 
 	return uio.NewCachingReader(resp.Body), nil
 }
 
-// RetryFilter implements FileSchemeRetryFilter.
-func (h HTTPClient) RetryFilter(u *url.URL, err error) bool {
-	e, ok := err.(*HTTPClientCodeError)
-	if !ok {
+// RetryOr returns a DoRetry function that returns true if any one of fn return
+// true.
+func RetryOr(fn ...DoRetry) DoRetry {
+	return func(u *url.URL, err error) bool {
+		for _, f := range fn {
+			if f(u, err) {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// RetryConnectErrors retries only connect(2) errors.
+func RetryConnectErrors(u *url.URL, err error) bool {
+	var serr *os.SyscallError
+	if errors.As(err, &serr) && serr.Syscall == "connect" {
 		return true
+	}
+	return false
+}
+
+// RetryTemporaryNetworkErrors only retries temporary network errors.
+//
+// This relies on Go's net.Error.Temporary definition of temporary network
+// errors, which does not include network configuration errors. The latter are
+// relevant for users of DHCP, for example.
+func RetryTemporaryNetworkErrors(u *url.URL, err error) bool {
+	var nerr net.Error
+	if errors.As(err, &nerr) {
+		return nerr.Temporary()
+	}
+	return false
+}
+
+// RetryHTTP implements DoRetry for HTTP error codes where it makes sense.
+func RetryHTTP(u *url.URL, err error) bool {
+	var e *HTTPClientCodeError
+	if !errors.As(err, &e) {
+		return false
 	}
 	switch c := e.HTTPCode; {
 	case c == 200:
 		return false
+
 	case c == 408, c == 409, c == 425, c == 429:
 		// Retry for codes "Request Timeout(408), Conflict(409), Too Early(425), and Too Many Requests(429)"
 		return true
+
 	case c >= 400 && c < 500:
 		// We don't retry all other 400 codes, since the situation won't be improved with a retry.
 		return false
+
 	default:
 		return true
 	}

@@ -154,18 +154,18 @@ var tests = []struct {
 	{
 		name: "retry filter",
 		scheme: func() (FileScheme, *MockScheme) {
-			s := NewMockSchemeRetryFilter("fooftp")
+			s := NewMockScheme("fooftp")
 			s.Add("192.168.0.1", "/foo/pxelinux.cfg/default", "haha")
 			s.SetErr(errTest, 5)
-			s.SetRetryFilter(func(u *url.URL, err error) bool {
-				return err != errTest
-			})
 			r := &SchemeWithRetries{
+				DoRetry: func(u *url.URL, err error) bool {
+					return err != errTest
+				},
 				Scheme: s,
 				// backoff.ZeroBackOff so unit tests run fast.
 				BackOff: backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 10),
 			}
-			return r, s.MockScheme
+			return r, s
 		},
 		url:            testURL,
 		err:            errTest,
