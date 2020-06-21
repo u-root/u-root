@@ -61,10 +61,11 @@ func NewUsers(file string) (u *Users, e error) {
 	passwdScanner := bufio.NewScanner(passwdFile)
 
 	for passwdScanner.Scan() {
-		if passwdScanner.Text()[0] == '#' { // skip comments
+		txt := passwdScanner.Text()
+		if len(txt) == 0 || txt[0] == '#' { // skip empty lines and comments
 			continue
 		}
-		passwdInfo = strings.Split(passwdScanner.Text(), ":")
+		passwdInfo = strings.Split(txt, ":")
 		userNum, err := strconv.Atoi(passwdInfo[2])
 		if err != nil {
 			return nil, err
