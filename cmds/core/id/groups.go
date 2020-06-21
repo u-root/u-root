@@ -64,10 +64,11 @@ func NewGroups(file string) (g *Groups, e error) {
 	groupScanner := bufio.NewScanner(groupFile)
 
 	for groupScanner.Scan() {
-		if groupScanner.Text()[0] == '#' { // skip comments
+		txt := groupScanner.Text()
+		if len(txt) == 0 || txt[0] == '#' { // skip empty lines and comments
 			continue
 		}
-		groupInfo = strings.Split(groupScanner.Text(), ":")
+		groupInfo = strings.Split(txt, ":")
 		groupNum, err := strconv.Atoi(groupInfo[2])
 		if err != nil {
 			return nil, err
