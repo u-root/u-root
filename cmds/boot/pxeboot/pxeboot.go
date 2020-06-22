@@ -36,10 +36,11 @@ import (
 )
 
 var (
-	ifName  = "^e.*"
-	noLoad  = flag.Bool("no-load", false, "get DHCP response, print chosen boot configuration, but do not download + exec it")
-	noExec  = flag.Bool("no-exec", false, "download boot configuration, but do not exec it")
-	verbose = flag.Bool("v", false, "Verbose output")
+	ifName      = "^e.*"
+	noLoad      = flag.Bool("no-load", false, "get DHCP response, print chosen boot configuration, but do not download + exec it")
+	noExec      = flag.Bool("no-exec", false, "download boot configuration, but do not exec it")
+	noNetConfig = flag.Bool("no-net-config", false, "get DHCP response, but do not apply the network config it to the kernel interface")
+	verbose     = flag.Bool("v", false, "Verbose output")
 )
 
 const (
@@ -74,14 +75,17 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 
 		case result, ok := <-r:
 			if !ok {
-				log.Printf("Configured all interfaces.")
-				return nil, fmt.Errorf("nothing bootable found")
+				return nil, fmt.Errorf("nothing bootable found, all interfaces are configured or timed out")
 			}
+			iname := result.Interface.Attrs().Name
 			if result.Err != nil {
+				log.Printf("Could not configure %s for %s: %v", iname, result.Protocol, result.Err)
 				continue
 			}
 
-			if err := result.Lease.Configure(); err != nil {
+			if *noNetConfig {
+				log.Printf("Skipping configuring %s with lease %s", iname, result.Lease)
+			} else if err := result.Lease.Configure(); err != nil {
 				log.Printf("Failed to configure lease %s: %v", result.Lease, err)
 				// Boot further regardless of lease configuration result.
 				//
