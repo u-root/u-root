@@ -9,18 +9,18 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log"
-    "errors"
 
-	"github.com/u-root/u-root/pkg/tss"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
+	"github.com/u-root/u-root/pkg/tss"
 )
 
 var hashAlgo = tss.HashSHA256.GoTPMAlg()
-var tpmHandle *tss.TPM = nil
+var tpmHandle *tss.TPM
 
 // marshalPcrEvent writes structure fields piecemeal to buffer.
 func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
@@ -97,13 +97,13 @@ func hashReader(f io.Reader) []byte {
  * New sets up a tpm device handle
  * that can be used for storing hashes.
  */
-func New() (error) {
+func New() error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
 		return fmt.Errorf("couldn't talk to TPM Device: err=%v", err)
 	}
 
-    tpmHandle = tpm
+	tpmHandle = tpm
 	return nil
 }
 
@@ -111,10 +111,10 @@ func New() (error) {
  * Close ends connection to a tpm device handle
  */
 func Close() {
-    if (tpmHandle != nil) {
-        tpmHandle.Close()
-        tpmHandle = nil
-    }
+	if tpmHandle != nil {
+		tpmHandle.Close()
+		tpmHandle = nil
+	}
 }
 
 /*
@@ -124,9 +124,9 @@ func Close() {
  * err is returned if read fails.
  */
 func readPCR(pcr uint32) ([]byte, error) {
-    if (tpmHandle == nil) {
-        return nil, errors.New("tpmHandle is nil")
-    }
+	if tpmHandle == nil {
+		return nil, errors.New("tpmHandle is nil")
+	}
 
 	val, err := tpmHandle.ReadPCR(pcr)
 	if err != nil {
@@ -143,9 +143,9 @@ func readPCR(pcr uint32) ([]byte, error) {
  * err is returned if write to pcr fails.
  */
 func extendPCR(pcr uint32, hash []byte) error {
-    if (tpmHandle == nil) {
-        return errors.New("tpmHandle is nil")
-    }
+	if tpmHandle == nil {
+		return errors.New("tpmHandle is nil")
+	}
 
 	return tpmHandle.Extend(hash, pcr)
 }
