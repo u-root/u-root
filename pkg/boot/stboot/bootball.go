@@ -121,7 +121,7 @@ func (ball *BootBall) init() error {
 		return fmt.Errorf("BootBall: getting signatures: %v", err)
 	}
 
-	var x int = 0
+	var x int
 	for _, sigPool := range ball.signatures {
 		if x == 0 {
 			x = len(sigPool)
