@@ -5,11 +5,18 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"net"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/u-root/iscsinl"
+	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/dhclient"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
@@ -48,6 +55,11 @@ func checkDebugFlag() {
  */
 func main() {
 	checkDebugFlag()
+
+	err := scanIscsiDrives()
+	if err != nil {
+		log.Printf("NO ISCSI DRIVES found, err=[%v]", err)
+	}
 
 	defer unmountAndExit() // called only on error, on success we kexec
 	slaunch.Debug("********Step 1: init completed. starting main ********")
@@ -109,4 +121,47 @@ func unmountAndExit() {
 	slaunch.UnmountAll()
 	time.Sleep(5 * time.Second) // let queued up debug statements get printed
 	os.Exit(1)
+}
+
+// scanIscsiDrives calls dhcleint to parse cmdline and
+// iscsinl to mount iscsi drives.
+func scanIscsiDrives() error {
+
+	val, ok := cmdline.Flag("netroot")
+	if !ok {
+		return errors.New("netroot flag is not set")
+	}
+	slaunch.Debug("netroot flag is set with val=%s", val)
+
+	var n *net.TCPAddr
+	n, volume, err := dhclient.ParseISCSIURI(val)
+	if err != nil {
+		return fmt.Errorf("dhclient ISCSI parser failed err=%v", err)
+	}
+
+	ip := n.IP.String() + ":" + strconv.Itoa(n.Port)
+	slaunch.Debug("resolved ip:port=%v", ip)
+	slaunch.Debug("resolved vol=%v", volume)
+
+	slaunch.Debug("Scanning kernel cmd line for *rd.iscsi.initiator* flag")
+	initiatorName, ok := cmdline.Flag("rd.iscsi.initiator")
+	if !ok {
+		return errors.New("rd.iscsi.initiator flag is not set")
+	}
+
+	devices, err := iscsinl.MountIscsi(
+		iscsinl.WithInitiator(initiatorName),
+		iscsinl.WithTarget(ip, volume),
+		iscsinl.WithCmdsMax(128),
+		iscsinl.WithQueueDepth(16),
+		iscsinl.WithScheduler("noop"),
+	)
+	if err != nil {
+		return err
+	}
+
+	for i := range devices {
+		slaunch.Debug("Mounted at dev %v", devices[i])
+	}
+	return nil
 }
