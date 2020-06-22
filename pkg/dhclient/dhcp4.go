@@ -199,11 +199,11 @@ func (p *Packet4) Boot() (*url.URL, error) {
 func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
 	rp := p.P.RootPath()
 	if len(rp) > 0 {
-		return parseISCSIURI(rp)
+		return ParseISCSIURI(rp)
 	}
 	bootfilename := p.bootfilename()
 	if len(bootfilename) > 0 && strings.HasPrefix(bootfilename, "iscsi:") {
-		return parseISCSIURI(bootfilename)
+		return ParseISCSIURI(bootfilename)
 	}
 	return nil, "", ErrNoRootPath
 }

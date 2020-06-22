@@ -118,5 +118,5 @@ func (p *Packet6) ISCSIBoot() (*net.TCPAddr, string, error) {
 	if len(uri) == 0 {
 		return nil, "", fmt.Errorf("packet does not contain boot file URL")
 	}
-	return parseISCSIURI(uri)
+	return ParseISCSIURI(uri)
 }
