@@ -9,9 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/u-root/iscsinl"
@@ -126,21 +124,18 @@ func unmountAndExit() {
 // scanIscsiDrives calls dhcleint to parse cmdline and
 // iscsinl to mount iscsi drives.
 func scanIscsiDrives() error {
-
 	val, ok := cmdline.Flag("netroot")
 	if !ok {
 		return errors.New("netroot flag is not set")
 	}
 	slaunch.Debug("netroot flag is set with val=%s", val)
 
-	var n *net.TCPAddr
-	n, volume, err := dhclient.ParseISCSIURI(val)
+	target, volume, err := dhclient.ParseISCSIURI(val)
 	if err != nil {
 		return fmt.Errorf("dhclient ISCSI parser failed err=%v", err)
 	}
 
-	ip := n.IP.String() + ":" + strconv.Itoa(n.Port)
-	slaunch.Debug("resolved ip:port=%v", ip)
+	slaunch.Debug("resolved ip:port=%s", target)
 	slaunch.Debug("resolved vol=%v", volume)
 
 	slaunch.Debug("Scanning kernel cmd line for *rd.iscsi.initiator* flag")
@@ -151,7 +146,7 @@ func scanIscsiDrives() error {
 
 	devices, err := iscsinl.MountIscsi(
 		iscsinl.WithInitiator(initiatorName),
-		iscsinl.WithTarget(ip, volume),
+		iscsinl.WithTarget(target.String(), volume),
 		iscsinl.WithCmdsMax(128),
 		iscsinl.WithQueueDepth(16),
 		iscsinl.WithScheduler("noop"),
