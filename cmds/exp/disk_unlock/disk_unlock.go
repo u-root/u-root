@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The bmc_disk_unlock command is used to unlock a disk drive as follows:
+// The disk_unlock command is used to unlock a disk drive as follows:
 // 1. Via BMC, read a 32-byte secret seed known as the Host Secret Seed (HSS)
 //    using the OpenBMC IPMI blob transfer protocol
 // 2. Compute a password as follows:
@@ -38,8 +38,16 @@ const (
 )
 
 var (
-	disk = flag.String("disk", "/dev/sda", "The disk to be unlocked")
+	disk              = flag.String("disk", "/dev/sda", "The disk to be unlocked")
+	verbose           = flag.Bool("v", false, "print verbose output")
+	verboseNoSanitize = flag.Bool("dangerous-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
 )
+
+func verboseLog(msg string) {
+	if *verbose {
+		log.Print(msg)
+	}
+}
 
 // readHssBlob reads a host secret seed from the given blob id.
 func readHssBlob(id string, h *blobs.BlobHandler) (data []uint8, rerr error) {
@@ -98,6 +106,11 @@ func getAllHss() ([][]uint8, error) {
 		if err != nil {
 			log.Printf("failed to read HSS of id %s: %v", id, err)
 		} else {
+			msg := fmt.Sprintf("HSS Entry: Index=%s", strings.TrimPrefix(id, skmPrefix))
+			if *verboseNoSanitize {
+				msg = msg + fmt.Sprintf(", Seed=%s", hss)
+			}
+			verboseLog(msg)
 			hssList = append(hssList, hss)
 		}
 	}
@@ -131,7 +144,7 @@ func main() {
 		log.Fatalf("no HSS found - can't unlock disk.")
 	}
 
-	log.Printf("Found %d Host Secret Seeds.", len(hssList))
+	verboseLog(fmt.Sprintf("Found %d Host Secret Seeds.", len(hssList)))
 
 	// Open the disk. Read its identity, and use it to unlock the disk.
 	sgdisk, err := scuzz.NewSGDisk(*disk)
@@ -144,7 +157,7 @@ func main() {
 		log.Fatalf("failed to read disk %v identity: %v", *disk, err)
 	}
 
-	log.Printf("Disk info for %s: %s", *disk, info.String())
+	verboseLog(fmt.Sprintf("Disk info for %s: %s", *disk, info.String()))
 
 	// Try using each HSS to unlock the disk - only 1 should work.
 	unlocked := false
@@ -185,6 +198,6 @@ func main() {
 		log.Fatalf("Could not find disk partitions: %v", err)
 	}
 
-	log.Printf("Found these %s unlocked partitions: %v", *disk, parts)
+	verboseLog(fmt.Sprintf("Found these %s unlocked partitions: %v", *disk, parts))
 
 }

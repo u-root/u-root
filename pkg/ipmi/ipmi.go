@@ -222,22 +222,26 @@ func ioctlGetRecv(fd, name uintptr, recv *recv) error {
 	return nil
 }
 
-// SendRecvBasic sends the IPMI message, receives the response, and returns the
+// SendRecv sends the IPMI message, receives the response, and returns the
 // response data. This is recommended for use unless the user must be able to
 // specify the data pointer and length on their own.
-func (i *IPMI) SendRecvBasic(netfn NetFn, cmd Command, data []byte) ([]byte, error) {
+func (i *IPMI) SendRecv(netfn NetFn, cmd Command, data []byte) ([]byte, error) {
+	var dataPtr unsafe.Pointer
+	if data != nil {
+		dataPtr = unsafe.Pointer(&data[0])
+	}
 	msg := Msg{
 		Netfn:   netfn,
 		Cmd:     cmd,
-		Data:    unsafe.Pointer(&data[0]),
+		Data:    dataPtr,
 		DataLen: uint16(len(data)),
 	}
-	return i.SendRecv(msg)
+	return i.RawSendRecv(msg)
 }
 
-// SendRecv sends the IPMI message, receives the response, and returns the
+// RawSendRecv sends the IPMI message, receives the response, and returns the
 // response data.
-func (i *IPMI) SendRecv(msg Msg) ([]byte, error) {
+func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 	addr := &systemInterfaceAddr{
 		addrType: _IPMI_SYSTEM_INTERFACE_ADDR_TYPE,
 		channel:  _IPMI_BMC_CHANNEL,
@@ -290,16 +294,15 @@ func (i *IPMI) SendRecv(msg Msg) ([]byte, error) {
 		}
 	}
 
+	if recv.msg.DataLen >= _IPMI_BUF_SIZE {
+		return nil, fmt.Errorf("data length received too large: %d > %d", recv.msg.DataLen, _IPMI_BUF_SIZE)
+	}
+
 	return buf[:recv.msg.DataLen:recv.msg.DataLen], nil
 }
 
 func (i *IPMI) WatchdogRunning() (bool, error) {
-	msg := Msg{
-		Cmd:   BMC_GET_WATCHDOG_TIMER,
-		Netfn: _IPMI_NETFN_APP,
-	}
-
-	recv, err := i.SendRecv(msg)
+	recv, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_WATCHDOG_TIMER, nil)
 	if err != nil {
 		return false, err
 	}
@@ -320,14 +323,7 @@ func (i *IPMI) ShutoffWatchdog() error {
 	data[4] = 0xb8 // countdown lsb (100 ms/count)
 	data[5] = 0x0b // countdown msb - 5 mins
 
-	msg := Msg{
-		Cmd:     BMC_SET_WATCHDOG_TIMER,
-		Netfn:   _IPMI_NETFN_APP,
-		Data:    unsafe.Pointer(&data),
-		DataLen: 6,
-	}
-
-	_, err := i.SendRecv(msg)
+	_, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_WATCHDOG_TIMER, data[:6])
 	if err != nil {
 		return err
 	}
@@ -372,15 +368,7 @@ func (i *IPMI) LogSystemEvent(e *Event) error {
 	if err != nil {
 		return err
 	}
-
-	msg := Msg{
-		Cmd:     BMC_ADD_SEL,
-		Netfn:   _IPMI_NETFN_STORAGE,
-		Data:    unsafe.Pointer(&data[0]),
-		DataLen: 16,
-	}
-
-	_, err = i.SendRecv(msg)
+	_, err = i.SendRecv(_IPMI_NETFN_STORAGE, BMC_ADD_SEL, data)
 	return err
 }
 
@@ -392,7 +380,7 @@ func (i *IPMI) setsysinfo(data *setSystemInfoReq) error {
 		DataLen: 18,
 	}
 
-	if _, err := i.SendRecv(msg); err != nil {
+	if _, err := i.RawSendRecv(msg); err != nil {
 		return err
 	}
 
@@ -442,12 +430,7 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 }
 
 func (i *IPMI) GetDeviceID() (*DevID, error) {
-	msg := Msg{
-		Cmd:   BMC_GET_DEVICE_ID,
-		Netfn: _IPMI_NETFN_APP,
-	}
-
-	data, err := i.SendRecv(msg)
+	data, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_DEVICE_ID, nil)
 
 	if err != nil {
 		return nil, err
@@ -464,24 +447,12 @@ func (i *IPMI) GetDeviceID() (*DevID, error) {
 }
 
 func (i *IPMI) setGlobalEnables(enables byte) error {
-	msg := Msg{
-		Cmd:     BMC_SET_GLOBAL_ENABLES,
-		Netfn:   _IPMI_NETFN_APP,
-		Data:    unsafe.Pointer(&enables),
-		DataLen: 1,
-	}
-
-	_, err := i.SendRecv(msg)
+	_, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_GLOBAL_ENABLES, []byte{enables})
 	return err
 }
 
 func (i *IPMI) getGlobalEnables() ([]byte, error) {
-	msg := Msg{
-		Cmd:   BMC_GET_GLOBAL_ENABLES,
-		Netfn: _IPMI_NETFN_APP,
-	}
-
-	return i.SendRecv(msg)
+	return i.SendRecv(_IPMI_NETFN_APP, BMC_GET_GLOBAL_ENABLES, nil)
 }
 
 func (i *IPMI) EnableSEL() (bool, error) {
@@ -511,12 +482,7 @@ func (i *IPMI) EnableSEL() (bool, error) {
 }
 
 func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
-	msg := Msg{
-		Cmd:   BMC_GET_CHASSIS_STATUS,
-		Netfn: _IPMI_NETFN_CHASSIS,
-	}
-
-	data, err := i.SendRecv(msg)
+	data, err := i.SendRecv(_IPMI_NETFN_CHASSIS, BMC_GET_CHASSIS_STATUS, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -531,12 +497,7 @@ func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 }
 
 func (i *IPMI) GetSELInfo() (*SELInfo, error) {
-	msg := Msg{
-		Cmd:   BMC_GET_SEL_INFO,
-		Netfn: _IPMI_NETFN_STORAGE,
-	}
-
-	data, err := i.SendRecv(msg)
+	data, err := i.SendRecv(_IPMI_NETFN_STORAGE, BMC_GET_SEL_INFO, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -557,14 +518,7 @@ func (i *IPMI) GetLanConfig(channel byte, param byte) ([]byte, error) {
 	data[2] = 0
 	data[3] = 0
 
-	msg := Msg{
-		Cmd:     BMC_GET_LAN_CONFIG,
-		Netfn:   _IPMI_NETFN_TRANSPORT,
-		Data:    unsafe.Pointer(&data[0]),
-		DataLen: 4,
-	}
-
-	return i.SendRecv(msg)
+	return i.SendRecv(_IPMI_NETFN_TRANSPORT, BMC_GET_LAN_CONFIG, data[:4])
 }
 
 func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
@@ -582,5 +536,5 @@ func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 
 	msg.DataLen = uint16(len(param) - 2)
 
-	return i.SendRecv(msg)
+	return i.RawSendRecv(msg)
 }
