@@ -45,11 +45,7 @@ func parse(device *block.BlockDev, mountDir string) []boot.OSImage {
 }
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
-func Localboot(verbose bool, noLoad bool, noExec bool) ([]boot.OSImage, []*mount.MountPoint, error) {
-	debug := func(string, ...interface{}) {}
-	if verbose {
-		debug = log.Printf
-	}
+func Localboot() ([]boot.OSImage, []*mount.MountPoint, error) {
 	blockDevs, err := block.GetBlockDevices()
 	if err != nil {
 		return nil, nil, errors.New("no available block devices to boot from")
@@ -57,7 +53,7 @@ func Localboot(verbose bool, noLoad bool, noExec bool) ([]boot.OSImage, []*mount
 
 	// Try to only boot from "good" block devices.
 	blockDevs = blockDevs.FilterZeroSize()
-	debug("Booting from the following block devices: %v", blockDevs)
+	log.Printf("Booting from the following block devices: %v", blockDevs)
 
 	mountPoints, err := ioutil.TempDir("", "u-root-boot")
 	if err != nil {

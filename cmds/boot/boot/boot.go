@@ -67,7 +67,7 @@ func main() {
 		debug = log.Printf
 	}
 
-	images, mps, err := localboot.Localboot(*verbose, *noLoad, *noExec)
+	images, mps, err := localboot.Localboot()
 	if err != nil {
 		log.Fatal(err)
 	}
