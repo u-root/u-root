@@ -132,7 +132,7 @@ func (h *BlobHandler) sendBlobCmd(code uint8, data []uint8, crcOpt CRCOption) ([
 	// - (optionally) 2-byte CRC over request body in little endian format
 	// - request body in little endian format
 
-	res, err := i.SendRecvBasic(_IPMI_GGL_NET_FN, _IPMI_GGL_BLOB_CMD, buf)
+	res, err := i.SendRecv(_IPMI_GGL_NET_FN, _IPMI_GGL_BLOB_CMD, buf)
 	if err != nil {
 		return nil, err
 	}
@@ -378,19 +378,19 @@ func (h *BlobHandler) BlobDelete(id string) error {
 func (h *BlobHandler) BlobStat(id string) (*BlobStats, error) {
 	req, err := appendLittleEndian([]uint8{}, ([]byte)(id))
 	if err != nil {
-		return &BlobStats{}, fmt.Errorf("failed to create data buffer: %v", err)
+		return nil, fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
 	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_STAT, req, REQ_RES_CRC)
 	if err != nil {
-		return &BlobStats{}, err
+		return nil, err
 	}
 
 	buf := bytes.NewReader(data)
 	var stats BlobStats
 
 	if err := binary.Read(buf, binary.LittleEndian, &stats); err != nil {
-		return &BlobStats{}, fmt.Errorf("failed to read response: %v", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
 	return &stats, nil
@@ -404,19 +404,19 @@ func (h *BlobHandler) BlobStat(id string) (*BlobStats, error) {
 func (h *BlobHandler) BlobSessionStat(sid SessionID) (*BlobStats, error) {
 	req, err := appendLittleEndian([]uint8{}, sid)
 	if err != nil {
-		return &BlobStats{}, fmt.Errorf("failed to create data buffer: %v", err)
+		return nil, fmt.Errorf("failed to create data buffer: %v", err)
 	}
 
 	data, err := h.sendBlobCmd(_BMC_BLOB_CMD_CODE_SESSION_STAT, req, REQ_RES_CRC)
 	if err != nil {
-		return &BlobStats{}, err
+		return nil, err
 	}
 
 	buf := bytes.NewReader(data)
 	var stats BlobStats
 
 	if err := binary.Read(buf, binary.LittleEndian, &stats); err != nil {
-		return &BlobStats{}, fmt.Errorf("failed to read response: %v", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
 	return &stats, nil

@@ -63,11 +63,6 @@ var OENMap = map[string][3]uint8{
 }
 
 func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
-	msg := ipmi.Msg{
-		Netfn: _IPMI_FB_OEM_NET_FUNCTION2,
-		Cmd:   _FB_OEM_SET_PROC_INFO,
-	}
-
 	for index := 0; index < len(info); index++ {
 		for param := 1; param <= 2; param++ {
 			data, err := info[index].marshall(param)
@@ -75,10 +70,7 @@ func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
 				return err
 			}
 
-			msg.Data = unsafe.Pointer(&data[0])
-			msg.DataLen = uint16(len(data))
-
-			_, err = i.SendRecv(msg)
+			_, err = i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION2, _FB_OEM_SET_PROC_INFO, data)
 			if err != nil {
 				return err
 			}
@@ -88,11 +80,6 @@ func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
 }
 
 func SendOemIpmiDimmInfo(i *ipmi.IPMI, info []DimmInfo) error {
-	msg := ipmi.Msg{
-		Netfn: _IPMI_FB_OEM_NET_FUNCTION2,
-		Cmd:   _FB_OEM_SET_DIMM_INFO,
-	}
-
 	for index := 0; index < len(info); index++ {
 		for param := 1; param <= 6; param++ {
 			//If DIMM is not present, only send the information of DIMM location
@@ -104,11 +91,7 @@ func SendOemIpmiDimmInfo(i *ipmi.IPMI, info []DimmInfo) error {
 			if err != nil {
 				return err
 			}
-
-			msg.Data = unsafe.Pointer(&data[0])
-			msg.DataLen = uint16(len(data))
-
-			_, err = i.SendRecv(msg)
+			_, err = i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION2, _FB_OEM_SET_DIMM_INFO, data)
 			if err != nil {
 				return err
 			}
@@ -302,12 +285,7 @@ func GetOemIpmiDimmInfo(si *smbios.Info) ([]DimmInfo, error) {
 
 // Get BIOS boot order data and check if CMOS clear bit and valid bit are both set
 func IsCMOSClearSet(i *ipmi.IPMI) (bool, []byte, error) {
-	msg := ipmi.Msg{
-		Netfn: _IPMI_FB_OEM_NET_FUNCTION1,
-		Cmd:   _FB_OEM_GET_BIOS_BOOT_ORDER,
-	}
-
-	recv, err := i.SendRecv(msg)
+	recv, err := i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION1, _FB_OEM_GET_BIOS_BOOT_ORDER, nil)
 	if err != nil {
 		return false, nil, err
 	}
@@ -330,7 +308,7 @@ func ClearCMOSClearValidBits(i *ipmi.IPMI, data []byte) error {
 		DataLen: 6,
 	}
 
-	if _, err := i.SendRecv(msg); err != nil {
+	if _, err := i.RawSendRecv(msg); err != nil {
 		return err
 	}
 	return nil
