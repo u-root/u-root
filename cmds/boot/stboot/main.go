@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -74,7 +75,8 @@ func main() {
 
 	info(banner)
 
-	vars, err := loadHostvars()
+	p := filepath.Join("etc/", hostvarsFile)
+	vars, err := loadHostvars(p)
 	if err != nil {
 		reboot("Cannot find hostvars: %v", err)
 	}
@@ -160,12 +162,13 @@ func main() {
 	}
 
 	info("Try downloading individual bootball")
-	file := stboot.ComposeIndividualBallName(hwAddr)
+	prefix := stboot.ComposeIndividualBallPrefix(hwAddr)
+	file := prefix + stboot.DefaultBallName
 	dest, err := tryDownload(urlStrings, file)
 	if err != nil {
 		debug("%v", err)
 		info("Try downloading general bootball")
-		dest, err = tryDownload(urlStrings, stboot.BallName)
+		dest, err = tryDownload(urlStrings, file)
 		if err != nil {
 			debug("%v", err)
 			reboot("Cannot get appropriate bootball from provisioning servers")
