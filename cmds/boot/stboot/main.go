@@ -15,15 +15,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/stboot"
 	"github.com/u-root/u-root/pkg/recovery"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
-	dryRun  = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
-	doDebug = flag.Bool("debug", false, "Print additional debug output")
-	klog    = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
+	noMeasuredBoot = flag.Bool("insecure", false, "Do not extend PCRs with measurements of the loaded OS")
+	doDebug        = flag.Bool("debug", false, "Print additional debug output")
+	klog           = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
+	dryRun         = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 
 	debug = func(string, ...interface{}) {}
 
@@ -84,7 +86,6 @@ func main() {
 	/////////////////
 	// Data partition
 	/////////////////
-
 	data, err = findDataPartition()
 	if err != nil {
 		reboot("%v", err)
@@ -134,10 +135,18 @@ func main() {
 		reboot("%v", err)
 	}
 
+	////////////////
+	// TXT self test
+	////////////////
+	txtSupported := runTxtTests(*doDebug)
+	if !txtSupported {
+		info("WARNING: No TXT Support!")
+	}
+	info("TXT is supported on this platform")
+
 	////////////////////
 	// Download bootball
 	////////////////////
-
 	bytes, err := data.get(provisioningServerFile)
 	if err != nil {
 		reboot("Bootstrap URLs: %v", err)
@@ -163,14 +172,14 @@ func main() {
 		}
 	}
 
-	ball, err := stboot.BootBallFromArchive(dest)
+	ball, err := stboot.BootballFromArchive(dest)
 	if err != nil {
 		reboot("%v", err)
 	}
 
-	////////////////////////////////////////////////
-	// Validate bootball's signing root certificates
-	////////////////////////////////////////////////
+	////////////////////////////////////////
+	// Validate bootball's root certificates
+	////////////////////////////////////////
 	if len(vars.Fingerprints) == 0 {
 		reboot("No root certificate fingerprints found in hostvars")
 	}
@@ -185,44 +194,87 @@ func main() {
 	////////////////////////////
 	// Verify boot configuration
 	////////////////////////////
-	info("Pick the first boot configuration")
-	var index = 0 // Just choose the first Bootconfig for now
-	bc, err := ball.GetBootConfigByIndex(index)
-	if err != nil {
-		reboot("Cannot get boot configuration %d: %v", index, err)
-	}
-
 	if *doDebug {
-		str, _ := json.MarshalIndent(*bc, "", "  ")
-		info("Bootconfig (ID: %s): %s", bc.ID(), str)
+		str, _ := json.MarshalIndent(ball.Config, "", "  ")
+		info("Bootball config: %s", str)
+	} else {
+		info("Label: %s", ball.Config.Label)
 	}
 
-	n, valid, err := ball.VerifyBootconfigByID(bc.ID())
+	n, valid, err := ball.Verify()
 	if err != nil {
-		reboot("Error verifying bootconfig %d: %v", index, err)
+		reboot("Error verifying bootball: %v", err)
 	}
 	if valid < vars.MinimalSignaturesMatch {
-		reboot("Did not found enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
+		reboot("Not enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
 
 	debug("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
-	info("Bootconfig '%s' passed verification", bc.Name)
+	info("Bootball passed verification")
 	info(check)
+
+	/////////////////////////////
+	// Measure bootball into PCRs
+	/////////////////////////////
+	// if !*noMeasuredBoot {
+	// 	err = crypto.TryMeasureData(crypto.BootConfigPCR, ball.HashValue, ball.Config.Label)
+	// 	if err != nil {
+	// 		reboot("measured boot failed: %v", err)
+	// 	}
+	// 	// TODO: measure hostvars.json and files from data partition
+	// }
+
+	//////////
+	// Boot OS
+	//////////
+	debug("Try extracting operating system with TXT")
+	txt := true
+	osiTXT, err := ball.OSImage(txt)
+	if err != nil {
+		debug("%v", err)
+	}
+	debug("Try extracting non-TXT fallback operating system")
+	osiFallback, err := ball.OSImage(!txt)
+	if err != nil {
+		debug("%s", err)
+	}
+
+	if osiTXT == nil && osiFallback == nil {
+		reboot("Failed to get operating system from bootball")
+	}
+
+	var osi boot.OSImage
+	if txtSupported {
+		if osiTXT == nil {
+			info("WARNING: TXT will not be used!")
+			osi = osiFallback
+		}
+		osi = osiTXT
+	} else {
+		if osiFallback == nil {
+			reboot("TXT is not supported by the host and no fallback OS is provided by the bootball")
+		}
+		info("WARNING: TXT will not be used!")
+		osi = osiFallback
+	}
+
+	info("Loading operating system \n%s", osi.String())
+	err = osi.Load(*doDebug)
+	if err != nil {
+		reboot("%s", err)
+	}
 
 	if *dryRun {
 		debug("Dryrun mode: will not boot")
 		return
 	}
-	//////////
-	// Boot OS
-	//////////
-	info("Starting up new kernel.")
-
-	if err := bc.Boot(); err != nil {
-		reboot("Failed to boot kernel %s: %v", bc.Kernel, err)
+	info("Handing over controll now")
+	err = boot.Execute()
+	if err != nil {
+		reboot("%v", err)
 	}
-	// if we reach this point, no boot configuration succeeded
-	reboot("No boot configuration succeeded")
+
+	reboot("unexpected return from kexec")
 }
 
 // fingerprintIsValid returns true if fpHex is equal to on of

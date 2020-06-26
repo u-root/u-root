@@ -15,57 +15,63 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/bootconfig"
+	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
+	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/uzip"
 )
 
 const (
-	signaturesDirName string = "signatures"
-	rootCertName      string = "root.cert"
+	bootfilesDir  string = "boot"
+	acmDir        string = "boot/acms"
+	signaturesDir string = "signatures"
+	rootCertPath  string = "signatures/root.cert"
 )
 
-// BootBall contains data to operate on the system transparency
+// Bootball contains data to operate on the system transparency
 // bootball archive. There is an underlying temporary directory
 // representing the extracted archive.
-type BootBall struct {
-	Archive        string
-	dir            string
-	config         *Stconfig
-	numBootConfigs int
-	bootFiles      map[string][]string
-	RootCertPEM    []byte
-	signatures     map[string][]Signature
-	NumSignatures  int
-	hashes         map[string][]byte
-	Signer         Signer
+type Bootball struct {
+	Archive           string
+	Dir               string
+	Config            *Stconfig
+	FilesToBeMeasured []string
+	RootCertPEM       []byte
+	Signatures        []Signature
+	NumSignatures     int
+	HashValue         []byte
+	Signer            Signer
 }
 
-// BootBallFromArchive constructs a BootBall zip file at archive
-func BootBallFromArchive(archive string) (*BootBall, error) {
-	var ball = new(BootBall)
+// BootballFromArchive constructs a Bootball from a zip file at archive.
+func BootballFromArchive(archive string) (*Bootball, error) {
+	var ball = &Bootball{}
 
 	if _, err := os.Stat(archive); err != nil {
-		return ball, fmt.Errorf("BootBall: %v", err)
+		return nil, fmt.Errorf("Bootball: %v", err)
 	}
 
 	dir, err := ioutil.TempDir("", "bootball")
 	if err != nil {
-		return ball, fmt.Errorf("BootBall: cannot create tmp dir: %v", err)
+		return nil, fmt.Errorf("Bootball: cannot create tmp dir: %v", err)
 	}
 
 	err = uzip.FromZip(archive, dir)
 	if err != nil {
-		return ball, fmt.Errorf("BootBall: cannot unzip %s: %v", archive, err)
+		return nil, fmt.Errorf("Bootball: cannot unzip %s: %v", archive, err)
 	}
 
-	cfg, err := getConfig(filepath.Join(dir, ConfigName))
+	cfg, err := StconfigFromFile(filepath.Join(dir, ConfigName))
 	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
+		return nil, fmt.Errorf("Bootball: getting configuration faild: %v", err)
+	}
+	if err = cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("Bootball: invalid config: %v", err)
 	}
 
 	ball.Archive = archive
-	ball.dir = dir
-	ball.config = cfg
+	ball.Dir = dir
+	ball.Config = cfg
 
 	err = ball.init()
 	if err != nil {
@@ -75,123 +81,95 @@ func BootBallFromArchive(archive string) (*BootBall, error) {
 	return ball, nil
 }
 
-// BootBallFromConfig constructs a BootBall from a stconfig.json at configFile.
-// the underlying tmporary directory is created with standardized paths and an
-// updated copy of stconfig.json
-func BootBallFromConfig(configFile string) (*BootBall, error) {
-	var ball = new(BootBall)
+// InitBootball constructs a Bootball from the parsed files. The underlying
+// tmporary directory is created with standardized paths and names.
+func InitBootball(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, rootCert string, acms []string, allowNonTXT bool) (*Bootball, error) {
+	var ball = &Bootball{}
 
-	archive := filepath.Join(filepath.Dir(configFile), BallName)
+	ball.Archive = filepath.Join(outDir, BallName)
 
-	cfg, err := getConfig(configFile)
+	dir, cfg, err := createFileTree(kernel, initramfs, tboot, rootCert, acms)
 	if err != nil {
-		return ball, fmt.Errorf("BootBall: getting configuration faild: %v", err)
+		return nil, fmt.Errorf("Bootball: creating standard file tree faild: %v", err)
 	}
 
-	dir, err := makeConfigDir(cfg, filepath.Dir(configFile))
-	if err != nil {
-		return ball, fmt.Errorf("BootBall: creating standard configuration directory faild: %v", err)
-	}
+	cfg.Label = label
+	cfg.Cmdline = cmdline
+	cfg.AllowNonTXT = allowNonTXT
+	cfg.Write(dir)
 
-	ball.Archive = archive
-	ball.dir = dir
-	ball.config = cfg
+	ball.Dir = dir
+	ball.Config = &cfg
 
 	err = ball.init()
 	if err != nil {
-		return ball, err
+		return nil, err
 	}
 
 	return ball, nil
 }
 
-func (ball *BootBall) init() error {
-	certPEM, err := ioutil.ReadFile(filepath.Join(ball.dir, signaturesDirName, rootCertName))
+func (ball *Bootball) init() error {
+	certPEM, err := ioutil.ReadFile(filepath.Join(ball.Dir, rootCertPath))
 	if err != nil {
-		return fmt.Errorf("BootBall: reading root certificate faild: %v", err)
+		return fmt.Errorf("Bootball: reading root certificate faild: %v", err)
 	}
-
-	bootFiles, err := getBootFiles(ball.config, ball.dir)
-	if err != nil {
-		return fmt.Errorf("BootBall: getting boot files faild: %v", err)
-	}
-
 	ball.RootCertPEM = certPEM
-	ball.numBootConfigs = len(ball.config.BootConfigs)
-	ball.bootFiles = bootFiles
+
+	err = ball.getFilesToBeHashed()
+	if err != nil {
+		return fmt.Errorf("Bootball: collecting files for measurement failed: %v", err)
+	}
+
 	ball.Signer = Sha512PssSigner{}
 
 	err = ball.getSignatures()
 	if err != nil {
-		return fmt.Errorf("BootBall: getting signatures: %v", err)
+		return fmt.Errorf("Bootball: getting signatures: %v", err)
 	}
 
-	var x int = 0
-	for _, sigPool := range ball.signatures {
-		if x == 0 {
-			x = len(sigPool)
-			continue
-		}
-		if len(sigPool) != x {
-			return errors.New("BootBall: invalid map of signatures")
-		}
-	}
-	ball.NumSignatures = x
+	ball.NumSignatures = len(ball.Signatures)
 	return nil
 }
 
 // Clean removes the underlying temporary directory.
-func (ball *BootBall) Clean() error {
-	err := os.RemoveAll(ball.dir)
+func (ball *Bootball) Clean() error {
+	err := os.RemoveAll(ball.Dir)
 	if err != nil {
 		return err
 	}
-	ball.dir = ""
+	ball.Dir = ""
 	return nil
 }
 
 // Pack archives the all contents of the underlying temporary
 // directory using zip.
-func (ball *BootBall) Pack() error {
-	if ball.Archive == "" || ball.dir == "" {
-		return errors.New("BootBall.Pacstandak: booball.archive and bootball.dir must be set")
+func (ball *Bootball) Pack() error {
+	if ball.Archive == "" {
+		return errors.New("Booball.Archive is not set")
 	}
-	return uzip.ToZip(ball.dir, ball.Archive)
+	if ball.Dir == "" {
+		return errors.New("Cannot locate underlying directory")
+	}
+	return uzip.ToZip(ball.Dir, ball.Archive)
 }
 
-// Dir returns the temporary directory associated with BootBall.
-func (ball *BootBall) Dir() string {
-	return ball.dir
-}
-
-// GetBootConfigByIndex returns the Bootconfig at index from the BootBall's configs arrey.
-func (ball *BootBall) GetBootConfigByIndex(index int) (*bootconfig.BootConfig, error) {
-	bc, err := ball.config.GetBootConfig(index)
+// Hash calculates hashes of all boot configurations in Bootball using the
+// Bootball.Signer's hash function.
+func (ball *Bootball) Hash() error {
+	hash, err := ball.Signer.Hash(ball.FilesToBeMeasured...)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	bc.SetFilePathsPrefix(ball.dir)
-	return bc, nil
-}
-
-// Hash calculates hashes of all boot configurations in BootBall using the
-// BootBall.Signer's hash function
-func (ball *BootBall) Hash() error {
-	ball.hashes = make(map[string][]byte)
-	for key, files := range ball.bootFiles {
-		hash, herr := ball.Signer.Hash(files...)
-		if herr != nil {
-			return herr
-		}
-		ball.hashes[key] = hash
-	}
+	ball.HashValue = hash
 	return nil
 }
 
-// Sign signes the hashes of all boot configurations in BootBall using the
-// BootBall.Signer's sign function with the provided privKeyFile. The signature
-// is stored along with the provided certFile inside the BootBall.
-func (ball *BootBall) Sign(privKeyFile, certFile string) error {
+// Sign signes ball.HashValue using ball.Signer with the private key named by
+// privKeyFile. The certificate named by certFile is supposed to correspond
+// to the private key. Both, the signature and the certificate are stored into
+// the Bootball.
+func (ball *Bootball) Sign(privKeyFile, certFile string) error {
 	if _, err := os.Stat(privKeyFile); err != nil {
 		return err
 	}
@@ -211,53 +189,51 @@ func (ball *BootBall) Sign(privKeyFile, certFile string) error {
 		return err
 	}
 
-	if ball.hashes == nil {
+	if ball.HashValue == nil {
 		err = ball.Hash()
 		if err != nil {
 			return err
 		}
 	}
 
-	for key, hash := range ball.hashes {
-		// check for dublicate certificates
-		for _, sig := range ball.signatures[key] {
-			if sig.Cert.Equal(cert) {
-				return fmt.Errorf("certificate has already been used: %v", certFile)
-			}
+	// check for dublicate certificates
+	for _, sig := range ball.Signatures {
+		if sig.Cert.Equal(cert) {
+			return fmt.Errorf("certificate has already been used: %v", certFile)
 		}
-		// sign
-		s, err := ball.Signer.Sign(privKeyFile, hash)
-		if err != nil {
-			return err
-		}
-		sig := Signature{
-			Bytes: s,
-			Cert:  cert}
-		// check
-		err = ball.Signer.Verify(sig, hash)
-		if err != nil {
-			return fmt.Errorf("public key in %s does not match the private key in %s", filepath.Base(certFile), filepath.Base(privKeyFile))
-		}
-		// save
-		ball.signatures[key] = append(ball.signatures[key], sig)
-		d := filepath.Join(ball.dir, signaturesDirName, key)
-		if err = writeSignature(d, certFile, sig); err != nil {
-			return err
-		}
+	}
+	// sign with private key
+	s, err := ball.Signer.Sign(privKeyFile, ball.HashValue)
+	if err != nil {
+		return err
+	}
+	sig := Signature{
+		Bytes: s,
+		Cert:  cert}
+	// check certificate's public key
+	err = ball.Signer.Verify(sig, ball.HashValue)
+	if err != nil {
+		return fmt.Errorf("public key in %s does not match the private key %s", filepath.Base(certFile), filepath.Base(privKeyFile))
+	}
+	// save
+	ball.Signatures = append(ball.Signatures, sig)
+	dir := filepath.Join(ball.Dir, signaturesDir)
+	if err = sig.Write(dir); err != nil {
+		return err
 	}
 
 	ball.NumSignatures++
 	return nil
 }
 
-// VerifyBootconfigByID validates the certificates stored together with the
-// signatures of BootConfig id and verifies the signatures. The number of
-// valid signatures is returned. A signature is valid if:
-// * Its certificate was signed by the bootball's root certificate
+// Verify first validates the certificates stored together with the signatures
+// and the verifies the signatures. The number of found signatures and the
+// number of valid signatures are returned. A signature is valid if:
+// * Its certificate was signed by balls's root certificate
 // * Verification is passed
-// * No previous signature of this bootconfig has the same certificate
-func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err error) {
-	if ball.hashes == nil {
+// * No previous signature has the same certificate
+func (ball *Bootball) Verify() (found, verified int, err error) {
+	if ball.HashValue == nil {
 		err := ball.Hash()
 		if err != nil {
 			return 0, 0, err
@@ -267,11 +243,11 @@ func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err 
 	found = 0
 	verified = 0
 	var certsUsed []*x509.Certificate
-	for i, sig := range ball.signatures[id] {
+	for i, sig := range ball.Signatures {
 		found++
 		err := validateCertificate(sig.Cert, ball.RootCertPEM)
 		if err != nil {
-			log.Printf("skip signature %d: %v", i, err)
+			log.Printf("skip signature %d: invalid certificate: %v", i+1, err)
 			continue
 		}
 		var dublicate bool
@@ -282,13 +258,13 @@ func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err 
 			}
 		}
 		if dublicate {
-			log.Printf("skip signature %d: dublicate", i)
+			log.Printf("skip signature %d: dublicate", i+1)
 			continue
 		}
 		certsUsed = append(certsUsed, sig.Cert)
-		err = ball.Signer.Verify(sig, ball.hashes[id])
+		err = ball.Signer.Verify(sig, ball.HashValue)
 		if err != nil {
-			log.Printf("skip signature %d: %v", i, err)
+			log.Printf("skip signature %d: verification failed: %v", i+1, err)
 			continue
 		}
 		verified++
@@ -296,52 +272,124 @@ func (ball *BootBall) VerifyBootconfigByID(id string) (found, verified int, err 
 	return found, verified, nil
 }
 
-// getConfig returns a Stconfig struct from a JSON file at src
-func getConfig(src string) (*Stconfig, error) {
-	cfgBytes, err := ioutil.ReadFile(src)
+// OSImage retunrns a boot.OSImage generated from ball's configuration
+func (ball *Bootball) OSImage(txt bool) (boot.OSImage, error) {
+	err := ball.Config.Validate()
 	if err != nil {
 		return nil, err
 	}
-	cfg, err := StconfigFromBytes(cfgBytes)
-	if err != nil {
-		return nil, err
+
+	if txt && ball.Config.Tboot == "" {
+		return nil, errors.New("Bootball does not contain a TXT-ready configuration")
 	}
-	if !(cfg.IsValid()) {
-		return nil, errors.New("invalid configuration")
+
+	if !txt && !ball.Config.AllowNonTXT {
+		return nil, errors.New("Bootball requires the use of TXT")
 	}
-	return cfg, nil
+
+	var osi boot.OSImage
+	if !txt {
+		osi = &boot.LinuxImage{
+			Name:    ball.Config.Label,
+			Kernel:  uio.NewLazyFile(filepath.Join(ball.Dir, ball.Config.Kernel)),
+			Initrd:  uio.NewLazyFile(filepath.Join(ball.Dir, ball.Config.Initramfs)),
+			Cmdline: ball.Config.Cmdline,
+		}
+		return osi, nil
+	}
+
+	var modules []multiboot.Module
+	kernel := multiboot.Module{
+		Module:  uio.NewLazyFile(filepath.Join(ball.Dir, ball.Config.Kernel)),
+		Name:    "OS-Kernel",
+		CmdLine: ball.Config.Cmdline,
+	}
+	modules = append(modules, kernel)
+
+	initramfs := multiboot.Module{
+		Module: uio.NewLazyFile(filepath.Join(ball.Dir, ball.Config.Initramfs)),
+		Name:   "OS-Initramfs",
+	}
+	modules = append(modules, initramfs)
+
+	for n, a := range ball.Config.ACMs {
+		acm := multiboot.Module{
+			Module: uio.NewLazyFile(filepath.Join(ball.Dir, a)),
+			Name:   fmt.Sprintf("ACM%d", n+1),
+		}
+		modules = append(modules, acm)
+	}
+
+	osi = &boot.MultibootImage{
+		Name:    ball.Config.Label,
+		Kernel:  uio.NewLazyFile(filepath.Join(ball.Dir, ball.Config.Tboot)),
+		Cmdline: ball.Config.TbootArgs,
+		Modules: modules,
+	}
+	return osi, nil
 }
 
-// getBootFiles returns the file paths of all files of a u-root bootconfig
-// for all bootconfigs in cfg.BootConfigs. Prefix is added in front of each
-// file path. The map's keys are set to the respective bootconfig's name.
-// An error is returned in case one of the files does not exist.
-func getBootFiles(cfg *Stconfig, prefix string) (map[string][]string, error) {
-	bootFiles := make(map[string][]string)
-	for _, bc := range cfg.BootConfigs {
-		files := make([]string, 0)
-		for _, file := range bc.Files() {
-			file = filepath.Join(prefix, file)
-			if _, err := os.Stat(file); err != nil {
-				return nil, err
-			}
-			files = append(files, file)
-		}
-		bootFiles[bc.ID()] = files
+// getFilesToBeHashed the paths of the bootball' files that are supposed
+// to be hashed for signing and varifiaction. These are:
+// * stconfig.json
+// * root.cert
+// * files defined in stconfig.json if they are present
+func (ball *Bootball) getFilesToBeHashed() error {
+	var f []string
+
+	// these files must be present
+	config := filepath.Join(ball.Dir, ConfigName)
+	kernel := filepath.Join(ball.Dir, ball.Config.Kernel)
+	rootCert := filepath.Join(ball.Dir, rootCertPath)
+	_, err := os.Stat(config)
+	if err != nil {
+		return errors.New("files to be measured: missing stconfig.json")
 	}
-	return bootFiles, nil
+	_, err = os.Stat(kernel)
+	if err != nil {
+		return errors.New("files to be measured: missing kernel")
+	}
+	_, err = os.Stat(rootCert)
+	if err != nil {
+		return errors.New("files to be measured: missing root certificate")
+	}
+	f = append(f, config, kernel, rootCert)
+
+	// following files are measured if present
+	if ball.Config.Initramfs != "" {
+		initramfs := filepath.Join(ball.Dir, ball.Config.Initramfs)
+		_, err = os.Stat(initramfs)
+		if err == nil {
+			f = append(f, initramfs)
+		}
+	}
+	if ball.Config.Tboot != "" {
+		tboot := filepath.Join(ball.Dir, ball.Config.Tboot)
+		_, err = os.Stat(tboot)
+		if err == nil {
+			f = append(f, tboot)
+		}
+	}
+	for _, acm := range ball.Config.ACMs {
+		a := filepath.Join(ball.Dir, acm)
+		_, err = os.Stat(a)
+		if err == nil {
+			f = append(f, a)
+		}
+	}
+
+	ball.FilesToBeMeasured = f
+	return nil
 }
 
 // getSignatures initializes ball.signatures with the corresponding signatures
-// and certificates found in the signatures folder (stboot.signaturesDirName)
-// of ball's underlying tmpDir (ball.dir). An error is returned if one of the
-// files cannot be read or parsed.
-func (ball *BootBall) getSignatures() error {
-	ball.signatures = make(map[string][]Signature)
-	path := filepath.Join(ball.dir, signaturesDirName)
+// and certificates found in the signatures folder of ball's underlying tmpDir.
+// An error is returned if one of the files cannot be read or parsed.
+func (ball *Bootball) getSignatures() error {
+	root := filepath.Join(ball.Dir, signaturesDir)
 
-	sigPool := make([]Signature, 0)
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	sigs := make([]Signature, 0)
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		ext := filepath.Ext(info.Name())
 
 		if !info.IsDir() && (ext == ".signature") {
@@ -365,89 +413,89 @@ func (ball *BootBall) getSignatures() error {
 				Bytes: sigBytes,
 				Cert:  cert,
 			}
-			sigPool = append(sigPool, sig)
-			key := filepath.Base(filepath.Dir(path))
-			ball.signatures[key] = sigPool
+			sigs = append(sigs, sig)
+			ball.Signatures = sigs
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
-// writeSignature writes the signature represented by sig to a file in
-// dir along with a copy of certFile. The filenames are composed of the
-// first piece of the public key of the certificate.
-func writeSignature(dir, certFile string, sig Signature) error {
-	err := os.MkdirAll(dir, os.ModePerm)
+// createFileTree copies the provided files to a well known tree inside
+// the bootball's underlying tmpDir. The created tmpDir and a Stconfig
+// initialized with corresponding paths is retruned.
+func createFileTree(kernel, initramfs, tboot, rootCert string, acms []string) (dir string, cfg Stconfig, err error) {
+	dir, err = ioutil.TempDir(os.TempDir(), "bootball")
 	if err != nil {
-		return err
+		return
 	}
-
-	id := fmt.Sprintf("%x", sig.Cert.PublicKey)[2:18]
-	sigName := fmt.Sprintf("%s.signature", id)
-	sigPath := filepath.Join(dir, sigName)
-	err = ioutil.WriteFile(sigPath, sig.Bytes, 0644)
-	if err != nil {
-		return err
-	}
-
-	certName := fmt.Sprintf("%s.cert", id)
-	certPath := filepath.Join(dir, certName)
-	return copyFile(certFile, certPath)
-}
-
-// makeConfigDir copies the files named in cfg to well known directory tree
-// inside the bootball's underlying tmpDir since the files in user's cfg can
-// reside anywhere in the file system. The created tmpDir is returned.
-// If one of the files in cfg does not exist or copying fails an error is
-// returned.
-func makeConfigDir(cfg *Stconfig, origDir string) (string, error) {
-	dir, err := ioutil.TempDir(os.TempDir(), "bootball")
-	if err != nil {
-		return "", err
-	}
-
-	dstPath := filepath.Join(dir, signaturesDirName, rootCertName)
-	srcPath := filepath.Join(origDir, cfg.RootCertPath)
-	if err := copyFile(srcPath, dstPath); err != nil {
-		return "", err
-	}
-
-	for i, bc := range cfg.BootConfigs {
-		dirName := bc.ID()
-		for _, file := range bc.Files() {
-			fileName := filepath.Base(file)
-			dstPath := filepath.Join(dir, dirName, fileName)
-			srcPath := filepath.Join(origDir, file)
-			if err := copyFile(srcPath, dstPath); err != nil {
-				return "", err
-			}
+	defer func() {
+		if err != nil {
+			os.RemoveAll(dir)
 		}
+	}()
 
-		bc.ChangeFilePaths(dirName)
-		cfg.BootConfigs[i] = bc
+	var dst, rel string
+
+	// Kernel
+	if kernel == "" {
+		err = errors.New("kernel missing")
+	}
+	rel = filepath.Join(bootfilesDir, filepath.Base(kernel))
+	dst = filepath.Join(dir, rel)
+	if err = createAndCopy(kernel, dst); err != nil {
+		return
+	}
+	cfg.Kernel = rel
+
+	// Initramfs
+	if initramfs != "" {
+		rel = filepath.Join(bootfilesDir, filepath.Base(initramfs))
+		dst = filepath.Join(dir, rel)
+		if err = createAndCopy(initramfs, dst); err != nil {
+			return
+		}
+		cfg.Initramfs = rel
 	}
 
-	dstPath = filepath.Join(dir, ConfigName)
-	bytes, err := cfg.Bytes()
-	if err != nil {
-		return "", err
-	}
-	err = ioutil.WriteFile(dstPath, bytes, os.ModePerm)
-	if err != nil {
-		return "", err
+	// tboot
+	if tboot != "" {
+		rel = filepath.Join(bootfilesDir, filepath.Base(tboot))
+		dst = filepath.Join(dir, rel)
+		if err = createAndCopy(tboot, dst); err != nil {
+			return
+		}
+		cfg.Tboot = rel
 	}
 
-	return dir, nil
+	// Root Certificate
+	if rootCert == "" {
+		err = errors.New("root certificate missing")
+	}
+	dst = filepath.Join(dir, rootCertPath)
+	if err = createAndCopy(rootCert, dst); err != nil {
+		return
+	}
+
+	// ACMs
+	if len(acms) > 0 {
+		for _, acm := range acms {
+			rel = filepath.Join(acmDir, filepath.Base(acm))
+			dst = filepath.Join(dir, rel)
+			if err = createAndCopy(acm, dst); err != nil {
+				return
+			}
+			cfg.ACMs = append(cfg.ACMs, rel)
+		}
+	}
+
+	return
 }
 
-// copyFiles copies the content of the file at src to dst. If dst does not
+// createAndCopy copies the content of the file at src to dst. If dst does not
 // exist it is created. In case case src does not exist, creation of dst
-// or copying fails an error is returned
-func copyFile(src, dst string) error {
+// or copying fails and error is returned.
+func createAndCopy(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err

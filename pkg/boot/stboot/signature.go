@@ -5,6 +5,7 @@
 package stboot
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -14,6 +15,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 // Signature contains the signature bytes and the
@@ -23,19 +26,51 @@ type Signature struct {
 	Cert  *x509.Certificate
 }
 
-// Signer is used by BootBall to hash, sign and varify the BootConfigs
-// with appropriate algorithms
+// Write saves the signature and the certificate represented by s to files at
+// a path named by dir. The filenames are composed of the first piece of the
+// certificate's public key. The file extensions are '.signature' and '.cert'.
+func (s *Signature) Write(dir string) error {
+	stat, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
+	if !stat.IsDir() {
+		return fmt.Errorf("not a directory: %s", dir)
+	}
+
+	id := fmt.Sprintf("%x", s.Cert.PublicKey)[2:18]
+	sigName := fmt.Sprintf("%s.signature", id)
+	sigPath := filepath.Join(dir, sigName)
+	err = ioutil.WriteFile(sigPath, s.Bytes, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	certName := fmt.Sprintf("%s.cert", id)
+	certPath := filepath.Join(dir, certName)
+	block := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: s.Cert.Raw,
+	}
+	var certBuf bytes.Buffer
+	if err := pem.Encode(&certBuf, block); err != nil {
+		return (err)
+	}
+	return ioutil.WriteFile(certPath, certBuf.Bytes(), os.ModePerm)
+}
+
+// Signer is used by BootBall to hash, sign and varify the Bootball.
 type Signer interface {
 	Hash(files ...string) ([]byte, error)
 	Sign(privKey string, data []byte) ([]byte, error)
 	Verify(sig Signature, hash []byte) error
 }
 
-// DummySigner creates signatures that are always valid.
+// DummySigner implements the Signer interface. It creates signatures
+// that are always valid.
 type DummySigner struct{}
 
-// Hash hashes the the provided files. I case of DummySigner
-// just 8 random bytes are returned.
+// Hash returns a hash value of just 8 random bytes.
 func (DummySigner) Hash(files ...string) ([]byte, error) {
 	hash := make([]byte, 8)
 	_, err := rand.Read(hash)
@@ -45,8 +80,7 @@ func (DummySigner) Hash(files ...string) ([]byte, error) {
 	return hash, nil
 }
 
-// Sign signes the provided data with privKey. In case of DummySigner
-// just 8 random bytes are returned
+// Sign returns a signature containing just 8 random bytes.
 func (DummySigner) Sign(privKey string, data []byte) ([]byte, error) {
 	sig := make([]byte, 8)
 	_, err := rand.Read(sig)
@@ -56,18 +90,16 @@ func (DummySigner) Sign(privKey string, data []byte) ([]byte, error) {
 	return sig, nil
 }
 
-// Verify checks if sig contains a valid signature of hash. In case of
-// DummySigner this is allwazs the case.
+// Verify will never return an error.
 func (DummySigner) Verify(sig Signature, hash []byte) error {
 	return nil
 }
 
-// Sha512PssSigner uses SHA512 hashes ans PSS signatures along with
-// x509 certificates.
+// Sha512PssSigner implements the Signer interface. It uses SHA512 hashes
+// and PSS signatures along with x509 certificates.
 type Sha512PssSigner struct{}
 
-// Hash hashes the the provided files. In case of Sha512PssSigner
-// it is a SHA512 hash.
+// Hash returns the a SHA512 hash value of the provided files.
 func (Sha512PssSigner) Hash(files ...string) ([]byte, error) {
 	h := sha512.New()
 	for _, file := range files {
@@ -83,8 +115,8 @@ func (Sha512PssSigner) Hash(files ...string) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-// Sign signes the provided data with privKey. In case of Sha512PssSigner
-// it is a PSS signature.
+// Sign signes the provided data with the key named by privKey. The returned
+// byte slice contains a PSS signature value.
 func (Sha512PssSigner) Sign(privKey string, data []byte) ([]byte, error) {
 	buf, err := ioutil.ReadFile(privKey)
 	if err != nil {
@@ -123,13 +155,13 @@ func (Sha512PssSigner) Verify(sig Signature, hash []byte) error {
 	return nil
 }
 
-// parseCertificate parses certificate from raw certificate.
+// parseCertificate parses a x509 certificate from raw data.
 func parseCertificate(raw []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(raw)
 	return x509.ParseCertificate(block.Bytes)
 }
 
-// certPool returns a x509 certificate pool from raw certificate.
+// certPool returns a x509 certificate pool from PEM encoded data.
 func certPool(pem []byte) (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pem)

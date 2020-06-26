@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"path/filepath"
@@ -12,23 +13,23 @@ import (
 	"github.com/u-root/u-root/pkg/boot/stboot"
 )
 
-func packBootBall(config string, mac string) error {
-	var newName string
+func packBootBall(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, rootCert string, acms []string, allowNonTXT bool, mac string) error {
+	var individualName string
 	if mac != "" {
 		hwAddr, err := net.ParseMAC(mac)
 		if err != nil {
 			return err
 		}
-		newName = stboot.ComposeIndividualBallName(hwAddr)
+		individualName = stboot.ComposeIndividualBallName(hwAddr)
 	}
 
-	ball, err := stboot.BootBallFromConfig(config)
+	ball, err := stboot.InitBootball(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, rootCert, acms, allowNonTXT)
 	if err != nil {
 		return err
 	}
 
-	if newName != "" {
-		ball.Archive = filepath.Join(filepath.Dir(ball.Archive), newName)
+	if individualName != "" {
+		ball.Archive = filepath.Join(filepath.Dir(ball.Archive), individualName)
 	}
 
 	err = ball.Pack()
@@ -36,13 +37,13 @@ func packBootBall(config string, mac string) error {
 		return err
 	}
 
-	log.Printf("Bootball created at: %s", ball.Archive)
+	fmt.Println(filepath.Base(ball.Archive))
 	return ball.Clean()
 
 }
 
 func addSignatureToBootBall(bootBall, privKey, cert string) error {
-	ball, err := stboot.BootBallFromArchive(bootBall)
+	ball, err := stboot.BootballFromArchive(bootBall)
 	if err != nil {
 		return err
 	}
@@ -59,16 +60,16 @@ func addSignatureToBootBall(bootBall, privKey, cert string) error {
 		return err
 	}
 
-	log.Printf("Signatures included for each bootconfig: %d", ball.NumSignatures)
+	log.Printf("Signatures included: %d", ball.NumSignatures)
 	return ball.Clean()
 }
 
 func unpackBootBall(bootBall string) error {
-	ball, err := stboot.BootBallFromArchive(bootBall)
+	ball, err := stboot.BootballFromArchive(bootBall)
 	if err != nil {
 		return err
 	}
 
-	log.Println("Archive unpacked into: " + ball.Dir())
-	return ball.Clean()
+	log.Println("Archive unpacked into: " + ball.Dir)
+	return nil
 }
