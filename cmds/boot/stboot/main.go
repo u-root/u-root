@@ -33,11 +33,12 @@ var (
 	data dataPartition
 )
 
+// configuration files form STDATA partition
 const (
-	provisioningServerFile = "provisioning-servers.json"
-	networkFile            = "network.json"
-	httpsRootsFile         = "https-root-certificates.pem"
-	ntpServerFile          = "ntp-servers.json"
+	provisioningServerFile = "stboot/etc/provisioning-servers.json"
+	networkFile            = "stboot/etc/network.json"
+	httpsRootsFile         = "stboot/etc/https-root-certificates.pem"
+	ntpServerFile          = "stboot/etc/ntp-servers.json"
 )
 
 var banner = `
