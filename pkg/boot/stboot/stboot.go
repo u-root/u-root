@@ -10,17 +10,18 @@ import (
 )
 
 const (
-	// BallName is the file name of the archive, which is expected to contain
+	// BootballExt is the file extension of bootballs
+	BootballExt string = ".stboot"
+	// DefaultBallName is the file name of the archive, which is expected to contain
 	// the stboot configuration file along with the corresponding files
-	BallName string = "stboot.ball"
+	DefaultBallName string = "ball.stboot"
 	// ConfigName is the name of the stboot configuration file
 	ConfigName string = "stconfig.json"
 )
 
-// ComposeIndividualBallName extends the general BallName
-// with an individual hardware address.
-func ComposeIndividualBallName(hwAddr net.HardwareAddr) string {
-	suffix := hwAddr.String()
-	suffix = strings.ReplaceAll(suffix, ":", "-")
-	return BallName + "." + suffix
+// ComposeIndividualBallPrefix returns a host specific name prefix for bootball files.
+func ComposeIndividualBallPrefix(hwAddr net.HardwareAddr) string {
+	prefix := hwAddr.String()
+	prefix = strings.ReplaceAll(prefix, ":", "-")
+	return prefix + "-"
 }

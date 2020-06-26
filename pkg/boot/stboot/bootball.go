@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -86,7 +87,10 @@ func BootballFromArchive(archive string) (*Bootball, error) {
 func InitBootball(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, rootCert string, acms []string, allowNonTXT bool) (*Bootball, error) {
 	var ball = &Bootball{}
 
-	ball.Archive = filepath.Join(outDir, BallName)
+	t := time.Now()
+	tstr := fmt.Sprintf("%04d-%02d-%02d-%02d-%02d-%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+	name := "ball-" + tstr + BootballExt
+	ball.Archive = filepath.Join(outDir, name)
 
 	dir, cfg, err := createFileTree(kernel, initramfs, tboot, rootCert, acms)
 	if err != nil {

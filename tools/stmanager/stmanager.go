@@ -30,7 +30,7 @@ var goversion string
 
 var (
 	create            = kingpin.Command("create", "Create a bootball from the provided config")
-	createOut         = create.Flag("out", "Output directory of the bootball. If not set, current directory is used").ExistingDir()
+	createOut         = create.Flag("out", "Output directory of the bootball. Defaults to current directory").ExistingDir()
 	createLabel       = create.Flag("label", "Name of the boot configuration. Defaults to 'System Tarnsparency Bootball <kernel>'").String()
 	createKernel      = create.Flag("kernel", "Operation system kernel").Required().ExistingFile()
 	createInitramfs   = create.Flag("initramfs", "Operation system initramfs").ExistingFile()

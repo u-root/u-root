@@ -14,13 +14,13 @@ import (
 )
 
 func packBootBall(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, rootCert string, acms []string, allowNonTXT bool, mac string) error {
-	var individualName string
+	var individual string
 	if mac != "" {
 		hwAddr, err := net.ParseMAC(mac)
 		if err != nil {
 			return err
 		}
-		individualName = stboot.ComposeIndividualBallName(hwAddr)
+		individual = stboot.ComposeIndividualBallPrefix(hwAddr)
 	}
 
 	ball, err := stboot.InitBootball(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, rootCert, acms, allowNonTXT)
@@ -28,8 +28,10 @@ func packBootBall(outDir, label, kernel, initramfs, cmdline, tboot, tbootArgs, r
 		return err
 	}
 
-	if individualName != "" {
-		ball.Archive = filepath.Join(filepath.Dir(ball.Archive), individualName)
+	if individual != "" {
+		name := filepath.Base(ball.Archive)
+		name = individual + name
+		ball.Archive = filepath.Join(filepath.Dir(ball.Archive), name)
 	}
 
 	err = ball.Pack()
