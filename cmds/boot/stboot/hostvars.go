@@ -8,10 +8,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 )
 
 const hostvarsFile = "hostvars.json"
+
+//go:generate jsonenums -type=bootmode
+type bootmode int
+
+// bootmodes values defines where to load a bootball from.
+const (
+	NetworkStatic bootmode = iota
+	NetworkDHCP
+	LocalStorage
+)
+
+func (b bootmode) string() string {
+	return []string{"NetworkStatic", "NetworkDHCP", "LocalStorage"}[b]
+}
 
 // Hostvars contains platform-specific data.
 type Hostvars struct {
@@ -21,19 +34,20 @@ type Hostvars struct {
 	Fingerprints []string `json:"fingerprints"`
 	// Timestamp is the UNIX build time of the bootloader
 	Timestamp int `json:"build_timestamp"`
+	//BootMode
+	BootMode bootmode `json:"boot_mode"`
 }
 
-// FindHostVars parses hostvars.json file.
+// loadHostVars parses hostvars.json file.
 // It is expected to be in /etc.
-func loadHostvars() (Hostvars, error) {
+func loadHostvars(path string) (Hostvars, error) {
 	var vars Hostvars
-	file := filepath.Join("etc/", hostvarsFile)
-	data, err := ioutil.ReadFile(file)
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return vars, err
 	}
 	if err = json.Unmarshal(data, &vars); err != nil {
-		return vars, fmt.Errorf("cant parse data from %s", file)
+		return vars, fmt.Errorf("cannot parse data - invalid hostvars in %s:  %v", path, err)
 	}
 	return vars, nil
 }
