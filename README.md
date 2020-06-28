@@ -117,7 +117,7 @@ cpio -ivt < /tmp/initramfs.linux_amd64.cpio
 # lrwxrwxrwx   0 root     root           12 Dec 31  1969 bin/uinit -> ../bbin/echo
 # lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/init
 
-qemu-system-x86_64 -kernel $KERNEL -initramfs /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0"
+qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0"
 # ...
 # [    0.848021] Freeing unused kernel memory: 896K
 # 2020/05/01 04:04:39 Welcome to u-root!
@@ -163,7 +163,7 @@ cpio -ivt < /tmp/initramfs.linux_amd64.cpio
 # ...
 # lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/elvish
 
-qemu-system-x86_64 -kernel $KERNEL -initramfs /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0"
+qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0"
 # ...
 # [    0.848021] Freeing unused kernel memory: 896K
 # failed to put myself in foreground: ioctl: inappropriate ioctl for device
