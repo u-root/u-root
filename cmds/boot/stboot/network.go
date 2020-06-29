@@ -40,7 +40,8 @@ type netConf struct {
 }
 
 func getNetConf() (netConf, error) {
-	bytes, err := data.get(networkFile)
+	p := filepath.Join(dataMountPoint, networkFile)
+	bytes, err := ioutil.ReadFile(p)
 	var net netConf
 	if err != nil {
 		return net, err
@@ -266,7 +267,8 @@ func download(url string, destination string) error {
 // for HTTPS and verifies it.
 func loadHTTPSCertificates() (*x509.CertPool, error) {
 	roots := x509.NewCertPool()
-	bytes, err := data.get(httpsRootsFile)
+	p := filepath.Join(dataMountPoint, httpsRootsFile)
+	bytes, err := ioutil.ReadFile(p)
 	if err != nil {
 		return roots, err
 	}

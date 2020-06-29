@@ -40,14 +40,14 @@ type Hostvars struct {
 
 // loadHostVars parses hostvars.json file.
 // It is expected to be in /etc.
-func loadHostvars(path string) (Hostvars, error) {
+func loadHostvars(path string) (*Hostvars, error) {
 	var vars Hostvars
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return vars, err
+		return nil, err
 	}
 	if err = json.Unmarshal(data, &vars); err != nil {
-		return vars, fmt.Errorf("cannot parse data - invalid hostvars in %s:  %v", path, err)
+		return nil, fmt.Errorf("cannot parse data - invalid hostvars in %s:  %v", path, err)
 	}
-	return vars, nil
+	return &vars, nil
 }

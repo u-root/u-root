@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"time"
 
 	"github.com/beevik/ntp"
@@ -17,7 +19,8 @@ import (
 // pollNTP queries the specified NTP server.
 // On error the query is repeated infinitally.
 func pollNTP() (time.Time, error) {
-	bytes, err := data.get(ntpServerFile)
+	p := filepath.Join(dataMountPoint, ntpServerFile)
+	bytes, err := ioutil.ReadFile(p)
 	if err != nil {
 		reboot("Bootstrap URLs: %v", err)
 	}

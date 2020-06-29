@@ -23,54 +23,39 @@ import (
 const (
 	dataPartitionFSType = "ext4"
 	dataPartitionLabel  = "STDATA"
+	dataMountPoint      = "data"
 )
 
-type dataPartition interface {
-	get(filename string) ([]byte, error)
-}
-
-type partition struct {
-	mountpoint string
-}
-
-func (p *partition) get(filename string) ([]byte, error) {
-	f := filepath.Join(p.mountpoint, filename)
-	return ioutil.ReadFile(f)
-}
-
-func findDataPartition() (dataPartition, error) {
+func findDataPartition() error {
 	debug("Search data partition with label %s ...", dataPartitionLabel)
 	fs, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !strings.Contains(string(fs), dataPartitionFSType) {
-		return nil, fmt.Errorf("filesystem unknown: %s", dataPartitionFSType)
+		return fmt.Errorf("filesystem unknown: %s", dataPartitionFSType)
 	}
 
 	devices, err := getBlockDevs()
 	if err != nil {
-		return nil, fmt.Errorf("block devices: %v", err)
+		return fmt.Errorf("block devices: %v", err)
 	}
 	if len(devices) == 0 {
-		return nil, fmt.Errorf("no non-loopback block devices found")
+		return fmt.Errorf("no non-loopback block devices found")
 	}
 
 	device, err := deviceByPartLabel(devices, dataPartitionLabel)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	path := filepath.Join("/mnt", device)
-	mp, err := mount.Mount(device, path, dataPartitionFSType, "", 0)
+	mp, err := mount.Mount(device, dataMountPoint, dataPartitionFSType, "", 0)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	debug("data partition %s mounted at %s", mp.Device, mp.Path)
-	var p partition
-	p.mountpoint = mp.Path
-	return &p, nil
+	return nil
 }
 
 func getBlockDevs() ([]string, error) {

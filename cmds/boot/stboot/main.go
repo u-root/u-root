@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
@@ -18,19 +19,21 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/stboot"
+	"github.com/u-root/u-root/pkg/crypto"
 	"github.com/u-root/u-root/pkg/recovery"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
-	noMeasuredBoot = flag.Bool("insecure", false, "Do not extend PCRs with measurements of the loaded OS")
+	noMeasuredBoot = flag.Bool("no-measurement", false, "Do not extend PCRs with measurements of the loaded OS")
 	doDebug        = flag.Bool("debug", false, "Print additional debug output")
 	klog           = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
 	dryRun         = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 
 	debug = func(string, ...interface{}) {}
 
-	data dataPartition
+	vars         *Hostvars
+	txtSupported bool
 )
 
 // configuration files form STDATA partition
@@ -39,6 +42,10 @@ const (
 	networkFile            = "stboot/etc/network.json"
 	httpsRootsFile         = "stboot/etc/https-root-certificates.pem"
 	ntpServerFile          = "stboot/etc/ntp-servers.json"
+
+	newDir       = "stboot/bootballs/new"
+	knownGoodDir = "stboot/bootballs/known_good"
+	invalidDir   = "stboot/bootballs/invalid"
 )
 
 var banner = `
@@ -77,7 +84,8 @@ func main() {
 	info(banner)
 
 	p := filepath.Join("etc/", hostvarsFile)
-	vars, err := loadHostvars(p)
+	var err error
+	vars, err = loadHostvars(p)
 	if err != nil {
 		reboot("Cannot find hostvars: %v", err)
 	}
@@ -89,115 +97,168 @@ func main() {
 	/////////////////
 	// Data partition
 	/////////////////
-	data, err = findDataPartition()
+	err = findDataPartition()
 	if err != nil {
 		reboot("%v", err)
 	}
 
-	//////////
-	// Network
-	//////////
-	nc, err := getNetConf()
-	if err != nil {
-		debug("Cannot read network configuration file: %v", err)
-		err = configureDHCPNetwork()
+	if vars.BootMode == NetworkStatic || vars.BootMode == NetworkDHCP {
+		//////////
+		// Network
+		//////////
+		nc, err := getNetConf()
+		if err != nil {
+			debug("Cannot read network configuration file: %v", err)
+			err = configureDHCPNetwork()
+			if err != nil {
+				reboot("Cannot set up IO: %v", err)
+			}
+		}
+
+		if nc.HostIP != "" && nc.DefaultGateway != "" {
+			if *doDebug {
+				str, _ := json.MarshalIndent(nc, "", "  ")
+				info("Network configuration: %s", str)
+			}
+			err = configureStaticNetwork(nc)
+		} else {
+			debug("no configuration specified in %s", networkFile)
+			err = configureDHCPNetwork()
+		}
 		if err != nil {
 			reboot("Cannot set up IO: %v", err)
 		}
-	}
 
-	if nc.HostIP != "" && nc.DefaultGateway != "" {
-		if *doDebug {
-			str, _ := json.MarshalIndent(nc, "", "  ")
-			info("Network configuration: %s", str)
+		////////////////////
+		// Time validatition
+		////////////////////
+		if vars.Timestamp == 0 && *doDebug {
+			info("WARNING: No timestamp found in hostvars")
 		}
-		err = configureStaticNetwork(nc)
-	} else {
-		debug("no configuration specified in %s", networkFile)
-		err = configureDHCPNetwork()
-	}
-	if err != nil {
-		reboot("Cannot set up IO: %v", err)
-	}
-
-	hwAddr, err := hostHWAddr()
-	if err != nil {
-		reboot("%v", err)
-	}
-	info("Host's HW address: %s", hwAddr.String())
-
-	////////////////////
-	// Time validatition
-	////////////////////
-	if vars.Timestamp == 0 && *doDebug {
-		info("WARNING: No timestamp found in hostvars")
-	}
-	buildTime := time.Unix(int64(vars.Timestamp), 0)
-	err = validateSystemTime(buildTime)
-	if err != nil {
-		reboot("%v", err)
+		buildTime := time.Unix(int64(vars.Timestamp), 0)
+		err = validateSystemTime(buildTime)
+		if err != nil {
+			reboot("%v", err)
+		}
 	}
 
 	////////////////
 	// TXT self test
 	////////////////
-	txtSupported := runTxtTests(*doDebug)
+	txtSupported = runTxtTests(*doDebug)
 	if !txtSupported {
 		info("WARNING: No TXT Support!")
 	}
 	info("TXT is supported on this platform")
 
-	////////////////////
-	// Download bootball
-	////////////////////
-	bytes, err := data.get(provisioningServerFile)
-	if err != nil {
-		reboot("Bootstrap URLs: %v", err)
-	}
-	var urlStrings []string
-	if err = json.Unmarshal(bytes, &urlStrings); err != nil {
-		reboot("Bootstrap URLs: %v", err)
-	}
-	if err = forceHTTPS(urlStrings); err != nil {
-		reboot("Bootstrap URLs: %v", err)
-	}
+	////////////////
+	// Load bootball
+	////////////////
 
-	info("Try downloading individual bootball")
-	prefix := stboot.ComposeIndividualBallPrefix(hwAddr)
-	file := prefix + stboot.DefaultBallName
-	dest, err := tryDownload(urlStrings, file)
-	if err != nil {
-		debug("%v", err)
-		info("Try downloading general bootball")
-		dest, err = tryDownload(urlStrings, file)
+	var bootballFiles []string
+
+	switch vars.BootMode {
+	case NetworkStatic, NetworkDHCP:
+		f, err := loadBallFromNetwork()
 		if err != nil {
-			debug("%v", err)
-			reboot("Cannot get appropriate bootball from provisioning servers")
+			reboot("%v", err)
+		}
+		bootballFiles = append(bootballFiles, f)
+	case LocalStorage:
+		ff, err := loadBallFromLocalStorage()
+		if err != nil {
+			reboot("%v", err)
+		}
+		bootballFiles = append(bootballFiles, ff...)
+	default:
+		reboot("unknown boot mode: %s", vars.BootMode.string())
+	}
+	if len(bootballFiles) == 0 {
+		reboot("No bootballs found")
+	}
+	if *doDebug {
+		info("Bootballs to be processed:")
+		for _, b := range bootballFiles {
+			info(b)
 		}
 	}
 
-	ball, err := stboot.BootballFromArchive(dest)
+	////////////////////
+	// Process bootballs
+	////////////////////
+	var osi boot.OSImage
+	for _, b := range bootballFiles {
+		osi, err = processBootball(b)
+		if err == nil {
+			break
+		}
+		debug("%v", err)
+		if vars.BootMode == LocalStorage {
+			invalid := filepath.Join(dataMountPoint, invalidDir, filepath.Base(b))
+			stboot.CreateAndCopy(b, invalid)
+		}
+	}
+	info("Operating system: %s", osi.Label())
+	debug("%s", osi.String())
+	///////////////////////
+	// Measure OS into PCRs
+	///////////////////////
+	if !*noMeasuredBoot {
+		// TODO: measure osi byte stream not its label
+		err = crypto.TryMeasureData(crypto.BootConfigPCR, []byte(osi.Label()), osi.Label())
+		if err != nil {
+			reboot("measured boot failed: %v", err)
+		}
+		// TODO: measure hostvars.json and files from data partition
+	}
+	info("WARNING: measured boot disabled!")
+
+	//////////
+	// Boot OS
+	//////////
+	if *dryRun {
+		debug("Dryrun mode: will not boot")
+		return
+	}
+	info("Loading operating system \n%s", osi.String())
+	err = osi.Load(*doDebug)
+	if err != nil {
+		reboot("%s", err)
+	}
+	info("Handing over controll now")
+	err = boot.Execute()
 	if err != nil {
 		reboot("%v", err)
+	}
+
+	reboot("unexpected return from kexec")
+
+}
+
+func processBootball(path string) (boot.OSImage, error) {
+	info("Try loading bootball %s", path)
+	ball, err := stboot.BootballFromArchive(path)
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
 	}
 
 	////////////////////////////////////////
 	// Validate bootball's root certificates
 	////////////////////////////////////////
 	if len(vars.Fingerprints) == 0 {
-		reboot("No root certificate fingerprints found in hostvars")
+		return nil, fmt.Errorf("No root certificate fingerprints found in hostvars")
 	}
 	fp := calculateFingerprint(ball.RootCertPEM)
 	info("Fingerprint of boot ball's root certificate:")
 	info(fp)
 	if !fingerprintIsValid(fp, vars.Fingerprints) {
-		reboot("Root certificate of boot ball does not match expacted fingerprint")
+		return nil, fmt.Errorf("Root certificate of boot ball does not match expacted fingerprint")
 	}
 	info("OK!")
 
-	////////////////////////////
-	// Verify boot configuration
-	////////////////////////////
+	//////////////////
+	// Verify bootball
+	//////////////////
 	if *doDebug {
 		str, _ := json.MarshalIndent(ball.Config, "", "  ")
 		info("Bootball config: %s", str)
@@ -207,78 +268,131 @@ func main() {
 
 	n, valid, err := ball.Verify()
 	if err != nil {
-		reboot("Error verifying bootball: %v", err)
+		return nil, fmt.Errorf("Error verifying bootball: %v", err)
 	}
 	if valid < vars.MinimalSignaturesMatch {
-		reboot("Not enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
+		return nil, fmt.Errorf("Not enough valid signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	}
 
 	debug("Signatures: %d found, %d valid, %d required", n, valid, vars.MinimalSignaturesMatch)
 	info("Bootball passed verification")
 	info(check)
 
-	/////////////////////////////
-	// Measure bootball into PCRs
-	/////////////////////////////
-	// if !*noMeasuredBoot {
-	// 	err = crypto.TryMeasureData(crypto.BootConfigPCR, ball.HashValue, ball.Config.Label)
-	// 	if err != nil {
-	// 		reboot("measured boot failed: %v", err)
-	// 	}
-	// 	// TODO: measure hostvars.json and files from data partition
-	// }
-
-	//////////
-	// Boot OS
-	//////////
+	/////////////
+	// Extract OS
+	/////////////
 	debug("Try extracting operating system with TXT")
 	txt := true
 	osiTXT, err := ball.OSImage(txt)
 	if err != nil {
-		debug("%v", err)
+		info("%v", err)
 	}
 	debug("Try extracting non-TXT fallback operating system")
 	osiFallback, err := ball.OSImage(!txt)
 	if err != nil {
-		debug("%s", err)
+		info("%v", err)
 	}
 
 	if osiTXT == nil && osiFallback == nil {
-		reboot("Failed to get operating system from bootball")
+		return nil, fmt.Errorf("Failed to get operating system from bootball")
 	}
 
-	var osi boot.OSImage
+	var img boot.OSImage
 	if txtSupported {
 		if osiTXT == nil {
 			info("WARNING: TXT will not be used!")
-			osi = osiFallback
+			img = osiFallback
 		}
-		osi = osiTXT
+		img = osiTXT
 	} else {
 		if osiFallback == nil {
-			reboot("TXT is not supported by the host and no fallback OS is provided by the bootball")
+			return nil, fmt.Errorf("TXT is not supported by the host and no fallback OS is provided by the bootball")
 		}
 		info("WARNING: TXT will not be used!")
-		osi = osiFallback
+		img = osiFallback
 	}
 
-	info("Loading operating system \n%s", osi.String())
-	err = osi.Load(*doDebug)
+	return img, nil
+}
+
+func loadBallFromNetwork() (string, error) {
+	p := filepath.Join(dataMountPoint, provisioningServerFile)
+	bytes, err := ioutil.ReadFile(p)
 	if err != nil {
-		reboot("%s", err)
+		return "", fmt.Errorf("provisioning server URLs: %v", err)
+	}
+	var urlStrings []string
+	if err = json.Unmarshal(bytes, &urlStrings); err != nil {
+		return "", fmt.Errorf("provisioning server URLs URLs: %v", err)
+	}
+	if err = forceHTTPS(urlStrings); err != nil {
+		return "", fmt.Errorf("provisioning server URLs URLs: %v", err)
 	}
 
-	if *dryRun {
-		debug("Dryrun mode: will not boot")
-		return
-	}
-	info("Handing over controll now")
-	err = boot.Execute()
+	info("Try downloading individual bootball")
+	hwAddr, err := hostHWAddr()
 	if err != nil {
-		reboot("%v", err)
+		return "", fmt.Errorf("cannot evaluate hardware address: %v", err)
+	}
+	info("Host's HW address: %s", hwAddr.String())
+	prefix := stboot.ComposeIndividualBallPrefix(hwAddr)
+	file := prefix + stboot.DefaultBallName
+	dest, err := tryDownload(urlStrings, file)
+	if err != nil {
+		debug("%v", err)
+		info("Try downloading general bootball")
+		dest, err = tryDownload(urlStrings, stboot.DefaultBallName)
+		if err != nil {
+			debug("%v", err)
+			return "", fmt.Errorf("cannot get appropriate bootball from provisioning servers")
+		}
 	}
 
-	reboot("unexpected return from kexec")
+	return dest, nil
+}
+
+func loadBallFromLocalStorage() ([]string, error) {
+	var bootballs []string
+	var newBootballs []string
+	var knownGoodBootballs []string
+
+	//new Bootballs
+	dir := filepath.Join(dataMountPoint, newDir)
+	newBootballs, err := searchBootballFiles(dir)
+	if err != nil {
+		return nil, err
+	}
+	bootballs = append(bootballs, newBootballs...)
+
+	// known good bootballs
+	dir = filepath.Join(dataMountPoint, knownGoodDir)
+	knownGoodBootballs, err = searchBootballFiles(dir)
+	if err != nil {
+		return nil, err
+	}
+	bootballs = append(bootballs, knownGoodBootballs...)
+	return bootballs, nil
+}
+
+func searchBootballFiles(dir string) ([]string, error) {
+	var ret []string
+	fis, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, fi := range fis {
+		// take *.stboot files only
+		if filepath.Ext(fi.Name()) == ".stboot" {
+			b := filepath.Join(dir, fi.Name())
+			ret = append(ret, b)
+		}
+	}
+	// reverse order
+	for i := 0; i < len(ret)/2; i++ {
+		j := len(ret) - i - 1
+		ret[i], ret[j] = ret[j], ret[i]
+	}
+	return ret, nil
 }
 
 // fingerprintIsValid returns true if fpHex is equal to on of
