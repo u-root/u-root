@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -43,9 +44,10 @@ const (
 	httpsRootsFile         = "stboot/etc/https-root-certificates.pem"
 	ntpServerFile          = "stboot/etc/ntp-servers.json"
 
-	newDir       = "stboot/bootballs/new"
-	knownGoodDir = "stboot/bootballs/known_good"
-	invalidDir   = "stboot/bootballs/invalid"
+	newDir              = "stboot/bootballs/new/"
+	knownGoodDir        = "stboot/bootballs/known_good/"
+	invalidDir          = "stboot/bootballs/invalid/"
+	currentBootballFile = "stboot/bootballs/current"
 )
 
 var banner = `
@@ -190,16 +192,34 @@ func main() {
 	for _, b := range bootballFiles {
 		osi, err = processBootball(b)
 		if err == nil {
+			if vars.BootMode == LocalStorage {
+				// indicate current bootball
+				f := filepath.Join(dataMountPoint, currentBootballFile)
+				rel, err := filepath.Rel(filepath.Dir(f), b)
+				if err != nil {
+					reboot("failed to indicate current bootball: %v", err)
+				}
+				if err = ioutil.WriteFile(f, []byte(rel), os.ModePerm); err != nil {
+					reboot("failed to indicate current bootball: %v", err)
+				}
+			}
 			break
 		}
 		debug("%v", err)
 		if vars.BootMode == LocalStorage {
+			// move invalid bootballs
 			invalid := filepath.Join(dataMountPoint, invalidDir, filepath.Base(b))
-			stboot.CreateAndCopy(b, invalid)
+			if err = stboot.CreateAndCopy(b, invalid); err != nil {
+				reboot("failed to move invalid bootball: %v", err)
+			}
+			if err = os.Remove(b); err != nil {
+				reboot("failed to move invalid bootball: %v", err)
+			}
 		}
 	}
 	info("Operating system: %s", osi.Label())
 	debug("%s", osi.String())
+
 	///////////////////////
 	// Measure OS into PCRs
 	///////////////////////
