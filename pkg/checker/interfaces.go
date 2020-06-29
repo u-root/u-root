@@ -23,25 +23,17 @@ func InterfaceExists(ifname string) Checker {
 	}
 }
 
-func ethStats(ifname string) (*ethtool.EthtoolCmd, error) {
-	cmd := ethtool.EthtoolCmd{}
-	_, err := cmd.CmdGet(ifname)
-	if err != nil {
-		return nil, err
-	}
-	return &cmd, nil
-}
-
 // LinkSpeed checks the link speed, and complains if smaller than `min`
 // megabit/s.
-func LinkSpeed(ifname string, minSpeed int) Checker {
+func LinkSpeed(ifname string, minSpeed uint32) Checker {
 	return func() error {
-		eth, err := ethStats(ifname)
+		ec := ethtool.EthtoolCmd{}
+		speed, err := ec.CmdGet(ifname)
 		if err != nil {
 			return err
 		}
-		if int(eth.Speed) < minSpeed {
-			return fmt.Errorf("link speed %d < %d", eth.Speed, minSpeed)
+		if speed < minSpeed {
+			return fmt.Errorf("link speed %d < %d", speed, minSpeed)
 		}
 		return nil
 	}
@@ -51,7 +43,8 @@ func LinkSpeed(ifname string, minSpeed int) Checker {
 // it's not the expected state.
 func LinkAutoneg(ifname string, expected bool) Checker {
 	return func() error {
-		eth, err := ethStats(ifname)
+		ec := ethtool.EthtoolCmd{}
+		_, err := ec.CmdGet(ifname)
 		if err != nil {
 			return err
 		}
@@ -59,8 +52,8 @@ func LinkAutoneg(ifname string, expected bool) Checker {
 		if expected {
 			want = 1
 		}
-		if eth.Autoneg != want {
-			return fmt.Errorf("link autoneg %d; want %d", eth.Autoneg, want)
+		if ec.Autoneg != want {
+			return fmt.Errorf("link autoneg %d; want %d", ec.Autoneg, want)
 		}
 		return nil
 	}
