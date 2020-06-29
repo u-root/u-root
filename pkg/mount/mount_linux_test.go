@@ -36,12 +36,12 @@ import (
 func TestGPT(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
-	disk, err := block.Device("/dev/sdc")
+	sdcDisk, err := block.Device("/dev/sdc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	parts, err := disk.GPTTable()
+	parts, err := sdcDisk.GPTTable()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,6 +60,48 @@ func TestGPT(t *testing.T) {
 			}
 
 			t.Logf("partition: %v", p)
+		}
+	}
+}
+
+func TestFilterPartType(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	for _, tt := range []struct {
+		guid string
+		want block.BlockDevices
+	}{
+		{
+			// EFI system partition.
+			guid: "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
+			want: block.BlockDevices{
+				&block.BlockDev{Name: "sdc1"},
+			},
+		},
+		{
+			// EFI system partition. mixed case.
+			guid: "c12a7328-f81F-11D2-BA4B-00A0C93ec93B",
+			want: block.BlockDevices{
+				&block.BlockDev{Name: "sdc1"},
+			},
+		},
+		{
+			// This is some random Linux GUID.
+			guid: "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+			want: block.BlockDevices{
+				&block.BlockDev{Name: "sdc2"},
+			},
+		},
+	} {
+		parts := devs.FilterPartType(tt.guid)
+		if !reflect.DeepEqual(parts, tt.want) {
+			t.Errorf("FilterPartType(%s) = %v, want %v", tt.guid, parts, tt.want)
 		}
 	}
 }

@@ -42,7 +42,7 @@ var debug = func(string, ...interface{}) {}
 // This function returns a mount.Mountpoint object, or an error if any.
 func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*mount.MountPoint, error) {
 	log.Printf("Looking for partition with GUID %s", guid)
-	partitions := devices.FilterGUID(guid)
+	partitions := devices.FilterPartType(guid)
 	if len(partitions) == 0 {
 		return nil, fmt.Errorf("no partitions with GUID %s", guid)
 	}
@@ -223,7 +223,7 @@ func main() {
 		}
 	}
 
-	// TODO boot from EFI system partitions. See block.FilterESP
+	// TODO boot from EFI system partitions.
 
 	if *flagGrubMode {
 		if err := BootGrubMode(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagDryRun, *flagConfigIdx); err != nil {
