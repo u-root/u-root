@@ -223,7 +223,9 @@ func main() {
 	///////////////////////
 	// Measure OS into PCRs
 	///////////////////////
-	if !*noMeasuredBoot {
+	if *noMeasuredBoot {
+		info("WARNING: measured boot disabled!")
+	} else {
 		// TODO: measure osi byte stream not its label
 		err = crypto.TryMeasureData(crypto.BootConfigPCR, []byte(osi.Label()), osi.Label())
 		if err != nil {
@@ -231,7 +233,6 @@ func main() {
 		}
 		// TODO: measure hostvars.json and files from data partition
 	}
-	info("WARNING: measured boot disabled!")
 
 	//////////
 	// Boot OS
