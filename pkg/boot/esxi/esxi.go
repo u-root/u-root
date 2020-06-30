@@ -55,13 +55,28 @@ import (
 // may not be valid.
 //
 // device5 and device6 will be mounted at temporary directories.
-func LoadDisk(device string) ([]*boot.MultibootImage, error) {
-	opts5, err5 := mountPartition(fmt.Sprintf("%s5", device))
-	opts6, err6 := mountPartition(fmt.Sprintf("%s6", device))
+func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error) {
+	opts5, mp5, err5 := mountPartition(fmt.Sprintf("%s5", device))
+	opts6, mp6, err6 := mountPartition(fmt.Sprintf("%s6", device))
 	if err5 != nil && err6 != nil {
-		return nil, fmt.Errorf("could not mount or read either partition 5 (%v) or partition 6 (%v)", err5, err6)
+		return nil, nil, fmt.Errorf("could not mount or read either partition 5 (%v) or partition 6 (%v)", err5, err6)
 	}
-	return getImages(device, opts5, opts6)
+	var mps []*mount.MountPoint
+	if mp5 != nil {
+		mps = append(mps, mp5)
+	}
+	if mp6 != nil {
+		mps = append(mps, mp6)
+	}
+
+	imgs, err := getImages(device, opts5, opts6)
+	if err != nil {
+		for _, mp := range mps {
+			mp.Unmount(mount.MNT_DETACH)
+		}
+		return nil, nil, err
+	}
+	return imgs, mps, nil
 }
 
 func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, error) {
@@ -70,10 +85,10 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 		err5, err6 error
 	)
 	if opts5 != nil {
-		img5, err5 = getBootImage(*opts5, device, 5)
+		img5, err5 = getBootImage(*opts5, device, 5, fmt.Sprintf("%s%d", device, 5))
 	}
 	if opts6 != nil {
-		img6, err6 = getBootImage(*opts6, device, 6)
+		img6, err6 = getBootImage(*opts6, device, 6, fmt.Sprintf("%s%d", device, 6))
 	}
 	if img5 == nil && img6 == nil {
 		return nil, fmt.Errorf("could not read boot configs on partition 5 (%v) or partition 6 (%v)", err5, err6)
@@ -93,16 +108,25 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 // LoadCDROM loads an ESXi multiboot kernel from a CDROM at device.
 //
 // device will be mounted at mountPoint.
-func LoadCDROM(device string) (*boot.MultibootImage, error) {
+func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 	mountPoint, err := ioutil.TempDir("", "esxi-mount-")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if _, err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
-		return nil, err
+	mp, err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME)
+	if err != nil {
+		os.RemoveAll(mountPoint)
+		return nil, nil, err
 	}
 	// Don't pass the device to ESXi. It doesn't need it.
-	return LoadConfig(filepath.Join(mountPoint, "boot.cfg"))
+	img, err := LoadConfig(filepath.Join(mountPoint, "boot.cfg"))
+	if err != nil {
+		mp.Unmount(mount.MNT_DETACH)
+		os.RemoveAll(mountPoint)
+		return nil, nil, err
+	}
+	img.Name = fmt.Sprintf("VMware ESXi from CD-ROM %s", device)
+	return img, mp, nil
 }
 
 // LoadConfig loads an ESXi configuration from configFile.
@@ -111,25 +135,29 @@ func LoadConfig(configFile string) (*boot.MultibootImage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
 	}
-	return getBootImage(opts, "", 0)
+	return getBootImage(opts, "", 0, fmt.Sprintf("config file %s", configFile))
 }
 
-func mountPartition(dev string) (*options, error) {
+func mountPartition(dev string) (*options, *mount.MountPoint, error) {
 	base := filepath.Base(dev)
 	mountPoint, err := ioutil.TempDir("", fmt.Sprintf("%s-", base))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if _, err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
-		return nil, err
+	mp, err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME)
+	if err != nil {
+		os.RemoveAll(mountPoint)
+		return nil, nil, err
 	}
 
 	configFile := filepath.Join(mountPoint, "boot.cfg")
 	opts, err := parse(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
+		mp.Unmount(mount.MNT_DETACH)
+		os.RemoveAll(mountPoint)
+		return nil, nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
 	}
-	return &opts, nil
+	return &opts, mp, nil
 }
 
 // lazyOpenModules assigns modules to be opened as files.
@@ -149,7 +177,7 @@ func lazyOpenModules(mods []module) multiboot.Modules {
 	return modules
 }
 
-func getBootImage(opts options, device string, partition int) (*boot.MultibootImage, error) {
+func getBootImage(opts options, device string, partition int, name string) (*boot.MultibootImage, error) {
 	// Only valid and upgrading are bootable partitions.
 	//
 	// We are supposed to support the following two state transitions (only
@@ -174,7 +202,7 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 	}
 
 	return &boot.MultibootImage{
-		Name:    fmt.Sprintf("VMware ESXi from %s%d", device, partition),
+		Name:    fmt.Sprintf("VMware ESXi from %s", name),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
 		Modules: lazyOpenModules(opts.modules),

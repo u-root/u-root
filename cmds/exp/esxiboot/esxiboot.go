@@ -37,6 +37,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/esxi"
+	"github.com/u-root/u-root/pkg/mount"
 )
 
 var (
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	if len(*diskDev) > 0 {
-		imgs, err := esxi.LoadDisk(*diskDev)
+		imgs, mps, err := esxi.LoadDisk(*diskDev)
 		if err != nil {
 			log.Fatalf("Failed to load ESXi configuration: %v", err)
 		}
@@ -75,16 +76,22 @@ func main() {
 				break
 			}
 		}
+		for _, mp := range mps {
+			if err := mp.Unmount(mount.MNT_DETACH); err != nil {
+				log.Printf("Failed to unmount %s: %v", mp, err)
+			}
+		}
 		if !loaded {
 			log.Fatalf("Failed to load all ESXi images found.")
 		}
 	} else {
 		var err error
 		var img *boot.MultibootImage
+		var mp *mount.MountPoint
 		if len(*cfg) > 0 {
 			img, err = esxi.LoadConfig(*cfg)
 		} else if len(*cdrom) > 0 {
-			img, err = esxi.LoadCDROM(*cdrom)
+			img, mp, err = esxi.LoadCDROM(*cdrom)
 		}
 		if err != nil {
 			log.Fatalf("Failed to load ESXi configuration: %v", err)
@@ -96,6 +103,11 @@ func main() {
 			log.Fatalf("Failed to load ESXi image (%v) into memory: %v", img, err)
 		}
 		log.Printf("Loaded image: %v", img)
+		if mp != nil {
+			if err := mp.Unmount(mount.MNT_DETACH); err != nil {
+				log.Printf("Failed to unmount %s: %v", mp, err)
+			}
+		}
 	}
 
 	if *dryRun {
