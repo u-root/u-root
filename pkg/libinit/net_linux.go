@@ -12,7 +12,7 @@ import (
 )
 
 // NetInit is u-root network initialization.
-func NetInit() {
+func linuxNetInit() {
 	if err := loopbackUp(); err != nil {
 		ulog.KernelLog.Printf("Failed to initialize loopback: %v", err)
 	}
@@ -28,4 +28,8 @@ func loopbackUp() error {
 		return fmt.Errorf("couldn't set link loopback up: %v", err)
 	}
 	return nil
+}
+
+func init() {
+	osNetInit = linuxNetInit
 }

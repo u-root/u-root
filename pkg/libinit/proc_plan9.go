@@ -16,49 +16,34 @@ func WaitOrphans() uint {
 	var numReaped uint
 	for {
 		var (
-			s syscall.WaitStatus
-			r syscall.Rusage
+			w syscall.Waitmsg
 		)
-		p, err := syscall.Wait4(-1, &s, 0, &r)
-		if p == -1 {
+		err := syscall.Await(&w)
+		if err != nil {
 			break
 		}
-		log.Printf("%v: exited with %v, status %v, rusage %v", p, err, s, r)
+		log.Printf("Exited with %v", w)
 		numReaped++
 	}
 	return numReaped
 }
 
-// WithTTYControl turns on controlling the TTY on this command.
-func WithTTYControl(ctty bool) CommandModifier {
+// WithRforkFlags adds rfork flags to the *exec.Cmd.
+func WithRforkFlags(flags uintptr) CommandModifier {
 	return func(c *exec.Cmd) {
 		if c.SysProcAttr == nil {
 			c.SysProcAttr = &syscall.SysProcAttr{}
 		}
-		c.SysProcAttr.Setctty = ctty
-		c.SysProcAttr.Setsid = ctty
-	}
-}
-
-// WithCloneFlags adds clone(2) flags to the *exec.Cmd.
-func WithCloneFlags(flags uintptr) CommandModifier {
-	return func(c *exec.Cmd) {
-		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
-		}
-		c.SysProcAttr.Cloneflags = flags
+		c.SysProcAttr.Rfork = int(flags)
 	}
 }
 
 func init() {
-	osDefault = linuxDefault
+	osDefault = plan9Default
 }
 
-func linuxDefault(c *exec.Cmd) {
-	c.SysProcAttr = &syscall.SysProcAttr{
-		Setctty: true,
-		Setsid:  true,
-	}
+func plan9Default(c *exec.Cmd) {
+	c.SysProcAttr = &syscall.SysProcAttr{}
 }
 
 // FIX ME: make it not linux-specific
@@ -83,17 +68,16 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		}
 
 		for {
-			var s syscall.WaitStatus
-			var r syscall.Rusage
-			if p, err := syscall.Wait4(-1, &s, 0, &r); p == cmd.Process.Pid {
-				debug("Shell exited, exit status %d", s.ExitStatus())
-				break
-			} else if p != -1 {
-				debug("Reaped PID %d, exit status %d", p, s.ExitStatus())
-			} else {
-				debug("Error from Wait4 for orphaned child: %v", err)
+			var w syscall.Waitmsg
+			if err := syscall.Await(&w); err != nil {
+				debug("Error from Await: %v", err)
 				break
 			}
+			if w.Pid == cmd.Process.Pid {
+				debug("Shell exited, exit status %v", w)
+				break
+			}
+			debug("Reaped PID %d, exit status %v", w.Pid, w)
 		}
 		if err := cmd.Process.Release(); err != nil {
 			log.Printf("Error releasing process %v: %v", cmd, err)
