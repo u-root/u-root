@@ -183,6 +183,8 @@ jobs:
                   go run u-root.go -build=bb all core
                   go run u-root.go all core
                   go run u-root.go -fourbins minimal
+                  go build .
+                  GOOS=plan9 ./u-root plan9 -defaultsh=/bbin/rush -initcmd=/bbin/rush
   test-integration-amd64:
     <<: *integration-template
     docker:
