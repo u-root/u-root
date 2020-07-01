@@ -113,6 +113,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/wget",
 	},
 	"plan9": {
+		"github.com/u-root/u-root/cmds/core/init",
 		"github.com/u-root/u-root/cmds/exp/rush",
 	},
 }
