@@ -34,6 +34,8 @@ const (
 	gmt0 = "TZif2\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00GMT\x00\x00\x00TZif2\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x04\xf8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00GMT\x00\x00\x00\nGMT0\n"
 
 	nameserver = "nameserver 8.8.8.8\n"
+	defaultuserentry = "root:x:0:0:root:/root:/bin/bash\n"
+	defaultgroup = "root:x:0:\n"
 )
 
 // DefaultRamfs are files that are contained in all u-root initramfs archives
@@ -55,6 +57,8 @@ var DefaultRamfs = cpio.ArchiveFromRecords([]cpio.Record{
 	cpio.CharDev("dev/port", 0640, 1, 4),
 	cpio.CharDev("dev/urandom", 0666, 1, 9),
 	cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
+	cpio.StaticFile("etc/passwd", defaultuserentry, 0644),
+	cpio.StaticFile("etc/group", defaultgroup, 0644),
 	cpio.StaticFile("etc/localtime", gmt0, 0644),
 })
 
