@@ -3,10 +3,10 @@
     "cmdline": "root=/dev/mapper/rhel-root ro crashkernel=auto spectre_v2=retpoline rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap LANG=en_US.UTF-8 console=ttyS0,9600",
     "image_type": "linux",
     "initrd": {
-      "url": "file://testdata_new/rhel_7_8_installed/initramfs-3.10.0-1127.el7.x86_64.img"
+      "url": "file://./testdata_new/rhel_7_8_installed/initramfs-3.10.0-1127.el7.x86_64.img"
     },
     "kernel": {
-      "url": "file://testdata_new/rhel_7_8_installed/vmlinuz-3.10.0-1127.el7.x86_64"
+      "url": "file://./testdata_new/rhel_7_8_installed/vmlinuz-3.10.0-1127.el7.x86_64"
     },
     "name": "Red Hat Enterprise Linux Server (3.10.0-1127.el7.x86_64) 7.8 (Maipo)"
   },
@@ -14,10 +14,10 @@
     "cmdline": "root=/dev/mapper/rhel-root ro crashkernel=auto spectre_v2=retpoline rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap LANG=en_US.UTF-8 console=ttyS0,9600",
     "image_type": "linux",
     "initrd": {
-      "url": "file://testdata_new/rhel_7_8_installed/initramfs-3.10.0-1090.el7.x86_64.img"
+      "url": "file://./testdata_new/rhel_7_8_installed/initramfs-3.10.0-1090.el7.x86_64.img"
     },
     "kernel": {
-      "url": "file://testdata_new/rhel_7_8_installed/vmlinuz-3.10.0-1090.el7.x86_64"
+      "url": "file://./testdata_new/rhel_7_8_installed/vmlinuz-3.10.0-1090.el7.x86_64"
     },
     "name": "Red Hat Enterprise Linux Server (3.10.0-1090.el7.x86_64) 7.8 (Maipo)"
   },
@@ -25,10 +25,10 @@
     "cmdline": "root=/dev/mapper/rhel-root ro crashkernel=auto spectre_v2=retpoline rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet",
     "image_type": "linux",
     "initrd": {
-      "url": "file://testdata_new/rhel_7_8_installed/initramfs-0-rescue-c1f242ee03e54908bf80c667e1d9ef90.img"
+      "url": "file://./testdata_new/rhel_7_8_installed/initramfs-0-rescue-c1f242ee03e54908bf80c667e1d9ef90.img"
     },
     "kernel": {
-      "url": "file://testdata_new/rhel_7_8_installed/vmlinuz-0-rescue-c1f242ee03e54908bf80c667e1d9ef90"
+      "url": "file://./testdata_new/rhel_7_8_installed/vmlinuz-0-rescue-c1f242ee03e54908bf80c667e1d9ef90"
     },
     "name": "Red Hat Enterprise Linux Server (0-rescue-c1f242ee03e54908bf80c667e1d9ef90) 7.8 (Maipo)"
   }
