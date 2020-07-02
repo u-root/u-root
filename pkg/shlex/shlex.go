@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package shlex is a simplified command-line shell-like argument parser.
+// Package shlex is a POSIX command-line argument parser.
 //
 // shlex will parse for example
 //
@@ -10,6 +10,10 @@
 //
 // into the appropriate argvs to start the command.
 package shlex
+
+import (
+	"unicode"
+)
 
 func isWhitespace(b byte) bool {
 	return b == '\t' || b == '\n' || b == '\v' ||
@@ -33,16 +37,16 @@ const (
 // https://www.gnu.org/software/grub/manual/grub/grub.html#Quoting
 // except that the escaping of newline is not supported
 func Argv(s string) []string {
-	var ret []string
-	var token []byte
+	ret := []string{}
+	var token []rune
 
 	var context quote
 	lastWhiteSpace := true
-	for i := range []byte(s) {
+	for _, r := range s {
 		quotes := context != unquoted
 		switch context {
 		case unquoted:
-			switch s[i] {
+			switch r {
 			case '\\':
 				context = escape
 				// strip out the quote
@@ -67,14 +71,14 @@ func Argv(s string) []string {
 			context = unquoted
 
 		case singleQuote:
-			if s[i] == '\'' {
+			if r == '\'' {
 				context = unquoted
 				// strip out the quote
 				continue
 			}
 
 		case doubleQuote:
-			switch s[i] {
+			switch r {
 			case '\\':
 				context = doubleQuoteEscape
 				// strip out the quote
@@ -86,7 +90,14 @@ func Argv(s string) []string {
 			}
 
 		case doubleQuoteEscape:
-			switch s[i] {
+			// GNU Bash manual:
+			//
+			// The backslash retains its special meaning only when
+			// followed by one of the following characters: ‘$’,
+			// ‘`’, ‘"’, ‘\’, or newline. Within double quotes,
+			// backslashes that are followed by one of these
+			// characters are removed.
+			switch r {
 			case '$', '"', '\\', '\n': // or newline
 			default:
 				token = append(token, '\\')
@@ -99,13 +110,12 @@ func Argv(s string) []string {
 
 			// strip out the rest
 			continue
-
 		}
 
-		lastWhiteSpace = isWhitespace(s[i])
+		lastWhiteSpace = unicode.IsSpace(r)
 
-		if !isWhitespace(s[i]) || quotes {
-			token = append(token, s[i])
+		if !lastWhiteSpace || quotes {
+			token = append(token, r)
 		} else if len(token) > 0 {
 			ret = append(ret, string(token))
 			token = token[:0]
