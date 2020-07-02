@@ -182,7 +182,7 @@ func TestTryMount(t *testing.T) {
 	defer os.RemoveAll(d)
 
 	sda1 := filepath.Join(d, "sda1")
-	if mp, err := mount.TryMount("/dev/sda1", sda1, mount.ReadOnly); err != nil {
+	if mp, err := mount.TryMount("/dev/sda1", sda1, "", mount.ReadOnly); err != nil {
 		t.Errorf("TryMount(/dev/sda1) = %v, want nil", err)
 	} else {
 		want := &mount.MountPoint{
@@ -201,7 +201,7 @@ func TestTryMount(t *testing.T) {
 	}
 
 	sda2 := filepath.Join(d, "sda2")
-	if mp, err := mount.TryMount("/dev/sda2", sda2, mount.ReadOnly); err != nil {
+	if mp, err := mount.TryMount("/dev/sda2", sda2, "", mount.ReadOnly); err != nil {
 		t.Errorf("TryMount(/dev/sda2) = %v, want nil", err)
 	} else {
 		want := &mount.MountPoint{
@@ -220,12 +220,12 @@ func TestTryMount(t *testing.T) {
 	}
 
 	sdb1 := filepath.Join(d, "sdb1")
-	if _, err := mount.TryMount("/dev/sdb1", sdb1, mount.ReadOnly); !strings.Contains(err.Error(), "no suitable filesystem") {
+	if _, err := mount.TryMount("/dev/sdb1", sdb1, "", mount.ReadOnly); !strings.Contains(err.Error(), "no suitable filesystem") {
 		t.Errorf("TryMount(/dev/sdb1) = %v, want an error containing 'no suitable filesystem'", err)
 	}
 
 	sdz1 := filepath.Join(d, "sdz1")
-	if _, err := mount.TryMount("/dev/sdz1", sdz1, mount.ReadOnly); !os.IsNotExist(err) {
+	if _, err := mount.TryMount("/dev/sdz1", sdz1, "", mount.ReadOnly); !os.IsNotExist(err) {
 		t.Errorf("TryMount(/dev/sdz1) = %v, want an error equivalent to Does Not Exist", err)
 	}
 }
