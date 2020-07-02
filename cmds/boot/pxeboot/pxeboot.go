@@ -24,10 +24,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/bootcmd"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/boot/netboot"
 	"github.com/u-root/u-root/pkg/curl"
@@ -118,31 +118,10 @@ func main() {
 		log.Printf("Netboot failed: %v", err)
 	}
 
-	if *noLoad {
-		if len(images) > 0 {
-			log.Printf("Got configuration: %s", images[0])
-		} else {
-			log.Fatalf("Nothing bootable found.")
-		}
-		return
-	}
 	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 
-	chosenEntry := menu.ShowMenuAndLoad(os.Stdin, menuEntries...)
-	if chosenEntry == nil {
-		log.Fatalf("Nothing to boot.")
-	}
-	if *noExec {
-		log.Printf("Chosen menu entry: %s", chosenEntry)
-		os.Exit(0)
-	}
-	// Exec should either return an error or not return at all.
-	if err := chosenEntry.Exec(); err != nil {
-		log.Fatalf("Failed to exec %s: %v", chosenEntry, err)
-	}
-
-	// Kexec should either return an error or not return at all.
-	panic("unreachable")
+	// Boot does not return.
+	bootcmd.ShowMenuAndBoot(menuEntries, nil, *noLoad, *noExec)
 }
