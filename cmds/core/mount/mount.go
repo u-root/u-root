@@ -124,12 +124,14 @@ func main() {
 		flags |= unix.MS_RDONLY
 	}
 	if *fsType == "" {
-		// mandatory parameter for the moment
-		log.Fatalf("No file system type provided!\nUsage: mount [-r] [-o mount options] -t fstype dev path")
-	}
-	if _, err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), flags); err != nil {
-		log.Printf("%v", err)
-		informIfUnknownFS(*fsType)
-		os.Exit(1)
+		if _, err := mount.TryMount(dev, path, strings.Join(data, ","), flags); err != nil {
+			log.Fatalf("%v", err)
+		}
+	} else {
+		if _, err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), flags); err != nil {
+			log.Printf("%v", err)
+			informIfUnknownFS(*fsType)
+			os.Exit(1)
+		}
 	}
 }

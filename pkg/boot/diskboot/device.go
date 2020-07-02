@@ -69,7 +69,7 @@ func FindDevice(devPath string, flags uintptr) (*Device, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tmp mount directory: %v", err)
 	}
-	mp, err := mount.TryMount(devPath, mountPath, flags)
+	mp, err := mount.TryMount(devPath, mountPath, "", flags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find a valid boot device: %v", err)
 	}

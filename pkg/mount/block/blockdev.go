@@ -71,7 +71,7 @@ func (b *BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) 
 		return mount.Mount(devpath, path, b.FSType, "", flags)
 	}
 
-	return mount.TryMount(devpath, path, flags)
+	return mount.TryMount(devpath, path, "", flags)
 }
 
 // GPTTable tries to read a GPT table from the block device described by the
