@@ -60,7 +60,20 @@ func probeIsolinuxFiles() []string {
 func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
 	rootdir := &url.URL{
 		Scheme: "file",
-		Path:   diskDir,
+		Path:   filepath.Join("/", diskDir),
+	}
+	// There is technically no such thing as a relative file URL. We'll use
+	// a custom convention that our curl package supports: Host == "."
+	// means a relative path.
+	//
+	// When string'd back out, they'll show up as file://./booyah, which is
+	// technically not a valid file URI. But at least it parses back correctly.
+	//
+	// Leaving the . out means that the top-most directory becomes the
+	// hostname. File names get string'd out to file://booyah, and when you
+	// parse it back, you get Host = "booyah". That kind of sucks.
+	if !filepath.IsAbs(diskDir) {
+		rootdir.Host = "."
 	}
 
 	for _, relname := range probeIsolinuxFiles() {

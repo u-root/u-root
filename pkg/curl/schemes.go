@@ -375,5 +375,9 @@ type LocalFileClient struct{}
 
 // Fetch implements FileScheme.Fetch.
 func (lfs LocalFileClient) Fetch(_ context.Context, u *url.URL) (io.ReaderAt, error) {
-	return os.Open(filepath.Clean(u.Path))
+	p := filepath.Clean(u.Path)
+	if len(u.Host) > 0 {
+		p = filepath.Join(u.Host, p)
+	}
+	return os.Open(p)
 }
