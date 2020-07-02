@@ -118,14 +118,19 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 		os.RemoveAll(mountPoint)
 		return nil, nil, err
 	}
-	// Don't pass the device to ESXi. It doesn't need it.
-	img, err := LoadConfig(filepath.Join(mountPoint, "boot.cfg"))
+
+	opts, err := parse(filepath.Join(mountPoint, "boot.cfg"))
+	if err != nil {
+		mp.Unmount(mount.MNT_DETACH)
+		os.RemoveAll(mountPoint)
+		return nil, nil, fmt.Errorf("cannot parse config from %s: %v", device, err)
+	}
+	img, err := getBootImage(opts, "", 0, device)
 	if err != nil {
 		mp.Unmount(mount.MNT_DETACH)
 		os.RemoveAll(mountPoint)
 		return nil, nil, err
 	}
-	img.Name = fmt.Sprintf("VMware ESXi from CD-ROM %s", device)
 	return img, mp, nil
 }
 
@@ -202,7 +207,7 @@ func getBootImage(opts options, device string, partition int, name string) (*boo
 	}
 
 	return &boot.MultibootImage{
-		Name:    fmt.Sprintf("VMware ESXi from %s", name),
+		Name:    fmt.Sprintf("%s from %s", opts.title, name),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
 		Modules: lazyOpenModules(opts.modules),
@@ -215,6 +220,7 @@ type module struct {
 }
 
 type options struct {
+	title     string
 	kernel    string
 	args      string
 	modules   []module
@@ -300,6 +306,7 @@ func parse(configFile string) (options, error) {
 	//
 	// see esx-boot/bootlib/parse.c:parse_config_file.
 	opt := options{
+		title: "VMware ESXi",
 		// Default value taken from
 		// esx-boot/safeboot/bootbank.c:bank_scan.
 		bootstate: bootInvalid,
@@ -321,6 +328,9 @@ func parse(configFile string) (options, error) {
 		key := strings.TrimSpace(tokens[0])
 		val := strings.TrimSpace(tokens[1])
 		switch key {
+		case "title":
+			opt.title = val
+
 		case "kernel":
 			opt.kernel = filepath.Join(dir, val)
 

@@ -23,6 +23,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/kernel_cmdline_mods.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 				modules: []module{
@@ -44,6 +45,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/kernelopt_first.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 			},
@@ -51,6 +53,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/empty_mods.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 			},
@@ -58,6 +61,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/no_mods.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 			},
@@ -65,6 +69,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/no_cmdline.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 ",
 			},
@@ -72,6 +77,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/empty_cmdline.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 ",
 			},
@@ -79,6 +85,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/empty_updated.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
@@ -88,6 +95,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/updated_twice.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
@@ -97,6 +105,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/updated.cfg",
 			want: options{
+				title:   "VMware ESXi",
 				kernel:  "testdata/b.b00",
 				args:    "b.b00 zee",
 				updated: 4,
@@ -105,6 +114,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/empty_bootstate.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
@@ -114,6 +124,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/bootstate_twice.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
 				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
@@ -123,6 +134,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/bootstate.cfg",
 			want: options{
+				title:     "VMware ESXi",
 				kernel:    "testdata/b.b00",
 				args:      "b.b00 zee",
 				bootstate: bootDirty,
@@ -131,6 +143,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/bootstate_invalid.cfg",
 			want: options{
+				title:     "VMware ESXi",
 				kernel:    "testdata/b.b00",
 				args:      "b.b00 zee",
 				bootstate: bootInvalid,
@@ -139,6 +152,7 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/no_bootstate.cfg",
 			want: options{
+				title:     "VMware ESXi",
 				kernel:    "testdata/b.b00",
 				args:      "b.b00 zee",
 				bootstate: bootInvalid,
@@ -185,6 +199,7 @@ func TestDev5Valid(t *testing.T) {
 	}
 
 	opts5 := &options{
+		title:     "VMware ESXi",
 		kernel:    "testdata/k",
 		updated:   1,
 		bootstate: bootValid,
@@ -198,6 +213,7 @@ func TestDev5Valid(t *testing.T) {
 
 	// Invalid opts6. Higher updated, but invalid state.
 	invalidOpts6 := &options{
+		title:     "VMware ESXi",
 		kernel:    "foobar",
 		updated:   2,
 		bootstate: bootInvalid,
@@ -219,6 +235,7 @@ func TestDev6Valid(t *testing.T) {
 	}
 
 	opts6 := &options{
+		title:     "VMware ESXi",
 		kernel:    "testdata/k",
 		updated:   1,
 		bootstate: bootValid,
@@ -232,6 +249,7 @@ func TestDev6Valid(t *testing.T) {
 
 	// Invalid opts5. Higher updated, but invalid state.
 	invalidOpts5 := &options{
+		title:     "VMware ESXi",
 		kernel:    "foobar",
 		updated:   2,
 		bootstate: bootInvalid,
@@ -252,6 +270,7 @@ func TestImageOrder(t *testing.T) {
 	}
 
 	opt5 := &options{
+		title:     "VMware ESXi",
 		kernel:    "foobar",
 		updated:   2,
 		bootstate: bootValid,
@@ -264,6 +283,7 @@ func TestImageOrder(t *testing.T) {
 	}
 
 	opt6 := &options{
+		title:     "VMware ESXi",
 		kernel:    "testdata/k",
 		updated:   1,
 		bootstate: bootValid,
