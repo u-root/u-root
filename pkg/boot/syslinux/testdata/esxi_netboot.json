@@ -1,0 +1,62 @@
+[
+  {
+    "cmdline": "/b.b00 cdromBoot runweasel ks=http://192.168.10.1/pxe/vmware/kickstart/esxi5.cfg",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file:///testdata/esxi_netboot/b.b00"
+    },
+    "modules": [
+      {
+        "cmdline": "/jumpstrt.gz",
+        "name": "/jumpstrt.gz",
+        "url": "file://./testdata/esxi_netboot//jumpstrt.gz"
+      },
+      {
+        "cmdline": "/useropts.gz",
+        "name": "/useropts.gz",
+        "url": "file://./testdata/esxi_netboot//useropts.gz"
+      },
+      {
+        "cmdline": "/features.gz",
+        "name": "/features.gz",
+        "url": "file://./testdata/esxi_netboot//features.gz"
+      },
+      {
+        "cmdline": "/k.b00",
+        "name": "/k.b00",
+        "url": "file://./testdata/esxi_netboot//k.b00"
+      }
+    ],
+    "name": "Loading ESXi installer from file://./testdata/esxi_netboot/boot.cfg"
+  },
+  {
+    "cmdline": "/b.b00 cdromBoot runweasel",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file:///testdata/esxi_netboot/b.b00"
+    },
+    "modules": [
+      {
+        "cmdline": "/jumpstrt.gz",
+        "name": "/jumpstrt.gz",
+        "url": "file://./testdata/esxi_netboot//jumpstrt.gz"
+      },
+      {
+        "cmdline": "/useropts.gz",
+        "name": "/useropts.gz",
+        "url": "file://./testdata/esxi_netboot//useropts.gz"
+      },
+      {
+        "cmdline": "/features.gz",
+        "name": "/features.gz",
+        "url": "file://./testdata/esxi_netboot//features.gz"
+      },
+      {
+        "cmdline": "/k.b00",
+        "name": "/k.b00",
+        "url": "file://./testdata/esxi_netboot//k.b00"
+      }
+    ],
+    "name": "Loading ESXi installer from file://./testdata/esxi_netboot/boot.cfg"
+  }
+]
