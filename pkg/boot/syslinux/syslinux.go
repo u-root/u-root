@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/esxi"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
@@ -356,7 +357,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 		case "kernel":
 			// I hate special cases like these, but we aren't gonna
 			// implement syslinux modules.
-			if arg == "mboot.c32" {
+			if path.Base(arg) == "mboot.c32" {
 				// Prepare for a multiboot kernel.
 				delete(c.linuxEntries, c.curEntry)
 				c.mbEntries[c.curEntry] = &boot.MultibootImage{
@@ -396,6 +397,35 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 			case scopeEntry:
 				if e, ok := c.mbEntries[c.curEntry]; ok {
+					maybeMod := strings.Split(arg, " ")
+
+					// ESXi isolinux has its own special
+					// mboot.c32 module, in which APPEND
+					// takes an argument "-c" and a
+					// location for a boot configuration
+					// file.
+					//
+					// An honest-to-god ESXi install will
+					// have exactly a boot.cfg. Let's hope
+					// nobody messed with it.
+					if len(maybeMod) >= 2 && maybeMod[0] == "-c" &&
+						path.Base(maybeMod[1]) == "boot.cfg" {
+						u, err := parseURL(maybeMod[1], c.rootdir, c.wd)
+						if err != nil {
+							return err
+						}
+
+						img, err := esxi.LoadRemoteConfig(ctx, u.String(), c.schemes)
+						if err != nil {
+							return err
+						}
+						if len(maybeMod) >= 3 {
+							img.Cmdline = strings.Join(append([]string{img.Cmdline}, maybeMod[2:]...), " ")
+						}
+						*e = *img
+						continue
+					}
+
 					modules := strings.Split(arg, "---")
 					// The first module is special -- the kernel.
 					if len(modules) > 0 {

@@ -109,7 +109,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	select {
 	case entry := <-boot:
 		if entry != nil {
-			fmt.Printf("Chosen option %s.\r\n\r\n", entry.Label())
+			fmt.Printf("Chosen option %s.\r\n\r\n", entry)
 		}
 		return entry
 

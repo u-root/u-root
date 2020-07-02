@@ -159,7 +159,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 	} {
-		got, err := parse(tt.file)
+		got, err := parseLocalFile(tt.file)
 		if err != nil {
 			t.Fatalf("cannot parse config at %s: %v", tt.file, err)
 		}

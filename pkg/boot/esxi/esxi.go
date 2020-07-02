@@ -27,22 +27,25 @@ package esxi
 
 import (
 	"bufio"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
+	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/gpt"
 	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 // LoadDisk loads the right ESXi multiboot kernel from partitions 5 or 6 of the
@@ -119,7 +122,7 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 		return nil, nil, err
 	}
 
-	opts, err := parse(filepath.Join(mountPoint, "boot.cfg"))
+	opts, err := parseLocalFile(filepath.Join(mountPoint, "boot.cfg"))
 	if err != nil {
 		mp.Unmount(mount.MNT_DETACH)
 		os.RemoveAll(mountPoint)
@@ -136,11 +139,68 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 
 // LoadConfig loads an ESXi configuration from configFile.
 func LoadConfig(configFile string) (*boot.MultibootImage, error) {
-	opts, err := parse(configFile)
+	opts, err := parseLocalFile(configFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
 	}
 	return getBootImage(opts, "", 0, fmt.Sprintf("config file %s", configFile))
+}
+
+func getFile(s curl.Schemes, name string) (io.ReaderAt, error) {
+	u, err := url.Parse(name)
+	if err != nil {
+		return nil, err
+	}
+	return s.LazyFetch(u)
+}
+
+// LoadRemoteConfig loads an ESXi configuration from configFile.
+func LoadRemoteConfig(ctx context.Context, configFile string, s curl.Schemes) (*boot.MultibootImage, error) {
+	u, err := url.Parse(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse config URL %s: %v", configFile, err)
+	}
+
+	f, err := s.Fetch(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+
+	workingDir := *u
+	workingDir.Path = path.Dir(workingDir.Path)
+
+	opts, err := parse(f, workingDir.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
+	}
+	if opts.bootstate != bootValid && opts.bootstate != bootUpgrading {
+		return nil, fmt.Errorf("boot state %d invalid", opts.bootstate)
+	}
+
+	kernel, err := getFile(s, opts.kernel)
+	if err != nil {
+		return nil, err
+	}
+
+	modules := make([]multiboot.Module, 0, len(opts.modules))
+	for _, m := range opts.modules {
+		modFile, err := getFile(s, m.path)
+		if err != nil {
+			return nil, err
+		}
+		name := strings.Fields(m.cmdline)[0]
+		modules = append(modules, multiboot.Module{
+			CmdLine: m.cmdline,
+			Name:    name,
+			Module:  modFile,
+		})
+	}
+	return &boot.MultibootImage{
+		Name:    fmt.Sprintf("%s from %s", opts.title, configFile),
+		Kernel:  kernel,
+		Cmdline: opts.args,
+		Modules: modules,
+	}, nil
 }
 
 func mountPartition(dev string) (*options, *mount.MountPoint, error) {
@@ -156,7 +216,7 @@ func mountPartition(dev string) (*options, *mount.MountPoint, error) {
 	}
 
 	configFile := filepath.Join(mountPoint, "boot.cfg")
-	opts, err := parse(configFile)
+	opts, err := parseLocalFile(configFile)
 	if err != nil {
 		mp.Unmount(mount.MNT_DETACH)
 		os.RemoveAll(mountPoint)
@@ -165,11 +225,11 @@ func mountPartition(dev string) (*options, *mount.MountPoint, error) {
 	return &opts, mp, nil
 }
 
-// lazyOpenModules assigns modules to be opened as files.
+// lazyOpenLocalModules assigns modules to be opened as files.
 //
 // Each module is a path followed by optional command-line arguments, e.g.
 // []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
-func lazyOpenModules(mods []module) multiboot.Modules {
+func lazyOpenLocalModules(mods []module) multiboot.Modules {
 	modules := make([]multiboot.Module, 0, len(mods))
 	for _, m := range mods {
 		name := strings.Fields(m.cmdline)[0]
@@ -210,7 +270,7 @@ func getBootImage(opts options, device string, partition int, name string) (*boo
 		Name:    fmt.Sprintf("%s from %s", opts.title, name),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
-		Modules: lazyOpenModules(opts.modules),
+		Modules: lazyOpenLocalModules(opts.modules),
 	}, nil
 }
 
@@ -292,7 +352,7 @@ const (
 	uuidSize  = 32
 )
 
-func parse(configFile string) (options, error) {
+func parseLocalFile(configFile string) (options, error) {
 	dir := filepath.Dir(configFile)
 
 	f, err := os.Open(configFile)
@@ -301,6 +361,10 @@ func parse(configFile string) (options, error) {
 	}
 	defer f.Close()
 
+	return parse(f, dir)
+}
+
+func parse(r io.ReaderAt, dir string) (options, error) {
 	// An empty or missing updated value is always 0, so we can let the
 	// ints be initialized to 0.
 	//
@@ -312,7 +376,7 @@ func parse(configFile string) (options, error) {
 		bootstate: bootInvalid,
 	}
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(uio.Reader(r))
 	for scanner.Scan() {
 		line := scanner.Text()
 		line = strings.TrimSpace(line)
@@ -361,6 +425,7 @@ func parse(configFile string) (options, error) {
 				}
 				opt.updated = n
 			}
+
 		case "bootstate":
 			if len(val) == 0 {
 				// Explicitly setting to valid, as in
@@ -378,6 +443,7 @@ func parse(configFile string) (options, error) {
 					opt.bootstate = bootstate(n)
 				}
 			}
+
 		case "modules":
 			for _, tok := range strings.Split(val, sep) {
 				// Each module is "filename arg0 arg1 arg2" and
@@ -387,7 +453,8 @@ func parse(configFile string) (options, error) {
 				if len(tok) > 0 {
 					entry := strings.Fields(tok)
 					opt.modules = append(opt.modules, module{
-						path:    filepath.Join(dir, entry[0]),
+						// We can't use filepath.Join here in case it's a URL.
+						path:    fmt.Sprintf("%s/%s", dir, entry[0]),
 						cmdline: tok,
 					})
 				}
@@ -395,6 +462,6 @@ func parse(configFile string) (options, error) {
 		}
 	}
 
-	err = scanner.Err()
+	err := scanner.Err()
 	return opt, err
 }
