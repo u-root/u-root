@@ -182,6 +182,7 @@ func SetEnv() {
 		"GOPATH":          "/",
 		"GOBIN":           "/ubin",
 		"CGO_ENABLED":     "0",
+		"USER":            "root",
 	}
 
 	// Not all these paths may be populated or even exist but OTOH they might.
