@@ -95,7 +95,7 @@ func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 
 // TryMount tries to mount a device on the given mountpoint, trying in order
 // the supported block device file systems on the system.
-func TryMount(device, path string, flags uintptr) (*MountPoint, error) {
+func TryMount(device, path, data string, flags uintptr) (*MountPoint, error) {
 	// TryMount only works on existing block devices. No weirdo devices
 	// like 9P.
 	if _, err := os.Stat(device); err != nil {
@@ -107,7 +107,7 @@ func TryMount(device, path string, flags uintptr) (*MountPoint, error) {
 		return nil, fmt.Errorf("failed to mount %s on %s: %v", device, path, err)
 	}
 	for _, fstype := range fs {
-		mp, err := Mount(device, path, fstype, "", flags)
+		mp, err := Mount(device, path, fstype, data, flags)
 		if err != nil {
 			continue
 		}
