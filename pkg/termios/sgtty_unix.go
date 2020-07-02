@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !plan9,!windows
+
 package termios
 
 import (
@@ -14,25 +16,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type (
-	// tty is an os-independent version of the combined info in termios and window size structs.
-	// It is used to get/set info to the termios functions as well as marshal/unmarshal data
-	// in JSON formwt for dump and loading.
-	tty struct {
-		Ispeed int
-		Ospeed int
-		Row    int
-		Col    int
-
-		CC map[string]uint8
-
-		Opts map[string]bool
-	}
-)
-
-// GTTY returns the tty struct for a given fd. It is like a New in
+// GTTY returns the TTY struct for a given fd. It is like a New in
 // many packages but the name GTTY is a tradition.
-func GTTY(fd int) (*tty, error) {
+func GTTY(fd int) (*TTY, error) {
 	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
 		return nil, err
@@ -42,7 +28,7 @@ func GTTY(fd int) (*tty, error) {
 		return nil, err
 	}
 
-	var t = tty{Opts: make(map[string]bool), CC: make(map[string]uint8)}
+	var t = TTY{Opts: make(map[string]bool), CC: make(map[string]uint8)}
 	for n, b := range boolFields {
 		val := uint32(reflect.ValueOf(term).Elem().Field(b.word).Uint()) & b.mask
 		t.Opts[n] = val != 0
@@ -63,10 +49,10 @@ func GTTY(fd int) (*tty, error) {
 	return &t, nil
 }
 
-// STTY uses a tty * to set tty settings on an fd.
-// It returns a new tty struct for the fd after the changes are made,
-// and an error. It does not change the original tty struct.
-func (t *tty) STTY(fd int) (*tty, error) {
+// STTY uses a TTY * to set TTY settings on an fd.
+// It returns a new TTY struct for the fd after the changes are made,
+// and an error. It does not change the original TTY struct.
+func (t *TTY) STTY(fd int) (*TTY, error) {
 	// Get a unix.Termios which we can partially fill in.
 	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
 	if err != nil {
@@ -103,8 +89,8 @@ func (t *tty) STTY(fd int) (*tty, error) {
 	return GTTY(fd)
 }
 
-// String will stringify a tty, including printing out the options all in the same order.
-func (t *tty) String() string {
+// String will stringify a TTY, including printing out the options all in the same order.
+func (t *TTY) String() string {
 	s := fmt.Sprintf("speed:%v ", t.Ispeed)
 	s += fmt.Sprintf("rows:%d cols:%d", t.Row, t.Col)
 	var opts []string
@@ -137,10 +123,10 @@ func intarg(s []string) int {
 	return i
 }
 
-// SetOpts sets opts in a tty given an array of key-value pairs and
+// SetOpts sets opts in a TTY given an array of key-value pairs and
 // booleans. The arguments are a variety of key-value pairs and booleans.
 // booleans are cleared if the first char is a -, set otherwise.
-func (t *tty) SetOpts(opts []string) error {
+func (t *TTY) SetOpts(opts []string) error {
 	for i := 0; i < len(opts); i++ {
 		o := opts[i]
 		switch o {
@@ -181,8 +167,8 @@ func (t *tty) SetOpts(opts []string) error {
 	return nil
 }
 
-// Raw sets a tty into raw more, returning a tty struct
-func Raw(fd int) (*tty, error) {
+// Raw sets a TTY into raw more, returning a TTY struct
+func Raw(fd int) (*TTY, error) {
 	t, err := GTTY(fd)
 	if err != nil {
 		return nil, err

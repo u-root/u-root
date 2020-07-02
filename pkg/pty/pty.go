@@ -19,7 +19,6 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/termios"
-	"golang.org/x/sys/unix"
 )
 
 type Pty struct {
@@ -28,9 +27,9 @@ type Pty struct {
 	Pts      *os.File
 	Sname    string
 	Kid      int
-	TTY      *termios.TTY
-	WS       *unix.Winsize
-	Restorer *unix.Termios
+	TTY      *termios.TTYIO
+	WS       *termios.Winsize
+	Restorer *termios.Termios
 }
 
 func (p *Pty) Command(cmd string, args ...string) {
