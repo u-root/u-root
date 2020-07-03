@@ -24,7 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/termios"
 )
 
-func page(t *termios.TTY, r io.Reader, w io.Writer) error {
+func page(t *termios.TTYIO, r io.Reader, w io.Writer) error {
 	rows := int64(24)
 	if w, err := t.GetWinSize(); err != nil {
 		log.Printf("Could not get win size: %v; continuing assuming %d rows", err, rows)

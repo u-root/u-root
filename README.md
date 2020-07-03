@@ -3,6 +3,7 @@
 [![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
+[![Slack](http://slack.u-root.com/badge.svg)](http://slack.u-root.com)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
 
 # Description
@@ -267,14 +268,15 @@ these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
     boot configuration which can be parsed as PXELinux or iPXE configuration
     files to get a boot program.
 
+*   `boot`: finds all bootable kernels on local disk, shows a menu, and boots
+    them. Supports (basic) GRUB, (basic) syslinux, (non-EFI) BootLoaderSpec, and
+    ESXi configurations.
+
 *   `fbnetboot`: a network boot client that uses DHCP and HTTP to get a boot
     program based on Linux, and boots it. To be merged with `pxeboot`.
 
 *   `localboot`: a tool that finds bootable kernel configurations on the local
     disks and boots them.
-
-*   `boot2`: similar to `localboot`, finds a bootable kernel configuration on
-    disk (GRUB or syslinux) and boots it. To be merged into `localboot`.
 
 *   `systemboot`: a wrapper around `fbnetboot` and `localboot` that just mimicks
     a BIOS/UEFI BDS behaviour, by looping between network booting and local

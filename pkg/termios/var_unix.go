@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !plan9
+
 package termios
 
 import (
@@ -9,6 +11,11 @@ import (
 
 	"golang.org/x/sys/unix"
 )
+
+// Termios is a struct for Termios operations.
+type Termios struct {
+	*unix.Termios
+}
 
 type bit struct {
 	word int
