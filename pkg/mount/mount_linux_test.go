@@ -64,6 +64,43 @@ func TestGPT(t *testing.T) {
 	}
 }
 
+func TestFilterPartID(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	for _, tt := range []struct {
+		guid string
+		want block.BlockDevices
+	}{
+		{
+			guid: "C9865081-266C-4A23-A948-C03DAB506198",
+			want: block.BlockDevices{
+				&block.BlockDev{Name: "sdc2"},
+			},
+		},
+		{
+			guid: "c9865081-266c-4a23-a948-c03dab506198",
+			want: block.BlockDevices{
+				&block.BlockDev{Name: "sdc2"},
+			},
+		},
+		{
+			guid: "",
+			want: nil,
+		},
+	} {
+		parts := devs.FilterPartID(tt.guid)
+		if !reflect.DeepEqual(parts, tt.want) {
+			t.Errorf("FilterPartID(%s) = %v, want %v", tt.guid, parts, tt.want)
+		}
+	}
+}
+
 func TestFilterPartType(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 

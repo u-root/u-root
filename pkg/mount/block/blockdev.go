@@ -386,6 +386,26 @@ func (b BlockDevices) FilterZeroSize() BlockDevices {
 	return nb
 }
 
+// FilterPartID returns partitions with the given partition ID GUID.
+func (b BlockDevices) FilterPartID(guid string) BlockDevices {
+	var names []string
+	for _, device := range b {
+		table, err := device.GPTTable()
+		if err != nil {
+			continue
+		}
+		for i, part := range table.Partitions {
+			if part.IsEmpty() {
+				continue
+			}
+			if strings.ToLower(part.Id.String()) == strings.ToLower(guid) {
+				names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
+			}
+		}
+	}
+	return b.FilterNames(names...)
+}
+
 // FilterPartType returns partitions with the given partition type GUID.
 func (b BlockDevices) FilterPartType(guid string) BlockDevices {
 	var names []string
