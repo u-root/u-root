@@ -27,8 +27,8 @@ func CatInitrds(initrds ...io.ReaderAt) io.ReaderAt {
 			if err != nil {
 				return nil, err
 			}
-			// Don't pad the ending.
-			if i != len(initrds)-1 {
+			// Don't pad the ending or an already aligned file.
+			if i != len(initrds)-1 && size%512 != 0 {
 				padding := make([]byte, 512-(size%512))
 				buf.Write(padding)
 			}

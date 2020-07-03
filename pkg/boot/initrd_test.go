@@ -39,6 +39,15 @@ func TestCatInitrds(t *testing.T) {
 	}{
 		{
 			readers: []io.ReaderAt{
+				bytes.NewReader(make([]byte, 512)),
+				bytes.NewReader(make([]byte, 512)),
+			},
+			wantName:    "*bytes.Reader,*bytes.Reader",
+			wantContent: make([]byte, 1024),
+			wantSize:    1024,
+		},
+		{
+			readers: []io.ReaderAt{
 				strings.NewReader("yay"),
 				bytes.NewReader(make([]byte, 777)),
 			},
