@@ -34,7 +34,7 @@ func stringer(mod io.ReaderAt) string {
 	if f, ok := mod.(*os.File); ok {
 		return f.Name()
 	}
-	return fmt.Sprintf("%v", mod)
+	return fmt.Sprintf("%T", mod)
 }
 
 // Label returns either the Name or a short description.
@@ -42,7 +42,7 @@ func (li *LinuxImage) Label() string {
 	if len(li.Name) > 0 {
 		return li.Name
 	}
-	return fmt.Sprintf("Linux(kernel=%s, initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
+	return fmt.Sprintf("Linux(kernel=%s initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
 }
 
 // String prints a human-readable version of this linux image.
