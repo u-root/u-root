@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package ipmi
+package wiwynn
 
 import (
 	"bytes"
@@ -11,17 +11,18 @@ import (
 	"strings"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
 const (
-	_IPMI_FB_OEM_NET_FUNCTION1 = 0x30
-	_IPMI_FB_OEM_NET_FUNCTION2 = 0x36
+	_IPMI_FB_OEM_NET_FUNCTION1 ipmi.NetFn = 0x30
+	_IPMI_FB_OEM_NET_FUNCTION2 ipmi.NetFn = 0x36
 
-	_FB_OEM_SET_PROC_INFO       = 0x10
-	_FB_OEM_SET_DIMM_INFO       = 0x12
-	_FB_OEM_SET_BIOS_BOOT_ORDER = 0x52
-	_FB_OEM_GET_BIOS_BOOT_ORDER = 0x53
+	_FB_OEM_SET_PROC_INFO       ipmi.Command = 0x10
+	_FB_OEM_SET_DIMM_INFO       ipmi.Command = 0x12
+	_FB_OEM_SET_BIOS_BOOT_ORDER ipmi.Command = 0x52
+	_FB_OEM_GET_BIOS_BOOT_ORDER ipmi.Command = 0x53
 )
 
 type ProcessorInfo struct {
@@ -55,15 +56,13 @@ type DimmInfo struct {
 	ModuleManufacturerIDMSB uint8
 }
 
-var BoardManufacturer = map[string][3]uint8{
+// Maps OEM names to a 3 byte OEM number.
+// OENs are typically serialized as the first 3 bytes of a request body.
+var OENMap = map[string][3]uint8{
 	"Wiwynn": {0x0, 0x9c, 0x9c},
 }
 
-func (i *IPMI) SendOemIpmiProcessorInfo(info []ProcessorInfo) error {
-	req := &req{}
-	req.msg.cmd = _FB_OEM_SET_PROC_INFO
-	req.msg.netfn = _IPMI_FB_OEM_NET_FUNCTION2
-
+func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
 	for index := 0; index < len(info); index++ {
 		for param := 1; param <= 2; param++ {
 			data, err := info[index].marshall(param)
@@ -71,10 +70,7 @@ func (i *IPMI) SendOemIpmiProcessorInfo(info []ProcessorInfo) error {
 				return err
 			}
 
-			req.msg.data = unsafe.Pointer(&data[0])
-			req.msg.dataLen = uint16(len(data))
-
-			_, err = i.sendrecv(req)
+			_, err = i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION2, _FB_OEM_SET_PROC_INFO, data)
 			if err != nil {
 				return err
 			}
@@ -83,11 +79,7 @@ func (i *IPMI) SendOemIpmiProcessorInfo(info []ProcessorInfo) error {
 	return nil
 }
 
-func (i *IPMI) SendOemIpmiDimmInfo(info []DimmInfo) error {
-	req := &req{}
-	req.msg.cmd = _FB_OEM_SET_DIMM_INFO
-	req.msg.netfn = _IPMI_FB_OEM_NET_FUNCTION2
-
+func SendOemIpmiDimmInfo(i *ipmi.IPMI, info []DimmInfo) error {
 	for index := 0; index < len(info); index++ {
 		for param := 1; param <= 6; param++ {
 			//If DIMM is not present, only send the information of DIMM location
@@ -99,11 +91,7 @@ func (i *IPMI) SendOemIpmiDimmInfo(info []DimmInfo) error {
 			if err != nil {
 				return err
 			}
-
-			req.msg.data = unsafe.Pointer(&data[0])
-			req.msg.dataLen = uint16(len(data))
-
-			_, err = i.sendrecv(req)
+			_, err = i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION2, _FB_OEM_SET_DIMM_INFO, data)
 			if err != nil {
 				return err
 			}
@@ -188,7 +176,7 @@ func GetOemIpmiProcessorInfo(si *smbios.Info) ([]ProcessorInfo, error) {
 
 	info := make([]ProcessorInfo, len(t4))
 
-	boardManufacturerID, ok := BoardManufacturer[t1.Manufacturer]
+	boardManufacturerID, ok := OENMap[t1.Manufacturer]
 
 	for index := 0; index < len(t4); index++ {
 		if ok {
@@ -257,7 +245,7 @@ func GetOemIpmiDimmInfo(si *smbios.Info) ([]DimmInfo, error) {
 
 	info := make([]DimmInfo, len(t17))
 
-	boardManufacturerID, ok := BoardManufacturer[t1.Manufacturer]
+	boardManufacturerID, ok := OENMap[t1.Manufacturer]
 
 	for index := 0; index < len(t17); index++ {
 		if ok {
@@ -296,12 +284,8 @@ func GetOemIpmiDimmInfo(si *smbios.Info) ([]DimmInfo, error) {
 }
 
 // Get BIOS boot order data and check if CMOS clear bit and valid bit are both set
-func (i *IPMI) IsCMOSClearSet() (bool, []byte, error) {
-	req := &req{}
-	req.msg.cmd = _FB_OEM_GET_BIOS_BOOT_ORDER
-	req.msg.netfn = _IPMI_FB_OEM_NET_FUNCTION1
-
-	recv, err := i.sendrecv(req)
+func IsCMOSClearSet(i *ipmi.IPMI) (bool, []byte, error) {
+	recv, err := i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION1, _FB_OEM_GET_BIOS_BOOT_ORDER, nil)
 	if err != nil {
 		return false, nil, err
 	}
@@ -313,16 +297,18 @@ func (i *IPMI) IsCMOSClearSet() (bool, []byte, error) {
 }
 
 // Set BIOS boot order with both CMOS clear and valid bits cleared
-func (i *IPMI) ClearCMOSClearValidBits(data []byte) error {
-	req := &req{}
-	req.msg.cmd = _FB_OEM_SET_BIOS_BOOT_ORDER
-	req.msg.netfn = _IPMI_FB_OEM_NET_FUNCTION1
+func ClearCMOSClearValidBits(i *ipmi.IPMI, data []byte) error {
 	// Clear bit 1 and bit 7
 	data[0] &= 0x7d
-	req.msg.data = unsafe.Pointer(&data[0])
-	req.msg.dataLen = 6
 
-	if _, err := i.sendrecv(req); err != nil {
+	msg := ipmi.Msg{
+		Netfn:   _IPMI_FB_OEM_NET_FUNCTION1,
+		Cmd:     _FB_OEM_SET_BIOS_BOOT_ORDER,
+		Data:    unsafe.Pointer(&data[0]),
+		DataLen: 6,
+	}
+
+	if _, err := i.RawSendRecv(msg); err != nil {
 		return err
 	}
 	return nil

@@ -4,6 +4,8 @@
 
 // Package ipmi implements functions to communicate with the OpenIPMI driver
 // interface.
+// For a detailed description of OpenIPMI, see
+// http://openipmi.sourceforge.net/IPMI.pdf
 package ipmi
 
 import (
@@ -11,9 +13,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
+	"math/rand"
 	"os"
 	"runtime"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/vtolstov/go-ioctl"
@@ -24,39 +29,41 @@ const (
 	_IPMI_BMC_CHANNEL                = 0xf
 	_IPMI_BUF_SIZE                   = 1024
 	_IPMI_IOC_MAGIC                  = 'i'
-	_IPMI_NETFN_CHASSIS              = 0x0
-	_IPMI_NETFN_APP                  = 0x6
-	_IPMI_NETFN_STORAGE              = 0xA
-	_IPMI_NETFN_TRANSPORT            = 0xC
 	_IPMI_OPENIPMI_READ_TIMEOUT      = 15
 	_IPMI_SYSTEM_INTERFACE_ADDR_TYPE = 0x0c
 
+	// Net functions
+	_IPMI_NETFN_CHASSIS   NetFn = 0x0
+	_IPMI_NETFN_APP       NetFn = 0x6
+	_IPMI_NETFN_STORAGE   NetFn = 0xA
+	_IPMI_NETFN_TRANSPORT NetFn = 0xC
+
 	// IPM Device "Global" Commands
-	_BMC_GET_DEVICE_ID = 0x01
+	BMC_GET_DEVICE_ID Command = 0x01
 
 	// BMC Device and Messaging Commands
-	_BMC_SET_WATCHDOG_TIMER     = 0x24
-	_BMC_GET_WATCHDOG_TIMER     = 0x25
-	_BMC_SET_GLOBAL_ENABLES     = 0x2E
-	_BMC_GET_GLOBAL_ENABLES     = 0x2F
-	_SET_SYSTEM_INFO_PARAMETERS = 0x58
-	_BMC_ADD_SEL                = 0x44
+	BMC_SET_WATCHDOG_TIMER     Command = 0x24
+	BMC_GET_WATCHDOG_TIMER     Command = 0x25
+	BMC_SET_GLOBAL_ENABLES     Command = 0x2E
+	BMC_GET_GLOBAL_ENABLES     Command = 0x2F
+	SET_SYSTEM_INFO_PARAMETERS Command = 0x58
+	BMC_ADD_SEL                Command = 0x44
 
 	// Chassis Device Commands
-	_BMC_GET_CHASSIS_STATUS = 0x01
+	BMC_GET_CHASSIS_STATUS Command = 0x01
 
 	// SEL device Commands
-	_BMC_GET_SEL_INFO = 0x40
+	BMC_GET_SEL_INFO Command = 0x40
 
 	//LAN Device Commands
-	_BMC_GET_LAN_CONFIG = 0x02
+	BMC_GET_LAN_CONFIG Command = 0x02
 
-	_IPM_WATCHDOG_NO_ACTION    = 0x00
-	_IPM_WATCHDOG_SMS_OS       = 0x04
-	_IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
+	IPM_WATCHDOG_NO_ACTION    = 0x00
+	IPM_WATCHDOG_SMS_OS       = 0x04
+	IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
 
-	_ADTL_SEL_DEVICE         = 0x04
-	_EN_SYSTEM_EVENT_LOGGING = 0x08
+	ADTL_SEL_DEVICE         = 0x04
+	EN_SYSTEM_EVENT_LOGGING = 0x08
 
 	// SEL
 	// STD_TYPE  = 0x02
@@ -75,42 +82,34 @@ const (
 var (
 	_IPMICTL_RECEIVE_MSG  = ioctl.IOWR(_IPMI_IOC_MAGIC, 12, uintptr(unsafe.Sizeof(recv{})))
 	_IPMICTL_SEND_COMMAND = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(req{})))
+
+	timeout = 30 * time.Second
 )
 
+// IPMI represents access to the IPMI interface.
 type IPMI struct {
 	*os.File
 }
 
-type msg struct {
-	netfn   byte
-	cmd     byte
-	dataLen uint16
-	data    unsafe.Pointer
+// Command is the command code for a given message.
+type Command byte
+
+// NetFn is the network function of the class of message being sent.
+type NetFn byte
+
+// Msg is the full IPMI message to be sent.
+type Msg struct {
+	Netfn   NetFn
+	Cmd     Command
+	DataLen uint16
+	Data    unsafe.Pointer
 }
 
 type req struct {
 	addr    *systemInterfaceAddr
 	addrLen uint32
 	msgid   int64 //nolint:structcheck
-	msg     msg
-}
-
-func ioctlSetReq(fd, name uintptr, req *req) error {
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(req)))
-	runtime.KeepAlive(req)
-	if err != 0 {
-		return err
-	}
-	return nil
-}
-
-func ioctlGetRecv(fd, name uintptr, recv *recv) error {
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(recv)))
-	runtime.KeepAlive(recv)
-	if err != 0 {
-		return err
-	}
-	return nil
+	msg     Msg
 }
 
 type recv struct {
@@ -118,7 +117,7 @@ type recv struct {
 	addr     *systemInterfaceAddr
 	addrLen  uint32
 	msgid    int64 //nolint:structcheck
-	msg      msg
+	msg      Msg
 }
 
 type systemInterfaceAddr struct {
@@ -205,47 +204,105 @@ func fdSet(fd uintptr, p *syscall.FdSet) {
 	p.Bits[fd/64] |= 1 << (uint(fd) % 64)
 }
 
-func (i *IPMI) sendrecv(req *req) ([]byte, error) {
-	addr := systemInterfaceAddr{
+func ioctlSetReq(fd, name uintptr, req *req) error {
+	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(req)))
+	runtime.KeepAlive(req)
+	if err != 0 {
+		return err
+	}
+	return nil
+}
+
+func ioctlGetRecv(fd, name uintptr, recv *recv) error {
+	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(recv)))
+	runtime.KeepAlive(recv)
+	if err != 0 {
+		return err
+	}
+	return nil
+}
+
+// SendRecv sends the IPMI message, receives the response, and returns the
+// response data. This is recommended for use unless the user must be able to
+// specify the data pointer and length on their own.
+func (i *IPMI) SendRecv(netfn NetFn, cmd Command, data []byte) ([]byte, error) {
+	var dataPtr unsafe.Pointer
+	if data != nil {
+		dataPtr = unsafe.Pointer(&data[0])
+	}
+	msg := Msg{
+		Netfn:   netfn,
+		Cmd:     cmd,
+		Data:    dataPtr,
+		DataLen: uint16(len(data)),
+	}
+	return i.RawSendRecv(msg)
+}
+
+// RawSendRecv sends the IPMI message, receives the response, and returns the
+// response data.
+func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
+	addr := &systemInterfaceAddr{
 		addrType: _IPMI_SYSTEM_INTERFACE_ADDR_TYPE,
 		channel:  _IPMI_BMC_CHANNEL,
 	}
+	req := &req{
+		addr:    addr,
+		addrLen: uint32(unsafe.Sizeof(addr)),
+		msgid:   rand.Int63(),
+		msg:     msg,
+	}
 
-	req.addr = &addr
-	req.addrLen = uint32(unsafe.Sizeof(addr))
 	if err := ioctlSetReq(i.Fd(), _IPMICTL_SEND_COMMAND, req); err != nil {
 		return nil, err
 	}
 
 	set := &syscall.FdSet{}
 	fdSet(i.Fd(), set)
-	time := &syscall.Timeval{
+	timeval := &syscall.Timeval{
 		Sec:  _IPMI_OPENIPMI_READ_TIMEOUT,
 		Usec: 0,
 	}
-	if _, err := syscall.Select(int(i.Fd()+1), set, nil, nil, time); err != nil {
+	if _, err := syscall.Select(int(i.Fd()+1), set, nil, nil, timeval); err != nil {
 		return nil, err
 	}
 
-	recv := &recv{}
-	recv.addr = &systemInterfaceAddr{}
-	recv.addrLen = uint32(unsafe.Sizeof(addr))
 	buf := make([]byte, _IPMI_BUF_SIZE)
-	recv.msg.data = unsafe.Pointer(&buf[0])
-	recv.msg.dataLen = _IPMI_BUF_SIZE
-	if err := ioctlGetRecv(i.Fd(), _IPMICTL_RECEIVE_MSG, recv); err != nil {
-		return nil, err
+	recvMsg := Msg{
+		Data:    unsafe.Pointer(&buf[0]),
+		DataLen: _IPMI_BUF_SIZE,
+	}
+	recv := &recv{
+		addr:    req.addr,
+		addrLen: req.addrLen,
+		msg:     recvMsg,
 	}
 
-	return buf[:recv.msg.dataLen:recv.msg.dataLen], nil
+	t := time.After(timeout)
+	for {
+		if err := ioctlGetRecv(i.Fd(), _IPMICTL_RECEIVE_MSG, recv); err != nil {
+			return nil, err
+		}
+		if recv.msgid != req.msgid {
+			log.Printf("Received wrong message. Trying again.")
+		} else {
+			break
+		}
+		select {
+		case <-t:
+			return nil, fmt.Errorf("timeout waiting for response")
+		}
+	}
+
+	if recv.msg.DataLen >= _IPMI_BUF_SIZE {
+		return nil, fmt.Errorf("data length received too large: %d > %d", recv.msg.DataLen, _IPMI_BUF_SIZE)
+	}
+
+	return buf[:recv.msg.DataLen:recv.msg.DataLen], nil
 }
 
 func (i *IPMI) WatchdogRunning() (bool, error) {
-	req := &req{}
-	req.msg.cmd = _BMC_GET_WATCHDOG_TIMER
-	req.msg.netfn = _IPMI_NETFN_APP
-
-	recv, err := i.sendrecv(req)
+	recv, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_WATCHDOG_TIMER, nil)
 	if err != nil {
 		return false, err
 	}
@@ -258,21 +315,15 @@ func (i *IPMI) WatchdogRunning() (bool, error) {
 }
 
 func (i *IPMI) ShutoffWatchdog() error {
-	req := &req{}
-	req.msg.cmd = _BMC_SET_WATCHDOG_TIMER
-	req.msg.netfn = _IPMI_NETFN_APP
-
 	var data [6]byte
-	data[0] = _IPM_WATCHDOG_SMS_OS
-	data[1] = _IPM_WATCHDOG_NO_ACTION
+	data[0] = IPM_WATCHDOG_SMS_OS
+	data[1] = IPM_WATCHDOG_NO_ACTION
 	data[2] = 0x00 // pretimeout interval
-	data[3] = _IPM_WATCHDOG_CLEAR_SMS_OS
+	data[3] = IPM_WATCHDOG_CLEAR_SMS_OS
 	data[4] = 0xb8 // countdown lsb (100 ms/count)
 	data[5] = 0x0b // countdown msb - 5 mins
-	req.msg.data = unsafe.Pointer(&data)
-	req.msg.dataLen = 6
 
-	_, err := i.sendrecv(req)
+	_, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_WATCHDOG_TIMER, data[:6])
 	if err != nil {
 		return err
 	}
@@ -312,32 +363,24 @@ func (e *Event) marshall() ([]byte, error) {
 
 // LogSystemEvent adds an SEL (System Event Log) entry.
 func (i *IPMI) LogSystemEvent(e *Event) error {
-	req := &req{}
-	req.msg.cmd = _BMC_ADD_SEL
-	req.msg.netfn = _IPMI_NETFN_STORAGE
-
 	data, err := e.marshall()
 
 	if err != nil {
 		return err
 	}
-
-	req.msg.data = unsafe.Pointer(&data[0])
-	req.msg.dataLen = 16
-
-	_, err = i.sendrecv(req)
-
+	_, err = i.SendRecv(_IPMI_NETFN_STORAGE, BMC_ADD_SEL, data)
 	return err
 }
 
 func (i *IPMI) setsysinfo(data *setSystemInfoReq) error {
-	req := &req{}
-	req.msg.cmd = _SET_SYSTEM_INFO_PARAMETERS
-	req.msg.netfn = _IPMI_NETFN_APP
-	req.msg.dataLen = 18 // size of setSystemInfoReq
-	req.msg.data = unsafe.Pointer(data)
+	msg := Msg{
+		Cmd:     SET_SYSTEM_INFO_PARAMETERS,
+		Netfn:   _IPMI_NETFN_APP,
+		Data:    unsafe.Pointer(data),
+		DataLen: 18,
+	}
 
-	if _, err := i.sendrecv(req); err != nil {
+	if _, err := i.RawSendRecv(msg); err != nil {
 		return err
 	}
 
@@ -387,11 +430,7 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 }
 
 func (i *IPMI) GetDeviceID() (*DevID, error) {
-	req := &req{}
-	req.msg.netfn = _IPMI_NETFN_APP
-	req.msg.cmd = _BMC_GET_DEVICE_ID
-
-	data, err := i.sendrecv(req)
+	data, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_DEVICE_ID, nil)
 
 	if err != nil {
 		return nil, err
@@ -408,22 +447,12 @@ func (i *IPMI) GetDeviceID() (*DevID, error) {
 }
 
 func (i *IPMI) setGlobalEnables(enables byte) error {
-	req := &req{}
-	req.msg.netfn = _IPMI_NETFN_APP
-	req.msg.cmd = _BMC_SET_GLOBAL_ENABLES
-	req.msg.data = unsafe.Pointer(&enables)
-	req.msg.dataLen = 1
-
-	_, err := i.sendrecv(req)
+	_, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_GLOBAL_ENABLES, []byte{enables})
 	return err
 }
 
 func (i *IPMI) getGlobalEnables() ([]byte, error) {
-	req := &req{}
-	req.msg.netfn = _IPMI_NETFN_APP
-	req.msg.cmd = _BMC_GET_GLOBAL_ENABLES
-
-	return i.sendrecv(req)
+	return i.SendRecv(_IPMI_NETFN_APP, BMC_GET_GLOBAL_ENABLES, nil)
 }
 
 func (i *IPMI) EnableSEL() (bool, error) {
@@ -432,7 +461,7 @@ func (i *IPMI) EnableSEL() (bool, error) {
 
 	if err != nil {
 		return false, err
-	} else if (mcInfo.AdtlDeviceSupport & _ADTL_SEL_DEVICE) == 0 {
+	} else if (mcInfo.AdtlDeviceSupport & ADTL_SEL_DEVICE) == 0 {
 		return false, nil
 	}
 
@@ -442,9 +471,9 @@ func (i *IPMI) EnableSEL() (bool, error) {
 		return false, err
 	}
 
-	if (data[1] & _EN_SYSTEM_EVENT_LOGGING) == 0 {
+	if (data[1] & EN_SYSTEM_EVENT_LOGGING) == 0 {
 		// SEL is not enabled, enable SEL
-		if err = i.setGlobalEnables(data[1] | _EN_SYSTEM_EVENT_LOGGING); err != nil {
+		if err = i.setGlobalEnables(data[1] | EN_SYSTEM_EVENT_LOGGING); err != nil {
 			return false, err
 		}
 	}
@@ -453,11 +482,7 @@ func (i *IPMI) EnableSEL() (bool, error) {
 }
 
 func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
-	req := &req{}
-	req.msg.netfn = _IPMI_NETFN_CHASSIS
-	req.msg.cmd = _BMC_GET_CHASSIS_STATUS
-
-	data, err := i.sendrecv(req)
+	data, err := i.SendRecv(_IPMI_NETFN_CHASSIS, BMC_GET_CHASSIS_STATUS, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -472,11 +497,7 @@ func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 }
 
 func (i *IPMI) GetSELInfo() (*SELInfo, error) {
-	req := &req{}
-	req.msg.netfn = _IPMI_NETFN_STORAGE
-	req.msg.cmd = _BMC_GET_SEL_INFO
-
-	data, err := i.sendrecv(req)
+	data, err := i.SendRecv(_IPMI_NETFN_STORAGE, BMC_GET_SEL_INFO, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -491,19 +512,13 @@ func (i *IPMI) GetSELInfo() (*SELInfo, error) {
 }
 
 func (i *IPMI) GetLanConfig(channel byte, param byte) ([]byte, error) {
-	req := &req{}
-	req.msg.netfn = _IPMI_NETFN_TRANSPORT
-	req.msg.cmd = _BMC_GET_LAN_CONFIG
-
 	var data [4]byte
 	data[0] = channel
 	data[1] = param
 	data[2] = 0
 	data[3] = 0
-	req.msg.data = unsafe.Pointer(&data[0])
-	req.msg.dataLen = 4
 
-	return i.sendrecv(req)
+	return i.SendRecv(_IPMI_NETFN_TRANSPORT, BMC_GET_LAN_CONFIG, data[:4])
 }
 
 func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
@@ -511,14 +526,15 @@ func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 		return nil, errors.New("Not enough parameters given")
 	}
 
-	req := &req{}
-	req.msg.netfn = param[0]
-	req.msg.cmd = param[1]
+	msg := Msg{
+		Netfn: NetFn(param[0]),
+		Cmd:   Command(param[1]),
+	}
 	if len(param) > 2 {
-		req.msg.data = unsafe.Pointer(&param[2])
+		msg.Data = unsafe.Pointer(&param[2])
 	}
 
-	req.msg.dataLen = uint16(len(param) - 2)
+	msg.DataLen = uint16(len(param) - 2)
 
-	return i.sendrecv(req)
+	return i.RawSendRecv(msg)
 }
