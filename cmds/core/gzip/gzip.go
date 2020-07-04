@@ -32,15 +32,19 @@ func main() {
 		os.Exit(2)
 	}
 
-	var input []string
-	if opts.Stdin {
-		input = []string{"/dev/stdin"}
+	var input []gzip.File
+	args := cmdLine.Args()
+
+	if len(args) == 0 {
+		// no args given, compress stdin to stdout
+		input = append(input, gzip.File{Options: &opts})
 	} else {
-		input = cmdLine.Args()
+		for _, arg := range args {
+			input = append(input, gzip.File{Path: arg, Options: &opts})
+		}
 	}
 
-	for _, path := range input {
-		f := gzip.File{Path: path, Options: &opts}
+	for _, f := range input {
 		if err := f.CheckPath(); err != nil {
 			if !opts.Quiet {
 				fmt.Fprintf(os.Stderr, "%s\n", err)

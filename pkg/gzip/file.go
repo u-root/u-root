@@ -33,7 +33,12 @@ func (f *File) outputPath() string {
 // CheckPath validates the input file path. Checks on compression
 // if the path has the correct suffix, and on decompression checks
 // that it doesn't have the suffix. Allows override by force option.
+// Skip if the input is a Stdin.
 func (f *File) CheckPath() error {
+	if f.Options.Stdin {
+		return nil
+	}
+
 	_, err := os.Stat(f.Path)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("skipping, %s does not exist", f.Path)
@@ -92,11 +97,18 @@ func (f *File) Cleanup() error {
 // Process either compresses or decompressed the input file based on
 // the associated file.options.
 func (f *File) Process() error {
-	i, err := os.Open(f.Path)
-	if err != nil {
-		return err
+	var i *os.File
+	var err error
+
+	if f.Options.Stdin {
+		i = os.Stdin
+	} else {
+		i, err = os.Open(f.Path)
+		if err != nil {
+			return err
+		}
+		defer i.Close()
 	}
-	defer i.Close()
 
 	// Use the uio.WriteNameCloser interface so both *os.File and
 	// uio.WriteNameClose can be assigned to var o without any type casting below.
