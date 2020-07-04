@@ -35,12 +35,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"syscall"
 	"time"
 
 	"github.com/u-root/u-root/pkg/ls"
-	"github.com/u-root/u-root/pkg/uio"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -140,56 +137,30 @@ func Format(name string) (RecordFormat, error) {
 
 func modeFromLinux(mode uint64) os.FileMode {
 	m := os.FileMode(mode & 0777)
-	switch mode & syscall.S_IFMT {
-	case syscall.S_IFBLK:
+	switch mode & S_IFMT {
+	case S_IFBLK:
 		m |= os.ModeDevice
-	case syscall.S_IFCHR:
+	case S_IFCHR:
 		m |= os.ModeDevice | os.ModeCharDevice
-	case syscall.S_IFDIR:
+	case S_IFDIR:
 		m |= os.ModeDir
-	case syscall.S_IFIFO:
+	case S_IFIFO:
 		m |= os.ModeNamedPipe
-	case syscall.S_IFLNK:
+	case S_IFLNK:
 		m |= os.ModeSymlink
-	case syscall.S_IFREG:
+	case S_IFREG:
 		// nothing to do
-	case syscall.S_IFSOCK:
+	case S_IFSOCK:
 		m |= os.ModeSocket
 	}
-	if mode&syscall.S_ISGID != 0 {
+	if mode&S_ISGID != 0 {
 		m |= os.ModeSetgid
 	}
-	if mode&syscall.S_ISUID != 0 {
+	if mode&S_ISUID != 0 {
 		m |= os.ModeSetuid
 	}
-	if mode&syscall.S_ISVTX != 0 {
+	if mode&S_ISVTX != 0 {
 		m |= os.ModeSticky
 	}
 	return m
-}
-
-// LSInfoFromRecord converts a Record to be usable with the ls package for
-// listing files.
-func LSInfoFromRecord(rec Record) ls.FileInfo {
-	var target string
-
-	mode := modeFromLinux(rec.Mode)
-	if mode&os.ModeType == os.ModeSymlink {
-		if l, err := uio.ReadAll(rec); err != nil {
-			target = err.Error()
-		} else {
-			target = string(l)
-		}
-	}
-
-	return ls.FileInfo{
-		Name:          rec.Name,
-		Mode:          mode,
-		Rdev:          unix.Mkdev(uint32(rec.Rmajor), uint32(rec.Rminor)),
-		UID:           uint32(rec.UID),
-		GID:           uint32(rec.GID),
-		Size:          int64(rec.FileSize),
-		MTime:         time.Unix(int64(rec.MTime), 0).UTC(),
-		SymlinkTarget: target,
-	}
 }

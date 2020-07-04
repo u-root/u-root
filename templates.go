@@ -120,6 +120,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/chmod",
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/cp",
+		"github.com/u-root/u-root/cmds/core/cpio",
 		//"github.com/u-root/u-root/cmds/core/date",
 		//"github.com/u-root/u-root/cmds/core/dd",
 		"github.com/u-root/u-root/cmds/core/echo",
