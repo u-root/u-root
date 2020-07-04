@@ -129,7 +129,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/gpgv",
 		"github.com/u-root/u-root/cmds/core/grep",
 		"github.com/u-root/u-root/cmds/core/gzip",
-		//"github.com/u-root/u-root/cmds/core/hostname",
+		"github.com/u-root/u-root/cmds/core/hostname",
 		"github.com/u-root/u-root/cmds/core/init",
 		//"github.com/u-root/u-root/cmds/core/io",
 		//"github.com/u-root/u-root/cmds/core/kexec",
