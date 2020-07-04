@@ -2,22 +2,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !plan9
+// +build plan9
 
 package ls
 
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"regexp"
 	"strconv"
-	"strings"
-	"syscall"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	"golang.org/x/sys/unix"
 )
 
 // Matches characters which would interfere with ls's formatting.
@@ -30,75 +26,36 @@ var unprintableRe = regexp.MustCompile("[[:cntrl:]\n]")
 // `extractImportantParts` populates our own struct which we can modify at will
 // before printing.
 type FileInfo struct {
-	Name          string
-	Mode          os.FileMode
-	Rdev          uint64
-	UID, GID      uint32
-	Size          int64
-	MTime         time.Time
-	SymlinkTarget string
+	Name  string
+	Mode  os.FileMode
+	UID   string
+	Size  int64
+	MTime time.Time
 }
 
 // FromOSFileInfo converts os.FileInfo to an ls.FileInfo.
 func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
-	var link string
-
-	s := fi.Sys().(*syscall.Stat_t)
-	if fi.Mode()&os.ModeType == os.ModeSymlink {
-		if l, err := os.Readlink(path); err != nil {
-			link = err.Error()
-		} else {
-			link = l
-		}
-	}
-
 	return FileInfo{
-		Name:          fi.Name(),
-		Mode:          fi.Mode(),
-		Rdev:          uint64(s.Rdev),
-		UID:           s.Uid,
-		GID:           s.Gid,
-		Size:          fi.Size(),
-		MTime:         fi.ModTime(),
-		SymlinkTarget: link,
+		Name: fi.Name(),
+		Mode: fi.Mode(),
+		// Plan 9 UIDs from the file system are strings.
+		// os.FileInfo only allows ints.
+		// The Plan 9 runtime does not attach syscall.Dir to the Sys
+		// on FileInfo or there would be no problem.
+		// This is going to require some fixes to the Go runtime.
+		// os.FileInfo botched a few things.
+		// That said, it is a rare case that you could unpack a cpio
+		// in Plan 9 and set file ownership; that's not how it works.
+		// so ... bootes it is.
+		UID:   "bootes",
+		Size:  fi.Size(),
+		MTime: fi.ModTime(),
 	}
 }
 
 // PrintableName returns a printable file name.
 func (fi FileInfo) PrintableName() string {
 	return unprintableRe.ReplaceAllLiteralString(fi.Name, "?")
-}
-
-// Without this cache, `ls -l` is orders of magnitude slower.
-var (
-	uidCache = map[uint32]string{}
-	gidCache = map[uint32]string{}
-)
-
-// Convert uid to username, or return uid on error.
-func lookupUserName(id uint32) string {
-	if s, ok := uidCache[id]; ok {
-		return s
-	}
-	s := fmt.Sprint(id)
-	if u, err := user.LookupId(s); err == nil {
-		s = u.Username
-	}
-	uidCache[id] = s
-	return s
-}
-
-// Convert gid to group name, or return gid on error.
-func lookupGroupName(id uint32) string {
-	if s, ok := gidCache[id]; ok {
-		return s
-	}
-	s := fmt.Sprint(id)
-	if g, err := user.LookupGroupId(s); err == nil {
-		s = g.Name
-	}
-	gidCache[id] = s
-	return s
 }
 
 // Stringer provides a consistent way to format FileInfo.
@@ -133,16 +90,6 @@ type LongStringer struct {
 
 // FileString implements Stringer.FileString.
 func (ls LongStringer) FileString(fi FileInfo) string {
-	// Golang's FileMode.String() is almost sufficient, except we would
-	// rather use b and c for devices.
-	replacer := strings.NewReplacer("Dc", "c", "D", "b")
-
-	// Ex: crw-rw-rw-  root  root  1, 3  Feb 6 09:31  null
-	pattern := "%[1]s\t%[2]s\t%[3]s\t%[4]d, %[5]d\t%[7]v\t%[8]s"
-	if fi.Mode&os.ModeDevice == 0 && fi.Mode&os.ModeCharDevice == 0 {
-		// Ex: -rw-rw----  myuser  myuser  1256  Feb 6 09:31  recipes.txt
-		pattern = "%[1]s\t%[2]s\t%[3]s\t%[6]s\t%[7]v\t%[8]s"
-	}
 
 	var size string
 	if ls.Human {
@@ -150,19 +97,11 @@ func (ls LongStringer) FileString(fi FileInfo) string {
 	} else {
 		size = strconv.FormatInt(fi.Size, 10)
 	}
-
-	s := fmt.Sprintf(pattern,
-		replacer.Replace(fi.Mode.String()),
-		lookupUserName(fi.UID),
-		lookupGroupName(fi.GID),
-		unix.Major(fi.Rdev),
-		unix.Minor(fi.Rdev),
+	// Ex: -rw-rw----  myuser  1256  Feb 6 09:31  recipes.txt
+	return fmt.Sprintf("%s\t%s\t%s\t%v\t%s",
+		fi.Mode.String(),
+		fi.UID,
 		size,
 		fi.MTime.Format("Jan _2 15:04"),
 		ls.Name.FileString(fi))
-
-	if fi.Mode&os.ModeType == os.ModeSymlink {
-		s += fmt.Sprintf(" -> %v", fi.SymlinkTarget)
-	}
-	return s
 }

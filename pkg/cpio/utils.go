@@ -55,7 +55,7 @@ func Directory(name string, mode uint64) Record {
 	return Record{
 		Info: Info{
 			Name: name,
-			Mode: unix.S_IFDIR | mode&^unix.S_IFMT,
+			Mode: S_IFDIR | mode&^unix.S_IFMT,
 		},
 	}
 }
