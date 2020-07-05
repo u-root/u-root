@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -119,6 +120,35 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	}
 }
 
+func loadEntry(ctx context.Context, entry Entry) error {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+
+	// TODO: should the parent context really be passed in here? Should there even be one?
+	ctx, cancel := context.WithCancel(ctx)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		<-sigChan
+		cancel()
+	}()
+
+	err := entry.Load(ctx)
+
+	// Stop the signals before closing the channel to avoid writes to
+	// sigChan.
+	signal.Stop(sigChan)
+	close(sigChan)
+
+	// Closing the channel should lead to cancel and Done being called.
+	wg.Wait()
+
+	return err
+}
+
 // ShowMenuAndLoad lets the user choose one of entries and loads it. If no
 // entry is chosen by the user, an entry whose IsDefault() is true will be
 // returned.
@@ -128,7 +158,7 @@ func ShowMenuAndLoad(ctx context.Context, input *os.File, entries ...Entry) Entr
 	// Clear the screen (ANSI terminal escape code for screen clear).
 	fmt.Printf("\033[1;1H\033[2J\n\n")
 	fmt.Printf("Welcome to NERF's Boot Menu\n\n")
-	fmt.Printf("Enter a number to boot a kernel:\n")
+	fmt.Printf("Enter a number to boot a kernel. Press Ctrl+C at any point to come back to this screen (if possible).\n")
 
 	for {
 		// Allow the user to choose.
@@ -140,11 +170,11 @@ func ShowMenuAndLoad(ctx context.Context, input *os.File, entries ...Entry) Entr
 			// If nothing was entered, fall back to default.
 			break
 		}
-		if err := entry.Load(ctx); err != nil {
+
+		if err := loadEntry(ctx, entry); err != nil {
 			log.Printf("Failed to load %s: %v", entry.Label(), err)
 			continue
 		}
-
 		// Entry was successfully loaded. Leave it to the caller to
 		// exec, so the caller can clean up the OS before rebooting or
 		// kexecing (e.g. unmount file systems).
@@ -159,9 +189,9 @@ func ShowMenuAndLoad(ctx context.Context, input *os.File, entries ...Entry) Entr
 		// Only perform actions that are default actions. I.e. don't
 		// drop to shell.
 		if e.IsDefault() {
-			fmt.Printf("Attempting to boot %s.\n\n", e)
+			fmt.Printf("Attempting to load %s.\n\n", e)
 
-			if err := e.Load(ctx); err != nil {
+			if err := loadEntry(ctx, e); err != nil {
 				log.Printf("Failed to load %s: %v", e.Label(), err)
 				continue
 			}
