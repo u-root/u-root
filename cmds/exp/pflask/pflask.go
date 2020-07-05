@@ -27,13 +27,13 @@ import (
 // pty support. We used to import github.com/kr/pty but what we need is not that complex.
 // Thanks to keith rarick for these functions.
 
-func ptsopen() (pty, tty *os.File, slavename string, err error) {
+func ptsopen() (controlPTY, processTTY *os.File, ttyname string, err error) {
 	p, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
 	if err != nil {
 		return
 	}
 
-	slavename, err = ptsname(p)
+	ttyname, err = ptsname(p)
 	if err != nil {
 		return
 	}
@@ -43,11 +43,11 @@ func ptsopen() (pty, tty *os.File, slavename string, err error) {
 		return
 	}
 
-	t, err := os.OpenFile(slavename, os.O_RDWR|syscall.O_NOCTTY, 0)
+	t, err := os.OpenFile(ttyname, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		return
 	}
-	return p, t, slavename, nil
+	return p, t, ttyname, nil
 }
 
 func ptsname(f *os.File) (string, error) {
@@ -60,7 +60,7 @@ func ptsname(f *os.File) (string, error) {
 
 func ptsunlock(f *os.File) error {
 	var u uintptr
-	// use TIOCSPTLCK with a zero valued arg to clear the slave pty lock
+	// use TIOCSPTLCK with a zero valued arg to clear the pty lock
 	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&u)))
 	if err != 0 {
 		return err
@@ -361,14 +361,14 @@ func main() {
 	//log.Printf("greetings %v\n", a)
 	a = a[:len(a)-1]
 
-	ptm, pts, sname, err := ptsopen()
+	controlPTY, processTTY, sname, err := ptsopen()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 
 	// child code. Not really. What really happens here is we set
 	// ourselves into the container, and spawn the child. It's a bit odd
-	// but we're the master, but we'll run in the container? I don't know
+	// but we're the parent, but we'll run in the container? I don't know
 	// how else to do it. This may require we set some things up first,
 	// esp. the network. But, it's all fun and games until someone loses
 	// an eye.
@@ -442,8 +442,8 @@ func main() {
 		Setctty: true,
 		Setsid:  true,
 	}
-	c.Stdout = pts
-	c.Stdin = pts
+	c.Stdout = processTTY
+	c.Stdin = processTTY
 	c.Stderr = c.Stdout
 	c.SysProcAttr.Setctty = true
 	c.SysProcAttr.Setsid = true
@@ -485,8 +485,8 @@ func main() {
 	raw()
 
 	go func() {
-		io.Copy(os.Stdout, ptm)
+		io.Copy(os.Stdout, controlPTY)
 		os.Exit(1)
 	}()
-	io.Copy(ptm, os.Stdin)
+	io.Copy(controlPTY, os.Stdin)
 }

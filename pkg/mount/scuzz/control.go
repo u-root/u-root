@@ -37,8 +37,8 @@ type Info struct {
 // operate on them.
 type Disk interface {
 	// Unlock unlocks the drive, given a password and an indication of
-	// whether it is the master (true) or user (false) password.
-	Unlock(password string, master bool) error
+	// whether it is the admin (true) or user (false) password.
+	Unlock(password string, admin bool) error
 
 	// Identify returns drive identity information
 	Identify() (*Info, error)

@@ -19,7 +19,7 @@ import (
 
 // readLineTest contains the data for a test case of ReadLine.
 type readLineTest struct {
-	// The input to write to the master side.
+	// The input to write to the control tty side.
 	input []byte
 	// Places where SIGINT should be sent to the editor, as indicies into the
 	// input string. For example, if sigints is {1}, it means that a SIGINT
@@ -60,10 +60,10 @@ func TestReadLine(t *testing.T) {
 		var outputs []byte
 		sigs := make(chan os.Signal, 10)
 		defer close(sigs)
-		master, lineChan, errChan := run(ev, sigs, &outputs)
-		defer master.Close()
+		control, lineChan, errChan := run(ev, sigs, &outputs)
+		defer control.Close()
 
-		write(master, sigs, test.input, test.sigints)
+		write(control, sigs, test.input, test.sigints)
 
 		select {
 		case line := <-lineChan:
@@ -82,19 +82,19 @@ func TestReadLine(t *testing.T) {
 }
 
 // run sets up a testing environment for an Editor, and calls its ReadLine
-// method in a goroutine. It returns the master end of the pty the Editor is
+// method in a goroutine. It returns the control end of the pty the Editor is
 // connected to, and two channels onto which the result of ReadLine will be
-// delivered. The caller is responsible for closing the master file.
+// delivered. The caller is responsible for closing the control tty file.
 func run(ev *eval.Evaler, sigs <-chan os.Signal, ptrOutputs *[]byte) (*os.File,
 	<-chan string, <-chan error) {
 
-	master, tty, err := pty.Open()
+	control, tty, err := pty.Open()
 	if err != nil {
 		panic(err)
 	}
 	// Continually consume tty outputs so that the editor is not blocked on
 	// writing.
-	go drain(master, ptrOutputs)
+	go drain(control, ptrOutputs)
 
 	lineChan := make(chan string)
 	errChan := make(chan error)
@@ -113,7 +113,7 @@ func run(ev *eval.Evaler, sigs <-chan os.Signal, ptrOutputs *[]byte) (*os.File,
 		close(errChan)
 	}()
 
-	return master, lineChan, errChan
+	return control, lineChan, errChan
 }
 
 // drain drains the given reader. If a non-nil []byte pointer is passed, it also
