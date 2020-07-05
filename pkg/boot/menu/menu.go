@@ -255,3 +255,36 @@ func (Reboot) Exec() error {
 
 // IsDefault indicates that this should not be run as a default action.
 func (Reboot) IsDefault() bool { return false }
+
+// TimedTestEntry is an entry that returns a specific error after a specific duration of Loading.
+type TimedTestEntry struct {
+	LoadDur time.Duration
+	LoadErr error
+	ExecErr error
+}
+
+// Label is the label to show the user.
+func (tte TimedTestEntry) Label() string {
+	return fmt.Sprintf("Timed Test Entry (%s)", tte.LoadDur)
+}
+
+// Load times out after LoadDur or when ctx exits.
+func (tte TimedTestEntry) Load(ctx context.Context) error {
+	select {
+	case <-time.After(tte.LoadDur):
+		return tte.LoadErr
+
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Exec returns ExecErr.
+func (tte TimedTestEntry) Exec() error {
+	return tte.ExecErr
+}
+
+// IsDefault returns false.
+func (tte TimedTestEntry) IsDefault() bool {
+	return false
+}

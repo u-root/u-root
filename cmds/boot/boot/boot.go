@@ -31,8 +31,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bootcmd"
@@ -47,6 +49,8 @@ var (
 	verbose = flag.Bool("v", false, "Print debug messages")
 	noLoad  = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
 	noExec  = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
+
+	testEntry = flag.Bool("timed-test-entry", false, "add a timed test entry to the menu")
 
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
@@ -91,6 +95,13 @@ func main() {
 	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
+	if *testEntry {
+		menuEntries = append(menuEntries, menu.TimedTestEntry{
+			LoadDur: 10 * time.Second,
+			LoadErr: fmt.Errorf("finished loading"),
+			ExecErr: fmt.Errorf("exec should not be called"),
+		})
+	}
 
 	// Boot does not return.
 	bootcmd.ShowMenuAndBoot(context.Background(), menuEntries, mps, *noLoad, *noExec)
