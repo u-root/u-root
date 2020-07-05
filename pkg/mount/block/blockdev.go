@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -387,32 +386,61 @@ func (b BlockDevices) FilterZeroSize() BlockDevices {
 	return nb
 }
 
-// FilterESP returns a list of BlockDev objects whose underlying block device
-// is a valid EFI system partition.
-func (b BlockDevices) FilterESP() BlockDevices {
-	return b.FilterGUID(SystemPartitionGUID.String())
-}
-
-// FilterGUID returns a list of BlockDev objects whose underlying
-// block device has the given GPT partition GUID.
-func (b BlockDevices) FilterGUID(guid string) BlockDevices {
-	partitions := make(BlockDevices, 0)
+// FilterPartID returns partitions with the given partition ID GUID.
+func (b BlockDevices) FilterPartID(guid string) BlockDevices {
+	var names []string
 	for _, device := range b {
 		table, err := device.GPTTable()
 		if err != nil {
-			log.Printf("Skipping; no GPT table on %s: %v", device.Name, err)
 			continue
 		}
-		for _, part := range table.Partitions {
+		for i, part := range table.Partitions {
 			if part.IsEmpty() {
 				continue
 			}
-			if part.Type.String() == guid {
-				partitions = append(partitions, device)
+			if strings.ToLower(part.Id.String()) == strings.ToLower(guid) {
+				names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
 			}
 		}
 	}
-	return partitions
+	return b.FilterNames(names...)
+}
+
+// FilterPartType returns partitions with the given partition type GUID.
+func (b BlockDevices) FilterPartType(guid string) BlockDevices {
+	var names []string
+	for _, device := range b {
+		table, err := device.GPTTable()
+		if err != nil {
+			continue
+		}
+		for i, part := range table.Partitions {
+			if part.IsEmpty() {
+				continue
+			}
+			if strings.ToLower(part.Type.String()) == strings.ToLower(guid) {
+				names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
+			}
+		}
+	}
+	return b.FilterNames(names...)
+}
+
+// FilterNames filters block devices by the given list of device names (e.g.
+// /dev/sda1 sda2 /sys/class/block/sda3).
+func (b BlockDevices) FilterNames(names ...string) BlockDevices {
+	m := make(map[string]struct{})
+	for _, n := range names {
+		m[filepath.Base(n)] = struct{}{}
+	}
+
+	var devices BlockDevices
+	for _, device := range b {
+		if _, ok := m[device.Name]; ok {
+			devices = append(devices, device)
+		}
+	}
+	return devices
 }
 
 // FilterFSUUID returns a list of BlockDev objects whose underlying block
