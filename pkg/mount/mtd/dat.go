@@ -550,7 +550,7 @@ var (
 		/*
 		 * The Sanyo chip found so far uses SPI, first byte is manufacture code,
 		 * second byte is the device code,
-		 * third byte is a dummy byte.
+		 * third byte is a placeholder byte.
 		 */
 		{vendor: "SANYO", devices: []ChipName{"LE25FW203A"}, id: 0x1600},
 		{vendor: "SANYO", devices: []ChipName{"LE25FW403A"}, id: 0x1100},

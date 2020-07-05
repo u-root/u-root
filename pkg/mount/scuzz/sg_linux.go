@@ -226,10 +226,10 @@ func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8) *packet 
 	return p
 }
 
-func (s *SGDisk) unlockPacket(password string, master bool) *packet {
+func (s *SGDisk) unlockPacket(password string, admin bool) *packet {
 	p := s.newPacket(unix.WIN_SECURITY_UNLOCK, _SG_DXFER_TO_DEV, lba48)
 	p.genCommandDataBlock()
-	if master {
+	if admin {
 		p.block[1] = 1
 	}
 	copy(p.block[2:], []byte(password))
@@ -237,8 +237,8 @@ func (s *SGDisk) unlockPacket(password string, master bool) *packet {
 }
 
 // Unlock performs unlock requests for Linux SCSI Generic Disks
-func (s *SGDisk) Unlock(password string, master bool) error {
-	p := s.unlockPacket(password, master)
+func (s *SGDisk) Unlock(password string, admin bool) error {
+	p := s.unlockPacket(password, admin)
 	if err := s.operate(p); err != nil {
 		return err
 	}

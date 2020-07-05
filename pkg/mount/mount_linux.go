@@ -69,7 +69,7 @@ func (mp *MountPoint) Unmount(flags uintptr) error {
 // Mount attaches the fsType file system at path.
 //
 // dev is the device to mount (this is often the path of a block device, name
-// of a file, or a dummy string). data usually contains arguments for the
+// of a file, or a placeholder string). data usually contains arguments for the
 // specific file system.
 func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 	// Create the mount point if it doesn't already exist.

@@ -13,8 +13,8 @@ type Booter interface {
 	TypeName() string
 }
 
-// NullBooter is a dummy booter that does nothing. It is used when no other
-// booter has been found
+// NullBooter is a booter that does nothing. It is used when no other booter
+// has been found.
 type NullBooter struct {
 }
 
