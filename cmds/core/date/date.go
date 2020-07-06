@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -226,21 +225,17 @@ func main() {
 		t = stat.ModTime()
 	}
 
-	switch len(flag.Args()) {
+	a := flag.Args()
+	switch len(a) {
 	case 0:
 		fmt.Printf("%v\n", date(t, z))
 	case 1:
-		argv0 := flag.Args()[0]
-		if argv0[0] == '+' {
-			fmt.Printf("%v\n", dateMap(t, z, argv0[1:]))
+		a0 := a[0]
+		if strings.HasPrefix(a0, "+") {
+			fmt.Printf("%v\n", dateMap(t, z, a0[1:]))
 		} else {
-			t, err := getTime(z, argv0)
-			if err != nil {
-				log.Fatalf("%v: %v", argv0, err)
-			}
-			tv := syscall.NsecToTimeval(t.UnixNano())
-			if err := syscall.Settimeofday(&tv); err != nil {
-				log.Fatalf("%v: %v", argv0, err)
+			if err := setDate(a[0], z); err != nil {
+				log.Fatalf("%v: %v", a0, err)
 			}
 		}
 	default:
