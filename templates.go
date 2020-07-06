@@ -116,13 +116,15 @@ var templates = map[string][]string{
 	// if you don't see a name here, and it is in core, we expect it
 	// not to work.
 	"plan9": {
+		"github.com/u-root/u-root/cmds/core/basename",
 		"github.com/u-root/u-root/cmds/core/cat",
 		"github.com/u-root/u-root/cmds/core/chmod",
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/cp",
 		"github.com/u-root/u-root/cmds/core/cpio",
-		//"github.com/u-root/u-root/cmds/core/date",
-		//"github.com/u-root/u-root/cmds/core/dd",
+		"github.com/u-root/u-root/cmds/core/date",
+		"github.com/u-root/u-root/cmds/core/dd",
+		"github.com/u-root/u-root/cmds/core/dirname",
 		"github.com/u-root/u-root/cmds/core/echo",
 		//"github.com/u-root/u-root/cmds/core/elvish",
 		// package ls"github.com/u-root/u-root/cmds/core/find",
