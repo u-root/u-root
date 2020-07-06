@@ -202,7 +202,7 @@ func VerboseLogFilter(hdr *tar.Header) bool {
 }
 
 // SafeFilter filters out all files which are not regular and not directories.
-// It also sets sane permissions.
+// It also sets appropriate permissions.
 func SafeFilter(hdr *tar.Header) bool {
 	if hdr.Typeflag == tar.TypeDir {
 		hdr.Mode = 0770

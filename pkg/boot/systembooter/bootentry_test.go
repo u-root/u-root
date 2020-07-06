@@ -52,7 +52,7 @@ func TestGetBootEntries(t *testing.T) {
 		bootConfig0000 = []byte(`{"type": "netboot", "method": "dhcpv6", "mac": "aa:bb:cc:dd:ee:ff"}`)
 		bootConfig0001 = []byte(`{"type": "localboot", "uuid": "blah-bleh", "kernel": "/path/to/kernel"}`)
 	)
-	// Override the package-level variable Get so it will use our dummy getter
+	// Override the package-level variable Get so it will use our test getter
 	// instead of VPD
 	Get = func(key string, readOnly bool) ([]byte, error) {
 		switch key {
@@ -73,7 +73,7 @@ func TestGetBootEntries(t *testing.T) {
 }
 
 func TestGetBootEntriesOnlyRO(t *testing.T) {
-	// Override the package-level variable Get so it will use our dummy getter
+	// Override the package-level variable Get so it will use our test getter
 	// instead of VPD
 	Get = func(key string, readOnly bool) ([]byte, error) {
 		if !readOnly || key != "Boot0000" {

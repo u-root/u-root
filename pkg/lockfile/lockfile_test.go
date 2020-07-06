@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func dummyProcess(t *testing.T) *os.Process {
+func testProcess(t *testing.T) *os.Process {
 	p := exec.Command("sleep", "1000")
 	if err := p.Start(); err != nil {
 		t.Fatal(err)
@@ -23,9 +23,9 @@ func dummyProcess(t *testing.T) *os.Process {
 }
 
 func TestTryLock(t *testing.T) {
-	p1 := dummyProcess(t)
+	p1 := testProcess(t)
 	defer p1.Kill()
-	p2 := dummyProcess(t)
+	p2 := testProcess(t)
 	defer p2.Kill()
 
 	dir, err := ioutil.TempDir("", "lockfile-")
@@ -64,7 +64,7 @@ func TestTryLock(t *testing.T) {
 }
 
 func TestLockFileRemoval(t *testing.T) {
-	p := dummyProcess(t)
+	p := testProcess(t)
 	defer p.Kill()
 
 	dir, err := ioutil.TempDir("", "lockfile-")
@@ -96,9 +96,9 @@ func TestLockFileRemoval(t *testing.T) {
 }
 
 func TestDeadProcess(t *testing.T) {
-	p1 := dummyProcess(t)
+	p1 := testProcess(t)
 	defer p1.Kill()
-	p2 := dummyProcess(t)
+	p2 := testProcess(t)
 	defer p2.Kill()
 
 	dir, err := ioutil.TempDir("", "lockfile-")

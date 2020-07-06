@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !plan9
+
 package cpio
 
 import (
@@ -11,25 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
+	"github.com/u-root/u-root/pkg/ls"
 	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
-)
-
-// Linux mode_t bits.
-const (
-	modeTypeMask    = 0170000
-	modeSocket      = 0140000
-	modeSymlink     = 0120000
-	modeFile        = 0100000
-	modeBlock       = 0060000
-	modeDir         = 0040000
-	modeChar        = 0020000
-	modeFIFO        = 0010000
-	modeSUID        = 0004000
-	modeSGID        = 0002000
-	modeSticky      = 0001000
-	modePermissions = 0000777
 )
 
 var modeMap = map[uint64]os.FileMode{
@@ -269,4 +257,30 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 // you're doing.
 func NewRecorder() *Recorder {
 	return &Recorder{make(map[devInode]Info), 0}
+}
+
+// LSInfoFromRecord converts a Record to be usable with the ls package for
+// listing files.
+func LSInfoFromRecord(rec Record) ls.FileInfo {
+	var target string
+
+	mode := modeFromLinux(rec.Mode)
+	if mode&os.ModeType == os.ModeSymlink {
+		if l, err := uio.ReadAll(rec); err != nil {
+			target = err.Error()
+		} else {
+			target = string(l)
+		}
+	}
+
+	return ls.FileInfo{
+		Name:          rec.Name,
+		Mode:          mode,
+		Rdev:          unix.Mkdev(uint32(rec.Rmajor), uint32(rec.Rminor)),
+		UID:           uint32(rec.UID),
+		GID:           uint32(rec.GID),
+		Size:          int64(rec.FileSize),
+		MTime:         time.Unix(int64(rec.MTime), 0).UTC(),
+		SymlinkTarget: target,
+	}
 }
