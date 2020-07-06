@@ -65,7 +65,7 @@ func main() {
 
 	blockDevs, err := block.GetBlockDevices()
 	if err != nil {
-		log.Fatal("no available block devices to boot from")
+		log.Fatal("No available block devices to boot from")
 	}
 
 	// Try to only boot from "good" block devices.
