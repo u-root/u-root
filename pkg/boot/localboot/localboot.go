@@ -45,7 +45,7 @@ func parse(l ulog.Logger, device *block.BlockDev, mountDir string) []boot.OSImag
 }
 
 // parseUnmounted treats device as unmounted, with or without partitions.
-func parseUnmounted(l ulog.Logger, device *block.BlockDev) ([]boot.OSImage, []*mount.MountPoint, error) {
+func parseUnmounted(l ulog.Logger, device *block.BlockDev) ([]boot.OSImage, []*mount.MountPoint) {
 	// This will try to mount device partition 5 and 6.
 	imgs, mps, err := esxi.LoadDisk(device.DevicePath())
 	if err != nil {
@@ -66,7 +66,7 @@ func parseUnmounted(l ulog.Logger, device *block.BlockDev) ([]boot.OSImage, []*m
 	for _, i := range imgs {
 		images = append(images, i)
 	}
-	return images, mps, nil
+	return images, mps
 }
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
@@ -79,8 +79,8 @@ func Localboot(l ulog.Logger, blockDevs block.BlockDevices) ([]boot.OSImage, []*
 	var images []boot.OSImage
 	var mps []*mount.MountPoint
 	for _, device := range blockDevs {
-		imgs, mmps, err := parseUnmounted(l, device)
-		if err == nil {
+		imgs, mmps := parseUnmounted(l, device)
+		if len(imgs) > 0 {
 			images = append(images, imgs...)
 			mps = append(mps, mmps...)
 		} else {
