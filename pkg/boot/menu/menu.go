@@ -229,6 +229,17 @@ func (oia OSImageAction) Load(ctx context.Context) error {
 	if err := oia.OSImage.Load(ctx, oia.Verbose); err != nil {
 		return fmt.Errorf("could not load image %s: %v", oia.OSImage, err)
 	}
+
+	// Non-blockingly check whether context was canceled in the meantime.
+	//
+	// Even if loading succeeded, it means user requested cancelation and
+	// we will go back to the menu.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+
+	default:
+	}
 	return nil
 }
 
