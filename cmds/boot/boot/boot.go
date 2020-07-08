@@ -38,10 +38,11 @@ import (
 	"github.com/u-root/u-root/pkg/boot/localboot"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/mount/block"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
-	debug   = func(string, ...interface{}) {}
 	verbose = flag.Bool("v", false, "Print debug messages")
 	noLoad  = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
 	noExec  = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
@@ -62,11 +63,20 @@ func updateBootCmdline(cl string) string {
 func main() {
 	flag.Parse()
 
-	if *verbose {
-		debug = log.Printf
+	blockDevs, err := block.GetBlockDevices()
+	if err != nil {
+		log.Fatal("No available block devices to boot from")
 	}
 
-	images, mps, err := localboot.Localboot()
+	// Try to only boot from "good" block devices.
+	blockDevs = blockDevs.FilterZeroSize()
+	log.Printf("Booting from the following block devices: %v", blockDevs)
+
+	var l ulog.Logger = ulog.Null
+	if *verbose {
+		l = ulog.Log
+	}
+	images, mps, err := localboot.Localboot(l, blockDevs)
 	if err != nil {
 		log.Fatal(err)
 	}

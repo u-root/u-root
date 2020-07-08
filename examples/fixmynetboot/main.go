@@ -40,7 +40,7 @@ func checkInterface(ifname string) error {
 		},
 		{
 			Name:        fmt.Sprintf("%s link speed", ifname),
-			Run:         checker.LinkSpeed(ifname, 100),
+			Run:         checker.LinkSpeed(ifname, 400000),
 			Remediate:   nil,
 			StopOnError: false},
 		{
