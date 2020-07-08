@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-type dummyEntry struct {
+type testEntry struct {
 	mu         sync.Mutex
 	label      string
 	isDefault  bool
@@ -30,36 +30,36 @@ type dummyEntry struct {
 	loadCalled bool
 }
 
-func (d *dummyEntry) Label() string {
+func (d *testEntry) Label() string {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.label
 }
 
-func (d *dummyEntry) String() string {
+func (d *testEntry) String() string {
 	return d.Label()
 }
 
-func (d *dummyEntry) Load() error {
+func (d *testEntry) Load() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.loadCalled = true
 	return d.load
 }
 
-func (d *dummyEntry) Exec() error {
+func (d *testEntry) Exec() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return nil
 }
 
-func (d *dummyEntry) LoadCalled() bool {
+func (d *testEntry) LoadCalled() bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.loadCalled
 }
 
-func (d *dummyEntry) IsDefault() bool {
+func (d *testEntry) IsDefault() bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.isDefault
@@ -70,9 +70,9 @@ func TestChoose(t *testing.T) {
 	// anything root-specific.
 	testutil.SkipIfInVMTest(t)
 
-	entry1 := &dummyEntry{label: "1"}
-	entry2 := &dummyEntry{label: "2"}
-	entry3 := &dummyEntry{label: "3"}
+	entry1 := &testEntry{label: "1"}
+	entry2 := &testEntry{label: "2"}
+	entry3 := &testEntry{label: "3"}
 
 	for _, tt := range []struct {
 		name      string
@@ -174,7 +174,7 @@ func TestShowMenuAndLoad(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		entries   []*dummyEntry
+		entries   []*testEntry
 		userEntry []byte
 
 		// calledLabels are the entries for which Do was called.
@@ -182,7 +182,7 @@ func TestShowMenuAndLoad(t *testing.T) {
 	}{
 		{
 			name: "default_entry",
-			entries: []*dummyEntry{
+			entries: []*testEntry{
 				{label: "1", isDefault: true, load: nil},
 				{label: "2", isDefault: true, load: nil},
 			},
@@ -192,7 +192,7 @@ func TestShowMenuAndLoad(t *testing.T) {
 		},
 		{
 			name: "non_default_entry_default",
-			entries: []*dummyEntry{
+			entries: []*testEntry{
 				{label: "1", isDefault: false, load: nil},
 				{label: "2", isDefault: true, load: nil},
 				{label: "3", isDefault: true, load: nil},
@@ -203,7 +203,7 @@ func TestShowMenuAndLoad(t *testing.T) {
 		},
 		{
 			name: "non_default_entry_chosen_but_broken",
-			entries: []*dummyEntry{
+			entries: []*testEntry{
 				{label: "1", isDefault: false, load: fmt.Errorf("borked")},
 				{label: "2", isDefault: true, load: nil},
 				{label: "3", isDefault: true, load: nil},
@@ -213,7 +213,7 @@ func TestShowMenuAndLoad(t *testing.T) {
 		},
 		{
 			name: "last_entry_works",
-			entries: []*dummyEntry{
+			entries: []*testEntry{
 				{label: "1", isDefault: true, load: fmt.Errorf("foo")},
 				{label: "2", isDefault: true, load: fmt.Errorf("bar")},
 				{label: "3", isDefault: true, load: nil},

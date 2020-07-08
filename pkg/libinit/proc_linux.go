@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
-
-	"github.com/u-root/u-root/pkg/upath"
 )
 
 // WaitOrphans waits for all remaining processes on the system to exit.
@@ -31,6 +29,39 @@ func WaitOrphans() uint {
 	return numReaped
 }
 
+// WithTTYControl turns on controlling the TTY on this command.
+func WithTTYControl(ctty bool) CommandModifier {
+	return func(c *exec.Cmd) {
+		if c.SysProcAttr == nil {
+			c.SysProcAttr = &syscall.SysProcAttr{}
+		}
+		c.SysProcAttr.Setctty = ctty
+		c.SysProcAttr.Setsid = ctty
+	}
+}
+
+// WithCloneFlags adds clone(2) flags to the *exec.Cmd.
+func WithCloneFlags(flags uintptr) CommandModifier {
+	return func(c *exec.Cmd) {
+		if c.SysProcAttr == nil {
+			c.SysProcAttr = &syscall.SysProcAttr{}
+		}
+		c.SysProcAttr.Cloneflags = flags
+	}
+}
+
+func init() {
+	osDefault = linuxDefault
+}
+
+func linuxDefault(c *exec.Cmd) {
+	c.SysProcAttr = &syscall.SysProcAttr{
+		Setctty: true,
+		Setsid:  true,
+	}
+}
+
+// FIX ME: make it not linux-specific
 // RunCommands runs commands in sequence.
 //
 // RunCommands returns how many commands existed and were attempted to run.
@@ -69,53 +100,4 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		}
 	}
 	return cmdCount
-}
-
-// CommandModifier makes *exec.Cmd construction modular.
-type CommandModifier func(c *exec.Cmd)
-
-// WithTTYControl turns on controlling the TTY on this command.
-func WithTTYControl(ctty bool) CommandModifier {
-	return func(c *exec.Cmd) {
-		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
-		}
-		c.SysProcAttr.Setctty = ctty
-		c.SysProcAttr.Setsid = ctty
-	}
-}
-
-// WithCloneFlags adds clone(2) flags to the *exec.Cmd.
-func WithCloneFlags(flags uintptr) CommandModifier {
-	return func(c *exec.Cmd) {
-		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
-		}
-		c.SysProcAttr.Cloneflags = flags
-	}
-}
-
-// WithArguments adds command-line arguments to a command.
-func WithArguments(arg ...string) CommandModifier {
-	return func(c *exec.Cmd) {
-		if len(arg) > 0 {
-			c.Args = append(c.Args, arg...)
-		}
-	}
-}
-
-// Command constructs an *exec.Cmd object.
-func Command(bin string, m ...CommandModifier) *exec.Cmd {
-	bin = upath.UrootPath(bin)
-	cmd := exec.Command(bin)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	// By default, this stuff is on.
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setctty: true,
-		Setsid:  true,
-	}
-	for _, mod := range m {
-		mod(cmd)
-	}
-	return cmd
 }

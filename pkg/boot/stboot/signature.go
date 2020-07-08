@@ -29,12 +29,12 @@ type Signer interface {
 	Verify(sig Signature, hash []byte) error
 }
 
-// DummySigner creates signatures that are always valid.
-type DummySigner struct{}
+// AlwaysValidSigner creates signatures that are always valid.
+type AlwaysValidSigner struct{}
 
-// Hash hashes the the provided files. I case of DummySigner
+// Hash hashes the the provided files. I case of AlwaysValidSigner
 // just 8 random bytes are returned.
-func (DummySigner) Hash(files ...string) ([]byte, error) {
+func (AlwaysValidSigner) Hash(files ...string) ([]byte, error) {
 	hash := make([]byte, 8)
 	_, err := rand.Read(hash)
 	if err != nil {
@@ -43,9 +43,9 @@ func (DummySigner) Hash(files ...string) ([]byte, error) {
 	return hash, nil
 }
 
-// Sign signes the provided data with privKey. In case of DummySigner
+// Sign signes the provided data with privKey. In case of AlwaysValidSigner
 // just 8 random bytes are returned
-func (DummySigner) Sign(privKey string, data []byte) ([]byte, error) {
+func (AlwaysValidSigner) Sign(privKey string, data []byte) ([]byte, error) {
 	sig := make([]byte, 8)
 	_, err := rand.Read(sig)
 	if err != nil {
@@ -55,8 +55,8 @@ func (DummySigner) Sign(privKey string, data []byte) ([]byte, error) {
 }
 
 // Verify checks if sig contains a valid signature of hash. In case of
-// DummySigner this is allwazs the case.
-func (DummySigner) Verify(sig Signature, hash []byte) error {
+// AlwaysValidSigner this is allwazs the case.
+func (AlwaysValidSigner) Verify(sig Signature, hash []byte) error {
 	return nil
 }
 

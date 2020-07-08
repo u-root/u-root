@@ -5,8 +5,10 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,6 +16,9 @@ import (
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/kmodule"
+	"github.com/u-root/u-root/pkg/libinit"
+	"github.com/u-root/u-root/pkg/uflag"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // installModules installs kernel modules (.ko files) from /lib/modules.
@@ -50,11 +55,19 @@ func installModules() {
 	}
 }
 
-func init() {
-	osInitGo = runOSInitGo
+func quiet() {
+	if !*verbose {
+		// Only messages more severe than "notice" are printed.
+		if err := ulog.KernelLog.SetConsoleLogLevel(ulog.KLogNotice); err != nil {
+			log.Printf("Could not set log level: %v", err)
+		}
+	}
 }
 
-func runOSInitGo() {
+func osInitGo() *initCmds {
+	// Turn off job control when test mode is on.
+	ctty := libinit.WithTTYControl(!*test)
+
 	// Install modules before exec-ing into user mode below
 	installModules()
 
@@ -72,4 +85,35 @@ func runOSInitGo() {
 			log.Printf("Lucky you, systemd failed: %v", err)
 		}
 	}
+
+	// Allows passing args to uinit via kernel parameters, for example:
+	//
+	// uroot.uinitargs="-v --foobar"
+	//
+	// We also allow passing args to uinit via a flags file in
+	// /etc/uinit.flags.
+	args := cmdline.GetUinitArgs()
+	if contents, err := ioutil.ReadFile("/etc/uinit.flags"); err == nil {
+		args = append(args, uflag.FileToArgv(string(contents))...)
+	}
+	uinitArgs := libinit.WithArguments(args...)
+
+	return &initCmds{
+		cmds: []*exec.Cmd{
+			// inito is (optionally) created by the u-root command when the
+			// u-root initramfs is merged with an existing initramfs that
+			// has a /init. The name inito means "original /init" There may
+			// be an inito if we are building on an existing initramfs. All
+			// initos need their own pid space.
+			libinit.Command("/inito", libinit.WithCloneFlags(syscall.CLONE_NEWPID), ctty),
+
+			libinit.Command("/bbin/uinit", ctty, uinitArgs),
+			libinit.Command("/bin/uinit", ctty, uinitArgs),
+			libinit.Command("/buildbin/uinit", ctty, uinitArgs),
+
+			libinit.Command("/bin/defaultsh", ctty),
+			libinit.Command("/bin/sh", ctty),
+		},
+	}
+
 }

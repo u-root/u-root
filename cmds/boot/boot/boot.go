@@ -31,18 +31,18 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/bootcmd"
 	"github.com/u-root/u-root/pkg/boot/localboot"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/block"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
-	debug   = func(string, ...interface{}) {}
 	verbose = flag.Bool("v", false, "Print debug messages")
 	noLoad  = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
 	noExec  = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
@@ -63,11 +63,20 @@ func updateBootCmdline(cl string) string {
 func main() {
 	flag.Parse()
 
-	if *verbose {
-		debug = log.Printf
+	blockDevs, err := block.GetBlockDevices()
+	if err != nil {
+		log.Fatal("No available block devices to boot from")
 	}
 
-	images, mps, err := localboot.Localboot()
+	// Try to only boot from "good" block devices.
+	blockDevs = blockDevs.FilterZeroSize()
+	log.Printf("Booting from the following block devices: %v", blockDevs)
+
+	var l ulog.Logger = ulog.Null
+	if *verbose {
+		l = ulog.Log
+	}
+	images, mps, err := localboot.Localboot(l, blockDevs)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,38 +87,10 @@ func main() {
 		}
 	}
 
-	if *noLoad {
-		if len(images) > 0 {
-			log.Printf("Got configuration: %s", images[0])
-		} else {
-			log.Fatalf("Nothing bootable found.")
-		}
-		return
-	}
 	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 
-	chosenEntry := menu.ShowMenuAndLoad(os.Stdin, menuEntries...)
-
-	// Clean up.
-	for _, mp := range mps {
-		if err := mp.Unmount(mount.MNT_DETACH); err != nil {
-			debug("Failed to unmount %s: %v", mp, err)
-		}
-	}
-	if chosenEntry == nil {
-		log.Fatalf("Nothing to boot.")
-	}
-	if *noExec {
-		log.Printf("Chosen menu entry: %s", chosenEntry)
-		os.Exit(0)
-	}
-	// Exec should either return an error or not return at all.
-	if err := chosenEntry.Exec(); err != nil {
-		log.Fatalf("Failed to exec %s: %v", chosenEntry, err)
-	}
-
-	// Kexec should either return an error or not return.
-	panic("unreachable")
+	// Boot does not return.
+	bootcmd.ShowMenuAndBoot(menuEntries, mps, *noLoad, *noExec)
 }
