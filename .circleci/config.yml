@@ -196,5 +196,5 @@ jobs:
   test-integration-arm64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm64:v0.0.1
+      - image: uroottest/test-image-arm64:v0.0.2
     working_directory: /home/circleci/go/src/github.com/u-root/u-root

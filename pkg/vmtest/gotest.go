@@ -24,7 +24,7 @@ import (
 func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	SkipWithoutQEMU(t)
 	// TODO: support arm
-	if TestArch() != "amd64" {
+	if TestArch() != "amd64" && TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", TestArch())
 	}
 
@@ -50,6 +50,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
 	os.Setenv("CGO_ENABLED", "0")
+	os.Setenv("GOARCH", TestArch())
 	testDir := filepath.Join(o.TmpDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)

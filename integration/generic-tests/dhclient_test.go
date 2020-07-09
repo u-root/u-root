@@ -25,7 +25,7 @@ import (
 // TestDhclientQEMU4 uses QEMU's DHCP server to test dhclient.
 func TestDhclientQEMU4(t *testing.T) {
 	// TODO: support arm
-	if vmtest.TestArch() != "amd64" {
+	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
@@ -98,7 +98,7 @@ func TestDhclientQEMU4(t *testing.T) {
 
 func TestDhclientTimesOut(t *testing.T) {
 	// TODO: support arm
-	if vmtest.TestArch() != "amd64" {
+	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
@@ -136,7 +136,7 @@ func TestDhclientTimesOut(t *testing.T) {
 
 func TestDhclient6(t *testing.T) {
 	// TODO: support arm
-	if vmtest.TestArch() != "amd64" {
+	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 
