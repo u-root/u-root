@@ -27,8 +27,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const linkUpAttempt = 30 * time.Second
-
 // isIpv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
 func isIpv6LinkReady(l netlink.Link) (bool, error) {
@@ -48,9 +46,9 @@ func isIpv6LinkReady(l netlink.Link) (bool, error) {
 }
 
 // IfUp ensures the given network interface is up and returns the link object.
-func IfUp(ifname string) (netlink.Link, error) {
+func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 	start := time.Now()
-	for time.Since(start) < linkUpAttempt {
+	for time.Since(start) < linkUpTimeout {
 		// Note that it may seem odd to keep trying the LinkByName
 		// operation, but consider that a hotplug device such as USB
 		// ethernet can just vanish.
@@ -59,7 +57,10 @@ func IfUp(ifname string) (netlink.Link, error) {
 			return nil, fmt.Errorf("cannot get interface %q by name: %v", ifname, err)
 		}
 
-		if iface.Attrs().Flags&net.FlagUp == net.FlagUp {
+		// Check if link is actually operational.
+		// https://www.kernel.org/doc/Documentation/networking/operstates.txt states that we should check
+		// for OperUp and OperUnknown.
+		if o := iface.Attrs().OperState; o == netlink.OperUp || o == netlink.OperUnknown {
 			return iface, nil
 		}
 
@@ -69,7 +70,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	return nil, fmt.Errorf("link %q still down after %d seconds", ifname, linkUpAttempt)
+	return nil, fmt.Errorf("link %q still down after %v seconds", ifname, linkUpTimeout.Seconds())
 }
 
 // WriteDNSSettings writes the given nameservers, search list, and domain to resolv.conf.
@@ -196,7 +197,7 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	return packet, nil
 }
 
-func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
+func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout time.Duration) (Lease, error) {
 	// For ipv6, we cannot bind to the port until Duplicate Address
 	// Detection (DAD) is complete which is indicated by the link being no
 	// longer marked as "tentative". This usually takes about a second.
@@ -205,7 +206,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	// (The user may not have configured a ctx with a timeout.)
 	//
 	// Hardcode the timeout to 30s for now.
-	linkTimeout := time.After(linkUpAttempt)
+	linkTimeout := time.After(linkUpTimeout)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
@@ -303,7 +304,7 @@ type Result struct {
 // respectively.
 //
 // The *Result channel will be closed when all requests have completed.
-func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Config) chan *Result {
+func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Config, linkUpTimeout time.Duration) chan *Result {
 	// Yeah, this is a hack, until we can cancel all leases in progress.
 	r := make(chan *Result, 3*len(ifs))
 
@@ -314,7 +315,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 			defer wg.Done()
 
 			log.Printf("Bringing up interface %s...", iface.Attrs().Name)
-			if _, err := IfUp(iface.Attrs().Name); err != nil {
+			if _, err := IfUp(iface.Attrs().Name, linkUpTimeout); err != nil {
 				log.Printf("Could not bring up interface %s: %v", iface.Attrs().Name, err)
 				return
 			}
@@ -332,7 +333,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				wg.Add(1)
 				go func(iface netlink.Link) {
 					defer wg.Done()
-					lease, err := lease6(ctx, iface, c)
+					lease, err := lease6(ctx, iface, c, linkUpTimeout)
 					r <- &Result{NetIPv6, iface, lease, err}
 				}(iface)
 			}
