@@ -69,6 +69,12 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/uroot",
 		"github.com/u-root/u-root/pkg/uroot/builder",
 	}
+	if vmtest.TestArch() == "arm64" {
+		blocklist = append(
+			blocklist,
+			"github.com/u-root/u-root/pkg/strace",
+		)
+	}
 	for i := 0; i < len(pkgs); i++ {
 		for _, b := range blocklist {
 			if pkgs[i] == b {
