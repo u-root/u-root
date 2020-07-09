@@ -56,8 +56,17 @@ func (p *Packet6) Configure() error {
 	// Add the address to the iface.
 	dst := &netlink.Addr{
 		IPNet: &net.IPNet{
-			IP:   l.IPv6Addr,
-			Mask: net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::")),
+			IP: l.IPv6Addr,
+
+			// This mask tells Linux which addresses we know to be
+			// "on-link" (i.e., reachable on this interface without
+			// having to talk to a router).
+			//
+			// Since DHCPv6 does not give us that information, we
+			// have to assume that no addresses are on-link. To do
+			// that, we use /128. (See also RFC 5942 Section 5,
+			// "Observed Incorrect Implementation Behavior".)
+			Mask: net.CIDRMask(128, 128),
 		},
 		PreferedLft: int(l.PreferredLifetime),
 		ValidLft:    int(l.ValidLifetime),
