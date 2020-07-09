@@ -794,6 +794,17 @@ func PolicyPCR(rw io.ReadWriter, session tpmutil.Handle, expectedDigest []byte, 
 	return err
 }
 
+// PolicyOr compares PolicySession→Digest against the list of provided values.
+// If the current Session→Digest does not match any value in the list,
+// the TPM shall return TPM_RC_VALUE. Otherwise, the TPM will reset policySession→Digest
+// to a Zero Digest. Then policySession→Digest is extended by the concatenation of
+// TPM_CC_PolicyOR and the concatenation of all of the digests.
+func PolicyOr(rw io.ReadWriter, session tpmutil.Handle, digests TPMLDigest) error {
+	data, err := tpmutil.Pack(session, digests)
+	_, err = runCommand(rw, TagNoSessions, cmdPolicyOr, data)
+	return err
+}
+
 // PolicyGetDigest returns the current policyDigest of the session.
 func PolicyGetDigest(rw io.ReadWriter, handle tpmutil.Handle) ([]byte, error) {
 	resp, err := runCommand(rw, TagNoSessions, cmdPolicyGetDigest, handle)
@@ -1072,7 +1083,7 @@ func encodeClear(handle tpmutil.Handle, auth AuthCommand) ([]byte, error) {
 	return concat(ah, encodedAuth)
 }
 
-// Clears lockout, endorsement and owner hierarchy authorization values
+// Clear clears lockout, endorsement and owner hierarchy authorization values
 func Clear(rw io.ReadWriter, handle tpmutil.Handle, auth AuthCommand) error {
 	cmd, err := encodeClear(handle, auth)
 	if err != nil {
@@ -1381,18 +1392,30 @@ func NVReadLock(rw io.ReadWriter, owner, handle tpmutil.Handle, authString strin
 	return err
 }
 
-// Hash computes a hash of data in buf using the TPM.
-func Hash(rw io.ReadWriter, alg Algorithm, buf tpmutil.U16Bytes) ([]byte, error) {
-	resp, err := runCommand(rw, TagNoSessions, cmdHash, buf, alg, HandleNull)
-	if err != nil {
-		return nil, err
-	}
-
+// decodeHash unpacks a successful response to TPM2_Hash, returning the computed digest and
+// validation ticket.
+func decodeHash(resp []byte) ([]byte, *Ticket, error) {
 	var digest tpmutil.U16Bytes
-	if _, err = tpmutil.Unpack(resp, &digest); err != nil {
-		return nil, err
+	var validation Ticket
+
+	buf := bytes.NewBuffer(resp)
+	if err := tpmutil.UnpackBuf(buf, &digest, &validation); err != nil {
+		return nil, nil, err
 	}
-	return digest, nil
+	return digest, &validation, nil
+}
+
+// Hash computes a hash of data in buf using TPM2_Hash, returning the computed
+// digest and validation ticket. The validation ticket serves as confirmation
+// from the TPM that the data in buf did not begin with TPM_GENERATED_VALUE.
+// NOTE: TPM2_Hash can only accept data up to MAX_DIGEST_BUFFER in size, which
+// is implementation-dependent, but guaranteed to be at least 1024 octets.
+func Hash(rw io.ReadWriter, alg Algorithm, buf tpmutil.U16Bytes, hierarchy tpmutil.Handle) (digest []byte, validation *Ticket, err error) {
+	resp, err := runCommand(rw, TagNoSessions, cmdHash, buf, alg, hierarchy)
+	if err != nil {
+		return nil, nil, err
+	}
+	return decodeHash(resp)
 }
 
 // Startup initializes a TPM (usually done by the OS).
@@ -1407,7 +1430,16 @@ func Shutdown(rw io.ReadWriter, typ StartupType) error {
 	return err
 }
 
-func encodeSign(sessionHandle, key tpmutil.Handle, password string, digest tpmutil.U16Bytes, sigScheme *SigScheme) ([]byte, error) {
+// nullTicket is a hard-coded null ticket of type TPMT_TK_HASHCHECK.
+// It is for Sign commands that do not require the TPM to verify that the digest
+// is not from data that started with TPM_GENERATED_VALUE.
+var nullTicket = Ticket{
+	Type:      TagHashCheck,
+	Hierarchy: HandleNull,
+	Digest:    tpmutil.U16Bytes{},
+}
+
+func encodeSign(sessionHandle, key tpmutil.Handle, password string, digest tpmutil.U16Bytes, sigScheme *SigScheme, validation *Ticket) ([]byte, error) {
 	ha, err := tpmutil.Pack(key)
 	if err != nil {
 		return nil, err
@@ -1424,16 +1456,15 @@ func encodeSign(sessionHandle, key tpmutil.Handle, password string, digest tpmut
 	if err != nil {
 		return nil, err
 	}
-	hc, err := tpmutil.Pack(TagHashCheck)
-	if err != nil {
-		return nil, err
+	if validation == nil {
+		validation = &nullTicket
 	}
-	params, err := tpmutil.Pack(HandleNull, tpmutil.U16Bytes(nil))
+	v, err := tpmutil.Pack(validation)
 	if err != nil {
 		return nil, err
 	}
 
-	return concat(ha, auth, d, s, hc, params)
+	return concat(ha, auth, d, s, v)
 }
 
 func decodeSign(buf []byte) (*Signature, error) {
@@ -1447,8 +1478,11 @@ func decodeSign(buf []byte) (*Signature, error) {
 
 // SignWithSession computes a signature for digest using a given loaded key. Signature
 // algorithm depends on the key type. Used for keys with non-password authorization policies.
-func SignWithSession(rw io.ReadWriter, sessionHandle, key tpmutil.Handle, password string, digest []byte, sigScheme *SigScheme) (*Signature, error) {
-	cmd, err := encodeSign(sessionHandle, key, password, digest, sigScheme)
+// If 'key' references a Restricted Decryption key, 'validation' must be a valid hash verification
+// ticket from the TPM, which can be obtained by using Hash() to hash the data with the TPM.
+// If 'validation' is nil, a NULL ticket is passed to TPM2_Sign.
+func SignWithSession(rw io.ReadWriter, sessionHandle, key tpmutil.Handle, password string, digest []byte, validation *Ticket, sigScheme *SigScheme) (*Signature, error) {
+	cmd, err := encodeSign(sessionHandle, key, password, digest, sigScheme, validation)
 	if err != nil {
 		return nil, err
 	}
@@ -1461,8 +1495,11 @@ func SignWithSession(rw io.ReadWriter, sessionHandle, key tpmutil.Handle, passwo
 
 // Sign computes a signature for digest using a given loaded key. Signature
 // algorithm depends on the key type.
-func Sign(rw io.ReadWriter, key tpmutil.Handle, password string, digest []byte, sigScheme *SigScheme) (*Signature, error) {
-	return SignWithSession(rw, HandlePasswordSession, key, password, digest, sigScheme)
+// If 'key' references a Restricted Decryption key, 'validation' must be a valid hash verification
+// ticket from the TPM, which can be obtained by using Hash() to hash the data with the TPM.
+// If 'validation' is nil, a NULL ticket is passed to TPM2_Sign.
+func Sign(rw io.ReadWriter, key tpmutil.Handle, password string, digest []byte, validation *Ticket, sigScheme *SigScheme) (*Signature, error) {
+	return SignWithSession(rw, HandlePasswordSession, key, password, digest, validation, sigScheme)
 }
 
 func encodeCertify(parentAuth, ownerAuth string, object, signer tpmutil.Handle, qualifyingData tpmutil.U16Bytes) ([]byte, error) {
@@ -1837,6 +1874,96 @@ func RSADecrypt(rw io.ReadWriter, key tpmutil.Handle, password string, message [
 		return nil, err
 	}
 	return decodeRSADecrypt(resp)
+}
+
+func encodeECDHKeyGen(key tpmutil.Handle) ([]byte, error) {
+	return tpmutil.Pack(key)
+}
+
+func decodeECDHKeyGen(resp []byte) (*ECPoint, *ECPoint, error) {
+	// Unpack z and pub as TPM2B_ECC_POINT, which is a TPMS_ECC_POINT with a total size prepended.
+	var z2B, pub2B tpmutil.U16Bytes
+	_, err := tpmutil.Unpack(resp, &z2B, &pub2B)
+	if err != nil {
+		return nil, nil, err
+	}
+	var zPoint, pubPoint ECPoint
+	_, err = tpmutil.Unpack(z2B, &zPoint.XRaw, &zPoint.YRaw)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, err = tpmutil.Unpack(pub2B, &pubPoint.XRaw, &pubPoint.YRaw)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &zPoint, &pubPoint, nil
+}
+
+// ECDHKeyGen generates an ephemeral ECC key, calculates the ECDH point multiplcation of the
+// ephemeral private key and a loaded public key, and returns the public ephemeral point along with
+// the coordinates of the resulting point.
+func ECDHKeyGen(rw io.ReadWriter, key tpmutil.Handle) (zPoint, pubPoint *ECPoint, err error) {
+	cmd, err := encodeECDHKeyGen(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	resp, err := runCommand(rw, TagNoSessions, cmdECDHKeyGen, tpmutil.RawBytes(cmd))
+	if err != nil {
+		return nil, nil, err
+	}
+	return decodeECDHKeyGen(resp)
+}
+
+func encodeECDHZGen(key tpmutil.Handle, password string, inPoint ECPoint) ([]byte, error) {
+	ha, err := tpmutil.Pack(key)
+	if err != nil {
+		return nil, err
+	}
+	auth, err := encodeAuthArea(AuthCommand{Session: HandlePasswordSession, Attributes: AttrContinueSession, Auth: []byte(password)})
+	if err != nil {
+		return nil, err
+	}
+	p, err := tpmutil.Pack(inPoint)
+	if err != nil {
+		return nil, err
+	}
+	// Pack the TPMS_ECC_POINT as a TPM2B_ECC_POINT.
+	p2B, err := tpmutil.Pack(tpmutil.U16Bytes(p))
+	if err != nil {
+		return nil, err
+	}
+	return concat(ha, auth, p2B)
+}
+
+func decodeECDHZGen(resp []byte) (*ECPoint, error) {
+	var paramSize uint32
+	// Unpack a TPM2B_ECC_POINT, which is a TPMS_ECC_POINT with a total size prepended.
+	var z2B tpmutil.U16Bytes
+	_, err := tpmutil.Unpack(resp, &paramSize, &z2B)
+	if err != nil {
+		return nil, err
+	}
+	var zPoint ECPoint
+	_, err = tpmutil.Unpack(z2B, &zPoint.XRaw, &zPoint.YRaw)
+	if err != nil {
+		return nil, err
+	}
+	return &zPoint, nil
+}
+
+// ECDHZGen performs ECDH point multiplication between a private key held in the TPM and a given
+// public point, returning the coordinates of the resulting point. The key must have FlagDecrypt
+// set.
+func ECDHZGen(rw io.ReadWriter, key tpmutil.Handle, password string, inPoint ECPoint) (zPoint *ECPoint, err error) {
+	cmd, err := encodeECDHZGen(key, password, inPoint)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := runCommand(rw, TagSessions, cmdECDHZGen, tpmutil.RawBytes(cmd))
+	if err != nil {
+		return nil, err
+	}
+	return decodeECDHZGen(resp)
 }
 
 // DictionaryAttackLockReset cancels the effect of a TPM lockout due to a number

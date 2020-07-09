@@ -40,3 +40,7 @@ ignored = ["github.com/u-root/u-root/bb*"]
 [[constraint]]
   name = "github.com/gliderlabs/ssh"
   revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
+
+[[constraint]]
+  name = "github.com/9elements/converged-security-suite"
+  version = "2.0.0"

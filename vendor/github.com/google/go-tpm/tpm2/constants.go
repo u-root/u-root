@@ -18,6 +18,7 @@ import (
 	"crypto"
 	"crypto/elliptic"
 	"fmt"
+	"strings"
 
 	// Register the relevant hash implementations to prevent a runtime failure.
 	_ "crypto/sha1"
@@ -369,6 +370,7 @@ const (
 	// It's exported for computing of default AuthPolicy value.
 	CmdPolicySecret     tpmutil.Command = 0x00000151
 	cmdCreate           tpmutil.Command = 0x00000153
+	cmdECDHZGen         tpmutil.Command = 0x00000154
 	cmdImport           tpmutil.Command = 0x00000156
 	cmdLoad             tpmutil.Command = 0x00000157
 	cmdQuote            tpmutil.Command = 0x00000158
@@ -377,11 +379,13 @@ const (
 	cmdUnseal           tpmutil.Command = 0x0000015E
 	cmdContextLoad      tpmutil.Command = 0x00000161
 	cmdContextSave      tpmutil.Command = 0x00000162
+	cmdECDHKeyGen       tpmutil.Command = 0x00000163
 	cmdEncryptDecrypt   tpmutil.Command = 0x00000164
 	cmdFlushContext     tpmutil.Command = 0x00000165
 	cmdLoadExternal     tpmutil.Command = 0x00000167
 	cmdMakeCredential   tpmutil.Command = 0x00000168
 	cmdReadPublicNV     tpmutil.Command = 0x00000169
+	cmdPolicyOr         tpmutil.Command = 0x00000171
 	cmdReadPublic       tpmutil.Command = 0x00000173
 	cmdRSAEncrypt       tpmutil.Command = 0x00000174
 	cmdStartAuthSession tpmutil.Command = 0x00000176
@@ -432,3 +436,42 @@ const (
 	AttrPlatformCreate NVAttr = 0x40000000
 	AttrReadSTClear    NVAttr = 0x80000000
 )
+
+var permMap = map[NVAttr]string{
+	AttrPPWrite:        "PPWrite",
+	AttrOwnerWrite:     "OwnerWrite",
+	AttrAuthWrite:      "AuthWrite",
+	AttrPolicyWrite:    "PolicyWrite",
+	AttrPolicyDelete:   "PolicyDelete",
+	AttrWriteLocked:    "WriteLocked",
+	AttrWriteAll:       "WriteAll",
+	AttrWriteDefine:    "WriteDefine",
+	AttrWriteSTClear:   "WriteSTClear",
+	AttrGlobalLock:     "GlobalLock",
+	AttrPPRead:         "PPRead",
+	AttrOwnerRead:      "OwnerRead",
+	AttrAuthRead:       "AuthRead",
+	AttrPolicyRead:     "PolicyRead",
+	AttrNoDA:           "No Do",
+	AttrOrderly:        "Oderly",
+	AttrClearSTClear:   "ClearSTClear",
+	AttrReadLocked:     "ReadLocked",
+	AttrWritten:        "Writte",
+	AttrPlatformCreate: "PlatformCreate",
+	AttrReadSTClear:    "ReadSTClear",
+}
+
+// String returns a textual representation of the set of NVAttr
+func (p NVAttr) String() string {
+	var retString strings.Builder
+	for iterator, item := range permMap {
+		if (p & iterator) != 0 {
+			retString.WriteString(item + " + ")
+		}
+	}
+	if retString.String() == "" {
+		return "Permission/s not found"
+	}
+	return strings.TrimSuffix(retString.String(), " + ")
+
+}

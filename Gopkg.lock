@@ -2,6 +2,26 @@
 
 
 [[projects]]
+  digest = "1:7491ac52c165f7fa6249c853129efeb90eb3362748fede02274fd83af5ee2ccc"
+  name = "github.com/9elements/converged-security-suite"
+  packages = [
+    "pkg/hwapi",
+    "pkg/test",
+    "pkg/tools",
+  ]
+  pruneopts = "NUT"
+  revision = "cddae1a1ef65d54eee59f2bed98b1d431d5cb651"
+  version = "v2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b1dd6f595a60586173d73f86b539353781b809961ab843b84ee36b72663de865"
+  name = "github.com/9elements/go-tss"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "83e8814aec2a4a315bacdb35753b7535b4101f37"
+
+[[projects]]
   branch = "master"
   digest = "1:f3793f8a708522400cef1dba23385e901aede5519f68971fd69938ef330b07a1"
   name = "github.com/alecthomas/template"
@@ -69,6 +89,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:ef1d5abedbaa92ba898a4c6fd47baf2c689ae33d65b890fea704bea9f4ed5e2e"
+  name = "github.com/fearful-symmetry/gomsr"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "be352f4f0713931b4735174c2e7c8c685dee97bd"
+  version = "v0.0.1"
+
+[[projects]]
   digest = "1:e8301df5b11c8c13927a26a88ee7ec65410024f75c0fc3c8e6421aa6833808ac"
   name = "github.com/gliderlabs/ssh"
   packages = ["."]
@@ -82,6 +110,14 @@
   pruneopts = "NUT"
   revision = "17394cbf6bf88945e8ffab0f084ab409167b5ed2"
   version = "v1.0.6"
+
+[[projects]]
+  digest = "1:9e1f58e0d3991f12e7b532161f56dc12c633fb01802ec60520d877599c2af2c5"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  pruneopts = "NUT"
+  revision = "d04d7b157bb510b1e0c10132224b616ac0e26b17"
+  version = "v1.4.2"
 
 [[projects]]
   digest = "1:ea920fc7bb1d9a2fe99782eb6a5b4e809dfbfcfabd6ab55a387353934acbf09c"
@@ -99,7 +135,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:abb11547ac7ac81badc517cc3e0a98a6f18cec279662c8622bf87c0a1ded8fbc"
+  digest = "1:5e7c796966ded5391498f32690983ca162b693f7e48350fdb37f28b1dc37808f"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
@@ -108,7 +144,17 @@
     "tpmutil/tbs",
   ]
   pruneopts = "NUT"
-  revision = "9cc5bb2cf703e5ec3b7393ad8c99bceb8e01ad4e"
+  revision = "141af4d716c8ef15a830f1b0f1dd94e1b831d229"
+
+[[projects]]
+  digest = "1:0a07f619fe04dc23de3180560d2a43653438c66bb49469c35014160a0c2df406"
+  name = "github.com/google/go-tpm-tools"
+  packages = [
+    "proto",
+    "tpm2tools",
+  ]
+  pruneopts = "NUT"
+  revision = "11f284793aa87a8cfb0c1396e77f74654c497d01"
 
 [[projects]]
   branch = "master"
@@ -425,6 +471,41 @@
   version = "v1.29.1"
 
 [[projects]]
+  digest = "1:cccb3a18e62abaccd19c309fc01a69da2509719f5a453cb2e66969f670503245"
+  name = "google.golang.org/protobuf"
+  packages = [
+    "encoding/prototext",
+    "encoding/protowire",
+    "internal/descfmt",
+    "internal/descopts",
+    "internal/detrand",
+    "internal/encoding/defval",
+    "internal/encoding/messageset",
+    "internal/encoding/tag",
+    "internal/encoding/text",
+    "internal/errors",
+    "internal/fieldsort",
+    "internal/filedesc",
+    "internal/filetype",
+    "internal/flags",
+    "internal/genid",
+    "internal/impl",
+    "internal/mapsort",
+    "internal/pragma",
+    "internal/set",
+    "internal/strs",
+    "internal/version",
+    "proto",
+    "reflect/protoreflect",
+    "reflect/protoregistry",
+    "runtime/protoiface",
+    "runtime/protoimpl",
+  ]
+  pruneopts = "NUT"
+  revision = "3f7a61f89bb6813f89d981d1870ed68da0b3c3f1"
+  version = "v1.25.0"
+
+[[projects]]
   digest = "1:22b2dee6f30bc8601f087449a2a819df8388e54e9547349c658f14d8f8c590f2"
   name = "gopkg.in/alecthomas/kingpin.v2"
   packages = ["."]
@@ -455,6 +536,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/9elements/converged-security-suite/pkg/hwapi",
+    "github.com/9elements/converged-security-suite/pkg/test",
     "github.com/beevik/ntp",
     "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",

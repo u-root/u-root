@@ -50,21 +50,21 @@ type pcrInfoLong struct {
 	LocAtRelease     Locality
 	PCRsAtCreation   pcrSelection
 	PCRsAtRelease    pcrSelection
-	DigestAtCreation digest
-	DigestAtRelease  digest
+	DigestAtCreation Digest
+	DigestAtRelease  Digest
 }
 
 // pcrInfoShort stores detailed information about PCRs.
 type pcrInfoShort struct {
 	PCRsAtRelease   pcrSelection
 	LocAtRelease    Locality
-	DigestAtRelease digest
+	DigestAtRelease Digest
 }
 
 type pcrInfo struct {
 	PcrSelection     pcrSelection
-	DigestAtRelease  digest
-	DigestAtCreation digest
+	DigestAtRelease  Digest
+	DigestAtCreation Digest
 }
 
 // A capVersionInfo contains information about the TPM itself. Note that this
@@ -113,7 +113,7 @@ type PermanentFlags struct {
 // See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.140
 type nvAttributes struct {
 	Tag        uint16
-	Attributes permission
+	Attributes Permission
 }
 
 // NVDataPublic implements the structure of TPM_NV_DATA_PUBLIC
@@ -135,15 +135,13 @@ func CloseKey(rw io.ReadWriter, h tpmutil.Handle) error {
 	return flushSpecific(rw, h, rtKey)
 }
 
-// A nonce is a 20-byte value.
-type nonce [20]byte
-
-const nonceSize uint32 = 20
+// A Nonce is a 20-byte value.
+type Nonce [20]byte
 
 // An oiapResponse is a response to an OIAP command.
 type oiapResponse struct {
 	AuthHandle tpmutil.Handle
-	NonceEven  nonce
+	NonceEven  Nonce
 }
 
 // String returns a string representation of an oiapResponse.
@@ -160,7 +158,7 @@ func (opr *oiapResponse) Close(rw io.ReadWriter) error {
 type osapCommand struct {
 	EntityType  uint16
 	EntityValue tpmutil.Handle
-	OddOSAP     nonce
+	OddOSAP     Nonce
 }
 
 // String returns a string representation of an osapCommand.
@@ -171,8 +169,8 @@ func (opc osapCommand) String() string {
 // An osapResponse is a TPM reply to an osapCommand.
 type osapResponse struct {
 	AuthHandle tpmutil.Handle
-	NonceEven  nonce
-	EvenOSAP   nonce
+	NonceEven  Nonce
+	EvenOSAP   Nonce
 }
 
 // String returns a string representation of an osapResponse.
@@ -186,9 +184,7 @@ func (opr *osapResponse) Close(rw io.ReadWriter) error {
 }
 
 // A Digest is a 20-byte SHA1 value.
-type digest [20]byte
-
-const digestSize uint32 = 20
+type Digest [20]byte
 
 // An AuthValue is a 20-byte value used for authentication.
 type authValue [20]byte
@@ -211,7 +207,7 @@ func (sc sealCommand) String() string {
 // tagRQUAuth2Command use two.
 type commandAuth struct {
 	AuthHandle  tpmutil.Handle
-	NonceOdd    nonce
+	NonceOdd    Nonce
 	ContSession byte
 	Auth        authValue
 }
@@ -223,7 +219,7 @@ func (ca commandAuth) String() string {
 
 // responseAuth contains the auth information returned from a command.
 type responseAuth struct {
-	NonceEven   nonce
+	NonceEven   Nonce
 	ContSession byte
 	Auth        authValue
 }
@@ -315,10 +311,10 @@ type quoteInfo struct {
 	Fixed [4]byte
 
 	// The CompositeDigest is computed by ComputePCRComposite.
-	CompositeDigest digest
+	CompositeDigest Digest
 
-	// The nonce is either a random nonce or the SHA1 hash of data to sign.
-	Nonce nonce
+	// The Nonce is either a random Nonce or the SHA1 hash of data to sign.
+	Nonce Nonce
 }
 
 // A pcrComposite stores a selection of PCRs with the selected PCR values.

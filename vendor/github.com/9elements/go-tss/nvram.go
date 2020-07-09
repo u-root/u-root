@@ -1,0 +1,44 @@
+package tss
+
+import (
+	"crypto/sha1"
+	"fmt"
+	"io"
+
+	tpm1 "github.com/google/go-tpm/tpm"
+	tpm2 "github.com/google/go-tpm/tpm2"
+	tpmutil "github.com/google/go-tpm/tpmutil"
+)
+
+func nvRead12(rwc io.ReadWriteCloser, index, offset, len uint32, auth string) ([]byte, error) {
+	var ownAuth [20]byte //owner well known
+	if auth != "" {
+		ownAuth = sha1.Sum([]byte(auth))
+	}
+
+	// Get TPMInfo
+	indexData, err := tpm1.GetNVIndex(rwc, index)
+	if err != nil {
+		return nil, err
+	}
+	if indexData == nil {
+		return nil, fmt.Errorf("index not found")
+	}
+
+	// Check if authData is needed
+	// AuthRead 0x00200000 | OwnerRead 0x00100000
+	needAuthData := 1 >> (indexData.Permission.Attributes & (tpm1.NVPerAuthRead | tpm1.NVPerOwnerRead))
+	authread := 1 >> (indexData.Permission.Attributes & tpm1.NVPerAuthRead)
+
+	if needAuthData == 0 {
+		if authread != 0 {
+			return tpm1.NVReadValue(rwc, index, offset, len, ownAuth[:])
+		}
+		return tpm1.NVReadValue(rwc, index, offset, len, ownAuth[:])
+	}
+	return tpm1.NVReadValue(rwc, index, offset, len, nil)
+}
+
+func nvRead20(rwc io.ReadWriteCloser, index, authHandle tpmutil.Handle, password string, blocksize int) ([]byte, error) {
+	return tpm2.NVReadEx(rwc, index, authHandle, password, blocksize)
+}

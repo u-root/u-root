@@ -31,7 +31,7 @@ import (
 type NVPublic struct {
 	NVIndex    tpmutil.Handle
 	NameAlg    Algorithm
-	Attributes KeyProp
+	Attributes NVAttr
 	AuthPolicy tpmutil.U16Bytes
 	DataSize   uint16
 }
@@ -1008,7 +1008,7 @@ type TaggedProperty struct {
 // information.
 type Ticket struct {
 	Type      tpmutil.Tag
-	Hierarchy uint32
+	Hierarchy tpmutil.Handle
 	Digest    tpmutil.U16Bytes
 }
 
@@ -1019,4 +1019,12 @@ type AuthCommand struct {
 	Nonce      tpmutil.U16Bytes
 	Attributes SessionAttributes
 	Auth       tpmutil.U16Bytes
+}
+
+// TPMLDigest represents the TPML_Digest structure
+// It is used to convey a list of digest values.
+//This type is used in TPM2_PolicyOR() and in TPM2_PCR_Read()
+type TPMLDigest struct {
+	Count   uint32
+	Digests []tpmutil.U16Bytes
 }

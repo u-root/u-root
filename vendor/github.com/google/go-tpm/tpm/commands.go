@@ -159,7 +159,7 @@ func getCapability(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
 }
 
 // nvDefineSpace allocates space in NVRAM
-func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc digest, ca *commandAuth) (*responseAuth, uint32, error) {
+func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc Digest, ca *commandAuth) (*responseAuth, uint32, error) {
 	var ra responseAuth
 	in := []interface{}{nvData, enc}
 	if ca != nil {
@@ -175,17 +175,24 @@ func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc digest, ca *comman
 }
 
 // nvReadValue reads from the NVRAM
-// If TPM isn't locked, no authentification is needed.
+// If TPM isn't locked, and for some nv permission no authentification is needed.
 // See TPM-Main-Part-3-Commands-20.4
 func nvReadValue(rw io.ReadWriter, index, offset, len uint32, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
 	var b tpmutil.U32Bytes
 	var ra responseAuth
+	var ret uint32
+	var err error
 	in := []interface{}{index, offset, len}
+	out := []interface{}{&b}
+	// Auth is needed
 	if ca != nil {
 		in = append(in, ca)
+		out = append(out, ra)
+		ret, err = submitTPMRequest(rw, tagRQUAuth1Command, ordNVReadValue, in, out)
+	} else {
+		// Auth is not needed
+		ret, err = submitTPMRequest(rw, tagRQUCommand, ordNVReadValue, in, out)
 	}
-	out := []interface{}{&b, &ra}
-	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVReadValue, in, out)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -292,7 +299,7 @@ func quote(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrS
 
 // makeIdentity requests that the TPM create a new AIK. It returns the handle to
 // this new key.
-func makeIdentity(rw io.ReadWriter, encAuth digest, idDigest digest, k *key, ca1 *commandAuth, ca2 *commandAuth) (*key, []byte, *responseAuth, *responseAuth, uint32, error) {
+func makeIdentity(rw io.ReadWriter, encAuth Digest, idDigest Digest, k *key, ca1 *commandAuth, ca2 *commandAuth) (*key, []byte, *responseAuth, *responseAuth, uint32, error) {
 	in := []interface{}{encAuth, idDigest, k, ca1, ca2}
 	var aik key
 	var sig tpmutil.U32Bytes
@@ -356,10 +363,10 @@ func ownerReadInternalPub(rw io.ReadWriter, kh tpmutil.Handle, ca *commandAuth) 
 // that this call can only be made when there is no owner in the TPM. Once an
 // owner is established, the endorsement key can be retrieved using
 // ownerReadInternalPub.
-func readPubEK(rw io.ReadWriter, n nonce) (*pubKey, digest, uint32, error) {
+func readPubEK(rw io.ReadWriter, n Nonce) (*pubKey, Digest, uint32, error) {
 	in := []interface{}{n}
 	var pk pubKey
-	var d digest
+	var d Digest
 	out := []interface{}{&pk, &d}
 	ret, err := submitTPMRequest(rw, tagRQUCommand, ordReadPubEK, in, out)
 	if err != nil {
@@ -401,7 +408,7 @@ func takeOwnership(rw io.ReadWriter, encOwnerAuth tpmutil.U32Bytes, encSRKAuth t
 }
 
 // Creates a wrapped key under the SRK.
-func createWrapKey(rw io.ReadWriter, encUsageAuth digest, encMigrationAuth digest, keyInfo *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
+func createWrapKey(rw io.ReadWriter, encUsageAuth Digest, encMigrationAuth Digest, keyInfo *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
 	in := []interface{}{khSRK, encUsageAuth, encMigrationAuth, keyInfo, ca}
 	var k key
 	var ra responseAuth

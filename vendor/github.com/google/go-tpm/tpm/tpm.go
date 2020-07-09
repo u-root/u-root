@@ -34,7 +34,7 @@ import (
 
 // GetKeys gets the list of handles for currently-loaded TPM keys.
 func GetKeys(rw io.ReadWriter) ([]tpmutil.Handle, error) {
-	b, err := getCapability(rw, capHandle, rtKey)
+	b, err := getCapability(rw, CapHandle, rtKey)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func newOSAPSession(rw io.ReadWriter, entityType uint16, entityValue tpmutil.Han
 
 // newCommandAuth creates a new commandAuth structure over the given
 // parameters, using the given secret for HMAC computation.
-func newCommandAuth(authHandle tpmutil.Handle, nonceEven nonce, key []byte, params []interface{}) (*commandAuth, error) {
+func newCommandAuth(authHandle tpmutil.Handle, nonceEven Nonce, key []byte, params []interface{}) (*commandAuth, error) {
 	// Auth = HMAC-SHA1(key, SHA1(params) || NonceEven || NonceOdd || ContSession)
 	digestBytes, err := tpmutil.Pack(params...)
 	if err != nil {
@@ -285,7 +285,7 @@ func newCommandAuth(authHandle tpmutil.Handle, nonceEven nonce, key []byte, para
 // verify checks that the response authentication was correct.
 // It computes the SHA1 of params, and computes the HMAC-SHA1 of this digest
 // with the authentication parameters of ra along with the given odd nonce.
-func (ra *responseAuth) verify(nonceOdd nonce, key []byte, params []interface{}) error {
+func (ra *responseAuth) verify(nonceOdd Nonce, key []byte, params []interface{}) error {
 	// Auth = HMAC-SHA1(key, SHA1(params) || ra.NonceEven || NonceOdd || ra.ContSession)
 	digestBytes, err := tpmutil.Pack(params...)
 	if err != nil {
@@ -529,12 +529,12 @@ func MakeIdentity(rw io.ReadWriter, srkAuth []byte, ownerAuth []byte, aikAuth []
 	defer zeroBytes(xorData)
 
 	encAuthData := sha1.Sum(xorData)
-	var encAuth digest
+	var encAuth Digest
 	for i := range encAuth {
 		encAuth[i] = aikAuth[i] ^ encAuthData[i]
 	}
 
-	var caDigest digest
+	var caDigest Digest
 	if (pk != nil) != (label != nil) {
 		return nil, errors.New("inconsistent null values between the pk and the label")
 	}
@@ -742,7 +742,7 @@ func ActivateIdentity(rw io.ReadWriter, aikAuth []byte, ownerAuth []byte, aik tp
 // TPM to start working again after authentication errors without waiting for
 // the dictionary-attack defenses to time out. This requires owner
 // authentication.
-func ResetLockValue(rw io.ReadWriter, ownerAuth digest) error {
+func ResetLockValue(rw io.ReadWriter, ownerAuth Digest) error {
 	// Run OSAP for the Owner, reading a random OddOSAP for our initial command
 	// and getting back a secret and a handle.
 	sharedSecretOwn, osaprOwn, err := newOSAPSession(rw, etOwner, khOwner, ownerAuth[:])
@@ -779,7 +779,7 @@ func ResetLockValue(rw io.ReadWriter, ownerAuth digest) error {
 // ownerReadInternalHelper sets up command auth and checks response auth for
 // OwnerReadInternalPub. It's not exported because OwnerReadInternalPub only
 // supports two fixed key handles: khEK and khSRK.
-func ownerReadInternalHelper(rw io.ReadWriter, kh tpmutil.Handle, ownerAuth digest) (*pubKey, error) {
+func ownerReadInternalHelper(rw io.ReadWriter, kh tpmutil.Handle, ownerAuth Digest) (*pubKey, error) {
 	// Run OSAP for the Owner, reading a random OddOSAP for our initial command
 	// and getting back a secret and a handle.
 	sharedSecretOwn, osaprOwn, err := newOSAPSession(rw, etOwner, khOwner, ownerAuth[:])
@@ -814,7 +814,7 @@ func ownerReadInternalHelper(rw io.ReadWriter, kh tpmutil.Handle, ownerAuth dige
 }
 
 // OwnerReadSRK uses owner auth to get a blob representing the SRK.
-func OwnerReadSRK(rw io.ReadWriter, ownerAuth digest) ([]byte, error) {
+func OwnerReadSRK(rw io.ReadWriter, ownerAuth Digest) ([]byte, error) {
 	pk, err := ownerReadInternalHelper(rw, khSRK, ownerAuth)
 	if err != nil {
 		return nil, err
@@ -828,7 +828,7 @@ func OwnerReadSRK(rw io.ReadWriter, ownerAuth digest) ([]byte, error) {
 // here and return only the DER encoded certificate.
 // TCG PC Client Specific Implementation Specification for Conventional BIOS 7.4.4
 // https://www.trustedcomputinggroup.org/wp-content/uploads/TCG_PCClientImplementation_1-21_1_00.pdf
-func ReadEKCert(rw io.ReadWriter, ownAuth digest) ([]byte, error) {
+func ReadEKCert(rw io.ReadWriter, ownAuth Digest) ([]byte, error) {
 	const (
 		certIndex                 = 0x1000f000 // TPM_NV_INDEX_EKCert (TPM Main Part 2 TPM Structures 19.1.2)
 		certTagPCClientStoredCert = 0x1001     // TCG_TAG_PCCLIENT_STORED_CERT
@@ -1076,7 +1076,7 @@ func NVWriteValueAuth(rw io.ReadWriter, index, offset uint32, data []byte, auth 
 
 // OwnerReadPubEK uses owner auth to get a blob representing the public part of the
 // endorsement key.
-func OwnerReadPubEK(rw io.ReadWriter, ownerAuth digest) ([]byte, error) {
+func OwnerReadPubEK(rw io.ReadWriter, ownerAuth Digest) ([]byte, error) {
 	pk, err := ownerReadInternalHelper(rw, khEK, ownerAuth)
 	if err != nil {
 		return nil, err
@@ -1088,7 +1088,7 @@ func OwnerReadPubEK(rw io.ReadWriter, ownerAuth digest) ([]byte, error) {
 // ReadPubEK reads the public part of the endorsement key when no owner is
 // established.
 func ReadPubEK(rw io.ReadWriter) ([]byte, error) {
-	var n nonce
+	var n Nonce
 	if _, err := rand.Read(n[:]); err != nil {
 		return nil, err
 	}
@@ -1117,14 +1117,14 @@ func ReadPubEK(rw io.ReadWriter) ([]byte, error) {
 
 // GetManufacturer returns the manufacturer ID
 func GetManufacturer(rw io.ReadWriter) ([]byte, error) {
-	return getCapability(rw, capProperty, tpmCapPropManufacturer)
+	return getCapability(rw, CapProperty, SubCapPropManufacturer)
 }
 
 // GetPermanentFlags returns the TPM_PERMANENT_FLAGS structure.
 func GetPermanentFlags(rw io.ReadWriter) (PermanentFlags, error) {
 	var ret PermanentFlags
 
-	raw, err := getCapability(rw, capFlag, tpmCapFlagPermanent)
+	raw, err := getCapability(rw, CapFlag, SubCapFlagPermanent)
 	if err != nil {
 		return ret, err
 	}
@@ -1137,7 +1137,7 @@ func GetPermanentFlags(rw io.ReadWriter) (PermanentFlags, error) {
 func GetAlgs(rw io.ReadWriter) ([]Algorithm, error) {
 	var algs []Algorithm
 	for i := AlgRSA; i <= AlgXOR; i++ {
-		buf, err := getCapability(rw, capAlg, uint32(i))
+		buf, err := getCapability(rw, CapAlg, uint32(i))
 		if err != nil {
 			return nil, err
 		}
@@ -1152,31 +1152,28 @@ func GetAlgs(rw io.ReadWriter) ([]Algorithm, error) {
 // GetNVList returns a list of TPM_NV_INDEX values that
 // are currently allocated NV storage through TPM_NV_DefineSpace.
 func GetNVList(rw io.ReadWriter) ([]uint32, error) {
-	var nvList []uint32
-	buf, err := getCapability(rw, capNVList, 0)
+	buf, err := getCapability(rw, CapNVList, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := bytes.NewReader(buf)
-	err = binary.Read(r, binary.LittleEndian, &nvList)
+	nvList := make([]uint32, len(buf)/4)
+	for i := range nvList {
+		nvList[i] = uint32(binary.BigEndian.Uint32(buf[i*4 : (i+1)*4]))
+	}
+
 	return nvList, err
 }
 
 // GetNVIndex returns the structure of NVDataPublic which contains
 // information about the requested NV Index.
 // See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.167
-func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (NVDataPublic, error) {
+func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (*NVDataPublic, error) {
 	var nvInfo NVDataPublic
-	buf, err := getCapability(rw, capNVIndex, 0)
-	if err != nil {
-		return nvInfo, fmt.Errorf("failed to get capability NVIndex: %v", err)
+	buf, _ := getCapability(rw, CapNVIndex, nvIndex)
+	if _, err := tpmutil.Unpack(buf, &nvInfo); err != nil {
+		return &nvInfo, err
 	}
-	r := bytes.NewReader(buf)
-	err = binary.Read(r, binary.LittleEndian, &nvInfo)
-	if err != nil {
-		return nvInfo, fmt.Errorf("failed to read nvInfo: %v", err)
-	}
-	return nvInfo, nil
+	return &nvInfo, nil
 }
 
 // GetCapabilityRaw reads the requested capability and sub-capability from the
@@ -1188,7 +1185,7 @@ func GetCapabilityRaw(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
 
 // OwnerClear uses owner auth to clear the TPM. After this operation, the TPM
 // can change ownership.
-func OwnerClear(rw io.ReadWriter, ownerAuth digest) error {
+func OwnerClear(rw io.ReadWriter, ownerAuth Digest) error {
 	// Run OSAP for the Owner, reading a random OddOSAP for our initial command
 	// and getting back a secret and a handle.
 	sharedSecretOwn, osaprOwn, err := newOSAPSession(rw, etOwner, khOwner, ownerAuth[:])
@@ -1227,7 +1224,7 @@ func OwnerClear(rw io.ReadWriter, ownerAuth digest) error {
 // operation can only be performed if there isn't already an owner for the TPM.
 // The pub EK blob can be acquired by calling ReadPubEK if there is no owner, or
 // OwnerReadPubEK if there is.
-func TakeOwnership(rw io.ReadWriter, newOwnerAuth digest, newSRKAuth digest, pubEK []byte) error {
+func TakeOwnership(rw io.ReadWriter, newOwnerAuth Digest, newSRKAuth Digest, pubEK []byte) error {
 
 	// Encrypt the owner and SRK auth with the endorsement key.
 	ek, err := UnmarshalPubRSAPublicKey(pubEK)
@@ -1305,7 +1302,7 @@ func TakeOwnership(rw io.ReadWriter, newOwnerAuth digest, newSRKAuth digest, pub
 // parameter defines the auth key for using this new key. The migrationAuth
 // parameter would be used for authorizing migration of the key (although this
 // code currently disables migration).
-func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth digest, migrationAuth digest, pcrs []int) ([]byte, error) {
+func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth Digest, migrationAuth Digest, pcrs []int) ([]byte, error) {
 	// Run OSAP for the SRK, reading a random OddOSAP for our initial
 	// command and getting back a secret and a handle.
 	sharedSecret, osapr, err := newOSAPSession(rw, etSRK, khSRK, srkAuth)
@@ -1322,11 +1319,11 @@ func CreateWrapKey(rw io.ReadWriter, srkAuth []byte, usageAuth digest, migration
 	defer zeroBytes(xorData)
 	encAuthDataKey := sha1.Sum(xorData)
 
-	var encUsageAuth digest
+	var encUsageAuth Digest
 	for i := range srkAuth {
 		encUsageAuth[i] = encAuthDataKey[i] ^ usageAuth[i]
 	}
-	var encMigrationAuth digest
+	var encMigrationAuth Digest
 	for i := range srkAuth {
 		encMigrationAuth[i] = encAuthDataKey[i] ^ migrationAuth[i]
 	}
