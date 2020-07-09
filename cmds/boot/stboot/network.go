@@ -82,7 +82,7 @@ func configureDHCPNetwork() error {
 		LogLevel: level,
 	}
 
-	r := dhclient.SendRequests(context.TODO(), links, true, false, config)
+	r := dhclient.SendRequests(context.TODO(), links, true, false, config, 30*time.Second)
 	for result := range r {
 		if result.Err == nil {
 			return result.Lease.Configure()
