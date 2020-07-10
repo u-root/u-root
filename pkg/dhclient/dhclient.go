@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,32 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
+
+// DisableSLAAC disable IPv6 auto-configure on each interface.
+//
+// As soon as the interface is set up, the kernel (by default) will try to
+// auto-configure global addresses on it using SLAAC. This settings does not
+// affect link-local SLAAC addresses.
+//
+// SLAAC would mean a global address will magically appear on the interface a
+// few seconds later which is different from the address returned by DHCPv6.
+func DisableSLAAC(ifs ...netlink.Link) error {
+	for _, iface := range ifs {
+		name := iface.Attrs().Name
+		autoconfPath := filepath.Join("/proc/sys/net/ipv6/conf", name, "autoconf")
+		if err := ioutil.WriteFile(autoconfPath, []byte("0\n"), 0777); err != nil {
+			return fmt.Errorf("error disabling autoconf on %s: %v", name, err)
+		}
+
+		// Make sure Router Advertisement (RA) remains enabled. The routes are being
+		// configured by the kernel.
+		acceptRAPath := filepath.Join("/proc/sys/net/ipv6/conf", name, "accept_ra")
+		if err := ioutil.WriteFile(acceptRAPath, []byte("1\n"), 0777); err != nil {
+			return fmt.Errorf("error enabling accept_ra on %s: %v", name, err)
+		}
+	}
+	return nil
+}
 
 // isIpv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
