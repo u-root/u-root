@@ -72,9 +72,27 @@ func (s *dserver4) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHC
 		log.Printf("Can't handle type %v", mt)
 		return
 	}
-	if s.mac != nil && !bytes.Equal(m.ClientHWAddr, s.mac) {
-		log.Printf("Not responding to DHCP request for mac %s, which does not match %s", m.ClientHWAddr, s.mac)
-		return
+
+	// In nets with 1 host, and no entries in /etc/hosts, we use the
+	// default command line value for Your IP
+	ip := s.yourIP
+
+	// We preferentially use and /ec/hosts entry if it exists,
+	// with a hostname uab:cd:ef:gh:ij:kl
+	// The /etc/hosts entry takes precedence over all other
+	// options. Since this is dserver4, we force it to be an ip4 address.
+	if i, err := net.LookupIP(fmt.Sprintf("u%s", m.ClientHWAddr)); err == nil {
+		ip = i[0].To4()
+	} else {
+		if s.mac != nil && !bytes.Equal(m.ClientHWAddr, s.mac) {
+			log.Printf("Not responding to DHCP request for mac %s, which does not match %s", m.ClientHWAddr, s.mac)
+			log.Printf("You can create a host entry of the form 'a.b.c.d [names] u%s' 'ip6addr [names] u%s'if you wish", m.ClientHWAddr, m.ClientHWAddr)
+			return
+		}
+
+		if s.mac == nil {
+			s.mac = m.ClientHWAddr
+		}
 	}
 
 	reply, err := dhcpv4.NewReplyFromRequest(m,
@@ -82,7 +100,7 @@ func (s *dserver4) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHC
 		dhcpv4.WithServerIP(s.self),
 		dhcpv4.WithRouter(s.self),
 		dhcpv4.WithNetmask(s.submask),
-		dhcpv4.WithYourIP(s.yourIP),
+		dhcpv4.WithYourIP(ip),
 		// RFC 2131, Section 4.3.1. Server Identifier: MUST
 		dhcpv4.WithOption(dhcpv4.OptServerIdentifier(s.self)),
 		// RFC 2131, Section 4.3.1. IP lease time: MUST
