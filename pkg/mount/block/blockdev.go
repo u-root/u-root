@@ -11,19 +11,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unsafe"
 
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/pci"
 	"golang.org/x/sys/unix"
 )
 
 var (
 	// LinuxMountsPath is the standard mountpoint list path
 	LinuxMountsPath = "/proc/mounts"
+
+	Debug = func(string, ...interface{}) {}
 )
 
 // BlockDev maps a device name to a BlockStat structure for a given block device
@@ -163,6 +169,55 @@ func (b *BlockDev) ReadPartitionTable() error {
 	}
 	defer f.Close()
 	return unix.IoctlSetInt(int(f.Fd()), unix.BLKRRPART, 0)
+}
+
+// PCIInfo searches sysfs for the PCI vendor and device id.
+// We fill in the PCI struct with just those two elements.
+func (b *BlockDev) PCIInfo() (*pci.PCI, error) {
+	p, err := filepath.EvalSymlinks(filepath.Join("/sys/class/block", b.Name))
+	if err != nil {
+		return nil, err
+	}
+	// Loop through devices until we find the actual backing pci device.
+	// For Example:
+	// /sys/class/block/nvme0n1p1 usually resolves to something like
+	// /sys/devices/pci..../.../.../nvme/nvme0/nvme0n1/nvme0n1p1. This leads us to the
+	// first partition of the first namespace of the nvme0 device. In this case, the actual pci device and vendor
+	// is found in nvme, three levels up. We traverse back up to the parent device
+	// and we keep going until we find a device and vendor file.
+	dp := filepath.Join(p, "device")
+	vp := filepath.Join(p, "vendor")
+	found := false
+	for p != "/sys/devices" {
+		// Check if there is a vendor and device file in this directory.
+		if d, err := os.Stat(dp); err == nil && !d.IsDir() {
+			if v, err := os.Stat(vp); err == nil && !v.IsDir() {
+				found = true
+				break
+			}
+		}
+		p = filepath.Dir(p)
+		dp = filepath.Join(p, "device")
+		vp = filepath.Join(p, "vendor")
+	}
+	if !found {
+		return nil, fmt.Errorf("Unable to find backing pci device with device and vendor files for %v", b.Name)
+	}
+
+	// Read both files into the pci struct and return
+	device, err := ioutil.ReadFile(dp)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading device file: %v", err)
+	}
+	vendor, err := ioutil.ReadFile(vp)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading vendor file: %v", err)
+	}
+	return &pci.PCI{
+		Vendor:   strings.TrimSpace(string(vendor)),
+		Device:   strings.TrimSpace(string(device)),
+		FullPath: p,
+	}, nil
 }
 
 // SystemPartitionGUID is the GUID of EFI system partitions
@@ -462,6 +517,83 @@ func (b BlockDevices) FilterName(name string) BlockDevices {
 	for _, device := range b {
 		if device.Name == name {
 			partitions = append(partitions, device)
+		}
+	}
+	return partitions
+}
+
+// parsePCIBlockList parses a string in the format vendor:device,vendor:device
+// and returns a list of PCI devices containing the vendor and device pairs to block.
+func parsePCIBlockList(blockList string) (pci.Devices, error) {
+	pciList := pci.Devices{}
+	bL := strings.Split(blockList, ",")
+	for _, b := range bL {
+		p := strings.Split(b, ":")
+		if len(p) != 2 {
+			return nil, fmt.Errorf("BlockList needs to be of format vendor1:device1,vendor2:device2...! got %v", blockList)
+		}
+		// Check that values are hex and convert them to sysfs formats
+		// This accepts 0xABCD and turns it into 0xabcd
+		// abcd also turns into 0xabcd
+		v, err := strconv.ParseUint(strings.TrimPrefix(p[0], "0x"), 16, 16)
+		if err != nil {
+			return nil, fmt.Errorf("BlockList needs to contain a hex vendor ID, got %v, err %v", p[0], err)
+		}
+		vs := fmt.Sprintf("%#04x", v)
+
+		d, err := strconv.ParseUint(strings.TrimPrefix(p[1], "0x"), 16, 16)
+		if err != nil {
+			return nil, fmt.Errorf("BlockList needs to contain a hex device ID, got %v, err %v", p[1], err)
+		}
+		ds := fmt.Sprintf("%#04x", d)
+		pciList = append(pciList, &pci.PCI{Vendor: vs, Device: ds})
+	}
+	return pciList, nil
+}
+
+// FilterBlockPCIString parses a string in the format vendor:device,vendor:device
+// and returns a list of BlockDev objects whose backing pci devices do not match
+// the vendor:device pairs passed in. All values are treated as hex.
+// E.g. 0x8086:0xABCD,8086:0x1234
+func (b BlockDevices) FilterBlockPCIString(blocklist string) (BlockDevices, error) {
+	pciList, err := parsePCIBlockList(blocklist)
+	if err != nil {
+		return nil, err
+	}
+	return b.FilterBlockPCI(pciList), nil
+}
+
+// FilterBlockPCI returns a list of BlockDev objects whose backing
+// pci devices do not match the blocklist of PCI devices passed in.
+// FilterBlockPCI discards entries which have a matching PCI vendor
+// and device ID as an entry in the blocklist.
+func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
+	type mapKey struct {
+		vendor, device string
+	}
+	m := make(map[mapKey]bool)
+
+	for _, v := range blocklist {
+		m[mapKey{v.Vendor, v.Device}] = true
+	}
+	Debug("block map is %v", m)
+
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
+		p, err := device.PCIInfo()
+		if err != nil {
+			// In the case of an error, we err on the safe side and choose not to block it.
+			// Not all block devices are backed by a pci device, for example SATA drives.
+			Debug("Failed to find PCI info; %v", err)
+			partitions = append(partitions, device)
+			continue
+		}
+		if _, ok := m[mapKey{p.Vendor, p.Device}]; !ok {
+			// Not in blocklist, we're good to go
+			Debug("Not blocking device %v, with pci %v, not in map", device, p)
+			partitions = append(partitions, device)
+		} else {
+			log.Printf("Blocking device %v since it appears in blocklist", device.Name)
 		}
 	}
 	return partitions

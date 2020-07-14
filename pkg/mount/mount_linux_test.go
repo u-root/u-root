@@ -6,6 +6,7 @@ package mount_test
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,6 +18,7 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/mount/scuzz"
+	"github.com/u-root/u-root/pkg/pci"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -172,6 +174,102 @@ func TestIdentify(t *testing.T) {
 	}
 }
 
+func TestFilterBlockPCI(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	// Check that NVME devices are present.
+	want := block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: "nvme0n1p1"},
+		&block.BlockDev{Name: "nvme0n1p2"},
+		&block.BlockDev{Name: "sda"},
+		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		&block.BlockDev{Name: "sda2", FsUUID: "ace5-5144"},
+		&block.BlockDev{Name: "sdb"},
+		&block.BlockDev{Name: "sdb1"},
+		&block.BlockDev{Name: "sdc"},
+		&block.BlockDev{Name: "sdc1"},
+		&block.BlockDev{Name: "sdc2"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+
+	p := &pci.PCI{Vendor: "0x8086", Device: "0x5845"}
+	pl := pci.Devices{p}
+
+	block.Debug = log.Printf
+	devs = devs.FilterBlockPCI(pl)
+
+	want = block.BlockDevices{
+		&block.BlockDev{Name: "sda"},
+		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		&block.BlockDev{Name: "sda2", FsUUID: "ace5-5144"},
+		&block.BlockDev{Name: "sdb"},
+		&block.BlockDev{Name: "sdb1"},
+		&block.BlockDev{Name: "sdc"},
+		&block.BlockDev{Name: "sdc1"},
+		&block.BlockDev{Name: "sdc2"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+}
+
+func TestFilterBlockPCIString(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	// Check that NVME devices are present.
+	want := block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: "nvme0n1p1"},
+		&block.BlockDev{Name: "nvme0n1p2"},
+		&block.BlockDev{Name: "sda"},
+		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		&block.BlockDev{Name: "sda2", FsUUID: "ace5-5144"},
+		&block.BlockDev{Name: "sdb"},
+		&block.BlockDev{Name: "sdb1"},
+		&block.BlockDev{Name: "sdc"},
+		&block.BlockDev{Name: "sdc1"},
+		&block.BlockDev{Name: "sdc2"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+
+	block.Debug = log.Printf
+	devs, err = devs.FilterBlockPCIString("0x8086:0x5845")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want = block.BlockDevices{
+		&block.BlockDev{Name: "sda"},
+		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		&block.BlockDev{Name: "sda2", FsUUID: "ace5-5144"},
+		&block.BlockDev{Name: "sdb"},
+		&block.BlockDev{Name: "sdb1"},
+		&block.BlockDev{Name: "sdc"},
+		&block.BlockDev{Name: "sdc1"},
+		&block.BlockDev{Name: "sdc2"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+}
+
 func TestBlockDevices(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
@@ -182,6 +280,9 @@ func TestBlockDevices(t *testing.T) {
 	devs = devs.FilterZeroSize()
 
 	want := block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: "nvme0n1p1"},
+		&block.BlockDev{Name: "nvme0n1p2"},
 		&block.BlockDev{Name: "sda"},
 		&block.BlockDev{Name: "sda1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
 		&block.BlockDev{Name: "sda2", FsUUID: "ace5-5144"},
@@ -196,14 +297,17 @@ func TestBlockDevices(t *testing.T) {
 	}
 
 	sizes := map[string]uint64{
-		"sda":  2048 * 512,
-		"sda1": 1024 * 512,
-		"sda2": 1023 * 512,
-		"sdb":  24 * 512,
-		"sdb1": 23 * 512,
-		"sdc":  50 * 4096,
-		"sdc1": 167 * 512,
-		"sdc2": 166 * 512,
+		"sda":       2048 * 512,
+		"sda1":      1024 * 512,
+		"sda2":      1023 * 512,
+		"sdb":       24 * 512,
+		"sdb1":      23 * 512,
+		"sdc":       50 * 4096,
+		"sdc1":      167 * 512,
+		"sdc2":      166 * 512,
+		"nvme0n1":   50 * 4096,
+		"nvme0n1p1": 167 * 512,
+		"nvme0n1p2": 166 * 512,
 	}
 	for _, dev := range devs {
 		size, err := dev.Size()
@@ -235,14 +339,17 @@ func TestBlockDevices(t *testing.T) {
 	}
 
 	wantRR := map[string]error{
-		"sda":  nil,
-		"sda1": syscall.EINVAL,
-		"sda2": syscall.EINVAL,
-		"sdb":  nil,
-		"sdb1": syscall.EINVAL,
-		"sdc":  nil,
-		"sdc1": syscall.EINVAL,
-		"sdc2": syscall.EINVAL,
+		"sda":       nil,
+		"sda1":      syscall.EINVAL,
+		"sda2":      syscall.EINVAL,
+		"sdb":       nil,
+		"sdb1":      syscall.EINVAL,
+		"sdc":       nil,
+		"sdc1":      syscall.EINVAL,
+		"sdc2":      syscall.EINVAL,
+		"nvme0n1":   nil,
+		"nvme0n1p1": syscall.EINVAL,
+		"nvme0n1p2": syscall.EINVAL,
 	}
 	for _, dev := range devs {
 		if err := dev.ReadPartitionTable(); err != wantRR[dev.Name] {
