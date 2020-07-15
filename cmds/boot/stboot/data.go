@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf16"
 	"unicode/utf8"
 
@@ -26,7 +27,7 @@ const (
 	dataMountPoint      = "data"
 )
 
-func findDataPartition() error {
+func findDataPartition(timeout uint) error {
 	debug("Search data partition with label %s ...", dataPartitionLabel)
 	fs, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
@@ -36,12 +37,23 @@ func findDataPartition() error {
 		return fmt.Errorf("filesystem unknown: %s", dataPartitionFSType)
 	}
 
-	devices, err := getBlockDevs()
-	if err != nil {
-		return fmt.Errorf("block devices: %v", err)
-	}
-	if len(devices) == 0 {
-		return fmt.Errorf("no non-loopback block devices found")
+	var devices []string
+	for {
+		devices, err = getBlockDevs()
+		if err != nil {
+			return fmt.Errorf("getting block devices failed with: %v", err)
+		}
+		if len(devices) == 0 {
+			if timeout == 0 {
+				return fmt.Errorf("no non-loopback block devices found")
+			}
+			debug("waiting for block devices to appear...\n")
+
+			timeout--
+			time.Sleep(time.Second)
+		} else {
+			break
+		}
 	}
 
 	device, err := deviceByPartLabel(devices, dataPartitionLabel)

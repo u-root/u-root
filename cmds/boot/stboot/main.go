@@ -99,9 +99,9 @@ func main() {
 	/////////////////
 	// Data partition
 	/////////////////
-	err = findDataPartition()
+	err = findDataPartition(60)
 	if err != nil {
-		reboot("%v", err)
+		reboot("Failed to find DATA partition: %v", err)
 	}
 
 	if vars.BootMode == NetworkStatic || vars.BootMode == NetworkDHCP {
