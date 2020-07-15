@@ -1,0 +1,2 @@
+# root
+mount -aC #s/boot /root

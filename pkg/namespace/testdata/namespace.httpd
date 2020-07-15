@@ -1,0 +1,39 @@
+# we start with the namespace of the console...
+
+# man2html expects man pages under /sys/man
+mount #s/boot /n/emelieother other
+bind /n/emelieother/plan9/sys/man /usr/web/sys/man
+#bind /n/emelieother/plan9/sys/doc /usr/web/sys/doc
+#bind /sys/man /usr/web/sys/man
+bind /sys/doc /usr/web/sys/doc
+
+# just so people will find something under plan9
+bind /usr/web/plan9dist /usr/web/plan9
+
+# users
+bind /usr/mike/www /usr/web/incoming/mike
+
+# netlib
+bind /netlib/pub /usr/web/netlib
+mount -b #s/netlib.depend.pub /usr/web/netlib.depend
+# don't need to bind to /usr/web/math etc. because of /sys/lib/http-rewrite
+
+# who what why when where
+mount /srv/alice /n/alice
+bind -b /n/alice/cm /usr/web/cm
+bind /usr/web/cm/who /usr/web/who
+bind -b /usr/web/cm/physics/who /usr/web/who
+bind -b /usr/web/cm/blrsv/who /usr/web/who
+bind -b /usr/web/cm/ss/who /usr/web/who
+bind -b /usr/web/cm/ms/who /usr/web/who
+bind -b /usr/web/cm/china/who /usr/web/who
+bind -b /usr/web/cm/cs/who /usr/web/who
+bind /usr/web/cm/ms/what/wavelet /usr/web/wavelet
+
+# formerly ftp.research.bell-labs.com
+bind -b /n/alice/usr/ftp /usr/web/dist
+
+# wiki (questions to rsc)
+mount -b #s/wiki.plan9 /usr/web/wiki/plan9
+
+# httpd will bind /usr/web onto /
