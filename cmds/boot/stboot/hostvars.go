@@ -44,7 +44,7 @@ func loadHostvars(path string) (*Hostvars, error) {
 	var vars Hostvars
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to read file %s due to: %v", path, err)
 	}
 	if err = json.Unmarshal(data, &vars); err != nil {
 		return nil, fmt.Errorf("cannot parse data - invalid hostvars in %s:  %v", path, err)

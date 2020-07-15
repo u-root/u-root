@@ -58,12 +58,12 @@ func findDataPartition(timeout uint) error {
 
 	device, err := deviceByPartLabel(devices, dataPartitionLabel)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to get device by partition label: %v", err)
 	}
 
 	mp, err := mount.Mount(device, dataMountPoint, dataPartitionFSType, "", 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to mount device %s: %v", device, err)
 	}
 
 	debug("data partition %s mounted at %s", mp.Device, mp.Path)
@@ -92,7 +92,7 @@ func getBlockDevs() ([]string, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Walking %s returned an error: %v", root, err)
 	}
 	return devnames, nil
 }

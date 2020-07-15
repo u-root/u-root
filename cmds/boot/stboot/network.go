@@ -44,11 +44,11 @@ func getNetConf() (netConf, error) {
 	bytes, err := ioutil.ReadFile(p)
 	var net netConf
 	if err != nil {
-		return net, err
+		return net, fmt.Errorf("Failed to read file %s due to: %v", p, err)
 	}
 	err = json.Unmarshal(bytes, &net)
 	if err != nil {
-		return net, err
+		return net, fmt.Errorf("Failed to unmarshel file %s due to: %v", p, err)
 	}
 	return net, nil
 }
