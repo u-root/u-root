@@ -1,0 +1,13 @@
+# bootes' root
+mount -a #s/boot /
+
+# visible things go here
+bind /sys/doc /usr/web/plan9/doc
+bind /sys/src/cmd/unix /usr/web/plan9/unixsrc
+
+# anonymous ftp only allows writes to files below /incoming
+# bind a personal incoming directory below incoming
+bind -c /usr/none/incoming /usr/web/incoming/none
+
+# this cuts off everything not mounted below /usr/web
+bind /usr/web /

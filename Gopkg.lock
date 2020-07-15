@@ -76,6 +76,14 @@
   revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
 
 [[projects]]
+  digest = "1:f1ccee0f876cdf0558e5add38e827c100a5a90564cd7d4a369a76a4c1b192277"
+  name = "github.com/gojuno/minimock"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "37f8ffa861a483b9bb6c98d85642ccbc5166bd92"
+  version = "v3.0.8"
+
+[[projects]]
   digest = "1:112b07cad4bd500e6e445cc0b9294ca310faa41199c19475c557daa2c7519549"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
@@ -516,6 +524,7 @@
     "github.com/davecgh/go-spew/spew",
     "github.com/dustin/go-humanize",
     "github.com/gliderlabs/ssh",
+    "github.com/gojuno/minimock",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-tpm-tools/proto",
     "github.com/google/go-tpm-tools/tpm2tools",
@@ -541,6 +550,7 @@
     "github.com/rekby/gpt",
     "github.com/safchain/ethtool",
     "github.com/spf13/pflag",
+    "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/u-root/iscsinl",
     "github.com/vishvananda/netlink",
