@@ -44,13 +44,15 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
+	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
+	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
+	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
-	flag.StringArrayVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
+	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 	return o
 }
 
