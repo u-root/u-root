@@ -33,7 +33,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// builder is only ever required chdir
 	if err := mod.Modify(namespace.DefaultNamespace, &namespace.Builder{}); err != nil {
 		log.Fatal(err)
 	}
