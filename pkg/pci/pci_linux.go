@@ -45,7 +45,7 @@ func onePCI(dir string) (*PCI, error) {
 // If it can't glob in pciPath/g then it returns an error.
 // For convenience, we use * as the glob if none are supplied.
 // We don't provide an option to do type I or PCIe MMIO config stuff.
-func NewBusReader(globs ...string) (busReader, error) {
+func NewBusReader(globs ...string) (BusReader, error) {
 	if len(globs) == 0 {
 		globs = []string{"*"}
 	}

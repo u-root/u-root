@@ -7,7 +7,9 @@ package pci
 // Filter can be used to filter a device
 type Filter func(p *PCI) bool
 
-type busReader interface {
+// BusReader is the interface for reading device names for a given bus.
+type BusReader interface {
+	// Read returns Devices, possibly filter by a provided ...Filter
 	Read(...Filter) (Devices, error)
 }
 
