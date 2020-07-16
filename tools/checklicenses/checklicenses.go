@@ -22,7 +22,7 @@ import (
 var (
 	absPath    = flag.Bool("a", false, "Print absolute paths")
 	configFile = flag.String("c", "", "Configuration file in JSON format")
-	generated  = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
+	generated  = regexp.MustCompilePOSIX(`^// Code generated .* DO NOT EDIT\.$`)
 )
 
 type rule struct {
