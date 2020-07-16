@@ -32,20 +32,20 @@ environment variables, uses pkg/qemu to start a QEMU VM with the correct command
 line and configuration.
 
 Files that need to be shared with the VM are written to a temp dir which is
-exposed as a Plan 9 (9p) filesystem in the VM. This includes the kernel and 
+exposed as a Plan 9 (9p) filesystem in the VM. This includes the kernel and
 initramfs being used for the VM.
 
 The test architecture, kernel and QEMU binary are set using environment
 variables.
 
 The initramfs can come from the following sources:
-* User overridden: when the `UROOT_INITRAMFS` environment variable is used to 
-  override the initramfs. The user is responsible for ensuring the initramfs 
+* User overridden: when the `UROOT_INITRAMFS` environment variable is used to
+  override the initramfs. The user is responsible for ensuring the initramfs
   contains the correct binaries.
 * Custom u-root opts: define u-root opts in the test itself (eg. custom uinit).
   The testing setup will generate an initramfs with those options.
 * Default: provide the set of commands to be tested. The commands are written to
-  an elvish script in the shared dir. The testing setup will generate a generic 
+  an elvish script in the shared dir. The testing setup will generate a generic
   initramfs that mounts the shared 9p filesystem as '/testdata', and then finds
   and runs the elvish script.
 
@@ -84,6 +84,29 @@ export UROOT_KERNEL="$HOME/linux/arch/x86/boot/bzImage"
 Our automated CI uses Dockerfiles to build a kernel and QEMU and set these
 environment variables. You can see the Dockerfile and the config file used to
 build the kernel for each supported architecture [here](/.circleci/images).
+
+If you don't want to deal with version differences in QEMU and the kernel, you
+can use the docker image get both. Inside /.circleci/images/test-image-amd64 (or
+whatever arch you have), run
+
+```
+cd test-image-$GOARCH
+docker build . -t uroottest/test-image-$GOARCH:$VERSION
+docker run uroottest/test-image-$GOARCH:$VERSION
+docker container list -a
+```
+
+Then look for the container id for your newly built container, and
+
+```
+docker cp $CONTAINER_ID:bzImage <target>
+docker cp $CONTAINER_ID:qemu-system-x86_64 <target>
+docker cp $CONTAINER_ID:pc-bios <target>
+```
+
+The pc bios needs to be passed into qemu with the -L flag for this built version
+of qemu.
+
 
 2. **Run Tests**
 
