@@ -38,9 +38,10 @@ const (
 )
 
 var (
-	disk              = flag.String("disk", "/dev/sda", "The disk to be unlocked")
-	verbose           = flag.Bool("v", false, "print verbose output")
-	verboseNoSanitize = flag.Bool("dangerous-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
+	disk               = flag.String("disk", "/dev/sda", "The disk to be unlocked")
+	verbose            = flag.Bool("d", false, "print debug output")
+	verboseNoSanitize  = flag.Bool("dangerously-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
+	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
 )
 
 func verboseLog(msg string) {
@@ -89,16 +90,16 @@ func getAllHss() ([][]uint8, error) {
 	}
 
 	hssList := [][]uint8{}
-	skmPrefix := "/skm/hss/"
+	skmSubstr := "/skm/hss/"
 
-	// Read from all /skm/hss/* blobs.
+	// Read from all */skm/hss/* blobs.
 	for j := 0; j < blobCount; j++ {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to enumerate blob %d: %v", j, err)
 		}
 
-		if !strings.HasPrefix(id, skmPrefix) {
+		if !strings.Contains(id, skmSubstr) {
 			continue
 		}
 
@@ -106,9 +107,9 @@ func getAllHss() ([][]uint8, error) {
 		if err != nil {
 			log.Printf("failed to read HSS of id %s: %v", id, err)
 		} else {
-			msg := fmt.Sprintf("HSS Entry: Index=%s", strings.TrimPrefix(id, skmPrefix))
+			msg := fmt.Sprintf("HSS Entry: Name=%s", skmSubstr)
 			if *verboseNoSanitize {
-				msg = msg + fmt.Sprintf(", Seed=%s", hss)
+				msg = msg + fmt.Sprintf(",Seed=%x", hss)
 			}
 			verboseLog(msg)
 			hssList = append(hssList, hss)
@@ -180,6 +181,10 @@ func main() {
 		log.Printf("Successfully unlocked disk %s.", *disk)
 	} else {
 		log.Fatalf("Failed to unlock disk %s with any HSS.", *disk)
+	}
+
+	if *noRereadPartitions {
+		return
 	}
 
 	// Update partitions on the on the disk.
