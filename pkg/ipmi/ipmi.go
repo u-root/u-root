@@ -83,7 +83,7 @@ var (
 	_IPMICTL_RECEIVE_MSG  = ioctl.IOWR(_IPMI_IOC_MAGIC, 12, uintptr(unsafe.Sizeof(recv{})))
 	_IPMICTL_SEND_COMMAND = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(req{})))
 
-	timeout = 30 * time.Second
+	timeout = time.Second * 10
 )
 
 // IPMI represents access to the IPMI interface.
@@ -254,17 +254,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 	}
 
 	if err := ioctlSetReq(i.Fd(), _IPMICTL_SEND_COMMAND, req); err != nil {
-		return nil, err
-	}
-
-	set := &syscall.FdSet{}
-	fdSet(i.Fd(), set)
-	timeval := &syscall.Timeval{
-		Sec:  _IPMI_OPENIPMI_READ_TIMEOUT,
-		Usec: 0,
-	}
-	if _, err := syscall.Select(int(i.Fd()+1), set, nil, nil, timeval); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ioctlSetReq failed with %v", err)
 	}
 
 	buf := make([]byte, _IPMI_BUF_SIZE)
@@ -278,27 +268,44 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		msg:     recvMsg,
 	}
 
-	t := time.After(timeout)
-	for {
-		if err := ioctlGetRecv(i.Fd(), _IPMICTL_RECEIVE_MSG, recv); err != nil {
-			return nil, err
+	// This will be passed to the RawConn Read function. Until readMsg returns
+	// true, Read blocks and retries until the connection is ready for reading.
+	var result []byte
+	var rerr error
+	readMsg := func(fd uintptr) bool {
+		if err := ioctlGetRecv(fd, _IPMICTL_RECEIVE_MSG, recv); err != nil {
+			rerr = fmt.Errorf("ioctlGetRecv failed with %v", err)
+			return false
 		}
+
 		if recv.msgid != req.msgid {
 			log.Printf("Received wrong message. Trying again.")
+			return false
+		}
+
+		if recv.msg.DataLen >= _IPMI_BUF_SIZE {
+			rerr = fmt.Errorf("data length received too large: %d > %d", recv.msg.DataLen, _IPMI_BUF_SIZE)
+		} else if buf[0] != 0 {
+			rerr = fmt.Errorf("invalid response, expected first byte of response to be 0, got: %v", buf[0])
 		} else {
-			break
+			result = buf[:recv.msg.DataLen:recv.msg.DataLen]
+			rerr = nil
 		}
-		select {
-		case <-t:
-			return nil, fmt.Errorf("timeout waiting for response")
-		}
+		return true
 	}
 
-	if recv.msg.DataLen >= _IPMI_BUF_SIZE {
-		return nil, fmt.Errorf("data length received too large: %d > %d", recv.msg.DataLen, _IPMI_BUF_SIZE)
+	conn, err := i.File.SyscallConn()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file rawconn: %v", err)
+	}
+	if err := i.File.SetReadDeadline(time.Now().Add(timeout)); err != nil {
+		return nil, fmt.Errorf("failed to set read deadline: %v", err)
+	}
+	if err := conn.Read(readMsg); err != nil {
+		return nil, fmt.Errorf("failed to read rawconn: %v", err)
 	}
 
-	return buf[:recv.msg.DataLen:recv.msg.DataLen], nil
+	return result, rerr
 }
 
 func (i *IPMI) WatchdogRunning() (bool, error) {
