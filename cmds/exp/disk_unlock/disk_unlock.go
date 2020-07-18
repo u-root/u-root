@@ -107,7 +107,7 @@ func getAllHss() ([][]uint8, error) {
 		if err != nil {
 			log.Printf("failed to read HSS of id %s: %v", id, err)
 		} else {
-			msg := fmt.Sprintf("HSS Entry: Name=%s", skmSubstr)
+			msg := fmt.Sprintf("HSS Entry: Id=%s", id)
 			if *verboseNoSanitize {
 				msg = msg + fmt.Sprintf(",Seed=%x", hss)
 			}
