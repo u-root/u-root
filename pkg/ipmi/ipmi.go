@@ -80,8 +80,8 @@ const (
 )
 
 var (
-	_IPMICTL_RECEIVE_MSG  = ioctl.IOWR(_IPMI_IOC_MAGIC, 12, uintptr(unsafe.Sizeof(recv{})))
-	_IPMICTL_SEND_COMMAND = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(req{})))
+	_IPMICTL_RECEIVE_MSG_TRUNC = ioctl.IOWR(_IPMI_IOC_MAGIC, 11, uintptr(unsafe.Sizeof(recv{})))
+	_IPMICTL_SEND_COMMAND      = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(req{})))
 
 	timeout = time.Second * 10
 )
@@ -253,8 +253,15 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		msg:     msg,
 	}
 
-	if err := ioctlSetReq(i.Fd(), _IPMICTL_SEND_COMMAND, req); err != nil {
-		return nil, fmt.Errorf("ioctlSetReq failed with %v", err)
+	// Send request.
+	for {
+		switch err := ioctlSetReq(i.Fd(), _IPMICTL_SEND_COMMAND, req); {
+		case err == syscall.EINTR:
+			continue
+		case err != nil:
+			return nil, fmt.Errorf("ioctlSetReq failed with %v", err)
+		}
+		break
 	}
 
 	buf := make([]byte, _IPMI_BUF_SIZE)
@@ -273,7 +280,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 	var result []byte
 	var rerr error
 	readMsg := func(fd uintptr) bool {
-		if err := ioctlGetRecv(fd, _IPMICTL_RECEIVE_MSG, recv); err != nil {
+		if err := ioctlGetRecv(fd, _IPMICTL_RECEIVE_MSG_TRUNC, recv); err != nil {
 			rerr = fmt.Errorf("ioctlGetRecv failed with %v", err)
 			return false
 		}
@@ -294,6 +301,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		return true
 	}
 
+	// Read response.
 	conn, err := i.File.SyscallConn()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file rawconn: %v", err)
