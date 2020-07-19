@@ -50,6 +50,7 @@ var (
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
 	appendCmdline     = flag.String("append", "", "Additional kernel params")
+	blockList         = flag.String("block", "", "comma separated list of pci vendor and device ids to ignore (format vendor:device). E.g. 0x8086:0x1234,0x8086:0xabcd")
 )
 
 // updateBootCmdline get the kernel command line parameters and filter it:
@@ -63,6 +64,9 @@ func updateBootCmdline(cl string) string {
 func main() {
 	flag.Parse()
 
+	if *verbose {
+		block.Debug = log.Printf
+	}
 	blockDevs, err := block.GetBlockDevices()
 	if err != nil {
 		log.Fatal("No available block devices to boot from")
@@ -70,6 +74,15 @@ func main() {
 
 	// Try to only boot from "good" block devices.
 	blockDevs = blockDevs.FilterZeroSize()
+
+	// Parse and filter blocklist
+	if *blockList != "" {
+		blockDevs, err = blockDevs.FilterBlockPCIString(*blockList)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	log.Printf("Booting from the following block devices: %v", blockDevs)
 
 	var l ulog.Logger = ulog.Null
