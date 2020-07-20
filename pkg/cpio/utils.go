@@ -256,3 +256,15 @@ func Equal(r Record, s Record) bool {
 	}
 	return uio.ReaderAtEqual(r.ReaderAt, s.ReaderAt)
 }
+
+func ZipSlip(dest, archiveName string) error {
+	clean := filepath.Clean(archiveName)
+	relDest, err := filepath.Rel(dest, clean)
+	if err != nil {
+		return fmt.Errorf("ZipSlip test can not form a path from %q, %q", dest, clean)
+	}
+	if strings.HasPrefix(relDest, "..") {
+		return fmt.Errorf("Error: rel path %q has .. as the prefix and hence fails the ZipSlip test", relDest)
+	}
+	return nil
+}

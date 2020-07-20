@@ -108,7 +108,11 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		return err
 	}
 
-	f.Name = filepath.Clean(filepath.Join(rootDir, f.Name))
+	n := filepath.Clean(filepath.Join(rootDir, f.Name))
+	if err := ZipSlip(n, f.Name); err != nil {
+		return err
+	}
+	f.Name = n
 	dir := filepath.Dir(f.Name)
 	// The problem: many cpio archives do not specify the directories and
 	// hence the permissions. They just specify the whole path.  In order
