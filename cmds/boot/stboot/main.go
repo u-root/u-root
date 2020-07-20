@@ -322,7 +322,7 @@ func processBootball(path string) (boot.OSImage, error) {
 	if txtSupported {
 		if osiTXT == nil {
 			info("WARNING: TXT will not be used!")
-			img = osiFallback
+			//FIXME: img = osiFallback
 		}
 		img = osiTXT
 	} else {
