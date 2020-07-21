@@ -48,7 +48,7 @@ func (m *multiboot) loadModules() (modules, error) {
 	m.loadedModules = loaded
 
 	for i, mod := range loaded {
-		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name, mod.Start, mod.End)
+		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name(), mod.Start, mod.End)
 	}
 
 	return loaded, nil
@@ -97,8 +97,8 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 	}
 
 	for i, rmod := range rmods {
-		if err := loaded[i].loadModule(&buf, rmod.Module, rmod.Name); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
+		if err := loaded[i].loadModule(&buf, rmod.Module); err != nil {
+			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name(), err)
 		}
 	}
 	return loaded, buf.Bytes(), nil
@@ -117,7 +117,7 @@ func pageAlignBuf(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error {
+func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt) error {
 	// place start of each module to a beginning of a page.
 	if err := pageAlignBuf(buf); err != nil {
 		return err

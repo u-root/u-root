@@ -32,8 +32,16 @@ const bootloader = "u-root kexec"
 // Module describe a module by a ReaderAt and a `Cmdline`
 type Module struct {
 	Module  io.ReaderAt
-	Name    string
 	Cmdline string
+}
+
+// Name returns the first field of the cmdline, if there is one.
+func (m Module) Name() string {
+	f := strings.Fields(m.Cmdline)
+	if len(f) > 0 {
+		return f[0]
+	}
+	return ""
 }
 
 // Modules is a range of module with a Closer interface
@@ -192,7 +200,6 @@ func OpenModules(cmds []string) (Modules, error) {
 	for i, cmd := range cmds {
 		modules[i].Cmdline = cmd
 		name := strings.Fields(cmd)[0]
-		modules[i].Name = name
 		f, err := os.Open(name)
 		if err != nil {
 			// TODO close already open files
@@ -213,7 +220,6 @@ func LazyOpenModules(cmds []string) Modules {
 		name := strings.Fields(cmd)[0]
 		modules = append(modules, Module{
 			Cmdline: cmd,
-			Name:    name,
 			Module:  uio.NewLazyFile(name),
 		})
 	}

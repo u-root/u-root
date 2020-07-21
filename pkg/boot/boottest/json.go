@@ -123,7 +123,7 @@ func MultibootImageToJSON(mi *boot.MultibootImage) map[string]interface{} {
 	for _, mod := range mi.Modules {
 		mmod := module(mod.Module)
 		mmod["cmdline"] = mod.Cmdline
-		mmod["name"] = mod.Name
+		mmod["name"] = mod.Name()
 		modules = append(modules, mmod)
 	}
 	m["modules"] = modules

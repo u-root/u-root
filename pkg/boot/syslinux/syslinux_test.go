@@ -477,12 +477,10 @@ func TestParseGeneral(t *testing.T) {
 					Modules: []multiboot.Module{
 						{
 							Module:  strings.NewReader(kernel1),
-							Name:    "./pxefiles/kernel1",
 							Cmdline: "./pxefiles/kernel1 foobar hahaha",
 						},
 						{
 							Module:  strings.NewReader(initrd1),
-							Name:    "./pxefiles/initrd1",
 							Cmdline: "./pxefiles/initrd1",
 						},
 					},
