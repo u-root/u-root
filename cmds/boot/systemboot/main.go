@@ -15,7 +15,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
-	"github.com/u-root/u-root/pkg/ipmi/odm"
+	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
