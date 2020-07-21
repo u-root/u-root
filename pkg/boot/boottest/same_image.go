@@ -78,9 +78,6 @@ func SameBootImage(got, want boot.OSImage) error {
 		for i := range gotMB.Modules {
 			g := gotMB.Modules[i]
 			w := wantMB.Modules[i]
-			if g.Name != w.Name {
-				return fmt.Errorf("module %d got name %s, want %s", i, g.Name, w.Name)
-			}
 			if g.Cmdline != w.Cmdline {
 				return fmt.Errorf("module %d got name %s, want %s", i, g.Cmdline, w.Cmdline)
 			}
