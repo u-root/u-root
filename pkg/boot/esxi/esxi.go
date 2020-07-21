@@ -174,7 +174,7 @@ func lazyOpenModules(mods []module) multiboot.Modules {
 	for _, m := range mods {
 		name := strings.Fields(m.cmdline)[0]
 		modules = append(modules, multiboot.Module{
-			CmdLine: m.cmdline,
+			Cmdline: m.cmdline,
 			Name:    name,
 			Module:  uio.NewLazyFile(m.path),
 		})

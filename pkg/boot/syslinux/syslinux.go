@@ -408,7 +408,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 							return err
 						}
 						e.Modules = append(e.Modules, multiboot.Module{
-							CmdLine: strings.TrimSpace(cmdline),
+							Cmdline: strings.TrimSpace(cmdline),
 							Name:    name,
 							Module:  file,
 						})

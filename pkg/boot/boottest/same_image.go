@@ -81,8 +81,8 @@ func SameBootImage(got, want boot.OSImage) error {
 			if g.Name != w.Name {
 				return fmt.Errorf("module %d got name %s, want %s", i, g.Name, w.Name)
 			}
-			if g.CmdLine != w.CmdLine {
-				return fmt.Errorf("module %d got name %s, want %s", i, g.CmdLine, w.CmdLine)
+			if g.Cmdline != w.Cmdline {
+				return fmt.Errorf("module %d got name %s, want %s", i, g.Cmdline, w.Cmdline)
 			}
 			if !uio.ReaderAtEqual(g.Module, w.Module) {
 				return fmt.Errorf("got kernel %s, want %s", mustReadAll(g.Module), mustReadAll(w.Module))
