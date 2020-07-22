@@ -263,6 +263,9 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
 		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
 	}
+	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "bin/init"); err != nil {
+		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
+	}
 	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
 		return fmt.Errorf("%v: specify -defaultsh=\"\" to ignore this error and build without a shell", err)
 	}
