@@ -39,16 +39,19 @@ const (
 // DefaultRamfs are files that are contained in all u-root initramfs archives
 // by default.
 var DefaultRamfs = cpio.ArchiveFromRecords([]cpio.Record{
-	cpio.Directory("tcz", 0755),
-	cpio.Directory("etc", 0755),
+	cpio.Directory("bin", 0755),
 	cpio.Directory("dev", 0755),
+	cpio.Directory("env", 0755),
+	cpio.Directory("etc", 0755),
+	cpio.Directory("lib64", 0755),
+	cpio.Directory("proc", 0755),
+	cpio.Directory("sys", 0755),
+	cpio.Directory("tcz", 0755),
 	cpio.Directory("tmp", 0777),
 	cpio.Directory("ubin", 0755),
 	cpio.Directory("usr", 0755),
 	cpio.Directory("usr/lib", 0755),
 	cpio.Directory("var/log", 0777),
-	cpio.Directory("lib64", 0755),
-	cpio.Directory("bin", 0755),
 	cpio.CharDev("dev/console", 0600, 5, 1),
 	cpio.CharDev("dev/tty", 0666, 5, 0),
 	cpio.CharDev("dev/null", 0666, 1, 3),
