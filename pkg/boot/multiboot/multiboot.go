@@ -29,11 +29,19 @@ import (
 
 const bootloader = "u-root kexec"
 
-// Module describe a module by a ReaderAt and a `CmdLine`
+// Module describe a module by a ReaderAt and a `Cmdline`
 type Module struct {
 	Module  io.ReaderAt
-	Name    string
-	CmdLine string
+	Cmdline string
+}
+
+// Name returns the first field of the cmdline, if there is one.
+func (m Module) Name() string {
+	f := strings.Fields(m.Cmdline)
+	if len(f) > 0 {
+		return f[0]
+	}
+	return ""
 }
 
 // Modules is a range of module with a Closer interface
@@ -190,9 +198,8 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 func OpenModules(cmds []string) (Modules, error) {
 	modules := make([]Module, len(cmds))
 	for i, cmd := range cmds {
-		modules[i].CmdLine = cmd
+		modules[i].Cmdline = cmd
 		name := strings.Fields(cmd)[0]
-		modules[i].Name = name
 		f, err := os.Open(name)
 		if err != nil {
 			// TODO close already open files
@@ -212,8 +219,7 @@ func LazyOpenModules(cmds []string) Modules {
 	for _, cmd := range cmds {
 		name := strings.Fields(cmd)[0]
 		modules = append(modules, Module{
-			CmdLine: cmd,
-			Name:    name,
+			Cmdline: cmd,
 			Module:  uio.NewLazyFile(name),
 		})
 	}
@@ -488,7 +494,7 @@ func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 
 	return &infoWrapper{
 		info:           inf,
-		CmdLine:        m.cmdLine,
+		Cmdline:        m.cmdLine,
 		BootLoaderName: m.bootloader,
 	}, nil
 }

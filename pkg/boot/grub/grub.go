@@ -337,8 +337,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				// TODO: Lasy tryGzipFilter(m)
 				mod := multiboot.Module{
 					Module:  m,
-					Name:    arg,
-					CmdLine: cmdlineQuote(cmdline),
+					Cmdline: cmdlineQuote(cmdline),
 				}
 				e.Modules = append(e.Modules, mod)
 			}

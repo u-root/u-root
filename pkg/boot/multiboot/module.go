@@ -24,8 +24,8 @@ type module struct {
 	// End is the exclusive end of the Module memory location.
 	End uint32
 
-	// CmdLine is a pointer to a null-terminated ASCII string.
-	CmdLine uint32
+	// Cmdline is a pointer to a null-terminated ASCII string.
+	Cmdline uint32
 
 	// Reserved is always zero.
 	Reserved uint32
@@ -48,7 +48,7 @@ func (m *multiboot) loadModules() (modules, error) {
 	m.loadedModules = loaded
 
 	for i, mod := range loaded {
-		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name, mod.Start, mod.End)
+		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name(), mod.Start, mod.End)
 	}
 
 	return loaded, nil
@@ -91,14 +91,14 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 	var buf bytes.Buffer
 
 	for i, rmod := range rmods {
-		if err := loaded[i].setCmdLine(&buf, rmod.CmdLine); err != nil {
+		if err := loaded[i].setCmdline(&buf, rmod.Cmdline); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	for i, rmod := range rmods {
-		if err := loaded[i].loadModule(&buf, rmod.Module, rmod.Name); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name, err)
+		if err := loaded[i].loadModule(&buf, rmod.Module); err != nil {
+			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name(), err)
 		}
 	}
 	return loaded, buf.Bytes(), nil
@@ -117,7 +117,7 @@ func pageAlignBuf(buf *bytes.Buffer) error {
 	return err
 }
 
-func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error {
+func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt) error {
 	// place start of each module to a beginning of a page.
 	if err := pageAlignBuf(buf); err != nil {
 		return err
@@ -133,8 +133,8 @@ func (m *module) loadModule(buf *bytes.Buffer, r io.ReaderAt, name string) error
 	return nil
 }
 
-func (m *module) setCmdLine(buf *bytes.Buffer, cmdLine string) error {
-	m.CmdLine = uint32(buf.Len())
+func (m *module) setCmdline(buf *bytes.Buffer, cmdLine string) error {
+	m.Cmdline = uint32(buf.Len())
 	if _, err := buf.WriteString(cmdLine); err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (m modules) fix(base uint32) {
 	for i := range m {
 		m[i].Start += base
 		m[i].End += base
-		m[i].CmdLine += base
+		m[i].Cmdline += base
 	}
 }
 
@@ -164,7 +164,7 @@ func (m modules) elems() []elem {
 	var e []elem
 	for _, mm := range m {
 		e = append(e, &mutibootModule{
-			cmdline:    uint64(mm.CmdLine),
+			cmdline:    uint64(mm.Cmdline),
 			moduleSize: uint64(mm.End - mm.Start),
 			ranges: []mutibootModuleRange{
 				{

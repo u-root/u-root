@@ -43,7 +43,7 @@ func (mi *MultibootImage) Load(verbose bool) error {
 func (mi *MultibootImage) String() string {
 	modules := make([]string, len(mi.Modules))
 	for i, mod := range mi.Modules {
-		modules[i] = mod.CmdLine
+		modules[i] = mod.Cmdline
 	}
 	return fmt.Sprintf("MultibootImage(\n  Name: %s\n  Kernel: %s\n  Cmdline: %s\n  iBFT: %s\n  Modules: %s\n)",
 		mi.Name, mi.Kernel, mi.Cmdline, mi.IBFT, strings.Join(modules, ", "))

@@ -402,14 +402,12 @@ func (c *parser) append(ctx context.Context, config string) error {
 						if len(m) == 0 {
 							continue
 						}
-						name := m[0]
-						file, err := c.getFile(name)
+						file, err := c.getFile(m[0])
 						if err != nil {
 							return err
 						}
 						e.Modules = append(e.Modules, multiboot.Module{
-							CmdLine: strings.TrimSpace(cmdline),
-							Name:    name,
+							Cmdline: strings.TrimSpace(cmdline),
 							Module:  file,
 						})
 					}

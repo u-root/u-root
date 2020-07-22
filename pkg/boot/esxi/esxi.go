@@ -172,10 +172,8 @@ func mountPartition(dev string) (*options, *mount.MountPoint, error) {
 func lazyOpenModules(mods []module) multiboot.Modules {
 	modules := make([]multiboot.Module, 0, len(mods))
 	for _, m := range mods {
-		name := strings.Fields(m.cmdline)[0]
 		modules = append(modules, multiboot.Module{
-			CmdLine: m.cmdline,
-			Name:    name,
+			Cmdline: m.cmdline,
 			Module:  uio.NewLazyFile(m.path),
 		})
 	}
