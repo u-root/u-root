@@ -72,9 +72,6 @@ jobs:
             go get -u golang.org/x/lint/golint
             go get github.com/alecthomas/gometalinter
       - run:
-          name: Install ineffassign
-          command: go get github.com/gordonklaus/ineffassign
-      - run:
           name: Check vendored dependencies
           command: |
             ./dep version
@@ -109,9 +106,6 @@ jobs:
                 --exclude="(function|type|const|method|var|type field|struct field) (\w|_|\.)+ should be (\w|_|\.)+" \
                 --exclude="stutter" \
                 --exclude="which can be annoying to use"
-      - run:
-          name: ineffassign
-          command: ineffassign .
   test:
     <<: *golang-template
     steps:
