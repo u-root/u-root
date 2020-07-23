@@ -1,4 +1,4 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -20,8 +20,7 @@ import (
 	"github.com/u-root/u-root/pkg/termios"
 )
 
-// pty support. We used to import github.com/kr/pty but what we need is not that complex.
-// Thanks to keith rarick for these functions.
+// New returns a new Pty.
 func New() (*Pty, error) {
 	tty, err := termios.New()
 	if err != nil {
@@ -80,4 +79,12 @@ func ptsunlock(f *os.File) error {
 		return err
 	}
 	return nil
+}
+
+func sysLinux(p *Pty) {
+	p.C.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
+}
+
+func init() {
+	sys = sysLinux
 }

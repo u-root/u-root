@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,20 +6,20 @@
 package main
 
 const (
-	Data = 0x60 /* data port */
+	i8042Data = 0x60 /* data port */
 
-	Status   = 0x64 /* status port */
-	Inready  = 0x01 /*  input character ready */
-	Outbusy  = 0x02 /*  output busy */
-	Sysflag  = 0x04 /*  system flag */
-	Cmddata  = 0x08 /*  cmd==0 data==1 */
-	Inhibit  = 0x10 /*  keyboard/mouse inhibited */
-	Minready = 0x20 /*  mouse character ready */
-	Rtimeout = 0x40 /*  general timeout */
-	Parity   = 0x80
+	i8042Status   = 0x64 /* status port */
+	i8042Inready  = 0x01 /*  input character ready */
+	i8042Outbusy  = 0x02 /*  output busy */
+	i8042Sysflag  = 0x04 /*  system flag */
+	i8042Cmddata  = 0x08 /*  cmd==0 data==1 */
+	i8042Inhibit  = 0x10 /*  keyboard/mouse inhibited */
+	i8042Minready = 0x20 /*  mouse character ready */
+	i8042Rtimeout = 0x40 /*  general timeout */
+	i8042Parity   = 0x80
 
-	Cmd   = 0x64 /* command port (write only) */
-	Nscan = 128
+	i8042Cmd   = 0x64 /* command port (write only) */
+	i8042Nscan = 128
 )
 
 type i8042 struct {
@@ -31,7 +31,7 @@ func openi8042() (*i8042, error) {
 		return nil, err
 	}
 
-	return &i8042{data: Data, status: Status}, nil
+	return &i8042{data: i8042Data, status: i8042Status}, nil
 }
 
 func (u *i8042) OK(bit uint8) (bool, error) {
@@ -65,7 +65,7 @@ func (u *i8042) io(b []byte, bit uint8, f func([]byte) error) (int, error) {
 }
 
 func (u *i8042) Read(b []byte) (int, error) {
-	return u.io(b, Inready, func(b []byte) error {
+	return u.io(b, i8042Inready, func(b []byte) error {
 		_, err := portFile.ReadAt(b[:1], u.data)
 		return err
 	})
