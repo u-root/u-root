@@ -1,4 +1,4 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -47,26 +47,10 @@ func main() {
 		libinit.CreateRootfs()
 	}
 
-	in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)
+	in, out, err := console(*serial)
 
-	// This switch is kind of hokey, true, but it's also quite convenient for users.
-	switch {
-	// A raw IO port for serial console
-	case []byte(*serial)[0] == '0':
-		u, err := openUART(*serial)
-		if err != nil {
-			log.Fatalf("Console exits: sorry, can't get a uart: %v", err)
-		}
-		in, out = u, u
-	case *serial == "i8042":
-		u, err := openi8042()
-		if err != nil {
-			log.Fatalf("Console exits: sorry, can't get an i8042: %v", err)
-		}
-		in, out = u, os.Stdout
-	case *serial == "stdio":
-	default:
-		log.Fatalf("Console exits: console must be one of stdio, i8042, or an IO port with a leading 0 (e.g. 0x3f8)")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	err = p.Start()
