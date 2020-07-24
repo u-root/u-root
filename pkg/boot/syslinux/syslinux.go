@@ -363,17 +363,21 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 		case "initrd":
 			if e, ok := c.linuxEntries[c.curEntry]; ok {
-				// TODO: support multiple comma-separated initrds.
 				// TODO: append "initrd=$arg" to the cmdline.
 				//
 				// For how this interacts with global appends,
 				// read
 				// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
-				i, err := c.getFile(arg)
-				if err != nil {
-					return err
+				// Multiple initrds are comma-separated
+				var initrds []io.ReaderAt
+				for _, f := range strings.Split(arg, ",") {
+					i, err := c.getFile(f)
+					if err != nil {
+						return err
+					}
+					initrds = append(initrds, i)
 				}
-				e.Initrd = i
+				e.Initrd = boot.CatInitrds(initrds...)
 			}
 
 		case "append":
