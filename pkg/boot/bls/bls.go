@@ -16,6 +16,7 @@ package bls
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -151,6 +152,8 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 	linux := &boot.LinuxImage{}
 
 	var cmdlines []string
+	// multiple initrds need to be concatenated
+	var initrds []io.ReaderAt
 	for key, val := range vals {
 		switch key {
 		case "linux":
@@ -160,13 +163,12 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 			}
 			linux.Kernel = f
 
-		// TODO: initrd may be specified more than once.
 		case "initrd":
 			f, err := os.Open(filePath(fsRoot, val))
 			if err != nil {
 				return nil, err
 			}
-			linux.Initrd = f
+			initrds = append(initrds, f)
 
 		case "devicetree":
 			// Explicitly return an error rather than ignore this,
@@ -195,6 +197,9 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 	// If both title and version were empty, so will this.
 	linux.Name = strings.Join(name, " ")
 	linux.Cmdline = strings.Join(cmdlines, " ")
+	if len(initrds) > 0 {
+		linux.Initrd = boot.CatInitrds(initrds...)
+	}
 	return linux, nil
 }
 

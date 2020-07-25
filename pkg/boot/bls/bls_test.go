@@ -25,6 +25,13 @@ var blsEntries = []struct {
 		entry: "entry-2.conf",
 		err:   "neither linux, efi, nor multiboot present in BootLoaderSpec config",
 	},
+	{
+		entry: "entry-3.conf",
+	},
+	{
+		entry: "entry-4.conf",
+		err:   "no-such-initrd-file: no such file or directory",
+	},
 }
 
 func TestParseBLSEntries(t *testing.T) {
