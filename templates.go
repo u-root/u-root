@@ -162,6 +162,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
 
+		"github.com/u-root/u-root/cmds/exp/console",
 		"github.com/u-root/u-root/cmds/exp/rush",
 	},
 }
