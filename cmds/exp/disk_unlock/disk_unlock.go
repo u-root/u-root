@@ -135,6 +135,8 @@ func genPassword(hss []byte, info *scuzz.Info) ([]byte, error) {
 }
 
 func main() {
+	flag.Parse()
+
 	// Obtain 32 byte Host Secret Seed (HSS) from IPMI.
 	hssList, err := getAllHss()
 	if err != nil {
