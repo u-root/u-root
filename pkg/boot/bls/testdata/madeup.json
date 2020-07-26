@@ -3,7 +3,7 @@
     "cmdline": "earlyprintk=ttyS0",
     "image_type": "linux",
     "initrd": {
-      "name": "testdata/madeup/loader/fakefile"
+      "stringer": "testdata/madeup/loader/fakefile"
     },
     "kernel": {
       "name": "testdata/madeup/loader/fakefile"
