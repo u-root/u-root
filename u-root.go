@@ -44,6 +44,14 @@ var (
 )
 
 func init() {
+	var sh string
+	switch golang.Default().GOOS {
+	case "plan9":
+		sh = ""
+	default:
+		sh = "elvish"
+	}
+
 	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
 	build = flag.String("build", "bb", "u-root build format (e.g. bb or source).")
 	format = flag.String("format", "cpio", "Archival format.")
@@ -56,7 +64,7 @@ func init() {
 
 	initCmd = flag.String("initcmd", "init", "Symlink target for /init. Can be an absolute path or a u-root command name. Use initcmd=\"\" if you don't want the symlink.")
 	uinitCmd = flag.String("uinitcmd", "", "Symlink target and arguments for /bin/uinit. Can be an absolute path or a u-root command name. Use uinitcmd=\"\" if you don't want the symlink. E.g. -uinitcmd=\"echo foobar\"")
-	defaultShell = flag.String("defaultsh", "elvish", "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
+	defaultShell = flag.String("defaultsh", sh, "Default shell. Can be an absolute path or a u-root command name. Use defaultsh=\"\" if you don't want the symlink.")
 
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
