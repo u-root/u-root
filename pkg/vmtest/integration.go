@@ -313,7 +313,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 
 	// Fill in the default build options if not specified.
 	if o.BaseArchive == nil {
-		o.BaseArchive = uroot.DefaultRamfs.Reader()
+		o.BaseArchive = uroot.DefaultRamfs().Reader()
 	}
 	if len(o.InitCmd) == 0 {
 		o.InitCmd = "init"
