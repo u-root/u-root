@@ -137,7 +137,7 @@ func Main() error {
 		defer bf.Close()
 		baseFile = archiver.Reader(bf)
 	} else {
-		baseFile = uroot.DefaultRamfs.Reader()
+		baseFile = uroot.DefaultRamfs().Reader()
 	}
 
 	tempDir := *tmpDir
