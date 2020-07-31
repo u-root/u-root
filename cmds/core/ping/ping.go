@@ -155,7 +155,7 @@ func main() {
 
 	// ping needs to run forever, except if '*iter' is not zero
 	var i uint64
-	for i = 1; *iter == 0 || i < *iter; i++ {
+	for i = 1; *iter == 0 || i <= *iter; i++ {
 		msg, err := ping1(netname, host, i)
 		if err != nil {
 			log.Fatalf("ping failed: %v", err)
