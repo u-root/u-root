@@ -24,6 +24,7 @@ const (
 	_FB_OEM_SET_DIMM_INFO       ipmi.Command = 0x12
 	_FB_OEM_SET_BIOS_BOOT_ORDER ipmi.Command = 0x52
 	_FB_OEM_GET_BIOS_BOOT_ORDER ipmi.Command = 0x53
+	_FB_OEM_SET_POST_END        ipmi.Command = 0x74
 )
 
 type ProcessorInfo struct {
@@ -282,6 +283,14 @@ func GetOemIpmiDimmInfo(si *smbios.Info) ([]DimmInfo, error) {
 	}
 
 	return info, nil
+}
+
+func SetOemIpmiPostEnd(i *ipmi.IPMI) error {
+	_, err := i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION1, _FB_OEM_SET_POST_END, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Get BIOS boot order data and check if CMOS clear bit and valid bit are both set
