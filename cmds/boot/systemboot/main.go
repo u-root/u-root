@@ -140,6 +140,13 @@ func runIPMICommands() {
 			} else {
 				log.Printf("Failed to get the information of Processors: %v.", err)
 			}
+
+			if err = ocp.SetOemIpmiPostEnd(i); err == nil {
+				log.Printf("Send IPMI POST end to BMC")
+			} else {
+				log.Printf("Failed to send IPMI POST end to BMC: %v.", err)
+			}
+
 		} else {
 			log.Printf("No product name is matched for OEM commands.")
 		}
