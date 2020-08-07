@@ -1,0 +1,6 @@
+path=example.com/m
+version=v1.0.0
+wantErr=unexpected file name example.com/m@v1.0.0
+-- example.com/m@v1.0.0 --
+-- example.com/m@v1.0.0/go.mod --
+module example.com/m

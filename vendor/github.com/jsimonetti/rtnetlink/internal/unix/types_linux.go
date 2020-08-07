@@ -70,6 +70,7 @@ const (
 	RTA_OIF              = linux.RTA_OIF
 	RTA_PRIORITY         = linux.RTA_PRIORITY
 	RTA_TABLE            = linux.RTA_TABLE
+	RTA_MARK             = linux.RTA_MARK
 	RTA_EXPIRES          = linux.RTA_EXPIRES
 	NTF_PROXY            = linux.NTF_PROXY
 	RTN_UNICAST          = linux.RTN_UNICAST

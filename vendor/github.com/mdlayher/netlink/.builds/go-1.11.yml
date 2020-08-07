@@ -1,0 +1,22 @@
+image: archlinux
+packages:
+  - wget
+sources:
+  - https://github.com/mdlayher/netlink
+environment:
+  GO111MODULE: "on"
+tasks:
+  - install: |
+      wget -q https://dl.google.com/go/go1.11.13.linux-amd64.tar.gz
+      sudo tar -C /usr/local -xzf go1.11.13.linux-amd64.tar.gz
+      sudo ln -s /usr/local/go/bin/go /usr/bin/go
+  - build: |
+      go version
+      cd netlink/
+      go get golang.org/x/lint/golint
+      go get honnef.co/go/tools/cmd/staticcheck
+      /home/build/go/bin/staticcheck ./...
+      /home/build/go/bin/golint -set_exit_status ./...
+      go test -v -race ./...
+      go test -c -race .
+      sudo ./netlink.test -test.v -test.run TestIntegration*

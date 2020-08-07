@@ -1,0 +1,59 @@
+on: [push, pull_request]
+name: Go
+jobs:
+  macos_test:
+    name: Test MacOS
+    strategy:
+      matrix:
+        go-version: [1.13.x, 1.14.x]
+        platform: [macos-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+      id: go
+
+    - name: Checkout code
+      uses: actions/checkout@v1
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Go Vet
+      run: go vet ./...
+
+    - name: Fuzz build
+      run: go build -tags=gofuzz ./...
+
+    - name: Test
+      run: go test ./...
+  linux_test:
+    name: Test Linux Integration
+    strategy:
+      matrix:
+        go-version: [1.13.x, 1.14.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+      id: go
+
+    - name: Checkout code
+      uses: actions/checkout@v1
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Go Vet
+      run: go vet ./...
+
+    - name: Fuzz build
+      run: go build -tags=gofuzz ./...
+
+    - name: Test Integration
+      run: sudo -E env PATH=$PATH go test -v -tags=integration ./...

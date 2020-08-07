@@ -1,0 +1,11 @@
+# Being an admin also gives you global code ownership.
+*                   @google/go-tpm-admin
+
+# Don't add all the admins by default for most things.
+# Note that any admins can still approve any PR.
+*                   @josephlr @twitchy-jsonp
+
+# The TPM 1.2 maintainers own the TPM 1.2 files. If this is updated, the access
+# permissions to the repository should also be updated.
+/tpm/               @zaolin @flanfly @ChriMarMe @google/go-tpm-admin
+/examples/tpm-*/    @zaolin @flanfly @ChriMarMe @google/go-tpm-admin

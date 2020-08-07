@@ -1,0 +1,22 @@
+image: archlinux
+packages:
+  - go
+sources:
+  - https://github.com/mdlayher/netlink
+environment:
+  GO111MODULE: "on"
+  GOTRACEBACK: "all"
+tasks:
+  - build: |
+      go version
+      go get golang.org/x/lint/golint
+      go get honnef.co/go/tools/cmd/staticcheck
+      cd netlink/
+      /home/build/go/bin/staticcheck ./...
+      /home/build/go/bin/golint -set_exit_status ./...
+      # Create a network namespace for use in unprivileged tests.
+      sudo ip netns add unpriv0
+      go test -v -race ./...
+      go test -c -race .
+      # Run privileged integration tests.
+      sudo ./netlink.test -test.v -test.run TestIntegration*

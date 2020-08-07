@@ -1,0 +1,17 @@
+-- functionextraction_extract_args_returns_5_2 --
+package extract
+
+func _() {
+	a := 1
+	a = fn0(a) //@mark(exEn0, "2")
+	//@extractfunc(exSt0, exEn0)
+	b := a * 2
+	_ = 3 + 4
+}
+
+func fn0(a int) int {
+	a = 5
+	a = a + 2
+	return a
+}
+

@@ -66,6 +66,7 @@ const (
 	RTA_OIF              = 0x4
 	RTA_PRIORITY         = 0x6
 	RTA_TABLE            = 0xf
+	RTA_MARK             = 0x10
 	RTA_EXPIRES          = 0x17
 	NTF_PROXY            = 0x8
 	RTN_UNICAST          = 0x1

@@ -1,0 +1,681 @@
+-- foldingRange-0 --
+package folding //@fold("package")
+
+import (<>)
+
+import _ "os"
+
+// bar is a function.<>
+func bar(<>) string {<>}
+
+-- foldingRange-1 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {<>}
+	_ = []int{<>}
+	_ = [2]string{<>}
+	_ = map[string]int{<>}
+	type T struct {<>}
+	_ = T{<>}
+	x, y := make(<>), make(<>)
+	select {<>}
+	// This is a multiline comment<>
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-2 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:<>
+	case false:<>
+	default:<>
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:<>
+	case <-y:<>
+	default:<>
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-3 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:
+		if true {<>} else {<>}
+	case false:
+		fmt.Println(<>)
+	default:
+		fmt.Println(<>)
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {<>} else {<>}
+	case <-y:
+		fmt.Println(<>)
+	default:
+		fmt.Println(<>)
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-4 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:
+		if true {
+			fmt.Println(<>)
+		} else {
+			fmt.Println(<>)
+		}
+	case false:
+		fmt.Println("false")
+	default:
+		fmt.Println("default")
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {
+			fmt.Println(<>)
+		} else {
+			fmt.Println(<>)
+		}
+	case <-y:
+		fmt.Println("y")
+	default:
+		fmt.Println("default")
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-cmd --
+3:9-6:0
+10:22-11:32
+12:10-12:9
+12:20-66:0
+13:10-24:1
+14:12-19:3
+15:12-17:2
+16:16-16:21
+17:11-19:2
+18:16-18:22
+20:13-21:22
+21:15-21:21
+22:10-23:24
+23:15-23:23
+25:12-29:1
+30:16-32:1
+33:21-37:1
+38:17-42:1
+43:8-47:1
+48:15-48:23
+48:32-48:40
+49:10-60:1
+50:18-55:3
+51:11-53:2
+52:16-52:28
+53:11-55:2
+54:16-54:29
+56:11-57:18
+57:15-57:17
+58:10-59:24
+59:15-59:23
+61:32-62:30
+
+-- foldingRange-comment-0 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.<>
+func bar() string {
+	switch {
+	case true:
+		if true {
+			fmt.Println("true")
+		} else {
+			fmt.Println("false")
+		}
+	case false:
+		fmt.Println("false")
+	default:
+		fmt.Println("default")
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {
+			fmt.Println("true from x")
+		} else {
+			fmt.Println("false from x")
+		}
+	case <-y:
+		fmt.Println("y")
+	default:
+		fmt.Println("default")
+	}
+	// This is a multiline comment<>
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-imports-0 --
+package folding //@fold("package")
+
+import (<>)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:
+		if true {
+			fmt.Println("true")
+		} else {
+			fmt.Println("false")
+		}
+	case false:
+		fmt.Println("false")
+	default:
+		fmt.Println("default")
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {
+			fmt.Println("true from x")
+		} else {
+			fmt.Println("false from x")
+		}
+	case <-y:
+		fmt.Println("y")
+	default:
+		fmt.Println("default")
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-lineFolding-0 --
+package folding //@fold("package")
+
+import (<>
+)
+
+import _ "os"
+
+// bar is a function.<>
+func bar() string {<>
+}
+
+-- foldingRange-lineFolding-1 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {<>
+	}
+	_ = []int{<>,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{<>,
+	}
+	type T struct {<>
+	}
+	_ = T{<>,
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {<>
+	}
+	// This is a multiline comment<>
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-lineFolding-2 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:<>
+	case false:<>
+	default:<>
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:<>
+	case <-y:<>
+	default:<>
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-lineFolding-3 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:
+		if true {<>
+		} else {<>
+		}
+	case false:
+		fmt.Println("false")
+	default:
+		fmt.Println("default")
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {<>
+		} else {<>
+		}
+	case <-y:
+		fmt.Println("y")
+	default:
+		fmt.Println("default")
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-lineFolding-comment-0 --
+package folding //@fold("package")
+
+import (
+	"fmt"
+	_ "log"
+)
+
+import _ "os"
+
+// bar is a function.<>
+func bar() string {
+	switch {
+	case true:
+		if true {
+			fmt.Println("true")
+		} else {
+			fmt.Println("false")
+		}
+	case false:
+		fmt.Println("false")
+	default:
+		fmt.Println("default")
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {
+			fmt.Println("true from x")
+		} else {
+			fmt.Println("false from x")
+		}
+	case <-y:
+		fmt.Println("y")
+	default:
+		fmt.Println("default")
+	}
+	// This is a multiline comment<>
+	return `
+this string
+is not indented`
+}
+
+-- foldingRange-lineFolding-imports-0 --
+package folding //@fold("package")
+
+import (<>
+)
+
+import _ "os"
+
+// bar is a function.
+// With a multiline doc comment.
+func bar() string {
+	switch {
+	case true:
+		if true {
+			fmt.Println("true")
+		} else {
+			fmt.Println("false")
+		}
+	case false:
+		fmt.Println("false")
+	default:
+		fmt.Println("default")
+	}
+	_ = []int{
+		1,
+		2,
+		3,
+	}
+	_ = [2]string{"d",
+		"e"
+	}
+	_ = map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	type T struct {
+		f string
+		g int
+		h string
+	}
+	_ = T{
+		f: "j",
+		g: 4,
+		h: "i",
+	}
+	x, y := make(chan bool), make(chan bool)
+	select {
+	case val := <-x:
+		if val {
+			fmt.Println("true from x")
+		} else {
+			fmt.Println("false from x")
+		}
+	case <-y:
+		fmt.Println("y")
+	default:
+		fmt.Println("default")
+	}
+	// This is a multiline comment
+	// that is not a doc comment.
+	return `
+this string
+is not indented`
+}
+

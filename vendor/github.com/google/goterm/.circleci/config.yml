@@ -1,0 +1,37 @@
+#
+# YAML anchor to keep configuration DRY.
+#
+common: &common
+  # This conforms to Go workspace requirements (we are pre-modules).
+  working_directory: /go/src/github.com/google/goterm
+  steps:
+    - checkout
+    - run:
+        name: Go version
+        command: go version
+    - run:
+        name: Run unit tests
+        command: go test -v ./...
+
+#
+# CircleCI.
+#
+version: 2
+
+jobs:
+  go-1.11:
+    docker:
+      - image: circleci/golang:1.11
+    <<: *common
+  go-1.12:
+    docker:
+      - image: circleci/golang:1.12
+    <<: *common
+
+workflows:
+  version: 2
+  test:
+    # These will run in parallel.
+    jobs:
+      - go-1.11
+      - go-1.12

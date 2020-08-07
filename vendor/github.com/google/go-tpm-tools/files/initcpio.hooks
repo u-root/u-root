@@ -1,0 +1,7 @@
+#!/usr/bin/ash
+
+run_hook() {
+    /etc/gotpm/boot-unseal.sh
+}
+
+# vim: set ft=sh ts=4 sw=4 et:

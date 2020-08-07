@@ -1,0 +1,24 @@
+container:
+  dockerfile: Dockerfile
+
+env:
+  GOPROXY: https://proxy.golang.org
+  GO111MODULE: on
+
+test_task:
+  modules_cache:
+    fingerprint_script: cat go.sum
+    folder: $GOPATH/pkg/mod
+  build_script: go build -v ./...
+  windows_build_script: GOOS=windows go build -v ./...
+  test_script: go test -v ./...
+  lint_script:
+    golangci-lint run
+      -D errcheck
+      -E stylecheck
+      -E goimports
+      -E misspell
+      -E golint
+      --exclude-use-default=false
+      --max-same-issues=0
+      --max-issues-per-linter=0

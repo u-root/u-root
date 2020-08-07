@@ -1,0 +1,16 @@
+-- functionextraction_extract_smart_initialization_5_2 --
+package extract
+
+func _() {
+	var a []int
+	a, b := fn0(a)           //@mark(exEn6, "4")
+	//@extractfunc(exSt6, exEn6)
+	a = append(a, b)
+}
+
+func fn0(a []int) ([]int, int) {
+	a = append(a, 2)
+	b := 4
+	return a, b
+}
+

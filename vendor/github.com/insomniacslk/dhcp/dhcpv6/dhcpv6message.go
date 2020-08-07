@@ -67,6 +67,25 @@ func (mo MessageOptions) OneIANA() *OptIANA {
 	return ianas[0]
 }
 
+// IATA returns all Identity Association for Temporary Address options.
+func (mo MessageOptions) IATA() []*OptIATA {
+	opts := mo.Get(OptionIANA)
+	var iatas []*OptIATA
+	for _, o := range opts {
+		iatas = append(iatas, o.(*OptIATA))
+	}
+	return iatas
+}
+
+// OneIATA returns the first IATA option.
+func (mo MessageOptions) OneIATA() *OptIATA {
+	iatas := mo.IATA()
+	if len(iatas) == 0 {
+		return nil
+	}
+	return iatas[0]
+}
+
 // IAPD returns all Identity Association for Prefix Delegation options.
 func (mo MessageOptions) IAPD() []*OptIAPD {
 	opts := mo.Get(OptionIAPD)

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+build() {
+    # Allows us to mount the ESP
+    add_module vfat
+    # Allows us to use the TPM (through either hardware interface).
+    add_module tpm_crb
+    add_module tpm_tis
+
+    add_binary gotpm
+    add_file /etc/gotpm/boot-unseal.sh
+
+    add_runscript
+}
+
+help() {
+    cat <<HELPEOF
+This hook enables unlocking TPM-bound encrypted disks with gotpm. This hook
+should be placed before the "encrypt" hook.
+HELPEOF
+}
+
+# vim: set ft=sh ts=4 sw=4 et:

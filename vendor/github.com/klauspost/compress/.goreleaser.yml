@@ -1,0 +1,98 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+builds:
+  -
+    id: "s2c"
+    binary: s2c
+    main: ./s2/cmd/s2c/main.go
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - freebsd
+      - netbsd
+      - windows
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+      - ppc64
+      - ppc64le
+      - mips64
+      - mips64le
+    goarm:
+      - 7
+  -
+    id: "s2d"
+    binary: s2d
+    main: ./s2/cmd/s2d/main.go
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - freebsd
+      - netbsd
+      - windows
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+      - ppc64
+      - ppc64le
+      - mips64
+      - mips64le
+    goarm:
+      - 7
+
+archives:
+  -
+    id: s2-binaries
+    name_template: "s2-cmds_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+      freebsd: FreeBSD
+      netbsd: NetBSD
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - s2/LICENSE
+      - s2/README.md
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "s2-cmds_{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^doc:'
+    - '^docs:'
+    - '^test:'
+    - '^tests:'
+    - '^Update\sREADME.md'
+
+nfpms:
+  -
+    name_template: "s2-cmds_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    vendor: Klaus Post
+    homepage: https://github.com/klauspost/compress
+    maintainer: Klaus Post <klauspost@gmail.com>
+    description: S2 Compression Tool
+    license: BSD 3-Clause
+    formats:
+      - deb
+      - rpm
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      freebsd: FreeBSD
+      amd64: x86_64

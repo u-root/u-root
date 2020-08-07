@@ -799,8 +799,13 @@ func (e *GExpect) ExpectSwitchCase(cs []Caser, timeout time.Duration) (string, [
 			}
 		case <-e.rcv:
 			// Data to fetch.
-			if _, err := io.Copy(&tbuf, e); err != nil {
+			nr, err := io.Copy(&tbuf, e)
+		    	if err != nil {
 				return tbuf.String(), nil, -1, fmt.Errorf("io.Copy failed: %v", err)
+			}
+			// timer shoud be reset when new output is available.
+			if nr > 0 {
+				timer = time.NewTimer(timeout)
 			}
 		}
 	}

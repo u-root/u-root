@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package proto;
+
+// Enum values come from TCG Algorithm Registry - v1.27 - Table 3
+enum ObjectType {
+  OBJECT_INVALID = 0x0000;
+  RSA = 0x0001;
+  ECC = 0x0023;
+}
+
+enum HashAlgo {
+  HASH_INVALID = 0x0000;
+  SHA1 = 0x0004;
+  SHA256 = 0x000B;
+}
+
+// SealedBytes stores the result of a TPM2_Seal. The private portion (priv) has
+// already been encrypted and is no longer sensitive. The hash algorithm is
+// assumed to be SHA256.
+message SealedBytes {
+  bytes priv = 1;
+  bytes pub = 2;
+  repeated int32 pcrs = 3;
+  HashAlgo hash = 4;
+  ObjectType srk = 5;
+  Pcrs certified_pcrs = 6;
+  bytes creation_data = 7;
+  bytes ticket = 8;
+}
+
+message ImportBlob {
+  bytes duplicate = 1;
+  bytes encrypted_seed = 2;
+  bytes public_area = 3;
+  Pcrs pcrs = 4;
+}
+
+message Pcrs {
+  HashAlgo hash = 1;
+  map<uint32, bytes> pcrs = 2;
+}
