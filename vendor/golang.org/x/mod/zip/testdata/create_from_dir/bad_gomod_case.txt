@@ -1,0 +1,5 @@
+path=example.com/m
+version=v1.0.0
+wantErr=found file named GO.MOD, want all lower-case go.mod
+-- GO.MOD --
+module example.com/m

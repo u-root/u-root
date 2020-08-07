@@ -1,0 +1,37 @@
+language: go
+
+sudo: required
+
+go:
+  - "1.13"
+  - "1.14"
+
+env:
+  - TEST_SUITE=unit
+  - TEST_SUITE=linters
+
+before_install:
+  - go get -t -v ./...
+
+before_script:
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
+      sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
+    fi
+
+script: |
+  set -x
+  case $TEST_SUITE in
+  unit)
+    ./.travis/tests.sh
+    ;;
+  linters)
+    ./.travis/linters.sh
+    ;;
+  *)
+    echo "[!] Unknown test suite: ${TEST_SUITE}. Exiting."
+    exit 1
+  esac
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+

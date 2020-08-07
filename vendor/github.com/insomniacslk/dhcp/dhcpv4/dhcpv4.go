@@ -144,6 +144,7 @@ func New(modifiers ...Modifier) (*DHCPv4, error) {
 	d := DHCPv4{
 		OpCode:        OpcodeBootRequest,
 		HWType:        iana.HWTypeEthernet,
+		ClientHWAddr:  make(net.HardwareAddr, 6),
 		HopCount:      0,
 		TransactionID: xid,
 		NumSeconds:    0,
@@ -267,6 +268,23 @@ func NewReplyFromRequest(request *DHCPv4, modifiers ...Modifier) (*DHCPv4, error
 		// RFC 6842 states the Client Identifier option must be copied
 		// from the request if a client specified it.
 		WithOptionCopied(request, OptionClientIdentifier),
+	)...)
+}
+
+// NewReleaseFromACK creates a DHCPv4 Release message from ACK.
+// default Release message without any Modifer is created as following:
+//  - option Message Type is Release
+//  - ClientIP is set to ack.YourIPAddr
+//  - ClientHWAddr is set to ack.ClientHWAddr
+//  - Unicast
+//  - option Server Identifier is set to ack's ServerIdentifier
+func NewReleaseFromACK(ack *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
+	return New(PrependModifiers(modifiers,
+		WithMessageType(MessageTypeRelease),
+		WithClientIP(ack.YourIPAddr),
+		WithHwAddr(ack.ClientHWAddr),
+		WithBroadcast(false),
+		WithOptionCopied(ack, OptionServerIdentifier),
 	)...)
 }
 
@@ -476,9 +494,6 @@ func (d *DHCPv4) ToBytes() []byte {
 
 	// HwAddrLen
 	hlen := uint8(len(d.ClientHWAddr))
-	if hlen == 0 && d.HWType == iana.HWTypeEthernet {
-		hlen = 6
-	}
 	buf.Write8(hlen)
 	buf.Write8(d.HopCount)
 	buf.WriteBytes(d.TransactionID[:])
@@ -492,13 +507,11 @@ func (d *DHCPv4) ToBytes() []byte {
 	copy(buf.WriteN(16), d.ClientHWAddr)
 
 	var sname [64]byte
-	copy(sname[:], []byte(d.ServerHostName))
-	sname[len(d.ServerHostName)] = 0
+	copy(sname[:63], []byte(d.ServerHostName))
 	buf.WriteBytes(sname[:])
 
 	var file [128]byte
-	copy(file[:], []byte(d.BootFileName))
-	file[len(d.BootFileName)] = 0
+	copy(file[:127], []byte(d.BootFileName))
 	buf.WriteBytes(file[:])
 
 	// The magic cookie.
@@ -660,6 +673,38 @@ func (d *DHCPv4) DomainSearch() *rfc1035label.Labels {
 // The IP address lease time option is described by RFC 2132, Section 9.2.
 func (d *DHCPv4) IPAddressLeaseTime(def time.Duration) time.Duration {
 	v := d.Options.Get(OptionIPAddressLeaseTime)
+	if v == nil {
+		return def
+	}
+	var dur Duration
+	if err := dur.FromBytes(v); err != nil {
+		return def
+	}
+	return time.Duration(dur)
+}
+
+// IPAddressRenewalTime returns the IP address renewal time or the given
+// default duration if not present.
+//
+// The IP address renewal time option is described by RFC 2132, Section 9.11.
+func (d *DHCPv4) IPAddressRenewalTime(def time.Duration) time.Duration {
+	v := d.Options.Get(OptionRenewTimeValue)
+	if v == nil {
+		return def
+	}
+	var dur Duration
+	if err := dur.FromBytes(v); err != nil {
+		return def
+	}
+	return time.Duration(dur)
+}
+
+// IPAddressRebindingTime returns the IP address rebinding time or the given
+// default duration if not present.
+//
+// The IP address rebinding time option is described by RFC 2132, Section 9.12.
+func (d *DHCPv4) IPAddressRebindingTime(def time.Duration) time.Duration {
+	v := d.Options.Get(OptionRebindingTimeValue)
 	if v == nil {
 		return def
 	}

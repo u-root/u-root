@@ -59,6 +59,7 @@ const (
 	ETHTOOL_GMSGLVL   = 0x00000007 /* Get driver message level */
 	ETHTOOL_SMSGLVL   = 0x00000008 /* Set driver msg level. */
 	ETHTOOL_GCHANNELS = 0x0000003c /* Get no of channels */
+	ETHTOOL_SCHANNELS = 0x0000003d /* Set no of channels */
 	ETHTOOL_GCOALESCE = 0x0000000e /* Get coalesce config */
 	/* Get link status for host, i.e. whether the interface *and* the
 	 * physical port (if there is one) are up (ethtool_value). */
@@ -306,6 +307,17 @@ func (e *Ethtool) GetChannels(intf string) (Channels, error) {
 	return channels, nil
 }
 
+// SetChannels sets the number of channels for the given interface name and
+// returns the new number of channels.
+func (e *Ethtool) SetChannels(intf string, channels Channels) (Channels, error) {
+	channels, err := e.setChannels(intf, channels)
+	if err != nil {
+		return Channels{}, err
+	}
+
+	return channels, nil
+}
+
 // GetCoalesce returns the coalesce config for the given interface name.
 func (e *Ethtool) GetCoalesce(intf string) (Coalesce, error) {
 	coalesce, err := e.getCoalesce(intf)
@@ -371,6 +383,16 @@ func (e *Ethtool) getChannels(intf string) (Channels, error) {
 	channels := Channels{
 		Cmd: ETHTOOL_GCHANNELS,
 	}
+
+	if err := e.ioctl(intf, uintptr(unsafe.Pointer(&channels))); err != nil {
+		return Channels{}, err
+	}
+
+	return channels, nil
+}
+
+func (e *Ethtool) setChannels(intf string, channels Channels) (Channels, error) {
+	channels.Cmd = ETHTOOL_SCHANNELS
 
 	if err := e.ioctl(intf, uintptr(unsafe.Pointer(&channels))); err != nil {
 		return Channels{}, err
@@ -592,7 +614,11 @@ func (e *Ethtool) Stats(intf string) (map[string]uint64, error) {
 	var result = make(map[string]uint64)
 	for i := 0; i != int(drvinfo.n_stats); i++ {
 		b := gstrings.data[i*ETH_GSTRING_LEN : i*ETH_GSTRING_LEN+ETH_GSTRING_LEN]
-		key := string(b[:strings.Index(string(b), "\x00")])
+		strEnd := strings.Index(string(b), "\x00")
+		if strEnd == -1 {
+			strEnd = ETH_GSTRING_LEN
+		}
+		key := string(b[:strEnd])
 		if len(key) != 0 {
 			result[key] = stats.data[i]
 		}

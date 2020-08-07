@@ -1,0 +1,17 @@
+image: freebsd/latest
+packages:
+  - go
+sources:
+  - https://github.com/mdlayher/netlink
+environment:
+  GO111MODULE: "on"
+tasks:
+  - build: |
+      go version
+      go get golang.org/x/lint/golint
+      go get honnef.co/go/tools/cmd/staticcheck
+      cd netlink/
+      /home/build/go/bin/staticcheck ./...
+      /home/build/go/bin/golint -set_exit_status ./...
+      # Make sure non-Linux stubs are functional.
+      go test -v -race ./...

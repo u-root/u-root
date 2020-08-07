@@ -90,6 +90,23 @@ func WithIAID(iaid [4]byte) Modifier {
 	}
 }
 
+// WithIATA adds or updates an OptIANA option with the provided IAAddress
+// options
+func WithIATA(addrs ...OptIAAddress) Modifier {
+	return func(d DHCPv6) {
+		if msg, ok := d.(*Message); ok {
+			iata := msg.Options.OneIATA()
+			if iata == nil {
+				iata = &OptIATA{}
+			}
+			for _, addr := range addrs {
+				iata.Options.Add(&addr)
+			}
+			msg.UpdateOption(iata)
+		}
+	}
+}
+
 // WithDNS adds or updates an OptDNSRecursiveNameServer
 func WithDNS(dnses ...net.IP) Modifier {
 	return WithOption(OptDNS(dnses...))
@@ -151,4 +168,10 @@ func WithIAPD(iaid [4]byte, prefixes ...*OptIAPrefix) Modifier {
 			d.UpdateOption(opt)
 		}
 	}
+}
+
+// WithClientLinkLayerAddress adds or updates the ClientLinkLayerAddress
+// option with provided HWType and HWAddress on a DHCPv6 packet
+func WithClientLinkLayerAddress(ht iana.HWType, lla net.HardwareAddr) Modifier {
+	return WithOption(OptClientLinkLayerAddress(ht, lla))
 }

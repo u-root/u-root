@@ -98,7 +98,7 @@ var charRe = regexp.MustCompile(`&#x[0-9a-fA-F]*;|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-
 func replaceUnicode(s string) string {
 	if s[1] == '#' {
 		r, _ := strconv.ParseInt(s[3:len(s)-1], 16, 32)
-		return string(r)
+		return string(rune(r))
 	}
 	r, _, _, _ := strconv.UnquoteChar(s, 0)
 	return string(r)

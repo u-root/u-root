@@ -27,7 +27,7 @@ func (signer *tpmSigner) Public() crypto.PublicKey {
 
 // Sign uses the TPM key to sign the digest.
 // The digest must be hashed from the same hash algorithm as the keys scheme.
-// The opts hash function must also match the keys scheme.
+// The opts hash function must also match the keys scheme (or be nil).
 // Concurrent use of Sign is thread safe, but it is not safe to access the TPM
 // from other sources while Sign is executing.
 // For RSAPSS signatures, you cannot specify custom salt lengths. The salt
@@ -37,17 +37,17 @@ func (signer *tpmSigner) Public() crypto.PublicKey {
 func (signer *tpmSigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
 	if pssOpts, ok := opts.(*rsa.PSSOptions); ok {
 		if signer.Key.pubArea.RSAParameters.Sign.Alg != tpm2.AlgRSAPSS {
-			return nil, fmt.Errorf("invalid options. PSSOptions cannot be used with signing alg: %v", signer.Key.pubArea.RSAParameters.Sign.Alg)
+			return nil, fmt.Errorf("invalid options: PSSOptions cannot be used with signing alg: %v", signer.Key.pubArea.RSAParameters.Sign.Alg)
 		}
 		if pssOpts.SaltLength != rsa.PSSSaltLengthAuto {
 			return nil, fmt.Errorf("salt length must be rsa.PSSSaltLengthAuto")
 		}
 	}
-	if opts.HashFunc() != signer.Hash {
-		return nil, fmt.Errorf("opts hash: %v does not match the keys signing hash: %v", opts.HashFunc(), signer.Hash)
+	if opts != nil && opts.HashFunc() != signer.Hash {
+		return nil, fmt.Errorf("hash algorithm: got %v, want %v", opts.HashFunc(), signer.Hash)
 	}
 	if len(digest) != signer.Hash.Size() {
-		return nil, fmt.Errorf("digest length: %d does not match hash size: %d", digest, signer.Hash.Size())
+		return nil, fmt.Errorf("digest length: got %d, want %d", digest, signer.Hash.Size())
 	}
 
 	signerMutex.Lock()
@@ -58,7 +58,7 @@ func (signer *tpmSigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts
 		return nil, err
 	}
 
-	sig, err := tpm2.SignWithSession(signer.Key.rw, auth.Session, signer.Key.handle, "", digest, nil)
+	sig, err := tpm2.SignWithSession(signer.Key.rw, auth.Session, signer.Key.handle, "", digest, nil, nil)
 	if err != nil {
 		return nil, err
 	}

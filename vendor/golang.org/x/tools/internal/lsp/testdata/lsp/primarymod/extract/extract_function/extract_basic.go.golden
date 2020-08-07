@@ -1,0 +1,13 @@
+-- functionextraction_extract_basic_4_2 --
+package extract
+
+func _() {
+	fn0() //@mark(exEn1, "4")
+	//@extractfunc(exSt1, exEn1)
+}
+
+func fn0() {
+	a := 1
+	_ = 3 + 4
+}
+

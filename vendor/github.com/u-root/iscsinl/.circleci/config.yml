@@ -1,0 +1,33 @@
+version: 2
+
+templates:
+  golang-template: &golang-template
+    docker:
+      - image: uroottest/test-image-amd64:v3.2.10
+    working_directory: /go/src/github.com/u-root/iscsinl
+    environment:
+      - GOPATH: "/go"
+      - CGO_ENABLED: 0
+      # Double all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 2
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
+
+jobs:
+  build:
+    <<: *golang-template
+    steps:
+      - checkout
+      - run: go env
+      - run: go get -v -t -d github.com/u-root/u-root
+      - run: go get -v -d ./...
+      - run: GO111MODULE=on go mod vendor
+      - run: go test -timeout 15m -v ./...
+      - run: |
+          go get github.com/mitchellh/gox
+          gox -os="linux" -arch="386 amd64 arm arm64 ppc64 ppc64le s390x mips mipsle mips64 mips64le" ./...
+
