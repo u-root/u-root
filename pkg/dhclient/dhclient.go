@@ -176,6 +176,7 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
 
 	// Prepend modifiers with default options, so they can be overriden.
 	reqmods := append(
@@ -240,6 +241,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
 
 	// Prepend modifiers with default options, so they can be overriden.
 	reqmods := append(
