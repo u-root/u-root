@@ -30,7 +30,7 @@ func TryMeasureData(pcr uint32, data []byte, info string) error {
 		return err
 	}
 	log.Printf("Measuring blob: %v", info)
-	if err := tpm.Measure(data, pcr, tss.HashSHA1); err != nil {
+	if err := tpm.Measure(data, pcr); err != nil {
 		return err
 	}
 	tpm.Close()
@@ -49,7 +49,7 @@ func TryMeasureFiles(files ...string) error {
 		if err != nil {
 			continue
 		}
-		if err := tpm.Measure(data, BlobPCR, tss.HashSHA1); err != nil {
+		if err := tpm.Measure(data, BlobPCR); err != nil {
 			return err
 		}
 	}
