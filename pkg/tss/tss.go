@@ -7,9 +7,13 @@
 package tss
 
 import (
+	"crypto"
+	"crypto/sha1"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 
+	"github.com/google/go-tpm/tpm2"
 	tpmutil "github.com/google/go-tpm/tpmutil"
 )
 
@@ -62,25 +66,25 @@ func (t *TPM) Close() error {
 }
 
 // ReadPCRs reads all PCRs into the PCR structure
-func (t *TPM) ReadPCRs(alg HashAlg) ([]PCR, error) {
+func (t *TPM) ReadPCRs() ([]PCR, error) {
 	var PCRs map[uint32][]byte
 	var err error
+	var alg crypto.Hash
 
 	switch t.Version {
 	case TPMVersion12:
-		if alg != HashSHA1 {
-			return nil, fmt.Errorf("non-SHA1 algorithm %v is not supported on TPM 1.2", alg)
-		}
 		PCRs, err = readAllPCRs12(t.RWC)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read PCRs: %v", err)
 		}
+		alg = crypto.SHA1
 
 	case TPMVersion20:
-		PCRs, err = readAllPCRs20(t.RWC, alg.GoTPMAlg())
+		PCRs, err = readAllPCRs20(t.RWC, tpm2.AlgSHA256)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read PCRs: %v", err)
 		}
+		alg = crypto.SHA1
 
 	default:
 		return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
@@ -91,7 +95,7 @@ func (t *TPM) ReadPCRs(alg HashAlg) ([]PCR, error) {
 		out[int(index)] = PCR{
 			Index:     int(index),
 			Digest:    digest,
-			DigestAlg: alg.cryptoHash(),
+			DigestAlg: alg,
 		}
 	}
 
@@ -125,25 +129,17 @@ func (t *TPM) Extend(hash []byte, pcrIndex uint32) error {
 }
 
 // Measure measures data with a specific hash algorithm and extends it into the pcrIndex
-func (t *TPM) Measure(data []byte, pcrIndex uint32, alg HashAlg) error {
+func (t *TPM) Measure(data []byte, pcrIndex uint32) error {
 	switch t.Version {
 	case TPMVersion12:
-		hashFunc := HashSHA1.cryptoHash().New()
-		hash := hashFunc.Sum(data)
-		var thash [20]byte
-		hashlen := len(hash)
-		if hashlen != 20 {
-			return fmt.Errorf("hash length insufficient - need 20, got: %v", hashlen)
-		}
-		copy(thash[:], hash[:20])
-		err := extendPCR12(t.RWC, pcrIndex, thash)
+		hash := sha1.Sum(data)
+		err := extendPCR12(t.RWC, pcrIndex, hash)
 		if err != nil {
 			return err
 		}
 	case TPMVersion20:
-		hashFunc := alg.cryptoHash().New()
-		hash := hashFunc.Sum(data)
-		err := extendPCR20(t.RWC, pcrIndex, hash)
+		hash := sha256.Sum256(data)
+		err := extendPCR20(t.RWC, pcrIndex, hash[:])
 		if err != nil {
 			return err
 		}

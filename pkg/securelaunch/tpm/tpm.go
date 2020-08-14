@@ -14,12 +14,13 @@ import (
 	"io"
 	"log"
 
+	"github.com/google/go-tpm/tpm2"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/tss"
 )
 
-var hashAlgo = tss.HashSHA256.GoTPMAlg()
+var hashAlgo = tpm2.AlgSHA256
 var tpmHandle *tss.TPM
 
 // marshalPcrEvent writes structure fields piecemeal to buffer.
