@@ -18,8 +18,8 @@ Conduct](https://github.com/u-root/u-root/wiki/Code-of-Conduct).
 
 ## Communication
 
-- [Slack](https://u-root.slack.com), sign up
-[here](http://slack.u-root.com/)
+- [Open Source Firmware Slack team](https://osfw.slack.com),
+  channel `#u-root`, sign up [here](https://slack.osfw.dev/)
 - [Join the mailing list](https://groups.google.com/forum/#!forum/u-root)
 
 ## Bugs
