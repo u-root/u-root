@@ -1,4 +1,4 @@
-// Copyright 2012-2019 the u-root Authors. All rights reserved
+// Copyright 2012-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,6 @@ import (
 
 var (
 	pageSize = int64(syscall.Getpagesize())
-	memPath  = "/dev/mem"
 )
 
 // mmap aligns the address and maps multiple pages when needed.

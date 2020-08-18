@@ -1,4 +1,4 @@
-// Copyright 2012-2019 the u-root Authors. All rights reserved
+// Copyright 2012-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -14,12 +14,12 @@ func init() {
 	usageMsg += `io (in{b,w,l} address)...
 io (out{b,w,l} address value)...
 `
-	readCmds["inb"] = cmd{in, 16, 8}
-	readCmds["inw"] = cmd{in, 16, 16}
-	readCmds["inl"] = cmd{in, 16, 32}
-	writeCmds["outb"] = cmd{out, 16, 8}
-	writeCmds["outw"] = cmd{out, 16, 16}
-	writeCmds["outl"] = cmd{out, 16, 32}
+	addCmd(readCmds, "inb", &cmd{in, 16, 8})
+	addCmd(readCmds, "inw", &cmd{in, 16, 16})
+	addCmd(readCmds, "inl", &cmd{in, 16, 32})
+	addCmd(writeCmds, "outb", &cmd{out, 16, 8})
+	addCmd(writeCmds, "outw", &cmd{out, 16, 16})
+	addCmd(writeCmds, "outl", &cmd{out, 16, 32})
 }
 
 func in(addr int64, data memio.UintN) error {
