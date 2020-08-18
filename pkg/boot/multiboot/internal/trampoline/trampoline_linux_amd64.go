@@ -36,11 +36,11 @@ func funcPC(f interface{}) uintptr
 // Setup scans file for trampoline code and sets
 // values for multiboot info address and kernel entry point.
 func Setup(path string, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
-	trampStart, d, err := extract(path)
+	trampolineStart, d, err := extract(path)
 	if err != nil {
 		return nil, err
 	}
-	return patch(trampStart, d, magic, infoAddr, entryPoint)
+	return patch(trampolineStart, d, magic, infoAddr, entryPoint)
 }
 
 // extract extracts trampoline segment from file.
@@ -80,7 +80,7 @@ func ptrToSlice(ptr uintptr, size int) []byte {
 //
 // All 3 are determined by pretending they are functions, and finding their PC
 // within our own address space.
-func patch(trampStart uintptr, trampoline []byte, magicVal, infoAddr, entryPoint uintptr) ([]byte, error) {
+func patch(trampolineStart uintptr, trampoline []byte, magicVal, infoAddr, entryPoint uintptr) ([]byte, error) {
 	replace := func(start uintptr, d []byte, f func(), val uint32) error {
 		buf := make([]byte, 4)
 		ubinary.NativeEndian.PutUint32(buf, val)
@@ -93,13 +93,13 @@ func patch(trampStart uintptr, trampoline []byte, magicVal, infoAddr, entryPoint
 		return nil
 	}
 
-	if err := replace(trampStart, trampoline, info, uint32(infoAddr)); err != nil {
+	if err := replace(trampolineStart, trampoline, info, uint32(infoAddr)); err != nil {
 		return nil, err
 	}
-	if err := replace(trampStart, trampoline, entry, uint32(entryPoint)); err != nil {
+	if err := replace(trampolineStart, trampoline, entry, uint32(entryPoint)); err != nil {
 		return nil, err
 	}
-	if err := replace(trampStart, trampoline, magic, uint32(magicVal)); err != nil {
+	if err := replace(trampolineStart, trampoline, magic, uint32(magicVal)); err != nil {
 		return nil, err
 	}
 	return trampoline, nil
