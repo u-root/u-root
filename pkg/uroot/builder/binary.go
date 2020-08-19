@@ -36,7 +36,7 @@ func (BinaryBuilder) Build(af *initramfs.Files, opts Opts) error {
 			result <- opts.Env.Build(
 				p,
 				filepath.Join(opts.TempDir, opts.BinaryDir, filepath.Base(p)),
-				golang.BuildOpts{})
+				golang.BuildOpts{NoStrip: opts.NoStrip})
 		}(pkg)
 	}
 

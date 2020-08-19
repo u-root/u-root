@@ -32,7 +32,7 @@ func main() {
 
 	pkgs := flag.Args()
 	if len(pkgs) == 0 {
-		pkgs = []string{"github.com/u-root/u-root/cmds/*"}
+		pkgs = []string{"github.com/u-root/u-root/cmds/*/*"}
 	}
 	pkgs, err := uroot.ResolvePackagePaths(l, env, pkgs)
 	if err != nil {
@@ -44,7 +44,7 @@ func main() {
 		l.Fatal(err)
 	}
 
-	if err := bb.BuildBusybox(env, pkgs, o); err != nil {
+	if err := bb.BuildBusybox(env, pkgs, false /* noStrip */, o); err != nil {
 		l.Fatal(err)
 	}
 }

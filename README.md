@@ -49,10 +49,13 @@ u-root
 u-root core boot
 
 # Generate an archive with only these given commands
-u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+
+# Generate an archive with all of the core tools with some exceptions
+u-root core -cmds/core/{installcommand,losetup}
 
 # Generate an archive with a tool outside of u-root
-u-root ./cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
+u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
 ```
 
 The default set of packages included is all packages in
