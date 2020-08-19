@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
@@ -13,10 +14,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/uio"
 	itest "github.com/u-root/u-root/pkg/uroot/initramfs/test"
 )
 
@@ -68,6 +72,102 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not build go source %v; output\n%s", err, out)
+	}
+	return nil
+}
+
+func xTestDCE(t *testing.T) {
+	delFiles := false
+	f, _ := buildIt(
+		t,
+		[]string{
+			"-build=bb", "-no-strip",
+			"./cmds/*/*",
+			"-cmds/core/installcommand", "-cmds/exp/builtin", "-cmds/exp/run",
+			"pkg/uroot/test/foo",
+		},
+		nil,
+		nil)
+	defer func() {
+		if delFiles {
+			os.RemoveAll(f.Name())
+		}
+	}()
+	st, _ := f.Stat()
+	t.Logf("Built %s, size %d", f.Name(), st.Size())
+	cmd := golang.Default().GoCmd("tool", "nm", f.Name())
+	nmOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to run nm: %s %s", err, nmOutput)
+	}
+	symScanner := bufio.NewScanner(bytes.NewBuffer(nmOutput))
+	syms := map[string]bool{}
+	for symScanner.Scan() {
+		line := symScanner.Text()
+		parts := strings.Split(line, " ")
+		if len(parts) == 0 {
+			continue
+		}
+		sym := parts[len(parts)-1]
+		syms[sym] = true
+		t.Logf("%s", sym)
+	}
+}
+
+type noDeadCode struct {
+	Path string
+}
+
+func (v noDeadCode) Validate(a *cpio.Archive) error {
+	// 1. Extract BB binary into a temporary file.
+	delFiles := true
+	bbRecord, ok := a.Get(v.Path)
+	if !ok {
+		return fmt.Errorf("archive does not contain %s, but should", v.Path)
+	}
+	tf, err := ioutil.TempFile("", "u-root-temp-bb-")
+	if err != nil {
+		return err
+	}
+	bbData, _ := uio.ReadAll(bbRecord)
+	tf.Write(bbData)
+	tf.Close()
+	defer func() {
+		if delFiles {
+			os.RemoveAll(tf.Name())
+		}
+	}()
+	// 2. Run "go nm" on it and build symbol table.
+	cmd := golang.Default().GoCmd("tool", "nm", tf.Name())
+	nmOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to run nm: %s %s", err, nmOutput)
+	}
+	symScanner := bufio.NewScanner(bytes.NewBuffer(nmOutput))
+	syms := map[string]bool{}
+	for symScanner.Scan() {
+		line := symScanner.Text()
+		parts := strings.Split(line, " ")
+		if len(parts) == 0 {
+			continue
+		}
+		sym := parts[len(parts)-1]
+		syms[sym] = true
+	}
+	// 3. Check for presence and absence of particular symbols.
+	if !syms["github.com/u-root/u-root/pkg/uroot/test/bar.Bar.UsedInterfaceMethod"] {
+		// Sanity check of the test itself: this method must be in the binary.
+		return fmt.Errorf("expected symbol not found, something is wrong with the build")
+	}
+	if syms["github.com/u-root/u-root/pkg/uroot/test/bar.Bar.UnusedNonInterfaceMethod"] {
+		// Sanity check of the test itself: this method must be in the binary.
+		delFiles = false
+		return fmt.Errorf(
+			"Unused non-interface method has not been eliminated, dead code elimination is not working properly.\n"+
+				"The most likely reason is use of reflect.Value.Method or .MethodByName somewhere "+
+				"(could be a command or vendor dependency, apologies for not being more precise here).\n"+
+				"See https://golang.org/src/cmd/link/internal/ld/deadcode.go for explanation.\n"+
+				"%s contains the resulting binary.\n", tf.Name())
 	}
 	return nil
 }
@@ -141,6 +241,21 @@ func TestUrootCmdline(t *testing.T) {
 			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bush"},
+			},
+		},
+		{
+			name: "make sure dead code gets eliminated",
+			args: []string{
+				// Build the world + test symbols, unstripped.
+				"-build=bb", "-no-strip", "cmds/*/*", "pkg/uroot/test/foo",
+				// These are known to disable DCE and need to be exluded.
+				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
+				// so these can be removed once we no longer support Go < 1.15.
+				"-cmds/core/installcommand", "-cmds/exp/builtin", "-cmds/exp/run",
+			},
+			err: nil,
+			validators: []itest.ArchiveValidator{
+				noDeadCode{Path: "bbin/bb"},
 			},
 		},
 		{

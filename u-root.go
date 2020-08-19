@@ -41,6 +41,7 @@ var (
 	fourbins                                *bool
 	noCommands                              *bool
 	extraFiles                              multiFlag
+	noStrip                                 *bool
 )
 
 func init() {
@@ -69,6 +70,8 @@ func init() {
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
+
+	noStrip = flag.Bool("no-strip", false, "Build unstripped binaries")
 }
 
 func main() {
@@ -221,6 +224,7 @@ func Main() error {
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
+		NoStrip:         *noStrip,
 	}
 	uinitArgs := shlex.Argv(*uinitCmd)
 	if len(uinitArgs) > 0 {

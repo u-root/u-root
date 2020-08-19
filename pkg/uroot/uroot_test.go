@@ -145,6 +145,15 @@ func TestResolvePackagePaths(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		// Excludes
+		{
+			env: defaultEnv,
+			in:  []string{"test/gopath2/src/*", "-test/gopath2/src/mypkga"},
+			expected: []string{
+				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkgb",
+			},
+			wantErr: false,
+		},
 	} {
 		t.Run(fmt.Sprintf("%q", tc.in), func(t *testing.T) {
 			out, err := ResolvePackagePaths(l, tc.env, tc.in)

@@ -44,7 +44,7 @@ func (BBBuilder) DefaultBinaryDir() string {
 func (BBBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
-	if err := bb.BuildBusybox(opts.Env, opts.Packages, bbPath); err != nil {
+	if err := bb.BuildBusybox(opts.Env, opts.Packages, opts.NoStrip, bbPath); err != nil {
 		return err
 	}
 

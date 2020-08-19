@@ -214,6 +214,9 @@ type Opts struct {
 	//
 	// This must be specified to have a default shell.
 	DefaultShell string
+
+	// NoStrip builds unstripped binaries.
+	NoStrip bool
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
@@ -249,6 +252,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
+			NoStrip:   opts.NoStrip,
 		}
 		if err := cmds.Builder.Build(files, bOpts); err != nil {
 			return fmt.Errorf("error building: %v", err)
@@ -395,19 +399,38 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //   - globs of package imports, e.g. github.com/u-root/u-root/cmds/*
 //   - paths to package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   - globs of paths to package directories; e.g. ./cmds/*
+//   - if an entry starts with "-" it excludes the matching package(s)
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
 func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) ([]string, error) {
-	var importPaths []string
+	var includes []string
+	excludes := map[string]bool{}
 	for _, pkg := range pkgs {
+		isExclude := false
+		if strings.HasPrefix(pkg, "-") {
+			pkg = pkg[1:]
+			isExclude = true
+		}
 		paths, err := resolvePackagePath(logger, env, pkg)
 		if err != nil {
 			return nil, err
 		}
-		importPaths = append(importPaths, paths...)
+		if !isExclude {
+			includes = append(includes, paths...)
+		} else {
+			for _, p := range paths {
+				excludes[p] = true
+			}
+		}
 	}
-	return importPaths, nil
+	var result []string
+	for _, p := range includes {
+		if !excludes[p] {
+			result = append(result, p)
+		}
+	}
+	return result, nil
 }
 
 // ParseExtraFiles adds files from the extraFiles list to the archive.

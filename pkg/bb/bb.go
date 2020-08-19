@@ -84,7 +84,7 @@ func getBBLock(bblock string) (*lockfile.Lockfile, error) {
 //
 // pkgs is a list of Go import paths. If nil is returned, binaryPath will hold
 // the busybox-style binary.
-func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
+func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath string) error {
 	urootPkg, err := env.Package("github.com/u-root/u-root")
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, binaryPath string) error {
 	}
 
 	// Compile bb.
-	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{})
+	return env.Build("github.com/u-root/u-root/bb", binaryPath, golang.BuildOpts{NoStrip: noStrip})
 }
 
 // CreateBBMainSource creates a bb Go command that imports all given pkgs.
