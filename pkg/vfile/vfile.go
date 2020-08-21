@@ -74,8 +74,20 @@ func GetKeyRing(keyPath string) (openpgp.KeyRing, error) {
 // OpenSignedSigFile calls OpenSignedFile expecting the signature to be in path.sig.
 //
 // E.g. if path is /foo/bar, the signature is expected to be in /foo/bar.sig.
-func OpenSignedSigFile(keyring openpgp.KeyRing, path string) (io.Reader, error) {
+func OpenSignedSigFile(keyring openpgp.KeyRing, path string) (*File, error) {
 	return OpenSignedFile(keyring, path, fmt.Sprintf("%s.sig", path))
+}
+
+// File encapsulates a bytes.Reader with the file contents and its name.
+type File struct {
+	*bytes.Reader
+
+	FileName string
+}
+
+// Name returns the file name.
+func (f *File) Name() string {
+	return f.FileName
 }
 
 // OpenSignedFile opens a file that is expected to be signed.
@@ -87,27 +99,30 @@ func OpenSignedSigFile(keyring openpgp.KeyRing, path string) (io.Reader, error) 
 //
 // If the signature does not exist or does not match the keyring, both the file
 // and a signature error will be returned.
-func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (io.Reader, error) {
+func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error) {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	b := bytes.NewReader(content)
+	f := &File{
+		Reader:   bytes.NewReader(content),
+		FileName: path,
+	}
 
 	signaturef, err := os.Open(pathSig)
 	if err != nil {
-		return b, ErrUnsigned{Path: path, Err: err}
+		return f, ErrUnsigned{Path: path, Err: err}
 	}
 	defer signaturef.Close()
 
 	if keyring == nil {
-		return b, ErrUnsigned{Path: path, Err: ErrNoKeyRing}
+		return f, ErrUnsigned{Path: path, Err: ErrNoKeyRing}
 	} else if signer, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(content), signaturef); err != nil {
-		return b, ErrUnsigned{Path: path, Err: err}
+		return f, ErrUnsigned{Path: path, Err: err}
 	} else if signer == nil {
-		return b, ErrUnsigned{Path: path, Err: ErrWrongSigner{keyring}}
+		return f, ErrUnsigned{Path: path, Err: ErrWrongSigner{keyring}}
 	}
-	return b, nil
+	return f, nil
 }
 
 // ErrInvalidHash is returned when hash verification failed.
@@ -147,7 +162,7 @@ var ErrNoExpectedHash = errors.New("OpenHashedFile: no expected hash given")
 // error in case the expected hash does not match the contents.
 //
 // If the contents match, the contents are returned with no error.
-func OpenHashedFile256(path string, wantSHA256Hash []byte) (io.Reader, error) {
+func OpenHashedFile256(path string, wantSHA256Hash []byte) (*File, error) {
 	return openHashedFile(path, wantSHA256Hash, sha256.New())
 }
 
@@ -158,19 +173,22 @@ func OpenHashedFile256(path string, wantSHA256Hash []byte) (io.Reader, error) {
 // error in case the expected hash does not match the contents.
 //
 // If the contents match, the contents are returned with no error.
-func OpenHashedFile512(path string, wantSHA512Hash []byte) (io.Reader, error) {
+func OpenHashedFile512(path string, wantSHA512Hash []byte) (*File, error) {
 	return openHashedFile(path, wantSHA512Hash, sha512.New())
 }
 
-func openHashedFile(path string, wantHash []byte, h hash.Hash) (io.Reader, error) {
+func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	b := bytes.NewReader(content)
+	f := &File{
+		Reader:   bytes.NewReader(content),
+		FileName: path,
+	}
 
 	if len(wantHash) == 0 {
-		return b, ErrInvalidHash{
+		return f, ErrInvalidHash{
 			Path: path,
 			Err:  ErrNoExpectedHash,
 		}
@@ -178,7 +196,7 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (io.Reader, error
 
 	// Hash the file.
 	if _, err := io.Copy(h, bytes.NewReader(content)); err != nil {
-		return b, ErrInvalidHash{
+		return f, ErrInvalidHash{
 			Path: path,
 			Err:  err,
 		}
@@ -186,7 +204,7 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (io.Reader, error
 
 	got := h.Sum(nil)
 	if !bytes.Equal(wantHash, got) {
-		return b, ErrInvalidHash{
+		return f, ErrInvalidHash{
 			Path: path,
 			Err: ErrHashMismatch{
 				Got:  got,
@@ -194,5 +212,5 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (io.Reader, error
 			},
 		}
 	}
-	return b, nil
+	return f, nil
 }
