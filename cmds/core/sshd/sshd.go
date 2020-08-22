@@ -13,7 +13,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
@@ -76,14 +75,13 @@ func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 		ps, _ = e.Process.Wait()
 	}
 
-	ws := ps.Sys().(syscall.WaitStatus)
 	// TODO(bluecmd): If somebody wants we can send exit-signal to return
 	// information about signal termination, but leave it until somebody needs
 	// it.
 	// if ws.Signaled() {
 	// }
-	if ws.Exited() {
-		code := uint32(ws.ExitStatus())
+	if ps.Exited() {
+		code := uint32(ps.ExitCode())
 		dprintf("Exit status %v", code)
 		c.SendRequest("exit-status", false, ssh.Marshal(exitStatusReq{code}))
 	}
