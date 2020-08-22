@@ -14,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/vfile"
 )
 
 func TestLinuxLabel(t *testing.T) {
@@ -82,6 +83,17 @@ func TestLinuxLabel(t *testing.T) {
 				),
 			},
 			want: "Linux(kernel=http://127.0.0.1/kernel initrd=http://127.0.0.1/initrd1,http://127.0.0.1/initrd2)",
+		},
+		{
+			desc: "verified file",
+			img: &LinuxImage{
+				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				Initrd: CatInitrds(
+					&vfile.File{Reader: nil, FileName: "/boot/initrd1"},
+					&vfile.File{Reader: nil, FileName: "/boot/initrd2"},
+				),
+			},
+			want: "Linux(kernel=/boot/foobar initrd=/boot/initrd1,/boot/initrd2)",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {

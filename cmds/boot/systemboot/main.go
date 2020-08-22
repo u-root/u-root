@@ -15,7 +15,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
-	"github.com/u-root/u-root/pkg/ipmi/wiwynn"
+	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
@@ -64,13 +64,13 @@ func getSystemFWVersion(si *smbios.Info) (string, error) {
 }
 
 func checkCMOSClear(ipmi *ipmi.IPMI) error {
-	if cmosclear, bootorder, err := wiwynn.IsCMOSClearSet(ipmi); cmosclear {
+	if cmosclear, bootorder, err := ocp.IsCMOSClearSet(ipmi); cmosclear {
 		log.Printf("CMOS clear starts")
 		if err = cmosClear(); err != nil {
 			return err
 		}
 		// ToDo: Reset RW_VPD to default values
-		if err = wiwynn.ClearCMOSClearValidBits(ipmi, bootorder); err != nil {
+		if err = ocp.ClearCMOSClearValidBits(ipmi, bootorder); err != nil {
 			return err
 		}
 		addSEL("cmosclear")
@@ -119,9 +119,9 @@ func runIPMICommands() {
 				log.Printf("IPMI CMOS clear err: %v", err)
 			}
 
-			dimmInfo, err := wiwynn.GetOemIpmiDimmInfo(si)
+			dimmInfo, err := ocp.GetOemIpmiDimmInfo(si)
 			if err == nil {
-				if err = wiwynn.SendOemIpmiDimmInfo(i, dimmInfo); err == nil {
+				if err = ocp.SendOemIpmiDimmInfo(i, dimmInfo); err == nil {
 					log.Printf("Send the information of DIMMs to BMC.")
 				} else {
 					log.Printf("Failed to send the information of DIMMs to BMC: %v.", err)
@@ -130,9 +130,9 @@ func runIPMICommands() {
 				log.Printf("Failed to get the information of DIMMs: %v.", err)
 			}
 
-			processorInfo, err := wiwynn.GetOemIpmiProcessorInfo(si)
+			processorInfo, err := ocp.GetOemIpmiProcessorInfo(si)
 			if err == nil {
-				if err = wiwynn.SendOemIpmiProcessorInfo(i, processorInfo); err == nil {
+				if err = ocp.SendOemIpmiProcessorInfo(i, processorInfo); err == nil {
 					log.Printf("Send the information of processors to BMC.")
 				} else {
 					log.Printf("Failed to send the information of processors to BMC: %v.", err)
@@ -140,6 +140,13 @@ func runIPMICommands() {
 			} else {
 				log.Printf("Failed to get the information of Processors: %v.", err)
 			}
+
+			if err = ocp.SetOemIpmiPostEnd(i); err == nil {
+				log.Printf("Send IPMI POST end to BMC")
+			} else {
+				log.Printf("Failed to send IPMI POST end to BMC: %v.", err)
+			}
+
 		} else {
 			log.Printf("No product name is matched for OEM commands.")
 		}

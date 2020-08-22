@@ -27,11 +27,16 @@ type LinuxImage struct {
 
 var _ OSImage = &LinuxImage{}
 
+// named is satisifed by both *os.File and *vfile.File. Hack hack hack.
+type named interface {
+	Name() string
+}
+
 func stringer(mod io.ReaderAt) string {
 	if s, ok := mod.(fmt.Stringer); ok {
 		return s.String()
 	}
-	if f, ok := mod.(*os.File); ok {
+	if f, ok := mod.(named); ok {
 		return f.Name()
 	}
 	return fmt.Sprintf("%T", mod)

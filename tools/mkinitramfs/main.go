@@ -37,7 +37,7 @@ func main() {
 	archive := &initramfs.Opts{
 		Files:       files,
 		OutputFile:  w,
-		BaseArchive: uroot.DefaultRamfs.Reader(),
+		BaseArchive: uroot.DefaultRamfs().Reader(),
 	}
 	if err := uroot.ParseExtraFiles(logger, archive.Files, flag.Args(), false); err != nil {
 		log.Fatalf("failed to parse file names %v: %v", flag.Args(), err)

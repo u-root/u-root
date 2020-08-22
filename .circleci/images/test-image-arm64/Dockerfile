@@ -23,6 +23,7 @@ RUN sudo apt-get update &&                          \
         zlib1g-dev                                  \
         libcap-dev                                  \
         libattr1-dev                                \
+        qemu-efi-aarch64                            \
         `# Linux kernel build deps`                 \
         libelf-dev &&                               \
     sudo rm -rf /var/lib/apt/lists/*
@@ -63,7 +64,11 @@ RUN set -eux;                                                          \
     cp qemu/build/aarch64-softmmu/qemu-system-aarch64 .;               \
     rm -rf qemu/
 
+# Generate UEFI file images
+RUN dd if=/dev/zero bs=1M count=64 of=flash0.img;                                   \
+    dd if=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd bs=1M of=flash0.img conv=notrunc;
+
 # Export paths to binaries.
 ENV UROOT_KERNEL /home/circleci/Image
-ENV UROOT_QEMU "/home/circleci/qemu-system-aarch64 -machine virt -cpu cortex-a57 -L /home/circleci/pc-bios"
+ENV UROOT_QEMU "/home/circleci/qemu-system-aarch64 -machine virt -cpu cortex-a57 -L /home/circleci/pc-bios -m 1G -pflash /home/circleci/flash0.img"
 ENV UROOT_TESTARCH arm64

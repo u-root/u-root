@@ -66,7 +66,7 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 	if *verbose {
 		c.LogLevel = dhclient.LogSummary
 	}
-	r := dhclient.SendRequests(ctx, filteredIfs, true, true, c)
+	r := dhclient.SendRequests(ctx, filteredIfs, true, true, c, 30*time.Second)
 
 	for {
 		select {

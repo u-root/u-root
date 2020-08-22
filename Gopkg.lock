@@ -76,12 +76,12 @@
   revision = "cbabf541443203944eeedf87d8bb92e2924170b5"
 
 [[projects]]
-  digest = "1:112b07cad4bd500e6e445cc0b9294ca310faa41199c19475c557daa2c7519549"
-  name = "github.com/golang/protobuf"
-  packages = ["proto"]
+  digest = "1:f1ccee0f876cdf0558e5add38e827c100a5a90564cd7d4a369a76a4c1b192277"
+  name = "github.com/gojuno/minimock"
+  packages = ["."]
   pruneopts = "NUT"
-  revision = "1b794fe86dd6a0c7c52ae69b5c9cb0aeedc52afa"
-  version = "v1.4.0"
+  revision = "37f8ffa861a483b9bb6c98d85642ccbc5166bd92"
+  version = "v3.0.8"
 
 [[projects]]
   digest = "1:ea920fc7bb1d9a2fe99782eb6a5b4e809dfbfcfabd6ab55a387353934acbf09c"
@@ -109,17 +109,6 @@
   ]
   pruneopts = "NUT"
   revision = "5d8a91de9ae363d5a2754ab4f6d67444120953d6"
-
-[[projects]]
-  branch = "master"
-  digest = "1:e346063afb9f1c747e6cd9bd0bd4f786e508b57baa20a7534988b795c741b19a"
-  name = "github.com/google/go-tpm-tools"
-  packages = [
-    "proto",
-    "tpm2tools",
-  ]
-  pruneopts = "NUT"
-  revision = "4f3f3b508c7f808aec7ddbbe3ca3e1aa8276b0d6"
 
 [[projects]]
   branch = "master"
@@ -445,42 +434,6 @@
   version = "v1.29.1"
 
 [[projects]]
-  digest = "1:f1865c7b6c5f85632ff40fd729aa3393e66a2db3de74d43ab7c594be7e9bfe25"
-  name = "google.golang.org/protobuf"
-  packages = [
-    "encoding/prototext",
-    "encoding/protowire",
-    "internal/descfmt",
-    "internal/descopts",
-    "internal/detrand",
-    "internal/encoding/defval",
-    "internal/encoding/messageset",
-    "internal/encoding/tag",
-    "internal/encoding/text",
-    "internal/errors",
-    "internal/fieldnum",
-    "internal/fieldsort",
-    "internal/filedesc",
-    "internal/filetype",
-    "internal/flags",
-    "internal/genname",
-    "internal/impl",
-    "internal/mapsort",
-    "internal/pragma",
-    "internal/set",
-    "internal/strs",
-    "internal/version",
-    "proto",
-    "reflect/protoreflect",
-    "reflect/protoregistry",
-    "runtime/protoiface",
-    "runtime/protoimpl",
-  ]
-  pruneopts = "NUT"
-  revision = "3b9eee12916ce611400f93d6c2fed2fc2911b0ad"
-  version = "v1.21.0"
-
-[[projects]]
   digest = "1:22b2dee6f30bc8601f087449a2a819df8388e54e9547349c658f14d8f8c590f2"
   name = "gopkg.in/alecthomas/kingpin.v2"
   packages = ["."]
@@ -516,9 +469,8 @@
     "github.com/davecgh/go-spew/spew",
     "github.com/dustin/go-humanize",
     "github.com/gliderlabs/ssh",
+    "github.com/gojuno/minimock",
     "github.com/google/go-cmp/cmp",
-    "github.com/google/go-tpm-tools/proto",
-    "github.com/google/go-tpm-tools/tpm2tools",
     "github.com/google/go-tpm/tpm",
     "github.com/google/go-tpm/tpm2",
     "github.com/google/go-tpm/tpmutil",
@@ -541,6 +493,7 @@
     "github.com/rekby/gpt",
     "github.com/safchain/ethtool",
     "github.com/spf13/pflag",
+    "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/u-root/iscsinl",
     "github.com/vishvananda/netlink",

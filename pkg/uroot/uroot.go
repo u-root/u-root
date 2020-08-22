@@ -36,27 +36,41 @@ const (
 	nameserver = "nameserver 8.8.8.8\n"
 )
 
-// DefaultRamfs are files that are contained in all u-root initramfs archives
-// by default.
-var DefaultRamfs = cpio.ArchiveFromRecords([]cpio.Record{
-	cpio.Directory("tcz", 0755),
-	cpio.Directory("etc", 0755),
-	cpio.Directory("dev", 0755),
-	cpio.Directory("tmp", 0777),
-	cpio.Directory("ubin", 0755),
-	cpio.Directory("usr", 0755),
-	cpio.Directory("usr/lib", 0755),
-	cpio.Directory("var/log", 0777),
-	cpio.Directory("lib64", 0755),
-	cpio.Directory("bin", 0755),
-	cpio.CharDev("dev/console", 0600, 5, 1),
-	cpio.CharDev("dev/tty", 0666, 5, 0),
-	cpio.CharDev("dev/null", 0666, 1, 3),
-	cpio.CharDev("dev/port", 0640, 1, 4),
-	cpio.CharDev("dev/urandom", 0666, 1, 9),
-	cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
-	cpio.StaticFile("etc/localtime", gmt0, 0644),
-})
+// DefaultRamRamfs returns a cpio.Archive for the target OS.
+// If an OS is not known it will return a reasonable u-root specific
+// default.
+func DefaultRamfs() *cpio.Archive {
+	switch golang.Default().GOOS {
+	case "linux":
+		return cpio.ArchiveFromRecords([]cpio.Record{
+			cpio.Directory("bin", 0755),
+			cpio.Directory("dev", 0755),
+			cpio.Directory("env", 0755),
+			cpio.Directory("etc", 0755),
+			cpio.Directory("lib64", 0755),
+			cpio.Directory("proc", 0755),
+			cpio.Directory("sys", 0755),
+			cpio.Directory("tcz", 0755),
+			cpio.Directory("tmp", 0777),
+			cpio.Directory("ubin", 0755),
+			cpio.Directory("usr", 0755),
+			cpio.Directory("usr/lib", 0755),
+			cpio.Directory("var/log", 0777),
+			cpio.CharDev("dev/console", 0600, 5, 1),
+			cpio.CharDev("dev/tty", 0666, 5, 0),
+			cpio.CharDev("dev/null", 0666, 1, 3),
+			cpio.CharDev("dev/port", 0640, 1, 4),
+			cpio.CharDev("dev/urandom", 0666, 1, 9),
+			cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
+			cpio.StaticFile("etc/localtime", gmt0, 0644),
+		})
+	default:
+		return cpio.ArchiveFromRecords([]cpio.Record{
+			cpio.Directory("ubin", 0755),
+			cpio.Directory("bbin", 0755),
+		})
+	}
+}
 
 // Commands specifies a list of Golang packages to build with a builder, e.g.
 // in busybox mode, source mode, or binary mode.

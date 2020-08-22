@@ -19,10 +19,10 @@ io (cw index value)... # write value to CMOS register index [14-127]
 io (rtcr index)... # read from RTC register index [0-13]
 io (rtcw index value)... # write value to RTC register index [0-13]
 `
-	readCmds["cr"] = cmd{cmosRead, 7, 8}
-	readCmds["rtcr"] = cmd{rtcRead, 7, 8}
-	writeCmds["cw"] = cmd{cmosWrite, 7, 8}
-	writeCmds["rtcw"] = cmd{rtcWrite, 7, 8}
+	addCmd(readCmds, "cr", &cmd{cmosRead, 7, 8})
+	addCmd(readCmds, "rtcr", &cmd{rtcRead, 7, 8})
+	addCmd(writeCmds, "cw", &cmd{cmosWrite, 7, 8})
+	addCmd(writeCmds, "rtcw", &cmd{rtcWrite, 7, 8})
 }
 
 func cmosRead(reg int64, data memio.UintN) error {

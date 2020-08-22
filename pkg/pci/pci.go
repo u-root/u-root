@@ -119,3 +119,25 @@ func (p *PCI) WriteConfigRegister(offset, size int64, val uint64) error {
 	}
 	return err
 }
+
+// Read implements the BusReader interface for type bus. Iterating over each
+// PCI bus device, and applying optional Filters to it.
+func (bus *bus) Read(filters ...Filter) (Devices, error) {
+	devices := make(Devices, 0, len(bus.Devices))
+iter:
+	for _, d := range bus.Devices {
+		p, err := onePCI(d)
+		if err != nil {
+			return nil, err
+		}
+		p.Addr = filepath.Base(d)
+		p.FullPath = d
+		for _, f := range filters {
+			if !f(p) {
+				continue iter
+			}
+		}
+		devices = append(devices, p)
+	}
+	return devices, nil
+}

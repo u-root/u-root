@@ -27,3 +27,44 @@ func TestNewBusReaderNoGlob(t *testing.T) {
 		}
 	}
 }
+
+func TestBusReader(t *testing.T) {
+	n, err := NewBusReader()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(n.(*bus).Devices) == 0 {
+		t.Fatal("got 0 devices, want at least 1")
+	}
+	d, err := n.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(n.(*bus).Devices) != len(d) {
+		t.Fatalf("Got %d devices, wanted %d", len(d), len(n.(*bus).Devices))
+	}
+	// Multiple reads should be ok
+	d, err = n.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(n.(*bus).Devices) != len(d) {
+		t.Fatalf("Got %d devices, wanted %d", len(d), len(n.(*bus).Devices))
+	}
+	// Filter by vendor and dev id.
+	ven, dev := d[0].Vendor, d[0].Device
+	d, err = n.Read(func(p *PCI) bool {
+		if p.Vendor == ven && p.Device == dev {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// That should filter just one thing.
+	if len(n.(*bus).Devices)-1 != len(d) {
+		t.Fatalf("Got %d devices, wanted %d", len(d), len(n.(*bus).Devices)-1)
+	}
+
+}

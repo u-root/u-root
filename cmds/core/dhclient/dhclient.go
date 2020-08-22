@@ -83,7 +83,7 @@ func configureAll(ifs []netlink.Link) {
 	if *vverbose {
 		c.LogLevel = dhclient.LogDebug
 	}
-	r := dhclient.SendRequests(context.Background(), ifs, *ipv4, *ipv6, c)
+	r := dhclient.SendRequests(context.Background(), ifs, *ipv4, *ipv6, c, 30*time.Second)
 
 	for result := range r {
 		if result.Err != nil {

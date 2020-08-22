@@ -4,8 +4,13 @@
 
 package pci
 
-type busReader interface {
-	Read() (Devices, error)
+// Filter can be used to filter a device
+type Filter func(p *PCI) bool
+
+// BusReader is the interface for reading device names for a given bus.
+type BusReader interface {
+	// Read returns Devices, possibly filter by a provided ...Filter
+	Read(...Filter) (Devices, error)
 }
 
 // Vendor is a PCI vendor human readable label. It contains a map of one or

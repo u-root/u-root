@@ -17,7 +17,7 @@ import (
 
 func TestTczclient(t *testing.T) {
 	// TODO: support arm
-	if vmtest.TestArch() != "amd64" {
+	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
 

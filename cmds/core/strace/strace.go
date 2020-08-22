@@ -25,8 +25,8 @@ import (
 	"github.com/u-root/u-root/pkg/strace"
 )
 
-var (
-	cmdUsage = "Usage: strace <command> [args...]"
+const (
+	cmdUsage = "Usage: strace [-o <outputfile>] <command> [args...]"
 )
 
 func usage() {
@@ -34,6 +34,7 @@ func usage() {
 }
 
 func main() {
+	o := flag.String("o", "", "write output to file (if empty, stdout)")
 	flag.Parse()
 
 	a := flag.Args()
@@ -44,7 +45,16 @@ func main() {
 	c := exec.Command(a[0], a[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 
-	if err := strace.Strace(c, os.Stdout); err != nil {
+	out := os.Stdout
+	if len(*o) > 0 {
+		f, err := os.Create(*o)
+		if err != nil {
+			log.Fatalf("creating output file: %s", err)
+		}
+		defer f.Close()
+		out = f
+	}
+	if err := strace.Strace(c, out); err != nil {
 		log.Printf("strace exited: %v", err)
 	}
 }

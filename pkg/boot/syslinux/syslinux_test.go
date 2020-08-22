@@ -131,6 +131,51 @@ func TestParseGeneral(t *testing.T) {
 			},
 		},
 		{
+			desc: "all files exist, simple config with two initrd files",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					default foo
+					label multi-initrd
+					kernel ./pxefiles/kernel1
+					initrd ./pxefiles/initrd1,./pxefiles/initrd2
+					append foo=bar`,
+			},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:    "multi-initrd",
+					Kernel:  strings.NewReader(kernel1),
+					Initrd:  boot.CatInitrds(strings.NewReader(initrd1), strings.NewReader(initrd2)),
+					Cmdline: "foo=bar",
+				},
+			},
+		},
+		{
+			desc: "an initrd file missing, config with two initrd files",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					default foo
+					label multi-initrd
+					kernel ./pxefiles/kernel1
+					initrd ./pxefiles/initrd1,./pxefiles/no-initrd-here
+					append foo=bar`,
+			},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:   "multi-initrd",
+					Kernel: strings.NewReader(kernel1),
+					Initrd: errorReader{&curl.URLError{
+						URL: &url.URL{
+							Scheme: "tftp",
+							Host:   "1.2.3.4",
+							Path:   "/foobar/pxefiles/no-initrd-here",
+						},
+						Err: curl.ErrNoSuchFile,
+					}},
+					Cmdline: "foo=bar",
+				},
+			},
+		},
+		{
 			desc: "kernel does not exist, simple config",
 			configFiles: map[string]string{
 				"/foobar/pxelinux.cfg/default": `
@@ -477,13 +522,11 @@ func TestParseGeneral(t *testing.T) {
 					Modules: []multiboot.Module{
 						{
 							Module:  strings.NewReader(kernel1),
-							Name:    "./pxefiles/kernel1",
-							CmdLine: "./pxefiles/kernel1 foobar hahaha",
+							Cmdline: "./pxefiles/kernel1 foobar hahaha",
 						},
 						{
 							Module:  strings.NewReader(initrd1),
-							Name:    "./pxefiles/initrd1",
-							CmdLine: "./pxefiles/initrd1",
+							Cmdline: "./pxefiles/initrd1",
 						},
 					},
 				},
