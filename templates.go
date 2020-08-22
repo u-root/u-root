@@ -164,5 +164,6 @@ var templates = map[string][]string{
 
 		"github.com/u-root/u-root/cmds/exp/console",
 		"github.com/u-root/u-root/cmds/exp/rush",
+		"github.com/u-root/u-root/cmds/core/sshd",
 	},
 }
