@@ -11,15 +11,15 @@ package main
 // completely; that may be our best bet.
 var templates = map[string][]string{
 	"all": {
-		"github.com/u-root/u-root/cmds/core/*",
-		"github.com/u-root/u-root/cmds/boot/*boot*",
+		"github.com/u-root/u-root/cmds/core/...",
+		"github.com/u-root/u-root/cmds/boot/...",
 	},
 	"boot": {
-		"github.com/u-root/u-root/cmds/boot/*boot*",
+		"github.com/u-root/u-root/cmds/boot/...",
 	},
 	// Core should be things you don't want to live without.
 	"core": {
-		"github.com/u-root/u-root/cmds/core/*",
+		"github.com/u-root/u-root/cmds/core/...",
 	},
 	// Minimal should be things you can't live without.
 	"minimal": {
