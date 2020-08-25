@@ -285,6 +285,7 @@ func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer t
 	if err != nil {
 		return err
 	}
+	// FIXME: put the bb buil dir somewhere else; this is read-only ;)
 	dest := filepath.Join(buildp.Dir, ".bb")
 	// If .bb directory already exists, delete it. This will prevent stale
 	// files from being included in the build.
