@@ -13,7 +13,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
+
+var DefaultConfig = &packages.Config{Mode: packages.NeedFiles | packages.NeedSyntax}
 
 type Environ struct {
 	build.Context

@@ -11,6 +11,7 @@ package uroot
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"golang.org/x/tools/go/packages"
 )
 
 // These constants are used in DefaultRamfs.
@@ -323,45 +325,15 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 
 // resolvePackagePath finds import paths for a single import path or directory string
 func resolvePackagePath(logger ulog.Logger, env golang.Environ, pkg string) ([]string, error) {
-	// Search the current working directory, as well GOROOT and GOPATHs
-	prefixes := append([]string{""}, env.SrcDirs()...)
-	// Resolve file system paths to package import paths.
-	for _, prefix := range prefixes {
-		path := filepath.Join(prefix, pkg)
-		matches, err := filepath.Glob(path)
-		if len(matches) == 0 || err != nil {
-			continue
-		}
-
-		var importPaths []string
-		for _, match := range matches {
-
-			// Only match directories for building.
-			// Skip anything that is not a directory
-			fileInfo, _ := os.Stat(match)
-			if !fileInfo.IsDir() {
-				continue
-			}
-
-			p, err := env.PackageByPath(match)
-			if err != nil {
-				logger.Printf("Skipping package %q: %v", match, err)
-			} else if p.ImportPath == "." {
-				// TODO: I do not completely understand why
-				// this is triggered. This is only an issue
-				// while this function is run inside the
-				// process of a "go test".
-				importPaths = append(importPaths, pkg)
-			} else {
-				importPaths = append(importPaths, p.ImportPath)
-			}
-		}
-		return importPaths, nil
+	cfg := golang.DefaultConfig
+	pkgs, err := packages.Load(cfg, pkg)
+	if err != nil {
+		return nil, err
 	}
-
-	// No file import paths found. Check if pkg still resolves as a package name.
-	if _, err := env.Package(pkg); err != nil {
-		return nil, fmt.Errorf("%q is neither package or path/glob: %v", pkg, err)
+	paths := []string{}
+	for _, p := range pkgs {
+		log.Println(p)
+		paths = append(paths, p.PkgPath)
 	}
 	return []string{pkg}, nil
 }
