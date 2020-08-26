@@ -73,12 +73,23 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 }
 
 func TestUrootCmdline(t *testing.T) {
-	samplef, err := ioutil.TempFile("", "u-root-sample-")
+	samplef, err := ioutil.TempFile("", "u-root-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	samplef.Close()
 	defer os.RemoveAll(samplef.Name())
+	sampledir, err := ioutil.TempDir("", "u-root-test-dir-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = ioutil.WriteFile(filepath.Join(sampledir, "foo"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err = ioutil.WriteFile(filepath.Join(sampledir, "bar"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(sampledir)
 
 	for _, tt := range []struct {
 		name       string
@@ -109,10 +120,11 @@ func TestUrootCmdline(t *testing.T) {
 		},
 		{
 			name: "fix usage of an absolute path",
-			args: []string{"-nocmd", "-files=/bin:/bin"},
+			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
-				itest.HasFile{"bin/bash"},
+				itest.HasFile{"/bin/foo"},
+				itest.HasFile{"/bin/bar"},
 			},
 		},
 		{
