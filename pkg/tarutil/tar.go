@@ -131,7 +131,7 @@ func CreateTarFilter(tarFile io.Writer, files []string, filters []Filter) error 
 
 func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
 	fi := hdr.FileInfo()
-	path := filepath.Clean(filepath.Join(rootDir, hdr.Name))
+	path := filepath.Clean(filepath.Join(rootDir, filepath.Join("/", hdr.Name)))
 	if !strings.HasPrefix(path, filepath.Clean(rootDir)) {
 		return fmt.Errorf("file outside root directory: %q", path)
 	}

@@ -89,7 +89,7 @@ func FromZip(src, dir string) error {
 	}
 
 	for _, file := range z.File {
-		path := filepath.Join(dir, file.Name)
+		path := filepath.Join(dir, filepath.Join("/", file.Name))
 		if file.FileInfo().IsDir() {
 			if err = os.MkdirAll(path, file.Mode()); err != nil {
 				return err
