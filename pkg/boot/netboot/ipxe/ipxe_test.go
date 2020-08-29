@@ -87,6 +87,38 @@ func TestParseURL(t *testing.T) {
 func TestIpxeConfig(t *testing.T) {
 	content1 := "1111"
 	content2 := "2222"
+	content512_1 := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	content512_2 := "h123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"he23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hell456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hello56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hellow6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hellowo789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hellowor89abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"helloworl9abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	content1024 := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"h123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"he23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hell456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hello56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hellow6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hellowo789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"hellowor89abcdef0123456789abcdef0123456789abcdef0123456789abcdef" +
+		"helloworl9abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 	for i, tt := range []struct {
 		desc       string
@@ -118,6 +150,32 @@ func TestIpxeConfig(t *testing.T) {
 			want: &boot.LinuxImage{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content2),
+			},
+		},
+		{
+			desc: "all files exist, simple config with no cmdline, one relative file path, concatenate initrd",
+			schemeFunc: func() curl.Schemes {
+				s := make(curl.Schemes)
+				fs := curl.NewMockScheme("http")
+				conf := `#!ipxe
+				kernel http://someplace.com/foobar/pxefiles/kernel
+				initrd initrd-file.001,initrd-file.002
+				boot`
+				fs.Add("someplace.com", "/foobar/pxefiles/ipxeconfig", conf)
+				fs.Add("someplace.com", "/foobar/pxefiles/kernel", content1)
+				fs.Add("someplace.com", "/foobar/pxefiles/initrd-file.001", content512_1)
+				fs.Add("someplace.com", "/foobar/pxefiles/initrd-file.002", content512_2)
+				s.Register(fs.Scheme, fs)
+				return s
+			},
+			curl: &url.URL{
+				Scheme: "http",
+				Host:   "someplace.com",
+				Path:   "/foobar/pxefiles/ipxeconfig",
+			},
+			want: &boot.LinuxImage{
+				Kernel: strings.NewReader(content1),
+				Initrd: strings.NewReader(content1024),
 			},
 		},
 		{
