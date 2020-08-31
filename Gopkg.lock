@@ -99,7 +99,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:025aff2aa982bc49f6805ced7a2366c3a150c7116411de517da4149cd5db9c04"
+  digest = "1:67da3ec4f6b68d84f7c05ac47bdf10e8023a5367a2fbf4cdbc5f5303ba9e3792"
   name = "github.com/google/go-tpm"
   packages = [
     "tpm",
@@ -108,7 +108,7 @@
     "tpmutil/tbs",
   ]
   pruneopts = "NUT"
-  revision = "5d8a91de9ae363d5a2754ab4f6d67444120953d6"
+  revision = "a8905819c79c3ceb82b80bb336d2f10ae1a6fbed"
 
 [[projects]]
   branch = "master"

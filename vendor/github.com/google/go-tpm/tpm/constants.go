@@ -36,63 +36,68 @@ const (
 
 // Supported TPM operations.
 const (
-	ordOIAP                 uint32 = 0x0000000A
-	ordOSAP                 uint32 = 0x0000000B
-	ordTakeOwnership        uint32 = 0x0000000D
-	ordExtend               uint32 = 0x00000014
-	ordPCRRead              uint32 = 0x00000015
-	ordQuote                uint32 = 0x00000016
-	ordSeal                 uint32 = 0x00000017
-	ordUnseal               uint32 = 0x00000018
-	ordCreateWrapKey        uint32 = 0x0000001F
-	ordGetPubKey            uint32 = 0x00000021
-	ordSign                 uint32 = 0x0000003C
-	ordQuote2               uint32 = 0x0000003E
-	ordResetLockValue       uint32 = 0x00000040
-	ordLoadKey2             uint32 = 0x00000041
-	ordGetRandom            uint32 = 0x00000046
-	ordOwnerClear           uint32 = 0x0000005B
-	ordForceClear           uint32 = 0x0000005D
-	ordGetCapability        uint32 = 0x00000065
-	ordMakeIdentity         uint32 = 0x00000079
-	ordActivateIdentity     uint32 = 0x0000007A
-	ordReadPubEK            uint32 = 0x0000007C
-	ordOwnerReadInternalPub uint32 = 0x00000081
-	ordFlushSpecific        uint32 = 0x000000BA
-	ordNVDefineSpace        uint32 = 0x000000CC
-	ordPcrReset             uint32 = 0x000000C8
-	ordNVWriteValue         uint32 = 0x000000CD
-	ordNVWriteValueAuth     uint32 = 0x000000CE
-	ordNVReadValue          uint32 = 0x000000CF
-	ordNVReadValueAuth      uint32 = 0x000000D0
+	ordOIAP                     uint32 = 0x0000000A
+	ordOSAP                     uint32 = 0x0000000B
+	ordTakeOwnership            uint32 = 0x0000000D
+	ordExtend                   uint32 = 0x00000014
+	ordPCRRead                  uint32 = 0x00000015
+	ordQuote                    uint32 = 0x00000016
+	ordSeal                     uint32 = 0x00000017
+	ordUnseal                   uint32 = 0x00000018
+	ordCreateWrapKey            uint32 = 0x0000001F
+	ordGetPubKey                uint32 = 0x00000021
+	ordCreateMigrationBlob      uint32 = 0x00000028
+	ordAuthorizeMigrationKey    uint32 = 0x0000002b
+	ordSign                     uint32 = 0x0000003C
+	ordQuote2                   uint32 = 0x0000003E
+	ordResetLockValue           uint32 = 0x00000040
+	ordLoadKey2                 uint32 = 0x00000041
+	ordGetRandom                uint32 = 0x00000046
+	ordOwnerClear               uint32 = 0x0000005B
+	ordForceClear               uint32 = 0x0000005D
+	ordGetCapability            uint32 = 0x00000065
+	ordCreateEndorsementKeyPair uint32 = 0x00000078
+	ordMakeIdentity             uint32 = 0x00000079
+	ordActivateIdentity         uint32 = 0x0000007A
+	ordReadPubEK                uint32 = 0x0000007C
+	ordOwnerReadInternalPub     uint32 = 0x00000081
+	ordStartup                  uint32 = 0x00000099
+	ordFlushSpecific            uint32 = 0x000000BA
+	ordNVDefineSpace            uint32 = 0x000000CC
+	ordPcrReset                 uint32 = 0x000000C8
+	ordNVWriteValue             uint32 = 0x000000CD
+	ordNVWriteValueAuth         uint32 = 0x000000CE
+	ordNVReadValue              uint32 = 0x000000CF
+	ordNVReadValueAuth          uint32 = 0x000000D0
 )
 
 // Capability types.
 const (
-	capAlg      uint32 = 0x00000002
-	capProperty uint32 = 0x00000005
-	capFlag     uint32 = 0x00000004
-	capNVList   uint32 = 0x0000000D
-	capNVIndex  uint32 = 0x00000011
-	capHandle   uint32 = 0x00000014
+	CapAlg      uint32 = 0x00000002
+	CapProperty uint32 = 0x00000005
+	CapFlag     uint32 = 0x00000004
+	CapNVList   uint32 = 0x0000000D
+	CapNVIndex  uint32 = 0x00000011
+	CapHandle   uint32 = 0x00000014
+	CapVersion  uint32 = 0x0000001A
 )
 
 // SubCapabilities
 const (
-	tpmCapPropManufacturer uint32 = 0x00000103
-	tpmCapFlagPermanent    uint32 = 0x00000108
+	SubCapPropManufacturer uint32 = 0x00000103
+	SubCapFlagPermanent    uint32 = 0x00000108
 )
 
-// permission type
-type permission uint32
+// Permission type
+type Permission uint32
 
 // NV Permissions and Operations
 // Note: Permissions are summable
 const (
-	nvPerPPWrite    permission = 0x00000001
-	nvPerOwnerWrite permission = 0x00000002
-	nvPerAuthWrite  permission = 0x00000004
-	nvPerWriteAll   permission = 0x00000800
+	NVPerPPWrite    Permission = 0x00000001
+	NVPerOwnerWrite Permission = 0x00000002
+	NVPerAuthWrite  Permission = 0x00000004
+	NVPerWriteAll   Permission = 0x00000800
 	// Warning: The Value 0x00001000 is
 	// defined in the spec as
 	// TPM_NV_PER_WRITEDEFINE, but it is
@@ -103,30 +108,30 @@ const (
 	// be undone in any way. Do not use
 	// this value unless you know what
 	// you're doing!
-	nvPerWriteSTClear permission = 0x00002000
-	nvPerGlobalLock   permission = 0x00004000
-	nvPerPPRead       permission = 0x00008000
-	nvPerOwnerRead    permission = 0x00100000
-	nvPerAuthRead     permission = 0x00200000
-	nvPerReadSTClear  permission = 0x80000000
+	NVPerWriteSTClear Permission = 0x00002000
+	NVPerGlobalLock   Permission = 0x00004000
+	NVPerPPRead       Permission = 0x00008000
+	NVPerOwnerRead    Permission = 0x00100000
+	NVPerAuthRead     Permission = 0x00200000
+	NVPerReadSTClear  Permission = 0x80000000
 )
 
 // permMap : Map of TPM_NV_Permissions to its strings for convenience
-var permMap = map[permission]string{
-	nvPerPPWrite:      "PPWrite",
-	nvPerOwnerWrite:   "OwnerWrite",
-	nvPerAuthWrite:    "AuthWrite",
-	nvPerWriteAll:     "WriteAll",
-	nvPerWriteSTClear: " WriteSTClear",
-	nvPerGlobalLock:   "GlobalLock",
-	nvPerPPRead:       "PPRead",
-	nvPerOwnerRead:    "OwnerRead",
-	nvPerAuthRead:     "AuthRead",
-	nvPerReadSTClear:  "ReadSTClear",
+var permMap = map[Permission]string{
+	NVPerPPWrite:      "PPWrite",
+	NVPerOwnerWrite:   "OwnerWrite",
+	NVPerAuthWrite:    "AuthWrite",
+	NVPerWriteAll:     "WriteAll",
+	NVPerWriteSTClear: " WriteSTClear",
+	NVPerGlobalLock:   "GlobalLock",
+	NVPerPPRead:       "PPRead",
+	NVPerOwnerRead:    "OwnerRead",
+	NVPerAuthRead:     "AuthRead",
+	NVPerReadSTClear:  "ReadSTClear",
 }
 
 // String returns a textual representation of the set of permissions
-func (p permission) String() string {
+func (p Permission) String() string {
 	var retString strings.Builder
 	for iterator, item := range permMap {
 		if (p & iterator) != 0 {
@@ -167,20 +172,20 @@ type Locality byte
 // Values of locality
 // Note: Localities are summable
 const (
-	locZero Locality = 1 << iota
-	locOne
-	locTwo
-	locThree
-	locFour
+	LocZero Locality = 1 << iota
+	LocOne
+	LocTwo
+	LocThree
+	LocFour
 )
 
 // LocaMap maps Locality values to strings for convenience
 var locaMap = map[Locality]string{
-	locZero:  "Locality 0",
-	locOne:   "Locality 1",
-	locTwo:   "Locality 2",
-	locThree: "Locality 3",
-	locFour:  "Locality 4",
+	LocZero:  "Locality 0",
+	LocOne:   "Locality 1",
+	LocTwo:   "Locality 2",
+	LocThree: "Locality 3",
+	LocFour:  "Locality 4",
 }
 
 // // String returns a textual representation of the set of Localities
@@ -292,6 +297,28 @@ const (
 	authNever       byte = 0x00
 	authAlways      byte = 0x01
 	authPrivUseOnly byte = 0x03
+)
+
+// KeyFlags represents TPM_KEY_FLAGS.
+type KeyFlags uint32
+
+const (
+	keyRedirection      KeyFlags = 0x00000001
+	keyMigratable       KeyFlags = 0x00000002
+	keyIsVolatile       KeyFlags = 0x00000004
+	keyPcrIgnoredOnRead KeyFlags = 0x00000008
+	keyMigrateAuthority KeyFlags = 0x00000010
+)
+
+// MigrationScheme represents TPM_MIGRATE_SCHEME.
+type MigrationScheme uint16
+
+const (
+	msMigrate         MigrationScheme = 0x0001
+	msRewrap          MigrationScheme = 0x0002
+	msMaint           MigrationScheme = 0x0003
+	msRestrictMigrate MigrationScheme = 0x0004
+	msRestrictApprove MigrationScheme = 0x0005
 )
 
 // fixedQuote is the fixed constant string used in quoteInfo.

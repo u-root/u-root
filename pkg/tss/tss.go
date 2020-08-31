@@ -12,28 +12,49 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io/ioutil"
 
-	"github.com/google/go-tpm/tpm2"
+	tpm1 "github.com/google/go-tpm/tpm"
+	tpm2 "github.com/google/go-tpm/tpm2"
 	tpmutil "github.com/google/go-tpm/tpmutil"
+)
+
+const (
+	tpmPath = "/dev/tpm0"
 )
 
 // NewTPM initializes access to the TPM based on the
 // config provided.
 func NewTPM() (*TPM, error) {
-	candidateTPMs, err := probeSystemTPMs()
+	t, err := tpm1.OpenTPM(tpmPath)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, tpm := range candidateTPMs {
-		tss, err := newTPM(tpm)
-		if err != nil {
-			continue
-		}
-		return tss, nil
-	}
+	_, err = tpm1.GetCapVersionVal(t)
+	if err != nil {
+		t.Close()
+		// No TPM12 device - check for TPM20
 
-	return nil, errors.New("TPM device not available")
+		t, err = tpm2.OpenTPM(tpmPath)
+		if err != nil {
+			return nil, err
+		}
+		_, _, err := tpm2.GetCapability(t, tpm2.CapabilityTPMProperties, 0, uint32(tpm2.FamilyIndicator))
+		if err != nil {
+			return nil, fmt.Errorf("No TPM device found")
+		}
+		tpmDev := &TPM{
+			Version: TPMVersion20,
+			RWC:     t,
+		}
+		return tpmDev, nil
+	}
+	tpmDev := &TPM{
+		Version: TPMVersion12,
+		RWC:     t,
+	}
+	return tpmDev, errors.New("TPM device not available")
 }
 
 // Info returns information about the TPM.
@@ -219,4 +240,10 @@ func (t *TPM) NVReadValue(index uint32, ownerPassword string, size, offhandle ui
 		return nvRead20(t.RWC, tpmutil.Handle(index), tpmutil.Handle(offhandle), ownerPassword, int(size))
 	}
 	return nil, fmt.Errorf("unsupported TPM version: %x", t.Version)
+}
+
+// MeasurementLog reads the TCPA eventlog in binary format
+// from the Linux kernel
+func (t *TPM) MeasurementLog() ([]byte, error) {
+	return ioutil.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
 }
