@@ -21,6 +21,10 @@ func CatInitrds(initrds ...io.ReaderAt) io.ReaderAt {
 	}
 
 	return uio.NewLazyOpenerAt(strings.Join(names, ","), func() (io.ReaderAt, error) {
+		// TODO: be smarter
+		if len(initrds) == 1 {
+			return initrds[0], nil
+		}
 		buf := new(bytes.Buffer)
 		for i, ireader := range initrds {
 			size, err := buf.ReadFrom(uio.Reader(ireader))
