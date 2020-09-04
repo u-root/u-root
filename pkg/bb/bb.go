@@ -172,6 +172,9 @@ func BuildBusybox(env golang.Environ, cmdPaths []string, noStrip bool, binaryPat
 	// dependencies need modules anyway. There's literally no way around
 	// them.
 
+	if env.GO111MODULE == "off" {
+		env.GOPATH = tmpDir
+	}
 	// Compile bb.
 	return env.BuildDir(bbDir, binaryPath, golang.BuildOpts{NoStrip: noStrip})
 }
