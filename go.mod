@@ -8,11 +8,12 @@ require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/beevik/ntp v0.2.0
 	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/creack/pty v1.1.11 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
-	github.com/gojuno/minimock v1.9.2
+	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.4.1
 	github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
@@ -36,12 +37,10 @@ require (
 	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
-	golang.org/x/sys v0.0.0-20200523222454-059865788121
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f
 	golang.org/x/text v0.3.2
-	golang.org/x/tools v0.0.0-20200526224456-8b020aee10d2
+	golang.org/x/tools v0.0.0-20200904185747-39188db58858
 	google.golang.org/grpc v1.29.1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.3.0 // indirect
