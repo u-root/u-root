@@ -64,12 +64,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install dep
-          command: |
-            wget https://github.com/golang/dep/releases/download/v0.5.4/dep-linux-amd64
-            mv dep-linux-amd64 dep
-            chmod +x dep
-      - run:
           name: Install gometalinter
           command: |
             go get -u golang.org/x/lint/golint
@@ -80,13 +74,11 @@ jobs:
       - run:
           name: Check vendored dependencies
           command: |
-            ./dep version
-            ./dep status
-            ./dep ensure -vendor-only
+            go mod vendor -v
             git status
             if [[ -n "$(git status --porcelain vendor)" ]]; then
-              echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
-              echo 'If `dep ensure` results in no changes, make sure you are using the latest relase of dep'
+              echo 'vendor/ is out-of-date: run `go mod vendor` and then check in the changes'
+              echo 'If `go mod vendor` results in no changes, make sure you are using the latest relase of Go'
               git status --porcelain vendor
               exit 1
             fi
