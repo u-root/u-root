@@ -32,11 +32,13 @@ test_task:
     export GOPATH=$CIRRUS_WORKING_DIR
     export CIRRUS_WORKING_DIR=$CIRRUS_WORKING_DIR/src/github.com/${CIRRUS_REPO_FULL_NAME}
     cd $CIRRUS_WORKING_DIR
+    go mod tidy
+    go mod verify
     go mod vendor -v
     git status
     if [ -n "$(git status --porcelain vendor)" ]; then
-      echo '`vendor/` is out-of-date: run `go mod vendor` and then'
-      echo 'check in the changes. If `go mod vendor` results in no changes, make'
+      echo '`vendor/` is out-of-date: run `go mod tidy && go mod vendor` and then'
+      echo 'check in the changes. If `go mod tidy && go mod vendor` results in no changes, make'
       echo 'sure you are using the latest release of Go.'
       git status --porcelain vendor
       exit 1
