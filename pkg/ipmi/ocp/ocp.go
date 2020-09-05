@@ -58,7 +58,8 @@ type DimmInfo struct {
 	ModuleManufacturerIDMSB uint8
 }
 
-// Maps OEM names to a 3 byte OEM number.
+// OENMap maps OEM names to a 3 byte OEM number.
+//
 // OENs are typically serialized as the first 3 bytes of a request body.
 var OENMap = map[string][3]uint8{
 	"Wiwynn": {0x0, 0x9c, 0x9c},

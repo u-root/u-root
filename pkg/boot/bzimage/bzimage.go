@@ -65,7 +65,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if b.Header.HeaderMagic != HeaderMagic {
 		return fmt.Errorf("not a bzImage: magic should be %02x, and is %02x", HeaderMagic, b.Header.HeaderMagic)
 	}
-	Debug("RamDisk image %x size %x", b.Header.RamDiskImage, b.Header.RamDiskSize)
+	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
 	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
 	Debug("SetupSects %d", b.Header.SetupSects)
@@ -106,7 +106,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	}
 	Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 	b.KernelBase = uintptr(0x100000)
-	if b.Header.RamDiskImage == 0 {
+	if b.Header.RamdiskImage == 0 {
 		return nil
 	}
 	if r.Len() != 0 {
