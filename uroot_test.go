@@ -68,6 +68,7 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 		fmt.Sprintf("GOPATH=%s", gopath),
 		fmt.Sprintf("GOCACHE=%s", filepath.Join(dir, "tmp")),
 		fmt.Sprintf("GOROOT=%s", goroot),
+		"GO111MODULE=off",
 		"CGO_ENABLED=0")
 	out, err := c.CombinedOutput()
 	if err != nil {
