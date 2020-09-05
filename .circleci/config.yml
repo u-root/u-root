@@ -64,13 +64,14 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install gometalinter
+          name: Install golangci-lint
           command: |
-            go get -u golang.org/x/lint/golint
-            go get github.com/alecthomas/gometalinter
+            cd ..
+            go get golang.org/x/lint/golint
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.30.0
       - run:
           name: Install ineffassign
-          command: go get github.com/gordonklaus/ineffassign
+          command: (cd .. && go get github.com/gordonklaus/ineffassign)
       - run:
           name: Check vendored dependencies
           command: |
@@ -93,11 +94,11 @@ jobs:
           command: |
             test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
       - run:
-          name: gometalinter
+          name: golangci-lint
           command: |
-              gometalinter --vendor ./... --disable-all --enable=golint \
-                --skip=pkg/uroot/test \
-                --skip=cmds/core/elvish \
+              golangci-lint run ./... --disable-all --enable=golint \
+                --skip-dirs=pkg/uroot/test \
+                --skip-dirs=cmds/core/elvish \
                 --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
                 --exclude="don't use underscores" \
                 --exclude="don't use ALL_CAPS" \

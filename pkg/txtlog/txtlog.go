@@ -154,7 +154,7 @@ func readTPM2Log(firmware FirmwareType) (*PCRLog, error) {
 	if pcrEvent, err = parseTcgPcrEvent(file); err != nil {
 		return nil, err
 	}
-	if efiSpecId, err := parseEfiSpecEvent(bytes.NewBuffer(pcrEvent.event)); efiSpecId == nil {
+	if efiSpecID, err := parseEfiSpecEvent(bytes.NewBuffer(pcrEvent.event)); efiSpecID == nil {
 		if err != nil {
 			return nil, err
 		}

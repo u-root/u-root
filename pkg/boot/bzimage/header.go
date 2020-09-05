@@ -8,7 +8,7 @@ package bzimage
 // Thanks to coreboot for documenting the basic layout.
 
 const (
-	Ram      e820type = 1
+	RAM      e820type = 1
 	Reserved e820type = 2
 	ACPI     e820type = 3
 	NVS      e820type = 4
@@ -85,7 +85,7 @@ type LinuxHeader struct {
 	SetupSects      uint8               `offset:"0x1f1"`
 	RootFlags       uint16              `offset:"0x1f2"`
 	Syssize         uint32              `offset:"0x1f4"` //(2.04+)
-	RamSize         uint16              `offset:"0x1f8"`
+	RAMSize         uint16              `offset:"0x1f8"`
 	Vidmode         uint16              `offset:"0x1fa"`
 	RootDev         uint16              `offset:"0x1fc"`
 	Bootsectormagic uint16              `offset:"0x1fe"`
@@ -100,8 +100,8 @@ type LinuxHeader struct {
 	Loadflags       uint8    `offset:"0x211"`
 	Setupmovesize   uint16   `offset:"0x212"`
 	Code32Start     uint32   `offset:"0x214"`
-	RamDiskImage    uint32   `offset:"0x218"`
-	RamDiskSize     uint32   `offset:"0x21c"`
+	RamdiskImage    uint32   `offset:"0x218"`
+	RamdiskSize     uint32   `offset:"0x21c"`
 	BootSectKludge  [4]uint8 `offset:"0x220"`
 	// 2.01+
 	Heapendptr    uint16 `offset:"0x224"`
@@ -235,7 +235,7 @@ var (
 		Kernel:    "kernel (kexec)",
 	}
 	E820 = map[e820type]string{
-		Ram:      "Ram",
+		RAM:      "RAM",
 		Reserved: "Reserved",
 		ACPI:     "ACPI",
 		NVS:      "NVS",

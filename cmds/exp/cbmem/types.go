@@ -284,7 +284,7 @@ type LBEntry struct {
 
 type LBRAMEntry struct {
 	Record
-	RamCode uint32
+	RAMCode uint32
 }
 
 type SPIFlashEntry struct {
