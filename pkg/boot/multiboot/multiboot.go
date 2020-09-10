@@ -133,6 +133,8 @@ func (m memoryMaps) String() string {
 }
 
 // Probe checks if `kernel` is multiboot v1 or esxBootInfo kernel.
+// If the `kernel` is gzip'ed, it will decompress it.
+// Only Gzip decmpression is supported at present.
 func Probe(kernel io.ReaderAt) error {
 	r := util.TryGzipFilter(kernel)
 	_, err := parseHeader(uio.Reader(r))
