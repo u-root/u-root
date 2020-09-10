@@ -10,8 +10,7 @@
 // - https://www.gnu.org/software/grub/manual/grub/html_node/Shell_002dlike-scripting.html
 // - https://www.gnu.org/software/grub/manual/grub/html_node/Commands.html
 //
-// Currently, only the linux[16|efi], initrd[16|efi], menuentry and set
-// directives are partially supported.
+// See parser.append function for list of commands that are supported.
 package grub
 
 import (
@@ -21,6 +20,7 @@ import (
 	"log"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -37,6 +37,22 @@ var probeGrubFiles = []string{
 	"grub2/grub.cfg",
 	"boot/grub2/grub.cfg",
 }
+
+// Grub syntax for OpenSUSE/Fedora/RHEL has some undocumented quirks. You
+// won't find it on the master branch, but instead look at the rhel and fedora
+// branches for these commits:
+//
+// * https://github.com/rhboot/grub2/commit/7e6775e6d4a8de9baf3f4676d4e021cc2f5dd761
+// * https://github.com/rhboot/grub2/commit/0c26c6f7525737962d1389ebdfbb918f52d1b3b6
+//
+// They add a special case to not escape hex sequences:
+//
+//     grub> echo hello \xff \xfg
+//     hello \xff xfg
+//
+// Their default installations depend on this functionality.
+var hexEscape = regexp.MustCompile(`\\x[0-9a-fA-F]{2}`)
+var anyEscape = regexp.MustCompile(`\\.{0,3}`)
 
 // ParseLocalConfig looks for a GRUB config in the disk partition mounted at
 // diskDir and parses out OSes to boot.
@@ -225,7 +241,13 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 func cmdlineQuote(args []string) string {
 	q := make([]string, len(args))
 	for i, s := range args {
-		s = strings.Replace(s, `\`, `\\`, -1)
+		// Replace \ with \\ unless it matches \xXX
+		s = anyEscape.ReplaceAllStringFunc(s, func(match string) string {
+			if hexEscape.MatchString(match) {
+				return match
+			}
+			return strings.Replace(match, `\`, `\\`, -1)
+		})
 		s = strings.Replace(s, `'`, `\'`, -1)
 		s = strings.Replace(s, `"`, `\"`, -1)
 		if strings.ContainsRune(s, ' ') {
@@ -244,6 +266,9 @@ func cmdlineQuote(args []string) string {
 func (c *parser) append(ctx context.Context, config string) error {
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
+		// Add extra backslash for OpenSUSE/Fedora/RHEL use case. shlex
+		// will convert it back to a single backslash.
+		line = hexEscape.ReplaceAllString(line, `\\$0`)
 		kv := shlex.Argv(line)
 		if len(kv) < 1 {
 			continue
