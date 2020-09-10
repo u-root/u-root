@@ -19,10 +19,7 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -95,33 +92,11 @@ func main() {
 			log.Fatal(err)
 		}
 		defer mbkernel.Close()
-		var r io.ReaderAt
-		// kernel files are sometimes gzip'ed, and there's no good
-		// pattern to the naming. Just try to read it as a gzip,
-		// and if it fails, proceed with the original.
-		if f, err := gzip.NewReader(mbkernel); err == nil {
-			defer f.Close()
-			// We need a ReaderAt, and it's best to find out
-			// right away if the gunzip will not work out.
-			b, err := ioutil.ReadAll(f)
-			if err != nil {
-				log.Fatalf("Reading gzip'ed kernel: %v", err)
-			}
-			r = bytes.NewReader(b)
-		} else {
-			// gzip can set the file offset, make sure we're back
-			// at the start. There's no reason for this seek
-			// to ever fail, but ...
-			if _, err := mbkernel.Seek(io.SeekStart, 0); err != nil {
-				log.Fatalf("Seeking to 0 on %q: %v", kernelpath, err)
-			}
-			r = mbkernel
-		}
 		var image boot.OSImage
 		if err := multiboot.Probe(mbkernel); err == nil {
 			image = &boot.MultibootImage{
 				Modules: multiboot.LazyOpenModules(opts.modules),
-				Kernel:  r,
+				Kernel:  mbkernel,
 				Cmdline: newCmdline,
 			}
 		} else {
