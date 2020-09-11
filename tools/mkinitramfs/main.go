@@ -28,7 +28,7 @@ func main() {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 
 	// Open the target initramfs file.
-	w, err := initramfs.CPIO.OpenWriter(logger, *outputFile, "", "")
+	w, err := initramfs.CPIO.OpenWriter(logger, *outputFile)
 	if err != nil {
 		log.Fatalf("failed to open cpio archive %q: %v", *outputFile, err)
 	}

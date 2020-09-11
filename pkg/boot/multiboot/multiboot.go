@@ -23,6 +23,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/ibft"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
+	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -133,7 +134,7 @@ func (m memoryMaps) String() string {
 
 // Probe checks if `kernel` is multiboot v1 or mutiboot kernel.
 func Probe(kernel io.ReaderAt) error {
-	r := tryGzipFilter(kernel)
+	r := util.TryGzipFilter(kernel)
 	_, err := parseHeader(uio.Reader(r))
 	if err == ErrHeaderNotFound {
 		_, err = parseMutiHeader(uio.Reader(r))
@@ -173,9 +174,9 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
 func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
-	kernel = tryGzipFilter(kernel)
+	kernel = util.TryGzipFilter(kernel)
 	for i, mod := range modules {
-		modules[i].Module = tryGzipFilter(mod.Module)
+		modules[i].Module = util.TryGzipFilter(mod.Module)
 	}
 
 	m, err := newMB(kernel, cmdline, modules)

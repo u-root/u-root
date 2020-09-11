@@ -25,7 +25,7 @@ func (da DirArchiver) Reader(io.ReaderAt) Reader {
 }
 
 // OpenWriter implements Archiver.OpenWriter.
-func (da DirArchiver) OpenWriter(l ulog.Logger, path, goos, goarch string) (Writer, error) {
+func (da DirArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 	if len(path) == 0 {
 		var err error
 		path, err = ioutil.TempDir("", "u-root")
