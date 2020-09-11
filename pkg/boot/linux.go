@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -81,7 +82,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
 
-	kernel, initrd := uio.Reader(li.Kernel), uio.Reader(li.Initrd)
+	kernel, initrd := uio.Reader(util.TryGzipFilter(li.Kernel)), uio.Reader(li.Initrd)
 	if verbose {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
 		// but it at least proves the files are still downloading.
