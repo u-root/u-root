@@ -17,6 +17,10 @@ var templates = map[string][]string{
 	"boot": {
 		"github.com/u-root/u-root/cmds/boot/*boot*",
 	},
+	// Absolutely everything, including experimental commands.
+	"world": {
+		"github.com/u-root/u-root/cmds/*/*",
+	},
 	// Core should be things you don't want to live without.
 	"core": {
 		"github.com/u-root/u-root/cmds/core/*",

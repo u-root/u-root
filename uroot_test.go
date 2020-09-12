@@ -247,7 +247,7 @@ func TestUrootCmdline(t *testing.T) {
 			name: "make sure dead code gets eliminated",
 			args: []string{
 				// Build the world + test symbols, unstripped.
-				"-build=bb", "-no-strip", "cmds/*/*", "pkg/uroot/test/foo",
+				"-build=bb", "-no-strip", "world", "pkg/uroot/test/foo",
 				// These are known to disable DCE and need to be exluded.
 				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
 				// so these can be removed once we no longer support Go < 1.15.

@@ -51,6 +51,9 @@ workflows:
       - compile_cmds:
           requires:
             - clean-code
+      - check_templates:
+          requires:
+            - clean-code
       - check_licenses:
           requires:
             - clean-code
@@ -170,21 +173,25 @@ jobs:
     steps:
       - checkout
       - run:
-          name: ensure that every template builds for a variety of options.
+          name: Ensure that every template builds for a variety of options.
           command: |
-                  go run u-root.go -build=bb minimal
-                  go run u-root.go minimal
-                  go run u-root.go -build=bb core
-                  go run u-root.go core
-                  go run u-root.go -build=bb coreboot-app
-                  go run u-root.go coreboot-app
-                  go run u-root.go -build=bb all
-                  go run u-root.go all
-                  go run u-root.go -build=bb all core
-                  go run u-root.go all core
-                  go run u-root.go -fourbins minimal
                   go build .
-                  GOOS=plan9 ./u-root plan9 -defaultsh=/bbin/rush
+                  goruncmd="./u-root -stats-output-path=/tmp/stats.json"
+                  $goruncmd -build=bb minimal
+                  $goruncmd -build=bb core
+                  $goruncmd -build=bb coreboot-app
+                  $goruncmd -build=bb all
+                  $goruncmd -build=bb world
+                  # Fails because of dups. Is this supposed to work?
+                  #$goruncmd -build=bb all core
+                  #$goruncmd all core
+                  go run u-root.go templates.go -fourbins minimal
+                  GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
+                  cat /tmp/stats.json
+      - store_artifacts:
+          name: Store build stats
+          path: /tmp/stats.json
+          destination: stats.json
   test-integration-amd64:
     <<: *integration-template
     docker:

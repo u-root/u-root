@@ -286,6 +286,19 @@
   revision = "ee1a8f979f6802a4c7d5d6d41353efe8110a78ef"
 
 [[projects]]
+  digest = "1:00faef81a300a900e0a78e5e5a04f469f1449b4c1ae6fa9302fd199078c629b2"
+  name = "github.com/ulikunitz/xz"
+  packages = [
+    ".",
+    "internal/hash",
+    "internal/xlog",
+    "lzma",
+  ]
+  pruneopts = "NUT"
+  revision = "492fb8161cff03dd43fd938e40ecede6c6ffd8eb"
+  version = "v0.5.8"
+
+[[projects]]
   branch = "master"
   digest = "1:e15ff54118098374b20121eaa32154cd811d1f578de5bf965fed2eed82127e18"
   name = "github.com/vishvananda/netlink"
@@ -496,6 +509,7 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/u-root/iscsinl",
+    "github.com/ulikunitz/xz",
     "github.com/vishvananda/netlink",
     "github.com/vtolstov/go-ioctl",
     "golang.org/x/crypto/ed25519",

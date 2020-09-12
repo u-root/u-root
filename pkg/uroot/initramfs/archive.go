@@ -33,10 +33,7 @@ var (
 // files.
 type Archiver interface {
 	// OpenWriter opens an archive writer at `path`.
-	//
-	// If `path` is unspecified, implementations may choose an arbitrary
-	// default location, potentially based on `goos` and `goarch`.
-	OpenWriter(l ulog.Logger, path, goos, goarch string) (Writer, error)
+	OpenWriter(l ulog.Logger, path string) (Writer, error)
 
 	// Reader returns a Reader that allows reading files from a file.
 	Reader(file io.ReaderAt) Reader
