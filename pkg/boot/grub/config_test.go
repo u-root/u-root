@@ -12,7 +12,43 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/block"
 )
+
+// fakeDevices returns a list of fake block devices and a pool of mount points.
+// The pool is pre-populated so that Mount is never called.
+func fakeDevices() (block.BlockDevices, *mount.Pool, error) {
+	// For some reason, Glob("testdata_new/*/") does not work here.
+	files, err := ioutil.ReadDir("testdata_new")
+	if err != nil {
+		return nil, nil, err
+	}
+	dirs := []string{}
+	for _, f := range files {
+		if f.IsDir() {
+			dirs = append(dirs, filepath.Join("testdata_new", f.Name()))
+		}
+	}
+
+	devices := block.BlockDevices{}
+	mountPool := &mount.Pool{}
+	for _, dir := range dirs {
+		// TODO: Also add LABEL to BlockDev
+		fsUUID, _ := ioutil.ReadFile(filepath.Join(dir, "UUID"))
+		devices = append(devices, &block.BlockDev{
+			Name:   dir,
+			FSType: "test",
+			FsUUID: strings.TrimSpace(string(fsUUID)),
+		})
+		mountPool.Add(&mount.MountPoint{
+			Path:   dir,
+			Device: dir,
+			FSType: "test",
+		})
+	}
+	return devices, mountPool, nil
+}
 
 // Enable this to generate new configs.
 func DISABLEDTestGenerateConfigs(t *testing.T) {
@@ -24,7 +60,11 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimRight(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			imgs, err := ParseLocalConfig(context.Background(), configPath)
+			devices, mountPool, err := fakeDevices()
+			if err != nil {
+				t.Fatal(err)
+			}
+			imgs, err := ParseLocalConfig(context.Background(), configPath, devices, mountPool)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -51,7 +91,11 @@ func TestConfigs(t *testing.T) {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}
 
-			imgs, err := ParseLocalConfig(context.Background(), configPath)
+			devices, mountPool, err := fakeDevices()
+			if err != nil {
+				t.Fatal(err)
+			}
+			imgs, err := ParseLocalConfig(context.Background(), configPath, devices, mountPool)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}

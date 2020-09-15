@@ -25,10 +25,10 @@ func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mo
 		l.Printf("No systemd-boot BootLoaderSpec configs found on %s, trying another format...: %v", device, err)
 	}
 
-	// TODO: The grub intepreter may want to load files from another
-	//       partition, thus it will be given devices and mountPool in
-	//       order to mount more file systems.
-	grubImgs, err := grub.ParseLocalConfig(context.Background(), mountDir)
+	// Grub parser may want to load files (kernel, initramfs, modules, ...)
+	// from another partition, thus it is given devices and mountPool in
+	// order to reuse mounts and mount more file systems.
+	grubImgs, err := grub.ParseLocalConfig(context.Background(), mountDir, devices, mountPool)
 	if err != nil {
 		l.Printf("No GRUB configs found on %s, trying another format...: %v", device, err)
 	}
