@@ -41,6 +41,8 @@ var (
 	noExec      = flag.Bool("no-exec", false, "download boot configuration, but do not exec it")
 	noNetConfig = flag.Bool("no-net-config", false, "get DHCP response, but do not apply the network config it to the kernel interface")
 	verbose     = flag.Bool("v", false, "Verbose output")
+	ipv4        = flag.Bool("ipv4", true, "use IPV4")
+	ipv6        = flag.Bool("ipv6", true, "use IPV6")
 )
 
 const (
@@ -66,7 +68,7 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 	if *verbose {
 		c.LogLevel = dhclient.LogSummary
 	}
-	r := dhclient.SendRequests(ctx, filteredIfs, true, true, c, 30*time.Second)
+	r := dhclient.SendRequests(ctx, filteredIfs, *ipv4, *ipv6, c, 30*time.Second)
 
 	for {
 		select {
