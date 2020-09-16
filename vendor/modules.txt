@@ -7,8 +7,6 @@ github.com/alecthomas/units
 github.com/anmitsu/go-shlex
 # github.com/beevik/ntp v0.2.0
 github.com/beevik/ntp
-# github.com/cenkalti/backoff v2.2.1+incompatible
-github.com/cenkalti/backoff
 # github.com/cenkalti/backoff/v4 v4.0.2
 github.com/cenkalti/backoff/v4
 # github.com/creack/pty v1.1.11
