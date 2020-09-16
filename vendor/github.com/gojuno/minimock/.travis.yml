@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.x
+
+install:
+  - go get github.com/golang/lint/golint
+
+script:
+  - cd $TRAVIS_BUILD_DIR && make all
