@@ -31,10 +31,10 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
-	github.com/u-root/iscsinl v0.0.0-20200619005400-ee1a8f979f68
+	github.com/u-root/iscsinl v0.1.0
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
-	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
+	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
