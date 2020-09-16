@@ -29,6 +29,8 @@ u-root embodies four different projects.
 # Usage
 
 Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
+While u-root uses Go modules, it still vendors dependencies and builds with
+`GO111MODULE=off`.
 
 Download and install u-root:
 
@@ -377,9 +379,9 @@ u-root can create an initramfs in two different modes:
 ## Updating Dependencies
 
 ```shell
-# The latest released version of dep is required:
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-dep ensure
+go get -u
+go mod tidy
+go mod vendor
 ```
 
 # Hardware
