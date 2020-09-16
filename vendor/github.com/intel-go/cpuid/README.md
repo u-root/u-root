@@ -63,7 +63,7 @@ Most data is available with simple variables:
 * **DisplayFamily uint32** Processor family
 * **DisplayModel uint32** Processor model
 * **CacheLineSize uint32** Cache line size in bytes
-* **MaxLogocalCPUId uint32** Maximum number of addressable IDs for logical processors in this physical package
+* **MaxLogicalCPUId uint32** Maximum number of addressable IDs for logical processors in this physical package
 * **InitialAPICId uint32** Initial APIC ID
 * **CacheDescriptors []CacheDescriptor** Cache descriptor's array
 

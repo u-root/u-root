@@ -54,7 +54,7 @@ func getCPUIDInfo() []byte {
 	fmt.Fprintf(&w, "DisplayFamily:  %d\n", cpuid.DisplayFamily)
 	fmt.Fprintf(&w, "DisplayModel:   %d\n", cpuid.DisplayModel)
 	fmt.Fprintf(&w, "CacheLineSize:  %d\n", cpuid.CacheLineSize)
-	fmt.Fprintf(&w, "MaxLogocalCPUId:%d\n", cpuid.MaxLogocalCPUId)
+	fmt.Fprintf(&w, "MaxLogocalCPUId:%d\n", cpuid.MaxLogicalCPUId)
 	fmt.Fprintf(&w, "InitialAPICId:  %d\n", cpuid.InitialAPICId)
 	fmt.Fprintf(&w, "Smallest monitor-line size in bytes:  %d\n", cpuid.MonLineSizeMin)
 	fmt.Fprintf(&w, "Largest monitor-line size in bytes:   %d\n", cpuid.MonLineSizeMax)
