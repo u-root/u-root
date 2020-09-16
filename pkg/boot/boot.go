@@ -21,6 +21,10 @@ type OSImage interface {
 	// Label is intended for boot menus.
 	Label() string
 
+	// Edit the kernel command line if possible. Must be called before
+	// Load.
+	Edit(func(cmdline string) string)
+
 	// Load loads the OS image into kernel memory, ready for execution.
 	//
 	// After Load is called, call boot.Execute() to stop Linux and boot the

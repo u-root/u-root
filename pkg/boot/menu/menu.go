@@ -32,6 +32,10 @@ type Entry interface {
 	// Label is the string displayed to the user in the menu.
 	Label() string
 
+	// Edit the kernel command line if possible. Must be called prior to
+	// Load.
+	Edit(func(cmdline string) string)
+
 	// Load is called when the entry is chosen, but does not transfer
 	// execution to another process or kernel.
 	Load() error
@@ -44,6 +48,17 @@ type Entry interface {
 	// IsDefault indicates that this action should be run by default if the
 	// user didn't make an entry choice.
 	IsDefault() bool
+}
+
+func parseBootNum(choice string, entries []Entry) (int, error) {
+	num, err := strconv.Atoi(choice)
+	if err != nil {
+		return -1, fmt.Errorf("%s is not a valid entry number: %v", choice, err)
+	}
+	if num < 1 || num > len(entries) {
+		return -1, fmt.Errorf("%s is not a valid entry number", choice)
+	}
+	return num, nil
 }
 
 // Choose presents the user a menu on input to choose an entry from and returns that entry.
@@ -69,7 +84,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 
 	go func() {
 		// Read exactly one line.
-		term := terminal.NewTerminal(input, "Choose a menu option (hit enter to boot the default - 01 is the default option) > ")
+		term := terminal.NewTerminal(input, "")
 
 		term.AutoCompleteCallback = func(line string, pos int, key rune) (string, int, bool) {
 			// We ain't gonna autocomplete, but we'll reset the countdown timer when you press a key.
@@ -78,27 +93,77 @@ func Choose(input *os.File, entries ...Entry) Entry {
 		}
 
 		for {
+			term.SetPrompt("Enter an option ('01' is the default, 'e' to edit kernel cmdline):\n > ")
 			choice, err := term.ReadLine()
 			if err != nil {
 				if err != io.EOF {
-					fmt.Printf("BUG: Please report: Terminal read error: %v.\r\n", err)
+					fmt.Printf("BUG: Please report: Terminal read error: %v.\n", err)
 				}
 				boot <- nil
 				return
 			}
 
+			if choice == "e" {
+				// Edit command line.
+				term.SetPrompt("Select a boot option to edit:\n > ")
+				choice, err := term.ReadLine()
+				if err != nil {
+					fmt.Fprintln(term, err)
+					fmt.Fprintln(term, "Returning to main menu...")
+					continue
+				}
+				num, err := parseBootNum(choice, entries)
+				if err != nil {
+					fmt.Fprintln(term, err)
+					fmt.Fprintln(term, "Returning to main menu...")
+					continue
+				}
+				entries[num-1].Edit(func(cmdline string) string {
+					fmt.Fprintf(term, "The current quoted cmdline for option %d is:\n > %q\n", num, cmdline)
+					fmt.Fprintln(term, ` * Note the cmdline is c-style quoted. Ex: \n => newline, \\ => \`)
+					term.SetPrompt("Enter an option:\n * (a)ppend, (o)verwrite, (r)eturn to main menu\n > ")
+					choice, err := term.ReadLine()
+					if err != nil {
+						fmt.Fprintln(term, err)
+						return cmdline
+					}
+					switch choice {
+					case "a":
+						term.SetPrompt("Enter unquoted cmdline to append:\n > ")
+						appendCmdline, err := term.ReadLine()
+						if err != nil {
+							fmt.Fprintln(term, err)
+							return cmdline
+						}
+						if appendCmdline != "" {
+							cmdline += " " + appendCmdline
+						}
+					case "o":
+						term.SetPrompt("Enter new unquoted cmdline:\n > ")
+						newCmdline, err := term.ReadLine()
+						if err != nil {
+							fmt.Fprintln(term, err)
+							return cmdline
+						}
+						cmdline = newCmdline
+					case "r":
+					default:
+						fmt.Fprintf(term, "Unrecognized choice %q", choice)
+					}
+					fmt.Fprintf(term, "The new quoted cmdline for option %d is:\n > %q\n", num, cmdline)
+					return cmdline
+				})
+				fmt.Fprintln(term, "Returning to main menu...")
+				continue
+			}
 			if choice == "" {
 				// nil will result in the default order.
 				boot <- nil
 				return
 			}
-			num, err := strconv.Atoi(choice)
+			num, err := parseBootNum(choice, entries)
 			if err != nil {
-				fmt.Printf("%s is not a valid entry number: %v.\r\n", choice, err)
-				continue
-			}
-			if num-1 < 0 || num > len(entries) {
-				fmt.Printf("%s is not a valid entry number.\r\n", choice)
+				fmt.Fprintln(term, err)
 				continue
 			}
 			boot <- entries[num-1]
@@ -218,6 +283,10 @@ func (StartShell) Label() string {
 	return "Enter a LinuxBoot shell"
 }
 
+// Edit does nothing.
+func (StartShell) Edit(func(cmdline string) string) {
+}
+
 // Load does nothing.
 func (StartShell) Load() error {
 	return nil
@@ -239,6 +308,10 @@ type Reboot struct{}
 // Label is the label to show to the user.
 func (Reboot) Label() string {
 	return "Reboot"
+}
+
+// Edit does nothing.
+func (Reboot) Edit(func(cmdline string) string) {
 }
 
 // Load does nothing.

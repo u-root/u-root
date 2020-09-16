@@ -76,6 +76,11 @@ func copyToFile(r io.Reader) (*os.File, error) {
 	return readOnlyF, nil
 }
 
+// Edit the kernel command line.
+func (li *LinuxImage) Edit(f func(cmdline string) string) {
+	li.Cmdline = f(li.Cmdline)
+}
+
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
 func (li *LinuxImage) Load(verbose bool) error {
 	if li.Kernel == nil {
