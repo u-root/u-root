@@ -391,15 +391,20 @@ type IscsiIpcConn struct {
 func ConnectNetlink() (*IscsiIpcConn, error) {
 	conn, err := nl.Subscribe(unix.NETLINK_ISCSI, 1)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, syscall.EPROTONOSUPPORT) {
+			return nil, fmt.Errorf("failed to open iSCSI netlink socket (CONFIG_SCSI_ISCSI_ATTRS missing?): %w", err)
+		}
+		return nil, fmt.Errorf("failed to open iSCSI netlink socket: %w", err)
 	}
-	data, err := ioutil.ReadFile("/sys/class/iscsi_transport/tcp/handle")
+
+	handleFile := "/sys/class/iscsi_transport/tcp/handle"
+	data, err := ioutil.ReadFile(handleFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read sysfs iscsi tcp handle: %w", err)
 	}
 	handle, err := strconv.ParseUint(string(data[:len(data)-1]), 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to transport handle (%s) to int: %w", handleFile, err)
 	}
 
 	conn.SetReceiveTimeout(&unix.Timeval{Sec: 30})
