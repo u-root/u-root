@@ -42,11 +42,3 @@ func (st *safeTester) Fatalf(format string, args ...interface{}) {
 
 	st.Tester.Fatalf(format, args...)
 }
-
-// FailNow implements Tester
-func (st *safeTester) FailNow() {
-	st.m.Lock()
-	defer st.m.Unlock()
-
-	st.Tester.FailNow()
-}
