@@ -188,13 +188,13 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 		c.Modifiers4...)
 
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
-	_, p, err := client.Request(ctx, reqmods...)
+	lease, err := client.Request(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}
 
-	packet := NewPacket4(iface, p)
-	log.Printf("Got DHCPv4 lease on %s: %v", iface.Attrs().Name, p.Summary())
+	packet := NewPacket4(iface, lease.ACK)
+	log.Printf("Got DHCPv4 lease on %s: %v", iface.Attrs().Name, lease.ACK.Summary())
 	return packet, nil
 }
 

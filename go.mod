@@ -17,7 +17,7 @@ require (
 	github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
-	github.com/insomniacslk/dhcp v0.0.0-20200420235442-ed3125c2efe7
+	github.com/insomniacslk/dhcp v0.0.0-20200814125043-2e1bf785d039
 	github.com/intel-go/cpuid v0.0.0-20181003105527-1a4a6f06a1c6
 	github.com/jsimonetti/rtnetlink v0.0.0-20200505065535-3ee32e7e21a4 // indirect
 	github.com/klauspost/compress v1.10.6 // indirect
