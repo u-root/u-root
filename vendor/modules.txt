@@ -15,26 +15,32 @@ github.com/creack/pty
 github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.0
 github.com/dustin/go-humanize
-# github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
+# github.com/gliderlabs/ssh v0.3.0
 github.com/gliderlabs/ssh
 # github.com/gojuno/minimock/v3 v3.0.8
 github.com/gojuno/minimock/v3
-# github.com/google/go-cmp v0.4.1
+# github.com/golang/protobuf v1.4.2
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/timestamp
+# github.com/google/go-cmp v0.5.2
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
+# github.com/google/go-tpm v0.3.0
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
 github.com/google/go-tpm/tpmutil
 github.com/google/go-tpm/tpmutil/tbs
-# github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
+# github.com/google/goexpect v0.0.0-20200816234442-b5b77125c2c5
 github.com/google/goexpect
-# github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
+# github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
 github.com/google/goterm/term
-# github.com/insomniacslk/dhcp v0.0.0-20200814125043-2e1bf785d039
+# github.com/insomniacslk/dhcp v0.0.0-20200916151309-1a1c38473709
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
@@ -49,13 +55,13 @@ github.com/insomniacslk/dhcp/netboot
 github.com/insomniacslk/dhcp/rfc1035label
 # github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 github.com/intel-go/cpuid
-# github.com/jsimonetti/rtnetlink v0.0.0-20200505065535-3ee32e7e21a4
+# github.com/jsimonetti/rtnetlink v0.0.0-20200726165900-d699427278d3
 github.com/jsimonetti/rtnetlink
 github.com/jsimonetti/rtnetlink/internal/unix
 github.com/jsimonetti/rtnetlink/rtnl
-# github.com/klauspost/compress v1.10.6
+# github.com/klauspost/compress v1.11.0
 github.com/klauspost/compress/flate
-# github.com/klauspost/pgzip v1.2.4
+# github.com/klauspost/pgzip v1.2.5
 github.com/klauspost/pgzip
 # github.com/kr/pty v1.1.8
 github.com/kr/pty
@@ -72,13 +78,13 @@ github.com/mdlayher/raw
 github.com/pmezard/go-difflib/difflib
 # github.com/rck/unit v0.0.3
 github.com/rck/unit
-# github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
+# github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566
 github.com/rekby/gpt
-# github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
+# github.com/safchain/ethtool v0.0.0-20200804214954-8f958a28363a
 github.com/safchain/ethtool
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.5.1
+# github.com/stretchr/testify v1.6.1
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/u-root/iscsinl v0.1.0
@@ -95,7 +101,7 @@ github.com/vishvananda/netlink/nl
 github.com/vishvananda/netns
 # github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 github.com/vtolstov/go-ioctl
-# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+# golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
@@ -126,15 +132,15 @@ golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
+# golang.org/x/sys v0.0.0-20200917073148-efd3b9a0ff20
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
+# golang.org/x/tools v0.0.0-20200917050209-655488c8ae71
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/imports
 golang.org/x/tools/internal/event
@@ -148,12 +154,46 @@ golang.org/x/tools/internal/imports
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/grpc v1.29.1
+# google.golang.org/genproto v0.0.0-20200916143405-f6a2fa72f0c4
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v1.32.0
 google.golang.org/grpc/codes
+google.golang.org/grpc/internal/status
+google.golang.org/grpc/status
+# google.golang.org/protobuf v1.25.0
+google.golang.org/protobuf/encoding/prototext
+google.golang.org/protobuf/encoding/protowire
+google.golang.org/protobuf/internal/descfmt
+google.golang.org/protobuf/internal/descopts
+google.golang.org/protobuf/internal/detrand
+google.golang.org/protobuf/internal/encoding/defval
+google.golang.org/protobuf/internal/encoding/messageset
+google.golang.org/protobuf/internal/encoding/tag
+google.golang.org/protobuf/internal/encoding/text
+google.golang.org/protobuf/internal/errors
+google.golang.org/protobuf/internal/fieldsort
+google.golang.org/protobuf/internal/filedesc
+google.golang.org/protobuf/internal/filetype
+google.golang.org/protobuf/internal/flags
+google.golang.org/protobuf/internal/genid
+google.golang.org/protobuf/internal/impl
+google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/pragma
+google.golang.org/protobuf/internal/set
+google.golang.org/protobuf/internal/strs
+google.golang.org/protobuf/internal/version
+google.golang.org/protobuf/proto
+google.golang.org/protobuf/reflect/protoreflect
+google.golang.org/protobuf/reflect/protoregistry
+google.golang.org/protobuf/runtime/protoiface
+google.golang.org/protobuf/runtime/protoimpl
+google.golang.org/protobuf/types/known/anypb
+google.golang.org/protobuf/types/known/durationpb
+google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/alecthomas/kingpin.v2 v2.2.6
 gopkg.in/alecthomas/kingpin.v2
-# gopkg.in/yaml.v2 v2.3.0
-gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+gopkg.in/yaml.v3
 # pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 pack.ag/tftp
 pack.ag/tftp/netascii

@@ -134,7 +134,7 @@ func main() {
 ```
 
 In essence to run and attach to a process the `expect.Spawn(<cmd>,<timeout>)` is used.
-The spawn returns and Expecter that can rund `e.Expect` and `e.Send` commands to match information
+The spawn returns an Expecter `e` that can run `e.Expect` and `e.Send` commands to match information
 in the output and Send information in.
 
 *See the https://github.com/google/goexpect/blob/master/examples/newspawner/telnet.go  example for a slightly more fleshed out version*

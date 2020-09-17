@@ -735,6 +735,13 @@ func (d *DHCPv4) MessageType() MessageType {
 	return m
 }
 
+// Message returns the DHCPv4 (Error) Message option.
+//
+// The message options is described in RFC 2132, Section 9.9.
+func (d *DHCPv4) Message() string {
+	return GetString(OptionMessage, d.Options)
+}
+
 // ParameterRequestList returns the DHCPv4 Parameter Request List.
 //
 // The parameter request list option is described by RFC 2132, Section 9.8.

@@ -175,9 +175,13 @@ func (l *LinkService) Set(req *LinkMessage) error {
 	return nil
 }
 
-// List retrieves all interfaces.
-func (l *LinkService) List() ([]LinkMessage, error) {
+func (l *LinkService) list(kind string) ([]LinkMessage, error) {
 	req := &LinkMessage{}
+	if kind != "" {
+		req.Attributes = &LinkAttributes{
+			Info: &LinkInfo{Kind: kind},
+		}
+	}
 
 	flags := netlink.Request | netlink.Dump
 	msgs, err := l.c.Execute(req, unix.RTM_GETLINK, flags)
@@ -192,6 +196,16 @@ func (l *LinkService) List() ([]LinkMessage, error) {
 	}
 
 	return links, nil
+}
+
+// ListByKind retrieves all interfaces of a specific kind.
+func (l *LinkService) ListByKind(kind string) ([]LinkMessage, error) {
+	return l.list(kind)
+}
+
+// List retrieves all interfaces.
+func (l *LinkService) List() ([]LinkMessage, error) {
+	return l.list("")
 }
 
 // LinkAttributes contains all attributes for an interface.

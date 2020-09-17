@@ -58,6 +58,7 @@ includes_Darwin='
 #define _DARWIN_USE_64_BIT_INODE
 #include <stdint.h>
 #include <sys/attr.h>
+#include <sys/clonefile.h>
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/ptrace.h>

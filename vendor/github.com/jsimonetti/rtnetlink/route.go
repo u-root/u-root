@@ -176,6 +176,7 @@ type RouteAttributes struct {
 	OutIface uint32
 	Priority uint32
 	Table    uint32
+	Mark     uint32
 	Expires  *uint32
 }
 
@@ -209,6 +210,8 @@ func (a *RouteAttributes) decode(ad *netlink.AttributeDecoder) error {
 			a.Priority = ad.Uint32()
 		case unix.RTA_TABLE:
 			a.Table = ad.Uint32()
+		case unix.RTA_MARK:
+			a.Mark = ad.Uint32()
 		case unix.RTA_EXPIRES:
 			timeout := ad.Uint32()
 			a.Expires = &timeout
@@ -260,6 +263,10 @@ func (a *RouteAttributes) encode(ae *netlink.AttributeEncoder) error {
 
 	if a.Table != 0 {
 		ae.Uint32(unix.RTA_TABLE, a.Table)
+	}
+
+	if a.Mark != 0 {
+		ae.Uint32(unix.RTA_MARK, a.Mark)
 	}
 
 	if a.Expires != nil {

@@ -379,7 +379,7 @@ u-root can create an initramfs in two different modes:
 ## Updating Dependencies
 
 ```shell
-go get -u
+go get -u ./...
 go mod tidy
 go mod vendor
 ```
