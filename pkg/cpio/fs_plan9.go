@@ -7,8 +7,10 @@ package cpio
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/u-root/u-root/pkg/ls"
@@ -25,8 +27,9 @@ type Recorder struct {
 }
 
 var modeMap = map[uint64]os.FileMode{
-	modeFile: 0,
-	modeDir:  os.ModeDir,
+	modeFile:    0,
+	modeDir:     os.ModeDir,
+	modeSymlink: os.ModeSymlink,
 }
 
 func unixModeToFileType(m uint64) (os.FileMode, error) {
@@ -100,6 +103,22 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 			return err
 		}
 
+	case os.ModeSymlink:
+		b, err := ioutil.ReadAll(uio.Reader(f))
+		if err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(f.Name, []byte{}, 0444); err != nil {
+			return err
+		}
+		content := string(b)
+		if !filepath.IsAbs(content) {
+			content = filepath.Join(dir, content)
+		}
+		if err := syscall.Bind(f.Name, content, syscall.MREPL); err != nil {
+			return err
+		}
+
 	default:
 		return fmt.Errorf("%v: Unknown type %#o", f.Name, m)
 	}
@@ -152,7 +171,7 @@ func LSInfoFromRecord(rec Record) ls.FileInfo {
 	return ls.FileInfo{
 		Name:  rec.Name,
 		Mode:  mode,
-		UID:   fmt.Sprint("%d", rec.UID),
+		UID:   fmt.Sprintf("%d", rec.UID),
 		Size:  int64(rec.FileSize),
 		MTime: time.Unix(int64(rec.MTime), 0).UTC(),
 	}
