@@ -25,10 +25,9 @@ import (
 //
 // The policy is stored as a JSON file.
 type Policy struct {
-	DefaultAction string
-	Collectors    []measurement.Collector
-	Launcher      launcher.Launcher
-	EventLog      eventlog.EventLog
+	Collectors []measurement.Collector
+	Launcher   launcher.Launcher
+	EventLog   eventlog.EventLog
 }
 
 // scanKernelCmdLine scans the kernel cmdline for the 'sl_policy' flag.
@@ -138,19 +137,16 @@ func locate() ([]byte, error) {
 func parse(pf []byte) (*Policy, error) {
 	p := &Policy{}
 	var parse struct {
-		DefaultAction string            `json:"default_action"`
-		Collectors    []json.RawMessage `json:"collectors"`
-		Attestor      json.RawMessage   `json:"attestor"`
-		Launcher      json.RawMessage   `json:"launcher"`
-		EventLog      json.RawMessage   `json:"eventlog"`
+		Collectors []json.RawMessage `json:"collectors"`
+		Attestor   json.RawMessage   `json:"attestor"`
+		Launcher   json.RawMessage   `json:"launcher"`
+		EventLog   json.RawMessage   `json:"eventlog"`
 	}
 
 	if err := json.Unmarshal(pf, &parse); err != nil {
 		log.Printf("parse SL Policy: Unmarshall error for entire policy file!! err=%v", err)
 		return nil, err
 	}
-
-	p.DefaultAction = parse.DefaultAction
 
 	for _, c := range parse.Collectors {
 		collector, err := measurement.GetCollector(c)
