@@ -5,6 +5,7 @@
 package kexec
 
 import (
+	"bytes"
 	"debug/elf"
 	"fmt"
 	"io"
@@ -73,6 +74,13 @@ func (r Range) Contains(p uintptr) bool {
 }
 
 func min(a, b uintptr) uintptr {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func minuint(a, b uint) uint {
 	if a < b {
 		return a
 	}
@@ -232,24 +240,111 @@ func (s Segment) String() string {
 	return fmt.Sprintf("(userspace: %s, phys: %s)", s.Buf, s.Phys)
 }
 
-func (s *Segment) tryMerge(s2 Segment) (ok bool) {
-	if s.Phys.Disjunct(s2.Phys) {
+// AlignAndMerge adjusts segs to the preconditions of kexec_load.
+//
+// Pre-conditions: segs physical ranges are disjoint.
+// Post-conditions: segs physical start addresses & size aligned to page size.
+func AlignAndMerge(segs Segments) (Segments, error) {
+	sort.Slice(segs, func(i, j int) bool {
+		if segs[i].Phys.Start == segs[j].Phys.Start {
+			// let segs[i] be the superset of segs[j]
+			return segs[i].Phys.Size > segs[j].Phys.Size
+		}
+		return segs[i].Phys.Start < segs[j].Phys.Start
+	})
+
+	// We index 0 below.
+	if len(segs) == 0 {
+		return segs, nil
+	}
+
+	// Physical ranges may not overlap.
+	//
+	// Overlapping ranges could be allowed if the corresponding
+	// intersecting buffer ranges contain the same bytes. TBD whether
+	// that's needed.
+	for i := 0; i < len(segs)-1; i++ {
+		if segs[i].Phys.Overlaps(segs[i+1].Phys) {
+			return nil, fmt.Errorf("segment %s and %s overlap in the physical space", segs[i], segs[i+1])
+		}
+	}
+
+	// Since segments' physical ranges are guaranteed to be disjoint, the
+	// only condition under which they overlap is if an aligned Phys.Start
+	// address overlaps. In that case, merge the segments.
+	//
+	// The sorting guarantees we can step through linearly.
+	var newSegs Segments
+	newSegs = append(newSegs, AlignPhysStart(segs[0]))
+
+	for i := 1; i < len(segs); i++ {
+		cand := AlignPhysStart(segs[i])
+
+		// Does the aligned segment overlap with the previous
+		// segment? We'll have to merge the (unaligned) segment with
+		// the last segment.
+		if cand.Phys.Overlaps(newSegs[len(newSegs)-1].Phys) {
+			if ok := newSegs[len(newSegs)-1].mergeDisjoint(segs[i]); !ok {
+				// This should be impossible as long as
+				// mergeDisjoint and Overlaps have a matching
+				// definition of overlapping.
+				return nil, fmt.Errorf("could not merge disjoint segments")
+			}
+		} else {
+			newSegs = append(newSegs, cand)
+		}
+	}
+
+	// Align the sizes. This is guaranteed to still produce disjoint
+	// physical ranges.
+	for i := range newSegs {
+		// If we adjust the size up, we must curtail the buffer.
+		//
+		// If Phys.Size = 1 and Buf.Size = 8, the caller only expected
+		// 1 byte to go into the physical range.
+		//
+		// We don't need to deal with the inverse, because kexec_load
+		// will fill the remainder of the segment with zeros anyway
+		// when buf.Size < phys.Size.
+		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
+			newSegs[i].Buf.Size = newSegs[i].Phys.Size
+		}
+		newSegs[i].Phys.Size = alignUp(newSegs[i].Phys.Size)
+	}
+	return newSegs, nil
+}
+
+// realBuf adjusts s.Buf.Size = s.Phys.Size. Buf will either gain some
+// zeros or be truncated.
+func (s Segment) realBuf() []byte {
+	switch {
+	case s.Buf.Size == s.Phys.Size:
+		return s.Buf.toSlice()
+
+	case s.Buf.Size < s.Phys.Size:
+		return append(s.Buf.toSlice(), make([]byte, int(s.Phys.Size-s.Buf.Size))...)
+
+	case s.Buf.Size > s.Phys.Size:
+		return s.Buf.toSlice()[:s.Phys.Size]
+	}
+	return nil
+}
+
+func (s *Segment) mergeDisjoint(s2 Segment) bool {
+	if s.Phys.Overlaps(s2.Phys) {
 		return false
 	}
 
-	// Virtual memory ranges should never overlap,
-	// concatenate ranges.
-	a := s.Buf.toSlice()
-	b := s2.Buf.toSlice()
-	c := append(a, b...)
+	a := s.realBuf()
+	b := s2.realBuf()
+	diffSize := s2.Phys.Start - s.Phys.End()
+	// Zeros for the middle.
+	buf := append(a, make([]byte, int(diffSize))...)
+	buf = append(buf, b...)
 
 	phys := s.Phys
-	// s1 and s2 overlap somewhat.
-	if !s.Phys.IsSupersetOf(s2.Phys) {
-		phys.Size = uint(s2.Phys.Start-s.Phys.Start) + s2.Phys.Size
-	}
-
-	*s = NewSegment(c, phys)
+	phys.Size += uint(diffSize) + s2.Phys.Size
+	*s = NewSegment(buf, phys)
 	return true
 }
 
@@ -261,29 +356,14 @@ func alignUpPtr(p uintptr) uintptr {
 	return uintptr(alignUp(uint(p)))
 }
 
-// AlignPhys fixes s to the kexec_load preconditions.
-//
-// s's physical addresses must be multiples of the page size.
-//
-// E.g. if page size is 0x1000:
-// Segment {
-//   Buf:  {Start: 0x1011, Size: 0x1022}
-//   Phys: {Start: 0x2011, Size: 0x1022}
-// }
-// has to become
-// Segment {
-//   Buf:  {Start: 0x1000, Size: 0x1033}
-//   Phys: {Start: 0x2000, Size: 0x2000}
-// }
-func AlignPhys(s Segment) Segment {
+// AlignPhysStart aligns s.Phys.Start to the page size. AlignPhysStart does not
+// align the size of the segment.
+func AlignPhysStart(s Segment) Segment {
 	orig := s.Phys.Start
 	// Find the page address of the starting point.
 	s.Phys.Start = s.Phys.Start &^ uintptr(pageMask)
-
 	diff := orig - s.Phys.Start
-
-	// Round up to page size.
-	s.Phys.Size = alignUp(s.Phys.Size + uint(diff))
+	s.Phys.Size = s.Phys.Size + uint(diff)
 
 	if s.Buf.Start < diff && diff > 0 {
 		panic("cannot have virtual memory address within first page")
@@ -310,6 +390,45 @@ func (segs Segments) PhysContains(p uintptr) bool {
 	return false
 }
 
+// Phys returns all physical address ranges.
+func (segs Segments) Phys() Ranges {
+	var r Ranges
+	for _, s := range segs {
+		r = append(r, s.Phys)
+	}
+	return r
+}
+
+// IsSupersetOf checks whether all segments in o are present in s and contain
+// the same buffer content.
+func (segs Segments) IsSupersetOf(o Segments) error {
+	for _, seg := range o {
+		size := minuint(seg.Phys.Size, seg.Buf.Size)
+		r := Range{Start: seg.Phys.Start, Size: size}
+		buf := segs.GetPhys(r)
+		if buf == nil {
+			return fmt.Errorf("phys %s not found", r)
+		}
+		if !bytes.Equal(buf, seg.Buf.toSlice()[:size]) {
+			return fmt.Errorf("phys %s contains different bytes", r)
+		}
+	}
+	return nil
+}
+
+// GetPhys gets the buffer corresponding to the physical address range r.
+func (segs Segments) GetPhys(r Range) []byte {
+	for _, seg := range segs {
+		if seg.Phys.IsSupersetOf(r) {
+			offset := r.Start - seg.Phys.Start
+			// TODO: This could be out of range.
+			buf := seg.Buf.toSlice()[int(offset) : int(offset)+int(r.Size)]
+			return buf
+		}
+	}
+	return nil
+}
+
 // Insert inserts s assuming it does not overlap with an existing segment.
 func (segs *Segments) Insert(s Segment) {
 	*segs = append(*segs, s)
@@ -320,32 +439,6 @@ func (segs Segments) sort() {
 	sort.Slice(segs, func(i, j int) bool {
 		return segs[i].Phys.Start < segs[j].Phys.Start
 	})
-}
-
-// Dedup deduplicates overlapping and merges adjacent segments in segs.
-func Dedup(segs Segments) Segments {
-	var s Segments
-	sort.Slice(segs, func(i, j int) bool {
-		if segs[i].Phys.Start == segs[j].Phys.Start {
-			// let segs[i] be the superset of segs[j]
-			return segs[i].Phys.Size > segs[j].Phys.Size
-		}
-		return segs[i].Phys.Start < segs[j].Phys.Start
-	})
-
-	for _, seg := range segs {
-		doIt := true
-		for i := range s {
-			if merged := s[i].tryMerge(seg); merged {
-				doIt = false
-				break
-			}
-		}
-		if doIt {
-			s = append(s, seg)
-		}
-	}
-	return s
 }
 
 // Memory provides routines to work with physical memory ranges.
