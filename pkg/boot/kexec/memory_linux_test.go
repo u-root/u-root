@@ -5,13 +5,14 @@
 package kexec
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestParseMemoryMap(t *testing.T) {
@@ -103,165 +104,103 @@ func TestAvailableRAM(t *testing.T) {
 	}
 }
 
-func TestAlignPhys(t *testing.T) {
-	for _, test := range []struct {
-		name      string
-		seg, want Segment
+func TestAlignAndMerge(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		in      Segments
+		want    Segments
+		wantErr bool
 	}{
 		{
-			name: "aligned",
-			seg: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1000},
-				Phys: Range{Start: 0x2000, Size: 0x1000},
+			name: "3 buffers in the same page",
+			in: Segments{
+				NewSegment([]byte("test"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foo"), Range{Start: 10, Size: 5}),
+				NewSegment([]byte("haha"), Range{Start: 15, Size: 4}),
+				NewSegment([]byte("hahahahaha"), Range{Start: 0x1000, Size: 10}),
+				NewSegment([]byte("hhhhhhhhhh"), Range{Start: 0x2000, Size: 1}),
 			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1000},
-				Phys: Range{Start: 0x2000, Size: 0x1000},
-			},
-		},
-		{
-			name: "unaligned",
-			seg: Segment{
-				Buf:  Range{Start: 0x1011, Size: 0x1022},
-				Phys: Range{Start: 0x2011, Size: 0x1022},
-			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1033},
-				Phys: Range{Start: 0x2000, Size: 0x2000},
+			want: Segments{
+				NewSegment([]byte("test\x00\x00\x00\x00\x00\x00foo\x00\x00haha"), Range{Start: 0, Size: 0x1000}),
+				NewSegment([]byte("hahahahaha"), Range{Start: 0x1000, Size: 0x1000}),
+				NewSegment([]byte("h"), Range{Start: 0x2000, Size: 0x1000}),
 			},
 		},
 		{
-			name: "unaligned_size",
-			seg: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1022},
-				Phys: Range{Start: 0x2000, Size: 0x1022},
+			name: "no buffers",
+			in:   Segments{},
+			want: Segments{},
+		},
+		{
+			name: "perfectly aligned buffer",
+			in: Segments{
+				NewSegment([]byte("test"), Range{Start: 0, Size: 0x1000}),
 			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1022},
-				Phys: Range{Start: 0x2000, Size: 0x2000},
+			want: Segments{
+				NewSegment([]byte("test"), Range{Start: 0, Size: 0x1000}),
 			},
 		},
 		{
-			name: "empty_buf",
-			seg: Segment{
-				Buf:  Range{Start: 0x1011, Size: 0},
-				Phys: Range{Start: 0x2011, Size: 0},
+			name: "truncate buffer",
+			in: Segments{
+				NewSegment([]byte("testtest"), Range{Start: 0, Size: 5}),
 			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0},
-				Phys: Range{Start: 0x2000, Size: 0x1000},
+			want: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 0x1000}),
 			},
+		},
+		{
+			name: "backfill, truncate buffer",
+			in: Segments{
+				NewSegment([]byte("testtest"), Range{Start: 2, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("\x00\x00testt"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "physical address overlaps, conflicting content",
+			in: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("aabbc"), Range{Start: 3, Size: 4}),
+			},
+			wantErr: true,
+		},
+		{
+			// This could potentially be solved some day.
+			name: "physical address overlaps, same content",
+			in: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("ttaaa"), Range{Start: 3, Size: 4}),
+			},
+			wantErr: true,
 		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			got := AlignPhys(test.seg)
-			if got != test.want {
-				t.Errorf("AlignPhys() got %v, want %v", got, test.want)
-			}
-		})
-	}
-}
-
-func TestTryMerge(t *testing.T) {
-	for _, test := range []struct {
-		name   string
-		phys   Range
-		merged bool
-		want   Range
-	}{
-		{
-			name:   "disjunct",
-			phys:   Range{Start: 100, Size: 150},
-			merged: false,
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 0, Size: 80},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 10, Size: 80},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 10, Size: 90},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 0, Size: 100},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "overlap",
-			phys:   Range{Start: 0, Size: 150},
-			merged: true,
-			want:   Range{Start: 0, Size: 150},
-		},
-		{
-			name:   "overlap",
-			phys:   Range{Start: 50, Size: 100},
-			merged: true,
-			want:   Range{Start: 0, Size: 150},
-		},
-		{
-			name:   "overlap",
-			phys:   Range{Start: 99, Size: 51},
-			merged: true,
-			want:   Range{Start: 0, Size: 150},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			a := NewSegment([]byte("aaaa"), Range{Start: 0, Size: 100})
-			b := NewSegment([]byte("bbbb"), test.phys)
-
-			merged := a.tryMerge(b)
-			if merged != test.merged {
-				t.Fatalf("tryMerge() got %v, want %v", merged, test.merged)
-			}
-			if !merged {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := AlignAndMerge(tt.in)
+			gotErr := err != nil
+			if gotErr != tt.wantErr {
+				t.Errorf("AlignAndMerge = %v, want error %t", err, tt.wantErr)
+			} else if err != nil {
 				return
 			}
-			if a.Phys != test.want {
-				t.Fatalf("Wrong merge result: got %+v, want %+v", a.Phys, test.want)
+
+			if err := got.IsSupersetOf(tt.in); err != nil {
+				t.Errorf("AlignAndMerge: %v", err)
 			}
 
-			got := a.Buf.toSlice()
-			want := []byte("aaaabbbb")
-			if !bytes.Equal(got, want) {
-				t.Errorf("Wrong buf: got %s, want %s", got, want)
+			gotRanges := got.Phys()
+			wantRanges := tt.want.Phys()
+			if diff := cmp.Diff(wantRanges, gotRanges); diff != "" {
+				t.Errorf("AlignAndMerge physical ranges = (-want, +got):\n%s", diff)
+			}
+			for i, s := range got {
+				b := s.Buf.toSlice()
+				if diff := cmp.Diff(tt.want[i].Buf.toSlice(), b); diff != "" {
+					t.Errorf("segment %s bytes differ (-want, +got):\n%s", got[i].Phys, diff)
+				}
 			}
 		})
-	}
-}
-
-func TestDedup(t *testing.T) {
-	s := []Segment{
-		NewSegment([]byte("test"), Range{Start: 0, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 100, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 200, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 250, Size: 50}),
-		NewSegment([]byte("test"), Range{Start: 300, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 350, Size: 100}),
-	}
-	want := []Range{
-		{Start: 0, Size: 100},
-		{Start: 100, Size: 100},
-		{Start: 200, Size: 100},
-		{Start: 300, Size: 150},
-	}
-
-	got := Dedup(s)
-	for i := range got {
-		if got[i].Phys != want[i] {
-			t.Errorf("Dedup() got %v, want %v", got[i].Phys, want[i])
-		}
 	}
 }
 
