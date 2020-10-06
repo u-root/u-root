@@ -158,15 +158,15 @@ func (m modules) marshal() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// elems adds mutiboot info elements describing where to find each module and
+// elems adds esxBootInfo info elements describing where to find each module and
 // its cmdline.
 func (m modules) elems() []elem {
 	var e []elem
 	for _, mm := range m {
-		e = append(e, &mutibootModule{
+		e = append(e, &esxBootInfoModule{
 			cmdline:    uint64(mm.Cmdline),
 			moduleSize: uint64(mm.End - mm.Start),
-			ranges: []mutibootModuleRange{
+			ranges: []esxBootInfoModuleRange{
 				{
 					startPageNum: uint64(mm.Start / uint32(os.Getpagesize())),
 					numPages:     pageAlign(mm.End-mm.Start) / uint32(os.Getpagesize()),
