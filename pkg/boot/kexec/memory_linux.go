@@ -229,7 +229,7 @@ func NewSegment(buf []byte, phys Range) Segment {
 }
 
 func (s Segment) String() string {
-	return fmt.Sprintf("(virt: %s, phys: %s)", s.Buf, s.Phys)
+	return fmt.Sprintf("(userspace: %s, phys: %s)", s.Buf, s.Phys)
 }
 
 func (s *Segment) tryMerge(s2 Segment) (ok bool) {
