@@ -1,8 +1,141 @@
-<center>
-<img src="img/u-root-logo.png" alt="u-root logo" width=300 />
-</center>
+<!DOCTYPE html>
+<html  dir="ltr">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>u-root</title>
+        <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+        <link rel="apple-touch-icon-precomposed" href="images/apple-touch-icon.png">
+        <!--<link rel="stylesheet" href="/templates/pandoc-uikit/uikit.css">-->
+        <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/2.26.4/css/uikit.gradient.css">-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/2.26.4/css/uikit.gradient.min.css">
+        <link rel="stylesheet" href="/templates/pandoc-uikit/style.css">
+        <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+        <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+        <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/2.26.4/js/uikit.min.js"></script>-->
+        <script src="/templates/pandoc-uikit/uikit.js"></script>
+        <script src="/templates/pandoc-uikit/scripts.js"></script>
+        <script src="/bower_components/sticky-kit/jquery.sticky-kit.js "></script>
+
+        <meta name="generator" content="pandoc" />
+                        <title>u-root</title>
+        <style type="text/css">code{white-space: pre;}</style>
+                        <style type="text/css">
+            pre > code.sourceCode { white-space: pre; position: relative; }
+            pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+            pre > code.sourceCode > span:empty { height: 1.2em; }
+            code.sourceCode > span { color: inherit; text-decoration: inherit; }
+            div.sourceCode { margin: 1em 0; }
+            pre.sourceCode { margin: 0; }
+            @media screen {
+            div.sourceCode { overflow: auto; }
+            }
+            @media print {
+            pre > code.sourceCode { white-space: pre-wrap; }
+            pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+            }
+            pre.numberSource code
+              { counter-reset: source-line 0; }
+            pre.numberSource code > span
+              { position: relative; left: -4em; counter-increment: source-line; }
+            pre.numberSource code > span > a:first-child::before
+              { content: counter(source-line);
+                position: relative; left: -1em; text-align: right; vertical-align: baseline;
+                border: none; display: inline-block;
+                -webkit-touch-callout: none; -webkit-user-select: none;
+                -khtml-user-select: none; -moz-user-select: none;
+                -ms-user-select: none; user-select: none;
+                padding: 0 4px; width: 4em;
+                color: #aaaaaa;
+              }
+            pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+            div.sourceCode
+              {   }
+            @media screen {
+            pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+            }
+            code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+            code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+            code span.at { color: #7d9029; } /* Attribute */
+            code span.bn { color: #40a070; } /* BaseN */
+            code span.bu { } /* BuiltIn */
+            code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+            code span.ch { color: #4070a0; } /* Char */
+            code span.cn { color: #880000; } /* Constant */
+            code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+            code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+            code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+            code span.dt { color: #902000; } /* DataType */
+            code span.dv { color: #40a070; } /* DecVal */
+            code span.er { color: #ff0000; font-weight: bold; } /* Error */
+            code span.ex { } /* Extension */
+            code span.fl { color: #40a070; } /* Float */
+            code span.fu { color: #06287e; } /* Function */
+            code span.im { } /* Import */
+            code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+            code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+            code span.op { color: #666666; } /* Operator */
+            code span.ot { color: #007020; } /* Other */
+            code span.pp { color: #bc7a00; } /* Preprocessor */
+            code span.sc { color: #4070a0; } /* SpecialChar */
+            code span.ss { color: #bb6688; } /* SpecialString */
+            code span.st { color: #4070a0; } /* String */
+            code span.va { color: #19177c; } /* Variable */
+            code span.vs { color: #4070a0; } /* VerbatimString */
+            code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+        </style>
+        <style>.kommentar {display: none;}</style>
+                                               
+    </head>
+
+    <body>
+
+
+        <div class="uk-container uk-container-center uk-margin-top uk-margin-large-bottom">
+
+                        <div class="uk-grid" data-uk-grid-margin>
+                <div class="uk-width-1-1">
+                    <h1 class="uk-heading-large">u-root</h1>
+                                                        </div>
+            </div>
+            
+            <div class="uk-grid" data-uk-grid-margin >          
+                <div class="uk-width-medium-1-4">
+                    <div class="uk-overflow-container" data-uk-sticky="{top:25,media: 768}">
+                        <div class="uk-panel uk-panel-box menu-begin" >
+
+                                                        <ul>
+                                                        <li><a href="#u-root">u-root</a>
+                                                        <ul>
+                                                        <li><a href="#setup">Setup</a></li>
+                                                        <li><a href="#submitting-changes">Submitting Changes</a></li>
+                                                        <li><a href="#faqs">FAQs</a>
+                                                        <ul>
+                                                        <li><a href="#so-why-u-root">So, why “u-root”?</a></li>
+                                                        <li><a href="#any-publications">Any publications?</a></li>
+                                                        </ul></li>
+                                                        <li><a href="#community">Community</a></li>
+                                                        <li><a href="#contributors">Contributors</a></li>
+                                                        <li><a href="#logo">Logo</a></li>
+                                                        </ul></li>
+                                                        </ul>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                <div class="uk-width-medium-3-4">
+<p><img src="img/u-root-logo.png" width="300" alt="u-root logo" /><br />
+</p>
 <h1 id="u-root">u-root</h1>
-<p>u-root is an embeddable root file system intended to be placed in a flash device as part of the firmware image, along with a Linux kernel. Unlike most embedded root file systems, which consist of large binaries, u-root only has five: an init program and four Go compiler binaries.</p>
+<p>u-root embodies four different projects.</p>
+<ul>
+<li><p>Go versions of many standard Linux tools, such as <a href="https://github.com/u-root/u-root/tree/master/cmds/core/ls/ls.go">ls</a>, <a href="https://github.com/u-root/u-root/tree/master/cmds/core/cp/cp.go">cp</a>, or <a href="https://github.com/u-root/u-root/tree/master/cmds/core/shutdown/shutdown.go">shutdown</a>. See <a href="https://github.com/u-root/u-root/tree/master/cmds/core">cmds/core</a> for most of these.</p></li>
+<li><p>A way to compile many Go programs into a single binary with <a href="https://github.com/u-root/u-root/tree/master/pkg/bb/README.md">busybox mode</a>.</p></li>
+<li><p>A way to create initramfs (an archive of files) to use with Linux kernels.</p></li>
+<li><p>Go bootloaders that use <code>kexec</code> to boot Linux or multiboot kernels such as ESXi, Xen, or tboot. They are meant to be used with <a href="https://www.linuxboot.org">LinuxBoot</a>. With that, parsers for <a href="https://github.com/u-root/u-root/tree/master/pkg/boot/grub">GRUB config files</a> or <a href="https://github.com/u-root/u-root/tree/master/pkg/boot/syslinux">syslinux config files</a> are to make transition to LinuxBoot easier.</p></li>
+</ul>
 <h2 id="setup">Setup</h2>
 <p>On an Ubuntu system, install prerequisites and ensure Go is at least version 1.13:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">sudo</span> apt-get install git golang build-essential</span>
@@ -57,4 +190,12 @@
 <li><p>the other gophers can make more copies of u-root; hence the u-root logo on their chest.</p></li>
 <li><p>the highest gopher is showing how u-root is a good root file system for a VM.</p></li>
 <li><p>the U itself is a stylized tree, evocative of roots.</p></li>
-</ul>
+</ul>                    
+                </div>
+            </div>
+
+  </script>
+            <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+        </div>
+    </body>
+</html>
