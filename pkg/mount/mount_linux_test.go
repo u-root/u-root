@@ -31,9 +31,9 @@ import (
 //   /dev/sdb is ./testdata/12Kzeros
 //	/dev/sdb1 exists, but is not formatted.
 //
-//   /dev/sdc is ./testdata/gptdisk
-//      /dev/sdc1 exists (EFI system partition), but is not formatted
-//      /dev/sdc2 exists (Linux), but is not formatted
+//   /dev/sdc and /dev/nvme0n1 are ./testdata/gptdisk
+//      /dev/sdc1 and /dev/nvme0n1p1 exist (EFI system partition), but is not formatted
+//      /dev/sdc2 and /dev/nvme0n1p2 exist (Linux), but is not formatted
 //
 //   ARM tests will load drives as virtio-blk devices (/dev/vd*)
 
@@ -88,12 +88,14 @@ func TestFilterPartID(t *testing.T) {
 		{
 			guid: "C9865081-266C-4A23-A948-C03DAB506198",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p2"},
 				&block.BlockDev{Name: devname},
 			},
 		},
 		{
 			guid: "c9865081-266c-4a23-a948-c03dab506198",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p2"},
 				&block.BlockDev{Name: devname},
 			},
 		},
@@ -128,6 +130,7 @@ func TestFilterPartType(t *testing.T) {
 			// EFI system partition.
 			guid: "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p1"},
 				&block.BlockDev{Name: prefix + "c1"},
 			},
 		},
@@ -135,6 +138,7 @@ func TestFilterPartType(t *testing.T) {
 			// EFI system partition. mixed case.
 			guid: "c12a7328-f81F-11D2-BA4B-00A0C93ec93B",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p1"},
 				&block.BlockDev{Name: prefix + "c1"},
 			},
 		},
@@ -142,6 +146,7 @@ func TestFilterPartType(t *testing.T) {
 			// This is some random Linux GUID.
 			guid: "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p2"},
 				&block.BlockDev{Name: prefix + "c2"},
 			},
 		},

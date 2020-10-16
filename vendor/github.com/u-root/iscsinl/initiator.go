@@ -183,6 +183,10 @@ type IscsiOptions struct {
 
 	// Scheduler to configure for the blockdev
 	Scheduler string
+
+	// ScanTimeout is the total time to wait for block devices to appear in
+	// the file system after initiating a scan.
+	ScanTimeout time.Duration
 }
 
 // IscsiTargetSession represents an iSCSI session and a single connection to a target
@@ -231,6 +235,7 @@ var defaultOpts = IscsiOptions{
 	DataPDUInOrder:      true,
 	DataSequenceInOrder: true,
 	Scheduler:           "noop",
+	ScanTimeout:         3 * time.Second,
 }
 
 // Option is a functional API for setting optional configuration.
@@ -241,6 +246,13 @@ func WithTarget(addr, volume string) Option {
 	return func(i *IscsiOptions) {
 		i.Address = addr
 		i.Volume = volume
+	}
+}
+
+// WithScanTimeout sets the timeout to wait for devices to appear after sending the scan event.
+func WithScanTimeout(dur time.Duration) Option {
+	return func(i *IscsiOptions) {
+		i.ScanTimeout = dur
 	}
 }
 
@@ -428,15 +440,25 @@ func (s *IscsiTargetSession) ReScan() error {
 	}
 
 	var matches []string
-	for i := 0; i < 10; i++ {
-		var err error
+	start := time.Now()
+	// The kernel may add devices it finds through scanning at any time. If
+	// a scan yields multiple, kernel will not add them atomically. We wait
+	// until at least one device has appeared, and no new devices have
+	// appeared for 100ms. We also time out based on the user defined
+	// ScanTimeout.
+	for elapsed := time.Now().Sub(start); elapsed <= s.opts.ScanTimeout; {
 		log.Printf("Waiting for device...")
-		time.Sleep(30 * time.Millisecond)
-		matches, err = filepath.Glob(fmt.Sprintf(
+		time.Sleep(100 * time.Millisecond)
+		newMatches, err := filepath.Glob(fmt.Sprintf(
 			"/sys/class/iscsi_session/session%d/device/target*/*/block/*/uevent", s.sid))
-
 		if err != nil {
 			return err
+		}
+		if len(newMatches) > 0 {
+			if len(matches) == len(newMatches) {
+				break
+			}
+			matches = newMatches
 		}
 	}
 
@@ -458,7 +480,7 @@ func (s *IscsiTargetSession) ReScan() error {
 	}
 
 	if !found {
-		return errors.New("could not find DEVNAME")
+		return errors.New("could not find any device DEVNAMEs")
 	}
 	return nil
 

@@ -29,6 +29,8 @@ u-root embodies four different projects.
 # Usage
 
 Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
+While u-root uses Go modules, it still vendors dependencies and builds with
+`GO111MODULE=off`.
 
 Download and install u-root:
 
@@ -49,10 +51,13 @@ u-root
 u-root core boot
 
 # Generate an archive with only these given commands
-u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+
+# Generate an archive with all of the core tools with some exceptions
+u-root core -cmds/core/{installcommand,losetup}
 
 # Generate an archive with a tool outside of u-root
-u-root ./cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
+u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
 ```
 
 The default set of packages included is all packages in
@@ -374,9 +379,9 @@ u-root can create an initramfs in two different modes:
 ## Updating Dependencies
 
 ```shell
-# The latest released version of dep is required:
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-dep ensure
+go get -u
+go mod tidy
+go mod vendor
 ```
 
 # Hardware

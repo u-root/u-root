@@ -87,8 +87,10 @@ Fork the project on GitHub, work in your fork and in branches, push
 these to your GitHub fork, and when ready, do a GitHub pull requests
 against https://github.com/u-root/u-root.
 
-`u-root` uses [dep](https://github.com/golang/dep)
-for its dependency management. Please run `dep ensure`, `dep prune`, and commit Gopkg.toml, Gopkg.lock and vendor/ changes before opening a pull request.
+u-root uses Go modules for its dependency management, but still vendors
+dependencies in the repository pending module support in the build system.
+Please run `go mod tidy` and `go mod vendor` and commit `go.mod`, `go.sum`, and
+`vendor/` changes before opening a pull request.
 
 Every commit in your pull request needs to be able to build and pass the CI tests.
 

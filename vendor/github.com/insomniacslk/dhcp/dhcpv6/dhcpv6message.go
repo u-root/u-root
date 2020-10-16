@@ -67,6 +67,25 @@ func (mo MessageOptions) OneIANA() *OptIANA {
 	return ianas[0]
 }
 
+// IATA returns all Identity Association for Temporary Address options.
+func (mo MessageOptions) IATA() []*OptIATA {
+	opts := mo.Get(OptionIANA)
+	var iatas []*OptIATA
+	for _, o := range opts {
+		iatas = append(iatas, o.(*OptIATA))
+	}
+	return iatas
+}
+
+// OneIATA returns the first IATA option.
+func (mo MessageOptions) OneIATA() *OptIATA {
+	iatas := mo.IATA()
+	if len(iatas) == 0 {
+		return nil
+	}
+	return iatas[0]
+}
+
 // IAPD returns all Identity Association for Prefix Delegation options.
 func (mo MessageOptions) IAPD() []*OptIAPD {
 	opts := mo.Get(OptionIAPD)
@@ -227,6 +246,21 @@ func (mo MessageOptions) ElapsedTime() time.Duration {
 		return t.ElapsedTime
 	}
 	return 0
+}
+
+// InformationRefreshTime returns the Information Refresh Time option
+// as defined by RFC 815 Section 21.23.
+//
+// InformationRefreshTime returns the provided default if no option is present.
+func (mo MessageOptions) InformationRefreshTime(def time.Duration) time.Duration {
+	opt := mo.Options.GetOne(OptionInformationRefreshTime)
+	if opt == nil {
+		return def
+	}
+	if t, ok := opt.(*optInformationRefreshTime); ok {
+		return t.InformationRefreshtime
+	}
+	return def
 }
 
 // FQDN returns the FQDN option as defined by RFC 4704.

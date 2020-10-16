@@ -22,10 +22,10 @@ func readTPM12Information(rwc io.ReadWriter) (TPMInfo, error) {
 		return TPMInfo{}, err
 	}
 
-	manufacturerId := binary.BigEndian.Uint32(manufacturerRaw)
+	manufacturerID := binary.BigEndian.Uint32(manufacturerRaw)
 	return TPMInfo{
-		VendorInfo:   TCGVendorID(manufacturerId).String(),
-		Manufacturer: TCGVendorID(manufacturerId),
+		VendorInfo:   TCGVendorID(manufacturerID).String(),
+		Manufacturer: TCGVendorID(manufacturerID),
 	}, nil
 }
 

@@ -37,6 +37,9 @@ type Opts struct {
 	//
 	// BinaryDir must be specified.
 	BinaryDir string
+
+	// NoStrip builds unstripped binaries.
+	NoStrip bool
 }
 
 // Builder builds Go packages and adds the binaries to an initramfs.

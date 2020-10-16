@@ -44,8 +44,17 @@ func GetNetConfFromPacketv6(d *dhcpv6.Message) (*NetConf, error) {
 	for _, iaaddr := range iana.Options.Addresses() {
 		netconf.Addresses = append(netconf.Addresses, AddrConf{
 			IPNet: net.IPNet{
-				IP:   iaaddr.IPv6Addr,
-				Mask: net.CIDRMask(64, 128),
+				IP: iaaddr.IPv6Addr,
+
+				// This mask tells Linux which addresses we know to be
+				// "on-link" (i.e., reachable on this interface without
+				// having to talk to a router).
+				//
+				// Since DHCPv6 does not give us that information, we
+				// have to assume that no addresses are on-link. To do
+				// that, we use /128. (See also RFC 5942 Section 5,
+				// "Observed Incorrect Implementation Behavior".)
+				Mask: net.CIDRMask(128, 128),
 			},
 			PreferredLifetime: iaaddr.PreferredLifetime,
 			ValidLifetime:     iaaddr.ValidLifetime,

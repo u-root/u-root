@@ -17,12 +17,17 @@ var templates = map[string][]string{
 	"boot": {
 		"github.com/u-root/u-root/cmds/boot/*boot*",
 	},
+	// Absolutely everything, including experimental commands.
+	"world": {
+		"github.com/u-root/u-root/cmds/*/*",
+	},
 	// Core should be things you don't want to live without.
 	"core": {
 		"github.com/u-root/u-root/cmds/core/*",
 	},
 	// Minimal should be things you can't live without.
 	"minimal": {
+		"github.com/u-root/u-root/cmds/core/blkid",
 		"github.com/u-root/u-root/cmds/core/cat",
 		"github.com/u-root/u-root/cmds/core/chmod",
 		"github.com/u-root/u-root/cmds/core/cmp",

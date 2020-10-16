@@ -5,13 +5,17 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"runtime"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
@@ -41,6 +45,9 @@ var (
 	fourbins                                *bool
 	noCommands                              *bool
 	extraFiles                              multiFlag
+	noStrip                                 *bool
+	statsOutputPath                         *string
+	statsLabel                              *string
 )
 
 func init() {
@@ -69,16 +76,95 @@ func init() {
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
+
+	noStrip = flag.Bool("no-strip", false, "Build unstripped binaries")
+
+	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
+
+	statsLabel = flag.String("stats-label", "", "Use this statsLabel when writing stats")
+}
+
+type buildStats struct {
+	Label      string  `json:"label,omitempty"`
+	Time       int64   `json:"time"`
+	Duration   float64 `json:"duration"`
+	OutputSize int64   `json:"output_size"`
+}
+
+func writeBuildStats(stats buildStats, path string) error {
+	var allStats []buildStats
+	if data, err := ioutil.ReadFile(*statsOutputPath); err == nil {
+		json.Unmarshal(data, &allStats)
+	}
+	found := false
+	for i, s := range allStats {
+		if s.Label == stats.Label {
+			allStats[i] = stats
+			found = true
+			break
+		}
+	}
+	if !found {
+		allStats = append(allStats, stats)
+		sort.Slice(allStats, func(i, j int) bool {
+			return strings.Compare(allStats[i].Label, allStats[j].Label) == -1
+		})
+	}
+	data, err := json.MarshalIndent(allStats, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(*statsOutputPath, data, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateLabel() string {
+	var baseCmds []string
+	env := golang.Default()
+	if len(flag.Args()) > 0 {
+		// Use the last component of the name to keep the label short
+		for _, e := range flag.Args() {
+			baseCmds = append(baseCmds, path.Base(e))
+		}
+	} else {
+		baseCmds = []string{"core"}
+	}
+	return fmt.Sprintf("%s-%s-%s-%s", *build, env.GOOS, env.GOARCH, strings.Join(baseCmds, "_"))
 }
 
 func main() {
 	flag.Parse()
 
+	start := time.Now()
+
 	// Main is in a separate functions so defers run on return.
 	if err := Main(); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Successfully wrote initramfs.")
+
+	elapsed := time.Now().Sub(start)
+
+	stats := buildStats{
+		Label:    *statsLabel,
+		Time:     start.Unix(),
+		Duration: float64(elapsed.Milliseconds()) / 1000,
+	}
+	if stats.Label == "" {
+		stats.Label = generateLabel()
+	}
+	if stat, err := os.Stat(*outputPath); err == nil && stat.ModTime().After(start) {
+		log.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
+		stats.OutputSize = stat.Size()
+		if *statsOutputPath != "" {
+			if err := writeBuildStats(stats, *statsOutputPath); err == nil {
+				log.Printf("Wrote stats to %q (label %q)", *statsOutputPath, stats.Label)
+			} else {
+				log.Printf("Failed to write stats to %s: %v", *statsOutputPath, err)
+			}
+		}
+	}
 }
 
 var recommendedVersions = []string{
@@ -131,7 +217,13 @@ func Main() error {
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Open the target initramfs file.
-	w, err := archiver.OpenWriter(logger, *outputPath, env.GOOS, env.GOARCH)
+	if *outputPath == "" {
+		if len(env.GOOS) == 0 && len(env.GOARCH) == 0 {
+			return fmt.Errorf("passed no path, GOOS, and GOARCH to CPIOArchiver.OpenWriter")
+		}
+		*outputPath = fmt.Sprintf("/tmp/initramfs.%s_%s.cpio", env.GOOS, env.GOARCH)
+	}
+	w, err := archiver.OpenWriter(logger, *outputPath)
 	if err != nil {
 		return err
 	}
@@ -221,6 +313,7 @@ func Main() error {
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
+		NoStrip:         *noStrip,
 	}
 	uinitArgs := shlex.Argv(*uinitCmd)
 	if len(uinitArgs) > 0 {

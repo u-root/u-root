@@ -71,6 +71,9 @@ type Client struct {
 	// wg protects the receiveLoop.
 	wg sync.WaitGroup
 
+	// printDropped logs dropped packets to logger if true.
+	printDropped bool
+
 	pendingMu sync.Mutex
 	// pending stores the distribution channels for each pending
 	// TransactionID. receiveLoop uses this map to determine which channel
@@ -217,6 +220,12 @@ func (c *Client) receiveLoop() {
 			msg, err := dhcpv6.MessageFromBytes(b[:n])
 			if err != nil {
 				// Not a valid DHCP packet; keep listening.
+				if c.printDropped {
+					if len(b) > 12 {
+						b = b[:12]
+					}
+					c.logger.Printf("Invalid DHCPv6 message received (len %d bytes), first 12 bytes: %#x", n, b)
+				}
 				continue
 			}
 
@@ -231,6 +240,9 @@ func (c *Client) receiveLoop() {
 				// This send may block.
 				case p.ch <- msg:
 				}
+			} else if c.printDropped {
+				// The Stringer will print the transaction ID.
+				c.logger.Printf("No client waiting for msg with this XID: %s", msg)
 			}
 			c.pendingMu.Unlock()
 		}
@@ -246,6 +258,13 @@ type ClientOpt func(*Client)
 func WithTimeout(d time.Duration) ClientOpt {
 	return func(c *Client) {
 		c.timeout = d
+	}
+}
+
+// WithLogDroppedPackets logs a short message for dropped packets.
+func WithLogDroppedPackets() ClientOpt {
+	return func(c *Client) {
+		c.printDropped = true
 	}
 }
 

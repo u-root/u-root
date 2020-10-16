@@ -22,7 +22,7 @@ func TestPackageRewriteFile(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	bin := filepath.Join(dir, "foo")
-	if err := BuildBusybox(golang.Default(), []string{"github.com/u-root/u-root/pkg/uroot/test/foo"}, bin); err != nil {
+	if err := BuildBusybox(golang.Default(), []string{"github.com/u-root/u-root/pkg/uroot/test/foo"}, false, bin); err != nil {
 		t.Fatal(err)
 	}
 

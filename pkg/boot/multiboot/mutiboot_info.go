@@ -8,13 +8,13 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-type mutibootInfo struct {
+type esxBootInfoInfo struct {
 	cmdline uint64
 
 	elems []elem
 }
 
-func (m *mutibootInfo) marshal() []byte {
+func (m *esxBootInfoInfo) marshal() []byte {
 	buf := uio.NewNativeEndianBuffer(nil)
 	buf.Write64(m.cmdline)
 	buf.Write64(uint64(len(m.elems)))
@@ -33,32 +33,32 @@ func (m *mutibootInfo) marshal() []byte {
 }
 
 type elem interface {
-	typ() mutibootType
+	typ() esxBootInfoType
 	marshal() []byte
 }
 
-type mutibootType uint32
+type esxBootInfoType uint32
 
 const (
-	MUTIBOOT_INVALID_TYPE  mutibootType = 0
-	MUTIBOOT_MEMRANGE_TYPE mutibootType = 1
-	MUTIBOOT_MODULE_TYPE   mutibootType = 2
-	MUTIBOOT_VBE_TYPE      mutibootType = 3
-	MUTIBOOT_EFI_TYPE      mutibootType = 4
-	MUTIBOOT_LOADESX_TYPE  mutibootType = 5
+	ESXBOOTINFO_INVALID_TYPE  esxBootInfoType = 0
+	ESXBOOTINFO_MEMRANGE_TYPE esxBootInfoType = 1
+	ESXBOOTINFO_MODULE_TYPE   esxBootInfoType = 2
+	ESXBOOTINFO_VBE_TYPE      esxBootInfoType = 3
+	ESXBOOTINFO_EFI_TYPE      esxBootInfoType = 4
+	ESXBOOTINFO_LOADESX_TYPE  esxBootInfoType = 5
 )
 
-type mutibootMemRange struct {
+type esxBootInfoMemRange struct {
 	startAddr uint64
 	length    uint64
 	memType   uint32
 }
 
-func (m mutibootMemRange) typ() mutibootType {
-	return MUTIBOOT_MEMRANGE_TYPE
+func (m esxBootInfoMemRange) typ() esxBootInfoType {
+	return ESXBOOTINFO_MEMRANGE_TYPE
 }
 
-func (m *mutibootMemRange) marshal() []byte {
+func (m *esxBootInfoMemRange) marshal() []byte {
 	buf := uio.NewNativeEndianBuffer(nil)
 	buf.Write64(m.startAddr)
 	buf.Write64(m.length)
@@ -66,22 +66,22 @@ func (m *mutibootMemRange) marshal() []byte {
 	return buf.Data()
 }
 
-type mutibootModuleRange struct {
+type esxBootInfoModuleRange struct {
 	startPageNum uint64
 	numPages     uint32
 }
 
-type mutibootModule struct {
+type esxBootInfoModule struct {
 	cmdline    uint64
 	moduleSize uint64
-	ranges     []mutibootModuleRange
+	ranges     []esxBootInfoModuleRange
 }
 
-func (m mutibootModule) typ() mutibootType {
-	return MUTIBOOT_MODULE_TYPE
+func (m esxBootInfoModule) typ() esxBootInfoType {
+	return ESXBOOTINFO_MODULE_TYPE
 }
 
-func (m *mutibootModule) marshal() []byte {
+func (m *esxBootInfoModule) marshal() []byte {
 	buf := uio.NewNativeEndianBuffer(nil)
 	buf.Write64(m.cmdline)
 	buf.Write64(m.moduleSize)
@@ -95,36 +95,36 @@ func (m *mutibootModule) marshal() []byte {
 	return buf.Data()
 }
 
-type mutibootEfiFlags uint32
+type esxBootInfoEfiFlags uint32
 
 const (
 	// 64-bit ARM EFI. (Why would we have to tell the next kernel that it's
 	// an aarch64 EFI? Shouldn't it know?)
-	MUTIBOOT_EFI_ARCH64 mutibootEfiFlags = 1 << 0
+	ESXBOOTINFO_EFI_ARCH64 esxBootInfoEfiFlags = 1 << 0
 
 	// EFI Secure Boot in progress.
-	MUTIBOOT_EFI_SECURE_BOOT mutibootEfiFlags = 1 << 1
+	ESXBOOTINFO_EFI_SECURE_BOOT esxBootInfoEfiFlags = 1 << 1
 
-	// UEFI memory map is valid rather than mutiboot memory map.
-	MUTIBOOT_EFI_MMAP mutibootEfiFlags = 1 << 2
+	// UEFI memory map is valid rather than esxBootInfo memory map.
+	ESXBOOTINFO_EFI_MMAP esxBootInfoEfiFlags = 1 << 2
 )
 
-type mutibootEfi struct {
-	flags  mutibootEfiFlags
+type esxBootInfoEfi struct {
+	flags  esxBootInfoEfiFlags
 	systab uint64
 
-	// Only set if flags & MUTIBOOT_EFI_MMAP.
+	// Only set if flags & ESXBOOTINFO_EFI_MMAP.
 	memmap         uint64
 	memmapNumDescs uint32
 	memmapDescSize uint32
 	memmapVersion  uint32
 }
 
-func (m mutibootEfi) typ() mutibootType {
-	return MUTIBOOT_EFI_TYPE
+func (m esxBootInfoEfi) typ() esxBootInfoType {
+	return ESXBOOTINFO_EFI_TYPE
 }
 
-func (m *mutibootEfi) marshal() []byte {
+func (m *esxBootInfoEfi) marshal() []byte {
 	buf := uio.NewNativeEndianBuffer(nil)
 	buf.Write32(uint32(m.flags))
 	buf.Write64(m.systab)

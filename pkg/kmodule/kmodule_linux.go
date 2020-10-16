@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/klauspost/pgzip"
+	"github.com/ulikunitz/xz"
 	"golang.org/x/sys/unix"
 )
 
@@ -37,25 +39,43 @@ func Init(image []byte, opts string) error {
 }
 
 // FileInit loads the kernel module contained by `f` with the given opts and
-// flags.
+// flags. Uncompresses modules with a .xz and .gz suffix before loading.
 //
-// FileInit falls back to Init when the finit_module(2) syscall is not available.
+// FileInit falls back to init_module(2) via Init when the finit_module(2)
+// syscall is not available and when loading compressed modules.
 func FileInit(f *os.File, opts string, flags uintptr) error {
-	err := unix.FinitModule(int(f.Fd()), opts, int(flags))
-	if err == unix.ENOSYS {
-		if flags != 0 {
+	var r io.Reader
+	if strings.HasSuffix(f.Name(), ".xz") {
+		var err error
+		if r, err = xz.NewReader(f); err != nil {
 			return err
 		}
 
-		// Fall back to regular init_module(2).
-		img, err := ioutil.ReadAll(f)
-		if err != nil {
+	} else if strings.HasSuffix(f.Name(), ".gz") {
+		var err error
+		if r, err = pgzip.NewReader(f); err != nil {
 			return err
 		}
-		return Init(img, opts)
 	}
 
-	return err
+	if r == nil {
+		err := unix.FinitModule(int(f.Fd()), opts, int(flags))
+		if err == unix.ENOSYS {
+			if flags != 0 {
+				return err
+			}
+			// Fall back to init_module(2).
+			r = f
+		} else {
+			return err
+		}
+	}
+
+	img, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	return Init(img, opts)
 }
 
 // Delete removes a kernel module.
@@ -120,11 +140,7 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 			return err
 		}
 	}
-	if err := loadModule(modPath, modParams, opts); err != nil {
-		return err
-	}
-
-	return nil
+	return loadModule(modPath, modParams, opts)
 }
 
 func checkBuiltin(moduleDir string, deps depMap) error {
@@ -211,8 +227,17 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 }
 
 func findModPath(name string, m depMap) (string, error) {
+	// Kernel modules do not have any consistency with use of hyphens and underscores
+	// matching from the module's name to the module's file path. Thus try matching
+	// the provided name using either.
+	nameH := strings.Replace(name, "_", "-", -1)
+	nameU := strings.Replace(name, "-", "_", -1)
+
 	for mp := range m {
-		if path.Base(mp) == name+".ko" {
+		switch path.Base(mp) {
+		case nameH + ".ko", nameH + ".ko.gz", nameH + ".ko.xz":
+			return mp, nil
+		case nameU + ".ko", nameU + ".ko.gz", nameU + ".ko.xz":
 			return mp, nil
 		}
 	}
@@ -272,7 +297,7 @@ func genLoadedMods(r io.Reader, deps depMap) error {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		arr := strings.Split(scanner.Text(), " ")
-		name := strings.Replace(arr[0], "_", "-", -1)
+		name := arr[0]
 		modPath, err := findModPath(name, deps)
 		if err != nil {
 			return fmt.Errorf("could not find module path %q: %v", name, err)

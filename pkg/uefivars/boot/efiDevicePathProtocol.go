@@ -22,8 +22,10 @@ var (
 	ErrParse    = errors.New("parse error")
 	ErrNotFound = errors.New("Described device not found")
 
-	// Device Path Protocol is used for more than boot entries. Some types
-	// aren't suitable for boot entries, so a resolver doesn't make sense.
+	// ErrUnimpl is returned when we do not implement the Device Path
+	// Protocol entry type, because the Device Path Protocol is used for
+	// more than boot entries. Some types aren't suitable for boot entries,
+	// so a resolver doesn't make sense.
 	//
 	// There are probably others which can be used for boot entries, but are
 	// not implemented simply because they have not been needed yet.

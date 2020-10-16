@@ -34,7 +34,7 @@ var DisplayModel uint32
 var CacheLineSize uint32
 
 // Maximum number of addressable IDs for logical processors in this physical package
-var MaxLogocalCPUId uint32
+var MaxLogicalCPUId uint32
 
 // Initial APIC ID
 var InitialAPICId uint32

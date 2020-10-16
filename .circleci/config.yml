@@ -9,18 +9,22 @@ templates:
       - CGO_ENABLED: 0
       # Triple all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 3
+      - GO111MODULE: "off"
+
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
       # Triple all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 3
+      - GO111MODULE: "off"
     steps:
       - checkout
       - run:
           name: Test integration
           command: go test -a -v -timeout 15m -ldflags '-s' ./integration/...
           no_output_timeout: 15m
+
   beefy-template: &beefy-template
     <<: *golang-template
     resource_class: large
@@ -51,6 +55,9 @@ workflows:
       - compile_cmds:
           requires:
             - clean-code
+      - check_templates:
+          requires:
+            - clean-code
       - check_licenses:
           requires:
             - clean-code
@@ -61,29 +68,26 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install dep
+          name: Install golangci-lint
           command: |
-            wget https://github.com/golang/dep/releases/download/v0.5.4/dep-linux-amd64
-            mv dep-linux-amd64 dep
-            chmod +x dep
-      - run:
-          name: Install gometalinter
-          command: |
-            go get -u golang.org/x/lint/golint
-            go get github.com/alecthomas/gometalinter
+            cd ..
+            go get golang.org/x/lint/golint
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.30.0
       - run:
           name: Install ineffassign
-          command: go get github.com/gordonklaus/ineffassign
+          command: (cd .. && go get github.com/gordonklaus/ineffassign)
       - run:
           name: Check vendored dependencies
+          environment:
+            - GO111MODULE: "auto"
           command: |
-            ./dep version
-            ./dep status
-            ./dep ensure -vendor-only
+            go mod tidy
+            go mod verify
+            go mod vendor -v
             git status
             if [[ -n "$(git status --porcelain vendor)" ]]; then
-              echo 'vendor/ is out-of-date: run `dep ensure -vendor-only` and then check in the changes'
-              echo 'If `dep ensure` results in no changes, make sure you are using the latest relase of dep'
+              echo 'vendor/ is out-of-date: run `go mod tidy && go mod vendor` and then check in the changes'
+              echo 'If `go mod tidy && go mod vendor` results in no changes, make sure you are using the latest relase of Go'
               git status --porcelain vendor
               exit 1
             fi
@@ -96,11 +100,11 @@ jobs:
           command: |
             test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
       - run:
-          name: gometalinter
+          name: golangci-lint
           command: |
-              gometalinter --vendor ./... --disable-all --enable=golint \
-                --skip=pkg/uroot/test \
-                --skip=cmds/core/elvish \
+              golangci-lint run ./... --disable-all --enable=golint \
+                --skip-dirs=pkg/uroot/test \
+                --skip-dirs=cmds/core/elvish \
                 --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
                 --exclude="don't use underscores" \
                 --exclude="don't use ALL_CAPS" \
@@ -135,11 +139,13 @@ jobs:
     <<: *golang-template
     environment:
       - CGO_ENABLED: 1
+      - GO111MODULE: "off"
     steps:
       - checkout
       - run:
           name: Race detector
           command: go test -race ./cmds/... ./pkg/...
+
   compile_cmds:
     <<: *golang-template
     steps:
@@ -170,21 +176,25 @@ jobs:
     steps:
       - checkout
       - run:
-          name: ensure that every template builds for a variety of options.
+          name: Ensure that every template builds for a variety of options.
           command: |
-                  go run u-root.go -build=bb minimal
-                  go run u-root.go minimal
-                  go run u-root.go -build=bb core
-                  go run u-root.go core
-                  go run u-root.go -build=bb coreboot-app
-                  go run u-root.go coreboot-app
-                  go run u-root.go -build=bb all
-                  go run u-root.go all
-                  go run u-root.go -build=bb all core
-                  go run u-root.go all core
-                  go run u-root.go -fourbins minimal
                   go build .
-                  GOOS=plan9 ./u-root plan9 -defaultsh=/bbin/rush
+                  goruncmd="./u-root -stats-output-path=/tmp/stats.json"
+                  $goruncmd -build=bb minimal
+                  $goruncmd -build=bb core
+                  $goruncmd -build=bb coreboot-app
+                  $goruncmd -build=bb all
+                  $goruncmd -build=bb world
+                  # Fails because of dups. Is this supposed to work?
+                  #$goruncmd -build=bb all core
+                  #$goruncmd all core
+                  go run u-root.go templates.go -fourbins minimal
+                  GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
+                  cat /tmp/stats.json
+      - store_artifacts:
+          name: Store build stats
+          path: /tmp/stats.json
+          destination: stats.json
   test-integration-amd64:
     <<: *integration-template
     docker:

@@ -13,12 +13,12 @@ import (
 func TestInfoMarshal(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		mi   *mutibootInfo
+		mi   *esxBootInfoInfo
 		want []byte
 	}{
 		{
 			name: "no elements",
-			mi: &mutibootInfo{
+			mi: &esxBootInfoInfo{
 				cmdline: 0xdeadbeef,
 				elems:   nil,
 			},
@@ -31,10 +31,10 @@ func TestInfoMarshal(t *testing.T) {
 		},
 		{
 			name: "one memrange element",
-			mi: &mutibootInfo{
+			mi: &esxBootInfoInfo{
 				cmdline: 0xdeadbeef,
 				elems: []elem{
-					&mutibootMemRange{
+					&esxBootInfoMemRange{
 						startAddr: 0xbeefdead,
 						length:    0xdeadbeef,
 						memType:   2,
@@ -50,7 +50,7 @@ func TestInfoMarshal(t *testing.T) {
 				// TLV -- type, length, value
 
 				// type
-				byte(MUTIBOOT_MEMRANGE_TYPE), 0, 0, 0,
+				byte(ESXBOOTINFO_MEMRANGE_TYPE), 0, 0, 0,
 				// length - 20 bytes + 8 for the length + 4 for the type
 				32, 0, 0, 0, 0, 0, 0, 0,
 				// values
@@ -61,13 +61,13 @@ func TestInfoMarshal(t *testing.T) {
 		},
 		{
 			name: "one module element",
-			mi: &mutibootInfo{
+			mi: &esxBootInfoInfo{
 				cmdline: 0xdeadbeef,
 				elems: []elem{
-					&mutibootModule{
+					&esxBootInfoModule{
 						cmdline:    0xbeefdead,
 						moduleSize: 0x1000,
-						ranges: []mutibootModuleRange{
+						ranges: []esxBootInfoModuleRange{
 							{
 								startPageNum: 0x100,
 								numPages:     1,
@@ -85,7 +85,7 @@ func TestInfoMarshal(t *testing.T) {
 				// TLV -- type, length, value
 
 				// type
-				byte(MUTIBOOT_MODULE_TYPE), 0, 0, 0,
+				byte(ESXBOOTINFO_MODULE_TYPE), 0, 0, 0,
 				// length - 36 bytes + 8 for the length + 4 for the type
 				48, 0, 0, 0, 0, 0, 0, 0,
 				// values
@@ -105,10 +105,10 @@ func TestInfoMarshal(t *testing.T) {
 		},
 		{
 			name: "one zero-length module element",
-			mi: &mutibootInfo{
+			mi: &esxBootInfoInfo{
 				cmdline: 0xdeadbeef,
 				elems: []elem{
-					&mutibootModule{
+					&esxBootInfoModule{
 						cmdline:    0xbeefdead,
 						moduleSize: 0,
 					},
@@ -123,7 +123,7 @@ func TestInfoMarshal(t *testing.T) {
 				// TLV -- type, length, value
 
 				// type
-				byte(MUTIBOOT_MODULE_TYPE), 0, 0, 0,
+				byte(ESXBOOTINFO_MODULE_TYPE), 0, 0, 0,
 				// length - 20 bytes + 8 for the length + 4 for the type
 				32, 0, 0, 0, 0, 0, 0, 0,
 				// values

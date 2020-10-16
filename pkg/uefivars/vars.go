@@ -21,19 +21,19 @@ import (
 
 //http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
 
-//overridden for testing
+// EfiVarDir is the sysfs /sys/firmware/efi/vars directory, which can be overridden for testing.
 var EfiVarDir = "/sys/firmware/efi/vars"
 
-//EfiVar is a generic efi var
+// EfiVar is a generic efi var.
 type EfiVar struct {
-	Uuid, Name string
+	UUID, Name string
 	Data       []byte
 }
 type EfiVars []EfiVar
 
 func ReadVar(uuid, name string) (e EfiVar, err error) {
 	path := fp.Join(EfiVarDir, name+"-"+uuid, "data")
-	e.Uuid = uuid
+	e.UUID = uuid
 	e.Name = name
 	e.Data, err = ioutil.ReadFile(path)
 	return
@@ -98,7 +98,7 @@ func AndFilter(filters ...VarFilter) VarFilter {
 func (vars EfiVars) Filter(filt VarFilter) EfiVars {
 	var res EfiVars
 	for _, v := range vars {
-		if filt(v.Uuid, v.Name) {
+		if filt(v.UUID, v.Name) {
 			res = append(res, v)
 		}
 	}
