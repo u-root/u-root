@@ -83,7 +83,19 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	boot := make(chan Entry, 1)
 
 	go func() {
-		// Read exactly one line.
+		// Note that term is in raw mode. Write \r\n whenever you would
+		// write a \n. When testing in qemu, it might look fine because
+		// there might be another tty cooking the newlines. In for
+		// example minicom, the behavior is different. And you would
+		// see something like:
+		//
+		//     Select a boot option to edit:
+		//                                  >
+		//
+		// Instead of:
+		//
+		//     Select a boot option to edit:
+		//      >
 		term := terminal.NewTerminal(input, "")
 
 		term.AutoCompleteCallback = func(line string, pos int, key rune) (string, int, bool) {
@@ -93,7 +105,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 		}
 
 		for {
-			term.SetPrompt("Enter an option ('01' is the default, 'e' to edit kernel cmdline):\n > ")
+			term.SetPrompt("Enter an option ('01' is the default, 'e' to edit kernel cmdline):\r\n > ")
 			choice, err := term.ReadLine()
 			if err != nil {
 				if err != io.EOF {
@@ -105,7 +117,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 
 			if choice == "e" {
 				// Edit command line.
-				term.SetPrompt("Select a boot option to edit:\n > ")
+				term.SetPrompt("Select a boot option to edit:\r\n > ")
 				choice, err := term.ReadLine()
 				if err != nil {
 					fmt.Fprintln(term, err)
@@ -119,9 +131,9 @@ func Choose(input *os.File, entries ...Entry) Entry {
 					continue
 				}
 				entries[num-1].Edit(func(cmdline string) string {
-					fmt.Fprintf(term, "The current quoted cmdline for option %d is:\n > %q\n", num, cmdline)
+					fmt.Fprintf(term, "The current quoted cmdline for option %d is:\r\n > %q\r\n", num, cmdline)
 					fmt.Fprintln(term, ` * Note the cmdline is c-style quoted. Ex: \n => newline, \\ => \`)
-					term.SetPrompt("Enter an option:\n * (a)ppend, (o)verwrite, (r)eturn to main menu\n > ")
+					term.SetPrompt("Enter an option:\r\n * (a)ppend, (o)verwrite, (r)eturn to main menu\r\n > ")
 					choice, err := term.ReadLine()
 					if err != nil {
 						fmt.Fprintln(term, err)
@@ -129,7 +141,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 					}
 					switch choice {
 					case "a":
-						term.SetPrompt("Enter unquoted cmdline to append:\n > ")
+						term.SetPrompt("Enter unquoted cmdline to append:\r\n > ")
 						appendCmdline, err := term.ReadLine()
 						if err != nil {
 							fmt.Fprintln(term, err)
@@ -139,7 +151,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 							cmdline += " " + appendCmdline
 						}
 					case "o":
-						term.SetPrompt("Enter new unquoted cmdline:\n > ")
+						term.SetPrompt("Enter new unquoted cmdline:\r\n > ")
 						newCmdline, err := term.ReadLine()
 						if err != nil {
 							fmt.Fprintln(term, err)
@@ -150,7 +162,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 					default:
 						fmt.Fprintf(term, "Unrecognized choice %q", choice)
 					}
-					fmt.Fprintf(term, "The new quoted cmdline for option %d is:\n > %q\n", num, cmdline)
+					fmt.Fprintf(term, "The new quoted cmdline for option %d is:\r\n > %q\r\n", num, cmdline)
 					return cmdline
 				})
 				fmt.Fprintln(term, "Returning to main menu...")
@@ -191,7 +203,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
 	// Clear the screen (ANSI terminal escape code for screen clear).
 	fmt.Printf("\033[1;1H\033[2J\n\n")
-	fmt.Printf("Welcome to NERF's Boot Menu\n\n")
+	fmt.Printf("Welcome to LinuxBoot's Menu\n\n")
 	fmt.Printf("Enter a number to boot a kernel:\n")
 
 	for {

@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 	"unsafe"
 
 	"github.com/rekby/gpt"
@@ -454,7 +455,12 @@ func (b BlockDevices) FilterPartID(guid string) BlockDevices {
 				continue
 			}
 			if strings.ToLower(part.Id.String()) == strings.ToLower(guid) {
-				names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
+				r := []rune(device.Name[len(device.Name)-1:])
+				if unicode.IsDigit(r[0]) {
+					names = append(names, fmt.Sprintf("%sp%d", device.Name, i+1))
+				} else {
+					names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
+				}
 			}
 		}
 	}
@@ -474,7 +480,12 @@ func (b BlockDevices) FilterPartType(guid string) BlockDevices {
 				continue
 			}
 			if strings.ToLower(part.Type.String()) == strings.ToLower(guid) {
-				names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
+				r := []rune(device.Name[len(device.Name)-1:])
+				if unicode.IsDigit(r[0]) {
+					names = append(names, fmt.Sprintf("%sp%d", device.Name, i+1))
+				} else {
+					names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
+				}
 			}
 		}
 	}

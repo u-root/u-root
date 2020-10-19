@@ -110,11 +110,11 @@ func (m memoryMaps) marshal() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// elems adds mutiboot info elements describing the memory map of the system.
+// elems adds esxBootInfo info elements describing the memory map of the system.
 func (m memoryMaps) elems() []elem {
 	var e []elem
 	for _, mm := range m {
-		e = append(e, &mutibootMemRange{
+		e = append(e, &esxBootInfoMemRange{
 			startAddr: mm.BaseAddr,
 			length:    mm.Length,
 			memType:   mm.Type,
@@ -132,7 +132,7 @@ func (m memoryMaps) String() string {
 	return strings.Join(s, "\n")
 }
 
-// Probe checks if `kernel` is multiboot v1 or mutiboot kernel.
+// Probe checks if `kernel` is multiboot v1 or esxBootInfo kernel.
 func Probe(kernel io.ReaderAt) error {
 	r := util.TryGzipFilter(kernel)
 	_, err := parseHeader(uio.Reader(r))
@@ -253,11 +253,11 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	if err == nil {
 		header = multibootHeader
 	} else if err == ErrHeaderNotFound {
-		var mutibootHeader *mutibootHeader
+		var esxBootInfoHeader *esxBootInfoHeader
 		// We don't even need the header at the moment. Just need to
 		// know it's there. Everything that matters is in the ELF.
-		mutibootHeader, err = parseMutiHeader(uio.Reader(m.kernel))
-		header = mutibootHeader
+		esxBootInfoHeader, err = parseMutiHeader(uio.Reader(m.kernel))
+		header = esxBootInfoHeader
 	}
 	if err != nil {
 		return fmt.Errorf("error parsing headers: %v", err)
@@ -362,14 +362,14 @@ func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
 	return r.Start, nil
 }
 
-// addInfo collects and adds mutiboot (without L!) into the segments.
+// addInfo collects and adds esxBootInfo (without L!) into the segments.
 //
 // The format is described in the structs in
-// https://github.com/vmware/esx-boot/blob/master/include/mutiboot.h
+// https://github.com/vmware/esx-boot/blob/master/include/esxbootinfo.h
 //
 // It includes a memory map and a list of modules.
-func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
-	var mi mutibootInfo
+func (*esxBootInfoHeader) addInfo(m *multiboot) (addr uintptr, err error) {
+	var mi esxBootInfoInfo
 
 	mi.elems = append(mi.elems, m.memoryMap().elems()...)
 	mods, err := m.loadModules()
@@ -378,7 +378,7 @@ func (*mutibootHeader) addInfo(m *multiboot) (addr uintptr, err error) {
 	}
 	mi.elems = append(mi.elems, mods.elems()...)
 
-	// This marshals the mutiboot info with cmdline = 0. We're gonna append
+	// This marshals the esxBootInfo info with cmdline = 0. We're gonna append
 	// the cmdline, so we must know the size of the marshaled stuff first
 	// to be able to point to it.
 	//
