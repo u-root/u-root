@@ -33,6 +33,7 @@ import (
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 var probeGrubFiles = []string{
@@ -221,9 +222,28 @@ func parseURL(surl string, root string) (*url.URL, error) {
 		u.Scheme = ru.Scheme
 
 		if len(u.Host) == 0 {
-			// If this is not there, it was likely just a path.
+			// If host is not there, it was likely just a path.
 			u.Host = ru.Host
-			u.Path = filepath.Join(ru.Path, filepath.Clean(u.Path))
+			u.Path, err = upath.SafeFilepathJoin(ru.Path, u.Path)
+			if err != nil {
+				return nil, err
+			}
+			// If the file exists as a symlink (or possibly some
+			// other irregular file type), it could also perform a
+			// directory traversal attack, so disallow these file
+			// types.
+			fi, err := os.Lstat(u.Path)
+			if !os.IsNotExist(err) {
+				if err != nil {
+					return nil, fmt.Errorf("could not stat %q: %w", u.Path, err)
+				}
+				if fi.Mode()&os.ModeSymlink != 0 {
+					return nil, fmt.Errorf("error, %q is a symlink", u.Path)
+				}
+				if !fi.Mode().IsRegular() && !fi.Mode().IsDir() {
+					return nil, fmt.Errorf("error, %q is not a regular file or directory", u.Path)
+				}
+			}
 		}
 	}
 	return u, nil
