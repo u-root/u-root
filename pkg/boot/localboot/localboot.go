@@ -7,10 +7,6 @@ package localboot
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bls"
@@ -23,12 +19,15 @@ import (
 )
 
 // parse treats device as a block device with a file system.
-func parse(l ulog.Logger, device *block.BlockDev, mountDir string) []boot.OSImage {
+func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mountDir string, mountPool *mount.Pool) []boot.OSImage {
 	imgs, err := bls.ScanBLSEntries(l, mountDir)
 	if err != nil {
 		l.Printf("No systemd-boot BootLoaderSpec configs found on %s, trying another format...: %v", device, err)
 	}
 
+	// TODO: The grub intepreter may want to load files from another
+	//       partition, thus it will be given devices and mountPool in
+	//       order to mount more file systems.
 	grubImgs, err := grub.ParseLocalConfig(context.Background(), mountDir)
 	if err != nil {
 		l.Printf("No GRUB configs found on %s, trying another format...: %v", device, err)
@@ -45,58 +44,50 @@ func parse(l ulog.Logger, device *block.BlockDev, mountDir string) []boot.OSImag
 }
 
 // parseUnmounted treats device as unmounted, with or without partitions.
-func parseUnmounted(l ulog.Logger, device *block.BlockDev) ([]boot.OSImage, []*mount.MountPoint) {
+func parseUnmounted(l ulog.Logger, device *block.BlockDev, mountPool *mount.Pool) []boot.OSImage {
 	// This will try to mount device partition 5 and 6.
 	imgs, mps, err := esxi.LoadDisk(device.DevicePath())
+	if mps != nil {
+		mountPool.Add(mps...)
+	}
 	if err != nil {
 		l.Printf("No ESXi disk configs found on %s: %v", device, err)
 	}
 
 	// This tries to mount the device itself, in case it's an installer CD.
 	img, mp, err := esxi.LoadCDROM(device.DevicePath())
+	if mp != nil {
+		mountPool.Add(mp)
+	}
 	if err != nil {
 		l.Printf("No ESXi CDROM configs found on %s: %v", device, err)
 	}
 	if img != nil {
 		imgs = append(imgs, img)
-		mps = append(mps, mp)
 	}
 	// Convert from *MultibootImage to OSImage.
 	var images []boot.OSImage
 	for _, i := range imgs {
 		images = append(images, i)
 	}
-	return images, mps
+	return images
 }
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
-func Localboot(l ulog.Logger, blockDevs block.BlockDevices) ([]boot.OSImage, []*mount.MountPoint, error) {
-	mountPoints, err := ioutil.TempDir("", "u-root-boot")
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot create tmpdir: %v", err)
-	}
-
+func Localboot(l ulog.Logger, blockDevs block.BlockDevices, mp *mount.Pool) ([]boot.OSImage, error) {
 	var images []boot.OSImage
-	var mps []*mount.MountPoint
 	for _, device := range blockDevs {
-		imgs, mmps := parseUnmounted(l, device)
+		imgs := parseUnmounted(l, device, mp)
 		if len(imgs) > 0 {
 			images = append(images, imgs...)
-			mps = append(mps, mmps...)
 		} else {
-			dir := filepath.Join(mountPoints, device.Name)
-
-			os.MkdirAll(dir, 0777)
-			mp, err := device.Mount(dir, mount.ReadOnly)
+			m, err := mp.Mount(device, mount.ReadOnly)
 			if err != nil {
-				os.RemoveAll(dir)
 				continue
 			}
-
-			imgs = parse(l, device, dir)
+			imgs = parse(l, device, blockDevs, m.Path, mp)
 			images = append(images, imgs...)
-			mps = append(mps, mp)
 		}
 	}
-	return images, mps, nil
+	return images, nil
 }

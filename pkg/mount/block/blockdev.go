@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -30,6 +30,7 @@ var (
 	// LinuxMountsPath is the standard mountpoint list path
 	LinuxMountsPath = "/proc/mounts"
 
+	// Debug function to override for verbose logging.
 	Debug = func(string, ...interface{}) {}
 )
 
@@ -68,6 +69,11 @@ func (b *BlockDev) String() string {
 // DevicePath is the path to the actual device.
 func (b BlockDev) DevicePath() string {
 	return filepath.Join("/dev/", b.Name)
+}
+
+// Name implements mount.Mounter.
+func (b *BlockDev) DevName() string {
+	return b.Name
 }
 
 // Mount implements mount.Mounter.
