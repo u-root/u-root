@@ -17,10 +17,10 @@ import (
 // ShowMenuAndBoot handles common cleanup functions and flags that all boot
 // commands should support.
 //
-// mps are mounts to unmount before kexecing. noLoad prints the list of entries
+// mountPool is unmounted before kexecing. noLoad prints the list of entries
 // and exits. If noLoad is false, a boot menu is shown to the user. The
 // user-chosen boot entry will be kexec'd unless noExec is true.
-func ShowMenuAndBoot(entries []menu.Entry, mps []*mount.MountPoint, noLoad, noExec bool) {
+func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec bool) {
 	if noLoad {
 		log.Print("Not loading menu or kernel. Options:")
 		for i, entry := range entries {
@@ -33,10 +33,8 @@ func ShowMenuAndBoot(entries []menu.Entry, mps []*mount.MountPoint, noLoad, noEx
 	loadedEntry := menu.ShowMenuAndLoad(os.Stdin, entries...)
 
 	// Clean up.
-	for _, mp := range mps {
-		if err := mp.Unmount(mount.MNT_DETACH); err != nil {
-			log.Printf("Failed to unmount %s: %v", mp, err)
-		}
+	if err := mountPool.UnmountAll(mount.MNT_DETACH); err != nil {
+		log.Printf("Failed to unmount: %v", err)
 	}
 	if loadedEntry == nil {
 		log.Fatalf("Nothing to boot.")

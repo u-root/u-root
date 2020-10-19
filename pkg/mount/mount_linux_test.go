@@ -418,3 +418,47 @@ func getDevicePrefix() string {
 	}
 	return "sd"
 }
+
+// fakeMount lets us count how many times it has been mounted.
+type fakeMounter struct {
+	name  string
+	count int
+}
+
+func (m *fakeMounter) DevName() string {
+	return m.name
+}
+
+func (m *fakeMounter) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+	m.count++
+	return &mount.MountPoint{
+		Path:   path,
+		Device: m.name,
+		Flags:  flags,
+	}, nil
+}
+
+func TestMountPool(t *testing.T) {
+	sda1 := &fakeMounter{name: "sda1"}
+	sda2 := &fakeMounter{name: "sda2"}
+	mp := &mount.Pool{}
+	m1, err := mp.Mount(sda1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = mp.Mount(sda2, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m3, err := mp.Mount(sda1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if m1 != m3 {
+		t.Fatalf("mp.Mount(sda1) = %v; expected to reuse mount %v", m3, m1)
+	}
+	if sda1.count != 1 {
+		t.Fatalf("expected sda1 mounted 1 times; but mounted %d times", sda1.count)
+	}
+}
