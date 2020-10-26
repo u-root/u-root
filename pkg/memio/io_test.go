@@ -95,7 +95,7 @@ func ExampleRead() {
 	if err := Read(0x1000000, &data); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%v\n", data)
+	log.Println(data)
 }
 
 func ExampleWrite() {
