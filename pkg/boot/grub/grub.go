@@ -54,6 +54,19 @@ var probeGrubFiles = []string{
 var hexEscape = regexp.MustCompile(`\\x[0-9a-fA-F]{2}`)
 var anyEscape = regexp.MustCompile(`\\.{0,3}`)
 
+// absFileScheme creates a file:/// scheme with an absolute path. Technically,
+// file schemes must be absolute paths and Go makes that assumption.
+func absFileScheme(path string) (*url.URL, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	return &url.URL{
+		Scheme: "file",
+		Path:   path,
+	}, nil
+}
+
 // ParseLocalConfig looks for a GRUB config in the disk partition mounted at
 // diskDir and parses out OSes to boot.
 //
@@ -61,9 +74,9 @@ var anyEscape = regexp.MustCompile(`\\.{0,3}`)
 // assume that the kernels we boot are only on this one partition. But so is
 // this whole parser.
 func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
-	wd := &url.URL{
-		Scheme: "file",
-		Path:   diskDir,
+	wd, err := absFileScheme(diskDir)
+	if err != nil {
+		return nil, err
 	}
 
 	// This is a hack. GRUB should stop caring about URLs at least in the

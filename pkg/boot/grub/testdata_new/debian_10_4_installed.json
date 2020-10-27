@@ -3,10 +3,10 @@
     "cmdline": "root=UUID=f117f752-02f1-4df8-89ba-20032dea6905 ro console=ttyS0 quiet",
     "image_type": "linux",
     "initrd": {
-      "url": "file://testdata_new/debian_10_4_installed/boot/initrd.img-4.19.0-9-amd64"
+      "url": "file:///testdata_new/debian_10_4_installed/boot/initrd.img-4.19.0-9-amd64"
     },
     "kernel": {
-      "url": "file://testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
+      "url": "file:///testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
     },
     "name": "Debian GNU/Linux"
   },
@@ -14,10 +14,10 @@
     "cmdline": "root=UUID=f117f752-02f1-4df8-89ba-20032dea6905 ro console=ttyS0 quiet",
     "image_type": "linux",
     "initrd": {
-      "url": "file://testdata_new/debian_10_4_installed/boot/initrd.img-4.19.0-9-amd64"
+      "url": "file:///testdata_new/debian_10_4_installed/boot/initrd.img-4.19.0-9-amd64"
     },
     "kernel": {
-      "url": "file://testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
+      "url": "file:///testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
     },
     "name": "Debian GNU/Linux, with Linux 4.19.0-9-amd64"
   },
@@ -25,10 +25,10 @@
     "cmdline": "root=UUID=f117f752-02f1-4df8-89ba-20032dea6905 ro single console=ttyS0",
     "image_type": "linux",
     "initrd": {
-      "url": "file://testdata_new/debian_10_4_installed/boot/initrd.img-4.19.0-9-amd64"
+      "url": "file:///testdata_new/debian_10_4_installed/boot/initrd.img-4.19.0-9-amd64"
     },
     "kernel": {
-      "url": "file://testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
+      "url": "file:///testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
     },
     "name": "Debian GNU/Linux, with Linux 4.19.0-9-amd64 (recovery mode)"
   }
