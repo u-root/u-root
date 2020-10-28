@@ -411,3 +411,34 @@ func (fdt *FDT) Write(f io.Writer) (int, error) {
 	_, err := w.Write(strs)
 	return w.N, err
 }
+
+// NodeByName finds a node by name.
+func (fdt *FDT) NodeByName(name string) (*Node, bool) {
+	return fdt.RootNode.Find(func(n *Node) bool {
+		return n.Name == name
+	})
+}
+
+// Bytes returns a []byte for a property of a node,
+// or an error if the node has no data property.
+func (fdt *FDT) Bytes(name, pname string) ([]byte, error) {
+	n, ok := fdt.NodeByName(name)
+	if !ok {
+		return nil, fmt.Errorf("could not find node %q", name)
+	}
+	p, ok := n.LookProperty(pname)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have a data property", n)
+	}
+	return p.Value, nil
+}
+
+// Reader returns a *bytes.Reader for a property of a Node,
+// or an error if the node is not found or the node has no data property.
+func (fdt *FDT) Reader(name, pname string) (*bytes.Reader, error) {
+	b, err := fdt.Bytes(name, pname)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(b), nil
+}
