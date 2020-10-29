@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -17,14 +18,31 @@ import (
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 var (
 	allowInteractive = flag.Bool("i", true, "Allow user to interrupt boot process and run commands")
-	doQuiet          = flag.Bool("q", false, "Disable verbose output")
+	doQuiet          = flag.Bool("q", false, fmt.Sprintf("Disable verbose output. If not specified, read it from VPD var '%s'. If missing, use default (default false)", vpdDebugEnabled))
 	interval         = flag.Int("I", 1, "Interval in seconds before looping to the next boot command")
 	noDefaultBoot    = flag.Bool("nodefault", false, "Do not attempt default boot entries if regular ones fail")
 )
+
+const (
+	// vpdDebugEnabled is the name of the VPD variable used to check if debug output is desired.
+	vpdDebugEnabled = "debug_enabled"
+)
+
+// isFlagPassed checks whether a flag was explicitly passed on the command line. Thank you StackOverflow.
+func isFlagPassed(name string) bool {
+    found := false
+    flag.Visit(func(f *flag.Flag) {
+        if f.Name == name {
+            found = true
+        }
+    })
+    return found
+}
 
 var defaultBootsequence = [][]string{
 	{"fbnetboot", "-userclass", "linuxboot"},
@@ -190,14 +208,52 @@ func addSEL(sequence string) {
 	}
 }
 
+// getDebugEnabled checks whether debug output is requested, either via command line or via VPD
+// variables.
+// If -q was explicitly passed on the command line, will use that value, otherwise will look for
+// the VPD variable "debug_enabled". Valid values are "true", "false", "1", "0", "yes", "no",
+// case-insensitive.
+// If the VPD variable is missing or it is set to an invalid value, it will use the default.
+func getDebugEnabled() bool {
+	if isFlagPassed("q") {
+		return !*doQuiet
+	} else {
+		// -q was not passet, so `doQuiet` contains the default value
+		defaultDebugEnabled := !*doQuiet
+		// check for the VPD variable "debug_enabled". First the read-write, then the read-only
+		v, err := vpd.Get(vpdDebugEnabled, false)
+		if err != nil {
+			// TODO do not print warning if file is not found
+			log.Printf("Warning: failed to read read-write VPD variable '%s', will try the read-only one. Error was: %v", vpdDebugEnabled, err)
+			v, err = vpd.Get(vpdDebugEnabled, true)
+			if err != nil {
+				// TODO do not print warning if file is not found
+				log.Printf("Warning: failed to read read-only VPD variable '%s', will use the default value. Error was: %v", vpdDebugEnabled, err)
+				return defaultDebugEnabled
+			}
+		}
+		switch strings.ToLower(strings.TrimSpace(string(v))) {
+		case "true", "1", "yes":
+			return true
+		case "false", "0", "no":
+			return false
+		default:
+			log.Printf("Invalid value '%s' for VPD variable '%s', using default", v, vpdDebugEnabled)
+			return defaultDebugEnabled
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 
+	debugEnabled := getDebugEnabled()
+
 	log.Print(`
-                     ____            _                 _                 _   
-                    / ___| _   _ ___| |_ ___ _ __ ___ | |__   ___   ___ | |_ 
+                     ____            _                 _                 _
+                    / ___| _   _ ___| |_ ___ _ __ ___ | |__   ___   ___ | |_
                     \___ \| | | / __| __/ _ \ '_ ` + "`" + ` _ \| '_ \ / _ \ / _ \| __|
-                     ___) | |_| \__ \ ||  __/ | | | | | |_) | (_) | (_) | |_ 
+                     ___) | |_| \__ \ ||  __/ | | | | | |_) | (_) | (_) | |_
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
@@ -224,7 +280,7 @@ func main() {
 			log.Printf("Warning: failed to boot with configuration: %+v", entry)
 			addSEL(entry.Booter.TypeName())
 		}
-		if !*doQuiet {
+		if debugEnabled {
 			log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 		}
 		time.Sleep(sleepInterval)
@@ -237,7 +293,7 @@ func main() {
 		log.Print("Falling back to the default boot sequence")
 		for {
 			for _, bootcmd := range defaultBootsequence {
-				if !*doQuiet {
+				if debugEnabled {
 					bootcmd = append(bootcmd, "-d")
 				}
 				log.Printf("Running boot command: %v", bootcmd)
@@ -253,7 +309,7 @@ func main() {
 			}
 			selRecorded = true
 
-			if !*doQuiet {
+			if debugEnabled {
 				log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 			}
 			time.Sleep(sleepInterval)
