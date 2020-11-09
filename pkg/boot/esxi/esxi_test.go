@@ -242,9 +242,9 @@ func TestDev6Valid(t *testing.T) {
 	}
 
 	// No opts5 at all.
-	imgs, _ := getImages(device, nil, opts6)
+	imgs, err := getImages(device, nil, opts6)
 	if !multibootEqual(imgs, want) {
-		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, nil, opts6, imgs, want)
+		t.Fatalf("getImages(%s, %v, %v) = %v, want %v (err %v)", device, nil, opts6, imgs, want, err)
 	}
 
 	// Invalid opts5. Higher updated, but invalid state.
