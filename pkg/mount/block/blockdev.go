@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -30,6 +30,7 @@ var (
 	// LinuxMountsPath is the standard mountpoint list path
 	LinuxMountsPath = "/proc/mounts"
 
+	// Debug function to override for verbose logging.
 	Debug = func(string, ...interface{}) {}
 )
 
@@ -68,6 +69,11 @@ func (b *BlockDev) String() string {
 // DevicePath is the path to the actual device.
 func (b BlockDev) DevicePath() string {
 	return filepath.Join("/dev/", b.Name)
+}
+
+// Name implements mount.Mounter.
+func (b *BlockDev) DevName() string {
+	return b.Name
 }
 
 // Mount implements mount.Mounter.
@@ -510,7 +516,7 @@ func (b BlockDevices) FilterNames(names ...string) BlockDevices {
 }
 
 // FilterFSUUID returns a list of BlockDev objects whose underlying block
-// device has a filesystem with the given UUID.
+// device has a filesystem with the given FSUUID.
 func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
 	partitions := make(BlockDevices, 0)
 	for _, device := range b {
@@ -519,6 +525,33 @@ func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
 		}
 	}
 	return partitions
+}
+
+// filterUsingSymlink resolves the given symlink and filters out all block
+// devices which do not match the resolved symlink. The intended purpose is to
+// filter using a symlink like "/dev/disk/by-partlabel/UBUNTU".
+func (b BlockDevices) filterUsingSymlink(symlink string) (BlockDevices, error) {
+	newBlockDevices := make(BlockDevices, 0, 1)
+	devPath, err := filepath.EvalSymlinks(symlink)
+	if os.IsNotExist(err) {
+		// UUID does not exist so filter everything.
+		return newBlockDevices, nil
+	} else if err != nil {
+		return nil, err
+	}
+	for _, device := range b {
+		if filepath.Join("/dev", device.Name) == devPath {
+			newBlockDevices = append(newBlockDevices, device)
+		}
+	}
+	return newBlockDevices, nil
+}
+
+// FilterPartLabel returns a list of BlockDev objects whose underlying block
+// device has the given parition label.
+// TODO: This is only useful if udev has created /dev/disk/by-partlabel/...
+func (b BlockDevices) FilterPartLabel(label string) (BlockDevices, error) {
+	return b.filterUsingSymlink(filepath.Join("/dev/disk/by-partlabel", label))
 }
 
 // FilterName returns a list of BlockDev objects whose underlying

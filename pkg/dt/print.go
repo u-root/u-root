@@ -6,6 +6,7 @@ package dt
 
 import (
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -13,4 +14,36 @@ import (
 // TODO: not yet implemented
 func (fdt *FDT) PrintDTS(f io.Writer) error {
 	return errors.New("not yet implemented")
+}
+
+// String implements String() for an FDT
+func (fdt *FDT) String() string {
+	return fmt.Sprintf("%#04x %s", fdt.Header, fdt.RootNode)
+}
+
+func (p *Property) String() string {
+	var more string
+	l := len(p.Value)
+	if l > 8 {
+		more = "..."
+		l = 8
+	}
+	return fmt.Sprintf("%s[%#02x]%#x%s", p.Name, len(p.Value), p.Value[:l], more)
+}
+
+func (n *Node) String() string {
+	var s string
+	var indent string
+	n.Walk(func(n *Node) error {
+		i := indent
+		indent += "\t"
+		s += fmt.Sprintf("%s%s: [", indent, n.Name)
+		for _, p := range n.Properties {
+			s += fmt.Sprintf("%s, ", &p)
+		}
+		s += "]\n"
+		indent = i
+		return nil
+	})
+	return s
 }

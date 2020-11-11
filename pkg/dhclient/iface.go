@@ -6,10 +6,29 @@ package dhclient
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/vishvananda/netlink"
 )
+
+// FilterBondedInterfaces takes a slice of links, checks to see if any of
+// them are already bonded to a bond, and returns the ones that aren't bonded.
+func FilterBondedInterfaces(ifs []netlink.Link, verbose bool) []netlink.Link {
+	t := []netlink.Link{}
+	for _, iface := range ifs {
+		n := iface.Attrs().Name
+		if _, err := os.Stat(filepath.Join("/sys/class/net", n, "master")); err != nil {
+			// if the master symlink does not exist, it probably means link isn't bonded to a bond.
+			t = append(t, iface)
+		} else if verbose {
+			log.Printf("skipping bonded interface %v", n)
+		}
+	}
+	return t
+}
 
 // Interfaces takes an RE and returns a
 // []netlink.Link that matches it, or an error. It is an error

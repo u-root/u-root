@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -48,6 +48,11 @@ func New(source, fstype string, data string) (*Loop, error) {
 		FSType: fstype,
 		Data:   data,
 	}, nil
+}
+
+// DevName implements mount.Mounter.
+func (l *Loop) DevName() string {
+	return l.Dev
 }
 
 // Mount mounts the provided source file, with type fstype, and flags and data options

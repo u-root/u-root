@@ -18,6 +18,8 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/block"
 )
 
 var update = flag.Bool("run-bash", false, "run bash and update golden file")
@@ -109,7 +111,8 @@ func TestGrubTests(t *testing.T) {
 				Scheme: "file",
 				Path:   "./testdata",
 			}
-			c := newParser(wd, curl.DefaultSchemes)
+			mountPool := &mount.Pool{}
+			c := newParser(wd, block.BlockDevices{}, mountPool, curl.DefaultSchemes)
 			c.W = &b
 
 			script, err := ioutil.ReadFile(file)
