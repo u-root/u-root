@@ -141,7 +141,7 @@ func TestFindProperty(t *testing.T) {
 	}
 }
 
-func TestReader(t *testing.T) {
+func TestWalk(t *testing.T) {
 	f, err := os.Open("testdata/fdt.dtb")
 	if err != nil {
 		t.Fatal(err)
@@ -152,14 +152,9 @@ func TestReader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := fdt.Reader("psci", "migrate")
+	b, err := fdt.Root().Walk("psci").Property("migrate").AsBytes()
 	if err != nil {
-		t.Fatalf("Getting reader (psci, migrate) in %s: got %v, want nil", fdt, err)
-	}
-	t.Logf("Got the Reader: %v", r)
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		t.Fatalf("Reading psci/migrate: got %v, want nil", err)
+		t.Fatalf("Walk to psci/migrate: got %v, want nil", err)
 	}
 	v := []byte{0x84, 0, 0, 0x5}
 	if !bytes.Equal(b, v) {
