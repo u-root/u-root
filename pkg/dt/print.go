@@ -24,11 +24,11 @@ func (fdt *FDT) String() string {
 func (p *Property) String() string {
 	var more string
 	l := len(p.Value)
-	if l > 8 {
+	if l > 64 {
 		more = "..."
-		l = 8
+		l = 64
 	}
-	return fmt.Sprintf("%s[%#02x]%#x%s", p.Name, len(p.Value), p.Value[:l], more)
+	return fmt.Sprintf("%s[%#02x]%q{%#x}%s", p.Name, len(p.Value), p.Value[:l], p.Value[:l], more)
 }
 
 func (n *Node) String() string {
