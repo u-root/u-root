@@ -84,8 +84,8 @@ func sendEventToSysfs(pcr uint32, h []byte, eventDesc []byte) {
 	}
 }
 
-// hashReader calculates the sha256 sum of an io reader.
-func hashReader(f io.Reader) []byte {
+// HashReader calculates the sha256 sum of an io reader.
+func HashReader(f io.Reader) []byte {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		log.Fatal(err)
@@ -148,7 +148,7 @@ func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	}
 	slaunch.Debug("ExtendPCRDebug: oldPCRValue = [%x]", oldPCRValue)
 
-	hash := hashReader(data)
+	hash := HashReader(data)
 
 	slaunch.Debug("Adding hash=[%x] to PCR #%d", hash, pcr)
 	if e := extendPCR(pcr, hash); e != nil {
@@ -167,7 +167,7 @@ func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	}
 	slaunch.Debug("ExtendPCRDebug: newPCRValue = [%x]", newPCRValue)
 
-	finalPCR := hashReader(bytes.NewReader(append(oldPCRValue, hash...)))
+	finalPCR := HashReader(bytes.NewReader(append(oldPCRValue, hash...)))
 	if !bytes.Equal(finalPCR, newPCRValue) {
 		return fmt.Errorf("PCRs not equal, got %x, want %x", finalPCR, newPCRValue)
 	}
@@ -223,4 +223,14 @@ func LogPCRs(selection []uint32, pcrLogLocation string) error {
 	slaunch.Debug("tpm: LogPCRs: PCRs successfully logged to file")
 
 	return nil
+}
+
+// ReadValue32 reads the a 32-bit value from the TPM at the specified index.
+func ReadValue32(nvIndex uint32) ([]byte, error) {
+	hashBytes, err := tpmHandle.NVReadValue(nvIndex, "", 32, nvIndex)
+	if err != nil {
+		return nil, fmt.Errorf("could not read TPM value at index %d: %w", nvIndex, err)
+	}
+
+	return hashBytes[:32], nil
 }
