@@ -41,6 +41,9 @@ const signatureFilename = "securelaunch.sig"
 // the securelaunch policy file.
 const policyLocationFlag = "securelaunch_policy"
 
+// pubkeyIndex hold the TPM index where the public key hash is stored.
+const pubkeyHashIndex = uint32(0x01800180)
+
 var slDebug = flag.Bool("d", false, "enable debug logs")
 
 // step keeps track of the current step (e.g., parse policy, measure).
@@ -178,6 +181,15 @@ func verifyAndParsePolicy(policyLocation string) (*policy.Policy, error) {
 
 	if err := policy.Load(policyFileLocation, pubkeyFileLocation, signatureFileLocation); err != nil {
 		return nil, fmt.Errorf("failed to load policy file: %w", err)
+	}
+
+	tpmPubkeyHashBytes, err := tpm.ReadValue32(pubkeyHashIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public key hash from TPM: %w", err)
+	}
+
+	if err := policy.VerifyPubkey(tpmPubkeyHashBytes); err != nil {
+		return nil, fmt.Errorf("failed to verify public key file: %w", err)
 	}
 
 	if err := policy.Verify(); err != nil {
