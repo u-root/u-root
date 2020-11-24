@@ -6,6 +6,7 @@
 package policy
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -20,6 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/securelaunch/launcher"
 	"github.com/u-root/u-root/pkg/securelaunch/measurement"
+	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
 // Policy describes the policy used to drive the security engine.
@@ -74,6 +76,24 @@ func Load(policyLocation, pubkeyLocation, signatureLocation string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// VerifyPubkey verifies the public key file against the provided hash.
+func VerifyPubkey(hashBytes []byte) error {
+	if len(pubkeyBytes) == 0 {
+		return fmt.Errorf("public key file not yet loaded or empty")
+	}
+
+	if len(hashBytes) == 0 {
+		return fmt.Errorf("hash not yet loaded or empty")
+	}
+
+	pubkeyHashBytes := tpm.HashReader(bytes.NewReader(pubkeyBytes))
+	if !bytes.Equal(pubkeyHashBytes, hashBytes) {
+		return fmt.Errorf("public key hash does not match provided")
 	}
 
 	return nil
