@@ -349,6 +349,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 			if err := fs.Parse(kv[1:]); err != nil || fs.NArg() != 1 {
 				log.Printf("Warning: Grub parser could not parse %q", kv)
+				continue
 			}
 			searchName := fs.Arg(0)
 			if *searchUUID && *searchLabel || *searchUUID && *searchFile || *searchLabel && *searchFile {
@@ -402,6 +403,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				cleanPath, err := filepath.Rel("/", filepath.Clean(filepath.Join("/", searchName)))
 				if err != nil {
 					log.Printf("Error: Could not clean path %q: %v", searchName, err)
+					continue
 				}
 				// Search through all the devices for the file.
 				for _, d := range c.devices {
