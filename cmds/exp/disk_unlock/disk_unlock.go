@@ -42,6 +42,7 @@ var (
 	verbose            = flag.Bool("d", false, "print debug output")
 	verboseNoSanitize  = flag.Bool("dangerously-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
+	retries            = flag.Int("num_retries", 1, "Number of times to retry password if unlocking fails for any reason other than the password being wrong.")
 )
 
 func verboseLog(msg string) {
@@ -90,6 +91,7 @@ func getAllHss() ([][]uint8, error) {
 	}
 
 	hssList := [][]uint8{}
+	seen := make(map[string]bool)
 	skmSubstr := "/skm/hss/"
 
 	// Read from all */skm/hss/* blobs.
@@ -106,12 +108,18 @@ func getAllHss() ([][]uint8, error) {
 		hss, err := readHssBlob(id, h)
 		if err != nil {
 			log.Printf("failed to read HSS of id %s: %v", id, err)
-		} else {
-			msg := fmt.Sprintf("HSS Entry: Id=%s", id)
-			if *verboseNoSanitize {
-				msg = msg + fmt.Sprintf(",Seed=%x", hss)
-			}
-			verboseLog(msg)
+			continue
+		}
+
+		msg := fmt.Sprintf("HSS Entry: Id=%s", id)
+		if *verboseNoSanitize {
+			msg = msg + fmt.Sprintf(",Seed=%x", hss)
+		}
+		verboseLog(msg)
+
+		hssStr := fmt.Sprint(hss)
+		if _, ok := seen[hssStr]; !ok {
+			seen[hssStr] = true
 			hssList = append(hssList, hss)
 		}
 	}
@@ -164,6 +172,8 @@ func main() {
 
 	// Try using each HSS to unlock the disk - only 1 should work.
 	unlocked := false
+
+TryAllHSS:
 	for i, hss := range hssList {
 		key, err := genPassword(hss, info)
 		if err != nil {
@@ -171,11 +181,13 @@ func main() {
 			continue
 		}
 
-		if err := sgdisk.Unlock((string)(key), false); err != nil {
-			log.Printf("Couldn't unlock disk with HSS %d: %v", i, err)
-		} else {
-			unlocked = true
-			break
+		for r := 0; r < *retries; r++ {
+			if err := sgdisk.Unlock(string(key), false); err != nil {
+				log.Printf("Couldn't unlock disk with HSS %d: %v", i, err)
+			} else {
+				unlocked = true
+				break TryAllHSS
+			}
 		}
 	}
 
