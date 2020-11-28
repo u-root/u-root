@@ -1,0 +1,24 @@
+{
+    "version": "0.1",
+    "checklist": [
+        {
+            "check": {
+                "description": "check if {{.interface}} exists",
+                "name": "interface_exists",
+                "args": ["{{.interface}}"]
+            },
+            "remediation": {
+                "name": "remediate_interface_exists",
+                "description": "check if NIC driver is loaded",
+                "args": ["{{.interface}}"]
+            }
+        },
+        {
+            "check": {
+                "description": "execute ls",
+                "name": "cmd",
+                "args": ["ls", "{{.dir}}"]
+            }
+        }
+    ]
+}

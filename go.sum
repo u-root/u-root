@@ -78,6 +78,9 @@ github.com/hugelgupf/socketpair v0.0.0-20190730060125-05d35a94e714/go.mod h1:2Go
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/insomniacslk/dhcp v0.0.0-20200814125043-2e1bf785d039 h1:0/zNUrLwk+KKke+36rq6HczOeXUNjJ8gI5fRAAJxDTY=
 github.com/insomniacslk/dhcp v0.0.0-20200814125043-2e1bf785d039/go.mod h1:CfMdguCK66I5DAUJgGKyNz8aB6vO5dZzkm9Xep6WGvw=
+github.com/insomniacslk/makefunc v0.0.0-20201203114805-a7c4aeb6b631 h1:6gz8SXgBbkDJCIhvByojO7pWCTOMQlV539cbaSiBpTA=
+github.com/insomniacslk/makefunc v0.0.0-20201207164302-baae9106eb62 h1:wAkahPWMC9dTXcITVLRiX82mpecCoA3dCm6P6kcHA04=
+github.com/insomniacslk/makefunc v0.0.0-20201207164302-baae9106eb62/go.mod h1:+CPlAQKgAwAHXNaTkN7tcmlyDPLy5ENTnsc6ZbzC9mg=
 github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2 h1:h+RKaNPjka7LRJGoeub/IQBdXSoEaJjfADkBq02hvjw=
 github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2/go.mod h1:RmeVYf9XrPRbRc3XIx0gLYA8qOFvNoPOfaEZduRlEp4=
 github.com/jsimonetti/rtnetlink v0.0.0-20190606172950-9527aa82566a/go.mod h1:Oz+70psSo5OFh8DBl0Zv2ACw7Esh6pPUphlvZG9x7uw=
@@ -154,6 +157,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1 h1:nOGnQDM7FYENwehXlg/kFVnos3rEvtKTjRvOWSzb6H4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
+github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
+github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/twitchtv/twirp v5.8.0+incompatible/go.mod h1:RRJoFSAmTEh2weEqWtpPE3vFK5YBhA6bqp2l1kfCC5A=
 github.com/u-root/iscsinl v0.1.0 h1:ZXDHSh7M4pedQaXQibucFToJJn2cDFYRAqciTU0pCvk=
 github.com/u-root/iscsinl v0.1.0/go.mod h1:UGTrNqGTX3vAz6y/VmHC7pY8FLqoigybttGade1nIv4=
@@ -267,6 +272,8 @@ gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.3.0 h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=
 gopkg.in/yaml.v2 v2.3.0/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie2QXMNeKRTHCNY2nXvo=
+gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c h1:4DHuGX0VtxRIyjXlVpcjSGEmZ7OnIK7Hvo+INnxI8yk=
