@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"log"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -63,13 +65,20 @@ func (i *Image) Edit(f func(s string) string) {
 	i.Cmdline = f(i.Cmdline)
 }
 
+var v = func(string, ...interface{}) {}
+
 // Load loads an Image.
 func (i *Image) Load(verbose bool) error {
+	if verbose {
+		v = log.Printf
+	}
+
 	w := i.Root.Root().Walk("images").Walk(i.Kernel)
 	b, err := w.Property("data").AsBytes()
 	if err != nil {
 		return err
 	}
+
 	image := &boot.LinuxImage{
 		Kernel:  bytes.NewReader(b),
 		Cmdline: i.Cmdline,
@@ -96,7 +105,35 @@ func (i *Image) Load(verbose bool) error {
 		if err := kexec.Reboot(); err != nil {
 			return err
 		}
+	} else {
+		v("Not trying to boot since this is a dry run")
 	}
 
 	return nil
+}
+
+// Load configuration of FIT Image.
+func (i *Image) LoadBzConfig(verbose bool) (string, string, error) {
+	configs := i.Root.Root().Walk("configurations")
+	dc, err := configs.Property("default").AsString()
+	if err != nil {
+		return "", "", err
+	}
+	n := strings.Split(dc, "@")
+	if len(n) != 2 {
+		return "", "", fmt.Errorf("Invalid default configuration naming: %v", dc)
+	}
+	bzn := n[0] + "_bz@" + n[1]
+	bzconfig := i.Root.Root().Walk("configurations").Walk(bzn)
+
+	kn, err := bzconfig.Property("kernel").AsString()
+	if err != nil {
+		return "", "", err
+	}
+	rn, err := bzconfig.Property("ramdisk").AsString()
+	if err != nil {
+		return "", "", err
+	}
+
+	return kn, rn, nil
 }
