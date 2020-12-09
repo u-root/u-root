@@ -7,8 +7,8 @@ package fit
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -27,14 +27,12 @@ type Image struct {
 	Kernel string
 	// InitRAMFS is the name of the initramfs node.
 	InitRAMFS string
-	// RootFS is a root file system image file.
-	// It is unclear how to use this in kexec.
-	RootFS string
 	// Dryrun indicates that Load should not Exec
 	Dryrun bool
 }
 
 var _ = boot.OSImage(&Image{})
+var v = func(string, ...interface{}) {}
 
 // New returns a new image initialized with a file containing an FDT.
 func New(n string) (*Image, error) {
@@ -52,7 +50,7 @@ func New(n string) (*Image, error) {
 
 // String is a Stringer for Image.
 func (i *Image) String() string {
-	return fmt.Sprintf("FDT %s from %s, kernel %q, initrd %q, RootFS %q", i.Root, i.name, i.Kernel, i.InitRAMFS, i.RootFS)
+	return fmt.Sprintf("FDT %s from %s, kernel %q, initrd %q", i.Root, i.name, i.Kernel, i.InitRAMFS)
 }
 
 // Label returns an Image Label.
@@ -65,9 +63,16 @@ func (i *Image) Edit(f func(s string) string) {
 	i.Cmdline = f(i.Cmdline)
 }
 
-var v = func(string, ...interface{}) {}
+// Load LinuxImage to memory
+func loadLinuxImage(i *boot.LinuxImage, verbose bool) error {
+	return i.Load(verbose)
+}
 
-// Load loads an Image.
+// provide chance to mock in test
+var loadImage = loadLinuxImage
+var kexecReboot = kexec.Reboot
+
+// Load image and reboot
 func (i *Image) Load(verbose bool) error {
 	if verbose {
 		v = log.Printf
@@ -92,17 +97,13 @@ func (i *Image) Load(verbose bool) error {
 		}
 		image.Initrd = bytes.NewReader(b)
 	}
-	// Technically, we can have both an initramfs and a rootfs.
-	// The current question: how do we provided the rootfs from a file
-	// to the kernel? We do not know.
-	if len(i.RootFS) > 0 {
-		return fmt.Errorf("No way to provide a rootfs yet")
-	}
-	if err := image.Load(verbose); err != nil {
+
+	if err := loadImage(image, verbose); err != nil {
 		return err
 	}
+
 	if !i.Dryrun {
-		if err := kexec.Reboot(); err != nil {
+		if err := kexecReboot(); err != nil {
 			return err
 		}
 	} else {
@@ -112,7 +113,8 @@ func (i *Image) Load(verbose bool) error {
 	return nil
 }
 
-// Load configuration of FIT Image.
+// Loads configuration from FIT Image.
+// Returns <kernel_name>, <ramdisk_name>, error
 func (i *Image) LoadBzConfig(verbose bool) (string, string, error) {
 	configs := i.Root.Root().Walk("configurations")
 	dc, err := configs.Property("default").AsString()
