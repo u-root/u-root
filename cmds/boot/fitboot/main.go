@@ -7,16 +7,15 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 
 	"github.com/u-root/u-root/pkg/boot/fit"
 )
 
 var (
-	dryRun    = flag.Bool("dryrun", true, "Do not actually kexec into the boot config")
-	debug     = flag.Bool("d", true, "Print debug output")
-	rootfs    = flag.String("r", "", "Root file system name")
+	dryRun    = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
+	debug     = flag.Bool("d", false, "Print debug output")
 	cmdline   = flag.String("c", "earlyprintk=ttyS0,115200,keep console=ttyS0", "command line")
+	kernel    = flag.String("k", "", "Kernel image node name.")
 	initramfs = flag.String("i", "", "InitRAMFS node name -- default none")
 )
 
@@ -24,23 +23,37 @@ var v = func(string, ...interface{}) {}
 
 func main() {
 	flag.Parse()
+
 	if *debug {
 		v = log.Printf
 	}
-	if len(flag.Args()) < 2 {
-		log.Fatal("Usage: fitboot <file> <node name>")
+
+	if len(flag.Args()) != 1 {
+		log.Fatal("Usage: fitboot <file>")
 	}
 	f, err := fit.New(flag.Args()[0])
 	if err != nil {
 		log.Fatal(err)
 	}
-	v("Loaded uimage: %s", f)
-	f.Cmdline, f.Kernel, f.InitRAMFS, f.RootFS, f.Dryrun = *cmdline, flag.Args()[1], *initramfs, *rootfs, *dryRun
+
+	f.Cmdline, f.Kernel, f.InitRAMFS, f.Dryrun = *cmdline, *kernel, *initramfs, *dryRun
+
+	kn, in, err := f.LoadBzConfig(*debug)
+	if err == nil {
+		f.Kernel, f.InitRAMFS =  kn, in
+	} else {
+		v("Default configuration is not available: %v", err)
+	}
+
+	if f.Kernel == "" {
+		log.Fatal("kernel name is not found in fit configuration or pass through -k.")
+	}
+
+	v("Kernel name=%s, initramfs=%s", f.Kernel, f.InitRAMFS)
+
+	f.Cmdline, f.Dryrun = *cmdline, *dryRun
+
 	if err := f.Load(*debug); err != nil {
 		log.Fatal(err)
-	}
-	if *dryRun {
-		v("Not trying to boot since this is a dry run")
-		os.Exit(0)
 	}
 }
