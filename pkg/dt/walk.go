@@ -69,7 +69,7 @@ func (pq *PropertyWalk) AsString() (string, error) {
 	if pq.err != nil {
 		return "", pq.err
 	}
-	return pq.p.String(), nil
+	return pq.p.AsString()
 }
 
 // AsBytes returns the PropertyWalk value as a []byte.
