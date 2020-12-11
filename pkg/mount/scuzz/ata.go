@@ -148,8 +148,9 @@ func unpackIdentify(s statusBlock, d dataBlock, w wordBlock) *Info {
 	info.FirmwareRevision = ataString(d[46:54])
 	info.Model = ataString(d[54:94])
 
-	info.MasterPasswordRev = w[92]
-	info.SecurityStatus = w[128]
+	info.MasterPasswordRev = binary.LittleEndian.Uint16(d[184:186])
+	info.SecurityStatus = DiskSecurityStatus(binary.LittleEndian.Uint16(d[256:258]))
+
 	info.TrustedComputingSupport = w[48]
 	return &info
 }
