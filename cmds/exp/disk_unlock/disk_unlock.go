@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -36,7 +37,8 @@ const (
 
 	passwordSalt = "SKM PROD_V2 ACCESS"
 
-	SkmMPI = 0x0601
+	// Master Password ID for SKM-based unlock.
+	skmMPI = 0x0601
 )
 
 var (
@@ -144,6 +146,23 @@ func genPassword(hss []byte, info *scuzz.Info) ([]byte, error) {
 	return key, nil
 }
 
+// writeFile is ioutil.WriteFile but disallows creating new file
+func writeFile(filename string, contents string) error {
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_SYNC, 0)
+	if err != nil {
+		return err
+	}
+	wlen, err := file.WriteString(contents)
+	if err != nil && wlen < len(contents) {
+		err = io.ErrShortWrite
+	}
+	// If Close() fails this likely indicates a write failure.
+	if errClose := file.Close(); err == nil {
+		err = errClose
+	}
+	return err
+}
+
 func main() {
 	flag.Parse()
 
@@ -192,7 +211,7 @@ func main() {
 		// on the disk.
 		log.Print("security count expired on disk. Reset the password counter by power cycling the disk.")
 		return
-	case info.MasterPasswordRev != SkmMPI:
+	case info.MasterPasswordRev != skmMPI:
 		log.Printf("disk is locked with unknown master password ID: %X", info.MasterPasswordRev)
 		return
 	}
@@ -228,7 +247,15 @@ TryAllHSS:
 		return
 	}
 
+	// Rescans all LUNs/Channels/Targets on the scsi_host. This ensures the kernel
+	// updates the ATA driver to see the newly unlocked disk.
+	verboseLog("Rescanning scsi...")
+	if err := writeFile("/sys/class/scsi_host/host0/scan", "- - -"); err != nil {
+		log.Fatalf("couldn't rescan SCSI to reload newly unlocked disk: %v", err)
+	}
+
 	// Update partitions on the on the disk.
+	verboseLog("Reloading disk partitions...")
 	diskdev, err := block.Device(*disk)
 	if err != nil {
 		log.Fatalf("Could not find %s: %v", *disk, err)
