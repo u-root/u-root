@@ -6,17 +6,20 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/fit"
 )
 
 var (
-	dryRun    = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
-	debug     = flag.Bool("d", false, "Print debug output")
-	cmdline   = flag.String("c", "earlyprintk=ttyS0,115200,keep console=ttyS0", "command line")
-	kernel    = flag.String("k", "", "Kernel image node name.")
-	initramfs = flag.String("i", "", "InitRAMFS node name -- default none")
+	dryRun     = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
+	debug      = flag.Bool("d", false, "Print debug output")
+	cmdline    = flag.String("c", "earlyprintk=ttyS0,115200,keep console=ttyS0", "command line")
+	kernel     = flag.String("k", "", "Kernel image node name.")
+	initramfs  = flag.String("i", "", "InitRAMFS node name -- default none")
+	rsdpLookup = flag.Bool("rsdp", false, "Derrive RSDP table pointer from environment")
 )
 
 var v = func(string, ...interface{}) {}
@@ -40,7 +43,7 @@ func main() {
 
 	kn, in, err := f.LoadBzConfig(*debug)
 	if err == nil {
-		f.Kernel, f.InitRAMFS =  kn, in
+		f.Kernel, f.InitRAMFS = kn, in
 	} else {
 		v("Default configuration is not available: %v", err)
 	}
@@ -51,7 +54,17 @@ func main() {
 
 	v("Kernel name=%s, initramfs=%s", f.Kernel, f.InitRAMFS)
 
-	f.Cmdline, f.Dryrun = *cmdline, *dryRun
+	kernel_cmd := *cmdline
+	if *rsdpLookup {
+		r, err := acpi.GetRSDP()
+		if err != nil {
+			log.Fatal("Unable to find acpi table in the environment.")
+		}
+		v("Found an RSDP at %#x", r.RSDPAddr())
+		kernel_cmd = fmt.Sprintf("acpi_rsdp=%x %s", r.RSDPAddr(), kernel_cmd)
+	}
+
+	f.Cmdline, f.Dryrun = kernel_cmd, *dryRun
 
 	if err := f.Load(*debug); err != nil {
 		log.Fatal(err)
