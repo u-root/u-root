@@ -54,17 +54,17 @@ func main() {
 
 	v("Kernel name=%s, initramfs=%s", f.Kernel, f.InitRAMFS)
 
-	kernel_cmd := *cmdline
+	kernelCmd := *cmdline
 	if *rsdpLookup {
 		r, err := acpi.GetRSDP()
 		if err != nil {
 			log.Fatal("Unable to find acpi table in the environment.")
 		}
 		v("Found an RSDP at %#x", r.RSDPAddr())
-		kernel_cmd = fmt.Sprintf("acpi_rsdp=%x %s", r.RSDPAddr(), kernel_cmd)
+		kernelCmd = fmt.Sprintf("acpi_rsdp=%x %s", r.RSDPAddr(), kernelCmd)
 	}
 
-	f.Cmdline, f.Dryrun = kernel_cmd, *dryRun
+	f.Cmdline, f.Dryrun = kernelCmd, *dryRun
 
 	if err := f.Load(*debug); err != nil {
 		log.Fatal(err)

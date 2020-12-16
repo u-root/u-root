@@ -72,7 +72,7 @@ func loadLinuxImage(i *boot.LinuxImage, verbose bool) error {
 var loadImage = loadLinuxImage
 var kexecReboot = kexec.Reboot
 
-// Load image and reboot
+// Load loads an image and reboots
 func (i *Image) Load(verbose bool) error {
 	if verbose {
 		v = log.Printf
@@ -113,7 +113,7 @@ func (i *Image) Load(verbose bool) error {
 	return nil
 }
 
-// Loads configuration from FIT Image.
+// LoadBzConfig loads a configuration from a FIT image
 // Returns <kernel_name>, <ramdisk_name>, error
 func (i *Image) LoadBzConfig(verbose bool) (string, string, error) {
 	configs := i.Root.Root().Walk("configurations")
