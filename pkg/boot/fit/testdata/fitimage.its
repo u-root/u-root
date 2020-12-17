@@ -1,13 +1,4 @@
-#!/bin/bash
-
-
-tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
-
-echo "temp dir: $tmp_dir"
-head -c 1000 /dev/urandom > $tmp_dir/dummy_kernel
-head -c 1000 /dev/urandom > $tmp_dir/dummy_initramfs.cpio
-
-cat <<EOM >$tmp_dir/config.its
+# dummy fitimage its file
 /dts-v1/;
 / {
     description = "U-Boot fitImage for nerf kernel";
@@ -60,7 +51,3 @@ cat <<EOM >$tmp_dir/config.its
         };
     };
 };
-EOM
-
-mkimage -f $tmp_dir/config.its fitimage.itb
-rm -rf $tmp_dir
