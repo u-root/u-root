@@ -33,11 +33,10 @@ func RunWithIO(in io.Reader, out, err io.Writer, arg0 string, args ...string) er
 	cmd.Stdin = in
 	cmd.Stdout = out
 	cmd.Stderr = err
-	
 	// If it is a background process, don't wait for it to return.
 	if len(args) > 0 && args[len(args)-1] == "&" {
 		return cmd.Start()
-	}	
+	}
 	return cmd.Run()
 }
 
