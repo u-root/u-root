@@ -83,9 +83,11 @@ func xTestDCE(t *testing.T) {
 		t,
 		[]string{
 			"-build=bb", "-no-strip",
-			"./cmds/*/*",
-			"-cmds/core/installcommand", "-cmds/exp/builtin", "-cmds/exp/run",
-			"pkg/uroot/test/foo",
+			"world",
+			"-github.com/u-root/u-root/cmds/core/installcommand",
+			"-github.com/u-root/u-root/cmds/exp/builtin",
+			"-github.com/u-root/u-root/cmds/exp/run",
+			"github.com/u-root/u-root/pkg/uroot/test/foo",
 		},
 		nil,
 		nil)
@@ -209,7 +211,7 @@ func TestUrootCmdline(t *testing.T) {
 		},
 		{
 			name: "uinitcmd",
-			args: []string{"-build=bb", "-uinitcmd=echo foobar fuzz", "-defaultsh=", "./cmds/core/init", "./cmds/core/echo"},
+			args: []string{"-build=bb", "-uinitcmd=echo foobar fuzz", "-defaultsh=", "github.com/u-root/u-root/cmds/core/init", "github.com/u-root/u-root/cmds/core/echo"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasRecord{cpio.Symlink("bin/uinit", "../bbin/echo")},
@@ -248,11 +250,13 @@ func TestUrootCmdline(t *testing.T) {
 			name: "make sure dead code gets eliminated",
 			args: []string{
 				// Build the world + test symbols, unstripped.
-				"-build=bb", "-no-strip", "world", "pkg/uroot/test/foo",
+				"-build=bb", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
 				// These are known to disable DCE and need to be exluded.
 				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
 				// so these can be removed once we no longer support Go < 1.15.
-				"-cmds/core/installcommand", "-cmds/exp/builtin", "-cmds/exp/run",
+				"-github.com/u-root/u-root/cmds/core/installcommand",
+				"-github.com/u-root/u-root/cmds/exp/builtin",
+				"-github.com/u-root/u-root/cmds/exp/run",
 			},
 			err: nil,
 			validators: []itest.ArchiveValidator{
@@ -371,11 +375,18 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Use the u-root command outside of the $GOPATH tree to make sure it
+	// still works.
+	dir, err := ioutil.TempDir("", "build-")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	arg := append([]string{"-o", f.Name()}, args...)
 	c := testutil.Command(t, arg...)
 	t.Logf("Commandline: %v", arg)
 	c.Env = append(c.Env, env...)
+	c.Dir = dir
 	if out, err := c.CombinedOutput(); err != want {
 		t.Fatalf("Error: %v\nOutput:\n%s", err, out)
 	} else if err != nil {

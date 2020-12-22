@@ -140,6 +140,7 @@ func (ibd IDEBlockDevice) Cmdline() []string {
 		"-drive", fmt.Sprintf("file=%s,if=none,id=disk", ibd.File),
 	}
 }
+
 func (IDEBlockDevice) KArgs() []string { return nil }
 
 // P9Directory is a Device that exposes a directory as a Plan9 (9p)

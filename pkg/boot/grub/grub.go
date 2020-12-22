@@ -19,14 +19,18 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -54,16 +58,28 @@ var probeGrubFiles = []string{
 var hexEscape = regexp.MustCompile(`\\x[0-9a-fA-F]{2}`)
 var anyEscape = regexp.MustCompile(`\\.{0,3}`)
 
+// mountFlags are the flags this grub interpreter uses to mount partitions.
+var mountFlags = uintptr(mount.ReadOnly)
+
+// absFileScheme creates a file:/// scheme with an absolute path. Technically,
+// file schemes must be absolute paths and Go makes that assumption.
+func absFileScheme(path string) (*url.URL, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	return &url.URL{
+		Scheme: "file",
+		Path:   path,
+	}, nil
+}
+
 // ParseLocalConfig looks for a GRUB config in the disk partition mounted at
 // diskDir and parses out OSes to boot.
-//
-// This... is at best crude, at worst totally wrong, since we fundamentally
-// assume that the kernels we boot are only on this one partition. But so is
-// this whole parser.
-func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
-	wd := &url.URL{
-		Scheme: "file",
-		Path:   diskDir,
+func ParseLocalConfig(ctx context.Context, diskDir string, devices block.BlockDevices, mountPool *mount.Pool) ([]boot.OSImage, error) {
+	root, err := absFileScheme(diskDir)
+	if err != nil {
+		return nil, err
 	}
 
 	// This is a hack. GRUB should stop caring about URLs at least in the
@@ -86,7 +102,7 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 	}
 
 	for _, relname := range append(relNames, probeGrubFiles...) {
-		c, err := ParseConfigFile(ctx, curl.DefaultSchemes, relname, wd)
+		c, err := ParseConfigFile(ctx, curl.DefaultSchemes, relname, root, devices, mountPool)
 		if curl.IsURLError(err) {
 			continue
 		}
@@ -98,14 +114,13 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 // ParseConfigFile parses a grub configuration as specified in
 // https://www.gnu.org/software/grub/manual/grub/
 //
-// Currently, only the linux[16|efi], initrd[16|efi], menuentry and set
-// directives are partially supported.
+// See parser.append function for list of commands that are supported.
 //
-// `wd` is the default scheme, host, and path for any files named as a
-// relative path - e.g. kernel, include, and initramfs paths are requested
-// relative to the wd.
-func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, wd *url.URL) ([]boot.OSImage, error) {
-	p := newParser(wd, s)
+// `root` is the default scheme, host, and path for any files named as a
+// relative path - e.g. kernel and initramfs paths are requested relative to
+// the root.
+func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, root *url.URL, devices block.BlockDevices, mountPool *mount.Pool) ([]boot.OSImage, error) {
+	p := newParser(root, devices, mountPool, s)
 	if err := p.appendFile(ctx, configFile); err != nil {
 		return nil, err
 	}
@@ -116,8 +131,8 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, wd 
 	seenLinux := make(map[*boot.LinuxImage]struct{})
 	seenMB := make(map[*boot.MultibootImage]struct{})
 
-	if len(p.defaultEntry) > 0 {
-		p.labelOrder = append([]string{p.defaultEntry}, p.labelOrder...)
+	if defaultEntry, ok := p.variables["default"]; ok {
+		p.labelOrder = append([]string{defaultEntry}, p.labelOrder...)
 	}
 
 	var images []boot.OSImage
@@ -143,13 +158,16 @@ type parser struct {
 	linuxEntries map[string]*boot.LinuxImage
 	mbEntries    map[string]*boot.MultibootImage
 
-	labelOrder   []string
-	defaultEntry string
+	labelOrder []string
 
 	W io.Writer
 
 	// parser internals.
 	numEntry int
+	// Special variables:
+	//   * default: Default boot option.
+	//   * root: Root "partition" as a URL.
+	variables map[string]string
 
 	// curEntry is the current entry number as a string.
 	curEntry string
@@ -157,53 +175,67 @@ type parser struct {
 	// curLabel is the last parsed label from a "menuentry".
 	curLabel string
 
-	wd      *url.URL
-	schemes curl.Schemes
+	devices   block.BlockDevices
+	mountPool *mount.Pool
+	schemes   curl.Schemes
 }
 
-// newParser returns a new grub parser using working directory `wd`
-// and schemes `s`.
+// newParser returns a new grub parser using `root` and schemes `s`.
 //
-// If a path encountered in a configuration file is relative instead of a full
-// URL, `wd` is used as the "working directory" of that relative path; the
-// resulting URL is roughly `wd.String()/path`.
+// We are going off script here by using URLs instead of grub's device syntax.
 //
-// `s` is used to get files referred to by URLs.
-func newParser(wd *url.URL, s curl.Schemes) *parser {
+// Typically, the default value for root should be the mount point containing
+// the grub config, for example: "file:///tmp/sda1/". Kernel and initramfs
+// files are opened relative to this path.
+//
+// Some grub configs may set a different local root. For this, all partitions
+// must be mounted beforehand and made available to grub through `mounts`.
+//
+// For example, if the grub config contains `search --by-label LINUX`, this
+// resolves to the device node "/dev/disk/by-partlabel/LINUX". This grub parser
+// looks through mounts for a matching device number.
+func newParser(root *url.URL, devices block.BlockDevices, mountPool *mount.Pool, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*boot.LinuxImage),
 		mbEntries:    make(map[string]*boot.MultibootImage),
-		wd:           wd,
-		schemes:      s,
+		variables: map[string]string{
+			"root": root.String(),
+		},
+		devices:   devices,
+		mountPool: mountPool,
+		schemes:   s,
 	}
 }
 
-func parseURL(surl string, wd *url.URL) (*url.URL, error) {
+func parseURL(surl string, root string) (*url.URL, error) {
 	u, err := url.Parse(surl)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
 	}
+	ru, err := url.Parse(root)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse URL %q: %v", root, err)
+	}
 
 	if len(u.Scheme) == 0 {
-		u.Scheme = wd.Scheme
+		u.Scheme = ru.Scheme
 
 		if len(u.Host) == 0 {
 			// If this is not there, it was likely just a path.
-			u.Host = wd.Host
-			u.Path = filepath.Join(wd.Path, filepath.Clean(u.Path))
+			u.Host = ru.Host
+			u.Path = filepath.Join(ru.Path, filepath.Clean(u.Path))
 		}
 	}
 	return u, nil
 }
 
-// getFile parses `url` relative to the config's working directory and returns
-// an io.Reader for the requested url.
+// getFile parses `url` relative to the current root and returns an io.Reader
+// for the requested url.
 //
-// If url is just a relative path and not a full URL, c.wd is used as the
-// "working directory" of that relative path; the resulting URL is roughly
-// path.Join(wd.String(), url).
+// If url is just a relative path and not a full URL, c.root is used for the
+// relative path; the resulting URL is roughly path.Join(root, url).
 func (c *parser) getFile(url string) (io.ReaderAt, error) {
-	u, err := parseURL(url, c.wd)
+	u, err := parseURL(url, c.variables["root"])
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +245,7 @@ func (c *parser) getFile(url string) (io.ReaderAt, error) {
 
 // appendFile parses the config file downloaded from `url` and adds it to `c`.
 func (c *parser) appendFile(ctx context.Context, url string) error {
-	u, err := parseURL(url, c.wd)
+	u, err := parseURL(url, c.variables["root"])
 	if err != nil {
 		return err
 	}
@@ -285,14 +317,121 @@ func (c *parser) append(ctx context.Context, config string) error {
 		arg := kv[1]
 
 		switch directive {
+		case "search.file", "search.fs_label", "search.fs_uuid":
+			// Alias to regular search directive.
+			kv = append(
+				[]string{"search", map[string]string{
+					"search.file":     "--file",
+					"search.fs_label": "--fs-label",
+					"search.fs_uuid":  "--fs-uuid",
+				}[directive]},
+				kv[1:]...,
+			)
+			fallthrough
+		case "search":
+			// Parses a line with this format:
+			//   search [--file|--label|--fs-uuid] [--set [var]] [--no-floppy] name
+			fs := pflag.NewFlagSet("grub.search", pflag.ContinueOnError)
+			searchUUID := fs.BoolP("fs-uuid", "u", false, "")
+			searchLabel := fs.BoolP("fs-label", "l", false, "")
+			searchFile := fs.BoolP("file", "f", false, "")
+			setVar := fs.String("set", "root", "")
+			// Ignored flags
+			fs.String("no-floppy", "", "ignored")
+			fs.String("hint", "", "ignored")
+			fs.SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+				// Everything that begins with "hint" is ignored.
+				if strings.HasPrefix(name, "hint") {
+					name = "hint"
+				}
+				return pflag.NormalizedName(name)
+			})
+
+			if err := fs.Parse(kv[1:]); err != nil || fs.NArg() != 1 {
+				log.Printf("Warning: Grub parser could not parse %q", kv)
+				continue
+			}
+			searchName := fs.Arg(0)
+			if *searchUUID && *searchLabel || *searchUUID && *searchFile || *searchLabel && *searchFile {
+				log.Printf("Warning: Grub parser found more than one search option in %q, skipping line", line)
+				continue
+			}
+			if !*searchUUID && !*searchLabel && !*searchFile {
+				// defaults to searchUUID
+				*searchUUID = true
+			}
+
+			switch {
+			case *searchUUID:
+				d := c.devices.FilterFSUUID(searchName)
+				if len(d) != 1 {
+					log.Printf("Error: Expected 1 device with UUID %q, found %d", searchName, len(d))
+					continue
+				}
+				mp, err := c.mountPool.Mount(d[0], mountFlags)
+				if err != nil {
+					log.Printf("Error: Could not mount %v: %v", d[0], err)
+					continue
+				}
+				setVal, err := absFileScheme(mp.Path)
+				if err != nil {
+					continue
+				}
+				c.variables[*setVar] = setVal.String()
+			case *searchLabel:
+				d, err := c.devices.FilterPartLabel(searchName)
+				if err != nil {
+					log.Printf("Error: Could not search label %q: %v", searchName, err)
+					continue
+				}
+				if len(d) != 1 {
+					log.Printf("Error: Expected 1 device with label %q, found %d", searchName, len(d))
+					continue
+				}
+				mp, err := c.mountPool.Mount(d[0], mountFlags)
+				if err != nil {
+					log.Printf("Error: Could not mount %v: %v", d[0], err)
+					continue
+				}
+				setVal, err := absFileScheme(mp.Path)
+				if err != nil {
+					continue
+				}
+				c.variables[*setVar] = setVal.String()
+			case *searchFile:
+				// Make sure searchName stays in mountpoint. Remove "../" components.
+				cleanPath, err := filepath.Rel("/", filepath.Clean(filepath.Join("/", searchName)))
+				if err != nil {
+					log.Printf("Error: Could not clean path %q: %v", searchName, err)
+					continue
+				}
+				// Search through all the devices for the file.
+				for _, d := range c.devices {
+					mp, err := c.mountPool.Mount(d, mountFlags)
+					if err != nil {
+						log.Printf("Warning: Could not mount %v: %v", mp, err)
+						continue
+					}
+					file := filepath.Join(mp.Path, cleanPath)
+					if _, err := os.Stat(file); err == nil {
+						setVal, err := absFileScheme(mp.Path)
+						if err != nil {
+							continue
+						}
+						c.variables[*setVar] = setVal.String()
+						break
+					}
+				}
+			}
+
 		case "set":
 			vals := strings.SplitN(arg, "=", 2)
 			if len(vals) == 2 {
-				//TODO handle vars? bootVars[vals[0]] = vals[1]
-				//log.Printf("grubvar: %s=%s", vals[0], vals[1])
-				if vals[0] == "default" {
-					c.defaultEntry = vals[1]
+				// TODO: We cannot parse grub device syntax.
+				if vals[0] == "root" {
+					continue
 				}
+				c.variables[vals[0]] = vals[1]
 			}
 
 		case "configfile":

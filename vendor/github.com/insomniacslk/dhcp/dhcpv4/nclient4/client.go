@@ -432,8 +432,8 @@ func (c *Client) DiscoverOffer(ctx context.Context, modifiers ...dhcpv4.Modifier
 // Request completes the 4-way Discover-Offer-Request-Ack handshake.
 //
 // Note that modifiers will be applied *both* to Discover and Request packets.
-func (c *Client) Request(ctx context.Context, modifiers ...dhcpv4.Modifier) (offer, ack *dhcpv4.DHCPv4, err error) {
-	offer, err = c.DiscoverOffer(ctx, modifiers...)
+func (c *Client) Request(ctx context.Context, modifiers ...dhcpv4.Modifier) (lease *Lease, err error) {
+	offer, err := c.DiscoverOffer(ctx, modifiers...)
 	if err != nil {
 		err = fmt.Errorf("unable to receive an offer: %w", err)
 		return
@@ -447,12 +447,15 @@ func (c *Client) Request(ctx context.Context, modifiers ...dhcpv4.Modifier) (off
 		return
 	}
 
-	ack, err = c.SendAndRead(ctx, c.serverAddr, request, nil)
+	ack, err := c.SendAndRead(ctx, c.serverAddr, request, nil)
 	if err != nil {
 		err = fmt.Errorf("got an error while processing the request: %w", err)
 		return
 	}
-
+	lease = &Lease{}
+	lease.ACK = ack
+	lease.Offer = offer
+	lease.CreationTime = time.Now()
 	return
 }
 

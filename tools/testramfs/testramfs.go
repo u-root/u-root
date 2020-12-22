@@ -115,7 +115,7 @@ func main() {
 	cmd.Command("/init")
 	cmd.C.SysProcAttr.Chroot = tempDir
 	cmd.C.SysProcAttr.Cloneflags = cloneFlags
-	cmd.C.SysProcAttr.Unshareflags = cloneFlags
+	cmd.C.SysProcAttr.Unshareflags = unshareFlags
 	if *interactive {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
