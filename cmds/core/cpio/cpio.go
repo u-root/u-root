@@ -82,7 +82,7 @@ func main() {
 
 			// A file with zero size could be a hard link to another file
 			// in the archive. The file with contents always comes first.
-			if rec.Info.FileSize == 0 {
+			if rec.Mode&cpio.S_IFMT != cpio.S_IFDIR && rec.Info.FileSize == 0 {
 				if _, ok := inums[rec.Info.Ino]; ok {
 					err := os.Link(inums[rec.Info.Ino], rec.Name)
 					if err != nil {
