@@ -162,6 +162,29 @@ func TestCpio(t *testing.T) {
 	}
 }
 
+func TestDirectoryHardLink(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "TestCpio")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Open an archive containing two directories with the same inode (0).
+	// We're trying to test if having the same inode will trigger a hard link.
+	archiveFile, err := os.Open("testdata/dir-hard-link.cpio")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := testutil.Command(t, "-v", "i")
+	c.Dir = tempDir
+	c.Stdin = archiveFile
+
+	out, err := c.Output()
+	if err != nil {
+		t.Fatalf("Extraction failed:\n%s\n%s\n%v\n", out, c.Stderr, err)
+	}
+}
+
 func TestMain(m *testing.M) {
 	testutil.Run(m, main)
 }

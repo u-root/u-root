@@ -152,7 +152,7 @@ func LSInfoFromRecord(rec Record) ls.FileInfo {
 	return ls.FileInfo{
 		Name:  rec.Name,
 		Mode:  mode,
-		UID:   fmt.Sprint("%d", rec.UID),
+		UID:   fmt.Sprintf("%d", rec.UID),
 		Size:  int64(rec.FileSize),
 		MTime: time.Unix(int64(rec.MTime), 0).UTC(),
 	}
