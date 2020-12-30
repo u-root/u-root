@@ -256,7 +256,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 // single CPIO archive. Do not reuse between CPIOs if you don't know what
 // you're doing.
 func NewRecorder() *Recorder {
-	return &Recorder{make(map[devInode]Info), 0}
+	return &Recorder{make(map[devInode]Info), 2}
 }
 
 // LSInfoFromRecord converts a Record to be usable with the ls package for

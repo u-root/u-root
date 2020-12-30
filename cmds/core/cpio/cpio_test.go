@@ -25,6 +25,7 @@ type dirEnt struct {
 }
 
 func TestCpio(t *testing.T) {
+	debug = t.Logf
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "TestCpio")
 	if err != nil {
@@ -35,7 +36,7 @@ func TestCpio(t *testing.T) {
 	var targets = []dirEnt{
 		{Name: "file1", Type: "file", Content: "Hello World"},
 		{Name: "file2", Type: "file", Content: ""},
-		{Name: "hardlinked", Type: "hardlink", Target: "file1"},
+		{Name: "hardlinked", Type: "hardlink", Target: "file1", Content: "Hello World"},
 		{Name: "hardlinkedtofile2", Type: "hardlink", Target: "file2"},
 		{Name: "directory1", Type: "dir"},
 	}
@@ -125,10 +126,12 @@ func TestCpio(t *testing.T) {
 		var name = filepath.Join(tempExtractDir, ent.Name)
 		newFileInfo, err := os.Stat(name)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			continue
 		}
 		newStatT := newFileInfo.Sys().(*syscall.Stat_t)
 		statT := ent.FileInfo.Sys().(*syscall.Stat_t)
+		t.Logf("Entry %v statT %v old ino %d new Ino %d", ent, newFileInfo, statT.Ino, newStatT.Ino)
 		if ent.FileInfo.Name() != newFileInfo.Name() ||
 			ent.FileInfo.Size() != newFileInfo.Size() ||
 			ent.FileInfo.Mode() != newFileInfo.Mode() ||
@@ -147,16 +150,16 @@ func TestCpio(t *testing.T) {
 			msg += fmt.Sprintf("Uid:     | %10d | %10d\n", statT.Uid, newStatT.Uid)
 			msg += fmt.Sprintf("Gid:     | %10d | %10d\n", statT.Gid, newStatT.Gid)
 			msg += fmt.Sprintf("NLink:   | %10d | %10d\n", statT.Nlink, newStatT.Nlink)
-			t.Fatal(msg)
+			t.Error(msg)
 		}
 
-		if ent.Type == "file" {
+		if ent.Type != "dir" {
 			content, err := ioutil.ReadFile(name)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			if string(content) != ent.Content {
-				t.Fatalf("File %s has mismatched contents", ent.Name)
+				t.Errorf("File %s has mismatched contents", ent.Name)
 			}
 		}
 	}
