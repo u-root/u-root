@@ -60,7 +60,7 @@ func main() {
 			log.Printf("looperr: %v", err)
 			continue
 		}
-		if _, err := t.Write([]byte("\r\n")); err != nil {
+		if _, err := t.Write([]byte(newline)); err != nil {
 			log.Print(err)
 		}
 		if l.FullLine == "" {
@@ -70,7 +70,7 @@ func main() {
 			f := strings.Fields(l.FullLine)
 			if *test {
 				log.Printf("%v", f)
-				if _, err := t.Write([]byte("\r\n")); err != nil {
+				if _, err := t.Write([]byte(newline)); err != nil {
 					log.Print(err)
 				}
 				continue

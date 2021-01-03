@@ -174,7 +174,7 @@ func (l *NewerLineReader) ReadLine(r io.Reader, w io.Writer) error {
 			if l.Exact != "" {
 				c = append([]string{l.Exact}, l.Candidates...)
 			}
-			if _, err := fmt.Fprintf(w, "\r\n%s\r\n%s%s", c, l.Prompt, l.Line); err != nil {
+			if _, err := fmt.Fprintf(w, newline+"%s"+newline+"%s%s", c, l.Prompt, l.Line); err != nil {
 				log.Printf("Showing completions: %v", err)
 			}
 			continue
@@ -183,10 +183,8 @@ func (l *NewerLineReader) ReadLine(r io.Reader, w io.Writer) error {
 		if s, err := os.Stat(l.Exact); err == nil && s.IsDir() {
 			l.Line += "/"
 		}
-		if p != l.Line {
-			if _, err := w.Write([]byte("\r" + strings.Repeat(" ", len(l.Prompt+p)) + "\r" + l.Prompt + l.Line)); err != nil {
-				log.Print(err)
-			}
+		if err := l.updateline(p, w); err != nil {
+			log.Printf("updating line: %v", err)
 		}
 	}
 }

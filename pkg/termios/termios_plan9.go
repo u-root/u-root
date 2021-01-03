@@ -9,11 +9,12 @@ package termios
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 // Termios is used to manipulate the control channel of a kernel.
 type Termios struct {
+	// current state
+	state string
 }
 
 // Winsize holds the window size information, it is modeled on unix.Winsize.
@@ -25,8 +26,15 @@ type Winsize struct {
 }
 
 // TTYIO is a wrapper that only allows Read and Write.
+// Plan 9 inherited little of the 1900-teletype-style
+// API from Unix. But so many programs we want to support
+// seem to need this nonsense, we'll pretend to support
+// it for now.
 type TTYIO struct {
 	f *os.File
+	// The control channel is used for Raw() control only.
+	c *os.File
+	Termios
 }
 
 // New creates a new TTYIO using /dev/tty
@@ -40,65 +48,62 @@ func NewWithDev(device string) (*TTYIO, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TTYIO{f: f}, nil
+	c, err := os.OpenFile(device+"ctl", os.O_WRONLY, 0)
+	if err != nil {
+		return nil, err
+	}
+	return &TTYIO{f: f, c: c, Termios: Termios{state: ""}}, nil
 }
 
 // NewTTYS returns a new TTYIO.
 func NewTTYS(port string) (*TTYIO, error) {
-	f, err := os.OpenFile(filepath.Join("/dev", port), os.O_RDWR, 0620)
-	if err != nil {
-		return nil, err
-	}
-	return &TTYIO{f: f}, nil
-}
-
-// GetTermios returns a filled-in Termios, from an fd.
-func GetTermios(fd uintptr) (*Termios, error) {
-	return &Termios{}, nil
+	return nil, fmt.Errorf("not yet")
 }
 
 // Get terms a Termios from a TTYIO.
 func (t *TTYIO) Get() (*Termios, error) {
-	return GetTermios(t.f.Fd())
-}
-
-// SetTermios sets tty parameters for an fd from a Termios.
-func SetTermios(fd uintptr, ti *Termios) error {
-	return fmt.Errorf("Plan 9: not yet")
+	nt := t.Termios
+	return &nt, nil
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
 func (t *TTYIO) Set(ti *Termios) error {
-	return SetTermios(t.f.Fd(), ti)
+	_, err := t.c.Write([]byte(ti.state))
+	return err
 }
 
 // GetWinSize gets window size from an fd.
 func GetWinSize(fd uintptr) (*Winsize, error) {
-	return nil, fmt.Errorf("Plan 9: not yet")
+	return nil, fmt.Errorf("not yet")
 }
 
 // GetWinSize gets window size from a TTYIO.
+// TODO: pick it up from rio
 func (t *TTYIO) GetWinSize() (*Winsize, error) {
-	return GetWinSize(t.f.Fd())
+	return &Winsize{24, 80, 1024, 768}, nil
 }
 
 // SetWinSize sets window size for an fd from a Winsize.
 func SetWinSize(fd uintptr, w *Winsize) error {
-	return fmt.Errorf("Plan 9: not yet")
+	return fmt.Errorf("Not yet")
 }
 
 // SetWinSize sets window size for a TTYIO from a Winsize.
 func (t *TTYIO) SetWinSize(w *Winsize) error {
-	return SetWinSize(t.f.Fd(), w)
+	return fmt.Errorf("Plan 9: not yet")
 }
 
-// MakeRaw modifies Termio state so, if it used for an fd or tty, it will set it to raw mode.
+// MakeRaw modifies Termio state so, when Set is called, it will set it to raw mode.
 func MakeRaw(term *Termios) *Termios {
+	// This is dumb but should always work.
 	raw := *term
+	raw.state = "rawon"
 	return &raw
 }
 
 // MakeSerialBaud updates the Termios to set the baudrate
+// not on plan 9 however.
+// we'll need to rework a lot of this nonsense.
 func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 	t := *term
 
@@ -106,12 +111,7 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 }
 
 // MakeSerialDefault updates the Termios to typical serial configuration:
-// - Ignore all flow control (modem, hardware, software...)
-// - Translate carriage return to newline on input
-// - Enable canonical mode: Input is available line by line, with line editing
-//   enabled (ERASE, KILL are supported)
-// - Local ECHO is added (and handled by line editing)
-// - Map newline to carriage return newline on output
+// not know how to do this yet.
 func MakeSerialDefault(term *Termios) *Termios {
 	t := *term
 

@@ -167,7 +167,7 @@ func (t *TTY) SetOpts(opts []string) error {
 	return nil
 }
 
-// Raw sets a TTY into raw more, returning a TTY struct
+// Raw sets a TTY into raw mode, returning a TTY struct
 func Raw(fd int) (*TTY, error) {
 	t, err := GTTY(fd)
 	if err != nil {

@@ -37,7 +37,12 @@ func NewEnvCompleter(s string) (Completer, error) {
 // NewPathCompleter calls NewEnvCompleter with "PATH" as the
 // variable name. It can be used to create completers for shells.
 func NewPathCompleter() (Completer, error) {
-	// Getenv returns the same value ("") if a path is not found
-	// or if it has the value "". Oh well.
-	return NewEnvCompleter("PATH")
+	// on some modern kernels, e.g. Plan 9, all binary directories
+	// are union-mounted into /bin. In that case, there will be not
+	// PATH variable -- the function of pathing is implemented by
+	// the union mount in the name space.
+	if _, ok := os.LookupEnv("PATH"); ok {
+		return NewEnvCompleter("PATH")
+	}
+	return NewMultiCompleter(NewFileCompleter("/bin")), nil
 }

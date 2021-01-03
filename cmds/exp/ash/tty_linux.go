@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -17,6 +18,7 @@ import (
 var (
 	ttypgrp int
 	ttyf    *os.File
+	newline = "\r\n"
 )
 
 // tty does whatever needs to be done to set up a tty for GOOS.
@@ -59,4 +61,20 @@ func foreground() {
 		}
 	}
 
+}
+
+func preExec(c *Command) {
+	c.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+	if c.bg {
+		c.Cmd.SysProcAttr.Setpgid = true
+	} else {
+		c.Cmd.SysProcAttr.Foreground = true
+		c.Cmd.SysProcAttr.Ctty = int(ttyf.Fd())
+	}
+}
+
+func unshare(c *Command) {
+	if c.cmd == "builtin" {
+		c.Cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
+	}
 }
