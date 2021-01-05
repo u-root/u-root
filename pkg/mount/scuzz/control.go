@@ -14,13 +14,22 @@ import (
 const DefaultTimeout time.Duration = 15 * time.Second
 
 const (
-	_SECURITY_SUPPORTED     = 0x1
-	_SECURITY_ENABLED       = 0x2
-	_SECURITY_LOCKED        = 0x4
-	_SECURITY_FROZEN        = 0x8
-	_SECURITY_COUNT_EXPIRED = 0x10
-	_SECURITY_LEVEL_MAX     = 0x100
+	securitySupported    DiskSecurityStatus = 0x1
+	securityEnabled      DiskSecurityStatus = 0x2
+	securityLocked       DiskSecurityStatus = 0x4
+	securityFrozen       DiskSecurityStatus = 0x8
+	securityCountExpired DiskSecurityStatus = 0x10
+	securityLevelMax     DiskSecurityStatus = 0x100
 )
+
+var securityStatusStrings = map[DiskSecurityStatus]string{
+	securitySupported:    "SUPPORTED",
+	securityEnabled:      "ENABLED",
+	securityLocked:       "LOCKED",
+	securityFrozen:       "FROZEN",
+	securityCountExpired: "COUNT EXPIRED",
+	securityLevelMax:     "LEVEL MAX",
+}
 
 // Info is information about a SCSI disk device.
 type Info struct {
@@ -42,49 +51,6 @@ type Info struct {
 	OrigFirmwareRevision string
 }
 
-// DiskSecurityStatus is information about how the disk is secured.
-type DiskSecurityStatus uint16
-
-// SecuritySupported returns true if the disk has security.
-func (d DiskSecurityStatus) SecuritySupported() bool {
-	return (d & _SECURITY_SUPPORTED) != 0
-}
-
-// SecurityEnabled returns true if security is enabled on the disk.
-func (d DiskSecurityStatus) SecurityEnabled() bool {
-	return (d & _SECURITY_ENABLED) != 0
-}
-
-// SecurityLocked returns true if the disk is locked.
-func (d DiskSecurityStatus) SecurityLocked() bool {
-	return (d & _SECURITY_LOCKED) != 0
-}
-
-// SecurityFrozen returns true if the disk is frozen and its security state
-// cannot be changed.
-func (d DiskSecurityStatus) SecurityFrozen() bool {
-	return (d & _SECURITY_FROZEN) != 0
-}
-
-// SecurityCountExpired returns true if all attempts to unlock the disk have
-// been used up.
-func (d DiskSecurityStatus) SecurityCountExpired() bool {
-	return (d & _SECURITY_COUNT_EXPIRED) != 0
-}
-
-func (d DiskSecurityStatus) String() string {
-	return fmt.Sprintf(`
-	Security Status:
-		Supported: %d,
-		Enabled: %d,
-		Locked: %d,
-		Frozen: %d,
-		Count Expired: %d,
-		Level Max: %d
-	`, d&_SECURITY_SUPPORTED, d&_SECURITY_ENABLED, d&_SECURITY_LOCKED,
-		d&_SECURITY_FROZEN, d&_SECURITY_COUNT_EXPIRED, d&_SECURITY_LEVEL_MAX)
-}
-
 // Disk is the interface to a disk, with operations to create packets and
 // operate on them.
 type Disk interface {
@@ -94,6 +60,46 @@ type Disk interface {
 
 	// Identify returns drive identity information
 	Identify() (*Info, error)
+}
+
+// DiskSecurityStatus is information about how the disk is secured.
+type DiskSecurityStatus uint16
+
+// SecuritySupported returns true if the disk has security.
+func (d DiskSecurityStatus) SecuritySupported() bool {
+	return (d & securitySupported) != 0
+}
+
+// SecurityEnabled returns true if security is enabled on the disk.
+func (d DiskSecurityStatus) SecurityEnabled() bool {
+	return (d & securityEnabled) != 0
+}
+
+// SecurityLocked returns true if the disk is locked.
+func (d DiskSecurityStatus) SecurityLocked() bool {
+	return (d & securityLocked) != 0
+}
+
+// SecurityFrozen returns true if the disk is frozen and its security state
+// cannot be changed.
+func (d DiskSecurityStatus) SecurityFrozen() bool {
+	return (d & securityFrozen) != 0
+}
+
+// SecurityCountExpired returns true if all attempts to unlock the disk have
+// been used up.
+func (d DiskSecurityStatus) SecurityCountExpired() bool {
+	return (d & securityCountExpired) != 0
+}
+
+func (d DiskSecurityStatus) String() string {
+	s := fmt.Sprint("Security Status: ")
+	for v, name := range securityStatusStrings {
+		if d&v != 0 {
+			s += name + ", "
+		}
+	}
+	return s
 }
 
 // String prints a nice JSON-formatted info.

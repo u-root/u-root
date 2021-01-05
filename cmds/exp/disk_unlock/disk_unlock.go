@@ -193,27 +193,25 @@ func main() {
 
 	switch {
 	case !info.SecurityStatus.SecurityEnabled():
-		log.Printf("disk security is not enabled on %v", *disk)
+		log.Printf("Disk security is not enabled on %v.", *disk)
 		return
 	case info.SecurityStatus.SecurityFrozen():
 		// If the disk is frozen, its security state cannot be changed until the next
 		// power on or hardware reset. Disk unlock will fail anyways, so return.
 		// This is unlikely to occur, since someone would need to freeze the drive's
 		// security state between the last AC cycle and this code being run.
-		log.Print("disk security is frozen. Power cycle the machine to unfreeze the disk")
+		log.Print("Disk security is frozen. Power cycle the machine to unfreeze the disk.")
 		return
 	case !info.SecurityStatus.SecurityLocked():
-		log.Print("disk is already unlocked")
+		log.Print("Disk is already unlocked.")
 		return
 	case info.SecurityStatus.SecurityCountExpired():
 		// If the security count is expired, this means too many attempts have been
 		// made to unlock the disk. Reset this with an AC cycle or hardware reset
 		// on the disk.
-		log.Print("security count expired on disk. Reset the password counter by power cycling the disk.")
-		return
+		log.Fatalf("Security count expired on disk. Reset the password counter by power cycling the disk.")
 	case info.MasterPasswordRev != skmMPI:
-		log.Printf("disk is locked with unknown master password ID: %X", info.MasterPasswordRev)
-		return
+		log.Fatalf("Disk is locked with unknown master password ID: %X", info.MasterPasswordRev)
 	}
 
 	// Try using each HSS to unlock the disk - only 1 should work.
