@@ -19,8 +19,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
-// TODO(chengchieh): Add integration test for uefi package.
-
 const fvEntryImageOffset int64 = 0xA0
 
 var kexecLoad = kexec.Load
