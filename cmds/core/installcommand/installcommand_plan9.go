@@ -5,15 +5,19 @@
 package main
 
 import (
-	"os"
 	"os/exec"
 	"syscall"
+	"unsafe"
 )
 
 func exitWithStatus(err *exec.ExitError) {
-	os.Exit(err.Sys().(syscall.WaitStatus).ExitStatus())
+	// DAMN. os.Exit ABI is an int :-(
+	// This does not play nice with Plan 9.
+	cp := unsafe.Pointer(&[]byte(err.Error())[0])
+	syscall.Syscall(8, uintptr(cp), 0, 0)
 }
 
 func lowpriority() error {
-	return syscall.Setpriority(syscall.PRIO_PROCESS, 0, 20)
+	// TODO: write pri 0 to /proc/<me>/ctl
+	return nil
 }
