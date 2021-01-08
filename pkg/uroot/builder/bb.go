@@ -31,7 +31,12 @@ var skip = map[string]struct{}{
 //
 // See bb/README.md for a detailed explanation of the implementation of busybox
 // mode.
-type BBBuilder struct{}
+type BBBuilder struct {
+
+	// ShellBang means generate #! files instead of symlinks.
+	// ShellBang are more portable and just as efficient.
+	ShellBang bool
+}
 
 // DefaultBinaryDir implements Builder.DefaultBinaryDir.
 //
@@ -41,7 +46,7 @@ func (BBBuilder) DefaultBinaryDir() string {
 }
 
 // Build is an implementation of Builder.Build for a busybox-like initramfs.
-func (BBBuilder) Build(af *initramfs.Files, opts Opts) error {
+func (b BBBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
 	if err := bb.BuildBusybox(opts.Env, opts.Packages, opts.NoStrip, bbPath); err != nil {
@@ -63,7 +68,13 @@ func (BBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		}
 
 		// Add a symlink /bbin/{cmd} -> /bbin/bb to our initramfs.
-		if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {
+		// Or add a #! file if b.ShellBang is set ...
+		if b.ShellBang {
+			b := path.Base(pkg)
+			if err := af.AddRecord(cpio.StaticFile(filepath.Join(opts.BinaryDir, b), "#!/bbin/bb #!"+b+"\n", 0755)); err != nil {
+				return err
+			}
+		} else if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {
 			return err
 		}
 	}

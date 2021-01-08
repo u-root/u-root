@@ -142,7 +142,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 // single CPIO archive. Do not reuse between CPIOs if you don't know what
 // you're doing.
 func NewRecorder() *Recorder {
-	return &Recorder{}
+	return &Recorder{inumber: 2}
 }
 
 // LSInfoFromRecord converts a Record to be usable with the ls package for
@@ -152,7 +152,7 @@ func LSInfoFromRecord(rec Record) ls.FileInfo {
 	return ls.FileInfo{
 		Name:  rec.Name,
 		Mode:  mode,
-		UID:   fmt.Sprint("%d", rec.UID),
+		UID:   fmt.Sprintf("%d", rec.UID),
 		Size:  int64(rec.FileSize),
 		MTime: time.Unix(int64(rec.MTime), 0).UTC(),
 	}
