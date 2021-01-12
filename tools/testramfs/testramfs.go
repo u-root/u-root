@@ -17,6 +17,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/termios"
 )
 
 const (
@@ -117,6 +118,15 @@ func main() {
 	cmd.C.SysProcAttr.Cloneflags = cloneFlags
 	cmd.C.SysProcAttr.Unshareflags = unshareFlags
 	if *interactive {
+		t, err := termios.GetTermios(0)
+		if err != nil {
+			log.Fatal("Getting Termios")
+		}
+		defer func(t *termios.Termios) {
+			if err := termios.SetTermios(0, t); err != nil {
+				log.Print(err)
+			}
+		}(t)
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
 		}
