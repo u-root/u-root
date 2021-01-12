@@ -31,9 +31,9 @@ import (
 //   /dev/sdb is ./testdata/12Kzeros
 //	/dev/sdb1 exists, but is not formatted.
 //
-//   /dev/sdc is ./testdata/gptdisk
-//      /dev/sdc1 exists (EFI system partition), but is not formatted
-//      /dev/sdc2 exists (Linux), but is not formatted
+//   /dev/sdc and /dev/nvme0n1 are ./testdata/gptdisk
+//      /dev/sdc1 and /dev/nvme0n1p1 exist (EFI system partition), but is not formatted
+//      /dev/sdc2 and /dev/nvme0n1p2 exist (Linux), but is not formatted
 //
 //   ARM tests will load drives as virtio-blk devices (/dev/vd*)
 
@@ -88,12 +88,14 @@ func TestFilterPartID(t *testing.T) {
 		{
 			guid: "C9865081-266C-4A23-A948-C03DAB506198",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p2"},
 				&block.BlockDev{Name: devname},
 			},
 		},
 		{
 			guid: "c9865081-266c-4a23-a948-c03dab506198",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p2"},
 				&block.BlockDev{Name: devname},
 			},
 		},
@@ -128,6 +130,7 @@ func TestFilterPartType(t *testing.T) {
 			// EFI system partition.
 			guid: "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p1"},
 				&block.BlockDev{Name: prefix + "c1"},
 			},
 		},
@@ -135,6 +138,7 @@ func TestFilterPartType(t *testing.T) {
 			// EFI system partition. mixed case.
 			guid: "c12a7328-f81F-11D2-BA4B-00A0C93ec93B",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p1"},
 				&block.BlockDev{Name: prefix + "c1"},
 			},
 		},
@@ -142,6 +146,7 @@ func TestFilterPartType(t *testing.T) {
 			// This is some random Linux GUID.
 			guid: "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
 			want: block.BlockDevices{
+				&block.BlockDev{Name: "nvme0n1p2"},
 				&block.BlockDev{Name: prefix + "c2"},
 			},
 		},
@@ -412,4 +417,48 @@ func getDevicePrefix() string {
 		return "vd"
 	}
 	return "sd"
+}
+
+// fakeMount lets us count how many times it has been mounted.
+type fakeMounter struct {
+	name  string
+	count int
+}
+
+func (m *fakeMounter) DevName() string {
+	return m.name
+}
+
+func (m *fakeMounter) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+	m.count++
+	return &mount.MountPoint{
+		Path:   path,
+		Device: m.name,
+		Flags:  flags,
+	}, nil
+}
+
+func TestMountPool(t *testing.T) {
+	sda1 := &fakeMounter{name: "sda1"}
+	sda2 := &fakeMounter{name: "sda2"}
+	mp := &mount.Pool{}
+	m1, err := mp.Mount(sda1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = mp.Mount(sda2, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m3, err := mp.Mount(sda1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if m1 != m3 {
+		t.Fatalf("mp.Mount(sda1) = %v; expected to reuse mount %v", m3, m1)
+	}
+	if sda1.count != 1 {
+		t.Fatalf("expected sda1 mounted 1 times; but mounted %d times", sda1.count)
+	}
 }

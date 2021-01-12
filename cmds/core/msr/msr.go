@@ -245,7 +245,7 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s msr %s reg rd", a[1], a[2])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg rd", a[1], a[2])); err != nil {
 			log.Fatal(err)
 		}
 	case "w":
@@ -254,14 +254,14 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s msr %s reg %s u64 swr", a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg %s u64 swr", a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	case "lock":
 		if len(a) != 4 {
 			log.Fatal("Usage for lock: lock <msr-glob> <register> <bit>")
 		}
-		if err := forth.EvalString(f, fmt.Sprintf("'%s msr %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	default:

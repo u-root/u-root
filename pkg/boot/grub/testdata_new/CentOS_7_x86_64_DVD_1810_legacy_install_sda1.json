@@ -1,0 +1,24 @@
+[
+  {
+    "cmdline": "root=/dev/mapper/centos-root ro crashkernel=auto rd.lvm.lv=centos/root rd.lvm.lv=centos/swap console=ttyS0,115200,8n1 LANG=en_US.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810_legacy_install_sda1/initramfs-3.10.0-957.el7.x86_64.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810_legacy_install_sda1/vmlinuz-3.10.0-957.el7.x86_64"
+    },
+    "name": "CentOS Linux (3.10.0-957.el7.x86_64) 7 (Core)"
+  },
+  {
+    "cmdline": "root=/dev/mapper/centos-root ro crashkernel=auto rd.lvm.lv=centos/root rd.lvm.lv=centos/swap console=ttyS0,115200,8n1",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810_legacy_install_sda1/initramfs-0-rescue-d2794e72bf4d44508b9ba5d447dd14ff.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810_legacy_install_sda1/vmlinuz-0-rescue-d2794e72bf4d44508b9ba5d447dd14ff"
+    },
+    "name": "CentOS Linux (0-rescue-d2794e72bf4d44508b9ba5d447dd14ff) 7 (Core)"
+  }
+]

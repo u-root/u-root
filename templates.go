@@ -27,6 +27,7 @@ var templates = map[string][]string{
 	},
 	// Minimal should be things you can't live without.
 	"minimal": {
+		"github.com/u-root/u-root/cmds/core/blkid",
 		"github.com/u-root/u-root/cmds/core/cat",
 		"github.com/u-root/u-root/cmds/core/chmod",
 		"github.com/u-root/u-root/cmds/core/cmp",
