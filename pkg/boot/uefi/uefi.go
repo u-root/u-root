@@ -17,6 +17,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/smbios"
 )
 
 const fvEntryImageOffset int64 = 0xA0
@@ -24,6 +25,7 @@ const fvEntryImageOffset int64 = 0xA0
 var kexecLoad = kexec.Load
 var kexecParseMemoryMap = kexec.ParseMemoryMap
 var getRSDP = acpi.GetRSDP
+var getSMBIOSBase = smbios.GetSMBIOSBase
 
 // SerialPortConfig defines debug port configuration
 // This struct will be used to initialize SERIAL_PORT_INFO
@@ -47,14 +49,16 @@ const (
 const PayloadConfigVersion = 1
 
 type payloadConfig struct {
-	AcpiBase            uint64
-	AcpiSize            uint64
+	ACPIBase            uint64
+	ACPISize            uint64
+	SMBIOSBase          uint64
+	SMBIOSSize          uint64
 	SerialConfig        SerialPortConfig
 	NumMemoryMapEntries uint32
 }
 
-// FvImage is a structure for loading a firmware volume
-type FvImage struct {
+// FVImage is a structure for loading a firmware volume
+type FVImage struct {
 	name         string
 	mem          kexec.Memory
 	entryAddress uintptr
@@ -62,7 +66,7 @@ type FvImage struct {
 	SerialConfig SerialPortConfig
 }
 
-func checkFvAndGetEntryPoint(name string) (uintptr, error) {
+func checkFVAndGetEntryPoint(name string) (uintptr, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return 0, err
@@ -81,20 +85,20 @@ func checkFvAndGetEntryPoint(name string) (uintptr, error) {
 	return uintptr(fvEntryImageOffset) + uintptr(op64.AddressOfEntryPoint), nil
 }
 
-// New loads the file and return FvImage stucture if entry image is found
-func New(n string) (*FvImage, error) {
-	entry, err := checkFvAndGetEntryPoint(n)
+// New loads the file and return FVImage stucture if entry image is found
+func New(n string) (*FVImage, error) {
+	entry, err := checkFVAndGetEntryPoint(n)
 	if err != nil {
 		return nil, err
 	}
-	return &FvImage{name: n, mem: kexec.Memory{}, entryAddress: entry}, nil
+	return &FVImage{name: n, mem: kexec.Memory{}, entryAddress: entry}, nil
 }
 
 // Reserved 64kb for passing params
 const uefiPayloadConfigSize = 0x10000
 
 // Load loads fimware volume payload and boot the the payload
-func (fv *FvImage) Load(verbose bool) error {
+func (fv *FVImage) Load(verbose bool) error {
 	// Install payload
 	dat, err := ioutil.ReadFile(fv.name)
 	if err != nil {
@@ -118,9 +122,16 @@ func (fv *FvImage) Load(verbose bool) error {
 		return err
 	}
 
+	smbiosBase, smbiosSize, err := getSMBIOSBase()
+	if err != nil {
+		return err
+	}
+
 	pc := payloadConfig{
-		AcpiBase:            uint64(rsdp.RSDPAddr()),
-		AcpiSize:            uint64(rsdp.Len()),
+		ACPIBase:            uint64(rsdp.RSDPAddr()),
+		ACPISize:            uint64(rsdp.Len()),
+		SMBIOSBase:          uint64(smbiosBase),
+		SMBIOSSize:          uint64(smbiosSize),
 		SerialConfig:        fv.SerialConfig,
 		NumMemoryMapEntries: uint32(len(mm)),
 	}
