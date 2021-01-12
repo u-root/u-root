@@ -24,6 +24,11 @@ func TestLoadFvImage(t *testing.T) {
 		t.Log("mock acpi.GetRSDP()")
 		return &acpi.RSDP{}, nil
 	}
+	defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
+	getSMBIOSBase = func() (int64, int64, error) {
+		t.Log("mock getSMBIOSBase()")
+		return 100, 200, nil
+	}
 	// TODO(chengchieh): refactor kexec pkg and create a real mock function. A real
 	// kexec mock load should include segments and alignment check.
 	defer func(old kexecLoadFunc) { kexecLoad = old }(kexecLoad)
