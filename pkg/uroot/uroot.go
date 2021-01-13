@@ -489,8 +489,12 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 				}
 				// Try to open it as an ELF. If that fails, we can skip the ldd
 				// step. The file will still be included from above.
-				if _, err := elf.Open(name); err != nil {
+				f, err := elf.Open(name)
+				if err != nil {
 					return nil
+				}
+				if err = f.Close(); err != nil {
+					logger.Printf("WARNING: Closing ELF file %q: %v", name, err)
 				}
 				// Pull dependencies in the case of binaries. If `path` is not
 				// a binary, `libs` will just be empty.
