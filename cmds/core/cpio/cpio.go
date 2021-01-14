@@ -69,7 +69,10 @@ func main() {
 		var inums map[uint64]string
 		inums = make(map[uint64]string)
 
-		rr := archiver.Reader(os.Stdin)
+		rr, err := archiver.NewFileReader(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
 		for {
 			rec, err := rr.ReadRecord()
 			if err == io.EOF {
@@ -148,7 +151,10 @@ func main() {
 		}
 
 	case "t":
-		rr := archiver.Reader(os.Stdin)
+		rr, err := archiver.NewFileReader(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
 		for {
 			rec, err := rr.ReadRecord()
 			if err == io.EOF {
