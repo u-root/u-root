@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/u-root/u-root/pkg/ls"
@@ -125,7 +126,10 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	info := r.inode(sysInfo(path, fi))
+
+	sys := fi.Sys().(*syscall.Dir)
+	info := r.inode(sysInfo(path, sys))
+
 	switch fi.Mode() & os.ModeType {
 	case 0: // Regular file.
 		return Record{Info: info, ReaderAt: uio.NewLazyFile(path)}, nil
