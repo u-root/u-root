@@ -29,8 +29,8 @@ func iopl() error {
 // In reads data from the x86 port at address addr. Data must be Uint8, Uint16,
 // Uint32, but not Uint64.
 func In(addr uint16, data UintN) error {
-	if _, ok := data.(*Uint64); ok {
-		return fmt.Errorf("port data must be 8, 16 or 32 bits")
+	if _, ok := data.(*Uint8); !ok {
+		return fmt.Errorf("/dev/port data must be 8 bits on Linux")
 	}
 	return pathRead(portPath, int64(addr), data)
 }
@@ -38,8 +38,8 @@ func In(addr uint16, data UintN) error {
 // Out writes data to the x86 port at address addr. data must be Uint8, Uint16
 // uint32, but not Uint64.
 func Out(addr uint16, data UintN) error {
-	if _, ok := data.(*Uint64); ok {
-		return fmt.Errorf("port data must be 8, 16 or 32 bits")
+	if _, ok := data.(*Uint8); !ok {
+		return fmt.Errorf("/dev/port data must be 8 bits on Linux")
 	}
 	return pathWrite(portPath, int64(addr), data)
 }
