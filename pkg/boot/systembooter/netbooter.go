@@ -77,9 +77,9 @@ func NewNetBooter(config []byte) (Booter, error) {
 }
 
 // Boot will run the boot procedure. In the case of NetBooter, it will call the
-// `netboot` command
+// `fbnetboot` command
 func (nb *NetBooter) Boot() error {
-	bootcmd := []string{"netboot", "-d", "-userclass", "linuxboot"}
+	bootcmd := []string{"fbnetboot", "-d", "-userclass", "linuxboot"}
 	if nb.OverrideURL != nil {
 		bootcmd = append(bootcmd, "-netboot-url", *nb.OverrideURL)
 	}
