@@ -10,6 +10,11 @@
             "^// Copyright [\\d\\-, ]+ Google (LLC|Inc).",
             "//",
             "// Licensed under the Apache License, Version 2.0.*"
+        ],
+	[
+            "^// *The +MIT +License +(MIT)",
+            "//",
+            "//Copyright (c) [\\d\\-, ]+ The.*Authors"
         ]
     ],
     "accept": [

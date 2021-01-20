@@ -35,6 +35,8 @@ github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.m
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
+github.com/genuinetools/binctr v0.0.0-20190525205509-66e393036fad h1:gZKNN2HjdRv+hq0TeGLVE6cgycF7D0Rb2yFSCH3zXDU=
+github.com/genuinetools/binctr v0.0.0-20190525205509-66e393036fad/go.mod h1:sB/MXLxx4RuGOrp3Qw4SobgeomSWcHnQ1medrqhPozU=
 github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432 h1:DGWE1Z/9om1Ny/BvHHIQB81DOzm95VUkTzwmtGtVzK0=
 github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aevW3Awn0=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=

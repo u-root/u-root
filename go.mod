@@ -11,6 +11,7 @@ require (
 	github.com/creack/pty v1.1.11 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.0
+	github.com/genuinetools/binctr v0.0.0-20190525205509-66e393036fad // indirect
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.4.1
