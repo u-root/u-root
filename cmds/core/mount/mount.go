@@ -15,6 +15,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -95,13 +96,22 @@ func informIfUnknownFS(originFS string) {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		n := []string{"/proc/self/mounts", "/proc/mounts", "/etc/mtab"}
+		for _, p := range n {
+			if b, err := ioutil.ReadFile(p); err == nil {
+				fmt.Print(string(b))
+				os.Exit(0)
+			}
+		}
+		log.Fatalf("Could not read %s to get namespace", n)
+	}
 	flag.Parse()
-	a := flag.Args()
-	if len(a) < 2 {
+	if len(flag.Args()) < 2 {
 		flag.Usage()
 		os.Exit(1)
 	}
-
+	a := flag.Args()
 	dev := a[0]
 	path := a[1]
 	var flags uintptr
