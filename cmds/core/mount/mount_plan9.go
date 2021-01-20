@@ -25,6 +25,9 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -32,7 +35,16 @@ import (
 )
 
 func main() {
-	mod, err := namespace.ParseArgs(os.Args)
+	if len(os.Args) == 1 {
+		n := fmt.Sprintf("/proc/%d/ns", os.Getpid())
+		if b, err := ioutil.ReadFile(n); err == nil {
+			fmt.Print(string(b))
+			os.Exit(0)
+		}
+		log.Fatalf("Could not read %s to get namespace", n)
+	}
+	flag.Parse()
+	mod, err := namespace.ParseArgs(flag.Args())
 	if err != nil {
 		log.Fatal(err)
 	}
