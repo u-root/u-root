@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM circleci/golang:1.12
+FROM circleci/golang:1.13
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
@@ -46,7 +46,7 @@ RUN set -eux;                                                             \
 
 # Build QEMU
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v2.12.0 https://github.com/qemu/qemu; \
+    git clone --depth=1 --branch=v4.2.0 https://github.com/qemu/qemu;  \
     cd qemu;                                                           \
     mkdir build;                                                       \
     cd build;                                                          \

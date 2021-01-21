@@ -24,7 +24,7 @@ import (
 func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	SkipWithoutQEMU(t)
 	// TODO: support arm
-	if TestArch() != "amd64" {
+	if TestArch() != "amd64" && TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", TestArch())
 	}
 
@@ -41,6 +41,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		o.TmpDir = tmpDir
 	}
 
+	// Set up u-root build options.
 	env := golang.Default()
 	env.CgoEnabled = false
 	env.GOARCH = TestArch()
@@ -49,6 +50,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
 	os.Setenv("CGO_ENABLED", "0")
+	os.Setenv("GOARCH", TestArch())
 	testDir := filepath.Join(o.TmpDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
@@ -59,6 +61,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		testFile := filepath.Join(pkgDir, fmt.Sprintf("%s.test", path.Base(pkg)))
 
 		cmd := exec.Command("go", "test",
+			"-gcflags=all=-l",
 			"-ldflags", "-s -w",
 			"-c", pkg,
 			"-o", testFile,
@@ -86,6 +89,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	}
 
 	// Create the CPIO and start QEMU.
+	o.BuildOpts.AddBusyBoxCommands("github.com/u-root/u-root/cmds/core/*")
 	o.BuildOpts.AddCommands(uroot.BinaryCmds("cmd/test2json")...)
 
 	// Specify the custom gotest uinit.

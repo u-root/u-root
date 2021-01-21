@@ -374,8 +374,8 @@ func sealHelper(rw io.ReadWriter, pcrInfo *pcrInfoLong, data []byte, srkAuth []b
 }
 
 // Seal encrypts data against a given locality and PCRs and returns the sealed data.
-func Seal(rw io.ReadWriter, locality byte, pcrs []int, data []byte, srkAuth []byte) ([]byte, error) {
-	pcrInfo, err := newPCRInfoLong(rw, locality, pcrs)
+func Seal(rw io.ReadWriter, loc Locality, pcrs []int, data []byte, srkAuth []byte) ([]byte, error) {
+	pcrInfo, err := newPCRInfoLong(rw, loc, pcrs)
 	if err != nil {
 		return nil, err
 	}
@@ -386,8 +386,8 @@ func Seal(rw io.ReadWriter, locality byte, pcrs []int, data []byte, srkAuth []by
 // with a srkAuth. This function is necessary for PCR pre-calculation and later
 // sealing to provide a way of updating software which is part of a measured
 // boot process.
-func Reseal(rw io.ReadWriter, locality byte, pcrs map[int][]byte, data []byte, srkAuth []byte) ([]byte, error) {
-	pcrInfo, err := newPCRInfoLongWithHashes(locality, pcrs)
+func Reseal(rw io.ReadWriter, loc Locality, pcrs map[int][]byte, data []byte, srkAuth []byte) ([]byte, error) {
+	pcrInfo, err := newPCRInfoLongWithHashes(loc, pcrs)
 	if err != nil {
 		return nil, err
 	}
@@ -904,6 +904,47 @@ func ReadEKCert(rw io.ReadWriter, ownAuth digest) ([]byte, error) {
 	return ekbuf, nil
 }
 
+// NVDefineSpace implements the reservation of NVRAM as specified in:
+// TPM-Main-Part-3-Commands_v1.2_rev116_01032011, P. 212
+func NVDefineSpace(rw io.ReadWriter, nvData NVDataPublic, ownAuth []byte) error {
+	var ra *responseAuth
+	var ret uint32
+	if ownAuth == nil {
+	} else {
+		sharedSecretOwn, osaprOwn, err := newOSAPSession(rw, etOwner, khOwner, ownAuth[:])
+		if err != nil {
+			return fmt.Errorf("failed to start new auth session: %v", err)
+		}
+		defer osaprOwn.Close(rw)
+		defer zeroBytes(sharedSecretOwn[:])
+
+		// encAuth: NV_Define_Space is a special case where no encryption is used.
+		// See spec: TPM-Main-Part-1-Design-Principles_v1.2_rev116_01032011, P. 81
+		xorData, err := tpmutil.Pack(sharedSecretOwn, osaprOwn.NonceEven)
+		if err != nil {
+			return err
+		}
+		defer zeroBytes(xorData)
+
+		encAuthData := sha1.Sum(xorData)
+
+		authIn := []interface{}{ordNVDefineSpace, nvData, encAuthData}
+		ca, err := newCommandAuth(osaprOwn.AuthHandle, osaprOwn.NonceEven, sharedSecretOwn[:], authIn)
+		if err != nil {
+			return err
+		}
+		ra, ret, err = nvDefineSpace(rw, nvData, encAuthData, ca)
+		if err != nil {
+			return fmt.Errorf("failed to define space in NVRAM: %v", err)
+		}
+		raIn := []interface{}{ret, ordNVDefineSpace}
+		if err := ra.verify(ca.NonceOdd, sharedSecretOwn[:], raIn); err != nil {
+			return fmt.Errorf("failed to verify authenticity of response: %v", err)
+		}
+	}
+	return nil
+}
+
 // NVReadValue returns the value from a given index, offset, and length in NVRAM.
 // See TPM-Main-Part-2-TPM-Structures 19.1.
 // If TPM isn't locked, no authentification is needed.
@@ -938,6 +979,99 @@ func NVReadValue(rw io.ReadWriter, index, offset, len uint32, ownAuth []byte) ([
 	}
 
 	return data, nil
+}
+
+// NVReadValueAuth returns the value from a given index, offset, and length in NVRAM.
+// See TPM-Main-Part-2-TPM-Structures 19.1.
+// If TPM is locked, authentification is mandatory.
+// See TPM-Main-Part-3-Commands-20.5
+func NVReadValueAuth(rw io.ReadWriter, index, offset, len uint32, auth []byte) ([]byte, error) {
+	if auth == nil {
+		return nil, fmt.Errorf("no auth value given but mandatory")
+	}
+	sharedSecret, osapr, err := newOSAPSession(rw, etOwner, khOwner, auth[:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to start new auth session: %v", err)
+	}
+	defer osapr.Close(rw)
+	defer zeroBytes(sharedSecret[:])
+	authIn := []interface{}{ordNVReadValueAuth, index, offset, len}
+	ca, err := newCommandAuth(osapr.AuthHandle, osapr.NonceEven, sharedSecret[:], authIn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct auth fields: %v", err)
+	}
+	data, ra, ret, err := nvReadValue(rw, index, offset, len, ca)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from NVRAM: %v", err)
+	}
+	raIn := []interface{}{ret, ordNVReadValueAuth, tpmutil.U32Bytes(data)}
+	if err := ra.verify(ca.NonceOdd, sharedSecret[:], raIn); err != nil {
+		return nil, fmt.Errorf("failed to verify authenticity of response: %v", err)
+	}
+
+	return data, nil
+}
+
+// NVWriteValue for writing to the NVRAM. Needs a index for a defined space in NVRAM.
+// See TPM-Main-Part-3-Commands_v1.2_rev116_01032011, P216
+func NVWriteValue(rw io.ReadWriter, index, offset uint32, data []byte, ownAuth []byte) error {
+	if ownAuth == nil {
+		if _, _, _, err := nvWriteValue(rw, index, offset, uint32(len(data)), data, nil); err != nil {
+			return fmt.Errorf("failed to write to NVRAM: %v", err)
+		}
+		return nil
+	}
+	sharedSecretOwn, osaprOwn, err := newOSAPSession(rw, etOwner, khOwner, ownAuth[:])
+	if err != nil {
+		return fmt.Errorf("failed to start new auth session: %v", err)
+	}
+	defer osaprOwn.Close(rw)
+	defer zeroBytes(sharedSecretOwn[:])
+	authIn := []interface{}{ordNVWriteValue, index, offset, len(data), data}
+	ca, err := newCommandAuth(osaprOwn.AuthHandle, osaprOwn.NonceEven, sharedSecretOwn[:], authIn)
+	if err != nil {
+		return fmt.Errorf("failed to construct owner auth fields: %v", err)
+	}
+	data, ra, ret, err := nvWriteValue(rw, index, offset, uint32(len(data)), data, ca)
+	if err != nil {
+		return fmt.Errorf("failed to write to NVRAM: %v", err)
+	}
+	raIn := []interface{}{ret, ordNVWriteValue, tpmutil.U32Bytes(data)}
+	if err := ra.verify(ca.NonceOdd, sharedSecretOwn[:], raIn); err != nil {
+		return fmt.Errorf("failed to verify authenticity of response: %v", err)
+	}
+	return nil
+}
+
+// NVWriteValueAuth for authenticated writing to the NVRAM.
+// Needs a index of a defined space in NVRAM.
+// See TPM-Main-Part-2-TPM-Structures 19.1.
+// If TPM is locked, authentification is mandatory.
+// See TPM-Main-Part-3-Commands_v1.2_rev116_01032011, P216
+func NVWriteValueAuth(rw io.ReadWriter, index, offset uint32, data []byte, auth []byte) error {
+	if auth == nil {
+		return fmt.Errorf("no auth value given but mandatory")
+	}
+	sharedSecret, osapr, err := newOSAPSession(rw, etOwner, khOwner, auth[:])
+	if err != nil {
+		return fmt.Errorf("failed to start new auth session: %v", err)
+	}
+	defer osapr.Close(rw)
+	defer zeroBytes(sharedSecret[:])
+	authIn := []interface{}{ordNVWriteValueAuth, index, offset, len(data), data}
+	ca, err := newCommandAuth(osapr.AuthHandle, osapr.NonceEven, sharedSecret[:], authIn)
+	if err != nil {
+		return fmt.Errorf("failed to construct auth fields: %v", err)
+	}
+	data, ra, ret, err := nvWriteValue(rw, index, offset, uint32(len(data)), data, ca)
+	if err != nil {
+		return fmt.Errorf("failed to write to NVRAM: %v", err)
+	}
+	raIn := []interface{}{ret, ordNVWriteValueAuth, tpmutil.U32Bytes(data)}
+	if err := ra.verify(ca.NonceOdd, sharedSecret[:], raIn); err != nil {
+		return fmt.Errorf("failed to verify authenticity of response: %v", err)
+	}
+	return nil
 }
 
 // OwnerReadPubEK uses owner auth to get a blob representing the public part of the
@@ -1018,31 +1152,35 @@ func GetAlgs(rw io.ReadWriter) ([]Algorithm, error) {
 // GetNVList returns a list of TPM_NV_INDEX values that
 // are currently allocated NV storage through TPM_NV_DefineSpace.
 func GetNVList(rw io.ReadWriter) ([]uint32, error) {
-	var nvList []uint32
 	buf, err := getCapability(rw, capNVList, 0)
 	if err != nil {
 		return nil, err
 	}
-	r := bytes.NewReader(buf)
-	err = binary.Read(r, binary.LittleEndian, &nvList)
+	nvList := make([]uint32, len(buf)/4)
+	for i := range nvList {
+		nvList[i] = uint32(binary.BigEndian.Uint32(buf[i*4 : (i+1)*4]))
+	}
+
 	return nvList, err
 }
 
-// GetNVIndex returns the structure of nvDataPublic which contains
+// GetNVIndex returns the structure of NVDataPublic which contains
 // information about the requested NV Index.
 // See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.167
-func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (NVDataPublic, error) {
+func GetNVIndex(rw io.ReadWriter, nvIndex uint32) (*NVDataPublic, error) {
 	var nvInfo NVDataPublic
-	buf, err := getCapability(rw, capNVIndex, 0)
-	if err != nil {
-		return nvInfo, fmt.Errorf("failed to get capability NVIndex: %v", err)
+	buf, _ := getCapability(rw, capNVIndex, nvIndex)
+	if _, err := tpmutil.Unpack(buf, &nvInfo); err != nil {
+		return &nvInfo, err
 	}
-	r := bytes.NewReader(buf)
-	err = binary.Read(r, binary.LittleEndian, &nvInfo)
-	if err != nil {
-		return nvInfo, fmt.Errorf("failed to read nvInfo: %v", err)
-	}
-	return nvInfo, nil
+	return &nvInfo, nil
+}
+
+// GetCapabilityRaw reads the requested capability and sub-capability from the
+// TPM and returns it as a []byte. Where possible, prefer the convenience
+// functions above, which return higher-level structs for easier handling.
+func GetCapabilityRaw(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
+	return getCapability(rw, cap, subcap)
 }
 
 // OwnerClear uses owner auth to clear the TPM. After this operation, the TPM

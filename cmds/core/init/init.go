@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// assumptions
-// we've been booted into a ramfs with all this stuff unpacked and ready.
-// we don't need a loop device mount because it's all there.
-// So we run /go/bin/go build installcommand
-// and then exec /buildbin/sh
-
+// init is u-root's standard userspace init process.
+//
+// init is intended to be the first process run by the kernel when it boots up.
+// init does some basic initialization (mount file systems, turn on loopback)
+// and then tries to execute, in order, /inito, a uinit (either in /bin, /bbin,
+// or /ubin), and then a shell (/bin/defaultsh and /bin/sh).
 package main
 
 import (
@@ -15,18 +15,20 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"syscall"
 
-	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/libinit"
-	"github.com/u-root/u-root/pkg/ulog"
 )
 
+// initCmds has all the bits needed to continue
+// the init process after some initial setup.
+type initCmds struct {
+	cmds []*exec.Cmd
+}
+
 var (
-	verbose  = flag.Bool("v", false, "print all build commands")
-	test     = flag.Bool("test", false, "Test mode: don't try to set control tty")
-	debug    = func(string, ...interface{}) {}
-	osInitGo = func() {}
+	verbose = flag.Bool("v", false, "print all build commands")
+	test    = flag.Bool("test", false, "Test mode: don't try to set control tty")
+	debug   = func(string, ...interface{}) {}
 )
 
 func main() {
@@ -48,53 +50,26 @@ func main() {
 
 	// Before entering an interactive shell, decrease the loglevel because
 	// spamming non-critical logs onto the shell frustrates users. The logs
-	// are still accessible through dmesg.
-	if !*verbose {
-		// Only messages more severe than "notice" are printed.
-		if err := ulog.KernelLog.SetConsoleLogLevel(ulog.KLogNotice); err != nil {
-			log.Printf("Could not set log level: %v", err)
-		}
-	}
+	// are still accessible through kernel logs buffers (on most kernels).
+	quiet()
 
 	libinit.SetEnv()
 	libinit.CreateRootfs()
 	libinit.NetInit()
 
-	// Potentially exec systemd if we have been asked to.
-	osInitGo()
+	// osInitGo wraps all the kernel-specific (i.e. non-portable) stuff.
+	// It returns an initCmds struct derived from kernel-specific information
+	// to be used in the rest of init.
+	ic := osInitGo()
 
 	// Start background build.
 	if isBgBuildEnabled() {
 		go startBgBuild()
 	}
 
-	// Turn off job control when test mode is on.
-	ctty := libinit.WithTTYControl(!*test)
-
-	// Allows passing args to uinit via kernel parameters, for example:
-	//
-	// uroot.uinitargs="-v --foobar"
-	uinitArgs := libinit.WithArguments(cmdline.GetUinitArgs()...)
-
-	cmdList := []*exec.Cmd{
-		// inito is (optionally) created by the u-root command when the
-		// u-root initramfs is merged with an existing initramfs that
-		// has a /init. The name inito means "original /init" There may
-		// be an inito if we are building on an existing initramfs. All
-		// initos need their own pid space.
-		libinit.Command("/inito", libinit.WithCloneFlags(syscall.CLONE_NEWPID), ctty),
-
-		libinit.Command("/bbin/uinit", ctty, uinitArgs),
-		libinit.Command("/bin/uinit", ctty, uinitArgs),
-		libinit.Command("/buildbin/uinit", ctty, uinitArgs),
-
-		libinit.Command("/bin/defaultsh", ctty),
-		libinit.Command("/bin/sh", ctty),
-	}
-
-	cmdCount := libinit.RunCommands(debug, cmdList...)
+	cmdCount := libinit.RunCommands(debug, ic.cmds...)
 	if cmdCount == 0 {
-		log.Printf("No suitable executable found in %v", cmdList)
+		log.Printf("No suitable executable found in %v", ic.cmds)
 	}
 
 	// We need to reap all children before exiting.
@@ -102,6 +77,8 @@ func main() {
 	libinit.WaitOrphans()
 	log.Printf("All commands exited")
 	log.Printf("Syncing filesystems")
-	syscall.Sync()
+	if err := quiesce(); err != nil {
+		log.Printf("%v", err)
+	}
 	log.Printf("Exiting...")
 }

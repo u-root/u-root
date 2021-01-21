@@ -10,7 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
+
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 // DebugPrefix is a prefix that some messages are printed with for tests to parse.
@@ -28,7 +29,7 @@ type Description struct {
 	MmapAddr   uint32 `json:"mmap_addr"`
 	MmapLength uint32 `json:"mmap_length"`
 
-	CmdLine    string `json:"cmdline"`
+	Cmdline    string `json:"cmdline"`
 	Bootloader string `json:"bootloader"`
 
 	Mmap    []MemoryMap  `json:"mmap"`
@@ -40,8 +41,7 @@ type Description struct {
 func (m multiboot) description() (string, error) {
 	var modules []ModuleDesc
 	for i, mod := range m.loadedModules {
-		name := strings.Fields(m.modules[i])[0]
-		b, err := readFile(name)
+		b, err := uio.ReadAll(m.modules[i].Module)
 		if err != nil {
 			return "", nil
 		}
@@ -49,7 +49,7 @@ func (m multiboot) description() (string, error) {
 		modules = append(modules, ModuleDesc{
 			Start:   mod.Start,
 			End:     mod.End,
-			CmdLine: m.modules[i],
+			Cmdline: m.modules[i].Cmdline,
 			SHA256:  fmt.Sprintf("%x", hash),
 		})
 
@@ -63,7 +63,7 @@ func (m multiboot) description() (string, error) {
 		MmapAddr:   m.info.MmapAddr,
 		MmapLength: m.info.MmapLength,
 
-		CmdLine:    m.cmdLine,
+		Cmdline:    m.cmdLine,
 		Bootloader: m.bootloader,
 
 		Mmap:    m.memoryMap(),
@@ -82,7 +82,7 @@ func (m multiboot) description() (string, error) {
 type ModuleDesc struct {
 	Start   uint32 `json:"start"`
 	End     uint32 `json:"end"`
-	CmdLine string `json:"cmdline"`
+	Cmdline string `json:"cmdline"`
 	SHA256  string `json:"sha256"`
 }
 

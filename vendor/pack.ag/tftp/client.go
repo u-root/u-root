@@ -7,6 +7,8 @@ package tftp // import "pack.ag/tftp"
 import (
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -132,20 +134,31 @@ type parsedURL struct {
 //
 // If port is not specified, defaultPort will be used.
 func parseURL(tftpURL string) (*parsedURL, error) {
-	url := strings.TrimPrefix(tftpURL, "tftp://")
-
-	parts := strings.SplitN(url, "/", 2)
-
-	if len(parts) != 2 {
+	if tftpURL == "" {
 		return nil, ErrInvalidURL
 	}
+	const kTftpPrefix = "tftp://"
+	if !strings.HasPrefix(tftpURL, kTftpPrefix) {
+		tftpURL = kTftpPrefix + tftpURL
+	}
+	u, err := url.Parse(tftpURL)
+	if err != nil {
+		return nil, err
+	}
 
+	file := u.RequestURI()
+	if u.Fragment != "" {
+		file = file + "#" + u.Fragment
+	}
 	p := &parsedURL{
-		host: parts[0],
-		file: parts[1],
+		host: u.Hostname(),
+		file: strings.TrimPrefix(file, "/"),
 	}
 
 	if p.host == "" {
+		return nil, ErrInvalidHostIP
+	}
+	if isNumeric(p.host) {
 		return nil, ErrInvalidHostIP
 	}
 
@@ -153,29 +166,14 @@ func parseURL(tftpURL string) (*parsedURL, error) {
 		return nil, ErrInvalidFile
 	}
 
-	hostParts := strings.Split(p.host, ":")
-	if isNumeric(hostParts[0]) {
-		// Host can't be number
+	port := u.Port()
+	if port == "" {
+		port = defaultPort
+	}
+	if !isNumeric(port) {
 		return nil, ErrInvalidHostIP
 	}
-	switch l := len(hostParts); {
-	case l == 1:
-		// Host only add default port
-		p.host = fmt.Sprintf("%s:%d", p.host, defaultPort)
-	case l == 2:
-		if hostParts[0] == "" {
-			// Host is blank
-			return nil, ErrInvalidHostIP
-		}
-		if !isNumeric(hostParts[1]) {
-			// Port must be numeric
-			return nil, ErrInvalidHostIP
-		}
-	case l > 2:
-		// Too many colons
-		return nil, ErrInvalidHostIP
-	}
-
+	p.host = net.JoinHostPort(p.host, port)
 	return p, nil
 }
 

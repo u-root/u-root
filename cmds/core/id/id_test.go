@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !plan9
+
 package main
 
 import (
@@ -160,6 +162,16 @@ func TestUsers(t *testing.T) {
 			t.Errorf("NewUser should return a valid Users object even if passwd file is empty")
 		}
 	})
+	t.Run("almost empty passwd file", func(t *testing.T) {
+		f := "testdata/passwd-newline.txt"
+		u, e := NewUsers(f)
+		if e != nil {
+			t.Errorf("NewUser should not report error for empty passwd file")
+		}
+		if u == nil {
+			t.Errorf("NewUser should return a valid Users object even if passwd file is empty")
+		}
+	})
 	for _, f := range passwdFiles {
 		t.Run(f, func(t *testing.T) {
 			u, e := NewUsers(f)
@@ -217,8 +229,18 @@ func TestGroups(t *testing.T) {
 			t.Errorf("NewGroups should return a valid Groups object, even on error")
 		}
 	})
-	t.Run("empty passwd file", func(t *testing.T) {
+	t.Run("empty group file", func(t *testing.T) {
 		f := "testdata/group-empty.txt"
+		g, e := NewGroups(f)
+		if e != nil {
+			t.Errorf("NewGroups should not report error for empty passwd file")
+		}
+		if g == nil {
+			t.Errorf("NewGroups should return a valid Users object even if passwd file is empty")
+		}
+	})
+	t.Run("almost empty group file", func(t *testing.T) {
+		f := "testdata/group-newline.txt"
 		g, e := NewGroups(f)
 		if e != nil {
 			t.Errorf("NewGroups should not report error for empty passwd file")

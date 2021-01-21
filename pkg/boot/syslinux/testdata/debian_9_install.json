@@ -1,0 +1,882 @@
+[
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Debian GNU/Linux Live (kernel 4.9.0-3-amd64)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=sq_AL.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Albanian (sq)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=am_ET",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Amharic (am)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ar_EG.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Arabic (ar)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ast_ES.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Asturian (ast)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=eu_ES.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Basque (eu)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=be_BY.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Belarusian (be)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=bn_BD",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Bangla (bn)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=bs_BA.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Bosnian (bs)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=bg_BG.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Bulgarian (bg)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=bo_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Tibetan (bo)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=C",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "C (C)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ca_ES.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Catalan (ca)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=zh_CN.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Chinese (Simplified) (zh_CN)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=zh_TW.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Chinese (Traditional) (zh_TW)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=hr_HR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Croatian (hr)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=cs_CZ.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Czech (cs)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=da_DK.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Danish (da)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=nl_NL.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Dutch (nl)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=dz_BT",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Dzongkha (dz)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=en_US.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "English (en)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=eo.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Esperanto (eo)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=et_EE.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Estonian (et)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=fi_FI.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Finnish (fi)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=fr_FR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "French (fr)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=gl_ES.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Galician (gl)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ka_GE.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Georgian (ka)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=de_DE.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "German (de)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=el_GR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Greek (el)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=gu_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Gujarati (gu)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=he_IL.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Hebrew (he)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=hi_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Hindi (hi)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=hu_HU.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Hungarian (hu)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=is_IS.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Icelandic (is)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=id_ID.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Indonesian (id)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ga_IE.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Irish (ga)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=it_IT.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Italian (it)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ja_JP.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Japanese (ja)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=kk_KZ.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Kazakh (kk)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=km_KH",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Khmer (km)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=kn_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Kannada (kn)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ko_KR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Korean (ko)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ku_TR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Kurdish (ku)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=lo_LA",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Lao (lo)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=lv_LV.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Latvian (lv)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=lt_LT.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Lithuanian (lt)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ml_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Malayalam (ml)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=mr_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Marathi (mr)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=mk_MK.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Macedonian (mk)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=my_MM",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Burmese (my)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ne_NP",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Nepali (ne)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=se_NO",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Northern Sami (se_NO)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=nb_NO.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Norwegian Bokmaal (nb_NO)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=nn_NO.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Norwegian Nynorsk (nn_NO)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=fa_IR",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Persian (fa)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=pl_PL.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Polish (pl)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=pt_PT.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Portuguese (pt)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=pt_BR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Portuguese (Brazil) (pt_BR)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=pa_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Punjabi (Gurmukhi) (pa)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ro_RO.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Romanian (ro)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ru_RU.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Russian (ru)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=si_LK",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Sinhala (si)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=sr_RS",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Serbian (Cyrillic) (sr)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=sk_SK.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Slovak (sk)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=sl_SI.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Slovenian (sl)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=es_ES.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Spanish (es)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=sv_SE.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Swedish (sv)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=tl_PH.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Tagalog (tl)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ta_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Tamil (ta)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=te_IN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Telugu (te)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=tg_TJ.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Tajik (tg)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=th_TH.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Thai (th)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=tr_TR.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Turkish (tr)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=ug_CN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Uyghur (ug)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=uk_UA.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Ukrainian (uk)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=vi_VN",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Vietnamese (vi)"
+  },
+  {
+    "cmdline": "initrd=/live/initrd.img-4.9.0-3-amd64 boot=live components locales=cy_GB.UTF-8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/live/initrd.img-4.9.0-3-amd64"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
+    },
+    "name": "Welsh (cy)"
+  },
+  {
+    "cmdline": "initrd=/d-i/gtk/initrd.gz append video=vesa:ywrap,mtrr vga=788",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/d-i/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/d-i/gtk/vmlinuz"
+    },
+    "name": "Graphical Debian Installer"
+  },
+  {
+    "cmdline": "initrd=/d-i/initrd.gz",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/d-i/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/d-i/vmlinuz"
+    },
+    "name": "Debian Installer"
+  },
+  {
+    "cmdline": "initrd=/d-i/gtk/initrd.gz speakup.synth=soft",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_9_install/d-i/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_9_install/d-i/gtk/vmlinuz"
+    },
+    "name": "Debian Installer with Speech Synthesis"
+  }
+]

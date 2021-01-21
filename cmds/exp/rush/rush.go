@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"syscall"
 )
 
 type builtin func(c *Command) error
@@ -93,13 +92,7 @@ func runit(c *Command) error {
 			return err
 		}
 	} else {
-		c.Cmd.SysProcAttr = &syscall.SysProcAttr{}
-		if c.bg {
-			c.Cmd.SysProcAttr.Setpgid = true
-		} else {
-			c.Cmd.SysProcAttr.Foreground = true
-			c.Cmd.SysProcAttr.Ctty = int(ttyf.Fd())
-		}
+		forkAttr(c)
 		if err := c.Start(); err != nil {
 			return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))
 		}
@@ -169,7 +162,7 @@ func commands(cmds []*Command) error {
 		// Not sure of the issue but this hack will have to do until
 		// we understand it. Barf.
 		if c.cmd == "builtin" {
-			c.Cmd.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
+			builtinAttr(c)
 		}
 	}
 	return nil

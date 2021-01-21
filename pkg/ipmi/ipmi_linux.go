@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+// Open a channel to an IPMI device /dev/ipmi{devnum}.
 func Open(devnum int) (*IPMI, error) {
 	d := fmt.Sprintf("/dev/ipmi%d", devnum)
 

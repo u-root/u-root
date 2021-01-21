@@ -1,0 +1,159 @@
+# github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+github.com/alecthomas/template
+github.com/alecthomas/template/parse
+# github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
+github.com/alecthomas/units
+# github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
+github.com/anmitsu/go-shlex
+# github.com/beevik/ntp v0.3.0
+github.com/beevik/ntp
+# github.com/cenkalti/backoff/v4 v4.0.2
+github.com/cenkalti/backoff/v4
+# github.com/creack/pty v1.1.11
+github.com/creack/pty
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
+# github.com/dustin/go-humanize v1.0.0
+github.com/dustin/go-humanize
+# github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
+github.com/gliderlabs/ssh
+# github.com/gojuno/minimock/v3 v3.0.8
+github.com/gojuno/minimock/v3
+# github.com/google/go-cmp v0.4.1
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
+# github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
+github.com/google/go-tpm/tpm
+github.com/google/go-tpm/tpm2
+github.com/google/go-tpm/tpmutil
+github.com/google/go-tpm/tpmutil/tbs
+# github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
+github.com/google/goexpect
+# github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
+github.com/google/goterm/term
+# github.com/insomniacslk/dhcp v0.0.0-20200814125043-2e1bf785d039
+github.com/insomniacslk/dhcp/dhcpv4
+github.com/insomniacslk/dhcp/dhcpv4/client4
+github.com/insomniacslk/dhcp/dhcpv4/nclient4
+github.com/insomniacslk/dhcp/dhcpv4/server4
+github.com/insomniacslk/dhcp/dhcpv6
+github.com/insomniacslk/dhcp/dhcpv6/client6
+github.com/insomniacslk/dhcp/dhcpv6/nclient6
+github.com/insomniacslk/dhcp/dhcpv6/server6
+github.com/insomniacslk/dhcp/iana
+github.com/insomniacslk/dhcp/interfaces
+github.com/insomniacslk/dhcp/netboot
+github.com/insomniacslk/dhcp/rfc1035label
+# github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
+github.com/intel-go/cpuid
+# github.com/jsimonetti/rtnetlink v0.0.0-20200505065535-3ee32e7e21a4
+github.com/jsimonetti/rtnetlink
+github.com/jsimonetti/rtnetlink/internal/unix
+github.com/jsimonetti/rtnetlink/rtnl
+# github.com/klauspost/compress v1.10.6
+github.com/klauspost/compress/flate
+# github.com/klauspost/pgzip v1.2.4
+github.com/klauspost/pgzip
+# github.com/kr/pty v1.1.8
+github.com/kr/pty
+# github.com/mattn/go-isatty v0.0.12
+github.com/mattn/go-isatty
+# github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
+github.com/mdlayher/ethernet
+# github.com/mdlayher/netlink v1.1.0
+github.com/mdlayher/netlink
+github.com/mdlayher/netlink/nlenc
+# github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
+github.com/mdlayher/raw
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/rck/unit v0.0.3
+github.com/rck/unit
+# github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
+github.com/rekby/gpt
+# github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
+github.com/safchain/ethtool
+# github.com/spf13/pflag v1.0.5
+github.com/spf13/pflag
+# github.com/stretchr/testify v1.5.1
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
+# github.com/u-root/iscsinl v0.1.0
+github.com/u-root/iscsinl
+# github.com/ulikunitz/xz v0.5.8
+github.com/ulikunitz/xz
+github.com/ulikunitz/xz/internal/hash
+github.com/ulikunitz/xz/internal/xlog
+github.com/ulikunitz/xz/lzma
+# github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae
+github.com/vishvananda/netns
+# github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
+github.com/vtolstov/go-ioctl
+# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/cast5
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
+golang.org/x/crypto/hkdf
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/md4
+golang.org/x/crypto/openpgp
+golang.org/x/crypto/openpgp/armor
+golang.org/x/crypto/openpgp/elgamal
+golang.org/x/crypto/openpgp/errors
+golang.org/x/crypto/openpgp/packet
+golang.org/x/crypto/openpgp/s2k
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/ripemd160
+golang.org/x/crypto/sha3
+golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
+golang.org/x/crypto/ssh/terminal
+# golang.org/x/mod v0.3.0
+golang.org/x/mod/module
+golang.org/x/mod/semver
+# golang.org/x/net v0.0.0-20200904194848-62affa334b73
+golang.org/x/net/bpf
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
+# golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
+golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# golang.org/x/text v0.3.2
+golang.org/x/text/transform
+golang.org/x/text/unicode/norm
+# golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
+golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/imports
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/gopathwalk
+golang.org/x/tools/internal/imports
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
+# google.golang.org/grpc v1.29.1
+google.golang.org/grpc/codes
+# gopkg.in/alecthomas/kingpin.v2 v2.2.6
+gopkg.in/alecthomas/kingpin.v2
+# gopkg.in/yaml.v2 v2.3.0
+gopkg.in/yaml.v2
+# pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
+pack.ag/tftp
+pack.ag/tftp/netascii

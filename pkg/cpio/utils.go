@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/uio"
-	"golang.org/x/sys/unix"
 )
 
 // Trailer is the name of the trailer record.
@@ -34,7 +33,7 @@ func StaticRecord(contents []byte, info Info) Record {
 func StaticFile(name string, content string, perm uint64) Record {
 	return StaticRecord([]byte(content), Info{
 		Name: name,
-		Mode: unix.S_IFREG | perm,
+		Mode: S_IFREG | perm,
 	})
 }
 
@@ -44,7 +43,7 @@ func Symlink(name string, target string) Record {
 		ReaderAt: strings.NewReader(target),
 		Info: Info{
 			FileSize: uint64(len(target)),
-			Mode:     unix.S_IFLNK | 0777,
+			Mode:     S_IFLNK | 0777,
 			Name:     name,
 		},
 	}
@@ -55,7 +54,7 @@ func Directory(name string, mode uint64) Record {
 	return Record{
 		Info: Info{
 			Name: name,
-			Mode: unix.S_IFDIR | mode&^unix.S_IFMT,
+			Mode: S_IFDIR | mode&^S_IFMT,
 		},
 	}
 }
@@ -65,7 +64,7 @@ func CharDev(name string, perm uint64, rmajor, rminor uint64) Record {
 	return Record{
 		Info: Info{
 			Name:   name,
-			Mode:   unix.S_IFCHR | perm,
+			Mode:   S_IFCHR | perm,
 			Rmajor: rmajor,
 			Rminor: rminor,
 		},

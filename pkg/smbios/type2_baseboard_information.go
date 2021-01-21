@@ -12,8 +12,8 @@ import (
 
 // Much of this is auto-generated. If adding a new type, see README for instructions.
 
-// BaseboardInformation is defined in DSP0134 7.3.
-type BaseboardInformation struct {
+// BaseboardInfo is defined in DSP0134 7.3.
+type BaseboardInfo struct {
 	Table
 	Manufacturer                   string        // 04h
 	Product                        string        // 05h
@@ -28,15 +28,16 @@ type BaseboardInformation struct {
 	ContainedObjectHandles         []uint16      `smbios:"-"` // 0Fh
 }
 
-// NewBaseboardInformation parses a generic Table into BaseboardInformation.
-func NewBaseboardInformation(t *Table) (*BaseboardInformation, error) {
-	if t.Type != TableTypeBaseboardInformation {
+// ParseBaseboardInfo parses a generic Table into BaseboardInfo.
+func ParseBaseboardInfo(t *Table) (*BaseboardInfo, error) {
+	if t.Type != TableTypeBaseboardInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
-	if t.Len() < 0xf {
+	// Defined in DSP0134 7.3, length of the structure is at least 08h.
+	if t.Len() < 0x8 {
 		return nil, errors.New("required fields missing")
 	}
-	bi := &BaseboardInformation{Table: *t}
+	bi := &BaseboardInfo{Table: *t}
 	off, err := parseStruct(t, 0 /* off */, false /* complete */, bi)
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func NewBaseboardInformation(t *Table) (*BaseboardInformation, error) {
 	return bi, nil
 }
 
-func (bi *BaseboardInformation) String() string {
+func (bi *BaseboardInfo) String() string {
 	lines := []string{
 		bi.Header.String(),
 		fmt.Sprintf("Manufacturer: %s", bi.Manufacturer),

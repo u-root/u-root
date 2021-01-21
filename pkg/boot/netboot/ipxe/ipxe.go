@@ -6,16 +6,18 @@
 package ipxe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var (
@@ -30,34 +32,34 @@ var (
 type parser struct {
 	bootImage *boot.LinuxImage
 
+	// wd is the current working directory.
+	//
+	// Relative file paths are interpreted relative to this URL.
+	wd *url.URL
+
+	log ulog.Logger
+
 	schemes curl.Schemes
 }
 
-// ParseConfig returns a new  configuration with the file at URL and default
+// ParseConfig returns a new configuration with the file at URL and default
 // schemes.
 //
-// See ParseConfigWithSchemes for more details.
-func ParseConfig(configURL *url.URL) (*boot.LinuxImage, error) {
-	return ParseConfigWithSchemes(configURL, curl.DefaultSchemes)
-}
-
-// ParseConfigWithSchemes returns a new  configuration with the file at URL
-// and schemes `s`.
-//
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfigWithSchemes(configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
+func ParseConfig(ctx context.Context, l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
 	c := &parser{
 		schemes: s,
+		log:     l,
 	}
-	if err := c.getAndParseFile(configURL); err != nil {
+	if err := c.getAndParseFile(ctx, configURL); err != nil {
 		return nil, err
 	}
 	return c.bootImage, nil
 }
 
 // getAndParse parses the config file downloaded from `url` and fills in `c`.
-func (c *parser) getAndParseFile(u *url.URL) error {
-	r, err := c.schemes.LazyFetch(u)
+func (c *parser) getAndParseFile(ctx context.Context, u *url.URL) error {
+	r, err := c.schemes.Fetch(ctx, u)
 	if err != nil {
 		return err
 	}
@@ -69,17 +71,49 @@ func (c *parser) getAndParseFile(u *url.URL) error {
 	if !strings.HasPrefix(config, "#!ipxe") {
 		return ErrNotIpxeScript
 	}
-	log.Printf("Got ipxe config file %s:\n%s\n", r, config)
+	c.log.Printf("Got ipxe config file %s:\n%s\n", r, config)
+
+	// Parent dir of the config file.
+	c.wd = &url.URL{
+		Scheme: u.Scheme,
+		Host:   u.Host,
+		Path:   path.Dir(u.Path),
+	}
 	return c.parseIpxe(config)
 }
 
 // getFile parses `surl` and returns an io.Reader for the requested url.
 func (c *parser) getFile(surl string) (io.ReaderAt, error) {
-	u, err := url.Parse(surl)
+	u, err := parseURL(surl, c.wd)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
 	}
 	return c.schemes.LazyFetch(u)
+}
+
+func parseURL(name string, wd *url.URL) (*url.URL, error) {
+	u, err := url.Parse(name)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse URL %q: %v", name, err)
+	}
+
+	// If it parsed, but it didn't have a Scheme or Host, use the working
+	// directory's values.
+	if len(u.Scheme) == 0 && wd != nil {
+		u.Scheme = wd.Scheme
+
+		if len(u.Host) == 0 {
+			// If this is not there, it was likely just a path.
+			u.Host = wd.Host
+
+			// Absolute file names don't get the parent
+			// directories, just the host and scheme.
+			if !path.IsAbs(name) {
+				u.Path = path.Join(wd.Path, path.Clean(u.Path))
+			}
+		}
+	}
+	return u, nil
 }
 
 // parseIpxe parses `config` and constructs a BootImage for `c`.
@@ -96,19 +130,20 @@ func (c *parser) parseIpxe(config string) error {
 		}
 
 		args := strings.Fields(line)
-		if len(args) <= 1 {
-			log.Printf("Ignoring unsupported ipxe cmd: %s", line)
+		if len(args) == 0 {
 			continue
 		}
 		cmd := strings.ToLower(args[0])
 
 		switch cmd {
 		case "kernel":
-			k, err := c.getFile(args[1])
-			if err != nil {
-				return err
+			if len(args) > 1 {
+				k, err := c.getFile(args[1])
+				if err != nil {
+					return err
+				}
+				c.bootImage.Kernel = k
 			}
-			c.bootImage.Kernel = k
 
 			// Add cmdline if there are any.
 			if len(args) > 2 {
@@ -116,14 +151,25 @@ func (c *parser) parseIpxe(config string) error {
 			}
 
 		case "initrd":
-			i, err := c.getFile(args[1])
-			if err != nil {
-				return err
+			if len(args) > 1 {
+				var initrds []io.ReaderAt
+				for _, f := range strings.Split(args[1], ",") {
+					i, err := c.getFile(f)
+					if err != nil {
+						return err
+					}
+					initrds = append(initrds, i)
+				}
+				c.bootImage.Initrd = boot.CatInitrds(initrds...)
 			}
-			c.bootImage.Initrd = i
+
+		case "boot":
+			// Stop parsing at this point, we should go ahead and
+			// boot.
+			return nil
 
 		default:
-			log.Printf("Ignoring unsupported ipxe cmd: %s", line)
+			c.log.Printf("Ignoring unsupported ipxe cmd: %s", line)
 		}
 	}
 

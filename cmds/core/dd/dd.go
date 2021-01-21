@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Convert and copy a file.
+// dd converts and copies a file.
 //
 // Synopsis:
 //     dd [OPTIONS...] [-inName FILE] [-outName FILE]
@@ -43,7 +43,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/rck/unit"
@@ -63,20 +62,23 @@ var (
 	bytesWritten int64 // access atomically, must be global for correct alignedness
 )
 
-const (
-	convNoTrunc = 1 << iota
-	oFlagSync
-	oFlagDSync
-)
-
-var convMap = map[string]int{
-	"notrunc": convNoTrunc,
+type bitClearAndSet struct {
+	clear int
+	set   int
 }
 
-var flagMap = map[string]int{
-	"sync":  oFlagSync,
-	"dsync": oFlagDSync,
+// N.B. The flags in os derive from syscall.
+// They are, hence, mutually exclusive, on target
+// kernels.
+var convMap = map[string]bitClearAndSet{
+	"notrunc": {clear: os.O_TRUNC},
 }
+
+var flagMap = map[string]bitClearAndSet{
+	"sync": {set: os.O_SYNC},
+}
+
+var allowedFlags = os.O_TRUNC | os.O_SYNC
 
 // intermediateBuffer is a buffer that one can write to and read from.
 type intermediateBuffer interface {
@@ -347,16 +349,7 @@ func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, 
 	if name == "" {
 		out = os.Stdout
 	} else {
-		perm := os.O_CREATE | os.O_WRONLY
-		if flags&convNoTrunc == 0 {
-			perm |= os.O_TRUNC
-		}
-		if flags&oFlagSync != 0 {
-			perm |= os.O_SYNC
-		}
-		if flags&oFlagDSync != 0 {
-			perm |= syscall.O_DSYNC
-		}
+		perm := os.O_CREATE | os.O_WRONLY | (flags & allowedFlags)
 		if out, err = os.OpenFile(name, perm, 0666); err != nil {
 			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
 		}
@@ -469,11 +462,12 @@ func main() {
 	}
 
 	// Convert conv argument to bit set.
-	flags := 0
+	flags := os.O_TRUNC
 	if *conv != "none" {
 		for _, c := range strings.Split(*conv, ",") {
 			if v, ok := convMap[c]; ok {
-				flags |= v
+				flags &= ^v.clear
+				flags |= v.set
 			} else {
 				log.Printf("unknown argument conv=%s", c)
 				usage()
@@ -485,7 +479,8 @@ func main() {
 	if *oFlag != "none" {
 		for _, f := range strings.Split(*oFlag, ",") {
 			if v, ok := flagMap[f]; ok {
-				flags |= v
+				flags &= ^v.clear
+				flags |= v.set
 			} else {
 				log.Printf("unknown argument oflag=%s", f)
 				usage()

@@ -39,8 +39,23 @@ func NewNetwork() *Network {
 	}
 }
 
+// NetworkOpt returns additional QEMU command-line parameters based on the net
+// device ID.
+type NetworkOpt func(netdev string) []string
+
+// WithPCAP captures network traffic and saves it to outputFile.
+func WithPCAP(outputFile string) NetworkOpt {
+	return func(netdev string) []string {
+		return []string{
+			"-object",
+			// TODO(chrisko): generate an ID instead of 'f1'.
+			fmt.Sprintf("filter-dump,id=f1,netdev=%s,file=%s", netdev, outputFile),
+		}
+	}
+}
+
 // NewVM returns a Device that can be used with a new QEMU VM.
-func (n *Network) NewVM() Device {
+func (n *Network) NewVM(nopts ...NetworkOpt) Device {
 	if n == nil {
 		return nil
 	}
@@ -52,16 +67,21 @@ func (n *Network) NewVM() Device {
 	//
 	// This is from the range of locally administered address ranges.
 	mac := net.HardwareAddr{0x0e, 0x00, 0x00, 0x00, 0x00, byte(num)}
+	devID := fmt.Sprintf("vm%d", num)
 
-	args := []string{"-net", fmt.Sprintf("nic,macaddr=%s", mac)}
+	args := []string{"-device", fmt.Sprintf("e1000,netdev=%s,mac=%s", devID, mac)}
 	// Note: QEMU in CircleCI seems to in solve cases fail when using just ':1234' format.
 	// It fails with "address resolution failed for :1234: Name or service not known"
 	// hinting that this is somehow related to DNS resolution. To work around this,
 	// we explicitly bind to 127.0.0.1 (IPv6 [::1] is not parsed correctly by QEMU).
 	if num != 0 {
-		args = append(args, "-net", fmt.Sprintf("socket,connect=127.0.0.1:%d", n.port))
+		args = append(args, "-netdev", fmt.Sprintf("socket,id=%s,connect=127.0.0.1:%d", devID, n.port))
 	} else {
-		args = append(args, "-net", fmt.Sprintf("socket,listen=127.0.0.1:%d", n.port))
+		args = append(args, "-netdev", fmt.Sprintf("socket,id=%s,listen=127.0.0.1:%d", devID, n.port))
+	}
+
+	for _, opt := range nopts {
+		args = append(args, opt(devID)...)
 	}
 	return networkImpl{args}
 }
@@ -97,6 +117,31 @@ func (rod ReadOnlyDirectory) Cmdline() []string {
 }
 
 func (ReadOnlyDirectory) KArgs() []string { return nil }
+
+// IDEBlockDevice emulates an AHCI/IDE block device.
+type IDEBlockDevice struct {
+	File string
+}
+
+func (ibd IDEBlockDevice) Cmdline() []string {
+	if len(ibd.File) == 0 {
+		return nil
+	}
+
+	// There's a better way to do this. I don't know what it is. Some day
+	// I'll learn QEMU's crazy command line.
+	//
+	// I wish someone would make a proto representation of the
+	// command-line. Would be so much more understandable how device
+	// backends and frontends relate to each other.
+	return []string{
+		"-device", "ich9-ahci,id=ahci",
+		"-device", "ide-drive,drive=disk,bus=ahci.0",
+		"-drive", fmt.Sprintf("file=%s,if=none,id=disk", ibd.File),
+	}
+}
+
+func (IDEBlockDevice) KArgs() []string { return nil }
 
 // P9Directory is a Device that exposes a directory as a Plan9 (9p)
 // read-write filesystem in the VM.

@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
+	"github.com/u-root/u-root/pkg/uio"
 )
 
 func TestParse(t *testing.T) {
@@ -21,46 +23,71 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/kernel_cmdline_mods.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
-				modules: []string{
-					"testdata/b.b00 blabla",
-					"testdata/k.b00",
-					"testdata/m.m00 marg marg2",
+				args:   "b.b00 zee",
+				modules: []module{
+					{
+						path:    "testdata/b.b00",
+						cmdline: "b.b00 blabla",
+					},
+					{
+						path:    "testdata/k.b00",
+						cmdline: "k.b00",
+					},
+					{
+						path:    "testdata/m.m00",
+						cmdline: "m.m00 marg marg2",
+					},
 				},
+			},
+		},
+		{
+			file: "testdata/kernelopt_first.cfg",
+			want: options{
+				title:  "VMware ESXi",
+				kernel: "testdata/b.b00",
+				args:   "b.b00 zee",
 			},
 		},
 		{
 			file: "testdata/empty_mods.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 			},
 		},
 		{
 			file: "testdata/no_mods.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 			},
 		},
 		{
 			file: "testdata/no_cmdline.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
+				args:   "b.b00 ",
 			},
 		},
 		{
 			file: "testdata/empty_cmdline.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
+				args:   "b.b00 ",
 			},
 		},
 		{
 			file: "testdata/empty_updated.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				updated: 0,
 			},
@@ -68,8 +95,9 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/updated_twice.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				updated: 0,
 			},
@@ -77,16 +105,18 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/updated.cfg",
 			want: options{
+				title:   "VMware ESXi",
 				kernel:  "testdata/b.b00",
-				args:    "zee",
+				args:    "b.b00 zee",
 				updated: 4,
 			},
 		},
 		{
 			file: "testdata/empty_bootstate.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				bootstate: bootValid,
 			},
@@ -94,8 +124,9 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/bootstate_twice.cfg",
 			want: options{
+				title:  "VMware ESXi",
 				kernel: "testdata/b.b00",
-				args:   "zee",
+				args:   "b.b00 zee",
 				// Explicitly stating this as the wanted value.
 				bootstate: bootValid,
 			},
@@ -103,24 +134,27 @@ func TestParse(t *testing.T) {
 		{
 			file: "testdata/bootstate.cfg",
 			want: options{
+				title:     "VMware ESXi",
 				kernel:    "testdata/b.b00",
-				args:      "zee",
+				args:      "b.b00 zee",
 				bootstate: bootDirty,
 			},
 		},
 		{
 			file: "testdata/bootstate_invalid.cfg",
 			want: options{
+				title:     "VMware ESXi",
 				kernel:    "testdata/b.b00",
-				args:      "zee",
+				args:      "b.b00 zee",
 				bootstate: bootInvalid,
 			},
 		},
 		{
 			file: "testdata/no_bootstate.cfg",
 			want: options{
+				title:     "VMware ESXi",
 				kernel:    "testdata/b.b00",
-				args:      "zee",
+				args:      "b.b00 zee",
 				bootstate: bootInvalid,
 			},
 		},
@@ -131,7 +165,7 @@ func TestParse(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("LoadConfig(%s) = %v want %v", tt.file, got, tt.want)
+			t.Errorf("LoadConfig(%s) = %#v want %#v", tt.file, got, tt.want)
 		}
 	}
 }
@@ -145,15 +179,27 @@ var (
 	device   = "testdata/dev"
 )
 
+// Poor man's equal.
+//
+// the Kernel and Modules fields will be full of uio.NewLazyFiles. We just want
+// them to be pointing to the same file name; we can't compare the function
+// pointers obviously. Lazy files will always print their name.
+func multibootEqual(a, b []*boot.MultibootImage) bool {
+	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+}
+
 func TestDev5Valid(t *testing.T) {
 	want := []*boot.MultibootImage{
 		{
-			Path:    "testdata/k",
+			Name:    "VMware ESXi from testdata/dev5",
+			Kernel:  uio.NewLazyFile("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
+			Modules: []multiboot.Module{},
 		},
 	}
 
 	opts5 := &options{
+		title:     "VMware ESXi",
 		kernel:    "testdata/k",
 		updated:   1,
 		bootstate: bootValid,
@@ -161,18 +207,19 @@ func TestDev5Valid(t *testing.T) {
 
 	// No opts6 at all.
 	imgs, _ := getImages(device, opts5, nil)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opts5, nil, imgs, want)
 	}
 
 	// Invalid opts6. Higher updated, but invalid state.
 	invalidOpts6 := &options{
+		title:     "VMware ESXi",
 		kernel:    "foobar",
 		updated:   2,
 		bootstate: bootInvalid,
 	}
 	imgs, _ = getImages(device, opts5, invalidOpts6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opts5, invalidOpts6, imgs, want)
 	}
 }
@@ -180,64 +227,78 @@ func TestDev5Valid(t *testing.T) {
 func TestDev6Valid(t *testing.T) {
 	want := []*boot.MultibootImage{
 		{
-			Path:    "testdata/k",
+			Name:    "VMware ESXi from testdata/dev6",
+			Kernel:  uio.NewLazyFile("testdata/k"),
 			Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
+			Modules: []multiboot.Module{},
 		},
 	}
 
 	opts6 := &options{
+		title:     "VMware ESXi",
 		kernel:    "testdata/k",
 		updated:   1,
 		bootstate: bootValid,
 	}
 
 	// No opts5 at all.
-	imgs, _ := getImages(device, nil, opts6)
-	if !reflect.DeepEqual(imgs, want) {
-		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, nil, opts6, imgs, want)
+	imgs, err := getImages(device, nil, opts6)
+	if !multibootEqual(imgs, want) {
+		t.Fatalf("getImages(%s, %v, %v) = %v, want %v (err %v)", device, nil, opts6, imgs, want, err)
 	}
 
 	// Invalid opts5. Higher updated, but invalid state.
 	invalidOpts5 := &options{
+		title:     "VMware ESXi",
 		kernel:    "foobar",
 		updated:   2,
 		bootstate: bootInvalid,
 	}
 	imgs, _ = getImages(device, invalidOpts5, opts6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, invalidOpts5, opts6, imgs, want)
 	}
 }
 
 func TestImageOrder(t *testing.T) {
+	prevGetBlockSize := getBlockSize
+	defer func() {
+		getBlockSize = prevGetBlockSize
+	}()
 	getBlockSize = func(dev string) (int, error) {
 		return 512, nil
 	}
 
 	opt5 := &options{
+		title:     "VMware ESXi",
 		kernel:    "foobar",
 		updated:   2,
 		bootstate: bootValid,
 	}
 	want5 := &boot.MultibootImage{
-		Path:    "foobar",
+		Name:    "VMware ESXi from testdata/dev5",
+		Kernel:  uio.NewLazyFile("foobar"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
+		Modules: []multiboot.Module{},
 	}
 
 	opt6 := &options{
+		title:     "VMware ESXi",
 		kernel:    "testdata/k",
 		updated:   1,
 		bootstate: bootValid,
 	}
 	want6 := &boot.MultibootImage{
-		Path:    "testdata/k",
+		Name:    "VMware ESXi from testdata/dev6",
+		Kernel:  uio.NewLazyFile("testdata/k"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
+		Modules: []multiboot.Module{},
 	}
 
 	// Way 1.
 	want := []*boot.MultibootImage{want5, want6}
 	imgs, _ := getImages(device, opt5, opt6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)
 	}
 
@@ -246,7 +307,7 @@ func TestImageOrder(t *testing.T) {
 	// Vice versa priority.
 	want = []*boot.MultibootImage{want6, want5}
 	imgs, _ = getImages(device, opt5, opt6)
-	if !reflect.DeepEqual(imgs, want) {
+	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)
 	}
 }

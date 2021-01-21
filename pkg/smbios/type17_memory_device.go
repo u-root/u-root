@@ -16,7 +16,7 @@ import (
 type MemoryDevice struct {
 	Table
 	PhysicalMemoryArrayHandle         uint16                              // 04h
-	MemoryErrorInformationHandle      uint16                              // 06h
+	MemoryErrorInfoHandle             uint16                              // 06h
 	TotalWidth                        uint16                              // 08h
 	DataWidth                         uint16                              // 0Ah
 	Size                              uint16                              // 0Ch
@@ -48,6 +48,28 @@ type MemoryDevice struct {
 	VolatileSize                      uint64                              // 3Ch
 	CacheSize                         uint64                              // 44h
 	LogicalSize                       uint64                              // 4Ch
+}
+
+var MemoryDeviceManufacturer = map[string]uint16{
+	"Micron":   0x2C00,
+	"Samsung":  0xCE00,
+	"Montage":  0x3206,
+	"Kinston":  0x9801,
+	"Elpida":   0xFE02,
+	"Hynix":    0xAD00,
+	"Infineon": 0xC100,
+	"Smart":    0x9401,
+	"Aeneon":   0x5705,
+	"Qimonda":  0x5105,
+	"NEC":      0x1000,
+	"Nanya":    0x0B03,
+	"TI":       0x9700,
+	"IDT":      0xB300,
+	"TEK":      0x3D00,
+	"Agilent":  0xC802,
+	"Inphi":    0xB304,
+	"Intel":    0x8900,
+	"Viking":   0x4001,
 }
 
 // NewMemoryDevice parses a generic Table into MemoryDevice.
@@ -84,13 +106,13 @@ func (md *MemoryDevice) GetSizeBytes() uint64 {
 
 func (md *MemoryDevice) String() string {
 	ehStr := ""
-	switch md.MemoryErrorInformationHandle {
+	switch md.MemoryErrorInfoHandle {
 	case 0xffff:
 		ehStr = "No Error"
 	case 0xfffe:
 		ehStr = "Not Provided"
 	default:
-		ehStr = fmt.Sprintf("0x%04X", md.MemoryErrorInformationHandle)
+		ehStr = fmt.Sprintf("0x%04X", md.MemoryErrorInfoHandle)
 	}
 
 	bitWidthStr := func(v uint16) string {

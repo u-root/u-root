@@ -7,7 +7,7 @@
             "// license that can be found in the LICENSE file\\."
         ],
         [
-            "^// Copyright [\\d\\-, ]+ Google LLC.",
+            "^// Copyright [\\d\\-, ]+ Google (LLC|Inc).",
             "//",
             "// Licensed under the Apache License, Version 2.0.*"
         ]
@@ -20,7 +20,6 @@
         "cmds/core/elvish/.*",
         "cmds/core/ping/.*",
         "cmds/exp/ectool/.*",
-        "cmds/core/man/data/data.go",
-        "pkg/boot/diskboot/entrytype_string.go"
+        "cmds/core/man/data/data.go"
     ]
 }

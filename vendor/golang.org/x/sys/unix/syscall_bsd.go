@@ -510,6 +510,40 @@ func SysctlRaw(name string, args ...int) ([]byte, error) {
 	return buf[:n], nil
 }
 
+func SysctlClockinfo(name string) (*Clockinfo, error) {
+	mib, err := sysctlmib(name)
+	if err != nil {
+		return nil, err
+	}
+
+	n := uintptr(SizeofClockinfo)
+	var ci Clockinfo
+	if err := sysctl(mib, (*byte)(unsafe.Pointer(&ci)), &n, nil, 0); err != nil {
+		return nil, err
+	}
+	if n != SizeofClockinfo {
+		return nil, EIO
+	}
+	return &ci, nil
+}
+
+func SysctlTimeval(name string) (*Timeval, error) {
+	mib, err := sysctlmib(name)
+	if err != nil {
+		return nil, err
+	}
+
+	var tv Timeval
+	n := uintptr(unsafe.Sizeof(tv))
+	if err := sysctl(mib, (*byte)(unsafe.Pointer(&tv)), &n, nil, 0); err != nil {
+		return nil, err
+	}
+	if n != unsafe.Sizeof(tv) {
+		return nil, EIO
+	}
+	return &tv, nil
+}
+
 //sys	utimes(path string, timeval *[2]Timeval) (err error)
 
 func Utimes(path string, tv []Timeval) error {

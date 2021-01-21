@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,7 +13,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
@@ -38,8 +37,6 @@ type (
 )
 
 var (
-	shells  = [...]string{"bash", "zsh", "elvish"}
-	shell   = "/bin/sh"
 	debug   = flag.Bool("d", false, "Enable debug prints")
 	keys    = flag.String("keys", "authorized_keys", "Path to the authorized_keys file")
 	privkey = flag.String("privatekey", "id_rsa", "Path of private key")
@@ -76,14 +73,13 @@ func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 		ps, _ = e.Process.Wait()
 	}
 
-	ws := ps.Sys().(syscall.WaitStatus)
 	// TODO(bluecmd): If somebody wants we can send exit-signal to return
 	// information about signal termination, but leave it until somebody needs
 	// it.
 	// if ws.Signaled() {
 	// }
-	if ws.Exited() {
-		code := uint32(ws.ExitStatus())
+	if ps.Exited() {
+		code := uint32(ps.ExitCode())
 		dprintf("Exit status %v", code)
 		c.SendRequest("exit-status", false, ssh.Marshal(exitStatusReq{code}))
 	}

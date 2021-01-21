@@ -10,22 +10,19 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegration(t *testing.T) {
 	o := &vmtest.Options{
-		BuildOpts: uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/ls",
-			),
-		},
 		QEMUOpts: qemu.Options{
 			Devices: []qemu.Device{
 				// CONFIG_ATA_PIIX is required for this option to work.
 				qemu.ArbitraryArgs{"-hda", "testdata/1MB.ext4_vfat"},
 				qemu.ArbitraryArgs{"-hdb", "testdata/12Kzeros"},
+				qemu.ArbitraryArgs{"-hdc", "testdata/gptdisk"},
+				qemu.ArbitraryArgs{"-drive", "file=testdata/gptdisk2,if=none,id=NVME1"},
+				qemu.ArbitraryArgs{"-device", "nvme,drive=NVME1,serial=nvme-1"},
 			},
 		},
 	}

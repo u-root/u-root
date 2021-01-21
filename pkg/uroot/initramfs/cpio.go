@@ -20,21 +20,14 @@ type CPIOArchiver struct {
 
 // OpenWriter opens `path` as the correct file type and returns an
 // Writer pointing to `path`.
-//
-// If `path` is empty, a default path of /tmp/initramfs.GOOS_GOARCH.cpio is
-// used.
-func (ca CPIOArchiver) OpenWriter(l ulog.Logger, path, goos, goarch string) (Writer, error) {
-	if len(path) == 0 && len(goos) == 0 && len(goarch) == 0 {
-		return nil, fmt.Errorf("passed no path, GOOS, and GOARCH to CPIOArchiver.OpenWriter")
-	}
+func (ca CPIOArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 	if len(path) == 0 {
-		path = fmt.Sprintf("/tmp/initramfs.%s_%s.cpio", goos, goarch)
+		return nil, fmt.Errorf("path is required")
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, err
 	}
-	l.Printf("Filename is %s", path)
 	return osWriter{ca.RecordFormat.Writer(f), f}, nil
 }
 

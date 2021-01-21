@@ -27,8 +27,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const linkUpAttempt = 30 * time.Second
-
 // isIpv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
 func isIpv6LinkReady(l netlink.Link) (bool, error) {
@@ -48,9 +46,9 @@ func isIpv6LinkReady(l netlink.Link) (bool, error) {
 }
 
 // IfUp ensures the given network interface is up and returns the link object.
-func IfUp(ifname string) (netlink.Link, error) {
+func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 	start := time.Now()
-	for time.Since(start) < linkUpAttempt {
+	for time.Since(start) < linkUpTimeout {
 		// Note that it may seem odd to keep trying the LinkByName
 		// operation, but consider that a hotplug device such as USB
 		// ethernet can just vanish.
@@ -59,7 +57,10 @@ func IfUp(ifname string) (netlink.Link, error) {
 			return nil, fmt.Errorf("cannot get interface %q by name: %v", ifname, err)
 		}
 
-		if iface.Attrs().Flags&net.FlagUp == net.FlagUp {
+		// Check if link is actually operational.
+		// https://www.kernel.org/doc/Documentation/networking/operstates.txt states that we should check
+		// for OperUp and OperUnknown.
+		if o := iface.Attrs().OperState; o == netlink.OperUp || o == netlink.OperUnknown {
 			return iface, nil
 		}
 
@@ -69,7 +70,7 @@ func IfUp(ifname string) (netlink.Link, error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	return nil, fmt.Errorf("link %q still down after %d seconds", ifname, linkUpAttempt)
+	return nil, fmt.Errorf("link %q still down after %v seconds", ifname, linkUpTimeout.Seconds())
 }
 
 // WriteDNSSettings writes the given nameservers, search list, and domain to resolv.conf.
@@ -107,6 +108,10 @@ type Lease interface {
 
 	// Link is the interface the configuration is for.
 	Link() netlink.Link
+
+	// Return the full DHCP response, this is either a *dhcpv4.DHCPv4 or a
+	// *dhcpv6.Message.
+	Message() (*dhcpv4.DHCPv4, *dhcpv6.Message)
 }
 
 // LogLevel is the amount of information to log.
@@ -131,6 +136,29 @@ type Config struct {
 	// attempt. The highest log level should print each entire packet sent
 	// and received.
 	LogLevel LogLevel
+
+	// Modifiers4 allows modifications to the IPv4 DHCP request.
+	Modifiers4 []dhcpv4.Modifier
+
+	// Modifiers6 allows modifications to the IPv6 DHCP request.
+	Modifiers6 []dhcpv6.Modifier
+
+	// V6ServerAddr can be a unicast or broadcast destination for DHCPv6
+	// messages.
+	//
+	// If not set, it will default to nclient6's default (all servers &
+	// relay agents).
+	V6ServerAddr *net.UDPAddr
+
+	// V4ServerAddr can be a unicast or broadcast destination for IPv4 DHCP
+	// messages.
+	//
+	// If not set, it will default to nclient4's default (DHCP broadcast
+	// address).
+	V4ServerAddr *net.UDPAddr
+
+	// If true, add Client Identifier (61) option to the IPv4 request.
+	V4ClientIdentifier bool
 }
 
 func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
@@ -144,25 +172,43 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	case LogDebug:
 		mods = append(mods, nclient4.WithDebugLogger())
 	}
+	if c.V4ServerAddr != nil {
+		mods = append(mods, nclient4.WithServerAddr(c.V4ServerAddr))
+	}
 	client, err := nclient4.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
+
+	// Prepend modifiers with default options, so they can be overriden.
+	reqmods := append(
+		[]dhcpv4.Modifier{
+			dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
+			dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask),
+			dhcpv4.WithNetboot,
+		},
+		c.Modifiers4...)
+
+	if c.V4ClientIdentifier {
+		// Client Id is hardware type + mac per RFC 2132 9.14.
+		ident := []byte{0x01} // Type ethernet
+		ident = append(ident, iface.Attrs().HardwareAddr...)
+		reqmods = append(reqmods, dhcpv4.WithOption(dhcpv4.OptClientIdentifier(ident)))
+	}
 
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
-	_, p, err := client.Request(ctx, dhcpv4.WithNetboot,
-		dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
-		dhcpv4.WithRequestedOptions(dhcpv4.OptionSubnetMask))
+	lease, err := client.Request(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}
 
-	packet := NewPacket4(iface, p)
-	log.Printf("Got DHCPv4 lease on %s: %v", iface.Attrs().Name, p.Summary())
+	packet := NewPacket4(iface, lease.ACK)
+	log.Printf("Got DHCPv4 lease on %s: %v", iface.Attrs().Name, lease.ACK.Summary())
 	return packet, nil
 }
 
-func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
+func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout time.Duration) (Lease, error) {
 	// For ipv6, we cannot bind to the port until Duplicate Address
 	// Detection (DAD) is complete which is indicated by the link being no
 	// longer marked as "tentative". This usually takes about a second.
@@ -171,7 +217,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	// (The user may not have configured a ctx with a timeout.)
 	//
 	// Hardcode the timeout to 30s for now.
-	linkTimeout := time.After(linkUpAttempt)
+	linkTimeout := time.After(linkUpTimeout)
 	for {
 		if ready, err := isIpv6LinkReady(iface); err != nil {
 			return nil, err
@@ -198,13 +244,24 @@ func lease6(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	case LogDebug:
 		mods = append(mods, nclient6.WithDebugLogger())
 	}
+	if c.V6ServerAddr != nil {
+		mods = append(mods, nclient6.WithBroadcastAddr(c.V6ServerAddr))
+	}
 	client, err := nclient6.New(iface.Attrs().Name, mods...)
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
+
+	// Prepend modifiers with default options, so they can be overriden.
+	reqmods := append(
+		[]dhcpv6.Modifier{
+			dhcpv6.WithNetboot,
+		},
+		c.Modifiers6...)
 
 	log.Printf("Attempting to get DHCPv6 lease on %s", iface.Attrs().Name)
-	p, err := client.RapidSolicit(ctx, dhcpv6.WithNetboot)
+	p, err := client.RapidSolicit(ctx, reqmods...)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +316,7 @@ type Result struct {
 // respectively.
 //
 // The *Result channel will be closed when all requests have completed.
-func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Config) chan *Result {
+func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Config, linkUpTimeout time.Duration) chan *Result {
 	// Yeah, this is a hack, until we can cancel all leases in progress.
 	r := make(chan *Result, 3*len(ifs))
 
@@ -270,7 +327,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 			defer wg.Done()
 
 			log.Printf("Bringing up interface %s...", iface.Attrs().Name)
-			if _, err := IfUp(iface.Attrs().Name); err != nil {
+			if _, err := IfUp(iface.Attrs().Name, linkUpTimeout); err != nil {
 				log.Printf("Could not bring up interface %s: %v", iface.Attrs().Name, err)
 				return
 			}
@@ -288,7 +345,7 @@ func SendRequests(ctx context.Context, ifs []netlink.Link, ipv4, ipv6 bool, c Co
 				wg.Add(1)
 				go func(iface netlink.Link) {
 					defer wg.Done()
-					lease, err := lease6(ctx, iface, c)
+					lease, err := lease6(ctx, iface, c, linkUpTimeout)
 					r <- &Result{NetIPv6, iface, lease, err}
 				}(iface)
 			}

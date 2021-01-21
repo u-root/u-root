@@ -14,8 +14,7 @@
 package netboot
 
 import (
-	"fmt"
-	"log"
+	"context"
 	"net"
 	"net/url"
 	"path"
@@ -25,25 +24,26 @@ import (
 	"github.com/u-root/u-root/pkg/boot/netboot/pxe"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
-// BootImage figures out the image to boot from the given DHCP lease.
+// BootImages figure out a ranked order of images to boot from the given DHCP lease.
 //
 // Tries, in order:
 //
 // - to detect an iPXE script beginning with #!ipxe,
 //
-// - to detect a pxelinux.0, in which case we will ignore the pxelinux and try
-//   to parse pxelinux.cfg/<files>.
+// - to detect a pxelinux.0, in which case we will ignore the pxelinux.0 and
+//   try to parse pxelinux.cfg/<files>.
 //
 // TODO: detect straight up multiboot and bzImage Linux kernel files rather
 // than just configuration scripts.
-func BootImage(s curl.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
+func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclient.Lease) ([]boot.OSImage, error) {
 	uri, err := lease.Boot()
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Boot URI: %s", uri)
+	l.Printf("Boot URI: %s", uri)
 
 	// IP only makes sense for v4 anyway, because the PXE probing of files
 	// uses a MAC address and an IPv4 address to look at files.
@@ -51,19 +51,23 @@ func BootImage(s curl.Schemes, lease dhclient.Lease) (*boot.LinuxImage, error) {
 	if p4, ok := lease.(*dhclient.Packet4); ok {
 		ip = p4.Lease().IP
 	}
-	return getBootImage(s, uri, lease.Link().Attrs().HardwareAddr, ip)
+	return getBootImages(ctx, l, s, uri, lease.Link().Attrs().HardwareAddr, ip), nil
 }
 
-// getBootImage attempts to parse the file at uri as an ipxe config and returns
+// getBootImages attempts to parse the file at uri as an ipxe config and returns
 // the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
 // ip, and mac address to search for pxe configs.
-func getBootImage(schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) (*boot.LinuxImage, error) {
+func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) []boot.OSImage {
+	var images []boot.OSImage
+
 	// Attempt to read the given boot path as an ipxe config file.
-	ipc, err := ipxe.ParseConfigWithSchemes(uri, schemes)
-	if err == nil {
-		return ipc, nil
+	ipc, err := ipxe.ParseConfig(ctx, l, uri, schemes)
+	if err != nil {
+		l.Printf("Parsing boot files as iPXE failed, trying other formats...: %v", err)
 	}
-	log.Printf("Falling back to pxe boot: %v", err)
+	if ipc != nil {
+		images = append(images, ipc)
+	}
 
 	// Fallback to pxe boot.
 	wd := &url.URL{
@@ -71,11 +75,9 @@ func getBootImage(schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip n
 		Host:   uri.Host,
 		Path:   path.Dir(uri.Path),
 	}
-	pc, err := pxe.ParseConfigWithSchemes(wd, mac, ip, schemes)
+	pxeImages, err := pxe.ParseConfig(ctx, wd, mac, ip, schemes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse pxelinux config: %v", err)
+		l.Printf("Failed to try parsing pxelinux config: %v", err)
 	}
-
-	label := pc.Entries[pc.DefaultEntry]
-	return label, nil
+	return append(images, pxeImages...)
 }

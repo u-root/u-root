@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package uroot creates root file systems from Go programs.
+//
+// uroot will appropriately compile the Go programs, create symlinks for their
+// names, and assemble an initramfs with additional files as specified.
 package uroot
 
 import (
+	"debug/elf"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +20,7 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ldd"
+	"github.com/u-root/u-root/pkg/uflag"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -31,27 +37,41 @@ const (
 	nameserver = "nameserver 8.8.8.8\n"
 )
 
-// DefaultRamfs are files that are contained in all u-root initramfs archives
-// by default.
-var DefaultRamfs = cpio.ArchiveFromRecords([]cpio.Record{
-	cpio.Directory("tcz", 0755),
-	cpio.Directory("etc", 0755),
-	cpio.Directory("dev", 0755),
-	cpio.Directory("tmp", 0777),
-	cpio.Directory("ubin", 0755),
-	cpio.Directory("usr", 0755),
-	cpio.Directory("usr/lib", 0755),
-	cpio.Directory("var/log", 0777),
-	cpio.Directory("lib64", 0755),
-	cpio.Directory("bin", 0755),
-	cpio.CharDev("dev/console", 0600, 5, 1),
-	cpio.CharDev("dev/tty", 0666, 5, 0),
-	cpio.CharDev("dev/null", 0666, 1, 3),
-	cpio.CharDev("dev/port", 0640, 1, 4),
-	cpio.CharDev("dev/urandom", 0666, 1, 9),
-	cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
-	cpio.StaticFile("etc/localtime", gmt0, 0644),
-})
+// DefaultRamRamfs returns a cpio.Archive for the target OS.
+// If an OS is not known it will return a reasonable u-root specific
+// default.
+func DefaultRamfs() *cpio.Archive {
+	switch golang.Default().GOOS {
+	case "linux":
+		return cpio.ArchiveFromRecords([]cpio.Record{
+			cpio.Directory("bin", 0755),
+			cpio.Directory("dev", 0755),
+			cpio.Directory("env", 0755),
+			cpio.Directory("etc", 0755),
+			cpio.Directory("lib64", 0755),
+			cpio.Directory("proc", 0755),
+			cpio.Directory("sys", 0755),
+			cpio.Directory("tcz", 0755),
+			cpio.Directory("tmp", 0777),
+			cpio.Directory("ubin", 0755),
+			cpio.Directory("usr", 0755),
+			cpio.Directory("usr/lib", 0755),
+			cpio.Directory("var/log", 0777),
+			cpio.CharDev("dev/console", 0600, 5, 1),
+			cpio.CharDev("dev/tty", 0666, 5, 0),
+			cpio.CharDev("dev/null", 0666, 1, 3),
+			cpio.CharDev("dev/port", 0640, 1, 4),
+			cpio.CharDev("dev/urandom", 0666, 1, 9),
+			cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
+			cpio.StaticFile("etc/localtime", gmt0, 0644),
+		})
+	default:
+		return cpio.ArchiveFromRecords([]cpio.Record{
+			cpio.Directory("ubin", 0755),
+			cpio.Directory("bbin", 0755),
+		})
+	}
+}
 
 // Commands specifies a list of Golang packages to build with a builder, e.g.
 // in busybox mode, source mode, or binary mode.
@@ -177,11 +197,16 @@ type Opts struct {
 	// This can be an absolute path or the name of a command included in
 	// Commands.
 	//
-	// The u-root init will always attempt to fork/exec a uinit program.
+	// The u-root init will always attempt to fork/exec a uinit program,
+	// and append arguments from both the kernel command-line
+	// (uroot.uinitargs) as well as specified in UinitArgs.
 	//
 	// If this is empty, no uinit symlink will be created, but a user may
 	// still specify a command called uinit or include a /bin/uinit file.
 	UinitCmd string
+
+	// UinitArgs are the arguments passed to /bin/uinit.
+	UinitArgs []string
 
 	// DefaultShell is the default shell to start after init.
 	//
@@ -190,6 +215,9 @@ type Opts struct {
 	//
 	// This must be specified to have a default shell.
 	DefaultShell string
+
+	// NoStrip builds unstripped binaries.
+	NoStrip bool
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
@@ -225,6 +253,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
+			NoStrip:   opts.NoStrip,
 		}
 		if err := cmds.Builder.Build(files, bOpts); err != nil {
 			return fmt.Errorf("error building: %v", err)
@@ -242,11 +271,16 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		return err
 	}
 
-	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
-		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
-	}
 	if err := opts.addSymlinkTo(logger, archive, opts.UinitCmd, "bin/uinit"); err != nil {
 		return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
+	}
+	if len(opts.UinitArgs) > 0 {
+		if err := archive.AddRecord(cpio.StaticFile("etc/uinit.flags", uflag.ArgvToFile(opts.UinitArgs), 0444)); err != nil {
+			return fmt.Errorf("%v: could not add uinit arguments from UinitArgs (-uinitcmd) to initramfs", err)
+		}
+	}
+	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
+		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
 		return fmt.Errorf("%v: specify -defaultsh=\"\" to ignore this error and build without a shell", err)
@@ -366,19 +400,38 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //   - globs of package imports, e.g. github.com/u-root/u-root/cmds/*
 //   - paths to package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   - globs of paths to package directories; e.g. ./cmds/*
+//   - if an entry starts with "-" it excludes the matching package(s)
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
 func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) ([]string, error) {
-	var importPaths []string
+	var includes []string
+	excludes := map[string]bool{}
 	for _, pkg := range pkgs {
+		isExclude := false
+		if strings.HasPrefix(pkg, "-") {
+			pkg = pkg[1:]
+			isExclude = true
+		}
 		paths, err := resolvePackagePath(logger, env, pkg)
 		if err != nil {
 			return nil, err
 		}
-		importPaths = append(importPaths, paths...)
+		if !isExclude {
+			includes = append(includes, paths...)
+		} else {
+			for _, p := range paths {
+				excludes[p] = true
+			}
+		}
 	}
-	return importPaths, nil
+	var result []string
+	for _, p := range includes {
+		if !excludes[p] {
+			result = append(result, p)
+		}
+	}
+	return result, nil
 }
 
 // ParseExtraFiles adds files from the extraFiles list to the archive.
@@ -425,23 +478,44 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 		}
 
 		if lddDeps {
-			// Pull dependencies in the case of binaries. If `path` is not
-			// a binary, `libs` will just be empty.
-			libs, err := ldd.List([]string{src})
-			if err != nil {
-				logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", file, err)
-				continue
-			}
-			for _, lib := range libs {
-				// N.B.: we already added information about the src.
-				// Don't add it twice. We have to do this check here in
-				// case we're renaming the src to a different dest.
-				if lib == src {
-					continue
+			// Users are frequently naming directories now, not just files.
+			// Hence we must use walk here, not just check the one file.
+			if err := filepath.Walk(src, func(name string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
 				}
-				if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
-					logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
+				if info.IsDir() {
+					return nil
 				}
+				// Try to open it as an ELF. If that fails, we can skip the ldd
+				// step. The file will still be included from above.
+				f, err := elf.Open(name)
+				if err != nil {
+					return nil
+				}
+				if err = f.Close(); err != nil {
+					logger.Printf("WARNING: Closing ELF file %q: %v", name, err)
+				}
+				// Pull dependencies in the case of binaries. If `path` is not
+				// a binary, `libs` will just be empty.
+				libs, err := ldd.List([]string{name})
+				if err != nil {
+					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %v", name, err)
+				}
+				for _, lib := range libs {
+					// N.B.: we already added information about the src.
+					// Don't add it twice. We have to do this check here in
+					// case we're renaming the src to a different dest.
+					if lib == name {
+						continue
+					}
+					if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
+						logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
+					}
+				}
+				return nil
+			}); err != nil {
+				logger.Printf("Getting dependencies for %q: %v", src, err)
 			}
 		}
 	}

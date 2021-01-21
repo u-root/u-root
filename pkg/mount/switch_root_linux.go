@@ -19,17 +19,23 @@ func getDev(fd int) (dev uint64, err error) {
 	if err := unix.Fstat(fd, &stat); err != nil {
 		return 0, err
 	}
-	return stat.Dev, nil
+	return uint64(stat.Dev), nil
 }
 
 // recursiveDelete deletes a directory identified by `fd` and everything in it.
 //
 // This function allows deleting directories no longer referenceable by
 // any file name. This function does not descend into mounts.
+//
+// It is not an error for this function to fail to delete a file/directory.  That's normal (e.g. mount points).
+// The objective is to clear as much memory as possible.
+// In general this should be best-effort and should generally warn rather than fail,
+// since failure leaves the system in an undefined state.
 func recursiveDelete(fd int) error {
 	parentDev, err := getDev(fd)
 	if err != nil {
-		return err
+		log.Printf("warn: unable to get underlying dev for dir: %v", err)
+		return nil
 	}
 
 	// The file descriptor is already open, but allocating a os.File
@@ -38,7 +44,8 @@ func recursiveDelete(fd int) error {
 	defer dir.Close()
 	names, err := dir.Readdirnames(-1)
 	if err != nil {
-		return err
+		log.Printf("warn: unable to read dir %s: %v", dir.Name(), err)
+		return nil
 	}
 
 	for _, name := range names {
@@ -61,15 +68,16 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 	if err != nil {
 		// childName points to either a file or a symlink, delete in any case.
 		if err := unix.Unlinkat(parentFd, childName, 0); err != nil {
-			return err
+			log.Printf("warn: unable to remove file %s: %v", childName, err)
 		}
 	} else {
 		// Open succeeded, which means childName points to a real directory.
 		defer unix.Close(childFd)
 
-		// Don't descent into other file systems.
+		// Don't descend into other file systems.
 		if childFdDev, err := getDev(childFd); err != nil {
-			return err
+			log.Printf("warn: unable to get underlying dev for dir: %s: %v", childName, err)
+			return nil
 		} else if childFdDev != parentDev {
 			// This means continue in recursiveDelete.
 			return nil
@@ -80,7 +88,7 @@ func recusiveDeleteInner(parentFd int, parentDev uint64, childName string) error
 		}
 		// Back from recursion, the directory is now empty, delete.
 		if err := unix.Unlinkat(parentFd, childName, unix.AT_REMOVEDIR); err != nil {
-			return err
+			log.Printf("warn: unable to remove dir %s: %v", childName, err)
 		}
 	}
 	return nil

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Read the system log.
+// dmesg reads the system log.
 //
 // Synopsis:
 //     dmesg [-clear|-read-clear]
@@ -18,12 +18,6 @@ import (
 	"os"
 
 	"golang.org/x/sys/unix"
-)
-
-const (
-	_SYSLOG_ACTION_READ_ALL   = 3
-	_SYSLOG_ACTION_READ_CLEAR = 4
-	_SYSLOG_ACTION_CLEAR      = 5
 )
 
 var (
@@ -43,12 +37,12 @@ func main() {
 		log.Fatalf("cannot specify both -clear and -read-clear")
 	}
 
-	level := _SYSLOG_ACTION_READ_ALL
+	level := unix.SYSLOG_ACTION_READ_ALL
 	if clear {
-		level = _SYSLOG_ACTION_CLEAR
+		level = unix.SYSLOG_ACTION_CLEAR
 	}
 	if readClear {
-		level = _SYSLOG_ACTION_READ_CLEAR
+		level = unix.SYSLOG_ACTION_READ_CLEAR
 	}
 
 	b := make([]byte, 256*1024)

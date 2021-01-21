@@ -17,6 +17,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/termios"
 )
 
 const (
@@ -115,8 +116,17 @@ func main() {
 	cmd.Command("/init")
 	cmd.C.SysProcAttr.Chroot = tempDir
 	cmd.C.SysProcAttr.Cloneflags = cloneFlags
-	cmd.C.SysProcAttr.Unshareflags = cloneFlags
+	cmd.C.SysProcAttr.Unshareflags = unshareFlags
 	if *interactive {
+		t, err := termios.GetTermios(0)
+		if err != nil {
+			log.Fatal("Getting Termios")
+		}
+		defer func(t *termios.Termios) {
+			if err := termios.SetTermios(0, t); err != nil {
+				log.Print(err)
+			}
+		}(t)
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
 		}
@@ -129,8 +139,10 @@ func main() {
 
 	// At this point you could use an array of commands/output templates to
 	// drive the test, and end with the exit command shown nere.
-	if n, err := cmd.Ptm.Write([]byte("exit\n")); err != nil {
-		log.Printf("Writing exit: want (5, nil); got (%d, %v)\n", n, err)
+	for _, c := range []string{"date\n", "exit\n", "exit\n", "exit\n"} {
+		if _, err := cmd.Ptm.Write([]byte(c)); err != nil {
+			log.Printf("Writing %s: %v", c, err)
+		}
 	}
 	if err := cmd.Wait(); err != nil {
 		log.Fatal(err)

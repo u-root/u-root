@@ -19,6 +19,7 @@ package ibft
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 
 	"github.com/u-root/u-root/pkg/uio"
@@ -136,6 +137,45 @@ func (b BDF) marshal(h *heapTable) {
 	h.Table.Write16(uint16(uint16(b.Bus)<<8 | uint16(b.Device)<<3 | uint16(b.Function)))
 }
 
+// Origin is the source of network configuration; for example, DHCP or static
+// configuration.
+//
+// The spec links to a Microsoft.com 404 page. We got this info from
+// iPXE code, but most likely it refers to the NL_PREFIX_ORIGIN enumeration in
+// nldef.h, which can currently be found here
+// https://docs.microsoft.com/en-us/windows/win32/api/nldef/ne-nldef-nl_prefix_origin
+type Origin uint8
+
+// These values and descriptions were taken from the NL_PREFIX_ORIGIN
+// enumeration documentation for Windows.
+//
+// They can also be found in iPXE source at src/include/ipxe/ibft.h.
+const (
+	// OriginOther means the IP prefix was provided by a source other than
+	// those in this enumeration.
+	OriginOther Origin = 0
+
+	// OriginManual means the IP address prefix was manually specified.
+	OriginManual Origin = 1
+
+	// OriginWellKnown means the IP address prefix is from a well-known
+	// source.
+	OriginWellKnown Origin = 2
+
+	// OriginDHCP means the IP addrss prefix was provided by DHCP settings.
+	OriginDHCP Origin = 3
+
+	// OriginRA means the IP address prefix was obtained through a router
+	// advertisement (RA).
+	OriginRA Origin = 4
+
+	// OriginUnchanged menas the IP address prefix should be unchanged.
+	// This value is used when setting the properties for a unicast IP
+	// interface when the value for the IP prefix origin should be left
+	// unchanged.
+	OriginUnchanged Origin = 0xf
+)
+
 // NIC defines NIC network configuration such as IP, gateway, DNS.
 type NIC struct {
 	// Valid NIC.
@@ -150,10 +190,14 @@ type NIC struct {
 	// IPNet is the IP and subnet mask for this network interface.
 	IPNet *net.IPNet
 
-	// Origin. Nobody knows what this is. Nobody cares.
+	// Origin is the source of the IP address prefix.
 	//
-	// The spec links to a Microsoft.com 404 page. Yay.
-	Origin uint8
+	// It's hard to say what loaded operating systems do with this field.
+	//
+	// The Windows docs for NL_PREFIX_ORIGIN consider it the origin of only
+	// the IP address prefix. iPXE only ever sets the Manual and DHCP
+	// constants, even in all IPv6 cases where it came from RAs.
+	Origin Origin
 
 	// Gateway is the network gateway. The gateway must be within the IPNet.
 	Gateway net.IP
@@ -200,7 +244,7 @@ func (n *NIC) marshal(h *heapTable) {
 		h.Table.Write8(uint8(ones))
 	}
 
-	h.Table.Write8(n.Origin)
+	h.Table.Write8(uint8(n.Origin))
 
 	writeIP6(h.Table, n.Gateway)
 	writeIP6(h.Table, n.PrimaryDNS)
@@ -283,6 +327,11 @@ type IBFT struct {
 
 	// Target offset: 0x110
 	Target0 Target
+}
+
+// String is a short summary of the iBFT contents.
+func (i *IBFT) String() string {
+	return fmt.Sprintf("iBFT(iSCSI target=%s, IP=%s)", i.Target0.Target, i.NIC0.IPNet)
 }
 
 type heapTable struct {

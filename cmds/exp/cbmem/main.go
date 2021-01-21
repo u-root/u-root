@@ -113,7 +113,8 @@ func parseCBtable(r io.ReaderAt, address int64, sz int) (*CBmem, error) {
 				LB_TAG_COMPILE_DOMAIN,
 				LB_TAG_COMPILER,
 				LB_TAG_LINKER,
-				LB_TAG_ASSEMBLER:
+				LB_TAG_ASSEMBLER,
+				LB_TAG_PLATFORM_BLOB_VERSION:
 				s, err := bufio.NewReader(io.NewSectionReader(r, j, 65536)).ReadString(0)
 				if err != nil {
 					log.Fatalf("Trying to read string for %s: %v", n, err)

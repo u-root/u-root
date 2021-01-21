@@ -40,19 +40,23 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	)
 	switch code {
 	case OptionClientID:
-		opt, err = ParseOptClientId(optData)
+		opt, err = parseOptClientID(optData)
 	case OptionServerID:
-		opt, err = ParseOptServerId(optData)
+		opt, err = parseOptServerID(optData)
 	case OptionIANA:
 		opt, err = ParseOptIANA(optData)
+	case OptionIATA:
+		opt, err = ParseOptIATA(optData)
 	case OptionIAAddr:
 		opt, err = ParseOptIAAddress(optData)
 	case OptionORO:
-		opt, err = ParseOptRequestedOption(optData)
+		var o optRequestedOption
+		err = o.FromBytes(optData)
+		opt = &o
 	case OptionElapsedTime:
-		opt, err = ParseOptElapsedTime(optData)
+		opt, err = parseOptElapsedTime(optData)
 	case OptionRelayMsg:
-		opt, err = ParseOptRelayMsg(optData)
+		opt, err = parseOptRelayMsg(optData)
 	case OptionStatusCode:
 		opt, err = ParseOptStatusCode(optData)
 	case OptionUserClass:
@@ -62,25 +66,37 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 	case OptionVendorOpts:
 		opt, err = ParseOptVendorOpts(optData)
 	case OptionInterfaceID:
-		opt, err = ParseOptInterfaceId(optData)
+		opt, err = parseOptInterfaceID(optData)
 	case OptionDNSRecursiveNameServer:
-		opt, err = ParseOptDNSRecursiveNameServer(optData)
+		opt, err = parseOptDNS(optData)
 	case OptionDomainSearchList:
-		opt, err = ParseOptDomainSearchList(optData)
+		opt, err = parseOptDomainSearchList(optData)
 	case OptionIAPD:
-		opt, err = ParseOptIAForPrefixDelegation(optData)
+		opt, err = ParseOptIAPD(optData)
 	case OptionIAPrefix:
 		opt, err = ParseOptIAPrefix(optData)
+	case OptionInformationRefreshTime:
+		opt, err = parseOptInformationRefreshTime(optData)
 	case OptionRemoteID:
-		opt, err = ParseOptRemoteId(optData)
+		opt, err = ParseOptRemoteID(optData)
+	case OptionFQDN:
+		opt, err = ParseOptFQDN(optData)
 	case OptionBootfileURL:
-		opt, err = ParseOptBootFileURL(optData)
+		opt, err = parseOptBootFileURL(optData)
 	case OptionBootfileParam:
-		opt, err = ParseOptBootFileParam(optData)
+		opt, err = parseOptBootFileParam(optData)
 	case OptionClientArchType:
-		opt, err = ParseOptClientArchType(optData)
+		opt, err = parseOptClientArchType(optData)
 	case OptionNII:
-		opt, err = ParseOptNetworkInterfaceId(optData)
+		var o OptNetworkInterfaceID
+		err = o.FromBytes(optData)
+		opt = &o
+	case OptionClientLinkLayerAddr:
+		opt, err = parseOptClientLinkLayerAddress(optData)
+	case OptionDHCPv4Msg:
+		opt, err = ParseOptDHCPv4Msg(optData)
+	case OptionDHCP4oDHCP6Server:
+		opt, err = ParseOptDHCP4oDHCP6Server(optData)
 	case Option4RD:
 		opt, err = ParseOpt4RD(optData)
 	case Option4RDMapRule:

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Setup loop devices.
+// losetup sets up and controls loop devices.
 //
 // Synopsis:
 //     losetup [-Ad] FILE
@@ -18,7 +18,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/u-root/u-root/pkg/loop"
+	"github.com/u-root/u-root/pkg/mount/loop"
 )
 
 var (

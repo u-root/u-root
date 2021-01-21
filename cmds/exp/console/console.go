@@ -1,4 +1,4 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,7 +7,7 @@
 // being just stdin and stdout. It will also set up a root file system
 // using util.Rootfs, although this can be disabled as well.
 // Console uses a Go version of fork_pty to start up a shell, default
-// /ubin/elvish. Console runs until the shell exits and then exits itself.
+// sh. Console runs until the shell exits and then exits itself.
 package main
 
 import (
@@ -23,7 +23,7 @@ import (
 
 var (
 	serial    = flag.String("serial", "0x3f8", "which IO device: stdio, i8042, or serial port starting with 0")
-	setupRoot = flag.Bool("setuproot", true, "Set up a root file system")
+	setupRoot = flag.Bool("setuproot", false, "Set up a root file system")
 )
 
 func main() {
@@ -32,12 +32,12 @@ func main() {
 
 	a := flag.Args()
 	if len(a) == 0 {
-		a = []string{"/ubin/elvish"}
+		a = []string{"/bin/sh"}
 	}
 
 	p, err := pty.New()
 	if err != nil {
-		log.Fatalf("Can't open pty: %v", err)
+		log.Fatalf("Console exits: can't open pty: %v", err)
 	}
 	p.Command(a[0], a[1:]...)
 	// Make a good faith effort to set up root. This being
@@ -47,32 +47,15 @@ func main() {
 		libinit.CreateRootfs()
 	}
 
-	in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)
+	in, out, err := console(*serial)
 
-	// This switch is kind of hokey, true, but it's also quite convenient for users.
-	switch {
-	// A raw IO port for serial console
-	case []byte(*serial)[0] == '0':
-		u, err := openUART(*serial)
-		if err != nil {
-			log.Fatalf("Sorry, can't get a uart: %v", err)
-		}
-		in, out = u, u
-	case *serial == "i8042":
-		u, err := openi8042()
-		if err != nil {
-			log.Fatalf("Sorry, can't get an i8042: %v", err)
-		}
-		in, out = u, os.Stdout
-	case *serial == "stdio":
-	default:
-		log.Fatalf("console must be one of stdio, i8042, or an IO port with a leading 0 (e.g. 0x3f8)")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	err = p.Start()
 	if err != nil {
-		fmt.Printf("Can't start %v: %v", a, err)
-		os.Exit(1)
+		log.Fatalf("Console exits: can't start %v: %v", a, err)
 	}
 	kid := p.C.Process.Pid
 
@@ -101,7 +84,8 @@ func main() {
 	}()
 
 	if err := p.Wait(); err != nil {
-		log.Fatalf("%v", err)
+		log.Fatalf("Console exits: %v", err)
 	}
+	log.Printf("Console all done")
 	os.Exit(0)
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Print or set the system's hostname.
+// hostname prints or changes the system's hostname.
 //
 // Synopsis:
 //     hostname [HOSTNAME]
@@ -15,26 +15,22 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"golang.org/x/sys/unix"
 )
 
 func main() {
-	if len(os.Args) == 2 {
-		newHostname := os.Args[1]
-
-		err := unix.Sethostname([]byte(newHostname))
-		if err != nil {
+	a := os.Args
+	switch len(a) {
+	case 2:
+		if err := Sethostname(a[1]); err != nil {
 			log.Fatalf("could not set hostname: %v", err)
 		}
-	} else if len(os.Args) == 1 {
+	case 1:
 		hostname, err := os.Hostname()
 		if err != nil {
 			log.Fatalf("could not obtain hostname: %v", err)
 		}
-
 		fmt.Println(hostname)
-	} else {
+	default:
 		log.Fatalf("usage: hostname [HOSTNAME]")
 	}
 }

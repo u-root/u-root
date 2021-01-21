@@ -35,13 +35,29 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/gpt"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/gpt"
+	"github.com/u-root/u-root/pkg/uio"
 )
+
+func partNo(device string, number int) (string, error) {
+	var name string
+	if unicode.IsDigit(rune(device[len(device)-1])) {
+		name = fmt.Sprintf("%sp%d", device, number)
+	} else {
+		name = fmt.Sprintf("%s%d", device, number)
+	}
+	if _, err := os.Stat(name); err != nil {
+		return "", err
+	}
+	return name, nil
+}
 
 // LoadDisk loads the right ESXi multiboot kernel from partitions 5 or 6 of the
 // given device.
@@ -53,13 +69,28 @@ import (
 // may not be valid.
 //
 // device5 and device6 will be mounted at temporary directories.
-func LoadDisk(device string) ([]*boot.MultibootImage, error) {
-	opts5, err5 := mountPartition(fmt.Sprintf("%s5", device))
-	opts6, err6 := mountPartition(fmt.Sprintf("%s6", device))
+func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error) {
+	opts5, mp5, err5 := mountPartition(device, 5)
+	opts6, mp6, err6 := mountPartition(device, 6)
 	if err5 != nil && err6 != nil {
-		return nil, fmt.Errorf("could not mount or read either partition 5 (%v) or partition 6 (%v)", err5, err6)
+		return nil, nil, fmt.Errorf("could not mount or read either partition 5 (%v) or partition 6 (%v)", err5, err6)
 	}
-	return getImages(device, opts5, opts6)
+	var mps []*mount.MountPoint
+	if mp5 != nil {
+		mps = append(mps, mp5)
+	}
+	if mp6 != nil {
+		mps = append(mps, mp6)
+	}
+
+	imgs, err := getImages(device, opts5, opts6)
+	if err != nil {
+		for _, mp := range mps {
+			mp.Unmount(mount.MNT_DETACH)
+		}
+		return nil, nil, err
+	}
+	return imgs, mps, nil
 }
 
 func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, error) {
@@ -68,10 +99,10 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 		err5, err6 error
 	)
 	if opts5 != nil {
-		img5, err5 = getBootImage(*opts5, device, 5)
+		img5, err5 = getBootImage(*opts5, device, 5, fmt.Sprintf("%s%d", device, 5))
 	}
 	if opts6 != nil {
-		img6, err6 = getBootImage(*opts6, device, 6)
+		img6, err6 = getBootImage(*opts6, device, 6, fmt.Sprintf("%s%d", device, 6))
 	}
 	if img5 == nil && img6 == nil {
 		return nil, fmt.Errorf("could not read boot configs on partition 5 (%v) or partition 6 (%v)", err5, err6)
@@ -91,16 +122,30 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 // LoadCDROM loads an ESXi multiboot kernel from a CDROM at device.
 //
 // device will be mounted at mountPoint.
-func LoadCDROM(device string) (*boot.MultibootImage, error) {
+func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 	mountPoint, err := ioutil.TempDir("", "esxi-mount-")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if _, err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
-		return nil, err
+	mp, err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME)
+	if err != nil {
+		os.RemoveAll(mountPoint)
+		return nil, nil, err
 	}
-	// Don't pass the device to ESXi. It doesn't need it.
-	return LoadConfig(filepath.Join(mountPoint, "boot.cfg"))
+
+	opts, err := parse(filepath.Join(mountPoint, "boot.cfg"))
+	if err != nil {
+		mp.Unmount(mount.MNT_DETACH)
+		os.RemoveAll(mountPoint)
+		return nil, nil, fmt.Errorf("cannot parse config from %s: %v", device, err)
+	}
+	img, err := getBootImage(opts, "", 0, device)
+	if err != nil {
+		mp.Unmount(mount.MNT_DETACH)
+		os.RemoveAll(mountPoint)
+		return nil, nil, err
+	}
+	return img, mp, nil
 }
 
 // LoadConfig loads an ESXi configuration from configFile.
@@ -109,28 +154,51 @@ func LoadConfig(configFile string) (*boot.MultibootImage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
 	}
-	return getBootImage(opts, "", 0)
+	return getBootImage(opts, "", 0, fmt.Sprintf("config file %s", configFile))
 }
 
-func mountPartition(dev string) (*options, error) {
+func mountPartition(parentdev string, partition int) (*options, *mount.MountPoint, error) {
+	dev, err := partNo(parentdev, partition)
+	if err != nil {
+		return nil, nil, err
+	}
 	base := filepath.Base(dev)
 	mountPoint, err := ioutil.TempDir("", fmt.Sprintf("%s-", base))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if _, err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME); err != nil {
-		return nil, err
+	mp, err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME)
+	if err != nil {
+		os.RemoveAll(mountPoint)
+		return nil, nil, err
 	}
 
 	configFile := filepath.Join(mountPoint, "boot.cfg")
 	opts, err := parse(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
+		mp.Unmount(mount.MNT_DETACH)
+		os.RemoveAll(mountPoint)
+		return nil, nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
 	}
-	return &opts, nil
+	return &opts, mp, nil
 }
 
-func getBootImage(opts options, device string, partition int) (*boot.MultibootImage, error) {
+// lazyOpenModules assigns modules to be opened as files.
+//
+// Each module is a path followed by optional command-line arguments, e.g.
+// []string{"./module arg1 arg2", "./module2 arg3 arg4"}.
+func lazyOpenModules(mods []module) multiboot.Modules {
+	modules := make([]multiboot.Module, 0, len(mods))
+	for _, m := range mods {
+		modules = append(modules, multiboot.Module{
+			Cmdline: m.cmdline,
+			Module:  uio.NewLazyFile(m.path),
+		})
+	}
+	return modules
+}
+
+func getBootImage(opts options, device string, partition int, name string) (*boot.MultibootImage, error) {
 	// Only valid and upgrading are bootable partitions.
 	//
 	// We are supposed to support the following two state transitions (only
@@ -153,17 +221,25 @@ func getBootImage(opts options, device string, partition int) (*boot.MultibootIm
 			return nil, fmt.Errorf("cannot add boot uuid of %s: %v", device, err)
 		}
 	}
+
 	return &boot.MultibootImage{
-		Path:    opts.kernel,
+		Name:    fmt.Sprintf("%s from %s", opts.title, name),
+		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,
-		Modules: opts.modules,
+		Modules: lazyOpenModules(opts.modules),
 	}, nil
 }
 
+type module struct {
+	path    string
+	cmdline string
+}
+
 type options struct {
+	title     string
 	kernel    string
 	args      string
-	modules   []string
+	modules   []module
 	updated   int
 	bootstate bootstate
 }
@@ -188,7 +264,12 @@ func getUUID(device string, partition int) (string, error) {
 		return "", err
 	}
 
-	f, err := os.Open(fmt.Sprintf("%s%d", device, partition))
+	dev, err := partNo(device, partition)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := os.Open(dev)
 	if err != nil {
 		return "", err
 	}
@@ -246,6 +327,7 @@ func parse(configFile string) (options, error) {
 	//
 	// see esx-boot/bootlib/parse.c:parse_config_file.
 	opt := options{
+		title: "VMware ESXi",
 		// Default value taken from
 		// esx-boot/safeboot/bootbank.c:bank_scan.
 		bootstate: bootInvalid,
@@ -267,10 +349,26 @@ func parse(configFile string) (options, error) {
 		key := strings.TrimSpace(tokens[0])
 		val := strings.TrimSpace(tokens[1])
 		switch key {
+		case "title":
+			opt.title = val
+
 		case "kernel":
 			opt.kernel = filepath.Join(dir, val)
+
+			// The kernel cmdline is expected to have the filename
+			// first, as in cmdlines[0] here:
+			// https://github.com/vmware/esx-boot/blob/1380fc86cffdfb83448e2913ae11f6b7f248cf23/mboot/mutiboot.c#L870
+			//
+			// Note that the kernel is module 0 in the esx-boot
+			// code base, but it doesn't get loaded like that into
+			// the info structure; see -- so don't panic like I did
+			// when you read that!
+			// https://github.com/vmware/esx-boot/blob/1380fc86cffdfb83448e2913ae11f6b7f248cf23/mboot/mutiboot.c#L578
+			opt.args = val + " " + opt.args
+
 		case "kernelopt":
-			opt.args = val
+			opt.args += val
+
 		case "updated":
 			if len(val) == 0 {
 				// Explicitly setting to 0, as in
@@ -309,8 +407,10 @@ func parse(configFile string) (options, error) {
 				tok = strings.TrimSpace(tok)
 				if len(tok) > 0 {
 					entry := strings.Fields(tok)
-					entry[0] = filepath.Join(dir, entry[0])
-					opt.modules = append(opt.modules, strings.Join(entry, " "))
+					opt.modules = append(opt.modules, module{
+						path:    filepath.Join(dir, entry[0]),
+						cmdline: tok,
+					})
 				}
 			}
 		}

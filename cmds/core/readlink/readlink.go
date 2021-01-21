@@ -9,8 +9,8 @@
 //
 // Options:
 //     -f: follow
+//     -n: nonewline
 //     -v: verbose
-//
 package main
 
 import (
@@ -20,11 +20,13 @@ import (
 	"path/filepath"
 )
 
-const cmd = "readlink [-fv] FILE"
+const cmd = "readlink [-fnv] FILE"
 
 var (
-	follow  = flag.Bool("f", false, "follow recursively")
-	verbose = flag.Bool("v", false, "report error messages")
+	delimiter = "\n"
+	follow    = flag.Bool("f", false, "follow recursively")
+	nonewline = flag.Bool("n", false, "do not output trailing newline")
+	verbose   = flag.Bool("v", false, "report error messages")
 )
 
 func init() {
@@ -33,7 +35,6 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.Parse()
 }
 
 func readLink(file string) error {
@@ -46,11 +47,17 @@ func readLink(file string) error {
 		path, err = filepath.EvalSymlinks(file)
 	}
 
-	fmt.Printf("%s\n", path)
+	if *nonewline {
+		delimiter = ""
+	}
+
+	fmt.Printf("%s%s", path, delimiter)
 	return err
 }
 
 func main() {
+	flag.Parse()
+
 	var exitStatus int
 
 	for _, file := range flag.Args() {

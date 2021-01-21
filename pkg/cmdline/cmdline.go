@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/u-root/u-root/pkg/shlex"
 )
 
 // CmdLine lets people view the raw & parsed /proc/cmdline in one place
@@ -164,5 +166,25 @@ func GetInitFlagMap() map[string]string {
 // GetUinitArgs gets the uinit argvs.
 func GetUinitArgs() []string {
 	uinitargs, _ := Flag("uroot.uinitargs")
-	return strings.Fields(uinitargs)
+	return shlex.Argv(uinitargs)
+}
+
+// FlagsForModule gets all flags for a designated module
+// and returns them as a space-seperated string designed to be passed to insmod
+// Note that similarly to flags, module names with - and _ are treated the same.
+func FlagsForModule(name string) string {
+	once.Do(cmdLineOpener)
+	var ret string
+	flagsAdded := make(map[string]bool) // Ensures duplicate flags aren't both added
+	// Module flags come as moduleName.flag in /proc/cmdline
+	prefix := strings.Replace(name, "-", "_", -1) + "."
+	for flag, val := range procCmdLine.AsMap {
+		canonicalFlag := strings.Replace(flag, "-", "_", -1)
+		if !flagsAdded[canonicalFlag] && strings.HasPrefix(canonicalFlag, prefix) {
+			flagsAdded[canonicalFlag] = true
+			// They are passed to insmod space seperated as flag=val
+			ret += strings.TrimPrefix(canonicalFlag, prefix) + "=" + val + " "
+		}
+	}
+	return ret
 }

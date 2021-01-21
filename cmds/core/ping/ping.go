@@ -14,6 +14,7 @@
 //     -i: interval in milliseconds (default: 1000)
 //     -V: version
 //     -w: wait time in milliseconds (default: 100)
+//     -a: Audible rings a bell when a packet is received
 //     -h: help
 package main
 
@@ -34,13 +35,19 @@ var (
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
+	audible    = flag.Bool("a", false, "Audible rings a bell when a packet is received")
 )
 
 const (
 	ICMP_TYPE_ECHO_REQUEST             = 8
 	ICMP_TYPE_ECHO_REPLY               = 0
 	ICMP_ECHO_REPLY_HEADER_IPV4_OFFSET = 20
-	ICMP_ECHO_REPLY_HEADER_IPV6_OFFSET = 40
+)
+
+const (
+	ICMP6_TYPE_ECHO_REQUEST             = 128
+	ICMP6_TYPE_ECHO_REPLY               = 129
+	ICMP6_ECHO_REPLY_HEADER_IPV6_OFFSET = 40
 )
 
 func usage() {
@@ -80,18 +87,33 @@ func cksum(bs []byte) uint16 {
 	return ^uint16(sum)
 }
 
-func ping1(netname string, host string, i uint64) (string, error) {
+func ping1(net6 bool, host string, i uint64, waitFor time.Duration) (string, error) {
+	netname := "ip4:icmp"
+	// todo: just figure out if it's an ip6 address and go from there.
+	if net6 {
+		netname = "ip6:ipv6-icmp"
+	}
 	c, derr := net.Dial(netname, host)
 	if derr != nil {
 		return "", fmt.Errorf("net.Dial(%v %v) failed: %v", netname, host, derr)
 	}
 	defer c.Close()
 
+	if net6 {
+		ipc := c.(*net.IPConn)
+		if err := setupICMPv6Socket(ipc); err != nil {
+			return "", fmt.Errorf("failed to set up the ICMPv6 connection: %w", err)
+		}
+	}
+
 	// Send ICMP Echo Request
-	waitFor := time.Duration(*wtf) * time.Millisecond
 	c.SetDeadline(time.Now().Add(waitFor))
 	msg := make([]byte, *packetSize)
-	msg[0] = ICMP_TYPE_ECHO_REQUEST
+	if net6 {
+		msg[0] = ICMP6_TYPE_ECHO_REQUEST
+	} else {
+		msg[0] = ICMP_TYPE_ECHO_REQUEST
+	}
 	msg[1] = 0
 	binary.BigEndian.PutUint16(msg[6:], uint16(i))
 	binary.BigEndian.PutUint16(msg[4:], uint16(i>>16))
@@ -109,17 +131,23 @@ func ping1(netname string, host string, i uint64) (string, error) {
 		return "", fmt.Errorf("read failed: %v", rerr)
 	}
 	latency := time.Since(before)
-	if (rmsg[0] & 0x0F) == 6 {
-		rmsg = rmsg[ICMP_ECHO_REPLY_HEADER_IPV6_OFFSET:]
-	} else {
+	if !net6 {
 		rmsg = rmsg[ICMP_ECHO_REPLY_HEADER_IPV4_OFFSET:]
 	}
-	if rmsg[0] != ICMP_TYPE_ECHO_REPLY {
-		return "", fmt.Errorf("bad ICMP echo reply type: %v", msg[0])
+	if net6 {
+		if rmsg[0] != ICMP6_TYPE_ECHO_REPLY {
+			return "", fmt.Errorf("bad ICMPv6 echo reply type, got %d, want %d", rmsg[0], ICMP6_TYPE_ECHO_REPLY)
+		}
+	} else {
+		if rmsg[0] != ICMP_TYPE_ECHO_REPLY {
+			return "", fmt.Errorf("bad ICMP echo reply type, got %d, want %d", rmsg[0], ICMP_TYPE_ECHO_REPLY)
+		}
 	}
 	cks := binary.BigEndian.Uint16(rmsg[2:])
 	binary.BigEndian.PutUint16(rmsg[2:], 0)
-	if cks != cksum(rmsg) {
+	// only validate the checksum for IPv4. For IPv6 this *should* be done by the
+	// TCP stack (and do we need to validate the checksum anyway?)
+	if !net6 && cks != cksum(rmsg) {
 		return "", fmt.Errorf("bad ICMP checksum: %v (expected %v)", cks, cksum(rmsg))
 	}
 	id := binary.BigEndian.Uint16(rmsg[4:])
@@ -143,20 +171,19 @@ func main() {
 		log.Fatalf("packet size too small (must be >= 8): %v", *packetSize)
 	}
 
-	netname := "ip4:icmp"
 	interval := time.Duration(*intv)
 	host := flag.Args()[0]
-	// todo: just figure out if it's an ip6 address and go from there.
-	if *net6 {
-		netname = "ip6:ipv6-icmp"
-	}
 
 	// ping needs to run forever, except if '*iter' is not zero
+	waitFor := time.Duration(*wtf) * time.Millisecond
 	var i uint64
-	for i = 1; *iter == 0 || i < *iter; i++ {
-		msg, err := ping1(netname, host, i)
+	for i = 1; *iter == 0 || i <= *iter; i++ {
+		msg, err := ping1(*net6, host, i, waitFor)
 		if err != nil {
 			log.Fatalf("ping failed: %v", err)
+		}
+		if *audible {
+			msg = "\a" + msg
 		}
 		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)

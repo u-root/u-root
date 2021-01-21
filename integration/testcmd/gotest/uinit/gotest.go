@@ -39,6 +39,7 @@ func main() {
 	if err := os.MkdirAll("/testdata", 0755); err != nil {
 		log.Fatalf("Couldn't create testdata: %v", err)
 	}
+
 	var (
 		mp  *mount.MountPoint
 		err error

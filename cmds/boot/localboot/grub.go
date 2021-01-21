@@ -17,8 +17,8 @@ import (
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/u-root/u-root/pkg/bootconfig"
-	"github.com/u-root/u-root/pkg/storage"
+	"github.com/u-root/u-root/pkg/boot/jsonboot"
+	"github.com/u-root/u-root/pkg/mount/block"
 )
 
 // List of directories where to recursively look for grub config files. The root dorectory
@@ -59,7 +59,7 @@ func isGrubSearchDir(dirname string) bool {
 // BootConfig structures, one for each menuentry, in the same order as they
 // appear in grub.cfg. All opened kernel and initrd files are relative to
 // basedir.
-func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, basedir string) []bootconfig.BootConfig {
+func ParseGrubCfg(ver grubVersion, devices block.BlockDevices, grubcfg string, basedir string) []jsonboot.BootConfig {
 	// This parser sucks. It's not even a parser, it just looks for lines
 	// starting with menuentry, linux or initrd.
 	// TODO use a parser, e.g. https://github.com/alecthomas/participle
@@ -68,9 +68,9 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 		return nil
 	}
 	kernelBasedir := basedir
-	bootconfigs := make([]bootconfig.BootConfig, 0)
+	bootconfigs := make([]jsonboot.BootConfig, 0)
 	inMenuEntry := false
-	var cfg *bootconfig.BootConfig
+	var cfg *jsonboot.BootConfig
 	for _, line := range strings.Split(grubcfg, "\n") {
 		// remove all leading spaces as they are not relevant for the config
 		// line
@@ -92,7 +92,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 				kernelBasedir = basedir
 			}
 			inMenuEntry = true
-			cfg = new(bootconfig.BootConfig)
+			cfg = new(jsonboot.BootConfig)
 			name := ""
 			if len(sline) > 1 {
 				name = strings.Join(sline[1:], " ")
@@ -111,7 +111,7 @@ func ParseGrubCfg(ver grubVersion, devices []storage.BlockDev, grubcfg string, b
 							if isValidFsUUID(str2) {
 								kernelFsUUID := str2
 								log.Printf("fs-uuid: %s", kernelFsUUID)
-								partitions := storage.PartitionsByFsUUID(devices, kernelFsUUID)
+								partitions := devices.FilterFSUUID(kernelFsUUID)
 								if len(partitions) == 0 {
 									log.Printf("WARNING: No partition found with filesystem UUID:'%s' to load kernel from!", kernelFsUUID) // TODO throw error ?
 									continue
@@ -191,8 +191,8 @@ func isMn(r rune) bool {
 
 // ScanGrubConfigs looks for grub2 and grub legacy config files in the known
 // locations and returns a list of boot configurations.
-func ScanGrubConfigs(devices []storage.BlockDev, basedir string) []bootconfig.BootConfig {
-	bootconfigs := make([]bootconfig.BootConfig, 0)
+func ScanGrubConfigs(devices block.BlockDevices, basedir string) []jsonboot.BootConfig {
+	bootconfigs := make([]jsonboot.BootConfig, 0)
 	err := filepath.Walk(basedir, func(currentPath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

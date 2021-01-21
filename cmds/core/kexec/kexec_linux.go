@@ -19,7 +19,9 @@
 package main
 
 import (
+	"io"
 	"log"
+	"os"
 
 	flag "github.com/spf13/pflag"
 
@@ -42,13 +44,15 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Set the kernel command line")
+	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
+	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
+	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
-	flag.StringArrayVar(&o.modules, "module", nil, `Load module with command line args (e.g --module="mod arg1")`)
+	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 	return o
 }
 
@@ -83,17 +87,26 @@ func main() {
 
 	if opts.load {
 		kernelpath := flag.Arg(0)
+		mbkernel, err := os.Open(kernelpath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer mbkernel.Close()
 		var image boot.OSImage
-		if err := multiboot.Probe(kernelpath); err == nil {
+		if err := multiboot.Probe(mbkernel); err == nil {
 			image = &boot.MultibootImage{
-				Modules: opts.modules,
-				Path:    kernelpath,
+				Modules: multiboot.LazyOpenModules(opts.modules),
+				Kernel:  mbkernel,
 				Cmdline: newCmdline,
 			}
 		} else {
+			var i io.ReaderAt
+			if opts.initramfs != "" {
+				i = uio.NewLazyFile(opts.initramfs)
+			}
 			image = &boot.LinuxImage{
 				Kernel:  uio.NewLazyFile(kernelpath),
-				Initrd:  uio.NewLazyFile(opts.initramfs),
+				Initrd:  i,
 				Cmdline: newCmdline,
 			}
 		}

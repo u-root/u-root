@@ -16,12 +16,27 @@ func ExampleIn() {
 	if err := In(0x3f8, &data); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%v\n", data)
+	fmt.Println(data)
 }
 
 func ExampleOut() {
 	data := Uint8('A')
 	if err := Out(0x3f8, &data); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ExampleArchIn() {
+	var data Uint8
+	if err := In(0x80, &data); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(data)
+}
+
+func ExampleArchOut() {
+	data := Uint8('A')
+	if err := Out(0x80, &data); err != nil {
 		log.Fatal(err)
 	}
 }

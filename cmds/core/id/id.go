@@ -2,17 +2,22 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !plan9
+
+// id displays the user id, group id, and groups of the calling process.
+//
 // Synopsis:
 //      id [-gGnu]
 //
 // Description:
-//      id displays the uid, guid and groups of the calling process
+//      id displays the uid, gid and groups of the calling process
+//
 // Options:
-//  	  -g, --group     print only the effective group ID
-//		  -G, --groups    print all group IDs
-//		  -n, --name      print a name instead of a number, for -ugG
-//		  -u, --user      print only the effective user ID
-//		  -r, --user      print real ID instead of effective ID
+//	-g, --group     print only the effective group ID
+//	-G, --groups    print all group IDs
+//	-n, --name      print a name instead of a number, for -ugG
+//	-u, --user      print only the effective user ID
+//	-r, --user      print real ID instead of effective ID
 package main
 
 import (

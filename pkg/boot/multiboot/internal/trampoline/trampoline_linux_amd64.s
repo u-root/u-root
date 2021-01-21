@@ -16,8 +16,6 @@
 #define DATA_SEGMENT	0x00CF92000000FFFF
 #define CODE_SEGMENT	0x00CF9A000000FFFF
 
-#define MAGIC	0x2BADB002
-
 TEXT ·start(SB),NOSPLIT,$0
 	// Create GDT pointer on stack.
 	LEAQ	gdt(SB), CX
@@ -29,7 +27,11 @@ TEXT ·start(SB),NOSPLIT,$0
 
 	// Store value of multiboot info addr in BX.
 	// Don't modify BX.
-	MOVL	info(SB), BX
+	MOVL	·info(SB), BX
+
+	// Store value of mu(l)tiboot magic in SI.
+	// Don't modify SI.
+	MOVL	·magic(SB), SI
 
 	// Far return doesn't work on QEMU in 64-bit mode,
 	// let's do far jump.
@@ -45,7 +47,7 @@ TEXT ·start(SB),NOSPLIT,$0
 	//
 	// Setup offset to make a far jump from boot(SB)
 	// to a final kernel in a 32-bit mode.
-	MOVL	entry(SB), AX
+	MOVL	·entry(SB), AX
 	MOVL	AX, farjump32+1(SB)
 
 	// Setup offset to make a far jump to boot(SB)
@@ -84,14 +86,9 @@ TEXT boot(SB),NOSPLIT,$0
 	BYTE	$0x8e; BYTE $0xe0 // MOVL AX, FS
 	BYTE	$0x8e; BYTE $0xe8 // MOVL AX, GS
 
-	MOVL	$MAGIC, AX
+	// We stored the magic in SI before the far jump.
+	MOVL	SI, AX
 	JMP	farjump32(SB)
-
-	// Unreachable code.
-	// Need reference text labels for compiler to
-	// include them to a binary.
-	JMP	infotext(SB)
-	JMP	entrytext(SB)
 
 TEXT farjump64(SB),NOSPLIT,$0
 	BYTE	$0xFF; BYTE $0x2D; LONG $0x0 // ljmp *(ip)
@@ -111,22 +108,13 @@ TEXT gdt(SB),NOSPLIT,$0
 	QUAD	$DATA_SEGMENT	// 0x10
 	QUAD	$CODE_SEGMENT	// 0x18
 
-TEXT infotext(SB),NOSPLIT,$0
-	// u-root-info-long
-	BYTE $'u'; BYTE $'-'; BYTE $'r'; BYTE $'o'; BYTE $'o';
-	BYTE $'t'; BYTE $'-'; BYTE $'i'; BYTE $'n'; BYTE $'f';
-	BYTE $'o'; BYTE $'-'; BYTE $'l'; BYTE $'o'; BYTE $'n';
-	BYTE $'g';
-TEXT info(SB),NOSPLIT,$0
+TEXT ·info(SB),NOSPLIT,$0
 	LONG	$0x0
 
-TEXT entrytext(SB),NOSPLIT,$0
-	// u-root-entry-long
-	BYTE $'u'; BYTE $'-'; BYTE $'r'; BYTE $'o'; BYTE $'o';
-	BYTE $'t'; BYTE $'-'; BYTE $'e'; BYTE $'n'; BYTE $'t';
-	BYTE $'r'; BYTE $'y'; BYTE $'-'; BYTE $'l'; BYTE $'o';
-	BYTE $'n'; BYTE $'g';
-TEXT entry(SB),NOSPLIT,$0
+TEXT ·entry(SB),NOSPLIT,$0
+	LONG	$0x0
+
+TEXT ·magic(SB),NOSPLIT,$0
 	LONG	$0x0
 
 TEXT ·end(SB),NOSPLIT,$0

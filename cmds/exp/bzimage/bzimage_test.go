@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/bzimage"
+	"github.com/u-root/u-root/pkg/boot/bzimage"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -54,7 +54,7 @@ var (
 			SetupSects:          0x1e,
 			RootFlags:           0x01,
 			Syssize:             0xb51d,
-			RamSize:             0x00,
+			RAMSize:             0x00,
 			Vidmode:             0xffff,
 			RootDev:             0x00,
 			Bootsectormagic:     0xaa55,
@@ -68,8 +68,8 @@ var (
 			Loadflags:           0x01,
 			Setupmovesize:       0x8000,
 			Code32Start:         0x100000,
-			RamDiskImage:        0x00,
-			RamDiskSize:         0x00,
+			RamdiskImage:        0x00,
+			RamdiskSize:         0x00,
 			BootSectKludge:      [4]uint8{},
 			Heapendptr:          0x5320,
 			ExtLoaderVer:        0x00,
@@ -139,7 +139,7 @@ func TestSimple(t *testing.T) {
 			args:   []string{"dump", "bzImage"},
 			name:   "dump",
 			status: 0,
-			out:    "MBRCode:0xea0500c0078cc88ed88ec08ed031e4fbfcbe2d00ac20c07409b40ebb0700cd10ebf231c0cd16cd19eaf0ff00f0557365206120626f6f74206c6f616465722e0d0a0a52656d6f7665206469736b20616e6420707265737320616e79206b657920746f207265626f6f742e2e2e0d0a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nExtRamdiskImage:0x00\nExtRamdiskSize:0x00\nExtCmdlinePtr:0x00\nO:0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ffff\nSetupSects:0x1e\nRootFlags:0x01\nSyssize:0xb51d\nRamSize:0x00\nVidmode:0xffff\nRootDev:0x00\nBootsectormagic:0xaa55\nJump:0x66eb\nHeaderMagic:0x48647253\nProtocolversion:0x20d\nRealModeSwitch:0x00\nStartSys:0x1000\nKveraddr:0x3140\nTypeOfLoader:0x00\nLoadflags:0x01\nSetupmovesize:0x8000\nCode32Start:0x100000\nRamDiskImage:0x00\nRamDiskSize:0x00\nBootSectKludge:0x00000000\nHeapendptr:0x5320\nExtLoaderVer:0x00\nExtLoaderType:0x00\nCmdlineptr:0x00\nInitrdAddrMax:0x7fffffff\nKernelalignment:0x200000\nRelocatableKernel:0x00\nMinAlignment:0x15\nXLoadFlags:0x01\nCmdLineSize:0x7ff\nHardwareSubArch:0x00\nHardwareSubArchData:0x00\nPayloadOffset:0x255\nPayloadSize:0x9532c\nSetupData:0x00\nPrefAddress:0x1000000\nInitSize:0x6e0000\nHandoverOffset:0x00\n",
+			out:    "MBRCode:0xea0500c0078cc88ed88ec08ed031e4fbfcbe2d00ac20c07409b40ebb0700cd10ebf231c0cd16cd19eaf0ff00f0557365206120626f6f74206c6f616465722e0d0a0a52656d6f7665206469736b20616e6420707265737320616e79206b657920746f207265626f6f742e2e2e0d0a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nExtRamdiskImage:0x00\nExtRamdiskSize:0x00\nExtCmdlinePtr:0x00\nO:0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ffff\nSetupSects:0x1e\nRootFlags:0x01\nSyssize:0xb51d\nRAMSize:0x00\nVidmode:0xffff\nRootDev:0x00\nBootsectormagic:0xaa55\nJump:0x66eb\nHeaderMagic:0x48647253\nProtocolversion:0x20d\nRealModeSwitch:0x00\nStartSys:0x1000\nKveraddr:0x3140\nTypeOfLoader:0x00\nLoadflags:0x01\nSetupmovesize:0x8000\nCode32Start:0x100000\nRamdiskImage:0x00\nRamdiskSize:0x00\nBootSectKludge:0x00000000\nHeapendptr:0x5320\nExtLoaderVer:0x00\nExtLoaderType:0x00\nCmdlineptr:0x00\nInitrdAddrMax:0x7fffffff\nKernelalignment:0x200000\nRelocatableKernel:0x00\nMinAlignment:0x15\nXLoadFlags:0x01\nCmdLineSize:0x7ff\nHardwareSubArch:0x00\nHardwareSubArchData:0x00\nPayloadOffset:0x255\nPayloadSize:0x9532c\nSetupData:0x00\nPrefAddress:0x1000000\nInitSize:0x6e0000\nHandoverOffset:0x00\n",
 		},
 		{
 			args:   []string{"initramfs"},
@@ -175,7 +175,7 @@ func TestSimple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := testutil.Command(t, tt.args...)
-			c.Dir = "../../../pkg/bzimage/testdata"
+			c.Dir = "../../../pkg/boot/bzimage/testdata"
 			// ignore the error, we deal with it via process status,
 			// and most of these commands are supposed to get an error.
 			out, _ := c.CombinedOutput()

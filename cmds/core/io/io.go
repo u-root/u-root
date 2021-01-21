@@ -1,4 +1,4 @@
-// Copyright 2010-2019 the u-root Authors. All rights reserved
+// Copyright 2010-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,7 +9,9 @@
 //     io (w{b,w,l,q} address value)...
 //     # x86 only:
 //     io (in{b,w,l} address)
-//     io (out{b,w,l} address value)...
+//     io (out{b,w,l} address value)
+//     io (cr index}
+//     io {cw index value}...
 //
 // Description:
 //     io lets you read/write 1/2/4/8-bytes to memory with the {r,w}{b,w,l,q}
@@ -17,6 +19,7 @@
 //
 //     On x86 platforms, {in,out}{b,w,l} allow for port io.
 //
+//     Use cr / cw to write to cmos registers
 // Examples:
 //     # Read 8-bytes from address 0x10000 and 0x10000
 //     io rq 0x10000 rq 0x10008
@@ -33,29 +36,24 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
+type cmdFunc func(addr int64, data memio.UintN) error
 type cmd struct {
-	f                 func(addr int64, data memio.UintN) error
+	f                 cmdFunc
 	addrBits, valBits int
 }
 
 var (
-	readCmds = map[string]cmd{
-		"rb": {memio.Read, 64, 8},
-		"rw": {memio.Read, 64, 16},
-		"rl": {memio.Read, 64, 32},
-		"rq": {memio.Read, 64, 64},
-	}
-	writeCmds = map[string]cmd{
-		"wb": {memio.Write, 64, 8},
-		"ww": {memio.Write, 64, 16},
-		"wl": {memio.Write, 64, 32},
-		"wq": {memio.Write, 64, 64},
-	}
+	readCmds  = map[string]*cmd{}
+	writeCmds = map[string]*cmd{}
+	usageMsg  string
 )
 
-var usageMsg = `io (r{b,w,l,q} address)...
-io (w{b,w,l,q} address value)...
-`
+func addCmd(cmds map[string]*cmd, n string, f *cmd) {
+	if _, ok := cmds[n]; ok {
+		log.Fatalf("Command %q is defined twice", n)
+	}
+	cmds[n] = f
+}
 
 func usage() {
 	fmt.Print(usageMsg)

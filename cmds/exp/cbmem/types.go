@@ -126,6 +126,7 @@ const (
 	LB_TAG_CBMEM_ENTRY               = 0x0031
 	LB_TAG_SERIALNO                  = 0x002a
 	LB_TAG_MAC_ADDRS                 = 0x0033
+	LB_TAG_PLATFORM_BLOB_VERSION     = 0x0038
 	MAX_SERIALNO_LENGTH              = 32
 	LB_TAG_CMOS_OPTION_TABLE         = 200
 	LB_TAG_OPTION                    = 201
@@ -283,7 +284,7 @@ type LBEntry struct {
 
 type LBRAMEntry struct {
 	Record
-	RamCode uint32
+	RAMCode uint32
 }
 
 type SPIFlashEntry struct {

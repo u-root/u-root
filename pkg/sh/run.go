@@ -5,6 +5,7 @@
 package sh
 
 import (
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -27,7 +28,7 @@ func RunWithLogs(arg0 string, args ...string) error {
 }
 
 // RunWithIO runs a command with the given input, output and error.
-func RunWithIO(in, out, err *os.File, arg0 string, args ...string) error {
+func RunWithIO(in io.Reader, out, err io.Writer, arg0 string, args ...string) error {
 	cmd := exec.Command(arg0, args...)
 	cmd.Stdin = in
 	cmd.Stdout = out

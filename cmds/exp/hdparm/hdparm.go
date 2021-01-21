@@ -27,7 +27,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/u-root/u-root/pkg/scuzz"
+	"github.com/u-root/u-root/pkg/mount/scuzz"
 )
 
 // Because all the verbs and options are switches, hence global,
@@ -40,7 +40,7 @@ var (
 	debug           = func(string, ...interface{}) {}
 	unlock          = flag.String("security-unlock", "", "Unlock the drive with a password")
 	identify        = flag.Bool("i", false, "Get drive identifying information")
-	master          = flag.Bool("user-master", false, "Unlock master (true) or user (false)")
+	admin           = flag.Bool("user-master", false, "Unlock admin (true) or user (false)")
 	timeoutDuration = flag.String("timeout", "15s", "Timeout for operations expressed as a Go duration (e.g. 15s)")
 	verbs           = []string{"security-unlock", "i"}
 )
@@ -71,7 +71,7 @@ func checkVerbs() (op, error) {
 }
 
 func unlockop(d scuzz.Disk) (string, error) {
-	return "", d.Unlock(*unlock, *master)
+	return "", d.Unlock(*unlock, *admin)
 }
 
 func identifyop(d scuzz.Disk) (string, error) {

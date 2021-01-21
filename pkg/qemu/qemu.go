@@ -91,7 +91,7 @@ func (o *Options) Start() (*VM, error) {
 	}, nil
 }
 
-// cmdline returns the command line arguments used to start QEMU. These
+// Cmdline returns the command line arguments used to start QEMU. These
 // arguments are derived from the given QEMU struct.
 func (o *Options) Cmdline() ([]string, error) {
 	var args []string
@@ -225,4 +225,10 @@ func (v *VM) ExpectRETimeout(pattern *regexp.Regexp, timeout time.Duration) (str
 	scaled := time.Duration(float64(timeout) * TimeoutMultiplier)
 	str, _, err := v.gExpect.Expect(pattern, scaled)
 	return str, err
+}
+
+// ExpectBatch matches many regular expressions.
+func (v *VM) ExpectBatch(batch []expect.Batcher, timeout time.Duration) ([]expect.BatchRes, error) {
+	scaled := time.Duration(float64(timeout) * TimeoutMultiplier)
+	return v.gExpect.ExpectBatch(batch, scaled)
 }

@@ -7,12 +7,16 @@ package libinit
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/kmodule"
 	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
 )
@@ -123,6 +127,9 @@ var (
 		mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
 	}
+
+	// cgroups are optional for most u-root users, especially
+	// LinuxBoot/NERF. Some users use u-root for container stuff.
 	cgroupsnamespace = []creator{
 		mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
 		dir{Name: "/sys/fs/cgroup/memory", Mode: 0555},
@@ -156,13 +163,17 @@ func goBin() string {
 	return fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s", runtime.GOOS, runtime.GOARCH, runtime.GOOS, runtime.GOARCH)
 }
 
-func create(namespace []creator) {
+func create(namespace []creator, optional bool) {
 	// Clear umask bits so that we get stuff like ptmx right.
 	m := unix.Umask(0)
 	defer unix.Umask(m)
 	for _, c := range namespace {
 		if err := c.create(); err != nil {
-			ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
+			if optional {
+				ulog.KernelLog.Printf("u-root init [optional]: warning creating %s: %v", c, err)
+			} else {
+				ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
+			}
 		}
 	}
 }
@@ -175,6 +186,7 @@ func SetEnv() {
 		"GOPATH":          "/",
 		"GOBIN":           "/ubin",
 		"CGO_ENABLED":     "0",
+		"USER":            "root",
 	}
 
 	// Not all these paths may be populated or even exist but OTOH they might.
@@ -189,10 +201,10 @@ func SetEnv() {
 // CreateRootfs creates the default u-root file system.
 func CreateRootfs() {
 	// Mount devtmpfs, then open /dev/kmsg with Reinit.
-	create(preNamespace)
+	create(preNamespace, false)
 	ulog.KernelLog.Reinit()
 
-	create(namespace)
+	create(namespace, false)
 
 	// systemd gets upset when it discovers something has already setup cgroups
 	// We have to do this after the base namespace is created, so we have /proc
@@ -200,6 +212,60 @@ func CreateRootfs() {
 	systemd, present := initFlags["systemd"]
 	systemdEnabled, boolErr := strconv.ParseBool(systemd)
 	if !present || boolErr != nil || !systemdEnabled {
-		create(cgroupsnamespace)
+		create(cgroupsnamespace, true)
 	}
+}
+
+var (
+	excludedMods = map[string]bool{
+		"idpf":     true,
+		"idpf_imc": true,
+	}
+)
+
+// InstallAllModules installs kernel modules (.ko files) from /lib/modules.
+// Useful for modules that need to be loaded for boot (ie a network
+// driver needed for netboot). It skips over blacklisted modules in
+// excludedMods.
+func InstallAllModules() {
+	modulePattern := "/lib/modules/*.ko"
+	if err := InstallModules(modulePattern, excludedMods); err != nil {
+		log.Print(err)
+	}
+}
+
+// InstallModules installs kernel modules (.ko files) from /lib/modules that
+// match the given pattern, skipping those in the exclude list.
+func InstallModules(pattern string, exclude map[string]bool) error {
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return fmt.Errorf("no modules found matching '%s'", pattern)
+	}
+
+	for _, filename := range files {
+		f, err := os.Open(filename)
+		if err != nil {
+			log.Printf("installModules: can't open %q: %v", filename, err)
+			continue
+		}
+		// Module flags are passed to the command line in the form modulename.flag=val
+		// And must be passed to FileInit as flag=val to be installed properly
+		moduleName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
+		if _, ok := exclude[moduleName]; ok {
+			log.Printf("Skipping module %s", moduleName)
+			continue
+		}
+
+		flags := cmdline.FlagsForModule(moduleName)
+		err = kmodule.FileInit(f, flags, 0)
+		f.Close()
+		if err != nil {
+			log.Printf("installModules: can't install %q: %v", filename, err)
+		}
+	}
+
+	return nil
 }

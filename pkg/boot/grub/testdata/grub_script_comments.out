@@ -1,0 +1,8 @@
+echo:[]string{"a###b"}
+echo:[]string{"a#"}
+echo:[]string{}
+echo:[]string{"#"}
+echo:[]string{"#"}
+echo:[]string{"#"}
+echo:[]string{"\\#"}
+echo:[]string{"\\#"}

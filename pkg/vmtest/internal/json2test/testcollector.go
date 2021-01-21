@@ -10,14 +10,14 @@ import (
 	"sync"
 )
 
-type TestState int
+type TestState string
 
 const (
-	StateSkip TestState = iota
-	StateFail
-	StatePass
-	StatePaused
-	StateRunning
+	StateSkip    TestState = "skip"
+	StateFail    TestState = "fail"
+	StatePass    TestState = "pass"
+	StatePaused  TestState = "paused"
+	StateRunning TestState = "running"
 )
 
 var actionToState = map[Action]TestState{

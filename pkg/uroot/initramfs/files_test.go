@@ -110,9 +110,22 @@ func TestFilesAddFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir2)
 
+	dir3, err := ioutil.TempDir("", "archive-add-files")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir3)
+
 	os.Create(filepath.Join(dir, "foo"))
 	os.Create(filepath.Join(dir, "foo2"))
 	os.Symlink(filepath.Join(dir, "foo2"), filepath.Join(dir2, "foo3"))
+
+	fooDir := filepath.Join(dir3, "fooDir")
+	os.Mkdir(fooDir, os.ModePerm)
+	symlinkToDir3 := filepath.Join(dir3, "fooSymDir/")
+	os.Symlink(fooDir, symlinkToDir3)
+	os.Create(filepath.Join(fooDir, "foo"))
+	os.Create(filepath.Join(fooDir, "bar"))
 
 	for i, tt := range []struct {
 		name        string
@@ -144,6 +157,20 @@ func TestFilesAddFile(t *testing.T) {
 			result: &Files{
 				Files: map[string]string{
 					"bar/foo": filepath.Join(dir, "foo2"),
+				},
+				Records: map[string]cpio.Record{},
+			},
+		},
+		{
+			name: "add symlinked directory, following",
+			af:   NewFiles(),
+			src:  symlinkToDir3,
+			dest: "foo/",
+			result: &Files{
+				Files: map[string]string{
+					"foo":     fooDir,
+					"foo/foo": filepath.Join(fooDir, "foo"),
+					"foo/bar": filepath.Join(fooDir, "bar"),
 				},
 				Records: map[string]cpio.Record{},
 			},

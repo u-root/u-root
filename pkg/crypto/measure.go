@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/9elements/tpmtool/pkg/tpm"
+	tss "github.com/u-root/u-root/pkg/tss"
 )
 
 const (
@@ -23,23 +23,25 @@ const (
 )
 
 // TryMeasureData measures a byte array with additional information
-func TryMeasureData(pcr uint32, data []byte, info string) {
-	TPMInterface, err := tpm.NewTPM()
+func TryMeasureData(pcr uint32, data []byte, info string) error {
+	tpm, err := tss.NewTPM()
 	if err != nil {
 		log.Printf("Cannot open TPM: %v", err)
-		return
+		return err
 	}
 	log.Printf("Measuring blob: %v", info)
-	TPMInterface.Measure(pcr, data)
-	TPMInterface.Close()
+	if err := tpm.Measure(data, pcr); err != nil {
+		return err
+	}
+	tpm.Close()
+	return nil
 }
 
 // TryMeasureFiles measures a variable amount of files
-func TryMeasureFiles(files ...string) {
-	TPMInterface, err := tpm.NewTPM()
+func TryMeasureFiles(files ...string) error {
+	tpm, err := tss.NewTPM()
 	if err != nil {
-		log.Printf("Cannot open TPM: %v", err)
-		return
+		return err
 	}
 	for _, file := range files {
 		log.Printf("Measuring file: %v", file)
@@ -47,7 +49,10 @@ func TryMeasureFiles(files ...string) {
 		if err != nil {
 			continue
 		}
-		TPMInterface.Measure(BlobPCR, data)
+		if err := tpm.Measure(data, BlobPCR); err != nil {
+			return err
+		}
 	}
-	TPMInterface.Close()
+	tpm.Close()
+	return nil
 }

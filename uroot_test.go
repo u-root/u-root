@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
@@ -13,10 +14,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/uio"
 	itest "github.com/u-root/u-root/pkg/uroot/initramfs/test"
 )
 
@@ -63,7 +67,9 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 	c.Env = append(b.env,
 		fmt.Sprintf("GOPATH=%s", gopath),
 		fmt.Sprintf("GOCACHE=%s", filepath.Join(dir, "tmp")),
-		fmt.Sprintf("GOROOT=%s", goroot))
+		fmt.Sprintf("GOROOT=%s", goroot),
+		"GO111MODULE=off",
+		"CGO_ENABLED=0")
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not build go source %v; output\n%s", err, out)
@@ -71,13 +77,122 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 	return nil
 }
 
+func xTestDCE(t *testing.T) {
+	delFiles := false
+	f, _ := buildIt(
+		t,
+		[]string{
+			"-build=bb", "-no-strip",
+			"world",
+			"-github.com/u-root/u-root/cmds/core/installcommand",
+			"-github.com/u-root/u-root/cmds/exp/builtin",
+			"-github.com/u-root/u-root/cmds/exp/run",
+			"github.com/u-root/u-root/pkg/uroot/test/foo",
+		},
+		nil,
+		nil)
+	defer func() {
+		if delFiles {
+			os.RemoveAll(f.Name())
+		}
+	}()
+	st, _ := f.Stat()
+	t.Logf("Built %s, size %d", f.Name(), st.Size())
+	cmd := golang.Default().GoCmd("tool", "nm", f.Name())
+	nmOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to run nm: %s %s", err, nmOutput)
+	}
+	symScanner := bufio.NewScanner(bytes.NewBuffer(nmOutput))
+	syms := map[string]bool{}
+	for symScanner.Scan() {
+		line := symScanner.Text()
+		parts := strings.Split(line, " ")
+		if len(parts) == 0 {
+			continue
+		}
+		sym := parts[len(parts)-1]
+		syms[sym] = true
+		t.Logf("%s", sym)
+	}
+}
+
+type noDeadCode struct {
+	Path string
+}
+
+func (v noDeadCode) Validate(a *cpio.Archive) error {
+	// 1. Extract BB binary into a temporary file.
+	delFiles := true
+	bbRecord, ok := a.Get(v.Path)
+	if !ok {
+		return fmt.Errorf("archive does not contain %s, but should", v.Path)
+	}
+	tf, err := ioutil.TempFile("", "u-root-temp-bb-")
+	if err != nil {
+		return err
+	}
+	bbData, _ := uio.ReadAll(bbRecord)
+	tf.Write(bbData)
+	tf.Close()
+	defer func() {
+		if delFiles {
+			os.RemoveAll(tf.Name())
+		}
+	}()
+	// 2. Run "go nm" on it and build symbol table.
+	cmd := golang.Default().GoCmd("tool", "nm", tf.Name())
+	nmOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to run nm: %s %s", err, nmOutput)
+	}
+	symScanner := bufio.NewScanner(bytes.NewBuffer(nmOutput))
+	syms := map[string]bool{}
+	for symScanner.Scan() {
+		line := symScanner.Text()
+		parts := strings.Split(line, " ")
+		if len(parts) == 0 {
+			continue
+		}
+		sym := parts[len(parts)-1]
+		syms[sym] = true
+	}
+	// 3. Check for presence and absence of particular symbols.
+	if !syms["github.com/u-root/u-root/pkg/uroot/test/bar.Bar.UsedInterfaceMethod"] {
+		// Sanity check of the test itself: this method must be in the binary.
+		return fmt.Errorf("expected symbol not found, something is wrong with the build")
+	}
+	if syms["github.com/u-root/u-root/pkg/uroot/test/bar.Bar.UnusedNonInterfaceMethod"] {
+		// Sanity check of the test itself: this method must be in the binary.
+		delFiles = false
+		return fmt.Errorf(
+			"Unused non-interface method has not been eliminated, dead code elimination is not working properly.\n"+
+				"The most likely reason is use of reflect.Value.Method or .MethodByName somewhere "+
+				"(could be a command or vendor dependency, apologies for not being more precise here).\n"+
+				"See https://golang.org/src/cmd/link/internal/ld/deadcode.go for explanation.\n"+
+				"%s contains the resulting binary.\n", tf.Name())
+	}
+	return nil
+}
+
 func TestUrootCmdline(t *testing.T) {
-	samplef, err := ioutil.TempFile("", "u-root-sample-")
+	samplef, err := ioutil.TempFile("", "u-root-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	samplef.Close()
 	defer os.RemoveAll(samplef.Name())
+	sampledir, err := ioutil.TempDir("", "u-root-test-dir-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = ioutil.WriteFile(filepath.Join(sampledir, "foo"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err = ioutil.WriteFile(filepath.Join(sampledir, "bar"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(sampledir)
 
 	for _, tt := range []struct {
 		name       string
@@ -95,11 +210,24 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
-			name: "fix usage of an absolute path",
-			args: []string{"-nocmd", "-files=/bin:/bin"},
+			name: "uinitcmd",
+			args: []string{"-build=bb", "-uinitcmd=echo foobar fuzz", "-defaultsh=", "github.com/u-root/u-root/cmds/core/init", "github.com/u-root/u-root/cmds/core/echo"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
-				itest.HasFile{"bin/bash"},
+				itest.HasRecord{cpio.Symlink("bin/uinit", "../bbin/echo")},
+				itest.HasContent{
+					Path:    "etc/uinit.flags",
+					Content: "\"foobar\"\n\"fuzz\"",
+				},
+			},
+		},
+		{
+			name: "fix usage of an absolute path",
+			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
+			err:  nil,
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"/bin/foo"},
+				itest.HasFile{"/bin/bar"},
 			},
 		},
 		{
@@ -116,6 +244,23 @@ func TestUrootCmdline(t *testing.T) {
 			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bush"},
+			},
+		},
+		{
+			name: "make sure dead code gets eliminated",
+			args: []string{
+				// Build the world + test symbols, unstripped.
+				"-build=bb", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
+				// These are known to disable DCE and need to be exluded.
+				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
+				// so these can be removed once we no longer support Go < 1.15.
+				"-github.com/u-root/u-root/cmds/core/installcommand",
+				"-github.com/u-root/u-root/cmds/exp/builtin",
+				"-github.com/u-root/u-root/cmds/exp/run",
+			},
+			err: nil,
+			validators: []itest.ArchiveValidator{
+				noDeadCode{Path: "bbin/bb"},
 			},
 		},
 		{
@@ -144,6 +289,26 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "MIPS bb build",
+			env:  []string{"GOARCH=mips"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPSLE bb build",
+			env:  []string{"GOARCH=mipsle"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPS64 bb build",
+			env:  []string{"GOARCH=mips64"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "MIPS64LE bb build",
+			env:  []string{"GOARCH=mips64le"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
 			name: "ARM7 bb build",
 			env:  []string{"GOARCH=arm", "GOARM=7"},
 			args: []string{"-build=bb", "all"},
@@ -151,6 +316,11 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "ARM64 bb build",
 			env:  []string{"GOARCH=arm64"},
+			args: []string{"-build=bb", "all"},
+		},
+		{
+			name: "386 (32 bit) bb build",
+			env:  []string{"GOARCH=386"},
 			args: []string{"-build=bb", "all"},
 		},
 		{
@@ -200,11 +370,18 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Use the u-root command outside of the $GOPATH tree to make sure it
+	// still works.
+	dir, err := ioutil.TempDir("", "build-")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	arg := append([]string{"-o", f.Name()}, args...)
 	c := testutil.Command(t, arg...)
 	t.Logf("Commandline: %v", arg)
 	c.Env = append(c.Env, env...)
+	c.Dir = dir
 	if out, err := c.CombinedOutput(); err != want {
 		t.Fatalf("Error: %v\nOutput:\n%s", err, out)
 	} else if err != nil {

@@ -9,8 +9,6 @@
 package trampoline
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 	"reflect"
 	"unsafe"
@@ -21,37 +19,34 @@ import (
 const (
 	trampolineEntry = "u-root-entry-long"
 	trampolineInfo  = "u-root-info-long"
+	trampolineMagic = "u-root-mb-magic"
 )
 
 func start()
 func end()
+func info()
+func magic()
+func entry()
 
 // funcPC gives the program counter of the given function.
 //
 //go:linkname funcPC runtime.funcPC
 func funcPC(f interface{}) uintptr
 
-// alignUp aligns x to a 0x10 bytes boundary.
-// go compiler aligns TEXT parts at 0x10 bytes boundary.
-func alignUp(x int) int {
-	const mask = 0x10 - 1
-	return (x + mask) & ^mask
-}
-
 // Setup scans file for trampoline code and sets
 // values for multiboot info address and kernel entry point.
-func Setup(path string, infoAddr, entryPoint uintptr) ([]byte, error) {
-	d, err := extract(path)
+func Setup(path string, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
+	trampolineStart, d, err := extract(path)
 	if err != nil {
 		return nil, err
 	}
-	return patch(d, infoAddr, entryPoint)
+	return patch(trampolineStart, d, magic, infoAddr, entryPoint)
 }
 
 // extract extracts trampoline segment from file.
 // trampoline segment begins after "u-root-trampoline-begin" byte sequence + padding,
 // and ends at "u-root-trampoline-end" byte sequence.
-func extract(path string) ([]byte, error) {
+func extract(path string) (uintptr, []byte, error) {
 	// TODO(https://github.com/golang/go/issues/35055): deal with
 	// potentially non-contiguous trampoline. Rather than locating start
 	// and end, we should locate start,boot,farjump{32,64},gdt,info,entry
@@ -59,14 +54,14 @@ func extract(path string) ([]byte, error) {
 	tbegin := funcPC(start)
 	tend := funcPC(end)
 	if tend <= tbegin {
-		return nil, io.ErrUnexpectedEOF
+		return 0, nil, io.ErrUnexpectedEOF
 	}
 	tramp := ptrToSlice(tbegin, int(tend-tbegin))
 
 	// tramp is read-only executable memory. So we gotta copy it to a
 	// slice. Gotta modify it later.
 	cp := append([]byte(nil), tramp...)
-	return cp, nil
+	return tbegin, cp, nil
 }
 
 func ptrToSlice(ptr uintptr, size int) []byte {
@@ -80,30 +75,31 @@ func ptrToSlice(ptr uintptr, size int) []byte {
 	return data
 }
 
-// patch patches the trampoline code to store value for multiboot info address
-// after "u-root-header-long" byte sequence + padding and value
-// for kernel entry point, after "u-root-entry-long" byte sequence + padding.
-func patch(trampoline []byte, infoAddr, entryPoint uintptr) ([]byte, error) {
-	replace := func(d, label []byte, val uint32) error {
+// patch patches the trampoline code to store value for multiboot info address,
+// entry point, and boot magic value.
+//
+// All 3 are determined by pretending they are functions, and finding their PC
+// within our own address space.
+func patch(trampolineStart uintptr, trampoline []byte, magicVal, infoAddr, entryPoint uintptr) ([]byte, error) {
+	replace := func(start uintptr, d []byte, f func(), val uint32) error {
 		buf := make([]byte, 4)
 		ubinary.NativeEndian.PutUint32(buf, val)
 
-		ind := bytes.Index(d, label)
-		if ind == -1 {
-			return fmt.Errorf("%q label not found in file", label)
-		}
-		ind = alignUp(ind + len(label))
-		if len(d) < ind+len(buf) {
+		offset := funcPC(f) - start
+		if int(offset+4) > len(d) {
 			return io.ErrUnexpectedEOF
 		}
-		copy(d[ind:], buf)
+		copy(d[int(offset):], buf)
 		return nil
 	}
 
-	if err := replace(trampoline, []byte(trampolineInfo), uint32(infoAddr)); err != nil {
+	if err := replace(trampolineStart, trampoline, info, uint32(infoAddr)); err != nil {
 		return nil, err
 	}
-	if err := replace(trampoline, []byte(trampolineEntry), uint32(entryPoint)); err != nil {
+	if err := replace(trampolineStart, trampoline, entry, uint32(entryPoint)); err != nil {
+		return nil, err
+	}
+	if err := replace(trampolineStart, trampoline, magic, uint32(magicVal)); err != nil {
 		return nil, err
 	}
 	return trampoline, nil

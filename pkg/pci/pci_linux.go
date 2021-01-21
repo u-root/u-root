@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"sort"
 )
 
 const (
@@ -40,30 +41,32 @@ func onePCI(dir string) (*PCI, error) {
 	return &pci, nil
 }
 
-// Read implements the BusReader interface for type bus. Iterating over each
-// PCI bus device.
-func (bus *bus) Read() (Devices, error) {
-	devices := make(Devices, len(bus.Devices))
-	for i, d := range bus.Devices {
-		p, err := onePCI(d)
+// NewBusReader returns a BusReader, given a ...glob to match PCI devices against.
+// If it can't glob in pciPath/g then it returns an error.
+// For convenience, we use * as the glob if none are supplied.
+// We don't provide an option to do type I or PCIe MMIO config stuff.
+func NewBusReader(globs ...string) (BusReader, error) {
+	if len(globs) == 0 {
+		globs = []string{"*"}
+	}
+	var exp []string
+	for _, g := range globs {
+		gg, err := filepath.Glob(filepath.Join(pciPath, g))
 		if err != nil {
 			return nil, err
 		}
-		p.Addr = filepath.Base(d)
-		p.FullPath = d
-		devices[i] = p
+		exp = append(exp, gg...)
 	}
-	return devices, nil
-}
-
-// NewBusReader returns a BusReader, given a glob to match PCI devices against.
-// If it can't glob in pciPath/g then it returns an error.
-// We don't provide an option to do type I or PCIe MMIO config stuff.
-func NewBusReader(g string) (busReader, error) {
-	globs, err := filepath.Glob(filepath.Join(pciPath, g))
-	if err != nil {
-		return nil, err
+	// uniq
+	var u = map[string]struct{}{}
+	for _, e := range exp {
+		u[e] = struct{}{}
 	}
-
-	return &bus{Devices: globs}, nil
+	exp = []string{}
+	for v := range u {
+		exp = append(exp, v)
+	}
+	// sort. This might even sort like a shell would do it.
+	sort.Strings(exp)
+	return &bus{Devices: exp}, nil
 }

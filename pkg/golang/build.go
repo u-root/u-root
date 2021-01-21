@@ -58,7 +58,8 @@ type ListPackage struct {
 	ImportPath string
 }
 
-func (c Environ) goCmd(args ...string) *exec.Cmd {
+// GoCmd runs a go command in the environment.
+func (c Environ) GoCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command(filepath.Join(c.GOROOT, "bin", "go"), args...)
 	cmd.Env = append(os.Environ(), c.Env()...)
 	return cmd
@@ -67,7 +68,7 @@ func (c Environ) goCmd(args ...string) *exec.Cmd {
 // Version returns the Go version string that runtime.Version would return for
 // the Go compiler in this environ.
 func (c Environ) Version() (string, error) {
-	cmd := c.goCmd("version")
+	cmd := c.GoCmd("version")
 	v, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", err
@@ -83,7 +84,7 @@ func (c Environ) Version() (string, error) {
 func (c Environ) Deps(importPath string) (*ListPackage, error) {
 	// The output of this is almost the same as build.Import, except for
 	// the dependencies.
-	cmd := c.goCmd("list", "-json", importPath)
+	cmd := c.GoCmd("list", "-json", importPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -115,6 +116,7 @@ func (c Environ) Env() []string {
 		cgo = 1
 	}
 	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
+	env = append(env, "GO111MODULE=off")
 	return env
 }
 
@@ -124,6 +126,8 @@ func (c Environ) String() string {
 
 // Optional arguments to Environ.Build.
 type BuildOpts struct {
+	// NoStrip builds an unstripped binary.
+	NoStrip bool
 	// ExtraArgs to `go build`.
 	ExtraArgs []string
 }
@@ -147,7 +151,10 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 		"-a", // Force rebuilding of packages.
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
-		"-ldflags", "-s -w", // Strip all symbols.
+		"-gcflags=all=-l", // Disable "function inlining" to get a smaller binary
+	}
+	if !opts.NoStrip {
+		args = append(args, `-ldflags=-s -w`) // Strip all symbols.
 	}
 	if len(c.BuildTags) > 0 {
 		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
@@ -158,7 +165,7 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")
 
-	cmd := c.goCmd(args...)
+	cmd := c.GoCmd(args...)
 	cmd.Dir = dirPath
 
 	if o, err := cmd.CombinedOutput(); err != nil {

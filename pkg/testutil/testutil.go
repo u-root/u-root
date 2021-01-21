@@ -12,11 +12,33 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
+	"time"
 
+	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/golang"
 )
+
+// CheckError is a helper function for tests
+// It is common to check if an err is expected in the form of errStr, then
+// there should be an actual error reported. This is an if and only if condition
+// that needs to be verified.
+func CheckError(err error, errStr string) error {
+	if err != nil && errStr == "" {
+		return fmt.Errorf("no error expected, got: \n%v", err)
+	} else if err == nil && errStr != "" {
+		return fmt.Errorf("error \n%v\nexpected, got nil error", errStr)
+	} else if err != nil && err.Error() != errStr {
+		return fmt.Errorf("error \n%v\nexpected, got: \n%v", errStr, err)
+	}
+	return nil
+}
+
+// NowLog returns the current time formatted like the standard log package's
+// timestamp.
+func NowLog() string {
+	return time.Now().Format("2006/01/02 15:04:05")
+}
 
 var binary string
 
@@ -68,11 +90,11 @@ func IsExitCode(err error, exitCode int) error {
 	if !ok {
 		return fmt.Errorf("encountered error other than ExitError: %#v", err)
 	}
-	ws, ok := exitErr.Sys().(syscall.WaitStatus)
-	if !ok {
-		return fmt.Errorf("sys() is not a syscall WaitStatus: %v", err)
+	es, err := exitStatus(exitErr)
+	if err != nil {
+		return err
 	}
-	if es := ws.ExitStatus(); es != exitCode {
+	if es != exitCode {
 		return fmt.Errorf("got exit status %d, want %d", es, exitCode)
 	}
 	return nil
@@ -130,6 +152,16 @@ func run(m *testing.M, mainFn func()) int {
 // m.Run.
 func Run(m *testing.M, mainFn func()) {
 	os.Exit(run(m, mainFn))
+}
+
+// SkipIfInVMTest skips a test if it's being executed in a u-root test VM.
+//
+// See pkg/vmtest/integration.go which starts the VM with the uroot.vmtest in
+// the kernel cmdline.
+func SkipIfInVMTest(t *testing.T) {
+	if cmdline.ContainsFlag("uroot.vmtest") {
+		t.Skipf("Skipping test since we are in a u-root test VM")
+	}
 }
 
 // SkipIfNotRoot skips the calling test if uid != 0.

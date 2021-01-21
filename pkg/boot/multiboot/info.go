@@ -18,7 +18,7 @@ type flag uint32
 const (
 	flagInfoMemory flag = 1 << iota
 	flagInfoBootDev
-	flagInfoCmdLine
+	flagInfoCmdline
 	flagInfoMods
 	flagInfoAoutSyms
 	flagInfoElfSHDR
@@ -40,7 +40,7 @@ type info struct {
 	// BootDevice is not supported, always zero.
 	BootDevice uint32
 
-	CmdLine uint32
+	Cmdline uint32
 
 	ModsCount uint32
 	ModsAddr  uint32
@@ -82,7 +82,7 @@ type info struct {
 type infoWrapper struct {
 	info
 
-	CmdLine        string
+	Cmdline        string
 	BootLoaderName string
 }
 
@@ -90,16 +90,17 @@ type infoWrapper struct {
 // expected by the kernel being loaded.
 func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
 	offset := sizeofInfo + uint32(base)
-	iw.info.CmdLine = offset
-	offset += uint32(len(iw.CmdLine)) + 1
+	iw.info.Cmdline = offset
+	offset += uint32(len(iw.Cmdline)) + 1
 	iw.info.BootLoaderName = offset
+	iw.info.Flags |= flagInfoCmdline | flagInfoBootLoaderName
 
 	buf := bytes.Buffer{}
 	if err := binary.Write(&buf, ubinary.NativeEndian, iw.info); err != nil {
 		return nil, err
 	}
 
-	for _, s := range []string{iw.CmdLine, iw.BootLoaderName} {
+	for _, s := range []string{iw.Cmdline, iw.BootLoaderName} {
 		if _, err := buf.WriteString(s); err != nil {
 			return nil, err
 		}

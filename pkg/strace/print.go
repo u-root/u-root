@@ -17,6 +17,7 @@
 package strace
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -35,7 +36,7 @@ var LogMaximumSize uint = DefaultLogMaximumSize
 // do anything useful with binary text dump of byte array arguments.
 var EventMaximumSize uint
 
-func dump(t *Tracer, addr Addr, size uint, maximumBlobSize uint) string {
+func dump(t Task, addr Addr, size uint, maximumBlobSize uint) string {
 	origSize := size
 	if size > maximumBlobSize {
 		size = maximumBlobSize
@@ -59,7 +60,7 @@ func dump(t *Tracer, addr Addr, size uint, maximumBlobSize uint) string {
 	return fmt.Sprintf("%#x %q%s", addr, b[:amt], dot)
 }
 
-func iovecs(t *Tracer, addr Addr, iovcnt int, printContent bool, maxBytes uint64) string {
+func iovecs(t Task, addr Addr, iovcnt int, printContent bool, maxBytes uint64) string {
 	if iovcnt < 0 || iovcnt > 0x10 /*unix.MSG_MAXIOVLEN*/ {
 		return fmt.Sprintf("%#x (error decoding iovecs: invalid iovcnt)", addr)
 	}
@@ -104,7 +105,7 @@ func iovecs(t *Tracer, addr Addr, iovcnt int, printContent bool, maxBytes uint64
 	return fmt.Sprintf("%#x %s", addr, strings.Join(iovs, ", "))
 }
 
-func fdpair(t *Tracer, addr Addr) string {
+func fdpair(t Task, addr Addr) string {
 	var fds [2]int32
 	_, err := t.Read(addr, &fds)
 	if err != nil {
@@ -114,21 +115,45 @@ func fdpair(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x [%d %d]", addr, fds[0], fds[1])
 }
 
-func uname(t *Tracer, addr Addr) string {
+type SaneUtsname struct {
+	Sysname    string
+	Nodename   string
+	Release    string
+	Version    string
+	Machine    string
+	Domainname string
+}
+
+func SaneUname(u unix.Utsname) SaneUtsname {
+	return SaneUtsname{
+		Sysname:    convertUname(u.Sysname),
+		Nodename:   convertUname(u.Nodename),
+		Release:    convertUname(u.Release),
+		Version:    convertUname(u.Version),
+		Machine:    convertUname(u.Machine),
+		Domainname: convertUname(u.Domainname),
+	}
+}
+
+func convertUname(s [65]uint8) string {
+	return string(bytes.TrimRight(s[:], "\x00"))
+}
+
+func uname(t Task, addr Addr) string {
 	var u unix.Utsname
 	if _, err := t.Read(addr, &u); err != nil {
 		return fmt.Sprintf("%#x (error decoding utsname: %s)", addr, err)
 	}
 
-	return fmt.Sprintf("%#x %v", addr, u)
+	return fmt.Sprintf("%#x %#v", addr, SaneUname(u))
 }
 
-// AlignUp rounds a length up to an alignment. align must be a power of 2.
-func AlignUp(length int, align uint) int {
+// alignUp rounds a length up to an alignment. align must be a power of 2.
+func alignUp(length int, align uint) int {
 	return (length + int(align) - 1) & ^(int(align) - 1)
 }
 
-// AlignDown rounds a down to an alignment. align must be a power of 2.
-func AlignDown(length int, align uint) int {
+// alignDown rounds a down to an alignment. align must be a power of 2.
+func alignDown(length int, align uint) int {
 	return length & ^(int(align) - 1)
 }

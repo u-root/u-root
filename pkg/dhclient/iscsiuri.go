@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 )
 
 type iscsiURIParser struct {
@@ -56,14 +57,16 @@ const (
 
 // Format:
 //
-// iscsi:"<servername>":"<protocol>":"<port>":"<LUN>":"<targetname>"
+// iscsi:@"<servername>":"<protocol>":"<port>":"<LUN>":"<targetname>"
 //
+// @ for now will be ignored. Eventually we would want complete support.
+// iscsi:[<username>:<password>[:<reverse>:<password>]@]"<servername>":"<protocol>":"<port>"[:[<iscsi_iface_name>]:[<netdev_name>]]:"<LUN>":"<targetname>"
 // "<servername>" may contain an IPv6 address enclosed with [] with an
 // arbitrary but bounded number of colons.
 //
 // "<targetname>" may contain an arbitrary string with an arbitrary number of
 // colons.
-func parseISCSIURI(s string) (*net.TCPAddr, string, error) {
+func ParseISCSIURI(s string) (*net.TCPAddr, string, error) {
 	var (
 		// port has a default value according to RFC 4173.
 		port   = 3260
@@ -82,6 +85,7 @@ func parseISCSIURI(s string) (*net.TCPAddr, string, error) {
 		case iscsiMagic:
 			magic = tok
 		case serverField:
+			tok = strings.TrimPrefix(tok, "@") // ignore any leading @
 			ip = net.ParseIP(tok)
 		case protField, lunField:
 			// yeah whatever

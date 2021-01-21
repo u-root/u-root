@@ -28,7 +28,7 @@ func main() {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 
 	// Open the target initramfs file.
-	w, err := initramfs.CPIO.OpenWriter(logger, *outputFile, "", "")
+	w, err := initramfs.CPIO.OpenWriter(logger, *outputFile)
 	if err != nil {
 		log.Fatalf("failed to open cpio archive %q: %v", *outputFile, err)
 	}
@@ -37,7 +37,7 @@ func main() {
 	archive := &initramfs.Opts{
 		Files:       files,
 		OutputFile:  w,
-		BaseArchive: uroot.DefaultRamfs.Reader(),
+		BaseArchive: uroot.DefaultRamfs().Reader(),
 	}
 	if err := uroot.ParseExtraFiles(logger, archive.Files, flag.Args(), false); err != nil {
 		log.Fatalf("failed to parse file names %v: %v", flag.Args(), err)

@@ -72,3 +72,32 @@ func TestCmdline(t *testing.T) {
 	}
 
 }
+
+func TestCmdlineModules(t *testing.T) {
+	exampleCmdlineModules := `BOOT_IMAGE=/vmlinuz-4.11.2 ro ` +
+		`my_module.flag1=8 my-module.flag2-string=hello ` +
+		`otherMod.opt1=world otherMod.opt_2=22-22`
+
+	once.Do(cmdLineOpener)
+	cmdLineReader := strings.NewReader(exampleCmdlineModules)
+	procCmdLine = parse(cmdLineReader)
+
+	if procCmdLine.Err != nil {
+		t.Errorf("procCmdLine threw an error: %v", procCmdLine.Err)
+	}
+
+	// Check flags using contains to not rely on map iteration order
+	flags := FlagsForModule("my-module")
+	if !strings.Contains(flags, "flag1=8 ") || !strings.Contains(flags, "flag2_string=hello ") {
+		t.Errorf("my-module flags got: %v, want flag1=8 flag2_string=hello ", flags)
+	}
+	flags = FlagsForModule("my_module")
+	if !strings.Contains(flags, "flag1=8 ") || !strings.Contains(flags, "flag2_string=hello ") {
+		t.Errorf("my_module flags got: %v, want flag1=8 flag2_string=hello ", flags)
+	}
+
+	flags = FlagsForModule("otherMod")
+	if !strings.Contains(flags, "opt1=world ") || !strings.Contains(flags, "opt_2=22-22 ") {
+		t.Errorf("my_module flags got: %v, want opt1=world opt_2=22-22 ", flags)
+	}
+}

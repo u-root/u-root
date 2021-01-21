@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// ip manipulates network addresses, interfaces, routing, and other config.
 package main
 
 import (
@@ -315,18 +316,37 @@ func routeadd() error {
 	}
 }
 
+func routedel() error {
+	cursor++
+	addr, err := netlink.ParseAddr(arg[cursor])
+	if err != nil {
+		return usage()
+	}
+	d, err := dev()
+	if err != nil {
+		return usage()
+	}
+	r := &netlink.Route{LinkIndex: d.Attrs().Index, Dst: addr.IPNet}
+	if err := netlink.RouteDel(r); err != nil {
+		return fmt.Errorf("error adding route %s -> %s: %v", addr, d.Attrs().Name, err)
+	}
+	return nil
+}
+
 func route() error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
 		return routeshow()
 	}
 
-	whatIWant = []string{"show", "add"}
+	whatIWant = []string{"show", "add", "del"}
 	switch one(arg[cursor], whatIWant) {
-	case "show":
-		return routeshow()
 	case "add":
 		return routeadd()
+	case "del":
+		return routedel()
+	case "show":
+		return routeshow()
 	}
 	return usage()
 }

@@ -1,0 +1,47 @@
+{
+    "default_action": "",
+    "collectors": [
+      {
+        "type": "dmi",
+        "events": [
+          {
+            "label": "BIOS",
+            "fields": []
+          },
+          {
+            "label": "System",
+            "fields": []
+          },
+          {
+            "label": "Processor",
+            "fields": []
+          }
+        ]
+      },
+      {
+         "type": "files",
+         "paths": [ "65cfe18c-4f9b-402b-9ea6-4c68c856546e:/Paul/foo" ]
+      },
+      {
+         "type": "storage",
+         "paths": [ "sda1" ]
+      },
+      {
+         "type": "cpuid",
+         "location": "65cfe18c-4f9b-402b-9ea6-4c68c856546e:/cpuid.txt"
+      }
+    ],
+    "attestor": {},
+    "launcher": {
+        "type": "kexec",
+        "params": {
+            "initrd":"sda2:/initramfs-4.14.35-1941.el7uek.x86_64.img",
+            "cmdline":"BOOT_IMAGE=/vmlinuz-4.14.35-1941.el7uek.x86_64 root=/dev/mapper/ol-root ro crashkernel=auto rd.lvm.lv=ol/root netroot=iscsi:@10.196.210.62::3260::iqn.1986-03.com.sun:ovs112-boot rd.iscsi.initiator=iqn.1988-12.com.oracle:ovs112 rd.lvm.lv=ol/home rd.lvm.lv=ol/swap ip=eno2:dhcp console=ttyS0,115200n8 earlyprintk=serial,ttyS0,115200n8,keep printk.time=y intel_iommu=on pci=realloc iommu=pt LANG=en_US.UTF-8",
+            "kernel":"65cfe18c-4f9b-402b-9ea6-4c68c856546e:/vmlinuz-4.14.35-1941.el7uek.x86_64"
+         }
+    },
+    "eventlog": {
+        "type": "file",
+        "location": "65cfe18c-4f9b-402b-9ea6-4c68c856546e:/evtlog"
+    }
+}

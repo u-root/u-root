@@ -71,6 +71,9 @@ type Client struct {
 	// wg protects the receiveLoop.
 	wg sync.WaitGroup
 
+	// printDropped logs dropped packets to logger if true.
+	printDropped bool
+
 	pendingMu sync.Mutex
 	// pending stores the distribution channels for each pending
 	// TransactionID. receiveLoop uses this map to determine which channel
@@ -113,7 +116,13 @@ func (d debugLogger) PrintMessage(prefix string, message *dhcpv6.Message) {
 // NewIPv6UDPConn returns a UDP connection bound to both the interface and port
 // given based on a IPv6 DGRAM socket.
 func NewIPv6UDPConn(iface string, port int) (net.PacketConn, error) {
+	ip, err := dhcpv6.GetLinkLocalAddr(iface)
+	if err != nil {
+		return nil, err
+	}
+
 	return net.ListenUDP("udp6", &net.UDPAddr{
+		IP:   ip,
 		Port: port,
 		Zone: iface,
 	})
@@ -211,6 +220,12 @@ func (c *Client) receiveLoop() {
 			msg, err := dhcpv6.MessageFromBytes(b[:n])
 			if err != nil {
 				// Not a valid DHCP packet; keep listening.
+				if c.printDropped {
+					if len(b) > 12 {
+						b = b[:12]
+					}
+					c.logger.Printf("Invalid DHCPv6 message received (len %d bytes), first 12 bytes: %#x", n, b)
+				}
 				continue
 			}
 
@@ -225,6 +240,9 @@ func (c *Client) receiveLoop() {
 				// This send may block.
 				case p.ch <- msg:
 				}
+			} else if c.printDropped {
+				// The Stringer will print the transaction ID.
+				c.logger.Printf("No client waiting for msg with this XID: %s", msg)
 			}
 			c.pendingMu.Unlock()
 		}
@@ -240,6 +258,13 @@ type ClientOpt func(*Client)
 func WithTimeout(d time.Duration) ClientOpt {
 	return func(c *Client) {
 		c.timeout = d
+	}
+}
+
+// WithLogDroppedPackets logs a short message for dropped packets.
+func WithLogDroppedPackets() ClientOpt {
+	return func(c *Client) {
+		c.printDropped = true
 	}
 }
 
@@ -288,11 +313,17 @@ func WithDebugLogger() ClientOpt {
 type Matcher func(*dhcpv6.Message) bool
 
 // IsMessageType returns a matcher that checks for the message type.
-//
-// If t is MessageTypeNone, all packets are matched.
-func IsMessageType(t dhcpv6.MessageType) Matcher {
+func IsMessageType(t dhcpv6.MessageType, tt ...dhcpv6.MessageType) Matcher {
 	return func(p *dhcpv6.Message) bool {
-		return p.MessageType == t || t == dhcpv6.MessageTypeNone
+		if p.MessageType == t {
+			return true
+		}
+		for _, mt := range tt {
+			if p.MessageType == mt {
+				return true
+			}
+		}
+		return false
 	}
 }
 
@@ -303,11 +334,23 @@ func (c *Client) RapidSolicit(ctx context.Context, modifiers ...dhcpv6.Modifier)
 	if err != nil {
 		return nil, err
 	}
-	msg, err := c.SendAndRead(ctx, c.serverAddr, solicit, IsMessageType(dhcpv6.MessageTypeReply))
+	msg, err := c.SendAndRead(ctx, c.serverAddr, solicit, IsMessageType(dhcpv6.MessageTypeReply, dhcpv6.MessageTypeAdvertise))
 	if err != nil {
 		return nil, err
 	}
-	return msg, nil
+
+	switch msg.MessageType {
+	case dhcpv6.MessageTypeReply:
+		// We got RapidCommitted.
+		return msg, nil
+
+	case dhcpv6.MessageTypeAdvertise:
+		// We didn't get RapidCommitted. Request regular lease.
+		return c.Request(ctx, msg, modifiers...)
+
+	default:
+		return nil, fmt.Errorf("invalid message type: cannot happen")
+	}
 }
 
 // Solicit sends a solicitation message and returns the first valid

@@ -143,7 +143,7 @@ func getPubKey(rw io.ReadWriter, keyHandle tpmutil.Handle, ca *commandAuth) (*pu
 	return &pk, &ra, ret, nil
 }
 
-// getCapability reads the requested capability and sub-capability from NVRAM
+// getCapability reads the requested capability and sub-capability from the TPM
 func getCapability(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
 	subCapBytes, err := tpmutil.Pack(subcap)
 	if err != nil {
@@ -158,22 +158,92 @@ func getCapability(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
 	return b, nil
 }
 
+// nvDefineSpace allocates space in NVRAM
+func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc digest, ca *commandAuth) (*responseAuth, uint32, error) {
+	var ra responseAuth
+	in := []interface{}{nvData, enc}
+	if ca != nil {
+		in = append(in, ca)
+	}
+	out := []interface{}{&ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVDefineSpace, in, out)
+	if err != nil {
+		return nil, 0, err
+	}
+	return &ra, ret, nil
+
+}
+
 // nvReadValue reads from the NVRAM
-// If TPM isn't locked, no authentification is needed.
+// If TPM isn't locked, and for some nv permission no authentification is needed.
 // See TPM-Main-Part-3-Commands-20.4
 func nvReadValue(rw io.ReadWriter, index, offset, len uint32, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
 	var b tpmutil.U32Bytes
 	var ra responseAuth
+	var ret uint32
+	var err error
 	in := []interface{}{index, offset, len}
+	out := []interface{}{&b}
+	// Auth is needed
+	if ca != nil {
+		in = append(in, ca)
+		out = append(out, ra)
+		ret, err = submitTPMRequest(rw, tagRQUAuth1Command, ordNVReadValue, in, out)
+	} else {
+		// Auth is not needed
+		ret, err = submitTPMRequest(rw, tagRQUCommand, ordNVReadValue, in, out)
+	}
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	return b, &ra, ret, nil
+}
+
+// nvReadValueAuth reads nvram with enforced authentication.
+// No Owner needs to be present.
+// See TPM-Main-Part-3-Commands-20.5
+func nvReadValueAuth(rw io.ReadWriter, index, offset, len uint32, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+	var b tpmutil.U32Bytes
+	var ra responseAuth
+	in := []interface{}{index, offset, len, ca}
+	out := []interface{}{&b, &ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVReadValueAuth, in, out)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	return b, &ra, ret, nil
+}
+
+// nvWriteValue writes to the NVRAM
+// If TPM isn't locked, no authentication is needed.
+// See TPM-Main-Part-3-Commands-20.2
+func nvWriteValue(rw io.ReadWriter, index, offset, len uint32, data []byte, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+	var b tpmutil.U32Bytes
+	var ra responseAuth
+	in := []interface{}{index, offset, len, data}
 	if ca != nil {
 		in = append(in, ca)
 	}
 	out := []interface{}{&b, &ra}
-	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVReadValue, in, out)
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVWriteValue, in, out)
 	if err != nil {
 		return nil, nil, 0, err
 	}
+	return b, &ra, ret, nil
+}
 
+// nvWriteValue writes to the NVRAM
+// If TPM isn't locked, no authentication is needed.
+// See TPM-Main-Part-3-Commands-20.3
+func nvWriteValueAuth(rw io.ReadWriter, index, offset, len uint32, data []byte, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+	var b tpmutil.U32Bytes
+	var ra responseAuth
+	in := []interface{}{index, offset, len, data, ca}
+	out := []interface{}{&b, &ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordNVWriteValueAuth, in, out)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	return b, &ra, ret, nil
 }
 

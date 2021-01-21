@@ -26,14 +26,25 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func path(t *Tracer, addr Addr) string {
-	path, err := t.ReadString(addr, unix.PathMax)
+// Task is a Linux process.
+type Task interface {
+	// Read reads from the process at Addr to the interface{}
+	// and returns a byte count and error.
+	Read(addr Addr, v interface{}) (int, error)
+
+	// Name is a human-readable process identifier. E.g. PID or argv[0].
+	Name() string
+}
+
+func path(t Task, addr Addr) string {
+	path, err := ReadString(t, addr, unix.PathMax)
 	if err != nil {
 		return fmt.Sprintf("%#x (error decoding path: %s)", addr, err)
 	}
 	return fmt.Sprintf("%#x %s", addr, path)
 }
-func utimensTimespec(t *Tracer, addr Addr) string {
+
+func utimensTimespec(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -55,7 +66,7 @@ func utimensTimespec(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x {sec=%v nsec=%s}", addr, tim.Sec, ns)
 }
 
-func timespec(t *Tracer, addr Addr) string {
+func timespec(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -67,7 +78,7 @@ func timespec(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x {sec=%v nsec=%v}", addr, tim.Sec, tim.Nsec)
 }
 
-func timeval(t *Tracer, addr Addr) string {
+func timeval(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -80,7 +91,7 @@ func timeval(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x {sec=%v usec=%v}", addr, tim.Sec, tim.Usec)
 }
 
-func utimbuf(t *Tracer, addr Addr) string {
+func utimbuf(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -97,7 +108,7 @@ func fileMode(mode uint32) string {
 	return fmt.Sprintf("%#09o", mode&0x1ff)
 }
 
-func stat(t *Tracer, addr Addr) string {
+func stat(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -109,7 +120,7 @@ func stat(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x {dev=%d, ino=%d, mode=%s, nlink=%d, uid=%d, gid=%d, rdev=%d, size=%d, blksize=%d, blocks=%d, atime=%s, mtime=%s, ctime=%s}", addr, stat.Dev, stat.Ino, fileMode(stat.Mode), stat.Nlink, stat.Uid, stat.Gid, stat.Rdev, stat.Size, stat.Blksize, stat.Blocks, time.Unix(int64(stat.Atim.Sec), int64(stat.Atim.Nsec)), time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec)), time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec)))
 }
 
-func itimerval(t *Tracer, addr Addr) string {
+func itimerval(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -119,7 +130,7 @@ func itimerval(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x {interval=%s, value=%s}", addr, interval, value)
 }
 
-func itimerspec(t *Tracer, addr Addr) string {
+func itimerspec(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -129,27 +140,15 @@ func itimerspec(t *Tracer, addr Addr) string {
 	return fmt.Sprintf("%#x {interval=%s, value=%s}", addr, interval, value)
 }
 
-func stringVector(t *Tracer, addr Addr) string {
-	vs, err := t.ReadStringVector(addr, ExecMaxElemSize, ExecMaxTotalSize)
+func stringVector(t Task, addr Addr) string {
+	vs, err := ReadStringVector(t, addr, ExecMaxElemSize, ExecMaxTotalSize)
 	if err != nil {
 		return fmt.Sprintf("%#x {error copying vector: %v}", addr, err)
 	}
 	return fmt.Sprintf("%q", vs)
-	/*
-		vec := []string{}
-		s := fmt.Sprintf("%#x [", addr)
-		for i, v := range vec {
-			if i != 0 {
-				s += ", "
-			}
-			s += fmt.Sprintf("%q", v)
-		}
-		s += "]"
-		return s
-	*/
 }
 
-func rusage(t *Tracer, addr Addr) string {
+func rusage(t Task, addr Addr) string {
 	if addr == 0 {
 		return "null"
 	}
@@ -165,9 +164,8 @@ func rusage(t *Tracer, addr Addr) string {
 // cannot be interpreted before the system call is executed, then a hex value
 // will be used. Note that a full output slice will always be provided, that is
 // len(return) == len(args).
-func (i *SyscallInfo) pre(t *Tracer, r *TraceRecord, maximumBlobSize uint) []string {
+func (i *SyscallInfo) pre(t Task, args SyscallArguments, maximumBlobSize uint) []string {
 	var output []string
-	args := r.Args
 	for arg := range args {
 		if arg >= len(i.format) {
 			break
@@ -238,7 +236,7 @@ func (i *SyscallInfo) pre(t *Tracer, r *TraceRecord, maximumBlobSize uint) []str
 // post fills in the post-execution arguments for a system call. This modifies
 // the given output slice in place with arguments that may only be interpreted
 // after the system call has been executed.
-func (i *SyscallInfo) post(t *Tracer, args SyscallArguments, rval SyscallArgument, output []string, maximumBlobSize uint) {
+func (i *SyscallInfo) post(t Task, args SyscallArguments, rval SyscallArgument, output []string, maximumBlobSize uint) {
 	for arg := range output {
 		if arg >= len(i.format) {
 			break
@@ -286,83 +284,74 @@ func (i *SyscallInfo) post(t *Tracer, args SyscallArguments, rval SyscallArgumen
 }
 
 // printEntry prints the given system call entry.
-func (i *SyscallInfo) printEnter(t *Tracer, r *TraceRecord) string {
-	t.output = i.pre(t, r, LogMaximumSize)
-	o := t.output
+func (i *SyscallInfo) printEnter(t Task, args SyscallArguments) string {
+	o := i.pre(t, args, LogMaximumSize)
 	switch len(o) {
 	case 0:
-		return fmt.Sprintf("%s E %s()", t.Name, i.name)
+		return fmt.Sprintf("%s E %s()", t.Name(), i.name)
 	case 1:
-		return fmt.Sprintf("%s E %s(%s)", t.Name, i.name, o[0])
+		return fmt.Sprintf("%s E %s(%s)", t.Name(), i.name, o[0])
 	case 2:
-		return fmt.Sprintf("%s E %s(%s, %s)", t.Name, i.name, o[0], o[1])
+		return fmt.Sprintf("%s E %s(%s, %s)", t.Name(), i.name, o[0], o[1])
 	case 3:
-		return fmt.Sprintf("%s E %s(%s, %s, %s)", t.Name, i.name, o[0], o[1], o[2])
+		return fmt.Sprintf("%s E %s(%s, %s, %s)", t.Name(), i.name, o[0], o[1], o[2])
 	case 4:
-		return fmt.Sprintf("%s E %s(%s, %s, %s, %s)", t.Name, i.name, o[0], o[1], o[2], o[3])
+		return fmt.Sprintf("%s E %s(%s, %s, %s, %s)", t.Name(), i.name, o[0], o[1], o[2], o[3])
 	case 5:
-		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s)", t.Name, i.name, o[0], o[1], o[2], o[3], o[4])
+		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s)", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4])
 	case 6:
-		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s, %s)", t.Name, i.name, o[0], o[1], o[2], o[3], o[4], o[5])
+		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s, %s)", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4], o[5])
 	default:
-		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s, %s, ...)", t.Name, i.name, o[0], o[1], o[2], o[3], o[4], o[5])
+		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s, %s, ...)", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4], o[5])
 	}
 
 }
 
-func sysCallEnter(t *Tracer, r *TraceRecord) {
-	i := defaultSyscallInfo(r.Sysno)
-	if v, ok := syscalls[uintptr(r.Sysno)]; ok {
+func SysCallEnter(t Task, s *SyscallEvent) string {
+	i := defaultSyscallInfo(s.Sysno)
+	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
 		*i = v
 	}
-	r.Out = i.printEnter(t, r)
+	return i.printEnter(t, s.Args)
 }
 
-func sysCallExit(t *Tracer, r *TraceRecord) {
-	i := defaultSyscallInfo(r.Sysno)
-	if v, ok := syscalls[uintptr(r.Sysno)]; ok {
+func SysCallExit(t Task, s *SyscallEvent) string {
+	i := defaultSyscallInfo(s.Sysno)
+	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
 		*i = v
 	}
-	r.Out = i.printExit(t, r.Time, r.Args, r.Ret[0], r.Err, r.Errno)
-}
-
-// SysCall takes a Tracer and a TraceRecord and adds prettyprint to the TraceRecord.
-func SysCall(t *Tracer, r *TraceRecord) {
-	if r.EX == Enter {
-		sysCallEnter(t, r)
-		return
-	}
-	sysCallExit(t, r)
+	return i.printExit(t, s.Duration, s.Args, s.Ret[0], s.Errno)
 }
 
 // printExit prints the given system call exit.
-func (i *SyscallInfo) printExit(t *Tracer, elapsed time.Duration, args SyscallArguments, retval SyscallArgument, err error, errno int) string {
-	o := t.output
+func (i *SyscallInfo) printExit(t Task, elapsed time.Duration, args SyscallArguments, retval SyscallArgument, errno unix.Errno) string {
+	// Eventually, we'll be able to cache o and look at the entry record's output.
+	o := i.pre(t, args, LogMaximumSize)
 	var rval string
-	if err == nil {
+	if errno == 0 {
 		// Fill in the output after successful execution.
 		i.post(t, args, retval, o, LogMaximumSize)
-		rval = fmt.Sprintf("%#x (%v)", retval, elapsed)
+		rval = fmt.Sprintf("%#x (%v)", retval.Uint64(), elapsed)
 	} else {
-		rval = fmt.Sprintf("%#x errno=%d (%s) (%v)", retval, errno, err, elapsed)
+		rval = fmt.Sprintf("%s (%#x) (%v)", errno, errno, elapsed)
 	}
 
 	switch len(o) {
 	case 0:
-		return fmt.Sprintf("%s X %s() = %s", t.Name, i.name, rval)
+		return fmt.Sprintf("%s X %s() = %s", t.Name(), i.name, rval)
 	case 1:
-		return fmt.Sprintf("%s X %s(%s) = %s", t.Name, i.name, o[0], rval)
+		return fmt.Sprintf("%s X %s(%s) = %s", t.Name(), i.name, o[0], rval)
 	case 2:
-		return fmt.Sprintf("%s X %s(%s, %s) = %s", t.Name, i.name, o[0], o[1], rval)
+		return fmt.Sprintf("%s X %s(%s, %s) = %s", t.Name(), i.name, o[0], o[1], rval)
 	case 3:
-		return fmt.Sprintf("%s X %s(%s, %s, %s) = %s", t.Name, i.name, o[0], o[1], o[2], rval)
+		return fmt.Sprintf("%s X %s(%s, %s, %s) = %s", t.Name(), i.name, o[0], o[1], o[2], rval)
 	case 4:
-		return fmt.Sprintf("%s X %s(%s, %s, %s, %s) = %s", t.Name, i.name, o[0], o[1], o[2], o[3], rval)
+		return fmt.Sprintf("%s X %s(%s, %s, %s, %s) = %s", t.Name(), i.name, o[0], o[1], o[2], o[3], rval)
 	case 5:
-		return fmt.Sprintf("%s X %s(%s, %s, %s, %s, %s) = %s", t.Name, i.name, o[0], o[1], o[2], o[3], o[4], rval)
+		return fmt.Sprintf("%s X %s(%s, %s, %s, %s, %s) = %s", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4], rval)
 	case 6:
-		return fmt.Sprintf("%s X %s(%s, %s, %s, %s, %s, %s) = %s", t.Name, i.name, o[0], o[1], o[2], o[3], o[4], o[5], rval)
+		return fmt.Sprintf("%s X %s(%s, %s, %s, %s, %s, %s) = %s", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4], o[5], rval)
 	default:
-		return fmt.Sprintf("%s X %s(%s, %s, %s, %s, %s, %s, ...) = %s", t.Name, i.name, o[0], o[1], o[2], o[3], o[4], o[5], rval)
+		return fmt.Sprintf("%s X %s(%s, %s, %s, %s, %s, %s, ...) = %s", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4], o[5], rval)
 	}
 }

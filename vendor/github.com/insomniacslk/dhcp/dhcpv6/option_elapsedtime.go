@@ -2,38 +2,41 @@ package dhcpv6
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-// OptElapsedTime implements the Elapsed Time option.
-//
-// This module defines the OptElapsedTime structure.
-// https://www.ietf.org/rfc/rfc3315.txt
-type OptElapsedTime struct {
-	ElapsedTime uint16
+// OptElapsedTime returns an Elapsed Time option as defined by RFC 3315 Section
+// 22.9.
+func OptElapsedTime(dur time.Duration) Option {
+	return &optElapsedTime{ElapsedTime: dur}
 }
 
-func (op *OptElapsedTime) Code() OptionCode {
+type optElapsedTime struct {
+	ElapsedTime time.Duration
+}
+
+func (*optElapsedTime) Code() OptionCode {
 	return OptionElapsedTime
 }
 
 // ToBytes marshals this option to bytes.
-func (op *OptElapsedTime) ToBytes() []byte {
+func (op *optElapsedTime) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write16(op.ElapsedTime)
+	buf.Write16(uint16(op.ElapsedTime.Round(10*time.Millisecond) / (10 * time.Millisecond)))
 	return buf.Data()
 }
 
-func (op *OptElapsedTime) String() string {
-	return fmt.Sprintf("OptElapsedTime{elapsedtime=%v}", op.ElapsedTime)
+func (op *optElapsedTime) String() string {
+	return fmt.Sprintf("ElapsedTime: %s", op.ElapsedTime)
 }
 
-// build an OptElapsedTime structure from a sequence of bytes.
+// build an optElapsedTime structure from a sequence of bytes.
 // The input data does not include option code and length bytes.
-func ParseOptElapsedTime(data []byte) (*OptElapsedTime, error) {
-	var opt OptElapsedTime
+func parseOptElapsedTime(data []byte) (*optElapsedTime, error) {
+	var opt optElapsedTime
 	buf := uio.NewBigEndianBuffer(data)
-	opt.ElapsedTime = buf.Read16()
+	opt.ElapsedTime = time.Duration(buf.Read16()) * 10 * time.Millisecond
 	return &opt, buf.FinError()
 }

@@ -25,6 +25,7 @@ CONFIG_TTY=y
 CONFIG_BLOCK=y
 CONFIG_ATA=y
 CONFIG_SATA_AHCI=y
+CONFIG_BLK_DEV_NVME=y
 CONFIG_BLK_DEV_SD=y
 # Allows using -hda when running QEMU
 CONFIG_ATA_PIIX=y
@@ -94,3 +95,10 @@ CONFIG_GPIO_MOCKUP=y
 
 # Compressed initramfs
 CONFIG_KERNEL_GZIP=y
+
+# iSCSI initiator support
+CONFIG_ISCSI_TCP=y
+
+# NBD (Network Block Device) support: will automatically re-read partitions when
+# iSCSI disk is mounted.
+CONFIG_BLK_DEV_NBD=y

@@ -1,0 +1,222 @@
+[
+  {
+    "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Graphical install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/initrd.gz --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Advanced options"
+  },
+  {
+    "cmdline": "priority=low vga=788 initrd=/install.amd/gtk/initrd.gz ---",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Graphical expert install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz rescue/enable=true --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Graphical rescue mode"
+  },
+  {
+    "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/gtk/initrd.gz --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Graphical automated install"
+  },
+  {
+    "cmdline": "priority=low vga=788 initrd=/install.amd/initrd.gz ---",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "E^xpert install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/initrd.gz rescue/enable=true --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Rescue mode"
+  },
+  {
+    "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/initrd.gz --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Speech-enabled advanced options"
+  },
+  {
+    "cmdline": "priority=low vga=788 initrd=/install.amd/gtk/initrd.gz speakup.synth=soft ---",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "E^xpert speech install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz rescue/enable=true speakup.synth=soft --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Rescue speech mode"
+  },
+  {
+    "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/gtk/initrd.gz speakup.synth=soft --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Accessible ^dark contrast installer menu"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz theme=dark --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Graphical install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/initrd.gz theme=dark --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Advanced options"
+  },
+  {
+    "cmdline": "priority=low vga=788 initrd=/install.amd/gtk/initrd.gz theme=dark ---",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Graphical expert install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz rescue/enable=true theme=dark --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Graphical rescue mode"
+  },
+  {
+    "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/gtk/initrd.gz theme=dark --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Graphical automated install"
+  },
+  {
+    "cmdline": "priority=low vga=788 initrd=/install.amd/initrd.gz theme=dark ---",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "E^xpert install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/initrd.gz rescue/enable=true theme=dark --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Rescue mode"
+  },
+  {
+    "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/initrd.gz theme=dark --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "^Automated install"
+  },
+  {
+    "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz speakup.synth=soft --- quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file://testdata/debian_10_install/install.amd/gtk/initrd.gz"
+    },
+    "kernel": {
+      "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
+    },
+    "name": "Install with ^speech synthesis"
+  }
+]

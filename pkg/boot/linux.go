@@ -13,11 +13,14 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
 // LinuxImage implements OSImage for a Linux kernel + initramfs.
 type LinuxImage struct {
+	Name string
+
 	Kernel  io.ReaderAt
 	Initrd  io.ReaderAt
 	Cmdline string
@@ -25,9 +28,32 @@ type LinuxImage struct {
 
 var _ OSImage = &LinuxImage{}
 
+// named is satisifed by both *os.File and *vfile.File. Hack hack hack.
+type named interface {
+	Name() string
+}
+
+func stringer(mod io.ReaderAt) string {
+	if s, ok := mod.(fmt.Stringer); ok {
+		return s.String()
+	}
+	if f, ok := mod.(named); ok {
+		return f.Name()
+	}
+	return fmt.Sprintf("%T", mod)
+}
+
+// Label returns either the Name or a short description.
+func (li *LinuxImage) Label() string {
+	if len(li.Name) > 0 {
+		return li.Name
+	}
+	return fmt.Sprintf("Linux(kernel=%s initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
+}
+
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
-	return fmt.Sprintf("LinuxImage(\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Kernel, li.Initrd, li.Cmdline)
+	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline)
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
@@ -50,13 +76,18 @@ func copyToFile(r io.Reader) (*os.File, error) {
 	return readOnlyF, nil
 }
 
+// Edit the kernel command line.
+func (li *LinuxImage) Edit(f func(cmdline string) string) {
+	li.Cmdline = f(li.Cmdline)
+}
+
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
 func (li *LinuxImage) Load(verbose bool) error {
 	if li.Kernel == nil {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
 
-	kernel, initrd := uio.Reader(li.Kernel), uio.Reader(li.Initrd)
+	kernel, initrd := uio.Reader(util.TryGzipFilter(li.Kernel)), uio.Reader(li.Initrd)
 	if verbose {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
 		// but it at least proves the files are still downloading.

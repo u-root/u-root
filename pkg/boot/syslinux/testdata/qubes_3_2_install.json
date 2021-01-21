@@ -1,0 +1,90 @@
+[
+  {
+    "cmdline": "console=none",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata/qubes_3_2_install/isolinux/xen.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "vmlinuz inst.stage2=hd:LABEL=Qubes-R3.2-x86_64 i915.preliminary_hw_support=1 quiet rhgb rd.live.check",
+        "name": "vmlinuz",
+        "url": "file://testdata/qubes_3_2_install/isolinux/vmlinuz"
+      },
+      {
+        "cmdline": "initrd.img",
+        "name": "initrd.img",
+        "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
+      }
+    ],
+    "name": "Test this ^media \u0026 install Qubes R3.2"
+  },
+  {
+    "cmdline": "console=none",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata/qubes_3_2_install/isolinux/xen.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "vmlinuz inst.stage2=hd:LABEL=Qubes-R3.2-x86_64 i915.preliminary_hw_support=1 quiet rhgb",
+        "name": "vmlinuz",
+        "url": "file://testdata/qubes_3_2_install/isolinux/vmlinuz"
+      },
+      {
+        "cmdline": "initrd.img",
+        "name": "initrd.img",
+        "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
+      }
+    ],
+    "name": "^Install Qubes R3.2"
+  },
+  {
+    "cmdline": "",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata/qubes_3_2_install/isolinux/xen.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "vmlinuz inst.stage2=hd:LABEL=Qubes-R3.2-x86_64 xdriver=vesa nomodeset quiet",
+        "name": "vmlinuz",
+        "url": "file://testdata/qubes_3_2_install/isolinux/vmlinuz"
+      },
+      {
+        "cmdline": "initrd.img",
+        "name": "initrd.img",
+        "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
+      }
+    ],
+    "name": "Install Qubes R3.2 in ^basic graphics mode"
+  },
+  {
+    "cmdline": "",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file://testdata/qubes_3_2_install/isolinux/xen.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "vmlinuz inst.stage2=hd:LABEL=Qubes-R3.2-x86_64 rescue quiet",
+        "name": "vmlinuz",
+        "url": "file://testdata/qubes_3_2_install/isolinux/vmlinuz"
+      },
+      {
+        "cmdline": "initrd.img",
+        "name": "initrd.img",
+        "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
+      }
+    ],
+    "name": "^Rescue a Qubes system"
+  },
+  {
+    "cmdline": "",
+    "image_type": "linux",
+    "kernel": {
+      "url": "file://testdata/qubes_3_2_install/isolinux/memtest"
+    },
+    "name": "Run a ^memory test"
+  }
+]

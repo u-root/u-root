@@ -5,10 +5,68 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/insomniacslk/dhcp/iana"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
 const RelayHeaderSize = 34
+
+// RelayOptions are the options valid for RelayForw and RelayRepl messages.
+//
+// RFC 3315 Appendix B defines them to be InterfaceID and RelayMsg options; RFC
+// 4649 also adds the RemoteID option.
+type RelayOptions struct {
+	Options
+}
+
+// RelayMessage returns the message embedded.
+func (ro RelayOptions) RelayMessage() DHCPv6 {
+	opt := ro.Options.GetOne(OptionRelayMsg)
+	if opt == nil {
+		return nil
+	}
+	if relayOpt, ok := opt.(*optRelayMsg); ok {
+		return relayOpt.Msg
+	}
+	return nil
+}
+
+// InterfaceID returns the interface ID of this relay message.
+func (ro RelayOptions) InterfaceID() []byte {
+	opt := ro.Options.GetOne(OptionInterfaceID)
+	if opt == nil {
+		return nil
+	}
+	if iid, ok := opt.(*optInterfaceID); ok {
+		return iid.ID
+	}
+	return nil
+}
+
+// RemoteID returns the remote ID in this relay message.
+func (ro RelayOptions) RemoteID() *OptRemoteID {
+	opt := ro.Options.GetOne(OptionRemoteID)
+	if opt == nil {
+		return nil
+	}
+	if rid, ok := opt.(*OptRemoteID); ok {
+		return rid
+	}
+	return nil
+}
+
+// ClientLinkLayerAddress returns the Hardware Type and
+// Link Layer Address of the requesting client in this relay message.
+func (ro RelayOptions) ClientLinkLayerAddress() (iana.HWType, net.HardwareAddr) {
+	opt := ro.Options.GetOne(OptionClientLinkLayerAddr)
+	if opt == nil {
+		return 0, nil
+	}
+	if lla, ok := opt.(*optClientLinkLayerAddress); ok {
+		return lla.LinkLayerType, lla.LinkLayerAddress
+	}
+	return 0, nil
+}
 
 // RelayMessage is a DHCPv6 relay agent message as defined by RFC 3315 Section
 // 7.
@@ -17,7 +75,16 @@ type RelayMessage struct {
 	HopCount    uint8
 	LinkAddr    net.IP
 	PeerAddr    net.IP
-	Options     Options
+	Options     RelayOptions
+}
+
+func write16(b *uio.Lexer, ip net.IP) {
+	if ip == nil || ip.To16() == nil {
+		var zeros [net.IPv6len]byte
+		b.WriteBytes(zeros[:])
+	} else {
+		b.WriteBytes(ip.To16())
+	}
 }
 
 // Type is this relay message's types.
@@ -29,7 +96,7 @@ func (r *RelayMessage) Type() MessageType {
 func (r *RelayMessage) String() string {
 	ret := fmt.Sprintf(
 		"RelayMessage(messageType=%s hopcount=%d, linkaddr=%s, peeraddr=%s, %d options)",
-		r.Type(), r.HopCount, r.LinkAddr, r.PeerAddr, len(r.Options),
+		r.Type(), r.HopCount, r.LinkAddr, r.PeerAddr, len(r.Options.Options),
 	)
 	return ret
 }
@@ -58,8 +125,8 @@ func (r *RelayMessage) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(make([]byte, 0, RelayHeaderSize))
 	buf.Write8(byte(r.MessageType))
 	buf.Write8(r.HopCount)
-	buf.WriteBytes(r.LinkAddr.To16())
-	buf.WriteBytes(r.PeerAddr.To16())
+	write16(buf, r.LinkAddr)
+	write16(buf, r.PeerAddr)
 	buf.WriteBytes(r.Options.ToBytes())
 	return buf.Data()
 }

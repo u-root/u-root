@@ -1,0 +1,1 @@
+echo:[]string{"if", "then", "else", "fi", "for", "do", "done"}

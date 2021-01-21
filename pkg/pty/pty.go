@@ -1,4 +1,4 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -16,29 +16,36 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/termios"
-	"golang.org/x/sys/unix"
 )
 
+// Pty contains all the bits and pieces needed to start and control
+// a process at the other end of a pty, as well as whatever is needed
+// to control the pty, and restore modes on exit.
 type Pty struct {
 	C        *exec.Cmd
 	Ptm      *os.File
 	Pts      *os.File
 	Sname    string
 	Kid      int
-	TTY      *termios.TTY
-	WS       *unix.Winsize
-	Restorer *unix.Termios
+	TTY      *termios.TTYIO
+	WS       *termios.Winsize
+	Restorer *termios.Termios
 }
 
+var sys = func(p *Pty) {}
+
+// Command sets up an exec.Command at the remote end of a Pty.
 func (p *Pty) Command(cmd string, args ...string) {
 	p.C = exec.Command(cmd, args...)
 	p.C.Stdin, p.C.Stdout, p.C.Stderr = p.Pts, p.Pts, p.Pts
-	p.C.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true}
+	sys(p)
 }
 
+// Start starts Command attached to a Pty. It sets
+// window size and other variables as needed. It does not
+// block.
 func (p *Pty) Start() error {
 	tty, err := termios.New()
 	if err != nil {
@@ -69,6 +76,8 @@ func (p *Pty) Start() error {
 	return nil
 }
 
+// Run runs a Command attached to a Pty, waiting for completion and
+// managing stdio. It uses Wait to restore tty modes when it is done.
 func (p *Pty) Run() error {
 	if err := p.Start(); err != nil {
 		return err
@@ -93,6 +102,8 @@ func (p *Pty) Run() error {
 	return p.Wait()
 }
 
+// Wait waits for a previously started command to finish, and restores the
+// tty mode when it is done.
 func (p *Pty) Wait() error {
 	defer p.TTY.Set(p.Restorer)
 	return p.C.Wait()

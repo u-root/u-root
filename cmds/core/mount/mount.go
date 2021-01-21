@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Mount a filesystem at the specified path.
+// +build !plan9
+
+// mount mounts a filesystem at the specified path.
 //
 // Synopsis:
 //     mount [-r] [-o options] [-t FSTYPE] DEV PATH
@@ -13,13 +15,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/loop"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/loop"
 	"golang.org/x/sys/unix"
 )
 
@@ -93,13 +96,22 @@ func informIfUnknownFS(originFS string) {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		n := []string{"/proc/self/mounts", "/proc/mounts", "/etc/mtab"}
+		for _, p := range n {
+			if b, err := ioutil.ReadFile(p); err == nil {
+				fmt.Print(string(b))
+				os.Exit(0)
+			}
+		}
+		log.Fatalf("Could not read %s to get namespace", n)
+	}
 	flag.Parse()
-	a := flag.Args()
-	if len(a) < 2 {
+	if len(flag.Args()) < 2 {
 		flag.Usage()
 		os.Exit(1)
 	}
-
+	a := flag.Args()
 	dev := a[0]
 	path := a[1]
 	var flags uintptr
@@ -124,12 +136,14 @@ func main() {
 		flags |= unix.MS_RDONLY
 	}
 	if *fsType == "" {
-		// mandatory parameter for the moment
-		log.Fatalf("No file system type provided!\nUsage: mount [-r] [-o mount options] -t fstype dev path")
-	}
-	if _, err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), flags); err != nil {
-		log.Printf("%v", err)
-		informIfUnknownFS(*fsType)
-		os.Exit(1)
+		if _, err := mount.TryMount(dev, path, strings.Join(data, ","), flags); err != nil {
+			log.Fatalf("%v", err)
+		}
+	} else {
+		if _, err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), flags); err != nil {
+			log.Printf("%v", err)
+			informIfUnknownFS(*fsType)
+			os.Exit(1)
+		}
 	}
 }

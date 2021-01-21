@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Build commands in background processes. This feature certainly makes a
-// non-busybox shell feel more realtime.
 package main
 
 import (

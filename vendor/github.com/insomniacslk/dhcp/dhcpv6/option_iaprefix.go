@@ -3,20 +3,44 @@ package dhcpv6
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
+
+// PrefixOptions are the options valid for use with IAPrefix option field.
+//
+// RFC 3633 states that it's just the StatusCode option.
+//
+// RFC 8415 Appendix C does not list the Status Code option as valid, but it
+// does say that the previous text in RFC 8415 Section 21.22 supersedes that
+// table. Section 21.22 does mention the Status Code option.
+type PrefixOptions struct {
+	Options
+}
+
+// Status returns the status code associated with this option.
+func (po PrefixOptions) Status() *OptStatusCode {
+	opt := po.Options.GetOne(OptionStatusCode)
+	if opt == nil {
+		return nil
+	}
+	sc, ok := opt.(*OptStatusCode)
+	if !ok {
+		return nil
+	}
+	return sc
+}
 
 // OptIAPrefix implements the IAPrefix option.
 //
 // This module defines the OptIAPrefix structure.
 // https://www.ietf.org/rfc/rfc3633.txt
 type OptIAPrefix struct {
-	PreferredLifetime uint32
-	ValidLifetime     uint32
-	prefixLength      byte
-	ipv6Prefix        net.IP
-	Options           Options
+	PreferredLifetime time.Duration
+	ValidLifetime     time.Duration
+	Prefix            *net.IPNet
+	Options           PrefixOptions
 }
 
 func (op *OptIAPrefix) Code() OptionCode {
@@ -26,46 +50,28 @@ func (op *OptIAPrefix) Code() OptionCode {
 // ToBytes marshals this option according to RFC 3633, Section 10.
 func (op *OptIAPrefix) ToBytes() []byte {
 	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write32(op.PreferredLifetime)
-	buf.Write32(op.ValidLifetime)
-	buf.Write8(op.prefixLength)
-	buf.WriteBytes(op.ipv6Prefix.To16())
+
+	t1 := Duration{op.PreferredLifetime}
+	t1.Marshal(buf)
+	t2 := Duration{op.ValidLifetime}
+	t2.Marshal(buf)
+
+	if op.Prefix != nil {
+		// Even if Mask is nil, Size will return 0 without panicking.
+		length, _ := op.Prefix.Mask.Size()
+		buf.Write8(uint8(length))
+		write16(buf, op.Prefix.IP)
+	} else {
+		buf.Write8(0)
+		write16(buf, nil)
+	}
 	buf.WriteBytes(op.Options.ToBytes())
 	return buf.Data()
 }
 
-func (op *OptIAPrefix) PrefixLength() byte {
-	return op.prefixLength
-}
-
-func (op *OptIAPrefix) SetPrefixLength(pl byte) {
-	op.prefixLength = pl
-}
-
-// IPv6Prefix returns the ipv6Prefix
-func (op *OptIAPrefix) IPv6Prefix() net.IP {
-	return op.ipv6Prefix
-}
-
-// SetIPv6Prefix sets the ipv6Prefix
-func (op *OptIAPrefix) SetIPv6Prefix(p net.IP) {
-	op.ipv6Prefix = p
-}
-
 func (op *OptIAPrefix) String() string {
-	return fmt.Sprintf("OptIAPrefix{preferredlifetime=%v, validlifetime=%v, prefixlength=%v, ipv6prefix=%v, options=%v}",
-		op.PreferredLifetime, op.ValidLifetime, op.PrefixLength(), op.IPv6Prefix(), op.Options)
-}
-
-// GetOneOption will get an option of the give type from the Options field, if
-// it is present. It will return `nil` otherwise
-func (op *OptIAPrefix) GetOneOption(code OptionCode) Option {
-	return op.Options.GetOne(code)
-}
-
-// DelOption will remove all the options that match a Option code.
-func (op *OptIAPrefix) DelOption(code OptionCode) {
-	op.Options.Del(code)
+	return fmt.Sprintf("IAPrefix: {PreferredLifetime=%v, ValidLifetime=%v, Prefix=%s, Options=%v}",
+		op.PreferredLifetime, op.ValidLifetime, op.Prefix, op.Options)
 }
 
 // ParseOptIAPrefix an OptIAPrefix structure from a sequence of bytes. The
@@ -73,10 +79,24 @@ func (op *OptIAPrefix) DelOption(code OptionCode) {
 func ParseOptIAPrefix(data []byte) (*OptIAPrefix, error) {
 	buf := uio.NewBigEndianBuffer(data)
 	var opt OptIAPrefix
-	opt.PreferredLifetime = buf.Read32()
-	opt.ValidLifetime = buf.Read32()
-	opt.prefixLength = buf.Read8()
-	opt.ipv6Prefix = net.IP(buf.CopyN(net.IPv6len))
+
+	var t1, t2 Duration
+	t1.Unmarshal(buf)
+	t2.Unmarshal(buf)
+	opt.PreferredLifetime = t1.Duration
+	opt.ValidLifetime = t2.Duration
+
+	length := buf.Read8()
+	ip := net.IP(buf.CopyN(net.IPv6len))
+
+	if length == 0 {
+		opt.Prefix = nil
+	} else {
+		opt.Prefix = &net.IPNet{
+			Mask: net.CIDRMask(int(length), 128),
+			IP:   ip,
+		}
+	}
 	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
 		return nil, err
 	}

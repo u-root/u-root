@@ -213,14 +213,19 @@ func (a *AddressAttributes) decode(ad *netlink.AttributeDecoder) error {
 func (a *AddressAttributes) encode(ae *netlink.AttributeEncoder) error {
 	ae.Uint16(unix.IFA_UNSPEC, 0)
 	ae.Bytes(unix.IFA_ADDRESS, a.Address)
-	ae.Bytes(unix.IFA_BROADCAST, a.Broadcast)
-	ae.Bytes(unix.IFA_ANYCAST, a.Anycast)
-	ae.Bytes(unix.IFA_MULTICAST, a.Multicast)
-	ae.Uint32(unix.IFA_FLAGS, a.Flags)
-
 	if a.Local != nil {
 		ae.Bytes(unix.IFA_LOCAL, a.Local)
 	}
+	if a.Broadcast != nil {
+		ae.Bytes(unix.IFA_BROADCAST, a.Broadcast)
+	}
+	if a.Anycast != nil {
+		ae.Bytes(unix.IFA_ANYCAST, a.Anycast)
+	}
+	if a.Multicast != nil {
+		ae.Bytes(unix.IFA_MULTICAST, a.Multicast)
+	}
+	ae.Uint32(unix.IFA_FLAGS, a.Flags)
 
 	return nil
 }
