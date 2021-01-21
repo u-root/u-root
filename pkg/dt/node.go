@@ -67,6 +67,36 @@ func (n *Node) Walk(f func(*Node) error) error {
 	return nil
 }
 
+// Find finds a Node starting at a node, given a matching function.
+func (n *Node) Find(f func(*Node) bool) (*Node, bool) {
+	if ok := f(n); ok {
+		return n, ok
+	}
+	for _, child := range n.Children {
+		if nn, ok := child.Find(f); ok {
+			return nn, ok
+		}
+	}
+	return nil, false
+}
+
+// NodeByName uses Find to find a node by name.
+func (n *Node) NodeByName(name string) (*Node, bool) {
+	return n.Find(func(n *Node) bool {
+		return n.Name == name
+	})
+}
+
+// LookProperty finds a property by name.
+func (n *Node) LookProperty(name string) (*Property, bool) {
+	for _, p := range n.Properties {
+		if p.Name == name {
+			return &p, true
+		}
+	}
+	return nil, false
+}
+
 // Property is a name-value pair. Note the PropertyType of Value is not
 // encoded.
 type Property struct {

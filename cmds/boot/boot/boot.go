@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -38,6 +38,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/localboot"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/ulog"
 )
@@ -89,7 +90,8 @@ func main() {
 	if *verbose {
 		l = ulog.Log
 	}
-	images, mps, err := localboot.Localboot(l, blockDevs)
+	mountPool := &mount.Pool{}
+	images, err := localboot.Localboot(l, blockDevs, mountPool)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -105,5 +107,5 @@ func main() {
 	menuEntries = append(menuEntries, menu.StartShell{})
 
 	// Boot does not return.
-	bootcmd.ShowMenuAndBoot(menuEntries, mps, *noLoad, *noExec)
+	bootcmd.ShowMenuAndBoot(menuEntries, mountPool, *noLoad, *noExec)
 }

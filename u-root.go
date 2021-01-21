@@ -48,6 +48,7 @@ var (
 	noStrip                                 *bool
 	statsOutputPath                         *string
 	statsLabel                              *string
+	shellbang                               *bool
 )
 
 func init() {
@@ -78,6 +79,7 @@ func init() {
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 
 	noStrip = flag.Bool("no-strip", false, "Build unstripped binaries")
+	shellbang = flag.Bool("shellbang", false, "Use #! instead of symlinks for busybox")
 
 	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
 
@@ -170,6 +172,7 @@ func main() {
 var recommendedVersions = []string{
 	"go1.13",
 	"go1.14",
+	"go1.15",
 }
 
 func isRecommendedVersion(v string) bool {
@@ -262,7 +265,7 @@ func Main() error {
 		var b builder.Builder
 		switch *build {
 		case "bb":
-			b = builder.BBBuilder{}
+			b = builder.BBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
 		case "source":

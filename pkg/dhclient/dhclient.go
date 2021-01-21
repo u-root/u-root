@@ -156,6 +156,9 @@ type Config struct {
 	// If not set, it will default to nclient4's default (DHCP broadcast
 	// address).
 	V4ServerAddr *net.UDPAddr
+
+	// If true, add Client Identifier (61) option to the IPv4 request.
+	V4ClientIdentifier bool
 }
 
 func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
@@ -186,6 +189,13 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 			dhcpv4.WithNetboot,
 		},
 		c.Modifiers4...)
+
+	if c.V4ClientIdentifier {
+		// Client Id is hardware type + mac per RFC 2132 9.14.
+		ident := []byte{0x01} // Type ethernet
+		ident = append(ident, iface.Attrs().HardwareAddr...)
+		reqmods = append(reqmods, dhcpv4.WithOption(dhcpv4.OptClientIdentifier(ident)))
+	}
 
 	log.Printf("Attempting to get DHCPv4 lease on %s", iface.Attrs().Name)
 	lease, err := client.Request(ctx, reqmods...)

@@ -1,0 +1,53 @@
+# dummy fitimage its file
+/dts-v1/;
+/ {
+    description = "U-Boot fitImage for nerf kernel";
+    #address-cells = <1>;
+
+    images {
+        kernel@0 {
+            description = "Linux Kernel";
+            data = /incbin/("${tmp_dir}/dummy_kernel");
+            type = "kernel";
+            arch = "x86_64";
+            os = "linux";
+            compression = "none";
+            load = <0x10000>;
+            entry = <0x10000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk@0 {
+            description = "initramfs";
+            data = /incbin/("${tmp_dir}/dummy_initramfs.cpio");
+            type = "ramdisk";
+            arch = "x86_64";
+            os = "linux";
+            load = <0x320000>;
+            compression = "none";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+    };
+    configurations {
+        default = "conf@1";
+        conf@1 {
+            description = "Boot Linux kernel with ramdisk";
+            kernel = "kernel@0";
+            ramdisk = "ramdisk@0";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_bz@1 {
+            description = "Boot Linux kernel with ramdisk";
+            kernel = "kernel@0";
+            ramdisk = "ramdisk@0";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+    };
+};

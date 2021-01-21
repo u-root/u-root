@@ -35,6 +35,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"golang.org/x/sys/unix"
 
@@ -44,6 +45,19 @@ import (
 	"github.com/u-root/u-root/pkg/mount/gpt"
 	"github.com/u-root/u-root/pkg/uio"
 )
+
+func partNo(device string, number int) (string, error) {
+	var name string
+	if unicode.IsDigit(rune(device[len(device)-1])) {
+		name = fmt.Sprintf("%sp%d", device, number)
+	} else {
+		name = fmt.Sprintf("%s%d", device, number)
+	}
+	if _, err := os.Stat(name); err != nil {
+		return "", err
+	}
+	return name, nil
+}
 
 // LoadDisk loads the right ESXi multiboot kernel from partitions 5 or 6 of the
 // given device.
@@ -56,8 +70,8 @@ import (
 //
 // device5 and device6 will be mounted at temporary directories.
 func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error) {
-	opts5, mp5, err5 := mountPartition(fmt.Sprintf("%s5", device))
-	opts6, mp6, err6 := mountPartition(fmt.Sprintf("%s6", device))
+	opts5, mp5, err5 := mountPartition(device, 5)
+	opts6, mp6, err6 := mountPartition(device, 6)
 	if err5 != nil && err6 != nil {
 		return nil, nil, fmt.Errorf("could not mount or read either partition 5 (%v) or partition 6 (%v)", err5, err6)
 	}
@@ -143,7 +157,11 @@ func LoadConfig(configFile string) (*boot.MultibootImage, error) {
 	return getBootImage(opts, "", 0, fmt.Sprintf("config file %s", configFile))
 }
 
-func mountPartition(dev string) (*options, *mount.MountPoint, error) {
+func mountPartition(parentdev string, partition int) (*options, *mount.MountPoint, error) {
+	dev, err := partNo(parentdev, partition)
+	if err != nil {
+		return nil, nil, err
+	}
 	base := filepath.Base(dev)
 	mountPoint, err := ioutil.TempDir("", fmt.Sprintf("%s-", base))
 	if err != nil {
@@ -246,7 +264,12 @@ func getUUID(device string, partition int) (string, error) {
 		return "", err
 	}
 
-	f, err := os.Open(fmt.Sprintf("%s%d", device, partition))
+	dev, err := partNo(device, partition)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := os.Open(dev)
 	if err != nil {
 		return "", err
 	}
