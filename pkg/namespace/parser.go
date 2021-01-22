@@ -109,7 +109,7 @@ func ParseArgs(args []string) (Modifier, error) {
 	case "import":
 		c.syscall = IMPORT
 	default:
-		panic(arg)
+		return nil, fmt.Errorf("%q is an unknown operation", arg)
 	}
 
 	c.flag, c.args = ParseFlags(args)

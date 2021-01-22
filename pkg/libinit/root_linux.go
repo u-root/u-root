@@ -7,12 +7,16 @@ package libinit
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/kmodule"
 	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
 )
@@ -210,4 +214,58 @@ func CreateRootfs() {
 	if !present || boolErr != nil || !systemdEnabled {
 		create(cgroupsnamespace, true)
 	}
+}
+
+var (
+	excludedMods = map[string]bool{
+		"idpf":     true,
+		"idpf_imc": true,
+	}
+)
+
+// InstallAllModules installs kernel modules (.ko files) from /lib/modules.
+// Useful for modules that need to be loaded for boot (ie a network
+// driver needed for netboot). It skips over blacklisted modules in
+// excludedMods.
+func InstallAllModules() {
+	modulePattern := "/lib/modules/*.ko"
+	if err := InstallModules(modulePattern, excludedMods); err != nil {
+		log.Print(err)
+	}
+}
+
+// InstallModules installs kernel modules (.ko files) from /lib/modules that
+// match the given pattern, skipping those in the exclude list.
+func InstallModules(pattern string, exclude map[string]bool) error {
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return fmt.Errorf("no modules found matching '%s'", pattern)
+	}
+
+	for _, filename := range files {
+		f, err := os.Open(filename)
+		if err != nil {
+			log.Printf("installModules: can't open %q: %v", filename, err)
+			continue
+		}
+		// Module flags are passed to the command line in the form modulename.flag=val
+		// And must be passed to FileInit as flag=val to be installed properly
+		moduleName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
+		if _, ok := exclude[moduleName]; ok {
+			log.Printf("Skipping module %s", moduleName)
+			continue
+		}
+
+		flags := cmdline.FlagsForModule(moduleName)
+		err = kmodule.FileInit(f, flags, 0)
+		f.Close()
+		if err != nil {
+			log.Printf("installModules: can't install %q: %v", filename, err)
+		}
+	}
+
+	return nil
 }
