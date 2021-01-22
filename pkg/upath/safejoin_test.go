@@ -60,3 +60,56 @@ func TestSafeFilepathJoin(t *testing.T) {
 		})
 	}
 }
+
+func TestSafeResolveSymlink(t *testing.T) {
+	for _, tt := range []struct {
+		name               string
+		path1, path2, want string
+	}{
+		{
+			path1: "a",
+			path2: "b",
+			want:  "a/b",
+		},
+		{
+			path1: "/a",
+			path2: "b",
+			want:  "/a/b",
+		},
+		{
+			path1: "/a",
+			path2: "/b",
+			want:  "/a/b",
+		},
+		{
+			path1: "/a",
+			path2: "../b",
+			want:  "/a/b",
+		},
+		{
+			path1: "/a",
+			path2: "c/../b",
+			want:  "/a/b",
+		},
+		{
+			path1: "/a",
+			path2: "c/d/../b",
+			want:  "/a/c/b",
+		},
+		{
+			path1: "/a",
+			path2: "c/d/../../../b",
+			want:  "/a/b",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SafeFilepathJoin(tt.path1, tt.path2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tt.want {
+				t.Errorf("safePathJoin(%q, %q) = %q; want %q", tt.path1, tt.path2, got, tt.want)
+			}
+		})
+	}
+}
