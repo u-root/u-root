@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -32,7 +32,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/upath"
@@ -123,7 +122,7 @@ func main() {
 	form := parseCommandLine()
 
 	if form.lowPri {
-		if err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, 20); err != nil {
+		if err := lowpriority(); err != nil {
 			log.Printf("Cannot set low priority: %v", err)
 		}
 	}

@@ -31,6 +31,11 @@ var defaultBootsequence = [][]string{
 	{"localboot", "-grub"},
 }
 
+// VPD variable for enabling IPMI BMC overriding boot order, default is not set
+const VpdBmcBootOrderOverride = "bmc_bootorder_override"
+
+var bmcBootOverride bool
+
 // Product list for running IPMI OEM commands
 var productList = [3]string{"Tioga Pass", "Mono Lake", "Delta Lake"}
 
@@ -97,7 +102,16 @@ func runIPMICommands() {
 	} else {
 		log.Printf("Watchdog is stopped.")
 	}
-
+	// Try RW_VPD first
+	value, err := systembooter.Get(VpdBmcBootOrderOverride, false)
+	if err != nil {
+		// Try RO_VPD
+		value, err = systembooter.Get(VpdBmcBootOrderOverride, true)
+	}
+	if err == nil && string(value) == "1" {
+		bmcBootOverride = true
+	}
+	log.Printf("VPD %s is %v", VpdBmcBootOrderOverride, string(value))
 	// Below IPMI commands would require SMBIOS data
 	si, err := smbios.FromSysfs()
 	if err != nil {
@@ -118,7 +132,9 @@ func runIPMICommands() {
 			if err = checkCMOSClear(i); err != nil {
 				log.Printf("IPMI CMOS clear err: %v", err)
 			}
-
+			if err = ocp.CheckBMCBootOrder(i, bmcBootOverride); err != nil {
+				log.Printf("Failed to sync BMC Boot Order %v.", err)
+			}
 			dimmInfo, err := ocp.GetOemIpmiDimmInfo(si)
 			if err == nil {
 				if err = ocp.SendOemIpmiDimmInfo(i, dimmInfo); err == nil {
@@ -164,6 +180,8 @@ func addSEL(sequence string) {
 	defer i.Close()
 
 	switch sequence {
+	case "netboot":
+		fallthrough
 	case "fbnetboot":
 		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
@@ -213,7 +231,12 @@ func main() {
 	}
 
 	// Get and show boot entries
-	bootEntries := systembooter.GetBootEntries()
+	var bootEntries []systembooter.BootEntry
+	if bmcBootOverride && ocp.BmcUpdatedBootorder {
+		bootEntries = ocp.BootEntries
+	} else {
+		bootEntries = systembooter.GetBootEntries()
+	}
 	log.Printf("BOOT ENTRIES:")
 	for _, entry := range bootEntries {
 		log.Printf("    %v) %+v", entry.Name, string(entry.Config))
