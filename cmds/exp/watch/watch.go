@@ -1,6 +1,20 @@
-// Copyright 2015-2017 the u-root Authors. All rights reserved
+// Copyright 2015-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// watch periodically executes the executable.
+//
+// Synopsis:
+//     watch [-n] SEC [-t] cmd-exec
+//
+// Description:
+//    cmd-exec is executed every n seconds
+//    example, watch -n 5 dmesg >> log.txt 
+//    : executes dmesg every 5 sec and stores the log in log.txt
+//
+// Options:
+//     -n: time in seconds
+//     -t: do not print header
 
 package main
 
@@ -33,6 +47,7 @@ func main() {
 
 	argRem := flag.Args()
 
+	// argRem is the remaining args(non flag) after parsing.
 	if len(argRem) == 0 {
 		flag.Usage()
 		os.Exit(0)
@@ -47,7 +62,7 @@ func main() {
 	for {
 		fmt.Print("\033[0;0H")
 		fmt.Print("\033[J")
-		if *t == false {
+		if !*t {
 			fmt.Printf("Every %d : %v \n\n", seconds, argRem)
 		}
 		cmd := exec.Command(argRem[0], argRem[1:]...)
