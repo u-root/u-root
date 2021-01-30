@@ -476,3 +476,27 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 	}
 	return -1, -1, fmt.Errorf("no cpio found")
 }
+
+var ErrCfgNotFound = errors.New("embedded config not found")
+
+// extract embedded config from kernel
+func (b *BzImage) ReadConfig() (string, error) {
+	i := bytes.Index(b.KernelCode, []byte("IKCFG_ST\037\213\010"))
+	if i == -1 {
+		return "", ErrCfgNotFound
+	}
+	i += 8
+	mb := 1024 * 1024 //read only 1 mb; arbitrary
+	buf := bytes.NewReader(b.KernelCode[i : i+mb])
+	gz, err := gzip.NewReader(buf)
+	if err != nil {
+		return "", err
+	}
+	//make it stop at end of stream, since we don't know the actual size
+	gz.Multistream(false)
+	cfg, err := ioutil.ReadAll(gz)
+	if err != nil {
+		return "", err
+	}
+	return string(cfg), nil
+}
