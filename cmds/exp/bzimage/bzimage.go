@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -30,16 +31,31 @@ var argcounts = map[string]int{
 	"extract":   3,
 }
 
-var (
-	cmdUsage = "Usage: bzImage  [copy <in> <out> ] | [diff <image> <image> ] | [extract <file> <elf-file> ] | [dump <file>] | [initramfs input-bzimage initramfs output-bzimage]"
-	debug    = flag.BoolP("debug", "d", false, "enable debug printing")
-)
+const cmdUsage = `Performs various operations on kernel images. Usage:
+bzimage copy <in> <out>
+	Create a copy of <in> at <out>, parsing structures.
+bzimage diff <image> <image>
+	Compare headers of two kernel images.
+bzimage extract <file> <elf-file>
+	extract parts of the kernel into separate files with self-
+	explainatory extensions .boot, .head, .kern, .tail, .ramfs
+bzimage dump <file>
+    Dumps header.
+bzimage initramfs <input-bzimage> <new-initramfs> <output-bzimage>
+	Replaces initramfs in input-bzimage, creating output-bzimage.
+
+flags:`
+
+var debug = flag.BoolP("debug", "d", false, "enable debug printing")
 
 func usage() {
-	log.Fatalf(cmdUsage)
+	fmt.Fprintln(os.Stderr, cmdUsage)
+	flag.PrintDefaults()
+	os.Exit(1)
 }
 
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 
 	if *debug {
@@ -57,7 +73,10 @@ func main() {
 	var br = &bzimage.BzImage{}
 	var image []byte
 	switch a[0] {
-	case "copy", "diff", "dump", "initramfs", "extract":
+	case "diff", "dump":
+		br.NoDecompress = true
+		fallthrough
+	case "copy", "initramfs", "extract":
 		var err error
 		image, err = ioutil.ReadFile(a[1])
 		if err != nil {
