@@ -12,8 +12,10 @@ package bzimage
 
 import (
 	"bytes"
+	"compress/gzip"
 	"debug/elf"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -95,16 +97,20 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.compressed); err != nil {
 		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
-	var err error
-	Debug("Uncompress %d bytes", len(b.compressed))
-	if b.KernelCode, err = unpack(b.compressed); err != nil {
-		return err
+	if b.NoDecompress {
+		Debug("skipping code decompress")
+	} else {
+		var err error
+		Debug("Uncompress %d bytes", len(b.compressed))
+		if b.KernelCode, err = unpack(b.compressed); err != nil {
+			return err
+		}
+		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 	}
 	b.TailCode = make([]byte, r.Len())
 	if _, err := r.Read(b.TailCode); err != nil {
 		return fmt.Errorf("can't read TailCode: %v", err)
 	}
-	Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 	b.KernelBase = uintptr(0x100000)
 	if b.Header.RamdiskImage == 0 {
 		return nil
@@ -115,8 +121,13 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	return nil
 }
 
+var ErrKCodeMissing = errors.New("No kernel code was decompressed")
+
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
 func (b *BzImage) MarshalBinary() ([]byte, error) {
+	if b.NoDecompress || b.KernelCode == nil {
+		return nil, ErrKCodeMissing
+	}
 	// First step, make sure we can compress the kernel.
 	dat, err := compress(b.KernelCode, "--lzma2=,dict=32MiB")
 	if err != nil {
@@ -230,6 +241,9 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 
 // Extract extracts the KernelCode as an ELF.
 func (b *BzImage) ELF() (*elf.File, error) {
+	if b.NoDecompress || b.KernelCode == nil {
+		return nil, ErrKCodeMissing
+	}
 	e, err := elf.NewFile(bytes.NewReader(b.KernelCode))
 	if err != nil {
 		return nil, err
@@ -362,6 +376,7 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
 	}
 	if b.KernelBase != b2.KernelBase {
+		//NOTE: this is hardcoded to 0x100000
 		s = s + fmt.Sprintf("b KernelBase is %#x; b2 KernelBase is %#x", b.KernelBase, b2.KernelBase)
 	}
 	if b.KernelOffset != b2.KernelOffset {

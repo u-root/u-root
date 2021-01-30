@@ -252,4 +252,6 @@ type BzImage struct {
 	KernelBase   uintptr
 	KernelOffset uintptr
 	compressed   []byte
+	// Some operations don't need the decompressed code; this speeds them up significantly.
+	NoDecompress bool
 }
