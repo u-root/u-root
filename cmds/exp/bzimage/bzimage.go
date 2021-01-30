@@ -29,6 +29,8 @@ var argcounts = map[string]int{
 	"dump":      2,
 	"initramfs": 4,
 	"extract":   3,
+	"ver":       2,
+	"cfg":       2,
 }
 
 const cmdUsage = `Performs various operations on kernel images. Usage:
@@ -43,6 +45,10 @@ bzimage dump <file>
     Dumps header.
 bzimage initramfs <input-bzimage> <new-initramfs> <output-bzimage>
 	Replaces initramfs in input-bzimage, creating output-bzimage.
+bzimage ver <image>
+	Dump version info similar to 'file <image>'.
+bzimage cfg <image>
+	Dump embedded config.
 
 flags:`
 
@@ -73,10 +79,10 @@ func main() {
 	var br = &bzimage.BzImage{}
 	var image []byte
 	switch a[0] {
-	case "diff", "dump":
+	case "diff", "dump", "ver":
 		br.NoDecompress = true
 		fallthrough
-	case "copy", "initramfs", "extract":
+	case "copy", "initramfs", "extract", "cfg":
 		var err error
 		image, err = ioutil.ReadFile(a[1])
 		if err != nil {
@@ -162,5 +168,13 @@ func main() {
 		if err := ioutil.WriteFile(a[3], b, 0644); err != nil {
 			log.Fatal(err)
 		}
+	case "ver":
+		fmt.Println(br.KVer())
+	case "cfg":
+		cfg, err := br.ReadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s\n", cfg)
 	}
 }
