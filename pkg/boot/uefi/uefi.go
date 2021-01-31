@@ -49,6 +49,7 @@ const (
 const PayloadConfigVersion = 1
 
 type payloadConfig struct {
+	Version             uint64
 	ACPIBase            uint64
 	ACPISize            uint64
 	SMBIOSBase          uint64
@@ -128,6 +129,7 @@ func (fv *FVImage) Load(verbose bool) error {
 	}
 
 	pc := payloadConfig{
+		Version:             PayloadConfigVersion,
 		ACPIBase:            uint64(rsdp.RSDPAddr()),
 		ACPISize:            uint64(rsdp.Len()),
 		SMBIOSBase:          uint64(smbiosBase),
