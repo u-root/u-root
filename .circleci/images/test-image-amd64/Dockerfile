@@ -25,7 +25,12 @@ RUN sudo apt-get update &&                          \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
         gcc-multilib                                \
-        gzip &&                                     \
+        gzip                                        \
+        `# Edk2 build deps`                         \
+        uuid-dev                                    \
+        nasm                                        \
+        bash                                        \
+        iasl &&                                     \
     sudo rm -rf /var/lib/apt/lists/*
 
 # Create working directory
@@ -72,6 +77,19 @@ RUN set -eux;                                                          \
     cp multiboot-test-kernel/kernel ./;                                \
     gzip -k kernel;                                                    \
     rm -rf multiboot-test-kernel/
+
+SHELL ["/bin/bash", "-c"]
+RUN set -ex;                                                           \
+    git clone --branch uefipayload --recursive                         \
+    https://github.com/chengchiehhuang/edk2 uefipayload;               \
+    cd uefipayload;                                                    \
+    source ./edksetup.sh;                                              \
+    make -C BaseTools;                                                 \
+    build -a X64 -p UefiPayloadPkg/UefiPayloadPkg.dsc -b DEBUG         \
+    -t GCC5 -D BOOTLOADER=LINUXBOOT;                                   \
+    cp Build/UefiPayloadPkgX64/DEBUG_GCC5/FV/UEFIPAYLOAD.fd ~/;        \
+    cd ~;                                                              \
+    rm -rf uefipayload/
 
 # Export paths to binaries.
 ENV UROOT_KERNEL /home/circleci/bzImage
