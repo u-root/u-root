@@ -146,11 +146,11 @@ type Opts struct {
 	// TempDir is a temporary directory for builders to store files in.
 	TempDir string
 
-	// ExtraFiles are files to add to the archive in addition to the Go
-	// packages.
+	// ExtraFilesInstall are files to install to the archive in addition to
+	// the Go packages.
 	//
 	// Shared library dependencies will automatically also be added to the
-	// archive using ldd, unless SkipLDD (below) is true.
+	// archive using ldd.
 	//
 	// The following formats are allowed in the list:
 	//
@@ -158,16 +158,20 @@ type Opts struct {
 	//     /home/chrisko/foo on the host at the relative root/bar in the
 	//     archive.
 	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
-	ExtraFiles []string
+	ExtraFilesInstall []string
 
-	// If true, do not use ldd to pick up dependencies from local machine for
-	// ExtraFiles. Useful if you have all deps revision controlled and wish to
-	// ensure builds are repeatable, and/or if the local machine's binaries use
-	// instructions unavailable on the emulated cpu.
+	// ExtraFilesInclude are files to include in the archive in addition to
+	// the Go packages.
 	//
-	// If you turn this on but do not manually list all deps, affected binaries
-	// will misbehave.
-	SkipLDD bool
+	// Shared library dependencies will NOT be added to the archive.
+	//
+	// The following formats are allowed in the list:
+	//
+	//   - "/home/chrisko/foo:root/bar" adds the file from absolute path
+	//     /home/chrisko/foo on the host at the relative root/bar in the
+	//     archive.
+	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
+	ExtraFilesInclude []string
 
 	// OutputFile is the archive output file.
 	OutputFile initramfs.Writer
@@ -267,7 +271,12 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		BaseArchive:     opts.BaseArchive,
 		UseExistingInit: opts.UseExistingInit,
 	}
-	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFiles, !opts.SkipLDD); err != nil {
+	// Install extra binaries with their ldd dependencies
+	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFilesInstall, true); err != nil {
+		return err
+	}
+	// Include extra files/directories (don't check for ldd dependencies)
+	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFilesInclude, false); err != nil {
 		return err
 	}
 
