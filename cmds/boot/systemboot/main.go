@@ -74,7 +74,7 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 		if err = cmosClear(); err != nil {
 			return err
 		}
-		if err = clearRwVpd(); err != nil {
+		if err = ocp.ClearRwVpd(); err != nil {
 			return err
 		}
 
