@@ -132,6 +132,19 @@ go test [-v] -test.run=TestDhclient
 *To avoid having to do this every time, check the instructions for the RUNLOCAL
 script.*
 
+## Kernel Code Coverage
+
+For kernel code coverage, build your kernel with the CONFIGs here:
+https://www.kernel.org/doc/html/v4.14/dev-tools/gcov.html
+
+With these configs enabled, a folder containing gcda files (raw coverage data)
+will appear in the VM /sys/kernel/debug/gcov/. The u-root test infra will
+automatically tar this directory and save to:
+
+```
+u-root/integration/coverage/{{testname}}/{{instance}}/kernel_coverage.tar
+```
+
 ## Writing a New Test
 
 To write a new test, first decide which of the options from the previous

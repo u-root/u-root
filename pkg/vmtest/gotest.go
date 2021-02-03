@@ -110,8 +110,8 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	q, cleanup := QEMUTest(t, o)
 	defer cleanup()
 
-	if err := q.Expect("GoTest Done"); err != nil {
-		t.Errorf("Waiting for GoTest Done: %v", err)
+	if err := q.Expect("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("Waiting for 'TESTS PASSED MARKER' signal: %v", err)
 	}
 
 	// TODO: check that tc.Tests == tests
