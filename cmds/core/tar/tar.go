@@ -33,11 +33,12 @@ import (
 )
 
 var (
-	create  = flag.BoolP("create", "c", false, "create a new tar archive from the given directory")
-	extract = flag.BoolP("extract", "x", false, "extract a tar archive from the given directory")
-	verbose = flag.BoolP("verbose", "v", false, "print each filename")
-	file    = flag.StringP("file", "f", "", "tar file")
-	list    = flag.BoolP("list", "t", false, "list the contents of an archive")
+	create      = flag.BoolP("create", "c", false, "create a new tar archive from the given directory")
+	extract     = flag.BoolP("extract", "x", false, "extract a tar archive from the given directory")
+	file        = flag.StringP("file", "f", "", "tar file")
+	list        = flag.BoolP("list", "t", false, "list the contents of an archive")
+	noRecursion = flag.Bool("no-recursion", false, "do not automatically recurse into directories")
+	verbose     = flag.BoolP("verbose", "v", false, "print each filename")
 )
 
 func main() {
@@ -55,9 +56,11 @@ func main() {
 		log.Fatal("tar filename is required")
 	}
 
-	var filters []tarutil.Filter
+	opts := &tarutil.Opts{
+		NoRecursion: *noRecursion,
+	}
 	if *verbose {
-		filters = []tarutil.Filter{tarutil.VerboseFilter}
+		opts.Filters = []tarutil.Filter{tarutil.VerboseFilter}
 	}
 
 	switch {
@@ -66,7 +69,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := tarutil.CreateTarFilter(f, flag.Args(), filters); err != nil {
+		if err := tarutil.CreateTar(f, flag.Args(), opts); err != nil {
 			f.Close()
 			log.Fatal(err)
 		}
@@ -83,7 +86,7 @@ func main() {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		if err := tarutil.ExtractDirFilter(f, flag.Arg(0), filters); err != nil {
+		if err := tarutil.ExtractDir(f, flag.Arg(0), opts); err != nil {
 			log.Fatal(err)
 		}
 	case *list:
