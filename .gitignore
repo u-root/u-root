@@ -11,6 +11,7 @@ bazel-*
 /u-root
 !vendor/github.com/u-root
 integration/serial/
+integration/coverage/
 
 # Folders
 _obj
