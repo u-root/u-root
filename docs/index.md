@@ -1,15 +1,3 @@
-<center>
-<img src="img/u-root-logo.png" alt="u-root logo" width=300 />
-</center>
-
-
-# u-root
-
-u-root is an embeddable root file system intended to be placed in a flash device
-as part of the firmware image, along with a Linux kernel. Unlike most embedded
-root file systems, which consist of large binaries, u-root only has five: an
-init program and four Go compiler binaries.
-
 ## Setup
 
 On an Ubuntu system, install prerequisites and ensure Go is at least version 1.13:
