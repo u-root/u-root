@@ -5,7 +5,9 @@
 package gzip
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -62,12 +64,44 @@ func TestFile_CheckPath(t *testing.T) {
 		name    string
 		fields  fields
 		wantErr bool
-	}{ // TODO: Add test cases.
+	}{
+		{
+			name: "skip decompressing already does not have suffix",
+			fields: fields{
+				Path: "file",
+				Options: &Options{
+					Decompress: true,
+					Suffix:     ".gz",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "skip compressing already has suffix",
+			fields: fields{
+				Path: "file.gz",
+				Options: &Options{
+					Decompress: false,
+					Suffix:     ".gz",
+				},
+			},
+			wantErr: true,
+		},
 	}
+
+	tempDir := os.TempDir()
+	defer os.Remove(tempDir)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			path, err := os.Create(filepath.Join(tempDir, tt.fields.Path))
+			if err != nil {
+				t.Fatalf("File.CheckPath() error can't create temp file: %v", err)
+			}
+			defer path.Close()
+
 			f := &File{
-				Path:    tt.fields.Path,
+				Path:    path.Name(),
 				Options: tt.fields.Options,
 			}
 			if err := f.CheckPath(); (err != nil) != tt.wantErr {
@@ -86,7 +120,16 @@ func TestFile_CheckOutputPath(t *testing.T) {
 		name    string
 		fields  fields
 		wantErr bool
-	}{ // TODO: Add test cases.
+	}{
+		{
+			name: "don't check output path if Stdout is true",
+			fields: fields{
+				Options: &Options{
+					Stdout: true,
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,6 +143,7 @@ func TestFile_CheckOutputPath(t *testing.T) {
 		})
 	}
 }
+
 func TestFile_CheckOutputStdout(t *testing.T) {
 	type fields struct {
 		Path    string
@@ -169,42 +213,98 @@ func TestFile_Cleanup(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
+		exists  bool
 		wantErr bool
-	}{ // TODO: Add test cases.
+	}{
+		{
+			name: "file should be deleted",
+			fields: fields{
+				Options: &Options{},
+			},
+			exists:  false,
+			wantErr: false,
+		},
+		{
+			name: "file should not be deleted Keep is true",
+			fields: fields{
+				Options: &Options{Keep: true},
+			},
+			exists:  true,
+			wantErr: false,
+		},
+		{
+			name: "file should not be deleted Stdout is true",
+			fields: fields{
+				Options: &Options{Stdout: true},
+			},
+			exists:  true,
+			wantErr: false,
+		},
+		{
+			name: "file should not be deleted Test is true",
+			fields: fields{
+				Options: &Options{Stdout: true},
+			},
+			exists:  true,
+			wantErr: false,
+		},
 	}
+
+	tempDir := os.TempDir()
+	defer os.Remove(tempDir)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			path, err := ioutil.TempFile(tempDir, "cleanup-test")
+			if err != nil {
+				t.Errorf("File.Cleanup() error can't create temp file: %v", err)
+			}
+			defer path.Close()
 			f := &File{
-				Path:    tt.fields.Path,
+				Path:    path.Name(),
 				Options: tt.fields.Options,
 			}
 			if err := f.Cleanup(); (err != nil) != tt.wantErr {
 				t.Errorf("File.Cleanup() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			_, err = os.Stat(f.Path)
+			if tt.exists && err != nil {
+				t.Errorf("File.Cleanup() file should be deleted")
+			}
+			if !tt.exists && err == nil {
+				t.Errorf("File.Cleanup() file should stay")
 			}
 		})
 	}
 }
 
 func TestFile_Process(t *testing.T) {
-	type fields struct {
-		Path    string
-		Options *Options
+	tempDir := os.TempDir()
+	defer os.Remove(tempDir)
+	path, err := ioutil.TempFile(tempDir, "process-test")
+	if err != nil {
+		t.Fatalf("File.Process() error can't create temp file: %v", err)
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
-	}{ // TODO: Add test cases.
+	defer path.Close()
+
+	f := File{
+		Path: path.Name(),
+		Options: &Options{
+			Decompress: false,
+			Blocksize:  128,
+			Level:      -1,
+			Processes:  1,
+			Suffix:     ".gz",
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := &File{
-				Path:    tt.fields.Path,
-				Options: tt.fields.Options,
-			}
-			if err := f.Process(); (err != nil) != tt.wantErr {
-				t.Errorf("File.Process() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+
+	if err := f.Process(); err != nil {
+		t.Errorf("File.Process() compression error = %v", err)
+	}
+
+	f.Path = f.Path + f.Options.Suffix
+	f.Options.Decompress = true
+	if err := f.Process(); err != nil {
+		t.Errorf("File.Process() decompression error = %v", err)
 	}
 }
