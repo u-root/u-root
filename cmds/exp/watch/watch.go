@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"time"
 	"bufio"
+	"strings"
 
 )
 
@@ -70,8 +71,9 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			fmt.Println("Unable to run command", err)
-			os.Exit(0)
+			if strings.Contains(err.Error(), "executable file not found") {
+				fmt.Print(err)
+			 }
 		}
 
 		out.Flush()
