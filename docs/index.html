@@ -25,6 +25,7 @@
             pre > code.sourceCode { white-space: pre; position: relative; }
             pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
             pre > code.sourceCode > span:empty { height: 1.2em; }
+            .sourceCode { overflow: visible; }
             code.sourceCode > span { color: inherit; text-decoration: inherit; }
             div.sourceCode { margin: 1em 0; }
             pre.sourceCode { margin: 0; }
@@ -138,14 +139,14 @@
 </ul>
 <h2 id="setup">Setup</h2>
 <p>On an Ubuntu system, install prerequisites and ensure Go is at least version 1.13:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">sudo</span> apt-get install git golang build-essential</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="ex">go</span> version</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install git golang build-essential</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">go</span> version</span></code></pre></div>
 <p>Set your <code>GOPATH</code>:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="bu">export</span> <span class="va">GOPATH=</span><span class="st">&quot;</span><span class="va">$HOME</span><span class="st">/go&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">GOPATH=</span><span class="st">&quot;</span><span class="va">$HOME</span><span class="st">/go&quot;</span></span></code></pre></div>
 <p>Clone u-root:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="ex">go</span> get github.com/u-root/u-root</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">go</span> get github.com/u-root/u-root</span></code></pre></div>
 <p>Generate an initramfs containing u-root Go tools:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="ex">u-root</span> -format=cpio -o initramfs.cpio</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">u-root</span> <span class="at">-format</span><span class="op">=</span>cpio <span class="at">-o</span> initramfs.cpio</span></code></pre></div>
 <p>You can use this initramfs with your favorite Linux kernel in QEMU to try it out.</p>
 <p>More instructions can be found in the repo’s <a href="https://github.com/u-root/u-root/blob/master/README.md">README.md</a>.</p>
 <h2 id="submitting-changes">Submitting Changes</h2>
@@ -164,12 +165,11 @@
 <li><a href="https://groups.google.com/forum/#!forum/u-root">Join the mailing list</a></li>
 <li><a href="https://osfw.slack.com/">Join the Open Source Firmware Slack team</a> (Get an invite <a href="https://slack.osfw.dev">here</a>.)</li>
 <li><a href="https://github.com/u-root/u-root/blob/master/roadmap.md">Checkout the roadmap</a></li>
-<li><a href="https://github.com/u-root/u-root/blob/master/tricksandtips.md">Tricks and tips for building u-root images</a></li>
 </ul>
 <h2 id="contributors">Contributors</h2>
 <ul>
 <li><a href="https://github.com/rminnich">Ron Minnich</a></li>
-<li><a href="https://github.com/mirtchovski">Andrey Mirtchovski</a></li>
+<li><a href="https://www.dignitymemorial.com/en-ca/obituaries/calgary-ab/andrey-mirtchovski-9382591">Andrey Mirtchovski</a></li>
 <li><a href="https://github.com/rhiguita">Alexandre Beletti</a></li>
 <li><a href="https://github.com/ryukinix">Manoel Machado</a></li>
 <li><a href="https://github.com/rafaelcn">Rafael C. Nunes</a></li>
