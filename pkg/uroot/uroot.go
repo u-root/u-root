@@ -146,7 +146,7 @@ type Opts struct {
 	// TempDir is a temporary directory for builders to store files in.
 	TempDir string
 
-	// ExtraFilesLdd are files to install to the archive in addition to
+	// ExtraFilesLdd are files to add to the archive in addition to
 	// the Go packages.
 	//
 	// Shared library dependencies will automatically also be added to the
@@ -160,7 +160,7 @@ type Opts struct {
 	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
 	ExtraFilesLdd []string
 
-	// ExtraFilesNoLdd are files to include in the archive in addition to
+	// ExtraFilesNoLdd are files to add in the archive in addition to
 	// the Go packages.
 	//
 	// Shared library dependencies will NOT be added to the archive.
