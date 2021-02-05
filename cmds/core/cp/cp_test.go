@@ -229,6 +229,11 @@ func TestCpRecursiveMultiple(t *testing.T) {
 	if err := cpArgs(args); err != nil {
 		t.Fatalf("cp %q exit with error: %v", args, err)
 	}
+	// Make sure we can do it twice.
+	flags.force = true
+	if err := cpArgs(args); err != nil {
+		t.Fatalf("cp %q exit with error: %v", args, err)
+	}
 	for _, src := range srcDirs {
 		_, srcFile := filepath.Split(src)
 
