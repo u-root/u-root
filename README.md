@@ -74,8 +74,10 @@ option in for example Grub or the QEMU command line or coreboot config variable.
 
 ## Extra Files
 
-You may also include additional files in the initramfs using the `-files` flag.
-If you add binaries with `-files` are listed, their ldd dependencies will be
+You may also include additional files in the initramfs using one or both of the
+`-files` or `-lddfiles` flags.
+
+If you add binaries with `-lddfiles`, their ldd dependencies will be
 included as well. As example for Debian, you want to add two kernel modules for
 testing, executing your currently booted kernel:
 
