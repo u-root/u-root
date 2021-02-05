@@ -58,6 +58,13 @@ f1
 f2
 f3?line 2
 `,
+	}, {
+		flags: []string{"f1", "d1", "f2"},
+		out: `f1
+d1:
+f4
+f2
+`,
 	},
 }
 
