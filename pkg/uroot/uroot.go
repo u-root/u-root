@@ -502,11 +502,22 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 				if err != nil {
 					return nil
 				}
+				// Check if binary is statically or dynamically linked. Only
+				// pull ldd dependencies if dynamically linked.
+				dynamicBin := false
+				_, err = f.DynamicSymbols()
+				if err != nil {
+					// Binary is static. Do not look for ldd dependencies.
+					dynamicBin = true
+				}
 				if err = f.Close(); err != nil {
 					logger.Printf("WARNING: Closing ELF file %q: %v", name, err)
 				}
-				// Pull dependencies in the case of binaries. If `path` is not
-				// a binary, `libs` will just be empty.
+				if dynamicBin {
+					return nil
+				}
+				// Pull dependencies in the case of dynamically-linked binaries.
+				// If `path` is not a binary, `libs` will just be empty.
 				libs, err := ldd.List([]string{name})
 				if err != nil {
 					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %v", name, err)
