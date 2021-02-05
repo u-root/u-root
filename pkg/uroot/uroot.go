@@ -146,7 +146,7 @@ type Opts struct {
 	// TempDir is a temporary directory for builders to store files in.
 	TempDir string
 
-	// ExtraFilesInstall are files to install to the archive in addition to
+	// ExtraFilesLdd are files to install to the archive in addition to
 	// the Go packages.
 	//
 	// Shared library dependencies will automatically also be added to the
@@ -158,9 +158,9 @@ type Opts struct {
 	//     /home/chrisko/foo on the host at the relative root/bar in the
 	//     archive.
 	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
-	ExtraFilesInstall []string
+	ExtraFilesLdd []string
 
-	// ExtraFilesInclude are files to include in the archive in addition to
+	// ExtraFilesNoLdd are files to include in the archive in addition to
 	// the Go packages.
 	//
 	// Shared library dependencies will NOT be added to the archive.
@@ -171,7 +171,7 @@ type Opts struct {
 	//     /home/chrisko/foo on the host at the relative root/bar in the
 	//     archive.
 	//   - "/home/foo" is equivalent to "/home/foo:home/foo".
-	ExtraFilesInclude []string
+	ExtraFilesNoLdd []string
 
 	// OutputFile is the archive output file.
 	OutputFile initramfs.Writer
@@ -272,11 +272,11 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		UseExistingInit: opts.UseExistingInit,
 	}
 	// Install extra binaries with their ldd dependencies
-	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFilesInstall, true); err != nil {
+	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFilesLdd, true); err != nil {
 		return err
 	}
 	// Include extra files/directories (don't check for ldd dependencies)
-	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFilesInclude, false); err != nil {
+	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFilesNoLdd, false); err != nil {
 		return err
 	}
 

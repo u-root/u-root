@@ -44,8 +44,8 @@ var (
 	useExistingInit                         *bool
 	fourbins                                *bool
 	noCommands                              *bool
-	extraFilesInstall                       multiFlag
-	extraFilesInclude                       multiFlag
+	extraFilesLdd                           multiFlag
+	extraFilesNoLdd                         multiFlag
 	noStrip                                 *bool
 	statsOutputPath                         *string
 	statsLabel                              *string
@@ -77,8 +77,8 @@ func init() {
 
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
-	flag.Var(&extraFilesInstall, "install", "Additional binaries (with their ldd dependencies) to add to archive. Can be specified multiple times.")
-	flag.Var(&extraFilesInclude, "include", "Additional files/directories to add to archive (no ldd dependencies). Can be specified multiple times.")
+	flag.Var(&extraFilesLdd, "lddfiles", "Additional files, directories, and binaries (WITH their ldd dependencies) to add to archive. Can be speficified multiple times.")
+	flag.Var(&extraFilesNoLdd, "files", "Additional files, directories, and binaries (WITHOUT their ldd dependencies) to add to archive. Can be speficified multiple times.")
 
 	noStrip = flag.Bool("no-strip", false, "Build unstripped binaries")
 	shellbang = flag.Bool("shellbang", false, "Use #! instead of symlinks for busybox")
@@ -309,17 +309,17 @@ func Main() error {
 	}
 
 	opts := uroot.Opts{
-		Env:               env,
-		Commands:          c,
-		TempDir:           tempDir,
-		ExtraFilesInstall: extraFilesInstall,
-		ExtraFilesInclude: extraFilesInclude,
-		OutputFile:        w,
-		BaseArchive:       baseFile,
-		UseExistingInit:   *useExistingInit,
-		InitCmd:           initCommand,
-		DefaultShell:      *defaultShell,
-		NoStrip:           *noStrip,
+		Env:             env,
+		Commands:        c,
+		TempDir:         tempDir,
+		ExtraFilesLdd:   extraFilesLdd,
+		ExtraFilesNoLdd: extraFilesNoLdd,
+		OutputFile:      w,
+		BaseArchive:     baseFile,
+		UseExistingInit: *useExistingInit,
+		InitCmd:         initCommand,
+		DefaultShell:    *defaultShell,
+		NoStrip:         *noStrip,
 	}
 	uinitArgs := shlex.Argv(*uinitCmd)
 	if len(uinitArgs) > 0 {
