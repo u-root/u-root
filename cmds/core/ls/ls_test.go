@@ -66,6 +66,16 @@ d1:
 f4
 f2
 `,
+	}, {
+		flags: []string{"-d"},
+		out: `.
+`,
+	}, {
+		flags: []string{"-d", "f1", "d1", "f2"},
+		out: `f1
+d1
+f2
+`,
 	},
 }
 
