@@ -74,7 +74,10 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 		if err = cmosClear(); err != nil {
 			return err
 		}
-		// ToDo: Reset RW_VPD to default values
+		if err = ocp.ClearRwVpd(); err != nil {
+			return err
+		}
+
 		if err = ocp.ClearCMOSClearValidBits(ipmi, bootorder); err != nil {
 			return err
 		}
