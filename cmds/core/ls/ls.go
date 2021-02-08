@@ -30,12 +30,13 @@ import (
 )
 
 var (
-	all      = flag.BoolP("all", "a", false, "show hidden files")
-	human    = flag.BoolP("human-readable", "h", false, "human readable sizes")
-	long     = flag.BoolP("long", "l", false, "long form")
-	quoted   = flag.BoolP("quote-name", "Q", false, "quoted")
-	recurse  = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
-	classify = flag.BoolP("classify", "F", false, "append indicator (one of */=>@|) to entries")
+	all       = flag.BoolP("all", "a", false, "show hidden files")
+	human     = flag.BoolP("human-readable", "h", false, "human readable sizes")
+	directory = flag.BoolP("directory", "d", false, "list directories but not their contents")
+	long      = flag.BoolP("long", "l", false, "long form")
+	quoted    = flag.BoolP("quote-name", "Q", false, "quoted")
+	recurse   = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
+	classify  = flag.BoolP("classify", "F", false, "append indicator (one of */=>@|) to entries")
 )
 
 func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
@@ -53,6 +54,11 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 			// Mimic find command
 			fi.Name = path
 		} else if path == d {
+			if *directory {
+				fmt.Fprintln(w, stringer.FileString(fi))
+				return filepath.SkipDir
+			}
+
 			// Starting directory is a dot when non-recursive
 			if osfi.IsDir() {
 				fi.Name = "."
