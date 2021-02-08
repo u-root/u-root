@@ -55,7 +55,11 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 			if osfi.IsDir() {
 				fi.Name = "."
 				if prefix {
-					fmt.Printf("%q\n", d)
+					if *quoted {
+						fmt.Fprintf(w, "%q:\n", d)
+					} else {
+						fmt.Fprintf(w, "%v:\n", d)
+					}
 				}
 			}
 		}
