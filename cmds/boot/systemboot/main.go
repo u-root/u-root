@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -17,14 +18,31 @@ import (
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 var (
 	allowInteractive = flag.Bool("i", true, "Allow user to interrupt boot process and run commands")
-	doQuiet          = flag.Bool("q", false, "Disable verbose output")
+	doQuiet          = flag.Bool("q", false, fmt.Sprintf("Disable verbose output. If not specified, read it from VPD var '%s'. Default false", vpdSystembootLogLevel))
 	interval         = flag.Int("I", 1, "Interval in seconds before looping to the next boot command")
 	noDefaultBoot    = flag.Bool("nodefault", false, "Do not attempt default boot entries if regular ones fail")
 )
+
+const (
+	// vpdSystembootLogLevel is the name of the VPD variable used to set the log level.
+	vpdSystembootLogLevel = "systemboot_log_level"
+)
+
+// isFlagPassed checks whether a flag was explicitly passed on the command line
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
 
 var defaultBootsequence = [][]string{
 	{"fbnetboot", "-userclass", "linuxboot"},
@@ -211,14 +229,56 @@ func addSEL(sequence string) {
 	}
 }
 
+// getDebugEnabled checks whether debug output is requested, either via command line or via VPD
+// variables.
+// If -q was explicitly passed on the command line, will use that value, otherwise will look for
+// the VPD variable "systemboot_log_level".
+// Valid values are coreboot loglevels https://review.coreboot.org/cgit/coreboot.git/tree/src/commonlib/include/commonlib/loglevel.h,
+// either as integer (1, 2) or string ("debug").
+// If the VPD variable is missing or it is set to an invalid value, it will use the default.
+func getDebugEnabled() bool {
+	if isFlagPassed("q") {
+		return !*doQuiet
+	}
+
+	// -q was not passed, so `doQuiet` contains the default value
+	defaultDebugEnabled := !*doQuiet
+	// check for the VPD variable "systemboot_log_level". First the read-write, then the read-only
+	v, err := vpd.Get(vpdSystembootLogLevel, false)
+	if err != nil {
+		// TODO do not print warning if file is not found
+		log.Printf("Warning: failed to read read-write VPD variable '%s', will try the read-only one. Error was: %v", vpdSystembootLogLevel, err)
+		v, err = vpd.Get(vpdSystembootLogLevel, true)
+		if err != nil {
+			// TODO do not print warning if file is not found
+			log.Printf("Warning: failed to read read-only VPD variable '%s', will use the default value. Error was: %v", vpdSystembootLogLevel, err)
+			return defaultDebugEnabled
+		}
+	}
+	level := strings.ToLower(strings.TrimSpace(string(v)))
+	switch level {
+	case "0", "emerg", "1", "alert", "2", "crit", "3", "err", "4", "warning", "9", "never":
+		// treat as quiet
+		return false
+	case "5", "notice", "6", "info", "7", "debug", "8", "spew":
+		// treat as debug
+		return true
+	default:
+		log.Printf("Invalid value '%s' for VPD variable '%s', using default", level, vpdSystembootLogLevel)
+		return defaultDebugEnabled
+	}
+}
+
 func main() {
 	flag.Parse()
 
+	debugEnabled := getDebugEnabled()
+
 	log.Print(`
-                     ____            _                 _                 _   
-                    / ___| _   _ ___| |_ ___ _ __ ___ | |__   ___   ___ | |_ 
+                     ____            _                 _                 _
+                    / ___| _   _ ___| |_ ___ _ __ ___ | |__   ___   ___ | |_
                     \___ \| | | / __| __/ _ \ '_ ` + "`" + ` _ \| '_ \ / _ \ / _ \| __|
-                     ___) | |_| \__ \ ||  __/ | | | | | |_) | (_) | (_) | |_ 
+                     ___) | |_| \__ \ ||  __/ | | | | | |_) | (_) | (_) | |_
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
@@ -250,7 +310,7 @@ func main() {
 			log.Printf("Warning: failed to boot with configuration: %+v", entry)
 			addSEL(entry.Booter.TypeName())
 		}
-		if !*doQuiet {
+		if debugEnabled {
 			log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 		}
 		time.Sleep(sleepInterval)
@@ -263,7 +323,7 @@ func main() {
 		log.Print("Falling back to the default boot sequence")
 		for {
 			for _, bootcmd := range defaultBootsequence {
-				if !*doQuiet {
+				if debugEnabled {
 					bootcmd = append(bootcmd, "-d")
 				}
 				log.Printf("Running boot command: %v", bootcmd)
@@ -279,7 +339,7 @@ func main() {
 			}
 			selRecorded = true
 
-			if !*doQuiet {
+			if debugEnabled {
 				log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 			}
 			time.Sleep(sleepInterval)
