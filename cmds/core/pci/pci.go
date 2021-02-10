@@ -80,7 +80,7 @@ func registers(d pci.Devices, cmds ...string) {
 		if len(rv) == 1 {
 			v, err := d.ReadConfigRegister(int64(reg), int64(s))
 			if err != nil {
-				log.Printf("%v:%v. Due to this error no more commands will be issued", rv[1], err)
+				log.Printf("%v:%v. Due to this error no more commands will be issued", rv[0], err)
 				justCheck = true
 				continue
 			}
