@@ -11,6 +11,7 @@
 //     -l: long form
 //     -Q: quoted
 //     -R: equivalent to findutil's find
+//     -F: append indicator (one of */=>@|) to entries
 //
 // Bugs:
 //     With the `-R` flag, directories are only ever printed once.
@@ -29,11 +30,12 @@ import (
 )
 
 var (
-	all     = flag.BoolP("all", "a", false, "show hidden files")
-	human   = flag.BoolP("human-readable", "h", false, "human readable sizes")
-	long    = flag.BoolP("long", "l", false, "long form")
-	quoted  = flag.BoolP("quote-name", "Q", false, "quoted")
-	recurse = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
+	all      = flag.BoolP("all", "a", false, "show hidden files")
+	human    = flag.BoolP("human-readable", "h", false, "human readable sizes")
+	long     = flag.BoolP("long", "l", false, "long form")
+	quoted   = flag.BoolP("quote-name", "Q", false, "quoted")
+	recurse  = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
+	classify = flag.BoolP("classify", "F", false, "append indicator (one of */=>@|) to entries")
 )
 
 func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
@@ -67,6 +69,9 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 		// Hide .files unless -a was given
 		if *all || fi.Name[0] != '.' {
 			// Print the file in the proper format.
+			if *classify {
+				fi.Name = fi.Name + indicator(fi)
+			}
 			fmt.Fprintln(w, stringer.FileString(fi))
 		}
 
@@ -76,6 +81,25 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 		}
 		return nil
 	})
+}
+
+func indicator(fi ls.FileInfo) string {
+	if fi.Mode.IsRegular() && fi.Mode&0111 != 0 {
+		return "*"
+	}
+	if fi.Mode&os.ModeDir != 0 {
+		return "/"
+	}
+	if fi.Mode&os.ModeSymlink != 0 {
+		return "@"
+	}
+	if fi.Mode&os.ModeSocket != 0 {
+		return "="
+	}
+	if fi.Mode&os.ModeNamedPipe != 0 {
+		return "|"
+	}
+	return ""
 }
 
 func main() {
