@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/ls"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -90,6 +91,27 @@ func TestLs(t *testing.T) {
 		}
 		if string(out) != tt.out {
 			t.Errorf("got:\n%s\nwant:\n%s", string(out), tt.out)
+		}
+	}
+}
+
+func TestIndicator(t *testing.T) {
+	var tests = []struct {
+		lsInfo ls.FileInfo
+		symbol string
+	}{
+		{ls.FileInfo{Mode: os.ModeDir}, "/"},
+		{ls.FileInfo{Mode: os.ModeNamedPipe}, "|"},
+		{ls.FileInfo{Mode: os.ModeSymlink}, "@"},
+		{ls.FileInfo{Mode: os.ModeSocket}, "="},
+		{ls.FileInfo{Mode: 0b110110100}, ""},
+		{ls.FileInfo{Mode: 0b111111101}, "*"},
+	}
+
+	for _, test := range tests {
+		r := indicator(test.lsInfo)
+		if r != test.symbol {
+			t.Errorf("for mode %b expected %q, got %q", test.lsInfo.Mode, test.symbol, r)
 		}
 	}
 }
