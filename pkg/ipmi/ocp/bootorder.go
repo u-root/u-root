@@ -101,15 +101,15 @@ func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder) error {
 		if bootType == NETWORK_BOOT {
 			log.Printf("VPD set %s to %s", key, NETBOOTER_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(NETBOOTER_CONFIG)})
-			if err = systembooter.Set(key, []byte(NETBOOTER_CONFIG), false); err != nil {
-				// ToDo: return err after VPD write is ready
+			if err = Set(key, []byte(NETBOOTER_CONFIG)); err != nil {
+				return err
 			}
 			idx++
 		} else if bootType == LOCAL_BOOT {
 			log.Printf("VPD set %s to %s", key, LOCALBOOTER_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(LOCALBOOTER_CONFIG)})
-			if err = systembooter.Set(key, []byte(LOCALBOOTER_CONFIG), false); err != nil {
-				// ToDo: return err after VPD write is ready
+			if err = Set(key, []byte(LOCALBOOTER_CONFIG)); err != nil {
+				return err
 			}
 			idx++
 		} else if bootType == (INVALID_BOOT & 0x7) {

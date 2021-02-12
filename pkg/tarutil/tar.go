@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,6 +6,7 @@ package tarutil
 
 import (
 	"archive/tar"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,19 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+// Opts contains options for creating and extracting tar files.
+type Opts struct {
+	// Filters are applied to each file while creating or extracting a tar
+	// archive. The filter can modify the tar.Header struct. If the filter
+	// returns false, the file is omitted.
+	Filters []Filter
+
+	// By default, when creating a tar archive, all directories are walked
+	// to include all sub-directories. Set to true to prevent this
+	// behavior.
+	NoRecursion bool
+}
 
 // passesFilters returns true if the given file passes all filters, false otherwise.
 func passesFilters(hdr *tar.Header, filters []Filter) bool {
@@ -52,12 +66,11 @@ func ListArchive(tarFile io.Reader) error {
 }
 
 // ExtractDir extracts all the contents of the tar file to the given directory.
-func ExtractDir(tarFile io.Reader, dir string) error {
-	return ExtractDirFilter(tarFile, dir, nil)
-}
+func ExtractDir(tarFile io.Reader, dir string, opts *Opts) error {
+	if opts == nil {
+		opts = &Opts{}
+	}
 
-// ExtractDirFilter extracts a tar file with the given filter.
-func ExtractDirFilter(tarFile io.Reader, dir string, filters []Filter) error {
 	fi, err := os.Stat(dir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(dir, os.ModePerm); err != nil {
@@ -68,7 +81,7 @@ func ExtractDirFilter(tarFile io.Reader, dir string, filters []Filter) error {
 	}
 
 	return applyToArchive(tarFile, func(tr *tar.Reader, hdr *tar.Header) error {
-		if !passesFilters(hdr, filters) {
+		if !passesFilters(hdr, opts.Filters) {
 			return nil
 		}
 		return createFileInRoot(hdr, tr, dir)
@@ -76,15 +89,23 @@ func ExtractDirFilter(tarFile io.Reader, dir string, filters []Filter) error {
 }
 
 // CreateTar creates a new tar file with all the contents of a directory.
-func CreateTar(tarFile io.Writer, files []string) error {
-	return CreateTarFilter(tarFile, files, nil)
-}
+func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
+	if opts == nil {
+		opts = &Opts{}
+	}
 
-// CreateTarFilter creates a new tar file of the given files, with the given filter.
-func CreateTarFilter(tarFile io.Writer, files []string, filters []Filter) error {
 	tw := tar.NewWriter(tarFile)
 	for _, file := range files {
-		err := filepath.Walk(file, func(path string, info os.FileInfo, err error) error {
+		walk := filepath.Walk
+		if opts.NoRecursion {
+			// This "walk" function does not recurse.
+			walk = func(root string, walkFn filepath.WalkFunc) error {
+				fi, err := os.Lstat(root)
+				return walkFn(root, fi, err)
+			}
+		}
+
+		err := walk(file, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -98,24 +119,41 @@ func CreateTarFilter(tarFile io.Writer, files []string, filters []Filter) error 
 				return err
 			}
 			hdr.Name = path
-			if !passesFilters(hdr, filters) {
+			if !passesFilters(hdr, opts.Filters) {
 				return nil
-			}
-			if err := tw.WriteHeader(hdr); err != nil {
-				return err
 			}
 			switch hdr.Typeflag {
 			case tar.TypeLink, tar.TypeSymlink, tar.TypeChar, tar.TypeBlock, tar.TypeDir, tar.TypeFifo:
+				if err := tw.WriteHeader(hdr); err != nil {
+					return err
+				}
 			default:
 				f, err := os.Open(path)
 				if err != nil {
 					return err
 				}
-				if _, err := io.Copy(tw, f); err != nil {
+
+				var r io.Reader = f
+				if hdr.Size == 0 {
+					// Some files don't report their size correctly
+					// (ex: procfs), so we use an intermediary
+					// buffer to determine size.
+					b := &bytes.Buffer{}
+					if _, err := io.Copy(b, f); err != nil {
+						f.Close()
+						return err
+					}
 					f.Close()
+					hdr.Size = int64(b.Len())
+					r = b
+				}
+
+				if err := tw.WriteHeader(hdr); err != nil {
 					return err
 				}
-				f.Close()
+				if _, err := io.Copy(tw, r); err != nil {
+					return err
+				}
 			}
 			return nil
 		})

@@ -108,7 +108,7 @@ func copyFile(src, dst string, srcInfo os.FileInfo) error {
 	m := srcInfo.Mode()
 	switch {
 	case m.IsDir():
-		return os.Mkdir(dst, srcInfo.Mode().Perm())
+		return os.MkdirAll(dst, srcInfo.Mode().Perm())
 
 	case m.IsRegular():
 		return copyRegularFile(src, dst, srcInfo)

@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,18 +9,24 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
-func extractAndCompare(t *testing.T, files []struct{ name, body string }) {
-	f, err := os.Open("test.tar")
+func extractAndCompare(t *testing.T, tarFile string, files []struct{ name, body string }) {
+	tmpDir, err := ioutil.TempDir("", "tartest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Extract tar to tmpDir.
+	f, err := os.Open(tarFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
-
-	tmpDir := "tartest"
-	if err := ExtractDir(f, tmpDir); err != nil {
+	if err := ExtractDir(f, tmpDir, &Opts{Filters: []Filter{SafeFilter}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -38,32 +44,13 @@ func extractAndCompare(t *testing.T, files []struct{ name, body string }) {
 }
 
 func TestExtractDir(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "tartest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	var files = []struct {
 		name, body string
 	}{
 		{"a.txt", "hello\n"},
 		{"dir/b.txt", "world\n"},
 	}
-	extractAndCompare(t, files)
-}
-
-func TestExtractDirNotExist(t *testing.T) {
-	tmpDir := "tartest"
-	defer os.RemoveAll(tmpDir) // ExtractDir should have created dir
-
-	var files = []struct {
-		name, body string
-	}{
-		{"a.txt", "hello\n"},
-		{"dir/b.txt", "world\n"},
-	}
-	extractAndCompare(t, files)
+	extractAndCompare(t, "test.tar", files)
 }
 
 func TestCreateTarSingleFile(t *testing.T) {
@@ -73,14 +60,17 @@ func TestCreateTarSingleFile(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// Create the tar file.
 	filename := filepath.Join(tmpDir, "test.tar")
 	f, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-
-	if err := CreateTar(f, []string{"test0"}); err != nil {
+	if err := CreateTar(f, []string{"test0"}, nil); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -105,15 +95,18 @@ func TestCreateTarMultFiles(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// Create the tar file.
 	filename := filepath.Join(tmpDir, "test.tar")
 	f, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-
 	files := []string{"test0", "test1", "test2.txt"}
-	if err := CreateTar(f, files); err != nil {
+	if err := CreateTar(f, files, nil); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -132,6 +125,55 @@ test2.txt
 	if string(out) != expected {
 		t.Fatalf("got %q, want %q", string(out), expected)
 	}
+}
+
+// TestCreateTarProcfsFile exercises the special case where stat on the file
+// reports a size of 0, but the file actually has contents. For example, most
+// of the files in /proc and /sys.
+func TestCreateTarProcfsFile(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skipf("/proc/version is only on linux, but GOOS=%s", runtime.GOOS)
+	}
+
+	tmpDir, err := ioutil.TempDir("", "tartest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// /proc/version won't change during the test. The size according to
+	// stat should also be 0.
+	procfsFile := "/proc/version"
+	contents, err := ioutil.ReadFile(procfsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(procfsFile); err != nil {
+		t.Fatal(err)
+	} else if fi.Size() != 0 {
+		t.Fatalf("Expected the size of %q to be 0, got %d", procfsFile, fi.Size())
+	}
+
+	// Create the tar file containing /proc/version.
+	filename := filepath.Join(tmpDir, "test.tar")
+	f, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := CreateTar(f, []string{"/proc", procfsFile}, &Opts{NoRecursion: true}); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var expected = []struct {
+		name, body string
+	}{
+		{procfsFile, string(contents)},
+	}
+	extractAndCompare(t, filename, expected)
 }
 
 func TestListArchive(t *testing.T) {
