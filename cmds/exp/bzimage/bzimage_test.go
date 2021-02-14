@@ -102,11 +102,12 @@ func TestSimple(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	var tests = []struct {
-		args   []string
-		name   string
-		status int
-		out    string
-		skip   int
+		args            []string
+		name            string
+		status          int
+		out             string
+		skip            int  //leading chars to skip in output when comparing
+		outputContinues bool //if true, only compare 'out' len of bytes; flags produce extra output.
 	}{
 		{
 			args:   []string{"initramfs", "bzImage", "init.cpio", "zz/zz/zz"},
@@ -129,11 +130,11 @@ func TestSimple(t *testing.T) {
 			out:    "",
 		},
 		{
-			args:   []string{},
-			name:   "no args",
-			status: 1,
-			out:    cmdUsage + "\n",
-			skip:   uskip,
+			args:            []string{},
+			name:            "no args",
+			status:          1,
+			out:             cmdUsage,
+			outputContinues: true,
 		},
 		{
 			args:   []string{"dump", "bzImage"},
@@ -142,18 +143,18 @@ func TestSimple(t *testing.T) {
 			out:    "MBRCode:0xea0500c0078cc88ed88ec08ed031e4fbfcbe2d00ac20c07409b40ebb0700cd10ebf231c0cd16cd19eaf0ff00f0557365206120626f6f74206c6f616465722e0d0a0a52656d6f7665206469736b20616e6420707265737320616e79206b657920746f207265626f6f742e2e2e0d0a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\nExtRamdiskImage:0x00\nExtRamdiskSize:0x00\nExtCmdlinePtr:0x00\nO:0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ffff\nSetupSects:0x1e\nRootFlags:0x01\nSyssize:0xb51d\nRAMSize:0x00\nVidmode:0xffff\nRootDev:0x00\nBootsectormagic:0xaa55\nJump:0x66eb\nHeaderMagic:0x48647253\nProtocolversion:0x20d\nRealModeSwitch:0x00\nStartSys:0x1000\nKveraddr:0x3140\nTypeOfLoader:0x00\nLoadflags:0x01\nSetupmovesize:0x8000\nCode32Start:0x100000\nRamdiskImage:0x00\nRamdiskSize:0x00\nBootSectKludge:0x00000000\nHeapendptr:0x5320\nExtLoaderVer:0x00\nExtLoaderType:0x00\nCmdlineptr:0x00\nInitrdAddrMax:0x7fffffff\nKernelalignment:0x200000\nRelocatableKernel:0x00\nMinAlignment:0x15\nXLoadFlags:0x01\nCmdLineSize:0x7ff\nHardwareSubArch:0x00\nHardwareSubArchData:0x00\nPayloadOffset:0x255\nPayloadSize:0x9532c\nSetupData:0x00\nPrefAddress:0x1000000\nInitSize:0x6e0000\nHandoverOffset:0x00\n",
 		},
 		{
-			args:   []string{"initramfs"},
-			name:   "initramfs with no args",
-			status: 1,
-			out:    cmdUsage + "\n",
-			skip:   uskip,
+			args:            []string{"initramfs"},
+			name:            "initramfs with no args",
+			status:          1,
+			out:             cmdUsage,
+			outputContinues: true,
 		},
 		{
-			args:   []string{"initramfs", "a", "b", "c", "too many"},
-			name:   "initramfs with too many args",
-			status: 1,
-			out:    cmdUsage + "\n",
-			skip:   uskip,
+			args:            []string{"initramfs", "a", "b", "c", "too many"},
+			name:            "initramfs with too many args",
+			status:          1,
+			out:             cmdUsage,
+			outputContinues: true,
 		},
 		{
 			args:   []string{"initramfs", "a", "b", "c"},
@@ -184,8 +185,11 @@ func TestSimple(t *testing.T) {
 				t.Errorf("err got: %v want %v", status, tt.status)
 			}
 			m := string(out[tt.skip:])
+			if tt.outputContinues && len(m) > len(tt.out) {
+				m = m[:len(tt.out)]
+			}
 			if m != tt.out {
-				t.Errorf("got:'%q'(%d bytes)want:'%q'(%d bytes)", m, len(m), tt.out, len(tt.out))
+				t.Errorf("\ngot (%d bytes):\n%q\nwant (%d bytes):\n%q", len(m), m, len(tt.out), tt.out)
 			}
 		})
 	}
