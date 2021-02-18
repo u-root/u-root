@@ -25,6 +25,11 @@ var slDebug = flag.Bool("d", false, "enable debug logs")
 // checkDebugFlag checks if `uroot.uinitargs=-d` is set on the kernel cmdline.
 // If it is set, slaunch.Debug is set to log.Printf.
 func checkDebugFlag() {
+	// By default, CommandLine exits on error, but this makes it trivial to get
+	// a shell in u-root. Instead, continue on error and let the error handling
+	// code here handle it.
+	flag.CommandLine.Init(flag.CommandLine.Name(), flag.ContinueOnError)
+
 	flag.Parse()
 
 	if flag.NArg() > 1 {
