@@ -306,7 +306,7 @@ func main() {
 	}
 	for _, entry := range bootEntries {
 		log.Printf("Trying boot entry %s: %s", entry.Name, string(entry.Config))
-		if err := entry.Booter.Boot(); err != nil {
+		if err := entry.Booter.Boot(debugEnabled); err != nil {
 			log.Printf("Warning: failed to boot with configuration: %+v", entry)
 			addSEL(entry.Booter.TypeName())
 		}
