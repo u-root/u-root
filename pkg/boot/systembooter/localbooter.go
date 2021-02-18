@@ -73,8 +73,14 @@ func NewLocalBooter(config []byte) (Booter, error) {
 
 // Boot will run the boot procedure. In the case of LocalBooter, it will call
 // the `localboot` command
-func (lb *LocalBooter) Boot() error {
-	bootcmd := []string{"localboot", "-d"}
+func (lb *LocalBooter) Boot(debugEnabled bool) error {
+	var bootcmd []string
+	if debugEnabled {
+		bootcmd = []string{"localboot", "-d"}
+	} else {
+		bootcmd = []string{"localboot"}
+	}
+
 	// validate arguments
 	if lb.Method == "grub" {
 		bootcmd = append(bootcmd, "-grub")
