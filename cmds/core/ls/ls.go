@@ -34,6 +34,7 @@ var (
 	human     = flag.BoolP("human-readable", "h", false, "human readable sizes")
 	directory = flag.BoolP("directory", "d", false, "list directories but not their contents")
 	long      = flag.BoolP("long", "l", false, "long form")
+	final     = flag.BoolP("print-last", "p", false, "Print only the final path element of each file name")
 	quoted    = flag.BoolP("quote-name", "Q", false, "quoted")
 	recurse   = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
 	classify  = flag.BoolP("classify", "F", false, "append indicator (one of */=>@|) to entries")
