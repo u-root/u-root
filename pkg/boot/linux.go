@@ -90,7 +90,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 	kernel, initrd := uio.Reader(util.TryGzipFilter(li.Kernel)), uio.Reader(li.Initrd)
 	if verbose {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
-		// but it at least proves the files are still downloading.
+		// but it at least proves the files are still loading.
 		progress := func(r io.Reader) io.Reader {
 			return &uio.ProgressReader{
 				R:        r,
@@ -114,6 +114,9 @@ func (li *LinuxImage) Load(verbose bool) error {
 		return err
 	}
 	defer k.Close()
+	if verbose {
+		os.Stdout.Write([]byte("\n"))
+	}
 
 	var i *os.File
 	if li.Initrd != nil {
@@ -122,6 +125,9 @@ func (li *LinuxImage) Load(verbose bool) error {
 			return err
 		}
 		defer i.Close()
+		if verbose {
+			os.Stdout.Write([]byte("\n"))
+		}
 	}
 
 	if verbose {
