@@ -4,19 +4,6 @@
 
 // +build plan9
 
-// ls prints the contents of a directory.
-//
-// Synopsis:
-//     ls [OPTIONS] [DIRS]...
-//
-// Options:
-//     -l: long form
-//     -Q: quoted
-//     -R: equivalent to findutil's find
-//     -F: append indicator (one of */=>@|) to entries
-//
-// Bugs:
-//     With the `-R` flag, directories are only ever printed once.
 package main
 
 import (
