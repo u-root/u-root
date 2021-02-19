@@ -57,7 +57,7 @@ func (li *LinuxImage) String() string {
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
-	f, err := ioutil.TempFile("", "nerf-netboot")
+	f, err := ioutil.TempFile("", "linux-image")
 	if err != nil {
 		return nil, err
 	}
