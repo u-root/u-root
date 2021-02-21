@@ -42,6 +42,7 @@ const (
 
 // Endpoint - YAML Endpoint
 type Endpoint struct {
+	Name    string
 	Path    string   `yaml:"path"`
 	Os      string   `yaml:"os"`
 	Version string   `yaml:"version"`
@@ -52,6 +53,7 @@ type Endpoint struct {
 
 type OSEndpoint struct {
 	Name        string
+	RawName		string
 	Vmlinuz     string
 	Initrd      string
 	Filesystem  string
@@ -115,10 +117,18 @@ func (o OSEndpoint) IsDefault() bool {
 	return false
 }
 
+// Edit - edit something
+func (o OSEndpoint) Edit(func(cmdline string) string) {
+	return
+}
+
 // Endpoints - map for OS Endpoints
 type Endpoints struct {
-	Endpoints map[string]Endpoint
+	Endpoints map[string]Endpoint `yaml:"endpoints"`
 }
+
+var kernelList []Endpoint
+var filesystemList []Endpoint
 
 var OSEndpoints []OSEndpoint
 
@@ -202,20 +212,6 @@ func findNetworkInterface() (netlink.Link, error) {
 	return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
 }
 
-// UnmarshalYAML - Custom unmarshal YAML function
-func (e *Endpoints) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var endpoints map[string]Endpoint
-	if err := unmarshal(&endpoints); err != nil {
-		// Here we expect an error because a boolean cannot be converted to a
-		// a MajorVersion
-		if _, ok := err.(*yaml.TypeError); !ok {
-			return err
-		}
-	}
-	e.Endpoints = endpoints
-	return nil
-}
-
 var banner = `
 
  _________________________________
@@ -244,6 +240,7 @@ func main() {
 
 	tr := &http.Transport{TLSClientConfig: config}
 	client := &http.Client{Transport: tr}
+
 	req, err := http.NewRequest(http.MethodGet, netbootxyzURL, nil)
 	if err != nil {
 		fmt.Printf("New Request Error : %v\n", err)
@@ -261,57 +258,65 @@ func main() {
 		return
 	}
 
-	fmt.Printf("YAML: %v \n", string(content))
 
-	var e map[string]Endpoints
+	var e Endpoints
 	if err := yaml.Unmarshal(content, &e); err != nil {
 		fmt.Println(err.Error())
+		return
 	}
 
-	for key, value := range e["endpoints"].Endpoints {
-		if !strings.Contains(key, "ubuntu") {
-			continue
+	fmt.Println(e)
+
+	tmp := make(map[string]struct{})
+
+	// Sort entries into either Kernel or Distros
+	// File Systems could also contain a Kernel directly!
+
+	for key, value := range e.Endpoints {
+		value.Name = key
+		if value.Os != "" {
+			tmp[value.Os] = struct{}{}
 		}
-		fmt.Printf("OS: %s\n", key)
-		fmt.Printf("Kernel: %s\n", value.Kernel)
-		fmt.Printf("Files: %v\n", value.Files)
-
-		var vmlinuz, initrd, filesystem string
-
-		// If kernel is empty - or we do point to ourselves
-		if (value.Kernel == "") || (value.Kernel == key) {
-			vmlinuz = githubBaseURL + value.Path + "vmlinuz"
-			initrd = githubBaseURL + value.Path + "initrd"
-			// TODO: Check for real FS
-			filesystem = githubBaseURL + value.Path + "filesystem.squashfs"
+		if strings.Contains(key, "kernel") {
+			kernelList = append(kernelList, value)
 		} else {
-			vmlinuz = value.Kernel
-			initrd = value.Kernel
+			filesystemList = append(filesystemList, value)
 		}
-
-		filesystem = githubBaseURL + "/ubuntu-squash/releases/download/18.04.5-0dd1e29b/filesystem.squashfs"
-
-		OSEndpoint := OSEndpoint{
-			Name:        key,
-			Vmlinuz:     vmlinuz,
-			Initrd:      initrd,
-			Filesystem:  filesystem,
-			Version:     value.Version,
-			Commandline: "earlyprintk=ttyS0,115200 console=ttyS0,115200 ip=dhcp boot=casper initrd=initrd netboot=url url=" + filesystem, // Function which gets this
-			OS:          value.Os,
-		}
-
-		OSEndpoints = append(OSEndpoints, OSEndpoint)
-		bootMenu = append(bootMenu, OSEndpoint)
-
-		fmt.Printf("\n%v\n", OSEndpoint)
 	}
 
-	fmt.Printf("\n\n%v\n", OSEndpoints)
+	OSEntriesInMenu := make([]string, 0, len(tmp))
+	for k := range tmp {
+		OSEntriesInMenu = append(OSEntriesInMenu, strings.Title(k))
+	}
+
+	for _, entry := range filesystemList {
+		var OSEntry OSEndpoint
+
+		OSEntry.RawName = entry.Name
+		OSEntry.Name = strings.Title(entry.Os) + " " + strings.Title(entry.Version) + " " + strings.Title(entry.Flavor)
+		OSEntry.OS = strings.Title(entry.Os)
+
+		if entry.Name == entry.Kernel || entry.Kernel == "" {
+			OSEntry.Vmlinuz = githubBaseURL + entry.Path + "vmlinuz"
+			OSEntry.Initrd = githubBaseURL + entry.Path + "initrd"
+		} else if (entry.Kernel != "") {
+			// Search for Kernel in Kernel List
+			for _, value := range kernelList {
+				if (value.Name == entry.Kernel) {
+					OSEntry.Vmlinuz = githubBaseURL + value.Path + "vmlinuz"
+					OSEntry.Initrd = githubBaseURL + value.Path + "initrd"
+				}
+			}
+		}
+		OSEntry.Filesystem = githubBaseURL + entry.Path + "filesystem.squash"
+		OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200"
+
+		OSEndpoints = append(OSEndpoints, OSEntry)
+		bootMenu = append(bootMenu, OSEntry)
+	}
 
 	bootMenu = append(bootMenu, menu.Reboot{})
 	bootMenu = append(bootMenu, menu.StartShell{})
 
-	// Boot does not return.
 	menu.ShowMenuAndLoad(os.Stdin, bootMenu...)
 }
