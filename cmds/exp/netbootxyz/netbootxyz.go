@@ -1,24 +1,18 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
-	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/menu"
-	"github.com/u-root/u-root/pkg/dhclient"
-	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,6 +28,7 @@ var (
 )
 
 var bootMenu []menu.Entry
+var subMenu []menu.Entry
 
 const (
 	dhcpTimeout = 5 * time.Second
@@ -53,13 +48,33 @@ type Endpoint struct {
 
 type OSEndpoint struct {
 	Name        string
-	RawName		string
+	RawName     string
 	Vmlinuz     string
 	Initrd      string
 	Filesystem  string
 	Version     string
 	Commandline string
 	OS          string
+	onlyLabel   bool
+}
+
+var majorOS = []string{
+	"Ubuntu",
+	"Fedora",
+	"Pop",
+	"Debian",
+	"Manjaro",
+	"Arch",
+	"Mint"}
+
+var OSCommandline = map[string]string{
+	"Ubuntu":  "ip=dhcp boot=casper initrd=initrd netboot=url url=%s",
+	"Fedora":  "root=live:%s ip=dhcp ro rd.live.image rd.lvm=0 rd.luks=0 rd.md=0 rd.dm=0 initrd=initrd",
+	"Pop":     "ip=dhcp boot=casper netboot=url url=%s",
+	"Debian":  "auto=true priority=critical preseed/url=%s initrd=initrd.gz",
+	"Manjaro": "ip=dhcp net.ifnames=0 miso_http_srv=%s nouveau.modeset=1 i915.modeset=1 radeon.modeset=1 driver=free tz=UTC lang=en_US keytable=us",
+	"Arch":    "ip=dhcp archiso_http_srv=%s archisobasedir=arch verify=y net.ifnames=0",
+	"Mint":    "ip=dhcp boot=casper netboot=http fetch=%s",
 }
 
 // Label - Menu Function Label
@@ -69,7 +84,24 @@ func (o OSEndpoint) Label() string {
 
 // Load - Load data into kexec
 func (o OSEndpoint) Load() error {
-	tmpPath := "/tmp/" + o.Name + "/"
+	if o.onlyLabel == true {
+		subMenu = nil
+		if o.Name == "Other" {
+			// Load all other OS's
+		} else {
+			// Now we load everything with this label
+			for _, value := range OSEndpoints {
+				if value.OS == o.Name {
+					subMenu = append(subMenu, value)
+				}
+			}
+		}
+		menu.ShowMenuAndLoad(os.Stdin, subMenu...)
+
+		return nil
+	}
+
+	tmpPath := "/tmp/" + strings.ReplaceAll(o.Name, " ", "") + "/"
 	err := os.Mkdir(tmpPath, 0666)
 	if err != nil {
 		return err
@@ -97,12 +129,16 @@ func (o OSEndpoint) Load() error {
 	}
 
 	fmt.Println("Loading Kernel and Initrd into kexec")
-	fmt.Printf("With Kernel at %s\n", tmpPath+"vmliuz")
+	fmt.Printf("With Kernel at %s\n", tmpPath+"vmlinuz")
 	fmt.Printf("With Initrd at %s\n", tmpPath+"initrd")
 	fmt.Printf("Commandline: %s\n", o.Commandline)
 	// Load Kernel and initrd
 	err = kexec.FileLoad(vmlinuz, initrd, o.Commandline)
 	// Load KExec kernel and initrd - init cmdline
+
+	cmd := exec.Command("kexec", "-e")
+
+	err = cmd.Run()
 	return err
 }
 
@@ -132,86 +168,6 @@ var filesystemList []Endpoint
 
 var OSEndpoints []OSEndpoint
 
-func DownloadFile(filepath string, url string) error {
-
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
-func configureDHCPNetwork() error {
-	log.Printf("Trying to configure network configuration dynamically...")
-
-	link, err := findNetworkInterface()
-	if err != nil {
-		return err
-	}
-
-	var links []netlink.Link
-	links = append(links, link)
-
-	var level dhclient.LogLevel
-
-	config := dhclient.Config{
-		Timeout:  6 * time.Second,
-		Retries:  4,
-		LogLevel: level,
-	}
-
-	r := dhclient.SendRequests(context.TODO(), links, true, false, config, 30*time.Second)
-	for result := range r {
-		if result.Err == nil {
-			return result.Lease.Configure()
-		} else {
-			log.Printf("dhcp response error: %v", result.Err)
-		}
-	}
-	return errors.New("no valid DHCP configuration recieved")
-}
-
-func findNetworkInterface() (netlink.Link, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(ifaces) == 0 {
-		return nil, errors.New("No network interface found")
-	}
-
-	var ifnames []string
-	for _, iface := range ifaces {
-		ifnames = append(ifnames, iface.Name)
-		// skip loopback
-		if iface.Flags&net.FlagLoopback != 0 || iface.HardwareAddr.String() == "" {
-			continue
-		}
-		log.Printf("Try using %s", iface.Name)
-		link, err := netlink.LinkByName(iface.Name)
-		if err == nil {
-			return link, nil
-		}
-		log.Print(err)
-	}
-
-	return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
-}
-
 var banner = `
 
  _________________________________
@@ -224,6 +180,19 @@ var banner = `
                 ||     ||
 
 `
+
+func indexOf(element string, data []string) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1 //not found.
+}
+
+func remove(slice []string, s int) []string {
+	return append(slice[:s], slice[s+1:]...)
+}
 
 func main() {
 
@@ -257,7 +226,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
 
 	var e Endpoints
 	if err := yaml.Unmarshal(content, &e); err != nil {
@@ -296,25 +264,51 @@ func main() {
 		OSEntry.Name = strings.Title(entry.Os) + " " + strings.Title(entry.Version) + " " + strings.Title(entry.Flavor)
 		OSEntry.OS = strings.Title(entry.Os)
 
+		files := entry.Files
+
 		if entry.Name == entry.Kernel || entry.Kernel == "" {
 			OSEntry.Vmlinuz = githubBaseURL + entry.Path + "vmlinuz"
 			OSEntry.Initrd = githubBaseURL + entry.Path + "initrd"
-		} else if (entry.Kernel != "") {
+		} else if entry.Kernel != "" {
 			// Search for Kernel in Kernel List
 			for _, value := range kernelList {
-				if (value.Name == entry.Kernel) {
+				if value.Name == entry.Kernel {
 					OSEntry.Vmlinuz = githubBaseURL + value.Path + "vmlinuz"
 					OSEntry.Initrd = githubBaseURL + value.Path + "initrd"
 				}
 			}
 		}
-		OSEntry.Filesystem = githubBaseURL + entry.Path + "filesystem.squash"
-		OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200"
+		if indexOf("vmlinuz", files) != -1 {
+			files = remove(files, indexOf("vmlinuz", files))
+		}
+		if indexOf("initrd", files) != -1 {
+			files = remove(files, indexOf("initrd", files))
+		}
+		if len(files) != 0 {
+			OSEntry.Filesystem = githubBaseURL + entry.Path + files[0]
+		}
+		OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200 " + fmt.Sprintf(OSCommandline[OSEntry.OS], OSEntry.Filesystem)
 
 		OSEndpoints = append(OSEndpoints, OSEntry)
-		bootMenu = append(bootMenu, OSEntry)
 	}
 
+	// Only Add Major OS first
+	for _, value := range OSEntriesInMenu {
+		entry := OSEndpoint{
+			Name:      value,
+			onlyLabel: true,
+		}
+		for _, val := range majorOS {
+			if val == value {
+				bootMenu = append(bootMenu, entry)
+			}
+		}
+	}
+	entry := OSEndpoint{
+		Name:      "Other",
+		onlyLabel: true,
+	}
+	bootMenu = append(bootMenu, entry)
 	bootMenu = append(bootMenu, menu.Reboot{})
 	bootMenu = append(bootMenu, menu.StartShell{})
 
