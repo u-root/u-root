@@ -169,6 +169,10 @@ func main() {
 			log.Fatal(err)
 		}
 	case "ver":
+		v, err := br.KVer()
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Println(br.KVer())
 	case "cfg":
 		cfg, err := br.ReadConfig()
