@@ -13,6 +13,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -53,6 +54,7 @@ bzimage cfg <image>
 flags:`
 
 var debug = flag.BoolP("debug", "d", false, "enable debug printing")
+var jsonOut = flag.BoolP("json", "j", false, "json output ('ver' subcommand only)")
 
 func usage() {
 	fmt.Fprintln(os.Stderr, cmdUsage)
@@ -173,7 +175,19 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(br.KVer())
+		if *jsonOut {
+			info, err := bzimage.ParseDesc(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+			j, err := json.MarshalIndent(info, "", "    ")
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(j))
+		} else {
+			fmt.Println(v)
+		}
 	case "cfg":
 		cfg, err := br.ReadConfig()
 		if err != nil {
