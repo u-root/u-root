@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package bzImage implements decoding for bzImage files.
+// Package bzimage implements decoding for bzImage files.
 //
 // The bzImage struct contains all the information about the file and can
 // be used to create a new bzImage.
@@ -28,12 +28,16 @@ import (
 
 var (
 	xzmagic = [...]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}
+
 	// String of unknown meaning.
 	// The build script has this value:
 	//initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
 	// The resultant bzd has this value:
 	initRAMFStag = [4]byte{0xf8, 0x85, 0x21, 0x01}
-	Debug        = func(string, ...interface{}) {}
+
+	// Debug is a function used to log debug information. It
+	// can be set to, for example, log.Printf.
+	Debug = func(string, ...interface{}) {}
 )
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -121,6 +125,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	return nil
 }
 
+// ErrKCodeMissing is returned if kernel code was not decompressed.
 var ErrKCodeMissing = errors.New("No kernel code was decompressed")
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
@@ -239,7 +244,7 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 	return dat, nil
 }
 
-// Extract extracts the KernelCode as an ELF.
+// ELF extracts the KernelCode.
 func (b *BzImage) ELF() (*elf.File, error) {
 	if b.NoDecompress || b.KernelCode == nil {
 		return nil, ErrKCodeMissing
@@ -251,6 +256,7 @@ func (b *BzImage) ELF() (*elf.File, error) {
 	return e, nil
 }
 
+// Equal compares two kernels and returns true if they are equal.
 func Equal(a, b []byte) error {
 	if len(a) != len(b) {
 		return fmt.Errorf("images differ in len: %d bytes and %d bytes", len(a), len(b))
@@ -283,6 +289,7 @@ func Equal(a, b []byte) error {
 	return nil
 }
 
+// AddInitRAMFS adds an initramfs to the BzImage.
 func (b *BzImage) AddInitRAMFS(name string) error {
 	u, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -324,7 +331,7 @@ func MakeLinuxHeader(h *LinuxHeader) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// Show stringifies a LinuxHeader into a []string
+// Show stringifies a LinuxHeader into a []string.
 func (h *LinuxHeader) Show() []string {
 	var s []string
 
@@ -477,9 +484,10 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 	return -1, -1, fmt.Errorf("no cpio found")
 }
 
+// ErrCfgNotFound is returned if embedded config is not found.
 var ErrCfgNotFound = errors.New("embedded config not found")
 
-// extract embedded config from kernel
+// ReadConfig extracts embedded config from kernel
 func (b *BzImage) ReadConfig() (string, error) {
 	i := bytes.Index(b.KernelCode, []byte("IKCFG_ST\037\213\010"))
 	if i == -1 {

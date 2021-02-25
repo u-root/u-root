@@ -31,13 +31,17 @@ off val
 const kverMax = 1024 //arbitrary
 
 var (
+	//ErrBootSig is returned when the boot sig is missing.
 	ErrBootSig = errors.New("missing 0x55AA boot sig")
-	ErrBadSig  = errors.New("missing kernel header sig")
-	ErrBadOff  = errors.New("null version string offset")
-	ErrParse   = errors.New("parse error")
+	//ErrBadSig is returned when the kernel header sig is missing.
+	ErrBadSig = errors.New("missing kernel header sig")
+	//ErrBadOff is returned if the version string offset is null.
+	ErrBadOff = errors.New("null version string offset")
+	//ErrParse is returned on a parse error.
+	ErrParse = errors.New("parse error")
 )
 
-//Read kernel version string. See also: (*BZImage)Kver()
+// KVer reads the kernel version string. See also: (*BZImage)Kver()
 func KVer(k io.ReadSeeker) (string, error) {
 	var buf = make([]byte, kverMax)
 	_, err := k.Seek(0, io.SeekStart)
@@ -68,7 +72,7 @@ func KVer(k io.ReadSeeker) (string, error) {
 	return nullterm(buf), nil
 }
 
-//Read kernel version string. See also: KVer()
+// KVer reads the kernel version string. See also: KVer()
 func (bz *BzImage) KVer() string {
 	if bz.Header.Kveraddr == 0 {
 		return ("(unknown)")
@@ -99,11 +103,13 @@ func nullterm(buf []byte) string {
 	return string(buf[:i])
 }
 
+// KInfo struct holds info extracted from the kernel's embedded version string
+//
+//2.6.24.111 (bluebat@linux-vm-os64.site) #606 Mon Apr 14 00:06:11 CEST 2014
+//4.19.16-norm_boot (user@host) #300 SMP Fri Jan 25 16:32:19 UTC 2019
+//   release             (builder)         version
+//maj.min.patch-localver                #buildnum SMP buildtime
 type KInfo struct {
-	//2.6.24.111 (bluebat@linux-vm-os64.site) #606 Mon Apr 14 00:06:11 CEST 2014
-	//4.19.16-norm_boot (user@host) #300 SMP Fri Jan 25 16:32:19 UTC 2019
-	//   release               (builder)                              version
-	//maj.min.patch-localver                                      #buildnum SMP buildtime
 	Release, Version string //uname -r, uname -v respectfully
 	Builder          string //user@hostname in parenthesis, shown by `file` but not `uname`
 
@@ -115,6 +121,8 @@ type KInfo struct {
 	LocalVer        string    //from Release
 }
 
+// Equal compares two KInfo structs and returns
+// true if the content is identical.
 func (l KInfo) Equal(r KInfo) bool {
 	return l.Release == r.Release &&
 		l.Builder == r.Builder &&
@@ -129,7 +137,8 @@ func (l KInfo) Equal(r KInfo) bool {
 
 const layout = "Mon Jan 2 15:04:05 MST 2006"
 
-//Parse output of GetKDesc
+// ParseDesc parses the output of KVer() or
+// BzImage.KVer(), returning a KInfo struct.
 func ParseDesc(desc string) (KInfo, error) {
 	var ki KInfo
 
