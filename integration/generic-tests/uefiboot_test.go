@@ -31,7 +31,7 @@ func TestUefiBoot(t *testing.T) {
 	}
 
 	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
-		t.Skip("UEFI payload image is not found. Usage: uefiboot <payload>")
+		t.Skipf("UEFI payload image is not found: %s\n Usage: uefiboot <payload>", src)
 	}
 
 	// Create the CPIO and start QEMU.
