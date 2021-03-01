@@ -5,6 +5,7 @@
 package uefi
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/acpi"
@@ -12,6 +13,23 @@ import (
 )
 
 type kexecLoadFunc func(entry uintptr, segments kexec.Segments, flags uint64) error
+
+// TODO(chengchieh): move this function to kexec package
+func mockKexecLoad(entry uintptr, segments kexec.Segments, flags uint64) error {
+	if len(segments) > 16 {
+		return fmt.Errorf("number of segments should be less than 16 before dedup")
+	}
+
+	segments, err := kexec.AlignAndMerge(segments)
+	if err != nil {
+		return fmt.Errorf("could not align segments: %w", err)
+	}
+
+	if !segments.PhysContains(entry) {
+		return fmt.Errorf("entry point %#v is not covered by any segment", entry)
+	}
+	return nil
+}
 
 func TestLoadFvImage(t *testing.T) {
 	fv, err := New("testdata/uefi.fd")
@@ -29,13 +47,8 @@ func TestLoadFvImage(t *testing.T) {
 		t.Log("mock getSMBIOSBase()")
 		return 100, 200, nil
 	}
-	// TODO(chengchieh): refactor kexec pkg and create a real mock function. A real
-	// kexec mock load should include segments and alignment check.
 	defer func(old kexecLoadFunc) { kexecLoad = old }(kexecLoad)
-	kexecLoad = func(entry uintptr, segments kexec.Segments, flags uint64) error {
-		t.Log("mock kexec.Load()")
-		return nil
-	}
+	kexecLoad = mockKexecLoad
 
 	defer func(old func() (kexec.MemoryMap, error)) { kexecParseMemoryMap = old }(kexecParseMemoryMap)
 	kexecParseMemoryMap = func() (kexec.MemoryMap, error) {
