@@ -151,7 +151,7 @@ func (ball *BootBall) Pack() error {
 	if ball.Archive == "" || ball.dir == "" {
 		return errors.New("BootBall.Pacstandak: booball.archive and bootball.dir must be set")
 	}
-	return uzip.ToZip(ball.dir, ball.Archive)
+	return uzip.ToZip(ball.dir, ball.Archive, "")
 }
 
 // Dir returns the temporary directory associated with BootBall.
