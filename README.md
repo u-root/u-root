@@ -29,7 +29,8 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
+Make sure your Go version is >=1.13. Make sure your `GOPATH` is set up
+correctly.
 While u-root uses Go modules, it still vendors dependencies and builds with
 `GO111MODULE=off`.
 
