@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -35,6 +36,9 @@ const (
 	hostSecretSeedLen = 32
 
 	passwordSalt = "SKM PROD_V2 ACCESS"
+
+	// Master Password ID for SKM-based unlock.
+	skmMPI = 0x0601
 )
 
 var (
@@ -42,6 +46,7 @@ var (
 	verbose            = flag.Bool("d", false, "print debug output")
 	verboseNoSanitize  = flag.Bool("dangerously-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
+	retries            = flag.Int("num_retries", 1, "Number of times to retry password if unlocking fails for any reason other than the password being wrong.")
 )
 
 func verboseLog(msg string) {
@@ -90,6 +95,7 @@ func getAllHss() ([][]uint8, error) {
 	}
 
 	hssList := [][]uint8{}
+	seen := make(map[string]bool)
 	skmSubstr := "/skm/hss/"
 
 	// Read from all */skm/hss/* blobs.
@@ -106,12 +112,18 @@ func getAllHss() ([][]uint8, error) {
 		hss, err := readHssBlob(id, h)
 		if err != nil {
 			log.Printf("failed to read HSS of id %s: %v", id, err)
-		} else {
-			msg := fmt.Sprintf("HSS Entry: Id=%s", id)
-			if *verboseNoSanitize {
-				msg = msg + fmt.Sprintf(",Seed=%x", hss)
-			}
-			verboseLog(msg)
+			continue
+		}
+
+		msg := fmt.Sprintf("HSS Entry: Id=%s", id)
+		if *verboseNoSanitize {
+			msg = msg + fmt.Sprintf(",Seed=%x", hss)
+		}
+		verboseLog(msg)
+
+		hssStr := fmt.Sprint(hss)
+		if _, ok := seen[hssStr]; !ok {
+			seen[hssStr] = true
 			hssList = append(hssList, hss)
 		}
 	}
@@ -132,6 +144,23 @@ func genPassword(hss []byte, info *scuzz.Info) ([]byte, error) {
 		return nil, err
 	}
 	return key, nil
+}
+
+// writeFile is ioutil.WriteFile but disallows creating new file
+func writeFile(filename string, contents string) error {
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_SYNC, 0)
+	if err != nil {
+		return err
+	}
+	wlen, err := file.WriteString(contents)
+	if err != nil && wlen < len(contents) {
+		err = io.ErrShortWrite
+	}
+	// If Close() fails this likely indicates a write failure.
+	if errClose := file.Close(); err == nil {
+		err = errClose
+	}
+	return err
 }
 
 func main() {
@@ -162,8 +191,33 @@ func main() {
 
 	verboseLog(fmt.Sprintf("Disk info for %s: %s", *disk, info.String()))
 
+	switch {
+	case !info.SecurityStatus.SecurityEnabled():
+		log.Printf("Disk security is not enabled on %v.", *disk)
+		return
+	case info.SecurityStatus.SecurityFrozen():
+		// If the disk is frozen, its security state cannot be changed until the next
+		// power on or hardware reset. Disk unlock will fail anyways, so return.
+		// This is unlikely to occur, since someone would need to freeze the drive's
+		// security state between the last AC cycle and this code being run.
+		log.Print("Disk security is frozen. Power cycle the machine to unfreeze the disk.")
+		return
+	case !info.SecurityStatus.SecurityLocked():
+		log.Print("Disk is already unlocked.")
+		return
+	case info.SecurityStatus.SecurityCountExpired():
+		// If the security count is expired, this means too many attempts have been
+		// made to unlock the disk. Reset this with an AC cycle or hardware reset
+		// on the disk.
+		log.Fatalf("Security count expired on disk. Reset the password counter by power cycling the disk.")
+	case info.MasterPasswordRev != skmMPI:
+		log.Fatalf("Disk is locked with unknown master password ID: %X", info.MasterPasswordRev)
+	}
+
 	// Try using each HSS to unlock the disk - only 1 should work.
 	unlocked := false
+
+TryAllHSS:
 	for i, hss := range hssList {
 		key, err := genPassword(hss, info)
 		if err != nil {
@@ -171,11 +225,13 @@ func main() {
 			continue
 		}
 
-		if err := sgdisk.Unlock((string)(key), false); err != nil {
-			log.Printf("Couldn't unlock disk with HSS %d: %v", i, err)
-		} else {
-			unlocked = true
-			break
+		for r := 0; r < *retries; r++ {
+			if err := sgdisk.Unlock(string(key), false); err != nil {
+				log.Printf("Couldn't unlock disk with HSS %d: %v", i, err)
+			} else {
+				unlocked = true
+				break TryAllHSS
+			}
 		}
 	}
 
@@ -189,7 +245,15 @@ func main() {
 		return
 	}
 
+	// Rescans all LUNs/Channels/Targets on the scsi_host. This ensures the kernel
+	// updates the ATA driver to see the newly unlocked disk.
+	verboseLog("Rescanning scsi...")
+	if err := writeFile("/sys/class/scsi_host/host0/scan", "- - -"); err != nil {
+		log.Fatalf("couldn't rescan SCSI to reload newly unlocked disk: %v", err)
+	}
+
 	// Update partitions on the on the disk.
+	verboseLog("Reloading disk partitions...")
 	diskdev, err := block.Device(*disk)
 	if err != nil {
 		log.Fatalf("Could not find %s: %v", *disk, err)

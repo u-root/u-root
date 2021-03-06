@@ -69,7 +69,10 @@ func main() {
 		var inums map[uint64]string
 		inums = make(map[uint64]string)
 
-		rr := archiver.Reader(os.Stdin)
+		rr, err := archiver.NewFileReader(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
 		for {
 			rec, err := rr.ReadRecord()
 			if err == io.EOF {
@@ -78,20 +81,47 @@ func main() {
 			if err != nil {
 				log.Fatalf("error reading records: %v", err)
 			}
-			debug("Creating %s\n", rec)
+			debug("record name %s ino %d\n", rec.Name, rec.Info.Ino)
 
 			// A file with zero size could be a hard link to another file
-			// in the archive. The file with contents always comes first.
-			if rec.Info.FileSize == 0 {
-				if _, ok := inums[rec.Info.Ino]; ok {
-					err := os.Link(inums[rec.Info.Ino], rec.Name)
+			// in the archive. The file with content always comes first.
+			//
+			// But we should ignore files with Ino of 0; that's an illegal value.
+			// The current most common use of this command is with u-root
+			// initramfs cpio files on Linux and Harvey.
+			// (nobody else cares about cpio any more save kernels).
+			// Those always have Ino of zero for reproducible builds.
+			// Hence doing the Ino != 0 test first saves a bit of work.
+			if rec.Info.Ino != 0 {
+				switch rec.Mode & cpio.S_IFMT {
+				// In any Unix past about V1, you can't do os.Link from user mode.
+				// Except via mkdir of course :-).
+				case cpio.S_IFDIR:
+				default:
+					// FileSize of non-zero means it is the first and possibly
+					// only instance of this file.
+					if rec.Info.FileSize != 0 {
+						break
+					}
+					// If the file is not in []inums it is a true zero-length file,
+					// not a hard link to a file already seen.
+					// (pedantic mode: on Unix all files are hard links;
+					// so what this comment really means is "file with more than one
+					// hard link).
+					ino, ok := inums[rec.Info.Ino]
+					if !ok {
+						break
+					}
+					err := os.Link(ino, rec.Name)
+					debug("Hard linking %s to %s", ino, rec.Name)
 					if err != nil {
 						log.Fatal(err)
 					}
 					continue
 				}
+				inums[rec.Info.Ino] = rec.Name
 			}
-			inums[rec.Info.Ino] = rec.Name
+			debug("Creating file %s", rec.Name)
 			if err := cpio.CreateFile(rec); err != nil {
 				log.Printf("Creating %q failed: %v", rec.Name, err)
 			}
@@ -121,7 +151,10 @@ func main() {
 		}
 
 	case "t":
-		rr := archiver.Reader(os.Stdin)
+		rr, err := archiver.NewFileReader(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
 		for {
 			rec, err := rr.ReadRecord()
 			if err == io.EOF {

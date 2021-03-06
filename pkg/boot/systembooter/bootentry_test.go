@@ -31,7 +31,7 @@ func TestGetBooterForNullBooter(t *testing.T) {
 	require.NotNil(t, booter)
 	require.Equal(t, booter.TypeName(), "null")
 	require.NotNil(t, booter.(*NullBooter))
-	require.Nil(t, booter.Boot())
+	require.Nil(t, booter.Boot(true))
 }
 
 func TestGetBooterForInvalidBooter(t *testing.T) {
@@ -44,7 +44,7 @@ func TestGetBooterForInvalidBooter(t *testing.T) {
 	// an invalid config returns always a NullBooter
 	require.Equal(t, booter.TypeName(), "null")
 	require.NotNil(t, booter.(*NullBooter))
-	require.Nil(t, booter.Boot())
+	require.Nil(t, booter.Boot(true))
 }
 
 func TestGetBootEntries(t *testing.T) {

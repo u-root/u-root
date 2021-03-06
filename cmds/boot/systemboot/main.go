@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -17,19 +18,41 @@ import (
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 var (
 	allowInteractive = flag.Bool("i", true, "Allow user to interrupt boot process and run commands")
-	doQuiet          = flag.Bool("q", false, "Disable verbose output")
+	doQuiet          = flag.Bool("q", false, fmt.Sprintf("Disable verbose output. If not specified, read it from VPD var '%s'. Default false", vpdSystembootLogLevel))
 	interval         = flag.Int("I", 1, "Interval in seconds before looping to the next boot command")
 	noDefaultBoot    = flag.Bool("nodefault", false, "Do not attempt default boot entries if regular ones fail")
 )
+
+const (
+	// vpdSystembootLogLevel is the name of the VPD variable used to set the log level.
+	vpdSystembootLogLevel = "systemboot_log_level"
+)
+
+// isFlagPassed checks whether a flag was explicitly passed on the command line
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
 
 var defaultBootsequence = [][]string{
 	{"fbnetboot", "-userclass", "linuxboot"},
 	{"localboot", "-grub"},
 }
+
+// VPD variable for enabling IPMI BMC overriding boot order, default is not set
+const VpdBmcBootOrderOverride = "bmc_bootorder_override"
+
+var bmcBootOverride bool
 
 // Product list for running IPMI OEM commands
 var productList = [3]string{"Tioga Pass", "Mono Lake", "Delta Lake"}
@@ -69,7 +92,10 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 		if err = cmosClear(); err != nil {
 			return err
 		}
-		// ToDo: Reset RW_VPD to default values
+		if err = ocp.ClearRwVpd(); err != nil {
+			return err
+		}
+
 		if err = ocp.ClearCMOSClearValidBits(ipmi, bootorder); err != nil {
 			return err
 		}
@@ -97,7 +123,16 @@ func runIPMICommands() {
 	} else {
 		log.Printf("Watchdog is stopped.")
 	}
-
+	// Try RW_VPD first
+	value, err := systembooter.Get(VpdBmcBootOrderOverride, false)
+	if err != nil {
+		// Try RO_VPD
+		value, err = systembooter.Get(VpdBmcBootOrderOverride, true)
+	}
+	if err == nil && string(value) == "1" {
+		bmcBootOverride = true
+	}
+	log.Printf("VPD %s is %v", VpdBmcBootOrderOverride, string(value))
 	// Below IPMI commands would require SMBIOS data
 	si, err := smbios.FromSysfs()
 	if err != nil {
@@ -118,7 +153,9 @@ func runIPMICommands() {
 			if err = checkCMOSClear(i); err != nil {
 				log.Printf("IPMI CMOS clear err: %v", err)
 			}
-
+			if err = ocp.CheckBMCBootOrder(i, bmcBootOverride); err != nil {
+				log.Printf("Failed to sync BMC Boot Order %v.", err)
+			}
 			dimmInfo, err := ocp.GetOemIpmiDimmInfo(si)
 			if err == nil {
 				if err = ocp.SendOemIpmiDimmInfo(i, dimmInfo); err == nil {
@@ -164,6 +201,8 @@ func addSEL(sequence string) {
 	defer i.Close()
 
 	switch sequence {
+	case "netboot":
+		fallthrough
 	case "fbnetboot":
 		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
@@ -190,14 +229,56 @@ func addSEL(sequence string) {
 	}
 }
 
+// getDebugEnabled checks whether debug output is requested, either via command line or via VPD
+// variables.
+// If -q was explicitly passed on the command line, will use that value, otherwise will look for
+// the VPD variable "systemboot_log_level".
+// Valid values are coreboot loglevels https://review.coreboot.org/cgit/coreboot.git/tree/src/commonlib/include/commonlib/loglevel.h,
+// either as integer (1, 2) or string ("debug").
+// If the VPD variable is missing or it is set to an invalid value, it will use the default.
+func getDebugEnabled() bool {
+	if isFlagPassed("q") {
+		return !*doQuiet
+	}
+
+	// -q was not passed, so `doQuiet` contains the default value
+	defaultDebugEnabled := !*doQuiet
+	// check for the VPD variable "systemboot_log_level". First the read-write, then the read-only
+	v, err := vpd.Get(vpdSystembootLogLevel, false)
+	if err != nil {
+		// TODO do not print warning if file is not found
+		log.Printf("Warning: failed to read read-write VPD variable '%s', will try the read-only one. Error was: %v", vpdSystembootLogLevel, err)
+		v, err = vpd.Get(vpdSystembootLogLevel, true)
+		if err != nil {
+			// TODO do not print warning if file is not found
+			log.Printf("Warning: failed to read read-only VPD variable '%s', will use the default value. Error was: %v", vpdSystembootLogLevel, err)
+			return defaultDebugEnabled
+		}
+	}
+	level := strings.ToLower(strings.TrimSpace(string(v)))
+	switch level {
+	case "0", "emerg", "1", "alert", "2", "crit", "3", "err", "4", "warning", "9", "never":
+		// treat as quiet
+		return false
+	case "5", "notice", "6", "info", "7", "debug", "8", "spew":
+		// treat as debug
+		return true
+	default:
+		log.Printf("Invalid value '%s' for VPD variable '%s', using default", level, vpdSystembootLogLevel)
+		return defaultDebugEnabled
+	}
+}
+
 func main() {
 	flag.Parse()
 
+	debugEnabled := getDebugEnabled()
+
 	log.Print(`
-                     ____            _                 _                 _   
-                    / ___| _   _ ___| |_ ___ _ __ ___ | |__   ___   ___ | |_ 
+                     ____            _                 _                 _
+                    / ___| _   _ ___| |_ ___ _ __ ___ | |__   ___   ___ | |_
                     \___ \| | | / __| __/ _ \ '_ ` + "`" + ` _ \| '_ \ / _ \ / _ \| __|
-                     ___) | |_| \__ \ ||  __/ | | | | | |_) | (_) | (_) | |_ 
+                     ___) | |_| \__ \ ||  __/ | | | | | |_) | (_) | (_) | |_
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
@@ -213,18 +294,23 @@ func main() {
 	}
 
 	// Get and show boot entries
-	bootEntries := systembooter.GetBootEntries()
+	var bootEntries []systembooter.BootEntry
+	if bmcBootOverride && ocp.BmcUpdatedBootorder {
+		bootEntries = ocp.BootEntries
+	} else {
+		bootEntries = systembooter.GetBootEntries()
+	}
 	log.Printf("BOOT ENTRIES:")
 	for _, entry := range bootEntries {
 		log.Printf("    %v) %+v", entry.Name, string(entry.Config))
 	}
 	for _, entry := range bootEntries {
 		log.Printf("Trying boot entry %s: %s", entry.Name, string(entry.Config))
-		if err := entry.Booter.Boot(); err != nil {
+		if err := entry.Booter.Boot(debugEnabled); err != nil {
 			log.Printf("Warning: failed to boot with configuration: %+v", entry)
 			addSEL(entry.Booter.TypeName())
 		}
-		if !*doQuiet {
+		if debugEnabled {
 			log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 		}
 		time.Sleep(sleepInterval)
@@ -237,7 +323,7 @@ func main() {
 		log.Print("Falling back to the default boot sequence")
 		for {
 			for _, bootcmd := range defaultBootsequence {
-				if !*doQuiet {
+				if debugEnabled {
 					bootcmd = append(bootcmd, "-d")
 				}
 				log.Printf("Running boot command: %v", bootcmd)
@@ -253,7 +339,7 @@ func main() {
 			}
 			selRecorded = true
 
-			if !*doQuiet {
+			if debugEnabled {
 				log.Printf("Sleeping %v before attempting next boot command", sleepInterval)
 			}
 			time.Sleep(sleepInterval)

@@ -79,6 +79,10 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 // It further modifies options if the running binary is named
 // gunzip or gzcat to allow for expected behavor. Checks if there is piped stdin data.
 func (o *Options) validate(moreArgs bool) error {
+	if !moreArgs && !o.Force {
+		return fmt.Errorf("gzip: standard output is a terminal -- ignoring")
+	}
+
 	if o.Help {
 		// Return an empty errorString so the CLI app does not continue
 		return errors.New("")
@@ -96,20 +100,12 @@ func (o *Options) validate(moreArgs bool) error {
 		o.Stdout = true
 	}
 
-	stat, _ := os.Stdin.Stat()
-
-	// No files passed and no arguments, Stdin piped data found.
-	// Stdin piped data is ignored if arguments are found.
-	if !moreArgs && ((stat.Mode() & os.ModeCharDevice) == 0) {
+	// no args passed compress stdin to stdout
+	if !moreArgs {
 		o.Stdin = true
-		// Enable force to ignore suffix checks
-		o.Force = true
 		// Since there's no filename to derive the output path from, only support
 		// outputting to stdout when data is piped from stdin
 		o.Stdout = true
-	} else if !moreArgs {
-		// No stdin piped data found and no files passed as arguments
-		return fmt.Errorf("error: no input files specified or piped data")
 	}
 
 	return nil
