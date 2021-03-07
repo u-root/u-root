@@ -357,6 +357,46 @@ func TestFindSpaceIn(t *testing.T) {
 	}
 }
 
+func TestFindSpace(t *testing.T) {
+	for i, tt := range []struct {
+		name string
+		rs   Ranges
+		size uint
+		want Range
+		err  error
+	}{
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "no ranges",
+			rs:   Ranges{},
+			size: 0x10,
+			err:  ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "no ranges, zero size",
+			rs:   Ranges{},
+			size: 0,
+			err:  ErrNotEnoughSpace{Size: 0},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
+			got, err := tt.rs.FindSpace(tt.size)
+			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
+				t.Errorf("%s.FindSpace(%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, got, err, tt.want, tt.err)
+			}
+		})
+	}
+}
+
 func TestIntersection(t *testing.T) {
 	for i, tt := range []struct {
 		r             Range
