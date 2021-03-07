@@ -196,6 +196,11 @@ func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
 // Sort sorts ranges by their start point.
 func (rs Ranges) Sort() {
 	sort.Slice(rs, func(i, j int) bool {
+		if rs[i].Start == rs[j].Start {
+			// let rs[i] be the superset of rs[j]
+			return rs[i].Size > rs[j].Size
+		}
+
 		return rs[i].Start < rs[j].Start
 	})
 }
@@ -425,6 +430,9 @@ func (segs Segments) Phys() Ranges {
 func (segs Segments) IsSupersetOf(o Segments) error {
 	for _, seg := range o {
 		size := minuint(seg.Phys.Size, seg.Buf.Size)
+		if size == 0 {
+			continue
+		}
 		r := Range{Start: seg.Phys.Start, Size: size}
 		buf := segs.GetPhys(r)
 		if buf == nil {
