@@ -314,9 +314,9 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 	return newSegs, nil
 }
 
-// realBuf adjusts s.Buf.Size = s.Phys.Size. Buf will either gain some
-// zeros or be truncated.
-func (s Segment) realBuf() []byte {
+// realBufPad adjusts s.Buf.Size = s.Phys.Size. Buf will either gain some zeros
+// or be truncated.
+func (s Segment) realBufPad() []byte {
 	switch {
 	case s.Buf.Size == s.Phys.Size:
 		return s.Buf.toSlice()
@@ -330,13 +330,34 @@ func (s Segment) realBuf() []byte {
 	return nil
 }
 
+// realBufTruncate adjusts s.Buf.Size = s.Phys.Size, except when Buf is smaller
+// than Phys. Buf will either remain the same or be truncated.
+func (s Segment) realBufTruncate() []byte {
+	switch {
+	case s.Buf.Size == s.Phys.Size:
+		return s.Buf.toSlice()
+
+	case s.Buf.Size < s.Phys.Size:
+		return s.Buf.toSlice()
+
+	case s.Buf.Size > s.Phys.Size:
+		return s.Buf.toSlice()[:s.Phys.Size]
+	}
+	return nil
+}
+
 func (s *Segment) mergeDisjoint(s2 Segment) bool {
 	if s.Phys.Overlaps(s2.Phys) {
 		return false
 	}
+	// Must be s < s2
+	if s.Phys.Start > s2.Phys.Start {
+		return false
+	}
 
-	a := s.realBuf()
-	b := s2.realBuf()
+	a := s.realBufPad()
+	// Second half can drop the extra padded zeroes.
+	b := s2.realBufTruncate()
 	diffSize := s2.Phys.Start - s.Phys.End()
 	// Zeros for the middle.
 	buf := append(a, make([]byte, int(diffSize))...)
