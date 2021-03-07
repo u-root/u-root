@@ -28,6 +28,11 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		t.Skipf("test not supported on %s", TestArch())
 	}
 
+	vmcoverprofile, ok := os.LookupEnv("UROOT_QEMU_COVERPROFILE")
+	if !ok {
+		t.Log("QEMU test coverage is not collected unless UROOT_QEMU_COVERPROFILE is set")
+	}
+
 	if o == nil {
 		o = &Options{}
 	}
@@ -52,6 +57,15 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	os.Setenv("CGO_ENABLED", "0")
 	os.Setenv("GOARCH", TestArch())
 	testDir := filepath.Join(o.TmpDir, "tests")
+
+	if len(vmcoverprofile) > 0 {
+		f, err := os.Create(filepath.Join(o.TmpDir, "coverage.profile"))
+		if err != nil {
+			t.Fatalf("Could not create coverage file %v", err)
+		}
+		f.Close()
+	}
+
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
 		if err := os.MkdirAll(pkgDir, 0755); err != nil {
@@ -60,12 +74,18 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 
 		testFile := filepath.Join(pkgDir, fmt.Sprintf("%s.test", path.Base(pkg)))
 
-		cmd := exec.Command("go", "test",
+		args := []string{
+			"test",
 			"-gcflags=all=-l",
 			"-ldflags", "-s -w",
 			"-c", pkg,
 			"-o", testFile,
-		)
+		}
+		if len(vmcoverprofile) > 0 {
+			args = append(args, "-covermode=atomic")
+		}
+
+		cmd := exec.Command("go", args...)
 		if stderr, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("could not build %s: %v\n%s", pkg, err, string(stderr))
 		}
@@ -106,12 +126,33 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		serial = append(serial, o.QEMUOpts.SerialOutput)
 	}
 	o.QEMUOpts.SerialOutput = uio.MultiWriteCloser(serial...)
+	if len(vmcoverprofile) > 0 {
+		o.QEMUOpts.KernelArgs += " uroot.uinitargs=-coverprofile=/testdata/coverage.profile"
+	}
 
 	q, cleanup := QEMUTest(t, o)
 	defer cleanup()
 
 	if err := q.Expect("GoTest Done"); err != nil {
 		t.Errorf("Waiting for GoTest Done: %v", err)
+	}
+
+	if len(vmcoverprofile) > 0 {
+		cov, err := os.Open(filepath.Join(o.TmpDir, "coverage.profile"))
+		if err != nil {
+			t.Fatalf("No coverage file shared from VM: %v", err)
+		}
+
+		out, err := os.OpenFile(vmcoverprofile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+		if err != nil {
+			t.Fatalf("Could not open vmcoverageprofile: %v", err)
+		}
+
+		if _, err := io.Copy(out, cov); err != nil {
+			t.Fatalf("Error copying coverage: %s", err)
+		}
+		out.Close()
+		cov.Close()
 	}
 
 	// TODO: check that tc.Tests == tests

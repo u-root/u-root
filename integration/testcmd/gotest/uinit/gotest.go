@@ -6,6 +6,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -34,8 +36,33 @@ func walkTests(testRoot string, fn func(string, string)) error {
 	})
 }
 
+var (
+	coverprofile = flag.String("coverprofile", "", "Filename to write coverage data to")
+)
+
+func AppendFile(srcFile, targetFile string) error {
+	cov, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+	defer cov.Close()
+
+	out, err := os.OpenFile(targetFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, cov); err != nil {
+		return fmt.Errorf("error appending %s to %s: %v", srcFile, targetFile, err)
+	}
+	return nil
+}
+
 // Mount a vfat volume and run the tests within.
 func main() {
+	flag.Parse()
+
 	if err := os.MkdirAll("/testdata", 0755); err != nil {
 		log.Fatalf("Couldn't create testdata: %v", err)
 	}
@@ -64,7 +91,13 @@ func main() {
 			return
 		}
 
-		cmd := exec.CommandContext(ctx, path, "-test.v")
+		args := []string{"-test.v"}
+		coverfile := filepath.Join(filepath.Dir(path), "coverage.txt")
+		if len(*coverprofile) > 0 {
+			args = append(args, "-test.coverprofile", coverfile)
+		}
+
+		cmd := exec.CommandContext(ctx, path, args...)
 		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
 
 		// Write to stdout for humans, write to w for the JSON converter.
@@ -95,6 +128,10 @@ func main() {
 		// Close the pipe so test2json will quit.
 		w.Close()
 		j.Wait()
+
+		if err := AppendFile(coverfile, *coverprofile); err != nil {
+			log.Printf("Could not append to cover file: %s", err)
+		}
 	})
 
 	log.Printf("GoTest Done")

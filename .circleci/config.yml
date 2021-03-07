@@ -22,8 +22,13 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: go test -a -v -timeout 15m -ldflags '-s' ./integration/...
+          command: |
+              UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v \
+                -timeout 15m -ldflags '-s' ./integration/...
           no_output_timeout: 15m
+      - run:
+          name: Upload integration coverage
+          command: bash <(curl -s https://codecov.io/bash)
 
   beefy-template: &beefy-template
     <<: *golang-template
@@ -124,12 +129,18 @@ jobs:
           name: Test all
           command: go test -a -timeout 15m -ldflags '-s' ./cmds/... ./pkg/...
           no_output_timeout: 15m
+
       - run:
           name: Test coverage
-          command: go test -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+          command: |
+              UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=15m \
+                -coverprofile=coverage.txt -covermode=atomic -cover \
+                ./cmds/... ./pkg/...
+
       - run:
           name: Upload coverage
           command: bash <(curl -s https://codecov.io/bash)
+
   test-build:
     <<: *beefy-template
     steps:
@@ -138,6 +149,7 @@ jobs:
           name: Test u-root build
           command: go test -a -timeout 15m .
           no_output_timeout: 15m
+
   race:
     <<: *golang-template
     environment:
