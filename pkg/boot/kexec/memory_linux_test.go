@@ -127,6 +127,15 @@ func TestAlignAndMerge(t *testing.T) {
 			},
 		},
 		{
+			name: "no buffer",
+			in: Segments{
+				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
+			},
+			want: Segments{
+				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
 			name: "no buffers",
 			in:   Segments{},
 			want: Segments{},
@@ -216,7 +225,7 @@ func TestAlignAndMerge(t *testing.T) {
 			}
 
 			if err := got.IsSupersetOf(tt.in); err != nil {
-				t.Errorf("AlignAndMerge: %v", err)
+				t.Errorf("AlignAndMerge = %v: %v", got, err)
 			}
 
 			gotRanges := got.Phys()
@@ -394,6 +403,123 @@ func TestFindSpace(t *testing.T) {
 				t.Errorf("%s.FindSpace(%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, got, err, tt.want, tt.err)
 			}
 		})
+	}
+}
+
+func TestFindSpaceAbove(t *testing.T) {
+	for i, tt := range []struct {
+		name string
+		rs   Ranges
+		size uint
+		min  uintptr
+		want Range
+		err  error
+	}{
+		{
+			name: "no space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+			},
+			size: 0x10,
+			min:  0x1000,
+			err:  ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			min:  0x1000,
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size: 0x10,
+			min:  0x1000,
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size: 0x10,
+			min:  0x1000,
+			want: Range{Start: 0x1010, Size: 0x10},
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			min:  0,
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "no ranges",
+			rs:   Ranges{},
+			size: 0x10,
+			err:  ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "no ranges, zero size",
+			rs:   Ranges{},
+			size: 0,
+			err:  ErrNotEnoughSpace{Size: 0},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
+			got, err := tt.rs.FindSpaceAbove(tt.size, tt.min)
+			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.min, got, err, tt.want, tt.err)
+			}
+		})
+	}
+}
+
+func TestSort(t *testing.T) {
+	for _, tt := range []struct {
+		in   Ranges
+		want Ranges
+	}{
+		{
+			in: Ranges{
+				Range{Start: 2, Size: 5},
+				Range{Start: 1, Size: 5},
+			},
+			want: Ranges{
+				Range{Start: 1, Size: 5},
+				Range{Start: 2, Size: 5},
+			},
+		},
+		{
+			in: Ranges{
+				Range{Start: 1, Size: 5},
+				Range{Start: 1, Size: 6},
+			},
+			want: Ranges{
+				Range{Start: 1, Size: 6},
+				Range{Start: 1, Size: 5},
+			},
+		},
+	} {
+		var deepCopy Ranges
+		for _, i := range tt.in {
+			deepCopy = append(deepCopy, i)
+		}
+		tt.in.Sort()
+		if !reflect.DeepEqual(tt.in, tt.want) {
+			t.Errorf("%v.Sort() = %v, want\n%v", deepCopy, tt.in, tt.want)
+		}
 	}
 }
 
@@ -683,5 +809,47 @@ func TestSegmentsInsert(t *testing.T) {
 				t.Errorf("\n%v.Insert(%v) = \n%v, want \n%v", before, tt.s, tt.segs, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsSupersetOf(t *testing.T) {
+	for _, tt := range []struct {
+		r    Range
+		r2   Range
+		want bool
+	}{
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 1, Size: 0x1000 - 2},
+			want: true,
+		},
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 1, Size: 0x1000 - 1},
+			want: true,
+		},
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 1, Size: 0x1000},
+			want: false,
+		},
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 0, Size: 0},
+			want: true,
+		},
+		{
+			// Hmm... this feels wrong. "IsSupersetOf" may be the
+			// wrong name, or the implementation should recognize
+			// that any 0-size range is inside any other range.
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 0x1001, Size: 0},
+			want: false,
+		},
+	} {
+		got := tt.r.IsSupersetOf(tt.r2)
+		if got != tt.want {
+			t.Errorf("%s.IsSupersetOf(%s) = %t, want %t", tt.r, tt.r2, got, tt.want)
+		}
 	}
 }
