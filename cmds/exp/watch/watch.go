@@ -2,36 +2,33 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// watch periodically executes the executable.
+// watch periodically executes the executable specified in argument.
 //
 // Synopsis:
 //     watch [-n] SEC [-t] cmd-exec
 //
 // Description:
 //    cmd-exec is executed every n seconds
-//    example, watch -n 5 dmesg >> log.txt 
+//    example, watch -n 5 dmesg >> log.txt
 //    : executes dmesg every 5 sec and stores the log in log.txt
 //
 // Options:
 //     -n: time in seconds
 //     -t: do not print header
-
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
-	"time"
-	"bufio"
 	"strings"
-
+	"time"
 )
 
 var (
-	t       	= flag.Bool("t", false, "Don't print header")
-	n       	= flag.Int64("n", 2, "Loop period in SEC, default 2")
+	t = flag.Bool("t", false, "Don't print header")
+	n = flag.Int64("n", 2, "Loop period in SEC, default 2")
 )
 
 func init() {
@@ -45,7 +42,6 @@ func init() {
 
 func main() {
 	flag.Parse()
-
 	argRem := flag.Args()
 
 	// argRem is the remaining args(non flag) after parsing.
@@ -58,7 +54,6 @@ func main() {
 	if seconds <= 0 {
 		seconds = 2
 	}
-	out := bufio.NewWriter(os.Stdout)
 
 	for {
 		fmt.Print("\033[0;0H")
@@ -73,10 +68,9 @@ func main() {
 		if err := cmd.Run(); err != nil {
 			if strings.Contains(err.Error(), "executable file not found") {
 				fmt.Print(err)
-			 }
+			}
 		}
 
-		out.Flush()
 		time.Sleep(time.Second * time.Duration(seconds))
 	}
 }
