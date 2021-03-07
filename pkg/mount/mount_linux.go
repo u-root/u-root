@@ -85,7 +85,7 @@ func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 		return nil, &os.PathError{
 			Op:   "mount",
 			Path: path,
-			Err:  fmt.Errorf("from device %q (fs type %s, flags %#x): %v", dev, fsType, flags, err),
+			Err:  fmt.Errorf("from device %q (fs type %s, flags %#x): %w", dev, fsType, flags, err),
 		}
 	}
 	return &MountPoint{
@@ -132,7 +132,11 @@ func Unmount(path string, force, lazy bool) error {
 		flags |= unix.MNT_DETACH
 	}
 	if err := unix.Unmount(path, flags); err != nil {
-		return fmt.Errorf("umount %q flags %x: %v", path, flags, err)
+		return &os.PathError{
+			Op:   "unmount",
+			Path: path,
+			Err:  fmt.Errorf("flags %#x: %w", flags, err),
+		}
 	}
 	return nil
 }

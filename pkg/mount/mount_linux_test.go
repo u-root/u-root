@@ -5,6 +5,7 @@
 package mount_test
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -460,5 +461,52 @@ func TestMountPool(t *testing.T) {
 	}
 	if sda1.count != 1 {
 		t.Fatalf("expected sda1 mounted 1 times; but mounted %d times", sda1.count)
+	}
+}
+
+func TestUnmount(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	d, err := ioutil.TempDir("", "test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(d)
+
+	mp, err := mount.Mount("", d, "tmpfs", "", 0)
+	if err != nil {
+		t.Fatalf("Mount(tmpfs) = %v, want nil", err)
+	}
+
+	want := &mount.MountPoint{
+		Path:   d,
+		FSType: "tmpfs",
+	}
+	if !reflect.DeepEqual(mp, want) {
+		t.Fatalf("Mount(tmpfs) = %v, want %v", mp, want)
+	}
+
+	if err := mount.Unmount("", false, false); err == nil {
+		t.Errorf("Unmount('') got %v, want error", err)
+	}
+	if err := mount.Unmount(d, true, true); err == nil {
+		t.Errorf("Unmount(%s) got %v, want error", d, err)
+	}
+
+	// Make the mount busy.
+	f, err := os.Create(filepath.Join(d, "busy.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mount.Unmount(d, false, false); !errors.Is(err, syscall.EBUSY) {
+		t.Errorf("Unmount(%s) = %v, want EBUSY", d, err)
+	}
+
+	// Make unbusy.
+	f.Close()
+
+	if err := mount.Unmount(d, true, false); err != nil {
+		t.Errorf("Unmount(%s) = %v, want nil", d, err)
 	}
 }
