@@ -175,6 +175,36 @@ func TestAlignAndMerge(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "two segments in the same page with first-buffer-truncation and second-buffer-padding",
+			in: Segments{
+				NewSegment([]byte("testtest"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foo"), Range{Start: 10, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("testt\x00\x00\x00\x00\x00foo"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "two segments in the same page with first-buffer-perfect and second-buffer-truncation",
+			in: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foofoofoo"), Range{Start: 10, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("testt\x00\x00\x00\x00\x00foofo"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "two segments in the same page with first-buffer-padding and second-buffer-perfect",
+			in: Segments{
+				NewSegment([]byte("tes"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foofo"), Range{Start: 10, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("tes\x00\x00\x00\x00\x00\x00\x00foofo"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := AlignAndMerge(tt.in)
