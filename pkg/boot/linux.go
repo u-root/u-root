@@ -57,7 +57,7 @@ func (li *LinuxImage) String() string {
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
-	f, err := ioutil.TempFile("", "linux-image")
+	f, err := ioutil.TempFile("", "kexec-image")
 	if err != nil {
 		return nil, err
 	}
