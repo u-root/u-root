@@ -19,15 +19,19 @@ type ProgressReader struct {
 	W        io.Writer
 
 	counter int
+	written bool
 }
 
 // Read implements io.Reader for ProgressReader.
 func (r *ProgressReader) Read(p []byte) (n int, err error) {
 	defer func() {
-		//log.Print("r.Counter %d, r.Interval %d, n
 		numSymbols := (r.counter%r.Interval + n) / r.Interval
 		r.W.Write([]byte(strings.Repeat(r.Symbol, numSymbols)))
 		r.counter += n
+		r.written = (r.written || numSymbols > 0)
+		if err == io.EOF && r.written {
+			r.W.Write([]byte("\n"))
+		}
 	}()
 	return r.R.Read(p)
 }
