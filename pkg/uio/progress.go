@@ -35,3 +35,33 @@ func (r *ProgressReader) Read(p []byte) (n int, err error) {
 	}()
 	return r.R.Read(p)
 }
+
+// ProgressReadCloser implements io.ReadCloser and prints Symbol to W after every
+// Interval bytes passes through RC.
+type ProgressReadCloser struct {
+	RC io.ReadCloser
+
+	Symbol   string
+	Interval int
+	W        io.Writer
+
+	pr *ProgressReader
+}
+
+// Read implements io.Reader for ProgressReader.
+func (rc *ProgressReadCloser) Read(p []byte) (n int, err error) {
+	if rc.pr == nil {
+		rc.pr = &ProgressReader{
+			R:        rc.RC,
+			Symbol:   rc.Symbol,
+			Interval: rc.Interval,
+			W:        rc.W,
+		}
+	}
+	return rc.pr.Read(p)
+}
+
+// Read implements io.Closer for ProgressReader.
+func (rc *ProgressReadCloser) Close() error {
+	return rc.RC.Close()
+}
