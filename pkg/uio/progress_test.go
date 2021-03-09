@@ -6,6 +6,7 @@ package uio
 
 import (
 	"bytes"
+	"io/ioutil"
 	"testing"
 )
 
@@ -41,13 +42,25 @@ func TestProgressReader(t *testing.T) {
 	if string(output) != "456789012" {
 		t.Errorf("found %q, expected %q to be written", string(output), "456789012")
 	}
+
+	// Read until EOF
+	output, err := ioutil.ReadAll(&pr)
+	if err != nil {
+		t.Errorf("got %v, expected nil error", err)
+	}
+	if stdout.String() != "#####\n" {
+		t.Errorf("found %q, expected %q to be written", stdout.String(), "#####\n")
+	}
+	if string(output) != "3456789" {
+		t.Errorf("found %q, expected %q to be written", string(output), "3456789")
+	}
 }
 
 func TestProgressReadCloser(t *testing.T) {
-	input := bytes.NewBufferString("01234567890123456789")
+	input := ioutil.NopCloser(bytes.NewBufferString("01234567890123456789"))
 	stdout := &bytes.Buffer{}
-	prc := ProgressReader{
-		R:        input,
+	prc := ProgressReadCloser{
+		RC:       input,
 		Symbol:   "#",
 		Interval: 4,
 		W:        stdout,
@@ -74,5 +87,22 @@ func TestProgressReadCloser(t *testing.T) {
 	}
 	if string(output) != "456789012" {
 		t.Errorf("found %q, expected %q to be written", string(output), "456789012")
+	}
+
+	// Read until EOF
+	output, err := ioutil.ReadAll(&prc)
+	if err != nil {
+		t.Errorf("got %v, expected nil error", err)
+	}
+	if stdout.String() != "#####\n" {
+		t.Errorf("found %q, expected %q to be written", stdout.String(), "#####\n")
+	}
+	if string(output) != "3456789" {
+		t.Errorf("found %q, expected %q to be written", string(output), "3456789")
+	}
+
+	err = prc.Close()
+	if err != nil {
+		t.Errorf("got %v, expected nil error", err)
 	}
 }
