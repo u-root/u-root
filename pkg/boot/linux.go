@@ -57,7 +57,7 @@ func (li *LinuxImage) String() string {
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
-	f, err := ioutil.TempFile("", "nerf-netboot")
+	f, err := ioutil.TempFile("", "kexec-image")
 	if err != nil {
 		return nil, err
 	}
@@ -124,10 +124,12 @@ func (li *LinuxImage) Load(verbose bool) error {
 		defer i.Close()
 	}
 
-	log.Printf("Kernel: %s", k.Name())
-	if i != nil {
-		log.Printf("Initrd: %s", i.Name())
+	if verbose {
+		log.Printf("Kernel: %s", k.Name())
+		if i != nil {
+			log.Printf("Initrd: %s", i.Name())
+		}
+		log.Printf("Command line: %s", li.Cmdline)
 	}
-	log.Printf("Command line: %s", li.Cmdline)
 	return kexec.FileLoad(k, i, li.Cmdline)
 }
