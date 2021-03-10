@@ -10,7 +10,15 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 )
+
+func handler(c <-chan os.Signal) {
+	for range c {
+		log.Printf("ignoring SIGINT during flash write to prevent corruption")
+	}
+}
 
 // Set RW_VPD key-value
 func Set(key string, value []byte) error {
@@ -19,6 +27,10 @@ func Set(key string, value []byte) error {
 		return err
 	}
 	defer os.Remove(file.Name())
+
+	c := make(chan os.Signal)
+	go handler(c)
+	defer close(c)
 
 	cmd := exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RW_VPD", "-r", file.Name())
 	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
@@ -32,6 +44,11 @@ func Set(key string, value []byte) error {
 		return err
 	}
 	cmd = exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RW_VPD", "--noverify-all", "-w", file.Name())
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	signal.Notify(c, syscall.SIGINT)
+	defer signal.Reset(syscall.SIGINT)
 	if err = cmd.Run(); err != nil {
 		log.Printf("flashrom failed to write RW_VPD: %v", err)
 		return err
@@ -47,6 +64,10 @@ func ClearRwVpd() error {
 	}
 	defer os.Remove(file.Name())
 
+	c := make(chan os.Signal)
+	go handler(c)
+	defer close(c)
+
 	log.Printf("Reading RW_VPD...")
 	cmd := exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RW_VPD", "-r", file.Name())
 	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
@@ -60,6 +81,11 @@ func ClearRwVpd() error {
 		return err
 	}
 	cmd = exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RW_VPD", "--noverify-all", "-w", file.Name())
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	signal.Notify(c, syscall.SIGINT)
+	defer signal.Reset(syscall.SIGINT)
 	if err = cmd.Run(); err != nil {
 		log.Printf("flashrom failed to write RW_VPD: %v", err)
 		return err

@@ -6,6 +6,8 @@ package crypto
 
 import (
 	"io/ioutil"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,10 +21,6 @@ const (
 	publicKeyPEMFile string = "tests/public_key.pem"
 	// privateKeyPEMFile is a RSA public key in PEM format
 	privateKeyPEMFile string = "tests/private_key.pem"
-	// publicKeyPEMFile2 is a RSA public key in PEM format
-	publicKeyPEMFile2 string = "tests/public_key2.pem"
-	// privateKeyPEMFile2 is a RSA public key in PEM format
-	privateKeyPEMFile2 string = "tests/private_key2.pem"
 	// testDataFile which should be verified by the good signature
 	testDataFile string = "tests/data"
 	// signatureGoodFile is a good signature of testDataFile
@@ -100,11 +98,21 @@ func TestBadSignature(t *testing.T) {
 }
 
 func TestGenerateKeys(t *testing.T) {
-	err := GeneratED25519Key(password, privateKeyPEMFile2, publicKeyPEMFile2)
+	// FIXME: move this to testing.TempDir once we require >= Go 1.15
+	tmpdir, err := ioutil.TempDir("", "generate-keys")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	err = GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
 	require.NoError(t, err)
 }
 
 func TestGenerateUnprotectedKeys(t *testing.T) {
-	err := GeneratED25519Key(nil, privateKeyPEMFile2, publicKeyPEMFile2)
+	// FIXME: move this to testing.TempDir once we require >= Go 1.15
+	tmpdir, err := ioutil.TempDir("", "generate-keys")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	err = GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
 	require.NoError(t, err)
 }

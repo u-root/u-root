@@ -15,24 +15,75 @@ import (
 )
 
 // ToZip packs the all files at dir to a zip archive at dest.
-func ToZip(dir, dest string) error {
-	info, err := os.Stat(dir)
-	if err != nil {
+func ToZip(dir, dest, comment string) (reterr error) {
+	if info, err := os.Stat(dir); err != nil {
 		return err
-	}
-	if !(info.IsDir()) {
+	} else if !info.IsDir() {
 		return fmt.Errorf("%s is not a directory", dir)
 	}
 	archive, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
-	defer archive.Close()
+	defer func() {
+		if err := archive.Close(); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
 
 	z := zip.NewWriter(archive)
-	defer z.Close()
+	defer func() {
+		if comment != "" {
+			z.SetComment(comment)
+		}
+		if err := z.Close(); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
 
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	return writeDir(dir, z)
+}
+
+// AppendZip packs the all files at dir to a zip archive at dest.
+func AppendZip(dir, dest, comment string) (reterr error) {
+	if info, err := os.Stat(dir); err != nil {
+		return err
+	} else if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", dir)
+	}
+
+	archive, err := os.OpenFile(dest, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := archive.Close(); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
+
+	// Go to the end of the file because we are appending.
+	end, err := archive.Seek(0, os.SEEK_END)
+	if err != nil {
+		return err
+	}
+
+	z := zip.NewWriter(archive)
+	z.SetOffset(end)
+	defer func() {
+		if comment != "" {
+			z.SetComment(comment)
+		}
+		if err := z.Close(); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
+
+	return writeDir(dir, z)
+}
+
+func writeDir(dir string, z *zip.Writer) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -73,8 +124,16 @@ func ToZip(dir, dest string) error {
 		_, err = io.Copy(writer, file)
 		return err
 	})
+}
 
-	return err
+// Comment returns the comment from the zip file.
+func Comment(file string) (string, error) {
+	z, err := zip.OpenReader(file)
+	if err != nil {
+		return "", err
+	}
+	z.Close()
+	return z.Comment, nil
 }
 
 // FromZip extracts the zip archive at src to dir.

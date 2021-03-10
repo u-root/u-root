@@ -1,6 +1,7 @@
 # u-root
 
 [![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master)
+[![codecov](https://codecov.io/gh/u-root/u-root/branch/master/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
 [![Slack](https://slack.osfw.dev/badge.svg)](https://slack.osfw.dev)
@@ -28,7 +29,8 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
+Make sure your Go version is >=1.13. Make sure your `GOPATH` is set up
+correctly.
 While u-root uses Go modules, it still vendors dependencies and builds with
 `GO111MODULE=off`.
 
