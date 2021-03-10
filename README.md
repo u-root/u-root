@@ -240,7 +240,7 @@ For a list of modes, refer to the
 Some utilities, e.g., `dhclient`, require entropy to be present. For a speedy
 virtualized random number generator, the kernel should have the following:
 
-```
+```shell
 CONFIG_VIRTIO_PCI=y
 CONFIG_HW_RANDOM_VIRTIO=y
 CONFIG_CRYPTO_DEV_VIRTIO=y
@@ -248,7 +248,7 @@ CONFIG_CRYPTO_DEV_VIRTIO=y
 
 Then you can run your kernel in QEMU with a `virtio-rng-pci` device:
 
-```sh
+```shell
 qemu-system-x86_64 \
     -device virtio-rng-pci \
     -kernel vmlinuz \
@@ -257,7 +257,7 @@ qemu-system-x86_64 \
 
 In addition, you can pass your host's RNG:
 
-```sh
+```shell
 qemu-system-x86_64 \
     -object rng-random,filename=/dev/urandom,id=rng0 \
     -device virtio-rng-pci,rng=rng0 \
@@ -303,7 +303,7 @@ image using u-root/systemboot and coreboot can be found in the
 
 You can build systemboot like this:
 
-```sh
+```shell
 u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
 ```
 
