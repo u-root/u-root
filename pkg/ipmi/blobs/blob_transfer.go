@@ -319,7 +319,7 @@ func (h *BlobHandler) BlobRead(sid SessionID, offset, size uint32) ([]uint8, err
 // |sessionID| returned from BlobOpen gives us the open blob.
 // |data| is bounded by max size of an IPMI packet, which is platform-dependent.
 // If not all of the bytes can be written, this operation will fail.
-func (h *BlobHandler) BlobWrite(sid SessionID, offset int32, data []int8) error {
+func (h *BlobHandler) BlobWrite(sid SessionID, offset uint32, data []uint8) error {
 	req, err := appendLittleEndian([]uint8{}, sid, offset, data)
 	if err != nil {
 		return fmt.Errorf("failed to create data buffer: %v", err)
@@ -333,7 +333,7 @@ func (h *BlobHandler) BlobWrite(sid SessionID, offset int32, data []int8) error 
 //
 // Each blob defines its own commit behavior. Optional blob-specific commit data
 // can be provided with |data|.
-func (h *BlobHandler) BlobCommit(sid SessionID, data []int8) error {
+func (h *BlobHandler) BlobCommit(sid SessionID, data []uint8) error {
 	req, err := appendLittleEndian([]uint8{}, sid, (uint8)(len(data)), data)
 	if err != nil {
 		return fmt.Errorf("failed to create data buffer: %v", err)
