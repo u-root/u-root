@@ -4,6 +4,7 @@
 
 // illumos system calls not present on Solaris.
 
+//go:build amd64 && illumos
 // +build amd64,illumos
 
 package unix
@@ -56,7 +57,7 @@ func Pwritev(fd int, iovs [][]byte, off int64) (n int, err error) {
 	return n, err
 }
 
-//sys	accept4(s int, rsa *RawSockaddrAny, addrlen *_Socklen, flags int) (fd int, err error)
+//sys	accept4(s int, rsa *RawSockaddrAny, addrlen *_Socklen, flags int) (fd int, err error) = libsocket.accept4
 
 func Accept4(fd int, flags int) (nfd int, sa Sockaddr, err error) {
 	var rsa RawSockaddrAny
