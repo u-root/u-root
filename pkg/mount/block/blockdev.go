@@ -628,7 +628,7 @@ func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
 		if err != nil {
 			// In the case of an error, we err on the safe side and choose not to block it.
 			// Not all block devices are backed by a pci device, for example SATA drives.
-			Debug("Failed to find PCI info; %v", err)
+			Debug("Failed to find PCI info: %v", err)
 			partitions = append(partitions, device)
 			continue
 		}
