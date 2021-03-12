@@ -7,6 +7,8 @@ package main
 import (
 	"fmt"
 	"log"
+
+	"github.com/u-root/u-root/pkg/uroot/test/bar"
 )
 
 var (
@@ -134,6 +136,11 @@ func verify() error {
 	if nil1 != interface{}(nil) {
 		return fmt.Errorf("nil1 is %v, want nil interface", nil1)
 	}
+
+	// Test unused method elimination.
+	var b bar.Interface
+	b = bar.Bar{}
+	b.UsedInterfaceMethod()
 
 	return nil
 }

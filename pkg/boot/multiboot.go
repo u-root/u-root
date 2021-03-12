@@ -31,7 +31,12 @@ func (mi *MultibootImage) Label() string {
 	if len(mi.Name) > 0 {
 		return mi.Name
 	}
-	return fmt.Sprintf("Multiboot(kernel=%s cmdline=%s iBFT=%s)", mi.Kernel, mi.Cmdline, mi.IBFT)
+	return fmt.Sprintf("Multiboot(kernel=%s cmdline=%s iBFT=%s)", stringer(mi.Kernel), mi.Cmdline, mi.IBFT)
+}
+
+// Edit the kernel command line.
+func (mi *MultibootImage) Edit(f func(cmdline string) string) {
+	mi.Cmdline = f(mi.Cmdline)
 }
 
 // Load implements OSImage.Load.
@@ -46,5 +51,5 @@ func (mi *MultibootImage) String() string {
 		modules[i] = mod.Cmdline
 	}
 	return fmt.Sprintf("MultibootImage(\n  Name: %s\n  Kernel: %s\n  Cmdline: %s\n  iBFT: %s\n  Modules: %s\n)",
-		mi.Name, mi.Kernel, mi.Cmdline, mi.IBFT, strings.Join(modules, ", "))
+		mi.Name, stringer(mi.Kernel), mi.Cmdline, mi.IBFT, strings.Join(modules, ", "))
 }

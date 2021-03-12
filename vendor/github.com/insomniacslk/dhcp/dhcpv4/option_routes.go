@@ -38,6 +38,9 @@ func (r Route) Marshal(buf *uio.Lexer) {
 // Unmarshal implements uio.Unmarshaler.
 func (r *Route) Unmarshal(buf *uio.Lexer) error {
 	maskSize := buf.Read8()
+	if maskSize > 32 {
+		return fmt.Errorf("invalid mask length %d in route option", maskSize)
+	}
 	r.Dest = &net.IPNet{
 		IP:   make([]byte, net.IPv4len),
 		Mask: net.CIDRMask(int(maskSize), 32),

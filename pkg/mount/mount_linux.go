@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,9 @@ package mount
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/sys/unix"
 )
@@ -36,6 +38,8 @@ const (
 
 // Mounter is a device that can be attached at a file system path.
 type Mounter interface {
+	// DevName returns the name of the device.
+	DevName() string
 	// Mount attaches the device at path.
 	Mount(path string, flags uintptr) (*MountPoint, error)
 }
@@ -96,24 +100,12 @@ func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 // TryMount tries to mount a device on the given mountpoint, trying in order
 // the supported block device file systems on the system.
 func TryMount(device, path, data string, flags uintptr) (*MountPoint, error) {
-	// TryMount only works on existing block devices. No weirdo devices
-	// like 9P.
-	if _, err := os.Stat(device); err != nil {
+	fstype, extraflags, err := FSFromBlock(device)
+	if err != nil {
 		return nil, err
 	}
 
-	fs, err := GetBlockFilesystems()
-	if err != nil {
-		return nil, fmt.Errorf("failed to mount %s on %s: %v", device, path, err)
-	}
-	for _, fstype := range fs {
-		mp, err := Mount(device, path, fstype, data, flags)
-		if err != nil {
-			continue
-		}
-		return mp, nil
-	}
-	return nil, fmt.Errorf("no suitable filesystem (out of %v) found to mount %s at %v", fs, device, path)
+	return Mount(device, path, fstype, data, flags|extraflags)
 }
 
 // Unmount detaches any file system mounted at path.
@@ -143,4 +135,84 @@ func Unmount(path string, force, lazy bool) error {
 		return fmt.Errorf("umount %q flags %x: %v", path, flags, err)
 	}
 	return nil
+}
+
+// Pool keeps track of multiple MountPoint.
+type Pool struct {
+	// List of items mounted by this pool.
+	MountPoints []*MountPoint
+	// Temporary directory which contains sub-directories for mounts.
+	tmpDir string
+}
+
+// Mount mounts a file system using Mounter and returns the MountPoint. If the
+// device has already been mounted, it is not mounted again.
+//
+// Note the pool is keyed on Mounter.DevName() alone meaning DevName is used to
+// determine whether it has already been mounted.
+func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
+	for _, m := range p.MountPoints {
+		if m.Device == mounter.DevName() {
+			return m, nil
+		}
+	}
+
+	// Create temporary directory if one does not already exist.
+	if p.tmpDir == "" {
+		tmpDir, err := ioutil.TempDir("", "u-root-mounts")
+		if err != nil {
+			return nil, fmt.Errorf("cannot create tmpdir: %v", err)
+		}
+		p.tmpDir = tmpDir
+	}
+
+	path := filepath.Join(p.tmpDir, mounter.DevName())
+	os.MkdirAll(path, 0777)
+	m, err := mounter.Mount(path, flags)
+	if err != nil {
+		// unix.Rmdir is used (instead of os.RemoveAll) because it
+		// fails when the directory is non-empty. It would be a bit
+		// dangerous to use os.RemoveAll because it could accidentally
+		// delete everything in a mount.
+		unix.Rmdir(p.tmpDir)
+		return nil, err
+	}
+	p.MountPoints = append(p.MountPoints, m)
+	return m, err
+}
+
+// Add adds MountPoints to the pool.
+func (p *Pool) Add(m ...*MountPoint) {
+	p.MountPoints = append(p.MountPoints, m...)
+}
+
+// UnmountAll umounts all the mountpoints from the pool. This makes a
+// best-effort attempt to unmount everything and cleanup temporary directories.
+// If this function fails, it can be re-tried.
+func (p *Pool) UnmountAll(flags uintptr) error {
+	// Errors get concatenated together here.
+	var returnErr error
+
+	for _, m := range p.MountPoints {
+		if err := m.Unmount(flags); err != nil {
+			if returnErr == nil {
+				returnErr = err
+			} else {
+				returnErr = fmt.Errorf("%w; %s", returnErr, err.Error())
+			}
+		}
+
+		// unix.Rmdir is used (instead of os.RemoveAll) because it
+		// fails when the directory is non-empty. It would be a bit
+		// dangerous to use os.RemoveAll because it could accidentally
+		// delete everything in a mount.
+		unix.Rmdir(m.Path)
+	}
+
+	if returnErr == nil && p.tmpDir != "" {
+		returnErr = unix.Rmdir(p.tmpDir)
+		p.tmpDir = ""
+	}
+
+	return returnErr
 }

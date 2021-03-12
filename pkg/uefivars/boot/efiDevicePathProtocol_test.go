@@ -33,7 +33,7 @@ func TestParseFilePathList(t *testing.T) {
 	// These entries are safe to ignore, unless you ran as root (!) in which
 	// case the devices ought to be readable.
 	e := uefivars.EfiVar{
-		Uuid: BootUUID,
+		UUID: BootUUID,
 		Name: "Boot0007",
 		Data: boot7,
 	}

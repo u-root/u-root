@@ -13,38 +13,38 @@ import (
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
-// mutibootMagic is both the magic value found in the mutiboot kernel header as
+// esxBootInfoMagic is both the magic value found in the esxBootInfo kernel header as
 // well as the value the loaded OS expects in EAX at boot time.
-const mutibootMagic = 0x1BADB005
+const esxBootInfoMagic = 0x1BADB005
 
-type mutibootHeaderFlag uint32
+type esxBootInfoHeaderFlag uint32
 
 const (
 	// Kernel runs in EL1, not EL2.
-	MUTIBOOT_ARCH_FLAG_ARM64_EL1 mutibootHeaderFlag = 1 << 0
+	ESXBOOTINFO_ARCH_FLAG_ARM64_EL1 esxBootInfoHeaderFlag = 1 << 0
 	// Must pass video info to OS.
-	MUTIBOOT_FLAG_VIDEO mutibootHeaderFlag = 1 << 2
+	ESXBOOTINFO_FLAG_VIDEO esxBootInfoHeaderFlag = 1 << 2
 
 	// rts_vaddr field is valid.
-	MUTIBOOT_FLAG_EFI_RTS_OLD mutibootHeaderFlag = 1 << 17
+	ESXBOOTINFO_FLAG_EFI_RTS_OLD esxBootInfoHeaderFlag = 1 << 17
 	// rts vaddr and size fields valid.
-	MUTIBOOT_FLAG_EFI_RTS_NEW mutibootHeaderFlag = 1 << 18
+	ESXBOOTINFO_FLAG_EFI_RTS_NEW esxBootInfoHeaderFlag = 1 << 18
 	// LoadESX version field valid.
-	MUTIBOOT_FLAG_LOADESX_VERSION mutibootHeaderFlag = 1 << 19
+	ESXBOOTINFO_FLAG_LOADESX_VERSION esxBootInfoHeaderFlag = 1 << 19
 	// Video min fields valid.
-	MUTIBOOT_FLAG_VIDEO_MIN mutibootHeaderFlag = 1 << 20
+	ESXBOOTINFO_FLAG_VIDEO_MIN esxBootInfoHeaderFlag = 1 << 20
 )
 
-type mutibootVideoMode uint32
+type esxBootInfoVideoMode uint32
 
 const (
-	MUTIBOOT_VIDEO_GRAPHIC = 0
-	MUTIBOOT_VIDEO_TEXT    = 1
+	ESXBOOTINFO_VIDEO_GRAPHIC = 0
+	ESXBOOTINFO_VIDEO_TEXT    = 1
 )
 
-type mutibootHeader struct {
+type esxBootInfoHeader struct {
 	Magic    uint32
-	Flags    mutibootHeaderFlag
+	Flags    esxBootInfoHeaderFlag
 	Checksum uint32
 
 	// unused.
@@ -55,7 +55,7 @@ type mutibootHeader struct {
 	MinWidth  uint32
 	MinHeight uint32
 	MinDepth  uint32
-	ModeType  mutibootVideoMode
+	ModeType  esxBootInfoVideoMode
 	Width     uint32
 	Height    uint32
 	Depth     uint32
@@ -65,19 +65,19 @@ type mutibootHeader struct {
 	LoadESXVersion       uint32
 }
 
-func (m *mutibootHeader) name() string {
-	return "mutiboot"
+func (m *esxBootInfoHeader) name() string {
+	return "ESXBootInfo"
 }
 
-func (m *mutibootHeader) bootMagic() uintptr {
-	return mutibootMagic
+func (m *esxBootInfoHeader) bootMagic() uintptr {
+	return esxBootInfoMagic
 }
 
-// parseMutiHeader parses mutiboot header.
-func parseMutiHeader(r io.Reader) (*mutibootHeader, error) {
-	sizeofHeader := binary.Size(mutibootHeader{})
+// parseMutiHeader parses esxBootInfo header.
+func parseMutiHeader(r io.Reader) (*esxBootInfoHeader, error) {
+	sizeofHeader := binary.Size(esxBootInfoHeader{})
 
-	var hdr mutibootHeader
+	var hdr esxBootInfoHeader
 	// The multiboot header must be contained completely within the
 	// first 8192 bytes of the OS image.
 	buf := make([]byte, 8192)
@@ -93,11 +93,11 @@ func parseMutiHeader(r io.Reader) (*mutibootHeader, error) {
 		if err := binary.Read(br, ubinary.NativeEndian, &hdr); err != nil {
 			return nil, err
 		}
-		if hdr.Magic == mutibootMagic && (hdr.Magic+uint32(hdr.Flags)+hdr.Checksum) == 0 {
+		if hdr.Magic == esxBootInfoMagic && (hdr.Magic+uint32(hdr.Flags)+hdr.Checksum) == 0 {
 			/*if hdr.Flags&flagHeaderUnsupported != 0 {
 				return hdr, ErrFlagsNotSupported
 			}*/
-			if hdr.Flags&MUTIBOOT_FLAG_VIDEO != 0 {
+			if hdr.Flags&ESXBOOTINFO_FLAG_VIDEO != 0 {
 				log.Print("VideoMode flag is not supproted yet, trying to load anyway")
 			}
 			return &hdr, nil

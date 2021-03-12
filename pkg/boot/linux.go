@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -27,11 +28,16 @@ type LinuxImage struct {
 
 var _ OSImage = &LinuxImage{}
 
+// named is satisifed by both *os.File and *vfile.File. Hack hack hack.
+type named interface {
+	Name() string
+}
+
 func stringer(mod io.ReaderAt) string {
 	if s, ok := mod.(fmt.Stringer); ok {
 		return s.String()
 	}
-	if f, ok := mod.(*os.File); ok {
+	if f, ok := mod.(named); ok {
 		return f.Name()
 	}
 	return fmt.Sprintf("%T", mod)
@@ -51,7 +57,7 @@ func (li *LinuxImage) String() string {
 }
 
 func copyToFile(r io.Reader) (*os.File, error) {
-	f, err := ioutil.TempFile("", "nerf-netboot")
+	f, err := ioutil.TempFile("", "kexec-image")
 	if err != nil {
 		return nil, err
 	}
@@ -70,13 +76,18 @@ func copyToFile(r io.Reader) (*os.File, error) {
 	return readOnlyF, nil
 }
 
+// Edit the kernel command line.
+func (li *LinuxImage) Edit(f func(cmdline string) string) {
+	li.Cmdline = f(li.Cmdline)
+}
+
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
 func (li *LinuxImage) Load(verbose bool) error {
 	if li.Kernel == nil {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
 
-	kernel, initrd := uio.Reader(li.Kernel), uio.Reader(li.Initrd)
+	kernel, initrd := uio.Reader(util.TryGzipFilter(li.Kernel)), uio.Reader(li.Initrd)
 	if verbose {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
 		// but it at least proves the files are still downloading.
@@ -113,10 +124,12 @@ func (li *LinuxImage) Load(verbose bool) error {
 		defer i.Close()
 	}
 
-	log.Printf("Kernel: %s", k.Name())
-	if i != nil {
-		log.Printf("Initrd: %s", i.Name())
+	if verbose {
+		log.Printf("Kernel: %s", k.Name())
+		if i != nil {
+			log.Printf("Initrd: %s", i.Name())
+		}
+		log.Printf("Command line: %s", li.Cmdline)
 	}
-	log.Printf("Command line: %s", li.Cmdline)
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

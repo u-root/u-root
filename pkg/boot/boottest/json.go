@@ -21,17 +21,51 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
 )
 
+// makeFileRel converts file:/// schemes to a path relative to the current
+// working directory in order to make a hermetic comparison for the test. Note
+// that a "relative file scheme" does not technically exist since all file
+// schemes are absolute.
+//
+// For example, if the URL is
+// "file:///home/ryan/go/src/github.com/u-root/u-root/pkg/boot/grub/testdata_new/a/b/c",
+// and the working directory is in grub, the URL is converted to
+// "file:///testdata_new/a/b/c".
+// It assumes the testdata is in a sub-directory of the test.
+func makeFileRel(u *url.URL) (*url.URL, error) {
+	if u.Scheme != "file" {
+		return u, nil
+	}
+	relU, err := url.Parse(u.String())
+	if err != nil {
+		return nil, fmt.Errorf("error parsing %v: %v", u.String(), err)
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("error from os.GetWd(): %v", err)
+	}
+	relU.Path = strings.TrimPrefix(relU.Path, wd)
+	return relU, nil
+}
+
 func module(r io.ReaderAt) map[string]interface{} {
 	m := make(map[string]interface{})
 	if f, ok := r.(curl.File); ok {
-		m["url"] = f.URL().String()
+		url, err := makeFileRel(f.URL())
+		if err != nil {
+			// Including the error message is sufficient to cause
+			// the test to fail and simplifies error handling.
+			m["error"] = err
+		}
+		m["url"] = url.String()
 	} else if f, ok := r.(fmt.Stringer); ok {
 		m["stringer"] = f.String()
 	} else if f, ok := r.(*os.File); ok {

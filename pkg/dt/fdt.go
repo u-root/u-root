@@ -411,3 +411,10 @@ func (fdt *FDT) Write(f io.Writer) (int, error) {
 	_, err := w.Write(strs)
 	return w.N, err
 }
+
+// NodeByName finds a node by name.
+func (fdt *FDT) NodeByName(name string) (*Node, bool) {
+	return fdt.RootNode.Find(func(n *Node) bool {
+		return n.Name == name
+	})
+}

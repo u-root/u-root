@@ -6,11 +6,10 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
+	"runtime"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -25,6 +24,7 @@ type dirEnt struct {
 }
 
 func TestCpio(t *testing.T) {
+	debug = t.Logf
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "TestCpio")
 	if err != nil {
@@ -35,9 +35,13 @@ func TestCpio(t *testing.T) {
 	var targets = []dirEnt{
 		{Name: "file1", Type: "file", Content: "Hello World"},
 		{Name: "file2", Type: "file", Content: ""},
-		{Name: "hardlinked", Type: "hardlink", Target: "file1"},
-		{Name: "hardlinkedtofile2", Type: "hardlink", Target: "file2"},
 		{Name: "directory1", Type: "dir"},
+	}
+	if runtime.GOOS != "plan9" {
+		targets = append(targets, []dirEnt{
+			{Name: "hardlinked", Type: "hardlink", Target: "file1", Content: "Hello World"},
+			{Name: "hardlinkedtofile2", Type: "hardlink", Target: "file2"},
+		}...)
 	}
 	for _, ent := range targets {
 		var name = filepath.Join(tempDir, ent.Name)
@@ -125,40 +129,43 @@ func TestCpio(t *testing.T) {
 		var name = filepath.Join(tempExtractDir, ent.Name)
 		newFileInfo, err := os.Stat(name)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			continue
 		}
-		newStatT := newFileInfo.Sys().(*syscall.Stat_t)
-		statT := ent.FileInfo.Sys().(*syscall.Stat_t)
-		if ent.FileInfo.Name() != newFileInfo.Name() ||
-			ent.FileInfo.Size() != newFileInfo.Size() ||
-			ent.FileInfo.Mode() != newFileInfo.Mode() ||
-			ent.FileInfo.IsDir() != newFileInfo.IsDir() ||
-			statT.Mode != newStatT.Mode ||
-			statT.Uid != newStatT.Uid ||
-			statT.Gid != newStatT.Gid ||
-			statT.Nlink != newStatT.Nlink {
-			msg := "File has mismatched attributes:\n"
-			msg += "Property |   Original |  Extracted\n"
-			msg += fmt.Sprintf("Name:    | %10s | %10s\n", ent.FileInfo.Name(), newFileInfo.Name())
-			msg += fmt.Sprintf("Size:    | %10d | %10d\n", ent.FileInfo.Size(), newFileInfo.Size())
-			msg += fmt.Sprintf("Mode:    | %10d | %10d\n", ent.FileInfo.Mode(), newFileInfo.Mode())
-			msg += fmt.Sprintf("IsDir:   | %10t | %10t\n", ent.FileInfo.IsDir(), newFileInfo.IsDir())
-			msg += fmt.Sprintf("FI Mode: | %10d | %10d\n", statT.Mode, newStatT.Mode)
-			msg += fmt.Sprintf("Uid:     | %10d | %10d\n", statT.Uid, newStatT.Uid)
-			msg += fmt.Sprintf("Gid:     | %10d | %10d\n", statT.Gid, newStatT.Gid)
-			msg += fmt.Sprintf("NLink:   | %10d | %10d\n", statT.Nlink, newStatT.Nlink)
-			t.Fatal(msg)
-		}
+		checkFileInfo(t, &ent, newFileInfo)
 
-		if ent.Type == "file" {
+		if ent.Type != "dir" {
 			content, err := ioutil.ReadFile(name)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			if string(content) != ent.Content {
-				t.Fatalf("File %s has mismatched contents", ent.Name)
+				t.Errorf("File %s has mismatched contents", ent.Name)
 			}
 		}
+	}
+}
+
+func TestDirectoryHardLink(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "TestCpio")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Open an archive containing two directories with the same inode (0).
+	// We're trying to test if having the same inode will trigger a hard link.
+	archiveFile, err := os.Open("testdata/dir-hard-link.cpio")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := testutil.Command(t, "-v", "i")
+	c.Dir = tempDir
+	c.Stdin = archiveFile
+
+	out, err := c.Output()
+	if err != nil {
+		t.Fatalf("Extraction failed:\n%s\n%s\n%v\n", out, c.Stderr, err)
 	}
 }
 

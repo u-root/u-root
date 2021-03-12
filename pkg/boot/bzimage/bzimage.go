@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package bzImage implements decoding for bzImage files.
+// Package bzimage implements decoding for bzImage files.
 //
 // The bzImage struct contains all the information about the file and can
 // be used to create a new bzImage.
@@ -12,8 +12,10 @@ package bzimage
 
 import (
 	"bytes"
+	"compress/gzip"
 	"debug/elf"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,12 +28,16 @@ import (
 
 var (
 	xzmagic = [...]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}
+
 	// String of unknown meaning.
 	// The build script has this value:
 	//initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
 	// The resultant bzd has this value:
 	initRAMFStag = [4]byte{0xf8, 0x85, 0x21, 0x01}
-	Debug        = func(string, ...interface{}) {}
+
+	// Debug is a function used to log debug information. It
+	// can be set to, for example, log.Printf.
+	Debug = func(string, ...interface{}) {}
 )
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -65,7 +71,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if b.Header.HeaderMagic != HeaderMagic {
 		return fmt.Errorf("not a bzImage: magic should be %02x, and is %02x", HeaderMagic, b.Header.HeaderMagic)
 	}
-	Debug("RamDisk image %x size %x", b.Header.RamDiskImage, b.Header.RamDiskSize)
+	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
 	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
 	Debug("SetupSects %d", b.Header.SetupSects)
@@ -95,18 +101,22 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.compressed); err != nil {
 		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
-	var err error
-	Debug("Uncompress %d bytes", len(b.compressed))
-	if b.KernelCode, err = unpack(b.compressed); err != nil {
-		return err
+	if b.NoDecompress {
+		Debug("skipping code decompress")
+	} else {
+		var err error
+		Debug("Uncompress %d bytes", len(b.compressed))
+		if b.KernelCode, err = unpack(b.compressed); err != nil {
+			return err
+		}
+		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 	}
 	b.TailCode = make([]byte, r.Len())
 	if _, err := r.Read(b.TailCode); err != nil {
 		return fmt.Errorf("can't read TailCode: %v", err)
 	}
-	Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 	b.KernelBase = uintptr(0x100000)
-	if b.Header.RamDiskImage == 0 {
+	if b.Header.RamdiskImage == 0 {
 		return nil
 	}
 	if r.Len() != 0 {
@@ -115,8 +125,14 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	return nil
 }
 
+// ErrKCodeMissing is returned if kernel code was not decompressed.
+var ErrKCodeMissing = errors.New("No kernel code was decompressed")
+
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
 func (b *BzImage) MarshalBinary() ([]byte, error) {
+	if b.NoDecompress || b.KernelCode == nil {
+		return nil, ErrKCodeMissing
+	}
 	// First step, make sure we can compress the kernel.
 	dat, err := compress(b.KernelCode, "--lzma2=,dict=32MiB")
 	if err != nil {
@@ -228,8 +244,11 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 	return dat, nil
 }
 
-// Extract extracts the KernelCode as an ELF.
+// ELF extracts the KernelCode.
 func (b *BzImage) ELF() (*elf.File, error) {
+	if b.NoDecompress || b.KernelCode == nil {
+		return nil, ErrKCodeMissing
+	}
 	e, err := elf.NewFile(bytes.NewReader(b.KernelCode))
 	if err != nil {
 		return nil, err
@@ -237,6 +256,7 @@ func (b *BzImage) ELF() (*elf.File, error) {
 	return e, nil
 }
 
+// Equal compares two kernels and returns true if they are equal.
 func Equal(a, b []byte) error {
 	if len(a) != len(b) {
 		return fmt.Errorf("images differ in len: %d bytes and %d bytes", len(a), len(b))
@@ -269,6 +289,7 @@ func Equal(a, b []byte) error {
 	return nil
 }
 
+// AddInitRAMFS adds an initramfs to the BzImage.
 func (b *BzImage) AddInitRAMFS(name string) error {
 	u, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -310,7 +331,7 @@ func MakeLinuxHeader(h *LinuxHeader) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// Show stringifies a LinuxHeader into a []string
+// Show stringifies a LinuxHeader into a []string.
 func (h *LinuxHeader) Show() []string {
 	var s []string
 
@@ -362,6 +383,7 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
 	}
 	if b.KernelBase != b2.KernelBase {
+		//NOTE: this is hardcoded to 0x100000
 		s = s + fmt.Sprintf("b KernelBase is %#x; b2 KernelBase is %#x", b.KernelBase, b2.KernelBase)
 	}
 	if b.KernelOffset != b2.KernelOffset {
@@ -460,4 +482,29 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 		cur += 6
 	}
 	return -1, -1, fmt.Errorf("no cpio found")
+}
+
+// ErrCfgNotFound is returned if embedded config is not found.
+var ErrCfgNotFound = errors.New("embedded config not found")
+
+// ReadConfig extracts embedded config from kernel
+func (b *BzImage) ReadConfig() (string, error) {
+	i := bytes.Index(b.KernelCode, []byte("IKCFG_ST\037\213\010"))
+	if i == -1 {
+		return "", ErrCfgNotFound
+	}
+	i += 8
+	mb := 1024 * 1024 //read only 1 mb; arbitrary
+	buf := bytes.NewReader(b.KernelCode[i : i+mb])
+	gz, err := gzip.NewReader(buf)
+	if err != nil {
+		return "", err
+	}
+	//make it stop at end of stream, since we don't know the actual size
+	gz.Multistream(false)
+	cfg, err := ioutil.ReadAll(gz)
+	if err != nil {
+		return "", err
+	}
+	return string(cfg), nil
 }

@@ -324,7 +324,7 @@ func getClientForBootfile(bootfile string) (*http.Client, error) {
 		tr := &http.Transport{TLSClientConfig: config}
 		client = &http.Client{Transport: tr}
 		debug("https client setup (use certs from VPD: %t, skipCertVerify %t)",
-			*skipCertVerify, *caCertFile != "")
+			*caCertFile != "", *skipCertVerify)
 	case "http":
 		client = &http.Client{}
 		debug("http client setup")

@@ -40,6 +40,9 @@ func (d *testEntry) String() string {
 	return d.Label()
 }
 
+func (d *testEntry) Edit(func(cmdline string) string) {
+}
+
 func (d *testEntry) Load() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

@@ -1,0 +1,21 @@
+language: go
+
+go:
+  - 1.x
+
+install:
+  - go get github.com/mattn/goveralls
+  - if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+  - export BINDIR=./bin
+  - curl -L https://git.io/vp6lP | sh #gometalinter installation
+  - export PATH=`pwd`/bin:$PATH
+  - export GO111MODULE=on
+
+script:
+  - cd $TRAVIS_BUILD_DIR && make all
+  - cd tests/
+  - go test -c -covermode=count -coverpkg=github.com/gojuno/minimock/tests
+  - ./tests.test -test.coverprofile coverage.cov
+
+after_script:
+  - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.cov

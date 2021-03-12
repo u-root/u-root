@@ -13,9 +13,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -28,18 +30,40 @@ var argcounts = map[string]int{
 	"dump":      2,
 	"initramfs": 4,
 	"extract":   3,
+	"ver":       2,
+	"cfg":       2,
 }
 
-var (
-	cmdUsage = "Usage: bzImage  [copy <in> <out> ] | [diff <image> <image> ] | [extract <file> <elf-file> ] | [dump <file>] | [initramfs input-bzimage initramfs output-bzimage]"
-	debug    = flag.BoolP("debug", "d", false, "enable debug printing")
-)
+const cmdUsage = `Performs various operations on kernel images. Usage:
+bzimage copy <in> <out>
+	Create a copy of <in> at <out>, parsing structures.
+bzimage diff <image> <image>
+	Compare headers of two kernel images.
+bzimage extract <file> <elf-file>
+	extract parts of the kernel into separate files with self-
+	explainatory extensions .boot, .head, .kern, .tail, .ramfs
+bzimage dump <file>
+    Dumps header.
+bzimage initramfs <input-bzimage> <new-initramfs> <output-bzimage>
+	Replaces initramfs in input-bzimage, creating output-bzimage.
+bzimage ver <image>
+	Dump version info similar to 'file <image>'.
+bzimage cfg <image>
+	Dump embedded config.
+
+flags:`
+
+var debug = flag.BoolP("debug", "d", false, "enable debug printing")
+var jsonOut = flag.BoolP("json", "j", false, "json output ('ver' subcommand only)")
 
 func usage() {
-	log.Fatalf(cmdUsage)
+	fmt.Fprintln(os.Stderr, cmdUsage)
+	flag.PrintDefaults()
+	os.Exit(1)
 }
 
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 
 	if *debug {
@@ -57,7 +81,10 @@ func main() {
 	var br = &bzimage.BzImage{}
 	var image []byte
 	switch a[0] {
-	case "copy", "diff", "dump", "initramfs", "extract":
+	case "diff", "dump", "ver":
+		br.NoDecompress = true
+		fallthrough
+	case "copy", "initramfs", "extract", "cfg":
 		var err error
 		image, err = ioutil.ReadFile(a[1])
 		if err != nil {
@@ -143,5 +170,29 @@ func main() {
 		if err := ioutil.WriteFile(a[3], b, 0644); err != nil {
 			log.Fatal(err)
 		}
+	case "ver":
+		v, err := br.KVer()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if *jsonOut {
+			info, err := bzimage.ParseDesc(v)
+			if err != nil {
+				log.Fatal(err)
+			}
+			j, err := json.MarshalIndent(info, "", "    ")
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(j))
+		} else {
+			fmt.Println(v)
+		}
+	case "cfg":
+		cfg, err := br.ReadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s\n", cfg)
 	}
 }

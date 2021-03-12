@@ -152,11 +152,15 @@ func (c *parser) parseIpxe(config string) error {
 
 		case "initrd":
 			if len(args) > 1 {
-				i, err := c.getFile(args[1])
-				if err != nil {
-					return err
+				var initrds []io.ReaderAt
+				for _, f := range strings.Split(args[1], ",") {
+					i, err := c.getFile(f)
+					if err != nil {
+						return err
+					}
+					initrds = append(initrds, i)
 				}
-				c.bootImage.Initrd = i
+				c.bootImage.Initrd = boot.CatInitrds(initrds...)
 			}
 
 		case "boot":

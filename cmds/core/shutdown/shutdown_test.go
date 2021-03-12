@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"syscall"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -17,8 +18,6 @@ var tests = []struct {
 	args    []string
 	retCode int
 }{
-	// Too many args is an error.
-	{[]string{"halt", "police"}, 1},
 	{[]string{"halt"}, 2},
 	{[]string{"-h"}, 2},
 	// No args means halt.
@@ -27,6 +26,20 @@ var tests = []struct {
 	{[]string{"-r"}, 3},
 	{[]string{"suspend"}, 4},
 	{[]string{"-s"}, 4},
+	// good times, bad times
+	{[]string{"halt", "police"}, 1},
+	// Yep, it's legal.
+	// We can't put any non-zero times in these tests, it causes
+	// the integration tests to fail ...
+	{[]string{"halt", "+-0"}, 2},
+	{[]string{"halt", "+0"}, 2},
+	{[]string{"halt", "+2"}, 2},
+	{[]string{"halt", "now"}, 2},
+	{[]string{"halt", "2006-01-02T15:04:05Z"}, 2},
+	{[]string{"halt", "2006-01-02T15:04:05Z07:00"}, 1},
+	{[]string{"halt", "2006-o1-02T15:04:05Z07:00"}, 1},
+	// Get the message out
+	{[]string{"halt", "now", "is", "the", "time"}, 2},
 }
 
 func TestShutdown(t *testing.T) {
@@ -34,7 +47,8 @@ func TestShutdown(t *testing.T) {
 		var retCode int
 		c := exec.Command(os.Args[0], append([]string{"-test.run=TestHelperProcess", "--"}, tt.args...)...)
 		c.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		_, err := c.Output()
+		o, err := c.CombinedOutput()
+		t.Logf("out %s", o)
 		if err != nil {
 			exitErr, ok := err.(*exec.ExitError)
 			if !ok {
@@ -44,7 +58,7 @@ func TestShutdown(t *testing.T) {
 			retCode = exitErr.Sys().(syscall.WaitStatus).ExitStatus()
 		}
 		if retCode != tt.retCode {
-			t.Errorf("%d. Want: %d; Got: %d", i, tt.retCode, retCode)
+			t.Errorf("%v. Want: %d; Got: %d", tt, tt.retCode, retCode)
 		}
 	}
 }
@@ -71,6 +85,7 @@ func TestHelperProcess(t *testing.T) {
 		return nil
 	}
 
+	delay = func(_ time.Duration) {}
 	os.Args = append([]string{"shutdown"}, os.Args[3:]...)
 	main()
 }

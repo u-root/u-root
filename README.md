@@ -1,9 +1,10 @@
 # u-root
 
 [![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master)
+[![codecov](https://codecov.io/gh/u-root/u-root/branch/master/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
-[![Slack](http://slack.u-root.com/badge.svg)](http://slack.u-root.com)
+[![Slack](https://slack.osfw.dev/badge.svg)](https://slack.osfw.dev)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
 
 # Description
@@ -28,7 +29,10 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
+Make sure your Go version is >=1.13. Make sure your `GOPATH` is set up
+correctly.
+While u-root uses Go modules, it still vendors dependencies and builds with
+`GO111MODULE=off`.
 
 Download and install u-root:
 
@@ -49,10 +53,13 @@ u-root
 u-root core boot
 
 # Generate an archive with only these given commands
-u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+
+# Generate an archive with all of the core tools with some exceptions
+u-root core -cmds/core/{installcommand,losetup}
 
 # Generate an archive with a tool outside of u-root
-u-root ./cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
+u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
 ```
 
 The default set of packages included is all packages in
@@ -233,7 +240,7 @@ For a list of modes, refer to the
 Some utilities, e.g., `dhclient`, require entropy to be present. For a speedy
 virtualized random number generator, the kernel should have the following:
 
-```
+```shell
 CONFIG_VIRTIO_PCI=y
 CONFIG_HW_RANDOM_VIRTIO=y
 CONFIG_CRYPTO_DEV_VIRTIO=y
@@ -241,7 +248,7 @@ CONFIG_CRYPTO_DEV_VIRTIO=y
 
 Then you can run your kernel in QEMU with a `virtio-rng-pci` device:
 
-```sh
+```shell
 qemu-system-x86_64 \
     -device virtio-rng-pci \
     -kernel vmlinuz \
@@ -250,7 +257,7 @@ qemu-system-x86_64 \
 
 In addition, you can pass your host's RNG:
 
-```sh
+```shell
 qemu-system-x86_64 \
     -object rng-random,filename=/dev/urandom,id=rng0 \
     -device virtio-rng-pci,rng=rng0 \
@@ -296,7 +303,7 @@ image using u-root/systemboot and coreboot can be found in the
 
 You can build systemboot like this:
 
-```sh
+```shell
 u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
 ```
 
@@ -374,9 +381,9 @@ u-root can create an initramfs in two different modes:
 ## Updating Dependencies
 
 ```shell
-# The latest released version of dep is required:
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-dep ensure
+go get -u
+go mod tidy
+go mod vendor
 ```
 
 # Hardware

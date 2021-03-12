@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"syscall"
 	"testing"
@@ -79,6 +80,90 @@ func TestWriteRead(t *testing.T) {
 
 	if !bytes.Equal(contents2, contents) {
 		t.Errorf("Read(%q) = %s, want %s", rec2.Name, string(contents2), contents)
+	}
+}
+
+func TestPipeWriteRead(t *testing.T) {
+	contents := []byte("ABCDEFG")
+	// N.B. It is important to have two records,
+	// it caught a problem with the first discard
+	// implementation.
+	records := []Record{
+		StaticRecord(contents, Info{
+			Ino:      1,
+			Mode:     syscall.S_IFREG | 2,
+			UID:      3,
+			GID:      4,
+			NLink:    5,
+			MTime:    6,
+			FileSize: 7,
+			Major:    8,
+			Minor:    9,
+			Rmajor:   10,
+			Rminor:   11,
+			Name:     "foobar",
+		}),
+		StaticRecord(contents[:5], Info{
+			Ino:      1,
+			Mode:     syscall.S_IFREG | 2,
+			UID:      3,
+			GID:      4,
+			NLink:    5,
+			MTime:    6,
+			FileSize: 5,
+			Major:    8,
+			Minor:    9,
+			Rmajor:   10,
+			Rminor:   11,
+			Name:     "farba",
+		}),
+	}
+
+	rp, wp, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := Newc.Writer(wp)
+	// We need a func here in case the pipe blocks the write.
+
+	go func() {
+		for _, rec := range records {
+			if err := w.WriteRecord(rec); err != nil {
+				t.Errorf("Could not write record %q: %v", rec.Name, err)
+			}
+		}
+
+		if err := WriteTrailer(w); err != nil {
+			t.Errorf("Could not write trailer: %v", err)
+		}
+	}()
+
+	Debug = t.Logf
+
+	rdr, err := Newc.NewFileReader(rp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range records {
+		rec, err := rdr.ReadRecord()
+		if err != nil {
+			t.Errorf("Could not read record: %v", err)
+		}
+
+		t.Logf("Check Info")
+		if rec.Info != r.Info {
+			t.Errorf("Records not equal:\n%#v\n%#v", r.Info, rec.Info)
+		}
+
+		t.Logf("Check Data")
+		dat, err := ioutil.ReadAll(uio.Reader(rec))
+		if err != nil {
+			t.Errorf("Could not read %q: %v", rec.Name, err)
+		}
+
+		if !bytes.Equal(dat, contents[:r.Info.FileSize]) {
+			t.Errorf("Read(%q) = %s, want %s", rec.Name, string(dat), contents[:r.Info.FileSize])
+		}
 	}
 }
 

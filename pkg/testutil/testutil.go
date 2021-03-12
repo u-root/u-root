@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -91,11 +90,11 @@ func IsExitCode(err error, exitCode int) error {
 	if !ok {
 		return fmt.Errorf("encountered error other than ExitError: %#v", err)
 	}
-	ws, ok := exitErr.Sys().(syscall.WaitStatus)
-	if !ok {
-		return fmt.Errorf("sys() is not a syscall WaitStatus: %v", err)
+	es, err := exitStatus(exitErr)
+	if err != nil {
+		return err
 	}
-	if es := ws.ExitStatus(); es != exitCode {
+	if es != exitCode {
 		return fmt.Errorf("got exit status %d, want %d", es, exitCode)
 	}
 	return nil

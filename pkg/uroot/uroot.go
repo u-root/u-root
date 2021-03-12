@@ -9,6 +9,7 @@
 package uroot
 
 import (
+	"debug/elf"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -214,6 +215,9 @@ type Opts struct {
 	//
 	// This must be specified to have a default shell.
 	DefaultShell string
+
+	// NoStrip builds unstripped binaries.
+	NoStrip bool
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
@@ -249,6 +253,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
+			NoStrip:   opts.NoStrip,
 		}
 		if err := cmds.Builder.Build(files, bOpts); err != nil {
 			return fmt.Errorf("error building: %v", err)
@@ -395,19 +400,38 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //   - globs of package imports, e.g. github.com/u-root/u-root/cmds/*
 //   - paths to package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   - globs of paths to package directories; e.g. ./cmds/*
+//   - if an entry starts with "-" it excludes the matching package(s)
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
 func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) ([]string, error) {
-	var importPaths []string
+	var includes []string
+	excludes := map[string]bool{}
 	for _, pkg := range pkgs {
+		isExclude := false
+		if strings.HasPrefix(pkg, "-") {
+			pkg = pkg[1:]
+			isExclude = true
+		}
 		paths, err := resolvePackagePath(logger, env, pkg)
 		if err != nil {
 			return nil, err
 		}
-		importPaths = append(importPaths, paths...)
+		if !isExclude {
+			includes = append(includes, paths...)
+		} else {
+			for _, p := range paths {
+				excludes[p] = true
+			}
+		}
 	}
-	return importPaths, nil
+	var result []string
+	for _, p := range includes {
+		if !excludes[p] {
+			result = append(result, p)
+		}
+	}
+	return result, nil
 }
 
 // ParseExtraFiles adds files from the extraFiles list to the archive.
@@ -454,23 +478,44 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 		}
 
 		if lddDeps {
-			// Pull dependencies in the case of binaries. If `path` is not
-			// a binary, `libs` will just be empty.
-			libs, err := ldd.List([]string{src})
-			if err != nil {
-				logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", file, err)
-				continue
-			}
-			for _, lib := range libs {
-				// N.B.: we already added information about the src.
-				// Don't add it twice. We have to do this check here in
-				// case we're renaming the src to a different dest.
-				if lib == src {
-					continue
+			// Users are frequently naming directories now, not just files.
+			// Hence we must use walk here, not just check the one file.
+			if err := filepath.Walk(src, func(name string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
 				}
-				if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
-					logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
+				if info.IsDir() {
+					return nil
 				}
+				// Try to open it as an ELF. If that fails, we can skip the ldd
+				// step. The file will still be included from above.
+				f, err := elf.Open(name)
+				if err != nil {
+					return nil
+				}
+				if err = f.Close(); err != nil {
+					logger.Printf("WARNING: Closing ELF file %q: %v", name, err)
+				}
+				// Pull dependencies in the case of binaries. If `path` is not
+				// a binary, `libs` will just be empty.
+				libs, err := ldd.List([]string{name})
+				if err != nil {
+					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %v", name, err)
+				}
+				for _, lib := range libs {
+					// N.B.: we already added information about the src.
+					// Don't add it twice. We have to do this check here in
+					// case we're renaming the src to a different dest.
+					if lib == name {
+						continue
+					}
+					if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
+						logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
+					}
+				}
+				return nil
+			}); err != nil {
+				logger.Printf("Getting dependencies for %q: %v", src, err)
 			}
 		}
 	}

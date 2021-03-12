@@ -338,7 +338,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 		}
 		outputFile = f.Name()
 	}
-	w, err := initramfs.CPIO.OpenWriter(logger, outputFile, "", "")
+	w, err := initramfs.CPIO.OpenWriter(logger, outputFile)
 	if err != nil {
 		return "", fmt.Errorf("Failed to create initramfs writer: %v", err)
 	}

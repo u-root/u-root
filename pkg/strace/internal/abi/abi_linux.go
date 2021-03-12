@@ -731,8 +731,9 @@ var ItimerTypes = FlagSet{
 	},
 }
 
-// from gvisor futex.go
 // FutexCmd are the possible futex(2) commands.
+//
+// from gvisor futex.go
 var FutexCmd = FlagSet{
 	&Value{
 		Value: FUTEX_WAIT,

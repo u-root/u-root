@@ -185,12 +185,20 @@ func (o Options) Marshal(b *uio.Lexer) {
 		code := uint8(c)
 		// Even if the End option is in there, don't marshal it until
 		// the end.
-		if code == optEnd {
+		// Don't write padding either, since the options are sorted
+		// it would always be written first which isn't useful
+		if code == optEnd || code == optPad {
 			continue
 		}
 
 		data := o[code]
 
+		// Ensure even 0-length options are written out
+		if len(data) == 0 {
+			b.Write8(code)
+			b.Write8(0)
+			continue
+		}
 		// RFC 3396: If more than 256 bytes of data are given, the
 		// option is simply listed multiple times.
 		for len(data) > 0 {

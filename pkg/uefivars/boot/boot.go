@@ -192,7 +192,7 @@ func BootEntries(vars uefivars.EfiVars) (bootvars BootEntryVars) {
 
 // IsBootEntry returns true if the given var is a boot entry.
 func IsBootEntry(e uefivars.EfiVar) bool {
-	if e.Uuid != BootUUID || len(e.Name) != 8 || e.Name[:4] != "Boot" {
+	if e.UUID != BootUUID || len(e.Name) != 8 || e.Name[:4] != "Boot" {
 		return false
 	}
 	_, err := strconv.ParseUint(e.Name[4:], 16, 16)
