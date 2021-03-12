@@ -5,6 +5,7 @@
 package boot
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -102,5 +103,22 @@ func TestLinuxLabel(t *testing.T) {
 				t.Errorf("Label() = %s, want %s", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestCopyToFile(t *testing.T) {
+	buf := bytes.NewBufferString("abcdefg hijklmnop")
+
+	f, err := copyToFile(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(f.Name())
+	got, err := ioutil.ReadAll(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "abcdefg hijklmnop" {
+		t.Errorf("got %s, expected %s", string(got), "abcdefg hijklmnop")
 	}
 }
