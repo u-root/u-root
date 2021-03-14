@@ -97,8 +97,13 @@ func (c *Conn) debug(fn func(d *debugger)) {
 	fn(c.d)
 }
 
-// Close closes the connection. Close will unblock any concurrent calls to
-// Receive which are waiting on a response from the kernel.
+// Close closes the connection.
+//
+// Due to a bug https://github.com/mdlayher/netlink/issues/162, Close currently
+// cannot unblock concurrent calls to Send or Receive. As a stop-gap measure,
+// call SetDeadline with a time in the past such as time.Unix(1, 0) in a
+// different goroutine to unblock a long-running Receive loop. The intent is to
+// fix this issue in v1.2.0.
 func (c *Conn) Close() error {
 	// Close does not acquire a lock because it must be able to interrupt any
 	// blocked system calls, such as when Receive is waiting on a multicast
