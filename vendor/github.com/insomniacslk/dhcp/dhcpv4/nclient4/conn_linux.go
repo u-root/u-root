@@ -82,8 +82,8 @@ func udpMatch(addr *net.UDPAddr, bound *net.UDPAddr) bool {
 // ReadFrom reads raw IP packets and will try to match them against
 // upc.boundAddr. Any matching packets are returned via the given buffer.
 func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
-	ipHdrMaxLen := IPv4MaximumHeaderSize
-	udpHdrLen := UDPMinimumSize
+	ipHdrMaxLen := ipv4MaximumHeaderSize
+	udpHdrLen := udpMinimumSize
 
 	for {
 		pkt := make([]byte, ipHdrMaxLen+udpHdrLen+len(b))
@@ -98,28 +98,28 @@ func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		buf := uio.NewBigEndianBuffer(pkt)
 
 		// To read the header length, access data directly.
-		ipHdr := IPv4(buf.Data())
-		ipHdr = IPv4(buf.Consume(int(ipHdr.HeaderLength())))
+		ipHdr := ipv4(buf.Data())
+		ipHdr = ipv4(buf.Consume(int(ipHdr.headerLength())))
 
-		if ipHdr.TransportProtocol() != UDPProtocolNumber {
+		if ipHdr.transportProtocol() != udpProtocolNumber {
 			continue
 		}
-		udpHdr := UDP(buf.Consume(udpHdrLen))
+		udpHdr := udp(buf.Consume(udpHdrLen))
 
 		addr := &net.UDPAddr{
-			IP:   ipHdr.DestinationAddress(),
-			Port: int(udpHdr.DestinationPort()),
+			IP:   ipHdr.destinationAddress(),
+			Port: int(udpHdr.destinationPort()),
 		}
 		if !udpMatch(addr, upc.boundAddr) {
 			continue
 		}
 		srcAddr := &net.UDPAddr{
-			IP:   ipHdr.SourceAddress(),
-			Port: int(udpHdr.SourcePort()),
+			IP:   ipHdr.sourceAddress(),
+			Port: int(udpHdr.sourcePort()),
 		}
 		// Extra padding after end of IP packet should be ignored,
 		// if not dhcp option parsing will fail.
-		dhcpLen := int(ipHdr.PayloadLength()) - udpHdrLen
+		dhcpLen := int(ipHdr.payloadLength()) - udpHdrLen
 		return copy(b, buf.Consume(dhcpLen)), srcAddr, nil
 	}
 }

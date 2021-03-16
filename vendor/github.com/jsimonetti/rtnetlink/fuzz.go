@@ -2,14 +2,8 @@
 
 package rtnetlink
 
-func Fuzz(data []byte) int {
-	return fuzzLinkMessage(data)
-	//return fuzzAddressMessage(data)
-	//return fuzzRouteMessage(data)
-	//return fuzzNeighMessage(data)
-}
-
-func fuzzLinkMessage(data []byte) int {
+// FuzzLinkMessage will fuzz a LinkMessage
+func FuzzLinkMessage(data []byte) int {
 	m := &LinkMessage{}
 	if err := (m).UnmarshalBinary(data); err != nil {
 		return 0
@@ -22,7 +16,8 @@ func fuzzLinkMessage(data []byte) int {
 	return 1
 }
 
-func fuzzAddressMessage(data []byte) int {
+// FuzzAddressMessage will fuzz an AddressMessage
+func FuzzAddressMessage(data []byte) int {
 	m := &AddressMessage{}
 	if err := (m).UnmarshalBinary(data); err != nil {
 		return 0
@@ -35,7 +30,8 @@ func fuzzAddressMessage(data []byte) int {
 	return 1
 }
 
-func fuzzRouteMessage(data []byte) int {
+// FuzzRouteMessage will fuzz a RouteMessage
+func FuzzRouteMessage(data []byte) int {
 	m := &RouteMessage{}
 	if err := (m).UnmarshalBinary(data); err != nil {
 		return 0
@@ -48,7 +44,8 @@ func fuzzRouteMessage(data []byte) int {
 	return 1
 }
 
-func fuzzNeighMessage(data []byte) int {
+// FuzzNeighMessage will fuzz a NeighMessage
+func FuzzNeighMessage(data []byte) int {
 	m := &NeighMessage{}
 	if err := (m).UnmarshalBinary(data); err != nil {
 		return 0

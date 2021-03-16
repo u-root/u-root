@@ -19,7 +19,7 @@ github.com/dustin/go-humanize
 github.com/gliderlabs/ssh
 # github.com/gojuno/minimock/v3 v3.0.8
 github.com/gojuno/minimock/v3
-# github.com/google/go-cmp v0.4.1
+# github.com/google/go-cmp v0.5.2
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -34,7 +34,7 @@ github.com/google/go-tpm/tpmutil/tbs
 github.com/google/goexpect
 # github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
 github.com/google/goterm/term
-# github.com/insomniacslk/dhcp v0.0.0-20200814125043-2e1bf785d039
+# github.com/insomniacslk/dhcp v0.0.0-20210314223004-28f74147e2e8
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
@@ -49,7 +49,7 @@ github.com/insomniacslk/dhcp/netboot
 github.com/insomniacslk/dhcp/rfc1035label
 # github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 github.com/intel-go/cpuid
-# github.com/jsimonetti/rtnetlink v0.0.0-20200505065535-3ee32e7e21a4
+# github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c
 github.com/jsimonetti/rtnetlink
 github.com/jsimonetti/rtnetlink/internal/unix
 github.com/jsimonetti/rtnetlink/rtnl
@@ -63,7 +63,7 @@ github.com/kr/pty
 github.com/mattn/go-isatty
 # github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
 github.com/mdlayher/ethernet
-# github.com/mdlayher/netlink v1.1.0
+# github.com/mdlayher/netlink v1.1.1
 github.com/mdlayher/netlink
 github.com/mdlayher/netlink/nlenc
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
@@ -78,7 +78,7 @@ github.com/rekby/gpt
 github.com/safchain/ethtool
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.5.1
+# github.com/stretchr/testify v1.6.1
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/u-root/iscsinl v0.1.0
@@ -120,18 +120,18 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/mod v0.3.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200904194848-62affa334b73
+# golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 golang.org/x/net/bpf
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
+# golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 # golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
@@ -152,8 +152,8 @@ golang.org/x/xerrors/internal
 google.golang.org/grpc/codes
 # gopkg.in/alecthomas/kingpin.v2 v2.2.6
 gopkg.in/alecthomas/kingpin.v2
-# gopkg.in/yaml.v2 v2.3.0
-gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+gopkg.in/yaml.v3
 # pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 pack.ag/tftp
 pack.ag/tftp/netascii

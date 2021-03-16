@@ -19,15 +19,14 @@ import (
 //
 // Load will align segments to page boundaries and deduplicate overlapping ranges.
 func Load(entry uintptr, segments Segments, flags uint64) error {
-	for i := range segments {
-		segments[i] = AlignPhys(segments[i])
+	segments, err := AlignAndMerge(segments)
+	if err != nil {
+		return fmt.Errorf("could not align segments: %w", err)
 	}
 
-	segments = Dedup(segments)
 	if !segments.PhysContains(entry) {
-		return fmt.Errorf("entry point %#v is not covered by any segment", entry)
+		return fmt.Errorf("entry point %#v is not contained by any segment", entry)
 	}
-
 	return rawLoad(entry, segments, flags)
 }
 

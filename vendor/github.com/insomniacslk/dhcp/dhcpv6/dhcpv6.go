@@ -1,3 +1,5 @@
+// Package dhcpv6 provides encoding and decoding of DHCPv6 messages and
+// options.
 package dhcpv6
 
 import (
