@@ -258,7 +258,7 @@ func TestCreateInitramfs(t *testing.T) {
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
 			},
-			want: "could not create symlink from \"init\" to \"foobar\": command or path \"foobar\" not included in u-root build: specify -initcmd=\"\" to ignore this error and build without an init",
+			want: "could not create symlink from \"init\" to \"foobar\": command or path \"foobar\" not included in u-root build: specify -initcmd=\"\" to ignore this error and build without an init (or, did you specify a list, and are you missing github.com/u-root/u-root/cmds/core/init?)",
 			validators: []itest.ArchiveValidator{
 				itest.IsEmpty{},
 			},
