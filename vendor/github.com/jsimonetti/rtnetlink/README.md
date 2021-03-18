@@ -1,4 +1,4 @@
-rtnetlink [![Build Status](https://travis-ci.org/jsimonetti/rtnetlink.svg?branch=master)](https://travis-ci.org/jsimonetti/rtnetlink) [![GoDoc](https://godoc.org/github.com/jsimonetti/rtnetlink?status.svg)](https://godoc.org/github.com/jsimonetti/rtnetlink) [![Go Report Card](https://goreportcard.com/badge/github.com/jsimonetti/rtnetlink)](https://goreportcard.com/report/github.com/jsimonetti/rtnetlink)
+rtnetlink ![Linux Integration](https://github.com/jsimonetti/rtnetlink/workflows/Go/badge.svg) [![GoDoc](https://godoc.org/github.com/jsimonetti/rtnetlink?status.svg)](https://godoc.org/github.com/jsimonetti/rtnetlink) [![Go Report Card](https://goreportcard.com/badge/github.com/jsimonetti/rtnetlink)](https://goreportcard.com/report/github.com/jsimonetti/rtnetlink)
 =======
 
 Package `rtnetlink` allows the kernel's routing tables to be read and
