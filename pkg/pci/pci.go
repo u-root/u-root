@@ -99,7 +99,7 @@ func (p *PCI) ReadConfigRegister(offset, size int64) (uint64, error) {
 	r := &barreg{offset: offset, File: f}
 	switch size {
 	default:
-		return 0, fmt.Errorf("%d is not valid: only options are 8, 16, 32, 64", size)
+		return 0, fmt.Errorf("ReadConfigRegister@%#x width of %d: only options are 8, 16, 32, 64", offset, size)
 	case 64:
 		err = binary.Read(r, binary.LittleEndian, &reg)
 	case 32:
@@ -129,7 +129,7 @@ func (p *PCI) WriteConfigRegister(offset, size int64, val uint64) error {
 	w := &barreg{offset: offset, File: f}
 	switch size {
 	default:
-		return fmt.Errorf("%d is not valid: only options are 8, 16, 32, 64", size)
+		return fmt.Errorf("WriteConfigRegister@%#x width of %d: only options are 8, 16, 32, 64", offset, size)
 	case 64:
 		err = binary.Write(w, binary.LittleEndian, &val)
 	case 32:
