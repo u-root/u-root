@@ -32,6 +32,28 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
+func TestLoadConfigMiss(t *testing.T) {
+	i, err := New("testdata/fitimage.itb")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i.ConfigOverride = "MagicNonExistentConfig"
+	kn, rn, err := i.LoadConfig(true)
+
+	if kn != "" {
+		t.Fatalf("Kernel %s returned on expected config miss", kn)
+	}
+
+	if rn != "" {
+		t.Fatalf("Initramfs %s returned on expected config miss", rn)
+	}
+
+	if err == nil {
+		t.Fatal("Expected error message for miss on FIT config, got nil")
+	}
+}
+
 func TestLoad(t *testing.T) {
 	i, err := New("testdata/fitimage.itb")
 	if err != nil {
