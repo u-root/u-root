@@ -10,13 +10,13 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 )
 
-func TestLoadBzConfig(t *testing.T) {
+func TestLoadConfig(t *testing.T) {
 	i, err := New("testdata/fitimage.itb")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	kn, rn, err := i.LoadBzConfig(true)
+	kn, rn, err := i.LoadConfig(true)
 
 	if err != nil {
 		t.Fatal(err)
