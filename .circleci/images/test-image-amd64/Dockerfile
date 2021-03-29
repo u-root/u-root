@@ -86,7 +86,7 @@ RUN set -ex;                                                           \
     source ./edksetup.sh;                                              \
     make -C BaseTools;                                                 \
     build -a X64 -p UefiPayloadPkg/UefiPayloadPkg.dsc -b DEBUG         \
-    -t GCC5 -D BOOTLOADER=LINUXBOOT;                                   \
+    -t GCC5 -D BOOTLOADER=LINUXBOOT -D DISABLE_MMX_SSE=true;           \
     cp Build/UefiPayloadPkgX64/DEBUG_GCC5/FV/UEFIPAYLOAD.fd ~/;        \
     cd ~;                                                              \
     rm -rf uefipayload/
