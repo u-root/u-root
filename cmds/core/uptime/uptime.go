@@ -1,4 +1,4 @@
-// Copyright 2013-2019 the u-root Authors. All rights reserved
+// Copyright 2013-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -33,7 +33,7 @@ func uptime(contents string) (*time.Time, error) {
 	}
 	uptimeDuration, err := time.ParseDuration(string(uptimeArray[0]) + "s")
 	if err != nil {
-		return nil, fmt.Errorf("error %v", err)
+		return nil, err
 	}
 	uptime := time.Time{}.Add(uptimeDuration)
 
