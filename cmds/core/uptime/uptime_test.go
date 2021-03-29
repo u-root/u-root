@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,6 +13,11 @@ var (
 	testTime = time.Date(0001, 1, 15, 5, 35, 49, 0, time.UTC)
 )
 
+func invalidDurationError(d string) string {
+	_, err := time.ParseDuration(d)
+	return err.Error()
+}
+
 func TestUptime(t *testing.T) {
 	var tests = []struct {
 		name   string
@@ -20,25 +25,40 @@ func TestUptime(t *testing.T) {
 		uptime *time.Time
 		err    string
 	}{
-		{"goodInput", "1229749 1422244", &testTime, ""},
-		{"badDataInput", "string", nil, "error time: invalid duration strings"},
-		{"emptyDataInput", "", nil, "error:the contents of proc/uptime we are trying to read are empty"},
+		{
+			name:   "goodInput",
+			input:  "1229749 1422244",
+			uptime: &testTime,
+			err:    "",
+		},
+		{
+			name:   "badDataInput",
+			input:  "string",
+			uptime: nil,
+			err:    invalidDurationError("strings"),
+		},
+		{
+			name:   "emptyDataInput",
+			input:  "",
+			uptime: nil,
+			err:    "error:the contents of proc/uptime we are trying to read are empty",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			gotUptime, err := uptime(test.input)
 			if err == nil && test.err != "" {
-				t.Errorf("Error was not returned:got nil,want %v", test.err)
+				t.Errorf("uptime(%q) err = nil, want %q", test.input, test.err)
 			} else if err != nil && err.Error() != test.err {
-				t.Errorf("Mismatched Error returned :got %v ,want %v", err.Error(), test.err)
+				t.Errorf("uptime(%q) err = %q, want %q", test.input, err.Error(), test.err)
 			}
 			if gotUptime == nil && test.uptime != nil {
-				t.Errorf("Error mismatched uptime :got nil ,want %v", *test.uptime)
+				t.Errorf("uptime(%q) = nil, want %v", test.input, *test.uptime)
 			} else if gotUptime != nil && test.uptime != nil && *gotUptime != *test.uptime {
-				t.Errorf("Error mismatched uptime :got %v , want %v", *gotUptime, *test.uptime)
+				t.Errorf("uptime(%q) = %v, want %v", test.input, *gotUptime, *test.uptime)
 			} else if gotUptime != nil && test.uptime == nil {
-				t.Errorf("Error mismatched uptime :got %v , want nil", *gotUptime)
+				t.Errorf("uptime(%q) = %v, want nil", test.input, *gotUptime)
 			}
 		})
 	}
@@ -59,16 +79,16 @@ func TestLoadAverage(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			loadAverage, err := loadavg(test.input)
 			if err == nil && test.err != "" {
-				t.Errorf("Error was not returned:got nil, want %s", test.err)
+				t.Errorf("loadavg(%q) err = nil, want %q", test.input, test.err)
 			} else if err != nil && err.Error() != test.err {
-				t.Errorf("Mismatched Error returned,got %s ,want %s", err.Error(), test.err)
+				t.Errorf("loadavg(%q) err = %q, want %q", test.input, err.Error(), test.err)
 			}
 			if loadAverage == "" && test.loadAverage != "" {
-				t.Errorf("Error mismatched loadaverage: got '', want %s", test.loadAverage)
+				t.Errorf("loadavg(%q) = \"\", want %v", test.input, test.loadAverage)
 			} else if loadAverage != "" && test.loadAverage != "" && loadAverage != test.loadAverage {
-				t.Errorf("Error mismatched loadaverage :got %s ,want %s", loadAverage, test.loadAverage)
+				t.Errorf("loadavg(%q) = %v, want %v", test.input, loadAverage, test.loadAverage)
 			} else if loadAverage != "" && test.loadAverage == "" {
-				t.Errorf("Error mismatched loadaverage :got %s ,want ''", loadAverage)
+				t.Errorf("loadavg(%q) = %v, want \"\"", test.input, loadAverage)
 			}
 		})
 	}
