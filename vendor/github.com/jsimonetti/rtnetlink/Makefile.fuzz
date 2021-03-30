@@ -22,7 +22,10 @@ install:
 .PHONY: fuzz
 fuzz:
 	go-fuzz-build -tags gofuzz
-	go-fuzz -bin=./rtnetlink-fuzz.zip -workdir=testdata
+	echo go-fuzz -bin=./rtnetlink-fuzz.zip -workdir=testdata -func FuzzLinkMessage
+	echo go-fuzz -bin=./rtnetlink-fuzz.zip -workdir=testdata -func FuzzAddressMessage
+	echo go-fuzz -bin=./rtnetlink-fuzz.zip -workdir=testdata -func FuzzRouteMessage
+	echo go-fuzz -bin=./rtnetlink-fuzz.zip -workdir=testdata -func FuzzNeighMessage
 
 .PHONY: clean
 clean:

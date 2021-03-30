@@ -62,7 +62,7 @@ var (
 	DefaultHTTPClient = NewHTTPClient(http.DefaultClient)
 
 	// DefaultTFTPClient is the default TFTP FileScheme.
-	DefaultTFTPClient = NewTFTPClient(tftp.ClientMode(tftp.ModeOctet), tftp.ClientBlocksize(1450), tftp.ClientWindowsize(65535))
+	DefaultTFTPClient = NewTFTPClient(tftp.ClientMode(tftp.ModeOctet), tftp.ClientBlocksize(1450), tftp.ClientWindowsize(64))
 
 	// DefaultSchemes are the schemes supported by default.
 	DefaultSchemes = Schemes{

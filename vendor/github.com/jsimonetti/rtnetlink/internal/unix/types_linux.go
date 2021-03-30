@@ -15,6 +15,7 @@ const (
 	SizeofIfInfomsg      = linux.SizeofIfInfomsg
 	SizeofNdMsg          = linux.SizeofNdMsg
 	SizeofRtMsg          = linux.SizeofRtMsg
+	SizeofRtNexthop      = linux.SizeofRtNexthop
 	RTM_NEWADDR          = linux.RTM_NEWADDR
 	RTM_DELADDR          = linux.RTM_DELADDR
 	RTM_GETADDR          = linux.RTM_GETADDR
@@ -58,6 +59,12 @@ const (
 	IFLA_INFO_SLAVE_KIND = linux.IFLA_INFO_SLAVE_KIND
 	IFLA_INFO_DATA       = linux.IFLA_INFO_DATA
 	IFLA_INFO_SLAVE_DATA = linux.IFLA_INFO_SLAVE_DATA
+	IFLA_XDP             = linux.IFLA_XDP
+	IFLA_XDP_FD          = linux.IFLA_XDP_FD
+	IFLA_XDP_ATTACHED    = linux.IFLA_XDP_ATTACHED
+	IFLA_XDP_FLAGS       = linux.IFLA_XDP_FLAGS
+	IFLA_XDP_PROG_ID     = linux.IFLA_XDP_PROG_ID
+	IFLA_XDP_EXPECTED_FD = linux.IFLA_XDP_EXPECTED_FD
 	NDA_UNSPEC           = linux.NDA_UNSPEC
 	NDA_DST              = linux.NDA_DST
 	NDA_LLADDR           = linux.NDA_LLADDR
@@ -70,7 +77,14 @@ const (
 	RTA_OIF              = linux.RTA_OIF
 	RTA_PRIORITY         = linux.RTA_PRIORITY
 	RTA_TABLE            = linux.RTA_TABLE
+	RTA_MARK             = linux.RTA_MARK
 	RTA_EXPIRES          = linux.RTA_EXPIRES
+	RTA_METRICS          = linux.RTA_METRICS
+	RTA_MULTIPATH        = linux.RTA_MULTIPATH
+	RTAX_ADVMSS          = linux.RTAX_ADVMSS
+	RTAX_FEATURES        = linux.RTAX_FEATURES
+	RTAX_INITCWND        = linux.RTAX_INITCWND
+	RTAX_MTU             = linux.RTAX_MTU
 	NTF_PROXY            = linux.NTF_PROXY
 	RTN_UNICAST          = linux.RTN_UNICAST
 	RT_TABLE_MAIN        = linux.RT_TABLE_MAIN

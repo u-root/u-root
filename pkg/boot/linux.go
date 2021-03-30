@@ -92,8 +92,8 @@ func (li *LinuxImage) Load(verbose bool) error {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
 		// but it at least proves the files are still downloading.
 		progress := func(r io.Reader) io.Reader {
-			return &uio.ProgressReader{
-				R:        r,
+			return &uio.ProgressReadCloser{
+				RC:       ioutil.NopCloser(r),
 				Symbol:   ".",
 				Interval: 5 * 1024 * 1024,
 				W:        os.Stdout,

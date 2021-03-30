@@ -12,16 +12,16 @@ type RelayOptions struct {
 
 var relayHumanizer = OptionHumanizer{
 	ValueHumanizer: func(code OptionCode, data []byte) fmt.Stringer {
-		return OptionGeneric{data}
+		return raiSubOptionValue{data}
 	},
 	CodeHumanizer: func(c uint8) OptionCode {
-		return GenericOptionCode(c)
+		return raiSubOptionCode(c)
 	},
 }
 
 // String prints the contained options using Relay Agent-specific option code parsing.
 func (r RelayOptions) String() string {
-	return r.Options.ToString(relayHumanizer)
+	return "\n" + r.Options.ToString(relayHumanizer)
 }
 
 // FromBytes parses relay agent options from data.
@@ -35,6 +35,14 @@ func (r *RelayOptions) FromBytes(data []byte) error {
 // The relay agent info option is described by RFC 3046.
 func OptRelayAgentInfo(o ...Option) Option {
 	return Option{Code: OptionRelayAgentInformation, Value: RelayOptions{OptionsFromList(o...)}}
+}
+
+type raiSubOptionValue struct {
+	val []byte
+}
+
+func (rv raiSubOptionValue) String() string {
+	return fmt.Sprintf("%s (%v)", string(rv.val), rv.val)
 }
 
 type raiSubOptionCode uint8

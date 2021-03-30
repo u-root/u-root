@@ -520,20 +520,18 @@ func (d *DHCPv4) ToBytes() []byte {
 	// Write all options.
 	d.Options.Marshal(buf)
 
+	// Finish the options.
+	buf.Write8(OptionEnd.Code())
+
 	// DHCP is based on BOOTP, and BOOTP messages have a minimum length of
 	// 300 bytes per RFC 951. This not stated explicitly, but if you sum up
 	// all the bytes in the message layout, you'll get 300 bytes.
 	//
 	// Some DHCP servers and relay agents care about this BOOTP legacy B.S.
 	// and "conveniently" drop messages that are less than 300 bytes long.
-	//
-	// We subtract one byte for the OptionEnd option.
-	if buf.Len()+1 < bootpMinLen {
-		buf.WriteBytes(bytes.Repeat([]byte{OptionPad.Code()}, bootpMinLen-1-buf.Len()))
+	if buf.Len() < bootpMinLen {
+		buf.WriteBytes(bytes.Repeat([]byte{OptionPad.Code()}, bootpMinLen-buf.Len()))
 	}
-
-	// Finish the packet.
-	buf.Write8(OptionEnd.Code())
 
 	return buf.Data()
 }
@@ -606,7 +604,8 @@ func (d *DHCPv4) DomainName() string {
 //
 // The Host Name option is described by RFC 2132, Section 3.14.
 func (d *DHCPv4) HostName() string {
-	return GetString(OptionHostName, d.Options)
+	name := GetString(OptionHostName, d.Options)
+	return strings.TrimRight(name, "\x00")
 }
 
 // RootPath parses the DHCPv4 Root Path option if present.
@@ -733,6 +732,13 @@ func (d *DHCPv4) MessageType() MessageType {
 		return MessageTypeNone
 	}
 	return m
+}
+
+// Message returns the DHCPv4 (Error) Message option.
+//
+// The message options is described in RFC 2132, Section 9.9.
+func (d *DHCPv4) Message() string {
+	return GetString(OptionMessage, d.Options)
 }
 
 // ParameterRequestList returns the DHCPv4 Parameter Request List.
