@@ -17,6 +17,7 @@ var (
 	dryRun     = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
 	debug      = flag.Bool("d", false, "Print debug output")
 	cmdline    = flag.String("c", "earlyprintk=ttyS0,115200,keep console=ttyS0", "command line")
+	config     = flag.String("config", "", "FIT configuration to use")
 	kernel     = flag.String("k", "", "Kernel image node name.")
 	initramfs  = flag.String("i", "", "InitRAMFS node name -- default none")
 	rsdpLookup = flag.Bool("rsdp", false, "Derrive RSDP table pointer from environment")
@@ -39,13 +40,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	f.Cmdline, f.Kernel, f.InitRAMFS, f.Dryrun = *cmdline, *kernel, *initramfs, *dryRun
+	f.Cmdline, f.Kernel, f.InitRAMFS, f.Dryrun, f.ConfigOverride = *cmdline, *kernel, *initramfs, *dryRun, *config
 
-	kn, in, err := f.LoadBzConfig(*debug)
+	kn, in, err := f.LoadConfig(*debug)
 	if err == nil {
 		f.Kernel, f.InitRAMFS = kn, in
 	} else {
-		v("Default configuration is not available: %v", err)
+		v("Configuration is not available: %v", err)
 	}
 
 	if f.Kernel == "" {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -29,6 +28,8 @@ type Image struct {
 	InitRAMFS string
 	// Dryrun indicates that Load should not Exec
 	Dryrun bool
+	// ConfigOverride is the optional FIT config to use instead of default
+	ConfigOverride string
 }
 
 var _ = boot.OSImage(&Image{})
@@ -113,26 +114,47 @@ func (i *Image) Load(verbose bool) error {
 	return nil
 }
 
-// LoadBzConfig loads a configuration from a FIT image
-// Returns <kernel_name>, <ramdisk_name>, error
-func (i *Image) LoadBzConfig(verbose bool) (string, string, error) {
+// GetConfigName finds the name of the default configuration or returns the
+// override config if available
+func (i *Image) GetConfigName(verbose bool) (string, error) {
+	if len(i.ConfigOverride) != 0 {
+		return i.ConfigOverride, nil
+	}
+
 	configs := i.Root.Root().Walk("configurations")
 	dc, err := configs.Property("default").AsString()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	n := strings.Split(dc, "@")
-	if len(n) != 2 {
-		return "", "", fmt.Errorf("Invalid default configuration naming: %v", dc)
-	}
-	bzn := n[0] + "_bz@" + n[1]
-	bzconfig := i.Root.Root().Walk("configurations").Walk(bzn)
 
-	kn, err := bzconfig.Property("kernel").AsString()
+	return dc, nil
+}
+
+// LoadConfig loads a configuration from a FIT image
+// Returns <kernel_name>, <ramdisk_name>, error
+func (i *Image) LoadConfig(verbose bool) (string, string, error) {
+	tc, err := i.GetConfigName(verbose)
 	if err != nil {
 		return "", "", err
 	}
-	rn, err := bzconfig.Property("ramdisk").AsString()
+
+	configs := i.Root.Root().Walk("configurations")
+	config := configs.Walk(tc)
+	_, err = config.AsString()
+
+	if err != nil {
+		if verbose {
+			cs, _ := configs.ListChildNodes()
+			log.Printf("Config options: %#v", cs)
+		}
+		return "", "", err
+	}
+
+	kn, err := config.Property("kernel").AsString()
+	if err != nil {
+		return "", "", err
+	}
+	rn, err := config.Property("ramdisk").AsString()
 	if err != nil {
 		return "", "", err
 	}

@@ -18,6 +18,27 @@ type NodeWalk struct {
 	err error
 }
 
+// AsString returns the NodeWalk Name and error as a string.
+func (nq *NodeWalk) AsString() (string, error) {
+	if nq.err != nil {
+		return "", nq.err
+	}
+	return nq.n.Name, nil
+}
+
+// ListChildNodes returns a string array with the Names of each child Node
+func (nq *NodeWalk) ListChildNodes() ([]string, error) {
+	if nq.err != nil {
+		return nil, nq.err
+	}
+
+	cs := make([]string, len(nq.n.Children))
+	for i := range nq.n.Children {
+		cs[i] = nq.n.Children[i].Name
+	}
+	return cs, nil
+}
+
 // Root returns the Root node from an FDT to start the walk.
 func (fdt *FDT) Root() *NodeWalk {
 	return &NodeWalk{n: fdt.RootNode}
