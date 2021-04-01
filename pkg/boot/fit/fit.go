@@ -7,6 +7,7 @@ package fit
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -46,14 +47,46 @@ func New(n string) (*Image, error) {
 	return &Image{name: n, Root: fdt}, nil
 }
 
+// ParseConfig reads r for a FIT image and returns a OSImage for each
+// configuration parsed.
+func ParseConfig(r io.ReadSeeker, verbose bool) ([]Image, error) {
+	fdt, err := dt.ReadFDT(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var images []Image
+	configs := fdt.Root().Walk("configurations")
+	cn, _ := configs.ListChildNodes()
+
+	for _, n := range cn {
+		var i = Image{name: n, Root: fdt, ConfigOverride: n}
+
+		kn, in, err := i.LoadConfig(false, verbose)
+
+		if err == nil {
+			i.Kernel, i.InitRAMFS = kn, in
+			images = append(images, i)
+		}
+		if err != nil && verbose {
+			log.Printf("Failed to load config for config name %s: %v", n, err)
+		}
+	}
+
+	return images, nil
+}
+
 // String is a Stringer for Image.
 func (i *Image) String() string {
-	return fmt.Sprintf("FDT %s from %s, kernel %q, initrd %q", i.Root, i.name, i.Kernel, i.InitRAMFS)
+	return fmt.Sprintf("FDT %s, kernel %q, initrd %q", i.name, i.Kernel, i.InitRAMFS)
 }
 
 // Label returns an Image Label.
 func (i *Image) Label() string {
-	return i.name
+	if i.Kernel == "" {
+		return i.name
+	}
+	return i.name + " (kernel:" + i.Kernel + ")"
 }
 
 // Edit edits the Image cmdline using a func.
