@@ -10,6 +10,7 @@ import (
 	"log"
 
 	"github.com/u-root/u-root/pkg/acpi"
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/fit"
 )
 
@@ -20,6 +21,7 @@ var (
 	config     = flag.String("config", "", "FIT configuration to use")
 	kernel     = flag.String("k", "", "Kernel image node name.")
 	initramfs  = flag.String("i", "", "InitRAMFS node name -- default none")
+	noinitfs   = flag.Bool("n", false, "Skip looking for InitRAMFS node -- default false")
 	rsdpLookup = flag.Bool("rsdp", false, "Derrive RSDP table pointer from environment")
 )
 
@@ -40,9 +42,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	f.Cmdline, f.Kernel, f.InitRAMFS, f.Dryrun, f.ConfigOverride = *cmdline, *kernel, *initramfs, *dryRun, *config
+	f.Cmdline, f.Kernel, f.InitRAMFS, f.ConfigOverride = *cmdline, *kernel, *initramfs, *config
 
-	kn, in, err := f.LoadConfig(*debug)
+	kn, in, err := f.LoadConfig(*noinitfs, *debug)
 	if err == nil {
 		f.Kernel, f.InitRAMFS = kn, in
 	} else {
@@ -65,9 +67,18 @@ func main() {
 		kernelCmd = fmt.Sprintf("acpi_rsdp=%x %s", r.RSDPAddr(), kernelCmd)
 	}
 
-	f.Cmdline, f.Dryrun = kernelCmd, *dryRun
+	f.Cmdline = kernelCmd
 
 	if err := f.Load(*debug); err != nil {
 		log.Fatal(err)
 	}
+
+	if !*dryRun {
+		if err := boot.Execute(); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		v("Not trying to boot since this is a dry run")
+	}
+
 }
