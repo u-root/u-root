@@ -44,6 +44,7 @@ var (
 	verbose     = flag.Bool("v", false, "Verbose output")
 	ipv4        = flag.Bool("ipv4", true, "use IPV4")
 	ipv6        = flag.Bool("ipv6", true, "use IPV6")
+	cmdAppend   = flag.String("cmd", "", "Kernel command to append for each image")
 )
 
 const (
@@ -106,6 +107,7 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
 			}
+
 			return imgs, nil
 		}
 	}
@@ -123,6 +125,12 @@ func main() {
 	images, err := NetbootImages(ifName)
 	if err != nil {
 		log.Printf("Netboot failed: %v", err)
+	}
+
+	for _, img := range images {
+		img.Edit(func(cmdline string) string {
+			return cmdline + " " + *cmdAppend
+		})
 	}
 
 	menuEntries := menu.OSImages(*verbose, images...)
