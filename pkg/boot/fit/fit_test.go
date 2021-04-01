@@ -16,7 +16,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	kn, rn, err := i.LoadConfig(true)
+	kn, rn, err := i.LoadConfig(false, true)
 
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +39,7 @@ func TestLoadConfigMiss(t *testing.T) {
 	}
 
 	i.ConfigOverride = "MagicNonExistentConfig"
-	kn, rn, err := i.LoadConfig(true)
+	kn, rn, err := i.LoadConfig(false, true)
 
 	if kn != "" {
 		t.Fatalf("Kernel %s returned on expected config miss", kn)
@@ -62,13 +62,7 @@ func TestLoad(t *testing.T) {
 
 	i.Kernel, i.InitRAMFS = "kernel@0", "ramdisk@0"
 
-	// Save kexecReboot function and restore at the end
-	defer func(old func() error) { kexecReboot = old }(kexecReboot)
 	defer func(old func(i *boot.LinuxImage, verbose bool) error) { loadImage = old }(loadImage)
-	kexecReboot = func() error {
-		t.Log("mock reboot")
-		return nil
-	}
 
 	loadImage = func(i *boot.LinuxImage, verbose bool) error {
 		t.Log("mock load image")

@@ -11,7 +11,6 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
 )
 
@@ -26,8 +25,6 @@ type Image struct {
 	Kernel string
 	// InitRAMFS is the name of the initramfs node.
 	InitRAMFS string
-	// Dryrun indicates that Load should not Exec
-	Dryrun bool
 	// ConfigOverride is the optional FIT config to use instead of default
 	ConfigOverride string
 }
@@ -71,7 +68,6 @@ func loadLinuxImage(i *boot.LinuxImage, verbose bool) error {
 
 // provide chance to mock in test
 var loadImage = loadLinuxImage
-var kexecReboot = kexec.Reboot
 
 // Load loads an image and reboots
 func (i *Image) Load(verbose bool) error {
@@ -103,14 +99,6 @@ func (i *Image) Load(verbose bool) error {
 		return err
 	}
 
-	if !i.Dryrun {
-		if err := kexecReboot(); err != nil {
-			return err
-		}
-	} else {
-		v("Not trying to boot since this is a dry run")
-	}
-
 	return nil
 }
 
@@ -132,7 +120,7 @@ func (i *Image) GetConfigName(verbose bool) (string, error) {
 
 // LoadConfig loads a configuration from a FIT image
 // Returns <kernel_name>, <ramdisk_name>, error
-func (i *Image) LoadConfig(verbose bool) (string, string, error) {
+func (i *Image) LoadConfig(skipinitfs bool, verbose bool) (string, string, error) {
 	tc, err := i.GetConfigName(verbose)
 	if err != nil {
 		return "", "", err
@@ -150,13 +138,18 @@ func (i *Image) LoadConfig(verbose bool) (string, string, error) {
 		return "", "", err
 	}
 
-	kn, err := config.Property("kernel").AsString()
+	var kn, rn string
+
+	kn, err = config.Property("kernel").AsString()
 	if err != nil {
 		return "", "", err
 	}
-	rn, err := config.Property("ramdisk").AsString()
-	if err != nil {
-		return "", "", err
+
+	if !skipinitfs {
+		rn, err = config.Property("ramdisk").AsString()
+		if err != nil {
+			return "", "", err
+		}
 	}
 
 	return kn, rn, nil
