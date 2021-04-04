@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !plan9,!windows,!darwin
-
 package termios
 
 import (
@@ -19,7 +17,7 @@ import (
 // GTTY returns the TTY struct for a given fd. It is like a New in
 // many packages but the name GTTY is a tradition.
 func GTTY(fd int) (*TTY, error) {
-	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
+	term, err := unix.IoctlGetTermios(fd, unix.TIOCGETA)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +52,7 @@ func GTTY(fd int) (*TTY, error) {
 // and an error. It does not change the original TTY struct.
 func (t *TTY) STTY(fd int) (*TTY, error) {
 	// Get a unix.Termios which we can partially fill in.
-	term, err := unix.IoctlGetTermios(fd, unix.TCGETS)
+	term, err := unix.IoctlGetTermios(fd, unix.TIOCGETA)
 	if err != nil {
 		return nil, err
 	}
@@ -74,10 +72,10 @@ func (t *TTY) STTY(fd int) (*TTY, error) {
 		term.Cc[c] = t.CC[n]
 	}
 
-	term.Ispeed = uint32(t.Ispeed)
-	term.Ospeed = uint32(t.Ospeed)
+	term.Ispeed = uint64(t.Ispeed)
+	term.Ospeed = uint64(t.Ospeed)
 
-	if err := unix.IoctlSetTermios(fd, unix.TCSETS, term); err != nil {
+	if err := unix.IoctlSetTermios(fd, unix.TIOCSETA, term); err != nil {
 		return nil, err
 	}
 
