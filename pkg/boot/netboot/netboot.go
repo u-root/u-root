@@ -33,7 +33,7 @@ import (
 //
 // - to detect a pxelinux.0, in which case we will ignore the pxelinux.0 and
 //   try to parse pxelinux.cfg/<files>.
-func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclient.Lease, verbose bool) ([]boot.OSImage, error) {
+func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclient.Lease) ([]boot.OSImage, error) {
 	uri, err := lease.Boot()
 	if err != nil {
 		return nil, err
@@ -46,13 +46,13 @@ func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclie
 	if p4, ok := lease.(*dhclient.Packet4); ok {
 		ip = p4.Lease().IP
 	}
-	return getBootImages(ctx, l, s, uri, lease.Link().Attrs().HardwareAddr, ip, verbose), nil
+	return getBootImages(ctx, l, s, uri, lease.Link().Attrs().HardwareAddr, ip), nil
 }
 
 // getBootImages attempts to parse the file at uri as an ipxe config and returns
 // the ipxe boot image. Otherwise falls back to pxe and uses the uri directory,
 // ip, and mac address to search for pxe configs.
-func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP, verbose bool) []boot.OSImage {
+func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) []boot.OSImage {
 	var images []boot.OSImage
 
 	// Attempt to read the given boot path as an ipxe config file.
@@ -77,7 +77,7 @@ func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri
 
 	l.Printf("Trying to parse file as a non config Image...")
 	// Check if target is a simple file instead of config script
-	sImages, err := simple.FetchAndProbe(ctx, uri, schemes, verbose)
+	sImages, err := simple.FetchAndProbe(ctx, uri, schemes)
 	if err != nil {
 		l.Printf("failed to parse boot file as simple file: %v", err)
 	}

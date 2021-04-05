@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -28,10 +27,11 @@ type Image struct {
 	InitRAMFS string
 	// ConfigOverride is the optional FIT config to use instead of default
 	ConfigOverride string
+	// SkipInitRAMFS skips the search for an ramdisk entry in the config
+	SkipInitRAMFS bool
 }
 
 var _ = boot.OSImage(&Image{})
-var v = func(string, ...interface{}) {}
 
 // New returns a new image initialized with a file containing an FDT.
 func New(n string) (*Image, error) {
@@ -49,7 +49,7 @@ func New(n string) (*Image, error) {
 
 // ParseConfig reads r for a FIT image and returns a OSImage for each
 // configuration parsed.
-func ParseConfig(r io.ReadSeeker, verbose bool) ([]Image, error) {
+func ParseConfig(r io.ReadSeeker) ([]Image, error) {
 	fdt, err := dt.ReadFDT(r)
 	if err != nil {
 		return nil, err
@@ -62,15 +62,16 @@ func ParseConfig(r io.ReadSeeker, verbose bool) ([]Image, error) {
 	for _, n := range cn {
 		var i = Image{name: n, Root: fdt, ConfigOverride: n}
 
-		kn, in, err := i.LoadConfig(false, verbose)
+		kn, in, err := i.LoadConfig()
 
 		if err == nil {
 			i.Kernel, i.InitRAMFS = kn, in
 			images = append(images, i)
 		}
-		if err != nil && verbose {
-			log.Printf("Failed to load config for config name %s: %v", n, err)
-		}
+	}
+
+	if len(images) == 0 {
+		return nil, fmt.Errorf("failed to find valid usable config")
 	}
 
 	return images, nil
@@ -86,7 +87,7 @@ func (i *Image) Label() string {
 	if i.Kernel == "" {
 		return i.name
 	}
-	return i.name + " (kernel:" + i.Kernel + ")"
+	return fmt.Sprintf("%s (kernel: %s)", i.name, i.Kernel)
 }
 
 // Edit edits the Image cmdline using a func.
@@ -104,10 +105,6 @@ var loadImage = loadLinuxImage
 
 // Load loads an image and reboots
 func (i *Image) Load(verbose bool) error {
-	if verbose {
-		v = log.Printf
-	}
-
 	w := i.Root.Root().Walk("images").Walk(i.Kernel)
 	b, err := w.Property("data").AsBytes()
 	if err != nil {
@@ -137,7 +134,7 @@ func (i *Image) Load(verbose bool) error {
 
 // GetConfigName finds the name of the default configuration or returns the
 // override config if available
-func (i *Image) GetConfigName(verbose bool) (string, error) {
+func (i *Image) GetConfigName() (string, error) {
 	if len(i.ConfigOverride) != 0 {
 		return i.ConfigOverride, nil
 	}
@@ -153,8 +150,8 @@ func (i *Image) GetConfigName(verbose bool) (string, error) {
 
 // LoadConfig loads a configuration from a FIT image
 // Returns <kernel_name>, <ramdisk_name>, error
-func (i *Image) LoadConfig(skipinitfs bool, verbose bool) (string, string, error) {
-	tc, err := i.GetConfigName(verbose)
+func (i *Image) LoadConfig() (string, string, error) {
+	tc, err := i.GetConfigName()
 	if err != nil {
 		return "", "", err
 	}
@@ -164,10 +161,6 @@ func (i *Image) LoadConfig(skipinitfs bool, verbose bool) (string, string, error
 	_, err = config.AsString()
 
 	if err != nil {
-		if verbose {
-			cs, _ := configs.ListChildNodes()
-			log.Printf("Config options: %#v", cs)
-		}
 		return "", "", err
 	}
 
@@ -178,12 +171,8 @@ func (i *Image) LoadConfig(skipinitfs bool, verbose bool) (string, string, error
 		return "", "", err
 	}
 
-	if !skipinitfs {
-		rn, err = config.Property("ramdisk").AsString()
-		if err != nil {
-			return "", "", err
-		}
-	}
+	// Allow missing initram nodes
+	rn, _ = config.Property("ramdisk").AsString()
 
 	return kn, rn, nil
 }
