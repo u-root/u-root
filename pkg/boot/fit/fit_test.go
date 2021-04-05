@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	//Number of configs in the fitimage.itb
+	// Number of configs in the fitimage.itb
 	fbcCnt = 2
 )
 
@@ -23,7 +23,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	kn, rn, err := i.LoadConfig(false, true)
+	kn, rn, err := i.LoadConfig()
 
 	if err != nil {
 		t.Fatal(err)
@@ -32,12 +32,11 @@ func TestLoadConfig(t *testing.T) {
 	t.Logf("kernel name: %s", kn)
 	t.Logf("ramdisk name: %s", rn)
 	if kn != "kernel@0" {
-		t.Fatalf("Expected kernel %s, got %s", "kernel@0", kn)
+		t.Errorf("Expected kernel %s, got %s", "kernel@0", kn)
 	}
 	if rn != "ramdisk@0" {
-		t.Fatalf("Expected ramdisk %s, got %s", "ramdisk@0", rn)
+		t.Errorf("Expected ramdisk %s, got %s", "ramdisk@0", rn)
 	}
-
 }
 
 func TestLoadConfigMiss(t *testing.T) {
@@ -47,14 +46,14 @@ func TestLoadConfigMiss(t *testing.T) {
 	}
 
 	i.ConfigOverride = "MagicNonExistentConfig"
-	kn, rn, err := i.LoadConfig(false, true)
+	kn, rn, err := i.LoadConfig()
 
 	if kn != "" {
-		t.Fatalf("Kernel %s returned on expected config miss", kn)
+		t.Errorf("Kernel %s returned on expected config miss", kn)
 	}
 
 	if rn != "" {
-		t.Fatalf("Initramfs %s returned on expected config miss", rn)
+		t.Errorf("Initramfs %s returned on expected config miss", rn)
 	}
 
 	if err == nil {
@@ -88,7 +87,7 @@ func TestParseConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	imgs, err := ParseConfig(f, true)
+	imgs, err := ParseConfig(f)
 
 	if err != nil {
 		t.Fatal(err)
@@ -104,14 +103,31 @@ func TestParseConfig(t *testing.T) {
 		t.Logf("kernel name: %s", i.Kernel)
 		t.Logf("ramdisk name: %s", i.InitRAMFS)
 		if i.ConfigOverride != cs[c] {
-			t.Fatalf("Expected config %s, got %s", cs[c], i.ConfigOverride)
+			t.Errorf("Expected config %s, got %s", cs[c], i.ConfigOverride)
 		}
 		if i.Kernel != "kernel@0" {
-			t.Fatalf("Expected kernel %s, got %s", "kernel@0", i.Kernel)
+			t.Errorf("Expected kernel %s, got %s", "kernel@0", i.Kernel)
 		}
 		if i.InitRAMFS != "ramdisk@0" {
-			t.Fatalf("Expected ramdisk %s, got %s", "ramdisk@0", i.InitRAMFS)
+			t.Errorf("Expected ramdisk %s, got %s", "ramdisk@0", i.InitRAMFS)
 		}
+	}
+}
+
+func TestParseConfigMiss(t *testing.T) {
+	f, err := os.Open("testdata/fitimage.its")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imgs, err := ParseConfig(f)
+
+	if imgs != nil {
+		t.Errorf("Expected nil on bad image parse, got %#v", imgs)
+	}
+
+	if err == nil {
+		t.Fatal("Expected error on failed ParseConfig, got nil")
 	}
 }
 

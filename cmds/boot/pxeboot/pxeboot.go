@@ -102,7 +102,7 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 			}
 
 			// Don't use the other context, as it's for the DHCP timeout.
-			imgs, err := netboot.BootImages(context.Background(), ulog.Log, curl.DefaultSchemes, result.Lease, *verbose)
+			imgs, err := netboot.BootImages(context.Background(), ulog.Log, curl.DefaultSchemes, result.Lease)
 			if err != nil {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
