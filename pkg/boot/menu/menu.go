@@ -18,8 +18,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/sh"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 )
 
 var (
@@ -69,12 +69,12 @@ func Choose(input *os.File, entries ...Entry) Entry {
 	}
 	fmt.Println("\r")
 
-	oldState, err := terminal.MakeRaw(int(input.Fd()))
+	oldState, err := term.MakeRaw(int(input.Fd()))
 	if err != nil {
 		log.Printf("BUG: Please report: We cannot actually let you choose from menu (MakeRaw failed): %v", err)
 		return nil
 	}
-	defer terminal.Restore(int(input.Fd()), oldState)
+	defer term.Restore(int(input.Fd()), oldState)
 
 	// TODO(chrisko): reduce this timeout a la GRUB. 3 seconds, and hitting
 	// any button resets the timeout. We could save 7 seconds here.
@@ -96,7 +96,7 @@ func Choose(input *os.File, entries ...Entry) Entry {
 		//
 		//     Select a boot option to edit:
 		//      >
-		term := terminal.NewTerminal(input, "")
+		term := term.NewTerminal(input, "")
 
 		term.AutoCompleteCallback = func(line string, pos int, key rune) (string, int, bool) {
 			// We ain't gonna autocomplete, but we'll reset the countdown timer when you press a key.
