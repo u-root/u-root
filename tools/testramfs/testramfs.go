@@ -80,7 +80,7 @@ func main() {
 			}
 		}(tempDir)
 	}
-	if err := syscall.Mount("", tempDir, "tmpfs", 0, ""); err != nil {
+	if err := syscall.Mount("testramfs.tmpfs", tempDir, "tmpfs", 0, ""); err != nil {
 		log.Fatal(err)
 	}
 	if !*noremove {
