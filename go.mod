@@ -35,6 +35,7 @@ require (
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
+	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
 	google.golang.org/grpc v1.29.1 // indirect
