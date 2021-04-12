@@ -16,7 +16,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func DownloadFile(filepath string, url string) error {
+func downloadFile(filepath string, url string) error {
 
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	// Get the data
@@ -39,9 +39,11 @@ func DownloadFile(filepath string, url string) error {
 }
 
 func configureDHCPNetwork() error {
-	log.Printf("Trying to configure network configuration dynamically...")
+	if *verbose {
+		log.Printf("Trying to configure network configuration dynamically...")
+	}
 
-	link, err := findNetworkInterface()
+	link, err := findNetworkInterface(*ifName)
 	if err != nil {
 		return err
 	}
@@ -52,12 +54,12 @@ func configureDHCPNetwork() error {
 	var level dhclient.LogLevel
 
 	config := dhclient.Config{
-		Timeout:  6 * time.Second,
-		Retries:  4,
+		Timeout:  dhcpTimeout,
+		Retries:  dhcpTries,
 		LogLevel: level,
 	}
 
-	r := dhclient.SendRequests(context.TODO(), links, true, false, config, 30*time.Second)
+	r := dhclient.SendRequests(context.TODO(), links, true, false, config, 20*time.Second)
 	for result := range r {
 		if result.Err == nil {
 			return result.Lease.Configure()
@@ -68,14 +70,25 @@ func configureDHCPNetwork() error {
 	return errors.New("no valid DHCP configuration recieved")
 }
 
-func findNetworkInterface() (netlink.Link, error) {
+func findNetworkInterface(ifName string) (netlink.Link, error) {
+	if ifName != "" {
+		if *verbose {
+			log.Printf("Try using %s", ifName)
+		}
+		link, err := netlink.LinkByName(ifName)
+		if err == nil {
+			return link, nil
+		}
+		log.Print(err)
+	}
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
 
 	if len(ifaces) == 0 {
-		return nil, errors.New("No network interface found")
+		return nil, errors.New("no network interface found")
 	}
 
 	var ifnames []string
@@ -85,7 +98,9 @@ func findNetworkInterface() (netlink.Link, error) {
 		if iface.Flags&net.FlagLoopback != 0 || iface.HardwareAddr.String() == "" {
 			continue
 		}
-		log.Printf("Try using %s", iface.Name)
+		if *verbose {
+			log.Printf("Try using %s", iface.Name)
+		}
 		link, err := netlink.LinkByName(iface.Name)
 		if err == nil {
 			return link, nil
@@ -93,5 +108,5 @@ func findNetworkInterface() (netlink.Link, error) {
 		log.Print(err)
 	}
 
-	return nil, fmt.Errorf("Could not find a non-loopback network interface with hardware address in any of %v", ifnames)
+	return nil, fmt.Errorf("could not find a non-loopback network interface with hardware address in any of %v", ifnames)
 }
