@@ -35,22 +35,20 @@ var (
 
 	majorOS = []string{
 		"Ubuntu",
-		"Fedora",
 		"Pop",
-		"Debian",
-		"Manjaro",
 		"Mint",
+		"Debian",
+		"Fedora",
 		"Gentoo",
 	}
 
 	OSCommandline = map[string]string{
-		"Ubuntu":  "boot=casper netboot=url url=%s",
-		"Mint":    "boot=casper netboot=url url=%s",
-		"Pop":     "boot=casper netboot=url url=%s",
-		"Debian":  "boot=live fetch=%s",
-		"Fedora":  "root=live:%s ro rd.live.image rd.lvm=0 rd.luks=0 rd.md=0 rd.dm=0",
-		"Manjaro": "misobasedir=manjaro miso_http_srv=%s nouveau.modeset=1 i915.modeset=1 radeon.modeset=1 driver=free net.ifnames=0 ",
-		"Gentoo":  "root=/dev/ram0 init=/linuxrc loop=/image.squashfs looptype=squashfs cdroot=1 real_root=/ fetch=%s",
+		"Ubuntu": "boot=casper netboot=url url=%s",
+		"Mint":   "boot=casper netboot=url url=%s",
+		"Pop":    "boot=casper netboot=url url=%s",
+		"Debian": "boot=live fetch=%s",
+		"Fedora": "root=live:%s ro rd.live.image rd.lvm=0 rd.luks=0 rd.md=0 rd.dm=0",
+		"Gentoo": "root=/dev/ram0 init=/linuxrc loop=/image.squashfs looptype=squashfs cdroot=1 real_root=/ fetch=%s",
 	}
 
 	banner = `
@@ -112,6 +110,12 @@ func (o OSEndpoint) Load() error {
 		subMenu = nil
 		if o.Name == "Other" {
 			// Load all other OS's
+			for _, value := range OSEndpoints {
+				_, found := OSCommandline[value.OS]
+				if !found {
+					subMenu = append(subMenu, value)
+				}
+			}
 		} else {
 			// Now we load everything with this label
 			for _, value := range OSEndpoints {
@@ -125,50 +129,61 @@ func (o OSEndpoint) Load() error {
 		return nil
 	}
 
-	tmpPath := "/tmp/" + strings.ReplaceAll(o.Name, " ", "") + "/"
-	err := os.Mkdir(tmpPath, 0666)
-	if err != nil {
+	if *noLoad {
+		fmt.Printf("Selected %s\n", o.Name)
+		fmt.Printf("Commandline: %s\n", o.Commandline)
+	} else {
+		tmpPath := "/tmp/" + strings.ReplaceAll(o.Name, " ", "") + "/"
+		err := os.Mkdir(tmpPath, 0666)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Download to %s\n", tmpPath)
+
+		err = downloadFile(tmpPath+"vmlinuz", o.Vmlinuz)
+		if err != nil {
+			return err
+		}
+
+		err = downloadFile(tmpPath+"initrd", o.Initrd)
+		if err != nil {
+			return err
+		}
+
+		vmlinuz, err := os.Open(tmpPath + "vmlinuz")
+		if err != nil {
+			return err
+		}
+
+		initrd, err := os.Open(tmpPath + "initrd")
+		if err != nil {
+			return err
+		}
+
+		if *noExec {
+			fmt.Println("Loaded Kernel and Initrd")
+			fmt.Printf("With Kernel at %s\n", tmpPath+"vmlinuz")
+			fmt.Printf("With Initrd at %s\n", tmpPath+"initrd")
+			fmt.Printf("Commandline: %s\n", o.Commandline)
+		} else {
+			fmt.Println("Loading Kernel and Initrd into kexec")
+			fmt.Printf("With Kernel at %s\n", tmpPath+"vmlinuz")
+			fmt.Printf("With Initrd at %s\n", tmpPath+"initrd")
+			fmt.Printf("Commandline: %s\n", o.Commandline)
+			// Load Kernel and initrd
+			err = kexec.FileLoad(vmlinuz, initrd, o.Commandline)
+			// Load KExec kernel and initrd - init cmdline
+			cmd := exec.Command("kexec", "-e")
+			err = cmd.Run()
+			return err
+		}
 		return err
 	}
-	fmt.Printf("Download to %s\n", tmpPath)
-
-	err = downloadFile(tmpPath+"vmlinuz", o.Vmlinuz)
-	if err != nil {
-		return err
-	}
-
-	err = downloadFile(tmpPath+"initrd", o.Initrd)
-	if err != nil {
-		return err
-	}
-
-	vmlinuz, err := os.Open(tmpPath + "vmlinuz")
-	if err != nil {
-		return err
-	}
-
-	initrd, err := os.Open(tmpPath + "initrd")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Loading Kernel and Initrd into kexec")
-	fmt.Printf("With Kernel at %s\n", tmpPath+"vmlinuz")
-	fmt.Printf("With Initrd at %s\n", tmpPath+"initrd")
-	fmt.Printf("Commandline: %s\n", o.Commandline)
-	// Load Kernel and initrd
-	err = kexec.FileLoad(vmlinuz, initrd, o.Commandline)
-	// Load KExec kernel and initrd - init cmdline
-
-	cmd := exec.Command("kexec", "-e")
-
-	err = cmd.Run()
-	return err
+	return nil
 }
 
 // Exec - Execute new kernel
 func (o OSEndpoint) Exec() error {
-	// Execute
 	return nil
 }
 
@@ -289,16 +304,18 @@ func main() {
 		if indexOf("initrd", files) != -1 {
 			files = remove(files, indexOf("initrd", files))
 		}
-		// TODO: Some distributions have more than one filesystem e.g. Manjaro
+		// Add filesystem entry
 		if len(files) != 0 {
 			OSEntry.Filesystem = githubBaseURL + entry.Path + files[0]
 		}
 		// Set specific cmdline if defined or resort to generic cmdline
 		_, found := OSCommandline[OSEntry.OS]
 		if found {
-			OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200 ip=dhcp initrd=initrd " + fmt.Sprintf(OSCommandline[OSEntry.OS], OSEntry.Filesystem)
+			OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200 ip=dhcp initrd=initrd " +
+				fmt.Sprintf(OSCommandline[OSEntry.OS], OSEntry.Filesystem)
 		} else {
-			OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200 ip=dhcp initrd=initrd " + fmt.Sprintf("url=%s", OSEntry.Filesystem)
+			OSEntry.Commandline = "earlyprintk=ttyS0,115200 console=ttyS0,115200 ip=dhcp initrd=initrd " +
+				fmt.Sprintf("boot=casper netboot=url url=%s", OSEntry.Filesystem)
 		}
 		// Store each fully configured endpoint
 		OSEndpoints = append(OSEndpoints, OSEntry)
@@ -315,14 +332,15 @@ func main() {
 			}
 		}
 	}
-	// TODO: Make remaining distributions available here
+	// Group non-major distributions here
 	entry := OSEndpoint{
 		Name:      "Other",
 		onlyLabel: true,
 	}
-	// TODO: Change default timeout of 10 seconds
+	// Fill menu with remaining options
 	bootMenu = append(bootMenu, entry)
 	bootMenu = append(bootMenu, menu.Reboot{})
 	bootMenu = append(bootMenu, menu.StartShell{})
+	menu.SetInitialTimeout(90 * time.Second)
 	menu.ShowMenuAndLoad(os.Stdin, bootMenu...)
 }
