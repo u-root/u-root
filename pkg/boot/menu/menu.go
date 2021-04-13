@@ -61,6 +61,11 @@ func parseBootNum(choice string, entries []Entry) (int, error) {
 	return num, nil
 }
 
+// SetInitialTimeout sets the initial timeout of the menu to the provided duration
+func SetInitialTimeout(timeout time.Duration) {
+	initialTimeout = timeout
+}
+
 // Choose presents the user a menu on input to choose an entry from and returns that entry.
 func Choose(input *os.File, entries ...Entry) Entry {
 	fmt.Println("")

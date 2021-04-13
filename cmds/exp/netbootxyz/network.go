@@ -24,18 +24,44 @@ func downloadFile(filepath string, url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer closeIO(resp.Body, &err)
 
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer closeFile(out, &err)
 
 	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+// Allows error handling on deferred file.Close()
+func closeFile(f *os.File, err *error) {
+	e := f.Close()
+	switch *err {
+	case nil:
+		*err = e
+	default:
+		if e != nil {
+			log.Println("Error:", e)
+		}
+	}
+}
+
+// Allows error handling on deferred io.Close()
+func closeIO(c io.Closer, err *error) {
+	e := c.Close()
+	switch *err {
+	case nil:
+		*err = e
+	default:
+		if e != nil {
+			log.Println("Error:", e)
+		}
+	}
 }
 
 func configureDHCPNetwork() error {
