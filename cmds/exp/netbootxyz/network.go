@@ -89,9 +89,8 @@ func configureDHCPNetwork() error {
 	for result := range r {
 		if result.Err == nil {
 			return result.Lease.Configure()
-		} else {
-			log.Printf("dhcp response error: %v", result.Err)
 		}
+		log.Printf("dhcp response error: %v", result.Err)
 	}
 	return errors.New("no valid DHCP configuration recieved")
 }
