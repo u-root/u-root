@@ -40,5 +40,6 @@ require (
 	golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
 	google.golang.org/grpc v1.29.1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.2.2
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
