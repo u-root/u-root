@@ -292,12 +292,25 @@ func DumpMem(cbmem *CBmem, w io.Writer) {
 				log.Print(err)
 				continue
 			}
-			w := hex.Dumper(w)
-			log.Printf("Dump %#x to %#x", e.Start, e.Start+e.Size)
-			if _, err := w.Write(b[e.Start : e.Start+e.Size]); err != nil {
-				log.Print(err)
+			// The hexdump does a lot of what we want, but not all of
+			// what we want. In particular, we'd like better control of
+			// what is printed with the offset. So ... hackery.
+			out := ""
+			same := 0
+			for i := e.Start; i < e.Start+e.Size; i += 16 {
+				s := hex.Dump(b[i : i+16])[10:]
+				// If it's the same as the previous, increment same
+				if s == out {
+					if same == 0 {
+						fmt.Fprintf(w, "...\n")
+					}
+					same++
+					continue
+				}
+				same = 0
+				out = s
+				fmt.Fprintf(w, "%08x: %s", i, s)
 			}
-			w.Close()
 		}
 	}
 }
