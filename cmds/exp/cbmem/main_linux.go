@@ -248,8 +248,15 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 
 				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
 				data := make([]byte, sz)
-				// TODO: deal with wrap.
 				readOne(r, data, cbcons)
+				if (c.Cursor & CBMC_OVERFLOW) != 0 {
+					if curse > sz {
+						log.Printf("cursor is %d, and size is %d: things could be bad", curse, sz)
+						curse = 0
+					}
+					data = append(data[curse:], data[:curse]...)
+				}
+
 				c.Data = string(data)
 				cbmem.MemConsole = c
 
