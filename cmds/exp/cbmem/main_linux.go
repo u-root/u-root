@@ -1,4 +1,4 @@
-// Copyright 2016-2017 the u-root Authors. All rights reserved
+// Copyright 2016-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,6 +9,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -16,6 +18,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"syscall"
 )
 
 // The C version of cbmem has a complex function to list
@@ -30,6 +33,7 @@ import (
 
 var (
 	mem                 = flag.String("mem", "/dev/mem", "file for coreboot image")
+	memFile             *os.File
 	debug               = func(string, ...interface{}) {}
 	addr                int64
 	size                int
@@ -41,30 +45,77 @@ var (
 	parseabletimestamps bool
 	verbose             bool
 	version             bool
-	dumpJSON            = flag.Bool("json", true, "Output tables in JSON format")
+	dumpJSON            bool
 )
 
+//
+// usage: /home/rminnich/bin/cbmem [-cCltTLxVvh?]
+//   -c | --console:                   print cbmem console
+
 func init() {
-	flag.BoolVar(&console, "console", false, "print cbmem console")
-	flag.BoolVar(&coverage, "coverage", false, "dump coverage information")
-	flag.BoolVar(&list, "list", false, "print cbmem table of contents")
-	flag.BoolVar(&hexdump, "hexdump", false, "print hexdump of cbmem area")
-	flag.BoolVar(&timestamps, "timestamps", false, "print timestamp information")
-	flag.BoolVar(&parseabletimestamps, "parseable-timestamps", false, "print parseable timestamps")
-	flag.BoolVar(&verbose, "verbose", false, "verbose (debugging) output")
-	flag.BoolVar(&version, "version", false, "print the version")
-	flag.BoolVar(&console, "c", false, "print cbmem console")
-	flag.BoolVar(&coverage, "C", false, "dump coverage information")
-	flag.BoolVar(&list, "l", false, "print cbmem table of contents")
-	flag.BoolVar(&hexdump, "x", false, "print hexdump of cbmem area")
-	flag.BoolVar(&timestamps, "t", false, "print timestamp information")
-	flag.BoolVar(&parseabletimestamps, "T", false, "print parseable timestamps")
-	flag.BoolVar(&verbose, "v", false, "verbose (debugging) output")
-	flag.BoolVar(&version, "V", false, "print the version")
+	const longfmt = "-%s | --%s:%s%s (default %v)\n"
+	var (
+		ushort = "cbmem [h?"
+		ulong  string
+	)
+
+	for _, f := range []struct {
+		b     *bool
+		def   bool
+		short string
+		long  string
+		help  string
+		tab   string
+	}{
+		{&console, false, "c", "console", "print cbmem console", "\t\t\t"},
+		{&coverage, false, "C", "coverage", "dump coverage information", "\t\t"},
+		{&list, false, "l", "list", "print cbmem table of contents", "\t\t\t"},
+		{&hexdump, false, "x", "hexdump", "print hexdump of cbmem area", "\t\t\t"},
+		{&timestamps, false, "t", "timestamps", "print timestamp information", "\t\t"},
+		{&parseabletimestamps, false, "p", "parseable-timestamps", "print parseable timestamps", "\t"},
+		{&verbose, false, "v", "verbose", "verbose (debugging) output", "\t\t\t"},
+		{&version, false, "V", "version", "print version information", "\t\t\t"},
+		{&dumpJSON, false, "j", "json", "Output tables in JSON format", "\t\t\t"},
+	} {
+		flag.BoolVar(f.b, f.short, f.def, f.help)
+		flag.BoolVar(f.b, f.long, f.def, f.help)
+		ushort += f.short
+		ulong += fmt.Sprintf(longfmt, f.short, f.long, f.tab, f.help, f.def)
+	}
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s]\n\n%s", ushort, ulong)
+		os.Exit(1)
+	}
+
 }
 
-func parseCBtable(r io.ReaderAt, address int64, sz int) (*CBmem, error) {
-	debug("Looking for coreboot table at %v %v bytes", address, sz)
+func mapit(addr int64, sz int) ([]byte, error) {
+	b, err := syscall.Mmap(int(memFile.Fd()), 0, int(addr)+sz, syscall.PROT_READ, syscall.MAP_SHARED)
+	if err != nil {
+		return nil, fmt.Errorf("mmap %d bytes at %#x: %v", sz, addr, err)
+	}
+	return b, nil
+}
+
+func parseCBtable(address int64, sz int) (*CBmem, error) {
+	// Note:
+	// Code uses mmmap
+	// address is 0-relative
+	// potential for a large mmap is "large"
+	// it's nice if we don't have to mmap a slice starting
+	// at address and then tweak address everywhere.
+	// This is easy: always mmap at 0, and then we can use address in the returned
+	// slice directly.
+	// mmap is backed by a VMA, and it is not populated until an address is used.
+	// Linux VMAs are very cheap for this sort of thing.
+	// So if you're worried about using offset size with what might be a 2G range,
+	// no need to worry.
+	b, err := mapit(0, int(address)+sz)
+	if err != nil {
+		return nil, err
+	}
+	var r io.ReaderAt = bytes.NewReader(b)
+	debug("Looking for coreboot table at %#08x %d bytes", address, sz)
 	var (
 		i     int64
 		lbh   Header
@@ -74,29 +125,30 @@ func parseCBtable(r io.ReaderAt, address int64, sz int) (*CBmem, error) {
 
 	for i = address; i < address+0x1000 && found != nil; i += 0x10 {
 		readOne(r, &lbh, i)
-		debug("header is %q", lbh)
+		debug("header is %s", lbh.String())
 		if string(lbh.Signature[:]) != "LBIO" {
-			debug("no LBIO at %v", i)
+			debug("no LBIO at %#08x", i)
 			continue
 		}
 		if lbh.HeaderSz == 0 {
-			debug("HeaderSz is 0 at %v", i)
+			debug("HeaderSz is 0 at %#08x", i)
 		}
 		// TODO: checksum the header.
 		// Although I know of no case in 10 years where that
 		// was useful.
 		addr = i + int64(lbh.HeaderSz)
 		found = nil
-		debug("Found!\n")
+		debug("Found at %#08x!", addr)
 
 		/* Keep reference to lbtable. */
 		size = int(lbh.TableSz)
 		j := addr
+		debug("Process %d entires", lbh.TableEntries)
 		for j < addr+int64(lbh.TableSz) {
 			var rec Record
-			debug("  coreboot table entry 0x%02x\n", rec.Tag)
+			debug("\tcoreboot table entry 0x%02x\n", rec.Tag)
 			readOne(r, &rec, j)
-			debug("Found Tag %s (%v) Size %v", tagNames[rec.Tag], rec.Tag, rec.Size)
+			debug("\tFound Tag %s (%v)@%#08x Size %v", tagNames[rec.Tag], rec.Tag, j, rec.Size)
 			start := j
 			j += int64(reflect.TypeOf(r).Size())
 			n := tagNames[rec.Tag]
@@ -170,25 +222,42 @@ func parseCBtable(r io.ReaderAt, address int64, sz int) (*CBmem, error) {
 				cbmem.MainBoard.PartNumber = p[:len(p)-1]
 			case LB_TAG_HWRPB:
 				readOne(r, &cbmem.Hwrpb, start)
+
+				// "Nobody knew consoles could be so hard."
 			case LB_TAG_CBMEM_CONSOLE:
 				var c = &memconsoleEntry{Record: rec}
-				debug("    Found cbmem console, %d byte record.\n", c.Size)
-				readOne(r, &c.CSize, j)
-				j += int64(reflect.TypeOf(c.CSize).Size())
-				readOne(r, &c.Cursor, j)
-				j += int64(reflect.TypeOf(c.Cursor).Size())
-				if c.CSize > c.Cursor {
-					c.CSize = c.Cursor
-				}
+				debug("    Found cbmem console(%#x), %d byte record.\n", rec, c.Size)
+				readOne(r, &c.Address, j)
+				j += int64(reflect.TypeOf(c.Address).Size())
+				debug("    console data is at %#x", c.Address)
+				cbcons := int64(c.Address)
+				// u32 size;
+				// u32 cursor;
+				// u8  body[0];
+				readOne(r, &c.Size, cbcons)
+				cbcons += int64(reflect.TypeOf(c.Size).Size())
+				readOne(r, &c.Cursor, cbcons)
+				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
 				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
-				c.Data = make([]byte, c.CSize)
-				readOne(r, c.Data, j)
+
+				curse := c.Cursor & CBMC_CURSOR_MASK
+				sz := c.Size
+				if (c.Cursor&CBMC_OVERFLOW) == 0 && curse < c.Size {
+					sz = curse
+				}
+
+				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
+				data := make([]byte, sz)
+				// TODO: deal with wrap.
+				readOne(r, data, cbcons)
+				c.Data = string(data)
 				cbmem.MemConsole = c
+
 			case LB_TAG_FORWARD:
 				var newTable int64
 				readOne(r, &newTable, j)
 				debug("Forward to %08x", newTable)
-				return parseCBtable(r, newTable, 1048576)
+				return parseCBtable(newTable, 1048576)
 			default:
 				if n, ok := tagNames[rec.Tag]; ok {
 					log.Printf("Ignoring record %v", n)
@@ -206,45 +275,60 @@ func parseCBtable(r io.ReaderAt, address int64, sz int) (*CBmem, error) {
 	return cbmem, found
 }
 
-func DumpMem(cbmem *CBmem) {
+func DumpMem(cbmem *CBmem, w io.Writer) {
 	if cbmem.Memory == nil {
-		fmt.Printf("No cbmem table name")
+		fmt.Fprintf(w, "No cbmem table name")
 	}
 	m := cbmem.Memory.Maps
 	if len(m) == 0 {
-		fmt.Printf("No cbmem map entries")
+		fmt.Fprintf(w, "No cbmem map entries")
 	}
-	fmt.Printf("%19s %8s %8s\n", "Name", "Start", "Size")
+	fmt.Fprintf(w, "%19s %8s %8s\n", "Name", "Start", "Size")
 	for _, e := range m {
-		fmt.Printf("%19s %08x %08x\n", memTags[e.Mtype], e.Start, e.Size)
+		fmt.Fprintf(w, "%19s %08x %08x\n", memTags[e.Mtype], e.Start, e.Size)
+		if hexdump && e.Mtype == LB_MEM_TABLE {
+			b, err := mapit(int64(e.Start), int(e.Size))
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			w := hex.Dumper(w)
+			log.Printf("Dump %#x to %#x", e.Start, e.Start+e.Size)
+			if _, err := w.Write(b[e.Start : e.Start+e.Size]); err != nil {
+				log.Print(err)
+			}
+			w.Close()
+		}
 	}
 }
 
+//go:generate go run gen/gen.go -apu2
+
 func main() {
+	var err error
 	flag.Parse()
 	if version {
-		fmt.Println("cbmem in Go, a superset of cbmem v1.1 from coreboot")
+		fmt.Println("cbmem in Go, including JSON output")
 		os.Exit(0)
 	}
 	if verbose {
 		debug = log.Printf
 	}
 
-	mf, err := os.Open(*mem)
-	if err != nil {
+	if memFile, err = os.Open(*mem); err != nil {
 		log.Fatal(err)
 	}
 
 	var cbmem *CBmem
 	for _, addr := range []int64{0, 0xf0000} {
-		if cbmem, err = parseCBtable(mf, addr, TableSize); err == nil {
+		if cbmem, err = parseCBtable(addr, 0x10000); err == nil {
 			break
 		}
 	}
 	if err != nil {
 		log.Fatalf("Reading coreboot table: %v", err)
 	}
-	if *dumpJSON {
+	if dumpJSON {
 		b, err := json.MarshalIndent(cbmem, "", "\t")
 		if err != nil {
 			log.Fatalf("json marshal: %v", err)
@@ -253,11 +337,11 @@ func main() {
 	}
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
-	if list {
-		DumpMem(cbmem)
+	if list || hexdump {
+		DumpMem(cbmem, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
-		fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)
+		//fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)
 		fmt.Printf("%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])
 	}
 
