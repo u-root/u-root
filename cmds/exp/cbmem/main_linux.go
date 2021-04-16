@@ -55,7 +55,7 @@ var (
 func init() {
 	const longfmt = "-%s | --%s:%s%s (default %v)\n"
 	var (
-		ushort = "cbmem [h?"
+		ushort = "Usage: cbmem [h?"
 		ulong  string
 	)
 
