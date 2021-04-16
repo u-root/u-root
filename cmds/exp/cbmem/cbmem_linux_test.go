@@ -54,3 +54,19 @@ func TestAPU2(t *testing.T) {
 	}
 
 }
+
+func TestIO(t *testing.T) {
+	var (
+		b = [8]byte{1}
+		i uint64
+	)
+	if err := readOneSize(bytes.NewReader(b[:1]), &i, 1, 23); err == nil {
+		t.Errorf("readOne on too small buffer: got nil, want err")
+	}
+	if err := readOneSize(bytes.NewReader(b[:]), &i, 1, 23); err == nil {
+		t.Fatalf("readOne on too small buffer: got %v, want nil", err)
+	}
+	if i != i {
+		t.Fatalf("readOne value: got %d, want 1", i)
+	}
+}

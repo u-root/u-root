@@ -8,22 +8,23 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
-	"log"
 )
 
 // readOneSize reads an entry of any type. This Size variant is for
 // the console log only, though we know of no case in which it is
 // larger than 1M. We really want the SectionReader as a way to ReadAt
 // for the binary.Read. Any meaningful limit will be enforced by the kernel.
-func readOneSize(r io.ReaderAt, i interface{}, o int64, n int64) {
+func readOneSize(r io.ReaderAt, i interface{}, o int64, n int64) error {
 	err := binary.Read(io.NewSectionReader(r, o, n), binary.LittleEndian, i)
 	if err != nil {
-		log.Fatalf("Trying to read section for %T: %v", r, err)
+		return fmt.Errorf("Trying to read section for %T: %v", r, err)
 	}
+	return nil
 }
 
 // readOneSize reads an entry of any type, limited to 64K.
-func readOne(r io.ReaderAt, i interface{}, o int64) {
-	readOneSize(r, i, o, 65536)
+func readOne(r io.ReaderAt, i interface{}, o int64) error {
+	return readOneSize(r, i, o, 65536)
 }
