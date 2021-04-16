@@ -34,6 +34,7 @@ require (
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/exp v0.0.0-20190121172915-509febef88a4
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	golang.org/x/text v0.3.3
