@@ -282,6 +282,8 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 	return cbmem, found
 }
 
+// DumpMem prints the memory areas. If hexdump is set, it will hexdump
+// LB tables.
 func DumpMem(cbmem *CBmem, w io.Writer) {
 	if cbmem.Memory == nil {
 		fmt.Fprintf(w, "No cbmem table name")
