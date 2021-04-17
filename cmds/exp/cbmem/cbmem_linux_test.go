@@ -64,9 +64,12 @@ func TestAPU2(t *testing.T) {
 		t.Errorf("APU2 DumpMem: got %d bytes output, want more", b.Len())
 	}
 	// See if JSON even works. TODO: compare output
-	_, err = json.MarshalIndent(c, "", "\t")
+	j, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		t.Fatalf("json marshal: %v", err)
+	}
+	if string(j) != apu2JSON {
+		t.Errorf("APU2 JSON: got %s, want %s", string(j), apu2JSON)
 	}
 }
 
