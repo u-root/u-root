@@ -7,12 +7,17 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func genFile(f *os.File, s []seg) error {
+	// Extend the test file to the full 4G, to match hardware.
+	if _, err := f.WriteAt([]byte{1}[:], 0xffffffff); err != nil {
+		return err
+	}
 	for _, r := range s {
 		if _, err := f.WriteAt(r.dat, r.off); err != nil {
 			return err
@@ -41,7 +46,7 @@ func TestAPU2(t *testing.T) {
 		t.Fatalf("Reading coreboot table: %v", err)
 	}
 	var b = &bytes.Buffer{}
-	DumpMem(c, b)
+	DumpMem(c, false, b)
 	t.Logf("%s", b.String())
 	apu2Mem := `               Name    Start     Size
        LB_MEM_TABLE 00000000 00001000
@@ -49,10 +54,20 @@ func TestAPU2(t *testing.T) {
          LB_MEM_RAM 000c0000 77eee000
        LB_MEM_TABLE 77fae000 00052000
 `
-	if b.String() != apu2Mem {
+	o := b.String()
+	if o != apu2Mem {
 		t.Errorf("APU2 DumpMem: got \n%s\n, want \n%s\n", hex.Dump(b.Bytes()), hex.Dump([]byte(apu2Mem)))
 	}
-
+	b.Reset()
+	DumpMem(c, true, b)
+	if b.Len() == len(apu2Mem) {
+		t.Errorf("APU2 DumpMem: got %d bytes output, want more", b.Len())
+	}
+	// See if JSON even works. TODO: compare output
+	_, err = json.MarshalIndent(c, "", "\t")
+	if err != nil {
+		t.Fatalf("json marshal: %v", err)
+	}
 }
 
 func TestIO(t *testing.T) {

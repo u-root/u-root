@@ -284,7 +284,7 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 
 // DumpMem prints the memory areas. If hexdump is set, it will hexdump
 // LB tables.
-func DumpMem(cbmem *CBmem, w io.Writer) {
+func DumpMem(cbmem *CBmem, hexdump bool, w io.Writer) {
 	if cbmem.Memory == nil {
 		fmt.Fprintf(w, "No cbmem table name")
 	}
@@ -360,7 +360,7 @@ func main() {
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
 	if list || hexdump {
-		DumpMem(cbmem, os.Stdout)
+		DumpMem(cbmem, hexdump, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
 		//fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)
