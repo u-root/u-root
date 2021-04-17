@@ -14,23 +14,26 @@ type seg struct {
 }
 
 const (
+	// TableSize is the size of the LB Table Header in bytes.
 	TableSize = 48
 )
 
-// TODO: we don't have a platform yet that creates these.
+// TS is an ID and timestamp
 type TS struct {
-	entry_id    uint32
-	entry_stamp uint64
+	entryID    uint32
+	entryStamp uint64
 }
 
+// TSTable is a table of TS with metadata.
 type TSTable struct {
-	base_time     uint64
-	max_entries   uint16
-	tick_freq_mhz uint16
-	num_entries   uint32
-	entries       []TS
+	baseTime    uint64
+	maxEntries  uint16
+	tickFreqMHZ uint16
+	numEntries  uint32
+	entries     []TS
 }
 
+// Header is the comment cbmem header.
 type Header struct {
 	Signature    [4]uint8
 	HeaderSz     uint32
@@ -45,6 +48,7 @@ func (h *Header) String() string {
 		string(h.Signature[:4]), h.HeaderSz, h.HeaderCSUM, h.TableSz, h.TableCSUM, h.TableEntries)
 }
 
+// Record is the common CBMEM record header: a tag and a type.
 type Record struct {
 	Tag  uint32
 	Size uint32
@@ -145,37 +149,45 @@ type cbmemEntry struct {
 	CbmemAddr uint64
 }
 
+// MTRREntry is MTRR Entry record.
 type MTRREntry struct {
 	Record
 	Index uint32
 }
 
+// BoardIDEntry is the ID for a board.
 type BoardIDEntry struct {
 	Record
 	BoardID uint32
 }
+
+// MACEntry is a Mac Entry record.
 type MACEntry struct {
 	MACaddr []uint8
 	pad     []uint8
 }
 
+// LBEntry is a set of MAC addresses.
 type LBEntry struct {
 	Record
 	Count    uint32
 	MACAddrs []MACEntry
 }
 
+// LBRAMEntry is a defintion of RAM (is this even used?)
 type LBRAMEntry struct {
 	Record
 	RAMCode uint32
 }
 
+// SPIFlashEntry defines properties of a SPI part.
 type SPIFlashEntry struct {
 	Record
 	FlashSize  uint32
 	SectorSize uint32
 	EraseCmd   uint32
 }
+
 type bootMediaParamsEntry struct {
 	Record
 	FMAPOffset    uint64
@@ -183,16 +195,23 @@ type bootMediaParamsEntry struct {
 	CBFSSize      uint64
 	BootMediaSize uint64
 }
+
+// CBMemEntry defines the Address and other properties of a CBMem area.
 type CBMemEntry struct {
 	Record
 	Address   uint64
 	EntrySize uint32
 	ID        uint32
 }
+
+// CMOSTable is a CMOS table header, defining the length of the table.
+// CMOS entries have a variable-length encoding.
 type CMOSTable struct {
 	Record
 	HeaderLength uint32
 }
+
+// CMOSEntry defines a CMOS entry. This is little used any more.
 type CMOSEntry struct {
 	Record
 	Bit      uint32
@@ -201,18 +220,24 @@ type CMOSEntry struct {
 	ConfigID uint32
 	Name     []uint8
 }
+
+// CMOSEnums defines a CMOS entry enumeration type.
 type CMOSEnums struct {
 	Record
 	ConfigID uint32
 	Value    uint32
 	Text     []uint8
 }
+
+// CMOSDefaults define CMOS defaults.
 type CMOSDefaults struct {
 	Record
 	NameLength uint32
 	Name       []uint8
 	DefaultSet []uint8
 }
+
+// CMOSChecksum defines a checksum over a range of CMOS
 type CMOSChecksum struct {
 	Record
 	RangeStart uint32
@@ -221,6 +246,7 @@ type CMOSChecksum struct {
 	Type       uint32
 }
 
+// CBmem is the set of all CBmem records in a coreboot image.
 type CBmem struct {
 	Memory           *memoryEntry
 	MemConsole       *memconsoleEntry

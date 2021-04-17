@@ -6,6 +6,7 @@
 
 package main
 
+// Constants from coreboot. We will not change these.
 const (
 	TS_START_ROMSTAGE            int = 1
 	TS_BEFORE_INITRAM            int = 2
@@ -143,6 +144,7 @@ const (
 )
 
 var (
+	// TimeStampNames map time stamp values to a nice name.
 	TimeStampNames = map[int]string{
 		0:                    "1st timestamp",
 		TS_START_ROMSTAGE:    "start of rom stage",
