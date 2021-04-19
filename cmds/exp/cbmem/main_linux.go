@@ -17,21 +17,14 @@ import (
 	"log"
 	"os"
 	"reflect"
-)
+	"text/tabwriter"
 
-// The C version of cbmem has a complex function to list
-// numbers in xx,xxx,xxx form. I personally think this
-// is a terrible idea (what about the EU among other things?)
-// If you decide yor really want this, then don't write a function,
-// do this.
-//    "golang.org/x/text/language"
-//    "golang.org/x/text/message"
-//    p := message.NewPrinter(language.English)
-//    p.Printf("%d\n", 1000)
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+)
 
 var (
 	mem                 = flag.String("mem", "/dev/mem", "file for coreboot image")
-	memFile             *os.File
 	debug               = func(string, ...interface{}) {}
 	addr                int64
 	size                int
@@ -69,7 +62,7 @@ func init() {
 		{&coverage, false, "C", "coverage", "dump coverage information", "\t\t"},
 		{&list, false, "l", "list", "print cbmem table of contents", "\t\t\t"},
 		{&hexdump, false, "x", "hexdump", "print hexdump of cbmem area", "\t\t\t"},
-		{&timestamps, false, "t", "timestamps", "print timestamp information", "\t\t"},
+		{&timestamps, true, "t", "timestamps", "print timestamp information (default)", "\t\t"},
 		{&parseabletimestamps, false, "p", "parseable-timestamps", "print parseable timestamps", "\t"},
 		{&verbose, false, "v", "verbose", "verbose (debugging) output", "\t\t\t"},
 		{&version, false, "V", "version", "print version information", "\t\t\t"},
@@ -91,9 +84,9 @@ func init() {
 // If it finds one it tries to parse it.
 // If it found a table it returns true.
 // If the parsing had an error, it returns the error.
-func parseCBtable(address int64, sz int) (*CBmem, bool, error) {
+func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 	var found bool
-	r, err := newOffsetReader(memFile, address, sz)
+	r, err := newOffsetReader(f, address, sz)
 	if err != nil {
 		return nil, found, err
 	}
@@ -196,12 +189,16 @@ func parseCBtable(address int64, sz int) (*CBmem, bool, error) {
 					return nil, found, err
 				}
 			case LB_TAG_TIMESTAMPS:
-				debug("    Found timestamp table.\n")
-				var t timestampEntry
-				if err := readOne(r, &t, start); err != nil {
+				if err := readOne(r, &cbmem.TimeStampsTable, start); err != nil {
 					return nil, found, err
 				}
-				cbmem.TimeStamps = append(cbmem.TimeStamps, t)
+				if cbmem.TimeStampsTable.Addr == 0 {
+					continue
+				}
+				if cbmem.TimeStamps, err = cbmem.readTimeStamps(f); err != nil {
+					log.Printf("TimeStampAddress is %#x but ReadTimeStamps failed: %v", cbmem.TimeStampsTable, err)
+					return nil, found, err
+				}
 			case LB_TAG_MAINBOARD:
 				// The mainboard entry is a bit weird.
 				// There is a byte after the Record
@@ -241,7 +238,7 @@ func parseCBtable(address int64, sz int) (*CBmem, bool, error) {
 				// u32 cursor;
 				// u8  body[0];
 				// The cbmem size is a guess.
-				cr, err := newOffsetReader(memFile, cbcons, 1048576)
+				cr, err := newOffsetReader(f, cbcons, 1048576)
 				if err != nil {
 					return nil, found, err
 				}
@@ -284,10 +281,10 @@ func parseCBtable(address int64, sz int) (*CBmem, bool, error) {
 					return nil, found, err
 				}
 				debug("Forward to %08x", newTable)
-				return parseCBtable(newTable, 1048576)
+				return parseCBtable(f, newTable, 1048576)
 			default:
 				if n, ok := tagNames[rec.Tag]; ok {
-					log.Printf("Ignoring record %v", n)
+					debug("Ignoring record %v", n)
 					cbmem.Ignored = append(cbmem.Ignored, n)
 					break
 				}
@@ -367,14 +364,15 @@ func main() {
 		debug = log.Printf
 	}
 
-	if memFile, err = os.Open(*mem); err != nil {
+	f, err := os.Open(*mem)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	var cbmem *CBmem
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
-		if cbmem, found, err = parseCBtable(addr, 0x10000); found {
+		if cbmem, found, err = parseCBtable(f, addr, 0x10000); found {
 			break
 		}
 	}
@@ -383,6 +381,30 @@ func main() {
 	}
 	if !found {
 		log.Fatalf("No coreboot table found")
+	}
+
+	if timestamps {
+		ts := cbmem.TimeStamps
+
+		// Format in tab-separated columns with a tab stop of 8.
+		w := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
+		freq := uint64(ts.TickFreqMHZ)
+		debug("ts %#x freq %#x stamps %#x\n", ts, freq, ts.TS)
+		prev := ts.TS[0].EntryStamp
+		p := message.NewPrinter(language.English)
+		p.Fprintf(w, "%d entries total:\n\n", len(ts.TS))
+		for _, t := range ts.TS {
+			n, ok := TimeStampNames[t.EntryID]
+			if !ok {
+				n = fmt.Sprintf("[%#x]", t.EntryID)
+			}
+			cur := t.EntryStamp
+			debug("cur %#x cur / freq %#x", cur, cur/freq)
+			p.Fprintf(w, "\t%d:%s\t%d (%d)\n", t.EntryID, n, cur/freq, (cur-prev)/freq)
+			prev = cur
+
+		}
+		w.Flush()
 	}
 	if dumpJSON {
 		b, err := json.MarshalIndent(cbmem, "", "\t")
@@ -394,7 +416,7 @@ func main() {
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
 	if list || hexdump {
-		DumpMem(memFile, cbmem, hexdump, os.Stdout)
+		DumpMem(f, cbmem, hexdump, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
 		//fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)

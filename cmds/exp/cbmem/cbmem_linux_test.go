@@ -30,10 +30,11 @@ func genFile(f *os.File, p func(string, ...interface{}), s []seg) error {
 
 func TestAPU2(t *testing.T) {
 	var err error
-	if memFile, err = ioutil.TempFile("", "cbmemAPU2"); err != nil {
+	f, err := ioutil.TempFile("", "cbmemAPU2")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := genFile(memFile, t.Logf, apu2); err != nil {
+	if err := genFile(f, t.Logf, apu2); err != nil {
 		t.Fatal(err)
 	}
 	var c *CBmem
@@ -41,7 +42,7 @@ func TestAPU2(t *testing.T) {
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
 		t.Logf("Check %#08x", addr)
-		if c, found, err = parseCBtable(addr, 0x10000); err == nil {
+		if c, found, err = parseCBtable(f, addr, 0x10000); err == nil {
 			break
 		}
 	}
@@ -52,7 +53,7 @@ func TestAPU2(t *testing.T) {
 		t.Fatalf("Reading coreboot table: got %v, want nil", err)
 	}
 	var b = &bytes.Buffer{}
-	DumpMem(memFile, c, false, b)
+	DumpMem(f, c, false, b)
 	t.Logf("%s", b.String())
 	apu2Mem := `               Name    Start     Size
        LB_MEM_TABLE 00000000 00001000
@@ -65,7 +66,7 @@ func TestAPU2(t *testing.T) {
 		t.Errorf("APU2 DumpMem: got \n%s\n, want \n%s\n", hex.Dump(b.Bytes()), hex.Dump([]byte(apu2Mem)))
 	}
 	b.Reset()
-	DumpMem(memFile, c, true, b)
+	DumpMem(f, c, true, b)
 	if b.Len() == len(apu2Mem) {
 		t.Errorf("APU2 DumpMem: got %d bytes output, want more", b.Len())
 	}
@@ -74,7 +75,10 @@ func TestAPU2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("json marshal: %v", err)
 	}
-	ioutil.WriteFile("json", j, 0666)
+	// You can use this to generate new test data. It's a timesaver.
+	if false {
+		ioutil.WriteFile("json", j, 0666)
+	}
 	if string(j) != apu2JSON {
 		t.Errorf("APU2 JSON: got %s, want %s", j, apu2JSON)
 	}
@@ -138,5 +142,40 @@ func TestOffsetReader(t *testing.T) {
 		if string(b[:4]) != "LBIO" {
 			t.Errorf("Reading newOffsetReader at %#x: got %q, want LBIO", 0x77fae000, string(b[:4]))
 		}
+	}
+	if err := memFile.Close(); err != nil {
+		t.Fatalf("Closing %s: got %v, want nil", memFile.Name(), err)
+	}
+	if _, err := newOffsetReader(memFile, 0x77fdf040, 1); err == nil {
+		t.Fatalf("newOffsetReader: got nil, want err")
+	}
+}
+
+func TestTimeStampsAPU2(t *testing.T) {
+	debug = t.Logf
+	f, err := ioutil.TempFile("", "cbmemAPU2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := genFile(f, t.Logf, apu2); err != nil {
+		t.Fatal(err)
+	}
+	var c *CBmem
+	debug = t.Logf
+	var found bool
+	for _, addr := range []int64{0, 0xf0000} {
+		t.Logf("Check %#08x", addr)
+		if c, found, err = parseCBtable(f, addr, 0x10000); err == nil {
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("Looking for coreboot table: got false, want true")
+	}
+	if err != nil {
+		t.Fatalf("Reading coreboot table: got %v, want nil", err)
+	}
+	if c.TimeStampsTable.Addr != 0 {
+		t.Fatalf("TimeStampsTable: got %#x, want 0", c.TimeStampsTable)
 	}
 }
