@@ -41,7 +41,7 @@ var apu2JSON = `{
 		"Data": "PCEngines apu2\r\ncoreboot build 20170228\r\n2032 MB DRAM\r\n\r\n"
 	},
 	"Consoles": [
-		"SERIAL8250"
+		""
 	],
 	"TimeStamps": null,
 	"UART": [

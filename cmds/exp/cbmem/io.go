@@ -7,10 +7,56 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
+	"syscall"
 )
+
+type offsetReader struct {
+	name string
+	base int64
+	r    io.ReaderAt
+}
+
+var _ io.ReaderAt = &offsetReader{}
+
+// ReadAt implements io.ReaderAt.
+// The offset is adjusted by the base. After that
+// it is bytes.Buffer's job to deal with all the
+// corner cases.
+func (o *offsetReader) ReadAt(b []byte, i int64) (int, error) {
+	// If things are really bad, set this to true.
+	if false {
+		debug("Reading %#x at %#x for %d bytes", o, i, len(b))
+	}
+	i -= o.base
+	n, err := o.r.ReadAt(b, i)
+	if err != nil && err != io.EOF {
+		return n, fmt.Errorf("Reading at #%x for %d bytes: %v", i, len(b), err)
+	}
+	return n, err
+}
+
+func mapit(f *os.File, addr int64, sz int) (io.ReaderAt, error) {
+	ba := (addr >> 12) << 12
+	basz := sz + int(addr-ba)
+	b, err := syscall.Mmap(int(f.Fd()), ba, basz, syscall.PROT_READ, syscall.MAP_SHARED)
+	if err != nil {
+		return nil, fmt.Errorf("mmap %d bytes at %#x: %v", sz, addr, err)
+	}
+	return bytes.NewReader(b[:sz]), nil
+}
+
+func newOffsetReader(f *os.File, off int64, sz int) (*offsetReader, error) {
+	r, err := mapit(f, off, sz)
+	if err != nil {
+		return nil, err
+	}
+	return &offsetReader{base: off, r: r}, nil
+}
 
 // readOneSize reads an entry of any type. This Size variant is for
 // the console log only, though we know of no case in which it is
