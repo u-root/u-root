@@ -20,17 +20,22 @@ const (
 
 // TS is an ID and timestamp
 type TS struct {
-	entryID    uint32
-	entryStamp uint64
+	EntryID    uint32
+	EntryStamp uint64
 }
 
-// TSTable is a table of TS with metadata.
-type TSTable struct {
-	baseTime    uint64
-	maxEntries  uint16
-	tickFreqMHZ uint16
-	numEntries  uint32
-	entries     []TS
+// TSHeader e is the header of a time stamp table.
+type TSHeader struct {
+	BaseTime    uint64
+	MaxEntries  uint16
+	TickFreqMHZ uint16
+	NumEntries  uint32
+}
+
+// TimeStamps is a TSHeader and its time stamps.
+type TimeStamps struct {
+	TSHeader
+	TS []TS
 }
 
 // Header is the comment cbmem header.
@@ -63,6 +68,13 @@ type memoryEntry struct {
 	Record
 	Maps []memoryRange
 }
+
+// Pointer is a record containing just an address to another record.
+type Pointer struct {
+	Record
+	Addr uint32
+}
+
 type hwrpbEntry struct {
 	Record
 	HwrPB uint64
@@ -84,9 +96,9 @@ type stringEntry struct {
 	String []uint8
 }
 
-type timestampEntry struct {
+type timeStampTableEntry struct {
 	Record
-	TimeStamp uint32
+	TimeStampTable uint32
 }
 type serialEntry struct {
 	Record
@@ -251,7 +263,8 @@ type CBmem struct {
 	Memory           *memoryEntry
 	MemConsole       *memconsoleEntry
 	Consoles         []string
-	TimeStamps       []timestampEntry
+	TimeStampsTable  Pointer
+	TimeStamps       *TimeStamps
 	UART             []serialEntry
 	MainBoard        mainboardEntry
 	Hwrpb            hwrpbEntry

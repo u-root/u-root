@@ -50,10 +50,12 @@ func mapit(f *os.File, addr int64, sz int) (io.ReaderAt, error) {
 	if err != nil {
 		return nil, fmt.Errorf("mmap %d bytes at %#x: %v", sz, addr, err)
 	}
-	return bytes.NewReader(b[:sz]), nil
+	off := int(addr - ba)
+	return bytes.NewReader(b[off : off+sz]), nil
 }
 
 func newOffsetReader(f *os.File, off int64, sz int) (*offsetReader, error) {
+	debug("newOffsetReader(%v, %#x, %#x)", f, off, sz)
 	r, err := mapit(f, off, sz)
 	if err != nil {
 		return nil, err

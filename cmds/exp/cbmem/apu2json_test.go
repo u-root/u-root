@@ -43,6 +43,11 @@ var apu2JSON = `{
 	"Consoles": [
 		""
 	],
+	"TimeStampsTable": {
+		"Tag": 0,
+		"Size": 0,
+		"Addr": 0
+	},
 	"TimeStamps": null,
 	"UART": [
 		{

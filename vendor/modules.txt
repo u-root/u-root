@@ -134,6 +134,18 @@ golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 golang.org/x/term
 # golang.org/x/text v0.3.3
+golang.org/x/text/feature/plural
+golang.org/x/text/internal
+golang.org/x/text/internal/catmsg
+golang.org/x/text/internal/format
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/number
+golang.org/x/text/internal/stringset
+golang.org/x/text/internal/tag
+golang.org/x/text/language
+golang.org/x/text/message
+golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 # golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
