@@ -9,7 +9,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -18,7 +17,6 @@ import (
 	"log"
 	"os"
 	"reflect"
-	"syscall"
 )
 
 // The C version of cbmem has a complex function to list
@@ -89,42 +87,27 @@ func init() {
 
 }
 
-func mapit(addr int64, sz int) ([]byte, error) {
-	b, err := syscall.Mmap(int(memFile.Fd()), 0, int(addr)+sz, syscall.PROT_READ, syscall.MAP_SHARED)
+// parseCBtable looks for a coreboot table in the range address, address + size - 1
+// If it finds one it tries to parse it.
+// If it found a table it returns true.
+// If the parsing had an error, it returns the error.
+func parseCBtable(address int64, sz int) (*CBmem, bool, error) {
+	var found bool
+	r, err := newOffsetReader(memFile, address, sz)
 	if err != nil {
-		return nil, fmt.Errorf("mmap %d bytes at %#x: %v", sz, addr, err)
+		return nil, found, err
 	}
-	return b, nil
-}
-
-func parseCBtable(address int64, sz int) (*CBmem, error) {
-	// Note:
-	// Code uses mmmap
-	// address is 0-relative
-	// potential for a large mmap is "large"
-	// it's nice if we don't have to mmap a slice starting
-	// at address and then tweak address everywhere.
-	// This is easy: always mmap at 0, and then we can use address in the returned
-	// slice directly.
-	// mmap is backed by a VMA, and it is not populated until an address is used.
-	// Linux VMAs are very cheap for this sort of thing.
-	// So if you're worried about using offset size with what might be a 2G range,
-	// no need to worry.
-	b, err := mapit(0, int(address)+sz)
-	if err != nil {
-		return nil, err
-	}
-	var r io.ReaderAt = bytes.NewReader(b)
 	debug("Looking for coreboot table at %#08x %d bytes", address, sz)
 	var (
 		i     int64
 		lbh   Header
-		found = fmt.Errorf("No cb table found")
 		cbmem = &CBmem{StringVars: make(map[string]string)}
 	)
 
-	for i = address; i < address+0x1000 && found != nil; i += 0x10 {
-		readOne(r, &lbh, i)
+	for i = address; i < address+0x1000 && !found; i += 0x10 {
+		if err := readOne(r, &lbh, i); err != nil {
+			return nil, found, err
+		}
 		debug("header is %s", lbh.String())
 		if string(lbh.Signature[:]) != "LBIO" {
 			debug("no LBIO at %#08x", i)
@@ -133,12 +116,13 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 		if lbh.HeaderSz == 0 {
 			debug("HeaderSz is 0 at %#08x", i)
 		}
+		debug("Found at %#08x!", i)
+
 		// TODO: checksum the header.
 		// Although I know of no case in 10 years where that
 		// was useful.
 		addr = i + int64(lbh.HeaderSz)
-		found = nil
-		debug("Found at %#08x!", addr)
+		found = true
 
 		/* Keep reference to lbtable. */
 		size = int(lbh.TableSz)
@@ -147,14 +131,18 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 		for j < addr+int64(lbh.TableSz) {
 			var rec Record
 			debug("\tcoreboot table entry 0x%02x\n", rec.Tag)
-			readOne(r, &rec, j)
+			if err := readOne(r, &rec, j); err != nil {
+				return nil, found, err
+			}
 			debug("\tFound Tag %s (%v)@%#08x Size %v", tagNames[rec.Tag], rec.Tag, j, rec.Size)
 			start := j
 			j += int64(reflect.TypeOf(r).Size())
 			n := tagNames[rec.Tag]
 			switch rec.Tag {
 			case LB_TAG_BOARD_ID:
-				readOne(r, &cbmem.BoardID, start)
+				if err := readOne(r, &cbmem.BoardID, start); err != nil {
+					return nil, found, err
+				}
 			case
 				LB_TAG_VERSION,
 				LB_TAG_EXTRA_VERSION,
@@ -174,31 +162,45 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 				cbmem.StringVars[n] = s[:len(s)-1]
 			case LB_TAG_SERIAL:
 				var s serialEntry
-				readOne(r, &s, start)
+				if err := readOne(r, &s, start); err != nil {
+					return nil, found, err
+				}
 				cbmem.UART = append(cbmem.UART, s)
 
 			case LB_TAG_CONSOLE:
 				var c uint32
-				readOne(r, &c, j)
+				if err := readOne(r, &c, j); err != nil {
+					return nil, found, err
+				}
 				cbmem.Consoles = append(cbmem.Consoles, consoleNames[c])
 			case LB_TAG_VERSION_TIMESTAMP:
-				readOne(r, &cbmem.VersionTimeStamp, start)
+				if err := readOne(r, &cbmem.VersionTimeStamp, start); err != nil {
+					return nil, found, err
+				}
 			case LB_TAG_BOOT_MEDIA_PARAMS:
-				readOne(r, &cbmem.BootMediaParams, start)
+				if err := readOne(r, &cbmem.BootMediaParams, start); err != nil {
+					return nil, found, err
+				}
 			case LB_TAG_CBMEM_ENTRY:
 				var c cbmemEntry
-				readOne(r, &c, start)
+				if err := readOne(r, &c, start); err != nil {
+					return nil, found, err
+				}
 				cbmem.CBMemory = append(cbmem.CBMemory, c)
 			case LB_TAG_MEMORY:
 				debug("    Found memory map.\n")
 				cbmem.Memory = &memoryEntry{Record: rec}
 				nel := (int64(cbmem.Memory.Size) - (j - start)) / int64(reflect.TypeOf(memoryRange{}).Size())
 				cbmem.Memory.Maps = make([]memoryRange, nel)
-				readOne(r, cbmem.Memory.Maps, j)
+				if err := readOne(r, cbmem.Memory.Maps, j); err != nil {
+					return nil, found, err
+				}
 			case LB_TAG_TIMESTAMPS:
 				debug("    Found timestamp table.\n")
 				var t timestampEntry
-				readOne(r, &t, start)
+				if err := readOne(r, &t, start); err != nil {
+					return nil, found, err
+				}
 				cbmem.TimeStamps = append(cbmem.TimeStamps, t)
 			case LB_TAG_MAINBOARD:
 				// The mainboard entry is a bit weird.
@@ -221,25 +223,39 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 				cbmem.MainBoard.Vendor = v[:len(v)-1]
 				cbmem.MainBoard.PartNumber = p[:len(p)-1]
 			case LB_TAG_HWRPB:
-				readOne(r, &cbmem.Hwrpb, start)
+				if err := readOne(r, &cbmem.Hwrpb, start); err != nil {
+					return nil, found, err
+				}
 
 				// "Nobody knew consoles could be so hard."
 			case LB_TAG_CBMEM_CONSOLE:
 				var c = &memconsoleEntry{Record: rec}
 				debug("    Found cbmem console(%#x), %d byte record.\n", rec, c.Size)
-				readOne(r, &c.Address, j)
+				if err := readOne(r, &c.Address, j); err != nil {
+					return nil, found, err
+				}
 				j += int64(reflect.TypeOf(c.Address).Size())
 				debug("    console data is at %#x", c.Address)
 				cbcons := int64(c.Address)
 				// u32 size;
 				// u32 cursor;
 				// u8  body[0];
-				readOne(r, &c.Size, cbcons)
-				cbcons += int64(reflect.TypeOf(c.Size).Size())
-				readOne(r, &c.Cursor, cbcons)
-				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
-				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
+				// The cbmem size is a guess.
+				cr, err := newOffsetReader(memFile, cbcons, 1048576)
+				if err != nil {
+					return nil, found, err
+				}
 
+				if err := readOne(cr, &c.Size, cbcons); err != nil {
+					return nil, found, err
+				}
+				cbcons += int64(reflect.TypeOf(c.Size).Size())
+				if err := readOne(cr, &c.Cursor, cbcons); err != nil {
+					return nil, found, err
+				}
+				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
+				debug("CSize is %#x, and Cursor is at %#x", c.CSize, c.Cursor)
+				//p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
 				curse := c.Cursor & CBMC_CURSOR_MASK
 				sz := c.Size
 				if (c.Cursor&CBMC_OVERFLOW) == 0 && curse < c.Size {
@@ -248,7 +264,9 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 
 				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
 				data := make([]byte, sz)
-				readOne(r, data, cbcons)
+				if err := readOne(cr, data, cbcons); err != nil {
+					return nil, found, err
+				}
 				if (c.Cursor & CBMC_OVERFLOW) != 0 {
 					if curse > sz {
 						log.Printf("cursor is %d, and size is %d: things could be bad", curse, sz)
@@ -262,7 +280,9 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 
 			case LB_TAG_FORWARD:
 				var newTable int64
-				readOne(r, &newTable, j)
+				if err := readOne(r, &newTable, j); err != nil {
+					return nil, found, err
+				}
 				debug("Forward to %08x", newTable)
 				return parseCBtable(newTable, 1048576)
 			default:
@@ -271,7 +291,7 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 					cbmem.Ignored = append(cbmem.Ignored, n)
 					break
 				}
-				log.Printf("Unknown tag record %v", r)
+				log.Printf("Unknown tag record %v %#x", rec, rec.Tag)
 				cbmem.Unknown = append(cbmem.Unknown, rec.Tag)
 				break
 
@@ -279,12 +299,12 @@ func parseCBtable(address int64, sz int) (*CBmem, error) {
 			j = start + int64(rec.Size)
 		}
 	}
-	return cbmem, found
+	return cbmem, found, nil
 }
 
 // DumpMem prints the memory areas. If hexdump is set, it will hexdump
 // LB tables.
-func DumpMem(cbmem *CBmem, hexdump bool, w io.Writer) {
+func DumpMem(f *os.File, cbmem *CBmem, hexdump bool, w io.Writer) error {
 	if cbmem.Memory == nil {
 		fmt.Fprintf(w, "No cbmem table name")
 	}
@@ -296,7 +316,7 @@ func DumpMem(cbmem *CBmem, hexdump bool, w io.Writer) {
 	for _, e := range m {
 		fmt.Fprintf(w, "%19s %08x %08x\n", memTags[e.Mtype], e.Start, e.Size)
 		if hexdump && e.Mtype == LB_MEM_TABLE {
-			b, err := mapit(int64(e.Start), int(e.Size))
+			r, err := newOffsetReader(f, int64(e.Start), int(e.Size))
 			if err != nil {
 				log.Print(err)
 				continue
@@ -306,8 +326,17 @@ func DumpMem(cbmem *CBmem, hexdump bool, w io.Writer) {
 			// what is printed with the offset. So ... hackery.
 			out := ""
 			same := 0
+			var line [16]byte
 			for i := e.Start; i < e.Start+e.Size; i += 16 {
-				s := hex.Dump(b[i : i+16])[10:]
+				n, err := r.ReadAt(line[:], int64(i))
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					return err
+				}
+
+				s := hex.Dump(line[:n])[10:]
 				// If it's the same as the previous, increment same
 				if s == out {
 					if same == 0 {
@@ -322,6 +351,7 @@ func DumpMem(cbmem *CBmem, hexdump bool, w io.Writer) {
 			}
 		}
 	}
+	return nil
 }
 
 //go:generate go run gen/gen.go -apu2
@@ -342,13 +372,17 @@ func main() {
 	}
 
 	var cbmem *CBmem
+	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
-		if cbmem, err = parseCBtable(addr, 0x10000); err == nil {
+		if cbmem, found, err = parseCBtable(addr, 0x10000); found {
 			break
 		}
 	}
 	if err != nil {
 		log.Fatalf("Reading coreboot table: %v", err)
+	}
+	if !found {
+		log.Fatalf("No coreboot table found")
 	}
 	if dumpJSON {
 		b, err := json.MarshalIndent(cbmem, "", "\t")
@@ -360,7 +394,7 @@ func main() {
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
 	if list || hexdump {
-		DumpMem(cbmem, hexdump, os.Stdout)
+		DumpMem(memFile, cbmem, hexdump, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
 		//fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)
