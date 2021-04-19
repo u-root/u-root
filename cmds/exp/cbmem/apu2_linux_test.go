@@ -4,6 +4,7 @@
 
 package main
 
+// This is the set of segments comprising a coreboot table from an PC Engines APU2.
 var apu2 = []seg{
 	{off: 0x0, dat: []byte{
 		/*0x00000000*/ 0x53 /*'S'*/, 0xff /*'ÿ'*/, 0x00 /*'\x00'*/, 0xf0 /*'ð'*/, 0x53 /*'S'*/, 0xff /*'ÿ'*/, 0x00 /*'\x00'*/, 0xf0, /*'ð'*/

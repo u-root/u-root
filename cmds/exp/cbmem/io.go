@@ -27,11 +27,14 @@ var _ io.ReaderAt = &offsetReader{}
 // The offset is adjusted by the base. After that
 // it is bytes.Buffer's job to deal with all the
 // corner cases.
+// Note that this is not a section reader, since the offset
+// is maintained. This makes it easy to use ROM addresses
+// without adjusting them.
+// For one example, the coreboot MEM_CONSOLE tag has an absolute
+// address in it. Once a proper offset reader is created,
+// that absolute address is used unchanged.
 func (o *offsetReader) ReadAt(b []byte, i int64) (int, error) {
-	// If things are really bad, set this to true.
-	if false {
-		debug("Reading %#x at %#x for %d bytes", o, i, len(b))
-	}
+	// This is the line that makes it "not a section reader".
 	i -= o.base
 	n, err := o.r.ReadAt(b, i)
 	if err != nil && err != io.EOF {
