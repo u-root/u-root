@@ -116,12 +116,20 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 	return u, nil
 }
 
+func (c *parser) createInitRD(initrds []io.ReaderAt) error {
+	if len(initrds) > 0 {
+		c.bootImage.Initrd = boot.CatInitrds(initrds...)
+	}
+	return nil
+}
+
 // parseIpxe parses `config` and constructs a BootImage for `c`.
 func (c *parser) parseIpxe(config string) error {
 	// A trivial ipxe script parser.
 	// Currently only supports kernel and initrd commands.
 	c.bootImage = &boot.LinuxImage{}
 
+	var initrds []io.ReaderAt
 	for _, line := range strings.Split(config, "\n") {
 		// Skip blank lines and comment lines.
 		line = strings.TrimSpace(line)
@@ -152,7 +160,6 @@ func (c *parser) parseIpxe(config string) error {
 
 		case "initrd":
 			if len(args) > 1 {
-				var initrds []io.ReaderAt
 				for _, f := range strings.Split(args[1], ",") {
 					i, err := c.getFile(f)
 					if err != nil {
@@ -160,18 +167,18 @@ func (c *parser) parseIpxe(config string) error {
 					}
 					initrds = append(initrds, i)
 				}
-				c.bootImage.Initrd = boot.CatInitrds(initrds...)
 			}
 
 		case "boot":
 			// Stop parsing at this point, we should go ahead and
 			// boot.
-			return nil
+			return c.createInitRD(initrds)
 
 		default:
 			c.log.Printf("Ignoring unsupported ipxe cmd: %s", line)
 		}
 	}
 
-	return nil
+	// EOF - we should go ahead and boot.
+	return c.createInitRD(initrds)
 }
