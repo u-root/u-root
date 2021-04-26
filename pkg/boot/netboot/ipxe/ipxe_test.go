@@ -153,6 +153,30 @@ func TestIpxeConfig(t *testing.T) {
 			},
 		},
 		{
+			desc: "all files exist, simple config with no cmdline, one relative file path, premature end",
+			schemeFunc: func() curl.Schemes {
+				s := make(curl.Schemes)
+				fs := curl.NewMockScheme("http")
+				conf := `#!ipxe
+				kernel http://someplace.com/foobar/pxefiles/kernel
+				initrd initrd-file`
+				fs.Add("someplace.com", "/foobar/pxefiles/ipxeconfig", conf)
+				fs.Add("someplace.com", "/foobar/pxefiles/kernel", content1)
+				fs.Add("someplace.com", "/foobar/pxefiles/initrd-file", content2)
+				s.Register(fs.Scheme, fs)
+				return s
+			},
+			curl: &url.URL{
+				Scheme: "http",
+				Host:   "someplace.com",
+				Path:   "/foobar/pxefiles/ipxeconfig",
+			},
+			want: &boot.LinuxImage{
+				Kernel: strings.NewReader(content1),
+				Initrd: strings.NewReader(content2),
+			},
+		},
+		{
 			desc: "all files exist, simple config with no cmdline, one relative file path, concatenate initrd",
 			schemeFunc: func() curl.Schemes {
 				s := make(curl.Schemes)
