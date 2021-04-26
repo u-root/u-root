@@ -92,10 +92,10 @@ func TestIO(t *testing.T) {
 	if err := readOneSize(bytes.NewReader(b[:1]), &i, 1, 23); err == nil {
 		t.Errorf("readOne on too small buffer: got nil, want err")
 	}
-	if err := readOneSize(bytes.NewReader(b[:]), &i, 1, 23); err == nil {
-		t.Fatalf("readOne on too small buffer: got %v, want nil", err)
+	if err := readOneSize(bytes.NewReader(b[:]), &i, 0, 8); err != nil {
+		t.Fatalf("readOne: got %v, want nil", err)
 	}
-	if i != i {
+	if i != 1 {
 		t.Fatalf("readOne value: got %d, want 1", i)
 	}
 }
