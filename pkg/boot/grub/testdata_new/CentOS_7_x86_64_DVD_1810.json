@@ -1,0 +1,46 @@
+[
+  {
+    "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 rd.live.check quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
+    },
+    "name": "Test this media \u0026 install CentOS 7"
+  },
+  {
+    "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
+    },
+    "name": "Install CentOS 7"
+  },
+  {
+    "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 xdriver=vesa nomodeset quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
+    },
+    "name": "Install CentOS 7 in basic graphics mode"
+  },
+  {
+    "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 rescue quiet",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/initrd.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
+    },
+    "name": "Rescue a CentOS system"
+  }
+]

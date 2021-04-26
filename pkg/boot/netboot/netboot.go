@@ -7,9 +7,6 @@
 // netboot can take a URL from a DHCP lease and try to detect iPXE scripts and
 // PXE scripts.
 //
-// TODO: detect multiboot and Linux kernels without configuration (URL points
-// to a single kernel file).
-//
 // TODO: detect iSCSI root paths.
 package netboot
 
@@ -22,6 +19,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/netboot/ipxe"
 	"github.com/u-root/u-root/pkg/boot/netboot/pxe"
+	"github.com/u-root/u-root/pkg/boot/netboot/simple"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/ulog"
@@ -35,9 +33,6 @@ import (
 //
 // - to detect a pxelinux.0, in which case we will ignore the pxelinux.0 and
 //   try to parse pxelinux.cfg/<files>.
-//
-// TODO: detect straight up multiboot and bzImage Linux kernel files rather
-// than just configuration scripts.
 func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclient.Lease) ([]boot.OSImage, error) {
 	uri, err := lease.Boot()
 	if err != nil {
@@ -79,5 +74,16 @@ func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri
 	if err != nil {
 		l.Printf("Failed to try parsing pxelinux config: %v", err)
 	}
+
+	l.Printf("Trying to parse file as a non config Image...")
+	// Check if target is a simple file instead of config script
+	sImages, err := simple.FetchAndProbe(ctx, uri, schemes)
+	if err != nil {
+		l.Printf("failed to parse boot file as simple file: %v", err)
+	}
+	if sImages != nil {
+		images = append(images, sImages...)
+	}
+
 	return append(images, pxeImages...)
 }

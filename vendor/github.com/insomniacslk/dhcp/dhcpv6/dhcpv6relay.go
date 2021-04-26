@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/insomniacslk/dhcp/iana"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -52,6 +53,19 @@ func (ro RelayOptions) RemoteID() *OptRemoteID {
 		return rid
 	}
 	return nil
+}
+
+// ClientLinkLayerAddress returns the Hardware Type and
+// Link Layer Address of the requesting client in this relay message.
+func (ro RelayOptions) ClientLinkLayerAddress() (iana.HWType, net.HardwareAddr) {
+	opt := ro.Options.GetOne(OptionClientLinkLayerAddr)
+	if opt == nil {
+		return 0, nil
+	}
+	if lla, ok := opt.(*optClientLinkLayerAddress); ok {
+		return lla.LinkLayerType, lla.LinkLayerAddress
+	}
+	return 0, nil
 }
 
 // RelayMessage is a DHCPv6 relay agent message as defined by RFC 3315 Section

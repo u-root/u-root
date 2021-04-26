@@ -17,6 +17,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/termios"
 )
 
 const (
@@ -79,7 +80,7 @@ func main() {
 			}
 		}(tempDir)
 	}
-	if err := syscall.Mount("", tempDir, "tmpfs", 0, ""); err != nil {
+	if err := syscall.Mount("testramfs.tmpfs", tempDir, "tmpfs", 0, ""); err != nil {
 		log.Fatal(err)
 	}
 	if !*noremove {
@@ -115,8 +116,17 @@ func main() {
 	cmd.Command("/init")
 	cmd.C.SysProcAttr.Chroot = tempDir
 	cmd.C.SysProcAttr.Cloneflags = cloneFlags
-	cmd.C.SysProcAttr.Unshareflags = cloneFlags
+	cmd.C.SysProcAttr.Unshareflags = unshareFlags
 	if *interactive {
+		t, err := termios.GetTermios(0)
+		if err != nil {
+			log.Fatal("Getting Termios")
+		}
+		defer func(t *termios.Termios) {
+			if err := termios.SetTermios(0, t); err != nil {
+				log.Print(err)
+			}
+		}(t)
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
 		}

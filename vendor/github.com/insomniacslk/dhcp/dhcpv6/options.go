@@ -45,6 +45,8 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		opt, err = parseOptServerID(optData)
 	case OptionIANA:
 		opt, err = ParseOptIANA(optData)
+	case OptionIATA:
+		opt, err = ParseOptIATA(optData)
 	case OptionIAAddr:
 		opt, err = ParseOptIAAddress(optData)
 	case OptionORO:
@@ -73,6 +75,8 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		opt, err = ParseOptIAPD(optData)
 	case OptionIAPrefix:
 		opt, err = ParseOptIAPrefix(optData)
+	case OptionInformationRefreshTime:
+		opt, err = parseOptInformationRefreshTime(optData)
 	case OptionRemoteID:
 		opt, err = ParseOptRemoteID(optData)
 	case OptionFQDN:
@@ -87,6 +91,8 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		var o OptNetworkInterfaceID
 		err = o.FromBytes(optData)
 		opt = &o
+	case OptionClientLinkLayerAddr:
+		opt, err = parseOptClientLinkLayerAddress(optData)
 	case OptionDHCPv4Msg:
 		opt, err = ParseOptDHCPv4Msg(optData)
 	case OptionDHCP4oDHCP6Server:

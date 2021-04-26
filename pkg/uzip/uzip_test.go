@@ -20,7 +20,7 @@ func TestFromZip(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	f := filepath.Join(tmpDir, "test.zip")
-	err = ToZip("testdata/testFolder", f)
+	err = ToZip("testdata/testFolder", f, "")
 	if err != nil {
 		t.Fatal(err)
 	}

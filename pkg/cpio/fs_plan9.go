@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/u-root/u-root/pkg/ls"
@@ -125,7 +126,10 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	info := r.inode(sysInfo(path, fi))
+
+	sys := fi.Sys().(*syscall.Dir)
+	info := r.inode(sysInfo(path, sys))
+
 	switch fi.Mode() & os.ModeType {
 	case 0: // Regular file.
 		return Record{Info: info, ReaderAt: uio.NewLazyFile(path)}, nil
@@ -142,7 +146,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 // single CPIO archive. Do not reuse between CPIOs if you don't know what
 // you're doing.
 func NewRecorder() *Recorder {
-	return &Recorder{}
+	return &Recorder{inumber: 2}
 }
 
 // LSInfoFromRecord converts a Record to be usable with the ls package for
@@ -152,7 +156,7 @@ func LSInfoFromRecord(rec Record) ls.FileInfo {
 	return ls.FileInfo{
 		Name:  rec.Name,
 		Mode:  mode,
-		UID:   fmt.Sprint("%d", rec.UID),
+		UID:   fmt.Sprintf("%d", rec.UID),
 		Size:  int64(rec.FileSize),
 		MTime: time.Unix(int64(rec.MTime), 0).UTC(),
 	}

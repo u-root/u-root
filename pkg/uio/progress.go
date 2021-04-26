@@ -9,25 +9,34 @@ import (
 	"strings"
 )
 
-// ProgressReader implements io.Reader and prints Symbol to W after every
-// Interval bytes passes through R.
-type ProgressReader struct {
-	R io.Reader
+// ProgressReadCloser implements io.ReadCloser and prints Symbol to W after every
+// Interval bytes passes through RC.
+type ProgressReadCloser struct {
+	RC io.ReadCloser
 
 	Symbol   string
 	Interval int
 	W        io.Writer
 
 	counter int
+	written bool
 }
 
-// Read implements io.Reader for ProgressReader.
-func (r *ProgressReader) Read(p []byte) (n int, err error) {
+// Read implements io.Reader for ProgressReadCloser.
+func (rc *ProgressReadCloser) Read(p []byte) (n int, err error) {
 	defer func() {
-		//log.Print("r.Counter %d, r.Interval %d, n
-		numSymbols := (r.counter%r.Interval + n) / r.Interval
-		r.W.Write([]byte(strings.Repeat(r.Symbol, numSymbols)))
-		r.counter += n
+		numSymbols := (rc.counter%rc.Interval + n) / rc.Interval
+		rc.W.Write([]byte(strings.Repeat(rc.Symbol, numSymbols)))
+		rc.counter += n
+		rc.written = (rc.written || numSymbols > 0)
+		if err == io.EOF && rc.written {
+			rc.W.Write([]byte("\n"))
+		}
 	}()
-	return r.R.Read(p)
+	return rc.RC.Read(p)
+}
+
+// Read implements io.Closer for ProgressReader.
+func (rc *ProgressReadCloser) Close() error {
+	return rc.RC.Close()
 }

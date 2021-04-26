@@ -5,13 +5,14 @@
 package kexec
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestParseMemoryMap(t *testing.T) {
@@ -103,165 +104,142 @@ func TestAvailableRAM(t *testing.T) {
 	}
 }
 
-func TestAlignPhys(t *testing.T) {
-	for _, test := range []struct {
-		name      string
-		seg, want Segment
+func TestAlignAndMerge(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		in      Segments
+		want    Segments
+		wantErr bool
 	}{
 		{
-			name: "aligned",
-			seg: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1000},
-				Phys: Range{Start: 0x2000, Size: 0x1000},
+			name: "3 buffers in the same page",
+			in: Segments{
+				NewSegment([]byte("test"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foo"), Range{Start: 10, Size: 5}),
+				NewSegment([]byte("haha"), Range{Start: 15, Size: 4}),
+				NewSegment([]byte("hahahahaha"), Range{Start: 0x1000, Size: 10}),
+				NewSegment([]byte("hhhhhhhhhh"), Range{Start: 0x2000, Size: 1}),
 			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1000},
-				Phys: Range{Start: 0x2000, Size: 0x1000},
-			},
-		},
-		{
-			name: "unaligned",
-			seg: Segment{
-				Buf:  Range{Start: 0x1011, Size: 0x1022},
-				Phys: Range{Start: 0x2011, Size: 0x1022},
-			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1033},
-				Phys: Range{Start: 0x2000, Size: 0x2000},
+			want: Segments{
+				NewSegment([]byte("test\x00\x00\x00\x00\x00\x00foo\x00\x00haha"), Range{Start: 0, Size: 0x1000}),
+				NewSegment([]byte("hahahahaha"), Range{Start: 0x1000, Size: 0x1000}),
+				NewSegment([]byte("h"), Range{Start: 0x2000, Size: 0x1000}),
 			},
 		},
 		{
-			name: "unaligned_size",
-			seg: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1022},
-				Phys: Range{Start: 0x2000, Size: 0x1022},
+			name: "no buffer",
+			in: Segments{
+				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
 			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0x1022},
-				Phys: Range{Start: 0x2000, Size: 0x2000},
+			want: Segments{
+				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
 			},
 		},
 		{
-			name: "empty_buf",
-			seg: Segment{
-				Buf:  Range{Start: 0x1011, Size: 0},
-				Phys: Range{Start: 0x2011, Size: 0},
+			name: "no buffers",
+			in:   Segments{},
+			want: Segments{},
+		},
+		{
+			name: "perfectly aligned buffer",
+			in: Segments{
+				NewSegment([]byte("test"), Range{Start: 0, Size: 0x1000}),
 			},
-			want: Segment{
-				Buf:  Range{Start: 0x1000, Size: 0},
-				Phys: Range{Start: 0x2000, Size: 0x1000},
+			want: Segments{
+				NewSegment([]byte("test"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "truncate buffer",
+			in: Segments{
+				NewSegment([]byte("testtest"), Range{Start: 0, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "backfill, truncate buffer",
+			in: Segments{
+				NewSegment([]byte("testtest"), Range{Start: 2, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("\x00\x00testt"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "physical address overlaps, conflicting content",
+			in: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("aabbc"), Range{Start: 3, Size: 4}),
+			},
+			wantErr: true,
+		},
+		{
+			// This could potentially be solved some day.
+			name: "physical address overlaps, same content",
+			in: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("ttaaa"), Range{Start: 3, Size: 4}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "two segments in the same page with first-buffer-truncation and second-buffer-padding",
+			in: Segments{
+				NewSegment([]byte("testtest"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foo"), Range{Start: 10, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("testt\x00\x00\x00\x00\x00foo"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "two segments in the same page with first-buffer-perfect and second-buffer-truncation",
+			in: Segments{
+				NewSegment([]byte("testt"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foofoofoo"), Range{Start: 10, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("testt\x00\x00\x00\x00\x00foofo"), Range{Start: 0, Size: 0x1000}),
+			},
+		},
+		{
+			name: "two segments in the same page with first-buffer-padding and second-buffer-perfect",
+			in: Segments{
+				NewSegment([]byte("tes"), Range{Start: 0, Size: 5}),
+				NewSegment([]byte("foofo"), Range{Start: 10, Size: 5}),
+			},
+			want: Segments{
+				NewSegment([]byte("tes\x00\x00\x00\x00\x00\x00\x00foofo"), Range{Start: 0, Size: 0x1000}),
 			},
 		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			got := AlignPhys(test.seg)
-			if got != test.want {
-				t.Errorf("AlignPhys() got %v, want %v", got, test.want)
-			}
-		})
-	}
-}
-
-func TestTryMerge(t *testing.T) {
-	for _, test := range []struct {
-		name   string
-		phys   Range
-		merged bool
-		want   Range
-	}{
-		{
-			name:   "disjunct",
-			phys:   Range{Start: 100, Size: 150},
-			merged: false,
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 0, Size: 80},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 10, Size: 80},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 10, Size: 90},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "superset",
-			phys:   Range{Start: 0, Size: 100},
-			merged: true,
-			want:   Range{Start: 0, Size: 100},
-		},
-		{
-			name:   "overlap",
-			phys:   Range{Start: 0, Size: 150},
-			merged: true,
-			want:   Range{Start: 0, Size: 150},
-		},
-		{
-			name:   "overlap",
-			phys:   Range{Start: 50, Size: 100},
-			merged: true,
-			want:   Range{Start: 0, Size: 150},
-		},
-		{
-			name:   "overlap",
-			phys:   Range{Start: 99, Size: 51},
-			merged: true,
-			want:   Range{Start: 0, Size: 150},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			a := NewSegment([]byte("aaaa"), Range{Start: 0, Size: 100})
-			b := NewSegment([]byte("bbbb"), test.phys)
-
-			merged := a.tryMerge(b)
-			if merged != test.merged {
-				t.Fatalf("tryMerge() got %v, want %v", merged, test.merged)
-			}
-			if !merged {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := AlignAndMerge(tt.in)
+			gotErr := err != nil
+			if gotErr != tt.wantErr {
+				t.Errorf("AlignAndMerge = %v, want error %t", err, tt.wantErr)
+			} else if err != nil {
 				return
 			}
-			if a.Phys != test.want {
-				t.Fatalf("Wrong merge result: got %+v, want %+v", a.Phys, test.want)
+
+			if err := got.IsSupersetOf(tt.in); err != nil {
+				t.Errorf("AlignAndMerge = %v: %v", got, err)
 			}
 
-			got := a.Buf.toSlice()
-			want := []byte("aaaabbbb")
-			if !bytes.Equal(got, want) {
-				t.Errorf("Wrong buf: got %s, want %s", got, want)
+			gotRanges := got.Phys()
+			wantRanges := tt.want.Phys()
+			if diff := cmp.Diff(wantRanges, gotRanges); diff != "" {
+				t.Errorf("AlignAndMerge physical ranges = (-want, +got):\n%s", diff)
+			}
+			for i, s := range got {
+				b := s.Buf.toSlice()
+				if diff := cmp.Diff(tt.want[i].Buf.toSlice(), b); diff != "" {
+					t.Errorf("segment %s bytes differ (-want, +got):\n%s", got[i].Phys, diff)
+				}
 			}
 		})
-	}
-}
-
-func TestDedup(t *testing.T) {
-	s := []Segment{
-		NewSegment([]byte("test"), Range{Start: 0, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 100, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 200, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 250, Size: 50}),
-		NewSegment([]byte("test"), Range{Start: 300, Size: 100}),
-		NewSegment([]byte("test"), Range{Start: 350, Size: 100}),
-	}
-	want := []Range{
-		{Start: 0, Size: 100},
-		{Start: 100, Size: 100},
-		{Start: 200, Size: 100},
-		{Start: 300, Size: 150},
-	}
-
-	got := Dedup(s)
-	for i := range got {
-		if got[i].Phys != want[i] {
-			t.Errorf("Dedup() got %v, want %v", got[i].Phys, want[i])
-		}
 	}
 }
 
@@ -385,6 +363,163 @@ func TestFindSpaceIn(t *testing.T) {
 				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.limit, got, err, tt.want, tt.err)
 			}
 		})
+	}
+}
+
+func TestFindSpace(t *testing.T) {
+	for i, tt := range []struct {
+		name string
+		rs   Ranges
+		size uint
+		want Range
+		err  error
+	}{
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "no ranges",
+			rs:   Ranges{},
+			size: 0x10,
+			err:  ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "no ranges, zero size",
+			rs:   Ranges{},
+			size: 0,
+			err:  ErrNotEnoughSpace{Size: 0},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
+			got, err := tt.rs.FindSpace(tt.size)
+			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
+				t.Errorf("%s.FindSpace(%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, got, err, tt.want, tt.err)
+			}
+		})
+	}
+}
+
+func TestFindSpaceAbove(t *testing.T) {
+	for i, tt := range []struct {
+		name string
+		rs   Ranges
+		size uint
+		min  uintptr
+		want Range
+		err  error
+	}{
+		{
+			name: "no space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+			},
+			size: 0x10,
+			min:  0x1000,
+			err:  ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			min:  0x1000,
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size: 0x10,
+			min:  0x1000,
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size: 0x10,
+			min:  0x1000,
+			want: Range{Start: 0x1010, Size: 0x10},
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			min:  0,
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "no ranges",
+			rs:   Ranges{},
+			size: 0x10,
+			err:  ErrNotEnoughSpace{Size: 0x10},
+		},
+		{
+			name: "no ranges, zero size",
+			rs:   Ranges{},
+			size: 0,
+			err:  ErrNotEnoughSpace{Size: 0},
+		},
+	} {
+		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
+			got, err := tt.rs.FindSpaceAbove(tt.size, tt.min)
+			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.min, got, err, tt.want, tt.err)
+			}
+		})
+	}
+}
+
+func TestSort(t *testing.T) {
+	for _, tt := range []struct {
+		in   Ranges
+		want Ranges
+	}{
+		{
+			in: Ranges{
+				Range{Start: 2, Size: 5},
+				Range{Start: 1, Size: 5},
+			},
+			want: Ranges{
+				Range{Start: 1, Size: 5},
+				Range{Start: 2, Size: 5},
+			},
+		},
+		{
+			in: Ranges{
+				Range{Start: 1, Size: 5},
+				Range{Start: 1, Size: 6},
+			},
+			want: Ranges{
+				Range{Start: 1, Size: 6},
+				Range{Start: 1, Size: 5},
+			},
+		},
+	} {
+		var deepCopy Ranges
+		for _, i := range tt.in {
+			deepCopy = append(deepCopy, i)
+		}
+		tt.in.Sort()
+		if !reflect.DeepEqual(tt.in, tt.want) {
+			t.Errorf("%v.Sort() = %v, want\n%v", deepCopy, tt.in, tt.want)
+		}
 	}
 }
 
@@ -674,5 +809,47 @@ func TestSegmentsInsert(t *testing.T) {
 				t.Errorf("\n%v.Insert(%v) = \n%v, want \n%v", before, tt.s, tt.segs, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsSupersetOf(t *testing.T) {
+	for _, tt := range []struct {
+		r    Range
+		r2   Range
+		want bool
+	}{
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 1, Size: 0x1000 - 2},
+			want: true,
+		},
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 1, Size: 0x1000 - 1},
+			want: true,
+		},
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 1, Size: 0x1000},
+			want: false,
+		},
+		{
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 0, Size: 0},
+			want: true,
+		},
+		{
+			// Hmm... this feels wrong. "IsSupersetOf" may be the
+			// wrong name, or the implementation should recognize
+			// that any 0-size range is inside any other range.
+			r:    Range{Start: 0, Size: 0x1000},
+			r2:   Range{Start: 0x1001, Size: 0},
+			want: false,
+		},
+	} {
+		got := tt.r.IsSupersetOf(tt.r2)
+		if got != tt.want {
+			t.Errorf("%s.IsSupersetOf(%s) = %t, want %t", tt.r, tt.r2, got, tt.want)
+		}
 	}
 }

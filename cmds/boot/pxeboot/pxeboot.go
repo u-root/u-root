@@ -40,7 +40,11 @@ var (
 	noLoad      = flag.Bool("no-load", false, "get DHCP response, print chosen boot configuration, but do not download + exec it")
 	noExec      = flag.Bool("no-exec", false, "download boot configuration, but do not exec it")
 	noNetConfig = flag.Bool("no-net-config", false, "get DHCP response, but do not apply the network config it to the kernel interface")
+	skipBonded  = flag.Bool("skip-bonded", false, "Skip NICs that have already been added to a bond")
 	verbose     = flag.Bool("v", false, "Verbose output")
+	ipv4        = flag.Bool("ipv4", true, "use IPV4")
+	ipv6        = flag.Bool("ipv6", true, "use IPV6")
+	cmdAppend   = flag.String("cmd", "", "Kernel command to append for each image")
 )
 
 const (
@@ -56,6 +60,10 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 		return nil, err
 	}
 
+	if *skipBonded {
+		filteredIfs = dhclient.FilterBondedInterfaces(filteredIfs, *verbose)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), (1<<dhcpTries)*dhcpTimeout)
 	defer cancel()
 
@@ -66,7 +74,7 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 	if *verbose {
 		c.LogLevel = dhclient.LogSummary
 	}
-	r := dhclient.SendRequests(ctx, filteredIfs, true, true, c, 30*time.Second)
+	r := dhclient.SendRequests(ctx, filteredIfs, *ipv4, *ipv6, c, 30*time.Second)
 
 	for {
 		select {
@@ -99,6 +107,7 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
 			}
+
 			return imgs, nil
 		}
 	}
@@ -116,6 +125,12 @@ func main() {
 	images, err := NetbootImages(ifName)
 	if err != nil {
 		log.Printf("Netboot failed: %v", err)
+	}
+
+	for _, img := range images {
+		img.Edit(func(cmdline string) string {
+			return cmdline + " " + *cmdAppend
+		})
 	}
 
 	menuEntries := menu.OSImages(*verbose, images...)

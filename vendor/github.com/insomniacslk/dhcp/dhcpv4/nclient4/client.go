@@ -352,7 +352,7 @@ func WithLogger(newLogger Logger) ClientOpt {
 func WithUnicast(srcAddr *net.UDPAddr) ClientOpt {
 	return func(c *Client) (err error) {
 		if srcAddr == nil {
-			srcAddr = &net.UDPAddr{Port: ServerPort}
+			srcAddr = &net.UDPAddr{Port: ClientPort}
 		}
 		c.conn, err = net.ListenUDP("udp4", srcAddr)
 		if err != nil {
@@ -399,13 +399,53 @@ func WithServerAddr(n *net.UDPAddr) ClientOpt {
 // Matcher matches DHCP packets.
 type Matcher func(*dhcpv4.DHCPv4) bool
 
-// IsMessageType returns a matcher that checks for the message type.
-//
-// If t is MessageTypeNone, all packets are matched.
-func IsMessageType(t dhcpv4.MessageType) Matcher {
+// IsMessageType returns a matcher that checks for the message types.
+func IsMessageType(t dhcpv4.MessageType, tt ...dhcpv4.MessageType) Matcher {
 	return func(p *dhcpv4.DHCPv4) bool {
-		return p.MessageType() == t || t == dhcpv4.MessageTypeNone
+		if p.MessageType() == t {
+			return true
+		}
+		for _, mt := range tt {
+			if p.MessageType() == mt {
+				return true
+			}
+		}
+		return false
 	}
+}
+
+// IsCorrectServer returns a matcher that checks for the correct ServerAddress.
+func IsCorrectServer(s net.IP) Matcher {
+	return func(p *dhcpv4.DHCPv4) bool {
+		return p.ServerIdentifier().Equal(s)
+	}
+}
+
+// IsAll returns a matcher that checks for all given matchers to be true.
+func IsAll(ms ...Matcher) Matcher {
+	return func(p *dhcpv4.DHCPv4) bool {
+		for _, m := range ms {
+			if !m(p) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// RemoteAddr is the default DHCP server address this client sends messages to.
+func (c *Client) RemoteAddr() *net.UDPAddr {
+	// Make a copy so the caller cannot modify the address once the client
+	// is running.
+	cop := *c.serverAddr
+	return &cop
+}
+
+// InterfaceAddr returns the MAC address of the client's interface.
+func (c *Client) InterfaceAddr() net.HardwareAddr {
+	b := make(net.HardwareAddr, len(c.ifaceHWAddr))
+	copy(b, c.ifaceHWAddr)
+	return b
 }
 
 // DiscoverOffer sends a DHCPDiscover message and returns the first valid offer
@@ -416,44 +456,72 @@ func (c *Client) DiscoverOffer(ctx context.Context, modifiers ...dhcpv4.Modifier
 	discover, err := dhcpv4.NewDiscovery(c.ifaceHWAddr, dhcpv4.PrependModifiers(modifiers,
 		dhcpv4.WithOption(dhcpv4.OptMaxMessageSize(MaxMessageSize)))...)
 	if err != nil {
-		err = fmt.Errorf("unable to create a discovery request: %w", err)
-		return
+		return nil, fmt.Errorf("unable to create a discovery request: %w", err)
 	}
 
 	offer, err = c.SendAndRead(ctx, c.serverAddr, discover, IsMessageType(dhcpv4.MessageTypeOffer))
 	if err != nil {
-		err = fmt.Errorf("got an error while the discovery request: %w", err)
-		return
+		return nil, fmt.Errorf("got an error while the discovery request: %w", err)
 	}
-
-	return
+	return offer, nil
 }
 
 // Request completes the 4-way Discover-Offer-Request-Ack handshake.
 //
 // Note that modifiers will be applied *both* to Discover and Request packets.
-func (c *Client) Request(ctx context.Context, modifiers ...dhcpv4.Modifier) (offer, ack *dhcpv4.DHCPv4, err error) {
-	offer, err = c.DiscoverOffer(ctx, modifiers...)
+func (c *Client) Request(ctx context.Context, modifiers ...dhcpv4.Modifier) (lease *Lease, err error) {
+	offer, err := c.DiscoverOffer(ctx, modifiers...)
 	if err != nil {
 		err = fmt.Errorf("unable to receive an offer: %w", err)
 		return
 	}
+	return c.RequestFromOffer(ctx, offer, modifiers...)
+}
 
+// ErrNak is returned if a DHCP server rejected our Request.
+type ErrNak struct {
+	Offer *dhcpv4.DHCPv4
+	Nak   *dhcpv4.DHCPv4
+}
+
+// Error implements error.Error.
+func (e *ErrNak) Error() string {
+	if msg := e.Nak.Message(); len(msg) > 0 {
+		return fmt.Sprintf("server rejected request with Nak (msg: %s)", msg)
+	}
+	return "server rejected request with Nak"
+}
+
+// RequestFromOffer sends a Request message and waits for an response.
+func (c *Client) RequestFromOffer(ctx context.Context, offer *dhcpv4.DHCPv4, modifiers ...dhcpv4.Modifier) (*Lease, error) {
 	// TODO(chrisko): should this be unicast to the server?
 	request, err := dhcpv4.NewRequestFromOffer(offer, dhcpv4.PrependModifiers(modifiers,
 		dhcpv4.WithOption(dhcpv4.OptMaxMessageSize(MaxMessageSize)))...)
 	if err != nil {
-		err = fmt.Errorf("unable to create a request: %w", err)
-		return
+		return nil, fmt.Errorf("unable to create a request: %w", err)
 	}
 
-	ack, err = c.SendAndRead(ctx, c.serverAddr, request, nil)
+	// Servers are supposed to only respond to Requests containing their server identifier,
+	// but sometimes non-compliant servers respond anyway.
+	// Clients are not required to validate this field, but servers are required to
+	// include the server identifier in their Offer per RFC 2131 Section 4.3.1 Table 3.
+	response, err := c.SendAndRead(ctx, c.serverAddr, request, IsAll(
+		IsCorrectServer(offer.ServerIdentifier()),
+		IsMessageType(dhcpv4.MessageTypeAck, dhcpv4.MessageTypeNak)))
 	if err != nil {
-		err = fmt.Errorf("got an error while processing the request: %w", err)
-		return
+		return nil, fmt.Errorf("got an error while processing the request: %w", err)
 	}
-
-	return
+	if response.MessageType() == dhcpv4.MessageTypeNak {
+		return nil, &ErrNak{
+			Offer: offer,
+			Nak:   response,
+		}
+	}
+	lease := &Lease{}
+	lease.ACK = response
+	lease.Offer = offer
+	lease.CreationTime = time.Now()
+	return lease, nil
 }
 
 // ErrTransactionIDInUse is returned if there were an attempt to send a message

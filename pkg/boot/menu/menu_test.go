@@ -16,7 +16,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	initialTimeout = 2 * time.Second
+	SetInitialTimeout(2 * time.Second)
 	subsequentTimeout = 6 * time.Second
 
 	os.Exit(m.Run())
@@ -38,6 +38,9 @@ func (d *testEntry) Label() string {
 
 func (d *testEntry) String() string {
 	return d.Label()
+}
+
+func (d *testEntry) Edit(func(cmdline string) string) {
 }
 
 func (d *testEntry) Load() error {

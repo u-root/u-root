@@ -7,13 +7,15 @@ package bzimage
 // These are the semi-documented things that define a bzImage
 // Thanks to coreboot for documenting the basic layout.
 
+// E820 types.
 const (
-	Ram      e820type = 1
+	RAM      e820type = 1
 	Reserved e820type = 2
 	ACPI     e820type = 3
 	NVS      e820type = 4
 )
 
+// Boot types.
 const (
 	NotSet    boottype = 0
 	LoadLin   boottype = 1
@@ -23,6 +25,7 @@ const (
 	Kernel    boottype = 5
 )
 
+//Offsets and magic values.
 const (
 	RamdiskStartMask = 0x07FF
 	Prompt           = 0x8000
@@ -44,12 +47,14 @@ const (
  * EDD stuff
  */
 
+// EDD consts.
 const (
 	EDDMBRSigMax       = 16
 	EDDMaxNR           = 6 /* number of edd_info structs starting at EDDBUF  */
 	EDDDeviceParamSize = 74
 )
 
+// EDDExt consts.
 const (
 	EDDExtFixedDiskAccess = 1 << iota
 	EDDExtDeviceLockingAndEjecting
@@ -57,6 +62,7 @@ const (
 	EDDExt64BitExtensions
 )
 
+// EDDInfo struct.
 type EDDInfo struct {
 	Device                uint8
 	Version               uint8
@@ -69,13 +75,15 @@ type EDDInfo struct {
 
 type e820type uint32
 type boottype uint8
+
+// E820Entry is one e820 entry.
 type E820Entry struct {
 	Addr    uint64
 	Size    uint64
 	MemType e820type
 }
 
-// The header of Linux/i386 kernel
+// LinuxHeader is the header of Linux/i386 kernel
 type LinuxHeader struct {
 	MBRCode         [0xc0]uint8         `offset:"0x000"`
 	ExtRamdiskImage uint32              `offset:"0xc0"`
@@ -85,7 +93,7 @@ type LinuxHeader struct {
 	SetupSects      uint8               `offset:"0x1f1"`
 	RootFlags       uint16              `offset:"0x1f2"`
 	Syssize         uint32              `offset:"0x1f4"` //(2.04+)
-	RamSize         uint16              `offset:"0x1f8"`
+	RAMSize         uint16              `offset:"0x1f8"`
 	Vidmode         uint16              `offset:"0x1fa"`
 	RootDev         uint16              `offset:"0x1fc"`
 	Bootsectormagic uint16              `offset:"0x1fe"`
@@ -100,8 +108,8 @@ type LinuxHeader struct {
 	Loadflags       uint8    `offset:"0x211"`
 	Setupmovesize   uint16   `offset:"0x212"`
 	Code32Start     uint32   `offset:"0x214"`
-	RamDiskImage    uint32   `offset:"0x218"`
-	RamDiskSize     uint32   `offset:"0x21c"`
+	RamdiskImage    uint32   `offset:"0x218"`
+	RamdiskSize     uint32   `offset:"0x21c"`
 	BootSectKludge  [4]uint8 `offset:"0x220"`
 	// 2.01+
 	Heapendptr    uint16 `offset:"0x224"`
@@ -132,7 +140,7 @@ type LinuxHeader struct {
 	HandoverOffset uint32 `offset:"0x264"`
 }
 
-// Parameters passed to 32-bit part of Linux
+// LinuxParams is parameters passed to the 32-bit part of Linux
 type LinuxParams struct {
 	Origx           uint8  `offset:"0x00"`
 	Origy           uint8  `offset:"0x01"`
@@ -207,7 +215,7 @@ type LinuxParams struct {
 	CmdLineSize         uint32               `offset:"0x238"`
 	HardwareSubarch     uint32               `offset:"0x23C"`
 	HardwareSubarchData uint64               `offset:"0x240"`
-	Payload_Ofset       uint32               `offset:"0x248"`
+	PayloadOffset       uint32               `offset:"0x248"`
 	PayloadLength       uint32               `offset:"0x24C"`
 	SetupData           uint64               `offset:"0x250"`
 	PrefAddress         uint64               `offset:"0x258"`
@@ -226,6 +234,7 @@ type LinuxParams struct {
 }
 
 var (
+	// LoaderType contains strings describing boot types.
 	LoaderType = map[boottype]string{
 		NotSet:    "Not set",
 		LoadLin:   "loadlin",
@@ -234,15 +243,18 @@ var (
 		EtherBoot: "etherboot",
 		Kernel:    "kernel (kexec)",
 	}
+	//E820 contains strings describing e820types.
 	E820 = map[e820type]string{
-		Ram:      "Ram",
+		RAM:      "RAM",
 		Reserved: "Reserved",
 		ACPI:     "ACPI",
 		NVS:      "NVS",
 	}
+	// HeaderMagic is kernel header magic bytes.
 	HeaderMagic = [4]uint8{'H', 'd', 'r', 'S'}
 )
 
+// BzImage represents sections extracted from a kernel.
 type BzImage struct {
 	Header       LinuxHeader
 	BootCode     []byte
@@ -252,4 +264,6 @@ type BzImage struct {
 	KernelBase   uintptr
 	KernelOffset uintptr
 	compressed   []byte
+	// Some operations don't need the decompressed code; this speeds them up significantly.
+	NoDecompress bool
 }

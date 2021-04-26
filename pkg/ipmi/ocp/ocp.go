@@ -58,7 +58,8 @@ type DimmInfo struct {
 	ModuleManufacturerIDMSB uint8
 }
 
-// Maps OEM names to a 3 byte OEM number.
+// OENMap maps OEM names to a 3 byte OEM number.
+//
 // OENs are typically serialized as the first 3 bytes of a request body.
 var OENMap = map[string][3]uint8{
 	"Wiwynn": {0x0, 0x9c, 0x9c},
@@ -190,8 +191,8 @@ func GetOemIpmiProcessorInfo(si *smbios.Info) ([]ProcessorInfo, error) {
 		info[index].CoreNumber = uint8(t4[index].GetCoreCount())
 		info[index].ThreadNumberLSB = uint8(t4[index].GetThreadCount() & 0x00ff)
 		info[index].ThreadNumberMSB = uint8(t4[index].GetThreadCount() >> 8)
-		info[index].ProcessorFrequencyLSB = uint8(t4[index].MaxSpeed & 0x00ff)
-		info[index].ProcessorFrequencyMSB = uint8(t4[index].MaxSpeed >> 8)
+		info[index].ProcessorFrequencyLSB = uint8(t4[index].CurrentSpeed & 0x00ff)
+		info[index].ProcessorFrequencyMSB = uint8(t4[index].CurrentSpeed >> 8)
 		info[index].Revision1 = 0
 		info[index].Revision2 = 0
 	}

@@ -164,7 +164,7 @@ const (
 	TxtEvTypeCombinedHash
 	TxtEvTypeMleHash
 	TxtEvTypeBiosAcRegData TxtLogID = iota + 0x405
-	TxtEvTypeCpuScrtmStat
+	TxtEvTypeCPUScrtmStat
 	TxtEvTypeLcpControlHash
 	TxtEvTypeElementsHash
 	TxtEvTypeStmHash
@@ -184,7 +184,7 @@ const (
 	TxtEvTypeCapValue
 )
 
-// Txt12LogTypes are the Intel TXT eventlog types
+// TxtLogTypes are the Intel TXT eventlog types
 var TxtLogTypes = map[TxtLogID]string{
 	TxtEvTypeBase:               "EVTYPE_BASE",
 	TxtEvTypePcrMapping:         "EVTYPE_PCR_MAPPING",
@@ -192,7 +192,7 @@ var TxtLogTypes = map[TxtLogID]string{
 	TxtEvTypeCombinedHash:       "EVTYPE_COMBINED_HASH",
 	TxtEvTypeMleHash:            "EVTYPE_MLE_HASH",
 	TxtEvTypeBiosAcRegData:      "EVTYPE_BIOSAC_REG_DATA",
-	TxtEvTypeCpuScrtmStat:       "EVTYPE_CPU_SCRTM_STAT",
+	TxtEvTypeCPUScrtmStat:       "EVTYPE_CPU_SCRTM_STAT",
 	TxtEvTypeLcpControlHash:     "EVTYPE_LCP_CONTROL_HASH",
 	TxtEvTypeElementsHash:       "EVTYPE_ELEMENTS_HASH",
 	TxtEvTypeStmHash:            "EVTYPE_STM_HASH",

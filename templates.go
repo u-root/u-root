@@ -17,12 +17,17 @@ var templates = map[string][]string{
 	"boot": {
 		"github.com/u-root/u-root/cmds/boot/*boot*",
 	},
+	// Absolutely everything, including experimental commands.
+	"world": {
+		"github.com/u-root/u-root/cmds/*/*",
+	},
 	// Core should be things you don't want to live without.
 	"core": {
 		"github.com/u-root/u-root/cmds/core/*",
 	},
 	// Minimal should be things you can't live without.
 	"minimal": {
+		"github.com/u-root/u-root/cmds/core/blkid",
 		"github.com/u-root/u-root/cmds/core/cat",
 		"github.com/u-root/u-root/cmds/core/chmod",
 		"github.com/u-root/u-root/cmds/core/cmp",
@@ -137,6 +142,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/hexdump",
 		"github.com/u-root/u-root/cmds/core/hostname",
 		"github.com/u-root/u-root/cmds/core/init",
+		"github.com/u-root/u-root/cmds/core/installcommand",
 		"github.com/u-root/u-root/cmds/core/io",
 		//"github.com/u-root/u-root/cmds/core/kexec",
 		//"github.com/u-root/u-root/cmds/core/kill",

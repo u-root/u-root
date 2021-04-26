@@ -117,9 +117,23 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 		return err
 	}
 
+	// The source importer uses the Go command underneath, unless
+	// GO111MODULE is set to off, but does not allow us to pass a build
+	// environment to use. (It uses build.Default underneath.)
+	//
+	// Since `env` may contain a potentially different environment that
+	// isn't passed to the Go command, we need it to be off. For the
+	// moment, we don't support modules anyway.
+	//
+	// https://github.com/golang/go/blob/09dd2b004aadb95887c4d6047ecb1a675a569ad2/src/go/build/build.go#L1035
+	oldMod := os.Getenv("GO111MODULE")
+	os.Setenv("GO111MODULE", "off")
+	defer os.Setenv("GO111MODULE", oldMod)
+
+	importer := importer.For("source", nil)
+
 	var bbPackages []string
 	// Move and rewrite package files.
-	importer := importer.For("source", nil)
 	seenPackages := map[string]bool{}
 	for _, pkg := range pkgs {
 		basePkg := path.Base(pkg)

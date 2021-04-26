@@ -77,3 +77,8 @@ func OptClassIdentifier(name string) Option {
 func OptUserClass(name string) Option {
 	return Option{Code: OptionUserClassInformation, Value: String(name)}
 }
+
+// OptMessage returns a new DHCPv4 (Error) Message option.
+func OptMessage(msg string) Option {
+	return Option{Code: OptionMessage, Value: String(msg)}
+}
