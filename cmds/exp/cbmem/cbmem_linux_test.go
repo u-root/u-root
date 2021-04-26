@@ -14,6 +14,31 @@ import (
 	"testing"
 )
 
+func TestNotFound(t *testing.T) {
+	var err error
+	f, err := ioutil.TempFile("", "cbmemNotFound")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write(make([]byte, 0x100000)); err != nil {
+		t.Fatalf("Writing empty file: got %v, want nil", err)
+	}
+	debug = t.Logf
+	var found bool
+	for _, addr := range []int64{0, 0xf0000} {
+		t.Logf("Check %#08x", addr)
+		if _, found, err = parseCBtable(f, addr, 0x10000); err == nil {
+			break
+		}
+	}
+	if err != nil {
+		t.Errorf("Scanning empty file: got %v, want nil", err)
+	}
+	if found {
+		t.Fatalf("Found a coreboot table in empty file: got nil, want err")
+	}
+}
+
 func genFile(f *os.File, p func(string, ...interface{}), s []seg) error {
 	// Extend the test file to the full 4G, to match hardware.
 	if _, err := f.WriteAt([]byte{1}[:], 0xffffffff); err != nil {
@@ -55,18 +80,13 @@ func TestAPU2(t *testing.T) {
 	var b = &bytes.Buffer{}
 	DumpMem(f, c, false, b)
 	t.Logf("%s", b.String())
-	apu2Mem := `               Name    Start     Size
-       LB_MEM_TABLE 00000000 00001000
-         LB_MEM_RAM 00001000 0009f000
-         LB_MEM_RAM 000c0000 77eee000
-       LB_MEM_TABLE 77fae000 00052000
-`
 	o := b.String()
 	if o != apu2Mem {
 		t.Errorf("APU2 DumpMem: got \n%s\n, want \n%s\n", hex.Dump(b.Bytes()), hex.Dump([]byte(apu2Mem)))
 	}
 	b.Reset()
 	DumpMem(f, c, true, b)
+	t.Logf("2nd dump string is %s", b.String())
 	if b.Len() == len(apu2Mem) {
 		t.Errorf("APU2 DumpMem: got %d bytes output, want more", b.Len())
 	}

@@ -286,11 +286,10 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				if n, ok := tagNames[rec.Tag]; ok {
 					debug("Ignoring record %v", n)
 					cbmem.Ignored = append(cbmem.Ignored, n)
-					break
+					continue
 				}
 				log.Printf("Unknown tag record %v %#x", rec, rec.Tag)
 				cbmem.Unknown = append(cbmem.Unknown, rec.Tag)
-				break
 
 			}
 			j = start + int64(rec.Size)
