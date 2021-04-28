@@ -27,11 +27,11 @@ func mockMemioRead(base int64, uintn memio.UintN) error {
 	return nil
 }
 
-func TestGetSMBIOSLegacyNotFound(t *testing.T) {
+func TestSMBIOSLegacyNotFound(t *testing.T) {
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = mockMemioRead
 
-	_, _, err := GetSMBIOSBaseLegacy()
+	_, _, err := SMBIOSBaseLegacy()
 
 	want := "could not find _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
 	if err.Error() != want {
@@ -39,13 +39,13 @@ func TestGetSMBIOSLegacyNotFound(t *testing.T) {
 	}
 }
 
-func TestGetSMBIOSLegacyMemIoReadError(t *testing.T) {
+func TestSMBIOSLegacyMemIoReadError(t *testing.T) {
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = func(base int64, uintn memio.UintN) error {
 		return fmt.Errorf("MEMIOREAD_ERROR")
 	}
 
-	_, _, err := GetSMBIOSBaseLegacy()
+	_, _, err := SMBIOSBaseLegacy()
 
 	want := "MEMIOREAD_ERROR"
 	if err.Error() != want {
@@ -53,11 +53,11 @@ func TestGetSMBIOSLegacyMemIoReadError(t *testing.T) {
 	}
 }
 
-func TestGetSMBIOSLegacySMBIOS(t *testing.T) {
+func TestSMBIOSLegacySMBIOS(t *testing.T) {
 	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '_', 0, 0, 0, 0, 0}
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = mockMemioRead
-	base, size, err := GetSMBIOSBaseLegacy()
+	base, size, err := SMBIOSBaseLegacy()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,21 +65,21 @@ func TestGetSMBIOSLegacySMBIOS(t *testing.T) {
 	var want int64 = 0xf0007
 
 	if base != want {
-		t.Errorf("GetSMBIOSLegacy() get 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSLegacy() get 0x%x, want 0x%x", base, want)
 	}
 
 	var wantSize int64 = 0x1f
 
 	if size != wantSize {
-		t.Errorf("GetSMBIOSLegacy() get size 0x%x, want 0x%x", size, wantSize)
+		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x", size, wantSize)
 	}
 }
 
-func TestGetSMBIOSLegacySMBIOS3(t *testing.T) {
+func TestSMBIOSLegacySMBIOS3(t *testing.T) {
 	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '3', '_', 0, 0, 0, 0, 0}
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = mockMemioRead
-	base, size, err := GetSMBIOSBaseLegacy()
+	base, size, err := SMBIOSBaseLegacy()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,31 +87,31 @@ func TestGetSMBIOSLegacySMBIOS3(t *testing.T) {
 	var want int64 = 0xf0009
 
 	if base != want {
-		t.Errorf("GetSMBIOSLegacy() get base 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSLegacy() get base 0x%x, want 0x%x", base, want)
 	}
 
 	var wantSize int64 = 0x18
 
 	if size != wantSize {
-		t.Errorf("GetSMBIOSLegacy() get size 0x%x, want 0x%x", size, wantSize)
+		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x", size, wantSize)
 	}
 }
 
-func TestGetSMBIOSLegacyQEMU(t *testing.T) {
+func TestSMBIOSLegacyQEMU(t *testing.T) {
 	if runtime.GOARCH != "amd64" {
 		t.Skipf("test not supported on %s", runtime.GOARCH)
 	}
 	testutil.SkipIfNotRoot(t)
-	base, size, err := GetSMBIOSBaseLegacy()
+	base, size, err := SMBIOSBaseLegacy()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if base == 0 {
-		t.Errorf("GetSMBIOSLegacy() does not get SMBIOS base")
+		t.Errorf("SMBIOSLegacy() does not get SMBIOS base")
 	}
 
 	if size != smbios2HeaderSize && size != smbios3HeaderSize {
-		t.Errorf("GetSMBIOSLegacy() get size 0x%x, want 0x%x or 0x%x ", size, smbios2HeaderSize, smbios3HeaderSize)
+		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x or 0x%x ", size, smbios2HeaderSize, smbios3HeaderSize)
 	}
 }

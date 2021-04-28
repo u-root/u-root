@@ -30,8 +30,8 @@ func getSMBIOSBase(start, end int64) (int64, int64, error) {
 	return 0, 0, fmt.Errorf("could not find _SM_ or _SM3_ via /dev/mem from %#08x to %#08x", start, end)
 }
 
-// GetSMBIOSBaseLegacy searches in SMBIOS entry point address in F0000 segment.
+// SMBIOSBaseLegacy searches in SMBIOS entry point address in F0000 segment.
 // NOTE: Legacy BIOS will store their SMBIOS in this region.
-func GetSMBIOSBaseLegacy() (int64, int64, error) {
+func SMBIOSBaseLegacy() (int64, int64, error) {
 	return getSMBIOSBase(0xf0000, 0x100000)
 }

@@ -25,7 +25,7 @@ const fvEntryImageOffset int64 = 0xA0
 var kexecLoad = kexec.Load
 var kexecParseMemoryMap = kexec.ParseMemoryMap
 var getRSDP = acpi.GetRSDP
-var getSMBIOSBase = smbios.GetSMBIOSBase
+var getSMBIOSBase = smbios.SMBIOSBase
 
 // SerialPortConfig defines debug port configuration
 // This struct will be used to initialize SERIAL_PORT_INFO
