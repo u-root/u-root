@@ -9,11 +9,11 @@ const (
 	smbios3HeaderSize = 0x18
 )
 
-// GetSMBIOSBase returns SMBIOS Table's base pointer.
-func GetSMBIOSBase() (int64, int64, error) {
-	base, size, err := GetSMBIOSBaseEFI()
+// SMBIOSBase returns SMBIOS Table's base pointer.
+func SMBIOSBase() (int64, int64, error) {
+	base, size, err := SMBIOSBaseEFI()
 	if err != nil {
-		base, size, err = GetSMBIOSBaseLegacy()
+		base, size, err = SMBIOSBaseLegacy()
 		if err != nil {
 			return 0, 0, err
 		}
