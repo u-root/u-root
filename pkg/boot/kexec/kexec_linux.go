@@ -20,7 +20,7 @@ func Reboot() error {
 		d, err := watchdogd.Find()
 		if err != nil {
 			log.Printf("Error finding watchdog daemon: %v", err)
-		} else if err := d.Disarm(); err != nil {
+		} else if err := d.DisarmAndExit(); err != nil {
 			log.Printf("Error disarming watchdog: %v", err)
 		}
 	}

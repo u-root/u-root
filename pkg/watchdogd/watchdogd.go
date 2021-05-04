@@ -7,7 +7,7 @@
 //
 // It starts in the running+armed state:
 //
-//             \| watchdogd Running     | watchdogd Stopped
+//              | watchdogd Running     | watchdogd Stopped
 //     ---------+-----------------------+--------------------------
 //     Watchdog | watchdogd is actively | machine will soon reboot
 //     Armed    | keeping machine alive |
@@ -19,12 +19,14 @@
 //
 //     - STOP: running -> stopped
 //     - CONT: stopped -> running
+//     - INT:  running -> stopped and exit the daemon
 //     - USR1: armed -> disarmed
 //     - USR2: disarmed -> armed
 package watchdogd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -71,15 +73,15 @@ func MonitorOops() error {
 	return nil
 }
 
-// Run runs the watchdog on the current goroutine. The USR1, USR2, STOP and
-// CONT signals are used to control, so consider using a dedicated process.
+// Run runs the watchdog on the current goroutine. The USR1, USR2, INT, STOP
+// and CONT signals are used to control, so consider using a dedicated process.
 // Consider using the watchdogd command in u-root. Cancelling the context will
 // leave with the armed/disarmed state as is.
 func Run(ctx context.Context, opts *DaemonOpts) error {
 	defer log.Println("watchdogd: Daemon quit")
 
 	signals := make(chan os.Signal, 5)
-	signal.Notify(signals, unix.SIGUSR1, unix.SIGUSR2)
+	signal.Notify(signals, unix.SIGUSR1, unix.SIGUSR2, unix.SIGINT)
 	defer signal.Stop(signals)
 
 	for {
@@ -114,17 +116,20 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 					// Keep trying to pet until the watchdog times out.
 				}
 			case s := <-signals:
-				if s == unix.SIGUSR1 {
+				if s == unix.SIGUSR1 || s == unix.SIGINT {
+					if err := wd.MagicClose(); err != nil {
+						log.Printf("watchdog: Failed to disarm: %v", err)
+					} else {
+						log.Println("watchdog: Disarmed")
+					}
+					if s == unix.SIGINT {
+						return nil
+					}
 					break armed
 				}
 			case <-ctx.Done():
 				return wd.Close()
 			}
-		}
-		if err := wd.MagicClose(); err != nil {
-			log.Printf("watchdog: Failed to disarm: %v", err)
-		} else {
-			log.Println("watchdog: Disarmed")
 		}
 
 	disarmed: // Loop while disarmed. SIGUSR2 to break.
@@ -133,6 +138,9 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 			case s := <-signals:
 				if s == unix.SIGUSR2 {
 					break disarmed
+				}
+				if s == unix.SIGINT {
+					return nil
 				}
 			case <-ctx.Done():
 				return nil
@@ -215,6 +223,27 @@ func (d *Daemon) Continue() error {
 // Disarm sends a signal to the watchdog daemon to disarm.
 func (d *Daemon) Disarm() error {
 	return (*os.Process)(d).Signal(unix.SIGUSR1)
+}
+
+// DisarmAndShutdown sends a signal to the watchdog daemon to disarm and exit
+// the process. This is synchronizing. The calling process will wait until the
+// disarm has been completed.
+func (d *Daemon) DisarmAndExit() error {
+	p := (*os.Process)(d)
+	if err := p.Signal(unix.SIGINT); err != nil {
+		return err
+	}
+	// Poll because wait syscall only works for child processes. The
+	// watchdogd process should exit almost immediately. The timeout is
+	// used for the unlikely cases such as pid reuse.
+	timeout := time.NewTimer(2 * time.Second)
+	for len(timeout.C) == 0 {
+		if _, err := os.FindProcess(p.Pid); err != nil {
+			return nil
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return errors.New("error: watchdogd process never exited, watchdog may still be armed")
 }
 
 // Arm sends a signal to the watchdog deamon to arm.
