@@ -19,6 +19,7 @@ type PCI struct {
 	Addr       string
 	Vendor     string `pci:"vendor"`
 	Device     string `pci:"device"`
+	Class      string `pci:"class"`
 	VendorName string
 	DeviceName string
 	FullPath   string
@@ -38,7 +39,7 @@ type Status uint16
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.
 func (p *PCI) String() string {
-	return strings.Join(append([]string{fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
+	return strings.Join(append([]string{fmt.Sprintf("%s: %v: %v %v", p.Addr, p.Class, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
 }
 
 // SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
@@ -48,21 +49,13 @@ func (p *PCI) SetVendorDeviceName() {
 	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
 }
 
-// ReadConfig reads the config space and adds it to ExtraInfo as a hexdump.
-func (p *PCI) ReadConfig(n int) error {
+// ReadConfig reads the config space.
+func (p *PCI) ReadConfig() error {
 	dev := filepath.Join(p.FullPath, "config")
 	c, err := ioutil.ReadFile(dev)
 	if err != nil {
 		return err
 
-	}
-	// If we want more than 64 bytes, we MUST have read that or we're not
-	// uid(0)
-	if n > 64 && len(c) <= 64 {
-		return fmt.Errorf("Read %q for %d bytes: %v (do you need to be root?)", dev, n, os.ErrPermission)
-	}
-	if n < len(c) {
-		c = c[:n]
 	}
 	p.Config = c
 	p.Control = Control(binary.LittleEndian.Uint16(c[4:6]))
@@ -159,12 +152,17 @@ iter:
 				continue iter
 			}
 		}
-		if bus.confSize > 0 {
-			if err := p.ReadConfig(bus.confSize); err != nil {
-				return nil, err
-			}
-			p.SetVendorDeviceName()
+		// In the older versions of this package, reading was conditional.
+		// There is no harm done, and little performance lost, in just reading it.
+		// It's less than a millisecond.
+		// In all cases, the first 64 bits are visible, so setting vendor
+		// and device names is also no problem. If we can't read any bytes
+		// at all, that indicates a problem and it's worth passing that problem
+		// up to higher levels.
+		if err := p.ReadConfig(); err != nil {
+			return nil, err
 		}
+		p.SetVendorDeviceName()
 
 		devices = append(devices, p)
 	}

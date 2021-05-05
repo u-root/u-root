@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 )
 
 //Devices contains a slice of one or more PCI devices
@@ -21,6 +22,11 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 			return err
 		}
 		var extraNL bool
+		// Make sure we have read enough config space to satisfy the verbose and confSize requests.
+		// If len(pci.Config) is > 64, that's the only test we need.
+		if (verbose > 0 || confSize > 64) && len(pci.Config) <= 64 {
+			return os.ErrPermission
+		}
 		if verbose >= 1 {
 			if _, err := fmt.Fprintf(o, "\tControl: %s\n\tStatus: %s\n", pci.Control.String(), pci.Status.String()); err != nil {
 				return err
@@ -53,9 +59,9 @@ func (d Devices) SetVendorDeviceName() {
 }
 
 // ReadConfig reads the config info for all the devices.
-func (d Devices) ReadConfig(n int) error {
+func (d Devices) ReadConfig() error {
 	for _, p := range d {
-		if err := p.ReadConfig(n); err != nil {
+		if err := p.ReadConfig(); err != nil {
 			return err
 		}
 	}
