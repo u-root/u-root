@@ -5,6 +5,8 @@
 package pci
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 )
@@ -13,18 +15,29 @@ import (
 type Devices []*PCI
 
 // Print prints information to an io.Writer
-func (d Devices) Print(o io.Writer, verbose int) error {
+func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 	for _, pci := range d {
 		if _, err := fmt.Fprintf(o, "%s\n", pci.String()); err != nil {
 			return err
 		}
+		var extraNL bool
 		if verbose >= 1 {
 			if _, err := fmt.Fprintf(o, "\tControl: %s\n\tStatus: %s\n", pci.Control.String(), pci.Status.String()); err != nil {
 				return err
 			}
+			extraNL = true
 		}
 
-		if verbose > 0 {
+		if confSize > 0 {
+			r := io.LimitReader(bytes.NewBuffer(pci.Config), int64(confSize))
+			e := hex.Dumper(o)
+			if _, err := io.Copy(e, r); err != nil {
+				return err
+			}
+			extraNL = true
+		}
+		// lspci likes that extra line of separation
+		if extraNL {
 			fmt.Fprintf(o, "\n")
 		}
 	}
@@ -40,9 +53,9 @@ func (d Devices) SetVendorDeviceName() {
 }
 
 // ReadConfig reads the config info for all the devices.
-func (d Devices) ReadConfig() error {
+func (d Devices) ReadConfig(n int) error {
 	for _, p := range d {
-		if err := p.ReadConfig(); err != nil {
+		if err := p.ReadConfig(n); err != nil {
 			return err
 		}
 	}

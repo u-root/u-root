@@ -27,7 +27,7 @@ var crBits = []string{
 	"DisInt",
 }
 
-func (c *PCIControl) String() string {
+func (c *Control) String() string {
 	var s string
 	for i, n := range crBits {
 		if len(s) > 0 {
@@ -61,7 +61,7 @@ var stBits = []string{
 	"<PERR",
 }
 
-func (c *PCIStatus) String() string {
+func (c *Status) String() string {
 	var s string
 
 	for i, n := range stBits {

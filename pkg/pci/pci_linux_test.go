@@ -6,15 +6,16 @@ package pci
 
 import (
 	"log"
+	"os"
 	"testing"
 )
 
 func TestNewBusReaderNoGlob(t *testing.T) {
-	n, err := NewBusReader()
+	n, err := NewBusReader(0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	g, err := NewBusReader("*", "*")
+	g, err := NewBusReader(0, 0, "*", "*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +31,7 @@ func TestNewBusReaderNoGlob(t *testing.T) {
 }
 
 func TestBusReader(t *testing.T) {
-	n, err := NewBusReader()
+	n, err := NewBusReader(0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,17 +81,17 @@ func TestBusReader(t *testing.T) {
 }
 
 func TestBusReadConfig(t *testing.T) {
-	r, err := NewBusReader()
+	if os.Getuid() != 0 {
+		t.Skip("not root")
+	}
+
+	r, err := NewBusReader(0, 4096)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	d, err := r.Read()
-	if err != nil {
+	if _, err := r.Read(); err != nil {
 		log.Fatalf("Read: %v", err)
 	}
-	d.SetVendorDeviceName()
-	if err := d.ReadConfig(); err != nil {
-		log.Fatalf("ReadConfig: got %v, want nil", err)
-	}
+
 }

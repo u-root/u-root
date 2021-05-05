@@ -6,7 +6,6 @@ package pci
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,17 +23,17 @@ type PCI struct {
 	DeviceName string
 	FullPath   string
 	ExtraInfo  []string
-	config     []byte
+	Config     []byte
 	// The rest only gets filled in config space is read.
-	Control PCIControl
-	Status  PCIStatus
+	Control Control
+	Status  Status
 }
 
-// PCIControl configures how the device responds to operations. It is the 3rd 16-bit word.
-type PCIControl uint16
+// Control configures how the device responds to operations. It is the 3rd 16-bit word.
+type Control uint16
 
-// PCIStatus contains status bits for the PCI device. It is the 4th 16-bit word.
-type PCIStatus uint16
+// Status contains status bits for the PCI device. It is the 4th 16-bit word.
+type Status uint16
 
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.
@@ -50,15 +49,24 @@ func (p *PCI) SetVendorDeviceName() {
 }
 
 // ReadConfig reads the config space and adds it to ExtraInfo as a hexdump.
-func (p *PCI) ReadConfig() error {
-	c, err := ioutil.ReadFile(filepath.Join(p.FullPath, "config"))
+func (p *PCI) ReadConfig(n int) error {
+	dev := filepath.Join(p.FullPath, "config")
+	c, err := ioutil.ReadFile(dev)
 	if err != nil {
 		return err
+
 	}
-	p.config = c
-	p.ExtraInfo = append(p.ExtraInfo, hex.Dump(c))
-	p.Control = PCIControl(binary.LittleEndian.Uint16(c[4:6]))
-	p.Status = PCIStatus(binary.LittleEndian.Uint16(c[6:8]))
+	// If we want more than 64 bytes, we MUST have read that or we're not
+	// uid(0)
+	if n > 64 && len(c) <= 64 {
+		return fmt.Errorf("Read %q for %d bytes: %v (do you need to be root?)", dev, n, os.ErrPermission)
+	}
+	if n < len(c) {
+		c = c[:n]
+	}
+	p.Config = c
+	p.Control = Control(binary.LittleEndian.Uint16(c[4:6]))
+	p.Status = Status(binary.LittleEndian.Uint16(c[6:8]))
 	return nil
 }
 
@@ -78,7 +86,8 @@ func (r *barreg) Write(b []byte) (int, error) {
 // ReadConfigRegister reads a configuration register of size 8, 16, 32, or 64.
 // It will only work on little-endian machines.
 func (p *PCI) ReadConfigRegister(offset, size int64) (uint64, error) {
-	f, err := os.Open(filepath.Join(p.FullPath, "config"))
+	dev := filepath.Join(p.FullPath, "config")
+	f, err := os.Open(dev)
 	if err != nil {
 		return 0, err
 	}
@@ -150,6 +159,13 @@ iter:
 				continue iter
 			}
 		}
+		if bus.confSize > 0 {
+			if err := p.ReadConfig(bus.confSize); err != nil {
+				return nil, err
+			}
+			p.SetVendorDeviceName()
+		}
+
 		devices = append(devices, p)
 	}
 	return devices, nil

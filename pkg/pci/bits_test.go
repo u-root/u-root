@@ -8,7 +8,7 @@ import "testing"
 
 func TestControlBits(t *testing.T) {
 	var tests = []struct {
-		c PCIControl
+		c Control
 		w string
 	}{
 		{c: 0, w: "I/O- Memory- DMA- Special- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisInt-"},
@@ -29,7 +29,7 @@ func TestControlBits(t *testing.T) {
 
 func TestStatusBits(t *testing.T) {
 	var tests = []struct {
-		c PCIStatus
+		c Status
 		w string
 	}{
 		{c: 0, w: "INTx- Cap- 66MHz- UDF- FastB2b- ParErr- DEVSEL- DEVSEL=fast <MABORT- >SERR- <PERR-"},
