@@ -24,7 +24,17 @@ type PCI struct {
 	DeviceName string
 	FullPath   string
 	ExtraInfo  []string
+	config     []byte
+	// The rest only gets filled in config space is read.
+	Control PCIControl
+	Status  PCIStatus
 }
+
+// PCIControl configures how the device responds to operations. It is the 3rd 16-bit word.
+type PCIControl uint16
+
+// PCIStatus contains status bits for the PCI device. It is the 4th 16-bit word.
+type PCIStatus uint16
 
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.
@@ -45,7 +55,10 @@ func (p *PCI) ReadConfig() error {
 	if err != nil {
 		return err
 	}
+	p.config = c
 	p.ExtraInfo = append(p.ExtraInfo, hex.Dump(c))
+	p.Control = PCIControl(binary.LittleEndian.Uint16(c[4:6]))
+	p.Status = PCIStatus(binary.LittleEndian.Uint16(c[6:8]))
 	return nil
 }
 

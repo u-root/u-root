@@ -5,20 +5,30 @@
 package pci
 
 import (
-	"bytes"
+	"fmt"
+	"io"
 )
 
 //Devices contains a slice of one or more PCI devices
 type Devices []*PCI
 
-// String stringifies the PCI devices. Currently it just calls the device String().
-func (d Devices) String() string {
-	var buffer bytes.Buffer
+// Print prints information to an io.Writer
+func (d Devices) Print(o io.Writer, verbose int) error {
 	for _, pci := range d {
-		buffer.WriteString(pci.String())
-		buffer.WriteString("\n")
+		if _, err := fmt.Fprintf(o, "%s\n", pci.String()); err != nil {
+			return err
+		}
+		if verbose >= 1 {
+			if _, err := fmt.Fprintf(o, "\tControl: %s\n\tStatus: %s\n", pci.Control.String(), pci.Status.String()); err != nil {
+				return err
+			}
+		}
+
+		if verbose > 0 {
+			fmt.Fprintf(o, "\n")
+		}
 	}
-	return buffer.String()
+	return nil
 }
 
 // SetVendorDeviceName sets all numeric IDs of all the devices

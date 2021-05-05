@@ -5,6 +5,7 @@
 package pci
 
 import (
+	"log"
 	"testing"
 )
 
@@ -75,5 +76,21 @@ func TestBusReader(t *testing.T) {
 	// Check that the partitions add up.
 	if len(matches)+len(notMatches) != len(n.(*bus).Devices) {
 		t.Fatalf("Got %d+%d devices, wanted %d", len(matches), len(notMatches), len(n.(*bus).Devices))
+	}
+}
+
+func TestBusReadConfig(t *testing.T) {
+	r, err := NewBusReader()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	d, err := r.Read()
+	if err != nil {
+		log.Fatalf("Read: %v", err)
+	}
+	d.SetVendorDeviceName()
+	if err := d.ReadConfig(); err != nil {
+		log.Fatalf("ReadConfig: got %v, want nil", err)
 	}
 }

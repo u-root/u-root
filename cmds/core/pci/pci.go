@@ -14,9 +14,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -27,11 +29,13 @@ var (
 	numbers    = flag.Bool("n", false, "Show numeric IDs")
 	dumpConfig = flag.Bool("c", false, "Dump config space")
 	devs       = flag.String("s", "*", "Devices to match")
+	j          = flag.Bool("json", false, "Dump the bus in JSON")
 	format     = map[int]string{
 		32: "%08x:%08x",
 		16: "%08x:%04x",
 		8:  "%08x:%02x",
 	}
+	verbose = flag.Int("v", 0, "Verbosity level, 0 - to 1")
 )
 
 // maybe we need a better syntax than the standard pcitools?
@@ -117,14 +121,21 @@ func main() {
 		log.Fatalf("Read: %v", err)
 	}
 
-	if !*numbers {
+	if !*numbers || *j {
 		d.SetVendorDeviceName()
 	}
 	if len(flag.Args()) > 0 {
 		registers(d, flag.Args()...)
 	}
-	if *dumpConfig {
+	if *dumpConfig || *verbose > 0 || *j {
 		d.ReadConfig()
 	}
-	fmt.Print(d)
+	if *j {
+		o, err := json.MarshalIndent(d, "", "\t")
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		fmt.Printf("%s", string(o))
+	}
+	d.Print(os.Stdout, *verbose)
 }
