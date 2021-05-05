@@ -5,17 +5,18 @@
 package pci
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"testing"
 )
 
 func TestNewBusReaderNoGlob(t *testing.T) {
-	n, err := NewBusReader(0, 0)
+	n, err := NewBusReader()
 	if err != nil {
 		t.Fatal(err)
 	}
-	g, err := NewBusReader(0, 0, "*", "*")
+	g, err := NewBusReader("*", "*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +32,7 @@ func TestNewBusReaderNoGlob(t *testing.T) {
 }
 
 func TestBusReader(t *testing.T) {
-	n, err := NewBusReader(0, 0)
+	n, err := NewBusReader()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,17 +82,33 @@ func TestBusReader(t *testing.T) {
 }
 
 func TestBusReadConfig(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("not root")
+	var fullread bool
+	if os.Getuid() == 0 {
+		fullread = true
 	}
 
-	r, err := NewBusReader(0, 4096)
+	r, err := NewBusReader()
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
-	if _, err := r.Read(); err != nil {
+	d, err := r.Read()
+	if err != nil {
 		log.Fatalf("Read: %v", err)
+	}
+	var o = &bytes.Buffer{}
+	// First test is a low verbosity one that should only require 64 bytes.
+	if err := d.Print(o, 0, 64); err != nil {
+		log.Fatal(err)
+	}
+	// Second test is a bit more complex. If we are not root, it should
+	// get an error. If we are root, it should be ok.
+	err = d.Print(o, 0, 256)
+	if fullread && err != nil {
+		log.Fatalf("Doing a full config read as root: got %v, want nil", err)
+	}
+	if !fullread && err == nil {
+		log.Fatalf("Doing a full config read as ! root: got nil, want %v", os.ErrPermission)
 	}
 
 }

@@ -34,7 +34,7 @@ var (
 		16: "%08x:%04x",
 		8:  "%08x:%02x",
 	}
-	verbose  int
+	verbose            int
 	dumpSize, readSize int
 )
 
@@ -167,7 +167,7 @@ func main() {
 	if *j {
 		readSize = 4096
 	}
-	r, err := pci.NewBusReader(verbose, readSize, strings.Split(*devs, ",")...)
+	r, err := pci.NewBusReader(strings.Split(*devs, ",")...)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
