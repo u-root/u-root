@@ -18,7 +18,9 @@ const (
 )
 
 type bus struct {
-	Devices []string
+	Devices  []string
+	verbose  int
+	confSize int
 }
 
 func onePCI(dir string) (*PCI, error) {
@@ -45,7 +47,9 @@ func onePCI(dir string) (*PCI, error) {
 // If it can't glob in pciPath/g then it returns an error.
 // For convenience, we use * as the glob if none are supplied.
 // We don't provide an option to do type I or PCIe MMIO config stuff.
-func NewBusReader(globs ...string) (BusReader, error) {
+// The need for verbose and confsize options are not obvious but those settings
+// determine how much you need to read, and permissions may limit the reading.
+func NewBusReader(verbose, confSize int, globs ...string) (BusReader, error) {
 	if len(globs) == 0 {
 		globs = []string{"*"}
 	}
@@ -68,5 +72,5 @@ func NewBusReader(globs ...string) (BusReader, error) {
 	}
 	// sort. This might even sort like a shell would do it.
 	sort.Strings(exp)
-	return &bus{Devices: exp}, nil
+	return &bus{Devices: exp, verbose: verbose, confSize: confSize}, nil
 }

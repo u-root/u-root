@@ -26,16 +26,16 @@ import (
 )
 
 var (
-	numbers    = flag.Bool("n", false, "Show numeric IDs")
-	dumpConfig = flag.Bool("c", false, "Dump config space")
-	devs       = flag.String("s", "*", "Devices to match")
-	j          = flag.Bool("json", false, "Dump the bus in JSON")
-	format     = map[int]string{
+	numbers = flag.Bool("n", false, "Show numeric IDs")
+	devs    = flag.String("s", "*", "Devices to match")
+	j       = flag.Bool("json", false, "Dump the bus in JSON")
+	format  = map[int]string{
 		32: "%08x:%08x",
 		16: "%08x:%04x",
 		8:  "%08x:%02x",
 	}
-	verbose = flag.Int("v", 0, "Verbosity level, 0 - to 1")
+	verbose  int
+	dumpSize, readSize int
 )
 
 // maybe we need a better syntax than the standard pcitools?
@@ -109,16 +109,72 @@ func registers(d pci.Devices, cmds ...string) {
 
 	}
 }
+
+func readsize(want int) {
+	if want > readSize {
+		readSize = want
+	}
+}
+
+func dumpsize(want int) {
+	readsize(want)
+	if want > dumpSize {
+		dumpSize = want
+	}
+
+}
+
+func init() {
+	args := os.Args
+	os.Args = nil
+	// PCI command arguments and Go arguments are not very compatible.
+	// Look for certain patterns, and on match, discard them and note them.
+	// Consider doing this via regexp but, in the end, it's unlikely to be easier.
+	for _, a := range args {
+		switch a {
+		case "-v":
+			readsize(48)
+			verbose++
+		case "-vv":
+			readsize(256)
+			verbose = 2
+		case "-vvv":
+			readsize(4096)
+			verbose = 3
+		case "-x":
+			switch dumpSize {
+			case 0:
+				dumpsize(48)
+			case 1:
+				dumpsize(256)
+			case 2:
+				dumpsize(4096)
+			default:
+				dumpsize(4096)
+			}
+		case "-xxx":
+			dumpsize(256)
+		case "-xxxx":
+			dumpsize(4096)
+		default:
+			os.Args = append(os.Args, a)
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
-	r, err := pci.NewBusReader(strings.Split(*devs, ",")...)
+	if *j {
+		readSize = 4096
+	}
+	r, err := pci.NewBusReader(verbose, readSize, strings.Split(*devs, ",")...)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	d, err := r.Read()
 	if err != nil {
-		log.Fatalf("Read: %v", err)
+		log.Fatal(err)
 	}
 
 	if !*numbers || *j {
@@ -127,9 +183,6 @@ func main() {
 	if len(flag.Args()) > 0 {
 		registers(d, flag.Args()...)
 	}
-	if *dumpConfig || *verbose > 0 || *j {
-		d.ReadConfig()
-	}
 	if *j {
 		o, err := json.MarshalIndent(d, "", "\t")
 		if err != nil {
@@ -137,5 +190,7 @@ func main() {
 		}
 		fmt.Printf("%s", string(o))
 	}
-	d.Print(os.Stdout, *verbose)
+	if err := d.Print(os.Stdout, verbose, dumpSize); err != nil {
+		log.Fatal(err)
+	}
 }
