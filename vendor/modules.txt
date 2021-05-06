@@ -68,6 +68,8 @@ github.com/mdlayher/netlink
 github.com/mdlayher/netlink/nlenc
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
 github.com/mdlayher/raw
+# github.com/pborman/getopt/v2 v2.1.0
+github.com/pborman/getopt/v2
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/rck/unit v0.0.3
