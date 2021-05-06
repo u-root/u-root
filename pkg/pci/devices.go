@@ -24,12 +24,33 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 		var extraNL bool
 		// Make sure we have read enough config space to satisfy the verbose and confSize requests.
 		// If len(pci.Config) is > 64, that's the only test we need.
-		if (verbose > 1 || confSize > 64) && len(pci.Config) <= 64 {
+		if (verbose > 1 || confSize > 64) && len(pci.Config) < 256 {
 			return os.ErrPermission
 		}
 		if verbose >= 1 {
-			if _, err := fmt.Fprintf(o, "\tControl: %s\n\tStatus: %s\n", pci.Control.String(), pci.Status.String()); err != nil {
+			c := pci.Config
+			if _, err := fmt.Fprintf(o, "\tControl: %s\n\tStatus: %s\n\tLatency: %d", pci.Control.String(), pci.Status.String(), pci.Latency); err != nil {
 				return err
+			}
+			if pci.Bridge {
+				if _, err := fmt.Fprintf(o, ", Cache Line Size: %d bytes", c[CacheLineSize]); err != nil {
+					return err
+				}
+			}
+			fmt.Fprintf(o, "\n")
+			if pci.IRQPin != 0 {
+				if _, err := fmt.Fprintf(o, "\tInterrupt: pin %X routed to IRQ %s\n", 9+pci.IRQPin, pci.IRQLine); err != nil {
+					return err
+				}
+
+			}
+			if verbose >= 2 {
+				if !pci.Bridge {
+				} else {
+				}
+
+				//Latency: 0, Cache Line Size: 64 bytes
+				//Interrupt: pin D routed to IRQ 19
 			}
 			extraNL = true
 		}

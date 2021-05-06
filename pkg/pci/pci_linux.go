@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 const (
@@ -35,7 +36,8 @@ func onePCI(dir string) (*PCI, error) {
 			return nil, err
 		}
 		// Linux never understood /proc.
-		reflect.ValueOf(&pci).Elem().Field(ix).SetString(string(s[2 : len(s)-1]))
+		ss := strings.TrimSuffix(strings.TrimPrefix(string(s), "0x"), "\n")
+		reflect.ValueOf(&pci).Elem().Field(ix).SetString(ss)
 	}
 	pci.VendorName, pci.DeviceName = pci.Vendor, pci.Device
 	if n, ok := ClassNames[pci.Class]; ok {

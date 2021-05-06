@@ -22,6 +22,10 @@ type PCI struct {
 	Class      string `pci:"class"`
 	VendorName string
 	DeviceName string
+	Latency    byte
+	IRQPin     byte
+	IRQLine    string `pci:"irq"`
+	Bridge     bool
 	FullPath   string
 	ExtraInfo  []string
 	Config     []byte
@@ -164,6 +168,13 @@ iter:
 		}
 		p.SetVendorDeviceName()
 
+		c := p.Config
+		// Fill in whatever random stuff we can, from the base config.
+		p.Latency = c[LatencyTimer]
+		if c[HeaderType]&HeaderTypeMask == HeaderTypeBridge {
+			p.Bridge = true
+		}
+		p.IRQPin = c[IRQPin]
 		devices = append(devices, p)
 	}
 	return devices, nil
