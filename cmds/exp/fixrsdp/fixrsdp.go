@@ -47,9 +47,10 @@ func main() {
 
 	fd := int(f.Fd())
 	if err = syscall.Flock(fd, syscall.LOCK_EX); err != nil {
-		log.Fatalf("File lock of /dev/mem failed: %v", err)
+		log.Printf("WARNING: File lock of /dev/mem failed: %v", err)
+	} else {
+		defer syscall.Flock(fd, syscall.LOCK_UN)
 	}
-	defer syscall.Flock(fd, syscall.LOCK_UN)
 
 	e, err := ebda.ReadEBDA(f)
 	if err != nil {
