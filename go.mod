@@ -23,6 +23,7 @@ require (
 	github.com/klauspost/pgzip v1.2.4
 	github.com/kr/pty v1.1.8
 	github.com/mattn/go-isatty v0.0.12
+	github.com/pborman/getopt/v2 v2.1.0
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664

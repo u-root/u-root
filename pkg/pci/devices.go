@@ -24,7 +24,7 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 		var extraNL bool
 		// Make sure we have read enough config space to satisfy the verbose and confSize requests.
 		// If len(pci.Config) is > 64, that's the only test we need.
-		if (verbose > 0 || confSize > 64) && len(pci.Config) <= 64 {
+		if (verbose > 1 || confSize > 64) && len(pci.Config) <= 64 {
 			return os.ErrPermission
 		}
 		if verbose >= 1 {
