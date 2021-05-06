@@ -46,3 +46,28 @@ func TestStatusBits(t *testing.T) {
 	}
 
 }
+
+func TestBAR(t *testing.T) {
+	var tests = []struct {
+		bar BAR
+		res string
+	}{
+		{bar: "0x0000000000001860 0x0000000000001867 0x0000000000040101", res: "I/O ports at 1860 [size=8]"},
+		{bar: "0x0000000000001814 0x0000000000001817 0x0000000000040101", res: "I/O ports at 1814 [size=4]"},
+		{bar: "0x0000000000001818 0x000000000000181f 0x0000000000040101", res: "I/O ports at 1818 [size=8]"},
+		{bar: "0x0000000000001810 0x0000000000001813 0x0000000000040101", res: "I/O ports at 1810 [size=4]"},
+		{bar: "0x0000000000001840 0x000000000000185f 0x0000000000040101", res: "I/O ports at 1840 [size=32]"},
+		{bar: "0x00000000f2827000 0x00000000f28277ff 0x0000000000040200", res: "Memory at f2827000 (32-bit, non-prefetchable) [size=0x800]"},
+		{bar: "0x0000000000000000 0x0000000000000000 0x0000000000000000", res: "Memory at 00000000 (32-bit, non-prefetchable) [size=0x1]"},
+		{bar: "z 0x0000000000080000 0x0000000000000000", res: "Could not parse \"z 0x0000000000080000 0x0000000000000000\""},
+		{bar: " 0x0000000000080000 0x0000000000000000", res: "Could not parse \" 0x0000000000080000 0x0000000000000000\""},
+		{bar: "0x0000000000000000 0x0000000000000000 0x000000000000000f", res: "Can't get type from \"0x0000000000000000 0x0000000000000000 0x000000000000000f\""},
+	}
+	for _, tt := range tests {
+		s := tt.bar.String()
+		if s != tt.res {
+			t.Errorf("BAR %s: got \n%q, want \n%q", tt.bar, s, tt.res)
+		}
+	}
+
+}

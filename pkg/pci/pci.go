@@ -30,15 +30,15 @@ type PCI struct {
 	ExtraInfo  []string
 	Config     []byte
 	// The rest only gets filled in config space is read.
-	Control Control
-	Status  Status
+	// Type 0
+	Control  Control
+	Status   Status
+	Resource string `pci:"resource"`
+	BARS     []string
+
+	// Type 1
+
 }
-
-// Control configures how the device responds to operations. It is the 3rd 16-bit word.
-type Control uint16
-
-// Status contains status bits for the PCI device. It is the 4th 16-bit word.
-type Status uint16
 
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.

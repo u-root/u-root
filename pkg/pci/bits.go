@@ -6,6 +6,8 @@ package pci
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // bit puller-aparters. There's a case to be made for the usual tables
@@ -27,6 +29,7 @@ var crBits = []string{
 	"DisInt",
 }
 
+// String implements Stringer.
 func (c *Control) String() string {
 	var s string
 	for i, n := range crBits {
@@ -61,6 +64,7 @@ var stBits = []string{
 	"<PERR",
 }
 
+// String implements Stringer.
 func (c *Status) String() string {
 	var s string
 
@@ -90,4 +94,47 @@ func (c *Status) String() string {
 		}
 	}
 	return s
+}
+
+// String implements Stringer.
+func (bar *BAR) String() string {
+	// Gaul was divided into three parts.
+	// So are the BARs.
+	b := strings.Fields(string(*bar))
+	// If the bar is not something that matches the known format,
+	// your kernel is broken. Just return something to be printed.
+	if len(b) != 3 {
+		return fmt.Sprintf("Could not parse %q", string(*bar))
+	}
+	// The type is the last byte of the 3rd field.
+	// Kind of wish there were a substring operator that
+	// Did All The Right Things.
+	t := b[2][len(b[2])-1:]
+	var typ string
+	switch t {
+	case "0":
+		typ = "Memory at %08x (32-bit, non-prefetchable) [size=%#x]"
+	case "1":
+		typ = "I/O ports at %04x [size=%d]"
+	case "4":
+		typ = "Memory at %08x (32-bit, non-prefetchable) [size=%#x]"
+	case "8":
+		typ = "Memory at %08x (32-bit, prefetchable) [size=%#x]"
+	case "c":
+		typ = "Memory at %016x (64-bit, prefetchable) [size=%#x]"
+	default:
+		return fmt.Sprintf("Can't get type from %q", string(*bar))
+	}
+	base, err := strconv.ParseUint(b[0], 0, 0)
+	if err != nil {
+		return fmt.Sprintf("Could not parse %q", string(*bar))
+		base = 0
+	}
+	end, err := strconv.ParseUint(b[1], 0, 0)
+	if err != nil {
+		return fmt.Sprintf("Could not parse %q", string(*bar))
+		end = 0
+	}
+	sz := end - base + 1
+	return fmt.Sprintf(typ, base, sz)
 }

@@ -43,6 +43,7 @@ func onePCI(dir string) (*PCI, error) {
 	if n, ok := ClassNames[pci.Class]; ok {
 		pci.Class = n
 	}
+	pci.BARS = strings.Split(pci.Resource, "\n")
 	return &pci, nil
 }
 

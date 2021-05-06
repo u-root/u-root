@@ -22,3 +22,25 @@ type Vendor struct {
 
 // Device is a PCI device human readable label
 type Device string
+
+// Control configures how the device responds to operations. It is the 3rd 16-bit word.
+type Control uint16
+
+// Status contains status bits for the PCI device. It is the 4th 16-bit word.
+type Status uint16
+
+// BAR is a base address register. It can be a 32- or 64-bit quantity.
+// Do you know that PCI was designed by DEC, in the time of Alpha, a 64-bit
+// machine, and yet it's still full of 32-bit isms?
+// Here's the good news: we don't have to care, since it is
+// present as an array of strings in sysfs!
+type BAR string
+
+// ROM is the expansion ROM type. 32-bit by design.
+type ROM uint32
+
+// BridgeCtl is the Bridge Control register.
+type BridgeCtl uint16
+
+// BridgeStatus is the Bridge Status register.
+type BridgeStatus uint16
