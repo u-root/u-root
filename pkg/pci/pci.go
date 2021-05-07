@@ -34,7 +34,7 @@ type PCI struct {
 	Control  Control
 	Status   Status
 	Resource string `pci:"resource"`
-	BARS     []string
+	BARS     []BAR
 
 	// Type 1
 

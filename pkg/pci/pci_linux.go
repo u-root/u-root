@@ -36,14 +36,20 @@ func onePCI(dir string) (*PCI, error) {
 			return nil, err
 		}
 		// Linux never understood /proc.
-		ss := strings.TrimSuffix(strings.TrimPrefix(string(s), "0x"), "\n")
+		// Anyway, bar is special.
+		ss := strings.TrimSuffix(string(s), "\n")
+		if n != "resource" {
+			ss = strings.TrimPrefix(ss, "0x")
+		}
 		reflect.ValueOf(&pci).Elem().Field(ix).SetString(ss)
 	}
 	pci.VendorName, pci.DeviceName = pci.Vendor, pci.Device
 	if n, ok := ClassNames[pci.Class]; ok {
 		pci.Class = n
 	}
-	pci.BARS = strings.Split(pci.Resource, "\n")
+	for _, b := range strings.Split(pci.Resource, "\n") {
+		pci.BARS = append(pci.BARS, BAR(b))
+	}
 	return &pci, nil
 }
 

@@ -117,23 +117,21 @@ func (bar *BAR) String() string {
 	case "1":
 		typ = "I/O ports at %04x [size=%d]"
 	case "4":
-		typ = "Memory at %08x (32-bit, non-prefetchable) [size=%#x]"
+		typ = "Memory at %08x (64-bit, non-prefetchable) [size=%#x]"
 	case "8":
 		typ = "Memory at %08x (32-bit, prefetchable) [size=%#x]"
 	case "c":
-		typ = "Memory at %016x (64-bit, prefetchable) [size=%#x]"
+		typ = "Memory at %08x (64-bit, prefetchable) [size=%#x]"
 	default:
 		return fmt.Sprintf("Can't get type from %q", string(*bar))
 	}
 	base, err := strconv.ParseUint(b[0], 0, 0)
 	if err != nil {
 		return fmt.Sprintf("Could not parse %q", string(*bar))
-		base = 0
 	}
 	end, err := strconv.ParseUint(b[1], 0, 0)
 	if err != nil {
 		return fmt.Sprintf("Could not parse %q", string(*bar))
-		end = 0
 	}
 	sz := end - base + 1
 	return fmt.Sprintf(typ, base, sz)

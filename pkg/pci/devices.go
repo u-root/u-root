@@ -44,6 +44,18 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				}
 
 			}
+			if !pci.Bridge {
+				for i, b := range pci.BARS {
+					if b == "0x0000000000000000 0x0000000000000000 0x0000000000000000" {
+						continue
+					}
+
+					if _, err := fmt.Fprintf(o, "\tRegion %d: %v\n", i, b.String()); err != nil {
+						return err
+					}
+				}
+
+			}
 			if verbose >= 2 {
 				if !pci.Bridge {
 				} else {
