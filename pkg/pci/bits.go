@@ -106,6 +106,15 @@ func (bar *BAR) String() string {
 	if len(b) != 3 {
 		return fmt.Sprintf("Could not parse %q", string(*bar))
 	}
+	base, err := strconv.ParseUint(b[0], 0, 0)
+	if err != nil {
+		return fmt.Sprintf("Could not parse %q", string(*bar))
+	}
+	end, err := strconv.ParseUint(b[1], 0, 0)
+	if err != nil {
+		return fmt.Sprintf("Could not parse %q", string(*bar))
+	}
+
 	// The type is the last byte of the 3rd field.
 	// Kind of wish there were a substring operator that
 	// Did All The Right Things.
@@ -116,6 +125,16 @@ func (bar *BAR) String() string {
 		typ = "Memory at %08x (32-bit, non-prefetchable) [size=%#x]"
 	case "1":
 		typ = "I/O ports at %04x [size=%d]"
+	case "2":
+		typ = "Memory at %08x (32-bit, low 1Mbyte, non-prefetchable) [size=%#x]"
+		if base < 0x100000 && base >= 0xc0000 {
+			typ = "Expansion ROM at %08x (low 1Mbyte) [size=%#x]"
+			if base&1 == 0 {
+				typ = "(Disabled)" + typ
+			} else {
+				base--
+			}
+		}
 	case "4":
 		typ = "Memory at %08x (64-bit, non-prefetchable) [size=%#x]"
 	case "8":
@@ -124,14 +143,6 @@ func (bar *BAR) String() string {
 		typ = "Memory at %08x (64-bit, prefetchable) [size=%#x]"
 	default:
 		return fmt.Sprintf("Can't get type from %q", string(*bar))
-	}
-	base, err := strconv.ParseUint(b[0], 0, 0)
-	if err != nil {
-		return fmt.Sprintf("Could not parse %q", string(*bar))
-	}
-	end, err := strconv.ParseUint(b[1], 0, 0)
-	if err != nil {
-		return fmt.Sprintf("Could not parse %q", string(*bar))
 	}
 	sz := end - base + 1
 	return fmt.Sprintf(typ, base, sz)
