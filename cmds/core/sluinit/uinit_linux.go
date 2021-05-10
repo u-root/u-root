@@ -17,6 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/dhclient"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
@@ -177,6 +178,10 @@ func parseEventLog(p *policy.Policy) error {
 // dumpLogs writes out any pending logs to a file on disk.
 func dumpLogs() error {
 	printStep("Dump logs to disk")
+
+	if err := eventlog.ParseEventLog(); err != nil {
+		return fmt.Errorf("failed to parse event log: %w", err)
+	}
 
 	if err := slaunch.ClearPersistQueue(); err != nil {
 		return fmt.Errorf("failed to clear persist queue: %w", err)
