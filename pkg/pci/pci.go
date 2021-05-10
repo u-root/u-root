@@ -40,6 +40,7 @@ type PCI struct {
 	Primary     string
 	Secondary   string
 	Subordinate string
+	SecLatency  string
 	IO          BAR
 	Mem         BAR
 	PrefMem     BAR
@@ -183,6 +184,7 @@ iter:
 		p.Primary = fmt.Sprintf("%02x", c[Primary])
 		p.Secondary = fmt.Sprintf("%02x", c[Secondary])
 		p.Subordinate = fmt.Sprintf("%02x", c[Subordinate])
+		p.SecLatency = fmt.Sprintf("%02x", c[SecondaryLatency])
 
 		devices = append(devices, p)
 	}

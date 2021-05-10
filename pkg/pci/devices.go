@@ -40,6 +40,10 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				if _, err := fmt.Fprintf(o, ", Cache Line Size: %d bytes", c[CacheLineSize]); err != nil {
 					return err
 				}
+				if _, err := fmt.Fprintf(o, "\n\tBus: primary=%s, secondary=%s, subordinate=%s, sec-latency=%s",
+					pci.Primary, pci.Secondary, pci.Subordinate, pci.SecLatency); err != nil {
+					return err
+				}
 				// I hate this code.
 				// I miss Rust tuples at times.
 				for _, e := range []struct {
