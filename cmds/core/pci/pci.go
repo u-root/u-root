@@ -16,6 +16,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -112,6 +113,7 @@ func main() {
 	j := flag.BoolLong("json", 'j', "Dump the bus in JSON")
 	v := flag.Counter('v', "verbosity")
 	x := flag.Counter('x', "hexdump the config space")
+	readJSON := flag.StringLong("JSON", 'J', "", "Read JSON in instead of /sys")
 
 	flag.Parse()
 
@@ -130,9 +132,20 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 
-	d, err := r.Read()
-	if err != nil {
-		log.Fatal(err)
+	var d pci.Devices
+	if len(*readJSON) != 0 {
+		b, err := ioutil.ReadFile(*readJSON)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.Unmarshal(b, &d); err != nil {
+			log.Fatal(err)
+		}
+
+	} else {
+		if d, err = r.Read(); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if !*numbers || *j {
@@ -147,6 +160,7 @@ func main() {
 			log.Fatalf("%v", err)
 		}
 		fmt.Printf("%s", string(o))
+		os.Exit(0)
 	}
 	if err := d.Print(os.Stdout, *v, dumpSize); err != nil {
 		log.Fatal(err)
