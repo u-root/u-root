@@ -49,25 +49,34 @@ func TestStatusBits(t *testing.T) {
 
 func TestBAR(t *testing.T) {
 	var tests = []struct {
-		bar BAR
+		bar string
 		res string
+		err string
 	}{
-		{bar: "0x0000000000001860 0x0000000000001867 0x0000000000040101", res: "I/O ports at 1860 [size=8]"},
-		{bar: "0x0000000000001814 0x0000000000001817 0x0000000000040101", res: "I/O ports at 1814 [size=4]"},
-		{bar: "0x0000000000001818 0x000000000000181f 0x0000000000040101", res: "I/O ports at 1818 [size=8]"},
-		{bar: "0x0000000000001810 0x0000000000001813 0x0000000000040101", res: "I/O ports at 1810 [size=4]"},
-		{bar: "0x0000000000001840 0x000000000000185f 0x0000000000040101", res: "I/O ports at 1840 [size=32]"},
-		{bar: "0x00000000f2827000 0x00000000f28277ff 0x0000000000040200", res: "Memory at f2827000 (32-bit, non-prefetchable) [size=0x800]"},
-		{bar: "0x0000000000000000 0x0000000000000000 0x0000000000000000", res: "Memory at 00000000 (32-bit, non-prefetchable) [size=0x1]"},
-		{bar: "z 0x0000000000080000 0x0000000000000000", res: "Could not parse \"z 0x0000000000080000 0x0000000000000000\""},
-		{bar: " 0x0000000000080000 0x0000000000000000", res: "Could not parse \" 0x0000000000080000 0x0000000000000000\""},
-		{bar: "0x0000000000000000 0x0000000000000000 0x000000000000000f", res: "Can't get type from \"0x0000000000000000 0x0000000000000000 0x000000000000000f\""},
-		{bar: "0x00000000000c0000 0x00000000000dffff 0x0000000000000212", res: "(Disabled)Expansion ROM at 000c0000 (low 1Mbyte) [size=0x20000]"},
-		{bar: "0x00000000000c0001 0x00000000000dffff 0x0000000000000212", res: "Expansion ROM at 000c0000 (low 1Mbyte) [size=0x20000]"},
-		{bar: "0x0000000000080000 0x000000000008ffff 0x0000000000000212", res: "Memory at 00080000 (32-bit, low 1Mbyte, non-prefetchable) [size=0x10000]"},
+		{bar: "0x0000000000001860 0x0000000000001867 0x0000000000040101", res: "Region 0: I/O ports at 1860 [size=8]"},
+		{bar: "0x0000000000001814 0x0000000000001817 0x0000000000040101", res: "Region 1: I/O ports at 1814 [size=4]"},
+		{bar: "0x0000000000001818 0x000000000000181f 0x0000000000040101", res: "Region 2: I/O ports at 1818 [size=8]"},
+		{bar: "0x0000000000001810 0x0000000000001813 0x0000000000040101", res: "Region 3: I/O ports at 1810 [size=4]"},
+		{bar: "0x0000000000001840 0x000000000000185f 0x0000000000040101", res: "Region 4: I/O ports at 1840 [size=32]"},
+		{bar: "0x00000000f2827000 0x00000000f28277ff 0x0000000000040200", res: "Region 5: Memory at f2827000 (32-bit, non-prefetchable) [size=0x800]"},
+		{bar: "0x0000000000000000 0x0000000000000000 0x0000000000000000", res: ""},
+		{bar: "z 0x0000000000080000 0x0000000000000000", res: "", err: "strconv.ParseUint: parsing \"z\": invalid syntax"},
+		{bar: " 0x0000000000080000 0x0000000000000000", res: "", err: "bar \" 0x0000000000080000 0x0000000000000000\" should have 3 fields"},
+		//		{bar: "0x0000000000000000 0x0000000000000000 0x000000000000000f", res: "Region 1: Can't get type from \"0x0000000000000000 0x0000000000000000 0x000000000000000f\""},
+		{bar: "0x00000000000c0000 0x00000000000dffff 0x0000000000000212", res: "Region 9: (Disabled)Expansion ROM at 000c0000 (low 1Mbyte) [size=0x20000]"},
+		{bar: "0x00000000000c0001 0x00000000000dffff 0x0000000000000212", res: "Region 10: Expansion ROM at 000c0000 (low 1Mbyte) [size=0x20000]"},
+		{bar: "0x0000000000080000 0x000000000008ffff 0x0000000000000212", res: "Region 11: Memory at 00080000 (32-bit, low 1Mbyte, non-prefetchable) [size=0x10000]"},
 	}
-	for _, tt := range tests {
-		s := tt.bar.String()
+	for i, tt := range tests {
+		b, l, a, err := BaseLimType(tt.bar)
+		if err != nil && err.Error() != tt.err {
+			t.Errorf("BAR %s: got error \n%q, want \n%q", tt.bar, err, tt.err)
+		}
+		if err == nil && len(tt.err) != 0 {
+			t.Errorf("BAR %s: got nil, want \n%q", tt.bar, tt.err)
+		}
+		bar := BAR{Index: i, Base: b, Lim: l, Attr: a}
+		s := bar.String()
 		if s != tt.res {
 			t.Errorf("BAR %s: got \n%q, want \n%q", tt.bar, s, tt.res)
 		}
