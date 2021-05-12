@@ -38,7 +38,7 @@ type TimeStamps struct {
 	TS []TS
 }
 
-// Header is the comment cbmem header.
+// Header is the common cbmem header.
 type Header struct {
 	Signature    [4]uint8
 	HeaderSz     uint32
