@@ -3,8 +3,6 @@ module github.com/u-root/u-root
 go 1.13
 
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
-	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/beevik/ntp v0.3.0
 	github.com/cenkalti/backoff/v4 v4.0.2
@@ -40,7 +38,6 @@ require (
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba
 	google.golang.org/grpc v1.29.1 // indirect
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.2.2
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
