@@ -33,8 +33,35 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				return err
 			}
 			if pci.Bridge {
+				// Bus: primary=00, secondary=05, subordinate=0c, sec-latency=0
+				// I/O behind bridge: 00002000-00002fff [size=4K]
+				// Memory behind bridge: f0000000-f1ffffff [size=32M]
+				// Prefetchable memory behind bridge: 00000000f2900000-00000000f29fffff [size=1M]
 				if _, err := fmt.Fprintf(o, ", Cache Line Size: %d bytes", c[CacheLineSize]); err != nil {
 					return err
+				}
+				if _, err := fmt.Fprintf(o, "\n\tBus: primary=%s, secondary=%s, subordinate=%s, sec-latency=%s",
+					pci.Primary, pci.Secondary, pci.Subordinate, pci.SecLatency); err != nil {
+					return err
+				}
+				// I hate this code.
+				// I miss Rust tuples at times.
+				for _, e := range []struct {
+					h, f string
+					b, l uint64
+				}{
+					{"\n\tI/O behind bridge: ", "%#08x-%#08x [size=%#x]", pci.IO.Base, pci.IO.Lim},
+					{"\n\tMemory behind bridge: ", "%#08x-%#08x [size=%#x]", pci.Mem.Base, pci.Mem.Lim},
+					{"\n\tPrefetchable memory behind bridge: ", "%#08x-%#08x [size=%#x]", pci.PrefMem.Base, pci.PrefMem.Lim},
+				} {
+					s := e.h + " [disabled]"
+					if e.b != 0 {
+						sz := e.l - e.b + 1
+						s = fmt.Sprintf(e.h+e.f, e.b, e.l, sz)
+					}
+					if _, err := fmt.Fprintf(o, s); err != nil {
+						return err
+					}
 				}
 			}
 			fmt.Fprintf(o, "\n")
@@ -45,12 +72,8 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 
 			}
 			if !pci.Bridge {
-				for i, b := range pci.BARS {
-					if b == "0x0000000000000000 0x0000000000000000 0x0000000000000000" {
-						continue
-					}
-
-					if _, err := fmt.Fprintf(o, "\tRegion %d: %v\n", i, b.String()); err != nil {
+				for _, b := range pci.BARS {
+					if _, err := fmt.Fprintf(o, "\t%v\n", b.String()); err != nil {
 						return err
 					}
 				}

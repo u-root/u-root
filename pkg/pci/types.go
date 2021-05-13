@@ -34,7 +34,16 @@ type Status uint16
 // machine, and yet it's still full of 32-bit isms?
 // Here's the good news: we don't have to care, since it is
 // present as an array of strings in sysfs!
-type BAR string
+type BAR struct {
+	// Index is the index of this resource in the resource list.
+	Index int
+	// Base is the base, derived (usually) from the resource
+	Base uint64
+	// Lim is the limit.
+	Lim uint64
+	// Attr are attributes of this BAR
+	Attr uint64
+}
 
 // ROM is the expansion ROM type. 32-bit by design.
 type ROM uint32
