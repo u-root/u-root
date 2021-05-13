@@ -401,8 +401,8 @@ func main() {
 		log.Fatalf("No coreboot table found")
 	}
 
-	if timestamps {
-		ts := cbmem.TimeStamps
+	ts := cbmem.TimeStamps
+	if timestamps && ts != nil {
 
 		// Format in tab-separated columns with a tab stop of 8.
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
