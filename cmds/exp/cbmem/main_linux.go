@@ -238,14 +238,14 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				// u32 cursor;
 				// u8  body[0];
 				// The cbmem size is a guess.
-				cr, err := newOffsetReader(f, cbcons, 1048576)
+				cr, err := newOffsetReader(f, cbcons, 8)
 				if err != nil {
 					return nil, found, err
 				}
-
 				if err := readOne(cr, &c.Size, cbcons); err != nil {
 					return nil, found, err
 				}
+
 				cbcons += int64(reflect.TypeOf(c.Size).Size())
 				if err := readOne(cr, &c.Cursor, cbcons); err != nil {
 					return nil, found, err
@@ -253,23 +253,42 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
 				debug("CSize is %#x, and Cursor is at %#x", c.CSize, c.Cursor)
 				//p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
-				curse := c.Cursor & CBMC_CURSOR_MASK
-				sz := c.Size
-				if (c.Cursor&CBMC_OVERFLOW) == 0 && curse < c.Size {
-					sz = curse
-				}
+				sz := int(c.Size)
 
-				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
-				data := make([]byte, sz)
-				if err := readOne(cr, data, cbcons); err != nil {
+				cr, err = newOffsetReader(f, cbcons, sz)
+				if err != nil {
 					return nil, found, err
 				}
-				if (c.Cursor & CBMC_OVERFLOW) != 0 {
+
+				curse := int(c.Cursor & CBMC_CURSOR_MASK)
+				data := make([]byte, sz)
+				// This one is easy. Read from 0 to the cursor.
+				if c.Cursor&CBMC_OVERFLOW == 0 {
+					if curse < int(c.Size) {
+						sz = curse
+						data = data[:sz]
+					}
+
+					debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
+
+					if n, err := cr.ReadAt(data, cbcons); err != nil || n != len(data) {
+						return nil, found, err
+					}
+				} else {
+					debug("CSize is %#x, and Cursor is at %#x", curse, sz)
+					// This should not happen, but that means that it WILL happen
+					// some day ...
 					if curse > sz {
-						log.Printf("cursor is %d, and size is %d: things could be bad", curse, sz)
 						curse = 0
 					}
-					data = append(data[curse:], data[:curse]...)
+					off := cbcons + int64(curse)
+					if n, err := cr.ReadAt(data[:curse], off); err != nil || n != len(data[:curse]) {
+						return nil, found, err
+					}
+					if n, err := cr.ReadAt(data[curse:], cbcons); err != nil || n != len(data[curse:]) {
+						debug("2nd read: %v", err)
+						return nil, found, err
+					}
 				}
 
 				c.Data = string(data)

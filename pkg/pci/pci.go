@@ -34,10 +34,16 @@ type PCI struct {
 	Control  Control
 	Status   Status
 	Resource string `pci:"resource"`
-	BARS     []BAR
+	BARS     []BAR  `json:"omitempty"`
 
 	// Type 1
-
+	Primary     string
+	Secondary   string
+	Subordinate string
+	SecLatency  string
+	IO          BAR
+	Mem         BAR
+	PrefMem     BAR
 }
 
 // String concatenates PCI address, Vendor, and Device and other information
@@ -175,6 +181,11 @@ iter:
 			p.Bridge = true
 		}
 		p.IRQPin = c[IRQPin]
+		p.Primary = fmt.Sprintf("%02x", c[Primary])
+		p.Secondary = fmt.Sprintf("%02x", c[Secondary])
+		p.Subordinate = fmt.Sprintf("%02x", c[Subordinate])
+		p.SecLatency = fmt.Sprintf("%02x", c[SecondaryLatency])
+
 		devices = append(devices, p)
 	}
 	return devices, nil
