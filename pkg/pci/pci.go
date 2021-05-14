@@ -6,7 +6,6 @@ package pci
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -20,26 +19,37 @@ type PCI struct {
 	Addr       string
 	Vendor     string `pci:"vendor"`
 	Device     string `pci:"device"`
+	Class      string `pci:"class"`
 	VendorName string
 	DeviceName string
+	Latency    byte
+	IRQPin     byte
+	IRQLine    string `pci:"irq"`
+	Bridge     bool
 	FullPath   string
 	ExtraInfo  []string
-	config     []byte
+	Config     []byte
 	// The rest only gets filled in config space is read.
-	Control PCIControl
-	Status  PCIStatus
+	// Type 0
+	Control  Control
+	Status   Status
+	Resource string `pci:"resource"`
+	BARS     []BAR  `json:"omitempty"`
+
+	// Type 1
+	Primary     string
+	Secondary   string
+	Subordinate string
+	SecLatency  string
+	IO          BAR
+	Mem         BAR
+	PrefMem     BAR
 }
-
-// PCIControl configures how the device responds to operations. It is the 3rd 16-bit word.
-type PCIControl uint16
-
-// PCIStatus contains status bits for the PCI device. It is the 4th 16-bit word.
-type PCIStatus uint16
 
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.
 func (p *PCI) String() string {
-	return strings.Join(append([]string{fmt.Sprintf("%s: %v %v", p.Addr, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
+	return strings.Join(append([]string{fmt.Sprintf("%s: %v: %v %v", p.Addr, p.Class, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
 }
 
 // SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
@@ -49,16 +59,17 @@ func (p *PCI) SetVendorDeviceName() {
 	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
 }
 
-// ReadConfig reads the config space and adds it to ExtraInfo as a hexdump.
+// ReadConfig reads the config space.
 func (p *PCI) ReadConfig() error {
-	c, err := ioutil.ReadFile(filepath.Join(p.FullPath, "config"))
+	dev := filepath.Join(p.FullPath, "config")
+	c, err := ioutil.ReadFile(dev)
 	if err != nil {
 		return err
+
 	}
-	p.config = c
-	p.ExtraInfo = append(p.ExtraInfo, hex.Dump(c))
-	p.Control = PCIControl(binary.LittleEndian.Uint16(c[4:6]))
-	p.Status = PCIStatus(binary.LittleEndian.Uint16(c[6:8]))
+	p.Config = c
+	p.Control = Control(binary.LittleEndian.Uint16(c[4:6]))
+	p.Status = Status(binary.LittleEndian.Uint16(c[6:8]))
 	return nil
 }
 
@@ -78,7 +89,8 @@ func (r *barreg) Write(b []byte) (int, error) {
 // ReadConfigRegister reads a configuration register of size 8, 16, 32, or 64.
 // It will only work on little-endian machines.
 func (p *PCI) ReadConfigRegister(offset, size int64) (uint64, error) {
-	f, err := os.Open(filepath.Join(p.FullPath, "config"))
+	dev := filepath.Join(p.FullPath, "config")
+	f, err := os.Open(dev)
 	if err != nil {
 		return 0, err
 	}
@@ -150,6 +162,30 @@ iter:
 				continue iter
 			}
 		}
+		// In the older versions of this package, reading was conditional.
+		// There is no harm done, and little performance lost, in just reading it.
+		// It's less than a millisecond.
+		// In all cases, the first 64 bits are visible, so setting vendor
+		// and device names is also no problem. If we can't read any bytes
+		// at all, that indicates a problem and it's worth passing that problem
+		// up to higher levels.
+		if err := p.ReadConfig(); err != nil {
+			return nil, err
+		}
+		p.SetVendorDeviceName()
+
+		c := p.Config
+		// Fill in whatever random stuff we can, from the base config.
+		p.Latency = c[LatencyTimer]
+		if c[HeaderType]&HeaderTypeMask == HeaderTypeBridge {
+			p.Bridge = true
+		}
+		p.IRQPin = c[IRQPin]
+		p.Primary = fmt.Sprintf("%02x", c[Primary])
+		p.Secondary = fmt.Sprintf("%02x", c[Secondary])
+		p.Subordinate = fmt.Sprintf("%02x", c[Subordinate])
+		p.SecLatency = fmt.Sprintf("%02x", c[SecondaryLatency])
+
 		devices = append(devices, p)
 	}
 	return devices, nil

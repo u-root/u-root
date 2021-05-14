@@ -23,7 +23,6 @@ func TestNotFound(t *testing.T) {
 	if _, err := f.Write(make([]byte, 0x100000)); err != nil {
 		t.Fatalf("Writing empty file: got %v, want nil", err)
 	}
-	debug = t.Logf
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
 		t.Logf("Check %#08x", addr)
@@ -63,7 +62,6 @@ func TestAPU2(t *testing.T) {
 		t.Fatal(err)
 	}
 	var c *CBmem
-	debug = t.Logf
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
 		t.Logf("Check %#08x", addr)
@@ -104,6 +102,100 @@ func TestAPU2(t *testing.T) {
 	}
 }
 
+func TestAPU2CBMemWrap(t *testing.T) {
+	var err error
+	f, err := ioutil.TempFile("", "cbmemWRAPAPU2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Need to patch this a bit. First, add a patch so that the cursor has wrapped.
+	p := apu2
+	if true {
+		p = append(p, []seg{
+			{
+				// The buffer size will be 4, and the cursor will be 2 -> wrap.
+				off: 0x77fdf000, dat: []byte{
+					0x04 /*'ø'*/, 0x00 /*'ÿ'*/, 0x00 /*'\x01'*/, 0x00 /*'\x00'*/, 0x02 /*'\x02' */, 0x00 /*'\x00'*/, 0x00 /*'\x00'*/, 0x80, /*'\x80'*/
+				},
+			},
+		}...)
+	}
+	if err := genFile(f, t.Logf, p); err != nil {
+		t.Fatal(err)
+	}
+	var c *CBmem
+	var found bool
+	if c, found, err = parseCBtable(f, 0, 0x10000); err != nil {
+		t.Fatalf("reading CB table: got %v, want nil", err)
+	}
+	if !found {
+		t.Fatalf("Looking for coreboot table: got false, want true")
+	}
+	want := "EnPC"
+	got := c.MemConsole.Data
+	if got != want {
+		t.Fatalf("Console data: got %q, want %q", got, want)
+	}
+}
+
+func TestAPU2CBBadCursor(t *testing.T) {
+	var err error
+	f, err := ioutil.TempFile("", "cbmemWRAPAPU2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Need to patch this a bit. First, add a patch so that the cursor has wrapped.
+	p := apu2
+	p = append(p, []seg{
+		{
+			// The buffer size will be 4, and the cursor will be 2 -> wrap.
+			off: 0x77fdf000, dat: []byte{
+				/*0x77fdf000*/ 0x04 /*'ø'*/, 0x00 /*'ÿ'*/, 0x00 /*'\x01'*/, 0x00 /*'\x00'*/, 0x0a /*'\x0a'*/, 0x00 /*'\x00'*/, 0x00 /*'\x00'*/, 0x80, /*'\x80'*/
+			},
+		},
+	}...)
+
+	if err := genFile(f, t.Logf, p); err != nil {
+		t.Fatal(err)
+	}
+	var c *CBmem
+	var found bool
+	if c, found, err = parseCBtable(f, 0, 0x10000); err != nil {
+		t.Fatalf("reading CB table: got %v, want nil", err)
+	}
+	if !found {
+		t.Fatalf("Looking for coreboot table: got false, want true")
+	}
+	want := "PCEn"
+	got := c.MemConsole.Data
+	if got != want {
+		t.Fatalf("Console data: got %q, want %q", got, want)
+	}
+}
+
+func TestAPU2CBBadPtr(t *testing.T) {
+	var err error
+	f, err := ioutil.TempFile("", "cbmemWRAPAPU2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Need to patch this a bit. First, add a patch so that the cursor has wrapped.
+	p := apu2
+	p = append(p, []seg{
+		{
+			off: 0x77fae170, dat: []byte{
+				0xff, 0xff, 0xff, 0xff,
+			},
+		},
+	}...)
+	if err := genFile(f, t.Logf, p); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = parseCBtable(f, 0, 0x10000); err == nil {
+		t.Fatalf("reading CB table: got nil, want err")
+	}
+}
+
 func TestIO(t *testing.T) {
 	var (
 		b = [8]byte{1}
@@ -121,7 +213,6 @@ func TestIO(t *testing.T) {
 }
 
 func TestOffsetReader(t *testing.T) {
-	debug = t.Logf
 	memFile, err := ioutil.TempFile("", "cbmemAPU2")
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +263,6 @@ func TestOffsetReader(t *testing.T) {
 }
 
 func TestTimeStampsAPU2(t *testing.T) {
-	debug = t.Logf
 	f, err := ioutil.TempFile("", "cbmemAPU2")
 	if err != nil {
 		t.Fatal(err)
@@ -181,7 +271,6 @@ func TestTimeStampsAPU2(t *testing.T) {
 		t.Fatal(err)
 	}
 	var c *CBmem
-	debug = t.Logf
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
 		t.Logf("Check %#08x", addr)
