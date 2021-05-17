@@ -141,6 +141,12 @@ github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330 h1:zJBTzB
 github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330/go.mod h1:3Myb/UszJY32F2G7yGkUtcW/ejHpjlGfYLim7cv2uKA=
 github.com/pborman/getopt/v2 v2.1.0 h1:eNfR+r+dWLdWmV8g5OlpyrTYHkhVNxHBdN2cCrJmOEA=
 github.com/pborman/getopt/v2 v2.1.0/go.mod h1:4NtW75ny4eBw9fO1bhtNdYTlZKYX5/tBLtsOpwKIKd0=
+github.com/orangecms/go-framebuffer v0.0.0-20210517165205-32bfff227167 h1:x3mPxdM4VdAFwE8GZxo/Ld/0Yn5IWMCj5fEsgE87xv8=
+github.com/orangecms/go-framebuffer v0.0.0-20210517165205-32bfff227167/go.mod h1:3Myb/UszJY32F2G7yGkUtcW/ejHpjlGfYLim7cv2uKA=
+github.com/orangecms/go-framebuffer v0.0.0-20210517170857-52867592d019 h1:ii2V7vo19V7VcyMEwxa8km5jSWSJANws1PiPEjZTwHY=
+github.com/orangecms/go-framebuffer v0.0.0-20210517170857-52867592d019/go.mod h1:3Myb/UszJY32F2G7yGkUtcW/ejHpjlGfYLim7cv2uKA=
+github.com/orangecms/go-framebuffer v0.0.0-20210517171852-20f47eb728e1 h1:siNb0xJzD9DQLvAkyEpehX8tt3kCUdcm6t3oTPXZsBQ=
+github.com/orangecms/go-framebuffer v0.0.0-20210517171852-20f47eb728e1/go.mod h1:3Myb/UszJY32F2G7yGkUtcW/ejHpjlGfYLim7cv2uKA=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pierrec/lz4/v4 v4.1.11 h1:LVs17FAZJFOjgmJXl9Tf13WfLUvZq7/RjfEJrnwZ9OE=
 github.com/pierrec/lz4/v4 v4.1.11/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=

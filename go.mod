@@ -20,7 +20,7 @@ require (
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/pgzip v1.2.4
 	github.com/kr/pty v1.1.8
-	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
+	github.com/orangecms/go-framebuffer v0.0.0-20210517171852-20f47eb728e1
 	github.com/pborman/getopt/v2 v2.1.0
 	github.com/pierrec/lz4/v4 v4.1.11
 	github.com/rck/unit v0.0.3
