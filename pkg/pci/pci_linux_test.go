@@ -5,7 +5,9 @@
 package pci
 
 import (
+	"bytes"
 	"log"
+	"os"
 	"testing"
 )
 
@@ -80,6 +82,11 @@ func TestBusReader(t *testing.T) {
 }
 
 func TestBusReadConfig(t *testing.T) {
+	var fullread bool
+	if os.Getuid() == 0 {
+		fullread = true
+	}
+
 	r, err := NewBusReader()
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -89,8 +96,40 @@ func TestBusReadConfig(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Read: %v", err)
 	}
-	d.SetVendorDeviceName()
-	if err := d.ReadConfig(); err != nil {
-		log.Fatalf("ReadConfig: got %v, want nil", err)
+	var o = &bytes.Buffer{}
+	// First test is a low verbosity one that should only require 64 bytes.
+	if err := d.Print(o, 0, 64); err != nil {
+		log.Fatal(err)
 	}
+	// Second test is a bit more complex. If we are not root, it should
+	// get an error. If we are root, it should be ok.
+	err = d.Print(o, 0, 256)
+	if fullread && err != nil {
+		log.Fatalf("Doing a full config read as root: got %v, want nil", err)
+	}
+	if !fullread && err == nil {
+		log.Fatalf("Doing a full config read as ! root: got nil, want %v", os.ErrPermission)
+	}
+
+}
+
+func testBaseLimType(t *testing.T) {
+	var tests = []struct {
+		bar    string
+		r1, r2 string
+	}{
+		{bar: "0x0000000000001860 0x0000000000001867 0x0000000000040101", r1: "0x0000000000001860", r2: "0x0000000000001867"},
+		{bar: "0x0000000000001867 0x0000000000040101"},
+		{bar: "0x000000000001860 0x0?00000000001867 0x0000000000040101"},
+		{bar: "0x000000000001860 0x0000000000001867 0x0?00000000040101"},
+		{bar: "0x000000?000001860 0x0000000000001867 0x0000000000040101"},
+	}
+	for _, tt := range tests {
+		b, l, a, err := BaseLimType(tt.bar)
+		t.Logf("%v %v %v %v", b, l, a, err)
+		// if r1 != tt.r1 || r2 != tt.r2 {
+		// 	t.Errorf("BAR %s: got \n(%q,%q) want \n(%q,%q)", tt.bar, r1, r2, tt.r1, tt.r2)
+		//}
+	}
+
 }

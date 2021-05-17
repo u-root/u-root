@@ -27,7 +27,8 @@ var crBits = []string{
 	"DisInt",
 }
 
-func (c *PCIControl) String() string {
+// String implements Stringer.
+func (c *Control) String() string {
 	var s string
 	for i, n := range crBits {
 		if len(s) > 0 {
@@ -61,7 +62,8 @@ var stBits = []string{
 	"<PERR",
 }
 
-func (c *PCIStatus) String() string {
+// String implements Stringer.
+func (c *Status) String() string {
 	var s string
 
 	for i, n := range stBits {
@@ -90,4 +92,42 @@ func (c *PCIStatus) String() string {
 		}
 	}
 	return s
+}
+
+// String implements Stringer.
+func (bar *BAR) String() string {
+	// This little test lets us create empty strings, which
+	// the JSON marshaler can then omit. That way, non-bridge
+	// PCI devices won't even have this stuff show up.
+	if bar.Base == 0 {
+		return ""
+	}
+	var typ string
+	base := bar.Base
+	switch bar.Attr & 0xf {
+	case 0:
+		typ = "Memory at %08x (32-bit, non-prefetchable) [size=%#x]"
+	case 1:
+		typ = "I/O ports at %04x [size=%d]"
+	case 2:
+		typ = "Memory at %08x (32-bit, low 1Mbyte, non-prefetchable) [size=%#x]"
+		if base < 0x100000 && base >= 0xc0000 {
+			typ = "Expansion ROM at %08x (low 1Mbyte) [size=%#x]"
+			if base&1 == 0 {
+				typ = "(Disabled)" + typ
+			} else {
+				base--
+			}
+		}
+	case 4:
+		typ = "Memory at %08x (64-bit, non-prefetchable) [size=%#x]"
+	case 8:
+		typ = "Memory at %08x (32-bit, prefetchable) [size=%#x]"
+	case 0xc:
+		typ = "Memory at %08x (64-bit, prefetchable) [size=%#x]"
+	default:
+		return fmt.Sprintf("Can't get type from %#x", bar.Attr)
+	}
+	sz := bar.Lim - base + 1
+	return fmt.Sprintf("Region %d: "+typ, bar.Index, base, sz)
 }
