@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -152,6 +153,166 @@ func TestString(t *testing.T) {
 			t.Errorf("want %s got %s Same %v", as[i], ag[i], as[i] == ag[i])
 		}
 
+	}
+
+}
+
+func TestSet(t *testing.T) {
+	// This JSON is from a real device.
+	j := `{
+	"Ispeed": 0,
+	"Ospeed": 0,
+	"Row": 72,
+	"Col": 238,
+	"CC": {
+		"eof": 4,
+		"eol": 255,
+		"eol2": 255,
+		"erase": 127,
+		"intr": 3,
+		"kill": 21,
+		"lnext": 22,
+		"min": 0,
+		"quit": 28,
+		"start": 17,
+		"stop": 19,
+		"susp": 26,
+		"werase": 23,
+		"time": 3
+	},
+	"Opts": {
+		"xcase": false,
+		"brkint": true,
+		"clocal": false,
+		"cread": true,
+		"cstopb": false,
+		"echo": true,
+		"echoctl": true,
+		"echoe": true,
+		"echok": true,
+		"echoke": true,
+		"echonl": false,
+		"echoprt": false,
+		"flusho": false,
+		"hupcl": false,
+		"icanon": true,
+		"icrnl": true,
+		"iexten": true,
+		"ignbrk": false,
+		"igncr": false,
+		"ignpar": true,
+		"imaxbel": true,
+		"inlcr": false,
+		"inpck": false,
+		"isig": true,
+		"istrip": false,
+		"iuclc": false,
+		"iutf8": true,
+		"ixany": false,
+		"ixoff": false,
+		"ixon": true,
+		"noflsh": false,
+		"ocrnl": false,
+		"ofdel": false,
+		"ofill": false,
+		"olcuc": false,
+		"onlcr": true,
+		"onlret": false,
+		"onocr": false,
+		"opost": true,
+		"parenb": false,
+		"parmrk": false,
+		"parodd": false,
+		"pendin": true,
+		"tostop": false
+	}
+}`
+	g := &TTY{}
+	if err := json.Unmarshal([]byte(j), g); err != nil {
+		t.Fatalf("load from JSON: got %v, want nil", err)
+	}
+	sets := [][]string{
+		{"speed", "0"},
+		{"rows", "72"},
+		{"cols", "238"},
+		{"brkint"},
+		{"~clocal"},
+		{"cread"},
+		{"~cstopb"},
+		{"echo"},
+		{"echoctl"},
+		{"echoe"},
+		{"echok"},
+		{"echoke"},
+		{"~echonl"},
+		{"~echoprt"},
+		{"eof", "0x04"},
+		{"eol2", "0xff"},
+		{"eol", "0xff"},
+		{"erase", "0x7f"},
+		{"~flusho"},
+		{"~hupcl"},
+		{"icanon"},
+		{"icrnl"},
+		{"iexten"},
+		{"~ignbrk"},
+		{"~igncr"},
+		{"ignpar"},
+		{"imaxbel"},
+		{"~inlcr"},
+		{"~inpck"},
+		{"intr", "0x03"},
+		{"isig"},
+		{"~istrip"},
+		{"iutf8"},
+		{"~ixany"},
+		{"~ixoff"},
+		{"ixon"},
+		{"kill", "0x15"},
+		{"lnext", "0x16"},
+		{"min", "0x00"},
+		{"~noflsh"},
+		{"~ocrnl"},
+		{"~ofdel"},
+		{"~ofill"},
+		{"onlcr"},
+		{"~onlret"},
+		{"~onocr"},
+		{"opost"},
+		{"~parenb"},
+		{"~parmrk"},
+		{"~parodd"},
+		{"pendin"},
+		{"quit", "0x1c"},
+		{"start", "0x11"},
+		{"stop", "0x13"},
+		{"susp", "0x1a"},
+		{"time", "0x03"},
+		{"~tostop"},
+		{"werase", "0x17"},
+	}
+
+	if runtime.GOOS == "linux" {
+		sets = append(sets, []string{"~iuclc"}, []string{"~olcuc"}, []string{"~xcase"})
+	}
+	for _, set := range sets {
+		if err := g.SetOpts(set); err != nil {
+			t.Errorf("Setting %q: got %v, want nil", set, err)
+		}
+	}
+	bad := [][]string{
+		{"hi", "1"},
+		{"rows"},
+		{"rows", "z"},
+		{"erase"},
+		{"erase", "z"},
+		{"hi"},
+		{"~hi"},
+	}
+	for _, set := range bad {
+		if err := g.SetOpts(set); err == nil {
+			t.Errorf("Setting %q: got nil, want err", set)
+		}
 	}
 
 }
