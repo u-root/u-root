@@ -7,8 +7,6 @@
 // Synopsis:
 //     watchdogd run [OPTIONS]
 //         Run the watchdogd in a child process (does not daemonize).
-//     watchdogd pid
-//         Print the pid of the running watchdogd
 //     watchdogd stop
 //         Send a signal to arm the running watchdog.
 //     watchdogd continue
@@ -42,8 +40,6 @@ import (
 func usage() {
 	fmt.Print(`watchdogd run [--dev DEV] [--timeout N] [--pre_timeout N] [--keep_alive N] [--monitors STRING]
 	Run the watchdogd daemon in a child process (does not daemonize).
-watchdogd pid
-	Print the pid of the running watchdogd.
 watchdogd stop
 	Send a signal to arm the running watchdogd.
 watchdogd continue
@@ -72,6 +68,7 @@ func runCommand() error {
 			preTimeout = fs.Duration("pre_timeout", -1, "duration for pretimeout")
 			keepAlive  = fs.Duration("keep_alive", 5*time.Second, "duration between issuing keepalive")
 			monitors   = fs.String("monitors", "", "comma seperated list of monitors, ex: oops")
+			uds        = fs.String("uds", "/tmp/watchdogd", "unix domain socket path for the daemon")
 		)
 		fs.Parse(args)
 		if fs.NArg() != 0 {
@@ -92,23 +89,24 @@ func runCommand() error {
 				return fmt.Errorf("unrecognized monitor: %v", m)
 			}
 		}
+
 		return watchdogd.Run(context.Background(), &watchdogd.DaemonOpts{
 			Dev:        *dev,
 			Timeout:    timeout,
 			PreTimeout: preTimeout,
 			KeepAlive:  *keepAlive,
 			Monitors:   monitorFuncs,
+			UDS:        *uds,
 		})
 	default:
 		if len(args) != 0 {
 			usage()
 		}
-		d, err := watchdogd.Find()
+		d, err := watchdogd.NewClient()
 		if err != nil {
-			return fmt.Errorf("could not find watchdog daemon: %v", err)
+			return fmt.Errorf("could not dial watchdog daemon: %v", err)
 		}
 		f, ok := map[string]func() error{
-			"pid":      func() error { fmt.Println(d.Pid); return nil },
 			"stop":     d.Stop,
 			"continue": d.Continue,
 			"arm":      d.Arm,
