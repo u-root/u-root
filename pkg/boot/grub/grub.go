@@ -379,11 +379,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				}
 				c.variables[*setVar] = setVal.String()
 			case *searchLabel:
-				d, err := c.devices.FilterPartLabel(searchName)
-				if err != nil {
-					log.Printf("Error: Could not search label %q: %v", searchName, err)
-					continue
-				}
+				d := c.devices.FilterPartLabel(searchName)
 				if len(d) != 1 {
 					log.Printf("Error: Expected 1 device with label %q, found %d", searchName, len(d))
 					continue

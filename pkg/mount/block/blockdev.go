@@ -448,6 +448,19 @@ func (b BlockDevices) FilterZeroSize() BlockDevices {
 	return nb
 }
 
+// composePartName returns the partition name described by the parent devName
+// and partNo counting from 1. It is assumed that device names ending in a
+// number like nvme0n1 have partitions named like nvme0n1p1, nvme0n1p2, ...
+// and devices ending in a letter like sda have partitions named like
+//  sda1, sda2, ...
+func composePartName(devName string, partNo int) string {
+	r := []rune(devName[len(devName)-1:])
+	if unicode.IsDigit(r[0]) {
+		return fmt.Sprintf("%sp%d", devName, partNo)
+	}
+	return fmt.Sprintf("%s%d", devName, partNo)
+}
+
 // FilterPartID returns partitions with the given partition ID GUID.
 func (b BlockDevices) FilterPartID(guid string) BlockDevices {
 	var names []string
@@ -460,13 +473,8 @@ func (b BlockDevices) FilterPartID(guid string) BlockDevices {
 			if part.IsEmpty() {
 				continue
 			}
-			if strings.ToLower(part.Id.String()) == strings.ToLower(guid) {
-				r := []rune(device.Name[len(device.Name)-1:])
-				if unicode.IsDigit(r[0]) {
-					names = append(names, fmt.Sprintf("%sp%d", device.Name, i+1))
-				} else {
-					names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
-				}
+			if strings.EqualFold(part.Id.String(), guid) {
+				names = append(names, composePartName(device.Name, i+1))
 			}
 		}
 	}
@@ -485,13 +493,29 @@ func (b BlockDevices) FilterPartType(guid string) BlockDevices {
 			if part.IsEmpty() {
 				continue
 			}
-			if strings.ToLower(part.Type.String()) == strings.ToLower(guid) {
-				r := []rune(device.Name[len(device.Name)-1:])
-				if unicode.IsDigit(r[0]) {
-					names = append(names, fmt.Sprintf("%sp%d", device.Name, i+1))
-				} else {
-					names = append(names, fmt.Sprintf("%s%d", device.Name, i+1))
-				}
+			if strings.EqualFold(part.Type.String(), guid) {
+				names = append(names, composePartName(device.Name, i+1))
+			}
+		}
+	}
+	return b.FilterNames(names...)
+}
+
+// FilterPartLabel returns a list of BlockDev objects whose underlying block
+// device has the given partition label. The name comparison is case-insensitive.
+func (b BlockDevices) FilterPartLabel(label string) BlockDevices {
+	var names []string
+	for _, device := range b {
+		table, err := device.GPTTable()
+		if err != nil {
+			continue
+		}
+		for i, part := range table.Partitions {
+			if part.IsEmpty() {
+				continue
+			}
+			if strings.EqualFold(part.Name(), label) {
+				names = append(names, composePartName(device.Name, i+1))
 			}
 		}
 	}
@@ -545,13 +569,6 @@ func (b BlockDevices) filterUsingSymlink(symlink string) (BlockDevices, error) {
 		}
 	}
 	return newBlockDevices, nil
-}
-
-// FilterPartLabel returns a list of BlockDev objects whose underlying block
-// device has the given parition label.
-// TODO: This is only useful if udev has created /dev/disk/by-partlabel/...
-func (b BlockDevices) FilterPartLabel(label string) (BlockDevices, error) {
-	return b.filterUsingSymlink(filepath.Join("/dev/disk/by-partlabel", label))
 }
 
 // FilterName returns a list of BlockDev objects whose underlying
