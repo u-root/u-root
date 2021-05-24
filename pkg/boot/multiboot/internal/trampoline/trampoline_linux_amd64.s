@@ -57,7 +57,7 @@ TEXT ·start(SB),NOSPLIT,$0
 	JMP	farjump64(SB)
 
 
-TEXT boot(SB),NOSPLIT,$0
+TEXT ·boot(SB),NOSPLIT,$0
 	// We are in 32-bit mode now.
 	//
 	// Be careful editing this code!!! Go compiler
@@ -90,19 +90,19 @@ TEXT boot(SB),NOSPLIT,$0
 	MOVL	SI, AX
 	JMP	farjump32(SB)
 
-TEXT farjump64(SB),NOSPLIT,$0
+TEXT ·farjump64(SB),NOSPLIT,$0
 	BYTE	$0xFF; BYTE $0x2D; LONG $0x0 // ljmp *(ip)
 
 	LONG	$0x0 // farjump64+6(SB)
 	LONG	$0x8 // code segment
 
-TEXT farjump32(SB),NOSPLIT,$0
+TEXT ·farjump32(SB),NOSPLIT,$0
 	// ljmp $0x18, offset
 	BYTE	$0xEA
 	LONG	$0x0 // farjump32+1(SB)
 	WORD	$0x18 // code segment
 
-TEXT gdt(SB),NOSPLIT,$0
+TEXT ·gdt(SB),NOSPLIT,$0
 	QUAD	$0x0		// 0x0 null entry
 	QUAD	$CODE_SEGMENT	// 0x8
 	QUAD	$DATA_SEGMENT	// 0x10

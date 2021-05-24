@@ -27,6 +27,10 @@ func end()
 func info()
 func magic()
 func entry()
+func boot()
+func farjump32()
+func farjump64()
+func gdt()
 
 // funcPC gives the program counter of the given function.
 //
