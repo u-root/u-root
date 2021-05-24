@@ -31,8 +31,6 @@ u-root embodies four different projects.
 
 Make sure your Go version is >=1.13. Make sure your `GOPATH` is set up
 correctly.
-While u-root uses Go modules, it still vendors dependencies and builds with
-`GO111MODULE=off`.
 
 Download and install u-root:
 
@@ -73,6 +71,21 @@ directories will be included. For example:
 You can build the initramfs built by u-root into the kernel via the
 `CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an
 option in for example Grub or the QEMU command line or coreboot config variable.
+
+## :warning: Go Modules are Broken :warning:
+
+u-root itself builds fine with modules. When adding commands to your busybox
+which are outside u-root, make sure to `export GO111MODULE=off` both when
+`get`ing the command (so that the command is found under `$GOPATH/src` and when
+running the `u-root` command (so that you can run the u-root command from any
+directory).
+
+For example:
+
+```
+GO111MODULE=off go get github.com/nsf/godit
+GO111MODULE=off u-root all github.com/nsf/godit
+```
 
 ## Extra Files
 
