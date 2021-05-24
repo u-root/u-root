@@ -68,7 +68,6 @@ func (b buildSourceValidator) Validate(a *cpio.Archive) error {
 		fmt.Sprintf("GOPATH=%s", gopath),
 		fmt.Sprintf("GOCACHE=%s", filepath.Join(dir, "tmp")),
 		fmt.Sprintf("GOROOT=%s", goroot),
-		"GO111MODULE=off",
 		"CGO_ENABLED=0")
 	out, err := c.CombinedOutput()
 	if err != nil {
@@ -264,10 +263,6 @@ func TestUrootCmdline(t *testing.T) {
 			},
 		},
 		{
-			name: "hosted source mode",
-			args: append([]string{"-build=source", "-base=/dev/null", "-defaultsh=", "-initcmd="}, srcmds...),
-		},
-		{
 			name: "hosted bb mode",
 			args: append([]string{"-build=bb", "-base=/dev/null", "-defaultsh=", "-initcmd="}, twocmds...),
 		},
@@ -275,18 +270,6 @@ func TestUrootCmdline(t *testing.T) {
 			name: "AMD64 bb build",
 			env:  []string{"GOARCH=amd64"},
 			args: []string{"-build=bb", "all"},
-		},
-		{
-			name: "AMD64 source build",
-			env:  []string{"GOARCH=amd64"},
-			args: []string{"-build=source", "all"},
-			validators: []itest.ArchiveValidator{
-				buildSourceValidator{
-					goroot: "/go",
-					gopath: ".",
-					env:    []string{"GOARCH=amd64"},
-				},
-			},
 		},
 		{
 			name: "MIPS bb build",
