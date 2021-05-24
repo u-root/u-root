@@ -27,17 +27,11 @@ import (
 const cmd = "find [opts] starting-at-path"
 
 var (
-	perm      = flag.Int("mode", -1, "Permissions")
-	fileType  = flag.String("type", "", "File type")
-	name      = flag.String("name", "", "glob for name")
-	long      = flag.Bool("l", false, "long listing")
-	debug     = flag.Bool("d", false, "Enable debugging in the find package")
-	fileTypes = map[string]os.FileMode{
-		"f":         0,
-		"file":      0,
-		"d":         os.ModeDir,
-		"directory": os.ModeDir,
-	}
+	perm     = flag.Int("mode", -1, "Permissions")
+	fileType = flag.String("type", "", "File type")
+	name     = flag.String("name", "", "glob for name")
+	long     = flag.Bool("l", false, "long listing")
+	debug    = flag.Bool("d", false, "Enable debugging in the find package")
 )
 
 func init() {
@@ -50,6 +44,13 @@ func init() {
 }
 
 func main() {
+	var fileTypes = map[string]os.FileMode{
+		"f":         0,
+		"file":      0,
+		"d":         os.ModeDir,
+		"directory": os.ModeDir,
+	}
+
 	flag.Parse()
 	a := flag.Args()
 	if len(a) != 1 {
