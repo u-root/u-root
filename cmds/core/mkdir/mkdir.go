@@ -23,17 +23,16 @@ import (
 
 const (
 	cmd                 = "mkdir [-m mode] [-v] [-p] <directory> [more directories]"
-	DefaultCreationMode = 0777
-	StickyBit           = 01000
-	SgidBit             = 02000
-	SuidBit             = 04000
+	defaultCreationMode = 0777
+	stickyBit           = 01000
+	sgidBit             = 02000
+	suidBit             = 04000
 )
 
 var (
 	mode    = flag.String("m", "", "Directory mode")
 	mkall   = flag.Bool("p", false, "Make all needed directories in the path")
 	verbose = flag.Bool("v", false, "Print each directory as it is made")
-	f       = os.Mkdir
 )
 
 func init() {
@@ -46,6 +45,7 @@ func init() {
 }
 
 func main() {
+	f := os.Mkdir
 	flag.Parse()
 	if len(flag.Args()) < 1 {
 		flag.Usage()
@@ -59,7 +59,7 @@ func main() {
 	var m uint64
 	var err error
 	if *mode == "" {
-		m = DefaultCreationMode
+		m = defaultCreationMode
 	} else {
 		m, err = strconv.ParseUint(*mode, 8, 32)
 		if err != nil || m > 07777 {
@@ -67,13 +67,13 @@ func main() {
 		}
 	}
 	createMode := os.FileMode(m)
-	if m&StickyBit != 0 {
+	if m&stickyBit != 0 {
 		createMode |= os.ModeSticky
 	}
-	if m&SgidBit != 0 {
+	if m&sgidBit != 0 {
 		createMode |= os.ModeSetgid
 	}
-	if m&SuidBit != 0 {
+	if m&suidBit != 0 {
 		createMode |= os.ModeSetuid
 	}
 
