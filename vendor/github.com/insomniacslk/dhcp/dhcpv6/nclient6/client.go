@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package nclient6 is a minimum-functionality client for DHCPv6.
 package nclient6
 
 import (
@@ -325,6 +326,21 @@ func IsMessageType(t dhcpv6.MessageType, tt ...dhcpv6.MessageType) Matcher {
 		}
 		return false
 	}
+}
+
+// RemoteAddr is the default DHCP server address this client sends messages to.
+func (c *Client) RemoteAddr() *net.UDPAddr {
+	// Make a copy so the caller cannot modify the address once the client
+	// is running.
+	cop := *c.serverAddr
+	return &cop
+}
+
+// InterfaceAddr returns the MAC address of the client's interface.
+func (c *Client) InterfaceAddr() net.HardwareAddr {
+	b := make(net.HardwareAddr, len(c.ifaceHWAddr))
+	copy(b, c.ifaceHWAddr)
+	return b
 }
 
 // RapidSolicit sends a solicitation message with the RapidCommit option and

@@ -9,6 +9,7 @@
 //
 // Options:
 //     -s: size in bytes
+//     -r: reference file for size
 //     -c: do not create any files
 //
 // Author:
@@ -29,6 +30,7 @@ const cmd = "truncate [-c] -s size file..."
 var (
 	create = flag.Bool("c", false, "Do not create files.")
 	size   = unit.MustNewUnit(unit.DefaultUnits).MustNewValue(1, unit.None)
+	rfile  = flag.String("r", "", "Reference file for size")
 )
 
 func init() {
@@ -49,8 +51,12 @@ func usageAndExit() {
 func main() {
 	flag.Parse()
 
-	if !size.IsSet {
-		log.Println("truncate: ERROR: You need to specify -s <number>.")
+	if !size.IsSet && *rfile == "" {
+		log.Println("truncate: ERROR: You need to specify size via -s <number> or -r <rfile>.")
+		usageAndExit()
+	}
+	if size.IsSet && *rfile != "" {
+		log.Println("truncate: ERROR: You need to specify size via -s <number> or -r <rfile>.")
 		usageAndExit()
 	}
 	if flag.NArg() == 0 {
@@ -59,6 +65,8 @@ func main() {
 	}
 
 	for _, fname := range flag.Args() {
+
+		var final int64
 		st, err := os.Stat(fname)
 		if os.IsNotExist(err) && !*create {
 			if err = ioutil.WriteFile(fname, []byte{}, 0644); err != nil {
@@ -68,13 +76,19 @@ func main() {
 				log.Fatalf("truncate: ERROR: could not stat newly created file: %v\n", err)
 			}
 		}
-
-		final := size.Value // base case
-		if size.ExplicitSign != unit.None {
-			final += st.Size() // in case of '-', size.Value is already negative
-		}
-		if final < 0 {
-			final = 0
+		if *rfile != "" {
+			if st, err = os.Stat(*rfile); err != nil {
+				log.Fatalf("truncate: ERROR: could not stat reference file: %v\n", err)
+			}
+			final = st.Size()
+		} else if size.IsSet {
+			final = size.Value // base case
+			if size.ExplicitSign != unit.None {
+				final += st.Size() // in case of '-', size.Value is already negative
+			}
+			if final < 0 {
+				final = 0
+			}
 		}
 
 		// intentionally ignore, like GNU truncate

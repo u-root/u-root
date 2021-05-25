@@ -242,7 +242,7 @@ func ConfigureInterface(ifname string, netconf *NetConf) (err error) {
 
 		src := netconf.Addresses[0].IPNet
 		// TODO handle the remaining Routers if more than one
-		if err := rt.RouteAddSrc(iface, dst, &src, netconf.Routers[0]); err != nil {
+		if err := rt.RouteAdd(iface, dst, netconf.Routers[0], rtnl.WithRouteSrc(&src)); err != nil {
 			return fmt.Errorf("could not add gateway %s for src %s dst %s to interface %s: %v", netconf.Routers[0], src, dst, ifname, err)
 		}
 	}
