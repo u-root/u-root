@@ -89,23 +89,33 @@ func (t *TTY) STTY(fd int) (*TTY, error) {
 }
 
 // String will stringify a TTY, including printing out the options all in the same order.
+// The options are presented in the order:
+// integer options as name:value
+// boolean options which are set, printed as name, sorted by name
+// boolean options which are clear, printed as ~name, sorted by name
+// This ordering makes it a bit more readable: integer value, sorted set values, sorted clear values
 func (t *TTY) String() string {
 	s := fmt.Sprintf("speed:%v ", t.Ispeed)
 	s += fmt.Sprintf("rows:%d cols:%d", t.Row, t.Col)
-	var opts []string
-	for n, c := range t.CC {
-		opts = append(opts, fmt.Sprintf("%v:%#02x", n, c))
-	}
 
+	var intopts []string
+	for n, c := range t.CC {
+		intopts = append(intopts, fmt.Sprintf("%v:%#02x", n, c))
+	}
+	sort.Strings(intopts)
+
+	var trueopts, falseopts []string
 	for n, set := range t.Opts {
 		if set {
-			opts = append(opts, fmt.Sprintf("%v:1", n))
+			trueopts = append(trueopts, n)
 		} else {
-			opts = append(opts, fmt.Sprintf("%v:0", n))
+			falseopts = append(falseopts, "~"+n)
 		}
 	}
-	sort.Strings(opts)
-	for _, v := range opts {
+	sort.Strings(trueopts)
+	sort.Strings(falseopts)
+
+	for _, v := range append(intopts, append(trueopts, falseopts...)...) {
 		s += fmt.Sprintf(" %s", v)
 	}
 	return s
