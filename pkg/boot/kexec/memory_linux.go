@@ -789,3 +789,55 @@ func (m *MemoryMap) Insert(r TypedRange) {
 	newMap.sort()
 	*m = newMap
 }
+
+// PayloadMemType defines type of a memory map entry
+type PayloadMemType uint32
+
+// Payload memory type (PayloadMemType) in UefiPayload
+const (
+	PayloadTypeRAM      = 1
+	PayloadTypeDefault  = 2
+	PayloadTypeACPI     = 3
+	PayloadTypeNVS      = 4
+	PayloadTypeReserved = 5
+)
+
+// payloadMemoryMapEntry represent a memory map entry in payload param
+type payloadMemoryMapEntry struct {
+	Start uint64
+	End   uint64
+	Type  PayloadMemType
+}
+
+// PayloadMemoryMapParam is payload's MemoryMap parameter
+type PayloadMemoryMapParam []payloadMemoryMapEntry
+
+var rangeTypeToPayloadMemType = map[RangeType]PayloadMemType{
+	RangeRAM:      PayloadTypeRAM,
+	RangeDefault:  PayloadTypeDefault,
+	RangeACPI:     PayloadTypeACPI,
+	RangeNVS:      PayloadTypeNVS,
+	RangeReserved: PayloadTypeReserved,
+}
+
+func convertToPayloadMemType(rt RangeType) PayloadMemType {
+	mt, ok := rangeTypeToPayloadMemType[rt]
+	if !ok {
+		// return reserved if range type is not recognized
+		return PayloadTypeReserved
+	}
+	return mt
+}
+
+// AsPayloadParam converts MemoryMap to a PayloadMemoryMapParam
+func (m *MemoryMap) AsPayloadParam() PayloadMemoryMapParam {
+	var p PayloadMemoryMapParam
+	for _, entry := range *m {
+		p = append(p, payloadMemoryMapEntry{
+			Start: uint64(entry.Start),
+			End:   uint64(entry.Start) + uint64(entry.Size) - 1,
+			Type:  convertToPayloadMemType(entry.Type),
+		})
+	}
+	return p
+}
