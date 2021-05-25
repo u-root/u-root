@@ -201,7 +201,7 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.12
+      - image: uroottest/test-image-amd64:v3.2.15
   test-integration-arm:
     <<: *integration-template
     docker:
