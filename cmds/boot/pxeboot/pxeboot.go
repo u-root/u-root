@@ -24,6 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -33,6 +34,8 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/ulog"
+
+	"github.com/insomniacslk/dhcp/dhcpv4"
 )
 
 var (
@@ -44,6 +47,9 @@ var (
 	verbose     = flag.Bool("v", false, "Verbose output")
 	ipv4        = flag.Bool("ipv4", true, "use IPV4")
 	ipv6        = flag.Bool("ipv6", true, "use IPV6")
+	cmdAppend   = flag.String("cmd", "", "Kernel command to append for each image")
+	bootfile    = flag.String("file", "", "Boot file name (default tftp) or full URI to use instead of DHCP.")
+	server      = flag.String("server", "0.0.0.0", "Server IP (Requires -file for effect)")
 )
 
 const (
@@ -106,9 +112,27 @@ func NetbootImages(ifaceNames string) ([]boot.OSImage, error) {
 				log.Printf("Failed to boot lease %v: %v", result.Lease, err)
 				continue
 			}
+
 			return imgs, nil
 		}
 	}
+}
+
+func newManualLease() (dhclient.Lease, error) {
+	filteredIfs, err := dhclient.Interfaces(ifName)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := dhcpv4.New()
+	if err != nil {
+		return nil, err
+	}
+
+	d.BootFileName = *bootfile
+	d.ServerIPAddr = net.ParseIP(*server)
+
+	return dhclient.NewPacket4(filteredIfs[0], d), nil
 }
 
 func main() {
@@ -120,9 +144,27 @@ func main() {
 		ifName = flag.Args()[0]
 	}
 
-	images, err := NetbootImages(ifName)
+	var images []boot.OSImage
+	var err error
+	if *bootfile == "" {
+		images, err = NetbootImages(ifName)
+	} else {
+		log.Printf("Skipping DHCP for manual target..")
+		var l dhclient.Lease
+		l, err = newManualLease()
+		if err == nil {
+			images, err = netboot.BootImages(context.Background(), ulog.Log, curl.DefaultSchemes, l)
+		}
+	}
+
 	if err != nil {
 		log.Printf("Netboot failed: %v", err)
+	}
+
+	for _, img := range images {
+		img.Edit(func(cmdline string) string {
+			return cmdline + " " + *cmdAppend
+		})
 	}
 
 	menuEntries := menu.OSImages(*verbose, images...)

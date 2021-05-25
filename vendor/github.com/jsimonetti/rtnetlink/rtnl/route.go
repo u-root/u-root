@@ -1,6 +1,7 @@
 package rtnl
 
 import (
+	"errors"
 	"net"
 
 	"github.com/jsimonetti/rtnetlink/internal/unix"
@@ -8,8 +9,21 @@ import (
 	"github.com/jsimonetti/rtnetlink"
 )
 
+// Route represents a route table entry
+type Route struct {
+	Gateway   net.IP
+	Interface *net.Interface
+}
+
 // generating route message
-func genRouteMessage(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (rm *rtnetlink.RouteMessage, err error) {
+func genRouteMessage(ifc *net.Interface, dst net.IPNet, gw net.IP, options ...RouteOption) (rm *rtnetlink.RouteMessage, err error) {
+
+	opts := DefaultRouteOptions(ifc, dst, gw)
+
+	for _, option := range options {
+		option(opts)
+	}
+
 	af, err := addrFamily(dst.IP)
 	if err != nil {
 		return nil, err
@@ -27,19 +41,10 @@ func genRouteMessage(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.I
 		scope = unix.RT_SCOPE_LINK
 	}
 
-	attr := rtnetlink.RouteAttributes{
-		Dst:      dst.IP,
-		OutIface: uint32(ifc.Index),
-	}
-
-	if gw != nil {
-		attr.Gateway = gw
-	}
-
 	var srclen int
-	if src != nil {
-		srclen, _ = src.Mask.Size()
-		attr.Src = src.IP
+	if opts.Src != nil {
+		srclen, _ = opts.Src.Mask.Size()
+		opts.Attrs.Src = opts.Src.IP
 	}
 
 	dstlen, _ := dst.Mask.Size()
@@ -52,47 +57,28 @@ func genRouteMessage(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.I
 		Scope:      scope,
 		DstLength:  uint8(dstlen),
 		SrcLength:  uint8(srclen),
-		Attributes: attr,
+		Attributes: opts.Attrs,
 	}
 	return tx, nil
 }
 
 // RouteAdd adds infomation about a network route.
-func (c *Conn) RouteAdd(ifc *net.Interface, dst net.IPNet, gw net.IP) (err error) {
-	rm, err := genRouteMessage(ifc, dst, nil, gw)
+func (c *Conn) RouteAdd(ifc *net.Interface, dst net.IPNet, gw net.IP, options ...RouteOption) (err error) {
+	rm, err := genRouteMessage(ifc, dst, gw, options...)
 	if err != nil {
 		return err
 	}
+
 	return c.Conn.Route.Add(rm)
 }
 
 // RouteReplace adds or replace information about a network route.
-func (c *Conn) RouteReplace(ifc *net.Interface, dst net.IPNet, gw net.IP) (err error) {
-	rm, err := genRouteMessage(ifc, dst, nil, gw)
+func (c *Conn) RouteReplace(ifc *net.Interface, dst net.IPNet, gw net.IP, options ...RouteOption) (err error) {
+	rm, err := genRouteMessage(ifc, dst, gw, options...)
 	if err != nil {
 		return err
 	}
 	return c.Conn.Route.Replace(rm)
-}
-
-// RouteReplaceSrc adds or replace infomation about a network route with the given destination
-// and source. If source is `nil` it's ignored.
-func (c *Conn) RouteReplaceSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (err error) {
-	rm, err := genRouteMessage(ifc, dst, src, gw)
-	if err != nil {
-		return err
-	}
-	return c.Conn.Route.Replace(rm)
-}
-
-// RouteAddSrc adds infomation about a network route with the given destination
-// and source. If source is `nil` it's ignored.
-func (c *Conn) RouteAddSrc(ifc *net.Interface, dst net.IPNet, src *net.IPNet, gw net.IP) (err error) {
-	rm, err := genRouteMessage(ifc, dst, src, gw)
-	if err != nil {
-		return err
-	}
-	return c.Conn.Route.Add(rm)
 }
 
 // RouteDel deletes the route to the given destination.
@@ -113,4 +99,36 @@ func (c *Conn) RouteDel(ifc *net.Interface, dst net.IPNet) error {
 		Attributes: attr,
 	}
 	return c.Conn.Route.Delete(tx)
+}
+
+// RouteGet gets a single route to the given destination address.
+func (c *Conn) RouteGet(dst net.IP) (*Route, error) {
+	af, err := addrFamily(dst)
+	if err != nil {
+		return nil, err
+	}
+	attr := rtnetlink.RouteAttributes{
+		Dst: dst,
+	}
+	tx := &rtnetlink.RouteMessage{
+		Family:     uint8(af),
+		Table:      unix.RT_TABLE_MAIN,
+		Attributes: attr,
+	}
+	rx, err := c.Conn.Route.Get(tx)
+	if err != nil {
+		return nil, err
+	}
+	if len(rx) == 0 {
+		return nil, errors.New("route wrong length")
+	}
+	ifindex := int(rx[0].Attributes.OutIface)
+	iface, err := c.LinkByIndex(ifindex)
+	if err != nil {
+		return nil, err
+	}
+	return &Route{
+		Gateway:   rx[0].Attributes.Gateway,
+		Interface: iface,
+	}, nil
 }

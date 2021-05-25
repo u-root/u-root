@@ -126,7 +126,10 @@ jobs:
           no_output_timeout: 15m
       - run:
           name: Test coverage
-          command: go test -cover ./cmds/... ./pkg/...
+          command: go test -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+      - run:
+          name: Upload coverage
+          command: bash <(curl -s https://codecov.io/bash)
   test-build:
     <<: *beefy-template
     steps:
@@ -198,7 +201,7 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.12
+      - image: uroottest/test-image-amd64:v3.2.15
   test-integration-arm:
     <<: *integration-template
     docker:

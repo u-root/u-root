@@ -1,6 +1,7 @@
 # u-root
 
 [![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master)
+[![codecov](https://codecov.io/gh/u-root/u-root/branch/master/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
 [![Slack](https://slack.osfw.dev/badge.svg)](https://slack.osfw.dev)
@@ -28,9 +29,8 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is 1.13. Make sure your `GOPATH` is set up correctly.
-While u-root uses Go modules, it still vendors dependencies and builds with
-`GO111MODULE=off`.
+Make sure your Go version is >=1.13. Make sure your `GOPATH` is set up
+correctly.
 
 Download and install u-root:
 
@@ -71,6 +71,21 @@ directories will be included. For example:
 You can build the initramfs built by u-root into the kernel via the
 `CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an
 option in for example Grub or the QEMU command line or coreboot config variable.
+
+## :warning: Go Modules are Broken :warning:
+
+u-root itself builds fine with modules. When adding commands to your busybox
+which are outside u-root, make sure to `export GO111MODULE=off` both when
+`get`ing the command (so that the command is found under `$GOPATH/src` and when
+running the `u-root` command (so that you can run the u-root command from any
+directory).
+
+For example:
+
+```
+GO111MODULE=off go get github.com/nsf/godit
+GO111MODULE=off u-root all github.com/nsf/godit
+```
 
 ## Extra Files
 
@@ -238,7 +253,7 @@ For a list of modes, refer to the
 Some utilities, e.g., `dhclient`, require entropy to be present. For a speedy
 virtualized random number generator, the kernel should have the following:
 
-```
+```shell
 CONFIG_VIRTIO_PCI=y
 CONFIG_HW_RANDOM_VIRTIO=y
 CONFIG_CRYPTO_DEV_VIRTIO=y
@@ -246,7 +261,7 @@ CONFIG_CRYPTO_DEV_VIRTIO=y
 
 Then you can run your kernel in QEMU with a `virtio-rng-pci` device:
 
-```sh
+```shell
 qemu-system-x86_64 \
     -device virtio-rng-pci \
     -kernel vmlinuz \
@@ -255,7 +270,7 @@ qemu-system-x86_64 \
 
 In addition, you can pass your host's RNG:
 
-```sh
+```shell
 qemu-system-x86_64 \
     -object rng-random,filename=/dev/urandom,id=rng0 \
     -device virtio-rng-pci,rng=rng0 \
@@ -301,7 +316,7 @@ image using u-root/systemboot and coreboot can be found in the
 
 You can build systemboot like this:
 
-```sh
+```shell
 u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
 ```
 

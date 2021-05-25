@@ -114,17 +114,26 @@ func main() {
 	}
 	files := strings.Fields(string(out))
 
-	rules := append(config.accept, config.reject...)
-
 	// Iterate over files.
-outer:
 	for _, file := range files {
 		// Test rules.
 		trimmedPath := strings.TrimPrefix(file, pkgPath)
-		for _, r := range rules {
-			if r.MatchString(trimmedPath) == r.invert {
-				continue outer
+		foundAccept, foundReject := false, false
+		// First go through accepted patterns
+		for _, r := range config.accept {
+			if r.MatchString(trimmedPath) {
+				foundAccept = true
 			}
+		}
+		// Then go through rejected patterns. Rejection patterns override
+		// acceptance patterns.
+		for _, r := range config.reject {
+			if r.MatchString(trimmedPath) {
+				foundReject = true
+			}
+		}
+		if foundReject || !foundAccept {
+			continue
 		}
 
 		// Make sure it is not a directory.

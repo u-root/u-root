@@ -11,6 +11,7 @@ const (
 	SizeofIfInfomsg      = 0x10
 	SizeofNdMsg          = 0xc
 	SizeofRtMsg          = 0xc
+	SizeofRtNexthop      = 0x8
 	RTM_NEWADDR          = 0x14
 	RTM_DELADDR          = 0x15
 	RTM_GETADDR          = 0x16
@@ -54,6 +55,12 @@ const (
 	IFLA_INFO_SLAVE_KIND = 0x4
 	IFLA_INFO_DATA       = 0x2
 	IFLA_INFO_SLAVE_DATA = 0x5
+	IFLA_XDP             = 0x2b
+	IFLA_XDP_FD          = 0x1
+	IFLA_XDP_ATTACHED    = 0x2
+	IFLA_XDP_FLAGS       = 0x3
+	IFLA_XDP_PROG_ID     = 0x4
+	IFLA_XDP_EXPECTED_FD = 0x8
 	NDA_UNSPEC           = 0x0
 	NDA_DST              = 0x1
 	NDA_LLADDR           = 0x2
@@ -66,7 +73,14 @@ const (
 	RTA_OIF              = 0x4
 	RTA_PRIORITY         = 0x6
 	RTA_TABLE            = 0xf
+	RTA_MARK             = 0x10
 	RTA_EXPIRES          = 0x17
+	RTA_METRICS          = 0x8
+	RTA_MULTIPATH        = 0x9
+	RTAX_ADVMSS          = 0x8
+	RTAX_FEATURES        = 0xc
+	RTAX_INITCWND        = 0xb
+	RTAX_MTU             = 0x2
 	NTF_PROXY            = 0x8
 	RTN_UNICAST          = 0x1
 	RT_TABLE_MAIN        = 0xfe

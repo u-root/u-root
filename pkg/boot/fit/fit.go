@@ -7,12 +7,10 @@ package fit
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"io"
 	"os"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
 )
 
@@ -27,12 +25,13 @@ type Image struct {
 	Kernel string
 	// InitRAMFS is the name of the initramfs node.
 	InitRAMFS string
-	// Dryrun indicates that Load should not Exec
-	Dryrun bool
+	// ConfigOverride is the optional FIT config to use instead of default
+	ConfigOverride string
+	// SkipInitRAMFS skips the search for an ramdisk entry in the config
+	SkipInitRAMFS bool
 }
 
 var _ = boot.OSImage(&Image{})
-var v = func(string, ...interface{}) {}
 
 // New returns a new image initialized with a file containing an FDT.
 func New(n string) (*Image, error) {
@@ -48,14 +47,47 @@ func New(n string) (*Image, error) {
 	return &Image{name: n, Root: fdt}, nil
 }
 
+// ParseConfig reads r for a FIT image and returns a OSImage for each
+// configuration parsed.
+func ParseConfig(r io.ReadSeeker) ([]Image, error) {
+	fdt, err := dt.ReadFDT(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var images []Image
+	configs := fdt.Root().Walk("configurations")
+	cn, _ := configs.ListChildNodes()
+
+	for _, n := range cn {
+		var i = Image{name: n, Root: fdt, ConfigOverride: n}
+
+		kn, in, err := i.LoadConfig()
+
+		if err == nil {
+			i.Kernel, i.InitRAMFS = kn, in
+			images = append(images, i)
+		}
+	}
+
+	if len(images) == 0 {
+		return nil, fmt.Errorf("failed to find valid usable config")
+	}
+
+	return images, nil
+}
+
 // String is a Stringer for Image.
 func (i *Image) String() string {
-	return fmt.Sprintf("FDT %s from %s, kernel %q, initrd %q", i.Root, i.name, i.Kernel, i.InitRAMFS)
+	return fmt.Sprintf("FDT %s, kernel %q, initrd %q", i.name, i.Kernel, i.InitRAMFS)
 }
 
 // Label returns an Image Label.
 func (i *Image) Label() string {
-	return i.name
+	if i.Kernel == "" {
+		return i.name
+	}
+	return fmt.Sprintf("%s (kernel: %s)", i.name, i.Kernel)
 }
 
 // Edit edits the Image cmdline using a func.
@@ -70,14 +102,9 @@ func loadLinuxImage(i *boot.LinuxImage, verbose bool) error {
 
 // provide chance to mock in test
 var loadImage = loadLinuxImage
-var kexecReboot = kexec.Reboot
 
 // Load loads an image and reboots
 func (i *Image) Load(verbose bool) error {
-	if verbose {
-		v = log.Printf
-	}
-
 	w := i.Root.Root().Walk("images").Walk(i.Kernel)
 	b, err := w.Property("data").AsBytes()
 	if err != nil {
@@ -102,40 +129,50 @@ func (i *Image) Load(verbose bool) error {
 		return err
 	}
 
-	if !i.Dryrun {
-		if err := kexecReboot(); err != nil {
-			return err
-		}
-	} else {
-		v("Not trying to boot since this is a dry run")
-	}
-
 	return nil
 }
 
-// LoadBzConfig loads a configuration from a FIT image
-// Returns <kernel_name>, <ramdisk_name>, error
-func (i *Image) LoadBzConfig(verbose bool) (string, string, error) {
+// GetConfigName finds the name of the default configuration or returns the
+// override config if available
+func (i *Image) GetConfigName() (string, error) {
+	if len(i.ConfigOverride) != 0 {
+		return i.ConfigOverride, nil
+	}
+
 	configs := i.Root.Root().Walk("configurations")
 	dc, err := configs.Property("default").AsString()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	n := strings.Split(dc, "@")
-	if len(n) != 2 {
-		return "", "", fmt.Errorf("Invalid default configuration naming: %v", dc)
-	}
-	bzn := n[0] + "_bz@" + n[1]
-	bzconfig := i.Root.Root().Walk("configurations").Walk(bzn)
 
-	kn, err := bzconfig.Property("kernel").AsString()
+	return dc, nil
+}
+
+// LoadConfig loads a configuration from a FIT image
+// Returns <kernel_name>, <ramdisk_name>, error
+func (i *Image) LoadConfig() (string, string, error) {
+	tc, err := i.GetConfigName()
 	if err != nil {
 		return "", "", err
 	}
-	rn, err := bzconfig.Property("ramdisk").AsString()
+
+	configs := i.Root.Root().Walk("configurations")
+	config := configs.Walk(tc)
+	_, err = config.AsString()
+
 	if err != nil {
 		return "", "", err
 	}
+
+	var kn, rn string
+
+	kn, err = config.Property("kernel").AsString()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Allow missing initram nodes
+	rn, _ = config.Property("ramdisk").AsString()
 
 	return kn, rn, nil
 }

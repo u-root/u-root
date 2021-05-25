@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"syscall"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -39,15 +40,7 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		Name: fi.Name(),
 		Mode: fi.Mode(),
 		// Plan 9 UIDs from the file system are strings.
-		// os.FileInfo only allows ints.
-		// The Plan 9 runtime does not attach syscall.Dir to the Sys
-		// on FileInfo or there would be no problem.
-		// This is going to require some fixes to the Go runtime.
-		// os.FileInfo botched a few things.
-		// That said, it is a rare case that you could unpack a cpio
-		// in Plan 9 and set file ownership; that's not how it works.
-		// so ... bootes it is.
-		UID:   "bootes",
+		UID:   fi.Sys().(*syscall.Dir).Uid,
 		Size:  fi.Size(),
 		MTime: fi.ModTime(),
 	}
