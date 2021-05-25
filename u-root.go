@@ -8,10 +8,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -38,17 +40,21 @@ func (m *multiFlag) Set(value string) error {
 
 // Flags for u-root builder.
 var (
-	build, format, tmpDir, base, outputPath *string
-	uinitCmd, initCmd                       *string
-	defaultShell                            *string
-	useExistingInit                         *bool
-	fourbins                                *bool
-	noCommands                              *bool
-	extraFiles                              multiFlag
-	noStrip                                 *bool
-	statsOutputPath                         *string
-	statsLabel                              *string
-	shellbang                               *bool
+	buildformat, format, tmpDir, base, outputPath *string
+	uinitCmd, initCmd                             *string
+	defaultShell                                  *string
+	useExistingInit                               *bool
+	fourbins                                      *bool
+	noCommands                                    *bool
+	extraFiles                                    multiFlag
+	noStrip                                       *bool
+	statsOutputPath                               *string
+	statsLabel                                    *string
+	shellbang                                     *bool
+	version                                       *string
+	goPath                                        string
+	modPath                                       string
+	modules                                       bool
 )
 
 func init() {
@@ -61,7 +67,7 @@ func init() {
 	}
 
 	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
-	build = flag.String("build", "bb", "u-root build format (e.g. bb or source).")
+	buildformat = flag.String("build", "bb", "u-root build format (e.g. bb or source).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
@@ -84,6 +90,9 @@ func init() {
 	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
 
 	statsLabel = flag.String("stats-label", "", "Use this statsLabel when writing stats")
+
+	version = flag.String("version", "@v1.0.0", "Version to use when modules are enabled")
+
 }
 
 type buildStats struct {
@@ -133,11 +142,53 @@ func generateLabel() string {
 	} else {
 		baseCmds = []string{"core"}
 	}
-	return fmt.Sprintf("%s-%s-%s-%s", *build, env.GOOS, env.GOARCH, strings.Join(baseCmds, "_"))
+	return fmt.Sprintf("%s-%s-%s-%s", *buildformat, env.GOOS, env.GOARCH, strings.Join(baseCmds, "_"))
+}
+
+func setup() error {
+	goPath = build.Default.GOPATH
+	// When modules are enabled, we need to know where the go.mod file is.
+	// We assume they are on unless told otherwise.
+	if os.Getenv("GO111MODULE") == "off" {
+		return nil
+	}
+	modules = true
+	// Try to find the go.mod, which is either in
+	// $GOPATH/src/github.com/u-root/u-root/go.mod, or in
+	// $GOPATH/pkd/mod/github.com/u-root/u-root+*version Note that
+	// for convenience version can be a glob, e.g. *, and if there
+	// is only one directory with go.mod, that will be used.  To
+	// force things such that ONLY the path in src will work, one
+	// can set -version=""
+
+	modPath = filepath.Join(goPath, "src/github.com/u-root/u-root/go.mod")
+	if _, err := os.Stat(modPath); err != nil {
+		glob := filepath.Join(goPath, "pkg/mod/github.com/u-root/u-root"+*version, "go.mod")
+		g, err := filepath.Glob(glob)
+		if err != nil {
+			return fmt.Errorf("glob %v: %v", glob, err)
+		}
+		if len(g) == 0 {
+			return fmt.Errorf("modpath glob %v doesn't match anything", glob)
+		}
+		if len(g) != 1 {
+			return fmt.Errorf("modpath glob %v matches more than 1 glob: %v", glob, g)
+		}
+		modPath = g[0]
+	}
+	if err := os.Chdir(filepath.Dir(modPath)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
+
 	flag.Parse()
+
+	if err := setup(); err != nil {
+		log.Fatal(err)
+	}
 
 	start := time.Now()
 
@@ -264,7 +315,7 @@ func Main() error {
 	)
 	if !*noCommands {
 		var b builder.Builder
-		switch *build {
+		switch *buildformat {
 		case "bb":
 			b = builder.BBBuilder{ShellBang: *shellbang}
 		case "binary":
@@ -274,7 +325,7 @@ func Main() error {
 				FourBins: *fourbins,
 			}
 		default:
-			return fmt.Errorf("could not find builder %q", *build)
+			return fmt.Errorf("could not find builder %q", *buildformat)
 		}
 
 		// Resolve globs into package imports.
@@ -295,7 +346,7 @@ func Main() error {
 			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
 		}
 
-		if *fourbins && *build == "source" {
+		if *fourbins && *buildformat == "source" {
 			initCommand = "/go/bin/go"
 		}
 
