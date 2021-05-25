@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -51,14 +52,16 @@ type Entry interface {
 }
 
 func parseBootNum(choice string, entries []Entry) (int, error) {
-	num, err := strconv.Atoi(choice)
-	if err != nil {
-		return -1, fmt.Errorf("%s is not a valid entry number: %v", choice, err)
-	}
-	if num < 1 || num > len(entries) {
-		return -1, fmt.Errorf("%s is not a valid entry number", choice)
+	num, err := strconv.Atoi(strings.TrimSpace(choice))
+	if err != nil || num < 1 || num > len(entries) {
+		return -1, fmt.Errorf("%q is not a valid entry number", choice)
 	}
 	return num, nil
+}
+
+// SetInitialTimeout sets the initial timeout of the menu to the provided duration
+func SetInitialTimeout(timeout time.Duration) {
+	initialTimeout = timeout
 }
 
 // Choose presents the user a menu on input to choose an entry from and returns that entry.

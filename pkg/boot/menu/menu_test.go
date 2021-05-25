@@ -16,7 +16,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	initialTimeout = 2 * time.Second
+	SetInitialTimeout(2 * time.Second)
 	subsequentTimeout = 6 * time.Second
 
 	os.Exit(m.Run())

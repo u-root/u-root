@@ -110,3 +110,80 @@ func TestParsePCIBlockList(t *testing.T) {
 		})
 	}
 }
+
+func TestComposePartName(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		devName string
+		partNo  int
+		want    string
+	}{
+		{
+			name:    "parent device name ends with a letter #1",
+			devName: "sda",
+			partNo:  1,
+			want:    "sda1",
+		},
+		{
+			name:    "parent device name ends with a letter #2",
+			devName: "sdb",
+			partNo:  1,
+			want:    "sdb1",
+		},
+		{
+			name:    "parent device name ends with a letter #3",
+			devName: "sda",
+			partNo:  2,
+			want:    "sda2",
+		},
+		{
+			name:    "parent device name ends with a letter #4",
+			devName: "sdb",
+			partNo:  2,
+			want:    "sdb2",
+		},
+		{
+			name:    "parent device name ends with a letter, more than 9 partitions",
+			devName: "sda",
+			partNo:  11,
+			want:    "sda11",
+		},
+		{
+			name:    "parent device name ends with a number #1",
+			devName: "nvme0n1",
+			partNo:  1,
+			want:    "nvme0n1p1",
+		},
+		{
+			name:    "parent device name ends with a number #2",
+			devName: "nvme0n1",
+			partNo:  2,
+			want:    "nvme0n1p2",
+		},
+		{
+			name:    "parent device name ends with a number, more than 9 devices",
+			devName: "nvme0n10",
+			partNo:  1,
+			want:    "nvme0n10p1",
+		},
+		{
+			name:    "parent device name ends with a number, more than 9 partitions",
+			devName: "nvme0n1",
+			partNo:  10,
+			want:    "nvme0n1p10",
+		},
+		{
+			name:    "parent device name ends with a number, more than 9 devices ans partitions",
+			devName: "nvme0n10",
+			partNo:  10,
+			want:    "nvme0n10p10",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := composePartName(tt.devName, tt.partNo)
+			if got != tt.want {
+				t.Errorf("Compose partition name - got: %s, want: %s", got, tt.want)
+			}
+		})
+	}
+}
