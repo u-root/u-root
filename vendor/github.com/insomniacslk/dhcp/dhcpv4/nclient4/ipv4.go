@@ -22,7 +22,7 @@ import (
 	"encoding/binary"
 	"net"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 const (

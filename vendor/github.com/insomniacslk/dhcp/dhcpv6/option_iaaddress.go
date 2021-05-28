@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // AddressOptions are options valid for the IAAddress option field.
