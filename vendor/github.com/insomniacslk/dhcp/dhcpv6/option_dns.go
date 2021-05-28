@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // OptDNS returns a DNS Recursive Name Server option as defined by RFC 3646.

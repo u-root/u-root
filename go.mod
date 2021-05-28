@@ -15,7 +15,7 @@ require (
 	github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
-	github.com/insomniacslk/dhcp v0.0.0-20210314223004-28f74147e2e8
+	github.com/insomniacslk/dhcp v0.0.0-20210528123148-fb4eaaa00ad2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/klauspost/compress v1.10.6 // indirect
@@ -29,13 +29,13 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/u-root/iscsinl v0.1.0
+	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
-	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
+	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.1.1
