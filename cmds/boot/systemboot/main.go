@@ -45,6 +45,8 @@ func isFlagPassed(name string) bool {
 }
 
 var defaultBootsequence = [][]string{
+	{"pxeboot"},
+	{"boot"},
 	{"fbnetboot", "-userclass", "linuxboot"},
 	{"localboot", "-grub"},
 }
@@ -205,6 +207,7 @@ func runIPMICommands() {
 	}
 }
 
+// Add an event to the IPMI System Even Log
 func addSEL(sequence string) {
 	var bootErr ipmi.Event
 
@@ -317,12 +320,12 @@ func main() {
 	}
 	log.Printf("BOOT ENTRIES:")
 	for _, entry := range bootEntries {
-		log.Printf("    %v) %+v", entry.Name, string(entry.Config))
+		log.Printf("    %v : %+v", entry.Name, string(entry.Config))
 	}
 	for _, entry := range bootEntries {
 		log.Printf("Trying boot entry %s: %s", entry.Name, string(entry.Config))
 		if err := entry.Booter.Boot(debugEnabled); err != nil {
-			log.Printf("Warning: failed to boot with configuration: %+v", entry)
+			log.Printf("Warning: failed to boot with configuration: %s: %s", entry.Name, string(entry.Config))
 			addSEL(entry.Booter.TypeName())
 		}
 		if debugEnabled {
@@ -338,14 +341,23 @@ func main() {
 		log.Print("Falling back to the default boot sequence")
 		for {
 			for _, bootcmd := range defaultBootsequence {
+				if _, err := exec.LookPath(bootcmd[0]); err != nil {
+					log.Printf("No Path: %v", bootcmd)
+					continue
+				}
 				if debugEnabled {
-					bootcmd = append(bootcmd, "-d")
+					if bootcmd[0] == "pxeboot" || bootcmd[0] == "boot" {
+						bootcmd = append(bootcmd, "-v")
+					} else {
+						bootcmd = append(bootcmd, "-d")
+					}
 				}
 				log.Printf("Running boot command: %v", bootcmd)
 				cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
+					//MJ TODO - Need a fix for booters with menues that fail and drop to menu.
 					log.Printf("Error executing %v: %v", cmd, err)
 					if !selRecorded {
 						addSEL(bootcmd[0])
