@@ -392,7 +392,7 @@ func dhcp4(ifname string) (*netboot.BootConf, error) {
 	log.Printf("Trying to obtain a DHCPv4 lease on %s", ifname)
 	var modifiers []dhcpv4.Modifier
 	if *userClass != "" {
-		modifiers = append(modifiers, dhcpv4.WithUserClass(*userClass, false))
+		modifiers = append(modifiers, dhcpv4.WithUserClass(*userClass, true))
 	}
 	if *ntpEnable && strings.Contains(*ntpServers, ntpServerDHCP) {
 		modifiers = append(modifiers, dhcpv4.WithRequestedOptions(dhcpv4.OptionNTPServers))
