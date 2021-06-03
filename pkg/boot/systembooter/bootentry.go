@@ -29,6 +29,8 @@ type BootEntry struct {
 }
 
 var supportedBooterParsers = []func([]byte) (Booter, error){
+	NewPxeBooter,
+	NewBootBooter,
 	NewNetBooter,
 	NewLocalBooter,
 }
@@ -45,12 +47,13 @@ func GetBooterFor(entry BootEntry) Booter {
 		booter, err = booterParser(entry.Config)
 		if err != nil {
 			log.Printf("This config is not valid for this booter (#%d)", idx)
+			log.Printf("  Error: %v", err.Error())
 			continue
 		}
 		break
 	}
 	if booter == nil {
-		log.Printf("No booter found for entry: %+v", entry)
+		log.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
 		return &NullBooter{}
 	}
 	return booter
@@ -60,6 +63,7 @@ func GetBooterFor(entry BootEntry) Booter {
 // partition of the flash chip
 func GetBootEntries() []BootEntry {
 	var bootEntries []BootEntry
+
 	for idx := 0; idx < 9999; idx++ {
 		key := fmt.Sprintf("Boot%04d", idx)
 		// try the RW entries first
@@ -78,11 +82,12 @@ func GetBootEntries() []BootEntry {
 			bootEntries = append(bootEntries, BootEntry{Name: key, Config: value})
 		}
 	}
+
 	// look for a Booter that supports the given configuration
 	for idx, entry := range bootEntries {
 		entry.Booter = GetBooterFor(entry)
 		if entry.Booter == nil {
-			log.Printf("No booter found for entry: %+v", entry)
+			log.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
 		}
 		bootEntries[idx] = entry
 	}
