@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,31 +23,54 @@ type bus struct {
 	Devices []string
 }
 
-func onePCI(dir string) (*PCI, error) {
-	var pci PCI
-	v := reflect.TypeOf(pci)
-	for ix := 0; ix < v.NumField(); ix++ {
-		f := v.Field(ix)
-		n := f.Tag.Get("pci")
-		if n == "" {
-			continue
-		}
-		s, err := ioutil.ReadFile(filepath.Join(dir, n))
-		if err != nil {
-			return nil, err
-		}
-		// Linux never understood /proc.
-		// Anyway, bar is special.
-		ss := strings.TrimSuffix(string(s), "\n")
-		if n != "resource" {
-			ss = strings.TrimPrefix(ss, "0x")
-		}
-		reflect.ValueOf(&pci).Elem().Field(ix).SetString(ss)
+func readString(dir, file string) (string, error) {
+	s, err := ioutil.ReadFile(filepath.Join(dir, file))
+	if err != nil {
+		return "", err
 	}
-	pci.VendorName, pci.DeviceName = pci.Vendor, pci.Device
-	if n, ok := ClassNames[pci.Class]; ok {
-		pci.Class = n
+	return strings.TrimSuffix(string(s), "\n"), nil
+}
+
+func readUint(dir, file string, base, bits int) (uint64, error) {
+	s, err := readString(dir, file)
+	if err != nil {
+		return 0, err
 	}
+	s = strings.TrimPrefix(s, "0x")
+	return strconv.ParseUint(s, base, bits)
+}
+
+// OnePCI takes the name of a directory containing linux-style
+// PCI files and returns a filled-in *PCI.
+func OnePCI(dir string) (*PCI, error) {
+	pci := PCI{}
+	var err error
+	var n uint64
+
+	if n, err = readUint(dir, "vendor", 16, 16); err != nil {
+		return nil, err
+	}
+	pci.Vendor = uint16(n)
+	if n, err = readUint(dir, "device", 16, 16); err != nil {
+		return nil, err
+	}
+	pci.Device = uint16(n)
+	if n, err = readUint(dir, "class", 16, 24); err != nil {
+		return nil, err
+	}
+	pci.Class = uint32(n)
+	if n, err = readUint(dir, "irq", 10, 8); err != nil {
+		return nil, err
+	}
+	pci.IRQLine = uint8(n)
+	if pci.Resource, err = readString(dir, "resource"); err != nil {
+		return nil, err
+	}
+	pci.VendorName, pci.DeviceName = fmt.Sprintf("%04x", pci.Vendor), fmt.Sprintf("%04x", pci.Device)
+	if nm, ok := ClassNames[pci.Class]; ok {
+		pci.ClassName = nm
+	}
+
 	for i, r := range strings.Split(pci.Resource, "\n") {
 		b, l, a, err := BaseLimType(r)
 		// It's not clear how this can happen, if ever; could someone

@@ -17,11 +17,11 @@ type BusReader interface {
 // more Devices keyed by hex ID.
 type Vendor struct {
 	Name    string
-	Devices map[string]Device
+	Devices map[uint16]DeviceName
 }
 
 // Device is a PCI device human readable label
-type Device string
+type DeviceName string
 
 // Control configures how the device responds to operations. It is the 3rd 16-bit word.
 type Control uint16
