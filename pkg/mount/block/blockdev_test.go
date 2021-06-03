@@ -41,15 +41,15 @@ func TestParsePCIBlockList(t *testing.T) {
 		{
 			name:        "one device",
 			blockString: "0x8086:0x1234",
-			want:        pci.Devices{&pci.PCI{Vendor: "0x8086", Device: "0x1234"}},
+			want:        pci.Devices{&pci.PCI{Vendor: 0x8086, Device: 0x1234}},
 			errStr:      "",
 		},
 		{
 			name:        "two devices",
 			blockString: "0x8086:0x1234,0x1234:0xabcd",
 			want: pci.Devices{
-				&pci.PCI{Vendor: "0x8086", Device: "0x1234"},
-				&pci.PCI{Vendor: "0x1234", Device: "0xabcd"},
+				&pci.PCI{Vendor: 0x8086, Device: 0x1234},
+				&pci.PCI{Vendor: 0x1234, Device: 0xabcd},
 			},
 			errStr: "",
 		},
@@ -57,8 +57,8 @@ func TestParsePCIBlockList(t *testing.T) {
 			name:        "no 0x",
 			blockString: "8086:1234,1234:abcd",
 			want: pci.Devices{
-				&pci.PCI{Vendor: "0x8086", Device: "0x1234"},
-				&pci.PCI{Vendor: "0x1234", Device: "0xabcd"},
+				&pci.PCI{Vendor: 0x8086, Device: 0x1234},
+				&pci.PCI{Vendor: 0x1234, Device: 0xabcd},
 			},
 			errStr: "",
 		},
@@ -66,8 +66,8 @@ func TestParsePCIBlockList(t *testing.T) {
 			name:        "capitals",
 			blockString: "0x8086:0x1234,0x1234:0xABCD",
 			want: pci.Devices{
-				&pci.PCI{Vendor: "0x8086", Device: "0x1234"},
-				&pci.PCI{Vendor: "0x1234", Device: "0xabcd"},
+				&pci.PCI{Vendor: 0x8086, Device: 0x1234},
+				&pci.PCI{Vendor: 0x1234, Device: 0xabcd},
 			},
 			errStr: "",
 		},

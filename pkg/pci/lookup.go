@@ -4,18 +4,22 @@
 
 package pci
 
-// Lookup takes PCI hex (as strings) vendor and device ID values and returns human
-// readable labels for both the vendor and device. Returns the input ID value if
-// if label is not found in the ids map.
-func Lookup(ids map[string]Vendor, vendor string, device string) (string, string) {
+import "fmt"
 
-	if v, f1 := ids[vendor]; f1 {
-		if d, f2 := v.Devices[device]; f2 {
-			return v.Name, string(d)
+const venDevFmt = "%04x"
+
+// Lookup takes PCI and device ID values and returns human
+// readable labels for both the vendor and device. It returns the input ID value if
+// if label is not found in the ids map.
+func Lookup(ids map[uint16]Vendor, vendor uint16, device uint16) (string, string) {
+
+	if v, ok := ids[vendor]; ok {
+		if d, ok := v.Devices[device]; ok {
+			return v.Name, fmt.Sprintf(venDevFmt, d)
 		}
 		// If entry for device doesn't exist return the hex ID
-		return v.Name, device
+		return fmt.Sprintf(venDevFmt, v.Name), fmt.Sprintf(venDevFmt, device)
 	}
 	// If entry for vendor doesn't exist both hex IDs
-	return vendor, device
+	return fmt.Sprintf(venDevFmt, vendor), fmt.Sprintf(venDevFmt, device)
 }
