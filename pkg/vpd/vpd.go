@@ -75,7 +75,7 @@ func (r *Reader) Set(key string, value []byte, readOnly bool) error {
 	return os.WriteFile(path.Join(r.getBaseDir(readOnly), key), value, 0o644)
 }
 
-// GetAll reads all the VPD variables and returns a map contaiing each
+// GetAll reads all the VPD variables and returns a map containing each
 // name:value couple. The `readOnly` flag specifies whether the variable is
 // read-only or read-write.
 func (r *Reader) GetAll(readOnly bool) (map[string][]byte, error) {
