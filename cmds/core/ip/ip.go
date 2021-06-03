@@ -353,7 +353,7 @@ func route() error {
 
 func main() {
 	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = []string{"addr", "route", "link", "neigh"}
+	whatIWant = []string{"address", "route", "link", "neigh"}
 	cursor = 0
 	flag.Parse()
 	arg = flag.Args()
@@ -377,7 +377,7 @@ func main() {
 	// There are lots of handy shortcuts that people will expect.
 	var err error
 	switch one(arg[cursor], whatIWant) {
-	case "addr":
+	case "address":
 		err = addrip()
 	case "link":
 		err = link()
@@ -386,7 +386,7 @@ func main() {
 	case "neigh":
 		err = neigh()
 	default:
-		usage()
+		err = usage()
 	}
 	if err != nil {
 		log.Fatal(err)
