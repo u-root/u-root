@@ -23,10 +23,15 @@ var (
 	EXT3     = []byte{0x53, 0xef}
 	EXT4     = []byte{0x53, 0xef}
 	ISOFS    = []byte{1, 'C', 'D', '0', '0', '1'}
-	MSDOS    = []byte{0xeb, 0x3c}
 	SQUASHFS = []byte{'h', 's', 'q', 's'}
-	VFAT     = []byte{0xeb, 0x58}
 	XFS      = []byte{'X', 'F', 'S', 'B'}
+	// There's no fixed magic number for the different FAT varieties
+	// Usually they start with 0xEB but it's not mandatory.
+	// Therefore we just list a few examples that we have seen in the wild.
+	MSDOS = []byte{0xeb, 0x3c}
+	VFAT  = []byte{0xeb, 0x58}
+	// QEMU virtual VFAT
+	VVFAT = []byte{0xeb, 0x3e}
 
 	AAFS        = []byte{0x5a, 0x3c, 0x69, 0xf0}
 	ADFS        = []byte{0xad, 0xf5}
@@ -119,6 +124,7 @@ var magics = []magic{
 	{magic: SQUASHFS, name: "squashfs", flags: MS_RDONLY, off: 0},
 	{magic: ISOFS, name: "iso9660", flags: MS_RDONLY, off: 32768},
 	{magic: VFAT, name: "vfat", off: 0},
+	{magic: VVFAT, name: "vfat", off: 0},
 	{magic: XFS, name: "xfs", off: 0},
 }
 
