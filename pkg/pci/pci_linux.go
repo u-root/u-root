@@ -67,6 +67,7 @@ func OnePCI(dir string) (*PCI, error) {
 		return nil, err
 	}
 	pci.VendorName, pci.DeviceName = fmt.Sprintf("%04x", pci.Vendor), fmt.Sprintf("%04x", pci.Device)
+	pci.ClassName = "ClassUnknown"
 	if nm, ok := ClassNames[pci.Class]; ok {
 		pci.ClassName = nm
 	}
