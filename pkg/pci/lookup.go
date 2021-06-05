@@ -15,10 +15,10 @@ func Lookup(ids map[uint16]Vendor, vendor uint16, device uint16) (string, string
 
 	if v, ok := ids[vendor]; ok {
 		if d, ok := v.Devices[device]; ok {
-			return v.Name, fmt.Sprintf(venDevFmt, d)
+			return v.Name, string(d)
 		}
 		// If entry for device doesn't exist return the hex ID
-		return fmt.Sprintf(venDevFmt, v.Name), fmt.Sprintf(venDevFmt, device)
+		return v.Name, fmt.Sprintf(venDevFmt, device)
 	}
 	// If entry for vendor doesn't exist both hex IDs
 	return fmt.Sprintf(venDevFmt, vendor), fmt.Sprintf(venDevFmt, device)

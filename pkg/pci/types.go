@@ -20,7 +20,7 @@ type Vendor struct {
 	Devices map[uint16]DeviceName
 }
 
-// Device is a PCI device human readable label
+// DeviceName is a PCI device human readable label
 type DeviceName string
 
 // Control configures how the device responds to operations. It is the 3rd 16-bit word.

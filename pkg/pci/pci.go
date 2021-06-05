@@ -52,7 +52,7 @@ type PCI struct {
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.
 func (p *PCI) String() string {
-	return strings.Join(append([]string{fmt.Sprintf("%s: %v: %v %v", p.Addr, p.Class, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
+	return strings.Join(append([]string{fmt.Sprintf("%s: %v: %v %v", p.Addr, p.ClassName, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
 }
 
 // SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
