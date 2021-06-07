@@ -1,50 +1,47 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 
-	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/integration/testcmd/common"
 	"golang.org/x/sys/unix"
 )
 
-func main() {
-	if err := os.MkdirAll("/testdata", 0755); err != nil {
-		log.Fatalf("Couldn't create testdata: %v", err)
-	}
-
-	// Mount a vfat volume and run the tests within.
-	var (
-		mp  *mount.MountPoint
-		err error
-	)
-	if os.Getenv("UROOT_USE_9P") == "1" {
-		mp, err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
-	} else {
-		mp, err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
-	}
+func runTest() error {
+	cleanup, err := common.MountSharedDir()
 	if err != nil {
-		log.Fatalf("Failed to mount test directory: %v", err)
+		return err
 	}
-	defer mp.Unmount(0) //nolint:errcheck
+	defer cleanup()
+	defer common.CollectKernelCoverage()
 
 	// Run the test script test.elv
-	test := filepath.Join("/testdata", "test.elv")
+	test := "/testdata/test.elv"
 	if _, err := os.Stat(test); os.IsNotExist(err) {
-		log.Fatalf("Could not find any test script to run.")
+		return errors.New("could not find any test script to run")
 	}
-
 	cmd := exec.Command("elvish", test)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		log.Fatalf("test.elv ran unsuccessfully: %v", err)
+		return fmt.Errorf("test.elv ran unsuccessfully: %v", err)
+	}
+	return nil
+}
+
+func main() {
+	if err := runTest(); err != nil {
+		log.Printf("Tests failed: %v", err)
+	} else {
+		log.Print("Tests passed")
 	}
 
 	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF); err != nil {

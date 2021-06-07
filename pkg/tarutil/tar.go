@@ -109,10 +109,11 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 			if err != nil {
 				return err
 			}
-			symlink := ""
-			if info.Mode()&os.ModeSymlink != 0 {
-				// TODO: symlinks
-				return fmt.Errorf("symlinks not yet supported: %q", path)
+			var symlink string
+			if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+				if symlink, err = os.Readlink(path); err != nil {
+					return err
+				}
 			}
 			hdr, err := tar.FileInfoHeader(info, symlink)
 			if err != nil {
