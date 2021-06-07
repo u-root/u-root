@@ -16,19 +16,22 @@ import (
 // PCI is a PCI device. We will fill this in as we add options.
 // For now it just holds two uint16 per the PCI spec.
 type PCI struct {
-	Addr       string
-	Vendor     string `pci:"vendor"`
-	Device     string `pci:"device"`
-	Class      string `pci:"class"`
+	Addr   string
+	Vendor uint16
+	Device uint16
+	Class  uint32
+
 	VendorName string
 	DeviceName string
-	Latency    byte
-	IRQPin     byte
-	IRQLine    string `pci:"irq"`
-	Bridge     bool
-	FullPath   string
-	ExtraInfo  []string
-	Config     []byte
+	ClassName  string
+
+	Latency   byte
+	IRQPin    byte
+	IRQLine   uint8
+	Bridge    bool
+	FullPath  string
+	ExtraInfo []string
+	Config    []byte
 	// The rest only gets filled in config space is read.
 	// Type 0
 	Control  Control
@@ -49,7 +52,7 @@ type PCI struct {
 // String concatenates PCI address, Vendor, and Device and other information
 // to make a useful display for the user.
 func (p *PCI) String() string {
-	return strings.Join(append([]string{fmt.Sprintf("%s: %v: %v %v", p.Addr, p.Class, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
+	return strings.Join(append([]string{fmt.Sprintf("%s: %v: %v %v", p.Addr, p.ClassName, p.VendorName, p.DeviceName)}, p.ExtraInfo...), "\n")
 }
 
 // SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
@@ -151,7 +154,7 @@ func (bus *bus) Read(filters ...Filter) (Devices, error) {
 	devices := make(Devices, 0, len(bus.Devices))
 iter:
 	for _, d := range bus.Devices {
-		p, err := onePCI(d)
+		p, err := OnePCI(d)
 		if err != nil {
 			return nil, err
 		}
