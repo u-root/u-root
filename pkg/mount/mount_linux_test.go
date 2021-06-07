@@ -187,7 +187,7 @@ func TestFilterBlockPCI(t *testing.T) {
 		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
 	}
 
-	p := &pci.PCI{Vendor: "0x8086", Device: "0x5845"}
+	p := &pci.PCI{Vendor: 0x8086, Device: 0x5845}
 	pl := pci.Devices{p}
 
 	block.Debug = log.Printf

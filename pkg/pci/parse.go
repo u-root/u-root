@@ -7,6 +7,8 @@ package pci
 import (
 	"bufio"
 	"bytes"
+	"log"
+	"strconv"
 )
 
 func isHex(b byte) bool {
@@ -15,8 +17,8 @@ func isHex(b byte) bool {
 
 // scan searches for Vendor and Device lines from the input *bufio.Scanner based
 // on pci.ids format. Found Vendors and Devices are added to the input ids map.
-func scan(s *bufio.Scanner, ids map[string]Vendor) {
-	var currentVendor string
+func scan(s *bufio.Scanner, ids map[uint16]Vendor) {
+	var currentVendor uint16
 	var line string
 
 	for s.Scan() {
@@ -24,16 +26,27 @@ func scan(s *bufio.Scanner, ids map[string]Vendor) {
 
 		switch {
 		case isHex(line[0]) && isHex(line[1]):
-			currentVendor = line[:4]
-			ids[currentVendor] = Vendor{Name: line[6:], Devices: make(map[string]Device)}
-		case currentVendor != "" && line[0] == '\t' && isHex(line[1]) && isHex(line[3]):
-			ids[currentVendor].Devices[line[1:5]] = Device(line[7:])
+			v, err := strconv.ParseUint(line[:4], 16, 16)
+			if err != nil {
+				log.Printf("Bad hex constant for vendor: %v", line[:4])
+				continue
+			}
+			currentVendor = uint16(v)
+			ids[currentVendor] = Vendor{Name: line[6:], Devices: make(map[uint16]DeviceName)}
+
+		case currentVendor != 0 && line[0] == '\t' && isHex(line[1]) && isHex(line[3]):
+			v, err := strconv.ParseUint(line[1:5], 16, 16)
+			if err != nil {
+				log.Printf("Bad hex constant for device: %v", line[1:5])
+				continue
+			}
+			ids[currentVendor].Devices[uint16(v)] = DeviceName(line[7:])
 		}
 	}
 }
 
 func parse(input []byte) idMap {
-	ids := make(map[string]Vendor)
+	ids := make(map[uint16]Vendor)
 	s := bufio.NewScanner(bytes.NewReader(input))
 	scan(s, ids)
 	return ids

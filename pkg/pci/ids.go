@@ -11,7 +11,7 @@
 
 package pci
 
-type idMap map[string]Vendor
+type idMap map[uint16]Vendor
 
 var ids idMap
 

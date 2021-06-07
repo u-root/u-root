@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -211,20 +210,7 @@ func (b *BlockDev) PCIInfo() (*pci.PCI, error) {
 		return nil, fmt.Errorf("Unable to find backing pci device with device and vendor files for %v", b.Name)
 	}
 
-	// Read both files into the pci struct and return
-	device, err := ioutil.ReadFile(dp)
-	if err != nil {
-		return nil, fmt.Errorf("Error reading device file: %v", err)
-	}
-	vendor, err := ioutil.ReadFile(vp)
-	if err != nil {
-		return nil, fmt.Errorf("Error reading vendor file: %v", err)
-	}
-	return &pci.PCI{
-		Vendor:   strings.TrimSpace(string(vendor)),
-		Device:   strings.TrimSpace(string(device)),
-		FullPath: p,
-	}, nil
+	return pci.OnePCI(p)
 }
 
 // SystemPartitionGUID is the GUID of EFI system partitions
@@ -600,14 +586,13 @@ func parsePCIBlockList(blockList string) (pci.Devices, error) {
 		if err != nil {
 			return nil, fmt.Errorf("BlockList needs to contain a hex vendor ID, got %v, err %v", p[0], err)
 		}
-		vs := fmt.Sprintf("%#04x", v)
 
 		d, err := strconv.ParseUint(strings.TrimPrefix(p[1], "0x"), 16, 16)
 		if err != nil {
 			return nil, fmt.Errorf("BlockList needs to contain a hex device ID, got %v, err %v", p[1], err)
 		}
-		ds := fmt.Sprintf("%#04x", d)
-		pciList = append(pciList, &pci.PCI{Vendor: vs, Device: ds})
+
+		pciList = append(pciList, &pci.PCI{Vendor: uint16(v), Device: uint16(d)})
 	}
 	return pciList, nil
 }
@@ -630,7 +615,7 @@ func (b BlockDevices) FilterBlockPCIString(blocklist string) (BlockDevices, erro
 // and device ID as an entry in the blocklist.
 func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
 	type mapKey struct {
-		vendor, device string
+		vendor, device uint16
 	}
 	m := make(map[mapKey]bool)
 
