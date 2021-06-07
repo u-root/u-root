@@ -98,6 +98,8 @@ github.com/vishvananda/netlink/nl
 github.com/vishvananda/netns
 # github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 github.com/vtolstov/go-ioctl
+# go.etcd.io/bbolt v1.3.5
+go.etcd.io/bbolt
 # golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -175,3 +177,54 @@ gopkg.in/yaml.v3
 # pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 pack.ag/tftp
 pack.ag/tftp/netascii
+# src.elv.sh v0.14.1-0.20210606214627-cb15a1e28e03
+src.elv.sh/pkg/buildinfo
+src.elv.sh/pkg/cli
+src.elv.sh/pkg/cli/histutil
+src.elv.sh/pkg/cli/lscolors
+src.elv.sh/pkg/cli/mode
+src.elv.sh/pkg/cli/prompt
+src.elv.sh/pkg/cli/term
+src.elv.sh/pkg/cli/tk
+src.elv.sh/pkg/daemon
+src.elv.sh/pkg/daemon/internal/api
+src.elv.sh/pkg/diag
+src.elv.sh/pkg/edit
+src.elv.sh/pkg/edit/complete
+src.elv.sh/pkg/edit/filter
+src.elv.sh/pkg/edit/highlight
+src.elv.sh/pkg/env
+src.elv.sh/pkg/eval
+src.elv.sh/pkg/eval/errs
+src.elv.sh/pkg/eval/mods/bundled
+src.elv.sh/pkg/eval/mods/daemon
+src.elv.sh/pkg/eval/mods/file
+src.elv.sh/pkg/eval/mods/math
+src.elv.sh/pkg/eval/mods/path
+src.elv.sh/pkg/eval/mods/platform
+src.elv.sh/pkg/eval/mods/re
+src.elv.sh/pkg/eval/mods/store
+src.elv.sh/pkg/eval/mods/str
+src.elv.sh/pkg/eval/mods/unix
+src.elv.sh/pkg/eval/vals
+src.elv.sh/pkg/eval/vars
+src.elv.sh/pkg/fsutil
+src.elv.sh/pkg/getopt
+src.elv.sh/pkg/glob
+src.elv.sh/pkg/logutil
+src.elv.sh/pkg/parse
+src.elv.sh/pkg/parse/cmpd
+src.elv.sh/pkg/parse/parseutil
+src.elv.sh/pkg/persistent/hash
+src.elv.sh/pkg/persistent/hashmap
+src.elv.sh/pkg/persistent/vector
+src.elv.sh/pkg/prog
+src.elv.sh/pkg/rpc
+src.elv.sh/pkg/shell
+src.elv.sh/pkg/store
+src.elv.sh/pkg/strutil
+src.elv.sh/pkg/sys
+src.elv.sh/pkg/testutil
+src.elv.sh/pkg/tt
+src.elv.sh/pkg/ui
+src.elv.sh/pkg/wcwidth

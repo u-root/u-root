@@ -104,7 +104,7 @@ jobs:
           command: |
               golangci-lint run ./... --disable-all --enable=golint \
                 --skip-dirs=pkg/uroot/test \
-                --skip-dirs=cmds/core/elvish \
+                --skip-dirs=cmds/exp/felvish \
                 --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
                 --exclude="don't use underscores" \
                 --exclude="don't use ALL_CAPS" \
