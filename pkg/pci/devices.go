@@ -66,7 +66,7 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 			}
 			fmt.Fprintf(o, "\n")
 			if pci.IRQPin != 0 {
-				if _, err := fmt.Fprintf(o, "\tInterrupt: pin %X routed to IRQ %s\n", 9+pci.IRQPin, pci.IRQLine); err != nil {
+				if _, err := fmt.Fprintf(o, "\tInterrupt: pin %X routed to IRQ %X\n", 9+pci.IRQPin, pci.IRQLine); err != nil {
 					return err
 				}
 

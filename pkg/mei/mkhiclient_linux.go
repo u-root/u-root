@@ -9,14 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/u-root/u-root/pkg/pci"
 )
 
 // Intel MEI PCI dev IDs,
 // from https://elixir.bootlin.com/linux/latest/source/drivers/misc/mei/hw-me-regs.h
-var meiDevIDs = map[string]uint{
+var meiDevIDs = map[string]uint16{
 	// awk '/MEI_DEV_ID/ {print "\t\"" $2 "\": " $3 ","}' hw-me-regs.h
 	"MEI_DEV_ID_82946GZ":    0x2974,
 	"MEI_DEV_ID_82G35":      0x2984,
@@ -270,16 +269,12 @@ func GetMeiPciDevice() (*pci.PCI, error) {
 	}
 	for _, device := range devices {
 		// look for vendor ID 8086 (Intel)
-		if device.Vendor != "8086" {
+		if device.Vendor != 0x8086 {
 			continue
-		}
-		productID, err := strconv.ParseInt(device.Device, 16, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse device ID '%s' as hex: %v", device.Device, err)
 		}
 		// look for a known MEI product ID
 		for _, devID := range meiDevIDs {
-			if int64(devID) == productID {
+			if devID == device.Device {
 				device.SetVendorDeviceName()
 				// there is only one MEI device, right?
 				return device, nil
