@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -17,6 +18,8 @@ import (
 	"github.com/u-root/u-root/integration/testcmd/common"
 	"golang.org/x/sys/unix"
 )
+
+const individualTestTimeout = 25 * time.Second
 
 func walkTests(testRoot string, fn func(string, string)) error {
 	return filepath.Walk(testRoot, func(path string, info os.FileInfo, err error) error {
@@ -43,7 +46,8 @@ func runTest() error {
 	defer common.CollectKernelCoverage()
 
 	walkTests("/testdata/tests", func(path, pkgName string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
+		// Send the kill signal with a 500ms grace period.
+		ctx, cancel := context.WithTimeout(context.Background(), individualTestTimeout+500*time.Millisecond)
 		defer cancel()
 
 		r, w, err := os.Pipe()
@@ -52,7 +56,7 @@ func runTest() error {
 			return
 		}
 
-		cmd := exec.CommandContext(ctx, path, "-test.v")
+		cmd := exec.CommandContext(ctx, path, "-test.v", "-test.timeout", individualTestTimeout.String())
 		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
 
 		// Write to stdout for humans, write to w for the JSON converter.
@@ -69,7 +73,10 @@ func runTest() error {
 			return
 		}
 
-		j := exec.CommandContext(ctx, "test2json", "-t", "-p", pkgName)
+		// The test2json is not run with a context as it does not
+		// block. If we cancelled test2json with the same context as
+		// the test, we may lose some of the last few lines.
+		j := exec.Command("test2json", "-t", "-p", pkgName)
 		j.Stdin = r
 		j.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		if err := j.Start(); err != nil {
@@ -77,9 +84,11 @@ func runTest() error {
 			return
 		}
 
-		// Don't do anything if the test fails. The log collector will
-		// deal with it. ¯\_(ツ)_/¯
-		cmd.Wait()
+		if err := cmd.Wait(); err != nil {
+			// Log for processing by test2json.
+			fmt.Fprintf(w, "Error: test for %q exited early: %v", pkgName, err)
+		}
+
 		// Close the pipe so test2json will quit.
 		w.Close()
 		j.Wait()
