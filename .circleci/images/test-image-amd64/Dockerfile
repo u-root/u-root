@@ -1,8 +1,8 @@
-# Copyright 2018-2019 the u-root Authors. All rights reserved
+# Copyright 2018-2021 the u-root Authors. All rights reserved
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM circleci/golang:1.13
+FROM circleci/golang:1.15
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
