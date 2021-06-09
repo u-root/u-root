@@ -11,7 +11,6 @@ import (
 
 var (
 	BusyBox = BBBuilder{}
-	Source  = SourceBuilder{}
 	Binary  = BinaryBuilder{}
 )
 
