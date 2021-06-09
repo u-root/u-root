@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -29,53 +28,6 @@ var twocmds = []string{
 	"github.com/u-root/u-root/cmds/core/init",
 }
 
-var srcmds = []string{
-	"github.com/u-root/u-root/cmds/core/ls",
-	"github.com/u-root/u-root/cmds/core/init",
-	"github.com/u-root/u-root/cmds/core/installcommand",
-}
-
-type buildSourceValidator struct {
-	gopath string
-	goroot string
-	env    []string
-}
-
-func (b buildSourceValidator) Validate(a *cpio.Archive) error {
-	dir, err := ioutil.TempDir("", "u-root-source-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir)
-
-	if err := os.Mkdir(filepath.Join(dir, "tmp"), 0755); err != nil {
-		return err
-	}
-
-	// Unpack into dir.
-	err = cpio.ForEachRecord(a.Reader(), func(r cpio.Record) error {
-		return cpio.CreateFileInRoot(r, dir, false)
-	})
-	if err != nil {
-		return err
-	}
-
-	goroot := filepath.Join(dir, b.goroot)
-	gopath := filepath.Join(dir, b.gopath)
-	// go build ./src/...
-	c := exec.Command(filepath.Join(goroot, "bin/go"), "build", filepath.Join(gopath, "src/..."))
-	c.Env = append(b.env,
-		fmt.Sprintf("GOPATH=%s", gopath),
-		fmt.Sprintf("GOCACHE=%s", filepath.Join(dir, "tmp")),
-		fmt.Sprintf("GOROOT=%s", goroot),
-		"CGO_ENABLED=0")
-	out, err := c.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("could not build go source %v; output\n%s", err, out)
-	}
-	return nil
-}
-
 func xTestDCE(t *testing.T) {
 	delFiles := false
 	f, _ := buildIt(
@@ -83,7 +35,6 @@ func xTestDCE(t *testing.T) {
 		[]string{
 			"-build=bb", "-no-strip",
 			"world",
-			"-github.com/u-root/u-root/cmds/core/installcommand",
 			"-github.com/u-root/u-root/cmds/exp/builtin",
 			"-github.com/u-root/u-root/cmds/exp/run",
 			"github.com/u-root/u-root/pkg/uroot/test/foo",
@@ -253,7 +204,6 @@ func TestUrootCmdline(t *testing.T) {
 				// These are known to disable DCE and need to be exluded.
 				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
 				// so these can be removed once we no longer support Go < 1.15.
-				"-github.com/u-root/u-root/cmds/core/installcommand",
 				"-github.com/u-root/u-root/cmds/exp/builtin",
 				"-github.com/u-root/u-root/cmds/exp/run",
 			},

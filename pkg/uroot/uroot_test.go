@@ -299,14 +299,6 @@ func TestCreateInitramfs(t *testing.T) {
 							"github.com/u-root/u-root/cmds/core/dd",
 						},
 					},
-					{
-						Builder: builder.Source,
-						Packages: []string{
-							"github.com/u-root/u-root/cmds/core/cat",
-							"github.com/u-root/u-root/cmds/core/chroot",
-							"github.com/u-root/u-root/cmds/core/installcommand",
-						},
-					},
 				},
 			},
 			want: "",
@@ -323,14 +315,6 @@ func TestCreateInitramfs(t *testing.T) {
 				// binary mode.
 				itest.HasFile{"bin/cp"},
 				itest.HasFile{"bin/dd"},
-
-				// source mode.
-				itest.HasRecord{cpio.Symlink("buildbin/cat", "installcommand")},
-				itest.HasRecord{cpio.Symlink("buildbin/chroot", "installcommand")},
-				itest.HasFile{"buildbin/installcommand"},
-				itest.HasFile{"src/github.com/u-root/u-root/cmds/core/cat/cat.go"},
-				itest.HasFile{"src/github.com/u-root/u-root/cmds/core/chroot/chroot.go"},
-				itest.HasFile{"src/github.com/u-root/u-root/cmds/core/installcommand/installcommand.go"},
 			},
 		},
 	} {

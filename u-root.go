@@ -42,7 +42,6 @@ var (
 	uinitCmd, initCmd                       *string
 	defaultShell                            *string
 	useExistingInit                         *bool
-	fourbins                                *bool
 	noCommands                              *bool
 	extraFiles                              multiFlag
 	noStrip                                 *bool
@@ -60,8 +59,7 @@ func init() {
 		sh = "elvish"
 	}
 
-	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
-	build = flag.String("build", "bb", "u-root build format (e.g. bb or source).")
+	build = flag.String("build", "bb", "u-root build format (e.g. bb or binary).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
@@ -189,9 +187,6 @@ func isRecommendedVersion(v string) bool {
 // on exit.
 func Main() error {
 	env := golang.Default()
-	if *fourbins && env.GOROOT == "" {
-		log.Fatalf("You have to set GOROOT for fourbins to work")
-	}
 	if env.CgoEnabled {
 		log.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
@@ -270,9 +265,7 @@ func Main() error {
 		case "binary":
 			b = builder.BinaryBuilder{}
 		case "source":
-			b = builder.SourceBuilder{
-				FourBins: *fourbins,
-			}
+			return fmt.Errorf("source mode has been deprecated")
 		default:
 			return fmt.Errorf("could not find builder %q", *build)
 		}
@@ -293,10 +286,6 @@ func Main() error {
 		}
 		if len(pkgs) == 0 {
 			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
-		}
-
-		if *fourbins && *build == "source" {
-			initCommand = "/go/bin/go"
 		}
 
 		// The command-line tool only allows specifying one build mode

@@ -191,7 +191,6 @@ jobs:
                   # Fails because of dups. Is this supposed to work?
                   #$goruncmd -build=bb all core
                   #$goruncmd all core
-                  go run u-root.go templates.go -fourbins minimal
                   GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
                   cat /tmp/stats.json
       - store_artifacts:
