@@ -54,7 +54,7 @@ u-root core boot
 u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
 
 # Generate an archive with all of the core tools with some exceptions
-u-root core -cmds/core/{installcommand,losetup}
+u-root core -cmds/core/{ls,losetup}
 
 # Generate an archive with a tool outside of u-root
 u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
@@ -375,21 +375,16 @@ assuming your kernel is configured to work that way.
 
 ## Build Modes
 
-u-root can create an initramfs in two different modes:
+u-root can create an initramfs in two different modes, specified by `-build`:
 
-*   source mode includes Go toolchain binaries + simple shell + Go source files
-    in the initramfs archive. Tools are compiled from source on the fly by the
-    shell.
-
-    When you try to run a command that is not built, it is compiled first and
-    stored in tmpfs. From that point on, when you run the command, you get the
-    one in tmpfs. Don't worry: the Go compiler is pretty fast.
-
-*   bb mode: One busybox-like binary comprising all the Go tools you ask to
+*   `bb` mode: One busybox-like binary comprising all the Go tools you ask to
     include. See [here for how it works](pkg/bb/README.md).
 
     In this mode, u-root copies and rewrites the source of the tools you asked
     to include to be able to compile everything into one busybox-like binary.
+
+*   `binary` mode: each specified binary is compiled separately and all binaries
+    are added to the initramfs.
 
 ## Updating Dependencies
 
