@@ -13,10 +13,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
+
+	"github.com/u-root/u-root/pkg/bb/bbmain"
 )
 
 type builtin func(c *Command) error
@@ -91,7 +95,12 @@ func runit(c *Command) error {
 		if err := b(c); err != nil {
 			return err
 		}
+	} else if runtime.GOOS == "tamago" {
+		os.Args = c.Args
+		log.Printf("TAMAGO! %v, run %s", c, filepath.Base(os.Args[0]))
+		return bbmain.Run(filepath.Base(os.Args[0]))
 	} else {
+
 		forkAttr(c)
 		if err := c.Start(); err != nil {
 			return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))
