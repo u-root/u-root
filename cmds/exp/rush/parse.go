@@ -116,7 +116,7 @@ func tok(b *bufio.Reader) (string, string) {
 		}
 	case ' ', '\t':
 		return "white", string(c)
-	case '\n':
+	case '\n', '\r':
 		//fmt.Printf("NEWLINE\n")
 		return "EOL", ""
 	case '|', '&':
