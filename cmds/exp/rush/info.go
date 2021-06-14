@@ -21,6 +21,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 )
 
@@ -29,6 +30,6 @@ func init() {
 }
 
 func infocmd(c *Command) error {
-	_, err := fmt.Printf("%s %s %s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	_, err := fmt.Printf("%s %s %s %q\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, os.Args)
 	return err
 }
