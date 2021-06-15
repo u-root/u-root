@@ -26,10 +26,10 @@ import (
 )
 
 func init() {
-	addBuiltIn("info", infocmd)
+	addBuiltIn("rushinfo", infocmd)
 }
 
 func infocmd(c *Command) error {
-	_, err := fmt.Printf("%s %s %s %q\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, os.Args)
+	_, err := fmt.Printf("%s %s %s %q: builtins %v\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, os.Args, builtins)
 	return err
 }
