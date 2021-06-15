@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -33,6 +34,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/netboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
+	"github.com/u-root/u-root/pkg/sh"
 	"github.com/u-root/u-root/pkg/ulog"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
@@ -135,6 +137,17 @@ func newManualLease() (dhclient.Lease, error) {
 	return dhclient.NewPacket4(filteredIfs[0], d), nil
 }
 
+func dumpNetDebugInfo() {
+	log.Println("Dump debug info of network status")
+	commands := []string{"ip link", "ip addr", "ip route show table all", "ip neigh"}
+	for _, cmd := range commands {
+		cmds := strings.Split(cmd, " ")
+		name := cmds[0]
+		args := cmds[1:]
+		sh.RunWithLogs(name, args...)
+	}
+}
+
 func main() {
 	flag.Parse()
 	if len(flag.Args()) > 1 {
@@ -148,6 +161,9 @@ func main() {
 	var err error
 	if *bootfile == "" {
 		images, err = NetbootImages(ifName)
+		if err != nil {
+			dumpNetDebugInfo()
+		}
 	} else {
 		log.Printf("Skipping DHCP for manual target..")
 		var l dhclient.Lease
