@@ -35,7 +35,19 @@ correctly.
 Download and install u-root:
 
 ```shell
-go get github.com/u-root/u-root
+GO111MODULE=off go get github.com/u-root/u-root
+```
+
+Navigate to the directory where the u-root sources are located:
+
+```shell
+cd $GOPATH/github.com/u-root/u-root/
+```
+
+or refer to all commands with their absolute path to github, for example:
+
+```shell
+u-root github.com/u-root/u-root/core
 ```
 
 You can now use the u-root command to build an initramfs. Here are some
