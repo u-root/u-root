@@ -75,8 +75,7 @@ var (
 	ErrNoSuchFile = errors.New("no such file exists on this host")
 )
 
-// Fetch implements FileScheme.Fetch.
-func (m *MockScheme) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
+func mockFetch(m *MockScheme, u *url.URL) (*strings.Reader, error) {
 	url := u.String()
 	m.numCalled[url]++
 
@@ -99,4 +98,14 @@ func (m *MockScheme) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error)
 		return nil, ErrNoSuchFile
 	}
 	return strings.NewReader(content), nil
+}
+
+// Fetch implements FileScheme.Fetch.
+func (m *MockScheme) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
+	return mockFetch(m, u)
+}
+
+// FetchWithoutCache implements FileScheme.FetchWithoutCache.
+func (m *MockScheme) FetchWithoutCache(ctx context.Context, u *url.URL) (io.Reader, error) {
+	return mockFetch(m, u)
 }
