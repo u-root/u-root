@@ -35,14 +35,14 @@ import (
 )
 
 func init() {
-	addBuiltIn("time", runtime)
+	addBuiltIn("time", runtimecmd)
 }
 
 func printTime(label string, t time.Duration) {
 	fmt.Fprintf(os.Stderr, "%s %.03f\n", label, t.Seconds())
 }
 
-func runtime(c *Command) error {
+func runtimecmd(c *Command) error {
 	var err error
 	start := time.Now()
 	if len(c.argv) > 0 {

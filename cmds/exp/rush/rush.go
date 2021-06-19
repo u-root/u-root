@@ -23,15 +23,18 @@ type builtin func(c *Command) error
 
 // TODO: probably have one builtin map and use it for both types?
 var (
-	urpath   = "/go/bin:/ubin:/buildbin:/bbin:/bin:/usr/local/bin:"
-	builtins = make(map[string]builtin)
+	urpath = "/go/bin:/ubin:/buildbin:/bbin:/bin:/usr/local/bin:"
 
+	builtins map[string]builtin
 	// the environment dir is INTENDED to be per-user and bound in
 	// a private name space at /env.
 	envDir = "/env"
 )
 
 func addBuiltIn(name string, f builtin) error {
+	if builtins == nil {
+		builtins = make(map[string]builtin)
+	}
 	if _, ok := builtins[name]; ok {
 		return fmt.Errorf("%v already a builtin", name)
 	}
@@ -92,6 +95,7 @@ func runit(c *Command) error {
 			return err
 		}
 	} else {
+
 		forkAttr(c)
 		if err := c.Start(); err != nil {
 			return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))

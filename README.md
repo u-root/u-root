@@ -151,6 +151,33 @@ qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nogr
 # Go Gopher
 # ~/>
 ```
+Passing command line arguments like above is equivalent to passing the arguments to uinit via a flags file in `/etc/uinit.flags`, see [Extra Files](#extra-files).
+
+Additionally, you can pass arguments to uinit via the `uroot.uinitargs` kernel parameters, for example:
+
+```bash
+u-root -uinitcmd="echo Gopher" ./cmds/core/{init,echo,elvish}
+
+cpio -ivt < /tmp/initramfs.linux_amd64.cpio
+# ...
+# lrwxrwxrwx   0 root     root           12 Dec 31  1969 bin/uinit -> ../bbin/echo
+# lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/init
+
+qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0 uroot.uinitargs=Go"
+# ...
+# [    0.848021] Freeing unused kernel memory: 896K
+# 2020/05/01 04:04:39 Welcome to u-root!
+#                              _
+#   _   _      _ __ ___   ___ | |_
+#  | | | |____| '__/ _ \ / _ \| __|
+#  | |_| |____| | | (_) | (_) | |_
+#   \__,_|    |_|  \___/ \___/ \__|
+#
+# Go Gopher
+# ~/>
+```
+Note the order of the passed arguments in the above example.
+
 
 The command you name must be present in the command set. The following will *not
 work*:
