@@ -345,6 +345,7 @@ func main() {
 	bootMenu = append(bootMenu, entry)
 	bootMenu = append(bootMenu, menu.Reboot{})
 	bootMenu = append(bootMenu, menu.StartShell{})
+	bootMenu = append(bootMenu, menu.Return{})
 	menu.SetInitialTimeout(90 * time.Second)
 	menu.ShowMenuAndLoad(true, "NetbootXYZ", bootMenu...)
 }

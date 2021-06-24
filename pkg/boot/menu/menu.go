@@ -338,3 +338,23 @@ func (Reboot) Exec() error {
 
 // IsDefault indicates that this should not be run as a default action.
 func (Reboot) IsDefault() bool { return false }
+
+// Return is a menu. Entry that does nothing and returns to the caller to continue execution.
+type Return struct{}
+
+// Label is the label to show to the user.
+func (Return) Label() string {
+	return "Return to caller"
+}
+
+// Edit does nothing.
+func (Return) Edit(func(cmdline string) string) {}
+
+// Load does nothing.
+func (Return) Load() error { return nil }
+
+// Exec returns to the menu caller.
+func (Return) Exec() error { return nil }
+
+// IsDefault indicates that this should not be run as a default action.
+func (Return) IsDefault() bool { return false }

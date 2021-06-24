@@ -105,6 +105,7 @@ func main() {
 	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
+	menuEntries = append(menuEntries, menu.Return{})
 
 	// Boot does not return.
 	bootcmd.ShowMenuAndBoot(menuEntries, mountPool, *noLoad, *noExec, "Boot")

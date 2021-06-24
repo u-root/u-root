@@ -359,6 +359,15 @@ func TestShowMenuAndLoadFromFile(t *testing.T) {
 			userEntry:    []byte{},
 			calledLabels: []string{"1"},
 		},
+		{
+			name: "appended_return_entry_works",
+			entries: []*testEntry{
+				{label: "1", isDefault: true, load: fmt.Errorf("oops")},
+			},
+			// Select the appended return case
+			userEntry:    []byte("2\r\n"),
+			calledLabels: []string{"Return to caller"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -373,6 +382,7 @@ func TestShowMenuAndLoadFromFile(t *testing.T) {
 			for _, e := range tt.entries {
 				entries = append(entries, e)
 			}
+			entries = append(entries, Return{})
 
 			timer := time.NewTimer(initialTimeout * 4)
 			entry := make(chan Entry)
