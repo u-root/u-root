@@ -177,7 +177,7 @@ func Choose(term MenuTerminal, allowEdit bool, entries ...Entry) Entry {
 
 // ShowMenuAndLoad calls showMenuAndLoadFromFile using the default tty.
 // Use TTY because os.stdin does not support deadlines well.
-func ShowMenuAndLoad(allowEdit bool, entries ...Entry) Entry {
+func ShowMenuAndLoad(allowEdit bool, menuName string, entries ...Entry) Entry {
 	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 	if err != nil {
 		log.Printf("Failed to open /dev/tty: %s\n", err)
@@ -185,7 +185,7 @@ func ShowMenuAndLoad(allowEdit bool, entries ...Entry) Entry {
 	}
 	defer f.Close()
 
-	return showMenuAndLoadFromFile(f, allowEdit, entries...)
+	return showMenuAndLoadFromFile(f, allowEdit, menuName, entries...)
 }
 
 // showMenuAndLoadFromFile lets the user choose one of entries and loads it.
@@ -193,10 +193,10 @@ func ShowMenuAndLoad(allowEdit bool, entries ...Entry) Entry {
 // returned.
 //
 // The user is left to call Entry.Exec when this function returns.
-func showMenuAndLoadFromFile(file *os.File, allowEdit bool, entries ...Entry) Entry {
+func showMenuAndLoadFromFile(file *os.File, allowEdit bool, menuName string, entries ...Entry) Entry {
 	// Clear the screen (ANSI terminal escape code for screen clear).
 	fmt.Printf("\033[1;1H\033[2J\n\n")
-	fmt.Printf("Welcome to LinuxBoot's Menu\n\n")
+	fmt.Printf("Welcome to LinuxBoot's %s Menu\n\n", menuName)
 	fmt.Printf("Enter a number to boot a kernel:\n")
 
 	for {

@@ -107,5 +107,5 @@ func main() {
 	menuEntries = append(menuEntries, menu.StartShell{})
 
 	// Boot does not return.
-	bootcmd.ShowMenuAndBoot(menuEntries, mountPool, *noLoad, *noExec)
+	bootcmd.ShowMenuAndBoot(menuEntries, mountPool, *noLoad, *noExec, "Boot")
 }

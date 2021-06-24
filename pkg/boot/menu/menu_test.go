@@ -377,7 +377,7 @@ func TestShowMenuAndLoadFromFile(t *testing.T) {
 			timer := time.NewTimer(initialTimeout * 4)
 			entry := make(chan Entry)
 			go func() {
-				entry <- showMenuAndLoadFromFile(slave, true, entries...)
+				entry <- showMenuAndLoadFromFile(slave, true, "Testing", entries...)
 			}()
 
 			if tt.userEntry != nil && len(tt.userEntry) > 0 {

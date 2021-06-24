@@ -20,7 +20,7 @@ import (
 // mountPool is unmounted before kexecing. noLoad prints the list of entries
 // and exits. If noLoad is false, a boot menu is shown to the user. The
 // user-chosen boot entry will be kexec'd unless noExec is true.
-func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec bool) {
+func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec bool, menuName string) {
 	if noLoad {
 		log.Print("Not loading menu or kernel. Options:")
 		for i, entry := range entries {
@@ -30,7 +30,7 @@ func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec
 		os.Exit(0)
 	}
 
-	loadedEntry := menu.ShowMenuAndLoad(true, entries...)
+	loadedEntry := menu.ShowMenuAndLoad(true, menuName, entries...)
 
 	// Clean up.
 	if mountPool != nil {

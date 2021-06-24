@@ -188,5 +188,5 @@ func main() {
 	menuEntries = append(menuEntries, menu.StartShell{})
 
 	// Boot does not return.
-	bootcmd.ShowMenuAndBoot(menuEntries, nil, *noLoad, *noExec)
+	bootcmd.ShowMenuAndBoot(menuEntries, nil, *noLoad, *noExec, "PXEBoot")
 }
