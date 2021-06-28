@@ -2,6 +2,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// netbootxyz shows a boot menu based on netboot.xyz
+//
+// Synopsis:
+//     netbootxyz [-no-dhcp,-no-load,-no-exec,-v,-i eth0]
+//
+// Options:
+//     -v:       Verbose output
+//     -no-load: Print chosen boot configuration, but do not download + exec it
+//     -no-exec: Download boot configuration, but do not exec it
+//     -no-dhcp: Don't try to get an IP address via DHCP
+//     -i eth0:  Interface to send packets through
+
 package main
 
 import (
