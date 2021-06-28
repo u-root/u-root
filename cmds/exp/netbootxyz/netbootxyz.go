@@ -27,6 +27,7 @@ var (
 	verbose = flag.Bool("v", false, "Verbose output")
 	noLoad  = flag.Bool("no-load", false, "Get DHCP response, print chosen boot configuration, but do not download + exec it")
 	noExec  = flag.Bool("no-exec", false, "Download boot configuration, but do not exec it")
+	noDhcp  = flag.Bool("no-dhcp", false, "Don't try to get an IP address via DHCP")
 	ifName  = flag.String("i", "eth0", "Interface to send packets through")
 
 	bootMenu []menu.Entry
@@ -222,10 +223,12 @@ func main() {
 	time.Sleep(2 * time.Second)
 	flag.Parse()
 
-	// Get an IP address via DHCP
-	err := configureDHCPNetwork()
-	if err != nil {
-		fmt.Printf("Error while getting IP : %v\n", err)
+	if !*noDhcp {
+		// Get an IP address via DHCP
+		err := configureDHCPNetwork()
+		if err != nil {
+			fmt.Printf("Error while getting IP : %v\n", err)
+		}
 	}
 
 	// Set up HTTP client
