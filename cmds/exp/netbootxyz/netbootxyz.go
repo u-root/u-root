@@ -218,10 +218,11 @@ func remove(slice []string, s int) []string {
 }
 
 func main() {
+	flag.Parse()
+
 	// Print Banner and parse arguments
 	fmt.Print(banner)
 	time.Sleep(2 * time.Second)
-	flag.Parse()
 
 	if !*noDhcp {
 		// Get an IP address via DHCP
