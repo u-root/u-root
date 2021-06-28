@@ -138,13 +138,22 @@ func closeIO(c io.Closer, err *error) {
 }
 
 func configureDHCPNetwork() error {
-	if *verbose {
-		log.Printf("Trying to configure network configuration dynamically...")
-	}
-
 	link, err := findNetworkInterface(*ifName)
 	if err != nil {
 		return err
+	}
+
+	addrs, err := netlink.AddrList(link, netlink.FAMILY_ALL)
+	if err != nil {
+		return fmt.Errorf("Can't enumerate addresses: %v", err)
+	}
+	if len(addrs) > 0 {
+		log.Printf("Continuing without DHCP because the interface %s already has IP addresses.", *ifName)
+		return nil
+	}
+
+	if *verbose {
+		log.Printf("Trying to configure network configuration dynamically...")
 	}
 
 	var links []netlink.Link
