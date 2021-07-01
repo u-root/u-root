@@ -7,22 +7,20 @@ yourself.
 
 | Command        | Flags TODO      | Comments               |
 | -------------- | --------------- | ---------------------- |
+| :x: base64     | -d              | Not implemented yet!   |
 | :x: flashrom   | -p internal     |                        |
 | :x: gitclone   |                 | Not implemented yet!   |
-| grep           | -cnF            | RE2-compatible only    |
-| ls             | -hFfS           | -r is raw not reverse  |
-| :x: man        | -k              | Not implemented yet!   |
-| mv             | -n              |                        |
-| ping           | -a              |                        |
+| grep           | -nF             | RE2-compatible only    |
+| gzip           | -d              |                        |
 | :x: printf     |                 | Not implemented yet!   |
 | ps             |                 | Fix race conditions    |
 | readlink       | -em             |                        |
+| :x: sed        | -ie             | Not implemented yet!   |
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |
 | :x: time       | -p              |                        |
-| truncate       | -or             |                        |
+| truncate       | -o              |                        |
 | uniq           | -i              |                        |
 | unshare        |                 | Different flag names   |
-| wget           |                 | No args yet...         |
 
 (Commands marked with an :x: are not yet implemented.)
