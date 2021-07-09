@@ -5,15 +5,17 @@
 // spidev communicates with the Linux spidev driver.
 //
 // Synopsis:
-//     spidev [-D DEV] [-s SPEED] raw < tx.bin > rx.bin
+//     spidev [OPTIONS] raw < tx.bin > rx.bin
+//     spidev [OPTIONS] sfdp
 //
 // Options:
 //     -D DEV: spidev device (default /dev/spidev0.0)
 //     -s SPEED: max speed in Hz (default 500000)
 //
 // Description:
-//     With the raw subcommand, the binary data from stdin is transmitted over
-//     the SPI bus. Received data is printed to stdout.
+//     raw: The binary data from stdin is transmitted over the SPI bus.
+//          Received data is printed to stdout.
+//     sfdp: Parse and print the parameters in the SFDP.
 package main
 
 import (
@@ -24,11 +26,14 @@ import (
 	"os"
 
 	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/flash"
+	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spi"
 )
 
 type spidev interface {
 	Transfer([]spi.Transfer) error
+	SetSpeedHz(uint32) error
 	Close() error
 }
 
@@ -47,10 +52,9 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return err
 	}
 
-	// Currently, only the raw subcommand is supported.
-	if fs.NArg() != 1 || fs.Args()[0] != "raw" {
+	if fs.NArg() != 1 {
 		flag.Usage()
-		return errors.New("expected 'raw' subcommand")
+		return errors.New("expected one subcommand")
 	}
 
 	// Open the spi device.
@@ -59,31 +63,51 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return err
 	}
 	defer s.Close()
-
-	// Create transfer from stdin.
-	tx, err := ioutil.ReadAll(input)
-	if err != nil {
-		return err
-	}
-	if len(tx) == 0 {
-		return nil
-	}
-	transfers := []spi.Transfer{
-		{
-			Tx:       tx,
-			Rx:       make([]byte, len(tx)),
-			CSChange: true,
-			SpeedHz:  *speed,
-		},
-	}
-
-	// Perform transfers.
-	if err := s.Transfer(transfers); err != nil {
+	if err := s.SetSpeedHz(*speed); err != nil {
 		return err
 	}
 
-	_, err = output.Write(transfers[0].Rx)
-	return err
+	// Currently, only the raw subcommand is supported.
+	switch fs.Args()[0] {
+	case "raw":
+		// Create transfer from stdin.
+		tx, err := ioutil.ReadAll(input)
+		if err != nil {
+			return err
+		}
+		if len(tx) == 0 {
+			return nil
+		}
+		transfers := []spi.Transfer{
+			{
+				Tx: tx,
+				Rx: make([]byte, len(tx)),
+			},
+		}
+
+		// Perform transfers.
+		if err := s.Transfer(transfers); err != nil {
+			return err
+		}
+
+		_, err = output.Write(transfers[0].Rx)
+		return err
+
+	case "sfdp":
+		// Create flash device and read SFDP.
+		f := &flash.Flash{SPI: s}
+		p, err := f.SFDP()
+		if err != nil {
+			return err
+		}
+
+		// Print sfdp.
+		return p.PrettyPrint(output, sfdp.BasicTableLookup)
+
+	default:
+		flag.Usage()
+		return errors.New("unknown subcommand")
+	}
 }
 
 func main() {
