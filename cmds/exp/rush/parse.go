@@ -84,7 +84,7 @@ func tok(b *bufio.Reader) (string, string) {
 
 	//fmt.Printf("TOK %v", c)
 	switch c {
-	case 0:
+	case 0, 4:
 		return "EOF", ""
 	case '>':
 		return "FD", "1"
@@ -116,7 +116,7 @@ func tok(b *bufio.Reader) (string, string) {
 		}
 	case ' ', '\t':
 		return "white", string(c)
-	case '\n':
+	case '\n', '\r':
 		//fmt.Printf("NEWLINE\n")
 		return "EOL", ""
 	case '|', '&':

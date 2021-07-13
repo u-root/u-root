@@ -28,6 +28,13 @@ func quiet() {
 }
 
 func osInitGo() *initCmds {
+	// Backwards compatibility for the transition from uroot.nohwrng to
+	// UROOT_NOHWRNG=1 on kernel commandline.
+	if cmdline.ContainsFlag("uroot.nohwrng") {
+		os.Setenv("UROOT_NOHWRNG", "1")
+		log.Printf("Deprecation warning: use UROOT_NOHWRNG=1 on kernel cmdline instead of uroot.nohwrng")
+	}
+
 	// Turn off job control when test mode is on.
 	ctty := libinit.WithTTYControl(!*test)
 
