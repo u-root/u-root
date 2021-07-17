@@ -6,8 +6,8 @@ package uefi
 
 import (
 	"fmt"
+	"strings"
 	"testing"
-	"io/ioutil"
 
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -45,7 +45,7 @@ func mockGetSMBIOSBase() (int64, int64, error) {
 }
 
 func TestLoadFvImage(t *testing.T) {
-	fv, err := New("testdata/uefi.fd")
+	fv, err := New("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,10 +76,13 @@ func TestNewNotFound(t *testing.T) {
 }
 
 func TestNewInvalidPayload(t *testing.T) {
-	_, err := New("testdata/invalid_uefi.fd")
-	want := "Unrecognised COFF file header machine value of 0x76c0."
-	if err.Error() != want {
-		t.Fatalf("Should be '%s', but get '%v'", want, err)
+	_, err := New("testdata/fv_with_invalid_sec.fd")
+	// for golang >= 1.7
+	want1 := "unrecognized PE machine"
+	// for golang < 1.7
+	want2 := "Unrecognised COFF file header"
+	if !(strings.Contains(err.Error(), want1) || strings.Contains(err.Error(), want2)) {
+		t.Fatalf("Should be '%s' or '%s', but get '%v'", want1, want2, err)
 	}
 }
 
@@ -95,7 +98,7 @@ func TestLoadFvImageNotFound(t *testing.T) {
 }
 
 func TestLoadFvImageFailAtParseMemoryMap(t *testing.T) {
-	fv, err := New("testdata/uefi.fd")
+	fv, err := New("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +117,7 @@ func TestLoadFvImageFailAtParseMemoryMap(t *testing.T) {
 }
 
 func TestLoadFvImageFailAtGetRSDP(t *testing.T) {
-	fv, err := New("testdata/uefi.fd")
+	fv, err := New("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +139,7 @@ func TestLoadFvImageFailAtGetRSDP(t *testing.T) {
 }
 
 func TestLoadFvImageFailAtGetSMBIOS(t *testing.T) {
-	fv, err := New("testdata/uefi.fd")
+	fv, err := New("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +165,7 @@ func TestLoadFvImageFailAtGetSMBIOS(t *testing.T) {
 }
 
 func TestLoadFvImageFailAtKexec(t *testing.T) {
-	fv, err := New("testdata/uefi.fd")
+	fv, err := New("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,20 +189,5 @@ func TestLoadFvImageFailAtKexec(t *testing.T) {
 	want := "kexec.Load() error: KEXEC_FAILED"
 	if err.Error() != want {
 		t.Fatalf("want '%s', get '%v'", want, err)
-	}
-}
-
-func TestFindSecurityCorePE32Entry (t *testing.T) {
-	dat, err := ioutil.ReadFile("testdata/uefi.fd")
-	if err != nil {
-		t.Fatalf("fail to read firmware volume, %v", err)
-	}
-	offset, err := findSecurityCorePEEntry(dat)
-	if err != nil {
-		t.Fatalf("fail to find SEC in Firmware Volume, %v", err)
-	}
-	want := 0x120
-	if offset != want {
-		t.Fatalf("want '%v', get '%v'", want, offset)
 	}
 }

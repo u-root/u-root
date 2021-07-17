@@ -107,7 +107,7 @@ func findSecurityCorePEEntry(data []byte) (offset int, err error) {
 			if err == nil {
 				offset2, err := findSecurityCorePEEntry(data[offset+fvo:])
 				if err == nil {
-					return offset + offset2, nil
+					return offset + fvo + offset2, nil
 				}
 			}
 		}
