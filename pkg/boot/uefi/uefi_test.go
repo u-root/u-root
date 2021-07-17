@@ -7,6 +7,7 @@ package uefi
 import (
 	"fmt"
 	"testing"
+	"io/ioutil"
 
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -185,5 +186,20 @@ func TestLoadFvImageFailAtKexec(t *testing.T) {
 	want := "kexec.Load() error: KEXEC_FAILED"
 	if err.Error() != want {
 		t.Fatalf("want '%s', get '%v'", want, err)
+	}
+}
+
+func TestFindSecurityCorePE32Entry (t *testing.T) {
+	dat, err := ioutil.ReadFile("testdata/uefi.fd")
+	if err != nil {
+		t.Fatalf("fail to read firmware volume, %v", err)
+	}
+	offset, err := findSecurityCorePEEntry(dat)
+	if err != nil {
+		t.Fatalf("fail to find SEC in Firmware Volume, %v", err)
+	}
+	want := 0x120
+	if offset != want {
+		t.Fatalf("want '%v', get '%v'", want, offset)
 	}
 }
