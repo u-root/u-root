@@ -21,9 +21,10 @@ import (
 type LinuxImage struct {
 	Name string
 
-	Kernel  io.ReaderAt
-	Initrd  io.ReaderAt
-	Cmdline string
+	Kernel   io.ReaderAt
+	Initrd   io.ReaderAt
+	Cmdline  string
+	BootRank int
 }
 
 var _ OSImage = &LinuxImage{}
@@ -49,6 +50,11 @@ func (li *LinuxImage) Label() string {
 		return li.Name
 	}
 	return fmt.Sprintf("Linux(kernel=%s initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
+}
+
+// Rank for the boot menu order
+func (li *LinuxImage) Rank() int {
+	return li.BootRank
 }
 
 // String prints a human-readable version of this linux image.

@@ -18,10 +18,11 @@ import (
 type MultibootImage struct {
 	Name string
 
-	Kernel  io.ReaderAt
-	Cmdline string
-	Modules []multiboot.Module
-	IBFT    *ibft.IBFT
+	Kernel   io.ReaderAt
+	Cmdline  string
+	Modules  []multiboot.Module
+	IBFT     *ibft.IBFT
+	BootRank int
 }
 
 var _ OSImage = &MultibootImage{}
@@ -32,6 +33,11 @@ func (mi *MultibootImage) Label() string {
 		return mi.Name
 	}
 	return fmt.Sprintf("Multiboot(kernel=%s cmdline=%s iBFT=%s)", stringer(mi.Kernel), mi.Cmdline, mi.IBFT)
+}
+
+// Rank for the boot menu order
+func (mi *MultibootImage) Rank() int {
+	return mi.BootRank
 }
 
 // Edit the kernel command line.
