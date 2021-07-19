@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
     },
-    "name": "Test this media \u0026 install CentOS 7"
+    "name": "Test this media \u0026 install CentOS 7",
+    "rank": "0"
   },
   {
     "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 quiet",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
     },
-    "name": "Install CentOS 7"
+    "name": "Install CentOS 7",
+    "rank": "0"
   },
   {
     "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 xdriver=vesa nomodeset quiet",
@@ -30,7 +32,8 @@
     "kernel": {
       "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
     },
-    "name": "Install CentOS 7 in basic graphics mode"
+    "name": "Install CentOS 7 in basic graphics mode",
+    "rank": "0"
   },
   {
     "cmdline": "inst.stage2=hd:LABEL=CentOS\\x207\\x20x86_64 rescue quiet",
@@ -41,6 +44,7 @@
     "kernel": {
       "url": "file:///testdata_new/CentOS_7_x86_64_DVD_1810/images/pxeboot/vmlinuz"
     },
-    "name": "Rescue a CentOS system"
+    "name": "Rescue a CentOS system",
+    "rank": "0"
   }
 ]

@@ -122,3 +122,12 @@ func TestCopyToFile(t *testing.T) {
 		t.Errorf("got %s, expected %s", string(got), "abcdefg hijklmnop")
 	}
 }
+
+func TestLinuxRank(t *testing.T) {
+	testRank := 2
+	img := &LinuxImage{BootRank: testRank}
+	l := img.Rank()
+	if l != testRank {
+		t.Fatalf("Expected Image rank %d, got %d", testRank, l)
+	}
+}

@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file://testdata/fedora_27_install/isolinux/vmlinuz"
     },
-    "name": "Test this ^media \u0026 start Fedora-Workstation-Live 27"
+    "name": "Test this ^media \u0026 start Fedora-Workstation-Live 27",
+    "rank": "0"
   },
   {
     "cmdline": "initrd=initrd.img root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image quiet",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file://testdata/fedora_27_install/isolinux/vmlinuz"
     },
-    "name": "^Start Fedora-Workstation-Live 27"
+    "name": "^Start Fedora-Workstation-Live 27",
+    "rank": "0"
   },
   {
     "cmdline": "initrd=initrd.img root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image nomodeset quiet",
@@ -30,7 +32,8 @@
     "kernel": {
       "url": "file://testdata/fedora_27_install/isolinux/vmlinuz"
     },
-    "name": "Start Fedora-Workstation-Live 27 in ^basic graphics mode"
+    "name": "Start Fedora-Workstation-Live 27 in ^basic graphics mode",
+    "rank": "0"
   },
   {
     "cmdline": "",
@@ -38,6 +41,7 @@
     "kernel": {
       "url": "file://testdata/fedora_27_install/isolinux/memtest"
     },
-    "name": "Run a ^memory test"
+    "name": "Run a ^memory test",
+    "rank": "0"
   }
 ]

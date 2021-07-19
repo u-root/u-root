@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -131,6 +132,7 @@ func LinuxImageToJSON(li *boot.LinuxImage) map[string]interface{} {
 	m["image_type"] = "linux"
 	m["name"] = li.Name
 	m["cmdline"] = li.Cmdline
+	m["rank"] = strconv.Itoa(li.BootRank)
 	if li.Kernel != nil {
 		m["kernel"] = module(li.Kernel)
 	}
@@ -149,6 +151,7 @@ func MultibootImageToJSON(mi *boot.MultibootImage) map[string]interface{} {
 	m["image_type"] = "multiboot"
 	m["name"] = mi.Name
 	m["cmdline"] = mi.Cmdline
+	m["rank"] = strconv.Itoa(mi.BootRank)
 	if mi.Kernel != nil {
 		m["kernel"] = module(mi.Kernel)
 	}
