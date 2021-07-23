@@ -250,28 +250,6 @@ func (s *SPI) Transfer(transfers []Transfer) error {
 	return nil
 }
 
-// Read reads from SPI, half-duplex. All writes are zero.
-func (s *SPI) Read(rx []byte) error {
-	return s.Transfer([]Transfer{
-		{Rx: rx, CSChange: true},
-	})
-}
-
-// Write writes to SPI, half-duplex.
-func (s *SPI) Write(tx []byte) error {
-	return s.Transfer([]Transfer{
-		{Tx: tx, CSChange: true},
-	})
-}
-
-// WriteThenRead performs a Write followed by a Read in a single transfer.
-func (s *SPI) WriteThenRead(tx []byte, rx []byte) error {
-	return s.Transfer([]Transfer{
-		{Tx: tx, CSChange: false},
-		{Rx: rx, CSChange: true},
-	})
-}
-
 // Mode returns the Mode bitset.
 func (s *SPI) Mode() (Mode, error) {
 	var m Mode
