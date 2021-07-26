@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/flash/spimock"
-	"github.com/u-root/u-root/pkg/spi"
+	"github.com/u-root/u-root/pkg/spidev"
 )
 
 func TestRun(t *testing.T) {
@@ -24,7 +24,7 @@ func TestRun(t *testing.T) {
 		ForceOpenErr       error
 		ForceTransferErr   error
 		ForceSetSpeedHzErr error
-		wantTransfers      []spi.Transfer
+		wantTransfers      []spidev.Transfer
 		wantSpeed          uint32
 		wantOutput         string
 		wantOutputRegex    *regexp.Regexp
@@ -77,7 +77,7 @@ func TestRun(t *testing.T) {
 			args: []string{"raw"},
 			// This test sends a raw sfdp read command.
 			input: []byte{0x5a, 0, 0, 0, 0xff, 0, 0, 0, 0},
-			wantTransfers: []spi.Transfer{
+			wantTransfers: []spidev.Transfer{
 				{
 					Tx: []byte{0x5a, 0, 0, 0, 0xff, 0, 0, 0, 0},
 					Rx: []byte{0, 0, 0, 0, 0, 'S', 'F', 'D', 'P'},
@@ -97,7 +97,7 @@ func TestRun(t *testing.T) {
 			s := spimock.New()
 			s.ForceTransferErr = tt.ForceTransferErr
 			s.ForceSetSpeedHzErr = tt.ForceSetSpeedHzErr
-			openFakeSpi := func(dev string) (spidev, error) {
+			openFakeSpi := func(dev string) (spi, error) {
 				if tt.ForceOpenErr != nil {
 					return nil, tt.ForceOpenErr
 				}
