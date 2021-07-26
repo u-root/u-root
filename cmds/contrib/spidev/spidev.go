@@ -28,19 +28,19 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/flash"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
-	"github.com/u-root/u-root/pkg/spi"
+	"github.com/u-root/u-root/pkg/spidev"
 )
 
-type spidev interface {
-	Transfer([]spi.Transfer) error
+type spi interface {
+	Transfer([]spidev.Transfer) error
 	SetSpeedHz(uint32) error
 	Close() error
 }
 
-type spiOpenFunc func(dev string) (spidev, error)
+type spiOpenFunc func(dev string) (spi, error)
 
-func openRealSpi(dev string) (spidev, error) {
-	return spi.Open(dev)
+func openSPIDev(dev string) (spi, error) {
+	return spidev.Open(dev)
 }
 
 func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) error {
@@ -78,7 +78,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		if len(tx) == 0 {
 			return nil
 		}
-		transfers := []spi.Transfer{
+		transfers := []spidev.Transfer{
 			{
 				Tx: tx,
 				Rx: make([]byte, len(tx)),
@@ -95,14 +95,13 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 
 	case "sfdp":
 		// Create flash device and read SFDP.
-		f := &flash.Flash{SPI: s}
-		p, err := f.SFDP()
+		f, err := flash.New(s)
 		if err != nil {
 			return err
 		}
 
 		// Print sfdp.
-		return p.PrettyPrint(output, sfdp.BasicTableLookup)
+		return f.SFDP().PrettyPrint(output, sfdp.BasicTableLookup)
 
 	default:
 		flag.Usage()
@@ -111,7 +110,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 }
 
 func main() {
-	if err := run(os.Args[1:], openRealSpi, os.Stdin, os.Stdout); err != nil {
+	if err := run(os.Args[1:], openSPIDev, os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 }
