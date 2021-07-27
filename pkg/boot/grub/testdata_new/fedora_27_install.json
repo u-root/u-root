@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file:///testdata_new/fedora_27_install/images/pxeboot/vmlinuz"
     },
-    "name": "Test this media \u0026 start Fedora-Workstation-Live 27"
+    "name": "Test this media \u0026 start Fedora-Workstation-Live 27",
+    "rank": "0"
   },
   {
     "cmdline": "root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image quiet",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file:///testdata_new/fedora_27_install/images/pxeboot/vmlinuz"
     },
-    "name": "Start Fedora-Workstation-Live 27"
+    "name": "Start Fedora-Workstation-Live 27",
+    "rank": "0"
   },
   {
     "cmdline": "root=live:CDLABEL=Fedora-WS-Live-27-1-6 rd.live.image nomodeset quiet",
@@ -30,6 +32,7 @@
     "kernel": {
       "url": "file:///testdata_new/fedora_27_install/images/pxeboot/vmlinuz"
     },
-    "name": "Start Fedora-Workstation-Live 27 in basic graphics mode"
+    "name": "Start Fedora-Workstation-Live 27 in basic graphics mode",
+    "rank": "0"
   }
 ]

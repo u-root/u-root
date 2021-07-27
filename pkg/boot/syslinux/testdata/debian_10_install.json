@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Graphical install"
+    "name": "^Graphical install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/initrd.gz --- quiet",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Advanced options"
+    "name": "^Advanced options",
+    "rank": "0"
   },
   {
     "cmdline": "priority=low vga=788 initrd=/install.amd/gtk/initrd.gz ---",
@@ -30,7 +32,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Graphical expert install"
+    "name": "Graphical expert install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz rescue/enable=true --- quiet",
@@ -41,7 +44,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Graphical rescue mode"
+    "name": "Graphical rescue mode",
+    "rank": "0"
   },
   {
     "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/gtk/initrd.gz --- quiet",
@@ -52,7 +56,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Graphical automated install"
+    "name": "Graphical automated install",
+    "rank": "0"
   },
   {
     "cmdline": "priority=low vga=788 initrd=/install.amd/initrd.gz ---",
@@ -63,7 +68,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "E^xpert install"
+    "name": "E^xpert install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/initrd.gz rescue/enable=true --- quiet",
@@ -74,7 +80,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Rescue mode"
+    "name": "^Rescue mode",
+    "rank": "0"
   },
   {
     "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/initrd.gz --- quiet",
@@ -85,7 +92,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Speech-enabled advanced options"
+    "name": "^Speech-enabled advanced options",
+    "rank": "0"
   },
   {
     "cmdline": "priority=low vga=788 initrd=/install.amd/gtk/initrd.gz speakup.synth=soft ---",
@@ -96,7 +104,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "E^xpert speech install"
+    "name": "E^xpert speech install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz rescue/enable=true speakup.synth=soft --- quiet",
@@ -107,7 +116,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Rescue speech mode"
+    "name": "^Rescue speech mode",
+    "rank": "0"
   },
   {
     "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/gtk/initrd.gz speakup.synth=soft --- quiet",
@@ -118,7 +128,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Accessible ^dark contrast installer menu"
+    "name": "Accessible ^dark contrast installer menu",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz theme=dark --- quiet",
@@ -129,7 +140,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Graphical install"
+    "name": "^Graphical install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/initrd.gz theme=dark --- quiet",
@@ -140,7 +152,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Advanced options"
+    "name": "^Advanced options",
+    "rank": "0"
   },
   {
     "cmdline": "priority=low vga=788 initrd=/install.amd/gtk/initrd.gz theme=dark ---",
@@ -151,7 +164,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Graphical expert install"
+    "name": "Graphical expert install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz rescue/enable=true theme=dark --- quiet",
@@ -162,7 +176,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Graphical rescue mode"
+    "name": "Graphical rescue mode",
+    "rank": "0"
   },
   {
     "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/gtk/initrd.gz theme=dark --- quiet",
@@ -173,7 +188,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Graphical automated install"
+    "name": "Graphical automated install",
+    "rank": "0"
   },
   {
     "cmdline": "priority=low vga=788 initrd=/install.amd/initrd.gz theme=dark ---",
@@ -184,7 +200,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "E^xpert install"
+    "name": "E^xpert install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/initrd.gz rescue/enable=true theme=dark --- quiet",
@@ -195,7 +212,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Rescue mode"
+    "name": "^Rescue mode",
+    "rank": "0"
   },
   {
     "cmdline": "auto=true priority=critical vga=788 initrd=/install.amd/initrd.gz theme=dark --- quiet",
@@ -206,7 +224,8 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "^Automated install"
+    "name": "^Automated install",
+    "rank": "0"
   },
   {
     "cmdline": "vga=788 initrd=/install.amd/gtk/initrd.gz speakup.synth=soft --- quiet",
@@ -217,6 +236,7 @@
     "kernel": {
       "url": "file://testdata/debian_10_install/install.amd/vmlinuz"
     },
-    "name": "Install with ^speech synthesis"
+    "name": "Install with ^speech synthesis",
+    "rank": "0"
   }
 ]

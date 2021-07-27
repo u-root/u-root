@@ -21,6 +21,11 @@ type OSImage interface {
 	// Label is intended for boot menus.
 	Label() string
 
+	// Rank the priority of the images for boot menus.
+	//
+	// The larger the number, the prior the image shows in the menu.
+	Rank() int
+
 	// Edit the kernel command line if possible. Must be called before
 	// Load.
 	Edit(func(cmdline string) string)

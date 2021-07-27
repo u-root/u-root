@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -27,6 +28,9 @@ import (
 
 const (
 	blsEntriesDir = "loader/entries"
+	// Set a higher default rank for BLS. It should be booted prior to the
+	// other local images.
+	blsDefaultRank = 1
 )
 
 func cutConf(s string) string {
@@ -195,6 +199,13 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 	// If both title and version were empty, so will this.
 	linux.Name = strings.Join(name, " ")
 	linux.Cmdline = strings.Join(cmdlines, " ")
+	linux.BootRank = blsDefaultRank
+	if val, exist := os.LookupEnv("BLS_BOOT_RANK"); exist {
+		if rank, err := strconv.Atoi(val); err == nil {
+			linux.BootRank = rank
+		}
+	}
+
 	return linux, nil
 }
 

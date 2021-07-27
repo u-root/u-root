@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
     },
-    "name": "Debian GNU/Linux"
+    "name": "Debian GNU/Linux",
+    "rank": "0"
   },
   {
     "cmdline": "root=UUID=39ec20e2-83f5-44ce-8671-f31ce0856377 ro console=ttyS0 quiet",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
     },
-    "name": "Debian GNU/Linux, with Linux 4.19.0-9-amd64"
+    "name": "Debian GNU/Linux, with Linux 4.19.0-9-amd64",
+    "rank": "0"
   },
   {
     "cmdline": "root=UUID=39ec20e2-83f5-44ce-8671-f31ce0856377 ro single console=ttyS0",
@@ -30,6 +32,7 @@
     "kernel": {
       "url": "file:///testdata_new/debian_10_4_installed/boot/vmlinuz-4.19.0-9-amd64"
     },
-    "name": "Debian GNU/Linux, with Linux 4.19.0-9-amd64 (recovery mode)"
+    "name": "Debian GNU/Linux, with Linux 4.19.0-9-amd64 (recovery mode)",
+    "rank": "0"
   }
 ]

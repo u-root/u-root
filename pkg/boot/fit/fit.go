@@ -29,6 +29,8 @@ type Image struct {
 	ConfigOverride string
 	// SkipInitRAMFS skips the search for an ramdisk entry in the config
 	SkipInitRAMFS bool
+	// BootRank ranks the priority of the images in boot menu
+	BootRank int
 }
 
 var _ = boot.OSImage(&Image{})
@@ -88,6 +90,11 @@ func (i *Image) Label() string {
 		return i.name
 	}
 	return fmt.Sprintf("%s (kernel: %s)", i.name, i.Kernel)
+}
+
+// Rank returns an Image Rank.
+func (i *Image) Rank() int {
+	return i.BootRank
 }
 
 // Edit edits the Image cmdline using a func.
