@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"testing"
@@ -49,8 +48,6 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
-	os.Setenv("CGO_ENABLED", "0")
-	os.Setenv("GOARCH", TestArch())
 	testDir := filepath.Join(o.TmpDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
@@ -60,7 +57,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 
 		testFile := filepath.Join(pkgDir, fmt.Sprintf("%s.test", path.Base(pkg)))
 
-		cmd := exec.Command("go", "test",
+		cmd := env.GoCmd("test",
 			"-gcflags=all=-l",
 			"-ldflags", "-s -w",
 			"-c", pkg,
