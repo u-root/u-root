@@ -16,6 +16,9 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// DefaultScheme for boot file if there are none in the lease
+var DefaultScheme = "tftp"
+
 // Packet4 implements convenience functions for DHCPv4 packets.
 type Packet4 struct {
 	iface netlink.Link
@@ -172,8 +175,8 @@ func (p *Packet4) Boot() (*url.URL, error) {
 	}
 
 	if len(u.Scheme) == 0 {
-		// Defaults to tftp is not specified.
-		u.Scheme = "tftp"
+		// Use the DefaultScheme if not specified
+		u.Scheme = DefaultScheme
 		u.Path = bootFileName
 		if len(p.P.ServerHostName) == 0 {
 			server := p.P.ServerIdentifier()
