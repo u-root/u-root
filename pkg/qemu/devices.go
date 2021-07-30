@@ -112,7 +112,7 @@ func (rod ReadOnlyDirectory) Cmdline() []string {
 	return []string{
 		"-drive", fmt.Sprintf("file=fat:rw:%s,if=none,id=tmpdir", rod.Dir),
 		"-device", "ich9-ahci,id=ahci",
-		"-device", "ide-drive,drive=tmpdir,bus=ahci.0",
+		"-device", "ide-hd,drive=tmpdir,bus=ahci.0",
 	}
 }
 
@@ -136,7 +136,7 @@ func (ibd IDEBlockDevice) Cmdline() []string {
 	// backends and frontends relate to each other.
 	return []string{
 		"-device", "ich9-ahci,id=ahci",
-		"-device", "ide-drive,drive=disk,bus=ahci.0",
+		"-device", "ide-hd,drive=disk,bus=ahci.0",
 		"-drive", fmt.Sprintf("file=%s,if=none,id=disk", ibd.File),
 	}
 }

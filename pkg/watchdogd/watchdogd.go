@@ -208,7 +208,6 @@ func (d *Daemon) DoPetting() error {
 	if err := d.CurrentWd.KeepAlive(); err != nil {
 		return err
 	}
-	log.Println("Just pet Watchdog.")
 	return nil
 }
 

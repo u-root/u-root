@@ -17,7 +17,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-13.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen hypervisor"
+    "name": "Qubes, with Xen hypervisor",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -37,7 +38,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-13.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-13.pvops.qubes.x86_64"
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-13.pvops.qubes.x86_64",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -57,7 +59,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-13.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-13.pvops.qubes.x86_64 (recovery mode)"
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-13.pvops.qubes.x86_64 (recovery mode)",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -77,7 +80,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-12.pvops.qubes.x86_64"
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-12.pvops.qubes.x86_64",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -97,7 +101,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-12.pvops.qubes.x86_64 (recovery mode)"
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.67-12.pvops.qubes.x86_64 (recovery mode)",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -117,7 +122,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.62-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.62-12.pvops.qubes.x86_64"
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.62-12.pvops.qubes.x86_64",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -137,7 +143,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.62-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.62-12.pvops.qubes.x86_64 (recovery mode)"
+    "name": "Qubes, with Xen 4.6.5 and Linux 4.4.62-12.pvops.qubes.x86_64 (recovery mode)",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -157,7 +164,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-13.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-13.pvops.qubes.x86_64"
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-13.pvops.qubes.x86_64",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -177,7 +185,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-13.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-13.pvops.qubes.x86_64 (recovery mode)"
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-13.pvops.qubes.x86_64 (recovery mode)",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -197,7 +206,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-12.pvops.qubes.x86_64"
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-12.pvops.qubes.x86_64",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -217,7 +227,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.67-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-12.pvops.qubes.x86_64 (recovery mode)"
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.67-12.pvops.qubes.x86_64 (recovery mode)",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -237,7 +248,8 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.62-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.62-12.pvops.qubes.x86_64"
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.62-12.pvops.qubes.x86_64",
+    "rank": "0"
   },
   {
     "cmdline": "placeholder ${xen_rm_opts}",
@@ -257,6 +269,7 @@
         "url": "file:///testdata_new/qubes_3_2_boot/initramfs-4.4.62-12.pvops.qubes.x86_64.img"
       }
     ],
-    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.62-12.pvops.qubes.x86_64 (recovery mode)"
+    "name": "Qubes, with Xen 4.6.5-heads and Linux 4.4.62-12.pvops.qubes.x86_64 (recovery mode)",
+    "rank": "0"
   }
 ]
