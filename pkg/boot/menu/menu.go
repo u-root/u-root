@@ -49,6 +49,10 @@ type Entry interface {
 	// IsDefault indicates that this action should be run by default if the
 	// user didn't make an entry choice.
 	IsDefault() bool
+
+	// String implements the fmt.Stringer interface. Shortly before kexec,
+	// "Attempting to boot %s" is printed.
+	String() string
 }
 
 func parseBootNum(choice string, entries []Entry) (int, error) {
