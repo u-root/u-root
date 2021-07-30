@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -173,6 +175,53 @@ var tests = []struct {
 	},
 }
 
+func TestFetchWithoutCache(t *testing.T) {
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test #%02d: %s", i, tt.name), func(t *testing.T) {
+			var r io.Reader
+			var err error
+
+			fs, ms := tt.scheme()
+			s := make(Schemes)
+			s.Register(ms.Scheme, fs)
+
+			r, err = s.FetchWithoutCache(context.TODO(), tt.url)
+			if uErr, ok := err.(*URLError); ok && uErr.Err != tt.err {
+				t.Errorf("FetchWithoutCache() = %v, want %v", uErr.Err, tt.err)
+			} else if !ok && err != tt.err {
+				t.Errorf("FetchWithoutCache() = %v, want %v", err, tt.err)
+			}
+
+			// Check number of calls before reading the file.
+			numCalled := ms.NumCalled(tt.url)
+			if numCalled != tt.wantFetchCount {
+				t.Errorf("number times Fetch() called = %v, want %v",
+					ms.NumCalled(tt.url), tt.wantFetchCount)
+			}
+			if err != nil {
+				return
+			}
+
+			// Read the entire file.
+			content, err := ioutil.ReadAll(r)
+			if err != nil {
+				t.Errorf("bytes.Buffer read returned an error? %v", err)
+			}
+			if got, want := string(content), tt.want; got != want {
+				t.Errorf("Fetch() = %v, want %v", got, want)
+			}
+
+			// Check number of calls after reading the file.
+			numCalled = ms.NumCalled(tt.url)
+			if numCalled != tt.wantFetchCount {
+				t.Errorf("number times Fetch() called = %v, want %v",
+					ms.NumCalled(tt.url), tt.wantFetchCount)
+			}
+		})
+	}
+
+}
+
 func TestFetch(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("Test #%02d: %s", i, tt.name), func(t *testing.T) {
@@ -266,5 +315,44 @@ func TestLazyFetch(t *testing.T) {
 					ms.NumCalled(tt.url), tt.wantFetchCount)
 			}
 		})
+	}
+}
+
+func TestHttpFetches(t *testing.T) {
+	c := "fetch content"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, c)
+	}))
+	defer ts.Close()
+
+	fURL, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatalf("url.Parse(%s) = %v, want no error", ts.URL, err)
+	}
+
+	// Fetch need to fetch the content as is.
+	fetchFile, err := Fetch(context.Background(), fURL)
+	if err != nil {
+		t.Errorf("Fetch(context.Background(), %s) = %v, want no error", fURL, err)
+	}
+	got, err := ioutil.ReadAll(io.NewSectionReader(fetchFile, 0, int64(len(c))))
+	if err != nil {
+		t.Errorf("ioutil.ReadAll(%v) = %v, want no error", fetchFile, err)
+	}
+	if string(got) != c {
+		t.Errorf("got %s, want %s", got, c)
+	}
+
+	// FetchWithoutCache need to fetch the content as is.
+	fetchFileNoCache, err := FetchWithoutCache(context.Background(), fURL)
+	if err != nil {
+		t.Errorf("FetchWithoutCache(context.Background(), %s) = %v, want no error", fURL, err)
+	}
+	got, err = ioutil.ReadAll(fetchFileNoCache)
+	if err != nil {
+		t.Errorf("ioutil.ReadAll(%s) = %v, want no error", fetchFileNoCache, err)
+	}
+	if string(got) != c {
+		t.Errorf("got %s, want %s", got, c)
 	}
 }
