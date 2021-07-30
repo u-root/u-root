@@ -36,10 +36,6 @@ func (d *testEntry) Label() string {
 	return d.label
 }
 
-func (d *testEntry) String() string {
-	return d.Label()
-}
-
 func (d *testEntry) Edit(func(cmdline string) string) {
 }
 
@@ -66,6 +62,40 @@ func (d *testEntry) IsDefault() bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.isDefault
+}
+
+type testEntryStringer struct {
+	testEntry
+}
+
+func (d *testEntryStringer) String() string {
+	return d.Label() + " string"
+}
+
+func TestExtendedLabel(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		entry Entry
+		want  string
+	}{
+		{
+			name:  "without stringer",
+			entry: &testEntry{label: "label"},
+			want:  "label",
+		},
+		{
+			name:  "with stringer",
+			entry: &testEntryStringer{testEntry{label: "label"}},
+			want:  "label string",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtendedLabel(tt.entry)
+			if got != tt.want {
+				t.Errorf("ExtendedLabel(%v) = %q; want %q", tt.entry, got, tt.want)
+			}
+		})
+	}
 }
 
 func TestChoose(t *testing.T) {

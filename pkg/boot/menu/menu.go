@@ -1,4 +1,4 @@
-// Copyright 2020 the u-root Authors. All rights reserved
+// Copyright 2020-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -30,7 +30,8 @@ var (
 
 // Entry is a menu entry.
 type Entry interface {
-	// Label is the string displayed to the user in the menu.
+	// Label is the string displayed to the user in the menu. It must be a
+	// single line to fit in the menu.
 	Label() string
 
 	// Edit the kernel command line if possible. Must be called prior to
@@ -49,10 +50,16 @@ type Entry interface {
 	// IsDefault indicates that this action should be run by default if the
 	// user didn't make an entry choice.
 	IsDefault() bool
+}
 
-	// String implements the fmt.Stringer interface. Shortly before kexec,
-	// "Attempting to boot %s" is printed.
-	String() string
+// ExtendedLabel calls Entry.String(), but falls back to Entry.Label(). Shortly
+// before kexec, "Attempting to boot %s" is printed. This allows for multiple
+// lines of information which would not otherwise fit in the menu.
+func ExtendedLabel(e Entry) string {
+	if s, ok := e.(fmt.Stringer); ok {
+		return s.String()
+	}
+	return e.Label()
 }
 
 func parseBootNum(choice string, entries []Entry) (int, error) {
@@ -242,7 +249,7 @@ func ShowMenuAndLoad(input *os.File, entries ...Entry) Entry {
 		// Only perform actions that are default actions. I.e. don't
 		// drop to shell.
 		if e.IsDefault() {
-			fmt.Printf("Attempting to boot %s.\n\n", e)
+			fmt.Printf("Attempting to boot %s.\n\n", ExtendedLabel(e))
 
 			if err := e.Load(); err != nil {
 				log.Printf("Failed to load %s: %v", e.Label(), err)
