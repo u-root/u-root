@@ -1,26 +1,30 @@
-# Copyright 2018-2019 the u-root Authors. All rights reserved
+# Copyright 2018-2021 the u-root Authors. All rights reserved
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM circleci/golang:1.13
+FROM circleci/golang:1.15
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
     sudo apt-get install -y --no-install-recommends \
         `# Linux dependencies`                      \
-        git                                         \
         bc                                          \
         bison                                       \
         flex                                        \
         gcc-arm-linux-gnueabi                       \
+        git                                         \
         make                                        \
         `# QEMU dependencies`                       \
-        libglib2.0-dev                              \
+        libattr1-dev                                \
+        libcap-dev                                  \
+        libcap-ng-dev                               \
         libfdt-dev                                  \
+        libglib2.0-dev                              \
         libpixman-1-dev                             \
+        meson                                       \
+        ninja-build                                 \
+        python                                      \
         zlib1g-dev                                  \
-	libcap-dev                                  \
-	libattr1-dev                                \
         `# Linux kernel build deps`                 \
         libelf-dev &&                               \
     sudo rm -rf /var/lib/apt/lists/*
@@ -44,7 +48,7 @@ RUN set -eux;                                                             \
 
 # Build QEMU
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v3.1.0 https://github.com/qemu/qemu; \
+    git clone --depth=1 --branch=v6.0.0 https://github.com/qemu/qemu; \
     cd qemu;                                                           \
     mkdir build;                                                       \
     cd build;                                                          \

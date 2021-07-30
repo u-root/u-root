@@ -1,26 +1,30 @@
-# Copyright 2018-2019 the u-root Authors. All rights reserved
+# Copyright 2018-2021 the u-root Authors. All rights reserved
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM circleci/golang:1.13
+FROM circleci/golang:1.15
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
     sudo apt-get install -y --no-install-recommends \
         `# Linux dependencies`                      \
-        git                                         \
         bc                                          \
         bison                                       \
         flex                                        \
         gcc                                         \
+        git                                         \
         make                                        \
         `# QEMU dependencies`                       \
-        libglib2.0-dev                              \
-        libfdt-dev                                  \
-        libpixman-1-dev                             \
-        zlib1g-dev                                  \
-        libcap-dev                                  \
         libattr1-dev                                \
+        libcap-dev                                  \
+        libcap-ng-dev                               \
+        libfdt-dev                                  \
+        libglib2.0-dev                              \
+        libpixman-1-dev                             \
+        meson                                       \
+        ninja-build                                 \
+        python                                      \
+        zlib1g-dev                                  \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
         `# Multiboot kernel build deps`             \
@@ -51,7 +55,7 @@ RUN set -eux;                                                             \
 
 # Build QEMU
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v4.2.0 https://github.com/qemu/qemu;  \
+    git clone --depth=1 --branch=v6.0.0 https://github.com/qemu/qemu;  \
     cd qemu;                                                           \
     mkdir build;                                                       \
     cd build;                                                          \
@@ -81,7 +85,7 @@ RUN set -eux;                                                          \
 SHELL ["/bin/bash", "-c"]
 RUN set -ex;                                                           \
     git clone --branch uefipayload --recursive                         \
-    https://github.com/chengchiehhuang/edk2 uefipayload;               \
+    https://github.com/linuxboot/edk2 uefipayload;                     \
     cd uefipayload;                                                    \
     source ./edksetup.sh;                                              \
     make -C BaseTools;                                                 \

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // OptDHCP4oDHCP6Server represents a OptionDHCP4oDHCP6Server option

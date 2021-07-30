@@ -17,7 +17,8 @@
         "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
       }
     ],
-    "name": "Test this ^media \u0026 install Qubes R3.2"
+    "name": "Test this ^media \u0026 install Qubes R3.2",
+    "rank": "0"
   },
   {
     "cmdline": "console=none",
@@ -37,7 +38,8 @@
         "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
       }
     ],
-    "name": "^Install Qubes R3.2"
+    "name": "^Install Qubes R3.2",
+    "rank": "0"
   },
   {
     "cmdline": "",
@@ -57,7 +59,8 @@
         "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
       }
     ],
-    "name": "Install Qubes R3.2 in ^basic graphics mode"
+    "name": "Install Qubes R3.2 in ^basic graphics mode",
+    "rank": "0"
   },
   {
     "cmdline": "",
@@ -77,7 +80,8 @@
         "url": "file://testdata/qubes_3_2_install/isolinux/initrd.img"
       }
     ],
-    "name": "^Rescue a Qubes system"
+    "name": "^Rescue a Qubes system",
+    "rank": "0"
   },
   {
     "cmdline": "",
@@ -85,6 +89,7 @@
     "kernel": {
       "url": "file://testdata/qubes_3_2_install/isolinux/memtest"
     },
-    "name": "Run a ^memory test"
+    "name": "Run a ^memory test",
+    "rank": "0"
   }
 ]

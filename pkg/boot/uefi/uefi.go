@@ -20,8 +20,6 @@ import (
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
-const fvEntryImageOffset int64 = 0xA0
-
 var kexecLoad = kexec.Load
 var kexecParseMemoryMap = kexec.ParseMemoryMap
 var getRSDP = acpi.GetRSDP
@@ -68,13 +66,20 @@ type FVImage struct {
 }
 
 func checkFVAndGetEntryPoint(name string) (uintptr, error) {
+	// Parse entire firmware volume to find SEC's PE32. Since payload will
+	// be only few MBs, it should be fine to load entire image for parsing.
+	dat, err := ioutil.ReadFile(name)
+	if err != nil {
+		return 0, err
+	}
+	secEntry, err := findSecurityCorePEEntry(dat)
 	f, err := os.Open(name)
 	if err != nil {
 		return 0, err
 	}
 	defer f.Close()
-	// Entry PE image for UEFI Payload is 0xA0 offset from FV head.
-	pef := io.NewSectionReader(f, fvEntryImageOffset, math.MaxInt64)
+
+	pef := io.NewSectionReader(f, int64(secEntry), math.MaxInt64)
 	pf, err := pe.NewFile(pef)
 	if err != nil {
 		return 0, err
@@ -83,7 +88,7 @@ func checkFVAndGetEntryPoint(name string) (uintptr, error) {
 	if !ok {
 		return 0, fmt.Errorf("it is not OptionalHeader64")
 	}
-	return uintptr(fvEntryImageOffset) + uintptr(op64.AddressOfEntryPoint), nil
+	return uintptr(secEntry) + uintptr(op64.AddressOfEntryPoint), nil
 }
 
 // New loads the file and return FVImage stucture if entry image is found

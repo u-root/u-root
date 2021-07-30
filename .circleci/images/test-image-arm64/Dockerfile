@@ -2,28 +2,31 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM cimg/go:1.13
+FROM cimg/go:1.15
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
     sudo apt-get install -y --no-install-recommends \
         `# Linux dependencies`                      \
-        git                                         \
         bc                                          \
         bison                                       \
         flex                                        \
         gcc-aarch64-linux-gnu                       \
+        git                                         \
         libssl-dev                                  \
         make                                        \
         `# QEMU dependencies`                       \
-        python                                      \
-        libglib2.0-dev                              \
-        libfdt-dev                                  \
-        libpixman-1-dev                             \
-        zlib1g-dev                                  \
-        libcap-dev                                  \
         libattr1-dev                                \
+        libcap-dev                                  \
+        libcap-ng-dev                               \
+        libfdt-dev                                  \
+        libglib2.0-dev                              \
+        libpixman-1-dev                             \
+        meson                                       \
+        ninja-build                                 \
+        python                                      \
         qemu-efi-aarch64                            \
+        zlib1g-dev                                  \
         `# Linux kernel build deps`                 \
         libelf-dev &&                               \
     sudo rm -rf /var/lib/apt/lists/*
@@ -48,7 +51,7 @@ RUN set -eux;                                                             \
 
 # Build QEMU
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v3.1.0 https://github.com/qemu/qemu;  \
+    git clone --depth=1 --branch=v6.0.0 https://github.com/qemu/qemu;  \
     cd qemu;                                                           \
     mkdir build;                                                       \
     cd build;                                                          \

@@ -54,7 +54,7 @@ u-root core boot
 u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
 
 # Generate an archive with all of the core tools with some exceptions
-u-root core -cmds/core/{installcommand,losetup}
+u-root core -cmds/core/{ls,losetup}
 
 # Generate an archive with a tool outside of u-root
 u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
@@ -151,6 +151,33 @@ qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nogr
 # Go Gopher
 # ~/>
 ```
+Passing command line arguments like above is equivalent to passing the arguments to uinit via a flags file in `/etc/uinit.flags`, see [Extra Files](#extra-files).
+
+Additionally, you can pass arguments to uinit via the `uroot.uinitargs` kernel parameters, for example:
+
+```bash
+u-root -uinitcmd="echo Gopher" ./cmds/core/{init,echo,elvish}
+
+cpio -ivt < /tmp/initramfs.linux_amd64.cpio
+# ...
+# lrwxrwxrwx   0 root     root           12 Dec 31  1969 bin/uinit -> ../bbin/echo
+# lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/init
+
+qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0 uroot.uinitargs=Go"
+# ...
+# [    0.848021] Freeing unused kernel memory: 896K
+# 2020/05/01 04:04:39 Welcome to u-root!
+#                              _
+#   _   _      _ __ ___   ___ | |_
+#  | | | |____| '__/ _ \ / _ \| __|
+#  | |_| |____| | | (_) | (_) | |_
+#   \__,_|    |_|  \___/ \___/ \__|
+#
+# Go Gopher
+# ~/>
+```
+Note the order of the passed arguments in the above example.
+
 
 The command you name must be present in the command set. The following will *not
 work*:
@@ -375,21 +402,16 @@ assuming your kernel is configured to work that way.
 
 ## Build Modes
 
-u-root can create an initramfs in two different modes:
+u-root can create an initramfs in two different modes, specified by `-build`:
 
-*   source mode includes Go toolchain binaries + simple shell + Go source files
-    in the initramfs archive. Tools are compiled from source on the fly by the
-    shell.
-
-    When you try to run a command that is not built, it is compiled first and
-    stored in tmpfs. From that point on, when you run the command, you get the
-    one in tmpfs. Don't worry: the Go compiler is pretty fast.
-
-*   bb mode: One busybox-like binary comprising all the Go tools you ask to
+*   `bb` mode: One busybox-like binary comprising all the Go tools you ask to
     include. See [here for how it works](pkg/bb/README.md).
 
     In this mode, u-root copies and rewrites the source of the tools you asked
     to include to be able to compile everything into one busybox-like binary.
+
+*   `binary` mode: each specified binary is compiled separately and all binaries
+    are added to the initramfs.
 
 ## Updating Dependencies
 

@@ -13,7 +13,7 @@ import (
 
 	"github.com/mdlayher/ethernet"
 	"github.com/mdlayher/raw"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 var (

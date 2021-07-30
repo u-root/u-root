@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,9 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/integration/testcmd/common"
 	"golang.org/x/sys/unix"
 )
+
+const individualTestTimeout = 25 * time.Second
 
 func walkTests(testRoot string, fn func(string, string)) error {
 	return filepath.Walk(testRoot, func(path string, info os.FileInfo, err error) error {
@@ -34,28 +37,17 @@ func walkTests(testRoot string, fn func(string, string)) error {
 	})
 }
 
-// Mount a vfat volume and run the tests within.
-func main() {
-	if err := os.MkdirAll("/testdata", 0755); err != nil {
-		log.Fatalf("Couldn't create testdata: %v", err)
-	}
-
-	var (
-		mp  *mount.MountPoint
-		err error
-	)
-	if os.Getenv("UROOT_USE_9P") == "1" {
-		mp, err = mount.Mount("tmpdir", "/testdata", "9p", "", 0)
-	} else {
-		mp, err = mount.Mount("/dev/sda1", "/testdata", "vfat", "", unix.MS_RDONLY)
-	}
+func runTest() error {
+	cleanup, err := common.MountSharedDir()
 	if err != nil {
-		log.Fatalf("Failed to mount test directory: %v", err)
+		return err
 	}
-	defer mp.Unmount(0) //nolint:errcheck
+	defer cleanup()
+	defer common.CollectKernelCoverage()
 
 	walkTests("/testdata/tests", func(path, pkgName string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 25000*time.Millisecond)
+		// Send the kill signal with a 500ms grace period.
+		ctx, cancel := context.WithTimeout(context.Background(), individualTestTimeout+500*time.Millisecond)
 		defer cancel()
 
 		r, w, err := os.Pipe()
@@ -64,7 +56,7 @@ func main() {
 			return
 		}
 
-		cmd := exec.CommandContext(ctx, path, "-test.v")
+		cmd := exec.CommandContext(ctx, path, "-test.v", "-test.timeout", individualTestTimeout.String())
 		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
 
 		// Write to stdout for humans, write to w for the JSON converter.
@@ -81,7 +73,10 @@ func main() {
 			return
 		}
 
-		j := exec.CommandContext(ctx, "test2json", "-t", "-p", pkgName)
+		// The test2json is not run with a context as it does not
+		// block. If we cancelled test2json with the same context as
+		// the test, we may lose some of the last few lines.
+		j := exec.Command("test2json", "-t", "-p", pkgName)
 		j.Stdin = r
 		j.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		if err := j.Start(); err != nil {
@@ -89,15 +84,28 @@ func main() {
 			return
 		}
 
-		// Don't do anything if the test fails. The log collector will
-		// deal with it. ¯\_(ツ)_/¯
-		cmd.Wait()
+		if err := cmd.Wait(); err != nil {
+			// Log for processing by test2json.
+			fmt.Fprintf(w, "Error: test for %q exited early: %v", pkgName, err)
+		}
+
 		// Close the pipe so test2json will quit.
 		w.Close()
 		j.Wait()
 	})
+	return nil
+}
 
-	log.Printf("GoTest Done")
+// Mount a vfat volume and run the tests within.
+func main() {
+	if err := runTest(); err != nil {
+		log.Printf("Tests failed: %v", err)
+	} else {
+		// The test infra is expecting this exact print.
+		log.Print("TESTS PASSED MARKER")
+	}
 
-	unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF)
+	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
+		log.Fatalf("Failed to reboot: %v", err)
+	}
 }

@@ -62,11 +62,6 @@ func main() {
 	// to be used in the rest of init.
 	ic := osInitGo()
 
-	// Start background build.
-	if isBgBuildEnabled() {
-		go startBgBuild()
-	}
-
 	cmdCount := libinit.RunCommands(debug, ic.cmds...)
 	if cmdCount == 0 {
 		log.Printf("No suitable executable found in %v", ic.cmds)
