@@ -30,7 +30,7 @@ func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec
 		os.Exit(0)
 	}
 
-	loadedEntry := menu.ShowMenuAndLoad(os.Stdin, entries...)
+	loadedEntry := menu.ShowMenuAndLoad(true, entries...)
 
 	// Clean up.
 	if mountPool != nil {
