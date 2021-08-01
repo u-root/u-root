@@ -261,6 +261,11 @@ func TestUrootCmdline(t *testing.T) {
 			env:  []string{"GOARCH=ppc64le"},
 			args: []string{"-build=bb", "all"},
 		},
+		{
+			name: "RISCV 64bit bb build",
+			env:  []string{"GOARCH=riscv64"},
+			args: []string{"-build=bb", "all"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			delFiles := true
