@@ -6,9 +6,9 @@ require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/beevik/ntp v0.3.0
 	github.com/cenkalti/backoff/v4 v4.0.2
-	github.com/creack/pty v1.1.11 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.0
+	github.com/elves/elvish v0.15.0 // indirect
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.2
@@ -21,7 +21,6 @@ require (
 	github.com/klauspost/compress v1.10.6 // indirect
 	github.com/klauspost/pgzip v1.2.4
 	github.com/kr/pty v1.1.8
-	github.com/mattn/go-isatty v0.0.12
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/pborman/getopt/v2 v2.1.0
 	github.com/rck/unit v0.0.3
@@ -42,4 +41,5 @@ require (
 	google.golang.org/grpc v1.29.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
+	src.elv.sh v0.14.1-0.20210801205800-8077c8bb855c
 )
