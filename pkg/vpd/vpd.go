@@ -11,28 +11,53 @@ import (
 	"path/filepath"
 )
 
-// VpdDir points to the base directory where the VPD sysfs interface is located.
-// It is an exported variable to allow for testing
+// default variables
 var (
-	VpdDir       = "/sys/firmware/vpd"
-	MaxBootEntry = 9999
+	MaxBootEntry  = 9999
+	DefaultVpdDir = "/sys/firmware/vpd"
 )
 
-func getBaseDir(readOnly bool) string {
-	var baseDir string
-	if readOnly {
-		baseDir = path.Join(VpdDir, "ro")
-	} else {
-		baseDir = path.Join(VpdDir, "rw")
+var globalReader = NewReader()
+
+// NewReader returns a new VPD Reader.
+func NewReader() *Reader {
+	return &Reader{
+		VpdDir: DefaultVpdDir,
 	}
-	return baseDir
+}
+
+// Get wraps globalReader.Get .
+func Get(key string, readOnly bool) ([]byte, error) {
+	return globalReader.Get(key, readOnly)
+}
+
+// Set wraps globalReader.Set .
+func Set(key string, value []byte, readOnly bool) error {
+	return globalReader.Set(key, value, readOnly)
+}
+
+// GetAll wraps globalReader.GetAll .
+func GetAll(readOnly bool) (map[string][]byte, error) {
+	return globalReader.GetAll(readOnly)
+}
+
+func (r *Reader) getBaseDir(readOnly bool) string {
+	if readOnly {
+		return path.Join(r.VpdDir, "ro")
+	}
+	return path.Join(r.VpdDir, "rw")
+}
+
+// Reader is a VPD reader object.
+type Reader struct {
+	VpdDir string
 }
 
 // Get reads a VPD variable by name and returns its value as a sequence of
 // bytes. The `readOnly` flag specifies whether the variable is read-only or
 // read-write.
-func Get(key string, readOnly bool) ([]byte, error) {
-	buf, err := ioutil.ReadFile(path.Join(getBaseDir(readOnly), key))
+func (r *Reader) Get(key string, readOnly bool) ([]byte, error) {
+	buf, err := ioutil.ReadFile(path.Join(r.getBaseDir(readOnly), key))
 	if err != nil {
 		return []byte{}, err
 	}
@@ -45,25 +70,25 @@ func Get(key string, readOnly bool) ([]byte, error) {
 // NOTE Unfortunately Set doesn't currently work, because the sysfs interface
 // does not support writing. To write, this library needs a backend able to
 // write to flash chips, like the command line tool flashrom or flashtools.
-func Set(key string, value []byte, readOnly bool) error {
+func (r *Reader) Set(key string, value []byte, readOnly bool) error {
 	// NOTE this is not implemented yet in the kernel interface, and will always
 	// return a permission denied error
-	return ioutil.WriteFile(path.Join(getBaseDir(readOnly), key), value, 0644)
+	return ioutil.WriteFile(path.Join(r.getBaseDir(readOnly), key), value, 0644)
 }
 
 // GetAll reads all the VPD variables and returns a map contaiing each
 // name:value couple. The `readOnly` flag specifies whether the variable is
 // read-only or read-write.
-func GetAll(readOnly bool) (map[string][]byte, error) {
+func (r *Reader) GetAll(readOnly bool) (map[string][]byte, error) {
 	vpdMap := make(map[string][]byte)
-	baseDir := getBaseDir(readOnly)
+	baseDir := r.getBaseDir(readOnly)
 	err := filepath.Walk(baseDir, func(fpath string, info os.FileInfo, _ error) error {
 		key := path.Base(fpath)
 		if key == "." || key == "/" || fpath == baseDir {
 			// empty or all slashes?
 			return nil
 		}
-		value, err := Get(key, readOnly)
+		value, err := r.Get(key, readOnly)
 		if err != nil {
 			return err
 		}
