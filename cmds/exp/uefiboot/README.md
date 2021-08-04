@@ -3,7 +3,7 @@
 *   Obtain edk2
 
 ```shell
-git clone --branch uefipayload --recursive https://github.com/chengchiehhuang/edk2 uefipayload
+git clone --branch uefipayload --recursive https://github.com/linuxboot/edk2 uefipayload
 ```
 
 *   Follow setup instructions in

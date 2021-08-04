@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Debian GNU/Linux Live (kernel 4.9.0-3-amd64)"
+    "name": "Debian GNU/Linux Live (kernel 4.9.0-3-amd64)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=sq_AL.UTF-8 ${loopback}",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Albanian (sq)"
+    "name": "Albanian (sq)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=am_ET ${loopback}",
@@ -30,7 +32,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Amharic (am)"
+    "name": "Amharic (am)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ar_EG.UTF-8 ${loopback}",
@@ -41,7 +44,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Arabic (ar)"
+    "name": "Arabic (ar)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ast_ES.UTF-8 ${loopback}",
@@ -52,7 +56,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Asturian (ast)"
+    "name": "Asturian (ast)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=eu_ES.UTF-8 ${loopback}",
@@ -63,7 +68,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Basque (eu)"
+    "name": "Basque (eu)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=be_BY.UTF-8 ${loopback}",
@@ -74,7 +80,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Belarusian (be)"
+    "name": "Belarusian (be)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=bn_BD ${loopback}",
@@ -85,7 +92,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Bangla (bn)"
+    "name": "Bangla (bn)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=bs_BA.UTF-8 ${loopback}",
@@ -96,7 +104,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Bosnian (bs)"
+    "name": "Bosnian (bs)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=bg_BG.UTF-8 ${loopback}",
@@ -107,7 +116,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Bulgarian (bg)"
+    "name": "Bulgarian (bg)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=bo_IN ${loopback}",
@@ -118,7 +128,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Tibetan (bo)"
+    "name": "Tibetan (bo)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=C ${loopback}",
@@ -129,7 +140,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "C (C)"
+    "name": "C (C)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ca_ES.UTF-8 ${loopback}",
@@ -140,7 +152,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Catalan (ca)"
+    "name": "Catalan (ca)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=zh_CN.UTF-8 ${loopback}",
@@ -151,7 +164,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Chinese (Simplified) (zh_CN)"
+    "name": "Chinese (Simplified) (zh_CN)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=zh_TW.UTF-8 ${loopback}",
@@ -162,7 +176,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Chinese (Traditional) (zh_TW)"
+    "name": "Chinese (Traditional) (zh_TW)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=hr_HR.UTF-8 ${loopback}",
@@ -173,7 +188,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Croatian (hr)"
+    "name": "Croatian (hr)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=cs_CZ.UTF-8 ${loopback}",
@@ -184,7 +200,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Czech (cs)"
+    "name": "Czech (cs)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=da_DK.UTF-8 ${loopback}",
@@ -195,7 +212,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Danish (da)"
+    "name": "Danish (da)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=nl_NL.UTF-8 ${loopback}",
@@ -206,7 +224,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Dutch (nl)"
+    "name": "Dutch (nl)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=dz_BT ${loopback}",
@@ -217,7 +236,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Dzongkha (dz)"
+    "name": "Dzongkha (dz)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=en_US.UTF-8 ${loopback}",
@@ -228,7 +248,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "English (en)"
+    "name": "English (en)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=eo.UTF-8 ${loopback}",
@@ -239,7 +260,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Esperanto (eo)"
+    "name": "Esperanto (eo)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=et_EE.UTF-8 ${loopback}",
@@ -250,7 +272,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Estonian (et)"
+    "name": "Estonian (et)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=fi_FI.UTF-8 ${loopback}",
@@ -261,7 +284,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Finnish (fi)"
+    "name": "Finnish (fi)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=fr_FR.UTF-8 ${loopback}",
@@ -272,7 +296,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "French (fr)"
+    "name": "French (fr)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=gl_ES.UTF-8 ${loopback}",
@@ -283,7 +308,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Galician (gl)"
+    "name": "Galician (gl)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ka_GE.UTF-8 ${loopback}",
@@ -294,7 +320,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Georgian (ka)"
+    "name": "Georgian (ka)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=de_DE.UTF-8 ${loopback}",
@@ -305,7 +332,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "German (de)"
+    "name": "German (de)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=el_GR.UTF-8 ${loopback}",
@@ -316,7 +344,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Greek (el)"
+    "name": "Greek (el)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=gu_IN ${loopback}",
@@ -327,7 +356,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Gujarati (gu)"
+    "name": "Gujarati (gu)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=he_IL.UTF-8 ${loopback}",
@@ -338,7 +368,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Hebrew (he)"
+    "name": "Hebrew (he)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=hi_IN ${loopback}",
@@ -349,7 +380,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Hindi (hi)"
+    "name": "Hindi (hi)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=hu_HU.UTF-8 ${loopback}",
@@ -360,7 +392,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Hungarian (hu)"
+    "name": "Hungarian (hu)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=is_IS.UTF-8 ${loopback}",
@@ -371,7 +404,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Icelandic (is)"
+    "name": "Icelandic (is)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=id_ID.UTF-8 ${loopback}",
@@ -382,7 +416,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Indonesian (id)"
+    "name": "Indonesian (id)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ga_IE.UTF-8 ${loopback}",
@@ -393,7 +428,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Irish (ga)"
+    "name": "Irish (ga)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=it_IT.UTF-8 ${loopback}",
@@ -404,7 +440,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Italian (it)"
+    "name": "Italian (it)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ja_JP.UTF-8 ${loopback}",
@@ -415,7 +452,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Japanese (ja)"
+    "name": "Japanese (ja)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=kk_KZ.UTF-8 ${loopback}",
@@ -426,7 +464,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Kazakh (kk)"
+    "name": "Kazakh (kk)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=km_KH ${loopback}",
@@ -437,7 +476,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Khmer (km)"
+    "name": "Khmer (km)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=kn_IN ${loopback}",
@@ -448,7 +488,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Kannada (kn)"
+    "name": "Kannada (kn)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ko_KR.UTF-8 ${loopback}",
@@ -459,7 +500,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Korean (ko)"
+    "name": "Korean (ko)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ku_TR.UTF-8 ${loopback}",
@@ -470,7 +512,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Kurdish (ku)"
+    "name": "Kurdish (ku)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=lo_LA ${loopback}",
@@ -481,7 +524,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Lao (lo)"
+    "name": "Lao (lo)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=lv_LV.UTF-8 ${loopback}",
@@ -492,7 +536,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Latvian (lv)"
+    "name": "Latvian (lv)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=lt_LT.UTF-8 ${loopback}",
@@ -503,7 +548,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Lithuanian (lt)"
+    "name": "Lithuanian (lt)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ml_IN ${loopback}",
@@ -514,7 +560,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Malayalam (ml)"
+    "name": "Malayalam (ml)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=mr_IN ${loopback}",
@@ -525,7 +572,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Marathi (mr)"
+    "name": "Marathi (mr)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=mk_MK.UTF-8 ${loopback}",
@@ -536,7 +584,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Macedonian (mk)"
+    "name": "Macedonian (mk)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=my_MM ${loopback}",
@@ -547,7 +596,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Burmese (my)"
+    "name": "Burmese (my)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ne_NP ${loopback}",
@@ -558,7 +608,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Nepali (ne)"
+    "name": "Nepali (ne)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=se_NO ${loopback}",
@@ -569,7 +620,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Northern Sami (se_NO)"
+    "name": "Northern Sami (se_NO)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=nb_NO.UTF-8 ${loopback}",
@@ -580,7 +632,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Norwegian Bokmaal (nb_NO)"
+    "name": "Norwegian Bokmaal (nb_NO)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=nn_NO.UTF-8 ${loopback}",
@@ -591,7 +644,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Norwegian Nynorsk (nn_NO)"
+    "name": "Norwegian Nynorsk (nn_NO)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=fa_IR ${loopback}",
@@ -602,7 +656,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Persian (fa)"
+    "name": "Persian (fa)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=pl_PL.UTF-8 ${loopback}",
@@ -613,7 +668,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Polish (pl)"
+    "name": "Polish (pl)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=pt_PT.UTF-8 ${loopback}",
@@ -624,7 +680,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Portuguese (pt)"
+    "name": "Portuguese (pt)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=pt_BR.UTF-8 ${loopback}",
@@ -635,7 +692,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Portuguese (Brazil) (pt_BR)"
+    "name": "Portuguese (Brazil) (pt_BR)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=pa_IN ${loopback}",
@@ -646,7 +704,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Punjabi (Gurmukhi) (pa)"
+    "name": "Punjabi (Gurmukhi) (pa)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ro_RO.UTF-8 ${loopback}",
@@ -657,7 +716,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Romanian (ro)"
+    "name": "Romanian (ro)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ru_RU.UTF-8 ${loopback}",
@@ -668,7 +728,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Russian (ru)"
+    "name": "Russian (ru)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=si_LK ${loopback}",
@@ -679,7 +740,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Sinhala (si)"
+    "name": "Sinhala (si)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=sr_RS ${loopback}",
@@ -690,7 +752,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Serbian (Cyrillic) (sr)"
+    "name": "Serbian (Cyrillic) (sr)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=sk_SK.UTF-8 ${loopback}",
@@ -701,7 +764,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Slovak (sk)"
+    "name": "Slovak (sk)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=sl_SI.UTF-8 ${loopback}",
@@ -712,7 +776,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Slovenian (sl)"
+    "name": "Slovenian (sl)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=es_ES.UTF-8 ${loopback}",
@@ -723,7 +788,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Spanish (es)"
+    "name": "Spanish (es)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=sv_SE.UTF-8 ${loopback}",
@@ -734,7 +800,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Swedish (sv)"
+    "name": "Swedish (sv)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=tl_PH.UTF-8 ${loopback}",
@@ -745,7 +812,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Tagalog (tl)"
+    "name": "Tagalog (tl)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ta_IN ${loopback}",
@@ -756,7 +824,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Tamil (ta)"
+    "name": "Tamil (ta)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=te_IN ${loopback}",
@@ -767,7 +836,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Telugu (te)"
+    "name": "Telugu (te)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=tg_TJ.UTF-8 ${loopback}",
@@ -778,7 +848,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Tajik (tg)"
+    "name": "Tajik (tg)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=th_TH.UTF-8 ${loopback}",
@@ -789,7 +860,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Thai (th)"
+    "name": "Thai (th)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=tr_TR.UTF-8 ${loopback}",
@@ -800,7 +872,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Turkish (tr)"
+    "name": "Turkish (tr)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=ug_CN ${loopback}",
@@ -811,7 +884,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Uyghur (ug)"
+    "name": "Uyghur (ug)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=uk_UA.UTF-8 ${loopback}",
@@ -822,7 +896,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Ukrainian (uk)"
+    "name": "Ukrainian (uk)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=vi_VN ${loopback}",
@@ -833,7 +908,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Vietnamese (vi)"
+    "name": "Vietnamese (vi)",
+    "rank": "0"
   },
   {
     "cmdline": "boot=live components locales=cy_GB.UTF-8 ${loopback}",
@@ -844,7 +920,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/live/vmlinuz-4.9.0-3-amd64"
     },
-    "name": "Welsh (cy)"
+    "name": "Welsh (cy)",
+    "rank": "0"
   },
   {
     "cmdline": "append video=vesa:ywrap,mtrr vga=788 ${loopback}",
@@ -855,7 +932,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/d-i/gtk/vmlinuz"
     },
-    "name": "Graphical Debian Installer"
+    "name": "Graphical Debian Installer",
+    "rank": "0"
   },
   {
     "cmdline": "${loopback}",
@@ -866,7 +944,8 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/d-i/vmlinuz"
     },
-    "name": "Debian Installer"
+    "name": "Debian Installer",
+    "rank": "0"
   },
   {
     "cmdline": "speakup.synth=soft ${loopback}",
@@ -877,6 +956,7 @@
     "kernel": {
       "url": "file:///testdata_new/debian_9_install/d-i/gtk/vmlinuz"
     },
-    "name": "Debian Installer with Speech Synthesis"
+    "name": "Debian Installer with Speech Synthesis",
+    "rank": "0"
   }
 ]

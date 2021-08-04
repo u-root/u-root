@@ -22,6 +22,12 @@ const (
 
 	sharedDir          = "/testdata"
 	kernelCoverageFile = "/testdata/kernel_coverage.tar"
+
+	// https://wiki.qemu.org/Documentation/9psetup#msize recommends an
+	// msize of at least 10MiB. Larger number might give better
+	// performance. QEMU will print a warning if it is too small. Linux's
+	// default is 8KiB which is way too small.
+	msize9P = 10 * 1024 * 1024
 )
 
 // gcovFilter filters on all files ending with a gcda or gcno extension.
@@ -98,7 +104,7 @@ func MountSharedDir() (func(), error) {
 		err error
 	)
 	if os.Getenv(envUse9P) == "1" {
-		mp, err = mount.Mount("tmpdir", sharedDir, "9p", "", 0)
+		mp, err = mount.Mount("tmpdir", sharedDir, "9p", fmt.Sprintf("9P2000.L,msize=%d", msize9P), 0)
 	} else {
 		mp, err = mount.Mount("/dev/sda1", sharedDir, "vfat", "", unix.MS_RDONLY)
 	}

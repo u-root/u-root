@@ -85,7 +85,7 @@ RUN set -eux;                                                          \
 SHELL ["/bin/bash", "-c"]
 RUN set -ex;                                                           \
     git clone --branch uefipayload --recursive                         \
-    https://github.com/chengchiehhuang/edk2 uefipayload;               \
+    https://github.com/linuxboot/edk2 uefipayload;                     \
     cd uefipayload;                                                    \
     source ./edksetup.sh;                                              \
     make -C BaseTools;                                                 \

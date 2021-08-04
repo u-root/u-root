@@ -139,3 +139,12 @@ func TestLabel(t *testing.T) {
 		t.Fatalf("Expected Image label to contain name %s, got %s", n, l)
 	}
 }
+
+func TestRank(t *testing.T) {
+	testRank := 2
+	img := &Image{BootRank: testRank}
+	l := img.Rank()
+	if l != testRank {
+		t.Fatalf("Expected Image rank %d, got %d", testRank, l)
+	}
+}

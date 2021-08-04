@@ -3,7 +3,7 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.13
+      - image: uroottest/test-image-amd64:v4.1.0
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -15,8 +15,8 @@ templates:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Triple all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 3
+      # x5 all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 5
       - GO111MODULE: "off"
     steps:
       - checkout
@@ -118,15 +118,18 @@ jobs:
           command: ineffassign .
   test:
     <<: *golang-template
+    <<: *beefy-template
     steps:
       - checkout
       - run:
-          name: Test all
-          command: go test -a -timeout 15m -ldflags '-s' ./cmds/... ./pkg/...
+          name: Test Packages
+          command: go test -v -a -timeout 15m -ldflags '-s' -coverprofile=coverage_pkg.txt -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
       - run:
-          name: Test coverage
-          command: go test -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+          name: Test Commands
+          # Commands cannot be tested with -coverpkg due to https://github.com/golang/go/issues/23910, hence they are tested separately.
+          command: go test -v -a -timeout 15m -ldflags '-s' -coverprofile=coverage_cmd.txt -covermode=atomic ./cmds/...
+          no_output_timeout: 15m
       - run:
           name: Upload coverage
           command: bash <(curl -s https://codecov.io/bash)
@@ -200,13 +203,13 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.15
+      - image: uroottest/test-image-amd64:v4.1.0
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v3.0.4
+      - image: uroottest/test-image-arm:v4.1.0
   test-integration-arm64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm64:v0.0.2
+      - image: uroottest/test-image-arm64:v4.1.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
