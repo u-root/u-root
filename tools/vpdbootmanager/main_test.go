@@ -23,12 +23,12 @@ func TestInvalidCommand(t *testing.T) {
 
 func TestNoEntryType(t *testing.T) {
 	err := cli([]string{"add", "localboot"})
-	require.Equal(t, "You need to provide method", err.Error())
+	require.Equal(t, "you need to provide method", err.Error())
 }
 
 func TestNoAction(t *testing.T) {
 	err := cli([]string{})
-	require.Equal(t, "You need to provide action", err.Error())
+	require.Equal(t, "you need to provide action", err.Error())
 }
 
 func TestAddNetbootEntryFull(t *testing.T) {
