@@ -26,7 +26,7 @@ const (
 // wrapper function rather than the function itself. We must reference from
 // assembly to get the ABI0 (i.e., primary) address (this way of doing things
 // will work for both 1.17+ and versions prior to 1.17). Note for posterity:
-// runtime.funcPC (used previously) is going away in 1.18+).
+// runtime.funcPC (used previously) is going away in 1.18+.
 //
 // Each of the functions below of form 'addrOfXXX' return the starting PC
 // of the assembl routine XXX.
