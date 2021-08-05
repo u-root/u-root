@@ -21,7 +21,7 @@ TEXT ·addrOfStart(SB), $0-8
 	MOVQ	$start(SB), AX
 	MOVQ	AX, ret+0(FP)
 	RET
-	
+
 // func addrOfEnd() uintptr
 TEXT ·addrOfEnd(SB), $0-8
 	MOVQ	$end(SB), AX
@@ -39,13 +39,13 @@ TEXT ·addrOfMagic(SB), $0-8
 	MOVQ	$magic(SB), AX
 	MOVQ	AX, ret+0(FP)
 	RET
-	
+
 // func addrOfEntry() uintptr
 TEXT ·addrOfEntry(SB), $0-8
 	MOVQ	$entry(SB), AX
 	MOVQ	AX, ret+0(FP)
 	RET
-	
+
 TEXT start(SB),NOSPLIT,$0
 	// Create GDT pointer on stack.
 	LEAQ	gdt(SB), CX
