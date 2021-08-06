@@ -35,7 +35,7 @@ func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec
 	// Clean up.
 	if mountPool != nil {
 		if err := mountPool.UnmountAll(mount.MNT_DETACH); err != nil {
-			log.Printf("Failed to unmount: %v", err)
+			log.Printf("Failed in UnmountAll: %v", err)
 		}
 	}
 	if loadedEntry == nil {
