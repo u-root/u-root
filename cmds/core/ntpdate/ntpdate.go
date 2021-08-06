@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	config  = flag.String("config", "/etc/ntp.conf", "NTP config file.")
+	config  = flag.String("config", ntpdate.DefaultNTPConfig, "NTP config file.")
 	setRTC  = flag.Bool("rtc", false, "Set RTC time as well")
 	verbose = flag.Bool("verbose", false, "Verbose output")
 )

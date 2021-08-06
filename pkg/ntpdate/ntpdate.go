@@ -17,6 +17,8 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
+const DefaultNTPConfig = "/etc/ntp.conf"
+
 var Debug = func(string, ...interface{}) {}
 
 func parseServers(r *bufio.Reader) []string {
@@ -118,7 +120,7 @@ func setTime(servers []string, config string, fallback string, setRTC bool, gs t
 		return "", 0, fmt.Errorf("unable to get time: %w", err)
 	}
 
-	offset := time.Since(t).Seconds()
+	offset := time.Until(t).Seconds()
 
 	if err = gs.SetSystemTime(t); err != nil {
 		return "", 0, fmt.Errorf("unable to set system time: %w", err)
