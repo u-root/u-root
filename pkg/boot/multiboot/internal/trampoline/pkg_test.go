@@ -20,5 +20,4 @@ func TestSetupExecutesWithoutCrashing(t *testing.T) {
 	} else {
 		t.Fatal("didn't expect this")
 	}
-	
 }
