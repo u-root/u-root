@@ -48,6 +48,7 @@ var (
 	statsOutputPath                         *string
 	statsLabel                              *string
 	shellbang                               *bool
+	tags                                    *string
 )
 
 func init() {
@@ -80,8 +81,9 @@ func init() {
 	shellbang = flag.Bool("shellbang", false, "Use #! instead of symlinks for busybox")
 
 	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
-
 	statsLabel = flag.String("stats-label", "", "Use this statsLabel when writing stats")
+
+	tags = flag.String("tags", "", "Comma separated list of build tags")
 }
 
 type buildStats struct {
@@ -187,6 +189,7 @@ func isRecommendedVersion(v string) bool {
 // on exit.
 func Main() error {
 	env := golang.Default()
+	env.BuildTags = strings.Split(*tags, ",")
 	if env.CgoEnabled {
 		log.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false

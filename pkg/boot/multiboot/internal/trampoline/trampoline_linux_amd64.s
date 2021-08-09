@@ -16,7 +16,37 @@
 #define DATA_SEGMENT	0x00CF92000000FFFF
 #define CODE_SEGMENT	0x00CF9A000000FFFF
 
-TEXT ·start(SB),NOSPLIT,$0
+// func addrOfStart() uintptr
+TEXT ·addrOfStart(SB), $0-8
+	MOVQ	$start(SB), AX
+	MOVQ	AX, ret+0(FP)
+	RET
+
+// func addrOfEnd() uintptr
+TEXT ·addrOfEnd(SB), $0-8
+	MOVQ	$end(SB), AX
+	MOVQ	AX, ret+0(FP)
+	RET
+
+// func addrOfInfo() uintptr
+TEXT ·addrOfInfo(SB), $0-8
+	MOVQ	$info(SB), AX
+	MOVQ	AX, ret+0(FP)
+	RET
+
+// func addrOfMagic() uintptr
+TEXT ·addrOfMagic(SB), $0-8
+	MOVQ	$magic(SB), AX
+	MOVQ	AX, ret+0(FP)
+	RET
+
+// func addrOfEntry() uintptr
+TEXT ·addrOfEntry(SB), $0-8
+	MOVQ	$entry(SB), AX
+	MOVQ	AX, ret+0(FP)
+	RET
+
+TEXT start(SB),NOSPLIT,$0
 	// Create GDT pointer on stack.
 	LEAQ	gdt(SB), CX
 	SHLQ	$16, CX
@@ -27,11 +57,11 @@ TEXT ·start(SB),NOSPLIT,$0
 
 	// Store value of multiboot info addr in BX.
 	// Don't modify BX.
-	MOVL	·info(SB), BX
+	MOVL	info(SB), BX
 
 	// Store value of mu(l)tiboot magic in SI.
 	// Don't modify SI.
-	MOVL	·magic(SB), SI
+	MOVL	magic(SB), SI
 
 	// Far return doesn't work on QEMU in 64-bit mode,
 	// let's do far jump.
@@ -47,7 +77,7 @@ TEXT ·start(SB),NOSPLIT,$0
 	//
 	// Setup offset to make a far jump from boot(SB)
 	// to a final kernel in a 32-bit mode.
-	MOVL	·entry(SB), AX
+	MOVL	entry(SB), AX
 	MOVL	AX, farjump32+1(SB)
 
 	// Setup offset to make a far jump to boot(SB)
@@ -108,13 +138,13 @@ TEXT gdt(SB),NOSPLIT,$0
 	QUAD	$DATA_SEGMENT	// 0x10
 	QUAD	$CODE_SEGMENT	// 0x18
 
-TEXT ·info(SB),NOSPLIT,$0
+TEXT info(SB),NOSPLIT,$0
 	LONG	$0x0
 
-TEXT ·entry(SB),NOSPLIT,$0
+TEXT entry(SB),NOSPLIT,$0
 	LONG	$0x0
 
-TEXT ·magic(SB),NOSPLIT,$0
+TEXT magic(SB),NOSPLIT,$0
 	LONG	$0x0
 
-TEXT ·end(SB),NOSPLIT,$0
+TEXT end(SB),NOSPLIT,$0
