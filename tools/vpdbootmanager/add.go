@@ -146,3 +146,11 @@ func addBootEntry(cfg systembooter.Booter, vpdDir string) error {
 	}
 	return errors.New("Maximum number of boot entries already set")
 }
+
+func set(key string, value string) error {
+	return vpd.FlashromRWVpdSet(key, []byte(value), false)
+}
+
+func delete(key string) error {
+	return vpd.FlashromRWVpdSet(key, []byte("dummy"), true)
+}

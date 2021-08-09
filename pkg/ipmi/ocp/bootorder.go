@@ -12,6 +12,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/u-root/u-root/pkg/vpd"
 )
 
 const (
@@ -101,14 +102,14 @@ func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder) error {
 		if bootType == NETWORK_BOOT {
 			log.Printf("VPD set %s to %s", key, NETBOOTER_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(NETBOOTER_CONFIG)})
-			if err = Set(key, []byte(NETBOOTER_CONFIG)); err != nil {
+			if err = vpd.FlashromRWVpdSet(key, []byte(NETBOOTER_CONFIG), false); err != nil {
 				return err
 			}
 			idx++
 		} else if bootType == LOCAL_BOOT {
 			log.Printf("VPD set %s to %s", key, LOCALBOOTER_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(LOCALBOOTER_CONFIG)})
-			if err = Set(key, []byte(LOCALBOOTER_CONFIG)); err != nil {
+			if err = vpd.FlashromRWVpdSet(key, []byte(LOCALBOOTER_CONFIG), false); err != nil {
 				return err
 			}
 			idx++
