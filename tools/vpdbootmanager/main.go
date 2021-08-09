@@ -19,6 +19,8 @@ add localboot grub
 add netboot dhcpv6 AA:BB:CC:DD:EE:FF
 get
 get firmware_version
+set systemboot_log_level 6
+delete systemboot_log_level
 
 Flags for netboot:
 
@@ -59,6 +61,22 @@ func cli(args []string) error {
 		}
 		getter := NewGetter()
 		return getter.Print(varname)
+	case "set":
+		if len(args) == 3 {
+			err := set(args[1], args[2])
+			if err == nil {
+				fmt.Println("Successfully set, it will take effect after reboot")
+			}
+			return err
+		}
+	case "delete":
+		if len(args) == 2 {
+			err := delete(args[1])
+			if err == nil {
+				fmt.Println("Successfully deleted, it will take effect after reboot")
+			}
+			return err
+		}
 	}
 	return fmt.Errorf("Unrecognized action")
 }

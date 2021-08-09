@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package ocp implements OCP/Facebook-specific IPMI client functions.
-package ocp
+package vpd
 
 import (
 	"io/ioutil"
@@ -20,8 +19,9 @@ func handler(c <-chan os.Signal) {
 	}
 }
 
-// Set RW_VPD key-value
-func Set(key string, value []byte) error {
+// Set RW_VPD key-value via flashrom and vpd executables, delete set to false would set or add the key,
+// delete set to true would delete an existing key.
+func FlashromRWVpdSet(key string, value []byte, delete bool) error {
 	file, err := ioutil.TempFile("/tmp", "rwvpd*.bin")
 	if err != nil {
 		return err
@@ -38,11 +38,21 @@ func Set(key string, value []byte) error {
 		log.Printf("flashrom failed to read RW_VPD: %v", err)
 		return err
 	}
-	cmd = exec.Command("vpd", "-f", file.Name(), "-s", key+"="+string(value[:]))
-	if err = cmd.Run(); err != nil {
-		log.Printf("vpd failed to set key: %v value: %v, err: %v", key, string(value[:]), err)
-		return err
+
+	if delete {
+		cmd = exec.Command("vpd", "-f", file.Name(), "-d", key)
+		if err = cmd.Run(); err != nil {
+			log.Printf("vpd failed to delete key: %v, err: %v", key, err)
+			return err
+		}
+	} else {
+		cmd = exec.Command("vpd", "-f", file.Name(), "-s", key+"="+string(value[:]))
+		if err = cmd.Run(); err != nil {
+			log.Printf("vpd failed to set key: %v value: %v, err: %v", key, string(value[:]), err)
+			return err
+		}
 	}
+
 	cmd = exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RW_VPD", "--noverify-all", "-w", file.Name())
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
@@ -56,7 +66,7 @@ func Set(key string, value []byte) error {
 	return nil
 }
 
-// ClearRwVpd re-format RW_VPD
+// ClearRwVpd re-format RW_VPD via flashrom and vpd executables
 func ClearRwVpd() error {
 	file, err := ioutil.TempFile("/tmp", "rwvpd*.bin")
 	if err != nil {
