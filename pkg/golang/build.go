@@ -156,7 +156,7 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 		args = append(args, `-ldflags=-s -w`) // Strip all symbols.
 	}
 	if len(c.BuildTags) > 0 {
-		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
+		args = append(args, []string{"-tags", strings.Join(c.BuildTags, ",")}...)
 	}
 	if opts.ExtraArgs != nil {
 		args = append(args, opts.ExtraArgs...)

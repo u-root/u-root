@@ -92,12 +92,6 @@ var tests = []struct {
 		url:     "http://localhost:%[2]d/200",
 		content: "",
 		retCode: 1,
-	}, {
-		name:    "output file",
-		flags:   []string{"-O", "/dev/null"},
-		url:     "http://localhost:%[1]d/200",
-		content: "",
-		retCode: 0,
 	},
 }
 
@@ -136,9 +130,12 @@ func TestWget(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpDir)
 
-			args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
+			fileName := filepath.Base(tt.url)
+
+			args := append(tt.flags,
+				"-O", filepath.Join(tmpDir, fileName),
+				fmt.Sprintf(tt.url, port, unusedPort))
 			cmd := testutil.Command(t, args...)
-			cmd.Dir = tmpDir
 			output, err := cmd.CombinedOutput()
 
 			// Check return code.
@@ -147,7 +144,6 @@ func TestWget(t *testing.T) {
 			}
 
 			if tt.content != "" {
-				fileName := filepath.Base(tt.url)
 				content, err := ioutil.ReadFile(filepath.Join(tmpDir, fileName))
 				if err != nil {
 					t.Errorf("File %s was not created: %v", fileName, err)
