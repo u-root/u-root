@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/kmodule"
 	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
@@ -84,6 +85,19 @@ func (m mount) String() string {
 	return fmt.Sprintf("mount -t %q -o %s %q %q flags %#x", m.FSType, m.Opts, m.Source, m.Target, m.Flags)
 }
 
+type cpdir struct {
+	Source string
+	Target string
+}
+
+func (c cpdir) create() error {
+	return cp.CopyTree(c.Source, c.Target)
+}
+
+func (c cpdir) String() string {
+	return fmt.Sprintf("cp -a %q %q", c.Source, c.Target)
+}
+
 var (
 	// These have to be created / mounted first, so that the logging works correctly.
 	preNamespace = []creator{
@@ -126,6 +140,9 @@ var (
 		dir{Name: "/sys", Mode: 0555},
 		mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
+
+		cpdir{Source: "/etc", Target: "/tmp/etc"},
+		mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},
 	}
 
 	// cgroups are optional for most u-root users, especially
