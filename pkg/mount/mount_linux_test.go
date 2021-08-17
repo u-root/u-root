@@ -158,6 +158,47 @@ func TestFilterPartType(t *testing.T) {
 	}
 }
 
+func TestFilterHavingPartitions(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	prefix := getDevicePrefix()
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	want := block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: "nvme0n1p1"},
+		&block.BlockDev{Name: "nvme0n1p2"},
+		&block.BlockDev{Name: prefix + "a"},
+		&block.BlockDev{Name: prefix + "a1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		&block.BlockDev{Name: prefix + "a2", FsUUID: "ace5-5144"},
+		&block.BlockDev{Name: prefix + "b"},
+		&block.BlockDev{Name: prefix + "b1"},
+		&block.BlockDev{Name: prefix + "c"},
+		&block.BlockDev{Name: prefix + "c1"},
+		&block.BlockDev{Name: prefix + "c2"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+
+	block.Debug = log.Printf
+	devs = devs.FilterHavingPartitions([]int{1, 2})
+
+	want = block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: prefix + "a"},
+		&block.BlockDev{Name: prefix + "c"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+}
+
 func TestFilterBlockPCI(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
