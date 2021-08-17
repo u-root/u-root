@@ -81,6 +81,8 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		opt, err = ParseOptRemoteID(optData)
 	case OptionFQDN:
 		opt, err = ParseOptFQDN(optData)
+	case OptionNTPServer:
+		opt, err = ParseOptNTPServer(optData)
 	case OptionBootfileURL:
 		opt, err = parseOptBootFileURL(optData)
 	case OptionBootfileParam:
