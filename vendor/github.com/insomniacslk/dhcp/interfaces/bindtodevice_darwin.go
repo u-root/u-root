@@ -1,4 +1,4 @@
-// +build aix freebsd openbsd netbsd
+// +build darwin
 
 package interfaces
 
@@ -9,11 +9,11 @@ import (
 )
 
 // BindToInterface emulates linux's SO_BINDTODEVICE option for a socket by using
-// IP_RECVIF.
+// IP_BOUND_IF.
 func BindToInterface(fd int, ifname string) error {
 	iface, err := net.InterfaceByName(ifname)
 	if err != nil {
 		return err
 	}
-	return unix.SetsockoptInt(fd, unix.IPPROTO_IP, unix.IP_RECVIF, iface.Index)
+	return unix.SetsockoptInt(fd, unix.IPPROTO_IP, unix.IP_BOUND_IF, iface.Index)
 }
