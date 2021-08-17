@@ -487,6 +487,26 @@ func (b BlockDevices) FilterPartType(guid string) BlockDevices {
 	return b.FilterNames(names...)
 }
 
+// FilterHavingPartitions returns BlockDevices with have the specified
+// partitions. (e.g. f(1, 2) {sda, sda1, sda2, sdb} -> {sda})
+func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
+	devices := make(BlockDevices, 0)
+	for _, device := range b {
+		hasParts := true
+		for _, part := range parts {
+			if _, err := os.Stat(filepath.Join("/sys/class/block",
+				composePartName(device.Name, part))); err != nil {
+				hasParts = false
+				break
+			}
+		}
+		if hasParts {
+			devices = append(devices, device)
+		}
+	}
+	return devices
+}
+
 // FilterPartLabel returns a list of BlockDev objects whose underlying block
 // device has the given partition label. The name comparison is case-insensitive.
 func (b BlockDevices) FilterPartLabel(label string) BlockDevices {
