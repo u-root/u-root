@@ -5,28 +5,46 @@
 package main
 
 import (
-	"bytes"
-	"os/exec"
-	"regexp"
+	"errors"
+	"fmt"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type test struct {
-	args   []string
-	stdout string
-	stderr string
-	exitok bool
+func TestRun(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		timeout string
+		cmd     string
+		args    []string
+		wantErr error
+	}{
+		{
+			name:    "no cmd and no arguments",
+			timeout: "15s",
+			cmd:     "",
+			args:    []string{"", ""},
+			wantErr: errors.New("no command passed"),
+		},
+		{
+			name:    "call echo function",
+			timeout: "5s",
+			cmd:     "echo",
+			args:    []string{"hi"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotErr := runit(tt.timeout, tt.cmd, tt.args...)
+			if gotErrorString, wantErrorString := fmt.Sprint(gotErr), fmt.Sprint(tt.wantErr); gotErrorString != wantErrorString {
+				t.Errorf("runit() got err %q; want err %q",
+					gotErrorString,
+					wantErrorString)
+			}
+
+		})
+	}
 }
 
-func run(c *exec.Cmd) (string, string, error) {
-	var o, e bytes.Buffer
-	c.Stdout, c.Stderr = &o, &e
-	err := c.Run()
-	return o.String(), e.String(), err
-}
-
+/*
 // TestOK for now just runs a simple successful test with 0 args or more than one arg.
 func TestOK(t *testing.T) {
 	var tests = []test{
@@ -98,7 +116,4 @@ func TestTO(t *testing.T) {
 		}
 	}
 }
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
-}
+*/
