@@ -6,7 +6,7 @@ require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/beevik/ntp v0.3.0
 	github.com/cenkalti/backoff/v4 v4.0.2
-	github.com/creack/pty v1.1.11 // indirect
+	github.com/creack/pty v1.1.11
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
@@ -14,8 +14,8 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
-	github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
-	github.com/insomniacslk/dhcp v0.0.0-20210528123148-fb4eaaa00ad2
+	github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f // indirect
+	github.com/insomniacslk/dhcp v0.0.0-20210817203519-d82598001386
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/klauspost/compress v1.10.6 // indirect
