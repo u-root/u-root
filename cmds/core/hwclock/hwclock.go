@@ -33,6 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer r.Close()
 
 	if *write {
 		tu := time.Now().UTC()

@@ -64,3 +64,7 @@ func (r *RTC) Set(tu time.Time) error {
 
 	return unix.IoctlSetRTCTime(int(r.file.Fd()), &rt)
 }
+
+func (r *RTC) Close() error {
+	return r.file.Close()
+}

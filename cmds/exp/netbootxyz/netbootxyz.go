@@ -128,7 +128,7 @@ func (o OSEndpoint) Load() error {
 				}
 			}
 		}
-		menu.ShowMenuAndLoad(os.Stdin, subMenu...)
+		menu.ShowMenuAndLoad(true, subMenu...)
 
 		return nil
 	}
@@ -346,5 +346,5 @@ func main() {
 	bootMenu = append(bootMenu, menu.Reboot{})
 	bootMenu = append(bootMenu, menu.StartShell{})
 	menu.SetInitialTimeout(90 * time.Second)
-	menu.ShowMenuAndLoad(os.Stdin, bootMenu...)
+	menu.ShowMenuAndLoad(true, bootMenu...)
 }

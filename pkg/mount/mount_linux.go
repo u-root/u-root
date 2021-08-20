@@ -174,7 +174,7 @@ func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
 		// fails when the directory is non-empty. It would be a bit
 		// dangerous to use os.RemoveAll because it could accidentally
 		// delete everything in a mount.
-		unix.Rmdir(p.tmpDir)
+		unix.Rmdir(path)
 		return nil, err
 	}
 	p.MountPoints = append(p.MountPoints, m)
@@ -196,9 +196,9 @@ func (p *Pool) UnmountAll(flags uintptr) error {
 	for _, m := range p.MountPoints {
 		if err := m.Unmount(flags); err != nil {
 			if returnErr == nil {
-				returnErr = err
+				returnErr = fmt.Errorf("(Unmount) %s", err.Error())
 			} else {
-				returnErr = fmt.Errorf("%w; %s", returnErr, err.Error())
+				returnErr = fmt.Errorf("%w; (Unmount) %s", returnErr, err.Error())
 			}
 		}
 
@@ -210,7 +210,13 @@ func (p *Pool) UnmountAll(flags uintptr) error {
 	}
 
 	if returnErr == nil && p.tmpDir != "" {
-		returnErr = unix.Rmdir(p.tmpDir)
+		if err := unix.Rmdir(p.tmpDir); err != nil {
+			if returnErr == nil {
+				returnErr = fmt.Errorf("(Rmdir) %s", err.Error())
+			} else {
+				returnErr = fmt.Errorf("%w; (Rmdir) %s", returnErr, err.Error())
+			}
+		}
 		p.tmpDir = ""
 	}
 
