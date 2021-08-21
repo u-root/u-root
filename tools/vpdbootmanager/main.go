@@ -13,6 +13,8 @@ func getUsage(progname string) string {
 	return fmt.Sprintf(`Usage:
 %s add [netboot [dhcpv6|dhcpv4] [MAC] | localboot [grub|path [Device GUID] [Kernel Path]]]
 %s get [variable name]
+%s set [variable name] [variable value]
+%s delete [variable name]
 
 Ex.
 add localboot grub
@@ -36,7 +38,7 @@ Global flags:
 
 -vpd-dir - VPD dir to use
 
-`, progname, progname)
+`, progname, progname, progname, progname)
 }
 
 func main() {
