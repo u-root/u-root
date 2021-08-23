@@ -7,6 +7,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,7 +17,10 @@ import (
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
-var outputPath = flag.String("o", "bb", "Path to busybox binary")
+var (
+	outputPath = flag.String("o", "bb", "Path to busybox binary")
+	showCmds   = flag.Bool("c", false, "Show commands -- useful in scripts")
+)
 
 func main() {
 	flag.Parse()
@@ -46,5 +50,10 @@ func main() {
 
 	if err := bb.BuildBusybox(env, pkgs, false /* noStrip */, o); err != nil {
 		l.Fatal(err)
+	}
+	if *showCmds {
+		for _, p := range pkgs {
+			fmt.Println(filepath.Base(p))
+		}
 	}
 }
