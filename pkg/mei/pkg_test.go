@@ -4,4 +4,8 @@
 
 package mei
 
-// TODO: Write a unit test.
+import "testing"
+
+func TestTODO(t *testing.T) {
+	// TODO: Write a unit test.
+}

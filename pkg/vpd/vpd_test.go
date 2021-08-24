@@ -8,37 +8,42 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetReadOnly(t *testing.T) {
-	VpdDir = "./tests"
-	value, err := Get("key1", true)
+	r := NewReader()
+	r.VpdDir = "./tests"
+	value, err := r.Get("key1", true)
 	require.NoError(t, err)
-	require.Equal(t, value, []byte("value1\n"))
+	assert.Equal(t, value, []byte("value1\n"))
 }
 
 func TestGetReadWrite(t *testing.T) {
-	VpdDir = "./tests"
-	value, err := Get("mysecretpassword", false)
+	r := NewReader()
+	r.VpdDir = "./tests"
+	value, err := r.Get("mysecretpassword", false)
 	require.NoError(t, err)
-	require.Equal(t, value, []byte("passw0rd\n"))
+	assert.Equal(t, value, []byte("passw0rd\n"))
 }
 
 func TestGetReadBinary(t *testing.T) {
-	VpdDir = "./tests"
-	value, err := Get("binary1", true)
+	r := NewReader()
+	r.VpdDir = "./tests"
+	value, err := r.Get("binary1", true)
 	require.NoError(t, err)
-	require.Equal(t, value, []byte("some\x00binary\ndata"))
+	assert.Equal(t, value, []byte("some\x00binary\ndata"))
 }
 
 func TestGetAllReadOnly(t *testing.T) {
-	VpdDir = "./tests"
+	r := NewReader()
+	r.VpdDir = "./tests"
 	expected := map[string][]byte{
 		"binary1": []byte("some\x00binary\ndata"),
 		"key1":    []byte("value1\n"),
 	}
-	vpdMap, err := GetAll(true)
+	vpdMap, err := r.GetAll(true)
 	require.NoError(t, err)
 	if !reflect.DeepEqual(vpdMap, expected) {
 		t.FailNow()

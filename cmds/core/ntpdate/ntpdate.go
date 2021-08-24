@@ -3,92 +3,52 @@
 // license that can be found in the LICENSE file.
 
 // ntpdate uses NTP to adjust the system clock.
+//
+// Synopsis:
+//     ntpdate [--config=/etc/ntp.conf] [--rtc] [--verbose] [server ...]
+//
+// Description:
+//     ntpdate queries NTP server(s) for time and update susyem time.
+//     If --rtc is specified, it updates the hardware clock as well.
+//     Servers to query are obtained from /etc/ntp.conf and/or the command line.
+//     By default --config is set to /etc/ntp.conf, config lookup can be disabled
+//     by setting --confg to an empty string.
+//     If servers are specified on the command line, they are tried first.
+//     time.google.com is used as the last resort.
+//
+// Options:
+//     -w: set hwclock to system clock in UTC
 package main
 
 import (
-	"bufio"
 	"flag"
-	"fmt"
 	"log"
-	"os"
-	"strings"
-	"syscall"
-	"time"
 
-	"github.com/beevik/ntp"
+	"github.com/u-root/u-root/pkg/ntpdate"
 )
 
 var (
-	config  = flag.String("config", "/etc/ntp.conf", "NTP config file.")
+	config  = flag.String("config", ntpdate.DefaultNTPConfig, "NTP config file.")
+	setRTC  = flag.Bool("rtc", false, "Set RTC time as well")
 	verbose = flag.Bool("verbose", false, "Verbose output")
-	debug   = func(string, ...interface{}) {}
 )
 
 const (
 	fallback = "time.google.com"
 )
 
-func parseServers(r *bufio.Reader) []string {
-	var uri []string
-	var l string
-	var err error
-
-	debug("Reading config file")
-	for err == nil {
-		// This handles the case where the last line doesn't end in \n
-		l, err = r.ReadString('\n')
-		debug("%v", l)
-		if w := strings.Fields(l); len(w) > 1 && w[0] == "server" {
-			// We look only for the server lines, we ignore options like iburst
-			// TODO(ganshun): figure out what options we want to support.
-			uri = append(uri, w[1])
-		}
-	}
-
-	return uri
-}
-
-func getTime(servers []string) (t time.Time, err error) {
-	for _, s := range servers {
-		debug("Getting time from %v", s)
-		if t, err = ntp.Time(s); err == nil {
-			// Right now we return on the first valid time.
-			// We can implement better heuristics here.
-			debug("Got time %v", t)
-			return
-		}
-		debug("Error getting time: %v", err)
-	}
-
-	err = fmt.Errorf("unable to get any time from servers %v", servers)
-	return
-}
-
 func main() {
-	var servers []string
 	flag.Parse()
 	if *verbose {
-		debug = log.Printf
+		ntpdate.Debug = log.Printf
 	}
-
-	debug("Reading NTP servers from config file: %v", *config)
-	f, err := os.Open(*config)
-	if err == nil {
-		defer f.Close()
-		servers = parseServers(bufio.NewReader(f))
-		debug("Found %v servers", len(servers))
-	} else {
-		log.Printf("Unable to open config file: %v\nFalling back to : %v", err, fallback)
-		servers = []string{fallback}
-	}
-
-	t, err := getTime(servers)
+	server, offset, err := ntpdate.SetTime(flag.Args(), *config, fallback, *setRTC)
 	if err != nil {
-		log.Fatalf("Unable to get time: %v", err)
+		log.Fatalf("Error: %v", err)
 	}
-
-	tv := syscall.NsecToTimeval(t.UnixNano())
-	if err = syscall.Settimeofday(&tv); err != nil {
-		log.Fatalf("Unable to set system time: %v", err)
+	plus := ""
+	if offset > 0 {
+		plus = "+"
 	}
+	log.Printf("adjust time server %s offset %s%f sec", server, plus, offset)
 }
