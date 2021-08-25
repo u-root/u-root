@@ -5,6 +5,7 @@
 package menu
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -65,6 +66,9 @@ func NewTerminal(f *os.File) *xterm {
 }
 
 func (t *xterm) Close() error {
+	if t.oldState == nil {
+		return fmt.Errorf("Cannot restore terminal state to nil.")
+	}
 	return term.Restore(int(t.fileInput.Fd()), t.oldState)
 }
 
