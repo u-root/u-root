@@ -13,7 +13,7 @@ import (
 
 // Read implements Read for RTC, returning time.Now()
 func (r *RTC) Read() (time.Time, error) {
-	return time.Now(), nil
+	return nil, errors.New("not supported")
 }
 
 // Set returns an error for RTC
