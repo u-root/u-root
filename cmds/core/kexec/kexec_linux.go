@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 
@@ -102,7 +103,11 @@ func main() {
 		} else {
 			var i io.ReaderAt
 			if opts.initramfs != "" {
-				i = uio.NewLazyFile(opts.initramfs)
+				var files []io.ReaderAt
+				for _, n := range strings.Fields(opts.initramfs) {
+					files = append(files, uio.NewLazyFile(n))
+				}
+				i = boot.CatInitrds(files...)
 			}
 			image = &boot.LinuxImage{
 				Kernel:  uio.NewLazyFile(kernelpath),
