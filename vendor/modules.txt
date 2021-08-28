@@ -29,7 +29,7 @@ github.com/google/go-tpm/tpmutil/tbs
 github.com/google/goexpect
 # github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
 github.com/google/goterm/term
-# github.com/insomniacslk/dhcp v0.0.0-20210528123148-fb4eaaa00ad2
+# github.com/insomniacslk/dhcp v0.0.0-20210817203519-d82598001386
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4

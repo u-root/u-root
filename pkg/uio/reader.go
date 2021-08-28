@@ -53,21 +53,16 @@ func ReaderAtEqual(r1, r2 io.ReaderAt) bool {
 // If the file at given path does not exist, a new file will be created.
 // If the file exists at the given path, but not empty, it will be truncated.
 func ReadIntoFile(r io.Reader, p string) error {
-	f, err := os.OpenFile(p, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	b := make([]byte, 0, 512)
-	for {
-		n, err := r.Read(b[:cap(b)])
-		b = b[:n]
-		f.Write(b)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return err
-		}
+
+	_, err = io.Copy(f, r)
+	if err != nil {
+		return err
 	}
+
+	return f.Close()
 }

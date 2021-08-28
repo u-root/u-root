@@ -28,6 +28,7 @@ import (
 	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/crypto"
+	"github.com/u-root/u-root/pkg/ntpdate"
 )
 
 var (
@@ -42,11 +43,15 @@ var (
 	dhcpRetries        = flag.Int("retries", 3, "Number of times a DHCP request is retried")
 	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
 	caCertFile         = flag.String("cacerts", "/etc/cacerts.pem", "CA cert file")
+	ntpEnable          = flag.Bool("ntp", true, "Set system time via NTP")
+	ntpConfig          = flag.String("ntp-config", ntpdate.DefaultNTPConfig, "NTP config to use when NTP is enabled")
+	ntpServers         = flag.String("ntp-servers", ntpServerDHCP, fmt.Sprintf("Comma-separated list of NTP servers to query for time. %q expands to list of NTP servers received in the DHCP lease, if any.", ntpServerDHCP))
 	skipCertVerify     = flag.Bool("skip-cert-verify", false, "Don't authenticate https certs")
 	doFix              = flag.Bool("fix", false, "Try to run fixmynetboot if netboot fails")
 )
 
 const (
+	ntpServerDHCP      = "DHCP"
 	interfaceUpTimeout = 10 * time.Second
 	maxHTTPAttempts    = 3
 	retryInterval      = time.Second
@@ -162,6 +167,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	)
 	if *skipDHCP {
 		log.Print("Skipping DHCP")
+		bootconf = &netboot.BootConf{}
 	} else {
 		// send a netboot request via DHCP
 		bootconf, err = dhcp(ifname)
@@ -191,6 +197,32 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	if scheme == "" {
 		return errors.New("DHCP: no valid scheme found in URL")
+	}
+
+	if *ntpEnable {
+		var servers []string
+		for _, s := range strings.Split(*ntpServers, ",") {
+			if len(s) == 0 {
+				continue
+			}
+			if s == ntpServerDHCP {
+				for _, ip := range bootconf.NTPServers {
+					servers = append(servers, ip.String())
+				}
+			} else {
+				servers = append(servers, s)
+			}
+		}
+		log.Printf("NTP: Servers: %v, config: %s", servers, *ntpConfig)
+		if server, offset, err := ntpdate.SetTime(servers, *ntpConfig, "" /* fallback */, false /* setRTC */); err == nil {
+			plus := ""
+			if offset > 0 {
+				plus = "+"
+			}
+			log.Printf("NTP: adjust time server %s offset %s%f sec", server, plus, offset)
+		} else {
+			log.Printf("NTP: error setting time: %v", err)
+		}
 	}
 
 	client, err := getClientForBootfile(bootconf.BootfileURL)
@@ -344,6 +376,9 @@ func dhcp6(ifname string) (*netboot.BootConf, error) {
 	if *userClass != "" {
 		modifiers = append(modifiers, dhcpv6.WithUserClass([]byte(*userClass)))
 	}
+	if *ntpEnable && strings.Contains(*ntpServers, ntpServerDHCP) {
+		modifiers = append(modifiers, dhcpv6.WithRequestedOptions(dhcpv6.OptionNTPServer))
+	}
 	conversation, err := netboot.RequestNetbootv6(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	for _, m := range conversation {
 		debug(m.Summary())
@@ -359,6 +394,9 @@ func dhcp4(ifname string) (*netboot.BootConf, error) {
 	var modifiers []dhcpv4.Modifier
 	if *userClass != "" {
 		modifiers = append(modifiers, dhcpv4.WithUserClass(*userClass, false))
+	}
+	if *ntpEnable && strings.Contains(*ntpServers, ntpServerDHCP) {
+		modifiers = append(modifiers, dhcpv4.WithRequestedOptions(dhcpv4.OptionNTPServers))
 	}
 	conversation, err := netboot.RequestNetbootv4(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	for _, m := range conversation {
