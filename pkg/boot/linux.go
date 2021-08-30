@@ -14,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/util"
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -62,7 +63,38 @@ func (li *LinuxImage) String() string {
 	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline)
 }
 
-func copyToFile(r io.Reader) (*os.File, error) {
+func copyToFileIfNotRegular(r io.Reader) (*os.File, error) {
+	// If source is a regular file in tmpfs, simply re-use that than copy.
+	//
+	// The assumption (bad?) is original local file was opened as a type
+	// conforming to os.File. We then can derive file descriptor, and the
+	// name.
+	if f, ok := r.(*os.File); ok {
+		if fi, err := f.Stat(); err == nil && fi.Mode().IsRegular() { // Name is the path.
+			if r, _ := mount.IsTmpfs(f.Name()); r {
+				return f, nil
+				// This is not checking if same file is linked by another
+				// file descriptor for writing. It is tempting to check or
+				// guarantee, by this point, the file passed in for kexec
+				// is not opened for writing. Caller in the same routine
+				// probably has done its work on the file before it decides
+				// to kexec file load it.
+				//
+				// Same file maybe opened by another process for writing
+				// which is theoretically possible, but may not need to be
+				// paranoid on.
+				//
+				// But kexec file load will propogate up an error if the
+				// file is opened for writting, which is not too different
+				// from we handling it, and return an userspace error to
+				// caller, or not call into file load. Here, it simply leaps
+				// before it looks, and let file load system call errors up.
+			}
+		}
+		// Skip scenarios where it does not exist, and we don't know
+		// if it exists.
+	}
+
 	f, err := ioutil.TempFile("", "kexec-image")
 	if err != nil {
 		return nil, err
@@ -109,13 +141,13 @@ func (li *LinuxImage) Load(verbose bool) error {
 		initrd = progress(initrd)
 	}
 
-	// It seams inefficient to always copy, in particular when the reader
+	// It seems inefficient to always copy, in particular when the reader
 	// is an io.File but that's not sufficient, os.File could be a socket,
 	// a pipe or some other strange thing. Also kexec_file_load will fail
 	// (similar to execve) if anything as the file opened for writing.
 	// That's unfortunately something we can't guarantee here - unless we
 	// make a copy of the file and dump it somewhere.
-	k, err := copyToFile(kernel)
+	k, err := copyToFileIfNotRegular(kernel)
 	if err != nil {
 		return err
 	}
@@ -123,7 +155,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = copyToFile(initrd)
+		i, err = copyToFileIfNotRegular(initrd)
 		if err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 package mount
@@ -11,6 +12,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 const blocksize = 65536
@@ -214,4 +218,13 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		}
 	}
 	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", n, magics)
+}
+
+// IsTmpfs tells if the file path given is under a tmpfs.
+func IsTmpfs(path string) (bool, error) {
+	var s syscall.Statfs_t
+	if err := syscall.Statfs(path, &s); err != nil {
+		return false, err
+	}
+	return s.Type == unix.TMPFS_MAGIC, nil
 }
