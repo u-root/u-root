@@ -25,6 +25,10 @@ type LinuxImage struct {
 	Initrd   io.ReaderAt
 	Cmdline  string
 	BootRank int
+
+	// DeleteOriginalImg indicates if original kernel+initrd need to be
+	// deleted, after a tmpfs copy is made and before kexec fileload.
+	DeleteOriginalImg bool
 }
 
 var _ OSImage = &LinuxImage{}
@@ -109,7 +113,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 		initrd = progress(initrd)
 	}
 
-	// It seams inefficient to always copy, in particular when the reader
+	// It seems inefficient to always copy, in particular when the reader
 	// is an io.File but that's not sufficient, os.File could be a socket,
 	// a pipe or some other strange thing. Also kexec_file_load will fail
 	// (similar to execve) if anything as the file opened for writing.
@@ -136,6 +140,19 @@ func (li *LinuxImage) Load(verbose bool) error {
 			log.Printf("Initrd: %s", i.Name())
 		}
 		log.Printf("Command line: %s", li.Cmdline)
+	}
+
+	if li.DeleteOriginalImg {
+		// Best effort to delete original files. If there is error, simply
+		// proceed.
+		log.Printf("Delete original kernel file: %s", stringer(li.Kernel))
+		if err := os.Remove(stringer(li.Kernel)); err != nil {
+			log.Printf("Error in deleting original kernel file %v: %v", k, err)
+		}
+		log.Printf("Delete original initrd file: %s", stringer(li.Initrd))
+		if err := os.Remove(stringer(li.Initrd)); err != nil {
+			log.Printf("Error in deleting original initrd file %v: %v", i, err)
+		}
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }
