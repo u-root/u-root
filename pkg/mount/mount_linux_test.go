@@ -503,3 +503,45 @@ func TestMountPool(t *testing.T) {
 		t.Fatalf("expected sda1 mounted 1 times; but mounted %d times", sda1.count)
 	}
 }
+
+func TestIsTmpfs(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	testRoot, err := ioutil.TempDir("", "testtmpfs")
+	if err != nil {
+		t.Fatalf("Failed to create tmp dir: %v", err)
+	}
+
+	// Is a tmpfs.
+	tmpfsMount := filepath.Join(testRoot, "tmpfs")
+	mp1, err := mount.Mount("somedevice", tmpfsMount, "tmpfs", "", 0)
+	if err != nil {
+		t.Fatalf("mount.Mount(somedevice, %s, tmpfs, 0) returned with error: %v", tmpfsMount, err)
+	}
+	defer mp1.Unmount(0)
+
+	r, err := mount.IsTmpfs(tmpfsMount)
+	if err != nil {
+		t.Errorf("mount.IsTmpfs(%s) returned error: %v, want nil", tmpfsMount, err)
+	}
+
+	if !r {
+		t.Errorf("mount.IsTmpfs(%s) = false, want true", tmpfsMount)
+	}
+
+	// Not a tmpfs.
+	nottmpfsMount := filepath.Join(testRoot, "nottmpfs")
+	mp2, err := mount.Mount("none", nottmpfsMount, "proc", "", 0)
+	if err != nil {
+		t.Fatalf("mount.Mount(somedevice, %s, \"\", \"\", 0)", err)
+	}
+	defer mp2.Unmount(0)
+
+	r, err = mount.IsTmpfs(nottmpfsMount)
+	if err != nil {
+		t.Errorf("mount.IsTmpfs(%s) returned error: %v, want nil", nottmpfsMount, err)
+	}
+	if r {
+		t.Errorf("mount.IsTmpfs(%s) = true, want false", nottmpfsMount)
+	}
+}
