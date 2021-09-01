@@ -5,7 +5,7 @@ freebsd_instance:
   # Upstream FreeBSD release information: https://www.freebsd.org/where.html
   image_family: freebsd-12-1
 
-task_template: &REGULAR_TASK_TEMPLATE
+template_task: &REGULAR_TASK_TEMPLATE
   provision_script:
     - pkg install -y go git
   # see https://cirrus-ci.org/guide/tips-and-tricks/#custom-clone-command
