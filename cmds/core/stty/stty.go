@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// This tag may be temporary. It depends on how much
+// u-root does with the packages it uses.
+
+//go:build !plan9
+// +build !plan9
+
 // stty is an stty command in Go.
 // It follows many of the conventions of standard stty.
 // However, it can produce JSON output, for later use, and can
