@@ -80,6 +80,24 @@ func (n *Node) Find(f func(*Node) bool) (*Node, bool) {
 	return nil, false
 }
 
+// Find returns all Node starting at a node, given a matching function.
+func (n *Node) FindAll(f func(*Node) bool) ([]*Node, bool) {
+	var nodes []*Node
+	if ok := f(n); ok {
+		nodes = append(nodes, n)
+	}
+
+	for _, child := range n.Children {
+		if matching, ok := child.FindAll(f); ok {
+			nodes = append(nodes, matching...)
+		}
+	}
+	if len(nodes) == 0 {
+		return nil, false
+	}
+	return nodes, true
+}
+
 // NodeByName uses Find to find a node by name.
 func (n *Node) NodeByName(name string) (*Node, bool) {
 	return n.Find(func(n *Node) bool {
