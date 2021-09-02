@@ -13,6 +13,7 @@ import (
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/fit"
+	"github.com/u-root/u-root/pkg/vfile"
 )
 
 var (
@@ -22,6 +23,7 @@ var (
 	config     = flag.String("config", "", "FIT configuration to use")
 	kernel     = flag.String("k", "", "Kernel image node name.")
 	initramfs  = flag.String("i", "", "InitRAMFS node name -- default none")
+	ringPath   = flag.String("r", "", "Path to PGP keyring. Enforces signature if non-empty path")
 	rsdpLookup = flag.Bool("rsdp", false, "Derrive RSDP table pointer from environment")
 )
 
@@ -68,6 +70,14 @@ func main() {
 	}
 
 	f.Cmdline = kernelCmd
+
+	if *ringPath != "" {
+		ring, err := vfile.GetKeyRing(*ringPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		f.KeyRing = ring
+	}
 
 	if err := f.Load(*debug); err != nil {
 		log.Fatal(err)

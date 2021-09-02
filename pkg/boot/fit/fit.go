@@ -12,6 +12,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dt"
+	"golang.org/x/crypto/openpgp"
 )
 
 // Image is a Flattened Image Tree implementation for OSImage.
@@ -31,6 +32,8 @@ type Image struct {
 	SkipInitRAMFS bool
 	// BootRank ranks the priority of the images in boot menu
 	BootRank int
+	// KeyRing is the optional set of public keys used to validate images at Load
+	KeyRing openpgp.KeyRing
 }
 
 var _ = boot.OSImage(&Image{})
@@ -112,24 +115,38 @@ var loadImage = loadLinuxImage
 
 // Load loads an image and reboots
 func (i *Image) Load(verbose bool) error {
-	w := i.Root.Root().Walk("images").Walk(i.Kernel)
-	b, err := w.Property("data").AsBytes()
-	if err != nil {
-		return err
-	}
-
 	image := &boot.LinuxImage{
-		Kernel:  bytes.NewReader(b),
 		Cmdline: i.Cmdline,
 	}
 
-	if len(i.InitRAMFS) != 0 {
-		w := i.Root.Root().Walk("images").Walk(i.InitRAMFS)
-		b, err := w.Property("data").AsBytes()
+	if i.KeyRing != nil {
+		kr, err := i.ReadSignedImage(i.Kernel, i.KeyRing)
 		if err != nil {
 			return err
 		}
-		image.Initrd = bytes.NewReader(b)
+		image.Kernel = kr
+	} else {
+		kr, err := i.ReadImage(i.Kernel)
+		if err != nil {
+			return err
+		}
+		image.Kernel = kr
+	}
+
+	if len(i.InitRAMFS) != 0 {
+		if i.KeyRing != nil {
+			ir, err := i.ReadSignedImage(i.InitRAMFS, i.KeyRing)
+			if err != nil {
+				return err
+			}
+			image.Initrd = ir
+		} else {
+			ir, err := i.ReadImage(i.InitRAMFS)
+			if err != nil {
+				return err
+			}
+			image.Initrd = ir
+		}
 	}
 
 	if err := loadImage(image, verbose); err != nil {
@@ -137,6 +154,15 @@ func (i *Image) Load(verbose bool) error {
 	}
 
 	return nil
+}
+
+func (i *Image) ReadImage(image string) (*bytes.Reader, error) {
+	root := i.Root.Root().Walk("images").Walk(image)
+	b, err := root.Property("data").AsBytes()
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(b), nil
 }
 
 // GetConfigName finds the name of the default configuration or returns the
