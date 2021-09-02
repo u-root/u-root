@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"hash"
@@ -262,7 +263,7 @@ func CheckHashedContent(b *bytes.Reader, wantHash []byte, h hash.Hash) (*bytes.R
 		return b, err
 	}
 
-	if !bytes.Equal(wantHash, got) {
+	if subtle.ConstantTimeCompare(wantHash, got) == 0 {
 		return b, ErrInvalidHash{
 			Err: ErrHashMismatch{
 				Got:  got,

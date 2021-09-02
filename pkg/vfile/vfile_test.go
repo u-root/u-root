@@ -274,7 +274,7 @@ func TestOpenSignedFile(t *testing.T) {
 	}
 }
 
-func TestGetRSAKeysFromRing(t *testing.T) {
+func TestReadSignedImage(t *testing.T) {
 	for _, tt := range []struct {
 		desc       string
 		path       string
