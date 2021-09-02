@@ -274,6 +274,61 @@ func TestOpenSignedFile(t *testing.T) {
 	}
 }
 
+func TestGetRSAKeysFromRing(t *testing.T) {
+	for _, tt := range []struct {
+		desc       string
+		path       string
+		wantKeyCnt int
+		wantError  bool
+	}{
+		{
+			desc:       "Correct read key0",
+			path:       "testdata/key0",
+			wantError:  false,
+			wantKeyCnt: 2,
+		},
+		{
+			desc:       "Correct read key1",
+			path:       "testdata/key1",
+			wantError:  false,
+			wantKeyCnt: 2,
+		},
+		{
+			desc:       "Read nonRSA key",
+			path:       "testdata/dsakey",
+			wantError:  true,
+			wantKeyCnt: 0,
+		},
+		{
+			desc:       "Multikey ring",
+			path:       "testdata/keyring0+1+dsa",
+			wantError:  false,
+			wantKeyCnt: 4,
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			ring, err := GetKeyRing(tt.path)
+			if err != nil {
+				t.Fatalf("GetKeyRing(%s) Failed with err: %v", tt.path, err)
+			}
+			gotKeys, gotErr := GetRSAKeysFromRing(ring)
+			if (gotErr == nil) == tt.wantError {
+				t.Errorf("GetRSAKeysFromRing(%s) = %v, want %v", tt.path, gotErr, tt.wantError)
+			}
+			var gotCnt int
+			if gotKeys == nil {
+				gotCnt = 0
+			} else {
+				gotCnt = len(gotKeys)
+			}
+
+			if tt.wantKeyCnt != gotCnt {
+				t.Errorf("GetRSAKeysFromRing(%s) returned %d keys, want %d", tt.path, gotCnt, tt.wantKeyCnt)
+			}
+		})
+	}
+}
+
 func TestOpenHashedFile(t *testing.T) {
 	dir, err := ioutil.TempDir("", "openhashedfile")
 	if err != nil {

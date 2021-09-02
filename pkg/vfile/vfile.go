@@ -9,6 +9,7 @@ package vfile
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"os"
 
 	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
 )
 
 // ErrUnsigned is returned for a file that failed signature verification.
@@ -69,6 +71,39 @@ func GetKeyRing(keyPath string) (openpgp.KeyRing, error) {
 		return nil, fmt.Errorf("could not read pub key: %v", err)
 	}
 	return ring, nil
+}
+
+// GetRSAKeysFromRing iterates a PGP Keyring and extracts all rsa.PublicKey.
+// An error is returned iff the keyring is not found or no RSA public keys were
+// found on it.
+func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
+	el, ok := ring.(openpgp.EntityList)
+	if !ok {
+		return nil, fmt.Errorf("failed to assert KeyRing as EntityList to read RSA keys")
+	}
+
+	var rsaKeys []*rsa.PublicKey
+	for _, entity := range el {
+		// Extract Primary Key
+		if entity.PrimaryKey != nil {
+			pk := (packet.PublicKey)(*entity.PrimaryKey)
+			if rsaKey, ok := pk.PublicKey.(*rsa.PublicKey); ok {
+				rsaKeys = append(rsaKeys, rsaKey)
+			}
+		}
+		// Extract any subkeys
+		for _, subkey := range entity.Subkeys {
+			pk := (packet.PublicKey)(*subkey.PublicKey)
+			if rsaKey, ok := pk.PublicKey.(*rsa.PublicKey); ok {
+				rsaKeys = append(rsaKeys, rsaKey)
+			}
+		}
+	}
+
+	if len(rsaKeys) == 0 {
+		return nil, fmt.Errorf("no RSA public keys found on keyring")
+	}
+	return rsaKeys, nil
 }
 
 // OpenSignedSigFile calls OpenSignedFile expecting the signature to be in path.sig.
@@ -213,4 +248,38 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
 		}
 	}
 	return f, nil
+}
+
+func CheckHashedContent(b *bytes.Reader, wantHash []byte, h hash.Hash) (*bytes.Reader, error) {
+	if len(wantHash) == 0 {
+		return b, ErrInvalidHash{
+			Err: ErrNoExpectedHash,
+		}
+	}
+
+	got, err := CalculateHash(b, h)
+	if err != nil {
+		return b, err
+	}
+
+	if !bytes.Equal(wantHash, got) {
+		return b, ErrInvalidHash{
+			Err: ErrHashMismatch{
+				Got:  got,
+				Want: wantHash,
+			},
+		}
+	}
+	return b, nil
+}
+
+func CalculateHash(b *bytes.Reader, h hash.Hash) ([]byte, error) {
+	// Hash the file.
+	if _, err := io.Copy(h, b); err != nil {
+		return nil, ErrInvalidHash{
+			Err: err,
+		}
+	}
+
+	return h.Sum(nil), nil
 }
