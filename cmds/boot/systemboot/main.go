@@ -55,7 +55,7 @@ const VpdBmcBootOrderOverride = "bmc_bootorder_override"
 var bmcBootOverride bool
 
 // Product list for running IPMI OEM commands
-var productList = [4]string{"Tioga Pass", "Mono Lake", "Delta Lake", "CraterLake"}
+var productList = [5]string{"Tioga Pass", "Mono Lake", "Delta Lake", "CraterLake", "S9S"}
 
 var selRecorded bool
 
