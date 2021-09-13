@@ -31,11 +31,11 @@ RUN sudo apt-get update &&                          \
 
 # Create working directory
 WORKDIR /home/circleci
-COPY config_linux5.2.0_arm.txt .config
+COPY config_linux5.10.0_arm.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
-    git clone --depth=1 --branch=v5.2  https://github.com/torvalds/linux; \
+    git clone --depth=1 --branch=v5.10 https://github.com/torvalds/linux; \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
