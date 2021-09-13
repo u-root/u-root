@@ -26,9 +26,28 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
-var (
-	xzmagic = [...]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}
+type magic struct {
+	signature []byte
+	c         *exec.Cmd
+}
 
+// MSDOS tag used in .efi binaries.
+// There are no words.
+const MSDOS = "MZ"
+
+var (
+	// these are the magics, along with the command to run
+	// it as a pipe.
+	magics = []*magic{
+		{[]byte("\037\213\010"), exec.Command("zcat")},
+		{[]byte("\3757zXZ\000"), exec.Command("xzcat")},
+		{[]byte("BZh"), exec.Command("bzcat")},
+		{[]byte("\135\000\000\000"), exec.Command("lzcat")},
+		{[]byte("\211\114\132"), exec.Command("lzop", "-c", "-d")},
+		// Is this just lz? Assume so.
+		{[]byte("\002!L\030"), exec.Command("lzcat")},
+		{[]byte("(\265/\375"), exec.Command("unzip", "-c")},
+	}
 	// String of unknown meaning.
 	// The build script has this value:
 	//initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
@@ -39,6 +58,23 @@ var (
 	// can be set to, for example, log.Printf.
 	Debug = func(string, ...interface{}) {}
 )
+
+// This is all C to Go and it reads like it, sorry
+// unpacking bzimage is a mess, so for now, this is a mess.
+
+// decompressor finds a decompressor by scanning a []byte for a tag.
+// Using Index means we need not worry about silly things like MSDOS
+// headers in UEFI binaries. Like that should ever have existed anyway.
+func findDecompressor(b []byte) (int, *exec.Cmd, error) {
+	for _, m := range magics {
+		x := bytes.Index(b, m.signature)
+		if x != -1 {
+			Debug("decompressor: %s %v", m.c.Path, m.c.Args)
+			return x, m.c, nil
+		}
+	}
+	return -1, nil, fmt.Errorf("can't find any headers")
+}
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
 // For now, it hardwires the KernelBase to 0x100000.
@@ -87,9 +123,9 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	Debug("%d bytes of BootCode", len(b.BootCode))
 
 	Debug("Remaining length is %d bytes, PayloadSize %d", r.Len(), b.Header.PayloadSize)
-	x := bytes.Index(r.Bytes(), xzmagic[:])
-	if x == -1 {
-		return fmt.Errorf("can't find xz header")
+	x, c, err := findDecompressor(r.Bytes())
+	if err != nil {
+		return err
 	}
 	Debug("xz is at %d", x)
 	b.HeadCode = make([]byte, x)
@@ -106,7 +142,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	} else {
 		var err error
 		Debug("Uncompress %d bytes", len(b.compressed))
-		if b.KernelCode, err = unpack(b.compressed); err != nil {
+		if b.KernelCode, err = unpack(b.compressed, *c); err != nil {
 			return err
 		}
 		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
@@ -186,10 +222,9 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 // It searches the Kernel []byte for an xz header. Where it begins
 // is never certain. We only do relatively newer images, i.e. we only
 // look for the xz magic.
-func unpack(d []byte) ([]byte, error) {
+func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 	Debug("Kernel is %d bytes", len(d))
 	Debug("Some kernel data: %#02x %#02x", d[:32], d[len(d)-8:])
-	c := exec.Command("xzcat")
 	stdout, err := c.StdoutPipe()
 	if err != nil {
 		return nil, err
