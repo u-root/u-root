@@ -52,6 +52,7 @@ CONFIG_DEVPORT=y
 
 # For the kernel doing the kexec'ing
 CONFIG_CRYPTO=y
+CONFIG_CRYPTO_SHA256=y
 CONFIG_KEXEC=y
 CONFIG_KEXEC_FILE=y
 
@@ -93,6 +94,7 @@ CONFIG_9P_FS=y
 # GPIO test - mock GPIO libraries
 CONFIG_GPIOLIB=y
 CONFIG_GPIO_MOCKUP=y
+CONFIG_GPIO_SYSFS=y
 
 # Compressed initramfs
 CONFIG_KERNEL_GZIP=y

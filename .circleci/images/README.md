@@ -40,13 +40,3 @@ Remember to update the image version in `.circleci/config.yml`.
 More instructions:
 
     https://circleci.com/docs/2.0/custom-images/
-
-
-## Alternative Method
-
-With this new trick, there's no need to install Docker! Simply push a tag with
-the following name:
-
-- `test-image-$GOARCH-$VERSION`
-
-The new Docker image takes about 40 minutes to build and propagate.
