@@ -41,7 +41,7 @@ func TestUefiBoot(t *testing.T) {
 			Devices: []qemu.Device{
 				qemu.IDEBlockDevice{File: src},
 				qemu.ArbitraryArgs{"-machine", "q35"},
-				qemu.ArbitraryArgs{"-m", "2048"},
+				qemu.ArbitraryArgs{"-m", "4096"},
 			},
 		},
 	})
