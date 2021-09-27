@@ -59,6 +59,8 @@ func (nq *NodeWalk) Walk(name string) *NodeWalk {
 	return &NodeWalk{err: fmt.Errorf("cannot find node name %q", name)}
 }
 
+// Find returns a Node given a matching function starting at the current
+// NodeWalk.
 func (nq *NodeWalk) Find(f func(*Node) bool) (*Node, error) {
 	if nq.err != nil {
 		return nil, nq.err
@@ -69,6 +71,8 @@ func (nq *NodeWalk) Find(f func(*Node) bool) (*Node, error) {
 	return nil, fmt.Errorf("cannot find node with matching pattern")
 }
 
+// FindAll returns all Nodes given a matching function starting at the current
+// NodeWalk.
 func (nq *NodeWalk) FindAll(f func(*Node) bool) ([]*Node, error) {
 	if nq.err != nil {
 		return nil, nq.err

@@ -251,6 +251,12 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
 	return f, nil
 }
 
+// CheckHashedContent verifies a calculated hash against an expected hash array.
+//
+// WARNING! Unlike many Go functions, this may return both the file and an
+// error in case the expected hash does not match the contents.
+//
+// If the contents match, the contents are returned with no error.
 func CheckHashedContent(b *bytes.Reader, wantHash []byte, h hash.Hash) (*bytes.Reader, error) {
 	if len(wantHash) == 0 {
 		return b, ErrInvalidHash{
@@ -274,6 +280,7 @@ func CheckHashedContent(b *bytes.Reader, wantHash []byte, h hash.Hash) (*bytes.R
 	return b, nil
 }
 
+// CalculateHash computes the hash of the input data b given a hash function.
 func CalculateHash(b *bytes.Reader, h hash.Hash) ([]byte, error) {
 	// Hash the file.
 	if _, err := io.Copy(h, b); err != nil {
