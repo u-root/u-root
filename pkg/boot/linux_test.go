@@ -109,7 +109,7 @@ func TestLinuxLabel(t *testing.T) {
 func TestCopyToFile(t *testing.T) {
 	buf := bytes.NewBufferString("abcdefg hijklmnop")
 
-	f, err := copyToFile(buf)
+	f, err := copyToFileIfNotRegular(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
