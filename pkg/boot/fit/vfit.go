@@ -110,7 +110,7 @@ func (s RSASignature) String() string {
 	return fmt.Sprintf("RSA Signature - name: %s, signer: '%s', hint: '%s', hash: '%s'", s.name, s.signer, s.hint, s.hash)
 }
 
-// parseHash cleans and maps the first detected hash string into a crytpo.Hash.
+// parseHash cleans and maps the first detected hash string into a crypto.Hash.
 // Expected format: "sha256,rsa4096" or "sha1"
 func parseHash(algo string) (crypto.Hash, error) {
 	cleaned := strings.TrimFunc(algo, func(r rune) bool {
