@@ -80,7 +80,7 @@ func (n *Node) Find(f func(*Node) bool) (*Node, bool) {
 	return nil, false
 }
 
-// Find returns all Node starting at a node, given a matching function.
+// FindAll returns all Node starting at a node, given a matching function.
 func (n *Node) FindAll(f func(*Node) bool) ([]*Node, bool) {
 	var nodes []*Node
 	if ok := f(n); ok {

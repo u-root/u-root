@@ -47,6 +47,8 @@ var (
 	}
 )
 
+// Signature defines an extendable interface for verifying images using
+// varying signing methods.
 type Signature interface {
 	fmt.Stringer
 	// Warning: If the signature does not exist or does not match the keyring,
@@ -55,6 +57,7 @@ type Signature interface {
 	Verify([]byte, openpgp.KeyRing) (*bytes.Reader, error)
 }
 
+// PGPSignature implements a OpenPGP signature check.
 type PGPSignature struct {
 	name  string // Name of signature Node
 	value []byte
@@ -63,6 +66,7 @@ type PGPSignature struct {
 	hint   string
 }
 
+// RSASignature implements a PKCS1v15 signature check.
 type RSASignature struct {
 	name  string // Name of signature Node
 	hash  crypto.Hash
@@ -76,6 +80,8 @@ func (s PGPSignature) String() string {
 	return fmt.Sprintf("PGP Signature - name: %s, signer: '%s', hint: '%s'", s.name, s.signer, s.hint)
 }
 
+// Verify runs a PKCS1v15 check using the RSA keys extracted from the provided
+// key ring.
 // Warning: If the signature does not exist or does not match the keyring,
 // both the file and a signature error will be returned.
 func (s PGPSignature) Verify(b []byte, ring openpgp.KeyRing) (*bytes.Reader, error) {

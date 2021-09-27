@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package fit provides tools to read and verify FIT kernel images
+// See https://doc.coreboot.org/lib/payloads/fit.html
 package fit
 
 import (
@@ -156,6 +158,7 @@ func (i *Image) Load(verbose bool) error {
 	return nil
 }
 
+// ReadImage reads an image node from an FDT and returns the `data` contents.
 func (i *Image) ReadImage(image string) (*bytes.Reader, error) {
 	root := i.Root.Root().Walk("images").Walk(image)
 	b, err := root.Property("data").AsBytes()
