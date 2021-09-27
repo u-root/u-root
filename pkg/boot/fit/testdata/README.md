@@ -23,7 +23,7 @@ gpg --default-key $key1 --output $tmp_dir/key1_initram0_pgp.sig --detach-sig $tm
 gpg --default-key $key0 --output $tmp_dir/key0_kernel0_pgp.sig --detach-sig $tmp_dir/dummy_kernel_0
 ```
 
-* optinal clean up keyring
+* optional clean up keyring
 ```shell
 gpg --delete-secret-key $key0 $key1
 gpg --delete-key $key0 $key1

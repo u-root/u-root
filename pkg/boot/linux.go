@@ -84,8 +84,8 @@ func copyToFileIfNotRegular(r io.Reader) (*os.File, error) {
 				// which is theoretically possible, but may not need to be
 				// paranoid on.
 				//
-				// But kexec file load will propogate up an error if the
-				// file is opened for writting, which is not too different
+				// But kexec file load will propagate up an error if the
+				// file is opened for writing, which is not too different
 				// from we handling it, and return an userspace error to
 				// caller, or not call into file load. Here, it simply leaps
 				// before it looks, and let file load system call errors up.
