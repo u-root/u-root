@@ -39,11 +39,11 @@ RUN sudo apt-get update &&                          \
 
 # Create working directory
 WORKDIR /home/circleci
-COPY config_linux4.17_x86_64.txt .config
+COPY config_linux5.10_x86_64.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
-    git clone --depth=1 --branch=v4.17 https://github.com/torvalds/linux; \
+    git clone --depth=1 --branch=v5.10 https://github.com/torvalds/linux; \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
