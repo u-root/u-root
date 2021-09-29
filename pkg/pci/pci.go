@@ -27,7 +27,7 @@ type PCI struct {
 
 	Latency   byte
 	IRQPin    byte
-	IRQLine   uint8
+	IRQLine   uint
 	Bridge    bool
 	FullPath  string
 	ExtraInfo []string
