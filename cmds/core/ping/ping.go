@@ -51,7 +51,7 @@ const (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stdout, "ping [-V] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
+	fmt.Fprintf(os.Stdout, "ping [-V] [-6] [-c count] [-i interval] [-s packetsize] [-w deadline] [-a audible] destination\n")
 	os.Exit(0)
 }
 
