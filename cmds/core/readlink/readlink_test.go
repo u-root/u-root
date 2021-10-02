@@ -83,7 +83,7 @@ func TestReadlink(t *testing.T) {
 		{
 			flags:      []string{"-v", "foo.bar"},
 			out:        "",
-			stdErr:     fmt.Sprintf("readlink foo.bar: no such file or directory\n"),
+			stdErr:     "readlink foo.bar: no such file or directory\n",
 			exitStatus: 1,
 		},
 	}

@@ -93,7 +93,7 @@ func (d DiskSecurityStatus) SecurityCountExpired() bool {
 }
 
 func (d DiskSecurityStatus) String() string {
-	s := fmt.Sprint("Security Status: ")
+	s := "Security Status: "
 	for v, name := range securityStatusStrings {
 		if d&v != 0 {
 			s += name + ", "
