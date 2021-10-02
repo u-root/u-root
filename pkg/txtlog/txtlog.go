@@ -238,7 +238,7 @@ func getHandoffTablePointers(eventData []byte) (*string, error) {
 		}
 	}
 
-	eventInfo := fmt.Sprint("Tables: ")
+	eventInfo := "Tables: "
 	for _, table := range handoffTablePointers.tableEntry {
 		guid := fmt.Sprintf("%x-%x-%x-%x-%x", table.vendorGUID.blockA, table.vendorGUID.blockB, table.vendorGUID.blockC, table.vendorGUID.blockD, table.vendorGUID.blockE)
 		eventInfo += fmt.Sprintf("At address 0x%d with Guid %s", table.vendorTable, guid)
@@ -304,7 +304,7 @@ func getGPTEventString(eventData []byte) (*string, error) {
 
 	// Stop here we only want to know which device was used here.
 
-	eventInfo := fmt.Sprint("Disk Guid - ")
+	eventInfo := "Disk Guid - "
 	eventInfo += gptEvent.uefiPartitionHeader.DiskGUID.String()
 	return &eventInfo, nil
 }

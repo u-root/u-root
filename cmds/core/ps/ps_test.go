@@ -22,7 +22,7 @@ import (
 // If no errors returns, it's okay
 func TestPsExecution(t *testing.T) {
 	t.Logf("TestPsExecution")
-	d, err := ioutil.TempDir("", fmt.Sprintf("ps"))
+	d, err := ioutil.TempDir("", "ps")
 	if err != nil {
 		t.Fatal(err)
 	}

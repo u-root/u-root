@@ -47,7 +47,7 @@ func TestScpSink(t *testing.T) {
 	}
 	defer os.Remove(tf.Name())
 
-	r.Write([]byte(fmt.Sprintf("C0600 18 test\ntest-file-contents")))
+	r.Write([]byte("C0600 18 test\ntest-file-contents"))
 	// Post IO-copy success status
 	r.Write([]byte{0})
 
