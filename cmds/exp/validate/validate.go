@@ -120,10 +120,7 @@ func main() {
 	}
 
 	if *alg != "" {
-		try = []string{}
-		for _, v := range strings.Split(*alg, ",") {
-			try = append(try, v)
-		}
+		try = append(try, strings.Split(*alg, ",")...)
 	}
 
 	log.Printf("Try %v", try)
