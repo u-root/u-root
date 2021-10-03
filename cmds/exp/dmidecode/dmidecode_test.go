@@ -45,7 +45,7 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 		t.Errorf("%+v %+v %+v: failed to load %s: %v", dumpFile, args, expectedOutFile, expectedOutFile, err)
 		return
 	}
-	if bytes.Compare(actualOut, expectedOut) != 0 {
+	if !bytes.Equal(actualOut, expectedOut) {
 		ioutil.WriteFile(actualOutFile, actualOut, 0644)
 		t.Errorf("%+v %+v %+v: output mismatch, see %s", dumpFile, args, expectedOutFile, actualOutFile)
 		diffOut, _ := exec.Command("diff", "-u", expectedOutFile, actualOutFile).CombinedOutput()
@@ -89,7 +89,7 @@ func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {
 	if err != nil {
 		t.Fatalf("failed to read output: %v", err)
 	}
-	if bytes.Compare(outData, expectedOutData) != 0 {
+	if !bytes.Equal(outData, expectedOutData) {
 		t.Fatalf("binary data mismatch,\nexpected:\n  %s\ngot:\n  %s", hex.EncodeToString(expectedOutData), hex.EncodeToString(outData))
 	}
 }
