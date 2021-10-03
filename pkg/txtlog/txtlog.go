@@ -382,7 +382,7 @@ func getVariableDataString(eventData []byte) (*string, error) {
 	guid := fmt.Sprintf("Variable - %x-%x-%x-%x-%x - ", variableData.variableName.blockA, variableData.variableName.blockB, variableData.variableName.blockC, variableData.variableName.blockD, variableData.variableName.blockE)
 	eventInfo := guid
 	utf16String := utf16.Decode(variableData.unicodeName)
-	eventInfo += fmt.Sprintf("%s", string(utf16String))
+	eventInfo += string(utf16String)
 
 	return &eventInfo, nil
 }
