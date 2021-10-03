@@ -279,7 +279,6 @@ func (ed *editor) moveDotDown() {
 func (ed *editor) insertLastWord() {
 
 	ed.AddTip("daemon offline")
-	return
 	/*
 		_, cmd, err := ed.daemon.PrevCmd(-1, "")
 		if err == nil {
