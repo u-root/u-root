@@ -85,10 +85,8 @@ func one(n string, b []byte, sig string) bool {
 		sumText += fmt.Sprintf("%02x", v)
 	}
 	debug("Compare to %v", sumText)
-	if sumText == sig {
-		return true
-	}
-	return false
+
+	return sumText == sig
 }
 
 func sign(n string, k crypto.PrivateKey, b []byte, sig string) bool {
