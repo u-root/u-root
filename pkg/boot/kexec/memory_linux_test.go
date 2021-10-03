@@ -535,9 +535,7 @@ func TestSort(t *testing.T) {
 		},
 	} {
 		var deepCopy Ranges
-		for _, i := range tt.in {
-			deepCopy = append(deepCopy, i)
-		}
+		deepCopy = append(deepCopy, tt.in...)
 		tt.in.Sort()
 		if !reflect.DeepEqual(tt.in, tt.want) {
 			t.Errorf("%v.Sort() = %v, want\n%v", deepCopy, tt.in, tt.want)
