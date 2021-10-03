@@ -138,7 +138,6 @@ func (m *mode) start() {
 	ed := m.editor
 
 	ed.Notify("store offline, cannot start location mode")
-	return
 }
 
 // convertListToDirs converts a list of strings to []storedefs.Dir. It uses the
