@@ -79,14 +79,6 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				}
 
 			}
-			if verbose >= 2 {
-				if !pci.Bridge {
-				} else {
-				}
-
-				//Latency: 0, Cache Line Size: 64 bytes
-				//Interrupt: pin D routed to IRQ 19
-			}
 			extraNL = true
 		}
 
