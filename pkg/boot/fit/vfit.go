@@ -94,6 +94,8 @@ func (s PGPSignature) Verify(b []byte, ring openpgp.KeyRing) (*bytes.Reader, err
 	return r, nil
 }
 
+// Verify runs a OpenPGP check using the PGP keys extracted from the provided
+// key ring.
 // Warning: If the signature does not exist or does not match the keyring,
 // both the file and a signature error will be returned.
 func (s RSASignature) Verify(b []byte, ring openpgp.KeyRing) (*bytes.Reader, error) {
