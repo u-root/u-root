@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/beevik/ntp v0.3.0
+	github.com/canonical/go-efilib v0.2.0
 	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/creack/pty v1.1.11
 	github.com/davecgh/go-spew v1.1.1
