@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -220,11 +219,14 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", n, magics)
 }
 
-// IsTmpfs tells if the file path given is under a tmpfs.
-func IsTmpfs(path string) (bool, error) {
-	var s syscall.Statfs_t
-	if err := syscall.Statfs(path, &s); err != nil {
+// IsTmpfs tells if the file path given is under a tmpfs or ramfs.
+func IsTmpRamfs(path string) (bool, error) {
+	var s unix.Statfs_t
+	if err := unix.Statfs(path, &s); err != nil {
 		return false, err
 	}
-	return s.Type == unix.TMPFS_MAGIC, nil
+	// Force it to be int64 so that unix.RAMFS_MAGIC won't overflow on an
+	// int32, which is the type for Type on some platforms.
+	t := int64(s.Type)
+	return t == unix.TMPFS_MAGIC || t == unix.RAMFS_MAGIC, nil
 }
