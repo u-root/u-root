@@ -107,9 +107,10 @@ func TestLinuxLabel(t *testing.T) {
 }
 
 func TestCopyToFile(t *testing.T) {
-	buf := bytes.NewBufferString("abcdefg hijklmnop")
+	want := "abcdefg hijklmnop"
+	buf := bytes.NewReader([]byte(want))
 
-	f, err := copyToFileIfNotRegular(buf)
+	f, err := copyToFileIfNotRegular(buf, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,8 +119,8 @@ func TestCopyToFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != "abcdefg hijklmnop" {
-		t.Errorf("got %s, expected %s", string(got), "abcdefg hijklmnop")
+	if string(got) != want {
+		t.Errorf("got %s, expected %s", string(got), want)
 	}
 }
 
