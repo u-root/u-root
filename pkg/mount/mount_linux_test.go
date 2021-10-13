@@ -504,7 +504,7 @@ func TestMountPool(t *testing.T) {
 	}
 }
 
-func TestIsTmpfs(t *testing.T) {
+func TestIsTmpRamfs(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	testRoot, err := ioutil.TempDir("", "testtmpfs")
@@ -520,13 +520,13 @@ func TestIsTmpfs(t *testing.T) {
 	}
 	defer mp1.Unmount(0)
 
-	r, err := mount.IsTmpfs(tmpfsMount)
+	r, err := mount.IsTmpRamfs(tmpfsMount)
 	if err != nil {
-		t.Errorf("mount.IsTmpfs(%s) returned error: %v, want nil", tmpfsMount, err)
+		t.Errorf("mount.IsTmpRamfs(%s) returned error: %v, want nil", tmpfsMount, err)
 	}
 
 	if !r {
-		t.Errorf("mount.IsTmpfs(%s) = false, want true", tmpfsMount)
+		t.Errorf("mount.IsTmpRamfs(%s) = false, want true", tmpfsMount)
 	}
 
 	// Not a tmpfs.
@@ -537,11 +537,11 @@ func TestIsTmpfs(t *testing.T) {
 	}
 	defer mp2.Unmount(0)
 
-	r, err = mount.IsTmpfs(nottmpfsMount)
+	r, err = mount.IsTmpRamfs(nottmpfsMount)
 	if err != nil {
-		t.Errorf("mount.IsTmpfs(%s) returned error: %v, want nil", nottmpfsMount, err)
+		t.Errorf("mount.IsTmpRamfs(%s) returned error: %v, want nil", nottmpfsMount, err)
 	}
 	if r {
-		t.Errorf("mount.IsTmpfs(%s) = true, want false", nottmpfsMount)
+		t.Errorf("mount.IsTmpRamfs(%s) = true, want false", nottmpfsMount)
 	}
 }
