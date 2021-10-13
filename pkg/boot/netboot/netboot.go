@@ -55,7 +55,9 @@ func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclie
 func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri *url.URL, mac net.HardwareAddr, ip net.IP) []boot.OSImage {
 	var images []boot.OSImage
 
-	// Attempt to read the given boot path as an ipxe config file.
+	// 1: Attempt to download the given url as is.
+	//
+	// 1.1: Try ipxe config file.
 	ipc, err := ipxe.ParseConfig(ctx, l, uri, schemes)
 	if err != nil {
 		l.Printf("Parsing boot files as iPXE failed, trying other formats...: %v", err)
@@ -64,7 +66,21 @@ func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri
 		images = append(images, ipc)
 	}
 
-	// Fallback to pxe boot.
+	// 1.2: Check if target is a simple file instead of config script
+	if ipc == nil {
+		l.Printf("Trying to parse file as a non config Image...")
+		sImages, err := simple.FetchAndProbe(ctx, uri, schemes)
+		if err != nil {
+			l.Printf("failed to parse boot file as simple file: %v", err)
+		}
+		if sImages != nil {
+			images = append(images, sImages...)
+		}
+	}
+
+	// 2: Fallback to pxe boot.
+	//
+	// Look for pxelinux.cfg from parent directory of given url path.
 	wd := &url.URL{
 		Scheme: uri.Scheme,
 		Host:   uri.Host,
@@ -73,16 +89,6 @@ func getBootImages(ctx context.Context, l ulog.Logger, schemes curl.Schemes, uri
 	pxeImages, err := pxe.ParseConfig(ctx, wd, mac, ip, schemes)
 	if err != nil {
 		l.Printf("Failed to try parsing pxelinux config: %v", err)
-	}
-
-	l.Printf("Trying to parse file as a non config Image...")
-	// Check if target is a simple file instead of config script
-	sImages, err := simple.FetchAndProbe(ctx, uri, schemes)
-	if err != nil {
-		l.Printf("failed to parse boot file as simple file: %v", err)
-	}
-	if sImages != nil {
-		images = append(images, sImages...)
 	}
 
 	return append(images, pxeImages...)
