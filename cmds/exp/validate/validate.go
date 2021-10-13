@@ -85,10 +85,8 @@ func one(n string, b []byte, sig string) bool {
 		sumText += fmt.Sprintf("%02x", v)
 	}
 	debug("Compare to %v", sumText)
-	if sumText == sig {
-		return true
-	}
-	return false
+
+	return sumText == sig
 }
 
 func sign(n string, k crypto.PrivateKey, b []byte, sig string) bool {
@@ -120,10 +118,7 @@ func main() {
 	}
 
 	if *alg != "" {
-		try = []string{}
-		for _, v := range strings.Split(*alg, ",") {
-			try = append(try, v)
-		}
+		try = append(try, strings.Split(*alg, ",")...)
 	}
 
 	log.Printf("Try %v", try)
