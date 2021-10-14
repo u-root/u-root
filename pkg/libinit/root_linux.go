@@ -6,6 +6,7 @@
 package libinit
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -240,11 +241,15 @@ var (
 	}
 )
 
-// InstallAllModules installs kernel modules (.ko files) from /lib/modules.
+// InstallAllModules installs kernel modules (.ko files) from /lib/modules
+// if the kernel has loadable module support.
 // Useful for modules that need to be loaded for boot (ie a network
 // driver needed for netboot). It skips over blacklisted modules in
 // excludedMods.
 func InstallAllModules() {
+	if _, err := os.Stat("/proc/modules"); errors.Is(err, os.ErrNotExist) {
+		return
+	}
 	modulePattern := "/lib/modules/*.ko"
 	if err := InstallModules(modulePattern, excludedMods); err != nil {
 		log.Print(err)
