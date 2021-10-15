@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package spi wraps the Linux spidev driver and performs low-level SPI
+// Package spidev wraps the Linux spidev driver and performs low-level SPI
 // operations.
-package spi
+package spidev
 
 import (
 	"encoding/binary"
