@@ -272,7 +272,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	log.Printf("Kernel entry point at %#x", kernelEntry)
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(m.kernel); err != nil {
+	if _, err := m.mem.LoadElfSegments(m.kernel); err != nil {
 		return fmt.Errorf("error loading ELF segments: %v", err)
 	}
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package kexec
+package linux
 
 import (
 	"bytes"
@@ -22,14 +22,14 @@ func TestObject(t *testing.T) {
 		t.Fatalf("os.Open(%v): %v != nil", n, err)
 	}
 
-	_, err = objectNewFile(f)
+	_, err = ObjectNewFile(f)
 	if err != nil {
-		t.Fatalf("objectNewFile(%v): %v != nil", f, err)
+		t.Fatalf("ObjectNewFile(%v): %v != nil", f, err)
 	}
 	// Now try a plan 9 object
-	o, err := objectNewFile(bytes.NewReader(emptyAout))
+	o, err := ObjectNewFile(bytes.NewReader(emptyAout))
 	if err != nil {
-		t.Fatalf("objectNewFile(%#x): %v != nil", emptyAout[:64], err)
+		t.Fatalf("ObjectNewFile(%#x): %v != nil", emptyAout[:64], err)
 	}
 	p := o.Progs()
 	if p[0].Paddr != 0x1000 {
@@ -42,8 +42,8 @@ func TestObject(t *testing.T) {
 		t.Errorf("o.Entry(): %#x != 0x2000", o.Entry())
 	}
 
-	if _, err := objectNewFile(bytes.NewReader(bogus)); err == nil {
-		t.Fatalf("objectNewFile(%#x): nil != err", bogus[:64])
+	if _, err := ObjectNewFile(bytes.NewReader(bogus)); err == nil {
+		t.Fatalf("ObjectNewFile(%#x): nil != err", bogus[:64])
 	}
 }
 

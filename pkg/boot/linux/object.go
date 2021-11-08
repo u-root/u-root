@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package kexec
+package linux
 
 import (
 	"debug/elf"
 	"debug/plan9obj"
 	"fmt"
 	"io"
+
+	"github.com/u-root/u-root/pkg/boot/align"
 )
 
 // Object is an object file, specific to kexec uses.
@@ -69,7 +71,7 @@ func (e *aout9Object) Progs() []*elf.Prog {
 				Type:   elf.PT_LOAD,
 				Flags:  elf.PF_W | elf.PF_R,
 				Filesz: uint64(e.f.Sections[1].Size),
-				Paddr:  uint64(alignUp(uint(e.f.LoadAddress + uint64(e.f.Sections[0].Size)))),
+				Paddr:  uint64(align.AlignUpPageSize(uint(e.f.LoadAddress + uint64(e.f.Sections[0].Size)))),
 			},
 			ReaderAt: e.f.Sections[1].ReaderAt,
 		},
@@ -82,7 +84,9 @@ func (e *aout9Object) Entry() uint64 {
 
 var _ Object = &aout9Object{}
 
-func objectNewFile(r io.ReaderAt) (Object, error) {
+// ObjectNewFile reads from input stream and returns a specific object. It tries
+// elf first, then plan9.
+func ObjectNewFile(r io.ReaderAt) (Object, error) {
 	f, errELF := elf.NewFile(r)
 	if errELF == nil {
 		return &elfObject{f: f}, nil

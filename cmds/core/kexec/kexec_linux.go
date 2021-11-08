@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:generate go run purgatories.go
+
 // kexec executes a new kernel over the running kernel (u-root).
 //
 // Synopsis:
@@ -11,11 +13,19 @@
 //		 Loads a kernel for later execution.
 //
 // Options:
-//     --cmdline=STRING or -c=STRING: Set the kernel command line
-//     --reuse-commandline:           Use the kernel command line from running system
-//     --i=FILE or --initrd=FILE:     Use file as the kernel's initial ramdisk
-//     -l or --load:                  Load the new kernel into the current kernel
-//     -e or --exec:                  Execute a currently loaded kernel
+//      --append string        Append to the kernel command line
+//  -c, --cmdline string       Append to the kernel command line
+//  -d, --debug                Print debug info (default true)
+//  -e, --exec                 Execute a currently loaded kernel
+//  -x, --extra string         Add a cpio containing extra files
+//      --initramfs string     Use file as the kernel's initial ramdisk
+//  -i, --initrd string        Use file as the kernel's initial ramdisk
+//  -l, --load                 Load the new kernel into the current kernel
+//  -L, --loadsyscall          Use the kexec load syscall (not file_load) (default true)
+//      --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
+//  -p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
+//      --reuse-cmdline        Use the kernel command line from running system
+
 package main
 
 import (
@@ -36,6 +46,7 @@ import (
 )
 
 type options struct {
+	loadSyscall  bool
 	cmdline      string
 	reuseCmdline bool
 	initramfs    string
@@ -43,11 +54,13 @@ type options struct {
 	exec         bool
 	debug        bool
 	extra        string
+	purgatory    string
 	modules      []string
 }
 
 func registerFlags() *options {
 	o := &options{}
+	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec load syscall (not file_load)")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
@@ -58,12 +71,19 @@ func registerFlags() *options {
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
+
+	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
+	flag.StringVarP(&o.purgatory, "purgatory", "p", "default", "pick a purgatory, use '-p xyz' to get a list")
 	return o
 }
 
 func main() {
 	opts := registerFlags()
 	flag.Parse()
+
+	if opts.debug {
+		kexec.Debug = log.Printf
+	}
 
 	if (!opts.exec && flag.NArg() == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
@@ -90,18 +110,21 @@ func main() {
 		}
 	}
 
+	if err := kexec.SelectPurgator(opts.purgatory); err != nil {
+		log.Fatal(err)
+	}
 	if opts.load {
 		kernelpath := flag.Arg(0)
-		mbkernel, err := os.Open(kernelpath)
+		kernel, err := os.Open(kernelpath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer mbkernel.Close()
+		defer kernel.Close()
 		var image boot.OSImage
-		if err := multiboot.Probe(mbkernel); err == nil {
+		if err := multiboot.Probe(kernel); err == nil {
 			image = &boot.MultibootImage{
 				Modules: multiboot.LazyOpenModules(opts.modules),
-				Kernel:  mbkernel,
+				Kernel:  kernel,
 				Cmdline: newCmdline,
 			}
 		} else {
@@ -139,10 +162,12 @@ func main() {
 			if len(files) > 0 {
 				i = boot.CatInitrds(files...)
 			}
+
 			image = &boot.LinuxImage{
-				Kernel:  uio.NewLazyFile(kernelpath),
-				Initrd:  i,
-				Cmdline: newCmdline,
+				Kernel:      uio.NewLazyFile(kernelpath),
+				Initrd:      i,
+				Cmdline:     newCmdline,
+				LoadSyscall: opts.loadSyscall,
 			}
 		}
 		if err := image.Load(opts.debug); err != nil {
