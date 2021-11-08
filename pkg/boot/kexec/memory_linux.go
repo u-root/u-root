@@ -614,7 +614,7 @@ func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 		//
 		// while we represent
 		//
-		// start: 0x100, size: 0x100.
+		// start: 0x100, size: 0x200.
 		phys = append(phys, TypedRange{
 			Range: RangeFromInterval(r.start, r.end+1),
 			Type:  r.typ,
