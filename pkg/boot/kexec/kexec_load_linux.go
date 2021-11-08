@@ -1,4 +1,4 @@
-// Copyright 2015-2019 the u-root Authors. All rights reserved
+// Copyright 2015-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,10 +6,29 @@ package kexec
 
 import (
 	"fmt"
+	"log"
 	"syscall"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"golang.org/x/sys/unix"
+)
+
+const (
+	DEFAULT_INITRD_ADDR_MAX  uint = 0x37FFFFFF
+	DEFAULT_BZIMAGE_ADDR_MAX uint = 0x37FFFFFF
+	bootParams                    = "/sys/kernel/boot_params/data"
+)
+
+const defaultPurgatory = "to32bit_3000"
+
+var (
+	// Debug is called to print out verbose debug info.
+	//
+	// Set this to appropriate output stream for display
+	// of useful debug info.
+	Debug        = log.Printf // func(string, ...interface{}) {}
+	curPurgatory = linux.Purgatories[defaultPurgatory]
 )
 
 // Load loads the given segments into memory to be executed on a kexec-reboot.
@@ -63,5 +82,20 @@ func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
 			Errno:    errno,
 		}
 	}
+	return nil
+}
+
+// SelectPurgatory picks a purgatory, returning an error if none is found
+func SelectPurgator(name string) error {
+	p, ok := linux.Purgatories[name]
+	if !ok {
+		var s []string
+		for i := range linux.Purgatories {
+			s = append(s, i)
+		}
+		return fmt.Errorf("%s: no such purgatory, try one of %v", name, s)
+
+	}
+	curPurgatory = p
 	return nil
 }
