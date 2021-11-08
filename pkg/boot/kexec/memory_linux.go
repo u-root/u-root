@@ -18,6 +18,9 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/boot/align"
+	"github.com/u-root/u-root/pkg/boot/linux"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -313,7 +316,7 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
 			newSegs[i].Buf.Size = newSegs[i].Phys.Size
 		}
-		newSegs[i].Phys.Size = alignUp(newSegs[i].Phys.Size)
+		newSegs[i].Phys.Size = align.AlignUpPageSize(newSegs[i].Phys.Size)
 	}
 	return newSegs, nil
 }
@@ -371,14 +374,6 @@ func (s *Segment) mergeDisjoint(s2 Segment) bool {
 	phys.Size += uint(diffSize) + s2.Phys.Size
 	*s = NewSegment(buf, phys)
 	return true
-}
-
-func alignUp(p uint) uint {
-	return (p + pageMask) &^ pageMask
-}
-
-func alignUpPtr(p uintptr) uintptr {
-	return uintptr(alignUp(uint(p)))
 }
 
 // AlignPhysStart aligns s.Phys.Start to the page size. AlignPhysStart does not
@@ -484,13 +479,13 @@ type Memory struct {
 }
 
 // LoadElfSegments loads loadable ELF segments.
-func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
-	f, err := elf.NewFile(r)
+func (m *Memory) LoadElfSegments(r io.ReaderAt) (linux.Object, error) {
+	f, err := linux.ObjectNewFile(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for _, p := range f.Progs {
+	for _, p := range f.Progs() {
 		if p.Type != elf.PT_LOAD {
 			continue
 		}
@@ -503,10 +498,10 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 			d = make([]byte, p.Filesz)
 			n, err := r.ReadAt(d, int64(p.Off))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if n < len(d) {
-				return fmt.Errorf("not all data of the segment was read")
+				return nil, fmt.Errorf("not all data of the segment was read")
 			}
 		}
 		// TODO(hugelgupf): check if this is within availableRAM??
@@ -514,9 +509,10 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 			Start: uintptr(p.Paddr),
 			Size:  uint(p.Memsz),
 		})
+		Debug("Added segment at %#x for %#x bytes", p.Paddr, p.Memsz)
 		m.Segments.Insert(s)
 	}
-	return nil
+	return f, nil
 }
 
 // ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
@@ -632,7 +628,7 @@ const M1 = 1 << 20
 // be stored during next AddKexecSegment call.
 func (m Memory) FindSpace(sz uint) (Range, error) {
 	// Allocate full pages.
-	sz = alignUp(sz)
+	sz = align.AlignUpPageSize(sz)
 
 	// Don't use memory below 1M, just in case.
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
@@ -641,7 +637,7 @@ func (m Memory) FindSpace(sz uint) (Range, error) {
 // ReservePhys reserves page-aligned sz bytes in the physical memmap within
 // the given limit address range.
 func (m *Memory) ReservePhys(sz uint, limit Range) (Range, error) {
-	sz = alignUp(sz)
+	sz = align.AlignUpPageSize(sz)
 
 	r, err := m.AvailableRAM().FindSpaceIn(sz, limit)
 	if err != nil {
@@ -698,7 +694,7 @@ func (m Memory) AvailableRAM() Ranges {
 	// Only return Ranges starting at an aligned size.
 	var alignedRanges Ranges
 	for _, r := range ram {
-		alignedStart := alignUpPtr(r.Start)
+		alignedStart := align.AlignUpPageSizePtr(r.Start)
 		if alignedStart < r.End() {
 			alignedRanges = append(alignedRanges, Range{
 				Start: alignedStart,

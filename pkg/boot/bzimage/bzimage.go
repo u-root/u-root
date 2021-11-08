@@ -420,8 +420,6 @@ func (h *LinuxParams) Show() []string {
 		k := reflect.ValueOf(v).Kind()
 		n := val.Type().Field(i).Name
 		switch k {
-		case reflect.Slice:
-			s = append(s, fmt.Sprintf("%s:%#02x", n, v))
 		case reflect.Bool:
 			s = append(s, fmt.Sprintf("%s:%v", n, v))
 		default:
