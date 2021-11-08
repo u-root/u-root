@@ -19,6 +19,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const (
+	optSyscallKexecLoad = "kexecload"
+	optSyscallFileLoad  = "fileload"
+)
+
 // LinuxImage implements OSImage for a Linux kernel + initramfs.
 type LinuxImage struct {
 	Name string
@@ -27,6 +32,7 @@ type LinuxImage struct {
 	Initrd   io.ReaderAt
 	Cmdline  string
 	BootRank int
+	Syscall  string
 }
 
 var _ OSImage = &LinuxImage{}
@@ -166,6 +172,10 @@ func (li *LinuxImage) Load(verbose bool) error {
 			log.Printf("Initrd: %s", i.Name())
 		}
 		log.Printf("Command line: %s", li.Cmdline)
+	}
+
+	if li.Syscall == optSyscallKexecLoad {
+		return kexec.KexecLoad(k, i, li.Cmdline)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

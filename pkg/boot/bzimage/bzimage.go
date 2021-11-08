@@ -135,7 +135,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	// Now size up the kernel code. Is it just PayloadSize?
 	b.compressed = make([]byte, b.Header.PayloadSize)
 	if _, err := r.Read(b.compressed); err != nil {
-		return fmt.Errorf("can't read HeadCode: %v", err)
+		return fmt.Errorf("can't read KernelCode: %v", err)
 	}
 	if b.NoDecompress {
 		Debug("skipping code decompress")
@@ -146,6 +146,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 			return err
 		}
 		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
+		Debug("KernelCode size: %d", len(b.KernelCode))
 	}
 	b.TailCode = make([]byte, r.Len())
 	if _, err := r.Read(b.TailCode); err != nil {
@@ -225,6 +226,20 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 	Debug("Kernel is %d bytes", len(d))
 	Debug("Some kernel data: %#02x %#02x", d[:32], d[len(d)-8:])
+
+	r := bytes.NewReader(d)
+	gzipR, err := gzip.NewReader(r)
+	if err != nil {
+		Debug("Failed to create a new gzip reader: %v", err)
+	}
+	data, err := ioutil.ReadAll(gzipR)
+	if err != nil {
+		Debug("Failed to unpack compressed kernelCode: %v", err)
+		return []byte{}, err
+	}
+	Debug("Uncompressed kernel is %d bytes", len(data))
+	return data, nil
+
 	stdout, err := c.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -281,9 +296,11 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 
 // ELF extracts the KernelCode.
 func (b *BzImage) ELF() (*elf.File, error) {
+	Debug("getting ELF...")
 	if b.NoDecompress || b.KernelCode == nil {
 		return nil, ErrKCodeMissing
 	}
+	Debug("creating a elf NewFile...")
 	e, err := elf.NewFile(bytes.NewReader(b.KernelCode))
 	if err != nil {
 		return nil, err
