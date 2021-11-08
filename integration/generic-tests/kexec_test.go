@@ -33,6 +33,38 @@ func TestMountKexec(t *testing.T) {
 		},
 		QEMUOpts: qemu.Options{
 			Timeout: 20 * time.Second,
+			Devices: []qemu.Device{
+				qemu.ArbitraryArgs{"-m", "8192"},
+			},
+		},
+	})
+	defer cleanup()
+
+	if err := q.Expect("SAW KEXEC=Y"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestMountKexecLoad is same as TestMountKexec except it test calling
+// kexec_load syscall than file load.
+func TestMountKexecLoad(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		TestCmds: []string{
+			"CMDLINE = (cat /proc/cmdline)",
+			"SUFFIX = $CMDLINE[-7:]",
+			"echo SAW $SUFFIX",
+			"kexec -i /testdata/initramfs.cpio --syscall kexecload -c $CMDLINE' KEXEC=Y' /testdata/kernel",
+		},
+		QEMUOpts: qemu.Options{
+			Timeout: 20 * time.Second,
+			Devices: []qemu.Device{
+				qemu.ArbitraryArgs{"-m", "8192"},
+			},
 		},
 	})
 	defer cleanup()
