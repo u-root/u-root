@@ -4,8 +4,98 @@
 
 package ipmi
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
-func TestTODO(t *testing.T) {
-	// TODO: Write a unit test.
+type mock struct {
+}
+
+func (m *mock) SendRequest(req *request) error {
+	return nil
+}
+
+func (m *mock) ReceiveResponse(msgID int64, resp *response, buf []byte) ([]byte, error) {
+	return buf, nil
+}
+
+func (m *mock) GetFile() *os.File {
+	return nil
+}
+
+func GetMockIPMI() *IPMI {
+	return &IPMI{DevAPI: &mock{}}
+}
+
+func TestWatchdogRunning(t *testing.T) {
+	i := GetMockIPMI()
+	_, err := i.WatchdogRunning()
+	if err != nil {
+		t.Error(err)
+	}
+
+}
+
+func TestShutiffWatchdog(t *testing.T) {
+	i := GetMockIPMI()
+	if err := i.ShutoffWatchdog(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestGetDeviceID(t *testing.T) {
+	i := GetMockIPMI()
+	_, err := i.GetDeviceID()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestEnableSEL(t *testing.T) {
+	i := GetMockIPMI()
+	_, err := i.EnableSEL()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestGetSELInfo(t *testing.T) {
+	i := GetMockIPMI()
+	_, err := i.GetSELInfo()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestGetLanConfig(t *testing.T) {
+	i := GetMockIPMI()
+	_, err := i.GetLanConfig(1, 1)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRawCmd(t *testing.T) {
+	i := GetMockIPMI()
+	data := []byte{0x1, 0x2, 0x3}
+	_, err := i.RawCmd(data)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSetSystemFWVersion(t *testing.T) {
+	i := GetMockIPMI()
+	if err := i.SetSystemFWVersion("TestTest"); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestLogSystemEvent(t *testing.T) {
+	i := GetMockIPMI()
+	e := &Event{}
+	if err := i.LogSystemEvent(e); err != nil {
+		t.Error(err)
+	}
 }

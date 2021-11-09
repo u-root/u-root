@@ -18,5 +18,5 @@ func Open(devnum int) (*IPMI, error) {
 		return nil, err
 	}
 
-	return &IPMI{File: f}, nil
+	return &IPMI{DevAPI: GetDev(f)}, nil
 }
