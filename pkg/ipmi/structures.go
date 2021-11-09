@@ -4,15 +4,7 @@
 
 package ipmi
 
-import (
-	"os"
-	"unsafe"
-)
-
-// IPMI represents access to the IPMI interface.
-type IPMI struct {
-	*os.File
-}
+import "unsafe"
 
 // Command is the command code for a given message.
 type Command byte
@@ -28,14 +20,14 @@ type Msg struct {
 	Data    unsafe.Pointer
 }
 
-type req struct {
+type request struct {
 	addr    *systemInterfaceAddr
 	addrLen uint32
 	msgid   int64 //nolint:structcheck
 	msg     Msg
 }
 
-type recv struct {
+type response struct {
 	recvType int32 //nolint:structcheck
 	addr     *systemInterfaceAddr
 	addrLen  uint32
@@ -74,7 +66,7 @@ type OEMTsEvent struct {
 // OEMNonTsEvent is a non-timestamped OEM-custom event.
 //
 // It holds 13 bytes of OEM-defined arbitrary data.
-type OEMNontsEvent struct {
+type OEMNonTsEvent struct {
 	OEMNontsDefinedData [13]uint8
 }
 
@@ -86,7 +78,7 @@ type Event struct {
 	RecordType uint8
 	StandardEvent
 	OEMTsEvent
-	OEMNontsEvent
+	OEMNonTsEvent
 }
 
 type setSystemInfoReq struct {
@@ -95,6 +87,7 @@ type setSystemInfoReq struct {
 	strData       [_SYSTEM_INFO_BLK_SZ]byte
 }
 
+// DevID holds information of a Device provided by the BMC via IPMI
 type DevID struct {
 	DeviceID          byte
 	DeviceRevision    byte
@@ -107,6 +100,7 @@ type DevID struct {
 	AuxFwRev          [4]byte
 }
 
+// ChassisStatus holds information about status of the chassis reported by the BMC via IPMI
 type ChassisStatus struct {
 	CurrentPowerState byte
 	LastPowerEvent    byte
@@ -114,6 +108,7 @@ type ChassisStatus struct {
 	FrontPanelButton  byte
 }
 
+// SELInfo holds information about System Event Log reported by the BMC via IPMI
 type SELInfo struct {
 	Version     byte
 	Entries     uint16
