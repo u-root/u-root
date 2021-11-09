@@ -5,11 +5,12 @@
 package uzip
 
 import (
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFromZip(t *testing.T) {
@@ -86,4 +87,23 @@ func TestFromZip(t *testing.T) {
 	x, err = ioutil.ReadFile(f4)
 	require.NoError(t, err)
 	require.Equal(t, x, f4Expected)
+}
+
+func TestAppendZip(t *testing.T) {
+	_, err := os.Create("appendTest.zip")
+	if err != nil {
+		t.Error(err)
+	}
+	if err := AppendZip("testdata/testFolder", "appendTest.zip", "Test append zip"); err != nil {
+		t.Error(err)
+	}
+	os.Remove("appendTest.zip")
+}
+
+func TestComment(t *testing.T) {
+	comment, err := Comment("test.zip")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(comment)
 }
