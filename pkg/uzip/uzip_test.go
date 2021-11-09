@@ -6,6 +6,7 @@ package uzip
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -93,10 +94,11 @@ func TestAppendZip(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer os.Remove("appendTest.zip")
+
 	if err := AppendZip("testdata/testFolder", "appendTest.zip", "Test append zip"); err != nil {
 		t.Error(err)
 	}
-	os.Remove("appendTest.zip")
 }
 
 func TestComment(t *testing.T) {
@@ -104,5 +106,12 @@ func TestComment(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(comment)
+	fmt.Println(comment)
+}
+
+func TestToZip(t *testing.T) {
+	if err := ToZip(".", "testfile.zip", "test comment"); err != nil {
+		t.Error(err)
+	}
+	defer os.Remove("testfile.zip")
 }
