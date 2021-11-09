@@ -58,7 +58,10 @@ func TestIO(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			tmpFile.Write(make([]byte, 10000))
+			_, err = tmpFile.Write(make([]byte, 10000))
+			if err != nil {
+				t.Fatal(err)
+			}
 			tmpFile.Close()
 			defer os.Remove(tmpFile.Name())
 			memPath = tmpFile.Name()

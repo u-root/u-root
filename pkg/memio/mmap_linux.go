@@ -40,7 +40,12 @@ func Read(addr int64, data UintN) error {
 	if err != nil {
 		return fmt.Errorf("Reading %#x/%d: %v", addr, data.Size(), err)
 	}
-	defer syscall.Munmap(mem)
+	defer func() {
+		err = syscall.Munmap(mem)
+		if err != nil {
+			fmt.Printf("Failed to unmap memory: %v", err)
+		}
+	}()
 
 	// MMIO makes this a bit tricky. Reads must be conducted in one load
 	// operation. Review the generated assembly to make sure.
@@ -63,7 +68,12 @@ func Write(addr int64, data UintN) error {
 	if err != nil {
 		return err
 	}
-	defer syscall.Munmap(mem)
+	defer func() {
+		err = syscall.Munmap(mem)
+		if err != nil {
+			fmt.Printf("Failed to unmap memory: %v", err)
+		}
+	}()
 
 	// MMIO makes this a bit tricky. Writes must be conducted in one store
 	// operation. Review the generated assembly to make sure.
