@@ -87,3 +87,22 @@ func TestFromZip(t *testing.T) {
 		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f4, x, err, f4Expected)
 	}
 }
+
+func TestAppendZip(t *testing.T) {
+	_, err := os.Create("appendTest.zip")
+	if err != nil {
+		t.Error(err)
+	}
+	if err := AppendZip("testdata/testFolder", "appendTest.zip", "Test append zip"); err != nil {
+		t.Error(err)
+	}
+	os.Remove("appendTest.zip")
+}
+
+func TestComment(t *testing.T) {
+	comment, err := Comment("test.zip")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(comment)
+}
