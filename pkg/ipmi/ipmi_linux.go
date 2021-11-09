@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -18,5 +18,5 @@ func Open(devnum int) (*IPMI, error) {
 		return nil, err
 	}
 
-	return &IPMI{File: f}, nil
+	return &IPMI{dev: newDev(f)}, nil
 }
