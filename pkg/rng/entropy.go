@@ -78,7 +78,7 @@ func setAvailableTRNG() error {
 
 	for _, trng := range trngList {
 		for _, rng := range availableRNGs {
-			if trng == rng {
+			if strings.Contains(rng, trng) {
 				selectedRNG = trng
 				break
 			}
