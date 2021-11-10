@@ -67,6 +67,12 @@ github.com/mdlayher/raw
 github.com/orangecms/go-framebuffer/framebuffer
 # github.com/pborman/getopt/v2 v2.1.0
 github.com/pborman/getopt/v2
+# github.com/pierrec/lz4/v4 v4.1.10
+github.com/pierrec/lz4/v4
+github.com/pierrec/lz4/v4/internal/lz4block
+github.com/pierrec/lz4/v4/internal/lz4errors
+github.com/pierrec/lz4/v4/internal/lz4stream
+github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/rck/unit v0.0.3
