@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
+
 package rng
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -77,7 +80,7 @@ func setAvailableTRNG() error {
 
 	for _, trng := range trngList {
 		for _, rng := range availableRNGs {
-			if trng == rng {
+			if strings.Contains(rng, trng) {
 				selectedRNG = trng
 				break
 			}
@@ -118,45 +121,52 @@ func UpdateLinuxRandomness(recoverer recovery.Recoverer) error {
 	if err != nil {
 		return err
 	}
+	defer hwRng.Close()
 
 	rng, err := os.OpenFile(RandomDevice, os.O_APPEND|os.O_WRONLY, os.ModeDevice)
 	if err != nil {
 		return err
 	}
+	defer rng.Close()
 
-	go func() {
-		defer hwRng.Close()
-		defer rng.Close()
+	for {
+		time.Sleep(EntropyFeedTime)
 
-		for {
-			time.Sleep(EntropyFeedTime)
-
-			randomEntropyAvailableData, err := os.ReadFile(RandomEntropyAvailableFile)
-			if err != nil {
-				recoverer.Recover("Can't read entropy pool size")
+		randomEntropyAvailableData, err := os.ReadFile(RandomEntropyAvailableFile)
+		if err != nil {
+			if err := recoverer.Recover("Can't read entropy pool size"); err == nil {
+				return fmt.Errorf("can't read entropy pool size")
 			}
-
-			formatted := strings.TrimSuffix(string(randomEntropyAvailableData), "\n")
-			randomEntropyAvailable, err := strconv.ParseUint(formatted, 10, 32)
-			if err != nil {
-				recoverer.Recover("Can't parse entropy pool size")
-			}
-
-			if randomEntropyAvailable >= EntropyThreshold {
-				continue
-			}
-
-			random := make([]byte, EntropyBlockSize)
-			length, err := hwRng.Read(random)
-			if err != nil {
-				recoverer.Recover("Can't open the hardware random device")
-			}
-			_, err = rng.Write(random[:length])
-			if err != nil {
-				recoverer.Recover("Can't open the random device")
-			}
+			return err
 		}
-	}()
+
+		randomEntropyAvailable, err := strconv.ParseUint(strings.TrimSuffix(string(randomEntropyAvailableData), "\n"), 10, 32)
+		if err != nil {
+			if err := recoverer.Recover("Can't parse entropy pool size"); err == nil {
+				return fmt.Errorf("can't parse entropy pool size")
+			}
+			return err
+		}
+
+		var random = make([]byte, EntropyBlockSize)
+		length, err := hwRng.Read(random)
+		if err != nil {
+			if err := recoverer.Recover("Can't open the hardware random device"); err == nil {
+				return fmt.Errorf("can't open the hardware random device")
+			}
+			return err
+		}
+		if _, err = rng.Write(random[:length]); err != nil {
+			if err := recoverer.Recover("Can't open the random device"); err == nil {
+				return fmt.Errorf("can't open the random device")
+			}
+			return err
+		}
+
+		if randomEntropyAvailable >= EntropyThreshold {
+			break
+		}
+	}
 
 	return nil
 }
