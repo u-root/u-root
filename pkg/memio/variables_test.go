@@ -41,3 +41,19 @@ var tests = []struct {
 		readData:  &[]ByteSlice{make([]byte, 5)}[0],
 	},
 }
+
+var testsInvalid = []struct {
+	name                string
+	addr                int64
+	writeData, readData UintN
+	err                 string
+	path                string
+}{
+	{
+		name:      "uint8",
+		addr:      0x00,
+		writeData: &[]Uint8{0x12}[0],
+		readData:  new(Uint8),
+		path:      "/tmp/null",
+	},
+}
