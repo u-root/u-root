@@ -5,6 +5,8 @@
 package cp_test
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -52,4 +54,44 @@ func TestSimpleCopy(t *testing.T) {
 
 	copyAndTest(t, cp.Default, origf, filepath.Join(tmpDir, "foobar-copied"))
 	copyAndTest(t, cp.NoFollowSymlinks, origf, filepath.Join(tmpDir, "foobar-copied-just-symlink"))
+}
+
+func TestCopyTree(t *testing.T) {
+	testfiles := make([]*os.File, 3)
+	tmpDir, err := ioutil.TempDir("", "u-root-pkg-cp-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Make src directory.
+	srcd := filepath.Join(tmpDir, "src")
+	if err := os.Mkdir(srcd, 0744); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Chdir(srcd); err != nil {
+		t.Fatal(err)
+	}
+
+	// Make some rnd files
+	for i := 0; i < 3; i++ {
+		testfiles[i], err = os.Create("testfile" + fmt.Sprintf("%d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Make dest directory.
+	dest := filepath.Join(tmpDir, "dest")
+	if err := os.Mkdir(dest, 0744); err != nil {
+		t.Fatal(err)
+	}
+	// Copy the tree
+	if err := cp.CopyTree(srcd, dest); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmp.IsEqualTree(cp.Default, srcd, dest); err != nil {
+		t.Fatal(err)
+	}
 }
