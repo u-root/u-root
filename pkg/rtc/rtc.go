@@ -13,16 +13,16 @@ type RTC struct {
 	file *os.File
 }
 
+var devs = []string{
+	"/dev/rtc",
+	"/dev/rtc0",
+	"/dev/misc/rtc0",
+}
+
 // OpenRTC opens an RTC. It will typically only work on Linux, but since it
 // uses a file API, it will be tried on all systems. Perhaps at some future
 // time, other kernels will implement this API.
 func OpenRTC() (*RTC, error) {
-	devs := []string{
-		"/dev/rtc",
-		"/dev/rtc0",
-		"/dev/misc/rtc0",
-	}
-
 	// This logic seems a bit odd, but here is the problem:
 	// an error that is NOT IsNotExist may indicate some
 	// deeper RTC problem, and should probably halt further efforts.

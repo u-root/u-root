@@ -10,9 +10,15 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// For testing purposes
+var (
+	unixIoctlGetRTCTime = unix.IoctlGetRTCTime
+	unixIoctlSetRTCTime = unix.IoctlSetRTCTime
+)
+
 // Read implements Read for the Linux RTC
 func (r *RTC) Read() (time.Time, error) {
-	rt, err := unix.IoctlGetRTCTime(int(r.file.Fd()))
+	rt, err := unixIoctlGetRTCTime(int(r.file.Fd()))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -39,5 +45,5 @@ func (r *RTC) Set(tu time.Time) error {
 		Yday:  int32(0),
 		Isdst: int32(0)}
 
-	return unix.IoctlSetRTCTime(int(r.file.Fd()), &rt)
+	return unixIoctlSetRTCTime(int(r.file.Fd()), &rt)
 }
