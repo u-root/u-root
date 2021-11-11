@@ -18,7 +18,7 @@ type PermissiveRecoverer struct {
 // Recover logs error message in panic mode.
 // Can jump into a shell for later debugging.
 func (pr PermissiveRecoverer) Recover(message string) error {
-	log.Print(message)
+	log.Println(message)
 
 	if pr.RecoveryCommand != "" {
 		cmd := exec.Command(pr.RecoveryCommand)

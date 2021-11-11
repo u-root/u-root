@@ -24,10 +24,27 @@ type SecureRecoverer struct {
 	Sync     bool
 	Debug    bool
 	RandWait bool
+	syscalls
 }
+
+type syscalls interface {
+	reboot(int) error
+}
+
+type realSyscalls struct{}
+
+func (sc realSyscalls) reboot(cmd int) error {
+	return syscall.Reboot(cmd)
+}
+
+var sc realSyscalls
 
 // Recover by reboot or poweroff without or with sync
 func (sr SecureRecoverer) Recover(message string) error {
+	if sr.syscalls == nil {
+		sr.syscalls = sc
+	}
+
 	if sr.Sync {
 		syscall.Sync()
 	}
@@ -48,11 +65,11 @@ func (sr SecureRecoverer) Recover(message string) error {
 	}
 
 	if sr.Reboot {
-		if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
+		if err := sr.reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
 			return err
 		}
 	} else {
-		if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
+		if err := sr.reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 			return err
 		}
 	}
