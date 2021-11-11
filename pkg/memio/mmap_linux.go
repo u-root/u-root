@@ -17,9 +17,6 @@ var (
 
 // mmap aligns the address and maps multiple pages when needed.
 func mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, offset int64, err error) {
-	if addr+size <= addr {
-		return nil, 0, fmt.Errorf("invalid address for size %#x", size)
-	}
 	page := addr &^ (pageSize - 1)
 	offset = addr - page
 	mapSize := offset + size
