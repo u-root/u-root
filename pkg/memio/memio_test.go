@@ -5,6 +5,7 @@
 package memio
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -50,6 +51,31 @@ func TestIO(t *testing.T) {
 			if !reflect.DeepEqual(want, got) {
 				t.Fatalf("Write(%#016x, %v) = %v; want %v",
 					tt.addr, want, got, want)
+			}
+		})
+	}
+}
+
+func TestIOErrors(t *testing.T) {
+	for _, tt := range testsInvalid {
+		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+			memPath = tt.path
+			defer func() { memPath = "/dev/mem" }()
+
+			// Write to the file.
+			if err := Write(tt.addr, tt.writeData); err != nil {
+				want := os.ErrNotExist
+				if !errors.Is(err, want) {
+					t.Fatal(err)
+				}
+			}
+
+			// Read back the value.
+			if err := Read(tt.addr, tt.readData); err != nil {
+				want := os.ErrNotExist
+				if !errors.Is(err, want) {
+					t.Fatal(err)
+				}
 			}
 		})
 	}
