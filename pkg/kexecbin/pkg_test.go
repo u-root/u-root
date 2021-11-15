@@ -6,6 +6,7 @@ package kexecbin
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -70,6 +71,15 @@ func TestCommandLine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			commandLine := buildCommandline(tt.kernelFilePath, tt.kernelCommandline, tt.initrdFilePath, tt.dtFilePath)
+
+			DeviceTreePaths := []string{"/sys/firmware/fdt", "/proc/device-tree"}
+
+			for _, dtFilePath := range DeviceTreePaths {
+				if _, err := os.Stat(dtFilePath); err == nil {
+					tt.wantCommandline = append(tt.wantCommandline, "--dtb="+dtFilePath)
+					break
+				}
+			}
 
 			if !reflect.DeepEqual(commandLine, tt.wantCommandline) {
 				t.Errorf("buildCommandLine fails. Want %v but have %v", tt.wantCommandline, commandLine)
