@@ -22,17 +22,13 @@ var (
 	DeviceTreePaths = []string{"/sys/firmware/fdt", "/proc/device-tree"}
 )
 
-// KexecBin uses kexec-tools binary and runtime architecture detection
-// to execute abritary files.
-func KexecBin(kernelFilePath string, kernelCommandline string, initrdFilePath string, dtFilePath string) error {
-	baseCmd, err := exec.LookPath("kexecbin")
-	if err != nil {
-		return err
-	}
-
+// build the kernel command line
+func buildCommandline(kernelFilePath string, kernelCommandline string, initrdFilePath string, dtFilePath string) []string {
 	var loadCommands []string
-	loadCommands = append(loadCommands, "-l")
-	loadCommands = append(loadCommands, kernelFilePath)
+	if kernelFilePath != "" {
+		loadCommands = append(loadCommands, "-l")
+		loadCommands = append(loadCommands, kernelFilePath)
+	}
 
 	if kernelCommandline != "" {
 		loadCommands = append(loadCommands, "--command-line="+kernelCommandline)
@@ -54,6 +50,19 @@ func KexecBin(kernelFilePath string, kernelCommandline string, initrdFilePath st
 			}
 		}
 	}
+
+	return loadCommands
+}
+
+// KexecBin uses kexec-tools binary and runtime architecture detection
+// to execute abritary files.
+func KexecBin(kernelFilePath string, kernelCommandline string, initrdFilePath string, dtFilePath string) error {
+	baseCmd, err := exec.LookPath("kexecbin")
+	if err != nil {
+		return err
+	}
+
+	loadCommands := buildCommandline(kernelFilePath, kernelCommandline, initrdFilePath, dtFilePath)
 
 	// Load data into physical non reserved memory regions
 	cmdLoad := exec.Command(baseCmd, loadCommands...)
