@@ -21,7 +21,6 @@ require (
 	github.com/klauspost/compress v1.10.6 // indirect
 	github.com/klauspost/pgzip v1.2.4
 	github.com/kr/pty v1.1.8
-	github.com/mattn/go-isatty v0.0.12
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/pborman/getopt/v2 v2.1.0
 	github.com/rck/unit v0.0.3
@@ -35,11 +34,12 @@ require (
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
+	golang.org/x/sys v0.0.0-20210820121016-41cdb8703e55
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.1.1
 	google.golang.org/grpc v1.29.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
+	src.elv.sh v0.16.3
 )
