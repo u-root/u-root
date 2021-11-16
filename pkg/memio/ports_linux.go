@@ -13,16 +13,21 @@ import (
 	"syscall"
 )
 
-const portPath = "/dev/port"
+var portPath = "/dev/port"
 
-var ioplError struct {
-	sync.Once
-	err error
-}
+var (
+	ioplError struct {
+		sync.Once
+		err error
+	}
+
+	// syscallIopl enables Mocking of syscall function
+	syscallIopl = syscall.Iopl
+)
 
 func iopl() error {
 	ioplError.Do(func() {
-		ioplError.err = syscall.Iopl(3)
+		ioplError.err = syscallIopl(3)
 	})
 	return ioplError.err
 }
