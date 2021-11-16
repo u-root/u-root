@@ -25,7 +25,7 @@ func TestString(t *testing.T) {
 			got := tt.writeData.String()
 			want := wants[i]
 			if !reflect.DeepEqual(want, got) {
-				t.Fatalf("Got: %v, want: %v", got, want)
+				t.Errorf("Got: %v, want: %v", got, want)
 			}
 		},
 		)

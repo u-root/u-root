@@ -18,7 +18,7 @@ func TestSeek(t *testing.T) {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
 			tmpFile, err := ioutil.TempFile("", "seek_test")
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			defer os.Remove(tmpFile.Name())
 
@@ -26,16 +26,16 @@ func TestSeek(t *testing.T) {
 			defer func() { memPath = "/dev/mem" }()
 
 			if err := pathWrite(memPath, tt.addr, tt.writeData); err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			if err := pathRead(memPath, tt.addr, tt.readData); err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 
 			want := tt.writeData
 			got := tt.readData
 			if !reflect.DeepEqual(want, got) {
-				t.Fatalf("Write(%#016x, %v) = %v; want %v",
+				t.Errorf("Write(%#016x, %v) = %v; want %v",
 					tt.addr, want, got, want)
 			}
 
@@ -53,13 +53,13 @@ func TestErrors(t *testing.T) {
 			if err := pathWrite(memPath, tt.addr, tt.writeData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Fatal(err)
+					t.Error(err)
 				}
 			}
 			if err := pathRead(memPath, tt.addr, tt.readData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Fatal(err)
+					t.Error(err)
 				}
 			}
 		})
