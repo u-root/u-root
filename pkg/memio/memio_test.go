@@ -19,11 +19,11 @@ func TestIO(t *testing.T) {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
 			tmpFile, err := ioutil.TempFile("", "io_test")
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			_, err = tmpFile.Write(make([]byte, 10000))
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			tmpFile.Close()
 			defer os.Remove(tmpFile.Name())
@@ -43,7 +43,7 @@ func TestIO(t *testing.T) {
 				if err.Error() == tt.err {
 					return
 				}
-				t.Fatal(err)
+				t.Error(err)
 			}
 
 			want := tt.writeData
@@ -67,7 +67,7 @@ func TestIOErrors(t *testing.T) {
 			if err := Write(tt.addr, tt.writeData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Fatal(err)
+					t.Error(err)
 				}
 			}
 
@@ -75,7 +75,7 @@ func TestIOErrors(t *testing.T) {
 			if err := Read(tt.addr, tt.readData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Fatal(err)
+					t.Error(err)
 				}
 			}
 		})
@@ -85,11 +85,11 @@ func TestIOErrors(t *testing.T) {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
 			tmpFile, err := ioutil.TempFile("", "io_test")
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			_, err = tmpFile.Write(make([]byte, 10000))
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 			tmpFile.Close()
 			defer os.Remove(tmpFile.Name())
@@ -108,15 +108,15 @@ func TestIOErrors(t *testing.T) {
 
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
-				if err.Error() == tt.err {
-					return
+				if err == nil {
+					t.Error(err)
 				}
 			}
 
 			// Read back the value.
 			if err := Read(tt.addr, tt.readData); err != nil {
-				if err.Error() == tt.err {
-					return
+				if err == nil {
+					t.Error(err)
 				}
 			}
 		})
@@ -126,7 +126,7 @@ func TestIOErrors(t *testing.T) {
 func ExampleRead() {
 	var data Uint32
 	if err := Read(0x1000000, &data); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 	log.Println(data)
 }
@@ -134,6 +134,6 @@ func ExampleRead() {
 func ExampleWrite() {
 	data := Uint32(42)
 	if err := Write(0x1000000, &data); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 }
