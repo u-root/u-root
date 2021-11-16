@@ -13,7 +13,7 @@ import (
 
 var (
 	pageSize = int64(syscall.Getpagesize())
-	// For testing purposes
+	// Munmap and Mmap for testing purposes
 	Munmap = syscall.Munmap
 	Mmap   = syscall.Mmap
 )
