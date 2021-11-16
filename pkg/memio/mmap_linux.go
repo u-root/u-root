@@ -13,6 +13,9 @@ import (
 
 var (
 	pageSize = int64(syscall.Getpagesize())
+	// For testing purposes
+	Munmap = syscall.Munmap
+	Mmap   = syscall.Mmap
 )
 
 // mmap aligns the address and maps multiple pages when needed.
@@ -20,7 +23,7 @@ func mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, offset int6
 	page := addr &^ (pageSize - 1)
 	offset = addr - page
 	mapSize := offset + size
-	mem, err = syscall.Mmap(int(f.Fd()), int64(page), int(mapSize), prot, syscall.MAP_SHARED)
+	mem, err = Mmap(int(f.Fd()), int64(page), int(mapSize), prot, syscall.MAP_SHARED)
 	return
 }
 
@@ -38,7 +41,7 @@ func Read(addr int64, data UintN) error {
 		return fmt.Errorf("Reading %#x/%d: %v", addr, data.Size(), err)
 	}
 	defer func() {
-		err = syscall.Munmap(mem)
+		err = Munmap(mem)
 		if err != nil {
 			fmt.Printf("Failed to unmap memory: %v", err)
 		}
@@ -66,7 +69,7 @@ func Write(addr int64, data UintN) error {
 		return err
 	}
 	defer func() {
-		err = syscall.Munmap(mem)
+		err = Munmap(mem)
 		if err != nil {
 			fmt.Printf("Failed to unmap memory: %v", err)
 		}
