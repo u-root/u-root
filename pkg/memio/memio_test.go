@@ -137,6 +137,7 @@ func TestPathError(t *testing.T) {
 }
 
 func TestMmap(t *testing.T) {
+
 	// Test invalid file opening
 	for _, tt := range testsInvalid {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
@@ -156,16 +157,17 @@ func TestMmap(t *testing.T) {
 			// Set error
 			tt.err = "This is a dummy error"
 			// Set internal functions to dummy function
+			oMmap := Mmap
 			Mmap = func(fd int, offset int64, length int, prot int, flags int) ([]byte, error) {
 				return nil, errors.New(tt.err)
 			}
+			defer func() { Mmap = oMmap }()
 
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
 				if err.Error() != tt.err {
 					t.Error(err)
 				}
-
 			}
 
 			// Read back the value.
@@ -199,10 +201,12 @@ func TestUnmap(t *testing.T) {
 			// Set error
 			tt.err = "This is a dummy error"
 			// Set internal functions to dummy function
+			oMunmap := Munmap
 			Munmap = func(mem []byte) error {
 				t.Log("Test Munmap")
 				return errors.New(tt.err)
 			}
+			defer func() { Munmap = oMunmap }()
 
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
@@ -223,6 +227,7 @@ func TestUnmap(t *testing.T) {
 		})
 	}
 }
+
 func ExampleRead() {
 	var data Uint32
 	if err := Read(0x1000000, &data); err != nil {
