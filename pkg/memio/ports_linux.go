@@ -23,6 +23,13 @@ var (
 
 	// syscallIopl enables Mocking of syscall function
 	syscallIopl = syscall.Iopl
+	// Mocking of assembly functions
+	archOutLong = archOutl
+	archOutWord = archOutw
+	archOutByte = archOutb
+	archInLong  = archInl
+	archInWord  = archInw
+	archInByte  = archInb
 )
 
 func iopl() error {
@@ -63,11 +70,11 @@ func ArchIn(addr uint16, data UintN) error {
 
 	switch p := data.(type) {
 	case *Uint32:
-		*p = Uint32(archInl(addr))
+		*p = Uint32(archInLong(addr))
 	case *Uint16:
-		*p = Uint16(archInw(addr))
+		*p = Uint16(archInWord(addr))
 	case *Uint8:
-		*p = Uint8(archInb(addr))
+		*p = Uint8(archInByte(addr))
 	default:
 		return fmt.Errorf("port data must be 8, 16 or 32 bits")
 	}
@@ -87,11 +94,11 @@ func ArchOut(addr uint16, data UintN) error {
 
 	switch p := data.(type) {
 	case *Uint32:
-		archOutl(addr, uint32(*p))
+		archOutLong(addr, uint32(*p))
 	case *Uint16:
-		archOutw(addr, uint16(*p))
+		archOutWord(addr, uint16(*p))
 	case *Uint8:
-		archOutb(addr, uint8(*p))
+		archOutByte(addr, uint8(*p))
 	default:
 		return fmt.Errorf("port data must be 8, 16 or 32 bits")
 	}
