@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestOpenRTC(t *testing.T) {
@@ -50,6 +52,8 @@ func TestOpenRTC(t *testing.T) {
 				}
 			}
 			if tt.name == "no permission" {
+				//TODO(MDr164): This only works locally, no idea why
+				testutil.SkipIfInVMTest(t)
 				f, err := ioutil.TempFile("", "rtc-*")
 				if err != nil {
 					t.Error(err)
