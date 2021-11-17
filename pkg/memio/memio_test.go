@@ -203,7 +203,6 @@ func TestUnmap(t *testing.T) {
 			// Set internal functions to dummy function
 			oMunmap := Munmap
 			Munmap = func(mem []byte) error {
-				t.Log("Test Munmap")
 				return errors.New(tt.err)
 			}
 			defer func() { Munmap = oMunmap }()
