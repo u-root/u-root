@@ -8,7 +8,6 @@
 package memio
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -150,27 +149,49 @@ func TestOut(t *testing.T) {
 
 func TestUintErr(t *testing.T) {
 	// Circumventing syscallIopl here leads to segmentation fault later
+	oSyscallIopl := syscallIopl
 	syscallIopl = func(int) error { return nil }
-	for _, tt := range testsUint16 {
-		//	t.Run(fmt.Sprintf("ArchIn(%v)", tt.name), func(t *testing.T) {
-		//		if err := ArchIn(tt.addr, tt.readData); err != nil {
-		//			switch err.Error() {
-		//			case "port data must be 8, 16 or 32 bits":
-		//				return
-		//			// catching the failed sysopcall due to insufficient permissions here
-		//			case "operation not permitted":
-		//				return
+	defer func() { syscallIopl = oSyscallIopl }()
+	// Mock assembly implementations
+	oAIL := archInLong
+	archInLong = func(uint16) uint32 { return uint32(0x11) }
+	defer func() { archInLong = oAIL }()
+	oAIW := archInWord
+	archInWord = func(uint16) uint16 { return uint16(0x11) }
+	defer func() { archInWord = oAIW }()
+	oAIB := archInb
+	archInByte = func(uint16) uint8 { return uint8(0x11) }
+	defer func() { archInByte = oAIB }()
+	oAOL := archOutLong
+	archOutLong = func(uint16, uint32) {}
+	defer func() { archOutLong = oAOL }()
+	oAOW := archOutWord
+	archOutWord = func(uint16, uint16) {}
+	defer func() { archOutWord = oAOW }()
+	oAOB := archOutByte
+	archOutByte = func(uint16, uint8) {}
+	defer func() { archOutByte = oAOB }()
 
-		//			default:
-		//				t.Error(err)
-		//			}
-		//		}
-		//		got := tt.readData.Size()
-		//		want := tt.writeData.Size()
-		//		if !reflect.DeepEqual(got, want) {
-		//			t.Errorf("ArchIn(%#016x) got size %v, want %v", tt.addr, got, want)
-		//		}
-		//	})
+	for _, tt := range testsUint16 {
+		t.Run(fmt.Sprintf("ArchIn(%v)", tt.name), func(t *testing.T) {
+			if err := ArchIn(tt.addr, tt.readData); err != nil {
+				switch err.Error() {
+				case "port data must be 8, 16 or 32 bits":
+					return
+				// catching the failed sysopcall due to insufficient permissions here
+				case "operation not permitted":
+					return
+
+				default:
+					t.Error(err)
+				}
+			}
+			got := tt.readData.Size()
+			want := tt.writeData.Size()
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("ArchIn(%#016x) got size %v, want %v", tt.addr, got, want)
+			}
+		})
 		t.Run(fmt.Sprintf("ArchOut(%v)", tt.name), func(t *testing.T) {
 			t.Logf("%T, %T, size: %v", tt.addr, tt.writeData, tt.writeData.Size())
 			if err := ArchOut(tt.addr, tt.writeData); err != nil {
@@ -193,32 +214,30 @@ func TestUintErr(t *testing.T) {
 		})
 	}
 }
-func TestIoplErr(t *testing.T) {
-	syscallIopl = func(int) error {
-		return errors.New("Failed Iopl syscall")
-	}
-	t.Run("iopl()", func(t *testing.T) {
-		syscallIopl = func(int) error {
-			return errors.New("Failed Iopl syscall")
-		}
-		if err := iopl(); err != nil {
-			return
-		}
-	})
-	t.Run("ArchIn()", func(t *testing.T) {
-		syscallIopl = func(int) error {
-			return errors.New("Failed Iopl syscall")
-		}
-		if err := ArchIn(uint16(tests[0].addr), tests[0].writeData); err != nil {
-			return
-		}
-	})
-	t.Run("ArchOut()", func(t *testing.T) {
-		syscallIopl = func(int) error {
-			return errors.New("Failed Iopl syscall")
-		}
-		if err := ArchOut(uint16(tests[0].addr), tests[0].writeData); err != nil {
-			return
-		}
-	})
-}
+
+// TestIoplErr tests the error evaluation of ArchIn and ArchOut,
+// however due to Sync.Once being triggered already to "nil" by the previous tests
+// this test doesn't work anymore.
+//func TestIoplErr(t *testing.T) {
+//	oSyscallIopl := syscallIopl
+//	syscallIopl = func(int) error {
+//		return errors.New("Failed Iopl syscall")
+//	}
+//	defer func() { syscallIopl = oSyscallIopl }()
+//	t.Run("iopl()", func(t *testing.T) {
+//		// Circumventing syscallIopl here leads to segmentation fault later
+//		if err := iopl(); err != nil {
+//			return
+//		}
+//	})
+//	t.Run("ArchIn()", func(t *testing.T) {
+//		if err := ArchIn(uint16(tests[0].addr), tests[0].writeData); err != nil {
+//			return
+//		}
+//	})
+//	t.Run("ArchOut()", func(t *testing.T) {
+//		if err := ArchOut(uint16(tests[0].addr), tests[0].writeData); err != nil {
+//			return
+//		}
+//	})
+//}
