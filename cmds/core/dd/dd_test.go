@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,418 @@ import (
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
+
+func TestNewChunkedBuffer(t *testing.T) {
+	tests := []struct {
+		name         string
+		BufferSize   int64
+		outChunkSize int64
+		flags        int
+	}{
+		{
+			name:         "Empty buffer with length zero",
+			BufferSize:   0,
+			outChunkSize: 2,
+			flags:        0,
+		},
+		{
+			name:         "Normal buffer",
+			BufferSize:   16,
+			outChunkSize: 2,
+			flags:        0,
+		},
+		{
+			name:         "non-zero flag",
+			BufferSize:   16,
+			outChunkSize: 2,
+			flags:        3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newIntermediateBufferInterface := newChunkedBuffer(tt.BufferSize, tt.outChunkSize, tt.flags)
+			newIntermediateBuffer := newIntermediateBufferInterface.(*chunkedBuffer)
+
+			if (int64(len(newIntermediateBuffer.data)) != tt.BufferSize) || (newIntermediateBuffer.outChunk != tt.outChunkSize) ||
+				(newIntermediateBuffer.flags != tt.flags) {
+				t.Errorf("Test failed - got: {%v, %v, %v} want {%v, %v, %v}",
+					len(newIntermediateBuffer.data), newIntermediateBuffer.outChunk, newIntermediateBuffer.flags,
+					tt.BufferSize, tt.outChunkSize, tt.flags)
+			}
+
+		})
+	}
+}
+
+func TestReadFrom(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputBuffer []byte
+		wantError   bool
+	}{
+		{
+			name:        "Read From",
+			inputBuffer: []byte("ABC"),
+		},
+		{
+			name:        "Empty Buffer",
+			inputBuffer: []byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cBuffer := &chunkedBuffer{
+				outChunk: 1,
+				length:   0,
+				data:     make([]byte, len(tt.inputBuffer)),
+				flags:    0,
+			}
+			readFromBuffer := bytes.NewReader(tt.inputBuffer)
+			cBuffer.ReadFrom(readFromBuffer)
+
+			if !reflect.DeepEqual(cBuffer.data, tt.inputBuffer) {
+				t.Errorf("ReadFrom failed. Got: %v - want: %v", cBuffer.data, tt.inputBuffer)
+			}
+		})
+	}
+}
+
+func TestWriteTo(t *testing.T) {
+	tests := []struct {
+		name          string
+		initialBuffer []byte
+		wantError     bool
+	}{
+		{
+			name:          "WriteTo",
+			initialBuffer: []byte("ABC"),
+		},
+		{
+			name:          "Empty Buffer",
+			initialBuffer: []byte{},
+		},
+		{
+			name:          "Bigger Buffer",
+			initialBuffer: []byte("This is madness. We need to turn this into happiness."),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cBuffer := &chunkedBuffer{
+				outChunk: 16,
+				length:   int64(len(tt.initialBuffer)),
+				data:     tt.initialBuffer,
+				flags:    0,
+			}
+
+			p := make([]byte, 0)
+			b := bytes.NewBuffer(p)
+			buffer := bufio.NewWriter(b)
+
+			n, err := cBuffer.WriteTo(buffer)
+			if err != nil || n != int64(len(tt.initialBuffer)) {
+				t.Errorf("Unable to write to buffer: %v. Wrote %d bytes.", err, n)
+			}
+
+			err = buffer.Flush()
+			if err != nil {
+				t.Errorf("Unable to flush buffer: %v", err)
+			}
+
+			if !reflect.DeepEqual(b.Bytes(), tt.initialBuffer) {
+				t.Errorf("WriteTo failed. Got: %v - want: %v", b.Bytes(), tt.initialBuffer)
+			}
+		})
+	}
+}
+
+func TestParallelChunkedCopy(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputBuffer []byte
+		outBufSize  int
+		wantError   bool
+	}{
+		{
+			name:        "Copy 8 bytes",
+			inputBuffer: []byte("ABCDEFGH"),
+			outBufSize:  16,
+		},
+		{
+			name:        "No bytes to copy",
+			inputBuffer: []byte{},
+			outBufSize:  16,
+			wantError:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// We need to set up an output buffer
+			outBuf := make([]byte, 0)
+
+			// Make it a Writer
+			b := bytes.NewBuffer(outBuf)
+			writeBuf := bufio.NewWriter(b)
+
+			// Now we need a readbuffer
+			readBuf := bytes.NewReader(tt.inputBuffer)
+
+			err := parallelChunkedCopy(readBuf, writeBuf, int64(len(tt.inputBuffer)), 8, 0)
+
+			if err != nil && !tt.wantError {
+				t.Errorf("parallelChunkedCopy failed with %v", err)
+			}
+
+			err = writeBuf.Flush()
+			if err != nil {
+				t.Errorf("Unable to flush writeBuffer: %v", err)
+			}
+
+			if !reflect.DeepEqual(b.Bytes(), tt.inputBuffer) {
+				t.Errorf("ParallelChunkedCopies are not equal. Got: %v - want: %v", b.Bytes(), tt.inputBuffer)
+			}
+		})
+	}
+}
+
+func TestRead(t *testing.T) {
+	tests := []struct {
+		name      string
+		offset    int64
+		maxRead   int64
+		expected  []byte
+		wantError bool
+	}{
+		{
+			name:     "read one byte from offset 0",
+			offset:   0,
+			maxRead:  10,
+			expected: []byte("A"),
+		},
+		{
+			name:     "read one byte from offset 3",
+			offset:   3,
+			maxRead:  10,
+			expected: []byte("D"),
+		},
+		{
+			name:      "read out of bounds",
+			offset:    11,
+			maxRead:   10,
+			expected:  []byte{},
+			wantError: true,
+		},
+		{
+			name:      "Read EOF",
+			offset:    0,
+			maxRead:   0,
+			expected:  []byte{},
+			wantError: true,
+		},
+	}
+
+	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
+	if err != nil {
+		t.Errorf("unable to mockup file: %v", err)
+	}
+	defer os.Remove("datafile")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buffer := make([]byte, len(tt.expected))
+
+			file, err := os.Open("datafile")
+			if err != nil {
+				t.Errorf("Unable to open mock file: %v", err)
+			}
+
+			defer file.Close()
+
+			reader := &sectionReader{tt.offset, 0, tt.maxRead, file}
+			_, err = reader.Read(buffer)
+			if err != nil && !tt.wantError {
+				t.Errorf("Unable to read from sectionReader: %v", err)
+			}
+
+			if !reflect.DeepEqual(buffer, tt.expected) {
+				t.Errorf("Got: %v - Want: %v", buffer, tt.expected)
+			}
+
+		})
+	}
+}
+
+func TestInFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		filename    string
+		outputBytes int64
+		seek        int64
+		count       int64
+		wantErr     bool
+	}{
+		{
+			name:        "Seek to first byte",
+			filename:    "datafile",
+			outputBytes: 1,
+			seek:        0,
+			count:       1,
+			wantErr:     false,
+		},
+		{
+			name:        "Seek to second byte",
+			filename:    "datafile",
+			outputBytes: 1,
+			seek:        1,
+			count:       1,
+			wantErr:     false,
+		},
+		{
+			name:        "no filename",
+			filename:    "",
+			outputBytes: 1,
+			seek:        0,
+			count:       1,
+			wantErr:     false,
+		},
+		{
+			name:        "unknown file",
+			filename:    "/something/something",
+			outputBytes: 1,
+			seek:        0,
+			count:       1,
+			wantErr:     true,
+		},
+		{
+			name:        "no filename and seek to nowhere",
+			filename:    "",
+			outputBytes: 8,
+			seek:        8,
+			count:       1,
+			wantErr:     true,
+		},
+	}
+
+	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
+	if err != nil {
+		t.Errorf("unable to mockup file: %v", err)
+	}
+	defer os.Remove("datafile")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err = inFile(tt.filename, tt.outputBytes, tt.seek, tt.count)
+			if err != nil && !tt.wantErr {
+				t.Errorf("outFile failed with %v", err)
+			}
+		})
+	}
+}
+
+func TestOutFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		filename    string
+		outputBytes int64
+		seek        int64
+		flags       int
+		wantErr     bool
+	}{
+		{
+			name:        "Seek to first byte",
+			filename:    "datafile",
+			outputBytes: 1,
+			seek:        0,
+			flags:       0,
+			wantErr:     false,
+		},
+		{
+			name:        "Seek to second byte",
+			filename:    "datafile",
+			outputBytes: 1,
+			seek:        1,
+			flags:       0,
+			wantErr:     false,
+		},
+		{
+			name:        "no filename",
+			filename:    "",
+			outputBytes: 1,
+			seek:        0,
+			flags:       0,
+			wantErr:     false,
+		},
+		{
+			name:        "unknown file",
+			filename:    "/something/something",
+			outputBytes: 1,
+			seek:        0,
+			flags:       0,
+			wantErr:     true,
+		},
+		{
+			name:        "no filename and seek to nowhere",
+			filename:    "",
+			outputBytes: 8,
+			seek:        8,
+			flags:       0,
+			wantErr:     true,
+		},
+	}
+
+	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
+	if err != nil {
+		t.Errorf("unable to mockup file: %v", err)
+	}
+	defer os.Remove("datafile")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err = outFile(tt.filename, tt.outputBytes, tt.seek, tt.flags)
+			if err != nil && !tt.wantErr {
+				t.Errorf("outFile failed with %v", err)
+			}
+		})
+	}
+}
+
+func TestConvertArgs(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		expectedArgs []string
+	}{
+		{
+			name:         "Empty Args",
+			args:         []string{""},
+			expectedArgs: []string{""},
+		},
+		{
+			name:         "One Arg",
+			args:         []string{"if=somefile"},
+			expectedArgs: []string{"-if", "somefile"},
+		},
+		{
+			name:         "Two Args",
+			args:         []string{"if=somefile", "conv=none"},
+			expectedArgs: []string{"-if", "somefile", "-conv", "none"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotArgs := convertArgs(tt.args)
+
+			if !reflect.DeepEqual(gotArgs, tt.expectedArgs) {
+				t.Errorf("Args not equal. Got %v, want %v", gotArgs, tt.expectedArgs)
+			}
+		})
+	}
+}
 
 // TestDd implements a table-driven test.
 func TestDd(t *testing.T) {
