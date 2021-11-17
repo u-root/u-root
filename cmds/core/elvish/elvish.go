@@ -13,8 +13,11 @@ import (
 	"src.elv.sh/pkg/shell"
 )
 
+// For testing purposes
+var sh = prog.Run
+
 func main() {
-	os.Exit(prog.Run([3]*os.File{os.Stdin, os.Stdout, os.Stderr}, os.Args, buildinfo.Program, daemonStub{}, shell.Program{}))
+	os.Exit(sh([3]*os.File{os.Stdin, os.Stdout, os.Stderr}, os.Args, buildinfo.Program, daemonStub{}, shell.Program{}))
 }
 
 type daemonStub struct{}
