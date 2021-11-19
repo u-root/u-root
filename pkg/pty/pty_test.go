@@ -4,6 +4,7 @@
 
 // This test is flaky AF under the race detector.
 
+//go:build !race
 // +build !race
 
 package pty
