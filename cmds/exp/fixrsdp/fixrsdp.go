@@ -32,7 +32,7 @@ func main() {
 
 	base := r.RSDPAddr()
 	// Check if ACPI rsdp is already in low memory
-	if base >= 0xe0000 && base+uint64(rLen) < 0xffff0 {
+	if base >= 0xe0000 && base+int64(rLen) < 0xffff0 {
 		log.Printf("RSDP is already in low memory at %#X, no need to fix.", base)
 		return
 	}
