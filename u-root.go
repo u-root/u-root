@@ -170,9 +170,6 @@ func main() {
 }
 
 var recommendedVersions = []string{
-	"go1.14",
-	"go1.15",
-	"go1.16",
 	"go1.17",
 }
 
