@@ -44,7 +44,7 @@ GO111MODULE=off u-root all github.com/nsf/godit
 
 # Usage
 
-Make sure your Go version is >=1.15. Make sure your `GOPATH` is set up
+Make sure your Go version is >=1.17. Make sure your `GOPATH` is set up
 correctly.
 
 Download and install u-root:

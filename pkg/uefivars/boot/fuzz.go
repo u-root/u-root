@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+//go:build gofuzz
 // +build gofuzz
 
 package boot

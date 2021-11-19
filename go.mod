@@ -1,6 +1,6 @@
 module github.com/u-root/u-root
 
-go 1.13
+go 1.17
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
@@ -43,4 +43,18 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 	src.elv.sh v0.16.3
+)
+
+require (
+	github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7 // indirect
+	github.com/mdlayher/netlink v1.1.1 // indirect
+	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
+	golang.org/x/mod v0.4.2 // indirect
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
