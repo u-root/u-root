@@ -10,10 +10,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    # Environment variables
-    env:
-      # Turn off modules because we are broken.
-      GO111MODULE: off
 
     steps:
     - uses: actions/checkout@v2
@@ -24,7 +20,7 @@ jobs:
         go-version: 1.17
 
     - name: Build
-      run: go build -v ./...
+      run: go build -mod=mod -v ./...
 
     - name: Test
-      run: go test -v ./...
+      run: go test -mod=mod -v ./...
