@@ -3,8 +3,8 @@
 package pty
 
 import (
-	"os"
 	"golang.org/x/sys/unix"
+	"os"
 )
 
 const (

@@ -1,4 +1,5 @@
-//+build go1.12,linux
+//go:build go1.12 && linux
+// +build go1.12,linux
 
 package netlink
 

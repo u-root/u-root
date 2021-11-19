@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-
 /*
 Package term implements a subset of the C termios library to interface with Terminals.
 

@@ -168,8 +168,8 @@ func SetEnv(env []string) Option {
 	}
 }
 
-// SetSysProcAttr sets the SysProcAttr syscall values for the spawned process. 
-// Because this modifies cmd, it will only work with the process spawners 
+// SetSysProcAttr sets the SysProcAttr syscall values for the spawned process.
+// Because this modifies cmd, it will only work with the process spawners
 // and not effect the GExpect option method.
 func SetSysProcAttr(args *syscall.SysProcAttr) Option {
 	return func(e *GExpect) Option {
@@ -732,7 +732,7 @@ func (e *GExpect) ExpectSwitchCase(cs []Caser, timeout time.Duration) (string, [
 				matchIndex := rs[i].FindStringIndex(tbufString)
 				o = tbufString[0:matchIndex[1]]
 				e.returnUnmatchedSuffix(tbufString[matchIndex[1]:])
-			} 
+			}
 
 			tbuf.Reset()
 
@@ -1127,11 +1127,11 @@ func (e *GExpect) Read(p []byte) (nr int, err error) {
 }
 
 func (e *GExpect) returnUnmatchedSuffix(p string) {
-    e.mu.Lock()
-    defer e.mu.Unlock()
-    newBuffer := bytes.NewBufferString(p)
-    newBuffer.WriteString(e.out.String())
-    e.out = *newBuffer
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	newBuffer := bytes.NewBufferString(p)
+	newBuffer.WriteString(e.out.String())
+	e.out = *newBuffer
 }
 
 // Send sends a string to spawned process.
