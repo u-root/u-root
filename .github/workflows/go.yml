@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     # Environment variables
     env:
-      # GOPATH is the current directory.
-      GOPATH: ${{ github.workspace }}
       # Turn off modules because we are broken.
       GO111MODULE: off
 
