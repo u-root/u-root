@@ -13,6 +13,7 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
+	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/insomniacslk/dhcp v0.0.0-20210817203519-d82598001386
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/klauspost/pgzip v1.2.4
@@ -25,7 +26,9 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
+	github.com/u-root/gobusybox/src v0.0.0-20210529132627-adc854ea4425
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
+	github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7 // indirect
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
