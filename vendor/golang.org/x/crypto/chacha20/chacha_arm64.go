@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.11 && !gccgo && !purego
 // +build go1.11,!gccgo,!purego
 
 package chacha20

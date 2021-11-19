@@ -1,4 +1,3 @@
-//go:build linux && go1.10
 // +build linux,go1.10
 
 package netns

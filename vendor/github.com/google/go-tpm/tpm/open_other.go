@@ -1,4 +1,3 @@
-//go:build !windows
 // +build !windows
 
 // Copyright (c) 2019, Google LLC All rights reserved.

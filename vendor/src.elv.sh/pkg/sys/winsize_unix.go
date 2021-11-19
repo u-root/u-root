@@ -1,4 +1,3 @@
-//go:build !windows && !plan9
 // +build !windows,!plan9
 
 // Copyright 2015 go-termios Author. All Rights Reserved.

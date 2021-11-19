@@ -1,4 +1,3 @@
-//go:build darwin || dragonfly || freebsd || netbsd
 // +build darwin dragonfly freebsd netbsd
 
 package raw

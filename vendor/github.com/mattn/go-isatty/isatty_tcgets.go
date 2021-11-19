@@ -1,4 +1,3 @@
-//go:build (linux || aix) && !appengine
 // +build linux aix
 // +build !appengine
 

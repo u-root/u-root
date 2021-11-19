@@ -1,4 +1,3 @@
-//go:build (amd64 && darwin) || (arm64 && darwin)
 // +build amd64,darwin arm64,darwin
 
 package sys

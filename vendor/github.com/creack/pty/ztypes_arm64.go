@@ -1,7 +1,6 @@
 // Created by cgo -godefs - DO NOT EDIT
 // cgo -godefs types.go
 
-//go:build arm64
 // +build arm64
 
 package pty

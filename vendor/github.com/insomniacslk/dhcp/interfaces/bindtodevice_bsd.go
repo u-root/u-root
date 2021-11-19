@@ -1,4 +1,3 @@
-//go:build aix || freebsd || openbsd || netbsd
 // +build aix freebsd openbsd netbsd
 
 package interfaces
