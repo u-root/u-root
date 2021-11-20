@@ -39,7 +39,10 @@ func osInitGo() *initCmds {
 	ctty := libinit.WithTTYControl(!*test)
 
 	// Install modules before exec-ing into user mode below
-	libinit.InstallAllModules()
+	err := libinit.InstallAllModules()
+	if err != nil {
+		log.Printf("unable to install all modules:%v", err)
+	}
 
 	// systemd is "special". If we are supposed to run systemd, we're
 	// going to exec, and if we're going to exec, we're done here.

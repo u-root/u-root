@@ -242,31 +242,31 @@ var (
 )
 
 // InstallAllModules installs kernel modules (.ko files) from /lib/modules
-// if the kernel has loadable module support.
+// if the kernel has loadable module support, returns error otherwise.
 // Useful for modules that need to be loaded for boot (ie a network
 // driver needed for netboot). It skips over blacklisted modules in
 // excludedMods.
-func InstallAllModules() {
-	if _, err := os.Stat("/proc/modules"); errors.Is(err, os.ErrNotExist) {
-		return
-	}
+func InstallAllModules() error {
 	modulePattern := "/lib/modules/*.ko"
-	if err := InstallModules(modulePattern, excludedMods); err != nil {
-		log.Print(err)
-	}
-}
-
-// InstallModules installs kernel modules (.ko files) from /lib/modules that
-// match the given pattern, skipping those in the exclude list.
-func InstallModules(pattern string, exclude map[string]bool) error {
-	files, err := filepath.Glob(pattern)
+	files, err := filepath.Glob(modulePattern)
 	if err != nil {
 		return err
 	}
 	if len(files) == 0 {
-		return fmt.Errorf("no modules found matching '%s'", pattern)
+		return nil
 	}
+	if _, err := os.Stat("/proc/modules"); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("there are modules in /lib/modules, but this kernel does not support module loading")
+	}
+	if err := InstallModules(files, excludedMods); err != nil {
+		return err
+	}
+	return nil
+}
 
+// InstallModules installs kernel modules (.ko files) from /lib/modules that
+// match the given pattern, skipping those in the exclude list.
+func InstallModules(files []string, exclude map[string]bool) error {
 	for _, filename := range files {
 		f, err := os.Open(filename)
 		if err != nil {
