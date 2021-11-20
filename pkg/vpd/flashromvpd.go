@@ -28,7 +28,7 @@ func FlashromRWVpdSet(key string, value []byte, delete bool) error {
 	}
 	defer os.Remove(file.Name())
 
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	go handler(c)
 	defer close(c)
 
@@ -74,7 +74,7 @@ func ClearRwVpd() error {
 	}
 	defer os.Remove(file.Name())
 
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	go handler(c)
 	defer close(c)
 
