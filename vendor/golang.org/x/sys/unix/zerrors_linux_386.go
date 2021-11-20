@@ -137,6 +137,7 @@ const (
 	MEMSETBADBLOCK                   = 0x40084d0c
 	MEMUNLOCK                        = 0x40084d06
 	MEMWRITEOOB                      = 0xc00c4d03
+	MTDFILEMODE                      = 0x4d13
 	NFDBITS                          = 0x20
 	NLDLY                            = 0x100
 	NOFLSH                           = 0x80
@@ -146,6 +147,7 @@ const (
 	NS_GET_USERNS                    = 0xb701
 	OLCUC                            = 0x2
 	ONLCR                            = 0x4
+	OTPERASE                         = 0x400c4d19
 	OTPGETREGIONCOUNT                = 0x40044d0e
 	OTPGETREGIONINFO                 = 0x400c4d0f
 	OTPLOCK                          = 0x800c4d10
