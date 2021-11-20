@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !race
 // +build !race
 
 package integration
@@ -61,9 +62,6 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/exp/bzimage",
 		"github.com/u-root/u-root/pkg/boot/bzimage",
 
-		// Missing /dev/mem and /sys/firmware/efi
-		"github.com/u-root/u-root/pkg/boot/acpi",
-
 		// No Go compiler in VM.
 		"github.com/u-root/u-root/pkg/bb",
 		"github.com/u-root/u-root/pkg/uroot",
@@ -97,6 +95,15 @@ func TestGoTest(t *testing.T) {
 	o := &vmtest.Options{
 		QEMUOpts: qemu.Options{
 			Timeout: 120 * time.Second,
+			Devices: []qemu.Device{
+				// Bump this up so that some unit tests can happily
+				// and questionably pre-claim large bytes slices.
+				//
+				// e.g. pkg/mount/gpt/gpt_test.go need to claim 4.29G
+				//
+				//     disk = make([]byte, 0x100000000)
+				qemu.ArbitraryArgs{"-m", "6G"},
+			},
 		},
 	}
 	vmtest.GolangTest(t, pkgs, o)
