@@ -96,7 +96,8 @@ func TestLockFileRemoval(t *testing.T) {
 }
 
 // Fails on circleci, with go1.17, reason unknown.
-func testDeadProcess(t *testing.T) {
+// Needs to get turned back on Issue #2175
+func TestDeadProcess(t *testing.T) {
 	p1 := testProcess(t)
 	defer p1.Kill()
 	p2 := testProcess(t)
