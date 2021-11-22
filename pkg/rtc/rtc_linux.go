@@ -5,36 +5,12 @@
 package rtc
 
 import (
-	"errors"
-	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
 
-type RTC struct {
-	file *os.File
-}
-
-func OpenRTC() (*RTC, error) {
-	devs := []string{
-		"/dev/rtc",
-		"/dev/rtc0",
-		"/dev/misc/rtc0",
-	}
-
-	for _, dev := range devs {
-		f, err := os.Open(dev)
-		if err == nil {
-			return &RTC{f}, err
-		} else if !os.IsNotExist(err) {
-			return nil, err
-		}
-	}
-
-	return nil, errors.New("no RTC device found")
-}
-
+// Read implements Read for the Linux RTC
 func (r *RTC) Read() (time.Time, error) {
 	rt, err := unix.IoctlGetRTCTime(int(r.file.Fd()))
 	if err != nil {
@@ -51,6 +27,7 @@ func (r *RTC) Read() (time.Time, error) {
 		time.UTC), nil
 }
 
+// Set implements Set for the Linux RTC
 func (r *RTC) Set(tu time.Time) error {
 	rt := unix.RTCTime{Sec: int32(tu.Second()),
 		Min:   int32(tu.Minute()),

@@ -98,7 +98,7 @@ func tok(b *bufio.Reader) (string, string) {
 			if c == 0 {
 				break
 			}
-			if strings.Index(punct, string(c)) > -1 {
+			if strings.Contains(punct, string(c)) {
 				pushback(b)
 				break
 			}
@@ -143,7 +143,7 @@ func tok(b *bufio.Reader) (string, string) {
 			if c == 0 {
 				return "ARG", arg
 			}
-			if strings.Index(punct, string(c)) > -1 {
+			if strings.Contains(punct, string(c)) {
 				pushback(b)
 				return "ARG", arg
 			}

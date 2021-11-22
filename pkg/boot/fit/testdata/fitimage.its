@@ -1,13 +1,31 @@
-# dummy fitimage its file
-/dts-v1/;
+/dts-v1/;  // dummy fitimage its file. Replace ${tmp_dir} with proper path
 / {
     description = "U-Boot fitImage for nerf kernel";
     #address-cells = <1>;
 
     images {
         kernel@0 {
-            description = "Linux Kernel";
-            data = /incbin/("${tmp_dir}/dummy_kernel");
+            description = "Signed Linux Kernel";
+            data = /incbin/("./dummy_kernel_0");
+            type = "kernel";
+            arch = "x86_64";
+            os = "linux";
+            compression = "none";
+            load = <0x10000>;
+            entry = <0x10000>;
+            hash@1 {
+                algo = "sha1";
+            };
+            signature@1 {
+                signer-name = "uroot";
+                key-name-hint = "key0";
+                algo = "pgp";
+                value = /incbin/("./key0_kernel0_pgp.sig");
+            };
+        };
+        kernel@1 {
+            description = "Unsigned Linux Kernel";
+            data = /incbin/("./dummy_kernel_1");
             type = "kernel";
             arch = "x86_64";
             os = "linux";
@@ -19,8 +37,8 @@
             };
         };
         ramdisk@0 {
-            description = "initramfs";
-            data = /incbin/("${tmp_dir}/dummy_initramfs.cpio");
+            description = "signed initramfs";
+            data = /incbin/("./dummy_initramfs_0.cpio");
             type = "ramdisk";
             arch = "x86_64";
             os = "linux";
@@ -28,6 +46,18 @@
             compression = "none";
             hash@1 {
                 algo = "sha1";
+            };
+            signature@0 {
+                signer-name = "uroot";
+                key-name-hint = "key1";
+                algo = "pgp";
+                value = /incbin/("./key1_initram0_pgp.sig");
+            };
+            signature@1 {
+                signer-name = "uroot";
+                key-name-hint = "key0";
+                algo = "pgp";
+                value = /incbin/("./key0_initram0_pgp.sig");
             };
         };
     };

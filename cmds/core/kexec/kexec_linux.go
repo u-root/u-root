@@ -19,9 +19,11 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -39,6 +42,7 @@ type options struct {
 	load         bool
 	exec         bool
 	debug        bool
+	extra        string
 	modules      []string
 }
 
@@ -46,6 +50,7 @@ func registerFlags() *options {
 	o := &options{}
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
+	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
 	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
 	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
@@ -100,9 +105,40 @@ func main() {
 				Cmdline: newCmdline,
 			}
 		} else {
-			var i io.ReaderAt
+			var files []io.ReaderAt
+			if len(opts.extra) > 0 {
+				b := &bytes.Buffer{}
+				archiver, err := cpio.Format("newc")
+				if err != nil {
+					log.Fatal(err)
+				}
+				w := archiver.Writer(b)
+				cr := cpio.NewRecorder()
+				// to deconflict names, we may want to prepend the names with
+				// kexec_extra/ or something.
+				for _, n := range strings.Fields(opts.extra) {
+					rec, err := cr.GetRecord(n)
+					if err != nil {
+						log.Fatalf("Getting record of %q failed: %v", n, err)
+					}
+					if err := w.WriteRecord(rec); err != nil {
+						log.Fatalf("Writing record %q failed: %v", n, err)
+					}
+				}
+				if err := cpio.WriteTrailer(w); err != nil {
+					log.Fatalf("Error writing trailer record: %v", err)
+				}
+				files = append(files, bytes.NewReader(b.Bytes()))
+			}
 			if opts.initramfs != "" {
-				i = uio.NewLazyFile(opts.initramfs)
+				for _, n := range strings.Fields(opts.initramfs) {
+					files = append(files, uio.NewLazyFile(n))
+				}
+
+			}
+			var i io.ReaderAt
+			if len(files) > 0 {
+				i = boot.CatInitrds(files...)
 			}
 			image = &boot.LinuxImage{
 				Kernel:  uio.NewLazyFile(kernelpath),

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 package mount
@@ -11,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 const blocksize = 65536
@@ -214,4 +217,16 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		}
 	}
 	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", n, magics)
+}
+
+// IsTmpRamfs tells if the file path given is under a tmpfs or ramfs.
+func IsTmpRamfs(path string) (bool, error) {
+	var s unix.Statfs_t
+	if err := unix.Statfs(path, &s); err != nil {
+		return false, err
+	}
+	// Force it to be int64 so that unix.RAMFS_MAGIC won't overflow on an
+	// int32, which is the type for Type on some platforms.
+	t := int64(s.Type)
+	return t == unix.TMPFS_MAGIC || t == unix.RAMFS_MAGIC, nil
 }

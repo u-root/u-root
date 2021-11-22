@@ -91,7 +91,10 @@ func (p *Packet6) Configure() error {
 }
 
 func (p *Packet6) String() string {
-	return fmt.Sprintf("IPv6 DHCP Lease IP %s", p.Lease().IPv6Addr)
+	if p.Lease() != nil {
+		return fmt.Sprintf("IPv6 DHCP Lease IP %s", p.Lease().IPv6Addr)
+	}
+	return fmt.Sprintf("IPv6 DHCP Lease came with no IP")
 }
 
 // Lease returns lease information assigned.

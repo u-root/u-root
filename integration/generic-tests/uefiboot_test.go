@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build amd64 && !race
 // +build amd64,!race
 
 package integration
@@ -41,7 +42,7 @@ func TestUefiBoot(t *testing.T) {
 			Devices: []qemu.Device{
 				qemu.IDEBlockDevice{File: src},
 				qemu.ArbitraryArgs{"-machine", "q35"},
-				qemu.ArbitraryArgs{"-m", "2048"},
+				qemu.ArbitraryArgs{"-m", "4096"},
 			},
 		},
 	})

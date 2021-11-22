@@ -139,7 +139,7 @@ func newManualLease() (dhclient.Lease, error) {
 
 func dumpNetDebugInfo() {
 	log.Println("Dump debug info of network status")
-	commands := []string{"ip link", "ip addr", "ip route show table all", "ip neigh"}
+	commands := []string{"ip link", "ip addr", "ip route show table all", "ip -6 route show table all", "ip neigh"}
 	for _, cmd := range commands {
 		cmds := strings.Split(cmd, " ")
 		name := cmds[0]

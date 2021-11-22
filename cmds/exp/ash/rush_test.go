@@ -53,13 +53,13 @@ func testRush(t *testing.T) {
 			err := cmd.Run()
 
 			// Check stdout
-			strout := string(stdout.Bytes())
+			strout := stdout.String()
 			if !regexp.MustCompile("^" + tt.stdout + "$").MatchString(strout) {
 				t.Errorf("Want: %#v; Got: %#v", tt.stdout, strout)
 			}
 
 			// Check stderr
-			strerr := string(stderr.Bytes())
+			strerr := stderr.String()
 			if !regexp.MustCompile("^" + tt.stderr + "$").MatchString(strerr) {
 				t.Errorf("Want: %#v; Got: %#v", tt.stderr, strerr)
 			}

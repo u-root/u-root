@@ -4,7 +4,9 @@
 
 package dt
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // NodeWalk is used to contain state for walking
 // the FDT, such as an error. A Walk with a non-nil
@@ -55,6 +57,30 @@ func (nq *NodeWalk) Walk(name string) *NodeWalk {
 		}
 	}
 	return &NodeWalk{err: fmt.Errorf("cannot find node name %q", name)}
+}
+
+// Find returns a Node given a matching function starting at the current
+// NodeWalk.
+func (nq *NodeWalk) Find(f func(*Node) bool) (*Node, error) {
+	if nq.err != nil {
+		return nil, nq.err
+	}
+	if matching, ok := nq.n.Find(f); ok {
+		return matching, nil
+	}
+	return nil, fmt.Errorf("cannot find node with matching pattern")
+}
+
+// FindAll returns all Nodes given a matching function starting at the current
+// NodeWalk.
+func (nq *NodeWalk) FindAll(f func(*Node) bool) ([]*Node, error) {
+	if nq.err != nil {
+		return nil, nq.err
+	}
+	if matching, ok := nq.n.FindAll(f); ok {
+		return matching, nil
+	}
+	return nil, fmt.Errorf("cannot find nodes with matching pattern")
 }
 
 // Property walks from a Node to a Property of that Node, returning a PropertyWalk.

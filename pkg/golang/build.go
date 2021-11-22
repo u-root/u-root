@@ -147,7 +147,6 @@ func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) err
 func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) error {
 	args := []string{
 		"build",
-		"-a", // Force rebuilding of packages.
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
 		"-gcflags=all=-l", // Disable "function inlining" to get a smaller binary

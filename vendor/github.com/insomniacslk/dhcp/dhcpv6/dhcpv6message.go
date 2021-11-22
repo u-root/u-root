@@ -288,6 +288,32 @@ func (mo MessageOptions) DHCP4oDHCP6Server() *OptDHCP4oDHCP6Server {
 	return nil
 }
 
+// NTPServers returns the NTP server addresses contained in the
+// NTP_SUBOPTION_SRV_ADDR of an OPTION_NTP_SERVER.
+// If multiple NTP server options exist, the function will return all the NTP
+// server addresses it finds, as defined by RFC 5908.
+func (mo MessageOptions) NTPServers() []net.IP {
+	opts := mo.Options.Get(OptionNTPServer)
+	if opts == nil {
+		return nil
+	}
+	addrs := make([]net.IP, 0)
+	for _, opt := range opts {
+		ntp, ok := opt.(*OptNTPServer)
+		if !ok {
+			continue
+		}
+		for _, subopt := range ntp.Suboptions {
+			so, ok := subopt.(*NTPSuboptionSrvAddr)
+			if !ok {
+				continue
+			}
+			addrs = append(addrs, net.IP(*so))
+		}
+	}
+	return addrs
+}
+
 // Message represents a DHCPv6 Message as defined by RFC 3315 Section 6.
 type Message struct {
 	MessageType   MessageType

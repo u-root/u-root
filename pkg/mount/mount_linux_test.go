@@ -158,6 +158,47 @@ func TestFilterPartType(t *testing.T) {
 	}
 }
 
+func TestFilterHavingPartitions(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	prefix := getDevicePrefix()
+
+	devs, err := block.GetBlockDevices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs = devs.FilterZeroSize()
+
+	want := block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: "nvme0n1p1"},
+		&block.BlockDev{Name: "nvme0n1p2"},
+		&block.BlockDev{Name: prefix + "a"},
+		&block.BlockDev{Name: prefix + "a1", FsUUID: "2183ead8-a510-4b3d-9777-19c7090f66d9"},
+		&block.BlockDev{Name: prefix + "a2", FsUUID: "ace5-5144"},
+		&block.BlockDev{Name: prefix + "b"},
+		&block.BlockDev{Name: prefix + "b1"},
+		&block.BlockDev{Name: prefix + "c"},
+		&block.BlockDev{Name: prefix + "c1"},
+		&block.BlockDev{Name: prefix + "c2"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+
+	block.Debug = log.Printf
+	devs = devs.FilterHavingPartitions([]int{1, 2})
+
+	want = block.BlockDevices{
+		&block.BlockDev{Name: "nvme0n1"},
+		&block.BlockDev{Name: prefix + "a"},
+		&block.BlockDev{Name: prefix + "c"},
+	}
+	if !reflect.DeepEqual(devs, want) {
+		t.Fatalf("BlockDevices() = \n\t%v want\n\t%v", devs, want)
+	}
+}
+
 func TestFilterBlockPCI(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
@@ -460,5 +501,47 @@ func TestMountPool(t *testing.T) {
 	}
 	if sda1.count != 1 {
 		t.Fatalf("expected sda1 mounted 1 times; but mounted %d times", sda1.count)
+	}
+}
+
+func TestIsTmpRamfs(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
+	testRoot, err := ioutil.TempDir("", "testtmpfs")
+	if err != nil {
+		t.Fatalf("Failed to create tmp dir: %v", err)
+	}
+
+	// Is a tmpfs.
+	tmpfsMount := filepath.Join(testRoot, "tmpfs")
+	mp1, err := mount.Mount("somedevice", tmpfsMount, "tmpfs", "", 0)
+	if err != nil {
+		t.Fatalf("mount.Mount(somedevice, %s, tmpfs, 0) returned with error: %v", tmpfsMount, err)
+	}
+	defer mp1.Unmount(0)
+
+	r, err := mount.IsTmpRamfs(tmpfsMount)
+	if err != nil {
+		t.Errorf("mount.IsTmpRamfs(%s) returned error: %v, want nil", tmpfsMount, err)
+	}
+
+	if !r {
+		t.Errorf("mount.IsTmpRamfs(%s) = false, want true", tmpfsMount)
+	}
+
+	// Not a tmpfs.
+	nottmpfsMount := filepath.Join(testRoot, "nottmpfs")
+	mp2, err := mount.Mount("none", nottmpfsMount, "proc", "", 0)
+	if err != nil {
+		t.Fatalf("mount.Mount(somedevice, %s, \"\", \"\", 0)", err)
+	}
+	defer mp2.Unmount(0)
+
+	r, err = mount.IsTmpRamfs(nottmpfsMount)
+	if err != nil {
+		t.Errorf("mount.IsTmpRamfs(%s) returned error: %v, want nil", nottmpfsMount, err)
+	}
+	if r {
+		t.Errorf("mount.IsTmpRamfs(%s) = true, want false", nottmpfsMount)
 	}
 }
