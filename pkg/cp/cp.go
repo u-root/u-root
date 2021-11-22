@@ -106,6 +106,7 @@ func CopyTree(src, dst string) error {
 
 func copyFile(src, dst string, srcInfo os.FileInfo) error {
 	m := srcInfo.Mode()
+	fmt.Println(m)
 	switch {
 	case m.IsDir():
 		return os.MkdirAll(dst, srcInfo.Mode().Perm())
@@ -131,13 +132,15 @@ func copyFile(src, dst string, srcInfo os.FileInfo) error {
 	}
 }
 
+// For testing purpose
+var open = os.Open
+
 func copyRegularFile(src, dst string, srcfi os.FileInfo) error {
-	srcf, err := os.Open(src)
+	srcf, err := open(src)
 	if err != nil {
 		return err
 	}
 	defer srcf.Close()
-
 	dstf, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, srcfi.Mode().Perm())
 	if err != nil {
 		return err

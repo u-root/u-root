@@ -9,6 +9,7 @@ package cmp
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -36,6 +37,9 @@ func isEqualFile(fpath1, fpath2 string) error {
 	return nil
 }
 
+// For testing purpose
+var readDirName = readDirNames
+
 func readDirNames(path string) ([]string, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -55,27 +59,43 @@ func stat(o cp.Options, path string) (os.FileInfo, error) {
 	return os.Stat(path)
 }
 
-// IsEqualTree compare the content in the file trees in src and dst paths
-func IsEqualTree(o cp.Options, src, dst string) error {
-	srcInfo, err := stat(o, src)
+// For testing purpose
+var readLink = os.Readlink
+
+// stats creating the source and the destination filemodes and returns it
+func stats(o cp.Options, src, dst string) (sm, dm fs.FileMode, srcInfo fs.FileInfo, err error) {
+	srcInfo, err = stat(o, src)
 	if err != nil {
-		return err
+		return 0, 0, nil, err
 	}
 	dstInfo, err := stat(o, dst)
 	if err != nil {
-		return err
+		return 0, 0, nil, err
 	}
-	if sm, dm := srcInfo.Mode()&os.ModeType, dstInfo.Mode()&os.ModeType; sm != dm {
+
+	sm = srcInfo.Mode() & os.ModeType
+	dm = dstInfo.Mode() & os.ModeType
+
+	return sm, dm, srcInfo, nil
+}
+
+// IsEqualTree compare the content in the file trees in src and dst paths
+func IsEqualTree(o cp.Options, src, dst string) error {
+	sm, dm, srcInfo, err := stats(o, src, dst)
+	if err != nil {
+		return fmt.Errorf("could not get the stat for src or dst")
+	}
+	if sm != dm {
 		return fmt.Errorf("mismatched mode: %q has mode %s while %q has mode %s", src, sm, dst, dm)
 	}
 
 	switch {
 	case srcInfo.Mode().IsDir():
-		srcEntries, err := readDirNames(src)
+		srcEntries, err := readDirName(src)
 		if err != nil {
 			return err
 		}
-		dstEntries, err := readDirNames(dst)
+		dstEntries, err := readDirName(dst)
 		if err != nil {
 			return err
 		}
@@ -94,11 +114,11 @@ func IsEqualTree(o cp.Options, src, dst string) error {
 		return isEqualFile(src, dst)
 
 	case srcInfo.Mode()&os.ModeSymlink == os.ModeSymlink:
-		srcTarget, err := os.Readlink(src)
+		srcTarget, err := readLink(src)
 		if err != nil {
 			return err
 		}
-		dstTarget, err := os.Readlink(dst)
+		dstTarget, err := readLink(dst)
 		if err != nil {
 			return err
 		}
