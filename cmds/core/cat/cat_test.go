@@ -50,12 +50,84 @@ func TestCat(t *testing.T) {
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
 	}
-
-	var b bytes.Buffer
-	if err := cat(&b, files); err != nil {
+	var out bytes.Buffer
+	if err := run(files, nil, &out); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(b.Bytes(), someData) {
-		t.Fatalf("Reading files failed: got %v, want %v", b.Bytes(), someData)
+
+	if !reflect.DeepEqual(out.Bytes(), someData) {
+		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
+	}
+}
+
+func TestCatPipe(t *testing.T) {
+	var inputbuf bytes.Buffer
+	teststring := "testdata"
+	fmt.Fprintf(&inputbuf, "%s", teststring)
+
+	var out bytes.Buffer
+
+	if err := cat(&inputbuf, &out); err != nil {
+		t.Error(err)
+	}
+	if out.String() != teststring {
+		t.Errorf("CatPipe: Want %q Got: %q", teststring, out.String())
+	}
+}
+
+func TestRunFiles(t *testing.T) {
+	var files []string
+	someData := []byte{'l', 2, 3, 4, 'd'}
+
+	dir, err := setup(t, someData)
+	if err != nil {
+		t.Fatalf("setup has failed, %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	for i := range someData {
+		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
+	}
+
+	var out bytes.Buffer
+	if err := run(files, nil, &out); err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(out.Bytes(), someData) {
+		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
+	}
+}
+
+func TestRunFilesError(t *testing.T) {
+	var files []string
+	someData := []byte{'l', 2, 3, 4, 'd'}
+
+	dir, err := setup(t, someData)
+	if err != nil {
+		t.Fatalf("setup has failed, %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	for i := range someData {
+		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
+	}
+	filenotexist := "testdata/doesnotexist.txt"
+	files = append(files, filenotexist)
+	var in, out bytes.Buffer
+	if err := run(files, &in, &out); err == nil {
+		t.Error("function run succeeded but should have failed")
+	}
+}
+
+func TestRunNoArgs(t *testing.T) {
+	var in, out bytes.Buffer
+	inputdata := "teststring"
+	fmt.Fprintf(&in, "%s", inputdata)
+	args := make([]string, 0)
+	if err := run(args, &in, &out); err != nil {
+		t.Error(err)
+	}
+	if out.String() != inputdata {
+		t.Errorf("Want: %q Got: %q", inputdata, out.String())
 	}
 }
