@@ -14,15 +14,83 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/vishvananda/netlink"
 )
 
-func downloadFile(filepath string, url string) error {
+// Counts number of bytes written
+// Conforms to io.Writer interface
+type ProgressCounter struct {
+	Downloaded    uint64
+	Total         uint64
+	PreviousRatio int
+	Writer        io.Writer
+}
 
+func (counter *ProgressCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	counter.Downloaded += uint64(n)
+	counter.PrintProgress()
+	return n, nil
+}
+
+func (counter *ProgressCounter) PrintProgress() {
+	ratio := int(float64(counter.Downloaded) / float64(counter.Total) * 100)
+
+	// Only print every 5% to avoid spamming the serial port and making it look weird
+	if ratio%5 == 0 && ratio != counter.PreviousRatio {
+		// Clear the line by using a character return to go back to the start and
+		// remove the remaining characters by filling it with spaces
+		fmt.Fprintf(counter.Writer, "\r%s", strings.Repeat(" ", 50))
+
+		fmt.Fprintf(counter.Writer, "\rDownloading... %s out of %s (%d%%)", bytesToHuman(counter.Downloaded), bytesToHuman(counter.Total), ratio)
+		counter.PreviousRatio = ratio
+	}
+
+	if counter.Downloaded == counter.Total {
+		fmt.Fprintf(counter.Writer, "\n")
+	}
+}
+
+func bytesToHuman(bytes uint64) string {
+	const unit = 1000 // Instead of 1024 so we'll get MB instead of MiB
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	div := int64(unit)
+	exponent := 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exponent++
+	}
+	return fmt.Sprintf("%4.1f %cB", float64(bytes)/float64(div), "kMGTPE"[exponent])
+}
+
+func downloadFile(filepath string, url string) error {
+	// TODO: Should probably not blindly skip TLS checking
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	log.Printf("Downloading file %s from %s\n", filepath, url)
+
+	headResp, err := http.Head(url)
+
+	if err != nil {
+		return err
+	}
+
+	defer headResp.Body.Close()
+
+	// Get size for progress indicator
+	size, err := strconv.ParseUint(headResp.Header.Get("Content-Length"), 10, 64)
+	if err != nil {
+		return err
+	}
+
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -38,7 +106,9 @@ func downloadFile(filepath string, url string) error {
 	defer closeFile(out, &err)
 
 	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
+	counter := &ProgressCounter{Total: size, PreviousRatio: 0, Writer: os.Stdout}
+	_, err = io.Copy(out, io.TeeReader(resp.Body, counter))
+
 	return err
 }
 
