@@ -16,7 +16,7 @@ import (
 	"github.com/pierrec/lz4/v4"
 )
 
-const choices = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*()_+"
+const choices = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func TestArchiveReaderRegular(t *testing.T) {
 	dataStr := strings.Repeat("This is an important data!@#$%^^&&*&**(()())", 1000)
@@ -126,7 +126,7 @@ func TestArchiveReaderLZ4(t *testing.T) {
 			setup: func(w io.Writer) *lz4.Writer {
 				return lz4.NewWriter(w)
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 		{
 			name: "non-legacy short data", // Likley not realistic for most cases in the real world.
@@ -151,7 +151,7 @@ func TestArchiveReaderLZ4(t *testing.T) {
 				lz4w.Apply(lz4.LegacyOption(true))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 		{
 			name: "legacy small data",
@@ -178,7 +178,7 @@ func TestArchiveReaderLZ4(t *testing.T) {
 				lz4w.Apply(lz4.CompressionLevelOption(lz4.Fast))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 		{
 			name: "legacy larger data with fast compression",
@@ -188,7 +188,7 @@ func TestArchiveReaderLZ4(t *testing.T) {
 				lz4w.Apply(lz4.CompressionLevelOption(lz4.Fast))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -206,7 +206,7 @@ func TestArchiveReaderLZ4SlowCompressed(t *testing.T) {
 				lz4w.Apply(lz4.CompressionLevelOption(lz4.Level5))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 		{
 			name: "regular larger data with slow compression",
@@ -215,7 +215,7 @@ func TestArchiveReaderLZ4SlowCompressed(t *testing.T) {
 				lz4w.Apply(lz4.CompressionLevelOption(lz4.Level9))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 		{
 			name: "legacy larger data with medium compression",
@@ -225,7 +225,7 @@ func TestArchiveReaderLZ4SlowCompressed(t *testing.T) {
 				lz4w.Apply(lz4.CompressionLevelOption(lz4.Level5))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 		{
 			name: "legacy larger data with slow compression",
@@ -235,7 +235,7 @@ func TestArchiveReaderLZ4SlowCompressed(t *testing.T) {
 				lz4w.Apply(lz4.CompressionLevelOption(lz4.Level9))
 				return lz4w
 			},
-			dataStr: randomString(512 * 1024),
+			dataStr: randomString(5 * 1024),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
