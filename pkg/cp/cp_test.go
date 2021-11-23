@@ -95,44 +95,45 @@ func TestCopyFile(t *testing.T) {
 	// Defining files and vars for the test
 	var equalTreeOpts Options
 
-	firstTmpDir, err := os.MkdirTemp("", "u-root-pkg-cp-")
+	dirPath := "/tmp/u-root-pkg-cp/"
+	err := os.Mkdir(dirPath, 0700)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(firstTmpDir)
+	defer os.RemoveAll(dirPath)
 
-	tmpFile1, err := ioutil.TempFile(firstTmpDir, "file1")
+	tmpFile1, err := ioutil.TempFile(dirPath, "file1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tmpFile1.Close()
 
-	tmpFile2, err := ioutil.TempFile(firstTmpDir, "file2")
+	tmpFile2, err := ioutil.TempFile(dirPath, "file2")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tmpFile2.Close()
 
 	equalTreeOpts.NoFollowSymlinks = true
-	err = os.Symlink(tmpFile1.Name(), filepath.Join(firstTmpDir, "symlink1"))
+	err = os.Symlink(tmpFile1.Name(), filepath.Join(dirPath, "symlink1"))
 	if err != nil {
 		t.Errorf("err while creating a symlink")
 	}
 
 	// Retrieving os.ModeSymlink from symlink
-	srcInfo, err := equalTreeOpts.stat(firstTmpDir + "/symlink1")
+	srcInfo, err := equalTreeOpts.stat(dirPath + "/symlink1")
 	if err != nil {
 		t.Errorf("err is: %v", err)
 	}
 
 	// Read the symlink
-	err = copyFile(firstTmpDir+"/symlink1", firstTmpDir+"/symlink2", srcInfo)
+	err = copyFile(dirPath+"/symlink1", dirPath+"/symlink2", srcInfo)
 	if err != nil {
 		t.Errorf("err is: %v", err)
 	}
 
 	// Error in reading symlink
-	err = copyFile(tmpFile1.Name(), firstTmpDir+"/symlink2", srcInfo)
+	err = copyFile(tmpFile1.Name(), dirPath+"/symlink2", srcInfo)
 	if fmt.Sprintf("%v", err) != "readlink "+tmpFile1.Name()+": invalid argument" {
 		t.Errorf("Test %s: got: (%s), want: (%s)", "error in os.Readlink", err, "readlink "+tmpFile1.Name()+": invalid argument")
 	}

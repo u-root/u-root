@@ -9,7 +9,6 @@ package cmp
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -63,7 +62,7 @@ func stat(o cp.Options, path string) (os.FileInfo, error) {
 var readLink = os.Readlink
 
 // stats creating the source and the destination filemodes and returns it
-func stats(o cp.Options, src, dst string) (sm, dm fs.FileMode, srcInfo fs.FileInfo, err error) {
+func stats(o cp.Options, src, dst string) (sm, dm os.FileMode, srcInfo os.FileInfo, err error) {
 	srcInfo, err = stat(o, src)
 	if err != nil {
 		return 0, 0, nil, err
