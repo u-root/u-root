@@ -15,8 +15,9 @@ import (
 )
 
 func TestCMP(t *testing.T) {
-	dirPath := "/tmp/u-root-pkg-cmp/"
 	// Creating all tmp dirs and files for testing purpose
+	dirPath := "/tmp/u-root-pkg-cmp/"
+
 	err := os.Mkdir(dirPath, 0700)
 	if err != nil {
 		t.Fatal(err)
@@ -109,23 +110,38 @@ func TestCMP(t *testing.T) {
 	//
 	//
 	// Struct for testing isEqualFile and readDirNames
-	var test1 = []struct {
-		n     string
+	var testTable1 = []struct {
+		name  string
 		file1 string
 		file2 string
 		err   string
 	}{
-		{n: "file1 does not exist", file1: "file1", file2: tmpFile2.Name(), err: "open file1: no such file or directory"},
-		{n: "file2 does not exist", file1: tmpFile1.Name(), file2: "file2", err: "open file2: no such file or directory"},
-		{n: "files are not equal", file1: tmpFile1.Name(), file2: tmpFile3.Name(), err: fmt.Sprintf("%q and %q do not have equal content", tmpFile1.Name(), tmpFile3.Name())},
+		{
+			name:  "file1 does not exist",
+			file1: "file1",
+			file2: tmpFile2.Name(),
+			err:   "open file1: no such file or directory",
+		},
+		{
+			name:  "file2 does not exist",
+			file1: tmpFile1.Name(),
+			file2: "file2",
+			err:   "open file2: no such file or directory",
+		},
+		{
+			name:  "files are not equal",
+			file1: tmpFile1.Name(),
+			file2: tmpFile3.Name(),
+			err:   fmt.Sprintf("%q and %q do not have equal content", tmpFile1.Name(), tmpFile3.Name()),
+		},
 	}
 
 	// Testing isEqualFile
 	t.Run("Test isEqualFile", func(t *testing.T) {
-		for _, tt := range test1 {
+		for _, tt := range testTable1 {
 			err := isEqualFile(tt.file1, tt.file2)
 			if err.Error() != tt.err {
-				t.Errorf("Test %s: got: (%s), want: (%s)", tt.n, err.Error(), tt.err)
+				t.Errorf("Test %s: got: (%s), want: (%s)", tt.name, err.Error(), tt.err)
 			}
 		}
 		err = isEqualFile(tmpFile1.Name(), tmpFile2.Name())
@@ -135,10 +151,12 @@ func TestCMP(t *testing.T) {
 	})
 
 	// Testing readDirNames
-	t.Run("Test isEqualFile", func(t *testing.T) {
+	t.Run("Test readDirNames", func(t *testing.T) {
 		names, err := readDirNames(dirPath + "one")
-		if len(names) != 3 || names[0] != filepath.Base(tmpFile1.Name()) || names[1] != filepath.Base(tmpFile2.Name()) || names[2] != filepath.Base(tmpFile3.Name()) || err != nil {
-			t.Errorf("file amount: %d, files: %v, files created %s, %s, %s", len(names), names, filepath.Base(tmpFile1.Name()), filepath.Base(tmpFile2.Name()), filepath.Base(tmpFile3.Name()))
+		if len(names) != 3 || names[0] != filepath.Base(tmpFile1.Name()) || names[1] != filepath.Base(tmpFile2.Name()) ||
+			names[2] != filepath.Base(tmpFile3.Name()) || err != nil {
+			t.Errorf("file amount: %d, files: %v, files created %s, %s, %s",
+				len(names), names, filepath.Base(tmpFile1.Name()), filepath.Base(tmpFile2.Name()), filepath.Base(tmpFile3.Name()))
 		}
 		_, err = readDirNames("dir")
 		if err.Error() != "open dir: no such file or directory" {
@@ -146,47 +164,49 @@ func TestCMP(t *testing.T) {
 		}
 	})
 
-	// Testing stat
-	t.Run("Test stat", func(t *testing.T) {
-		statOpts := cp.Default
-		_, err = stat(statOpts, tmpFile1.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		statOpts.NoFollowSymlinks = true
-		_, err = stat(statOpts, tmpFile1.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-
 	// Default option var
 	equalTreeOpts := cp.Default
 
-	// Testing isEqualTree
-	t.Run("Test isEqualTree stat fail + dirs are equal", func(t *testing.T) {
+	// Testing stats and the IsEqualTree two dirs equal
+	t.Run("Test stats and the IsEqualTree two dirs equal", func(t *testing.T) {
 		// Struct for testing isEqualTree
-		var test2 = []struct {
-			n   string
-			src string
-			dst string
-			err string
+		var testTable2 = []struct {
+			name string
+			src  string
+			dst  string
+			err  string
 		}{
-			{n: "stat src err", src: tmpFile1.Name(), dst: "", err: "stat : no such file or directory"},
-			{n: "stat dst err", src: "", dst: tmpFile2.Name(), err: "stat : no such file or directory"},
-			{n: "two dirs are equal", src: dirPath + "four", dst: dirPath + "six", err: "<nil>"},
+			{
+				name: "stat src err",
+				src:  tmpFile1.Name(),
+				dst:  "",
+				err:  "stat : no such file or directory",
+			},
+			{
+				name: "stat dst err",
+				src:  "",
+				dst:  tmpFile2.Name(),
+				err:  "stat : no such file or directory",
+			},
+			{
+				name: "two dirs are equal",
+				src:  dirPath + "four",
+				dst:  dirPath + "six",
+				err:  "<nil>",
+			},
 		}
 
-		for _, tt := range test2 {
+		for _, tt := range testTable2 {
 			_, _, _, err := stats(equalTreeOpts, tt.src, tt.dst)
 
 			if fmt.Sprintf("%v", err) != tt.err {
-				t.Errorf("Test %s: got: (%s), want: (%s)", tt.n, err, tt.err)
+				t.Errorf("Test %s: got: (%s), want: (%s)", tt.name, err, tt.err)
 			}
 		}
 	})
 
-	t.Run("Test stat", func(t *testing.T) {
+	// Testing IsEqualTree for case dir
+	t.Run("Test IsEqualTree for case dir", func(t *testing.T) {
 		// Test case that two dirs are equal
 		err := IsEqualTree(equalTreeOpts, dirPath+"four", dirPath+"six")
 		if fmt.Sprintf("%v", err) != "<nil>" {
@@ -227,31 +247,55 @@ func TestCMP(t *testing.T) {
 		}
 
 		// Struct for testing isEqualTree
-		var test3 = []struct {
-			n   string
-			src string
-			dst string
-			err string
+		var testTable3 = []struct {
+			name string
+			src  string
+			dst  string
+			err  string
 		}{
-			{n: "mismatched mode, one dir one file", src: dirPath + "one", dst: tmpFile2.Name(), err: fmt.Sprintf("mismatched mode: %q has mode %s while %q has mode %s", dirPath+"one", sm, tmpFile2.Name(), dm)},
-			{n: "err in first readDirName", src: dirPath + "one", dst: dirPath + "three", err: "error in readDirNames"},
-			{n: "err in second readDirName", src: dirPath + "three", dst: dirPath + "one", err: "error in readDirNames"},
-			{n: "directory content is different", src: dirPath + "three", dst: dirPath + "four", err: fmt.Sprintf("directory contents did not match:\n%q had %v\n%q had %v", dirPath+"three", srcEntries, dirPath+"four", dstEntries)},
-			{n: "tree content is different", src: dirPath + "four", dst: dirPath + "five", err: "could not get the stat for src or dst"},
+			{
+				name: "mismatched mode, one dir one file",
+				src:  dirPath + "one",
+				dst:  tmpFile2.Name(),
+				err:  fmt.Sprintf("mismatched mode: %q has mode %s while %q has mode %s", dirPath+"one", sm, tmpFile2.Name(), dm),
+			},
+			{
+				name: "err in first readDirName",
+				src:  dirPath + "one",
+				dst:  dirPath + "three",
+				err:  "error in readDirNames",
+			},
+			{
+				name: "err in second readDirName",
+				src:  dirPath + "three",
+				dst:  dirPath + "one",
+				err:  "error in readDirNames",
+			},
+			{
+				name: "directory content is different",
+				src:  dirPath + "three",
+				dst:  dirPath + "four",
+				err:  fmt.Sprintf("directory contents did not match:\n%q had %v\n%q had %v", dirPath+"three", srcEntries, dirPath+"four", dstEntries),
+			},
+			{
+				name: "tree content is different",
+				src:  dirPath + "four",
+				dst:  dirPath + "five",
+				err:  "could not get the stat for src or dst",
+			},
 		}
 
-		for _, tt := range test3 {
+		for _, tt := range testTable3 {
 			err := IsEqualTree(equalTreeOpts, tt.src, tt.dst)
 
 			if fmt.Sprintf("%v", err) != tt.err {
-				t.Errorf("Test %s: got: (%s), want: (%s)", tt.n, err, tt.err)
+				t.Errorf("Test %s: got: (%s), want: (%s)", tt.name, err, tt.err)
 			}
 		}
 	})
 
 	// Symlink
-
-	// Creating Symlinks
+	// Creating Symlinks and adapt the opts symlink value
 	equalTreeOpts.NoFollowSymlinks = true
 	err = os.Symlink(tmpFile1.Name(), filepath.Join(dirPath+"one", "symlink1"))
 	if err != nil {
@@ -279,23 +323,37 @@ func TestCMP(t *testing.T) {
 		t.Errorf("err is: %v", err)
 	}
 
-	var test4 = []struct {
-		n   string
-		src string
-		dst string
-		err string
+	var testTable4 = []struct {
+		name string
+		src  string
+		dst  string
+		err  string
 	}{
-		{n: "symlinks are not equal", src: dirPath + "one" + "/symlink3", dst: dirPath + "one" + "/symlink4", err: fmt.Sprintf("target mismatch: symlink %q had target %q, while %q had target %q", dirPath+"one"+"/symlink3", srcTarget, dirPath+"one"+"/symlink4", dstTarget)},
-		{n: "symlinks are equal", src: dirPath + "one" + "/symlink3", dst: dirPath + "one" + "/symlink3", err: "<nil>"},
+		{
+			name: "symlinks are not equal",
+			src:  dirPath + "one" + "/symlink3",
+			dst:  dirPath + "one" + "/symlink4",
+			err: fmt.Sprintf("target mismatch: symlink %q had target %q, while %q had target %q", dirPath+"one"+"/symlink3",
+				srcTarget, dirPath+"one"+"/symlink4", dstTarget),
+		},
+		{
+			name: "symlinks are equal",
+			src:  dirPath + "one" + "/symlink3",
+			dst:  dirPath + "one" + "/symlink3",
+			err:  "<nil>",
+		},
 	}
 
-	for _, tt := range test4 {
-		err := IsEqualTree(equalTreeOpts, tt.src, tt.dst)
+	// Testing IsEqualTree for case symlink
+	t.Run("Test IsEqualTree for case symlink", func(t *testing.T) {
+		for _, tt := range testTable4 {
+			err := IsEqualTree(equalTreeOpts, tt.src, tt.dst)
 
-		if fmt.Sprintf("%v", err) != tt.err {
-			t.Errorf("Test %s: got: (%s), want: (%s)", tt.n, err, tt.err)
+			if fmt.Sprintf("%v", err) != tt.err {
+				t.Errorf("Test %s: got: (%s), want: (%s)", tt.name, err, tt.err)
+			}
 		}
-	}
+	})
 
 	// Fake the readLink func
 	oReadLink := readLink
@@ -309,26 +367,43 @@ func TestCMP(t *testing.T) {
 		return "test", nil
 	}
 
-	var test5 = []struct {
-		n   string
-		src string
-		dst string
-		err string
+	var testTable5 = []struct {
+		name string
+		src  string
+		dst  string
+		err  string
 	}{
-		{n: "first read link err", src: dirPath + "one" + "/symlink1", dst: dirPath + "one" + "/symlink2", err: "error in readlink"},
-		{n: "second read link err", src: dirPath + "one" + "/symlink3", dst: dirPath + "one" + "/symlink2", err: "error in readlink"},
+		{
+			name: "first read link err",
+			src:  dirPath + "one" + "/symlink1",
+			dst:  dirPath + "one" + "/symlink2",
+			err:  "error in readlink",
+		},
+		{
+			name: "second read link err",
+			src:  dirPath + "one" + "/symlink3",
+			dst:  dirPath + "one" + "/symlink2",
+			err:  "error in readlink",
+		},
 	}
 
-	for _, tt := range test5 {
-		err := IsEqualTree(equalTreeOpts, tt.src, tt.dst)
+	// Testing IsEqualTree for case symlink errors
+	t.Run("Test IsEqualTree for case symlink errors", func(t *testing.T) {
+		for _, tt := range testTable5 {
+			err := IsEqualTree(equalTreeOpts, tt.src, tt.dst)
 
-		if fmt.Sprintf("%v", err) != tt.err {
-			t.Errorf("Test %s: got: (%s), want: (%s)", tt.n, err, tt.err)
+			if fmt.Sprintf("%v", err) != tt.err {
+				t.Errorf("Test %s: got: (%s), want: (%s)", tt.name, err, tt.err)
+			}
 		}
-	}
-	options.NoFollowSymlinks = true
-	_, err = stat(options, tmpFile1.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	})
+
+	// Testing  IsEqualTree case regular file
+	t.Run("Test IsEqualTree case regular file", func(t *testing.T) {
+		err = IsEqualTree(equalTreeOpts, tmpFile4.Name(), tmpFile4.Name())
+		if err != nil {
+			t.Errorf("err is: %v", err)
+		}
+	})
+
 }
