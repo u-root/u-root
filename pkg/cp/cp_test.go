@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -88,7 +89,74 @@ func TestCopyTree(t *testing.T) {
 	if err := CopyTree(srcd, dest); err != nil {
 		t.Fatal(err)
 	}
-	// if err := cmp.IsEqualTree(Default, srcd, dest); err != nil {
-	// 	t.Fatal(err)
-	// }
+}
+
+func TestCopyFile(t *testing.T) {
+	// Defining files and vars for the test
+	var equalTreeOpts Options
+
+	firstTmpDir, err := os.MkdirTemp("", "u-root-pkg-cp-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(firstTmpDir)
+
+	tmpFile1, err := ioutil.TempFile(firstTmpDir, "file1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tmpFile1.Close()
+
+	tmpFile2, err := ioutil.TempFile(firstTmpDir, "file2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tmpFile2.Close()
+
+	equalTreeOpts.NoFollowSymlinks = true
+	err = os.Symlink(tmpFile1.Name(), filepath.Join(firstTmpDir, "symlink1"))
+	if err != nil {
+		t.Errorf("err while creating a symlink")
+	}
+
+	// Retrieving os.ModeSymlink from symlink
+	srcInfo, err := equalTreeOpts.stat(firstTmpDir + "/symlink1")
+	if err != nil {
+		t.Errorf("err is: %v", err)
+	}
+
+	// Read the symlink
+	err = copyFile(firstTmpDir+"/symlink1", firstTmpDir+"/symlink2", srcInfo)
+	if err != nil {
+		t.Errorf("err is: %v", err)
+	}
+
+	// Error in reading symlink
+	err = copyFile(tmpFile1.Name(), firstTmpDir+"/symlink2", srcInfo)
+	if fmt.Sprintf("%v", err) != "readlink "+tmpFile1.Name()+": invalid argument" {
+		t.Errorf("Test %s: got: (%s), want: (%s)", "error in os.Readlink", err, "readlink "+tmpFile1.Name()+": invalid argument")
+	}
+}
+
+func TestCopyRegularFile(t *testing.T) {
+
+	// Faking os.Open function
+	oopen := open
+	defer func() { open = oopen }()
+	open = func(name string) (*os.File, error) {
+		if name == "srcto" {
+			return nil, fmt.Errorf("error in open src")
+		}
+		f, err := os.OpenFile(name, syscall.O_RDONLY, 0)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		return f, nil
+	}
+
+	err := copyRegularFile("srcto", "dst", nil)
+	if fmt.Sprintf("%v", err) != "error in open src" {
+		t.Errorf("Test %s: got: (%s), want: (%s)\n", "error open src", err, "error in open src")
+	}
 }

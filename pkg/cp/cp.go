@@ -106,7 +106,6 @@ func CopyTree(src, dst string) error {
 
 func copyFile(src, dst string, srcInfo os.FileInfo) error {
 	m := srcInfo.Mode()
-	fmt.Println(m)
 	switch {
 	case m.IsDir():
 		return os.MkdirAll(dst, srcInfo.Mode().Perm())
