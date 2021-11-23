@@ -31,6 +31,10 @@ func TestSet(t *testing.T) {
 				t.Error(err)
 			}
 			devs = []string{f.Name()}
+			// As f.Name() is now the only object in the devs array
+			// we can close f here an don't need to run a defer on
+			// os.Remove here but rather do that manually a few lines
+			// further down
 			f.Close()
 			rtc, err := OpenRTC()
 			if err != nil {
@@ -40,8 +44,7 @@ func TestSet(t *testing.T) {
 				unixIoctlSetRTCTime = func(fd int, value *unix.RTCTime) error {
 					return nil
 				}
-				err = rtc.Set(time.Now())
-				if err != nil {
+				if err := rtc.Set(time.Now()); err != nil {
 					t.Error(err)
 				}
 			}
@@ -49,14 +52,12 @@ func TestSet(t *testing.T) {
 				unixIoctlSetRTCTime = func(fd int, value *unix.RTCTime) error {
 					return errors.New("error")
 				}
-				err = rtc.Set(time.Now())
-				if err == nil {
+				if err := rtc.Set(time.Now()); err == nil {
 					t.Error(err)
 				}
 			}
 			rtc.Close()
-			err = os.Remove(devs[0])
-			if err != nil {
+			if err := os.Remove(devs[0]); err != nil {
 				t.Error(err)
 			}
 			unixIoctlSetRTCTime = unix.IoctlSetRTCTime
@@ -81,6 +82,10 @@ func TestRead(t *testing.T) {
 				t.Error(err)
 			}
 			devs = []string{f.Name()}
+			// As f.Name() is now the only object in the devs array
+			// we can close f here an don't need to run a defer on
+			// os.Remove here but rather do that manually a few lines
+			// further down
 			f.Close()
 			rtc, err := OpenRTC()
 			if err != nil {
@@ -105,8 +110,7 @@ func TestRead(t *testing.T) {
 				}
 			}
 			rtc.Close()
-			err = os.Remove(devs[0])
-			if err != nil {
+			if err := os.Remove(devs[0]); err != nil {
 				t.Error(err)
 			}
 			unixIoctlGetRTCTime = unix.IoctlGetRTCTime

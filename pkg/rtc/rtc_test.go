@@ -33,14 +33,17 @@ func TestOpenRTC(t *testing.T) {
 					t.Error(err)
 				}
 				devs = []string{f.Name()}
+				// As f.Name() is now the only object in the devs array
+				// we can close f here an don't need to run a defer on
+				// os.Remove here but rather do that manually a few lines
+				// further down
 				f.Close()
 				rtc, err := OpenRTC()
 				if err != nil {
 					t.Error(err)
 				}
 				rtc.Close()
-				err = os.Remove(devs[0])
-				if err != nil {
+				if err := os.Remove(devs[0]); err != nil {
 					t.Error(err)
 				}
 			}
@@ -59,8 +62,11 @@ func TestOpenRTC(t *testing.T) {
 					t.Error(err)
 				}
 				devs = []string{f.Name()}
-				err = f.Chmod(0)
-				if err != nil {
+				// As f.Name() is now the only object in the devs array
+				// we can close f here an don't need to run a defer on
+				// os.Remove here but rather do that manually a few lines
+				// further down
+				if err := f.Chmod(0); err != nil {
 					t.Error(err)
 				}
 				f.Close()
@@ -68,12 +74,10 @@ func TestOpenRTC(t *testing.T) {
 				if err == nil {
 					t.Error(err)
 				}
-				err = os.Chmod(devs[0], 0777)
-				if err != nil {
+				if err := os.Chmod(devs[0], 0777); err != nil {
 					t.Error(err)
 				}
-				err = os.Remove(devs[0])
-				if err != nil {
+				if err := os.Remove(devs[0]); err != nil {
 					t.Error(err)
 				}
 			}
