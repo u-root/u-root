@@ -12,7 +12,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 // Opts contains options for creating and extracting tar files.
@@ -203,9 +204,12 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 
 func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
 	fi := hdr.FileInfo()
-	path := filepath.Clean(filepath.Join(rootDir, hdr.Name))
-	if !strings.HasPrefix(path, filepath.Clean(rootDir)) {
-		return fmt.Errorf("file outside root directory: %q", path)
+	path, err := upath.SafeFilepathJoin(rootDir, hdr.Name)
+	if err != nil {
+		// The behavior is to skip files which are unsafe due to
+		// zipslip, but continue extracting everything else.
+		log.Printf("Warning: Skipping file %q due to: %v", hdr.Name, err)
+		return nil
 	}
 
 	switch fi.Mode() & os.ModeType {
