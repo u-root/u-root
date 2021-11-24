@@ -23,4 +23,4 @@ jobs:
       run: go build -mod=mod -v ./...
 
     - name: Test
-      run: "go test -mod=mod -v ./pkg/..."
+      run: "CGO_ENABLED=0 go env && CGO_ENABLED=0 go test -mod=mod  ./pkg/uroot/..."
