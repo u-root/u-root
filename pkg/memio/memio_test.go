@@ -69,20 +69,22 @@ var testsInvalid = []struct {
 
 // TestIO tests a set of UintN againt the IO operations
 func TestIO(t *testing.T) {
+
+	tmpFile, err := ioutil.TempFile("", "io_test")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = tmpFile.Write(make([]byte, 10000))
+	if err != nil {
+		t.Error(err)
+	}
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+	memPath = tmpFile.Name()
+	defer func() { memPath = "/dev/mem" }()
+
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile("", "io_test")
-			if err != nil {
-				t.Error(err)
-			}
-			_, err = tmpFile.Write(make([]byte, 10000))
-			if err != nil {
-				t.Error(err)
-			}
-			tmpFile.Close()
-			defer os.Remove(tmpFile.Name())
-			memPath = tmpFile.Name()
-			defer func() { memPath = "/dev/mem" }()
 
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
@@ -138,21 +140,22 @@ func TestPathError(t *testing.T) {
 
 func TestMmap(t *testing.T) {
 
+	tmpFile, err := ioutil.TempFile("", "io_test")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = tmpFile.Write(make([]byte, 10000))
+	if err != nil {
+		t.Error(err)
+	}
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+	memPath = tmpFile.Name()
+	defer func() { memPath = "/dev/mem" }()
+
 	// Test invalid file opening
 	for _, tt := range testsInvalid {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile("", "io_test")
-			if err != nil {
-				t.Error(err)
-			}
-			_, err = tmpFile.Write(make([]byte, 10000))
-			if err != nil {
-				t.Error(err)
-			}
-			tmpFile.Close()
-			defer os.Remove(tmpFile.Name())
-			memPath = tmpFile.Name()
-			defer func() { memPath = "/dev/mem" }()
 
 			// Set error
 			tt.err = "This is a dummy error"

@@ -14,16 +14,18 @@ import (
 )
 
 func TestSeek(t *testing.T) {
+
+	tmpFile, err := ioutil.TempFile("", "seek_test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	memPath = tmpFile.Name()
+	defer func() { memPath = "/dev/mem" }()
+
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile("", "seek_test")
-			if err != nil {
-				t.Error(err)
-			}
-			defer os.Remove(tmpFile.Name())
-
-			memPath = tmpFile.Name()
-			defer func() { memPath = "/dev/mem" }()
 
 			if err := pathWrite(memPath, tt.addr, tt.writeData); err != nil {
 				t.Error(err)

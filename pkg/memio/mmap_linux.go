@@ -43,7 +43,7 @@ func Read(addr int64, data UintN) error {
 	defer func() {
 		err = Munmap(mem)
 		if err != nil {
-			fmt.Printf("Failed to unmap memory: %v", err)
+			fmt.Printf("Failed to unmap memory: %v\n", err)
 		}
 	}()
 
@@ -71,7 +71,7 @@ func Write(addr int64, data UintN) error {
 	defer func() {
 		err = Munmap(mem)
 		if err != nil {
-			fmt.Printf("Failed to unmap memory: %v", err)
+			fmt.Printf("Failed to unmap memory: %v\n", err)
 		}
 	}()
 

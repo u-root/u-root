@@ -214,30 +214,3 @@ func TestUintErr(t *testing.T) {
 		})
 	}
 }
-
-// TestIoplErr tests the error evaluation of ArchIn and ArchOut,
-// however due to Sync.Once being triggered already to "nil" by the previous tests
-// this test doesn't work anymore.
-//func TestIoplErr(t *testing.T) {
-//	oSyscallIopl := syscallIopl
-//	syscallIopl = func(int) error {
-//		return errors.New("Failed Iopl syscall")
-//	}
-//	defer func() { syscallIopl = oSyscallIopl }()
-//	t.Run("iopl()", func(t *testing.T) {
-//		// Circumventing syscallIopl here leads to segmentation fault later
-//		if err := iopl(); err != nil {
-//			return
-//		}
-//	})
-//	t.Run("ArchIn()", func(t *testing.T) {
-//		if err := ArchIn(uint16(tests[0].addr), tests[0].writeData); err != nil {
-//			return
-//		}
-//	})
-//	t.Run("ArchOut()", func(t *testing.T) {
-//		if err := ArchOut(uint16(tests[0].addr), tests[0].writeData); err != nil {
-//			return
-//		}
-//	})
-//}
