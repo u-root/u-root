@@ -9,9 +9,11 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 // ToZip packs the all files at dir to a zip archive at dest.
@@ -98,8 +100,11 @@ func writeDir(dir string, z *zip.Writer) error {
 			return err
 		}
 
-		// adjust header.Name to preserve folder strulture
-		header.Name = strings.TrimPrefix(path, dir)
+		// adjust header.Name to preserve folder structure
+		header.Name, err = filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
 
 		if info.IsDir() {
 			header.Name += "/"
@@ -148,7 +153,14 @@ func FromZip(src, dir string) error {
 	}
 
 	for _, file := range z.File {
-		path := filepath.Join(dir, file.Name)
+		path, err := upath.SafeFilepathJoin(dir, file.Name)
+		if err != nil {
+			// The behavior is to skip files which are unsafe due to
+			// zipslip, but continue extracting everything else.
+			log.Printf("Warning: Skipping file %q due to: %v", file.Name, err)
+			continue
+		}
+
 		if file.FileInfo().IsDir() {
 			if err = os.MkdirAll(path, file.Mode()); err != nil {
 				return err
