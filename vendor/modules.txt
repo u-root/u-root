@@ -133,7 +133,7 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
-# github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
+# github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 ## explicit; go 1.12
 github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
