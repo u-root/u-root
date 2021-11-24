@@ -10,6 +10,7 @@ package cpio
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/ls"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/upath"
 	"golang.org/x/sys/unix"
 )
 
@@ -108,7 +110,13 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		return err
 	}
 
-	f.Name = filepath.Clean(filepath.Join(rootDir, f.Name))
+	f.Name, err = upath.SafeFilepathJoin(rootDir, f.Name)
+	if err != nil {
+		// The behavior is to skip files which are unsafe due to
+		// zipslip, but continue extracting everything else.
+		log.Printf("Warning: Skipping file %q due to: %v", f.Name, err)
+		return nil
+	}
 	dir := filepath.Dir(f.Name)
 	// The problem: many cpio archives do not specify the directories and
 	// hence the permissions. They just specify the whole path.  In order
