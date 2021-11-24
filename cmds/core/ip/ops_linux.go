@@ -203,7 +203,7 @@ func showRoutes(inet6 bool) error {
 func defaultRoute(r netlink.Route, l netlink.Link) {
 	gw := r.Gw
 	name := l.Attrs().Name
-	proto := rtProto[r.Protocol]
+	proto := rtProto[int(r.Protocol)]
 	metric := r.Priority
 	fmt.Printf(defaultFmt, gw, name, proto, metric)
 }
@@ -211,7 +211,7 @@ func defaultRoute(r netlink.Route, l netlink.Link) {
 func showRoute(r netlink.Route, l netlink.Link, f int) {
 	dest := r.Dst
 	name := l.Attrs().Name
-	proto := rtProto[r.Protocol]
+	proto := rtProto[int(r.Protocol)]
 	metric := r.Priority
 	switch f {
 	case netlink.FAMILY_V4:

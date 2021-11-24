@@ -38,7 +38,7 @@ require (
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20210528114334-82958018845c // indirect
 	github.com/ulikunitz/xz v0.5.8
-	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
+	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9

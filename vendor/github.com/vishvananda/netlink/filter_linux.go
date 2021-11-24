@@ -37,6 +37,7 @@ type U32 struct {
 	ClassId    uint32
 	Divisor    uint32 // Divisor MUST be power of 2.
 	Hash       uint32
+	Link       uint32
 	RedirIndex int
 	Sel        *TcU32Sel
 	Actions    []Action
@@ -89,7 +90,7 @@ func NewFw(attrs FilterAttrs, fattrs FilterFwAttrs) (*Fw, error) {
 		if CalcRtable(&police.Rate, rtab[:], rcellLog, fattrs.Mtu, linklayer) < 0 {
 			return nil, errors.New("TBF: failed to calculate rate table")
 		}
-		police.Burst = uint32(Xmittime(uint64(police.Rate.Rate), uint32(buffer)))
+		police.Burst = Xmittime(uint64(police.Rate.Rate), uint32(buffer))
 	}
 	police.Mtu = fattrs.Mtu
 	if police.PeakRate.Rate != 0 {
@@ -118,6 +119,131 @@ func (filter *Fw) Attrs() *FilterAttrs {
 
 func (filter *Fw) Type() string {
 	return "fw"
+}
+
+type Flower struct {
+	FilterAttrs
+	DestIP        net.IP
+	DestIPMask    net.IPMask
+	SrcIP         net.IP
+	SrcIPMask     net.IPMask
+	EthType       uint16
+	EncDestIP     net.IP
+	EncDestIPMask net.IPMask
+	EncSrcIP      net.IP
+	EncSrcIPMask  net.IPMask
+	EncDestPort   uint16
+	EncKeyId      uint32
+
+	Actions []Action
+}
+
+func (filter *Flower) Attrs() *FilterAttrs {
+	return &filter.FilterAttrs
+}
+
+func (filter *Flower) Type() string {
+	return "flower"
+}
+
+func (filter *Flower) encodeIP(parent *nl.RtAttr, ip net.IP, mask net.IPMask, v4Type, v6Type int, v4MaskType, v6MaskType int) {
+	ipType := v4Type
+	maskType := v4MaskType
+
+	encodeMask := mask
+	if mask == nil {
+		encodeMask = net.CIDRMask(32, 32)
+	}
+	v4IP := ip.To4()
+	if v4IP == nil {
+		ipType = v6Type
+		maskType = v6MaskType
+		if mask == nil {
+			encodeMask = net.CIDRMask(128, 128)
+		}
+	} else {
+		ip = v4IP
+	}
+
+	parent.AddRtAttr(ipType, ip)
+	parent.AddRtAttr(maskType, encodeMask)
+}
+
+func (filter *Flower) encode(parent *nl.RtAttr) error {
+	if filter.EthType != 0 {
+		parent.AddRtAttr(nl.TCA_FLOWER_KEY_ETH_TYPE, htons(filter.EthType))
+	}
+	if filter.SrcIP != nil {
+		filter.encodeIP(parent, filter.SrcIP, filter.SrcIPMask,
+			nl.TCA_FLOWER_KEY_IPV4_SRC, nl.TCA_FLOWER_KEY_IPV6_SRC,
+			nl.TCA_FLOWER_KEY_IPV4_SRC_MASK, nl.TCA_FLOWER_KEY_IPV6_SRC_MASK)
+	}
+	if filter.DestIP != nil {
+		filter.encodeIP(parent, filter.DestIP, filter.DestIPMask,
+			nl.TCA_FLOWER_KEY_IPV4_DST, nl.TCA_FLOWER_KEY_IPV6_DST,
+			nl.TCA_FLOWER_KEY_IPV4_DST_MASK, nl.TCA_FLOWER_KEY_IPV6_DST_MASK)
+	}
+	if filter.EncSrcIP != nil {
+		filter.encodeIP(parent, filter.EncSrcIP, filter.EncSrcIPMask,
+			nl.TCA_FLOWER_KEY_ENC_IPV4_SRC, nl.TCA_FLOWER_KEY_ENC_IPV6_SRC,
+			nl.TCA_FLOWER_KEY_ENC_IPV4_SRC_MASK, nl.TCA_FLOWER_KEY_ENC_IPV6_SRC_MASK)
+	}
+	if filter.EncDestIP != nil {
+		filter.encodeIP(parent, filter.EncDestIP, filter.EncSrcIPMask,
+			nl.TCA_FLOWER_KEY_ENC_IPV4_DST, nl.TCA_FLOWER_KEY_ENC_IPV6_DST,
+			nl.TCA_FLOWER_KEY_ENC_IPV4_DST_MASK, nl.TCA_FLOWER_KEY_ENC_IPV6_DST_MASK)
+	}
+	if filter.EncDestPort != 0 {
+		parent.AddRtAttr(nl.TCA_FLOWER_KEY_ENC_UDP_DST_PORT, htons(filter.EncDestPort))
+	}
+	if filter.EncKeyId != 0 {
+		parent.AddRtAttr(nl.TCA_FLOWER_KEY_ENC_KEY_ID, htonl(filter.EncKeyId))
+	}
+
+	actionsAttr := parent.AddRtAttr(nl.TCA_FLOWER_ACT, nil)
+	if err := EncodeActions(actionsAttr, filter.Actions); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (filter *Flower) decode(data []syscall.NetlinkRouteAttr) error {
+	for _, datum := range data {
+		switch datum.Attr.Type {
+		case nl.TCA_FLOWER_KEY_ETH_TYPE:
+			filter.EthType = ntohs(datum.Value)
+		case nl.TCA_FLOWER_KEY_IPV4_SRC, nl.TCA_FLOWER_KEY_IPV6_SRC:
+			filter.SrcIP = datum.Value
+		case nl.TCA_FLOWER_KEY_IPV4_SRC_MASK, nl.TCA_FLOWER_KEY_IPV6_SRC_MASK:
+			filter.SrcIPMask = datum.Value
+		case nl.TCA_FLOWER_KEY_IPV4_DST, nl.TCA_FLOWER_KEY_IPV6_DST:
+			filter.DestIP = datum.Value
+		case nl.TCA_FLOWER_KEY_IPV4_DST_MASK, nl.TCA_FLOWER_KEY_IPV6_DST_MASK:
+			filter.DestIPMask = datum.Value
+		case nl.TCA_FLOWER_KEY_ENC_IPV4_SRC, nl.TCA_FLOWER_KEY_ENC_IPV6_SRC:
+			filter.EncSrcIP = datum.Value
+		case nl.TCA_FLOWER_KEY_ENC_IPV4_SRC_MASK, nl.TCA_FLOWER_KEY_ENC_IPV6_SRC_MASK:
+			filter.EncSrcIPMask = datum.Value
+		case nl.TCA_FLOWER_KEY_ENC_IPV4_DST, nl.TCA_FLOWER_KEY_ENC_IPV6_DST:
+			filter.EncDestIP = datum.Value
+		case nl.TCA_FLOWER_KEY_ENC_IPV4_DST_MASK, nl.TCA_FLOWER_KEY_ENC_IPV6_DST_MASK:
+			filter.EncDestIPMask = datum.Value
+		case nl.TCA_FLOWER_KEY_ENC_UDP_DST_PORT:
+			filter.EncDestPort = ntohs(datum.Value)
+		case nl.TCA_FLOWER_KEY_ENC_KEY_ID:
+			filter.EncKeyId = ntohl(datum.Value)
+		case nl.TCA_FLOWER_ACT:
+			tables, err := nl.ParseRouteAttr(datum.Value)
+			if err != nil {
+				return err
+			}
+			filter.Actions, err = parseActions(tables)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // FilterDel will delete a filter from the system.
@@ -169,7 +295,6 @@ func (h *Handle) FilterReplace(filter Filter) error {
 }
 
 func (h *Handle) filterModify(filter Filter, flags int) error {
-	native = nl.NativeEndian()
 	req := h.newNetlinkRequest(unix.RTM_NEWTFILTER, flags|unix.NLM_F_ACK)
 	base := filter.Attrs()
 	msg := &nl.TcMsg{
@@ -225,6 +350,9 @@ func (h *Handle) filterModify(filter Filter, flags int) error {
 		}
 		if filter.Hash != 0 {
 			options.AddRtAttr(nl.TCA_U32_HASH, nl.Uint32Attr(filter.Hash))
+		}
+		if filter.Link != 0 {
+			options.AddRtAttr(nl.TCA_U32_LINK, nl.Uint32Attr(filter.Link))
 		}
 		actionsAttr := options.AddRtAttr(nl.TCA_U32_ACT, nil)
 		// backwards compatibility
@@ -283,6 +411,10 @@ func (h *Handle) filterModify(filter Filter, flags int) error {
 		}
 		if filter.ClassId != 0 {
 			options.AddRtAttr(nl.TCA_MATCHALL_CLASSID, nl.Uint32Attr(filter.ClassId))
+		}
+	case *Flower:
+		if err := filter.encode(options); err != nil {
+			return err
 		}
 	}
 
@@ -352,6 +484,8 @@ func (h *Handle) FilterList(link Link, parent uint32) ([]Filter, error) {
 					filter = &BpfFilter{}
 				case "matchall":
 					filter = &MatchAll{}
+				case "flower":
+					filter = &Flower{}
 				default:
 					filter = &GenericFilter{FilterType: filterType}
 				}
@@ -378,6 +512,11 @@ func (h *Handle) FilterList(link Link, parent uint32) ([]Filter, error) {
 					}
 				case "matchall":
 					detailed, err = parseMatchAllData(filter, data)
+					if err != nil {
+						return nil, err
+					}
+				case "flower":
+					detailed, err = parseFlowerData(filter, data)
 					if err != nil {
 						return nil, err
 					}
@@ -455,6 +594,9 @@ func EncodeActions(attr *nl.RtAttr, actions []Action) error {
 					aopts.AddRtAttr(nl.TCA_TUNNEL_KEY_ENC_IPV6_DST, v6[:])
 				} else {
 					return fmt.Errorf("invalid dst addr %s for tunnel_key action", action.DstAddr)
+				}
+				if action.DestPort != 0 {
+					aopts.AddRtAttr(nl.TCA_TUNNEL_KEY_ENC_DST_PORT, htons(action.DestPort))
 				}
 			}
 		case *SkbEditAction:
@@ -566,12 +708,12 @@ func parseActions(tables []syscall.NetlinkRouteAttr) ([]Action, error) {
 							action.(*TunnelKeyAction).Action = TunnelKeyAct(tun.Action)
 						case nl.TCA_TUNNEL_KEY_ENC_KEY_ID:
 							action.(*TunnelKeyAction).KeyID = networkOrder.Uint32(adatum.Value[0:4])
-						case nl.TCA_TUNNEL_KEY_ENC_IPV6_SRC:
-						case nl.TCA_TUNNEL_KEY_ENC_IPV4_SRC:
-							action.(*TunnelKeyAction).SrcAddr = net.IP(adatum.Value[:])
-						case nl.TCA_TUNNEL_KEY_ENC_IPV6_DST:
-						case nl.TCA_TUNNEL_KEY_ENC_IPV4_DST:
-							action.(*TunnelKeyAction).DstAddr = net.IP(adatum.Value[:])
+						case nl.TCA_TUNNEL_KEY_ENC_IPV6_SRC, nl.TCA_TUNNEL_KEY_ENC_IPV4_SRC:
+							action.(*TunnelKeyAction).SrcAddr = adatum.Value[:]
+						case nl.TCA_TUNNEL_KEY_ENC_IPV6_DST, nl.TCA_TUNNEL_KEY_ENC_IPV4_DST:
+							action.(*TunnelKeyAction).DstAddr = adatum.Value[:]
+						case nl.TCA_TUNNEL_KEY_ENC_DST_PORT:
+							action.(*TunnelKeyAction).DestPort = ntohs(adatum.Value)
 						}
 					case "skbedit":
 						switch adatum.Attr.Type {
@@ -626,7 +768,6 @@ func parseActions(tables []syscall.NetlinkRouteAttr) ([]Action, error) {
 }
 
 func parseU32Data(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) {
-	native = nl.NativeEndian()
 	u32 := filter.(*U32)
 	detailed := false
 	for _, datum := range data {
@@ -664,13 +805,14 @@ func parseU32Data(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) 
 			u32.Divisor = native.Uint32(datum.Value)
 		case nl.TCA_U32_HASH:
 			u32.Hash = native.Uint32(datum.Value)
+		case nl.TCA_U32_LINK:
+			u32.Link = native.Uint32(datum.Value)
 		}
 	}
 	return detailed, nil
 }
 
 func parseFwData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) {
-	native = nl.NativeEndian()
 	fw := filter.(*Fw)
 	detailed := true
 	for _, datum := range data {
@@ -699,7 +841,6 @@ func parseFwData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) {
 }
 
 func parseBpfData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) {
-	native = nl.NativeEndian()
 	bpf := filter.(*BpfFilter)
 	detailed := true
 	for _, datum := range data {
@@ -725,7 +866,6 @@ func parseBpfData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) 
 }
 
 func parseMatchAllData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) {
-	native = nl.NativeEndian()
 	matchall := filter.(*MatchAll)
 	detailed := true
 	for _, datum := range data {
@@ -744,6 +884,10 @@ func parseMatchAllData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, er
 		}
 	}
 	return detailed, nil
+}
+
+func parseFlowerData(filter Filter, data []syscall.NetlinkRouteAttr) (bool, error) {
+	return true, filter.(*Flower).decode(data)
 }
 
 func AlignToAtm(size uint) uint {
@@ -783,7 +927,7 @@ func CalcRtable(rate *nl.TcRateSpec, rtab []uint32, cellLog int, mtu uint32, lin
 	}
 	for i := 0; i < 256; i++ {
 		sz = AdjustSize(uint((i+1)<<uint32(cellLog)), uint(mpu), linklayer)
-		rtab[i] = uint32(Xmittime(uint64(bps), uint32(sz)))
+		rtab[i] = Xmittime(uint64(bps), uint32(sz))
 	}
 	rate.CellAlign = -1
 	rate.CellLog = uint8(cellLog)
@@ -793,14 +937,12 @@ func CalcRtable(rate *nl.TcRateSpec, rtab []uint32, cellLog int, mtu uint32, lin
 
 func DeserializeRtab(b []byte) [256]uint32 {
 	var rtab [256]uint32
-	native := nl.NativeEndian()
 	r := bytes.NewReader(b)
 	_ = binary.Read(r, native, &rtab)
 	return rtab
 }
 
 func SerializeRtab(rtab [256]uint32) []byte {
-	native := nl.NativeEndian()
 	var w bytes.Buffer
 	_ = binary.Write(&w, native, rtab)
 	return w.Bytes()
