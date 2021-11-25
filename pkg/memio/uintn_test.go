@@ -1,4 +1,4 @@
-// Copyright 2012-2019 the u-root Authors. All rights reserved
+// Copyright 2012-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -49,15 +49,13 @@ var uintn_tests = []struct {
 	},
 }
 
-// Slice of strings taken from io_test.go `var tests`
-
 func TestString(t *testing.T) {
 	for _, tt := range uintn_tests {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
 			got := tt.writeData.String()
 			want := tt.want
 			if !reflect.DeepEqual(want, got) {
-				t.Errorf("Got: %v, want: %v", got, want)
+				t.Errorf("Want %v, got %v", want, got)
 			}
 		},
 		)

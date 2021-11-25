@@ -1,4 +1,4 @@
-// Copyright 2012-2019 the u-root Authors. All rights reserved
+// Copyright 2012-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,7 +6,6 @@ package memio
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -14,10 +13,9 @@ import (
 )
 
 func TestSeek(t *testing.T) {
-
 	tmpFile, err := ioutil.TempFile("", "seek_test")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to create tempfile: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
@@ -25,13 +23,13 @@ func TestSeek(t *testing.T) {
 	defer func() { memPath = "/dev/mem" }()
 
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 
 			if err := pathWrite(memPath, tt.addr, tt.writeData); err != nil {
-				t.Error(err)
+				t.Errorf("pathwrite failed: %v", err)
 			}
 			if err := pathRead(memPath, tt.addr, tt.readData); err != nil {
-				t.Error(err)
+				t.Errorf("pathRead failed: %v", err)
 			}
 
 			want := tt.writeData
@@ -47,7 +45,7 @@ func TestSeek(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	for _, tt := range testsInvalid {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 
 			memPath = tt.path
 			defer func() { memPath = "/dev/mem" }()
@@ -55,13 +53,13 @@ func TestErrors(t *testing.T) {
 			if err := pathWrite(memPath, tt.addr, tt.writeData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Error(err)
+					t.Errorf("Want %v, got %v", want, err)
 				}
 			}
 			if err := pathRead(memPath, tt.addr, tt.readData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Error(err)
+					t.Errorf("Want %v, got %v", want, err)
 				}
 			}
 		})

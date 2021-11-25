@@ -1,4 +1,4 @@
-// Copyright 2012-2019 the u-root Authors. All rights reserved
+// Copyright 2012-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -82,7 +82,7 @@ func TestIn(t *testing.T) {
 	// In calls pathRead(portPath,...) therefore a tmpfile shall be used
 	tmpFile, err := ioutil.TempFile("", "TestIn")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to create tempfile: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
@@ -90,7 +90,7 @@ func TestIn(t *testing.T) {
 	defer func() { portPath = "/dev/port" }()
 	_, err = tmpFile.Write(make([]byte, 10000))
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to write to tempfile: %v", err)
 	}
 	tmpFile.Close()
 	for _, tt := range testsUint16 {
@@ -106,7 +106,7 @@ func TestIn(t *testing.T) {
 				case "EOF":
 					return
 				default:
-					t.Error(err)
+					t.Errorf("Want %v, got %v", nil, err)
 				}
 			}
 		})
@@ -116,7 +116,7 @@ func TestOut(t *testing.T) {
 	// Out calls pathWrite(portPath,...) therefore a tmpfile shall be used
 	tmpFile, err := ioutil.TempFile("", "TestOut")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to create tempfile: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
@@ -124,7 +124,7 @@ func TestOut(t *testing.T) {
 	defer func() { portPath = "/dev/port" }()
 	_, err = tmpFile.Write(make([]byte, 10000))
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to write to tempfile: %v", err)
 	}
 	tmpFile.Close()
 	for _, tt := range testsUint16 {
@@ -140,7 +140,7 @@ func TestOut(t *testing.T) {
 				case "EOF":
 					return
 				default:
-					t.Error(err)
+					t.Errorf("Want %v, got %v", nil, err)
 				}
 			}
 		})
@@ -148,10 +148,10 @@ func TestOut(t *testing.T) {
 }
 
 func TestUintErr(t *testing.T) {
-	// Circumventing syscallIopl here leads to segmentation fault later
 	oSyscallIopl := syscallIopl
 	syscallIopl = func(int) error { return nil }
 	defer func() { syscallIopl = oSyscallIopl }()
+
 	// Mock assembly implementations
 	oAIL := archInLong
 	archInLong = func(uint16) uint32 { return uint32(0x11) }
@@ -183,7 +183,7 @@ func TestUintErr(t *testing.T) {
 					return
 
 				default:
-					t.Error(err)
+					t.Errorf("ArchIn failed: %v", err)
 				}
 			}
 			got := tt.readData.Size()
@@ -192,6 +192,7 @@ func TestUintErr(t *testing.T) {
 				t.Errorf("ArchIn(%#016x) got size %v, want %v", tt.addr, got, want)
 			}
 		})
+
 		t.Run(fmt.Sprintf("ArchOut(%v)", tt.name), func(t *testing.T) {
 			t.Logf("%T, %T, size: %v", tt.addr, tt.writeData, tt.writeData.Size())
 			if err := ArchOut(tt.addr, tt.writeData); err != nil {
@@ -203,7 +204,7 @@ func TestUintErr(t *testing.T) {
 					return
 
 				default:
-					t.Error(err)
+					t.Errorf("ArchOut failed: %v", err)
 				}
 			}
 			got := tt.readData.Size()

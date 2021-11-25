@@ -1,4 +1,4 @@
-// Copyright 2012-2019 the u-root Authors. All rights reserved
+// Copyright 2012-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,11 +6,11 @@ package memio
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -69,14 +69,13 @@ var testsInvalid = []struct {
 
 // TestIO tests a set of UintN againt the IO operations
 func TestIO(t *testing.T) {
-
 	tmpFile, err := ioutil.TempFile("", "io_test")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed creating tempfile: %v", err)
 	}
 	_, err = tmpFile.Write(make([]byte, 10000))
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to write to tempfile: %v", err)
 	}
 	tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
@@ -84,7 +83,7 @@ func TestIO(t *testing.T) {
 	defer func() { memPath = "/dev/mem" }()
 
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
@@ -115,7 +114,7 @@ func TestIO(t *testing.T) {
 func TestPathError(t *testing.T) {
 	// Test invalid path
 	for _, tt := range testsInvalid {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			memPath = tt.path
 			defer func() { memPath = "/dev/mem" }()
 
@@ -123,7 +122,7 @@ func TestPathError(t *testing.T) {
 			if err := Write(tt.addr, tt.writeData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Error(err)
+					t.Errorf("Want %v, got %v", want, err)
 				}
 			}
 
@@ -131,7 +130,7 @@ func TestPathError(t *testing.T) {
 			if err := Read(tt.addr, tt.readData); err != nil {
 				want := os.ErrNotExist
 				if !errors.Is(err, want) {
-					t.Error(err)
+					t.Errorf("Want %v, got %v", want, err)
 				}
 			}
 		})
@@ -139,14 +138,13 @@ func TestPathError(t *testing.T) {
 }
 
 func TestMmap(t *testing.T) {
-
 	tmpFile, err := ioutil.TempFile("", "io_test")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to create tempfile: %v", err)
 	}
 	_, err = tmpFile.Write(make([]byte, 10000))
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Failed to write to tempfile: %v", err)
 	}
 	tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
@@ -155,10 +153,10 @@ func TestMmap(t *testing.T) {
 
 	// Test invalid file opening
 	for _, tt := range testsInvalid {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 
 			// Set error
-			tt.err = "This is a dummy error"
+			tt.err = "this is a dummy error"
 			// Set internal functions to dummy function
 			oMmap := Mmap
 			Mmap = func(fd int, offset int64, length int, prot int, flags int) ([]byte, error) {
@@ -169,14 +167,15 @@ func TestMmap(t *testing.T) {
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
 				if err.Error() != tt.err {
-					t.Error(err)
+					t.Errorf("Want %v, got %v", nil, err)
 				}
 			}
 
 			// Read back the value.
 			if err := Read(tt.addr, tt.readData); err != nil {
-				if err.Error() == tt.err {
-					t.Error(err)
+				// Read outputs a verbose error with debug info in addition to the dummy error
+				if !strings.Contains(err.Error(), tt.err) {
+					t.Errorf("Want %v, got %v", nil, err)
 				}
 			}
 		})
@@ -185,16 +184,15 @@ func TestMmap(t *testing.T) {
 
 // TestUnmap tests the error handling of a malfunctioning syscall.Munmap
 func TestUnmap(t *testing.T) {
-
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			tmpFile, err := ioutil.TempFile("", "io_test")
 			if err != nil {
-				t.Error(err)
+				t.Errorf("Failed to create temp file: %v", err)
 			}
 			_, err = tmpFile.Write(make([]byte, 10000))
 			if err != nil {
-				t.Error(err)
+				t.Errorf("Failed to write to tempfile: %v", err)
 			}
 			tmpFile.Close()
 			defer os.Remove(tmpFile.Name())
@@ -202,7 +200,7 @@ func TestUnmap(t *testing.T) {
 			defer func() { memPath = "/dev/mem" }()
 
 			// Set error
-			tt.err = "This is a dummy error"
+			tt.err = "this is a dummy error"
 			// Set internal functions to dummy function
 			oMunmap := Munmap
 			Munmap = func(mem []byte) error {
@@ -212,18 +210,16 @@ func TestUnmap(t *testing.T) {
 
 			// Write to the file.
 			if err := Write(tt.addr, tt.writeData); err != nil {
-				if err.Error() == tt.err {
-					return
+				if err.Error() != tt.err {
+					t.Errorf("Want %v, got %v", nil, err)
 				}
-				t.Error(err)
 			}
 
 			// Read back the value.
 			if err := Read(tt.addr, tt.readData); err != nil {
-				if err.Error() == tt.err {
-					return
+				if err.Error() != tt.err {
+					t.Errorf("Want %v, got %v", nil, err)
 				}
-				t.Error(err)
 			}
 
 		})
