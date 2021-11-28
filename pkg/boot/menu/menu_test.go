@@ -16,9 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var (
-	inputDelay = 500 * time.Millisecond
-)
+var inputDelay = 500 * time.Millisecond
 
 func TestMain(m *testing.M) {
 	SetInitialTimeout(inputDelay * 2)
@@ -156,12 +154,12 @@ func TestChoose(t *testing.T) {
 			name: "just_hit_enter",
 			// user just hits enter.
 			userEntry:   []ReadLine{{"", nil}},
-			wantedEntry: -1, //expect nil
+			wantedEntry: -1, // expect nil
 		},
 		{
 			name:        "hit_nothing",
 			userEntry:   []ReadLine{},
-			wantedEntry: -1, //expect nil
+			wantedEntry: -1, // expect nil
 		},
 		{
 			name:        "hit_1",
@@ -176,26 +174,26 @@ func TestChoose(t *testing.T) {
 		{
 			name:        "out_of_bounds",
 			userEntry:   []ReadLine{{"4", nil}},
-			wantedEntry: -1, //expect nil
+			wantedEntry: -1, // expect nil
 		},
 		{
 			name:        "not_a_number",
 			userEntry:   []ReadLine{{"abc", nil}},
-			wantedEntry: -1, //expect nil
+			wantedEntry: -1, // expect nil
 		},
 		{
 			name:           "editing_allowed_override",
 			userEntry:      getEditSequence(false, "1", "after"),
 			editingAllowed: true,
 			expectedCmds:   []string{"after", "before", "before"},
-			wantedEntry:    -1, //expect nil
+			wantedEntry:    -1, // expect nil
 		},
 		{
 			name:           "editing_allowed_append",
 			userEntry:      getEditSequence(true, "2", "after"),
 			editingAllowed: true,
 			expectedCmds:   []string{"before", "before after", "before"},
-			wantedEntry:    -1, //expect nil
+			wantedEntry:    -1, // expect nil
 		},
 		{
 			name: "select_after_override",
@@ -217,21 +215,21 @@ func TestChoose(t *testing.T) {
 			userEntry:      errorOn(1, getEditSequence(false, "1", "after")),
 			editingAllowed: true,
 			expectedCmds:   []string{"before", "before", "before"},
-			wantedEntry:    -1, //expect nil
+			wantedEntry:    -1, // expect nil
 		},
 		{
 			name:           "edit_fail_reading_2",
 			userEntry:      errorOn(2, getEditSequence(false, "1", "after")),
 			editingAllowed: true,
 			expectedCmds:   []string{"before", "before", "before"},
-			wantedEntry:    -1, //expect nil
+			wantedEntry:    -1, // expect nil
 		},
 		{
 			name:           "edit_fail_reading_3",
 			userEntry:      errorOn(3, getEditSequence(false, "1", "after")),
 			editingAllowed: true,
 			expectedCmds:   []string{"before", "before", "before"},
-			wantedEntry:    -1, //expect nil
+			wantedEntry:    -1, // expect nil
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

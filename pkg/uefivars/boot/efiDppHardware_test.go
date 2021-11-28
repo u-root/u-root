@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-//func ParseDppHwPci(h EfiDevicePathProtocolHdr, b []byte) (*DppHwPci, error)
+// func ParseDppHwPci(h EfiDevicePathProtocolHdr, b []byte) (*DppHwPci, error)
 func TestParseDppHwPci(t *testing.T) {
 	in := []byte{3, 4}
 	hdr := EfiDevicePathProtocolHdr{

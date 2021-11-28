@@ -67,7 +67,6 @@ import (
 
 func main() {
 	t, err := termios.GTTY(0)
-
 	if err != nil {
 		log.Fatalf("termios.GTTY: %v", err)
 	}
@@ -81,7 +80,6 @@ func main() {
 		fmt.Printf("%v\n", t.String())
 	case "dump":
 		b, err := json.MarshalIndent(t, "", "\t")
-
 		if err != nil {
 			log.Fatalf("json marshal: %v", err)
 		}

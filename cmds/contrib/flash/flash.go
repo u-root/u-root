@@ -54,8 +54,10 @@ type programmer interface {
 	Close() error
 }
 
-type programmerParams map[string]string
-type programmerInit func(programmerParams) (programmer, error)
+type (
+	programmerParams map[string]string
+	programmerInit   func(programmerParams) (programmer, error)
+)
 
 // supportedProgrammers is populated by the other files in this package.
 var supportedProgrammers = map[string]programmerInit{}

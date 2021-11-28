@@ -31,9 +31,7 @@ const (
 	sysfsPath = "/sys/firmware/dmi/tables"
 )
 
-var (
-	retries = flag.Int("num_retries", 2, "Number of times to retry transferring SMBIOS tables")
-)
+var retries = flag.Int("num_retries", 2, "Number of times to retry transferring SMBIOS tables")
 
 func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr error) {
 	sessionID, err := h.BlobOpen(id, blobs.BMC_BLOB_OPEN_FLAG_WRITE)

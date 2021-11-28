@@ -39,7 +39,7 @@ func TestDhclientQEMU4(t *testing.T) {
 
 	want := "conteeent"
 	foobarFile := filepath.Join(dir, "foobar")
-	if err := ioutil.WriteFile(foobarFile, []byte(want), 0644); err != nil {
+	if err := ioutil.WriteFile(foobarFile, []byte(want), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

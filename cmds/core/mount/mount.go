@@ -82,7 +82,6 @@ func getSupportedFilesystem(originFS string) ([]string, bool, error) {
 		returnValue = append(returnValue, n[last])
 	}
 	return returnValue, known, err
-
 }
 
 func informIfUnknownFS(originFS string) {

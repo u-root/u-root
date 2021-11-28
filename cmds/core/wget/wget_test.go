@@ -53,7 +53,8 @@ var tests = []struct {
 		url:     "http://localhost:%[1]d/200",
 		content: content,
 		retCode: 0,
-	}, {
+	},
+	{
 		name:    "ipv4",
 		flags:   []string{},
 		url:     "http://127.0.0.1:%[1]d/200",
@@ -74,19 +75,22 @@ var tests = []struct {
 		url:     "http://localhost:%[1]d/302",
 		content: "",
 		retCode: 0,
-	}, {
+	},
+	{
 		name:    "4xx error",
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/404",
 		content: "",
 		retCode: 1,
-	}, {
+	},
+	{
 		name:    "5xx error",
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/500",
 		content: "",
 		retCode: 1,
-	}, {
+	},
+	{
 		name:    "no server",
 		flags:   []string{},
 		url:     "http://localhost:%[2]d/200",

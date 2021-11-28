@@ -75,7 +75,7 @@ func TestAPU2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reading coreboot table: got %v, want nil", err)
 	}
-	var b = &bytes.Buffer{}
+	b := &bytes.Buffer{}
 	DumpMem(f, c, false, b)
 	t.Logf("%s", b.String())
 	o := b.String()
@@ -95,7 +95,7 @@ func TestAPU2(t *testing.T) {
 	}
 	// You can use this to generate new test data. It's a timesaver.
 	if false {
-		ioutil.WriteFile("json", j, 0666)
+		ioutil.WriteFile("json", j, 0o666)
 	}
 	if string(j) != apu2JSON {
 		t.Errorf("APU2 JSON: got %s, want %s", j, apu2JSON)

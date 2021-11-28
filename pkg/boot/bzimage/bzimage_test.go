@@ -122,7 +122,7 @@ func TestAddInitRAMFS(t *testing.T) {
 	// qemu-system-x86_64 -serial stdio -kernel /tmp/x
 	// I mainly left this here as a memo.
 	if true {
-		if err := ioutil.WriteFile("/tmp/x", d, 0644); err != nil {
+		if err := ioutil.WriteFile("/tmp/x", d, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -146,8 +146,8 @@ func TestAddInitRAMFS(t *testing.T) {
 		t.Logf("shrink test, want nil, got %v", err)
 		t.Fatal(err)
 	}
-
 }
+
 func TestHeaderString(t *testing.T) {
 	Debug = t.Logf
 	initramfsimage, err := ioutil.ReadFile("testdata/bzImage")
@@ -160,6 +160,7 @@ func TestHeaderString(t *testing.T) {
 	}
 	t.Logf("%s", b.Header.String())
 }
+
 func TestExtract(t *testing.T) {
 	Debug = t.Logf
 	initramfsimage, err := ioutil.ReadFile("testdata/bzImage")
@@ -218,5 +219,4 @@ func TestInitRAMFS(t *testing.T) {
 		}
 		t.Logf("Found %d byte initramfs@%d:%d", e-s, s, e)
 	}
-
 }

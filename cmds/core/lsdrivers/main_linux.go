@@ -65,6 +65,7 @@ func lsdrivers(bus string, unused bool) ([]string, error) {
 	}
 	return d, nil
 }
+
 func main() {
 	flag.Parse()
 	drivers, err := lsdrivers("/sys/bus", *unused)

@@ -15,9 +15,7 @@ import (
 func WaitOrphans() uint {
 	var numReaped uint
 	for {
-		var (
-			w syscall.Waitmsg
-		)
+		var w syscall.Waitmsg
 		err := syscall.Await(&w)
 		if err != nil {
 			break

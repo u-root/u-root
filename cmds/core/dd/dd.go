@@ -354,7 +354,7 @@ func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, 
 		out = os.Stdout
 	} else {
 		perm := os.O_CREATE | os.O_WRONLY | (flags & allowedFlags)
-		if out, err = os.OpenFile(name, perm, 0666); err != nil {
+		if out, err = os.OpenFile(name, perm, 0o666); err != nil {
 			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
 		}
 	}

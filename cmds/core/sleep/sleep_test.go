@@ -10,7 +10,7 @@ import (
 )
 
 func TestParseDuration(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		in  string
 		out time.Duration
 		err error

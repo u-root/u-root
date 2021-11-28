@@ -220,7 +220,6 @@ func hmrfpoEnableResponseFromBytes(b []byte) (*hmrfpoEnableResponse, error) {
 // see cse_hmrfpo_enable at
 // https://github.com/coreboot/coreboot/blob/b8b8ec832360ada5a313f10938bb6cfc310a11eb/src/soc/intel/common/block/include/intelblocks/cse.h#L64
 func (m *MKHIClient) EnableHMRFPO() error {
-
 	var hdr mkhiHdr
 	hdr.SetGroupID(mkhiGroupIDHMRFPO)
 	hdr.SetCommand(mkhiHMRFPOEnable)

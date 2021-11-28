@@ -35,7 +35,7 @@ func TestBBBuild(t *testing.T) {
 		t.Error(err)
 	}
 
-	var mustContain = []string{
+	mustContain := []string{
 		"bbin/elvish",
 		"bbin/foo",
 	}
@@ -44,5 +44,4 @@ func TestBBBuild(t *testing.T) {
 			t.Errorf("expected files to include %q; archive: %v", name, af)
 		}
 	}
-
 }

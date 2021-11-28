@@ -146,7 +146,7 @@ func TestMarshal(t *testing.T) {
 					Gateway:    net.IP{192, 168, 1, 1},
 					PrimaryDNS: net.IP{8, 8, 8, 8},
 					DHCPServer: net.IP{192, 168, 1, 1},
-					MACAddress: net.HardwareAddr{52, 54, 00, 12, 34, 56},
+					MACAddress: net.HardwareAddr{52, 54, 0o0, 12, 34, 56},
 				},
 				Target0: Target{
 					Valid: true,
@@ -162,7 +162,7 @@ func TestMarshal(t *testing.T) {
 				emptyHeader(),
 				defaultControl(),
 				initiator(1<<1|1, 4 /* len */, 0x138),
-				nic(1<<2|1<<1|1, net.IP{192, 168, 1, 15} /* ip */, 24 /* netmask */, net.IP{192, 168, 1, 1} /* gateway */, net.IP{8, 8, 8, 8} /* dns */, net.IP{192, 168, 1, 1} /* dhcp serv */, net.HardwareAddr{52, 54, 00, 12, 34, 56} /* mac */, 0 /* BDF */),
+				nic(1<<2|1<<1|1, net.IP{192, 168, 1, 15} /* ip */, 24 /* netmask */, net.IP{192, 168, 1, 1} /* gateway */, net.IP{8, 8, 8, 8} /* dns */, net.IP{192, 168, 1, 1} /* dhcp serv */, net.HardwareAddr{52, 54, 0o0, 12, 34, 56} /* mac */, 0 /* BDF */),
 				target(1<<1|1, net.IP{192, 168, 1, 1}, 3260, 27, 0x138+5),
 				heap([]string{"NERF", "iqn.2016-01.com.example:foo"})),
 			),

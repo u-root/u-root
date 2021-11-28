@@ -32,73 +32,88 @@ var arithmeticPositiveTests = []struct {
 	out  *big.Int
 }{
 	// Constants
-	{"Zero",
+	{
+		"Zero",
 		"0",
 		big.NewInt(0),
 	},
-	{"Decimal",
+	{
+		"Decimal",
 		"123",
 		big.NewInt(123),
 	},
-	{"Octal",
+	{
+		"Octal",
 		"0123",
-		big.NewInt(0123),
+		big.NewInt(0o123),
 	},
-	{"Hex",
+	{
+		"Hex",
 		"0x123",
 		big.NewInt(0x123),
 	},
 
 	// Order of operation
-	{"BEDMAS1",
+	{
+		"BEDMAS1",
 		"1+2*3",
 		big.NewInt(7),
 	},
-	{"BEDMAS2",
+	{
+		"BEDMAS2",
 		"(1+2)*3",
 		big.NewInt(9),
 	},
-	{"BEDMAS3",
+	{
+		"BEDMAS3",
 		"1*2+3",
 		big.NewInt(5),
 	},
-	{"BEDMAS4",
+	{
+		"BEDMAS4",
 		"-1*-2+-+-3",
 		big.NewInt(5),
 	},
 
 	// Associativity
-	{"Associativity1",
+	{
+		"Associativity1",
 		"1-2-3",
 		big.NewInt(-4),
 	},
-	{"Associativity2",
+	{
+		"Associativity2",
 		"1-2*3-4",
 		big.NewInt(-9),
 	},
 
 	// Spacing
-	{"Spacing",
+	{
+		"Spacing",
 		" 1 + 3 * 4 / 3 - 8 ",
 		big.NewInt(-3),
 	},
 
 	// Conditional Operator
-	{"Conditional",
+	{
+		"Conditional",
 		" 0 ? 4 : 1 ? 5 : 6 ",
 		big.NewInt(5),
 	},
 
 	// Variables
-	{"Variables1",
+	{
+		"Variables1",
 		"x",
 		big.NewInt(1),
 	},
-	{"Variables2",
+	{
+		"Variables2",
 		"x + y",
 		big.NewInt(124),
 	},
-	{"Variables3",
+	{
+		"Variables3",
 		"xyz * 2",
 		big.NewInt(84),
 	},

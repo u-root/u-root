@@ -14,7 +14,7 @@ import (
 )
 
 func TestWc(t *testing.T) {
-	var tab = []struct {
+	tab := []struct {
 		i string
 		o string
 		s int

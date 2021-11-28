@@ -270,7 +270,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	if filename == "." || filename == "" {
 		return fmt.Errorf("invalid empty file name extracted from file path %s", u.Path)
 	}
-	if err = ioutil.WriteFile(filename, body, 0400); err != nil {
+	if err = ioutil.WriteFile(filename, body, 0o400); err != nil {
 		return fmt.Errorf("DHCP: cannot write to file %s: %v", filename, err)
 	}
 	debug("DHCP: saved boot file to %s", filename)
@@ -327,7 +327,6 @@ func loadCaCerts() (*x509.CertPool, error) {
 		debug("CA certs appended from PEM")
 	}
 	return rootCAs, nil
-
 }
 
 func getClientForBootfile(bootfile string) (*http.Client, error) {

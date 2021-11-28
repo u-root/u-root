@@ -555,20 +555,21 @@ var (
 // testReproducible verifies that we can produce reproducible cpio archives for newc format.
 func TestReproducible(t *testing.T) {
 	contents := []byte("LANAAAAAAAAAA")
-	rec := []Record{StaticRecord(contents, Info{
-		Ino:      1,
-		Mode:     syscall.S_IFREG | 2,
-		UID:      3,
-		GID:      4,
-		NLink:    5,
-		MTime:    6,
-		FileSize: 7,
-		Major:    8,
-		Minor:    9,
-		Rmajor:   10,
-		Rminor:   11,
-		Name:     "foobar",
-	}),
+	rec := []Record{
+		StaticRecord(contents, Info{
+			Ino:      1,
+			Mode:     syscall.S_IFREG | 2,
+			UID:      3,
+			GID:      4,
+			NLink:    5,
+			MTime:    6,
+			FileSize: 7,
+			Major:    8,
+			Minor:    9,
+			Rmajor:   10,
+			Rminor:   11,
+			Name:     "foobar",
+		}),
 	}
 
 	// First test that it fails unless we make it reproducible

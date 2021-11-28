@@ -22,12 +22,11 @@ var ids idMap
 // create ids since the most common use of pci will be with names,
 // not numbers.
 func newIDs() idMap {
-
 	if ids != nil {
 		return ids
 	}
 
-	var pciids = []byte(`0001  SafeNet (wrong ID)
+	pciids := []byte(`0001  SafeNet (wrong ID)
 0010  Allied Telesis, Inc (Wrong ID)
 	8139  AT-2500TX V3 Ethernet
 001c  PEAK-System Technik GmbH

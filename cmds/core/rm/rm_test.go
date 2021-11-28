@@ -40,23 +40,22 @@ func TestRemove(t *testing.T) {
 			mode  os.FileMode
 			isdir bool
 		}{
-
 			{
 				name:  "hi",
-				mode:  0755,
+				mode:  0o755,
 				isdir: true,
 			},
 			{
 				name: "hi/one.txt",
-				mode: 0666,
+				mode: 0o666,
 			},
 			{
 				name: "hi/two.txt",
-				mode: 0777,
+				mode: 0o777,
 			},
 			{
 				name: "go.txt",
-				mode: 0555,
+				mode: 0o555,
 			},
 		}
 		nilerr    = func(err error) bool { return err == nil }
@@ -157,7 +156,6 @@ func TestRemove(t *testing.T) {
 	)
 
 	for _, tc := range testCases {
-
 		t.Run(tc.name, func(t *testing.T) {
 			d, err := ioutil.TempDir(os.TempDir(), "u-root.cmds.rm")
 			if err != nil {
@@ -185,7 +183,7 @@ func TestRemove(t *testing.T) {
 }
 
 func testRemove(t *testing.T, dir string, tc rmTestCase) {
-	var files = make([]string, len(tc.files))
+	files := make([]string, len(tc.files))
 	for i, f := range tc.files {
 		files[i] = path.Join(dir, f.name)
 	}

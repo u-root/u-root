@@ -96,7 +96,7 @@ func TestBusReadConfig(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Read: %v", err)
 	}
-	var o = &bytes.Buffer{}
+	o := &bytes.Buffer{}
 	// First test is a low verbosity one that should only require 64 bytes.
 	if err := d.Print(o, 0, 64); err != nil {
 		log.Fatal(err)
@@ -110,11 +110,10 @@ func TestBusReadConfig(t *testing.T) {
 	if !fullread && err == nil {
 		log.Fatalf("Doing a full config read as ! root: got nil, want %v", os.ErrPermission)
 	}
-
 }
 
 func testBaseLimType(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		bar    string
 		r1, r2 string
 	}{
@@ -131,5 +130,4 @@ func testBaseLimType(t *testing.T) {
 		// 	t.Errorf("BAR %s: got \n(%q,%q) want \n(%q,%q)", tt.bar, r1, r2, tt.r1, tt.r2)
 		//}
 	}
-
 }

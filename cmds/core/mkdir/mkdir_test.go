@@ -34,7 +34,7 @@ type MkdirPermTestCase struct {
 
 var (
 	stubDirNames   = []string{"stub", "stub2"}
-	umaskDefault   = 022
+	umaskDefault   = 0o22
 	errorTestCases = []MkdirErrorTestcase{
 		{
 			name: "No Arg Error",
@@ -74,49 +74,49 @@ var (
 		{
 			name:     "Default Perm",
 			args:     []string{stubDirNames[0]},
-			perm:     os.FileMode(0755 | os.ModeDir),
+			perm:     os.FileMode(0o755 | os.ModeDir),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm in Octal Form",
 			args:     []string{"-m=0777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir),
+			perm:     os.FileMode(0o777 | os.ModeDir),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm not in Octal Form",
 			args:     []string{"-m=777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir),
+			perm:     os.FileMode(0o777 | os.ModeDir),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm with Sticky Bit",
 			args:     []string{"-m=1777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSticky),
+			perm:     os.FileMode(0o777 | os.ModeDir | os.ModeSticky),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm with SGID Bit",
 			args:     []string{"-m=2777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSetgid),
+			perm:     os.FileMode(0o777 | os.ModeDir | os.ModeSetgid),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm with SUID Bit",
 			args:     []string{"-m=4777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSetuid),
+			perm:     os.FileMode(0o777 | os.ModeDir | os.ModeSetuid),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm with Sticky Bit and SUID Bit",
 			args:     []string{"-m=5777", stubDirNames[0]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSticky | os.ModeSetuid),
+			perm:     os.FileMode(0o777 | os.ModeDir | os.ModeSticky | os.ModeSetuid),
 			dirNames: []string{stubDirNames[0]},
 		},
 		{
 			name:     "Custom Perm for 2 Directories",
 			args:     []string{"-m=5777", stubDirNames[0], stubDirNames[1]},
-			perm:     os.FileMode(0777 | os.ModeDir | os.ModeSticky | os.ModeSetuid),
+			perm:     os.FileMode(0o777 | os.ModeDir | os.ModeSticky | os.ModeSetuid),
 			dirNames: stubDirNames,
 		},
 	}

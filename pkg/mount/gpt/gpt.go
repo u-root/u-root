@@ -37,34 +37,38 @@ type GUID struct {
 	B  [8]byte
 }
 
-type MBR [BlockSize]byte
-type Header struct {
-	Signature  uint64
-	Revision   uint32 // (for GPT version 1.0 (through at least UEFI version 2.7 (May 2017)), the value is 00h 00h 01h 00h)
-	HeaderSize uint32 // size in little endian (in bytes, usually 5Ch 00h 00h 00h or 92 bytes)
-	CRC        uint32 // CRC32/zlib of header (offset +0 up to header size) in little endian, with this field zeroed during calculation
-	Reserved   uint32 // ; must be zero
-	CurrentLBA uint64 // (location of this header copy)
-	BackupLBA  uint64 // (location of the other header copy)
-	FirstLBA   uint64 // usable LBA for partitions (primary partition table last LBA + 1)
-	LastLBA    uint64 // usable LBA (secondary partition table first LBA - 1)
-	DiskGUID   GUID   // (also referred as UUID on UNIXes)
-	PartStart  uint64 // LBA of array of partition entries (always 2 in primary copy)
-	NPart      uint32 // Number of partition entries in array
-	PartSize   uint32 // Size of a single partition entry (usually 80h or 128)
-	PartCRC    uint32 // CRC32/zlib of partition array in little endian
-}
+type (
+	MBR    [BlockSize]byte
+	Header struct {
+		Signature  uint64
+		Revision   uint32 // (for GPT version 1.0 (through at least UEFI version 2.7 (May 2017)), the value is 00h 00h 01h 00h)
+		HeaderSize uint32 // size in little endian (in bytes, usually 5Ch 00h 00h 00h or 92 bytes)
+		CRC        uint32 // CRC32/zlib of header (offset +0 up to header size) in little endian, with this field zeroed during calculation
+		Reserved   uint32 // ; must be zero
+		CurrentLBA uint64 // (location of this header copy)
+		BackupLBA  uint64 // (location of the other header copy)
+		FirstLBA   uint64 // usable LBA for partitions (primary partition table last LBA + 1)
+		LastLBA    uint64 // usable LBA (secondary partition table first LBA - 1)
+		DiskGUID   GUID   // (also referred as UUID on UNIXes)
+		PartStart  uint64 // LBA of array of partition entries (always 2 in primary copy)
+		NPart      uint32 // Number of partition entries in array
+		PartSize   uint32 // Size of a single partition entry (usually 80h or 128)
+		PartCRC    uint32 // CRC32/zlib of partition array in little endian
+	}
+)
 
-type PartAttr uint64
-type PartName [72]byte
-type Part struct {
-	PartGUID   GUID     // Partition type GUID
-	UniqueGUID GUID     // Unique partition GUID
-	FirstLBA   uint64   // LBA (little endian)
-	LastLBA    uint64   // LBA (inclusive, usually odd)
-	Attribute  PartAttr // flags (e.g. bit 60 denotes read-only)
-	Name       PartName // Partition name (36 UTF-16LE code units)
-}
+type (
+	PartAttr uint64
+	PartName [72]byte
+	Part     struct {
+		PartGUID   GUID     // Partition type GUID
+		UniqueGUID GUID     // Unique partition GUID
+		FirstLBA   uint64   // LBA (little endian)
+		LastLBA    uint64   // LBA (inclusive, usually odd)
+		Attribute  PartAttr // flags (e.g. bit 60 denotes read-only)
+		Name       PartName // Partition name (36 UTF-16LE code units)
+	}
+)
 
 type GPT struct {
 	Header
@@ -112,7 +116,6 @@ func (p *PartitionTable) String() string {
 		log.Fatalf("Can't marshal %v", *p)
 	}
 	return string(b)
-
 }
 
 func errAppend(err error, s string, a ...interface{}) error {
@@ -209,7 +212,7 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 	if off != BlockSize {
 		which = "Backup"
 	}
-	var g = &GPT{}
+	g := &GPT{}
 	if err := binary.Read(io.NewSectionReader(r, off, HeaderSize), binary.LittleEndian, &g.Header); err != nil {
 		return nil, err
 	}
@@ -261,7 +264,6 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 	}
 
 	return g, nil
-
 }
 
 // Write writes the MBR and primary and backup GPTs to w.
@@ -282,7 +284,7 @@ func Write(w io.WriterAt, p *PartitionTable) error {
 // Write writes the GPT to w. It generates the partition and header CRC before writing.
 func writeGPT(w io.WriterAt, g *GPT) error {
 	// The maximum extent is NPart * PartSize
-	var h = make([]byte, uint64(g.NPart*g.PartSize))
+	h := make([]byte, uint64(g.NPart*g.PartSize))
 	s := int64(g.PartSize)
 	for i := int64(0); i < int64(g.NPart); i++ {
 		var b bytes.Buffer
@@ -321,8 +323,8 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 // one or more headers AND an error. Sorry. Experience with some real USB sticks
 // is showing that we need to return data even if there are some things wrong.
 func New(r io.ReaderAt) (*PartitionTable, error) {
-	var p = &PartitionTable{}
-	var mbr = &MBR{}
+	p := &PartitionTable{}
+	mbr := &MBR{}
 	n, err := r.ReadAt(mbr[:], 0)
 	if n != BlockSize || err != nil {
 		return p, err

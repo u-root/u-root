@@ -134,7 +134,7 @@ func SetUnits() {
 func df() {
 	SetUnits()
 	mounts, _ := mountinfo()
-	var blocksize = "1K"
+	blocksize := "1K"
 	if *inMB {
 		blocksize = "1M"
 	}

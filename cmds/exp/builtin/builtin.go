@@ -138,7 +138,7 @@ func main() {
 	}
 	// write the new elvishPath
 	for i, v := range filemap {
-		if err = ioutil.WriteFile(i, v, 0600); err != nil {
+		if err = ioutil.WriteFile(i, v, 0o600); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -149,7 +149,7 @@ func main() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	// TODO: figure out why we get EPERM when we use this.
-	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
 	if *debug {
 		log.Printf("Run %v", cmd)
 	}

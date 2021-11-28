@@ -73,7 +73,7 @@ func (r *Reader) Get(key string, readOnly bool) ([]byte, error) {
 func (r *Reader) Set(key string, value []byte, readOnly bool) error {
 	// NOTE this is not implemented yet in the kernel interface, and will always
 	// return a permission denied error
-	return ioutil.WriteFile(path.Join(r.getBaseDir(readOnly), key), value, 0644)
+	return ioutil.WriteFile(path.Join(r.getBaseDir(readOnly), key), value, 0o644)
 }
 
 // GetAll reads all the VPD variables and returns a map contaiing each

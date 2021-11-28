@@ -11,7 +11,7 @@ import (
 )
 
 func TestCksum(t *testing.T) {
-	var testMatrix = []struct {
+	testMatrix := []struct {
 		data      []byte
 		cksum     string
 		algorithm int
@@ -27,7 +27,6 @@ func TestCksum(t *testing.T) {
 			t.Errorf("shasum verification failed.(Expected:%s, Received:%s)", testData.cksum, shaPrinter(testData.algorithm, testData.data))
 		}
 	}
-
 }
 
 func TestMain(m *testing.M) {

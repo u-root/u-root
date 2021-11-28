@@ -31,7 +31,7 @@ func testArgs(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	tdir := filepath.Join(tmpDir, "a/b/c")
-	if err := os.MkdirAll(tdir, 0777); err != nil {
+	if err := os.MkdirAll(tdir, 0o777); err != nil {
 		t.Fatal(err)
 	}
 	ldir := filepath.Join(tmpDir, "d")
@@ -39,7 +39,7 @@ func testArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var tab = []struct {
+	tab := []struct {
 		n            string
 		o            string
 		e            int
@@ -161,6 +161,7 @@ func TestMount(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestMain(m *testing.M) {
 	testutil.Run(m, main)
 }

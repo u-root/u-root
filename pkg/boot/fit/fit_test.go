@@ -42,7 +42,6 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	kn, rn, err := i.LoadConfig()
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +307,6 @@ func TestParseConfig(t *testing.T) {
 	}
 
 	imgs, err := ParseConfig(f)
-
 	if err != nil {
 		t.Fatal(err)
 	}

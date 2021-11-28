@@ -89,7 +89,7 @@ func setAvailableTRNG() error {
 		return errors.New("no TRNG found on platform")
 	}
 
-	if err = ioutil.WriteFile(HwRandomCurrentFile, []byte(selectedRNG), 0644); err != nil {
+	if err = ioutil.WriteFile(HwRandomCurrentFile, []byte(selectedRNG), 0o644); err != nil {
 		return err
 	}
 
@@ -147,7 +147,7 @@ func UpdateLinuxRandomness(recoverer recovery.Recoverer) error {
 				continue
 			}
 
-			var random = make([]byte, EntropyBlockSize)
+			random := make([]byte, EntropyBlockSize)
 			length, err := hwRng.Read(random)
 			if err != nil {
 				recoverer.Recover("Can't open the hardware random device")

@@ -61,7 +61,6 @@ func setup() error {
 // The output of which.go has to be exactly equal to the output of which itself.
 func TestWhichUnique(t *testing.T) {
 	err := setup()
-
 	if err != nil {
 		t.Fatalf("setup has failed, %v", err)
 	}
@@ -83,7 +82,6 @@ func TestWhichUnique(t *testing.T) {
 // three, it should work with more commands as well.
 func TestWhichMultiple(t *testing.T) {
 	err := setup()
-
 	if err != nil {
 		t.Fatalf("setup has failed, %v", err)
 	}

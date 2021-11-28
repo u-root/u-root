@@ -51,7 +51,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	testDir := filepath.Join(o.TmpDir, "tests")
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
-		if err := os.MkdirAll(pkgDir, 0755); err != nil {
+		if err := os.MkdirAll(pkgDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 

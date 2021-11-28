@@ -136,10 +136,10 @@ func TestUrootCmdline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = ioutil.WriteFile(filepath.Join(sampledir, "foo"), nil, 0644); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(sampledir, "foo"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err = ioutil.WriteFile(filepath.Join(sampledir, "bar"), nil, 0644); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(sampledir, "bar"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(sampledir)
@@ -207,7 +207,7 @@ func TestUrootCmdline(t *testing.T) {
 				// so these can be removed once we no longer support Go < 1.15.
 				"-github.com/u-root/u-root/cmds/exp/builtin",
 				"-github.com/u-root/u-root/cmds/exp/run",
-				//TODO(MDr164): Find a solution for upstream elvish
+				// TODO(MDr164): Find a solution for upstream elvish
 				"-github.com/u-root/u-root/cmds/core/elvish",
 			},
 			err: nil,

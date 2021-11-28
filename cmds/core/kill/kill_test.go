@@ -59,20 +59,18 @@ func TestKillProcess(t *testing.T) {
 }
 
 func TestBadInvocations(t *testing.T) {
-	var (
-		tab = []struct {
-			a   []string
-			err string
-		}{
-			{a: []string{"-1w34"}, err: "1w34 is not a valid signal\n"},
-			{a: []string{"-s"}, err: eUsage + "\n"},
-			{a: []string{"-s", "a"}, err: "a is not a valid signal\n"},
-			{a: []string{"a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
-			{a: []string{"--signal"}, err: eUsage + "\n"},
-			{a: []string{"--signal", "a"}, err: "a is not a valid signal\n"},
-			{a: []string{"-1", "a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
-		}
-	)
+	tab := []struct {
+		a   []string
+		err string
+	}{
+		{a: []string{"-1w34"}, err: "1w34 is not a valid signal\n"},
+		{a: []string{"-s"}, err: eUsage + "\n"},
+		{a: []string{"-s", "a"}, err: "a is not a valid signal\n"},
+		{a: []string{"a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
+		{a: []string{"--signal"}, err: eUsage + "\n"},
+		{a: []string{"--signal", "a"}, err: "a is not a valid signal\n"},
+		{a: []string{"-1", "a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
+	}
 
 	tmpDir, err := ioutil.TempDir("", "KillTest")
 	if err != nil {

@@ -29,7 +29,7 @@ type signedFile struct {
 }
 
 func (s signedFile) write(path string) error {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (s signedFile) write(path string) error {
 		return err
 	}
 
-	sigf, err := os.OpenFile(fmt.Sprintf("%s.sig", path), os.O_RDWR|os.O_CREATE, 0600)
+	sigf, err := os.OpenFile(fmt.Sprintf("%s.sig", path), os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}
@@ -57,12 +57,12 @@ type normalFile struct {
 }
 
 func (n normalFile) write(path string) error {
-	return ioutil.WriteFile(path, []byte(n.content), 0600)
+	return ioutil.WriteFile(path, []byte(n.content), 0o600)
 }
 
 func writeHashedFile(path, content string) ([]byte, error) {
 	c := []byte(content)
-	if err := ioutil.WriteFile(path, c, 0600); err != nil {
+	if err := ioutil.WriteFile(path, c, 0o600); err != nil {
 		return nil, err
 	}
 	hash := sha256.Sum256(c)
@@ -77,7 +77,7 @@ func TestOpenSignedFile(t *testing.T) {
 	t.Run("EntityGenerate", func(t *testing.T) {
 		t.Skip("uncomment this to generate the entities")
 
-		if err := os.MkdirAll("testdata", 0777); err != nil {
+		if err := os.MkdirAll("testdata", 0o777); err != nil {
 			t.Fatal(err)
 		}
 
@@ -162,7 +162,7 @@ func TestOpenSignedFile(t *testing.T) {
 	}
 
 	normalPath := filepath.Join(dir, "unsigned")
-	if err := ioutil.WriteFile(normalPath, []byte("foo"), 0777); err != nil {
+	if err := ioutil.WriteFile(normalPath, []byte("foo"), 0o777); err != nil {
 		t.Fatal(err)
 	}
 

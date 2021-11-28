@@ -63,6 +63,7 @@ func handler(s ssh.Session) {
 		}
 	}
 }
+
 func main() {
 	flag.Parse()
 	publicKeyOption := func(ctx ssh.Context, key ssh.PublicKey) bool {

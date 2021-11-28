@@ -36,7 +36,7 @@ func (da DirArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 		if _, err := os.Stat(path); os.IsExist(err) {
 			return nil, fmt.Errorf("path %q already exists", path)
 		}
-		if err := os.MkdirAll(path, 0755); err != nil {
+		if err := os.MkdirAll(path, 0o755); err != nil {
 			return nil, err
 		}
 	}

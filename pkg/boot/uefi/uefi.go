@@ -20,10 +20,12 @@ import (
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
-var kexecLoad = kexec.Load
-var kexecParseMemoryMap = kexec.ParseMemoryMap
-var getRSDP = acpi.GetRSDP
-var getSMBIOSBase = smbios.SMBIOSBase
+var (
+	kexecLoad           = kexec.Load
+	kexecParseMemoryMap = kexec.ParseMemoryMap
+	getRSDP             = acpi.GetRSDP
+	getSMBIOSBase       = smbios.SMBIOSBase
+)
 
 // SerialPortConfig defines debug port configuration
 // This struct will be used to initialize SERIAL_PORT_INFO

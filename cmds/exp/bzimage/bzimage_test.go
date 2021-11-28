@@ -48,10 +48,11 @@ var (
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			ExtRamdiskImage:     00,
-			ExtRamdiskSize:      00,
-			ExtCmdlinePtr:       00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			ExtRamdiskImage:     0x00,
+			ExtRamdiskSize:      0x00,
+			ExtCmdlinePtr:       0x00,
 			SetupSects:          0x1e,
 			RootFlags:           0x01,
 			Syssize:             0xb51d,
@@ -114,13 +115,13 @@ func TestSimple(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	var tests = []struct {
+	tests := []struct {
 		args            []string
 		name            string
 		status          int
 		out             string
-		skip            int  //leading chars to skip in output when comparing
-		outputContinues bool //if true, only compare 'out' len of bytes; flags produce extra output.
+		skip            int  // leading chars to skip in output when comparing
+		outputContinues bool // if true, only compare 'out' len of bytes; flags produce extra output.
 	}{
 		{
 			args:   []string{"initramfs", "bzImage", "init.cpio", "zz/zz/zz"},

@@ -116,7 +116,7 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 	// to create files in these directories, we have to make them at least
 	// mode 755.
 	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("CreateFileInRoot %q: %v", f.Name, err)
 		}
 	}

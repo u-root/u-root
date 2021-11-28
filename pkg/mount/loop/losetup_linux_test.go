@@ -61,7 +61,7 @@ func TestSetFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := os.MkdirAll("/tmp/disk", 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll("/tmp/disk", 0o755); err != nil && !os.IsExist(err) {
 		t.Fatalf("Could not create /tmp/disk: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestSetFile(t *testing.T) {
 	}
 	defer mp.Unmount(0) //nolint:errcheck
 
-	if err := ioutil.WriteFile("/tmp/disk/foobar", []byte("Are you feeling it now Mr Krabs"), 0755); err != nil {
+	if err := ioutil.WriteFile("/tmp/disk/foobar", []byte("Are you feeling it now Mr Krabs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 }

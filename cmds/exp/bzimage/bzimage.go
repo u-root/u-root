@@ -53,8 +53,10 @@ bzimage cfg <image>
 
 flags:`
 
-var debug = flag.BoolP("debug", "d", false, "enable debug printing")
-var jsonOut = flag.BoolP("json", "j", false, "json output ('ver' subcommand only)")
+var (
+	debug   = flag.BoolP("debug", "d", false, "enable debug printing")
+	jsonOut = flag.BoolP("json", "j", false, "json output ('ver' subcommand only)")
+)
 
 func usage() {
 	fmt.Fprintln(os.Stderr, cmdUsage)
@@ -78,7 +80,7 @@ func main() {
 		usage()
 	}
 
-	var br = &bzimage.BzImage{}
+	br := &bzimage.BzImage{}
 	var image []byte
 	switch a[0] {
 	case "diff", "dump", "ver":
@@ -112,7 +114,7 @@ func main() {
 			log.Printf("%s", br.Header.Diff(&br2.Header))
 			log.Fatalf("there is no hope")
 		}
-		if err := ioutil.WriteFile(a[2], o, 0666); err != nil {
+		if err := ioutil.WriteFile(a[2], o, 0o666); err != nil {
 			log.Fatalf("Writing %v: %v", a[2], err)
 		}
 	case "diff":
@@ -120,7 +122,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		var br2 = &bzimage.BzImage{}
+		br2 := &bzimage.BzImage{}
 		if err = br2.UnmarshalBinary(b2); err != nil {
 			log.Fatal(err)
 		}
@@ -153,7 +155,7 @@ func main() {
 				fmt.Printf("Warning: %s is nil", v.n)
 				continue
 			}
-			if err := ioutil.WriteFile(v.n, v.b, 0666); err != nil {
+			if err := ioutil.WriteFile(v.n, v.b, 0o666); err != nil {
 				log.Fatalf("Writing %v: %v", v, err)
 			}
 		}
@@ -167,7 +169,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if err := ioutil.WriteFile(a[3], b, 0644); err != nil {
+		if err := ioutil.WriteFile(a[3], b, 0o644); err != nil {
 			log.Fatal(err)
 		}
 	case "ver":

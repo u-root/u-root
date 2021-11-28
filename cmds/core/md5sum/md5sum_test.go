@@ -11,7 +11,7 @@ import (
 )
 
 func TestCksum(t *testing.T) {
-	var testMatrix = []struct {
+	testMatrix := []struct {
 		data  []byte
 		cksum string
 	}{
@@ -24,7 +24,6 @@ func TestCksum(t *testing.T) {
 			t.Errorf("md5sum verification failed. (Expected: %s, Received: %s)", testData.cksum, calculateMd5Sum("", testData.data))
 		}
 	}
-
 }
 
 func TestMain(m *testing.M) {

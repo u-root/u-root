@@ -42,7 +42,6 @@ var forthTests = []forthTest{
 }
 
 func TestForth(t *testing.T) {
-
 	forthTests[0].res, _ = os.Hostname()
 	f := New()
 	if f.Length() != 0 {
@@ -89,7 +88,6 @@ func TestForth(t *testing.T) {
 			t.Errorf("Test: %v: stack is %v and should be empty", tt, f.Empty())
 		}
 	}
-
 }
 
 func TestBadPop(t *testing.T) {

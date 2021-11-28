@@ -10,5 +10,5 @@ package main
 import "io/ioutil"
 
 func Sethostname(n string) error {
-	return ioutil.WriteFile("#c/sysname", []byte(n), 0644)
+	return ioutil.WriteFile("#c/sysname", []byte(n), 0o644)
 }

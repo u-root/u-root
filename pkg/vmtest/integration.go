@@ -177,7 +177,7 @@ func saveCoverage(t *testing.T, path string) error {
 	// Move coverage to common directory.
 	uniqueCoveragePath := filepath.Join(coveragePath, t.Name(), fmt.Sprintf("%d", instance[t.Name()]))
 	instance[t.Name()]++
-	if err := os.MkdirAll(uniqueCoveragePath, 0770); err != nil {
+	if err := os.MkdirAll(uniqueCoveragePath, 0o770); err != nil {
 		return err
 	}
 	if err := os.Rename(path, filepath.Join(uniqueCoveragePath, filepath.Base(path))); err != nil {
@@ -263,7 +263,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		testFile := filepath.Join(o.TmpDir, "test.elv")
 
 		if err := ioutil.WriteFile(
-			testFile, []byte(strings.Join(o.TestCmds, "\n")), 0777); err != nil {
+			testFile, []byte(strings.Join(o.TestCmds, "\n")), 0o777); err != nil {
 			return nil, err
 		}
 	}

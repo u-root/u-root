@@ -23,9 +23,9 @@ var (
 	// PEMCipher is the PEM encryption algorithm
 	PEMCipher = x509.PEMCipherAES256
 	// PubKeyFilePermissions are the public key file perms
-	PubKeyFilePermissions os.FileMode = 0644
+	PubKeyFilePermissions os.FileMode = 0o644
 	// PrivKeyFilePermissions are the private key file perms
-	PrivKeyFilePermissions os.FileMode = 0600
+	PrivKeyFilePermissions os.FileMode = 0o600
 )
 
 // LoadPublicKeyFromFile loads PEM formatted ED25519 public key from file.
@@ -88,12 +88,12 @@ func GeneratED25519Key(password []byte, privateKeyFilePath string, publicKeyFile
 		return err
 	}
 
-	var privBlock = &pem.Block{
+	privBlock := &pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: privKey,
 	}
 
-	var pubBlock = &pem.Block{
+	pubBlock := &pem.Block{
 		Type:  "PUBLIC KEY",
 		Bytes: pubKey,
 	}

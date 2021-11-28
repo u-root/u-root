@@ -11,14 +11,14 @@ import (
 	"testing"
 )
 
-//func ParseDppAcpiExDevPath(h EfiDevicePathProtocolHdr, b []byte) (*DppAcpiExDevPath, error)
+// func ParseDppAcpiExDevPath(h EfiDevicePathProtocolHdr, b []byte) (*DppAcpiExDevPath, error)
 func TestParseDppAcpiExDevPath(t *testing.T) {
 	in := []byte{
 		0, 0, 0, 1,
 		0, 0, 0, 2,
 		0, 0, 0, 3,
 	}
-	//not sure what's supposed to go into these fields, so use made-up values
+	// not sure what's supposed to go into these fields, so use made-up values
 	in = append(in, cstr("HIDSTR")...)
 	in = append(in, cstr("UIDSTR")...)
 	in = append(in, cstr("CIDSTR")...)
@@ -47,7 +47,7 @@ func TestParseDppAcpiExDevPath(t *testing.T) {
 
 func cstr(s string) []byte { return append([]byte(s), 0) }
 
-//func ParseDppAcpiDevPath(h EfiDevicePathProtocolHdr, b []byte) (*DppAcpiDevPath, error)
+// func ParseDppAcpiDevPath(h EfiDevicePathProtocolHdr, b []byte) (*DppAcpiDevPath, error)
 func TestParseDppAcpiDevPath(t *testing.T) {
 	in := []byte{
 		0, 0, 0, 1,

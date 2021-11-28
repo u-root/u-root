@@ -46,7 +46,6 @@ type Policy struct {
  * e.g 4qccd342-12zr-4e99-9ze7-1234cb1234c4:/foo/securelaunch.policy
  */
 func scanKernelCmdLine() []byte {
-
 	slaunch.Debug("scanKernelCmdLine: scanning kernel cmd line for *sl_policy* flag")
 	val, ok := cmdline.Flag("sl_policy")
 	if !ok {
@@ -81,10 +80,9 @@ func scanKernelCmdLine() []byte {
  *	respectively for each iteration of loop over SearchRoots slice.
  */
 func scanBlockDevice(mountPath string) []byte {
-
 	log.Printf("scanBlockDevice")
 	// scan for securelaunch.policy under /, /efi, or /boot
-	var SearchRoots = []string{"/", "/efi", "/boot"}
+	SearchRoots := []string{"/", "/efi", "/boot"}
 	for _, c := range SearchRoots {
 
 		searchPath := filepath.Join(mountPath, c, "securelaunch.policy")
@@ -119,7 +117,6 @@ func scanBlockDevice(mountPath string) []byte {
  * 3  Read in policy file
  */
 func locate() ([]byte, error) {
-
 	d := scanKernelCmdLine()
 	if d != nil {
 		return d, nil

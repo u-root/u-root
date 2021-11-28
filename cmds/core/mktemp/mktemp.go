@@ -47,9 +47,7 @@ type mktempflags struct {
 	dir    string
 }
 
-var (
-	flags mktempflags
-)
+var flags mktempflags
 
 func init() {
 	flag.BoolVarP(&flags.d, "directory", "d", false, "Make a directory")

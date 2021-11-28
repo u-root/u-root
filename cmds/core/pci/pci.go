@@ -29,13 +29,11 @@ import (
 	"github.com/u-root/u-root/pkg/pci"
 )
 
-var (
-	format = map[int]string{
-		32: "%08x:%08x",
-		16: "%08x:%04x",
-		8:  "%08x:%02x",
-	}
-)
+var format = map[int]string{
+	32: "%08x:%08x",
+	16: "%08x:%04x",
+	8:  "%08x:%02x",
+}
 
 // maybe we need a better syntax than the standard pcitools?
 func registers(d pci.Devices, cmds ...string) {

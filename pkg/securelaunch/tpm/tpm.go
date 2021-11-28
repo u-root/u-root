@@ -20,12 +20,13 @@ import (
 	"github.com/u-root/u-root/pkg/tss"
 )
 
-var hashAlgo = tpm2.AlgSHA256
-var tpmHandle *tss.TPM
+var (
+	hashAlgo  = tpm2.AlgSHA256
+	tpmHandle *tss.TPM
+)
 
 // marshalPcrEvent writes structure fields piecemeal to buffer.
 func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
-
 	const baseTypeTXT = 0x400                       // TXT specification base event value for DRTM values
 	const slaunchType = uint32(baseTypeTXT + 0x102) // Secure Launch event log entry type.
 	count := uint32(1)
@@ -70,7 +71,6 @@ func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
 
 // sendEventToSysfs marshals measurement events and writes them to sysfs.
 func sendEventToSysfs(pcr uint32, h []byte, eventDesc []byte) {
-
 	b, err := marshalPcrEvent(pcr, h, eventDesc)
 	if err != nil {
 		log.Println(err)
@@ -85,7 +85,6 @@ func sendEventToSysfs(pcr uint32, h []byte, eventDesc []byte) {
  * hashReader calculates the sha256 sum of an io reader.
  */
 func hashReader(f io.Reader) []byte {
-
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		log.Fatal(err)

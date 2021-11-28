@@ -112,7 +112,7 @@ func walk(mans map[string]string, root string) (err error) {
 func writeFile(fname string, mans map[string]string) error {
 	dir := filepath.Dir(fname)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.Mkdir(dir, 0775); err != nil {
+		if err := os.Mkdir(dir, 0o775); err != nil {
 			return err
 		}
 	}

@@ -178,7 +178,7 @@ func TestCreateInitramfs(t *testing.T) {
 	syscall.Umask(0)
 
 	tmp777 := filepath.Join(dir, "tmp777")
-	if err := os.MkdirAll(tmp777, 0777); err != nil {
+	if err := os.MkdirAll(tmp777, 0o777); err != nil {
 		t.Error(err)
 	}
 

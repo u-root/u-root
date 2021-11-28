@@ -31,7 +31,7 @@ func TestReadlink(t *testing.T) {
 
 	// Creating here to utilize path in tests
 	testDir := filepath.Join(tmpDir, "readLinkDir")
-	if err := os.Mkdir(testDir, 0700); err != nil {
+	if err := os.Mkdir(testDir, 0o700); err != nil {
 		t.Error(err)
 	}
 
@@ -39,18 +39,20 @@ func TestReadlink(t *testing.T) {
 		t.Error(err)
 	}
 
-	var tests = []test{
+	tests := []test{
 		{
 			flags:      []string{},
 			out:        "",
 			stdErr:     "",
 			exitStatus: 1,
-		}, {
+		},
+		{
 			flags:      []string{"-v", "f1"},
 			out:        "",
 			stdErr:     "readlink f1: invalid argument\n",
 			exitStatus: 1,
-		}, {
+		},
+		{
 			flags:      []string{"-f", "f2"},
 			out:        "",
 			stdErr:     "",

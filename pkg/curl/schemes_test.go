@@ -219,7 +219,6 @@ func TestFetchWithoutCache(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestFetch(t *testing.T) {

@@ -21,12 +21,12 @@ import (
 // The ssh package does not define these things so we will
 type (
 	ptyReq struct {
-		TERM   string //TERM environment variable value (e.g., vt100)
+		TERM   string // TERM environment variable value (e.g., vt100)
 		Col    uint32
 		Row    uint32
 		Xpixel uint32
 		Ypixel uint32
-		Modes  string //encoded terminal modes
+		Modes  string // encoded terminal modes
 	}
 	execReq struct {
 		Command string

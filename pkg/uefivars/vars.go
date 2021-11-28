@@ -19,7 +19,7 @@ import (
 	"unicode/utf8"
 )
 
-//http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
+// http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
 
 // EfiVarDir is the sysfs /sys/firmware/efi/vars directory, which can be overridden for testing.
 var EfiVarDir = "/sys/firmware/efi/vars"

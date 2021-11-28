@@ -350,7 +350,6 @@ func sendAndCheckResult(c *net.UnixConn, op int) error {
 	b := make([]byte, 1)
 	if _, err := io.ReadAtLeast(c, b, 1); err != nil {
 		log.Printf("Failed to read operation bit from server: %v", err)
-
 	}
 	r := int(b[0])
 	if r != OpResultOk {

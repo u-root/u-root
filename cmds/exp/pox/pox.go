@@ -135,11 +135,11 @@ This can also be passed in with the POX_EXTRA variable.
 // When chrooting, programs often want to access various system directories:
 var chrootMounts = []mp{
 	// mount --bind /sys /chroot/sys
-	{"/sys", "/sys", "", mount.MS_BIND, "", 0555},
+	{"/sys", "/sys", "", mount.MS_BIND, "", 0o555},
 	// mount -t proc /proc /chroot/proc
-	{"/proc", "/proc", "proc", 0, "", 0555},
+	{"/proc", "/proc", "proc", 0, "", 0o555},
 	// mount --bind /dev /chroot/dev
-	{"/dev", "/dev", "", mount.MS_BIND, "", 0755}}
+	{"/dev", "/dev", "", mount.MS_BIND, "", 0o755}}
 
 func poxCreate(bin ...string) error {
 	if len(bin) == 0 {
@@ -185,7 +185,7 @@ func poxCreate(bin ...string) error {
 		f = strings.TrimPrefix(f, pwd)
 		dfile := filepath.Join(dir, f)
 		d := filepath.Dir(dfile)
-		if err := os.MkdirAll(d, 0755); err != nil {
+		if err := os.MkdirAll(d, 0o755); err != nil {
 			in.Close()
 			return err
 		}
@@ -307,7 +307,7 @@ func extraMounts(mountList string) error {
 	v("Extra mounts: %q", mountList)
 	// We have to specify the extra directories and do the create here b/c it is a squashfs. Sorry.
 	for _, e := range strings.Split(mountList, ",") {
-		m := mp{flags: mount.MS_BIND, perm: 0755}
+		m := mp{flags: mount.MS_BIND, perm: 0o755}
 		mp := strings.Split(e, ":")
 		switch len(mp) {
 		case 1:
