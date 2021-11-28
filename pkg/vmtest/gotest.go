@@ -7,7 +7,6 @@ package vmtest
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -33,7 +32,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 
 	// Create a temporary directory.
 	if len(o.TmpDir) == 0 {
-		tmpDir, err := ioutil.TempDir("", "uroot-integration")
+		tmpDir, err := os.MkdirTemp("", "uroot-integration")
 		if err != nil {
 			t.Fatal(err)
 		}

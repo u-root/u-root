@@ -13,7 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -175,7 +175,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 			if !path.IsAbs(s) {
 				s = filepath.Join(envDir, s)
 			}
-			b, err := ioutil.ReadFile(s)
+			b, err := os.ReadFile(s)
 			if err != nil {
 				panic(fmt.Errorf("%s: %v", s, err))
 			}

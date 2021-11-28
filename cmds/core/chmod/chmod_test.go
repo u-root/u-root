@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,13 +28,7 @@ func run(c *exec.Cmd) (string, string, error) {
 
 func TestChmodSimple(t *testing.T) {
 	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodSimple")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	f, err := ioutil.TempFile(tempDir, "BLAH1")
+	f, err := os.CreateTemp(t.TempDir(), "BLAH1")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
@@ -100,11 +93,7 @@ func checkPath(t *testing.T, path string, instruction string, v fileModeTrans) {
 
 func TestChmodRecursive(t *testing.T) {
 	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodRecursive")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	var targetDirectories []string
 	for _, dir := range []string{
@@ -148,8 +137,7 @@ func TestChmodRecursive(t *testing.T) {
 
 		// Set permissions using chmod.
 		c := testutil.Command(t, "-R", k, tempDir)
-		err = c.Run()
-		if err != nil {
+		if err := c.Run(); err != nil {
 			t.Fatalf("setting permissions failed: %v", err)
 		}
 
@@ -162,19 +150,15 @@ func TestChmodRecursive(t *testing.T) {
 
 func TestChmodReference(t *testing.T) {
 	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodReference")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
-	sourceFile, err := ioutil.TempFile(tempDir, "BLAH1")
+	sourceFile, err := os.CreateTemp(tempDir, "BLAH1")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
 	defer sourceFile.Close()
 
-	targetFile, err := ioutil.TempFile(tempDir, "BLAH2")
+	targetFile, err := os.CreateTemp(tempDir, "BLAH2")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
@@ -209,13 +193,7 @@ func TestChmodReference(t *testing.T) {
 }
 
 func TestInvocationErrors(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestInvocationErrors")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	f, err := ioutil.TempFile(tempDir, "BLAH1")
+	f, err := os.CreateTemp(t.TempDir(), "BLAH1")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}

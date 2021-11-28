@@ -9,7 +9,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -100,7 +99,7 @@ func TestGrubTests(t *testing.T) {
 					t.Fatalf("process ran with err %v", err)
 				}
 			} else {
-				out, err = ioutil.ReadFile(golden)
+				out, err = os.ReadFile(golden)
 				if err != nil {
 					t.Fatalf("error loading file `%s`, %v", golden, err)
 				}
@@ -115,7 +114,7 @@ func TestGrubTests(t *testing.T) {
 			c := newParser(wd, block.BlockDevices{}, mountPool, curl.DefaultSchemes)
 			c.W = &b
 
-			script, err := ioutil.ReadFile(file)
+			script, err := os.ReadFile(file)
 			if err != nil {
 				t.Fatalf("error loading file `%s`, %v", file, err)
 			}
@@ -129,7 +128,7 @@ func TestGrubTests(t *testing.T) {
 			}
 			// update/create golden file on success
 			if *update {
-				err := ioutil.WriteFile(golden, out, 0o644)
+				err := os.WriteFile(golden, out, 0o644)
 				if err != nil {
 					t.Fatalf("error writing file `%s`, %v", file, err)
 				}

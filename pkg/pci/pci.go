@@ -7,7 +7,6 @@ package pci
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,7 +64,7 @@ func (p *PCI) SetVendorDeviceName() {
 // ReadConfig reads the config space.
 func (p *PCI) ReadConfig() error {
 	dev := filepath.Join(p.FullPath, "config")
-	c, err := ioutil.ReadFile(dev)
+	c, err := os.ReadFile(dev)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,6 @@ package kexec
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
@@ -16,24 +15,20 @@ import (
 )
 
 func TestParseMemoryMap(t *testing.T) {
-	root, err := ioutil.TempDir("", "memmap")
-	if err != nil {
-		t.Fatalf("Cannot create test dir: %v", err)
-	}
-	defer os.RemoveAll(root)
+	root := t.TempDir()
 
 	create := func(dir string, start, end uintptr, typ RangeType) error {
 		p := path.Join(root, dir)
 		if err := os.Mkdir(p, 0o755); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path.Join(p, "start"), []byte(fmt.Sprintf("%#x\n", start)), 0o655); err != nil {
+		if err := os.WriteFile(path.Join(p, "start"), []byte(fmt.Sprintf("%#x\n", start)), 0o655); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(path.Join(p, "end"), []byte(fmt.Sprintf("%#x\n", end)), 0o655); err != nil {
+		if err := os.WriteFile(path.Join(p, "end"), []byte(fmt.Sprintf("%#x\n", end)), 0o655); err != nil {
 			return err
 		}
-		return ioutil.WriteFile(path.Join(p, "type"), append([]byte(typ), '\n'), 0o655)
+		return os.WriteFile(path.Join(p, "type"), append([]byte(typ), '\n'), 0o655)
 	}
 
 	if err := create("0", 0, 49, RangeRAM); err != nil {

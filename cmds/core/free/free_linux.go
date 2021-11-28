@@ -7,7 +7,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 )
 
@@ -16,7 +16,7 @@ const meminfoFile = "/proc/meminfo"
 // meminfo returns a mapping that represents the fields contained in
 // /proc/meminfo
 func meminfo() (meminfomap, error) {
-	buf, err := ioutil.ReadFile(meminfoFile)
+	buf, err := os.ReadFile(meminfoFile)
 	if err != nil {
 		return nil, err
 	}

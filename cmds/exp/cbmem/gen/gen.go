@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"syscall"
@@ -72,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := ioutil.WriteFile("apu2.go", []byte(s), 0o644); err != nil {
+		if err := os.WriteFile("apu2.go", []byte(s), 0o644); err != nil {
 			log.Fatal(err)
 		}
 		os.Exit(0)

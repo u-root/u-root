@@ -34,7 +34,6 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -599,7 +598,7 @@ func writeGoFile(path string, code []byte) error {
 		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
 	}
 
-	if err := ioutil.WriteFile(path, code, 0o644); err != nil {
+	if err := os.WriteFile(path, code, 0o644); err != nil {
 		return fmt.Errorf("error writing Go file to %q: %v", path, err)
 	}
 	return nil

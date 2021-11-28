@@ -58,7 +58,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -88,7 +87,7 @@ func main() {
 		if len(os.Args) != 3 {
 			log.Fatalf("arg count")
 		}
-		b, err := ioutil.ReadFile(os.Args[2])
+		b, err := os.ReadFile(os.Args[2])
 		if err != nil {
 			log.Fatalf("stty load: %v", err)
 		}

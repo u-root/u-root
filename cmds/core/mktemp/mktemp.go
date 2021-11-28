@@ -29,7 +29,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -75,10 +74,10 @@ func mktemp() (string, error) {
 	}
 
 	if flags.d {
-		d, err := ioutil.TempDir(flags.dir, flags.prefix)
+		d, err := os.MkdirTemp(flags.dir, flags.prefix)
 		return d, err
 	}
-	f, err := ioutil.TempFile(flags.dir, flags.prefix)
+	f, err := os.CreateTemp(flags.dir, flags.prefix)
 	return f.Name(), err
 }
 

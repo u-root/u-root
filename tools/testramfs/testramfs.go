@@ -7,7 +7,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"syscall"
@@ -66,7 +65,7 @@ func main() {
 	u := unix.Umask(0)
 	defer unix.Umask(u)
 
-	tempDir, err := ioutil.TempDir("", "u-root")
+	tempDir, err := os.MkdirTemp("", "u-root")
 	if err != nil {
 		log.Fatal(err)
 	}

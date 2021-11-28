@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"reflect"
 	"strings"
@@ -238,7 +238,7 @@ func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 		return nil, err
 	}
 
-	dat, err := ioutil.ReadAll(stdout)
+	dat, err := io.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 	// You can enable this if you have a nasty bug from xz.
 	// Just be aware that xz ALWAYS errors out even when nothing is wrong.
 	if false {
-		if e, err := ioutil.ReadAll(stderr); err != nil || len(e) > 0 {
+		if e, err := io.ReadAll(stderr); err != nil || len(e) > 0 {
 			Debug("xz stderr: '%s', %v", string(e), err)
 		}
 	}
@@ -267,7 +267,7 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 		return nil, err
 	}
 
-	dat, err := ioutil.ReadAll(stdout)
+	dat, err := io.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func Equal(a, b []byte) error {
 
 // AddInitRAMFS adds an initramfs to the BzImage.
 func (b *BzImage) AddInitRAMFS(name string) error {
-	u, err := ioutil.ReadFile(name)
+	u, err := os.ReadFile(name)
 	if err != nil {
 		return err
 	}
@@ -447,7 +447,7 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 	var prog *elf.Prog
 	for _, p := range f.Progs {
 		if p.Flags&(elf.PF_X|elf.PF_W|elf.PF_R) == elf.PF_X|elf.PF_W|elf.PF_R {
-			dat, err = ioutil.ReadAll(p.Open())
+			dat, err = io.ReadAll(p.Open())
 			if err != nil {
 				return -1, -1, err
 			}
@@ -537,7 +537,7 @@ func (b *BzImage) ReadConfig() (string, error) {
 	}
 	// make it stop at end of stream, since we don't know the actual size
 	gz.Multistream(false)
-	cfg, err := ioutil.ReadAll(gz)
+	cfg, err := io.ReadAll(gz)
 	if err != nil {
 		return "", err
 	}

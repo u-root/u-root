@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -21,12 +20,7 @@ func TestSimple(t *testing.T) {
 		t.Skip("Must be root for this test")
 	}
 
-	tmpDir, err := ioutil.TempDir("", "pox")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-	f := filepath.Join(tmpDir, "x.tcz")
+	f := filepath.Join(t.TempDir(), "x.tcz")
 	tests := []struct {
 		args   []string
 		name   string

@@ -88,7 +88,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -161,7 +160,7 @@ func poxCreate(bin ...string) error {
 	sort.Strings(names)
 	// Now we need to make a template file hierarchy and put
 	// the stuff we want in there.
-	dir, err := ioutil.TempDir("", "pox")
+	dir, err := os.MkdirTemp("", "pox")
 	if err != nil {
 		return err
 	}
@@ -247,7 +246,7 @@ func poxRun(args ...string) error {
 	if len(args) == 0 {
 		return fmt.Errorf(usage)
 	}
-	dir, err := ioutil.TempDir("", "pox")
+	dir, err := os.MkdirTemp("", "pox")
 	if err != nil {
 		return err
 	}

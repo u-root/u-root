@@ -7,7 +7,6 @@ package securelaunch
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -67,7 +66,7 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 	}
 
 	Debug("WriteToFile: target=%s", target)
-	err = ioutil.WriteFile(target, data, 0o644)
+	err = os.WriteFile(target, data, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("failed to write date to file =%s, err=%v", target, err)
 	}
@@ -209,7 +208,7 @@ func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
 	Debug("MountDevice: cache lookup failed for %s", devName)
 
 	Debug("MountDevice: Attempting to mount %s with flags %d", devName, flags)
-	mountPath, err := ioutil.TempDir("/tmp", "slaunch-")
+	mountPath, err := os.MkdirTemp("/tmp", "slaunch-")
 	if err != nil {
 		return "", fmt.Errorf("failed to create tmp mount directory: %v", err)
 	}

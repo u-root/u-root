@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -135,7 +134,7 @@ func main() {
 
 	var d pci.Devices
 	if len(*readJSON) != 0 {
-		b, err := ioutil.ReadFile(*readJSON)
+		b, err := os.ReadFile(*readJSON)
 		if err != nil {
 			log.Fatal(err)
 		}

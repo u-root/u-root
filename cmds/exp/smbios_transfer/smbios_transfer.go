@@ -14,8 +14,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/ipmi"
@@ -74,7 +74,7 @@ func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr 
 }
 
 func getSmbiosData() ([]uint8, error) {
-	tables, err := ioutil.ReadFile(filepath.Join(sysfsPath, "DMI"))
+	tables, err := os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 	if err != nil {
 		return nil, fmt.Errorf("error reading DMI data: %v", err)
 	}

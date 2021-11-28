@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,11 +29,7 @@ func TestLargeDevNumber(t *testing.T) {
 	}
 
 	// Make the node.
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	file := filepath.Join(tmpDir, "large_node")
 	if err := unix.Mknod(file, 0o660|unix.S_IFBLK, 0x12345678); err != nil {
 		t.Fatal(err)

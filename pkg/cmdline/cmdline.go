@@ -13,7 +13,6 @@ package cmdline
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -64,7 +63,7 @@ func FullCmdLine() string {
 
 // parse returns the current command line, trimmed
 func parse(cmdlineReader io.Reader) CmdLine {
-	raw, err := ioutil.ReadAll(cmdlineReader)
+	raw, err := io.ReadAll(cmdlineReader)
 	line := CmdLine{}
 	if err != nil {
 		log.Printf("Can't read command line: %v", err)

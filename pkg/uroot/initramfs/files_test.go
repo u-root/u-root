@@ -7,7 +7,6 @@ package initramfs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,23 +18,14 @@ import (
 )
 
 func TestFilesAddFileNoFollow(t *testing.T) {
-	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
+	regularFile, err := os.CreateTemp("", "archive-files-add-file")
 	if err != nil {
 		t.Error(err)
 	}
 	defer os.RemoveAll(regularFile.Name())
 
-	dir, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir)
-
-	dir2, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir2)
+	dir := t.TempDir()
+	dir2 := t.TempDir()
 
 	os.Create(filepath.Join(dir, "foo2"))
 	os.Symlink(filepath.Join(dir, "foo2"), filepath.Join(dir2, "foo3"))
@@ -92,29 +82,15 @@ func TestFilesAddFileNoFollow(t *testing.T) {
 }
 
 func TestFilesAddFile(t *testing.T) {
-	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
+	regularFile, err := os.CreateTemp("", "archive-files-add-file")
 	if err != nil {
 		t.Error(err)
 	}
 	defer os.RemoveAll(regularFile.Name())
 
-	dir, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir)
-
-	dir2, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir2)
-
-	dir3, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir3)
+	dir := t.TempDir()
+	dir2 := t.TempDir()
+	dir3 := t.TempDir()
 
 	os.Create(filepath.Join(dir, "foo"))
 	os.Create(filepath.Join(dir, "foo2"))

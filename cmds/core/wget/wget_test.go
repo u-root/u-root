@@ -9,7 +9,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -128,11 +127,7 @@ func TestWget(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Change the working directory to a temporary directory, so we can
 			// delete the temporary files after the test runs.
-			tmpDir, err := ioutil.TempDir("", "uroot-wget")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 
 			fileName := filepath.Base(tt.url)
 
@@ -148,7 +143,7 @@ func TestWget(t *testing.T) {
 			}
 
 			if tt.content != "" {
-				content, err := ioutil.ReadFile(filepath.Join(tmpDir, fileName))
+				content, err := os.ReadFile(filepath.Join(tmpDir, fileName))
 				if err != nil {
 					t.Errorf("File %s was not created: %v", fileName, err)
 				}

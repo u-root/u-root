@@ -7,7 +7,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"syscall"
@@ -157,11 +156,7 @@ func TestRemove(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			d, err := ioutil.TempDir(os.TempDir(), "u-root.cmds.rm")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(d)
+			d := t.TempDir()
 
 			for _, f := range tmpFiles {
 				var (
@@ -171,7 +166,7 @@ func TestRemove(t *testing.T) {
 				if f.isdir {
 					err = os.Mkdir(filepath, f.mode)
 				} else {
-					err = ioutil.WriteFile(filepath, fbody, f.mode)
+					err = os.WriteFile(filepath, fbody, f.mode)
 				}
 				if err != nil {
 					t.Fatal(err)

@@ -19,17 +19,15 @@ package main
 
 import (
 	"crypto"
-	"flag"
-	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-	"strings"
-
 	_ "crypto/md5"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"strings"
 
 	_ "golang.org/x/crypto/md4"
 	_ "golang.org/x/crypto/openpgp"
@@ -112,7 +110,7 @@ func main() {
 
 	v, f := flag.Args()[0], flag.Args()[1]
 
-	sigData, err := ioutil.ReadFile(v)
+	sigData, err := os.ReadFile(v)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -127,13 +125,13 @@ func main() {
 
 	debug("Signature is %v len %v", sig[0], len(sig[0]))
 
-	b, err := ioutil.ReadFile(f)
+	b, err := os.ReadFile(f)
 	if err != nil {
 		log.Fatalf("%s: %v", f, err)
 	}
 
 	if *sumfile != "" {
-		sum, err := ioutil.ReadFile(*sumfile)
+		sum, err := os.ReadFile(*sumfile)
 		if err != nil {
 			log.Fatalf("Can't read sumfile: %v", *sumfile)
 		}

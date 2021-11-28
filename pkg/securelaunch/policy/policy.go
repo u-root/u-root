@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -61,7 +60,7 @@ func scanKernelCmdLine() []byte {
 	}
 	slaunch.Debug("scanKernelCmdLine: Reading file=%s", mntFilePath)
 
-	d, err := ioutil.ReadFile(mntFilePath)
+	d, err := os.ReadFile(mntFilePath)
 	if err != nil {
 		log.Printf("Error reading policy file:mountPath=%s, passed=%s", mntFilePath, val)
 		return nil
@@ -90,7 +89,7 @@ func scanBlockDevice(mountPath string) []byte {
 			continue
 		}
 
-		d, err := ioutil.ReadFile(searchPath)
+		d, err := os.ReadFile(searchPath)
 		if err != nil {
 			// Policy File not found. Moving on to next search root...
 			log.Printf("Error reading policy file %s, continuing", searchPath)

@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,11 +21,7 @@ type test struct {
 }
 
 func TestMkfifo(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// used later in testing
 	testDir := filepath.Join(tmpDir, "mkfifoDir")

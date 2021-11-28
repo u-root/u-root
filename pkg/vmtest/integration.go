@@ -7,7 +7,6 @@ package vmtest
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -209,7 +208,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 
 	// Create or reuse a temporary directory. This is exposed to the VM.
 	if o.TmpDir == "" {
-		tmpDir, err := ioutil.TempDir("", "uroot-integration")
+		tmpDir, err := os.MkdirTemp("", "uroot-integration")
 		if err != nil {
 			t.Fatalf("Failed to create temp dir: %v", err)
 		}
@@ -262,7 +261,7 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	if len(o.TestCmds) > 0 {
 		testFile := filepath.Join(o.TmpDir, "test.elv")
 
-		if err := ioutil.WriteFile(
+		if err := os.WriteFile(
 			testFile, []byte(strings.Join(o.TestCmds, "\n")), 0o777); err != nil {
 			return nil, err
 		}
@@ -372,7 +371,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 		o.DefaultShell = "elvish"
 	}
 	if len(o.TempDir) == 0 {
-		tempDir, err := ioutil.TempDir("", "initramfs-tempdir")
+		tempDir, err := os.MkdirTemp("", "initramfs-tempdir")
 		if err != nil {
 			return "", fmt.Errorf("Failed to create temp dir: %v", err)
 		}
@@ -382,7 +381,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 
 	// Create an output file if one was not provided.
 	if len(outputFile) == 0 {
-		f, err := ioutil.TempFile("", "initramfs.cpio")
+		f, err := os.CreateTemp("", "initramfs.cpio")
 		if err != nil {
 			return "", fmt.Errorf("failed to create output file: %v", err)
 		}

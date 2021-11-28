@@ -5,8 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -109,12 +107,6 @@ var (
 )
 
 func TestSimple(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "bzImage")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	tests := []struct {
 		args            []string
 		name            string
@@ -138,7 +130,7 @@ func TestSimple(t *testing.T) {
 			skip:   uskip,
 		},
 		{
-			args:   []string{"initramfs", "bzImage", "/dev/null", filepath.Join(tmpDir, "zz")},
+			args:   []string{"initramfs", "bzImage", "/dev/null", filepath.Join(t.TempDir(), "zz")},
 			name:   "correct initramfs test",
 			status: 0,
 			out:    "",

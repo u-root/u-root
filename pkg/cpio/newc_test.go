@@ -7,7 +7,6 @@ package cpio
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"syscall"
@@ -73,7 +72,7 @@ func TestWriteRead(t *testing.T) {
 		t.Errorf("Records not equal:\n%#v\n%#v", rec.Info, rec2.Info)
 	}
 
-	contents2, err := ioutil.ReadAll(uio.Reader(rec2))
+	contents2, err := io.ReadAll(uio.Reader(rec2))
 	if err != nil {
 		t.Errorf("Could not read %q: %v", rec2.Name, err)
 	}
@@ -156,7 +155,7 @@ func TestPipeWriteRead(t *testing.T) {
 		}
 
 		t.Logf("Check Data")
-		dat, err := ioutil.ReadAll(uio.Reader(rec))
+		dat, err := io.ReadAll(uio.Reader(rec))
 		if err != nil {
 			t.Errorf("Could not read %q: %v", rec.Name, err)
 		}
@@ -211,11 +210,11 @@ func TestReadWrite(t *testing.T) {
 			t.Errorf("index %d: testCPIO Info\n%v\ngenerated Info\n%v\n", i, f1.Info, f2.Info)
 		}
 
-		contents1, err := ioutil.ReadAll(uio.Reader(f1))
+		contents1, err := io.ReadAll(uio.Reader(f1))
 		if err != nil {
 			t.Errorf("index %d(%q): can't read from the source: %v", i, f1.Name, err)
 		}
-		contents2, err := ioutil.ReadAll(uio.Reader(f2))
+		contents2, err := io.ReadAll(uio.Reader(f2))
 		if err != nil {
 			t.Errorf("index %d(%q): can't read from the dest: %v", i, f2.Name, err)
 		}

@@ -8,7 +8,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -242,7 +242,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error : %v\n", err)
 	}
-	content, err := ioutil.ReadAll(response.Body)
+	content, err := io.ReadAll(response.Body)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -28,7 +28,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -38,7 +37,7 @@ import (
 func main() {
 	if len(os.Args) == 1 {
 		n := fmt.Sprintf("/proc/%d/ns", os.Getpid())
-		if b, err := ioutil.ReadFile(n); err == nil {
+		if b, err := os.ReadFile(n); err == nil {
 			fmt.Print(string(b))
 			os.Exit(0)
 		}

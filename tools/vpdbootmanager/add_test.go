@@ -7,8 +7,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"testing"
@@ -129,17 +127,14 @@ func TestFailGracefullyUnknownEntryType(t *testing.T) {
 }
 
 func TestAddBootEntry(t *testing.T) {
-	vpdDir, err := ioutil.TempDir("", "vpdbootmanager")
-	if err != nil {
-		log.Fatal(err)
-	}
+	vpdDir := t.TempDir()
 	os.MkdirAll(path.Join(vpdDir, "rw"), 0o700)
 	defer os.RemoveAll(vpdDir)
-	err = addBootEntry(&systembooter.LocalBooter{
+	err := addBootEntry(&systembooter.LocalBooter{
 		Method: "grub",
 	}, vpdDir)
 	require.NoError(t, err)
-	file, err := ioutil.ReadFile(path.Join(vpdDir, "rw", "Boot0001"))
+	file, err := os.ReadFile(path.Join(vpdDir, "rw", "Boot0001"))
 	require.NoError(t, err)
 	var out systembooter.LocalBooter
 	err = json.Unmarshal([]byte(file), &out)
@@ -148,18 +143,15 @@ func TestAddBootEntry(t *testing.T) {
 }
 
 func TestAddBootEntryMultiple(t *testing.T) {
-	vpdDir, err := ioutil.TempDir("", "vpdbootmanager")
-	if err != nil {
-		log.Fatal(err)
-	}
+	vpdDir := t.TempDir()
 	os.MkdirAll(path.Join(vpdDir, "rw"), 0o700)
 	defer os.RemoveAll(vpdDir)
 	for i := 1; i < 5; i++ {
-		err = addBootEntry(&systembooter.LocalBooter{
+		err := addBootEntry(&systembooter.LocalBooter{
 			Method: "grub",
 		}, vpdDir)
 		require.NoError(t, err)
-		file, err := ioutil.ReadFile(path.Join(vpdDir, "rw", fmt.Sprintf("Boot%04d", i)))
+		file, err := os.ReadFile(path.Join(vpdDir, "rw", fmt.Sprintf("Boot%04d", i)))
 		require.NoError(t, err)
 		var out systembooter.LocalBooter
 		err = json.Unmarshal([]byte(file), &out)

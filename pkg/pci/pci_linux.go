@@ -8,7 +8,7 @@ package pci
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -24,7 +24,7 @@ type bus struct {
 }
 
 func readString(dir, file string) (string, error) {
-	s, err := ioutil.ReadFile(filepath.Join(dir, file))
+	s, err := os.ReadFile(filepath.Join(dir, file))
 	if err != nil {
 		return "", err
 	}

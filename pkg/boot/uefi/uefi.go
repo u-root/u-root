@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -70,7 +69,7 @@ type FVImage struct {
 func checkFVAndGetEntryPoint(name string) (uintptr, error) {
 	// Parse entire firmware volume to find SEC's PE32. Since payload will
 	// be only few MBs, it should be fine to load entire image for parsing.
-	dat, err := ioutil.ReadFile(name)
+	dat, err := os.ReadFile(name)
 	if err != nil {
 		return 0, err
 	}
@@ -108,7 +107,7 @@ const uefiPayloadConfigSize = 0x10000
 // Load loads fimware volume payload and boot the the payload
 func (fv *FVImage) Load(verbose bool) error {
 	// Install payload
-	dat, err := ioutil.ReadFile(fv.name)
+	dat, err := os.ReadFile(fv.name)
 	if err != nil {
 		return err
 	}

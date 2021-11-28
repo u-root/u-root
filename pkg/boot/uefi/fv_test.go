@@ -5,12 +5,12 @@
 package uefi
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
 func TestFindSecurityCorePEEntry(t *testing.T) {
-	dat, err := ioutil.ReadFile("testdata/fv_with_sec.fd")
+	dat, err := os.ReadFile("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatalf("fail to read firmware volume: %v", err)
 	}
@@ -25,7 +25,7 @@ func TestFindSecurityCorePEEntry(t *testing.T) {
 }
 
 func TestFindSecurityCorePEEntryNestedSec(t *testing.T) {
-	dat, err := ioutil.ReadFile("testdata/fv_with_nested_sec.fd")
+	dat, err := os.ReadFile("testdata/fv_with_nested_sec.fd")
 	if err != nil {
 		t.Fatalf("fail to read firmware volume: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestFindSecurityCorePEEntryNestedSec(t *testing.T) {
 }
 
 func TestFindSecurityCorePEEntryNotFound(t *testing.T) {
-	dat, err := ioutil.ReadFile("testdata/fv_without_sec.fd")
+	dat, err := os.ReadFile("testdata/fv_without_sec.fd")
 	if err != nil {
 		t.Fatalf("fail to read firmware volume: %v", err)
 	}

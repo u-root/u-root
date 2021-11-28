@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,11 +27,7 @@ func run(c *exec.Cmd) (string, string, error) {
 }
 
 func TestMknodFifo(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Delete a preexisting pipe if it exists, thought it shouldn't
 	pipepath := filepath.Join(tmpDir, "testpipe")
@@ -51,11 +46,7 @@ func TestMknodFifo(t *testing.T) {
 }
 
 func TestInvocationErrors(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	devpath := filepath.Join(tmpDir, "testdev")
 	tests := []test{

@@ -7,8 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -76,12 +74,6 @@ var stringsTests = []test{
 
 // strings < in > out
 func TestSortWithPipes(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "strings")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	// Table-driven testing
 	for _, tt := range stringsTests {
 		t.Run(fmt.Sprintf("%v", tt.name), func(t *testing.T) {
